@@ -240,12 +240,10 @@ const ntboxwidthincrement = 0.5
 const readspace_px = 2
 const readspace_bp = 5
 
-const maxreadcount = 30000 // maximum number of reads to load
+const maxreadcount = 10000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
 const bases = new Set(['A', 'T', 'C', 'G'])
-
-const samtools = serverconfig.samtools || 'samtools'
 
 module.exports = genomes => {
 	return async (req, res) => {
@@ -928,50 +926,44 @@ async function get_gdc_bam(chr, start, stop, token, case_id, cache_dir) {
 	}
 }
 
-function index_bam(file) {
+async function index_bam(file) {
 	// only work for gdc bam slices, file is absolute path in cache dir
-	return new Promise((resolve, reject) => {
-		const ps = spawn(samtools, ['index', file])
-		ps.on('close', code => {
-			resolve()
-		})
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args: ['index', file],
+		callback: () => {}
 	})
 }
 
-function query_region(r, q) {
-	// for each region, query its data
-	// if too many reads, collapse to coverage
+/*
+for each region, query its data
+if too many reads, kill the process and insert a message
+*/
+async function query_region(r, q) {
 	r.lines = []
-	return new Promise((resolve, reject) => {
-		let ps = ''
-		//console.log(
-		//	'samtools view ' + q.file + ' ' + (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-		//)
-		if (q.gdc_case_id) {
-			ps = spawn(samtools, ['view', q.file], { cwd: q.dir })
-		} else {
-			ps = spawn(
-				samtools,
-				['view', q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-				{ cwd: q.dir }
-			)
-		}
-		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
+	const args = ['view', q.file]
+	if (!q.gdc_case_id) {
+		// not a gdc slice, use region in querying
+		args.push((q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop)
+	}
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args,
+		dir: q.dir,
+		callback: (line, ps) => {
 			r.lines.push(line)
 			q._numofreads++
 			if (q._numofreads >= maxreadcount) {
 				ps.kill()
 				q.read_limit_reached = true
+				/*
 				q.messagerows.push({
 					h: 13,
-					t: 'Too many reads in view range. Try zooming into a smaller region.'
+					t: '11Too many reads in view range. Try zooming into a smaller region.'
 				})
+				*/
 			}
-		})
-		rl.on('close', () => {
-			resolve()
-		})
+		}
 	})
 }
 
@@ -984,11 +976,18 @@ should summarize into bins, each bin for a pixel with .coverage for each pixel, 
 */
 async function run_samtools_depth(q, r) {
 	const bplst = []
-	await utils.get_lines_bamdepth(
-		q.file || q.url,
-		q.dir,
-		(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
-		line => {
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args: [
+			'depth',
+			'-r',
+			(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
+			'-g',
+			'DUP',
+			q.file || q.url
+		],
+		dir: q.dir,
+		callback: line => {
 			const l = line.split('\t')
 			const position = Number.parseInt(l[1]) - 1 // change to 0-based
 			const depth = Number.parseInt(l[2])
@@ -1009,7 +1008,7 @@ async function run_samtools_depth(q, r) {
 			bplst[bpidx].sum += depth
 			bplst[bpidx].count++
 		}
-	)
+	})
 	if (r.ntwidth < 1) {
 		// get average for each bin
 		for (const b of bplst) {
@@ -2512,8 +2511,16 @@ async function query_oneread(req, r) {
 		isurl,
 		readstart,
 		readstop,
-		gdc_query = false
-	if (req.get('x-auth-token')) gdc_query = true
+		gdc_query = false,
+		lst // array of reads to be returned
+
+	if (req.get('x-auth-token')) {
+		gdc_query = true
+	} else {
+		;[e, _file, isurl] = app.fileurl(req)
+		if (e) throw e
+		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
+	}
 	if (req.query.unknownorder) {
 		// unknown order, read start/stop must be provided
 		readstart = Number(req.query.readstart)
@@ -2521,28 +2528,23 @@ async function query_oneread(req, r) {
 		if (Number.isNaN(readstart) || Number.isNaN(readstop))
 			throw 'readstart/stop not provided for read with unknown order'
 	}
-	if (!gdc_query) {
-		;[e, _file, isurl] = app.fileurl(req)
-		if (e) throw e
-		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
+
+	let args
+	if (gdc_query) {
+		args = ['view', path.join(serverconfig.cachedir, req.query.file)]
+	} else {
+		args = [
+			'view',
+			_file,
+			(req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop
+		]
 	}
-	return new Promise((resolve, reject) => {
-		let ps
-		if (gdc_query) {
-			ps = spawn(samtools, ['view', path.join(serverconfig.cachedir, req.query.file)])
-		} else {
-			ps = spawn(
-				samtools,
-				[
-					'view',
-					_file,
-					(req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop
-				],
-				{ cwd: dir }
-			)
-		}
-		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
+
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args,
+		dir,
+		callback: (line, ps) => {
 			if (line.split('\t')[0] != req.query.qname) return
 			const s = parse_one_segment({ sam_info: line, r, keepallboxes: true, keepmatepos: true, keepunmappedread: true })
 			if (!s) return
@@ -2551,32 +2553,32 @@ async function query_oneread(req, r) {
 				// In case first read is mapped and second unmapped
 				if (s.islast) {
 					ps.kill()
-					resolve([s])
+					lst = [s]
 					return
 				}
 			} else if (req.query.show_unmapped && req.query.getlast) {
 				// In case first read is mapped and second unmapped
 				if (s.isfirst) {
 					ps.kill()
-					resolve([s])
+					lst = [s]
 					return
 				}
 			} else if (req.query.getfirst) {
 				if (s.isfirst) {
 					ps.kill()
-					resolve([s])
+					lst = [s]
 					return
 				}
 			} else if (req.query.getlast) {
 				if (s.islast) {
 					ps.kill()
-					resolve([s])
+					lst = [s]
 					return
 				}
 			} else if (req.query.unknownorder) {
 				if (s.segstart == readstart && s.segstop == readstop) {
 					ps.kill()
-					resolve([s])
+					lst = [s]
 					return
 				}
 			} else {
@@ -2585,21 +2587,20 @@ async function query_oneread(req, r) {
 				else if (s.islast) lastseg = s
 				if (firstseg && lastseg) {
 					ps.kill()
-					resolve([firstseg, lastseg])
+					lst = [firstseg, lastseg]
 					return
 				}
 			}
-		})
-		rl.on('close', () => {
-			// finished reading and still not resolved
-			// means it is in paired mode but read is single
-
-			const lst = []
-			if (firstseg) lst.push(firstseg)
-			if (lastseg) lst.push(lastseg)
-			resolve(lst.length ? lst : null)
-		})
+		}
 	})
+	if (lst) {
+		// result is ready
+		return lst
+	}
+	lst = []
+	if (firstseg) lst.push(firstseg)
+	if (lastseg) lst.push(lastseg)
+	return lst.length ? lst : null
 }
 
 async function convertunmappedread2html(seg, genome, query) {

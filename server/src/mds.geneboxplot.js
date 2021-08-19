@@ -95,13 +95,13 @@ async function do_query(gn, ds, dsquery, svcnv, req) {
 	// collect data from .getgroup
 	const getgroupdata = []
 
-	await utils.get_lines_tabix(
-		[
+	await utils.get_lines_bigfile({
+		args: [
 			dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
 			req.query.chr + ':' + req.query.start + '-' + req.query.stop
 		],
-		dsquery.dir,
-		line => {
+		dir: dsquery.dir,
+		callback: line => {
 			const l = line.split('\t')
 			const j = JSON.parse(l[3])
 			if (!j.gene) return
@@ -249,7 +249,7 @@ async function do_query(gn, ds, dsquery, svcnv, req) {
 				})
 			}
 		}
-	)
+	})
 
 	if (req.query.getgroup2boxplot) {
 		getgroupdata.sort((i, j) => i.value - j.value)
@@ -430,13 +430,13 @@ async function may_get_sample2event(req, svcnv) {
 	// TODO cnv flanking
 
 	const sample2event = new Map()
-	await utils.get_lines_tabix(
-		[
+	await utils.get_lines_bigfile({
+		args: [
 			svcnv.dsquery.file ? path.join(serverconfig.tpmasterdir, svcnv.dsquery.file) : svcnv.dsquery.url,
 			req.query.chr + ':' + start + '-' + stop
 		],
-		svcnv.dsquery.dir,
-		line => {
+		dir: svcnv.dsquery.dir,
+		callback: line => {
 			const l = line.split('\t')
 			const j = JSON.parse(l[3])
 			if (!j.sample) return
@@ -476,7 +476,7 @@ async function may_get_sample2event(req, svcnv) {
 				}
 			}
 		}
-	)
+	})
 	return sample2event
 }
 

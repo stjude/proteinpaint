@@ -21,12 +21,12 @@ file_is_readable
 init_one_vcf
 validate_tabixfile
 tabix_is_nochr
-get_lines_tabix
 write_file
 write_tmpfile
 read_file
 file_not_exist
 file_not_readable
+get_lines_bigfile
 get_header_tabix
 get_header_vcf
 get_header_bcf
@@ -35,7 +35,6 @@ connect_db
 loadfile_ssid
 lines2R
 bam_ifnochr
-get_lines_bamdepth
 ********************** INTERNAL
 */
 
@@ -207,8 +206,12 @@ exports.validate_tabixfile = async function(file) {
 exports.tabix_is_nochr = async function(file, dir, genome) {
 	// also works for bcf file!
 	const lines = []
-	await exports.get_lines_tabix([file, '-l'], dir, line => {
-		lines.push(line)
+	await exports.get_lines_bigfile({
+		args: ['-l', file],
+		dir,
+		callback: line => {
+			lines.push(line)
+		}
 	})
 	return common.contigNameNoChr(genome, lines)
 }
@@ -236,8 +239,12 @@ exports.file_not_exist = file_not_exist
 exports.get_header_tabix = async (file, dir) => {
 	// file is full path file or url
 	const lines = []
-	await exports.get_lines_tabix([file, '-H'], dir, line => {
-		lines.push(line)
+	await exports.get_lines_bigfile({
+		args: ['-H', file],
+		dir,
+		callback: line => {
+			lines.push(line)
+		}
 	})
 	return lines
 }
@@ -263,12 +270,41 @@ exports.get_header_vcf = async (file, dir) => {
 	return vcf.vcfparsemeta(await exports.get_header_tabix(file, dir))
 }
 
-exports.get_lines_tabix = function(args, dir, callback, isbcf) {
+/*
+.isbcf: true
+	big file is bcf file and will use the "bcftools" command
+.isbam: true
+	big file is bam and will use "samtools" command
+
+** if neither isbcf or isbam is true, the file should be bgzip/tabix file and will use "tabix"
+** "tabix -l" can also work on bcf files
+
+.args: []
+	argument array for spawn, includes file path or url, and coordinate position
+	supports arbitrary use of tabix/bcftools/samtools command
+	e.g.
+	- tabix -l (list chrs for tabix/bcf files)
+	- samtools density
+	- samtools view -c (counts only)
+	- samtools index
+
+.dir: cache dir for custom file, undefined for native file
+
+.callback(line, ps)
+	function to process the line
+	ps as the second arg so callback may choose to kill the process e.g. too many lines returned
+*/
+exports.get_lines_bigfile = function({ args, dir, callback, isbcf, isbam }) {
+	if (!args) throw 'args is missing'
+	if (!Array.isArray(args)) throw 'args[] is not array'
+	if (args.length == 0) throw 'args[] empty array'
+	if (!callback) throw 'callback is missing'
+	if (typeof callback != 'function') throw 'callback() not a function'
 	return new Promise((resolve, reject) => {
-		const ps = spawn(isbcf ? bcftools : tabix, args, { cwd: dir })
+		const ps = spawn(isbcf ? bcftools : isbam ? samtools : tabix, args, { cwd: dir })
 		const rl = readline.createInterface({ input: ps.stdout })
 		const em = []
-		rl.on('line', line => callback(line))
+		rl.on('line', line => callback(line, ps))
 		ps.stderr.on('data', d => em.push(d))
 		ps.on('close', () => {
 			const e = em.join('').trim()
@@ -306,16 +342,15 @@ function read_file(file) {
 }
 exports.read_file = read_file
 
-exports.get_fasta = function(gn, pos) {
+exports.get_fasta = async (gn, pos) => {
 	// chr:start-stop, positions are 1-based
-	return new Promise((resolve, reject) => {
-		const ps = spawn(samtools, ['faidx', gn.genomefile, pos])
-		const out = []
-		ps.stdout.on('data', i => out.push(i))
-		ps.on('close', code => {
-			resolve(out.join(''))
-		})
+	const lines = []
+	await exports.get_lines_bigfile({
+		isbam: true, // so that samtools will be used for querying
+		args: ['faidx', gn.genomefile, pos],
+		callback: line => lines.push(line)
 	})
+	return lines.join('\n')
 }
 
 exports.connect_db = function(file, isfullpath) {
@@ -448,40 +483,24 @@ exports.stripJsScript = function stripJsScript(text) {
 	*/
 }
 
-exports.bam_ifnochr = (file, genome, dir) => {
-	return new Promise((resolve, reject) => {
-		const sp = spawn(samtools, ['view', '-H', file], { cwd: dir })
-		const out = [],
-			out2 = []
-		sp.stdout.on('data', i => out.push(i))
-		sp.stderr.on('data', i => out2.push(i))
-		sp.on('close', () => {
-			const err = out2.join('')
-			if (err) reject(err)
-			const str = out.join('').trim()
-			if (!str) reject('cannot list bam header lines')
-			const chrlst = []
-			for (const line of str.split('\n')) {
-				if (!line.startsWith('@SQ')) continue
-				const tmp = line.split('\t')[1]
-				if (!tmp) reject('2nd field missing from @SQ line')
-				const l = tmp.split(':')
-				if (l[0] != 'SN') reject('@SQ line 2nd field is not "SN" but ' + l[0])
-				if (!l[1]) reject('@SQ line no value for SN')
-				chrlst.push(l[1])
-			}
-			resolve(common.contigNameNoChr(genome, chrlst))
-		})
+exports.bam_ifnochr = async (file, genome, dir) => {
+	const lines = []
+	await exports.get_lines_bigfile({
+		isbam: true,
+		args: ['view', '-H', file],
+		dir,
+		callback: line => lines.push(line)
 	})
-}
-
-exports.get_lines_bamdepth = (file, dir, coord, callback) => {
-	return new Promise((resolve, reject) => {
-		const ps = spawn(samtools, ['depth', '-r', coord, '-g', 'DUP', file], { cwd: dir })
-		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', callback)
-		rl.on('close', () => {
-			resolve()
-		})
-	})
+	if (lines.length == 0) throw 'cannot list bam header lines'
+	const chrlst = []
+	for (const line of lines) {
+		if (!line.startsWith('@SQ')) continue
+		const tmp = line.split('\t')[1]
+		if (!tmp) reject('2nd field missing from @SQ line')
+		const l = tmp.split(':')
+		if (l[0] != 'SN') reject('@SQ line 2nd field is not "SN" but ' + l[0])
+		if (!l[1]) reject('@SQ line no value for SN')
+		chrlst.push(l[1])
+	}
+	return common.contigNameNoChr(genome, chrlst)
 }

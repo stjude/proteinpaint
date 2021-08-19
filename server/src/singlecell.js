@@ -148,18 +148,21 @@ may attach coloring scheme to result{} for returning to client
 		result.numbercellwithgeneexp = 0
 		result.numbercelltotal = 0
 
-		await utils.get_lines_tabix([ge.file, coord], null, line => {
-			const j = JSON.parse(line.split('\t')[3])
-			if (j.gene != ge.genename) return
-			if (!Number.isFinite(j.value)) return
-			result.numbercellwithgeneexp++
+		await utils.get_lines_bigfile({
+			args: [ge.file, coord],
+			callback: line => {
+				const j = JSON.parse(line.split('\t')[3])
+				if (j.gene != ge.genename) return
+				if (!Number.isFinite(j.value)) return
+				result.numbercellwithgeneexp++
 
-			if (ge.autoscale) {
-				minexpvalue = Math.min(minexpvalue, j.value)
-				maxexpvalue = Math.max(maxexpvalue, j.value)
+				if (ge.autoscale) {
+					minexpvalue = Math.min(minexpvalue, j.value)
+					maxexpvalue = Math.max(maxexpvalue, j.value)
+				}
+
+				cell2value.set(j.sample, j.value)
 			}
-
-			cell2value.set(j.sample, j.value)
 		})
 
 		// record scaling to return to client
@@ -344,18 +347,21 @@ async function get_geneboxplot(q, gn, res) {
 	let minexpvalue = 0,
 		maxexpvalue = 0
 
-	await utils.get_lines_tabix([ge.expfile, coord], null, line => {
-		const j = JSON.parse(line.split('\t')[3])
-		if (j.gene != ge.genename) return
-		if (!j.sample) return
-		if (!Number.isFinite(j.value)) return
+	await utils.get_lines_bigfile({
+		args: [ge.expfile, coord],
+		callback: line => {
+			const j = JSON.parse(line.split('\t')[3])
+			if (j.gene != ge.genename) return
+			if (!j.sample) return
+			if (!Number.isFinite(j.value)) return
 
-		const c = barcode2catvalue.get(j.sample)
-		if (!c) return
-		c.expvalue = j.value
+			const c = barcode2catvalue.get(j.sample)
+			if (!c) return
+			c.expvalue = j.value
 
-		minexpvalue = Math.min(minexpvalue, j.value)
-		maxexpvalue = Math.max(maxexpvalue, j.value)
+			minexpvalue = Math.min(minexpvalue, j.value)
+			maxexpvalue = Math.max(maxexpvalue, j.value)
+		}
 	})
 
 	const category2values = new Map()
@@ -479,18 +485,21 @@ async function get_heatmap(q, gn, res) {
 
 		const genename = gene.gene
 
-		await utils.get_lines_tabix([ge.expfile, coord], null, line => {
-			const j = JSON.parse(line.split('\t')[3])
-			if (j.gene.toUpperCase() !== gene.gene.toUpperCase()) return
-			if (!j.sample) return
-			if (!Number.isFinite(j.value)) return
+		await utils.get_lines_bigfile({
+			args: [ge.expfile, coord],
+			callback: line => {
+				const j = JSON.parse(line.split('\t')[3])
+				if (j.gene.toUpperCase() !== gene.gene.toUpperCase()) return
+				if (!j.sample) return
+				if (!Number.isFinite(j.value)) return
 
-			const c = barcode2catvalue.get(j.sample)
-			if (!c) return
-			c.expvalue = j.value
+				const c = barcode2catvalue.get(j.sample)
+				if (!c) return
+				c.expvalue = j.value
 
-			minexpvalue = Math.min(minexpvalue, j.value)
-			maxexpvalue = Math.max(maxexpvalue, j.value)
+				minexpvalue = Math.min(minexpvalue, j.value)
+				maxexpvalue = Math.max(maxexpvalue, j.value)
+			}
 		})
 
 		const category2values = new Map()
