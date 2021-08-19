@@ -83,6 +83,16 @@
                                 "link": "https://docs.google.com/document/d/1TC6pcAByqugzMWQ0C7mhHIHIkIxkqqDt1ATBBt_ehes/edit"
                             }
                         ]
+                    },
+                    {
+                        "name": "Test Button",
+                        "message": "Delete me later. I'm not supposed to go on living in this world",
+                        "links": [
+                            {
+                                "name": "Testy test test",
+                                "link": "https://www.bbc.com/"
+                            }
+                        ]
                     }
                 ]
             },
@@ -149,7 +159,7 @@
                             "height": 100
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -192,7 +202,7 @@
                             "type": "bigwigstranded"
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -261,7 +271,7 @@
                             ]
                         }
                     ],
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 },
@@ -284,7 +294,7 @@
                             "stackspace": 1
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 },
@@ -298,19 +308,95 @@
                         "noheader": 1,
                         "genome": "hg19",
                         "position":"chr17:7449122-7706842",
+                        "tracks":[{
+                            "type": "bedj",
+                            "name": "Numeric value demo",
+                            "file": "proteinpaint_demo/hg19/bedj/value.gz",
+                            "usevalue":{
+                                "key": "value",
+                                "dropBelowCutoff":1000
+                            },
+                            "stackheight": 16,
+                            "stackspace": 1
+                        }]
+                    },
+                    "testSpec": {
+                        "expected": {"image": 1 }
+                    }
+                },
+                {
+                    "label": "URL Linkout",
+                    "message": "Click on a SNP item to see details on the dbSNP website.",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjLinkoutDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "position":"chr17:7579546-7579629",
                         "tracks":[
                             {
-                                "type":"bedj",
-                                "name":"Numeric value demo",
-                                "file":"proteinpaint_demo/hg19/bedj/value.gz",
-                                "usevalue":{
-                                    "key":"value",
-                                    "dropBelowCutoff":1000
-                                }
+                                "type": "bedj",
+                                "name": "URL linkout demo",
+                                "file": "proteinpaint_demo/hg19/bedj/snp.gz",
+                                "itemurl_appendname": "https://www.ncbi.nlm.nih.gov/snp/",
+                                "stackheight": 16,
+                                "stackspace": 1
                             }
                         ]
                     },
-                    "testSpec": { 
+                    "testSpec": {
+                        "expected": {"image": 1, "rect": 1}
+                    }
+                },
+                {
+                    "label": "Hide item names",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "tracks":[
+                            {
+                                "type":"bedj",
+                                "name":"Hide names demo",
+                                "file":"proteinpaint_demo/hg19/bedj/gencode.gz",
+                                "hideItemNames": true,
+                                "stackheight": 16,
+                                "stackspace": 1
+                            }
+                        ]
+                    },
+                    "testSpec": {
+                        "expected": {"image": 1 }
+                    }
+                },
+                {
+                    "label": "Show item by name",
+                    "message": "To control this feature, click CONFIG and toggle the checkbox for 'Show items by names'.",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "position":"chr8:128538507-129301994",
+                        "tracks":[
+                            {
+                                "type":"bedj",
+                                "name":"Show item names demo",
+                                "file":"proteinpaint_demo/hg19/bedj/gencode.gz",
+                                "filterByName": "ENST00000377970\nENST00000667305",
+                                "stackheight": 16,
+                                "stackspace": 1
+                            }
+                        ]
+                    },
+                    "testSpec": {
                         "expected": {"image": 1 }
                     }
                 }
@@ -357,7 +443,7 @@
                             "name": "Demo sample tumor allelic imbalance"
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -416,7 +502,7 @@
                             ]
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -459,7 +545,7 @@
                             "sample": "TCGA-GS-A9TQ"
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"rect": 5 }
                     }
                 }
@@ -541,7 +627,7 @@
                         "genome": "hg19",
                         "dataset":"Pediatric"
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"circle": 10 }
                     }
                 }
@@ -588,7 +674,7 @@
                             "list_description":[{"k":"Test 1","v":"Description 1"}, {"k":"Test 2","v":"Description 2"}]
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"circle": 15, "line": 15}
                     }
                 }
@@ -641,7 +727,7 @@
                             "file": "proteinpaint_demo/hg19/junction/json.gz"
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"circle": 15, "line": 15}
                     }
                 },
@@ -668,7 +754,7 @@
                             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/rnapeg2matrix.py.gz"
                         }
                     ],
-                    "testSpec": { 
+                    "testSpec": {
                          "expected": {"circle": 15, "line": 15}
                     }
                 }
@@ -709,7 +795,7 @@
                         "nativetracks":"refgene",
                         "tkjsonfile": "proteinpaint_demo/hg19/tklist/tracks.json"
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -857,7 +943,7 @@
                             "mode_hm": false
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -968,7 +1054,7 @@
                             }
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "timeout": 7000,
                         "expected": { "rect": 20, "line": 20 }
                     }
@@ -1022,7 +1108,7 @@
                             "name": "WES KIT exon mutation demo"
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 },
@@ -1051,7 +1137,7 @@
                             ]
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -1088,7 +1174,7 @@
                         "noheader": 1,
                         "gdcbamslice": { "uionly": true }
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 1 }
                     }
                 }
@@ -1388,7 +1474,7 @@
                             "analysisdata_file": "proteinpaint_demo/hg38/mdstsne/file.json"
                         }
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"circle": 10 }
                     }
                 }
