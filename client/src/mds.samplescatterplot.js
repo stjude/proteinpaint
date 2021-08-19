@@ -1,5 +1,5 @@
 import * as client from './client'
-import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
+import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
 import { select as d3select, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
 import { make_lasso as d3lasso } from './mds.samplescatterplot.lasso'
@@ -265,6 +265,19 @@ async function get_data(obj) {
 			ad.samples.push(sample)
 		}
 		obj.dots = ad.samples
+		// create sample_attributes if not defined
+		if (ad.sample_attributes == undefined) {
+			ad.sample_attributes = {}
+			for(const [i, key] of headers.entries()){
+				if (i <= 2) continue
+				ad.sample_attributes[key] = { label: key }
+			}
+		}
+		// For tabular data, first 3 columns should be X, Y and sample_name
+		// 4th column will be used for color dots and legend by default
+		ad.colorbyattributes = [{key: headers[3]}]
+		// assign 3rd column header as 'samplekey'
+		ad.samplekey = headers[2] 
 	} else {
 		throw 'unknown data encoding in .analysisdata{}'
 	}
@@ -394,10 +407,15 @@ function finish_setup(obj) {
 					a.values[v] = {}
 				}
 			}
-			const cf = scaleOrdinal(schemeCategory10)
+			const cf = scaleOrdinal(schemeCategory20)
 			for (const k in a.values) {
 				if (!a.values[k].color) a.values[k].color = cf(k)
 			}
+			// add color to obj.analysisdata.sample_attributes[key].values
+			// for tabular data where colors are not defined for each category
+			const ad = obj.analysisdata.sample_attributes
+			if(ad[a.key].values == undefined)
+				ad[a.key].values = a.values
 		}
 	}
 	if (obj.attr_levels) {
