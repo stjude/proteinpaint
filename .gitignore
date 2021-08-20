@@ -41,7 +41,7 @@ public/rev.txt
 /utils/findspliceevent/bin2.js
 /utils/findspliceevent/bin.js
 /utils/countbamallele.phased/bin*
-/utils/prs/bin.js
+/utils/prs/*.bundle.js*
 
 server/utils/rust_indel_cargo/target/*
 server/utils/rust_indel_cargo/*.lock
