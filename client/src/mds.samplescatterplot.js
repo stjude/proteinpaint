@@ -1,5 +1,5 @@
 import * as client from './client'
-import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
+import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
 import { select as d3select, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
 import { make_lasso as d3lasso } from './mds.samplescatterplot.lasso'
@@ -22,6 +22,7 @@ obj:
 		.x/y/sample_name
 	.colorby
 	.key2color{}
+	.tabular_data
 
 // available for official datasets
 .mds{}
@@ -243,11 +244,19 @@ async function get_data(obj) {
 		obj.dots = ad.samples
 	} else if (ad.tabular_data) {
 		// load from tabular data
+		// tabular data foramting instructions:
+		// - tabular_data must have at least 3 columns, representing X, Y and sample_name
+		// - headers for X and Y are case insensitive. (e.g. 'x' or 'X')
+		// - header for 3rd column can be anything, it will be used as sample_name by default
+		// - Metadata can be added as columns to tabular_data
+		// - if tabular_data has metadata, 4th column is used to create legend and for coloring dots
 		let lines = ad.tabular_data.split('\n')
 		if (lines.length < 2) throw 'at least 2 rows, header row + at least 1 sample data must be supplied'
 		ad.samples = []
 		const headers = lines.shift().split('\t')
 		if (headers.length < 3) throw 'at least 3 columns are required with X, Y and sample name'
+		// assign 3rd column header as 'samplekey'
+		ad.samplekey = headers[2]
 		let xi = headers.indexOf('x')
 		if (xi == -1) xi = headers.indexOf('X')
 		if (xi == -1) throw '"X" or "x" column missing from tabular data'
@@ -265,6 +274,17 @@ async function get_data(obj) {
 			ad.samples.push(sample)
 		}
 		obj.dots = ad.samples
+		// create sample_attributes if not defined
+		if (ad.sample_attributes == undefined) {
+			ad.sample_attributes = {}
+			for (const [i, key] of headers.entries()) {
+				if (i <= 2) continue
+				ad.sample_attributes[key] = { label: key }
+			}
+		}
+		// For tabular data, first 3 columns should be X, Y and sample_name
+		// 4th column will be used for color dots and legend by default
+		if (!ad.colorbyattributes && headers.length > 3) ad.colorbyattributes = [{ key: headers[3] }]
 	} else {
 		throw 'unknown data encoding in .analysisdata{}'
 	}
@@ -394,10 +414,14 @@ function finish_setup(obj) {
 					a.values[v] = {}
 				}
 			}
-			const cf = scaleOrdinal(schemeCategory10)
+			const cf = scaleOrdinal(schemeCategory20)
 			for (const k in a.values) {
 				if (!a.values[k].color) a.values[k].color = cf(k)
 			}
+			// add color to obj.analysisdata.sample_attributes[key].values
+			// for tabular data where colors are not defined for each category
+			const ad = obj.analysisdata.sample_attributes
+			if (ad[a.key].values == undefined) ad[a.key].values = a.values
 		}
 	}
 	if (obj.attr_levels) {
@@ -416,7 +440,7 @@ function finish_setup(obj) {
 					if (v == undefined || v == null || register.values[v]) continue
 					register.values[v] = {}
 				}
-				const cf = scaleOrdinal(schemeCategory10)
+				const cf = scaleOrdinal(schemeCategory20)
 				for (const k in register.values) {
 					if (!register.values[k].color) register.values[k].color = cf(k)
 				}
