@@ -419,26 +419,13 @@ don't know a js method to alter the list of attributes in `case { }` part
 const variant2samples = {
 	endpoint: GDC_HOST + '/ssm_occurrences',
 	size: 100000,
-	fields_sunburst: ['case.project.project_id', 'case.case_id', 'case.disease_type'],
-	fields_summary: [
-		'case.project.project_id',
-		'case.case_id',
-		'case.disease_type',
-		'case.primary_site',
-		'case.demographic.gender',
-		'case.demographic.year_of_birth',
-		'case.demographic.race',
-		'case.demographic.ethnicity'
-	],
+	// Note: case.case_id seems extra field just for sunburst,
+	// but it's fail-safe in case both 'disease_type' and 'primary_site' are missing from that case
+	fields_sunburst: ['disease_type', 'primary_site', 'case_id'],
+	// Note: observation node and children terms are removed from gdc dictionary,
+	// so have to use entire path
 	fields_samples: [
-		'case.project.project_id',
 		'case.case_id',
-		'case.disease_type',
-		'case.primary_site',
-		'case.demographic.gender',
-		'case.demographic.year_of_birth',
-		'case.demographic.race',
-		'case.demographic.ethnicity',
 		'case.observation.read_depth.t_alt_count',
 		'case.observation.read_depth.t_depth',
 		'case.observation.read_depth.n_depth',
@@ -471,18 +458,15 @@ const variant2samples = {
 		if (p.filter0) {
 			f.content.push(p.filter0)
 		}
-		if (p.tid2value) {
-			for (const tid in p.tid2value) {
-				let t = terms.find(i => i.id == tid)
-				// Quick Fix: tid2value from sample table has term.name rather than term.id
-				if (!t) t = terms.find(i => i.name == tid)
+		if (p.termlst) {
+			for (const t of p.termlst) {
 				if (t && t.type == 'categorical') {
 					f.content.push({
 						op: 'in',
-						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[t.id]] }
 					})
 				} else if (t && t.type == 'integer') {
-					for (const val of p.tid2value[tid]) {
+					for (const val of p.tid2value[t.id]) {
 						f.content.push({
 							op: val.op,
 							content: { field: 'cases.' + t.fields.join('.'), value: val.range }
@@ -491,6 +475,29 @@ const variant2samples = {
 				}
 			}
 		}
+		// Note: all logic for tid2value has been converted termlst, because newly added terms are
+		// not part of terms[], so new term must be added from q.
+		// TODO: remove following commented part after reviewing
+		// else if (p.tid2value) {
+		// 	for (const tid in p.tid2value) {
+		// 		let t = terms.find(i => i.id == tid)
+		// 		// Quick Fix: tid2value from sample table has term.name rather than term.id
+		// 		if (!t) t = terms.find(i => i.name == tid)
+		// 		if (t && t.type == 'categorical') {
+		// 			f.content.push({
+		// 				op: 'in',
+		// 				content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+		// 			})
+		// 		} else if (t && t.type == 'integer') {
+		// 			for (const val of p.tid2value[tid]) {
+		// 				f.content.push({
+		// 					op: val.op,
+		// 					content: { field: 'cases.' + t.fields.join('.'), value: val.range }
+		// 				})
+		// 			}
+		// 		}
+		// 	}
+		// }
 		return f
 	}
 }
@@ -498,7 +505,6 @@ const variant2samples = {
 const ssm_occurrences_dictionary = {
 	endpoint: GDC_HOST + '/ssm_occurrences/_mapping',
 	mapping_prefix: 'ssm_occurrence_centrics',
-	prune_terms: ['ssm_occurrence_autocomplete', 'ssm_occurrence_id', 'ssm'],
 	duplicate_term_skip: ['case.project.disease_type', 'case.project.primary_site']
 }
 
@@ -597,6 +603,64 @@ const site_size = {
 }`,
 	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'primary_site', 'buckets'],
 	filters: totalsize_filters
+}
+
+function termid2size_query(termlst) {
+	let query_str = ''
+	for (const term of termlst) {
+		const key = term.path
+		if (term.type)
+			query_str = query_str.length
+				? `${query_str} ${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
+				: `${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
+	}
+
+	// for all terms from termidlst will be added to single query
+	const query = `query termislst2total( $filters: FiltersArgument) {
+		explore {
+			cases {
+				aggregations (filters: $filters, aggregations_filter_themselves: true) {
+					${query_str}
+				}
+			}
+		}
+	}`
+	return query
+}
+
+function termid2size_filters(p) {
+	const f = {
+		filters: {
+			op: 'and',
+			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+		}
+	}
+
+	if (p && p.tid2value) {
+		for (const tid in p.tid2value) {
+			const t = terms.find(i => i.id == tid)
+			if (t) {
+				f.filters.content.push({
+					op: 'in',
+					content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+				})
+			}
+		}
+	}
+
+	if (p && p.ssm_id_lst) {
+		f.filters.content.push({
+			op: '=',
+			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
+		})
+	}
+	return f
+}
+
+const termidlst2size = {
+	query: termid2size_query,
+	keys: ['data', 'explore', 'cases', 'aggregations'],
+	filters: termid2size_filters
 }
 
 const query_genecnv = `query CancerDistributionBarChart_relayQuery(
@@ -932,11 +996,12 @@ const terms = [
 		fields: ['demographic', 'gender']
 	},
 	{
-		name: 'Birth year',
-		id: 'year_of_birth',
+		name: 'Age at diagnosis',
+		id: 'age_at_diagnosis',
 		type: 'integer',
-		fields: ['demographic', 'year_of_birth'],
-		unit: 'year'
+		fields: ['diagnoses', 'age_at_diagnosis'],
+		unit_conversion: 0.002739,
+		unit: 'years'
 	},
 	{
 		name: 'Race',
@@ -1035,6 +1100,9 @@ module.exports = {
 			disease_type: { gdcapi: disease_size },
 			primary_site: { gdcapi: site_size }
 		},
+		termid2totalsize2: {
+			gdcapi: termidlst2size
+		},
 		dictionary: {
 			gdcapi: ssm_occurrences_dictionary
 		}
@@ -1048,8 +1116,8 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 		// list of terms to show as items in detailed info page
-		termidlst: ['project_id', 'disease_type', 'primary_site', 'gender', 'year_of_birth', 'race', 'ethnicity'],
-		sunburst_ids: ['project_id', 'disease_type'], // term id
+		termidlst: ['disease_type', 'primary_site', 'project_id', 'gender', 'age_at_diagnosis', 'race', 'ethnicity'],
+		sunburst_ids: ['disease_type', 'primary_site'], // term id
 
 		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
 		//sample_id_key: 'case_id',

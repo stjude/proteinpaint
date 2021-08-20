@@ -12,7 +12,7 @@ overlay
 ********************** INTERNAL
 */
 
-exports.load_tk = async function(_tk, q, genome, ds, result) {
+export async function load_tk(_tk, q, genome, ds, result) {
 	/*
 _tk:{}
 	.name
@@ -50,20 +50,24 @@ result:{}
 
 		// query for this variant
 		const coord = (tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-		await utils.get_lines_tabix([tk.file, coord], tk.dir, line => {
-			const l = line.split('\t')
-			const start = Number.parseInt(l[1])
-			if (start < r.start) return
-			const stop = Number.parseInt(l[2])
-			if (stop > r.stop) return
-			if (result.__mposset) {
-				if (!result.__mposset.has(start)) return
-				if (!result.__mposset.has(stop)) return
+		await utils.get_lines_bigfile({
+			args: [tk.file, coord],
+			dir: tk.dir,
+			callback: line => {
+				const l = line.split('\t')
+				const start = Number.parseInt(l[1])
+				if (start < r.start) return
+				const stop = Number.parseInt(l[2])
+				if (stop > r.stop) return
+				if (result.__mposset) {
+					if (!result.__mposset.has(start)) return
+					if (!result.__mposset.has(stop)) return
+				}
+				const r2 = Number.parseFloat(l[5])
+				pairs.push({ start, stop, r2 })
+				coordset.add(start)
+				coordset.add(stop)
 			}
-			const r2 = Number.parseFloat(l[5])
-			pairs.push({ start, stop, r2 })
-			coordset.add(start)
-			coordset.add(stop)
 		})
 
 		r2.img = plot_img(r, pairs, coordset, connheight)
@@ -154,7 +158,7 @@ limit bin size so as not to show a huge blood diamond filling screen when there'
 	return [binsize, coord2x2]
 }
 
-exports.overlay = async function(q, ds, res) {
+export async function overlay(q, ds, res) {
 	if (!q.ldtkname) throw '.ldtkname missing'
 	const tk = ds.track.ld.tracks.find(i => i.name == q.ldtkname)
 	if (!tk) throw 'ld tk not found by name: ' + q.ldtkname
@@ -162,25 +166,29 @@ exports.overlay = async function(q, ds, res) {
 	const thisalleles = q.m.ref + '.' + q.m.alt
 	const coord = (tk.nochr ? q.m.chr.replace('chr', '') : q.m.chr) + ':' + q.m.pos + '-' + (q.m.pos + 1)
 	const lst = []
-	await utils.get_lines_tabix([tk.file, coord], tk.dir, line => {
-		const l = line.split('\t')
-		const start = Number.parseInt(l[1])
-		const stop = Number.parseInt(l[2])
-		const alleles1 = l[3]
-		const alleles2 = l[4]
-		const r2 = Number.parseFloat(l[5])
-		if (start == q.m.pos && alleles1 == thisalleles) {
-			lst.push({
-				pos: stop,
-				alleles: alleles2,
-				r2
-			})
-		} else if (stop == q.m.pos && alleles2 == thisalleles) {
-			lst.push({
-				pos: start,
-				alleles: alleles1,
-				r2
-			})
+	await utils.get_lines_bigfile({
+		args: [tk.file, coord],
+		dir: tk.dir,
+		callback: line => {
+			const l = line.split('\t')
+			const start = Number.parseInt(l[1])
+			const stop = Number.parseInt(l[2])
+			const alleles1 = l[3]
+			const alleles2 = l[4]
+			const r2 = Number.parseFloat(l[5])
+			if (start == q.m.pos && alleles1 == thisalleles) {
+				lst.push({
+					pos: stop,
+					alleles: alleles2,
+					r2
+				})
+			} else if (stop == q.m.pos && alleles2 == thisalleles) {
+				lst.push({
+					pos: start,
+					alleles: alleles1,
+					r2
+				})
+			}
 		}
 	})
 

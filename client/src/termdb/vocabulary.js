@@ -73,6 +73,9 @@ class TermdbVocab {
 						.join(',')
 			)
 		}
+		if (this.state.treeFilter) {
+			lst.push('treeFilter=' + encodeURIComponent(JSON.stringify(this.state.treeFilter)))
+		}
 		const data = await dofetch3('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
@@ -103,6 +106,9 @@ class TermdbVocab {
 		]
 		if (exclude_types.length) {
 			lst.push('exclude_types=' + encodeURIComponent(JSON.stringify(exclude_types)))
+		}
+		if (this.state.treeFilter) {
+			lst.push('treeFilter=' + encodeURIComponent(JSON.stringify(this.state.treeFilter)))
 		}
 		const data = await dofetch3('termdb?' + lst.join('&'))
 		if (data.error) throw data.error
@@ -252,6 +258,7 @@ class FrontendVocab {
 			.slice()
 			.sort()
 			.join(',')
+		// TODO: handle treeFilter
 		const parent_id = term.__tree_isroot ? null : term.id
 		return {
 			lst: this.vocab.terms.filter(

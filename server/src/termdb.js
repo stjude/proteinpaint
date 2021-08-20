@@ -38,9 +38,9 @@ export function handle_request_closure(genomes) {
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
 			if (q.getcategories) return trigger_getcategories(q, res, tdb, ds)
 			if (q.getnumericcategories) return trigger_getnumericcategories(q, res, tdb, ds)
-			if (q.default_rootterm) return trigger_rootterm(q, res, tdb)
-			if (q.get_children) return trigger_children(q, res, tdb)
-			if (q.findterm) return trigger_findterm(q, res, tdb)
+			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
+			if (q.get_children) return await trigger_children(q, res, tdb)
+			if (q.findterm) return await trigger_findterm(q, res, tdb)
 			if (q.scatter) return trigger_scatter(q, res, tdb, ds)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
 			if (q.phewas) {
@@ -102,18 +102,21 @@ function trigger_getsamplecount(q, res, ds) {
 	res.send(termdbsql.get_samplecount(q, ds))
 }
 
-function trigger_rootterm(q, res, tdb) {
+async function trigger_rootterm(q, res, tdb) {
 	const cohortValues = q.cohortValues ? q.cohortValues : ''
-	res.send({ lst: tdb.q.getRootTerms(cohortValues) })
+	const treeFilter = q.treeFilter ? q.treeFilter : ''
+	res.send({ lst: await tdb.q.getRootTerms(cohortValues, treeFilter) })
 }
 
-function trigger_children(q, res, tdb) {
+async function trigger_children(q, res, tdb) {
 	/* get children terms
 may apply ssid: a premade sample set
 */
 	if (!q.tid) throw 'no parent term id'
 	const cohortValues = q.cohortValues ? q.cohortValues : ''
-	res.send({ lst: tdb.q.getTermChildren(q.tid, cohortValues).map(copy_term) })
+	const treeFilter = q.treeFilter ? q.treeFilter : ''
+	const terms = await tdb.q.getTermChildren(q.tid, cohortValues, treeFilter)
+	res.send({ lst: terms.map(copy_term) })
 }
 
 export function copy_term(t) {
@@ -129,14 +132,15 @@ do not directly hand over the term object to client; many attr to be kept on ser
 	return t2
 }
 
-function trigger_findterm(q, res, termdb) {
+async function trigger_findterm(q, res, termdb) {
 	// TODO also search categories
 	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
 	if (q.exclude_types) {
 		const exclude_types = JSON.parse(decodeURIComponent(q.exclude_types))
 		q.exclude_types = exclude_types.map(t => t.toLowerCase())
 	}
-	const terms = termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.exclude_types).map(copy_term)
+	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.exclude_types, q.treeFilter)
+	const terms = terms_.map(copy_term)
 	const id2ancestors = {}
 	terms.forEach(term => {
 		term.__ancestors = termdb.q.getAncestorIDs(term.id)

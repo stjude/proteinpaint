@@ -11,6 +11,16 @@ to tell backend to provide color scale
 
 tk can predefine if bam file has chr or not
 
+******* rows ********
+
+see makeTk for order of rows; following boolean flags indicate visibility of rows
+tk.pileup_shown
+tk.toomanyreads
+tk.gdc{} // if defined. delete later!
+tk.dom.variantg // if defined.
+
+******* attributes ********
+
 tk.downloadgdc // Downloads bam file from gdc
 tk.gdc // Renders gdc bam file
 tk.variants[ {} ]
@@ -18,11 +28,11 @@ tk.variants[ {} ]
 tk.pileupheight
 tk.pileupbottompad
 
+
 tk.dom{}
 .pileup_axis // left side
 .pileup_g // contains image
 .pileup_img
-.pileup_shown // if pileup is shown or not; to tell setTkHeight() whether height will be included
 .vsliderg
 
 tk.groups[]
@@ -43,6 +53,12 @@ tk.groups[]
 	.box_stay
 	.vslider{}
 		.g
+		.bar <rect> // gray rail
+		.boxg <g> // green slider
+		.box <rect>
+		.boxbotline
+		.boxtopline
+		.boxh
 		.boxy
 	.variantg <g>
 	.variantrowheight
@@ -68,6 +84,10 @@ getReadInfo
 
 const labyspace = 5
 const stackpagesize = 60
+const slider_rail_color = '#eee'
+const slider_color = '#c7edc5'
+const slider_color_dark = '#9ed19b'
+const slider_color_dark_line = '#36a32f'
 
 export async function loadTk(tk, block) {
 	block.tkcloakon(tk)
@@ -193,7 +213,6 @@ async function getData(tk, block, additional = []) {
 			orig_regions.push(r)
 		}
 		tk.orig_regions = orig_regions
-		tk.dom.gdc = tk.glider.append('g')
 	}
 
 	//delete orig_regions
@@ -217,11 +236,12 @@ or update existing groups, in which groupidx will be provided
 2. update indel match parameter
 3. change/cancel variant
 */
-	tk.nochr = data.nochr
+
+	if ('nochr' in data) tk.nochr = data.nochr // only set to tk when nochr is returned from server
 
 	if (data.pileup_data) {
 		// update the pileup image
-		tk.dom.pileup_shown = true
+		tk.pileup_shown = true
 		tk.dom.pileup_img
 			.attr('xlink:href', data.pileup_data.src)
 			.attr('width', data.pileup_data.width)
@@ -242,24 +262,25 @@ or update existing groups, in which groupidx will be provided
 		})
 	} else {
 		// pileup not returned when there's no visible reads (other cases?)
-		tk.dom.pileup_shown = false
+		tk.pileup_shown = false
 		tk.dom.pileup_axis.selectAll('*').remove()
 		tk.dom.pileup_img.attr('width', 0)
 	}
 
 	if (data.count.read_limit) {
-		// When view range contains reads in excess of the number of reads limit
-		tk.dom.read_limit_text
-			.attr('x', data.pileup_data.width / 2)
-			.attr('y', (tk.dom.pileup_shown ? tk.pileupheight + tk.pileupbottompad : 0) + tk.dom.read_limit_height)
-			.attr('transform', 'scale(1)')
+		// too many reads
+		tk.toomanyreads = true
+		tk.dom.read_limit_text.attr('x', data.pileup_data.width / 2).attr('transform', 'scale(1)')
 	} else {
+		tk.toomanyreads = false
 		tk.dom.read_limit_text.attr('transform', 'scale(0)')
 	}
 
-	if (tk.gdc) {
-		may_render_gdc(data, tk, block)
-	}
+	//if (tk.gdc) {
+	//	// XXX delete later
+	//	may_render_gdc(data, tk, block)
+	//}
+
 	may_render_variant(data, tk, block)
 
 	if (!tk.groups) {
@@ -271,7 +292,7 @@ or update existing groups, in which groupidx will be provided
 		updateExistingGroups(data, tk, block)
 	}
 
-	setTkHeight(tk, data)
+	setTkHeight(tk)
 
 	let countr = 0, // #read
 		countt = 0 // #templates
@@ -294,7 +315,7 @@ function may_render_gdc(data, tk, block) {
 	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
 	// in tk.dom.gdc, indicate location and status of the variant
 	// TODO show variant info alongside box, when box is wide enough, show
-	tk.dom.gdc.selectAll('*').remove()
+	tk.dom.gdc_g.selectAll('*').remove()
 	let x1, x2 // on screen pixel start/stop of the variant box
 	{
 		// Currently this supports only single-region. In the future, multiregion support will be added.
@@ -316,34 +337,30 @@ function may_render_gdc(data, tk, block) {
 		return
 	}
 
-	let yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
-	if (data.count.read_limit) yoff += tk.dom.read_limit_height + tk.dom.read_limit_bottompad
 	// will render gdc region box in a row
-	tk.dom.gdc
-		.append('rect')
-		.attr('x', x1)
-		.attr('y', yoff)
-		.attr('width', x2 - x1)
-		.attr('height', tk.dom.gdcrowheight - 2)
-
-	const gdc_string = 'Query region'
-	// Determining where to place the text. Before, inside or after the box
-	let gdc_start_text_pos = 0
-	const space_param = 10
-	const pad_param = 15
-	if (gdc_string.length * space_param < x1) {
-		gdc_start_text_pos = 0
-	} else {
-		gdc_start_text_pos = x2 + pad_param
-	}
-
-	tk.dom.gdc
-		.append('text')
-		.attr('x', gdc_start_text_pos)
-		.attr('y', yoff + tk.dom.gdcrowheight)
-		//.attr('dy', '.10em')
-		.attr('font-size', tk.dom.gdcrowheight)
-		.text(gdc_string)
+	//tk.dom.gdc_g
+	//	.append('rect')
+	//	.attr('x', x1)
+	//	.attr('width', x2 - x1)
+	//	.attr('height', tk.dom.gdcrowheight - 2)
+	//
+	//const gdc_string = 'Query region'
+	//// Determining where to place the text. Before, inside or after the box
+	//let gdc_start_text_pos = 0
+	//const space_param = 10
+	//const pad_param = 15
+	//if (gdc_string.length * space_param < x1) {
+	//	gdc_start_text_pos = 0
+	//} else {
+	//	gdc_start_text_pos = x2 + pad_param
+	//}
+	//
+	//tk.dom.gdc_g
+	//	.append('text')
+	//	.attr('x', gdc_start_text_pos)
+	//	.attr('y', tk.dom.gdcrowheight)
+	//	.attr('font-size', tk.dom.gdcrowheight)
+	//	.text(gdc_string)
 }
 
 function may_render_variant(data, tk, block) {
@@ -370,17 +387,12 @@ function may_render_variant(data, tk, block) {
 		return
 	}
 
-	let yoff = data.pileup_data ? tk.pileupheight + tk.pileupbottompad : 0 // get height of existing graph above variant row
-	if (tk.gdc) yoff += tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
-	if (data.count.read_limit) yoff += tk.dom.read_limit_height + tk.dom.read_limit_bottompad
-
 	// will render variant in a row
 	tk.dom.variantg
 		.append('rect')
 		.attr('x', x1)
-		.attr('y', yoff)
 		.attr('width', x2 - x1)
-		.attr('height', tk.dom.variantrowheight - 2)
+		.attr('height', tk.dom.variantrowheight)
 
 	const variant_string =
 		tk.variants[0].chr + '.' + (tk.variants[0].pos + 1).toString() + '.' + tk.variants[0].ref + '.' + tk.variants[0].alt
@@ -397,8 +409,7 @@ function may_render_variant(data, tk, block) {
 	tk.dom.variantg
 		.append('text')
 		.attr('x', variant_start_text_pos)
-		.attr('y', yoff + tk.dom.variantrowheight)
-		//.attr('dy', '.10em')
+		.attr('y', tk.dom.variantrowheight)
 		.attr('font-size', tk.dom.variantrowheight)
 		.text(variant_string)
 
@@ -422,9 +433,8 @@ function may_render_variant(data, tk, block) {
 		tk.dom.variantg
 			.append('text')
 			.attr('x', text_start_pos)
-			.attr('y', yoff + tk.dom.variantrowheight + tk.dom.variantrowbottompad)
+			.attr('y', tk.dom.variantrowheight)
 			.style('fill', 'red')
-			//.attr('dy', '.10em')
 			.attr('font-size', tk.dom.variantrowheight)
 			.text(text_string)
 	}
@@ -434,39 +444,41 @@ function may_render_variant(data, tk, block) {
 		tk.dom.variantg
 			.append('text')
 			.attr('x', data.pileup_data.width)
-			.attr('y', yoff - 2 * tk.dom.variantrowheight)
+			.attr('y', -tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
 			.text('Diff Score')
 
 		tk.dom.variantg
 			.append('text')
 			.attr('x', data.pileup_data.width)
-			.attr('y', yoff - tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
 			.text('Max: ' + data.max_diff_score.toFixed(2).toString())
 
 		tk.dom.variantg
 			.append('text')
 			.attr('x', data.pileup_data.width)
-			.attr('y', yoff)
+			.attr('y', tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
 			.text('Min: ' + data.min_diff_score.toFixed(2).toString())
 	}
 }
 
-function setTkHeight(tk, data) {
+function setTkHeight(tk) {
 	// FIXME TODO should set yoffset of all subtracks here (pileup, read_limit, variant, gdc, groups)
 	// call after any group is updated
 	let h = 0
-	if (tk.dom.pileup_shown) h += tk.pileupheight + tk.pileupbottompad
-	if (tk.gdc) {
-		h += tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
+	if (tk.pileup_shown) h += tk.pileupheight + tk.pileupbottompad
+	if (tk.toomanyreads) {
+		h += tk.dom.read_limit_height
+		tk.dom.read_limit_text.attr('y', h)
+		h += tk.dom.read_limit_bottompad
 	}
-	if (data && data.count && data.count.read_limit) {
-		// When view exceeds max number of reads limit
-		h += tk.dom.read_limit_height + tk.dom.read_limit_bottompad
-	}
+	//if (tk.gdc) {
+	//	tk.dom.gdc_g.attr('transform', 'translate(0,' + h + ')')
+	//	h += tk.dom.gdcrowheight + tk.dom.gdcrowbottompad
+	//}
 	if (tk.dom.variantg) {
+		tk.dom.variantg.attr('transform', 'translate(0,' + h + ')')
 		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
 	}
 	for (const g of tk.groups) {
@@ -484,7 +496,10 @@ function setTkHeight(tk, data) {
 					.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height + g.data.messagerowheights) + ')')
 				g.dom.vslider.g
 					.transition()
-					.attr('transform', 'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + h + ') scale(1)')
+					.attr(
+						'transform',
+						'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + (h + g.data.messagerowheights) + ') scale(1)'
+					)
 			} else {
 				g.dom.vslider.g.transition().attr('transform', 'translate(0,' + (h + g.data.messagerowheights) + ') scale(1)')
 			}
@@ -572,10 +587,11 @@ function makeTk(tk, block) {
 
 	tk.readpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
 	tk.readpane.pane.style('display', 'none')
-	// <g> of each group is added dynamically to glider
+
 	tk.pileupheight = 100
 	tk.pileupbottompad = 6
 
+	///////////// row #1: pileup
 	tk.dom = {
 		pileup_g: tk.glider.append('g'),
 		pileup_axis: tk.glider.append('g'),
@@ -584,6 +600,9 @@ function makeTk(tk, block) {
 		read_limit_bottompad: 6,
 		read_limit_g: tk.glider.append('g')
 	}
+	tk.dom.pileup_img = tk.dom.pileup_g.append('image') // pileup track height is defined
+
+	///////////// row #2: too many reads
 	tk.dom.read_limit_text = tk.dom.read_limit_g
 		.append('text')
 		.style('fill', 'red')
@@ -592,8 +611,7 @@ function makeTk(tk, block) {
 		.attr('transform', 'scale(0)')
 		.text('Too many reads in view range. Try zooming into a smaller region.')
 
-	tk.dom.pileup_img = tk.dom.pileup_g.append('image') // pileup track height is defined
-
+	///////////// row #3: variant
 	if (tk.variants) {
 		// assuming that variant will only be added upon track initiation
 		tk.dom.variantg = tk.glider.append('g')
@@ -602,11 +620,16 @@ function makeTk(tk, block) {
 		tk.dom.diff_score_g = tk.gright.append('g') // For storing bar plot of diff_score
 		tk.dom.diff_score_plotwidth = 50
 	}
-	if (tk.gdc) {
-		tk.dom.gdc_bar = tk.glider.append('g')
-		tk.dom.gdcrowheight = 15
-		tk.dom.gdcrowbottompad = 5
-	}
+
+	///////////// row #4: gdc region XXX delete and replace with bedj indicator track
+	//if (tk.gdc) {
+	//	tk.dom.gdc_g = tk.glider.append('g')
+	//	tk.dom.gdcrowheight = 15
+	//	tk.dom.gdcrowbottompad = 5
+	//}
+
+	///////////// row #5+: one for each group; <g> of a group is added dynamically to glider
+
 	tk.asPaired = false
 
 	let laby = block.labelfontsize + 5
@@ -802,27 +825,28 @@ function makeGroup(gd, tk, block, data) {
 
 	group.dom.vslider.bar = group.dom.vslider.g
 		.append('rect')
-		.attr('fill', '#eee')
+		.attr('fill', slider_rail_color)
 		.attr('x', 10)
 		.attr('width', 20)
 		.on('mouseover', () => group.dom.vslider.bar.attr('fill', '#fae8e8'))
-		.on('mouseout', () => group.dom.vslider.bar.attr('fill', '#eee'))
+		.on('mouseout', () => group.dom.vslider.bar.attr('fill', slider_rail_color))
 		.on('click', () => {
 			delete group.dom.vslider.boxy
 			delete group.partstack
 			group.data = group.data_fullstack
 			renderGroup(group, tk, block)
-			setTkHeight(tk, data)
+			setTkHeight(tk)
 			block.block_setheight()
 		})
 	group.dom.vslider.boxg = group.dom.vslider.g.append('g')
 	group.dom.vslider.box = group.dom.vslider.boxg
 		.append('rect')
-		.attr('fill', '#c7edc5')
+		.attr('fill', slider_color)
 		.attr('width', 40)
 		.on('mousedown', () => {
 			d3event.preventDefault()
-			group.dom.vslider.box.attr('fill', '#9ed19b')
+			group.dom.vslider.box.attr('fill', slider_color_dark)
+			const scrollableheight = group.data.height - group.data.messagerowheights
 			const y0 = d3event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
@@ -830,25 +854,25 @@ function makeGroup(gd, tk, block, data) {
 				const y1 = d3event.clientY
 				const d = y1 - y0
 				if (d < 0) {
-					if (group.dom.vslider.boxy + deltay <= 0) return
+					if (group.dom.vslider.boxy + d <= 0) return
 				} else {
-					if (group.dom.vslider.boxy + deltay >= group.data.height - group.dom.vslider.boxh) return
+					if (group.dom.vslider.boxy + d >= scrollableheight - group.dom.vslider.boxh) return
 				}
 				deltay = d
 				group.dom.vslider.boxg.attr('transform', 'translate(0,' + (group.dom.vslider.boxy + deltay) + ')')
 				group.dom.img_partstack.attr(
 					'y',
-					-((deltay * group.data_fullstack.stackcount * group.data.stackheight) / group.data.height)
+					-((deltay * group.data_fullstack.stackcount * group.data.stackheight) / scrollableheight)
 				)
 				group.dom.box_move.attr('width', 0)
 				group.dom.box_stay.attr('width', 0)
 			})
 			b.on('mouseup', async () => {
-				group.dom.vslider.box.attr('fill', '#c7edc5')
+				group.dom.vslider.box.attr('fill', slider_color)
 				b.on('mousemove', null).on('mouseup', null)
 				if (deltay == 0) return
 				group.dom.vslider.boxy += deltay
-				const delta = Math.ceil((group.data_fullstack.stackcount * deltay) / group.data.height)
+				const delta = Math.ceil((group.data_fullstack.stackcount * deltay) / scrollableheight)
 				group.partstack.start += delta
 				group.partstack.stop += delta
 				block.tkcloakon(tk)
@@ -859,7 +883,7 @@ function makeGroup(gd, tk, block, data) {
 				])
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
-				setTkHeight(tk, data)
+				setTkHeight(tk)
 				block.tkcloakoff(tk, {})
 				block.block_setheight()
 			})
@@ -867,13 +891,14 @@ function makeGroup(gd, tk, block, data) {
 
 	group.dom.vslider.boxtopline = group.dom.vslider.boxg
 		.append('line')
-		.attr('stroke', '#9ed19b')
+		.attr('stroke', slider_color_dark)
 		.attr('stroke-width', 3)
 		.attr('x2', 40)
-		.on('mouseover', () => group.dom.vslider.boxtopline.attr('stroke', '#36a32f'))
-		.on('mouseout', () => group.dom.vslider.boxtopline.attr('stroke', '#9ed19b'))
+		.on('mouseover', () => group.dom.vslider.boxtopline.attr('stroke', slider_color_dark_line))
+		.on('mouseout', () => group.dom.vslider.boxtopline.attr('stroke', slider_color_dark))
 		.on('mousedown', () => {
 			d3event.preventDefault()
+			const scrollableheight = group.data.height - group.data.messagerowheights
 			const y0 = d3event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
@@ -881,10 +906,9 @@ function makeGroup(gd, tk, block, data) {
 				const y1 = d3event.clientY
 				const d = y1 - y0
 				if (d < 0) {
-					if (group.dom.vslider.boxy + deltay <= 0) return
+					if (group.dom.vslider.boxy + d <= 0) return
 				} else {
-					if (group.dom.vslider.boxh - deltay <= (stackpagesize * group.data.height) / group.data_fullstack.stackcount)
-						return
+					if (group.dom.vslider.boxh - d <= (stackpagesize * scrollableheight) / group.data_fullstack.stackcount) return
 				}
 				deltay = d
 				group.dom.vslider.boxg.attr('transform', 'translate(0,' + (group.dom.vslider.boxy + deltay) + ')')
@@ -897,7 +921,7 @@ function makeGroup(gd, tk, block, data) {
 				b.on('mousemove', null).on('mouseup', null)
 				if (deltay == 0) return
 				group.dom.vslider.boxy += deltay
-				group.partstack.start += Math.ceil((group.data_fullstack.stackcount * deltay) / group.data.height)
+				group.partstack.start += Math.ceil((group.data_fullstack.stackcount * deltay) / scrollableheight)
 				block.tkcloakon(tk)
 				const _d = await getData(tk, block, [
 					'stackstart=' + group.partstack.start,
@@ -913,13 +937,14 @@ function makeGroup(gd, tk, block, data) {
 		})
 	group.dom.vslider.boxbotline = group.dom.vslider.boxg
 		.append('line')
-		.attr('stroke', '#9ed19b')
+		.attr('stroke', slider_color_dark)
 		.attr('stroke-width', 3)
 		.attr('x2', 40)
-		.on('mouseover', () => group.dom.vslider.boxbotline.attr('stroke', '#36a32f'))
-		.on('mouseout', () => group.dom.vslider.boxbotline.attr('stroke', '#9ed19b'))
+		.on('mouseover', () => group.dom.vslider.boxbotline.attr('stroke', slider_color_dark_line))
+		.on('mouseout', () => group.dom.vslider.boxbotline.attr('stroke', slider_color_dark))
 		.on('mousedown', () => {
 			d3event.preventDefault()
+			const scrollableheight = group.data.height - group.data.messagerowheights
 			const y0 = d3event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
@@ -927,10 +952,9 @@ function makeGroup(gd, tk, block, data) {
 				const y1 = d3event.clientY
 				const d = y1 - y0
 				if (d < 0) {
-					if (group.dom.vslider.boxh + d <= (stackpagesize * group.data.height) / group.data_fullstack.stackcount)
-						return
+					if (group.dom.vslider.boxh + d <= (stackpagesize * scrollableheight) / group.data_fullstack.stackcount) return
 				} else {
-					if (group.dom.vslider.boxy + deltay >= group.data.height - group.dom.vslider.boxh) return
+					if (group.dom.vslider.boxy + d >= scrollableheight - group.dom.vslider.boxh) return
 				}
 				deltay = d
 				group.dom.vslider.box.attr('height', group.dom.vslider.boxh + deltay)
@@ -942,7 +966,7 @@ function makeGroup(gd, tk, block, data) {
 				b.on('mousemove', null).on('mouseup', null)
 				if (deltay == 0) return
 				group.dom.vslider.boxh += deltay
-				group.partstack.stop += Math.ceil((group.data_fullstack.stackcount * deltay) / group.data.height)
+				group.partstack.stop += Math.ceil((group.data_fullstack.stackcount * deltay) / scrollableheight)
 				block.tkcloakon(tk)
 				const _d = await getData(tk, block, [
 					'stackstart=' + group.partstack.start,
@@ -1369,7 +1393,7 @@ async function enter_partstack(group, tk, block, y, data) {
 	group.data = _d.groups[0]
 	renderGroup(group, tk, block)
 
-	setTkHeight(tk, data)
+	setTkHeight(tk)
 	block.tkcloakoff(tk, {})
 	block.block_setheight()
 }

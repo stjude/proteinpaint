@@ -240,12 +240,10 @@ const ntboxwidthincrement = 0.5
 const readspace_px = 2
 const readspace_bp = 5
 
-const maxreadcount = 30000 // maximum number of reads to load
+const maxreadcount = 10000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 
 const bases = new Set(['A', 'T', 'C', 'G'])
-
-const samtools = serverconfig.samtools || 'samtools'
 
 module.exports = genomes => {
 	return async (req, res) => {
@@ -729,10 +727,9 @@ async function get_q(genome, req) {
 		q.nochr = JSON.parse(req.query.nochr) // parse "true" into json true
 	} else {
 		// info not provided
-		q.nochr = await app.bam_ifnochr(q.file, genome, q.dir)
+		q.nochr = await utils.bam_ifnochr(q.file, genome, q.dir)
 	}
 	if (!req.query.regions) throw '.regions[] missing'
-	//console.log('req.query.regions:', req.query.regions)
 	q.regions = JSON.parse(req.query.regions)
 
 	let maxntwidth = 0
@@ -929,50 +926,44 @@ async function get_gdc_bam(chr, start, stop, token, case_id, cache_dir) {
 	}
 }
 
-function index_bam(file) {
+async function index_bam(file) {
 	// only work for gdc bam slices, file is absolute path in cache dir
-	return new Promise((resolve, reject) => {
-		const ps = spawn(samtools, ['index', file])
-		ps.on('close', code => {
-			resolve()
-		})
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args: ['index', file],
+		callback: () => {}
 	})
 }
 
-function query_region(r, q) {
-	// for each region, query its data
-	// if too many reads, collapse to coverage
+/*
+for each region, query its data
+if too many reads, kill the process and insert a message
+*/
+async function query_region(r, q) {
 	r.lines = []
-	return new Promise((resolve, reject) => {
-		let ps = ''
-		//console.log(
-		//	'samtools view ' + q.file + ' ' + (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-		//)
-		if (q.gdc_case_id) {
-			ps = spawn(samtools, ['view', q.file], { cwd: q.dir })
-		} else {
-			ps = spawn(
-				samtools,
-				['view', q.file, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-				{ cwd: q.dir }
-			)
-		}
-		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
+	const args = ['view', q.file]
+	if (!q.gdc_case_id) {
+		// not a gdc slice, use region in querying
+		args.push((q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop)
+	}
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args,
+		dir: q.dir,
+		callback: (line, ps) => {
 			r.lines.push(line)
 			q._numofreads++
 			if (q._numofreads >= maxreadcount) {
 				ps.kill()
 				q.read_limit_reached = true
+				/*
 				q.messagerows.push({
 					h: 13,
-					t: 'Too many reads in view range. Try zooming into a smaller region.'
+					t: '11Too many reads in view range. Try zooming into a smaller region.'
 				})
+				*/
 			}
-		})
-		rl.on('close', () => {
-			resolve()
-		})
+		}
 	})
 }
 
@@ -983,24 +974,20 @@ when region resolution is high (>=1 pixels for each bp), bplst[] has one element
 when region resolution is low with #bp per pixel is above a cutoff e.g. 3,
 should summarize into bins, each bin for a pixel with .coverage for each pixel, with one element for each bin in bplst[]
 */
-function run_samtools_depth(q, r) {
+async function run_samtools_depth(q, r) {
 	const bplst = []
-	return new Promise((resolve, reject) => {
-		// must use r.start+1 to query bam
-		const ps = spawn(
-			samtools,
-			[
-				'depth',
-				'-r',
-				(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
-				'-g',
-				'DUP',
-				q.file || q.url
-			],
-			{ cwd: q.dir }
-		)
-		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args: [
+			'depth',
+			'-r',
+			(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
+			'-g',
+			'DUP',
+			q.file || q.url
+		],
+		dir: q.dir,
+		callback: line => {
 			const l = line.split('\t')
 			const position = Number.parseInt(l[1]) - 1 // change to 0-based
 			const depth = Number.parseInt(l[2])
@@ -1020,20 +1007,18 @@ function run_samtools_depth(q, r) {
 			}
 			bplst[bpidx].sum += depth
 			bplst[bpidx].count++
-		})
-		rl.on('close', () => {
-			if (r.ntwidth < 1) {
-				// get average for each bin
-				for (const b of bplst) {
-					if (!b) continue // could be undefined elements (gaps)
-					b.total = b.sum / b.count
-					delete b.sum
-					delete b.count
-				}
-			}
-			resolve(bplst)
-		})
+		}
 	})
+	if (r.ntwidth < 1) {
+		// get average for each bin
+		for (const b of bplst) {
+			if (!b) continue // could be undefined elements (gaps)
+			b.total = b.sum / b.count
+			delete b.sum
+			delete b.count
+		}
+	}
+	return bplst
 }
 
 async function may_checkrefseq4mismatch(templates, q) {
@@ -1482,58 +1467,217 @@ function parse_one_segment(arg) {
 		tempscore
 	}
 
-	if (flag & 0x40) {
+	parse_flag_detect_readtype(segment, rnext, pnext, r, keepmatepos, segstart_1based)
+
+	return segment
+}
+
+/*
+parse flag, detect if read is discordant read
+the current read is always mapped (0x4 is false)
+
+will set below boolean flags on segment for rendering:
+.isfirst
+.islast
+.rnext
+.pnext (when mate is on different chr)
+.discord_orientation
+
+0x2 alone is not enough to tell if the read is discordant or not
+*/
+function parse_flag_detect_readtype(segment, rnext, pnext, r, keepmatepos, segstart_1based) {
+	const f = segment.flag
+
+	if (!(f & 0x1)) {
+		// single end
+		// no need to parse any other flags?
+		return
+	}
+
+	// f & 0x4 should always be false (this read is properly mapped)
+
+	if (f & 0x40) {
 		segment.isfirst = true
-	} else if (flag & 0x80) {
+	} else if (f & 0x80) {
 		segment.islast = true
 	}
 
 	if (rnext != '=' && rnext != '*' && rnext != r.chr) {
-		// When mates are in different chromosome
+		// mate is in different chromosome
 		segment.rnext = rnext
 		segment.pnext = pnext
-	} else if (flag == 0 || flag == 16) {
-		// in some cases star-mapped bam can have this kind of nonstandard flag
-		// this is a temporary fix so that reads with 0 or 16 flag won't be labeled as discordant read (the last statement block)
-	} else if (
-		// // Mapped within insert size but incorrect orientation
-		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x40) || // 115
-		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x20 && flag & 0x80) //179
-	) {
-		segment.discord_orientation = true
-		if (keepmatepos) {
-			// for displaying mate position (on same chr) in details panel
-			segment.pnext = pnext
-		}
-	} else if (
-		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x40) || // 99
-		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x80) || // 147
-		(flag & 0x1 && flag & 0x2 && flag & 0x10 && flag & 0x40) || // 83
-		(flag & 0x1 && flag & 0x2 && flag & 0x20 && flag & 0x80) //163
-	) {
-		// Read and mate is properly paired
-	} else if (flag & 0x8) {
-		// Mate of read is unmapped
+		return
+	}
+
+	// for rest of cases, read and mate are on same chr
+	if (f & 0x8) {
+		// mate unmapped
 		segment.discord_unmapped2 = true
-	} else if (
-		(flag & 0x1 && flag & 0x2 && flag & 0x40) || // 67
-		(flag & 0x1 && flag & 0x2 && flag & 0x80) // 131
+		return
+	}
+
+	// mate is mapped for the rest cases
+	// check combination of orientation and insert size status
+
+	if (
+		(f & 0x20 && !(f & 0x10) && f & 0x40) || // F1R2
+		(f & 0x10 && !(f & 0x20) && f & 0x80) || // F1R2
+		(f & 0x10 && !(f & 0x20) && f & 0x40) || // F2R1
+		(f & 0x20 && !(f & 0x10) && f & 0x80) // F2R1
 	) {
-		// Mapped within insert size but incorrect orientation
-		segment.discord_orientation = true
-		if (keepmatepos) {
-			// for displaying mate position (on same chr) in details panel
-			segment.pnext = pnext
+		/******** correct orientation ********/
+
+		if (f & 0x2) {
+			// insert size and orientation are both correct, do not set any flags
+		} else {
+			// wrong insert size
+			segment.discord_wrong_insertsize = true
+			if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
 		}
 	} else {
-		// Discordant reads in same chr but not within the insert size
-		segment.discord_wrong_insertsize = true
+		/******** wrong orientation ********/
+		segment.discord_orientation = true
+
 		if (keepmatepos) {
-			// for displaying mate position (on same chr) in details panel
-			segment.pnext = pnext
+			// to display wrong orientation in details panel
+			if (f & 0x10) {
+				if (f & 0x20) {
+					segment.discord_orientation_direction = 'R1R2'
+				} else {
+					// copies gav's logic
+					if (pnext > segstart_1based) {
+						//read is on negative strand, mate is on positive strand, but mate position is downstream: <-- -->
+						segment.discord_orientation_direction = 'R1F2'
+					}
+				}
+			} else {
+				if (f & 0x20) {
+					// copies gav's logic
+					if (pnext < segstart_1based) {
+						//read is on positive strand, mate is on negative strand, but mate position is upstream: <-- -->
+						segment.discord_orientation_direction = 'R1F2'
+					}
+				} else {
+					segment.discord_orientation_direction = 'F1F2'
+				}
+			}
+		}
+
+		if (f & 0x2) {
+			// insert size correct
+		} else {
+			// insert size and orientation are both wrong
+			segment.discord_wrong_insertsize = true
+			if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
 		}
 	}
-	return segment
+
+	return
+	// remaining code is disabled and can be deleted once above logic is validated
+
+	if (
+		(f & 0x2 && f & 0x20 && f & 0x40) || // 99 F1R2
+		(f & 0x2 && f & 0x10 && f & 0x80) || // 147 F1R2
+		(f & 0x2 && f & 0x10 && f & 0x40) || // 83 F2R1
+		(f & 0x2 && f & 0x20 && f & 0x80) //163 F2R1
+	) {
+		// Read and mate is properly paired
+		// do not set any flags
+		return
+	}
+
+	if (!(f & 0x10) && !(f & 0x20)) {
+		//read and mate are both on positive strand: --> -->
+		segment.discord_orientation = true
+		segment.discord_orientation_direction = 'F1F2'
+		/*
+		if ((f & 0x1 && f & 0x40 && f & 0x2) || (f & 0x1 && f & 0x80 && f & 0x2)) {
+			// 67 and 131 (R1R2)
+			// XXX why this case is not discord_orientation??
+			//console.log('67,131:', f)
+		} else if ((f & 0x1 && f & 0x40) || (f & 0x1 && f & 0x80)) {
+			// (65 and 129, R1R2) but NOT (67 and 131)
+			segment.discord_wrong_insertsize = true
+		}
+		*/
+		if (!(f & 0x2)) {
+			segment.discord_wrong_insertsize = true
+		}
+		if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
+		return
+	}
+
+	if (!(f & 0x10) && f & 0x20 && pnext < segstart_1based) {
+		//read is on positive strand, mate is on negative strand, but mate position is upstream: <-- -->
+		segment.discord_orientation = true
+		segment.discord_orientation_direction = 'R1F2'
+		if ((f & 0x1 && f & 0x20 && f & 0x80) || (f & 0x1 && f & 0x10 && f & 0x40)) {
+			// 81, 161 (161 somehow gets classified in this if block but 81 does not)
+			segment.discord_wrong_insertsize = true
+			//console.log('81,161:', f)
+		}
+
+		//console.log('wrong orient2:', f)
+		if (keepmatepos) segment.pnext = pnext
+		return
+	}
+
+	if (f & 0x10 && f & 0x20) {
+		//read and mate are both on negative strand: <-- <--
+		segment.discord_orientation = true
+		segment.discord_orientation_direction = 'R1R2'
+		if (
+			(f & 0x1 && f & 0x10 && f & 0x20 && f & 0x40 && f & 0x2) ||
+			(f & 0x1 && f & 0x10 && f & 0x20 && f & 0x80 && f & 0x2)
+		) {
+			// 115 and 179
+			//console.log('115,179:', f)
+			// XXX what is this case??
+		} else if ((f & 0x1 && f & 0x10 && f & 0x20 && f & 0x40) || (f & 0x1 && f & 0x10 && f & 0x20 && f & 0x80)) {
+			// (113 and 177) but NOT (115 and 179)
+			segment.discord_wrong_insertsize = true
+			//console.log('113,177:', f)
+		}
+		//console.log('wrong orient3:', f)
+		if (keepmatepos) segment.pnext = pnext
+		return
+	}
+
+	if (f & 0x10 && !(f & 0x20) && pnext > segstart_1based) {
+		//read is on negative strand, mate is on positive strand, but mate position is downstream: <-- -->
+		segment.discord_orientation = true
+		segment.discord_orientation_direction = 'R1F2'
+		if ((f & 0x1 && f & 0x20 && f & 0x80) || (f & 0x1 && f & 0x10 && f & 0x40)) {
+			// 81, 161 (81 somehow gets classified in this if block but 161 does not)
+			segment.discord_wrong_insertsize = true
+			//console.log('81,161:', f)
+		}
+		//console.log('wrong orient4:', f)
+		if (keepmatepos) segment.pnext = pnext
+		return
+	}
+
+	////////// XXX follow code has not been unmodified. should refactor in the same style as above
+
+	if (
+		(f & 0x10 && f & 0x40 && segment.isfirst == true) || // 81 only if its the first segment of the template
+		(f & 0x20 && f & 0x80 && segment.islast == true) || // 161 only if its the last segment of the template
+		(f & 0x20 && f & 0x40) || // 97
+		(f & 0x10 && f & 0x80) // 145
+		//(f & 0x10 && f & 0x40 && segment.islast == true) || // 81 only if its the last segment of the template
+		//(f & 0x20 && f & 0x80 && segment.isfirst == true) // 161 only if its the first segment of the template
+	) {
+		// Discordant reads with wrong insert size where reads are oriented correctly
+		//console.log('flag wrong insert size:', f)
+		segment.discord_wrong_insertsize = true
+		if (keepmatepos) segment.pnext = pnext
+		return
+	}
+
+	// Discordant reads in same chr but not within the insert size
+	console.log('flag wrong insert size:', f)
+	segment.discord_wrong_insertsize = true
+	if (keepmatepos) segment.pnext = pnext
 }
 
 async function poststack_adjustq(group, q) {
@@ -2010,12 +2154,16 @@ function plot_segment(ctx, segment, y, group, q) {
 				for (let i = 0; i < b.qual.length; i++) {
 					const v = b.qual[i] / maxqual
 					ctx.fillStyle = b.opr == 'S' ? qual2softclipbg(v) : qual2mismatchbg(v)
-					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff < r.width && r.x < xoff) {
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff <= r.width && r.x < xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x < xoff) {
+						ctx.fillRect(xoff, y, r.width - xoff, group.stackheight)
+					} else if (xoff + r.ntwidth + ntboxwidthincrement > r.x && xoff <= r.x) {
+						ctx.fillRect(r.x, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
 					}
 					if (r.to_printnt) {
 						ctx.fillStyle = 'white'
-						if (xoff + r.ntwidth / 2 < r.width && xoff < r.width && r.x < xoff + r.ntwidth / 2) {
+						if (xoff + r.ntwidth / 2 < r.width && xoff < r.width && r.x <= xoff + r.ntwidth / 2) {
 							ctx.fillText(b.s[i], xoff + r.ntwidth / 2, y + group.stackheight / 2)
 						}
 					}
@@ -2051,8 +2199,12 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillStyle = qual2match(v / maxqual)
 					}
 					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
-					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x < xoff) {
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x <= xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x <= xoff) {
+						ctx.fillRect(xoff, y, r.width - xoff, group.stackheight)
+					} else if (xoff <= r.x && xoff + r.ntwidth + ntboxwidthincrement > r.x) {
+						ctx.fillRect(r.x, y, r.ntwidth + ntboxwidthincrement + xoff - r.x, group.stackheight)
 					}
 					xoff += r.ntwidth
 				})
@@ -2070,6 +2222,7 @@ function plot_segment(ctx, segment, y, group, q) {
 					ctx.fillStyle = match_hq
 				}
 				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
+
 				if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && x < r.width && r.x < x + ntboxwidthincrement) {
 					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
 				} else if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && r.x >= x) {
@@ -2082,7 +2235,9 @@ function plot_segment(ctx, segment, y, group, q) {
 				ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
 				ctx.fillStyle = 'white'
 				for (let i = 0; i < b.s.length; i++) {
-					ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + group.stackheight / 2)
+					if (x + r.ntwidth * (i + 0.5) < r.width && x < r.width && r.x <= x + r.ntwidth * (i + 0.5)) {
+						ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + group.stackheight / 2)
+					}
 				}
 			}
 			continue
@@ -2356,8 +2511,16 @@ async function query_oneread(req, r) {
 		isurl,
 		readstart,
 		readstop,
-		gdc_query = false
-	if (req.get('x-auth-token')) gdc_query = true
+		gdc_query = false,
+		lst // array of reads to be returned
+
+	if (req.get('x-auth-token')) {
+		gdc_query = true
+	} else {
+		;[e, _file, isurl] = app.fileurl(req)
+		if (e) throw e
+		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
+	}
 	if (req.query.unknownorder) {
 		// unknown order, read start/stop must be provided
 		readstart = Number(req.query.readstart)
@@ -2365,28 +2528,23 @@ async function query_oneread(req, r) {
 		if (Number.isNaN(readstart) || Number.isNaN(readstop))
 			throw 'readstart/stop not provided for read with unknown order'
 	}
-	if (!gdc_query) {
-		;[e, _file, isurl] = app.fileurl(req)
-		if (e) throw e
-		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
+
+	let args
+	if (gdc_query) {
+		args = ['view', path.join(serverconfig.cachedir, req.query.file)]
+	} else {
+		args = [
+			'view',
+			_file,
+			(req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop
+		]
 	}
-	return new Promise((resolve, reject) => {
-		let ps
-		if (gdc_query) {
-			ps = spawn(samtools, ['view', path.join(serverconfig.cachedir, req.query.file)])
-		} else {
-			ps = spawn(
-				samtools,
-				[
-					'view',
-					_file,
-					(req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop
-				],
-				{ cwd: dir }
-			)
-		}
-		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
+
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args,
+		dir,
+		callback: (line, ps) => {
 			if (line.split('\t')[0] != req.query.qname) return
 			const s = parse_one_segment({ sam_info: line, r, keepallboxes: true, keepmatepos: true, keepunmappedread: true })
 			if (!s) return
@@ -2395,32 +2553,32 @@ async function query_oneread(req, r) {
 				// In case first read is mapped and second unmapped
 				if (s.islast) {
 					ps.kill()
-					resolve([s])
+					lst = [s]
 					return
 				}
 			} else if (req.query.show_unmapped && req.query.getlast) {
 				// In case first read is mapped and second unmapped
 				if (s.isfirst) {
 					ps.kill()
-					resolve([s])
+					lst = [s]
 					return
 				}
 			} else if (req.query.getfirst) {
 				if (s.isfirst) {
 					ps.kill()
-					resolve([s])
+					lst = [s]
 					return
 				}
 			} else if (req.query.getlast) {
 				if (s.islast) {
 					ps.kill()
-					resolve([s])
+					lst = [s]
 					return
 				}
 			} else if (req.query.unknownorder) {
 				if (s.segstart == readstart && s.segstop == readstop) {
 					ps.kill()
-					resolve([s])
+					lst = [s]
 					return
 				}
 			} else {
@@ -2429,21 +2587,20 @@ async function query_oneread(req, r) {
 				else if (s.islast) lastseg = s
 				if (firstseg && lastseg) {
 					ps.kill()
-					resolve([firstseg, lastseg])
+					lst = [firstseg, lastseg]
 					return
 				}
 			}
-		})
-		rl.on('close', () => {
-			// finished reading and still not resolved
-			// means it is in paired mode but read is single
-
-			const lst = []
-			if (firstseg) lst.push(firstseg)
-			if (lastseg) lst.push(lastseg)
-			resolve(lst.length ? lst : null)
-		})
+		}
 	})
+	if (lst) {
+		// result is ready
+		return lst
+	}
+	lst = []
+	if (firstseg) lst.push(firstseg)
+	if (lastseg) lst.push(lastseg)
+	return lst.length ? lst : null
 }
 
 async function convertunmappedread2html(seg, genome, query) {
@@ -2597,6 +2754,23 @@ async function convertread2html(seg, genome, query) {
 				seg.pnext +
 				'</span></li>'
 		)
+	}
+	if (seg.discord_wrong_insertsize && seg.discord_orientation) {
+		lst.push(
+			'<li>' +
+				'<span style="background:' +
+				discord_wrong_insertsize_hq +
+				';color:white">Wrong insert size</span>' +
+				' mate position: ' +
+				seg.pnext +
+				'</li>' +
+				'<li><span style="background:' +
+				discord_orientation_hq +
+				';color:white">Segments also having wrong orientation' +
+				'</span> ' +
+				seg.discord_orientation_direction +
+				'</li>'
+		)
 	} else if (seg.discord_wrong_insertsize) {
 		lst.push(
 			'<li>' +
@@ -2611,9 +2785,9 @@ async function convertread2html(seg, genome, query) {
 		lst.push(
 			'<li><span style="background:' +
 				discord_orientation_hq +
-				';color:white">Segments having wrong orientation</span>' +
-				' mate position: ' +
-				seg.pnext +
+				';color:white">Segments having wrong orientation' +
+				'</span> ' +
+				seg.discord_orientation_direction +
 				'</li>'
 		)
 	} else if (seg.discord_unmapped2) {

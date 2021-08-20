@@ -41,21 +41,16 @@ async function get_samples(q, ds) {
 	let samples
 	if (ds.variant2samples.gdcapi) {
 		const termidlst = q.termidlst ? q.termidlst.split(',') : ds.variant2samples.termidlst
-		// fields_summary[] generated dynamically using gdc_dictionary
-		let fields_summary = []
-		for (const termid of termidlst) {
-			const term = ds.cohort.termdb.q.getTermById(termid)
-			fields_summary.push(term.path)
-		}
+		// fields[] generated dynamically using gdc_dictionary
 		const api = ds.variant2samples.gdcapi
 		const fields =
 			q.get == ds.variant2samples.type_sunburst
-				? api.fields_sunburst
+				? get_termid2fields(api.fields_sunburst, ds)
 				: q.get == ds.variant2samples.type_summary
-				? fields_summary
+				? get_termid2fields(termidlst, ds)
 				: q.get == ds.variant2samples.type_samples
 				? // fields_samples[] have few extra fields for table view than fields_summary[]
-				  [...api.fields_samples, ...fields_summary]
+				  [...api.fields_samples, ...get_termid2fields(termidlst, ds)]
 				: null
 		samples = await getSamples_gdcapi(q, termidlst, fields, ds)
 	} else {
@@ -65,6 +60,15 @@ async function get_samples(q, ds) {
 		return samplefilter.run(samples, q.samplefiltertemp)
 	}
 	return samples
+}
+
+function get_termid2fields(termidlst, ds) {
+	const fields = []
+	for (const termid of termidlst) {
+		const term = ds.cohort.termdb.q.getTermById(termid)
+		fields.push(term.path)
+	}
+	return fields
 }
 
 async function make_sunburst(samples, ds, q) {
@@ -125,6 +129,9 @@ async function make_summary(samples, ds, q) {
 		} else {
 			throw 'unknown term type'
 		}
+	}
+	if (ds.termdb.termid2totalsize2) {
+		await ds.termdb.termid2totalsize2.get(termidlst, entries, q)
 	}
 	return entries
 }

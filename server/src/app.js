@@ -870,41 +870,24 @@ async function handle_img(req, res) {
 	}
 }
 
-function handle_ntseq(req, res) {
+async function handle_ntseq(req, res) {
+	if (reqbodyisinvalidjson(req, res)) return
 	try {
-		req.query = JSON.parse(req.body)
+		if (!req.query.coord) throw 'coord missing'
+		const g = genomes[req.query.genome]
+		if (!g) throw 'invalid genome'
+		if (!g.genomefile) throw 'no sequence file available'
+		const seq = await utils.get_fasta(g, req.query.coord)
+		res.send({
+			seq: seq
+				.split('\n')
+				.slice(1)
+				.join('')
+		})
 	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
 	}
-	log(req)
-	var n = req.query.genome
-	if (!n) return res.send({ error: 'no genome' })
-	var g = genomes[n]
-	if (!g) return res.send({ error: 'invalid genome' })
-	if (!g.genomefile) return res.send({ error: 'no sequence file available' })
-	var ps = spawn(samtools, ['faidx', g.genomefile, req.query.coord])
-	var out = [],
-		out2 = []
-	ps.stdout.on('data', function(data) {
-		out.push(data)
-	})
-	ps.stderr.on('data', function(data) {
-		out2.push(data)
-	})
-	ps.on('close', function(code) {
-		var err = out2.join('').trim()
-		if (err.length) {
-			res.send({ error: 'Error getting sequence!' })
-			console.error(err)
-			return
-		}
-		var lst = out
-			.join('')
-			.trim()
-			.split('\n')
-		res.send({ seq: lst.slice(1).join('') })
-	})
 }
 
 function handle_pdomain(req, res) {
@@ -1298,13 +1281,12 @@ async function handle_clinvarVCF(req, res) {
 			if (pos > c.len) throw 'pos out of bound'
 		}
 		let m
-		await utils.get_lines_tabix(
-			[
+		await utils.get_lines_bigfile({
+			args: [
 				g.clinvarVCF.file,
 				(g.clinvarVCF.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + pos + '-' + (pos + 1)
 			],
-			null,
-			line => {
+			callback: line => {
 				const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, g.clinvarVCF)
 				for (const m0 of mlst) {
 					if (m0.pos == pos && m0.ref == req.query.ref && m0.alt == req.query.alt) {
@@ -1313,7 +1295,7 @@ async function handle_clinvarVCF(req, res) {
 					}
 				}
 			}
-		)
+		})
 		if (!m) return res.send({})
 		const k = m.info[g.clinvarVCF.infokey]
 		const v = g.clinvarVCF.categories[k]
@@ -3023,26 +3005,24 @@ async function handle_mdssvcnv_rnabam_do(genes, chr, start, stop, dsquery, resul
 	}
 }
 
-function handle_mdssvcnv_rnabam_genereadcount(bam, chr, gene) {
+async function handle_mdssvcnv_rnabam_genereadcount(bam, chr, gene) {
 	/* get # of reads for single-end sequencing over exons
     .exonunion[
     	[ start, stop ], e2, ...
     ]
     */
-	return new Promise((resolve, reject) => {
-		const args = ['view', '-c', '-M', bam.url || bam.file]
-		for (const e of gene.exonunion) {
-			args.push((bam.nochr ? chr.replace('chr', '') : chr) + ':' + (e[0] + 1) + '-' + (e[1] + 1))
-		}
-		const sp = spawn(samtools, args, { cwd: bam.dir })
-		const out = [],
-			out2 = []
-		sp.stdout.on('data', i => out.push(i))
-		sp.stderr.on('data', i => out2.push(i))
-		sp.on('close', () => {
-			resolve(Number.parseInt(out.join('')))
-		})
+	const args = ['view', '-c', '-M', bam.url || bam.file]
+	for (const e of gene.exonunion) {
+		args.push((bam.nochr ? chr.replace('chr', '') : chr) + ':' + (e[0] + 1) + '-' + (e[1] + 1))
+	}
+	let line
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args,
+		dir: bam.dir,
+		callback: ln => (line = ln)
 	})
+	return Number.parseInt(line)
 }
 
 function handle_mdssvcnv_rnabam_genefragcount(bam, chr, gene) {
@@ -3546,7 +3526,7 @@ async function handle_mdssvcnv_vcf(
 			thisvcf.info = info
 			thisvcf.format = format
 			thisvcf.samples = samples
-			thisvcf.nochr = await tabix_ifnochr(thisvcf.file, genome)
+			thisvcf.nochr = await utils.tabix_is_nochr(thisvcf.file, null, genome)
 			return handle_mdssvcnv_vcf_singlesample(
 				req,
 				ds,
@@ -4871,39 +4851,34 @@ function handle_ase_generesult(snps, genes, q) {
 	return out
 }
 
-function handle_ase_bamcoverage1stpass(q, start, stop) {
+async function handle_ase_bamcoverage1stpass(q, start, stop) {
 	/*
     1st pass: get max
     */
 	let m = 0
-	return new Promise((resolve, reject) => {
-		const sp = spawn(
-			samtools,
-			[
-				'depth',
-				'-r',
-				(q.rnabam_nochr ? q.chr.replace('chr', '') : q.chr) + ':' + (start + 1) + '-' + (stop + 1),
-				q.rnabamurl || q.rnabamfile
-			],
-			{ cwd: q.rnabamurl_dir }
-		)
-
-		const rl = readline.createInterface({ input: sp.stdout })
-		rl.on('line', line => {
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args: [
+			'depth',
+			'-r',
+			(q.rnabam_nochr ? q.chr.replace('chr', '') : q.chr) + ':' + (start + 1) + '-' + (stop + 1),
+			'-g',
+			'DUP',
+			q.rnabamurl || q.rnabamfile
+		],
+		dir: q.rnabamurl_dir,
+		callback: line => {
 			const l = line.split('\t')
 			if (l.length != 3) return
 			const v = Number.parseInt(l[2])
 			if (!Number.isInteger(v)) return
 			m = Math.max(m, v)
-		})
-
-		sp.on('close', () => {
-			resolve(m)
-		})
+		}
 	})
+	return m
 }
 
-function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
+async function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
 	/*
     2nd pass: plot coverage bar at each covered bp
     */
@@ -4947,20 +4922,18 @@ function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
 		// line width is 1 by default
 	}
 
-	return new Promise((resolve, reject) => {
-		const sp = spawn(
-			samtools,
-			[
-				'depth',
-				'-r',
-				(q.rnabam_nochr ? q.chr.replace('chr', '') : q.chr) + ':' + (start + 1) + '-' + (stop + 1),
-				q.rnabamurl || q.rnabamfile
-			],
-			{ cwd: q.rnabamurl_dir }
-		)
-
-		const rl = readline.createInterface({ input: sp.stdout })
-		rl.on('line', line => {
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args: [
+			'depth',
+			'-r',
+			(q.rnabam_nochr ? q.chr.replace('chr', '') : q.chr) + ':' + (start + 1) + '-' + (stop + 1),
+			'-g',
+			'DUP',
+			q.rnabamurl || q.rnabamfile
+		],
+		dir: q.rnabamurl_dir,
+		callback: line => {
 			const l = line.split('\t')
 			if (l.length != 3) return
 
@@ -4990,18 +4963,15 @@ function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
 				// matching a snp, record bar h
 				m.rnacount.h = h
 			}
-		})
-
-		sp.on('close', () => {
-			resolve({
-				canvas: canvas,
-				ctx: ctx,
-				isbp: isbp,
-				binpxw: binpxw,
-				binbpsize: binbpsize
-			})
-		})
+		}
 	})
+	return {
+		canvas,
+		ctx,
+		isbp,
+		binpxw,
+		binbpsize
+	}
 }
 
 function handle_ase_pileup_plotsnp(q, snps, searchstart, searchstop, renderstart, renderstop, plotter, rnamax) {
@@ -5192,7 +5162,7 @@ async function handle_bamnochr(req, res) {
 			q.url_dir = await utils.cache_index(q.url, q.indexURL || q.url + '.bai')
 		}
 
-		const nochr = await bam_ifnochr(q.file || q.url, genome, q.url_dir)
+		const nochr = await utils.bam_ifnochr(q.file || q.url, genome, q.url_dir)
 		res.send({ nochr: nochr })
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -5208,7 +5178,7 @@ async function handle_ase_prepfiles(q, genome) {
 		q.rnabamurl_dir = await utils.cache_index(q.rnabamurl, q.rnabamindexURL || q.rnabamurl + '.bai')
 	}
 
-	q.rnabam_nochr = await bam_ifnochr(q.rnabamfile || q.rnabamurl, genome, q.rnabamurl_dir)
+	q.rnabam_nochr = await utils.bam_ifnochr(q.rnabamfile || q.rnabamurl, genome, q.rnabamurl_dir)
 
 	if (q.vcffile) {
 		q.vcffile = path.join(serverconfig.tpmasterdir, q.vcffile)
@@ -5216,7 +5186,7 @@ async function handle_ase_prepfiles(q, genome) {
 		if (!q.vcfurl) throw 'no file or url for vcf'
 		q.vcfurl_dir = await utils.cache_index(q.vcfurl, q.vcfindexURL)
 	}
-	q.vcf_nochr = await tabix_ifnochr(q.vcffile || q.vcfurl, genome, q.vcfurl_dir)
+	q.vcf_nochr = await utils.tabix_is_nochr(q.vcffile || q.vcfurl, q.vcfurl_dir, genome)
 }
 
 async function handle_ase_getsnps(q, genome, genes, searchstart, searchstop) {
@@ -5405,52 +5375,6 @@ function tabix_getvcfmeta(file, dir) {
 		})
 	})
 }
-
-function tabix_ifnochr(file, genome, dir) {
-	return new Promise((resolve, reject) => {
-		const sp = spawn(tabix, ['-l', file], { cwd: dir })
-		const out = [],
-			out2 = []
-		sp.stdout.on('data', i => out.push(i))
-		sp.stderr.on('data', i => out2.push(i))
-		sp.on('close', () => {
-			const err = out2.join('')
-			if (err) reject(err)
-			const str = out.join('').trim()
-			if (!str) reject('cannot list chr names')
-			resolve(common.contigNameNoChr(genome, str.split('\n')))
-		})
-	})
-}
-
-function bam_ifnochr(file, genome, dir) {
-	return new Promise((resolve, reject) => {
-		const sp = spawn(samtools, ['view', '-H', file], { cwd: dir })
-		const out = [],
-			out2 = []
-		sp.stdout.on('data', i => out.push(i))
-		sp.stderr.on('data', i => out2.push(i))
-		sp.on('close', () => {
-			const err = out2.join('')
-			if (err) reject(err)
-			const str = out.join('').trim()
-			if (!str) reject('cannot list bam header lines')
-			const chrlst = []
-			for (const line of str.split('\n')) {
-				if (!line.startsWith('@SQ')) continue
-				const tmp = line.split('\t')[1]
-				if (!tmp) reject('2nd field missing from @SQ line')
-				const l = tmp.split(':')
-				if (l[0] != 'SN') reject('@SQ line 2nd field is not "SN" but ' + l[0])
-				if (!l[1]) reject('@SQ line no value for SN')
-				chrlst.push(l[1])
-			}
-
-			resolve(common.contigNameNoChr(genome, chrlst))
-		})
-	})
-}
-exports.bam_ifnochr = bam_ifnochr
 
 function get_rank_from_sortedarray(v, lst) {
 	// [ { value: v } ]
@@ -5765,10 +5689,10 @@ async function mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery) {
 		const dir = _c.file ? null : await utils.cache_index(_c.url, _c.indexURL)
 
 		const values = []
-		await utils.get_lines_tabix(
-			[_c.file ? path.join(serverconfig.tpmasterdir, _c.file) : _c.url, q.chr + ':' + q.start + '-' + q.stop],
+		await utils.get_lines_bigfile({
+			args: [_c.file ? path.join(serverconfig.tpmasterdir, _c.file) : _c.url, q.chr + ':' + q.start + '-' + q.stop],
 			dir,
-			line => {
+			callback: line => {
 				const l = line.split('\t')
 				let j
 				try {
@@ -5784,7 +5708,7 @@ async function mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery) {
 					values.push(j)
 				}
 			}
-		)
+		})
 
 		// convert to rank
 		const sample2rank = mdssvcnv_exit_getexpression4gene_rank(ds, dsquery, values)
@@ -6017,13 +5941,13 @@ async function handle_mdsgenevalueonesample(req, res) {
 		let nodata = true
 		for (const gene of q.genes) {
 			let v
-			await utils.get_lines_tabix(
-				[
+			await utils.get_lines_bigfile({
+				args: [
 					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
 					gene.chr + ':' + gene.start + '-' + gene.stop
 				],
 				dir,
-				line => {
+				callback: line => {
 					const l = line.split('\t')
 					if (!l[3]) return
 					const j = JSON.parse(l[3])
@@ -6031,7 +5955,7 @@ async function handle_mdsgenevalueonesample(req, res) {
 						v = j.value
 					}
 				}
-			)
+			})
 			if (Number.isFinite(v)) {
 				gene2value[gene.gene] = v
 				nodata = false
@@ -7282,8 +7206,10 @@ async function handle_vcf(req, res) {
 		if (!req.query.rglst) throw 'rglst missing'
 		const lines = []
 		for (const r of req.query.rglst) {
-			await utils.get_lines_tabix([file, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
-				lines.push(line)
+			await utils.get_lines_bigfile({
+				args: [file, r.chr + ':' + r.start + '-' + r.stop],
+				dir,
+				callback: line => lines.push(line)
 			})
 		}
 		res.send({ linestr: lines.join('\n') })
@@ -7293,48 +7219,25 @@ async function handle_vcf(req, res) {
 	}
 }
 
-function handle_translategm(req, res) {
+async function handle_translategm(req, res) {
+	if (reqbodyisinvalidjson(req, res)) return
 	try {
-		req.query = JSON.parse(req.body)
+		const g = genomes[req.query.genome]
+		if (!g) throw 'invalid genome'
+		const gm = req.query.gm
+		if (!gm) throw 'missing gm{}'
+		if (!gm.chr) throw 'gm.chr missing'
+		if (!gm.start) throw 'gm.start missing'
+		if (!Number.isInteger(gm.start)) throw 'gm.start not integer'
+		if (!gm.stop) throw 'gm.stop missing'
+		if (!Number.isInteger(gm.stop)) throw 'gm.stop not integer'
+		const seq = await utils.get_fasta(g, gm.chr + ':' + (gm.start + 1) + '-' + gm.stop)
+		const frame = common.fasta2gmframecheck(gm, seq)
+		res.send({ frame })
 	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
 	}
-	log(req)
-	if (!genomes[req.query.genome]) return res.send({ error: 'invalid genome' })
-	if (!req.query.gm) return res.send({ error: 'missing gm object' })
-	if (!req.query.gm.chr) return res.send({ error: 'gm.chr missing' })
-	if (!req.query.gm.start) return res.send({ error: 'gm.start missing' })
-	if (!Number.isInteger(req.query.gm.start)) return res.send({ error: 'gm.start not integer' })
-	if (!req.query.gm.stop) return res.send({ error: 'gm.stop missing' })
-	if (!Number.isInteger(req.query.gm.stop)) return res.send({ error: 'gm.stop not integer' })
-
-	const genomefile = genomes[req.query.genome].genomefile
-	const rawout = []
-	const rawerr = []
-	const ps = spawn(samtools, [
-		'faidx',
-		genomefile,
-		req.query.gm.chr + ':' + (req.query.gm.start + 1) + '-' + req.query.gm.stop
-	])
-	ps.stdout.on('data', i => rawout.push(i))
-	ps.stderr.on('data', i => rawerr.push(i))
-	ps.on('close', code => {
-		const err = rawerr.join('')
-		if (err) {
-			res.send({ error: 'error getting sequence' })
-			return
-		}
-		const fasta = rawout.join('').trim()
-		if (fasta == '') {
-			res.send({ error: 'no seqeuence retrieved' })
-			return
-		}
-
-		const thisframe = common.fasta2gmframecheck(req.query.gm, fasta)
-
-		res.send({ frame: thisframe })
-	})
 }
 
 /****************************************************************************************************/
@@ -7723,19 +7626,9 @@ async function pp_init() {
 		const g = genomes[genomename]
 		if (!g.majorchr) throw genomename + ': majorchr missing'
 		if (!g.defaultcoord) throw genomename + ': defaultcoord missing'
-		// test samtools and genomefile
-		const cmd =
-			samtools +
-			' faidx ' +
-			g.genomefile +
-			' ' +
-			g.defaultcoord.chr +
-			':' +
-			g.defaultcoord.start +
-			'-' +
-			(g.defaultcoord.start + 1)
 
-		child_process.execSync(cmd)
+		// test samtools and genomefile
+		await utils.get_fasta(g, g.defaultcoord.chr + ':' + g.defaultcoord.start + '-' + (g.defaultcoord.start + 1))
 
 		if (!g.tracks) {
 			g.tracks = []

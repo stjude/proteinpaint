@@ -49,12 +49,16 @@ async function run_request(q, dir, nochr) {
 		// figure out the hard way
 		for (const r of q.rglst) {
 			const coord = (nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-			await utils.get_lines_tabix([q.file, coord], dir, line => {
-				const [chr, s1, s2, s3] = line.split('\t')
-				for (const s of s3.split(',')) {
-					const v = Number(s)
-					minv = Math.min(minv, v)
-					maxv = Math.max(maxv, v)
+			await utils.get_lines_bigfile({
+				args: [q.file, coord],
+				dir,
+				callback: line => {
+					const [chr, s1, s2, s3] = line.split('\t')
+					for (const s of s3.split(',')) {
+						const v = Number(s)
+						minv = Math.min(minv, v)
+						maxv = Math.max(maxv, v)
+					}
 				}
 			})
 		}
@@ -86,30 +90,34 @@ async function run_request(q, dir, nochr) {
 
 		// query for this variant
 		const coord = (nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-		await utils.get_lines_tabix([q.file, coord], dir, line => {
-			const [chr, s1, s2, s3] = line.split('\t')
+		await utils.get_lines_bigfile({
+			args: [q.file, coord],
+			dir,
+			callback: line => {
+				const [chr, s1, s2, s3] = line.split('\t')
 
-			const start = Math.max(Number.parseInt(s1), r.start)
-			const stop = Math.min(Number.parseInt(s2), r.stop)
+				const start = Math.max(Number.parseInt(s1), r.start)
+				const stop = Math.min(Number.parseInt(s2), r.stop)
 
-			const x1 = ((r.reverse ? r.stop - stop : start - r.start) * r.width) / (r.stop - r.start)
-			const x2 = ((r.reverse ? r.stop - start : stop - r.start) * r.width) / (r.stop - r.start)
+				const x1 = ((r.reverse ? r.stop - stop : start - r.start) * r.width) / (r.stop - r.start)
+				const x2 = ((r.reverse ? r.stop - start : stop - r.start) * r.width) / (r.stop - r.start)
 
-			for (const str of s3.split(',')) {
-				const v = Number(str)
+				for (const str of s3.split(',')) {
+					const v = Number(str)
 
-				ctx.fillStyle = v > 0 ? q.pcolor : q.ncolor
-				const tmp = hscale(v)
+					ctx.fillStyle = v > 0 ? q.pcolor : q.ncolor
+					const tmp = hscale(v)
 
-				const w = Math.max(1, x2 - x1)
-				ctx.fillRect(x1, tmp.y, w, 2)
+					const w = Math.max(1, x2 - x1)
+					ctx.fillRect(x1, tmp.y, w, 2)
 
-				if (v > maxv) {
-					ctx.fillStyle = req.query.pcolor2
-					ctx.fillRect(x1, 0, w, 2)
-				} else if (v < minv) {
-					ctx.fillStyle = req.query.ncolor2
-					ctx.fillRect(x1, q.barheight - 2, w, 2)
+					if (v > maxv) {
+						ctx.fillStyle = req.query.pcolor2
+						ctx.fillRect(x1, 0, w, 2)
+					} else if (v < minv) {
+						ctx.fillStyle = req.query.ncolor2
+						ctx.fillRect(x1, q.barheight - 2, w, 2)
+					}
 				}
 			}
 		})
