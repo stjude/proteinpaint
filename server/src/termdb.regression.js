@@ -22,6 +22,8 @@ export async function get_regression(q, ds) {
 		}
 		const rows = get_matrix(q)
 		const tsv = [header.join('\t')]
+		const colClasses = q.independent.map(t => t.type)
+		console.log(25, colClasses)
 		for (const row of rows) {
 			const line = [row.outcome]
 			for (const i in q.independent) {

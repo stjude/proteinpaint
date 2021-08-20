@@ -311,7 +311,6 @@ export function get_term_cte(q, values, index, filter) {
 		// only term1 is required
 		if (!termid) throw 'missing term id'
 	} else if (!termid || term_is_genotype) {
-		console.log(313, termid)
 		// term2 and term0 are optional
 		// no table to query
 		const tablename = 'samplekey_' + index
@@ -321,10 +320,9 @@ export function get_term_cte(q, values, index, filter) {
 			join_on_clause: ''
 		}
 	}
-	console.log(323, termid)
+
 	// otherwise, must be a valid term
 	const term = q.ds.cohort.termdb.q.termjsonByOneid(termid)
-	console.log(325, term)
 	if (!term) throw 'no term found by id'
 	let termq = q['term' + index + '_q'] || {}
 	if (typeof termq == 'string') {
@@ -337,7 +335,6 @@ export function get_term_cte(q, values, index, filter) {
 		}
 	}
 	const CTE = makesql_oneterm(term, q.ds, termq, values, index, filter)
-	console.log(337)
 	if (index != 1) {
 		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
 	}

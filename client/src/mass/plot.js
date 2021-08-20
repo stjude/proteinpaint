@@ -182,7 +182,7 @@ class MassPlot {
 						encodeURIComponent(
 							JSON.stringify(
 								plot.independent.map(t => {
-									return { id: t.id, q: t.q }
+									return { id: t.id, q: t.q, type: t.term.type }
 								})
 							)
 						)
