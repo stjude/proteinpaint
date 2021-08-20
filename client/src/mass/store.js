@@ -222,7 +222,7 @@ TdbStore.prototype.actions = {
 			this.state.tree.plots[action.id] = plotConfig(
 				{
 					id: action.id,
-					term: { term: action.term },
+					term: action.term.term ? action.term : { term: action.term },
 					chartType: action.chartType,
 					settings: { currViews: [action.chartType] }
 				},
@@ -230,7 +230,7 @@ TdbStore.prototype.actions = {
 			)
 			if (action.independent) {
 				this.state.tree.plots[action.id].independent = action.independent.map(term => {
-					return fillTermWrapper({ term })
+					return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
 				})
 			}
 			this.state.tree.visiblePlotIds.push(action.id)
