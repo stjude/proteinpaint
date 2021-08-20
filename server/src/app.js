@@ -1281,13 +1281,12 @@ async function handle_clinvarVCF(req, res) {
 			if (pos > c.len) throw 'pos out of bound'
 		}
 		let m
-		await utils.get_lines_tabix(
-			[
+		await utils.get_lines_bigfile({
+			args: [
 				g.clinvarVCF.file,
 				(g.clinvarVCF.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + pos + '-' + (pos + 1)
 			],
-			null,
-			line => {
+			callback: line => {
 				const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, g.clinvarVCF)
 				for (const m0 of mlst) {
 					if (m0.pos == pos && m0.ref == req.query.ref && m0.alt == req.query.alt) {
@@ -1296,7 +1295,7 @@ async function handle_clinvarVCF(req, res) {
 					}
 				}
 			}
-		)
+		})
 		if (!m) return res.send({})
 		const k = m.info[g.clinvarVCF.infokey]
 		const v = g.clinvarVCF.categories[k]
@@ -3006,26 +3005,24 @@ async function handle_mdssvcnv_rnabam_do(genes, chr, start, stop, dsquery, resul
 	}
 }
 
-function handle_mdssvcnv_rnabam_genereadcount(bam, chr, gene) {
+async function handle_mdssvcnv_rnabam_genereadcount(bam, chr, gene) {
 	/* get # of reads for single-end sequencing over exons
     .exonunion[
     	[ start, stop ], e2, ...
     ]
     */
-	return new Promise((resolve, reject) => {
-		const args = ['view', '-c', '-M', bam.url || bam.file]
-		for (const e of gene.exonunion) {
-			args.push((bam.nochr ? chr.replace('chr', '') : chr) + ':' + (e[0] + 1) + '-' + (e[1] + 1))
-		}
-		const sp = spawn(samtools, args, { cwd: bam.dir })
-		const out = [],
-			out2 = []
-		sp.stdout.on('data', i => out.push(i))
-		sp.stderr.on('data', i => out2.push(i))
-		sp.on('close', () => {
-			resolve(Number.parseInt(out.join('')))
-		})
+	const args = ['view', '-c', '-M', bam.url || bam.file]
+	for (const e of gene.exonunion) {
+		args.push((bam.nochr ? chr.replace('chr', '') : chr) + ':' + (e[0] + 1) + '-' + (e[1] + 1))
+	}
+	let line
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args,
+		dir: bam.dir,
+		callback: ln => (line = ln)
 	})
+	return Number.parseInt(line)
 }
 
 function handle_mdssvcnv_rnabam_genefragcount(bam, chr, gene) {
@@ -4859,18 +4856,25 @@ async function handle_ase_bamcoverage1stpass(q, start, stop) {
     1st pass: get max
     */
 	let m = 0
-	await utils.get_lines_bamdepth(
-		q.rnabamurl || q.rnabamfile,
-		q.rnabamurl_dir,
-		(q.rnabam_nochr ? q.chr.replace('chr', '') : q.chr) + ':' + (start + 1) + '-' + (stop + 1),
-		line => {
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args: [
+			'depth',
+			'-r',
+			(q.rnabam_nochr ? q.chr.replace('chr', '') : q.chr) + ':' + (start + 1) + '-' + (stop + 1),
+			'-g',
+			'DUP',
+			q.rnabamurl || q.rnabamfile
+		],
+		dir: q.rnabamurl_dir,
+		callback: line => {
 			const l = line.split('\t')
 			if (l.length != 3) return
 			const v = Number.parseInt(l[2])
 			if (!Number.isInteger(v)) return
 			m = Math.max(m, v)
 		}
-	)
+	})
 	return m
 }
 
@@ -4918,11 +4922,18 @@ async function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
 		// line width is 1 by default
 	}
 
-	await utils.get_lines_bamdepth(
-		q.rnabamurl || q.rnabamfile,
-		q.rnabamurl_dir,
-		(q.rnabam_nochr ? q.chr.replace('chr', '') : q.chr) + ':' + (start + 1) + '-' + (stop + 1),
-		line => {
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args: [
+			'depth',
+			'-r',
+			(q.rnabam_nochr ? q.chr.replace('chr', '') : q.chr) + ':' + (start + 1) + '-' + (stop + 1),
+			'-g',
+			'DUP',
+			q.rnabamurl || q.rnabamfile
+		],
+		dir: q.rnabamurl_dir,
+		callback: line => {
 			const l = line.split('\t')
 			if (l.length != 3) return
 
@@ -4953,7 +4964,7 @@ async function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
 				m.rnacount.h = h
 			}
 		}
-	)
+	})
 	return {
 		canvas,
 		ctx,
@@ -5678,10 +5689,10 @@ async function mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery) {
 		const dir = _c.file ? null : await utils.cache_index(_c.url, _c.indexURL)
 
 		const values = []
-		await utils.get_lines_tabix(
-			[_c.file ? path.join(serverconfig.tpmasterdir, _c.file) : _c.url, q.chr + ':' + q.start + '-' + q.stop],
+		await utils.get_lines_bigfile({
+			args: [_c.file ? path.join(serverconfig.tpmasterdir, _c.file) : _c.url, q.chr + ':' + q.start + '-' + q.stop],
 			dir,
-			line => {
+			callback: line => {
 				const l = line.split('\t')
 				let j
 				try {
@@ -5697,7 +5708,7 @@ async function mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery) {
 					values.push(j)
 				}
 			}
-		)
+		})
 
 		// convert to rank
 		const sample2rank = mdssvcnv_exit_getexpression4gene_rank(ds, dsquery, values)
@@ -5930,13 +5941,13 @@ async function handle_mdsgenevalueonesample(req, res) {
 		let nodata = true
 		for (const gene of q.genes) {
 			let v
-			await utils.get_lines_tabix(
-				[
+			await utils.get_lines_bigfile({
+				args: [
 					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
 					gene.chr + ':' + gene.start + '-' + gene.stop
 				],
 				dir,
-				line => {
+				callback: line => {
 					const l = line.split('\t')
 					if (!l[3]) return
 					const j = JSON.parse(l[3])
@@ -5944,7 +5955,7 @@ async function handle_mdsgenevalueonesample(req, res) {
 						v = j.value
 					}
 				}
-			)
+			})
 			if (Number.isFinite(v)) {
 				gene2value[gene.gene] = v
 				nodata = false
@@ -7195,8 +7206,10 @@ async function handle_vcf(req, res) {
 		if (!req.query.rglst) throw 'rglst missing'
 		const lines = []
 		for (const r of req.query.rglst) {
-			await utils.get_lines_tabix([file, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
-				lines.push(line)
+			await utils.get_lines_bigfile({
+				args: [file, r.chr + ':' + r.start + '-' + r.stop],
+				dir,
+				callback: line => lines.push(line)
 			})
 		}
 		res.send({ linestr: lines.join('\n') })

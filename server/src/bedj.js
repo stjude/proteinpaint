@@ -744,36 +744,40 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 		// query over the gene region, just one region
 		const items = []
 		let errlinecount = 0
-		await utils.get_lines_tabix([tkfile, flag_gm.chr + ':' + flag_gm.start + '-' + flag_gm.stop], dir, line => {
-			const l = line.split('\t')
-			let j = {}
-			if (q.getBED) {
-				j.rest = l.slice(3)
-			} else if (l[3]) {
-				try {
-					j = JSON.parse(l[3])
-				} catch (e) {
-					errlinecount++
+		await utils.get_lines_bigfile({
+			args: [tkfile, flag_gm.chr + ':' + flag_gm.start + '-' + flag_gm.stop],
+			dir,
+			callback: line => {
+				const l = line.split('\t')
+				let j = {}
+				if (q.getBED) {
+					j.rest = l.slice(3)
+				} else if (l[3]) {
+					try {
+						j = JSON.parse(l[3])
+					} catch (e) {
+						errlinecount++
+						return
+					}
+				}
+				if (j.isoformonly && j.isoformonly != gmisoform) {
+					// this is specific for what? idr per isoforms?
 					return
 				}
-			}
-			if (j.isoformonly && j.isoformonly != gmisoform) {
-				// this is specific for what? idr per isoforms?
-				return
-			}
-			j.chr = l[0]
-			j.start = Number.parseInt(l[1])
-			j.stop = Number.parseInt(l[2])
-			j.rglst = []
-			for (let i = 0; i < q.rglst.length; i++) {
-				const r = q.rglst[i]
-				// simply decide by the whole gene span, not by exons, otherwise there will result in gaps
-				if (Math.max(j.start, r.start) < Math.min(j.stop, r.stop)) {
-					j.rglst.push({ idx: i })
+				j.chr = l[0]
+				j.start = Number.parseInt(l[1])
+				j.stop = Number.parseInt(l[2])
+				j.rglst = []
+				for (let i = 0; i < q.rglst.length; i++) {
+					const r = q.rglst[i]
+					// simply decide by the whole gene span, not by exons, otherwise there will result in gaps
+					if (Math.max(j.start, r.start) < Math.min(j.stop, r.stop)) {
+						j.rglst.push({ idx: i })
+					}
 				}
+				if (j.rglst.length == 0) return
+				items.push(j)
 			}
-			if (j.rglst.length == 0) return
-			items.push(j)
 		})
 		return [items]
 	}
@@ -783,24 +787,28 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 
 	for (const [idx, r] of q.rglst.entries()) {
 		const itemofthisregion = []
-		await utils.get_lines_tabix([tkfile, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
-			const l = line.split('\t')
-			let j = {}
-			if (q.getBED) {
-				j.rest = l.slice(3)
-			} else if (l[3]) {
-				try {
-					j = JSON.parse(l[3])
-				} catch (e) {
-					errlinecount++
-					return
+		await utils.get_lines_bigfile({
+			args: [tkfile, r.chr + ':' + r.start + '-' + r.stop],
+			dir,
+			callback: line => {
+				const l = line.split('\t')
+				let j = {}
+				if (q.getBED) {
+					j.rest = l.slice(3)
+				} else if (l[3]) {
+					try {
+						j = JSON.parse(l[3])
+					} catch (e) {
+						errlinecount++
+						return
+					}
 				}
+				j.chr = l[0]
+				j.start = Number.parseInt(l[1])
+				j.stop = Number.parseInt(l[2])
+				j.rglst = [{ idx }]
+				itemofthisregion.push(j)
 			}
-			j.chr = l[0]
-			j.start = Number.parseInt(l[1])
-			j.stop = Number.parseInt(l[2])
-			j.rglst = [{ idx }]
-			itemofthisregion.push(j)
 		})
 		regions.push(itemofthisregion)
 	}

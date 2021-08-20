@@ -36,10 +36,11 @@ export async function plot(q, genome, ds, result) {
 
 		let m
 
-		await utils.get_lines_tabix(
-			['query', '-r', coord, '-f', bcfformat, file],
-			tk.AD.dir,
-			line => {
+		await utils.get_lines_bigfile({
+			isbcf: true,
+			args: ['query', '-r', coord, '-f', bcfformat, file],
+			dir: tk.AD.dir,
+			callback: line => {
 				const [e, mlst, e2] = vcf.vcfparseline(line, tk.AD)
 				for (const m2 of mlst) {
 					//if( tk.nochr ) m.chr = 'chr'+m.chr
@@ -48,9 +49,8 @@ export async function plot(q, genome, ds, result) {
 						return
 					}
 				}
-			},
-			true
-		)
+			}
+		})
 
 		if (!m) throw 'variant not found'
 
