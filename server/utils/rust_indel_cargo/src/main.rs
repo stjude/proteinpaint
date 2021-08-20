@@ -590,6 +590,7 @@ fn main() {
                         0,
                         ref_alt_same_base_start,
                     );
+                    //println!("alignment_side:{}", &alignment_side);
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
                     //println!("read_ambivalent:{}", read_ambivalent);
@@ -1832,6 +1833,11 @@ fn check_polyclonal(
             && right_most_pos > indel_start + (alt_length as i64 - ref_length as i64).abs()
         {
             alignment_side = "right".to_string();
+        } else if correct_start_position > indel_start
+            && correct_start_position < indel_start + (alt_length as i64 - ref_length as i64).abs()
+            && right_most_pos > indel_start + (alt_length as i64 - ref_length as i64).abs()
+        {
+            alignment_side = "right".to_string();
         }
 
         for i in 0..alphabets.len() {
@@ -2537,11 +2543,6 @@ fn determine_maxima_alt(
             }
         }
         let score_cutoff: f64 = kmer_diff_scores_sorted[index_array_maximum].abs_value; // getting diff_score of the read used as the threshold
-        println!(
-            "{} {}",
-            "score_cutoff (from Rust):",
-            score_cutoff.to_string()
-        );
         for i in 0..kmer_diff_scores_length {
             if kmer_diff_scores_sorted[i].abs_value <= absolute_threshold_cutoff {
                 // If diff_score absolute value is less than absolute threshold cutoff, it is automatically classified as 'none'
