@@ -88,7 +88,20 @@ class TdbStore {
 				if (!savedPlot[t]) continue
 				savedPlot[t].term = await this.app.vocabApi.getterm(savedPlot[t].id)
 			}
+			if (!savedPlot.settings) savedPlot.settings = {}
+			if (!savedPlot.settings.currViews) savedPlot.settings.currViews = [savedPlot.chartType]
 			this.state.tree.plots[plotId] = plotConfig(savedPlot, await this.api.copyState())
+			if (savedPlot.independent) {
+				savedPlot.independent = await Promise.all(
+					savedPlot.independent.map(async term => {
+						if (!term.term) term.term = await this.app.vocabApi.getterm(term.id)
+						console.log(95, term)
+						return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
+					})
+				)
+				console.log(98, savedPlot.independent)
+			}
+			this.state.tree.visiblePlotIds.push(plotId)
 			this.adjustPlotCurrViews(this.state.tree.plots[plotId])
 		}
 

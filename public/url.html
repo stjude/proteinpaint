@@ -302,11 +302,27 @@ makeURL([
 },
 {name:'MASS UI',
 	links:[
-		['simple', '?noheader=1&mass='+JSON.stringify({
+		['TermdbTest', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
-			dslabel: 'TermdbTest',
-			plots: {
-				
+			dslabel: 'TermdbTest'
+		})],
+
+		['SJLife', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			tree: {
+				plots: {
+					0: {
+						chartType: 'regression',
+						id: 0,
+						term: {
+							id: 'BP_SBP1'
+						},
+						independent: [
+							{"id":"sex"}
+						]
+					}
+				}
 			}
 		})]
 	]

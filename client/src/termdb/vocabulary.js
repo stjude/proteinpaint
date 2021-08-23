@@ -87,7 +87,10 @@ class TermdbVocab {
 		const displayAsSurvival =
 			config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
 		const route =
-			config.settings.currViews.includes('scatter') || config.settings.currViews.includes('cuminc') || displayAsSurvival
+			config.settings.currViews.includes('regression') ||
+			config.settings.currViews.includes('scatter') ||
+			config.settings.currViews.includes('cuminc') ||
+			displayAsSurvival
 				? '/termdb'
 				: '/termdb-barsql'
 		const url = route + dataName + '&genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel

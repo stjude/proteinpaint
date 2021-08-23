@@ -40,8 +40,9 @@ export function isUsableTerm(term, use, ds) {
 			return term.included_types.includes('survival')
 
 		case 'regression':
-			if (use.detail == 'term')
-				return term.included_types.includes('condition') || term.included_types.includes('survival')
-			return term.included_types.filter(type => type != 'condition' && type != 'survival').length
+			return true
+
+		default:
+			return true
 	}
 }
