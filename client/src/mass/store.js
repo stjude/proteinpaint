@@ -95,11 +95,9 @@ class TdbStore {
 				savedPlot.independent = await Promise.all(
 					savedPlot.independent.map(async term => {
 						if (!term.term) term.term = await this.app.vocabApi.getterm(term.id)
-						console.log(95, term)
 						return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
 					})
 				)
-				console.log(98, savedPlot.independent)
 			}
 			this.state.tree.visiblePlotIds.push(plotId)
 			this.adjustPlotCurrViews(this.state.tree.plots[plotId])

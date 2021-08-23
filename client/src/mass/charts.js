@@ -24,12 +24,16 @@ class MassCharts {
 	}
 
 	getState(appState) {
+		const activeCohort = appState.termdbConfig?.selectCohort?.values[appState.activeCohort]
+		const cohortStr = activeCohort && activeCohort.keys.sort().join(',')
+
 		const state = {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: appState.tree.plots[this.id],
-			exclude_types: [...appState.tree.exclude_types]
+			exclude_types: [...appState.tree.exclude_types],
+			supportedChartTypes: appState.termdbConfig.supportedChartTypes?.[cohortStr] || ['barchart']
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
@@ -37,7 +41,9 @@ class MassCharts {
 		return state
 	}
 
-	main(data) {}
+	main(data) {
+		this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
+	}
 
 	setDom() {
 		this.dom = {
@@ -47,16 +53,16 @@ class MassCharts {
 
 		const btnData = [
 			{ label: 'Bar Chart', chartType: 'barchart' },
-			//{ label: 'Table', chartType: 'table' },
-			//{ label: 'Boxplot', chartType: 'boxplot' },
-			//{ label: 'Scatter Plot', chartType: 'scatter' },
+			{ label: 'Table', chartType: 'table' },
+			{ label: 'Boxplot', chartType: 'boxplot' },
+			{ label: 'Scatter Plot', chartType: 'scatter' },
 			{ label: 'Cumulative Incidence', chartType: 'cuminc' },
 			{ label: 'Survival', chartType: 'survival' },
 			{ label: 'Regression Analysis', chartType: 'regression' }
 		]
 		const self = this
 
-		const btns = this.dom.holder
+		this.dom.btns = this.dom.holder
 			.selectAll('button')
 			.data(btnData)
 			.enter()

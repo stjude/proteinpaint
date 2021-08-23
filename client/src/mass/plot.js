@@ -113,7 +113,6 @@ class MassPlot {
 				break
 
 			case 'regression':
-				console.log(115, 'plot case=regression ', this.id)
 				this.components.chart = regressionInit(
 					this.app,
 					{ holder: this.dom.viz.append('div'), id: this.id },
@@ -135,7 +134,6 @@ class MassPlot {
 
 	getState(appState) {
 		const config = appState.tree.plots[this.id]
-		console.log(config)
 		if (!config) {
 			throw `No plot with id='${this.id}' found.`
 		}

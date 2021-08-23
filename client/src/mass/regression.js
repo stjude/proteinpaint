@@ -47,7 +47,6 @@ class MassRegression {
 			this.dom.div.style('display', 'none')
 			throw 'independent variable(s) is required for regression analysis'
 		}
-		console.log(50, data)
 		const [columns, rows] = this.processData(this.data)
 		this.render(columns, rows)
 	}

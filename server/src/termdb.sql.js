@@ -1225,6 +1225,44 @@ thus less things to worry about...
 			return undefined
 		}
 	}
+
+	q.getSupportedChartTypes = () => {
+		const rows = cn
+			.prepare(
+				`WITH c AS (
+				SELECT cohort, term_id
+				FROM subcohort_terms s
+				GROUP BY cohort, term_id
+			) 
+			SELECT cohort, type, count(*) as samplecount
+			FROM terms t
+			JOIN c ON c.term_id = t.id
+			GROUP BY cohort, type`
+			)
+			.all()
+		const supportedChartTypes = {}
+		const numericTypeCount = {}
+
+		for (const r of rows) {
+			if (!r.type) continue
+			if (!(r.cohort in supportedChartTypes)) {
+				supportedChartTypes[r.cohort] = ['barchart', 'table', 'regression']
+				numericTypeCount[r.cohort] = 0
+			}
+			if (r.type == 'survival' && !supportedChartTypes[r.cohort].includes('survival'))
+				supportedChartTypes[r.cohort].push('survival')
+			if (r.type == 'condition' && !supportedChartTypes[r.cohort].includes('cuminc'))
+				supportedChartTypes[r.cohort].push('cuminc')
+			if (r.type == 'float' || r.type == 'integer') numericTypeCount[r.cohort] += r.samplecount
+		}
+		console.log(1253, numericTypeCount)
+		for (const cohort in numericTypeCount) {
+			if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].push('boxplot')
+			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].push('scatterplot')
+		}
+
+		return supportedChartTypes
+	}
 }
 
 function test_tables(cn) {
