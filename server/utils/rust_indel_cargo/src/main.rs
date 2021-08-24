@@ -559,6 +559,10 @@ fn main() {
                     //    "start_position:{}",
                     //    start_positions_list[i as usize - 2].to_string()
                     //);
+                    //println!(
+                    //    "cigar_sequence:{}",
+                    //    &cigar_sequences_list[i as usize - 2].to_string()
+                    //);
                     let read_ambivalent = check_if_read_ambivalent(
                         // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                         correct_start_position,
@@ -597,10 +601,6 @@ fn main() {
                         ref_alt_same_base_start,
                     );
                     //println!("alignment_side:{}", &alignment_side);
-                    //println!(
-                    //    "cigar_sequence:{}",
-                    //    &cigar_sequences_list[i as usize - 2].to_string()
-                    //);
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
                     //println!("read_ambivalent:{}", read_ambivalent);
@@ -1938,13 +1938,29 @@ fn check_polyclonal(
         //{ // If both sides are soft-clipped, then continue with left alignment. May need to think of a better logic later to handle this case.
         //} else
 
+        //println!("correct_start_position:{}", correct_start_position);
+        //println!("indel_start:{}", indel_start);
+        //println!(
+        //    "indel_start + indel_length:{}",
+        //    indel_start + indel_length as i64
+        //);
+        let mut alignment_offset: i64 = 7; // Variable which sets the offset for reads that start only these many bases before the indel start. If the start position of the read lies between the offset and indel start, the read is right-aligned. This value is somewhat arbitary and may be changed in the future.
+        if (indel_length as i64) < alignment_offset {
+            alignment_offset = indel_length as i64;
+        }
+
         if &alphabets[0].to_string().as_str() == &"S"
             && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
         {
             alignment_side = "right".to_string();
         } else if correct_start_position > indel_start
-            && correct_start_position < indel_start + ref_length as i64 - alt_length as i64
-            && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
+            && correct_start_position < indel_start + indel_length as i64
+            && right_most_pos > indel_start + indel_length as i64
+        {
+            alignment_side = "right".to_string();
+        } else if correct_start_position + alignment_offset > indel_start
+            && correct_start_position + alignment_offset < indel_start + indel_length as i64
+            && right_most_pos > indel_start + indel_length as i64
         {
             alignment_side = "right".to_string();
         }
