@@ -59,18 +59,17 @@ class MassApp {
 		for (const plotId in this.state.tree.plots) {
 			if (!(plotId in this.components.plots)) {
 				const plot = this.state.tree.plots[plotId]
-				const div = newSandboxDiv(this.dom.plotDiv, () => {
+				const holder = newSandboxDiv(this.dom.plotDiv, () => {
 					this.api.dispatch({
 						type: 'plot_delete',
 						id: plotId
 					})
 				})
 
-				if (plot?.term?.term) div.header.html(plot.term.term.name)
 				this.components.plots[plotId] = plotInit(
 					this.app,
 					{
-						holder: div.body,
+						holder,
 						plot
 					},
 					this.opts.plot

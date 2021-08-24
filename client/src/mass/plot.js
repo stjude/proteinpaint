@@ -27,22 +27,24 @@ class MassPlot {
 		this.dom = {
 			tip: new Menu({ padding: '0px' }),
 
-			holder: opts.holder
+			holder: opts.holder,
+
+			body: opts.holder.body
 				.style('margin-top', '-1px')
 				.style('white-space', 'nowrap')
 				.style('overflow-x', 'auto'),
 
 			// will hold no data notice or the page title in multichart views
-			banner: opts.holder.append('div').style('display', 'none'),
+			banner: opts.holder.body.append('div').style('display', 'none'),
 
 			// dom.controls will hold the config input, select, button elements
-			controls: opts.holder
+			controls: opts.holder.body
 				.append('div')
 				.attr('class', 'pp-termdb-plot-controls')
 				.style('display', opts.plot.chartType === 'regression' ? 'block' : 'inline-block'),
 
 			// dom.viz will hold the rendered view
-			viz: opts.holder
+			viz: opts.holder.body
 				.append('div')
 				.attr('class', 'pp-termdb-plot-viz')
 				.style('display', 'inline-block')
@@ -103,6 +105,7 @@ class MassPlot {
 		if (!this.components.chart) this.setChartComponent(this.opts)
 		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? '<b>Results<b>' : '')
 		if (this.state.config.term) {
+			this.dom.holder.header.html(this.state.config.term.term.name)
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
 			if (data.error) throw data.error
