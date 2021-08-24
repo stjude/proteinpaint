@@ -21,6 +21,7 @@ export async function get_regression(q, ds) {
 			q[termnum + '_id'] = term.id
 			if (term.q) q[termnum + '_q'] = term.q
 			header.push(term.id) //('var'+i)//(term.term.name)
+			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
 		}
 		const rows = get_matrix(q)
 		const tsv = [header.join('\t')]
@@ -32,13 +33,15 @@ export async function get_regression(q, ds) {
 		for (const row of rows) {
 			const line = [row.outcome]
 			for (const i in q.independent) {
-				line.push(row['val' + i])
+				const value = row['val' + i]
+				const term = q.independent[i]
+				const val = term.term && term.term.values && term.term.values[value]
+				line.push(val && val.uncomputable ? 'NA' : value)
 			}
 			tsv.push(line.join('\t'))
 		}
 		const regressionType = q.regressionType || 'linear'
-		console.log(38, regressionType, tsv.slice(0, 20))
-		const data = await lines2R('regression.R', tsv, ['linear', colClasses.join(',')])
+		const data = await lines2R('regression.R', tsv, [regressionType, colClasses.join(',')])
 		const result = {
 			keys: data.shift().split('\t'),
 			rows: []
