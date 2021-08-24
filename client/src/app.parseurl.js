@@ -328,7 +328,7 @@ upon error, throw err message as a string
 				arg.hostURL,
 				undefined, // jwt
 				false, // no show
-				{
+				arg.app || {
 					debugmode: arg.debugmode,
 					instanceTracker: arg.instanceTracker || {},
 					callbacks: arg.callbacks || {}

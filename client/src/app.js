@@ -731,6 +731,7 @@ async function parseembedthenurl(arg, app) {
 		*/
 		try {
 			await parseurl.parse({
+				app,
 				genomes: app.genomes,
 				hostURL: app.hostURL,
 				variantPageCall_snv: app.variantPageCall_snv,
