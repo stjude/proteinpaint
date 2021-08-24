@@ -68,7 +68,7 @@ class MassRegression {
 					if (columns[i].label === 'category') {
 						if (config) {
 							if (config.term.values) {
-								value = config.term.values[r].label
+								value = r in config.term.values ? config.term.values[r].label : r
 							}
 						}
 					}
