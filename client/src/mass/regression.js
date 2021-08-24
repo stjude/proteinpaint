@@ -57,9 +57,21 @@ class MassRegression {
 			return { key, label: key }
 		})
 		const rows = data.rows.map((row, i) => {
+			let config
 			return {
 				lst: row.map((r, i) => {
-					return { label: columns[i].label, value: r }
+					let value = r
+					if (columns[i].label === 'variable') {
+						config = this.state.config.independent.find(x => x.id === r)
+					}
+					if (columns[i].label === 'category') {
+						if (config) {
+							if (config.term.values) {
+								value = config.term.values[r].label
+							}
+						}
+					}
+					return { label: columns[i].label, value: value }
 				})
 			}
 		})
