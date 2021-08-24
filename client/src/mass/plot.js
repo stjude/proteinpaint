@@ -282,7 +282,6 @@ function setRenderers(self) {
 			foot: this.dom.controls.append('div')
 		}
 		const disable_terms = []
-		const pills = []
 
 		dom.body
 			.selectAll('div')
@@ -292,6 +291,7 @@ function setRenderers(self) {
 			.style('margin', '3px 5px')
 			.style('padding', '3px 5px')
 			.each(function(d) {
+				const pills = []
 				const div = select(this)
 				div
 					.append('div')
