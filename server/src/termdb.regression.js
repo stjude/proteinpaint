@@ -8,9 +8,10 @@ export async function get_regression(q, ds) {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
 		q.independent = JSON.parse(decodeURIComponent(q.independent))
+		// termY === outcome term
+		q.termY = ds.cohort.termdb.q.termjsonByOneid(q.term1_id)
 		q.termY_id = q.term1_id
 		q.termY_q = JSON.parse(q.term1_q)
-		const outcomeType = q.termY_q.termtype || q.termY_q.type
 		delete q.term1_id
 		delete q.term1_q
 		const header = ['outcome']
@@ -24,9 +25,10 @@ export async function get_regression(q, ds) {
 		const rows = get_matrix(q)
 		const tsv = [header.join('\t')]
 		const independentTypes = q.independent.map(t => t.type)
-		const variableTypes = [outcomeType, ...independentTypes]
+		const termTypes = [q.termY.type, ...independentTypes]
 		// Convert SJLIFE term types to R classes
-		const variableClasses = get_classes(variableTypes)
+		const colClasses = termTypes.map(type => type2class.get(type))
+		console.log(29, termTypes, colClasses)
 		for (const row of rows) {
 			const line = [row.outcome]
 			for (const i in q.independent) {
@@ -34,7 +36,9 @@ export async function get_regression(q, ds) {
 			}
 			tsv.push(line.join('\t'))
 		}
-		const data = await lines2R('regression.R', tsv, ['linear', variableClasses.join(',')])
+		const regressionType = q.regressionType || 'linear'
+		console.log(38, regressionType, tsv.slice(0, 20))
+		const data = await lines2R('regression.R', tsv, ['linear', colClasses.join(',')])
 		const result = {
 			keys: data.shift().split('\t'),
 			rows: []
@@ -104,13 +108,10 @@ q{}
 	return lst
 }
 
-function get_classes(variableTypes) {
-	const type2class = new Map()
-	type2class.set('integer', 'integer')
-	type2class.set('float', 'numeric')
-	type2class.set('survival', 'numeric')
-	type2class.set('categorical', 'factor')
-	type2class.set('condition', 'factor')
-	const variableClasses = variableTypes.map(type => type2class.get(type))
-	return variableClasses
-}
+const type2class = new Map([
+	['integer', 'integer'],
+	['float', 'numeric'],
+	['survival', 'numeric'],
+	['categorical', 'factor'],
+	['condition', 'factor']
+])

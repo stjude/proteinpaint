@@ -174,6 +174,9 @@ class MassPlot {
 			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
 		} else if (plot.settings.currViews.includes('regression')) {
 			params.push('getregression=1')
+			if (plot.term.term.values && Object.keys(plot.term.term.values).length === 2) {
+				params.push('regressionType=logistic')
+			}
 			if (plot.independent) {
 				params.push(
 					'independent=' +
