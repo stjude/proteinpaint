@@ -35,7 +35,7 @@ dat <- read.table(con, header = T, sep = "\t", quote = "", colClasses = variable
 names(dat) <- paste(names(dat), "___", sep = "")
 outcomeVar <- names(dat)[1]
 independentVars <- names(dat)[-1]
-model <- as.formula(paste(outcomeVar, paste(independentVars, collapse = " + "), sep = " ~ "))
+model <- as.formula(paste(sprintf("`%s`", outcomeVar), paste(sprintf("`%s`", independentVars), collapse = " + "), sep = " ~ "))
 if(regressionType == "linear"){
   res <- glm(model, data = dat)
   out <- cbind("beta" = coef(res), suppressMessages(confint(res)), "pvalue" = summary(res)$coefficients[,4])
@@ -60,9 +60,9 @@ names(out)[2:3] <- c("95% CI (low)","95% CI (high)")
 out[,c("variable","category")] <- ""
 var_and_cat <- strsplit(row.names(out), split = "___")
 for(x in 1:length(var_and_cat)){
-  out[x,"variable"] <- var_and_cat[[x]][1]
+  out[x,"variable"] <- gsub("`","",var_and_cat[[x]][1])
   if(length(var_and_cat[[x]]) > 1){
-    out[x,"category"] <- var_and_cat[[x]][2]
+    out[x,"category"] <- gsub("`","",var_and_cat[[x]][2])
   } else{
     out[x,"category"] <- ""
   }
