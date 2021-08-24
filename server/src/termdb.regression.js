@@ -37,8 +37,7 @@ export async function get_regression(q, ds) {
 			tsv.push(line.join('\t'))
 		}
 		const regressionType = q.regressionType || 'linear'
-		console.log(38, regressionType, tsv.slice(0, 20))
-		const data = await lines2R('regression.R', tsv, ['linear', colClasses.join(',')])
+		const data = await lines2R('regression.R', tsv, [regressionType, colClasses.join(',')])
 		const result = {
 			keys: data.shift().split('\t'),
 			rows: []
