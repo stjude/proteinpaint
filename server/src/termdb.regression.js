@@ -24,7 +24,7 @@ export async function get_regression(q, ds) {
 			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
 		}
 		const rows = get_matrix(q)
-		const tsv = [header.join('\t')]
+		const tsv = [header.map(name => name.replace(' ', '_').replace(',', '_')).join('\t')]
 		const termYvalues = q.termY.values || {}
 		console.log(termYvalues)
 		const independentTypes = q.independent.map(t => t.type)
