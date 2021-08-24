@@ -229,23 +229,22 @@ TdbStore.prototype.actions = {
 	},
 
 	async plot_show(action) {
-		if (!(action.id in this.state.tree.plots)) {
-			this.state.tree.plots[action.id] = plotConfig(
-				{
-					id: action.id,
-					term: action.term.term ? action.term : { term: action.term },
-					chartType: action.chartType,
-					settings: { currViews: [action.chartType] }
-				},
-				await this.api.copyState()
-			)
-			if (action.independent) {
-				this.state.tree.plots[action.id].independent = action.independent.map(term => {
-					return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
-				})
-			}
-			this.state.tree.visiblePlotIds.push(action.id)
+		if (action.id in this.state.tree.plots) return
+		this.state.tree.plots[action.id] = plotConfig(
+			{
+				id: action.id,
+				term: action.term.term ? action.term : { term: action.term },
+				chartType: action.chartType,
+				settings: { currViews: [action.chartType] }
+			},
+			await this.api.copyState()
+		)
+		if (action.independent) {
+			this.state.tree.plots[action.id].independent = action.independent.map(term => {
+				return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
+			})
 		}
+		this.state.tree.visiblePlotIds.push(action.id)
 	},
 
 	plot_hide(action) {

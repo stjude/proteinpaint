@@ -10,6 +10,7 @@ const defaults = {
 
 // to assign chart ID to distinguish
 // between chart instances
+const idPrefix = '_AUTOID_' // to distinguish from user-assigned chart IDs
 let id = 0
 
 class MassCharts {
@@ -106,7 +107,7 @@ function setRenderers(self) {
 		}
 		const usecase = { target: chartType }
 		const termSequence = getTermSelectionSequence(chartType)
-		const action = { type: 'plot_show', chartType, id: id++ }
+		const action = { type: 'plot_show', chartType, id: idPrefix + id++ }
 		if (termSequence.length == 1) self.showTree(usecase, dom, termSequence, action)
 		else self.showMultipart(usecase, dom, termSequence, action)
 	}
