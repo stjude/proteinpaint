@@ -82,7 +82,6 @@ class MassPlot {
 
 	getState(appState) {
 		const config = appState.tree.plots[this.id]
-		console.log(84, config.cutoff)
 		if (!config) {
 			throw `No plot with id='${this.id}' found.`
 		}
@@ -121,7 +120,6 @@ class MassPlot {
 	getDataName(state) {
 		const plot = this.config // the plot object in state
 		const params = []
-		console.log(123, 'getDataName()', plot.cutoff, 'cutoff' in plot)
 		if (state.displayAsSurvival) {
 			params.push('getsurvival=1')
 		} else if (plot.settings.currViews.includes('cuminc')) {
@@ -130,7 +128,6 @@ class MassPlot {
 		} else if (plot.settings.currViews.includes('regression')) {
 			params.push('getregression=1')
 			if ('cutoff' in plot) {
-				console.log(131)
 				params.push('cutoff=' + plot.cutoff)
 			}
 			if ('cutoff' in plot || (plot.term.term.values && Object.keys(plot.term.term.values).length === 2)) {
@@ -331,7 +328,6 @@ function setRenderers(self) {
 				for (const t of config.termSequence) {
 					config[t.detail] = t.selected
 					if ('cutoff' in t) config.cutoff = t.cutoff
-					console.log(328, 't.cutoff', t.cutoff)
 				}
 				self.app.dispatch({
 					type: _config.term ? 'plot_edit' : 'plot_show',
@@ -419,7 +415,6 @@ function setRenderers(self) {
 			.style('width', '50px')
 			.style('text-align', 'center')
 			.on('change', () => {
-				console.log([useCutoffInput.property('value')])
 				const value = useCutoffInput.property('value')
 				if (value === '') delete d.cutoff
 				else d.cutoff = Number(value)
