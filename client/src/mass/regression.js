@@ -27,6 +27,7 @@ class MassRegression {
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: {
+				cutoff: config.cutoff,
 				term: config.term,
 				independent: config.independent,
 				settings: {

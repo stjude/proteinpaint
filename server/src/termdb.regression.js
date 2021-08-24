@@ -31,9 +31,13 @@ export async function get_regression(q, ds) {
 		const termTypes = [q.termY.type, ...independentTypes]
 		// Convert SJLIFE term types to R classes
 		const colClasses = termTypes.map(type => type2class.get(type))
+		if ('cutoff' in q) colClasses[0] = 'factor'
+		const regressionType = q.regressionType || 'linear'
 		console.log(29, termTypes, colClasses)
 		for (const row of rows) {
-			const line = [termYvalues[row.outcome] && termYvalues[row.outcome].uncomputable ? 'NA' : row.outcome]
+			const outcomeVal = termYvalues[row.outcome] && termYvalues[row.outcome].uncomputable ? 'NA' : row.outcome
+			const meetsCutoff = 'cutoff' in q && outcomeVal != 'NA' && Number(outcomeVal) >= q.cutoff ? 1 : 0 //console.log(meetsCutoff, q.cutoff, outcomeVal, Number(outcomeVal), regressionType)
+			const line = ['cutoff' in q ? meetsCutoff : outcomeVal]
 			for (const i in q.independent) {
 				const value = row['val' + i]
 				const term = q.independent[i]
@@ -42,8 +46,7 @@ export async function get_regression(q, ds) {
 			}
 			if (line[0] != 'NA') tsv.push(line.join('\t'))
 		}
-		const regressionType = q.regressionType || 'linear'
-		console.log(43, regressionType, tsv.slice(0, 20))
+		console.log(tsv.slice(0, 30))
 		const data = await lines2R('regression.R', tsv, [regressionType, colClasses.join(',')])
 		const result = {
 			keys: data.shift().split('\t'),

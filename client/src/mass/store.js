@@ -251,6 +251,11 @@ TdbStore.prototype.actions = {
 		if (!action.config.termSequence) {
 			action.config.termSequence = getTermSelectionSequence(action.config.chartType)
 		}
+		if ('cutoff' in action.config) {
+			this.state.tree.plots[action.id].cutoff = action.config.cutoff
+		} else {
+			delete this.state.tree.plots[action.id].cutoff
+		}
 		this.state.tree.visiblePlotIds.push(action.id)
 	},
 
@@ -266,10 +271,16 @@ TdbStore.prototype.actions = {
 	},
 
 	plot_edit(action) {
+		console.log(273, action.config.cutoff)
 		const plot = this.state.tree.plots[action.id]
 		if (plot) {
 			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
 			validatePlot(plot, this.app.vocabApi)
+		}
+		if ('cutoff' in action.config) {
+			plot.cutoff = action.config.cutoff
+		} else {
+			delete plot.cutoff
 		}
 		this.adjustPlotCurrViews(plot)
 	},

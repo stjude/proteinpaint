@@ -141,7 +141,13 @@ function setRenderers(self) {
 export function getTermSelectionSequence(chartType) {
 	if (chartType == 'regression') {
 		return [
-			{ label: 'Outcome variable', prompt: 'Select outcome variable', detail: 'term', limit: 1 },
+			{
+				label: 'Outcome variable',
+				prompt: 'Select outcome variable',
+				detail: 'term',
+				limit: 1,
+				cutoffTermTypes: ['condition', 'integer', 'float']
+			},
 			{ label: 'Independent variable(s)', prompt: 'Add independent variable', detail: 'independent', limit: 10 }
 		]
 	} else {

@@ -82,6 +82,7 @@ class MassPlot {
 
 	getState(appState) {
 		const config = appState.tree.plots[this.id]
+		console.log(84, config.cutoff)
 		if (!config) {
 			throw `No plot with id='${this.id}' found.`
 		}
@@ -120,7 +121,7 @@ class MassPlot {
 	getDataName(state) {
 		const plot = this.config // the plot object in state
 		const params = []
-
+		console.log(123, 'getDataName()', plot.cutoff, 'cutoff' in plot)
 		if (state.displayAsSurvival) {
 			params.push('getsurvival=1')
 		} else if (plot.settings.currViews.includes('cuminc')) {
@@ -128,7 +129,11 @@ class MassPlot {
 			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
 		} else if (plot.settings.currViews.includes('regression')) {
 			params.push('getregression=1')
-			if (plot.term.term.values && Object.keys(plot.term.term.values).length === 2) {
+			if ('cutoff' in plot) {
+				console.log(131)
+				params.push('cutoff=' + plot.cutoff)
+			}
+			if ('cutoff' in plot || (plot.term.term.values && Object.keys(plot.term.term.values).length === 2)) {
 				params.push('regressionType=logistic')
 			}
 			if (plot.independent) {
@@ -313,7 +318,7 @@ function setRenderers(self) {
 						self.newPill(d, config, div, pills, disable_terms, term)
 					}
 				}
-				self.newPill(d, config, div, pills, disable_terms, d.limit === 1 && config[d.detail])
+				self.newPill(d, config, div.append('div'), pills, disable_terms, d.limit === 1 && config[d.detail])
 			})
 
 		self.dom.submitBtn = dom.foot
@@ -325,6 +330,8 @@ function setRenderers(self) {
 				self.dom.tip.hide()
 				for (const t of config.termSequence) {
 					config[t.detail] = t.selected
+					if ('cutoff' in t) config.cutoff = t.cutoff
+					console.log(328, 't.cutoff', t.cutoff)
 				}
 				self.app.dispatch({
 					type: _config.term ? 'plot_edit' : 'plot_show',
@@ -342,10 +349,9 @@ function setRenderers(self) {
 
 		const newPillDiv = pillDiv
 			.append('div')
+			.style('display', 'inline-block')
 			.style('margin', '3px 15px')
 			.style('padding', '3px 5px')
-
-		const usecase = { target: config.chartType, detail: d.detail }
 
 		const pill = termsettingInit({
 			placeholder: d.prompt,
@@ -356,7 +362,7 @@ function setRenderers(self) {
 			use_bins_less: true,
 			debug: self.opts.debug,
 			showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
-			usecase,
+			usecase: { target: config.chartType, detail: d.detail },
 			disable_terms,
 			callback: term => {
 				if (!term) {
@@ -369,6 +375,7 @@ function setRenderers(self) {
 						newPillDiv.remove()
 					}
 					self.updateBtns(config)
+					cutoffDiv.style('display', 'none')
 				} else {
 					if (!disable_terms.includes(term.term.id)) {
 						disable_terms.push(term.term.id)
@@ -384,12 +391,41 @@ function setRenderers(self) {
 						d.selected = term
 					}
 					self.updateBtns(config)
+					cutoffDiv.style(
+						'display',
+						d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
+					)
 				}
 			}
 		})
 
 		pills.push(pill)
 		if (term) pill.main(term)
+
+		const cutoffDiv = pillDiv
+			.append('div')
+			.style(
+				'display',
+				term && d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
+			)
+			.style('margin', '3px 15px')
+			.style('padding', '3px 5px')
+
+		const cutoffLabel = cutoffDiv.append('span').html('Use cutoff of ')
+
+		const useCutoffInput = cutoffDiv
+			.append('input')
+			.attr('type', 'number')
+			.style('width', '50px')
+			.style('text-align', 'center')
+			.on('change', () => {
+				console.log([useCutoffInput.property('value')])
+				const value = useCutoffInput.property('value')
+				if (value === '') delete d.cutoff
+				else d.cutoff = Number(value)
+			})
+
+		cutoffDiv.append('span').html(' (leave blank to disable)')
 	}
 
 	self.updateBtns = config => {
