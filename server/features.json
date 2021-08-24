@@ -27,7 +27,7 @@
             ],
             "ppcalls":[
                 {
-                    "label":"TCGA DLBC example",
+                    "label":"TCGA DLBC",
                     "note": "IF download data reimplemented later -> https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/GP/GPDemoData.tar.gz",
                     "urlparam":"?genome=hg38&block=1&position=chr22:22569655-23013766&svcnvfpkmfile=TCGA_DLBC,svcnv,proteinpaint_demo/hg38/GP/TCGA_DLBC.CNV.gz,vcf,proteinpaint_demo/hg38/GP/TCGA_DLBC.vcf.gz,fpkm,proteinpaint_demo/hg38/GP/TCGA_DLBC.fpkm.gz",
                     "runargs":{
@@ -52,7 +52,7 @@
                             }
                         ]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"rect": 20 }
                     }
                 }
@@ -65,16 +65,24 @@
                         "link": "https://genomepaint.stjude.cloud/"
                     },
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
-                    },
+                    }
+                ],
+                "arrowButtons": [
                     {
-                        "name": "Download Data & Processing Pipeline",
-                        "download": "https://pecan.stjude.cloud/static/genomepaint-support/script/GDC.variation.datafile.processing.zip"
-                    },
-                    {
-                        "name": "Data Processing Docs",
-                        "link": "https://docs.google.com/document/d/1TC6pcAByqugzMWQ0C7mhHIHIkIxkqqDt1ATBBt_ehes/edit"
+                        "name": "Data Processing",
+                        "message": "<p>Download the data and data processing scripts from the Download Data & Processing Pipeline link. Please use the Data Processing Docs for instructions</p>",
+                        "links": [
+                            {
+                                "name": "Download Data & Processing Pipeline",
+                                "download": "https://pecan.stjude.cloud/static/genomepaint-support/script/GDC.variation.datafile.processing.zip"
+                            },
+                            {
+                                "name": "Data Processing Docs",
+                                "link": "https://docs.google.com/document/d/1TC6pcAByqugzMWQ0C7mhHIHIkIxkqqDt1ATBBt_ehes/edit"
+                            }
+                        ]
                     }
                 ]
             },
@@ -141,7 +149,7 @@
                             "height": 100
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -150,7 +158,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
                     }
                 ]
@@ -178,13 +186,13 @@
                         "position": "chr8:128597079-130293343",
                         "nativetracks": "RefGene",
                         "tracks": [{
-                            "name": "Stranded RNA-seq",
+                            "name": "Stranded RNA-seq Demo",
                             "strand1": { "file": "proteinpaint_demo/hg19/strandedbigwig/sense.bw" },
                             "strand2": { "file": "proteinpaint_demo/hg19/strandedbigwig/antisense.bw", "normalize": { "dividefactor": -1 } },
                             "type": "bigwigstranded"
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -193,7 +201,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
                     }
                 ]
@@ -231,19 +239,19 @@
                         "nativetracks": "RefGene",
                         "tracks": [{
                             "type": "bedj",
-                            "name": "JSON BED gene track",
+                            "name": "JSON BED gene track demo",
                             "file": "proteinpaint_demo/hg19/bedj/gencode.gz",
                             "stackheight": 16,
                             "stackspace": 1,
                             "color": "teal"
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 },
                 {
-                    "label": "BED3 Example",
+                    "label": "BED3",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedj3DemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz",
                     "runargs": {
@@ -255,18 +263,18 @@
                         "nativetracks": "RefGene",
                         "tracks": [{
                             "type": "bedj",
-                            "name": "BED3 Example",
+                            "name": "BED3 demo",
                             "file": "proteinpaint_demo/hg19/bedj/bed3.gz",
                             "stackheight": 16,
                             "stackspace": 1
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 },
                 {
-                    "label": "Numeric Filter Example",
+                    "label": "Numeric Filter",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/numericDenomData.tar.gz",
                     "runargs": {
                         "parseurl": true,
@@ -275,19 +283,95 @@
                         "noheader": 1,
                         "genome": "hg19",
                         "position":"chr17:7449122-7706842",
+                        "tracks":[{
+                            "type": "bedj",
+                            "name": "Numeric value demo",
+                            "file": "proteinpaint_demo/hg19/bedj/value.gz",
+                            "usevalue":{
+                                "key": "value",
+                                "dropBelowCutoff":1000
+                            },
+                            "stackheight": 16,
+                            "stackspace": 1
+                        }]
+                    },
+                    "testSpec": {
+                        "expected": {"image": 1 }
+                    }
+                },
+                {
+                    "label": "URL Linkout",
+                    "message": "Click on a SNP item to see details on the dbSNP website.",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjLinkoutDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "position":"chr17:7579546-7579629",
                         "tracks":[
                             {
-                                "type":"bedj",
-                                "name":"numeric value",
-                                "file":"proteinpaint_demo/hg19/bedj/value.gz",
-                                "usevalue":{
-                                    "key":"value",
-                                    "dropBelowCutoff":1000
-                                }
+                                "type": "bedj",
+                                "name": "URL linkout demo",
+                                "file": "proteinpaint_demo/hg19/bedj/snp.gz",
+                                "itemurl_appendname": "https://www.ncbi.nlm.nih.gov/snp/",
+                                "stackheight": 16,
+                                "stackspace": 1
                             }
                         ]
                     },
-                    "testSpec": { 
+                    "testSpec": {
+                        "expected": {"image": 1, "rect": 1}
+                    }
+                },
+                {
+                    "label": "Hide item names",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "tracks":[
+                            {
+                                "type":"bedj",
+                                "name":"Hide names demo",
+                                "file":"proteinpaint_demo/hg19/bedj/gencode.gz",
+                                "hideItemNames": true,
+                                "stackheight": 16,
+                                "stackspace": 1
+                            }
+                        ]
+                    },
+                    "testSpec": {
+                        "expected": {"image": 1 }
+                    }
+                },
+                {
+                    "label": "Show item by name",
+                    "message": "To control this feature, click CONFIG and toggle the checkbox for 'Show items by names'.",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
+                    "runargs": {
+                        "parseurl": true,
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg19",
+                        "position":"chr8:128538507-129301994",
+                        "tracks":[
+                            {
+                                "type":"bedj",
+                                "name":"Show item names demo",
+                                "file":"proteinpaint_demo/hg19/bedj/gencode.gz",
+                                "filterByName": "ENST00000377970\nENST00000667305",
+                                "stackheight": 16,
+                                "stackspace": 1
+                            }
+                        ]
+                    },
+                    "testSpec": {
                         "expected": {"image": 1 }
                     }
                 }
@@ -296,7 +380,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A"
                     }
                 ]
@@ -334,7 +418,7 @@
                             "name": "Demo sample tumor allelic imbalance"
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -343,7 +427,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
                     }
                 ]
@@ -393,7 +477,7 @@
                             ]
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -402,7 +486,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit"
                     }
                 ]
@@ -432,11 +516,11 @@
                         "tracks": [{
                             "type": "mdsexpressionrank",
                             "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",
-                            "name": "TCGA FPKM demo rank",
+                            "name": "TCGA FPKM demo expression rank",
                             "sample": "TCGA-GS-A9TQ"
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"rect": 5 }
                     }
                 }
@@ -445,7 +529,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s"
                     }
                 ]
@@ -479,7 +563,7 @@
                         "tracks": [{
                             "type": "hicstraw",
                             "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
-                            "name": "Example Hi-C",
+                            "name": "Hi-C Demo",
                             "percentile_max": 95,
                             "mincutoff": 1,
                             "pyramidup": 1,
@@ -492,7 +576,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
                     }
                 ]
@@ -518,7 +602,7 @@
                         "genome": "hg19",
                         "dataset":"Pediatric"
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"circle": 10 }
                     }
                 }
@@ -527,7 +611,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
                     }
                 ]
@@ -565,7 +649,7 @@
                             "list_description":[{"k":"Test 1","v":"Description 1"}, {"k":"Test 2","v":"Description 2"}]
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"circle": 15, "line": 15}
                     }
                 }
@@ -574,7 +658,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
                     }
                 ]
@@ -614,11 +698,11 @@
                         "nativetracks": "Refgene",
                         "tracks": [{
                             "type": "mdsjunction",
-                            "name": "Demo",
+                            "name": "Cohort splice junction Demo",
                             "file": "proteinpaint_demo/hg19/junction/json.gz"
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"circle": 15, "line": 15}
                     }
                 },
@@ -635,7 +719,7 @@
                         "nativetracks": "Refgene",
                         "tracks": [{
                             "type": "mdsjunction",
-                            "name": "Demo",
+                            "name": "Cohort matrix splice junction demo",
                             "file2": "proteinpaint_demo/hg19/junction/matrix.gz"
                         }]
                     },
@@ -645,7 +729,7 @@
                             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/rnapeg2matrix.py.gz"
                         }
                     ],
-                    "testSpec": { 
+                    "testSpec": {
                          "expected": {"circle": 15, "line": 15}
                     }
                 }
@@ -654,7 +738,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.s58v64uwsl45"
                     }
                 ]
@@ -686,7 +770,7 @@
                         "nativetracks":"refgene",
                         "tkjsonfile": "proteinpaint_demo/hg19/tklist/tracks.json"
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -696,7 +780,7 @@
                 "intro": "<p>To view the facet table:</p><ul><li>Click on the <button>Tracks</button> in the genome browser toolbar</li><li>A button appears under FACET. Click on <button style='border:none;font-size:15px;padding:5px'>77 tracks from My facet table</button></li><li>Launch tracks by clicking on individual cells, samples (row labels), or assays (column labels).</li></ul>",
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6"
                     }
                 ]
@@ -828,13 +912,13 @@
                         "tracks": [{
                             "type": "hicstraw",
                             "bedfile": "proteinpaint_demo/hg19/arc/mango.gz",
-                            "name": "Arc Track Example",
+                            "name": "Arc Track Demo",
                             "percentile_max":99,
                             "mode_arc": true,
                             "mode_hm": false
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -843,7 +927,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.8zct8j3cscak"
                     }
                 ]
@@ -873,7 +957,7 @@
                         "nativetracks": "RefGene",
                         "tracks": [{
                             "type": "mdssvcnv",
-                            "name": "Demo ASE",
+                            "name": "ASE Demo",
                             "checkvcf": {
                                 "file": "proteinpaint_demo/hg38/ase/vcf.gz"
                             },
@@ -945,7 +1029,7 @@
                             }
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "timeout": 7000,
                         "expected": { "rect": 20, "line": 20 }
                     }
@@ -955,7 +1039,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz"
                     }
                 ]
@@ -996,10 +1080,10 @@
                         "tracks": [{
                             "type": "bam",
                             "file": "proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
-                            "name": "WES KIT exon mutation"
+                            "name": "WES KIT exon mutation demo"
                         }]
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 },
@@ -1017,7 +1101,7 @@
                         "tracks": [{
                             "type": "bam",
                             "file": "proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
-                            "name": "WES KIT exon mutation with variant",
+                            "name": "WES KIT exon mutation with variant demo",
                             "variants":[
                                 {
                                     "chr": "chr4",
@@ -1028,13 +1112,7 @@
                             ]
                         }]
                     },
-                    "buttons": [
-                        {
-                            "name": "Download BAM Slicing Script",
-                            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/slice_bam4pp.py.gz"
-                        }
-                    ],
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
@@ -1043,8 +1121,12 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
+                    },
+                    {
+                        "name": "Download BAM Slicing Script",
+                        "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/slice_bam4pp.py.gz"
                     }
                 ]
             },
@@ -1067,7 +1149,7 @@
                         "noheader": 1,
                         "gdcbamslice": { "uionly": true }
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"image": 1 }
                     }
                 }
@@ -1107,7 +1189,7 @@
                         "tracks": [{
                             "type": "bampile",
                             "file": "proteinpaint_demo/hg19/bampile/tk.gz",
-                            "name": "Demo Bampile"
+                            "name": "Bampile Demo"
                         }]
                     }
                 }
@@ -1139,7 +1221,7 @@
                 "is_ui": true,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1DRVzE_WenG490eRYB7VGFOygtSqtF5L97rhK0HOUCNY/edit"
                     }
                 ]
@@ -1169,7 +1251,7 @@
                 "is_ui": true,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13"
                     }
                 ]
@@ -1213,7 +1295,7 @@
                 "is_ui": true,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit"
                     }
                 ]
@@ -1255,7 +1337,7 @@
                 "is_ui": true,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit"
                     }
                 ]
@@ -1284,7 +1366,7 @@
                 "is_ui": true,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit"
                     }
                 ]
@@ -1367,7 +1449,7 @@
                             "analysisdata_file": "proteinpaint_demo/hg38/mdstsne/file.json"
                         }
                     },
-                    "testSpec": { 
+                    "testSpec": {
                         "expected": {"circle": 10 }
                     }
                 }
@@ -1376,7 +1458,7 @@
                 "is_ui": false,
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit"
                     }
                 ]
@@ -1412,7 +1494,7 @@
             "sandbox":{
                 "buttons": [
                     {
-                        "name": "Docs",
+                        "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
                     }
                 ]

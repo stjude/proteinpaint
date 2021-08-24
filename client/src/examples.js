@@ -1,7 +1,7 @@
-import { dofetch2, sayerror, newSandboxDiv, tab2box, tab_wait } from './client'
+import { dofetch2, sayerror, newSandboxDiv, tab2box, tab_wait, appear } from './client'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
-import { highlight } from 'highlight.js/lib/common';
+import { highlight } from 'highlight.js/lib/common'
 import { deepFreeze } from './common/rx.core'
 
 export async function init_examples(par) {
@@ -34,7 +34,7 @@ export async function init_examples(par) {
 		allow_mdsform: re.allow_mdsform
 	}
 	//Creates error when obj is modified to avoid issues when using the same obj or stringifying it.
-	for (const example of re.examples){
+	for (const example of re.examples) {
 		if (example.buttons && example.media.example) deepFreeze(example.media.example)
 	}
 	// make_searchbar(track_args, page_args, searchbar_div)
@@ -95,21 +95,6 @@ function make_subheader_contents(div, sub_name) {
 	return list
 }
 
-//Preserves alignment for search bar and launch button whilst aligning the first subheaders in each col
-function make_top_fnDiv(div) {
-	const top = div.append('div')
-	top
-		.style('display', 'flex')
-		.style('flex-direction', 'column')
-		.style('align-items', 'center')
-		.style('justify-content', 'center')
-		.style('background-color', '#f5f5f5')
-		.style('height', '35px')
-		.style('width', '550px')
-
-	return top
-}
-
 //Makes search bar and functionality to search tracks
 function make_searchbar(track_args, page_args, div) {
 	const bar_div = make_top_fnDiv(div)
@@ -166,30 +151,39 @@ async function loadTracks(args, page_args, filteredTracks) {
 function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
-		const urls = track.media.urls
 		const li = holder.append('li')
 		li.attr('class', 'sjpp-track')
 			.html(
-				`${track.blurb ? `<div class="sjpp-track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span class="sjpp-track-blurb" style="cursor:default">  ${track.blurb}</span></div>`: `<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`}
+				`${
+					track.blurb
+						? `<div class="sjpp-track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span class="sjpp-track-blurb" style="cursor:default">  ${track.blurb}</span></div>`
+						: `<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
+				}
 				<span class="sjpp-track-image"><img src="${track.image}"></img></span>
 				<div class='sjpp-track-links'>
-				${urls.map((url)=>{
-					if (!url) return ''
-					if (url.link && !url.name) {
-						return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.link}" target="_blank">URL</a>`
-					}
-					if (url.link && url.name){
-						return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.link}" target="_blank">${url.name}</a>`
-					}
-				}).join("")}
-				${track.media.doc ? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.media.doc}", target="_blank">Docs</a>`: ''}
+				${track.media.urls
+					.map(url => {
+						if (!url) return ''
+						if (url.link && !url.name) {
+							return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.link}" target="_blank">URL</a>`
+						}
+						if (url.link && url.name) {
+							return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.link}" target="_blank">${url.name}</a>`
+						}
+					})
+					.join('')}
+				${
+					track.media.doc
+						? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.media.doc}", target="_blank">Docs</a>`
+						: ''
+				}
 				</div>`
 			)
 			.on('click', async () => {
 				event.stopPropagation()
 				page_args.apps_off()
 				if (track.ppcalls) {
-					openExample(track, page_args.apps_sandbox_div)
+					openSandbox(track, page_args.apps_sandbox_div)
 				}
 			})
 
@@ -238,7 +232,7 @@ function displayTracks(tracks, holder, page_args) {
 									example: button.example
 								}
 							}
-							openExample(btn_args, page_args.apps_sandbox_div)
+							openSandbox(btn_args, page_args.apps_sandbox_div)
 						}
 						// TODO: Add logic if custom button has url or some other link
 					})
@@ -250,10 +244,11 @@ function displayTracks(tracks, holder, page_args) {
 }
 
 function makeRibbon(e, text, color) {
-	const ribbonDiv = e.append('div')
-	.attr('class', 'sjpp-track-ribbon')
-	.style('align-items','center')
-	.style('justify-content', 'center')
+	const ribbonDiv = e
+		.append('div')
+		.attr('class', 'sjpp-track-ribbon')
+		.style('align-items', 'center')
+		.style('justify-content', 'center')
 
 	const ribbon = ribbonDiv
 		.append('span')
@@ -269,13 +264,13 @@ function makeRibbon(e, text, color) {
 		.style('text-align', 'center')
 }
 
-//TODO: styling for the container
-//Opens example of app in landing page container
-async function openExample(track, holder) {
+// ******* Create Sandbox Function ********* Opens a sandbox with track example(s) or app ui with links and other information
+
+async function openSandbox(track, holder) {
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header_row.style('box-shadow', 'rgb(220 220 220) 5px -2px 5px').style('z-index', '99')
-	sandbox_div.header.text(track.name)
+	sandbox_div.header.text(track.name).style('padding', '5px 10px 10px 10px')
 	sandbox_div.body.style('box-shadow', 'rgb(220 220 220) 5px -2px 10px').style('z-index', '-1')
 
 	// creates div for instructions or other messaging about the track
@@ -286,14 +281,21 @@ async function openExample(track, holder) {
 
 	if (track.ppcalls.length == 1) {
 		const call = track.ppcalls[0]
+
+		const buttons_div = sandbox_div.body.append('div').attr('id', 'sjpp-buttons-div')
+		const reuse_div = sandbox_div.body
+			.append('div')
+			.attr('id', 'sjpp-reusable')
+			.style('border-bottom', '1.5px darkgray solid')
+
 		//Creates any custom buttons
-		addButtons(track.sandbox.buttons, sandbox_div.body)
+		addButtons(track.sandbox.buttons, buttons_div)
 		//Download data and show runpp() code at the top
-		makeDataDownload(call.download, sandbox_div.body)
+		makeDataDownload(call.download, buttons_div)
 		//Redirects to URL parameter of track
-		showURLLaunch(call.urlparam, sandbox_div.body)
-		//Shows code used to create sandbox
-		showCode(track, call.runargs, sandbox_div.body)
+		showURLLaunch(call.urlparam, buttons_div)
+
+		addArrowBtns(track, track.sandbox.arrowButtons, call.runargs, buttons_div, reuse_div)
 
 		// template runpp() arg
 		const runpp_arg = {
@@ -305,18 +307,19 @@ async function openExample(track, holder) {
 			host: window.location.origin
 		}
 
-		const oneexample = JSON.parse(JSON.stringify(call.runargs))
+		const callpp = JSON.parse(JSON.stringify(call.runargs))
 
-		runproteinpaint(Object.assign(runpp_arg, oneexample))
-
+		runproteinpaint(Object.assign(runpp_arg, callpp))
 	} else if (track.ppcalls.length > 1) {
 		addButtons(track.sandbox.buttons, sandbox_div.body)
 		makeTabMenu(track, sandbox_div)
 	}
 }
 
+// ******* Sandbox Message Functions *********
+
 function addMessage(arg, div) {
-	if (arg) {
+	if (arg != undefined && arg) {
 		const message = div
 			.append('div')
 			.style('margin', '20px')
@@ -341,126 +344,13 @@ async function addUpdateMessage(track, div) {
 	}
 }
 
-function showURLLaunch(arg,div){
-	if (arg){
-		const URLbtn = makeButton(div, "Run track from URL")
-		URLbtn.on('click', () => {
-			event.stopPropagation();
-			window.open(`${arg}`, '_blank')
-		})
-	}
-}
-
-function makeDataDownload(arg, div) {
-	if (arg) {
-		const dataBtn = makeButton(div, "Download Track File(s)")
-		dataBtn.on('click', () => {
-			event.stopPropagation();
-			window.open(`${arg}`, '_self', 'download')
-		})
-	}
-}
-
-// Creates 'Show Code' button in Sandbox for all examples
-function showCode(track, arg, div) {
-	if (track.sandbox.is_ui != true) {
-		const codeBtn = makeButton(div, "Show Code")
-			codeBtn.on('click', () => {
-				if (code.style('display') == 'none') {
-					code.style('display', 'block') //TODO fadein fn
-					select(event.target).text('Hide')
-				} else {
-					code.style('display', 'none') //TODO fadeout fn
-					select(event.target).text('Show Code')
-				}
-			})
-
-	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
-		const code = div
-			.append('pre')
-			.append('code')
-			.style('display', 'none')
-			.style('margin', '35px')
-			.style('font-size', '14px')
-			.style('border', '1px solid #aeafb0')
-			.html(highlight(`runproteinpaint({
-    host: "${window.location.origin}",
-    holder: document.getElementById('a'),` +
-		JSON.stringify(arg, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
-		`})`, {language:'javascript'}).value)
-	}
-}
-
-function makeTabMenu(track, holder){
-	const tabs = []
-	tabArray(tabs, track)
-	tab2box(holder.body.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px'), tabs)
-}
-
-function tabArray(tabs, track){
-	const calls = track.ppcalls
-	calls.forEach(call => {
-		tabs.push({
-			label: call.label,
-			callback: async (div) => {
-				const wait = tab_wait(div)
-				try {
-					makeTab(track, call, div)
-					wait.remove()
-				} catch(e) {
-					wait.text('Error: ' + (e.message || e))
-				}
-			}
-		})
-	})
-}
-
-function makeTab(track, arg, div) {
-	addMessage(arg.message, div)
-	addButtons(arg.buttons, div)
-	makeDataDownload(arg.download, div)
-	showURLLaunch(arg.urlparam, div)
-	showCode(track, arg.runargs, div)
-
-	const runpp_arg = {
-		holder: div
-			.append('div')
-			.style('margin', '20px')
-			.node(),
-		host: window.location.origin
-		}
-
-		const call = JSON.parse(JSON.stringify(arg.runargs))
-
-		runproteinpaint(Object.assign(runpp_arg, call))
-
-}
-
-function addButtons(arg, div){
-	const buttons = arg
-	if (buttons){
-		buttons.forEach(button => {
-			const sandboxButton = makeButton(div, button.name)
-				sandboxButton.on('click', () => {
-					if (button.download){
-						event.stopPropagation();
-						window.open(`${button.download}`, '_self', 'download')
-					} else if (button.arrow) {
-						makeArrowBtn(div)
-					} else {
-						event.stopPropagation();
-						window.open(`${button.link}`, '_blank')
-					}
-				})
-			})
-		}
-}
+// ******* Sandbox Button Functions *********
 
 function makeButton(div, text) {
 	const button = div
 		.append('button')
 		.attr('type', 'submit')
-		.attr('class', 'sjpp-sandbox-btn')
+		.style('background-color', '#cfe2f3')
 		.style('margin', '20px')
 		.style('padding', '8px')
 		.style('border', 'none')
@@ -471,19 +361,211 @@ function makeButton(div, text) {
 	return button
 }
 
-function makeArrowBtn(div) {
-	dropdownDiv(div)
-	if (showHide_div.style('display') == 'none') {
-		showHide_div.style('display', 'block')
-	} else {
-		showHide_div.style('display', 'none')
+function addButtons(buttons, div) {
+	if (buttons) {
+		buttons.forEach(button => {
+			const sandboxButton = makeButton(div, button.name)
+			sandboxButton.on('click', () => {
+				if (button.download) {
+					event.stopPropagation()
+					window.open(`${button.download}`, '_self', 'download')
+				} else {
+					event.stopPropagation()
+					window.open(`${button.link}`, '_blank')
+				}
+			})
+		})
 	}
 }
 
-function dropdownDiv(div) {
-	const showHide_div = div
+function showURLLaunch(arg, div) {
+	if (arg) {
+		const URLbtn = makeButton(div, 'Run track from URL')
+		URLbtn.on('click', () => {
+			event.stopPropagation()
+			window.open(`${arg}`, '_blank')
+		})
+	}
+}
+
+function makeDataDownload(arg, div) {
+	if (arg) {
+		const dataBtn = makeButton(div, 'Download Track File(s)')
+		dataBtn.on('click', () => {
+			event.stopPropagation()
+			window.open(`${arg}`, '_self', 'download')
+		})
+	}
+}
+
+async function showCode(track, call, btns) {
+	if (track.sandbox.is_ui != true) {
+		//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
+		const code = highlight(
+			`runproteinpaint({
+    host: "${window.location.origin}",
+    holder: document.getElementById('a'),` +
+				JSON.stringify(call, '', 4)
+					.replaceAll(/"(.+)"\s*:/g, '$1:')
+					.slice(1, -1) +
+				`})`,
+			{ language: 'javascript' }
+		).value
+
+		const contents = `<pre style="border: 1px solid #aeafb0"><code style="font-size:14px; margin:35px;">${code}</code></pre>`
+
+		btns.push({
+			name: 'Code',
+			callback: async rdiv => {
+				try {
+					rdiv.append('div').html(contents)
+				} catch (e) {
+					alert('Error: ' + e)
+				}
+			}
+		})
+	}
+}
+
+function makeArrowButtons(arrows, btns) {
+	if (arrows) {
+		arrows.forEach(arrow => {
+			const contents = `<div style="margin:10px;" class="sjpp-arrow-content">
+				${arrow.message ? `<div>${arrow.message}</div>` : ''}
+				${
+					arrow.links
+						? arrow.links
+								.map(hyperlink => {
+									if (!hyperlink) return ''
+									if (hyperlink.download) {
+										return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.download}", target="_self" download>${hyperlink.name}</a>`
+									}
+									if (hyperlink.link) {
+										return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.link}", target="_blank">${hyperlink.name}</a>`
+									}
+								})
+								.join('')
+						: ''
+				}</div>`
+
+			btns.push({
+				name: arrow.name,
+				callback: async rdiv => {
+					try {
+						rdiv.append('div').html(contents)
+					} catch (e) {
+						alert('Error: ' + e)
+					}
+				}
+			})
+		})
+	}
+}
+
+function addArrowBtns(track, arg, call, bdiv, rdiv) {
+	let btns = []
+	showCode(track, call, btns)
+	makeArrowButtons(arg, btns)
+
+	const active_btn = btns.findIndex(b => b.active) == -1 ? false : true
+
+	for (let i = 0; i < btns.length; i++) {
+		const btn = btns[i]
+
+		btn.btn = makeButton(bdiv, btn.name + ' ▼').classed('sjpp-active-sandbox-btn', active_btn && i == 0)
+
+		btn.c = rdiv.append('div').style('display', (active_btn && i == 0) || btn.active ? 'block' : 'none')
+
+		if ((active_btn && i == 0 && btn.callback) || btn.active) {
+			btn.callback(btn.c)
+			delete btn.callback
+		}
+
+		if (!active_btn) btn.btn.classed('sjpp-active-sandbox-btn', btn.active)
+
+		btn.btn.on('click', () => {
+			if (btn.c.style('display') != 'none') {
+				btn.btn
+					.text(btn.name + ' ▼')
+					.classed('sjpp-active-sandbox-btn', false)
+					.style('color', 'black')
+					.style('background-color', '#cfe2f3')
+				btn.c.style('display', 'none')
+			} else {
+				btn.btn
+					.text(btn.name + ' ▲')
+					.classed('sjpp-active-sandbox-btn', true)
+					.style('color', 'whitesmoke')
+					.style('background-color', '#487ba8')
+				appear(btn.c)
+				for (let j = 0; j < btns.length; j++) {
+					if (i != j) {
+						btns[j].btn
+							.text(btns[j].name + ' ▼')
+							.classed('sjpp-active-sandbox-btn', false)
+							.style('color', 'black')
+							.style('background-color', '#cfe2f3')
+						btns[j].c.style('display', 'none')
+					}
+				}
+			}
+			if (btn.callback) {
+				btn.callback(btn.c)
+				delete btn.callback
+			}
+		})
+	}
+}
+
+// ******* Tab Menu Functions *********
+
+function makeTabMenu(track, holder) {
+	const tabs = []
+	tabArray(tabs, track)
+	tab2box(holder.body.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px'), tabs, '', 'Examples')
+}
+
+function tabArray(tabs, track) {
+	const calls = track.ppcalls
+	calls.forEach(call => {
+		tabs.push({
+			label: call.label,
+			callback: async div => {
+				const wait = tab_wait(div)
+				try {
+					makeTab(track, call, div)
+					wait.remove()
+				} catch (e) {
+					wait.text('Error: ' + (e.message || e))
+				}
+			}
+		})
+	})
+}
+
+function makeTab(track, arg, div) {
+	addMessage(arg.message, div)
+
+	const buttons_div = div.append('div').attr('id', 'sjpp-buttons-div')
+	const reuse_div = div
 		.append('div')
-		.style('margin', '20px 20px 20px 30px')
-		.style('display', 'none')
-		.html('<p>This works</p>')
+		.attr('id', 'sjpp-reusable')
+		.style('border-bottom', '1.5px darkgray solid')
+
+	addButtons(arg.buttons, buttons_div)
+	makeDataDownload(arg.download, buttons_div)
+	showURLLaunch(arg.urlparam, buttons_div)
+	addArrowBtns(track, arg.arrowButtons, arg.runargs, buttons_div, reuse_div)
+
+	const runpp_arg = {
+		holder: div
+			.append('div')
+			.style('margin', '20px')
+			.node(),
+		host: window.location.origin
+	}
+
+	const call = JSON.parse(JSON.stringify(arg.runargs))
+
+	runproteinpaint(Object.assign(runpp_arg, call))
 }
