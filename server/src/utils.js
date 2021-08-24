@@ -429,7 +429,7 @@ exports.lines2R = async function(Rscript, lines, addArgs) {
 		sp.stderr.on('data', data => stderr.push(data))
 		sp.on('error', err => reject(err))
 		sp.on('close', code => {
-			if (code !== 0) reject('R process exited with non-zero status')
+			if (code !== 0) reject(`R process exited with non-zero status code=${code}`)
 			if (stderr.length > 0) reject(stderr.join(''))
 			resolve(
 				stdout

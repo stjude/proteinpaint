@@ -317,7 +317,7 @@ tape('survival.R', async function(test) {
 
 tape('regression.R', async function(test) {
 	// view linear regression results
-	const temp_linear_input = fs
+	/*const temp_linear_input = fs
 		.readFileSync(path.join(serverconfig.tpmasterdir, 'gmatt/sjlife_regression/sf36.input.linear.pcs.txt'), {
 			encoding: 'utf8'
 		})
@@ -333,76 +333,81 @@ tape('regression.R', async function(test) {
 		})
 		.trim()
 		.split('\n')
-	const temp_logistic_output = await lines2R('regression.R', temp_logistic_input, ['logistic'])
+	const temp_logistic_output = await lines2R('regression.R', temp_logistic_input, ['logistic'])*/
 	// console.log('\nResults of logistic regression analysis:')
 	// console.log(temp_logistic_output.join('\n'))
 	// console.log()
 
 	// test linear regression (dummy data)
-	const linear_input = []
-	linear_input.push('outcome\tgender\trace\tage\ttreatment')
-	linear_input.push('10.56\tmale\tother\t10-20\t1')
-	linear_input.push('12.21\tmale\twhite\t10-20\t1')
-	linear_input.push('13.10\tfemale\twhite\t10-20\t1')
-	linear_input.push('3.42\tmale\tother\t10-20\t0')
-	linear_input.push('5.23\tfemale\twhite\t20-30\t0')
-	linear_input.push('11.02\tmale\twhite\t20-30\t1')
-	linear_input.push('15.84\tmale\tother\t20-30\t1')
-	linear_input.push('14.17\tfemale\twhite\t10-20\t1')
-	linear_input.push('1.32\tmale\twhite\t20-30\t0')
-	linear_input.push('2.61\tmale\twhite\t20-30\t0')
+	const linear_input = [
+		'outcome\tgender\trace\tage\ttreatment',
+		'10.56\tmale\tother\t10-20\t1',
+		'12.21\tmale\twhite\t10-20\t1',
+		'13.10\tfemale\twhite\t10-20\t1',
+		'3.42\tmale\tother\t10-20\t0',
+		'5.23\tfemale\twhite\t20-30\t0',
+		'11.02\tmale\twhite\t20-30\t1',
+		'15.84\tmale\tother\t20-30\t1',
+		'14.17\tfemale\twhite\t10-20\t1',
+		'1.32\tmale\twhite\t20-30\t0',
+		'2.61\tmale\twhite\t20-30\t0'
+	]
 	const linear_expected = [
-		'variable\tcategory\tbeta\tci_low\tci_high\tpvalue',
+		'variable\tcategory\tbeta\t95% CI (low)\t95% CI (high)\tpvalue',
 		'(Intercept)\t\t5.889\t2.381\t9.397\t0.02171',
 		'gender\tmale\t-3.019\t-5.591\t-0.446\t0.06977',
 		'race\twhite\t-2.125\t-4.698\t0.447\t0.1663',
 		'age\t20-30\t1.486\t-0.872\t3.843\t0.2717',
-		'treatment\t1\t9.862\t7.634\t12.09\t0.0003362'
+		'treatment\t\t9.862\t7.634\t12.09\t0.0003362'
 	]
-	const linear_output = await lines2R('regression.R', linear_input, ['linear'])
+	const linear_output = await lines2R('regression.R', linear_input, ['linear', 'numeric,factor,factor,factor,numeric'])
 	test.deepEqual(linear_output, linear_expected, 'linear regression should match expected output')
 	// test logistic regression (dummy data)
-	const logistic_input = []
-	logistic_input.push('outcome\tgender\trace\tage\ttreatment')
-	logistic_input.push('1\tmale\tother\t10-20\t1')
-	logistic_input.push('1\tmale\twhite\t10-20\t1')
-	logistic_input.push('1\tfemale\twhite\t10-20\t1')
-	logistic_input.push('0\tmale\tother\t10-20\t0')
-	logistic_input.push('1\tfemale\twhite\t20-30\t1')
-	logistic_input.push('0\tfemale\tother\t20-30\t1')
-	logistic_input.push('0\tmale\tother\t20-30\t1')
-	logistic_input.push('1\tfemale\twhite\t10-20\t1')
-	logistic_input.push('1\tmale\twhite\t20-30\t0')
-	logistic_input.push('0\tmale\twhite\t20-30\t0')
-	logistic_input.push('1\tfemale\tother\t10-20\t1')
-	logistic_input.push('1\tmale\twhite\t10-20\t1')
-	logistic_input.push('1\tfemale\twhite\t10-20\t1')
-	logistic_input.push('1\tmale\tother\t10-20\t0')
-	logistic_input.push('1\tfemale\tother\t20-30\t1')
-	logistic_input.push('0\tmale\twhite\t20-30\t1')
-	logistic_input.push('0\tmale\tother\t20-30\t1')
-	logistic_input.push('1\tfemale\twhite\t10-20\t1')
-	logistic_input.push('1\tmale\tother\t20-30\t1')
-	logistic_input.push('0\tmale\twhite\t20-30\t0')
-	logistic_input.push('1\tmale\tother\t10-20\t1')
-	logistic_input.push('1\tfemale\twhite\t20-30\t1')
-	logistic_input.push('1\tfemale\twhite\t10-20\t1')
-	logistic_input.push('0\tmale\tother\t10-20\t0')
-	logistic_input.push('1\tfemale\twhite\t20-30\t1')
-	logistic_input.push('1\tmale\tother\t20-30\t1')
-	logistic_input.push('0\tmale\tother\t20-30\t1')
-	logistic_input.push('0\tfemale\tother\t20-30\t1')
-	logistic_input.push('1\tmale\twhite\t20-30\t0')
-	logistic_input.push('0\tmale\twhite\t20-30\t0')
+	const logistic_input = [
+		'outcome\tgender\trace\tage\ttreatment',
+		'1\tmale\tother\t10-20\t1',
+		'1\tmale\twhite\t10-20\t1',
+		'1\tfemale\twhite\t10-20\t1',
+		'0\tmale\tother\t10-20\t0',
+		'1\tfemale\twhite\t20-30\t1',
+		'0\tfemale\tother\t20-30\t1',
+		'0\tmale\tother\t20-30\t1',
+		'1\tfemale\twhite\t10-20\t1',
+		'1\tmale\twhite\t20-30\t0',
+		'0\tmale\twhite\t20-30\t0',
+		'1\tfemale\tother\t10-20\t1',
+		'1\tmale\twhite\t10-20\t1',
+		'1\tfemale\twhite\t10-20\t1',
+		'1\tmale\tother\t10-20\t0',
+		'1\tfemale\tother\t20-30\t1',
+		'0\tmale\twhite\t20-30\t1',
+		'0\tmale\tother\t20-30\t1',
+		'1\tfemale\twhite\t10-20\t1',
+		'1\tmale\tother\t20-30\t1',
+		'0\tmale\twhite\t20-30\t0',
+		'1\tmale\tother\t10-20\t1',
+		'1\tfemale\twhite\t20-30\t1',
+		'1\tfemale\twhite\t10-20\t1',
+		'0\tmale\tother\t10-20\t0',
+		'1\tfemale\twhite\t20-30\t1',
+		'1\tmale\tother\t20-30\t1',
+		'0\tmale\tother\t20-30\t1',
+		'0\tfemale\tother\t20-30\t1',
+		'1\tmale\twhite\t20-30\t0',
+		'0\tmale\twhite\t20-30\t0'
+	]
 	const logistic_expected = [
-		'variable\tcategory\tor\tci_low\tci_high\tpvalue',
+		'variable\tcategory\tor\t95% CI (low)\t95% CI (high)\tpvalue',
 		'(Intercept)\t\t1.846\t0.058\t59.34\t0.7206',
 		'gender\tmale\t0.467\t0.033\t5.915\t0.546',
 		'race\twhite\t8.838\t0.984\t227.069\t0.09316',
 		'age\t20-30\t0.062\t0.002\t0.602\t0.04556',
-		'treatment\t1\t7.944\t0.702\t224.334\t0.1324'
+		'treatment\t\t7.944\t0.702\t224.334\t0.1324'
 	]
-	const logistic_output = await lines2R('regression.R', logistic_input, ['logistic'])
+	const logistic_output = await lines2R('regression.R', logistic_input, [
+		'logistic',
+		'factor,factor,factor,factor,numeric'
+	])
 
 	test.deepEqual(logistic_output, logistic_expected, 'logistic regression should match expected output')
 	test.end()

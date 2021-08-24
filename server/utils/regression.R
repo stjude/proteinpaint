@@ -2,12 +2,12 @@
 # Regression analysis
 #######################
 
-# Usage: Rscript regression.R <linear/logistic> < input
-#   input: tab-delimited table of regression variables streamed from stdin
-#     - First line must be a header (i.e. column names).
-#     - First column must be the outcome variable. All other columns are independent variables. All variables in table are included in the regression analysis.
-#     - For categorical variables, use either string values or 0/1 values.
-#   <linear/logistic>: string indicating regression type
+# Usage: Rscript regression.R <regression type> <variable classes> < input
+#   - input: tab-delimited table of regression variables streamed from stdin. First line must be a header (i.e. column names). First column must be the outcome variable. All other columns are independent variables. All variables in table are included in the regression analysis (see example below).
+#   - arguments:
+#       - <regression type>: string indicating regression type ("linear" or "logistic"). Linear regression should be used if the outcome is a continuous variable. Logistic regression should be used if the outcome is a categorical variable. Currently, logistic regression can only be performed on binary outcome variables (e.g. "no/yes", "no condition/condition", "0/1").
+#       - <variable classes>: string listing the R class of each variable. Classes are comma separated and their order should match the order of variables in the table (e.g. "numeric,integer,factor,factor,factor,numeric"). Variables that have integer or numeric classes will be treated as continuous variables, while variables that have a factor class will be treated as categorical variables.
+#
 #
 # Example input dataset ("pcs" will be treated as the outcome variable):
 #   
@@ -18,30 +18,24 @@
 #   32.26   Male    Other   50+     0           0
 #   ...
 #
-# Linear regression should be performed if the outcome is a continuous numeric cvariable and logistic regression should be performed if the outcome is a categorical variable. Currently, the only categorical outcome variables that are supported are binary variables (e.g. "no/yes", "no condition/condition", "0/1").
 
+#Parse input arguments
+args <- commandArgs(trailingOnly = T)
+if (length(args) != 2){
+  stop("Usage: Rscript regression.R <regression type> <variable classes> < input")
+}
+regressionType <- args[1]
+variableClasses <- strsplit(args[2], split = ",")[[1]]
 
 #Read in input data
 con <- file("stdin","r")
-dat <- read.table(con, header = T, sep = "\t", quote = "", stringsAsFactors = T)
-args <- commandArgs(trailingOnly = T)
-if (length(args) != 1){
-  stop("Usage: Rscript regression.R <linear/logistic> < input")
-}
-regressionType <- args[1]
-
-#Set variables with binary 0/1 values as categorical variables
-for(column in 1:ncol(dat)){
-  if(all(dat[,column] == 0 | dat[,column] == 1 | is.na(dat[,column]))){
-    dat[,column] <- factor(dat[,column], levels = c(0,1))
-  }
-}
+dat <- read.table(con, header = T, sep = "\t", quote = "", colClasses = variableClasses, stringsAsFactors = F, check.names = F)
 
 #Perform regression analysis
 names(dat) <- paste(names(dat), "___", sep = "")
 outcomeVar <- names(dat)[1]
 independentVars <- names(dat)[-1]
-model <- as.formula(paste(outcomeVar, paste(independentVars, collapse = " + "), sep = " ~ "))
+model <- as.formula(paste(sprintf("`%s`", outcomeVar), paste(sprintf("`%s`", independentVars), collapse = " + "), sep = " ~ "))
 if(regressionType == "linear"){
   res <- glm(model, data = dat)
   out <- cbind("beta" = coef(res), suppressMessages(confint(res)), "pvalue" = summary(res)$coefficients[,4])
@@ -62,13 +56,13 @@ out[,4] <- signif(out[,4],4)
 
 #Reformat results table
 out <- as.data.frame(out)
-names(out)[2:3] <- c("ci_low","ci_high")
+names(out)[2:3] <- c("95% CI (low)","95% CI (high)")
 out[,c("variable","category")] <- ""
 var_and_cat <- strsplit(row.names(out), split = "___")
 for(x in 1:length(var_and_cat)){
-  out[x,"variable"] <- var_and_cat[[x]][1]
+  out[x,"variable"] <- gsub("`","",var_and_cat[[x]][1])
   if(length(var_and_cat[[x]]) > 1){
-    out[x,"category"] <- var_and_cat[[x]][2]
+    out[x,"category"] <- gsub("`","",var_and_cat[[x]][2])
   } else{
     out[x,"category"] <- ""
   }

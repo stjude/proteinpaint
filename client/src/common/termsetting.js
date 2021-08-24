@@ -55,6 +55,8 @@ class TermSetting {
 		this.activeCohort = opts.activeCohort
 		this.placeholder = opts.placeholder || 'Select term&nbsp;'
 		this.durations = { exit: 500 }
+		this.disable_terms = opts.disable_terms
+		this.usecase = opts.usecase
 		// detect if the holder is contained within a floating client Menu instance;
 		// this will be useful in preventing premature closure of the menu in case
 		// a submenu is clicked and is still visible
@@ -130,6 +132,7 @@ function setRenderers(self) {
 		self.dom.nopilldiv
 			.append('div')
 			.html(self.placeholder)
+			.attr('class', 'sja_clbtext2')
 			.style('padding', '3px 6px 3px 6px')
 			.style('display', 'inline-block')
 
@@ -259,8 +262,10 @@ function setInteractivity(self) {
 		self.opts.callback(null)
 	}
 
-	self.showTree = async holder => {
-		self.dom.tip.clear().showunder(holder || self.dom.holder.node())
+	self.showTree = async function(holder) {
+		self.dom.tip
+			.clear()
+			.showunder(holder instanceof Element ? holder : this instanceof Element ? this : self.dom.holder.node())
 		const termdb = await import('../termdb/app')
 		termdb.appInit(null, {
 			holder: self.dom.tip.d,
@@ -271,7 +276,8 @@ function setInteractivity(self) {
 					header_mode: 'search_only'
 				},
 				tree: {
-					exclude_types: self.exclude_types
+					exclude_types: self.exclude_types,
+					usecase: self.usecase
 				}
 			},
 			tree: {

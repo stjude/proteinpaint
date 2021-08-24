@@ -300,6 +300,11 @@ module.exports = {
 	},
 	*/
 
+	// may override the general rules in server/shared/termdb.usecase.js isUsableTerm()
+	/*usecase: {
+		regression(term, use) {}
+	},*/
+
 	cohort: {
 		db: {
 			file: 'files/hg38/sjlife/clinical/db'

@@ -3,6 +3,7 @@ import { select, selectAll, event } from 'd3-selection'
 import { plotInit } from './plot'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
+import { isUsableTerm } from '../../shared/termdb.usecase'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -105,7 +106,9 @@ class TdbTree {
 			visiblePlotIds: appState.tree.visiblePlotIds,
 			termfilter: { filter },
 			bar_click_menu: appState.bar_click_menu,
-			exclude_types: appState.tree.exclude_types
+			// TODO: deprecate "exclude_types" in favor of "usecase"
+			exclude_types: appState.tree.exclude_types,
+			usecase: appState.tree.usecase
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
@@ -276,7 +279,14 @@ function setRenderers(self) {
 				if (t.disabled) self.opts.disable_terms.push(t.id)
 			})
 		self.included_terms = []
-		if (!self.state.exclude_types.length) {
+		if (self.state.usecase) {
+			for (const t of term.terms) {
+				if (isUsableTerm(t, self.state.usecase)) {
+					self.included_terms.push(t)
+				}
+			}
+		} else if (!self.state.exclude_types.length) {
+			// TODO: deprecate exclude_types in favor or tree.usecase
 			self.included_terms.push(...term.terms)
 		} else {
 			for (const t of term.terms) {

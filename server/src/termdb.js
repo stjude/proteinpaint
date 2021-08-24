@@ -7,6 +7,7 @@ const phewas = require('./termdb.phewas')
 const density_plot = require('./termdb.densityPlot')
 const cuminc = require('./termdb.cuminc')
 const survival = require('./termdb.survival')
+const regression = require('./termdb.regression')
 
 /*
 ********************** EXPORTED
@@ -55,6 +56,7 @@ export function handle_request_closure(genomes) {
 			if (q.getsamples) return trigger_getsamples(q, res, ds)
 			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
 			if (q.getsurvival) return await trigger_getsurvival(q, res, ds)
+			if (q.getregression) return await trigger_getregression(q, res, ds)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {
@@ -82,7 +84,8 @@ function trigger_gettermdbconfig(res, tdb) {
 			// add attributes here to reveal to client
 			selectCohort: tdb.selectCohort, // optional
 			cumincplot4condition: tdb.cumincplot4condition, // optional
-			survivalplot: tdb.survivalplot // optional
+			survivalplot: tdb.survivalplot, // optional
+			supportedChartTypes: tdb.q.getSupportedChartTypes()
 		}
 	})
 }
@@ -242,5 +245,14 @@ async function trigger_getsurvival(q, res, ds) {
 		q.filter = JSON.parse(decodeURIComponent(q.filter))
 	}
 	const data = await survival.get_survival(q, ds)
+	res.send(data)
+}
+
+async function trigger_getregression(q, res, ds) {
+	if (typeof q.filter == 'string') {
+		q.filter = JSON.parse(decodeURIComponent(q.filter))
+	}
+	if ('cutoff' in q) q.cutoff = Number(q.cutoff)
+	const data = await regression.get_regression(q, ds)
 	res.send(data)
 }
