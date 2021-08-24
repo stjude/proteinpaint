@@ -54,7 +54,6 @@ class MassApp {
 	}
 
 	async main() {
-		//console.log(this.state.tree.expandedTermIds)
 		this.api.vocabApi.main()
 
 		for (const plotId in this.state.tree.plots) {
@@ -66,7 +65,8 @@ class MassApp {
 						id: plotId
 					})
 				})
-				div.header.html(plot.term.term.name)
+
+				if (plot?.term?.term) div.header.html(plot.term.term.name)
 				this.components.plots[plotId] = plotInit(
 					this.app,
 					{

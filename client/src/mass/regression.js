@@ -14,7 +14,7 @@ class MassRegression {
 		setInteractivity(this)
 		setRenderers(this)
 		this.eventTypes = ['postInit', 'postRender']
-		opts.controls.on('downloadClick.regression', this.download)
+		//opts.controls.on('downloadClick.regression', this.download)
 	}
 
 	getState(appState, sub) {
@@ -23,14 +23,14 @@ class MassRegression {
 		}
 		const config = appState.tree.plots[this.id]
 		return {
-			isVisible: config.settings.currViews.includes('regression'),
+			isVisible: config?.settings?.currViews.includes('regression'),
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: {
 				term: config.term,
 				independent: config.independent,
 				settings: {
-					table: config.settings.regression
+					table: config?.settings?.regression
 				}
 			}
 		}
@@ -38,11 +38,12 @@ class MassRegression {
 
 	main(data) {
 		if (data) this.data = data
-		this.config = this.state.config
 		if (!this.state.isVisible) {
 			this.dom.div.style('display', 'none')
 			return
 		}
+		if (!data || !this.state.config.term) return
+		this.config = this.state.config
 		if (!this.config.independent) {
 			this.dom.div.style('display', 'none')
 			throw 'independent variable(s) is required for regression analysis'

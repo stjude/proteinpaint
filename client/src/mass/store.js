@@ -1,6 +1,7 @@
 import * as rx from '../common/rx.core'
 import { root_ID } from '../termdb/tree'
 import { plotConfig, fillTermWrapper } from './plot'
+import { getTermSelectionSequence } from './charts'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
@@ -91,13 +92,17 @@ class TdbStore {
 			if (!savedPlot.settings) savedPlot.settings = {}
 			if (!savedPlot.settings.currViews) savedPlot.settings.currViews = [savedPlot.chartType]
 			this.state.tree.plots[plotId] = plotConfig(savedPlot, await this.api.copyState())
-			if (savedPlot.independent) {
-				savedPlot.independent = await Promise.all(
+			const plot = this.state.tree.plots[plotId]
+			if (plot.independent) {
+				plot.independent = await Promise.all(
 					savedPlot.independent.map(async term => {
 						if (!term.term) term.term = await this.app.vocabApi.getterm(term.id)
 						return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
 					})
 				)
+			}
+			if (!plot.termSequence) {
+				plot.termSequence = getTermSelectionSequence(plot.chartType)
 			}
 			this.state.tree.visiblePlotIds.push(plotId)
 			this.adjustPlotCurrViews(this.state.tree.plots[plotId])
@@ -229,22 +234,28 @@ TdbStore.prototype.actions = {
 	},
 
 	async plot_show(action) {
-		if (action.id in this.state.tree.plots) return
 		this.state.tree.plots[action.id] = plotConfig(
 			{
 				id: action.id,
-				term: action.term.term ? action.term : { term: action.term },
-				chartType: action.chartType,
-				settings: { currViews: [action.chartType] }
+				term: action.config.term.term ? action.config.term : { term: action.config.term },
+				chartType: action.config.chartType,
+				settings: { currViews: [action.config.chartType] }
 			},
 			await this.api.copyState()
 		)
-		if (action.independent) {
-			this.state.tree.plots[action.id].independent = action.independent.map(term => {
+		if (action.config.independent) {
+			this.state.tree.plots[action.id].independent = action.config.independent.map(term => {
 				return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
 			})
 		}
+		if (!action.config.termSequence) {
+			action.config.termSequence = getTermSelectionSequence(action.config.chartType)
+		}
 		this.state.tree.visiblePlotIds.push(action.id)
+	},
+
+	async plot_prep(action) {
+		this.state.tree.plots[action.id] = Object.assign({}, action)
 	},
 
 	plot_hide(action) {

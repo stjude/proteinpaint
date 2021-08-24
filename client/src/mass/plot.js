@@ -11,8 +11,9 @@ import { survivalInit } from '../termdb/survival'
 import { regressionInit } from './regression'
 //import { termInfoInit } from './termInfo'
 //import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
-import { termsetting_fill_q } from '../common/termsetting'
+import { termsetting_fill_q, termsettingInit } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
+import { Menu } from '../client'
 
 class MassPlot {
 	constructor(app, opts) {
@@ -21,8 +22,11 @@ class MassPlot {
 		this.api = rx.getComponentApi(this)
 		this.app = app
 		this.modifiers = opts.modifiers
+		this.opts = opts
 
 		this.dom = {
+			tip: new Menu({ padding: '0px' }),
+
 			holder: opts.holder
 				.style('margin-top', '-1px')
 				.style('white-space', 'nowrap')
@@ -35,7 +39,7 @@ class MassPlot {
 			controls: opts.holder
 				.append('div')
 				.attr('class', 'pp-termdb-plot-controls')
-				.style('display', 'inline-block'),
+				.style('display', opts.plot.chartType === 'regression' ? 'block' : 'inline-block'),
 
 			// dom.viz will hold the rendered view
 			viz: opts.holder
@@ -46,86 +50,28 @@ class MassPlot {
 				.style('margin-left', '50px')
 		}
 
-		const controls = controlsInit(
-			this.app,
-			{
-				id: this.id,
-				holder: this.dom.controls,
-				isleaf: opts.plot.term.isleaf,
-				iscondition: opts.plot.term.type == 'condition'
-			},
-			this.app.opts.plotControls
-		)
+		const controls =
+			opts.plot.chartType === 'regression'
+				? null
+				: controlsInit(
+						this.app,
+						{
+							id: this.id,
+							holder: this.dom.controls,
+							isleaf: opts.plot.term.isleaf,
+							iscondition: opts.plot.term.type == 'condition'
+						},
+						this.app.opts.plotControls
+				  )
 
-		this.components = { controls }
-		switch (opts.plot.chartType) {
-			case 'barchart':
-				this.components.chart = barInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls }, this.app.opts.barchart)
-				)
-				/*this.components.stattable = statTableInit(
-					this.app, 
-					{ holder: this.dom.viz.append('div'), id: this.id }, 
-					this.app.opts.stattable
-				)*/
-				break
-
-			case 'table':
-				this.components.chart = tableInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls }, this.app.opts.table)
-				)
-				break
-
-			case 'boxplot':
-				this.components.chart = boxplotInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls }, this.app.opts.boxplot)
-				)
-				break
-
-			case 'scatter':
-				this.components.chart = scatterInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls }, this.app.opts.scatter)
-				)
-				break
-
-			case 'cuminc':
-				this.components.chart = this.components.cuminc = cumincInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls }, this.app.opts.cuminc)
-				)
-				break
-
-			case 'survival':
-				this.components.chart = survivalInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls: this.components.controls }, this.app.opts.survival)
-				)
-				break
-
-			case 'regression':
-				this.components.chart = regressionInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls: this.components.controls }, this.app.opts.survival)
-				)
-		}
-
+		this.components = controls ? { controls } : {}
+		setRenderers(this)
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	reactsTo(action) {
-		if (action.type == 'plot_edit' || action.type == 'plot_show') {
-			return action.id == this.id
+		if (action.type == 'plot_edit' || action.type == 'plot_show' || action.type == 'plot_prep') {
+			return action.id === this.id
 		}
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
@@ -140,25 +86,30 @@ class MassPlot {
 		const filter = getNormalRoot(appState.termfilter.filter)
 		return {
 			activeCohort: appState.activeCohort,
+			vocab: appState.vocab,
 			termfilter: { filter },
 			ssid: appState.ssid,
 			config,
 			cumincplot4condition: appState.termdbConfig.cumincplot4condition,
 			displayAsSurvival:
-				config.settings.currViews[0] != 'regression' &&
-				(config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival'))
+				config?.settings?.currViews[0] != 'regression' &&
+				(config?.term?.term?.type == 'survival' || config?.term2?.term?.type == 'survival')
 		}
 	}
 
 	async main() {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
-		const dataName = this.getDataName(this.state)
-		const data = await this.app.vocabApi.getPlotData(this.id, dataName)
-		if (data.error) throw data.error
-		this.syncParams(this.config, data)
-		this.currData = data
-		return data
+		if (!this.components.chart) this.setChartComponent(this.opts)
+		this.dom.resultsHeading.html(this.state.config.term ? '<b>Results<b>' : '')
+		if (this.state.config.term) {
+			const dataName = this.getDataName(this.state)
+			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			if (data.error) throw data.error
+			this.syncParams(this.config, data)
+			this.currData = data
+			return data
+		}
 	}
 
 	// creates URL search parameter string, that also serves as
@@ -247,9 +198,206 @@ class MassPlot {
 			if (!term.q.groupsetting) term.q.groupsetting = {}
 		}
 	}
+
+	setChartComponent(opts) {
+		const controls = this.components.controls
+		switch (opts.plot.chartType) {
+			case 'barchart':
+				this.components.chart = barInit(
+					this.app,
+					{ holder: this.dom.viz.append('div'), id: this.id },
+					Object.assign({ controls }, this.app.opts.barchart)
+				)
+				/*this.components.stattable = statTableInit(
+					this.app, 
+					{ holder: this.dom.viz.append('div'), id: this.id }, 
+					this.app.opts.stattable
+				)*/
+				break
+
+			case 'table':
+				this.components.chart = tableInit(
+					this.app,
+					{ holder: this.dom.viz.append('div'), id: this.id },
+					Object.assign({ controls }, this.app.opts.table)
+				)
+				break
+
+			case 'boxplot':
+				this.components.chart = boxplotInit(
+					this.app,
+					{ holder: this.dom.viz.append('div'), id: this.id },
+					Object.assign({ controls }, this.app.opts.boxplot)
+				)
+				break
+
+			case 'scatter':
+				this.components.chart = scatterInit(
+					this.app,
+					{ holder: this.dom.viz.append('div'), id: this.id },
+					Object.assign({ controls }, this.app.opts.scatter)
+				)
+				break
+
+			case 'cuminc':
+				this.components.chart = this.components.cuminc = cumincInit(
+					this.app,
+					{ holder: this.dom.viz.append('div'), id: this.id },
+					Object.assign({ controls }, this.app.opts.cuminc)
+				)
+				break
+
+			case 'survival':
+				this.components.chart = survivalInit(
+					this.app,
+					{ holder: this.dom.viz.append('div'), id: this.id },
+					Object.assign({ controls: this.components.controls }, this.app.opts.survival)
+				)
+				break
+
+			case 'regression':
+				this.showMultipart(rx.copyMerge({}, this.state.config))
+				this.dom.resultsHeading = this.dom.viz.append('div').style('margin', '10px 5px')
+				this.components.chart = regressionInit(
+					this.app,
+					{ holder: this.dom.viz.append('div'), id: this.id },
+					Object.assign({}, this.app.opts.survival)
+				)
+		}
+	}
 }
 
 export const plotInit = rx.getInitFxn(MassPlot)
+
+function setRenderers(self) {
+	self.showMultipart = async function(_config) {
+		const config = JSON.parse(JSON.stringify(_config))
+		const dom = {
+			body: this.dom.controls.append('div'),
+			foot: this.dom.controls.append('div')
+		}
+		const disable_terms = []
+		const pills = []
+
+		dom.body
+			.selectAll('div')
+			.data(config.termSequence)
+			.enter()
+			.append('div')
+			.style('margin', '3px 5px')
+			.style('padding', '3px 5px')
+			.each(function(d) {
+				const div = select(this)
+				div
+					.append('div')
+					.style('margin', '3px 5px')
+					.style('padding', '3px 5px')
+					.style('font-weight', 600)
+					.text(d.label)
+
+				if (config[d.detail]) {
+					if (!d.selected) d.selected = config[d.detail]
+					if (Array.isArray(d.selected)) {
+						for (const t of d.selected) {
+							if (!disable_terms.includes(t.id)) disable_terms.push(t.id)
+						}
+					} else {
+						if (!disable_terms.includes(d.selected.id)) disable_terms.push(d.selected.id)
+					}
+				}
+				if (d.limit > 1 && config?.[d.detail] && config[d.detail].length) {
+					for (const term of config[d.detail]) {
+						self.newPill(d, config, div, pills, disable_terms, term)
+					}
+				}
+				self.newPill(d, config, div, pills, disable_terms, d.limit === 1 && config[d.detail])
+			})
+
+		self.dom.submitBtn = dom.foot
+			.style('margin', '3px 15px')
+			.style('padding', '3px 5px')
+			.append('button')
+			.html('Run analysis')
+			.on('click', () => {
+				self.dom.tip.hide()
+				for (const t of config.termSequence) {
+					config[t.detail] = t.selected
+				}
+				self.app.dispatch({
+					type: _config.term ? 'plot_edit' : 'plot_show',
+					id: self.id,
+					chartType: config.chartType,
+					config
+				})
+			})
+
+		self.updateBtns(config)
+	}
+
+	self.newPill = function(d, config, div, pills, disable_terms, term = null) {
+		const pillDiv = div.append('div').style('width', 'fit-content')
+
+		const newPillDiv = pillDiv
+			.append('div')
+			.style('margin', '3px 15px')
+			.style('padding', '3px 5px')
+
+		const usecase = { target: config.chartType, detail: d.detail }
+
+		const pill = termsettingInit({
+			placeholder: d.prompt,
+			holder: newPillDiv,
+			vocabApi: self.app.vocabApi,
+			vocab: self.state?.vocab,
+			activeCohort: self.state.activeCohort,
+			use_bins_less: true,
+			debug: self.opts.debug,
+			showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
+			usecase,
+			disable_terms,
+			callback: term => {
+				if (!term) {
+					const i = pills.indexOf(pill)
+					if (Array.isArray(d.selected)) d.selected.splice(i, 1)
+					else delete d.selected
+					pills.splice(i, 1)
+					disable_terms.splice(i, 1)
+					if (d.limit > 1) {
+						newPillDiv.remove()
+					}
+					self.updateBtns(config)
+				} else {
+					if (!disable_terms.includes(term.term.id)) {
+						disable_terms.push(term.term.id)
+					}
+					pill.main(term)
+					if (d.limit > 1) {
+						if (!d.selected) d.selected = []
+						d.selected.push(term)
+						if (d.selected.length < d.limit) {
+							self.newPill(d, config, div, pills, disable_terms)
+						}
+					} else {
+						d.selected = term
+					}
+					self.updateBtns(config)
+				}
+			}
+		})
+
+		pills.push(pill)
+		if (term) pill.main(term)
+	}
+
+	self.updateBtns = config => {
+		const hasMissingTerms =
+			config.termSequence.filter(t => !t.selected || (t.limit > 1 && !t.selected.length)).length > 0
+		self.dom.submitBtn
+			.property('disabled', hasMissingTerms)
+			.style('background-color', hasMissingTerms ? '' : 'rgba(143, 188, 139, 0.7)')
+			.style('color', hasMissingTerms ? '' : '#000')
+	}
+}
 
 function q_to_param(q) {
 	// exclude certain attributes of q from dataName
