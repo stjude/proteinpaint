@@ -101,7 +101,7 @@ class MassPlot {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
 		if (!this.components.chart) this.setChartComponent(this.opts)
-		this.dom.resultsHeading.html(this.state.config.term ? '<b>Results<b>' : '')
+		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? '<b>Results<b>' : '')
 		if (this.state.config.term) {
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)

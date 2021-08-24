@@ -54,9 +54,9 @@ class MassCharts {
 
 		const btnData = [
 			{ label: 'Bar Chart', chartType: 'barchart' },
-			{ label: 'Table', chartType: 'table' },
-			{ label: 'Boxplot', chartType: 'boxplot' },
-			{ label: 'Scatter Plot', chartType: 'scatter' },
+			//{ label: 'Table', chartType: 'table' },
+			//{ label: 'Boxplot', chartType: 'boxplot' },
+			//{ label: 'Scatter Plot', chartType: 'scatter' },
 			{ label: 'Cumulative Incidence', chartType: 'cuminc' },
 			{ label: 'Survival', chartType: 'survival' },
 			{ label: 'Regression Analysis', chartType: 'regression' }
@@ -90,7 +90,7 @@ function setRenderers(self) {
 
 		const termSequence = getTermSelectionSequence(chartType)
 		if (termSequence.length == 1) {
-			const action = { type: 'plot_show', chartType, id: idPrefix + id++ }
+			const action = { type: 'plot_show', id: idPrefix + id++, config: { chartType } }
 			self.showTree(chartType, termSequence, action)
 		} else {
 			self.app.dispatch({
@@ -99,7 +99,7 @@ function setRenderers(self) {
 				id: idPrefix + id++,
 				termSequence
 			})
-		} //self.showMultipart(usecase, dom, termSequence, action)
+		}
 	}
 
 	self.showTree = async function(chartType, termSequence, action) {
@@ -128,7 +128,7 @@ function setRenderers(self) {
 			},
 			tree: {
 				click_term: term => {
-					action[usecase.detail] = term
+					action.config[usecase.detail] = term
 					self.dom.tip.hide()
 					self.app.dispatch(action)
 				}
