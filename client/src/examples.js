@@ -1,4 +1,4 @@
-import { dofetch2, sayerror, newSandboxDiv, tab2box, tab_wait } from './client'
+import { dofetch2, sayerror, newSandboxDiv, tab2box, tab_wait, appear } from './client'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
 import { highlight } from 'highlight.js/lib/common'
@@ -151,7 +151,6 @@ async function loadTracks(args, page_args, filteredTracks) {
 function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
 	tracks.forEach(track => {
-		const urls = track.media.urls
 		const li = holder.append('li')
 		li.attr('class', 'sjpp-track')
 			.html(
@@ -162,7 +161,7 @@ function displayTracks(tracks, holder, page_args) {
 				}
 				<span class="sjpp-track-image"><img src="${track.image}"></img></span>
 				<div class='sjpp-track-links'>
-				${urls
+				${track.media.urls
 					.map(url => {
 						if (!url) return ''
 						if (url.link && !url.name) {
@@ -283,11 +282,11 @@ async function openSandbox(track, holder) {
 	if (track.ppcalls.length == 1) {
 		const call = track.ppcalls[0]
 
-		const buttons_div = sandbox_div.body.append('div').style('border-bottom', '4px darkgray solid')
+		const buttons_div = sandbox_div.body.append('div').attr('id', 'sjpp-buttons-div')
 		const reuse_div = sandbox_div.body
 			.append('div')
-			.attr('id', 'reusable')
-			.style('display', 'none')
+			.attr('id', 'sjpp-reusable')
+			.style('border-bottom', '1.5px darkgray solid')
 
 		//Creates any custom buttons
 		addButtons(track.sandbox.buttons, buttons_div)
@@ -295,10 +294,8 @@ async function openSandbox(track, holder) {
 		makeDataDownload(call.download, buttons_div)
 		//Redirects to URL parameter of track
 		showURLLaunch(call.urlparam, buttons_div)
-		//Shows code used to create sandbox
-		showCode(track, call.runargs, buttons_div)
 
-		addArrowButtons(track.sandbox.arrowButtons, buttons_div)
+		addArrowBtns(track, track.sandbox.arrowButtons, call.runargs, buttons_div, reuse_div)
 
 		// template runpp() arg
 		const runpp_arg = {
@@ -353,7 +350,6 @@ function makeButton(div, text) {
 	const button = div
 		.append('button')
 		.attr('type', 'submit')
-		.attr('class', 'sjpp-sandbox-btn')
 		.style('background-color', '#cfe2f3')
 		.style('margin', '20px')
 		.style('padding', '8px')
@@ -365,8 +361,7 @@ function makeButton(div, text) {
 	return button
 }
 
-function addButtons(arg, div) {
-	const buttons = arg
+function addButtons(buttons, div) {
 	if (buttons) {
 		buttons.forEach(button => {
 			const sandboxButton = makeButton(div, button.name)
@@ -403,28 +398,14 @@ function makeDataDownload(arg, div) {
 	}
 }
 
-// Creates 'Show Code' button in Sandbox for all examples
-async function showCode(track, arg, div) {
+async function showCode(track, call, btns) {
 	if (track.sandbox.is_ui != true) {
-		//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox.
-		// 	const code = collapseDiv.append('div')
-		// 		.append('pre')
-		// 		.append('code')
-		// 		.style('margin', '35px')
-		// 		.style('font-size', '14px')
-		// 		.style('border', '1px solid #aeafb0')
-		// 		.style('display', 'none')
-		// 		.html(highlight(`runproteinpaint({
-		// host: "${window.location.origin}",
-		// holder: document.getElementById('a'),` +
-		// 	JSON.stringify(arg, '', 4).replaceAll(/"(.+)"\s*:/g, '$1:').slice(1,-1) +
-		// 	`})`, {language:'javascript'}).value)
-
+		//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
 		const code = highlight(
 			`runproteinpaint({
     host: "${window.location.origin}",
     holder: document.getElementById('a'),` +
-				JSON.stringify(arg, '', 4)
+				JSON.stringify(call, '', 4)
 					.replaceAll(/"(.+)"\s*:/g, '$1:')
 					.slice(1, -1) +
 				`})`,
@@ -433,58 +414,107 @@ async function showCode(track, arg, div) {
 
 		const contents = `<pre style="border: 1px solid #aeafb0"><code style="font-size:14px; margin:35px;">${code}</code></pre>`
 
-		makeArrowBtns(div, 'Code', contents)
-	}
-}
-
-async function addArrowButtons(arg, div) {
-	const arrows = arg
-	if (arrows) {
-		arrows.forEach(arrow => {
-			const links = arrow.links
-			const contents = `<div style="margin:10px">
-				${arrow.message ? `<div>${arrow.message}</div>` : ''}
-				${links
-					.map(hyperlink => {
-						if (!hyperlink) return ''
-						if (hyperlink.download) {
-							return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.download}", target="_self" download>${hyperlink.name}</a>`
-						}
-						if (hyperlink.link) {
-							return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.link}", target="_blank">${hyperlink.name}</a>`
-						}
-					})
-					.join('')}</div>`
-
-			makeArrowBtns(div, arrow.name, contents)
+		btns.push({
+			name: 'Code',
+			callback: async rdiv => {
+				try {
+					rdiv.append('div').html(contents)
+				} catch (e) {
+					alert('Error: ' + e)
+				}
+			}
 		})
 	}
 }
 
-async function makeArrowBtns(div, name, contents) {
-	const collapse = document.getElementById('reusable')
-	collapse.innerHTML = ''
+function makeArrowButtons(arrows, btns) {
+	if (arrows) {
+		arrows.forEach(arrow => {
+			const contents = `<div style="margin:10px;" class="sjpp-arrow-content">
+				${arrow.message ? `<div>${arrow.message}</div>` : ''}
+				${
+					arrow.links
+						? arrow.links
+								.map(hyperlink => {
+									if (!hyperlink) return ''
+									if (hyperlink.download) {
+										return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.download}", target="_self" download>${hyperlink.name}</a>`
+									}
+									if (hyperlink.link) {
+										return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.link}", target="_blank">${hyperlink.name}</a>`
+									}
+								})
+								.join('')
+						: ''
+				}</div>`
 
-	const arrowBtn = makeButton(div, name + ' ▼')
-	arrowBtn.on('click', () => {
-		if (collapse.style.display == 'none') {
-			collapse.style.display = 'block'
-			collapse.style.borderBottom = '4px darkgray solid'
-			collapse.innerHTML = contents
-			select(event.target)
-				.text(name + ' ▲')
-				.style('color', 'whitesmoke')
-				.style('background-color', '#487ba8')
-		} else {
-			collapse.style.display = 'none'
-			collapse.style.borderBottom = 'none'
-			collapse.innerHTML = ''
-			select(event.target)
-				.text(name + ' ▼')
-				.style('color', 'black')
-				.style('background-color', '#cfe2f3')
+			btns.push({
+				name: arrow.name,
+				callback: async rdiv => {
+					try {
+						rdiv.append('div').html(contents)
+					} catch (e) {
+						alert('Error: ' + e)
+					}
+				}
+			})
+		})
+	}
+}
+
+function addArrowBtns(track, arg, call, bdiv, rdiv) {
+	let btns = []
+	showCode(track, call, btns)
+	makeArrowButtons(arg, btns)
+
+	const active_btn = btns.findIndex(b => b.active) == -1 ? false : true
+
+	for (let i = 0; i < btns.length; i++) {
+		const btn = btns[i]
+
+		btn.btn = makeButton(bdiv, btn.name + ' ▼').classed('sjpp-active-sandbox-btn', active_btn && i == 0)
+
+		btn.c = rdiv.append('div').style('display', (active_btn && i == 0) || btn.active ? 'block' : 'none')
+
+		if ((active_btn && i == 0 && btn.callback) || btn.active) {
+			btn.callback(btn.c)
+			delete btn.callback
 		}
-	})
+
+		if (!active_btn) btn.btn.classed('sjpp-active-sandbox-btn', btn.active)
+
+		btn.btn.on('click', () => {
+			if (btn.c.style('display') != 'none') {
+				btn.btn
+					.text(btn.name + ' ▼')
+					.classed('sjpp-active-sandbox-btn', false)
+					.style('color', 'black')
+					.style('background-color', '#cfe2f3')
+				btn.c.style('display', 'none')
+			} else {
+				btn.btn
+					.text(btn.name + ' ▲')
+					.classed('sjpp-active-sandbox-btn', true)
+					.style('color', 'whitesmoke')
+					.style('background-color', '#487ba8')
+				appear(btn.c)
+				for (let j = 0; j < btns.length; j++) {
+					if (i != j) {
+						btns[j].btn
+							.text(btns[j].name + ' ▼')
+							.classed('sjpp-active-sandbox-btn', false)
+							.style('color', 'black')
+							.style('background-color', '#cfe2f3')
+						btns[j].c.style('display', 'none')
+					}
+				}
+			}
+			if (btn.callback) {
+				btn.callback(btn.c)
+				delete btn.callback
+			}
+		})
+	}
 }
 
 // ******* Tab Menu Functions *********
@@ -492,7 +522,7 @@ async function makeArrowBtns(div, name, contents) {
 function makeTabMenu(track, holder) {
 	const tabs = []
 	tabArray(tabs, track)
-	tab2box(holder.body.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px'), tabs, true, 'Examples')
+	tab2box(holder.body.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px'), tabs, '', 'Examples')
 }
 
 function tabArray(tabs, track) {
@@ -516,17 +546,16 @@ function tabArray(tabs, track) {
 function makeTab(track, arg, div) {
 	addMessage(arg.message, div)
 
-	const buttons_div = div.append('div').style('border-bottom', '4px darkgray solid')
+	const buttons_div = div.append('div').attr('id', 'sjpp-buttons-div')
 	const reuse_div = div
 		.append('div')
-		.attr('id', 'reusable')
-		.style('display', 'none')
+		.attr('id', 'sjpp-reusable')
+		.style('border-bottom', '1.5px darkgray solid')
 
 	addButtons(arg.buttons, buttons_div)
 	makeDataDownload(arg.download, buttons_div)
 	showURLLaunch(arg.urlparam, buttons_div)
-	showCode(track, arg.runargs, buttons_div, reuse_div)
-	addArrowButtons(arg.arrowButtons, buttons_div, reuse_div)
+	addArrowBtns(track, arg.arrowButtons, arg.runargs, buttons_div, reuse_div)
 
 	const runpp_arg = {
 		holder: div

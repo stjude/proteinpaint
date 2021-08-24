@@ -83,16 +83,6 @@
                                 "link": "https://docs.google.com/document/d/1TC6pcAByqugzMWQ0C7mhHIHIkIxkqqDt1ATBBt_ehes/edit"
                             }
                         ]
-                    },
-                    {
-                        "name": "Test Button",
-                        "message": "Delete me later. I'm not supposed to go on living in this world",
-                        "links": [
-                            {
-                                "name": "Testy test test",
-                                "link": "https://www.bbc.com/"
-                            }
-                        ]
                     }
                 ]
             },
@@ -256,21 +246,6 @@
                             "color": "teal"
                         }]
                     },
-                    "arrowButtons": [
-                        {
-                            "name": "Test",
-                            "links": [
-                               {
-                                   "name": "Google",
-                                   "link": "https://www.google.com/"
-                                },
-                                {
-                                    "name": "BBC",
-                                    "link": "https://www.bbc.com/"
-                                }
-                            ]
-                        }
-                    ],
                     "testSpec": {
                         "expected": {"image": 2 }
                     }
