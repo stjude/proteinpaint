@@ -52,11 +52,11 @@ tape('survival term as term1', function(test) {
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 1, 'should render 1 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
-			183,
-			'should render 183 survival series circles (hidden for hover)'
+			173,
+			'should render 173 survival series circles (hidden for hover)'
 		)
 		test.equal(
-			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored circle').size(),
+			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
 			10,
 			'should render 10 survival censored circles'
 		)
@@ -96,11 +96,11 @@ tape('survival term as term1, with overlay', function(test) {
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 7, 'should render 7 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
-			201,
+			191,
 			'should render 201 survival series circles (hidden for hover)'
 		)
 		test.equal(
-			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored circle').size(),
+			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
 			10,
 			'should render 9 survival censored circles'
 		)
@@ -140,11 +140,11 @@ tape('survival term as overlay', function(test) {
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 7, 'should render 7 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
-			201,
+			191,
 			'should render 201 survival series circles (hidden for hover)'
 		)
 		test.equal(
-			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored circle').size(),
+			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
 			10,
 			'should render 10 survival censored circles'
 		)
