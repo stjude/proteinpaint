@@ -25,22 +25,25 @@ export async function get_regression(q, ds) {
 		}
 		const rows = get_matrix(q)
 		const tsv = [header.join('\t')]
+		const termYvalues = q.termY.values || {}
+		console.log(termYvalues)
 		const independentTypes = q.independent.map(t => t.type)
 		const termTypes = [q.termY.type, ...independentTypes]
 		// Convert SJLIFE term types to R classes
 		const colClasses = termTypes.map(type => type2class.get(type))
 		console.log(29, termTypes, colClasses)
 		for (const row of rows) {
-			const line = [row.outcome]
+			const line = [termYvalues[row.outcome] && termYvalues[row.outcome].uncomputable ? 'NA' : row.outcome]
 			for (const i in q.independent) {
 				const value = row['val' + i]
 				const term = q.independent[i]
 				const val = term.term && term.term.values && term.term.values[value]
 				line.push(val && val.uncomputable ? 'NA' : value)
 			}
-			tsv.push(line.join('\t'))
+			if (line[0] != 'NA') tsv.push(line.join('\t'))
 		}
 		const regressionType = q.regressionType || 'linear'
+		console.log(43, regressionType, tsv.slice(0, 20))
 		const data = await lines2R('regression.R', tsv, [regressionType, colClasses.join(',')])
 		const result = {
 			keys: data.shift().split('\t'),

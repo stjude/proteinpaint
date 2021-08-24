@@ -29,7 +29,7 @@ variableClasses <- strsplit(args[2], split = ",")[[1]]
 
 #Read in input data
 con <- file("stdin","r")
-dat <- read.table(con, header = T, sep = "\t", quote = "", colClasses = variableClasses, check.names = F)
+dat <- read.table(con, header = T, sep = "\t", quote = "", colClasses = variableClasses, stringsAsFactors = F, check.names = F)
 
 #Perform regression analysis
 names(dat) <- paste(names(dat), "___", sep = "")

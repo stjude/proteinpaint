@@ -316,15 +316,27 @@ makeURL([
 						chartType: 'regression',
 						id: 0,
 						term: {
+							id: 'LV_Ejection_Fraction_3D'
+						},
+						independent: [
+							{"id":"Hypertension","q":{"hiddenValues":{"9":1},"groupsetting":{"inuse":false},"value_by_max_grade":true,"bar_by_grade":true},"type":"condition"},
+							{"id":"Myocardial infarction","q":{"hiddenValues":{"9":1},"groupsetting":{"inuse":false},"value_by_max_grade":true,"bar_by_grade":true},"type":"condition"}
+						]
+					},
+					1: {
+						chartType: 'regression',
+						id: 1,
+						term: {
 							id: 'BP_SBP1'
 						},
 						independent: [
-							{"id":"sex"}
+							{"id": "sex"},
+							{"id": "agedx"}
 						]
-					}
+					},
 				}
 			}
-		})]
+		})],
 	]
 },
 ]
