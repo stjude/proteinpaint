@@ -1456,6 +1456,7 @@
                 },
                 {
                     "label": "Tabular Data",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/mdstsne/tabDemoData.tar.gz",
                     "runargs": {
                         "parseurl": true,
                         "nobox": 1,

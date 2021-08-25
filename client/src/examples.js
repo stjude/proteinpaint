@@ -415,13 +415,14 @@ async function showCode(track, call, btns) {
 				JSON.stringify(call, '', 4)
 					.replaceAll(/"(.+)"\s*:/g, '$1:')
 					.replaceAll(/\\t/g, '	')
-					.replaceAll(/\\n/g, '\r\t\t')
-					.slice(1, -1) +
+					.replaceAll(/\\n/g, '\r\t')
+					.slice(1, -1)
+					.trim() +
 				`})`,
 			{ language: 'javascript' }
 		).value
 
-		const contents = `<pre style="border: 1px solid #d7d7d9; width: 90%"><code style="font-size:14px; margin:35px;">${code}</code></pre>`
+		const contents = `<pre style="border: 1px solid #d7d7d9; width: 90%"><code style="font-size:14px;">${code}</code></pre>`
 
 		btns.push({
 			name: 'Code',
