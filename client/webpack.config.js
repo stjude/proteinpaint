@@ -1,6 +1,5 @@
 const WebpackNotifierPlugin = require('webpack-notifier')
 const path = require('path')
-
 module.exports = function(env = {}) {
 	const config = {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
@@ -35,8 +34,17 @@ module.exports = function(env = {}) {
 					test: /\.js$/,
 					use: [
 						{
-							loader: 'babel-loader'
+							loader: 'babel-loader',
+							// TODO: figure out why .babelrc is not being used by webpack during build/deploy
 							// babel-loader respects .babelrc, so no need to specify presets and plugins here
+							options: {
+								presets: [['@babel/preset-env', { loose: true }]],
+								plugins: [
+									'@babel/plugin-proposal-optional-chaining',
+									'@babel/plugin-syntax-dynamic-import',
+									'@babel/plugin-transform-runtime'
+								]
+							}
 						}
 					]
 				}

@@ -33,7 +33,6 @@ module.exports = function(env = {}) {
 					use: [
 						{
 							loader: 'babel-loader'
-							// babel-loader respects .babelrc, so no need to specify presets and plugins here
 						}
 					]
 				}
