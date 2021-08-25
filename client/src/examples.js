@@ -418,7 +418,7 @@ async function showCode(track, call, btns) {
 					.replaceAll(/\\n/g, '\r\t')
 					.slice(1, -1)
 					.trim() +
-				`})`,
+				`\r})`,
 			{ language: 'javascript' }
 		).value
 
