@@ -3022,7 +3022,7 @@ seekrange(chr,start,stop) {
 		tk.busy = false
 		this.ifbusy()
 		tk.cloak.attr('transform', 'scale(0)')
-		tk.cloakbox.attr('fill-opacity', 0)
+		tk.cloakbox.attr('fill-opacity', 0).attr('height', 0) //This is a fix for issue #259. Set to 0. Otherwise Safari will not detect event.listeners for the first few track rows.
 		tk.cloaktext.attr('fill-opacity', 0)
 		tk.cloakline.attr('x2', 0)
 		tk.glider.attr('transform', 'translate(0,0)')

@@ -1384,7 +1384,7 @@ async function enter_partstack(group, tk, block, y, data) {
 			stop: clickstackidx + stackpagesize / 2
 		}
 	}
-	// block.tkcloakon(tk)
+	block.tkcloakon(tk)
 	const _d = await getData(tk, block, [
 		'stackstart=' + group.partstack.start,
 		'stackstop=' + group.partstack.stop,
