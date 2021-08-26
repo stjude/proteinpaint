@@ -277,6 +277,7 @@ export const plotInit = rx.getInitFxn(MassPlot)
 function setRenderers(self) {
 	self.showMultipart = async function(_config) {
 		const config = JSON.parse(JSON.stringify(_config))
+		if (config.regression) this.dom.holder.header.html(config.regression.label + ' Regression')
 		const dom = {
 			body: this.dom.controls.append('div'),
 			foot: this.dom.controls.append('div')
@@ -387,10 +388,11 @@ function setRenderers(self) {
 						d.selected = term
 					}
 					self.updateBtns(config)
-					cutoffDiv.style(
-						'display',
-						d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
-					)
+					if (config.regression && config.regression.type != 'linear')
+						cutoffDiv.style(
+							'display',
+							d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
+						)
 				}
 			}
 		})
@@ -402,7 +404,13 @@ function setRenderers(self) {
 			.append('div')
 			.style(
 				'display',
-				term && d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
+				config.regression &&
+					config.regression.type != 'linear' &&
+					term &&
+					d.cutoffTermTypes &&
+					d.cutoffTermTypes.includes(term.term.type)
+					? 'inline-block'
+					: 'none'
 			)
 			.style('margin', '3px 15px')
 			.style('padding', '3px 5px')

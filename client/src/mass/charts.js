@@ -93,12 +93,8 @@ function setRenderers(self) {
 			const action = { type: 'plot_show', id: idPrefix + id++, config: { chartType } }
 			self.showTree(chartType, termSequence, action)
 		} else {
-			self.app.dispatch({
-				type: 'plot_prep',
-				chartType,
-				id: idPrefix + id++,
-				termSequence
-			})
+			const action = { type: 'plot_prep', chartType, id: idPrefix + id++, termSequence }
+			self.showRegressionMenu(action)
 		}
 	}
 
@@ -134,6 +130,29 @@ function setRenderers(self) {
 				}
 			}
 		})
+	}
+
+	self.showRegressionMenu = async function(action) {
+		const regTypes = [
+			{ label: 'Linear', type: 'linear' },
+			{ label: 'Logistic', type: 'logistic' }
+			// { label: 'Cox', regType: 'cox' },
+			//{ label: 'Polynomial', regType: 'polynomial' }
+		]
+		self.dom.tip.d.selectAll('*').remove()
+
+		self.dom.tip.d
+			.selectAll('div')
+			.data(regTypes)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.text(d => d.label)
+			.on('click', d => {
+				self.dom.tip.hide()
+				action.regression = d
+				self.app.dispatch(action)
+			})
 	}
 }
 
