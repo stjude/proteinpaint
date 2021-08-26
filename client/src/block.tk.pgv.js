@@ -299,7 +299,7 @@ export function loadTk(tk, block) {
 		delete tk.uninitiated
 	}
 
-	// block.tkcloakon(tk)
+	block.tkcloakon(tk)
 
 	const tasks = []
 	for (const t of tk.tracks) {
