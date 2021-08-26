@@ -34,17 +34,8 @@ module.exports = function(env = {}) {
 					test: /\.js$/,
 					use: [
 						{
-							loader: 'babel-loader',
-							// TODO: figure out why .babelrc is not being used by webpack during build/deploy
+							loader: 'babel-loader'
 							// babel-loader respects .babelrc, so no need to specify presets and plugins here
-							options: {
-								presets: [['@babel/preset-env', { loose: true }]],
-								plugins: [
-									'@babel/plugin-proposal-optional-chaining',
-									'@babel/plugin-syntax-dynamic-import',
-									'@babel/plugin-transform-runtime'
-								]
-							}
 						}
 					]
 				}

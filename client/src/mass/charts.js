@@ -25,7 +25,7 @@ class MassCharts {
 	}
 
 	getState(appState) {
-		const activeCohort = appState.termdbConfig?.selectCohort?.values[appState.activeCohort]
+		const activeCohort = appState.termdbConfig && appState.termdbConfig.selectCohort && appState.termdbConfig.selectCohort.values[appState.activeCohort]
 		const cohortStr = activeCohort && activeCohort.keys.sort().join(',')
 
 		const state = {
@@ -34,7 +34,7 @@ class MassCharts {
 			termfilter: appState.termfilter,
 			config: appState.tree.plots[this.id],
 			exclude_types: [...appState.tree.exclude_types],
-			supportedChartTypes: appState.termdbConfig.supportedChartTypes?.[cohortStr] || ['barchart']
+			supportedChartTypes: appState.termdbConfig.supportedChartTypes && appState.termdbConfig.supportedChartTypes.[cohortStr] || ['barchart']
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)

@@ -23,7 +23,7 @@ class MassRegression {
 		}
 		const config = appState.tree.plots[this.id]
 		return {
-			isVisible: config?.settings?.currViews.includes('regression'),
+			isVisible: config.settings && config.settings.currViews.includes('regression'),
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: {
@@ -31,7 +31,7 @@ class MassRegression {
 				term: config.term,
 				independent: config.independent,
 				settings: {
-					table: config?.settings?.regression
+					table: config.settings && config.settings.regression
 				}
 			}
 		}

@@ -179,7 +179,7 @@ else
 
 	# save some time by reusing parent folder's node_modules
 	# but making sure to update to committed package.json
-	cp -R ../../../node_modules .
+	ln -s ../../../node_modules .
 	# npm update
 
 	# create webpack bundle

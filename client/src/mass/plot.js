@@ -94,8 +94,9 @@ class MassPlot {
 			config,
 			cumincplot4condition: appState.termdbConfig.cumincplot4condition,
 			displayAsSurvival:
-				config?.settings?.currViews[0] != 'regression' &&
-				(config?.term?.term?.type == 'survival' || config?.term2?.term?.type == 'survival')
+				config.settings &&
+				config.settings.currViews[0] != 'regression' &&
+				((config.term && config.term.term.type == 'survival') || (config.term2 && config.term2.term.type == 'survival'))
 		}
 	}
 
@@ -310,7 +311,7 @@ function setRenderers(self) {
 						if (!disable_terms.includes(d.selected.id)) disable_terms.push(d.selected.id)
 					}
 				}
-				if (d.limit > 1 && config?.[d.detail] && config[d.detail].length) {
+				if (d.limit > 1 && config[d.detail] && config[d.detail].length) {
 					for (const term of config[d.detail]) {
 						self.newPill(d, config, div, pills, disable_terms, term)
 					}
@@ -353,7 +354,7 @@ function setRenderers(self) {
 			placeholder: d.prompt,
 			holder: newPillDiv,
 			vocabApi: self.app.vocabApi,
-			vocab: self.state?.vocab,
+			vocab: self.state && self.state.vocab,
 			activeCohort: self.state.activeCohort,
 			use_bins_less: true,
 			debug: self.opts.debug,
