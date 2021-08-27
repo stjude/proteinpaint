@@ -262,7 +262,10 @@ class MassPlot {
 
 			case 'regression':
 				this.showMultipart(rx.copyMerge({}, this.state.config))
-				this.dom.resultsHeading = this.dom.viz.append('div').style('margin', '10px 5px')
+				this.dom.resultsHeading = this.dom.viz
+					.append('div')
+					.style('margin-top', '30px')
+					.style('margin-bottom', '10px')
 				this.components.chart = regressionInit(
 					this.app,
 					{ holder: this.dom.viz.append('div'), id: this.id },
