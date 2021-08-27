@@ -75,6 +75,7 @@ class MassRegression {
 							let value = r
 							if (columns[i].label === 'Variable') {
 								config = this.state.config.independent.find(x => x.id === r)
+								if (config) value = config.term.name // get term name to display in table
 							}
 							if (columns[i].label === 'Category') {
 								if (config) {
@@ -147,7 +148,7 @@ function setRenderers(self) {
 			.style('margin-bottom', '20px')
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
-			.style('border', '1px solid black')
+			.style('border', '1px solid #999')
 
 		// header
 		const tr = table
@@ -162,13 +163,15 @@ function setRenderers(self) {
 				tr.append('th')
 					.text(label.length > 20 ? label.slice(0, 16) + '...' : label)
 					.attr('title', label)
-					.style('border', '1px solid black')
-					.style('padding', '3px')
+					// .style('border', '1px solid black')
+					.style('padding', '3px 5px')
 					.style('text-align', 'center')
 					.style('min-width', '80px')
 					.style('max-width', '150px')
 					.style('word-break', label.length > 12 ? 'break-word' : 'normal')
 					.style('vertical-align', 'top')
+					.style('font-weight', 'normal')
+					.style('color', '#777')
 			}
 
 			let i = 0
@@ -179,15 +182,15 @@ function setRenderers(self) {
 				for (const t2label of column_keys) {
 					const td = tr
 						.append('td')
-						.style('border', '1px solid black')
-						.style('padding', '3px 5px')
-						.style('text-align', 'center') //'right')
+						// .style('border', '1px solid black')
+						.style('padding', '3px 15px')
 					const v = t1v.lst.find(i => i.label == t2label)
 					if (v) {
 						td //.append('div')
 							//.style('display', 'inline-block')
 							//.style('text-align', 'right')
 							//.style('min-width', '50px')
+							.style('text-align', Number.isNaN(Number(v.value)) ? 'left' : 'right')
 							.html(v.value)
 					}
 				}
@@ -198,14 +201,16 @@ function setRenderers(self) {
 				const tr = table
 					.append('tr')
 					.style('background-color', i++ % 2 == 0 ? '#fff' : '#ececec')
-					.style('border', '1px solid black')
+					// .style('border', '1px solid black')
 					.style('padding', '3px 5px')
 					.style('text-align', 'center') //'right')
-				for (const cell of row) {
+				for (const [i, cell] of row.entries()) {
 					tr.append('td')
-						.style('border', '1px solid black')
-						.style('padding', '3px 5px')
-						.style('text-align', 'center')
+						// .style('border', '1px solid black')
+						.style('padding', '3px 15px')
+						// .style('text-align', 'center')
+						.style('text-align', Number.isNaN(Number(cell)) ? 'left' : 'right')
+						.style('color', i == 0 ? '#777' : '#000')
 						.html(cell)
 				}
 			}
