@@ -282,6 +282,7 @@ export const plotInit = rx.getInitFxn(MassPlot)
 function setRenderers(self) {
 	self.showMultipart = async function(_config) {
 		const config = JSON.parse(JSON.stringify(_config))
+		// show selected regression_type in sandbox header
 		if (config.regressionType) {
 			this.dom.holder.header.html(
 				config.regressionType.charAt(0).toUpperCase() + config.regressionType.slice(1) + ' Regression'
@@ -397,7 +398,8 @@ function setRenderers(self) {
 						d.selected = term
 					}
 					self.updateBtns(config)
-					if (config.regressionType && config.regressionType != 'linear')
+					// show cutoffDiv only for regressionType is logistic
+					if (config.regressionType && config.regressionType == 'logistic')
 						cutoffDiv.style(
 							'display',
 							d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
@@ -409,11 +411,12 @@ function setRenderers(self) {
 		pills.push(pill)
 		if (term) pill.main(term)
 
+		// show cutoffDiv only for regressionType is logistic and term in cutoffTermTypes
 		const cutoffDiv = pillDiv
 			.append('div')
 			.style(
 				'display',
-				config.regressionType != 'linear' && term && d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type)
+				config.regressionType == 'logistic' && term && d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type)
 					? 'inline-block'
 					: 'none'
 			)

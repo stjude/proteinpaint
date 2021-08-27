@@ -132,6 +132,7 @@ function setRenderers(self) {
 		})
 	}
 
+	// regression type selection menu from 'Regression Analysis' button click
 	self.showRegressionMenu = async function(action) {
 		const regTypes = [
 			'linear',
