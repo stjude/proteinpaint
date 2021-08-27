@@ -86,7 +86,9 @@ for(x in 1:length(var_and_cat)){
 }
 
 #Compute summary stats of deviance residuals
-deviance_resid_summ <- matrix(fivenum(res_summ$deviance.resid), dimnames = list(c("Min","1Q","Median","3Q","Max")))
+deviance_resid_summ <- round(data.frame(as.list(fivenum(res_summ$deviance.resid))), 3)
+colnames(deviance_resid_summ) <- c("Minimum","1st quartile","Median","3rd quartile","Maximum")
+#deviance_resid_summ <- round(matrix(fivenum(res_summ$deviance.resid), dimnames = list(c("Min","1Q","Median","3Q","Max"))), 3)
 
 #Extract other summary stats
 other_summ <- matrix(, nrow = 6, dimnames = list(c("Dispersion parameter","Null deviance","Null deviance df", "Residual deviance","Residual deviance df", "AIC")))
@@ -96,12 +98,13 @@ other_summ["Null deviance df",] <- res_summ$df.null
 other_summ["Residual deviance",] <- res_summ$deviance
 other_summ["Residual deviance df",] <- res_summ$df.residual
 other_summ["AIC",] <- res_summ$aic
+other_summ <- round(other_summ, 1)
 
 #Output summary statistics to stdout.
+cat("#matrix#Deviance Residuals\n", file = "", sep = "")
+write.table(deviance_resid_summ, file = "", sep = "\t", quote = F, row.names = F)
 cat("#matrix#Coefficients\n", file = "", sep = "")
 write.table(coefficients_summ, file = "", sep = "\t", quote = F, row.names = F)
-cat("#vector#Deviance Residuals\n", file = "", sep = "")
-write.table(deviance_resid_summ, file = "", sep = "\t", quote = F, row.names = T, col.names = F)
 cat("#vector#Other summary statistics\n", file = "", sep = "")
 write.table(other_summ, file = "", sep = "\t", quote = F, row.names = T, col.names = F)
 close(con)

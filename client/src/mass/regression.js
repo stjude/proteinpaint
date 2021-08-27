@@ -49,34 +49,53 @@ class MassRegression {
 			this.dom.div.style('display', 'none')
 			throw 'independent variable(s) is required for regression analysis'
 		}
-		const [columns, rows] = this.processData(this.data)
-		this.render(columns, rows)
+		this.dom.div
+			.style('display', 'inline-block')
+			.selectAll('*')
+			.remove()
+		const tables = this.processData(this.data)
+		for (const name in tables) {
+			const [columns, rows] = tables[name]
+			this.renderTable(this.dom.div, name, columns, rows)
+		}
 	}
 
-	processData(data) {
-		const columns = data.keys.map(key => {
-			return { key, label: key }
-		})
-		const rows = data.rows.map((row, i) => {
-			let config
-			return {
-				lst: row.map((r, i) => {
-					let value = r
-					if (columns[i].label === 'variable') {
-						config = this.state.config.independent.find(x => x.id === r)
-					}
-					if (columns[i].label === 'category') {
-						if (config) {
-							if (config.term.values) {
-								value = r in config.term.values ? config.term.values[r].label : r
-							}
-						}
-					}
-					return { label: columns[i].label, value: value }
+	processData(multipleData) {
+		const tables = {}
+		for (const data of multipleData) {
+			let columns, rows
+			if (data.format === 'matrix') {
+				columns = data.keys.map(key => {
+					return { key, label: key }
 				})
+				rows = data.rows.map((row, i) => {
+					let config
+					return {
+						lst: row.map((r, i) => {
+							let value = r
+							if (columns[i].label === 'Variable') {
+								config = this.state.config.independent.find(x => x.id === r)
+							}
+							if (columns[i].label === 'Category') {
+								if (config) {
+									if (config.term.values) {
+										value = r in config.term.values ? config.term.values[r].label : r
+									}
+								}
+							}
+							return { label: columns[i].label, value: value }
+						})
+					}
+				})
+			} else if (data.format === 'vector') {
+				columns = undefined
+				rows = data.rows
+			} else {
+				throw `data format '${data.format}' is not recognized`
 			}
-		})
-		return [columns, rows]
+			tables[data.name] = [columns, rows]
+		}
+		return tables
 	}
 }
 
@@ -111,17 +130,21 @@ function setInteractivity(self) {
 }
 
 function setRenderers(self) {
-	self.render = function render(columns, rows) {
-		self.dom.div
-			.style('display', 'inline-block')
-			.selectAll('*')
-			.remove()
-
+	self.renderTable = function(div, name, columns, rows) {
+		// show table title
+		const title_div = div
+			.append('div')
+			.style('text-decoration', 'underline')
+			.style('padding-top', '10px')
+			.style('padding-bottom', '15px')
+			.html(name + ':')
 		// show table
-		const table = self.dom.div
+		const table = div
 			.append('table')
 			//.style('margin-left','20px')
-			.style('margin-right', '20px')
+			//.style('margin-right', '20px')
+			//.style('margin-top', '10px')
+			.style('margin-bottom', '20px')
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
 			.style('border', '1px solid black')
@@ -133,38 +156,57 @@ function setRenderers(self) {
 			.style('background-color', '#ececec')
 
 		// print term2 values as rest of columns
-		for (const value of columns) {
-			const label = value.label
-			tr.append('th')
-				.text(label.length > 20 ? label.slice(0, 16) + '...' : label)
-				.attr('title', label)
-				.style('border', '1px solid black')
-				.style('padding', '3px')
-				.style('text-align', 'center')
-				.style('min-width', '80px')
-				.style('max-width', '150px')
-				.style('word-break', label.length > 12 ? 'break-word' : 'normal')
-				.style('vertical-align', 'top')
-		}
+		if (columns) {
+			for (const value of columns) {
+				const label = value.label
+				tr.append('th')
+					.text(label.length > 20 ? label.slice(0, 16) + '...' : label)
+					.attr('title', label)
+					.style('border', '1px solid black')
+					.style('padding', '3px')
+					.style('text-align', 'center')
+					.style('min-width', '80px')
+					.style('max-width', '150px')
+					.style('word-break', label.length > 12 ? 'break-word' : 'normal')
+					.style('vertical-align', 'top')
+			}
 
-		let i = 0
-		for (const t1v of rows) {
-			const tr = table.append('tr').style('background-color', i++ % 2 == 0 ? '#fff' : '#ececec')
+			let i = 0
+			for (const t1v of rows) {
+				const tr = table.append('tr').style('background-color', i++ % 2 == 0 ? '#fff' : '#ececec')
 
-			const column_keys = columns.map(d => d.key)
-			for (const t2label of column_keys) {
-				const td = tr
-					.append('td')
+				const column_keys = columns.map(d => d.key)
+				for (const t2label of column_keys) {
+					const td = tr
+						.append('td')
+						.style('border', '1px solid black')
+						.style('padding', '3px 5px')
+						.style('text-align', 'center') //'right')
+					const v = t1v.lst.find(i => i.label == t2label)
+					if (v) {
+						td //.append('div')
+							//.style('display', 'inline-block')
+							//.style('text-align', 'right')
+							//.style('min-width', '50px')
+							.html(v.value)
+					}
+				}
+			}
+		} else {
+			let i = 0
+			for (const row of rows) {
+				const tr = table
+					.append('tr')
+					.style('background-color', i++ % 2 == 0 ? '#fff' : '#ececec')
 					.style('border', '1px solid black')
 					.style('padding', '3px 5px')
 					.style('text-align', 'center') //'right')
-				const v = t1v.lst.find(i => i.label == t2label)
-				if (v) {
-					td //.append('div')
-						//.style('display', 'inline-block')
-						//.style('text-align', 'right')
-						//.style('min-width', '50px')
-						.html(v.value)
+				for (const cell of row) {
+					tr.append('td')
+						.style('border', '1px solid black')
+						.style('padding', '3px 5px')
+						.style('text-align', 'center')
+						.html(cell)
 				}
 			}
 		}

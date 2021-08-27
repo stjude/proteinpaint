@@ -24,16 +24,14 @@ export async function get_regression(q, ds) {
 			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
 		}
 		const rows = get_matrix(q)
-		const tsv = [header.map(name => name.replace(' ', '_').replace(',', '_')).join('\t')]
+		const tsv = [header.join('\t')]
 		const termYvalues = q.termY.values || {}
-		console.log(termYvalues)
 		const independentTypes = q.independent.map(t => t.type)
 		const termTypes = [q.termY.type, ...independentTypes]
 		// Convert SJLIFE term types to R classes
 		const colClasses = termTypes.map(type => type2class.get(type))
 		if ('cutoff' in q) colClasses[0] = 'factor'
 		const regressionType = q.regressionType || 'linear'
-		console.log(29, termTypes, colClasses)
 		for (const row of rows) {
 			const outcomeVal = termYvalues[row.outcome] && termYvalues[row.outcome].uncomputable ? 'NA' : row.outcome
 			const meetsCutoff = 'cutoff' in q && outcomeVal != 'NA' && Number(outcomeVal) >= q.cutoff ? 1 : 0 //console.log(meetsCutoff, q.cutoff, outcomeVal, Number(outcomeVal), regressionType)
@@ -46,15 +44,31 @@ export async function get_regression(q, ds) {
 			}
 			if (line[0] != 'NA') tsv.push(line.join('\t'))
 		}
-		console.log(tsv.slice(0, 30))
 		const data = await lines2R('regression.R', tsv, [regressionType, colClasses.join(',')])
-		const result = {
-			keys: data.shift().split('\t'),
-			rows: []
+		const result = []
+		let table, lineCnt
+		for (const line of data) {
+			if (line.startsWith('#')) {
+				if (table) result.push(table)
+				const [format, name] = line.split('#').slice(1)
+				table = {
+					name: name,
+					format: format,
+					rows: []
+				}
+				lineCnt = 0
+				continue
+			}
+			if (table.format === 'matrix') {
+				lineCnt++
+				if (lineCnt === 1) {
+					table.keys = line.split('\t')
+					continue
+				}
+			}
+			table.rows.push(line.split('\t'))
 		}
-		for (const d of data) {
-			result.rows.push(d.split('\t'))
-		}
+		result.push(table)
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
