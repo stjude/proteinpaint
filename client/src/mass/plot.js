@@ -130,9 +130,11 @@ class MassPlot {
 			if ('cutoff' in plot) {
 				params.push('cutoff=' + plot.cutoff)
 			}
-			if ('cutoff' in plot || (plot.term.term.values && Object.keys(plot.term.term.values).length === 2)) {
-				params.push('regressionType=logistic')
-			}
+			if (plot.regressionType && plot.regressionType == 'logistic') params.push('regressionType=logistic')
+			// TODO: remove this logic as regressionType is selected before launching regression form
+			// if ('cutoff' in plot || (plot.term.term.values && Object.keys(plot.term.term.values).length === 2)) {
+			// 	params.push('regressionType=logistic')
+			// }
 			if (plot.independent) {
 				params.push(
 					'independent=' +
@@ -266,7 +268,7 @@ class MassPlot {
 				this.components.chart = regressionInit(
 					this.app,
 					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({}, this.app.opts.survival)
+					Object.assign({ regressionType: this.state.config.regressionType }, this.app.opts.survival)
 				)
 		}
 	}
@@ -277,7 +279,11 @@ export const plotInit = rx.getInitFxn(MassPlot)
 function setRenderers(self) {
 	self.showMultipart = async function(_config) {
 		const config = JSON.parse(JSON.stringify(_config))
-		if (config.regression) this.dom.holder.header.html(config.regression.label + ' Regression')
+		if (config.regressionType) {
+			this.dom.holder.header.html(
+				config.regressionType.charAt(0).toUpperCase() + config.regressionType.slice(1) + ' Regression'
+			)
+		}
 		const dom = {
 			body: this.dom.controls.append('div'),
 			foot: this.dom.controls.append('div')
@@ -388,7 +394,7 @@ function setRenderers(self) {
 						d.selected = term
 					}
 					self.updateBtns(config)
-					if (config.regression && config.regression.type != 'linear')
+					if (config.regressionType && config.regressionType != 'linear')
 						cutoffDiv.style(
 							'display',
 							d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
@@ -404,11 +410,7 @@ function setRenderers(self) {
 			.append('div')
 			.style(
 				'display',
-				config.regression &&
-					config.regression.type != 'linear' &&
-					term &&
-					d.cutoffTermTypes &&
-					d.cutoffTermTypes.includes(term.term.type)
+				config.regressionType != 'linear' && term && d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type)
 					? 'inline-block'
 					: 'none'
 			)

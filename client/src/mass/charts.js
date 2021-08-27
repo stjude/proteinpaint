@@ -134,10 +134,9 @@ function setRenderers(self) {
 
 	self.showRegressionMenu = async function(action) {
 		const regTypes = [
-			{ label: 'Linear', type: 'linear' },
-			{ label: 'Logistic', type: 'logistic' }
-			// { label: 'Cox', regType: 'cox' },
-			//{ label: 'Polynomial', regType: 'polynomial' }
+			'linear',
+			'logistic'
+			// 'cox', 'polynomial'
 		]
 		self.dom.tip.d.selectAll('*').remove()
 
@@ -147,10 +146,10 @@ function setRenderers(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.text(d => d.label)
+			.text(d => d.charAt(0).toUpperCase() + d.slice(1))
 			.on('click', d => {
 				self.dom.tip.hide()
-				action.regression = d
+				action.regressionType = d
 				self.app.dispatch(action)
 			})
 	}

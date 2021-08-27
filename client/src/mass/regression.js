@@ -29,7 +29,7 @@ class MassRegression {
 			config: {
 				cutoff: config.cutoff,
 				term: config.term,
-				regression: { label: 'Linear', type: 'linear' },
+				regressionType: config.regressionType || 'linear',
 				independent: config.independent,
 				settings: {
 					table: config?.settings?.regression
