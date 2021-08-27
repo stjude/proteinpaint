@@ -15,10 +15,16 @@
 // preprocess_input() (Optimizing ref/alt allele entered by user to account for flanking repeat regions. For e.g A-AT in the region CACA{T}TTTTGCGA will become ATTTT-ATTTTT)
 //
 // Select appropriate kmer length
+//
+// assign_kmer_weights {
 //   while duplicate_kmers {
 //      build_kmers_refalt() (for both ref and alt)
 //      check for duplicate kmers
 //   }
+//
+//   Determine final weight of kmers for reference and alternate sequence
+//   build_kmers_refalt() (for both ref and alt using chosen kmer length)
+// }
 //
 // if number of reads > single_thread_limit (multithreading option is turned on)
 //
@@ -240,7 +246,7 @@ fn main() {
     let segbplen: i64 = args[4].parse::<i64>().unwrap(); // read sequence length
     let refallele: String = args[5].parse::<String>().unwrap(); // Reference allele
     let altallele: String = args[6].parse::<String>().unwrap(); // Alternate allele
-    let mut kmer_length_iter: i64 = args[7].parse::<i64>().unwrap(); // Initializing kmer length
+    let min_kmer_length: i64 = args[7].parse::<i64>().unwrap(); // Initializing kmer length
     let weight_no_indel: f64 = args[8].parse::<f64>().unwrap(); // Weight of base pair if outside indel region
     let weight_indel: f64 = args[9].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
     let threshold_slope: f64 = args[10].parse::<f64>().unwrap(); // threshold slope to determine curvature to separate out ref/alt reads from none
@@ -261,7 +267,7 @@ fn main() {
     let ref_length: i64 = refallele.len() as i64; // Determining length of ref allele
     let alt_length: i64 = altallele.len() as i64; // Determining length of alt allele
     let mut indel_length: i64 = alt_length; // Determining indel length, in case of an insertion it will be alt_length. In case of a deletion, it will be ref_length
-    let mut ref_status = "break_point".to_string(); // Flag to assign how weights of the indel are to be assigned to ref allele. If "break_point" only the kmer containing the complete insertion point of the ndel will be assigned weights. If "complete" then each nucleotide in the indel will be assigned weights.
+    let mut ref_status = "break_point".to_string(); // Flag to assign how weights of the indel are to be assigned to ref allele. If "break_point" only the kmer containing the complete insertion point of the indel will be assigned weights. If "complete" then each nucleotide in the indel will be assigned weights.
     let mut alt_status = "complete".to_string(); // Flag to assign how weights of the indel are to be assigned to alt allele. If "break_point" only the kmer containing the complete insertion point of the indel will be assigned weights. If "complete" then each nucleotide in the indel will be assigned weights.
     let indel_length_sign: i64 = altallele.len() as i64 - refallele.len() as i64; // Length of indel. Will be positive for insertion and negative for deletion.
 
@@ -333,137 +339,6 @@ fn main() {
     //println!("ref_nucleotides_all:{:?}", ref_nucleotides_all);
     //println!("alt_nucleotides_all:{:?}", alt_nucleotides_all);
     drop(rightflank_nucleotides);
-    // Select appropriate kmer length
-    let max_kmer_length: i64 = 40; // Maximum kmer length upto which search of unique kmers between indel region and flanking region will be tried after which it will just chose this kmer length for kmer generation of reads
-    let mut uniq_kmers: usize = 0; // Variable for storing if unique kmers have been found. Initialized to zero
-    let mut found_duplicate_kmers: usize = 0; // Variable for storing duplicate kmers
-
-    let mut ref_output = refalt_output::new(); // Initializing variable
-    let mut alt_output = refalt_output::new(); // Initializing variable
-
-    while kmer_length_iter <= max_kmer_length && uniq_kmers == 0 {
-        //#[allow(unused_variables)]
-        //let (
-        //    ref_kmers_weight,
-        //    ref_kmers_nodups,
-        //    ref_indel_kmers,
-        //    mut ref_surrounding_kmers,
-        //    ref_kmers_data,
-        //)
-        ref_output = build_kmers_refalt(
-            lines[0].to_string(),
-            kmer_length_iter,
-            left_most_pos,
-            variant_pos,
-            variant_pos + optimized_ref_allele.len() as i64,
-            weight_indel,
-            weight_no_indel,
-            ref_length,
-            surrounding_region_length,
-            &ref_status,
-            ref_alt_same_base_start,
-            "indel",
-            indel_length_sign,
-            "Ref",
-        );
-
-        //#[allow(unused_variables)]
-        //let (
-        //    alt_kmers_weight,
-        //    alt_kmers_nodups,
-        //    alt_indel_kmers,
-        //    mut alt_surrounding_kmers,
-        //    alt_kmers_data,
-        //)
-        alt_output = build_kmers_refalt(
-            lines[1].to_string(),
-            kmer_length_iter,
-            left_most_pos,
-            variant_pos,
-            variant_pos + optimized_alt_allele.len() as i64,
-            weight_indel,
-            weight_no_indel,
-            alt_length,
-            surrounding_region_length,
-            &alt_status,
-            ref_alt_same_base_start,
-            "indel",
-            indel_length_sign,
-            "Alt",
-        );
-
-        // Check if there are any common kmers between indel region and surrounding region (true in case of repetitive regions)
-        let mut ref_surrounding_kmers = ref_output.surrounding_kmers;
-        let ref_indel_kmers = ref_output.indel_kmers;
-        let matching_ref: usize = ref_surrounding_kmers
-            .iter()
-            .zip(&ref_indel_kmers)
-            .filter(|&(a, b)| a == b)
-            .count();
-
-        let mut alt_surrounding_kmers = alt_output.surrounding_kmers;
-        let alt_indel_kmers = alt_output.indel_kmers;
-        let matching_alt: usize = alt_surrounding_kmers
-            .iter()
-            .zip(&alt_indel_kmers)
-            .filter(|&(a, b)| a == b)
-            .count();
-        let non_uniq_ref_surrounding_length = ref_surrounding_kmers.len(); // Length of vector before removing duplicate kmers
-        ref_surrounding_kmers.sort(); // Sorting vector
-        ref_surrounding_kmers.dedup(); // Removing duplicate kmers adjacent to each other
-        let uniq_ref_surrounding_length = ref_surrounding_kmers.len(); // Length of vector after removing duplicate kmers
-
-        let non_uniq_alt_surrounding_length = alt_surrounding_kmers.len(); // Length of vector before removing duplicate kmers
-        alt_surrounding_kmers.sort(); // Sorting vector
-        alt_surrounding_kmers.dedup(); // Removing duplicate kmers adjacent to each other
-        let uniq_alt_surrounding_length = alt_surrounding_kmers.len(); // Length of vector after removing duplicate kmers
-
-        if matching_ref != 0
-            || matching_alt != 0
-            || non_uniq_ref_surrounding_length != uniq_ref_surrounding_length
-            || non_uniq_alt_surrounding_length != uniq_alt_surrounding_length
-        {
-            // Checking to see if there is no duplicate kmer between flanking region and indel region and also within ref and alt allele
-            kmer_length_iter += 1; // kmer length is incremented in case duplicate kmers are found
-            found_duplicate_kmers = 1;
-        } else {
-            uniq_kmers = 1;
-        }
-    }
-    println!(
-        "Found duplicate kmers status (from Rust):{:?}",
-        found_duplicate_kmers
-    );
-
-    println!(
-        "{}{}",
-        "Number of original reads in input (from Rust):",
-        (lines.len() - 2).to_string()
-    );
-
-    // Checking if kmer_length_iter smaller than the smallest optimized allele. If true, then kmer length is incremented to length of smallest optimized allele + 1. This is necessary so that the kmer length is sufficient to cover the "break-point" of the indel. May also be useful in complex indels.
-    if optimized_ref_allele.len() < optimized_alt_allele.len()
-        && kmer_length_iter <= optimized_ref_allele.len() as i64
-    {
-        kmer_length_iter = optimized_ref_allele.len() as i64 + 1;
-        println!("kmer length increased as it was lower than length of optimized ref allele");
-    } else if optimized_alt_allele.len() < optimized_ref_allele.len()
-        && kmer_length_iter <= optimized_alt_allele.len() as i64
-    {
-        kmer_length_iter = optimized_alt_allele.len() as i64 + 1;
-        println!("kmer length increased as it was lower than length of optimized alt allele");
-    }
-
-    println!("Final kmer length (from Rust):{:?}", kmer_length_iter);
-
-    let big_indel_threshold: f64 = 30000.0; // Threshold determining whether total weights between reference and alternate sequence should be balanced or not. This approach works for bigger indels but looses accuracy for smaller indels.
-    let mut activate_weight_balancing: usize = 0; // Flag for activating weight balancing between reference and alternate sequences
-    if (ref_output.total_kmers_weight - alt_output.total_kmers_weight).abs() > big_indel_threshold
-        && kmer_length_iter <= 10
-    {
-        // For now weights are not balanced in case of very repetitive cases
-        activate_weight_balancing = 1;
-    }
 
     #[allow(unused_variables)]
     let (
@@ -477,24 +352,33 @@ fn main() {
         alt_indel_kmers, // Vector of alt sequence kmers within indel region
         alt_surrounding_kmers, // Vector of alt sequence kmers in the flanking region as defined by surrounding_region_length
         alt_kmers_data, // Vector containing structs of kmer_data type. This contains the frequency and weight of each kmer as defined in alt_kmers_nodups
-    ) = assign_final_weights(
+        found_duplicate_kmers, // Variable for storing duplicate kmers
+        kmer_length_iter, //Final kmer length
+    ) = assign_kmer_weights(
         lines[0].to_string(),
         lines[1].to_string(),
-        kmer_length_iter,
+        min_kmer_length,
         left_most_pos,
         variant_pos,
         variant_pos + optimized_ref_allele.len() as i64,
         variant_pos + optimized_alt_allele.len() as i64,
+        optimized_ref_allele.len(),
+        optimized_alt_allele.len(),
         weight_indel,
         weight_no_indel,
         ref_length,
         alt_length,
         surrounding_region_length,
-        activate_weight_balancing,
         &ref_status,
         &alt_status,
         ref_alt_same_base_start,
         indel_length_sign,
+    );
+
+    println!(
+        "{}{}",
+        "Number of original reads in input (from Rust):",
+        (lines.len() - 2).to_string()
     );
 
     //for i in 0..ref_kmers_nodups.len() {
@@ -539,19 +423,29 @@ fn main() {
         for read in lines {
             if i >= 2 && read.len() > 0 {
                 // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
-                let (within_indel, correct_start_position, correct_end_position) =
-                    check_read_within_indel_region(
-                        // Checks if the read contains the indel region (or a part of it)
-                        start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
-                        cigar_sequences_list[i as usize - 2].to_string(),
-                        variant_pos,
-                        indel_length as usize,
-                        strictness,
-                    );
+                let (
+                    within_indel,
+                    correct_start_position,
+                    correct_end_position,
+                    splice_freq,
+                    splice_start_pos,
+                    splice_stop_pos,
+                ) = check_read_within_indel_region(
+                    // Checks if the read contains the indel region (or a part of it)
+                    start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
+                    cigar_sequences_list[i as usize - 2].to_string(),
+                    variant_pos,
+                    indel_length as usize,
+                    strictness,
+                );
                 if within_indel == 1 {
                     //println!(
                     //    "start_position:{}",
                     //    start_positions_list[i as usize - 2].to_string()
+                    //);
+                    //println!(
+                    //    "cigar_sequence:{}",
+                    //    &cigar_sequences_list[i as usize - 2].to_string()
                     //);
                     let read_ambivalent = check_if_read_ambivalent(
                         // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
@@ -590,19 +484,24 @@ fn main() {
                         0,
                         ref_alt_same_base_start,
                     );
+                    //println!("alignment_side:{}", &alignment_side);
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
                     //println!("read_ambivalent:{}", read_ambivalent);
                     //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
-                    let kmers = build_kmers(read.to_string(), kmer_length_iter); // Generates kmers for the given read
+
+                    //let kmers = build_kmers(read.to_string(), kmer_length_iter); // Generates kmers for the given read
+                    let kmers = build_kmers_reads(
+                        read.to_string(),
+                        kmer_length_iter,
+                        splice_freq,
+                        splice_start_pos,
+                        splice_stop_pos,
+                    ); // Generates kmers for the given read
 
                     //println!("read:{}", read.to_string());
                     //println!("left most pos:{}", correct_start_position);
                     //println!("right most pos:{}", right_most_pos);
-                    //println!(
-                    //    "cigar_sequence:{}",
-                    //    &cigar_sequences_list[i as usize - 2].to_string()
-                    //);
                     //println!("Reference:");
                     let ref_comparison = jaccard_similarity_weights(
                         // Computes jaccard similarity w.r.t ref sequence
@@ -703,15 +602,21 @@ fn main() {
                     let remainder: usize = iter % max_threads; // Calculate remainder of read number divided by max_threads to decide which thread parses this read
                     if remainder == thread_num {
                         // Thread analyzing a particular read must have the same remainder as the thread_num, this avoids multiple reads from parsing the same read
-                        let (within_indel, correct_start_position, correct_end_position) =
-                            check_read_within_indel_region(
-                                // Checks if the read contains the indel region (or a part of it)
-                                start_positions_list[iter].parse::<i64>().unwrap() - 1,
-                                cigar_sequences_list[iter].to_string(),
-                                variant_pos,
-                                indel_length as usize,
-                                strictness,
-                            );
+                        let (
+                            within_indel,
+                            correct_start_position,
+                            correct_end_position,
+                            splice_freq,
+                            splice_start_pos,
+                            splice_stop_pos,
+                        ) = check_read_within_indel_region(
+                            // Checks if the read contains the indel region (or a part of it)
+                            start_positions_list[iter].parse::<i64>().unwrap() - 1,
+                            cigar_sequences_list[iter].to_string(),
+                            variant_pos,
+                            indel_length as usize,
+                            strictness,
+                        );
 
                         if within_indel == 1 {
                             let read_ambivalent = check_if_read_ambivalent(
@@ -753,7 +658,15 @@ fn main() {
                                 ref_alt_same_base_start,
                             );
 
-                            let kmers = build_kmers(lines[iter + 2].to_string(), kmer_length_iter); // Generate kmers for a given read sequence
+                            //let kmers = build_kmers(lines[iter + 2].to_string(), kmer_length_iter); // Generate kmers for a given read sequence
+
+                            let kmers = build_kmers_reads(
+                                lines[iter + 2].to_string(),
+                                kmer_length_iter,
+                                splice_freq,
+                                splice_start_pos,
+                                splice_stop_pos,
+                            ); // Generates kmers for the given read
                             let ref_comparison = jaccard_similarity_weights(
                                 // Computer jaccard similarity w.r.t ref
                                 &kmers,
@@ -884,20 +797,21 @@ fn main() {
     println!("output_diff_scores:{:?}", output_diff_scores); // Final diff_scores corresponding to reads in group ID
 }
 
-fn assign_final_weights(
-    ref_sequence: String,             // Complete reference sequence
-    alt_sequence: String,             // Complete alternate sequence
-    kmer_length_iter: i64,            // Final kmer length
+fn assign_kmer_weights(
+    ref_sequence: String,           // Complete reference sequence
+    alt_sequence: String,           // Complete alternate sequence
+    mut kmer_length_iter: i64,      // Final kmer length
     left_most_pos: i64, // Determining left most position, this is the position from where kmers will be generated. Useful in determining if a nucleotide is within indel region or not.
     variant_pos: i64,   // Variant position
     ref_stop: i64,      // Position where reference allele ends
     alt_stop: i64,      // Position where alternate allele ends
+    optimized_ref_length: usize, // Optimized ref allele length
+    optimized_alt_length: usize, // Optimized alt allele length
     weight_indel: f64, // Original weight of nucleotide inside indel region. In case of big indels, this value is calculate dynamically for the smaller sequence below.
     weight_no_indel: f64, // Weight of nucleotide outside indel region
     ref_length: i64,   // Length of reference allele
     alt_length: i64,   // Length of alternate allele
     surrounding_region_length: i64, // Flanking region on both sides upto which it will search for duplicate kmers
-    activate_weight_balancing: usize, // Flag for activating weight balancing between reference and alternate sequences
     ref_status: &String, // Flag to assign how weights of the indel are to be assigned to ref allele. If "break_point" only the kmer containing the complete insertion point of the ndel will be assigned weights. If "complete" then each nucleotide in the indel will be assigned weights.
     alt_status: &String, // Flag to assign how weights of the indel are to be assigned to alt allele. If "break_point" only the kmer containing the complete insertion point of the ndel will be assigned weights. If "complete" then each nucleotide in the indel will be assigned weights.
     ref_alt_same_base_start: usize, // Flag to check if the ref and alt allele start with the last ref nucleotide (e.g A/ATCGT)
@@ -913,14 +827,130 @@ fn assign_final_weights(
     Vec<String>,
     Vec<String>,
     Vec<kmer_data>,
+    usize,
+    i64,
 ) {
+    // Select appropriate kmer length
+    let max_kmer_length: i64 = 40; // Maximum kmer length upto which search of unique kmers between indel region and flanking region will be tried after which it will just chose this kmer length for kmer generation of reads
+    let mut uniq_kmers: usize = 0; // Variable for storing if unique kmers have been found. Initialized to zero
+    let mut found_duplicate_kmers: usize = 0; // Variable for storing duplicate kmers
+
     let mut ref_output = refalt_output::new(); // Initializing variable
     let mut alt_output = refalt_output::new(); // Initializing variable
 
-    if ref_length == alt_length && activate_weight_balancing == 0 {
+    while kmer_length_iter <= max_kmer_length && uniq_kmers == 0 {
+        //#[allow(unused_variables)]
+        //let (
+        //    ref_kmers_weight,
+        //    ref_kmers_nodups,
+        //    ref_indel_kmers,
+        //    mut ref_surrounding_kmers,
+        //    ref_kmers_data,
+        //)
+        ref_output = build_kmers_refalt(
+            &ref_sequence,
+            kmer_length_iter,
+            left_most_pos,
+            variant_pos,
+            ref_stop,
+            weight_indel,
+            weight_no_indel,
+            ref_length,
+            surrounding_region_length,
+            &ref_status,
+            ref_alt_same_base_start,
+            "indel",
+            indel_length_sign,
+            "Ref",
+        );
+
+        //#[allow(unused_variables)]
+        //let (
+        //    alt_kmers_weight,
+        //    alt_kmers_nodups,
+        //    alt_indel_kmers,
+        //    mut alt_surrounding_kmers,
+        //    alt_kmers_data,
+        //)
+        alt_output = build_kmers_refalt(
+            &alt_sequence,
+            kmer_length_iter,
+            left_most_pos,
+            variant_pos,
+            alt_stop,
+            weight_indel,
+            weight_no_indel,
+            alt_length,
+            surrounding_region_length,
+            &alt_status,
+            ref_alt_same_base_start,
+            "indel",
+            indel_length_sign,
+            "Alt",
+        );
+
+        // Check if there are any common kmers between indel region and surrounding region (true in case of repetitive regions)
+        let ref_surrounding_kmers = &mut ref_output.surrounding_kmers;
+        let ref_indel_kmers = &ref_output.indel_kmers;
+        let matching_ref: usize = ref_surrounding_kmers
+            .iter()
+            .zip(ref_indel_kmers)
+            .filter(|&(a, b)| a == b)
+            .count();
+
+        let alt_surrounding_kmers = &mut alt_output.surrounding_kmers;
+        let alt_indel_kmers = &alt_output.indel_kmers;
+        let matching_alt: usize = alt_surrounding_kmers
+            .iter()
+            .zip(alt_indel_kmers)
+            .filter(|&(a, b)| a == b)
+            .count();
+        let non_uniq_ref_surrounding_length = ref_surrounding_kmers.len(); // Length of vector before removing duplicate kmers
+        ref_surrounding_kmers.sort(); // Sorting vector
+        ref_surrounding_kmers.dedup(); // Removing duplicate kmers adjacent to each other
+        let uniq_ref_surrounding_length = ref_surrounding_kmers.len(); // Length of vector after removing duplicate kmers
+
+        let non_uniq_alt_surrounding_length = alt_surrounding_kmers.len(); // Length of vector before removing duplicate kmers
+        alt_surrounding_kmers.sort(); // Sorting vector
+        alt_surrounding_kmers.dedup(); // Removing duplicate kmers adjacent to each other
+        let uniq_alt_surrounding_length = alt_surrounding_kmers.len(); // Length of vector after removing duplicate kmers
+
+        if matching_ref != 0
+            || matching_alt != 0
+            || non_uniq_ref_surrounding_length != uniq_ref_surrounding_length
+            || non_uniq_alt_surrounding_length != uniq_alt_surrounding_length
+        {
+            // Checking to see if there is no duplicate kmer between flanking region and indel region and also within ref and alt allele
+            kmer_length_iter += 1; // kmer length is incremented in case duplicate kmers are found
+            found_duplicate_kmers = 1;
+        } else {
+            uniq_kmers = 1;
+        }
+    }
+    println!(
+        "Found duplicate kmers status (from Rust):{:?}",
+        found_duplicate_kmers
+    );
+
+    // Checking if kmer_length_iter smaller than the smallest optimized allele. If true, then kmer length is incremented to length of smallest optimized allele + 1. This is necessary so that the kmer length is sufficient to cover the "break-point" of the indel. May also be useful in complex indels.
+    if optimized_ref_length < optimized_alt_length
+        && kmer_length_iter <= optimized_ref_length as i64
+    {
+        kmer_length_iter = optimized_ref_length as i64 + 1;
+        println!("kmer length increased as it was lower than length of optimized ref allele");
+    } else if optimized_alt_length < optimized_ref_length
+        && kmer_length_iter <= optimized_alt_length as i64
+    {
+        kmer_length_iter = optimized_alt_length as i64 + 1;
+        println!("kmer length increased as it was lower than length of optimized alt allele");
+    }
+
+    println!("Final kmer length (from Rust):{:?}", kmer_length_iter);
+
+    if ref_length == alt_length {
         //println!("case1");
         ref_output = build_kmers_refalt(
-            ref_sequence,
+            &ref_sequence,
             kmer_length_iter,
             left_most_pos,
             variant_pos,
@@ -937,7 +967,7 @@ fn assign_final_weights(
         );
 
         alt_output = build_kmers_refalt(
-            alt_sequence,
+            &alt_sequence,
             kmer_length_iter,
             left_most_pos,
             variant_pos,
@@ -958,177 +988,73 @@ fn assign_final_weights(
         //for kmer in &alt_indel_kmers {
         //  println!(&"Indel kmer:{}", kmer);
         //}
-    } else if ref_length > alt_length && activate_weight_balancing == 0 {
+    } else if ref_length > alt_length {
         //println!("case2");
         ref_output = build_kmers_refalt(
-            ref_sequence,
-            kmer_length_iter,
-            left_most_pos,
-            variant_pos,
-            ref_stop,
-            weight_indel,
-            weight_no_indel,
-            ref_length,
-            surrounding_region_length,
-            &ref_status,
-            ref_alt_same_base_start,
-            "indel",
-            indel_length_sign,
-            "Ref",
-        );
-
-        alt_output = build_kmers_refalt(
-            alt_sequence,
-            kmer_length_iter,
-            left_most_pos,
-            variant_pos,
-            alt_stop + 1,
-            weight_indel,
-            weight_no_indel,
-            alt_length + 1,
-            surrounding_region_length,
-            &alt_status,
-            ref_alt_same_base_start,
-            "indel",
-            indel_length_sign,
-            "Alt",
-        );
-
-        //alt_indel_kmers.sort();
-        //alt_indel_kmers.dedup();
-        //for kmer in &alt_indel_kmers {
-        //  println!(&"Indel kmer:{}", kmer);
-        //}
-    } else if ref_length < alt_length && activate_weight_balancing == 0 {
-        println!("case3");
-        alt_output = build_kmers_refalt(
-            alt_sequence,
-            kmer_length_iter,
-            left_most_pos,
-            variant_pos,
-            alt_stop,
-            weight_indel,
-            weight_no_indel,
-            alt_length,
-            surrounding_region_length,
-            &alt_status,
-            ref_alt_same_base_start,
-            "indel",
-            indel_length_sign,
-            "Alt",
-        );
-
-        ref_output = build_kmers_refalt(
-            ref_sequence,
-            kmer_length_iter,
-            left_most_pos,
-            variant_pos,
-            ref_stop + 1,
-            weight_indel,
-            weight_no_indel,
-            ref_length + 1,
-            surrounding_region_length,
-            &ref_status,
-            ref_alt_same_base_start,
-            "indel",
-            indel_length_sign,
-            "Ref",
-        );
-
-        //alt_indel_kmers.sort();
-        //alt_indel_kmers.dedup();
-        //for kmer in &alt_indel_kmers {
-        //  println!(&"Indel kmer:{}", kmer);
-        //}
-    } else if ref_length > alt_length && activate_weight_balancing == 1 {
-        //#[allow(unused_variables)]
-        //(
-        //    ref_kmers_weight,      // Total sum of all the kmers from the ref sequence set
-        //    ref_kmers_nodups,      // Vector of ref sequence kmers without any duplication
-        //    ref_indel_kmers,       // Vector of ref sequence kmers within indel region
-        //    ref_surrounding_kmers, // Vector of ref sequence kmers in the flanking region as defined by surrounding_region_length
-        //    ref_kmers_data, // Vector containing structs of kmer_data type. This contains the frequency and weight of each kmer as defined in ref_kmers_nodups
-        //)
-        println!("case4");
-        ref_output = build_kmers_refalt(
-            ref_sequence,
-            kmer_length_iter,
-            left_most_pos,
-            variant_pos,
-            ref_stop,
-            weight_indel,
-            weight_no_indel,
-            ref_length,
-            surrounding_region_length,
-            &ref_status,
-            ref_alt_same_base_start,
-            "indel",
-            indel_length_sign,
-            "Ref",
-        );
-
-        let alt_weight_indel = back_calculate_weight_indel(
-            // Calculating appropriate weight for nucleotides within indel region such that the total kmer weight for both reference and alternate sequences are equal
-            kmer_length_iter,
-            &alt_sequence,
-            alt_length,
-            weight_no_indel,
-            ref_output.total_kmers_weight,
-        );
-        println!("alt_weight_indel:{}", alt_weight_indel);
-
-        alt_output = build_kmers_refalt(
-            alt_sequence,
-            kmer_length_iter,
-            left_most_pos,
-            variant_pos,
-            alt_stop + 1,
-            alt_weight_indel,
-            weight_no_indel,
-            alt_length + 1,
-            surrounding_region_length,
-            &alt_status,
-            ref_alt_same_base_start,
-            "indel",
-            indel_length_sign,
-            "Alt",
-        );
-    } else if alt_length > ref_length && activate_weight_balancing == 1 {
-        println!("case5");
-        alt_output = build_kmers_refalt(
-            alt_sequence,
-            kmer_length_iter,
-            left_most_pos,
-            variant_pos,
-            alt_stop,
-            weight_indel,
-            weight_no_indel,
-            alt_length,
-            surrounding_region_length,
-            &alt_status,
-            ref_alt_same_base_start,
-            "indel",
-            indel_length_sign,
-            "Alt",
-        );
-
-        let ref_weight_indel = back_calculate_weight_indel(
-            // Calculating appropriate weight for nucleotides within indel region such that the total kmer weight for both reference and alternate sequences are equal
-            kmer_length_iter,
             &ref_sequence,
-            ref_length,
+            kmer_length_iter,
+            left_most_pos,
+            variant_pos,
+            ref_stop,
+            weight_indel,
             weight_no_indel,
-            alt_output.total_kmers_weight,
+            ref_length,
+            surrounding_region_length,
+            &ref_status,
+            ref_alt_same_base_start,
+            "indel",
+            indel_length_sign,
+            "Ref",
         );
-        println!("ref_weight_indel:{}", ref_weight_indel);
+
+        alt_output = build_kmers_refalt(
+            &alt_sequence,
+            kmer_length_iter,
+            left_most_pos,
+            variant_pos,
+            alt_stop + 1,
+            weight_indel,
+            weight_no_indel,
+            alt_length + 1,
+            surrounding_region_length,
+            &alt_status,
+            ref_alt_same_base_start,
+            "indel",
+            indel_length_sign,
+            "Alt",
+        );
+
+        //alt_indel_kmers.sort();
+        //alt_indel_kmers.dedup();
+        //for kmer in &alt_indel_kmers {
+        //  println!(&"Indel kmer:{}", kmer);
+        //}
+    } else if ref_length < alt_length {
+        //println!("case3");
+        alt_output = build_kmers_refalt(
+            &alt_sequence,
+            kmer_length_iter,
+            left_most_pos,
+            variant_pos,
+            alt_stop,
+            weight_indel,
+            weight_no_indel,
+            alt_length,
+            surrounding_region_length,
+            &alt_status,
+            ref_alt_same_base_start,
+            "indel",
+            indel_length_sign,
+            "Alt",
+        );
 
         ref_output = build_kmers_refalt(
-            ref_sequence,
+            &ref_sequence,
             kmer_length_iter,
             left_most_pos,
             variant_pos,
             ref_stop + 1,
-            ref_weight_indel,
+            weight_indel,
             weight_no_indel,
             ref_length + 1,
             surrounding_region_length,
@@ -1138,10 +1064,12 @@ fn assign_final_weights(
             indel_length_sign,
             "Ref",
         );
-    } else {
-        println!("case6");
-        // Should not happen at all
-        println!("None of the if conditions were satisfied in assign_final_weights()");
+
+        //alt_indel_kmers.sort();
+        //alt_indel_kmers.dedup();
+        //for kmer in &alt_indel_kmers {
+        //  println!(&"Indel kmer:{}", kmer);
+        //}
     }
 
     let ref_kmers_weight = ref_output.total_kmers_weight; // Total sum of all the kmers from the ref sequence set
@@ -1184,50 +1112,10 @@ fn assign_final_weights(
         alt_kmers_nodups, // Vector of alt sequence kmers without any duplication
         alt_indel_kmers, // Vector of alt sequence kmers within indel region
         alt_surrounding_kmers, // Vector of alt sequence kmers in the flanking region as defined by surrounding_region_length
-        alt_kmers_data,
-    ) // Vector containing structs of kmer_data type. This contains the frequency and weight of each kmer as defined in alt_kmers_nodups
-}
-
-fn back_calculate_weight_indel(
-    kmer_length_iter: i64,      // Final kmer length
-    next_sequence: &String,     // Sequence of next ref/alt
-    ref_alt_length: i64,        // Length of ref/alt allele
-    weight_no_indel: f64,       // Weight of nucleotide not inside indel region
-    previous_kmers_weight: f64, // Total weights of all kmers from the previously calculated sequence alt/ref
-) -> f64 {
-    let total_kmer_nums = next_sequence.len() as i64 - kmer_length_iter + 1; // This variable contains the total number of kmers for the given sequence
-    let mut kmer_num_completely_inside_indel_region = 0; // Variable containing number of kmers which completely lie inside indel region or number of kmers containing the complete indel region
-    let mut nucleotide_indel_freq: i64 = 0; // Variable containing number of times nucleotide inside indel region is found
-    let mut nucleotide_no_indel_freq: i64 = 0; // Variable containing number of times nucleotide NOT found inside indel region
-    if ref_alt_length >= kmer_length_iter {
-        kmer_num_completely_inside_indel_region = ref_alt_length - kmer_length_iter + 1;
-        nucleotide_indel_freq = kmer_num_completely_inside_indel_region * kmer_length_iter;
-        for i in 1..kmer_length_iter {
-            // Getting frequency of nucleotide inside and outside indel region for kmers partially containing indel region
-            nucleotide_indel_freq += i * 2;
-            nucleotide_no_indel_freq += kmer_length_iter * 2 - nucleotide_indel_freq;
-            kmer_num_completely_inside_indel_region += 2;
-        }
-    } else if ref_alt_length < kmer_length_iter {
-        kmer_num_completely_inside_indel_region = kmer_length_iter - ref_alt_length + 1;
-        nucleotide_indel_freq = kmer_num_completely_inside_indel_region * ref_alt_length;
-        nucleotide_no_indel_freq =
-            kmer_num_completely_inside_indel_region * kmer_length_iter - nucleotide_indel_freq;
-        for i in 1..ref_alt_length {
-            // Getting frequency of nucleotide inside and outside indel region for kmers partially containing indel region
-            nucleotide_indel_freq += i * 2;
-            nucleotide_no_indel_freq += kmer_length_iter * 2 - nucleotide_indel_freq;
-            kmer_num_completely_inside_indel_region += 2;
-        }
-    }
-    let kmers_completely_outside_indel_region: i64 =
-        total_kmer_nums - kmer_num_completely_inside_indel_region; // Frequency of all nucleotides from kmers completely outside indel region
-
-    let weight_indel: f64 = (previous_kmers_weight
-        - nucleotide_no_indel_freq as f64 * weight_no_indel
-        - kmers_completely_outside_indel_region as f64 * kmer_length_iter as f64 * weight_no_indel)
-        / nucleotide_indel_freq as f64;
-    weight_indel
+        alt_kmers_data, // Vector containing structs of kmer_data type. This contains the frequency and weight of each kmer as defined in alt_kmers_nodups
+        found_duplicate_kmers, // Variable for storing duplicate kmers
+        kmer_length_iter, // Final kmer length
+    )
 }
 
 fn check_if_read_ambivalent(
@@ -1521,7 +1409,7 @@ fn preprocess_input(
 }
 
 fn build_kmers_refalt(
-    sequence: String,               // Ref/Alt sequence
+    sequence: &String,              // Ref/Alt sequence
     kmer_length: i64,               // kmer length
     left_most_pos: i64,             // Left most position from where kmer generation occurs
     indel_start: i64,               // Indel region start
@@ -1702,10 +1590,14 @@ fn check_read_within_indel_region(
     indel_start: i64,   // Indel start position
     indel_length: usize, // Length of indel
     strictness: usize,  // Strictness of the indel pipeline
-) -> (usize, i64, i64) {
+) -> (usize, i64, i64, usize, i64, i64) {
     let mut within_indel = 0; // 0 if read does not contain indel region and 1 if it contains indel region
     let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
     let mut correct_end_position = correct_start_position; // Correct end position of read
+    let mut splice_freq: usize = 0; // Number of times the read has been spliced
+    let mut splice_start_pos: i64 = 0; // Start position of the spliced part of the region containing indel site relative to the read
+    let mut splice_stop_pos: i64 = 0; // Stop position of the spliced part of the region containing indel site relative to the read
+
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
     } else {
         let indel_stop: i64 = indel_start + indel_length as i64;
@@ -1724,6 +1616,9 @@ fn check_read_within_indel_region(
             //    correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
             //} else
             if &alphabets[i].to_string().as_str() == &"H" { // In case of a hard-clip, the read in the bam file will not contain indel region
+            } else if &alphabets[i].to_string().as_str() == &"N" {
+                splice_freq += 1;
+                correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
             } else {
                 correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
             }
@@ -1764,8 +1659,82 @@ fn check_read_within_indel_region(
         {
             within_indel = 1;
         }
+
+        // Checking if read is missing indel site due to splicing such as exon-skipping
+
+        let mut splice_start_frag = correct_start_position; // Start of spliced part of read which contains indel region in ref genome coordinates
+        let mut splice_stop_frag = correct_start_position; // Stop of spliced part of read which contains indel region in ref genome coordinates
+        if splice_freq > 0 && within_indel == 1 {
+            let mut nucleotide_position = 0; // This contains the position of nucleotide being analyzed w.r.t to read
+            let mut nucleotide_position_without_splicing = 0; // This contains the position of nucleotide being analyzed w.r.t to read without splicing
+            let mut new_frag = 1; // Flag indicating start of a new fragment after splicing
+            for i in 0..alphabets.len() {
+                if new_frag == 1 {
+                    splice_start_pos = nucleotide_position_without_splicing;
+                    new_frag = 0
+                }
+                if &alphabets[i].to_string().as_str() == &"N" {
+                    new_frag = 1;
+                    splice_stop_frag += nucleotide_position;
+                    // Check if this fragment of read contains indel region or not
+                    if (splice_start_frag <= indel_start && indel_start <= splice_stop_frag)
+                        || (splice_start_frag <= indel_start + indel_length as i64
+                            && indel_start + indel_length as i64 <= splice_stop_frag)
+                    {
+                        correct_start_position = splice_start_frag;
+                        correct_end_position = splice_stop_frag;
+                        splice_stop_pos = nucleotide_position_without_splicing;
+                        break;
+                    }
+                    splice_stop_frag -= nucleotide_position;
+                } else if i == alphabets.len() - 1 {
+                    // Last entry in CIGAR
+                    nucleotide_position += numbers[i].to_string().parse::<i64>().unwrap();
+                    nucleotide_position_without_splicing +=
+                        numbers[i].to_string().parse::<i64>().unwrap();
+                    splice_stop_frag += nucleotide_position;
+                    // Check if this fragment of read contains indel region or not
+                    if (splice_start_frag <= indel_start && indel_start <= splice_stop_frag)
+                        || (splice_start_frag <= indel_start + indel_length as i64
+                            && indel_start + indel_length as i64 <= splice_stop_frag)
+                    {
+                        correct_start_position = splice_start_frag;
+                        correct_end_position = splice_stop_frag;
+                        splice_stop_pos = nucleotide_position_without_splicing;
+                        break;
+                    } else {
+                        println!("Somehow fragment containing indel site was not found, please check (within_indel = 0)!");
+                        within_indel = 0;
+                        //println!("splice_start_frag:{}", splice_start_frag);
+                        //println!("splice_stop_frag:{}", splice_stop_frag);
+                        //println!("indel_start:{}", indel_start);
+                        //println!("indel_stop:{}", indel_start + indel_length as i64);
+                    }
+                }
+
+                nucleotide_position += numbers[i].to_string().parse::<i64>().unwrap();
+                if &alphabets[i].to_string().as_str() == &"N" {
+                    splice_start_frag += nucleotide_position;
+                } else if &alphabets[i].to_string().as_str() != &"D"
+                    && &alphabets[i].to_string().as_str() != &"H"
+                {
+                    nucleotide_position_without_splicing +=
+                        numbers[i].to_string().parse::<i64>().unwrap();
+                }
+                //println!("alphabet:{}", &alphabets[i].to_string().as_str());
+                //println!("splice_start_frag:{}", splice_start_frag);
+                //println!("splice_stop_frag:{}", splice_stop_frag);
+            }
+        }
     }
-    (within_indel, correct_start_position, correct_end_position)
+    (
+        within_indel,
+        correct_start_position,
+        correct_end_position,
+        splice_freq,
+        splice_start_pos,
+        splice_stop_pos,
+    )
 }
 
 fn check_polyclonal(
@@ -1828,8 +1797,29 @@ fn check_polyclonal(
         //{ // If both sides are soft-clipped, then continue with left alignment. May need to think of a better logic later to handle this case.
         //} else
 
+        //println!("correct_start_position:{}", correct_start_position);
+        //println!("indel_start:{}", indel_start);
+        //println!(
+        //    "indel_start + indel_length:{}",
+        //    indel_start + indel_length as i64
+        //);
+        let mut alignment_offset: i64 = 7; // Variable which sets the offset for reads that start only these many bases before the indel start. If the start position of the read lies between the offset and indel start, the read is right-aligned. This value is somewhat arbitary and may be changed in the future.
+        if (indel_length as i64) < alignment_offset {
+            alignment_offset = indel_length as i64;
+        }
+
         if &alphabets[0].to_string().as_str() == &"S"
-            && right_most_pos > indel_start + (alt_length as i64 - ref_length as i64).abs()
+            && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
+        {
+            alignment_side = "right".to_string();
+        } else if correct_start_position > indel_start
+            && correct_start_position < indel_start + indel_length as i64
+            && right_most_pos > indel_start + indel_length as i64
+        {
+            alignment_side = "right".to_string();
+        } else if correct_start_position + alignment_offset > indel_start
+            && correct_start_position + alignment_offset < indel_start + indel_length as i64
+            && right_most_pos > indel_start + indel_length as i64
         {
             alignment_side = "right".to_string();
         }
@@ -2183,68 +2173,29 @@ fn check_polyclonal(
     )
 }
 
-#[allow(dead_code)] // Function not used currently
 fn build_kmers_reads(
-    // This function is used to build kmers for each of the reads
-    sequence: String,              // Sequence of the read
-    kmer_length: i64,              // Kmer length
-    left_most_pos: i64,            // Left most position of the read
-    indel_start: i64,              // Indel start position
-    ref_indel_kmers: &Vec<String>, // Vector containing kmers in the indel region from the ref allele
-    alt_indel_kmers: &Vec<String>, // Vector containing kmers in the indel region from the alt allele
-    ref_length: i64,               // Length of ref allele
-    alt_length: i64,               // Length of alt allele
-) -> (Vec<String>, i64, i64) {
-    let num_iterations = sequence.len() as i64 - kmer_length + 1;
-    let sequence_vector: Vec<_> = sequence.chars().collect();
-    let mut kmers = Vec::<String>::new();
-    #[allow(unused_variables)]
-    let mut kmer_start = left_most_pos;
-    let mut kmer_start_poly = left_most_pos + 1;
-    let mut kmer_stop_poly = kmer_start_poly + kmer_length;
-    let mut ref_polyclonal_status: i64 = 0;
-    let mut alt_polyclonal_status: i64 = 0;
-    kmers.reserve(200);
-    for i in 0..num_iterations {
-        let mut subseq = String::new();
-        let mut j = i as usize;
-        for _k in 0..kmer_length {
-            subseq += &sequence_vector[j].to_string();
-            j += 1;
-        }
-        if (indel_start < kmer_start_poly && kmer_stop_poly <= indel_start + ref_length)
-            || (indel_start >= kmer_start_poly && kmer_stop_poly > indel_start + ref_length)
-        {
-            // Checking to see if there are any kmers which support neither reference nor alternate allele
-            let mut index: i64 = binary_search(ref_indel_kmers, &subseq);
-            if index == -1 as i64 {
-                ref_polyclonal_status = 1 as i64;
-                // Comparison with alt allele is only done when a kmer is found with no match to ref allele
-                if (indel_start < kmer_start_poly && kmer_stop_poly <= indel_start + alt_length)
-                    || (indel_start >= kmer_start_poly && kmer_stop_poly > indel_start + alt_length)
-                {
-                    index = binary_search(alt_indel_kmers, &subseq);
-                    if index == -1 as i64 {
-                        alt_polyclonal_status = 1 as i64;
-                    }
-                }
-            }
-        }
-        kmers.push(subseq);
-        kmer_start += 1;
-        kmer_start_poly += 1;
-        kmer_stop_poly += 1;
-    }
-    kmers.shrink_to_fit();
-    (kmers, ref_polyclonal_status, alt_polyclonal_status)
-}
-
-fn build_kmers(
-    sequence: String, // Sequence of kmer
-    kmer_length: i64, // Length of kmer
+    mut sequence: String,    // Sequence of kmer
+    kmer_length: i64,        // Length of kmer
+    splice_freq: usize,      // Number of splice junctions in read
+    left_most_spliced: i64, // Left most position of fragment in read containing indel region (Used when read is spliced)
+    right_most_spliced: i64, // Right most position of fragment in read containing indel region (Used when read is spliced)
 ) -> Vec<String> {
     // This function is used to build kmers for each of the reads
-    let sequence_vector: Vec<_> = sequence.chars().collect(); // Vector containing all the nucleotides of the reads as individual elements
+    let mut sequence_vector: Vec<_> = sequence.chars().collect(); // Vector containing all the nucleotides of the reads as individual elements
+
+    if splice_freq > 0 {
+        // When read is spliced
+        let mut spliced_seq = String::new(); // Contains spliced sequences which overlaps with indel region. If read not spliced, contains entire sequence
+                                             //println!("Length of sequence:{}", sequence.len());
+                                             //println!("left_most_spliced:{}", left_most_spliced);
+                                             //println!("right_most_spliced:{}", right_most_spliced);
+        for k in left_most_spliced..right_most_spliced {
+            spliced_seq += &sequence_vector[k as usize].to_string();
+        }
+        sequence = spliced_seq.clone();
+        sequence_vector = sequence.chars().collect();
+        //println!("spliced_seq:{}", spliced_seq);
+    }
     let num_iterations = sequence.len() as i64 - kmer_length + 1; // This variable contains the number of iteration required to generate the complete set of kmers for any given sequence
     let mut kmers = Vec::<String>::new(); // Vector where all kmers of the reads shall be inserted below
     kmers.reserve(200); // This in advance creates space for data to be added so that each time push function is called, it does not have to make space reducing execution time
@@ -2258,6 +2209,7 @@ fn build_kmers(
         }
         kmers.push(subseq); // Adding kmer to vector
     }
+    //println!("kmers{:?}", kmers);
     kmers.shrink_to_fit(); // Getting rid of excess space that may have been added initially
     kmers // Returning vector of kmers back to the main function
 }
@@ -2537,11 +2489,6 @@ fn determine_maxima_alt(
             }
         }
         let score_cutoff: f64 = kmer_diff_scores_sorted[index_array_maximum].abs_value; // getting diff_score of the read used as the threshold
-        println!(
-            "{} {}",
-            "score_cutoff (from Rust):",
-            score_cutoff.to_string()
-        );
         for i in 0..kmer_diff_scores_length {
             if kmer_diff_scores_sorted[i].abs_value <= absolute_threshold_cutoff {
                 // If diff_score absolute value is less than absolute threshold cutoff, it is automatically classified as 'none'
