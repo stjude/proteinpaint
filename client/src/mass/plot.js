@@ -105,7 +105,11 @@ class MassPlot {
 		if (!this.components.chart) this.setChartComponent(this.opts)
 		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? '<b>Results<b>' : '')
 		if (this.state.config.term) {
-			this.dom.holder.header.html(this.state.config.term.term.name)
+			const regressionType = this.config.regressionType
+				? this.config.regressionType.charAt(0).toUpperCase() + this.config.regressionType.slice(1)
+				: 'Linear'
+			const regression_type_txt = `<div style="color: #777; display: inline-block; padding-left: 10px;">[ Regression: ${regressionType} ]</div>`
+			this.dom.holder.header.html(this.state.config.term.term.name + regression_type_txt)
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
 			if (data.error) throw data.error
@@ -130,7 +134,10 @@ class MassPlot {
 			if ('cutoff' in plot) {
 				params.push('cutoff=' + plot.cutoff)
 			}
-			if (plot.regressionType && plot.regressionType == 'logistic') params.push('regressionType=logistic')
+			if (plot.regressionType && plot.regressionType == 'logistic') {
+				if (!plot.cutoff) throw "Cctofff values in required for 'Outcome variable'"
+				params.push('regressionType=logistic')
+			}
 			// TODO: remove this logic as regressionType is selected before launching regression form
 			// if ('cutoff' in plot || (plot.term.term.values && Object.keys(plot.term.term.values).length === 2)) {
 			// 	params.push('regressionType=logistic')
