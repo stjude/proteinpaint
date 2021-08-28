@@ -256,6 +256,9 @@ TdbStore.prototype.actions = {
 		} else {
 			delete this.state.tree.plots[action.id].cutoff
 		}
+		if (action.config.regressionType) {
+			this.state.tree.plots[action.id].regressionType = action.config.regressionType
+		}
 		this.state.tree.visiblePlotIds.push(action.id)
 	},
 

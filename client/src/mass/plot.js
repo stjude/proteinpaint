@@ -105,7 +105,11 @@ class MassPlot {
 		if (!this.components.chart) this.setChartComponent(this.opts)
 		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? '<b>Results<b>' : '')
 		if (this.state.config.term) {
-			this.dom.holder.header.html(this.state.config.term.term.name)
+			const regressionType = this.config.regressionType
+				? this.config.regressionType.charAt(0).toUpperCase() + this.config.regressionType.slice(1)
+				: 'Linear'
+			const regression_type_txt = `<div style="color: #777; display: inline-block; padding-left: 10px;">[ Regression: ${regressionType} ]</div>`
+			this.dom.holder.header.html(this.state.config.term.term.name + regression_type_txt)
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
 			if (data.error) throw data.error
@@ -130,9 +134,14 @@ class MassPlot {
 			if ('cutoff' in plot) {
 				params.push('cutoff=' + plot.cutoff)
 			}
-			if ('cutoff' in plot || (plot.term.term.values && Object.keys(plot.term.term.values).length === 2)) {
+			if (plot.regressionType && plot.regressionType == 'logistic') {
+				if (!plot.cutoff) throw "Cctofff values in required for 'Outcome variable'"
 				params.push('regressionType=logistic')
 			}
+			// TODO: remove this logic as regressionType is selected before launching regression form
+			// if ('cutoff' in plot || (plot.term.term.values && Object.keys(plot.term.term.values).length === 2)) {
+			// 	params.push('regressionType=logistic')
+			// }
 			if (plot.independent) {
 				params.push(
 					'independent=' +
@@ -269,7 +278,7 @@ class MassPlot {
 				this.components.chart = regressionInit(
 					this.app,
 					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({}, this.app.opts.survival)
+					Object.assign({ regressionType: this.state.config.regressionType }, this.app.opts.survival)
 				)
 		}
 	}
@@ -280,6 +289,12 @@ export const plotInit = rx.getInitFxn(MassPlot)
 function setRenderers(self) {
 	self.showMultipart = async function(_config) {
 		const config = JSON.parse(JSON.stringify(_config))
+		// show selected regression_type in sandbox header
+		if (config.regressionType) {
+			this.dom.holder.header.html(
+				config.regressionType.charAt(0).toUpperCase() + config.regressionType.slice(1) + ' Regression'
+			)
+		}
 		const dom = {
 			body: this.dom.controls.append('div'),
 			foot: this.dom.controls.append('div')
@@ -390,10 +405,12 @@ function setRenderers(self) {
 						d.selected = term
 					}
 					self.updateBtns(config)
-					cutoffDiv.style(
-						'display',
-						d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
-					)
+					// show cutoffDiv only for regressionType is logistic
+					if (config.regressionType && config.regressionType == 'logistic')
+						cutoffDiv.style(
+							'display',
+							d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
+						)
 				}
 			}
 		})
@@ -401,11 +418,14 @@ function setRenderers(self) {
 		pills.push(pill)
 		if (term) pill.main(term)
 
+		// show cutoffDiv only for regressionType is logistic and term in cutoffTermTypes
 		const cutoffDiv = pillDiv
 			.append('div')
 			.style(
 				'display',
-				term && d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
+				config.regressionType == 'logistic' && term && d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type)
+					? 'inline-block'
+					: 'none'
 			)
 			.style('margin', '3px 15px')
 			.style('padding', '3px 5px')
