@@ -105,10 +105,13 @@ class MassPlot {
 		if (!this.components.chart) this.setChartComponent(this.opts)
 		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? '<b>Results<b>' : '')
 		if (this.state.config.term) {
-			const regressionType = this.config.regressionType
-				? this.config.regressionType.charAt(0).toUpperCase() + this.config.regressionType.slice(1)
-				: 'Linear'
-			const regression_type_txt = `<div style="color: #777; display: inline-block; padding-left: 10px;">[ Regression: ${regressionType} ]</div>`
+			const regressionType = this.config.chartType == 'regression' && this.config.regressionType
+				? this.config.regressionType.toUpperCase()
+				: this.config.chartType == 'regression' ? 'LINEAR' : ''
+			const regression_type_txt = this.config.chartType == 'regression' 
+				? `<div style="color: #999; display: inline-block; padding-left: 7px; font-size: 70%;">
+				[ ${regressionType} REGRESSION ] </div>`
+				: ''
 			this.dom.holder.header.html(this.state.config.term.term.name + regression_type_txt)
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
