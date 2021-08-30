@@ -488,6 +488,7 @@ fn main() {
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
                     //println!("read_ambivalent:{}", read_ambivalent);
+                    //println!("ref_insertion:{}", ref_insertion);
                     //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
 
                     //let kmers = build_kmers(read.to_string(), kmer_length_iter); // Generates kmers for the given read
@@ -1884,6 +1885,7 @@ fn check_polyclonal(
                         indel_insertion_stops.push(parse_position);
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
                     } else if old_parse_position <= read_indel_start
+                        && parse_position >= read_indel_start
                         && parse_position <= read_indel_start + indel_length
                         && found_duplicate_kmers == 0
                     // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
@@ -1893,6 +1895,7 @@ fn check_polyclonal(
                         //indel_insertion_stops.push(parse_position);
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
                     } else if read_indel_start <= old_parse_position
+                        && read_indel_start + indel_length > old_parse_position
                         && read_indel_start + indel_length <= parse_position
                         && found_duplicate_kmers == 0
                     // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
@@ -1904,6 +1907,15 @@ fn check_polyclonal(
                     }
                 } else if &alphabets[i].to_string().as_str() == &"D" && strictness >= 1 {
                     read_indel_start -= numbers[i].to_string().parse::<usize>().unwrap(); // In case of a deletion, position is pushed back to account for it
+
+                    //println!("read_indel_start:{}", read_indel_start);
+                    //println!("old_parse_position:{}", old_parse_position);
+                    //println!("parse_position:{}", parse_position);
+                    //println!(
+                    //    "read_indel_start + indel_length:{}",
+                    //    read_indel_start + indel_length
+                    //);
+
                     if read_indel_start <= old_parse_position
                         && parse_position <= read_indel_start + indel_length
                     // Deletion inside indel region
@@ -1917,6 +1929,7 @@ fn check_polyclonal(
                         // Making sure the insertion is within the indel region
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
                     } else if old_parse_position <= read_indel_start
+                        && parse_position >= read_indel_start
                         && parse_position <= read_indel_start + indel_length
                         && found_duplicate_kmers == 0
                     // Part of deletion inside indel region
@@ -1924,6 +1937,7 @@ fn check_polyclonal(
                         // Making sure part of the insertion is within the indel region
                         ref_insertion = 1;
                     } else if read_indel_start <= old_parse_position
+                        && read_indel_start + indel_length > old_parse_position
                         && read_indel_start + indel_length <= parse_position
                         && found_duplicate_kmers == 0
                     // Part of deletion inside indel region
