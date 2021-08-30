@@ -439,14 +439,14 @@ fn main() {
                     strictness,
                 );
                 if within_indel == 1 {
-                    //println!(
-                    //    "start_position:{}",
-                    //    start_positions_list[i as usize - 2].to_string()
-                    //);
-                    //println!(
-                    //    "cigar_sequence:{}",
-                    //    &cigar_sequences_list[i as usize - 2].to_string()
-                    //);
+                    println!(
+                        "start_position:{}",
+                        start_positions_list[i as usize - 2].to_string()
+                    );
+                    println!(
+                        "cigar_sequence:{}",
+                        &cigar_sequences_list[i as usize - 2].to_string()
+                    );
                     let read_ambivalent = check_if_read_ambivalent(
                         // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                         correct_start_position,
@@ -484,7 +484,7 @@ fn main() {
                         0,
                         ref_alt_same_base_start,
                     );
-                    //println!("alignment_side:{}", &alignment_side);
+                    println!("alignment_side:{}", &alignment_side);
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
                     //println!("read_ambivalent:{}", read_ambivalent);
@@ -832,7 +832,7 @@ fn assign_kmer_weights(
     i64,
 ) {
     // Select appropriate kmer length
-    let max_kmer_length: i64 = 40; // Maximum kmer length upto which search of unique kmers between indel region and flanking region will be tried after which it will just chose this kmer length for kmer generation of reads
+    let max_kmer_length: i64 = 20; // Maximum kmer length upto which search of unique kmers between indel region and flanking region will be tried after which it will just chose this kmer length for kmer generation of reads
     let mut uniq_kmers: usize = 0; // Variable for storing if unique kmers have been found. Initialized to zero
     let mut found_duplicate_kmers: usize = 0; // Variable for storing duplicate kmers
 
