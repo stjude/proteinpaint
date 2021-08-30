@@ -439,14 +439,14 @@ fn main() {
                     strictness,
                 );
                 if within_indel == 1 {
-                    println!(
-                        "start_position:{}",
-                        start_positions_list[i as usize - 2].to_string()
-                    );
-                    println!(
-                        "cigar_sequence:{}",
-                        &cigar_sequences_list[i as usize - 2].to_string()
-                    );
+                    //println!(
+                    //    "start_position:{}",
+                    //    start_positions_list[i as usize - 2].to_string()
+                    //);
+                    //println!(
+                    //    "cigar_sequence:{}",
+                    //    &cigar_sequences_list[i as usize - 2].to_string()
+                    //);
                     let read_ambivalent = check_if_read_ambivalent(
                         // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                         correct_start_position,
@@ -484,7 +484,7 @@ fn main() {
                         0,
                         ref_alt_same_base_start,
                     );
-                    println!("alignment_side:{}", &alignment_side);
+                    //println!("alignment_side:{}", &alignment_side);
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
                     //println!("read_ambivalent:{}", read_ambivalent);
