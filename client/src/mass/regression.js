@@ -143,19 +143,17 @@ function setRenderers(self) {
 		// show table
 		const table = div
 			.append('table')
-			//.style('margin-left','20px')
-			//.style('margin-right', '20px')
-			//.style('margin-top', '10px')
 			.style('margin-bottom', '20px')
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
-			.style('border', '1px solid #999')
 
 		// header
 		const tr = table
 			.append('tr')
 			.style('white-space', 'normal')
-			.style('background-color', '#ececec')
+			.style('opacity', 0.6)
+			.style('font-size', '.8em')
+			.style('padding', '2px 5px')
 
 		// print term2 values as rest of columns
 		if (columns) {
@@ -164,9 +162,8 @@ function setRenderers(self) {
 				tr.append('th')
 					.text(label.length > 20 ? label.slice(0, 16) + '...' : label)
 					.attr('title', label)
-					// .style('border', '1px solid black')
-					.style('padding', '3px 5px')
-					.style('text-align', 'center')
+					.style('padding', '3px 10px')
+					.style('text-align', 'left')
 					.style('min-width', '80px')
 					.style('max-width', '150px')
 					.style('word-break', label.length > 12 ? 'break-word' : 'normal')
@@ -177,21 +174,16 @@ function setRenderers(self) {
 
 			let i = 0
 			for (const t1v of rows) {
-				const tr = table.append('tr').style('background-color', i++ % 2 == 0 ? '#fff' : '#ececec')
+				const tr = table.append('tr').style('background-color', i++ % 2 != 0 ? '#fff' : '#ececec')
 
 				const column_keys = columns.map(d => d.key)
 				for (const t2label of column_keys) {
 					const td = tr
 						.append('td')
-						// .style('border', '1px solid black')
-						.style('padding', '3px 15px')
+						.style('padding', '3px 10px')
 					const v = t1v.lst.find(i => i.label == t2label)
 					if (v) {
-						td //.append('div')
-							//.style('display', 'inline-block')
-							//.style('text-align', 'right')
-							//.style('min-width', '50px')
-							.style('text-align', Number.isNaN(Number(v.value)) ? 'left' : 'right')
+						td .style('text-align', 'left')
 							.html(v.value)
 					}
 				}
@@ -201,16 +193,13 @@ function setRenderers(self) {
 			for (const row of rows) {
 				const tr = table
 					.append('tr')
-					.style('background-color', i++ % 2 == 0 ? '#fff' : '#ececec')
-					// .style('border', '1px solid black')
+					.style('background-color', i++ % 2 != 0 ? '#fff' : '#ececec')
 					.style('padding', '3px 5px')
-					.style('text-align', 'center') //'right')
+					.style('text-align', 'left')
 				for (const [i, cell] of row.entries()) {
 					tr.append('td')
-						// .style('border', '1px solid black')
 						.style('padding', '3px 15px')
-						// .style('text-align', 'center')
-						.style('text-align', Number.isNaN(Number(cell)) ? 'left' : 'right')
+						.style('text-align', 'left')
 						.style('color', i == 0 ? '#777' : '#000')
 						.html(cell)
 				}
