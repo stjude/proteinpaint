@@ -1798,31 +1798,36 @@ fn check_polyclonal(
         //{ // If both sides are soft-clipped, then continue with left alignment. May need to think of a better logic later to handle this case.
         //} else
 
+        let alignment_offset: i64 = 7; // Variable which sets the offset for reads that start only these many bases before the indel start. If the start position of the read lies between the offset and indel start, the read is right-aligned. This value is somewhat arbitary and may be changed in the future.
+
         //println!("correct_start_position:{}", correct_start_position);
+        //println!(
+        //    "correct_start_position + alignment_offset:{}",
+        //    correct_start_position + alignment_offset
+        //);
+        //println!("right_most_pos:{}", right_most_pos);
         //println!("indel_start:{}", indel_start);
         //println!(
         //    "indel_start + indel_length:{}",
         //    indel_start + indel_length as i64
         //);
-        let mut alignment_offset: i64 = 7; // Variable which sets the offset for reads that start only these many bases before the indel start. If the start position of the read lies between the offset and indel start, the read is right-aligned. This value is somewhat arbitary and may be changed in the future.
-        if (indel_length as i64) < alignment_offset {
-            alignment_offset = indel_length as i64;
-        }
 
         if &alphabets[0].to_string().as_str() == &"S"
             && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
         {
             alignment_side = "right".to_string();
+            read_indel_start = right_most_pos as usize - sequence.len();
         } else if correct_start_position > indel_start
             && correct_start_position < indel_start + indel_length as i64
             && right_most_pos > indel_start + indel_length as i64
         {
             alignment_side = "right".to_string();
+            read_indel_start = right_most_pos as usize - sequence.len();
         } else if correct_start_position + alignment_offset > indel_start
-            && correct_start_position + alignment_offset < indel_start + indel_length as i64
             && right_most_pos > indel_start + indel_length as i64
         {
             alignment_side = "right".to_string();
+            read_indel_start = right_most_pos as usize - sequence.len();
         }
 
         for i in 0..alphabets.len() {
@@ -1868,7 +1873,7 @@ fn check_polyclonal(
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
                     }
                 } else if &alphabets[i].to_string().as_str() == &"I" && strictness >= 1 {
-                    read_indel_start += numbers[i].to_string().parse::<usize>().unwrap(); // Incrementing read_indel_start by the number of nucleotides described by CIGAR sequence
+                    //read_indel_start += numbers[i].to_string().parse::<usize>().unwrap(); // Incrementing read_indel_start by the number of nucleotides described by CIGAR sequence
 
                     if read_indel_start <= old_parse_position
                         && parse_position <= read_indel_start + indel_length
@@ -1906,7 +1911,7 @@ fn check_polyclonal(
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
                     }
                 } else if &alphabets[i].to_string().as_str() == &"D" && strictness >= 1 {
-                    read_indel_start -= numbers[i].to_string().parse::<usize>().unwrap(); // In case of a deletion, position is pushed back to account for it
+                    //read_indel_start -= numbers[i].to_string().parse::<usize>().unwrap(); // In case of a deletion, position is pushed back to account for it
 
                     //println!("read_indel_start:{}", read_indel_start);
                     //println!("old_parse_position:{}", old_parse_position);
