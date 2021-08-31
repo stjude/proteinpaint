@@ -44,6 +44,7 @@
 //     if polyclonal, classify as none
 //     if ref classified read, but contains inserted/deleted nucleotides in indel region, classify as none
 
+use std::cmp;
 use std::cmp::Ordering;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
@@ -278,7 +279,6 @@ fn main() {
         ref_status = "complete".to_string();
         alt_status = "break_point".to_string();
     }
-
     let surrounding_region_length: i64 = 50; // Flanking region on both sides upto which it will search for duplicate kmers
 
     // Preprocessing of input
@@ -1230,12 +1230,17 @@ fn preprocess_input(
     indel_length: i64,
     leftflankseq: String,
     rightflankseq: String,
-    surrounding_region_length: i64,
+    mut surrounding_region_length: i64,
 ) -> (String, String, usize, usize, usize, usize) {
     let mut optimized_ref_allele = ref_allele.clone();
     let mut optimized_alt_allele = alt_allele.clone();
     let mut right_subseq = String::new(); // String for storing kmer sequence
     let right_sequence_vector: Vec<_> = rightflankseq.chars().collect(); // A vector which contains all the nucleotides of the right flanking sequence
+
+    // Selecting minimum of surrounding region length and rightflankseq
+    surrounding_region_length = cmp::min(surrounding_region_length, rightflankseq.len() as i64);
+    // Selecting minimum of surrounding region length and leftflankseq
+    surrounding_region_length = cmp::min(surrounding_region_length, leftflankseq.len() as i64);
     for k in 0..surrounding_region_length as usize {
         right_subseq += &right_sequence_vector[k].to_string();
     }
@@ -1279,7 +1284,6 @@ fn preprocess_input(
             }
         }
     }
-
     let actual_indel_nucleotides: Vec<char> = actual_indel.chars().collect(); // Vector containing left flanking  nucleotides
     let mut no_repeats: usize = 1; // Flag to check if non-repeating region has been reached
     let mut left_offset: usize = 0; // Position in left-flanking sequence from where nearby nucleotides will be parsed
