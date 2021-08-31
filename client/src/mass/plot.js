@@ -103,7 +103,7 @@ class MassPlot {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
 		if (!this.components.chart) this.setChartComponent(this.opts)
-		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? '<b>Results<b>' : '')
+		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? 'Results' : '')
 		if (this.state.config.term) {
 			const regressionType =
 				this.config.chartType == 'regression' && this.config.regressionType
@@ -277,14 +277,19 @@ class MassPlot {
 				break
 
 			case 'regression':
-				this.showMultipart(rx.copyMerge({}, this.state.config))
 				this.dom.resultsHeading = this.dom.viz
 					.append('div')
 					.style('margin-top', '30px')
 					.style('margin-bottom', '10px')
+					.style('font-size', '17px')
+					.style('margin-left', '-35px')
+					.style('padding', '3px 5px')
+					.style('color', '#bbb')
+				const results_div = this.dom.viz.append('div')
+				this.showMultipart(rx.copyMerge({}, this.state.config), results_div)
 				this.components.chart = regressionInit(
 					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
+					{ holder: results_div, id: this.id },
 					Object.assign({ regressionType: this.state.config.regressionType }, this.app.opts.survival)
 				)
 		}
@@ -294,7 +299,7 @@ class MassPlot {
 export const plotInit = rx.getInitFxn(MassPlot)
 
 function setRenderers(self) {
-	self.showMultipart = async function(_config) {
+	self.showMultipart = async function(_config, result_div) {
 		const config = JSON.parse(JSON.stringify(_config))
 		// show selected regression_type in sandbox header
 		if (config.regressionType) {
@@ -322,7 +327,8 @@ function setRenderers(self) {
 					.append('div')
 					.style('margin', '3px 5px')
 					.style('padding', '3px 5px')
-					.style('font-weight', 600)
+					.style('font-size', '17px')
+					.style('color', '#bbb')
 					.text(d.label)
 
 				if (config[d.detail]) {
@@ -350,6 +356,11 @@ function setRenderers(self) {
 			.html('Run analysis')
 			.on('click', () => {
 				self.dom.tip.hide()
+				result_div.selectAll('*').remove()
+				result_div
+					.append('div')
+					.style('color', '#bbb')
+					.html('...Loading')
 				for (const t of config.termSequence) {
 					config[t.detail] = t.selected
 					if ('cutoff' in t) config.cutoff = t.cutoff
@@ -366,7 +377,10 @@ function setRenderers(self) {
 	}
 
 	self.newPill = function(d, config, div, pills, disable_terms, term = null) {
-		const pillDiv = div.append('div').style('width', 'fit-content')
+		const pillDiv = div
+			.append('div')
+			.style('width', 'fit-content')
+			.style('margin-left', '30px')
 
 		const newPillDiv = pillDiv
 			.append('div')
