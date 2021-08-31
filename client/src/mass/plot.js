@@ -411,6 +411,7 @@ function setRenderers(self) {
 					}
 					self.updateBtns(config)
 					cutoffDiv.style('display', 'none')
+					termdTypeDiv.style('display', 'none')
 				} else {
 					if (!disable_terms.includes(term.term.id)) {
 						disable_terms.push(term.term.id)
@@ -422,7 +423,7 @@ function setRenderers(self) {
 						if (d.selected.length && d.selected.findIndex(t => t.id == term.term.id) !== -1) {
 							const t_ = d.selected.find(t => t.id == term.term.id)
 							t_.q = JSON.parse(JSON.stringify(term.q))
-							if (bins_radio.property('checked')) t_.q.use_as = 'bins'
+							// if (bins_radio.property('checked')) t_.q.use_as = 'bins'
 						} else {
 							d.selected.push(term)
 							if (d.selected.length < d.limit) self.newPill(d, config, div, pills, disable_terms)
@@ -438,13 +439,8 @@ function setRenderers(self) {
 							d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
 						)
 
-					numeric_types_div.style(
-						'display',
-						d.detail == 'independent' && (term.term?.type == 'float' || term.term?.type == 'integer')
-							? 'inline-block'
-							: 'none'
-					)
-					update_numtype_radios(term)
+					termdTypeDiv.style('display', d.detail == 'independent' ? 'inline-block' : 'none')
+					updateTermdTypeDiv(term)
 				}
 			}
 		})
@@ -461,7 +457,7 @@ function setRenderers(self) {
 					? 'inline-block'
 					: 'none'
 			)
-			.style('margin', '3px 15px')
+			.style('margin', '3px 5px')
 			.style('padding', '3px 5px')
 
 		const cutoffLabel = cutoffDiv.append('span').html('Use cutoff of ')
@@ -477,65 +473,84 @@ function setRenderers(self) {
 				else d.cutoff = Number(value)
 			})
 
-		cutoffDiv.append('span').html(' (leave blank to disable)')
-
 		// QUICK FIX: numeric terms can be used as continuous or as defined as bins,
 		// by default it will be used as continuous, if radio select is changed to 'as bins',
 		// config.independent[term].q.use_as = 'bins'  flag will be added to use the term with bin config
-
-		const numeric_types_div = pillDiv
+		const termdTypeDiv = pillDiv
 			.append('div')
-			.style(
-				'display',
-				d.detail == 'independent' && term && term.term && (term.term.type == 'float' || term.term.type == 'integer')
-					? 'inline-block'
-					: 'none'
-			)
+			.style('display', d.detail == 'independent' && term?.term ? 'inline-block' : 'none')
+			.style('font-size', '.8em')
+			.style('text-align', 'left')
+			.style('color', '#999')
 
-		const id = Math.random().toString()
+		updateTermdTypeDiv(term)
 
-		const continuous_radio = numeric_types_div
-			.append('input')
-			.attr('type', 'radio')
-			.attr('id', 'continuous' + id)
-			.attr('name', 'num_type' + id)
-			.style('margin-left', '10px')
-			.property('checked', true)
-
-		numeric_types_div
-			.append('label')
-			.attr('for', 'continuous' + id)
-			.attr('class', 'sja_clbtext')
-			.text(' as continuous')
-
-		const bins_radio = numeric_types_div
-			.append('input')
-			.attr('type', 'radio')
-			.attr('id', 'bins' + id)
-			.attr('name', 'num_type' + id)
-			.style('margin-left', '10px')
-			.property('checked', null)
-
-		numeric_types_div
-			.append('label')
-			.attr('for', 'bins' + id)
-			.attr('class', 'sja_clbtext')
-			.text(' as bins')
-
-		if (term && d.detail == 'independent' && d.selected) {
-			const config_term = d.selected.find(t => t.id == term.id)
-			update_numtype_radios(config_term)
+		function updateTermdTypeDiv(term_) {
+			if (d.detail == 'independent' && term_?.term) {
+				if (term_.term.type == 'float' || term_.term.type == 'integer')
+					termdTypeDiv.text(term_.q?.use_as ? term_.q?.use_as : 'continuous')
+				else if (term_.term.type == 'categorical' || term_.term.type == 'condition') {
+					let text
+					if (term_.q.groupsetting?.inuse) {
+						let cats_n = 0
+						term_.q.groupsetting.customset.groups.forEach(g => (cats_n = cats_n + g.values.length))
+						text =
+							cats_n +
+							(term_.term.type == 'categorical' ? ' categories' : ' grades') +
+							(cats_n ? ' (' + (Object.keys(term_.term.values).length - cats_n) + ' excluded)' : '')
+					} else {
+						text =
+							Object.keys(term_.term.values).length + (term_.term.type == 'categorical' ? ' categories' : ' grades')
+					}
+					termdTypeDiv.text(text)
+				}
+			}
 		}
 
-		function update_numtype_radios(config_term) {
-			continuous_radio.on('change', () => {
-				config_term.q.use_as = 'continuous'
-			})
+		// const id = Math.random().toString()
 
-			bins_radio.on('change', () => {
-				config_term.q.use_as = 'bins'
-			})
-		}
+		// const continuous_radio = termdTypeDiv
+		// 	.append('input')
+		// 	.attr('type', 'radio')
+		// 	.attr('id', 'continuous' + id)
+		// 	.attr('name', 'num_type' + id)
+		// 	.style('margin-left', '10px')
+		// 	.property('checked', true)
+
+		// termdTypeDiv
+		// 	.append('label')
+		// 	.attr('for', 'continuous' + id)
+		// 	.attr('class', 'sja_clbtext')
+		// 	.text(' as continuous')
+
+		// const bins_radio = termdTypeDiv
+		// 	.append('input')
+		// 	.attr('type', 'radio')
+		// 	.attr('id', 'bins' + id)
+		// 	.attr('name', 'num_type' + id)
+		// 	.style('margin-left', '10px')
+		// 	.property('checked', null)
+
+		// termdTypeDiv
+		// 	.append('label')
+		// 	.attr('for', 'bins' + id)
+		// 	.attr('class', 'sja_clbtext')
+		// 	.text(' as bins')
+
+		// if (term && d.detail == 'independent' && d.selected) {
+		// 	const config_term = d.selected.find(t => t.id == term.id)
+		// 	update_numtype_radios(config_term)
+		// }
+
+		// function update_numtype_radios(config_term) {
+		// 	continuous_radio.on('change', () => {
+		// 		config_term.q.use_as = 'continuous'
+		// 	})
+
+		// 	bins_radio.on('change', () => {
+		// 		config_term.q.use_as = 'bins'
+		// 	})
+		// }
 	}
 
 	self.updateBtns = config => {
