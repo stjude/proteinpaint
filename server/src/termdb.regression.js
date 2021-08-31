@@ -26,7 +26,15 @@ export async function get_regression(q, ds) {
 		const rows = get_matrix(q)
 		const tsv = [header.join('\t')]
 		const termYvalues = q.termY.values || {}
-		const independentTypes = q.independent.map(t => t.type)
+		// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
+		// by default it will be used as continuous, if use selects 'as_bins' radio,
+		// term.q.use_as = 'as bins' flag will be added
+		const independentTypes = q.independent.map(t =>{ 			
+			if ((t.type == 'float' || t.type == 'integer') && t.q.use_as == 'bins')
+				return 'categorical'
+			else
+				return t.type
+		})
 		const termTypes = [q.termY.type, ...independentTypes]
 		// Convert SJLIFE term types to R classes
 		const colClasses = termTypes.map(type => type2class.get(type))
@@ -37,13 +45,19 @@ export async function get_regression(q, ds) {
 			const meetsCutoff = 'cutoff' in q && outcomeVal != 'NA' && Number(outcomeVal) >= q.cutoff ? 1 : 0 //console.log(meetsCutoff, q.cutoff, outcomeVal, Number(outcomeVal), regressionType)
 			const line = ['cutoff' in q ? meetsCutoff : outcomeVal]
 			for (const i in q.independent) {
-				const value = row['val' + i]
 				const term = q.independent[i]
-				const val = term.term && term.term.values && term.term.values[value]
-				line.push(val && val.uncomputable ? 'NA' : value)
+				if ((term.type == 'float' || term.type == 'integer') && term.q.use_as == 'bins') {
+					const value = row['key' + i]
+					line.push(value)
+				} else {
+					const value = row['val' + i]
+					const val = term.term && term.term.values && term.term.values[value]
+					line.push(val && val.uncomputable ? 'NA' : value)
+				}
 			}
 			if (line[0] != 'NA') tsv.push(line.join('\t'))
 		}
+		// console.log(tsv)
 		const data = await lines2R('regression.R', tsv, [regressionType, colClasses.join(',')])
 		const result = []
 		let table, lineCnt

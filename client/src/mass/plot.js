@@ -414,6 +414,13 @@ function setRenderers(self) {
 							'display',
 							d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
 						)
+
+					numeric_types_div.style(
+						'display', d.detail == 'independent' &&
+						(term.term?.type == 'float' || term.term?.type == 'integer') 
+						? 'inline-block' : 'none'
+					)
+					update_numtype_radios(term)
 				}
 			}
 		})
@@ -447,6 +454,60 @@ function setRenderers(self) {
 			})
 
 		cutoffDiv.append('span').html(' (leave blank to disable)')
+		
+		// QUICK FIX: numeric terms can be used as continuous or as defined as bins,
+		// by default it will be used as continuous, if radio select is changed to 'as bins',
+		// config.independent[term].q.use_as = 'bins'  flag will be added to use the term with bin config
+		
+		const numeric_types_div = pillDiv.append('div')
+			.style(
+				'display',
+				(d.detail == 'independent' && term && term.term 
+					&& (term.term.type == 'float' || term.term.type == 'integer'))
+					? 'inline-block'
+					: 'none'
+			)
+
+		const id = Math.random().toString()
+
+		const continuous_radio = numeric_types_div.append('input')
+			.attr('type', 'radio')
+			.attr('id', 'continuous' + id)
+			.attr('name', 'num_type' + id)
+			.style('margin-left','10px')
+			.property('checked', true)
+
+		numeric_types_div.append('label')
+			.attr('for', 'continuous' + id)
+			.attr('class', 'sja_clbtext')
+			.text(' as continuous')
+
+		const bins_radio = numeric_types_div.append('input')
+			.attr('type', 'radio')
+			.attr('id', 'bins' + id)
+			.attr('name', 'num_type' + id)
+			.style('margin-left','10px')
+			.property('checked', null)
+
+		numeric_types_div.append('label')
+			.attr('for', 'bins' + id)
+			.attr('class', 'sja_clbtext')
+			.text(' as bins')
+
+		if(term && d.detail == 'independent' && d.selected){
+			const config_term = d.selected.find(t => t.id == term.id)
+			update_numtype_radios(config_term)
+		}
+
+		function update_numtype_radios(config_term){
+			continuous_radio.on('change', () =>{ 
+				config_term.q.use_as = 'continuous'
+			})
+
+			bins_radio.on('change', () =>{
+				config_term.q.use_as = 'bins'
+			}) 
+		}
 	}
 
 	self.updateBtns = config => {
