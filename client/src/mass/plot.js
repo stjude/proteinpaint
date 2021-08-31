@@ -105,13 +105,17 @@ class MassPlot {
 		if (!this.components.chart) this.setChartComponent(this.opts)
 		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? '<b>Results<b>' : '')
 		if (this.state.config.term) {
-			const regressionType = this.config.chartType == 'regression' && this.config.regressionType
-				? this.config.regressionType.toUpperCase()
-				: this.config.chartType == 'regression' ? 'LINEAR' : ''
-			const regression_type_txt = this.config.chartType == 'regression' 
-				? `<div style="color: #999; display: inline-block; padding-left: 7px; font-size: 70%;">
+			const regressionType =
+				this.config.chartType == 'regression' && this.config.regressionType
+					? this.config.regressionType.toUpperCase()
+					: this.config.chartType == 'regression'
+					? 'LINEAR'
+					: ''
+			const regression_type_txt =
+				this.config.chartType == 'regression'
+					? `<div style="color: #999; display: inline-block; padding-left: 7px; font-size: 70%;">
 				[ ${regressionType} REGRESSION ] </div>`
-				: ''
+					: ''
 			this.dom.holder.header.html(this.state.config.term.term.name + regression_type_txt)
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
@@ -400,9 +404,14 @@ function setRenderers(self) {
 					pill.main(term)
 					if (d.limit > 1) {
 						if (!d.selected) d.selected = []
-						d.selected.push(term)
-						if (d.selected.length < d.limit) {
-							self.newPill(d, config, div, pills, disable_terms)
+						// if term is already selected, just replace q for that d.selected[] term
+						if (d.selected.length && d.selected.findIndex(t => t.id == term.term.id) !== -1) {
+							const t_ = d.selected.find(t => t.id == term.term.id)
+							t_.q = JSON.parse(JSON.stringify(term.q))
+							if (bins_radio.property('checked')) t_.q.use_as = 'bins'
+						} else {
+							d.selected.push(term)
+							if (d.selected.length < d.limit) self.newPill(d, config, div, pills, disable_terms)
 						}
 					} else {
 						d.selected = term
@@ -416,9 +425,10 @@ function setRenderers(self) {
 						)
 
 					numeric_types_div.style(
-						'display', d.detail == 'independent' &&
-						(term.term?.type == 'float' || term.term?.type == 'integer') 
-						? 'inline-block' : 'none'
+						'display',
+						d.detail == 'independent' && (term.term?.type == 'float' || term.term?.type == 'integer')
+							? 'inline-block'
+							: 'none'
 					)
 					update_numtype_radios(term)
 				}
@@ -454,59 +464,63 @@ function setRenderers(self) {
 			})
 
 		cutoffDiv.append('span').html(' (leave blank to disable)')
-		
+
 		// QUICK FIX: numeric terms can be used as continuous or as defined as bins,
 		// by default it will be used as continuous, if radio select is changed to 'as bins',
 		// config.independent[term].q.use_as = 'bins'  flag will be added to use the term with bin config
-		
-		const numeric_types_div = pillDiv.append('div')
+
+		const numeric_types_div = pillDiv
+			.append('div')
 			.style(
 				'display',
-				(d.detail == 'independent' && term && term.term 
-					&& (term.term.type == 'float' || term.term.type == 'integer'))
+				d.detail == 'independent' && term && term.term && (term.term.type == 'float' || term.term.type == 'integer')
 					? 'inline-block'
 					: 'none'
 			)
 
 		const id = Math.random().toString()
 
-		const continuous_radio = numeric_types_div.append('input')
+		const continuous_radio = numeric_types_div
+			.append('input')
 			.attr('type', 'radio')
 			.attr('id', 'continuous' + id)
 			.attr('name', 'num_type' + id)
-			.style('margin-left','10px')
+			.style('margin-left', '10px')
 			.property('checked', true)
 
-		numeric_types_div.append('label')
+		numeric_types_div
+			.append('label')
 			.attr('for', 'continuous' + id)
 			.attr('class', 'sja_clbtext')
 			.text(' as continuous')
 
-		const bins_radio = numeric_types_div.append('input')
+		const bins_radio = numeric_types_div
+			.append('input')
 			.attr('type', 'radio')
 			.attr('id', 'bins' + id)
 			.attr('name', 'num_type' + id)
-			.style('margin-left','10px')
+			.style('margin-left', '10px')
 			.property('checked', null)
 
-		numeric_types_div.append('label')
+		numeric_types_div
+			.append('label')
 			.attr('for', 'bins' + id)
 			.attr('class', 'sja_clbtext')
 			.text(' as bins')
 
-		if(term && d.detail == 'independent' && d.selected){
+		if (term && d.detail == 'independent' && d.selected) {
 			const config_term = d.selected.find(t => t.id == term.id)
 			update_numtype_radios(config_term)
 		}
 
-		function update_numtype_radios(config_term){
-			continuous_radio.on('change', () =>{ 
+		function update_numtype_radios(config_term) {
+			continuous_radio.on('change', () => {
 				config_term.q.use_as = 'continuous'
 			})
 
-			bins_radio.on('change', () =>{
+			bins_radio.on('change', () => {
 				config_term.q.use_as = 'bins'
-			}) 
+			})
 		}
 	}
 
