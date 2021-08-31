@@ -274,7 +274,7 @@ TdbStore.prototype.actions = {
 	},
 
 	plot_edit(action) {
-		console.log(273, action.config.cutoff)
+		// console.log(273, action.config.cutoff)
 		const plot = this.state.tree.plots[action.id]
 		if (plot) {
 			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
