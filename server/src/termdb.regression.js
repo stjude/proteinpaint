@@ -20,6 +20,7 @@ export async function get_regression(q, ds) {
 		// make "refCategories" array that contains reference categories for each variable
 		// For numeric variables, use empty string (see regression.R for more details)
 		const refCategories = []
+		refCategories.push(get_refCategory(q.termY))
 		for (const i in q.independent) {
 			const term = q.independent[i]
 			const termnum = 'term' + i
@@ -27,22 +28,7 @@ export async function get_regression(q, ds) {
 			if (term.q) q[termnum + '_q'] = term.q
 			header.push(term.id) //('var'+i)//(term.term.name)
 			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
-
-			// decide reference category
-			if (term.term.type == 'categorical' || term.term.type == 'condition') {
-				// for now using first category as reference
-				// TODO term=q.independent[i] attribute will tell which category is reference
-				for (const k in term.term.values) {
-					refCategories.push(k)
-					break
-				}
-			} else if (term.term.type == 'integer' || term.term.type == 'float') {
-				// TODO when numeric term is divided to bins, term should indicate which bin is reference
-				// this currently won't work if term is divided to bins
-				refCategories.push('')
-			} else {
-				throw 'unknown term type for refCategories'
-			}
+			refCategories.push(get_refCategory(term.term))
 		}
 
 		console.log('refCategories', refCategories)
@@ -111,6 +97,24 @@ export async function get_regression(q, ds) {
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
+	}
+}
+
+function get_refCategory(term) {
+	// decide reference category
+	if (term.type == 'categorical' || term.type == 'condition') {
+		// for now using first category as reference
+		// TODO term=q.independent[i] attribute will tell which category is reference
+		for (const k in term.values) {
+			return k
+			break
+		}
+	} else if (term.type == 'integer' || term.type == 'float') {
+		// TODO when numeric term is divided to bins, term should indicate which bin is reference
+		// this currently won't work if term is divided to bins
+		return ''
+	} else {
+		throw 'unknown term type for refCategories'
 	}
 }
 
