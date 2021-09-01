@@ -279,7 +279,7 @@ fn main() {
         ref_status = "complete".to_string();
         alt_status = "break_point".to_string();
     }
-    let surrounding_region_length: i64 = 50; // Flanking region on both sides upto which it will search for duplicate kmers
+    let surrounding_region_length: i64 = 80; // Flanking region on both sides upto which it will search for duplicate kmers
 
     // Preprocessing of input
     let (
