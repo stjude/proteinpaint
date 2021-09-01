@@ -249,7 +249,6 @@ fn main() {
     let min_kmer_length: i64 = args[7].parse::<i64>().unwrap(); // Initializing kmer length
     let weight_no_indel: f64 = args[8].parse::<f64>().unwrap(); // Weight of base pair if outside indel region
     let weight_indel: f64 = args[9].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
-                                                             //let threshold_slope: f64 = args[10].parse::<f64>().unwrap(); // threshold slope to determine curvature to separate out ref/alt reads from none
     let strictness: usize = args[10].parse::<usize>().unwrap(); // strictness of the pipeline
     let leftflankseq: String = args[11].parse::<String>().unwrap(); //Left flanking sequence
     let rightflankseq: String = args[12].parse::<String>().unwrap(); //Right flanking sequence
@@ -278,7 +277,7 @@ fn main() {
         ref_status = "complete".to_string();
         alt_status = "break_point".to_string();
     }
-    let surrounding_region_length: i64 = 80; // Flanking region on both sides upto which it will search for duplicate kmers
+    let surrounding_region_length: i64 = 150; // Flanking region on both sides upto which it will search for duplicate kmers
 
     // Preprocessing of input
     let (
