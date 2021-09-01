@@ -125,8 +125,10 @@ class MassPlot {
 				[ ${regressionType} REGRESSION ] </div>`
 					: ''
 			this.dom.holder.header.html(this.state.config.term.term.name + regression_type_txt)
-			this.dom.resultsDiv.selectAll('*').remove()
-			this.dom.resultsDiv.append('div').style('color','#bbb').html('...Loading')
+			if (this.dom.resultsDiv){
+				this.dom.resultsDiv.selectAll('*').remove()
+				this.dom.resultsDiv.append('div').style('color','#bbb').html('...Loading')
+			}
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
 			if (data.error) throw data.error
