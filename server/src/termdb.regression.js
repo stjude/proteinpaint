@@ -20,7 +20,8 @@ export async function get_regression(q, ds) {
 		// make "refCategories" array that contains reference categories for each variable
 		// For numeric variables, use empty string (see regression.R for more details)
 		const refCategories = []
-		refCategories.push(get_refCategory(q.termY))
+		refCategories.push(get_refCategory(q.termY, q))
+
 		for (const i in q.independent) {
 			const term = q.independent[i]
 			const termnum = 'term' + i
@@ -28,10 +29,8 @@ export async function get_regression(q, ds) {
 			if (term.q) q[termnum + '_q'] = term.q
 			header.push(term.id) //('var'+i)//(term.term.name)
 			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
-			refCategories.push(get_refCategory(term.term))
+			refCategories.push(get_refCategory(term.term, term))
 		}
-
-		console.log('refCategories', refCategories)
 
 		///////////// rest of rows for R matrix, one for each sample
 		const rows = get_matrix(q)
@@ -100,22 +99,23 @@ export async function get_regression(q, ds) {
 	}
 }
 
-function get_refCategory(term) {
-	// decide reference category
+/*
+decide reference category
+- term: the term json object {type, values, ...}
+- q: client side config for this term (should tell which category is chosen as reference, if applicable)
+*/
+function get_refCategory(term, q) {
 	if (term.type == 'categorical' || term.type == 'condition') {
 		// for now using first category as reference
-		// TODO term=q.independent[i] attribute will tell which category is reference
-		for (const k in term.values) {
-			return k
-			break
-		}
-	} else if (term.type == 'integer' || term.type == 'float') {
+		for (const k in term.values) return k
+		// TODO q attribute will tell which category is reference
+	}
+	if (term.type == 'integer' || term.type == 'float') {
 		// TODO when numeric term is divided to bins, term should indicate which bin is reference
 		// this currently won't work if term is divided to bins
 		return ''
-	} else {
-		throw 'unknown term type for refCategories'
 	}
+	throw 'unknown term type for refCategories'
 }
 
 function get_matrix(q) {
