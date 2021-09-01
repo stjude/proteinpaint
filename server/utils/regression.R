@@ -6,7 +6,7 @@
 # Usage
 ###########
 
-# Usage: Rscript regression.R <stdin> [<regression type> <variable classes>] <stdout>
+# Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories>] <stdout>
 #
 # Parameters:
 #   - <stdin>: [string] tab-delimited table of regression variables streamed from stdin. First line must be a header (i.e. column names). First column must be the outcome variable. All other columns are independent variables. All variables in the table are included in the regression analysis. Here is an example input where the "score" variable will be treated as the outcome variable:
@@ -20,7 +20,8 @@
 #
 #   - arguments:
 #       - <regression type>: [string] type of regression analysis ("linear" or "logistic"). Linear regression should be used if the outcome is a continuous variable. Logistic regression should be used if the outcome is a categorical variable. Currently, logistic regression can only be performed on binary outcome variables (e.g. "no/yes", "no condition/condition", "0/1").
-#       - <variable classes>: [string] a list of R classes for each variable. Classes are comma separated and their order should match the order of variables in the table (e.g. "numeric,integer,factor,factor,factor,numeric"). Variables that have integer or numeric classes will be treated as continuous variables, while variables that have a factor class will be treated as categorical variables.
+#       - <variable classes>: [string] a comma-delimited list of R classes for each variable (e.g. "numeric,integer,factor,factor,factor,numeric"). The number and order of classes should match that of variables in the table. Variables with integer or numeric classes will be treated as continuous variables, while variables with a factor class will be treated as categorical variables.
+#       - <reference categories>: [string] a comma-delimited list of reference categories for each variable (same format as <variable classes>). For categorical variables, specify the desired reference category. For continuous variables, use an empty string ("").
 #
 #   - output: 
 #       - <stdout>: [string] output summary statistics of the regression analysis streamed to stdout. The output will consist of different tables of summary statistics where the tables are delimited by header lines (i.e. lines beginning with "#"). Each header line has the following format: #<type of table (matrix or vector)>#<name of table>.
@@ -31,15 +32,23 @@
 ###########
 
 args <- commandArgs(trailingOnly = T)
-if (length(args) != 2){
-  stop("Usage: Rscript regression.R <stdin> [<regression type> <variable classes>] <stdout>")
+if (length(args) != 3){
+  stop("Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories>] <stdout>")
 }
 regressionType <- args[1]
 variableClasses <- strsplit(args[2], split = ",")[[1]]
+refCategories <- strsplit(args[3], split = ",")[[1]]
 
-#Read in input data
+#Read in input data and assign variable classes
 con <- file("stdin","r")
 dat <- read.table(con, header = T, sep = "\t", quote = "", colClasses = variableClasses, check.names = F)
+
+#Specify the reference categories of categorical variables
+for(i in 1:ncol(dat)) {
+  if(is.factor(dat[,i])) {
+    dat[,i] <- relevel(dat[,i], ref = refCategories[i])
+  }
+}
 
 #Perform the regression analysis
 names(dat) <- paste(names(dat), "___", sep = "")
@@ -88,7 +97,6 @@ for(x in 1:length(var_and_cat)){
 #Compute summary stats of deviance residuals
 deviance_resid_summ <- round(data.frame(as.list(fivenum(res_summ$deviance.resid))), 3)
 colnames(deviance_resid_summ) <- c("Minimum","1st quartile","Median","3rd quartile","Maximum")
-#deviance_resid_summ <- round(matrix(fivenum(res_summ$deviance.resid), dimnames = list(c("Min","1Q","Median","3Q","Max"))), 3)
 
 #Extract other summary stats
 other_summ <- matrix(, nrow = 6, dimnames = list(c("Dispersion parameter","Null deviance","Null deviance df", "Residual deviance","Residual deviance df", "AIC")))
