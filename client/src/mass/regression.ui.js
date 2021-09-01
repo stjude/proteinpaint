@@ -133,20 +133,23 @@ function setRenderers(self) {
     }
 
     self.newPill = function(d, config, div, pills, disable_terms, term = null) {
-		const pillDiv = div
+		const pillsDiv = div
 			.append('div')
 			.style('width', 'fit-content')
 			.style('margin-left', '30px')
 
-		const newPillDiv = pillDiv
+		const newTermDiv = pillsDiv
 			.append('div')
 			.style('display', 'inline-block')
-			.style('margin', '3px 15px')
+			.style('margin', '5px 15px')
 			.style('padding', '3px 5px')
+            .style('border-left', term ? '1px solid #bbb' : '')
+
+        const pillDiv = newTermDiv.append('div')
 
 		const pill = termsettingInit({
 			placeholder: d.prompt,
-			holder: newPillDiv,
+			holder: pillDiv,
 			vocabApi: self.app.vocabApi,
 			vocab: self.state?.vocab,
 			activeCohort: self.state.activeCohort,
@@ -163,11 +166,11 @@ function setRenderers(self) {
 					pills.splice(i, 1)
 					disable_terms.splice(i, 1)
 					if (d.limit > 1) {
-						newPillDiv.remove()
+						newTermDiv.remove()
 					}
 					self.updateBtns(config)
 					cutoffDiv.style('display', 'none')
-					termdTypeDiv.style('display', 'none')
+					termInfoDiv.style('display', 'none')
 				} else {
 					if (!disable_terms.includes(term.term.id)) {
 						disable_terms.push(term.term.id)
@@ -194,9 +197,10 @@ function setRenderers(self) {
 							'display',
 							d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
 						)
-
-					termdTypeDiv.style('display', d.detail == 'independent' ? 'inline-block' : 'none')
-					updateTermdTypeDiv(term)
+                    
+                    newTermDiv.style('border-left', '1px solid #bbb')
+					termInfoDiv.style('display', 'inline-block')
+					updateTermInfoDiv(term)
 				}
 			}
 		})
@@ -205,7 +209,7 @@ function setRenderers(self) {
 		if (term) pill.main(term)
 
 		// show cutoffDiv only for regressionType is logistic and term in cutoffTermTypes
-		const cutoffDiv = pillDiv
+		const cutoffDiv = pillsDiv
 			.append('div')
 			.style(
 				'display',
@@ -232,19 +236,24 @@ function setRenderers(self) {
 		// QUICK FIX: numeric terms can be used as continuous or as defined as bins,
 		// by default it will be used as continuous, if radio select is changed to 'as bins',
 		// config.independent[term].q.use_as = 'bins'  flag will be added to use the term with bin config
-		const termdTypeDiv = pillDiv
+		const termInfoDiv = newTermDiv
 			.append('div')
-			.style('display', d.detail == 'independent' && term?.term ? 'inline-block' : 'none')
+			.style('display', term?.term ? 'block' : 'none')
+            .style('margin', '10px')
 			.style('font-size', '.8em')
 			.style('text-align', 'left')
 			.style('color', '#999')
 
-		updateTermdTypeDiv(term)
+		updateTermInfoDiv(term)
 
-		function updateTermdTypeDiv(term_) {
-			if (d.detail == 'independent' && term_?.term) {
+		function updateTermInfoDiv(term_) {
+            termInfoDiv.selectAll('*').remove()
+            const term_summmary_div = termInfoDiv.append('div')
+            const term_values_div = termInfoDiv.append('div')
+            const values_table = term_values_div.append('table')
+			if (term_?.term) {
 				if (term_.term.type == 'float' || term_.term.type == 'integer')
-					termdTypeDiv.text(term_.q?.use_as ? term_.q?.use_as : 'continuous')
+                    term_summmary_div.text(term_.q?.use_as ? term_.q?.use_as : 'continuous')
 				else if (term_.term.type == 'categorical' || term_.term.type == 'condition') {
 					let text
 					if (term_.q.groupsetting?.inuse) {
@@ -254,18 +263,53 @@ function setRenderers(self) {
 							cats_n +
 							(term_.term.type == 'categorical' ? ' categories' : ' grades') +
 							(cats_n ? ' (' + (Object.keys(term_.term.values).length - cats_n) + ' excluded)' : '')
+                        make_values_table(term_.q.groupsetting.customset.groups, values_table, 'name')
 					} else {
-						text =
-							Object.keys(term_.term.values).length + (term_.term.type == 'categorical' ? ' categories' : ' grades')
+						text = Object.keys(term_.term.values).length + (term_.term.type == 'categorical' ? ' categories' : ' grades')
+                        make_values_table(term_.term.values, values_table, 'label')
 					}
-					termdTypeDiv.text(text)
+					term_summmary_div.text(text)
 				}
 			}
 		}
 
+        function make_values_table(values, table, key){
+            table.style('margin', '10px 5px')
+			    .style('border-spacing', '3px')
+			    .style('border-collapse', 'collapse')
+
+            let reference_rendered = false    
+            for (const value of Object.values(values)) {
+                const tr = table
+                    .append('tr')
+                    .style('padding', '5px 5px')
+                    .style('text-align', 'left')
+                    .style('border-bottom', 'solid 1px #ddd')
+
+                tr.append('td')
+                    .style('padding', '3px 5px')
+                    .style('text-align', 'left')
+                    .html(value[key])
+
+                const reference_td = tr.append('td')
+                    .style('padding', '3px 5px')
+                    .style('text-align', 'left')
+
+                if(!reference_rendered){
+                    reference_td.append('button')
+                        .style('border','1px solid #eee')
+                        .style('border-radius','5px')
+                        .style('background','#ddd')
+                        .text('Reference')
+
+                    reference_rendered = true
+                }    
+            }
+        }
+
 		// const id = Math.random().toString()
 
-		// const continuous_radio = termdTypeDiv
+		// const continuous_radio = termInfoDiv
 		// 	.append('input')
 		// 	.attr('type', 'radio')
 		// 	.attr('id', 'continuous' + id)
@@ -273,13 +317,13 @@ function setRenderers(self) {
 		// 	.style('margin-left', '10px')
 		// 	.property('checked', true)
 
-		// termdTypeDiv
+		// termInfoDiv
 		// 	.append('label')
 		// 	.attr('for', 'continuous' + id)
 		// 	.attr('class', 'sja_clbtext')
 		// 	.text(' as continuous')
 
-		// const bins_radio = termdTypeDiv
+		// const bins_radio = termInfoDiv
 		// 	.append('input')
 		// 	.attr('type', 'radio')
 		// 	.attr('id', 'bins' + id)
@@ -287,7 +331,7 @@ function setRenderers(self) {
 		// 	.style('margin-left', '10px')
 		// 	.property('checked', null)
 
-		// termdTypeDiv
+		// termInfoDiv
 		// 	.append('label')
 		// 	.attr('for', 'bins' + id)
 		// 	.attr('class', 'sja_clbtext')
