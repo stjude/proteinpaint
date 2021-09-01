@@ -8,13 +8,18 @@ export async function get_regression(q, ds) {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
 		q.independent = JSON.parse(decodeURIComponent(q.independent))
-		// termY === outcome term
+		// termY is the outcome term
 		q.termY = ds.cohort.termdb.q.termjsonByOneid(q.term1_id)
 		q.termY_id = q.term1_id
 		q.termY_q = JSON.parse(q.term1_q)
 		delete q.term1_id
 		delete q.term1_q
+
+		///////////// the header row of the R data matrix
 		const header = ['outcome']
+		// make "refCategories" array that contains reference categories for each variable
+		// For numeric variables, use empty string (see regression.R for more details)
+		const refCategories = []
 		for (const i in q.independent) {
 			const term = q.independent[i]
 			const termnum = 'term' + i
@@ -22,19 +27,39 @@ export async function get_regression(q, ds) {
 			if (term.q) q[termnum + '_q'] = term.q
 			header.push(term.id) //('var'+i)//(term.term.name)
 			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
+
+			// decide reference category
+			if (term.term.type == 'categorical' || term.term.type == 'condition') {
+				// for now using first category as reference
+				// TODO term=q.independent[i] attribute will tell which category is reference
+				for (const k in term.term.values) {
+					refCategories.push(k)
+					break
+				}
+			} else if (term.term.type == 'integer' || term.term.type == 'float') {
+				// TODO when numeric term is divided to bins, term should indicate which bin is reference
+				// this currently won't work if term is divided to bins
+				refCategories.push('')
+			} else {
+				throw 'unknown term type for refCategories'
+			}
 		}
+
+		console.log('refCategories', refCategories)
+
+		///////////// rest of rows for R matrix, one for each sample
 		const rows = get_matrix(q)
 		const tsv = [header.join('\t')]
 		const termYvalues = q.termY.values || {}
 		// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
-		// by default it will be used as continuous, if use selects 'as_bins' radio,
+		// by default it will be used as continuous, if user selects 'as_bins' radio,
 		// term.q.use_as = 'as bins' flag will be added
 		const independentTypes = q.independent.map(t => {
 			if ((t.type == 'float' || t.type == 'integer') && t.q.use_as == 'bins') return 'categorical'
 			else return t.type
 		})
 		const termTypes = [q.termY.type, ...independentTypes]
-		// Convert SJLIFE term types to R classes
+		// Convert term types to R classes
 		const colClasses = termTypes.map(type => type2class.get(type))
 		if ('cutoff' in q) colClasses[0] = 'factor'
 		const regressionType = q.regressionType || 'linear'
@@ -55,8 +80,9 @@ export async function get_regression(q, ds) {
 			}
 			if (line[0] != 'NA') tsv.push(line.join('\t'))
 		}
-		// TODO: make "refCategories" array that contains reference categories for each variable. For numeric variables, use empty string (see regression.R for more details)
+
 		const data = await lines2R('regression.R', tsv, [regressionType, colClasses.join(','), refCategories.join(',')])
+
 		const result = []
 		let table, lineCnt
 		for (const line of data) {
