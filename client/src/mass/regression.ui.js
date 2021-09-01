@@ -1,0 +1,320 @@
+import * as rx from '../common/rx.core'
+import { select } from 'd3-selection'
+import { termsettingInit } from '../common/termsetting'
+
+class MassRegressionUI {
+	constructor(app, opts) {
+		this.type = 'regressionUI'
+		this.id = opts.id
+		this.app = app
+		this.opts = opts
+		this.api = rx.getComponentApi(this)
+		this.dom = {
+			div: this.opts.holder.style('margin', '10px 0px').style('margin-left', '-50px'),
+            controls: opts.holder
+                .append('div')
+                .attr('class', 'pp-termdb-plot-controls')
+                .style('display', 'block')
+		}
+		setInteractivity(this)
+		setRenderers(this)
+		this.eventTypes = ['postInit', 'postRender']
+	}
+
+    getState(appState) {
+        if (!(this.id in appState.tree.plots)) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		const config = appState.tree.plots[this.id]
+		return {
+			isVisible: config?.settings?.currViews.includes('regression'),
+			activeCohort: appState.activeCohort,
+            vocab: appState.vocab,
+			termfilter: appState.termfilter,
+			config: {
+				cutoff: config.cutoff,
+				term: config.term,
+				regressionType: config.regressionType || 'linear',
+				independent: config.independent,
+				settings: {
+					table: config?.settings?.regression
+				}
+			}
+		}
+    }
+
+    reactsTo(action) {
+        if (action.type == 'plot_prep') {
+			return action.id === this.id
+		}
+        if (action.type == 'app_refresh') return true
+    }
+
+    main() {
+        this.config = rx.copyMerge('{}', this.state.config)
+        this.initUI()
+    }
+}
+
+function setInteractivity(self) {
+
+}
+
+function setRenderers(self) {
+    self.initUI = () => {
+		const config = JSON.parse(JSON.stringify(self.opts.config))
+		const dom = {
+			body: self.dom.controls.append('div'),
+			foot: self.dom.controls.append('div')
+		}
+		const disable_terms = []
+
+		dom.body
+			.selectAll('div')
+			.data(config.termSequence)
+			.enter()
+			.append('div')
+			.style('margin', '3px 5px')
+			.style('padding', '3px 5px')
+			.each(function(d) {
+				const pills = []
+				const div = select(this)
+				div
+					.append('div')
+					.style('margin', '3px 5px')
+					.style('padding', '3px 5px')
+					.style('font-size', '17px')
+					.style('color', '#bbb')
+					.text(d.label)
+
+				if (config[d.detail]) {
+					if (!d.selected) d.selected = config[d.detail]
+					if (Array.isArray(d.selected)) {
+						for (const t of d.selected) {
+							if (!disable_terms.includes(t.id)) disable_terms.push(t.id)
+						}
+					} else {
+						if (!disable_terms.includes(d.selected.id)) disable_terms.push(d.selected.id)
+					}
+				}
+				if (d.limit > 1 && config?.[d.detail] && config[d.detail].length) {
+					for (const term of config[d.detail]) {
+						self.newPill(d, config, div, pills, disable_terms, term)
+					}
+				}
+				self.newPill(d, config, div.append('div'), pills, disable_terms, d.limit === 1 && config[d.detail])
+			})
+
+		self.dom.submitBtn = dom.foot
+			.style('margin', '3px 15px')
+			.style('padding', '3px 5px')
+			.append('button')
+			.html('Run analysis')
+			.on('click', () => {
+                // disable submit button on click, reenable after rending results
+				self.dom.submitBtn.property('disabled',true)
+				self.api.on('postRender.submitbtn',()=>{
+					self.dom.submitBtn.property('disabled',false)
+					self.api.on('postRender.submitbtn',null)
+				})
+				for (const t of config.termSequence) {
+					config[t.detail] = t.selected
+					if ('cutoff' in t) config.cutoff = t.cutoff
+				}
+				self.app.dispatch({
+					type: self.opts.config.term ? 'plot_edit' : 'plot_show',
+					id: self.id,
+					chartType: config.chartType,
+					config
+				})
+			})
+
+		self.updateBtns(config)
+    }
+
+    self.newPill = function(d, config, div, pills, disable_terms, term = null) {
+		const pillDiv = div
+			.append('div')
+			.style('width', 'fit-content')
+			.style('margin-left', '30px')
+
+		const newPillDiv = pillDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('margin', '3px 15px')
+			.style('padding', '3px 5px')
+
+		const pill = termsettingInit({
+			placeholder: d.prompt,
+			holder: newPillDiv,
+			vocabApi: self.app.vocabApi,
+			vocab: self.state?.vocab,
+			activeCohort: self.state.activeCohort,
+			use_bins_less: true,
+			debug: self.opts.debug,
+			showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
+			usecase: { target: config.chartType, detail: d.detail },
+			disable_terms,
+			callback: term => {
+				if (!term) {
+					const i = pills.indexOf(pill)
+					if (Array.isArray(d.selected)) d.selected.splice(i, 1)
+					else delete d.selected
+					pills.splice(i, 1)
+					disable_terms.splice(i, 1)
+					if (d.limit > 1) {
+						newPillDiv.remove()
+					}
+					self.updateBtns(config)
+					cutoffDiv.style('display', 'none')
+					termdTypeDiv.style('display', 'none')
+				} else {
+					if (!disable_terms.includes(term.term.id)) {
+						disable_terms.push(term.term.id)
+					}
+					pill.main(term)
+					if (d.limit > 1) {
+						if (!d.selected) d.selected = []
+						// if term is already selected, just replace q for that d.selected[] term
+						if (d.selected.length && d.selected.findIndex(t => t.id == term.term.id) !== -1) {
+							const t_ = d.selected.find(t => t.id == term.term.id)
+							t_.q = JSON.parse(JSON.stringify(term.q))
+							// if (bins_radio.property('checked')) t_.q.use_as = 'bins'
+						} else {
+							d.selected.push(term)
+							if (d.selected.length < d.limit) self.newPill(d, config, div, pills, disable_terms)
+						}
+					} else {
+						d.selected = term
+					}
+					self.updateBtns(config)
+					// show cutoffDiv only for regressionType is logistic
+					if (config.regressionType && config.regressionType == 'logistic')
+						cutoffDiv.style(
+							'display',
+							d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
+						)
+
+					termdTypeDiv.style('display', d.detail == 'independent' ? 'inline-block' : 'none')
+					updateTermdTypeDiv(term)
+				}
+			}
+		})
+
+		pills.push(pill)
+		if (term) pill.main(term)
+
+		// show cutoffDiv only for regressionType is logistic and term in cutoffTermTypes
+		const cutoffDiv = pillDiv
+			.append('div')
+			.style(
+				'display',
+				config.regressionType == 'logistic' && term && d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type)
+					? 'inline-block'
+					: 'none'
+			)
+			.style('margin', '3px 5px')
+			.style('padding', '3px 5px')
+
+		const cutoffLabel = cutoffDiv.append('span').html('Use cutoff of ')
+
+		const useCutoffInput = cutoffDiv
+			.append('input')
+			.attr('type', 'number')
+			.style('width', '50px')
+			.style('text-align', 'center')
+			.on('change', () => {
+				const value = useCutoffInput.property('value')
+				if (value === '') delete d.cutoff
+				else d.cutoff = Number(value)
+			})
+
+		// QUICK FIX: numeric terms can be used as continuous or as defined as bins,
+		// by default it will be used as continuous, if radio select is changed to 'as bins',
+		// config.independent[term].q.use_as = 'bins'  flag will be added to use the term with bin config
+		const termdTypeDiv = pillDiv
+			.append('div')
+			.style('display', d.detail == 'independent' && term?.term ? 'inline-block' : 'none')
+			.style('font-size', '.8em')
+			.style('text-align', 'left')
+			.style('color', '#999')
+
+		updateTermdTypeDiv(term)
+
+		function updateTermdTypeDiv(term_) {
+			if (d.detail == 'independent' && term_?.term) {
+				if (term_.term.type == 'float' || term_.term.type == 'integer')
+					termdTypeDiv.text(term_.q?.use_as ? term_.q?.use_as : 'continuous')
+				else if (term_.term.type == 'categorical' || term_.term.type == 'condition') {
+					let text
+					if (term_.q.groupsetting?.inuse) {
+						let cats_n = 0
+						term_.q.groupsetting.customset.groups.forEach(g => (cats_n = cats_n + g.values.length))
+						text =
+							cats_n +
+							(term_.term.type == 'categorical' ? ' categories' : ' grades') +
+							(cats_n ? ' (' + (Object.keys(term_.term.values).length - cats_n) + ' excluded)' : '')
+					} else {
+						text =
+							Object.keys(term_.term.values).length + (term_.term.type == 'categorical' ? ' categories' : ' grades')
+					}
+					termdTypeDiv.text(text)
+				}
+			}
+		}
+
+		// const id = Math.random().toString()
+
+		// const continuous_radio = termdTypeDiv
+		// 	.append('input')
+		// 	.attr('type', 'radio')
+		// 	.attr('id', 'continuous' + id)
+		// 	.attr('name', 'num_type' + id)
+		// 	.style('margin-left', '10px')
+		// 	.property('checked', true)
+
+		// termdTypeDiv
+		// 	.append('label')
+		// 	.attr('for', 'continuous' + id)
+		// 	.attr('class', 'sja_clbtext')
+		// 	.text(' as continuous')
+
+		// const bins_radio = termdTypeDiv
+		// 	.append('input')
+		// 	.attr('type', 'radio')
+		// 	.attr('id', 'bins' + id)
+		// 	.attr('name', 'num_type' + id)
+		// 	.style('margin-left', '10px')
+		// 	.property('checked', null)
+
+		// termdTypeDiv
+		// 	.append('label')
+		// 	.attr('for', 'bins' + id)
+		// 	.attr('class', 'sja_clbtext')
+		// 	.text(' as bins')
+
+		// if (term && d.detail == 'independent' && d.selected) {
+		// 	const config_term = d.selected.find(t => t.id == term.id)
+		// 	update_numtype_radios(config_term)
+		// }
+
+		// function update_numtype_radios(config_term) {
+		// 	continuous_radio.on('change', () => {
+		// 		config_term.q.use_as = 'continuous'
+		// 	})
+
+		// 	bins_radio.on('change', () => {
+		// 		config_term.q.use_as = 'bins'
+		// 	})
+		// }
+	}
+
+    self.updateBtns = config => {
+		const hasMissingTerms =
+			config.termSequence.filter(t => !t.selected || (t.limit > 1 && !t.selected.length)).length > 0
+		self.dom.submitBtn
+			.property('disabled', hasMissingTerms)
+	}
+}
+
+export const regressionUIInit = rx.getInitFxn(MassRegressionUI)
