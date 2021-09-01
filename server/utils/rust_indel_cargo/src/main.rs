@@ -277,7 +277,7 @@ fn main() {
         ref_status = "complete".to_string();
         alt_status = "break_point".to_string();
     }
-    let surrounding_region_length: i64 = 150; // Flanking region on both sides upto which it will search for duplicate kmers
+    let surrounding_region_length: i64 = 80; // Flanking region on both sides upto which it will search for duplicate kmers
 
     // Preprocessing of input
     let (
@@ -741,12 +741,14 @@ fn main() {
     println!("Number of reads analyzed: {}", reads_analyzed_num);
     let mut ref_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for ref-classified reads. This importantly contains the read category ref or none as categorized by classify_to_three_categories function
     if ref_scores.len() > 0 {
-        ref_indices = classify_to_three_categories(&mut ref_scores); // Function to classify reads as either ref or as none
+        ref_indices = classify_to_three_categories(&mut ref_scores, strictness);
+        // Function to classify reads as either ref or as none
     }
 
     let mut alt_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for alt-classified reads. This importantly contains the read category alt or none as categorized by classify_to_three_categories function
     if alt_scores.len() > 0 {
-        alt_indices = classify_to_three_categories(&mut alt_scores); // Function to classify reads as either alt or as none
+        alt_indices = classify_to_three_categories(&mut alt_scores, strictness);
+        // Function to classify reads as either alt or as none
     }
 
     let mut output_cat: String = "".to_string(); // Initializing string variable which will store the read categories and will be printed for being passed onto nodejs
@@ -2377,9 +2379,10 @@ fn jaccard_similarity_weights(
 
 fn classify_to_three_categories(
     kmer_diff_scores: &mut Vec<read_diff_scores>, // Vector containing read diff_scores for all reads classified as ref/alt
+    strictness: usize,                            // Strictness of the pipeline
 ) -> Vec<read_category> {
     let mut indices = Vec::<read_category>::new(); // Vector of type struct read_category containing category classified, original group ID, diff_score and ref_insertion flag. This vecor will be finally returned to the main function
-    let absolute_threshold_cutoff: f64 = 0.01; // Absolute threshold cutoff. If the absolute diff_score is less than this value, the read will automatically be classified as "none"
+    let absolute_threshold_cutoff: f64 = 0.005; // Absolute threshold cutoff. If the absolute diff_score is less than this value, the read will automatically be classified as "none"
     for i in 0..kmer_diff_scores.len() {
         if kmer_diff_scores[i].polyclonal >= 2 as i64 {
             // If polyclonal is 2, it is automatically classified as 'none' since the allele neither matches ref allele or alt allele of interest
@@ -2390,7 +2393,7 @@ fn classify_to_three_categories(
                 ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
             };
             indices.push(read_cat);
-        } else if kmer_diff_scores[i].abs_value <= absolute_threshold_cutoff {
+        } else if kmer_diff_scores[i].abs_value <= absolute_threshold_cutoff && strictness >= 1 {
             // If diff_score absolute value is less than absolute threshold cutoff, it is automatically classified as 'none'
             let read_cat = read_category {
                 category: String::from("none"),
