@@ -39,13 +39,12 @@
 //      if diff_score > 0 classify read as alt; else classify read as ref
 //   }
 // Determine cutoff for both ref and alt categories
-//   determine_maxima_alt() (for both ref and alt)
+//   classify_to_three_categories() (for both ref and alt)
 //   Other post_processing:
 //     if polyclonal, classify as none
 //     if ref classified read, but contains inserted/deleted nucleotides in indel region, classify as none
 
 use std::cmp;
-use std::cmp::Ordering;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
 //use std::env;
@@ -250,10 +249,10 @@ fn main() {
     let min_kmer_length: i64 = args[7].parse::<i64>().unwrap(); // Initializing kmer length
     let weight_no_indel: f64 = args[8].parse::<f64>().unwrap(); // Weight of base pair if outside indel region
     let weight_indel: f64 = args[9].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
-    let threshold_slope: f64 = args[10].parse::<f64>().unwrap(); // threshold slope to determine curvature to separate out ref/alt reads from none
-    let strictness: usize = args[11].parse::<usize>().unwrap(); // strictness of the pipeline
-    let leftflankseq: String = args[12].parse::<String>().unwrap(); //Left flanking sequence
-    let rightflankseq: String = args[13].parse::<String>().unwrap(); //Right flanking sequence
+                                                             //let threshold_slope: f64 = args[10].parse::<f64>().unwrap(); // threshold slope to determine curvature to separate out ref/alt reads from none
+    let strictness: usize = args[10].parse::<usize>().unwrap(); // strictness of the pipeline
+    let leftflankseq: String = args[11].parse::<String>().unwrap(); //Left flanking sequence
+    let rightflankseq: String = args[12].parse::<String>().unwrap(); //Right flanking sequence
     let rightflank_nucleotides: Vec<char> = rightflankseq.chars().collect(); // Vector containing right flanking nucleotides
     let ref_nucleotides: Vec<char> = refallele.chars().collect(); // Vector containing ref nucleotides
     let alt_nucleotides: Vec<char> = altallele.chars().collect(); // Vector containing alt nucleotides
@@ -741,22 +740,14 @@ fn main() {
 
     let reads_analyzed_num: usize = ref_scores.len() + alt_scores.len();
     println!("Number of reads analyzed: {}", reads_analyzed_num);
-    let mut ref_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for ref-classified reads. This importantly contains the read category ref or none as categorized by determine_maxima_alt function
+    let mut ref_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for ref-classified reads. This importantly contains the read category ref or none as categorized by classify_to_three_categories function
     if ref_scores.len() > 0 {
-        //ref_indices = determine_maxima_alt(&mut ref_scores, &(&threshold_slope*num_of_reads));
-        ref_indices = determine_maxima_alt(
-            &mut ref_scores,
-            &threshold_slope, //&(threshold_slope * reads_analyzed_num as f64),
-        ); // Function to classify reads as either ref or as none
+        ref_indices = classify_to_three_categories(&mut ref_scores); // Function to classify reads as either ref or as none
     }
 
-    let mut alt_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for alt-classified reads. This importantly contains the read category alt or none as categorized by determine_maxima_alt function
+    let mut alt_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for alt-classified reads. This importantly contains the read category alt or none as categorized by classify_to_three_categories function
     if alt_scores.len() > 0 {
-        //alt_indices = determine_maxima_alt(&mut alt_scores, &(&threshold_slope*num_of_reads));
-        alt_indices = determine_maxima_alt(
-            &mut alt_scores,
-            &threshold_slope, //&(threshold_slope * (reads_analyzed_num as f64)),
-        ); // Function to classify reads as either alt or as none
+        alt_indices = classify_to_three_categories(&mut alt_scores); // Function to classify reads as either alt or as none
     }
 
     let mut output_cat: String = "".to_string(); // Initializing string variable which will store the read categories and will be printed for being passed onto nodejs
@@ -2385,172 +2376,38 @@ fn jaccard_similarity_weights(
     // Jaccard similarity i.e (A intersection B) / (A union B)
 }
 
-fn determine_maxima_alt(
+fn classify_to_three_categories(
     kmer_diff_scores: &mut Vec<read_diff_scores>, // Vector containing read diff_scores for all reads classified as ref/alt
-    threshold_slope: &f64, // Threshold slope at which the cutoff will be marked between ref/alt and none
 ) -> Vec<read_category> {
-    //Sorting kmer_diff_scores
-    kmer_diff_scores.sort_by(|a, b| {
-        a.abs_value
-            .partial_cmp(&b.abs_value)
-            .unwrap_or(Ordering::Equal)
-    });
-
-    let mut kmer_diff_scores_sorted = Vec::<read_diff_scores>::new(); // Converting from borrowed to owned (idea specific to Rust, read official docs for more info)
-    for item in kmer_diff_scores {
-        let item2: read_diff_scores = read_diff_scores_owned(item);
-        //println!("item2.value:{}", &item2.value);
-        //println!("item2.abs_value:{}", &item2.abs_value);
-        kmer_diff_scores_sorted.push(item2);
-    }
-
-    let absolute_threshold_cutoff: f64 = 0.01; // Absolute threshold cutoff. If the absolute diff_score is less than this value, the read will automatically be classified as "none"
-    let kmer_diff_scores_length: usize = kmer_diff_scores_sorted.len(); // Determining length of kmer_diff_scores
-
-    let mut start_point: usize = kmer_diff_scores_length - 1; // Starting from the last element of the array sorted in ascending order i.e the highest element in the array
-    let mut slope; // Slope between two adjacent points
-    let mut is_a_line = 1; // flag to check if the slope_threshold is never reached
     let mut indices = Vec::<read_category>::new(); // Vector of type struct read_category containing category classified, original group ID, diff_score and ref_insertion flag. This vecor will be finally returned to the main function
-    let threshold_slope_clone: f64 = threshold_slope.to_owned();
-    if kmer_diff_scores_length > 1 {
-        for i in (1..kmer_diff_scores_length).rev() {
-            slope = (&kmer_diff_scores_sorted[i - 1].abs_value
-                - &kmer_diff_scores_sorted[i].abs_value)
-                .abs();
-            if slope > threshold_slope_clone {
-                // If threshold_slope is reached that is used as the threshold point of the curve
-                start_point = i as usize;
-                is_a_line = 0; // When threshold_slope is reached, the curve cannot be called a line
-                break;
-            }
-        }
-    } else {
-        println!( // If length of kmer_diff_scores = 1, this function does not classify reads
-            "{}",
-            "Number of reads too low to determine curvature of slope"
-        );
-    }
-    if is_a_line == 1 {
-        for i in 0..kmer_diff_scores_length {
-            if kmer_diff_scores_sorted[i].polyclonal >= 2 as i64 {
-                // If polyclonal is 2, it is automatically classified as 'none' since the allele neither matches ref allele or alt allele of interest
-                let read_cat = read_category {
-                    category: String::from("none"),
-                    groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
-                    diff_score: f64::from(kmer_diff_scores_sorted[i].value),
-                    ref_insertion: i64::from(kmer_diff_scores_sorted[i].ref_insertion),
-                };
-                indices.push(read_cat);
-            } else if kmer_diff_scores_sorted[i].abs_value <= absolute_threshold_cutoff {
-                // If diff_score absolute value is less than absolute threshold cutoff, it is automatically classified as 'none'
-                let read_cat = read_category {
-                    category: String::from("none"),
-                    groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
-                    diff_score: f64::from(kmer_diff_scores_sorted[i].value),
-                    ref_insertion: i64::from(kmer_diff_scores_sorted[i].ref_insertion),
-                };
-                indices.push(read_cat);
-            } else {
-                let read_cat = read_category {
-                    category: String::from("refalt"),
-                    groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
-                    diff_score: f64::from(kmer_diff_scores_sorted[i].value),
-                    ref_insertion: i64::from(kmer_diff_scores_sorted[i].ref_insertion),
-                };
-                indices.push(read_cat);
-            }
-        }
-    } else {
-        //println!("{} {}", "start_point:", start_point.to_string());
-        let mut kmer_diff_scores_input = Vec::<read_diff_scores>::new();
-        for i in 0..start_point {
-            // Adding all reads before threshold in kmer_diff_scores_input
-            let item = read_diff_scores {
-                value: f64::from(kmer_diff_scores_sorted[i].value),
-                abs_value: f64::from(kmer_diff_scores_sorted[i].abs_value),
-                groupID: usize::from(i),
-                polyclonal: i64::from(kmer_diff_scores_sorted[i].polyclonal),
-                ref_insertion: i64::from(kmer_diff_scores_sorted[i].ref_insertion),
+    let absolute_threshold_cutoff: f64 = 0.01; // Absolute threshold cutoff. If the absolute diff_score is less than this value, the read will automatically be classified as "none"
+    for i in 0..kmer_diff_scores.len() {
+        if kmer_diff_scores[i].polyclonal >= 2 as i64 {
+            // If polyclonal is 2, it is automatically classified as 'none' since the allele neither matches ref allele or alt allele of interest
+            let read_cat = read_category {
+                category: String::from("none"),
+                groupID: usize::from(kmer_diff_scores[i].groupID),
+                diff_score: f64::from(kmer_diff_scores[i].value),
+                ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
             };
-            kmer_diff_scores_input.push(item);
-        }
-
-        let min_value = read_diff_scores {
-            value: f64::from(kmer_diff_scores_sorted[0].value),
-            abs_value: f64::from(kmer_diff_scores_sorted[0].abs_value),
-            groupID: usize::from(0 as usize),
-            polyclonal: i64::from(kmer_diff_scores_sorted[0].polyclonal),
-            ref_insertion: i64::from(kmer_diff_scores_sorted[0].ref_insertion),
-        };
-
-        let max_value = read_diff_scores {
-            value: f64::from(kmer_diff_scores_sorted[start_point].value),
-            abs_value: f64::from(kmer_diff_scores_sorted[start_point].abs_value),
-            groupID: usize::from(start_point),
-            polyclonal: i64::from(kmer_diff_scores_sorted[start_point].polyclonal),
-            ref_insertion: i64::from(kmer_diff_scores_sorted[start_point].ref_insertion),
-        };
-
-        let slope_of_line: f64 = (max_value.abs_value - min_value.abs_value)
-            / (max_value.groupID as f64 - min_value.groupID as f64); // m=(y2-y1)/(x2-x1)
-        let intercept_of_line: f64 =
-            min_value.abs_value - (min_value.groupID as f64) * slope_of_line; // c=y-m*x
-        let mut distances_from_line;
-        let mut array_maximum: f64 = 0.0;
-        let mut index_array_maximum: usize = 0;
-
-        // Trying to determine the point that is furthest from the line, will use that as the final cutoff
-        for i in 0..kmer_diff_scores_input.len() {
-            distances_from_line = (slope_of_line * kmer_diff_scores_input[i].groupID as f64
-                - kmer_diff_scores_input[i].abs_value
-                + intercept_of_line)
-                .abs()
-                / (1.0 as f64 + slope_of_line * slope_of_line).sqrt(); // distance of a point from line  = abs(a*x+b*y+c)/sqrt(a^2+b^2)
-            if array_maximum < distances_from_line {
-                array_maximum = distances_from_line;
-                index_array_maximum = i;
-            }
-        }
-        let score_cutoff: f64 = kmer_diff_scores_sorted[index_array_maximum].abs_value; // getting diff_score of the read used as the threshold
-        for i in 0..kmer_diff_scores_length {
-            if kmer_diff_scores_sorted[i].abs_value <= absolute_threshold_cutoff {
-                // If diff_score absolute value is less than absolute threshold cutoff, it is automatically classified as 'none'
-                let read_cat = read_category {
-                    category: String::from("none"),
-                    groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
-                    diff_score: f64::from(kmer_diff_scores_sorted[i].value),
-                    ref_insertion: i64::from(kmer_diff_scores_sorted[i].ref_insertion),
-                };
-                indices.push(read_cat);
-            } else if score_cutoff >= kmer_diff_scores_sorted[i].abs_value {
-                // Classifying allreads lower than this diff_score cutoff as 'none'
-                let read_cat = read_category {
-                    category: String::from("refalt"),
-                    groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
-                    diff_score: f64::from(kmer_diff_scores_sorted[i].value),
-                    ref_insertion: i64::from(kmer_diff_scores_sorted[i].ref_insertion),
-                };
-                indices.push(read_cat);
-            } else {
-                if kmer_diff_scores_sorted[i].polyclonal >= 2 as i64 {
-                    // If polyclonal = 2 (which is when read neither contains ref allele or alt allele of interest) classifying read as 'none'
-                    let read_cat = read_category {
-                        category: String::from("none"),
-                        groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
-                        diff_score: f64::from(kmer_diff_scores_sorted[i].value),
-                        ref_insertion: i64::from(kmer_diff_scores_sorted[i].ref_insertion),
-                    };
-                    indices.push(read_cat);
-                } else {
-                    let read_cat = read_category {
-                        category: String::from("refalt"),
-                        groupID: usize::from(kmer_diff_scores_sorted[i].groupID),
-                        diff_score: f64::from(kmer_diff_scores_sorted[i].value),
-                        ref_insertion: i64::from(kmer_diff_scores_sorted[i].ref_insertion),
-                    };
-                    indices.push(read_cat);
-                }
-            }
+            indices.push(read_cat);
+        } else if kmer_diff_scores[i].abs_value <= absolute_threshold_cutoff {
+            // If diff_score absolute value is less than absolute threshold cutoff, it is automatically classified as 'none'
+            let read_cat = read_category {
+                category: String::from("none"),
+                groupID: usize::from(kmer_diff_scores[i].groupID),
+                diff_score: f64::from(kmer_diff_scores[i].value),
+                ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
+            };
+            indices.push(read_cat);
+        } else {
+            let read_cat = read_category {
+                category: String::from("refalt"),
+                groupID: usize::from(kmer_diff_scores[i].groupID),
+                diff_score: f64::from(kmer_diff_scores[i].value),
+                ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
+            };
+            indices.push(read_cat);
         }
     }
     indices // Indices vector being returned to main function
