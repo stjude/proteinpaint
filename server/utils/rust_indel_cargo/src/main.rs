@@ -8,6 +8,7 @@
 // Strictness:
 //   0: No postprocessing, pure indel typing results
 //   1: Postprocessing will be carried out (In the future, there will be different levels of postprocessing)
+//   2: In addition to postprocessing in 1, insertions/deletions near indel region also get classified into none
 
 // Function cascade:
 //
