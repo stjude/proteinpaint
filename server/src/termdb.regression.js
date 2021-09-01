@@ -29,11 +29,9 @@ export async function get_regression(q, ds) {
 		// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
 		// by default it will be used as continuous, if use selects 'as_bins' radio,
 		// term.q.use_as = 'as bins' flag will be added
-		const independentTypes = q.independent.map(t =>{ 			
-			if ((t.type == 'float' || t.type == 'integer') && t.q.use_as == 'bins')
-				return 'categorical'
-			else
-				return t.type
+		const independentTypes = q.independent.map(t => {
+			if ((t.type == 'float' || t.type == 'integer') && t.q.use_as == 'bins') return 'categorical'
+			else return t.type
 		})
 		const termTypes = [q.termY.type, ...independentTypes]
 		// Convert SJLIFE term types to R classes
@@ -57,8 +55,8 @@ export async function get_regression(q, ds) {
 			}
 			if (line[0] != 'NA') tsv.push(line.join('\t'))
 		}
-		// console.log(tsv)
-		const data = await lines2R('regression.R', tsv, [regressionType, colClasses.join(',')])
+		// TODO: make "refCategories" array that contains reference categories for each variable. For numeric variables, use empty string (see regression.R for more details)
+		const data = await lines2R('regression.R', tsv, [regressionType, colClasses.join(','), refCategories.join(',')])
 		const result = []
 		let table, lineCnt
 		for (const line of data) {
