@@ -236,7 +236,7 @@ function setRenderers(self) {
 		// config.independent[term].q.use_as = 'bins'  flag will be added to use the term with bin config
 		const termInfoDiv = newTermDiv
 			.append('div')
-			.style('display', term?.term ? 'block' : 'none')
+			.style('display', d.detail == 'independent' && term?.term ? 'block' : 'none')
 			.style('margin', '10px')
 			.style('font-size', '.8em')
 			.style('text-align', 'left')
@@ -249,7 +249,7 @@ function setRenderers(self) {
 			const term_summmary_div = termInfoDiv.append('div')
 			const term_values_div = termInfoDiv.append('div')
 			const values_table = term_values_div.append('table')
-			if (term_?.term) {
+			if (d.detail == 'independent' && term_?.term) {
 				if (term_.term.type == 'float' || term_.term.type == 'integer')
 					term_summmary_div.text(term_.q?.use_as ? term_.q?.use_as : 'continuous')
 				else if (term_.term.type == 'categorical' || term_.term.type == 'condition') {
@@ -283,8 +283,8 @@ function setRenderers(self) {
 			tr_data[0].ref_grp = true
 
 			function updateTable() {
-				const ref_value = tr_data.find(v => v.ref_grp == true)
-				term.q.ref_grp = ref_value[key]
+				const ref_i = tr_data.findIndex(v => v.ref_grp == true)
+				term.q.ref_grp = Object.keys(values)[ref_i]
 				values_table
 					.selectAll('tr')
 					.data(tr_data)

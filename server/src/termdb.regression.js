@@ -29,7 +29,7 @@ export async function get_regression(q, ds) {
 			if (term.q) q[termnum + '_q'] = term.q
 			header.push(term.id) //('var'+i)//(term.term.name)
 			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
-			refCategories.push(get_refCategory(term.term, term))
+			refCategories.push(get_refCategory(term.term, term.q))
 		}
 
 		///////////// rest of rows for R matrix, one for each sample
@@ -106,9 +106,10 @@ decide reference category
 */
 function get_refCategory(term, q) {
 	if (term.type == 'categorical' || term.type == 'condition') {
-		// for now using first category as reference
-		for (const k in term.values) return k
-		// TODO q attribute will tell which category is reference
+		// q attribute will tell which category is reference
+		// else first category as reference
+		if (q.ref_grp) return q.ref_grp
+		else return Object.keys(term.values)[0]
 	}
 	if (term.type == 'integer' || term.type == 'float') {
 		// TODO when numeric term is divided to bins, term should indicate which bin is reference
