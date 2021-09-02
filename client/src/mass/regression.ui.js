@@ -11,25 +11,25 @@ class MassRegressionUI {
 		this.api = rx.getComponentApi(this)
 		this.dom = {
 			div: this.opts.holder.style('margin', '10px 0px').style('margin-left', '-50px'),
-            controls: opts.holder
-                .append('div')
-                .attr('class', 'pp-termdb-plot-controls')
-                .style('display', 'block')
+			controls: opts.holder
+				.append('div')
+				.attr('class', 'pp-termdb-plot-controls')
+				.style('display', 'block')
 		}
 		setInteractivity(this)
 		setRenderers(this)
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
-    getState(appState) {
-        if (!(this.id in appState.tree.plots)) {
+	getState(appState) {
+		if (!(this.id in appState.tree.plots)) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		const config = appState.tree.plots[this.id]
 		return {
 			isVisible: config?.settings?.currViews.includes('regression'),
 			activeCohort: appState.activeCohort,
-            vocab: appState.vocab,
+			vocab: appState.vocab,
 			termfilter: appState.termfilter,
 			config: {
 				cutoff: config.cutoff,
@@ -41,27 +41,25 @@ class MassRegressionUI {
 				}
 			}
 		}
-    }
+	}
 
-    reactsTo(action) {
-        if (action.type == 'plot_prep') {
+	reactsTo(action) {
+		if (action.type == 'plot_prep') {
 			return action.id === this.id
 		}
-        if (action.type == 'app_refresh') return true
-    }
+		if (action.type == 'app_refresh') return true
+	}
 
-    main() {
-        this.config = rx.copyMerge('{}', this.state.config)
-        this.initUI()
-    }
+	main() {
+		this.config = rx.copyMerge('{}', this.state.config)
+		this.initUI()
+	}
 }
 
-function setInteractivity(self) {
-
-}
+function setInteractivity(self) {}
 
 function setRenderers(self) {
-    self.initUI = () => {
+	self.initUI = () => {
 		const config = JSON.parse(JSON.stringify(self.opts.config))
 		const dom = {
 			body: self.dom.controls.append('div'),
@@ -111,11 +109,11 @@ function setRenderers(self) {
 			.append('button')
 			.html('Run analysis')
 			.on('click', () => {
-                // disable submit button on click, reenable after rending results
-				self.dom.submitBtn.property('disabled',true)
-				self.api.on('postRender.submitbtn',()=>{
-					self.dom.submitBtn.property('disabled',false)
-					self.api.on('postRender.submitbtn',null)
+				// disable submit button on click, reenable after rending results
+				self.dom.submitBtn.property('disabled', true)
+				self.api.on('postRender.submitbtn', () => {
+					self.dom.submitBtn.property('disabled', false)
+					self.api.on('postRender.submitbtn', null)
 				})
 				for (const t of config.termSequence) {
 					config[t.detail] = t.selected
@@ -130,9 +128,9 @@ function setRenderers(self) {
 			})
 
 		self.updateBtns(config)
-    }
+	}
 
-    self.newPill = function(d, config, div, pills, disable_terms, term = null) {
+	self.newPill = function(d, config, div, pills, disable_terms, term = null) {
 		const pillsDiv = div
 			.append('div')
 			.style('width', 'fit-content')
@@ -143,9 +141,9 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('margin', '5px 15px')
 			.style('padding', '3px 5px')
-            .style('border-left', term ? '1px solid #bbb' : '')
+			.style('border-left', term ? '1px solid #bbb' : '')
 
-        const pillDiv = newTermDiv.append('div')
+		const pillDiv = newTermDiv.append('div')
 
 		const pill = termsettingInit({
 			placeholder: d.prompt,
@@ -197,8 +195,8 @@ function setRenderers(self) {
 							'display',
 							d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
 						)
-                    
-                    newTermDiv.style('border-left', '1px solid #bbb')
+
+					newTermDiv.style('border-left', '1px solid #bbb')
 					termInfoDiv.style('display', 'inline-block')
 					updateTermInfoDiv(term)
 				}
@@ -239,7 +237,7 @@ function setRenderers(self) {
 		const termInfoDiv = newTermDiv
 			.append('div')
 			.style('display', term?.term ? 'block' : 'none')
-            .style('margin', '10px')
+			.style('margin', '10px')
 			.style('font-size', '.8em')
 			.style('text-align', 'left')
 			.style('color', '#999')
@@ -247,13 +245,13 @@ function setRenderers(self) {
 		updateTermInfoDiv(term)
 
 		function updateTermInfoDiv(term_) {
-            termInfoDiv.selectAll('*').remove()
-            const term_summmary_div = termInfoDiv.append('div')
-            const term_values_div = termInfoDiv.append('div')
-            const values_table = term_values_div.append('table')
+			termInfoDiv.selectAll('*').remove()
+			const term_summmary_div = termInfoDiv.append('div')
+			const term_values_div = termInfoDiv.append('div')
+			const values_table = term_values_div.append('table')
 			if (term_?.term) {
 				if (term_.term.type == 'float' || term_.term.type == 'integer')
-                    term_summmary_div.text(term_.q?.use_as ? term_.q?.use_as : 'continuous')
+					term_summmary_div.text(term_.q?.use_as ? term_.q?.use_as : 'continuous')
 				else if (term_.term.type == 'categorical' || term_.term.type == 'condition') {
 					let text
 					if (term_.q.groupsetting?.inuse) {
@@ -263,49 +261,93 @@ function setRenderers(self) {
 							cats_n +
 							(term_.term.type == 'categorical' ? ' categories' : ' grades') +
 							(cats_n ? ' (' + (Object.keys(term_.term.values).length - cats_n) + ' excluded)' : '')
-                        make_values_table(term_.q.groupsetting.customset.groups, values_table, 'name')
+						make_values_table({ term: term_, values: term_.q.groupsetting.customset.groups, values_table, key: 'name' })
 					} else {
-						text = Object.keys(term_.term.values).length + (term_.term.type == 'categorical' ? ' categories' : ' grades')
-                        make_values_table(term_.term.values, values_table, 'label')
+						text =
+							Object.keys(term_.term.values).length + (term_.term.type == 'categorical' ? ' categories' : ' grades')
+						make_values_table({ term: term_, values: term_.term.values, values_table, key: 'label' })
 					}
 					term_summmary_div.text(text)
 				}
 			}
 		}
 
-        function make_values_table(values, table, key){
-            table.style('margin', '10px 5px')
-			    .style('border-spacing', '3px')
-			    .style('border-collapse', 'collapse')
+		function make_values_table(args) {
+			const { term, values, values_table, key } = args
+			values_table
+				.style('margin', '10px 5px')
+				.style('border-spacing', '3px')
+				.style('border-collapse', 'collapse')
 
-            let reference_rendered = false    
-            for (const value of Object.values(values)) {
-                const tr = table
-                    .append('tr')
-                    .style('padding', '5px 5px')
-                    .style('text-align', 'left')
-                    .style('border-bottom', 'solid 1px #ddd')
+			const tr_data = Object.values(values)
+			tr_data[0].ref_grp = true
 
-                tr.append('td')
-                    .style('padding', '3px 5px')
-                    .style('text-align', 'left')
-                    .html(value[key])
+			function updateTable() {
+				const ref_value = tr_data.find(v => v.ref_grp == true)
+				term.q.ref_grp = ref_value[key]
+				values_table
+					.selectAll('tr')
+					.data(tr_data)
+					.each(trUpdate)
+					.enter()
+					.append('tr')
+					.each(trEnter)
 
-                const reference_td = tr.append('td')
-                    .style('padding', '3px 5px')
-                    .style('text-align', 'left')
+				function trEnter(value) {
+					const tr = select(this)
 
-                if(!reference_rendered){
-                    reference_td.append('button')
-                        .style('border','1px solid #eee')
-                        .style('border-radius','5px')
-                        .style('background','#ddd')
-                        .text('Reference')
+					tr.style('padding', '5px 5px')
+						.style('text-align', 'left')
+						.style('border-bottom', 'solid 1px #ddd')
+						.on('mouseover', () => tr.style('background', '#fff6dc'))
+						.on('mouseout', () => tr.style('background', 'white'))
+						.on('click', () => {
+							const ref_value = tr_data.find(v => v.ref_grp == true)
+							delete ref_value.ref_grp
+							value.ref_grp = true
+							ref_text.style('display', 'inline-block')
+							updateTable()
+						})
 
-                    reference_rendered = true
-                }    
-            }
-        }
+					tr.append('td')
+						.style('padding', '3px 5px')
+						.style('text-align', 'left')
+						.style('color', 'black')
+						.html(value[key])
+
+					const reference_td = tr
+						.append('td')
+						.style('padding', '3px 5px')
+						.style('text-align', 'left')
+
+					const ref_text = reference_td
+						.append('div')
+						.style('display', value.ref_grp ? 'inline-block' : 'none')
+						.style('padding', '2px 10px')
+						.style('border', '1px solid #bbb')
+						.style('border-radius', '10px')
+						.style('color', '#999')
+						.style('font-size', '.7em')
+						.text('REFERENCE')
+				}
+
+				function trUpdate(value) {
+					const tr = select(this)
+					tr.select('div').style('display', value.ref_grp ? 'inline-block' : 'none')
+				}
+			}
+
+			updateTable()
+
+			values_table
+				.append('tr')
+				.style('padding', '5px 5px')
+				.append('td')
+				.style('padding', '3px 5px')
+				.style('color', '#999')
+				.attr('colspan', 2)
+				.text('Click on a row to mark it as reference.')
+		}
 
 		// const id = Math.random().toString()
 
@@ -353,11 +395,10 @@ function setRenderers(self) {
 		// }
 	}
 
-    self.updateBtns = config => {
+	self.updateBtns = config => {
 		const hasMissingTerms =
 			config.termSequence.filter(t => !t.selected || (t.limit > 1 && !t.selected.length)).length > 0
-		self.dom.submitBtn
-			.property('disabled', hasMissingTerms)
+		self.dom.submitBtn.property('disabled', hasMissingTerms)
 	}
 }
 
