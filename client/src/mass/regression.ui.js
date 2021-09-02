@@ -198,7 +198,8 @@ function setRenderers(self) {
 
 					newTermDiv.style('border-left', '1px solid #bbb')
 					termInfoDiv.style('display', 'inline-block')
-					updateTermInfoDiv(term)
+					const config_term = config.independent.find(t => t.id == term.term.id)
+					updateTermInfoDiv(config_term)
 				}
 			}
 		})
@@ -231,9 +232,6 @@ function setRenderers(self) {
 				else d.cutoff = Number(value)
 			})
 
-		// QUICK FIX: numeric terms can be used as continuous or as defined as bins,
-		// by default it will be used as continuous, if radio select is changed to 'as bins',
-		// config.independent[term].q.use_as = 'bins'  flag will be added to use the term with bin config
 		const termInfoDiv = newTermDiv
 			.append('div')
 			.style('display', d.detail == 'independent' && term?.term ? 'block' : 'none')
@@ -255,12 +253,7 @@ function setRenderers(self) {
 				else if (term_.term.type == 'categorical' || term_.term.type == 'condition') {
 					let text
 					if (term_.q.groupsetting?.inuse) {
-						let cats_n = 0
-						term_.q.groupsetting.customset.groups.forEach(g => (cats_n = cats_n + g.values.length))
-						text =
-							cats_n +
-							(term_.term.type == 'categorical' ? ' categories' : ' grades') +
-							(cats_n ? ' (' + (Object.keys(term_.term.values).length - cats_n) + ' excluded)' : '')
+						text = Object.keys(term_.q.groupsetting.customset.groups).length + ' groups'
 						make_values_table({ term: term_, values: term_.q.groupsetting.customset.groups, values_table, key: 'name' })
 					} else {
 						text =
@@ -284,7 +277,8 @@ function setRenderers(self) {
 
 			function updateTable() {
 				const ref_i = tr_data.findIndex(v => v.ref_grp == true)
-				term.q.ref_grp = Object.keys(values)[ref_i]
+				if (term.q.groupsetting.inuse) term.q.ref_grp = values[ref_i]['name']
+				else term.q.ref_grp = Object.keys(values)[ref_i]
 				values_table
 					.selectAll('tr')
 					.data(tr_data)

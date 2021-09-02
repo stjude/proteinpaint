@@ -109,6 +109,7 @@ function get_refCategory(term, q) {
 		// q attribute will tell which category is reference
 		// else first category as reference
 		if (q.ref_grp) return q.ref_grp
+		else if (q.groupsetting && q.groupsetting.inuse) return q.groupsetting.customset.groups[0]['name']
 		else return Object.keys(term.values)[0]
 	}
 	if (term.type == 'integer' || term.type == 'float') {
