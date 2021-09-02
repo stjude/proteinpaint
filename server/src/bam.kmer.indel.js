@@ -84,10 +84,10 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 
 	//----------------------------------------------------------------------------
 	// IMPORTANT PARAMETERS
-	const kmer_length = 6 // length of kmer
+	const kmer_length = 6 // Initial length of kmer, will be increased in case of repeat regions
 	const weight_no_indel = 0.1 // Weight when base not inside the indel
 	const weight_indel = 10 // Weight when base is inside the indel
-	const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
+	//const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
 	//----------------------------------------------------------------------------
 
 	// Checking to see if reference allele is correct or not
@@ -131,8 +131,6 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		weight_no_indel.toString() +
 		':' +
 		weight_indel.toString() +
-		':' +
-		threshold_slope.toString() +
 		':' +
 		q.variant.strictness +
 		':' +

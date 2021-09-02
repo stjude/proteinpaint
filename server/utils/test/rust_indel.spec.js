@@ -39,7 +39,6 @@ const pphost = 'http://pp-int-test.stjude.org/' // show links using this host
 const kmer_length = 6,
 	weight_no_indel = 0.1,
 	weight_indel = 10,
-	threshold_slope = 0.1,
 	strictness = 1
 
 /**************
@@ -105,8 +104,6 @@ function runTest(e, test) {
 		weight_no_indel +
 		':' +
 		weight_indel +
-		':' +
-		threshold_slope +
 		':' +
 		strictness +
 		':' +
