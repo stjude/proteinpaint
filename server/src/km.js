@@ -6,7 +6,8 @@ const fs = require('fs'),
 	utils = require('./utils'),
 	common = require('../shared/common'),
 	serverconfig = require('./serverconfig'),
-	vcf = require('../shared/vcf')
+	vcf = require('../shared/vcf'),
+	lines2R = require('./lines2R')
 
 /*
 function cascade
@@ -101,7 +102,7 @@ async function get_pvalue(samplesets) {
 			lines.push(v.serialtime + '\t' + v.censored + '\t' + i)
 		}
 	}
-	const p = await utils.lines2R('km.R', lines)
+	const p = await lines2R(path.join(serverconfig.binpath, '/utils/km.R'), lines)
 	return Number(p.join(''))
 }
 

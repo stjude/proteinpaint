@@ -1,37 +1,33 @@
 /************************
-a script to test all R scripts at server/utils/
-run this as below
+Test script for all R scripts at server/utils/
 
-npx tape -r '@babel/register' Rscripts.spec.js
+Run test script as follows (from server/):
 
-*********************/
+    npx tape -r '@babel/register' utils/test/Rscripts.spec.js
+
+*************************/
 
 const tape = require('tape')
 const fs = require('fs')
-const lines2R = require('../../src/utils').lines2R
+const lines2R = require('../../src/lines2R')
 const serverconfig = require('../../serverconfig')
 const path = require('path')
 
-/**************
- Test sections
-***************/
 tape('\n', function(test) {
 	test.pass('-***- R scripts specs -***-')
 	test.end()
 })
 
-let output
-
 tape('hwe.R', async function(test) {
 	const invalidInput = '68\t28\t4,5\t40\t3,56\t4\t43,83\t45\t13'
 	try {
-		output = await lines2R('hwe.R', invalidInput)
+		const output = await lines2R(path.join(__dirname, '../hwe.R'), invalidInput)
 		test.fail('should emit an error on invalid input')
 	} catch (error) {
 		test.deepEqual(error, TypeError('lines.join is not a function'), 'should emit an error on invalid input')
 	}
 	const validInput = ['68\t28\t4', '5\t40\t3', '56\t4\t43', '83\t45\t13']
-	output = await lines2R('hwe.R', validInput)
+	const output = await lines2R(path.join(__dirname, '../hwe.R'), validInput)
 	test.deepEqual(
 		output.map(Number),
 		[0.515367, 0.000006269428, 1.385241e-24, 0.07429809],
@@ -43,7 +39,7 @@ tape('hwe.R', async function(test) {
 tape('fisher.R', async function(test) {
 	const invalidInput = 'gene1\t2\t10\t15\t3,gene2\t4\t74\t67\t9,gene3\t12\t17\t1000\t1012,gene4\t13\t25\t37\t19'
 	try {
-		output = await lines2R('fisher.R', invalidInput)
+		const output = await lines2R(path.join(__dirname, '../fisher.R'), invalidInput)
 		test.fail('should emit an error on invalid input')
 	} catch (error) {
 		test.deepEqual(error, TypeError('lines.join is not a function'), 'should emit an error on invalid input')
@@ -55,7 +51,7 @@ tape('fisher.R', async function(test) {
 		'chr17.7667610.C.T\t3551\t955\t51344\t12996',
 		'chr17.7667611.A.G\t3556\t950\t51358\t12974'
 	]
-	output = await lines2R('fisher.R', validInput)
+	const output = await lines2R(path.join(__dirname, '../fisher.R'), validInput)
 	test.deepEqual(
 		output,
 		[
@@ -74,7 +70,7 @@ tape('fisher.2x3.R', async function(test) {
 	const invalidInput =
 		'0\t506\t1451\t68\t206\t3\t11,1\t246\t1711\t24\t250\t1\t13,2\t102\t1855\t16\t258\t0\t14,3\t167\t1790\t22\t252\t2\t12,4\t174\t1783\t30\t244\t4\t10'
 	try {
-		output = await lines2R('fisher.2x3.R', invalidInput)
+		const output = await lines2R(path.join(__dirname, '../fisher.2x3.R'), invalidInput)
 		test.fail('should emit an error on invalid input')
 	} catch (error) {
 		test.deepEqual(error, TypeError('lines.join is not a function'), 'should emit an error on invalid input')
@@ -86,7 +82,7 @@ tape('fisher.2x3.R', async function(test) {
 		'3\t167\t1790\t22\t252\t2\t12',
 		'4\t174\t1783\t30\t244\t4\t10'
 	]
-	output = await lines2R('fisher.2x3.R', validInput)
+	const output = await lines2R(path.join(__dirname, '../fisher.2x3.R'), validInput)
 	test.deepEqual(
 		output,
 		[
@@ -104,7 +100,7 @@ tape('fisher.2x3.R', async function(test) {
 tape('km.R', async function(test) {
 	const invalidInput = 'futime\tfustat\trx,410\t1\t0,443\t0\t0,2819\t0\t0,496\t1\t0,2803\t0\t0,2983\t0\t0'
 	try {
-		output = await lines2R('km.R', invalidInput)
+		const output = await lines2R(path.join(__dirname, '../km.R'), invalidInput)
 		test.fail('should emit an error on invalid input')
 	} catch (error) {
 		test.deepEqual(error, TypeError('lines.join is not a function'), 'should emit an error on invalid input')
@@ -192,7 +188,7 @@ tape('km.R', async function(test) {
 		'259\t1\t1',
 		'633\t1\t1'
 	]
-	output = await lines2R('km.R', validInput)
+	const output = await lines2R(path.join(__dirname, '../km.R'), validInput)
 	test.deepEqual(output.map(Number), [0.007], 'should match expected output')
 	test.end()
 })
@@ -254,7 +250,7 @@ tape('survival.R', async function(test) {
 	]
 
 	try {
-		const output1 = await lines2R('survival.R', validInput1)
+		const output1 = await lines2R(path.join(__dirname, '../survival.R'), validInput1)
 		const expected1 = [
 			'cohort\ttime\tsurv\tncensor\tlower\tupper',
 			'1\t23\t0.976190476190476\t0\t0.931155465908631\t1',
@@ -323,7 +319,7 @@ tape('regression.R', async function(test) {
 		})
 		.trim()
 		.split('\n')
-	const temp_linear_output = await lines2R('regression.R', temp_linear_input, ['linear'])
+	const temp_linear_output = await lines2R('../regression.R', temp_linear_input, ['linear'])
 	// console.log('\nResults of linear regression analysis:')
 	// console.log(temp_linear_output.join('\n'))
 	// view logistic regression results
@@ -333,12 +329,12 @@ tape('regression.R', async function(test) {
 		})
 		.trim()
 		.split('\n')
-	const temp_logistic_output = await lines2R('regression.R', temp_logistic_input, ['logistic'])*/
+	const temp_logistic_output = await lines2R('../regression.R', temp_logistic_input, ['logistic'])*/
 	// console.log('\nResults of logistic regression analysis:')
 	// console.log(temp_logistic_output.join('\n'))
 	// console.log()
 
-	// test linear regression (dummy data)
+	// test linear regression
 	const linear_input = [
 		'outcome\tgender\trace\tage\ttreatment',
 		'10.56\tmale\tother\t10-20\t1',
@@ -360,9 +356,12 @@ tape('regression.R', async function(test) {
 		'age\t20-30\t1.486\t-0.872\t3.843\t0.2717',
 		'treatment\t\t9.862\t7.634\t12.09\t0.0003362'
 	]
-	const linear_output = await lines2R('regression.R', linear_input, ['linear', 'numeric,factor,factor,factor,numeric'])
+	const linear_output = await lines2R(path.join(__dirname, '../regression.R'), linear_input, [
+		'linear',
+		'numeric,factor,factor,factor,numeric'
+	])
 	test.deepEqual(linear_output, linear_expected, 'linear regression should match expected output')
-	// test logistic regression (dummy data)
+	// test logistic regression
 	const logistic_input = [
 		'outcome\tgender\trace\tage\ttreatment',
 		'1\tmale\tother\t10-20\t1',
@@ -404,7 +403,7 @@ tape('regression.R', async function(test) {
 		'age\t20-30\t0.062\t0.002\t0.602\t0.04556',
 		'treatment\t\t7.944\t0.702\t224.334\t0.1324'
 	]
-	const logistic_output = await lines2R('regression.R', logistic_input, [
+	const logistic_output = await lines2R(path.join(__dirname, '../regression.R'), logistic_input, [
 		'logistic',
 		'factor,factor,factor,factor,numeric'
 	])

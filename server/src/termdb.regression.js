@@ -1,7 +1,8 @@
 import path from 'path'
+import serverconfig from './serverconfig'
 import { get_term_cte } from './termdb.sql'
 import { getFilterCTEs } from './termdb.filter'
-import { lines2R } from './utils'
+import { lines2R } from './lines2R'
 
 export async function get_regression(q, ds) {
 	try {
@@ -65,8 +66,12 @@ export async function get_regression(q, ds) {
 			}
 			if (line[0] != 'NA') tsv.push(line.join('\t'))
 		}
-
-		const data = await lines2R('regression.R', tsv, [regressionType, colClasses.join(','), refCategories.join(',')])
+		console.log('termdb.regression.js')
+		const data = await lines2R(path.join(serverconfig.binpath, 'utils/regression.R'), tsv, [
+			regressionType,
+			colClasses.join(','),
+			refCategories.join(',')
+		])
 
 		const result = []
 		let table, lineCnt

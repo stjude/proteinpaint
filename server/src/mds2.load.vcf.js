@@ -5,6 +5,7 @@ const utils = require('./utils')
 const vcf = require('../shared/vcf')
 const common = require('../shared/common')
 const termdbsql = require('./termdb.sql')
+const lines2R = require('./lines2R')
 
 /*
 ********************** EXPORTED
@@ -700,7 +701,7 @@ async function may_apply_fishertest(q) {
 		// no data
 		return
 	}
-	const plines = await utils.lines2R('fisher.R', lines)
+	const plines = await lines2R(path.join(serverconfig.binpath, '/utils/fisher.R'), lines)
 	for (const line of plines) {
 		const l = line.split('\t')
 		const m = mlst[l[0]]
