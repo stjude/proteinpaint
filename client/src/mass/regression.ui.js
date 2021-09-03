@@ -34,7 +34,7 @@ class MassRegressionUI {
 			config: {
 				cutoff: config.cutoff,
 				term: config.term,
-				regressionType: config.regressionType || 'linear',
+				regressionType: config.regressionType,
 				independent: config.independent,
 				settings: {
 					table: config?.settings?.regression
@@ -167,7 +167,7 @@ function setRenderers(self) {
 						newTermDiv.remove()
 					}
 					self.updateBtns(config)
-					cutoffDiv.style('display', 'none')
+					if (config.regressionType == 'logistic') cutoffDiv.style('display', 'none')
 					termInfoDiv.style('display', 'none')
 				} else {
 					if (!disable_terms.includes(term.term.id)) {
@@ -190,16 +190,20 @@ function setRenderers(self) {
 					}
 					self.updateBtns(config)
 					// show cutoffDiv only for regressionType is logistic
-					if (config.regressionType && config.regressionType == 'logistic')
+					if (config.regressionType == 'logistic')
 						cutoffDiv.style(
 							'display',
-							d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'inline-block' : 'none'
+							d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'block' : 'none'
 						)
 
 					newTermDiv.style('border-left', '1px solid #bbb')
 					termInfoDiv.style('display', 'inline-block')
-					const config_term = config.independent.find(t => t.id == term.term.id)
-					updateTermInfoDiv(config_term)
+					if (d.selected.length) {
+						const config_term = d.selected.find(t => t.id == term.term.id)
+						updateTermInfoDiv(config_term)
+					} else {
+						updateTermInfoDiv(term)
+					}
 				}
 			}
 		})
@@ -208,29 +212,27 @@ function setRenderers(self) {
 		if (term) pill.main(term)
 
 		// show cutoffDiv only for regressionType is logistic and term in cutoffTermTypes
-		const cutoffDiv = pillsDiv
-			.append('div')
-			.style(
-				'display',
-				config.regressionType == 'logistic' && term && d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type)
-					? 'inline-block'
-					: 'none'
-			)
-			.style('margin', '3px 5px')
-			.style('padding', '3px 5px')
+		let cutoffDiv
+		if (config.regressionType == 'logistic') {
+			cutoffDiv = pillsDiv
+				.append('div')
+				.style('display', term && d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'block' : 'none')
+				.style('margin', '3px 5px')
+				.style('padding', '3px 5px')
 
-		const cutoffLabel = cutoffDiv.append('span').html('Use cutoff of ')
+			const cutoffLabel = cutoffDiv.append('span').html('Use cutoff of ')
 
-		const useCutoffInput = cutoffDiv
-			.append('input')
-			.attr('type', 'number')
-			.style('width', '50px')
-			.style('text-align', 'center')
-			.on('change', () => {
-				const value = useCutoffInput.property('value')
-				if (value === '') delete d.cutoff
-				else d.cutoff = Number(value)
-			})
+			const useCutoffInput = cutoffDiv
+				.append('input')
+				.attr('type', 'number')
+				.style('width', '50px')
+				.style('text-align', 'center')
+				.on('change', () => {
+					const value = useCutoffInput.property('value')
+					if (value === '') delete d.cutoff
+					else d.cutoff = Number(value)
+				})
+		}
 
 		const termInfoDiv = newTermDiv
 			.append('div')
@@ -328,6 +330,7 @@ function setRenderers(self) {
 				function trUpdate(value) {
 					const tr = select(this)
 					tr.select('div').style('display', value.ref_grp ? 'inline-block' : 'none')
+					self.dom.submitBtn.property('disabled', false)
 				}
 			}
 
