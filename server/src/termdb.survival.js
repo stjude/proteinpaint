@@ -4,7 +4,7 @@ const spawn = require('child_process').spawn
 const serverconfig = require('./serverconfig')
 const do_plot = require('./km').do_plot
 const processSerieses = require('./survival.km').processSerieses
-const lines2R = require('./utils').lines2R
+const lines2R = require('./lines2R')
 
 export async function get_survival(q, ds) {
 	try {
@@ -53,7 +53,7 @@ export async function get_survival(q, ds) {
 		}
 		const promises = []
 		for (const chartId in byChartSeries) {
-			const output = await lines2R('survival.R', byChartSeries[chartId])
+			const output = await lines2R(path.join(serverconfig.binpath, 'utils/survival.R'), byChartSeries[chartId])
 			let header
 			output
 				.map(line => line.split('\t'))

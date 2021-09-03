@@ -33,7 +33,6 @@ get_header_bcf
 get_fasta
 connect_db
 loadfile_ssid
-lines2R
 bam_ifnochr
 ********************** INTERNAL
 */
@@ -396,49 +395,6 @@ samplefilterset:
 		genotype2sample.set(genotype, new Set(samplelst))
 	}
 	return [sample2gt, genotype2sample]
-}
-
-/*
-Stream javascript data into R.
-<Rscript>: name of R script (assumed to be located in server/utils/)
-<lines>: array of data lines.
-<addArgs>: optional array of additional arguments into R script.
-Data lines are streamed into the standard input of the R script.
-The return value is an array of lines of standard output from the R script.
-*/
-exports.lines2R = async function(Rscript, lines, addArgs) {
-	const RscriptPath = path.join(serverconfig.binpath, 'utils', Rscript)
-	try {
-		await fs.promises.stat(RscriptPath)
-	} catch (e) {
-		throw 'R script not usable'
-	}
-	let args
-	if (addArgs) {
-		args = [RscriptPath, ...addArgs]
-	} else {
-		args = [RscriptPath]
-	}
-	const table = lines.join('\n') + '\n'
-	const stdout = []
-	const stderr = []
-	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', args)
-		Readable.from(table).pipe(sp.stdin)
-		sp.stdout.on('data', data => stdout.push(data))
-		sp.stderr.on('data', data => stderr.push(data))
-		sp.on('error', err => reject(err))
-		sp.on('close', code => {
-			if (code !== 0) reject(`R process exited with non-zero status code=${code}`)
-			if (stderr.length > 0) reject(stderr.join(''))
-			resolve(
-				stdout
-					.join('')
-					.trim()
-					.split('\n')
-			)
-		})
-	})
 }
 
 exports.run_fdr = async function(plst) {

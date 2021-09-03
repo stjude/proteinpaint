@@ -6,6 +6,7 @@ const createCanvas = require('canvas').createCanvas
 const termdb = require('./termdb')
 const readline = require('readline')
 const serverconfig = require('./serverconfig')
+const lines2R = require('./lines2R')
 
 /*
 ********************** EXPORTED
@@ -69,7 +70,7 @@ export async function trigger(q, res, ds) {
 		for (let i = 0; i < tests.length; i++) {
 			lines.push(i + '\t' + tests[i].table.join('\t'))
 		}
-		const plines = await utils.lines2R('fisher.2x3.R', lines)
+		const plines = await lines2R(path.join(serverconfig.binpath, 'utils/fisher.2x3.R'), lines)
 		let i = 0
 		for (const line of plines) {
 			tests[i++].pvalue = Number(line.split('\t')[7])
