@@ -165,6 +165,12 @@ function setRenderers(self) {
 					disable_terms.splice(i, 1)
 					if (d.limit > 1) {
 						newTermDiv.remove()
+					} else {
+						// Quick fix: remove pill and show text to add new term
+						const pill = pillDiv.select('.ts_pill').node()
+						select(pill).remove()
+						div.select('.sja_clbtext2').node().parentNode.style.display = 'inline-block'
+						newTermDiv.style('border-left', 'none')
 					}
 					self.updateBtns(config)
 					if (config.regressionType == 'logistic') cutoffDiv.style('display', 'none')
