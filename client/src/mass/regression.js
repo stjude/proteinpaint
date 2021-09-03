@@ -22,6 +22,7 @@ class MassRegression {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		const config = appState.tree.plots[this.id]
+		if (!config.regressionType) throw 'regressionType is required'
 		return {
 			isVisible: config?.settings?.currViews.includes('regression'),
 			activeCohort: appState.activeCohort,
@@ -29,7 +30,7 @@ class MassRegression {
 			config: {
 				cutoff: config.cutoff,
 				term: config.term,
-				regressionType: config.regressionType || 'linear',
+				regressionType: config.regressionType,
 				independent: config.independent,
 				settings: {
 					table: config?.settings?.regression
@@ -178,13 +179,10 @@ function setRenderers(self) {
 
 				const column_keys = columns.map(d => d.key)
 				for (const t2label of column_keys) {
-					const td = tr
-						.append('td')
-						.style('padding', '3px 10px')
+					const td = tr.append('td').style('padding', '3px 10px')
 					const v = t1v.lst.find(i => i.label == t2label)
 					if (v) {
-						td .style('text-align', 'left')
-							.html(v.value)
+						td.style('text-align', 'left').html(v.value)
 					}
 				}
 			}
