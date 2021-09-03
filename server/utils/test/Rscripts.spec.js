@@ -349,16 +349,28 @@ tape('regression.R', async function(test) {
 		'2.61\tmale\twhite\t20-30\t0'
 	]
 	const linear_expected = [
-		'variable\tcategory\tbeta\t95% CI (low)\t95% CI (high)\tpvalue',
-		'(Intercept)\t\t5.889\t2.381\t9.397\t0.02171',
-		'gender\tmale\t-3.019\t-5.591\t-0.446\t0.06977',
-		'race\twhite\t-2.125\t-4.698\t0.447\t0.1663',
-		'age\t20-30\t1.486\t-0.872\t3.843\t0.2717',
-		'treatment\t\t9.862\t7.634\t12.09\t0.0003362'
+		'#matrix#Deviance Residuals',
+		'Minimum\t1st quartile\tMedian\t3rd quartile\tMaximum',
+		'-2.172\t-0.91\t0.18\t0.55\t1.622',
+		'#matrix#Coefficients',
+		'Variable\tCategory\tBeta\tStd. Error\tt value\tPr(>|t|)\t95% CI (low)\t95% CI (high)',
+		'(Intercept)\t\t5.889\t1.79\t3.29\t0.02171\t2.381\t9.397',
+		'gender\tmale\t-3.019\t1.312\t-2.3\t0.06977\t-5.591\t-0.446',
+		'race\twhite\t-2.125\t1.312\t-1.619\t0.1663\t-4.698\t0.447',
+		'age\t20-30\t1.486\t1.203\t1.235\t0.2717\t-0.872\t3.843',
+		'treatment\t1\t9.862\t1.137\t8.677\t0.0003362\t7.634\t12.09',
+		'#vector#Other summary statistics',
+		'Dispersion parameter\t2.6',
+		'Null deviance\t252.3',
+		'Null deviance df\t9',
+		'Residual deviance\t12.9',
+		'Residual deviance df\t5',
+		'AIC\t42.9'
 	]
 	const linear_output = await lines2R(path.join(__dirname, '../regression.R'), linear_input, [
 		'linear',
-		'numeric,factor,factor,factor,numeric'
+		'numeric,factor,factor,factor,factor',
+		',female,other,10-20,0'
 	])
 	test.deepEqual(linear_output, linear_expected, 'linear regression should match expected output')
 	// test logistic regression
@@ -396,18 +408,29 @@ tape('regression.R', async function(test) {
 		'0\tmale\twhite\t20-30\t0'
 	]
 	const logistic_expected = [
-		'variable\tcategory\tor\t95% CI (low)\t95% CI (high)\tpvalue',
-		'(Intercept)\t\t1.846\t0.058\t59.34\t0.7206',
-		'gender\tmale\t0.467\t0.033\t5.915\t0.546',
-		'race\twhite\t8.838\t0.984\t227.069\t0.09316',
-		'age\t20-30\t0.062\t0.002\t0.602\t0.04556',
-		'treatment\t\t7.944\t0.702\t224.334\t0.1324'
+		'#matrix#Deviance Residuals',
+		'Minimum\t1st quartile\tMedian\t3rd quartile\tMaximum',
+		'-1.768\t-0.882\t0.124\t0.522\t1.553',
+		'#matrix#Coefficients',
+		'Variable\tCategory\tLog Odds\tStd. Error\tz value\tPr(>|z|)\tOdds ratio\t95% CI (low)\t95% CI (high)',
+		'(Intercept)\t\t0.613\t1.713\t0.358\t0.7206\t1.846\t0.058\t59.34',
+		'gender\tmale\t-0.761\t1.26\t-0.604\t0.546\t0.467\t0.033\t5.915',
+		'race\twhite\t2.179\t1.298\t1.679\t0.09316\t8.838\t0.984\t227.069',
+		'age\t20-30\t-2.775\t1.388\t-1.999\t0.04556\t0.062\t0.002\t0.602',
+		'treatment\t1\t2.072\t1.377\t1.505\t0.1324\t7.944\t0.702\t224.334',
+		'#vector#Other summary statistics',
+		'Dispersion parameter\t1',
+		'Null deviance\t39.4',
+		'Null deviance df\t29',
+		'Residual deviance\t26.6',
+		'Residual deviance df\t25',
+		'AIC\t36.6'
 	]
 	const logistic_output = await lines2R(path.join(__dirname, '../regression.R'), logistic_input, [
 		'logistic',
-		'factor,factor,factor,factor,numeric'
+		'factor,factor,factor,factor,factor',
+		'0,female,other,10-20,0'
 	])
-
 	test.deepEqual(logistic_output, logistic_expected, 'logistic regression should match expected output')
 	test.end()
 })

@@ -1,8 +1,8 @@
-import path from 'path'
-import serverconfig from './serverconfig'
-import { get_term_cte } from './termdb.sql'
-import { getFilterCTEs } from './termdb.filter'
-import { lines2R } from './lines2R'
+const path = require('path')
+const { get_term_cte } = require('./termdb.sql')
+const { getFilterCTEs } = require('./termdb.filter')
+const lines2R = require('./lines2R')
+const serverconfig = require('./serverconfig')
 
 export async function get_regression(q, ds) {
 	try {
