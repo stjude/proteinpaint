@@ -256,6 +256,9 @@ TdbStore.prototype.actions = {
 		} else {
 			delete this.state.tree.plots[action.id].cutoff
 		}
+		if (action.config.regressionType) {
+			this.state.tree.plots[action.id].regressionType = action.config.regressionType
+		}
 		this.state.tree.visiblePlotIds.push(action.id)
 	},
 
@@ -271,7 +274,7 @@ TdbStore.prototype.actions = {
 	},
 
 	plot_edit(action) {
-		console.log(273, action.config.cutoff)
+		// console.log(273, action.config.cutoff)
 		const plot = this.state.tree.plots[action.id]
 		if (plot) {
 			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)

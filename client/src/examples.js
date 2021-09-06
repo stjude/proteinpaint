@@ -283,10 +283,9 @@ async function openSandbox(track, holder) {
 		const call = track.ppcalls[0]
 
 		const buttons_div = sandbox_div.body.append('div').attr('id', 'sjpp-buttons-div')
-		const reuse_div = sandbox_div.body
-			.append('div')
-			.attr('id', 'sjpp-reusable')
-			.style('border-bottom', '1.5px darkgray solid')
+		const reuse_div = sandbox_div.body.append('div').attr('id', 'sjpp-reusable')
+
+		makeLine(sandbox_div.body)
 
 		//Creates any custom buttons
 		addButtons(track.sandbox.buttons, buttons_div)
@@ -314,6 +313,14 @@ async function openSandbox(track, holder) {
 		addButtons(track.sandbox.buttons, sandbox_div.body)
 		makeTabMenu(track, sandbox_div)
 	}
+}
+
+function makeLine(div) {
+	const line = div
+		.append('hr')
+		.style('width', '100%')
+		.style('border', '0')
+		.style('border-top', '1px dashed #e3e3e6')
 }
 
 // ******* Sandbox Message Functions *********
@@ -407,12 +414,15 @@ async function showCode(track, call, btns) {
     holder: document.getElementById('a'),` +
 				JSON.stringify(call, '', 4)
 					.replaceAll(/"(.+)"\s*:/g, '$1:')
-					.slice(1, -1) +
-				`})`,
+					.replaceAll(/\\t/g, '	')
+					.replaceAll(/\\n/g, '\r\t')
+					.slice(1, -1)
+					.trim() +
+				`\r})`,
 			{ language: 'javascript' }
 		).value
 
-		const contents = `<pre style="border: 1px solid #aeafb0"><code style="font-size:14px; margin:35px;">${code}</code></pre>`
+		const contents = `<pre style="border: 1px solid #d7d7d9; width: 90%"><code style="font-size:14px;">${code}</code></pre>`
 
 		btns.push({
 			name: 'Code',
@@ -547,15 +557,14 @@ function makeTab(track, arg, div) {
 	addMessage(arg.message, div)
 
 	const buttons_div = div.append('div').attr('id', 'sjpp-buttons-div')
-	const reuse_div = div
-		.append('div')
-		.attr('id', 'sjpp-reusable')
-		.style('border-bottom', '1.5px darkgray solid')
+	const reuse_div = div.append('div').attr('id', 'sjpp-reusable')
 
 	addButtons(arg.buttons, buttons_div)
 	makeDataDownload(arg.download, buttons_div)
 	showURLLaunch(arg.urlparam, buttons_div)
 	addArrowBtns(track, arg.arrowButtons, arg.runargs, buttons_div, reuse_div)
+
+	makeLine(div)
 
 	const runpp_arg = {
 		holder: div

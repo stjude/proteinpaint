@@ -8,10 +8,11 @@ import { tableInit } from '../termdb/table'
 //import { scatterInit } from './scatter'
 import { cumincInit } from '../termdb/cuminc'
 import { survivalInit } from '../termdb/survival'
+import { regressionUIInit } from './regression.ui'
 import { regressionInit } from './regression'
 //import { termInfoInit } from './termInfo'
 //import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
-import { termsetting_fill_q, termsettingInit } from '../common/termsetting'
+import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { Menu } from '../client'
 
@@ -54,7 +55,14 @@ class MassPlot {
 
 		const controls =
 			opts.plot.chartType === 'regression'
-				? null
+				? regressionUIInit(
+						this.app,
+						{
+							id: this.id,
+							holder: this.dom.viz.append('div')
+						},
+						Object.assign({ config: this.opts.plot })
+				  )
 				: controlsInit(
 						this.app,
 						{
@@ -104,9 +112,27 @@ class MassPlot {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
 		if (!this.components.chart) this.setChartComponent(this.opts)
-		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? '<b>Results<b>' : '')
+		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? 'Results' : '')
 		if (this.state.config.term) {
-			this.dom.holder.header.html(this.state.config.term.term.name)
+			const regressionType =
+				this.config.chartType == 'regression' && this.config.regressionType
+					? this.config.regressionType.toUpperCase()
+					: this.config.chartType == 'regression'
+					? 'LINEAR'
+					: ''
+			const regression_type_txt =
+				this.config.chartType == 'regression'
+					? `<div style="color: #999; display: inline-block; padding-left: 7px; font-size: 70%;">
+				[ ${regressionType} REGRESSION ] </div>`
+					: ''
+			this.dom.holder.header.html(this.state.config.term.term.name + regression_type_txt)
+			if (this.dom.resultsDiv) {
+				this.dom.resultsDiv.selectAll('*').remove()
+				this.dom.resultsDiv
+					.append('div')
+					.style('color', '#bbb')
+					.html('...Loading')
+			}
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
 			if (data.error) throw data.error
@@ -131,9 +157,14 @@ class MassPlot {
 			if ('cutoff' in plot) {
 				params.push('cutoff=' + plot.cutoff)
 			}
-			if ('cutoff' in plot || (plot.term.term.values && Object.keys(plot.term.term.values).length === 2)) {
+			if (plot.regressionType && plot.regressionType == 'logistic') {
+				if (!plot.cutoff) throw "Cctofff values in required for 'Outcome variable'"
 				params.push('regressionType=logistic')
 			}
+			// TODO: remove this logic as regressionType is selected before launching regression form
+			// if ('cutoff' in plot || (plot.term.term.values && Object.keys(plot.term.term.values).length === 2)) {
+			// 	params.push('regressionType=logistic')
+			// }
 			if (plot.independent) {
 				params.push(
 					'independent=' +
@@ -262,12 +293,24 @@ class MassPlot {
 				break
 
 			case 'regression':
-				this.showMultipart(rx.copyMerge({}, this.state.config))
-				this.dom.resultsHeading = this.dom.viz.append('div').style('margin', '10px 5px')
+				// show selected regression_type in sandbox header
+				const regressionType = this.state.config.regressionType
+				if (regressionType) {
+					this.dom.holder.header.html(regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression')
+				}
+				this.dom.resultsHeading = this.dom.viz
+					.append('div')
+					.style('margin-top', '30px')
+					.style('margin-bottom', '10px')
+					.style('font-size', '17px')
+					.style('margin-left', '-35px')
+					.style('padding', '3px 5px')
+					.style('color', '#bbb')
+				this.dom.resultsDiv = this.dom.viz.append('div')
 				this.components.chart = regressionInit(
 					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({}, this.app.opts.survival)
+					{ holder: this.dom.resultsDiv, id: this.id },
+					Object.assign({ regressionType: this.state.config.regressionType })
 				)
 		}
 	}

@@ -1,20 +1,28 @@
-import path from 'path'
-import { get_term_cte } from './termdb.sql'
-import { getFilterCTEs } from './termdb.filter'
-import { lines2R } from './utils'
+const path = require('path')
+const { get_term_cte } = require('./termdb.sql')
+const { getFilterCTEs } = require('./termdb.filter')
+const lines2R = require('./lines2R')
+const serverconfig = require('./serverconfig')
 
 export async function get_regression(q, ds) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
 		q.independent = JSON.parse(decodeURIComponent(q.independent))
-		// termY === outcome term
+		// termY is the outcome term
 		q.termY = ds.cohort.termdb.q.termjsonByOneid(q.term1_id)
 		q.termY_id = q.term1_id
 		q.termY_q = JSON.parse(q.term1_q)
 		delete q.term1_id
 		delete q.term1_q
+
+		///////////// the header row of the R data matrix
 		const header = ['outcome']
+		// make "refCategories" array that contains reference categories for each variable
+		// For numeric variables, use empty string (see regression.R for more details)
+		const refCategories = []
+		refCategories.push(get_refCategory(q.termY, q))
+
 		for (const i in q.independent) {
 			const term = q.independent[i]
 			const termnum = 'term' + i
@@ -22,44 +30,99 @@ export async function get_regression(q, ds) {
 			if (term.q) q[termnum + '_q'] = term.q
 			header.push(term.id) //('var'+i)//(term.term.name)
 			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
+			refCategories.push(get_refCategory(term.term, term.q))
 		}
+
+		///////////// rest of rows for R matrix, one for each sample
 		const rows = get_matrix(q)
-		const tsv = [header.map(name => name.replace(' ', '_').replace(',', '_')).join('\t')]
+		const tsv = [header.join('\t')]
 		const termYvalues = q.termY.values || {}
-		console.log(termYvalues)
-		const independentTypes = q.independent.map(t => t.type)
+		// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
+		// by default it will be used as continuous, if user selects 'as_bins' radio,
+		// term.q.use_as = 'as bins' flag will be added
+		const independentTypes = q.independent.map(t => {
+			if ((t.type == 'float' || t.type == 'integer') && t.q.use_as == 'bins') return 'categorical'
+			else return t.type
+		})
 		const termTypes = [q.termY.type, ...independentTypes]
-		// Convert SJLIFE term types to R classes
+		// Convert term types to R classes
 		const colClasses = termTypes.map(type => type2class.get(type))
 		if ('cutoff' in q) colClasses[0] = 'factor'
 		const regressionType = q.regressionType || 'linear'
-		console.log(29, termTypes, colClasses)
 		for (const row of rows) {
 			const outcomeVal = termYvalues[row.outcome] && termYvalues[row.outcome].uncomputable ? 'NA' : row.outcome
 			const meetsCutoff = 'cutoff' in q && outcomeVal != 'NA' && Number(outcomeVal) >= q.cutoff ? 1 : 0 //console.log(meetsCutoff, q.cutoff, outcomeVal, Number(outcomeVal), regressionType)
 			const line = ['cutoff' in q ? meetsCutoff : outcomeVal]
 			for (const i in q.independent) {
-				const value = row['val' + i]
 				const term = q.independent[i]
-				const val = term.term && term.term.values && term.term.values[value]
-				line.push(val && val.uncomputable ? 'NA' : value)
+				if ((term.type == 'float' || term.type == 'integer') && term.q.use_as == 'bins') {
+					const value = row['key' + i]
+					line.push(value)
+				} else {
+					const value = row['val' + i]
+					const val = term.term && term.term.values && term.term.values[value]
+					line.push(val && val.uncomputable ? 'NA' : value)
+				}
 			}
 			if (line[0] != 'NA') tsv.push(line.join('\t'))
 		}
-		console.log(tsv.slice(0, 30))
-		const data = await lines2R('regression.R', tsv, [regressionType, colClasses.join(',')])
-		const result = {
-			keys: data.shift().split('\t'),
-			rows: []
+		console.log('termdb.regression.js')
+		const data = await lines2R(path.join(serverconfig.binpath, 'utils/regression.R'), tsv, [
+			regressionType,
+			colClasses.join(','),
+			refCategories.join(',')
+		])
+
+		const result = []
+		let table, lineCnt
+		for (const line of data) {
+			if (line.startsWith('#')) {
+				if (table) result.push(table)
+				const [format, name] = line.split('#').slice(1)
+				table = {
+					name: name,
+					format: format,
+					rows: []
+				}
+				lineCnt = 0
+				continue
+			}
+			if (table.format === 'matrix') {
+				lineCnt++
+				if (lineCnt === 1) {
+					table.keys = line.split('\t')
+					continue
+				}
+			}
+			table.rows.push(line.split('\t'))
 		}
-		for (const d of data) {
-			result.rows.push(d.split('\t'))
-		}
+		result.push(table)
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
 	}
+}
+
+/*
+decide reference category
+- term: the term json object {type, values, ...}
+- q: client side config for this term (should tell which category is chosen as reference, if applicable)
+*/
+function get_refCategory(term, q) {
+	if (term.type == 'categorical' || term.type == 'condition') {
+		// q attribute will tell which category is reference
+		// else first category as reference
+		if (q.ref_grp) return q.ref_grp
+		else if (q.groupsetting && q.groupsetting.inuse) return q.groupsetting.customset.groups[0]['name']
+		else return Object.keys(term.values)[0]
+	}
+	if (term.type == 'integer' || term.type == 'float') {
+		// TODO when numeric term is divided to bins, term should indicate which bin is reference
+		// this currently won't work if term is divided to bins
+		return ''
+	}
+	throw 'unknown term type for refCategories'
 }
 
 function get_matrix(q) {
