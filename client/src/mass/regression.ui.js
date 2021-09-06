@@ -27,7 +27,7 @@ class MassRegressionUI {
 		}
 		const config = appState.tree.plots[this.id]
 		return {
-			isVisible: config?.settings?.currViews.includes('regression'),
+			isVisible: config.settings && config.settings.currViews.includes('regression'),
 			activeCohort: appState.activeCohort,
 			vocab: appState.vocab,
 			termfilter: appState.termfilter,
@@ -37,7 +37,7 @@ class MassRegressionUI {
 				regressionType: config.regressionType,
 				independent: config.independent,
 				settings: {
-					table: config?.settings?.regression
+					table: config.settings && config.settings.regression
 				}
 			}
 		}
@@ -95,7 +95,7 @@ function setRenderers(self) {
 						if (!disable_terms.includes(d.selected.id)) disable_terms.push(d.selected.id)
 					}
 				}
-				if (d.limit > 1 && config?.[d.detail] && config[d.detail].length) {
+				if (d.limit > 1 && config[d.detail] && config[d.detail].length) {
 					for (const term of config[d.detail]) {
 						self.newPill(d, config, div, pills, disable_terms, term)
 					}
@@ -149,7 +149,7 @@ function setRenderers(self) {
 			placeholder: d.prompt,
 			holder: pillDiv,
 			vocabApi: self.app.vocabApi,
-			vocab: self.state?.vocab,
+			vocab: self.state.vocab,
 			activeCohort: self.state.activeCohort,
 			use_bins_less: true,
 			debug: self.opts.debug,
@@ -242,7 +242,7 @@ function setRenderers(self) {
 
 		const termInfoDiv = newTermDiv
 			.append('div')
-			.style('display', d.detail == 'independent' && term?.term ? 'block' : 'none')
+			.style('display', d.detail == 'independent' && term && term.term ? 'block' : 'none')
 			.style('margin', '10px')
 			.style('font-size', '.8em')
 			.style('text-align', 'left')
@@ -255,12 +255,12 @@ function setRenderers(self) {
 			const term_summmary_div = termInfoDiv.append('div')
 			const term_values_div = termInfoDiv.append('div')
 			const values_table = term_values_div.append('table')
-			if (d.detail == 'independent' && term_?.term) {
-				if (term_.term.type == 'float' || term_.term.type == 'integer')
-					term_summmary_div.text(term_.q?.use_as ? term_.q?.use_as : 'continuous')
+			const q = term.q || {}
+			if (d.detail == 'independent' && term_ && term_.term) {
+				if (term_.term.type == 'float' || term_.term.type == 'integer') term_summmary_div.text(q.use_as || 'continuous')
 				else if (term_.term.type == 'categorical' || term_.term.type == 'condition') {
 					let text
-					if (term_.q.groupsetting?.inuse) {
+					if (q.groupsetting && q.groupsetting.inuse) {
 						text = Object.keys(term_.q.groupsetting.customset.groups).length + ' groups'
 						make_values_table({ term: term_, values: term_.q.groupsetting.customset.groups, values_table, key: 'name' })
 					} else {

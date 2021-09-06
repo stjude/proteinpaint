@@ -96,7 +96,7 @@ got the actual list of variants at r.variants[], render them
 	if (tk.vcf.numerical_axis && tk.vcf.numerical_axis.in_use) {
 		// numerical axis by info field
 		// FIXME .default{} is now needed to access exported function. need to know reason and any other affected code
-		height = numericaxis.default.render(data, r, g, tk, block)
+		height = numericaxis.render(data, r, g, tk, block)
 	} else {
 		// not numerical axis
 		height = plain.render(data, r, g, tk, block)
