@@ -255,7 +255,7 @@ function setRenderers(self) {
 			const term_summmary_div = termInfoDiv.append('div')
 			const term_values_div = termInfoDiv.append('div')
 			const values_table = term_values_div.append('table')
-			const q = term.q || {}
+			const q = (term_ && term_.q) || {}
 			if (d.detail == 'independent' && term_ && term_.term) {
 				if (term_.term.type == 'float' || term_.term.type == 'integer') term_summmary_div.text(q.use_as || 'continuous')
 				else if (term_.term.type == 'categorical' || term_.term.type == 'condition') {
