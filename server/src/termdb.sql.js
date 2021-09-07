@@ -1226,6 +1226,10 @@ thus less things to worry about...
 		}
 	}
 
+	/* returns list of chart types based on term types from each subcohort combination
+	FIXME for a termdb without subcohort, r.cohort will be undefined
+	returned object will have "undefined" as key. make sure an object like {undefined:"xx"} can work in client side
+	*/
 	q.getSupportedChartTypes = () => {
 		const rows = cn
 			.prepare(
@@ -1240,11 +1244,15 @@ thus less things to worry about...
 			GROUP BY cohort, type`
 			)
 			.all()
+
 		const supportedChartTypes = {}
 		const numericTypeCount = {}
+		// key: subcohort combinations, comma-joined, as in the subcohort_terms table
+		// value: array of chart types allowed by term types
 
 		for (const r of rows) {
 			if (!r.type) continue
+			// !!! r.cohort is undefined for dataset without subcohort
 			if (!(r.cohort in supportedChartTypes)) {
 				supportedChartTypes[r.cohort] = ['barchart', 'table', 'regression']
 				numericTypeCount[r.cohort] = 0
@@ -1255,7 +1263,6 @@ thus less things to worry about...
 				supportedChartTypes[r.cohort].push('cuminc')
 			if (r.type == 'float' || r.type == 'integer') numericTypeCount[r.cohort] += r.samplecount
 		}
-		console.log(1253, numericTypeCount)
 		for (const cohort in numericTypeCount) {
 			if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].push('boxplot')
 			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].push('scatterplot')

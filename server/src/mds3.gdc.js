@@ -931,67 +931,85 @@ export async function init_dictionary(ds) {
 function init_termdb_queries(termdb, ds) {
 	const q = (termdb.q = {})
 
-	{
-		q.getRootTerms = async (vocab, treeFilter = null) => {
-			// find terms without term.parent_id
-			const terms = []
-			termdb.id2term.forEach((v, k) => {
-				if (v.parent_id == undefined) terms.push(v)
-			})
-			const re = JSON.parse(JSON.stringify(terms))
-			if (treeFilter) await add_terms_samplecount(re, treeFilter)
-			return re
-		}
+	q.getRootTerms = async (vocab, treeFilter = null) => {
+		// find terms without term.parent_id
+		const terms = []
+		termdb.id2term.forEach((v, k) => {
+			if (v.parent_id == undefined) terms.push(v)
+		})
+		const re = JSON.parse(JSON.stringify(terms))
+		if (treeFilter) await add_terms_samplecount(re, treeFilter)
+		return re
 	}
 
-	{
-		q.getTermChildren = async (id, vocab, treeFilter = null) => {
-			// find terms which have term.parent_id as clicked term
-			const terms = []
-			termdb.id2term.forEach((v, k) => {
-				if (v.parent_id == id) terms.push(v)
-			})
-			const re = JSON.parse(JSON.stringify(terms))
-			if (treeFilter) await add_terms_samplecount(re, treeFilter)
-			return re
-		}
+	q.getTermChildren = async (id, vocab, treeFilter = null) => {
+		// find terms which have term.parent_id as clicked term
+		const terms = []
+		termdb.id2term.forEach((v, k) => {
+			if (v.parent_id == id) terms.push(v)
+		})
+		const re = JSON.parse(JSON.stringify(terms))
+		if (treeFilter) await add_terms_samplecount(re, treeFilter)
+		return re
 	}
 
-	{
-		q.findTermByName = async (searchStr, limit = null, vocab, exclude_types = [], treeFilter = null) => {
-			searchStr = searchStr.toLowerCase() // convert to lowercase
-			// replace space with _ to match with id of terms
-			if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
-			// find terms that have term.id containing search string
-			const terms = []
-			termdb.id2term.forEach((v, k) => {
-				if (v.id.includes(searchStr)) terms.push(v)
-			})
-			const re = JSON.parse(JSON.stringify(terms))
-			// find terms that have term.id containing search string
-			if (treeFilter) await add_terms_samplecount(re, treeFilter)
-			return re
-		}
+	q.findTermByName = async (searchStr, limit = null, vocab, exclude_types = [], treeFilter = null) => {
+		searchStr = searchStr.toLowerCase() // convert to lowercase
+		// replace space with _ to match with id of terms
+		if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
+		// find terms that have term.id containing search string
+		const terms = []
+		termdb.id2term.forEach((v, k) => {
+			if (v.id.includes(searchStr)) terms.push(v)
+		})
+		const re = JSON.parse(JSON.stringify(terms))
+		// find terms that have term.id containing search string
+		if (treeFilter) await add_terms_samplecount(re, treeFilter)
+		return re
 	}
 
-	{
-		q.getAncestorIDs = id => {
-			let search_term
-			termdb.id2term.forEach((v, k) => {
-				if (v.id == id) search_term = v
-			})
-			// ancestor terms are already defined in term.path seperated by '.'
-			let re = search_term.path ? search_term.path.split('.') : ['']
-			if (re.length > 1) re.pop()
-			return re
-		}
+	q.getAncestorIDs = id => {
+		let search_term
+		termdb.id2term.forEach((v, k) => {
+			if (v.id == id) search_term = v
+		})
+		// ancestor terms are already defined in term.path seperated by '.'
+		let re = search_term.path ? search_term.path.split('.') : ['']
+		if (re.length > 1) re.pop()
+		return re
 	}
 
-	{
-		q.getTermById = id => {
-			const terms = [...termdb.id2term.values()]
-			return terms.find(i => i.id == id)
+	q.getTermById = id => {
+		const terms = [...termdb.id2term.values()]
+		return terms.find(i => i.id == id)
+	}
+
+	q.getSupportedChartTypes = () => {
+		// this function is required for server-provided termdbConfig
+		const supportedChartTypes = {}
+		const numericTypeCount = {}
+		// key: subcohort combinations, comma-joined, as in the subcohort_terms table
+		// value: array of chart types allowed by term types
+
+		for (const r of termdb.id2term.values()) {
+			if (!r.type) continue
+			// !!! r.cohort is undefined here as gdc data dictionary has no subcohort
+			if (!(r.cohort in supportedChartTypes)) {
+				supportedChartTypes[r.cohort] = ['barchart', 'table', 'regression']
+				numericTypeCount[r.cohort] = 0
+			}
+			if (r.type == 'survival' && !supportedChartTypes[r.cohort].includes('survival'))
+				supportedChartTypes[r.cohort].push('survival')
+			if (r.type == 'condition' && !supportedChartTypes[r.cohort].includes('cuminc'))
+				supportedChartTypes[r.cohort].push('cuminc')
+			if (r.type == 'float' || r.type == 'integer') numericTypeCount[r.cohort] += r.samplecount
 		}
+		for (const cohort in numericTypeCount) {
+			if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].push('boxplot')
+			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].push('scatterplot')
+		}
+
+		return supportedChartTypes
 	}
 
 	async function add_terms_samplecount(terms, treeFilter) {
