@@ -11,9 +11,11 @@ copyMerge()
 fromJson()
 toJson()
 deepFreeze()
-matchAction()
 deepEqual()
 *********** Internal ***********
+
+Instances, APIs, and callback arguments are documented at:
+https://docs.google.com/document/d/1G3LqbtsCEkGw4ABA_VognhjVnUHnsVYAGdXyhYG374M/edit#
 
 */
 
@@ -22,10 +24,10 @@ deepEqual()
 *************/
 
 export function getInitFxn(_Class_) {
-	/*
+	/* return the initiator function to wrap around the _Class_ and return the API
+
 		arg: 
 		- opts{} for an App constructor
-		- App instance for all other classes
 		- predefined attributes:
 			.debug: if true, will expose app instance as api.Inner
 			.debugName: provide string as key to attach api to window
@@ -147,7 +149,7 @@ export function getAppApi(self) {
 			???
 			to-do:
  			track dispatched actions and
- 			if there is a pending action,
+ 			if there is a pending action (e.g. waiting on server response)
  			debounce dispatch requests
 			until the pending action is done?
 	 	  ???
@@ -241,7 +243,6 @@ export function getAppApi(self) {
 	// pattern to hide the mutable parts, not checked here
 	if (self.tip) api.tip = self.tip
 	if (self.opts.debugName) window[self.opts.debugName] = api
-	// what is this?
 	if (self.appInit) api.appInit = self.appInit
 	return api
 }
@@ -399,7 +400,6 @@ export class Bus {
 		setTimeout(() => {
 			for (const type in this.events) {
 				if (type == eventType || type.startsWith(eventType + '.')) {
-					// TODO should it await here?
 					this.events[type](arg || this.defaultArg)
 					if (eventType == 'postInit') delete this.events[type]
 				}
@@ -443,7 +443,9 @@ export class Bus {
 export async function notifyComponents(components, current, data = null) {
 	if (!components) return // allow component-less app
 	const called = []
+
 	for (const name in components) {
+		// when components is array, name will be index
 		const component = components[name]
 		if (Array.isArray(component)) {
 			for (const c of component) called.push(c.update(current, data))
@@ -474,10 +476,7 @@ export function getComponents(components, dotSepNames) {
 	let component = components
 	while (names.length) {
 		let name = names.shift()
-
-		// FIXME here it allow components to be array instead of objects, while notifyComponents requires it to be object
 		if (Array.isArray(component)) name = Number(name)
-
 		component = !names.length
 			? component[name]
 			: component[name] && component[name].components
@@ -567,28 +566,6 @@ export function deepFreeze(obj) {
 
 // Match Helpers
 // -----------
-
-export function matchAction(action, against, sub) {
-	//console.log(action, against)
-	// if string matches are specified, start with
-	// matched == false, otherwise start as true
-	let matched = !(against.prefix || against.type)
-	if (against.prefix) {
-		for (const p of against.prefix) {
-			matched = action.type.startsWith(p)
-			if (matched) break
-		}
-	}
-	if (against.type) {
-		// okay to match prefix, type, or both
-		matched = matched || against.type.includes(action.type)
-	}
-	if (against.fxn) {
-		// fine-tuned action matching with a function
-		matched = matched && against.fxn.call(self, action, sub)
-	}
-	return matched
-}
 
 export function deepEqual(x, y) {
 	if (x === y) {
