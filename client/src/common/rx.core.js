@@ -1,12 +1,43 @@
+/*
+*********** Exported ***********
+getInitFxn()
+getStoreApi()
+getAppApi()
+getComponentApi()
+Bus (class)
+notifyComponents()
+getComponents()
+copyMerge()
+fromJson()
+toJson()
+deepFreeze()
+deepEqual()
+*********** Internal ***********
+
+Instances, APIs, and callback arguments are documented at:
+https://docs.google.com/document/d/1G3LqbtsCEkGw4ABA_VognhjVnUHnsVYAGdXyhYG374M/edit#
+
+*/
+
 /************
  Init Factory
 *************/
 
 export function getInitFxn(_Class_) {
-	/*
+	/* return the initiator function to wrap around the _Class_ and return the API
+
 		arg: 
-		= opts{} for an App constructor
-		= App instance for all other classes
+		- opts{} for an App constructor
+		- predefined attributes:
+			.debug: if true, will expose app instance as api.Inner
+			.debugName: provide string as key to attach api to window
+			TODO any others?
+
+		instanceOpts{}
+		- TODO
+
+		overrides{}
+		- TODO
 
 		returns a function that 
 		- creates a _Class_ instance
@@ -16,7 +47,31 @@ export function getInitFxn(_Class_) {
 	return (arg, instanceOpts = {}, overrides) => {
 		if (overrides) copyMerge(instanceOpts, overrides)
 
-		// instantiate mutable private properties and methods
+		/* instantiate mutable private properties and methods
+
+		rx uses following predefined attributes from an app instance
+		.type
+			required
+			TODO explain
+		.components{}
+			required
+		.eventTypes[]
+			optional
+
+		.printError()
+			optional
+			triggered by exception upon dispatching action
+		.tip
+			optional
+			Menu instance
+		.dom{}
+			optional
+			.holder, d3-wrapped dom
+		.appInit
+			optional
+			TODO explain
+
+		*/
 		const self = new _Class_(arg, instanceOpts)
 
 		// get the instance's api that hides its
@@ -42,8 +97,8 @@ export function getInitFxn(_Class_) {
 			// set up an optional event bus
 			const callbacks = self.type in instanceOpts ? instanceOpts[self.type].callbacks : instanceOpts.callbacks
 			self.bus = new Bus(self.api, self.eventTypes, callbacks)
+			self.bus.emit('postInit')
 		}
-		if (self.bus) self.bus.emit('postInit')
 		return api
 	}
 }
@@ -94,7 +149,7 @@ export function getAppApi(self) {
 			???
 			to-do:
  			track dispatched actions and
- 			if there is a pending action,
+ 			if there is a pending action (e.g. waiting on server response)
  			debounce dispatch requests
 			until the pending action is done?
 	 	  ???
@@ -173,9 +228,11 @@ export function getAppApi(self) {
 				delete self.components[key]
 			}
 			if (typeof self.destroy == 'function') self.destroy()
-			self.dom.holder.selectAll('*').remove()
-			for (const key in self.dom) {
-				delete self.dom[key]
+			if (self.dom) {
+				if (self.dom.holder) self.dom.holder.selectAll('*').remove()
+				for (const key in self.dom) {
+					delete self.dom[key]
+				}
 			}
 			delete self.store
 		}
@@ -273,11 +330,13 @@ export class Bus {
 			
 			eventTypes[] 
 			- the events that this component wants to emit
-			- ['postInit', 'postRender', 'postClick']
+			- e.g. ['postInit', 'postRender', 'postClick']
+			- must not be namespaced
+			- later, api.on() can use namespaced eventTypes
 
-			callbacks{} any event listeners to set-up for this component 
-			.postInit: ()=>{}
-			.postRender() {}, etc.
+			callbacks{}
+			- any event listeners to set-up for this component 
+			- key: eventType, value: callback
 
 		*/
 		this.name = api.type + (api.id === undefined || api.id === null ? '' : '#' + api.id)
@@ -293,6 +352,8 @@ export class Bus {
 
 	on(eventType, callback, opts = {}) {
 		/*
+		assign or delete a callback for an event
+
 		eventType
 		- must match one of the eventTypes supplied to the Bus constructor
 		- maybe be namespaced or not, example: "postRender.test" or "postRender"
@@ -301,12 +362,12 @@ export class Bus {
 		  as a DOM event listener namespacing and replacement
 
 		callback
-		- function
+		- function. if missing will delete the eventType from bus
 
 		opts{}
 		- optional callback configuration, such as
 		.wait // to delay callback  
-	*/
+		*/
 		const [type, name] = eventType.split('.')
 		if (!this.eventTypes.includes(type)) {
 			throw `Unknown bus event '${type}' for component ${this.name}`
@@ -382,7 +443,9 @@ export class Bus {
 export async function notifyComponents(components, current, data = null) {
 	if (!components) return // allow component-less app
 	const called = []
+
 	for (const name in components) {
+		// when components is array, name will be index
 		const component = components[name]
 		if (Array.isArray(component)) {
 			for (const c of component) called.push(c.update(current, data))
@@ -503,28 +566,6 @@ export function deepFreeze(obj) {
 
 // Match Helpers
 // -----------
-
-export function matchAction(action, against, sub) {
-	//console.log(action, against)
-	// if string matches are specified, start with
-	// matched == false, otherwise start as true
-	let matched = !(against.prefix || against.type)
-	if (against.prefix) {
-		for (const p of against.prefix) {
-			matched = action.type.startsWith(p)
-			if (matched) break
-		}
-	}
-	if (against.type) {
-		// okay to match prefix, type, or both
-		matched = matched || against.type.includes(action.type)
-	}
-	if (against.fxn) {
-		// fine-tuned action matching with a function
-		matched = matched && against.fxn.call(self, action, sub)
-	}
-	return matched
-}
 
 export function deepEqual(x, y) {
 	if (x === y) {
