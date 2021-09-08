@@ -39,7 +39,7 @@ class TdbControlsTopBar {
 
 	getState(appState) {
 		return {
-			config: appState.tree.plots[this.id]
+			config: appState.plots.find(p => p.id === this.id)
 		}
 	}
 

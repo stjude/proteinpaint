@@ -15,10 +15,10 @@ class TdbTermInfo {
 	}
 
 	getState(appState) {
-		if (!(this.id in appState.tree.plots)) {
-			throw `No plot with id='${sub.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
+			throw `No plot with id='${this.id}' found.`
 		}
-		const config = appState.tree.plots[this.id]
 		return {
 			isVisible: config.settings.termInfo.isVisible,
 			term: config.term

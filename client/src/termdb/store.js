@@ -94,7 +94,7 @@ class TdbStore {
 		for (const savedPlot of this.state.plots) {
 			// .term{} is required, if missing, add with plotId
 			if (!savedPlot.term) savedPlot.term = {}
-			if (!savedPlot.term.id) savedPlot.term.id = plotId
+			if (!savedPlot.term.id) savedPlot.term.id = savedPlot.id
 			// .term2 and term0 are optional, but .id is required as that's a different term than plotId
 			if (savedPlot.term2 && !savedPlot.term2.id) delete savedPlot.term2
 			if (savedPlot.term0 && !savedPlot.term0.id) delete savedPlot.term0
@@ -178,7 +178,6 @@ class TdbStore {
 	}
 
 	adjustPlotCurrViews(plotConfig) {
-		console.log(180, plotConfig)
 		if (!plotConfig) return
 		const currViews = plotConfig.settings.currViews
 		if (plotConfig.chartType == 'regression') {

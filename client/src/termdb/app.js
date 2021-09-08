@@ -95,7 +95,7 @@ export const appInit = rx.getInitFxn(TdbApp)
 
 function setInteractivity(self) {
 	self.downloadView = id => {
-		const components = app.getComponents('tree.plots.' + opts.id)
+		const components = app.getComponents('plots.' + opts.id)
 		for (const name in self.components) {
 			// the download function in each component will be called,
 			// but should first check inside that function

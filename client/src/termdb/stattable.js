@@ -14,10 +14,10 @@ class TdbStatTable {
 	}
 
 	getState(appState) {
-		if (!(this.id in appState.tree.plots)) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-		const config = appState.tree.plots[this.id]
 		return {
 			isVisible:
 				config.settings.currViews.includes('barchart') &&

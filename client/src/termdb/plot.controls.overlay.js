@@ -58,10 +58,14 @@ class Overlay {
 		})
 	}
 	getState(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
+			throw `No plot with id='${this.id}' found.`
+		}
 		const state = {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
-			config: appState.tree.plots[this.id],
+			config,
 			ssid: appState.ssid,
 			exclude_types: [...appState.tree.exclude_types]
 		}
