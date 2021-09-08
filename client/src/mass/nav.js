@@ -83,7 +83,7 @@ class TdbNav {
 			termdbConfig: appState.termdbConfig,
 			filter: appState.termfilter.filter,
 			expandedTermIds: appState.tree.expandedTermIds,
-			plots: appState.tree.plots
+			plots: appState.plots
 		}
 	}
 	reactsTo(action) {
@@ -252,7 +252,7 @@ function setRenderers(self) {
 				if (d.key == 'top') return this.innerHTML
 				// the column index number for the cohort tab
 				if (d.colNum === 0) {
-					const n = Object.keys(self.state.plots).length
+					const n = self.state.plots.length
 					if (d.key == 'mid') return !n ? 'NONE' : n
 					else return ''
 				} else if (d.colNum === 1) {

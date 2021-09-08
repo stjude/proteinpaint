@@ -76,9 +76,22 @@ class TdbStore {
 	async rehydrate() {
 		this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
 
-		// maybe no need to provide term filter at this query
-		for (const plotId in this.state.tree.plots) {
-			const savedPlot = this.state.tree.plots[plotId]
+		// support any legacy examples and tests that use the deprecated state.tree.plots object,
+		// by converting to a state.plots array
+		if (this.state.tree.plots) {
+			for (const plotId in this.state.tree.plots) {
+				const plot = this.state.tree.plots[plotId]
+				const plotCopy = this.state.plots.find(p => p.id === plotId)
+				if (plotCopy && plotCopy != plot) {
+					throw `Plot ID conflict in deprecated state.tree.plots`
+				}
+				plot.id = plotId
+				this.state.plots.push(plot)
+			}
+			delete this.state.tree.plots
+		}
+
+		for (const savedPlot of this.state.plots) {
 			// .term{} is required, if missing, add with plotId
 			if (!savedPlot.term) savedPlot.term = {}
 			if (!savedPlot.term.id) savedPlot.term.id = plotId
@@ -91,23 +104,22 @@ class TdbStore {
 			}
 			if (!savedPlot.settings) savedPlot.settings = {}
 			if (!savedPlot.settings.currViews) savedPlot.settings.currViews = [savedPlot.chartType]
-			this.state.tree.plots[plotId] = plotConfig(savedPlot, await this.api.copyState())
-			const plot = this.state.tree.plots[plotId]
+			const plot = plotConfig(savedPlot, await this.api.copyState())
+			const i = this.state.plots.indexOf(savedPlot)
+			this.state.plots[i] = plot
+			if (!('id' in plot)) plot.id = '_AUTOID_' + i
 			if (plot.independent) {
 				plot.independent = await Promise.all(
-					savedPlot.independent.map(async term => {
+					plot.independent.map(async term => {
 						if (!term.term) term.term = await this.app.vocabApi.getterm(term.id)
 						return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
 					})
 				)
 			}
-			if (!plot.termSequence) {
-				plot.termSequence = getTermSelectionSequence(plot.chartType)
-			}
-			this.state.tree.visiblePlotIds.push(plotId)
-			this.adjustPlotCurrViews(this.state.tree.plots[plotId])
+			this.adjustPlotCurrViews(plot)
 		}
 
+		// maybe no need to provide term filter at this query
 		let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
 		if (!filterUiRoot) {
 			this.state.termfilter.filter.tag = 'filterUiRoot'
@@ -179,6 +191,9 @@ class TdbStore {
 	adjustPlotCurrViews(plotConfig) {
 		if (!plotConfig) return
 		const currViews = plotConfig.settings.currViews
+		if (plotConfig.chartType == 'regression') {
+			plotConfig.settings.currViews = ['regression']
+		}
 		if (currViews.includes('table') && !plotConfig.term2) {
 			plotConfig.settings.currViews = ['barchart']
 		}
@@ -206,8 +221,8 @@ TdbStore.prototype.actions = {
 		// initial render is not meant to be modified yet
 		//
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
-		for (const plotId in this.state.tree.plots) {
-			this.adjustPlotCurrViews(this.state.tree.plots[plotId])
+		for (const plot of this.state.plots) {
+			this.adjustPlotCurrViews(plot)
 		}
 	},
 	tab_set(action) {
@@ -234,7 +249,7 @@ TdbStore.prototype.actions = {
 	},
 
 	async plot_show(action) {
-		this.state.tree.plots[action.id] = plotConfig(
+		const plot = plotConfig(
 			{
 				id: action.id,
 				term: action.config.term.term ? action.config.term : { term: action.config.term },
@@ -244,26 +259,28 @@ TdbStore.prototype.actions = {
 			await this.api.copyState()
 		)
 		if (action.config.independent) {
-			this.state.tree.plots[action.id].independent = action.config.independent.map(term => {
+			plot.independent = action.config.independent.map(term => {
 				return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
 			})
 		}
+		console.log(251, action.config)
 		if (!action.config.termSequence) {
 			action.config.termSequence = getTermSelectionSequence(action.config.chartType)
 		}
 		if ('cutoff' in action.config) {
-			this.state.tree.plots[action.id].cutoff = action.config.cutoff
+			plot.cutoff = action.config.cutoff
 		} else {
-			delete this.state.tree.plots[action.id].cutoff
+			delete plot.cutoff
 		}
 		if (action.config.regressionType) {
-			this.state.tree.plots[action.id].regressionType = action.config.regressionType
+			plot.regressionType = action.config.regressionType
 		}
+		this.state.plots.push(plot)
 		this.state.tree.visiblePlotIds.push(action.id)
 	},
 
 	async plot_prep(action) {
-		this.state.tree.plots[action.id] = Object.assign({}, action)
+		this.state.plots.push(Object.assign({}, action))
 	},
 
 	plot_hide(action) {
@@ -275,7 +292,7 @@ TdbStore.prototype.actions = {
 
 	plot_edit(action) {
 		// console.log(273, action.config.cutoff)
-		const plot = this.state.tree.plots[action.id]
+		const plot = this.state.plots.find(p => p.id === action.id)
 		if (plot) {
 			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
 			validatePlot(plot, this.app.vocabApi)
@@ -289,7 +306,8 @@ TdbStore.prototype.actions = {
 	},
 
 	plot_delete(action) {
-		delete this.state.tree.plots[action.id]
+		const i = this.state.plots.findIndex(p => p.id === action.id)
+		if (i !== -1) this.state.plots.splice(i, 1)
 	},
 
 	filter_replace(action) {
