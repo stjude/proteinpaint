@@ -1,3 +1,22 @@
+/*
+*********** Exported ***********
+getInitFxn()
+getStoreApi()
+getAppApi()
+getComponentApi()
+Bus (class)
+notifyComponents()
+getComponents()
+copyMerge()
+fromJson()
+toJson()
+deepFreeze()
+matchAction()
+deepEqual()
+*********** Internal ***********
+
+*/
+
 /************
  Init Factory
 *************/
@@ -5,8 +24,18 @@
 export function getInitFxn(_Class_) {
 	/*
 		arg: 
-		= opts{} for an App constructor
-		= App instance for all other classes
+		- opts{} for an App constructor
+		- App instance for all other classes
+		- predefined attributes:
+			.debug: if true, will expose app instance as api.Inner
+			.debugName: provide string as key to attach api to window
+			TODO any others?
+
+		instanceOpts{}
+		- TODO
+
+		overrides{}
+		- TODO
 
 		returns a function that 
 		- creates a _Class_ instance
@@ -16,7 +45,31 @@ export function getInitFxn(_Class_) {
 	return (arg, instanceOpts = {}, overrides) => {
 		if (overrides) copyMerge(instanceOpts, overrides)
 
-		// instantiate mutable private properties and methods
+		/* instantiate mutable private properties and methods
+
+		rx uses following predefined attributes from an app instance
+		.type
+			required
+			TODO explain
+		.components{}
+			required
+		.eventTypes[]
+			optional
+
+		.printError()
+			optional
+			triggered by exception upon dispatching action
+		.tip
+			optional
+			Menu instance
+		.dom{}
+			optional
+			.holder, d3-wrapped dom
+		.appInit
+			optional
+			TODO explain
+
+		*/
 		const self = new _Class_(arg, instanceOpts)
 
 		// get the instance's api that hides its
@@ -42,8 +95,8 @@ export function getInitFxn(_Class_) {
 			// set up an optional event bus
 			const callbacks = self.type in instanceOpts ? instanceOpts[self.type].callbacks : instanceOpts.callbacks
 			self.bus = new Bus(self.api, self.eventTypes, callbacks)
+			self.bus.emit('postInit')
 		}
-		if (self.bus) self.bus.emit('postInit')
 		return api
 	}
 }
@@ -173,9 +226,11 @@ export function getAppApi(self) {
 				delete self.components[key]
 			}
 			if (typeof self.destroy == 'function') self.destroy()
-			self.dom.holder.selectAll('*').remove()
-			for (const key in self.dom) {
-				delete self.dom[key]
+			if (self.dom) {
+				if (self.dom.holder) self.dom.holder.selectAll('*').remove()
+				for (const key in self.dom) {
+					delete self.dom[key]
+				}
 			}
 			delete self.store
 		}
@@ -186,6 +241,7 @@ export function getAppApi(self) {
 	// pattern to hide the mutable parts, not checked here
 	if (self.tip) api.tip = self.tip
 	if (self.opts.debugName) window[self.opts.debugName] = api
+	// what is this?
 	if (self.appInit) api.appInit = self.appInit
 	return api
 }
@@ -273,11 +329,13 @@ export class Bus {
 			
 			eventTypes[] 
 			- the events that this component wants to emit
-			- ['postInit', 'postRender', 'postClick']
+			- e.g. ['postInit', 'postRender', 'postClick']
+			- must not be namespaced
+			- later, api.on() can use namespaced eventTypes
 
-			callbacks{} any event listeners to set-up for this component 
-			.postInit: ()=>{}
-			.postRender() {}, etc.
+			callbacks{}
+			- any event listeners to set-up for this component 
+			- key: eventType, value: callback
 
 		*/
 		this.name = api.type + (api.id === undefined || api.id === null ? '' : '#' + api.id)
@@ -293,6 +351,8 @@ export class Bus {
 
 	on(eventType, callback, opts = {}) {
 		/*
+		assign or delete a callback for an event
+
 		eventType
 		- must match one of the eventTypes supplied to the Bus constructor
 		- maybe be namespaced or not, example: "postRender.test" or "postRender"
@@ -301,12 +361,12 @@ export class Bus {
 		  as a DOM event listener namespacing and replacement
 
 		callback
-		- function
+		- function. if missing will delete the eventType from bus
 
 		opts{}
 		- optional callback configuration, such as
 		.wait // to delay callback  
-	*/
+		*/
 		const [type, name] = eventType.split('.')
 		if (!this.eventTypes.includes(type)) {
 			throw `Unknown bus event '${type}' for component ${this.name}`
@@ -339,6 +399,7 @@ export class Bus {
 		setTimeout(() => {
 			for (const type in this.events) {
 				if (type == eventType || type.startsWith(eventType + '.')) {
+					// TODO should it await here?
 					this.events[type](arg || this.defaultArg)
 					if (eventType == 'postInit') delete this.events[type]
 				}
@@ -413,7 +474,10 @@ export function getComponents(components, dotSepNames) {
 	let component = components
 	while (names.length) {
 		let name = names.shift()
+
+		// FIXME here it allow components to be array instead of objects, while notifyComponents requires it to be object
 		if (Array.isArray(component)) name = Number(name)
+
 		component = !names.length
 			? component[name]
 			: component[name] && component[name].components
