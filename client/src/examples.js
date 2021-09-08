@@ -271,13 +271,17 @@ async function openSandbox(track, holder) {
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header_row.style('box-shadow', 'rgb(220 220 220) 5px -2px 5px').style('z-index', '99')
 	sandbox_div.header.text(track.name).style('padding', '5px 10px 10px 10px')
-	sandbox_div.body.style('box-shadow', 'rgb(220 220 220) 5px -2px 10px').style('z-index', '-1')
+	sandbox_div.body
+		.style('box-shadow', 'rgb(220 220 220) 5px -2px 10px')
+		.style('z-index', '-1')
+		.style('overflow', 'hidden')
 
 	// creates div for instructions or other messaging about the track
 	addMessage(track.sandbox.intro, sandbox_div.body)
 
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div.body)
+	addButtons(track.sandbox.buttons, sandbox_div.body)
 
 	const toptab_div = sandbox_div.body
 		.append('div')
@@ -286,6 +290,7 @@ async function openSandbox(track, holder) {
 		.style('justify-content', 'center')
 		.style('border', 'none')
 		.style('border-bottom', '1px solid lightgray')
+		.style('width', '100%')
 	const maincontent_div = sandbox_div.body.append('div').attr('id', 'content_div')
 
 	// Creates the overarching tab menu and subsequent content
@@ -303,6 +308,12 @@ function renderContent(track, call, div) {
 	makeDataDownload(call.download, buttons_div)
 	showURLLaunch(call.urlparam, buttons_div)
 	addArrowBtns(track, call.arrowButtons, call.runargs, buttons_div, reuse_div)
+
+	const line = div
+		.append('hr')
+		.style('border', '0')
+		.style('border-top', '1px dashed #e3e3e6')
+		.style('width', '100%')
 
 	const runpp_arg = {
 		holder: div
@@ -367,7 +378,6 @@ function makeSandboxTabs(track, tabs) {
 			active: false,
 			callback: async div => {
 				try {
-					addButtons(track.sandbox.buttons, div)
 					makeTabMenu(track, div)
 				} catch (e) {
 					alert('Error: ' + e)
@@ -396,11 +406,11 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 			.style('font', 'Arial')
 			.style('font-size', '20px')
 			.style('padding', '6px')
-			.style('color', '#3e8bab')
+			.style('color', '#1575ad')
 			.style('background-color', 'transparent')
 			.style('border', 'none')
 			.style('border-radius', 'unset')
-			.style('border-bottom', tab.active == true ? '4px solid #3e8bab' : 'none')
+			.style('border-bottom', tab.active == true ? '4px solid #1575ad' : 'none')
 			.style('margin', '10px')
 
 		tab.content = content_div.append('div').style('display', tab.active == true ? 'block' : 'none')
@@ -416,7 +426,7 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 				tab.tab.style('border-bottom', 'none')
 				tab.active = false
 			} else {
-				tab.tab.style('border-bottom', '4px solid #3e8bab')
+				tab.tab.style('border-bottom', '4px solid #1575ad')
 				tab.active = true
 				appear(tab.content)
 				for (let j = 0; j < tabs.length; j++) {
@@ -428,7 +438,7 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 				}
 			}
 			if (tabs.findIndex(t => t.active) == -1) {
-				tabs[0].tab.style('border-bottom', '4px solid #3e8bab')
+				tabs[0].tab.style('border-bottom', '4px solid #1575ad')
 				tabs[0].content.style('display', 'block')
 				tabs[0].active = true
 			}
@@ -444,7 +454,7 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 async function makeTabMenu(track, div) {
 	const tabs = []
 	tabArray(tabs, track)
-	tab2box(div.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px'), tabs)
+	tab2box(div, tabs)
 }
 
 function tabArray(tabs, track) {
@@ -454,7 +464,7 @@ function tabArray(tabs, track) {
 			callback: async div => {
 				const wait = tab_wait(div)
 				try {
-					renderContent(track, call, div)
+					renderContent(track, call, div.style('width', '100%'))
 					wait.remove()
 				} catch (e) {
 					wait.text('Error: ' + (e.message || e))
