@@ -279,48 +279,144 @@ async function openSandbox(track, holder) {
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div.body)
 
-	if (track.ppcalls.length == 1) {
-		const call = track.ppcalls[0]
+	const toptab_div = sandbox_div.body
+		.append('div')
+		.style('display', 'flex')
+		.style('align-content', 'end')
+		.style('justify-content', 'center')
+	const maincontent_div = sandbox_div.body.append('div').attr('id', 'content_div')
 
-		const buttons_div = sandbox_div.body.append('div').attr('id', 'sjpp-buttons-div')
-		const reuse_div = sandbox_div.body.append('div').attr('id', 'sjpp-reusable')
+	sandboxTabMenu(track, toptab_div, maincontent_div)
+}
 
-		makeLine(sandbox_div.body)
+function makeSandboxTabs(track, tabs) {
+	const ui = track.ppcalls.findIndex(t => t.is_ui == true)
+	const notui = track.ppcalls.findIndex(t => t.is_ui == (false || undefined))
+	const ui_present = ui != -1 ? true : false
+	if (track.ppcalls.length == 1 || (track.ppcalls.length == 2 && ui_present == true)) {
+		tabs.push({
+			name: 'Example',
+			default: true,
+			callback: async div => {
+				try {
+					const runpp_arg = {
+						holder: div
+							.append('div')
+							.style('margin', '20px')
+							.node(),
+						sandbox_header: div,
+						host: window.location.origin
+					}
 
-		//Creates any custom buttons
-		addButtons(track.sandbox.buttons, buttons_div)
-		//Download data and show runpp() code at the top
-		makeDataDownload(call.download, buttons_div)
-		//Redirects to URL parameter of track
-		showURLLaunch(call.urlparam, buttons_div)
+					const callpp = JSON.parse(JSON.stringify(track.ppcalls[notui].runargs))
 
-		addArrowBtns(track, track.sandbox.arrowButtons, call.runargs, buttons_div, reuse_div)
+					runproteinpaint(Object.assign(runpp_arg, callpp))
+				} catch (e) {
+					alert('Error: ' + e)
+				}
+			}
+		})
+	}
+	if (track.ppcalls.length > 1 && ui_present == false) {
+		tabs.push({
+			name: 'Examples',
+			default: true,
+			callback: async div => {
+				try {
+					addButtons(track.sandbox.buttons, div)
+					makeTabMenu(track, div)
+				} catch (e) {
+					alert('Error: ' + e)
+				}
+			}
+		})
+	}
+	if (ui_present == true) {
+		tabs.push({
+			name: 'Add Your Data',
+			callback: async div => {
+				try {
+					const runpp_arg = {
+						holder: div
+							.append('div')
+							.style('margin', '20px')
+							.node(),
+						sandbox_header: div,
+						host: window.location.origin
+					}
 
-		// template runpp() arg
-		const runpp_arg = {
-			holder: sandbox_div.body
-				.append('div')
-				.style('margin', '20px')
-				.node(),
-			sandbox_header: sandbox_div.header,
-			host: window.location.origin
-		}
+					const callpp = JSON.parse(JSON.stringify(track.ppcalls[ui].runargs))
 
-		const callpp = JSON.parse(JSON.stringify(call.runargs))
-
-		runproteinpaint(Object.assign(runpp_arg, callpp))
-	} else if (track.ppcalls.length > 1) {
-		addButtons(track.sandbox.buttons, sandbox_div.body)
-		makeTabMenu(track, sandbox_div)
+					runproteinpaint(Object.assign(runpp_arg, callpp))
+				} catch (e) {
+					alert('Error: ' + e)
+				}
+			}
+		})
 	}
 }
 
-function makeLine(div) {
-	const line = div
-		.append('hr')
-		.style('width', '100%')
-		.style('border', '0')
-		.style('border-top', '1px dashed #e3e3e6')
+function sandboxTabMenu(track, tabs_div, content_div) {
+	let tabs = []
+	makeSandboxTabs(track, tabs)
+	console.log(tabs)
+
+	const active_tab = tabs.findIndex(t => t.active) == -1 ? false : true
+
+	for (let i = 0; i < tabs.length; i++) {
+		const tab = tabs[i]
+
+		tab.tab = tabs_div
+			.append('button')
+			.attr('type', 'submit')
+			.text(tab.name)
+			.style('display', 'inline-block')
+			.style('font', 'Arial')
+			.style('font-size', '20px')
+			.style('padding', '6px')
+			.style('color', 'blue')
+			.style('background-color', 'transparent')
+			.style('border', 'none')
+			.style('border-radius', 'unset')
+			.style('border-bottom', '0.5px solid blue')
+			.style('margin', '10px')
+
+		tab.content = content_div.append('div').style('display', (active_tab && i == 0) || tab.active ? 'block' : 'none')
+
+		if ((active_tab && i == 0 && tab.callback) || tab.active) {
+			tab.callback(tab.content)
+			delete tab.callback
+		}
+		const td = tabs.findIndex(t => t.default == true)
+		if (td) {
+			tabs[td].content.style('display', 'block')
+		}
+
+		tab.tab.on('click', () => {
+			if (tab.content.style('display') != 'none') {
+				tab.content.style('display', 'none')
+			} else {
+				appear(tab.content)
+				for (let j = 0; j < tabs.length; j++) {
+					if (i != j) {
+						tabs[j].tab
+						tabs[j].content.style('display', 'none')
+					}
+					// if (i != j && !tabs[j].default == true) {
+					// 	tabs[j].tab
+					// 	tabs[j].content.style('display', 'none')
+					// } else if (i != j && tabs[j].default == true) {
+					// 	tabs[j].tab
+					// 	tabs[j].content.style('display', 'block')
+					// }
+				}
+			}
+			if (tab.callback) {
+				tab.callback(tab.content)
+				delete tab.callback
+			}
+		})
+	}
 }
 
 // ******* Sandbox Message Functions *********
@@ -406,7 +502,7 @@ function makeDataDownload(arg, div) {
 }
 
 async function showCode(track, call, btns) {
-	if (track.sandbox.is_ui != true) {
+	if (track.ppcalls.is_ui != true) {
 		//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
 		const code = highlight(
 			`runproteinpaint({
@@ -529,15 +625,15 @@ function addArrowBtns(track, arg, call, bdiv, rdiv) {
 
 // ******* Tab Menu Functions *********
 
-function makeTabMenu(track, holder) {
+async function makeTabMenu(track, div) {
 	const tabs = []
 	tabArray(tabs, track)
-	tab2box(holder.body.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px'), tabs, '', 'Examples')
+	tab2box(div.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px'), tabs)
 }
 
 function tabArray(tabs, track) {
-	const calls = track.ppcalls
-	calls.forEach(call => {
+	// const calls = track.ppcalls
+	track.ppcalls.forEach(call => {
 		tabs.push({
 			label: call.label,
 			callback: async div => {
@@ -553,18 +649,16 @@ function tabArray(tabs, track) {
 	})
 }
 
-function makeTab(track, arg, div) {
-	addMessage(arg.message, div)
+function makeTab(track, call, div) {
+	addMessage(call.message, div)
 
 	const buttons_div = div.append('div').attr('id', 'sjpp-buttons-div')
 	const reuse_div = div.append('div').attr('id', 'sjpp-reusable')
 
-	addButtons(arg.buttons, buttons_div)
-	makeDataDownload(arg.download, buttons_div)
-	showURLLaunch(arg.urlparam, buttons_div)
-	addArrowBtns(track, arg.arrowButtons, arg.runargs, buttons_div, reuse_div)
-
-	makeLine(div)
+	addButtons(call.buttons, buttons_div)
+	makeDataDownload(call.download, buttons_div)
+	showURLLaunch(call.urlparam, buttons_div)
+	addArrowBtns(track, call.arrowButtons, call.runargs, buttons_div, reuse_div)
 
 	const runpp_arg = {
 		holder: div
@@ -574,7 +668,7 @@ function makeTab(track, arg, div) {
 		host: window.location.origin
 	}
 
-	const call = JSON.parse(JSON.stringify(arg.runargs))
+	const callpp = JSON.parse(JSON.stringify(call.runargs))
 
-	runproteinpaint(Object.assign(runpp_arg, call))
+	runproteinpaint(Object.assign(runpp_arg, callpp))
 }

@@ -58,7 +58,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Launch GenomePaint",
@@ -98,9 +97,7 @@
                 "urls": [],
                 "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.y9jkwpoon8qu"
             },
-            "sandbox":{
-                "is_ui": false
-            },
+            "sandbox":{},
             "searchterms": ["KM plot", "GenomePaint"]
         },
         {
@@ -113,9 +110,7 @@
                 "urls": [],
                 "doc": ""
             },
-            "sandbox":{
-                "is_ui": false
-            },
+            "sandbox":{},
             "searchterms": ["GenomePaint"]
         },
         {
@@ -155,7 +150,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -198,7 +192,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -378,7 +371,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -425,7 +417,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -484,7 +475,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -527,7 +517,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -574,7 +563,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -609,7 +597,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -656,7 +643,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -736,7 +722,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -777,7 +762,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "intro": "<p>To view the facet table:</p><ul><li>Click on the <button>Tracks</button> in the genome browser toolbar</li><li>A button appears under FACET. Click on <button style='border:none;font-size:15px;padding:5px'>77 tracks from My facet table</button></li><li>Launch tracks by clicking on individual cells, samples (row labels), or assays (column labels).</li></ul>",
                 "buttons": [
                     {
@@ -880,9 +864,7 @@
                     }
                 }
             ],
-            "sandbox":{
-                "is_ui": false
-            },
+            "sandbox":{},
             "searchterms": ["variant call", "lollipop", "vcf"]
         },
         {
@@ -925,7 +907,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1037,7 +1018,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1119,7 +1099,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1145,6 +1124,7 @@
             },
             "ppcalls": [
                 {
+                    "is_ui": true,
                     "runargs": {
                         "nobox": 1,
                         "noheader": 1,
@@ -1155,9 +1135,7 @@
                     }
                 }
             ],
-            "sandbox":{
-                "is_ui": true
-            },
+            "sandbox": {},
             "searchterms": []
         },
         {
@@ -1195,9 +1173,7 @@
                     }
                 }
             ],
-            "sandbox":{
-                "is_ui": false
-            },
+            "sandbox":{},
             "searchterms": []
         },
         {
@@ -1211,6 +1187,7 @@
             },
             "ppcalls": [
                 {
+                    "is_ui": true,
                     "runargs": {
                         "nobox": 1,
                         "noheader": 1,
@@ -1219,7 +1196,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": true,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1240,6 +1216,7 @@
             },
             "ppcalls": [
                 {
+                    "is_ui": true,
                     "runargs": {
                         "genome": "hg19",
                         "nobox": 1,
@@ -1249,7 +1226,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": true,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1258,21 +1234,6 @@
                 ]
             },
             "searchterms": ["2dmaf", "clonal evolution", "point mutations"]
-        },
-        {
-            "name": "FIMO motif analysis",
-            "app": "Apps",
-            "hidden": true,
-            "blurb": "predicts motif changes",
-            "image": "",
-            "media": {
-                "urls": [],
-                "doc": ""
-            },
-            "sandbox":{
-                "is_ui": true
-            },
-            "searchterms": []
         },
         {
             "name": "Load mutations from text files",
@@ -1285,6 +1246,7 @@
             },
             "ppcalls": [
                 {
+                    "is_ui": true,
                     "runargs": {
                         "nobox": 1,
                         "noheader": 1,
@@ -1293,7 +1255,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": true,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1314,6 +1275,7 @@
             },
             "ppcalls": [
                 {
+                    "is_ui": true,
                     "runargs": {
                         "genome": "hg19",
                         "noheader": 1,
@@ -1324,18 +1286,36 @@
                                 "link": "https://pecan.stjude.cloud/static/pp-support/example.files/DIPG_H33K27MvsWT_noACVR_adj.txt"
                             }
                         ],
-                        "tracks": [{
-                            "name": "Demo RNA-seq coverage",
-                            "strand1": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_sense.bw" },
-                            "strand2": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_antisense.bw", "normalize": { "dividefactor": -1 } },
-                            "type": "bigwigstranded"
-                        }]
+                        "tracks": [
+                            {
+                                "name": "Demo RNA-seq coverage",
+                                "strand1": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_sense.bw" },
+                                "strand2": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_antisense.bw", "normalize": { "dividefactor": -1 } },
+                                "type": "bigwigstranded"
+                            }
+                        ]
+                        }
+                    }
+                },
+                {
+                    "runargs": {
+                        "genome": "hg19",
+                        "noheader": 1,
+                        "mavolcanoplot": {
+                            "genome": "hg19",
+                            "noheader": 1,
+                            "tracks": [{
+                                "name": "Demo RNA-seq coverage",
+                                "strand1": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_sense.bw" },
+                                "strand2": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_antisense.bw", "normalize": { "dividefactor": -1 } },
+                                "type": "bigwigstranded"
+                            }]
                         }
                     }
                 }
             ],
             "sandbox":{
-                "is_ui": true,
+                
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1356,6 +1336,7 @@
             },
             "ppcalls": [
                 {
+                    "is_ui": true,
                     "runargs": {
                         "nobox": 1,
                         "noheader": 1,
@@ -1364,7 +1345,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": true,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1373,26 +1353,6 @@
                 ]
             },
             "searchterms": ["mutant allele fraction", "snv", "snv4"]
-        },
-        {
-            "name": "Mutation burden & spectrum",
-            "app": "Apps",
-            "hidden": true,
-            "blurb": "",
-            "image": "",
-            "media": {
-                "urls": [],
-                "doc": ""
-            },
-            "ppcalls": [
-                {
-                    "runargs": {}
-                }
-            ],
-            "sandbox":{
-                "is_ui": true
-            },
-            "searchterms": []
         },
         {
             "name": "Study View",
@@ -1404,9 +1364,7 @@
                 "urls": [],
                 "doc": "https://docs.google.com/document/d/121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE/edit?usp=sharing"
             },
-            "sandbox":{
-                "is_ui": true
-            },
+            "sandbox": {},
             "searchterms": ["heatmap", "heat map", "ribbon graph", "disco plot", "pie chart", "gene network"]
         },
         {
@@ -1419,9 +1377,7 @@
                 "urls": "/F/human.temp.hic.html",
                 "doc": ""
             },
-            "sandbox":{
-                "is_ui": true
-            },
+            "sandbox":{},
             "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation", "whole genome"]
         },
         {
@@ -1482,7 +1438,6 @@
                     }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1538,9 +1493,7 @@
                 "urls": [],
                 "doc": ""
             },
-            "sandbox":{
-                "is_ui": true
-            },
+            "sandbox":{},
             "searchterms": ["clinical", "dictionary"]
         }
     ]
