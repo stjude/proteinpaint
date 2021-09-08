@@ -284,56 +284,50 @@ async function openSandbox(track, holder) {
 		.style('display', 'flex')
 		.style('align-content', 'end')
 		.style('justify-content', 'center')
+		.style('border', 'none')
+		.style('border-bottom', '1px solid lightgray')
 	const maincontent_div = sandbox_div.body.append('div').attr('id', 'content_div')
 
+	// Creates the overarching tab menu and subsequent content
 	sandboxTabMenu(track, toptab_div, maincontent_div)
 }
 
+// Single content layout for examples only - buttons not used for uis
+function renderContent(track, call, div) {
+	addMessage(call.message, div)
+
+	const buttons_div = div.append('div')
+	const reuse_div = div.append('div')
+
+	addButtons(call.buttons, buttons_div)
+	makeDataDownload(call.download, buttons_div)
+	showURLLaunch(call.urlparam, buttons_div)
+	addArrowBtns(track, call.arrowButtons, call.runargs, buttons_div, reuse_div)
+
+	const runpp_arg = {
+		holder: div
+			.append('div')
+			.style('margin', '20px')
+			.node(),
+		host: window.location.origin
+	}
+
+	const callpp = JSON.parse(JSON.stringify(call.runargs))
+
+	runproteinpaint(Object.assign(runpp_arg, callpp))
+}
+
+//********* Tab Menu Functions *********
+
+//Creates the larger tab menu above all examples and uis
 function makeSandboxTabs(track, tabs) {
 	const ui = track.ppcalls.findIndex(t => t.is_ui == true)
 	const notui = track.ppcalls.findIndex(t => t.is_ui == (false || undefined))
 	const ui_present = ui != -1 ? true : false
-	if (track.ppcalls.length == 1 || (track.ppcalls.length == 2 && ui_present == true)) {
-		tabs.push({
-			name: 'Example',
-			default: true,
-			callback: async div => {
-				try {
-					const runpp_arg = {
-						holder: div
-							.append('div')
-							.style('margin', '20px')
-							.node(),
-						sandbox_header: div,
-						host: window.location.origin
-					}
-
-					const callpp = JSON.parse(JSON.stringify(track.ppcalls[notui].runargs))
-
-					runproteinpaint(Object.assign(runpp_arg, callpp))
-				} catch (e) {
-					alert('Error: ' + e)
-				}
-			}
-		})
-	}
-	if (track.ppcalls.length > 1 && ui_present == false) {
-		tabs.push({
-			name: 'Examples',
-			default: true,
-			callback: async div => {
-				try {
-					addButtons(track.sandbox.buttons, div)
-					makeTabMenu(track, div)
-				} catch (e) {
-					alert('Error: ' + e)
-				}
-			}
-		})
-	}
 	if (ui_present == true) {
 		tabs.push({
 			name: 'Add Your Data',
+			active: false,
 			callback: async div => {
 				try {
 					const runpp_arg = {
@@ -354,17 +348,45 @@ function makeSandboxTabs(track, tabs) {
 			}
 		})
 	}
+	if ((track.ppcalls.length == 1 && ui_present != true) || (track.ppcalls.length == 2 && ui_present == true)) {
+		tabs.push({
+			name: 'Example',
+			active: false,
+			callback: async div => {
+				try {
+					renderContent(track, track.ppcalls[notui], div)
+				} catch (e) {
+					alert('Error: ' + e)
+				}
+			}
+		})
+	}
+	if (track.ppcalls.length > 1 && ui_present == false) {
+		tabs.push({
+			name: 'Examples',
+			active: false,
+			callback: async div => {
+				try {
+					addButtons(track.sandbox.buttons, div)
+					makeTabMenu(track, div)
+				} catch (e) {
+					alert('Error: ' + e)
+				}
+			}
+		})
+	}
 }
 
 function sandboxTabMenu(track, tabs_div, content_div) {
 	let tabs = []
 	makeSandboxTabs(track, tabs)
-	console.log(tabs)
 
-	const active_tab = tabs.findIndex(t => t.active) == -1 ? false : true
+	const active_tab = tabs.findIndex(t => t.active)
 
 	for (let i = 0; i < tabs.length; i++) {
 		const tab = tabs[i]
+
+		tabs[0].active = true
 
 		tab.tab = tabs_div
 			.append('button')
@@ -374,42 +396,41 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 			.style('font', 'Arial')
 			.style('font-size', '20px')
 			.style('padding', '6px')
-			.style('color', 'blue')
+			.style('color', '#3e8bab')
 			.style('background-color', 'transparent')
 			.style('border', 'none')
 			.style('border-radius', 'unset')
-			.style('border-bottom', '0.5px solid blue')
+			.style('border-bottom', tab.active == true ? '4px solid #3e8bab' : 'none')
 			.style('margin', '10px')
 
-		tab.content = content_div.append('div').style('display', (active_tab && i == 0) || tab.active ? 'block' : 'none')
+		tab.content = content_div.append('div').style('display', tab.active == true ? 'block' : 'none')
 
 		if ((active_tab && i == 0 && tab.callback) || tab.active) {
 			tab.callback(tab.content)
 			delete tab.callback
 		}
-		const td = tabs.findIndex(t => t.default == true)
-		if (td) {
-			tabs[td].content.style('display', 'block')
-		}
 
 		tab.tab.on('click', () => {
 			if (tab.content.style('display') != 'none') {
 				tab.content.style('display', 'none')
+				tab.tab.style('border-bottom', 'none')
+				tab.active = false
 			} else {
+				tab.tab.style('border-bottom', '4px solid #3e8bab')
+				tab.active = true
 				appear(tab.content)
 				for (let j = 0; j < tabs.length; j++) {
 					if (i != j) {
-						tabs[j].tab
+						tabs[j].tab.style('border-bottom', 'none')
 						tabs[j].content.style('display', 'none')
+						tabs[j].active = false
 					}
-					// if (i != j && !tabs[j].default == true) {
-					// 	tabs[j].tab
-					// 	tabs[j].content.style('display', 'none')
-					// } else if (i != j && tabs[j].default == true) {
-					// 	tabs[j].tab
-					// 	tabs[j].content.style('display', 'block')
-					// }
 				}
+			}
+			if (tabs.findIndex(t => t.active) == -1) {
+				tabs[0].tab.style('border-bottom', '4px solid #3e8bab')
+				tabs[0].content.style('display', 'block')
+				tabs[0].active = true
 			}
 			if (tab.callback) {
 				tab.callback(tab.content)
@@ -417,6 +438,30 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 			}
 		})
 	}
+}
+
+//Creates the subtab menu for pursing through examples, on the left-hand side of the sandbox, below the main tabs
+async function makeTabMenu(track, div) {
+	const tabs = []
+	tabArray(tabs, track)
+	tab2box(div.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px'), tabs)
+}
+
+function tabArray(tabs, track) {
+	track.ppcalls.forEach(call => {
+		tabs.push({
+			label: call.label,
+			callback: async div => {
+				const wait = tab_wait(div)
+				try {
+					renderContent(track, call, div)
+					wait.remove()
+				} catch (e) {
+					wait.text('Error: ' + (e.message || e))
+				}
+			}
+		})
+	})
 }
 
 // ******* Sandbox Message Functions *********
@@ -578,7 +623,7 @@ function addArrowBtns(track, arg, call, bdiv, rdiv) {
 	for (let i = 0; i < btns.length; i++) {
 		const btn = btns[i]
 
-		btn.btn = makeButton(bdiv, btn.name + ' ▼').classed('sjpp-active-sandbox-btn', active_btn && i == 0)
+		btn.btn = makeButton(bdiv, btn.name + ' ▼')
 
 		btn.c = rdiv.append('div').style('display', (active_btn && i == 0) || btn.active ? 'block' : 'none')
 
@@ -587,20 +632,16 @@ function addArrowBtns(track, arg, call, bdiv, rdiv) {
 			delete btn.callback
 		}
 
-		if (!active_btn) btn.btn.classed('sjpp-active-sandbox-btn', btn.active)
-
 		btn.btn.on('click', () => {
 			if (btn.c.style('display') != 'none') {
 				btn.btn
 					.text(btn.name + ' ▼')
-					.classed('sjpp-active-sandbox-btn', false)
 					.style('color', 'black')
 					.style('background-color', '#cfe2f3')
 				btn.c.style('display', 'none')
 			} else {
 				btn.btn
 					.text(btn.name + ' ▲')
-					.classed('sjpp-active-sandbox-btn', true)
 					.style('color', 'whitesmoke')
 					.style('background-color', '#487ba8')
 				appear(btn.c)
@@ -608,7 +649,6 @@ function addArrowBtns(track, arg, call, bdiv, rdiv) {
 					if (i != j) {
 						btns[j].btn
 							.text(btns[j].name + ' ▼')
-							.classed('sjpp-active-sandbox-btn', false)
 							.style('color', 'black')
 							.style('background-color', '#cfe2f3')
 						btns[j].c.style('display', 'none')
@@ -621,54 +661,4 @@ function addArrowBtns(track, arg, call, bdiv, rdiv) {
 			}
 		})
 	}
-}
-
-// ******* Tab Menu Functions *********
-
-async function makeTabMenu(track, div) {
-	const tabs = []
-	tabArray(tabs, track)
-	tab2box(div.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px'), tabs)
-}
-
-function tabArray(tabs, track) {
-	// const calls = track.ppcalls
-	track.ppcalls.forEach(call => {
-		tabs.push({
-			label: call.label,
-			callback: async div => {
-				const wait = tab_wait(div)
-				try {
-					makeTab(track, call, div)
-					wait.remove()
-				} catch (e) {
-					wait.text('Error: ' + (e.message || e))
-				}
-			}
-		})
-	})
-}
-
-function makeTab(track, call, div) {
-	addMessage(call.message, div)
-
-	const buttons_div = div.append('div').attr('id', 'sjpp-buttons-div')
-	const reuse_div = div.append('div').attr('id', 'sjpp-reusable')
-
-	addButtons(call.buttons, buttons_div)
-	makeDataDownload(call.download, buttons_div)
-	showURLLaunch(call.urlparam, buttons_div)
-	addArrowBtns(track, call.arrowButtons, call.runargs, buttons_div, reuse_div)
-
-	const runpp_arg = {
-		holder: div
-			.append('div')
-			.style('margin', '20px')
-			.node(),
-		host: window.location.origin
-	}
-
-	const callpp = JSON.parse(JSON.stringify(call.runargs))
-
-	runproteinpaint(Object.assign(runpp_arg, callpp))
 }

@@ -1280,20 +1280,7 @@
                         "genome": "hg19",
                         "noheader": 1,
                         "mavolcanoplot": {
-                        "uionly": true,
-                        "urls": [
-                            {
-                                "link": "https://pecan.stjude.cloud/static/pp-support/example.files/DIPG_H33K27MvsWT_noACVR_adj.txt"
-                            }
-                        ],
-                        "tracks": [
-                            {
-                                "name": "Demo RNA-seq coverage",
-                                "strand1": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_sense.bw" },
-                                "strand2": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_antisense.bw", "normalize": { "dividefactor": -1 } },
-                                "type": "bigwigstranded"
-                            }
-                        ]
+                        "uionly": true
                         }
                     }
                 },
@@ -1304,10 +1291,16 @@
                         "mavolcanoplot": {
                             "genome": "hg19",
                             "noheader": 1,
+                            "url": "https://pecan.stjude.cloud/static/pp-support/example.files/DIPG_H33K27MvsWT_noACVR_adj.txt",
                             "tracks": [{
                                 "name": "Demo RNA-seq coverage",
-                                "strand1": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_sense.bw" },
-                                "strand2": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_antisense.bw", "normalize": { "dividefactor": -1 } },
+                                "strand1": { 
+                                    "file": "proteinpaint_demo/hg19/mavb/mavb_demo_sense.bw" 
+                                },
+                                "strand2": { 
+                                    "file": "proteinpaint_demo/hg19/mavb/mavb_demo_antisense.bw", 
+                                    "normalize": { "dividefactor": -1 } 
+                                },
                                 "type": "bigwigstranded"
                             }]
                         }
