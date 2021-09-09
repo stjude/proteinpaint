@@ -249,12 +249,17 @@ function makeRibbon(e, text, color) {
 async function openSandbox(track, holder) {
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
-	sandbox_div.header_row.style('box-shadow', 'rgb(220 220 220) 5px -2px 5px').style('z-index', '99')
-	sandbox_div.header.text(track.name).style('padding', '5px 10px 10px 10px')
+	sandbox_div.header_row
+		.style('box-shadow', 'rgb(220 220 220) 5px -2px 5px, rgb(220 220 220) 0.25px 1px 3px')
+		.style('z-index', '99')
+	// sandbox_div.header.text(track.name).style('padding', '5px 10px 10px 10px')
+	sandbox_div.header.text(track.name)
+
 	sandbox_div.body
-		.style('box-shadow', 'rgb(220 220 220) 5px -2px 10px')
+		.style('box-shadow', 'rgb(220 220 220) 5px -2px 10px, rgb(220 220 220) 0px 1px 3px')
 		.style('z-index', '-1')
 		.style('overflow', 'hidden')
+		.style('border', 'none')
 
 	// creates div for instructions or other messaging about the track
 	addMessage(track.sandbox.intro, sandbox_div.body)
@@ -277,12 +282,12 @@ async function openSandbox(track, holder) {
 	sandboxTabMenu(track, toptab_div, maincontent_div)
 }
 
-// Single content layout for examples only - buttons not used for uis
+// Single content layout for examples only - buttons not used for UIs
 function renderContent(track, call, div) {
 	addMessage(call.message, div)
 
 	const buttons_div = div.append('div')
-	const reuse_div = div.append('div')
+	const reuse_div = div.append('div').style('margin-top', '5px')
 
 	addButtons(call.buttons, buttons_div)
 	makeDataDownload(call.download, buttons_div)
@@ -358,7 +363,7 @@ function makeSandboxTabs(track, tabs) {
 			active: false,
 			callback: async div => {
 				try {
-					makeLeftSideTabMenu(track, div)
+					makeLeftsideTabMenu(track, div)
 				} catch (e) {
 					alert('Error: ' + e)
 				}
@@ -390,8 +395,8 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 			.style('background-color', 'transparent')
 			.style('border', 'none')
 			.style('border-radius', 'unset')
-			.style('border-bottom', tab.active == true ? '4px solid #1575ad' : 'none')
-			.style('margin', '10px')
+			.style('border-bottom', tab.active == true ? '8px solid #1575ad' : 'none')
+			.style('margin', '0px 10px 0px 10px')
 
 		tab.content = content_div.append('div').style('display', tab.active == true ? 'block' : 'none')
 
@@ -406,7 +411,7 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 				tab.tab.style('border-bottom', 'none')
 				tab.active = false
 			} else {
-				tab.tab.style('border-bottom', '4px solid #1575ad')
+				tab.tab.style('border-bottom', '8px solid #1575ad')
 				tab.active = true
 				appear(tab.content)
 				for (let j = 0; j < tabs.length; j++) {
@@ -418,7 +423,7 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 				}
 			}
 			if (tabs.findIndex(t => t.active) == -1) {
-				tab.tab.style('border-bottom', '4px solid #1575ad')
+				tab.tab.style('border-bottom', '8px solid #1575ad')
 				tab.content.style('display', 'block')
 				tab.active = true
 			}
@@ -431,12 +436,11 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 }
 
 //Creates the subtab menu for pursing through examples, on the left-hand side of the sandbox, below the main tabs
-async function makeLeftSideTabMenu(track, div) {
-	const tabs = []
+async function makeLeftsideTabMenu(track, div) {
+	let tabs = []
 	tabArray(tabs, track)
-	// tab2box(div, tabs)
 
-	const menu_wrapper = div.append('div').classed('sjpp-vertical-tab-manu', true)
+	const menu_wrapper = div.append('div').classed('sjpp-vertical-tab-menu', true)
 	const tabs_div = menu_wrapper.append('div').classed('sjpp-tabs-div', true)
 	const content_div = menu_wrapper.append('div').classed('sjpp-content-div', true)
 
@@ -451,16 +455,17 @@ async function makeLeftSideTabMenu(track, div) {
 			.append('button')
 			.attr('type', 'submit')
 			.text(tab.label)
-			.style('display', 'inline-block')
 			.style('font', 'Arial')
 			.style('font-size', '16px')
 			.style('padding', '6px')
-			.style('color', '#757373')
+			.style('color', tab.active == true ? '#1575ad' : '#757373') //#1575ad: blue color, same as the top tab; #757373: default darker gray color
 			.style('background-color', 'transparent')
 			.style('border', 'none')
+			.style('border-right', tab.active == true ? '8px solid #1575ad' : 'none')
 			.style('border-radius', 'unset')
-			// .style('border-bottom', tab.active == true ? '4px solid #1575ad' : 'none')
-			.style('margin', '10px')
+			.style('width', '100%')
+			.style('text-align', 'right')
+			.style('margin', '10px 0px 10px 0px')
 
 		tab.content = content_div.append('div').style('display', tab.active == true ? 'block' : 'none')
 
@@ -472,22 +477,22 @@ async function makeLeftSideTabMenu(track, div) {
 		tab.tab.on('click', () => {
 			if (tab.content.style('display') != 'none') {
 				tab.content.style('display', 'none')
-				// tab.tab.style('border-bottom', 'none')
+				tab.tab.style('color', '#757373').style('border-right', 'none')
 				tab.active = false
 			} else {
-				// tab.tab.style('border-bottom', '4px solid #1575ad')
+				tab.tab.style('color', '#1575ad').style('border-right', '8px solid #1575ad')
 				tab.active = true
 				appear(tab.content)
 				for (let j = 0; j < tabs.length; j++) {
 					if (i != j) {
-						// tabs[j].tab.style('border-bottom', 'none')
+						tabs[j].tab.style('color', '#757373').style('border-right', 'none')
 						tabs[j].content.style('display', 'none')
 						tabs[j].active = false
 					}
 				}
 			}
 			if (tabs.findIndex(t => t.active) == -1) {
-				// tab.tab.style('border-bottom', '4px solid #1575ad')
+				tab.tab.style('color', '#1575ad').style('border-right', '8px solid #1575ad')
 				tab.content.style('display', 'block')
 				tab.active = true
 			}
@@ -552,7 +557,7 @@ function makeButton(div, text) {
 		.append('button')
 		.attr('type', 'submit')
 		.style('background-color', '#cfe2f3')
-		.style('margin', '20px')
+		.style('margin', '20px 20px 0px 20px')
 		.style('padding', '8px')
 		.style('border', 'none')
 		.style('border-radius', '3px')
@@ -599,7 +604,7 @@ function makeDataDownload(arg, div) {
 	}
 }
 
-async function showCode(track, call, btns) {
+function showCode(track, call, btns) {
 	if (track.ppcalls.is_ui != true) {
 		//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
 		const code = highlight(
@@ -616,7 +621,7 @@ async function showCode(track, call, btns) {
 			{ language: 'javascript' }
 		).value
 
-		const contents = `<pre style="border: 1px solid #d7d7d9; width: 90%"><code style="font-size:14px;">${code}</code></pre>`
+		const contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 30px 5px 30px;"><code style="font-size:14px;">${code}</code></pre>`
 
 		btns.push({
 			name: 'Code',

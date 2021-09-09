@@ -833,7 +833,7 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border: 1px solid #eee;
+    /* border: 1px solid #eee; */
     border-radius: 3px;
 }
 
@@ -920,21 +920,23 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     border-radius: 0px 5px 5px 0px;
   }
 
-  .sjpp-vertical-tab-manu {
+  .sjpp-vertical-tab-menu {
     display: grid;
-    grid-template-columns: 1fr 9fr;
-    grid-template-areas: 'tabs content' 'tabs content';
+    grid-template-columns: 1fr 8fr;
+    grid-template-areas: 'tabs content';
+    flex-wrap: wrap;
     gap: 5px;
     text-align: left;
   }
   
   .sjpp-tabs-div{
-    grid-area: 'tabs';
+    grid-area: tabs;
     align-items: flex-start;
-    justify-items: start;
+    justify-items: end;
     text-align: right;
+    border-right: 1px solid lightgray;
  }
 
  .sjpp-content-div{
-    grid-area: 'content'
+    grid-area: content;
 }
