@@ -154,29 +154,9 @@ function displayTracks(tracks, holder, page_args) {
 		const li = holder.append('li')
 		li.attr('class', 'sjpp-track')
 			.html(
-				`${
-					track.blurb
-						? `<div class="sjpp-track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span class="sjpp-track-blurb" style="cursor:default">  ${track.blurb}</span></div>`
-						: `<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
-				}
+				`<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>
+				${track.blurb ? `<span class="sjpp-track-blurb" style="cursor:default">${track.blurb}</span></div>` : ''}
 				<span class="sjpp-track-image"><img src="${track.image}"></img></span>
-				<div class='sjpp-track-links'>
-				${track.media.urls
-					.map(url => {
-						if (!url) return ''
-						if (url.link && !url.name) {
-							return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.link}" target="_blank">URL</a>`
-						}
-						if (url.link && url.name) {
-							return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.link}" target="_blank">${url.name}</a>`
-						}
-					})
-					.join('')}
-				${
-					track.media.doc
-						? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.media.doc}", target="_blank">Docs</a>`
-						: ''
-				}
 				</div>`
 			)
 			.on('click', async () => {
@@ -291,7 +271,7 @@ async function openSandbox(track, holder) {
 		.style('border', 'none')
 		.style('border-bottom', '1px solid lightgray')
 		.style('width', '100%')
-	const maincontent_div = sandbox_div.body.append('div').attr('id', 'content_div')
+	const maincontent_div = sandbox_div.body.append('div')
 
 	// Creates the overarching tab menu and subsequent content
 	sandboxTabMenu(track, toptab_div, maincontent_div)
@@ -378,7 +358,7 @@ function makeSandboxTabs(track, tabs) {
 			active: false,
 			callback: async div => {
 				try {
-					makeTabMenu(track, div)
+					makeLeftSideTabMenu(track, div)
 				} catch (e) {
 					alert('Error: ' + e)
 				}
@@ -438,9 +418,9 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 				}
 			}
 			if (tabs.findIndex(t => t.active) == -1) {
-				tabs[0].tab.style('border-bottom', '4px solid #1575ad')
-				tabs[0].content.style('display', 'block')
-				tabs[0].active = true
+				tab.tab.style('border-bottom', '4px solid #1575ad')
+				tab.content.style('display', 'block')
+				tab.active = true
 			}
 			if (tab.callback) {
 				tab.callback(tab.content)
@@ -451,20 +431,83 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 }
 
 //Creates the subtab menu for pursing through examples, on the left-hand side of the sandbox, below the main tabs
-async function makeTabMenu(track, div) {
+async function makeLeftSideTabMenu(track, div) {
 	const tabs = []
 	tabArray(tabs, track)
-	tab2box(div, tabs)
+	// tab2box(div, tabs)
+
+	const menu_wrapper = div.append('div').classed('sjpp-vertical-tab-manu', true)
+	const tabs_div = menu_wrapper.append('div').classed('sjpp-tabs-div', true)
+	const content_div = menu_wrapper.append('div').classed('sjpp-content-div', true)
+
+	const active_tab = tabs.findIndex(t => t.active)
+
+	for (let i = 0; i < tabs.length; i++) {
+		const tab = tabs[i]
+
+		tabs[0].active = true
+
+		tab.tab = tabs_div
+			.append('button')
+			.attr('type', 'submit')
+			.text(tab.label)
+			.style('display', 'inline-block')
+			.style('font', 'Arial')
+			.style('font-size', '16px')
+			.style('padding', '6px')
+			.style('color', '#757373')
+			.style('background-color', 'transparent')
+			.style('border', 'none')
+			.style('border-radius', 'unset')
+			// .style('border-bottom', tab.active == true ? '4px solid #1575ad' : 'none')
+			.style('margin', '10px')
+
+		tab.content = content_div.append('div').style('display', tab.active == true ? 'block' : 'none')
+
+		if ((active_tab && i == 0 && tab.callback) || tab.active) {
+			tab.callback(tab.content)
+			delete tab.callback
+		}
+
+		tab.tab.on('click', () => {
+			if (tab.content.style('display') != 'none') {
+				tab.content.style('display', 'none')
+				// tab.tab.style('border-bottom', 'none')
+				tab.active = false
+			} else {
+				// tab.tab.style('border-bottom', '4px solid #1575ad')
+				tab.active = true
+				appear(tab.content)
+				for (let j = 0; j < tabs.length; j++) {
+					if (i != j) {
+						// tabs[j].tab.style('border-bottom', 'none')
+						tabs[j].content.style('display', 'none')
+						tabs[j].active = false
+					}
+				}
+			}
+			if (tabs.findIndex(t => t.active) == -1) {
+				// tab.tab.style('border-bottom', '4px solid #1575ad')
+				tab.content.style('display', 'block')
+				tab.active = true
+			}
+			if (tab.callback) {
+				tab.callback(tab.content)
+				delete tab.callback
+			}
+		})
+	}
 }
 
 function tabArray(tabs, track) {
 	track.ppcalls.forEach(call => {
 		tabs.push({
 			label: call.label,
+			active: false,
 			callback: async div => {
 				const wait = tab_wait(div)
 				try {
-					renderContent(track, call, div.style('width', '100%'))
+					renderContent(track, call, div)
 					wait.remove()
 				} catch (e) {
 					wait.text('Error: ' + (e.message || e))
