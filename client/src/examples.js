@@ -286,8 +286,8 @@ async function openSandbox(track, holder) {
 function renderContent(track, call, div) {
 	addMessage(call.message, div)
 
-	const buttons_div = div.append('div')
-	const reuse_div = div.append('div').style('margin-top', '5px')
+	const buttons_div = div.append('div').style('margin-bottom', '20px')
+	const reuse_div = div.append('div')
 
 	addButtons(call.buttons, buttons_div)
 	makeDataDownload(call.download, buttons_div)
