@@ -34,7 +34,10 @@ class Term1ui {
 		this.dom = { tr: o.holder }
 	}
 	getState(appState) {
-		const plot = appState.tree.plots[this.id]
+		const plot = appState.plots.find(p => p.id === this.id)
+		if (!plot) {
+			throw `No plot with id='${this.id}' found.`
+		}
 		const state = {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,

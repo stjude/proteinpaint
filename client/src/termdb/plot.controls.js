@@ -67,7 +67,8 @@ class TdbPlotControls {
 	}
 
 	getState(appState) {
-		if (!(this.id in appState.tree.plots)) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
 			throw `No plot with id='${this.id}' found.`
 		}
 		return {
@@ -75,7 +76,7 @@ class TdbPlotControls {
 			dslabel: appState.dslabel,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			config: appState.tree.plots[this.id]
+			config
 		}
 	}
 

@@ -493,7 +493,7 @@ function setInteractivity(self) {
 	self.clickViewButton = function(term) {
 		/*
 		when loading a plot for the first time,
-		"plot_show" is fired to add the term id to state.tree.plots{}
+		"plot_show" is fired to add the term id to state.plots{}
 		then, tree.main() detects the plot is not a component, will call newPlot() to render it
 		*/
 		if (self.loadingPlotSet.has(term.id)) {

@@ -18,10 +18,10 @@ class MassRegression {
 	}
 
 	getState(appState, sub) {
-		if (!(this.id in appState.tree.plots)) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-		const config = appState.tree.plots[this.id]
 		if (!config.regressionType) throw 'regressionType is required'
 		return {
 			isVisible: config.settings && config.settings.currViews.includes('regression'),

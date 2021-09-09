@@ -56,9 +56,8 @@ class MassApp {
 	async main() {
 		this.api.vocabApi.main()
 
-		for (const plotId in this.state.tree.plots) {
-			if (!(plotId in this.components.plots)) {
-				const plot = this.state.tree.plots[plotId]
+		for (const plot of this.state.plots) {
+			if (!(plot.id in this.components.plots)) {
 				const holder = newSandboxDiv(this.dom.plotDiv, () => {
 					this.api.dispatch({
 						type: 'plot_delete',
@@ -66,7 +65,7 @@ class MassApp {
 					})
 				})
 
-				this.components.plots[plotId] = plotInit(
+				this.components.plots[plot.id] = plotInit(
 					this.app,
 					{
 						holder,
@@ -78,7 +77,7 @@ class MassApp {
 		}
 
 		for (const plotId in this.components.plots) {
-			if (!(plotId in this.state.tree.plots)) {
+			if (!this.state.plots.find(p => p.id === plotId)) {
 				delete this.components.plots[plotId]
 			}
 		}
@@ -116,7 +115,7 @@ export const appInit = rx.getInitFxn(MassApp)
 
 function setInteractivity(self) {
 	self.downloadView = id => {
-		const components = app.getComponents('tree.plots.' + opts.id)
+		const components = app.getComponents('plots.' + opts.id)
 		for (const name in self.components) {
 			// the download function in each component will be called,
 			// but should first check inside that function

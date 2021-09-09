@@ -83,7 +83,7 @@ class TermdbVocab {
 
 	// from termdb/plot
 	async getPlotData(plotId, dataName) {
-		const config = this.state.tree.plots[plotId]
+		const config = this.state.plots.find(p => p.id === plotId)
 		const displayAsSurvival =
 			config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
 		const route =
@@ -274,15 +274,16 @@ class FrontendVocab {
 
 	// from termdb/plot
 	async getPlotData(plotId, dataName) {
-		if (!(plotId in this.state.tree.plots)) {
+		let config = this.state.plots.find(p => p.id === plotId)
+		if (!config) {
 			const term = this.vocab.terms.find(t => t.id === plotId)
 			const q = {}
 			termsetting_fill_q(q, term)
-			this.state.tree.plots[plotId] = {
+			config = {
 				term: { term, q }
 			}
+			this.state.plots.push(config)
 		}
-		const config = this.state.tree.plots[plotId]
 		const q = {
 			term1: config.term ? config.term.term : {},
 			term1_q: config.term ? config.term.q : undefined,

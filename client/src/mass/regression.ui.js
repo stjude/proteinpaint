@@ -1,6 +1,7 @@
 import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
 import { termsettingInit } from '../common/termsetting'
+import { getTermSelectionSequence } from './charts'
 
 class MassRegressionUI {
 	constructor(app, opts) {
@@ -16,16 +17,17 @@ class MassRegressionUI {
 				.attr('class', 'pp-termdb-plot-controls')
 				.style('display', 'block')
 		}
+		this.termSequence = getTermSelectionSequence('regression')
 		setInteractivity(this)
 		setRenderers(this)
 		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	getState(appState) {
-		if (!(this.id in appState.tree.plots)) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-		const config = appState.tree.plots[this.id]
 		return {
 			isVisible: config.settings && config.settings.currViews.includes('regression'),
 			activeCohort: appState.activeCohort,
@@ -52,7 +54,7 @@ class MassRegressionUI {
 
 	main() {
 		this.config = rx.copyMerge('{}', this.state.config)
-		this.initUI()
+		if (!this.dom.submitBtn) this.initUI()
 	}
 }
 
@@ -60,16 +62,15 @@ function setInteractivity(self) {}
 
 function setRenderers(self) {
 	self.initUI = () => {
-		const config = JSON.parse(JSON.stringify(self.opts.config))
+		const config = self.config
 		const dom = {
 			body: self.dom.controls.append('div'),
 			foot: self.dom.controls.append('div')
 		}
 		const disable_terms = []
-
 		dom.body
 			.selectAll('div')
-			.data(config.termSequence)
+			.data(self.termSequence || [])
 			.enter()
 			.append('div')
 			.style('margin', '3px 5px')
@@ -127,7 +128,7 @@ function setRenderers(self) {
 				})
 			})
 
-		self.updateBtns(config)
+		self.updateBtns()
 	}
 
 	self.newPill = function(d, config, div, pills, disable_terms, term = null) {
@@ -172,7 +173,7 @@ function setRenderers(self) {
 						div.select('.sja_clbtext2').node().parentNode.style.display = 'inline-block'
 						newTermDiv.style('border-left', 'none')
 					}
-					self.updateBtns(config)
+					self.updateBtns()
 					if (config.regressionType == 'logistic') cutoffDiv.style('display', 'none')
 					termInfoDiv.style('display', 'none')
 				} else {
@@ -194,7 +195,7 @@ function setRenderers(self) {
 					} else {
 						d.selected = term
 					}
-					self.updateBtns(config)
+					self.updateBtns()
 					// show cutoffDiv only for regressionType is logistic
 					if (config.regressionType == 'logistic')
 						cutoffDiv.style(
@@ -398,9 +399,8 @@ function setRenderers(self) {
 		// }
 	}
 
-	self.updateBtns = config => {
-		const hasMissingTerms =
-			config.termSequence.filter(t => !t.selected || (t.limit > 1 && !t.selected.length)).length > 0
+	self.updateBtns = () => {
+		const hasMissingTerms = self.termSequence.filter(t => !t.selected || (t.limit > 1 && !t.selected.length)).length > 0
 		self.dom.submitBtn.property('disabled', hasMissingTerms)
 	}
 }

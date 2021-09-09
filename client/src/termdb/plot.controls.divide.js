@@ -59,7 +59,7 @@ class Divide {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			config: appState.tree.plots[this.id],
+			config: appState.plots.find(p => p.id === this.id),
 			exclude_types: [...appState.tree.exclude_types]
 		}
 		if (appState.termfilter && appState.termfilter.filter) {

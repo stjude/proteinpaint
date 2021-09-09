@@ -43,7 +43,10 @@ class TdbSurvival {
 	}
 
 	getState(appState) {
-		const config = appState.tree.plots[this.id]
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
 		return {
 			isVisible: config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival'),
 			genome: this.app.vocabApi.vocab.genome,

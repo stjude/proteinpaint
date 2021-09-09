@@ -317,34 +317,30 @@ makeURL([
 		['Regression', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
-			tree: {
-				plots: {
-					0: {
-						chartType: 'regression',
-						regressionType: 'linear',
-						id: 0,
-						term: {
-							id: 'LV_Ejection_Fraction_3D'
-						},
-						independent: [
-							{"id":"Hypertension","q":{"hiddenValues":{"9":1},"groupsetting":{"inuse":false},"value_by_max_grade":true,"bar_by_grade":true},"type":"condition"},
-							{"id":"Myocardial infarction","q":{"hiddenValues":{"9":1},"groupsetting":{"inuse":false},"value_by_max_grade":true,"bar_by_grade":true},"type":"condition"}
-						]
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					term: {
+						id: 'LV_Ejection_Fraction_3D'
 					},
-					1: {
-						chartType: 'regression',
-						regressionType: 'linear',
-						id: 1,
-						term: {
-							id: 'BP_SBP1'
-						},
-						independent: [
-							{"id": "sex"},
-							{"id": "agedx"}
-						]
+					independent: [
+						{"id":"Hypertension","q":{"hiddenValues":{"9":1},"groupsetting":{"inuse":false},"value_by_max_grade":true,"bar_by_grade":true},"type":"condition"},
+						{"id":"Myocardial infarction","q":{"hiddenValues":{"9":1},"groupsetting":{"inuse":false},"value_by_max_grade":true,"bar_by_grade":true},"type":"condition"}
+					]
+				},
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					term: {
+						id: 'BP_SBP1'
 					},
-				}
-			}
+					independent: [
+						{"id": "sex"},
+						{"id": "agedx"}
+					]
+				},
+			]
 		})],
 	]
 },

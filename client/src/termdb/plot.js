@@ -104,11 +104,11 @@ class TdbPlot {
 	}
 
 	getState(appState) {
-		if (!(this.id in appState.tree.plots)) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
 			throw `No plot with id='${this.id}' found.`
 		}
 		const filter = getNormalRoot(appState.termfilter.filter)
-		const config = appState.tree.plots[this.id]
 		return {
 			activeCohort: appState.activeCohort,
 			termfilter: { filter },

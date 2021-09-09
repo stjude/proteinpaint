@@ -94,7 +94,7 @@ class TdbConfigUiInit {
 	}
 
 	getState(appState) {
-		const config = appState.tree.plots[this.id]
+		const config = appState.plots.find(p => p.id === this.id)
 		return {
 			genome: appState.genome,
 			dslabel: appState.dslabel,
