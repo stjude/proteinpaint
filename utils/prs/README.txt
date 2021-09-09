@@ -45,6 +45,10 @@ This script will create the "ancestry.prs", "annotation.scores", and "termdb.prs
 =========
 Notes
 =========
+- The script for computing PRS scores needs to be bundled so that it can run on HPC. To bundle the script, run the following from the pp root directory:
+
+    npx webpack --config=utils/prs/webpack.config.computeprs.js
+
 - The script for creating PRS database files needs to be bundled in order for it to be run on HPC. To bundle the script, run the following from the pp root directory:
 
     npx webpack --config=utils/prs/webpack.config.makeprsdb.js
