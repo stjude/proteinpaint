@@ -238,7 +238,7 @@ function makeRibbon(e, text, color) {
 		.style('height', 'auto')
 		.style('width', '100%')
 		.style('top', '15%')
-		.style('left', '-23%')
+		.style('left', '-30%')
 		.style('font-size', '11.5px')
 		.style('text-transform', 'uppercase')
 		.style('text-align', 'center')
