@@ -1,5 +1,15 @@
 const WebpackNotifierPlugin = require('webpack-notifier')
 const path = require('path')
+const fs = require('fs')
+
+let babelrc
+try {
+	babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
+	babelrc = JSON.parse(babelrc)
+} catch (e) {
+	throw e
+}
+
 module.exports = function(env = {}) {
 	const config = {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
@@ -34,8 +44,8 @@ module.exports = function(env = {}) {
 					test: /\.js$/,
 					use: [
 						{
-							loader: 'babel-loader'
-							// babel-loader respects .babelrc, so no need to specify presets and plugins here
+							loader: 'babel-loader',
+							options: babelrc
 						}
 					]
 				}

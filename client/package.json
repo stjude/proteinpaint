@@ -70,7 +70,20 @@
   "browserify": {
     "transform": [
       "browserify-css",
-      "babelify"
+      [
+        "babelify",
+        {
+          "babelrc": false,
+          "presets": [
+            "@babel/preset-env",
+            "@babel/preset-react"
+          ],
+          "plugins": [
+            "@babel/plugin-syntax-dynamic-import",
+            "@babel/plugin-transform-runtime"
+          ] 
+        }
+      ]
     ]
   }
 }
