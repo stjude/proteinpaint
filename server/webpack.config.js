@@ -1,6 +1,15 @@
 const nodeExternals = require('webpack-node-externals')
 const webpack = require('webpack')
 const path = require('path')
+const fs = require('fs')
+
+let babelrc
+try {
+	babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
+	babelrc = JSON.parse(babelrc)
+} catch (e) {
+	throw e
+}
 
 module.exports = function(env = {}) {
 	// the env object is passed to webpack cli call by
@@ -32,7 +41,8 @@ module.exports = function(env = {}) {
 					test: /\.js$/,
 					use: [
 						{
-							loader: 'babel-loader'
+							loader: 'babel-loader',
+							options: babelrc
 						}
 					]
 				}
