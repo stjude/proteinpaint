@@ -53,9 +53,12 @@ fi
 variants=$1
 genome=$2
 
-module load ucsc/041619 R/4.0.2
+module load dos2unix/7.4.0 ucsc/041619 R/4.0.2
 
+# Remove carriage returns
+dos2unix --allow-chown $variants
 
+# Count the total number of input variants
 totalCnt=$(grep -v "^#" $variants | sed '1d' | wc -l)
 
 # Verify that effect allele, reference allele, and effect weight information is provided
