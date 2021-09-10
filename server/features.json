@@ -79,24 +79,6 @@
             "searchterms": ["GenomePaint"]
         },
         {
-            "name": "Kaplan-Meier plot",
-            "app": "Genome Browser",
-            "hidden": true,
-            "blurb": "Genomic feature analysis",
-            "image": "",
-            "sandbox":{},
-            "searchterms": ["KM plot", "GenomePaint"]
-        },
-        {
-            "name": "Sample Matrix",
-            "app": "Genome Browser",
-            "hidden": true,
-            "blurb": "TODO: Brief description of track or app",
-            "image": "https://pecan.stjude.cloud/static/examples/images/samplematrix-square.png",
-            "sandbox":{},
-            "searchterms": ["GenomePaint"]
-        },
-        {
             "name": "BigWig",
             "app": "Genome Browser",
             "blurb": "Quantitative data at genomic positions",
@@ -583,7 +565,7 @@
             "new_expire": "2021-08-15",
             "ppcalls": [
                 {
-                    "label":"JSON",
+                    "label":"From a JSON",
                     "message": "",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionJsonDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz",
@@ -605,7 +587,7 @@
                     }
                 },
                 {
-                    "label":"Matrix",
+                    "label":"From a JSON Matrix File",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionMatrixDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz",
                     "runargs": {

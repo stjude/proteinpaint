@@ -1,8 +1,7 @@
-import { dofetch2, sayerror, newSandboxDiv, tab2box, tab_wait, appear } from './client'
+import { dofetch2, sayerror, newSandboxDiv, tab_wait, appear } from './client'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
 import { highlight } from 'highlight.js/lib/common'
-import { deepFreeze } from './common/rx.core'
 
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
@@ -249,14 +248,10 @@ function makeRibbon(e, text, color) {
 async function openSandbox(track, holder) {
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
-	sandbox_div.header_row
-		.style('box-shadow', 'rgb(220 220 220) 5px -2px 5px, rgb(220 220 220) 0.25px 1px 3px')
-		.style('z-index', '99')
-	// sandbox_div.header.text(track.name).style('padding', '5px 10px 10px 10px')
+	sandbox_div.header_row.style('z-index', '99')
 	sandbox_div.header.text(track.name)
 
 	sandbox_div.body
-		.style('box-shadow', 'rgb(220 220 220) 5px -2px 10px, rgb(220 220 220) 0px 1px 3px')
 		.style('z-index', '-1')
 		.style('overflow', 'hidden')
 		.style('border', 'none')
@@ -396,7 +391,7 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 			.style('border', 'none')
 			.style('border-radius', 'unset')
 			.style('border-bottom', tab.active == true ? '8px solid #1575ad' : 'none')
-			.style('margin', '0px 10px 0px 10px')
+			.style('margin', '5px 10px 0px 10px')
 
 		tab.content = content_div.append('div').style('display', tab.active == true ? 'block' : 'none')
 
@@ -458,7 +453,7 @@ async function makeLeftsideTabMenu(track, div) {
 			.style('font', 'Arial')
 			.style('font-size', '16px')
 			.style('padding', '6px')
-			.style('color', tab.active == true ? '#1575ad' : '#757373') //#1575ad: blue color, same as the top tab; #757373: default darker gray color
+			.style('color', tab.active == true ? '#1575ad' : '#757373') //#1575ad: blue color, same as the top tab. #757373: default darker gray color
 			.style('background-color', 'transparent')
 			.style('border', 'none')
 			.style('border-right', tab.active == true ? '8px solid #1575ad' : 'none')

@@ -833,7 +833,6 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    /* border: 1px solid #eee; */
     border-radius: 3px;
 }
 
