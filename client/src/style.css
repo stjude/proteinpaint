@@ -827,13 +827,14 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     height: 75px;
     align-self: start;
     justify-self: start;
+    /* overflow: hidden; */
 }
 
 .sjpp-track-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 3px;
+    border-radius: 5px 0px 0px 5px;
 }
 
 .sjpp-track-ribbon{

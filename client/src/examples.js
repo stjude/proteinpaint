@@ -275,7 +275,7 @@ async function openSandbox(track, holder) {
 }
 
 // Single content layout for examples only - buttons not used for UIs
-function renderContent(track, call, div) {
+function renderContent(call, div) {
 	addMessage(call.message, div)
 
 	const buttons_div = div.append('div').style('margin-bottom', '20px')
@@ -284,7 +284,7 @@ function renderContent(track, call, div) {
 	addButtons(call.buttons, buttons_div)
 	makeDataDownload(call.download, buttons_div)
 	showURLLaunch(call.urlparam, buttons_div)
-	addArrowBtns(track, call.arrowButtons, call.runargs, buttons_div, reuse_div)
+	addArrowBtns(call.arrowButtons, call.runargs, buttons_div, reuse_div)
 
 	const line = div
 		.append('hr')
@@ -331,7 +331,7 @@ function makeSandboxTabs(track, tabs) {
 
 					runproteinpaint(Object.assign(runpp_arg, callpp))
 				} catch (e) {
-					alert('Error: ' + e)
+					alert('Error: ' + (e.message || e))
 				}
 			}
 		})
@@ -342,9 +342,9 @@ function makeSandboxTabs(track, tabs) {
 			active: false,
 			callback: async div => {
 				try {
-					renderContent(track, track.ppcalls[notui], div)
+					renderContent(track.ppcalls[notui], div)
 				} catch (e) {
-					alert('Error: ' + e)
+					alert('Error: ' + (e.message || e))
 				}
 			}
 		})
@@ -357,7 +357,7 @@ function makeSandboxTabs(track, tabs) {
 				try {
 					makeLeftsideTabMenu(track, div)
 				} catch (e) {
-					alert('Error: ' + e)
+					alert('Error: ' + (e.message || e))
 				}
 			}
 		})
@@ -367,8 +367,6 @@ function makeSandboxTabs(track, tabs) {
 function sandboxTabMenu(track, tabs_div, content_div) {
 	let tabs = []
 	makeSandboxTabs(track, tabs)
-
-	const active_tab = tabs.findIndex(t => t.active)
 
 	for (let i = 0; i < tabs.length; i++) {
 		const tab = tabs[i]
@@ -387,12 +385,12 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 			.style('background-color', 'transparent')
 			.style('border', 'none')
 			.style('border-radius', 'unset')
-			.style('border-bottom', tab.active == true ? '8px solid #1575ad' : 'none')
+			.style('border-bottom', tab.active ? '8px solid #1575ad' : 'none')
 			.style('margin', '5px 10px 0px 10px')
 
-		tab.content = content_div.append('div').style('display', tab.active == true ? 'block' : 'none')
+		tab.content = content_div.append('div').style('display', tab.active ? 'block' : 'none')
 
-		if ((active_tab && i == 0 && tab.callback) || tab.active) {
+		if (tab.active) {
 			tab.callback(tab.content)
 			delete tab.callback
 		}
@@ -429,18 +427,14 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 
 //Creates the subtab menu for pursing through examples, on the left-hand side of the sandbox, below the main tabs
 async function makeLeftsideTabMenu(track, div) {
-	const tabs = track.ppcalls.map(ppcall => getTabData(track, ppcall))
+	const tabs = track.ppcalls.map(getTabData)
 
 	const menu_wrapper = div.append('div').classed('sjpp-vertical-tab-menu', true)
 	const tabs_div = menu_wrapper.append('div').classed('sjpp-tabs-div', true)
 	const content_div = menu_wrapper.append('div').classed('sjpp-content-div', true)
 
-	const active_tab = tabs.findIndex(t => t.active)
-
 	for (let i = 0; i < tabs.length; i++) {
 		const tab = tabs[i]
-
-		tabs[0].active = true
 
 		tab.tab = tabs_div
 			.append('button')
@@ -449,18 +443,18 @@ async function makeLeftsideTabMenu(track, div) {
 			.style('font', 'Arial')
 			.style('font-size', '16px')
 			.style('padding', '6px')
-			.style('color', tab.active == true ? '#1575ad' : '#757373') //#1575ad: blue color, same as the top tab. #757373: default darker gray color
+			.style('color', tab.active ? '#1575ad' : '#757373') //#1575ad: blue color, same as the top tab. #757373: default darker gray color
 			.style('background-color', 'transparent')
 			.style('border', 'none')
-			.style('border-right', tab.active == true ? '8px solid #1575ad' : 'none')
+			.style('border-right', tab.active ? '8px solid #1575ad' : 'none')
 			.style('border-radius', 'unset')
 			.style('width', '100%')
 			.style('text-align', 'right')
 			.style('margin', '10px 0px 10px 0px')
 
-		tab.content = content_div.append('div').style('display', tab.active == true ? 'block' : 'none')
+		tab.content = content_div.append('div').style('display', tab.active ? 'block' : 'none')
 
-		if ((active_tab && i == 0 && tab.callback) || tab.active) {
+		if (tab.active) {
 			tab.callback(tab.content)
 			delete tab.callback
 		}
@@ -495,15 +489,14 @@ async function makeLeftsideTabMenu(track, div) {
 	}
 }
 
-function getTabData(track, call) {
+function getTabData(call, i) {
 	return {
 		label: call.label,
-		active: false,
-		// active: i === 0,
+		active: i === 0,
 		callback: async div => {
 			const wait = tab_wait(div)
 			try {
-				renderContent(track, call, div)
+				renderContent(call, div)
 				wait.remove()
 			} catch (e) {
 				wait.text('Error: ' + (e.message || e))
@@ -594,8 +587,8 @@ function makeDataDownload(arg, div) {
 	}
 }
 
-function showCode(track, call, btns) {
-	if (track.ppcalls.is_ui == true) return
+function showCode(call, btns) {
+	if (call.is_ui == true) return
 
 	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
 	const code = highlight(
@@ -661,9 +654,9 @@ function makeArrowButtons(arrows, btns) {
 	}
 }
 
-function addArrowBtns(track, arg, call, bdiv, rdiv) {
+function addArrowBtns(arg, call, bdiv, rdiv) {
 	let btns = []
-	showCode(track, call, btns)
+	showCode(call, btns)
 	makeArrowButtons(arg, btns)
 
 	const active_btn = btns.findIndex(b => b.active) == -1 ? false : true
