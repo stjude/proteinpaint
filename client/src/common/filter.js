@@ -811,7 +811,7 @@ function setInteractivity(self) {
 			: JSON.parse(self.rawCopy)
 
 		const termdb = await import('../termdb/app')
-		termdb.appInit(null, {
+		termdb.appInit({
 			holder: self.dom.termSrcDiv,
 			state: {
 				vocab: self.opts.vocab,
@@ -903,7 +903,7 @@ function setInteractivity(self) {
 		const filter = self.activeData.filter
 
 		const termdb = await import('../termdb/app')
-		termdb.appInit(null, {
+		termdb.appInit({
 			holder: self.dom.termSrcDiv,
 			state: {
 				vocab: self.opts.vocab,

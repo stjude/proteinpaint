@@ -54,7 +54,7 @@ upon error, throw err message as a string
 			state
 		}
 		const _ = await import('./termdb/app')
-		_.appInit(null, opts)
+		_.appInit(opts)
 		return
 	}
 

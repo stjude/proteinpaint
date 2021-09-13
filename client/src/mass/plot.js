@@ -17,13 +17,13 @@ import { getNormalRoot } from '../common/filter'
 import { Menu } from '../client'
 
 class MassPlot {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'plot'
 		this.id = opts.plot.id
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.app = app
 		this.modifiers = opts.modifiers
-		this.opts = opts
 
 		this.dom = {
 			tip: new Menu({ padding: '0px' }),
@@ -55,24 +55,18 @@ class MassPlot {
 
 		const controls =
 			opts.plot.chartType === 'regression'
-				? regressionUIInit(
-						this.app,
-						{
-							id: this.id,
-							holder: this.dom.viz.append('div')
-						},
-						Object.assign({ config: this.opts.plot })
-				  )
-				: controlsInit(
-						this.app,
-						{
-							id: this.id,
-							holder: this.dom.controls,
-							isleaf: opts.plot.term.isleaf,
-							iscondition: opts.plot.term.type == 'condition'
-						},
-						this.app.opts.plotControls
-				  )
+				? regressionUIInit({
+						app: this.app,
+						id: this.id,
+						holder: this.dom.viz.append('div')
+				  })
+				: controlsInit({
+						app: this.app,
+						id: this.id,
+						holder: this.dom.controls,
+						isleaf: opts.plot.term.isleaf,
+						iscondition: opts.plot.term.type == 'condition'
+				  })
 
 		this.components = controls ? { controls } : {}
 		setRenderers(this)
@@ -240,56 +234,60 @@ class MassPlot {
 		const controls = this.components.controls
 		switch (opts.plot.chartType) {
 			case 'barchart':
-				this.components.chart = barInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls }, this.app.opts.barchart)
-				)
+				this.components.chart = barInit({
+					app: this.app,
+					holder: this.dom.viz.append('div'),
+					id: this.id,
+					controls
+				})
 				/*this.components.stattable = statTableInit(
-					this.app, 
-					{ holder: this.dom.viz.append('div'), id: this.id }, 
-					this.app.opts.stattable
+					{ app: this.app, holder: this.dom.viz.append('div'), id: this.id }
 				)*/
 				break
 
 			case 'table':
-				this.components.chart = tableInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls }, this.app.opts.table)
-				)
+				this.components.chart = tableInit({
+					app: this.app,
+					holder: this.dom.viz.append('div'),
+					id: this.id,
+					controls
+				})
 				break
 
 			case 'boxplot':
-				this.components.chart = boxplotInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls }, this.app.opts.boxplot)
-				)
+				this.components.chart = boxplotInit({
+					app: this.app,
+					holder: this.dom.viz.append('div'),
+					id: this.id,
+					controls
+				})
 				break
 
 			case 'scatter':
-				this.components.chart = scatterInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls }, this.app.opts.scatter)
-				)
+				this.components.chart = scatterInit({
+					app: this.app,
+					holder: this.dom.viz.append('div'),
+					id: this.id,
+					controls
+				})
 				break
 
 			case 'cuminc':
-				this.components.chart = this.components.cuminc = cumincInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls }, this.app.opts.cuminc)
-				)
+				this.components.chart = this.components.cuminc = cumincInit({
+					app: this.app,
+					holder: this.dom.viz.append('div'),
+					id: this.id,
+					controls
+				})
 				break
 
 			case 'survival':
-				this.components.chart = survivalInit(
-					this.app,
-					{ holder: this.dom.viz.append('div'), id: this.id },
-					Object.assign({ controls: this.components.controls }, this.app.opts.survival)
-				)
+				this.components.chart = survivalInit({
+					app: this.app,
+					holder: this.dom.viz.append('div'),
+					id: this.id,
+					controls
+				})
 				break
 
 			case 'regression':
@@ -307,11 +305,12 @@ class MassPlot {
 					.style('padding', '3px 5px')
 					.style('color', '#bbb')
 				this.dom.resultsDiv = this.dom.viz.append('div')
-				this.components.chart = regressionInit(
-					this.app,
-					{ holder: this.dom.resultsDiv, id: this.id },
-					Object.assign({ regressionType: this.state.config.regressionType })
-				)
+				this.components.chart = regressionInit({
+					app: this.app,
+					holder: this.dom.resultsDiv,
+					id: this.id,
+					regressionType: this.state.config.regressionType
+				})
 		}
 	}
 }

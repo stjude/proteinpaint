@@ -4,11 +4,11 @@ import { termsettingInit } from '../common/termsetting'
 import { getTermSelectionSequence } from './charts'
 
 class MassRegressionUI {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'regressionUI'
 		this.id = opts.id
-		this.app = app
-		this.opts = opts
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
 		this.dom = {
 			div: this.opts.holder.style('margin', '10px 0px').style('margin-left', '-50px'),

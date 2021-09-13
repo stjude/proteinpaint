@@ -18,14 +18,13 @@ https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/
 */
 
 class TdbApp {
-	constructor(coordApp, opts) {
-		if (coordApp) throw `TODO: termdb app does not currently support a parent coordinating app (coordApp)`
+	constructor(opts) {
 		this.type = 'app'
 		this.opts = this.initOpts(opts)
 		this.tip = new Menu({ padding: '5px' })
 		// the TdbApp may be the root app or a component within another app
-		this.api = coordApp ? rx.getComponentApi(this) : rx.getAppApi(this)
-		this.app = coordApp ? coordApp : this.api
+		this.api = rx.getAppApi(this)
+		this.app = this.api
 		this.api.vocabApi = vocabInit(this.api, this.app.opts)
 
 		this.dom = {
@@ -36,27 +35,19 @@ class TdbApp {
 
 		this.eventTypes = ['postInit', 'postRender']
 
-		if (!coordApp) {
-			// catch initialization error
-			try {
-				this.store = storeInit(this.api)
-				this.store
-					.copyState({ rehydrate: true })
-					.then(state => {
-						this.state = state
-						this.setComponents()
-					})
-					.then(() => this.api.dispatch())
-					.catch(e => this.printError(e))
-			} catch (e) {
-				this.printError(e)
-			}
-		} else {
-			try {
-				this.setComponents()
-			} catch (e) {
-				this.printError(e)
-			}
+		// catch initialization error
+		try {
+			this.store = storeInit({ app: this.api })
+			this.store
+				.copyState({ rehydrate: true })
+				.then(state => {
+					this.state = state
+					this.setComponents()
+				})
+				.then(() => this.api.dispatch())
+				.catch(e => this.printError(e))
+		} catch (e) {
+			this.printError(e)
 		}
 	}
 
@@ -72,16 +63,20 @@ class TdbApp {
 
 	setComponents() {
 		this.components = {
-			nav: navInit(
-				this.app,
-				{
-					holder: this.dom.topbar,
-					header_mode: this.state && this.state.nav && this.state.nav.header_mode
-				},
-				this.opts.nav
-			),
-			recover: recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover),
-			tree: treeInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.tree)
+			nav: navInit({
+				app: this.app,
+				holder: this.dom.topbar,
+				header_mode: this.state && this.state.nav && this.state.nav.header_mode
+			}),
+			recover: recoverInit({
+				app: this.app,
+				holder: this.dom.holder,
+				appType: 'termdb'
+			}),
+			tree: treeInit({
+				app: this.app,
+				holder: this.dom.holder.append('div')
+			})
 		}
 	}
 

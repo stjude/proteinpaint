@@ -1,12 +1,7 @@
 import * as rx from '../common/rx.core'
 import { Menu } from '../client'
-import { termsettingInit } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { select, event } from 'd3-selection'
-
-const defaults = {
-	// holder: d3-selection, required option
-}
 
 // to assign chart ID to distinguish
 // between chart instances
@@ -14,12 +9,11 @@ const idPrefix = '_AUTOID_' // to distinguish from user-assigned chart IDs
 let id = 0
 
 class MassCharts {
-	constructor(app, opts = {}) {
+	constructor(opts = {}) {
 		this.type = 'charts'
 		this.api = rx.getComponentApi(this)
-		this.app = app
-		this.opts = Object.assign({}, defaults, opts)
-
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.setDom()
 		setRenderers(this)
 	}
@@ -112,7 +106,7 @@ function setRenderers(self) {
 		}
 
 		const termdb = await import('../termdb/app')
-		termdb.appInit(null, {
+		termdb.appInit({
 			holder: self.dom.tip.d.append('div'),
 			state: {
 				vocab: self.opts.vocab,

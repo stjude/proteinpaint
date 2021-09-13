@@ -378,7 +378,7 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 			const tip = new Menu({ padding: '5px', parent_menu: add_btn })
 			const termdb = await import('../termdb/app')
 			tip.clear().showunder(add_btn.node())
-			termdb.appInit(null, {
+			termdb.appInit({
 				holder: tip.d,
 				state: {
 					dslabel: arg.tk.dslabel,

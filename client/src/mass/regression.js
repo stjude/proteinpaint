@@ -2,11 +2,11 @@ import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
 
 class MassRegression {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'regression'
 		this.id = opts.id
-		this.app = app
-		this.opts = opts
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
 		this.dom = {
 			div: this.opts.holder.style('margin', '10px 0px').style('display', 'none')

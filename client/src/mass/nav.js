@@ -12,10 +12,10 @@ import { getNormalRoot, getFilterItemByTag } from '../common/filter'
 let instanceNum = 0
 
 class TdbNav {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'nav'
-		this.app = app
-		this.opts = opts
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.id = opts.id
 		this.api = rx.getComponentApi(this)
 		this.instanceNum = instanceNum++
@@ -33,45 +33,32 @@ class TdbNav {
 		this.initUI()
 
 		this.components = {
-			search: searchInit(
-				this.app,
-				{
-					holder: this.dom.searchDiv,
-					resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null
-				},
-				rx.copyMerge(
-					{
-						click_term: this.app.opts.tree && this.app.opts.tree.click_term,
-						disable_terms: this.app.opts.tree && this.app.opts.tree.disable_terms,
-						callbacks: {
-							'postSearch.nav': data => {
-								if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
-								else if (this.opts.header_mode === 'with_tabs') {
-									this.dom.tip.showunder(this.dom.searchDiv.node())
-								}
-							}
+			search: searchInit({
+				app: this.app,
+				holder: this.dom.searchDiv,
+				resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
+				click_term: this.app.opts.tree && this.app.opts.tree.click_term,
+				disable_terms: this.app.opts.tree && this.app.opts.tree.disable_terms,
+				callbacks: {
+					'postSearch.nav': data => {
+						if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
+						else if (this.opts.header_mode === 'with_tabs') {
+							this.dom.tip.showunder(this.dom.searchDiv.node())
 						}
-					},
-					this.app.opts.search
-				)
-			),
-			filter: filter3Init(
-				this.app,
-				{
-					holder: this.dom.subheader.filter.append('div'),
-					hideLabel: this.opts.header_mode === 'with_tabs',
-					emptyLabel: '+Add new filter'
-				},
-				this.app.opts.filter
-			),
-			charts: chartsInit(
-				this.app,
-				{
-					holder: this.dom.subheader.charts,
-					vocab: this.opts.vocab
-				},
-				this.app.opts.charts
-			)
+					}
+				}
+			}),
+			filter: filter3Init({
+				app: this.app,
+				holder: this.dom.subheader.filter.append('div'),
+				hideLabel: this.opts.header_mode === 'with_tabs',
+				emptyLabel: '+Add new filter'
+			}),
+			charts: chartsInit({
+				app: this.app,
+				holder: this.dom.subheader.charts,
+				vocab: this.opts.vocab
+			})
 		}
 	}
 	getState(appState) {

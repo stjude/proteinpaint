@@ -6,11 +6,11 @@ import { format as d3format } from 'd3-format'
 import { axisLeft } from 'd3-axis'
 
 class TdbBoxplot {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'boxplot'
 		this.id = opts.id
-		this.app = app
-		this.opts = opts
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
 
 		const div = opts.holder.style('display', 'none')
@@ -28,7 +28,7 @@ class TdbBoxplot {
 		setInteractivity(this)
 		setRenderers(this)
 		this.eventTypes = ['postInit', 'postRender']
-		opts.controls.on('downloadClick.boxplot', this.download)
+		this.opts.controls.on('downloadClick.boxplot', this.download)
 	}
 
 	getState(appState, sub) {

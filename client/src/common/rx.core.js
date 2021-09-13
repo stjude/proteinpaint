@@ -26,27 +26,15 @@ https://docs.google.com/document/d/1G3LqbtsCEkGw4ABA_VognhjVnUHnsVYAGdXyhYG374M/
 export function getInitFxn(_Class_) {
 	/* return the initiator function to wrap around the _Class_ and return the API
 
-		arg: 
-		- opts{} for an App constructor
-		- predefined attributes:
-			.debug: if true, will expose app instance as api.Inner
-			.debugName: provide string as key to attach api to window
-			TODO any others?
-
 		instanceOpts{}
-		- TODO
-
-		overrides{}
-		- TODO
+		- app: required for non-app components
 
 		returns a function that 
 		- creates a _Class_ instance
 		- optionally attaches a self reference to the api
 		- freezes and returns the instance api
 	*/
-	return (arg, instanceOpts = {}, overrides) => {
-		if (overrides) copyMerge(instanceOpts, overrides)
-
+	return (instanceOpts = {}) => {
 		/* instantiate mutable private properties and methods
 
 		rx uses following predefined attributes from an app instance
@@ -72,7 +60,7 @@ export function getInitFxn(_Class_) {
 			TODO explain
 
 		*/
-		const self = new _Class_(arg, instanceOpts)
+		const self = new _Class_(instanceOpts)
 
 		// get the instance's api that hides its
 		// mutable props and methods
@@ -101,6 +89,19 @@ export function getInitFxn(_Class_) {
 		}
 		return api
 	}
+}
+
+/*
+	may apply overrides to instance opts
+	if there is an instance.type key in the opts.app
+*/
+export function getOpts(opts, instance) {
+	if (!instance.app) return opts
+	if (instance.app.opts[instance.type]) {
+		copyMerge(opts, instance.app.opts[instance.type])
+		opts.debug = instance.app.debug
+	}
+	return opts
 }
 
 /****************

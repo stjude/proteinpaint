@@ -2,10 +2,11 @@ import * as rx from '../common/rx.core'
 import { dofetch3 } from '../client'
 
 class TdbTermInfo {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'termInfo'
 		this.id = opts.id
-		this.app = app
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
 		this.dom = {
 			holder: opts.holder

@@ -2,12 +2,11 @@ import * as rx from './rx.core'
 import { Menu } from '../client'
 
 class Recover {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'recover'
-		this.opts = opts
-		this.app = app
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.app = app
 
 		this.dom = {
 			holder: opts.holder

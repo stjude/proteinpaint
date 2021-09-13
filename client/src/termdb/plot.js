@@ -14,30 +14,31 @@ import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 
 class TdbPlot {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'plot'
 		this.id = opts.id
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.app = app
-		this.modifiers = opts.modifiers
+		this.modifiers = this.opts.modifiers
 
 		this.dom = {
-			holder: opts.holder
+			holder: this.opts.holder
 				.style('margin-top', '-1px')
 				.style('white-space', 'nowrap')
 				.style('overflow-x', 'auto'),
 
 			// will hold no data notice or the page title in multichart views
-			banner: opts.holder.append('div').style('display', 'none'),
+			banner: this.opts.holder.append('div').style('display', 'none'),
 
 			// dom.controls will hold the config input, select, button elements
-			controls: opts.holder
+			controls: this.opts.holder
 				.append('div')
 				.attr('class', 'pp-termdb-plot-controls')
 				.style('display', 'inline-block'),
 
 			// dom.viz will hold the rendered view
-			viz: opts.holder
+			viz: this.opts.holder
 				.append('div')
 				.attr('class', 'pp-termdb-plot-viz')
 				.style('display', 'inline-block')
@@ -45,50 +46,60 @@ class TdbPlot {
 				.style('margin-left', '50px')
 		}
 
-		const controls = controlsInit(
-			this.app,
-			{
-				id: this.id,
-				holder: this.dom.controls,
-				isleaf: opts.term.isleaf,
-				iscondition: opts.term.type == 'condition'
-			},
-			this.app.opts.plotControls
-		)
+		const controls = controlsInit({
+			app: this.app,
+			id: this.id,
+			holder: this.dom.controls,
+			isleaf: opts.term.isleaf,
+			iscondition: opts.term.type == 'condition'
+		})
 
 		this.components = {
 			controls,
-			barchart: barInit(
-				this.app,
-				{ holder: this.dom.viz.append('div'), id: this.id },
-				Object.assign({ controls }, this.app.opts.barchart)
-			),
-			stattable: statTableInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.stattable),
-			table: tableInit(
-				this.app,
-				{ holder: this.dom.viz.append('div'), id: this.id },
-				Object.assign({ controls }, this.app.opts.table)
-			),
-			boxplot: boxplotInit(
-				this.app,
-				{ holder: this.dom.viz.append('div'), id: this.id },
-				Object.assign({ controls }, this.app.opts.boxplot)
-			),
-			scatter: scatterInit(
-				this.app,
-				{ holder: this.dom.viz.append('div'), id: this.id },
-				Object.assign({ controls }, this.app.opts.scatter)
-			),
-			termInfo: termInfoInit(this.app, { holder: this.dom.viz.append('div'), id: this.id }, this.app.opts.termInfo)
+			barchart: barInit({
+				app: this.app,
+				holder: this.dom.viz.append('div'),
+				id: this.id,
+				controls
+			}),
+			stattable: statTableInit({
+				app: this.app,
+				holder: this.dom.viz.append('div'),
+				id: this.id
+			}),
+			table: tableInit({
+				app: this.app,
+				holder: this.dom.viz.append('div'),
+				id: this.id,
+				controls
+			}),
+			boxplot: boxplotInit({
+				app: this.app,
+				holder: this.dom.viz.append('div'),
+				id: this.id,
+				controls
+			}),
+			scatter: scatterInit({
+				app: this.app,
+				holder: this.dom.viz.append('div'),
+				id: this.id,
+				controls
+			}),
+			termInfo: termInfoInit({
+				app: this.app,
+				holder: this.dom.viz.append('div'),
+				id: this.id
+			})
 		}
 
 		const termdbConfig = this.app.getState().termdbConfig
 		if (opts.term.type == 'condition' && termdbConfig.cumincplot4condition) {
-			this.components.cuminc = cumincInit(
-				this.app,
-				{ holder: this.dom.viz.append('div'), id: this.id },
-				Object.assign({ controls }, this.app.opts.cuminc)
-			)
+			this.components.cuminc = cumincInit({
+				app: this.app,
+				holder: this.dom.viz.append('div'),
+				id: this.id,
+				controls
+			})
 		}
 
 		this.eventTypes = ['postInit', 'postRender']

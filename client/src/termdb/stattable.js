@@ -1,10 +1,11 @@
 import * as rx from '../common/rx.core'
 
 class TdbStatTable {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'stattable'
 		this.id = opts.id
-		this.app = app
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
 		this.dom = {
 			div: opts.holder.append('div').style('margin', '10px')

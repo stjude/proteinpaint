@@ -1360,7 +1360,7 @@ opts
 function launchtoy(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
 	import('./toy/toy.app').then(_ => {
-		_.appInit(null, opts)
+		_.appInit(opts)
 	})
 }
 
@@ -1368,7 +1368,7 @@ function launchtermdb(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
 	if (!opts.callbacks) opts.callbacks = {}
 	import('./termdb/app').then(_ => {
-		_.appInit(null, opts)
+		_.appInit(opts)
 	})
 }
 

@@ -6,12 +6,12 @@ import Partjson from 'partjson'
 import { to_svg } from '../client'
 
 class TdbScatter {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'scatter'
 		this.id = opts.id
-		this.app = app
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-
 		this.dom = {
 			div: opts.holder
 		}

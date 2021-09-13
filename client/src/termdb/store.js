@@ -35,7 +35,7 @@ const defaultState = {
 
 // one store for the whole tdb app
 class TdbStore {
-	constructor(app) {
+	constructor(opts) {
 		this.api = rx.getStoreApi(this)
 		this.copyMerge = rx.copyMerge
 		this.deepFreeze = rx.deepFreeze
@@ -44,9 +44,9 @@ class TdbStore {
 		this.toJson = rx.toJson // used in store.api.state()
 		this.prevGeneratedId = 0 // use for assigning unique IDs where needed
 
-		this.app = app
-		if (!app.opts.state) throw '.state{} missing'
-		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
+		this.app = opts.app
+		if (!this.app.opts.state) throw '.state{} missing'
+		this.state = this.copyMerge(this.toJson(defaultState), this.app.opts.state)
 		this.validateOpts()
 
 		// when using rx.copyMerge, replace the object values

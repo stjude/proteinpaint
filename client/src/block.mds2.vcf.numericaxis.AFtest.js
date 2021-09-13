@@ -331,7 +331,7 @@ groupindex:
 				}
 				const filters = filterJoin(get_hidden_filters(tk))
 				if (filters) obj.state.termfilter = { filter: filters }
-				appInit(null, obj)
+				appInit(obj)
 			}
 		})
 	}
@@ -511,7 +511,7 @@ function show_group_termdb(group, tk, block) {
 			.on('click', () => {
 				// click label to embed tree
 				tk.legend.tip.clear().showunder(group.dom.samplehandle.node())
-				appInit(null, {
+				appInit({
 					holder: tk.legend.tip.d.append('div').style('margin', '5px'),
 					state: {
 						genome: block.genome.name,
