@@ -248,13 +248,10 @@ function makeRibbon(e, text, color) {
 async function openSandbox(track, holder) {
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
-	sandbox_div.header_row.style('z-index', '99')
+	sandbox_div.header_row
 	sandbox_div.header.text(track.name)
 
-	sandbox_div.body
-		.style('z-index', '-1')
-		.style('overflow', 'hidden')
-		.style('border', 'none')
+	sandbox_div.body.style('overflow', 'hidden').style('border', 'none')
 
 	// creates div for instructions or other messaging about the track
 	addMessage(track.sandbox.intro, sandbox_div.body)
@@ -432,8 +429,7 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 
 //Creates the subtab menu for pursing through examples, on the left-hand side of the sandbox, below the main tabs
 async function makeLeftsideTabMenu(track, div) {
-	let tabs = []
-	tabArray(tabs, track)
+	const tabs = track.ppcalls.map(ppcall => getTabData(track, ppcall))
 
 	const menu_wrapper = div.append('div').classed('sjpp-vertical-tab-menu', true)
 	const tabs_div = menu_wrapper.append('div').classed('sjpp-tabs-div', true)
@@ -499,22 +495,21 @@ async function makeLeftsideTabMenu(track, div) {
 	}
 }
 
-function tabArray(tabs, track) {
-	track.ppcalls.forEach(call => {
-		tabs.push({
-			label: call.label,
-			active: false,
-			callback: async div => {
-				const wait = tab_wait(div)
-				try {
-					renderContent(track, call, div)
-					wait.remove()
-				} catch (e) {
-					wait.text('Error: ' + (e.message || e))
-				}
+function getTabData(track, call) {
+	return {
+		label: call.label,
+		active: false,
+		// active: i === 0,
+		callback: async div => {
+			const wait = tab_wait(div)
+			try {
+				renderContent(track, call, div)
+				wait.remove()
+			} catch (e) {
+				wait.text('Error: ' + (e.message || e))
 			}
-		})
-	})
+		}
+	}
 }
 
 // ******* Sandbox Message Functions *********
@@ -600,35 +595,35 @@ function makeDataDownload(arg, div) {
 }
 
 function showCode(track, call, btns) {
-	if (track.ppcalls.is_ui != true) {
-		//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
-		const code = highlight(
-			`runproteinpaint({
+	if (track.ppcalls.is_ui == true) return
+
+	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
+	const code = highlight(
+		`runproteinpaint({
     host: "${window.location.origin}",
     holder: document.getElementById('a'),` +
-				JSON.stringify(call, '', 4)
-					.replaceAll(/"(.+)"\s*:/g, '$1:')
-					.replaceAll(/\\t/g, '	')
-					.replaceAll(/\\n/g, '\r\t')
-					.slice(1, -1)
-					.trim() +
-				`\r})`,
-			{ language: 'javascript' }
-		).value
+			JSON.stringify(call, '', 4)
+				.replaceAll(/"(.+)"\s*:/g, '$1:')
+				.replaceAll(/\\t/g, '	')
+				.replaceAll(/\\n/g, '\r\t')
+				.slice(1, -1)
+				.trim() +
+			`\r})`,
+		{ language: 'javascript' }
+	).value
 
-		const contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 30px 5px 30px;"><code style="font-size:14px;">${code}</code></pre>`
+	const contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 30px 5px 30px;"><code style="font-size:14px;">${code}</code></pre>`
 
-		btns.push({
-			name: 'Code',
-			callback: async rdiv => {
-				try {
-					rdiv.append('div').html(contents)
-				} catch (e) {
-					alert('Error: ' + e)
-				}
+	btns.push({
+		name: 'Code',
+		callback: async rdiv => {
+			try {
+				rdiv.append('div').html(contents)
+			} catch (e) {
+				alert('Error: ' + e)
 			}
-		})
-	}
+		}
+	})
 }
 
 function makeArrowButtons(arrows, btns) {
