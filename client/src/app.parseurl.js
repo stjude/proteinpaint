@@ -310,6 +310,14 @@ upon error, throw err message as a string
 				par.hlaachange.set(s, false)
 			}
 		}
+		if (urlp.has('hlregion')) {
+			const lst = []
+			for (const t of urlp.get('hlregion').split(',')) {
+				const pos = string2pos(t, par.genome, true)
+				if (pos) lst.push(pos)
+			}
+			if (lst.length) par.hlregions = lst
+		}
 
 		par.tklst = await get_tklst(urlp, par.genome)
 
