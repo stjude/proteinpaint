@@ -18,8 +18,8 @@ const defaultState = {
 	tree: {
 		exclude_types: [],
 		expandedTermIds: [],
-		visiblePlotIds: [],
-		plots: {} // deprecated but back-supported, use the root plots[] array instead
+		visiblePlotIds: []
+		// plots: {} // deprecated but back-supported, use the root plots[] array instead
 	},
 	plots: [],
 	termfilter: {

@@ -19,9 +19,9 @@ const defaultState = {
 	tree: {
 		exclude_types: [],
 		expandedTermIds: [],
-		visiblePlotIds: [],
-		plots: {}
+		visiblePlotIds: []
 	},
+	plots: [],
 	termfilter: {
 		filter: {
 			type: 'tvslst',
