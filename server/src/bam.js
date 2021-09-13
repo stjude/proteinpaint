@@ -921,9 +921,7 @@ async function query_reads(q) {
 
 /*
 get total number of reads from all regions
-determine downsampling ratio as
-{ keep:int, skip: int, pointer:int }
-where keep/(keep+skip) is the downsampling ratio
+determine downsampling ratio
 */
 async function determine_downsampling(q) {
 	let totalreads = 0 // total number of reads from all regions
@@ -948,8 +946,10 @@ async function determine_downsampling(q) {
 		return
 	}
 	// more than 110% of max reads, will apply downsampling
-	// 10% of maxreadcount as a unit, to indicate 1 out of ten reads to be dropped
+	// 10% of maxreadcount as a unit, corresponding to 1 out of ten reads to be dropped
 	const unitcount = (totalreads - maxreadcount) / (maxreadcount * 0.1)
+	// keep/(keep+skip) is the downsampling ratio
+	// pointer++ for every read so that for every #(keep+skip) reads, #skip reads are skipped
 	q.downsample = {
 		keep: 10,
 		skip: Math.floor(unitcount),
