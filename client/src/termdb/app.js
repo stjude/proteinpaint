@@ -37,7 +37,7 @@ class TdbApp {
 
 		// catch initialization error
 		try {
-			this.store = storeInit({ app: this.api })
+			this.store = storeInit({ app: this.api, state: this.opts.state })
 			this.store
 				.copyState({ rehydrate: true })
 				.then(state => {

@@ -23,59 +23,41 @@ https://docs.google.com/document/d/1G3LqbtsCEkGw4ABA_VognhjVnUHnsVYAGdXyhYG374M/
  Init Factory
 *************/
 
-export function getInitFxn(_Class_) {
-	/* return the initiator function to wrap around the _Class_ and return the API
-
-		instanceOpts{}
-		- app: required for non-app components
-
-		returns a function that 
+/* 
+	getInitFxn()
+	- returns a _Class_ initiator function that
 		- creates a _Class_ instance
-		- optionally attaches a self reference to the api
-		- freezes and returns the instance api
+		- optionally attaches an api.Inner reference to the instance for debugging
+		- optionally creates an instance.bus property if there is an instance.eventTypes property
+		- freezes and returns an immutable instance API
+
+	Design goal: 
+	- to protect _Class_ instance properties from being changed arbitrarily 
+	  by any code that has a reference to it
+	- Flexibility to use the generated instance outside of the rx framework/notification flow,
+		with or without an coordinating "app"
+*/
+export function getInitFxn(_Class_) {
+	/*
+		constructorArg
+		- the argument to the _Class_ constructor
 	*/
-	return (instanceOpts = {}) => {
-		/* instantiate mutable private properties and methods
+	return (constructorArg = {}) => {
+		// create a _Class_ instance with mutable private properties and methods
+		const self = new _Class_(constructorArg)
 
-		rx uses following predefined attributes from an app instance
-		.type
-			required
-			TODO explain
-		.components{}
-			required
-		.eventTypes[]
-			optional
-
-		.printError()
-			optional
-			triggered by exception upon dispatching action
-		.tip
-			optional
-			Menu instance
-		.dom{}
-			optional
-			.holder, d3-wrapped dom
-		.appInit
-			optional
-			TODO explain
-
-		*/
-		const self = new _Class_(instanceOpts)
-
-		// get the instance's api that may hide its
-		// mutable props and methods
-		// if there is already an instance api as constructed, use it
-		// if not, expose the mutable instance as its public api
+		// get the instance's api that may hide its mutable props and methods
+		// - if there is already an instance api as constructed, use it
+		// - if not, expose the mutable instance as its public api
 		const api = self.api || self
-		const opts = self.opts || (self.app && self.app.opts) || {}
-		// expose the hidden instance to debugging and testing code
-		if (opts.debug) api.Inner = self
+		// optionally expose the hidden instance to debugging and testing code
+		if (self.debug || (self.opts && self.opts.debug)) api.Inner = self
 		// freeze the api's properties and methods before exposing
 		Object.freeze(api)
 
 		if (self.eventTypes) {
 			// set up an optional event bus
-			self.bus = new Bus(api, self.eventTypes, self.opts.callbacks || instanceOpts.callbacks || {})
+			self.bus = new Bus(api, self.eventTypes, self.opts.callbacks || {})
 			self.bus.emit('postInit')
 		}
 		return api
@@ -84,18 +66,18 @@ export function getInitFxn(_Class_) {
 
 /*
 	may apply overrides to instance opts
-	if there is an instance.type key in the opts.app
+	if there is an instance.type key in app.opts
 */
 export function getOpts(opts, instance) {
 	if (!instance.app) return opts
 	if (instance.app.opts[instance.type]) {
 		/*
 			Always override opts with any app.opts that is available
-			for the instance's component type, supplied as a appInit() argument.
+			for the instance's component type, supplied as an appInit() argument.
 
 			TODO: May want the ability to NOT override an existing key-value
 			in opts, only apply app.opts[instance.type] override for key-values
-			that are not in opts.
+			that are not in opts. Need to see an actual use case before working on this.
 		*/
 		copyMerge(opts, instance.app.opts[instance.type])
 	}
@@ -274,11 +256,6 @@ export function getComponentApi(self) {
 			await notifyComponents(self.components, current, componentData)
 			if (self.bus) self.bus.emit('postRender')
 			return api
-		},
-		async setInnerAttr(data) {
-			if (typeof self.setAttr == 'function') {
-				await self.setAttr(data)
-			}
 		},
 		// must not expose self.bus directly since that
 		// will also expose bus.emit() which should only

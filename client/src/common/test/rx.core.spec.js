@@ -36,16 +36,12 @@ class TestApp {
 class TestStore {
 	constructor(opts) {
 		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getStoreApi(this)
 		this.deepFreeze = rx.deepFreeze
 		this.fromJson = rx.fromJson // used in store.api.copyState()
 		this.toJson = rx.toJson // used in store.api.copyState()
-		this.state = opts.app.opts.state
-			? opts.app.opts.state
-			: {
-					prop: 'xyz',
-					todos: []
-			  }
+		this.state = opts.state ? opts.state : { prop: 'xyz', todos: [] }
 	}
 }
 
@@ -173,7 +169,7 @@ tape('getStoreApi', function(test) {
 			debug: 1
 		}
 	}
-	const store0 = storeInit({ app })
+	const store0 = storeInit({ app, state: app.opts.state })
 	test.equal(typeof store0.write, 'function', 'should provide a write() method')
 	test.equal(typeof store0.copyState, 'function', 'should provide a copyState() method')
 	test.equal(store0.Inner.state, app.opts.state, 'should have the expected initial state')
