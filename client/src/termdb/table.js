@@ -2,11 +2,11 @@ import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
 
 class TdbTable {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'table'
 		this.id = opts.id
-		this.app = app
-		this.opts = opts
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
 		this.dom = {
 			div: this.opts.holder.style('margin', '10px 0px').style('display', 'none')
@@ -14,7 +14,7 @@ class TdbTable {
 		setInteractivity(this)
 		setRenderers(this)
 		this.eventTypes = ['postInit', 'postRender']
-		opts.controls.on('downloadClick.table', this.download)
+		this.opts.controls.on('downloadClick.table', this.download)
 	}
 
 	getState(appState, sub) {

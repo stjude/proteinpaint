@@ -25,11 +25,11 @@ allow to search categories, e.g. hodgkin lymphoma from diaggrp, how to act upon 
  */
 
 class TermSearch {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'search'
-		this.opts = opts
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.app = app
 		setRenderers(this)
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }

@@ -29,10 +29,8 @@ tape('component access', function(test) {
 	test.plan(2)
 
 	runpp({
-		app: {
-			callbacks: {
-				'postInit.test': runTests
-			}
+		callbacks: {
+			'postInit.test': runTests
 		}
 	})
 
@@ -66,10 +64,8 @@ tape('default view', function(test) {
 	test.plan(5)
 
 	runpp({
-		app: {
-			callbacks: {
-				'postInit.test': runTests
-			}
+		callbacks: {
+			'postInit.test': runTests
 		}
 	})
 

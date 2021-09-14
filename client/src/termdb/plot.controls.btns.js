@@ -1,18 +1,18 @@
 import * as rx from '../common/rx.core'
 
 class TdbControlsTopBar {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'controlsTopBar'
-		this.opts = opts
-		this.id = opts.id
-		this.app = app
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
+		this.id = this.opts.id
 		this.dom = {
 			holder: opts.holder,
 			burger_div: opts.holder.append('div'),
 			button_bar: opts.holder.append('div')
 		}
 
-		const debug = opts.debug
+		const debug = this.opts.debug
 		this.features = {
 			burgerbtn: burgerBtnInit({
 				holder: this.dom.burger_div,

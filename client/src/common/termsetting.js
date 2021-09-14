@@ -267,7 +267,7 @@ function setInteractivity(self) {
 			.clear()
 			.showunder(holder instanceof Element ? holder : this instanceof Element ? this : self.dom.holder.node())
 		const termdb = await import('../termdb/app')
-		termdb.appInit(null, {
+		termdb.appInit({
 			holder: self.dom.tip.d,
 			state: {
 				vocab: self.opts.vocab,

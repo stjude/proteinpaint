@@ -10,11 +10,11 @@ import getHandlers from './barchart.events'
 import { to_svg } from '../client'
 
 class TdbBarchart {
-	constructor(app, opts) {
-		this.app = app
-		this.opts = opts
+	constructor(opts) {
 		this.type = 'barchart'
+		this.app = opts.app
 		this.id = opts.id
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
 		this.dom = {
 			holder: opts.holder,

@@ -2,10 +2,10 @@ import * as rx from '../common/rx.core'
 import { select } from 'd3-selection'
 
 class ToyFilter {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'filter'
+		this.app = opts.app
 		this.api = rx.getComponentApi(this)
-		this.app = app
 		this.dom = { holder: opts.holder }
 
 		// set closured methods to use the correct "this" context

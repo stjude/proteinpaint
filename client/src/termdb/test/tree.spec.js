@@ -240,10 +240,8 @@ tape('error handling', function(test) {
 			genome: 'ahg38',
 			termdbConfig: {}
 		},
-		app: {
-			callbacks: {
-				'postRender.test': testWrongGenome
-			}
+		callbacks: {
+			'postRender.test': testWrongGenome
 		}
 	})
 	function testWrongGenome(app) {
@@ -256,10 +254,8 @@ tape('error handling', function(test) {
 			dslabel: 'xxx',
 			termdbConfig: {}
 		},
-		app: {
-			callbacks: {
-				'postRender.test': testWrongDslabel
-			}
+		callbacks: {
+			'postRender.test': testWrongDslabel
 		}
 	})
 	function testWrongDslabel(app) {

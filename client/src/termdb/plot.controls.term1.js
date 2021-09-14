@@ -18,11 +18,12 @@ execution flow:
 */
 
 class Term1ui {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'term1Input'
 		this.id = opts.id
-		this.app = app
-		this.validateOpts(opts)
+		this.app = opts.app
+		this.opts = this.validateOpts(opts)
+		this.dom = { tr: opts.holder }
 		setRenderers(this)
 		this.initUI()
 		this.api = rx.getComponentApi(this)
@@ -30,8 +31,7 @@ class Term1ui {
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing'
 		if (!o.holder) throw 'opts.holder missing'
-		this.opts = o
-		this.dom = { tr: o.holder }
+		return rx.getOpts(o, this)
 	}
 	getState(appState) {
 		const plot = appState.plots.find(p => p.id === this.id)

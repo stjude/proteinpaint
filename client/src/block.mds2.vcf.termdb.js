@@ -501,5 +501,5 @@ official track only
 			filter: JSON.parse(JSON.stringify(tk.sample_termfilter))
 		}
 	}
-	appInit(null, opt)
+	appInit(opt)
 }

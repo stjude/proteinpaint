@@ -63,11 +63,11 @@ class TdbTree {
 	  within this class declaration 
 
 	*/
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'tree'
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.app = app
-		this.opts = opts
 		this.dom = {
 			holder: opts.holder,
 			treeDiv: opts.holder.append('div')
@@ -225,25 +225,20 @@ class TdbTree {
 			.text('Loading...')
 			.style('margin', '3px')
 			.style('opacity', 0.5)
-		const plot = plotInit(
-			this.app,
-			rx.copyMerge(
-				{
-					id: term.id,
-					holder: holder,
-					term,
-					callbacks: {
-						// must use namespaced eventType otherwise will be rewritten..
-						'postRender.viewbtn': plot => {
-							this.loadingPlotSet.delete(term.id)
-							if (loading_div) loading_div.remove()
-							plot.on('postRender.viewbtn', null)
-						}
-					}
-				},
-				this.app.opts.plot || {}
-			)
-		)
+		const plot = plotInit({
+			app: this.app,
+			id: term.id,
+			holder: holder,
+			term,
+			callbacks: {
+				// must use namespaced eventType otherwise will be rewritten..
+				'postRender.viewbtn': plot => {
+					this.loadingPlotSet.delete(term.id)
+					if (loading_div) loading_div.remove()
+					plot.on('postRender.viewbtn', null)
+				}
+			}
+		})
 		this.plots[term.id] = plot
 	}
 

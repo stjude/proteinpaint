@@ -10,15 +10,15 @@ import { initRadioInputs } from '../common/dom'
 let instanceNum = 0
 
 class TdbConfigUiInit {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'controlsConfig'
-		this.opts = opts
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.id = opts.id
-		this.app = app
 		this.instanceNum = instanceNum++
 		setInteractivity(this)
 
-		const dispatch = app.dispatch
+		const dispatch = this.app.dispatch
 		const table = this.setDom()
 		const debug = opts.debug
 		this.inputs = {
@@ -54,9 +54,9 @@ class TdbConfigUiInit {
 			})
 		}
 		this.components = {
-			term1: term1uiInit(app, { holder: this.dom.term1Tr, id: this.id, debug }),
-			overlay: overlayInit(app, { holder: this.dom.overlayTr, id: this.id, debug }),
-			divideBy: divideInit(app, { holder: this.dom.divideTr, id: this.id, debug })
+			term1: term1uiInit({ app: this.app, holder: this.dom.term1Tr, id: this.id, debug }),
+			overlay: overlayInit({ app: this.app, holder: this.dom.overlayTr, id: this.id, debug }),
+			divideBy: divideInit({ app: this.app, holder: this.dom.divideTr, id: this.id, debug })
 		}
 
 		this.api = rx.getComponentApi(this)

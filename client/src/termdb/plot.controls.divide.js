@@ -16,11 +16,12 @@ pill is only for altering between (1) and (2)
 */
 
 class Divide {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'divideByInput'
 		this.id = opts.id
-		this.app = app
-		this.validateOpts(opts)
+		this.app = opts.app
+		this.opts = this.validateOpts(opts)
+		this.dom = { tr: opts.holder }
 		setRenderers(this)
 		this.initUI()
 		this.usedTerms = [] // array of {term, q}
@@ -29,8 +30,7 @@ class Divide {
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing' // plot id?
 		if (!o.holder) throw 'opts.holder missing'
-		this.opts = o
-		this.dom = { tr: o.holder }
+		return rx.getOpts(o, this)
 	}
 	initPill() {
 		this.pill = termsettingInit({

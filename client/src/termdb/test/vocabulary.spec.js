@@ -109,10 +109,8 @@ tape('getVocab(), custom', test => {
 				]
 			}
 		},
-		app: {
-			callbacks: {
-				'postInit.test': runTests1
-			}
+		callbacks: {
+			'postInit.test': runTests1
 		}
 	})
 

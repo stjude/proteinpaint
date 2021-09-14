@@ -9,12 +9,12 @@ const panel_border_color = '#D3D3D3'
 let i = 0 // track controls "instances" for assigning unambiguous unique input names
 
 class TdbPlotControls {
-	constructor(app, opts) {
-		this.opts = opts
+	constructor(opts) {
 		this.type = 'plotControls'
 		this.id = opts.id
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.app = app
 		this.setDom()
 
 		setInteractivity(this)
@@ -22,7 +22,8 @@ class TdbPlotControls {
 
 		const debug = this.app.opts.debug
 		this.components = {
-			topbar: topBarInit(app, {
+			topbar: topBarInit({
+				app: this.app,
 				id: this.id,
 				holder: this.dom.topbar,
 				callback: this.toggleVisibility,
@@ -41,10 +42,11 @@ class TdbPlotControls {
 					}),
 				debug
 			}),
-			config: configUiInit(app, {
+			config: configUiInit({
+				app: this.app,
 				id: this.id,
 				holder: this.dom.config_div,
-				tip: app.tip,
+				tip: this.app.tip,
 				debug,
 				isleaf: opts.isleaf,
 				iscondition: opts.iscondition
@@ -69,7 +71,7 @@ class TdbPlotControls {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
-			throw `No plot with id='${this.id}' found.`
+			throw `No plot with id='${this.id}' found. 73 33333`
 		}
 		return {
 			genome: appState.genome,

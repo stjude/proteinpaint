@@ -11,10 +11,11 @@ import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
 
 class TdbCumInc {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'cuminc'
 		this.id = opts.id
-		this.app = app
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
 		this.dom = {
 			holder: opts.holder,
@@ -22,7 +23,7 @@ class TdbCumInc {
 			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		// hardcode for now, but may be set as option later
-		this.settings = Object.assign({}, opts.settings)
+		this.settings = Object.assign({}, this.opts.settings)
 		this.pj = getPj(this)
 		this.lineFxn = line()
 			.curve(curveStepAfter)

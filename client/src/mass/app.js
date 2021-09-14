@@ -39,7 +39,7 @@ class MassApp {
 
 		// catch initialization error
 		try {
-			this.store = storeInit(this.api)
+			this.store = storeInit({ app: this.api, state: this.opts.state })
 			this.store
 				.copyState({ rehydrate: true })
 				.then(state => {
@@ -65,14 +65,11 @@ class MassApp {
 					})
 				})
 
-				this.components.plots[plot.id] = plotInit(
-					this.app,
-					{
-						holder,
-						plot
-					},
-					this.opts.plot
-				)
+				this.components.plots[plot.id] = plotInit({
+					app: this.app,
+					holder,
+					plot
+				})
 			}
 		}
 
@@ -84,23 +81,20 @@ class MassApp {
 	}
 
 	initOpts(o) {
-		if (!('app' in o)) o.app = {}
+		if (!o.callbacks) o.callbacks = {}
 		return o
 	}
 
 	setComponents() {
 		this.components = {
-			nav: navInit(
-				this.app,
-				{
-					holder: this.dom.topbar,
-					header_mode: this.state && this.state.nav && this.state.nav.header_mode,
-					vocab: this.state.vocab
-				},
-				this.opts.nav
-			),
+			nav: navInit({
+				app: this.app,
+				holder: this.dom.topbar,
+				header_mode: this.state && this.state.nav && this.state.nav.header_mode,
+				vocab: this.state.vocab
+			}),
 
-			//recover: recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover),
+			//recover: recoverInit({ app: this.app, holder: this.dom.holder, appType: 'termdb' }),
 			plots: {}
 		}
 	}

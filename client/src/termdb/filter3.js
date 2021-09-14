@@ -13,10 +13,12 @@ execution flow:
 4. then call this.initFilter() to initiate filter
 */
 class TdbFilter {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'filter'
-		this.app = app
+		this.app = opts.app
 		this.validateOpts(opts)
+		this.opts = rx.getOpts(opts, this)
+		this.dom = { holder: this.opts.holder }
 		this.initHolder()
 		this.api = rx.getComponentApi(this)
 		this.eventTypes = ['postInit', 'postRender']
@@ -24,8 +26,6 @@ class TdbFilter {
 
 	validateOpts(o) {
 		if (!o.holder) throw 'opts.holder missing'
-		this.opts = o
-		this.dom = { holder: o.holder }
 	}
 
 	getState(appState) {
