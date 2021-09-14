@@ -892,7 +892,7 @@ async function query_reads(q) {
 		will only query reads from the variant region
 		query region is centered on the variant position to be able to include softclip reads resulting from the mutation
 		*/
-		const varlen = Math.max(q.variant.ref.length, q.variant.alt.length)
+		const varlen = Math.floor(1.5 * Math.max(q.variant.ref.length, q.variant.alt.length))
 		const r = {
 			chr: q.variant.chr,
 			start: q.variant.pos - varlen,
