@@ -95,6 +95,36 @@ tape('\n', function(test) {
 	test.end()
 })
 
+tape('getOpts', function(test) {
+	// this app object will be its own appApi
+	const app = {
+		opts: {
+			debug: 1,
+			abc: {
+				callbacks: {
+					postInit() {}
+				},
+				random: []
+			}
+		}
+	}
+	const absInstance = { type: 'abc', app }
+	const opts0 = { app, testKey: 'xyz' }
+	const opts1 = rx.getOpts(opts0, absInstance)
+	test.deepEqual(
+		opts1,
+		{
+			app,
+			testKey: opts0.testKey,
+			callbacks: app.opts.abc.callbacks,
+			debug: 1,
+			random: app.opts.abc.random
+		},
+		'should copyMerge options by component type'
+	)
+	test.end()
+})
+
 tape('getInitFxn', function(test) {
 	test.equal(typeof rx.getInitFxn, 'function', 'should be an rx.function')
 
