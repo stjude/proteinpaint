@@ -307,8 +307,9 @@ function renderContent(call, div) {
 
 //********* Tab Menu Functions *********
 
-//Creates the larger tab menu above all examples and uis
-function makeSandboxTabs(track, tabs) {
+//Creates the larger tabs above all examples and uis
+function makeSandboxTabs(track) {
+	const tabs = []
 	const ui = track.ppcalls.findIndex(t => t.is_ui == true)
 	const notui = track.ppcalls.findIndex(t => t.is_ui == (false || undefined))
 	const ui_present = ui != -1 ? true : false
@@ -362,14 +363,13 @@ function makeSandboxTabs(track, tabs) {
 			}
 		})
 	}
+	return tabs
 }
-
+//Creates the main tab menu over the examples and/or app uis
 function sandboxTabMenu(track, tabs_div, content_div) {
-	let tabs = []
-	makeSandboxTabs(track, tabs)
+	const tabs = makeSandboxTabs(track) 
 
-	for (let i = 0; i < tabs.length; i++) {
-		const tab = tabs[i]
+	for (const tab of tabs) {
 
 		tabs[0].active = true
 
@@ -396,26 +396,10 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 		}
 
 		tab.tab.on('click', () => {
-			if (tab.content.style('display') != 'none') {
-				tab.content.style('display', 'none')
-				tab.tab.style('border-bottom', 'none')
-				tab.active = false
-			} else {
-				tab.tab.style('border-bottom', '8px solid #1575ad')
-				tab.active = true
-				appear(tab.content)
-				for (let j = 0; j < tabs.length; j++) {
-					if (i != j) {
-						tabs[j].tab.style('border-bottom', 'none')
-						tabs[j].content.style('display', 'none')
-						tabs[j].active = false
-					}
-				}
-			}
-			if (tabs.findIndex(t => t.active) == -1) {
-				tab.tab.style('border-bottom', '8px solid #1575ad')
-				tab.content.style('display', 'block')
-				tab.active = true
+			for(const t of tabs) {
+				t.active = t === tab 
+				t.tab.style('border-bottom', t.active ? '8px solid #1575ad' : 'none')
+				t.content.style('display', t.active ? 'block' : 'none')
 			}
 			if (tab.callback) {
 				tab.callback(tab.content)
@@ -433,8 +417,7 @@ async function makeLeftsideTabMenu(track, div) {
 	const tabs_div = menu_wrapper.append('div').classed('sjpp-tabs-div', true)
 	const content_div = menu_wrapper.append('div').classed('sjpp-content-div', true)
 
-	for (let i = 0; i < tabs.length; i++) {
-		const tab = tabs[i]
+	for (const tab of tabs) {
 
 		tab.tab = tabs_div
 			.append('button')
@@ -460,26 +443,11 @@ async function makeLeftsideTabMenu(track, div) {
 		}
 
 		tab.tab.on('click', () => {
-			if (tab.content.style('display') != 'none') {
-				tab.content.style('display', 'none')
-				tab.tab.style('color', '#757373').style('border-right', 'none')
-				tab.active = false
-			} else {
-				tab.tab.style('color', '#1575ad').style('border-right', '8px solid #1575ad')
-				tab.active = true
-				appear(tab.content)
-				for (let j = 0; j < tabs.length; j++) {
-					if (i != j) {
-						tabs[j].tab.style('color', '#757373').style('border-right', 'none')
-						tabs[j].content.style('display', 'none')
-						tabs[j].active = false
-					}
-				}
-			}
-			if (tabs.findIndex(t => t.active) == -1) {
-				tab.tab.style('color', '#1575ad').style('border-right', '8px solid #1575ad')
-				tab.content.style('display', 'block')
-				tab.active = true
+			for(const t of tabs) {
+				t.active = t === tab 
+				t.tab.style('border-right', t.active ? '8px solid #1575ad' : 'none')
+				t.tab.style('color', t.active ? '#1575ad': '#757373')
+				t.content.style('display', t.active ? 'block' : 'none')
 			}
 			if (tab.callback) {
 				tab.callback(tab.content)
