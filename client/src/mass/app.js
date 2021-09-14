@@ -81,7 +81,7 @@ class MassApp {
 	}
 
 	initOpts(o) {
-		if (!('app' in o)) o.app = {}
+		if (!o.callbacks) o.callbacks = {}
 		return o
 	}
 

@@ -1366,7 +1366,6 @@ function launchtoy(opts, app) {
 
 function launchtermdb(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
-	if (!opts.callbacks) opts.callbacks = {}
 	import('./termdb/app').then(_ => {
 		_.appInit(opts)
 	})
@@ -1374,7 +1373,6 @@ function launchtermdb(opts, app) {
 
 function launchmass(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
-	if (!opts.callbacks) opts.callbacks = {}
 	import('./mass/app').then(_ => {
 		_.appInit(opts)
 	})

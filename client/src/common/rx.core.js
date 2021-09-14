@@ -75,8 +75,7 @@ export function getInitFxn(_Class_) {
 
 		if (self.eventTypes) {
 			// set up an optional event bus
-			const callbacks = self.type in instanceOpts ? instanceOpts[self.type].callbacks : instanceOpts.callbacks
-			self.bus = new Bus(api, self.eventTypes, callbacks)
+			self.bus = new Bus(api, self.eventTypes, self.opts.callbacks || instanceOpts.callbacks || {})
 			self.bus.emit('postInit')
 		}
 		return api
