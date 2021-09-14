@@ -1,8 +1,7 @@
-import { dofetch2, sayerror, newSandboxDiv, tab2box, tab_wait, appear } from './client'
+import { dofetch2, sayerror, newSandboxDiv, tab_wait, appear } from './client'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
 import { highlight } from 'highlight.js/lib/common'
-import { deepFreeze } from './common/rx.core'
 
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
@@ -154,29 +153,9 @@ function displayTracks(tracks, holder, page_args) {
 		const li = holder.append('li')
 		li.attr('class', 'sjpp-track')
 			.html(
-				`${
-					track.blurb
-						? `<div class="sjpp-track-h" id="theader"><span style="font-size:14.5px;font-weight:500;cursor:pointer">${track.name}</span><span class="sjpp-track-blurb" style="cursor:default">  ${track.blurb}</span></div>`
-						: `<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>`
-				}
+				`<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>
+				${track.blurb ? `<span class="sjpp-track-blurb" style="cursor:default">${track.blurb}</span></div>` : ''}
 				<span class="sjpp-track-image"><img src="${track.image}"></img></span>
-				<div class='sjpp-track-links'>
-				${track.media.urls
-					.map(url => {
-						if (!url) return ''
-						if (url.link && !url.name) {
-							return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.link}" target="_blank">URL</a>`
-						}
-						if (url.link && url.name) {
-							return `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${window.location.origin}${url.link}" target="_blank">${url.name}</a>`
-						}
-					})
-					.join('')}
-				${
-					track.media.doc
-						? `<a style="cursor:pointer" onclick="event.stopPropagation();" href="${track.media.doc}", target="_blank">Docs</a>`
-						: ''
-				}
 				</div>`
 			)
 			.on('click', async () => {
@@ -258,7 +237,7 @@ function makeRibbon(e, text, color) {
 		.style('height', 'auto')
 		.style('width', '100%')
 		.style('top', '15%')
-		.style('left', '-23%')
+		.style('left', '-30%')
 		.style('font-size', '11.5px')
 		.style('text-transform', 'uppercase')
 		.style('text-align', 'center')
@@ -269,58 +248,229 @@ function makeRibbon(e, text, color) {
 async function openSandbox(track, holder) {
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
-	sandbox_div.header_row.style('box-shadow', 'rgb(220 220 220) 5px -2px 5px').style('z-index', '99')
-	sandbox_div.header.text(track.name).style('padding', '5px 10px 10px 10px')
-	sandbox_div.body.style('box-shadow', 'rgb(220 220 220) 5px -2px 10px').style('z-index', '-1')
+	sandbox_div.header_row
+	sandbox_div.header.text(track.name)
+
+	sandbox_div.body.style('overflow', 'hidden').style('border', 'none')
 
 	// creates div for instructions or other messaging about the track
 	addMessage(track.sandbox.intro, sandbox_div.body)
 
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div.body)
+	addButtons(track.sandbox.buttons, sandbox_div.body)
 
-	if (track.ppcalls.length == 1) {
-		const call = track.ppcalls[0]
+	const toptab_div = sandbox_div.body
+		.append('div')
+		.style('display', 'flex')
+		.style('align-content', 'end')
+		.style('justify-content', 'center')
+		.style('border', 'none')
+		.style('border-bottom', '1px solid lightgray')
+		.style('width', '100%')
+	const maincontent_div = sandbox_div.body.append('div')
 
-		const buttons_div = sandbox_div.body.append('div').attr('id', 'sjpp-buttons-div')
-		const reuse_div = sandbox_div.body.append('div').attr('id', 'sjpp-reusable')
+	// Creates the overarching tab menu and subsequent content
+	sandboxTabMenu(track, toptab_div, maincontent_div)
+}
 
-		makeLine(sandbox_div.body)
+// Single content layout for examples only - buttons not used for UIs
+function renderContent(call, div) {
+	addMessage(call.message, div)
 
-		//Creates any custom buttons
-		addButtons(track.sandbox.buttons, buttons_div)
-		//Download data and show runpp() code at the top
-		makeDataDownload(call.download, buttons_div)
-		//Redirects to URL parameter of track
-		showURLLaunch(call.urlparam, buttons_div)
+	const buttons_div = div.append('div').style('margin-bottom', '20px')
+	const reuse_div = div.append('div')
 
-		addArrowBtns(track, track.sandbox.arrowButtons, call.runargs, buttons_div, reuse_div)
+	addButtons(call.buttons, buttons_div)
+	makeDataDownload(call.download, buttons_div)
+	showURLLaunch(call.urlparam, buttons_div)
+	addArrowBtns(call.arrowButtons, call.runargs, buttons_div, reuse_div)
 
-		// template runpp() arg
-		const runpp_arg = {
-			holder: sandbox_div.body
-				.append('div')
-				.style('margin', '20px')
-				.node(),
-			sandbox_header: sandbox_div.header,
-			host: window.location.origin
+	const line = div
+		.append('hr')
+		.style('border', '0')
+		.style('border-top', '1px dashed #e3e3e6')
+		.style('width', '100%')
+
+	const runpp_arg = {
+		holder: div
+			.append('div')
+			.style('margin', '20px')
+			.node(),
+		host: window.location.origin
+	}
+
+	const callpp = JSON.parse(JSON.stringify(call.runargs))
+
+	runproteinpaint(Object.assign(runpp_arg, callpp))
+}
+
+//********* Tab Menu Functions *********
+
+//Creates the larger tabs above all examples and uis
+function makeSandboxTabs(track) {
+	const tabs = []
+	const ui = track.ppcalls.findIndex(t => t.is_ui == true)
+	const notui = track.ppcalls.findIndex(t => t.is_ui == (false || undefined))
+	const ui_present = ui != -1 ? true : false
+	if (ui_present == true) {
+		tabs.push({
+			name: 'Add Your Data',
+			active: false,
+			callback: async div => {
+				try {
+					const runpp_arg = {
+						holder: div
+							.append('div')
+							.style('margin', '20px')
+							.node(),
+						sandbox_header: div,
+						host: window.location.origin
+					}
+
+					const callpp = JSON.parse(JSON.stringify(track.ppcalls[ui].runargs))
+
+					runproteinpaint(Object.assign(runpp_arg, callpp))
+				} catch (e) {
+					alert('Error: ' + (e.message || e))
+				}
+			}
+		})
+	}
+	if ((track.ppcalls.length == 1 && ui_present != true) || (track.ppcalls.length == 2 && ui_present == true)) {
+		tabs.push({
+			name: 'Example',
+			active: false,
+			callback: async div => {
+				try {
+					renderContent(track.ppcalls[notui], div)
+				} catch (e) {
+					alert('Error: ' + (e.message || e))
+				}
+			}
+		})
+	}
+	if (track.ppcalls.length > 1 && ui_present == false) {
+		tabs.push({
+			name: 'Examples',
+			active: false,
+			callback: async div => {
+				try {
+					makeLeftsideTabMenu(track, div)
+				} catch (e) {
+					alert('Error: ' + (e.message || e))
+				}
+			}
+		})
+	}
+	return tabs
+}
+//Creates the main tab menu over the examples and/or app uis
+function sandboxTabMenu(track, tabs_div, content_div) {
+	const tabs = makeSandboxTabs(track) 
+
+	for (const tab of tabs) {
+
+		tabs[0].active = true
+
+		tab.tab = tabs_div
+			.append('button')
+			.attr('type', 'submit')
+			.text(tab.name)
+			.style('display', 'inline-block')
+			.style('font', 'Arial')
+			.style('font-size', '20px')
+			.style('padding', '6px')
+			.style('color', '#1575ad')
+			.style('background-color', 'transparent')
+			.style('border', 'none')
+			.style('border-radius', 'unset')
+			.style('border-bottom', tab.active ? '8px solid #1575ad' : 'none')
+			.style('margin', '5px 10px 0px 10px')
+
+		tab.content = content_div.append('div').style('display', tab.active ? 'block' : 'none')
+
+		if (tab.active) {
+			tab.callback(tab.content)
+			delete tab.callback
 		}
 
-		const callpp = JSON.parse(JSON.stringify(call.runargs))
-
-		runproteinpaint(Object.assign(runpp_arg, callpp))
-	} else if (track.ppcalls.length > 1) {
-		addButtons(track.sandbox.buttons, sandbox_div.body)
-		makeTabMenu(track, sandbox_div)
+		tab.tab.on('click', () => {
+			for(const t of tabs) {
+				t.active = t === tab 
+				t.tab.style('border-bottom', t.active ? '8px solid #1575ad' : 'none')
+				t.content.style('display', t.active ? 'block' : 'none')
+			}
+			if (tab.callback) {
+				tab.callback(tab.content)
+				delete tab.callback
+			}
+		})
 	}
 }
 
-function makeLine(div) {
-	const line = div
-		.append('hr')
-		.style('width', '100%')
-		.style('border', '0')
-		.style('border-top', '1px dashed #e3e3e6')
+//Creates the subtab menu for pursing through examples, on the left-hand side of the sandbox, below the main tabs
+async function makeLeftsideTabMenu(track, div) {
+	const tabs = track.ppcalls.map(getTabData)
+
+	const menu_wrapper = div.append('div').classed('sjpp-vertical-tab-menu', true)
+	const tabs_div = menu_wrapper.append('div').classed('sjpp-tabs-div', true)
+	const content_div = menu_wrapper.append('div').classed('sjpp-content-div', true)
+
+	for (const tab of tabs) {
+
+		tab.tab = tabs_div
+			.append('button')
+			.attr('type', 'submit')
+			.text(tab.label)
+			.style('font', 'Arial')
+			.style('font-size', '16px')
+			.style('padding', '6px')
+			.style('color', tab.active ? '#1575ad' : '#757373') //#1575ad: blue color, same as the top tab. #757373: default darker gray color
+			.style('background-color', 'transparent')
+			.style('border', 'none')
+			.style('border-right', tab.active ? '8px solid #1575ad' : 'none')
+			.style('border-radius', 'unset')
+			.style('width', '100%')
+			.style('text-align', 'right')
+			.style('margin', '10px 0px 10px 0px')
+
+		tab.content = content_div.append('div').style('display', tab.active ? 'block' : 'none')
+
+		if (tab.active) {
+			tab.callback(tab.content)
+			delete tab.callback
+		}
+
+		tab.tab.on('click', () => {
+			for(const t of tabs) {
+				t.active = t === tab 
+				t.tab.style('border-right', t.active ? '8px solid #1575ad' : 'none')
+				t.tab.style('color', t.active ? '#1575ad': '#757373')
+				t.content.style('display', t.active ? 'block' : 'none')
+			}
+			if (tab.callback) {
+				tab.callback(tab.content)
+				delete tab.callback
+			}
+		})
+	}
+}
+
+function getTabData(call, i) {
+	return {
+		label: call.label,
+		active: i === 0,
+		callback: async div => {
+			const wait = tab_wait(div)
+			try {
+				renderContent(call, div)
+				wait.remove()
+			} catch (e) {
+				wait.text('Error: ' + (e.message || e))
+			}
+		}
+	}
 }
 
 // ******* Sandbox Message Functions *********
@@ -358,7 +508,7 @@ function makeButton(div, text) {
 		.append('button')
 		.attr('type', 'submit')
 		.style('background-color', '#cfe2f3')
-		.style('margin', '20px')
+		.style('margin', '20px 20px 0px 20px')
 		.style('padding', '8px')
 		.style('border', 'none')
 		.style('border-radius', '3px')
@@ -405,36 +555,36 @@ function makeDataDownload(arg, div) {
 	}
 }
 
-async function showCode(track, call, btns) {
-	if (track.sandbox.is_ui != true) {
-		//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
-		const code = highlight(
-			`runproteinpaint({
+function showCode(call, btns) {
+	if (call.is_ui == true) return
+
+	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
+	const code = highlight(
+		`runproteinpaint({
     host: "${window.location.origin}",
     holder: document.getElementById('a'),` +
-				JSON.stringify(call, '', 4)
-					.replaceAll(/"(.+)"\s*:/g, '$1:')
-					.replaceAll(/\\t/g, '	')
-					.replaceAll(/\\n/g, '\r\t')
-					.slice(1, -1)
-					.trim() +
-				`\r})`,
-			{ language: 'javascript' }
-		).value
+			JSON.stringify(call, '', 4)
+				.replaceAll(/"(.+)"\s*:/g, '$1:')
+				.replaceAll(/\\t/g, '	')
+				.replaceAll(/\\n/g, '\r\t')
+				.slice(1, -1)
+				.trim() +
+			`\r})`,
+		{ language: 'javascript' }
+	).value
 
-		const contents = `<pre style="border: 1px solid #d7d7d9; width: 90%"><code style="font-size:14px;">${code}</code></pre>`
+	const contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 30px 5px 30px;"><code style="font-size:14px;">${code}</code></pre>`
 
-		btns.push({
-			name: 'Code',
-			callback: async rdiv => {
-				try {
-					rdiv.append('div').html(contents)
-				} catch (e) {
-					alert('Error: ' + e)
-				}
+	btns.push({
+		name: 'Code',
+		callback: async rdiv => {
+			try {
+				rdiv.append('div').html(contents)
+			} catch (e) {
+				alert('Error: ' + e)
 			}
-		})
-	}
+		}
+	})
 }
 
 function makeArrowButtons(arrows, btns) {
@@ -472,9 +622,9 @@ function makeArrowButtons(arrows, btns) {
 	}
 }
 
-function addArrowBtns(track, arg, call, bdiv, rdiv) {
+function addArrowBtns(arg, call, bdiv, rdiv) {
 	let btns = []
-	showCode(track, call, btns)
+	showCode(call, btns)
 	makeArrowButtons(arg, btns)
 
 	const active_btn = btns.findIndex(b => b.active) == -1 ? false : true
@@ -482,7 +632,7 @@ function addArrowBtns(track, arg, call, bdiv, rdiv) {
 	for (let i = 0; i < btns.length; i++) {
 		const btn = btns[i]
 
-		btn.btn = makeButton(bdiv, btn.name + ' ▼').classed('sjpp-active-sandbox-btn', active_btn && i == 0)
+		btn.btn = makeButton(bdiv, btn.name + ' ▼')
 
 		btn.c = rdiv.append('div').style('display', (active_btn && i == 0) || btn.active ? 'block' : 'none')
 
@@ -491,20 +641,16 @@ function addArrowBtns(track, arg, call, bdiv, rdiv) {
 			delete btn.callback
 		}
 
-		if (!active_btn) btn.btn.classed('sjpp-active-sandbox-btn', btn.active)
-
 		btn.btn.on('click', () => {
 			if (btn.c.style('display') != 'none') {
 				btn.btn
 					.text(btn.name + ' ▼')
-					.classed('sjpp-active-sandbox-btn', false)
 					.style('color', 'black')
 					.style('background-color', '#cfe2f3')
 				btn.c.style('display', 'none')
 			} else {
 				btn.btn
 					.text(btn.name + ' ▲')
-					.classed('sjpp-active-sandbox-btn', true)
 					.style('color', 'whitesmoke')
 					.style('background-color', '#487ba8')
 				appear(btn.c)
@@ -512,7 +658,6 @@ function addArrowBtns(track, arg, call, bdiv, rdiv) {
 					if (i != j) {
 						btns[j].btn
 							.text(btns[j].name + ' ▼')
-							.classed('sjpp-active-sandbox-btn', false)
 							.style('color', 'black')
 							.style('background-color', '#cfe2f3')
 						btns[j].c.style('display', 'none')
@@ -525,56 +670,4 @@ function addArrowBtns(track, arg, call, bdiv, rdiv) {
 			}
 		})
 	}
-}
-
-// ******* Tab Menu Functions *********
-
-function makeTabMenu(track, holder) {
-	const tabs = []
-	tabArray(tabs, track)
-	tab2box(holder.body.style('box-shadow', 'rgb(220 220 220) 5px 5px 10px'), tabs, '', 'Examples')
-}
-
-function tabArray(tabs, track) {
-	const calls = track.ppcalls
-	calls.forEach(call => {
-		tabs.push({
-			label: call.label,
-			callback: async div => {
-				const wait = tab_wait(div)
-				try {
-					makeTab(track, call, div)
-					wait.remove()
-				} catch (e) {
-					wait.text('Error: ' + (e.message || e))
-				}
-			}
-		})
-	})
-}
-
-function makeTab(track, arg, div) {
-	addMessage(arg.message, div)
-
-	const buttons_div = div.append('div').attr('id', 'sjpp-buttons-div')
-	const reuse_div = div.append('div').attr('id', 'sjpp-reusable')
-
-	addButtons(arg.buttons, buttons_div)
-	makeDataDownload(arg.download, buttons_div)
-	showURLLaunch(arg.urlparam, buttons_div)
-	addArrowBtns(track, arg.arrowButtons, arg.runargs, buttons_div, reuse_div)
-
-	makeLine(div)
-
-	const runpp_arg = {
-		holder: div
-			.append('div')
-			.style('margin', '20px')
-			.node(),
-		host: window.location.origin
-	}
-
-	const call = JSON.parse(JSON.stringify(arg.runargs))
-
-	runproteinpaint(Object.assign(runpp_arg, call))
 }

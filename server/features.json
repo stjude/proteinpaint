@@ -5,15 +5,6 @@
             "app": "Genome Browser",
             "blurb": "Explore coding and non-coding variants in cancer",
             "image": "https://pecan.stjude.cloud/static/examples/images/gpaint-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "name": "URL",
-                        "link": "?genome=hg38&block=1&position=chr22:22569655-23013766&svcnvfpkmfile=TCGA_DLBC,svcnv,proteinpaint_demo/hg38/GP/TCGA_DLBC.CNV.gz,vcf,proteinpaint_demo/hg38/GP/TCGA_DLBC.vcf.gz,fpkm,proteinpaint_demo/hg38/GP/TCGA_DLBC.fpkm.gz"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
-            },
             "custom_buttons":[
                 {
                     "name": "Create custom track",
@@ -58,7 +49,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Launch GenomePaint",
@@ -89,48 +79,10 @@
             "searchterms": ["GenomePaint"]
         },
         {
-            "name": "Kaplan-Meier plot",
-            "app": "Genome Browser",
-            "hidden": true,
-            "blurb": "genomic feature analysis",
-            "image": "",
-            "media": {
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.y9jkwpoon8qu"
-            },
-            "sandbox":{
-                "is_ui": false
-            },
-            "searchterms": ["KM plot", "GenomePaint"]
-        },
-        {
-            "name": "Sample Matrix",
-            "app": "Genome Browser",
-            "hidden": true,
-            "blurb": "TODO: Brief description of track or app",
-            "image": "https://pecan.stjude.cloud/static/examples/images/samplematrix-square.png",
-            "media": {
-                "urls": [],
-                "doc": ""
-            },
-            "sandbox":{
-                "is_ui": false
-            },
-            "searchterms": ["GenomePaint"]
-        },
-        {
             "name": "BigWig",
             "app": "Genome Browser",
-            "blurb": "quantitative data at genomic positions",
+            "blurb": "Quantitative data at genomic positions",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?block=on&genome=hg19&bigwigfile=BigWig_Demo,proteinpaint_demo/hg19/bigwig/file.bw"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
-            },
             "ppcalls":[
                 {
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bigwig/file.bw",
@@ -155,7 +107,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -168,12 +119,8 @@
         {
             "name": "Stranded BigWig",
             "app": "Genome Browser",
-            "blurb": "with forward & reverse strands",
+            "blurb": "With forward & reverse strands",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-stranded-square.png",
-            "media": {
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
-            },
             "ppcalls": [
                 {
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/strandedbigwig/strandedbigwigDemoData.tar.gz",
@@ -198,7 +145,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -211,20 +157,8 @@
         {
             "name": "JSON BED",
             "app": "Genome Browser",
-            "blurb": "genomic feature annotation",
+            "blurb": "Genomic feature annotation",
             "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz"
-                    },
-                    {
-                        "name": "BED3",
-                        "link": "?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A"
-            },
             "ppcalls": [
                 {
                     "label": "JSON BED",
@@ -378,7 +312,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -391,16 +324,8 @@
         {
             "name": "Allelic imbalance",
             "app": "Genome Browser",
-            "blurb": "from tumor and germline DNA",
+            "blurb": "From tumor and germline DNA",
             "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?block=on&genome=hg19&position=chr9:36816442-37058548&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,proteinpaint_demo/hg19/aicheck/file.gz"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
-            },
             "ppcalls": [
                 {
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/aicheck/aicheckDemoData.tar.gz",
@@ -425,7 +350,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -438,12 +362,8 @@
         {
             "name": "Profile gene value",
             "app": "Genome Browser",
-            "blurb": "profiling results & gene-level values",
+            "blurb": "Profiling results & gene-level values",
             "image": "https://pecan.stjude.cloud/static/examples/images/pgv-square.png",
-            "media": {
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit"
-            },
             "ppcalls": [
                 {
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/pgv/pgvDemoData.tar.gz",
@@ -484,7 +404,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -497,12 +416,8 @@
         {
             "name": "Expression rank",
             "app": "Genome Browser",
-            "blurb": "against all samples from a cohort",
+            "blurb": "Against all samples from a cohort",
             "image": "https://pecan.stjude.cloud/static/examples/images/exprank-square.png",
-            "media": {
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s"
-            },
             "ppcalls": [
                 {
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/exprank/exprankDemoData.tar.gz",
@@ -527,7 +442,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -540,16 +454,8 @@
         {
             "name": "Hi-C",
             "app": "Genome Browser",
-            "blurb": "chromatin interaction at a locus",
+            "blurb": "Chromatin interaction at a locus",
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
-            },
             "ppcalls": [
                 {
                     "urlparam": "?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic",
@@ -574,7 +480,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -587,12 +492,8 @@
         {
             "name": "Lollipop",
             "app": "Genome Browser",
-            "blurb": "coding mutations and gene fusions",
+            "blurb": "Coding mutations and gene fusions",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
-            "media": {
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
-            },
             "ppcalls": [
                 {
                     "runargs": {
@@ -609,7 +510,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -622,16 +522,8 @@
         {
             "name": "RNA splice junction of one sample",
             "app": "Genome Browser",
-            "blurb": "",
+            "blurb": " ",
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
-            },
             "ppcalls": [
                 {
                     "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionDemoData.tar.gz",
@@ -656,7 +548,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -669,24 +560,12 @@
         {
             "name": "Splice junctions of a cohort",
             "app": "Genome Browser",
-            "blurb": "",
+            "blurb": " ",
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-cohort-square.png",
             "new_expire": "2021-08-15",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz"
-                    },
-                    {
-                        "name": "Matrix",
-                        "link": "?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.s58v64uwsl45"
-            },
             "ppcalls": [
                 {
-                    "label":"JSON",
+                    "label":"From a JSON",
                     "message": "",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionJsonDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz",
@@ -708,7 +587,7 @@
                     }
                 },
                 {
-                    "label":"Matrix",
+                    "label":"From a JSON Matrix File",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionMatrixDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz",
                     "runargs": {
@@ -736,7 +615,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -749,16 +627,8 @@
         {
             "name": "Track list & facet table",
             "app": "Genome Browser",
-            "blurb": "",
+            "blurb": " ",
             "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/tklist/tracks.json"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6"
-            },
             "ppcalls": [
                 {
                     "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/tklist/tklistDemoData.tar.gz",
@@ -777,7 +647,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "intro": "<p>To view the facet table:</p><ul><li>Click on the <button>Tracks</button> in the genome browser toolbar</li><li>A button appears under FACET. Click on <button style='border:none;font-size:15px;padding:5px'>77 tracks from My facet table</button></li><li>Launch tracks by clicking on individual cells, samples (row labels), or assays (column labels).</li></ul>",
                 "buttons": [
                     {
@@ -794,14 +663,6 @@
             "app": "Genome Browser",
             "blurb": "SNV/indel variants",
             "image": "https://pecan.stjude.cloud/static/examples/images/vcf-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?block=on&genome=hg38&position=chr12:25245162-25245578&vcffile=Clinvar,hg38/clinvar.hg38.vcf.gz"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1dbuYeQR6cgkpzcPaIChRFtXwolJVheoTr9NEW_Mfthw"
-            },
             "ppcalls": [
                 {
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/vcf/vcfDemoData.tar.gz",
@@ -880,25 +741,15 @@
                     }
                 }
             ],
-            "sandbox":{
-                "is_ui": false
-            },
+            "sandbox":{},
             "searchterms": ["variant call", "lollipop", "vcf"]
         },
         {
             "name": "Arc Track",
             "app": "Genome Browser",
             "new_expire": "2021-07-02",
-            "blurb": "pairwise chromatin interactions",
+            "blurb": "Pairwise chromatin interactions",
             "image": "https://pecan.stjude.cloud/static/examples/images/arc-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc Track,proteinpaint_demo/hg19/arc/mango.gz"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.8zct8j3cscak"
-            },
             "ppcalls": [
                 {
                     "urlparam": "?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc Track,proteinpaint_demo/hg19/arc/mango.gz",
@@ -925,7 +776,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -939,12 +789,8 @@
             "name": "ASE",
             "app": "Genome Browser",
             "isbeta": 1,
-            "blurb": "allele-specific expression analysis",
+            "blurb": "Allele-specific expression analysis",
             "image": "https://pecan.stjude.cloud/static/examples/images/ase-square.png",
-            "media": {
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz"
-            },
             "ppcalls": [
                 {
                     "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/ase/aseDemoData.tar.gz",
@@ -1037,7 +883,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1051,20 +896,8 @@
             "name": "BAM",
             "app": "Genome Browser",
             "isbeta": 1,
-            "blurb": "sequence reads alignment",
+            "blurb": "Sequence reads alignment",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test%20WES%20BAM,proteinpaint_demo/hg19/bam/kit.exon8.del.bam"
-                    },
-                    {
-                        "name": "kmer typing",
-                        "link": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A"
-                    }
-                ],
-                "doc": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
-            },
             "ppcalls": [
                 {
                     "label": "BAM",
@@ -1119,7 +952,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1137,14 +969,11 @@
             "name": "GDC BAM slicing",
             "app": "Genome Browser",
             "isbeta": 1,
-            "blurb": "visualize sequencing reads in NCI GDC",
+            "blurb": "Visualize sequencing reads in NCI GDC",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
-            "media": {
-                "urls": [],
-                "doc": ""
-            },
             "ppcalls": [
                 {
+                    "is_ui": true,
                     "runargs": {
                         "nobox": 1,
                         "noheader": 1,
@@ -1155,9 +984,7 @@
                     }
                 }
             ],
-            "sandbox":{
-                "is_ui": true
-            },
+            "sandbox": {},
             "searchterms": []
         },
         {
@@ -1165,16 +992,8 @@
             "hidden": true,
             "app": "Genome Browser",
             "isbeta": 1,
-            "blurb": "deep sequencing",
+            "blurb": "Deep sequencing",
             "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=Test%20Bampile,proteinpaint_demo/hg19/bampile/tk.gz"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1ZS0v_t1WvZ4NX8LRhWRM9twl-M3IZt7b4tRCPKyYW1M"
-            },
             "ppcalls": [
                 {
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bampile/bampileDemoData.tar.gz",
@@ -1195,22 +1014,17 @@
                     }
                 }
             ],
-            "sandbox":{
-                "is_ui": false
-            },
+            "sandbox":{},
             "searchterms": []
         },
         {
             "name": "FusionEditor",
             "app": "Apps",
-            "blurb": "to review CICERO output",
+            "blurb": "Review CICERO output",
             "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
-            "media": {
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/1DRVzE_WenG490eRYB7VGFOygtSqtF5L97rhK0HOUCNY/edit"
-            },
             "ppcalls": [
                 {
+                    "is_ui": true,
                     "runargs": {
                         "nobox": 1,
                         "noheader": 1,
@@ -1219,7 +1033,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": true,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1232,14 +1045,11 @@
         {
             "name": "2DMAF",
             "app": "Apps",
-            "blurb": "somatic mutations from diagnosis & relapse",
+            "blurb": "Somatic mutations from diagnosis & relapse",
             "image": "https://pecan.stjude.cloud/static/examples/images/2dmaf-square.png",
-            "media": {
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13"
-            },
             "ppcalls": [
                 {
+                    "is_ui": true,
                     "runargs": {
                         "genome": "hg19",
                         "nobox": 1,
@@ -1249,7 +1059,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": true,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1260,31 +1069,13 @@
             "searchterms": ["2dmaf", "clonal evolution", "point mutations"]
         },
         {
-            "name": "FIMO motif analysis",
-            "app": "Apps",
-            "hidden": true,
-            "blurb": "predicts motif changes",
-            "image": "",
-            "media": {
-                "urls": [],
-                "doc": ""
-            },
-            "sandbox":{
-                "is_ui": true
-            },
-            "searchterms": []
-        },
-        {
             "name": "Load mutations from text files",
             "app": "Apps",
-            "blurb": "",
+            "blurb": "Mutation heatmap",
             "image": "https://pecan.stjude.cloud/static/examples/images/heatmap-square.png",
-            "media": {
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit"
-            },
             "ppcalls": [
                 {
+                    "is_ui": true,
                     "runargs": {
                         "nobox": 1,
                         "noheader": 1,
@@ -1293,7 +1084,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": true,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1306,36 +1096,44 @@
         {
             "name": "MA+Volcano plots",
             "app": "Apps",
-            "blurb": "differential gene expression",
+            "blurb": "Differential gene expression",
             "image": "https://pecan.stjude.cloud/static/examples/images/mavb-square.png",
-            "media": {
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit"
-            },
             "ppcalls": [
+                {
+                    "is_ui": true,
+                    "runargs": {
+                        "genome": "hg19",
+                        "noheader": 1,
+                        "mavolcanoplot": {
+                        "uionly": true
+                        }
+                    }
+                },
                 {
                     "runargs": {
                         "genome": "hg19",
                         "noheader": 1,
                         "mavolcanoplot": {
-                        "uionly": true,
-                        "urls": [
-                            {
-                                "link": "https://pecan.stjude.cloud/static/pp-support/example.files/DIPG_H33K27MvsWT_noACVR_adj.txt"
-                            }
-                        ],
-                        "tracks": [{
-                            "name": "Demo RNA-seq coverage",
-                            "strand1": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_sense.bw" },
-                            "strand2": { "file": "proteinpaint_demo/hg19/mavb/mavb_demo_antisense.bw", "normalize": { "dividefactor": -1 } },
-                            "type": "bigwigstranded"
-                        }]
+                            "genome": "hg19",
+                            "noheader": 1,
+                            "url": "https://pecan.stjude.cloud/static/pp-support/example.files/DIPG_H33K27MvsWT_noACVR_adj.txt",
+                            "tracks": [{
+                                "name": "Demo RNA-seq coverage",
+                                "strand1": { 
+                                    "file": "proteinpaint_demo/hg19/mavb/mavb_demo_sense.bw" 
+                                },
+                                "strand2": { 
+                                    "file": "proteinpaint_demo/hg19/mavb/mavb_demo_antisense.bw", 
+                                    "normalize": { "dividefactor": -1 } 
+                                },
+                                "type": "bigwigstranded"
+                            }]
                         }
                     }
                 }
             ],
             "sandbox":{
-                "is_ui": true,
+                
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1350,12 +1148,9 @@
             "app": "Apps",
             "blurb": "Mutant allele fraction timeline chart by date",
             "image": "https://pecan.stjude.cloud/static/examples/images/maf-timeline-square.png",
-            "media": {
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit"
-            },
             "ppcalls": [
                 {
+                    "is_ui": true,
                     "runargs": {
                         "nobox": 1,
                         "noheader": 1,
@@ -1364,7 +1159,6 @@
                 }
             ],
             "sandbox":{
-                "is_ui": true,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1375,38 +1169,12 @@
             "searchterms": ["mutant allele fraction", "snv", "snv4"]
         },
         {
-            "name": "Mutation burden & spectrum",
-            "app": "Apps",
-            "hidden": true,
-            "blurb": "",
-            "image": "",
-            "media": {
-                "urls": [],
-                "doc": ""
-            },
-            "ppcalls": [
-                {
-                    "runargs": {}
-                }
-            ],
-            "sandbox":{
-                "is_ui": true
-            },
-            "searchterms": []
-        },
-        {
             "name": "Study View",
             "app": "Apps",
             "hidden": true,
-            "blurb": "multiple viewing options for genes by sample matrix",
+            "blurb": "Multiple viewing options for genes by sample matrix",
             "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
-            "media": {
-                "urls": [],
-                "doc": "https://docs.google.com/document/d/121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE/edit?usp=sharing"
-            },
-            "sandbox":{
-                "is_ui": true
-            },
+            "sandbox": {},
             "searchterms": ["heatmap", "heat map", "ribbon graph", "disco plot", "pie chart", "gene network"]
         },
         {
@@ -1419,9 +1187,7 @@
                 "urls": "/F/human.temp.hic.html",
                 "doc": ""
             },
-            "sandbox":{
-                "is_ui": true
-            },
+            "sandbox":{},
             "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation", "whole genome"]
         },
         {
@@ -1429,14 +1195,6 @@
             "app": "Apps",
             "blurb": "2D scatterplot of samples & metadata",
             "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit?usp=sharing"
-            },
             "ppcalls": [
                 {
                     "label": "Scatterplot",
@@ -1448,7 +1206,11 @@
                         "noheader": 1,
                         "genome": "hg38",
                         "mdssamplescatterplot": {
-                            "analysisdata_file": "proteinpaint_demo/hg38/mdstsne/file.json"
+                            "analysisdata_file": "proteinpaint_demo/hg38/mdstsne/file.json",
+                            "dimensions": {
+                                "width": 700,
+                                "height": 400
+                                }
                         }
                     },
                     "testSpec": {
@@ -1467,6 +1229,10 @@
                             "analysisdata":{
                                 "tabular_data":
                                 "x\ty\tsample_name\tsj_diseases\tattr_diagnosis_group\tgroup\tlabel\n-11.81\t-113.71\tSJALCL030011_D1\tALCL\tHematologic Malignancy\tAnaplastic Large Cell Lymphoma\tAnaplastic Large Cell Lymphoma\n-1.25\t-66.68\tSJALCL031066_D1\tALCL\tHematologic Malignancy\tAnaplastic Large Cell Lymphoma\tAnaplastic Large Cell Lymphoma\n-18.24\t-126.21\tSJAML001417_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-10.47\t-119.03\tSJAML030004_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-6.06\t-125.18\tSJAML030006_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-19.84\t-131.29\tSJAML030024_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-20.94\t-110.81\tSJAML030025_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-19.74\t-122.91\tSJAML030069_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n7.02\t-128.83\tSJAML030077_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n25.77\t-118.43\tSJAML030079_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-31.75\t-124.21\tSJAML030085_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n6.78\t-129\tSJAML030099_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-31.47\t-121.83\tSJAML030118_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-17.47\t-143.7\tSJAML030119_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n31.56\t-135.88\tSJAML030120_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-28.22\t-136.57\tSJAML030151_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n26.89\t-117.75\tSJAML030155_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-6.63\t-129.02\tSJAML030156_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-15.8\t-144.98\tSJAML030163_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-17.84\t-148.55\tSJAML030195_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-23.2\t-127.4\tSJAML030200_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-16.5\t-146.21\tSJAML030208_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n60.65\t27.69\tSJAML030210_D2\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-31.8\t-135.54\tSJAML030231_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-11.96\t-132.64\tSJAML030233_D1\tAPLPMLRARA\tHematologic Malignancy\tAcute Promyelocytic Leukemia\tAcute Promyelocytic Leukemia\n-19.25\t-124.47\tSJAML030286_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-11.2\t-131.77\tSJAML030287_D1\tAPLPMLRARA\tHematologic Malignancy\tAcute Promyelocytic Leukemia\tAcute Promyelocytic Leukemia\n-7.03\t-122.07\tSJAML030297_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-24.27\t-126.15\tSJAML030320_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-18.06\t-122.12\tSJAML030322_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-31.71\t-124.18\tSJAML030324_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n21.15\t-43.2\tSJAML030330_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-21.23\t-128.36\tSJAML030345_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-34.51\t-126.14\tSJAML030361_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-20.07\t-109.26\tSJAML030410_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-20.22\t-111.24\tSJAML030416_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-31.58\t-133.24\tSJAML030430_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-18.62\t-110.96\tSJAML030431_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-6.87\t-123.79\tSJAML030440_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-18.11\t-136.47\tSJAML030454_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-16.6\t-148.11\tSJAML030471_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-14.25\t-137.79\tSJAML030509_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-23.99\t-127.3\tSJAML030534_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-37.92\t-117.02\tSJAML030547_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-3.4\t-132.13\tSJAML030560_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-13.61\t-126.45\tSJAML030561_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-16.06\t-135.75\tSJAML030592_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-16.17\t-136.61\tSJAML030601_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-26.09\t-123.82\tSJAML030624_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-15.49\t-146.76\tSJAML030669_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-29.51\t-136.32\tSJAML030683_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-38.98\t-114.19\tSJAML030689_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-21.31\t-125.44\tSJAML030690_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-16.35\t-123.57\tSJAML030708_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-18.02\t-131.29\tSJAML030714_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-5.88\t-128.53\tSJAML030727_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n10.26\t-121.52\tSJAML030773_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-19.1\t-128.18\tSJAML030778_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-1.1\t-123.61\tSJAML030799_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-9.52\t-119.24\tSJAML030852_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-13.76\t-149.01\tSJAML030881_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-18.21\t-120\tSJAML030934_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-12.29\t-125.65\tSJAML030947_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-30.25\t-116.31\tSJAML030987_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-22.82\t-109.22\tSJAML030988_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-15.28\t-149.86\tSJAML031022_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-2.03\t-119.32\tSJAML031065_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n11.35\t-132.74\tSJAML031075_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n14.5\t-121.45\tSJAMLM7001_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n8.74\t-125.72\tSJAMLM7003_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n13.82\t-135.59\tSJAMLM7004_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n34.31\t-137.03\tSJAMLM7005_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n33.77\t-138.83\tSJAMLM7006_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n33.62\t-138.25\tSJAMLM7007_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n16.29\t-121.02\tSJAMLM7008_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n13.09\t-135.43\tSJAMLM7009_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n21.06\t-123.94\tSJAMLM7010472_R1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n14.33\t-134.74\tSJAMLM7010475_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n32.61\t-136.92\tSJAMLM7010478_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n19.82\t-127.53\tSJAMLM7010479_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n20.83\t-125.22\tSJAMLM7010482_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n24.84\t-115.91\tSJAMLM7010483_R1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n9.46\t-116.96\tSJAMLM7010947_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n34.79\t-133.63\tSJAMLM7010948_R1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n22.12\t-116.97\tSJAMLM7010949_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n21.81\t-114.8\tSJAMLM7010949_R1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n22.53\t-114.76\tSJAMLM7010949_R2\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-19.73\t-136.62\tSJAMLM7010950_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n19.49\t-123.29\tSJAMLM7010951_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n21.57\t-122.74\tSJAMLM7010952_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n17.29\t-120.98\tSJAMLM7010953_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n5.25\t-118.23\tSJAMLM7010954_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n23.41\t-117.29\tSJAMLM7010955_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n23.42\t-117.29\tSJAMLM7010955_R1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n4.26\t-119.51\tSJAMLM7010956_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n11.47\t-129.88\tSJAMLM7010957_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n32.33\t-138.57\tSJAMLM7010958_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n14.48\t-117.39\tSJAMLM7010959_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n19.54\t-113.92\tSJAMLM7010960_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n12.25\t-132.51\tSJAMLM7010961_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n12.87\t-114.48\tSJAMLM7010962_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n17.89\t-126.55\tSJAMLM7010963_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n14.15\t-126.07\tSJAMLM7010964_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n35.27\t-135.05\tSJAMLM7010_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n18.52\t-117.53\tSJAMLM7011108_D2\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n15.53\t-126.69\tSJAMLM7011109_D2\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n12.93\t-121.39\tSJAMLM7011233_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n16.96\t-123.42\tSJAMLM7011234_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n15.32\t-133.72\tSJAMLM7011235_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n17.57\t-125.57\tSJAMLM7011236_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n20.27\t-115.91\tSJAMLM7011237_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n20.54\t-122.58\tSJAMLM7011238_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n12.67\t-113.25\tSJAMLM7011239_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n26.84\t-122.19\tSJAMLM7011240_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n3.4\t-119.71\tSJAMLM7011241_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n24.06\t-114.49\tSJAMLM7011242_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n12.84\t-115.12\tSJAMLM7011243_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n14.02\t-132.85\tSJAMLM7011244_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-19.97\t-133.24\tSJAMLM7011245_R1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n13.88\t-126.24\tSJAMLM7011246_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n12.52\t-133.32\tSJAMLM7011247_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n17.45\t-127.59\tSJAMLM7011248_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n19.39\t-113.44\tSJAMLM7011249_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-5.19\t-118.78\tSJAMLM7011321_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n17.08\t-124.56\tSJAMLM7011322_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n9.7\t-116.92\tSJAMLM7011323_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n2.69\t-117.56\tSJAMLM7011324_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n13.24\t-123.69\tSJAMLM7011325_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n10.5\t-131.5\tSJAMLM7011326_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n20.32\t-121.76\tSJAMLM7011327_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n13.98\t-124.22\tSJAMLM7011328_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n17.94\t-128.78\tSJAMLM7011_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n33.07\t-136.55\tSJAMLM7012_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n34.21\t-134.39\tSJAMLM7013_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n33.21\t-134.24\tSJAMLM7014_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n7.3\t-122.37\tSJAMLM7015533_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n7.82\t-130.76\tSJAMLM7015534_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n14.22\t-117.36\tSJAMLM7015535_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n38.99\t86.27\tSJAMLM7015543_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n10.84\t-123.2\tSJAMLM7015549_D1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n9.97\t-123.76\tSJAMLM7015549_R1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-14.79\t-126.46\tSJAMLM7015830_R1\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n22.99\t-123.38\tSJAMLM7015_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n15.57\t-132.75\tSJAMLM7026_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n16.28\t-133.33\tSJAMLM7027_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n20.89\t-118.8\tSJAMLM7028_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n17.19\t-115.95\tSJAMLM7029_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n34.16\t-135.72\tSJAMLM7030_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n23.15\t-118.79\tSJAMLM7031_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n14.44\t-130.93\tSJAMLM7032_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n25.63\t-119.25\tSJAMLM7033_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-10.78\t-123.97\tSJAMLM7041_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n0.88\t-119.56\tSJAMLM7042_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n3.41\t-121.72\tSJAMLM7043_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-16.87\t-119.33\tSJAMLM7045_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n1.15\t-116.87\tSJAMLM7046_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n1.46\t-121.34\tSJAMLM7047_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-0.37\t-122.39\tSJAMLM7048_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-15.69\t-120.8\tSJAMLM7049_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-5.33\t-123.65\tSJAMLM7050_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n0.99\t-122.07\tSJAMLM7051_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-2.61\t-125.58\tSJAMLM7052_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-4.54\t-125.93\tSJAMLM7053_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-1.05\t-69.96\tSJAMLM7054_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-2.28\t-125.87\tSJAMLM7055_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n2.16\t-124.42\tSJAMLM7056_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n1.02\t-70.01\tSJAMLM7057_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n23.05\t-122.38\tSJAMLM7058_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-3.37\t-132.24\tSJAMLM7059_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n27.15\t-122.4\tSJAMLM7060_D\tAMKL\tHematologic Malignancy\tAcute Megakaryoblastic Leukemia\tAcute Megakaryoblastic Leukemia\n-87.67\t-46.24\tSJBALL000013_D1\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-25.24\t-63.5\tSJBALL010_D\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-52.35\t-60.07\tSJBALL015_D\tBALLPAX5P80R\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 P80R\n-19.87\t-37.77\tSJBALL020013_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-16.96\t-56.17\tSJBALL020069_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-18.22\t-59.12\tSJBALL020073_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-32.45\t-52.66\tSJBALL020077_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-14.95\t-56.5\tSJBALL020081_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-20.89\t-66.49\tSJBALL020084_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-23.63\t-57.54\tSJBALL020091_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-55.48\t-59.75\tSJBALL020098_D1\tBALLPAX5P80R\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 P80R\n-10.36\t-57.97\tSJBALL020100_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-47.75\t-57.19\tSJBALL020101_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-36\t-27.62\tSJBALL020106_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-54.69\t-31.43\tSJBALL020111_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-57.8\t-44.16\tSJBALL020113_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-43.88\t-63.26\tSJBALL020122_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-25.57\t-55.83\tSJBALL020138_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-37.17\t-72.11\tSJBALL020140_D1\tBALLZNF384\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tZNF384 rearrangement\n-72.99\t-46.41\tSJBALL020141_D1\tBALLMEF2D\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tMEF2D rearrangement\n-72.99\t-46.41\tSJBALL020142_D1\tBALLMEF2D\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tMEF2D rearrangement\n-33.03\t-54.79\tSJBALL020145_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-40.24\t-25.28\tSJBALL020151_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-91.57\t-15.99\tSJBALL020340_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-9.92\t-56.95\tSJBALL020374_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-91.14\t-15\tSJBALL020383_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-98.25\t-16.35\tSJBALL020469_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-28.1\t-37.52\tSJBALL020570_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-26.55\t-56.08\tSJBALL020579_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-27.76\t-60.06\tSJBALL020589_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-100.64\t-3.85\tSJBALL020595_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-92.03\t-12.86\tSJBALL020609_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-20.47\t-61.96\tSJBALL020625_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-20.59\t-63.13\tSJBALL020649_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-28.59\t-61.22\tSJBALL020704_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-25.48\t-60.23\tSJBALL020765_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-89.19\t-13.35\tSJBALL020828_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-15.41\t-56.26\tSJBALL020832_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-47.51\t-57.28\tSJBALL020836_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-32.12\t-53.11\tSJBALL020877_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-20.35\t-64.56\tSJBALL020882_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-22.78\t-58.03\tSJBALL020941_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-28.48\t-29.41\tSJBALL020953_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-34.7\t-56.94\tSJBALL020958_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-75.74\t-44.33\tSJBALL020964_D1\tBALLMEF2D\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tMEF2D rearrangement\n-19.12\t-60.09\tSJBALL020966_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-73.8\t-41.2\tSJBALL020967_D1\tBALLMEF2D\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tMEF2D rearrangement\n-52.98\t-29.18\tSJBALL020977_D1\tBALLIGHCEBPD\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tIGH-CEBPD\n-24.18\t-57.35\tSJBALL020980_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-20.92\t-56.52\tSJBALL020984_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-74.19\t-41.32\tSJBALL020987_D1\tBALLMEF2D\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tMEF2D rearrangement\n-31.34\t-31.79\tSJBALL020993_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-26.15\t-54.8\tSJBALL020994_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n31.62\t-46.14\tSJBALL020995_D1\tBALLETV6RUNX1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1 like\n-20.71\t-71.96\tSJBALL020998_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-76.05\t-43.9\tSJBALL021005_D1\tBALLMEF2D\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tMEF2D rearrangement\n-21.37\t-29.37\tSJBALL021012_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-23.07\t-54.22\tSJBALL021018_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-49.68\t-28.17\tSJBALL021021_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n2.45\t-112.76\tSJBALL021023_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-34.54\t-28.67\tSJBALL021031_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-50.73\t-59.07\tSJBALL021043_D1\tBALLPAX5P80R\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 P80R\n-6.42\t-62.67\tSJBALL021047_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-12.79\t-60.38\tSJBALL021058_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-7.4\t-62.95\tSJBALL021059_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n2.35\t-113.79\tSJBALL021061_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-9.75\t-59.26\tSJBALL021080_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-19.44\t-38.32\tSJBALL021083_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-47.01\t-60.2\tSJBALL021102_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-53.71\t-60.48\tSJBALL021104_D1\tBALLPAX5P80R\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 P80R\n24.46\t-35.3\tSJBALL021108_D1\tBALLETV6RUNX1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1 like\n-7.07\t-61.2\tSJBALL021109_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-20.36\t-34.92\tSJBALL021124_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-38.35\t-71.59\tSJBALL021128_D1\tBALLZNF384L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tZNF384 rearrangement like\n-94.22\t-8.14\tSJBALL021130_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-39.89\t-73.65\tSJBALL021131_D1\tBALLZNF384\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tZNF384 rearrangement\n-8.46\t-60.44\tSJBALL021145_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-8.79\t-61.44\tSJBALL021146_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-43.58\t-63.9\tSJBALL021147_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-97.66\t-17.5\tSJBALL021299_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-31.09\t-52.34\tSJBALL021305_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-93.71\t-19.66\tSJBALL021324_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-91.66\t-4.73\tSJBALL021333_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-95.55\t-18.26\tSJBALL021336_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-52.13\t-38.64\tSJBALL021358_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-86.91\t-13.14\tSJBALL021372_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-91.69\t-4.78\tSJBALL021405_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-3.38\t-119.64\tSJBALL021416_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-97.44\t-5.19\tSJBALL021427_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-3.8\t-120.34\tSJBALL021434_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-88.17\t-14.7\tSJBALL021489_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-28.98\t-33.44\tSJBALL021491_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-96.18\t-16.49\tSJBALL021492_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-99.01\t-4\tSJBALL021511_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-99.03\t-5.03\tSJBALL021512_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-88.56\t-13.81\tSJBALL021514_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-93.69\t-17.52\tSJBALL021516_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-76.85\t-75.83\tSJBALL021549_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n5.11\t-106.79\tSJBALL021707_D1\tBALLMYC\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tMYC rearrangement\n-3.77\t-129.64\tSJBALL021720_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-19.99\t-108.6\tSJBALL021721_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-7.72\t-104.04\tSJBALL021722_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-20.99\t-47.61\tSJBALL021728_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-46.77\t-55.99\tSJBALL021735_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-23.66\t-62.33\tSJBALL021737_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-9.16\t-101.09\tSJBALL021738_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-36.65\t-50.94\tSJBALL021748_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-53.74\t-73.05\tSJBALL021769_D1\tBALLHYPO\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHypodiploidy\n-51.86\t-59.85\tSJBALL021772_D1\tBALLPAX5P80R\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 P80R\n-59.01\t-33.87\tSJBALL021778_D1\tBALLHYPO\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHypodiploidy\n-24.91\t-51.86\tSJBALL021780_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-38.39\t-71.11\tSJBALL021784_D1\tBALLZNF384L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tZNF384 rearrangement like\n-31.65\t-49.44\tSJBALL021786_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-8.1\t-95.89\tSJBALL021787_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-36.95\t-26.44\tSJBALL021790_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-2.05\t-111.99\tSJBALL021794_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-28.32\t-57.35\tSJBALL021800_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-35.86\t-29.24\tSJBALL021803_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-31.79\t-55.89\tSJBALL021807_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-27.26\t-57.85\tSJBALL021814_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-39.98\t-71.82\tSJBALL021816_D1\tBALLZNF384\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tZNF384 rearrangement\n-49.35\t-29.52\tSJBALL021820_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-20.24\t-131.9\tSJBALL021832_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-58.16\t-45.06\tSJBALL021841_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-3.59\t-103.95\tSJBALL021849_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-28.73\t-56.91\tSJBALL021856_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-31.83\t-55.87\tSJBALL021866_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-22.44\t-38.12\tSJBALL021900_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-14.96\t-52.22\tSJBALL022244_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-20.83\t-62.3\tSJBALL022245_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-25.77\t-59.43\tSJBALL022246_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n26.27\t-44.15\tSJBALL030034_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-34.91\t-48.82\tSJBALL030036_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-43.73\t-33.18\tSJBALL030040_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-43.34\t-34.38\tSJBALL030042_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n32.95\t-32.58\tSJBALL030045_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n32.14\t-39.4\tSJBALL030048_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n34.83\t-36.04\tSJBALL030052_D1\tBALLETV6RUNX1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1 like\n-33.02\t-50.02\tSJBALL030054_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-20.96\t-38.26\tSJBALL030072_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-35.52\t-66.57\tSJBALL030074_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-27.32\t-68.48\tSJBALL030080_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-39.49\t-35.74\tSJBALL030090_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n32.18\t-40.87\tSJBALL030091_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-42.06\t-53.15\tSJBALL030095_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-36.49\t-35.97\tSJBALL030103_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-39.79\t-49.79\tSJBALL030104_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-15.79\t-44.34\tSJBALL030108_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-85.49\t-65.41\tSJBALL030123_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-84.81\t-63.13\tSJBALL030123_R1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-84.82\t-63.57\tSJBALL030123_R2\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n27.15\t-45.68\tSJBALL030132_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-68.41\t-71.46\tSJBALL030133_R1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-35.3\t-36.88\tSJBALL030143_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-44.71\t-51\tSJBALL030144_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-101.45\t-9.65\tSJBALL030145_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-51.24\t-40.07\tSJBALL030150_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-30.55\t-40.71\tSJBALL030161_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n28.89\t-39.37\tSJBALL030164_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-103.61\t-12.62\tSJBALL030170_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-44.52\t-40.7\tSJBALL030190_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-82.69\t-64.5\tSJBALL030196_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n27.22\t-46.64\tSJBALL030207_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-25.26\t-35.14\tSJBALL030214_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-29.18\t-44.34\tSJBALL030215_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-40.71\t-53.78\tSJBALL030216_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-4.03\t-63.54\tSJBALL030219_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-5.63\t-52.37\tSJBALL030221_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n17.01\t-33.49\tSJBALL030247_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n29.51\t-55.06\tSJBALL030248_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-42.95\t-43.55\tSJBALL030254_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-45.15\t-34.59\tSJBALL030258_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-32.54\t-42.93\tSJBALL030265_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-47.85\t-42.54\tSJBALL030266_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-45.9\t-40.42\tSJBALL030267_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-76.35\t-43.17\tSJBALL030268_D1\tBALLMEF2D\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tMEF2D rearrangement\n-30.2\t-43.3\tSJBALL030270_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-31.59\t-39.65\tSJBALL030271_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n28.3\t-39.36\tSJBALL030275_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-32.43\t-34.54\tSJBALL030276_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-31.81\t-38.29\tSJBALL030282_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-43.58\t-35.91\tSJBALL030285_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n27.58\t-49.17\tSJBALL030288_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-37.37\t-35.75\tSJBALL030290_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-47.62\t-55.42\tSJBALL030294_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-43.78\t-58.6\tSJBALL030295_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-70.35\t-79.94\tSJBALL030301_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-46.66\t-29.34\tSJBALL030311_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-73.18\t-66.65\tSJBALL030313_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-35.5\t-35.35\tSJBALL030318_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n35.88\t-53.85\tSJBALL030323_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n25.84\t-48.65\tSJBALL030325_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-47.37\t-35.93\tSJBALL030327_D1\tBALLIGHCEBPD\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tIGH-CEBPD\n32.39\t-38.1\tSJBALL030331_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-38.27\t-37.39\tSJBALL030334_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n23.57\t-43.3\tSJBALL030337_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-16.36\t-46.89\tSJBALL030344_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-42.51\t-58.76\tSJBALL030346_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-45.43\t-36.46\tSJBALL030349_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-38.55\t-48.46\tSJBALL030350_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-48.13\t-28.76\tSJBALL030351_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n23.49\t-42.75\tSJBALL030353_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-46.58\t-39.61\tSJBALL030354_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n29.68\t-36.42\tSJBALL030355_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-30.78\t-36.3\tSJBALL030358_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-51.68\t-34.13\tSJBALL030362_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-52.52\t-35.21\tSJBALL030363_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n26.68\t-39.12\tSJBALL030366_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-33.86\t-49.14\tSJBALL030370_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-40.98\t-57.76\tSJBALL030378_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-103.16\t-4.63\tSJBALL030379_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-35.45\t-30.92\tSJBALL030384_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-52.04\t-49.09\tSJBALL030404_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-50.96\t-33.51\tSJBALL030413_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-22.2\t-49.44\tSJBALL030414_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-51.22\t-49.08\tSJBALL030415_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-36.32\t-65.76\tSJBALL030432_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-52.1\t-37.76\tSJBALL030434_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-59.44\t-34.05\tSJBALL030448_D1\tBALLHYPO\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHypodiploidy\n-40.7\t-47.55\tSJBALL030466_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n29.56\t-35.19\tSJBALL030474_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-43.24\t-37.71\tSJBALL030475_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-62.75\t-36.7\tSJBALL030482_D1\tBALLHYPO\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHypodiploidy\n-42.72\t-32.02\tSJBALL030491_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-31.83\t-45.2\tSJBALL030492_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-76.18\t-66.59\tSJBALL030499_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-34.4\t-66.93\tSJBALL030507_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-48.67\t-43.23\tSJBALL030515_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-52.25\t-31.1\tSJBALL030516_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n17.09\t-33.51\tSJBALL030517_D1\tBALLETV6RUNX1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1 like\n-9.74\t-64.58\tSJBALL030519_D1\tBALLIGHCEBPD\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tIGH-CEBPD\n28.67\t-45.22\tSJBALL030520_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-67.63\t-80.41\tSJBALL030523_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-68.47\t-81.08\tSJBALL030523_R1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-76.78\t-65.91\tSJBALL030525_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-50.67\t-60.01\tSJBALL030532_D1\tBALLPAX5P80R\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 P80R\n-51.34\t-31.95\tSJBALL030533_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-49.01\t-54\tSJBALL030535_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n26.9\t-36.72\tSJBALL030541_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-38\t-48\tSJBALL030542_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-86.3\t-65.08\tSJBALL030543_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n34.12\t-37.99\tSJBALL030563_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-45.88\t-41.73\tSJBALL030568_D1\tBALLHYPO\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHypodiploidy\n32.56\t-36.54\tSJBALL030569_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-74.95\t-68.68\tSJBALL030572_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-36.47\t-34.36\tSJBALL030574_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-10.59\t-63.26\tSJBALL030576_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n28.57\t-33.07\tSJBALL030588_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-74.4\t-40.72\tSJBALL030603_D1\tBALLMEF2D\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tMEF2D rearrangement\n-36.96\t-31.21\tSJBALL030607_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-48.17\t-31.09\tSJBALL030618_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-33.14\t-40.46\tSJBALL030639_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-47.31\t-27.13\tSJBALL030644_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-45.54\t-46.17\tSJBALL030652_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-33.63\t-50.55\tSJBALL030653_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-38.16\t-55.63\tSJBALL030659_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n27.8\t-32.13\tSJBALL030662_D1\tBALLETV6RUNX1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1 like\n-96.07\t-14.07\tSJBALL030663_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-36.17\t-48.13\tSJBALL030675_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n31.6\t-35.22\tSJBALL030685_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-45.04\t-46.77\tSJBALL030700_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-39.41\t-52.83\tSJBALL030701_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-30.64\t-26.56\tSJBALL030709_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n27.84\t-48.4\tSJBALL030713_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-26.54\t-68.68\tSJBALL030718_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-53.72\t-33.38\tSJBALL030719_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n25.09\t-44.11\tSJBALL030724_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n30.48\t-33.92\tSJBALL030726_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-16.4\t-50.16\tSJBALL030734_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-28.25\t-42.68\tSJBALL030735_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-22.98\t-39.7\tSJBALL030742_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n28.95\t-42.17\tSJBALL030754_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-46.52\t-34.91\tSJBALL030755_D2\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-33.77\t-38.41\tSJBALL030756_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-101.74\t-7.99\tSJBALL030762_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-33.69\t-65.47\tSJBALL030771_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-47.1\t-32.34\tSJBALL030772_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n25.23\t-46.42\tSJBALL030786_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-38.74\t-58.92\tSJBALL030807_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-36.58\t-69\tSJBALL030808_D1\tBALLZNF384\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tZNF384 rearrangement\n29.18\t-37.77\tSJBALL030816_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-37.74\t-33.97\tSJBALL030821_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n30.19\t-38.68\tSJBALL030822_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-36.88\t-32.56\tSJBALL030832_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-32.97\t-42.57\tSJBALL030840_D2\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-41.45\t-58.7\tSJBALL030853_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-39.53\t-58.03\tSJBALL030864_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-75.41\t-66.41\tSJBALL030865_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-30.28\t-42.1\tSJBALL030871_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n30.39\t-40.55\tSJBALL030872_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-35.44\t-65.23\tSJBALL030879_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-63.91\t-72.14\tSJBALL030887_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-12.75\t-47.08\tSJBALL030888_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-20.96\t-67.09\tSJBALL030889_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-90.95\t-45.87\tSJBALL030893_D1\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-39.11\t-56.65\tSJBALL030894_D1\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-12.53\t-57.18\tSJBALL030900_D1\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n28.2\t-36.6\tSJBALL030906_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-29.64\t-58.97\tSJBALL030923_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-45.34\t-30.62\tSJBALL030927_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-90.48\t-47.52\tSJBALL030928_D1\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-36.61\t-53.16\tSJBALL030937_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-38.62\t-32.05\tSJBALL030946_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-39.69\t-73.31\tSJBALL030971_D1\tBALLZNF384\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tZNF384 rearrangement\n-100.75\t-9.13\tSJBALL030975_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-4.8\t-65.83\tSJBALL030976_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-44.96\t-32.49\tSJBALL030977_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-62.13\t-36.14\tSJBALL030983_D1\tBALLHYPO\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHypodiploidy\n-38.31\t-29.41\tSJBALL030984_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-38.12\t-33.58\tSJBALL030994_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-28.24\t-39.85\tSJBALL030999_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n27.52\t-34.77\tSJBALL031006_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n29.26\t-56.38\tSJBALL031007_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-52.19\t-32.71\tSJBALL031021_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-44.23\t-29.82\tSJBALL031036_D1\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-37.96\t-46.35\tSJBALL031044_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n36.08\t-32.88\tSJBALL031048_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-39.76\t-33.74\tSJBALL031052_D1\tBALLHYPO\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHypodiploidy\n33.45\t-34.54\tSJBALL031057_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-5.71\t-52.62\tSJBALL031058_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n22.75\t-45.72\tSJBALL031069_D1\tBALLETV6RUNX1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1 like\n-38.2\t-31.23\tSJBALL031073_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-48.71\t-34.28\tSJBALL031074_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-31.34\t-27.3\tSJBALL031094_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-27.47\t-28.55\tSJBALL031099_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n30.56\t-55.2\tSJBALL031122_D1\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-48.32\t-29.84\tSJBALL031123_D1\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-20.72\t-36.4\tSJBALL101_D\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-23.59\t-36.29\tSJBALL102_D\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-30.31\t-59.93\tSJBALL204_D\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-98.43\t-8.8\tSJBALL215_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-96.58\t-11.15\tSJBALL218_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-101.06\t-6.96\tSJBALL227_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-96.45\t-9.66\tSJBALL230_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-41.58\t-54.98\tSJBALL231_D\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-36.85\t-38.24\tSJBALL237_D\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n-17.91\t-38.03\tSJBALL239_D\tBALLIAMP21\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tiAMP21\n35.96\t-49.44\tSJBALL247_D\tBALLETV6RUNX1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1 like\n-25.85\t-49.58\tSJBALL255_D\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-20.58\t-146.71\tSJCBF001018_D1\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-21.78\t-147.67\tSJCBF001018_D2\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-21.39\t-146.09\tSJCBF001018_D3\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-23.52\t-144.95\tSJCBF001018_D4\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-21.06\t-147.41\tSJCBF001018_D5\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-23.2\t-146.69\tSJCBF001018_D6\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-22.26\t-146.91\tSJCBF001018_D7\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-24.19\t-143.82\tSJCBF001018_D8\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-20.63\t-144.28\tSJCBF001_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-11.3\t-141.39\tSJCBF004_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-14.07\t-147.75\tSJCBF006_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-13.18\t-139.96\tSJCBF008_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-26.87\t-136.99\tSJCBF012_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-28.58\t-132.27\tSJCBF020_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-29.77\t-134.16\tSJCBF022_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-28.52\t-133.88\tSJCBF023_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-30.8\t-132.19\tSJCBF025_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-19.48\t-142.54\tSJCBF030_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-15.39\t-141.54\tSJCBF031_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-19.47\t-140.2\tSJCBF034_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-30.3\t-135.72\tSJCBF041_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-14.29\t-145.57\tSJCBF042_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-2.73\t-69.68\tSJCBF044_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-27.78\t-133.99\tSJCBF090_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-21.83\t-141.52\tSJCBF091_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-12.83\t-141.43\tSJCBF094_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-18.28\t-145.8\tSJCBF099_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-15.61\t-139.48\tSJCBF100_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-15.64\t-148.64\tSJCBF100_E\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-15.12\t-140.53\tSJCBF101_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-2.75\t-70.05\tSJCBF108_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-14\t-142.55\tSJCBF110_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-11.3\t-143.8\tSJCBF112_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-29.42\t-132.16\tSJCBF113_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-12.21\t-146.39\tSJCBF117_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-30.18\t-132.8\tSJCBF123_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-18.3\t-141.57\tSJCBF124_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-12.28\t-143.12\tSJCBF125_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-13.63\t-141.16\tSJCBF138_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-18.73\t-143.16\tSJCBF139_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-17.01\t-139.2\tSJCBF141_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-10.54\t-137.83\tSJCBF143_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-20.35\t-142.46\tSJCBF145_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-17.48\t-140.41\tSJCBF149_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-17.89\t-137.44\tSJCBF150_D\tCBF\tHematologic Malignancy\tAcute Myeloid Leukemia\tCore Binding Factor\n-7.04\t-119.86\tSJCML030409_D1\tCML\tHematologic Malignancy\tChronic Myeloid Leukemia\tChronic Myeloid Leukemia\n-23.06\t-43.54\tSJDOWN013_D\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-87.11\t-48.09\tSJE2A001_D\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-89.05\t-47.64\tSJE2A007_D\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-86.76\t-46.86\tSJE2A018_D\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-86.25\t-47.21\tSJE2A037_D\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-89.35\t-46.57\tSJE2A038_D\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-86.41\t-45.15\tSJE2A040_D\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-88.59\t-46.45\tSJE2A043_D\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-32.9\t-33.76\tSJE2A056_D\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-88.31\t-47.93\tSJE2A059_D\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-86.79\t-44.49\tSJE2A060_D\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-99.02\t-6.95\tSJERG002_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-95.3\t-13.94\tSJERG003_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-101.55\t-6.49\tSJERG004_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-103.5\t-11.63\tSJERG005_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-93.35\t-14.35\tSJERG008_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-89.59\t-11.48\tSJERG009_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-94.53\t-10.32\tSJERG010_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-93.16\t-13.82\tSJERG014_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-94.7\t-7.8\tSJERG020051_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-94.46\t-16.88\tSJERG020052_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-93.94\t-12.18\tSJERG020299_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-99.8\t-17.87\tSJERG020300_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-100.62\t-5.29\tSJERG020302_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-97.12\t-15.66\tSJERG020303_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-97.54\t-19.23\tSJERG020304_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-98.61\t-14.11\tSJERG020305_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-94.69\t-19.93\tSJERG020306_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-98.04\t-13.57\tSJERG020307_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-94.72\t-18.59\tSJERG020308_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-90.08\t-15.87\tSJERG020309_D1\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-91.95\t-13.94\tSJERG020_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-7.52\t-64.16\tSJERG021891_D1\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-102.4\t-6.62\tSJERG024_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-104.45\t-12.13\tSJERG026_D\tBALLDUX4IGHL\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH like\n-104.23\t-7.21\tSJERG028_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-100.32\t-7.2\tSJERG029_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-99.51\t-11.31\tSJERG030_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n-89.63\t-10.08\tSJERG031_D\tBALLDUX4IGH\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tDUX4-IGH\n36.49\t-40.49\tSJETV001_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n35.24\t-40.54\tSJETV003_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n31.88\t-49.45\tSJETV004_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n40.32\t-37.95\tSJETV010_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n40.72\t-37.69\tSJETV010_R\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n36.6\t-39.12\tSJETV022_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n34.68\t-47.84\tSJETV024_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n26.17\t-55.21\tSJETV025_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n38.15\t-39.85\tSJETV026_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n39.16\t-42.34\tSJETV027_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n33.99\t-40.09\tSJETV028_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n32.32\t-47.63\tSJETV032_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n38.73\t-43.47\tSJETV035_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-34.86\t-33.8\tSJETV036_D\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n36.42\t-42.11\tSJETV039_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n30.24\t-47.5\tSJETV041_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n43.69\t-41.06\tSJETV043_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n43.72\t-41.08\tSJETV043_R\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n33.32\t-52.12\tSJETV044_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n27.39\t-55.11\tSJETV045_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n33.1\t-49.2\tSJETV046_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n33.81\t-49.3\tSJETV047_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n38.58\t-49.02\tSJETV047_R\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n38.74\t-49.06\tSJETV047_S\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n39.41\t-40.36\tSJETV048_R\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n28.81\t-53.94\tSJETV059_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n34.58\t-41.52\tSJETV069_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n32.94\t-51.37\tSJETV070_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n35.62\t-39.06\tSJETV076_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n34.81\t-45.74\tSJETV078_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n37.29\t-36.66\tSJETV084_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n33.52\t-55.12\tSJETV086_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n24.58\t-46.58\tSJETV092_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n30.93\t-49.98\tSJETV093_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n37.32\t-38.22\tSJETV095_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n33.83\t-47.81\tSJETV098_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n25.7\t-52.81\tSJETV136_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n31.5\t-42.97\tSJETV136_R\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n29.47\t-52.34\tSJETV190_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n35.16\t-51.56\tSJETV190_R\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n31.27\t-52.23\tSJETV191_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n31.06\t-52.58\tSJETV191_R\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n33.34\t-53.59\tSJETV195_D\tBALLETV6RUNX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tETV6-RUNX1\n-20.87\t-118.17\tSJHM030053_D1\tALAL\tHematologic Malignancy\tAcute Leukemias of Ambiguous Lineage\tAcute Leukemias of Ambiguous Lineage\n-68.33\t-77.93\tSJHM030100_D1\tALAL\tHematologic Malignancy\tAcute Leukemias of Ambiguous Lineage\tAcute Leukemias of Ambiguous Lineage\n-6.31\t-100.23\tSJHM030102_D1\tTLL\tHematologic Malignancy\tT-cell Lymphoblastic Lymphoma\tT-cell Lymphoblastic Lymphoma\n-5.77\t-120.93\tSJHM030201_D1\tMDS\tHematologic Malignancy\tMyelodysplastic Syndromes\tMyelodysplastic Syndromes\n-38.98\t-114.12\tSJHM030269_D1\tALAL\tHematologic Malignancy\tAcute Leukemias of Ambiguous Lineage\tAcute Leukemias of Ambiguous Lineage\n-1.82\t-66.82\tSJHM030291_D1\tTLL\tHematologic Malignancy\tT-cell Lymphoblastic Lymphoma\tT-cell Lymphoblastic Lymphoma\n-66.74\t-81.33\tSJHM030302_D1\tALAL\tHematologic Malignancy\tAcute Leukemias of Ambiguous Lineage\tAcute Leukemias of Ambiguous Lineage\n30.03\t-133.22\tSJHM030369_D1\tALAL\tHematologic Malignancy\tAcute Leukemias of Ambiguous Lineage\tAcute Leukemias of Ambiguous Lineage\n-11.95\t-113.67\tSJHM030500_D1\tALCL\tHematologic Malignancy\tAnaplastic Large Cell Lymphoma\tAnaplastic Large Cell Lymphoma\n5.15\t-106.7\tSJHM030615_D1\tBL\tHematologic Malignancy\tBurkitt Lymphoma\tBurkitt Lymphoma\n60.97\t25.88\tSJHM030702_D1\tMS\tHematologic Malignancy\tMyeloid Sarcoma\tMyeloid Sarcoma\n-3.37\t-117.44\tSJHM030702_D2\tBCUP\tHematologic Malignancy\tMiscelaneous Blood Cancer\tMiscelaneous Blood Cancer\n4.4\t-108.76\tSJHM030817_D1\tDLBCLNOS\tHematologic Malignancy\tDiffuse Large B-cell Lymphoma\tDiffuse Large B-cell Lymphoma\n-88.78\t-43.9\tSJHM031092_D1\tBALLTCF3PBX1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tTCF3-PBX1\n-32.63\t-32.53\tSJHYPER006_D\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-45.8\t-34.41\tSJHYPER011_D\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-55.03\t-72.48\tSJHYPER025_D\tBALLHYPO\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHypodiploidy\n-34.44\t-41.43\tSJHYPO020_D\tBALLHYPO\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHypodiploidy\n-43.91\t-55.8\tSJHYPO107_D\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-42.43\t-55.03\tSJHYPO108_D\tBALLBCRABL1L\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1 like\n-55.23\t-59.99\tSJHYPO112_D\tBALLPAX5P80R\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 P80R\n-30.13\t-37.73\tSJHYPO117_D\tBALLHYPO\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHypodiploidy\n-55.46\t-72.41\tSJHYPO120_D\tBALLHYPO\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHypodiploidy\n-15.55\t-43.7\tSJHYPO121_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-33.79\t-35.54\tSJHYPO124_D\tBALLHYPO\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHypodiploidy\n-44.52\t-53.98\tSJHYPO147_D\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-44.08\t-63.98\tSJHYPO151_D\tBALLPAX5\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tPAX5 Alteration\n-72.64\t-73.03\tSJINF001102_D1\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-67.53\t-75.37\tSJINF001_E\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-68.47\t-76.69\tSJINF001_S\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-73.95\t-71.59\tSJINF002_E\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-73.06\t-70.77\tSJINF002_S\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-76.18\t-72.54\tSJINF003_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-85.25\t-67.63\tSJINF004_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-3.92\t-95.74\tSJINF005_D\tTALLKMT2A\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-75.55\t-72.14\tSJINF006_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-79.2\t-67.47\tSJINF008_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-76.27\t-71.5\tSJINF009_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-77.27\t-68.45\tSJINF010_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-70.95\t-74.69\tSJINF011_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-80.37\t-73.1\tSJINF012_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-65.55\t-74.68\tSJINF013_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-72.96\t-79.19\tSJINF014_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-86.02\t-67.5\tSJINF015_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-79.77\t-74.45\tSJINF016_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-72.56\t-79.59\tSJINF017_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-82.08\t-72.88\tSJINF018_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-80.87\t-70.15\tSJINF019_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-69.53\t-72.95\tSJINF020_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-82.11\t-67.63\tSJINF021_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-82.77\t-72.32\tSJINF022_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-65.5\t-57.16\tSJINF049_D\tBALLNUTM1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNUTM1 rearrangement\n-78.52\t-71.88\tSJINF053_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-68.64\t-75.88\tSJINF055_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-80.87\t-76.68\tSJINF059_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-80.82\t-76.72\tSJINF060_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-81.97\t-76.71\tSJINF060_R\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-2.87\t-99.78\tSJINF061_D\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-2.82\t-99.89\tSJINF061_R\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-65.37\t-77.07\tSJINF062_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-70.02\t-73.82\tSJINF063_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-71.32\t-78.14\tSJINF064_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-70.67\t-70.06\tSJINF065_R\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-76.64\t-74.94\tSJINF066_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-49.26\t-36.81\tSJINF067_D\tBALLHYPER\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tHyperdiploidy\n-66.95\t-73.77\tSJINF068_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-66.75\t-73.67\tSJINF068_F\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-70.71\t-78.29\tSJINF069_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-7.43\t-102.21\tSJINF070_D\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-55.17\t-62.13\tSJINF071_D\tBALLNOS\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNOS\n-76.63\t-69.97\tSJINF073_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-77.57\t-70.32\tSJINF073_R\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-65.56\t-57.16\tSJINF074_D\tBALLNUTM1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tNUTM1 rearrangement\n-66.71\t-75.27\tSJINF075_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-4.38\t-122.77\tSJMDS030661_D1\tMDS\tHematologic Malignancy\tMyelodysplastic Syndromes\tMyelodysplastic Syndromes\n-2.83\t-121.56\tSJMDS031037_D1\tMDS\tHematologic Malignancy\tMyelodysplastic Syndromes\tMyelodysplastic Syndromes\n-23.49\t-130.6\tSJMLL001_D\tAULKMT2A\tHematologic Malignancy\tAcute Undifferentiated Leukemia\tKMT2A rearrangement\n-3.91\t-95.86\tSJMLL002_D\tTALLKMT2A\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-74.4\t-73.93\tSJMLL003_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-70.81\t-72.45\tSJMLL004_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-72.75\t-78.03\tSJMLL005_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-72.15\t-75.56\tSJMLL006_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-6.88\t-107.48\tSJMLL008_D\tTALLKMT2A\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-79.29\t-69.14\tSJMLL009_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-72.9\t-75.57\tSJMLL010_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-22.74\t-129.98\tSJMLL011_D\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-30.97\t-118.6\tSJMLL012_D\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-30.15\t-121.24\tSJMLL013_D\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-21.81\t-124.61\tSJMLL014_D\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-84.7\t-66.39\tSJMLL016_D\tBALLKMT2A\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tKMT2A rearrangement\n-29.85\t-121.05\tSJMLL018_D\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-31.71\t-121.63\tSJMLL019_D\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-28.91\t-118.99\tSJMLL020_D\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-28\t-118.28\tSJMLL021_D\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-30\t-117.87\tSJMLL022_D\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-19.49\t-125.32\tSJMLL030007_D1\tAML\tHematologic Malignancy\tAcute Myeloid Leukemia\tOther\n-18.68\t-46.3\tSJPHALL003_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-13.99\t-47.83\tSJPHALL004_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-43.84\t-42.53\tSJPHALL005_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-21.2\t-49.68\tSJPHALL006_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-24.11\t-71.09\tSJPHALL007_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-39.08\t-41.33\tSJPHALL008_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-20.4\t-51.5\tSJPHALL009_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-21.91\t-67.98\tSJPHALL010_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-16.17\t-48.29\tSJPHALL012_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-19.72\t-49.31\tSJPHALL013_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-15.49\t-48.5\tSJPHALL015_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-19.75\t-50.6\tSJPHALL020033_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-51.56\t-27.61\tSJPHALL020034_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-11.38\t-65.9\tSJPHALL020035_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-24.88\t-53.64\tSJPHALL020036_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-12.81\t-52.05\tSJPHALL020037_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-14.43\t-51.82\tSJPHALL020038_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-39.22\t-26.18\tSJPHALL020040_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-37.96\t-41.44\tSJPHALL020043_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-23.82\t-69.71\tSJPHALL020044_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-20.88\t-70.72\tSJPHALL020046_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-20.9\t-69.95\tSJPHALL020047_D1\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-22.18\t-69.64\tSJPHALL020_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-23.92\t-69.94\tSJPHALL021_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-40.12\t-41.26\tSJPHALL026_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-20.17\t-49.44\tSJPHALL029_D\tBALLBCRABL1\tHematologic Malignancy\tB-cell Acute Lymphoblastic Leukemia\tBCR-ABL1\n-6.15\t-120.05\tSJPHCML030001_D1\tCML\tHematologic Malignancy\tChronic Myeloid Leukemia\tChronic Myeloid Leukemia\n-11.4\t-132.01\tSJPML030005_D1\tAPLPMLRARA\tHematologic Malignancy\tAcute Promyelocytic Leukemia\tAcute Promyelocytic Leukemia\n-12.75\t-113.48\tSJST030676_D1\tALCL\tHematologic Malignancy\tAnaplastic Large Cell Lymphoma\tAnaplastic Large Cell Lymphoma\n-22.03\t-135.81\tSJTALL002_D\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-20.73\t-112.71\tSJTALL030047_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-21.09\t-113.72\tSJTALL030047_R1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-9.69\t-99.23\tSJTALL030064_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-14.23\t-96.74\tSJTALL030071_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-10.9\t-99.38\tSJTALL030125_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-5.62\t-107.59\tSJTALL030189_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-8.18\t-105.82\tSJTALL030212_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-9.57\t-98.25\tSJTALL030213_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-6.17\t-116.78\tSJTALL030249_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-10.64\t-105.93\tSJTALL030263_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-4.07\t-106.09\tSJTALL030338_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-7.57\t-100.19\tSJTALL030359_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-1.05\t-116.08\tSJTALL030376_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-6.11\t-108.18\tSJTALL030390_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-11.38\t-101.16\tSJTALL030442_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-13.79\t-96\tSJTALL030493_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-10.43\t-104.1\tSJTALL030494_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-12.51\t-103.1\tSJTALL030522_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-10.51\t-96.1\tSJTALL030527_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-8.36\t-104.26\tSJTALL030551_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n0.66\t-116.16\tSJTALL030598_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-7.63\t-96.74\tSJTALL030640_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-13.02\t-101.15\tSJTALL030684_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-14.94\t-97.75\tSJTALL030761_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-15.98\t-105.85\tSJTALL030880_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-16.44\t-106.13\tSJTALL030907_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-14.56\t-95.92\tSJTALL030916_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-8.61\t-97.4\tSJTALL030933_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-10.08\t-97.53\tSJTALL030963_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-12.89\t-99.6\tSJTALL030_D\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n60.02\t29.62\tSJTALL031008_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-21.64\t-109.08\tSJTALL031014_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-6.06\t-97.92\tSJTALL031015_D1\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther\n-8.66\t-98.17\tSJTALL077_D\tTALL\tHematologic Malignancy\tT-cell Acute Lymphoblastic Leukemia\tOther"
+                                },
+                            "dimensions": {
+                                "width": 700,
+                                "height": 400
                                 }
                             }
                         },
@@ -1482,7 +1248,6 @@
                     }
             ],
             "sandbox":{
-                "is_ui": false,
                 "buttons": [
                     {
                         "name": "Documentation",
@@ -1495,16 +1260,8 @@
         {
             "name": "Single Cell",
             "app": "Apps",
-            "blurb": "single-cell omics viewer",
+            "blurb": "Single-cell omics viewer",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
-            "media": {
-                "urls": [
-                    {
-                        "link": "?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json"
-                    }
-                ],
-                "doc": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
-            },
             "ppcalls": [
                 {
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/singlecell/singlecellDemoData.tar.gz",
@@ -1534,13 +1291,7 @@
             "hidden": true,
             "blurb": "TODO: Brief description of track or app",
             "image": "",
-            "media": {
-                "urls": [],
-                "doc": ""
-            },
-            "sandbox":{
-                "is_ui": true
-            },
+            "sandbox":{},
             "searchterms": ["clinical", "dictionary"]
         }
     ]
