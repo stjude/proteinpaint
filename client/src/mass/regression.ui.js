@@ -116,14 +116,14 @@ function setRenderers(self) {
 					self.dom.submitBtn.property('disabled', false)
 					self.api.on('postRender.submitbtn', null)
 				})
-				for (const t of config.termSequence) {
+				for (const t of self.termSequence) {
 					config[t.detail] = t.selected
 					if ('cutoff' in t) config.cutoff = t.cutoff
 				}
 				self.app.dispatch({
-					type: self.opts.config.term ? 'plot_edit' : 'plot_show',
+					type: config.term ? 'plot_edit' : 'plot_show',
 					id: self.id,
-					chartType: config.chartType,
+					chartType: self.opts.config.chartType,
 					config
 				})
 			})
