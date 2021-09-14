@@ -13,7 +13,7 @@ const defaultState = {
 }
 
 class ToyStore {
-	constructor(app) {
+	constructor(opts) {
 		this.api = rx.getStoreApi(this)
 		this.copyMerge = rx.copyMerge
 		this.deepFreeze = rx.deepFreeze
@@ -21,8 +21,8 @@ class ToyStore {
 		this.fromJson = rx.fromJson // used in store.api.state()
 		this.toJson = rx.toJson // used in store.api.state()
 
-		this.app = app
-		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
+		this.app = opts.app
+		this.state = this.copyMerge(this.toJson(defaultState), opts.app.opts.state)
 	}
 }
 

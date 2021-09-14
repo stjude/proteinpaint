@@ -10,10 +10,11 @@ import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
 
 class TdbSurvival {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'survival'
 		this.id = opts.id
-		this.app = app
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
 		this.dom = {
 			holder: opts.holder,

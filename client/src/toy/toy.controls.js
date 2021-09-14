@@ -3,17 +3,15 @@ import { searchInit } from './toy.search'
 import { filterInit } from './toy.filter'
 
 class ToyControls {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'controls'
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.notifyComponents = rx.notifyComponents
-		this.getComponents = rx.getComponents
-		this.app = app
-		this.opts = opts.holder
 		this.dom = { holder: opts.holder }
 		this.components = {
-			search: searchInit(app, { holder: opts.holder.append('div') }, app.opts.search),
-			filter: filterInit(app, { holder: opts.holder.append('div') }, app.opts.filter)
+			search: searchInit({ app: this.app, holder: opts.holder.append('div') }),
+			filter: filterInit({ app: this.app, holder: opts.holder.append('div') })
 		}
 	}
 

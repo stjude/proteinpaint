@@ -3,13 +3,14 @@ import { Menu, dofetch3 } from '../client'
 import { event } from 'd3-selection'
 
 class ToySearch {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'search'
 		// need to supply this.api to callbacks
 		// supply optional argument to getComponentApi(),
 		// so no need to attach it as an instance method
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.app = app
 		this.dom = {
 			holder: opts.holder,
 			tip: new Menu({ padding: '' })

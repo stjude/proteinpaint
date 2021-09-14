@@ -26,14 +26,14 @@ import { Menu } from '../client'
 	.on()
 */
 class ToyApp {
-	constructor(parentApp, opts) {
+	constructor(opts) {
 		this.type = 'app'
 		this.opts = opts
 		// the ToyApp may be the root app or a component within another app
-		this.api = parentApp ? rx.getComponentApi(this) : rx.getAppApi(this)
-		this.app = parentApp ? parentApp : this.api
+		this.api = rx.getAppApi(this)
+		this.app = this.api
 
-		if (!parentApp) this.store = storeInit(this.api)
+		this.store = storeInit({ app: this.api })
 		this.state = this.store.copyState()
 		this.dom = {
 			tip: new Menu(),
@@ -41,8 +41,8 @@ class ToyApp {
 		}
 		// expose the app api, not "this" directly to subcomponents
 		this.components = {
-			controls: controlsInit(this.app, { holder: this.dom.holder.append('div') }),
-			table: tableInit(this.app, { holder: this.dom.holder.append('div') })
+			controls: controlsInit({ app: this.app, holder: this.dom.holder.append('div') }),
+			table: tableInit({ app: this.app, holder: this.dom.holder.append('div') })
 		}
 		// set up the app api as the default argument
 		// to callbacks of emitted events

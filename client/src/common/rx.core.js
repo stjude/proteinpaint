@@ -62,29 +62,21 @@ export function getInitFxn(_Class_) {
 		*/
 		const self = new _Class_(instanceOpts)
 
-		// get the instance's api that hides its
+		// get the instance's api that may hide its
 		// mutable props and methods
-		const api = self.api
-			? // if there is already an instance api as constructed, use it
-			  self.api
-			: // if not, check if there is an api generator function
-			self.getApi
-			? // if yes, generate the api
-			  self.getApi()
-			: // if not, expose the mutable instance as its public api
-			  self
-
-		const opts = (self.app && self.app.opts) || (self.api && self.api.opts) || self.opts || {}
+		// if there is already an instance api as constructed, use it
+		// if not, expose the mutable instance as its public api
+		const api = self.api || self
+		const opts = self.opts || (self.app && self.app.opts) || {}
 		// expose the hidden instance to debugging and testing code
 		if (opts.debug) api.Inner = self
-
 		// freeze the api's properties and methods before exposing
 		Object.freeze(api)
 
 		if (self.eventTypes) {
 			// set up an optional event bus
 			const callbacks = self.type in instanceOpts ? instanceOpts[self.type].callbacks : instanceOpts.callbacks
-			self.bus = new Bus(self.api, self.eventTypes, callbacks)
+			self.bus = new Bus(api, self.eventTypes, callbacks)
 			self.bus.emit('postInit')
 		}
 		return api
@@ -98,9 +90,18 @@ export function getInitFxn(_Class_) {
 export function getOpts(opts, instance) {
 	if (!instance.app) return opts
 	if (instance.app.opts[instance.type]) {
+		/*
+			Always override opts with any app.opts that is available
+			for the instance's component type, supplied as a appInit() argument.
+
+			TODO: May want the ability to NOT override an existing key-value
+			in opts, only apply app.opts[instance.type] override for key-values
+			that are not in opts.
+		*/
 		copyMerge(opts, instance.app.opts[instance.type])
-		opts.debug = instance.app.debug
 	}
+	if ('debug' in instance.app) opts.debug = instance.app.debug
+	else if (instance.app.opts && 'debug' in instance.app.opts) opts.debug = instance.app.opts.debug
 	return opts
 }
 

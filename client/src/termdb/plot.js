@@ -141,11 +141,12 @@ class TdbPlot {
 
 		// may need to display a survival plot
 		if (this.state.displayAsSurvival && !this.components.survival) {
-			this.components.survival = survivalInit(
-				this.app,
-				{ holder: this.dom.viz.append('div'), id: this.id },
-				Object.assign({ controls: this.components.controls }, this.app.opts.survival)
-			)
+			this.components.survival = survivalInit({
+				app: this.app,
+				holder: this.dom.viz.append('div'),
+				id: this.id,
+				controls: this.components.controls
+			})
 		}
 
 		return data

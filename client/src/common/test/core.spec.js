@@ -9,19 +9,17 @@ import * as rx from '../rx.core'
 // rm -f ../public/bin/bundle.*; npx browserify ./test/init.js ../public/bin/proteinpaint.js src/*/test/core*.spec.js | npx tape-run --static ../public
 
 class TestApp {
-	constructor(arg, opts) {
+	constructor(opts) {
 		this.type = 'app'
-		this.arg = arg
 		this.opts = opts
-		if (arg.api) this.api = arg.api
-		else if (arg.getApi) this.api = arg.getApi(this)
+		this.api = rx.getAppApi(this)
 
-		if (arg.storeInit) {
-			this.store = arg.storeInit(this)
+		if (opts.storeInit) {
+			this.store = opts.storeInit({ app: this.api })
 			this.state = this.store.copyState()
 		}
-		if (arg.components) {
-			this.components = arg.components
+		if (opts.components) {
+			this.components = opts.components
 			for (const name in this.components) {
 				if (!this.components[name].app) {
 					this.components[name].app = this.api
@@ -36,14 +34,14 @@ class TestApp {
 }
 
 class TestStore {
-	constructor(app) {
-		this.app = app
+	constructor(opts) {
+		this.app = opts.app
 		this.api = rx.getStoreApi(this)
 		this.deepFreeze = rx.deepFreeze
 		this.fromJson = rx.fromJson // used in store.api.copyState()
 		this.toJson = rx.toJson // used in store.api.copyState()
-		this.state = app.opts.state
-			? app.opts.state
+		this.state = opts.app.opts.state
+			? opts.app.opts.state
 			: {
 					prop: 'xyz',
 					todos: []
@@ -71,13 +69,11 @@ TestStore.prototype.actions = {
 }
 
 class TestPart {
-	constructor(app, opts = {}) {
+	constructor(opts = {}) {
 		this.type = 'part'
-		this.app = app
-		this.opts = opts
-
-		if (opts.api) this.api = opts.api
-		else if (opts.getApi) this.api = opts.getApi(this)
+		this.app = opts.app
+		this.opts = rx.getOpts(opts, this)
+		this.api = rx.getComponentApi(this)
 
 		if (opts.components) this.components = opts.components
 	}
@@ -102,30 +98,38 @@ tape('\n', function(test) {
 tape('getInitFxn', function(test) {
 	test.equal(typeof rx.getInitFxn, 'function', 'should be an rx.function')
 
-	const appInit = rx.getInitFxn(TestApp)
-	test.equal(typeof appInit, 'function', 'returned value should be a function')
+	const appInit0 = rx.getInitFxn(
+		class AppCls0 {
+			constructor(opts) {
+				this.opts = opts
+			}
+		}
+	)
+	test.equal(typeof appInit0, 'function', 'returned value should be a function')
 
-	const arg0 = {}
 	const opts = {}
-	const obj0 = appInit(arg0, opts)
-	test.equal(obj0.arg, arg0, 'should pass the first argument to object constructor')
-	test.equal(obj0.opts, opts, 'should pass the second argument to object constructor')
-	test.equal(obj0.constructor.name, 'TestApp', 'should return the object itself if it has no .api')
-	test.equal(Object.isFrozen(obj0), true, 'should return the frozen object if it has no .api')
+	const obj0 = appInit0(opts)
+	test.deepEqual(obj0.opts, opts, 'should pass the only argument to object constructor')
+	test.equal(obj0.constructor.name, 'AppCls0', 'should return the object itself if it has no .api')
+	test.equal(Object.isFrozen(obj0), true, 'should return a frozen object if it has no .api')
 
-	const api1 = {}
-	const arg1 = { api: api1 }
-	const obj1 = appInit(arg1, {})
-	test.equal(obj1, api1, "should return this object's api if constructed")
-	test.equal(obj1.Inner, undefined, 'should not create an api.Inner when debug==false')
-	test.equal(Object.isFrozen(obj1), true, 'should return the frozen api when constructed with an .api')
+	const appInit1 = rx.getInitFxn(
+		class AppCls1 {
+			constructor(opts) {
+				this.opts = opts
+				this.api = opts.api
+			}
+		}
+	)
+	const opts1a = { api: { main() {} } }
+	const obj1a = appInit1(opts1a)
+	test.equal(obj1a, opts1a.api, "should return this object's api if constructed")
+	test.equal(obj1a.Inner, undefined, 'should not create an api.Inner when debug==false')
+	test.equal(Object.isFrozen(obj1a), true, 'should return the frozen api when constructed with an .api')
 
-	const api2 = {}
-	const arg2 = { api: api2 }
-	const obj2 = appInit(arg2, { debug: 1 })
-	test.equal(obj2, api2, "should return this object's api if constructed when debug==true")
-	test.equal(obj2.Inner && obj2.Inner.constructor.name, 'TestApp', 'should create an api.Inner when debug==false')
-
+	const opts1b = { api: { main() {} }, debug: 1 }
+	const obj1b = appInit1(opts1b)
+	test.equal(obj1b.Inner && obj1b.Inner.constructor.name, 'AppCls1', 'should create an api.Inner when debug==true')
 	test.end()
 })
 
@@ -139,7 +143,7 @@ tape('getStoreApi', function(test) {
 			debug: 1
 		}
 	}
-	const store0 = storeInit(app)
+	const store0 = storeInit({ app })
 	test.equal(typeof store0.write, 'function', 'should provide a write() method')
 	test.equal(typeof store0.copyState, 'function', 'should provide a copyState() method')
 	test.equal(store0.Inner.state, app.opts.state, 'should have the expected initial state')
@@ -151,16 +155,16 @@ tape('getComponentApi', function(test) {
 	test.equal(typeof rx.getComponentApi, 'function', 'should be an rx.function')
 
 	const partInit = rx.getInitFxn(TestPart)
-	const app = {
-		opts: {
-			state: { abc: 123 },
-			debug: 1
-		}
-	}
 	const opts = {
+		app: {
+			opts: {
+				state: { abc: 123 },
+				debug: 1
+			}
+		},
 		getApi: rx.getComponentApi
 	}
-	const part0 = partInit(app, opts)
+	const part0 = partInit(opts)
 	test.equal('type' in part0, true, 'should have an api.type property, even if undefine)')
 	test.equal('id' in part0, true, 'should set an api.id property, even if undefined')
 	test.equal(typeof part0.update, 'function', 'should provide an update() method')
@@ -175,7 +179,7 @@ tape('getAppApi', function(test) {
 	const appInit = rx.getInitFxn(TestApp)
 	const arg0 = { getApi: rx.getAppApi }
 	const opts = {}
-	const api0 = appInit(arg0, opts)
+	const api0 = appInit(opts)
 	test.equal(typeof api0.dispatch, 'function', 'should provide a dispatch() method')
 	test.equal(typeof api0.save, 'function', 'should provide a save() method')
 	test.equal(typeof api0.getState, 'function', 'should provide a getState() method')
@@ -229,10 +233,11 @@ tape('Reactive flow', async function(test) {
 		components: {
 			comp1,
 			comp2: comp2.api
-		}
+		},
+		debug: 1
 	}
 	const appInit = rx.getInitFxn(TestApp)
-	const app = appInit(arg0, { debug: 1 })
+	const app = appInit(arg0)
 
 	const todo = { id: 1 }
 	const updateTests = {}
