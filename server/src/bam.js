@@ -887,32 +887,34 @@ async function do_query(q) {
 }
 
 async function query_reads(q) {
-	/*
-	if variant, query just the region at the variant position
-	then, assign the reads to q.regions[0]
-	assume just one region
-
-	//if (q.variant) {
-	//	const r = {
-	//		chr: q.variant.chr,
-	//		start: q.variant.pos,
-	//		stop: q.variant.pos + q.variant.ref.length,
-	//	}
-	//	await query_region(r, q)
-	//	q.regions[0].lines = r.lines
-	//	return
-	//}
-
-	if sv, query at the two breakends, and assign reads to two regions one for each breakend
-	assume two regions
-
-	otherwise, query for every region in q.regions
-	*/
-	if (q.sv) {
+	if (q.variant) {
+		/* doing kmer typing on a variant
+		will only query reads from the variant region
+		query region is centered on the variant position to be able to include softclip reads resulting from the mutation
+		*/
+		const varlen = Math.max(q.variant.ref.length, q.variant.alt.length)
+		const r = {
+			chr: q.variant.chr,
+			start: q.variant.pos - varlen,
+			stop: q.variant.pos + varlen
+		}
+		await determine_downsampling(q, [r])
+		await query_region(r, q)
+		q.regions[0].lines = r.lines
 		return
 	}
 
-	await determine_downsampling(q)
+	if (q.sv) {
+		/*
+		if sv, query at the two breakends, and assign reads to two regions one for each breakend
+		assume two regions
+		otherwise, query for every region in q.regions
+		*/
+		return
+	}
+
+	// query reads for all regions in q.regions
+	await determine_downsampling(q, q.regions)
 
 	for (const r of q.regions) {
 		await query_region(r, q) // add r.lines[]
@@ -922,10 +924,11 @@ async function query_reads(q) {
 /*
 get total number of reads from all regions
 determine downsampling ratio
+regions can be defined by variant/sv position
 */
-async function determine_downsampling(q) {
+async function determine_downsampling(q, regions) {
 	let totalreads = 0 // total number of reads from all regions
-	for (const r of q.regions) {
+	for (const r of regions) {
 		const args = ['view', '-c', q.file]
 		if (!q.gdc_case_id) {
 			args.push((q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop)
