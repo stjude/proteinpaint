@@ -31,9 +31,11 @@ class TdbNav {
 		this.samplecounts = {}
 		this.cohortFilter = getFilterItemByTag(this.app.getState().termfilter.filter, 'cohortFilter')
 		this.initUI()
+	}
 
+	async init() {
 		this.components = {
-			search: searchInit({
+			search: await searchInit({
 				app: this.app,
 				holder: this.dom.searchDiv,
 				resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
@@ -48,13 +50,13 @@ class TdbNav {
 					}
 				}
 			}),
-			filter: filter3Init({
+			filter: await filter3Init({
 				app: this.app,
 				holder: this.dom.subheader.filter.append('div'),
 				hideLabel: this.opts.header_mode === 'with_tabs',
 				emptyLabel: '+Add new filter'
 			}),
-			charts: chartsInit({
+			charts: await chartsInit({
 				app: this.app,
 				holder: this.dom.subheader.charts,
 				vocab: this.opts.vocab

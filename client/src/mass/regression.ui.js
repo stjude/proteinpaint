@@ -123,7 +123,7 @@ function setRenderers(self) {
 				self.app.dispatch({
 					type: config.term ? 'plot_edit' : 'plot_show',
 					id: self.id,
-					chartType: self.opts.config.chartType,
+					chartType: config.chartType || (self.opts.config && self.opts.config.chartType) || 'regression',
 					config
 				})
 			})
