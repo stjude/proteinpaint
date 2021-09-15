@@ -330,6 +330,7 @@ TdbStore.prototype.actions = {
 	}
 }
 
+// must use the await keyword when using this storeInit()
 export const storeInit = rx.getInitFxn(TdbStore)
 
 function validatePlot(p, vocabApi) {

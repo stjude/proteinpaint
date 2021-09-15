@@ -86,6 +86,7 @@ class TdbApp {
 	}
 }
 
+// must use the await keyword when using this appInit()
 export const appInit = rx.getInitFxn(TdbApp)
 
 function setInteractivity(self) {

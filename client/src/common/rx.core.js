@@ -63,8 +63,11 @@ export function getInitFxn(_Class_) {
 
 		// instance.init() is expected to be an async function
 		// which is not compatible within a constructor() function,
-		// so call it here if it available as an instance method
+		// so call it here if it is available as an instance method
 		if (self.init) {
+			// return a Promise thar resolves to the instance API;
+			// the parent component must use the await keyword
+			// when using this initializer to get the instance's API
 			return self
 				.init()
 				.then(() => {
@@ -77,6 +80,8 @@ export function getInitFxn(_Class_) {
 				})
 		} else {
 			if (self.bus) self.bus.emit('postInit')
+			// return a promise; the parent component does NOT HAVE to use
+			// the await keyword when using this initializer to get the instance's API
 			return api
 		}
 	}
