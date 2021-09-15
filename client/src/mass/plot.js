@@ -52,20 +52,22 @@ class MassPlot {
 				.style('min-width', '300px')
 				.style('margin-left', '50px')
 		}
+	}
 
+	async init() {
 		const controls =
-			opts.plot.chartType === 'regression'
-				? regressionUIInit({
+			this.opts.plot.chartType === 'regression'
+				? await regressionUIInit({
 						app: this.app,
 						id: this.id,
 						holder: this.dom.viz.append('div')
 				  })
-				: controlsInit({
+				: await controlsInit({
 						app: this.app,
 						id: this.id,
 						holder: this.dom.controls,
-						isleaf: opts.plot.term.isleaf,
-						iscondition: opts.plot.term.type == 'condition'
+						isleaf: this.opts.plot.term.isleaf,
+						iscondition: this.opts.plot.term.type == 'condition'
 				  })
 
 		this.components = controls ? { controls } : {}

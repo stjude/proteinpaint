@@ -20,8 +20,8 @@ class TdbPlot {
 		this.app = opts.app
 		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
+		this.eventTypes = ['postInit', 'postRender']
 		this.modifiers = this.opts.modifiers
-
 		this.dom = {
 			holder: this.opts.holder
 				.style('margin-top', '-1px')
@@ -45,64 +45,72 @@ class TdbPlot {
 				.style('min-width', '300px')
 				.style('margin-left', '50px')
 		}
+	}
 
-		const controls = controlsInit({
-			app: this.app,
-			id: this.id,
-			holder: this.dom.controls,
-			isleaf: opts.term.isleaf,
-			iscondition: opts.term.type == 'condition'
-		})
-
-		this.components = {
-			controls,
-			barchart: barInit({
+	async init() {
+		try {
+			const controls = await controlsInit({
 				app: this.app,
-				holder: this.dom.viz.append('div'),
 				id: this.id,
-				controls
-			}),
-			stattable: statTableInit({
-				app: this.app,
-				holder: this.dom.viz.append('div'),
-				id: this.id
-			}),
-			table: tableInit({
-				app: this.app,
-				holder: this.dom.viz.append('div'),
-				id: this.id,
-				controls
-			}),
-			boxplot: boxplotInit({
-				app: this.app,
-				holder: this.dom.viz.append('div'),
-				id: this.id,
-				controls
-			}),
-			scatter: scatterInit({
-				app: this.app,
-				holder: this.dom.viz.append('div'),
-				id: this.id,
-				controls
-			}),
-			termInfo: termInfoInit({
-				app: this.app,
-				holder: this.dom.viz.append('div'),
-				id: this.id
+				holder: this.dom.controls,
+				isleaf: this.opts.term.isleaf,
+				iscondition: this.opts.term.type == 'condition'
 			})
-		}
 
-		const termdbConfig = this.app.getState().termdbConfig
-		if (opts.term.type == 'condition' && termdbConfig.cumincplot4condition) {
-			this.components.cuminc = cumincInit({
-				app: this.app,
-				holder: this.dom.viz.append('div'),
-				id: this.id,
-				controls
-			})
-		}
+			this.components = Object.assign(
+				{
+					controls
+				},
+				await rx.multiInit({
+					barchart: barInit({
+						app: this.app,
+						holder: this.dom.viz.append('div'),
+						id: this.id,
+						controls
+					}),
+					stattable: statTableInit({
+						app: this.app,
+						holder: this.dom.viz.append('div'),
+						id: this.id
+					}),
+					table: tableInit({
+						app: this.app,
+						holder: this.dom.viz.append('div'),
+						id: this.id,
+						controls
+					}),
+					boxplot: boxplotInit({
+						app: this.app,
+						holder: this.dom.viz.append('div'),
+						id: this.id,
+						controls
+					}),
+					scatter: scatterInit({
+						app: this.app,
+						holder: this.dom.viz.append('div'),
+						id: this.id,
+						controls
+					}),
+					termInfo: termInfoInit({
+						app: this.app,
+						holder: this.dom.viz.append('div'),
+						id: this.id
+					})
+				})
+			)
 
-		this.eventTypes = ['postInit', 'postRender']
+			const termdbConfig = this.app.getState().termdbConfig
+			if (this.opts.term.type == 'condition' && termdbConfig.cumincplot4condition) {
+				this.components.cuminc = await cumincInit({
+					app: this.app,
+					holder: this.dom.viz.append('div'),
+					id: this.id,
+					controls
+				})
+			}
+		} catch (e) {
+			throw e
+		}
 	}
 
 	reactsTo(action) {

@@ -109,6 +109,26 @@ export function getOpts(opts, instance) {
 	return opts
 }
 
+/*
+	Parallelize the potentially async initialization of multiple components
+
+	initPromises{}
+	- keys: component names
+	- values: Promise
+*/
+export async function multiInit(initPromises) {
+	const components = {}
+	try {
+		await Promise.all(Object.values(initPromises))
+		for (const name in initPromises) {
+			components[name] = await initPromises[name]
+		}
+		return components
+	} catch (e) {
+		throw e
+	}
+}
+
 /****************
   API Generators
 *****************/
@@ -176,7 +196,7 @@ export function getAppApi(self) {
 				if (action) self.state = await self.store.write(action)
 				// else an empty action should force components to update
 
-				const data = self.main ? self.main() : null
+				const data = self.main ? await self.main() : null
 				const current = { action, appState: self.state }
 				await notifyComponents(self.components, current, data)
 			} catch (e) {
