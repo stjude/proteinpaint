@@ -244,6 +244,8 @@ const readspace_bp = 5
 
 const maxreadcount = 7000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
+const max_returntemplatebox = 2000 // maximum number of reads per group, for which to return the "templatebox"
+const minstackheight_returntemplatebox = 7 // minimum stack height (number of pixels) for which to return templatebox
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 
@@ -1763,7 +1765,7 @@ super high number of stacks will result in fractional row height and blurry rend
 	}
 	if (group.stacks.length) {
 		// has reads/templates for rendering, support below
-		if (group.stackheight >= 7 && q.totalnumreads < 3000) {
+		if (group.stackheight >= minstackheight_returntemplatebox && group.templates.length < max_returntemplatebox) {
 			group.returntemplatebox = []
 		} else {
 			if (!group.partstack) {
