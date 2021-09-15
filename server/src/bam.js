@@ -42,13 +42,14 @@ XXX quick fix to be removed/disabled later
 
 when client zooms into one read group, server needs to know which group it is and only generate that group
 
-*********************** new q{}
+*********************** q{}
 .grouptype, .partstack{} // having partstack indicates it's in the partstack mode
 .genome
 .devicePixelRatio
 .asPaired
 .stacksegspacing
 .canvaswidth
+.downsample{} // added by determine_downsampling
 .variant{}
 	.chr/pos/ref/alt
 .sv{}
@@ -123,6 +124,7 @@ download_gdc_bam  // For downloading gdc bam files
 get_q
 do_query
 	query_reads
+		determine_downsampling
 		query_region
 	get_templates
 		parse_one_segment
@@ -240,8 +242,10 @@ const ntboxwidthincrement = 0.5
 const readspace_px = 2
 const readspace_bp = 5
 
-const maxreadcount = 10000 // maximum number of reads to load
+const maxreadcount = 7000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
+const max_returntemplatebox = 2000 // maximum number of reads per group, for which to return the "templatebox"
+const minstackheight_returntemplatebox = 7 // minimum stack height (number of pixels) for which to return templatebox
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 
@@ -263,8 +267,13 @@ module.exports = genomes => {
 				return
 			}
 
+			const d1 = new Date()
+
 			const q = await get_q(genome, req)
 			res.send(await do_query(q))
+
+			const d2 = new Date()
+			console.log('bam.js', d2 - d1)
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -330,7 +339,6 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 	let i = 0
 	const dist_bw_reads = group.stackspace / group.canvasheight
 	for (const diff_score of diff_scores_list) {
-		//console.log('diff_score:', diff_score)
 		if (diff_score > 0) {
 			ctx.fillStyle = alt_diff_score_color
 		} else {
@@ -651,7 +659,7 @@ async function get_q(genome, req) {
 			file: path.join(serverconfig.cachedir, req.query.file), // will need to change this to a loop when viewing multiple regions in the same gdc sample
 			asPaired: req.query.asPaired,
 			getcolorscale: req.query.getcolorscale,
-			_numofreads: 0, // temp, to count num of reads while loading and detect above limit
+			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
 			messagerows: [],
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
@@ -667,7 +675,7 @@ async function get_q(genome, req) {
 			file: _file, // may change if is url
 			asPaired: req.query.asPaired,
 			getcolorscale: req.query.getcolorscale,
-			_numofreads: 0, // temp, to count num of reads while loading and detect above limit
+			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
 			messagerows: [],
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
@@ -749,7 +757,7 @@ async function get_q(genome, req) {
 
 async function do_query(q) {
 	await query_reads(q)
-	delete q._numofreads // read counter no longer needed after loading
+	//delete q._numofreads // read counter no longer needed after loading
 	q.totalnumreads = q.regions.reduce((i, j) => i + j.lines.length, 0)
 
 	// parse reads and cigar
@@ -767,7 +775,7 @@ async function do_query(q) {
 	}
 	if (q.read_limit_reached) {
 		// When maximum read limit is reached
-		result.count.read_limit = q.read_limit_reached
+		result.count.read_limit_reached = q.read_limit_reached
 	}
 
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
@@ -881,32 +889,78 @@ async function do_query(q) {
 }
 
 async function query_reads(q) {
-	/*
-	if variant, query just the region at the variant position
-	then, assign the reads to q.regions[0]
-	assume just one region
-
-	if sv, query at the two breakends, and assign reads to two regions one for each breakend
-	assume two regions
-
-	otherwise, query for every region in q.regions
-	*/
-	//if (q.variant) {
-	//	const r = {
-	//		chr: q.variant.chr,
-	//		start: q.variant.pos,
-	//		stop: q.variant.pos + q.variant.ref.length,
-	//	}
-	//	await query_region(r, q)
-	//	q.regions[0].lines = r.lines
-	//	return
-	//}
-	if (q.sv) {
+	if (q.variant) {
+		/* doing kmer typing on a variant
+		will only query reads from the variant region
+		query region is centered on the variant position to be able to include softclip reads resulting from the mutation
+		*/
+		const varlen = Math.floor(1.5 * Math.max(q.variant.ref.length, q.variant.alt.length))
+		const r = {
+			chr: q.variant.chr,
+			start: q.variant.pos - varlen,
+			stop: q.variant.pos + varlen
+		}
+		await determine_downsampling(q, [r])
+		await query_region(r, q)
+		q.regions[0].lines = r.lines
 		return
 	}
+
+	if (q.sv) {
+		/*
+		if sv, query at the two breakends, and assign reads to two regions one for each breakend
+		assume two regions
+		otherwise, query for every region in q.regions
+		*/
+		return
+	}
+
+	// query reads for all regions in q.regions
+	await determine_downsampling(q, q.regions)
+
 	for (const r of q.regions) {
 		await query_region(r, q) // add r.lines[]
 	}
+}
+
+/*
+get total number of reads from all regions
+determine downsampling ratio
+regions can be defined by variant/sv position
+*/
+async function determine_downsampling(q, regions) {
+	let totalreads = 0 // total number of reads from all regions
+	for (const r of regions) {
+		const args = ['view', '-c', q.file]
+		if (!q.gdc_case_id) {
+			args.push((q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop)
+		}
+		await utils.get_lines_bigfile({
+			isbam: true,
+			args,
+			dir: q.dir,
+			callback: line => {
+				const c = Number(line)
+				if (!Number.isInteger(c)) throw 'total number of reads from a region not integer'
+				totalreads += c
+			}
+		})
+	}
+	if (totalreads < maxreadcount * 1.1) {
+		// no downsampling
+		return
+	}
+	// more than 110% of max reads, will apply downsampling
+	// 10% of maxreadcount as a unit, corresponding to 1 out of ten reads to be dropped
+	const unitcount = (totalreads - maxreadcount) / (maxreadcount * 0.1)
+	// keep/(keep+skip) is the downsampling ratio
+	// pointer++ for every read so that for every #(keep+skip) reads, #skip reads are skipped
+	q.downsample = {
+		keep: 10,
+		skip: Math.floor(unitcount),
+		pointer: 0
+	}
+	q.read_limit_reached = totalreads // notify client
 }
 
 async function get_gdc_bam(chr, start, stop, token, case_id, cache_dir) {
@@ -951,18 +1005,30 @@ async function query_region(r, q) {
 		args,
 		dir: q.dir,
 		callback: (line, ps) => {
+			if (q.downsample) {
+				// apply downsampling based on the ratio specified in .keep and .skip
+				const d = q.downsample
+				d.pointer++
+				if (d.pointer >= d.keep && d.pointer < d.keep + d.skip) {
+					return
+				}
+				if (d.pointer >= d.keep + d.skip) d.pointer = 0 // restart pointer
+			}
+
 			r.lines.push(line)
+
+			/*
+			old logic to kill samtools process; no longer doing this with down sampling
 			q._numofreads++
 			if (q._numofreads >= maxreadcount) {
 				ps.kill()
 				q.read_limit_reached = true
-				/*
 				q.messagerows.push({
 					h: 13,
 					t: '11Too many reads in view range. Try zooming into a smaller region.'
 				})
-				*/
 			}
+			*/
 		}
 	})
 }
@@ -1699,7 +1765,7 @@ super high number of stacks will result in fractional row height and blurry rend
 	}
 	if (group.stacks.length) {
 		// has reads/templates for rendering, support below
-		if (group.stackheight >= 7 && q.totalnumreads < 3000) {
+		if (group.stackheight >= minstackheight_returntemplatebox && group.templates.length < max_returntemplatebox) {
 			group.returntemplatebox = []
 		} else {
 			if (!group.partstack) {
