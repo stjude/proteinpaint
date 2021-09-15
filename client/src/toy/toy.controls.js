@@ -8,11 +8,14 @@ class ToyControls {
 		this.app = opts.app
 		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.dom = { holder: opts.holder }
-		this.components = {
-			search: searchInit({ app: this.app, holder: opts.holder.append('div') }),
-			filter: filterInit({ app: this.app, holder: opts.holder.append('div') })
-		}
+		this.dom = { holder: this.opts.holder }
+	}
+
+	async init() {
+		this.components = await rx.multiInit({
+			search: searchInit({ app: this.app, holder: this.opts.holder.append('div') }),
+			filter: filterInit({ app: this.app, holder: this.opts.holder.append('div') })
+		})
 	}
 
 	getState(appState) {

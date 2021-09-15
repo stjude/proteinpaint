@@ -28,25 +28,25 @@ import { Menu } from '../client'
 class ToyApp {
 	constructor(opts) {
 		this.type = 'app'
-		this.opts = opts
+		this.opts = opts //rx.getOpts(opts, this)
 		// the ToyApp may be the root app or a component within another app
 		this.api = rx.getAppApi(this)
-		this.app = this.api
-
-		this.store = storeInit({ app: this.api })
-		this.state = this.store.copyState()
+		// set up the app api as the default argument
+		// to callbacks of emitted events
+		this.eventTypes = ['postInit', 'postRender']
 		this.dom = {
 			tip: new Menu(),
 			holder: opts.holder
 		}
-		// expose the app api, not "this" directly to subcomponents
-		this.components = {
-			controls: controlsInit({ app: this.app, holder: this.dom.holder.append('div') }),
-			table: tableInit({ app: this.app, holder: this.dom.holder.append('div') })
-		}
-		// set up the app api as the default argument
-		// to callbacks of emitted events
-		this.eventTypes = ['postInit', 'postRender']
+	}
+
+	async init() {
+		this.store = await storeInit({ app: this.api })
+		this.state = this.store.copyState()
+		this.components = await rx.multiInit({
+			controls: controlsInit({ app: this.api, holder: this.dom.holder.append('div') }),
+			table: tableInit({ app: this.api, holder: this.dom.holder.append('div') })
+		})
 	}
 
 	/*
