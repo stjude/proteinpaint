@@ -75,7 +75,7 @@ class TdbStore {
 		}
 	}
 
-	async rehydrate() {
+	async init() {
 		this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
 
 		// support any legacy examples and tests that use the deprecated state.tree.plots object,

@@ -42,6 +42,7 @@ export function getInitFxn(_Class_) {
 		constructorArg
 		- the argument to the _Class_ constructor
 	*/
+
 	return (constructorArg = {}) => {
 		// create a _Class_ instance with mutable private properties and methods
 		const self = new _Class_(constructorArg)
@@ -58,9 +59,26 @@ export function getInitFxn(_Class_) {
 		if (self.eventTypes) {
 			// set up an optional event bus
 			self.bus = new Bus(api, self.eventTypes, self.opts.callbacks || {})
-			self.bus.emit('postInit')
 		}
-		return api
+
+		// instance.init() is expected to be an async function
+		// which is not compatible within a constructor() function,
+		// so call it here if it available as an instance method
+		if (self.init) {
+			return self
+				.init()
+				.then(() => {
+					if (self.bus) self.bus.emit('postInit')
+					return api
+				})
+				.catch(e => {
+					if (self.printError) self.printError(e)
+					else throw e
+				})
+		} else {
+			if (self.bus) self.bus.emit('postInit')
+			return api
+		}
 	}
 }
 
@@ -108,7 +126,6 @@ export function getStoreApi(self) {
 			return await api.copyState()
 		},
 		async copyState(opts = {}) {
-			if (opts.rehydrate) await self.rehydrate()
 			const stateCopy = self.fromJson(self.toJson(self.state))
 			self.deepFreeze(stateCopy)
 			return stateCopy

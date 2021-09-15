@@ -18,14 +18,13 @@ https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/
 */
 
 class TdbApp {
-	constructor(opts) {
+	constructor(opts = {}) {
 		this.type = 'app'
-		this.opts = this.initOpts(opts)
+		this.opts = this.validateOpts(opts)
 		this.tip = new Menu({ padding: '5px' })
 		// the TdbApp may be the root app or a component within another app
 		this.api = rx.getAppApi(this)
-		this.app = this.api
-		this.api.vocabApi = vocabInit(this.api, this.app.opts)
+		this.api.vocabApi = vocabInit(this.api, this.opts)
 
 		this.dom = {
 			holder: opts.holder, // do not modify holder style
@@ -37,44 +36,45 @@ class TdbApp {
 
 		// catch initialization error
 		try {
-			this.store = storeInit({ app: this.api, state: this.opts.state })
-			this.store
-				.copyState({ rehydrate: true })
-				.then(state => {
-					this.state = state
-					this.setComponents()
-				})
-				.then(() => this.api.dispatch())
-				.catch(e => this.printError(e))
+		} catch (e) {
+			this.printError(e)
+		}
+	}
+
+	validateOpts(o) {
+		if (!o.callbacks) o.callbacks = {}
+		return o
+	}
+
+	async init() {
+		try {
+			this.store = await storeInit({ app: this.api, state: this.opts.state })
+			this.state = await this.store.copyState()
+			this.setComponents()
+			this.api.dispatch()
 		} catch (e) {
 			this.printError(e)
 		}
 	}
 
 	async main() {
-		//console.log(this.state.tree.expandedTermIds)
 		this.api.vocabApi.main()
-	}
-
-	initOpts(o) {
-		if (!o.callbacks) o.callbacks = {}
-		return o
 	}
 
 	setComponents() {
 		this.components = {
 			nav: navInit({
-				app: this.app,
+				app: this.api,
 				holder: this.dom.topbar,
 				header_mode: this.state && this.state.nav && this.state.nav.header_mode
 			}),
 			recover: recoverInit({
-				app: this.app,
+				app: this.api,
 				holder: this.dom.holder,
 				appType: 'termdb'
 			}),
 			tree: treeInit({
-				app: this.app,
+				app: this.api,
 				holder: this.dom.holder.append('div')
 			})
 		}
