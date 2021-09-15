@@ -48,64 +48,68 @@ class TdbPlot {
 	}
 
 	async init() {
-		const controls = await controlsInit({
-			app: this.app,
-			id: this.id,
-			holder: this.dom.controls,
-			isleaf: this.opts.term.isleaf,
-			iscondition: this.opts.term.type == 'condition'
-		})
-
-		this.components = Object.assign(
-			{
-				controls
-			},
-			await rx.multiInit({
-				barchart: barInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls
-				}),
-				stattable: statTableInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id
-				}),
-				table: tableInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls
-				}),
-				boxplot: boxplotInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls
-				}),
-				scatter: scatterInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls
-				}),
-				termInfo: termInfoInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id
-				})
-			})
-		)
-
-		const termdbConfig = this.app.getState().termdbConfig
-		if (this.opts.term.type == 'condition' && termdbConfig.cumincplot4condition) {
-			this.components.cuminc = await cumincInit({
+		try {
+			const controls = await controlsInit({
 				app: this.app,
-				holder: this.dom.viz.append('div'),
 				id: this.id,
-				controls
+				holder: this.dom.controls,
+				isleaf: this.opts.term.isleaf,
+				iscondition: this.opts.term.type == 'condition'
 			})
+
+			this.components = Object.assign(
+				{
+					controls
+				},
+				await rx.multiInit({
+					barchart: barInit({
+						app: this.app,
+						holder: this.dom.viz.append('div'),
+						id: this.id,
+						controls
+					}),
+					stattable: statTableInit({
+						app: this.app,
+						holder: this.dom.viz.append('div'),
+						id: this.id
+					}),
+					table: tableInit({
+						app: this.app,
+						holder: this.dom.viz.append('div'),
+						id: this.id,
+						controls
+					}),
+					boxplot: boxplotInit({
+						app: this.app,
+						holder: this.dom.viz.append('div'),
+						id: this.id,
+						controls
+					}),
+					scatter: scatterInit({
+						app: this.app,
+						holder: this.dom.viz.append('div'),
+						id: this.id,
+						controls
+					}),
+					termInfo: termInfoInit({
+						app: this.app,
+						holder: this.dom.viz.append('div'),
+						id: this.id
+					})
+				})
+			)
+
+			const termdbConfig = this.app.getState().termdbConfig
+			if (this.opts.term.type == 'condition' && termdbConfig.cumincplot4condition) {
+				this.components.cuminc = await cumincInit({
+					app: this.app,
+					holder: this.dom.viz.append('div'),
+					id: this.id,
+					controls
+				})
+			}
+		} catch (e) {
+			throw e
 		}
 	}
 

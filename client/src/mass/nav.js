@@ -34,34 +34,38 @@ class TdbNav {
 	}
 
 	async init() {
-		this.components = rx.multiInit({
-			search: searchInit({
-				app: this.app,
-				holder: this.dom.searchDiv,
-				resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
-				click_term: this.app.opts.tree && this.app.opts.tree.click_term,
-				disable_terms: this.app.opts.tree && this.app.opts.tree.disable_terms,
-				callbacks: {
-					'postSearch.nav': data => {
-						if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
-						else if (this.opts.header_mode === 'with_tabs') {
-							this.dom.tip.showunder(this.dom.searchDiv.node())
+		try {
+			this.components = rx.multiInit({
+				search: searchInit({
+					app: this.app,
+					holder: this.dom.searchDiv,
+					resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
+					click_term: this.app.opts.tree && this.app.opts.tree.click_term,
+					disable_terms: this.app.opts.tree && this.app.opts.tree.disable_terms,
+					callbacks: {
+						'postSearch.nav': data => {
+							if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
+							else if (this.opts.header_mode === 'with_tabs') {
+								this.dom.tip.showunder(this.dom.searchDiv.node())
+							}
 						}
 					}
-				}
-			}),
-			filter: filter3Init({
-				app: this.app,
-				holder: this.dom.subheader.filter.append('div'),
-				hideLabel: this.opts.header_mode === 'with_tabs',
-				emptyLabel: '+Add new filter'
-			}),
-			charts: chartsInit({
-				app: this.app,
-				holder: this.dom.subheader.charts,
-				vocab: this.opts.vocab
+				}),
+				filter: filter3Init({
+					app: this.app,
+					holder: this.dom.subheader.filter.append('div'),
+					hideLabel: this.opts.header_mode === 'with_tabs',
+					emptyLabel: '+Add new filter'
+				}),
+				charts: chartsInit({
+					app: this.app,
+					holder: this.dom.subheader.charts,
+					vocab: this.opts.vocab
+				})
 			})
-		})
+		} catch (e) {
+			throw e
+		}
 	}
 	getState(appState) {
 		this.cohortKey = appState.termdbConfig.selectCohort && appState.termdbConfig.selectCohort.term.id
