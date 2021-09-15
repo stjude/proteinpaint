@@ -20,11 +20,11 @@ class MassApp {
 	constructor(opts) {
 		//if (coordApp) throw `TODO: termdb app does not currently support a parent coordinating app (coordApp)`
 		this.type = 'app'
-		this.opts = this.initOpts(opts)
+		this.opts = this.validateOpts(opts)
 		this.tip = new Menu({ padding: '5px' })
 		// the TdbApp may be the root app or a component within another app
 		this.api = rx.getAppApi(this)
-		this.api.vocabApi = vocabInit(this.api, this.app.opts)
+		this.api.vocabApi = vocabInit(this.api, this.opts)
 
 		this.dom = {
 			holder: opts.holder, // do not modify holder style
@@ -34,18 +34,20 @@ class MassApp {
 		}
 
 		this.eventTypes = ['postInit', 'postRender']
+	}
 
+	validateOpts(o) {
+		if (!o.callbacks) o.callbacks = {}
+		return o
+	}
+
+	async init() {
 		// catch initialization error
 		try {
-			this.store = storeInit({ app: this.api, state: this.opts.state })
-			this.store
-				.copyState({ rehydrate: true })
-				.then(state => {
-					this.state = state
-					this.setComponents()
-				})
-				.then(() => this.api.dispatch())
-				.catch(e => this.printError(e))
+			this.store = await storeInit({ app: this.api, state: this.opts.state })
+			this.state = await this.store.copyState()
+			this.setComponents()
+			this.api.dispatch()
 		} catch (e) {
 			this.printError(e)
 		}
@@ -78,11 +80,6 @@ class MassApp {
 		}
 	}
 
-	initOpts(o) {
-		if (!o.callbacks) o.callbacks = {}
-		return o
-	}
-
 	setComponents() {
 		this.components = {
 			nav: navInit({
@@ -105,7 +102,7 @@ export const appInit = rx.getInitFxn(MassApp)
 
 function setInteractivity(self) {
 	self.downloadView = id => {
-		const components = app.getComponents('plots.' + opts.id)
+		const components = this.api.getComponents('plots.' + opts.id)
 		for (const name in self.components) {
 			// the download function in each component will be called,
 			// but should first check inside that function
