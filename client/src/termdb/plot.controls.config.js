@@ -13,54 +13,61 @@ class TdbConfigUiInit {
 	constructor(opts) {
 		this.type = 'controlsConfig'
 		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
 		this.id = opts.id
-		this.instanceNum = instanceNum++
-		setInteractivity(this)
-
-		const dispatch = this.app.dispatch
-		const table = this.setDom()
-		const debug = opts.debug
-		this.inputs = {
-			view: setViewOpts({
-				holder: this.dom.viewTr,
-				dispatch,
-				id: this.id,
-				debug,
-				instanceNum: this.instanceNum,
-				isleaf: opts.isleaf,
-				iscondition: opts.iscondition
-			}),
-			orientation: setOrientationOpts({
-				holder: this.dom.orientationTr,
-				dispatch,
-				id: this.id,
-				debug,
-				instanceNum: this.instanceNum
-			}),
-			scale: setScaleOpts({ holder: this.dom.scaleTr, dispatch, id: this.id, debug }),
-			grade: setCumincGradeOpts({
-				holder: this.dom.cumincGradeTr,
-				dispatch,
-				id: this.id,
-				debug
-			}),
-			ci: setCIOpts({
-				holder: this.dom.ciTr,
-				dispatch,
-				id: this.id,
-				debug,
-				instanceNum: this.instanceNum
-			})
-		}
-		this.components = {
-			term1: term1uiInit({ app: this.app, holder: this.dom.term1Tr, id: this.id, debug }),
-			overlay: overlayInit({ app: this.app, holder: this.dom.overlayTr, id: this.id, debug }),
-			divideBy: divideInit({ app: this.app, holder: this.dom.divideTr, id: this.id, debug })
-		}
-
+		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
 		this.eventTypes = ['postInit', 'postRender']
+
+		this.instanceNum = instanceNum++
+		setInteractivity(this)
+	}
+
+	async init() {
+		try {
+			const dispatch = this.app.dispatch
+			const table = this.setDom()
+			const debug = this.opts.debug
+			this.inputs = {
+				view: setViewOpts({
+					holder: this.dom.viewTr,
+					dispatch,
+					id: this.id,
+					debug,
+					instanceNum: this.instanceNum,
+					isleaf: this.opts.isleaf,
+					iscondition: this.opts.iscondition
+				}),
+				orientation: setOrientationOpts({
+					holder: this.dom.orientationTr,
+					dispatch,
+					id: this.id,
+					debug,
+					instanceNum: this.instanceNum
+				}),
+				scale: setScaleOpts({ holder: this.dom.scaleTr, dispatch, id: this.id, debug }),
+				grade: setCumincGradeOpts({
+					holder: this.dom.cumincGradeTr,
+					dispatch,
+					id: this.id,
+					debug
+				}),
+				ci: setCIOpts({
+					holder: this.dom.ciTr,
+					dispatch,
+					id: this.id,
+					debug,
+					instanceNum: this.instanceNum
+				})
+			}
+
+			this.components = await rx.multiInit({
+				term1: term1uiInit({ app: this.app, holder: this.dom.term1Tr, id: this.id, debug }),
+				overlay: overlayInit({ app: this.app, holder: this.dom.overlayTr, id: this.id, debug }),
+				divideBy: divideInit({ app: this.app, holder: this.dom.divideTr, id: this.id, debug })
+			})
+		} catch (e) {
+			throw e
+		}
 	}
 
 	setDom() {

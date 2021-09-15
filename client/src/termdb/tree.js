@@ -68,6 +68,7 @@ class TdbTree {
 		this.app = opts.app
 		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
+		this.eventTypes = ['postInit', 'postRender']
 		this.dom = {
 			holder: opts.holder,
 			treeDiv: opts.holder.append('div')
@@ -87,7 +88,6 @@ class TdbTree {
 		this.loadingTermSet = new Set()
 		this.loadingPlotSet = new Set()
 		this.termsByCohort = {}
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	reactsTo(action) {
@@ -136,11 +136,7 @@ class TdbTree {
 		root.terms = await this.requestTermRecursive(root)
 		this.renderBranch(root, this.dom.treeDiv)
 
-		for (const termId of this.state.visiblePlotIds) {
-			if (!this.plots[termId]) {
-				this.newPlot(this.termsById[termId])
-			}
-		}
+		await this.mayCreateNewPlots()
 
 		for (const termId in this.plots) {
 			if (termId in this.termsById) {
@@ -213,6 +209,23 @@ class TdbTree {
 		return terms
 	}
 
+	async mayCreateNewPlots() {
+		const newPlots = {}
+		for (const termId of this.state.visiblePlotIds) {
+			if (!this.plots[termId]) {
+				// assume that the values are promises
+				newPlots[termId] = this.newPlot(this.termsById[termId])
+			}
+		}
+
+		if (Object.keys(newPlots).length) {
+			await Promise.all(Object.values(newPlots))
+			for (const termId in newPlots) {
+				this.plots[termId] = await newPlots[termId]
+			}
+		}
+	}
+
 	newPlot(term) {
 		const holder = select(
 			this.dom.treeDiv
@@ -225,7 +238,8 @@ class TdbTree {
 			.text('Loading...')
 			.style('margin', '3px')
 			.style('opacity', 0.5)
-		const plot = plotInit({
+
+		return plotInit({
 			app: this.app,
 			id: term.id,
 			holder: holder,
@@ -239,7 +253,6 @@ class TdbTree {
 				}
 			}
 		})
-		this.plots[term.id] = plot
 	}
 
 	bindKey(term) {

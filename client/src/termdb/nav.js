@@ -30,29 +30,35 @@ class TdbNav {
 		this.samplecounts = {}
 		this.cohortFilter = getFilterItemByTag(this.app.getState().termfilter.filter, 'cohortFilter')
 		this.initUI()
+	}
 
-		this.components = {
-			search: searchInit({
-				app: this.app,
-				holder: this.dom.searchDiv,
-				resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
-				click_term: this.app.opts.tree && this.app.opts.tree.click_term,
-				disable_terms: this.app.opts.tree && this.app.opts.tree.disable_terms,
-				callbacks: {
-					'postSearch.nav': data => {
-						if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
-						else if (this.opts.header_mode === 'with_tabs') {
-							this.dom.tip.showunder(this.dom.searchDiv.node())
+	async init() {
+		try {
+			this.components = await rx.multiInit({
+				search: searchInit({
+					app: this.app,
+					holder: this.dom.searchDiv,
+					resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
+					click_term: this.app.opts.tree && this.app.opts.tree.click_term,
+					disable_terms: this.app.opts.tree && this.app.opts.tree.disable_terms,
+					callbacks: {
+						'postSearch.nav': data => {
+							if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
+							else if (this.opts.header_mode === 'with_tabs') {
+								this.dom.tip.showunder(this.dom.searchDiv.node())
+							}
 						}
 					}
-				}
-			}),
-			filter: filter3Init({
-				app: this.app,
-				holder: this.dom.subheader.filter.append('div'),
-				hideLabel: this.opts.header_mode === 'with_tabs',
-				emptyLabel: '+Add new filter'
+				}),
+				filter: filter3Init({
+					app: this.app,
+					holder: this.dom.subheader.filter.append('div'),
+					hideLabel: this.opts.header_mode === 'with_tabs',
+					emptyLabel: '+Add new filter'
+				})
 			})
+		} catch (e) {
+			throw e
 		}
 	}
 	getState(appState) {

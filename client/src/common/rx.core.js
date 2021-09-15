@@ -109,6 +109,26 @@ export function getOpts(opts, instance) {
 	return opts
 }
 
+/*
+	Parallelize the potentially async initialization of multiple components
+
+	initPromises{}
+	- keys: component names
+	- values: Promise
+*/
+export async function multiInit(initPromises) {
+	const components = {}
+	try {
+		await Promise.all(Object.values(initPromises))
+		for (const name in initPromises) {
+			components[name] = await initPromises[name]
+		}
+		return components
+	} catch (e) {
+		throw e
+	}
+}
+
 /****************
   API Generators
 *****************/

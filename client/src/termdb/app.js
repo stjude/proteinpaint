@@ -50,34 +50,38 @@ class TdbApp {
 		try {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
-			this.setComponents()
-			this.api.dispatch()
+			await this.setComponents()
+			await this.api.dispatch()
 		} catch (e) {
 			this.printError(e)
 		}
 	}
 
-	async main() {
-		this.api.vocabApi.main()
+	async setComponents() {
+		try {
+			this.components = await rx.multiInit({
+				nav: navInit({
+					app: this.api,
+					holder: this.dom.topbar,
+					header_mode: this.state && this.state.nav && this.state.nav.header_mode
+				}),
+				recover: recoverInit({
+					app: this.api,
+					holder: this.dom.holder,
+					appType: 'termdb'
+				}),
+				tree: treeInit({
+					app: this.api,
+					holder: this.dom.holder.append('div')
+				})
+			})
+		} catch (e) {
+			throw e
+		}
 	}
 
-	setComponents() {
-		this.components = {
-			nav: navInit({
-				app: this.api,
-				holder: this.dom.topbar,
-				header_mode: this.state && this.state.nav && this.state.nav.header_mode
-			}),
-			recover: recoverInit({
-				app: this.api,
-				holder: this.dom.holder,
-				appType: 'termdb'
-			}),
-			tree: treeInit({
-				app: this.api,
-				holder: this.dom.holder.append('div')
-			})
-		}
+	async main() {
+		this.api.vocabApi.main()
 	}
 
 	printError(e) {

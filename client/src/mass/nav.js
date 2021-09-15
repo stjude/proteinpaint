@@ -34,8 +34,8 @@ class TdbNav {
 	}
 
 	async init() {
-		this.components = {
-			search: await searchInit({
+		this.components = rx.multiInit({
+			search: searchInit({
 				app: this.app,
 				holder: this.dom.searchDiv,
 				resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
@@ -50,18 +50,18 @@ class TdbNav {
 					}
 				}
 			}),
-			filter: await filter3Init({
+			filter: filter3Init({
 				app: this.app,
 				holder: this.dom.subheader.filter.append('div'),
 				hideLabel: this.opts.header_mode === 'with_tabs',
 				emptyLabel: '+Add new filter'
 			}),
-			charts: await chartsInit({
+			charts: chartsInit({
 				app: this.app,
 				holder: this.dom.subheader.charts,
 				vocab: this.opts.vocab
 			})
-		}
+		})
 	}
 	getState(appState) {
 		this.cohortKey = appState.termdbConfig.selectCohort && appState.termdbConfig.selectCohort.term.id
