@@ -265,7 +265,6 @@ TdbStore.prototype.actions = {
 				return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
 			})
 		}
-		console.log(251, action.config)
 		if (!action.config.termSequence) {
 			action.config.termSequence = getTermSelectionSequence(action.config.chartType)
 		}
@@ -293,7 +292,6 @@ TdbStore.prototype.actions = {
 	},
 
 	plot_edit(action) {
-		// console.log(273, action.config.cutoff)
 		const plot = this.state.plots.find(p => p.id === action.id)
 		if (plot) {
 			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
