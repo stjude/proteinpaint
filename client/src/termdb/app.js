@@ -49,11 +49,8 @@ class TdbApp {
 	async init() {
 		try {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
-			console.log(this.store)
 			this.state = await this.store.copyState()
-			console.log(53, this.state)
 			this.setComponents()
-			console.log(54, this.components)
 			this.api.dispatch()
 		} catch (e) {
 			this.printError(e)
@@ -61,7 +58,6 @@ class TdbApp {
 	}
 
 	async main() {
-		//console.log(this.state.tree.expandedTermIds)
 		this.api.vocabApi.main()
 	}
 
