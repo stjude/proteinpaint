@@ -18,13 +18,12 @@ https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/
 */
 
 class TdbApp {
-	constructor(opts) {
+	constructor(opts = {}) {
 		this.type = 'app'
 		this.opts = this.initOpts(opts)
 		this.tip = new Menu({ padding: '5px' })
 		// the TdbApp may be the root app or a component within another app
 		this.api = rx.getAppApi(this)
-		this.app = this.api
 		this.api.vocabApi = vocabInit(this.api, this.app.opts)
 
 		this.dom = {

@@ -4,7 +4,6 @@ import { storeInit } from './store'
 import { vocabInit } from '../termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
-//import { recoverInit } from '../common/recover'
 import { sayerror, Menu, newSandboxDiv } from '../client'
 
 /*
@@ -25,7 +24,6 @@ class MassApp {
 		this.tip = new Menu({ padding: '5px' })
 		// the TdbApp may be the root app or a component within another app
 		this.api = rx.getAppApi(this)
-		this.app = this.api
 		this.api.vocabApi = vocabInit(this.api, this.app.opts)
 
 		this.dom = {
@@ -66,7 +64,7 @@ class MassApp {
 				})
 
 				this.components.plots[plot.id] = plotInit({
-					app: this.app,
+					app: this.api,
 					holder,
 					plot
 				})
@@ -88,13 +86,11 @@ class MassApp {
 	setComponents() {
 		this.components = {
 			nav: navInit({
-				app: this.app,
+				app: this.api,
 				holder: this.dom.topbar,
 				header_mode: this.state && this.state.nav && this.state.nav.header_mode,
 				vocab: this.state.vocab
 			}),
-
-			//recover: recoverInit({ app: this.app, holder: this.dom.holder, appType: 'termdb' }),
 			plots: {}
 		}
 	}
