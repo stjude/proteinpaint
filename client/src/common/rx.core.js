@@ -80,8 +80,8 @@ export function getInitFxn(_Class_) {
 				})
 		} else {
 			if (self.bus) self.bus.emit('postInit')
-			// return a promise; the parent component does NOT HAVE to use
-			// the await keyword when using this initializer to get the instance's API
+			// return the instance API; the parent component that uses this initializer
+			// does NOT have to use the await keyword
 			return api
 		}
 	}
