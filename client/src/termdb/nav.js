@@ -13,12 +13,9 @@ let instanceNum = 0
 class TdbNav {
 	constructor(opts) {
 		this.type = 'nav'
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.id = opts.id
-		this.api = rx.getComponentApi(this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.instanceNum = instanceNum++
-
 		setInteractivity(this)
 		setRenderers(this)
 		this.activeCohort = -1

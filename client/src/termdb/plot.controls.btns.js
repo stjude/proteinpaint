@@ -3,9 +3,8 @@ import * as rx from '../common/rx.core'
 class TdbControlsTopBar {
 	constructor(opts) {
 		this.type = 'controlsTopBar'
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.id = this.opts.id
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = {
 			holder: opts.holder,
 			burger_div: opts.holder.append('div'),
@@ -32,8 +31,6 @@ class TdbControlsTopBar {
 				debug
 			})
 		}
-
-		this.api = rx.getComponentApi(this)
 	}
 
 	getState(appState) {

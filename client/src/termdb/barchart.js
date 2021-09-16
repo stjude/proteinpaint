@@ -12,10 +12,8 @@ import { to_svg } from '../client'
 class TdbBarchart {
 	constructor(opts) {
 		this.type = 'barchart'
-		this.app = opts.app
-		this.id = opts.id
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = {
 			holder: opts.holder,
 			banner: opts.holder

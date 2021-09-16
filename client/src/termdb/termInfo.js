@@ -4,10 +4,8 @@ import { dofetch3 } from '../client'
 class TdbTermInfo {
 	constructor(opts) {
 		this.type = 'termInfo'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = {
 			holder: opts.holder
 		}

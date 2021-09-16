@@ -27,15 +27,14 @@ allow to search categories, e.g. hodgkin lymphoma from diaggrp, how to act upon 
 class TermSearch {
 	constructor(opts) {
 		this.type = 'search'
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
+		// currently postSearch is only used for testing
 		this.customEvents = ['postSearch']
-		this.api = rx.getComponentApi(this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		setRenderers(this)
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }
 		this.initUI()
-		// currently postSearch is only used for testing
 	}
 
 	async init() {

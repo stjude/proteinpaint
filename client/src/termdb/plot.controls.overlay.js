@@ -21,14 +21,12 @@ all other cases just text label
 class Overlay {
 	constructor(opts) {
 		this.type = 'overlayInput'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = this.validateOpts(opts)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = { tr: opts.holder }
 		setRenderers(this)
 		this.initUI()
 		this.usedTerms = [] // array of {term, q}
-		this.api = rx.getComponentApi(this)
 	}
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing' // plot id?

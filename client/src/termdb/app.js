@@ -20,22 +20,14 @@ https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/
 class TdbApp {
 	constructor(opts = {}) {
 		this.type = 'app'
-		this.opts = this.validateOpts(opts)
 		this.tip = new Menu({ padding: '5px' })
-		// the TdbApp may be the root app or a component within another app
-		this.api = rx.getAppApi(this)
+		// set this.id, .opts, .api
+		rx.prepApp(this, opts)
 		this.api.vocabApi = vocabInit(this.api, this.opts)
-
 		this.dom = {
 			holder: opts.holder, // do not modify holder style
 			topbar: opts.holder.append('div'),
 			errdiv: opts.holder.append('div')
-		}
-
-		// catch initialization error
-		try {
-		} catch (e) {
-			this.printError(e)
 		}
 	}
 

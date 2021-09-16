@@ -15,12 +15,10 @@ execution flow:
 class TdbFilter {
 	constructor(opts) {
 		this.type = 'filter'
-		this.app = opts.app
-		this.validateOpts(opts)
-		this.opts = rx.getOpts(opts, this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = { holder: this.opts.holder }
 		this.initHolder()
-		this.api = rx.getComponentApi(this)
 	}
 
 	validateOpts(o) {

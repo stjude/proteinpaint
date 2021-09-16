@@ -65,9 +65,8 @@ class TdbTree {
 	*/
 	constructor(opts) {
 		this.type = 'tree'
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = {
 			holder: opts.holder,
 			treeDiv: opts.holder.append('div')
