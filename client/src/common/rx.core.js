@@ -56,11 +56,6 @@ export function getInitFxn(_Class_) {
 		// freeze the api's properties and methods before exposing
 		Object.freeze(api)
 
-		if (self.eventTypes) {
-			// set up an optional event bus
-			self.bus = new Bus(api, self.eventTypes, self.opts.callbacks || {})
-		}
-
 		// instance.init() is expected to be an async function
 		// which is not compatible within a constructor() function,
 		// so call it here if it is available as an instance method
@@ -133,6 +128,20 @@ export async function multiInit(initPromises) {
   API Generators
 *****************/
 
+export function prepStore(self, opts) {
+	if (self.validateOpts) self.validateOpts(opts)
+	self.app = opts.app
+	self.opts = getOpts(opts, self)
+	self.api = getStoreApi(self)
+	self.copyMerge = copyMerge
+	self.deepFreeze = deepFreeze
+	// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
+	if (!self.fromJson) self.fromJson = fromJson // used in store.api.copyState()
+	if (!self.toJson) self.toJson = toJson // used in store.api.copyState()
+	self.state = copyMerge(self.toJson(self.defaultState), opts.app.opts.state)
+	if (self.validateState) self.validateState()
+}
+
 export function getStoreApi(self) {
 	const api = {
 		async write(action) {
@@ -157,6 +166,13 @@ export function getStoreApi(self) {
 		}
 	}
 	return api
+}
+
+export function prepApp(self, opts) {
+	if (self.validateOpts) self.validateOpts(opts)
+	if ('id' in opts) self.id = opts.id
+	self.opts = opts
+	self.api = getAppApi(self)
 }
 
 export function getAppApi(self) {
@@ -269,7 +285,23 @@ export function getAppApi(self) {
 	if (self.tip) api.tip = self.tip
 	if (self.opts.debugName) window[self.opts.debugName] = api
 	if (self.appInit) api.appInit = self.appInit
+	if (!self.bus) {
+		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender']
+		if (self.customEvents) self.eventTypes.push(...self.customEvents)
+		// set up a required event bus
+		self.bus = new Bus(api, self.eventTypes, self.opts.callbacks || {})
+	}
 	return api
+}
+
+export function prepComponent(self, opts) {
+	if (self.validateOpts) self.validateOpts(opts)
+	// the component type + id may be used later to
+	// simplify getting its state from the store
+	if ('id' in opts) self.id = opts.id
+	self.app = opts.app
+	self.opts = getOpts(opts, self)
+	self.api = getComponentApi(self)
 }
 
 export function getComponentApi(self) {
@@ -327,6 +359,14 @@ export function getComponentApi(self) {
 			}
 		}
 	}
+
+	if (!self.bus) {
+		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender']
+		if (self.customEvents) self.eventTypes.push(...self.customEvents)
+		// set up a required event bus
+		self.bus = new Bus(api, self.eventTypes, (self.opts && self.opts.callbacks) || {})
+	}
+
 	// must not freeze returned api, as getInitFxn() will add api.Inner
 	return api
 }

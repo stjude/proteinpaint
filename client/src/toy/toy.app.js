@@ -28,12 +28,8 @@ import { Menu } from '../client'
 class ToyApp {
 	constructor(opts) {
 		this.type = 'app'
-		this.opts = opts //rx.getOpts(opts, this)
-		// the ToyApp may be the root app or a component within another app
-		this.api = rx.getAppApi(this)
-		// set up the app api as the default argument
-		// to callbacks of emitted events
-		this.eventTypes = ['postInit', 'postRender']
+		// set this.id, .opts, .api
+		rx.prepApp(this, opts)
 		this.dom = {
 			tip: new Menu(),
 			holder: opts.holder

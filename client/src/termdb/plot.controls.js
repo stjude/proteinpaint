@@ -11,13 +11,10 @@ let i = 0 // track controls "instances" for assigning unambiguous unique input n
 class TdbPlotControls {
 	constructor(opts) {
 		this.type = 'plotControls'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
-		this.eventTypes = ['postInit', 'postRender', 'downloadClick', 'infoClick']
+		this.customEvents = ['downloadClick', 'infoClick']
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.setDom()
-
 		setInteractivity(this)
 		setRenderers(this)
 	}

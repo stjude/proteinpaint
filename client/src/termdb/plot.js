@@ -16,11 +16,8 @@ import { getNormalRoot } from '../common/filter'
 class TdbPlot {
 	constructor(opts) {
 		this.type = 'plot'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
-		this.eventTypes = ['postInit', 'postRender']
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.modifiers = this.opts.modifiers
 		this.dom = {
 			holder: this.opts.holder

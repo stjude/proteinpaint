@@ -27,15 +27,18 @@ allow to search categories, e.g. hodgkin lymphoma from diaggrp, how to act upon 
 class TermSearch {
 	constructor(opts) {
 		this.type = 'search'
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		// currently postSearch is only used for testing
+		this.customEvents = ['postSearch']
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		setRenderers(this)
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }
 		this.initUI()
-		this.eventTypes = ['postInit', 'postRender', 'postSearch']
-		// currently postSearch is only used for testing
+	}
+
+	async init() {
+		this.state = this.getState(this.app.getState())
 	}
 
 	reactsTo(action) {
@@ -63,7 +66,6 @@ class TermSearch {
 			this.bus.emit('postSearch', [])
 			return
 		}
-
 		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr, this.state.exclude_types)
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()

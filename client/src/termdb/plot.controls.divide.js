@@ -18,14 +18,12 @@ pill is only for altering between (1) and (2)
 class Divide {
 	constructor(opts) {
 		this.type = 'divideByInput'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = this.validateOpts(opts)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = { tr: opts.holder }
 		setRenderers(this)
 		this.initUI()
 		this.usedTerms = [] // array of {term, q}
-		this.api = rx.getComponentApi(this)
 	}
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing' // plot id?

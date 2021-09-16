@@ -72,7 +72,6 @@ class MassPlot {
 
 		this.components = controls ? { controls } : {}
 		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	reactsTo(action) {

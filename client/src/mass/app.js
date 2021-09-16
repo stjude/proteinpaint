@@ -18,22 +18,18 @@ https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/
 
 class MassApp {
 	constructor(opts) {
-		//if (coordApp) throw `TODO: termdb app does not currently support a parent coordinating app (coordApp)`
 		this.type = 'app'
-		this.opts = this.validateOpts(opts)
-		this.tip = new Menu({ padding: '5px' })
-		// the TdbApp may be the root app or a component within another app
-		this.api = rx.getAppApi(this)
+		// set this.id, .opts, .api
+		rx.prepApp(this, opts)
 		this.api.vocabApi = vocabInit(this.api, this.opts)
 
+		this.tip = new Menu({ padding: '5px' })
 		this.dom = {
 			holder: opts.holder, // do not modify holder style
 			topbar: opts.holder.append('div'),
 			errdiv: opts.holder.append('div'),
 			plotDiv: opts.holder.append('div')
 		}
-
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	validateOpts(o) {

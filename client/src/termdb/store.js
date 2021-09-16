@@ -37,27 +37,21 @@ const defaultState = {
 class TdbStore {
 	constructor(opts) {
 		this.type = 'store'
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getStoreApi(this)
-		this.copyMerge = rx.copyMerge
-		this.deepFreeze = rx.deepFreeze
-		// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
-		//this.fromJson = rx.fromJson // used in store.api.state()
-		this.toJson = rx.toJson // used in store.api.state()
-		this.prevGeneratedId = 0 // use for assigning unique IDs where needed
-
-		if (!this.app.opts.state) throw '.state{} missing'
-		this.state = this.copyMerge(this.toJson(defaultState), opts.state)
-		this.validateOpts()
-
+		this.defaultState = defaultState
+		// set this.app, .opts, .api, expected store methods,
+		// and the initial non-rehydrated state with overrides
+		rx.prepStore(this, opts)
+		// use for assigning unique IDs where needed
+		// may be used later to simplify getting component state by type and id
+		this.prevGeneratedId = 0
 		// when using rx.copyMerge, replace the object values
 		// for these keys instead of extending them
 		this.replaceKeyVals = ['term', 'term2', 'term0', 'q']
 	}
 
-	validateOpts() {
-		const s = this.state
+	validateOpts(opts) {
+		if (!opts.state) throw '.state{} missing'
+		const s = opts.state
 		// assume that any vocabulary with a route
 		// will require genome + dslabel
 		if (s.vocab.route) {
@@ -66,6 +60,10 @@ class TdbStore {
 		} else {
 			if (!Array.isArray(s.vocab.terms)) throw 'vocab.terms must be an array of objects'
 		}
+	}
+
+	validateState() {
+		const s = this.state
 		if (s.tree.expandedTermIds.length == 0) {
 			s.tree.expandedTermIds.push(root_ID)
 		} else {

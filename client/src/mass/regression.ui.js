@@ -6,10 +6,8 @@ import { getTermSelectionSequence } from './charts'
 class MassRegressionUI {
 	constructor(opts) {
 		this.type = 'regressionUI'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = {
 			div: this.opts.holder.style('margin', '10px 0px').style('margin-left', '-50px'),
 			controls: opts.holder
@@ -20,7 +18,6 @@ class MassRegressionUI {
 		this.termSequence = getTermSelectionSequence('regression')
 		setInteractivity(this)
 		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	getState(appState) {

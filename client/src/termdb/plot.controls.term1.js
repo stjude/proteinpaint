@@ -20,13 +20,11 @@ execution flow:
 class Term1ui {
 	constructor(opts) {
 		this.type = 'term1Input'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = this.validateOpts(opts)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = { tr: opts.holder }
 		setRenderers(this)
 		this.initUI()
-		this.api = rx.getComponentApi(this)
 	}
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing'

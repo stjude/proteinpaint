@@ -12,10 +12,8 @@ import { dofetch3, to_svg } from '../client'
 class TdbSurvival {
 	constructor(opts) {
 		this.type = 'survival'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = {
 			holder: opts.holder,
 			chartsDiv: opts.holder.append('div').style('margin', '10px'),
@@ -40,7 +38,6 @@ class TdbSurvival {
 				}
 			}
 		})
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	getState(appState) {
