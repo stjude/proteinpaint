@@ -20,7 +20,6 @@ class MassRegressionUI {
 		this.termSequence = getTermSelectionSequence('regression')
 		setInteractivity(this)
 		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	getState(appState) {

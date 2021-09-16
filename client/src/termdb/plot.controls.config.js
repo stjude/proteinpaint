@@ -16,7 +16,6 @@ class TdbConfigUiInit {
 		this.id = opts.id
 		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.eventTypes = ['postInit', 'postRender']
 
 		this.instanceNum = instanceNum++
 		setInteractivity(this)

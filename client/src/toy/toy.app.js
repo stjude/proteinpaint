@@ -33,7 +33,6 @@ class ToyApp {
 		this.api = rx.getAppApi(this)
 		// set up the app api as the default argument
 		// to callbacks of emitted events
-		this.eventTypes = ['postInit', 'postRender']
 		this.dom = {
 			tip: new Menu(),
 			holder: opts.holder

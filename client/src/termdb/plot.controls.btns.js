@@ -34,7 +34,6 @@ class TdbControlsTopBar {
 		}
 
 		this.api = rx.getComponentApi(this)
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	getState(appState) {

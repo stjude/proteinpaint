@@ -56,11 +56,6 @@ export function getInitFxn(_Class_) {
 		// freeze the api's properties and methods before exposing
 		Object.freeze(api)
 
-		if (self.eventTypes) {
-			// set up an optional event bus
-			self.bus = new Bus(api, self.eventTypes, self.opts.callbacks || {})
-		}
-
 		// instance.init() is expected to be an async function
 		// which is not compatible within a constructor() function,
 		// so call it here if it is available as an instance method
@@ -269,6 +264,12 @@ export function getAppApi(self) {
 	if (self.tip) api.tip = self.tip
 	if (self.opts.debugName) window[self.opts.debugName] = api
 	if (self.appInit) api.appInit = self.appInit
+	if (!self.bus) {
+		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender']
+		if (self.customEvents) self.eventTypes.push(...self.customEvents)
+		// set up a required event bus
+		self.bus = new Bus(api, self.eventTypes, self.opts.callbacks || {})
+	}
 	return api
 }
 
@@ -327,6 +328,14 @@ export function getComponentApi(self) {
 			}
 		}
 	}
+
+	if (!self.bus) {
+		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender']
+		if (self.customEvents) self.eventTypes.push(...self.customEvents)
+		// set up a required event bus
+		self.bus = new Bus(api, self.eventTypes, (self.opts && self.opts.callbacks) || {})
+	}
+
 	// must not freeze returned api, as getInitFxn() will add api.Inner
 	return api
 }

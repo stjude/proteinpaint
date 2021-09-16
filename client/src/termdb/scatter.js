@@ -17,7 +17,6 @@ class TdbScatter {
 		}
 		this.settings = {}
 		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
 		opts.controls.on('downloadClick.scatter', this.download)
 	}
 

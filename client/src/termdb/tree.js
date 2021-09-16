@@ -68,7 +68,6 @@ class TdbTree {
 		this.app = opts.app
 		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.eventTypes = ['postInit', 'postRender']
 		this.dom = {
 			holder: opts.holder,
 			treeDiv: opts.holder.append('div')

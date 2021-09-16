@@ -11,7 +11,6 @@ class TdbStatTable {
 			div: opts.holder.append('div').style('margin', '10px')
 		}
 		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	getState(appState) {

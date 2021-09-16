@@ -43,7 +43,6 @@ class TdbBarchart {
 		})
 		this.controls = {}
 		this.term2toColor = {}
-		this.eventTypes = ['postInit', 'postRender']
 		opts.controls.on('downloadClick.barchart', this.download)
 
 		if (this.opts.bar_click_override) {

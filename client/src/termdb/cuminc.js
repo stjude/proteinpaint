@@ -41,7 +41,6 @@ class TdbCumInc {
 				}
 			}
 		})
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	getState(appState) {

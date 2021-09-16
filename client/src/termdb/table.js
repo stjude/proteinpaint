@@ -13,7 +13,6 @@ class TdbTable {
 		}
 		setInteractivity(this)
 		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
 		this.opts.controls.on('downloadClick.table', this.download)
 	}
 

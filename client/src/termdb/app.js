@@ -32,8 +32,6 @@ class TdbApp {
 			errdiv: opts.holder.append('div')
 		}
 
-		this.eventTypes = ['postInit', 'postRender']
-
 		// catch initialization error
 		try {
 		} catch (e) {

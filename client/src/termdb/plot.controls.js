@@ -14,8 +14,8 @@ class TdbPlotControls {
 		this.id = opts.id
 		this.app = opts.app
 		this.opts = rx.getOpts(opts, this)
+		this.customEvents = ['downloadClick', 'infoClick']
 		this.api = rx.getComponentApi(this)
-		this.eventTypes = ['postInit', 'postRender', 'downloadClick', 'infoClick']
 		this.setDom()
 
 		setInteractivity(this)

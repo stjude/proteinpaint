@@ -20,7 +20,6 @@ class TdbPlot {
 		this.app = opts.app
 		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.eventTypes = ['postInit', 'postRender']
 		this.modifiers = this.opts.modifiers
 		this.dom = {
 			holder: this.opts.holder

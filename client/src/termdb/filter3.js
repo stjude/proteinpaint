@@ -21,7 +21,6 @@ class TdbFilter {
 		this.dom = { holder: this.opts.holder }
 		this.initHolder()
 		this.api = rx.getComponentApi(this)
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	validateOpts(o) {

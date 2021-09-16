@@ -40,7 +40,6 @@ class TdbSurvival {
 				}
 			}
 		})
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	getState(appState) {

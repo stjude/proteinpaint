@@ -11,7 +11,6 @@ class ToySearch {
 		this.app = opts.app
 		this.opts = rx.getOpts(opts, this)
 		this.api = rx.getComponentApi(this)
-		this.eventTypes = ['postInit', 'postRender']
 		this.dom = {
 			holder: opts.holder,
 			tip: new Menu({ padding: '' })

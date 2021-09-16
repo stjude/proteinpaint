@@ -32,8 +32,6 @@ class MassApp {
 			errdiv: opts.holder.append('div'),
 			plotDiv: opts.holder.append('div')
 		}
-
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	validateOpts(o) {

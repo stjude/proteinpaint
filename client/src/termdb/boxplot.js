@@ -27,7 +27,6 @@ class TdbBoxplot {
 
 		setInteractivity(this)
 		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
 		this.opts.controls.on('downloadClick.boxplot', this.download)
 	}
 

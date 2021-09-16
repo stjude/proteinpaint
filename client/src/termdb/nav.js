@@ -21,7 +21,6 @@ class TdbNav {
 
 		setInteractivity(this)
 		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
 		this.activeCohort = -1
 		// 0 = cohort tab, will switch to 1 = filter tab if there are no cohorts
 		this.activeTab = 0

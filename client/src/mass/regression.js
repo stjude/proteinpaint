@@ -13,7 +13,6 @@ class MassRegression {
 		}
 		setInteractivity(this)
 		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
 		//opts.controls.on('downloadClick.regression', this.download)
 	}
 
