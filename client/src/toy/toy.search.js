@@ -5,12 +5,8 @@ import { event } from 'd3-selection'
 class ToySearch {
 	constructor(opts) {
 		this.type = 'search'
-		// need to supply this.api to callbacks
-		// supply optional argument to getComponentApi(),
-		// so no need to attach it as an instance method
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = {
 			holder: opts.holder,
 			tip: new Menu({ padding: '' })

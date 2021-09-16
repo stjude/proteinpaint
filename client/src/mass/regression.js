@@ -4,10 +4,8 @@ import { select } from 'd3-selection'
 class MassRegression {
 	constructor(opts) {
 		this.type = 'regression'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = {
 			div: this.opts.holder.style('margin', '10px 0px').style('display', 'none')
 		}

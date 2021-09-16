@@ -128,6 +128,20 @@ export async function multiInit(initPromises) {
   API Generators
 *****************/
 
+export function prepStore(self, opts) {
+	if (self.validateOpts) self.validateOpts(opts)
+	self.app = opts.app
+	self.opts = getOpts(opts, self)
+	self.api = getStoreApi(self)
+	self.copyMerge = copyMerge
+	self.deepFreeze = deepFreeze
+	// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
+	if (!self.fromJson) self.fromJson = fromJson // used in store.api.copyState()
+	if (!self.toJson) self.toJson = toJson // used in store.api.copyState()
+	self.state = copyMerge(self.toJson(self.defaultState), opts.app.opts.state)
+	if (self.validateState) self.validateState()
+}
+
 export function getStoreApi(self) {
 	const api = {
 		async write(action) {
@@ -152,6 +166,13 @@ export function getStoreApi(self) {
 		}
 	}
 	return api
+}
+
+export function prepApp(self, opts) {
+	if (self.validateOpts) self.validateOpts(opts)
+	if ('id' in opts) self.id = opts.id
+	self.opts = opts
+	self.api = getAppApi(self)
 }
 
 export function getAppApi(self) {
@@ -271,6 +292,16 @@ export function getAppApi(self) {
 		self.bus = new Bus(api, self.eventTypes, self.opts.callbacks || {})
 	}
 	return api
+}
+
+export function prepComponent(self, opts) {
+	if (self.validateOpts) self.validateOpts(opts)
+	// the component type + id may be used later to
+	// simplify getting its state from the store
+	if ('id' in opts) self.id = opts.id
+	self.app = opts.app
+	self.opts = getOpts(opts, self)
+	self.api = getComponentApi(self)
 }
 
 export function getComponentApi(self) {

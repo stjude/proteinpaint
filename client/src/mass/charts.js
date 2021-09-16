@@ -11,15 +11,17 @@ let id = 0
 class MassCharts {
 	constructor(opts = {}) {
 		this.type = 'charts'
-		this.api = rx.getComponentApi(this)
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.setDom()
 		setRenderers(this)
 	}
 
 	getState(appState) {
-		const activeCohort = appState.termdbConfig && appState.termdbConfig.selectCohort && appState.termdbConfig.selectCohort.values[appState.activeCohort]
+		const activeCohort =
+			appState.termdbConfig &&
+			appState.termdbConfig.selectCohort &&
+			appState.termdbConfig.selectCohort.values[appState.activeCohort]
 		const cohortStr = activeCohort && activeCohort.keys.sort().join(',')
 
 		const state = {
@@ -28,7 +30,8 @@ class MassCharts {
 			termfilter: appState.termfilter,
 			config: appState.plots.find(p => p.id === this.id),
 			exclude_types: [...appState.tree.exclude_types],
-			supportedChartTypes: appState.termdbConfig.supportedChartTypes && appState.termdbConfig.supportedChartTypes[cohortStr] || ['barchart']
+			supportedChartTypes: (appState.termdbConfig.supportedChartTypes &&
+				appState.termdbConfig.supportedChartTypes[cohortStr]) || ['barchart']
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
