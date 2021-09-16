@@ -43,6 +43,7 @@ XXX quick fix to be removed/disabled later
 when client zooms into one read group, server needs to know which group it is and only generate that group
 
 *********************** q{}
+
 .grouptype, .partstack{} // having partstack indicates it's in the partstack mode
 .genome
 .devicePixelRatio
@@ -83,6 +84,7 @@ when client zooms into one read group, server needs to know which group it is an
 	.t str
 
 *********************** template - segment - box
+
 template {}
 .y // initially stack idx, then replaced to be actual screen y
 .x1, x2  // screen px, only for stacking not rendering
@@ -118,6 +120,7 @@ box {}
 
 
 *********************** function cascade
+
 download_gdc_bam  // For downloading gdc bam files
 	get_gdc_bam
 		index_bam
@@ -126,10 +129,6 @@ do_query
 	query_reads
 		determine_downsampling
 		query_region
-	get_templates
-		parse_one_segment
-	may_checkrefseq4mismatch
-		check_mismatch
 	divide_reads_togroups
 		may_match_snv
 			make_type2group
@@ -137,6 +136,10 @@ do_query
 		match_complexvariant
 		match_sv
 	(for each group...)
+		get_templates
+			parse_one_segment
+		may_checkrefseq4mismatch
+			check_mismatch
 		stack_templates
 			may_trimstacks
 		poststack_adjustq
@@ -185,28 +188,13 @@ const discord_unmapped_hq = '#6B4423'
 const discord_unmapped_lq = '#987654'
 const qual2discord_unmapped = interpolateRgb(discord_unmapped_lq, discord_unmapped_hq)
 // discord_orientation: soft pink for background only, strong pink for printing nt
-const discord_orientation_hq = '#ff0aef'
-const discord_orientation_lq = '#ffd6fe'
+const discord_orientation_hq = '#fc6df3'
+const discord_orientation_lq = '#dea4da'
 const qual2discord_orientation = interpolateRgb(discord_orientation_lq, discord_orientation_hq)
 // insertion, text color gradient to correlate with the quality
 // cyan
 const insertion_hq = '#47FFFC' //'#00FFFB'
 const insertion_lq = '#B2D7D7' //'#009290'
-// red
-//const insertion_hq = '#ff1f1f'
-//const insertion_lq = '#ffa6a6'
-// magenta
-//const insertion_hq = '#ff00dd' // '#ff4fe5'
-//const insertion_lq = '#ffbff6'
-// bright green
-//const insertion_hq = '#00ff2a'
-//const insertion_lq = '#c4ffce'
-// yellow
-//const insertion_hq = '#ffff14'
-//const insertion_lq = '#ffffa6'
-// white
-//const insertion_hq = '#ffffff'
-//const insertion_lq = '#d4d4d4'
 
 const qual2insertion = interpolateRgb(insertion_lq, insertion_hq)
 const insertion_maxfontsize = 12
@@ -267,13 +255,12 @@ module.exports = genomes => {
 				return
 			}
 
-			const d1 = new Date()
+			const starttime = serverconfig.debugmode ? new Date() : null
 
 			const q = await get_q(genome, req)
 			res.send(await do_query(q))
 
-			const d2 = new Date()
-			console.log('bam.js', d2 - d1)
+			if (serverconfig.debugmode) console.log('bam.js time ms', new Date() - starttime)
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -752,6 +739,9 @@ async function get_q(genome, req) {
 
 	// max ntwidth determines segment spacing in a stack, across all regions
 	q.stacksegspacing = Math.max(readspace_px, readspace_bp * maxntwidth)
+
+	q.readcount_skipped = 0 // count number of reads retrieved from view range but not visible e.g. spliced intron
+
 	return q
 }
 
@@ -759,12 +749,6 @@ async function do_query(q) {
 	await query_reads(q)
 	//delete q._numofreads // read counter no longer needed after loading
 	q.totalnumreads = q.regions.reduce((i, j) => i + j.lines.length, 0)
-
-	// parse reads and cigar
-	//const templates = get_templates(q)
-	// if zoomed in, will check reference for mismatch, so that templates can be divided by snv
-	// read quality is not parsed yet
-	//await may_checkrefseq4mismatch(templates, q)
 
 	const result = {
 		nochr: q.nochr,
@@ -782,6 +766,8 @@ async function do_query(q) {
 	{
 		const out = await divide_reads_togroups(q) // templates
 		q.groups = out.groups
+
+		// XXX clean up logic
 		if (Number.isFinite(q.max_diff_score) && q.variant) {
 			// In partstack mode
 			result.max_diff_score = q.max_diff_score
@@ -808,12 +794,8 @@ async function do_query(q) {
 
 		// parse reads and cigar
 		let templates = get_templates(q, group)
-		//let temp_array = templates.map((i) => i.segments[0].ridx)
-		//for (const item of temp_array) {
-		//	console.log('element:', item)
-		//}
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
-		await poststack_adjustq(group, q) // add .allowpartstack
+		await poststack_adjustq(group, q, templates)
 		// read quality is not parsed yet
 		await may_checkrefseq4mismatch(templates, q)
 		finalize_templates(group, templates, q) // set .canvasheight
@@ -875,16 +857,6 @@ async function do_query(q) {
 		}
 	}
 
-	// Deleting temporary gdc bam file
-
-	//if (q.gdc_case_id) {
-	//	fs.unlink(q.file, err => {
-	//		if (err) console.log(err)
-	//		else {
-	//			console.log('Deleted file: ' + q.file.toString())
-	//		}
-	//	})
-	//}
 	return result
 }
 
@@ -1132,10 +1104,8 @@ return {}
   .refalleleerror
 */
 async function divide_reads_togroups(q) {
-	//if (templates.length == 0) {
 	const templates_info = []
 
-	let count_reads_in_regions = false // Flag to check if there are no reads in any of the region
 	const widths = []
 	let width = 0
 	for (const r of q.regions) {
@@ -1145,15 +1115,11 @@ async function divide_reads_togroups(q) {
 			templates_info.push({ sam_info: line, tempscore: '' })
 		}
 		width = r.x + r.width // Storing the extreme right position of every region
-		if (r.lines.length != 0) {
-			// no reads at all, return empty group
-			count_reads_in_regions = true
-		}
 		widths.push(width) // Storing widths of regions
 	}
 
-	if (count_reads_in_regions == false) {
-		// This condition will only be true if both regions do not contain any reads
+	if (templates_info.length == 0) {
+		// no reads from any region
 		return {
 			groups: [
 				{
@@ -1169,11 +1135,6 @@ async function divide_reads_togroups(q) {
 	}
 
 	if (q.variant) {
-		// if snv, simple match; otherwise complex match
-		//const lst = may_match_snv(templates, q)
-		//if (lst) return { groups: lst }
-		//for (const template of templates) {
-
 		if (q.regions.length == 1) {
 			if (serverconfig.features.rust_indel) {
 				// If this toggle is on, the rust indel pipeline is invoked otherwise the nodejs indel pipeline is invoked
@@ -1202,6 +1163,7 @@ async function divide_reads_togroups(q) {
 	}
 }
 
+// NOT IN USE
 function may_match_snv(templates, q) {
 	const refallele = q.variant.ref.toUpperCase()
 	const altallele = q.variant.alt.toUpperCase()
@@ -1258,14 +1220,17 @@ function get_templates(q, group) {
 	if (!q.asPaired) {
 		// pretends single reads as templates
 		const lst = []
-		// to account for reads spanning between multiple regions, may use qname2read = new Map()
+
+		// XXX XXX XXX !!!!broken logic
+		// if 2 regions will parse the same reads twice??
+		// .r and .ridx should come from query_reads and this info should not be erased by divide_reads_togroups
+		// to be fixed later
 		for (let i = 0; i < q.regions.length; i++) {
 			const r = q.regions[i]
-			//for (const line of r.lines) {
 			for (const line of group.templates) {
 				line.r = r
 				line.ridx = i
-				const segment = parse_one_segment(line)
+				const segment = parse_one_segment(line, q)
 				if (!segment) continue
 				lst.push({
 					x1: segment.x1,
@@ -1283,11 +1248,10 @@ function get_templates(q, group) {
 	// value: template, a list of segments
 	for (let i = 0; i < q.regions.length; i++) {
 		const r = q.regions[i]
-		//for (const line of r.lines) {
 		for (const line of group.templates) {
 			line.r = r
 			line.ridx = i
-			const segment = parse_one_segment(line)
+			const segment = parse_one_segment(line, q)
 			if (!segment || !segment.qname) continue
 			const temp = qname2template.get(segment.qname)
 			if (temp) {
@@ -1319,17 +1283,24 @@ do not do:
 only gather boxes in view range, with sequence start (cidx) for finalizing later
 
 may skip insertion if on screen width shorter than minimum width
+
+when seq or cigar is *, will still return segment object for rendering
+the returned object may not have any boxes, in that case will render a blank box to mark out the read
 */
-function parse_one_segment(arg) {
+function parse_one_segment(arg, q) {
 	const {
 		sam_info, // sam line
-		tempscore,
-		r,
-		ridx,
-		keepallboxes,
-		keepmatepos,
+		tempscore, // ?
+		r, // region
+		ridx, // array index for current region in q.regions[]
+		// set following to true when getting details for a read
+		keepallboxes, // even if only part of the read is shown in view range
+		keepmatepos, // for displaying mate position (on same chr) in details panel
 		keepunmappedread // return object if the read is unmapped
 	} = arg
+
+	// q is the query object to count number of skipped reads, and is missing for querying single read
+
 	const l = sam_info.trim().split('\t')
 	if (l.length < 11) {
 		// truncated line possible if the reading process is killed
@@ -1342,189 +1313,24 @@ function parse_one_segment(arg) {
 		rnext = l[7 - 1],
 		pnext = l[8 - 1],
 		tlen = Number.parseInt(l[9 - 1]),
-		seq = l[10 - 1],
+		seq = l[10 - 1], // can be * or =
 		qual = l[11 - 1]
 
 	if (Number.isNaN(segstart_1based) || segstart_1based <= 0) {
 		// invalid
 		return
 	}
+
 	const segstart = segstart_1based - 1
-	if (flag & 0x4) {
-		if (keepunmappedread) {
-			const segment = {
-				qname,
-				segstart,
-				segstop: segstart,
-				boxes: [
-					{
-						opr: cigarstr,
-						start: segstart,
-						len: seq.length,
-						cidx: 0,
-						qual
-					}
-				],
-				forward: !(flag & 0x10),
-				ridx,
-				seq,
-				qual,
-				cigarstr,
-				tlen,
-				flag,
-				discord_unmapped1: true
-			}
-			if (flag & 0x40) {
-				segment.isfirst = true
-			} else if (flag & 0x80) {
-				segment.islast = true
-			}
-			return segment
-		}
-		// return undefined so the unmapped read will not render
-		// may collect number of unmapped reads in view range and report
-		return
-	}
 
-	// from here, read is mapped
-	if (cigarstr == '*') {
-		// why this case?
-		return
-	}
-	const boxes = [] // collect plottable segments
-	// as the absolute coord start of each box, will be incremented after parsing a box
-	let pos = segstart
-	// prev/cum are sequence/qual character offset
-	let prev = 0,
-		cum = 0
-
-	for (let i = 0; i < cigarstr.length; i++) {
-		const cigar = cigarstr[i]
-		if (cigar.match(/[0-9]/)) continue
-		// read bp length of this part
-		const len = Number.parseInt(cigarstr.substring(prev, i))
-		if (cigar == 'H') {
-			boxes.push({
-				opr: cigar,
-				start: pos,
-				len,
-				cidx: cum - len
-			})
-			prev = i + 1
-			continue
-		}
-		if (cigar == 'N') {
-			// no seq
-		} else if (cigar == 'P' || cigar == 'D') {
-			// padding or del, no sequence in read
-		} else {
-			// will consume read seq
-			cum += len
-		}
-		prev = i + 1
-		if (cigar == '=' || cigar == 'M') {
-			if (keepallboxes || Math.max(pos, r.start) <= Math.min(pos + len - 1, r.stop)) {
-				// visible
-				boxes.push({
-					opr: cigar,
-					start: pos,
-					len,
-					cidx: cum - len
-				})
-				// need cidx for = / M, for quality and sequence mismatch
-			}
-			pos += len
-			continue
-		}
-		if (cigar == 'I') {
-			if (keepallboxes || (pos > r.start && pos < r.stop)) {
-				if (len * r.ntwidth >= insertion_minpx) {
-					boxes.push({
-						opr: 'I',
-						start: pos,
-						len,
-						cidx: cum - len
-					})
-				}
-			}
-			continue
-		}
-		if (cigar == 'N' || cigar == 'D') {
-			// deletion or skipped region, must have at least one end within region
-			// cannot use max(starts)<min(stops)
-			// if both ends are outside of region e.g. intron-spanning rna read, will not include
-			if ((pos >= r.start && pos <= r.stop) || (pos + len - 1 >= r.start && pos + len - 1 <= r.stop)) {
-				boxes.push({
-					opr: cigar,
-					start: pos,
-					len
-				})
-				// no box seq, don't add cidx
-			}
-			pos += len
-			continue
-		}
-		if (cigar == 'X') {
-			if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
-				const b = {
-					opr: cigar,
-					start: pos,
-					len,
-					cidx: cum - len
-				}
-				boxes.push(b)
-			}
-			pos += len
-			continue
-		}
-		if (cigar == 'S') {
-			const b = {
-				opr: cigar,
-				start: pos,
-				len,
-				cidx: cum - len
-			}
-			if (boxes.length == 0) {
-				// this is the first box, will not consume ref
-				// shift softclip start to left, so its end will be pos, will not increment pos
-				b.start -= len
-				if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
-					boxes.push(b)
-				}
-			} else {
-				// not the first box, so should be the last box
-				// do not shift start
-				boxes.push(b)
-			}
-			continue
-		}
-		if (cigar == 'P') {
-			if (keepallboxes || (pos > r.start && pos < r.stop)) {
-				const b = {
-					opr: 'P',
-					start: pos,
-					len,
-					cidx: cum - len
-				}
-				boxes.push(b)
-			}
-			continue
-		}
-		console.log('unknown cigar: ' + cigar)
-	}
-	if (boxes.length == 0) {
-		// no visible boxes, do not show this segment
-		return
-	}
 	const segment = {
+		// return this data structure
 		qname,
 		segstart,
-		segstop: pos,
-		boxes,
+		segstop: segstart,
+		boxes: [], // blank array for no aligned parts
 		forward: !(flag & 0x10),
 		ridx,
-		x1: r.x + r.scale(boxes[0].start),
-		x2: r.x + r.scale(segmentstop(boxes)), // x stop position, for drawing connect line
 		seq,
 		qual,
 		cigarstr,
@@ -1534,6 +1340,158 @@ function parse_one_segment(arg) {
 	}
 
 	parse_flag_detect_readtype(segment, rnext, pnext, r, keepmatepos, segstart_1based)
+
+	if (flag & 0x4) {
+		if (keepunmappedread) {
+			segment.boxes.push({
+				opr: cigarstr,
+				start: segstart,
+				len: seq.length,
+				cidx: 0,
+				qual
+			})
+			segment.discord_unmapped1 = true
+			return segment
+		}
+		// return undefined so the unmapped read will not render
+		// may collect number of unmapped reads in view range and report
+		return
+	}
+
+	// from here, read is mapped
+	if (cigarstr != '*') {
+		// has valid cigar string to be parsed
+		// as the absolute coord start of each box, will be incremented after parsing a box
+		let pos = segstart
+		// prev/cum are sequence/qual character offset
+		let prev = 0,
+			cum = 0
+
+		for (let i = 0; i < cigarstr.length; i++) {
+			const cigar = cigarstr[i]
+			if (cigar.match(/[0-9]/)) continue
+			// read bp length of this part
+			const len = Number.parseInt(cigarstr.substring(prev, i))
+			if (cigar == 'H') {
+				segment.boxes.push({
+					opr: cigar,
+					start: pos,
+					len,
+					cidx: cum - len
+				})
+				prev = i + 1
+				continue
+			}
+			if (cigar == 'N') {
+				// no seq
+			} else if (cigar == 'P' || cigar == 'D') {
+				// padding or del, no sequence in read
+			} else {
+				// will consume read seq
+				cum += len
+			}
+			prev = i + 1
+			if (cigar == '=' || cigar == 'M') {
+				if (keepallboxes || Math.max(pos, r.start) <= Math.min(pos + len - 1, r.stop)) {
+					// visible
+					segment.boxes.push({
+						opr: cigar,
+						start: pos,
+						len,
+						cidx: cum - len
+					})
+					// need cidx for = / M, for quality and sequence mismatch
+				}
+				pos += len
+				continue
+			}
+			if (cigar == 'I') {
+				if (keepallboxes || (pos > r.start && pos < r.stop)) {
+					if (len * r.ntwidth >= insertion_minpx) {
+						segment.boxes.push({
+							opr: 'I',
+							start: pos,
+							len,
+							cidx: cum - len
+						})
+					}
+				}
+				continue
+			}
+			if (cigar == 'N' || cigar == 'D') {
+				// deletion or skipped region, must have at least one end within region
+				// cannot use max(starts)<min(stops)
+				// if both ends are outside of region e.g. intron-spanning rna read, will not include
+				if ((pos >= r.start && pos <= r.stop) || (pos + len - 1 >= r.start && pos + len - 1 <= r.stop)) {
+					segment.boxes.push({
+						opr: cigar,
+						start: pos,
+						len
+					})
+					// no box seq, don't add cidx
+				}
+				pos += len
+				continue
+			}
+			if (cigar == 'X') {
+				if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+					const b = {
+						opr: cigar,
+						start: pos,
+						len,
+						cidx: cum - len
+					}
+					segment.boxes.push(b)
+				}
+				pos += len
+				continue
+			}
+			if (cigar == 'S') {
+				const b = {
+					opr: cigar,
+					start: pos,
+					len,
+					cidx: cum - len
+				}
+				if (segment.boxes.length == 0) {
+					// this is the first box, will not consume ref
+					// shift softclip start to left, so its end will be pos, will not increment pos
+					b.start -= len
+					if (keepallboxes || Math.max(pos, r.start) < Math.min(pos + len - 1, r.stop)) {
+						segment.boxes.push(b)
+					}
+				} else {
+					// not the first box, so should be the last box
+					// do not shift start
+					segment.boxes.push(b)
+				}
+				continue
+			}
+			if (cigar == 'P') {
+				if (keepallboxes || (pos > r.start && pos < r.stop)) {
+					const b = {
+						opr: 'P',
+						start: pos,
+						len,
+						cidx: cum - len
+					}
+					segment.boxes.push(b)
+				}
+				continue
+			}
+			console.log('unknown cigar: ' + cigar)
+		}
+		if (segment.boxes.length == 0) {
+			// no visible boxes, do not show this segment
+			// this is the case for rnaseq reads split across the viewing intron and no need to show
+			if (q) q.readcount_skipped++
+			return
+		}
+
+		segment.segstop = pos
+		segment.x1 = r.x + r.scale(segment.boxes[0].start)
+		segment.x2 = r.x + r.scale(segmentstop(segment.boxes)) // x stop position, for drawing connect line
+	}
 
 	return segment
 }
@@ -1637,125 +1595,20 @@ function parse_flag_detect_readtype(segment, rnext, pnext, r, keepmatepos, segst
 			if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
 		}
 	}
-
-	return
-	// remaining code is disabled and can be deleted once above logic is validated
-
-	if (
-		(f & 0x2 && f & 0x20 && f & 0x40) || // 99 F1R2
-		(f & 0x2 && f & 0x10 && f & 0x80) || // 147 F1R2
-		(f & 0x2 && f & 0x10 && f & 0x40) || // 83 F2R1
-		(f & 0x2 && f & 0x20 && f & 0x80) //163 F2R1
-	) {
-		// Read and mate is properly paired
-		// do not set any flags
-		return
-	}
-
-	if (!(f & 0x10) && !(f & 0x20)) {
-		//read and mate are both on positive strand: --> -->
-		segment.discord_orientation = true
-		segment.discord_orientation_direction = 'F1F2'
-		/*
-		if ((f & 0x1 && f & 0x40 && f & 0x2) || (f & 0x1 && f & 0x80 && f & 0x2)) {
-			// 67 and 131 (R1R2)
-			// XXX why this case is not discord_orientation??
-			//console.log('67,131:', f)
-		} else if ((f & 0x1 && f & 0x40) || (f & 0x1 && f & 0x80)) {
-			// (65 and 129, R1R2) but NOT (67 and 131)
-			segment.discord_wrong_insertsize = true
-		}
-		*/
-		if (!(f & 0x2)) {
-			segment.discord_wrong_insertsize = true
-		}
-		if (keepmatepos) segment.pnext = pnext // for displaying mate position (on same chr) in details panel
-		return
-	}
-
-	if (!(f & 0x10) && f & 0x20 && pnext < segstart_1based) {
-		//read is on positive strand, mate is on negative strand, but mate position is upstream: <-- -->
-		segment.discord_orientation = true
-		segment.discord_orientation_direction = 'R1F2'
-		if ((f & 0x1 && f & 0x20 && f & 0x80) || (f & 0x1 && f & 0x10 && f & 0x40)) {
-			// 81, 161 (161 somehow gets classified in this if block but 81 does not)
-			segment.discord_wrong_insertsize = true
-			//console.log('81,161:', f)
-		}
-
-		//console.log('wrong orient2:', f)
-		if (keepmatepos) segment.pnext = pnext
-		return
-	}
-
-	if (f & 0x10 && f & 0x20) {
-		//read and mate are both on negative strand: <-- <--
-		segment.discord_orientation = true
-		segment.discord_orientation_direction = 'R1R2'
-		if (
-			(f & 0x1 && f & 0x10 && f & 0x20 && f & 0x40 && f & 0x2) ||
-			(f & 0x1 && f & 0x10 && f & 0x20 && f & 0x80 && f & 0x2)
-		) {
-			// 115 and 179
-			//console.log('115,179:', f)
-			// XXX what is this case??
-		} else if ((f & 0x1 && f & 0x10 && f & 0x20 && f & 0x40) || (f & 0x1 && f & 0x10 && f & 0x20 && f & 0x80)) {
-			// (113 and 177) but NOT (115 and 179)
-			segment.discord_wrong_insertsize = true
-			//console.log('113,177:', f)
-		}
-		//console.log('wrong orient3:', f)
-		if (keepmatepos) segment.pnext = pnext
-		return
-	}
-
-	if (f & 0x10 && !(f & 0x20) && pnext > segstart_1based) {
-		//read is on negative strand, mate is on positive strand, but mate position is downstream: <-- -->
-		segment.discord_orientation = true
-		segment.discord_orientation_direction = 'R1F2'
-		if ((f & 0x1 && f & 0x20 && f & 0x80) || (f & 0x1 && f & 0x10 && f & 0x40)) {
-			// 81, 161 (81 somehow gets classified in this if block but 161 does not)
-			segment.discord_wrong_insertsize = true
-			//console.log('81,161:', f)
-		}
-		//console.log('wrong orient4:', f)
-		if (keepmatepos) segment.pnext = pnext
-		return
-	}
-
-	////////// XXX follow code has not been unmodified. should refactor in the same style as above
-
-	if (
-		(f & 0x10 && f & 0x40 && segment.isfirst == true) || // 81 only if its the first segment of the template
-		(f & 0x20 && f & 0x80 && segment.islast == true) || // 161 only if its the last segment of the template
-		(f & 0x20 && f & 0x40) || // 97
-		(f & 0x10 && f & 0x80) // 145
-		//(f & 0x10 && f & 0x40 && segment.islast == true) || // 81 only if its the last segment of the template
-		//(f & 0x20 && f & 0x80 && segment.isfirst == true) // 161 only if its the first segment of the template
-	) {
-		// Discordant reads with wrong insert size where reads are oriented correctly
-		//console.log('flag wrong insert size:', f)
-		segment.discord_wrong_insertsize = true
-		if (keepmatepos) segment.pnext = pnext
-		return
-	}
-
-	// Discordant reads in same chr but not within the insert size
-	console.log('flag wrong insert size:', f)
-	segment.discord_wrong_insertsize = true
-	if (keepmatepos) segment.pnext = pnext
 }
 
-async function poststack_adjustq(group, q) {
-	/*
+/*
 call after stacking
 control canvas height based on number of reads and stacks
 set rendering parameters in q{}
 based on stack height, to know if to render base quality and print letters
 return number of stacks for setting canvas height
 
+"templates" is the renderable reads from this group, may be less than group.templates due to skipped ones (intron splicing etc)
+
 super high number of stacks will result in fractional row height and blurry rendering, no way to fix it now
 */
+async function poststack_adjustq(group, q, templates) {
 	const [a, b] = getstacksizebystacks(group.stacks.length, q)
 	group.stackheight = a
 	group.stackspace = b
@@ -1765,7 +1618,7 @@ super high number of stacks will result in fractional row height and blurry rend
 	}
 	if (group.stacks.length) {
 		// has reads/templates for rendering, support below
-		if (group.stackheight >= minstackheight_returntemplatebox && group.templates.length < max_returntemplatebox) {
+		if (group.stackheight >= minstackheight_returntemplatebox && templates.length < max_returntemplatebox) {
 			group.returntemplatebox = []
 		} else {
 			if (!group.partstack) {
