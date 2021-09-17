@@ -9,35 +9,7 @@
 
 # Pipeline to compute PRS scores for SJLIFE and CCSS samples using a given set of variants and their effect weights.
 
-
-########### Input ###############
-
-# The input for this PRS pipeline is a variant scoring file that reports the variants that will be used for PRS computation and their effect weights. This pipeline is designed to handle variant scoring files from the PGS catalog (https://www.pgscatalog.org/). Scoring files can be downloaded from the catalog and inputted directly into this pipeline. Alternatively, a custom variant scoring file can also be provided. For a custom scoring file, the file should follow the formatting guidelines described in the PGS catalog (see: https://www.pgscatalog.org/downloads/#dl_ftp).
-
-
-######## Pipeline steps #########
-
-# Pre-process the variants dataset
-    # Determine the hg38 coordinates of the variants
-    # Abort the analysis, if dataset contains duplicated variants
-    # Discard non-SNP variants (e.g. indels)
-    # Discard non-autosomal SNPs
-    # Discard strand-ambiguous SNPs
-    # Match variants to SJLIFE+CCSS variants
-
-# Compute PRS scores of SJLIFE and CCSS samples
-    # Split SJLIFE and CCSS samples by ancestry. Only consider samples of European, African, or Asian ancestry
-    # Compute PRS scores of samples for each ancestry separately using the processed variant dataset.
-    # QC steps during PRS computation:
-        # Missing call rate < 10%
-        # HWE p-value > 1e-6
-        # Effect allele frequency > 1% (optional)
-            # Compute PRS scores with and without this cutoff
-
-
-############ Notes ##############
-
-# Create a new working directory before running this pipeline. Store the input variant scoring file in this directory and run the pipeline from this directory. All output files of the pipeline will be stored in this working directory.
+# See README file for additional details.
 
 
 ############# Code ##############
@@ -96,7 +68,7 @@ then
         liftOver variants.data.bed ~/tp/utils/mds.liftover/hg19ToHg38.over.chain.gz variants.data.hg38.bed variants.data.unlifted.bed
         # Discard SNPs from minor chromosomes and convert the hg38 BED file to a PGS text file.
         awk 'BEGIN{FS=OFS="\t"} $1 !~ /_/' variants.data.hg38.bed | awk 'BEGIN{FS="[\t;]"; OFS="\t"; print "chr_name\tchr_position\teffect_allele\treference_allele\teffect_weight"} {sub("chr","",$1); print $1,$3,$6,$7,$8}' > variants.data.hg38.txt
-        unliftedCnt=$(($(grep -c "" variants.data.txt) - $(grep -c "" variants.data.hg38.txt)))
+        unliftedCnt=$(($(cat variants.data.txt | wc -l) - $(cat variants.data.hg38.txt | wc -l)))
     #If genome build is neither hg19 nor hg38, then abort
     else
         echo "Error: genome build of PGS dataset must be hg19 for liftover"
@@ -134,19 +106,17 @@ fi
 # Initial QC of variant data
 ##############################
 
-# Check if PGS dataset contains any duplicated SNPs
-dupCnt=$(awk 'BEGIN{FS=OFS="\t"} FNR > 1 {print $1,$2,$3,$4}' variants.data.hg38.txt | sort | uniq -d | wc -l)
-if [[ $dupCnt -gt 0 ]]
-then
-    echo "Error: duplicated SNPs present"
-    exit 2
-fi
-
-# Discard variants that are either: [1] non-SNPs (e.g. indels), [2] non-autosomal SNPs, or [3] strand-ambiguous SNPs
+# Discard the following variants: duplicated variants, non-SNP variants (e.g. indels), non-autosomal SNPs, and strand-ambiguous SNPs
 nonSnpCnt=$(sed '1d' variants.data.hg38.txt | awk 'BEGIN{FS=OFS="\t"} (length($3) > 1) || (length($4) > 1)' | wc -l)
 nonAutoCnt=$(sed '1d' variants.data.hg38.txt | cut -f 1 | grep -c "[^0-9]")
 ambigCnt=$(sed '1d' variants.data.hg38.txt | awk 'BEGIN{FS=OFS="\t"} ($3 == "A" && $4 == "T") || ($3 == "T" && $4 == "A") || ($3 == "C" && $4 == "G") || ($3 == "G" && $4 == "C")' | wc -l)
-awk 'BEGIN{FS=OFS="\t"} FNR == 1; ((length($3) == 1) && (length($4) == 1)) && ($1 !~ /[^0-9]/) && (($3 == "A" && $4 != "T") || ($3 == "T" && $4 != "A") || ($3 == "C" && $4 != "G") || ($3 == "G" && $4 != "C"))' variants.data.hg38.txt > variants.data.hg38.filt.txt
+
+(head -n 1 variants.data.hg38.txt; sed '1d' variants.data.hg38.txt | sort | awk 'BEGIN{FS=OFS="\t"} {print $5,$1,$2,$3,$4}' | uniq --skip-fields=1 --unique | awk 'BEGIN{FS=OFS="\t"} {print $2,$3,$4,$5,$1}') > temp.txt
+dupCnt=$(($(cat variants.data.hg38.txt | wc -l) - $(cat temp.txt | wc -l)))
+
+awk 'BEGIN{FS=OFS="\t"} FNR == 1; ((length($3) == 1) && (length($4) == 1)) && ($1 !~ /[^0-9]/) && (($3 == "A" && $4 != "T") || ($3 == "T" && $4 != "A") || ($3 == "C" && $4 != "G") || ($3 == "G" && $4 != "C"))' temp.txt > variants.data.hg38.filt.txt
+
+rm temp.txt
 
 
 #############################
@@ -182,8 +152,9 @@ done
 # Print statistics
 #############################
 printf "Number of input variants: ${totalCnt}\n\
-Numbers of dropped variants:\n\
+Numbers of discarded variants:\n\
 \tVariants not lifted over: ${unliftedCnt}\n\
+\tDuplicated variants: ${dupCnt}\n\
 \tNon-SNP variants: ${nonSnpCnt}\n\
 \tNon-autosomal SNPs: ${nonAutoCnt}\n\
 \tAmbiguous SNPs: ${ambigCnt}\n\
