@@ -283,11 +283,6 @@ or update existing groups, in which groupidx will be provided
 		tk.dom.read_limit_text.attr('transform', 'scale(0)')
 	}
 
-	//if (tk.gdc) {
-	//	// XXX delete later
-	//	may_render_gdc(data, tk, block)
-	//}
-
 	may_render_variant(data, tk, block)
 
 	if (!tk.groups) {
@@ -314,6 +309,13 @@ or update existing groups, in which groupidx will be provided
 		.each(function() {
 			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 		})
+	if (data.count.skipped) {
+		tk.label_skip.text(data.count.skipped + ' reads skipped').each(function() {
+			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
+		})
+	} else {
+		tk.label_skip.text('')
+	}
 	block.setllabel()
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
 }
@@ -640,6 +642,8 @@ function makeTk(tk, block) {
 
 	let laby = block.labelfontsize + 5
 	tk.label_count = block.maketklefthandle(tk, laby)
+	laby += block.labelfontsize
+	tk.label_skip = block.maketklefthandle(tk, laby).text('')
 }
 
 // may add additional parameters from url that specifically apply to the bam track

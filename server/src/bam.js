@@ -51,6 +51,7 @@ when client zooms into one read group, server needs to know which group it is an
 .stacksegspacing
 .canvaswidth
 .downsample{} // added by determine_downsampling
+.readcount_skipped
 .variant{}
 	.chr/pos/ref/alt
 .sv{}
@@ -787,6 +788,7 @@ async function do_query(q) {
 		})
 	}
 
+	// XXX TODO not to collect all reads into array
 	let templates_total = []
 	for (const group of q.groups) {
 		// do stacking for each group separately
@@ -840,6 +842,7 @@ async function do_query(q) {
 		result.groups.push(gr)
 		templates_total = [...templates_total, ...templates]
 	}
+	if (q.readcount_skipped) result.count.skipped = q.readcount_skipped
 	if (q.getcolorscale) result.colorscale = getcolorscale()
 	if (q.kmer_diff_scores_asc) {
 		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
