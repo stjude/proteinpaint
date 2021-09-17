@@ -4,13 +4,14 @@ import { select } from 'd3-selection'
 class MassRegression {
 	constructor(opts) {
 		this.type = 'regression'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+		setInteractivity(this)
+		setRenderers(this)
+	}
+
+	async init() {
 		this.dom = {
 			div: this.opts.holder.style('margin', '10px 0px').style('display', 'none')
 		}
-		setInteractivity(this)
-		setRenderers(this)
 		//opts.controls.on('downloadClick.regression', this.download)
 	}
 

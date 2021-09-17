@@ -14,25 +14,22 @@ let instanceNum = 0
 class TdbNav {
 	constructor(opts) {
 		this.type = 'nav'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
 		this.instanceNum = instanceNum++
-
-		setInteractivity(this)
-		setRenderers(this)
-		this.activeCohort = -1
 		// 0 = cohort tab, will switch to 1 = filter tab if there are no cohorts
 		this.activeTab = 0
+		this.activeCohort = -1
 		this.searching = false
 		this.hideSubheader = false
 		this.samplecounts = {}
-		this.cohortFilter = getFilterItemByTag(this.app.getState().termfilter.filter, 'cohortFilter')
-		this.initUI()
+		setInteractivity(this)
+		setRenderers(this)
 	}
 
 	async init() {
 		try {
-			this.components = rx.multiInit({
+			this.cohortFilter = getFilterItemByTag(this.app.getState().termfilter.filter, 'cohortFilter')
+			this.initUI()
+			this.components = await rx.multiInit({
 				search: searchInit({
 					app: this.app,
 					holder: this.dom.searchDiv,

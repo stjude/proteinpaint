@@ -19,59 +19,59 @@ import { Menu } from '../client'
 class MassPlot {
 	constructor(opts) {
 		this.type = 'plot'
-		this.id = opts.plot.id
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
 		this.modifiers = opts.modifiers
-
-		this.dom = {
-			tip: new Menu({ padding: '0px' }),
-
-			holder: opts.holder,
-
-			body: opts.holder.body
-				.style('margin-top', '-1px')
-				.style('white-space', 'nowrap')
-				.style('overflow-x', 'auto'),
-
-			// will hold no data notice or the page title in multichart views
-			banner: opts.holder.body.append('div').style('display', 'none'),
-
-			// dom.controls will hold the config input, select, button elements
-			controls: opts.holder.body
-				.append('div')
-				.attr('class', 'pp-termdb-plot-controls')
-				.style('display', opts.plot.chartType === 'regression' ? 'block' : 'inline-block'),
-
-			// dom.viz will hold the rendered view
-			viz: opts.holder.body
-				.append('div')
-				.attr('class', 'pp-termdb-plot-viz')
-				.style('display', 'inline-block')
-				.style('min-width', '300px')
-				.style('margin-left', '50px')
-		}
+		setRenderers(this)
 	}
 
 	async init() {
-		const controls =
-			this.opts.plot.chartType === 'regression'
-				? await regressionUIInit({
-						app: this.app,
-						id: this.id,
-						holder: this.dom.viz.append('div')
-				  })
-				: await controlsInit({
-						app: this.app,
-						id: this.id,
-						holder: this.dom.controls,
-						isleaf: this.opts.plot.term.isleaf,
-						iscondition: this.opts.plot.term.type == 'condition'
-				  })
+		try {
+			this.dom = {
+				tip: new Menu({ padding: '0px' }),
 
-		this.components = controls ? { controls } : {}
-		setRenderers(this)
+				holder: this.opts.holder,
+
+				body: this.opts.holder.body
+					.style('margin-top', '-1px')
+					.style('white-space', 'nowrap')
+					.style('overflow-x', 'auto'),
+
+				// will hold no data notice or the page title in multichart views
+				banner: this.opts.holder.body.append('div').style('display', 'none'),
+
+				// dom.controls will hold the config input, select, button elements
+				controls: this.opts.holder.body
+					.append('div')
+					.attr('class', 'pp-termdb-plot-controls')
+					.style('display', this.opts.chartType === 'regression' ? 'block' : 'inline-block'),
+
+				// dom.viz will hold the rendered view
+				viz: this.opts.holder.body
+					.append('div')
+					.attr('class', 'pp-termdb-plot-viz')
+					.style('display', 'inline-block')
+					.style('min-width', '300px')
+					.style('margin-left', '50px')
+			}
+
+			const controls =
+				this.opts.chartType === 'regression'
+					? await regressionUIInit({
+							app: this.app,
+							id: this.id,
+							holder: this.dom.viz.append('div')
+					  })
+					: await controlsInit({
+							app: this.app,
+							id: this.id,
+							holder: this.dom.controls,
+							isleaf: this.opts.term.isleaf,
+							iscondition: this.opts.term.type == 'condition'
+					  })
+
+			this.components = { controls }
+		} catch (e) {
+			throw e
+		}
 	}
 
 	reactsTo(action) {
@@ -106,7 +106,7 @@ class MassPlot {
 	async main() {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
-		if (!this.components.chart) this.setChartComponent(this.opts)
+		if (!this.components.chart) await this.setChartComponent(this.opts)
 		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? 'Results' : '')
 		if (this.state.config.term) {
 			const regressionType =
@@ -231,9 +231,9 @@ class MassPlot {
 		}
 	}
 
-	setChartComponent(opts) {
+	async setChartComponent(opts) {
 		const controls = this.components.controls
-		switch (opts.plot.chartType) {
+		switch (opts.chartType) {
 			case 'barchart':
 				this.components.chart = barInit({
 					app: this.app,
@@ -306,7 +306,7 @@ class MassPlot {
 					.style('padding', '3px 5px')
 					.style('color', '#bbb')
 				this.dom.resultsDiv = this.dom.viz.append('div')
-				this.components.chart = regressionInit({
+				this.components.chart = await regressionInit({
 					app: this.app,
 					holder: this.dom.resultsDiv,
 					id: this.id,

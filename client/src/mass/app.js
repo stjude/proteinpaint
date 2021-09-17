@@ -10,31 +10,28 @@ import { sayerror, Menu, newSandboxDiv } from '../client'
 opts{}
 .state{}
 	required, will fill-in or override store.defaultState
-.app{} .tree{} etc
-see doc for full spec
-https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit
+ 	.genome
+ 	.dslabel
+ 	.tree{} etc
+	see doc for full spec
+	https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit
 
 */
 
 class MassApp {
 	constructor(opts) {
 		this.type = 'app'
-		// set this.id, .opts, .api
-		rx.prepApp(this, opts)
-		this.api.vocabApi = vocabInit(this.api, this.opts)
-
-		this.tip = new Menu({ padding: '5px' })
-		this.dom = {
-			holder: opts.holder, // do not modify holder style
-			topbar: opts.holder.append('div'),
-			errdiv: opts.holder.append('div'),
-			plotDiv: opts.holder.append('div')
-		}
 	}
 
 	validateOpts(o) {
+		if (!o.holder) throw `missing opts.holder in the MassApp constructor argument`
 		if (!o.callbacks) o.callbacks = {}
 		return o
+	}
+
+	preApiFreeze(api) {
+		api.tip = new Menu({ padding: '5px' })
+		api.vocabApi = vocabInit(api, this.opts)
 	}
 
 	async init() {
@@ -42,6 +39,13 @@ class MassApp {
 		try {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
+			// this will create divs in the correct order
+			this.dom = {
+				holder: this.opts.holder, // do not modify holder style
+				topbar: this.opts.holder.append('div'),
+				errdiv: this.opts.holder.append('div'),
+				plotDiv: this.opts.holder.append('div')
+			}
 			this.components = {
 				nav: await navInit({
 					app: this.api,
@@ -66,15 +70,11 @@ class MassApp {
 				const holder = newSandboxDiv(this.dom.plotDiv, () => {
 					this.api.dispatch({
 						type: 'plot_delete',
-						id: plotId
+						id: plot.id
 					})
 				})
 
-				newPlots[plot.id] = plotInit({
-					app: this.api,
-					holder,
-					plot
-				})
+				newPlots[plot.id] = plotInit(Object.assign({}, { app: this.api, holder }, plot))
 			}
 		}
 
@@ -101,7 +101,6 @@ class MassApp {
 	}
 }
 
-// must use the await keyword when using this appInit()
 export const appInit = rx.getInitFxn(MassApp)
 
 function setInteractivity(self) {

@@ -11,10 +11,39 @@ let id = 0
 class MassCharts {
 	constructor(opts = {}) {
 		this.type = 'charts'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
-		this.setDom()
 		setRenderers(this)
+	}
+
+	async init() {
+		this.dom = {
+			holder: this.opts.holder,
+			tip: new Menu({ padding: '0px' })
+		}
+
+		const btnData = [
+			{ label: 'Bar Chart', chartType: 'barchart' },
+			//{ label: 'Table', chartType: 'table' },
+			//{ label: 'Boxplot', chartType: 'boxplot' },
+			//{ label: 'Scatter Plot', chartType: 'scatter' },
+			{ label: 'Cumulative Incidence', chartType: 'cuminc' },
+			{ label: 'Survival', chartType: 'survival' },
+			{ label: 'Regression Analysis', chartType: 'regression' }
+		]
+
+		const self = this
+
+		this.dom.btns = this.dom.holder
+			.selectAll('button')
+			.data(btnData)
+			.enter()
+			.append('button')
+			.style('margin', '5px')
+			.style('padding', '5px')
+			.html(d => d.label)
+			.on('click', function(d) {
+				// 'this' is the button element
+				self.showMenu(d.chartType, this)
+			})
 	}
 
 	getState(appState) {
@@ -41,36 +70,6 @@ class MassCharts {
 
 	main(data) {
 		this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
-	}
-
-	setDom() {
-		this.dom = {
-			holder: this.opts.holder,
-			tip: new Menu({ padding: '0px' })
-		}
-
-		const btnData = [
-			{ label: 'Bar Chart', chartType: 'barchart' },
-			//{ label: 'Table', chartType: 'table' },
-			//{ label: 'Boxplot', chartType: 'boxplot' },
-			//{ label: 'Scatter Plot', chartType: 'scatter' },
-			{ label: 'Cumulative Incidence', chartType: 'cuminc' },
-			{ label: 'Survival', chartType: 'survival' },
-			{ label: 'Regression Analysis', chartType: 'regression' }
-		]
-		const self = this
-
-		this.dom.btns = this.dom.holder
-			.selectAll('button')
-			.data(btnData)
-			.enter()
-			.append('button')
-			.style('margin', '5px')
-			.style('padding', '5px')
-			.html(d => d.label)
-			.on('click', function(d) {
-				self.showMenu(d.chartType, this)
-			})
 	}
 }
 

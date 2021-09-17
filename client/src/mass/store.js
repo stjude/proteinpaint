@@ -33,14 +33,11 @@ const defaultState = {
 	autoSave: true
 }
 
-// one store for the whole tdb app
+// one store for the whole MASS app
 class TdbStore {
 	constructor(opts) {
 		this.type = 'store'
 		this.defaultState = defaultState
-		// set this.app, .opts, .api, expected store methods,
-		// and the initial non-rehydrated state with overrides
-		rx.prepStore(this, opts)
 		// use for assigning unique IDs where needed
 		// may be used later to simplify getting component state by type and id
 		this.prevGeneratedId = 0

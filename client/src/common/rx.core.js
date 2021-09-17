@@ -39,13 +39,18 @@ https://docs.google.com/document/d/1G3LqbtsCEkGw4ABA_VognhjVnUHnsVYAGdXyhYG374M/
 */
 export function getInitFxn(_Class_) {
 	/*
-		constructorArg
+		opts
 		- the argument to the _Class_ constructor
 	*/
-
-	return (constructorArg = {}) => {
+	return opts => {
 		// create a _Class_ instance with mutable private properties and methods
-		const self = new _Class_(constructorArg)
+		const self = new _Class_(opts)
+
+		if (!self.api && self.type) {
+			if (self.type == 'app') prepApp(self, opts)
+			else if (self.type == 'store') prepStore(self, opts)
+			else prepComponent(self, opts)
+		}
 
 		// get the instance's api that may hide its mutable props and methods
 		// - if there is already an instance api as constructed, use it
@@ -53,6 +58,8 @@ export function getInitFxn(_Class_) {
 		const api = self.api || self
 		// optionally expose the hidden instance to debugging and testing code
 		if (self.debug || (self.opts && self.opts.debug)) api.Inner = self
+		// an instance may want to add or modify api properties before it is frozen
+		if (typeof self.preApiFreeze == 'function') self.preApiFreeze(api)
 		// freeze the api's properties and methods before exposing
 		Object.freeze(api)
 
@@ -88,7 +95,7 @@ export function getInitFxn(_Class_) {
 */
 export function getOpts(opts, instance) {
 	if (!instance.app) return opts
-	if (instance.app.opts[instance.type]) {
+	if (instance.type in instance.app.opts) {
 		/*
 			Always override opts with any app.opts that is available
 			for the instance's component type, supplied as an appInit() argument.
@@ -97,7 +104,9 @@ export function getOpts(opts, instance) {
 			in opts, only apply app.opts[instance.type] override for key-values
 			that are not in opts. Need to see an actual use case before working on this.
 		*/
-		copyMerge(opts, instance.app.opts[instance.type])
+		const overrides = instance.app.opts[instance.type]
+		if (instance.validateOpts) instance.validateOpts(overrides)
+		copyMerge(opts, overrides)
 	}
 	if ('debug' in instance.app) opts.debug = instance.app.debug
 	else if (instance.app.opts && 'debug' in instance.app.opts) opts.debug = instance.app.opts.debug
@@ -170,7 +179,7 @@ export function getStoreApi(self) {
 
 export function prepApp(self, opts) {
 	if (self.validateOpts) self.validateOpts(opts)
-	if ('id' in opts) self.id = opts.id
+	if ('id' in opts) self.id = opts[self.type].id
 	self.opts = opts
 	self.api = getAppApi(self)
 }
@@ -295,12 +304,13 @@ export function getAppApi(self) {
 }
 
 export function prepComponent(self, opts) {
+	if (!opts.app) throw `missing self.opts.app in prepComponent(${self.type})`
+	self.app = opts.app
+	self.opts = getOpts(opts, self)
 	if (self.validateOpts) self.validateOpts(opts)
 	// the component type + id may be used later to
 	// simplify getting its state from the store
-	if ('id' in opts) self.id = opts.id
-	self.app = opts.app
-	self.opts = getOpts(opts, self)
+	if ('id' in opts) self.id = self.opts.id
 	self.api = getComponentApi(self)
 }
 

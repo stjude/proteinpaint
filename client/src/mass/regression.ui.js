@@ -6,18 +6,19 @@ import { getTermSelectionSequence } from './charts'
 class MassRegressionUI {
 	constructor(opts) {
 		this.type = 'regressionUI'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+		this.termSequence = getTermSelectionSequence('regression')
+		setInteractivity(this)
+		setRenderers(this)
+	}
+
+	async init() {
 		this.dom = {
 			div: this.opts.holder.style('margin', '10px 0px').style('margin-left', '-50px'),
-			controls: opts.holder
+			controls: this.opts.holder
 				.append('div')
 				.attr('class', 'pp-termdb-plot-controls')
 				.style('display', 'block')
 		}
-		this.termSequence = getTermSelectionSequence('regression')
-		setInteractivity(this)
-		setRenderers(this)
 	}
 
 	getState(appState) {
