@@ -570,28 +570,6 @@
                     "testSpec": {
                         "expected": {"circle": 15, "line": 15}
                     }
-                },
-                {
-                    "label": "RNApeg",
-                    "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/rnapeg",
-                    "urlparam":"?genome=hg19&block=1&junctionrnapeg=RNApeg,proteinpaint_demo/hg19/junction/rnapeg",
-                    "runargs": {
-                        "parseurl": true,
-                        "block": true,
-                        "nobox": 1,
-                        "noheader": 1,
-                        "genome": "hg19",
-                        "nativetracks":"refgene",
-                        "tracks": [{
-                            "type": "junction",
-                            "name": "RNApeg demo",
-                            "tracks": [{ "rnapegfile": "proteinpaint_demo/hg19/junction/rnapeg" }]
-                            
-                        }]
-                    },
-                    "testSpec": {
-                        "expected": {"circle": 15, "line": 15}
-                    }
                 }
             ],
             "sandbox":{
