@@ -186,6 +186,7 @@
                 },
                 {
                     "label": "BED3",
+                    "message": "The bare minimum for the JSON BED track is a three column tab-delimited file with the chromosome, start position, and stop position. Below is example of the barebone rendering of the data.",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedj3DemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz",
                     "runargs": {
@@ -458,6 +459,7 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
             "ppcalls": [
                 {
+                    "label": "Hi-C",
                     "urlparam": "?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic",
                     "runargs": {
                         "parseurl": true,
@@ -476,6 +478,28 @@
                             "pyramidup": 1,
                             "enzyme": "MboI"
                         }]
+                    },
+                    "testSpec": {
+                        "expected": {"image": 1 }
+                    }
+                },
+                {
+                    "label": "Hi-C Whole Genome",
+                    "urlparam": "?genome=hg19&hicfile=proteinpaint_demo/hg19/hic/hic_demo.hic&enzyme=MboI",
+                    "runargs": {
+                        "parseurl": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "block": true,
+                        "hic": 
+                            {
+                                "genome": "hg19",
+                                "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
+                                "enzyme": "MboI"
+                            }
+                    },
+                    "testSpec": {
+                        "expected": {"image": 1 }
                     }
                 }
             ],
@@ -526,6 +550,7 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
             "ppcalls": [
                 {
+                    "label": "RNA Splice Junction",
                     "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionDemoData.tar.gz",
                     "urlparam": "?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz",
                     "runargs": {
@@ -752,6 +777,7 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/arc-square.png",
             "ppcalls": [
                 {
+                    "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/arc/arcDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc Track,proteinpaint_demo/hg19/arc/mango.gz",
                     "runargs": {
                         "parseurl": true,
@@ -923,6 +949,7 @@
                 },
                 {
                     "label": "Kmer typing",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/bamDemoData.exon8del.tar.gz",
                     "urlparam": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A",
                     "runargs": {
                         "parseurl": true,
@@ -1110,6 +1137,7 @@
                     }
                 },
                 {
+                    "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/mavb/mavbDemoData.tar.gz",
                     "runargs": {
                         "genome": "hg19",
                         "noheader": 1,
@@ -1129,6 +1157,9 @@
                                 "type": "bigwigstranded"
                             }]
                         }
+                    },
+                    "testSpec": {
+                        "expected": { "rect": 2, "circle": 10 }
                     }
                 }
             ],
@@ -1167,28 +1198,6 @@
                 ]
             },
             "searchterms": ["mutant allele fraction", "snv", "snv4"]
-        },
-        {
-            "name": "Study View",
-            "app": "Apps",
-            "hidden": true,
-            "blurb": "Multiple viewing options for genes by sample matrix",
-            "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
-            "sandbox": {},
-            "searchterms": ["heatmap", "heat map", "ribbon graph", "disco plot", "pie chart", "gene network"]
-        },
-        {
-            "name": "Hi-C whole-genome view",
-            "app": "Apps",
-            "hidden": true,
-            "blurb": "TODO: Brief description of track or app",
-            "image": "https://pecan.stjude.cloud/static/examples/images/hic-whole-square.png",
-            "media": {
-                "urls": "/F/human.temp.hic.html",
-                "doc": ""
-            },
-            "sandbox":{},
-            "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation", "whole genome"]
         },
         {
             "name": "Sample Scatterplot",
@@ -1272,6 +1281,9 @@
                             "genome": "hg19",
                             "jsonfile":"proteinpaint_demo/hg19/singlecell/singlecell.json"
                         }
+                    },
+                    "testSpec": {
+                        "expected": {"canvas": 1 }
                     }
                 }
             ],
