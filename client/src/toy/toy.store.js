@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getStoreInit } from '../common/rx.core'
 import { dofetch3 } from '../client'
 
 const defaultState = {
@@ -16,9 +16,6 @@ class ToyStore {
 	constructor(opts) {
 		this.type = 'store'
 		this.defaultState = defaultState
-		// set this.app, .opts, .api, expected store methods,
-		// and the initial non-rehydrated state with overrides
-		rx.prepStore(this, opts)
 	}
 }
 
@@ -86,4 +83,4 @@ ToyStore.prototype.actions = {
 	}
 }
 
-export const storeInit = rx.getInitFxn(ToyStore)
+export const storeInit = getStoreInit(ToyStore)

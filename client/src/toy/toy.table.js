@@ -1,17 +1,18 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 
 class ToyTable {
 	constructor(opts) {
 		this.type = 'table'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
-		this.dom = {
-			holder: opts.holder,
-			table: opts.holder.append('table')
-		}
 		setInteractivity(this)
 		setRenderers(this)
+	}
+
+	init() {
+		this.dom = {
+			holder: this.opts.holder,
+			table: this.opts.holder.append('table')
+		}
 	}
 
 	getState(appState) {
@@ -22,6 +23,8 @@ class ToyTable {
 		this.render()
 	}
 }
+
+export const tableInit = getCompInit(ToyTable)
 
 function setRenderers(self) {
 	self.render = function() {
@@ -128,5 +131,3 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.removeDiv = term => self.app.dispatch({ type: 'term_rm', termid: term.id })
 }
-
-export const tableInit = rx.getInitFxn(ToyTable)

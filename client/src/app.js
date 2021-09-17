@@ -754,10 +754,10 @@ async function parseembedthenurl(arg, app) {
 	}
 
 	if (arg.toy) {
-		launchtoy(arg.toy, app)
+		await launchtoy(arg.toy, app)
 	}
 	if (arg.termdb) {
-		launchtermdb(arg.termdb, app)
+		await launchtermdb(arg.termdb, app)
 	}
 	if (arg.maftimeline) {
 		launchmaftimeline(arg, app)
@@ -767,7 +767,7 @@ async function parseembedthenurl(arg, app) {
 		launchgdcbamslice(arg, app)
 	}
 	if (arg.mass) {
-		launchmass(arg.mass, app)
+		await launchmass(arg.mass, app)
 	}
 }
 
@@ -1357,21 +1357,24 @@ async function launch_singlecell(arg, app) {
 opts
 .state may be a partial or full instance of src/toy/toy.store defaultState
 */
-function launchtoy(opts, app) {
+async function launchtoy(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
-	import('./toy/toy.app').then(_ => {
-		_.appInit(opts)
-	})
+	try {
+		const _ = await import('./toy/toy.app')
+		await _.appInit(opts)
+	} catch (e) {
+		console.error(e)
+	}
 }
 
-function launchtermdb(opts, app) {
+async function launchtermdb(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
 	import('./termdb/app').then(_ => {
 		_.appInit(opts)
 	})
 }
 
-function launchmass(opts, app) {
+async function launchmass(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
 	import('./mass/app').then(_ => {
 		_.appInit(opts)

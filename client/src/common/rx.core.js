@@ -197,7 +197,7 @@ export function prepStore(self, opts) {
 	// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
 	if (!self.fromJson) self.fromJson = fromJson // used in store.api.copyState()
 	if (!self.toJson) self.toJson = toJson // used in store.api.copyState()
-	self.state = copyMerge(self.toJson(self.defaultState), opts.app.opts.state)
+	self.state = copyMerge(self.toJson(self.defaultState), opts.state)
 	if (self.validateState) self.validateState()
 }
 
@@ -235,12 +235,7 @@ export function prepApp(self, opts) {
 }
 
 export function getAppApi(self) {
-	if (!('type' in self)) {
-		throw `The component's this.type must be set before calling this.getAppApi(this).`
-	}
-
 	const middlewares = []
-
 	const api = {
 		opts: self.opts,
 		async dispatch(action) {

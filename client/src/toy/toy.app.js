@@ -26,23 +26,33 @@ import { Menu } from '../client'
 	.on()
 */
 class ToyApp {
-	constructor(opts) {
-		this.type = 'app'
-		// set this.id, .opts, .api
-		rx.prepApp(this, opts)
+	constructor(opts = {}) {
 		this.dom = {
-			tip: new Menu(),
-			holder: opts.holder
+			tip: new Menu()
 		}
 	}
 
+	validateOpts(opts) {
+		if (!opts.holder) throw `missing o.holder`
+		if (!opts.state) opts.state = {}
+	}
+
+	preApiFreeze(api) {
+		api.tip = this.dom.tip
+	}
+
 	async init() {
-		this.store = await storeInit({ app: this.api })
-		this.state = this.store.copyState()
-		this.components = await rx.multiInit({
-			controls: controlsInit({ app: this.api, holder: this.dom.holder.append('div') }),
-			table: tableInit({ app: this.api, holder: this.dom.holder.append('div') })
-		})
+		try {
+			this.dom.holder = this.opts.holder
+			this.store = await storeInit({ app: this.api, state: this.opts.state })
+			this.state = this.store.copyState()
+			this.components = await rx.multiInit({
+				controls: controlsInit({ app: this.api, holder: this.dom.holder.append('div') }),
+				table: tableInit({ app: this.api, holder: this.dom.holder.append('div') })
+			})
+		} catch (e) {
+			throw e
+		}
 	}
 
 	/*
@@ -53,4 +63,4 @@ class ToyApp {
 	*/
 }
 
-export const appInit = rx.getInitFxn(ToyApp)
+export const appInit = rx.getAppInit(ToyApp)

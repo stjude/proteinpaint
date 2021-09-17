@@ -1,20 +1,21 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { Menu, dofetch3 } from '../client'
 import { event } from 'd3-selection'
 
 class ToySearch {
 	constructor(opts) {
 		this.type = 'search'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
 		this.dom = {
 			holder: opts.holder,
 			tip: new Menu({ padding: '' })
 		}
 		// set methods to handle user input/interaction
 		setInteractivity(this)
-		// set renderer methods that affect DOM
+		// set renderer methods that affect the DOM
 		setRenderers(this)
+	}
+
+	init() {
 		this.render()
 	}
 
@@ -31,7 +32,7 @@ class ToySearch {
 	}
 }
 
-export const searchInit = rx.getInitFxn(ToySearch)
+export const searchInit = getCompInit(ToySearch)
 
 function setRenderers(self) {
 	self.render = () => {
@@ -102,11 +103,11 @@ function setRenderers(self) {
 			// a class method for the same reasons given
 			// in render() {on('keyup')} above
 			/*
-		.on('click', async ()=>{
-			self.app.dispatch({type:'term_add',term})
-			self.dom.tip.hide()
-		})
-		*/
+			.on('click', async ()=>{
+				self.app.dispatch({type:'term_add',term})
+				self.dom.tip.hide()
+			})
+			*/
 			.on('click', self.addTermByMenuClick)
 	}
 }
