@@ -186,7 +186,7 @@ class TdbStore {
 
 	adjustPlotCurrViews(plotConfig) {
 		if (!plotConfig) return
-		const currViews = plotConfig.settings.currViews
+		const currViews = plotConfig.settings.currViews || []
 		if (plotConfig.chartType == 'regression') {
 			plotConfig.settings.currViews = ['regression']
 		}
