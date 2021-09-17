@@ -316,7 +316,7 @@ class MassPlot {
 	}
 }
 
-export const plotInit = rx.getInitFxn(MassPlot)
+export const plotInit = rx.getCompInit(MassPlot)
 
 function setRenderers(self) {
 	self.showMultipart = async function(_config) {

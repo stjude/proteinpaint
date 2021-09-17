@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getAppInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { storeInit } from './store'
 import { vocabInit } from '../termdb/vocabulary'
@@ -21,9 +21,16 @@ opts{}
 class MassApp {
 	constructor(opts) {
 		this.type = 'app'
+		// this will create divs in the correct order
+		this.dom = {
+			holder: opts.holder, // do not modify holder style
+			topbar: opts.holder.append('div'),
+			errdiv: opts.holder.append('div'),
+			plotDiv: opts.holder.append('div')
+		}
 	}
 
-	validateOpts(o) {
+	validateOpts(o = {}) {
 		if (!o.holder) throw `missing opts.holder in the MassApp constructor argument`
 		if (!o.callbacks) o.callbacks = {}
 		return o
@@ -39,13 +46,6 @@ class MassApp {
 		try {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
-			// this will create divs in the correct order
-			this.dom = {
-				holder: this.opts.holder, // do not modify holder style
-				topbar: this.opts.holder.append('div'),
-				errdiv: this.opts.holder.append('div'),
-				plotDiv: this.opts.holder.append('div')
-			}
 			this.components = {
 				nav: await navInit({
 					app: this.api,
@@ -101,7 +101,7 @@ class MassApp {
 	}
 }
 
-export const appInit = rx.getInitFxn(MassApp)
+export const appInit = getAppInit(MassApp)
 
 function setInteractivity(self) {
 	self.downloadView = id => {

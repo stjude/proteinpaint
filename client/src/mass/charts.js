@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { Menu } from '../client'
 import { getNormalRoot } from '../common/filter'
 import { select, event } from 'd3-selection'
@@ -73,7 +73,7 @@ class MassCharts {
 	}
 }
 
-export const chartsInit = rx.getInitFxn(MassCharts)
+export const chartsInit = getCompInit(MassCharts)
 
 function setRenderers(self) {
 	self.showMenu = function(chartType, btn) {
