@@ -20,11 +20,11 @@ https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/
 class TdbApp {
 	constructor(opts = {}) {
 		this.type = 'app'
-		this.tip = new Menu({ padding: '5px' })
 		// set this.id, .opts, .api
 		rx.prepApp(this, opts)
 		this.api.vocabApi = vocabInit(this.api, this.opts)
 		this.dom = {
+			tip: new Menu({ padding: '5px' }),
 			holder: opts.holder, // do not modify holder style
 			topbar: opts.holder.append('div'),
 			errdiv: opts.holder.append('div')
@@ -34,6 +34,11 @@ class TdbApp {
 	validateOpts(o) {
 		if (!o.callbacks) o.callbacks = {}
 		return o
+	}
+
+	preApiFreeze(api) {
+		api.tip = this.dom.tip
+		api.appInit = appInit
 	}
 
 	async init() {

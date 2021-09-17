@@ -89,6 +89,56 @@ export function getInitFxn(_Class_) {
 	}
 }
 
+export function getAppInit(_Class_) {
+	return getInitPrepFxn(_Class_, prepApp)
+}
+
+export function getStoreInit(_Class_) {
+	return getInitPrepFxn(_Class_, prepStore)
+}
+
+export function getCompInit(_Class_) {
+	return getInitPrepFxn(_Class_, prepComponent)
+}
+
+function getInitPrepFxn(_Class_, prepFxn) {
+	if (typeof prepFxn != 'function') throw 'prepFxn must be a function'
+
+	/*
+		opts
+		- the argument to the _Class_ constructor
+	*/
+	return async opts => {
+		let self
+		try {
+			// create a _Class_ instance with mutable private properties and methods
+			self = new _Class_(opts)
+			prepFxn(self, opts)
+
+			// get the instance's api that may hide its mutable props and methods
+			// - if there is already an instance api as constructed, use it
+			// - if not, expose the mutable instance as its public api
+			const api = self.api || self
+			// optionally expose the hidden instance to debugging and testing code
+			if (self.debug || (self.opts && self.opts.debug)) api.Inner = self
+			// an instance may want to add or modify api properties before it is frozen
+			if (typeof self.preApiFreeze == 'function') self.preApiFreeze(api)
+			// freeze the api's properties and methods before exposing
+			Object.freeze(api)
+
+			// instance.init() can be an async function
+			// which is not compatible within a constructor() function,
+			// so call it here if it is available as an instance method
+			if (self.init) await self.init()
+			if (self.bus) self.bus.emit('postInit')
+			return api
+		} catch (e) {
+			if (self && self.printError) self.printError(e)
+			else throw e
+		}
+	}
+}
+
 /*
 	may apply overrides to instance opts
 	if there is an instance.type key in app.opts
@@ -168,7 +218,7 @@ export function getStoreApi(self) {
 			await actions[action.type].call(self, action)
 			return await api.copyState()
 		},
-		async copyState(opts = {}) {
+		async copyState() {
 			const stateCopy = self.fromJson(self.toJson(self.state))
 			self.deepFreeze(stateCopy)
 			return stateCopy
@@ -192,7 +242,6 @@ export function getAppApi(self) {
 	const middlewares = []
 
 	const api = {
-		type: self.type,
 		opts: self.opts,
 		async dispatch(action) {
 			/*
@@ -291,9 +340,7 @@ export function getAppApi(self) {
 	// expose tooltip if set, expected to be shared in common
 	// by all components within an app; should use the HOPI
 	// pattern to hide the mutable parts, not checked here
-	if (self.tip) api.tip = self.tip
 	if (self.opts.debugName) window[self.opts.debugName] = api
-	if (self.appInit) api.appInit = self.appInit
 	if (!self.bus) {
 		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender']
 		if (self.customEvents) self.eventTypes.push(...self.customEvents)

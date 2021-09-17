@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 
 class MassRegression {
@@ -204,4 +204,4 @@ function setRenderers(self) {
 	}
 }
 
-export const regressionInit = rx.getInitFxn(MassRegression)
+export const regressionInit = getCompInit(MassRegression)

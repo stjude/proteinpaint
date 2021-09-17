@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, multiInit } from '../common/rx.core'
 import { searchInit } from '../termdb/search'
 import { filter3Init } from '../termdb/filter3'
 import { chartsInit } from './charts'
@@ -29,7 +29,7 @@ class TdbNav {
 		try {
 			this.cohortFilter = getFilterItemByTag(this.app.getState().termfilter.filter, 'cohortFilter')
 			this.initUI()
-			this.components = await rx.multiInit({
+			this.components = await multiInit({
 				search: searchInit({
 					app: this.app,
 					holder: this.dom.searchDiv,
@@ -118,7 +118,7 @@ class TdbNav {
 	}
 }
 
-export const navInit = rx.getInitFxn(TdbNav)
+export const navInit = getCompInit(TdbNav)
 
 function setRenderers(self) {
 	self.initUI = () => {

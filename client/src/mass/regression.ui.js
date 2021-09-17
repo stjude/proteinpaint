@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { termsettingInit } from '../common/termsetting'
 import { getTermSelectionSequence } from './charts'
@@ -51,7 +51,7 @@ class MassRegressionUI {
 	}
 
 	main() {
-		this.config = rx.copyMerge('{}', this.state.config)
+		this.config = copyMerge('{}', this.state.config)
 		if (!this.dom.submitBtn) this.initUI()
 	}
 }
@@ -403,4 +403,4 @@ function setRenderers(self) {
 	}
 }
 
-export const regressionUIInit = rx.getInitFxn(MassRegressionUI)
+export const regressionUIInit = getCompInit(MassRegressionUI)
