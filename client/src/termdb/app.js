@@ -18,11 +18,23 @@ https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/
 */
 
 class TdbApp {
+	constructor(opts) {
+		if (!opts.holder) select('body').append('div')
+		// do this in the constructor to have an dom.errdiv
+		// available at any point during initialization
+		this.dom = {
+			holder: opts.holder,
+			topbar: opts.holder.append('div'),
+			errdiv: opts.holder.append('div'),
+			tip: new Menu({ padding: '5px' })
+		}
+	}
+
 	validateOpts(o) {
 		if (!o.callbacks) o.callbacks = {}
 		if (o.tree) {
-			if (o.tree.disable_terms && !o.tree.click_term) {
-				throw `opts.tree.disable_terms is used only when opts.tree.click_term is set`
+			if (o.tree.disable_terms && !o.tree.click_term && !(o.barchart || !o.barchart.bar_click_override)) {
+				throw `opts.tree.disable_terms is used only when opts.tree.click_term or opts.barchart.bar_click_override is set`
 			}
 			if (!o.search) o.search = {}
 			if (o.tree.click_term) o.search.click_term = o.tree.click_term
@@ -33,18 +45,12 @@ class TdbApp {
 
 	async preApiFreeze(api) {
 		api.vocabApi = await vocabInit(this.api, this.opts)
-		api.tip = new Menu({ padding: '5px' })
+		api.tip = this.dom.tip
 		api.appInit = appInit
 	}
 
 	async init() {
 		try {
-			this.dom = {
-				tip: this.api.tip,
-				holder: this.opts.holder, // do not modify holder style
-				topbar: this.opts.holder.append('div'),
-				errdiv: this.opts.holder.append('div')
-			}
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
 			await this.setComponents()

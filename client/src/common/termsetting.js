@@ -79,9 +79,9 @@ class TermSetting {
 				// term is read-only if it comes from state, let it remain read-only
 				this.term = data.term
 				this.q = rx.fromJson(rx.toJson(data.q)) // q{} will be altered here and must not be read-only
-				this.disable_terms = data.disable_terms
-				this.exclude_types = data.exclude_types
-				this.filter = data.filter
+				if ('disable_terms' in data) this.disable_terms = data.disable_terms
+				if ('exclude_types' in data) this.exclude_types = data.exclude_types
+				if ('filter' in data) this.filter = data.filter
 				if ('activeCohort' in data) this.activeCohort = data.activeCohort
 				// reset methods by term type
 				if (this.term) this.setMethodsByTermType[this.term.type](this)

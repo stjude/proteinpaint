@@ -332,8 +332,7 @@ export function getAppApi(self) {
 			}
 			if (self.bus) self.bus.destroy()
 			delete self.store
-			delete self.api.Inner
-			delete self.api
+			if (self.api) delete self.api
 		}
 	}
 
@@ -419,8 +418,7 @@ export function getComponentApi(self) {
 				}
 			}
 			if (self.bus) self.bus.destroy()
-			delete self.api.Inner
-			delete self.api
+			if (self.api) delete self.api
 		}
 	}
 

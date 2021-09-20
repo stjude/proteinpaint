@@ -14,7 +14,7 @@ execution flow:
 */
 class TdbFilter {
 	constructor(opts) {
-		this.type = 'filterWrapper'
+		this.type = 'filter'
 		// set this.id, .app, .opts, .api
 		rx.prepComponent(this, opts)
 		this.dom = { holder: this.opts.holder }
@@ -48,6 +48,7 @@ class TdbFilter {
 			holder: this.dom.filterDiv,
 			newBtn: this.opts.newBtn,
 			emptyLabel: this.opts.emptyLabel,
+			debug: this.app.opts.debug,
 			callback: filter => {
 				this.app.dispatch({
 					type: 'filter_replace',
