@@ -45,12 +45,17 @@ module.exports = function initBinConfig(data, opts = {}) {
 function roundBinVals(binSize, firstBinStop, max, min) {
 	let binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding
 	const log = Math.floor(Math.log10(binSize))
-	binSize_rnd = Math.round(binSize / (5 * 10 ** log)) * (5 * 10 ** log)
-	if (binSize_rnd === 0) binSize_rnd = 1 * 10 ** log
-	firstBinStop_rnd = Math.round(firstBinStop / (5 * 10 ** log)) * (5 * 10 ** log)
-	if (firstBinStop_rnd === 0) firstBinStop_rnd = 1 * 10 ** log
-	if (binSize_rnd === 5 * 10 ** log && firstBinStop_rnd === 1 * 10 ** log) {
-		firstBinStop_rnd = 5 * 10 ** log
+	if (binSize >= 0.1 && binSize <= 2) {
+		// Round to the nearest one for small bin sizes
+		binSize_rnd = Math.round(binSize / (1 * 10 ** log)) * (1 * 10 ** log)
+		firstBinStop_rnd = Math.round(firstBinStop / (1 * 10 ** log)) * (1 * 10 ** log)
+	} else {
+		// Round to the nearest five for large bin sizes
+		binSize_rnd = Math.round(binSize / (5 * 10 ** log)) * (5 * 10 ** log)
+		firstBinStop_rnd = Math.round(firstBinStop / (5 * 10 ** log)) * (5 * 10 ** log)
+		if (binSize_rnd === 0) binSize_rnd = 1 * 10 ** log
+		if (firstBinStop_rnd === 0) firstBinStop_rnd = 1 * 10 ** log
+		if (binSize_rnd === 5 * 10 ** log && firstBinStop_rnd === 1 * 10 ** log) firstBinStop_rnd = 5 * 10 ** log
 	}
 	if (firstBinStop_rnd < min) firstBinStop_rnd = firstBinStop_rnd * 2
 	// if the number of bins is above 8 after rounding, then set the last bin start to restrict the number of bins to 8
