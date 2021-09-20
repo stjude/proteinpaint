@@ -117,12 +117,12 @@ function getInitPrepFxn(_Class_, prepFxn) {
 
 			// get the instance's api that may hide its mutable props and methods
 			// - if there is already an instance api as constructed, use it
-			// - if not, expose the mutable instance as its public api
+			// - if not, expose the instance as its public api
 			const api = self.api || self
 			// optionally expose the hidden instance to debugging and testing code
 			if (self.debug || (self.opts && self.opts.debug)) api.Inner = self
 			// an instance may want to add or modify api properties before it is frozen
-			if (typeof self.preApiFreeze == 'function') self.preApiFreeze(api)
+			if (self.preApiFreeze) await self.preApiFreeze(api)
 			// freeze the api's properties and methods before exposing
 			Object.freeze(api)
 
@@ -312,6 +312,8 @@ export function getAppApi(self) {
 			return getComponents(self.components, dotSepNames)
 		},
 		destroy() {
+			// delete references to other objects to make it easier
+			// for automatic garbage collection to find unreferenced objects
 			for (const key in self.components) {
 				const component = self.components[key]
 				if (typeof component.destroy == 'function') {
@@ -328,7 +330,10 @@ export function getAppApi(self) {
 					delete self.dom[key]
 				}
 			}
+			if (self.bus) self.bus.destroy()
 			delete self.store
+			delete self.api.Inner
+			delete self.api
 		}
 	}
 
@@ -395,6 +400,8 @@ export function getComponentApi(self) {
 			return getComponents(self.components, dotSepNames)
 		},
 		destroy() {
+			// delete references to other objects to make it easier
+			// for automatic garbage collection to find unreferenced objects
 			for (const key in self.components) {
 				const component = self.components[key]
 				if (typeof component.destroy == 'function') {
@@ -405,10 +412,15 @@ export function getComponentApi(self) {
 				delete self.components[key]
 			}
 			if (typeof self.destroy == 'function') self.destroy()
-			self.dom.holder.selectAll('*').remove()
-			for (const key in self.dom) {
-				delete self.dom[key]
+			if (self.dom) {
+				if (self.dom.holder) self.dom.holder.selectAll('*').remove()
+				for (const key in self.dom) {
+					delete self.dom[key]
+				}
 			}
+			if (self.bus) self.bus.destroy()
+			delete self.api.Inner
+			delete self.api
 		}
 	}
 
