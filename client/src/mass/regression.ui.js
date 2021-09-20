@@ -2,6 +2,7 @@ import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { termsettingInit } from '../common/termsetting'
 import { getTermSelectionSequence } from './charts'
+import { dofetch3 } from '../client'
 
 class MassRegressionUI {
 	constructor(opts) {
@@ -155,7 +156,7 @@ function setRenderers(self) {
 			showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
 			usecase: { target: config.chartType, detail: d.detail },
 			disable_terms,
-			callback: term => {
+			callback: async term => {
 				if (!term) {
 					const i = pills.indexOf(pill)
 					if (Array.isArray(d.selected)) d.selected.splice(i, 1)
@@ -179,6 +180,23 @@ function setRenderers(self) {
 						disable_terms.push(term.term.id)
 					}
 					pill.main(term)
+					const q = {
+						term1_q: term.q,
+						filter: self.state.termfilter.filter
+					}
+					const url =
+						'/termdb-barsql?' +
+						'term1_id=' +
+						term.id +
+						'&' +
+						encodeURIComponent(JSON.stringify(q)) +
+						'&genome=' +
+						self.state.vocab.genome +
+						'&dslabel=' +
+						self.state.vocab.dslabel
+					const data = await dofetch3(url, {}, self.app.opts.fetchOpts)
+					if (data.error) throw data.error
+					console.log(data)
 					if (d.limit > 1) {
 						if (!d.selected) d.selected = []
 						// if term is already selected, just replace q for that d.selected[] term
