@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getAppInit, multiInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { vocabInit } from './vocabulary'
 import { navInit } from './nav'
@@ -18,31 +18,33 @@ https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/
 */
 
 class TdbApp {
-	constructor(opts = {}) {
-		this.type = 'app'
-		// set this.id, .opts, .api
-		rx.prepApp(this, opts)
-		this.api.vocabApi = vocabInit(this.api, this.opts)
-		this.dom = {
-			tip: new Menu({ padding: '5px' }),
-			holder: opts.holder, // do not modify holder style
-			topbar: opts.holder.append('div'),
-			errdiv: opts.holder.append('div')
-		}
-	}
-
 	validateOpts(o) {
 		if (!o.callbacks) o.callbacks = {}
+		if (o.tree) {
+			if (o.tree.disable_terms && !o.tree.click_term) {
+				throw `opts.tree.disable_terms is used only when opts.tree.click_term is set`
+			}
+			if (!o.search) o.search = {}
+			if (o.tree.click_term) o.search.click_term = o.tree.click_term
+			if (o.tree.disable_terms) o.search.disable_terms = o.tree.disable_terms
+		}
 		return o
 	}
 
-	preApiFreeze(api) {
-		api.tip = this.dom.tip
+	async preApiFreeze(api) {
+		api.vocabApi = await vocabInit(this.api, this.opts)
+		api.tip = new Menu({ padding: '5px' })
 		api.appInit = appInit
 	}
 
 	async init() {
 		try {
+			this.dom = {
+				tip: this.api.tip,
+				holder: this.opts.holder, // do not modify holder style
+				topbar: this.opts.holder.append('div'),
+				errdiv: this.opts.holder.append('div')
+			}
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
 			await this.setComponents()
@@ -54,7 +56,7 @@ class TdbApp {
 
 	async setComponents() {
 		try {
-			this.components = await rx.multiInit({
+			this.components = await multiInit({
 				nav: navInit({
 					app: this.api,
 					holder: this.dom.topbar,
@@ -86,7 +88,7 @@ class TdbApp {
 }
 
 // must use the await keyword when using this appInit()
-export const appInit = rx.getInitFxn(TdbApp)
+export const appInit = getAppInit(TdbApp)
 
 function setInteractivity(self) {
 	self.downloadView = id => {

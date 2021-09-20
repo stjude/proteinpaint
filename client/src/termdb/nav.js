@@ -28,6 +28,18 @@ class TdbNav {
 		this.initUI()
 	}
 
+	getState(appState) {
+		this.cohortKey = appState.termdbConfig.selectCohort && appState.termdbConfig.selectCohort.term.id
+		return {
+			searching: this.searching, // for detection of internal state change
+			nav: appState.nav,
+			activeCohort: appState.activeCohort,
+			termdbConfig: appState.termdbConfig,
+			filter: appState.termfilter.filter,
+			expandedTermIds: appState.tree.expandedTermIds
+		}
+	}
+
 	async init() {
 		try {
 			this.components = await rx.multiInit({
@@ -35,8 +47,6 @@ class TdbNav {
 					app: this.app,
 					holder: this.dom.searchDiv,
 					resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
-					click_term: this.app.opts.tree && this.app.opts.tree.click_term,
-					disable_terms: this.app.opts.tree && this.app.opts.tree.disable_terms,
 					callbacks: {
 						'postSearch.nav': data => {
 							if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
@@ -55,17 +65,6 @@ class TdbNav {
 			})
 		} catch (e) {
 			throw e
-		}
-	}
-	getState(appState) {
-		this.cohortKey = appState.termdbConfig.selectCohort && appState.termdbConfig.selectCohort.term.id
-		return {
-			searching: this.searching, // for detection of internal state change
-			nav: appState.nav,
-			activeCohort: appState.activeCohort,
-			termdbConfig: appState.termdbConfig,
-			filter: appState.termfilter.filter,
-			expandedTermIds: appState.tree.expandedTermIds
 		}
 	}
 	reactsTo(action) {

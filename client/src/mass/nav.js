@@ -34,8 +34,6 @@ class TdbNav {
 					app: this.app,
 					holder: this.dom.searchDiv,
 					resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
-					click_term: this.app.opts.tree && this.app.opts.tree.click_term,
-					disable_terms: this.app.opts.tree && this.app.opts.tree.disable_terms,
 					callbacks: {
 						'postSearch.nav': data => {
 							if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
