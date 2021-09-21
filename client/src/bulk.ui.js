@@ -194,10 +194,9 @@ export function bulkui(x, y, genomes, hostURL, holder, header) {
 			pane2.header.html('<span style="opacity:.5">FILE</span> ' + file.name)
 			visual_holder = pane2.body
 		}
-		// update sandbox panel header for landing page
+		// update sandbox panel for app drawer
 		if (holder !== undefined) {
-			header.html('<span style="opacity:.5">FILE</span> ' + file.name)
-			visual_holder = visualdiv
+			visual_holder = visualdiv.append('div').html('<span style="opacity:.5">FILE</span> ' + file.name) //Fix for ui in a div within sandbox, rather than consuming the entire sandbox
 		}
 
 		inputdiv.selectAll('*').remove()
