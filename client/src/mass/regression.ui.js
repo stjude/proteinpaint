@@ -255,8 +255,8 @@ function setRenderers(self) {
 		updateTermInfoDiv(term)
 
         async function updateValueCount(term){
-            // query backend for total sample count for each category of categorical or condtion terms
-            if (term.term.type != 'categorical' && term.term.type != 'condition') return
+            // query backend for total sample count for each value of categorical or condition terms
+            // and included and excluded sample count for nuemric term
             const q = JSON.parse(JSON.stringify(term.q))
             if (term.q.values) delete q.values
             const url =
@@ -273,19 +273,32 @@ function setRenderers(self) {
                 self.state.vocab.dslabel
             const data = await dofetch3(url, {}, self.app.opts.fetchOpts)
             if (data.error) throw data.error
-            const values = term.q.groupsetting && term.q.groupsetting.inuse ?
+            if (term.term.type == 'categorical' || term.term.type == 'condition') {
+                // add sample count data as q.values[].count (supports groupsetting)
+                const values = term.q.groupsetting && term.q.groupsetting.inuse ?
                 ( term.q.groupsetting.predefined_groupset_idx !== undefined ?
                     JSON.parse(JSON.stringify(term.term.groupsetting.lst[term.q.groupsetting.predefined_groupset_idx].groups)) :
                     JSON.parse(JSON.stringify(term.q.groupsetting.customset.groups)) ) :
                 JSON.parse(JSON.stringify(term.term.values))
-            const label_key = term.q.groupsetting && term.q.groupsetting.inuse ? 'name' : 'label'
-            const count_values = data.charts[0].serieses
-            // add sample count data as q.values[].count (supports groupsetting)
-            for( const key in values){
-                const count_data = count_values.find(v => v.seriesId == values[key][label_key])
-                values[key].count = count_data && count_data.total ? count_data.total : 0
+                const label_key = term.q.groupsetting && term.q.groupsetting.inuse ? 'name' : 'label'
+                const count_values = data.charts[0].serieses
+                for (const key in values){
+                    const count_data = count_values.find(v => v.seriesId == values[key][label_key])
+                    values[key].count = count_data && count_data.total ? count_data.total : 0
+                }
+                term.q.values = values
+            } else {
+                // add included and excluded sample count as term.q.count: { included: n, excluded: n }
+                const values = term.term.values || {}
+                term.q.count = { included: 0, excluded: 0 }
+                const count_values = data.charts[0].serieses
+                for(const count of count_values){
+                    if (Object.values(values).findIndex(v => v.label == count.seriesId) == -1)
+                        term.q.count.included = term.q.count.included + count.total
+                    else
+                        term.q.count.excluded = term.q.count.excluded + count.total
+                }
             }
-            term.q.values = values
         }
 
 		function updateTermInfoDiv(term_) {
@@ -295,7 +308,13 @@ function setRenderers(self) {
 			const values_table = term_values_div.append('table')
 			const q = (term_ && term_.q) || {}
 			if (d.detail == 'independent' && term_ && term_.term) {
-				if (term_.term.type == 'float' || term_.term.type == 'integer') term_summmary_div.text(q.use_as || 'continuous')
+				if (term_.term.type == 'float' || term_.term.type == 'integer'){
+                    term_summmary_div.html(
+                        `Use as ${q.use_as || 'continuous'} vairable. </br>
+                        ${q.count.included} sample included.` +
+                        ( q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '' )
+                    )
+                }
 				else if (term_.term.type == 'categorical' || term_.term.type == 'condition') {
 					let text
 					if (q.groupsetting && q.groupsetting.inuse) {
@@ -310,7 +329,13 @@ function setRenderers(self) {
 					}
 					term_summmary_div.text(text)
 				}
-			}
+			} else if (term_ && term_.term) {
+                if (term_.term.type == 'float' || term_.term.type == 'integer') 
+                    term_summmary_div.text( 
+                        `${q.count.included} sample included.` +
+                        (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
+                    )
+            }
 		}
 
 		function make_values_table(args) {
