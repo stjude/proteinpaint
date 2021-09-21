@@ -296,7 +296,9 @@ function parseRaw(mavb, lines) {
 		mavb.holder = pane.body
 	} else {
 		mavb.holder.selectAll('*').remove()
-		if (mavb.sandbox_header !== undefined) mavb.sandbox_header.text(mavb.filename)
+		//Fix for rendering data correctly now that the mavb UI is in a div rather than consuming the entire sandbox and therefore not able to access the header
+		if (mavb.sandbox_header !== undefined)
+			mavb.holder.append('div').html('<span style="opacity:.5;font-size:.7em">FILE: </span> ' + mavb.filename)
 	}
 	mavb.data = data
 
