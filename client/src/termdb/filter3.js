@@ -48,7 +48,7 @@ class TdbFilter {
 			holder: this.dom.filterDiv,
 			newBtn: this.opts.newBtn,
 			emptyLabel: this.opts.emptyLabel,
-			debug: this.app.opts.debug,
+			debug: this.opts.debug,
 			callback: filter => {
 				this.app.dispatch({
 					type: 'filter_replace',

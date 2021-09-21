@@ -46,7 +46,11 @@ class MassApp {
 
 	async preApiFreeze(api) {
 		api.tip = new Menu({ padding: '5px' })
-		api.vocabApi = await vocabInit(api, this.opts)
+		api.vocabApi = await vocabInit({
+			app: api,
+			state: this.opts.state,
+			fetchOpts: this.opts.fetchOpts
+		})
 	}
 
 	async init() {

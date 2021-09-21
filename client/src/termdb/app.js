@@ -44,7 +44,7 @@ class TdbApp {
 	}
 
 	async preApiFreeze(api) {
-		api.vocabApi = await vocabInit(this.api, this.opts)
+		api.vocabApi = await vocabInit({ app: this.api, state: this.opts.state, fetchOpts: this.opts.fetchOpts })
 		api.tip = this.dom.tip
 		api.appInit = appInit
 	}

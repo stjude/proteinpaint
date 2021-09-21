@@ -245,7 +245,8 @@ class Filter {
 				}
 			}
 
-			this.vocabApi = vocabInit(app, {
+			this.vocabApi = vocabInit({
+				app,
 				state: app.getState()
 			})
 		}

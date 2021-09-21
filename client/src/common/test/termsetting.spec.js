@@ -1,7 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
 const termsettingInit = require('../termsetting').termsettingInit
-const vocabInit = require('../../termdb/vocabulary').vocabInit
 const vocabData = require('../../termdb/test/vocabData')
 
 /*********
@@ -37,7 +36,6 @@ function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 
 	opts.pill = termsettingInit({
 		holder,
-		//vocabApi: vocabInit(app, { state }),
 		vocab,
 		use_bins_less: opts.use_bins_less,
 		showFullMenu: opts.showFullMenu,
