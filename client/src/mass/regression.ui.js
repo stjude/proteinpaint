@@ -284,9 +284,9 @@ function setRenderers(self) {
                 const count_values = data.charts[0].serieses
                 for (const key in values){
                     let count_data
-                    if (term.term.type == 'condition') 
+                    if (term.q.groupsetting.inuse || term.term.type == 'condition') 
                         count_data = count_values.find(v => v.seriesId == values[key][label_key])
-                    else if (term.term.type == 'categorical') 
+                    else if (term.term.type == 'categorical')
                         count_data = count_values.find(v => v.seriesId == key)
                     values[key].count = count_data && count_data.total ? count_data.total : 0
                 }
