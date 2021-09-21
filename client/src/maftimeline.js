@@ -101,8 +101,8 @@ export default function maftimelineui(genomes, holder, sandbox_header) {
 					}
 					// update sandbox panel header for landing page
 					if (holder !== undefined) {
-						sandbox_header.html('<span style="opacity:.5;font-size:.7em">MAF TIMELINE</span> ' + file.name)
-						visual_holder = visualdiv
+						//Fix for rendering data correctly now that the MAF UI is in a div rather than consuming the entire sandbox and therefore not able to access the header
+						visual_holder = visualdiv.html('<span style="opacity:.5;font-size:.7em">MAF TIMELINE</span> ' + file.name)
 						inputdiv.selectAll('*').remove()
 						saydiv.text('')
 					}
