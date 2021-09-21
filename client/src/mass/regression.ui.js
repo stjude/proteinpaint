@@ -245,7 +245,7 @@ function setRenderers(self) {
 
 		const termInfoDiv = newTermDiv
 			.append('div')
-			.style('display', d.detail == 'independent' && term && term.term ? 'block' : 'none')
+			.style('display', 'block')
 			.style('margin', '10px')
 			.style('font-size', '.8em')
 			.style('text-align', 'left')
@@ -283,7 +283,11 @@ function setRenderers(self) {
                 const label_key = term.q.groupsetting && term.q.groupsetting.inuse ? 'name' : 'label'
                 const count_values = data.charts[0].serieses
                 for (const key in values){
-                    const count_data = count_values.find(v => v.seriesId == values[key][label_key])
+                    let count_data
+                    if (term.term.type == 'condition') 
+                        count_data = count_values.find(v => v.seriesId == values[key][label_key])
+                    else if (term.term.type == 'categorical') 
+                        count_data = count_values.find(v => v.seriesId == key)
                     values[key].count = count_data && count_data.total ? count_data.total : 0
                 }
                 term.q.values = values
