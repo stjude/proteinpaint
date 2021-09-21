@@ -3,6 +3,7 @@ import { select } from 'd3-selection'
 import { termsettingInit } from '../common/termsetting'
 import { getTermSelectionSequence } from './charts'
 import { dofetch3 } from '../client'
+import { getNormalRoot } from '../common/filter'
 
 class MassRegressionUI {
 	constructor(opts) {
@@ -130,7 +131,7 @@ function setRenderers(self) {
 		self.updateBtns()
 	}
 
-	self.newPill = function(d, config, div, pills, disable_terms, term = null) {
+	self.newPill = async function(d, config, div, pills, disable_terms, term = null) {
 		const pillsDiv = div
 			.append('div')
 			.style('width', 'fit-content')
@@ -180,23 +181,8 @@ function setRenderers(self) {
 						disable_terms.push(term.term.id)
 					}
 					pill.main(term)
-					const q = {
-						term1_q: term.q,
-						filter: self.state.termfilter.filter
-					}
-					const url =
-						'/termdb-barsql?' +
-						'term1_id=' +
-						term.id +
-						'&' +
-						encodeURIComponent(JSON.stringify(q)) +
-						'&genome=' +
-						self.state.vocab.genome +
-						'&dslabel=' +
-						self.state.vocab.dslabel
-					const data = await dofetch3(url, {}, self.app.opts.fetchOpts)
-					if (data.error) throw data.error
-					console.log(data)
+                    term.id = term.term.id
+                    await updateValueCount(term)
 					if (d.limit > 1) {
 						if (!d.selected) d.selected = []
 						// if term is already selected, just replace q for that d.selected[] term
@@ -265,7 +251,42 @@ function setRenderers(self) {
 			.style('text-align', 'left')
 			.style('color', '#999')
 
+        if (term) await updateValueCount(term)
 		updateTermInfoDiv(term)
+
+        async function updateValueCount(term){
+            // query backend for total sample count for each category of categorical or condtion terms
+            if (term.term.type != 'categorical' && term.term.type != 'condition') return
+            const q = JSON.parse(JSON.stringify(term.q))
+            if (term.q.values) delete q.values
+            const url =
+                '/termdb-barsql?' +
+                'term1_id=' + 
+                term.id +
+                '&term1_q=' +
+                encodeURIComponent(JSON.stringify(q)) +
+                '&filter=' +
+                encodeURIComponent(JSON.stringify(getNormalRoot(self.state.termfilter.filter))) +
+                '&genome=' +
+                self.state.vocab.genome +
+                '&dslabel=' +
+                self.state.vocab.dslabel
+            const data = await dofetch3(url, {}, self.app.opts.fetchOpts)
+            if (data.error) throw data.error
+            const values = term.q.groupsetting && term.q.groupsetting.inuse ?
+                ( term.q.groupsetting.predefined_groupset_idx !== undefined ?
+                    JSON.parse(JSON.stringify(term.term.groupsetting.lst[term.q.groupsetting.predefined_groupset_idx].groups)) :
+                    JSON.parse(JSON.stringify(term.q.groupsetting.customset.groups)) ) :
+                JSON.parse(JSON.stringify(term.term.values))
+            const label_key = term.q.groupsetting && term.q.groupsetting.inuse ? 'name' : 'label'
+            const count_values = data.charts[0].serieses
+            // add sample count data as q.values[].count (supports groupsetting)
+            for( const key in values){
+                const count_data = count_values.find(v => v.seriesId == values[key][label_key])
+                values[key].count = count_data && count_data.total ? count_data.total : 0
+            }
+            term.q.values = values
+        }
 
 		function updateTermInfoDiv(term_) {
 			termInfoDiv.selectAll('*').remove()
@@ -278,12 +299,14 @@ function setRenderers(self) {
 				else if (term_.term.type == 'categorical' || term_.term.type == 'condition') {
 					let text
 					if (q.groupsetting && q.groupsetting.inuse) {
-						text = Object.keys(term_.q.groupsetting.customset.groups).length + ' groups'
-						make_values_table({ term: term_, values: term_.q.groupsetting.customset.groups, values_table, key: 'name' })
+                        const values = term_.q.values !== undefined ? term_.q.values : term_.q.groupsetting.customset.groups
+						text = Object.keys(values).length + ' groups'
+						make_values_table({ term: term_, values, values_table, key: 'name' })
 					} else {
+                        const values = term_.q.values !== undefined ? term_.q.values : term_.term.values
 						text =
 							Object.keys(term_.term.values).length + (term_.term.type == 'categorical' ? ' categories' : ' grades')
-						make_values_table({ term: term_, values: term_.term.values, values_table, key: 'label' })
+						make_values_table({ term: term_, values, values_table, key: 'label' })
 					}
 					term_summmary_div.text(text)
 				}
@@ -292,18 +315,21 @@ function setRenderers(self) {
 
 		function make_values_table(args) {
 			const { term, values, values_table, key } = args
+            const values_array = Object.values(values)
 			values_table
 				.style('margin', '10px 5px')
 				.style('border-spacing', '3px')
 				.style('border-collapse', 'collapse')
 
-			const tr_data = Object.values(values)
-			tr_data[0].ref_grp = true
+			const tr_data = term.term.type == 'condition' || values_array[0].count == undefined 
+                ? values_array
+                : values_array.sort((a,b)=> b.count - a.count)
+			tr_data[0].refGrp = true
 
 			function updateTable() {
-				const ref_i = tr_data.findIndex(v => v.ref_grp == true)
-				if (term.q.groupsetting.inuse) term.q.ref_grp = values[ref_i]['name']
-				else term.q.ref_grp = Object.keys(values)[ref_i]
+                const refGrp = tr_data.find(v => v.refGrp == true)
+                if (term.q.groupsetting.inuse) term.q.refGrp = refGrp[key]
+                else term.q.refGrp = Object.keys(values).find(k => values[k][key] == refGrp[key])
 				values_table
 					.selectAll('tr')
 					.data(tr_data)
@@ -321,9 +347,9 @@ function setRenderers(self) {
 						.on('mouseover', () => tr.style('background', '#fff6dc'))
 						.on('mouseout', () => tr.style('background', 'white'))
 						.on('click', () => {
-							const ref_value = tr_data.find(v => v.ref_grp == true)
-							delete ref_value.ref_grp
-							value.ref_grp = true
+							const ref_value = tr_data.find(v => v.refGrp == true)
+							delete ref_value.refGrp
+							value.refGrp = true
 							ref_text.style('display', 'inline-block')
 							updateTable()
 						})
@@ -332,7 +358,11 @@ function setRenderers(self) {
 						.style('padding', '3px 5px')
 						.style('text-align', 'left')
 						.style('color', 'black')
-						.html(value[key])
+						.html((value.count !== undefined 
+                                ? `<span style='display: inline-block;width: 70px;'>n= ${value.count} </span>`
+                                : '') 
+                            +  value[key]
+                        )
 
 					const reference_td = tr
 						.append('td')
@@ -341,7 +371,7 @@ function setRenderers(self) {
 
 					const ref_text = reference_td
 						.append('div')
-						.style('display', value.ref_grp ? 'inline-block' : 'none')
+						.style('display', value.refGrp ? 'inline-block' : 'none')
 						.style('padding', '2px 10px')
 						.style('border', '1px solid #bbb')
 						.style('border-radius', '10px')
@@ -352,7 +382,7 @@ function setRenderers(self) {
 
 				function trUpdate(value) {
 					const tr = select(this)
-					tr.select('div').style('display', value.ref_grp ? 'inline-block' : 'none')
+					tr.select('div').style('display', value.refGrp ? 'inline-block' : 'none')
 					self.dom.submitBtn.property('disabled', false)
 				}
 			}
