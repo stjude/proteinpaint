@@ -94,103 +94,108 @@ export function drawer_init(app, features, overrides = {}) {
 		apps_sandbox_div: dom.sandbox_div,
 		apps_off,
 		addBtn(headbox, btnLabel, padw_sm, jwt) {
-				// NOTE: set app_btn_active to false initially to
-				// make the drawer animation consistent on load,
-				// regardless of whether an app is to be opened right away
-				dom.drawer_div = dom.drawer_row
-					.append('div')
-					.style('position', 'relative')
-					.style('margin', '0 20px')
-					.style('padding', `0 ${padw_sm}`)
-					.style('top', `-${window.screen.height}px`)
-					.style('display', 'inline-block')
-					.style('overflow', 'hidden')
-					.style('background-color', '#f5f5f5')
-					.style('border-radius', '0px 0px 5px 5px')
-					.style('width', '93vw')
+			// NOTE: set app_btn_active to false initially to
+			// make the drawer animation consistent on load,
+			// regardless of whether an app is to be opened right away
+			dom.drawer_div = dom.drawer_row
+				.append('div')
+				.style('position', 'relative')
+				.style('margin', '0 20px')
+				.style('padding', `0 ${padw_sm}`)
+				.style('top', `-${window.screen.height}px`)
+				.style('display', 'inline-block')
+				.style('overflow', 'hidden')
+				.style('background-color', '#f5f5f5')
+				.style('border-radius', '0px 0px 5px 5px')
+				.style('width', '93vw')
 
-				dom.btn_wrapper = headbox
-					.append('div')
-					.style('position', 'relative')
-					.style('display', 'inline-block')
-					.style('margin-left', '5px')
-					.style('margin-right', '5px')
-					.style('border-radius', '5px')
-					.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
-					.style('color', app_btn_active ? '#fff' : '#000')
-					.on('click', async () => {
-						d3event.stopPropagation()
-						// toggle button color and hide/show apps div
-						app_btn_active = !app_btn_active
-						await load_examples()
-						slide_drawer()
-						if (app_btn_active) {
-							setTimeout(() => {
-								drawer_full_height = dom.drawer_div.node().getBoundingClientRect().height + 5
-							}, settings.duration + 5)
-						}
-					})
-					.on('mouseover', () => {
-						dom.btn_wrapper.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
-					})
-					.on('mouseout', () => {
-						dom.btn_wrapper.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
-					})
+			dom.btn_wrapper = headbox
+				.append('div')
+				.style('position', 'relative')
+				.style('display', 'inline-block')
+				.style('margin-left', '5px')
+				.style('margin-right', '5px')
+				.style('border-radius', '5px')
+				.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+				.style('color', app_btn_active ? '#fff' : '#000')
+				.on('click', async () => {
+					d3event.stopPropagation()
+					// toggle button color and hide/show apps div
+					app_btn_active = !app_btn_active
+					await load_examples()
+					slide_drawer()
+					if (app_btn_active) {
+						setTimeout(() => {
+							drawer_full_height = dom.drawer_div.node().getBoundingClientRect().height + 5
+						}, settings.duration + 5)
+					}
+				})
+				.on('mouseover', () => {
+					dom.btn_wrapper.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
+				})
+				.on('mouseout', () => {
+					dom.btn_wrapper.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
+				})
 
-				dom.btn = dom.btn_wrapper
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.style('display', 'inline-block')
-					.style('background-color', 'transparent')
-					.style('color', app_btn_active ? '#fff' : '#000')
-					.style('padding', padw_sm)
-					.style('margin', '0px 5px')
-					.style('cursor', 'pointer')
-					.text(btnLabel)
+			dom.btn = dom.btn_wrapper
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.style('display', 'inline-block')
+				.style('background-color', 'transparent')
+				.style('color', app_btn_active ? '#fff' : '#000')
+				.style('padding', padw_sm)
+				.style('margin', '0px 5px')
+				.style('cursor', 'pointer')
+				.text(btnLabel)
 
-				// an empty spacer div, needed since the arrows are absolutely positioned
-				dom.drawer_hint = dom.btn_wrapper
-					.append('div')
-					.style('position', 'relative')
-					.style('display', 'inline-block') //app_btn_active ? '' : 'inline-block')
-					.style('height', settings.arrow_size.closed + 'px')
-					.style('width', app_btn_active ? settings.hint_width.open : settings.hint_width.closed)
-					.style('background-color', 'transparent')
-					.style('text-align', 'center')
-					.style('cursor', 'pointer')
+			// an empty spacer div, needed since the arrows are absolutely positioned
+			dom.drawer_hint = dom.btn_wrapper
+				.append('div')
+				.style('position', 'relative')
+				.style('display', 'inline-block') //app_btn_active ? '' : 'inline-block')
+				.style('height', settings.arrow_size.closed + 'px')
+				.style('width', app_btn_active ? settings.hint_width.open : settings.hint_width.closed)
+				.style('background-color', 'transparent')
+				.style('text-align', 'center')
+				.style('cursor', 'pointer')
 
-				dom.drawer_arrow = dom.btn_wrapper
-					.append('div')
-					.style('position', 'absolute')
-					.style('font-size', settings.arrow_size.closed + 'px')
-					.style('right', settings.hint_pos.closed.rt + 'px')
-					.style('bottom', settings.hint_pos.closed.btm + 'px')
-					.style('background-color', 'transparent')
-					.style('color', settings.arrow_color.closed)
-					.style('opacity', app_btn_active ? 0 : 1)
-					.style('cursor', 'pointer')
-					.html('&#9660;')
+			dom.drawer_arrow = dom.btn_wrapper
+				.append('div')
+				.style('position', 'absolute')
+				.style('font-size', settings.arrow_size.closed + 'px')
+				.style('right', settings.hint_pos.closed.rt + 'px')
+				.style('bottom', settings.hint_pos.closed.btm + 'px')
+				.style('background-color', 'transparent')
+				.style('color', settings.arrow_color.closed)
+				.style('opacity', app_btn_active ? 0 : 1)
+				.style('cursor', 'pointer')
+				.html('&#9660;')
 
-				dom.drawer_arrow_open = dom.btn_wrapper
-					.append('div')
-					.style('position', 'absolute')
-					.style('font-size', settings.arrow_size.open + 'px')
-					.style('left', settings.hint_pos.open.left + 'px')
-					.style('bottom', settings.hint_pos.open.btm + 'px')
-					.style('transform', 'rotate(180deg)')
-					.style('background-color', 'transparent')
-					.style('color', settings.arrow_color.open)
-					.style('opacity', app_btn_active ? 1 : 0)
-					.style('cursor', 'pointer')
-					.style('pointer-events', app_btn_active ? 'auto' : 'none')
-					.html('&#9660;')
+			dom.drawer_arrow_open = dom.btn_wrapper
+				.append('div')
+				.style('position', 'absolute')
+				.style('font-size', settings.arrow_size.open + 'px')
+				.style('left', settings.hint_pos.open.left + 'px')
+				.style('bottom', settings.hint_pos.open.btm + 'px')
+				.style('transform', 'rotate(180deg)')
+				.style('background-color', 'transparent')
+				.style('color', settings.arrow_color.open)
+				.style('opacity', app_btn_active ? 1 : 0)
+				.style('cursor', 'pointer')
+				.style('pointer-events', app_btn_active ? 'auto' : 'none')
+				.html('&#9660;')
 
-				// detect whether to show examples right away, which is when the url is barebone without any route paths or search parameters
-				app_btn_active = window.location.pathname == '/' && !window.location.search.length
-				// if an app is loaded when the page opens, delay the loading
-				// of examples in order to not affect that loading,
-				// otherwise load trigger the loading of examples right away
-				setTimeout(load_examples, app_btn_active ? 0 : 5000)
+			// detect whether to show examples right away, which is when the url is barebone without any route paths or search parameters
+			app_btn_active = window.location.pathname == '/' && !window.location.search.length
+			// if an app is loaded when the page opens, delay the loading
+			// of examples in order to not affect that loading,
+			// otherwise load trigger the loading of examples right away
+			// setTimeout(load_examples, app_btn_active ? 0 : 5000)
+
+			//Fix for examplesjson loading before Apps btn is clicked
+			if (app_btn_active) {
+				load_examples()
+			}
 		}
 	}
 }
