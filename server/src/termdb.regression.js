@@ -113,7 +113,9 @@ function get_refCategory(term, q) {
 	if (term.type == 'categorical' || term.type == 'condition') {
 		// q attribute will tell which category is reference
 		// else first category as reference
-		if (q.ref_grp) return q.ref_grp
+		if (q.refGrp) return q.refGrp
+		else if (q.groupsetting && q.groupsetting.inuse && q.groupsetting.predefined_groupset_idx == undefined)
+			return term.groupsetting.lst[q.groupsetting.predefined_groupset_idx].groups[0]['name']
 		else if (q.groupsetting && q.groupsetting.inuse) return q.groupsetting.customset.groups[0]['name']
 		else return Object.keys(term.values)[0]
 	}
