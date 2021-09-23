@@ -75,7 +75,7 @@ class MassPlot {
 	}
 
 	reactsTo(action) {
-		if (action.type == 'plot_edit' || action.type == 'plot_show' || action.type == 'plot_prep') {
+		if (action.type.startsWith('plot_')) {
 			return action.id === this.id
 		}
 		if (action.type.startsWith('filter')) return true

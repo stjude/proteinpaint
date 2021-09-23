@@ -25,8 +25,8 @@ class MassRegressionUI {
 				selected: []
 			}
 		]
-		// work in progress: track reference category values or groups by term ID
-		this.refGrpsByTermId = {}
+		// track reference category values or groups by term ID
+		this.refGrpByTermId = {}
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -68,10 +68,10 @@ class MassRegressionUI {
 	}
 
 	reactsTo(action) {
-		if (action.type == 'plot_prep') {
+		if (action.type.startsWith('plot_')) {
 			return action.id === this.id
 		}
-        if (action.type.startsWith('filter')) return true
+		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
 	}
@@ -96,25 +96,23 @@ class MassRegressionUI {
 		// and included and excluded sample count for nuemric term
 		const q = JSON.parse(JSON.stringify(d.term.q))
 		delete q.values
-		const url =
-			'/termdb-barsql?' +
-			'term1_id=' +
-			d.term.id +
-			'&term1_q=' +
-			encodeURIComponent(JSON.stringify(q)) +
-			'&filter=' +
-			encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))) +
-			'&genome=' +
-			this.state.vocab.genome +
-			'&dslabel=' +
-			this.state.vocab.dslabel
-
+		const lst = [
+			'/termdb?getcategories=1',
+			'tid=' + d.term.id,
+			'term1_q=' + encodeURIComponent(JSON.stringify(q)),
+			'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel
+		]
+		if (q.bar_by_grade) lst.push('bar_by_grade=1')
+		if (q.bar_by_children) lst.push('bar_by_children=1')
+		if (q.value_by_max_grade) lst.push('value_by_max_grade=1')
+		if (q.value_by_most_recent) lst.push('value_by_most_recent=1')
+		if (q.value_by_computable_grade) lst.push('value_by_computable_grade=1')
+		const url = lst.join('&')
 		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
-		d.sampleCounts = {}
-		for (const series of data.charts[0].serieses) {
-			d.sampleCounts[series.seriesId] = series.total
-		}
+		d.sampleCounts = data.lst
 	}
 }
 
@@ -167,9 +165,10 @@ function setRenderers(self) {
 		const v = self.config[section.configKey]
 		const terms = Array.isArray(v) ? v : v ? [v] : []
 		section.selected = terms
-		section.disabled_terms = terms.map(d => d.term.id)
 		section.data = terms.map(term => {
-			return { section, term }
+			const d = { section, term }
+			setActiveValues(d)
+			return d
 		})
 		if (!section.pills) section.pills = {}
 		if (section.data.length < section.limit && !section.data.find(d => !d.term)) {
@@ -189,6 +188,13 @@ function setRenderers(self) {
 			.enter()
 			.append('div')
 			.each(addPill)
+	}
+
+	function setActiveValues(d) {
+		const gs = d.term.q.groupsetting || {}
+		const i = gs.inuse && gs.predefined_groupset_idx
+		d.values = gs.inuse ? (i !== undefined ? gs.lst[i].groups : gs.customset.groups) : d.term.term.values
+		d.label_key = gs.inuse ? 'name' : 'label'
 	}
 
 	async function addPill(d, i) {
@@ -277,7 +283,7 @@ function setRenderers(self) {
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
 				term_summmary_div.html(
 					`Use as ${q.use_as || 'continuous'} variable. </br>`
-        //   ${q.count.included} sample included.` + (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
+					//   ${q.count.included} sample included.` + (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
 				)
 			} else if (d.term.term.type == 'categorical' || d.term.term.type == 'condition') {
 				const gs = d.term.q.groupsetting || {}
@@ -294,11 +300,11 @@ function setRenderers(self) {
 						Object.keys(d.term.term.values).length + (d.term.term.type == 'categorical' ? ' categories' : ' grades')
 					make_values_table(d)
 				}
-                term_values_div
-                    .append('div')
-                    .style('padding', '5px 10px')
-                    .style('color', '#999')
-                    .text('Click on a row to mark it as reference.')
+				term_values_div
+					.append('div')
+					.style('padding', '5px 10px')
+					.style('color', '#999')
+					.text('Click on a row to mark it as reference.')
 				term_summmary_div.text(text)
 			}
 		} else if (d.section.configKey == 'term') {
@@ -310,12 +316,15 @@ function setRenderers(self) {
 	}
 
 	function make_values_table(d) {
-		const tr_data = Object.keys(d.sampleCounts).sort((a, b) => d.sampleCounts[b] - d.sampleCounts[a])
+		const tr_data = d.sampleCounts.sort((a, b) => b.samplecount - a.samplecount)
+		if (!('refGrp' in d) && d.term.q && 'refGrp' in d.term.q) d.refGrp = d.term.q.refGrp
 
-		if (!('refGrp' in d) || !tr_data.includes(d.refGrp)) {
-			d.refGrp = tr_data[0]
-			// todo, word in progress
-			self.refGrpsByTermId[d.term.id] = d.refGrp
+		if (!('refGrp' in d) || !tr_data.find(c => c.key === d.refGrp)) {
+			if (d.term.id in self.refGrpByTermId && tr_data.find(c => c.key === self.refGrpByTermId[d.term.id])) {
+				d.refGrp = self.refGrpByTermId[d.term.id]
+			} else {
+				d.refGrp = tr_data[0].key
+			}
 		}
 
 		const trs = d.values_table
@@ -338,10 +347,9 @@ function setRenderers(self) {
 		//d.values_table.selectAll('tr').sort((a,b) => d.sampleCounts[b.key] - d.sampleCounts[a.key])
 	}
 
-	function trEnter(key) {
+	function trEnter(item) {
 		const tr = select(this)
-		const pillData = this.parentNode.__data__
-		const value = { count: pillData.sampleCounts[key] }
+		const d = this.parentNode.__data__
 
 		tr.style('padding', '5px 5px')
 			.style('text-align', 'left')
@@ -349,9 +357,10 @@ function setRenderers(self) {
 			.on('mouseover', () => tr.style('background', '#fff6dc'))
 			.on('mouseout', () => tr.style('background', 'white'))
 			.on('click', () => {
-				pillData.refGrp = key
-				self.refGrpsByTermId[pillData.term.id] = pillData.refGrp
-				make_values_table(pillData)
+				d.refGrp = item.key
+				self.refGrpByTermId[d.term.id] = item.key
+				//d.term.q.refGrp = item.key
+				make_values_table(d)
 			})
 
 		tr.append('td')
@@ -359,9 +368,9 @@ function setRenderers(self) {
 			.style('text-align', 'left')
 			.style('color', 'black')
 			.html(
-				(value.count !== undefined
-					? `<span style='display: inline-block;width: 70px;'>n= ${value.count} </span>`
-					: '') + key //value[key]
+				(item.samplecount !== undefined
+					? `<span style='display: inline-block;width: 70px;'>n= ${item.samplecount} </span>`
+					: '') + item.label
 			)
 
 		const reference_td = tr
@@ -371,7 +380,7 @@ function setRenderers(self) {
 
 		const ref_text = reference_td
 			.append('div')
-			.style('display', key === pillData.refGrp ? 'inline-block' : 'none')
+			.style('display', item.key === d.refGrp ? 'inline-block' : 'none')
 			.style('padding', '2px 10px')
 			.style('border', '1px solid #bbb')
 			.style('border-radius', '10px')
@@ -380,16 +389,15 @@ function setRenderers(self) {
 			.text('REFERENCE')
 	}
 
-	function trUpdate(key) {
+	function trUpdate(item) {
 		const tr = select(this)
 		const pillData = this.parentNode.__data__
-		tr.select('div').style('display', key === pillData.refGrp ? 'inline-block' : 'none')
+		tr.select('div').style('display', item.key === pillData.refGrp ? 'inline-block' : 'none')
 		self.dom.submitBtn.property('disabled', false)
 	}
 
 	self.updateBtns = () => {
-		const hasMissingTerms =
-			self.sections.filter(t => !t[t.configKey] || (t.limit > 1 && !t[t.configKey].length)).length > 0
+		const hasMissingTerms = self.sections.filter(t => !t.selected || (t.limit > 1 && !t.selected.length)).length > 0
 		self.dom.submitBtn.property('disabled', hasMissingTerms)
 	}
 }
@@ -426,9 +434,10 @@ function setInteractivity(self) {
 
 	self.submit = () => {
 		const config = JSON.parse(JSON.stringify(self.config))
-		console.log(405, self.sections)
-		delete config.settings
-		console.log(config)
+		//delete config.settings
+		for (const term of config.independent) {
+			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : ''
+		}
 		// disable submit button on click, reenable after rendering results
 		self.dom.submitBtn.property('disabled', true)
 		self.app.dispatch({

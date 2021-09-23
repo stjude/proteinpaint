@@ -20,8 +20,7 @@ export async function get_regression(q, ds) {
 		const header = ['outcome']
 		// make "refCategories" array that contains reference categories for each variable
 		// For numeric variables, use empty string (see regression.R for more details)
-		const refCategories = []
-		refCategories.push(get_refCategory(q.termY, q))
+		const refCategories = ['']
 
 		for (const i in q.independent) {
 			const term = q.independent[i]
