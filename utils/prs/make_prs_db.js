@@ -98,27 +98,34 @@ function get_id2score(scoreFiles) {
 }
 
 async function get_metadata(pgsID, prsDir) {
-	const metadata = {}
 	const matchedVariantCnt = fs
 		.readFileSync(glob.sync(prsDir + '/*.data.hg38.matched.txt')[0], { encoding: 'utf8' })
 		.trim()
 		.split('\n').length
 	const response = await fetch(`https://www.pgscatalog.org/rest/score/${pgsID}`, { method: 'GET' })
 	const obj = await response.json()
-	metadata['PGS ID'] = obj.id
-	metadata['Mapped Trait'] = obj.trait_reported
-	metadata['Publication Date'] = obj.publication.date_publication
-	metadata['Number of Variants'] = {
-		Original: obj.variants_number,
-		'SJLIFE + CCSS matched': matchedVariantCnt,
-		'QC description': null
-	}
-	metadata['Development Method'] = obj.method_name
-	metadata['Development Samples'] = {
-		'Study Identifier': obj.samples_variants[0].source_GWAS_catalog,
-		'Sample Number': obj.samples_variants[0].sample_number,
-		'Sample Ancestry': obj.samples_variants[0].ancestry_broad
-	}
+	const metadata = [
+		{ label: 'PGS ID', value: obj.id },
+		{ label: 'Mapped Trait', value: obj.trait_reported },
+		{ label: 'Publication Date', value: obj.publication.date_publication },
+		{
+			label: 'Number of Variants',
+			value: [
+				{ label: 'Original', value: obj.variants_number },
+				{ label: 'SJLIFE + CCSS matched', value: matchedVariantCnt },
+				{ label: 'QC description', value: '' }
+			]
+		},
+		{ label: 'Development Method', value: obj.method_name },
+		{
+			label: 'Development Samples',
+			value: [
+				{ label: 'Study Identifier', value: obj.samples_variants[0].source_GWAS_catalog },
+				{ label: 'Sample Number', value: obj.samples_variants[0].sample_number },
+				{ label: 'Sample Ancestry', value: obj.samples_variants[0].ancestry_broad }
+			]
+		}
+	]
 	return metadata
 }
 
