@@ -367,10 +367,9 @@ function makeSandboxTabs(track) {
 }
 //Creates the main tab menu over the examples and/or app uis
 function sandboxTabMenu(track, tabs_div, content_div) {
-	const tabs = makeSandboxTabs(track) 
+	const tabs = makeSandboxTabs(track)
 
 	for (const tab of tabs) {
-
 		tabs[0].active = true
 
 		tab.tab = tabs_div
@@ -396,8 +395,8 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 		}
 
 		tab.tab.on('click', () => {
-			for(const t of tabs) {
-				t.active = t === tab 
+			for (const t of tabs) {
+				t.active = t === tab
 				t.tab.style('border-bottom', t.active ? '8px solid #1575ad' : 'none')
 				t.content.style('display', t.active ? 'block' : 'none')
 			}
@@ -418,7 +417,6 @@ async function makeLeftsideTabMenu(track, div) {
 	const content_div = menu_wrapper.append('div').classed('sjpp-content-div', true)
 
 	for (const tab of tabs) {
-
 		tab.tab = tabs_div
 			.append('button')
 			.attr('type', 'submit')
@@ -443,10 +441,10 @@ async function makeLeftsideTabMenu(track, div) {
 		}
 
 		tab.tab.on('click', () => {
-			for(const t of tabs) {
-				t.active = t === tab 
+			for (const t of tabs) {
+				t.active = t === tab
 				t.tab.style('border-right', t.active ? '8px solid #1575ad' : 'none')
-				t.tab.style('color', t.active ? '#1575ad': '#757373')
+				t.tab.style('color', t.active ? '#1575ad' : '#757373')
 				t.content.style('display', t.active ? 'block' : 'none')
 			}
 			if (tab.callback) {
@@ -562,7 +560,8 @@ function showCode(call, btns) {
 	const code = highlight(
 		`runproteinpaint({
     host: "${window.location.origin}",
-    holder: document.getElementById('a'),` +
+    holder: document.getElementById('a'),
+    ` + // Fix for first argument not properly appearing underneath holder
 			JSON.stringify(call, '', 4)
 				.replaceAll(/"(.+)"\s*:/g, '$1:')
 				.replaceAll(/\\t/g, '	')
