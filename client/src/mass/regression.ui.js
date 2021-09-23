@@ -71,6 +71,8 @@ class MassRegressionUI {
 		if (action.type == 'plot_prep') {
 			return action.id === this.id
 		}
+        if (action.type.startsWith('filter')) return true
+		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
 	}
 
@@ -270,17 +272,12 @@ function setRenderers(self) {
 		const term_summmary_div = d.infoDiv.append('div')
 		const term_values_div = d.infoDiv.append('div')
 		d.values_table = term_values_div.append('table')
-		term_values_div
-			.append('div')
-			.style('padding', '5px 10px')
-			.style('color', '#999')
-			.text('Click on a row to mark it as reference.')
 		const q = (d && d.term.q) || {}
 		if (d.section.configKey == 'independent') {
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
 				term_summmary_div.html(
-					`Use as ${q.use_as || 'continuous'} variable. </br>
-          ${q.count.included} sample included.` + (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
+					`Use as ${q.use_as || 'continuous'} variable. </br>`
+        //   ${q.count.included} sample included.` + (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
 				)
 			} else if (d.term.term.type == 'categorical' || d.term.term.type == 'condition') {
 				const gs = d.term.q.groupsetting || {}
@@ -297,6 +294,11 @@ function setRenderers(self) {
 						Object.keys(d.term.term.values).length + (d.term.term.type == 'categorical' ? ' categories' : ' grades')
 					make_values_table(d)
 				}
+                term_values_div
+                    .append('div')
+                    .style('padding', '5px 10px')
+                    .style('color', '#999')
+                    .text('Click on a row to mark it as reference.')
 				term_summmary_div.text(text)
 			}
 		} else if (d.section.configKey == 'term') {
