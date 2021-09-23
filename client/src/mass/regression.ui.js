@@ -8,18 +8,40 @@ import { getNormalRoot } from '../common/filter'
 class MassRegressionUI {
 	constructor(opts) {
 		this.type = 'regressionUI'
-		this.termSequence = getTermSelectionSequence('regression')
+		this.sections = [
+			{
+				label: 'Outcome variable',
+				prompt: 'Select outcome variable',
+				configKey: 'term',
+				limit: 1,
+				selected: [],
+				cutoffTermTypes: ['condition', 'integer', 'float']
+			},
+			{
+				label: 'Independent variable(s)',
+				prompt: 'Add independent variable',
+				configKey: 'independent',
+				limit: 10,
+				selected: []
+			}
+		]
+		// work in progress: track reference category values or groups by term ID
+		this.refGrpsByTermId = {}
 		setInteractivity(this)
 		setRenderers(this)
 	}
 
 	async init() {
+		const controls = this.opts.holder
+			.append('div')
+			.attr('class', 'pp-termdb-plot-controls')
+			.style('display', 'block')
+
 		this.dom = {
 			div: this.opts.holder.style('margin', '10px 0px').style('margin-left', '-50px'),
-			controls: this.opts.holder
-				.append('div')
-				.attr('class', 'pp-termdb-plot-controls')
-				.style('display', 'block')
+			controls,
+			body: controls.append('div'),
+			foot: controls.append('div')
 		}
 	}
 
@@ -53,430 +75,366 @@ class MassRegressionUI {
 	}
 
 	main() {
+		// create a writable config copy, that would not
+		// mutate the actual state until the form is submitted
 		this.config = copyMerge('{}', this.state.config)
 		if (!this.dom.submitBtn) this.initUI()
+		this.setDisableTerms()
+		this.render()
+	}
+
+	setDisableTerms() {
+		this.disable_terms = []
+		if (this.config.term) this.disable_terms.push(this.config.term.id)
+		for (const term of this.config.independent) this.disable_terms.push(term.id)
+	}
+
+	async updateValueCount(d) {
+		// query backend for total sample count for each value of categorical or condition terms
+		// and included and excluded sample count for nuemric term
+		const q = JSON.parse(JSON.stringify(d.term.q))
+		delete q.values
+		const url =
+			'/termdb-barsql?' +
+			'term1_id=' +
+			d.term.id +
+			'&term1_q=' +
+			encodeURIComponent(JSON.stringify(q)) +
+			'&filter=' +
+			encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))) +
+			'&genome=' +
+			this.state.vocab.genome +
+			'&dslabel=' +
+			this.state.vocab.dslabel
+
+		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
+		if (data.error) throw data.error
+		d.sampleCounts = {}
+		for (const series of data.charts[0].serieses) {
+			d.sampleCounts[series.seriesId] = series.total
+		}
 	}
 }
 
-function setInteractivity(self) {}
-
 function setRenderers(self) {
 	self.initUI = () => {
-		const config = self.config
-		const dom = {
-			body: self.dom.controls.append('div'),
-			foot: self.dom.controls.append('div')
-		}
-		const disable_terms = []
-		dom.body
-			.selectAll('div')
-			.data(self.termSequence || [])
-			.enter()
-			.append('div')
-			.style('margin', '3px 5px')
-			.style('padding', '3px 5px')
-			.each(function(d) {
-				const pills = []
-				const div = select(this)
-				div
-					.append('div')
-					.style('margin', '3px 5px')
-					.style('padding', '3px 5px')
-					.style('font-size', '17px')
-					.style('color', '#bbb')
-					.text(d.label)
-
-				if (config[d.detail]) {
-					if (!d.selected) d.selected = config[d.detail]
-					if (Array.isArray(d.selected)) {
-						for (const t of d.selected) {
-							if (!disable_terms.includes(t.id)) disable_terms.push(t.id)
-						}
-					} else {
-						if (!disable_terms.includes(d.selected.id)) disable_terms.push(d.selected.id)
-					}
-				}
-				if (d.limit > 1 && config[d.detail] && config[d.detail].length) {
-					for (const term of config[d.detail]) {
-						self.newPill(d, config, div, pills, disable_terms, term)
-					}
-				}
-				self.newPill(d, config, div.append('div'), pills, disable_terms, d.limit === 1 && config[d.detail])
-			})
-
-		self.dom.submitBtn = dom.foot
+		self.dom.submitBtn = self.dom.foot
 			.style('margin', '3px 15px')
 			.style('padding', '3px 5px')
 			.append('button')
 			.html('Run analysis')
-			.on('click', () => {
-				// disable submit button on click, reenable after rending results
-				self.dom.submitBtn.property('disabled', true)
-				self.api.on('postRender.submitbtn', () => {
-					self.dom.submitBtn.property('disabled', false)
-					self.api.on('postRender.submitbtn', null)
-				})
-				for (const t of self.termSequence) {
-					config[t.detail] = t.selected
-					if ('cutoff' in t) config.cutoff = t.cutoff
-				}
-				self.app.dispatch({
-					type: config.term ? 'plot_edit' : 'plot_show',
-					id: self.id,
-					chartType: config.chartType || (self.opts.config && self.opts.config.chartType) || 'regression',
-					config
-				})
-			})
+			.on('click', self.submit)
 
 		self.updateBtns()
 	}
 
-	self.newPill = async function(d, config, div, pills, disable_terms, term = null) {
-		const pillsDiv = div
-			.append('div')
-			.style('width', 'fit-content')
-			.style('margin-left', '30px')
+	self.render = () => {
+		const grps = self.dom.body.selectAll(':scope > div').data(self.sections || [])
 
-		const newTermDiv = pillsDiv
+		grps.exit().remove()
+		grps.each(renderSection)
+		grps
+			.enter()
 			.append('div')
-			.style('display', 'inline-block')
-			.style('margin', '5px 15px')
+			.style('margin', '3px 5px')
 			.style('padding', '3px 5px')
-			.style('border-left', term ? '1px solid #bbb' : '')
+			.each(renderSection)
 
-		const pillDiv = newTermDiv.append('div')
+		self.updateBtns()
+	}
 
-		const pill = termsettingInit({
-			placeholder: d.prompt,
-			holder: pillDiv,
+	// initialize the ui sections
+	function renderSection(section) {
+		const div = select(this)
+
+		// in case of an empty div
+		if (!this.lastChild) {
+			// firstChild
+			div
+				.append('div')
+				.style('margin', '3px 5px')
+				.style('padding', '3px 5px')
+				.style('font-size', '17px')
+				.style('color', '#bbb')
+				.text(section.label)
+
+			// this.lastChild
+			div.append('div')
+		}
+
+		const v = self.config[section.configKey]
+		const terms = Array.isArray(v) ? v : v ? [v] : []
+		section.selected = terms
+		section.disabled_terms = terms.map(d => d.term.id)
+		section.data = terms.map(term => {
+			return { section, term }
+		})
+		if (!section.pills) section.pills = {}
+		if (section.data.length < section.limit && !section.data.find(d => !d.term)) {
+			section.data.push({ section }) // a blank pill to prompt a new selection
+		}
+		const pillDivs = select(this.lastChild)
+			.selectAll(':scope > div')
+			.data(section.data, d => d.term && d.term.id)
+		pillDivs
+			.exit()
+			.transition()
+			.duration(500)
+			.style('opacity', 0)
+			.remove()
+		pillDivs.each(updatePill)
+		pillDivs
+			.enter()
+			.append('div')
+			.each(addPill)
+	}
+
+	async function addPill(d, i) {
+		const config = self.config
+		const div = select(this)
+			.style('width', 'fit-content')
+			.style('margin', '5px 15px 5px 45px')
+			.style('padding', '3px 5px')
+			.style('border-left', d.term ? '1px solid #bbb' : '')
+
+		d.pill = termsettingInit({
+			placeholder: d.section.prompt,
+			holder: div.append('div'),
 			vocabApi: self.app.vocabApi,
 			vocab: self.state.vocab,
 			activeCohort: self.state.activeCohort,
 			use_bins_less: true,
 			debug: self.opts.debug,
 			showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
-			usecase: { target: config.chartType, detail: d.detail },
-			disable_terms,
-			callback: async term => {
-				if (!term) {
-					const i = pills.indexOf(pill)
-					if (Array.isArray(d.selected)) d.selected.splice(i, 1)
-					else delete d.selected
-					pills.splice(i, 1)
-					disable_terms.splice(i, 1)
-					if (d.limit > 1) {
-						newTermDiv.remove()
-					} else {
-						// Quick fix: remove pill and show text to add new term
-						const pill = pillDiv.select('.ts_pill').node()
-						select(pill).remove()
-						div.select('.sja_clbtext2').node().parentNode.style.display = 'inline-block'
-						newTermDiv.style('border-left', 'none')
-					}
-					self.updateBtns()
-					if (config.regressionType == 'logistic') cutoffDiv.style('display', 'none')
-					termInfoDiv.style('display', 'none')
-				} else {
-					if (!disable_terms.includes(term.term.id)) {
-						disable_terms.push(term.term.id)
-					}
-					pill.main(term)
-                    term.id = term.term.id
-                    await updateValueCount(term)
-					if (d.limit > 1) {
-						if (!d.selected) d.selected = []
-						// if term is already selected, just replace q for that d.selected[] term
-						if (d.selected.length && d.selected.findIndex(t => t.id == term.term.id) !== -1) {
-							const t_ = d.selected.find(t => t.id == term.term.id)
-							t_.q = JSON.parse(JSON.stringify(term.q))
-							// if (bins_radio.property('checked')) t_.q.use_as = 'bins'
-						} else {
-							d.selected.push(term)
-							if (d.selected.length < d.limit) self.newPill(d, config, div, pills, disable_terms)
-						}
-					} else {
-						d.selected = term
-					}
-					self.updateBtns()
-					// show cutoffDiv only for regressionType is logistic
-					if (config.regressionType == 'logistic')
-						cutoffDiv.style(
-							'display',
-							d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'block' : 'none'
-						)
-
-					newTermDiv.style('border-left', '1px solid #bbb')
-					termInfoDiv.style('display', 'inline-block')
-					if (d.selected.length) {
-						const config_term = d.selected.find(t => t.id == term.term.id)
-						updateTermInfoDiv(config_term)
-					} else {
-						updateTermInfoDiv(term)
-					}
-				}
+			usecase: { target: config.chartType, detail: d.section.configKey },
+			disable_terms: self.disable_terms,
+			callback: term => {
+				self.editConfig(d, term)
 			}
 		})
 
-		pills.push(pill)
-		if (term) pill.main(term)
+		d.section.pills[d.term && d.term.id] = d.pill
+		d.infoDiv = div.append('div').attr('class', 'sjpp-regression-ui-infodiv')
+		updatePill.call(this, d)
+	}
 
-		// show cutoffDiv only for regressionType is logistic and term in cutoffTermTypes
-		let cutoffDiv
-		if (config.regressionType == 'logistic') {
-			cutoffDiv = pillsDiv
-				.append('div')
-				.style('display', term && d.cutoffTermTypes && d.cutoffTermTypes.includes(term.term.type) ? 'block' : 'none')
-				.style('margin', '3px 5px')
-				.style('padding', '3px 5px')
-
-			const cutoffLabel = cutoffDiv.append('span').html('Use cutoff of ')
-
-			const useCutoffInput = cutoffDiv
-				.append('input')
-				.attr('type', 'number')
-				.style('width', '50px')
-				.style('text-align', 'center')
-				.on('change', () => {
-					const value = useCutoffInput.property('value')
-					if (value === '') delete d.cutoff
-					else d.cutoff = Number(value)
-				})
+	function updatePill(d) {
+		select(this).style('border-left', d.term ? '1px solid #bbb' : '')
+		if (!d.pill && d.term && d.term.id in d.section.pills) d.pill = d.section.pills[d.term.id]
+		if (d.pill) d.pill.main(d.term)
+		d.infoDiv = select(this).select('.sjpp-regression-ui-infodiv')
+		if (d.section.configKey == 'term') renderCuttoff(d)
+		else if (d.infoDiv) {
+			if (d.term) renderInfo(d)
+			else d.infoDiv.selectAll('*').remove()
 		}
+	}
 
-		const termInfoDiv = newTermDiv
-			.append('div')
+	function renderCuttoff(d) {
+		if (!d.infoDiv || self.config.regressionType != 'logistic') return
+		d.infoDiv.selectAll('*').remove()
+		d.infoDiv
+			.style('display', d.term && d.cutoffTermTypes && d.cutoffTermTypes.includes(d.term.term.type) ? 'block' : 'none')
+			.style('margin', '3px 5px')
+			.style('padding', '3px 5px')
+
+		const cutoffLabel = cutoffDiv.append('span').html('Use cutoff of ')
+		const useCutoffInput = cutoffDiv
+			.append('input')
+			.attr('type', 'number')
+			.style('width', '50px')
+			.style('text-align', 'center')
+			.property('value', d.cutoff)
+			.on('change', () => {
+				const value = useCutoffInput.property('value')
+				if (value === '') delete d.cutoff
+				else d.cutoff = Number(value)
+			})
+	}
+
+	async function renderInfo(d) {
+		d.infoDiv.selectAll('*').remove()
+
+		d.infoDiv
 			.style('display', 'block')
 			.style('margin', '10px')
 			.style('font-size', '.8em')
 			.style('text-align', 'left')
 			.style('color', '#999')
 
-        if (term) await updateValueCount(term)
-		updateTermInfoDiv(term)
+		if (d.term) await self.updateValueCount(d)
+		updateTermInfoDiv(d)
+	}
 
-        async function updateValueCount(term){
-            // query backend for total sample count for each value of categorical or condition terms
-            // and included and excluded sample count for nuemric term
-            const q = JSON.parse(JSON.stringify(term.q))
-            if (term.q.values) delete q.values
-            const url =
-                '/termdb-barsql?' +
-                'term1_id=' + 
-                term.id +
-                '&term1_q=' +
-                encodeURIComponent(JSON.stringify(q)) +
-                '&filter=' +
-                encodeURIComponent(JSON.stringify(getNormalRoot(self.state.termfilter.filter))) +
-                '&genome=' +
-                self.state.vocab.genome +
-                '&dslabel=' +
-                self.state.vocab.dslabel
-            const data = await dofetch3(url, {}, self.app.opts.fetchOpts)
-            if (data.error) throw data.error
-            if (term.term.type == 'categorical' || term.term.type == 'condition') {
-                // add sample count data as q.values[].count (supports groupsetting)
-                const values = term.q.groupsetting && term.q.groupsetting.inuse ?
-                ( term.q.groupsetting.predefined_groupset_idx !== undefined ?
-                    JSON.parse(JSON.stringify(term.term.groupsetting.lst[term.q.groupsetting.predefined_groupset_idx].groups)) :
-                    JSON.parse(JSON.stringify(term.q.groupsetting.customset.groups)) ) :
-                JSON.parse(JSON.stringify(term.term.values))
-                const label_key = term.q.groupsetting && term.q.groupsetting.inuse ? 'name' : 'label'
-                const count_values = data.charts[0].serieses
-                for (const key in values){
-                    let count_data
-                    if (term.q.groupsetting.inuse || term.term.type == 'condition') 
-                        count_data = count_values.find(v => v.seriesId == values[key][label_key])
-                    else if (term.term.type == 'categorical')
-                        count_data = count_values.find(v => v.seriesId == key)
-                    values[key].count = count_data && count_data.total ? count_data.total : 0
-                }
-                term.q.values = values
-            } else {
-                // add included and excluded sample count as term.q.count: { included: n, excluded: n }
-                const values = term.term.values || {}
-                term.q.count = { included: 0, excluded: 0 }
-                const count_values = data.charts[0].serieses
-                for(const count of count_values){
-                    if (Object.values(values).findIndex(v => v.label == count.seriesId) == -1)
-                        term.q.count.included = term.q.count.included + count.total
-                    else
-                        term.q.count.excluded = term.q.count.excluded + count.total
-                }
-            }
-        }
-
-		function updateTermInfoDiv(term_) {
-			termInfoDiv.selectAll('*').remove()
-			const term_summmary_div = termInfoDiv.append('div')
-			const term_values_div = termInfoDiv.append('div')
-			const values_table = term_values_div.append('table')
-			const q = (term_ && term_.q) || {}
-			if (d.detail == 'independent' && term_ && term_.term) {
-				if (term_.term.type == 'float' || term_.term.type == 'integer'){
-                    term_summmary_div.html(
-                        `Use as ${q.use_as || 'continuous'} vairable. </br>
-                        ${q.count.included} sample included.` +
-                        ( q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '' )
-                    )
-                }
-				else if (term_.term.type == 'categorical' || term_.term.type == 'condition') {
-					let text
-					if (q.groupsetting && q.groupsetting.inuse) {
-                        const values = term_.q.values !== undefined ? term_.q.values : term_.q.groupsetting.customset.groups
-						text = Object.keys(values).length + ' groups'
-						make_values_table({ term: term_, values, values_table, key: 'name' })
-					} else {
-                        const values = term_.q.values !== undefined ? term_.q.values : term_.term.values
-						text =
-							Object.keys(term_.term.values).length + (term_.term.type == 'categorical' ? ' categories' : ' grades')
-						make_values_table({ term: term_, values, values_table, key: 'label' })
-					}
-					term_summmary_div.text(text)
+	function updateTermInfoDiv(d) {
+		const term_summmary_div = d.infoDiv.append('div')
+		const term_values_div = d.infoDiv.append('div')
+		d.values_table = term_values_div.append('table')
+		term_values_div
+			.append('div')
+			.style('padding', '5px 10px')
+			.style('color', '#999')
+			.text('Click on a row to mark it as reference.')
+		const q = (d && d.term.q) || {}
+		if (d.section.configKey == 'independent') {
+			if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
+				term_summmary_div.html(
+					`Use as ${q.use_as || 'continuous'} variable. </br>
+          ${q.count.included} sample included.` + (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
+				)
+			} else if (d.term.term.type == 'categorical' || d.term.term.type == 'condition') {
+				const gs = d.term.q.groupsetting || {}
+				let text
+				if (gs.inuse) {
+					d.values = d.term.q.values !== undefined ? d.term.q.values : gs.customset.groups
+					d.labelKey = 'name'
+					text = Object.keys(d.values).length + ' groups'
+					make_values_table(d)
+				} else {
+					d.values = d.term.q.values !== undefined ? d.term.q.values : d.term.term.values
+					d.labelKey = 'label'
+					text =
+						Object.keys(d.term.term.values).length + (d.term.term.type == 'categorical' ? ' categories' : ' grades')
+					make_values_table(d)
 				}
-			} else if (term_ && term_.term) {
-                if (term_.term.type == 'float' || term_.term.type == 'integer') 
-                    term_summmary_div.text( 
-                        `${q.count.included} sample included.` +
-                        (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
-                    )
-            }
-		}
-
-		function make_values_table(args) {
-			const { term, values, values_table, key } = args
-            const values_array = Object.values(values)
-			values_table
-				.style('margin', '10px 5px')
-				.style('border-spacing', '3px')
-				.style('border-collapse', 'collapse')
-
-			const tr_data = term.term.type == 'condition' || values_array[0].count == undefined 
-                ? values_array
-                : values_array.sort((a,b)=> b.count - a.count)
-			tr_data[0].refGrp = true
-
-			function updateTable() {
-                const refGrp = tr_data.find(v => v.refGrp == true)
-                if (term.q.groupsetting.inuse) term.q.refGrp = refGrp[key]
-                else term.q.refGrp = Object.keys(values).find(k => values[k][key] == refGrp[key])
-				values_table
-					.selectAll('tr')
-					.data(tr_data)
-					.each(trUpdate)
-					.enter()
-					.append('tr')
-					.each(trEnter)
-
-				function trEnter(value) {
-					const tr = select(this)
-
-					tr.style('padding', '5px 5px')
-						.style('text-align', 'left')
-						.style('border-bottom', 'solid 1px #ddd')
-						.on('mouseover', () => tr.style('background', '#fff6dc'))
-						.on('mouseout', () => tr.style('background', 'white'))
-						.on('click', () => {
-							const ref_value = tr_data.find(v => v.refGrp == true)
-							delete ref_value.refGrp
-							value.refGrp = true
-							ref_text.style('display', 'inline-block')
-							updateTable()
-						})
-
-					tr.append('td')
-						.style('padding', '3px 5px')
-						.style('text-align', 'left')
-						.style('color', 'black')
-						.html((value.count !== undefined 
-                                ? `<span style='display: inline-block;width: 70px;'>n= ${value.count} </span>`
-                                : '') 
-                            +  value[key]
-                        )
-
-					const reference_td = tr
-						.append('td')
-						.style('padding', '3px 5px')
-						.style('text-align', 'left')
-
-					const ref_text = reference_td
-						.append('div')
-						.style('display', value.refGrp ? 'inline-block' : 'none')
-						.style('padding', '2px 10px')
-						.style('border', '1px solid #bbb')
-						.style('border-radius', '10px')
-						.style('color', '#999')
-						.style('font-size', '.7em')
-						.text('REFERENCE')
-				}
-
-				function trUpdate(value) {
-					const tr = select(this)
-					tr.select('div').style('display', value.refGrp ? 'inline-block' : 'none')
-					self.dom.submitBtn.property('disabled', false)
-				}
+				term_summmary_div.text(text)
 			}
+		} else if (d.section.configKey == 'term') {
+			if (d.term.term.type == 'float' || d.term.term.type == 'integer')
+				term_summmary_div.text(
+					`${q.count.included} sample included.` + (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
+				)
+		}
+	}
 
-			updateTable()
+	function make_values_table(d) {
+		const tr_data = Object.keys(d.sampleCounts).sort((a, b) => d.sampleCounts[b] - d.sampleCounts[a])
 
-			values_table
-				.append('tr')
-				.style('padding', '5px 5px')
-				.append('td')
-				.style('padding', '3px 5px')
-				.style('color', '#999')
-				.attr('colspan', 2)
-				.text('Click on a row to mark it as reference.')
+		if (!('refGrp' in d) || !tr_data.includes(d.refGrp)) {
+			d.refGrp = tr_data[0]
+			// todo, word in progress
+			self.refGrpsByTermId[d.term.id] = d.refGrp
 		}
 
-		// const id = Math.random().toString()
+		const trs = d.values_table
+			.style('margin', '10px 5px')
+			.style('border-spacing', '3px')
+			.style('border-collapse', 'collapse')
+			.selectAll('tr')
+			.data(tr_data)
 
-		// const continuous_radio = termInfoDiv
-		// 	.append('input')
-		// 	.attr('type', 'radio')
-		// 	.attr('id', 'continuous' + id)
-		// 	.attr('name', 'num_type' + id)
-		// 	.style('margin-left', '10px')
-		// 	.property('checked', true)
+		trs
+			.exit()
+			.transition()
+			.duration(500)
+			.remove()
+		trs.each(trUpdate)
+		trs
+			.enter()
+			.append('tr')
+			.each(trEnter)
+		//d.values_table.selectAll('tr').sort((a,b) => d.sampleCounts[b.key] - d.sampleCounts[a.key])
+	}
 
-		// termInfoDiv
-		// 	.append('label')
-		// 	.attr('for', 'continuous' + id)
-		// 	.attr('class', 'sja_clbtext')
-		// 	.text(' as continuous')
+	function trEnter(key) {
+		const tr = select(this)
+		const pillData = this.parentNode.__data__
+		const value = { count: pillData.sampleCounts[key] }
 
-		// const bins_radio = termInfoDiv
-		// 	.append('input')
-		// 	.attr('type', 'radio')
-		// 	.attr('id', 'bins' + id)
-		// 	.attr('name', 'num_type' + id)
-		// 	.style('margin-left', '10px')
-		// 	.property('checked', null)
+		tr.style('padding', '5px 5px')
+			.style('text-align', 'left')
+			.style('border-bottom', 'solid 1px #ddd')
+			.on('mouseover', () => tr.style('background', '#fff6dc'))
+			.on('mouseout', () => tr.style('background', 'white'))
+			.on('click', () => {
+				pillData.refGrp = key
+				self.refGrpsByTermId[pillData.term.id] = pillData.refGrp
+				make_values_table(pillData)
+			})
 
-		// termInfoDiv
-		// 	.append('label')
-		// 	.attr('for', 'bins' + id)
-		// 	.attr('class', 'sja_clbtext')
-		// 	.text(' as bins')
+		tr.append('td')
+			.style('padding', '3px 5px')
+			.style('text-align', 'left')
+			.style('color', 'black')
+			.html(
+				(value.count !== undefined
+					? `<span style='display: inline-block;width: 70px;'>n= ${value.count} </span>`
+					: '') + key //value[key]
+			)
 
-		// if (term && d.detail == 'independent' && d.selected) {
-		// 	const config_term = d.selected.find(t => t.id == term.id)
-		// 	update_numtype_radios(config_term)
-		// }
+		const reference_td = tr
+			.append('td')
+			.style('padding', '3px 5px')
+			.style('text-align', 'left')
 
-		// function update_numtype_radios(config_term) {
-		// 	continuous_radio.on('change', () => {
-		// 		config_term.q.use_as = 'continuous'
-		// 	})
+		const ref_text = reference_td
+			.append('div')
+			.style('display', key === pillData.refGrp ? 'inline-block' : 'none')
+			.style('padding', '2px 10px')
+			.style('border', '1px solid #bbb')
+			.style('border-radius', '10px')
+			.style('color', '#999')
+			.style('font-size', '.7em')
+			.text('REFERENCE')
+	}
 
-		// 	bins_radio.on('change', () => {
-		// 		config_term.q.use_as = 'bins'
-		// 	})
-		// }
+	function trUpdate(key) {
+		const tr = select(this)
+		const pillData = this.parentNode.__data__
+		tr.select('div').style('display', key === pillData.refGrp ? 'inline-block' : 'none')
+		self.dom.submitBtn.property('disabled', false)
 	}
 
 	self.updateBtns = () => {
-		const hasMissingTerms = self.termSequence.filter(t => !t.selected || (t.limit > 1 && !t.selected.length)).length > 0
+		const hasMissingTerms =
+			self.sections.filter(t => !t[t.configKey] || (t.limit > 1 && !t[t.configKey].length)).length > 0
 		self.dom.submitBtn.property('disabled', hasMissingTerms)
+	}
+}
+
+function setInteractivity(self) {
+	self.editConfig = async (d, term) => {
+		const c = self.config
+		const key = d.section.configKey
+		// edit section data
+		if (Array.isArray(c[key])) {
+			if (!d.term) {
+				c[key].push(term)
+			} else {
+				const i = c[key].findIndex(t => t.id === d.term.id)
+				if (term) c[key][i] = term
+				else if (d.section.pills.undefined) c[key].splice(i, 1)
+			}
+		} else {
+			if (term) c[key] = term
+			delete c[key]
+		}
+
+		// edit pill data and tracker
+		if (term) {
+			if (!d.term) delete d.section.pills.undefined
+			d.section.pills[term.id] = d.pill
+			d.term = term
+		} else {
+			delete d.term
+		}
+
+		self.render()
+	}
+
+	self.submit = () => {
+		const config = JSON.parse(JSON.stringify(self.config))
+		console.log(405, self.sections)
+		delete config.settings
+		console.log(config)
+		// disable submit button on click, reenable after rendering results
+		self.dom.submitBtn.property('disabled', true)
+		self.app.dispatch({
+			type: config.term ? 'plot_edit' : 'plot_show',
+			id: self.id,
+			chartType: 'regression',
+			config
+		})
 	}
 }
 
