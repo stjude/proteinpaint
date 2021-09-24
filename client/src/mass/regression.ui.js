@@ -116,12 +116,12 @@ class MassRegressionUI {
 		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		d.sampleCounts = data.lst
-		d.totalCount = { included: 0, excluded: 0, total: 0 }
+		const totalCount = (d.term.q.totalCount = { included: 0, excluded: 0, total: 0 })
 		data.lst.forEach(v => {
-			if (v.range && v.range.is_unannotated) d.totalCount.excluded = d.totalCount.excluded + v.samplecount
-			else d.totalCount.included = d.totalCount.included + v.samplecount
+			if (v.range && v.range.is_unannotated) totalCount.excluded = totalCount.excluded + v.samplecount
+			else totalCount.included = totalCount.included + v.samplecount
 		})
-		d.totalCount.total = d.totalCount.included + d.totalCount.excluded
+		totalCount.total = totalCount.included + totalCount.excluded
 	}
 }
 
@@ -251,7 +251,8 @@ function setRenderers(self) {
 		)
 		d.dom.infoDiv.style('display', d.term ? 'block' : 'none')
 		if (d.section.configKey == 'term') renderCuttoff(d)
-		else if (d.term) renderInfo(d)
+		// renderInfo() is required for both outcome and independent variables
+		if (d.term) renderInfo(d)
 	}
 
 	function removePill(d) {
