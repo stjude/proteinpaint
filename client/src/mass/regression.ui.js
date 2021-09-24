@@ -406,6 +406,7 @@ function setInteractivity(self) {
 	self.editConfig = async (d, term) => {
 		const c = self.config
 		const key = d.section.configKey
+		if (!('id' in term)) term.id = term.term.id
 		// edit section data
 		if (Array.isArray(c[key])) {
 			if (!d.term) {
