@@ -117,12 +117,12 @@ class MassRegressionUI {
 		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		d.sampleCounts = data.lst
-		d.totalCount = { included: 0, excluded: 0, total: 0 }
+		const totalCount = (d.term.q.totalCount = { included: 0, excluded: 0, total: 0 })
 		data.lst.forEach(v => {
-			if (v.range && v.range.is_unannotated) d.totalCount.excluded = d.totalCount.excluded + v.samplecount
-			else d.totalCount.included = d.totalCount.included + v.samplecount
+			if (v.range && v.range.is_unannotated) totalCount.excluded = totalCount.excluded + v.samplecount
+			else totalCount.included = totalCount.included + v.samplecount
 		})
-		d.totalCount.total = d.totalCount.included + d.totalCount.excluded
+		totalCount.total = totalCount.included + totalCount.excluded
 	}
 }
 
@@ -253,7 +253,7 @@ function setRenderers(self) {
 		d.pill.main(d.term)
 		d.dom.infoDiv.style('display', d.term ? 'block' : 'none')
 		if (d.section.configKey == 'term') renderCuttoff(d)
-		else if (d.term) renderInfo(d)
+		if (d.term) renderInfo(d)
 	}
 
 	function removePill(d) {
@@ -305,12 +305,13 @@ function setRenderers(self) {
 	}
 
 	function updateTermInfoDiv(d) {
-		const q = (d.term && d.term.q) || { count: {} }
+		const q = (d.term && d.term.q) || { totalCount: { included: 0, excluded: 0, total: 0 } }
 		if (d.section.configKey == 'independent') {
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
 				d.dom.term_summmary_div.html(
-					`Use as ${q.use_as || 'continuous'} variable. </br>`
-					//   ${q.count.included} sample included.` + (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
+					`Use as ${q.use_as || 'continuous'} variable. </br>
+					${q.totalCount.included} sample included.` +
+						(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded.` : '')
 				)
 			} else if (d.term.term.type == 'categorical' || d.term.term.type == 'condition') {
 				const gs = d.term.q.groupsetting || {}
@@ -330,10 +331,10 @@ function setRenderers(self) {
 				d.dom.term_summmary_div.text(text)
 			}
 		} else if (d.section.configKey == 'term') {
-			if (!q.count) q.count = { included: 'FIX-ME', exlcuded: 'FIX-ME' }
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer')
 				d.dom.term_summmary_div.text(
-					`${q.count.included} sample included.` + (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
+					`${q.totalCount.included} sample included.` +
+						(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded.` : '')
 				)
 		}
 	}
