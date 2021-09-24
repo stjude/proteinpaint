@@ -250,7 +250,14 @@ function setRenderers(self) {
 
 	function updatePill(d) {
 		select(this).style('border-left', d.term ? '1px solid #bbb' : '')
-		d.pill.main(d.term)
+		d.pill.main(
+			Object.assign(
+				{
+					disable_terms: self.disable_terms
+				},
+				d.term
+			)
+		)
 		d.dom.infoDiv.style('display', d.term ? 'block' : 'none')
 		if (d.section.configKey == 'term') renderCuttoff(d)
 		else if (d.term) renderInfo(d)
@@ -355,7 +362,7 @@ function setRenderers(self) {
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
 			.selectAll('tr')
-			.data(tr_data)
+			.data(tr_data, d => d.key)
 
 		trs
 			.exit()
@@ -413,9 +420,15 @@ function setRenderers(self) {
 	}
 
 	function trUpdate(item) {
-		const tr = select(this)
 		const pillData = this.parentNode.__data__
-		tr.select('div').style('display', item.key === pillData.refGrp ? 'inline-block' : 'none')
+		select(this.firstChild).html(
+			(item.samplecount !== undefined
+				? `<span style='display: inline-block;width: 70px;'>n= ${item.samplecount} </span>`
+				: '') + item.label
+		)
+		select(this)
+			.select('div')
+			.style('display', item.key === pillData.refGrp ? 'inline-block' : 'none')
 		self.dom.submitBtn.property('disabled', false)
 	}
 
@@ -447,8 +460,9 @@ function setInteractivity(self) {
 		// edit pill data and tracker
 		if (term) {
 			delete d.section.pills[d.term && d.term.id]
-			delete d.dom.pills[d.term && d.term.id]
+			delete self.dom.pills[d.term && d.term.id]
 			d.section.pills[term.id] = d.pill
+			self.dom.pills[term.id] = d.dom
 			d.term = term
 		} // if (!term), no need to delete d.term to make it a part of pillDiv.exit()
 
