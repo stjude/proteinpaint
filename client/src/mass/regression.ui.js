@@ -88,7 +88,7 @@ class MassRegressionUI {
 	setDisableTerms() {
 		this.disable_terms = []
 		if (this.config.term) this.disable_terms.push(this.config.term.id)
-		for (const term of this.config.independent) this.disable_terms.push(term.id)
+		if (this.config.independent) for (const term of this.config.independent) this.disable_terms.push(term.id)
 	}
 
 	async updateValueCount(d) {
@@ -113,6 +113,12 @@ class MassRegressionUI {
 		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		d.sampleCounts = data.lst
+		d.totalCount = { included: 0, excluded: 0, total: 0 }
+		data.lst.forEach(v => {
+			if (v.range && v.range.is_unannotated) d.totalCount.excluded = d.totalCount.excluded + v.samplecount
+			else d.totalCount.included = d.totalCount.included + v.samplecount
+		})
+		d.totalCount.total = d.totalCount.included + d.totalCount.excluded
 	}
 }
 
@@ -232,7 +238,7 @@ function setRenderers(self) {
 		if (d.pill) d.pill.main(d.term)
 		d.infoDiv = select(this).select('.sjpp-regression-ui-infodiv')
 		if (d.section.configKey == 'term') renderCuttoff(d)
-		else if (d.infoDiv) {
+		if (d.infoDiv) {
 			if (d.term) renderInfo(d)
 			else d.infoDiv.selectAll('*').remove()
 		}
@@ -282,8 +288,9 @@ function setRenderers(self) {
 		if (d.section.configKey == 'independent') {
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
 				term_summmary_div.html(
-					`Use as ${q.use_as || 'continuous'} variable. </br>`
-					//   ${q.count.included} sample included.` + (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
+					`Use as ${q.use_as || 'continuous'} variable. </br>
+					  ${d.totalCount.included} sample included.` +
+						(d.totalCount.excluded ? ` ${d.totalCount.excluded} samples excluded.` : '')
 				)
 			} else if (d.term.term.type == 'categorical' || d.term.term.type == 'condition') {
 				const gs = d.term.q.groupsetting || {}
@@ -310,7 +317,8 @@ function setRenderers(self) {
 		} else if (d.section.configKey == 'term') {
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer')
 				term_summmary_div.text(
-					`${q.count.included} sample included.` + (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
+					`${d.totalCount.included} sample included.` +
+						(d.totalCount.excluded ? ` ${d.totalCount.excluded} samples excluded.` : '')
 				)
 		}
 	}
