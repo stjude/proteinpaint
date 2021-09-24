@@ -15,14 +15,16 @@ class MassRegressionUI {
 				configKey: 'term',
 				limit: 1,
 				selected: [],
-				cutoffTermTypes: ['condition', 'integer', 'float']
+				cutoffTermTypes: ['condition', 'integer', 'float'],
+				pills: {}
 			},
 			{
 				label: 'Independent variable(s)',
 				prompt: 'Add independent variable',
 				configKey: 'independent',
 				limit: 10,
-				selected: []
+				selected: [],
+				pills: {}
 			}
 		]
 		// track reference category values or groups by term ID
@@ -41,7 +43,10 @@ class MassRegressionUI {
 			div: this.opts.holder.style('margin', '10px 0px').style('margin-left', '-50px'),
 			controls,
 			body: controls.append('div'),
-			foot: controls.append('div')
+			foot: controls.append('div'),
+			// to track and recover selected term pills, info divs, other dom elements,
+			// and avoid unnecessary jerky full rerenders for the same term
+			pills: {}
 		}
 	}
 
@@ -87,7 +92,7 @@ class MassRegressionUI {
 	setDisableTerms() {
 		this.disable_terms = []
 		if (this.config.term) this.disable_terms.push(this.config.term.id)
-		if (this.config.independent) for (const term of this.config.independent) this.disable_terms.push(term.id)
+		for (const term of this.config.independent) this.disable_terms.push(term.id)
 	}
 
 	async updateValueCount(d) {
@@ -171,24 +176,26 @@ function setRenderers(self) {
 		const v = self.config[section.configKey]
 		const terms = Array.isArray(v) ? v : v ? [v] : []
 		section.selected = terms
-		section.data = terms.map(term => {
+		section.items = terms.map(term => {
 			const d = { section, term }
+			d.pill = d.section.pills[d.term && d.term.id]
+			d.dom = self.dom.pills[d.term && d.term.id]
 			setActiveValues(d)
 			return d
 		})
-		if (!section.pills) section.pills = {}
-		if (section.data.length < section.limit && !section.data.find(d => !d.term)) {
-			section.data.push({ section }) // a blank pill to prompt a new selection
+
+		if (section.items.length < section.limit && !section.items.find(d => !d.term)) {
+			// a blank pill to prompt a new term selection
+			section.items.push({
+				section,
+				pill: section.pills.undefined,
+				dom: self.dom.pills.undefined
+			})
 		}
 		const pillDivs = select(this.lastChild)
 			.selectAll(':scope > div')
-			.data(section.data, d => d.term && d.term.id)
-		pillDivs
-			.exit()
-			.transition()
-			.duration(500)
-			.style('opacity', 0)
-			.remove()
+			.data(section.items, d => d.term && d.term.id)
+		pillDivs.exit().each(removePill)
 		pillDivs.each(updatePill)
 		pillDivs
 			.enter()
@@ -226,34 +233,53 @@ function setRenderers(self) {
 				self.editConfig(d, term)
 			}
 		})
-
 		d.section.pills[d.term && d.term.id] = d.pill
-		d.infoDiv = div.append('div').attr('class', 'sjpp-regression-ui-infodiv')
+		d.dom = {
+			infoDiv: div.append('div')
+		}
+		d.dom.cutoffDiv = d.dom.infoDiv.append('div')
+		d.dom.term_summmary_div = d.dom.infoDiv.append('div')
+		d.dom.term_values_div = d.dom.infoDiv.append('div')
+		d.dom.values_table = d.dom.term_values_div.append('table')
+		d.dom.ref_click_prompt = d.dom.term_values_div.append('div')
+		// track the dom outside at the component level, to enable recovery
+		// when the section.items is reconstructed on render()
+		self.dom.pills[d.term && d.term.id] = d.dom
 		updatePill.call(this, d)
 	}
 
 	function updatePill(d) {
 		select(this).style('border-left', d.term ? '1px solid #bbb' : '')
-		if (!d.pill && d.term && d.term.id in d.section.pills) d.pill = d.section.pills[d.term.id]
-		if (d.pill) d.pill.main(d.term)
-		d.infoDiv = select(this).select('.sjpp-regression-ui-infodiv')
+		d.pill.main(d.term)
+		d.dom.infoDiv.style('display', d.term ? 'block' : 'none')
 		if (d.section.configKey == 'term') renderCuttoff(d)
-		if (d.infoDiv) {
-			if (d.term) renderInfo(d)
-			else d.infoDiv.selectAll('*').remove()
+		else if (d.term) renderInfo(d)
+	}
+
+	function removePill(d) {
+		for (const key in delete self.dom.pills[d.term.id]) {
+			delete self.dom.pills[d.term.id][key]
 		}
+		delete self.dom.pills[d.term.id]
+		delete d.section.pills[d.term.id]
+		const div = select(this)
+		div
+			.transition()
+			.duration(500)
+			.style('opacity', 0)
+			.remove()
 	}
 
 	function renderCuttoff(d) {
-		if (!d.infoDiv || self.config.regressionType != 'logistic') return
-		d.infoDiv.selectAll('*').remove()
-		d.infoDiv
+		if (!d.term || self.config.regressionType != 'logistic') return
+		d.dom.infoDiv
 			.style('display', d.term && d.cutoffTermTypes && d.cutoffTermTypes.includes(d.term.term.type) ? 'block' : 'none')
 			.style('margin', '3px 5px')
 			.style('padding', '3px 5px')
 
-		const cutoffLabel = cutoffDiv.append('span').html('Use cutoff of ')
-		const useCutoffInput = cutoffDiv
+		d.dom.cutoffDiv.selectAll('*').remove()
+		const cutoffLabel = d.dom.cutoffDiv.append('span').html('Use cutoff of ')
+		const useCutoffInput = d.dom.cutoffDiv
 			.append('input')
 			.attr('type', 'number')
 			.style('width', '50px')
@@ -267,9 +293,7 @@ function setRenderers(self) {
 	}
 
 	async function renderInfo(d) {
-		d.infoDiv.selectAll('*').remove()
-
-		d.infoDiv
+		d.dom.infoDiv
 			.style('display', 'block')
 			.style('margin', '10px')
 			.style('font-size', '.8em')
@@ -281,16 +305,12 @@ function setRenderers(self) {
 	}
 
 	function updateTermInfoDiv(d) {
-		const term_summmary_div = d.infoDiv.append('div')
-		const term_values_div = d.infoDiv.append('div')
-		d.values_table = term_values_div.append('table')
-		const q = (d && d.term.q) || {}
+		const q = (d.term && d.term.q) || { count: {} }
 		if (d.section.configKey == 'independent') {
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
-				term_summmary_div.html(
-					`Use as ${q.use_as || 'continuous'} variable. </br>
-					  ${d.totalCount.included} sample included.` +
-						(d.totalCount.excluded ? ` ${d.totalCount.excluded} samples excluded.` : '')
+				d.dom.term_summmary_div.html(
+					`Use as ${q.use_as || 'continuous'} variable. </br>`
+					//   ${q.count.included} sample included.` + (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
 				)
 			} else if (d.term.term.type == 'categorical' || d.term.term.type == 'condition') {
 				const gs = d.term.q.groupsetting || {}
@@ -303,18 +323,17 @@ function setRenderers(self) {
 					text = Object.keys(d.values).length + (d.term.term.type == 'categorical' ? ' categories' : ' grades')
 					make_values_table(d)
 				}
-				term_values_div
-					.append('div')
+				d.dom.ref_click_prompt
 					.style('padding', '5px 10px')
 					.style('color', '#999')
 					.text('Click on a row to mark it as reference.')
-				term_summmary_div.text(text)
+				d.dom.term_summmary_div.text(text)
 			}
 		} else if (d.section.configKey == 'term') {
+			if (!q.count) q.count = { included: 'FIX-ME', exlcuded: 'FIX-ME' }
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer')
-				term_summmary_div.text(
-					`${d.totalCount.included} sample included.` +
-						(d.totalCount.excluded ? ` ${d.totalCount.excluded} samples excluded.` : '')
+				d.dom.term_summmary_div.text(
+					`${q.count.included} sample included.` + (q.count.excluded ? ` ${q.count.excluded} samples excluded.` : '')
 				)
 		}
 	}
@@ -331,7 +350,7 @@ function setRenderers(self) {
 			}
 		}
 
-		const trs = d.values_table
+		const trs = d.dom.values_table
 			.style('margin', '10px 5px')
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
@@ -427,7 +446,8 @@ function setInteractivity(self) {
 
 		// edit pill data and tracker
 		if (term) {
-			if (!d.term) delete d.section.pills.undefined
+			delete d.section.pills[d.term && d.term.id]
+			delete d.dom.pills[d.term && d.term.id]
 			d.section.pills[term.id] = d.pill
 			d.term = term
 		} // if (!term), no need to delete d.term to make it a part of pillDiv.exit()
