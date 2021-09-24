@@ -16,7 +16,9 @@ class MassRegressionUI {
 				limit: 1,
 				selected: [],
 				cutoffTermTypes: ['condition', 'integer', 'float'],
-				pills: {}
+				// to track and recover selected term pills, info divs, other dom elements,
+				// and avoid unnecessary jerky full rerenders for the same term
+				items: {}
 			},
 			{
 				label: 'Independent variable(s)',
@@ -24,7 +26,7 @@ class MassRegressionUI {
 				configKey: 'independent',
 				limit: 10,
 				selected: [],
-				pills: {}
+				items: {}
 			}
 		]
 		// track reference category values or groups by term ID
@@ -43,10 +45,7 @@ class MassRegressionUI {
 			div: this.opts.holder.style('margin', '10px 0px').style('margin-left', '-50px'),
 			controls,
 			body: controls.append('div'),
-			foot: controls.append('div'),
-			// to track and recover selected term pills, info divs, other dom elements,
-			// and avoid unnecessary jerky full rerenders for the same term
-			pills: {}
+			foot: controls.append('div')
 		}
 	}
 
@@ -117,12 +116,12 @@ class MassRegressionUI {
 		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		d.sampleCounts = data.lst
-		const totalCount = (d.term.q.totalCount = { included: 0, excluded: 0, total: 0 })
+		d.totalCount = { included: 0, excluded: 0, total: 0 }
 		data.lst.forEach(v => {
-			if (v.range && v.range.is_unannotated) totalCount.excluded = totalCount.excluded + v.samplecount
-			else totalCount.included = totalCount.included + v.samplecount
+			if (v.range && v.range.is_unannotated) d.totalCount.excluded = d.totalCount.excluded + v.samplecount
+			else d.totalCount.included = d.totalCount.included + v.samplecount
 		})
-		totalCount.total = totalCount.included + totalCount.excluded
+		d.totalCount.total = d.totalCount.included + d.totalCount.excluded
 	}
 }
 
@@ -174,27 +173,23 @@ function setRenderers(self) {
 		}
 
 		const v = self.config[section.configKey]
-		const terms = Array.isArray(v) ? v : v ? [v] : []
-		section.selected = terms
-		section.items = terms.map(term => {
-			const d = { section, term }
-			d.pill = d.section.pills[d.term && d.term.id]
-			d.dom = self.dom.pills[d.term && d.term.id]
-			setActiveValues(d)
-			return d
+		section.selected = Array.isArray(v) ? v : v ? [v] : []
+		const itemRefs = section.selected.map(term => {
+			if (!(term.id in section.items)) {
+				section.items[term.id] = { section, term }
+			}
+			return section.items[term.id]
 		})
 
-		if (section.items.length < section.limit && !section.items.find(d => !d.term)) {
-			// a blank pill to prompt a new term selection
-			section.items.push({
-				section,
-				pill: section.pills.undefined,
-				dom: self.dom.pills.undefined
-			})
+		if (itemRefs.length < section.limit && !itemRefs.find(d => !d.term)) {
+			// create or reuse a blank pill to prompt a new term selection
+			if (!section.items.undefined) section.items.undefined = { section }
+			itemRefs.push(section.items.undefined)
 		}
+
 		const pillDivs = select(this.lastChild)
 			.selectAll(':scope > div')
-			.data(section.items, d => d.term && d.term.id)
+			.data(itemRefs, d => d.term && d.term.id)
 		pillDivs.exit().each(removePill)
 		pillDivs.each(updatePill)
 		pillDivs
@@ -210,7 +205,7 @@ function setRenderers(self) {
 		d.label_key = gs.inuse ? 'name' : 'label'
 	}
 
-	async function addPill(d, i) {
+	async function addPill(d) {
 		const config = self.config
 		const div = select(this)
 			.style('width', 'fit-content')
@@ -233,7 +228,6 @@ function setRenderers(self) {
 				self.editConfig(d, term)
 			}
 		})
-		d.section.pills[d.term && d.term.id] = d.pill
 		d.dom = {
 			infoDiv: div.append('div')
 		}
@@ -242,9 +236,6 @@ function setRenderers(self) {
 		d.dom.term_values_div = d.dom.infoDiv.append('div')
 		d.dom.values_table = d.dom.term_values_div.append('table')
 		d.dom.ref_click_prompt = d.dom.term_values_div.append('div')
-		// track the dom outside at the component level, to enable recovery
-		// when the section.items is reconstructed on render()
-		self.dom.pills[d.term && d.term.id] = d.dom
 		updatePill.call(this, d)
 	}
 
@@ -260,15 +251,11 @@ function setRenderers(self) {
 		)
 		d.dom.infoDiv.style('display', d.term ? 'block' : 'none')
 		if (d.section.configKey == 'term') renderCuttoff(d)
-		if (d.term) renderInfo(d)
+		else if (d.term) renderInfo(d)
 	}
 
 	function removePill(d) {
-		for (const key in delete self.dom.pills[d.term.id]) {
-			delete self.dom.pills[d.term.id][key]
-		}
-		delete self.dom.pills[d.term.id]
-		delete d.section.pills[d.term.id]
+		delete d.section.items[d.term.id]
 		const div = select(this)
 		div
 			.transition()
@@ -312,7 +299,9 @@ function setRenderers(self) {
 	}
 
 	function updateTermInfoDiv(d) {
-		const q = (d.term && d.term.q) || { totalCount: { included: 0, excluded: 0, total: 0 } }
+		setActiveValues(d)
+		const q = (d.term && d.term.q) || {}
+		if (!q.totalCount) q.totalCount = { included: 0, excluded: 0, total: 0 }
 		if (d.section.configKey == 'independent') {
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
 				d.dom.term_summmary_div.html(
@@ -459,17 +448,15 @@ function setInteractivity(self) {
 			}
 		} else {
 			if (term) c[key] = term
-			delete c[key]
+			//else delete c[key]
 		}
 
 		// edit pill data and tracker
 		if (term) {
-			delete d.section.pills[d.term && d.term.id]
-			delete self.dom.pills[d.term && d.term.id]
-			d.section.pills[term.id] = d.pill
-			self.dom.pills[term.id] = d.dom
+			delete d.section.items[d.term && d.term.id]
+			d.section.items[term.id] = d
 			d.term = term
-		} // if (!term), no need to delete d.term to make it a part of pillDiv.exit()
+		} // if (!term), do not delete d.term, so that it'll get handled in pillDiv.exit()
 
 		self.render()
 	}

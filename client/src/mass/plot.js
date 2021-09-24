@@ -496,6 +496,7 @@ export function plotConfig(opts, appState = {}) {
 
 	const config = {
 		id: opts.term.term.id,
+		independent: [],
 		settings: {
 			currViews: ['barchart'],
 			controls: {
