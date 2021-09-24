@@ -92,7 +92,7 @@ class MassRegressionUI {
 	setDisableTerms() {
 		this.disable_terms = []
 		if (this.config.term) this.disable_terms.push(this.config.term.id)
-		for (const term of this.config.independent) this.disable_terms.push(term.id)
+		if (this.config.independent) for (const term of this.config.independent) this.disable_terms.push(term.id)
 	}
 
 	async updateValueCount(d) {
@@ -325,12 +325,16 @@ function setRenderers(self) {
 				let text
 				// d.values is already set by self.setActiveValues() above
 				if (gs.inuse) {
-					text = Object.keys(d.values).length + ' groups'
+					text = Object.keys(d.values).length + ' groups.'
 					make_values_table(d)
 				} else {
-					text = Object.keys(d.values).length + (d.term.term.type == 'categorical' ? ' categories' : ' grades')
+					text = Object.keys(d.values).length + (d.term.term.type == 'categorical' ? ' categories.' : ' grades.')
 					make_values_table(d)
 				}
+				text =
+					text +
+					` ${q.totalCount.included} sample included.` +
+					(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded.` : '')
 				d.dom.ref_click_prompt
 					.style('padding', '5px 10px')
 					.style('color', '#999')
