@@ -81,7 +81,6 @@ class MassRegressionUI {
 		// mutate the actual state until the form is submitted
 		this.config = copyMerge('{}', this.state.config)
 		if (!this.dom.submitBtn) this.initUI()
-		this.setDisableTerms()
 		this.render()
 	}
 
@@ -135,6 +134,7 @@ function setRenderers(self) {
 	}
 
 	self.render = () => {
+		self.setDisableTerms()
 		const grps = self.dom.body.selectAll(':scope > div').data(self.sections || [])
 
 		grps.exit().remove()
@@ -295,16 +295,12 @@ function setRenderers(self) {
 			} else if (d.term.term.type == 'categorical' || d.term.term.type == 'condition') {
 				const gs = d.term.q.groupsetting || {}
 				let text
+				// d.values is already set by self.setActiveValues() above
 				if (gs.inuse) {
-					d.values = d.term.q.values !== undefined ? d.term.q.values : gs.customset.groups
-					d.labelKey = 'name'
 					text = Object.keys(d.values).length + ' groups'
 					make_values_table(d)
 				} else {
-					d.values = d.term.q.values !== undefined ? d.term.q.values : d.term.term.values
-					d.labelKey = 'label'
-					text =
-						Object.keys(d.term.term.values).length + (d.term.term.type == 'categorical' ? ' categories' : ' grades')
+					text = Object.keys(d.values).length + (d.term.term.type == 'categorical' ? ' categories' : ' grades')
 					make_values_table(d)
 				}
 				term_values_div
@@ -414,15 +410,15 @@ function setInteractivity(self) {
 	self.editConfig = async (d, term) => {
 		const c = self.config
 		const key = d.section.configKey
-		if (!('id' in term)) term.id = term.term.id
+		if (term && term.term && !('id' in term)) term.id = term.term.id
 		// edit section data
 		if (Array.isArray(c[key])) {
 			if (!d.term) {
-				c[key].push(term)
+				if (term) c[key].push(term)
 			} else {
 				const i = c[key].findIndex(t => t.id === d.term.id)
 				if (term) c[key][i] = term
-				else if (d.section.pills.undefined) c[key].splice(i, 1)
+				else c[key].splice(i, 1)
 			}
 		} else {
 			if (term) c[key] = term
@@ -434,9 +430,7 @@ function setInteractivity(self) {
 			if (!d.term) delete d.section.pills.undefined
 			d.section.pills[term.id] = d.pill
 			d.term = term
-		} else {
-			delete d.term
-		}
+		} // if (!term), no need to delete d.term to make it a part of pillDiv.exit()
 
 		self.render()
 	}
