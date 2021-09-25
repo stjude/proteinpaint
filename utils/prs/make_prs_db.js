@@ -17,7 +17,7 @@ const fetch = require('node-fetch').default
 const initBinConfig = require('../../server/shared/termdb.initbinconfig')
 
 // PRS db file paths
-const prsDbDir = path.join(os.homedir(), 'data', 'tp/files/hg38/sjlife/clinical/PRS')
+const prsDbDir = path.join(os.homedir(), 'tp/files/hg38/sjlife/clinical/PRS')
 const ancestryFile = path.join(prsDbDir, 'ancestry.prs')
 const annotationFile = path.join(prsDbDir, 'annotation.scores')
 const termdbFile = path.join(prsDbDir, 'termdb.prs')
@@ -36,7 +36,7 @@ const termid2htmlFile = path.join(prsDbDir, 'termid2htmldef.prs')
 		const fields = line.split('\t')
 		const prs = fields[0]
 		const ancestry = fields[1]
-		const dir = path.join(os.homedir(), 'data', 'tp', fields[2])
+		const dir = path.join(os.homedir(), 'tp', fields[2])
 		const scoreFiles = glob.sync(dir + '/*.prs.profile')
 		const scoreFiles_maf = glob.sync(dir + '/*.prs.mafFilt.profile')
 		const id2score = get_id2score(scoreFiles)
@@ -104,28 +104,54 @@ async function get_metadata(pgsID, prsDir) {
 		.split('\n').length
 	const response = await fetch(`https://www.pgscatalog.org/rest/score/${pgsID}`, { method: 'GET' })
 	const obj = await response.json()
+
 	const metadata = [
-		{ label: 'PGS ID', value: obj.id },
-		{ label: 'Mapped Trait', value: obj.trait_reported },
-		{ label: 'Publication Date', value: obj.publication.date_publication },
+		{ label: 'PGS catalog id', value: obj.id },
+		{ label: 'PGS catalog url', value: 'https://www.pgscatalog.org/score/' + pgsID },
+		{ label: 'Reported trait', value: obj.trait_reported },
 		{
-			label: 'Number of Variants',
+			label: 'Variants',
 			value: [
-				{ label: 'Original', value: obj.variants_number },
-				{ label: 'SJLIFE + CCSS matched', value: matchedVariantCnt },
-				{ label: 'QC description', value: '' }
+				{ label: 'Number of variants', value: obj.variants_number },
+				{ label: 'Number of matched variants', value: matchedVariantCnt },
+				{ label: 'Quality control details', value: '<>' }
 			]
 		},
-		{ label: 'Development Method', value: obj.method_name },
-		{
-			label: 'Development Samples',
-			value: [
-				{ label: 'Study Identifier', value: obj.samples_variants[0].source_GWAS_catalog },
-				{ label: 'Sample Number', value: obj.samples_variants[0].sample_number },
-				{ label: 'Sample Ancestry', value: obj.samples_variants[0].ancestry_broad }
-			]
-		}
+		{ label: 'Development method', value: obj.method_name }
 	]
+
+	// Information about the development samples may not be available
+	let label = 'Development samples'
+	let value
+	if (obj.samples_variants && obj.samples_variants.length > 0) {
+		value = []
+		for (const study of obj.samples_variants) {
+			value.push({
+				label: 'Source study',
+				value: [
+					{ label: 'Study identifier (GWAS catalog)', value: study.source_GWAS_catalog },
+					{ label: 'Sample number', value: study.sample_number },
+					{ label: 'Sample ancestry', value: study.ancestry_broad }
+				]
+			})
+		}
+	} else {
+		value = 'N/A'
+	}
+	metadata.push({ label: label, value: value })
+
+	// Add publication information
+	metadata.push({
+		label: 'Publication',
+		value: [
+			{ label: 'Title', value: obj.publication.title },
+			{ label: 'Journal', value: obj.publication.journal },
+			{ label: 'Date', value: obj.publication.date_publication },
+			{ label: 'PMID', value: obj.publication.PMID },
+			{ label: 'DOI', value: obj.publication.doi }
+		]
+	})
+
 	return metadata
 }
 

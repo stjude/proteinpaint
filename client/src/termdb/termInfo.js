@@ -103,9 +103,8 @@ function setRenderers(self) {
 				.style('padding-bottom', '10px')
 				.style('font-weight', 'bold')
 				.text('Description')
-			const details = self.dom.holder.append('div')
 			for (const d of data.terminfo.description) {
-				self.renderDetail(d, details.append('div'))
+				self.renderDetail(d, self.dom.holder.append('div').style('padding-bottom', '3px'))
 			}
 			self.dom.holder.append('div').style('padding-bottom', '20px')
 		}
@@ -113,20 +112,27 @@ function setRenderers(self) {
 
 	self.renderDetail = function(d, div) {
 		if (Array.isArray(d.value)) {
-			div
-				.append('span')
-				.html('<i>' + d.label + '</i>')
-				.style('padding-bottom', '5px')
+			div.append('span').html('<i>' + d.label + '</i>')
 			const section = div.append('div').style('padding-left', '20px')
 			for (const v of d.value) {
 				v.label = '- ' + v.label
 				self.renderDetail(v, section.append('div'))
 			}
 		} else {
-			div
-				.append('span')
-				.html('<i>' + d.label + ':' + '</i>' + '&nbsp&nbsp;' + '<text>' + d.value + '</text>')
-				.style('padding-bottom', '5px')
+			div.html('<i>' + d.label + ':' + '</i>' + '&nbsp;')
+			if (typeof d.value === 'string' && d.value.startsWith('http')) {
+				div
+					.append('a')
+					.attr('href', d.value)
+					.text(d.value)
+			} else if (d.label === '- DOI') {
+				div
+					.append('a')
+					.attr('href', 'https://doi.org/' + d.value)
+					.text(d.value)
+			} else {
+				div.append('span').text(d.value)
+			}
 		}
 	}
 }
