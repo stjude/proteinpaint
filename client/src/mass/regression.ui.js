@@ -349,6 +349,7 @@ function setRenderers(self) {
 				d.refGrp = self.refGrpByTermId[d.term.id]
 			} else {
 				d.refGrp = tr_data[0].key
+				self.refGrpByTermId[d.term.id] = tr_data[0].key
 			}
 		}
 
