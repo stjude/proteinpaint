@@ -186,6 +186,7 @@
                 },
                 {
                     "label": "BED3",
+                    "message": "The bare minimum for the JSON BED track is a three column tab-delimited file with the chromosome, start position, and stop position. Below is example of the barebone rendering of the data.",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedj3DemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz",
                     "runargs": {
@@ -458,6 +459,7 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
             "ppcalls": [
                 {
+                    "label": "Hi-C",
                     "urlparam": "?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic",
                     "runargs": {
                         "parseurl": true,
@@ -476,6 +478,9 @@
                             "pyramidup": 1,
                             "enzyme": "MboI"
                         }]
+                    },
+                    "testSpec": {
+                        "expected": {"image": 1 }
                     }
                 }
             ],
@@ -526,6 +531,7 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
             "ppcalls": [
                 {
+                    "label": "RNA Splice Junction",
                     "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionDemoData.tar.gz",
                     "urlparam": "?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz",
                     "runargs": {
@@ -565,7 +571,7 @@
             "new_expire": "2021-08-15",
             "ppcalls": [
                 {
-                    "label":"From a JSON",
+                    "label":"From an External JSON",
                     "message": "",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionJsonDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz",
@@ -752,6 +758,7 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/arc-square.png",
             "ppcalls": [
                 {
+                    "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/arc/arcDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc Track,proteinpaint_demo/hg19/arc/mango.gz",
                     "runargs": {
                         "parseurl": true,
@@ -923,6 +930,7 @@
                 },
                 {
                     "label": "Kmer typing",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/bamDemoData.exon8del.tar.gz",
                     "urlparam": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A",
                     "runargs": {
                         "parseurl": true,
@@ -1110,6 +1118,7 @@
                     }
                 },
                 {
+                    "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/mavb/mavbDemoData.tar.gz",
                     "runargs": {
                         "genome": "hg19",
                         "noheader": 1,
@@ -1129,6 +1138,9 @@
                                 "type": "bigwigstranded"
                             }]
                         }
+                    },
+                    "testSpec": {
+                        "expected": { "rect": 2, "circle": 10 }
                     }
                 }
             ],
@@ -1169,35 +1181,13 @@
             "searchterms": ["mutant allele fraction", "snv", "snv4"]
         },
         {
-            "name": "Study View",
-            "app": "Apps",
-            "hidden": true,
-            "blurb": "Multiple viewing options for genes by sample matrix",
-            "image": "https://pecan.stjude.cloud/static/examples/images/studyview-square.png",
-            "sandbox": {},
-            "searchterms": ["heatmap", "heat map", "ribbon graph", "disco plot", "pie chart", "gene network"]
-        },
-        {
-            "name": "Hi-C whole-genome view",
-            "app": "Apps",
-            "hidden": true,
-            "blurb": "TODO: Brief description of track or app",
-            "image": "https://pecan.stjude.cloud/static/examples/images/hic-whole-square.png",
-            "media": {
-                "urls": "/F/human.temp.hic.html",
-                "doc": ""
-            },
-            "sandbox":{},
-            "searchterms": ["hic", "hicstraw", "C3", "chromatin capture", "conformation", "whole genome"]
-        },
-        {
             "name": "Sample Scatterplot",
             "app": "Apps",
             "blurb": "2D scatterplot of samples & metadata",
             "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
             "ppcalls": [
                 {
-                    "label": "Scatterplot",
+                    "label": "From an External JSON",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/mdstsne/scatterplotDemoData.json.gz",
                     "urlparam": "?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json",
                     "runargs": {
@@ -1218,7 +1208,7 @@
                     }
                 },
                 {
-                    "label": "Tabular Data",
+                    "label": "From Tabular Data",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/mdstsne/tabDemoData.tar.gz",
                     "runargs": {
                         "parseurl": true,
@@ -1245,7 +1235,94 @@
                         "testSpec": {
                             "expected": {"circle": 10 }
                         }
+                    },
+                    {
+                        "label": "From a Custom Dataset",
+                        "runargs": {
+                            "noheader": true,
+                            "parseurl": true,
+                            "nobox":1,
+                            "genome":"hg38",
+                            "mdssamplescatterplot":{
+                                "features_on_rows": true,
+                                "analysisdata":{
+                                    "samplekey":"sample_name",
+                                    "attr_levels":[
+                                        {"key":"group"},
+                                        {"key":"sj_diseases","label":"label"}
+                                    ],
+                                   "sample_attributes": {
+                                        "sj_diseases": {
+                                            "label":"Diagnosis"
+                                        },
+                                        "group":{
+                                            "label":"Group"
+                                        },
+                                        "label":{
+                                            "label":"Label"
+                                        }
+                                    },
+                                    "samples": [
+                                        {"x": -18.24, "y": -126.21, "sample_name": "SJAML001417_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -10.47, "y": -119.03, "sample_name": "SJAML030004_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -6.06, "y": -125.18, "sample_name": "SJAML030006_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -19.84, "y": -131.29, "sample_name": "SJAML030024_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -20.94, "y": -110.81, "sample_name": "SJAML030025_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -6.63, "y": -129.02, "sample_name": "SJAML030156_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -15.8, "y": -144.98, "sample_name": "SJAML030163_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -17.84, "y": -148.55, "sample_name": "SJAML030195_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -23.2, "y": -127.4, "sample_name": "SJAML030200_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -18.62, "y": -110.96, "sample_name": "SJAML030431_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -6.87, "y": -123.79, "sample_name": "SJAML030440_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -13.76, "y": -149.01, "sample_name": "SJAML030881_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -18.21, "y": -120, "sample_name": "SJAML030934_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -12.29, "y": -125.65, "sample_name": "SJAML030947_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -30.25, "y": -116.31, "sample_name": "SJAML030987_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -22.82, "y": -109.22, "sample_name": "SJAML030988_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -15.28, "y": -149.86, "sample_name": "SJAML031022_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -2.03, "y": -119.32, "sample_name": "SJAML031065_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": 11.35, "y": -132.74, "sample_name": "SJAML031075_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -20.58, "y": -146.71, "sample_name": "SJCBF001018_D1", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -21.78, "y": -147.67, "sample_name": "SJCBF001018_D2", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -21.39, "y": -146.09, "sample_name": "SJCBF001018_D3", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -23.52, "y": -144.95, "sample_name": "SJCBF001018_D4", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -21.06, "y": -147.41, "sample_name": "SJCBF001018_D5", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -23.2, "y": -146.69, "sample_name": "SJCBF001018_D6", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -22.26, "y": -146.91, "sample_name": "SJCBF001018_D7", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -24.19, "y": -143.82, "sample_name": "SJCBF001018_D8", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -20.63, "y": -144.28, "sample_name": "SJCBF001_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -11.3, "y": -141.39, "sample_name": "SJCBF004_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -14.07, "y": -147.75, "sample_name": "SJCBF006_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -19.47, "y": -140.2, "sample_name": "SJCBF034_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -30.3, "y": -135.72, "sample_name": "SJCBF041_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -14.29, "y": -145.57, "sample_name": "SJCBF042_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -13.63, "y": -141.16, "sample_name": "SJCBF138_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -18.73, "y": -143.16, "sample_name": "SJCBF139_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -17.01, "y": -139.2, "sample_name": "SJCBF141_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -10.54, "y": -137.83, "sample_name": "SJCBF143_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -20.35, "y": -142.46, "sample_name": "SJCBF145_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -17.48, "y": -140.41, "sample_name": "SJCBF149_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -17.89, "y": -137.44, "sample_name": "SJCBF150_D", "sj_diseases": "CBF", "group": "Acute Myeloid Leukemia", "label": "Core Binding Factor"},
+                                        {"x": -22.74, "y": -129.98, "sample_name": "SJMLL011_D", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -30.97, "y": -118.6, "sample_name": "SJMLL012_D", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -30.15, "y": -121.24, "sample_name": "SJMLL013_D", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -21.81, "y": -124.61, "sample_name": "SJMLL014_D", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -29.85, "y": -121.05, "sample_name": "SJMLL018_D", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -31.71, "y": -121.63, "sample_name": "SJMLL019_D", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -28.91, "y": -118.99, "sample_name": "SJMLL020_D", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -28, "y": -118.28, "sample_name": "SJMLL021_D", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -30, "y": -117.87, "sample_name": "SJMLL022_D", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"},
+                                        {"x": -19.49, "y": -125.32, "sample_name": "SJMLL030007_D1", "sj_diseases": "AML", "group": "Acute Myeloid Leukemia", "label": "Other"}
+                                    ],
+
+                                    "user_samples":[{"x":60.7825039260531,"y":-123.425056732028,"sample_name":"SJAML032140_D1"},{"x":44.4596849912704,"y":-98.6334442331137,"sample_name":"SJAML032173_D1_V2"}]
+                            }
+                        }
+                    },
+                    "testSpec": {
+                        "expected": {"circle": 10 }
                     }
+                }
             ],
             "sandbox":{
                 "buttons": [
@@ -1272,6 +1349,9 @@
                             "genome": "hg19",
                             "jsonfile":"proteinpaint_demo/hg19/singlecell/singlecell.json"
                         }
+                    },
+                    "testSpec": {
+                        "expected": {"canvas": 1 }
                     }
                 }
             ],

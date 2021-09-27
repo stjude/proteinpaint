@@ -1,17 +1,20 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 
 class ToyFilter {
 	constructor(opts) {
 		this.type = 'filter'
-		this.app = opts.app
-		this.api = rx.getComponentApi(this)
-		this.dom = { holder: opts.holder }
+		setInteractivity(this)
+		setRenderers(this)
+	}
 
-		// set closured methods to use the correct "this" context
-		this.yesThis()
-		this.notThis(this)
-		this.render()
+	async init() {
+		try {
+			this.dom = { holder: this.opts.holder }
+			this.initUI()
+		} catch (e) {
+			throw e
+		}
 	}
 
 	reactsTo(action) {
@@ -25,21 +28,17 @@ class ToyFilter {
 	}
 
 	main() {
-		const rows = this.dom.holder.selectAll('.row_div').data(this.state.rows, this.getRowName)
-
-		rows.exit().each(this._removeRow)
-		rows.each(this._updateRow)
-		rows
-			.enter()
-			.append('div')
-			.attr('class', 'row_div')
-			.each(this._addRow)
-
-		this.updateAllBtn()
+		// most components will process data here,
+		// but this component does not need to that
+		this.render()
 	}
+}
 
-	render() {
-		const div = this.dom.holder
+export const filterInit = getCompInit(ToyFilter)
+
+function setRenderers(self) {
+	self.initUI = function() {
+		const div = self.dom.holder
 			.attr('class', 'filter_div')
 			.style('width', 'fit-content')
 			.style('padding', '5px')
@@ -56,7 +55,7 @@ class ToyFilter {
 			.style('margin-right', '10px')
 			.html('Rows')
 
-		const all_btn_div = this.dom.holder
+		const all_btn_div = self.dom.holder
 			.append('div')
 			.style('display', 'inline-block')
 			.style('position', 'relative')
@@ -70,7 +69,7 @@ class ToyFilter {
 			.attr('class', 'all_btn')
 			.attr('type', 'checkbox')
 			.attr('value', 'all')
-			.on('click', this.showHideAll)
+			.on('click', self.showHideAll)
 
 		label
 			.append('span')
@@ -78,7 +77,22 @@ class ToyFilter {
 			.text('ALL')
 	}
 
-	addRow(row, div) {
+	self.render = () => {
+		const rows = self.dom.holder.selectAll('.row_div').data(self.state.rows, self.getRowName)
+
+		rows.exit().each(self.removeRow)
+		rows.each(self.updateRow)
+		rows
+			.enter()
+			.append('div')
+			.attr('class', 'row_div')
+			.each(self.addRow)
+
+		self.updateAllBtn()
+	}
+
+	self.addRow = function(row) {
+		const div = select(this)
 		div
 			.style('display', 'inline-block')
 			.style('position', 'relative')
@@ -97,7 +111,7 @@ class ToyFilter {
 			.datum(row)
 			.attr('value', row.name)
 			.property('checked', row.hide ? false : true)
-			.on('click', this.hideRow)
+			.on('click', self.hideRow)
 
 		label
 			.append('span')
@@ -106,20 +120,21 @@ class ToyFilter {
 			.text(row.name)
 	}
 
-	updateRow(row, div) {
+	self.updateRow = function(row) {
+		const div = select(this)
 		const label = div.select('label').datum(row)
 
 		label
 			.select('input')
 			.property('checked', row.hide ? false : true)
-			.on('click', this.hideRow)
+			.on('click', self.hideRow)
 
 		label.select('span').text(row.name)
 	}
 
-	removeRow(row, div) {
+	self.removeRow = function(row) {
+		const div = select(this)
 		div.select('label').datum(row)
-
 		div
 			.style('opacity', 1)
 			.transition()
@@ -128,44 +143,28 @@ class ToyFilter {
 			.remove()
 	}
 
-	getRowName(row) {
-		return row.name
-	}
+	self.getRowName = row => row.name
 
-	yesThis() {
-		this.hideRow = row => this.app.dispatch({ type: 'term_row_hide', row_name: row.name })
-
-		this.showHideAll = () => {
-			const all_btn = this.dom.holder.selectAll('.all_btn')
-			if (all_btn.property('checked')) {
-				this.state.rows.forEach(row => {
-					if (row.hide) this.app.dispatch({ type: 'term_row_hide', row_name: row.name })
-				})
-			} else {
-				this.state.rows.forEach(row => {
-					if (!row.hide) this.app.dispatch({ type: 'term_row_hide', row_name: row.name })
-				})
-			}
-		}
-
-		this.updateAllBtn = () => {
-			const all_btn = this.dom.holder.selectAll('.all_btn')
-			const hiddencount = this.state.rows.map(a => a.hide)
-			all_btn.property('checked', hiddencount.includes(true) ? false : true)
-		}
-	}
-
-	notThis(self) {
-		self._addRow = function(row) {
-			self.addRow(row, select(this))
-		}
-		self._updateRow = function(row) {
-			self.updateRow(row, select(this))
-		}
-		self._removeRow = function(row) {
-			self.removeRow(row, select(this))
-		}
+	self.updateAllBtn = () => {
+		const all_btn = self.dom.holder.selectAll('.all_btn')
+		const hiddencount = self.state.rows.map(a => a.hide)
+		all_btn.property('checked', hiddencount.includes(true) ? false : true)
 	}
 }
 
-export const filterInit = rx.getInitFxn(ToyFilter)
+function setInteractivity(self) {
+	self.showHideAll = () => {
+		const all_btn = self.dom.holder.selectAll('.all_btn')
+		if (all_btn.property('checked')) {
+			self.state.rows.forEach(row => {
+				if (row.hide) self.app.dispatch({ type: 'term_row_hide', row_name: row.name })
+			})
+		} else {
+			self.state.rows.forEach(row => {
+				if (!row.hide) self.app.dispatch({ type: 'term_row_hide', row_name: row.name })
+			})
+		}
+	}
+
+	self.hideRow = row => self.app.dispatch({ type: 'term_row_hide', row_name: row.name })
+}

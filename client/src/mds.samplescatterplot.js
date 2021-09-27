@@ -418,10 +418,13 @@ function finish_setup(obj) {
 			for (const k in a.values) {
 				if (!a.values[k].color) a.values[k].color = cf(k)
 			}
-			// add color to obj.analysisdata.sample_attributes[key].values
-			// for tabular data where colors are not defined for each category
-			const ad = obj.analysisdata.sample_attributes
-			if (ad[a.key].values == undefined) ad[a.key].values = a.values
+
+			if (obj.analysisdata) {
+				// add color to obj.analysisdata.sample_attributes[key].values
+				// for tabular data where colors are not defined for each category
+				const ad = obj.analysisdata.sample_attributes
+				if (ad[a.key].values == undefined) ad[a.key].values = a.values
+			}
 		}
 	}
 	if (obj.attr_levels) {

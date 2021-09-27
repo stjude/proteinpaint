@@ -29,7 +29,7 @@ tape('vocabInit(), default', test => {
 			}
 		}
 	}
-	const vocabApi = vocabInit(app, app.opts)
+	const vocabApi = vocabInit({ app, state: app.opts.state, fetchOpts: app.opts.fetchOpts })
 
 	test.equal(typeof vocabApi, 'object', 'should return a vocab object')
 	test.equal(typeof vocabApi.getTermdbConfig, 'function', 'should have a vocab.getTermdbConfig function')

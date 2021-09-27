@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getAppInit, multiInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { vocabInit } from './vocabulary'
 import { navInit } from './nav'
@@ -18,66 +18,73 @@ https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/
 */
 
 class TdbApp {
-	constructor(opts = {}) {
-		this.type = 'app'
-		this.opts = this.validateOpts(opts)
-		this.tip = new Menu({ padding: '5px' })
-		// the TdbApp may be the root app or a component within another app
-		this.api = rx.getAppApi(this)
-		this.api.vocabApi = vocabInit(this.api, this.opts)
-
+	constructor(opts) {
+		if (!opts.holder) select('body').append('div')
+		// do this in the constructor to have an dom.errdiv
+		// available at any point during initialization
 		this.dom = {
-			holder: opts.holder, // do not modify holder style
+			holder: opts.holder,
 			topbar: opts.holder.append('div'),
-			errdiv: opts.holder.append('div')
-		}
-
-		this.eventTypes = ['postInit', 'postRender']
-
-		// catch initialization error
-		try {
-		} catch (e) {
-			this.printError(e)
+			errdiv: opts.holder.append('div'),
+			tip: new Menu({ padding: '5px' })
 		}
 	}
 
 	validateOpts(o) {
 		if (!o.callbacks) o.callbacks = {}
+		if (o.tree) {
+			if (o.tree.disable_terms && !o.tree.click_term && !(o.barchart || !o.barchart.bar_click_override)) {
+				throw `opts.tree.disable_terms is used only when opts.tree.click_term or opts.barchart.bar_click_override is set`
+			}
+			if (!o.search) o.search = {}
+			if (o.tree.click_term) o.search.click_term = o.tree.click_term
+			if (o.tree.disable_terms) o.search.disable_terms = o.tree.disable_terms
+		}
 		return o
+	}
+
+	async preApiFreeze(api) {
+		api.vocabApi = await vocabInit({ app: this.api, state: this.opts.state, fetchOpts: this.opts.fetchOpts })
+		api.tip = this.dom.tip
+		api.appInit = appInit
 	}
 
 	async init() {
 		try {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
-			this.setComponents()
-			this.api.dispatch()
+			await this.setComponents()
+			await this.api.dispatch()
 		} catch (e) {
 			this.printError(e)
 		}
 	}
 
-	async main() {
-		this.api.vocabApi.main()
+	async setComponents() {
+		try {
+			this.components = await multiInit({
+				nav: navInit({
+					app: this.api,
+					holder: this.dom.topbar,
+					header_mode: this.state && this.state.nav && this.state.nav.header_mode
+				}),
+				recover: recoverInit({
+					app: this.api,
+					holder: this.dom.holder,
+					appType: 'termdb'
+				}),
+				tree: treeInit({
+					app: this.api,
+					holder: this.dom.holder.append('div')
+				})
+			})
+		} catch (e) {
+			throw e
+		}
 	}
 
-	setComponents() {
-		this.components = {
-			nav: navInit({
-				app: this.api,
-				holder: this.dom.topbar,
-				header_mode: this.state && this.state.nav && this.state.nav.header_mode
-			}),
-			recover: recoverInit({
-				app: this.api,
-				holder: this.dom.holder,
-				appType: 'termdb'
-			}),
-			tree: treeInit({
-				app: this.api,
-				holder: this.dom.holder.append('div')
-			})
-		}
+	async main() {
+		this.api.vocabApi.main()
 	}
 
 	printError(e) {
@@ -87,7 +94,7 @@ class TdbApp {
 }
 
 // must use the await keyword when using this appInit()
-export const appInit = rx.getInitFxn(TdbApp)
+export const appInit = getAppInit(TdbApp)
 
 function setInteractivity(self) {
 	self.downloadView = id => {

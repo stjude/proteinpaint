@@ -1,25 +1,22 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { Menu, dofetch3 } from '../client'
 import { event } from 'd3-selection'
 
 class ToySearch {
 	constructor(opts) {
 		this.type = 'search'
-		// need to supply this.api to callbacks
-		// supply optional argument to getComponentApi(),
-		// so no need to attach it as an instance method
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
 		this.dom = {
 			holder: opts.holder,
 			tip: new Menu({ padding: '' })
 		}
-		// set closured methods to use the correct "this" context
-		this.yesThis()
-		// this.notThis(this)
+		// set methods to handle user input/interaction
+		setInteractivity(this)
+		// set renderer methods that affect the DOM
+		setRenderers(this)
+	}
+
+	init() {
 		this.render()
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	getState(appState) {
@@ -31,11 +28,15 @@ class ToySearch {
 
 	main() {
 		// clear search input entry
-		this.input.property('value', '')
+		this.dom.input.property('value', '')
 	}
+}
 
-	render() {
-		this.dom.holder
+export const searchInit = getCompInit(ToySearch)
+
+function setRenderers(self) {
+	self.render = () => {
+		self.dom.holder
 			.style('width', 'fit-content')
 			.style('padding', '5px')
 			.style('background-color', '#ececec')
@@ -43,12 +44,12 @@ class ToySearch {
 			.append('div')
 			.style('display', 'inline-block')
 
-		const div = this.dom.holder
+		const div = self.dom.holder
 			.style('display', 'block')
 			.append('div')
 			.style('display', 'inline-block')
 
-		this.input = div
+		self.dom.input = div
 			.append('input')
 			.attr('type', 'search')
 			.attr('class', 'tree_search')
@@ -62,99 +63,92 @@ class ToySearch {
 			// - reduce risk of memory leaks, if any
 			// - make it easier to test since the callback
 			//   will be exposed as an api.Inner method
-			.on('keyup', this.displaySearchResults)
+			.on('keyup', self.displaySearchResults)
 
-		this.input.node().focus() // always focus
+		self.dom.input.node().focus() // always focus
 	}
 
-	/*
-		To-do: reorganize into 
-		setRenderers(self), setInteractivity(self) instead
-	*/
-	yesThis() {
-		this.setTerm = () => {
-			if (event.key !== 'Enter') return
-			this.app.dispatch({ type: 'term_add', termid: this.input.property('value') })
+	self.displaySearchResults = async () => {
+		const value = self.dom.input.property('value').trim()
+		if (value.length < 2) {
+			self.dom.tip.hide()
+			return
 		}
-
-		this.displaySearchResults = async () => {
-			const value = this.input.property('value').trim()
-			if (value.length < 2) {
-				this.dom.tip.hide()
-				return
-			}
-			const o = this.app.opts
-			const data = await dofetch3(
-				`termdb?genome=${o.genome}&dslabel=${o.dslabel}&findterm=${value}&cohortStr=${o.cohortStr}`
-			)
-			// ready to show query result
-			this.dom.tip.clear().showunder(this.input.node())
-			if (!data.lst || data.lst.length == 0) {
-				this.dom.tip.d
-					.append('div')
-					.style('margin', '6px')
-					.text('No match')
-				return
-			}
-			// reuse an instance method as callback
-			// - see the reasons listed for render() {on('keyup')}
-			data.lst.forEach(this.displaySuggestedTerm)
-		}
-
-		this.displaySuggestedTerm = term => {
-			this.dom.tip.d
+		const o = self.app.opts
+		const data = await dofetch3(
+			`termdb?genome=${o.genome}&dslabel=${o.dslabel}&findterm=${value}&cohortStr=${o.cohortStr}`
+		)
+		// ready to show query result
+		self.dom.tip.clear().showunder(self.dom.input.node())
+		if (!data.lst || data.lst.length == 0) {
+			self.dom.tip.d
 				.append('div')
-				.datum(term)
-				.text(term.name)
-				.attr('class', 'sja_menuoption')
-				// for short anonymous functions, it's okay
-				// to keep inline, but still better to reuse
-				// a class method for the same reasons given
-				// in render() {on('keyup')} above
-				/*
+				.style('margin', '6px')
+				.text('No match')
+			return
+		}
+		// reuse an instance method as callback
+		// - see the reasons listed for render() {on('keyup')}
+		data.lst.forEach(self.displaySuggestedTerm)
+	}
+
+	self.displaySuggestedTerm = function(term) {
+		self.dom.tip.d
+			.append('div')
+			.datum(term)
+			.text(term.name)
+			.attr('class', 'sja_menuoption')
+			// for short anonymous functions, it's okay
+			// to keep inline, but still better to reuse
+			// a class method for the same reasons given
+			// in render() {on('keyup')} above
+			/*
 			.on('click', async ()=>{
-				this.app.dispatch({type:'term_add',term})
-				this.dom.tip.hide()
+				self.app.dispatch({type:'term_add',term})
+				self.dom.tip.hide()
 			})
 			*/
-				.on('click', this.addTermByMenuClick)
-		}
-
-		// reference to specific term data,
-		// as a callback argument, is made
-		// possible by the line .datum(term)
-		// in displaySuggestedTerm
-		//
-		// By using d3 to bind data to a DOM element,
-		// it gives one more troubleshooting tool via dev tools,
-		// via right click on element
-		// -> click "Inspect"
-		// -> Elements tab
-		// -> Properties
-		// -> click corrsponding tag name
-		// -> scroll all the way down to see __data__ key
-		// -> click __data__ to see the bound term data
-		this.addTermByMenuClick = term => {
-			this.app.dispatch({ type: 'term_add', term })
-			this.dom.tip.hide()
-		}
-
-		/*
-		by having term data bound to an element,
-		you can attach the same mouseover callback to 
-		similar rendered elements
-		
-		this.showElementInfo = term => {
-			this.dom.tip.clear()
-			this.dom.tip.d.append('div')
-				.html(term.name + '<br/>' + term....)
-		}
-		
-		then
-		
-		elem.on('mouseover', this.showElementInfo)
-		*/
+			.on('click', self.addTermByMenuClick)
 	}
 }
 
-export const searchInit = rx.getInitFxn(ToySearch)
+function setInteractivity(self) {
+	/*
+	by having term data bound to an element,
+	you can attach the same mouseover callback to 
+	similar rendered elements
+	
+	self.showElementInfo = term => {
+		self.dom.tip.clear()
+		self.dom.tip.d.append('div')
+			.html(term.name + '<br/>' + term....)
+	}
+	
+	then
+	
+	elem.on('mouseover', self.showElementInfo)
+	*/
+	self.setTerm = () => {
+		if (event.key !== 'Enter') return
+		self.app.dispatch({ type: 'term_add', termid: self.dom.input.property('value') })
+	}
+
+	// reference to specific term data,
+	// as a callback argument, is made
+	// possible by the line .datum(term)
+	// in displaySuggestedTerm
+	//
+	// By using d3 to bind data to a DOM element,
+	// it gives one more troubleshooting tool via dev tools,
+	// via right click on element
+	// -> click "Inspect"
+	// -> Elements tab
+	// -> Properties
+	// -> click corrsponding tag name
+	// -> scroll all the way down to see __data__ key
+	// -> click __data__ to see the bound term data
+	self.addTermByMenuClick = term => {
+		self.app.dispatch({ type: 'term_add', term })
+		self.dom.tip.hide()
+	}
+}

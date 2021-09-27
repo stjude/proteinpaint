@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { Menu } from '../client'
 import { getNormalRoot } from '../common/filter'
 import { select, event } from 'd3-selection'
@@ -11,36 +11,10 @@ let id = 0
 class MassCharts {
 	constructor(opts = {}) {
 		this.type = 'charts'
-		this.api = rx.getComponentApi(this)
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.setDom()
 		setRenderers(this)
 	}
 
-	getState(appState) {
-		const activeCohort = appState.termdbConfig && appState.termdbConfig.selectCohort && appState.termdbConfig.selectCohort.values[appState.activeCohort]
-		const cohortStr = activeCohort && activeCohort.keys.sort().join(',')
-
-		const state = {
-			vocab: appState.vocab,
-			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter,
-			config: appState.plots.find(p => p.id === this.id),
-			exclude_types: [...appState.tree.exclude_types],
-			supportedChartTypes: appState.termdbConfig.supportedChartTypes && appState.termdbConfig.supportedChartTypes[cohortStr] || ['barchart']
-		}
-		if (appState.termfilter && appState.termfilter.filter) {
-			state.filter = getNormalRoot(appState.termfilter.filter)
-		}
-		return state
-	}
-
-	main(data) {
-		this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
-	}
-
-	setDom() {
+	async init() {
 		this.dom = {
 			holder: this.opts.holder,
 			tip: new Menu({ padding: '0px' })
@@ -55,6 +29,7 @@ class MassCharts {
 			{ label: 'Survival', chartType: 'survival' },
 			{ label: 'Regression Analysis', chartType: 'regression' }
 		]
+
 		const self = this
 
 		this.dom.btns = this.dom.holder
@@ -66,12 +41,39 @@ class MassCharts {
 			.style('padding', '5px')
 			.html(d => d.label)
 			.on('click', function(d) {
+				// 'this' is the button element
 				self.showMenu(d.chartType, this)
 			})
 	}
+
+	getState(appState) {
+		const activeCohort =
+			appState.termdbConfig &&
+			appState.termdbConfig.selectCohort &&
+			appState.termdbConfig.selectCohort.values[appState.activeCohort]
+		const cohortStr = activeCohort && activeCohort.keys.sort().join(',')
+
+		const state = {
+			vocab: appState.vocab,
+			activeCohort: appState.activeCohort,
+			termfilter: appState.termfilter,
+			config: appState.plots.find(p => p.id === this.id),
+			exclude_types: [...appState.tree.exclude_types],
+			supportedChartTypes: (appState.termdbConfig.supportedChartTypes &&
+				appState.termdbConfig.supportedChartTypes[cohortStr]) || ['barchart']
+		}
+		if (appState.termfilter && appState.termfilter.filter) {
+			state.filter = getNormalRoot(appState.termfilter.filter)
+		}
+		return state
+	}
+
+	main(data) {
+		this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
+	}
 }
 
-export const chartsInit = rx.getInitFxn(MassCharts)
+export const chartsInit = getCompInit(MassCharts)
 
 function setRenderers(self) {
 	self.showMenu = function(chartType, btn) {
@@ -144,6 +146,7 @@ function setRenderers(self) {
 			.text(d => d.charAt(0).toUpperCase() + d.slice(1))
 			.on('click', d => {
 				self.dom.tip.hide()
+				action.id = idPrefix + id++
 				action.regressionType = d
 				self.app.dispatch(action)
 			})

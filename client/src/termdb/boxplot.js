@@ -8,10 +8,8 @@ import { axisLeft } from 'd3-axis'
 class TdbBoxplot {
 	constructor(opts) {
 		this.type = 'boxplot'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 
 		const div = opts.holder.style('display', 'none')
 		const svg = div
@@ -27,7 +25,6 @@ class TdbBoxplot {
 
 		setInteractivity(this)
 		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
 		this.opts.controls.on('downloadClick.boxplot', this.download)
 	}
 

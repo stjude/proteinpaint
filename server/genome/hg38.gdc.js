@@ -62,9 +62,10 @@ module.exports = {
 				problem: { color: '#FF3300', label: 'Problem' },
 				pseudo: { color: '#FF00CC', label: 'Pseudogene' }
 			},
-			file: 'anno/gencode.v22.hg38.gz',
+			// gencode version is removed from file name to make it easier for version change
+			file: 'anno/gencode.hg38.gz',
 			type: 'bedj',
-			name: 'GENCODE v22',
+			name: 'GENCODE',
 			stackheight: 16,
 			stackspace: 1,
 			vpad: 4

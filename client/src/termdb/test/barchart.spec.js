@@ -374,7 +374,7 @@ tape('series visibility - numeric', function(test) {
 			.node()
 			.dispatchEvent(new Event('click', { bubbles: true }))
 
-		plot.Inner.app.Inner.tip.d
+		plot.Inner.app.Inner.dom.tip.d
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('Hide'))
 			.node()
@@ -565,7 +565,7 @@ tape('click non-group bar to add filter', function(test) {
 	}
 
 	function triggerMenuClick(plot) {
-		plot.Inner.app.Inner.tip.d
+		plot.Inner.app.Inner.dom.tip.d
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('filter'))
 			.node()
@@ -714,7 +714,7 @@ tape('click custom categorical group bar to add filter', function(test) {
 	}
 
 	function triggerMenuClick(plot) {
-		plot.Inner.app.Inner.tip.d
+		plot.Inner.app.Inner.dom.tip.d
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('filter'))
 			.node()
@@ -859,7 +859,7 @@ tape('click custom subcondition group bar to add filter', function(test) {
 	}
 
 	function triggerMenuClick(plot) {
-		plot.Inner.app.Inner.tip.d
+		plot.Inner.app.Inner.dom.tip.d
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('filter'))
 			.node()
@@ -1518,7 +1518,7 @@ tape('all hidden + with overlay, legend click', function(test) {
 	}
 
 	function triggerMenuClick(plot) {
-		plot.Inner.app.Inner.tip.d
+		plot.Inner.app.Inner.dom.tip.d
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('Hide "Female"'))
 			.node()

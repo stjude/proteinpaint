@@ -26,27 +26,33 @@ import { Menu } from '../client'
 	.on()
 */
 class ToyApp {
-	constructor(opts) {
-		this.type = 'app'
-		this.opts = opts
-		// the ToyApp may be the root app or a component within another app
-		this.api = rx.getAppApi(this)
-		this.app = this.api
-
-		this.store = storeInit({ app: this.api })
-		this.state = this.store.copyState()
+	constructor(opts = {}) {
 		this.dom = {
-			tip: new Menu(),
-			holder: opts.holder
+			tip: new Menu()
 		}
-		// expose the app api, not "this" directly to subcomponents
-		this.components = {
-			controls: controlsInit({ app: this.app, holder: this.dom.holder.append('div') }),
-			table: tableInit({ app: this.app, holder: this.dom.holder.append('div') })
+	}
+
+	validateOpts(opts) {
+		if (!opts.holder) throw `missing o.holder`
+		if (!opts.state) opts.state = {}
+	}
+
+	preApiFreeze(api) {
+		api.tip = this.dom.tip
+	}
+
+	async init() {
+		try {
+			this.dom.holder = this.opts.holder
+			this.store = await storeInit({ app: this.api, state: this.opts.state })
+			this.state = this.store.copyState()
+			this.components = await rx.multiInit({
+				controls: controlsInit({ app: this.api, holder: this.dom.holder.append('div') }),
+				table: tableInit({ app: this.api, holder: this.dom.holder.append('div') })
+			})
+		} catch (e) {
+			throw e
 		}
-		// set up the app api as the default argument
-		// to callbacks of emitted events
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	/*
@@ -57,4 +63,4 @@ class ToyApp {
 	*/
 }
 
-export const appInit = rx.getInitFxn(ToyApp)
+export const appInit = rx.getAppInit(ToyApp)

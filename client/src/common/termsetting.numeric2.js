@@ -40,7 +40,7 @@ export async function setNumericMethods(self) {
 			// in which case it will not have an opts.vocabApi
 			if (!self.opts.vocabApi) {
 				const vocabulary = await import('../termdb/vocabulary')
-				self.opts.vocabApi = vocabulary.vocabInit(null, { state: { vocab: self.opts.vocab } })
+				self.opts.vocabApi = vocabulary.vocabInit({ state: { vocab: self.opts.vocab } })
 			}
 			self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
 			//console.log(38, self.num_obj.density_data)

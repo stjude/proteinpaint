@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, multiInit } from '../common/rx.core'
 import { searchInit } from '../termdb/search'
 import { filter3Init } from '../termdb/filter3'
 import { chartsInit } from './charts'
@@ -14,51 +14,49 @@ let instanceNum = 0
 class TdbNav {
 	constructor(opts) {
 		this.type = 'nav'
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.id = opts.id
-		this.api = rx.getComponentApi(this)
 		this.instanceNum = instanceNum++
-
-		setInteractivity(this)
-		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
-		this.activeCohort = -1
 		// 0 = cohort tab, will switch to 1 = filter tab if there are no cohorts
 		this.activeTab = 0
+		this.activeCohort = -1
 		this.searching = false
 		this.hideSubheader = false
 		this.samplecounts = {}
-		this.cohortFilter = getFilterItemByTag(this.app.getState().termfilter.filter, 'cohortFilter')
-		this.initUI()
+		setInteractivity(this)
+		setRenderers(this)
+	}
 
-		this.components = {
-			search: searchInit({
-				app: this.app,
-				holder: this.dom.searchDiv,
-				resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
-				click_term: this.app.opts.tree && this.app.opts.tree.click_term,
-				disable_terms: this.app.opts.tree && this.app.opts.tree.disable_terms,
-				callbacks: {
-					'postSearch.nav': data => {
-						if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
-						else if (this.opts.header_mode === 'with_tabs') {
-							this.dom.tip.showunder(this.dom.searchDiv.node())
+	async init() {
+		try {
+			this.cohortFilter = getFilterItemByTag(this.app.getState().termfilter.filter, 'cohortFilter')
+			this.initUI()
+			this.components = await multiInit({
+				search: searchInit({
+					app: this.app,
+					holder: this.dom.searchDiv,
+					resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
+					callbacks: {
+						'postSearch.nav': data => {
+							if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
+							else if (this.opts.header_mode === 'with_tabs') {
+								this.dom.tip.showunder(this.dom.searchDiv.node())
+							}
 						}
 					}
-				}
-			}),
-			filter: filter3Init({
-				app: this.app,
-				holder: this.dom.subheader.filter.append('div'),
-				hideLabel: this.opts.header_mode === 'with_tabs',
-				emptyLabel: '+Add new filter'
-			}),
-			charts: chartsInit({
-				app: this.app,
-				holder: this.dom.subheader.charts,
-				vocab: this.opts.vocab
+				}),
+				filter: filter3Init({
+					app: this.app,
+					holder: this.dom.subheader.filter.append('div'),
+					hideLabel: this.opts.header_mode === 'with_tabs',
+					emptyLabel: '+Add new filter'
+				}),
+				charts: chartsInit({
+					app: this.app,
+					holder: this.dom.subheader.charts,
+					vocab: this.opts.vocab
+				})
 			})
+		} catch (e) {
+			throw e
 		}
 	}
 	getState(appState) {
@@ -118,7 +116,7 @@ class TdbNav {
 	}
 }
 
-export const navInit = rx.getInitFxn(TdbNav)
+export const navInit = getCompInit(TdbNav)
 
 function setRenderers(self) {
 	self.initUI = () => {

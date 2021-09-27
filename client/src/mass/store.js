@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getStoreInit } from '../common/rx.core'
 import { root_ID } from '../termdb/tree'
 import { plotConfig, fillTermWrapper } from './plot'
 import { getTermSelectionSequence } from './charts'
@@ -33,31 +33,21 @@ const defaultState = {
 	autoSave: true
 }
 
-// one store for the whole tdb app
+// one store for the whole MASS app
 class TdbStore {
 	constructor(opts) {
 		this.type = 'store'
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getStoreApi(this)
-		this.copyMerge = rx.copyMerge
-		this.deepFreeze = rx.deepFreeze
-		// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
-		//this.fromJson = rx.fromJson // used in store.api.state()
-		this.toJson = rx.toJson // used in store.api.state()
-		this.prevGeneratedId = 0 // use for assigning unique IDs where needed
-
-		if (!this.app.opts.state) throw '.state{} missing'
-		this.state = this.copyMerge(this.toJson(defaultState), opts.state)
-		this.validateOpts()
-
+		this.defaultState = defaultState
+		// use for assigning unique IDs where needed
+		// may be used later to simplify getting component state by type and id
+		this.prevGeneratedId = 0
 		// when using rx.copyMerge, replace the object values
 		// for these keys instead of extending them
 		this.replaceKeyVals = ['term', 'term2', 'term0', 'q']
 	}
 
-	validateOpts() {
-		const s = this.state
+	validateOpts(opts) {
+		const s = opts.state
 		// assume that any vocabulary with a route
 		// will require genome + dslabel
 		if (s.vocab.route) {
@@ -66,6 +56,10 @@ class TdbStore {
 		} else {
 			if (!Array.isArray(s.vocab.terms)) throw 'vocab.terms must be an array of objects'
 		}
+	}
+
+	validateState() {
+		const s = this.state
 		if (s.tree.expandedTermIds.length == 0) {
 			s.tree.expandedTermIds.push(root_ID)
 		} else {
@@ -76,109 +70,108 @@ class TdbStore {
 	}
 
 	async init() {
-		this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
+		try {
+			this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
 
-		// support any legacy examples and tests that use the deprecated state.tree.plots object,
-		// by converting to a state.plots array
-		if (this.state.tree.plots) {
-			for (const plotId in this.state.tree.plots) {
-				const plot = this.state.tree.plots[plotId]
-				const plotCopy = this.state.plots.find(p => p.id === plotId)
-				if (plotCopy && plotCopy != plot) {
-					throw `Plot ID conflict in deprecated state.tree.plots`
-				}
-				plot.id = plotId
-				this.state.plots.push(plot)
-			}
-			delete this.state.tree.plots
-		}
-
-		for (const savedPlot of this.state.plots) {
-			// .term{} is required, if missing, add with plotId
-			if (!savedPlot.term) savedPlot.term = {}
-			if (!savedPlot.term.id) savedPlot.term.id = plotId
-			// .term2 and term0 are optional, but .id is required as that's a different term than plotId
-			if (savedPlot.term2 && !savedPlot.term2.id) delete savedPlot.term2
-			if (savedPlot.term0 && !savedPlot.term0.id) delete savedPlot.term0
-			for (const t of ['term', 'term2', 'term0']) {
-				if (!savedPlot[t]) continue
-				savedPlot[t].term = await this.app.vocabApi.getterm(savedPlot[t].id)
-			}
-			if (!savedPlot.settings) savedPlot.settings = {}
-			if (!savedPlot.settings.currViews) savedPlot.settings.currViews = [savedPlot.chartType]
-			const plot = plotConfig(savedPlot, await this.api.copyState())
-			const i = this.state.plots.indexOf(savedPlot)
-			this.state.plots[i] = plot
-			if (!('id' in plot)) plot.id = '_AUTOID_' + i
-			if (plot.independent) {
-				plot.independent = await Promise.all(
-					plot.independent.map(async term => {
-						if (!term.term) term.term = await this.app.vocabApi.getterm(term.id)
-						return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
-					})
-				)
-			}
-			this.adjustPlotCurrViews(plot)
-		}
-
-		// maybe no need to provide term filter at this query
-		let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
-		if (!filterUiRoot) {
-			this.state.termfilter.filter.tag = 'filterUiRoot'
-			filterUiRoot = this.state.termfilter.filter
-		}
-
-		if (this.state.termdbConfig.selectCohort) {
-			let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
-			if (!cohortFilter) {
-				// support legacy state.termfilter and test scripts that
-				// that does not specify a cohort when required;
-				// will use state.activeCohort if not -1
-				cohortFilter = {
-					tag: 'cohortFilter',
-					type: 'tvs',
-					tvs: {
-						term: JSON.parse(JSON.stringify(this.state.termdbConfig.selectCohort.term)),
-						values:
-							this.state.activeCohort == -1
-								? []
-								: this.state.termdbConfig.selectCohort.values[this.state.activeCohort].keys.map(key => {
-										return { key, label: key }
-								  })
+			// support any legacy examples and tests that use the deprecated state.tree.plots object,
+			// by converting to a state.plots array
+			if (this.state.tree.plots) {
+				for (const plotId in this.state.tree.plots) {
+					const plot = this.state.tree.plots[plotId]
+					const plotCopy = this.state.plots.find(p => p.id === plotId)
+					if (plotCopy && plotCopy != plot) {
+						throw `Plot ID conflict in deprecated state.tree.plots`
 					}
+					plot.id = plotId
+					this.state.plots.push(plot)
 				}
-				this.state.termfilter.filter = {
-					type: 'tvslst',
-					in: true,
-					join: 'and',
-					lst: [cohortFilter, filterUiRoot]
+				delete this.state.tree.plots
+			}
+
+			for (const savedPlot of this.state.plots) {
+				// .term{} is required, if missing, add with plotId
+				if (!savedPlot.term) savedPlot.term = {}
+				if (!savedPlot.term.id) savedPlot.term.id = plotId
+				// .term2 and term0 are optional, but .id is required as that's a different term than plotId
+				if (savedPlot.term2 && !savedPlot.term2.id) delete savedPlot.term2
+				if (savedPlot.term0 && !savedPlot.term0.id) delete savedPlot.term0
+				for (const t of ['term', 'term2', 'term0']) {
+					if (!savedPlot[t]) continue
+					savedPlot[t].term = await this.app.vocabApi.getterm(savedPlot[t].id)
+				}
+				if (!savedPlot.settings) savedPlot.settings = {}
+				if (!savedPlot.settings.currViews) savedPlot.settings.currViews = [savedPlot.chartType]
+				const plot = plotConfig(savedPlot, await this.api.copyState())
+				const i = this.state.plots.indexOf(savedPlot)
+				this.state.plots[i] = plot
+				if (!('id' in plot)) plot.id = '_AUTOID_' + i
+				if (plot.independent) {
+					plot.independent = await Promise.all(
+						plot.independent.map(async term => {
+							if (!term.term) term.term = await this.app.vocabApi.getterm(term.id)
+							return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
+						})
+					)
+				}
+				this.adjustPlotCurrViews(plot)
+			}
+
+			// maybe no need to provide term filter at this query
+			let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
+			if (!filterUiRoot) {
+				this.state.termfilter.filter.tag = 'filterUiRoot'
+				filterUiRoot = this.state.termfilter.filter
+			}
+
+			if (this.state.termdbConfig.selectCohort) {
+				let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
+				if (!cohortFilter) {
+					// support legacy state.termfilter and test scripts that
+					// that does not specify a cohort when required;
+					// will use state.activeCohort if not -1
+					cohortFilter = {
+						tag: 'cohortFilter',
+						type: 'tvs',
+						tvs: {
+							term: JSON.parse(JSON.stringify(this.state.termdbConfig.selectCohort.term)),
+							values:
+								this.state.activeCohort == -1
+									? []
+									: this.state.termdbConfig.selectCohort.values[this.state.activeCohort].keys.map(key => {
+											return { key, label: key }
+									  })
+						}
+					}
+					this.state.termfilter.filter = {
+						type: 'tvslst',
+						in: true,
+						join: 'and',
+						lst: [cohortFilter, filterUiRoot]
+					}
+				} else {
+					const sorter = (a, b) => (a < b ? -1 : 1)
+					cohortFilter.tvs.values.sort((a, b) => (a.key < b.key ? -1 : 1))
+					const keysStr = JSON.stringify(cohortFilter.tvs.values.map(v => v.key).sort(sorter))
+					const i = this.state.termdbConfig.selectCohort.values.findIndex(
+						v => keysStr == JSON.stringify(v.keys.sort(sorter))
+					)
+					if (this.state.activeCohort !== -1 && this.state.activeCohort !== 0 && i !== this.state.activeCohort) {
+						console.log('Warning: cohortFilter will override the state.activeCohort due to mismatch')
+					}
+					this.state.activeCohort = i
 				}
 			} else {
-				const sorter = (a, b) => (a < b ? -1 : 1)
-				cohortFilter.tvs.values.sort((a, b) => (a.key < b.key ? -1 : 1))
-				const keysStr = JSON.stringify(cohortFilter.tvs.values.map(v => v.key).sort(sorter))
-				const i = this.state.termdbConfig.selectCohort.values.findIndex(
-					v => keysStr == JSON.stringify(v.keys.sort(sorter))
-				)
-				if (this.state.activeCohort !== -1 && this.state.activeCohort !== 0 && i !== this.state.activeCohort) {
-					console.log('Warning: cohortFilter will override the state.activeCohort due to mismatch')
+				this.state.activeCohort = -1
+				// since the cohort tab will be hidden, default to making the filter tab active
+				if (this.state.activeTab === 0) this.state.activeTab = 1
+				if (this.state.nav.header_mode === 'with_cohortHtmlSelect') {
+					console.warn(`no termdbConfig.selectCohort to use for nav.header_mode = 'with_cohortHtmlSelect'`)
+					this.state.nav.header_mode = 'search_only'
 				}
-				this.state.activeCohort = i
 			}
-		} else {
-			this.state.activeCohort = -1
-			// since the cohort tab will be hidden, default to making the filter tab active
-			if (this.state.activeTab === 0) this.state.activeTab = 1
-			if (this.state.nav.header_mode === 'with_cohortHtmlSelect') {
-				console.warn(`no termdbConfig.selectCohort to use for nav.header_mode = 'with_cohortHtmlSelect'`)
-				this.state.nav.header_mode = 'search_only'
-			}
+		} catch (e) {
+			throw e
 		}
-	}
-
-	fromJson(str) {
-		const obj = JSON.parse(str)
-		return obj
 	}
 
 	setId(item) {
@@ -192,7 +185,7 @@ class TdbStore {
 
 	adjustPlotCurrViews(plotConfig) {
 		if (!plotConfig) return
-		const currViews = plotConfig.settings.currViews
+		const currViews = plotConfig.settings.currViews || []
 		if (plotConfig.chartType == 'regression') {
 			plotConfig.settings.currViews = ['regression']
 		}
@@ -265,7 +258,6 @@ TdbStore.prototype.actions = {
 				return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
 			})
 		}
-		console.log(251, action.config)
 		if (!action.config.termSequence) {
 			action.config.termSequence = getTermSelectionSequence(action.config.chartType)
 		}
@@ -282,7 +274,13 @@ TdbStore.prototype.actions = {
 	},
 
 	async plot_prep(action) {
-		this.state.plots.push(Object.assign({}, action))
+		const plot = {
+			id: action.id,
+			chartType: 'regression',
+			regressionType: action.regressionType,
+			independent: []
+		}
+		this.state.plots.push(plot)
 	},
 
 	plot_hide(action) {
@@ -293,7 +291,6 @@ TdbStore.prototype.actions = {
 	},
 
 	plot_edit(action) {
-		// console.log(273, action.config.cutoff)
 		const plot = this.state.plots.find(p => p.id === action.id)
 		if (plot) {
 			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
@@ -331,7 +328,7 @@ TdbStore.prototype.actions = {
 }
 
 // must use the await keyword when using this storeInit()
-export const storeInit = rx.getInitFxn(TdbStore)
+export const storeInit = getStoreInit(TdbStore)
 
 function validatePlot(p, vocabApi) {
 	/*

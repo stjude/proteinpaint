@@ -11,49 +11,48 @@ let i = 0 // track controls "instances" for assigning unambiguous unique input n
 class TdbPlotControls {
 	constructor(opts) {
 		this.type = 'plotControls'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		this.customEvents = ['downloadClick', 'infoClick']
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.setDom()
-
 		setInteractivity(this)
 		setRenderers(this)
+	}
 
-		const debug = this.app.opts.debug
-		this.components = {
-			topbar: topBarInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.topbar,
-				callback: this.toggleVisibility,
-				downloadHandler: () => this.bus.emit('downloadClick'),
-				infoHandler: isOpen =>
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: opts.id,
-						config: {
-							settings: {
-								termInfo: {
-									isVisible: isOpen
+	async init() {
+		try {
+			this.components = await rx.multiInit({
+				topbar: topBarInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.topbar,
+					callback: this.toggleVisibility,
+					downloadHandler: () => this.bus.emit('downloadClick'),
+					infoHandler: isOpen =>
+						this.app.dispatch({
+							type: 'plot_edit',
+							id: this.opts.id,
+							config: {
+								settings: {
+									termInfo: {
+										isVisible: isOpen
+									}
 								}
 							}
-						}
-					}),
-				debug
-			}),
-			config: configUiInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.config_div,
-				tip: this.app.tip,
-				debug,
-				isleaf: opts.isleaf,
-				iscondition: opts.iscondition
+						})
+				}),
+				config: configUiInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.config_div,
+					tip: this.app.tip,
+					isleaf: this.opts.isleaf,
+					iscondition: this.opts.iscondition
+				})
 			})
+		} catch (e) {
+			throw e
 		}
-
-		this.eventTypes = ['postInit', 'postRender', 'downloadClick', 'infoClick']
 	}
 
 	setDom() {

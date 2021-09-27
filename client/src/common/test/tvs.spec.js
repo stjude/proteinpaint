@@ -1,7 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3')
 const filterInit = require('../filter').filterInit
-const vocabInit = require('../../termdb/vocabulary').vocabInit
 
 /*********
 the direct functional testing of the component, without the use of runpp()

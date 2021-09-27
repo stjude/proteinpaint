@@ -1,6 +1,5 @@
 import * as rx from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { plotInit } from './plot'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
 import { isUsableTerm } from '../../shared/termdb.usecase'
@@ -65,9 +64,8 @@ class TdbTree {
 	*/
 	constructor(opts) {
 		this.type = 'tree'
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = {
 			holder: opts.holder,
 			treeDiv: opts.holder.append('div')
@@ -87,7 +85,6 @@ class TdbTree {
 		this.loadingTermSet = new Set()
 		this.loadingPlotSet = new Set()
 		this.termsByCohort = {}
-		this.eventTypes = ['postInit', 'postRender']
 	}
 
 	reactsTo(action) {
@@ -136,11 +133,7 @@ class TdbTree {
 		root.terms = await this.requestTermRecursive(root)
 		this.renderBranch(root, this.dom.treeDiv)
 
-		for (const termId of this.state.visiblePlotIds) {
-			if (!this.plots[termId]) {
-				this.newPlot(this.termsById[termId])
-			}
-		}
+		await this.mayCreateNewPlots()
 
 		for (const termId in this.plots) {
 			if (termId in this.termsById) {
@@ -213,7 +206,24 @@ class TdbTree {
 		return terms
 	}
 
-	newPlot(term) {
+	async mayCreateNewPlots() {
+		const newPlots = {}
+		for (const termId of this.state.visiblePlotIds) {
+			if (!this.plots[termId]) {
+				// assume that the values are promises
+				newPlots[termId] = this.newPlot(this.termsById[termId])
+			}
+		}
+
+		if (Object.keys(newPlots).length) {
+			await Promise.all(Object.values(newPlots))
+			for (const termId in newPlots) {
+				this.plots[termId] = await newPlots[termId]
+			}
+		}
+	}
+
+	async newPlot(term) {
 		const holder = select(
 			this.dom.treeDiv
 				.selectAll('.' + cls_termgraphdiv)
@@ -225,7 +235,9 @@ class TdbTree {
 			.text('Loading...')
 			.style('margin', '3px')
 			.style('opacity', 0.5)
-		const plot = plotInit({
+
+		const _ = await import('./plot')
+		return _.plotInit({
 			app: this.app,
 			id: term.id,
 			holder: holder,
@@ -239,7 +251,6 @@ class TdbTree {
 				}
 			}
 		})
-		this.plots[term.id] = plot
 	}
 
 	bindKey(term) {

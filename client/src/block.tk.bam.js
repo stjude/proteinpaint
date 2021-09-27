@@ -267,19 +267,21 @@ or update existing groups, in which groupidx will be provided
 		tk.dom.pileup_img.attr('width', 0)
 	}
 
-	if (data.count.read_limit) {
+	if (data.count.read_limit_reached) {
 		// too many reads
 		tk.toomanyreads = true
-		tk.dom.read_limit_text.attr('x', data.pileup_data.width / 2).attr('transform', 'scale(1)')
+		tk.dom.read_limit_text
+			.text(
+				`Downsampled to ${data.groups.reduce((i, j) => i + j.count.r, 0)} from ${
+					data.count.read_limit_reached
+				} reads. Try zooming into a smaller region.`
+			)
+			.attr('x', data.pileup_data.width / 2)
+			.attr('transform', 'scale(1)')
 	} else {
 		tk.toomanyreads = false
 		tk.dom.read_limit_text.attr('transform', 'scale(0)')
 	}
-
-	//if (tk.gdc) {
-	//	// XXX delete later
-	//	may_render_gdc(data, tk, block)
-	//}
 
 	may_render_variant(data, tk, block)
 
@@ -307,6 +309,13 @@ or update existing groups, in which groupidx will be provided
 		.each(function() {
 			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 		})
+	if (data.count.skipped) {
+		tk.label_skip.text(data.count.skipped + ' reads skipped').each(function() {
+			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
+		})
+	} else {
+		tk.label_skip.text('')
+	}
 	block.setllabel()
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
 }
@@ -609,7 +618,6 @@ function makeTk(tk, block) {
 		.attr('text-anchor', 'middle')
 		.attr('font-size', tk.dom.read_limit_height)
 		.attr('transform', 'scale(0)')
-		.text('Too many reads in view range. Try zooming into a smaller region.')
 
 	///////////// row #3: variant
 	if (tk.variants) {
@@ -634,6 +642,8 @@ function makeTk(tk, block) {
 
 	let laby = block.labelfontsize + 5
 	tk.label_count = block.maketklefthandle(tk, laby)
+	laby += block.labelfontsize
+	tk.label_skip = block.maketklefthandle(tk, laby).text('')
 }
 
 // may add additional parameters from url that specifically apply to the bam track

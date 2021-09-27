@@ -39,13 +39,18 @@ https://docs.google.com/document/d/1G3LqbtsCEkGw4ABA_VognhjVnUHnsVYAGdXyhYG374M/
 */
 export function getInitFxn(_Class_) {
 	/*
-		constructorArg
+		opts
 		- the argument to the _Class_ constructor
 	*/
-
-	return (constructorArg = {}) => {
+	return opts => {
 		// create a _Class_ instance with mutable private properties and methods
-		const self = new _Class_(constructorArg)
+		const self = new _Class_(opts)
+
+		if (!self.api && self.type) {
+			if (self.type == 'app') prepApp(self, opts)
+			else if (self.type == 'store') prepStore(self, opts)
+			else prepComponent(self, opts)
+		}
 
 		// get the instance's api that may hide its mutable props and methods
 		// - if there is already an instance api as constructed, use it
@@ -53,13 +58,10 @@ export function getInitFxn(_Class_) {
 		const api = self.api || self
 		// optionally expose the hidden instance to debugging and testing code
 		if (self.debug || (self.opts && self.opts.debug)) api.Inner = self
+		// an instance may want to add or modify api properties before it is frozen
+		if (typeof self.preApiFreeze == 'function') self.preApiFreeze(api)
 		// freeze the api's properties and methods before exposing
 		Object.freeze(api)
-
-		if (self.eventTypes) {
-			// set up an optional event bus
-			self.bus = new Bus(api, self.eventTypes, self.opts.callbacks || {})
-		}
 
 		// instance.init() is expected to be an async function
 		// which is not compatible within a constructor() function,
@@ -87,13 +89,63 @@ export function getInitFxn(_Class_) {
 	}
 }
 
+export function getAppInit(_Class_) {
+	return getInitPrepFxn(_Class_, prepApp)
+}
+
+export function getStoreInit(_Class_) {
+	return getInitPrepFxn(_Class_, prepStore)
+}
+
+export function getCompInit(_Class_) {
+	return getInitPrepFxn(_Class_, prepComponent)
+}
+
+function getInitPrepFxn(_Class_, prepFxn) {
+	if (typeof prepFxn != 'function') throw 'prepFxn must be a function'
+
+	/*
+		opts
+		- the argument to the _Class_ constructor
+	*/
+	return async opts => {
+		let self
+		try {
+			// create a _Class_ instance with mutable private properties and methods
+			self = new _Class_(opts)
+			prepFxn(self, opts)
+
+			// get the instance's api that may hide its mutable props and methods
+			// - if there is already an instance api as constructed, use it
+			// - if not, expose the instance as its public api
+			const api = self.api || self
+			// optionally expose the hidden instance to debugging and testing code
+			if (self.debug || (self.opts && self.opts.debug)) api.Inner = self
+			// an instance may want to add or modify api properties before it is frozen
+			if (self.preApiFreeze) await self.preApiFreeze(api)
+			// freeze the api's properties and methods before exposing
+			Object.freeze(api)
+
+			// instance.init() can be an async function
+			// which is not compatible within a constructor() function,
+			// so call it here if it is available as an instance method
+			if (self.init) await self.init()
+			if (self.bus) self.bus.emit('postInit')
+			return api
+		} catch (e) {
+			if (self && self.printError) self.printError(e)
+			else throw e
+		}
+	}
+}
+
 /*
 	may apply overrides to instance opts
 	if there is an instance.type key in app.opts
 */
 export function getOpts(opts, instance) {
 	if (!instance.app) return opts
-	if (instance.app.opts[instance.type]) {
+	if (instance.type in instance.app.opts) {
 		/*
 			Always override opts with any app.opts that is available
 			for the instance's component type, supplied as an appInit() argument.
@@ -102,16 +154,52 @@ export function getOpts(opts, instance) {
 			in opts, only apply app.opts[instance.type] override for key-values
 			that are not in opts. Need to see an actual use case before working on this.
 		*/
-		copyMerge(opts, instance.app.opts[instance.type])
+		const overrides = instance.app.opts[instance.type]
+		if (instance.validateOpts) instance.validateOpts(overrides)
+		copyMerge(opts, overrides)
 	}
 	if ('debug' in instance.app) opts.debug = instance.app.debug
 	else if (instance.app.opts && 'debug' in instance.app.opts) opts.debug = instance.app.opts.debug
 	return opts
 }
 
+/*
+	Parallelize the potentially async initialization of multiple components
+
+	initPromises{}
+	- keys: component names
+	- values: Promise
+*/
+export async function multiInit(initPromises) {
+	const components = {}
+	try {
+		await Promise.all(Object.values(initPromises))
+		for (const name in initPromises) {
+			components[name] = await initPromises[name]
+		}
+		return components
+	} catch (e) {
+		throw e
+	}
+}
+
 /****************
   API Generators
 *****************/
+
+export function prepStore(self, opts) {
+	if (self.validateOpts) self.validateOpts(opts)
+	self.app = opts.app
+	self.opts = getOpts(opts, self)
+	self.api = getStoreApi(self)
+	self.copyMerge = copyMerge
+	self.deepFreeze = deepFreeze
+	// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
+	if (!self.fromJson) self.fromJson = fromJson // used in store.api.copyState()
+	if (!self.toJson) self.toJson = toJson // used in store.api.copyState()
+	self.state = copyMerge(self.toJson(self.defaultState), opts.state)
+	if (self.validateState) self.validateState()
+}
 
 export function getStoreApi(self) {
 	const api = {
@@ -130,7 +218,7 @@ export function getStoreApi(self) {
 			await actions[action.type].call(self, action)
 			return await api.copyState()
 		},
-		async copyState(opts = {}) {
+		async copyState() {
 			const stateCopy = self.fromJson(self.toJson(self.state))
 			self.deepFreeze(stateCopy)
 			return stateCopy
@@ -139,15 +227,16 @@ export function getStoreApi(self) {
 	return api
 }
 
+export function prepApp(self, opts) {
+	if (self.validateOpts) self.validateOpts(opts)
+	if ('id' in opts) self.id = opts[self.type].id
+	self.opts = opts
+	self.api = getAppApi(self)
+}
+
 export function getAppApi(self) {
-	if (!('type' in self)) {
-		throw `The component's this.type must be set before calling this.getAppApi(this).`
-	}
-
 	const middlewares = []
-
 	const api = {
-		type: self.type,
 		opts: self.opts,
 		async dispatch(action) {
 			/*
@@ -176,7 +265,7 @@ export function getAppApi(self) {
 				if (action) self.state = await self.store.write(action)
 				// else an empty action should force components to update
 
-				const data = self.main ? self.main() : null
+				const data = self.main ? await self.main() : null
 				const current = { action, appState: self.state }
 				await notifyComponents(self.components, current, data)
 			} catch (e) {
@@ -223,6 +312,8 @@ export function getAppApi(self) {
 			return getComponents(self.components, dotSepNames)
 		},
 		destroy() {
+			// delete references to other objects to make it easier
+			// for automatic garbage collection to find unreferenced objects
 			for (const key in self.components) {
 				const component = self.components[key]
 				if (typeof component.destroy == 'function') {
@@ -239,17 +330,34 @@ export function getAppApi(self) {
 					delete self.dom[key]
 				}
 			}
+			if (self.bus) self.bus.destroy()
 			delete self.store
+			if (self.api) delete self.api
 		}
 	}
 
 	// expose tooltip if set, expected to be shared in common
 	// by all components within an app; should use the HOPI
 	// pattern to hide the mutable parts, not checked here
-	if (self.tip) api.tip = self.tip
 	if (self.opts.debugName) window[self.opts.debugName] = api
-	if (self.appInit) api.appInit = self.appInit
+	if (!self.bus) {
+		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender']
+		if (self.customEvents) self.eventTypes.push(...self.customEvents)
+		// set up a required event bus
+		self.bus = new Bus(api, self.eventTypes, self.opts.callbacks || {})
+	}
 	return api
+}
+
+export function prepComponent(self, opts) {
+	if (!opts.app) throw `missing self.opts.app in prepComponent(${self.type})`
+	self.app = opts.app
+	self.opts = getOpts(opts, self)
+	if (self.validateOpts) self.validateOpts(opts)
+	// the component type + id may be used later to
+	// simplify getting its state from the store
+	if ('id' in opts) self.id = self.opts.id
+	self.api = getComponentApi(self)
 }
 
 export function getComponentApi(self) {
@@ -291,6 +399,8 @@ export function getComponentApi(self) {
 			return getComponents(self.components, dotSepNames)
 		},
 		destroy() {
+			// delete references to other objects to make it easier
+			// for automatic garbage collection to find unreferenced objects
 			for (const key in self.components) {
 				const component = self.components[key]
 				if (typeof component.destroy == 'function') {
@@ -301,12 +411,24 @@ export function getComponentApi(self) {
 				delete self.components[key]
 			}
 			if (typeof self.destroy == 'function') self.destroy()
-			self.dom.holder.selectAll('*').remove()
-			for (const key in self.dom) {
-				delete self.dom[key]
+			if (self.dom) {
+				if (self.dom.holder) self.dom.holder.selectAll('*').remove()
+				for (const key in self.dom) {
+					delete self.dom[key]
+				}
 			}
+			if (self.bus) self.bus.destroy()
+			if (self.api) delete self.api
 		}
 	}
+
+	if (!self.bus) {
+		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender']
+		if (self.customEvents) self.eventTypes.push(...self.customEvents)
+		// set up a required event bus
+		self.bus = new Bus(api, self.eventTypes, (self.opts && self.opts.callbacks) || {})
+	}
+
 	// must not freeze returned api, as getInitFxn() will add api.Inner
 	return api
 }

@@ -8,16 +8,13 @@ import { to_svg } from '../client'
 class TdbScatter {
 	constructor(opts) {
 		this.type = 'scatter'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		this.dom = {
 			div: opts.holder
 		}
 		this.settings = {}
 		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
 		opts.controls.on('downloadClick.scatter', this.download)
 	}
 

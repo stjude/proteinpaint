@@ -8,7 +8,7 @@ import initBinConfig from '../../shared/termdb.initbinconfig'
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival'])
 
-export function vocabInit(app, opts) {
+export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
 	if (!opts.state) return // let termdb/store handle error
 	if (!opts.state.vocab) {
@@ -29,15 +29,15 @@ export function vocabInit(app, opts) {
 	/*** end legacy support ***/
 
 	if (vocab.route == 'termdb') {
-		return new TermdbVocab(app, opts)
+		return new TermdbVocab(opts)
 	} else if (!vocab.route && vocab.terms) {
-		return new FrontendVocab(app, opts)
+		return new FrontendVocab(opts)
 	}
 }
 
 class TermdbVocab {
-	constructor(app, opts) {
-		this.app = app
+	constructor(opts) {
+		this.app = opts.app
 		this.opts = opts
 		this.state = opts.state
 		this.vocab = opts.state.vocab
@@ -76,7 +76,7 @@ class TermdbVocab {
 		if (this.state.treeFilter) {
 			lst.push('treeFilter=' + encodeURIComponent(JSON.stringify(this.state.treeFilter)))
 		}
-		const data = await dofetch3('/termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('/termdb?' + lst.join('&'), {}, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
 	}
@@ -94,7 +94,7 @@ class TermdbVocab {
 				? '/termdb'
 				: '/termdb-barsql'
 		const url = route + dataName + '&genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel
-		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
+		const data = await dofetch3(url, {}, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
 	}
@@ -121,7 +121,7 @@ class TermdbVocab {
 	// from termdb/terminfo
 	async getTermInfo(id) {
 		const args = ['genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel + '&getterminfo=1&tid=' + id]
-		const data = await dofetch3('/termdb?' + args.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('/termdb?' + args.join('&'), {}, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
 	}
@@ -135,7 +135,7 @@ class TermdbVocab {
 			'getcohortsamplecount=' + cohortName,
 			'cohortValues=' + cohortName
 		]
-		const data = await dofetch3('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('termdb?' + lst.join('&'), {}, this.opts.fetchOpts)
 		if (!data) throw `missing data`
 		else if (data.error) throw data.error
 		else {
@@ -151,7 +151,7 @@ class TermdbVocab {
 			'getsamplecount=' + cohortName,
 			'filter=' + encodeURIComponent(filterJSON)
 		]
-		const data = await dofetch3('termdb?' + lst.join('&'), {}, this.app.opts.fetchOpts)
+		const data = await dofetch3('termdb?' + lst.join('&'), {}, this.opts.fetchOpts)
 		if (!data) throw `missing data`
 		else if (data.error) throw data.error
 		else {
@@ -235,8 +235,8 @@ class TermdbVocab {
 // class Mds3Vocab {}
 
 class FrontendVocab {
-	constructor(app, opts) {
-		this.app = app
+	constructor(opts) {
+		this.app = opts.app
 		this.opts = opts
 		this.state = opts.state
 		this.vocab = opts.state.vocab

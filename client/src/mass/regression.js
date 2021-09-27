@@ -1,19 +1,17 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 
 class MassRegression {
 	constructor(opts) {
 		this.type = 'regression'
-		this.id = opts.id
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
+		setInteractivity(this)
+		setRenderers(this)
+	}
+
+	async init() {
 		this.dom = {
 			div: this.opts.holder.style('margin', '10px 0px').style('display', 'none')
 		}
-		setInteractivity(this)
-		setRenderers(this)
-		this.eventTypes = ['postInit', 'postRender']
 		//opts.controls.on('downloadClick.regression', this.download)
 	}
 
@@ -206,4 +204,4 @@ function setRenderers(self) {
 	}
 }
 
-export const regressionInit = rx.getInitFxn(MassRegression)
+export const regressionInit = getCompInit(MassRegression)

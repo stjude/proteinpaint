@@ -1181,7 +1181,10 @@ module.exports = {
 				by: 'ssm_id',
 				gdcapi: ssmid2csq
 			}
-		},
+		}
+
+		/* gene-level cnv is no longer supported
+		to delete all corresponding code later
 		genecnv: {
 			gaincolor: '#c1433f',
 			losscolor: '#336cd5',
@@ -1197,6 +1200,8 @@ module.exports = {
 				}
 			}
 		}
+		*/
+
 		/*
 		svfusion: {
 		},
