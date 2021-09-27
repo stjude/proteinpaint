@@ -1,5 +1,7 @@
 import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
+import { q_to_param } from './plot'
+import { getNormalRoot } from '../common/filter'
 
 class MassRegression {
 	constructor(opts) {
@@ -10,7 +12,11 @@ class MassRegression {
 
 	async init() {
 		this.dom = {
-			div: this.opts.holder.style('margin', '10px 0px').style('display', 'none')
+			banner: this.opts.holder
+				.append('div')
+				.style('color', '#bbb')
+				.html('...Loading'),
+			div: this.opts.holder.append('div').style('margin', '10px 0px') //.style('display', 'none')
 		}
 		//opts.controls.on('downloadClick.regression', this.download)
 	}
@@ -37,27 +43,57 @@ class MassRegression {
 		}
 	}
 
-	main(data) {
-		if (data) this.data = data
+	async main() {
 		if (!this.state.isVisible) {
 			this.dom.div.style('display', 'none')
 			return
 		}
-		if (!data || !this.state.config.term) return
+		if (!this.state.config.term) return
 		this.config = this.state.config
 		if (!this.config.independent) {
 			this.dom.div.style('display', 'none')
 			throw 'independent variable(s) is required for regression analysis'
 		}
-		this.dom.div
-			.style('display', 'inline-block')
-			.selectAll('*')
-			.remove()
+		this.dom.div.selectAll('*').remove()
+		this.dom.banner.style('display', 'block')
+		const dataName = this.getDataName()
+		this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
 		const tables = this.processData(this.data)
+		this.dom.banner.style('display', 'none')
 		for (const name in tables) {
 			const [columns, rows] = tables[name]
 			this.renderTable(this.dom.div, name, columns, rows)
 		}
+	}
+
+	// creates URL search parameter string, that also serves as
+	// a unique request identifier to be used for caching server response
+	getDataName() {
+		const c = this.config // the plot object in state
+		const params = [
+			'getregression=1',
+			'term1_id=' + encodeURIComponent(c.term.term.id),
+			'term1_q=' + q_to_param(c.term.q),
+			'independent=' +
+				encodeURIComponent(
+					JSON.stringify(
+						c.independent.map(t => {
+							return { id: t.id, q: t.q, type: t.term.type }
+						})
+					)
+				)
+		]
+		if (c.regressionType == 'logistic') {
+			if (!c.cutoff) throw "Cutofff values in required for 'Outcome variable'"
+			params.push('regressionType=logistic')
+			params.push('cutoff=' + c.cutoff)
+		}
+
+		const filterData = getNormalRoot(this.state.termfilter.filter)
+		if (filterData.lst.length) {
+			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData))) //encodeNestedFilter(state.termfilter.filter))
+		}
+		return '?' + params.join('&')
 	}
 
 	processData(multipleData) {

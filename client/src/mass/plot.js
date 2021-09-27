@@ -109,25 +109,10 @@ class MassPlot {
 		if (!this.components.chart) await this.setChartComponent(this.opts)
 		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? 'Results' : '')
 		if (this.state.config.term) {
-			const regressionType =
-				this.config.chartType == 'regression' && this.config.regressionType
-					? this.config.regressionType.toUpperCase()
-					: this.config.chartType == 'regression'
-					? 'LINEAR'
-					: ''
-			const regression_type_txt =
-				this.config.chartType == 'regression'
-					? `<div style="color: #999; display: inline-block; padding-left: 7px; font-size: 70%;">
-				[ ${regressionType} REGRESSION ] </div>`
-					: ''
-			this.dom.holder.header.html(this.state.config.term.term.name + regression_type_txt)
-			if (this.dom.resultsDiv) {
-				this.dom.resultsDiv.selectAll('*').remove()
-				this.dom.resultsDiv
-					.append('div')
-					.style('color', '#bbb')
-					.html('...Loading')
-			}
+			// regression will request its own server data
+			if (this.config.settings.currViews.includes('regression')) return
+			// TODO: migrate data request to other child viz components
+
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
 			if (data.error) throw data.error
@@ -147,31 +132,6 @@ class MassPlot {
 		} else if (plot.settings.currViews.includes('cuminc')) {
 			params.push('getcuminc=1')
 			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
-		} else if (plot.settings.currViews.includes('regression')) {
-			params.push('getregression=1')
-			if ('cutoff' in plot) {
-				params.push('cutoff=' + plot.cutoff)
-			}
-			if (plot.regressionType && plot.regressionType == 'logistic') {
-				if (!plot.cutoff) throw "Cctofff values in required for 'Outcome variable'"
-				params.push('regressionType=logistic')
-			}
-			// TODO: remove this logic as regressionType is selected before launching regression form
-			// if ('cutoff' in plot || (plot.term.term.values && Object.keys(plot.term.term.values).length === 2)) {
-			// 	params.push('regressionType=logistic')
-			// }
-			if (plot.independent) {
-				params.push(
-					'independent=' +
-						encodeURIComponent(
-							JSON.stringify(
-								plot.independent.map(t => {
-									return { id: t.id, q: t.q, type: t.term.type }
-								})
-							)
-						)
-				)
-			}
 		}
 
 		const isscatter = plot.settings.currViews.includes('scatter')
@@ -295,7 +255,13 @@ class MassPlot {
 				// show selected regression_type in sandbox header
 				const regressionType = this.state.config.regressionType
 				if (regressionType) {
-					this.dom.holder.header.html(regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression')
+					this.dom.holder.header
+						.append('div')
+						.style('display', 'inline-block')
+						.style('color', '#999')
+						.style('padding-left', '7px')
+						//.style('font-size', '70%')
+						.html(regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression')
 				}
 				this.dom.resultsHeading = this.dom.viz
 					.append('div')
@@ -309,6 +275,7 @@ class MassPlot {
 				this.components.chart = await regressionInit({
 					app: this.app,
 					holder: this.dom.resultsDiv,
+					header: this.dom.holder.header,
 					id: this.id,
 					regressionType: this.state.config.regressionType
 				})
@@ -477,7 +444,7 @@ function setRenderers(self) {
 	}
 }
 
-function q_to_param(q) {
+export function q_to_param(q) {
 	// exclude certain attributes of q from dataName
 	const q2 = JSON.parse(JSON.stringify(q))
 	delete q2.hiddenValues
