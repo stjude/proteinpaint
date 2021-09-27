@@ -146,6 +146,7 @@ function setRenderers(self) {
 			.text(d => d.charAt(0).toUpperCase() + d.slice(1))
 			.on('click', d => {
 				self.dom.tip.hide()
+				action.id = idPrefix + id++
 				action.regressionType = d
 				self.app.dispatch(action)
 			})

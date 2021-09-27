@@ -274,7 +274,13 @@ TdbStore.prototype.actions = {
 	},
 
 	async plot_prep(action) {
-		this.state.plots.push(Object.assign({}, action))
+		const plot = {
+			id: action.id,
+			chartType: 'regression',
+			regressionType: action.regressionType,
+			independent: []
+		}
+		this.state.plots.push(plot)
 	},
 
 	plot_hide(action) {
