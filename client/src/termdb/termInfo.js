@@ -120,10 +120,16 @@ function setRenderers(self) {
 			}
 		} else {
 			div.html('<i>' + d.label + ':' + '</i>' + '&nbsp;')
-			if (typeof d.value === 'string' && d.value.startsWith('http')) {
+			if (d.label === 'PGS catalog id') {
+				//if (typeof d.value === 'string' && d.value.startsWith('http')) {
 				div
 					.append('a')
-					.attr('href', d.value)
+					.attr('href', 'https://www.pgscatalog.org/score/' + d.value)
+					.text(d.value)
+			} else if (d.label === '- PMID') {
+				div
+					.append('a')
+					.attr('href', 'https://pubmed.ncbi.nlm.nih.gov/' + d.value)
 					.text(d.value)
 			} else if (d.label === '- DOI') {
 				div

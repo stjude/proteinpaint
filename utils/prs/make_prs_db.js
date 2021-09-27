@@ -107,7 +107,6 @@ async function get_metadata(pgsID, prsDir) {
 
 	const metadata = [
 		{ label: 'PGS catalog id', value: obj.id },
-		{ label: 'PGS catalog url', value: 'https://www.pgscatalog.org/score/' + pgsID },
 		{ label: 'Reported trait', value: obj.trait_reported },
 		{
 			label: 'Variants',
