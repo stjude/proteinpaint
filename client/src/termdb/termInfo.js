@@ -53,43 +53,73 @@ function setRenderers(self) {
 
 	self.render = function(data) {
 		self.dom.tbody.selectAll('*').remove()
-		for (let s of data.terminfo.src) {
-			const source_td = self.dom.tbody
+		if (data.terminfo.src) {
+			for (let s of data.terminfo.src) {
+				const source_td = self.dom.tbody
+					.append('tr')
+					.append('td')
+					.style('padding', '5px 0')
+
+				source_td
+					.append('div')
+					.style('font-weight', 'bold')
+					.text('Source')
+
+				source_td
+					.append('div')
+					.style('margin-left', '20px')
+					.text(s.pub)
+
+				source_td
+					.append('div')
+					.style('margin-left', '20px')
+					.html(s.title + ':&nbsp;<i>' + s.section + '</i>')
+			}
+		}
+
+		if (data.terminfo.rubric) {
+			const grade_td = self.dom.tbody
 				.append('tr')
 				.append('td')
 				.style('padding', '5px 0')
-
-			source_td
 				.append('div')
 				.style('font-weight', 'bold')
-				.text('Source')
+				.text('Grading Rubric')
+				.append('ol')
+				.style('margin', '0px')
 
-			source_td
-				.append('div')
-				.style('margin-left', '20px')
-				.text(s.pub)
-
-			source_td
-				.append('div')
-				.style('margin-left', '20px')
-				.html(s.title + ':&nbsp;<i>' + s.section + '</i>')
+			for (let grade of data.terminfo.rubric) {
+				grade_td
+					.append('li')
+					.style('font-weight', 'normal')
+					.text(grade)
+			}
 		}
 
-		const grade_td = self.dom.tbody
-			.append('tr')
-			.append('td')
-			.style('padding', '5px 0')
-			.append('div')
-			.style('font-weight', 'bold')
-			.text('Grading Rubric')
-			.append('ol')
-			.style('margin', '0px')
+		if (data.terminfo.description) {
+			const header = self.dom.holder
+				.append('div')
+				.style('padding-top', '40px')
+				.style('padding-bottom', '10px')
+				.style('font-weight', 'bold')
+				.text('Description')
+			for (const d of data.terminfo.description) {
+				self.renderDetail(d, self.dom.holder.append('div').style('padding-bottom', '3px'))
+			}
+			self.dom.holder.append('div').style('padding-bottom', '20px')
+		}
+	}
 
-		for (let grade of data.terminfo.rubric) {
-			grade_td
-				.append('li')
-				.style('font-weight', 'normal')
-				.text(grade)
+	self.renderDetail = function(d, div) {
+		if (Array.isArray(d.value)) {
+			div.append('span').html('<i>' + d.label + '</i>')
+			const section = div.append('div').style('padding-left', '20px')
+			for (const v of d.value) {
+				v.label = '- ' + v.label
+				self.renderDetail(v, section.append('div'))
+			}
+		} else {
+			div.html('<i>' + d.label + ':' + '</i>' + '&nbsp;' + d.value)
 		}
 	}
 }
