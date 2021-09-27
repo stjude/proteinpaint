@@ -119,26 +119,7 @@ function setRenderers(self) {
 				self.renderDetail(v, section.append('div'))
 			}
 		} else {
-			div.html('<i>' + d.label + ':' + '</i>' + '&nbsp;')
-			if (d.label === 'PGS catalog id') {
-				//if (typeof d.value === 'string' && d.value.startsWith('http')) {
-				div
-					.append('a')
-					.attr('href', 'https://www.pgscatalog.org/score/' + d.value)
-					.text(d.value)
-			} else if (d.label === '- PMID') {
-				div
-					.append('a')
-					.attr('href', 'https://pubmed.ncbi.nlm.nih.gov/' + d.value)
-					.text(d.value)
-			} else if (d.label === '- DOI') {
-				div
-					.append('a')
-					.attr('href', 'https://doi.org/' + d.value)
-					.text(d.value)
-			} else {
-				div.append('span').text(d.value)
-			}
+			div.html('<i>' + d.label + ':' + '</i>' + '&nbsp;' + d.value)
 		}
 	}
 }

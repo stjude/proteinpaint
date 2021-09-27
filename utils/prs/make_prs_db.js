@@ -106,7 +106,10 @@ async function get_metadata(pgsID, prsDir) {
 	const obj = await response.json()
 
 	const metadata = [
-		{ label: 'PGS catalog id', value: obj.id },
+		{
+			label: 'PGS catalog id',
+			value: `<a href="https://www.pgscatalog.org/score/${obj.id}" target="_blank">${obj.id}</a>`
+		},
 		{ label: 'Reported trait', value: obj.trait_reported },
 		{
 			label: 'Variants',
@@ -146,8 +149,14 @@ async function get_metadata(pgsID, prsDir) {
 			{ label: 'Title', value: obj.publication.title },
 			{ label: 'Journal', value: obj.publication.journal },
 			{ label: 'Date', value: obj.publication.date_publication },
-			{ label: 'PMID', value: obj.publication.PMID },
-			{ label: 'DOI', value: obj.publication.doi }
+			{
+				label: 'PMID',
+				value: `<a href="https://pubmed.ncbi.nlm.nih.gov/${obj.publication.PMID}" target="_blank">${obj.publication.PMID}</a>`
+			},
+			{
+				label: 'DOI',
+				value: `<a href="https://doi.org/${obj.publication.doi}" target="_blank">${obj.publication.doi}</a>`
+			}
 		]
 	})
 
