@@ -113,7 +113,11 @@ class MassRegressionUI {
 		const url = lst.join('&')
 		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
-		d.sampleCounts = data.lst
+		console.log(data.lst)
+		d.sampleCounts =
+			d.term.term.type == 'float' || d.term.term.type == 'integer'
+				? data.lst.filter(v => v.range.is_unannotated != true)
+				: data.lst
 		const totalCount = (d.term.q.totalCount = { included: 0, excluded: 0, total: 0 })
 		data.lst.forEach(v => {
 			if (v.range && v.range.is_unannotated) totalCount.excluded = totalCount.excluded + v.samplecount
@@ -315,6 +319,7 @@ function setRenderers(self) {
 		if (!q.totalCount) q.totalCount = { included: 0, excluded: 0, total: 0 }
 		if (d.section.configKey == 'independent') {
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
+				make_values_table(d)
 				d.dom.term_summmary_div.html(
 					`Use as ${q.use_as || 'continuous'} variable. </br>
 					${q.totalCount.included} sample included.` +
@@ -338,15 +343,16 @@ function setRenderers(self) {
 				d.dom.ref_click_prompt
 					.style('padding', '5px 10px')
 					.style('color', '#999')
-					.text('Click on a row to mark it as reference.')
+					.style('text-transform', 'uppercase')
+					.text('Click to set a row as reference.')
 				d.dom.term_summmary_div.text(text)
 			}
 		} else if (d.section.configKey == 'term') {
-			if (d.term.term.type == 'float' || d.term.term.type == 'integer')
-				d.dom.term_summmary_div.text(
-					`${q.totalCount.included} sample included.` +
-						(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded.` : '')
-				)
+			if (d.term.term.type == 'float' || d.term.term.type == 'integer') make_values_table(d)
+			d.dom.term_summmary_div.text(
+				`${q.totalCount.included} sample included.` +
+					(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded.` : '')
+			)
 		}
 	}
 
@@ -399,7 +405,7 @@ function setRenderers(self) {
 					ref_text
 						.style('display', 'inline-block')
 						.style('border', '')
-						.text('Select as Reference')
+						.text('Set as reference')
 				} else tr.style('background', 'white')
 			})
 			.on('mouseout', () => {
