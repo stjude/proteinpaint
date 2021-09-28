@@ -15,6 +15,7 @@ class MassRegression {
 			banner: this.opts.holder
 				.append('div')
 				.style('color', '#bbb')
+				.style('display', 'none')
 				.html('...Loading'),
 			div: this.opts.holder.append('div').style('margin', '10px 0px') //.style('display', 'none')
 		}
@@ -29,6 +30,7 @@ class MassRegression {
 		if (!config.regressionType) throw 'regressionType is required'
 		return {
 			isVisible: config.settings && config.settings.currViews.includes('regression'),
+			formIsComplete: config.term && config.independent.length,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: {
@@ -49,17 +51,18 @@ class MassRegression {
 			return
 		}
 		if (!this.state.config.term) return
-		this.config = this.state.config
+		this.config = JSON.parse(JSON.stringify(this.state.config))
 		if (!this.config.independent) {
 			this.dom.div.style('display', 'none')
 			throw 'independent variable(s) is required for regression analysis'
 		}
 		this.dom.div.selectAll('*').remove()
-		this.dom.banner.style('display', 'block')
+		this.dom.banner.style('display', this.state.formIsComplete ? 'block' : 'none')
 		const dataName = this.getDataName()
 		this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
 		const tables = this.processData(this.data)
 		this.dom.banner.style('display', 'none')
+		this.dom.div.style('display', 'block')
 		for (const name in tables) {
 			const [columns, rows] = tables[name]
 			this.renderTable(this.dom.div, name, columns, rows)
