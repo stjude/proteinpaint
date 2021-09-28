@@ -47,6 +47,7 @@ class MassRegressionUI {
 			body: controls.append('div'),
 			foot: controls.append('div')
 		}
+        this.totalSampleCount = undefined
 	}
 
 	getState(appState) {
@@ -121,7 +122,15 @@ class MassRegressionUI {
 			if (v.range && v.range.is_unannotated) totalCount.excluded = totalCount.excluded + v.samplecount
 			else totalCount.included = totalCount.included + v.samplecount
 		})
+        // store total count from numerical/categorical term as global variable totalSampleCount
 		totalCount.total = totalCount.included + totalCount.excluded
+        if (this.totalSampleCount == undefined) this.totalSampleCount = totalCount.total
+        // for condition term, subtract included count from totalSampleCount to get excluded
+        // TODO: it's not reliable approch to get excluded count for
+        // 'Most recent grade' / 'any grade' / 'sub-conditions', for example, cardiovascular system
+        if (d.term.term.type == 'condition' && this.totalSampleCount){
+            totalCount.excluded = this.totalSampleCount - totalCount.included
+        }
 	}
 }
 
@@ -201,7 +210,7 @@ function setRenderers(self) {
 	function setActiveValues(d) {
 		const gs = d.term.q.groupsetting || {}
 		const i = gs.inuse && gs.predefined_groupset_idx
-		d.values = gs.inuse ? (i !== undefined ? gs.lst[i].groups : gs.customset.groups) : d.term.term.values
+		d.values = gs.inuse ? (i !== undefined ? d.term.term.groupsetting.lst[i].groups : gs.customset.groups) : d.term.term.values
 		d.label_key = gs.inuse ? 'name' : 'label'
 	}
 
@@ -341,6 +350,8 @@ function setRenderers(self) {
 	}
 
 	function make_values_table(d) {
+        // TODO: is it ok to sort grade by sample count or it should be by grades 0-5?
+        // and what should be reference group, '0: no condition' seems good choice. 
 		const tr_data = d.sampleCounts.sort((a, b) => b.samplecount - a.samplecount)
 		if (!('refGrp' in d) && d.term.q && 'refGrp' in d.term.q) d.refGrp = d.term.q.refGrp
 
@@ -380,12 +391,27 @@ function setRenderers(self) {
 		tr.style('padding', '5px 5px')
 			.style('text-align', 'left')
 			.style('border-bottom', 'solid 1px #ddd')
-			.on('mouseover', () => tr.style('background', '#fff6dc'))
-			.on('mouseout', () => tr.style('background', 'white'))
+            .style('cursor', 'pointer')
+			.on('mouseover', () => {
+                if (d.refGrp !== item.key) {
+                    tr.style('background', '#fff6dc')
+                    ref_text.style('display', 'inline-block')
+                        .style('border','')
+                        .text('Select as Reference')
+                }else
+                    tr.style('background', 'white') 
+            })
+			.on('mouseout', () => {
+                tr.style('background', 'white')
+                if (d.refGrp !== item.key) 
+                    ref_text.style('display', 'none')
+            })
 			.on('click', () => {
 				d.refGrp = item.key
 				self.refGrpByTermId[d.term.id] = item.key
 				//d.term.q.refGrp = item.key
+                ref_text.style('border', '1px solid #bbb')
+                    .text('REFERENCE')
 				make_values_table(d)
 			})
 
@@ -408,11 +434,11 @@ function setRenderers(self) {
 			.append('div')
 			.style('display', item.key === d.refGrp ? 'inline-block' : 'none')
 			.style('padding', '2px 10px')
-			.style('border', '1px solid #bbb')
+			.style('border', item.key === d.refGrp ? '1px solid #bbb' : '')
 			.style('border-radius', '10px')
 			.style('color', '#999')
 			.style('font-size', '.7em')
-			.text('REFERENCE')
+			.text(item.key === d.refGrp ? 'REFERENCE' : 'Select as Reference')
 	}
 
 	function trUpdate(item) {
