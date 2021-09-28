@@ -1,15 +1,5 @@
 import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
-import { controlsInit } from '../termdb/plot.controls'
-import { barInit } from '../termdb/barchart'
-//import { statTableInit } from './stattable'
-import { tableInit } from '../termdb/table'
-//import { boxplotInit } from './boxplot'
-//import { scatterInit } from './scatter'
-import { cumincInit } from '../termdb/cuminc'
-import { survivalInit } from '../termdb/survival'
-import { regressionUIInit } from './regression.ui'
-import { regressionInit } from './regression'
 //import { termInfoInit } from './termInfo'
 //import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 import { termsetting_fill_q } from '../common/termsetting'
@@ -41,7 +31,6 @@ class MassPlot {
 				// dom.controls will hold the config input, select, button elements
 				controls: this.opts.holder.body
 					.append('div')
-					.attr('class', 'pp-termdb-plot-controls')
 					.style('display', this.opts.chartType === 'regression' ? 'block' : 'inline-block'),
 
 				// dom.viz will hold the rendered view
@@ -52,23 +41,6 @@ class MassPlot {
 					.style('min-width', '300px')
 					.style('margin-left', '50px')
 			}
-
-			const controls =
-				this.opts.chartType === 'regression'
-					? await regressionUIInit({
-							app: this.app,
-							id: this.id,
-							holder: this.dom.viz.append('div')
-					  })
-					: await controlsInit({
-							app: this.app,
-							id: this.id,
-							holder: this.dom.controls,
-							isleaf: this.opts.term.isleaf,
-							iscondition: this.opts.term.type == 'condition'
-					  })
-
-			this.components = { controls }
 		} catch (e) {
 			throw e
 		}
@@ -106,8 +78,7 @@ class MassPlot {
 	async main() {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
-		if (!this.components.chart) await this.setChartComponent(this.opts)
-		if (this.dom.resultsHeading) this.dom.resultsHeading.html(this.state.config.term ? 'Results' : '')
+		if (!this.components) await this.setComponents(this.opts)
 		if (this.state.config.term) {
 			// regression will request its own server data
 			if (this.config.settings.currViews.includes('regression')) return
@@ -191,15 +162,30 @@ class MassPlot {
 		}
 	}
 
-	async setChartComponent(opts) {
-		const controls = this.components.controls
+	async setComponents(opts) {
+		this.components = {}
+		let paneTitle
+
+		if (this.opts.chartType != 'regression') {
+			const _ = await import('../termdb/plot.controls')
+			this.components.controls = await _.controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls'),
+				isleaf: this.opts.term.isleaf,
+				iscondition: this.opts.term.type == 'condition'
+			})
+		}
+
 		switch (opts.chartType) {
 			case 'barchart':
-				this.components.chart = barInit({
+				paneTitle = 'Barchart'
+				const bar = await import('../termdb/barchart')
+				this.components.chart = bar.barInit({
 					app: this.app,
 					holder: this.dom.viz.append('div'),
 					id: this.id,
-					controls
+					controls: this.components.controls
 				})
 				/*this.components.stattable = statTableInit(
 					{ app: this.app, holder: this.dom.viz.append('div'), id: this.id }
@@ -207,79 +193,88 @@ class MassPlot {
 				break
 
 			case 'table':
-				this.components.chart = tableInit({
+				paneTitle = 'Table'
+				const t = await import('../termdb/table')
+				this.components.chart = t.tableInit({
 					app: this.app,
 					holder: this.dom.viz.append('div'),
 					id: this.id,
-					controls
+					controls: this.components.controls
 				})
 				break
 
 			case 'boxplot':
-				this.components.chart = boxplotInit({
+				paneTitle = 'Boxplot'
+				const box = await import('../termdb/boxplot')
+				this.components.chart = box.boxplotInit({
 					app: this.app,
 					holder: this.dom.viz.append('div'),
 					id: this.id,
-					controls
+					controls: this.components.controls
 				})
 				break
 
 			case 'scatter':
-				this.components.chart = scatterInit({
+				paneTitle = 'Scatter Plot'
+				const sc = await import('../termdb/scatter')
+				this.components.chart = sc.scatterInit({
 					app: this.app,
 					holder: this.dom.viz.append('div'),
 					id: this.id,
-					controls
+					controls: this.components.controls
 				})
 				break
 
 			case 'cuminc':
-				this.components.chart = this.components.cuminc = cumincInit({
+				paneTitle = 'Cumulative Incidence Plot'
+				const ci = await import('../termdb/cuminc')
+				this.components.chart = ci.cumincInit({
 					app: this.app,
 					holder: this.dom.viz.append('div'),
 					id: this.id,
-					controls
+					controls: this.components.controls
 				})
 				break
 
 			case 'survival':
-				this.components.chart = survivalInit({
+				paneTitle = 'Survival Plot'
+				const surv = await import('../termdb/survival')
+				this.components.chart = surv.survivalInit({
 					app: this.app,
 					holder: this.dom.viz.append('div'),
 					id: this.id,
-					controls
+					controls: this.components.controls
 				})
 				break
 
 			case 'regression':
-				// show selected regression_type in sandbox header
 				const regressionType = this.state.config.regressionType
-				if (regressionType) {
-					this.dom.holder.header
-						.append('div')
-						.style('display', 'inline-block')
-						.style('color', '#999')
-						.style('padding-left', '7px')
-						//.style('font-size', '70%')
-						.html(regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression')
-				}
-				this.dom.resultsHeading = this.dom.viz
-					.append('div')
-					.style('margin-top', '30px')
-					.style('margin-bottom', '10px')
-					.style('font-size', '17px')
-					.style('margin-left', '-35px')
-					.style('padding', '3px 5px')
-					.style('color', '#bbb')
-				this.dom.resultsDiv = this.dom.viz.append('div')
-				this.components.chart = await regressionInit({
+				paneTitle = regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression'
+
+				const _ = await import('./regression.ui')
+				this.components.controls = await _.regressionUIInit({
 					app: this.app,
-					holder: this.dom.resultsDiv,
+					id: this.id,
+					holder: this.dom.controls
+				})
+
+				const rg = await import('./regression')
+				this.components.chart = await rg.regressionInit({
+					app: this.app,
+					holder: this.dom.viz,
 					header: this.dom.holder.header,
 					id: this.id,
 					regressionType: this.state.config.regressionType
 				})
 		}
+
+		// label the viz pane
+		this.dom.holder.header
+			.append('div')
+			.style('display', 'inline-block')
+			.style('color', '#999')
+			.style('padding-left', '7px')
+			.html(paneTitle)
 	}
 }
 
