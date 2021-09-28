@@ -36,13 +36,10 @@ class MassRegressionUI {
 	}
 
 	async init() {
-		const controls = this.opts.holder
-			.append('div')
-			.attr('class', 'pp-termdb-plot-controls')
-			.style('display', 'block')
+		const controls = this.opts.holder.append('div').style('display', 'block')
 
 		this.dom = {
-			div: this.opts.holder.style('margin', '10px 0px').style('margin-left', '-50px'),
+			div: this.opts.holder.style('margin', '10px 0px'),
 			controls,
 			body: controls.append('div'),
 			foot: controls.append('div')

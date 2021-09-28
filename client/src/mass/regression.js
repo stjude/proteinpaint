@@ -11,13 +11,25 @@ class MassRegression {
 	}
 
 	async init() {
+		const resultsDiv = this.opts.holder.append('div')
+
 		this.dom = {
 			banner: this.opts.holder
 				.append('div')
 				.style('color', '#bbb')
 				.style('display', 'none')
+				.style('margin-bottom', '10px')
 				.html('...Loading'),
-			div: this.opts.holder.append('div').style('margin', '10px 0px') //.style('display', 'none')
+
+			resultsHeading: resultsDiv
+				.append('div')
+				.style('margin', '30px 0 10px -35px')
+				.style('font-size', '17px')
+				.style('padding', '3px 5px')
+				.style('color', '#bbb')
+				.html('Results'),
+
+			div: resultsDiv.append('div').style('margin', '10px') //.style('display', 'none')
 		}
 		//opts.controls.on('downloadClick.regression', this.download)
 	}
