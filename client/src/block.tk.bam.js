@@ -222,6 +222,17 @@ async function getData(tk, block, additional = []) {
 	if (tk.url) lst.push('url=' + tk.url)
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 
+	// Show PCR optical duplicates (or not)
+	if (!tk.optical_duplicates) {
+		tk.optical_duplicates = false
+	}
+
+	if (tk.optical_duplicates == true) {
+		lst.push('optical_duplicates=true')
+	} else {
+		lst.push('optical_duplicates=false')
+	}
+
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
 	const data = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
 	if (data.error) throw data.error
@@ -404,7 +415,7 @@ function may_render_variant(data, tk, block) {
 		.attr('height', tk.dom.variantrowheight)
 
 	const variant_string =
-		tk.variants[0].chr + '.' + (tk.variants[0].pos + 1).toString() + '.' + tk.variants[0].ref + '.' + tk.variants[0].alt
+		tk.variants[0].chr + '.' + (tk.variants[0].pos + 1).toString() + '.' + data.ref_allele + '.' + data.alt_allele
 	// Determining where to place the text. Before, inside or after the box
 	let variant_start_text_pos = 0
 	const space_param = 10
@@ -678,8 +689,8 @@ function may_add_urlparameter(tk) {
 				const pos = Number(tmp[i + 1])
 				let strictness
 				if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
-				if (!tmp[i + 2]) return console.log('ref allele missing')
-				if (!tmp[i + 3]) return console.log('alt allele missing')
+				//if (!tmp[i + 2]) return console.log('ref allele missing')
+				//if (!tmp[i + 3]) return console.log('alt allele missing')
 				if (!tmp[i + 4]) {
 					strictness = 1 // Default strictness
 				} else if (!Number.isFinite(Number(tmp[i + 4]))) {
@@ -997,18 +1008,6 @@ function configPanel(tk, block) {
 	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
 	const d = tk.tkconfigtip.d.append('div')
 
-	if (tk.kmer_diff_scores_asc) {
-		tk.kmerScorePlotBtn = d.append('div')
-		tk.kmerScorePlotBtn
-			.append('button')
-			.html('Plot KMER scores')
-			.on('click', async () => {
-				const scatterpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
-				const _ = await import('./scatter')
-				_.renderScatter({ holder: scatterpane.body, data: tk.kmer_diff_scores_asc })
-			})
-	}
-
 	{
 		const row = d.append('div')
 		row
@@ -1024,6 +1023,48 @@ function configPanel(tk, block) {
 			styles: { display: 'inline-block' },
 			callback: () => {
 				tk.asPaired = !tk.asPaired
+				loadTk(tk, block)
+			}
+		})
+	}
+
+	{
+		const row = d.append('div')
+		row
+			.append('span')
+			.html('PCR optical duplicates:&nbsp;')
+			.style('opacity', 0.5)
+		const radios_output = make_radios({
+			holder: row,
+			options: [
+				{ label: 'False', value: false, checked: tk.optical_duplicates == false },
+				{ label: 'True', value: true, checked: tk.optical_duplicates == true }
+			],
+			styles: { display: 'inline-block' },
+			callback: v => {
+				tk.optical_duplicates = v
+				console.log('tk.optical_duplicates:', tk.optical_duplicates)
+				loadTk(tk, block)
+			}
+		})
+	}
+
+	if (tk.variants) {
+		const row = d.append('div')
+		row
+			.append('span')
+			.html('Strictness:&nbsp;')
+			.style('opacity', 0.5)
+		const radios_output = make_radios({
+			holder: row,
+			options: [
+				{ label: '0', value: 0, checked: tk.variants[0].strictness == 0 },
+				{ label: '1', value: 1, checked: tk.variants[0].strictness == 1 },
+				{ label: '2', value: 2, checked: tk.variants[0].strictness == 2 }
+			],
+			styles: { display: 'inline-block' },
+			callback: v => {
+				tk.variants[0].strictness = v
 				loadTk(tk, block)
 			}
 		})
