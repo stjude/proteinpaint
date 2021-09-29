@@ -112,8 +112,8 @@ class MassRegressionUI {
 		if (q.value_by_computable_grade) lst.push('value_by_computable_grade=1')
 		const url = lst.join('&')
 		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
+        console.log(data)
 		if (data.error) throw data.error
-		console.log(data.lst)
 		d.sampleCounts =
 			d.term.term.type == 'float' || d.term.term.type == 'integer'
 				? data.lst.filter(v => v.range.is_unannotated != true)
@@ -137,10 +137,16 @@ class MassRegressionUI {
 
 function setRenderers(self) {
 	self.initUI = () => {
+        if(self.config.regressionType == 'linear'){
+            self.sections[0].prompt = 'Select continuous outcome variable'
+        }
+
 		self.dom.submitBtn = self.dom.foot
 			.style('margin', '3px 15px')
 			.style('padding', '3px 5px')
 			.append('button')
+            .style('padding', '5px 15px')
+            .style('border-radius', '15px')
 			.html('Run analysis')
 			.on('click', self.submit)
 
@@ -360,6 +366,8 @@ function setRenderers(self) {
 		// TODO: is it ok to sort grade by sample count or it should be by grades 0-5?
 		// and what should be reference group, '0: no condition' seems good choice.
 		const tr_data = d.sampleCounts.sort((a, b) => b.samplecount - a.samplecount)
+        const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
+        tr_data.forEach(v => v.bar_width_frac = (1 - (maxCount - v.samplecount)/ maxCount))
 		if (!('refGrp' in d) && d.term.q && 'refGrp' in d.term.q) d.refGrp = d.term.q.refGrp
 
 		if (!('refGrp' in d) || !tr_data.find(c => c.key === d.refGrp)) {
@@ -394,12 +402,38 @@ function setRenderers(self) {
 	function trEnter(item) {
 		const tr = select(this)
 		const d = this.parentNode.__data__
+        const maxBarWidth = 150
 
-		tr.style('padding', '5px 5px')
+		tr.style('padding', '0 5px')
 			.style('text-align', 'left')
-			.style('border-bottom', 'solid 1px #ddd')
-			.style('cursor', 'pointer')
-			.on('mouseover', () => {
+			.style('cursor', d.term.term.type === 'integer' || d.term.term.type === 'float' ? 'default' : 'pointer')
+
+        // sample count + category td
+        tr.append('td')
+            .style('padding', '1px 5px')
+            .style('text-align', 'left')
+            .style('color', 'black')
+            .html(
+                (item.samplecount !== undefined
+                    ? `<span style='display: inline-block;width: 70px;'>n= ${item.samplecount} </span>`
+                    : '') + item.label
+            )
+
+        // sample count bar td
+        const bar_td = tr.append('td')
+            .style('padding', '3px 5px')
+
+        // bar_width
+        const barWidth = maxBarWidth * item.bar_width_frac
+        bar_td.append('div')
+           .style('margin','1px 10px')
+           .style('width',barWidth + 'px')
+           .style('height','12px')
+           .style('background-color','#ddd')
+            
+
+        if(d.term.term.type !== 'integer' && d.term.term.type !== 'float'){
+            tr.on('mouseover', () => {
 				if (d.refGrp !== item.key) {
 					tr.style('background', '#fff6dc')
 					ref_text
@@ -420,30 +454,21 @@ function setRenderers(self) {
 				make_values_table(d)
 			})
 
-		tr.append('td')
-			.style('padding', '3px 5px')
-			.style('text-align', 'left')
-			.style('color', 'black')
-			.html(
-				(item.samplecount !== undefined
-					? `<span style='display: inline-block;width: 70px;'>n= ${item.samplecount} </span>`
-					: '') + item.label
-			)
+            const reference_td = tr
+                .append('td')
+                .style('padding', '1px 5px')
+                .style('text-align', 'left')
 
-		const reference_td = tr
-			.append('td')
-			.style('padding', '3px 5px')
-			.style('text-align', 'left')
-
-		const ref_text = reference_td
-			.append('div')
-			.style('display', item.key === d.refGrp ? 'inline-block' : 'none')
-			.style('padding', '2px 10px')
-			.style('border', item.key === d.refGrp ? '1px solid #bbb' : '')
-			.style('border-radius', '10px')
-			.style('color', '#999')
-			.style('font-size', '.7em')
-			.text('REFERENCE')
+            const ref_text = reference_td
+                .append('div')
+                .style('display', item.key === d.refGrp ? 'inline-block' : 'none')
+                .style('padding', '2px 10px')
+                .style('border', item.key === d.refGrp ? '1px solid #bbb' : '')
+                .style('border-radius', '10px')
+                .style('color', '#999')
+                .style('font-size', '.7em')
+                .text('REFERENCE')
+        }
 	}
 
 	function trUpdate(item) {
@@ -453,9 +478,11 @@ function setRenderers(self) {
 				? `<span style='display: inline-block;width: 70px;'>n= ${item.samplecount} </span>`
 				: '') + item.label
 		)
-		select(this)
-			.select('div')
-			.style('display', item.key === pillData.refGrp ? 'inline-block' : 'none')
+        if(pillData.term.term.type !== 'integer' && pillData.term.term.type !== 'float'){
+            select(this.lastChild)
+                .select('div')
+                .style('display', item.key === pillData.refGrp ? 'inline-block' : 'none')
+        }
 		self.dom.submitBtn.property('disabled', false)
 	}
 
