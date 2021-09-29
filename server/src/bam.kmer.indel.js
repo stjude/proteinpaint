@@ -15,13 +15,18 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	// need to verify if the retrieved sequence is showing 1bp offset or not
 	let final_ref = ''
 	let final_alt = ''
-	if (q.variant.ref.length == 0 || q.variant.ref == '-') {
+
+	if ((q.variant.ref.length == 0 || q.variant.ref == '-') && (q.variant.alt == '-' || q.variant.alt.length == 0)) {
+		// Both ref and alt allele are missing
+		throw 'Both Ref and Alt alleles are missing'
+	} else if (q.variant.ref.length == 0 || q.variant.ref == '-') {
 		final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + q.variant.pos + '-' + q.variant.pos))
 			.split('\n')
 			.slice(1)
 			.join('')
 			.toUpperCase()
 		final_alt = final_ref + q.variant.alt // Adding flanking nucleotide before alternate allele
+		q.variant.pos -= 1
 	} else if (q.variant.alt == '-' || q.variant.alt.length == 0) {
 		// Format is in 55589772.ACGA.- (standard notation 55589771.ACGA.A)
 		const first_nucleotide = (await utils.get_fasta(
