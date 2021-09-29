@@ -17,10 +17,11 @@ export async function setNumericMethods(self) {
 		tsInstanceTracker.set(self, i++)
 	}
 
-	self.term_name_gen = function(d) {
-		return d.name.length <= 25
+	self.get_term_name = function(d) {
+		if (!self.opts.abbrCutoff) return d.name
+		return d.name.length <= self.opts.abbrCutoff + 2
 			? d.name
-			: '<label title="' + d.name + '">' + d.name.substring(0, 24) + '...' + '</label>'
+			: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 	}
 
 	self.get_status_msg = () => ''
