@@ -43,6 +43,13 @@ refCategories <- strsplit(args[3], split = ",")[[1]]
 con <- file("stdin","r")
 dat <- read.table(con, header = T, sep = "\t", quote = "", colClasses = variableClasses, check.names = F)
 
+if(length(variableClasses) != ncol(dat)){
+  stop("Number of variable classes does not match the number of variables")
+}
+if(length(refCategories) != ncol(dat)){
+  stop("Number of reference categories does not match the number of variables")
+}
+
 #Specify the reference categories of categorical variables
 for(i in 1:ncol(dat)) {
   if(is.factor(dat[,i])) {
@@ -94,6 +101,17 @@ for(x in 1:length(var_and_cat)){
   }
 }
 
+#Type III statistics.
+#For each variable, compare the complete model (i.e. model with all variables) to the model without the variable. This analysis will test whether the model changes significantly in the absence of each variable.
+typeIIIstats <- as.data.frame(drop1(res, test = "LRT"))
+#Round the non-p-value columns to 3 decimal places
+pvalueCol <- grepl("^Pr\\(>", colnames(typeIIIstats))
+typeIIIstats[,!pvalueCol] <- round(typeIIIstats[,!pvalueCol], 3)
+#Round the p-value column to 4 significant digits
+typeIIIstats[,pvalueCol] <- signif(typeIIIstats[,pvalueCol], 4)
+#Re-arrange columns
+typeIIIstats <- cbind("Variable" = gsub("`", "", gsub("___", "", row.names(typeIIIstats))), typeIIIstats, stringsAsFactors = F)
+
 #Compute summary stats of deviance residuals
 deviance_resid_summ <- round(data.frame(as.list(fivenum(res_summ$deviance.resid))), 3)
 colnames(deviance_resid_summ) <- c("Minimum","1st quartile","Median","3rd quartile","Maximum")
@@ -113,6 +131,8 @@ cat("#matrix#Deviance Residuals\n", file = "", sep = "")
 write.table(deviance_resid_summ, file = "", sep = "\t", quote = F, row.names = F)
 cat("#matrix#Coefficients\n", file = "", sep = "")
 write.table(coefficients_summ, file = "", sep = "\t", quote = F, row.names = F)
+cat("#matrix#Type III statistics\n", file = "", sep = "")
+write.table(typeIIIstats, file = "", sep = "\t", quote = F, row.names = F)
 cat("#vector#Other summary statistics\n", file = "", sep = "")
 write.table(other_summ, file = "", sep = "\t", quote = F, row.names = T, col.names = F)
 close(con)
