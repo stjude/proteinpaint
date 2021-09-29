@@ -40,6 +40,19 @@ export function isUsableTerm(term, use, ds) {
 			return term.included_types.includes('survival')
 
 		case 'regression':
+			if (use.detail == 'term') {
+				// outcome term
+				if (use.regressionType == 'linear') {
+					return term.included_types.includes('float') || term.included_types.includes('integer')
+				} else return true
+			}
+			if (use.detail == 'independent') {
+				return (
+					term.included_types.includes('float') ||
+					term.included_types.includes('integer') ||
+					term.included_types.includes('categorical')
+				)
+			}
 			return true
 
 		default:

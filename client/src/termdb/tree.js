@@ -288,13 +288,19 @@ function setRenderers(self) {
 		if (self.state.usecase) {
 			for (const t of term.terms) {
 				if (isUsableTerm(t, self.state.usecase)) {
-					self.included_terms.push(t)
+					if (
+						!self.state.exclude_types ||
+						t.included_types.filter(type => !self.state.exclude_types.includes(type)).length
+					) {
+						self.included_terms.push(t)
+					}
 				}
 			}
 		} else if (!self.state.exclude_types.length) {
 			// TODO: deprecate exclude_types in favor or tree.usecase
 			self.included_terms.push(...term.terms)
 		} else {
+			//console.log(297, self.state.exclude_types)
 			for (const t of term.terms) {
 				if (t.included_types.filter(type => !self.state.exclude_types.includes(type)).length) {
 					self.included_terms.push(t)

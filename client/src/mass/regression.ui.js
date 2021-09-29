@@ -11,22 +11,38 @@ class MassRegressionUI {
 		this.sections = [
 			{
 				label: 'Outcome variable',
-				prompt: 'Select outcome variable',
+				prompt: {
+					linear: '<u>Select continuous outcome variable</u>',
+					logistic: '<u>Select outcome variable</u>'
+				},
+				placeholderIcon: '',
 				configKey: 'term',
 				limit: 1,
 				selected: [],
 				cutoffTermTypes: ['condition', 'integer', 'float'],
+				exclude_types: {
+					linear: ['categorical', 'survival'],
+					logistic: ['survival']
+				},
 				// to track and recover selected term pills, info divs, other dom elements,
 				// and avoid unnecessary jerky full rerenders for the same term
 				items: {}
 			},
 			{
 				label: 'Independent variable(s)',
-				prompt: 'Add independent variable',
+				prompt: {
+					linear: '<u>Add independent variable</u>',
+					logistic: '<u>Add independent variable</u>'
+				},
+				placeholderIcon: '',
 				configKey: 'independent',
 				limit: 10,
 				selected: [],
-				items: {}
+				items: {},
+				exclude_types: {
+					linear: ['condition', 'survival'],
+					logistic: ['condition', 'survival']
+				}
 			}
 		]
 		// track reference category values or groups by term ID
@@ -224,7 +240,8 @@ function setRenderers(self) {
 			.style('border-left', d.term ? '1px solid #bbb' : '')
 
 		d.pill = termsettingInit({
-			placeholder: d.section.prompt,
+			placeholder: d.section.prompt[config.regressionType],
+			placeholderIcon: d.section.placeholder,
 			holder: div.append('div'),
 			vocabApi: self.app.vocabApi,
 			vocab: self.state.vocab,
@@ -232,7 +249,7 @@ function setRenderers(self) {
 			use_bins_less: true,
 			debug: self.opts.debug,
 			showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
-			usecase: { target: config.chartType, detail: d.section.configKey },
+			usecase: { target: 'regression', detail: d.section.configKey, regressionType: config.regressionType },
 			disable_terms: self.disable_terms,
 			callback: term => {
 				self.editConfig(d, term)
@@ -251,10 +268,17 @@ function setRenderers(self) {
 
 	function updatePill(d) {
 		select(this).style('border-left', d.term ? '1px solid #bbb' : '')
+		console.log(271, d.section.exclude_types[self.config.regressionType])
 		d.pill.main(
 			Object.assign(
 				{
-					disable_terms: self.disable_terms
+					disable_terms: self.disable_terms,
+					exclude_types: d.section.exclude_types[self.config.regressionType],
+					usecase: {
+						target: 'regression',
+						detail: d.section.configKey,
+						regressionType: self.config.regressionType
+					}
 				},
 				d.term
 			)
