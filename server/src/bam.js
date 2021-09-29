@@ -676,6 +676,10 @@ async function get_q(genome, req) {
 		q.pileupheight = Number(req.query.pileupheight)
 		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
 	}
+	if (req.query.drop_pcrduplicates) {
+		q.drop_pcrduplicates = true
+	}
+
 	if (req.query.variant) {
 		q.diff_score_plotwidth = Number(req.query.diff_score_plotwidth)
 		if (req.query.max_diff_score) {
@@ -767,6 +771,11 @@ async function do_query(q) {
 	{
 		const out = await divide_reads_togroups(q) // templates
 		q.groups = out.groups
+		if (q.variant) {
+			result.ref_allele = out.final_ref // Its possible the input ref allele is "-" or ""(blank). In that case it needs to be queried from the reference genome
+			result.alt_allele = out.final_alt // Its possible the input alt allele is "-" or ""(blank). In that case it needs to be deduced from the reference allele
+			result.allele_pos = out.final_pos // Start position needs to be changed if any of the alleles is blank or missing
+		}
 
 		// XXX clean up logic
 		if (Number.isFinite(q.max_diff_score) && q.variant) {
@@ -844,9 +853,6 @@ async function do_query(q) {
 	}
 	if (q.readcount_skipped) result.count.skipped = q.readcount_skipped
 	if (q.getcolorscale) result.colorscale = getcolorscale()
-	if (q.kmer_diff_scores_asc) {
-		result.kmer_diff_scores_asc = q.kmer_diff_scores_asc
-	}
 	if (!q.partstack) {
 		// not in partstack mode, may do pileup plot
 		if (result.count.r == 0) {
@@ -980,6 +986,11 @@ async function query_region(r, q) {
 		args,
 		dir: q.dir,
 		callback: (line, ps) => {
+			// Show/Hide PCR optical duplicates
+			const flag = line.split('\t')[1]
+			if (flag & 0x400 && q.drop_pcrduplicates) {
+				return
+			}
 			if (q.downsample) {
 				// apply downsampling based on the ratio specified in .keep and .skip
 				const d = q.downsample

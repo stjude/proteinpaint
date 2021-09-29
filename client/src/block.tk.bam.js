@@ -2,7 +2,8 @@ import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selec
 import { axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
-import { make_radios } from './dom'
+import { make_radios } from './common/dom/radiobutton'
+import { make_one_checkbox } from './common/dom/checkbox'
 import urlmap from './common/urlmap'
 
 /*
@@ -144,6 +145,13 @@ export async function loadTk(tk, block) {
 			tk.colorscale = data.colorscale
 		}
 
+		// When original ref or alt allele given by user is missing or "-"
+		if (tk.variants && tk.variants[0].pos != data.allele_pos) {
+			tk.variants[0].pos = data.allele_pos
+			tk.variants[0].ref = data.ref_allele
+			tk.variants[0].alt = data.alt_allele
+		}
+
 		renderTk(data, tk, block)
 
 		block.tkcloakoff(tk, {})
@@ -200,6 +208,9 @@ async function getData(tk, block, additional = []) {
 	if (tk.gdc_file) {
 		lst.push('gdc_file=' + tk.gdc_file)
 	}
+
+	// FIXME clean up
+	//delete orig_regions
 	let gdc_bam_files
 	let orig_regions = []
 	if (tk.downloadgdc) {
@@ -215,12 +226,12 @@ async function getData(tk, block, additional = []) {
 		tk.orig_regions = orig_regions
 	}
 
-	//delete orig_regions
-
 	if (tk.file) lst.push('file=' + tk.file)
 
 	if (tk.url) lst.push('url=' + tk.url)
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
+
+	if (tk.drop_pcrduplicates) lst.push('drop_pcrduplicates=1')
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
 	const data = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
@@ -404,7 +415,8 @@ function may_render_variant(data, tk, block) {
 		.attr('height', tk.dom.variantrowheight)
 
 	const variant_string =
-		tk.variants[0].chr + '.' + (tk.variants[0].pos + 1).toString() + '.' + tk.variants[0].ref + '.' + tk.variants[0].alt
+		tk.variants[0].chr + '.' + (data.allele_pos + 1).toString() + '.' + data.ref_allele + '.' + data.alt_allele
+
 	// Determining where to place the text. Before, inside or after the box
 	let variant_start_text_pos = 0
 	const space_param = 10
@@ -587,6 +599,13 @@ function update_box_stay(group, tk, block) {
 
 function makeTk(tk, block) {
 	may_add_urlparameter(tk)
+
+	// if to hide PCR or optical duplicates
+	if (tk.drop_pcrduplicates == undefined) {
+		// attribute is not set, set to true by default
+		tk.drop_pcrduplicates = true
+	}
+
 	tk.config_handle = block
 		.maketkconfighandle(tk)
 		.attr('y', 10 + block.labelfontsize)
@@ -678,8 +697,8 @@ function may_add_urlparameter(tk) {
 				const pos = Number(tmp[i + 1])
 				let strictness
 				if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
-				if (!tmp[i + 2]) return console.log('ref allele missing')
-				if (!tmp[i + 3]) return console.log('alt allele missing')
+				//if (!tmp[i + 2]) return console.log('ref allele missing')
+				//if (!tmp[i + 3]) return console.log('alt allele missing')
 				if (!tmp[i + 4]) {
 					strictness = 1 // Default strictness
 				} else if (!Number.isFinite(Number(tmp[i + 4]))) {
@@ -997,18 +1016,6 @@ function configPanel(tk, block) {
 	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
 	const d = tk.tkconfigtip.d.append('div')
 
-	if (tk.kmer_diff_scores_asc) {
-		tk.kmerScorePlotBtn = d.append('div')
-		tk.kmerScorePlotBtn
-			.append('button')
-			.html('Plot KMER scores')
-			.on('click', async () => {
-				const scatterpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
-				const _ = await import('./scatter')
-				_.renderScatter({ holder: scatterpane.body, data: tk.kmer_diff_scores_asc })
-			})
-	}
-
 	{
 		const row = d.append('div')
 		row
@@ -1024,6 +1031,37 @@ function configPanel(tk, block) {
 			styles: { display: 'inline-block' },
 			callback: () => {
 				tk.asPaired = !tk.asPaired
+				loadTk(tk, block)
+			}
+		})
+	}
+
+	make_one_checkbox({
+		holder: d.append('div'),
+		labeltext: 'Drop PCR or optical duplicates',
+		checked: tk.drop_pcrduplicates,
+		callback: () => {
+			tk.drop_pcrduplicates = !tk.drop_pcrduplicates
+			loadTk(tk, block)
+		}
+	})
+
+	if (tk.variants) {
+		const row = d.append('div')
+		row
+			.append('span')
+			.html('Strictness:&nbsp;')
+			.style('opacity', 0.5)
+		const radios_output = make_radios({
+			holder: row,
+			options: [
+				{ label: '0', value: 0, checked: tk.variants[0].strictness == 0 },
+				{ label: '1', value: 1, checked: tk.variants[0].strictness == 1 },
+				{ label: '2', value: 2, checked: tk.variants[0].strictness == 2 }
+			],
+			styles: { display: 'inline-block' },
+			callback: v => {
+				tk.variants[0].strictness = v
 				loadTk(tk, block)
 			}
 		})
