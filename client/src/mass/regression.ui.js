@@ -428,7 +428,7 @@ function setRenderers(self) {
             .style('padding', '1px 5px')
             .style('text-align', 'left')
             .style('color', 'black')
-            .text(item.samplecount !== undefined ? ('n= '+  item.samplecount) : '')
+            .text(item.samplecount !== undefined ? ('n='+  item.samplecount) : '')
 
         // label td
         tr.append('td')
@@ -491,7 +491,7 @@ function setRenderers(self) {
 
 	function trUpdate(item) {
 		const pillData = this.parentNode.__data__
-		select(this.firstChild).text(item.samplecount !== undefined ? ('n= '+  item.samplecount) : '')
+		select(this.firstChild).text(item.samplecount !== undefined ? ('n='+  item.samplecount) : '')
         if(pillData.term.term.type !== 'integer' && pillData.term.term.type !== 'float'){
             select(this.lastChild)
                 .select('div')
