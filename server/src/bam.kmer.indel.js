@@ -14,54 +14,45 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const segbplen = q.regions[0].lines[0].split('\t')[9].length // Check if this will work for multi-regions
 	// need to verify if the retrieved sequence is showing 1bp offset or not
 	let final_ref = ''
+	let final_alt = ''
 	if (q.variant.ref.length == 0 || q.variant.ref == '-') {
-		final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (q.variant.pos + 1) + '-' + (q.variant.pos + 1))) // Getting upstream and downstream region for the proposed indel site
+		final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + q.variant.pos + '-' + q.variant.pos))
 			.split('\n')
 			.slice(1)
 			.join('')
 			.toUpperCase()
-	} else {
-		final_ref = q.variant.ref
-	}
-	//else {
-	//	final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (q.variant.pos + 1) + '-' + (q.variant.pos + 2))) // Getting upstream and downstream region for the proposed indel site
-	//		.split('\n')
-	//		.slice(1)
-	//		.join('')
-	//		.toUpperCase()
-	//}
-	let final_alt = ''
-	if (q.variant.alt == '-' || q.variant.alt.length == 0) {
-		if (final_ref.length > 1) {
-			final_alt = final_ref[0] // Takes the first nucleotide from reference sequence
-		} else if (final_ref.length == 1) {
-			// In case of a SNV deletion
-			final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + q.variant.pos + '-' + (q.variant.pos + 1))) // Getting upstream and downstream region for the proposed indel site
-				.split('\n')
-				.slice(1)
-				.join('')
-				.toUpperCase()
-			q.variant.pos = q.variant.pos - 1
-			final_alt = final_ref[0]
-		}
+		final_alt = final_ref + q.variant.alt // Adding flanking nucleotide before alternate allele
+	} else if (q.variant.alt == '-' || q.variant.alt.length == 0) {
+		// Format is in 55589772.ACGA.- (standard notation 55589771.ACGA.A)
+		const first_nucleotide = (await utils.get_fasta(
+			q.genome,
+			q.variant.chr + ':' + q.variant.pos + '-' + q.variant.pos
+		))
+			.split('\n')
+			.slice(1)
+			.join('')
+			.toUpperCase()
+		final_ref = first_nucleotide + q.variant.ref
+		final_alt = first_nucleotide
+		q.variant.pos -= 1
 	} else {
 		final_alt = q.variant.alt
+		final_ref = q.variant.ref
 	}
 
+	const final_pos = q.variant.pos
+	//console.log(q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt)
 	/*
 	console.log(
-		'q.variant.pos:',
-		q.variant.pos,
+		'final_pos:',
+		final_pos,
 		',segbplen:',
 		segbplen,
 		',variant:',
-		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt
+		q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt
 	)
 	*/
-	const leftflankseq = (await utils.get_fasta(
-		q.genome,
-		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
-	))
+	const leftflankseq = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (final_pos - segbplen) + '-' + final_pos))
 
 		.split('\n')
 		.slice(1)
@@ -69,11 +60,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		.toUpperCase()
 	const rightflankseq = (await utils.get_fasta(
 		q.genome,
-		q.variant.chr +
-			':' +
-			(q.variant.pos + final_ref.length + 1) +
-			'-' +
-			(q.variant.pos + segbplen + final_ref.length + 1)
+		q.variant.chr + ':' + (final_pos + final_ref.length + 1) + '-' + (final_pos + segbplen + final_ref.length + 1)
 	))
 		.split('\n')
 		.slice(1)
@@ -81,14 +68,14 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		.toUpperCase()
 	const refseq = (await utils.get_fasta(
 		q.genome,
-		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + (q.variant.pos + segbplen + final_ref.length + 1)
+		q.variant.chr + ':' + (final_pos - segbplen) + '-' + (final_pos + segbplen + final_ref.length + 1)
 	))
 		.split('\n')
 		.slice(1)
 		.join('')
 		.toUpperCase()
 
-	//console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
+	//console.log(q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt)
 	//console.log('refSeq', refseq)
 	//console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
 
@@ -136,7 +123,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		':' +
 		cigar_sequences +
 		':' +
-		q.variant.pos.toString() +
+		final_pos.toString() +
 		':' +
 		segbplen.toString() +
 		':' +
@@ -284,7 +271,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		g.widths = region_widths
 		groups.push(g)
 	}
-	return { groups, refalleleerror, max_diff_score, min_diff_score, final_ref, final_alt }
+	return { groups, refalleleerror, max_diff_score, min_diff_score, final_pos, final_ref, final_alt }
 }
 
 function run_rust_indel_pipeline(input_data) {

@@ -408,7 +408,7 @@ function may_render_variant(data, tk, block) {
 		.attr('height', tk.dom.variantrowheight)
 
 	const variant_string =
-		tk.variants[0].chr + '.' + (tk.variants[0].pos + 1).toString() + '.' + data.ref_allele + '.' + data.alt_allele
+		tk.variants[0].chr + '.' + (data.allele_pos + 1).toString() + '.' + data.ref_allele + '.' + data.alt_allele
 	// Determining where to place the text. Before, inside or after the box
 	let variant_start_text_pos = 0
 	const space_param = 10
