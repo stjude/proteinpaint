@@ -676,10 +676,8 @@ async function get_q(genome, req) {
 		q.pileupheight = Number(req.query.pileupheight)
 		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
 	}
-	if (req.query.optical_duplicates == 'false') {
-		q.optical_duplicates = false
-	} else {
-		q.optical_duplicates = true
+	if (req.query.drop_pcrduplicates) {
+		q.drop_pcrduplicates = true
 	}
 
 	if (req.query.variant) {
@@ -989,7 +987,7 @@ async function query_region(r, q) {
 		callback: (line, ps) => {
 			// Show/Hide PCR optical duplicates
 			const flag = line.split('\t')[1]
-			if (flag & 0x400 && q.optical_duplicates == false) {
+			if (flag & 0x400 && q.drop_pcrduplicates) {
 				return
 			}
 			if (q.downsample) {

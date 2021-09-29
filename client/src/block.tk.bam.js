@@ -2,7 +2,8 @@ import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selec
 import { axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
-import { make_radios } from './dom'
+import { make_radios } from './common/dom/radiobutton'
+import { make_one_checkbox } from './common/dom/checkbox'
 import urlmap from './common/urlmap'
 
 /*
@@ -200,6 +201,9 @@ async function getData(tk, block, additional = []) {
 	if (tk.gdc_file) {
 		lst.push('gdc_file=' + tk.gdc_file)
 	}
+
+	// FIXME clean up
+	//delete orig_regions
 	let gdc_bam_files
 	let orig_regions = []
 	if (tk.downloadgdc) {
@@ -215,23 +219,12 @@ async function getData(tk, block, additional = []) {
 		tk.orig_regions = orig_regions
 	}
 
-	//delete orig_regions
-
 	if (tk.file) lst.push('file=' + tk.file)
 
 	if (tk.url) lst.push('url=' + tk.url)
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 
-	// Show PCR optical duplicates (or not)
-	if (!tk.optical_duplicates) {
-		tk.optical_duplicates = false
-	}
-
-	if (tk.optical_duplicates == true) {
-		lst.push('optical_duplicates=true')
-	} else {
-		lst.push('optical_duplicates=false')
-	}
+	if (tk.drop_pcrduplicates) lst.push('drop_pcrduplicates=1')
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
 	const data = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
@@ -598,6 +591,13 @@ function update_box_stay(group, tk, block) {
 
 function makeTk(tk, block) {
 	may_add_urlparameter(tk)
+
+	// if to hide PCR or optical duplicates
+	if (tk.drop_pcrduplicates == undefined) {
+		// attribute is not set, set to true by default
+		tk.drop_pcrduplicates = true
+	}
+
 	tk.config_handle = block
 		.maketkconfighandle(tk)
 		.attr('y', 10 + block.labelfontsize)
@@ -1028,26 +1028,15 @@ function configPanel(tk, block) {
 		})
 	}
 
-	{
-		const row = d.append('div')
-		row
-			.append('span')
-			.html('PCR optical duplicates:&nbsp;')
-			.style('opacity', 0.5)
-		const radios_output = make_radios({
-			holder: row,
-			options: [
-				{ label: 'False', value: false, checked: tk.optical_duplicates == false },
-				{ label: 'True', value: true, checked: tk.optical_duplicates == true }
-			],
-			styles: { display: 'inline-block' },
-			callback: v => {
-				tk.optical_duplicates = v
-				console.log('tk.optical_duplicates:', tk.optical_duplicates)
-				loadTk(tk, block)
-			}
-		})
-	}
+	make_one_checkbox({
+		holder: d.append('div'),
+		labeltext: 'Drop PCR or optical duplicates',
+		checked: tk.drop_pcrduplicates,
+		callback: () => {
+			tk.drop_pcrduplicates = !tk.drop_pcrduplicates
+			loadTk(tk, block)
+		}
+	})
 
 	if (tk.variants) {
 		const row = d.append('div')
