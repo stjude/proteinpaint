@@ -423,16 +423,19 @@ function setRenderers(self) {
 			.style('text-align', 'left')
 			.style('cursor', d.term.term.type === 'integer' || d.term.term.type === 'float' ? 'default' : 'pointer')
 
-        // sample count + category td
+        // sample count td
         tr.append('td')
             .style('padding', '1px 5px')
             .style('text-align', 'left')
             .style('color', 'black')
-            .html(
-                (item.samplecount !== undefined
-                    ? `<span style='display: inline-block;width: 70px;'>n= ${item.samplecount} </span>`
-                    : '') + item.label
-            )
+            .text(item.samplecount !== undefined ? ('n= '+  item.samplecount) : '')
+
+        // label td
+        tr.append('td')
+            .style('padding', '1px 5px')
+            .style('text-align', 'left')
+            .style('color', 'black')
+            .text(item.label)
 
         // sample count bar td
         const bar_td = tr.append('td')
@@ -488,11 +491,7 @@ function setRenderers(self) {
 
 	function trUpdate(item) {
 		const pillData = this.parentNode.__data__
-		select(this.firstChild).html(
-			(item.samplecount !== undefined
-				? `<span style='display: inline-block;width: 70px;'>n= ${item.samplecount} </span>`
-				: '') + item.label
-		)
+		select(this.firstChild).text(item.samplecount !== undefined ? ('n= '+  item.samplecount) : '')
         if(pillData.term.term.type !== 'integer' && pillData.term.term.type !== 'float'){
             select(this.lastChild)
                 .select('div')
