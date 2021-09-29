@@ -57,6 +57,7 @@ class TermSetting {
 		this.durations = { exit: 500 }
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
+		this.abbrCutoff = opts.abbrCutoff
 		// detect if the holder is contained within a floating client Menu instance;
 		// this will be useful in preventing premature closure of the menu in case
 		// a submenu is clicked and is still visible
@@ -90,13 +91,13 @@ class TermSetting {
 			showTree: this.showTree
 		}
 	}
-
 	validateOpts(o) {
 		if (!o.holder) throw '.holder missing'
 		if (!o.vocab) throw '.vocab missing'
 		if (o.vocab.route && !o.vocab.genome) throw '.genome missing'
 		if (o.vocab.route && !o.vocab.dslabel) throw '.dslabel missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
+		if (!('abbrCutoff' in o)) o.abbrCutoff = 18 //set the default to 18
 		return o
 	}
 	validateMainData(d) {
@@ -199,7 +200,7 @@ function setRenderers(self) {
 			.attr('class', 'term_name_btn  sja_filter_tag_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
-			.html(self.term_name_gen)
+			.html(self.get_term_name)
 
 		self.updatePill.call(this)
 	}
@@ -443,12 +444,14 @@ function valid_binscheme(q) {
 }
 
 function emptyMethod() {}
-function getTermLabel(d) {
-	return d.name.length <= 20 ? d.name : '<label title="' + d.name + '">' + d.name.substring(0, 18) + '...' + '</label>'
-}
 
 function setDefaultMethods(self) {
 	self.showEditMenu = emptyMethod
 	self.get_status_msg = emptyMethod
-	self.term_name_gen = getTermLabel
+	self.get_term_name = d => {
+		if (!self.opts.abbrCutoff) return d.name
+		return d.name.length <= self.opts.abbrCutoff + 2
+			? d.name
+			: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+	}
 }

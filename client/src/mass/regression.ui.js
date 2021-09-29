@@ -234,6 +234,7 @@ function setRenderers(self) {
 			showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
 			usecase: { target: config.chartType, detail: d.section.configKey },
 			disable_terms: self.disable_terms,
+			abbrCutoff: 50,
 			callback: term => {
 				self.editConfig(d, term)
 			}
