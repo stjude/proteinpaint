@@ -145,6 +145,13 @@ export async function loadTk(tk, block) {
 			tk.colorscale = data.colorscale
 		}
 
+		// When original ref or alt allele given by user is missing or "-"
+		if (tk.variants && tk.variants[0].pos != data.allele_pos) {
+			tk.variants[0].pos = data.allele_pos
+			tk.variants[0].ref = data.ref_allele
+			tk.variants[0].alt = data.alt_allele
+		}
+
 		renderTk(data, tk, block)
 
 		block.tkcloakoff(tk, {})
@@ -409,6 +416,7 @@ function may_render_variant(data, tk, block) {
 
 	const variant_string =
 		tk.variants[0].chr + '.' + (data.allele_pos + 1).toString() + '.' + data.ref_allele + '.' + data.alt_allele
+
 	// Determining where to place the text. Before, inside or after the box
 	let variant_start_text_pos = 0
 	const space_param = 10
