@@ -129,6 +129,7 @@ class MassRegressionUI {
 		const url = lst.join('&')
 		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
+		d.orderedLabels = data.orderedLabels
 		d.sampleCounts =
 			d.term.term.type == 'float' || d.term.term.type == 'integer'
 				? data.lst.filter(v => v.range.is_unannotated != true)
@@ -394,9 +395,11 @@ function setRenderers(self) {
 	function make_values_table(d, excluded) {
 		// TODO: is it ok to sort grade by sample count or it should be by grades 0-5?
 		// and what should be reference group, '0: no condition' seems good choice.
-		const tr_data = excluded
-			? d.excludeCounts.sort((a, b) => b.samplecount - a.samplecount)
-			: d.sampleCounts.sort((a, b) => b.samplecount - a.samplecount)
+		const sortFxn =
+			d.orderedLabels && d.orderedLabels.length
+				? (a, b) => d.orderedLabels.indexOf(a.label) - d.orderedLabels.indexOf(b.label)
+				: (a, b) => b.samplecount - a.samplecount
+		const tr_data = excluded ? d.excludeCounts.sort(sortFxn) : d.sampleCounts.sort(sortFxn)
 
 		if (!excluded) {
 			const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
