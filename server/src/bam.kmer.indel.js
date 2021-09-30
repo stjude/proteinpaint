@@ -14,36 +14,50 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const segbplen = q.regions[0].lines[0].split('\t')[9].length // Check if this will work for multi-regions
 	// need to verify if the retrieved sequence is showing 1bp offset or not
 	let final_ref = ''
-	if (q.variant.ref != '-') {
-		final_ref = q.variant.ref
-	} else {
-		final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (q.variant.pos + 1) + '-' + (q.variant.pos + 2))) // Getting upstream and downstream region for the proposed indel site
+	let final_alt = ''
+
+	if ((q.variant.ref.length == 0 || q.variant.ref == '-') && (q.variant.alt == '-' || q.variant.alt.length == 0)) {
+		// Both ref and alt allele are missing
+		throw 'Both Ref and Alt alleles are missing'
+	} else if (q.variant.ref.length == 0 || q.variant.ref == '-') {
+		final_ref = (await utils.get_fasta(q.genome, q.variant.chr + ':' + q.variant.pos + '-' + q.variant.pos))
 			.split('\n')
 			.slice(1)
 			.join('')
 			.toUpperCase()
-	}
-	let final_alt = ''
-	if (q.variant.alt != '-') {
-		final_alt = q.variant.alt
+		final_alt = final_ref + q.variant.alt // Adding flanking nucleotide before alternate allele
+		q.variant.pos -= 1
+	} else if (q.variant.alt == '-' || q.variant.alt.length == 0) {
+		// Format is in 55589772.ACGA.- (standard notation 55589771.ACGA.A)
+		const first_nucleotide = (await utils.get_fasta(
+			q.genome,
+			q.variant.chr + ':' + q.variant.pos + '-' + q.variant.pos
+		))
+			.split('\n')
+			.slice(1)
+			.join('')
+			.toUpperCase()
+		final_ref = first_nucleotide + q.variant.ref
+		final_alt = first_nucleotide
+		q.variant.pos -= 1
 	} else {
-		final_alt = ''
+		final_alt = q.variant.alt
+		final_ref = q.variant.ref
 	}
 
+	const final_pos = q.variant.pos
+	//console.log(q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt)
 	/*
 	console.log(
-		'q.variant.pos:',
-		q.variant.pos,
+		'final_pos:',
+		final_pos,
 		',segbplen:',
 		segbplen,
 		',variant:',
-		q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt
+		q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt
 	)
 	*/
-	const leftflankseq = (await utils.get_fasta(
-		q.genome,
-		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + q.variant.pos
-	))
+	const leftflankseq = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (final_pos - segbplen) + '-' + final_pos))
 
 		.split('\n')
 		.slice(1)
@@ -51,11 +65,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		.toUpperCase()
 	const rightflankseq = (await utils.get_fasta(
 		q.genome,
-		q.variant.chr +
-			':' +
-			(q.variant.pos + final_ref.length + 1) +
-			'-' +
-			(q.variant.pos + segbplen + final_ref.length + 1)
+		q.variant.chr + ':' + (final_pos + final_ref.length + 1) + '-' + (final_pos + segbplen + final_ref.length + 1)
 	))
 		.split('\n')
 		.slice(1)
@@ -63,14 +73,14 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		.toUpperCase()
 	const refseq = (await utils.get_fasta(
 		q.genome,
-		q.variant.chr + ':' + (q.variant.pos - segbplen) + '-' + (q.variant.pos + segbplen + final_ref.length + 1)
+		q.variant.chr + ':' + (final_pos - segbplen) + '-' + (final_pos + segbplen + final_ref.length + 1)
 	))
 		.split('\n')
 		.slice(1)
 		.join('')
 		.toUpperCase()
 
-	//console.log(q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt)
+	//console.log(q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt)
 	//console.log('refSeq', refseq)
 	//console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
 
@@ -118,7 +128,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		':' +
 		cigar_sequences +
 		':' +
-		q.variant.pos.toString() +
+		final_pos.toString() +
 		':' +
 		segbplen.toString() +
 		':' +
@@ -248,7 +258,6 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const diff_list = kmer_diff_scores_input.map(i => i.value)
 	const max_diff_score = Math.max(...diff_list)
 	const min_diff_score = Math.min(...diff_list)
-	q.kmer_diff_scores_asc = kmer_diff_scores_input
 	const groups = []
 	for (const k in type2group) {
 		const g = type2group[k]
@@ -267,7 +276,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		g.widths = region_widths
 		groups.push(g)
 	}
-	return { groups, refalleleerror, max_diff_score, min_diff_score }
+	return { groups, refalleleerror, max_diff_score, min_diff_score, final_pos, final_ref, final_alt }
 }
 
 function run_rust_indel_pipeline(input_data) {
@@ -603,19 +612,6 @@ export async function match_complexvariant(q, templates_info, region_widths) {
 	const diff_list = kmer_diff_scores_input.map(i => i.value)
 	const max_diff_score = Math.max(...diff_list)
 	const min_diff_score = Math.min(...diff_list)
-	q.kmer_diff_scores_asc = kmer_diff_scores_input
-	//	if (features.bamScoreRplot) {
-	//		const file = fs.createWriteStream(
-	//			q.variant.chr + '.' + q.variant.pos + '.' + final_ref + '.' + final_alt + '.txt'
-	//		)
-	//		file.on('error', function(err) {
-	//			/* error handling */
-	//		})
-	//		kmer_diff_scores_input.forEach(function(v) {
-	//			file.write(v.value + ',' + v.groupID + '\n')
-	//		})
-	//		file.end()
-	//	}
 
 	const groups = []
 	for (const k in type2group) {

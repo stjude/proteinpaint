@@ -10,10 +10,11 @@ export function setCategoricalMethods(self) {
 		self.showGrpOpts(div)
 	}
 
-	self.term_name_gen = function(d) {
-		return d.name.length <= 20
+	self.get_term_name = function(d) {
+		if (!self.opts.abbrCutoff) return d.name
+		return d.name.length <= self.opts.abbrCutoff + 2
 			? d.name
-			: '<label title="' + d.name + '">' + d.name.substring(0, 18) + '...' + '</label>'
+			: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 	}
 
 	self.get_status_msg = function() {
