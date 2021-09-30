@@ -97,7 +97,8 @@ class TermSetting {
 		if (o.vocab.route && !o.vocab.genome) throw '.genome missing'
 		if (o.vocab.route && !o.vocab.dslabel) throw '.dslabel missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
-		if (!o.placeholder && !o.placeholderIcon) throw 'must specify a non-empty opts.placeholder and/or .placeholderIcon'
+		if ('placeholder' in o && !o.placeholder && 'placeholderIcon' in o && !o.placeholderIcon)
+			throw 'must specify a non-empty opts.placeholder and/or .placeholderIcon'
 		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'
 		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
 		if (!('abbrCutoff' in o)) o.abbrCutoff = 18 //set the default to 18

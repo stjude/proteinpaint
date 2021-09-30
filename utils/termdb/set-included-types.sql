@@ -10,7 +10,7 @@ JOIN ancestry a ON subcohort_terms.term_id IN (a.ancestor_id, a.term_id) AND a.t
 JOIN subcohort_terms s ON s.cohort = subcohort_terms.cohort AND s.term_id = c.id
 );
 
-alter table subcohort_terms add column child_types text;
+-- alter table subcohort_terms add column child_types text;
 
 UPDATE subcohort_terms
 SET child_types=(
