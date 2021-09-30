@@ -14,4 +14,4 @@ if [[ ! -d tdb-temp ]]; then
 fi
 
 cd tdb-temp
-tar zcvf ./tdb.tgz a* category2vcfsample chronicevents.precomputed term* samples.idmap keep/* PRS/* phenotree/* term2subcohort
+tar zcvf ../tdb.tgz a* category2vcfsample chronicevents.precomputed term* samples.idmap keep/* PRS/* phenotree/*
