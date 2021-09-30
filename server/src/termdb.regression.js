@@ -19,7 +19,7 @@ export async function get_regression(q, ds) {
 		///////////// the header row of the R data matrix
 		const header = ['outcome']
 		// make "refCategories" array that contains reference categories for each variable
-		// For numeric variables, use empty string (see regression.R for more details)
+		// For numeric variables, use 'NA' string (see regression.R for more details)
 		const refCategories = ['NA']
 
 		for (const i in q.independent) {
