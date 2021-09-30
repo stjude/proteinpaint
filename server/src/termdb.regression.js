@@ -20,7 +20,7 @@ export async function get_regression(q, ds) {
 		const header = ['outcome']
 		// make "refCategories" array that contains reference categories for each variable
 		// For numeric variables, use empty string (see regression.R for more details)
-		const refCategories = ['']
+		const refCategories = ['NA']
 
 		for (const i in q.independent) {
 			const term = q.independent[i]
@@ -65,6 +65,7 @@ export async function get_regression(q, ds) {
 			}
 			if (line[0] != 'NA') tsv.push(line.join('\t'))
 		}
+		console.log('line 68', header, colClasses, refCategories)
 		console.log('termdb.regression.js')
 		const data = await lines2R(path.join(serverconfig.binpath, 'utils/regression.R'), tsv, [
 			regressionType,
@@ -121,7 +122,7 @@ function get_refCategory(term, q) {
 	if (term.type == 'integer' || term.type == 'float') {
 		// TODO when numeric term is divided to bins, term should indicate which bin is reference
 		// this currently won't work if term is divided to bins
-		return ''
+		return 'NA'
 	}
 	throw 'unknown term type for refCategories'
 }
