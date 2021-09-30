@@ -2,6 +2,7 @@ const tape = require('tape')
 const helpers = require('../../../test/front.helpers.js')
 const vocabInit = require('../vocabulary').vocabInit
 const appInit = require('../app').appInit
+const vocabData = require('./vocabData')
 
 /*************************
  reusable helper functions
@@ -44,70 +45,7 @@ tape('vocabInit(), default', test => {
 tape('getVocab(), custom', test => {
 	runpp({
 		state: {
-			vocab: {
-				terms: [
-					{
-						id: 'a',
-						name: 'AAA',
-						parent_id: null
-					},
-					{
-						id: 'b',
-						name: 'BBB',
-						parent_id: null
-					},
-					{
-						type: 'categorical',
-						id: 'c',
-						name: 'CCC',
-						parent_id: 'a',
-						isleaf: true,
-						groupsetting: {
-							disabled: true
-						}
-					},
-					{
-						type: 'integer',
-						id: 'd',
-						name: 'DDD',
-						parent_id: 'a',
-						isleaf: true,
-						groupsetting: {
-							disabled: true
-						}
-					},
-					{
-						type: 'condition',
-						id: 'e',
-						name: 'EEE',
-						parent_id: 'a',
-						isleaf: true,
-						groupsetting: {
-							disabled: true
-						}
-					},
-					{
-						type: 'categorical',
-						id: 'f',
-						name: 'FFF',
-						parent_id: 'b',
-						isleaf: true,
-						groupsetting: {
-							disabled: true
-						}
-					},
-					{
-						type: 'categorical',
-						id: 'g',
-						name: 'CCC',
-						parent_id: 'ab',
-						isleaf: true,
-						groupsetting: {
-							disabled: true
-						}
-					}
-				]
-			}
+			vocab: vocabData
 		},
 		callbacks: {
 			'postInit.test': runTests1
