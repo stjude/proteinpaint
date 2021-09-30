@@ -52,15 +52,24 @@ class MassRegressionUI {
 	}
 
 	async init() {
-		const controls = this.opts.holder.append('div').style('display', 'block')
+        try {
+            const controls = this.opts.holder.append('div').style('display', 'block')
 
-		this.dom = {
-			div: this.opts.holder.style('margin', '10px 0px'),
-			controls,
-			body: controls.append('div'),
-			foot: controls.append('div')
-		}
-		this.totalSampleCount = undefined
+            this.dom = {
+                div: this.opts.holder.style('margin', '10px 0px'),
+                controls,
+                body: controls.append('div'),
+                foot: controls.append('div')
+            }
+            this.totalSampleCount = undefined
+
+            this.opts.chart.on('postRender', ()=>{
+                const chartRendered = true
+                this.updateBtns(chartRendered)
+            })
+        } catch (e) {
+            throw e
+        }
 	}
 
 	getState(appState) {
@@ -523,14 +532,14 @@ function setRenderers(self) {
         self.dom.submitBtn.style('display', 'block')
 	}
 
-	self.updateBtns = () => {
+	self.updateBtns = (chartRendered) => {
 		const hasMissingTerms = self.sections.filter(t => !t.selected || (t.limit > 1 && !t.selected.length)).length > 0
 		self.dom.submitBtn.style('display', hasMissingTerms ? 'none' : 'block')
         
-        // console.log(self.state)
-        // TODO: disable when rendering, enable after rendering results
-        // TODO: change text from 'Running..' to 'Run analysis'
-		self.dom.submitBtn.property('disabled', hasMissingTerms)
+        if(chartRendered){
+            self.dom.submitBtn.property('disabled', false)
+                .html('Run analysis')
+        }
 	}
 }
 
@@ -571,7 +580,7 @@ function setInteractivity(self) {
 		}
 		// disable submit button on click, reenable after rendering results
 		self.dom.submitBtn.property('disabled', true)
-            // .html('Running...') // TODO: change text to 'Running..'
+            .html('Running...')
 		self.app.dispatch({
 			type: config.term ? 'plot_edit' : 'plot_show',
 			id: self.id,

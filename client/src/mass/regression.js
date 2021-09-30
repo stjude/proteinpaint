@@ -18,8 +18,7 @@ class MassRegression {
 				.append('div')
 				.style('color', '#bbb')
 				.style('display', 'none')
-				.style('margin-bottom', '10px')
-				.html('...Loading'),
+				.style('margin-bottom', '10px'),
 
 			resultsHeading: resultsDiv
 				.append('div')
