@@ -149,7 +149,7 @@ function print_result() {
 	// output
 	for (const [tid, cohort2samples] of term2cohort) {
 		for (const [cohort, sampleset] of cohort2samples) {
-			console.log(cohort + '\t' + tid + '\t' + sampleset.size + '\t')
+			console.log(cohort + '\t' + tid + '\t' + sampleset.size + '\t\t')
 		}
 	}
 }
