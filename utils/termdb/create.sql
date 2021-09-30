@@ -130,7 +130,8 @@ CREATE TABLE subcohort_terms_2 (
  cohort TEXT,
  term_id TEXT,
  count INT,
- included_types TEXT
+ included_types TEXT,
+ child_types TEXT
 );
 
 CREATE INDEX subcohort_terms_cohort ON subcohort_terms(cohort);

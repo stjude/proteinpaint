@@ -1053,7 +1053,7 @@ thus less things to worry about...
 
 	{
 		const sql = cn.prepare(
-			`SELECT id, jsondata, s.included_types
+			`SELECT id, jsondata, s.included_types, s.child_types
 			FROM terms t
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE parent_id is null
@@ -1069,6 +1069,7 @@ thus less things to worry about...
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
 				t.included_types = i.included_types ? i.included_types.split(',') : ['TO-DO-PLACEHOLDER']
+				t.child_types = i.child_types ? i.child_types.split(',') : []
 				return t
 			})
 			cache.set(cacheId, re)
@@ -1120,7 +1121,7 @@ thus less things to worry about...
 	*/
 	{
 		const sql = cn.prepare(
-			`SELECT id, type, jsondata, s.included_types 
+			`SELECT id, type, jsondata, s.included_types, s.child_types 
 			FROM terms t
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=? 
 			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
@@ -1139,6 +1140,7 @@ thus less things to worry about...
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
 					j.included_types = i.included_types ? i.included_types.split(',') : []
+					j.child_types = i.child_types ? i.child_types.split(',') : []
 					return j
 				})
 			}

@@ -288,13 +288,19 @@ function setRenderers(self) {
 		if (self.state.usecase) {
 			for (const t of term.terms) {
 				if (isUsableTerm(t, self.state.usecase)) {
-					self.included_terms.push(t)
+					if (
+						!self.state.exclude_types ||
+						t.included_types.filter(type => !self.state.exclude_types.includes(type)).length
+					) {
+						self.included_terms.push(t)
+					}
 				}
 			}
 		} else if (!self.state.exclude_types.length) {
 			// TODO: deprecate exclude_types in favor or tree.usecase
 			self.included_terms.push(...term.terms)
 		} else {
+			//console.log(297, self.state.exclude_types)
 			for (const t of term.terms) {
 				if (t.included_types.filter(type => !self.state.exclude_types.includes(type)).length) {
 					self.included_terms.push(t)
@@ -374,7 +380,7 @@ function setRenderers(self) {
 			.style('margin', term.isleaf ? '' : '2px')
 			.style('padding', '0px 5px')
 
-		if (!term.isleaf) {
+		if (!term.isleaf && term.child_types.filter(type => !self.state.exclude_types.includes(type)).length) {
 			div
 				.append('div')
 				.attr('class', 'sja_menuoption ' + cls_termbtn)
@@ -402,7 +408,7 @@ function setRenderers(self) {
 						.style('padding', '5px 8px')
 						.style('margin', '1px 0px')
 						.style('opacity', 0.4)
-				} else {
+				} else if (!self.state.exclude_types.includes(term.type)) {
 					labeldiv
 						// need better css class
 						.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)

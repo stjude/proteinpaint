@@ -159,7 +159,8 @@ CREATE TABLE subcohort_terms (
  cohort TEXT,
  term_id TEXT,
  count INT,
- included_types TEXT
+ included_types TEXT,
+ child_types TEXT
 );
 .import term2subcohort subcohort_terms
 

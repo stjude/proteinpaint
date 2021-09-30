@@ -11,22 +11,38 @@ class MassRegressionUI {
 		this.sections = [
 			{
 				label: 'Outcome variable',
-				prompt: 'Select outcome variable',
+				prompt: {
+					linear: '<u>Select continuous outcome variable</u>',
+					logistic: '<u>Select outcome variable</u>'
+				},
+				placeholderIcon: '',
 				configKey: 'term',
 				limit: 1,
 				selected: [],
 				cutoffTermTypes: ['condition', 'integer', 'float'],
+				exclude_types: {
+					linear: ['categorical', 'survival'],
+					logistic: ['survival']
+				},
 				// to track and recover selected term pills, info divs, other dom elements,
 				// and avoid unnecessary jerky full rerenders for the same term
 				items: {}
 			},
 			{
 				label: 'Independent variable(s)',
-				prompt: 'Add independent variable',
+				prompt: {
+					linear: '<u>Add independent variable</u>',
+					logistic: '<u>Add independent variable</u>'
+				},
+				placeholderIcon: '',
 				configKey: 'independent',
 				limit: 10,
 				selected: [],
-				items: {}
+				items: {},
+				exclude_types: {
+					linear: ['condition', 'survival'],
+					logistic: ['condition', 'survival']
+				}
 			}
 		]
 		// track reference category values or groups by term ID
@@ -117,9 +133,12 @@ class MassRegressionUI {
 			d.term.term.type == 'float' || d.term.term.type == 'integer'
 				? data.lst.filter(v => v.range.is_unannotated != true)
 				: data.lst
-        if(d.term.term.type == 'float' || d.term.term.type == 'integer' && data.lst.find(v => v.range.is_unannotated == true)){
-            d.excludeCounts = data.lst.filter(v => v.range.is_unannotated == true)
-        }
+		if (
+			d.term.term.type == 'float' ||
+			(d.term.term.type == 'integer' && data.lst.find(v => v.range.is_unannotated == true))
+		) {
+			d.excludeCounts = data.lst.filter(v => v.range.is_unannotated == true)
+		}
 		const totalCount = (d.term.q.totalCount = { included: 0, excluded: 0, total: 0 })
 		data.lst.forEach(v => {
 			if (v.range && v.range.is_unannotated) totalCount.excluded = totalCount.excluded + v.samplecount
@@ -139,16 +158,12 @@ class MassRegressionUI {
 
 function setRenderers(self) {
 	self.initUI = () => {
-        if(self.config.regressionType == 'linear'){
-            self.sections[0].prompt = 'Select continuous outcome variable'
-        }
-
 		self.dom.submitBtn = self.dom.foot
 			.style('margin', '3px 15px')
 			.style('padding', '3px 5px')
 			.append('button')
-            .style('padding', '5px 15px')
-            .style('border-radius', '15px')
+			.style('padding', '5px 15px')
+			.style('border-radius', '15px')
 			.html('Run analysis')
 			.on('click', self.submit)
 
@@ -236,7 +251,8 @@ function setRenderers(self) {
 			.style('border-left', d.term ? '1px solid #bbb' : '')
 
 		d.pill = termsettingInit({
-			placeholder: d.section.prompt,
+			placeholder: d.section.prompt[config.regressionType],
+			placeholderIcon: d.section.placeholderIcon,
 			holder: div.append('div'),
 			vocabApi: self.app.vocabApi,
 			vocab: self.state.vocab,
@@ -244,7 +260,7 @@ function setRenderers(self) {
 			use_bins_less: true,
 			debug: self.opts.debug,
 			showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
-			usecase: { target: config.chartType, detail: d.section.configKey },
+			usecase: { target: 'regression', detail: d.section.configKey, regressionType: config.regressionType },
 			disable_terms: self.disable_terms,
 			abbrCutoff: 50,
 			callback: term => {
@@ -255,13 +271,13 @@ function setRenderers(self) {
 			infoDiv: div.append('div')
 		}
 		d.dom.cutoffDiv = d.dom.infoDiv.append('div')
-        d.dom.top_info_div = d.dom.infoDiv.append('div')
-		d.dom.term_info_div = d.dom.top_info_div.append('div').style('display','inline-block')
-        d.dom.ref_click_prompt = d.dom.top_info_div.append('div').style('display','inline-block')
+		d.dom.top_info_div = d.dom.infoDiv.append('div')
+		d.dom.term_info_div = d.dom.top_info_div.append('div').style('display', 'inline-block')
+		d.dom.ref_click_prompt = d.dom.top_info_div.append('div').style('display', 'inline-block')
 		d.dom.term_values_div = d.dom.infoDiv.append('div')
 		d.dom.values_table = d.dom.term_values_div.append('table')
 		d.dom.term_summmary_div = d.dom.term_values_div.append('div')
-        d.dom.excluded_table = d.dom.term_values_div.append('table')
+		d.dom.excluded_table = d.dom.term_values_div.append('table')
 		updatePill.call(this, d)
 	}
 
@@ -270,7 +286,13 @@ function setRenderers(self) {
 		d.pill.main(
 			Object.assign(
 				{
-					disable_terms: self.disable_terms
+					disable_terms: self.disable_terms,
+					exclude_types: d.section.exclude_types[self.config.regressionType],
+					usecase: {
+						target: 'regression',
+						detail: d.section.configKey,
+						regressionType: self.config.regressionType
+					}
 				},
 				d.term
 			)
@@ -332,25 +354,25 @@ function setRenderers(self) {
 		if (d.section.configKey == 'independent') {
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
 				make_values_table(d)
-                d.dom.term_info_div.html(`Use as ${q.use_as || 'continuous'} variable. </br>`)
+				d.dom.term_info_div.html(`Use as ${q.use_as || 'continuous'} variable. </br>`)
 				d.dom.term_summmary_div.html(
 					`${q.totalCount.included} sample included.` +
 						(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded.` : '')
 				)
 			} else if (d.term.term.type == 'categorical' || d.term.term.type == 'condition') {
 				const gs = d.term.q.groupsetting || {}
-                // d.values is already set by self.setActiveValues() above
+				// d.values is already set by self.setActiveValues() above
 				const term_text = 'Use as ' + Object.keys(d.values).length + (gs.inuse ? ' groups.' : ' categories.')
 				make_values_table(d)
 				const summary_text =
 					` ${q.totalCount.included} sample included.` +
 					(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded:` : '')
-                d.dom.term_info_div.html(term_text)
+				d.dom.term_info_div.html(term_text)
 				d.dom.ref_click_prompt
 					.style('padding', '5px 10px')
 					.style('color', '#999')
 					.style('text-transform', 'uppercase')
-                    .style('font-size', '.7em')
+					.style('font-size', '.7em')
 					.text('Click to set a row as reference.')
 				d.dom.term_summmary_div.text(summary_text)
 			}
@@ -360,38 +382,38 @@ function setRenderers(self) {
 				`${q.totalCount.included} sample included.` +
 					(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded:` : '')
 			)
-            // QUICK FIX: hide top_info_div rightnow for linear regression, 
-            // for logistic regression, it needs to be changed as required
-            d.dom.top_info_div.style('display','none')
+			// QUICK FIX: hide top_info_div rightnow for linear regression,
+			// for logistic regression, it needs to be changed as required
+			d.dom.top_info_div.style('display', 'none')
 		}
-        if(d.excludeCounts !== undefined && d.excludeCounts.length){
-            make_values_table(d, true)
-        }
+		if (d.excludeCounts !== undefined && d.excludeCounts.length) {
+			make_values_table(d, true)
+		}
 	}
 
 	function make_values_table(d, excluded) {
 		// TODO: is it ok to sort grade by sample count or it should be by grades 0-5?
 		// and what should be reference group, '0: no condition' seems good choice.
-		const tr_data = excluded ? 
-            d.excludeCounts.sort((a, b) => b.samplecount - a.samplecount) :
-            d.sampleCounts.sort((a, b) => b.samplecount - a.samplecount)
-        
-        if(!excluded){
-            const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
-            tr_data.forEach(v => v.bar_width_frac = (1 - (maxCount - v.samplecount)/ maxCount).toFixed(4))
-            if (!('refGrp' in d) && d.term.q && 'refGrp' in d.term.q) d.refGrp = d.term.q.refGrp
-    
-            if (!('refGrp' in d) || !tr_data.find(c => c.key === d.refGrp)) {
-                if (d.term.id in self.refGrpByTermId && tr_data.find(c => c.key === self.refGrpByTermId[d.term.id])) {
-                    d.refGrp = self.refGrpByTermId[d.term.id]
-                } else {
-                    d.refGrp = tr_data[0].key
-                    self.refGrpByTermId[d.term.id] = tr_data[0].key
-                }
-            }
-        }
+		const tr_data = excluded
+			? d.excludeCounts.sort((a, b) => b.samplecount - a.samplecount)
+			: d.sampleCounts.sort((a, b) => b.samplecount - a.samplecount)
 
-        const table = excluded ? d.dom.excluded_table : d.dom.values_table
+		if (!excluded) {
+			const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
+			tr_data.forEach(v => (v.bar_width_frac = (1 - (maxCount - v.samplecount) / maxCount).toFixed(4)))
+			if (!('refGrp' in d) && d.term.q && 'refGrp' in d.term.q) d.refGrp = d.term.q.refGrp
+
+			if (!('refGrp' in d) || !tr_data.find(c => c.key === d.refGrp)) {
+				if (d.term.id in self.refGrpByTermId && tr_data.find(c => c.key === self.refGrpByTermId[d.term.id])) {
+					d.refGrp = self.refGrpByTermId[d.term.id]
+				} else {
+					d.refGrp = tr_data[0].key
+					self.refGrpByTermId[d.term.id] = tr_data[0].key
+				}
+			}
+		}
+
+		const table = excluded ? d.dom.excluded_table : d.dom.values_table
 		const trs = table
 			.style('margin', '10px 5px')
 			.style('border-spacing', '3px')
@@ -410,49 +432,48 @@ function setRenderers(self) {
 			.append('tr')
 			.each(trEnter)
 		//d.values_table.selectAll('tr').sort((a,b) => d.sampleCounts[b.key] - d.sampleCounts[a.key])
-        
-        // change color of excluded_table text
-        if(excluded) d.dom.excluded_table.selectAll('td').style('color','#999')
+
+		// change color of excluded_table text
+		if (excluded) d.dom.excluded_table.selectAll('td').style('color', '#999')
 	}
 
 	function trEnter(item) {
 		const tr = select(this)
 		const d = this.parentNode.__data__
-        const maxBarWidth = 150
+		const maxBarWidth = 150
 
 		tr.style('padding', '0 5px')
 			.style('text-align', 'left')
 			.style('cursor', d.term.term.type === 'integer' || d.term.term.type === 'float' ? 'default' : 'pointer')
 
-        // sample count td
-        tr.append('td')
-            .style('padding', '1px 5px')
-            .style('text-align', 'left')
-            .style('color', 'black')
-            .text(item.samplecount !== undefined ? ('n='+  item.samplecount) : '')
+		// sample count td
+		tr.append('td')
+			.style('padding', '1px 5px')
+			.style('text-align', 'left')
+			.style('color', 'black')
+			.text(item.samplecount !== undefined ? 'n=' + item.samplecount : '')
 
-        // label td
-        tr.append('td')
-            .style('padding', '1px 5px')
-            .style('text-align', 'left')
-            .style('color', 'black')
-            .text(item.label)
+		// label td
+		tr.append('td')
+			.style('padding', '1px 5px')
+			.style('text-align', 'left')
+			.style('color', 'black')
+			.text(item.label)
 
-        // sample count bar td
-        const bar_td = tr.append('td')
-            .style('padding', '1px 5px')
+		// sample count bar td
+		const bar_td = tr.append('td').style('padding', '1px 5px')
 
-        // bar_width
-        const barWidth = maxBarWidth * item.bar_width_frac
-        bar_td.append('div')
-           .style('margin','1px 10px')
-           .style('width',barWidth + 'px')
-           .style('height','15px')
-           .style('background-color','#ddd')
-            
+		// bar_width
+		const barWidth = maxBarWidth * item.bar_width_frac
+		bar_td
+			.append('div')
+			.style('margin', '1px 10px')
+			.style('width', barWidth + 'px')
+			.style('height', '15px')
+			.style('background-color', '#ddd')
 
-        if(d.term.term.type !== 'integer' && d.term.term.type !== 'float'){
-            tr.on('mouseover', () => {
+		if (d.term.term.type !== 'integer' && d.term.term.type !== 'float') {
+			tr.on('mouseover', () => {
 				if (d.refGrp !== item.key) {
 					tr.style('background', '#fff6dc')
 					ref_text
@@ -461,43 +482,43 @@ function setRenderers(self) {
 						.text('Set as reference')
 				} else tr.style('background', 'white')
 			})
-			.on('mouseout', () => {
-				tr.style('background', 'white')
-				if (d.refGrp !== item.key) ref_text.style('display', 'none')
-			})
-			.on('click', () => {
-				d.refGrp = item.key
-				self.refGrpByTermId[d.term.id] = item.key
-				//d.term.q.refGrp = item.key
-				ref_text.style('border', '1px solid #bbb').text('REFERENCE')
-				make_values_table(d)
-			})
+				.on('mouseout', () => {
+					tr.style('background', 'white')
+					if (d.refGrp !== item.key) ref_text.style('display', 'none')
+				})
+				.on('click', () => {
+					d.refGrp = item.key
+					self.refGrpByTermId[d.term.id] = item.key
+					//d.term.q.refGrp = item.key
+					ref_text.style('border', '1px solid #bbb').text('REFERENCE')
+					make_values_table(d)
+				})
 
-            const reference_td = tr
-                .append('td')
-                .style('padding', '1px 5px')
-                .style('text-align', 'left')
+			const reference_td = tr
+				.append('td')
+				.style('padding', '1px 5px')
+				.style('text-align', 'left')
 
-            const ref_text = reference_td
-                .append('div')
-                .style('display', item.key === d.refGrp ? 'inline-block' : 'none')
-                .style('padding', '2px 10px')
-                .style('border', item.key === d.refGrp ? '1px solid #bbb' : '')
-                .style('border-radius', '10px')
-                .style('color', '#999')
-                .style('font-size', '.7em')
-                .text('REFERENCE')
-        }
+			const ref_text = reference_td
+				.append('div')
+				.style('display', item.key === d.refGrp ? 'inline-block' : 'none')
+				.style('padding', '2px 10px')
+				.style('border', item.key === d.refGrp ? '1px solid #bbb' : '')
+				.style('border-radius', '10px')
+				.style('color', '#999')
+				.style('font-size', '.7em')
+				.text('REFERENCE')
+		}
 	}
 
 	function trUpdate(item) {
 		const pillData = this.parentNode.__data__
-		select(this.firstChild).text(item.samplecount !== undefined ? ('n='+  item.samplecount) : '')
-        if(pillData.term.term.type !== 'integer' && pillData.term.term.type !== 'float'){
-            select(this.lastChild)
-                .select('div')
-                .style('display', item.key === pillData.refGrp ? 'inline-block' : 'none')
-        }
+		select(this.firstChild).text(item.samplecount !== undefined ? 'n=' + item.samplecount : '')
+		if (pillData.term.term.type !== 'integer' && pillData.term.term.type !== 'float') {
+			select(this.lastChild)
+				.select('div')
+				.style('display', item.key === pillData.refGrp ? 'inline-block' : 'none')
+		}
 		self.dom.submitBtn.property('disabled', false)
 	}
 
@@ -540,7 +561,7 @@ function setInteractivity(self) {
 		const config = JSON.parse(JSON.stringify(self.config))
 		//delete config.settings
 		for (const term of config.independent) {
-			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : ''
+			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
 		// disable submit button on click, reenable after rendering results
 		self.dom.submitBtn.property('disabled', true)
