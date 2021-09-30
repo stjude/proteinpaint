@@ -268,7 +268,6 @@ function setRenderers(self) {
 
 	function updatePill(d) {
 		select(this).style('border-left', d.term ? '1px solid #bbb' : '')
-		console.log(271, d.section.exclude_types[self.config.regressionType])
 		d.pill.main(
 			Object.assign(
 				{
