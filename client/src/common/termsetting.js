@@ -1,32 +1,13 @@
-import * as rx from '../common/rx.core'
-import * as client from '../client'
-import { select, event } from 'd3-selection'
-import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX, drag as d3drag } from 'd3'
+import { getInitFxn, copyMerge } from '../common/rx.core'
+import { Menu } from './dom/menu'
+import { select } from 'd3-selection'
 import { setNumericMethods } from './termsetting.numeric2'
 import { setCategoricalMethods } from './termsetting.categorical'
 import { setConditionalMethods } from './termsetting.conditional'
 
 /*
-
-************** opts{} of constructor
-.holder
-.genome
-.dslabel
-.use_bins_less
-	boolean. if true, to initiate q{} of newly selected numeric term with bins.less (if available)
-.placeholder
-.callback( data )
-	.term{} // optional
-	.q{}
-
-
-************** this.api, exposed!!
-.main( data )
-	.term{} // optional
-	.q{}
-	.disable_terms
-.showTree()
-
+constructor option and API are documented at
+https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit#heading=h.qajstgcfxci
 
 ************** instance private properties
 .opts{}
@@ -65,7 +46,7 @@ class TermSetting {
 		this.parent_menu = this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
 		this.dom = {
 			holder: opts.holder,
-			tip: new client.Menu({ padding: '0px', parent_menu: this.parent_menu })
+			tip: new Menu({ padding: '0px', parent_menu: this.parent_menu })
 		}
 		setInteractivity(this)
 		setRenderers(this)
@@ -79,13 +60,20 @@ class TermSetting {
 				this.validateMainData(data)
 				// term is read-only if it comes from state, let it remain read-only
 				this.term = data.term
-				this.q = rx.fromJson(rx.toJson(data.q)) // q{} will be altered here and must not be read-only
+				this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
 				if ('disable_terms' in data) this.disable_terms = data.disable_terms
 				if ('exclude_types' in data) this.exclude_types = data.exclude_types
 				if ('filter' in data) this.filter = data.filter
 				if ('activeCohort' in data) this.activeCohort = data.activeCohort
-				// reset methods by term type
-				if (this.term) this.setMethodsByTermType[this.term.type](this)
+				if (this.term) {
+					// term is present and may have been replaced
+					// reset methods by term type
+					if (this.setMethodsByTermType[this.term.type]) {
+						this.setMethodsByTermType[this.term.type](this)
+					} else {
+						throw 'unknown term type for setMethodsByTermType: ' + this.term.type
+					}
+				}
 				this.updateUI()
 			},
 			showTree: this.showTree
@@ -109,6 +97,7 @@ class TermSetting {
 			// term is optional
 			if (!d.term.id) throw 'data.term.id missing'
 			if (!d.term.name) throw 'data.term.name missing'
+			if (!d.term.type) throw 'data.term.type missing'
 		}
 		if (!d.q) d.q = {}
 		if (typeof d.q != 'object') throw 'data.q{} is not object'
@@ -118,10 +107,11 @@ class TermSetting {
 	}
 }
 
-export const termsettingInit = rx.getInitFxn(TermSetting)
+export const termsettingInit = getInitFxn(TermSetting)
 
 function setRenderers(self) {
 	self.initUI = () => {
+		// run only once, upon init
 		if (self.opts.$id) {
 			self.dom.tip.d.attr('id', self.opts.$id + '-ts-tip')
 		}
@@ -173,6 +163,9 @@ function setRenderers(self) {
 			self.dom.pilldiv.style('display', 'none')
 			return
 		}
+
+		// has term
+
 		self.dom.nopilldiv.style('display', 'none')
 		self.dom.pilldiv.style('display', 'block')
 
@@ -280,7 +273,7 @@ function setInteractivity(self) {
 			holder: self.dom.tip.d,
 			state: {
 				vocab: self.opts.vocab,
-				activeCohort: 'activeCohort' in self ? self.activeCohort : -1,
+				activeCohort: self.activeCohort,
 				nav: {
 					header_mode: 'search_only'
 				},
@@ -349,19 +342,6 @@ function setInteractivity(self) {
 }
 
 export function termsetting_fill_q(q, term) {
-	// to-do: delete this code block when all term.is* has been removed from code
-	if (!term.type) {
-		term.type = term.iscategorical
-			? 'categorical'
-			: term.isfloat
-			? 'float'
-			: term.isinteger
-			? 'integer'
-			: term.iscondition
-			? 'condition'
-			: ''
-	}
-
 	if (term.type == 'integer' || term.type == 'float') {
 		if (!valid_binscheme(q)) {
 			/*
@@ -374,7 +354,7 @@ export function termsetting_fill_q(q, term) {
 			// for now assume that the same values will apply to both bins.default and .less
 			if (term.bins.rounding) term.bins.default.rounding = term.bins.rounding
 			if (term.bins.label_offset) term.bins.default.label_offset = term.bins.label_offset
-			rx.copyMerge(q, term.bins.default)
+			copyMerge(q, term.bins.default)
 		}
 		set_hiddenvalues(q, term)
 		// binconfig.termtype may be used to improve bin labels
