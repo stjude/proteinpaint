@@ -561,7 +561,7 @@ function setInteractivity(self) {
 		const config = JSON.parse(JSON.stringify(self.config))
 		//delete config.settings
 		for (const term of config.independent) {
-			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : ''
+			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
 		// disable submit button on click, reenable after rendering results
 		self.dom.submitBtn.property('disabled', true)
