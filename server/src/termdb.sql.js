@@ -365,7 +365,7 @@ q{}
 			labeler[n](row)
 		}
 	}
-	return result.lst
+	return result
 }
 
 function getlabeler(q, i, result) {
