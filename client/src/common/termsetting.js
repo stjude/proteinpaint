@@ -53,7 +53,7 @@ class TermSetting {
 		this.opts = this.validateOpts(opts)
 		this.vocab = opts.vocab
 		this.activeCohort = opts.activeCohort
-		this.placeholder = opts.placeholder || 'Select term&nbsp;'
+		this.placeholder = opts.placeholder
 		this.durations = { exit: 500 }
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
@@ -97,6 +97,9 @@ class TermSetting {
 		if (o.vocab.route && !o.vocab.genome) throw '.genome missing'
 		if (o.vocab.route && !o.vocab.dslabel) throw '.dslabel missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
+		if (!o.placeholder && !o.placeholderIcon) throw 'must specify a non-empty opts.placeholder and/or .placeholderIcon'
+		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'
+		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
 		return o
 	}
 	validateMainData(d) {
@@ -129,22 +132,26 @@ function setRenderers(self) {
 		self.dom.pilldiv = self.dom.holder.append('div')
 
 		// nopilldiv - placeholder label
-		self.dom.nopilldiv
-			.append('div')
-			.html(self.placeholder)
-			.attr('class', 'sja_clbtext2')
-			.style('padding', '3px 6px 3px 6px')
-			.style('display', 'inline-block')
+		if (self.opts.placeholder) {
+			self.dom.nopilldiv
+				.append('div')
+				.html(self.placeholder)
+				.attr('class', 'sja_clbtext2')
+				.style('padding', '3px 6px 3px 6px')
+				.style('display', 'inline-block')
+		}
 
 		// nopilldiv - plus button
-		self.dom.nopilldiv
-			.append('div')
-			.attr('class', 'sja_filter_tag_btn add_term_btn')
-			.style('padding', '3px 6px 3px 6px')
-			.style('display', 'inline-block')
-			.style('border-radius', '6px')
-			.style('background-color', '#4888BF')
-			.text('+')
+		if (self.opts.placeholderIcon) {
+			self.dom.nopilldiv
+				.append('div')
+				.attr('class', 'sja_filter_tag_btn add_term_btn')
+				.style('padding', '3px 6px 3px 6px')
+				.style('display', 'inline-block')
+				.style('border-radius', '6px')
+				.style('background-color', '#4888BF')
+				.text(self.opts.placeholderIcon)
+		}
 
 		self.setMethodsByTermType = {
 			integer: setNumericMethods,

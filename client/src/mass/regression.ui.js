@@ -241,7 +241,7 @@ function setRenderers(self) {
 
 		d.pill = termsettingInit({
 			placeholder: d.section.prompt[config.regressionType],
-			placeholderIcon: d.section.placeholder,
+			placeholderIcon: d.section.placeholderIcon,
 			holder: div.append('div'),
 			vocabApi: self.app.vocabApi,
 			vocab: self.state.vocab,
