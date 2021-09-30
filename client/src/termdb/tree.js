@@ -408,7 +408,7 @@ function setRenderers(self) {
 						.style('padding', '5px 8px')
 						.style('margin', '1px 0px')
 						.style('opacity', 0.4)
-				} else {
+				} else if (!self.state.exclude_types.includes(term.type)) {
 					labeldiv
 						// need better css class
 						.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)
