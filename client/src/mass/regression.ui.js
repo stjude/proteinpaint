@@ -162,6 +162,7 @@ function setRenderers(self) {
 			.style('margin', '3px 15px')
 			.style('padding', '3px 5px')
 			.append('button')
+            .style('display','none')
 			.style('padding', '5px 15px')
 			.style('border-radius', '15px')
 			.html('Run analysis')
@@ -519,11 +520,16 @@ function setRenderers(self) {
 				.select('div')
 				.style('display', item.key === pillData.refGrp ? 'inline-block' : 'none')
 		}
-		self.dom.submitBtn.property('disabled', false)
+        self.dom.submitBtn.style('display', 'block')
 	}
 
 	self.updateBtns = () => {
 		const hasMissingTerms = self.sections.filter(t => !t.selected || (t.limit > 1 && !t.selected.length)).length > 0
+		self.dom.submitBtn.style('display', hasMissingTerms ? 'none' : 'block')
+        
+        // console.log(self.state)
+        // TODO: disable when rendering, enable after rendering results
+        // TODO: change text from 'Running..' to 'Run analysis'
 		self.dom.submitBtn.property('disabled', hasMissingTerms)
 	}
 }
@@ -565,6 +571,7 @@ function setInteractivity(self) {
 		}
 		// disable submit button on click, reenable after rendering results
 		self.dom.submitBtn.property('disabled', true)
+            // .html('Running...') // TODO: change text to 'Running..'
 		self.app.dispatch({
 			type: config.term ? 'plot_edit' : 'plot_show',
 			id: self.id,
