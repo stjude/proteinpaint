@@ -12,7 +12,7 @@ self: a termsetting instance
 const tsInstanceTracker = new WeakMap()
 let i = 0
 
-export async function setNumericMethods(self, closureType='closured') {
+export async function setNumericMethods(self, closureType = 'closured') {
 	if (!tsInstanceTracker.has(self)) {
 		tsInstanceTracker.set(self, i++)
 	}
@@ -30,7 +30,7 @@ export async function setNumericMethods(self, closureType='closured') {
 		//
 		// TODO: may convert all other termsetting.*.js methods to
 		// just use the non-closured version to simplify
-		// 
+		//
 		self.get_term_name = d => get_term_name(self, d)
 		self.get_status_msg = get_status_msg
 		self.showEditMenu = async div => await showEditMenu(self, div)
@@ -44,8 +44,8 @@ function get_term_name(self, d) {
 		: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 }
 
-function get_status_msg() { 
-	return '' 
+function get_status_msg() {
+	return ''
 }
 
 async function showEditMenu(self, div) {
@@ -114,7 +114,7 @@ function applyEdits(self) {
 		self.q.lst = processCustomBinInputs(self)
 		self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
 	}
-
+	self.q.use_as = 'discrete'
 	self.dom.tip.hide()
 	self.opts.callback({
 		term: self.term,
@@ -624,7 +624,7 @@ function renderButtons(self) {
 		.append('button')
 		.style('margin', '5px')
 		.html('Apply')
-		.on('click', self.applyEdits)
+		.on('click', () => applyEdits(self))
 	btndiv
 		.append('button')
 		.style('margin', '5px')
