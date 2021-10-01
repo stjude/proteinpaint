@@ -18,8 +18,7 @@ class MassRegression {
 				.append('div')
 				.style('color', '#bbb')
 				.style('display', 'none')
-				.style('margin-bottom', '10px')
-				.html('...Loading'),
+				.style('margin-bottom', '10px'),
 
 			resultsHeading: resultsDiv
 				.append('div')
@@ -60,12 +59,14 @@ class MassRegression {
 	async main() {
 		if (!this.state.isVisible) {
 			this.dom.div.style('display', 'none')
+			this.dom.resultsHeading.style('display', 'none')
 			return
 		}
 		if (!this.state.config.term) return
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		if (!this.config.independent) {
 			this.dom.div.style('display', 'none')
+			this.dom.resultsHeading.style('display', 'none')
 			throw 'independent variable(s) is required for regression analysis'
 		}
 		this.dom.div.selectAll('*').remove()
@@ -75,6 +76,7 @@ class MassRegression {
 		const tables = this.processData(this.data)
 		this.dom.banner.style('display', 'none')
 		this.dom.div.style('display', 'block')
+		this.dom.resultsHeading.style('display', 'block')
 		for (const name in tables) {
 			const [columns, rows] = tables[name]
 			this.renderTable(this.dom.div, name, columns, rows)

@@ -1,7 +1,6 @@
 import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { termsettingInit } from '../common/termsetting'
-import { getTermSelectionSequence } from './charts'
 import { dofetch3 } from '../client'
 import { getNormalRoot } from '../common/filter'
 
@@ -52,15 +51,24 @@ class MassRegressionUI {
 	}
 
 	async init() {
-		const controls = this.opts.holder.append('div').style('display', 'block')
+		try {
+			const controls = this.opts.holder.append('div').style('display', 'block')
 
-		this.dom = {
-			div: this.opts.holder.style('margin', '10px 0px'),
-			controls,
-			body: controls.append('div'),
-			foot: controls.append('div')
+			this.dom = {
+				div: this.opts.holder.style('margin', '10px 0px'),
+				controls,
+				body: controls.append('div'),
+				foot: controls.append('div')
+			}
+			this.totalSampleCount = undefined
+
+			this.opts.chart.on('postRender.submitBtn', () => {
+				const chartRendered = true
+				this.updateBtns(chartRendered)
+			})
+		} catch (e) {
+			throw e
 		}
-		this.totalSampleCount = undefined
 	}
 
 	getState(appState) {
@@ -130,27 +138,25 @@ class MassRegressionUI {
 		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
 		d.orderedLabels = data.orderedLabels
-		d.sampleCounts =
-			d.term.term.type == 'float' || d.term.term.type == 'integer'
-				? data.lst.filter(v => v.range.is_unannotated != true)
-				: data.lst
-		if (
-			d.term.term.type == 'float' ||
-			(d.term.term.type == 'integer' && data.lst.find(v => v.range.is_unannotated == true))
-		) {
-			d.excludeCounts = data.lst.filter(v => v.range.is_unannotated == true)
-		}
+
+		// sepeate include and exclude categories based on term.values.uncomputable
+		const excluded_values = d.term.term.values
+			? Object.entries(d.term.term.values)
+					.filter(v => v[1].uncomputable)
+					.map(v => v[1].label)
+			: []
+		d.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label))
+		d.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
+
+		// get include, excluded and total sample count
 		const totalCount = (d.term.q.totalCount = { included: 0, excluded: 0, total: 0 })
-		data.lst.forEach(v => {
-			if (v.range && v.range.is_unannotated) totalCount.excluded = totalCount.excluded + v.samplecount
-			else totalCount.included = totalCount.included + v.samplecount
-		})
+		d.sampleCounts.forEach(v => (totalCount.included = totalCount.included + v.samplecount))
+		d.excludeCounts.forEach(v => (totalCount.excluded = totalCount.excluded + v.samplecount))
 		totalCount.total = totalCount.included + totalCount.excluded
+
 		// store total count from numerical/categorical term as global variable totalSampleCount
 		if (this.totalSampleCount == undefined && d.term.term.type != 'condition') this.totalSampleCount = totalCount.total
 		// for condition term, subtract included count from totalSampleCount to get excluded
-		// TODO: it's not reliable approch to get excluded count for
-		// 'Most recent grade' / 'any grade' / 'sub-conditions', for example, cardiovascular system
 		if (d.term.term.type == 'condition' && this.totalSampleCount) {
 			totalCount.excluded = this.totalSampleCount - totalCount.included
 		}
@@ -163,6 +169,7 @@ function setRenderers(self) {
 			.style('margin', '3px 15px')
 			.style('padding', '3px 5px')
 			.append('button')
+			.style('display', 'none')
 			.style('padding', '5px 15px')
 			.style('border-radius', '15px')
 			.html('Run analysis')
@@ -271,6 +278,7 @@ function setRenderers(self) {
 		d.dom = {
 			infoDiv: div.append('div')
 		}
+		d.dom.loading_div = d.dom.infoDiv.append('div').text('Loading..')
 		d.dom.cutoffDiv = d.dom.infoDiv.append('div')
 		d.dom.top_info_div = d.dom.infoDiv.append('div')
 		d.dom.term_info_div = d.dom.top_info_div.append('div').style('display', 'inline-block')
@@ -284,6 +292,7 @@ function setRenderers(self) {
 
 	function updatePill(d) {
 		select(this).style('border-left', d.term ? '1px solid #bbb' : '')
+		d.dom.loading_div.style('display', 'block')
 		d.pill.main(
 			Object.assign(
 				{
@@ -387,14 +396,16 @@ function setRenderers(self) {
 			// for logistic regression, it needs to be changed as required
 			d.dom.top_info_div.style('display', 'none')
 		}
-		if (d.excludeCounts !== undefined && d.excludeCounts.length) {
+		if (d.excludeCounts.length) {
 			make_values_table(d, true)
+		} else {
+			d.dom.excluded_table.selectAll('*').remove()
 		}
+		// hide loading.. text for categories after table is rendered
+		d.dom.loading_div.style('display', 'none')
 	}
 
 	function make_values_table(d, excluded) {
-		// TODO: is it ok to sort grade by sample count or it should be by grades 0-5?
-		// and what should be reference group, '0: no condition' seems good choice.
 		const sortFxn =
 			d.orderedLabels && d.orderedLabels.length
 				? (a, b) => d.orderedLabels.indexOf(a.label) - d.orderedLabels.indexOf(b.label)
@@ -422,7 +433,7 @@ function setRenderers(self) {
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
 			.selectAll('tr')
-			.data(tr_data, d => d.key)
+			.data(tr_data, d => d.key + d.label)
 
 		trs
 			.exit()
@@ -522,12 +533,17 @@ function setRenderers(self) {
 				.select('div')
 				.style('display', item.key === pillData.refGrp ? 'inline-block' : 'none')
 		}
-		self.dom.submitBtn.property('disabled', false)
 	}
 
-	self.updateBtns = () => {
-		const hasMissingTerms = self.sections.filter(t => !t.selected || (t.limit > 1 && !t.selected.length)).length > 0
-		self.dom.submitBtn.property('disabled', hasMissingTerms)
+	self.updateBtns = chartRendered => {
+		const hasOutcomeTerm = self.sections.filter(s => s.configKey == 'term' && s.selected.length).length
+		const hasIndependetTerm = self.sections.filter(s => s.configKey == 'independent' && s.selected.length).length
+		const hasBothTerms = hasOutcomeTerm && hasIndependetTerm
+		self.dom.submitBtn.style('display', hasBothTerms ? 'block' : 'none')
+
+		if (chartRendered) {
+			self.dom.submitBtn.property('disabled', false).html('Run analysis')
+		}
 	}
 }
 
@@ -567,7 +583,7 @@ function setInteractivity(self) {
 			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
 		// disable submit button on click, reenable after rendering results
-		self.dom.submitBtn.property('disabled', true)
+		self.dom.submitBtn.property('disabled', true).html('Running...')
 		self.app.dispatch({
 			type: config.term ? 'plot_edit' : 'plot_show',
 			id: self.id,

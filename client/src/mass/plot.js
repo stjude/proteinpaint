@@ -251,13 +251,6 @@ class MassPlot {
 				const regressionType = this.state.config.regressionType
 				paneTitle = regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression'
 
-				const _ = await import('./regression.ui')
-				this.components.controls = await _.regressionUIInit({
-					app: this.app,
-					id: this.id,
-					holder: this.dom.controls
-				})
-
 				const rg = await import('./regression')
 				this.components.chart = await rg.regressionInit({
 					app: this.app,
@@ -265,6 +258,14 @@ class MassPlot {
 					header: this.dom.holder.header,
 					id: this.id,
 					regressionType: this.state.config.regressionType
+				})
+
+				const _ = await import('./regression.ui')
+				this.components.controls = await _.regressionUIInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controls,
+					chart: this.components.chart
 				})
 		}
 
