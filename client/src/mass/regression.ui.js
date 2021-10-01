@@ -137,23 +137,22 @@ class MassRegressionUI {
 		const url = lst.join('&')
 		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
-		d.sampleCounts =
-			d.term.term.type == 'float' || d.term.term.type == 'integer'
-				? data.lst.filter(v => v.range.is_unannotated != true)
-				: data.lst
-		d.excludeCounts = []
-		if (
-			d.term.term.type == 'float' ||
-			(d.term.term.type == 'integer' && data.lst.find(v => v.range.is_unannotated == true))
-		) {
-			d.excludeCounts = data.lst.filter(v => v.range.is_unannotated == true)
-		}
+
+		// sepeate include and exclude categories based on term.values.uncomputable
+		const excluded_values = d.term.term.values
+			? Object.entries(d.term.term.values)
+					.filter(v => v[1].uncomputable)
+					.map(v => v[1].label)
+			: []
+		d.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label))
+		d.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
+
+		// get include, excluded and total sample count
 		const totalCount = (d.term.q.totalCount = { included: 0, excluded: 0, total: 0 })
-		data.lst.forEach(v => {
-			if (v.range && v.range.is_unannotated) totalCount.excluded = totalCount.excluded + v.samplecount
-			else totalCount.included = totalCount.included + v.samplecount
-		})
+		d.sampleCounts.forEach(v => (totalCount.included = totalCount.included + v.samplecount))
+		d.excludeCounts.forEach(v => (totalCount.excluded = totalCount.excluded + v.samplecount))
 		totalCount.total = totalCount.included + totalCount.excluded
+
 		// store total count from numerical/categorical term as global variable totalSampleCount
 		if (this.totalSampleCount == undefined && d.term.term.type != 'condition') this.totalSampleCount = totalCount.total
 		// for condition term, subtract included count from totalSampleCount to get excluded
