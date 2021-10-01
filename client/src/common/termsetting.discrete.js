@@ -1,4 +1,4 @@
-import * as client from '../client'
+import { keyupEnter } from '../client'
 import { select, event } from 'd3-selection'
 import { format } from 'd3-format'
 import { setDensityPlot } from './termsetting.density'
@@ -12,136 +12,156 @@ self: a termsetting instance
 const tsInstanceTracker = new WeakMap()
 let i = 0
 
-export async function setNumericMethods(self) {
+export async function setNumericMethods(self, closureType='closured') {
 	if (!tsInstanceTracker.has(self)) {
 		tsInstanceTracker.set(self, i++)
 	}
 
-	self.get_term_name = function(d) {
-		if (!self.opts.abbrCutoff) return d.name
-		return d.name.length <= self.opts.abbrCutoff + 2
-			? d.name
-			: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+	if (closureType == 'non-closured') {
+		// TODO: always use this non-closured version later
+		return {
+			get_term_name,
+			get_status_msg,
+			showEditMenu
+		}
+	} else {
+		// this version maintains a closured reference to 'self'
+		// so the 'self' argument does not need to be passed
+		//
+		// TODO: may convert all other termsetting.*.js methods to
+		// just use the non-closured version to simplify
+		// 
+		self.get_term_name = d => get_term_name(self, d)
+		self.get_status_msg = get_status_msg
+		self.showEditMenu = async div => await showEditMenu(self, div)
+	}
+}
+
+function get_term_name(self, d) {
+	if (!self.opts.abbrCutoff) return d.name
+	return d.name.length <= self.opts.abbrCutoff + 2
+		? d.name
+		: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+}
+
+function get_status_msg() { 
+	return '' 
+}
+
+async function showEditMenu(self, div) {
+	if (!self.numqByTermIdType) self.numqByTermIdType = {}
+	self.num_obj = {}
+
+	self.num_obj.plot_size = {
+		width: 500,
+		height: 100,
+		xpad: 10,
+		ypad: 20
+	}
+	try {
+		// check if termsettingInit() was called outside of termdb/app
+		// in which case it will not have an opts.vocabApi
+		if (!self.opts.vocabApi) {
+			const vocabulary = await import('../termdb/vocabulary')
+			self.opts.vocabApi = vocabulary.vocabInit({ state: { vocab: self.opts.vocab } })
+		}
+		self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
+	} catch (err) {
+		console.log(err)
 	}
 
-	self.get_status_msg = () => ''
+	div.selectAll('*').remove()
+	self.dom.num_holder = div
+	self.dom.bins_div = div.append('div').style('padding', '5px')
 
-	self.showEditMenu = async function(div) {
-		if (!self.numqByTermIdType) self.numqByTermIdType = {}
-		self.num_obj = {}
+	setqDefaults(self)
+	setDensityPlot(self)
+	renderBoundaryInclusionInput(self)
+	renderTypeInputs(self)
+	if (self.q.type == 'regular') renderFixedBinsInputs(self)
+	else renderCustomBinInputs(self)
+	renderButtons(self)
+}
 
-		self.num_obj.plot_size = {
-			width: 500,
-			height: 100,
-			xpad: 10,
-			ypad: 20
-		}
-		try {
-			// check if termsettingInit() was called outside of termdb/app
-			// in which case it will not have an opts.vocabApi
-			if (!self.opts.vocabApi) {
-				const vocabulary = await import('../termdb/vocabulary')
-				self.opts.vocabApi = vocabulary.vocabInit({ state: { vocab: self.opts.vocab } })
-			}
-			self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
-			//console.log(38, self.num_obj.density_data)
-		} catch (err) {
-			console.log(err)
-		}
-
-		div.selectAll('*').remove()
-		self.dom.num_holder = div
-		self.dom.bins_div = div.append('div').style('padding', '5px')
-
-		setqDefaults(self)
-		setDensityPlot(self)
-		renderBoundaryInclusionInput(self)
-		renderTypeInputs(self)
-		if (self.q.type == 'regular') renderFixedBinsInputs(self)
-		else renderCustomBinInputs(self)
-		renderButtons(self)
-	}
-
-	self.applyEdits = function() {
-		if (self.q.type == 'regular') {
-			self.q.first_bin.startunbounded = true
-			self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
-			self.q.startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
-			self.q.stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
-			const bin_size = self.dom.bin_size_input.property('value')
-			self.q.bin_size = Number(bin_size)
-			if (bin_size.includes('.') && !bin_size.endsWith('.')) {
-				self.q.rounding = '.' + bin_size.split('.')[1].length + 'f'
-			} else {
-				self.q.rounding = '.0f'
-			}
-
-			if (self.dom.last_radio_auto.property('checked')) {
-				delete self.q.last_bin
-			} else {
-				if (!self.q.last_bin) self.q.last_bin = {}
-				self.q.last_bin.start = +self.dom.last_start_input.property('value')
-				self.q.last_bin.stopunbounded = true
-			}
-			self.numqByTermIdType[self.term.id].regular = JSON.parse(JSON.stringify(self.q))
+function applyEdits(self) {
+	if (self.q.type == 'regular') {
+		self.q.first_bin.startunbounded = true
+		self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
+		self.q.startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
+		self.q.stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
+		const bin_size = self.dom.bin_size_input.property('value')
+		self.q.bin_size = Number(bin_size)
+		if (bin_size.includes('.') && !bin_size.endsWith('.')) {
+			self.q.rounding = '.' + bin_size.split('.')[1].length + 'f'
 		} else {
-			delete self.q.startinclusive
-			delete self.q.stopinclusive
-			delete self.q.bin_size
-			delete self.q.first_bin
-			delete self.q.last_bin
-			self.q.lst = self.processCustomBinInputs()
-			self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
+			self.q.rounding = '.0f'
 		}
 
-		self.dom.tip.hide()
-		self.opts.callback({
-			term: self.term,
-			q: self.q
-		})
+		if (self.dom.last_radio_auto.property('checked')) {
+			delete self.q.last_bin
+		} else {
+			if (!self.q.last_bin) self.q.last_bin = {}
+			self.q.last_bin.start = +self.dom.last_start_input.property('value')
+			self.q.last_bin.stopunbounded = true
+		}
+		self.numqByTermIdType[self.term.id].regular = JSON.parse(JSON.stringify(self.q))
+	} else {
+		delete self.q.startinclusive
+		delete self.q.stopinclusive
+		delete self.q.bin_size
+		delete self.q.first_bin
+		delete self.q.last_bin
+		self.q.lst = processCustomBinInputs(self)
+		self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
 	}
 
-	self.processCustomBinInputs = () => {
-		const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
-		const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
-		const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
-		let prevBin
-		const data = self.dom.customBinBoundaryInput
-			.property('value')
-			.split('\n')
-			.filter(d => d != '')
-			.map(d => +d)
-			.sort((a, b) => a - b)
-			.map((d, i) => {
-				const bin = {
-					start: +d,
-					startinclusive,
-					stopinclusive
-				}
-				if (prevBin) {
-					delete prevBin.stopunbounded
-					prevBin.stop = bin.start
-					const label = inputDivs[i].querySelector('input').value
-					prevBin.label = label ? label : get_bin_label(prevBin, self.q)
-				}
-				prevBin = bin
-				return bin
-			})
+	self.dom.tip.hide()
+	self.opts.callback({
+		term: self.term,
+		q: self.q
+	})
+}
 
-		prevBin.stopunbounded = true
-		const label = inputDivs[data.length] && inputDivs[data.length].querySelector('input').value
-		prevBin.label = label ? label : get_bin_label(prevBin, self.q)
-
-		data.unshift({
-			startunbounded: true,
-			stop: data[0].start,
-			startinclusive,
-			stopinclusive,
-			label: inputDivs[0].querySelector('input').value
+function processCustomBinInputs(self) {
+	const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
+	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
+	const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
+	let prevBin
+	const data = self.dom.customBinBoundaryInput
+		.property('value')
+		.split('\n')
+		.filter(d => d != '')
+		.map(d => +d)
+		.sort((a, b) => a - b)
+		.map((d, i) => {
+			const bin = {
+				start: +d,
+				startinclusive,
+				stopinclusive
+			}
+			if (prevBin) {
+				delete prevBin.stopunbounded
+				prevBin.stop = bin.start
+				const label = inputDivs[i].querySelector('input').value
+				prevBin.label = label ? label : get_bin_label(prevBin, self.q)
+			}
+			prevBin = bin
+			return bin
 		})
-		if (!data[0].label) data[0].label = get_bin_label(data[0], self.q)
-		return data
-	}
+
+	prevBin.stopunbounded = true
+	const label = inputDivs[data.length] && inputDivs[data.length].querySelector('input').value
+	prevBin.label = label ? label : get_bin_label(prevBin, self.q)
+
+	data.unshift({
+		startunbounded: true,
+		stop: data[0].start,
+		startinclusive,
+		stopinclusive,
+		label: inputDivs[0].querySelector('input').value
+	})
+	if (!data[0].label) data[0].label = get_bin_label(data[0], self.q)
+	return data
 }
 
 function setqDefaults(self) {
@@ -302,7 +322,7 @@ function renderBinSizeInput(self, tr) {
 		.style('color', d => (self.q.bin_size > Math.abs(dd.maxvalue - dd.minvalue) ? 'red' : ''))
 		.on('change', handleChange)
 		.on('keyup', function() {
-			if (!client.keyupEnter()) return
+			if (!keyupEnter()) return
 			handleChange.call(this)
 		})
 
@@ -342,7 +362,7 @@ function renderFirstBinInput(self, tr) {
 		.style('color', self.q.first_bin && self.q.first_bin.stop < self.num_obj.density_data.minvalue ? 'red' : '')
 		.on('change', handleChange)
 		.on('keyup', function() {
-			if (!client.keyupEnter()) return
+			if (!keyupEnter()) return
 			handleChange.call(this)
 		})
 
@@ -402,7 +422,7 @@ function renderLastBinInputs(self, tr) {
 		.property('checked', isAuto)
 		.on('change', handleChange)
 		.on('keyup', function() {
-			if (!client.keyupEnter()) return
+			if (!keyupEnter()) return
 			handleChange.call(this)
 		})
 
@@ -460,7 +480,7 @@ function renderLastBinInputs(self, tr) {
 		.style('margin-left', '15px')
 		.on('change', handleChange)
 		.on('keyup', function() {
-			if (!client.keyupEnter()) return
+			if (!keyupEnter()) return
 			handleChange.call(this)
 		})
 
@@ -535,7 +555,7 @@ function renderCustomBinInputs(self) {
 		.on('keyup', async () => {
 			// enter or backspace/delete
 			// i don't think backspace works
-			if (!client.keyupEnter() && event.key != 8) return
+			if (!keyupEnter() && event.key != 8) return
 			handleChange.call(this)
 		})
 

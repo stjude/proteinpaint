@@ -261,6 +261,7 @@ function setRenderers(self) {
 			use_bins_less: true,
 			debug: self.opts.debug,
 			showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
+			numericEditMenuVersion: 'toggled', // or 'default' for the usual binning menu
 			usecase: { target: 'regression', detail: d.section.configKey, regressionType: config.regressionType },
 			disable_terms: self.disable_terms,
 			abbrCutoff: 50,
