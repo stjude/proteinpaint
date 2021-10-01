@@ -52,24 +52,24 @@ class MassRegressionUI {
 	}
 
 	async init() {
-        try {
-            const controls = this.opts.holder.append('div').style('display', 'block')
+		try {
+			const controls = this.opts.holder.append('div').style('display', 'block')
 
-            this.dom = {
-                div: this.opts.holder.style('margin', '10px 0px'),
-                controls,
-                body: controls.append('div'),
-                foot: controls.append('div')
-            }
-            this.totalSampleCount = undefined
+			this.dom = {
+				div: this.opts.holder.style('margin', '10px 0px'),
+				controls,
+				body: controls.append('div'),
+				foot: controls.append('div')
+			}
+			this.totalSampleCount = undefined
 
-            this.opts.chart.on('postRender.submitBtn', ()=>{
-                const chartRendered = true
-                this.updateBtns(chartRendered)
-            })
-        } catch (e) {
-            throw e
-        }
+			this.opts.chart.on('postRender.submitBtn', () => {
+				const chartRendered = true
+				this.updateBtns(chartRendered)
+			})
+		} catch (e) {
+			throw e
+		}
 	}
 
 	getState(appState) {
@@ -171,7 +171,7 @@ function setRenderers(self) {
 			.style('margin', '3px 15px')
 			.style('padding', '3px 5px')
 			.append('button')
-            .style('display','none')
+			.style('display', 'none')
 			.style('padding', '5px 15px')
 			.style('border-radius', '15px')
 			.html('Run analysis')
@@ -529,17 +529,19 @@ function setRenderers(self) {
 				.select('div')
 				.style('display', item.key === pillData.refGrp ? 'inline-block' : 'none')
 		}
-        self.dom.submitBtn.style('display', 'block')
+		self.dom.submitBtn.style('display', 'block')
 	}
 
-	self.updateBtns = (chartRendered) => {
-		const hasMissingTerms = self.sections.filter(t => !t.selected || (t.limit > 1 && !t.selected.length)).length > 0
+	self.updateBtns = chartRendered => {
+		console.log(self.sections)
+		const hasOutcomeTerm = self.sections.filter(s => s.configKey == 'term' && s.selected.length)
+		const hasIndependetTerm = self.sections.filter(s => s.configKey == 'independent' && s.selected.length)
+		const hasMissingTerms = hasOutcomeTerm && hasIndependetTerm
 		self.dom.submitBtn.style('display', hasMissingTerms ? 'none' : 'block')
-        
-        if(chartRendered){
-            self.dom.submitBtn.property('disabled', false)
-                .html('Run analysis')
-        }
+
+		if (chartRendered) {
+			self.dom.submitBtn.property('disabled', false).html('Run analysis')
+		}
 	}
 }
 
@@ -579,8 +581,7 @@ function setInteractivity(self) {
 			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
 		// disable submit button on click, reenable after rendering results
-		self.dom.submitBtn.property('disabled', true)
-            .html('Running...')
+		self.dom.submitBtn.property('disabled', true).html('Running...')
 		self.app.dispatch({
 			type: config.term ? 'plot_edit' : 'plot_show',
 			id: self.id,
