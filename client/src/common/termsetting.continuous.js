@@ -1,3 +1,4 @@
+import { event as d3event } from 'd3-selection'
 const tsInstanceTracker = new WeakMap()
 let i = 0
 
@@ -51,10 +52,13 @@ async function showEditMenu(self, div) {
 		.style('padding', '3px 10px')
 		.html('Scale values')
 
-	const select = div.append('select')
-	/*.on('change', ()=>{
-			alert('TODO: handle scale values')
-		})*/
+	const select = div.append('select').on('change', () => {
+		self.q.scale = d3event.target.value
+		self.opts.callback({
+			term: self.term,
+			q: self.q
+		})
+	})
 
 	select
 		.selectAll('option')
@@ -68,4 +72,5 @@ async function showEditMenu(self, div) {
 		.append('option')
 		.attr('value', d => d.value)
 		.html(d => d.html)
+		.property('selected', d => (self.q.scale ? d.value == self.q.scale : 0))
 }
