@@ -529,15 +529,13 @@ function setRenderers(self) {
 				.select('div')
 				.style('display', item.key === pillData.refGrp ? 'inline-block' : 'none')
 		}
-		self.dom.submitBtn.style('display', 'block')
 	}
 
 	self.updateBtns = chartRendered => {
-		console.log(self.sections)
-		const hasOutcomeTerm = self.sections.filter(s => s.configKey == 'term' && s.selected.length)
-		const hasIndependetTerm = self.sections.filter(s => s.configKey == 'independent' && s.selected.length)
-		const hasMissingTerms = hasOutcomeTerm && hasIndependetTerm
-		self.dom.submitBtn.style('display', hasMissingTerms ? 'none' : 'block')
+		const hasOutcomeTerm = self.sections.filter(s => s.configKey == 'term' && s.selected.length).length
+		const hasIndependetTerm = self.sections.filter(s => s.configKey == 'independent' && s.selected.length).length
+		const hasBothTerms = hasOutcomeTerm && hasIndependetTerm
+		self.dom.submitBtn.style('display', hasBothTerms ? 'block' : 'none')
 
 		if (chartRendered) {
 			self.dom.submitBtn.property('disabled', false).html('Run analysis')
