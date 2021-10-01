@@ -48,6 +48,7 @@ async function showEditMenu(self, div) {
 	div
 		.append('div')
 		.style('display', 'inline-block')
+		.style('padding', '3px 10px')
 		.html('Scale values')
 
 	const select = div.append('select')
@@ -57,7 +58,12 @@ async function showEditMenu(self, div) {
 
 	select
 		.selectAll('option')
-		.data([{ html: 'Per 10', value: 10 }, { html: 'Per 100', value: 100 }, { html: 'Per 1000', value: 1000 }])
+		.data([
+			{ html: 'No Scaling', value: 1 },
+			{ html: 'Per 10', value: 10 },
+			{ html: 'Per 100', value: 100 },
+			{ html: 'Per 1000', value: 1000 }
+		])
 		.enter()
 		.append('option')
 		.attr('value', d => d.value)
