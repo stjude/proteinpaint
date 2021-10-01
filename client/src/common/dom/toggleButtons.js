@@ -13,9 +13,7 @@ this function attaches .holder (d3 dom) to each tab of tabs[]
 */
 
 export function init_tabs(holder, tabs) {
-	tabs.holder = holder
-		.append('div')
-		.style('padding', '10px 10px 0 10px')
+	tabs.holder = holder.append('div').style('padding', '10px 10px 0 10px')
 
 	const has_active_tab = tabs.some(i => i.active)
 	if (!has_active_tab) tabs[0].active = true
@@ -38,7 +36,7 @@ export function init_tabs(holder, tabs) {
 				}
 				if (tab.callback) {
 					await tab.callback(tab.holder)
-					delete tab.callback
+					//delete tab.callback
 				}
 			})
 
@@ -47,9 +45,9 @@ export function init_tabs(holder, tabs) {
 			.style('padding-top', '10px')
 			.style('display', tab.active ? 'block' : 'none')
 
-		if (i == 0 && tab.callback) {
+		if (tab.active && tab.callback) {
 			tab.callback(tab.holder)
-			delete tab.callback
+			//delete tab.callback
 		}
 	}
 }

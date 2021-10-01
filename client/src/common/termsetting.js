@@ -1,9 +1,10 @@
 import { getInitFxn, copyMerge } from '../common/rx.core'
 import { Menu } from './dom/menu'
 import { select } from 'd3-selection'
-import { setNumericMethods } from './termsetting.numeric2'
+import { setNumericMethods } from './termsetting.discrete'
 import { setCategoricalMethods } from './termsetting.categorical'
 import { setConditionalMethods } from './termsetting.conditional'
+import { setNumericTabs } from './termsetting.numeric'
 
 /*
 constructor option and API are documented at
@@ -90,6 +91,7 @@ class TermSetting {
 		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'
 		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
 		if (!('abbrCutoff' in o)) o.abbrCutoff = 18 //set the default to 18
+		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = 'default'
 		return o
 	}
 	validateMainData(d) {
@@ -146,8 +148,8 @@ function setRenderers(self) {
 		}
 
 		self.setMethodsByTermType = {
-			integer: setNumericMethods,
-			float: setNumericMethods,
+			integer: self.opts.numericEditMenuVersion == 'toggled' ? setNumericTabs : setNumericMethods,
+			float: self.opts.numericEditMenuVersion == 'toggled' ? setNumericTabs : setNumericMethods,
 			categorical: setCategoricalMethods,
 			condition: setConditionalMethods,
 			// for now, use default methods as placeholder functions
