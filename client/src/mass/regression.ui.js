@@ -1,7 +1,6 @@
 import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { termsettingInit } from '../common/termsetting'
-import { getTermSelectionSequence } from './charts'
 import { dofetch3 } from '../client'
 import { getNormalRoot } from '../common/filter'
 
@@ -142,6 +141,7 @@ class MassRegressionUI {
 			d.term.term.type == 'float' || d.term.term.type == 'integer'
 				? data.lst.filter(v => v.range.is_unannotated != true)
 				: data.lst
+		d.excludeCounts = []
 		if (
 			d.term.term.type == 'float' ||
 			(d.term.term.type == 'integer' && data.lst.find(v => v.range.is_unannotated == true))
@@ -157,8 +157,6 @@ class MassRegressionUI {
 		// store total count from numerical/categorical term as global variable totalSampleCount
 		if (this.totalSampleCount == undefined && d.term.term.type != 'condition') this.totalSampleCount = totalCount.total
 		// for condition term, subtract included count from totalSampleCount to get excluded
-		// TODO: it's not reliable approch to get excluded count for
-		// 'Most recent grade' / 'any grade' / 'sub-conditions', for example, cardiovascular system
 		if (d.term.term.type == 'condition' && this.totalSampleCount) {
 			totalCount.excluded = this.totalSampleCount - totalCount.included
 		}
@@ -280,6 +278,7 @@ function setRenderers(self) {
 		d.dom = {
 			infoDiv: div.append('div')
 		}
+		d.dom.loading_div = d.dom.infoDiv.append('div').text('Loading..')
 		d.dom.cutoffDiv = d.dom.infoDiv.append('div')
 		d.dom.top_info_div = d.dom.infoDiv.append('div')
 		d.dom.term_info_div = d.dom.top_info_div.append('div').style('display', 'inline-block')
@@ -293,6 +292,7 @@ function setRenderers(self) {
 
 	function updatePill(d) {
 		select(this).style('border-left', d.term ? '1px solid #bbb' : '')
+		d.dom.loading_div.style('display', 'block')
 		d.pill.main(
 			Object.assign(
 				{
@@ -396,14 +396,16 @@ function setRenderers(self) {
 			// for logistic regression, it needs to be changed as required
 			d.dom.top_info_div.style('display', 'none')
 		}
-		if (d.excludeCounts !== undefined && d.excludeCounts.length) {
+		if (d.excludeCounts.length) {
 			make_values_table(d, true)
+		} else {
+			d.dom.excluded_table.selectAll('*').remove()
 		}
+		// hide loading.. text for categories after table is rendered
+		d.dom.loading_div.style('display', 'none')
 	}
 
 	function make_values_table(d, excluded) {
-		// TODO: is it ok to sort grade by sample count or it should be by grades 0-5?
-		// and what should be reference group, '0: no condition' seems good choice.
 		const tr_data = excluded
 			? d.excludeCounts.sort((a, b) => b.samplecount - a.samplecount)
 			: d.sampleCounts.sort((a, b) => b.samplecount - a.samplecount)
@@ -429,7 +431,7 @@ function setRenderers(self) {
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
 			.selectAll('tr')
-			.data(tr_data, d => d.key)
+			.data(tr_data, d => d.key + d.label)
 
 		trs
 			.exit()
