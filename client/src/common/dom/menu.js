@@ -1,78 +1,75 @@
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
-import { font, base_zindex } from '../client'
+import { select as d3select, event as d3event } from 'd3-selection'
+import { transition } from 'd3-transition'
+import {base_zindex} from '../../client'
 
-export function initRadioInputs(opts) {
-	const divs = opts.holder
-		.selectAll('div')
-		.style('display', 'block')
-		.data(opts.options, d => d.value)
-
-	divs.exit().each(function(d) {
-		d3select(this)
-			.on('input', null)
-			.on('click', null)
-			.remove()
-	})
-
-	const labels = divs
-		.enter()
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '5px')
-		.append('label')
-
-	const inputs = labels
-		.append('input')
-		.attr('type', 'radio')
-		.attr('name', opts.name)
-		.attr('value', d => d.value)
-		.property('checked', opts.isCheckedFxn)
-		.style('vertical-align', 'top')
-		.on('input', opts.listeners.input)
-
-	labels
-		.append('span')
-		.style('vertical-align', 'top')
-		.html(d => '&nbsp;' + d.label)
-
-	function isChecked(d) {
-		return d.value == radio.currValue
-	}
-
-	const radio = {
-		main(currValue) {
-			radio.currValue = currValue
-			inputs.property('checked', isChecked)
-		},
-		dom: {
-			divs: opts.holder.selectAll('div'),
-			labels: opts.holder.selectAll('label').select('span'),
-			inputs: labels.selectAll('input')
-		}
-	}
-
-	return radio
-}
+// the Menu code in client/src/client.js should no longer be maintained.
+// should use this function from now on
 
 export class Menu {
 	constructor(arg = {}) {
 		this.typename = Math.random().toString()
 
 		const body = d3select(document.body)
-		body.on('mousedown.menu' + this.typename, () => {
-			this.hide()
-		})
-
 		this.d = body
 			.append('div')
 			.attr('class', 'sja_menu_div')
 			.style('display', 'none')
 			.style('position', 'absolute')
 			.style('background-color', 'white')
-			.style('font-family', font)
+			.style('font-family', 'Arial')
 			.on('mousedown.menu' + this.typename, () => {
-				d3event.stopPropagation()
+				/* 
+					When clicking on non-interactive elements within a menu, 
+					it should trigger other menus to be hidden. For example,
+					clicking on an empty spot in a parent menu should close 
+					any submenu that are open, which is done by allowing the 
+					mousedown event to propagate to the body (default behavior).
+				*/
+				const t = d3select(d3event.target)
+				if (
+					/*** 
+						NOTE on interactive menu elements: 
+						Any menu element (input, button, etc) that has event listeners
+					  is expected to handle that event, including possibly closing any
+					  associated menus, and thus no need to propagate the mousedown event 
+						to the document body
+					***/
+					t.on('mousedown') ||
+					t.on('click') ||
+					// also assume that the following elements have event listeners by default,
+					// so same logic of not wanting to propagate the event to the body
+					['INPUT', 'SELECT', 'TEXTAREA'].includes(d3event.target.tagName.toUpperCase())
+				) {
+					d3event.stopPropagation()
+				} /* else {
+					 // allow the bubbling of the mouse event to the document body
+				}*/
 			})
+
+		// detect if this menu is launched from within another menu
+		// (aka, the 'parent_menu'); this value may be empty (undefined, null)
+		// check if this.d isn't empty before assigning parent_menu
+		if (Object.values(this.d._groups[0]).length) this.d.node().parent_menu = arg.parent_menu
+
+		body.on('mousedown.menu' + this.typename, () => {
+			/*** 
+				Problem: A parent menu can close unexpectedly when clicking on a 
+				non-interactive submenu element, leaving its submenu still visible
+				but "floating" without context since its parent menu disappeared on 'body' click.
+
+				Solution: Do not hide a menu if it happens to be a parent of a clicked menu
+			***/
+			// when pressing the mouse cursor on the menu itself or any of its submenu, it should stay open
+			if (this.d.node().contains(d3event.target)) return
+			// this assumes that the mousedown occured on the menu holder itself (not any of its child elements)
+			if (d3event.target.parent_menu === this.d.node()) return
+			// detect in case the mousedown occurred on a menu's child element,
+			// in which case the menu's parent should still be not hidden
+			const menu = d3event.target.closest('.sja_menu_div')
+			if (menu && menu.parent_menu === this.d.node()) return
+			// close a menu for all other mousedown events outside of its own div or submenu
+			this.hide()
+		})
 
 		if (base_zindex) {
 			this.d.style('z-index', base_zindex + 1)

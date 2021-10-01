@@ -170,7 +170,7 @@ function trigger_getcategories(q, res, tdb, ds) {
 			break
 		case 'integer':
 		case 'float':
-			arg.term1_q = q.term1_q ? q.term1_q : term.bins.default
+			arg.term1_q = q.term1_q ? JSON.parse(q.term1_q) : term.bins.default
 			break
 		case 'condition':
 			arg.term1_q = q.term1_q
@@ -187,8 +187,17 @@ function trigger_getcategories(q, res, tdb, ds) {
 			throw 'unknown term type'
 	}
 	if (q.filter) arg.filter = JSON.parse(decodeURIComponent(q.filter))
-	const lst = termdbsql.get_summary(arg)
-	res.send({ lst })
+
+	const result = termdbsql.get_summary(arg)
+	const bins = result.CTE1.bins ? result.CTE1.bins : []
+	const orderedLabels =
+		term.type == 'condition' && term.grades
+			? term.grades.map(grade => term.values[grade].label)
+			: term.type == 'condition'
+			? [0, 1, 2, 3, 4, 5, 9].map(grade => term.values[grade].label) // hardcoded default order
+			: bins.map(bin => (bin.name ? bin.name : bin.label))
+
+	res.send({ lst: result.lst, orderedLabels })
 }
 function trigger_getnumericcategories(q, res, tdb, ds) {
 	if (!q.tid) throw '.tid missing'

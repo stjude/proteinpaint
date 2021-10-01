@@ -137,17 +137,17 @@ class MassRegressionUI {
 		const url = lst.join('&')
 		const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 		if (data.error) throw data.error
-
-		// sepeate include and exclude categories based on term.values.uncomputable
-		const excluded_values = d.term.term.values
-			? Object.entries(d.term.term.values)
-					.filter(v => v[1].uncomputable)
-					.map(v => v[1].label)
-			: []
-		d.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label))
-		d.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
-
-		// get include, excluded and total sample count
+		d.orderedLabels = data.orderedLabels
+		d.sampleCounts =
+			d.term.term.type == 'float' || d.term.term.type == 'integer'
+				? data.lst.filter(v => v.range.is_unannotated != true)
+				: data.lst
+		if (
+			d.term.term.type == 'float' ||
+			(d.term.term.type == 'integer' && data.lst.find(v => v.range.is_unannotated == true))
+		) {
+			d.excludeCounts = data.lst.filter(v => v.range.is_unannotated == true)
+		}
 		const totalCount = (d.term.q.totalCount = { included: 0, excluded: 0, total: 0 })
 		d.sampleCounts.forEach(v => (totalCount.included = totalCount.included + v.samplecount))
 		d.excludeCounts.forEach(v => (totalCount.excluded = totalCount.excluded + v.samplecount))
@@ -405,9 +405,11 @@ function setRenderers(self) {
 	}
 
 	function make_values_table(d, excluded) {
-		const tr_data = excluded
-			? d.excludeCounts.sort((a, b) => b.samplecount - a.samplecount)
-			: d.sampleCounts.sort((a, b) => b.samplecount - a.samplecount)
+		const sortFxn =
+			d.orderedLabels && d.orderedLabels.length
+				? (a, b) => d.orderedLabels.indexOf(a.label) - d.orderedLabels.indexOf(b.label)
+				: (a, b) => b.samplecount - a.samplecount
+		const tr_data = excluded ? d.excludeCounts.sort(sortFxn) : d.sampleCounts.sort(sortFxn)
 
 		if (!excluded) {
 			const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
