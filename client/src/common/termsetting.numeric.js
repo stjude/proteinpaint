@@ -22,42 +22,40 @@ export async function setNumericTabs(self) {
 	self.showEditMenu = async function(div) {
 		div.style('padding', '5px 10px')
 
-		div
+		const topBar = div.append('div').style('margin-left', '20px')
+		topBar
 			.append('div')
 			.style('display', 'inline-block')
 			.html('Use as')
 
-		const tabDiv = div.append('div').style('display', 'inline-block')
+		const tabDiv = topBar.append('div').style('display', 'inline-block')
 		const cont = {
-			div: div.append('div').style('display', 'none'),
+			//div: div.append('div')/*.style('display', 'none')*/,
 			fxns: await setContMethods(self, 'non-closured')
 		}
 		const discrete = {
-			div: div.append('div').style('display', 'none'),
+			//div: div.append('div')/*.style('display', 'none')*/.style('max-width', '500px'),
 			fxns: await setDiscreteMethods(self, 'non-closured')
 		}
 
 		const tabs = [
 			{
+				active: true,
 				label: 'Continuous',
 				callback: async div => {
-					discrete.div.style('display', 'none')
-					cont.div.style('display', 'block')
-					cont.fxns.showEditMenu(self, cont.div)
+					//discrete.div.style('display', 'none')
+					//cont.div.style('display', 'block')
+					cont.fxns.showEditMenu(self, div)
 				}
 			},
 			{
-				active: true, // for testing only, will default to continuous later
 				label: 'Discrete',
 				callback: async div => {
-					cont.div.style('display', 'none')
-					discrete.div.style('display', 'block')
-					discrete.fxns.showEditMenu(self, discrete.div)
+					discrete.fxns.showEditMenu(self, div)
 				}
 			}
 		]
 
-		init_tabs(tabDiv, tabs)
-		//discrete.fxns.showEditMenu(self, discrete.div.style('display', 'block'))
+		init_tabs({ holder: tabDiv, contentHolder: div.append('div'), tabs })
 	}
 }

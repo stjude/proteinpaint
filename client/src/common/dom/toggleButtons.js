@@ -12,8 +12,14 @@ tabs[ tab{} ]
 this function attaches .holder (d3 dom) to each tab of tabs[]
 */
 
-export function init_tabs(holder, tabs) {
-	tabs.holder = holder.append('div').style('padding', '10px 10px 0 10px')
+export function init_tabs(opts) {
+	if (!opts.holder) throw `missing opts.holder for toggleButtons()`
+	if (!Array.isArray(opts.tabs)) throw `invalided opts.tab for toggleButtons()`
+
+	const tabs = opts.tabs
+	tabs.holder = opts.contentHolder ? opts.holder : opts.holder.append('div')
+	tabs.holder.style('padding', '10px 10px 0 10px')
+	tabs.contentHolder = opts.contentHolder ? opts.contentHolder : opts.holder.append('div')
 
 	const has_active_tab = tabs.some(i => i.active)
 	if (!has_active_tab) tabs[0].active = true
@@ -27,27 +33,25 @@ export function init_tabs(holder, tabs) {
 			.style('display', 'inline-block')
 			.html(tab.label)
 			.on('click', async () => {
-				const last_active_tab = tabs.find(t => t.active == true)
-				delete last_active_tab.active
-				tab.active = true
 				for (const tab_ of tabs) {
+					tab_.active = tab_ === tab
 					tab_.tab.classed('active', tab_.active ? true : false)
 					tab_.holder.style('display', tab_.active ? 'block' : 'none')
 				}
 				if (tab.callback) {
 					await tab.callback(tab.holder)
-					//delete tab.callback
+					delete tab.callback
 				}
 			})
 
-		tab.holder = holder
+		tab.holder = tabs.contentHolder
 			.append('div')
 			.style('padding-top', '10px')
 			.style('display', tab.active ? 'block' : 'none')
 
 		if (tab.active && tab.callback) {
 			tab.callback(tab.holder)
-			//delete tab.callback
+			delete tab.callback
 		}
 	}
 }

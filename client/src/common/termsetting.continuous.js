@@ -38,5 +38,28 @@ function get_status_msg() {
 }
 
 async function showEditMenu(self, div) {
-	div.style('padding', '10px').html('**** TODO: create this menu ***')
+	div
+		.style('padding', '10px')
+		.selectAll('*')
+		.remove()
+
+	div.append('div').style('padding', '10px')
+
+	div
+		.append('div')
+		.style('display', 'inline-block')
+		.html('Scale values')
+
+	const select = div.append('select')
+	/*.on('change', ()=>{
+			alert('TODO: handle scale values')
+		})*/
+
+	select
+		.selectAll('option')
+		.data([{ html: 'Per 10', value: 10 }, { html: 'Per 100', value: 100 }, { html: 'Per 1000', value: 1000 }])
+		.enter()
+		.append('option')
+		.attr('value', d => d.value)
+		.html(d => d.html)
 }
