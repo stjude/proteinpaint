@@ -115,6 +115,7 @@ function applyEdits(self) {
 		self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
 	}
 	self.q.use_as = 'discrete'
+	delete self.q.scale
 	self.dom.tip.hide()
 	self.opts.callback({
 		term: self.term,

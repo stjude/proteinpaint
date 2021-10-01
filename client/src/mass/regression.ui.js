@@ -366,7 +366,9 @@ function setRenderers(self) {
 		if (d.section.configKey == 'independent') {
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
 				make_values_table(d)
-				d.dom.term_info_div.html(`Use as ${q.use_as || 'continuous'} variable. </br>`)
+				d.dom.term_info_div.html(
+					`Use as ${q.use_as || 'continuous'} variable.` + (q.scale ? `Scale: Per ${q.scale}` : '')
+				)
 				d.dom.term_summmary_div.html(
 					`${q.totalCount.included} sample included.` +
 						(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded.` : '')
