@@ -28,6 +28,14 @@ https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/
 
 ************** explain behavior here:
 
+setMethodsByTermType[this.term.type](self)
+- this will attach these methods to 'self', as appropriate for a given term type:
+	- get_term_name(term): will return the term label to use in the pill, including potential abbreviation
+	- get_status_msg(): either empty or error string, displayed on the right side of the pill
+	- showEditMenu(div): content/inputs to show for editing a term's binning or groupsetting
+
+NOTE: For numeric terms, there is an option to show a toggled edit menu, where continuous or binning
+	inputs are supported. By default, only the binning menu is shown (no toggle buttons). 
 */
 
 class TermSetting {
@@ -70,6 +78,7 @@ class TermSetting {
 					// term is present and may have been replaced
 					// reset methods by term type
 					if (this.setMethodsByTermType[this.term.type]) {
+						// see comments above about the class behavior
 						this.setMethodsByTermType[this.term.type](this)
 					} else {
 						throw 'unknown term type for setMethodsByTermType: ' + this.term.type

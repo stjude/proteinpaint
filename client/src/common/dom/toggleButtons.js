@@ -14,7 +14,7 @@ this function attaches .holder (d3 dom) to each tab of tabs[]
 
 export function init_tabs(opts) {
 	if (!opts.holder) throw `missing opts.holder for toggleButtons()`
-	if (!Array.isArray(opts.tabs)) throw `invalided opts.tab for toggleButtons()`
+	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
 
 	const tabs = opts.tabs
 	tabs.holder = opts.contentHolder ? opts.holder : opts.holder.append('div')
