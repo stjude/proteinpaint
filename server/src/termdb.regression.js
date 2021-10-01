@@ -63,17 +63,24 @@ export async function get_regression(q, ds) {
 					line.push(val && val.uncomputable ? 'NA' : value)
 				}
 			}
-			if (line[0] != 'NA') tsv.push(line.join('\t'))
+			// Discard samples that have an uncomputable value in any variable because these are not useable in the regression analysis
+			if (!line.includes('NA')) tsv.push(line.join('\t'))
 		}
-		console.log('line 68', header, colClasses, refCategories)
-		console.log('termdb.regression.js')
+
+		const sampleSize = tsv.length - 1
 		const data = await lines2R(path.join(serverconfig.binpath, 'utils/regression.R'), tsv, [
 			regressionType,
 			colClasses.join(','),
 			refCategories.join(',')
 		])
 
-		const result = []
+		const result = [
+			{
+				name: 'Sample size',
+				format: 'vector',
+				rows: [['Number of samples analyzed', sampleSize]]
+			}
+		]
 		let table, lineCnt
 		for (const line of data) {
 			if (line.startsWith('#')) {
@@ -97,6 +104,13 @@ export async function get_regression(q, ds) {
 			table.rows.push(line.split('\t'))
 		}
 		result.push(table)
+
+		// Verify that the computed sample size is consistent with the degrees of freedom
+		const nullDevDf = result
+			.find(table => table.name === 'Other summary statistics')
+			.rows.find(row => row[0] === 'Null deviance df')[1]
+		if (sampleSize !== Number(nullDevDf) + 1) throw 'computed sample size and degrees of freedom are inconsistent'
+
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
