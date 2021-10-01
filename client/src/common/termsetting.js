@@ -165,6 +165,23 @@ function setRenderers(self) {
 			// until there is actual need to group survival term values
 			survival: setDefaultMethods
 		}
+
+		self.dom.btnDiv = self.dom.holder.append('div')
+		if (self.opts.buttons) {
+			self.dom.btnDiv
+				.selectAll('div')
+				.data(self.opts.buttons)
+				.enter()
+				.append('div')
+				.style('display', 'inline-block')
+				.style('padding', '0px 5px')
+				.style('cursor', 'pointer')
+				.html(d => d.toUpperCase())
+				.on('click', d => {
+					if (d == 'delete') self.removeTerm()
+					else if (d == 'replace') self.showTree()
+				})
+		}
 	}
 
 	self.updateUI = () => {
@@ -172,13 +189,15 @@ function setRenderers(self) {
 			// no term
 			self.dom.nopilldiv.style('display', 'block')
 			self.dom.pilldiv.style('display', 'none')
+			self.dom.btnDiv.style('display', 'none')
 			return
 		}
 
 		// has term
 
 		self.dom.nopilldiv.style('display', 'none')
-		self.dom.pilldiv.style('display', 'block')
+		self.dom.pilldiv.style('display', self.opts.buttons ? 'inline-block' : 'block')
+		self.dom.btnDiv.style('display', 'inline-block')
 
 		const pills = self.dom.pilldiv.selectAll('.ts_pill').data([self.term], d => d.id)
 
@@ -316,7 +335,9 @@ function setInteractivity(self) {
 		self.dom.tip.clear().showunder(self.dom.holder.node())
 		if (self.opts.showFullMenu) {
 			self.showEditReplaceRemoveMenu(self.dom.tip.d)
-		} else {
+		} /*else if (self.opts.) {
+			
+		}*/ else {
 			self.showEditMenu(self.dom.tip.d)
 		}
 	}
