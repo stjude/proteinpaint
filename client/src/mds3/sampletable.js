@@ -354,7 +354,7 @@ async function make_multiSampleSummaryList(args) {
 		}
 	}
 
-	init_tabs(holder, main_tabs)
+	init_tabs({ holder, tabs: main_tabs })
 	init_dictionary_ui(main_tabs.holder, arg, main_tabs)
 	init_download(main_tabs.holder, arg, main_tabs)
 	// TODO: enable and move later in CONFIG
