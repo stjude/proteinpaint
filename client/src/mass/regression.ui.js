@@ -63,7 +63,7 @@ class MassRegressionUI {
             }
             this.totalSampleCount = undefined
 
-            this.opts.chart.on('postRender', ()=>{
+            this.opts.chart.on('postRender.submitBtn', ()=>{
                 const chartRendered = true
                 this.updateBtns(chartRendered)
             })
