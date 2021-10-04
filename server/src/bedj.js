@@ -182,7 +182,7 @@ async function do_query(req, genomes) {
 					const pxa = cumx + r.scale(r.reverse ? b : a)
 					const pxb = cumx + r.scale(r.reverse ? a : b)
 					ctx.fillRect(pxa, thinpad, Math.max(1, pxb - pxa), stackheight - thinpad * 2)
-					bedj_may_mapisoform(mapisoform, pxa, pxb, 1, item, ctx)
+					bedj_may_mapisoform(mapisoform, pxa, pxb, 1, item)
 				}
 				const thick = []
 				if (item.exon) {
@@ -198,7 +198,7 @@ async function do_query(req, genomes) {
 					const pxa = cumx + r.scale(r.reverse ? b : a)
 					const pxb = cumx + r.scale(r.reverse ? a : b)
 					ctx.fillRect(pxa, 0, Math.max(1, pxb - pxa), stackheight)
-					bedj_may_mapisoform(mapisoform, pxa, pxb, 1, item, ctx)
+					bedj_may_mapisoform(mapisoform, pxa, pxb, 1, item)
 					if (item.strand && notmanyitem) {
 						ctx.strokeStyle = 'white'
 						strokearrow(ctx, item.strand, pxa, thinpad, pxb - pxa, stackheight - thinpad * 2)
@@ -382,7 +382,7 @@ async function do_query(req, genomes) {
 			stack[maxstack] = boxstop
 			item.canvas.stack = maxstack
 		}
-		bedj_may_mapisoform(mapisoform, item.canvas.start, item.canvas.stop, item.canvas.stack, item, ctx)
+		bedj_may_mapisoform(mapisoform, item.canvas.start, item.canvas.stop, item.canvas.stack, item)
 	}
 
 	// render
@@ -712,7 +712,7 @@ async function do_query(req, genomes) {
 	return result
 }
 
-function bedj_may_mapisoform(lst, pxa, pxb, y, item, ctx) {
+function bedj_may_mapisoform(lst, pxa, pxb, y, item) {
 	/* only handle singular bed items, or entire isoform
 do not handle exon/intron parts
 may return additional info for:
@@ -723,14 +723,15 @@ may return additional info for:
 	const show = []
 	if (item.name) show.push(item.name)
 	if (item.isoform) show.push(item.isoform)
-	const namewidth = ctx.measureText(item.name).width + 1 //Solves tooltip not appearing over gene label
+	const x1 = item.canvas.namestart === pxa - 1 ? pxa - 1 - item.canvas.namewidth : pxa //Fix to include label along with the box for event handlers
+	const x2 = item.canvas.namestart === pxb + 1 ? pxb + 1 + item.canvas.namewidth : pxb
 	lst.push({
 		// return position for displaying in tooltip
 		chr: item.chr,
 		start: item.start,
 		stop: item.stop,
-		x1: pxa - namewidth,
-		x2: pxb,
+		x1: x1,
+		x2: x2,
 		y: y, // stack number
 		/* isoform is for client to select one and launch protein view
 		 */
