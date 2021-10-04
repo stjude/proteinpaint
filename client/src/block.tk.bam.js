@@ -1,5 +1,5 @@
 import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
-import { axisRight } from 'd3-axis'
+import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { make_radios } from './common/dom/radiobutton'
@@ -408,11 +408,19 @@ function may_render_variant(data, tk, block) {
 	}
 
 	// will render variant in a row
+	let variant_box_width = x2 - x1
+	if (x2 > data.pileup_data.width) {
+		variant_box_width = data.pileup_data.width - x1
+	} else if (x1 < 0) {
+		variant_box_width = x2
+	}
+
 	tk.dom.variantg
 		.append('rect')
-		.attr('x', x1)
-		.attr('width', x2 - x1)
+		.attr('x', Math.max(0, x1))
+		.attr('width', variant_box_width)
 		.attr('height', tk.dom.variantrowheight)
+		.attr('fill', 'grey')
 
 	const variant_string =
 		tk.variants[0].chr + '.' + (data.allele_pos + 1).toString() + '.' + data.ref_allele + '.' + data.alt_allele
@@ -421,18 +429,45 @@ function may_render_variant(data, tk, block) {
 	let variant_start_text_pos = 0
 	const space_param = 10
 	const pad_param = 15
-	if (variant_string.length * space_param < x1) {
-		variant_start_text_pos = 0
-	} else {
-		variant_start_text_pos = x2 + pad_param
-	}
 
-	tk.dom.variantg
-		.append('text')
-		.attr('x', variant_start_text_pos)
-		.attr('y', tk.dom.variantrowheight)
-		.attr('font-size', tk.dom.variantrowheight)
-		.text(variant_string)
+	if (variant_string.length * space_param < x1) {
+		// Before variant box
+		variant_start_text_pos = 0
+		tk.dom.variantg
+			.append('text')
+			.attr('x', variant_start_text_pos)
+			.attr('y', tk.dom.variantrowheight)
+			.attr('font-size', tk.dom.variantrowheight)
+			.text(variant_string)
+	} else if (variant_string.length * space_param < variant_box_width) {
+		// Inside variant box
+		variant_start_text_pos = Math.max(0, x1)
+		tk.dom.variantg
+			.append('text')
+			.attr('x', variant_start_text_pos)
+			.attr('y', tk.dom.variantrowheight)
+			.attr('font-size', tk.dom.variantrowheight)
+			.style('fill', 'black')
+			.text(variant_string)
+	} else if (x2 + variant_string.length * space_param < data.pileup_data.width) {
+		// After variant box but when variant_string length is lower than pileup plot width
+		variant_start_text_pos = x2 + pad_param
+		tk.dom.variantg
+			.append('text')
+			.attr('x', variant_start_text_pos)
+			.attr('y', tk.dom.variantrowheight)
+			.attr('font-size', tk.dom.variantrowheight)
+			.text(variant_string)
+	} else {
+		// When none of the three options are feasible, it will print variant_string on the left hand side leading to overlap with the variant box
+		variant_start_text_pos = 0
+		tk.dom.variantg
+			.append('text')
+			.attr('x', variant_start_text_pos)
+			.attr('y', tk.dom.variantrowheight)
+			.attr('font-size', tk.dom.variantrowheight)
+			.text(variant_string)
+	}
 
 	if (data.refalleleerror == true) {
 		const text_string = 'Incorrect reference allele'
@@ -464,23 +499,10 @@ function may_render_variant(data, tk, block) {
 		// Should always be true if variant field was given by user, but may change in the future
 		tk.dom.variantg
 			.append('text')
-			.attr('x', data.pileup_data.width)
-			.attr('y', -tk.dom.variantrowheight)
+			.attr('x', data.pileup_data.width + 5)
+			.attr('y', -10)
 			.attr('font-size', tk.dom.variantrowheight)
 			.text('Diff Score')
-
-		tk.dom.variantg
-			.append('text')
-			.attr('x', data.pileup_data.width)
-			.attr('font-size', tk.dom.variantrowheight)
-			.text('Max: ' + data.max_diff_score.toFixed(2).toString())
-
-		tk.dom.variantg
-			.append('text')
-			.attr('x', data.pileup_data.width)
-			.attr('y', tk.dom.variantrowheight)
-			.attr('font-size', tk.dom.variantrowheight)
-			.text('Min: ' + data.min_diff_score.toFixed(2).toString())
 	}
 }
 
@@ -645,6 +667,7 @@ function makeTk(tk, block) {
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
 		tk.dom.diff_score_g = tk.gright.append('g') // For storing bar plot of diff_score
+		tk.dom.diff_score_axis = tk.gright.append('g') // For storing axis of bar plot of diff_score
 		tk.dom.diff_score_plotwidth = 50
 	}
 
@@ -753,6 +776,29 @@ function makeGroup(gd, tk, block, data) {
 			tk.max_diff_score = data.max_diff_score
 			tk.min_diff_score = data.min_diff_score
 		}
+
+		const diff_score_mid_point = (tk.min_diff_score + tk.max_diff_score) / 2
+		let diff_score_height = tk.pileupheight + tk.dom.variantrowheight * 2
+
+		if (tk.toomanyreads) {
+			// When reads are downsampled a new row is created, therefore an additional row is needed, so the diff_score_axis needs to be pushed one row down so that it does not overlap with "Diff Score" text
+			diff_score_height = tk.pileupheight + tk.dom.variantrowheight * 3
+		}
+		const axis = axisTop()
+			.tickValues([tk.min_diff_score.toFixed(1), diff_score_mid_point.toFixed(1), tk.max_diff_score.toFixed(1)])
+			.scale(
+				scaleLinear()
+					.domain([tk.min_diff_score.toFixed(1), tk.max_diff_score.toFixed(1)])
+					.range([0, gd.diff_scores_img.width])
+			)
+		client.axisstyle({
+			axis: tk.dom.diff_score_axis
+				.transition()
+				.attr('transform', 'translate(' + 0 + ',' + diff_score_height + ')')
+				.call(axis),
+			color: 'black',
+			showline: true
+		})
 	}
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
