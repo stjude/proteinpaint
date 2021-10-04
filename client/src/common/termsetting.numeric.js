@@ -40,17 +40,20 @@ export async function setNumericTabs(self) {
 
 		const tabs = [
 			{
-				active: true,
+				active: self.q.mode && self.q.mode == 'discrete' ? false : true,
 				label: 'Continuous',
 				callback: async div => {
+					self.q.mode = 'continuous'
 					//discrete.div.style('display', 'none')
 					//cont.div.style('display', 'block')
 					cont.fxns.showEditMenu(self, div)
 				}
 			},
 			{
+				active: self.q.mode && self.q.mode == 'discrete' ? true: false,
 				label: 'Discrete',
 				callback: async div => {
+					self.q.mode = 'discrete'
 					discrete.fxns.showEditMenu(self, div)
 				}
 			}
