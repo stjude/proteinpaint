@@ -53,7 +53,7 @@ async function showEditMenu(self, div) {
 		.html('Scale values')
 
 	const select = div.append('select').on('change', () => {
-		delete self.q.use_as
+		delete self.q.mode
 		if (d3event.target.value != 1) self.q.scale = d3event.target.value
 		else delete self.q.scale
 		self.opts.callback({

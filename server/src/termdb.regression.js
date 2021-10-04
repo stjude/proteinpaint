@@ -38,9 +38,9 @@ export async function get_regression(q, ds) {
 		const termYvalues = q.termY.values || {}
 		// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
 		// by default it will be used as continuous, if user selects 'as_bins' radio,
-		// term.q.use_as = 'discrete' flag will be added
+		// term.q.mode = 'discrete' flag will be added
 		const independentTypes = q.independent.map(t => {
-			if ((t.type == 'float' || t.type == 'integer') && t.q.use_as == 'discrete') return 'categorical'
+			if ((t.type == 'float' || t.type == 'integer') && t.q.mode == 'discrete') return 'categorical'
 			else return t.type
 		})
 		const termTypes = [q.termY.type, ...independentTypes]
@@ -54,7 +54,7 @@ export async function get_regression(q, ds) {
 			const line = ['cutoff' in q ? meetsCutoff : outcomeVal]
 			for (const i in q.independent) {
 				const term = q.independent[i]
-				if ((term.type == 'float' || term.type == 'integer') && term.q.use_as == 'discrete') {
+				if ((term.type == 'float' || term.type == 'integer') && term.q.mode == 'discrete') {
 					const value = row['key' + i]
 					line.push(value)
 				} else {
@@ -124,11 +124,11 @@ decide reference category
 - q: client side config for this term (should tell which category is chosen as reference, if applicable)
 */
 function get_refCategory(term, q) {
+	if (q.refGrp) return q.refGrp
 	if (term.type == 'categorical' || term.type == 'condition') {
 		// q attribute will tell which category is reference
 		// else first category as reference
-		if (q.refGrp) return q.refGrp
-		else if (q.groupsetting && q.groupsetting.inuse && q.groupsetting.predefined_groupset_idx == undefined)
+		if (q.groupsetting && q.groupsetting.inuse && q.groupsetting.predefined_groupset_idx == undefined)
 			return term.groupsetting.lst[q.groupsetting.predefined_groupset_idx].groups[0]['name']
 		else if (q.groupsetting && q.groupsetting.inuse) return q.groupsetting.customset.groups[0]['name']
 		else return Object.keys(term.values)[0]
