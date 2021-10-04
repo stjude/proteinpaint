@@ -432,7 +432,7 @@ function may_render_variant(data, tk, block) {
 
 	if (variant_string.length * space_param < x1) {
 		// Before variant box
-		variant_start_text_pos = 0
+		variant_start_text_pos = x1 - variant_string.length * space_param
 		tk.dom.variantg
 			.append('text')
 			.attr('x', variant_start_text_pos)
