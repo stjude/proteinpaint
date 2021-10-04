@@ -176,6 +176,8 @@ function setRenderers(self) {
 				.style('display', 'inline-block')
 				.style('padding', '0px 5px')
 				.style('cursor', 'pointer')
+				.style('color','#999')
+				.style('font-size','.8em')
 				.html(d => d.toUpperCase())
 				.on('click', d => {
 					if (d == 'delete') self.removeTerm()
