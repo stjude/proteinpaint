@@ -14,6 +14,8 @@ genome=? is only required for gene tracks that will be translated, otherwise not
 
 const namespace = 1 // one pixel between the gene label name and the item structure
 const namepad = 10 // box no struct: [pad---name---pad]
+const cutoff = 200 /*Arbitary cutoff for when the track is not 'packed full' of items
+Effects when the name labels are shown*/
 
 /*
 item.canvas{}: The coordinates and attributes of items (i.e. exons and introns) and, 
@@ -257,10 +259,7 @@ async function do_query(req, genomes) {
 	let ctx = canvas.getContext('2d')
 	if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 	ctx.font = 'bold ' + fontsize + 'px Arial'
-	const packfull =
-		items.length <
-		200 /*Arbitary cutoff for when the track is not 'packed full' of items
-	Effects when the name labels are shown*/
+	const packfull = items.length < cutoff
 	const mapisoform = items.length < 200 ? [] : null
 	// sort items
 	// TODO from different chrs
@@ -337,12 +336,13 @@ async function do_query(req, genomes) {
 		}
 		/* 
 		if no name, boxstart and boxstop = the item start and stop, respectively. 
-		if name, boxstart and boxstop will include the item name. See logic under `if (packfull) {` below
+		if name, boxstart or boxstop will include the item name with item start or item stop, 
+		as appropriate. See logic under `if (packfull) {` below.
 		*/
 		let boxstart = itemstartpx
 		let boxstop = itemstoppx
 		if (packfull) {
-			// check item name; show item name if available
+			// check number of items; show item name if track not 'packed full' and name is available
 			const namestr = item.name
 			if (namestr) {
 				// has name, will figure out where to show name
