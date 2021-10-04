@@ -500,7 +500,7 @@ function may_render_variant(data, tk, block) {
 		tk.dom.variantg
 			.append('text')
 			.attr('x', data.pileup_data.width + 5)
-			.attr('y', -10)
+			.attr('y', -10 + tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
 			.text('Diff Score')
 	}
@@ -794,7 +794,7 @@ function makeGroup(gd, tk, block, data) {
 		client.axisstyle({
 			axis: tk.dom.diff_score_axis
 				.transition()
-				.attr('transform', 'translate(' + 0 + ',' + diff_score_height + ')')
+				.attr('transform', 'translate(' + 0 + ',' + (diff_score_height + 0.5 * tk.dom.variantrowheight) + ')')
 				.call(axis),
 			color: 'black',
 			showline: true
