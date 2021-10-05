@@ -267,7 +267,7 @@ function renderTypeInputs(self) {
 		.style('vertical-align', 'top')
 		.on('change', function() {
 			self.q.type = this.checked ? 'regular' : 'custom'
-			self.showEditMenu(self.dom.num_holder)
+			showEditMenu(self, self.dom.num_holder)
 		})
 	l1.append('span')
 		.style('color', 'rgb(136, 136, 136)')
@@ -283,7 +283,7 @@ function renderTypeInputs(self) {
 		.style('vertical-align', 'top')
 		.on('change', function() {
 			self.q.type = this.checked ? 'custom' : 'regular'
-			self.showEditMenu(self.dom.num_holder)
+			showEditMenu(self, self.dom.num_holder)
 		})
 	l2.append('span')
 		.style('color', 'rgb(136, 136, 136)')

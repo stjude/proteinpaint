@@ -3,6 +3,17 @@
 init_tabs
 update_tabs
 
+opts: {
+	holder,
+	contentHolder, (optional)
+	tabs
+}
+
+Note: 
+- if everthing should be randered in single holder, supply just `holder`
+- if top tabs and div containing tab specific ui should be in different tabs, 
+	define them sepeartely as holder and contentholder
+
 tabs[ tab{} ]
 	.label:
 		required
@@ -17,15 +28,15 @@ export function init_tabs(opts) {
 	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
 
 	const tabs = opts.tabs
-	tabs.holder = opts.contentHolder ? opts.holder : opts.holder.append('div')
-	tabs.holder.style('padding', '10px 10px 0 10px')
-	tabs.contentHolder = opts.contentHolder ? opts.contentHolder : opts.holder.append('div')
+	const holder = opts.holder.append('div')
+	holder.style('padding', '10px 10px 0 10px')
+	const contentHolder = opts.contentHolder ? opts.contentHolder : opts.holder.append('div')
 
 	const has_active_tab = tabs.some(i => i.active)
 	if (!has_active_tab) tabs[0].active = true
 
 	for (const [i, tab] of tabs.entries()) {
-		tab.tab = tabs.holder
+		tab.tab = holder
 			.append('div')
 			.attr('class', 'sj-toggle-button' + (i == 0 ? ' sj-left-toggle' : ' sj-right-toggle'))
 			.classed('active', tab.active ? true : false)
@@ -44,7 +55,7 @@ export function init_tabs(opts) {
 				}
 			})
 
-		tab.holder = tabs.contentHolder
+		tab.holder = contentHolder
 			.append('div')
 			.style('padding-top', '10px')
 			.style('display', tab.active ? 'block' : 'none')
