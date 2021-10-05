@@ -792,7 +792,6 @@ function makeGroup(gd, tk, block, data) {
 			tk.min_diff_score = data.min_diff_score
 		}
 
-		const diff_score_mid_point = (tk.min_diff_score + tk.max_diff_score) / 2
 		let diff_score_height = tk.pileupheight + tk.dom.variantrowheight * 2
 
 		if (tk.toomanyreads) {
@@ -800,7 +799,7 @@ function makeGroup(gd, tk, block, data) {
 			diff_score_height = tk.pileupheight + tk.dom.variantrowheight * 3
 		}
 		const axis = axisTop()
-			.tickValues([tk.min_diff_score.toFixed(1), diff_score_mid_point.toFixed(1), tk.max_diff_score.toFixed(1)])
+			.tickValues([tk.min_diff_score.toFixed(1), tk.max_diff_score.toFixed(1)])
 			.scale(
 				scaleLinear()
 					.domain([tk.min_diff_score.toFixed(1), tk.max_diff_score.toFixed(1)])
