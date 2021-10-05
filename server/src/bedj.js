@@ -14,8 +14,7 @@ genome=? is only required for gene tracks that will be translated, otherwise not
 
 const namespace = 1 // one pixel between the gene label name and the item structure
 const namepad = 10 // box no struct: [pad---name---pad]
-const packfull_cutoff = 200 /*Arbitary cutoff for when the track is not 'packed full' of items
-Effects when the name labels are shown*/
+const packfull_cutoff = 200 //the number of items in the view range; below the cutoff will render in 'packfull' mode
 
 /*
 item.canvas{}: The coordinates and attributes of items (i.e. exons and introns) and, 
@@ -259,7 +258,7 @@ async function do_query(req, genomes) {
 	let ctx = canvas.getContext('2d')
 	if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 	ctx.font = 'bold ' + fontsize + 'px Arial'
-	//the number of items in the view range; below the cutoff will render in 'packfull' mode
+
 	const packfull = items.length < packfull_cutoff
 	const mapisoform = items.length < packfull_cutoff ? [] : null
 	// sort items
