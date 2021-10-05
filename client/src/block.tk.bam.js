@@ -432,8 +432,7 @@ function may_render_variant(data, tk, block) {
 
 	const var_str = tk.dom.variantg
 		.append('text')
-		.attr('x', variant_start_text_pos)
-		.attr('y', tk.dom.variantrowheight)
+		.attr('y', tk.dom.variantrowheight - 2) // -2 is a quick fix to put text at vertical center (need better method)
 		.attr('font-size', tk.dom.variantrowheight)
 		.text(variant_string)
 
@@ -443,8 +442,8 @@ function may_render_variant(data, tk, block) {
 		// Before variant box
 		variant_start_text_pos = x1 - var_str_bbox.width - space_param
 	} else if (var_str_bbox.width < variant_box_width) {
-		// Inside variant box
-		variant_start_text_pos = Math.max(0, x1)
+		// Inside variant box, center align
+		variant_start_text_pos = Math.max(0, x1) + (variant_box_width - var_str_bbox.width) / 2
 	} else if (x2 + var_str_bbox.width < data.pileup_data.width) {
 		// After variant box but when variant_string length is lower than pileup plot width
 		variant_start_text_pos = x2 + space_param
