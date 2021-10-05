@@ -55,10 +55,10 @@ async function showEditMenu(self, div) {
 	const select = div.append('select').on('change', () => {
 		if (d3event.target.value != 1) self.q.scale = d3event.target.value
 		else delete self.q.scale
-		self.opts.callback({
-			term: self.term,
-			q: self.q
-		})
+		// self.opts.callback({
+		// 	term: self.term,
+		// 	q: self.q
+		// })
 	})
 
 	select
@@ -74,4 +74,30 @@ async function showEditMenu(self, div) {
 		.attr('value', d => d.value)
 		.html(d => d.html)
 		.property('selected', d => (self.q.scale ? d.value == self.q.scale : 0))
+
+	const btndiv = div.append('div').style('padding', '3px 10px')
+
+	btndiv
+		.append('button')
+		.style('margin', '5px')
+		.html('Apply')
+		.on('click', () => {
+			self.q.mode = 'continuous'
+			self.opts.callback({
+				term: self.term,
+				q: self.q
+			})
+		})
+
+	// btndiv.append('button')
+	// 	.style('margin', '5px')
+	// 	.html('Reset')
+	// 	.on('click', () => {
+	// 		self.q.mode = 'discrete'
+	// 		delete self.q.scale
+	// 		self.opts.callback({
+	// 			term: self.term,
+	// 			q: self.q
+	// 		})
+	// 	})
 }

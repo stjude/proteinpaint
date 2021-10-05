@@ -490,72 +490,75 @@ function setRenderers(self) {
 			.style('height', '15px')
 			.style('background-color', '#ddd')
 
-        addTrBehavior({d, item, tr, rendered: false})
+		addTrBehavior({ d, item, tr, rendered: false })
 	}
 
 	function trUpdate(item) {
 		const pillData = this.parentNode.__data__
 		select(this.firstChild).text(item.samplecount !== undefined ? 'n=' + item.samplecount : '')
-        let rendered = true
-        if (pillData.term.q.mode == 'discrete' && this.childNodes.length < 4)
-            rendered = false
-        addTrBehavior({ d: pillData, item, tr: select(this), rendered})
+		let rendered = true
+		if (pillData.term.q.mode == 'discrete' && this.childNodes.length < 4) rendered = false
+		addTrBehavior({ d: pillData, item, tr: select(this), rendered })
 	}
 
-    function addTrBehavior(args){
-        const { d, item, tr, rendered } = args
-        // don't add tr effects for excluded values
-        if (!item.bar_width_frac) return
-        
-        const hover_flag = 
-            (d.term.term.type !== 'integer' && d.term.term.type !== 'float') 
-            || d.term.q.mode == 'discrete'
-        let ref_text
+	function addTrBehavior(args) {
+		const { d, item, tr, rendered } = args
+		// don't add tr effects for excluded values
+		if (!item.bar_width_frac) return
 
-        if (rendered) {
-            ref_text = select(tr.node().lastChild).select('div')
-                .style('display', item.key === d.refGrp && hover_flag ? 'inline-block' : 'none')
-                .style('border', item.key === d.refGrp && hover_flag ? '1px solid #bbb' : '')
-        } else {
-            const reference_td = tr
-                .append('td')
-                .style('padding', '1px 5px')
-                .style('text-align', 'left')
+		const hover_flag = (d.term.term.type !== 'integer' && d.term.term.type !== 'float') || d.term.q.mode == 'discrete'
+		let ref_text
 
-            ref_text = reference_td
-                .append('div')
-                .style('display', item.key === d.refGrp && hover_flag ? 'inline-block' : 'none')
-                .style('padding', '2px 10px')
-                .style('border', item.key === d.refGrp && hover_flag ? '1px solid #bbb' : '')
-                .style('border-radius', '10px')
-                .style('color', '#999')
-                .style('font-size', '.7em')
-                .text('REFERENCE')
-        }
-        
-        if (hover_flag) {
-            tr.on('mouseover', () => {
-                if (d.refGrp !== item.key) {
-                    tr.style('background', '#fff6dc')
-                    ref_text
-                        .style('display', 'inline-block')
-                        .style('border', '')
-                        .text('Set as reference')
-                } else tr.style('background', 'white')
-            })
-                .on('mouseout', () => {
-                    tr.style('background', 'white')
-                    if (d.refGrp !== item.key) ref_text.style('display', 'none')
-                })
-                .on('click', () => {
-                    d.refGrp = item.key
-                    self.refGrpByTermId[d.term.id] = item.key
-                    //d.term.q.refGrp = item.key
-                    ref_text.style('border', '1px solid #bbb').text('REFERENCE')
-                    make_values_table(d)
-                })
-        }
-    }
+		if (rendered) {
+			tr.style('background', 'white')
+			ref_text = select(tr.node().lastChild)
+				.select('div')
+				.style('display', item.key === d.refGrp && hover_flag ? 'inline-block' : 'none')
+				.style('border', item.key === d.refGrp && hover_flag ? '1px solid #bbb' : '')
+		} else {
+			const reference_td = tr
+				.append('td')
+				.style('padding', '1px 5px')
+				.style('text-align', 'left')
+
+			ref_text = reference_td
+				.append('div')
+				.style('display', item.key === d.refGrp && hover_flag ? 'inline-block' : 'none')
+				.style('padding', '2px 10px')
+				.style('border', item.key === d.refGrp && hover_flag ? '1px solid #bbb' : '')
+				.style('border-radius', '10px')
+				.style('color', '#999')
+				.style('font-size', '.7em')
+				.text('REFERENCE')
+		}
+
+		if (hover_flag) {
+			tr.on('mouseover', () => {
+				if (d.refGrp !== item.key) {
+					tr.style('background', '#fff6dc')
+					ref_text
+						.style('display', 'inline-block')
+						.style('border', '')
+						.text('Set as reference')
+				} else tr.style('background', 'white')
+			})
+				.on('mouseout', () => {
+					tr.style('background', 'white')
+					if (d.refGrp !== item.key) ref_text.style('display', 'none')
+				})
+				.on('click', () => {
+					d.refGrp = item.key
+					self.refGrpByTermId[d.term.id] = item.key
+					//d.term.q.refGrp = item.key
+					ref_text.style('border', '1px solid #bbb').text('REFERENCE')
+					make_values_table(d)
+				})
+		} else {
+			tr.on('mouseover', () => {})
+				.on('mouseout', () => {})
+				.on('click', () => {})
+		}
+	}
 
 	self.updateBtns = chartRendered => {
 		const hasOutcomeTerm = self.sections.filter(s => s.configKey == 'term' && s.selected.length).length
