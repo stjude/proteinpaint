@@ -21,7 +21,7 @@ class TdbPlot {
 		this.modifiers = this.opts.modifiers
 		this.dom = {
 			holder: this.opts.holder
-				.style('margin-top', '-1px')
+				// .style('margin-top', '-1px')
 				.style('white-space', 'nowrap')
 				.style('overflow-x', 'auto'),
 

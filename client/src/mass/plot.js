@@ -21,7 +21,7 @@ class MassPlot {
 				holder: this.opts.holder,
 
 				body: this.opts.holder.body
-					.style('margin-top', '-1px')
+					// .style('margin-top', '-1px')
 					.style('white-space', 'nowrap')
 					.style('overflow-x', 'auto'),
 
