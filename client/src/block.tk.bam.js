@@ -430,69 +430,85 @@ function may_render_variant(data, tk, block) {
 	const space_param = 10
 	const pad_param = 15
 
-	if (variant_string.length * space_param < x1) {
+	const var_str = tk.dom.variantg
+		.append('text')
+		.attr('x', variant_start_text_pos)
+		.attr('y', tk.dom.variantrowheight)
+		.attr('font-size', tk.dom.variantrowheight)
+		.text(variant_string)
+
+	const var_str_bbox = var_str.node().getBBox() // .node() will get the DOM/SVG
+
+	if (var_str_bbox.width + space_param < x1) {
 		// Before variant box
-		variant_start_text_pos = x1 - variant_string.length * space_param
-		tk.dom.variantg
-			.append('text')
-			.attr('x', variant_start_text_pos)
-			.attr('y', tk.dom.variantrowheight)
-			.attr('font-size', tk.dom.variantrowheight)
-			.text(variant_string)
-	} else if (variant_string.length * space_param < variant_box_width) {
+		variant_start_text_pos = x1 - var_str_bbox.width - space_param
+	} else if (var_str_bbox.width < variant_box_width) {
 		// Inside variant box
 		variant_start_text_pos = Math.max(0, x1)
-		tk.dom.variantg
-			.append('text')
-			.attr('x', variant_start_text_pos)
-			.attr('y', tk.dom.variantrowheight)
-			.attr('font-size', tk.dom.variantrowheight)
-			.style('fill', 'black')
-			.text(variant_string)
-	} else if (x2 + variant_string.length * space_param < data.pileup_data.width) {
+	} else if (x2 + var_str_bbox.width < data.pileup_data.width) {
 		// After variant box but when variant_string length is lower than pileup plot width
-		variant_start_text_pos = x2 + pad_param
-		tk.dom.variantg
-			.append('text')
-			.attr('x', variant_start_text_pos)
-			.attr('y', tk.dom.variantrowheight)
-			.attr('font-size', tk.dom.variantrowheight)
-			.text(variant_string)
-	} else {
-		// When none of the three options are feasible, it will print variant_string on the left hand side leading to overlap with the variant box
-		variant_start_text_pos = 0
-		tk.dom.variantg
-			.append('text')
-			.attr('x', variant_start_text_pos)
-			.attr('y', tk.dom.variantrowheight)
-			.attr('font-size', tk.dom.variantrowheight)
-			.text(variant_string)
+		variant_start_text_pos = x2 + space_param
 	}
+	var_str.attr('x', variant_start_text_pos)
 
 	if (data.refalleleerror == true) {
-		const text_string = 'Incorrect reference allele'
-		// Determining position to place the string and avoid overwriting variant string
+		// When ref allele is not correct
 		let text_start_pos = 0
-		if (
-			variant_start_text_pos == 0 &&
-			text_string.length * space_param + pad_param < x1 - variant_string.length * space_param
-		) {
-			text_start_pos = variant_string.length * space_param + pad_param
-		} else if (variant_start_text_pos != 0 && text_string.length * space_param < x1) {
-			text_start_pos = 0
-		} else if (variant_start_text_pos == x2 + pad_param) {
-			text_start_pos = x2 + variant_string.length * space_param + pad_param
-		} else {
-			text_start_pos = x2 + pad_param
-		}
-
-		tk.dom.variantg
+		const incorrect_string = tk.dom.variantg
 			.append('text')
 			.attr('x', text_start_pos)
 			.attr('y', tk.dom.variantrowheight)
 			.style('fill', 'red')
 			.attr('font-size', tk.dom.variantrowheight)
-			.text(text_string)
+			.text('Incorrect reference allele')
+
+		const incorrect_ref_bbox = incorrect_string.node().getBBox() // .node() will get the DOM/SVG
+
+		// Determining position to place the string and avoid overwriting variant string
+		if (variant_start_text_pos == 0 && incorrect_ref_bbox.width + space_param < x1 - var_str_bbox.width - space_param) {
+			// When variant string starts from zero (when string is too big)
+			text_start_pos = var_str_bbox.width + space_param
+		} else if (
+			variant_start_text_pos == 0 &&
+			incorrect_ref_bbox.width + space_param > x1 - var_str_bbox.width - space_param // When variant string starts from zero (when string is too big)
+		) {
+			text_start_pos = x2 + space_param
+		} else if (
+			var_str_bbox.width + space_param < x1 &&
+			x2 + incorrect_ref_bbox.width + space_param < data.pileup_data.width
+		) {
+			// When variant string is rendered before variant box and incorrect string can fit after variant box
+			text_start_pos = x2 + space_param
+		} else if (
+			var_str_bbox.width + space_param < x1 &&
+			x2 + incorrect_ref_bbox.width + space_param >= data.pileup_data.width &&
+			incorrect_ref_bbox.width + space_param < variant_box_width
+		) {
+			// When variant string is rendered before variant box and incorrect string cannot fit after variant box, then rendered within variant box
+			text_start_pos = Math.max(0, x1)
+		} else if (
+			var_str_bbox.width + space_param < x1 &&
+			x2 + incorrect_ref_bbox.width + space_param >= data.pileup_data.width
+		) {
+			text_start_pos = x1 - var_str_bbox.width - space_param * 2 - incorrect_ref_bbox.width
+		} else if (var_str_bbox.width < variant_box_width && incorrect_ref_bbox.width + space_param < x1) {
+			// When variant string inside variant box and incorrect string as sufficient space on left hand side
+			text_start_pos = x1 - incorrect_ref_bbox.width - space_param
+		} else if (var_str_bbox.width < variant_box_width && incorrect_ref_bbox.width + space_param >= x1) {
+			// When variant string inside variant box and incorrect string as sufficient space on right hand side
+			text_start_pos = x2 + space_param
+		} else if (x2 + var_str_bbox.width < data.pileup_data.width && incorrect_ref_bbox.width + space_param < x1) {
+			// When variant string after variant box and incorrect space has sufficient space on left hand side
+			text_start_pos = x1 - incorrect_ref_bbox.width - space_param
+		} else if (x2 + var_str_bbox.width < data.pileup_data.width && incorrect_ref_bbox.width + space_param >= x1) {
+			// When variant string after variant box and incorrect space has sufficient space on right hand side
+			text_start_pos = x2 + var_str_bbox.width + 2 * space_param
+		} else if (x2 + var_str_bbox.width < data.pileup_data.width && incorrect_ref_bbox.width < variant_box_width) {
+			// When variant string after variant box and incorrect space has sufficient space inside variant box
+			text_start_pos = Math.max(0, x1)
+		}
+
+		incorrect_string.attr('x', text_start_pos)
 	}
 
 	if (Number.isFinite(data.max_diff_score)) {
