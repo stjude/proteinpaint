@@ -1372,7 +1372,7 @@ export function newSandboxDiv(sandbox_holder, close) {
 		.style('border-radius', '5px 5px 0 0')
 		.style('background-color', '#f2f2f2')
 		.style('width', '95vw')
-		.style('box-shadow', 'rgb(220 220 220) 5px -2px 5px, rgb(220 220 220) -1px 0px 1px') //Adds another small shadow to the left
+		//.style('box-shadow', 'rgb(220 220 220) 5px -2px 5px, rgb(220 220 220) -1px 0px 1px') //Adds another small shadow to the left
 		.style('z-index', '99')
 
 	// close_btn
@@ -1409,9 +1409,9 @@ export function newSandboxDiv(sandbox_holder, close) {
 		.style('margin-top', '0px')
 		.style('padding-right', '8px')
 		.style('display', 'inline-block')
-		.style('box-shadow', 'rgb(220 220 220) 5px 2px 5px, rgb(220 220 220) -1px 0px 1px')
-		// .style('box-shadow', '2px 2px 10px #f2f2f2')
-		// .style('border-top', 'solid 1px white')
+		//.style('box-shadow', 'rgb(220 220 220) 5px 2px 5px, rgb(220 220 220) -1px 0px 1px')
+		.style('box-shadow', '2px 2px 10px #f2f2f2')
+		.style('border-top', 'solid 1px white')
 		.style('border-radius', '0  0 5px 5px')
 		.style('width', '95vw')
 
