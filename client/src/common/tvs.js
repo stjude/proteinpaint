@@ -1,5 +1,4 @@
 import * as rx from './rx.core'
-import * as dom from '../dom'
 import { select } from 'd3-selection'
 import * as client from '../client'
 import { getCategoricalMethods } from './tvs.categorical'

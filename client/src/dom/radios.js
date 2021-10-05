@@ -1,8 +1,3 @@
-/*
-********************** EXPORTED
-make_radios
-*/
-
 export function make_radios(arg) {
 	/* makes radio buttons
 
@@ -55,22 +50,4 @@ export function make_radios(arg) {
 
 	labels.append('span').html(d => '&nbsp;' + d.label)
 	return { divs, labels, inputs }
-}
-
-export function make_select_btn_pair(holder) {
-	// a click button triggering a <select> menu
-	const btn = holder
-		.append('div')
-		.attr('class', 'sja_filter_tag_btn')
-		.style('position', 'absolute')
-	const select = holder
-		.append('select')
-		.style('opacity', 0)
-		.on('mouseover', () => {
-			btn.style('opacity', '0.8').style('cursor', 'default')
-		})
-		.on('mouseout', () => {
-			btn.style('opacity', '1')
-		})
-	return [select, btn]
 }

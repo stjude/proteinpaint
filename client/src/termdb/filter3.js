@@ -1,7 +1,6 @@
 import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
 import { Menu } from '../client'
-import * as dom from '../dom'
 import { filterInit } from '../common/filter'
 import * as client from '../client'
 /*

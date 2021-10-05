@@ -1,6 +1,6 @@
 import { select, transition } from 'd3'
 import { dofetch, dofetch2, tab2box, tkt } from './client'
-import { make_radios } from './dom'
+import { make_radios } from './dom/radios'
 import { gene_searchbox } from './gene'
 
 /*

@@ -1,7 +1,6 @@
 import * as rx from './rx.core'
 import { select, event } from 'd3-selection'
 import { Menu } from '../client'
-import * as dom from '../dom'
 import { TVSInit } from './tvs'
 import * as client from '../client'
 import { vocabInit } from '../termdb/vocabulary'
