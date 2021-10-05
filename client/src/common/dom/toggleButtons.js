@@ -3,6 +3,17 @@
 init_tabs
 update_tabs
 
+opts: {
+	holder,
+	contentHolder, (optional)
+	tabs
+}
+
+Note: 
+- if everthing should be randered in single holder, supply just `holder`
+- if top tabs and div containing tab specific ui should be in different tabs, 
+	define them sepeartely as holder and contentholder
+
 tabs[ tab{} ]
 	.label:
 		required
@@ -12,16 +23,20 @@ tabs[ tab{} ]
 this function attaches .holder (d3 dom) to each tab of tabs[]
 */
 
-export function init_tabs(holder, tabs) {
-	tabs.holder = holder
-		.append('div')
-		.style('padding', '10px 10px 0 10px')
+export function init_tabs(opts) {
+	if (!opts.holder) throw `missing opts.holder for toggleButtons()`
+	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
+
+	const tabs = opts.tabs
+	const holder = opts.holder.append('div')
+	holder.style('padding', '10px 10px 0 10px')
+	const contentHolder = opts.contentHolder ? opts.contentHolder : opts.holder.append('div')
 
 	const has_active_tab = tabs.some(i => i.active)
 	if (!has_active_tab) tabs[0].active = true
 
 	for (const [i, tab] of tabs.entries()) {
-		tab.tab = tabs.holder
+		tab.tab = holder
 			.append('div')
 			.attr('class', 'sj-toggle-button' + (i == 0 ? ' sj-left-toggle' : ' sj-right-toggle'))
 			.classed('active', tab.active ? true : false)
@@ -29,10 +44,8 @@ export function init_tabs(holder, tabs) {
 			.style('display', 'inline-block')
 			.html(tab.label)
 			.on('click', async () => {
-				const last_active_tab = tabs.find(t => t.active == true)
-				delete last_active_tab.active
-				tab.active = true
 				for (const tab_ of tabs) {
+					tab_.active = tab_ === tab
 					tab_.tab.classed('active', tab_.active ? true : false)
 					tab_.holder.style('display', tab_.active ? 'block' : 'none')
 				}
@@ -42,12 +55,12 @@ export function init_tabs(holder, tabs) {
 				}
 			})
 
-		tab.holder = holder
+		tab.holder = contentHolder
 			.append('div')
 			.style('padding-top', '10px')
 			.style('display', tab.active ? 'block' : 'none')
 
-		if (i == 0 && tab.callback) {
+		if (tab.active && tab.callback) {
 			tab.callback(tab.holder)
 			delete tab.callback
 		}

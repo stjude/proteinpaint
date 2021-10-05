@@ -1,9 +1,10 @@
 import { getInitFxn, copyMerge } from '../common/rx.core'
 import { Menu } from './dom/menu'
 import { select } from 'd3-selection'
-import { setNumericMethods } from './termsetting.numeric2'
+import { setNumericMethods } from './termsetting.discrete'
 import { setCategoricalMethods } from './termsetting.categorical'
 import { setConditionalMethods } from './termsetting.conditional'
+import { setNumericTabs } from './termsetting.numeric'
 
 /*
 constructor option and API are documented at
@@ -27,6 +28,14 @@ https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/
 
 ************** explain behavior here:
 
+setMethodsByTermType[this.term.type](self)
+- this will attach these methods to 'self', as appropriate for a given term type:
+	- get_term_name(term): will return the term label to use in the pill, including potential abbreviation
+	- get_status_msg(): either empty or error string, displayed on the right side of the pill
+	- showEditMenu(div): content/inputs to show for editing a term's binning or groupsetting
+
+NOTE: For numeric terms, there is an option to show a toggled edit menu, where continuous or binning
+	inputs are supported. By default, only the binning menu is shown (no toggle buttons). 
 */
 
 class TermSetting {
@@ -69,6 +78,7 @@ class TermSetting {
 					// term is present and may have been replaced
 					// reset methods by term type
 					if (this.setMethodsByTermType[this.term.type]) {
+						// see comments above about the class behavior
 						this.setMethodsByTermType[this.term.type](this)
 					} else {
 						throw 'unknown term type for setMethodsByTermType: ' + this.term.type
@@ -90,6 +100,7 @@ class TermSetting {
 		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'
 		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
 		if (!('abbrCutoff' in o)) o.abbrCutoff = 18 //set the default to 18
+		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = 'default'
 		return o
 	}
 	validateMainData(d) {
@@ -146,13 +157,32 @@ function setRenderers(self) {
 		}
 
 		self.setMethodsByTermType = {
-			integer: setNumericMethods,
-			float: setNumericMethods,
+			integer: self.opts.numericEditMenuVersion == 'toggled' ? setNumericTabs : setNumericMethods,
+			float: self.opts.numericEditMenuVersion == 'toggled' ? setNumericTabs : setNumericMethods,
 			categorical: setCategoricalMethods,
 			condition: setConditionalMethods,
 			// for now, use default methods as placeholder functions
 			// until there is actual need to group survival term values
 			survival: setDefaultMethods
+		}
+
+		self.dom.btnDiv = self.dom.holder.append('div')
+		if (self.opts.buttons) {
+			self.dom.btnDiv
+				.selectAll('div')
+				.data(self.opts.buttons)
+				.enter()
+				.append('div')
+				.style('display', 'inline-block')
+				.style('padding', '0px 5px')
+				.style('cursor', 'pointer')
+				.style('color','#999')
+				.style('font-size','.8em')
+				.html(d => d.toUpperCase())
+				.on('click', d => {
+					if (d == 'delete') self.removeTerm()
+					else if (d == 'replace') self.showTree()
+				})
 		}
 	}
 
@@ -161,13 +191,15 @@ function setRenderers(self) {
 			// no term
 			self.dom.nopilldiv.style('display', 'block')
 			self.dom.pilldiv.style('display', 'none')
+			self.dom.btnDiv.style('display', 'none')
 			return
 		}
 
 		// has term
 
 		self.dom.nopilldiv.style('display', 'none')
-		self.dom.pilldiv.style('display', 'block')
+		self.dom.pilldiv.style('display', self.opts.buttons ? 'inline-block' : 'block')
+		self.dom.btnDiv.style('display', 'inline-block')
 
 		const pills = self.dom.pilldiv.selectAll('.ts_pill').data([self.term], d => d.id)
 
@@ -305,7 +337,9 @@ function setInteractivity(self) {
 		self.dom.tip.clear().showunder(self.dom.holder.node())
 		if (self.opts.showFullMenu) {
 			self.showEditReplaceRemoveMenu(self.dom.tip.d)
-		} else {
+		} /*else if (self.opts.) {
+			
+		}*/ else {
 			self.showEditMenu(self.dom.tip.d)
 		}
 	}

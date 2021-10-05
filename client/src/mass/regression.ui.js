@@ -267,7 +267,9 @@ function setRenderers(self) {
 			activeCohort: self.state.activeCohort,
 			use_bins_less: true,
 			debug: self.opts.debug,
-			showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
+			//showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
+			buttons: d.section.configKey == 'term' ? ['replace'] : ['delete'],
+			numericEditMenuVersion: 'toggled', // or 'default' for the usual binning menu
 			usecase: { target: 'regression', detail: d.section.configKey, regressionType: config.regressionType },
 			disable_terms: self.disable_terms,
 			abbrCutoff: 50,
@@ -364,7 +366,9 @@ function setRenderers(self) {
 		if (d.section.configKey == 'independent') {
 			if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
 				make_values_table(d)
-				d.dom.term_info_div.html(`Use as ${q.use_as || 'continuous'} variable. </br>`)
+				d.dom.term_info_div.html(
+					`Use as ${q.mode || 'continuous'} variable.` + (q.scale ? `Scale: Per ${q.scale}` : '')
+				)
 				d.dom.term_summmary_div.html(
 					`${q.totalCount.included} sample included.` +
 						(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded.` : '')
@@ -428,12 +432,15 @@ function setRenderers(self) {
 		}
 
 		const table = excluded ? d.dom.excluded_table : d.dom.values_table
+		const isContinuousTerm =
+			d.term && d.term.q.mode !== 'bins' && (d.term.term.type == 'float' || d.term.term.type == 'integer')
+
 		const trs = table
 			.style('margin', '10px 5px')
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
 			.selectAll('tr')
-			.data(tr_data, d => d.key + d.label)
+			.data(tr_data, isContinuousTerm ? (b, i) => i : b => b.key + b.label)
 
 		trs
 			.exit()
@@ -486,7 +493,50 @@ function setRenderers(self) {
 			.style('height', '15px')
 			.style('background-color', '#ddd')
 
-		if (d.term.term.type !== 'integer' && d.term.term.type !== 'float') {
+		addTrBehavior({ d, item, tr, rendered: false })
+	}
+
+	function trUpdate(item) {
+		const pillData = this.parentNode.__data__
+		select(this.firstChild).text(item.samplecount !== undefined ? 'n=' + item.samplecount : '')
+		select(this.firstChild.nextSibling).text(item.label)
+		let rendered = true
+		if (pillData.term.q.mode == 'discrete' && this.childNodes.length < 4) rendered = false
+		addTrBehavior({ d: pillData, item, tr: select(this), rendered })
+	}
+
+	function addTrBehavior(args) {
+		const { d, item, tr, rendered } = args
+		// don't add tr effects for excluded values
+		if (!item.bar_width_frac) return
+
+		const hover_flag = (d.term.term.type !== 'integer' && d.term.term.type !== 'float') || d.term.q.mode == 'discrete'
+		let ref_text
+
+		if (rendered) {
+			tr.style('background', 'white')
+			ref_text = select(tr.node().lastChild)
+				.select('div')
+				.style('display', item.key === d.refGrp && hover_flag ? 'inline-block' : 'none')
+				.style('border', item.key === d.refGrp && hover_flag ? '1px solid #bbb' : '')
+		} else {
+			const reference_td = tr
+				.append('td')
+				.style('padding', '1px 5px')
+				.style('text-align', 'left')
+
+			ref_text = reference_td
+				.append('div')
+				.style('display', item.key === d.refGrp && hover_flag ? 'inline-block' : 'none')
+				.style('padding', '2px 10px')
+				.style('border', item.key === d.refGrp && hover_flag ? '1px solid #bbb' : '')
+				.style('border-radius', '10px')
+				.style('color', '#999')
+				.style('font-size', '.7em')
+				.text('REFERENCE')
+		}
+
+		if (hover_flag) {
 			tr.on('mouseover', () => {
 				if (d.refGrp !== item.key) {
 					tr.style('background', '#fff6dc')
@@ -507,31 +557,10 @@ function setRenderers(self) {
 					ref_text.style('border', '1px solid #bbb').text('REFERENCE')
 					make_values_table(d)
 				})
-
-			const reference_td = tr
-				.append('td')
-				.style('padding', '1px 5px')
-				.style('text-align', 'left')
-
-			const ref_text = reference_td
-				.append('div')
-				.style('display', item.key === d.refGrp ? 'inline-block' : 'none')
-				.style('padding', '2px 10px')
-				.style('border', item.key === d.refGrp ? '1px solid #bbb' : '')
-				.style('border-radius', '10px')
-				.style('color', '#999')
-				.style('font-size', '.7em')
-				.text('REFERENCE')
-		}
-	}
-
-	function trUpdate(item) {
-		const pillData = this.parentNode.__data__
-		select(this.firstChild).text(item.samplecount !== undefined ? 'n=' + item.samplecount : '')
-		if (pillData.term.term.type !== 'integer' && pillData.term.term.type !== 'float') {
-			select(this.lastChild)
-				.select('div')
-				.style('display', item.key === pillData.refGrp ? 'inline-block' : 'none')
+		} else {
+			tr.on('mouseover', () => {})
+				.on('mouseout', () => {})
+				.on('click', () => {})
 		}
 	}
 

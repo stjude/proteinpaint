@@ -16,45 +16,59 @@ export async function get_regression(q, ds) {
 		delete q.term1_id
 		delete q.term1_q
 
-		///////////// the header row of the R data matrix
-		const header = ['outcome']
-		// make "refCategories" array that contains reference categories for each variable
-		// For numeric variables, use 'NA' string (see regression.R for more details)
-		const refCategories = ['NA']
+		// Specify regression type
+		const regressionType = q.regressionType || 'linear'
 
+		// Header row of the R data matrix
+		const header = ['outcome']
 		for (const i in q.independent) {
 			const term = q.independent[i]
 			const termnum = 'term' + i
 			q[termnum + '_id'] = term.id
 			if (term.q) q[termnum + '_q'] = term.q
-			header.push(term.id) //('var'+i)//(term.term.name)
 			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
-			refCategories.push(get_refCategory(term.term, term.q))
+			header.push(term.id) //('var'+i)//(term.term.name)
 		}
 
-		///////////// rest of rows for R matrix, one for each sample
+		// Rest of rows for R matrix, one for each sample
 		const rows = get_matrix(q)
 		const tsv = [header.join('\t')]
 		const termYvalues = q.termY.values || {}
+
+		// Specify term types and R classes of variables
 		// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
 		// by default it will be used as continuous, if user selects 'as_bins' radio,
-		// term.q.use_as = 'as bins' flag will be added
-		const independentTypes = q.independent.map(t => {
-			if ((t.type == 'float' || t.type == 'integer') && t.q.use_as == 'bins') return 'categorical'
+		// term.q.mode = 'discrete' flag will be added
+		const indTermTypes = q.independent.map(t => {
+			if ((t.type == 'float' || t.type == 'integer') && t.q.mode == 'discrete') return 'categorical'
 			else return t.type
 		})
-		const termTypes = [q.termY.type, ...independentTypes]
+		const termTypes = [q.termY.type, ...indTermTypes]
 		// Convert term types to R classes
 		const colClasses = termTypes.map(type => type2class.get(type))
 		if ('cutoff' in q) colClasses[0] = 'factor'
-		const regressionType = q.regressionType || 'linear'
+
+		// Specify reference categories of variables
+		const indRefCategories = q.independent.map(t => {
+			return get_refCategory(t.term, t.q)
+		})
+		const refCategories = ['NA', ...indRefCategories]
+
+		// Specify scaling factors of variables
+		const indScalingFactors = q.independent.map(t => {
+			if ((t.type !== 'float' && t.type !== 'integer') || t.q.mode === 'discrete') return 'NA'
+			return t.q.scale || 'NA'
+		})
+		const scalingFactors = ['NA', ...indScalingFactors]
+
+		// Populate data rows of tsv
 		for (const row of rows) {
 			const outcomeVal = termYvalues[row.outcome] && termYvalues[row.outcome].uncomputable ? 'NA' : row.outcome
 			const meetsCutoff = 'cutoff' in q && outcomeVal != 'NA' && Number(outcomeVal) >= q.cutoff ? 1 : 0 //console.log(meetsCutoff, q.cutoff, outcomeVal, Number(outcomeVal), regressionType)
 			const line = ['cutoff' in q ? meetsCutoff : outcomeVal]
 			for (const i in q.independent) {
 				const term = q.independent[i]
-				if ((term.type == 'float' || term.type == 'integer') && term.q.use_as == 'bins') {
+				if ((term.type == 'float' || term.type == 'integer') && term.q.mode == 'discrete') {
 					const value = row['key' + i]
 					line.push(value)
 				} else {
@@ -71,7 +85,8 @@ export async function get_regression(q, ds) {
 		const data = await lines2R(path.join(serverconfig.binpath, 'utils/regression.R'), tsv, [
 			regressionType,
 			colClasses.join(','),
-			refCategories.join(',')
+			refCategories.join(','),
+			scalingFactors.join(',')
 		])
 
 		const result = [
@@ -124,11 +139,11 @@ decide reference category
 - q: client side config for this term (should tell which category is chosen as reference, if applicable)
 */
 function get_refCategory(term, q) {
+	if (q.refGrp) return q.refGrp
 	if (term.type == 'categorical' || term.type == 'condition') {
 		// q attribute will tell which category is reference
 		// else first category as reference
-		if (q.refGrp) return q.refGrp
-		else if (q.groupsetting && q.groupsetting.inuse && q.groupsetting.predefined_groupset_idx == undefined)
+		if (q.groupsetting && q.groupsetting.inuse && q.groupsetting.predefined_groupset_idx == undefined)
 			return term.groupsetting.lst[q.groupsetting.predefined_groupset_idx].groups[0]['name']
 		else if (q.groupsetting && q.groupsetting.inuse) return q.groupsetting.customset.groups[0]['name']
 		else return Object.keys(term.values)[0]
