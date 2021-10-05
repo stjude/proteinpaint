@@ -1,5 +1,5 @@
 import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
-import { axisRight } from 'd3-axis'
+import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { make_radios } from './common/dom/radiobutton'
@@ -408,11 +408,19 @@ function may_render_variant(data, tk, block) {
 	}
 
 	// will render variant in a row
+	let variant_box_width = x2 - x1
+	if (x2 > data.pileup_data.width) {
+		variant_box_width = data.pileup_data.width - x1
+	} else if (x1 < 0) {
+		variant_box_width = x2
+	}
+
 	tk.dom.variantg
 		.append('rect')
-		.attr('x', x1)
-		.attr('width', x2 - x1)
+		.attr('x', Math.max(0, x1))
+		.attr('width', variant_box_width)
 		.attr('height', tk.dom.variantrowheight)
+		.attr('fill', 'grey')
 
 	const variant_string =
 		tk.variants[0].chr + '.' + (data.allele_pos + 1).toString() + '.' + data.ref_allele + '.' + data.alt_allele
@@ -421,66 +429,95 @@ function may_render_variant(data, tk, block) {
 	let variant_start_text_pos = 0
 	const space_param = 10
 	const pad_param = 15
-	if (variant_string.length * space_param < x1) {
-		variant_start_text_pos = 0
-	} else {
-		variant_start_text_pos = x2 + pad_param
-	}
 
-	tk.dom.variantg
+	const var_str = tk.dom.variantg
 		.append('text')
-		.attr('x', variant_start_text_pos)
-		.attr('y', tk.dom.variantrowheight)
+		.attr('y', tk.dom.variantrowheight - 2) // -2 is a quick fix to put text at vertical center (need better method)
 		.attr('font-size', tk.dom.variantrowheight)
 		.text(variant_string)
 
-	if (data.refalleleerror == true) {
-		const text_string = 'Incorrect reference allele'
-		// Determining position to place the string and avoid overwriting variant string
-		let text_start_pos = 0
-		if (
-			variant_start_text_pos == 0 &&
-			text_string.length * space_param + pad_param < x1 - variant_string.length * space_param
-		) {
-			text_start_pos = variant_string.length * space_param + pad_param
-		} else if (variant_start_text_pos != 0 && text_string.length * space_param < x1) {
-			text_start_pos = 0
-		} else if (variant_start_text_pos == x2 + pad_param) {
-			text_start_pos = x2 + variant_string.length * space_param + pad_param
-		} else {
-			text_start_pos = x2 + pad_param
-		}
+	const var_str_bbox = var_str.node().getBBox() // .node() will get the DOM/SVG
 
-		tk.dom.variantg
+	if (var_str_bbox.width + space_param < x1) {
+		// Before variant box
+		variant_start_text_pos = x1 - var_str_bbox.width - space_param
+	} else if (var_str_bbox.width < variant_box_width) {
+		// Inside variant box, center align
+		variant_start_text_pos = Math.max(0, x1) + (variant_box_width - var_str_bbox.width) / 2
+	} else if (x2 + var_str_bbox.width < data.pileup_data.width) {
+		// After variant box but when variant_string length is lower than pileup plot width
+		variant_start_text_pos = x2 + space_param
+	}
+	var_str.attr('x', variant_start_text_pos)
+
+	if (data.refalleleerror == true) {
+		// When ref allele is not correct
+		let text_start_pos = 0
+		const incorrect_string = tk.dom.variantg
 			.append('text')
 			.attr('x', text_start_pos)
 			.attr('y', tk.dom.variantrowheight)
 			.style('fill', 'red')
 			.attr('font-size', tk.dom.variantrowheight)
-			.text(text_string)
+			.text('Incorrect reference allele')
+
+		const incorrect_ref_bbox = incorrect_string.node().getBBox() // .node() will get the DOM/SVG
+
+		// Determining position to place the string and avoid overwriting variant string
+		if (variant_start_text_pos == 0 && incorrect_ref_bbox.width + space_param < x1 - var_str_bbox.width - space_param) {
+			// When variant string starts from zero (when string is too big)
+			text_start_pos = var_str_bbox.width + space_param
+		} else if (
+			variant_start_text_pos == 0 &&
+			incorrect_ref_bbox.width + space_param > x1 - var_str_bbox.width - space_param // When variant string starts from zero (when string is too big)
+		) {
+			text_start_pos = x2 + space_param
+		} else if (
+			var_str_bbox.width + space_param < x1 &&
+			x2 + incorrect_ref_bbox.width + space_param < data.pileup_data.width
+		) {
+			// When variant string is rendered before variant box and incorrect string can fit after variant box
+			text_start_pos = x2 + space_param
+		} else if (
+			var_str_bbox.width + space_param < x1 &&
+			x2 + incorrect_ref_bbox.width + space_param >= data.pileup_data.width &&
+			incorrect_ref_bbox.width + space_param < variant_box_width
+		) {
+			// When variant string is rendered before variant box and incorrect string cannot fit after variant box, then rendered within variant box
+			text_start_pos = Math.max(0, x1)
+		} else if (
+			var_str_bbox.width + space_param < x1 &&
+			x2 + incorrect_ref_bbox.width + space_param >= data.pileup_data.width
+		) {
+			text_start_pos = x1 - var_str_bbox.width - space_param * 2 - incorrect_ref_bbox.width
+		} else if (var_str_bbox.width < variant_box_width && incorrect_ref_bbox.width + space_param < x1) {
+			// When variant string inside variant box and incorrect string as sufficient space on left hand side
+			text_start_pos = x1 - incorrect_ref_bbox.width - space_param
+		} else if (var_str_bbox.width < variant_box_width && incorrect_ref_bbox.width + space_param >= x1) {
+			// When variant string inside variant box and incorrect string as sufficient space on right hand side
+			text_start_pos = x2 + space_param
+		} else if (x2 + var_str_bbox.width < data.pileup_data.width && incorrect_ref_bbox.width + space_param < x1) {
+			// When variant string after variant box and incorrect space has sufficient space on left hand side
+			text_start_pos = x1 - incorrect_ref_bbox.width - space_param
+		} else if (x2 + var_str_bbox.width < data.pileup_data.width && incorrect_ref_bbox.width + space_param >= x1) {
+			// When variant string after variant box and incorrect space has sufficient space on right hand side
+			text_start_pos = x2 + var_str_bbox.width + 2 * space_param
+		} else if (x2 + var_str_bbox.width < data.pileup_data.width && incorrect_ref_bbox.width < variant_box_width) {
+			// When variant string after variant box and incorrect space has sufficient space inside variant box
+			text_start_pos = Math.max(0, x1)
+		}
+
+		incorrect_string.attr('x', text_start_pos)
 	}
 
 	if (Number.isFinite(data.max_diff_score)) {
 		// Should always be true if variant field was given by user, but may change in the future
 		tk.dom.variantg
 			.append('text')
-			.attr('x', data.pileup_data.width)
-			.attr('y', -tk.dom.variantrowheight)
+			.attr('x', data.pileup_data.width + 5)
+			.attr('y', -10 + tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
 			.text('Diff Score')
-
-		tk.dom.variantg
-			.append('text')
-			.attr('x', data.pileup_data.width)
-			.attr('font-size', tk.dom.variantrowheight)
-			.text('Max: ' + data.max_diff_score.toFixed(2).toString())
-
-		tk.dom.variantg
-			.append('text')
-			.attr('x', data.pileup_data.width)
-			.attr('y', tk.dom.variantrowheight)
-			.attr('font-size', tk.dom.variantrowheight)
-			.text('Min: ' + data.min_diff_score.toFixed(2).toString())
 	}
 }
 
@@ -645,6 +682,7 @@ function makeTk(tk, block) {
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
 		tk.dom.diff_score_g = tk.gright.append('g') // For storing bar plot of diff_score
+		tk.dom.diff_score_axis = tk.gright.append('g') // For storing axis of bar plot of diff_score
 		tk.dom.diff_score_plotwidth = 50
 	}
 
@@ -753,6 +791,28 @@ function makeGroup(gd, tk, block, data) {
 			tk.max_diff_score = data.max_diff_score
 			tk.min_diff_score = data.min_diff_score
 		}
+
+		let diff_score_height = tk.pileupheight + tk.dom.variantrowheight * 2
+
+		if (tk.toomanyreads) {
+			// When reads are downsampled a new row is created, therefore an additional row is needed, so the diff_score_axis needs to be pushed one row down so that it does not overlap with "Diff Score" text
+			diff_score_height = tk.pileupheight + tk.dom.variantrowheight * 3
+		}
+		const axis = axisTop()
+			.tickValues([tk.min_diff_score.toFixed(1), tk.max_diff_score.toFixed(1)])
+			.scale(
+				scaleLinear()
+					.domain([tk.min_diff_score.toFixed(1), tk.max_diff_score.toFixed(1)])
+					.range([0, gd.diff_scores_img.width])
+			)
+		client.axisstyle({
+			axis: tk.dom.diff_score_axis
+				.transition()
+				.attr('transform', 'translate(' + 0 + ',' + (diff_score_height + 0.5 * tk.dom.variantrowheight) + ')')
+				.call(axis),
+			color: 'black',
+			showline: true
+		})
 	}
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
