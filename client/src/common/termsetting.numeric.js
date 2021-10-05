@@ -1,6 +1,6 @@
 import { setNumericMethods as setDiscreteMethods } from './termsetting.discrete'
 import { setNumericMethods as setContMethods } from './termsetting.continuous'
-import { init_tabs, update_tabs } from '../common/dom/toggleButtons'
+import { init_tabs, update_tabs } from '../dom/toggleButtons'
 
 const tsInstanceTracker = new WeakMap()
 let i = 0
@@ -50,7 +50,7 @@ export async function setNumericTabs(self) {
 				}
 			},
 			{
-				active: self.q.mode && self.q.mode == 'discrete' ? true: false,
+				active: self.q.mode && self.q.mode == 'discrete' ? true : false,
 				label: 'Discrete',
 				callback: async div => {
 					self.q.mode = 'discrete'

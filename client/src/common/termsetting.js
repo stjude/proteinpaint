@@ -1,5 +1,5 @@
 import { getInitFxn, copyMerge } from '../common/rx.core'
-import { Menu } from './dom/menu'
+import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
 import { setNumericMethods } from './termsetting.discrete'
 import { setCategoricalMethods } from './termsetting.categorical'
@@ -176,8 +176,8 @@ function setRenderers(self) {
 				.style('display', 'inline-block')
 				.style('padding', '0px 5px')
 				.style('cursor', 'pointer')
-				.style('color','#999')
-				.style('font-size','.8em')
+				.style('color', '#999')
+				.style('font-size', '.8em')
 				.html(d => d.toUpperCase())
 				.on('click', d => {
 					if (d == 'delete') self.removeTerm()

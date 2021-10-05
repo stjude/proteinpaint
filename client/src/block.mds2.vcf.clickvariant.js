@@ -4,7 +4,7 @@ import { make_ui as mafcovplot_makeui } from './block.mds2.vcf.mafcovplot'
 import { termdb_bygenotype, make_phewas } from './block.mds2.vcf.termdb'
 import { AFtest_groupname } from './block.mds2.vcf.numericaxis.AFtest'
 import { addparameter_rangequery } from './block.mds2'
-//import {make_radios} from './dom'
+//import {make_radios} from './dom/radios'
 
 /*
 ********************** EXPORTED

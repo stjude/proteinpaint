@@ -1,7 +1,7 @@
 import { fillbar, tab2box, Menu, to_textfile } from '../client'
-import { make_densityplot } from '../common/dom/densityplot'
-import { init_tabs, update_tabs } from '../common/dom/toggleButtons'
-import { get_list_cells, get_table_header, get_table_cell } from '../common/dom/gridutils'
+import { make_densityplot } from '../dom/densityplot'
+import { init_tabs, update_tabs } from '../dom/toggleButtons'
+import { get_list_cells, get_table_header, get_table_cell } from '../dom/gridutils'
 import { select as d3select, event } from 'd3-selection'
 
 /*

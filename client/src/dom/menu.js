@@ -1,6 +1,6 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { transition } from 'd3-transition'
-import {base_zindex} from '../../client'
+import {base_zindex} from '../client'
 
 // the Menu code in client/src/client.js should no longer be maintained.
 // should use this function from now on

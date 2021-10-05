@@ -2,8 +2,8 @@ import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selec
 import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
-import { make_radios } from './common/dom/radiobutton'
-import { make_one_checkbox } from './common/dom/checkbox'
+import { make_radios } from './dom/radiobutton'
+import { make_one_checkbox } from './dom/checkbox'
 import urlmap from './common/urlmap'
 
 /*
