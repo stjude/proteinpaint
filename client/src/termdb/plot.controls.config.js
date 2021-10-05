@@ -2,7 +2,7 @@ import * as rx from '../common/rx.core'
 import { overlayInit } from './plot.controls.overlay'
 import { term1uiInit } from './plot.controls.term1'
 import { divideInit } from './plot.controls.divide'
-import { initRadioInputs } from '../common/dom/radio2'
+import { initRadioInputs } from '../dom/radio2'
 
 // to be used for assigning unique
 // radio button names by object instance
