@@ -12,6 +12,16 @@ genome=? is only required for gene tracks that will be translated, otherwise not
 
 */
 
+const namespace = 1 // one pixel between the gene label name and the item structure
+const namepad = 10 // box no struct: [pad---name---pad]
+const packfull_cutoff = 200 //the number of items in the view range; below the cutoff will render in 'packfull' mode
+
+/*
+item.canvas{}: The coordinates and attributes of items (i.e. exons and introns) and, 
+if applicable, the gene name/label. Necessary for event handlers, specifically click events
+and tooltip rendering. 
+*/
+
 module.exports = genomes => {
 	return async (req, res) => {
 		if (app.reqbodyisinvalidjson(req, res)) return
@@ -244,14 +254,13 @@ async function do_query(req, genomes) {
 		if (!genomeobj) throw 'invalid genome'
 	}
 	const translateitem = []
-	const namespace = 1
-	const namepad = 10 // box no struct: [pad---name---pad]
 	const canvas = createCanvas(10, 10) // for measuring text only
 	let ctx = canvas.getContext('2d')
 	if (req.query.devicePixelRatio > 1) ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
 	ctx.font = 'bold ' + fontsize + 'px Arial'
-	const packfull = items.length < 200
-	const mapisoform = items.length < 200 ? [] : null
+
+	const packfull = items.length < packfull_cutoff
+	const mapisoform = items.length < packfull_cutoff ? [] : null
 	// sort items
 	// TODO from different chrs
 	let sortreverse = false
@@ -317,30 +326,43 @@ async function do_query(req, genomes) {
 			continue
 		}
 		item.canvas = {
-			start: itemstartpx,
-			stop: itemstoppx,
+			start: itemstartpx, //x1 coordinate position
+			stop: itemstoppx, //x2 coordinate position
 			stranded: item.strand != undefined
 		}
 		if (item.coding && maytranslate) {
 			item.willtranslate = true // so later the strand will not show
 			translateitem.push(item)
 		}
+		/* 
+		if no name, boxstart and boxstop = the item start and stop, respectively. 
+		if name, boxstart or boxstop will include the item name with item start or item stop, 
+		as appropriate. See logic under `if (packfull) {` below.
+		*/
 		let boxstart = itemstartpx
 		let boxstop = itemstoppx
 		if (packfull) {
-			// check item name
+			// check number of items; show item name if track not 'packed full' and name is available
 			const namestr = item.name
 			if (namestr) {
+				// has name, will figure out where to show name
 				item.canvas.namestr = namestr
 				const namewidth = ctx.measureText(namestr).width
 				item.canvas.namewidth = namewidth
 
 				if (hasstruct) {
+					/* item has structure, try not to overlay name on top of item
+					an overlay occurs when the item extends past genome browser, 
+					thus no room is available*/
 					if (item.canvas.start >= namewidth + namespace) {
+						// show name on the left side of item
+						// x1 will include the item and the item label
 						item.canvas.namestart = item.canvas.start - namespace
 						boxstart = item.canvas.namestart - namewidth
 						item.canvas.textalign = 'right'
 					} else if (item.canvas.stop + namewidth + namespace <= width) {
+						// show name on the right side of item
+						// x2 will include the item and the item label
 						item.canvas.namestart = item.canvas.stop + namespace
 						boxstop = item.canvas.namestart + namewidth
 						item.canvas.textalign = 'left'
@@ -352,10 +374,12 @@ async function do_query(req, genomes) {
 					if (Math.min(width, item.canvas.stop) - Math.max(0, item.canvas.start) >= namewidth + namepad * 2) {
 						item.canvas.namein = true
 					} else if (item.canvas.start >= namewidth + namespace) {
+						// show name on the left side of item
 						item.canvas.namestart = item.canvas.start - namespace
 						boxstart = item.canvas.namestart - namewidth
 						item.canvas.textalign = 'right'
 					} else if (item.canvas.stop + namewidth + namespace <= width) {
+						// show name on the right side of item
 						item.canvas.namestart = item.canvas.stop + namespace
 						boxstop = item.canvas.namestart + namewidth
 						item.canvas.textalign = 'left'
@@ -382,7 +406,7 @@ async function do_query(req, genomes) {
 			stack[maxstack] = boxstop
 			item.canvas.stack = maxstack
 		}
-		bedj_may_mapisoform(mapisoform, item.canvas.start, item.canvas.stop, item.canvas.stack, item)
+		bedj_may_mapisoform(mapisoform, boxstart, boxstop, item.canvas.stack, item)
 	}
 
 	// render
@@ -712,7 +736,7 @@ async function do_query(req, genomes) {
 	return result
 }
 
-function bedj_may_mapisoform(lst, pxa, pxb, y, item) {
+function bedj_may_mapisoform(lst, boxstart, boxstop, y, item) {
 	/* only handle singular bed items, or entire isoform
 do not handle exon/intron parts
 may return additional info for:
@@ -728,8 +752,8 @@ may return additional info for:
 		chr: item.chr,
 		start: item.start,
 		stop: item.stop,
-		x1: pxa,
-		x2: pxb,
+		x1: boxstart, //item x1 coordinate; if applicable includes the label width & namespace
+		x2: boxstop, //item x2 coordinate; if applicable includes the label width & namespace
 		y: y, // stack number
 		/* isoform is for client to select one and launch protein view
 		 */
