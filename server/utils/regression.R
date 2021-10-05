@@ -6,7 +6,7 @@
 # Usage
 ###########
 
-# Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories>] <stdout>
+# Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories> <scaling factors>] <stdout>
 #
 # Parameters:
 #   - <stdin>: [string] tab-delimited table of regression variables streamed from stdin. First line must be a header (i.e. column names). First column must be the outcome variable. All other columns are independent variables. All variables in the table are included in the regression analysis. Here is an example input where the "score" variable will be treated as the outcome variable:
@@ -21,7 +21,8 @@
 #   - arguments:
 #       - <regression type>: [string] type of regression analysis ("linear" or "logistic"). Linear regression should be used if the outcome is a continuous variable. Logistic regression should be used if the outcome is a categorical variable. Currently, logistic regression can only be performed on binary outcome variables (e.g. "no/yes", "no condition/condition", "0/1").
 #       - <variable classes>: [string] a comma-delimited list of R classes for each variable (e.g. "numeric,integer,factor,factor,factor,numeric"). The number and order of classes should match that of variables in the table. Variables with integer or numeric classes will be treated as continuous variables, while variables with a factor class will be treated as categorical variables.
-#       - <reference categories>: [string] a comma-delimited list of reference categories for each variable (same format as <variable classes>). For categorical variables, specify the desired reference category. For continuous variables, use an NA string ('NA').
+#       - <reference categories>: [string] a comma-delimited list of reference categories for each variable (same format as <variable classes>). For categorical variables, specify the desired reference category. For continuous variables, use an 'NA' string.
+#       - <scaling factors>: [string] a comma-delimited list of scaling factors for each variable (same format as <variable classes>). Values of each variable will be divided by the corresponding scaling factor. Use the 'NA' string to indicate that a variable should not be scaled.
 #
 #   - output: 
 #       - <stdout>: [string] output summary statistics of the regression analysis streamed to stdout. The output will consist of different tables of summary statistics where the tables are delimited by header lines (i.e. lines beginning with "#"). Each header line has the following format: #<type of table (matrix or vector)>#<name of table>.
@@ -32,12 +33,13 @@
 ###########
 
 args <- commandArgs(trailingOnly = T)
-if (length(args) != 3){
-  stop("Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories>] <stdout>")
+if (length(args) != 4){
+  stop("Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories> <scaling factors>] <stdout>")
 }
 regressionType <- args[1]
 variableClasses <- strsplit(args[2], split = ",")[[1]]
 refCategories <- strsplit(args[3], split = ",")[[1]]
+scalingFactors <- strsplit(args[4], split = ",")[[1]]
 
 #Read in input data and assign variable classes
 con <- file("stdin","r")
@@ -49,11 +51,22 @@ if(length(variableClasses) != ncol(dat)){
 if(length(refCategories) != ncol(dat)){
   stop("Number of reference categories does not match the number of variables")
 }
+if(length(scalingFactors) != ncol(dat)){
+  stop("Number of scaling factors does not match the number of variables")
+}
 
 #Specify the reference categories of categorical variables
 for(i in 1:ncol(dat)) {
   if(is.factor(dat[,i])) {
     dat[,i] <- relevel(dat[,i], ref = refCategories[i])
+  }
+}
+
+#Scale those variables that have scaling factors
+for(i in 1:length(scalingFactors)) {
+  if(scalingFactors[i] != "NA") {
+    scalingFactor <- as.numeric(scalingFactors[i])
+    dat[,i] <- dat[,i]/scalingFactor
   }
 }
 
