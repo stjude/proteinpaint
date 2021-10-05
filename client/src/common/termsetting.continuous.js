@@ -53,7 +53,7 @@ async function showEditMenu(self, div) {
 		.html('Scale values')
 
 	const select = div.append('select').on('change', () => {
-		if (d3event.target.value != 1) self.q.scale = d3event.target.value
+		if (d3event.target.value != 1) self.q.scale = Number(d3event.target.value)
 		else delete self.q.scale
 		// self.opts.callback({
 		// 	term: self.term,
@@ -73,7 +73,7 @@ async function showEditMenu(self, div) {
 		.append('option')
 		.attr('value', d => d.value)
 		.html(d => d.html)
-		.property('selected', d => (self.q.scale ? d.value == self.q.scale : 0))
+		.property('selected', d => (self.q.scale ? 1 * d.value == self.q.scale : 0))
 
 	const btndiv = div.append('div').style('padding', '3px 10px')
 

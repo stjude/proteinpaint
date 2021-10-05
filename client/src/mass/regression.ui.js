@@ -432,12 +432,15 @@ function setRenderers(self) {
 		}
 
 		const table = excluded ? d.dom.excluded_table : d.dom.values_table
+		const isContinuousTerm =
+			d.term && d.term.q.mode !== 'bins' && (d.term.term.type == 'float' || d.term.term.type == 'integer')
+
 		const trs = table
 			.style('margin', '10px 5px')
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
 			.selectAll('tr')
-			.data(tr_data, d => d.key + d.label)
+			.data(tr_data, isContinuousTerm ? (b, i) => i : b => b.key + b.label)
 
 		trs
 			.exit()
@@ -496,6 +499,7 @@ function setRenderers(self) {
 	function trUpdate(item) {
 		const pillData = this.parentNode.__data__
 		select(this.firstChild).text(item.samplecount !== undefined ? 'n=' + item.samplecount : '')
+		select(this.firstChild.nextSibling).text(item.label)
 		let rendered = true
 		if (pillData.term.q.mode == 'discrete' && this.childNodes.length < 4) rendered = false
 		addTrBehavior({ d: pillData, item, tr: select(this), rendered })
