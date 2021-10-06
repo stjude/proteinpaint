@@ -8,7 +8,6 @@ import { boxplotInit } from './boxplot'
 import { scatterInit } from './scatter'
 import { cumincInit } from './cuminc'
 import { survivalInit } from './survival'
-import { termInfoInit } from './termInfo'
 //import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
@@ -87,11 +86,6 @@ class TdbPlot {
 						holder: this.dom.viz.append('div'),
 						id: this.id,
 						controls
-					}),
-					termInfo: termInfoInit({
-						app: this.app,
-						holder: this.dom.viz.append('div'),
-						id: this.id
 					})
 				})
 			)
@@ -323,10 +317,6 @@ export function plotConfig(opts, appState = {}) {
 				},
 				axisTitleFontSize: 16,
 				hidden: []
-			},
-
-			termInfo: {
-				isVisible: false
 			},
 
 			survival: {

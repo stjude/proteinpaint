@@ -7,7 +7,7 @@ class TdbTermInfo {
 		// set this.id, .app, .opts, .api
 		rx.prepComponent(this, opts)
 		this.dom = {
-			holder: opts.holder
+			holder: opts.holder.style('margin-left', '25px')
 		}
 		setRenderers(this)
 		this.initUI()
@@ -15,12 +15,9 @@ class TdbTermInfo {
 
 	getState(appState) {
 		//console.log(16, appState.tree.expandedInfoIds[this.id])
-		const config = appState.plots.find(p => p.id === this.id) || appState.infos[this.id]
-		if (!config) {
-			//throw `termInfo.js line 20: No plot with id='${this.id}' found.`
-		}
+		const config = appState.infos[this.id]
 		return {
-			isVisible: config && config.settings && config.settings.termInfo.isVisible,
+			isVisible: config && config.isVisible,
 			term: config && config.term
 		}
 	}

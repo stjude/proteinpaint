@@ -410,7 +410,7 @@ function setRenderers(self) {
 
 		if (term.hashtmldetail) {
 			let isOpen = false
-			const infoDiv = div
+			div
 				.append('div')
 				.style('display', 'inline-block')
 				.style('margin', '10px')

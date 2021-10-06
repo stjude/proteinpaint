@@ -240,11 +240,14 @@ TdbStore.prototype.actions = {
 
 	info_expand(action) {
 		console.log('store.js 241:', action)
-		this.state.infos[action.term.id] = { term: action.term, settings: { termInfo: { isVisible: true } } }
+		if (!this.state.infos[action.term.id]) {
+			this.state.infos[action.term.id] = { term: action.term, isVisible: true }
+		}
+		this.state.infos[action.term.id].isVisible = true
 	},
 
 	info_collapse(action) {
-		this.state.infos[action.term.id].settings.termInfo.isVisible = false
+		this.state.infos[action.term.id].isVisible = false
 	},
 
 	async plot_show(action) {
