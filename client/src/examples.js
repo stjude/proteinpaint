@@ -1,4 +1,5 @@
-import { dofetch2, sayerror, newSandboxDiv, tab_wait, appear } from './client'
+import { dofetch2, sayerror, tab_wait, appear } from './client'
+import { newSandboxDiv } from './dom/sandbox'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
 import { highlight } from 'highlight.js/lib/common'

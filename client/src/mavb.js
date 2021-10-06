@@ -1,5 +1,6 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import * as client from './client'
+import { renderSandboxFormDiv } from './dom/sandbox'
 import { scaleLog, scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import { format as d3format } from 'd3-format'
@@ -121,8 +122,7 @@ export function mavbui(genomes, hostURL, jwt, holder, sandbox_header) {
 	create GUI to collect user input
 	*/
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined)
-		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
 		pane.header.text('Differential gene expression viewer')

@@ -10,6 +10,7 @@ import * as coord from './coord'
 import vcf2dstk from './vcf.tkconvert'
 import blockinit from './block.init'
 import * as Legend from './block.legend'
+import { newSandboxDiv } from './dom/sandbox'
 
 // track types
 import { bamfromtemplate, bammaketk, bamload } from './block.tk.bam.adaptor'
@@ -3330,7 +3331,7 @@ seekrange(chr,start,stop) {
 		else {
 			// case 1 & 2
 			const sandbox_div = d3select(root_divs[2])
-			pane = client.newSandboxDiv(sandbox_div)
+			pane = newSandboxDiv(sandbox_div)
 		}
 		pane.header.text(isoform)
 		const arg = {

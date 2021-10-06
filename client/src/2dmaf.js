@@ -15,6 +15,7 @@ import {
 } from 'd3-shape'
 import * as common from '../shared/common'
 import Anchors from './2dmaf.anchors'
+import { renderSandboxFormDiv } from './dom/sandbox'
 
 /*
 input file/data is 2dmaf format of 1 pair or multiple pairs
@@ -48,8 +49,7 @@ const sharedFilters = {
 
 export function d2mafui(genomes, holder) {
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined)
-		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
 		pane.header.text('2DMAF: mutant allele fraction plot between a pair of samples')

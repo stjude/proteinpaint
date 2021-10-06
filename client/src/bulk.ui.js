@@ -11,6 +11,7 @@ import * as bulktrunc from '../shared/bulk.trunc'
 import { ProjectHandler } from './bulk.project'
 import * as common from '../shared/common'
 import { tpinit } from './tp.init'
+import { renderSandboxFormDiv } from './dom/sandbox'
 
 /*
 
@@ -31,8 +32,7 @@ bulkembed()
 
 export function bulkui(x, y, genomes, hostURL, holder, header) {
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined)
-		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(x, y, genomes)
 		pane.header.text('Load mutation from text files')
