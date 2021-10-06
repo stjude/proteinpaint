@@ -1,6 +1,7 @@
+import { regressionUIInit } from './regression.ui'
 import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
-import { q_to_param } from './plot'
+import { q_to_param } from '../termdb/plot'
 import { getNormalRoot } from '../common/filter'
 
 class MassRegression {
@@ -11,9 +12,13 @@ class MassRegression {
 	}
 
 	async init() {
-		const resultsDiv = this.opts.holder.append('div')
+		this.opts.holder.style('margin-left', 0)
+		const controls = this.opts.holder.append('div')
+		const resultsDiv = this.opts.holder.append('div').style('margin-left', '40px')
 
 		this.dom = {
+			controls,
+
 			banner: this.opts.holder
 				.append('div')
 				.style('color', '#bbb')
@@ -22,7 +27,7 @@ class MassRegression {
 
 			resultsHeading: resultsDiv
 				.append('div')
-				.style('margin', '30px 0 10px -35px')
+				.style('margin', '30px 0 10px 0px')
 				.style('font-size', '17px')
 				.style('padding', '3px 5px')
 				.style('color', '#bbb')
@@ -30,7 +35,18 @@ class MassRegression {
 
 			div: resultsDiv.append('div').style('margin', '10px') //.style('display', 'none')
 		}
-		//opts.controls.on('downloadClick.regression', this.download)
+
+		this.components = {
+			controls: await regressionUIInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controls,
+				chart: this.api,
+				/*callbacks: {
+					'downloadClick.regression': this.download
+				}*/
+			})
+		}
 	}
 
 	getState(appState, sub) {
@@ -153,6 +169,11 @@ class MassRegression {
 	}
 }
 
+export const regressionInit = getCompInit(MassRegression)
+// this alias will allow abstracted dynamic imports
+export const componentInit = regressionInit
+
+
 function setInteractivity(self) {
 	self.download = () => {
 		if (!self.state || !self.state.isVisible) return
@@ -256,5 +277,3 @@ function setRenderers(self) {
 		}
 	}
 }
-
-export const regressionInit = getCompInit(MassRegression)
