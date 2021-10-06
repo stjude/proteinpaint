@@ -25,6 +25,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			.slice(1)
 			.join('')
 			.toUpperCase()
+
 		final_alt = final_ref + q.variant.alt // Adding flanking nucleotide before alternate allele
 		q.variant.pos -= 1
 	} else if (q.variant.alt == '-' || q.variant.alt.length == 0) {
