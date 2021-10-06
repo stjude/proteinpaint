@@ -3,6 +3,103 @@ import { Menu } from '../client'
 import { getNormalRoot } from '../common/filter'
 import { select, event } from 'd3-selection'
 
+/* list all possible chart types in this array
+each char type will generate a button under the nav bar
+design idea is that button click event handler should not include chart-type specific logic
+
+.label:
+	text to show in the button
+
+.chartType:
+	values are controlled
+	must include for deciding if to display a chart button for a dataset
+	e.g. cumulative incidence plot will require "condition" term to be present in a dataset
+	see main()
+
+.clickTo:
+	=tree_select1term
+		show termdb tree to select a term
+		once selected, dispatch "plot_show" action (with the selected term) to produce the plot
+		example: barchart
+	=prepPlot
+		dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
+		example: table, scatterplot which requires user to select two terms
+	=menu
+		show a menu
+		each menu option will have its own clickTo to determine the behavior of clicking on it
+
+.usecase:{}
+	required for clickTo=tree_select1term
+	provide to termdb app
+
+.menuOptions:[]
+	required for clickTo=menu
+
+.payload:{}
+	required for clickTo=prepPlot
+	describe private details for creating a chart of a particular type
+	to be attached to action and used by store
+*/
+const chartTypeList = [
+	{
+		label: 'Bar Chart',
+		chartType: 'barchart',
+		clickTo: 'tree_select1term',
+		usecase: { target: 'barchart', detail: 'term' }
+	},
+	/*
+	{
+		label: 'Table',
+		clickTo:'prepPlot',
+	},
+	{
+		label: 'Scatterplot',
+		clickTo:'prepPlot',
+	},
+	*/
+	{
+		// should only show for official dataset, but not custom
+		label: 'Cumulative Incidence',
+		chartType: 'cuminc',
+		clickTo: 'tree_select1term',
+		usecase: { target: 'cuminc', detail: 'term' }
+	},
+	{
+		// should only show for official dataset, but not custom
+		label: 'Survival',
+		chartType: 'survival',
+		clickTo: 'tree_select1term',
+		usecase: { target: 'survival', detail: 'term' }
+	},
+	{
+		// should only show for official dataset, but not custom
+		label: 'Regression Analysis',
+		chartType: 'regression',
+		clickTo: 'menu',
+		menuOptions: [
+			{
+				label: 'Linear',
+				clickTo: 'prepPlot',
+				chartType: 'regression',
+				payload: {
+					chartType: 'regression',
+					regressionType: 'linear',
+					independent: []
+				}
+			},
+			{
+				label: 'Logistic',
+				clickTo: 'prepPlot',
+				payload: {
+					chartType: 'regression',
+					regressionType: 'logistic',
+					independent: []
+				}
+			}
+		]
+	}
+]
+
 // to assign chart ID to distinguish
 // between chart instances
 const idPrefix = '_AUTOID_' // to distinguish from user-assigned chart IDs
@@ -19,34 +116,13 @@ class MassCharts {
 			holder: this.opts.holder,
 			tip: new Menu({ padding: '0px' })
 		}
-
-		const btnData = [
-			{ label: 'Bar Chart', chartType: 'barchart' },
-			//{ label: 'Table', chartType: 'table' },
-			//{ label: 'Boxplot', chartType: 'boxplot' },
-			//{ label: 'Scatter Plot', chartType: 'scatter' },
-			{ label: 'Cumulative Incidence', chartType: 'cuminc' },
-			{ label: 'Survival', chartType: 'survival' },
-			{ label: 'Regression Analysis', chartType: 'regression' }
-		]
-
-		const self = this
-
-		this.dom.btns = this.dom.holder
-			.selectAll('button')
-			.data(btnData)
-			.enter()
-			.append('button')
-			.style('margin', '5px')
-			.style('padding', '5px')
-			.html(d => d.label)
-			.on('click', function(d) {
-				// 'this' is the button element
-				self.showMenu(d.chartType, this)
-			})
+		this.makeButtons()
 	}
 
+	// FIXME need reactsTo()?
+
 	getState(appState) {
+		// FIXME seems like it only needs supportedChartTypes and activeCohort, can delete the rest from state?
 		const activeCohort =
 			appState.termdbConfig &&
 			appState.termdbConfig.selectCohort &&
@@ -68,43 +144,76 @@ class MassCharts {
 		return state
 	}
 
-	main(data) {
+	main() {
 		this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
+	}
+
+	clickButton(chart, div) {
+		switch (chart.clickTo) {
+			case 'tree_select1term':
+				this.showTree_select1term(chart, div)
+				break
+			case 'prepPlot':
+				const action = { type: 'plot_prep', payload: chart.payload, id: idPrefix + id++ }
+				this.app.dispatch(action)
+				break
+			case 'menu':
+				this.showMenu(chart, div)
+				break
+			default:
+				throw 'unknown value for clickTo: ' + chart.clickTo
+		}
 	}
 }
 
 export const chartsInit = getCompInit(MassCharts)
 
 function setRenderers(self) {
-	self.showMenu = function(chartType, btn) {
-		const appState = this.app.getState()
-		if (appState.termdbConfig.selectCohort) {
-			self.activeCohort = appState.activeCohort
-		}
-
+	self.makeButtons = function() {
+		// TODO improve button styling
+		self.dom.btns = self.dom.holder
+			.selectAll('button')
+			.data(chartTypeList)
+			.enter()
+			.append('button')
+			.style('margin', '5px')
+			.style('padding', '5px')
+			.html(d => d.label)
+			.on('click', function(d) {
+				// 'this' is the button element
+				self.clickButton(d, this)
+			})
+	}
+	self.showMenu = function(chart, btn) {
 		self.dom.tip.clear().showunder(btn)
-
-		const termSequence = getTermSelectionSequence(chartType)
-		if (termSequence.length == 1) {
-			const action = { type: 'plot_show', id: idPrefix + id++, config: { chartType } }
-			self.showTree(chartType, termSequence, action)
-		} else {
-			const action = { type: 'plot_prep', chartType, id: idPrefix + id++, termSequence }
-			self.showRegressionMenu(action)
+		if (!Array.isArray(chart.menuOptions)) throw 'menuOptions is not array'
+		for (const opt of chart.menuOptions) {
+			self.dom.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text(opt.label)
+				.on('click', () => {
+					self.dom.tip.hide()
+					self.clickButton(opt, btn)
+				})
 		}
 	}
 
-	self.showTree = async function(chartType, termSequence, action) {
-		self.dom.tip.d.selectAll('*').remove()
-		const curr = termSequence.shift()
-		const usecase = { target: chartType, detail: curr.detail }
-		if (curr.label) {
+	self.showTree_select1term = async function(chart, btn) {
+		self.dom.tip.clear().showunder(btn)
+		if (chart.usecase.label) {
 			self.dom.tip.d
 				.append('div')
 				.style('margin', '3px 5px')
 				.style('padding', '3px 5px')
 				.style('font-weight', 600)
-				.html(curr.label)
+				.html(chart.usecase.label)
+		}
+
+		const action = {
+			type: 'plot_show',
+			id: idPrefix + id++,
+			config: { chartType: chart.chartType } // may be replaced by action.chart{}
 		}
 
 		const termdb = await import('../termdb/app')
@@ -112,48 +221,25 @@ function setRenderers(self) {
 			holder: self.dom.tip.d.append('div'),
 			state: {
 				vocab: self.opts.vocab,
-				activeCohort: 'activeCohort' in self ? self.activeCohort : -1,
+				activeCohort: self.state.activeCohort,
 				nav: {
 					header_mode: 'search_only'
 				},
-				tree: { usecase }
+				tree: { usecase: chart.usecase }
 			},
 			tree: {
 				click_term: term => {
-					action.config[usecase.detail] = term
+					action.config[chart.usecase.detail] = term
 					self.dom.tip.hide()
 					self.app.dispatch(action)
 				}
 			}
 		})
 	}
-
-	// regression type selection menu from 'Regression Analysis' button click
-	self.showRegressionMenu = async function(action) {
-		const regTypes = [
-			'linear',
-			'logistic'
-			// 'cox', 'polynomial'
-		]
-		self.dom.tip.d.selectAll('*').remove()
-
-		self.dom.tip.d
-			.selectAll('div')
-			.data(regTypes)
-			.enter()
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.text(d => d.charAt(0).toUpperCase() + d.slice(1))
-			.on('click', d => {
-				self.dom.tip.hide()
-				action.id = idPrefix + id++
-				action.regressionType = d
-				self.app.dispatch(action)
-			})
-	}
 }
 
 // term selection sequence by chart type or use default
+// FIXME may encode this info in chartTypeList
 export function getTermSelectionSequence(chartType) {
 	if (chartType == 'regression') {
 		return [

@@ -275,11 +275,10 @@ TdbStore.prototype.actions = {
 
 	async plot_prep(action) {
 		const plot = {
-			id: action.id,
-			chartType: 'regression',
-			regressionType: action.regressionType,
-			independent: []
+			id: action.id
 		}
+		if (!action.payload) throw '.payload{} missing for plot_prep'
+		Object.assign(plot, action.payload)
 		this.state.plots.push(plot)
 	},
 
