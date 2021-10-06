@@ -230,7 +230,7 @@ class TdbPlot {
 
 export const plotInit = rx.getInitFxn(TdbPlot)
 
-function q_to_param(q) {
+export function q_to_param(q) {
 	// exclude certain attributes of q from dataName
 	const q2 = JSON.parse(JSON.stringify(q))
 	delete q2.hiddenValues
