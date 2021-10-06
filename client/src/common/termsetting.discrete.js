@@ -114,6 +114,7 @@ function applyEdits(self) {
 		self.q.lst = processCustomBinInputs(self)
 		self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
 	}
+	self.q.mode = 'discrete'
 	delete self.q.scale
 	self.dom.tip.hide()
 	self.opts.callback({
