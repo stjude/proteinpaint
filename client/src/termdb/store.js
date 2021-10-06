@@ -18,6 +18,7 @@ const defaultState = {
 	tree: {
 		exclude_types: [],
 		expandedTermIds: [],
+		expandedInfoIds: {},
 		visiblePlotIds: []
 		// plots: {} // deprecated but back-supported, use the root plots[] array instead
 	},
@@ -235,6 +236,15 @@ TdbStore.prototype.actions = {
 		const i = this.state.tree.expandedTermIds.indexOf(action.termId)
 		if (i == -1) return
 		this.state.tree.expandedTermIds.splice(i, 1)
+	},
+
+	tree_info_expand(action) {
+		console.log('store.js 241:', action)
+		this.state.tree.expandedInfoIds[action.term.id] = { term: action.term }
+	},
+
+	tree_info_collapse(action) {
+		delete this.state.tree.expandedInfoIds[action.term.id]
 	},
 
 	async plot_show(action) {

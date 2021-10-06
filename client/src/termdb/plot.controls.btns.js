@@ -118,7 +118,7 @@ function downloadBtnInit(opts) {
 	return Object.freeze(api)
 }
 
-function infoBtnInit(opts) {
+export function infoBtnInit(opts) {
 	const self = {
 		isOpen: false,
 		dom: {
@@ -140,7 +140,7 @@ function infoBtnInit(opts) {
 
 	const api = {
 		main(isOpen, plot) {
-			if (plot.term && plot.term.term.hashtmldetail) {
+			if (plot && plot.term && plot.term.term.hashtmldetail) {
 				self.dom.btn
 					.style('display', isOpen ? 'inline-block' : 'block')
 					.style('margin-top', isOpen ? '15px' : '20px')

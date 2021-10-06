@@ -3,6 +3,7 @@ import { select, selectAll, event } from 'd3-selection'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
 import { isUsableTerm } from '../../shared/termdb.usecase'
+import { termInfoInit } from './termInfo'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -80,7 +81,7 @@ class TdbTree {
 		this.plots = {}
 		// this.components.plots will point to only the termIds
 		// that are applicable to the active cohort
-		this.components = { plots: {} }
+		this.components = { plots: {}, info: {} }
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
 		this.loadingPlotSet = new Set()
@@ -144,6 +145,12 @@ class TdbTree {
 				delete this.components.plots[termId]
 			}
 		}
+
+		/*for (const termId in this.infoBtns) {
+			const term = this.termsById[termId]
+			console.log(153, term)
+			this.infoBtns[termId].main(true, {term})
+		}*/
 	}
 
 	getTermsById() {
@@ -400,8 +407,45 @@ function setRenderers(self) {
 			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(term.name)
 
+		if (term.hashtmldetail) {
+			let isOpen = false
+			const infoDiv = div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('margin', '10px')
+				.style('font-family', 'verdana')
+				.style('font-size', '18px')
+				.style('font-weight', 'bold')
+				.style('cursor', 'pointer')
+				.attr('title', 'Grade Details')
+				.html('&#9432;')
+				.on('click', () => {
+					isOpen = !isOpen
+					const type = isOpen ? 'tree_info_expand' : 'tree_info_collapse'
+					self.app.dispatch({ type, term })
+				})
+		}
+
+		/*self.infoBtns[term.id] = infoBtnInit({
+			id: term.id,
+			holder: div.append('div'),
+			callback: isOpen =>
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: term.id,
+					config: {
+						settings: {
+							termInfo: {
+								isVisible: isOpen
+							}
+						}
+					}
+				})
+			})*/
+
 		if (graphable(term)) {
 			if (self.opts.click_term) {
+				console.log(term)
 				if (termIsDisabled) {
 					labeldiv
 						.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
@@ -451,6 +495,13 @@ function setRenderers(self) {
 
 				div.append('div').attr('class', cls_termgraphdiv)
 			}
+		}
+		if (term.hashtmldetail) {
+			self.components.info[term.id] = termInfoInit({
+				app: self.app,
+				holder: div.append('div'),
+				id: term.id
+			})
 		}
 
 		if (!term.isleaf) {
@@ -520,5 +571,14 @@ function setInteractivity(self) {
 		}
 		const type = self.state.visiblePlotIds.includes(term.id) ? 'plot_hide' : 'plot_show'
 		self.app.dispatch({ type, id: term.id, term })
+	}
+
+	self.clickInfoButton = function(term) {
+		const x = termInfoInit({
+			app: this.app,
+			holder: this.dom.viz.append('div'),
+			id: term.id
+		})
+		console.log(x)
 	}
 }

@@ -14,13 +14,13 @@ class TdbTermInfo {
 	}
 
 	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
+		const config = appState.plots.find(p => p.id === this.id) || appState.tree.expandedInfoIds[this.id]
 		if (!config) {
-			throw `No plot with id='${this.id}' found.`
+			//throw `termInfo.js line 20: No plot with id='${this.id}' found.`
 		}
 		return {
-			isVisible: config.settings.termInfo.isVisible,
-			term: config.term
+			isVisible: config && config.settings.termInfo.isVisible,
+			term: config && config.term
 		}
 	}
 
