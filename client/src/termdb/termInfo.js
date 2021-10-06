@@ -19,9 +19,8 @@ class TdbTermInfo {
 		if (!config) {
 			//throw `termInfo.js line 20: No plot with id='${this.id}' found.`
 		}
-		console.log(20, config)
 		return {
-			isVisible: config && config.settings.termInfo.isVisible,
+			isVisible: config && config.settings && config.settings.termInfo.isVisible,
 			term: config && config.term
 		}
 	}
@@ -51,9 +50,12 @@ function setRenderers(self) {
 			.append('table')
 			.style('white-space', 'normal')
 			.append('tbody')
+
+		self.dom.addlInfo = self.dom.holder.append('div')
 	}
 
 	self.render = function(data) {
+		if (self.state.term.id === 'PGS000001 (MAF>1%)') console.log(56)
 		self.dom.tbody.selectAll('*').remove()
 		if (data.terminfo.src) {
 			for (let s of data.terminfo.src) {
@@ -98,15 +100,16 @@ function setRenderers(self) {
 			}
 		}
 
+		self.dom.addlInfo.selectAll('*').remove()
 		if (data.terminfo.description) {
-			const header = self.dom.holder
+			const header = self.dom.addlInfo
 				.append('div')
 				.style('padding-top', '40px')
 				.style('padding-bottom', '10px')
 				.style('font-weight', 'bold')
 				.text('Description')
 			for (const d of data.terminfo.description) {
-				self.renderDetail(d, self.dom.holder.append('div').style('padding-bottom', '3px'))
+				self.renderDetail(d, self.dom.addlInfo.append('div').style('padding-bottom', '3px'))
 			}
 			self.dom.holder.append('div').style('padding-bottom', '20px')
 		}
