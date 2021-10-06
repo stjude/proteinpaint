@@ -14,10 +14,12 @@ class TdbTermInfo {
 	}
 
 	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id) || appState.tree.expandedInfoIds[this.id]
+		//console.log(16, appState.tree.expandedInfoIds[this.id])
+		const config = appState.plots.find(p => p.id === this.id) || appState.infos[this.id]
 		if (!config) {
 			//throw `termInfo.js line 20: No plot with id='${this.id}' found.`
 		}
+		console.log(20, config)
 		return {
 			isVisible: config && config.settings.termInfo.isVisible,
 			term: config && config.term

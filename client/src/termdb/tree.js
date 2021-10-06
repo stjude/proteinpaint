@@ -93,6 +93,7 @@ class TdbTree {
 		if (action.type.startsWith('filter_')) return true
 		if (action.type.startsWith('plot_')) return true
 		if (action.type.startsWith('cohort_')) return true
+		if (action.type.startsWith('info_')) return true
 		if (action.type == 'app_refresh') return true
 	}
 
@@ -421,7 +422,7 @@ function setRenderers(self) {
 				.html('&#9432;')
 				.on('click', () => {
 					isOpen = !isOpen
-					const type = isOpen ? 'tree_info_expand' : 'tree_info_collapse'
+					const type = isOpen ? 'info_expand' : 'info_collapse'
 					self.app.dispatch({ type, term })
 				})
 		}

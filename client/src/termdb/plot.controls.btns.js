@@ -23,12 +23,6 @@ class TdbControlsTopBar {
 				holder: this.dom.button_bar.append('div'),
 				callback: opts.downloadHandler,
 				debug
-			}),
-			infobtn: infoBtnInit({
-				id: opts.id,
-				holder: this.dom.button_bar.append('div'),
-				callback: opts.infoHandler,
-				debug
 			})
 		}
 	}
@@ -110,42 +104,6 @@ function downloadBtnInit(opts) {
 				self.dom.btn.attr('title', 'Download plot image')
 			} else if (currviews.includes('table')) {
 				self.dom.btn.attr('title', 'Download table data')
-			}
-		}
-	}
-
-	if (opts.debug) api.Inner = self
-	return Object.freeze(api)
-}
-
-export function infoBtnInit(opts) {
-	const self = {
-		isOpen: false,
-		dom: {
-			btn: opts.holder
-				.style('display', 'none')
-				.style('margin', '10px')
-				.style('font-family', 'verdana')
-				.style('font-size', '18px')
-				.style('font-weight', 'bold')
-				.style('cursor', 'pointer')
-				.attr('title', 'Grade Details')
-				.html('&#9432;')
-				.on('click', () => {
-					self.isOpen = !self.isOpen
-					opts.callback(self.isOpen)
-				})
-		}
-	}
-
-	const api = {
-		main(isOpen, plot) {
-			if (plot && plot.term && plot.term.term.hashtmldetail) {
-				self.dom.btn
-					.style('display', isOpen ? 'inline-block' : 'block')
-					.style('margin-top', isOpen ? '15px' : '20px')
-					.style('margin-right', isOpen ? '15px' : '10px')
-					.style('margin-left', isOpen ? '15px' : '24px')
 			}
 		}
 	}

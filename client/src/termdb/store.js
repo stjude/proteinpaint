@@ -18,11 +18,11 @@ const defaultState = {
 	tree: {
 		exclude_types: [],
 		expandedTermIds: [],
-		expandedInfoIds: {},
 		visiblePlotIds: []
 		// plots: {} // deprecated but back-supported, use the root plots[] array instead
 	},
 	plots: [],
+	infos: {},
 	termfilter: {
 		filter: {
 			type: 'tvslst',
@@ -238,13 +238,13 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTermIds.splice(i, 1)
 	},
 
-	tree_info_expand(action) {
+	info_expand(action) {
 		console.log('store.js 241:', action)
-		this.state.tree.expandedInfoIds[action.term.id] = { term: action.term }
+		this.state.infos[action.term.id] = { term: action.term, settings: { termInfo: { isVisible: true } } }
 	},
 
-	tree_info_collapse(action) {
-		delete this.state.tree.expandedInfoIds[action.term.id]
+	info_collapse(action) {
+		this.state.infos[action.term.id].settings.termInfo.isVisible = false
 	},
 
 	async plot_show(action) {
