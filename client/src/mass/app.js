@@ -4,7 +4,8 @@ import { storeInit } from './store'
 import { vocabInit } from '../termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
-import { sayerror, Menu, newSandboxDiv } from '../client'
+import { sayerror, Menu } from '../client'
+import { newSandboxDiv } from '../dom/sandbox'
 
 /*
 opts{}

@@ -14,6 +14,7 @@ import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
 import { drawer_init } from './app.drawer'
 import urlmap from './common/urlmap'
+import { renderSandboxFormDiv, newSandboxDiv } from './dom/sandbox'
 
 import * as wrappers from './wrappers/PpReact'
 
@@ -406,7 +407,7 @@ function make_genome_browser_btn(app, headbox, jwt) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', genomename => {
-			let sandbox_div = client.newSandboxDiv(app.drawer.apps_sandbox_div)
+			let sandbox_div = newSandboxDiv(app.drawer.apps_sandbox_div)
 
 			const g = app.genomes[genomename]
 			if (!g) {
@@ -1247,7 +1248,7 @@ async function launchblock(arg, app) {
 function launchfusioneditor(arg, app) {
 	if (arg.fusioneditor.uionly) {
 		// created seperate function in clinet for same page block div
-		const [inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(app.holder0, app.genomes)
+		const [inputdiv, gselect, filediv, saydiv, visualdiv] = renderSandboxFormDiv(app.holder0, app.genomes)
 		import('./svmr').then(p => {
 			p.svmrui([null, inputdiv, gselect, filediv, saydiv, visualdiv], app.genomes, app.hostURL, arg.jwt)
 		})

@@ -5,6 +5,7 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { timeFormat, timeParse } from 'd3-time-format'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { format as d3format } from 'd3-format'
+import { renderSandboxFormDiv } from './dom/sandbox'
 
 const zerovalue = 0.00001
 let showcircle = true
@@ -15,8 +16,7 @@ const tip = new client.Menu()
 
 export default function maftimelineui(genomes, holder, sandbox_header) {
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined)
-		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
 		pane.header.text('MAF timeline plot')
