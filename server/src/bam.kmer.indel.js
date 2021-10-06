@@ -98,6 +98,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const weight_no_indel = 0.1 // Weight when base not inside the indel
 	const weight_indel = 10 // Weight when base is inside the indel
 	//const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
+	const fisher_test_threshold = 60 // Fisher exact-test strand analysis significance parameter. See details in this weblink https://gatk.broadinstitute.org/hc/en-us/articles/360035890471
 	//----------------------------------------------------------------------------
 
 	// Checking to see if reference allele is correct or not
@@ -110,6 +111,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('-')
 	const start_positions = templates_info.map(i => i.sam_info.split('\t')[3]).join('-')
 	const cigar_sequences = templates_info.map(i => i.sam_info.split('\t')[5]).join('-')
+	const sequence_flags = templates_info.map(i => i.sam_info.split('\t')[1]).join('-')
 
 	let sequences = ''
 	sequences += refseq + '-'
@@ -127,6 +129,8 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		start_positions +
 		':' +
 		cigar_sequences +
+		':' +
+		sequence_flags +
 		':' +
 		final_pos.toString() +
 		':' +
