@@ -34,6 +34,8 @@ export async function init_tabs(opts) {
 
 	const tabs = opts.tabs
 	const holder = opts.holder.append('div')
+	// default width is 90px, if label is longer than that, it will be adjusted
+	let tab_width = 90
 	holder.style('padding', '10px 10px 0 10px')
 	const contentHolder = opts.contentHolder ? opts.contentHolder : opts.holder.append('div')
 
@@ -48,6 +50,10 @@ export async function init_tabs(opts) {
 			.style('padding', '5px')
 			.style('display', 'inline-block')
 			.html(tab.label)
+			.each(function() {
+				tab_width = Math.max(tab_width, this.getBoundingClientRect().width)
+			})
+			.style('width', tab_width + 'px')
 			.on('click', async () => {
 				for (const tab_ of tabs) {
 					tab_.active = tab_ === tab
