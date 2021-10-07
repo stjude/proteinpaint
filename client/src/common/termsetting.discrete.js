@@ -3,6 +3,7 @@ import { select, event } from 'd3-selection'
 import { format } from 'd3-format'
 import { setDensityPlot } from './termsetting.density'
 import { get_bin_label } from '../../shared/termdb.bins'
+import { init_tabs } from '../dom/toggleButtons'
 
 /*
 Arguments
@@ -78,8 +79,6 @@ async function showEditMenu(self, div) {
 	setDensityPlot(self)
 	renderBoundaryInclusionInput(self)
 	renderTypeInputs(self)
-	if (self.q.type == 'regular') renderFixedBinsInputs(self)
-	else renderCustomBinInputs(self)
 	renderButtons(self)
 }
 
@@ -114,6 +113,7 @@ function applyEdits(self) {
 		self.q.lst = processCustomBinInputs(self)
 		self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
 	}
+	self.q.mode = 'discrete'
 	delete self.q.scale
 	self.dom.tip.hide()
 	self.opts.callback({
@@ -254,49 +254,43 @@ function renderBoundaryInclusionInput(self) {
 }
 
 function renderTypeInputs(self) {
-	const id = tsInstanceTracker.get(self)
+	// toggle switch
 	const div = self.dom.bins_div.append('div').style('margin', '10px')
-	//div.append('span').html('Bin Size:')
-	const l1 = div.append('label').style('margin-right', '15px')
-	l1.append('input')
-		.attr('type', 'radio')
-		.attr('name', 'bins_type_' + id)
-		.attr('value', 'regular')
-		.property('checked', self.q.type == 'regular')
-		.style('margin-right', '3px')
-		.style('vertical-align', 'top')
-		.on('change', function() {
-			self.q.type = this.checked ? 'regular' : 'custom'
-			showEditMenu(self, self.dom.num_holder)
-		})
-	l1.append('span')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('Use same bin size')
-
-	const l2 = div.append('label')
-	l2.append('input')
-		.attr('type', 'radio')
-		.attr('name', 'bins_type_' + id)
-		.attr('value', 'custom')
-		.property('checked', self.q.type == 'custom')
-		.style('margin-right', '3px')
-		.style('vertical-align', 'top')
-		.on('change', function() {
-			self.q.type = this.checked ? 'custom' : 'regular'
-			showEditMenu(self, self.dom.num_holder)
-		})
-	l2.append('span')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('Use varying bin sizes')
+	const tabs = [
+		{
+			active: self.q.type == 'regular' ? true : false,
+			label: 'Same bin size',
+			callback: async div => {
+				self.q.type = 'regular'
+				if (!tabs[0].isInitialized) {
+					renderFixedBinsInputs(self, div)
+					tabs[0].isInitialized = true
+				}
+				setqDefaults(self)
+				setDensityPlot(self)
+			}
+		},
+		{
+			active: self.q.type == 'custom' ? true : false,
+			label: 'Varying bin sizes',
+			callback: async div => {
+				self.q.type = 'custom'
+				if (!tabs[1].isInitialized) {
+					setqDefaults(self)
+					setDensityPlot(self)
+					renderCustomBinInputs(self, div)
+					tabs[1].isInitialized = true
+				}
+				setqDefaults(self)
+				setDensityPlot(self)
+			}
+		}
+	]
+	init_tabs({ holder: div, tabs })
 }
 
 /******************* Functions for Numerical Fixed size bins *******************/
-function renderFixedBinsInputs(self) {
-	const tablediv = self.dom.bins_div
-		.append('div')
-		.style('border', '1px solid #ccc')
-		.style('margin', '10px')
-		.style('padding', '5px')
+function renderFixedBinsInputs(self, tablediv) {
 	self.dom.bins_table = tablediv.append('table')
 	renderBinSizeInput(self, self.dom.bins_table.append('tr'))
 	renderFirstBinInput(self, self.dom.bins_table.append('tr'))
@@ -519,12 +513,7 @@ function renderLastBinInputs(self, tr) {
 }
 
 /******************* Functions for Numerical Custom size bins *******************/
-function renderCustomBinInputs(self) {
-	const tablediv = self.dom.bins_div
-		.append('div')
-		.style('border', '1px solid #ccc')
-		.style('margin', '10px')
-		.style('padding', '5px')
+function renderCustomBinInputs(self, tablediv) {
 	self.dom.bins_table = tablediv.append('table')
 	const thead = self.dom.bins_table.append('thead').append('tr')
 	thead
@@ -561,7 +550,7 @@ function renderCustomBinInputs(self) {
 
 	function handleChange() {
 		self.dom.customBinLabelTd.selectAll('input').property('value', '')
-		const data = self.processCustomBinInputs()
+		const data = processCustomBinInputs(self)
 		// update self.q.lst and render bin lines only if bin boundry changed
 		if (binsChanged(data, self.q.lst)) {
 			self.q.lst = data
