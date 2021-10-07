@@ -430,6 +430,14 @@ function setRenderers(self) {
 				.style('border-radius', '3px')
 				.attr('title', 'Term Information')
 				.html('&#9432;')
+				.on('mouseover', () => {
+					if (isOpen == true) return
+					infoicon.style('color', 'blue')
+				})
+				.on('mouseleave', () => {
+					if (isOpen == true) return
+					infoicon.style('color', '#797a7a')
+				})
 				.on('click', () => {
 					isOpen = !isOpen
 					const type = isOpen ? 'info_expand' : 'info_collapse'
