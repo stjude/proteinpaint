@@ -21,10 +21,10 @@ export class TdbTermInfo {
 		this.app = opts.app
 		this.id = opts.id
 		this.type = 'termInfo'
-		this.dom = {
-			holder: opts.holder.style('margin-left', '25px')
-		}
 		this.state = Object.assign({}, defaultState, opts.state ? opts.state : {})
+		this.dom = {
+			holder: opts.holder.style('display', 'none').style('margin-left', '25px')
+		}
 		this.api = this
 		setRenderers(this)
 		this.initUI()
@@ -61,9 +61,9 @@ function setRenderers(self) {
 	self.initUI = function() {
 		self.dom.holder
 			.attr('class', 'term_info_div')
+			.style('display', self.state.isVisible ? 'block' : 'none')
 			.style('width', '80vh')
 			.style('padding-bottom', '20px')
-			.style('display', 'block')
 
 		self.dom.tbody = self.dom.holder
 			.append('table')
@@ -74,7 +74,6 @@ function setRenderers(self) {
 	}
 
 	self.render = function(data) {
-		if (self.state.term.id === 'PGS000001 (MAF>1%)') console.log(56)
 		self.dom.tbody.selectAll('*').remove()
 		if (data.terminfo.src) {
 			for (let s of data.terminfo.src) {
@@ -123,7 +122,7 @@ function setRenderers(self) {
 		if (data.terminfo.description) {
 			const header = self.dom.addlInfo
 				.append('div')
-				.style('padding-top', '40px')
+				.style('padding-top', '30px')
 				.style('padding-bottom', '10px')
 				.style('font-weight', 'bold')
 				.text('Description')
