@@ -1,11 +1,9 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { dofetch3 } from '../client'
 
-class TdbTermInfo {
+export class TdbTermInfo {
 	constructor(opts) {
 		this.type = 'termInfo'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
 		this.dom = {
 			holder: opts.holder.style('margin-left', '25px')
 		}
@@ -14,7 +12,6 @@ class TdbTermInfo {
 	}
 
 	getState(appState) {
-		//console.log(16, appState.tree.expandedInfoIds[this.id])
 		const config = appState.infos[this.id]
 		return {
 			isVisible: config && config.isVisible,
@@ -33,7 +30,7 @@ class TdbTermInfo {
 	}
 }
 
-export const termInfoInit = rx.getInitFxn(TdbTermInfo)
+export const termInfoInit = getCompInit(TdbTermInfo)
 
 function setRenderers(self) {
 	self.initUI = function() {

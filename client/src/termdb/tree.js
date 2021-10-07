@@ -107,7 +107,8 @@ class TdbTree {
 			bar_click_menu: appState.bar_click_menu,
 			// TODO: deprecate "exclude_types" in favor of "usecase"
 			exclude_types: appState.tree.exclude_types,
-			usecase: appState.tree.usecase
+			usecase: appState.tree.usecase,
+			infos: appState.infos
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
@@ -380,7 +381,7 @@ function setRenderers(self) {
 		div.select('.' + cls_termgraphdiv).style('display', plotIsVisible ? 'block' : 'none')
 	}
 
-	self.addTerm = function(term) {
+	self.addTerm = async function(term) {
 		const termIsDisabled = self.opts.disable_terms && self.opts.disable_terms.includes(term.id)
 
 		const div = select(this)
@@ -446,7 +447,6 @@ function setRenderers(self) {
 
 		if (graphable(term)) {
 			if (self.opts.click_term) {
-				console.log(term)
 				if (termIsDisabled) {
 					labeldiv
 						.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
@@ -498,7 +498,7 @@ function setRenderers(self) {
 			}
 		}
 		if (term.hashtmldetail) {
-			self.components.info[term.id] = termInfoInit({
+			self.components.info[term.id] = await termInfoInit({
 				app: self.app,
 				holder: div.append('div'),
 				id: term.id
