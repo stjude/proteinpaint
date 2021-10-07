@@ -1,5 +1,5 @@
 import { getCompInit } from '../common/rx.core'
-import { Menu } from '../client'
+import { Menu } from '../dom/menu'
 import { getNormalRoot } from '../common/filter'
 import { select, event } from 'd3-selection'
 
@@ -57,7 +57,11 @@ export const chartsInit = getCompInit(MassCharts)
 function getChartTypeList(self) {
 	/* list all possible chart types in this array
 	each char type will generate a button under the nav bar
-	design idea is that button click event handler should not include chart-type specific logic
+	design idea is that a button click will trigger a callback to do one of following things
+	in which chart-type specific logic is not included
+	1. show tree
+	2. show menu
+	3. prep chart
 
 	.label:
 		text to show in the button
@@ -88,7 +92,7 @@ function getChartTypeList(self) {
 		provide to termdb app
 
 	.menuOptions:[]
-		required for clickTo=menu
+		required for clickTo=showMenu
 		each menu option will have its own clickTo to determine the behavior of clicking on it
 
 	.payload:{}
@@ -161,29 +165,28 @@ function setRenderers(self) {
 	self.makeButtons = function() {
 		const chartTypeList = getChartTypeList(self)
 
-		// TODO improve button styling
 		self.dom.btns = self.dom.holder
 			.selectAll('button')
 			.data(chartTypeList)
 			.enter()
 			.append('button')
-			.style('margin', '5px')
-			.style('padding', '5px')
+			.style('margin', '10px')
+			.style('padding', '10px 15px')
+			.style('border-radius', '20px')
+			.style('border-color', '#ededed')
 			.html(d => d.label)
-			.on('click', chart => chart.clickTo(chart))
-			// maintain a reference to the button element
-			.each(function(chart) {
-				chart.btn = this
+			.on('click', function(chart) {
+				self.dom.tip.clear().showunder(this)
+				chart.clickTo(chart)
 			})
 	}
 
 	/*
 		show a menu
-		each option in chart.menuOptions will have its own clickTo to determine the behavior of clicking on it
+		each option in chart.menuOptions will have its own clickTo 
 		example: show a menu for the supported types of regression analysis  
 	*/
 	self.showMenu = function(chart) {
-		self.dom.tip.clear().showunder(chart.btn)
 		if (!Array.isArray(chart.menuOptions)) throw 'menuOptions is not array'
 		for (const opt of chart.menuOptions) {
 			self.dom.tip.d
@@ -192,7 +195,6 @@ function setRenderers(self) {
 				.text(opt.label)
 				.on('click', () => {
 					self.dom.tip.hide()
-					console.log(191, opt)
 					opt.clickTo(opt)
 				})
 		}
@@ -203,8 +205,7 @@ function setRenderers(self) {
 		once selected, dispatch "plot_show" action (with the selected term) to produce the plot
 		example: barchart
 	*/
-	self.showTree_select1term = async function(chart) {
-		self.dom.tip.clear().showunder(chart.btn)
+	self.showTree_select1term = async chart => {
 		if (chart.usecase.label) {
 			self.dom.tip.d
 				.append('div')
@@ -217,7 +218,7 @@ function setRenderers(self) {
 		const action = {
 			type: 'plot_show',
 			id: idPrefix + id++,
-			config: { chartType: chart.chartType } // may be replaced by action.chart{}
+			config: { chartType: chart.chartType } // may replaced by payload to be consistent
 		}
 
 		const termdb = await import('../termdb/app')
@@ -245,27 +246,8 @@ function setRenderers(self) {
 		dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
 		example: table, scatterplot which requires user to select two terms
 	*/
-	self.prepPlot = function(opt) {
-		const action = { type: 'plot_prep', payload: opt.payload, id: idPrefix + id++ }
+	self.prepPlot = function(chart) {
+		const action = { type: 'plot_prep', payload: chart.payload, id: idPrefix + id++ }
 		self.app.dispatch(action)
-	}
-}
-
-// term selection sequence by chart type or use default
-// FIXME may encode this info in chartTypeList
-export function getTermSelectionSequence(chartType) {
-	if (chartType == 'regression') {
-		return [
-			{
-				label: 'Outcome variable',
-				prompt: 'Select outcome variable',
-				detail: 'term',
-				limit: 1,
-				cutoffTermTypes: ['condition', 'integer', 'float']
-			},
-			{ label: 'Independent variable(s)', prompt: 'Add independent variable', detail: 'independent', limit: 10 }
-		]
-	} else {
-		return [{ label: '', detail: 'term', limit: 1 }]
 	}
 }

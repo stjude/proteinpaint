@@ -1,7 +1,6 @@
 import { getStoreInit } from '../common/rx.core'
 import { root_ID } from '../termdb/tree'
 import { plotConfig, fillTermWrapper } from './plot'
-import { getTermSelectionSequence } from './charts'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
@@ -405,5 +404,22 @@ function validatePlotTerm(t, vocabApi) {
 				break
 			}
 			throw 'unknown term type'
+	}
+}
+
+function getTermSelectionSequence(chartType) {
+	if (chartType == 'regression') {
+		return [
+			{
+				label: 'Outcome variable',
+				prompt: 'Select outcome variable',
+				detail: 'term',
+				limit: 1,
+				cutoffTermTypes: ['condition', 'integer', 'float']
+			},
+			{ label: 'Independent variable(s)', prompt: 'Add independent variable', detail: 'independent', limit: 10 }
+		]
+	} else {
+		return [{ label: '', detail: 'term', limit: 1 }]
 	}
 }
