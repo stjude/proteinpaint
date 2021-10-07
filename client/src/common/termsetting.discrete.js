@@ -269,7 +269,7 @@ function renderTypeInputs(self) {
 				setqDefaults(self)
 				setDensityPlot(self)
 			}
-		}, 
+		},
 		{
 			active: self.q.type == 'custom' ? true : false,
 			label: 'Varying bin sizes',
@@ -285,7 +285,7 @@ function renderTypeInputs(self) {
 				setDensityPlot(self)
 			}
 		}
-	] 
+	]
 	init_tabs({ holder: div, tabs })
 }
 
@@ -550,7 +550,7 @@ function renderCustomBinInputs(self, tablediv) {
 
 	function handleChange() {
 		self.dom.customBinLabelTd.selectAll('input').property('value', '')
-		const data = self.processCustomBinInputs()
+		const data = processCustomBinInputs(self)
 		// update self.q.lst and render bin lines only if bin boundry changed
 		if (binsChanged(data, self.q.lst)) {
 			self.q.lst = data
