@@ -59,33 +59,34 @@ export async function init_tabs(opts) {
 			.style('width', tab_width + 'px')
 			.on('click', async () => {
 				for (const tab_ of tabs) {
+					console.log(52, tab)
 					tab_.active = tab_ === tab
 					tab_.tab.classed('active', tab_.active ? true : false)
 					tab_.holder.style('display', tab_.active ? 'block' : 'none')
 				}
-				if (tab.repeatedCallback) {
+				/*if (tab.repeatedCallback) {
 					await tab.repeatedCallback()
-				}
-				if (tab.callback) {
-					await tab.callback(tab.holder)
-					delete tab.callback
-				}
+				}*/
+				if (tab.callback) await tab.callback(tab.holder)
+				//delete tab.callback
+				//}
 			})
 
 		tab.holder = contentHolder
 			.append('div')
 			.style('padding-top', '10px')
-			.style('margin-top','10px')
+			.style('margin-top', '10px')
 			.style('display', tab.active ? 'block' : 'none')
 			.style('border', '1px solid #eee')
 
-		if (tab.active && tab.repeatedCallback) {
+		/*if (tab.active && tab.repeatedCallback) {
 			await tab.repeatedCallback()
-		}
+		}*/
 
-		if (tab.active && tab.callback) {
+		if (tab.active) {
+			console.log(77)
 			await tab.callback(tab.holder)
-			delete tab.callback
+			//delete tab.callback
 		}
 	}
 }

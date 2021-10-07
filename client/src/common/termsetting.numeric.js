@@ -43,15 +43,18 @@ export async function setNumericTabs(self) {
 				active: self.q.mode && self.q.mode == 'discrete' ? false : true,
 				label: 'Continuous',
 				callback: async div => {
-					//discrete.div.style('display', 'none')
-					//cont.div.style('display', 'block')
 					cont.fxns.showEditMenu(self, div)
+					// example of deleting the callback here instead of in toggleButtons
+					delete tabs[0].callback
 				}
 			},
 			{
 				active: self.q.mode && self.q.mode == 'discrete' ? true : false,
 				label: 'Discrete',
 				callback: async div => {
+					// example of using a boolean attribute to track whether to exit early
+					if (tabs[1].isRendered) return
+					tabs[1].isRendered = true
 					discrete.fxns.showEditMenu(self, div)
 				}
 			}
