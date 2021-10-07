@@ -239,7 +239,6 @@ TdbStore.prototype.actions = {
 	},
 
 	info_expand(action) {
-		console.log('store.js 241:', action)
 		if (!this.state.infos[action.term.id]) {
 			this.state.infos[action.term.id] = { term: action.term, isVisible: true }
 		}

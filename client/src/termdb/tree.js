@@ -410,40 +410,34 @@ function setRenderers(self) {
 			.text(term.name)
 
 		if (term.hashtmldetail) {
+			/* When term has details, create a clickable icon ⓘ.
+			On click, div appears with term details. */
 			let isOpen = false
-			div
+			const infoicon = div
 				.append('div')
 				.style('display', 'inline-block')
-				.style('margin', '10px')
-				.style('font-family', 'verdana')
-				.style('font-size', '18px')
+				.style('margin', '1px 1px 1px 10px')
+				.style('padding', '2px 5px')
+				.style('font-family', 'Times New Roman')
+				.style('font-size', '14px')
 				.style('font-weight', 'bold')
 				.style('cursor', 'pointer')
-				.attr('title', 'Grade Details')
+				.style('background-color', 'transparent')
+				.style('color', '#797a7a')
+				.style('align-items', 'center')
+				.style('justify-content', 'center')
+				.style('border', 'none')
+				.style('border-radius', '3px')
+				.attr('title', 'Term Information')
 				.html('&#9432;')
 				.on('click', () => {
 					isOpen = !isOpen
 					const type = isOpen ? 'info_expand' : 'info_collapse'
+					infoicon.style('background-color', isOpen ? 'darkgray' : 'transparent')
+					infoicon.style('color', isOpen ? 'white' : '#797a7a')
 					self.app.dispatch({ type, term })
 				})
 		}
-
-		/*self.infoBtns[term.id] = infoBtnInit({
-			id: term.id,
-			holder: div.append('div'),
-			callback: isOpen =>
-				this.app.dispatch({
-					type: 'plot_edit',
-					id: term.id,
-					config: {
-						settings: {
-							termInfo: {
-								isVisible: isOpen
-							}
-						}
-					}
-				})
-			})*/
 
 		if (graphable(term)) {
 			if (self.opts.click_term) {
@@ -498,6 +492,7 @@ function setRenderers(self) {
 			}
 		}
 		if (term.hashtmldetail) {
+			//create div for term description/details when info icon is clicked
 			self.components.info[term.id] = await termInfoInit({
 				app: self.app,
 				holder: div.append('div'),
