@@ -3,103 +3,6 @@ import { Menu } from '../client'
 import { getNormalRoot } from '../common/filter'
 import { select, event } from 'd3-selection'
 
-/* list all possible chart types in this array
-each char type will generate a button under the nav bar
-design idea is that button click event handler should not include chart-type specific logic
-
-.label:
-	text to show in the button
-
-.chartType:
-	values are controlled
-	must include for deciding if to display a chart button for a dataset
-	e.g. cumulative incidence plot will require "condition" term to be present in a dataset
-	see main()
-
-.clickTo:
-	=tree_select1term
-		show termdb tree to select a term
-		once selected, dispatch "plot_show" action (with the selected term) to produce the plot
-		example: barchart
-	=prepPlot
-		dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
-		example: table, scatterplot which requires user to select two terms
-	=menu
-		show a menu
-		each menu option will have its own clickTo to determine the behavior of clicking on it
-
-.usecase:{}
-	required for clickTo=tree_select1term
-	provide to termdb app
-
-.menuOptions:[]
-	required for clickTo=menu
-
-.payload:{}
-	required for clickTo=prepPlot
-	describe private details for creating a chart of a particular type
-	to be attached to action and used by store
-*/
-const chartTypeList = [
-	{
-		label: 'Bar Chart',
-		chartType: 'barchart',
-		clickTo: 'tree_select1term',
-		usecase: { target: 'barchart', detail: 'term' }
-	},
-	/*
-	{
-		label: 'Table',
-		clickTo:'prepPlot',
-	},
-	{
-		label: 'Scatterplot',
-		clickTo:'prepPlot',
-	},
-	*/
-	{
-		// should only show for official dataset, but not custom
-		label: 'Cumulative Incidence',
-		chartType: 'cuminc',
-		clickTo: 'tree_select1term',
-		usecase: { target: 'cuminc', detail: 'term' }
-	},
-	{
-		// should only show for official dataset, but not custom
-		label: 'Survival',
-		chartType: 'survival',
-		clickTo: 'tree_select1term',
-		usecase: { target: 'survival', detail: 'term' }
-	},
-	{
-		// should only show for official dataset, but not custom
-		label: 'Regression Analysis',
-		chartType: 'regression',
-		clickTo: 'menu',
-		menuOptions: [
-			{
-				label: 'Linear',
-				clickTo: 'prepPlot',
-				chartType: 'regression',
-				payload: {
-					chartType: 'regression',
-					regressionType: 'linear',
-					independent: []
-				}
-			},
-			{
-				label: 'Logistic',
-				clickTo: 'prepPlot',
-				payload: {
-					chartType: 'regression',
-					regressionType: 'logistic',
-					independent: []
-				}
-			}
-		]
-	}
-]
-
 // to assign chart ID to distinguish
 // between chart instances
 const idPrefix = '_AUTOID_' // to distinguish from user-assigned chart IDs
@@ -147,29 +50,117 @@ class MassCharts {
 	main() {
 		this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
-
-	clickButton(chart, div) {
-		switch (chart.clickTo) {
-			case 'tree_select1term':
-				this.showTree_select1term(chart, div)
-				break
-			case 'prepPlot':
-				const action = { type: 'plot_prep', payload: chart.payload, id: idPrefix + id++ }
-				this.app.dispatch(action)
-				break
-			case 'menu':
-				this.showMenu(chart, div)
-				break
-			default:
-				throw 'unknown value for clickTo: ' + chart.clickTo
-		}
-	}
 }
 
 export const chartsInit = getCompInit(MassCharts)
 
+function getChartTypeList(self) {
+	/* list all possible chart types in this array
+	each char type will generate a button under the nav bar
+	design idea is that button click event handler should not include chart-type specific logic
+
+	.label:
+		text to show in the button
+
+	.chartType:
+		values are controlled
+		must include for deciding if to display a chart button for a dataset
+		e.g. cumulative incidence plot will require "condition" term to be present in a dataset
+		see main()
+
+	.clickTo:
+		callback to handle the button click event, may use any of the following renderer methods:
+	
+		self.tree_select1term 
+		- will show a term tree to select a term	
+
+		self.prepPlot
+		- dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
+			example: regression, table, scatterplot which requires user to select two terms
+		
+		self.showMenu
+			show a menu
+			each option in chart.menuOptions will have its own clickTo to determine the behavior of clicking on it
+			example: show a menu for the supported types of regression analysis  
+
+	.usecase:{}
+		required for clickTo=tree_select1term
+		provide to termdb app
+
+	.menuOptions:[]
+		required for clickTo=menu
+		each menu option will have its own clickTo to determine the behavior of clicking on it
+
+	.payload:{}
+		required for clickTo=prepPlot
+		describe private details for creating a chart of a particular type
+		to be attached to action and used by store
+	*/
+	return [
+		{
+			label: 'Bar Chart',
+			chartType: 'barchart',
+			clickTo: self.showTree_select1term,
+			usecase: { target: 'barchart', detail: 'term' }
+		},
+		/*
+		{
+			label: 'Table',
+			clickTo:'prepPlot',
+		},
+		{
+			label: 'Scatterplot',
+			clickTo:'prepPlot',
+		},
+		*/
+		{
+			// should only show for official dataset, but not custom
+			label: 'Cumulative Incidence',
+			chartType: 'cuminc',
+			clickTo: self.showTree_select1term,
+			usecase: { target: 'cuminc', detail: 'term' }
+		},
+		{
+			// should only show for official dataset, but not custom
+			label: 'Survival',
+			chartType: 'survival',
+			clickTo: self.showTree_select1term,
+			usecase: { target: 'survival', detail: 'term' }
+		},
+		{
+			// should only show for official dataset, but not custom
+			label: 'Regression Analysis',
+			chartType: 'regression',
+			clickTo: self.showMenu,
+			menuOptions: [
+				{
+					label: 'Linear',
+					clickTo: self.prepPlot,
+					chartType: 'regression',
+					payload: {
+						chartType: 'regression',
+						regressionType: 'linear',
+						independent: []
+					}
+				},
+				{
+					label: 'Logistic',
+					clickTo: self.prepPlot,
+					payload: {
+						chartType: 'regression',
+						regressionType: 'logistic',
+						independent: []
+					}
+				}
+			]
+		}
+	]
+}
+
 function setRenderers(self) {
 	self.makeButtons = function() {
+		const chartTypeList = getChartTypeList(self)
+
 		// TODO improve button styling
 		self.dom.btns = self.dom.holder
 			.selectAll('button')
@@ -179,13 +170,20 @@ function setRenderers(self) {
 			.style('margin', '5px')
 			.style('padding', '5px')
 			.html(d => d.label)
-			.on('click', function(d) {
-				// 'this' is the button element
-				self.clickButton(d, this)
+			.on('click', chart => chart.clickTo(chart))
+			// maintain a reference to the button element
+			.each(function(chart) {
+				chart.btn = this
 			})
 	}
-	self.showMenu = function(chart, btn) {
-		self.dom.tip.clear().showunder(btn)
+
+	/*
+		show a menu
+		each option in chart.menuOptions will have its own clickTo to determine the behavior of clicking on it
+		example: show a menu for the supported types of regression analysis  
+	*/
+	self.showMenu = function(chart) {
+		self.dom.tip.clear().showunder(chart.btn)
 		if (!Array.isArray(chart.menuOptions)) throw 'menuOptions is not array'
 		for (const opt of chart.menuOptions) {
 			self.dom.tip.d
@@ -194,13 +192,19 @@ function setRenderers(self) {
 				.text(opt.label)
 				.on('click', () => {
 					self.dom.tip.hide()
-					self.clickButton(opt, btn)
+					console.log(191, opt)
+					opt.clickTo(opt)
 				})
 		}
 	}
 
-	self.showTree_select1term = async function(chart, btn) {
-		self.dom.tip.clear().showunder(btn)
+	/*	
+		show termdb tree to select a term
+		once selected, dispatch "plot_show" action (with the selected term) to produce the plot
+		example: barchart
+	*/
+	self.showTree_select1term = async function(chart) {
+		self.dom.tip.clear().showunder(chart.btn)
 		if (chart.usecase.label) {
 			self.dom.tip.d
 				.append('div')
@@ -235,6 +239,15 @@ function setRenderers(self) {
 				}
 			}
 		})
+	}
+
+	/*
+		dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
+		example: table, scatterplot which requires user to select two terms
+	*/
+	self.prepPlot = function(opt) {
+		const action = { type: 'plot_prep', payload: opt.payload, id: idPrefix + id++ }
+		self.app.dispatch(action)
 	}
 }
 
