@@ -1,16 +1,36 @@
-import { getCompInit } from '../common/rx.core'
+import { getCompInit, getInitFxn, copyMerge } from '../common/rx.core'
 import { dofetch3 } from '../client'
 
+const defaultState = { isVisible: false, term: null }
+
 export class TdbTermInfo {
+	/*
+		Will display background information about a term, 
+		such as rubric, publication source, description, etc
+
+		opts{}
+			.id: INT optional
+			.holder: required d3-wrapped DOM element
+			.vocabApi: required vocabulary API with a getTermInfo() method
+			.state{} optional
+				.isVisible: boolean, optional
+				.term: {id, ...} optional (may be supplied with either getState() or main({state}))
+	*/
 	constructor(opts) {
+		this.vocabApi = opts.vocabApi || (opts.app && opts.app.vocabApi)
+		this.app = opts.app
+		this.id = opts.id
 		this.type = 'termInfo'
 		this.dom = {
 			holder: opts.holder.style('margin-left', '25px')
 		}
+		this.state = Object.assign({}, defaultState, opts.state ? opts.state : {})
+		this.api = this
 		setRenderers(this)
 		this.initUI()
 	}
 
+	// if "plugged" into the rx-framework, the app.dispatch will call this
 	getState(appState) {
 		const config = appState.infos[this.id]
 		return {
@@ -19,18 +39,23 @@ export class TdbTermInfo {
 		}
 	}
 
-	async main() {
+	async main(updates = {}) {
+		// when this component is used "unplugged" (outside of the rx framework),
+		// the parent component must supply an updates.state argument
+		if (updates && updates.state) copyMerge(this.state, updates.state)
+
 		if (!this.state.isVisible) {
 			this.dom.holder.style('display', 'none')
 			return
 		}
 		this.dom.holder.style('display', 'block')
-		const data = await this.app.vocabApi.getTermInfo(this.state.term.id)
+		const data = await this.vocabApi.getTermInfo(this.state.term.id)
 		this.render(data)
 	}
 }
 
 export const termInfoInit = getCompInit(TdbTermInfo)
+export const termInfoUnplugged = getInitFxn(TdbTermInfo)
 
 function setRenderers(self) {
 	self.initUI = function() {

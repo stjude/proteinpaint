@@ -3,7 +3,7 @@ import { select, selectAll, event } from 'd3-selection'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
 import { isUsableTerm } from '../../shared/termdb.usecase'
-import { termInfoInit } from './termInfo'
+import { termInfoUnplugged } from './termInfo'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -147,12 +147,6 @@ class TdbTree {
 				delete this.components.plots[termId]
 			}
 		}
-
-		/*for (const termId in this.infoBtns) {
-			const term = this.termsById[termId]
-			console.log(153, term)
-			this.infoBtns[termId].main(true, {term})
-		}*/
 	}
 
 	getTermsById() {
@@ -409,9 +403,8 @@ function setRenderers(self) {
 			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(term.name)
 
+		// add an info button
 		if (term.hashtmldetail) {
-			/* When term has details, create a clickable icon ⓘ.
-			On click, div appears with term details. */
 			let isOpen = false
 			const infoicon = div
 				.append('div')
@@ -443,7 +436,7 @@ function setRenderers(self) {
 					const type = isOpen ? 'info_expand' : 'info_collapse'
 					infoicon.style('background-color', isOpen ? 'darkgray' : 'transparent')
 					infoicon.style('color', isOpen ? 'white' : '#797a7a')
-					self.app.dispatch({ type, term })
+					termInfo.main({ state: { isVisible: isOpen } })
 				})
 		}
 
@@ -499,12 +492,16 @@ function setRenderers(self) {
 				div.append('div').attr('class', cls_termgraphdiv)
 			}
 		}
+
+		// the holder div for the terminfo will be displayed
+		// below the term label (and VIEW button, if applicable)
+		let termInfo
 		if (term.hashtmldetail) {
-			//create div for term description/details when info icon is clicked
-			self.components.info[term.id] = await termInfoInit({
-				app: self.app,
+			termInfo = await termInfoUnplugged({
+				vocabApi: self.app.vocabApi,
 				holder: div.append('div'),
-				id: term.id
+				id: term.id,
+				state: { term }
 			})
 		}
 
