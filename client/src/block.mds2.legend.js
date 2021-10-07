@@ -4,7 +4,6 @@ import { legend_newrow } from './block.legend'
 import * as common from '../shared/common'
 import { may_create_vcflegend_numericalaxis } from './block.mds2.vcf.numericaxis.legend'
 import { may_create_variantfilter } from './block.mds2.legend.variantfilter'
-import { make_radios } from './dom/radios'
 import { may_create_ldlegend } from './block.mds2.ld'
 import { addparameter_rangequery } from './block.mds2'
 
