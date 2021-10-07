@@ -3,7 +3,7 @@ import { select, event } from 'd3-selection'
 import { format } from 'd3-format'
 import { setDensityPlot } from './termsetting.density'
 import { get_bin_label } from '../../shared/termdb.bins'
-import { init_tabs, update_tabs } from '../dom/toggleButtons'
+import { init_tabs } from '../dom/toggleButtons'
 
 /*
 Arguments
@@ -275,8 +275,6 @@ function renderTypeInputs(self) {
 			label: 'Varying bin sizes',
 			callback: async div => {
 				self.q.type = 'custom'
-				setqDefaults(self)
-				setDensityPlot(self)
 				renderCustomBinInputs(self, div)
 			},
 			repeatedCallback: async () => {

@@ -19,6 +19,9 @@ tabs[ tab{} ]
 		required
 	.callback()
 		required
+		this callback will be run just once and deleted. on subsequent toggling of 
+		switch, it wlll not run. If some code need to run everytime buttons are 
+		toggled use repeatedCallback()
 	.repeatedCallback()
 		optional
 		if some part of UI must be re rendered each time tab is changed,
