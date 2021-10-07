@@ -22,10 +22,10 @@ class MassCharts {
 		this.makeButtons()
 	}
 
-	// FIXME need reactsTo()?
+	// TODO later add reactsTo() to react to filter change
 
 	getState(appState) {
-		// FIXME seems like it only needs supportedChartTypes and activeCohort, can delete the rest from state?
+		// need vocab, activeCohort and filter
 		const activeCohort =
 			appState.termdbConfig &&
 			appState.termdbConfig.selectCohort &&
@@ -36,8 +36,6 @@ class MassCharts {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			config: appState.plots.find(p => p.id === this.id),
-			exclude_types: [...appState.tree.exclude_types],
 			supportedChartTypes: (appState.termdbConfig.supportedChartTypes &&
 				appState.termdbConfig.supportedChartTypes[cohortStr]) || ['barchart']
 		}
@@ -57,6 +55,9 @@ export const chartsInit = getCompInit(MassCharts)
 function getChartTypeList(self) {
 	/* list all possible chart types in this array
 	each char type will generate a button under the nav bar
+
+	design goal is that chart specific logic should not leak into mass UI
+
 	design idea is that a button click will trigger a callback to do one of following things
 	in which chart-type specific logic is not included
 	1. show tree
@@ -225,7 +226,7 @@ function setRenderers(self) {
 		termdb.appInit({
 			holder: self.dom.tip.d.append('div'),
 			state: {
-				vocab: self.opts.vocab,
+				vocab: self.state.vocab,
 				activeCohort: self.state.activeCohort,
 				nav: {
 					header_mode: 'search_only'
