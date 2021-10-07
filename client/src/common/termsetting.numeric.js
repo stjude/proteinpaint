@@ -1,6 +1,6 @@
 import { setNumericMethods as setDiscreteMethods } from './termsetting.discrete'
 import { setNumericMethods as setContMethods } from './termsetting.continuous'
-import { init_tabs, update_tabs } from '../dom/toggleButtons'
+import { init_tabs } from '../dom/toggleButtons'
 
 const tsInstanceTracker = new WeakMap()
 let i = 0

@@ -19,14 +19,6 @@ tabs[ tab{} ]
 		required
 	.callback()
 		required
-		this callback will be run just once and deleted. on subsequent toggling of 
-		switch, it wlll not run. If some code need to run everytime buttons are 
-		toggled use repeatedCallback()
-	.repeatedCallback()
-		optional
-		if some part of UI must be re rendered each time tab is changed,
-		use this callback, it will not be deleted and will run on toggle switch
-		e.g. seperate component need to be updated as result of toggle switch
 
 this function attaches .holder (d3 dom) to each tab of tabs[]
 */
@@ -36,17 +28,17 @@ export async function init_tabs(opts) {
 	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
 
 	const tabs = opts.tabs
-	const holder = opts.holder.append('div')
+	tabs.holder = opts.holder.append('div')
+		.style('padding', '10px 10px 0 10px')
 	// default width is 90px, if label is longer than that, it will be adjusted
 	let tab_width = 90
-	holder.style('padding', '10px 10px 0 10px')
-	const contentHolder = opts.contentHolder ? opts.contentHolder : opts.holder.append('div')
+	tabs.contentHolder = opts.contentHolder ? opts.contentHolder : opts.holder.append('div')
 
 	const has_active_tab = tabs.some(i => i.active)
 	if (!has_active_tab) tabs[0].active = true
 
 	for (const [i, tab] of tabs.entries()) {
-		tab.tab = holder
+		tab.tab = tabs.holder
 			.append('div')
 			.attr('class', 'sj-toggle-button' + (i == 0 ? ' sj-left-toggle' : ' sj-right-toggle'))
 			.classed('active', tab.active ? true : false)
@@ -59,34 +51,22 @@ export async function init_tabs(opts) {
 			.style('width', tab_width + 'px')
 			.on('click', async () => {
 				for (const tab_ of tabs) {
-					console.log(52, tab)
 					tab_.active = tab_ === tab
 					tab_.tab.classed('active', tab_.active ? true : false)
 					tab_.holder.style('display', tab_.active ? 'block' : 'none')
 				}
-				/*if (tab.repeatedCallback) {
-					await tab.repeatedCallback()
-				}*/
 				if (tab.callback) await tab.callback(tab.holder)
-				//delete tab.callback
-				//}
 			})
 
-		tab.holder = contentHolder
+		tab.holder = tabs.contentHolder
 			.append('div')
 			.style('padding-top', '10px')
 			.style('margin-top', '10px')
 			.style('display', tab.active ? 'block' : 'none')
 			.style('border', '1px solid #eee')
 
-		/*if (tab.active && tab.repeatedCallback) {
-			await tab.repeatedCallback()
-		}*/
-
 		if (tab.active) {
-			console.log(77)
 			await tab.callback(tab.holder)
-			//delete tab.callback
 		}
 	}
 }
