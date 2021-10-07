@@ -1,54 +1,76 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, getInitFxn, copyMerge } from '../common/rx.core'
 import { dofetch3 } from '../client'
 
-class TdbTermInfo {
+const defaultState = { isVisible: false, term: null }
+
+export class TdbTermInfo {
+	/*
+		Will display background information about a term, 
+		such as rubric, publication source, description, etc
+
+		opts{}
+			.id: INT optional
+			.holder: required d3-wrapped DOM element
+			.vocabApi: required vocabulary API with a getTermInfo() method
+			.state{} optional
+				.isVisible: boolean, optional
+				.term: {id, ...} optional (may be supplied with either getState() or main({state}))
+	*/
 	constructor(opts) {
+		this.vocabApi = opts.vocabApi || (opts.app && opts.app.vocabApi)
+		this.app = opts.app
+		this.id = opts.id
 		this.type = 'termInfo'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+		this.state = Object.assign({}, defaultState, opts.state ? opts.state : {})
 		this.dom = {
-			holder: opts.holder
+			holder: opts.holder.style('display', 'none').style('margin-left', '25px')
 		}
+		this.api = this
 		setRenderers(this)
 		this.initUI()
 	}
 
+	// if "plugged" into the rx-framework, the app.dispatch will call this
 	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
-		if (!config) {
-			throw `No plot with id='${this.id}' found.`
-		}
+		const config = appState.infos[this.id]
 		return {
-			isVisible: config.settings.termInfo.isVisible,
-			term: config.term
+			isVisible: config && config.isVisible,
+			term: config && config.term
 		}
 	}
 
-	async main() {
+	async main(updates = {}) {
+		// when this component is used "unplugged" (outside of the rx framework),
+		// the parent component must supply an updates.state argument
+		if (updates && updates.state) copyMerge(this.state, updates.state)
+
 		if (!this.state.isVisible) {
 			this.dom.holder.style('display', 'none')
 			return
 		}
 		this.dom.holder.style('display', 'block')
-		const data = await this.app.vocabApi.getTermInfo(this.state.term.id)
+		const data = await this.vocabApi.getTermInfo(this.state.term.id)
 		this.render(data)
 	}
 }
 
-export const termInfoInit = rx.getInitFxn(TdbTermInfo)
+export const termInfoInit = getCompInit(TdbTermInfo)
+export const termInfoUnplugged = getInitFxn(TdbTermInfo)
 
 function setRenderers(self) {
 	self.initUI = function() {
 		self.dom.holder
 			.attr('class', 'term_info_div')
+			.style('display', self.state.isVisible ? 'block' : 'none')
 			.style('width', '80vh')
 			.style('padding-bottom', '20px')
-			.style('display', 'block')
 
 		self.dom.tbody = self.dom.holder
 			.append('table')
 			.style('white-space', 'normal')
 			.append('tbody')
+
+		self.dom.addlInfo = self.dom.holder.append('div')
 	}
 
 	self.render = function(data) {
@@ -96,17 +118,18 @@ function setRenderers(self) {
 			}
 		}
 
+		self.dom.addlInfo.selectAll('*').remove()
 		if (data.terminfo.description) {
-			const header = self.dom.holder
+			const header = self.dom.addlInfo
 				.append('div')
-				.style('padding-top', '40px')
+				.style('padding-top', '30px')
 				.style('padding-bottom', '10px')
 				.style('font-weight', 'bold')
 				.text('Description')
 			for (const d of data.terminfo.description) {
-				self.renderDetail(d, self.dom.holder.append('div').style('padding-bottom', '3px'))
+				self.renderDetail(d, self.dom.addlInfo.append('div').style('padding-bottom', '3px'))
 			}
-			self.dom.holder.append('div').style('padding-bottom', '20px')
+			self.dom.addlInfo.append('div').style('padding-bottom', '20px')
 		}
 	}
 

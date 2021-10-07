@@ -3,6 +3,7 @@ import { select, selectAll, event } from 'd3-selection'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
 import { isUsableTerm } from '../../shared/termdb.usecase'
+import { termInfoUnplugged } from './termInfo'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -80,7 +81,7 @@ class TdbTree {
 		this.plots = {}
 		// this.components.plots will point to only the termIds
 		// that are applicable to the active cohort
-		this.components = { plots: {} }
+		this.components = { plots: {}, info: {} }
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
 		this.loadingPlotSet = new Set()
@@ -92,6 +93,7 @@ class TdbTree {
 		if (action.type.startsWith('filter_')) return true
 		if (action.type.startsWith('plot_')) return true
 		if (action.type.startsWith('cohort_')) return true
+		if (action.type.startsWith('info_')) return true
 		if (action.type == 'app_refresh') return true
 	}
 
@@ -105,7 +107,8 @@ class TdbTree {
 			bar_click_menu: appState.bar_click_menu,
 			// TODO: deprecate "exclude_types" in favor of "usecase"
 			exclude_types: appState.tree.exclude_types,
-			usecase: appState.tree.usecase
+			usecase: appState.tree.usecase,
+			infos: appState.infos
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
@@ -372,7 +375,7 @@ function setRenderers(self) {
 		div.select('.' + cls_termgraphdiv).style('display', plotIsVisible ? 'block' : 'none')
 	}
 
-	self.addTerm = function(term) {
+	self.addTerm = async function(term) {
 		const termIsDisabled = self.opts.disable_terms && self.opts.disable_terms.includes(term.id)
 
 		const div = select(this)
@@ -399,6 +402,43 @@ function setRenderers(self) {
 			.style('padding', '5px')
 			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(term.name)
+
+		// add an info button
+		if (term.hashtmldetail) {
+			let isOpen = false
+			const infoicon = div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('margin', '1px 1px 1px 10px')
+				.style('padding', '2px 5px')
+				.style('font-family', 'Times New Roman')
+				.style('font-size', '14px')
+				.style('font-weight', 'bold')
+				.style('cursor', 'pointer')
+				.style('background-color', 'transparent')
+				.style('color', '#797a7a')
+				.style('align-items', 'center')
+				.style('justify-content', 'center')
+				.style('border', 'none')
+				.style('border-radius', '3px')
+				.attr('title', 'Term Information')
+				.html('&#9432;')
+				.on('mouseover', () => {
+					if (isOpen == true) return
+					infoicon.style('color', 'blue')
+				})
+				.on('mouseleave', () => {
+					if (isOpen == true) return
+					infoicon.style('color', '#797a7a')
+				})
+				.on('click', () => {
+					isOpen = !isOpen
+					const type = isOpen ? 'info_expand' : 'info_collapse'
+					infoicon.style('background-color', isOpen ? 'darkgray' : 'transparent')
+					infoicon.style('color', isOpen ? 'white' : '#797a7a')
+					termInfo.main({ state: { isVisible: isOpen } })
+				})
+		}
 
 		if (graphable(term)) {
 			if (self.opts.click_term) {
@@ -451,6 +491,18 @@ function setRenderers(self) {
 
 				div.append('div').attr('class', cls_termgraphdiv)
 			}
+		}
+
+		// the holder div for the terminfo will be displayed
+		// below the term label (and VIEW button, if applicable)
+		let termInfo
+		if (term.hashtmldetail) {
+			termInfo = await termInfoUnplugged({
+				vocabApi: self.app.vocabApi,
+				holder: div.append('div'),
+				id: term.id,
+				state: { term }
+			})
 		}
 
 		if (!term.isleaf) {
@@ -520,5 +572,14 @@ function setInteractivity(self) {
 		}
 		const type = self.state.visiblePlotIds.includes(term.id) ? 'plot_hide' : 'plot_show'
 		self.app.dispatch({ type, id: term.id, term })
+	}
+
+	self.clickInfoButton = function(term) {
+		const x = termInfoInit({
+			app: this.app,
+			holder: this.dom.viz.append('div'),
+			id: term.id
+		})
+		console.log(x)
 	}
 }
