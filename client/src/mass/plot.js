@@ -255,6 +255,8 @@ class MassPlot {
 
 			default:
 				const _ = await import(`../plots/${opts.chartType}`)
+				const regressionType = this.state.config.regressionType
+				paneTitle = regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression'
 				this.components.chart = await _.componentInit({
 					app: this.app,
 					holder: this.dom.viz,

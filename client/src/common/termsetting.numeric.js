@@ -2,13 +2,7 @@ import { setNumericMethods as setDiscreteMethods } from './termsetting.discrete'
 import { setNumericMethods as setContMethods } from './termsetting.continuous'
 import { init_tabs } from '../dom/toggleButtons'
 
-const tsInstanceTracker = new WeakMap()
-let i = 0
-
 export async function setNumericTabs(self) {
-	if (!tsInstanceTracker.has(self)) {
-		tsInstanceTracker.set(self, i++)
-	}
 
 	self.get_term_name = function(d) {
 		if (!self.opts.abbrCutoff) return d.name

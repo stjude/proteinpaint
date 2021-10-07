@@ -1,9 +1,11 @@
 import { getInitFxn, copyMerge } from '../common/rx.core'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
-import { setNumericMethods } from './termsetting.discrete'
 import { setCategoricalMethods } from './termsetting.categorical'
 import { setConditionalMethods } from './termsetting.conditional'
+import { setNumericMethods as setDiscreteNumericMethods } from './termsetting.discrete'
+import { setNumericMethods as setContNumericMethods } from './termsetting.continuous'
+import { setNumericMethods as setBinaryNumericMethods } from './termsetting.binary'
 import { setNumericTabs } from './termsetting.numeric'
 
 /*
@@ -100,7 +102,7 @@ class TermSetting {
 		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'
 		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
 		if (!('abbrCutoff' in o)) o.abbrCutoff = 18 //set the default to 18
-		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = 'default'
+		if (!o.numericEditMenuVersion) o.numericEditMenuVersion =  ['discrete']
 		return o
 	}
 	validateMainData(d) {
@@ -156,9 +158,15 @@ function setRenderers(self) {
 				.text(self.opts.placeholderIcon)
 		}
 
+		const editTypes = self.opts.numericEditMenuVersion
+		const numericMethodsSetter = editTypes.length > 1 ? 
+			setNumericTabs : editTypes[0] == 'continuous' ? 
+			setContNumericMethods : editTypes[0] == 'binary' ? 
+			setBinaryNumericMethods : setDiscreteNumericMethods
+
 		self.setMethodsByTermType = {
-			integer: self.opts.numericEditMenuVersion == 'toggled' ? setNumericTabs : setNumericMethods,
-			float: self.opts.numericEditMenuVersion == 'toggled' ? setNumericTabs : setNumericMethods,
+			integer: numericMethodsSetter,
+			float: numericMethodsSetter,
 			categorical: setCategoricalMethods,
 			condition: setConditionalMethods,
 			// for now, use default methods as placeholder functions

@@ -269,7 +269,7 @@ function setRenderers(self) {
 			debug: self.opts.debug,
 			//showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
 			buttons: d.section.configKey == 'term' ? ['replace'] : ['delete'],
-			numericEditMenuVersion: 'toggled', // or 'default' for the usual binning menu
+			numericEditMenuVersion: config.regressionType == 'linear' ? ['continuous', 'discrete'] : ['binary'],
 			usecase: { target: 'regression', detail: d.section.configKey, regressionType: config.regressionType },
 			disable_terms: self.disable_terms,
 			abbrCutoff: 50,
@@ -333,18 +333,18 @@ function setRenderers(self) {
 			.style('padding', '3px 5px')
 
 		d.dom.cutoffDiv.selectAll('*').remove()
-		const cutoffLabel = d.dom.cutoffDiv.append('span').html('Use cutoff of ')
-		const useCutoffInput = d.dom.cutoffDiv
-			.append('input')
-			.attr('type', 'number')
-			.style('width', '50px')
-			.style('text-align', 'center')
-			.property('value', d.cutoff)
-			.on('change', () => {
-				const value = useCutoffInput.property('value')
-				if (value === '') delete d.cutoff
-				else d.cutoff = Number(value)
-			})
+		// const cutoffLabel = d.dom.cutoffDiv.append('span').html('Use cutoff of ')
+		// const useCutoffInput = d.dom.cutoffDiv
+		// 	.append('input')
+		// 	.attr('type', 'number')
+		// 	.style('width', '50px')
+		// 	.style('text-align', 'center')
+		// 	.property('value', d.cutoff)
+		// 	.on('change', () => {
+		// 		const value = useCutoffInput.property('value')
+		// 		if (value === '') delete d.cutoff
+		// 		else d.cutoff = Number(value)
+		// 	})
 	}
 
 	async function renderInfo(d) {
