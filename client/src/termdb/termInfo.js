@@ -129,7 +129,7 @@ function setRenderers(self) {
 			for (const d of data.terminfo.description) {
 				self.renderDetail(d, self.dom.addlInfo.append('div').style('padding-bottom', '3px'))
 			}
-			self.dom.holder.append('div').style('padding-bottom', '20px')
+			self.dom.addlInfo.append('div').style('padding-bottom', '20px')
 		}
 	}
 
