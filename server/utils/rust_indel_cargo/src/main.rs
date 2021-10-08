@@ -45,8 +45,8 @@
 //     if polyclonal, classify as none
 //     if ref classified read, but contains inserted/deleted nucleotides in indel region, classify as none
 
-use factorial::Factorial;
-use statrs::distribution::{ChiSquared, Continuous};
+//use factorial::Factorial;
+use statrs::distribution::{ChiSquared, ContinuousCDF};
 use std::cmp;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
@@ -833,13 +833,17 @@ fn main() {
     //    reference_forward_count,
     //    reference_reverse_count,
     //);
-    chi_square_test(
+
+    let strand_probability = chi_square_test(
         alternate_forward_count,
         alternate_reverse_count,
         reference_forward_count,
         reference_reverse_count,
     );
-    //println!("p-value:{}", p_value);
+    println!("strand_probability:{}", strand_probability);
+
+    //println!("strand_probability:{}", chi_square_test(10, 0, 10, 0));
+
     output_cat.pop(); // Removing the last ":" character from string
     output_gID.pop(); // Removing the last ":" character from string
     output_diff_scores.pop(); // Removing the last ":" character from string
@@ -854,32 +858,73 @@ fn chi_square_test(
     reference_forward_count: u64,
     reference_reverse_count: u64,
 ) -> f64 {
-    let result = ChiSquared::new(3.0).unwrap();
-    let curve = Continuous::pdf(&result, 1.0);
-    println!("curve:{:?}", curve);
-    0.0
-}
-
-fn fishers_exact_test(
-    alternate_forward_count: u64,
-    alternate_reverse_count: u64,
-    reference_forward_count: u64,
-    reference_reverse_count: u64,
-) -> f64 {
-    ((alternate_forward_count + alternate_reverse_count).factorial()
-        + (alternate_forward_count + reference_forward_count).factorial()
-        + (reference_forward_count + reference_reverse_count).factorial()
-        + (alternate_reverse_count + reference_reverse_count).factorial()) as f64
-        / ((alternate_forward_count
+    if (alternate_reverse_count == 0 && reference_reverse_count == 0)
+        || (alternate_forward_count == 0 && reference_forward_count == 0)
+    {
+        100000.0 // Arbitarily put a very high number when there are only forward or reverse reads for alternate/reference
+    } else {
+        let total: f64 = (alternate_forward_count
             + alternate_reverse_count
             + reference_forward_count
-            + reference_reverse_count)
-            .factorial()
-            * alternate_forward_count.factorial()
-            * alternate_reverse_count.factorial()
-            * reference_forward_count.factorial()
-            * reference_reverse_count.factorial()) as f64
+            + reference_reverse_count) as f64;
+        let expected_alternate_forward_count: f64 = (alternate_forward_count
+            + alternate_reverse_count) as f64
+            * (alternate_forward_count + reference_forward_count) as f64
+            / total;
+        let expected_alternate_reverse_count: f64 = (alternate_forward_count
+            + alternate_reverse_count) as f64
+            * (alternate_reverse_count + reference_reverse_count) as f64
+            / total;
+        let expected_reference_forward_count: f64 = (alternate_forward_count
+            + reference_forward_count) as f64
+            * (reference_forward_count + reference_reverse_count) as f64
+            / total;
+        let expected_reference_reverse_count: f64 = (reference_forward_count
+            + reference_reverse_count) as f64
+            * (alternate_reverse_count + reference_reverse_count) as f64
+            / total;
+
+        let chi_sq: f64 = ((alternate_forward_count as f64 - expected_alternate_forward_count)
+            * (alternate_forward_count as f64 - expected_alternate_forward_count))
+            / expected_alternate_forward_count
+            + ((reference_forward_count as f64 - expected_reference_forward_count)
+                * (reference_forward_count as f64 - expected_reference_forward_count))
+                / expected_reference_forward_count
+            + ((alternate_reverse_count as f64 - expected_alternate_reverse_count)
+                * (alternate_reverse_count as f64 - expected_alternate_reverse_count))
+                / expected_alternate_reverse_count
+            + ((reference_reverse_count as f64 - expected_reference_reverse_count)
+                * (reference_reverse_count as f64 - expected_reference_reverse_count))
+                / expected_reference_reverse_count;
+
+        //println!("chi_sq:{}", chi_sq);
+        let chi_sq_dist = ChiSquared::new(1.0).unwrap(); // Using degrees of freedom = 1
+        let p_value: f64 = 1.0 - chi_sq_dist.cdf(chi_sq);
+        //println!("p-value:{}", p_value);
+        -10.0 * p_value.log(10.0) // Reporting phred-scale p-values (-10*log(p-value))
+    }
 }
+
+//fn fishers_exact_test(
+//    alternate_forward_count: u64,
+//    alternate_reverse_count: u64,
+//    reference_forward_count: u64,
+//    reference_reverse_count: u64,
+//) -> f64 {
+//    ((alternate_forward_count + alternate_reverse_count).factorial()
+//        + (alternate_forward_count + reference_forward_count).factorial()
+//        + (reference_forward_count + reference_reverse_count).factorial()
+//        + (alternate_reverse_count + reference_reverse_count).factorial()) as f64
+//        / ((alternate_forward_count
+//            + alternate_reverse_count
+//            + reference_forward_count
+//            + reference_reverse_count)
+//            .factorial()
+//            * alternate_forward_count.factorial()
+//            * alternate_reverse_count.factorial()
+//            * reference_forward_count.factorial()
+//            * reference_reverse_count.factorial()) as f64
+//}
 
 fn assign_kmer_weights(
     ref_sequence: String,           // Complete reference sequence
