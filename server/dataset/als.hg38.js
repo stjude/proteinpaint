@@ -25,8 +25,24 @@ module.exports = function(common) {
 			},
 			sampleAttribute: {
 				attributes: {
-					ALSRD_Dx: {
-						label: 'ALSRD_Dx',
+					Batch: {
+						label: 'Batch',
+						filter: 1
+					},
+					ClinDx_WGS: {
+						label: 'ClinDx_WGS',
+						filter: 1
+					},
+					Sex_c: {
+						label: 'Sex_c',
+						filter: 1
+					},
+					OsAge: {
+						label: 'OsAge',
+						filter: 1
+					},
+					SurvOs_mo: {
+						label: 'SurvOs_mo',
 						filter: 1
 					}
 				}
