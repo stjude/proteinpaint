@@ -85,7 +85,8 @@ module.exports = (q, res, ds) => {
 		maxvalue,
 		densitymax,
 		density,
-		samplecount: values.length
+		samplecount: values.length,
+		median: values[Math.floor(values.length / 2)]
 	}
 	res.send(result)
 }
