@@ -3,24 +3,20 @@ import { dofetch3 } from '../client'
 
 const defaultState = { isVisible: false, term: null }
 
-export class TdbTermInfo {
+class TdbTermInfo {
 	/*
 		Will display background information about a term, 
 		such as rubric, publication source, description, etc
 
 		opts{}
-			.id: INT optional
 			.holder: required d3-wrapped DOM element
 			.vocabApi: required vocabulary API with a getTermInfo() method
-			.state{} optional
+			.state{} optional, see defaultState value above
 				.isVisible: boolean, optional
 				.term: {id, ...} optional (may be supplied with either getState() or main({state}))
 	*/
 	constructor(opts) {
 		this.vocabApi = opts.vocabApi || (opts.app && opts.app.vocabApi)
-		this.app = opts.app
-		this.id = opts.id
-		this.type = 'termInfo'
 		this.state = Object.assign({}, defaultState, opts.state ? opts.state : {})
 		this.dom = {
 			holder: opts.holder.style('display', 'none').style('margin-left', '25px')
@@ -30,19 +26,11 @@ export class TdbTermInfo {
 		this.initUI()
 	}
 
-	// if "plugged" into the rx-framework, the app.dispatch will call this
-	getState(appState) {
-		const config = appState.infos[this.id]
-		return {
-			isVisible: config && config.isVisible,
-			term: config && config.term
-		}
-	}
-
-	async main(updates = {}) {
-		// when this component is used "unplugged" (outside of the rx framework),
-		// the parent component must supply an updates.state argument
-		if (updates && updates.state) copyMerge(this.state, updates.state)
+	/*
+		state: replace 1 or more state values by attribute key
+	*/
+	async main(state = {}) {
+		copyMerge(this.state, state)
 
 		if (!this.state.isVisible) {
 			this.dom.holder.style('display', 'none')
@@ -54,8 +42,38 @@ export class TdbTermInfo {
 	}
 }
 
-export const termInfoInit = getCompInit(TdbTermInfo)
-export const termInfoUnplugged = getInitFxn(TdbTermInfo)
+export const termInfoInit = getInitFxn(TdbTermInfo)
+
+/* 
+	rx-pluggable version: 
+	- extend a class instead of using a parent wrapper component
+	- reference in parentComponent.components for this to get notified of state changes,
+	- the parentComponent does NOT have to call termInfoInstance.main(...)
+	- rx will automatically detect if this component needs to update/rerender
+*/
+class TdbTermInfoComp extends TdbTermInfo {
+	/*
+	opts:
+		same as the constructor opts plus these attributes
+		.id: INT
+			- optional, to be used to get this component's state
+	*/
+	constructor(opts) {
+		super(opts)
+		this.type = 'termInfo'
+		this.mainArg = 'state'
+	}
+
+	getState(appState) {
+		const config = appState.infos[this.id]
+		return {
+			isVisible: config && config.isVisible,
+			term: config && config.term
+		}
+	}
+}
+
+export const termInfoComp = getCompInit(TdbTermInfoComp)
 
 function setRenderers(self) {
 	self.initUI = function() {
