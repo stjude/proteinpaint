@@ -116,7 +116,12 @@ for(x in 1:length(var_and_cat)){
 
 #Type III statistics.
 #For each variable, compare the complete model (i.e. model with all variables) to the model without the variable. This analysis will test whether the model changes significantly in the absence of each variable.
-typeIIIstats <- as.data.frame(drop1(res, test = "LRT"))
+#Use the F test for linear regression and use the likelihood ratio test for logistic regression.
+if (regressionType == "linear") {
+  typeIIIstats <- as.data.frame(drop1(res, test = "F"))
+} else {
+  typeIIIstats <- as.data.frame(drop1(res, test = "LRT"))
+}
 #Round the non-p-value columns to 3 decimal places
 pvalueCol <- grepl("^Pr\\(>", colnames(typeIIIstats))
 typeIIIstats[,!pvalueCol] <- round(typeIIIstats[,!pvalueCol], 3)
