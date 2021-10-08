@@ -180,7 +180,7 @@ class MassPlot {
 		switch (opts.chartType) {
 			case 'barchart':
 				paneTitle = 'Barchart'
-				const bar = await import('../termdb/barchart')
+				const bar = await import('../plots/barchart')
 				this.components.chart = bar.barInit({
 					app: this.app,
 					holder: this.dom.viz.append('div'),

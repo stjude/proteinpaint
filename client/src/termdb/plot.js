@@ -1,7 +1,7 @@
 import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
 import { controlsInit } from './plot.controls'
-import { barInit } from './barchart'
+import { barInit } from '../plots/barchart'
 import { statTableInit } from './stattable'
 import { tableInit } from './table'
 import { boxplotInit } from './boxplot'
