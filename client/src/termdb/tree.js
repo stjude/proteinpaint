@@ -3,7 +3,7 @@ import { select, selectAll, event } from 'd3-selection'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
 import { isUsableTerm } from '../../shared/termdb.usecase'
-import { termInfoUnplugged } from './termInfo'
+import { termInfoInit } from './termInfo'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -436,7 +436,7 @@ function setRenderers(self) {
 					const type = isOpen ? 'info_expand' : 'info_collapse'
 					infoicon.style('background-color', isOpen ? 'darkgray' : 'transparent')
 					infoicon.style('color', isOpen ? 'white' : '#797a7a')
-					termInfo.main({ state: { isVisible: isOpen } })
+					termInfo.main({ isVisible: isOpen })
 				})
 		}
 
@@ -497,7 +497,7 @@ function setRenderers(self) {
 		// below the term label (and VIEW button, if applicable)
 		let termInfo
 		if (term.hashtmldetail) {
-			termInfo = await termInfoUnplugged({
+			termInfo = await termInfoInit({
 				vocabApi: self.app.vocabApi,
 				holder: div.append('div'),
 				id: term.id,
