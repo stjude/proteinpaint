@@ -221,7 +221,7 @@ function setqDefaults(self) {
 	//*** validate self.q ***//
 }
 
-function renderBoundaryInclusionInput(self) {
+export function renderBoundaryInclusionInput(self) {
 	self.dom.boundaryInclusionDiv = self.dom.bins_div.append('div').style('margin-left', '5px')
 
 	self.dom.boundaryInclusionDiv
@@ -575,7 +575,7 @@ function renderCustomBinInputs(self, tablediv) {
 	renderBoundaryInputDivs(self, self.q.lst)
 }
 
-function renderBoundaryInputDivs(self, data) {
+export function renderBoundaryInputDivs(self, data) {
 	self.dom.customBinLabelTd.selectAll('div').remove('*')
 	const inputDivs = self.dom.customBinLabelTd.selectAll('div').data(data)
 	inputDivs.exit().remove()
@@ -599,7 +599,7 @@ function renderBoundaryInputDivs(self, data) {
 				.append('input')
 				.attr('type', 'text')
 				.property('value', d.label)
-				.on('change', function(d, i) {
+				.on('change', function() {
 					self.q.lst[i].label = this.value
 				})
 		})

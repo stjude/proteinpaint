@@ -281,7 +281,7 @@ function setRenderers(self) {
 			infoDiv: div.append('div')
 		}
 		d.dom.loading_div = d.dom.infoDiv.append('div').text('Loading..')
-		d.dom.cutoffDiv = d.dom.infoDiv.append('div')
+		// d.dom.cutoffDiv = d.dom.infoDiv.append('div')
 		d.dom.top_info_div = d.dom.infoDiv.append('div')
 		d.dom.term_info_div = d.dom.top_info_div.append('div').style('display', 'inline-block')
 		d.dom.ref_click_prompt = d.dom.top_info_div.append('div').style('display', 'inline-block')
@@ -310,7 +310,7 @@ function setRenderers(self) {
 			)
 		)
 		d.dom.infoDiv.style('display', d.term ? 'block' : 'none')
-		if (d.section.configKey == 'term') renderCuttoff(d)
+		if (d.section.configKey == 'term') updateCutoff(d)
 		// renderInfo() is required for both outcome and independent variables
 		if (d.term) renderInfo(d)
 	}
@@ -325,14 +325,16 @@ function setRenderers(self) {
 			.remove()
 	}
 
-	function renderCuttoff(d) {
+	function updateCutoff(d) {
 		if (!d.term || self.config.regressionType != 'logistic') return
-		d.dom.infoDiv
-			.style('display', d.term && d.cutoffTermTypes && d.cutoffTermTypes.includes(d.term.term.type) ? 'block' : 'none')
-			.style('margin', '3px 5px')
-			.style('padding', '3px 5px')
+		// TODO: set cutoff value of logistic numeric term
+		if (d.term.q.lst && d.term.q.lst[0].stop) self.config.cutoff = d.term.q.lst[0].stop
+		// d.dom.infoDiv
+		// 	.style('display', d.term && d.cutoffTermTypes && d.cutoffTermTypes.includes(d.term.term.type) ? 'block' : 'none')
+		// 	.style('margin', '3px 5px')
+		// 	.style('padding', '3px 5px')
 
-		d.dom.cutoffDiv.selectAll('*').remove()
+		// d.dom.cutoffDiv.selectAll('*').remove()
 		// const cutoffLabel = d.dom.cutoffDiv.append('span').html('Use cutoff of ')
 		// const useCutoffInput = d.dom.cutoffDiv
 		// 	.append('input')
