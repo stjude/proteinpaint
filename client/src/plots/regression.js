@@ -12,6 +12,7 @@ class MassRegression {
 	}
 
 	async init() {
+		this.opts.header = regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression'
 		this.opts.holder.style('margin-left', 0)
 		const controls = this.opts.holder.append('div')
 		const resultsDiv = this.opts.holder.append('div').style('margin-left', '40px')
@@ -41,7 +42,7 @@ class MassRegression {
 				app: this.app,
 				id: this.id,
 				holder: this.dom.controls,
-				chart: this.api,
+				chart: this.api
 				/*callbacks: {
 					'downloadClick.regression': this.download
 				}*/
@@ -172,7 +173,6 @@ class MassRegression {
 export const regressionInit = getCompInit(MassRegression)
 // this alias will allow abstracted dynamic imports
 export const componentInit = regressionInit
-
 
 function setInteractivity(self) {
 	self.download = () => {

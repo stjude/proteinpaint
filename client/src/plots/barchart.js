@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import rendererSettings from '../bars.settings'
 import barsRenderer from '../bars.renderer'
 import htmlLegend from '../html.legend'
@@ -11,10 +11,18 @@ import { to_svg } from '../client'
 
 class TdbBarchart {
 	constructor(opts) {
+		// rx.getComponentInit() will set this.app, this.id, this.opts
 		this.type = 'barchart'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+	preApiFreeze(api) {
+		api.download = this.download
+	}
+
+	init() {
+		const opts = this.opts
 		this.dom = {
+			header: opts.header,
 			holder: opts.holder,
 			banner: opts.holder
 				.append('div')
@@ -26,13 +34,13 @@ class TdbBarchart {
 			barDiv: opts.holder.append('div').style('white-space', 'normal'),
 			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
-		this.settings = JSON.parse(rendererSettings) //, this.config.settings.barchart)
-		this.renderers = {}
+		this.dom.header.html('Barchart')
+		this.settings = JSON.parse(rendererSettings)
 
 		setRenderers(this)
 		setInteractivity(this)
-		this.api.download = this.download
 
+		this.renderers = {}
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
 			settings: {
 				legendOrientation: 'vertical'
@@ -421,7 +429,9 @@ class TdbBarchart {
 	}
 }
 
-export const barInit = rx.getInitFxn(TdbBarchart)
+export const barInit = getCompInit(TdbBarchart)
+// this alias will allow abstracted dynamic imports
+export const componentInit = barInit
 
 function setRenderers(self) {
 	self.render = function() {

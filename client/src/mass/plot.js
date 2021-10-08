@@ -164,7 +164,6 @@ class MassPlot {
 
 	async setComponents(opts) {
 		this.components = {}
-		let paneTitle
 
 		if (this.opts.chartType != 'regression') {
 			const _ = await import('../termdb/plot.controls')
@@ -177,21 +176,15 @@ class MassPlot {
 			})
 		}
 
-		switch (opts.chartType) {
-			case 'barchart':
-				paneTitle = 'Barchart'
-				const bar = await import('../plots/barchart')
-				this.components.chart = bar.barInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls: this.components.controls
-				})
-				/*this.components.stattable = statTableInit(
-					{ app: this.app, holder: this.dom.viz.append('div'), id: this.id }
-				)*/
-				break
+		const paneTitleDiv = this.dom.holder.header
+			.append('div')
+			.style('display', 'inline-block')
+			.style('color', '#999')
+			.style('padding-left', '7px')
 
+		let paneTitle
+
+		switch (opts.chartType) {
 			case 'table':
 				paneTitle = 'Table'
 				const t = await import('../termdb/table')
@@ -225,17 +218,6 @@ class MassPlot {
 				})
 				break
 
-			case 'cuminc':
-				paneTitle = 'Cumulative Incidence Plot'
-				const ci = await import('../termdb/cuminc')
-				this.components.chart = ci.cumincInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls: this.components.controls
-				})
-				break
-
 			case 'survival':
 				paneTitle = 'Survival Plot'
 				const surv = await import('../termdb/survival')
@@ -247,30 +229,21 @@ class MassPlot {
 				})
 				break
 
-			/*
-			case 'regression':
-				const regressionType = this.state.config.regressionType
-				paneTitle = regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression'
-			*/
-
 			default:
 				const _ = await import(`../plots/${opts.chartType}`)
 				this.components.chart = await _.componentInit({
 					app: this.app,
 					holder: this.dom.viz,
-					header: this.dom.holder.header,
+					header: paneTitleDiv,
 					id: this.id,
-					regressionType: this.state.config.regressionType
+					// a component can choose to not use this control
+					// TODO: do not pass this controls
+					controls: this.components.controls
 				})
 		}
 
 		// label the viz pane
-		this.dom.holder.header
-			.append('div')
-			.style('display', 'inline-block')
-			.style('color', '#999')
-			.style('padding-left', '7px')
-			.html(paneTitle)
+		if (paneTitle) paneTitleDiv.html(paneTitle)
 	}
 }
 

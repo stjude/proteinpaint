@@ -16,10 +16,12 @@ class TdbCumInc {
 		// set this.id, .app, .opts, .api
 		rx.prepComponent(this, opts)
 		this.dom = {
+			header: opts.header,
 			holder: opts.holder,
 			chartsDiv: opts.holder.append('div').style('margin', '10px'),
 			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
+		this.dom.header.html('Cumulative Incidence Plot'); console.log(24, this.dom.header)
 		// hardcode for now, but may be set as option later
 		this.settings = Object.assign({}, this.opts.settings)
 		this.pj = getPj(this)
@@ -124,6 +126,8 @@ class TdbCumInc {
 }
 
 export const cumincInit = rx.getInitFxn(TdbCumInc)
+// this alias will allow abstracted dynamic imports
+export const componentInit = cumincInit
 
 function setRenderers(self) {
 	self.render = function() {
