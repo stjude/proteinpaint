@@ -4,19 +4,14 @@ import { format } from 'd3-format'
 import { setDensityPlot } from './termsetting.density'
 import { get_bin_label } from '../../shared/termdb.bins'
 import { init_tabs } from '../dom/toggleButtons'
+import { make_radios } from '../dom/radiobutton'
 
 /*
 Arguments
 self: a termsetting instance
 */
 
-const tsInstanceTracker = new WeakMap()
-let i = 0
-
 export async function setNumericMethods(self, closureType = 'closured') {
-	if (!tsInstanceTracker.has(self)) {
-		tsInstanceTracker.set(self, i++)
-	}
 
 	if (closureType == 'non-closured') {
 		// TODO: always use this non-closured version later
@@ -388,7 +383,6 @@ function renderFirstBinInput(self, tr) {
 }
 
 function renderLastBinInputs(self, tr) {
-	const id = tsInstanceTracker.get(self)
 	const isAuto = !self.q.last_bin || Object.keys(self.q.last_bin).length === 0
 
 	tr.append('td')
@@ -401,47 +395,18 @@ function renderLastBinInputs(self, tr) {
 		.style('padding-left', '15px')
 		.style('vertical-align', 'top')
 	const radio_div = td1.append('div')
-	const label0 = radio_div
-		.append('label')
-		.style('padding-left', '10px')
-		.style('padding-right', '10px')
 
-	self.dom.last_radio_auto = label0
-		.append('input')
-		.attr('type', 'radio')
-		.attr('name', 'last_bin_opt_' + id)
-		.attr('value', 'auto')
-		.style('margin-right', '3px')
-		.style('color', self.q.last_bin && self.q.last_bin.start > self.num_obj.density_data.maxvalue ? 'red' : '')
-		.property('checked', isAuto)
-		.on('change', handleChange)
-		.on('keyup', function() {
-			if (!keyupEnter()) return
-			handleChange.call(this)
-		})
-
-	label0
-		.append('span')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('Automatic<br>')
-
-	const label1 = radio_div
-		.append('label')
-		.style('padding-left', '10px')
-		.style('padding-right', '10px')
-
-	label1
-		.append('input')
-		.attr('type', 'radio')
-		.attr('name', 'last_bin_opt_' + id)
-		.attr('value', 'fixed')
-		.style('margin-right', '3px')
-		.property('checked', !isAuto)
-		.on('change', function() {
-			if (!this.checked) {
+	const { divs, labels, inputs } = make_radios({
+		holder: radio_div,
+		options: [
+			{ label: 'Automatic', value: 'auto', checked: isAuto },
+			{ label: 'Fixed', value: 'fixed', checked: !isAuto }
+		],
+		callback: v => {
+			if (v == 'auto') {
 				delete self.q.last_bin.start
 				edit_div.style('display', 'none')
-			} else {
+			} else if (v == 'fixed') {
 				if (!self.q.last_bin) self.q.last_bin = {}
 				if (!('start' in self.q.last_bin)) {
 					// default to setting the last bin start to max value,
@@ -453,13 +418,77 @@ function renderLastBinInputs(self, tr) {
 				self.q.last_bin.start = value
 				edit_div.style('display', 'inline-block')
 			}
+			handleChange()
 			setDensityPlot(self)
-		})
+		},
+		styles: {
+			'padding': '0 10px'
+		}
+	})
 
-	label1
-		.append('span')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('Fixed')
+	self.dom.last_radio_auto = select(inputs.nodes()[0])
+
+	// TODO: remove following code after revewing radiobutton implementation
+
+	// const label0 = radio_div
+	// 	.append('label')
+	// 	.style('padding-left', '10px')
+	// 	.style('padding-right', '10px')
+
+	// self.dom.last_radio_auto = label0
+	// 	.append('input')
+	// 	.attr('type', 'radio')
+	// 	.attr('name', 'last_bin_opt_' + id)
+	// 	.attr('value', 'auto')
+	// 	.style('margin-right', '3px')
+	// 	.style('color', self.q.last_bin && self.q.last_bin.start > self.num_obj.density_data.maxvalue ? 'red' : '')
+	// 	.property('checked', isAuto)
+	// 	.on('change', handleChange)
+	// 	.on('keyup', function() {
+	// 		if (!keyupEnter()) return
+	// 		handleChange.call(this)
+	// 	})
+
+	// label0
+	// 	.append('span')
+	// 	.style('color', 'rgb(136, 136, 136)')
+	// 	.html('Automatic<br>')
+
+	// const label1 = radio_div
+	// 	.append('label')
+	// 	.style('padding-left', '10px')
+	// 	.style('padding-right', '10px')
+
+	// label1
+	// 	.append('input')
+	// 	.attr('type', 'radio')
+	// 	.attr('name', 'last_bin_opt_' + id)
+	// 	.attr('value', 'fixed')
+	// 	.style('margin-right', '3px')
+	// 	.property('checked', !isAuto)
+	// 	.on('change', function() {
+	// 		if (!this.checked) {
+	// 			delete self.q.last_bin.start
+	// 			edit_div.style('display', 'none')
+	// 		} else {
+	// 			if (!self.q.last_bin) self.q.last_bin = {}
+	// 			if (!('start' in self.q.last_bin)) {
+	// 				// default to setting the last bin start to max value,
+	// 				// so that it will be dragged to the left by default
+	// 				self.q.last_bin.start = self.num_obj.density_data.maxvalue
+	// 			}
+	// 			self.dom.last_start_input.property('value', self.q.last_bin.start)
+	// 			const value = +self.dom.last_start_input.property('value')
+	// 			self.q.last_bin.start = value
+	// 			edit_div.style('display', 'inline-block')
+	// 		}
+	// 		setDensityPlot(self)
+	// 	})
+
+	// label1
+	// 	.append('span')
+	// 	.style('color', 'rgb(136, 136, 136)')
+	// 	.html('Fixed')
 
 	const edit_div = tr
 		.append('td')

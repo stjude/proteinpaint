@@ -187,7 +187,7 @@ function renderBinLines(self, data) {
 			.reverse()
 			.find(d => d.scaledX <= scaledMaxX)
 
-		if (data.last_bin && data.last_bin.start !== lastVisibleLine.x) {
+		if (data.last_bin && data.last_bin.start && data.last_bin.start !== lastVisibleLine.x) {
 			lines.push({ x: data.last_bin.start, index, scaledX: Math.round(o.xscale(data.last_bin.start)) })
 		}
 	} else {
