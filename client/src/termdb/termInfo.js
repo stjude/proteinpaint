@@ -9,7 +9,6 @@ class TdbTermInfo {
 		such as rubric, publication source, description, etc
 
 		opts{}
-			.id: INT optional
 			.holder: required d3-wrapped DOM element
 			.vocabApi: required vocabulary API with a getTermInfo() method
 			.state{} optional, see defaultState value above
@@ -45,15 +44,24 @@ class TdbTermInfo {
 
 export const termInfoInit = getInitFxn(TdbTermInfo)
 
-// rx-pluggable version
-// reference in parentComponent.components to get notified of state changes,
-// and thus the parentComponent does NOT have to call termInfoInstance.main(...)
-// and also rx will automatically detect if this component needs to update/rerender
+/* 
+	rx-pluggable version: 
+	- extend a class instead of using a parent wrapper component
+	- reference in parentComponent.components for this to get notified of state changes,
+	- the parentComponent does NOT have to call termInfoInstance.main(...)
+	- rx will automatically detect if this component needs to update/rerender
+*/
 class TdbTermInfoComp extends TdbTermInfo {
+	/*
+	opts:
+		same as the constructor opts plus these attributes
+		.id: INT
+			- optional, to be used to get this component's state
+	*/
 	constructor(opts) {
 		super(opts)
 		this.type = 'termInfo'
-		this.mainArg = 'state' // parentData
+		this.mainArg = 'state'
 	}
 
 	getState(appState) {
