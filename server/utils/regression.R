@@ -55,9 +55,12 @@ if(length(scalingFactors) != ncol(dat)){
   stop("Number of scaling factors does not match the number of variables")
 }
 
-#Specify the reference categories of categorical variables
+#Assign the reference categories of categorical variables. For binned categorical variables, ensure the order of categories follows a numeric order. 
 for(i in 1:ncol(dat)) {
   if(is.factor(dat[,i])) {
+    if(any(grepl(">|<|≥", dat[,i]))) {
+      levels(dat[,i]) <- levels(dat[,i])[order(gsub(">|<|≥", "", levels(dat[,i])))]
+    }
     dat[,i] <- relevel(dat[,i], ref = refCategories[i])
   }
 }
