@@ -2025,13 +2025,3 @@ export function tab_wait(d) {
 		.style('margin', '30px')
 		.text('Loading...')
 }
-
-export function add_scriptTag(path) {
-	// path like /static/js/three.js, must begin with /
-	return new Promise((resolve, reject) => {
-		const script = document.createElement('script')
-		script.setAttribute('src', sessionStorage.getItem('hostURL') + path)
-		document.head.appendChild(script)
-		script.onload = resolve
-	})
-}
