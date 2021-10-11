@@ -79,6 +79,7 @@ module.exports = (q, res, ds) => {
 	for (const d of density) {
 		densitymax = Math.max(densitymax, d[1])
 	}
+	const sorted_values = [...values].sort((a, b) => a - b)
 
 	const result = {
 		minvalue,
@@ -86,7 +87,7 @@ module.exports = (q, res, ds) => {
 		densitymax,
 		density,
 		samplecount: values.length,
-		median: values[Math.floor(values.length / 2)]
+		median: sorted_values[Math.floor(values.length / 2)]
 	}
 	res.send(result)
 }

@@ -3,6 +3,7 @@ import { select } from 'd3-selection'
 import { termsettingInit } from '../common/termsetting'
 import { dofetch3 } from '../client'
 import { getNormalRoot } from '../common/filter'
+import { get_bin_label } from '../../shared/termdb.bins'
 
 class MassRegressionUI {
 	constructor(opts) {
@@ -119,6 +120,43 @@ class MassRegressionUI {
 	async updateValueCount(d) {
 		// query backend for total sample count for each value of categorical or condition terms
 		// and included and excluded sample count for nuemric term
+
+		// query backend for median and create custom 2 bins with median and boundry 
+		// for logisctic independet numeric terms
+		if (d.section.configKey == 'term' && this.config.regressionType == 'logistic') {
+			const lst = [
+				'/termdb?getmedian=1',
+				'tid=' + d.term.id,
+				'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
+				'genome=' + this.state.vocab.genome,
+				'dslabel=' + this.state.vocab.dslabel
+			]
+			const url = lst.join('&')
+			const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
+			if (data.error) throw data.error
+			const median = data.median
+			d.term.q = {
+				mode: 'binary',
+				type: 'custom',
+				lst: [
+					{
+						startunbounded: true,
+						stopinclusive: true,
+						stop: +median.toFixed(d.term.type == 'integer' ? 0 : 2)
+					},
+					{
+						stopunbounded: true,
+						stopinclusive: true,
+						start: +median.toFixed(d.term.type == 'integer' ? 0 : 2)
+					}
+				]
+		  }
+
+		  d.term.q.lst.forEach(bin => {
+				if (!('label' in bin)) bin.label = get_bin_label(bin, d.term.q)
+			})
+		}
+
 		const q = JSON.parse(JSON.stringify(d.term.q))
 		delete q.values
 		const lst = [
@@ -327,26 +365,14 @@ function setRenderers(self) {
 
 	function updateCutoff(d) {
 		if (!d.term || self.config.regressionType != 'logistic') return
-		// TODO: set cutoff value of logistic numeric term
-		if (d.term.q.lst && d.term.q.lst[0].stop) self.config.cutoff = d.term.q.lst[0].stop
-		// d.dom.infoDiv
-		// 	.style('display', d.term && d.cutoffTermTypes && d.cutoffTermTypes.includes(d.term.term.type) ? 'block' : 'none')
-		// 	.style('margin', '3px 5px')
-		// 	.style('padding', '3px 5px')
-
-		// d.dom.cutoffDiv.selectAll('*').remove()
-		// const cutoffLabel = d.dom.cutoffDiv.append('span').html('Use cutoff of ')
-		// const useCutoffInput = d.dom.cutoffDiv
-		// 	.append('input')
-		// 	.attr('type', 'number')
-		// 	.style('width', '50px')
-		// 	.style('text-align', 'center')
-		// 	.property('value', d.cutoff)
-		// 	.on('change', () => {
-		// 		const value = useCutoffInput.property('value')
-		// 		if (value === '') delete d.cutoff
-		// 		else d.cutoff = Number(value)
-		// 	})
+		// set cutoff value of logistic numeric term
+		if (d.term.q.lst && d.term.q.lst[0].stop) {
+			self.config.cutoff = d.term.q.lst[0].stop
+		}
+		if (d.term.q.lst && !d.term.q.refGrp) {
+			d.term.q.refGrp = d.term.q.lst[0].label
+			self.refGrpByTermId[d.term.id] = d.term.q.lst[0].label
+		}
 	}
 
 	async function renderInfo(d) {
@@ -435,7 +461,7 @@ function setRenderers(self) {
 
 		const table = excluded ? d.dom.excluded_table : d.dom.values_table
 		const isContinuousTerm =
-			d.term && d.term.q.mode !== 'bins' && (d.term.term.type == 'float' || d.term.term.type == 'integer')
+			d.term && d.term.q.mode == 'continuous' && (d.term.term.type == 'float' || d.term.term.type == 'integer')
 
 		const trs = table
 			.style('margin', '10px 5px')
@@ -503,7 +529,7 @@ function setRenderers(self) {
 		select(this.firstChild).text(item.samplecount !== undefined ? 'n=' + item.samplecount : '')
 		select(this.firstChild.nextSibling).text(item.label)
 		let rendered = true
-		if (pillData.term.q.mode == 'discrete' && this.childNodes.length < 4) rendered = false
+		if ((pillData.term.q.mode == 'discrete' || pillData.term.q.mode == 'binary') && this.childNodes.length < 4) rendered = false
 		addTrBehavior({ d: pillData, item, tr: select(this), rendered })
 	}
 
@@ -512,7 +538,7 @@ function setRenderers(self) {
 		// don't add tr effects for excluded values
 		if (!item.bar_width_frac) return
 
-		const hover_flag = (d.term.term.type !== 'integer' && d.term.term.type !== 'float') || d.term.q.mode == 'discrete'
+		const hover_flag = (d.term.term.type !== 'integer' && d.term.term.type !== 'float') || d.term.q.mode == 'discrete' || d.term.q.mode == 'binary'
 		let ref_text
 
 		if (rendered) {
@@ -609,6 +635,7 @@ function setInteractivity(self) {
 
 	self.submit = () => {
 		const config = JSON.parse(JSON.stringify(self.config))
+		// console.log(config)
 		//delete config.settings
 		for (const term of config.independent) {
 			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'

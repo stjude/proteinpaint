@@ -89,9 +89,10 @@ async function showEditMenu(self, div) {
 		.append('button')
 		.style('margin', '5px')
 		.html('Apply')
-		.on('click', () => {
-			self.q.mode = 'discrete'
+		.on('click', async () => {
+			self.q.mode = 'binary'
 			self.opts.callback({
+				id: self.term.id,
 				term: self.term,
 				q: self.q
 			})
@@ -102,7 +103,7 @@ async function showEditMenu(self, div) {
 		.html('Reset')
 		.on('click', () => {
             // TODO: set self.q to default
-			// self.q.mode = 'discrete'
+			// self.q.mode = 'binary'
 			// self.opts.callback({
 			// 	term: self.term,
 			// 	q: self.q
@@ -167,7 +168,7 @@ function renderCuttoffInput(self) {
         .style('color', 'rgb(136, 136, 136)')
         .html('Boundary value')
 
-    self.dom.cutoff_input = self.dom.cutoff_div
+    self.dom.customBinBoundaryInput = self.dom.cutoff_div
         .append('input')
         .style('width', '100px')
         .attr('type', 'number')
