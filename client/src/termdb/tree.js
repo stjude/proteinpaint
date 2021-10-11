@@ -81,7 +81,7 @@ class TdbTree {
 		this.plots = {}
 		// this.components.plots will point to only the termIds
 		// that are applicable to the active cohort
-		this.components = { plots: {}, info: {} }
+		this.components = { plots: {} }
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
 		this.loadingPlotSet = new Set()

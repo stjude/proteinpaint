@@ -10,15 +10,22 @@ class TdbTermInfo {
 		opts{}
 			.content_holder: required d3-wrapped DOM element
 				****TODO: Create menu on the fly if content_holder is not supplied****
+			
 			.icon_holder: optional, creates information icon for terms
-			.vocabApi: required vocabulary API with a getTermInfo() method
+			
+			.vocabApi: 
+				- for termInfoInit(), required as opts.vocabApi
+				- for termInfoComp(), required as part of opts.app
+				- a vocabulary API that has a getTermInfo() method
+			
 			.state{} optional, see defaultState value above
 				.isVisible: boolean, optional
 				.term: {id, ...} optional (may be supplied with either getState() or main({state}))
 	*/
 	constructor(opts) {
 		this.vocabApi = opts.vocabApi || (opts.app && opts.app.vocabApi)
-		;(this.state = Object.assign({}, defaultState, opts.state ? opts.state : {})), (this.api = this)
+		this.state = Object.assign({}, defaultState, opts.state ? opts.state : {})
+		this.api = this
 		setInteractivity(this)
 		setRenderers(this)
 		this.initUI(opts)
@@ -54,6 +61,9 @@ class TdbTermInfoComp extends TdbTermInfo {
 		same as the constructor opts plus these attributes
 		.id: INT
 			- optional, to be used to get this component's state
+
+		.app 
+			- an app API with a .vocabApi{getTermInfo} instance and a dispatch() method
 	*/
 	constructor(opts) {
 		super(opts)
@@ -83,7 +93,7 @@ function setRenderers(self) {
 				.style('padding-bottom', '20px'),
 
 			//Term information/description
-			addlInfo: opts.content_holder.append('div'),
+			details: opts.content_holder.append('div'),
 
 			tbody: opts.content_holder
 				.append('table')
@@ -163,18 +173,18 @@ function setRenderers(self) {
 			}
 		}
 		//Term information/description
-		self.dom.addlInfo.selectAll('*').remove()
+		self.dom.details.selectAll('*').remove()
 		if (data.terminfo.description) {
-			const header = self.dom.addlInfo
+			const header = self.dom.details
 				.append('div')
 				.style('padding-top', '30px')
 				.style('padding-bottom', '10px')
 				.style('font-weight', 'bold')
 				.text('Description')
 			for (const d of data.terminfo.description) {
-				self.renderDetail(d, self.dom.addlInfo.append('div').style('padding-bottom', '3px'))
+				self.renderDetail(d, self.dom.details.append('div').style('padding-bottom', '3px'))
 			}
-			self.dom.addlInfo.append('div').style('padding-bottom', '20px')
+			self.dom.details.append('div').style('padding-bottom', '20px')
 		}
 	}
 
