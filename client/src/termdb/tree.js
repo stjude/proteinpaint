@@ -81,7 +81,7 @@ class TdbTree {
 		this.plots = {}
 		// this.components.plots will point to only the termIds
 		// that are applicable to the active cohort
-		this.components = { plots: {}, info: {} }
+		this.components = { plots: {} }
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
 		this.loadingPlotSet = new Set()
@@ -303,7 +303,6 @@ function setRenderers(self) {
 			// TODO: deprecate exclude_types in favor or tree.usecase
 			self.included_terms.push(...term.terms)
 		} else {
-			//console.log(297, self.state.exclude_types)
 			for (const t of term.terms) {
 				if (t.included_types.filter(type => !self.state.exclude_types.includes(type)).length) {
 					self.included_terms.push(t)
@@ -403,43 +402,10 @@ function setRenderers(self) {
 			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(term.name)
 
-		// add an info button
+		let infoIcon_div //Empty div for info icon if termInfoInit is called
 		if (term.hashtmldetail) {
-			let isOpen = false
-			const infoicon = div
-				.append('div')
-				.style('display', 'inline-block')
-				.style('margin', '1px 1px 1px 10px')
-				.style('padding', '2px 5px')
-				.style('font-family', 'Times New Roman')
-				.style('font-size', '14px')
-				.style('font-weight', 'bold')
-				.style('cursor', 'pointer')
-				.style('background-color', 'transparent')
-				.style('color', '#797a7a')
-				.style('align-items', 'center')
-				.style('justify-content', 'center')
-				.style('border', 'none')
-				.style('border-radius', '3px')
-				.attr('title', 'Term Information')
-				.html('&#9432;')
-				.on('mouseover', () => {
-					if (isOpen == true) return
-					infoicon.style('color', 'blue')
-				})
-				.on('mouseleave', () => {
-					if (isOpen == true) return
-					infoicon.style('color', '#797a7a')
-				})
-				.on('click', () => {
-					isOpen = !isOpen
-					const type = isOpen ? 'info_expand' : 'info_collapse'
-					infoicon.style('background-color', isOpen ? 'darkgray' : 'transparent')
-					infoicon.style('color', isOpen ? 'white' : '#797a7a')
-					termInfo.main({ isVisible: isOpen })
-				})
+			infoIcon_div = div.append('div').style('display', 'inline-block')
 		}
-
 		if (graphable(term)) {
 			if (self.opts.click_term) {
 				if (termIsDisabled) {
@@ -492,14 +458,12 @@ function setRenderers(self) {
 				div.append('div').attr('class', cls_termgraphdiv)
 			}
 		}
-
-		// the holder div for the terminfo will be displayed
-		// below the term label (and VIEW button, if applicable)
-		let termInfo
+		//Creates the info icon and description div from termInfo.js
 		if (term.hashtmldetail) {
-			termInfo = await termInfoInit({
+			termInfoInit({
 				vocabApi: self.app.vocabApi,
-				holder: div.append('div'),
+				icon_holder: infoIcon_div,
+				content_holder: div.append('div'),
 				id: term.id,
 				state: { term }
 			})
@@ -572,14 +536,5 @@ function setInteractivity(self) {
 		}
 		const type = self.state.visiblePlotIds.includes(term.id) ? 'plot_hide' : 'plot_show'
 		self.app.dispatch({ type, id: term.id, term })
-	}
-
-	self.clickInfoButton = function(term) {
-		const x = termInfoInit({
-			app: this.app,
-			holder: this.dom.viz.append('div'),
-			id: term.id
-		})
-		console.log(x)
 	}
 }
