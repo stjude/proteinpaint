@@ -1,5 +1,4 @@
 import { getCompInit, getInitFxn, copyMerge } from '../common/rx.core'
-import { dofetch3 } from '../client'
 
 const defaultState = { isVisible: false, term: null }
 
@@ -10,6 +9,7 @@ class TdbTermInfo {
 
 		opts{}
 			.content_holder: required d3-wrapped DOM element
+				****TODO: Create menu on the fly if content_holder is not supplied****
 			.icon_holder: optional, creates information icon for terms
 			.vocabApi: required vocabulary API with a getTermInfo() method
 			.state{} optional, see defaultState value above
@@ -82,6 +82,7 @@ function setRenderers(self) {
 				.style('width', '80vh')
 				.style('padding-bottom', '20px'),
 
+			//Term information/description
 			addlInfo: opts.content_holder.append('div'),
 
 			tbody: opts.content_holder
@@ -161,7 +162,7 @@ function setRenderers(self) {
 					.text(grade)
 			}
 		}
-
+		//Term information/description
 		self.dom.addlInfo.selectAll('*').remove()
 		if (data.terminfo.description) {
 			const header = self.dom.addlInfo

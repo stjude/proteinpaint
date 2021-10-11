@@ -460,7 +460,7 @@ function setRenderers(self) {
 		}
 		//Creates the info icon and description div from termInfo.js
 		if (term.hashtmldetail) {
-			await termInfoInit({
+			termInfoInit({
 				vocabApi: self.app.vocabApi,
 				icon_holder: infoIcon_div,
 				content_holder: div.append('div'),
