@@ -110,11 +110,6 @@ upon error, throw err message as a string
 		const genomeobj = arg.genomes[genomename]
 		if (!genomeobj) throw 'invalid genome: ' + genomename
 
-		await client.add_scriptTag('/static/js/three.js')
-		await client.add_scriptTag('/static/js/loaders/PCDLoader.js')
-		await client.add_scriptTag('/static/js/controls/TrackballControls.js')
-		await client.add_scriptTag('/static/js/WebGL.js')
-		await client.add_scriptTag('/static/js/libs/stats.min.js')
 		const _ = await import('./singlecell')
 		_.init(
 			{
