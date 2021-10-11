@@ -10,6 +10,7 @@ class TdbTermInfo {
 
 		opts{}
 			.content_holder: required d3-wrapped DOM element
+			.icon_holder: optional, creates information icon for terms
 			.vocabApi: required vocabulary API with a getTermInfo() method
 			.state{} optional, see defaultState value above
 				.isVisible: boolean, optional
@@ -88,7 +89,7 @@ function setRenderers(self) {
 				.style('white-space', 'normal')
 				.append('tbody'),
 
-			//Information icon button div. Description appears in content_holder
+			//Information icon button div. Term description appears in content_holder
 			icon_holder: opts.icon_holder
 				.style('margin', '1px 0px 1px 5px')
 				.style('padding', '2px 5px')
