@@ -45,9 +45,10 @@
 //     if polyclonal, classify as none
 //     if ref classified read, but contains inserted/deleted nucleotides in indel region, classify as none
 
-//use factorial::Factorial;
+use factorial::Factorial;
 use statrs::distribution::{ChiSquared, ContinuousCDF};
 use std::cmp;
+use std::panic;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
 //use std::env;
@@ -827,20 +828,41 @@ fn main() {
     println!("alternate_reverse_count:{}", alternate_reverse_count);
     println!("reference_forward_count:{}", reference_forward_count);
     println!("reference_reverse_count:{}", reference_reverse_count);
-    //let p_value = fishers_exact_test(
-    //    alternate_forward_count,
-    //    alternate_reverse_count,
-    //    reference_forward_count,
-    //    reference_reverse_count,
-    //);
 
-    let strand_probability = chi_square_test(
-        alternate_forward_count,
-        alternate_reverse_count,
-        reference_forward_count,
-        reference_reverse_count,
-    );
-    println!("strand_probability:{}", strand_probability);
+    let p_value_result = panic::catch_unwind(|| {
+        fishers_exact_test(
+            alternate_forward_count,
+            alternate_reverse_count,
+            reference_forward_count,
+            reference_reverse_count,
+        );
+    });
+
+    //match p_value_result {
+    //    Ok(res) => println!("{:?}", res),
+    //    Err(_) => println!("caught panic!"),
+    //}
+
+    let mut p_value: f64 = 0.0;
+    if p_value_result.is_ok() {
+        println!("Fisher test worked:{:?}", p_value_result);
+        p_value = fishers_exact_test(
+            alternate_forward_count,
+            alternate_reverse_count,
+            reference_forward_count,
+            reference_reverse_count,
+        );
+    } else if p_value_result.is_err() {
+        println!("Fisher test failed, using Chi-sq test instead");
+        p_value = chi_square_test(
+            alternate_forward_count,
+            alternate_reverse_count,
+            reference_forward_count,
+            reference_reverse_count,
+        );
+    }
+
+    println!("strand_probability:{}", p_value);
 
     //println!("strand_probability:{}", chi_square_test(10, 0, 10, 0));
 
@@ -905,26 +927,28 @@ fn chi_square_test(
     }
 }
 
-//fn fishers_exact_test(
-//    alternate_forward_count: u64,
-//    alternate_reverse_count: u64,
-//    reference_forward_count: u64,
-//    reference_reverse_count: u64,
-//) -> f64 {
-//    ((alternate_forward_count + alternate_reverse_count).factorial()
-//        + (alternate_forward_count + reference_forward_count).factorial()
-//        + (reference_forward_count + reference_reverse_count).factorial()
-//        + (alternate_reverse_count + reference_reverse_count).factorial()) as f64
-//        / ((alternate_forward_count
-//            + alternate_reverse_count
-//            + reference_forward_count
-//            + reference_reverse_count)
-//            .factorial()
-//            * alternate_forward_count.factorial()
-//            * alternate_reverse_count.factorial()
-//            * reference_forward_count.factorial()
-//            * reference_reverse_count.factorial()) as f64
-//}
+fn fishers_exact_test(
+    alternate_forward_count: u64,
+    alternate_reverse_count: u64,
+    reference_forward_count: u64,
+    reference_reverse_count: u64,
+) -> f64 {
+    -10.0
+        * (((alternate_forward_count + alternate_reverse_count).factorial()
+            + (alternate_forward_count + reference_forward_count).factorial()
+            + (reference_forward_count + reference_reverse_count).factorial()
+            + (alternate_reverse_count + reference_reverse_count).factorial()) as f64
+            / ((alternate_forward_count
+                + alternate_reverse_count
+                + reference_forward_count
+                + reference_reverse_count)
+                .factorial()
+                * alternate_forward_count.factorial()
+                * alternate_reverse_count.factorial()
+                * reference_forward_count.factorial()
+                * reference_reverse_count.factorial()) as f64)
+            .log(10.0)
+}
 
 fn assign_kmer_weights(
     ref_sequence: String,           // Complete reference sequence
