@@ -46,6 +46,7 @@
 //     if ref classified read, but contains inserted/deleted nucleotides in indel region, classify as none
 
 use factorial::Factorial;
+use num_traits::Float;
 use statrs::distribution::{ChiSquared, ContinuousCDF};
 use std::cmp;
 use std::panic;
@@ -261,6 +262,7 @@ fn main() {
     let strictness: usize = args[11].parse::<usize>().unwrap(); // strictness of the pipeline
     let leftflankseq: String = args[12].parse::<String>().unwrap(); //Left flanking sequence
     let rightflankseq: String = args[13].parse::<String>().unwrap(); //Right flanking sequence
+    let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
     let rightflank_nucleotides: Vec<char> = rightflankseq.chars().collect(); // Vector containing right flanking nucleotides
     let ref_nucleotides: Vec<char> = refallele.chars().collect(); // Vector containing ref nucleotides
     let alt_nucleotides: Vec<char> = altallele.chars().collect(); // Vector containing alt nucleotides
@@ -829,6 +831,70 @@ fn main() {
     println!("reference_forward_count:{}", reference_forward_count);
     println!("reference_reverse_count:{}", reference_reverse_count);
 
+    let mut p_value = strand_analysis(
+        alternate_forward_count,
+        alternate_reverse_count,
+        reference_forward_count,
+        reference_reverse_count,
+    );
+
+    // Need to get all possible combination of forward/reverse reads for alternate and reference alleles. For details, please see this link https://gatk.broadinstitute.org/hc/en-us/articles/360035532152-Fisher-s-Exact-Test
+
+    if p_value <= fisher_test_threshold {
+        let mut alternate_forward_count_temp: i64 =
+            (alternate_forward_count + alternate_reverse_count) as i64;
+        let mut alternate_reverse_count_temp = 0;
+        while p_value <= fisher_test_threshold && alternate_forward_count_temp >= 0 {
+            alternate_forward_count_temp -= 1;
+            alternate_reverse_count_temp += 1;
+            let p_temp = strand_analysis(
+                alternate_forward_count_temp as u64,
+                alternate_reverse_count_temp,
+                reference_forward_count,
+                reference_reverse_count,
+            );
+            if p_temp < fisher_test_threshold {
+                // Add to p-value only if its significant
+                p_value += p_temp;
+            }
+        }
+
+        let mut reference_forward_count_temp: i64 =
+            (reference_forward_count + reference_reverse_count) as i64;
+        let mut reference_reverse_count_temp = 0;
+        while p_value <= fisher_test_threshold && reference_forward_count_temp >= 0 {
+            reference_forward_count_temp -= 1;
+            reference_reverse_count_temp += 1;
+            let p_temp = strand_analysis(
+                alternate_forward_count,
+                alternate_reverse_count,
+                reference_forward_count_temp as u64,
+                reference_reverse_count_temp,
+            );
+            if p_temp < fisher_test_threshold {
+                // Add to p-value only if its significant
+                p_value += p_temp;
+            }
+        }
+    }
+
+    println!("strand_probability:{}", p_value);
+    println!("fisher_test_threshold:{}", fisher_test_threshold);
+
+    output_cat.pop(); // Removing the last ":" character from string
+    output_gID.pop(); // Removing the last ":" character from string
+    output_diff_scores.pop(); // Removing the last ":" character from string
+    println!("output_cat:{:?}", output_cat); // Final read categories assigned
+    println!("output_gID:{:?}", output_gID); // Initial read group ID corresponding to read category in output_cat
+    println!("output_diff_scores:{:?}", output_diff_scores); // Final diff_scores corresponding to reads in group ID
+}
+
+fn strand_analysis(
+    alternate_forward_count: u64,
+    alternate_reverse_count: u64,
+    reference_forward_count: u64,
+    reference_reverse_count: u64,
+) -> f64 {
     let p_value_result = panic::catch_unwind(|| {
         fishers_exact_test(
             alternate_forward_count,
@@ -861,17 +927,7 @@ fn main() {
             reference_reverse_count,
         );
     }
-
-    println!("strand_probability:{}", p_value);
-
-    //println!("strand_probability:{}", chi_square_test(10, 0, 10, 0));
-
-    output_cat.pop(); // Removing the last ":" character from string
-    output_gID.pop(); // Removing the last ":" character from string
-    output_diff_scores.pop(); // Removing the last ":" character from string
-    println!("output_cat:{:?}", output_cat); // Final read categories assigned
-    println!("output_gID:{:?}", output_gID); // Initial read group ID corresponding to read category in output_cat
-    println!("output_diff_scores:{:?}", output_diff_scores); // Final diff_scores corresponding to reads in group ID
+    p_value
 }
 
 fn chi_square_test(
@@ -883,7 +939,7 @@ fn chi_square_test(
     if (alternate_reverse_count == 0 && reference_reverse_count == 0)
         || (alternate_forward_count == 0 && reference_forward_count == 0)
     {
-        100000.0 // Arbitarily put a very high number when there are only forward or reverse reads for alternate/reference
+        0.05 // Arbitarily put a very high number when there are only forward or reverse reads for alternate/reference
     } else {
         let total: f64 = (alternate_forward_count
             + alternate_reverse_count
@@ -923,7 +979,8 @@ fn chi_square_test(
         let chi_sq_dist = ChiSquared::new(1.0).unwrap(); // Using degrees of freedom = 1
         let p_value: f64 = 1.0 - chi_sq_dist.cdf(chi_sq);
         //println!("p-value:{}", p_value);
-        -10.0 * p_value.log(10.0) // Reporting phred-scale p-values (-10*log(p-value))
+        //-10.0 * p_value.log(10.0) // Reporting phred-scale p-values (-10*log(p-value))
+        p_value
     }
 }
 
@@ -933,21 +990,19 @@ fn fishers_exact_test(
     reference_forward_count: u64,
     reference_reverse_count: u64,
 ) -> f64 {
-    -10.0
-        * (((alternate_forward_count + alternate_reverse_count).factorial()
-            + (alternate_forward_count + reference_forward_count).factorial()
-            + (reference_forward_count + reference_reverse_count).factorial()
-            + (alternate_reverse_count + reference_reverse_count).factorial()) as f64
-            / ((alternate_forward_count
-                + alternate_reverse_count
-                + reference_forward_count
-                + reference_reverse_count)
-                .factorial()
-                * alternate_forward_count.factorial()
-                * alternate_reverse_count.factorial()
-                * reference_forward_count.factorial()
-                * reference_reverse_count.factorial()) as f64)
-            .log(10.0)
+    ((alternate_forward_count + alternate_reverse_count).factorial()
+        + (alternate_forward_count + reference_forward_count).factorial()
+        + (reference_forward_count + reference_reverse_count).factorial()
+        + (alternate_reverse_count + reference_reverse_count).factorial()) as f64
+        / ((alternate_forward_count
+            + alternate_reverse_count
+            + reference_forward_count
+            + reference_reverse_count)
+            .factorial()
+            * alternate_forward_count.factorial()
+            * alternate_reverse_count.factorial()
+            * reference_forward_count.factorial()
+            * reference_reverse_count.factorial()) as f64
 }
 
 fn assign_kmer_weights(
