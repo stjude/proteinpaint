@@ -366,9 +366,9 @@ function setRenderers(self) {
 	function updateCutoff(d) {
 		if (!d.term || self.config.regressionType != 'logistic') return
 		// set cutoff value of logistic numeric term
-		if (d.term.q.lst && d.term.q.lst[0].stop) {
-			self.config.cutoff = d.term.q.lst[0].stop
-		}
+		// if (d.term.q.lst && d.term.q.lst[0].stop) {
+		// 	self.config.cutoff = d.term.q.lst[0].stop
+		// }
 		if (d.term.q.lst && !d.term.q.refGrp) {
 			d.term.q.refGrp = d.term.q.lst[0].label
 			self.refGrpByTermId[d.term.id] = d.term.q.lst[0].label
@@ -640,6 +640,8 @@ function setInteractivity(self) {
 		for (const term of config.independent) {
 			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
+		if(config.term.id in self.refGrpByTermId)
+			config.term.q.refGrp = self.refGrpByTermId[config.term.id]
 		// disable submit button on click, reenable after rendering results
 		self.dom.submitBtn.property('disabled', true).html('Running...')
 		self.app.dispatch({
