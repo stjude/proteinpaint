@@ -210,6 +210,11 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		//}
 	}
 
+	let strand_significance = false
+	if (strand_probability > fisher_test_threshold) {
+		strand_significance = true
+	}
+
 	//console.log("group_ids:",group_ids)
 	//console.log("categories:",categories.length)
 	//console.log("diff_scores:",diff_scores.length)
@@ -292,7 +297,17 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		g.widths = region_widths
 		groups.push(g)
 	}
-	return { groups, refalleleerror, max_diff_score, min_diff_score, final_pos, final_ref, final_alt, strand_probability }
+	return {
+		groups,
+		refalleleerror,
+		max_diff_score,
+		min_diff_score,
+		final_pos,
+		final_ref,
+		final_alt,
+		strand_probability,
+		strand_significance
+	}
 }
 
 function run_rust_indel_pipeline(input_data) {

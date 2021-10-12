@@ -389,7 +389,6 @@ function may_render_variant(data, tk, block) {
 	// TODO show variant info alongside box, when box is wide enough, show
 	if (!tk.dom.variantg) return
 	tk.dom.variantg.selectAll('*').remove()
-	console.log('strand_probability:', data.strand_probability)
 	let x1, x2 // on screen pixel start/stop of the variant box
 	{
 		const hits = block.seekcoord(tk.variants[0].chr, tk.variants[0].pos)
@@ -510,6 +509,23 @@ function may_render_variant(data, tk, block) {
 
 		incorrect_string.attr('x', text_start_pos)
 	}
+
+	// Rendering FS score
+	let text_fs_score = 0
+	let fs_string = tk.dom.variantg
+		.append('text')
+		.attr('x', text_fs_score)
+		.attr('y', tk.dom.variantrowheight)
+		.attr('text-anchor', 'end')
+		.attr('font-size', tk.dom.variantrowheight)
+		.text('FS = ' + data.strand_probability)
+
+	if (data.strand_significance) {
+		// Change color to red if FS score is significant
+		fs_string.style('fill', 'red')
+	}
+
+	//fs_string_bbox = fs_string.node().getBBox() // .node() will get the DOM/SVG
 
 	if (Number.isFinite(data.max_diff_score)) {
 		// Should always be true if variant field was given by user, but may change in the future

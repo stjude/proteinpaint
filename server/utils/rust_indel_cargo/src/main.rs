@@ -845,7 +845,7 @@ fn main() {
         fisher_test_threshold,
     );
 
-    println!("strand_probability:{}", p_value);
+    println!("strand_probability:{:.2}", p_value);
     //println!("fisher_test_threshold:{}", fisher_test_threshold);
 
     output_cat.pop(); // Removing the last ":" character from string
@@ -875,47 +875,47 @@ fn strand_analysis(
 
     // Need to get all possible combination of forward/reverse reads for alternate and reference alleles. For details, please see this link https://gatk.broadinstitute.org/hc/en-us/articles/360035532152-Fisher-s-Exact-Test
 
-    if p_value <= fisher_test_threshold {
-        let mut alternate_forward_count_temp: i64 =
-            (alternate_forward_count + alternate_reverse_count) as i64;
-        let mut alternate_reverse_count_temp = 0;
-        while p_value <= fisher_test_threshold && alternate_forward_count_temp >= 0 {
-            alternate_forward_count_temp -= 1;
-            alternate_reverse_count_temp += 1;
-            #[allow(unused_variables)]
-            let (p_temp, fisher_test_temp) = strand_analysis_one_iteration(
-                alternate_forward_count_temp as u64,
-                alternate_reverse_count_temp,
-                reference_forward_count,
-                reference_reverse_count,
-                fisher_chisq_test,
-            );
-            if p_temp < fisher_test_threshold {
-                // Add to p-value only if its significant
-                p_value += p_temp;
-            }
-        }
-
-        let mut reference_forward_count_temp: i64 =
-            (reference_forward_count + reference_reverse_count) as i64;
-        let mut reference_reverse_count_temp = 0;
-        while p_value <= fisher_test_threshold && reference_forward_count_temp >= 0 {
-            reference_forward_count_temp -= 1;
-            reference_reverse_count_temp += 1;
-            #[allow(unused_variables)]
-            let (p_temp, fisher_test_temp) = strand_analysis_one_iteration(
-                alternate_forward_count,
-                alternate_reverse_count,
-                reference_forward_count_temp as u64,
-                reference_reverse_count_temp,
-                fisher_chisq_test,
-            );
-            if p_temp < fisher_test_threshold {
-                // Add to p-value only if its significant
-                p_value += p_temp;
-            }
+    //if p_value <= fisher_test_threshold {
+    let mut alternate_forward_count_temp: i64 =
+        (alternate_forward_count + alternate_reverse_count) as i64;
+    let mut alternate_reverse_count_temp = 0;
+    while p_value <= fisher_test_threshold && alternate_forward_count_temp >= 0 {
+        alternate_forward_count_temp -= 1;
+        alternate_reverse_count_temp += 1;
+        #[allow(unused_variables)]
+        let (p_temp, fisher_test_temp) = strand_analysis_one_iteration(
+            alternate_forward_count_temp as u64,
+            alternate_reverse_count_temp,
+            reference_forward_count,
+            reference_reverse_count,
+            fisher_chisq_test,
+        );
+        if p_temp < fisher_test_threshold {
+            // Add to p-value only if its significant
+            p_value += p_temp;
         }
     }
+
+    let mut reference_forward_count_temp: i64 =
+        (reference_forward_count + reference_reverse_count) as i64;
+    let mut reference_reverse_count_temp = 0;
+    while p_value <= fisher_test_threshold && reference_forward_count_temp >= 0 {
+        reference_forward_count_temp -= 1;
+        reference_reverse_count_temp += 1;
+        #[allow(unused_variables)]
+        let (p_temp, fisher_test_temp) = strand_analysis_one_iteration(
+            alternate_forward_count,
+            alternate_reverse_count,
+            reference_forward_count_temp as u64,
+            reference_reverse_count_temp,
+            fisher_chisq_test,
+        );
+        if p_temp < fisher_test_threshold {
+            // Add to p-value only if its significant
+            p_value += p_temp;
+        }
+    }
+    //}
     -10.0 * p_value.log(10.0) // Reporting phred-scale p-values (-10*log(p-value))
 }
 
@@ -957,12 +957,31 @@ fn strand_analysis_one_iteration(
             }
         }
     } else if fisher_chisq_test == 1 {
-        p_value = fishers_exact_test(
-            alternate_forward_count,
-            alternate_reverse_count,
-            reference_forward_count,
-            reference_reverse_count,
-        );
+        let p_value_result = panic::catch_unwind(|| {
+            let p_value = fishers_exact_test(
+                alternate_forward_count,
+                alternate_reverse_count,
+                reference_forward_count,
+                reference_reverse_count,
+            );
+            p_value
+        });
+
+        match p_value_result {
+            Ok(res) => {
+                //println!("Fisher test worked:{:?}", p_value_result);
+                p_value = res;
+            }
+            Err(_) => {
+                //println!("Fisher test failed, using Chi-sq test instead");
+                p_value = chi_square_test(
+                    alternate_forward_count,
+                    alternate_reverse_count,
+                    reference_forward_count,
+                    reference_reverse_count,
+                );
+            }
+        }
         fisher_chisq_test_final = 1;
     } else if fisher_chisq_test == 2 {
         p_value = chi_square_test(
