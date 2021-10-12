@@ -1,4 +1,5 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
+import { controlsInit } from './controls'
 import { getNormalRoot } from '../common/filter'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
@@ -13,15 +14,20 @@ import { dofetch3, to_svg } from '../client'
 class TdbCumInc {
 	constructor(opts) {
 		this.type = 'cuminc'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+	async init() {
+		const opts = this.opts
+		const controls = this.opts.controls ? null : opts.holder.append('div')
+		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
 			header: opts.header,
-			holder: opts.holder,
-			chartsDiv: opts.holder.append('div').style('margin', '10px'),
-			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
+			controls,
+			holder,
+			chartsDiv: holder.append('div').style('margin', '10px'),
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
-		this.dom.header.html('Cumulative Incidence Plot'); console.log(24, this.dom.header)
+		if (this.dom.header) this.dom.header.html('Cumulative Incidence Plot')
 		// hardcode for now, but may be set as option later
 		this.settings = Object.assign({}, this.opts.settings)
 		this.pj = getPj(this)
@@ -41,6 +47,29 @@ class TdbCumInc {
 				}
 			}
 		})
+		await this.setControls()
+	}
+
+	async setControls() {
+		if (this.opts.controls) {
+			this.opts.controls.on('downloadClick.boxplot', this.download)
+		} else {
+			this.dom.holder
+				.attr('class', 'pp-termdb-plot-viz')
+				.style('display', 'inline-block')
+				.style('min-width', '300px')
+				.style('margin-left', '50px')
+
+			this.components = {
+				controls: await controlsInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
+				})
+			}
+
+			this.components.controls.on('downloadClick.boxplot', this.download)
+		}
 	}
 
 	getState(appState) {
@@ -125,7 +154,7 @@ class TdbCumInc {
 	}
 }
 
-export const cumincInit = rx.getInitFxn(TdbCumInc)
+export const cumincInit = getCompInit(TdbCumInc)
 // this alias will allow abstracted dynamic imports
 export const componentInit = cumincInit
 
@@ -137,7 +166,7 @@ function setRenderers(self) {
 		chartDivs.each(self.updateCharts)
 		chartDivs.enter().each(self.addCharts)
 
-		self.dom.holder.style('display', 'block')
+		self.dom.holder.style('display', 'inline-block')
 		self.dom.chartsDiv.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 	}
 

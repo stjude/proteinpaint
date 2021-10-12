@@ -237,6 +237,7 @@ export function prepApp(self, opts) {
 export function getAppApi(self) {
 	const middlewares = []
 	const api = {
+		type: self.type,
 		opts: self.opts,
 		async dispatch(action) {
 			/*

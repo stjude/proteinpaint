@@ -12,7 +12,6 @@ class MassRegression {
 	}
 
 	async init() {
-		this.opts.header = regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression'
 		this.opts.holder.style('margin-left', 0)
 		const controls = this.opts.holder.append('div')
 		const resultsDiv = this.opts.holder.append('div').style('margin-left', '40px')

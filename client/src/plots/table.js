@@ -1,17 +1,50 @@
-import * as rx from '../common/rx.core'
+import { controlsInit } from './controls'
+import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 
 class TdbTable {
 	constructor(opts) {
 		this.type = 'table'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+	async init() {
+		const opts = this.opts
+		const controls = this.opts.controls ? null : opts.holder.append('div')
+		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
-			div: this.opts.holder.style('margin', '10px 0px').style('display', 'none')
+			header: opts.header,
+			controls,
+			holder,
+			div: holder.style('margin', '10px 0px').style('display', 'none')
 		}
+		if (this.dom.header) this.dom.header.html('Crosstab')
 		setInteractivity(this)
 		setRenderers(this)
-		this.opts.controls.on('downloadClick.table', this.download)
+		await this.setControls()
+	}
+
+	async setControls() {
+		if (this.opts.controls) {
+			this.opts.controls.on('downloadClick.boxplot', this.download)
+		} else {
+			this.dom.holder
+				.attr('class', 'pp-termdb-plot-viz')
+				.style('display', 'inline-block')
+				.style('min-width', '300px')
+				.style('margin-left', '50px')
+
+			this.components = {
+				controls: await controlsInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controls
+						.attr('class', 'pp-termdb-plot-controls')
+						.style('display', 'inline-block')
+				})
+			}
+
+			this.components.controls.on('downloadClick.boxplot', this.download)
+		}
 	}
 
 	getState(appState, sub) {
@@ -180,4 +213,4 @@ function setRenderers(self) {
 	}
 }
 
-export const tableInit = rx.getInitFxn(TdbTable)
+export const tableInit = getCompInit(TdbTable)

@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 
@@ -20,8 +20,6 @@ execution flow:
 class Term1ui {
 	constructor(opts) {
 		this.type = 'term1Input'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
 		this.dom = { tr: opts.holder }
 		setRenderers(this)
 		this.initUI()
@@ -29,7 +27,6 @@ class Term1ui {
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing'
 		if (!o.holder) throw 'opts.holder missing'
-		return rx.getOpts(o, this)
 	}
 	getState(appState) {
 		const plot = appState.plots.find(p => p.id === this.id)
@@ -88,7 +85,7 @@ class Term1ui {
 	}
 }
 
-export const term1uiInit = rx.getInitFxn(Term1ui)
+export const term1uiInit = getCompInit(Term1ui)
 
 function setRenderers(self) {
 	self.initUI = function() {

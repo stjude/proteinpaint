@@ -28,18 +28,8 @@ class MassPlot {
 				// will hold no data notice or the page title in multichart views
 				banner: this.opts.holder.body.append('div').style('display', 'none'),
 
-				// dom.controls will hold the config input, select, button elements
-				controls: this.opts.holder.body
-					.append('div')
-					.style('display', this.opts.chartType === 'regression' ? 'block' : 'inline-block'),
-
 				// dom.viz will hold the rendered view
-				viz: this.opts.holder.body
-					.append('div')
-					.attr('class', 'pp-termdb-plot-viz')
-					.style('display', 'inline-block')
-					.style('min-width', '300px')
-					.style('margin-left', '50px')
+				viz: this.opts.holder.body.append('div')
 			}
 		} catch (e) {
 			throw e
@@ -165,85 +155,19 @@ class MassPlot {
 	async setComponents(opts) {
 		this.components = {}
 
-		if (this.opts.chartType != 'regression') {
-			const _ = await import('../termdb/plot.controls')
-			this.components.controls = await _.controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls'),
-				isleaf: this.opts.term.isleaf,
-				iscondition: this.opts.term.type == 'condition'
-			})
-		}
-
 		const paneTitleDiv = this.dom.holder.header
 			.append('div')
 			.style('display', 'inline-block')
 			.style('color', '#999')
 			.style('padding-left', '7px')
 
-		let paneTitle
-
-		switch (opts.chartType) {
-			case 'table':
-				paneTitle = 'Table'
-				const t = await import('../termdb/table')
-				this.components.chart = t.tableInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls: this.components.controls
-				})
-				break
-
-			case 'boxplot':
-				paneTitle = 'Boxplot'
-				const box = await import('../termdb/boxplot')
-				this.components.chart = box.boxplotInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls: this.components.controls
-				})
-				break
-
-			case 'scatter':
-				paneTitle = 'Scatter Plot'
-				const sc = await import('../termdb/scatter')
-				this.components.chart = sc.scatterInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls: this.components.controls
-				})
-				break
-
-			case 'survival':
-				paneTitle = 'Survival Plot'
-				const surv = await import('../termdb/survival')
-				this.components.chart = surv.survivalInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls: this.components.controls
-				})
-				break
-
-			default:
-				const _ = await import(`../plots/${opts.chartType}`)
-				this.components.chart = await _.componentInit({
-					app: this.app,
-					holder: this.dom.viz,
-					header: paneTitleDiv,
-					id: this.id,
-					// a component can choose to not use this control
-					// TODO: do not pass this controls
-					controls: this.components.controls
-				})
-		}
-
-		// label the viz pane
-		if (paneTitle) paneTitleDiv.html(paneTitle)
+		const _ = await import(`../plots/${opts.chartType}.js`)
+		this.components.chart = await _.componentInit({
+			app: this.app,
+			holder: this.dom.viz,
+			header: paneTitleDiv,
+			id: this.id
+		})
 	}
 }
 
