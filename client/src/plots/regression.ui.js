@@ -309,12 +309,7 @@ function setRenderers(self) {
 			debug: self.opts.debug,
 			//showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
 			buttons: d.section.configKey == 'term' ? ['replace'] : ['delete'],
-			numericEditMenuVersion:
-				config.regressionType == 'logistic' && d.section.configKey == 'term'
-					? ['binary']
-					: d.section.configKey == 'independent'
-					? ['continuous', 'discrete']
-					: [],
+			numericEditMenuVersion: getMenuVersion(config, d),
 			usecase: { target: 'regression', detail: d.section.configKey, regressionType: config.regressionType },
 			disable_terms: self.disable_terms,
 			abbrCutoff: 50,
@@ -666,6 +661,21 @@ function setInteractivity(self) {
 			config
 		})
 	}
+}
+
+function getMenuVersion(config, d) {
+	// for the numericEditMenuVersion of termsetting constructor option
+	if (d.section.configKey == 'term') {
+		// outcome
+		if (config.regressionType == 'logistic') return ['binary']
+		if (config.regressionType == 'linear') return ['continuous']
+		throw '100: unknown regressionType'
+	}
+	if (d.section.configKey == 'independent') {
+		// independent
+		return ['continuous', 'discrete']
+	}
+	throw 'unknown d.section.configKey: ' + d.section.configKey
 }
 
 export const regressionUIInit = getCompInit(MassRegressionUI)
