@@ -863,11 +863,14 @@ fn strand_analysis(
     reference_reverse_count: u64,
     fisher_test_threshold: f64,
 ) -> f64 {
-    let mut p_value = strand_analysis_one_iteration(
+    //let fisher_chisq_test: u64 = 0;
+    //let mut p_value = 0;
+    let (mut p_value, fisher_chisq_test) = strand_analysis_one_iteration(
         alternate_forward_count,
         alternate_reverse_count,
         reference_forward_count,
         reference_reverse_count,
+        0, // Initially setting fisher_chisq_test = 0 so as to check which test is more appropriate
     );
 
     // Need to get all possible combination of forward/reverse reads for alternate and reference alleles. For details, please see this link https://gatk.broadinstitute.org/hc/en-us/articles/360035532152-Fisher-s-Exact-Test
@@ -879,11 +882,13 @@ fn strand_analysis(
         while p_value <= fisher_test_threshold && alternate_forward_count_temp >= 0 {
             alternate_forward_count_temp -= 1;
             alternate_reverse_count_temp += 1;
-            let p_temp = strand_analysis_one_iteration(
+            #[allow(unused_variables)]
+            let (p_temp, fisher_test_temp) = strand_analysis_one_iteration(
                 alternate_forward_count_temp as u64,
                 alternate_reverse_count_temp,
                 reference_forward_count,
                 reference_reverse_count,
+                fisher_chisq_test,
             );
             if p_temp < fisher_test_threshold {
                 // Add to p-value only if its significant
@@ -897,11 +902,13 @@ fn strand_analysis(
         while p_value <= fisher_test_threshold && reference_forward_count_temp >= 0 {
             reference_forward_count_temp -= 1;
             reference_reverse_count_temp += 1;
-            let p_temp = strand_analysis_one_iteration(
+            #[allow(unused_variables)]
+            let (p_temp, fisher_test_temp) = strand_analysis_one_iteration(
                 alternate_forward_count,
                 alternate_reverse_count,
                 reference_forward_count_temp as u64,
                 reference_reverse_count_temp,
+                fisher_chisq_test,
             );
             if p_temp < fisher_test_threshold {
                 // Add to p-value only if its significant
@@ -917,34 +924,56 @@ fn strand_analysis_one_iteration(
     alternate_reverse_count: u64,
     reference_forward_count: u64,
     reference_reverse_count: u64,
-) -> f64 {
-    let p_value_result = panic::catch_unwind(|| {
-        let p_value = fishers_exact_test(
-            alternate_forward_count,
-            alternate_reverse_count,
-            reference_forward_count,
-            reference_reverse_count,
-        );
-        p_value
-    });
-
-    let p_value;
-    match p_value_result {
-        Ok(res) => {
-            //println!("Fisher test worked:{:?}", p_value_result);
-            p_value = res;
-        }
-        Err(_) => {
-            //println!("Fisher test failed, using Chi-sq test instead");
-            p_value = chi_square_test(
+    fisher_chisq_test: u64, // This option is useful id this function has already been preiously run, we can ask to run the spcific tust only rather than having to try out both tests each time. This decreases execution time. 0 = first time (both tests will be tried), 1 = fisher test, 2 = chi-sq test
+) -> (f64, u64) {
+    let mut p_value: f64 = 0.0;
+    let mut fisher_chisq_test_final: u64 = 0;
+    if fisher_chisq_test == 0 {
+        let p_value_result = panic::catch_unwind(|| {
+            let p_value = fishers_exact_test(
                 alternate_forward_count,
                 alternate_reverse_count,
                 reference_forward_count,
                 reference_reverse_count,
             );
+            p_value
+        });
+
+        match p_value_result {
+            Ok(res) => {
+                //println!("Fisher test worked:{:?}", p_value_result);
+                p_value = res;
+                fisher_chisq_test_final = 1;
+            }
+            Err(_) => {
+                //println!("Fisher test failed, using Chi-sq test instead");
+                p_value = chi_square_test(
+                    alternate_forward_count,
+                    alternate_reverse_count,
+                    reference_forward_count,
+                    reference_reverse_count,
+                );
+                fisher_chisq_test_final = 2;
+            }
         }
+    } else if fisher_chisq_test == 1 {
+        p_value = fishers_exact_test(
+            alternate_forward_count,
+            alternate_reverse_count,
+            reference_forward_count,
+            reference_reverse_count,
+        );
+        fisher_chisq_test_final = 1;
+    } else if fisher_chisq_test == 2 {
+        p_value = chi_square_test(
+            alternate_forward_count,
+            alternate_reverse_count,
+            reference_forward_count,
+            reference_reverse_count,
+        );
+        fisher_chisq_test_final = 2;
     }
-    p_value
+    (p_value, fisher_chisq_test_final)
 }
 
 fn chi_square_test(
@@ -1931,7 +1960,7 @@ fn check_read_within_indel_region(
                         splice_stop_pos = nucleotide_position_without_splicing;
                         break;
                     } else {
-                        println!("Somehow fragment containing indel site was not found, please check (within_indel = 0)!");
+                        //println!("Somehow fragment containing indel site was not found, please check (within_indel = 0)!");
                         within_indel = 0;
                         //println!("splice_start_frag:{}", splice_start_frag);
                         //println!("splice_stop_frag:{}", splice_stop_frag);
