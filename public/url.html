@@ -314,7 +314,7 @@ makeURL([
 		['TermdbTest', '?noheader=1&mass={"genome":"hg38","dslabel": "TermdbTest"}'],
 		['SJLife', '?noheader=1&mass={"genome":"hg38","dslabel": "SJLife"}'],
 
-		['Regression', '?noheader=1&mass='+JSON.stringify({
+		['Linear Regression', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
 			plots: [
@@ -344,6 +344,22 @@ makeURL([
 				},
 			]
 		})],
+		['Logistic Regression', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [{
+				chartType: 'regression',
+				regressionType: 'logistic',
+				cutoff: 57.8,
+				term: {
+					id: 'LV_Ejection_Fraction_3D'
+				},
+				independent: [
+					{"id": "sex"},
+					{"id": "diaggrp"}
+				]
+			}]
+		})]
 	]
 },
 ]
