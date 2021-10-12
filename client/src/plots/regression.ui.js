@@ -121,7 +121,7 @@ class MassRegressionUI {
 		// query backend for total sample count for each value of categorical or condition terms
 		// and included and excluded sample count for nuemric term
 
-		// query backend for median and create custom 2 bins with median and boundry 
+		// query backend for median and create custom 2 bins with median and boundry
 		// for logisctic independet numeric terms
 		if (d.section.configKey == 'term' && this.config.regressionType == 'logistic') {
 			const lst = [
@@ -150,11 +150,13 @@ class MassRegressionUI {
 						start: median
 					}
 				]
-		  }
+			}
 
-		  d.term.q.lst.forEach(bin => {
+			d.term.q.lst.forEach(bin => {
 				if (!('label' in bin)) bin.label = get_bin_label(bin, d.term.q)
 			})
+			console.log(158, d)
+			d.pill.main(d.term)
 		}
 
 		const q = JSON.parse(JSON.stringify(d.term.q))
@@ -529,7 +531,8 @@ function setRenderers(self) {
 		select(this.firstChild).text(item.samplecount !== undefined ? 'n=' + item.samplecount : '')
 		select(this.firstChild.nextSibling).text(item.label)
 		let rendered = true
-		if ((pillData.term.q.mode == 'discrete' || pillData.term.q.mode == 'binary') && this.childNodes.length < 4) rendered = false
+		if ((pillData.term.q.mode == 'discrete' || pillData.term.q.mode == 'binary') && this.childNodes.length < 4)
+			rendered = false
 		addTrBehavior({ d: pillData, item, tr: select(this), rendered })
 	}
 
@@ -538,7 +541,10 @@ function setRenderers(self) {
 		// don't add tr effects for excluded values
 		if (!item.bar_width_frac) return
 
-		const hover_flag = (d.term.term.type !== 'integer' && d.term.term.type !== 'float') || d.term.q.mode == 'discrete' || d.term.q.mode == 'binary'
+		const hover_flag =
+			(d.term.term.type !== 'integer' && d.term.term.type !== 'float') ||
+			d.term.q.mode == 'discrete' ||
+			d.term.q.mode == 'binary'
 		let ref_text
 
 		if (rendered) {
@@ -606,6 +612,7 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.editConfig = async (d, term) => {
+		console.log(610, d, term)
 		const c = self.config
 		const key = d.section.configKey
 		if (term && term.term && !('id' in term)) term.id = term.term.id
@@ -640,8 +647,7 @@ function setInteractivity(self) {
 		for (const term of config.independent) {
 			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
-		if(config.term.id in self.refGrpByTermId)
-			config.term.q.refGrp = self.refGrpByTermId[config.term.id]
+		if (config.term.id in self.refGrpByTermId) config.term.q.refGrp = self.refGrpByTermId[config.term.id]
 		// disable submit button on click, reenable after rendering results
 		self.dom.submitBtn.property('disabled', true).html('Running...')
 		self.app.dispatch({
