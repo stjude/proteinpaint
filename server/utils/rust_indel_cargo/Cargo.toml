@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 factorial = "*"
 statrs = "*"
+num-traits="*"
 [profile.release]
 lto = "fat"
 codegen-units = 1
