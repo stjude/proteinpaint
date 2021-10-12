@@ -56,6 +56,8 @@ async function showEditMenu(self, div) {
 			self.opts.vocabApi = vocabulary.vocabInit({ state: { vocab: self.opts.vocab } })
 		}
 		self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
+		self.num_obj.median = self.q && self.q.lst && self.q.lst.length ? self.q.lst[0].stop : undefined
+		console.log(self)
 	} catch (err) {
 		console.log(err)
 	}
@@ -112,10 +114,12 @@ async function showEditMenu(self, div) {
 }
 
 function setqDefaults(self) {
+	console.log(self.q )
 	const dd = self.num_obj.density_data
+	const median = self.q && self.q.lst && self.q.lst.length ? self.q.lst[0].stop : undefined
 	if (!(self.term.id in self.numqByTermIdType)) {
-		const cutoff = dd.median 
-            ? dd.median
+		const cutoff = median !== undefined
+            ? median
             : (dd.maxvalue != dd.minvalue)
             ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2 
             : dd.maxvalue
