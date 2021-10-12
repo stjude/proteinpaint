@@ -309,7 +309,9 @@ function setRenderers(self) {
 			debug: self.opts.debug,
 			//showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
 			buttons: d.section.configKey == 'term' ? ['replace'] : ['delete'],
-			numericEditMenuVersion: config.regressionType == 'linear' ? ['continuous', 'discrete'] : ['binary'],
+			numericEditMenuVersion: config.regressionType == 'logistic' && d.section.configKey == 'term' ? 
+				['binary'] : d.section.configKey == 'independent' ? 
+				['continuous', 'discrete'] : [],
 			usecase: { target: 'regression', detail: d.section.configKey, regressionType: config.regressionType },
 			disable_terms: self.disable_terms,
 			abbrCutoff: 50,
