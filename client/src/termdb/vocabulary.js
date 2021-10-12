@@ -1,5 +1,5 @@
 import { dofetch3 } from '../client'
-import { getBarchartData, getCategoryData } from './barchart.data'
+import { getBarchartData, getCategoryData } from '../plots/barchart.data'
 import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { scaleLinear } from 'd3-scale'

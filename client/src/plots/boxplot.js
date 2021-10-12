@@ -1,4 +1,5 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, copyMerge } from '../common/rx.core'
+import { controlsInit } from './controls'
 import * as client from '../client'
 import { event as d3event } from 'd3-selection'
 import { scaleLinear, scaleLog, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
@@ -8,24 +9,45 @@ import { axisLeft } from 'd3-axis'
 class TdbBoxplot {
 	constructor(opts) {
 		this.type = 'boxplot'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
 
-		const div = opts.holder.style('display', 'none')
+	async init() {
+		const holder = this.opts.holder
+		const div = this.opts.controls ? holder : holder.append('div')
 		const svg = div
 			.append('svg')
 			.style('margin-right', '20px')
 			.style('display', 'inline-block')
+
 		this.dom = {
+			header: this.opts.header,
+			controls: this.opts.controls ? null : holder.append('div'),
 			div,
 			svg,
 			yaxis_g: svg.append('g'), // for y axis
 			graph_g: svg.append('g') // for bar and label of each data item
 		}
 
+		if (this.dom.header) this.dom.header.html('Boxplot')
+		await this.setControls()
 		setInteractivity(this)
 		setRenderers(this)
-		this.opts.controls.on('downloadClick.boxplot', this.download)
+	}
+
+	async setControls() {
+		if (this.opts.controls) {
+			this.opts.controls.on('downloadClick.boxplot', this.download)
+		} else {
+			this.components = {
+				controls: await controlsInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls')
+				})
+			}
+
+			this.components.controls.on('downloadClick.boxplot', this.download)
+		}
 	}
 
 	getState(appState, sub) {
@@ -50,7 +72,7 @@ class TdbBoxplot {
 
 	main(data) {
 		if (data) this.data = data
-		this.config = rx.copyMerge('{}', this.state.config)
+		this.config = copyMerge('{}', this.state.config)
 		if (!this.state.isVisible) {
 			this.dom.div.style('display', 'none')
 			return
@@ -327,4 +349,4 @@ function setRenderers(self) {
 	}
 }
 
-export const boxplotInit = rx.getInitFxn(TdbBoxplot)
+export const boxplotInit = getCompInit(TdbBoxplot)

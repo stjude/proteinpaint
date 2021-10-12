@@ -1,10 +1,13 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, multiInit } from '../common/rx.core'
 
 class TdbControlsTopBar {
 	constructor(opts) {
 		this.type = 'controlsTopBar'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+	async init() {
+		const opts = this.opts
+
 		this.dom = {
 			holder: opts.holder,
 			burger_div: opts.holder.append('div'),
@@ -12,7 +15,7 @@ class TdbControlsTopBar {
 		}
 
 		const debug = this.opts.debug
-		this.features = {
+		this.features = await multiInit({
 			burgerbtn: burgerBtnInit({
 				holder: this.dom.burger_div,
 				callback: opts.callback,
@@ -24,7 +27,7 @@ class TdbControlsTopBar {
 				callback: opts.downloadHandler,
 				debug
 			})
-		}
+		})
 	}
 
 	getState(appState) {
@@ -44,7 +47,7 @@ class TdbControlsTopBar {
 	}
 }
 
-export const topBarInit = rx.getInitFxn(TdbControlsTopBar)
+export const topBarInit = getCompInit(TdbControlsTopBar)
 
 function setInteractivity(self) {
 	self.toggleVisibility = isVisible => {

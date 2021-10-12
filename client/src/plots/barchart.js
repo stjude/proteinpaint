@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import rendererSettings from '../bars.settings'
 import barsRenderer from '../bars.renderer'
 import htmlLegend from '../html.legend'
@@ -7,32 +7,44 @@ import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
 /* to-do: switch to using rx.Bus */
+import { controlsInit } from './controls'
 import { to_svg } from '../client'
 
 class TdbBarchart {
 	constructor(opts) {
+		// rx.getComponentInit() will set this.app, this.id, this.opts
 		this.type = 'barchart'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+	preApiFreeze(api) {
+		api.download = this.download
+	}
+
+	async init() {
+		const opts = this.opts
+		const controls = this.opts.controls ? null : opts.holder.append('div')
+		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
-			holder: opts.holder,
-			banner: opts.holder
+			header: opts.header,
+			controls,
+			holder,
+			banner: holder
 				.append('div')
 				.style('display', 'none')
 				.style('text-align', 'center')
 				.style('padding', '24px')
 				.style('font-size', '16px')
 				.style('color', '#aaa'),
-			barDiv: opts.holder.append('div').style('white-space', 'normal'),
-			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
+			barDiv: holder.append('div').style('white-space', 'normal'),
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
-		this.settings = JSON.parse(rendererSettings) //, this.config.settings.barchart)
-		this.renderers = {}
+		if (this.dom.header) this.dom.header.html('Barchart')
+		this.settings = JSON.parse(rendererSettings)
 
 		setRenderers(this)
 		setInteractivity(this)
-		this.api.download = this.download
 
+		this.renderers = {}
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
 			settings: {
 				legendOrientation: 'vertical'
@@ -41,7 +53,7 @@ class TdbBarchart {
 		})
 		this.controls = {}
 		this.term2toColor = {}
-		opts.controls.on('downloadClick.barchart', this.download)
+		await this.setControls()
 
 		if (this.opts.bar_click_override) {
 			// will use this as callback to bar click
@@ -49,6 +61,28 @@ class TdbBarchart {
 		} else if (!this.opts.bar_click_opts) {
 			this.opts.bar_click_opts = ['hide_bar']
 			if (this.app.getState().nav.header_mode === 'with_tabs') this.opts.bar_click_opts.push('add_filter')
+		}
+	}
+
+	async setControls() {
+		if (this.opts.controls) {
+			this.opts.controls.on('downloadClick.boxplot', this.download)
+		} else {
+			this.dom.holder
+				.attr('class', 'pp-termdb-plot-viz')
+				.style('display', 'inline-block')
+				.style('min-width', '300px')
+				.style('margin-left', '50px')
+
+			this.components = {
+				controls: await controlsInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
+				})
+			}
+
+			this.components.controls.on('downloadClick.boxplot', this.download)
 		}
 	}
 
@@ -421,7 +455,9 @@ class TdbBarchart {
 	}
 }
 
-export const barInit = rx.getInitFxn(TdbBarchart)
+export const barInit = getCompInit(TdbBarchart)
+// this alias will allow abstracted dynamic imports
+export const componentInit = barInit
 
 function setRenderers(self) {
 	self.render = function() {

@@ -1,13 +1,13 @@
 import * as rx from '../common/rx.core'
 import { select, event } from 'd3-selection'
-import { controlsInit } from './plot.controls'
-import { barInit } from './barchart'
-import { statTableInit } from './stattable'
-import { tableInit } from './table'
-import { boxplotInit } from './boxplot'
-import { scatterInit } from './scatter'
-import { cumincInit } from './cuminc'
-import { survivalInit } from './survival'
+import { controlsInit } from '../plots/controls'
+import { barInit } from '../plots/barchart'
+import { statTableInit } from '../plots/stattable'
+import { tableInit } from '../plots/table'
+import { boxplotInit } from '../plots/boxplot'
+import { scatterInit } from '../plots/scatter'
+import { cumincInit } from '../plots/cuminc'
+import { survivalInit } from '../plots/survival'
 //import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
 import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
@@ -140,7 +140,7 @@ class TdbPlot {
 
 		// may need to display a survival plot
 		if (this.state.displayAsSurvival && !this.components.survival) {
-			this.components.survival = survivalInit({
+			this.components.survival = await survivalInit({
 				app: this.app,
 				holder: this.dom.viz.append('div'),
 				id: this.id,

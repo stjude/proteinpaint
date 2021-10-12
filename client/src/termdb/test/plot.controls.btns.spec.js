@@ -57,7 +57,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('info btn', function(test) {
+tape.skip('info btn', function(test) {
 	test.timeoutAfter(3000)
 	test.plan(1) //(2)
 	/*
