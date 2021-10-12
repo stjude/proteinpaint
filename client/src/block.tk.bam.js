@@ -389,6 +389,7 @@ function may_render_variant(data, tk, block) {
 	// TODO show variant info alongside box, when box is wide enough, show
 	if (!tk.dom.variantg) return
 	tk.dom.variantg.selectAll('*').remove()
+	console.log('strand_probability:', data.strand_probability)
 	let x1, x2 // on screen pixel start/stop of the variant box
 	{
 		const hits = block.seekcoord(tk.variants[0].chr, tk.variants[0].pos)

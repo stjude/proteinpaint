@@ -931,11 +931,11 @@ fn strand_analysis_one_iteration(
     let p_value;
     match p_value_result {
         Ok(res) => {
-            println!("Fisher test worked:{:?}", p_value_result);
+            //println!("Fisher test worked:{:?}", p_value_result);
             p_value = res;
         }
         Err(_) => {
-            println!("Fisher test failed, using Chi-sq test instead");
+            //println!("Fisher test failed, using Chi-sq test instead");
             p_value = chi_square_test(
                 alternate_forward_count,
                 alternate_reverse_count,

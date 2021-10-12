@@ -151,7 +151,9 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		':' +
 		leftflankseq +
 		':' +
-		rightflankseq
+		rightflankseq +
+		':' +
+		fisher_test_threshold
 
 	//console.log({seqRef:refseq, seqMut:altseq, leftFlank:leftflankseq, rightFlank:rightflankseq, readlen: segbplen, variant: q.variant}) // uncomment this line to help creating tests at server/utils/test/rust_indel.spec.js
 
@@ -167,6 +169,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	let group_ids = []
 	let categories = []
 	let diff_scores = []
+	let strand_probability = 0 // Contains p_value of strand bias i.e forward/reverse vs alternate/reference
 
 	for (let item of rust_output_list) {
 		if (item.includes('output_gID')) {
@@ -194,6 +197,13 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			//.map(n => Number(n.replace(/\D/g, '')))
 		} else if (item.includes('Final kmer length (from Rust)')) {
 			console.log(item)
+		} else if (item.includes('strand_probability')) {
+			strand_probability = Number(
+				item
+					.replace(/"/g, '')
+					.replace(/,/g, '')
+					.replace('strand_probability:', '')
+			)
 		}
 		//else {
 		//	console.log(item)
@@ -203,6 +213,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	//console.log("group_ids:",group_ids)
 	//console.log("categories:",categories.length)
 	//console.log("diff_scores:",diff_scores.length)
+	//console.log('strand_probability:', strand_probability)
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
 	const kmer_diff_scores_input = []
@@ -281,7 +292,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		g.widths = region_widths
 		groups.push(g)
 	}
-	return { groups, refalleleerror, max_diff_score, min_diff_score, final_pos, final_ref, final_alt }
+	return { groups, refalleleerror, max_diff_score, min_diff_score, final_pos, final_ref, final_alt, strand_probability }
 }
 
 function run_rust_indel_pipeline(input_data) {

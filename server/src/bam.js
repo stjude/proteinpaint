@@ -775,6 +775,7 @@ async function do_query(q) {
 			result.ref_allele = out.final_ref // Its possible the input ref allele is "-" or ""(blank). In that case it needs to be queried from the reference genome
 			result.alt_allele = out.final_alt // Its possible the input alt allele is "-" or ""(blank). In that case it needs to be deduced from the reference allele
 			result.allele_pos = out.final_pos // Start position needs to be changed if any of the alleles is blank or missing
+			result.strand_probability = out.strand_probability // Contains p_value of strand bias i.e forward/reverse vs alternate/reference
 		}
 
 		// XXX clean up logic
