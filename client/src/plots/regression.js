@@ -117,7 +117,7 @@ class MassRegression {
 				)
 		]
 		if (c.regressionType == 'logistic') {
-			if (!c.cutoff) throw "Cutofff values in required for 'Outcome variable'"
+			if (!c.cutoff) throw "Cutoff values in required for 'Outcome variable'"
 			params.push('regressionType=logistic')
 			params.push('cutoff=' + c.cutoff)
 		}
