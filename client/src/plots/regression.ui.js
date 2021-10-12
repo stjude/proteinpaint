@@ -121,9 +121,10 @@ class MassRegressionUI {
 		// query backend for total sample count for each value of categorical or condition terms
 		// and included and excluded sample count for nuemric term
 
+		// if outcome term.q.mode != 'binary',
 		// query backend for median and create custom 2 bins with median and boundry
-		// for logisctic independet numeric terms
-		if (d.section.configKey == 'term' && this.config.regressionType == 'logistic') {
+		// for logistic independet numeric terms
+		if (d.section.configKey == 'term' && this.config.regressionType == 'logistic' && d.term.q.mode != 'binary') {
 			const lst = [
 				'/termdb?getmedian=1',
 				'tid=' + d.term.id,
@@ -155,7 +156,6 @@ class MassRegressionUI {
 			d.term.q.lst.forEach(bin => {
 				if (!('label' in bin)) bin.label = get_bin_label(bin, d.term.q)
 			})
-			console.log(158, d)
 			d.pill.main(d.term)
 		}
 
@@ -309,9 +309,12 @@ function setRenderers(self) {
 			debug: self.opts.debug,
 			//showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
 			buttons: d.section.configKey == 'term' ? ['replace'] : ['delete'],
-			numericEditMenuVersion: config.regressionType == 'logistic' && d.section.configKey == 'term' ? 
-				['binary'] : d.section.configKey == 'independent' ? 
-				['continuous', 'discrete'] : [],
+			numericEditMenuVersion:
+				config.regressionType == 'logistic' && d.section.configKey == 'term'
+					? ['binary']
+					: d.section.configKey == 'independent'
+					? ['continuous', 'discrete']
+					: [],
 			usecase: { target: 'regression', detail: d.section.configKey, regressionType: config.regressionType },
 			disable_terms: self.disable_terms,
 			abbrCutoff: 50,
@@ -451,8 +454,11 @@ function setRenderers(self) {
 		if (!excluded) {
 			const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
 			tr_data.forEach(v => (v.bar_width_frac = (1 - (maxCount - v.samplecount) / maxCount).toFixed(4)))
-			if ((d.term.term.type !== 'integer' && d.term.term.type !== 'float') ||
-				d.term.q.mode == 'discrete' || d.term.q.mode == 'binary') {
+			if (
+				(d.term.term.type !== 'integer' && d.term.term.type !== 'float') ||
+				d.term.q.mode == 'discrete' ||
+				d.term.q.mode == 'binary'
+			) {
 				if (!('refGrp' in d) && d.term.q && 'refGrp' in d.term.q) d.refGrp = d.term.q.refGrp
 
 				if (!('refGrp' in d) || !tr_data.find(c => c.key === d.refGrp)) {
@@ -617,7 +623,6 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.editConfig = async (d, term) => {
-		console.log(610, d, term)
 		const c = self.config
 		const key = d.section.configKey
 		if (term && term.term && !('id' in term)) term.id = term.term.id
@@ -649,7 +654,7 @@ function setInteractivity(self) {
 		const config = JSON.parse(JSON.stringify(self.config))
 		//delete config.settings
 		for (const term of config.independent) {
-				term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
+			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
 		if (config.term.id in self.refGrpByTermId) config.term.q.refGrp = self.refGrpByTermId[config.term.id]
 		// disable submit button on click, reenable after rendering results

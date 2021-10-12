@@ -54,7 +54,6 @@ async function showEditMenu(self, div) {
 			self.opts.vocabApi = vocabulary.vocabInit({ state: { vocab: self.opts.vocab } })
 		}
 		self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
-		console.log(self)
 	} catch (err) {
 		console.log(err)
 	}
@@ -99,7 +98,6 @@ async function showEditMenu(self, div) {
 			self.q.lst = processCustomBinInputs(self)
 			self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
 			self.q.mode = 'binary'
-			console.log(101, self.q)
 			self.opts.callback({
 				id: self.term.id,
 				term: self.term,
@@ -122,7 +120,6 @@ async function showEditMenu(self, div) {
 }
 
 function setqDefaults(self) {
-	console.log(116, self.q)
 	const dd = self.num_obj.density_data
 	const boundry_value = self.q && self.q.lst && self.q.lst.length ? self.q.lst[0].stop : undefined
 	if (!(self.term.id in self.numqByTermIdType)) {
@@ -205,39 +202,29 @@ function processCustomBinInputs(self) {
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
 	const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
 	let prevBin
-	const data = self.dom.customBinBoundaryInput
-		.property('value')
-		.split('\n')
-		.filter(d => d != '')
-		.map(d => +d)
-		.sort((a, b) => a - b)
-		.map((d, i) => {
-			const bin = {
-				start: +d,
-				startinclusive,
-				stopinclusive
-			}
-			if (prevBin) {
-				delete prevBin.stopunbounded
-				prevBin.stop = bin.start
-				const label = inputDivs[i].querySelector('input').value
-				prevBin.label = label ? label : get_bin_label(prevBin, self.q)
-			}
-			prevBin = bin
-			return bin
-		})
+	const val = +self.dom.customBinBoundaryInput.property('value')
 
-	prevBin.stopunbounded = true
-	const label = inputDivs[data.length] && inputDivs[data.length].querySelector('input').value
-	prevBin.label = label ? label : get_bin_label(prevBin, self.q)
+	const bins = [
+		{
+			startunbounded: true,
+			stop: val,
+			startinclusive,
+			stopinclusive
+		},
+		{
+			start: val,
+			startinclusive,
+			stopinclusive,
+			stopunbounded: true
+		}
+	]
 
-	data.unshift({
-		startunbounded: true,
-		stop: data[0].start,
-		startinclusive,
-		stopinclusive,
-		label: inputDivs[0].querySelector('input').value
+	// assign bin labels
+	bins.forEach((bin, i) => {
+		// may use user assigned labels if not empty string
+		const label = inputDivs[i].querySelector('input').value
+		bin.label = label ? label : get_bin_label(bin, self.q)
 	})
-	if (!data[0].label) data[0].label = get_bin_label(data[0], self.q)
-	return data
+
+	return bins
 }

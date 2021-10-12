@@ -293,14 +293,19 @@ function renderBinLines(self, data) {
 			self.q.lst[d.index + 1].label = get_bin_label(self.q.lst[d.index + 1], self.q)
 			self.q.lst[d.index].stop = value
 			self.q.lst[d.index].label = get_bin_label(self.q.lst[d.index], self.q)
-			self.dom.customBinBoundaryInput.property(
-				'value',
-				self.q.lst
-					.slice(1)
-					.map(d => d.start)
-					.join('\n')
-			)
-			self.dom.customBinLabelInput.property('value', c => c.label)
+			if (self.dom.customBinBoundaryInput) {
+				self.dom.customBinBoundaryInput.property(
+					'value',
+					self.q.lst
+						.slice(1)
+						.map(d => d.start)
+						.join('\n')
+				)
+			}
+
+			if (self.dom.customBinLabelInput) {
+				self.dom.customBinLabelInput.property('value', c => c.label)
+			}
 		}
 	}
 
