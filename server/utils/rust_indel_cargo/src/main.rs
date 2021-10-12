@@ -44,6 +44,12 @@
 //   Other post_processing:
 //     if polyclonal, classify as none
 //     if ref classified read, but contains inserted/deleted nucleotides in indel region, classify as none
+//
+// Strand analysis:
+// strand_analysis() (Inputs alternate_forward, alternate_reverse, reference_forward, reference_reverse and fisher_test_threshold and outputs final phred scale p-value)
+//       strand_analysis_one_iteration (Selects whether to use fisher or chi-sq test depending upon sample size)
+//              chi_square_test
+//              fishers_exact_test
 
 use factorial::Factorial;
 use num_traits::Float;
@@ -831,7 +837,33 @@ fn main() {
     println!("reference_forward_count:{}", reference_forward_count);
     println!("reference_reverse_count:{}", reference_reverse_count);
 
-    let mut p_value = strand_analysis(
+    let p_value = strand_analysis(
+        alternate_forward_count,
+        alternate_reverse_count,
+        reference_forward_count,
+        reference_reverse_count,
+        fisher_test_threshold,
+    );
+
+    println!("strand_probability:{}", p_value);
+    //println!("fisher_test_threshold:{}", fisher_test_threshold);
+
+    output_cat.pop(); // Removing the last ":" character from string
+    output_gID.pop(); // Removing the last ":" character from string
+    output_diff_scores.pop(); // Removing the last ":" character from string
+    println!("output_cat:{:?}", output_cat); // Final read categories assigned
+    println!("output_gID:{:?}", output_gID); // Initial read group ID corresponding to read category in output_cat
+    println!("output_diff_scores:{:?}", output_diff_scores); // Final diff_scores corresponding to reads in group ID
+}
+
+fn strand_analysis(
+    alternate_forward_count: u64,
+    alternate_reverse_count: u64,
+    reference_forward_count: u64,
+    reference_reverse_count: u64,
+    fisher_test_threshold: f64,
+) -> f64 {
+    let mut p_value = strand_analysis_one_iteration(
         alternate_forward_count,
         alternate_reverse_count,
         reference_forward_count,
@@ -847,7 +879,7 @@ fn main() {
         while p_value <= fisher_test_threshold && alternate_forward_count_temp >= 0 {
             alternate_forward_count_temp -= 1;
             alternate_reverse_count_temp += 1;
-            let p_temp = strand_analysis(
+            let p_temp = strand_analysis_one_iteration(
                 alternate_forward_count_temp as u64,
                 alternate_reverse_count_temp,
                 reference_forward_count,
@@ -865,7 +897,7 @@ fn main() {
         while p_value <= fisher_test_threshold && reference_forward_count_temp >= 0 {
             reference_forward_count_temp -= 1;
             reference_reverse_count_temp += 1;
-            let p_temp = strand_analysis(
+            let p_temp = strand_analysis_one_iteration(
                 alternate_forward_count,
                 alternate_reverse_count,
                 reference_forward_count_temp as u64,
@@ -877,19 +909,10 @@ fn main() {
             }
         }
     }
-
-    println!("strand_probability:{}", p_value);
-    println!("fisher_test_threshold:{}", fisher_test_threshold);
-
-    output_cat.pop(); // Removing the last ":" character from string
-    output_gID.pop(); // Removing the last ":" character from string
-    output_diff_scores.pop(); // Removing the last ":" character from string
-    println!("output_cat:{:?}", output_cat); // Final read categories assigned
-    println!("output_gID:{:?}", output_gID); // Initial read group ID corresponding to read category in output_cat
-    println!("output_diff_scores:{:?}", output_diff_scores); // Final diff_scores corresponding to reads in group ID
+    -10.0 * p_value.log(10.0) // Reporting phred-scale p-values (-10*log(p-value))
 }
 
-fn strand_analysis(
+fn strand_analysis_one_iteration(
     alternate_forward_count: u64,
     alternate_reverse_count: u64,
     reference_forward_count: u64,
@@ -979,7 +1002,6 @@ fn chi_square_test(
         let chi_sq_dist = ChiSquared::new(1.0).unwrap(); // Using degrees of freedom = 1
         let p_value: f64 = 1.0 - chi_sq_dist.cdf(chi_sq);
         //println!("p-value:{}", p_value);
-        //-10.0 * p_value.log(10.0) // Reporting phred-scale p-values (-10*log(p-value))
         p_value
     }
 }
