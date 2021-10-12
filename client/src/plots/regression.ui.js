@@ -134,7 +134,7 @@ class MassRegressionUI {
 			const url = lst.join('&')
 			const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 			if (data.error) throw data.error
-			const median = data.median
+			const median = d.term.type == 'integer' ? Math.round(data.median) : data.median
 			d.term.q = {
 				mode: 'binary',
 				type: 'custom',
@@ -142,12 +142,12 @@ class MassRegressionUI {
 					{
 						startunbounded: true,
 						stopinclusive: true,
-						stop: +median.toFixed(d.term.type == 'integer' ? 0 : 2)
+						stop: median
 					},
 					{
 						stopunbounded: true,
-						stopinclusive: true,
-						start: +median.toFixed(d.term.type == 'integer' ? 0 : 2)
+						startinclusive: false,
+						start: median
 					}
 				]
 		  }
