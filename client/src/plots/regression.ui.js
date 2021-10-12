@@ -449,14 +449,17 @@ function setRenderers(self) {
 		if (!excluded) {
 			const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
 			tr_data.forEach(v => (v.bar_width_frac = (1 - (maxCount - v.samplecount) / maxCount).toFixed(4)))
-			if (!('refGrp' in d) && d.term.q && 'refGrp' in d.term.q) d.refGrp = d.term.q.refGrp
+			if ((d.term.term.type !== 'integer' && d.term.term.type !== 'float') ||
+				d.term.q.mode == 'discrete' || d.term.q.mode == 'binary') {
+				if (!('refGrp' in d) && d.term.q && 'refGrp' in d.term.q) d.refGrp = d.term.q.refGrp
 
-			if (!('refGrp' in d) || !tr_data.find(c => c.key === d.refGrp)) {
-				if (d.term.id in self.refGrpByTermId && tr_data.find(c => c.key === self.refGrpByTermId[d.term.id])) {
-					d.refGrp = self.refGrpByTermId[d.term.id]
-				} else {
-					d.refGrp = tr_data[0].key
-					self.refGrpByTermId[d.term.id] = tr_data[0].key
+				if (!('refGrp' in d) || !tr_data.find(c => c.key === d.refGrp)) {
+					if (d.term.id in self.refGrpByTermId && tr_data.find(c => c.key === self.refGrpByTermId[d.term.id])) {
+						d.refGrp = self.refGrpByTermId[d.term.id]
+					} else {
+						d.refGrp = tr_data[0].key
+						self.refGrpByTermId[d.term.id] = tr_data[0].key
+					}
 				}
 			}
 		}
@@ -644,11 +647,7 @@ function setInteractivity(self) {
 		const config = JSON.parse(JSON.stringify(self.config))
 		//delete config.settings
 		for (const term of config.independent) {
-			if((term.term.type !== 'integer' && term.term.type !== 'float') ||
-				term.q.mode == 'discrete' ||
-				term.q.mode == 'binary'){
-					term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
-				}
+				term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
 		if (config.term.id in self.refGrpByTermId) config.term.q.refGrp = self.refGrpByTermId[config.term.id]
 		// disable submit button on click, reenable after rendering results
