@@ -642,10 +642,13 @@ function setInteractivity(self) {
 
 	self.submit = () => {
 		const config = JSON.parse(JSON.stringify(self.config))
-		// console.log(config)
 		//delete config.settings
 		for (const term of config.independent) {
-			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
+			if((term.term.type !== 'integer' && term.term.type !== 'float') ||
+				term.q.mode == 'discrete' ||
+				term.q.mode == 'binary'){
+					term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
+				}
 		}
 		if (config.term.id in self.refGrpByTermId) config.term.q.refGrp = self.refGrpByTermId[config.term.id]
 		// disable submit button on click, reenable after rendering results

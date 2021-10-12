@@ -73,7 +73,6 @@ export async function get_regression(q, ds) {
 			} else {
 				outcomeVal = row.outkey
 			}
-			console.log('outcomeVal:', outcomeVal)
 			//console.log('outcomeVal:', outcomeVal)
 			const line = [outcomeVal]
 			for (const i in q.independent) {
