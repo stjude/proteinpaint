@@ -525,8 +525,6 @@ function may_render_variant(data, tk, block) {
 		fs_string.style('fill', 'red')
 	}
 
-	//fs_string_bbox = fs_string.node().getBBox() // .node() will get the DOM/SVG
-
 	if (Number.isFinite(data.max_diff_score)) {
 		// Should always be true if variant field was given by user, but may change in the future
 		tk.dom.variantg
