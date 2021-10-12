@@ -49,10 +49,14 @@ export async function get_regression(q, ds) {
 		if ('cutoff' in q) colClasses[0] = 'factor'
 
 		// Specify reference categories of variables
-		const indRefCategories = q.independent.map(t => {
-			return get_refCategory(t.term, t.q)
+		console.log('q:', q)
+		console.log('q.independent:', q.independent)
+		const refCategories = []
+		regressionType === 'linear' ? refCategories.push('NA') : refCategories.push(get_refCategory(q.termY, q.termY_q))
+		q.independent.map(t => {
+			refCategories.push(get_refCategory(t.term, t.q))
 		})
-		const refCategories = ['NA', ...indRefCategories]
+		console.log('refCategories:', refCategories)
 
 		// Specify scaling factors of variables
 		const indScalingFactors = q.independent.map(t => {
