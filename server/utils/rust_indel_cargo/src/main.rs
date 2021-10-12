@@ -919,36 +919,30 @@ fn strand_analysis_one_iteration(
     reference_reverse_count: u64,
 ) -> f64 {
     let p_value_result = panic::catch_unwind(|| {
-        fishers_exact_test(
+        let p_value = fishers_exact_test(
             alternate_forward_count,
             alternate_reverse_count,
             reference_forward_count,
             reference_reverse_count,
         );
+        p_value
     });
 
-    //match p_value_result {
-    //    Ok(res) => println!("{:?}", res),
-    //    Err(_) => println!("caught panic!"),
-    //}
-
-    let mut p_value: f64 = 0.0;
-    if p_value_result.is_ok() {
-        println!("Fisher test worked:{:?}", p_value_result);
-        p_value = fishers_exact_test(
-            alternate_forward_count,
-            alternate_reverse_count,
-            reference_forward_count,
-            reference_reverse_count,
-        );
-    } else if p_value_result.is_err() {
-        println!("Fisher test failed, using Chi-sq test instead");
-        p_value = chi_square_test(
-            alternate_forward_count,
-            alternate_reverse_count,
-            reference_forward_count,
-            reference_reverse_count,
-        );
+    let p_value;
+    match p_value_result {
+        Ok(res) => {
+            println!("Fisher test worked:{:?}", p_value_result);
+            p_value = res;
+        }
+        Err(_) => {
+            println!("Fisher test failed, using Chi-sq test instead");
+            p_value = chi_square_test(
+                alternate_forward_count,
+                alternate_reverse_count,
+                reference_forward_count,
+                reference_reverse_count,
+            );
+        }
     }
     p_value
 }
