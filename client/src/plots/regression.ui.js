@@ -478,11 +478,7 @@ function setRenderers(self) {
 			.selectAll('tr')
 			.data(tr_data, isContinuousTerm ? (b, i) => i : b => b.key + b.label)
 
-		trs
-			.exit()
-			.transition()
-			.duration(500)
-			.remove()
+		trs.exit().remove()
 		trs.each(trUpdate)
 		trs
 			.enter()
