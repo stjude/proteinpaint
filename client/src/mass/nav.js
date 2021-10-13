@@ -371,7 +371,7 @@ function setRenderers(self) {
 					.style('vertical-align', 'top')
 			})
 
-		self.dom.cohortInputs = self.dom.cohortOpts.select('input')
+		self.dom.cohortInputs = self.dom.cohortOpts.selectAll('input')
 
 		self.dom.cohortTable = self.dom.subheader.cohort.append('div').html(selectCohort.htmlinfo)
 
