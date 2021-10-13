@@ -237,6 +237,7 @@ export function prepApp(self, opts) {
 export function getAppApi(self) {
 	const middlewares = []
 	const api = {
+		type: self.type,
 		opts: self.opts,
 		async dispatch(action) {
 			/*
@@ -377,10 +378,16 @@ export function getComponentApi(self) {
 			// force update if there is no action, or
 			// if the current and pending state is not equal
 			if (!current.action || !deepEqual(componentState, self.state)) {
-				self.state = componentState
-				// in some cases, a component may only be a wrapper to child
-				// components, in which case it will not have a
-				componentData = self.main ? await self.main(data) : null
+				if (!self.main) {
+					componentData = null
+				} else if (self.mainArg == 'state') {
+					// some components may require passing state to its .main() method,
+					// for example when extending a simple object class into an rx-component
+					componentData = self.main(componentState)
+				} else {
+					self.state = componentState
+					componentData = self.main ? await self.main(data) : null
+				}
 			}
 			// notify children
 			await notifyComponents(self.components, current, componentData)

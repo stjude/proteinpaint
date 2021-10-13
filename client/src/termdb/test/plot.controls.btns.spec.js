@@ -57,6 +57,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
+
 // TODO: test as part of the termInfo component
 tape.skip('info btn', function(test) {
 	test.timeoutAfter(3000)

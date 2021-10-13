@@ -4,7 +4,6 @@ import { make_ui as mafcovplot_makeui } from './block.mds2.vcf.mafcovplot'
 import { termdb_bygenotype, make_phewas } from './block.mds2.vcf.termdb'
 import { AFtest_groupname } from './block.mds2.vcf.numericaxis.AFtest'
 import { addparameter_rangequery } from './block.mds2'
-//import {make_radios} from './dom/radios'
 
 /*
 ********************** EXPORTED
@@ -36,7 +35,6 @@ p{}
 	mayaddtab_fishertable(tabs, m, tk, block)
 	mayaddtab_termdbbygenotype(tabs, m, tk, block)
 	mayaddtab_phewas(tabs, m, tk, block)
-	//mayaddtab_ld( tabs, m, tk, block )
 	mayaddtab_mafcovplot(tabs, m, tk, block)
 	mayaddtab_fimo(tabs, m, tk, block)
 
@@ -96,26 +94,6 @@ function mayaddtab_phewas(tabs, m, tk, block) {
 			} catch (e) {
 				wait.text('Error: ' + (e.message || e))
 			}
-		}
-	})
-}
-function mayaddtab_ld(tabs, m, tk, block) {
-	// only for vcf, by variant genotype
-
-	if (!tk.ld) return
-	if (!tk.vcf.termdb_bygenotype) return
-	tabs.push({
-		label: 'LD',
-		callback: div => {
-			make_radios({
-				holder: div,
-				options: tk.ld.tracks.map(i => {
-					return { label: i.name, value: i.name }
-				}),
-				callback: name => {
-					console.log(name)
-				}
-			})
 		}
 	})
 }

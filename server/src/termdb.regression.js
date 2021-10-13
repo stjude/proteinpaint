@@ -77,12 +77,12 @@ export async function get_regression(q, ds) {
 			const line = [outcomeVal]
 			for (const i in q.independent) {
 				const term = q.independent[i]
+				const key = row['key' + i]
+				const value = row['val' + i]
+				const val = term.term && term.term.values && term.term.values[value]
 				if ((term.type == 'float' || term.type == 'integer') && term.q.mode == 'discrete') {
-					const value = row['key' + i]
-					line.push(value)
+					line.push(val && val.uncomputable ? 'NA' : key)
 				} else {
-					const value = row['val' + i]
-					const val = term.term && term.term.values && term.term.values[value]
 					line.push(val && val.uncomputable ? 'NA' : value)
 				}
 			}

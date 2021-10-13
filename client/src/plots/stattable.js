@@ -1,12 +1,14 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 
 class TdbStatTable {
 	constructor(opts) {
 		this.type = 'stattable'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+
+	async init() {
 		this.dom = {
-			div: opts.holder.append('div').style('margin', '10px')
+			div: this.opts.holder.append('div').style('margin', '10px')
 		}
 		setRenderers(this)
 	}
@@ -110,4 +112,4 @@ function setRenderers(self) {
 	}
 }
 
-export const statTableInit = rx.getInitFxn(TdbStatTable)
+export const statTableInit = getCompInit(TdbStatTable)

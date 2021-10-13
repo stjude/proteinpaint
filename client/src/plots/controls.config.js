@@ -1,7 +1,7 @@
-import * as rx from '../common/rx.core'
-import { overlayInit } from './plot.controls.overlay'
-import { term1uiInit } from './plot.controls.term1'
-import { divideInit } from './plot.controls.divide'
+import { getCompInit, multiInit } from '../common/rx.core'
+import { overlayInit } from './controls.overlay'
+import { term1uiInit } from './controls.term1'
+import { divideInit } from './controls.divide'
 import { initRadioInputs } from '../dom/radio2'
 
 // to be used for assigning unique
@@ -14,9 +14,6 @@ class TdbConfigUiInit {
 		this.type = 'controlsConfig'
 		this.app = opts.app
 		this.id = opts.id
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
-
 		this.instanceNum = instanceNum++
 		setInteractivity(this)
 	}
@@ -34,7 +31,8 @@ class TdbConfigUiInit {
 					debug,
 					instanceNum: this.instanceNum,
 					isleaf: this.opts.isleaf,
-					iscondition: this.opts.iscondition
+					iscondition: this.opts.iscondition,
+					hasViewMode: this.app.type == 'termdb'
 				}),
 				orientation: setOrientationOpts({
 					holder: this.dom.orientationTr,
@@ -59,7 +57,7 @@ class TdbConfigUiInit {
 				})
 			}
 
-			this.components = await rx.multiInit({
+			this.components = await multiInit({
 				term1: term1uiInit({ app: this.app, holder: this.dom.term1Tr, id: this.id, debug }),
 				overlay: overlayInit({ app: this.app, holder: this.dom.overlayTr, id: this.id, debug }),
 				divideBy: divideInit({ app: this.app, holder: this.dom.divideTr, id: this.id, debug })
@@ -136,7 +134,7 @@ class TdbConfigUiInit {
 	}
 }
 
-export const configUiInit = rx.getInitFxn(TdbConfigUiInit)
+export const configUiInit = getCompInit(TdbConfigUiInit)
 
 function setInteractivity(self) {
 	self.rowIsVisible = function() {
@@ -336,7 +334,7 @@ function setViewOpts(opts) {
 
 	const api = {
 		main(plot, displayAsSurvival = false) {
-			self.dom.row.style('display', !displayAsSurvival && (plot.term2 || opts.iscondition) ? 'table-row' : 'none')
+			self.dom.row.style('display', opts.hasViewMode && !displayAsSurvival && (plot.term2 || opts.iscondition) ? 'table-row' : 'none')
 			const currValue = plot.settings.currViews.includes('table')
 				? 'table'
 				: plot.settings.currViews.includes('boxplot')

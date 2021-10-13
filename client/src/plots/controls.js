@@ -1,8 +1,8 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, multiInit } from '../common/rx.core'
 import { select as d3select, event as d3event } from 'd3-selection'
 import * as client from '../client'
-import { topBarInit } from './plot.controls.btns'
-import { configUiInit } from './plot.controls.config'
+import { topBarInit } from './controls.btns'
+import { configUiInit } from './controls.config'
 
 const panel_bg_color = '#fdfaf4'
 const panel_border_color = '#D3D3D3'
@@ -12,16 +12,14 @@ class TdbPlotControls {
 	constructor(opts) {
 		this.type = 'plotControls'
 		this.customEvents = ['downloadClick', 'infoClick']
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
-		this.setDom()
 		setInteractivity(this)
 		setRenderers(this)
 	}
 
 	async init() {
 		try {
-			this.components = await rx.multiInit({
+			this.setDom()
+			this.components = await multiInit({
 				topbar: topBarInit({
 					app: this.app,
 					id: this.id,
@@ -70,7 +68,7 @@ class TdbPlotControls {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
-			throw `No plot with id='${this.id}' found. 73 33333`
+			throw `No plot with id='${this.id}' found.`
 		}
 		return {
 			genome: appState.genome,
@@ -91,7 +89,7 @@ class TdbPlotControls {
 	}
 }
 
-export const controlsInit = rx.getInitFxn(TdbPlotControls)
+export const controlsInit = getCompInit(TdbPlotControls)
 
 function setRenderers(self) {
 	self.render = function() {

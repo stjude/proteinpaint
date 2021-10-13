@@ -55,9 +55,23 @@ if(length(scalingFactors) != ncol(dat)){
   stop("Number of scaling factors does not match the number of variables")
 }
 
-#Specify the reference categories of categorical variables
+#Assign the reference categories of categorical variables. For binned categorical variables, ensure the order of categories follows an ascending numeric order. 
 for(i in 1:ncol(dat)) {
   if(is.factor(dat[,i])) {
+    if(any(grepl(">|<|≥|≤", dat[,i]))) {
+      starts <- vector(mode = "numeric")
+      stops <- vector(mode = "numeric")
+      for (j in 1:length(levels(dat[,i]))) {
+        labels <- as.numeric(gsub("[^0-9]","", strsplit(levels(dat[,i])[j], split = "to")[[1]]))
+        starts <- c(starts, labels[1])
+        if (length(labels) == 2) {
+          stops <- c(stops, labels[2])
+        } else {
+          stops <- c(stops, 0)
+        }
+      }
+      dat[,i] <- factor(dat[,i], levels = levels(dat[,i])[order(starts, stops)])
+    }
     dat[,i] <- relevel(dat[,i], ref = refCategories[i])
   }
 }
@@ -116,7 +130,12 @@ for(x in 1:length(var_and_cat)){
 
 #Type III statistics.
 #For each variable, compare the complete model (i.e. model with all variables) to the model without the variable. This analysis will test whether the model changes significantly in the absence of each variable.
-typeIIIstats <- as.data.frame(drop1(res, test = "LRT"))
+#Use the F test for linear regression and use the likelihood ratio test for logistic regression.
+if (regressionType == "linear") {
+  typeIIIstats <- as.data.frame(drop1(res, test = "F"))
+} else {
+  typeIIIstats <- as.data.frame(drop1(res, test = "LRT"))
+}
 #Round the non-p-value columns to 3 decimal places
 pvalueCol <- grepl("^Pr\\(>", colnames(typeIIIstats))
 typeIIIstats[,!pvalueCol] <- round(typeIIIstats[,!pvalueCol], 3)

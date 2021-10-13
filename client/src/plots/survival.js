@@ -1,4 +1,5 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
+import { controlsInit } from './controls'
 import { getNormalRoot } from '../common/filter'
 import { select, event } from 'd3-selection'
 import { scaleLinear, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
@@ -12,13 +13,20 @@ import { dofetch3, to_svg } from '../client'
 class TdbSurvival {
 	constructor(opts) {
 		this.type = 'survival'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+	async init() {
+		const opts = this.opts
+		const controls = this.opts.controls ? null : opts.holder.append('div')
+		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
-			holder: opts.holder,
-			chartsDiv: opts.holder.append('div').style('margin', '10px'),
-			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
+			header: opts.header,
+			controls,
+			holder,
+			chartsDiv: holder.append('div').style('margin', '10px'),
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
+		if (this.dom.header) this.dom.header.html('Survival Plot')
 		// hardcode for now, but may be set as option later
 		this.settings = Object.assign({}, opts.settings)
 		this.pj = getPj(this)
@@ -38,6 +46,31 @@ class TdbSurvival {
 				}
 			}
 		})
+		await this.setControls()
+	}
+
+	async setControls() {
+		if (this.opts.controls) {
+			this.opts.controls.on('downloadClick.boxplot', this.download)
+		} else {
+			this.dom.holder
+				.attr('class', 'pp-termdb-plot-viz')
+				.style('display', 'inline-block')
+				.style('min-width', '300px')
+				.style('margin-left', '50px')
+
+			this.components = {
+				controls: await controlsInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controls
+						.attr('class', 'pp-termdb-plot-controls')
+						.style('display', 'inline-block')
+				})
+			}
+
+			this.components.controls.on('downloadClick.boxplot', this.download)
+		}
 	}
 
 	getState(appState) {
@@ -126,7 +159,7 @@ class TdbSurvival {
 	}
 }
 
-export const survivalInit = rx.getInitFxn(TdbSurvival)
+export const survivalInit = getCompInit(TdbSurvival)
 
 function setRenderers(self) {
 	self.render = function() {
@@ -136,7 +169,7 @@ function setRenderers(self) {
 		chartDivs.each(self.updateCharts)
 		chartDivs.enter().each(self.addCharts)
 
-		self.dom.holder.style('display', 'block')
+		self.dom.holder.style('display', 'inline-block')
 		self.dom.chartsDiv.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 	}
 

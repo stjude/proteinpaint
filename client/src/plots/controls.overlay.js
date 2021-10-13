@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
 import { Menu } from '../client'
 import { getNormalRoot } from '../common/filter'
@@ -21,8 +21,6 @@ all other cases just text label
 class Overlay {
 	constructor(opts) {
 		this.type = 'overlayInput'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
 		this.dom = { tr: opts.holder }
 		setRenderers(this)
 		this.initUI()
@@ -31,7 +29,6 @@ class Overlay {
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing' // plot id?
 		if (!o.holder) throw 'opts.holder missing'
-		return rx.getOpts(o, this)
 	}
 	initPill() {
 		this.pill = termsettingInit({
@@ -115,7 +112,7 @@ class Overlay {
 	}
 }
 
-export const overlayInit = rx.getInitFxn(Overlay)
+export const overlayInit = getCompInit(Overlay)
 
 function setRenderers(self) {
 	self.initUI = function() {

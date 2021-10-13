@@ -1,4 +1,5 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, copyMerge } from '../common/rx.core'
+import { controlsInit } from './controls'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
@@ -8,14 +9,35 @@ import { to_svg } from '../client'
 class TdbScatter {
 	constructor(opts) {
 		this.type = 'scatter'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+	async init() {
+		const div = this.opts.controls ? this.opts.holder : this.opts.holder.append('div')
 		this.dom = {
-			div: opts.holder
+			header: this.opts.header,
+			controls: this.opts.controls ? null : holder.append('div'),
+			div
 		}
 		this.settings = {}
+		if (this.dom.header) this.dom.header.html('Scatter Plot')
+		await this.setControls()
+		setInteractivity(this)
 		setRenderers(this)
-		opts.controls.on('downloadClick.scatter', this.download)
+	}
+
+	async setControls() {
+		if (this.opts.controls) {
+			this.opts.controls.on('downloadClick.boxplot', this.download)
+		} else {
+			this.components = {
+				controls: await controlsInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls')
+				})
+			}
+			this.components.controls.on('downloadClick.boxplot', this.download)
+		}
 	}
 
 	getState(appState) {
@@ -45,7 +67,7 @@ class TdbScatter {
 			this.dom.div.style('display', 'none')
 			return
 		}
-		rx.copyMerge(this.settings, this.state.config.settings.scatter)
+		copyMerge(this.settings, this.state.config.settings.scatter)
 		if (!this.pj) this.pj = getPj(this)
 
 		if (data) this.currData = data
@@ -54,7 +76,7 @@ class TdbScatter {
 	}
 }
 
-export const scatterInit = rx.getInitFxn(TdbScatter)
+export const scatterInit = getCompInit(TdbScatter)
 
 function setRenderers(self) {
 	self.render = function() {
