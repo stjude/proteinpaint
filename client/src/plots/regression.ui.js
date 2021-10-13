@@ -206,6 +206,7 @@ class MassRegressionUI {
 				if (!('label' in bin)) bin.label = get_bin_label(bin, d.term.q)
 			})
 		} else if (d.term.term.type == 'categorical') {
+			if (d.term.q.groupsetting.customset) return // return if it's alrady assinged or initiated
 			// for categorical term, devide values into 2 groups
 			const values = Object.keys(d.term.term.values)
 			if (values.length > 2) {
