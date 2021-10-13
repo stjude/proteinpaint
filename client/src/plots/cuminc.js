@@ -1,7 +1,7 @@
 import { getCompInit } from '../common/rx.core'
 import { controlsInit } from './controls'
 import { getNormalRoot } from '../common/filter'
-import { normalizeFilterData } from '../mass/plot'
+import { normalizeFilterData, syncParams } from '../mass/plot'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
@@ -104,6 +104,7 @@ class TdbCumInc {
 			Object.assign(this.settings, this.state.config.settings)
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			syncParams(this.state.config, data)
 			this.currData = this.processData(data)
 			this.refs = data.refs
 			this.pj.refresh({ data: this.currData })

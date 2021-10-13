@@ -9,7 +9,7 @@ import getHandlers from './barchart.events'
 /* to-do: switch to using rx.Bus */
 import { controlsInit } from './controls'
 import { to_svg } from '../client'
-import { normalizeFilterData } from '../mass/plot'
+import { normalizeFilterData, syncParams } from '../mass/plot'
 import { getNormalRoot } from '../common/filter'
 
 class TdbBarchart {
@@ -105,9 +105,7 @@ class TdbBarchart {
 			genome: appState.vocab.genome,
 			dslabel: appState.vocab.dslabel,
 			nav: appState.nav,
-			termfilter: {
-				filter: getNormalRoot(appState.termfilter.filter)
-			},
+			termfilter: appState.termfilter,
 			config: {
 				term: JSON.parse(JSON.stringify(config.term)),
 				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,
@@ -133,6 +131,7 @@ class TdbBarchart {
 
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			syncParams(this.state.config, data)
 			this.currServerData = data
 			if (this.currServerData.refs && this.currServerData.refs.q) {
 				for (const q of this.currServerData.refs.q) {
@@ -172,8 +171,19 @@ class TdbBarchart {
 			params.push(key + '_q=' + this.app.vocabApi.q_to_param(term.q))
 		}
 
-		if (state.termfilter.filter.lst.length) {
-			const filterData = normalizeFilterData(state.termfilter.filter)
+		if (state.ssid) {
+			params.push(
+				'term2_is_genotype=1',
+				'ssid=' + state.ssid.ssid,
+				'mname=' + state.ssid.mutation_name,
+				'chr=' + state.ssid.chr,
+				'pos=' + state.ssid.pos
+			)
+		}
+
+		const filter = getNormalRoot(state.termfilter.filter)
+		if (filter.lst.length) {
+			const filterData = normalizeFilterData(filter)
 			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData)))
 		}
 

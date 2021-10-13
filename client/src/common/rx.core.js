@@ -265,7 +265,7 @@ export function getAppApi(self) {
 				// replace app.state
 				if (action) self.state = await self.store.write(action)
 				// else an empty action should force components to update
-				await self.main()
+				if (self.main) await self.main()
 				const current = { action, appState: self.state }
 				await notifyComponents(self.components, current)
 			} catch (e) {

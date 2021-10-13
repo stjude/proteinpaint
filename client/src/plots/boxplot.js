@@ -5,7 +5,7 @@ import { event as d3event } from 'd3-selection'
 import { scaleLinear, scaleLog, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { format as d3format } from 'd3-format'
 import { axisLeft } from 'd3-axis'
-import { normalizeFilterData } from '../mass/plot'
+import { normalizeFilterData, syncParams } from '../mass/plot'
 import { getNormalRoot } from '../common/filter'
 
 class TdbBoxplot {
@@ -88,6 +88,7 @@ class TdbBoxplot {
 			}
 			const dataName = this.getDataName(this.state)
 			this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			syncParams(this.state.config, this.data)
 			const [lst, binmax] = this.processData(this.data)
 			this.dom.div.style('display', 'block')
 			this.render(lst.filter(d => d != null), binmax)

@@ -1,7 +1,7 @@
 import { controlsInit } from './controls'
 import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
-import { normalizeFilterData } from '../mass/plot'
+import { normalizeFilterData, syncParams } from '../mass/plot'
 import { getNormalRoot } from '../common/filter'
 
 class TdbTable {
@@ -82,6 +82,7 @@ class TdbTable {
 			}
 			const dataName = this.getDataName(this.state)
 			this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			syncParams(this.state.config, this.data)
 			const [columns, rows] = this.processData(this.data)
 			this.render(columns, rows)
 		} catch (e) {

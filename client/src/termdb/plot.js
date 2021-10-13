@@ -142,31 +142,6 @@ class TdbPlot {
 			})
 		}
 	}
-
-	syncParams(config, data) {
-		if (!data || !data.refs) return
-		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
-			const term = config[key]
-			if (term == 'genotype') return
-			if (!term) {
-				if (key == 'term') throw `missing plot.term{}`
-				return
-			}
-			if (data.refs.bins) {
-				term.bins = data.refs.bins[i]
-				if (data.refs.q && data.refs.q[i]) {
-					if (!term.q) term.q = {}
-					const q = data.refs.q[i]
-					if (q !== term.q) {
-						for (const key in term.q) delete term.q[key]
-						Object.assign(term.q, q)
-					}
-				}
-			}
-			if (!term.q) term.q = {}
-			if (!term.q.groupsetting) term.q.groupsetting = {}
-		}
-	}
 }
 
 export const plotInit = rx.getInitFxn(TdbPlot)

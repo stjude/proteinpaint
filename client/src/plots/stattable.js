@@ -1,5 +1,5 @@
 import { getCompInit } from '../common/rx.core'
-import { normalizeFilterData } from '../mass/plot'
+import { normalizeFilterData, syncParams } from '../mass/plot'
 import { getNormalRoot } from '../common/filter'
 
 class TdbStatTable {
@@ -48,6 +48,7 @@ class TdbStatTable {
 			if (this.state.isVisible) {
 				const dataName = this.getDataName(this.state)
 				this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
+				syncParams(this.state.config, this.data)
 			}
 			if (!this.state.isVisible || !this.data || !this.data.boxplot) {
 				this.dom.div.style('display', 'none')
