@@ -3,6 +3,9 @@ import { setDensityPlot } from './termsetting.density'
 import { renderBoundaryInclusionInput, renderBoundaryInputDivs } from './termsetting.discrete'
 import { get_bin_label } from '../../shared/termdb.bins'
 import { keyupEnter } from '../client'
+import { make_one_checkbox } from '../dom/checkbox'
+import { getNormalRoot } from './filter'
+import { dofetch3 } from './dofetch'
 
 export async function setNumericMethods(self, closureType = 'closured') {
 	if (closureType == 'non-closured') {
@@ -66,7 +69,7 @@ async function showEditMenu(self, div) {
 	renderBoundaryInclusionInput(self)
 
 	// cutoff input
-	self.dom.cutoff_div = self.dom.bins_div.append('div').style('margin', '5px')
+	self.dom.cutoff_div = self.dom.bins_div.append('div').style('margin', '10px')
 	renderCuttoffInput(self)
 
 	// render bin labels
@@ -136,17 +139,19 @@ function setqDefaults(self) {
 					: dd.maxvalue
 
 			cache[t.id].binary = {
+				mode: 'binary',
 				type: 'custom',
+				modeBinaryCutoffType: 'normal', // default value
+				modeBinaryCutoffPercentile: 80, // default value
 				lst: [
 					{
 						startunbounded: true,
 						stopinclusive: true,
-						stop: +cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
+						stop: cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
 					},
 					{
 						stopunbounded: true,
-						stopinclusive: true,
-						start: +cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
+						start: cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
 					}
 				]
 			}
@@ -157,7 +162,6 @@ function setqDefaults(self) {
 		cache[t.id][self.q.type] = t.q
 	}
 
-	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
 	if (!self.q || self.q.mode !== 'binary') self.q = {}
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].binary))
 	self.q = Object.assign(cacheCopy, self.q)
@@ -169,23 +173,48 @@ function setqDefaults(self) {
 	//*** validate self.q ***//
 }
 
-function renderCuttoffInput(self) {
+async function renderCuttoffInput(self) {
 	self.dom.cutoff_div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding', '5px')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('Boundary value')
+		.append('span')
+		.style('margin-right', '5px')
+		.style('opacity', 0.5)
+		.text('Boundary value')
 
 	self.dom.customBinBoundaryInput = self.dom.cutoff_div
 		.append('input')
 		.style('width', '100px')
 		.attr('type', 'number')
+		.style('margin-right', '10px')
 		.attr('value', self.q.lst[0].stop)
 		.on('change', handleChange)
 
-	function handleChange() {
-		const cutoff = +this.value
+	make_one_checkbox({
+		holder: self.dom.cutoff_div,
+		labeltext: 'Use percentile',
+		checked: self.q.modeBinaryCutoffType == 'percentile',
+		divstyle: { display: 'inline-block' },
+		callback: handleCheckbox
+	})
+
+	async function handleChange() {
+		const value = +this.value
+		if (self.q.modeBinaryCutoffType == 'normal') {
+			updateUI(value)
+		} else if (self.q.modeBinaryCutoffType == 'percentile') {
+			// using percentile, value is a percentile number
+			if (value < 1 || value > 99) {
+				window.alert('Invalid percentile value: enter integer between 1 and 99')
+				return
+			}
+			self.q.modeBinaryCutoffPercentile = value
+			await setPercentile()
+		} else {
+			throw 'invalid modeBinaryCutoffType value'
+		}
+	}
+
+	function updateUI(cutoff) {
+		// cutoff is the actual data value, not percentile
 		self.q.lst[0].stop = cutoff
 		self.q.lst[1].start = cutoff
 		self.q.lst.forEach(bin => {
@@ -193,6 +222,36 @@ function renderCuttoffInput(self) {
 		})
 		setDensityPlot(self)
 		renderBoundaryInputDivs(self, self.q.lst)
+	}
+
+	async function handleCheckbox() {
+		// FIXME self.q.modeBinaryCutoffType is undefined.
+		// why it is not assigned from setqDefaults()??
+		self.q.modeBinaryCutoffType = self.q.modeBinaryCutoffType == 'percentile' ? 'normal' : 'percentile'
+		if (self.q.modeBinaryCutoffType == 'normal') {
+			const v = self.q.lst[0].stop
+			self.dom.customBinBoundaryInput.property('value', v)
+			updateUI(v)
+		} else if (self.q.modeBinaryCutoffType == 'percentile') {
+			// switched to percentile
+			self.dom.customBinBoundaryInput.property('value', self.q.modeBinaryCutoffPercentile)
+			await setPercentile()
+		} else {
+			throw 'invalid modeBinaryCutoffType value'
+		}
+	}
+	async function setPercentile() {
+		const lst = [
+			'/termdb?getpercentile=' + self.q.modeBinaryCutoffPercentile,
+			'tid=' + self.term.id,
+			'genome=' + self.opts.vocab.genome,
+			'dslabel=' + self.opts.vocab.dslabel
+		]
+		if (self.opts.filter) {
+			lst.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(self.opts.filter))))
+		}
+		const data = await dofetch3(lst.join('&'), {}, self.opts.fetchOpts)
+		updateUI(data.value)
 	}
 }
 
