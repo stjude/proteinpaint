@@ -151,9 +151,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		':' +
 		leftflankseq +
 		':' +
-		rightflankseq +
-		':' +
-		fisher_test_threshold
+		rightflankseq
 
 	//console.log({seqRef:refseq, seqMut:altseq, leftFlank:leftflankseq, rightFlank:rightflankseq, readlen: segbplen, variant: q.variant}) // uncomment this line to help creating tests at server/utils/test/rust_indel.spec.js
 
