@@ -1,5 +1,5 @@
 import { getCompInit, multiInit } from '../common/rx.core'
-import { searchInit } from '../termdb/search'
+//import { searchInit } from '../termdb/search'
 import { filter3Init } from '../termdb/filter3'
 import { chartsInit } from './charts'
 import { select } from 'd3-selection'
@@ -30,6 +30,10 @@ class TdbNav {
 			this.cohortFilter = getFilterItemByTag(this.app.getState().termfilter.filter, 'cohortFilter')
 			this.initUI()
 			this.components = await multiInit({
+				/*	
+				DISABLE SEARCH, for now: 
+				not sure what type of chart should open when a term search result is clicked
+
 				search: searchInit({
 					app: this.app,
 					holder: this.dom.searchDiv,
@@ -42,7 +46,7 @@ class TdbNav {
 							}
 						}
 					}
-				}),
+				}),*/
 				filter: filter3Init({
 					app: this.app,
 					holder: this.dom.subheader.filter.append('div'),
@@ -59,6 +63,12 @@ class TdbNav {
 			throw e
 		}
 	}
+
+	/* for now, make the nav react to all state changes
+	reactsTo(action) {
+		return true 
+	}*/
+
 	getState(appState) {
 		this.cohortKey = appState.termdbConfig.selectCohort && appState.termdbConfig.selectCohort.term.id
 		return {
@@ -71,21 +81,13 @@ class TdbNav {
 			plots: appState.plots
 		}
 	}
-	reactsTo(action) {
-		return (
-			action.type.startsWith('tab_') ||
-			action.type.startsWith('filter_') ||
-			action.type.startsWith('cohort_') ||
-			action.type.startsWith('plot_') ||
-			action.type == 'app_refresh'
-		)
-	}
+
 	async main() {
 		this.dom.tabDiv.style('display', this.state.nav.header_mode === 'with_tabs' ? 'inline-block' : 'none')
 		this.dom.tip.hide()
 		this.activeTab = this.state.nav.activeTab
 		this.prevCohort = this.activeCohort
-		this.activeCohort = this.state.activeCohort
+		this.activeCohort = +this.state.activeCohort
 		this.filterUiRoot = getFilterItemByTag(this.state.filter, 'filterUiRoot')
 		this.cohortFilter = getFilterItemByTag(this.state.filter, 'cohortFilter')
 		if (!this.dom.cohortTable) this.initCohort()
@@ -301,6 +303,7 @@ function setRenderers(self) {
 				}
 			}
 			self.dom.cohortTable.selectAll(activeSelector).style('background-color', 'yellow')
+			self.dom.cohortInputs.property('checked', (d, i) => i === self.activeCohort)
 		}
 		if (self.dom.cohortPrompt) self.dom.cohortPrompt.style('display', self.activeCohort == -1 ? '' : 'none')
 
@@ -310,7 +313,6 @@ function setRenderers(self) {
 	}
 
 	self.initCohort = () => {
-		if (self.dom.cohortTable) return
 		const selectCohort = self.state.termdbConfig.selectCohort
 		if (!selectCohort) {
 			if (self.activeTab === 0) self.activeTab = 1
@@ -368,6 +370,8 @@ function setRenderers(self) {
 					.style('padding', '10px')
 					.style('vertical-align', 'top')
 			})
+
+		self.dom.cohortInputs = self.dom.cohortOpts.select('input')
 
 		self.dom.cohortTable = self.dom.subheader.cohort.append('div').html(selectCohort.htmlinfo)
 
