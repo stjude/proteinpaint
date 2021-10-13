@@ -294,6 +294,12 @@ function renderBinLines(self, data) {
 			self.q.lst[d.index].stop = value
 			self.q.lst[d.index].label = get_bin_label(self.q.lst[d.index], self.q)
 			if (self.dom.customBinBoundaryInput) {
+				// this is created by binary.js when mode=binary
+				// quick fix: while dragging, revert from percentile to normal, as it's hard to update percentile values
+				self.q.modeBinaryCutoffType = 'normal'
+				if (self.dom.customBinBoundaryPercentileCheckbox) {
+					self.dom.customBinBoundaryPercentileCheckbox.property('checked', false)
+				}
 				self.dom.customBinBoundaryInput.property(
 					'value',
 					self.q.lst
