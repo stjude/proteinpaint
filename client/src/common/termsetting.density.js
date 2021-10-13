@@ -187,7 +187,7 @@ function renderBinLines(self, data) {
 			.reverse()
 			.find(d => d.scaledX <= scaledMaxX)
 
-		if (data.last_bin && data.last_bin.start !== lastVisibleLine.x) {
+		if (data.last_bin && data.last_bin.start && data.last_bin.start !== lastVisibleLine.x) {
 			lines.push({ x: data.last_bin.start, index, scaledX: Math.round(o.xscale(data.last_bin.start)) })
 		}
 	} else {
@@ -293,14 +293,19 @@ function renderBinLines(self, data) {
 			self.q.lst[d.index + 1].label = get_bin_label(self.q.lst[d.index + 1], self.q)
 			self.q.lst[d.index].stop = value
 			self.q.lst[d.index].label = get_bin_label(self.q.lst[d.index], self.q)
-			self.dom.customBinBoundaryInput.property(
-				'value',
-				self.q.lst
-					.slice(1)
-					.map(d => d.start)
-					.join('\n')
-			)
-			self.dom.customBinLabelInput.property('value', c => c.label)
+			if (self.dom.customBinBoundaryInput) {
+				self.dom.customBinBoundaryInput.property(
+					'value',
+					self.q.lst
+						.slice(1)
+						.map(d => d.start)
+						.join('\n')
+				)
+			}
+
+			if (self.dom.customBinLabelInput) {
+				self.dom.customBinLabelInput.property('value', c => c.label)
+			}
 		}
 	}
 

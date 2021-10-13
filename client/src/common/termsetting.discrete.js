@@ -4,20 +4,14 @@ import { format } from 'd3-format'
 import { setDensityPlot } from './termsetting.density'
 import { get_bin_label } from '../../shared/termdb.bins'
 import { init_tabs } from '../dom/toggleButtons'
+import { make_radios } from '../dom/radiobutton'
 
 /*
 Arguments
 self: a termsetting instance
 */
 
-const tsInstanceTracker = new WeakMap()
-let i = 0
-
 export async function setNumericMethods(self, closureType = 'closured') {
-	if (!tsInstanceTracker.has(self)) {
-		tsInstanceTracker.set(self, i++)
-	}
-
 	if (closureType == 'non-closured') {
 		// TODO: always use this non-closured version later
 		return {
@@ -50,7 +44,6 @@ function get_status_msg() {
 }
 
 async function showEditMenu(self, div) {
-	if (!self.numqByTermIdType) self.numqByTermIdType = {}
 	self.num_obj = {}
 
 	self.num_obj.plot_size = {
@@ -74,7 +67,6 @@ async function showEditMenu(self, div) {
 	div.selectAll('*').remove()
 	self.dom.num_holder = div
 	self.dom.bins_div = div.append('div').style('padding', '5px')
-
 	setqDefaults(self)
 	setDensityPlot(self)
 	renderBoundaryInclusionInput(self)
@@ -103,7 +95,7 @@ function applyEdits(self) {
 			self.q.last_bin.start = +self.dom.last_start_input.property('value')
 			self.q.last_bin.stopunbounded = true
 		}
-		self.numqByTermIdType[self.term.id].regular = JSON.parse(JSON.stringify(self.q))
+		self.numqByTermIdModeType[self.term.id].discrete.regular = JSON.parse(JSON.stringify(self.q))
 	} else {
 		delete self.q.startinclusive
 		delete self.q.stopinclusive
@@ -111,7 +103,7 @@ function applyEdits(self) {
 		delete self.q.first_bin
 		delete self.q.last_bin
 		self.q.lst = processCustomBinInputs(self)
-		self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
+		self.numqByTermIdModeType[self.term.id].discrete.custom = JSON.parse(JSON.stringify(self.q))
 	}
 	self.q.mode = 'discrete'
 	delete self.q.scale
@@ -166,17 +158,20 @@ function processCustomBinInputs(self) {
 
 function setqDefaults(self) {
 	const dd = self.num_obj.density_data
-	if (!(self.term.id in self.numqByTermIdType)) {
+	const cache = self.numqByTermIdModeType
+	const t = self.term
+	if (!cache[t.id]) cache[t.id] = {}
+	if (!cache[t.id].discrete) {
 		const defaultCustomBoundary =
 			dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2 : dd.maxvalue
 
-		self.numqByTermIdType[self.term.id] = {
+		cache[t.id].discrete = {
 			regular:
 				self.q && self.q.type == 'regular'
 					? JSON.parse(JSON.stringify(self.q))
-					: self.opts.use_bins_less && self.term.bins.less
-					? JSON.parse(JSON.stringify(self.term.bins.less))
-					: JSON.parse(JSON.stringify(self.term.bins.default)),
+					: self.opts.use_bins_less && t.bins.less
+					? JSON.parse(JSON.stringify(t.bins.less))
+					: JSON.parse(JSON.stringify(t.bins.default)),
 			custom:
 				self.q && self.q.type == 'custom'
 					? self.q
@@ -186,28 +181,31 @@ function setqDefaults(self) {
 								{
 									startunbounded: true,
 									stopinclusive: true,
-									stop: +defaultCustomBoundary.toFixed(self.term.type == 'integer' ? 0 : 2)
+									stop: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
 								},
 								{
 									stopunbounded: true,
 									stopinclusive: true,
-									start: +defaultCustomBoundary.toFixed(self.term.type == 'integer' ? 0 : 2)
+									start: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
 								}
 							]
 					  }
 		}
-		if (!self.numqByTermIdType[self.term.id].regular.type) {
-			self.numqByTermIdType[self.term.id].regular.type = 'regular'
+		if (!cache[t.id].discrete.regular.type) {
+			cache[t.id].discrete.regular.type = 'regular'
 		}
-	} else if (self.term.q) {
-		if (!self.term.q.type) throw `missing numeric term q.type: should be 'regular' or 'custom'`
-		self.numqByTermIdType[self.term.id][self.q.type] = self.q
+	} else if (t.q) {
+		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
+		if (!t.q.type) throw `missing numeric term q.type: should be 'regular' or 'custom'`
+		cache[t.id].discrete[t.q.type] = t.q
 	}
 
 	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
-	if (!self.q) self.q = {}
+	if (self.q && !self.q.mode) self.q.mode = 'discrete'
+	if (!self.q || self.q.mode !== 'discrete') self.q = {}
 	if (!self.q.type) self.q.type = 'regular'
-	self.q = JSON.parse(JSON.stringify(self.numqByTermIdType[self.term.id][self.q.type]))
+	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].discrete[self.q.type]))
+	self.q = Object.assign(cacheCopy, self.q)
 	const bin_size = 'bin_size' in self.q && self.q.bin_size.toString()
 	if (!self.q.rounding && typeof bin_size == 'string' && bin_size.includes('.') && !bin_size.endsWith('.')) {
 		const binDecimals = bin_size.split('.')[1].length
@@ -221,7 +219,7 @@ function setqDefaults(self) {
 	//*** validate self.q ***//
 }
 
-function renderBoundaryInclusionInput(self) {
+export function renderBoundaryInclusionInput(self) {
 	self.dom.boundaryInclusionDiv = self.dom.bins_div.append('div').style('margin-left', '5px')
 
 	self.dom.boundaryInclusionDiv
@@ -236,8 +234,9 @@ function renderBoundaryInclusionInput(self) {
 		.append('select')
 		.style('margin-left', '10px')
 		.on('change', function() {
-			self.numqByTermIdType[self.term.id].startinclusive = self.dom.boundaryInput.node().selectedIndex == 1
-			self.numqByTermIdType[self.term.id].stopinclusive = self.dom.boundaryInput.node().selectedIndex == 0
+			const c = self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
+			c.startinclusive = self.dom.boundaryInput.node().selectedIndex == 1
+			c.stopinclusive = self.dom.boundaryInput.node().selectedIndex == 0
 		})
 
 	self.dom.boundaryInput
@@ -388,7 +387,6 @@ function renderFirstBinInput(self, tr) {
 }
 
 function renderLastBinInputs(self, tr) {
-	const id = tsInstanceTracker.get(self)
 	const isAuto = !self.q.last_bin || Object.keys(self.q.last_bin).length === 0
 
 	tr.append('td')
@@ -401,47 +399,18 @@ function renderLastBinInputs(self, tr) {
 		.style('padding-left', '15px')
 		.style('vertical-align', 'top')
 	const radio_div = td1.append('div')
-	const label0 = radio_div
-		.append('label')
-		.style('padding-left', '10px')
-		.style('padding-right', '10px')
 
-	self.dom.last_radio_auto = label0
-		.append('input')
-		.attr('type', 'radio')
-		.attr('name', 'last_bin_opt_' + id)
-		.attr('value', 'auto')
-		.style('margin-right', '3px')
-		.style('color', self.q.last_bin && self.q.last_bin.start > self.num_obj.density_data.maxvalue ? 'red' : '')
-		.property('checked', isAuto)
-		.on('change', handleChange)
-		.on('keyup', function() {
-			if (!keyupEnter()) return
-			handleChange.call(this)
-		})
-
-	label0
-		.append('span')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('Automatic<br>')
-
-	const label1 = radio_div
-		.append('label')
-		.style('padding-left', '10px')
-		.style('padding-right', '10px')
-
-	label1
-		.append('input')
-		.attr('type', 'radio')
-		.attr('name', 'last_bin_opt_' + id)
-		.attr('value', 'fixed')
-		.style('margin-right', '3px')
-		.property('checked', !isAuto)
-		.on('change', function() {
-			if (!this.checked) {
+	const { divs, labels, inputs } = make_radios({
+		holder: radio_div,
+		options: [
+			{ label: 'Automatic', value: 'auto', checked: isAuto },
+			{ label: 'Fixed', value: 'fixed', checked: !isAuto }
+		],
+		callback: v => {
+			if (v == 'auto') {
 				delete self.q.last_bin.start
 				edit_div.style('display', 'none')
-			} else {
+			} else if (v == 'fixed') {
 				if (!self.q.last_bin) self.q.last_bin = {}
 				if (!('start' in self.q.last_bin)) {
 					// default to setting the last bin start to max value,
@@ -453,13 +422,77 @@ function renderLastBinInputs(self, tr) {
 				self.q.last_bin.start = value
 				edit_div.style('display', 'inline-block')
 			}
+			handleChange()
 			setDensityPlot(self)
-		})
+		},
+		styles: {
+			padding: '0 10px'
+		}
+	})
 
-	label1
-		.append('span')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('Fixed')
+	self.dom.last_radio_auto = select(inputs.nodes()[0])
+
+	// TODO: remove following code after revewing radiobutton implementation
+
+	// const label0 = radio_div
+	// 	.append('label')
+	// 	.style('padding-left', '10px')
+	// 	.style('padding-right', '10px')
+
+	// self.dom.last_radio_auto = label0
+	// 	.append('input')
+	// 	.attr('type', 'radio')
+	// 	.attr('name', 'last_bin_opt_' + id)
+	// 	.attr('value', 'auto')
+	// 	.style('margin-right', '3px')
+	// 	.style('color', self.q.last_bin && self.q.last_bin.start > self.num_obj.density_data.maxvalue ? 'red' : '')
+	// 	.property('checked', isAuto)
+	// 	.on('change', handleChange)
+	// 	.on('keyup', function() {
+	// 		if (!keyupEnter()) return
+	// 		handleChange.call(this)
+	// 	})
+
+	// label0
+	// 	.append('span')
+	// 	.style('color', 'rgb(136, 136, 136)')
+	// 	.html('Automatic<br>')
+
+	// const label1 = radio_div
+	// 	.append('label')
+	// 	.style('padding-left', '10px')
+	// 	.style('padding-right', '10px')
+
+	// label1
+	// 	.append('input')
+	// 	.attr('type', 'radio')
+	// 	.attr('name', 'last_bin_opt_' + id)
+	// 	.attr('value', 'fixed')
+	// 	.style('margin-right', '3px')
+	// 	.property('checked', !isAuto)
+	// 	.on('change', function() {
+	// 		if (!this.checked) {
+	// 			delete self.q.last_bin.start
+	// 			edit_div.style('display', 'none')
+	// 		} else {
+	// 			if (!self.q.last_bin) self.q.last_bin = {}
+	// 			if (!('start' in self.q.last_bin)) {
+	// 				// default to setting the last bin start to max value,
+	// 				// so that it will be dragged to the left by default
+	// 				self.q.last_bin.start = self.num_obj.density_data.maxvalue
+	// 			}
+	// 			self.dom.last_start_input.property('value', self.q.last_bin.start)
+	// 			const value = +self.dom.last_start_input.property('value')
+	// 			self.q.last_bin.start = value
+	// 			edit_div.style('display', 'inline-block')
+	// 		}
+	// 		setDensityPlot(self)
+	// 	})
+
+	// label1
+	// 	.append('span')
+	// 	.style('color', 'rgb(136, 136, 136)')
+	// 	.html('Fixed')
 
 	const edit_div = tr
 		.append('td')
@@ -575,7 +608,7 @@ function renderCustomBinInputs(self, tablediv) {
 	renderBoundaryInputDivs(self, self.q.lst)
 }
 
-function renderBoundaryInputDivs(self, data) {
+export function renderBoundaryInputDivs(self, data) {
 	self.dom.customBinLabelTd.selectAll('div').remove('*')
 	const inputDivs = self.dom.customBinLabelTd.selectAll('div').data(data)
 	inputDivs.exit().remove()
@@ -599,7 +632,7 @@ function renderBoundaryInputDivs(self, data) {
 				.append('input')
 				.attr('type', 'text')
 				.property('value', d.label)
-				.on('change', function(d, i) {
+				.on('change', function() {
 					self.q.lst[i].label = this.value
 				})
 		})
@@ -620,7 +653,7 @@ function renderButtons(self) {
 		.html('Reset')
 		.on('click', () => {
 			delete self.q
-			delete self.numqByTermIdType[self.term.id]
+			delete self.numqByTermIdModeType[self.term.id]
 			self.showEditMenu(self.dom.num_holder)
 		})
 }

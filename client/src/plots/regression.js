@@ -80,10 +80,11 @@ class MassRegression {
 		}
 		if (!this.state.config.term) return
 		this.config = JSON.parse(JSON.stringify(this.state.config))
-		if (!this.config.independent) {
+		if (!this.config.independent.length || !this.config.term) {
 			this.dom.div.style('display', 'none')
 			this.dom.resultsHeading.style('display', 'none')
-			throw 'independent variable(s) is required for regression analysis'
+			// will only show the regression controls when outcome and/or independent terms are empty
+			return
 		}
 		this.dom.div.selectAll('*').remove()
 		this.dom.banner.style('display', this.state.formIsComplete ? 'block' : 'none')
@@ -117,7 +118,7 @@ class MassRegression {
 				)
 		]
 		if (c.regressionType == 'logistic') {
-			if (!c.cutoff) throw "Cutofff values in required for 'Outcome variable'"
+			if (!c.cutoff) throw "Cutoff values in required for 'Outcome variable'"
 			params.push('regressionType=logistic')
 			params.push('cutoff=' + c.cutoff)
 		}

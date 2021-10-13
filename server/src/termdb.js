@@ -38,6 +38,7 @@ export function handle_request_closure(genomes) {
 			// process triggers
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
 			if (q.getcategories) return trigger_getcategories(q, res, tdb, ds)
+			if (q.getmedian) return trigger_getmedianbins(q, res, ds)
 			if (q.getnumericcategories) return trigger_getnumericcategories(q, res, tdb, ds)
 			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
 			if (q.get_children) return await trigger_children(q, res, tdb)
@@ -266,4 +267,26 @@ async function trigger_getregression(q, res, ds) {
 	if ('cutoff' in q) q.cutoff = Number(q.cutoff)
 	const data = await regression.get_regression(q, ds)
 	res.send(data)
+}
+
+async function trigger_getmedianbins(q, res, ds) {
+	const term = ds.cohort.termdb.q.termjsonByOneid(q.tid)
+	if (!term) throw 'invalid termid'
+	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
+	const values = []
+	const rows = termdbsql.get_rows_by_one_key({
+		ds,
+		key: q.tid,
+		filter: q.filter ? (typeof q.filter == 'string' ? JSON.parse(q.filter) : q.filter) : null
+	})
+	for (const { value } of rows) {
+		if (term.values && term.values[value]) {
+			// is a special category
+			continue
+		}
+		values.push(Number(value))
+	}
+	const sorted_values = [...values].sort((a, b) => a - b)
+	const median = sorted_values[Math.floor(values.length / 2)]
+	res.send({median})
 }

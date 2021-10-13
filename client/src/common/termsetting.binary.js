@@ -1,0 +1,229 @@
+import { event as d3event } from 'd3-selection'
+import { setDensityPlot } from './termsetting.density'
+import { renderBoundaryInclusionInput, renderBoundaryInputDivs } from './termsetting.discrete'
+import { get_bin_label } from '../../shared/termdb.bins'
+import { keyupEnter } from '../client'
+
+export async function setNumericMethods(self, closureType = 'closured') {
+	if (closureType == 'non-closured') {
+		// TODO: always use this non-closured version later
+		return {
+			get_term_name,
+			get_status_msg,
+			showEditMenu
+		}
+	} else {
+		// this version maintains a closured reference to 'self'
+		// so the 'self' argument does not need to be passed
+		//
+		// TODO: may convert all other termsetting.*.js methods to
+		// just use the non-closured version to simplify
+		//
+		;(self.get_term_name = d => get_term_name(self, d)),
+			(self.get_status_msg = get_status_msg),
+			(self.showEditMenu = async div => await showEditMenu(self, div))
+	}
+}
+
+function get_term_name(self, d) {
+	if (!self.opts.abbrCutoff) return d.name
+	return d.name.length <= self.opts.abbrCutoff + 2
+		? d.name
+		: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+}
+
+function get_status_msg() {
+	return ''
+}
+
+async function showEditMenu(self, div) {
+	self.num_obj = {}
+
+	self.num_obj.plot_size = {
+		width: 500,
+		height: 100,
+		xpad: 10,
+		ypad: 20
+	}
+	try {
+		// check if termsettingInit() was called outside of termdb/app
+		// in which case it will not have an opts.vocabApi
+		if (!self.opts.vocabApi) {
+			const vocabulary = await import('../termdb/vocabulary')
+			self.opts.vocabApi = vocabulary.vocabInit({ state: { vocab: self.opts.vocab } })
+		}
+		self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
+	} catch (err) {
+		console.log(err)
+	}
+
+	div.selectAll('*').remove()
+	self.dom.num_holder = div.append('div')
+	self.dom.bins_div = div.append('div').style('padding', '5px')
+
+	setqDefaults(self)
+	setDensityPlot(self)
+	renderBoundaryInclusionInput(self)
+
+	// cutoff input
+	self.dom.cutoff_div = self.dom.bins_div.append('div').style('margin', '5px')
+	renderCuttoffInput(self)
+
+	// render bin labels
+	self.dom.bins_div
+		.append('div')
+		.style('padding', '5px')
+		.style('margin', '5px')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Bin labels')
+	self.dom.customBinLabelTd = self.dom.bins_div
+		.append('div')
+		.style('padding', '5px')
+		.style('margin', '5px')
+	renderBoundaryInputDivs(self, self.q.lst)
+
+	const btndiv = div.append('div').style('padding', '3px 10px')
+
+	btndiv
+		.append('button')
+		.style('margin', '5px')
+		.html('Apply')
+		.on('click', async () => {
+			delete self.q.startinclusive
+			delete self.q.stopinclusive
+			delete self.q.bin_size
+			delete self.q.first_bin
+			delete self.q.last_bin
+			self.q.lst = processCustomBinInputs(self)
+			self.numqByTermIdModeType[self.term.id].binary = JSON.parse(JSON.stringify(self.q))
+			self.q.mode = 'binary'
+			self.opts.callback({
+				id: self.term.id,
+				term: self.term,
+				q: self.q
+			})
+		})
+
+	btndiv
+		.append('button')
+		.style('margin', '5px')
+		.html('Reset')
+		.on('click', () => {
+			// TODO: set self.q to default
+			// self.q.mode = 'binary'
+			// self.opts.callback({
+			// 	term: self.term,
+			// 	q: self.q
+			// })
+		})
+}
+
+function setqDefaults(self) {
+	const dd = self.num_obj.density_data
+	const boundry_value = self.q && self.q.lst && self.q.lst.length ? self.q.lst[0].stop : undefined
+	const cache = self.numqByTermIdModeType
+	const t = self.term
+	if (!cache[t.id]) cache[t.id] = {}
+	if (!cache[t.id].binary) {
+		if (self.q.mode == 'binary' && self.q.type == 'custom') {
+			cache[t.id].binary = self.q
+		} else {
+			const cutoff =
+				boundry_value !== undefined
+					? boundry_value
+					: dd.maxvalue != dd.minvalue
+					? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2
+					: dd.maxvalue
+
+			cache[t.id].binary = {
+				type: 'custom',
+				lst: [
+					{
+						startunbounded: true,
+						stopinclusive: true,
+						stop: +cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
+					},
+					{
+						stopunbounded: true,
+						stopinclusive: true,
+						start: +cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
+					}
+				]
+			}
+		}
+	} else if (t.q) {
+		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
+		if (!t.q.type) throw `missing numeric term q.type: should be 'regular' or 'custom'`
+		cache[t.id][self.q.type] = t.q
+	}
+
+	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
+	if (!self.q || self.q.mode !== 'binary') self.q = {}
+	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].binary))
+	self.q = Object.assign(cacheCopy, self.q)
+	if (self.q.lst) {
+		self.q.lst.forEach(bin => {
+			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
+		})
+	}
+	//*** validate self.q ***//
+}
+
+function renderCuttoffInput(self) {
+	self.dom.cutoff_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding', '5px')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Boundary value')
+
+	self.dom.customBinBoundaryInput = self.dom.cutoff_div
+		.append('input')
+		.style('width', '100px')
+		.attr('type', 'number')
+		.attr('value', self.q.lst[0].stop)
+		.on('change', handleChange)
+
+	function handleChange() {
+		const cutoff = +this.value
+		self.q.lst[0].stop = cutoff
+		self.q.lst[1].start = cutoff
+		self.q.lst.forEach(bin => {
+			bin.label = get_bin_label(bin, self.q)
+		})
+		setDensityPlot(self)
+		renderBoundaryInputDivs(self, self.q.lst)
+	}
+}
+
+function processCustomBinInputs(self) {
+	const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
+	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
+	const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
+	let prevBin
+	const val = +self.dom.customBinBoundaryInput.property('value')
+
+	const bins = [
+		{
+			startunbounded: true,
+			stop: val,
+			startinclusive,
+			stopinclusive
+		},
+		{
+			start: val,
+			startinclusive,
+			stopinclusive,
+			stopunbounded: true
+		}
+	]
+
+	// assign bin labels
+	bins.forEach((bin, i) => {
+		// may use user assigned labels if not empty string
+		const label = inputDivs[i].querySelector('input').value
+		bin.label = label ? label : get_bin_label(bin, self.q)
+	})
+
+	return bins
+}

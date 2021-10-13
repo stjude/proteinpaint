@@ -31,7 +31,7 @@ export async function get_regression(q, ds) {
 		}
 
 		// Rest of rows for R matrix, one for each sample
-		const rows = get_matrix(q)
+		const rows = get_matrix(q, regressionType)
 		const tsv = [header.join('\t')]
 		const termYvalues = q.termY.values || {}
 
@@ -49,10 +49,12 @@ export async function get_regression(q, ds) {
 		if ('cutoff' in q) colClasses[0] = 'factor'
 
 		// Specify reference categories of variables
-		const indRefCategories = q.independent.map(t => {
-			return get_refCategory(t.term, t.q)
+		const refCategories = []
+		refCategories.push(get_refCategory(q.termY, q.termY_q))
+		q.independent.map(t => {
+			refCategories.push(get_refCategory(t.term, t.q))
 		})
-		const refCategories = ['NA', ...indRefCategories]
+		console.log('refCategories:', refCategories)
 
 		// Specify scaling factors of variables
 		const indScalingFactors = q.independent.map(t => {
@@ -63,9 +65,16 @@ export async function get_regression(q, ds) {
 
 		// Populate data rows of tsv
 		for (const row of rows) {
-			const outcomeVal = termYvalues[row.outcome] && termYvalues[row.outcome].uncomputable ? 'NA' : row.outcome
-			const meetsCutoff = 'cutoff' in q && outcomeVal != 'NA' && Number(outcomeVal) >= q.cutoff ? 1 : 0 //console.log(meetsCutoff, q.cutoff, outcomeVal, Number(outcomeVal), regressionType)
-			const line = ['cutoff' in q ? meetsCutoff : outcomeVal]
+			let outcomeVal
+			if (termYvalues[row.outcome] && termYvalues[row.outcome].uncomputable) {
+				continue
+			} else if (regressionType === 'linear') {
+				outcomeVal = row.outcome
+			} else {
+				outcomeVal = row.outkey
+			}
+			//console.log('outcomeVal:', outcomeVal)
+			const line = [outcomeVal]
 			for (const i in q.independent) {
 				const term = q.independent[i]
 				const key = row['key' + i]
@@ -80,7 +89,7 @@ export async function get_regression(q, ds) {
 			// Discard samples that have an uncomputable value in any variable because these are not useable in the regression analysis
 			if (!line.includes('NA')) tsv.push(line.join('\t'))
 		}
-
+		//console.log('tsv:', tsv)
 		const sampleSize = tsv.length - 1
 		const data = await lines2R(path.join(serverconfig.binpath, 'utils/regression.R'), tsv, [
 			regressionType,
@@ -156,7 +165,7 @@ function get_refCategory(term, q) {
 	throw 'unknown term type for refCategories'
 }
 
-function get_matrix(q) {
+function get_matrix(q, regressionType) {
 	/*
 works for only termdb terms; non-termdb attributes will not work
 
@@ -202,6 +211,7 @@ q{}
 		SELECT
 			Y.sample AS sample,
 			Y.value AS outcome,
+			Y.key AS outkey,
       ${columns.join(',\n')}
 		FROM ${outcome.tablename} Y
 		${ctes.map((t, i) => `JOIN ${t.tablename} t${i} ON t${i}.sample = Y.sample`).join('\n')}

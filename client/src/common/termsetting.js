@@ -1,9 +1,11 @@
 import { getInitFxn, copyMerge } from '../common/rx.core'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
-import { setNumericMethods } from './termsetting.discrete'
 import { setCategoricalMethods } from './termsetting.categorical'
 import { setConditionalMethods } from './termsetting.conditional'
+import { setNumericMethods as setDiscreteNumericMethods } from './termsetting.discrete'
+import { setNumericMethods as setContNumericMethods } from './termsetting.continuous'
+import { setNumericMethods as setBinaryNumericMethods } from './termsetting.binary'
 import { setNumericTabs } from './termsetting.numeric'
 
 /*
@@ -48,6 +50,13 @@ class TermSetting {
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
 		this.abbrCutoff = opts.abbrCutoff
+
+		// numqByTermIdModeType is used if/when a numeric pill term type changes:
+		// it will track numeric term.q by term.id, q.mode, and q.type to enable
+		// the "remember" input values when switching between
+		// discrete, continuous, and binary edit menus for the same term
+		this.numqByTermIdModeType = {}
+
 		// detect if the holder is contained within a floating client Menu instance;
 		// this will be useful in preventing premature closure of the menu in case
 		// a submenu is clicked and is still visible
@@ -100,7 +109,7 @@ class TermSetting {
 		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'
 		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
 		if (!('abbrCutoff' in o)) o.abbrCutoff = 18 //set the default to 18
-		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = 'default'
+		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = ['discrete']
 		return o
 	}
 	validateMainData(d) {
@@ -156,9 +165,19 @@ function setRenderers(self) {
 				.text(self.opts.placeholderIcon)
 		}
 
+		const editTypes = self.opts.numericEditMenuVersion
+		const numericMethodsSetter =
+			editTypes.length > 1
+				? setNumericTabs
+				: editTypes[0] == 'continuous'
+				? setContNumericMethods
+				: editTypes[0] == 'binary'
+				? setBinaryNumericMethods
+				: setDiscreteNumericMethods
+
 		self.setMethodsByTermType = {
-			integer: self.opts.numericEditMenuVersion == 'toggled' ? setNumericTabs : setNumericMethods,
-			float: self.opts.numericEditMenuVersion == 'toggled' ? setNumericTabs : setNumericMethods,
+			integer: numericMethodsSetter,
+			float: numericMethodsSetter,
 			categorical: setCategoricalMethods,
 			condition: setConditionalMethods,
 			// for now, use default methods as placeholder functions

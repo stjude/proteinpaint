@@ -3,6 +3,7 @@ import { select } from 'd3-selection'
 import { termsettingInit } from '../common/termsetting'
 import { dofetch3 } from '../client'
 import { getNormalRoot } from '../common/filter'
+import { get_bin_label } from '../../shared/termdb.bins'
 
 class MassRegressionUI {
 	constructor(opts) {
@@ -119,6 +120,45 @@ class MassRegressionUI {
 	async updateValueCount(d) {
 		// query backend for total sample count for each value of categorical or condition terms
 		// and included and excluded sample count for nuemric term
+
+		// if outcome term.q.mode != 'binary',
+		// query backend for median and create custom 2 bins with median and boundry
+		// for logistic independet numeric terms
+		if (d.section.configKey == 'term' && this.config.regressionType == 'logistic' && d.term.q.mode != 'binary') {
+			const lst = [
+				'/termdb?getmedian=1',
+				'tid=' + d.term.id,
+				'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
+				'genome=' + this.state.vocab.genome,
+				'dslabel=' + this.state.vocab.dslabel
+			]
+			const url = lst.join('&')
+			const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
+			if (data.error) throw data.error
+			const median = d.term.type == 'integer' ? Math.round(data.median) : data.median
+			d.term.q = {
+				mode: 'binary',
+				type: 'custom',
+				lst: [
+					{
+						startunbounded: true,
+						stopinclusive: true,
+						stop: median
+					},
+					{
+						stopunbounded: true,
+						startinclusive: false,
+						start: median
+					}
+				]
+			}
+
+			d.term.q.lst.forEach(bin => {
+				if (!('label' in bin)) bin.label = get_bin_label(bin, d.term.q)
+			})
+			d.pill.main(d.term)
+		}
+
 		const q = JSON.parse(JSON.stringify(d.term.q))
 		delete q.values
 		const lst = [
@@ -269,7 +309,7 @@ function setRenderers(self) {
 			debug: self.opts.debug,
 			//showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
 			buttons: d.section.configKey == 'term' ? ['replace'] : ['delete'],
-			numericEditMenuVersion: 'toggled', // or 'default' for the usual binning menu
+			numericEditMenuVersion: getMenuVersion(config, d),
 			usecase: { target: 'regression', detail: d.section.configKey, regressionType: config.regressionType },
 			disable_terms: self.disable_terms,
 			abbrCutoff: 50,
@@ -281,7 +321,7 @@ function setRenderers(self) {
 			infoDiv: div.append('div')
 		}
 		d.dom.loading_div = d.dom.infoDiv.append('div').text('Loading..')
-		d.dom.cutoffDiv = d.dom.infoDiv.append('div')
+		// d.dom.cutoffDiv = d.dom.infoDiv.append('div')
 		d.dom.top_info_div = d.dom.infoDiv.append('div')
 		d.dom.term_info_div = d.dom.top_info_div.append('div').style('display', 'inline-block')
 		d.dom.ref_click_prompt = d.dom.top_info_div.append('div').style('display', 'inline-block')
@@ -310,7 +350,7 @@ function setRenderers(self) {
 			)
 		)
 		d.dom.infoDiv.style('display', d.term ? 'block' : 'none')
-		if (d.section.configKey == 'term') renderCuttoff(d)
+		if (d.section.configKey == 'term') updateCutoff(d)
 		// renderInfo() is required for both outcome and independent variables
 		if (d.term) renderInfo(d)
 	}
@@ -325,26 +365,16 @@ function setRenderers(self) {
 			.remove()
 	}
 
-	function renderCuttoff(d) {
+	function updateCutoff(d) {
 		if (!d.term || self.config.regressionType != 'logistic') return
-		d.dom.infoDiv
-			.style('display', d.term && d.cutoffTermTypes && d.cutoffTermTypes.includes(d.term.term.type) ? 'block' : 'none')
-			.style('margin', '3px 5px')
-			.style('padding', '3px 5px')
-
-		d.dom.cutoffDiv.selectAll('*').remove()
-		const cutoffLabel = d.dom.cutoffDiv.append('span').html('Use cutoff of ')
-		const useCutoffInput = d.dom.cutoffDiv
-			.append('input')
-			.attr('type', 'number')
-			.style('width', '50px')
-			.style('text-align', 'center')
-			.property('value', d.cutoff)
-			.on('change', () => {
-				const value = useCutoffInput.property('value')
-				if (value === '') delete d.cutoff
-				else d.cutoff = Number(value)
-			})
+		// set cutoff value of logistic numeric term
+		if (d.term.q.lst && d.term.q.lst[0].stop) {
+			self.config.cutoff = d.term.q.lst[0].stop
+		}
+		if (d.term.q.lst && !d.term.q.refGrp) {
+			d.term.q.refGrp = d.term.q.lst[0].label
+			self.refGrpByTermId[d.term.id] = d.term.q.lst[0].label
+		}
 	}
 
 	async function renderInfo(d) {
@@ -419,21 +449,27 @@ function setRenderers(self) {
 		if (!excluded) {
 			const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
 			tr_data.forEach(v => (v.bar_width_frac = (1 - (maxCount - v.samplecount) / maxCount).toFixed(4)))
-			if (!('refGrp' in d) && d.term.q && 'refGrp' in d.term.q) d.refGrp = d.term.q.refGrp
+			if (
+				(d.term.term.type !== 'integer' && d.term.term.type !== 'float') ||
+				d.term.q.mode == 'discrete' ||
+				d.term.q.mode == 'binary'
+			) {
+				if (!('refGrp' in d) && d.term.q && 'refGrp' in d.term.q) d.refGrp = d.term.q.refGrp
 
-			if (!('refGrp' in d) || !tr_data.find(c => c.key === d.refGrp)) {
-				if (d.term.id in self.refGrpByTermId && tr_data.find(c => c.key === self.refGrpByTermId[d.term.id])) {
-					d.refGrp = self.refGrpByTermId[d.term.id]
-				} else {
-					d.refGrp = tr_data[0].key
-					self.refGrpByTermId[d.term.id] = tr_data[0].key
+				if (!('refGrp' in d) || !tr_data.find(c => c.key === d.refGrp)) {
+					if (d.term.id in self.refGrpByTermId && tr_data.find(c => c.key === self.refGrpByTermId[d.term.id])) {
+						d.refGrp = self.refGrpByTermId[d.term.id]
+					} else {
+						d.refGrp = tr_data[0].key
+						self.refGrpByTermId[d.term.id] = tr_data[0].key
+					}
 				}
 			}
 		}
 
 		const table = excluded ? d.dom.excluded_table : d.dom.values_table
 		const isContinuousTerm =
-			d.term && d.term.q.mode !== 'bins' && (d.term.term.type == 'float' || d.term.term.type == 'integer')
+			d.term && d.term.q.mode == 'continuous' && (d.term.term.type == 'float' || d.term.term.type == 'integer')
 
 		const trs = table
 			.style('margin', '10px 5px')
@@ -442,11 +478,7 @@ function setRenderers(self) {
 			.selectAll('tr')
 			.data(tr_data, isContinuousTerm ? (b, i) => i : b => b.key + b.label)
 
-		trs
-			.exit()
-			.transition()
-			.duration(500)
-			.remove()
+		trs.exit().remove()
 		trs.each(trUpdate)
 		trs
 			.enter()
@@ -501,7 +533,8 @@ function setRenderers(self) {
 		select(this.firstChild).text(item.samplecount !== undefined ? 'n=' + item.samplecount : '')
 		select(this.firstChild.nextSibling).text(item.label)
 		let rendered = true
-		if (pillData.term.q.mode == 'discrete' && this.childNodes.length < 4) rendered = false
+		if ((pillData.term.q.mode == 'discrete' || pillData.term.q.mode == 'binary') && this.childNodes.length < 4)
+			rendered = false
 		addTrBehavior({ d: pillData, item, tr: select(this), rendered })
 	}
 
@@ -510,7 +543,10 @@ function setRenderers(self) {
 		// don't add tr effects for excluded values
 		if (!item.bar_width_frac) return
 
-		const hover_flag = (d.term.term.type !== 'integer' && d.term.term.type !== 'float') || d.term.q.mode == 'discrete'
+		const hover_flag =
+			(d.term.term.type !== 'integer' && d.term.term.type !== 'float') ||
+			d.term.q.mode == 'discrete' ||
+			d.term.q.mode == 'binary'
 		let ref_text
 
 		if (rendered) {
@@ -611,6 +647,7 @@ function setInteractivity(self) {
 		for (const term of config.independent) {
 			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
+		if (config.term.id in self.refGrpByTermId) config.term.q.refGrp = self.refGrpByTermId[config.term.id]
 		// disable submit button on click, reenable after rendering results
 		self.dom.submitBtn.property('disabled', true).html('Running...')
 		self.app.dispatch({
@@ -620,6 +657,21 @@ function setInteractivity(self) {
 			config
 		})
 	}
+}
+
+function getMenuVersion(config, d) {
+	// for the numericEditMenuVersion of termsetting constructor option
+	if (d.section.configKey == 'term') {
+		// outcome
+		if (config.regressionType == 'logistic') return ['binary']
+		if (config.regressionType == 'linear') return ['continuous']
+		throw '100: unknown regressionType'
+	}
+	if (d.section.configKey == 'independent') {
+		// independent
+		return ['continuous', 'discrete']
+	}
+	throw 'unknown d.section.configKey: ' + d.section.configKey
 }
 
 export const regressionUIInit = getCompInit(MassRegressionUI)
