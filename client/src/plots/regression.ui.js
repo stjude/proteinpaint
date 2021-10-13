@@ -432,7 +432,7 @@ function setRenderers(self) {
 			} else if (d.term.term.type == 'categorical' || d.term.term.type == 'condition') {
 				const gs = d.term.q.groupsetting || {}
 				// d.values is already set by self.setActiveValues() above
-				const term_text = 'Use as ' + Object.keys(d.values).length + (gs.inuse ? ' groups.' : ' categories.')
+				const term_text = 'Use as ' + d.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
 				make_values_table(d)
 				const summary_text =
 					` ${q.totalCount.included} sample included.` +
@@ -502,7 +502,7 @@ function setRenderers(self) {
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
 			.selectAll('tr')
-			.data(tr_data, isContinuousTerm ? (b, i) => i : b => b.key + b.label)
+			.data(tr_data, isContinuousTerm ? (b, i) => i : b => b.key + b.label + b.bar_width_frac)
 
 		trs.exit().remove()
 		trs.each(trUpdate)
