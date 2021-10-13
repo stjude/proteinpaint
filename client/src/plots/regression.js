@@ -18,7 +18,7 @@ class MassRegression {
 
 		this.dom = {
 			controls,
-
+			header: this.opts.header,
 			banner: this.opts.holder
 				.append('div')
 				.style('color', '#bbb')
@@ -73,19 +73,25 @@ class MassRegression {
 	}
 
 	async main() {
+		//if (!this.state.config.term) return
+		this.config = JSON.parse(JSON.stringify(this.state.config))
+		if (this.dom.header) {
+			const regressionType = this.config.regressionType
+			const text = regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression'
+			this.dom.header.html(text)
+		}
 		if (!this.state.isVisible) {
 			this.dom.div.style('display', 'none')
 			this.dom.resultsHeading.style('display', 'none')
 			return
 		}
-		if (!this.state.config.term) return
-		this.config = JSON.parse(JSON.stringify(this.state.config))
 		if (!this.config.independent.length || !this.config.term) {
 			this.dom.div.style('display', 'none')
 			this.dom.resultsHeading.style('display', 'none')
 			// will only show the regression controls when outcome and/or independent terms are empty
 			return
 		}
+		console.log(88, this.dom)
 		this.dom.div.selectAll('*').remove()
 		this.dom.banner.style('display', this.state.formIsComplete ? 'block' : 'none')
 		const dataName = this.getDataName()
@@ -127,7 +133,7 @@ class MassRegression {
 		if (filterData.lst.length) {
 			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData))) //encodeNestedFilter(state.termfilter.filter))
 		}
-		return '?' + params.join('&')
+		return '/termdb?' + params.join('&')
 	}
 
 	processData(multipleData) {

@@ -57,6 +57,7 @@ class MassPlot {
 			termfilter: { filter },
 			ssid: appState.ssid,
 			config,
+
 			cumincplot4condition: appState.termdbConfig.cumincplot4condition,
 			displayAsSurvival:
 				config.settings &&
@@ -69,87 +70,6 @@ class MassPlot {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
 		if (!this.components) await this.setComponents(this.opts)
-		if (this.state.config.term) {
-			// regression will request its own server data
-			if (this.config.settings.currViews.includes('regression')) return
-			// TODO: migrate data request to other child viz components
-
-			const dataName = this.getDataName(this.state)
-			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
-			if (data.error) throw data.error
-			this.syncParams(this.config, data)
-			this.currData = data
-			return data
-		}
-	}
-
-	// creates URL search parameter string, that also serves as
-	// a unique request identifier to be used for caching server response
-	getDataName(state) {
-		const plot = this.config // the plot object in state
-		const params = []
-		if (state.displayAsSurvival) {
-			params.push('getsurvival=1')
-		} else if (plot.settings.currViews.includes('cuminc')) {
-			params.push('getcuminc=1')
-			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
-		}
-
-		const isscatter = plot.settings.currViews.includes('scatter')
-		if (isscatter) params.push('scatter=1')
-		;['term', 'term2', 'term0'].forEach(_key => {
-			// "term" on client is "term1" at backend
-			const term = plot[_key]
-			if (!term) return
-			const key = _key == 'term' ? 'term1' : _key
-			params.push(key + '_id=' + encodeURIComponent(term.term.id))
-			if (isscatter) return
-			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
-			params.push(key + '_q=' + q_to_param(term.q))
-		})
-
-		if (!isscatter) {
-			if (state.ssid) {
-				params.push(
-					'term2_is_genotype=1',
-					'ssid=' + state.ssid.ssid,
-					'mname=' + state.ssid.mutation_name,
-					'chr=' + state.ssid.chr,
-					'pos=' + state.ssid.pos
-				)
-			}
-		}
-
-		if (state.termfilter.filter.lst.length) {
-			const filterData = normalizeFilterData(state.termfilter.filter)
-			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData))) //encodeNestedFilter(state.termfilter.filter))
-		}
-		return '?' + params.join('&')
-	}
-
-	syncParams(config, data) {
-		if (!data || !data.refs) return
-		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
-			const term = config[key]
-			if (term == 'genotype') return
-			if (!term) {
-				if (key == 'term') throw `missing plot.term{}`
-				return
-			}
-			if (data.refs.bins) {
-				term.bins = data.refs.bins[i]
-				if (data.refs.q && data.refs.q[i]) {
-					if (!term.q) term.q = {}
-					const q = data.refs.q[i]
-					if (q !== term.q) {
-						for (const key in term.q) delete term.q[key]
-						Object.assign(term.q, q)
-					}
-				}
-			}
-			if (!term.q) term.q = {}
-			if (!term.q.groupsetting) term.q.groupsetting = {}
-		}
 	}
 
 	async setComponents(opts) {
@@ -447,7 +367,7 @@ export function plotConfig(opts, appState = {}) {
 	return rx.copyMerge(config, opts)
 }
 
-function normalizeFilterData(filter) {
+export function normalizeFilterData(filter) {
 	const lst = []
 	for (const item of filter.lst) {
 		if (item.type == 'tvslst') lst.push(normalizeFilterData(item))
@@ -507,4 +427,29 @@ export function fillTermWrapper(wrapper) {
 	if (!wrapper.q) wrapper.q = {}
 	termsetting_fill_q(wrapper.q, wrapper.term)
 	return wrapper
+}
+
+export function syncParams(config, data) {
+	if (!data || !data.refs) return
+	for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
+		const term = config[key]
+		if (term == 'genotype') return
+		if (!term) {
+			if (key == 'term') throw `missing plot.term{}`
+			return
+		}
+		if (data.refs.bins) {
+			term.bins = data.refs.bins[i]
+			if (data.refs.q && data.refs.q[i]) {
+				if (!term.q) term.q = {}
+				const q = data.refs.q[i]
+				if (q !== term.q) {
+					for (const key in term.q) delete term.q[key]
+					Object.assign(term.q, q)
+				}
+			}
+		}
+		if (!term.q) term.q = {}
+		if (!term.q.groupsetting) term.q.groupsetting = {}
+	}
 }

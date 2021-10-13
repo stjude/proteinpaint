@@ -5,6 +5,8 @@ import { event as d3event } from 'd3-selection'
 import { scaleLinear, scaleLog, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { format as d3format } from 'd3-format'
 import { axisLeft } from 'd3-axis'
+import { normalizeFilterData, syncParams } from '../mass/plot'
+import { getNormalRoot } from '../common/filter'
 
 class TdbBoxplot {
 	constructor(opts) {
@@ -58,7 +60,9 @@ class TdbBoxplot {
 		return {
 			isVisible: config.settings.currViews.includes('boxplot'),
 			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter,
+			termfilter: {
+				filter: getNormalRoot(appState.termfilter.filter)
+			},
 			config: {
 				term: config.term,
 				term2: config.term2,
@@ -70,21 +74,49 @@ class TdbBoxplot {
 		}
 	}
 
-	main(data) {
-		if (data) this.data = data
-		this.config = copyMerge('{}', this.state.config)
-		if (!this.state.isVisible) {
-			this.dom.div.style('display', 'none')
-			return
+	async main() {
+		try {
+			this.config = copyMerge('{}', this.state.config)
+			if (!this.state.isVisible) {
+				this.dom.div.style('display', 'none')
+				return
+			}
+			const t2 = this.config.term2
+			if (!t2 || !t2.termtype == 'float') {
+				this.dom.div.style('display', 'none')
+				throw `${t2 ? 'numeric ' : ''}term2 is required for boxplot view`
+			}
+			const dataName = this.getDataName(this.state)
+			this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			syncParams(this.state.config, this.data)
+			const [lst, binmax] = this.processData(this.data)
+			this.dom.div.style('display', 'block')
+			this.render(lst.filter(d => d != null), binmax)
+		} catch (e) {
+			throw e
 		}
-		const t2 = this.config.term2
-		if (!t2 || !t2.termtype == 'float') {
-			this.dom.div.style('display', 'none')
-			throw `${t2 ? 'numeric ' : ''}term2 is required for boxplot view`
+	}
+
+	// creates URL search parameter string, that also serves as
+	// a unique request identifier to be used for caching server response
+	getDataName(state) {
+		const params = []
+		for (const _key of ['term', 'term2', 'term0']) {
+			// "term" on client is "term1" at backend
+			const term = this.config[_key]
+			if (!term) continue
+			const key = _key == 'term' ? 'term1' : _key
+			params.push(key + '_id=' + encodeURIComponent(term.term.id))
+			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
+			params.push(key + '_q=' + this.app.vocabApi.q_to_param(term.q))
 		}
-		const [lst, binmax] = this.processData(this.data)
-		this.dom.div.style('display', 'block')
-		this.render(lst.filter(d => d != null), binmax)
+
+		if (state.termfilter.filter.lst.length) {
+			const filterData = normalizeFilterData(state.termfilter.filter)
+			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData)))
+		}
+
+		return '/termdb-barsql?' + params.join('&')
 	}
 
 	processData(data) {

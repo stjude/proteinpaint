@@ -83,17 +83,7 @@ class TermdbVocab {
 
 	// from termdb/plot
 	async getPlotData(plotId, dataName) {
-		const config = this.state.plots.find(p => p.id === plotId)
-		const displayAsSurvival =
-			config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
-		const route =
-			config.settings.currViews.includes('regression') ||
-			config.settings.currViews.includes('scatter') ||
-			config.settings.currViews.includes('cuminc') ||
-			displayAsSurvival
-				? '/termdb'
-				: '/termdb-barsql'
-		const url = route + dataName + '&genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel
+		const url = dataName + '&genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel
 		const data = await dofetch3(url, {}, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
@@ -228,6 +218,13 @@ class TermdbVocab {
 		} catch (e) {
 			window.alert(e.message || e)
 		}
+	}
+
+	q_to_param(q) {
+		// exclude certain attributes of q from dataName
+		const q2 = JSON.parse(JSON.stringify(q))
+		delete q2.hiddenValues
+		return encodeURIComponent(JSON.stringify(q2))
 	}
 }
 
@@ -401,6 +398,13 @@ class FrontendVocab {
 		if (!term) throw 'graphable: term is missing'
 		// term.isgenotype??
 		return graphableTypes.has(term.type)
+	}
+
+	q_to_param(q) {
+		// exclude certain attributes of q from dataName
+		const q2 = JSON.parse(JSON.stringify(q))
+		delete q2.hiddenValues
+		return encodeURIComponent(JSON.stringify(q2))
 	}
 }
 
