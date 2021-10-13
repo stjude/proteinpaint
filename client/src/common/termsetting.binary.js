@@ -171,12 +171,19 @@ function setqDefaults(self) {
 }
 
 async function renderCuttoffInput(self) {
+	// binary mode unqiue UI
 	self.dom.cutoff_div
 		.append('span')
 		.style('margin-right', '5px')
 		.style('opacity', 0.5)
 		.text('Boundary value')
 
+	/* known bug:
+	when percentile checkbox is checked,
+	after entering new percentile value to <input>,
+	must press Enter to apply;
+	click Apply without Enter may not apply the change
+	*/
 	self.dom.customBinBoundaryInput = self.dom.cutoff_div
 		.append('input')
 		.style('width', '100px')
@@ -185,7 +192,7 @@ async function renderCuttoffInput(self) {
 		.attr('value', self.q.modeBinaryCutoffType == 'normal' ? self.q.lst[0].stop : self.q.modeBinaryCutoffPercentile)
 		.on('change', handleChange)
 
-	make_one_checkbox({
+	self.dom.customBinBoundaryPercentileCheckbox = make_one_checkbox({
 		holder: self.dom.cutoff_div,
 		labeltext: 'Use percentile',
 		checked: self.q.modeBinaryCutoffType == 'percentile',
