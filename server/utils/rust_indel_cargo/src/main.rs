@@ -865,58 +865,46 @@ fn strand_analysis(
 ) -> f64 {
     //let fisher_chisq_test: u64 = 0;
     //let mut p_value = 0;
-    let (mut p_value, fisher_chisq_test) = strand_analysis_one_iteration(
+    let (p_value_original, fisher_chisq_test) = strand_analysis_one_iteration(
         alternate_forward_count,
         alternate_reverse_count,
         reference_forward_count,
         reference_reverse_count,
         0, // Initially setting fisher_chisq_test = 0 so as to check which test is more appropriate
     );
+    println!("p_value original:{}", p_value_original);
 
     // Need to get all possible combination of forward/reverse reads for alternate and reference alleles. For details, please see this link https://gatk.broadinstitute.org/hc/en-us/articles/360035532152-Fisher-s-Exact-Test
 
     //if p_value <= fisher_test_threshold {
+    let mut p_sum: f64 = p_value_original;
     let mut alternate_forward_count_temp: i64 =
         (alternate_forward_count + alternate_reverse_count) as i64;
     let mut alternate_reverse_count_temp = 0;
-    while alternate_forward_count_temp >= 0 {
+    let mut reference_forward_count_temp = 0;
+    let mut reference_reverse_count_temp =
+        (reference_forward_count + reference_reverse_count) as i64;
+    while alternate_forward_count_temp >= 0 && reference_reverse_count_temp >= 0 {
         alternate_forward_count_temp -= 1;
         alternate_reverse_count_temp += 1;
+        reference_forward_count_temp += 1;
+        reference_reverse_count_temp -= 1;
         #[allow(unused_variables)]
         let (p_temp, fisher_test_temp) = strand_analysis_one_iteration(
             alternate_forward_count_temp as u64,
             alternate_reverse_count_temp,
-            reference_forward_count,
-            reference_reverse_count,
+            reference_forward_count_temp,
+            reference_reverse_count_temp as u64,
             fisher_chisq_test,
         );
-        if p_temp < fisher_test_threshold {
-            // Add to p-value only if its significant
-            p_value += p_temp;
-        }
-    }
-
-    let mut reference_forward_count_temp: i64 =
-        (reference_forward_count + reference_reverse_count) as i64;
-    let mut reference_reverse_count_temp = 0;
-    while reference_forward_count_temp >= 0 {
-        reference_forward_count_temp -= 1;
-        reference_reverse_count_temp += 1;
-        #[allow(unused_variables)]
-        let (p_temp, fisher_test_temp) = strand_analysis_one_iteration(
-            alternate_forward_count,
-            alternate_reverse_count,
-            reference_forward_count_temp as u64,
-            reference_reverse_count_temp,
-            fisher_chisq_test,
-        );
-        if p_temp < fisher_test_threshold {
-            // Add to p-value only if its significant
-            p_value += p_temp;
+        if p_temp <= p_value_original && p_sum + p_temp < 1.0 {
+            // Add to p-value only if its lower or equal to p_value_original
+            p_sum += p_temp;
         }
     }
     //}
-    -10.0 * p_value.log(10.0) // Reporting phred-scale p-values (-10*log(p-value))
+    println!("Total p_value:{}", p_value_original + p_sum);
+    -10.0 * p_sum.log(10.0) // Reporting phred-scale p-values (-10*log(p-value))
 }
 
 fn strand_analysis_one_iteration(
