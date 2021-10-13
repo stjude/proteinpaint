@@ -889,7 +889,7 @@ fn strand_analysis(
         (alternate_forward_count + alternate_reverse_count) as i64;
     let mut alternate_reverse_count_temp = 0;
     let mut reference_forward_count_temp = 0;
-    let mut reference_reverse_count_temp =
+    let mut reference_reverse_count_temp: i64 =
         (reference_forward_count + reference_reverse_count) as i64;
     while alternate_forward_count_temp >= 0 && reference_reverse_count_temp >= 0 {
         alternate_forward_count_temp -= 1;
