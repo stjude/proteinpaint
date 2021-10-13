@@ -9,6 +9,8 @@ import getHandlers from './barchart.events'
 /* to-do: switch to using rx.Bus */
 import { controlsInit } from './controls'
 import { to_svg } from '../client'
+import { normalizeFilterData } from '../mass/plot'
+import { getNormalRoot } from '../common/filter'
 
 class TdbBarchart {
 	constructor(opts) {
@@ -91,8 +93,10 @@ class TdbBarchart {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+
 		const displayAsSurvival =
 			config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
+
 		return {
 			isVisible:
 				!displayAsSurvival &&
@@ -101,7 +105,9 @@ class TdbBarchart {
 			genome: appState.vocab.genome,
 			dslabel: appState.vocab.dslabel,
 			nav: appState.nav,
-			termfilter: appState.termfilter,
+			termfilter: {
+				filter: getNormalRoot(appState.termfilter.filter)
+			},
 			config: {
 				term: JSON.parse(JSON.stringify(config.term)),
 				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,
@@ -119,21 +125,29 @@ class TdbBarchart {
 		}
 	}
 
-	main(data) {
-		if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
-		if (data) this.currServerData = data
-		this.config = this.state.config
-		if (!this.setVisibility()) return
-		if (this.currServerData && this.currServerData.refs && this.currServerData.refs.q) {
-			for (const q of this.currServerData.refs.q) {
-				if (q.error) throw q.error
+	async main() {
+		try {
+			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
+			this.config = this.state.config
+			if (!this.setVisibility()) return
+
+			const dataName = this.getDataName(this.state)
+			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			this.currServerData = data
+			if (this.currServerData.refs && this.currServerData.refs.q) {
+				for (const q of this.currServerData.refs.q) {
+					if (q.error) throw q.error
+				}
 			}
+
+			this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
+			delete this.colorScale
+			this.updateSettings(this.config)
+			this.chartsData = this.processData(this.currServerData)
+			this.render()
+		} catch (e) {
+			throw e
 		}
-		this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
-		delete this.colorScale
-		this.updateSettings(this.config)
-		this.chartsData = this.processData(this.currServerData)
-		this.render()
 	}
 
 	setVisibility() {
@@ -142,6 +156,28 @@ class TdbBarchart {
 		this.dom.barDiv.style('display', display)
 		this.dom.legendDiv.style('display', display)
 		return isVisible
+	}
+
+	// creates URL search parameter string, that also serves as
+	// a unique request identifier to be used for caching server response
+	getDataName(state) {
+		const params = []
+		for (const _key of ['term', 'term2', 'term0']) {
+			// "term" on client is "term1" at backend
+			const term = this.config[_key]
+			if (!term) continue
+			const key = _key == 'term' ? 'term1' : _key
+			params.push(key + '_id=' + encodeURIComponent(term.term.id))
+			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
+			params.push(key + '_q=' + this.app.vocabApi.q_to_param(term.q))
+		}
+
+		if (state.termfilter.filter.lst.length) {
+			const filterData = normalizeFilterData(state.termfilter.filter)
+			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData)))
+		}
+
+		return '/termdb-barsql?' + params.join('&')
 	}
 
 	updateSettings(config) {

@@ -83,20 +83,37 @@ class TermdbVocab {
 
 	// from termdb/plot
 	async getPlotData(plotId, dataName) {
-		const config = this.state.plots.find(p => p.id === plotId)
-		const displayAsSurvival =
-			config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
-		const route =
-			config.settings.currViews.includes('regression') ||
-			config.settings.currViews.includes('scatter') ||
-			config.settings.currViews.includes('cuminc') ||
-			displayAsSurvival
-				? '/termdb'
-				: '/termdb-barsql'
-		const url = route + dataName + '&genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel
+		const url = dataName + '&genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel
 		const data = await dofetch3(url, {}, this.opts.fetchOpts)
 		if (data.error) throw data.error
+		const config = this.state.plots.find(p => p.id === plotId)
+		this.syncParams(config, data)
 		return data
+	}
+
+	syncParams(config, data) {
+		if (!data || !data.refs) return
+		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
+			const term = config[key]
+			if (term == 'genotype') return
+			if (!term) {
+				if (key == 'term') throw `missing plot.term{}`
+				return
+			}
+			if (data.refs.bins) {
+				term.bins = data.refs.bins[i]
+				if (data.refs.q && data.refs.q[i]) {
+					if (!term.q) term.q = {}
+					const q = data.refs.q[i]
+					if (q !== term.q) {
+						for (const key in term.q) delete term.q[key]
+						Object.assign(term.q, q)
+					}
+				}
+			}
+			if (!term.q) term.q = {}
+			if (!term.q.groupsetting) term.q.groupsetting = {}
+		}
 	}
 
 	// from termdb/search
@@ -228,6 +245,13 @@ class TermdbVocab {
 		} catch (e) {
 			window.alert(e.message || e)
 		}
+	}
+
+	q_to_param(q) {
+		// exclude certain attributes of q from dataName
+		const q2 = JSON.parse(JSON.stringify(q))
+		delete q2.hiddenValues
+		return encodeURIComponent(JSON.stringify(q2))
 	}
 }
 

@@ -57,6 +57,7 @@ class MassPlot {
 			termfilter: { filter },
 			ssid: appState.ssid,
 			config,
+
 			cumincplot4condition: appState.termdbConfig.cumincplot4condition,
 			displayAsSurvival:
 				config.settings &&
@@ -71,13 +72,14 @@ class MassPlot {
 		if (!this.components) await this.setComponents(this.opts)
 		if (this.state.config.term) {
 			// regression will request its own server data
-			if (this.config.settings.currViews.includes('regression')) return
+			if (this.config.chartType == 'regression') return
+			if (this.config.chartType == 'barchart') return
 			// TODO: migrate data request to other child viz components
 
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
 			if (data.error) throw data.error
-			this.syncParams(this.config, data)
+			this.app.vocabApi.syncParams(this.config, data)
 			this.currData = data
 			return data
 		}
@@ -125,31 +127,6 @@ class MassPlot {
 			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData))) //encodeNestedFilter(state.termfilter.filter))
 		}
 		return '?' + params.join('&')
-	}
-
-	syncParams(config, data) {
-		if (!data || !data.refs) return
-		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
-			const term = config[key]
-			if (term == 'genotype') return
-			if (!term) {
-				if (key == 'term') throw `missing plot.term{}`
-				return
-			}
-			if (data.refs.bins) {
-				term.bins = data.refs.bins[i]
-				if (data.refs.q && data.refs.q[i]) {
-					if (!term.q) term.q = {}
-					const q = data.refs.q[i]
-					if (q !== term.q) {
-						for (const key in term.q) delete term.q[key]
-						Object.assign(term.q, q)
-					}
-				}
-			}
-			if (!term.q) term.q = {}
-			if (!term.q.groupsetting) term.q.groupsetting = {}
-		}
 	}
 
 	async setComponents(opts) {
@@ -447,7 +424,7 @@ export function plotConfig(opts, appState = {}) {
 	return rx.copyMerge(config, opts)
 }
 
-function normalizeFilterData(filter) {
+export function normalizeFilterData(filter) {
 	const lst = []
 	for (const item of filter.lst) {
 		if (item.type == 'tvslst') lst.push(normalizeFilterData(item))

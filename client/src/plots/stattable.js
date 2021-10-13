@@ -1,10 +1,11 @@
 import { getCompInit } from '../common/rx.core'
+import { normalizeFilterData } from '../mass/plot'
+import { getNormalRoot } from '../common/filter'
 
 class TdbStatTable {
 	constructor(opts) {
 		this.type = 'stattable'
 	}
-
 
 	async init() {
 		this.dom = {
@@ -24,7 +25,9 @@ class TdbStatTable {
 				(config.term.term.type == 'float' || config.term.term.type == 'integer') &&
 				!config.term.term.noStatTable,
 			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter,
+			termfilter: {
+				filter: getNormalRoot(appState.termfilter.filter)
+			},
 			config: {
 				term: config.term,
 				term0: config.term0,
@@ -39,13 +42,43 @@ class TdbStatTable {
 		}
 	}
 
-	main(data) {
-		this.config = this.state.config
-		if (!this.state.isVisible || !data || !data.boxplot) {
-			this.dom.div.style('display', 'none')
-			return
+	async main() {
+		try {
+			this.config = this.state.config
+			if (this.state.isVisible) {
+				const dataName = this.getDataName(this.state)
+				this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			}
+			if (!this.state.isVisible || !this.data || !this.data.boxplot) {
+				this.dom.div.style('display', 'none')
+				return
+			}
+			this.render(this.data)
+		} catch (e) {
+			throw e
 		}
-		this.render(data)
+	}
+
+	// creates URL search parameter string, that also serves as
+	// a unique request identifier to be used for caching server response
+	getDataName(state) {
+		const params = []
+		for (const _key of ['term', 'term2', 'term0']) {
+			// "term" on client is "term1" at backend
+			const term = this.config[_key]
+			if (!term) continue
+			const key = _key == 'term' ? 'term1' : _key
+			params.push(key + '_id=' + encodeURIComponent(term.term.id))
+			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
+			params.push(key + '_q=' + this.app.vocabApi.q_to_param(term.q))
+		}
+
+		if (state.termfilter.filter.lst.length) {
+			const filterData = normalizeFilterData(state.termfilter.filter)
+			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData)))
+		}
+
+		return '/termdb-barsql?' + params.join('&')
 	}
 }
 

@@ -127,7 +127,7 @@ class MassRegression {
 		if (filterData.lst.length) {
 			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData))) //encodeNestedFilter(state.termfilter.filter))
 		}
-		return '?' + params.join('&')
+		return '/termdb?' + params.join('&')
 	}
 
 	processData(multipleData) {
