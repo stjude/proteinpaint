@@ -879,7 +879,7 @@ fn strand_analysis(
     let mut alternate_forward_count_temp: i64 =
         (alternate_forward_count + alternate_reverse_count) as i64;
     let mut alternate_reverse_count_temp = 0;
-    while p_value <= fisher_test_threshold && alternate_forward_count_temp >= 0 {
+    while alternate_forward_count_temp >= 0 {
         alternate_forward_count_temp -= 1;
         alternate_reverse_count_temp += 1;
         #[allow(unused_variables)]
@@ -899,7 +899,7 @@ fn strand_analysis(
     let mut reference_forward_count_temp: i64 =
         (reference_forward_count + reference_reverse_count) as i64;
     let mut reference_reverse_count_temp = 0;
-    while p_value <= fisher_test_threshold && reference_forward_count_temp >= 0 {
+    while reference_forward_count_temp >= 0 {
         reference_forward_count_temp -= 1;
         reference_reverse_count_temp += 1;
         #[allow(unused_variables)]
