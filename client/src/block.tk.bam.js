@@ -515,7 +515,7 @@ function may_render_variant(data, tk, block) {
 	let fs_string = tk.dom.variantg
 		.append('text')
 		.attr('x', text_fs_score)
-		.attr('y', tk.dom.variantrowheight)
+		.attr('y', tk.dom.variantrowheight - 2)
 		.attr('text-anchor', 'end')
 		.attr('font-size', tk.dom.variantrowheight)
 		.text('FS = ' + data.strand_probability)
