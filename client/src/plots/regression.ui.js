@@ -125,38 +125,7 @@ class MassRegressionUI {
 		// query backend for median and create custom 2 bins with median and boundry
 		// for logistic independet numeric terms
 		if (d.section.configKey == 'term' && this.config.regressionType == 'logistic' && d.term.q.mode != 'binary') {
-			const lst = [
-				'/termdb?getmedian=1',
-				'tid=' + d.term.id,
-				'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
-				'genome=' + this.state.vocab.genome,
-				'dslabel=' + this.state.vocab.dslabel
-			]
-			const url = lst.join('&')
-			const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
-			if (data.error) throw data.error
-			const median = d.term.type == 'integer' ? Math.round(data.median) : data.median
-			d.term.q = {
-				mode: 'binary',
-				type: 'custom',
-				lst: [
-					{
-						startunbounded: true,
-						stopinclusive: true,
-						stop: median
-					},
-					{
-						stopunbounded: true,
-						startinclusive: false,
-						start: median
-					}
-				]
-			}
-
-			d.term.q.lst.forEach(bin => {
-				if (!('label' in bin)) bin.label = get_bin_label(bin, d.term.q)
-			})
-			d.pill.main(d.term)
+			await this.updateLogisticOutcome(d)
 		}
 
 		const q = JSON.parse(JSON.stringify(d.term.q))
@@ -200,6 +169,68 @@ class MassRegressionUI {
 		if (d.term.term.type == 'condition' && this.totalSampleCount) {
 			totalCount.excluded = this.totalSampleCount - totalCount.included
 		}
+	}
+
+	async updateLogisticOutcome(d) {
+		if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
+			// for numeric terms, add 2 custom bins devided at median value
+			const lst = [
+				'/termdb?getmedian=1',
+				'tid=' + d.term.id,
+				'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
+				'genome=' + this.state.vocab.genome,
+				'dslabel=' + this.state.vocab.dslabel
+			]
+			const url = lst.join('&')
+			const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
+			if (data.error) throw data.error
+			const median = d.term.type == 'integer' ? Math.round(data.median) : data.median.toFixed(2)
+			d.term.q = {
+				mode: 'binary',
+				type: 'custom',
+				lst: [
+					{
+						startunbounded: true,
+						stopinclusive: true,
+						stop: median
+					},
+					{
+						stopunbounded: true,
+						startinclusive: false,
+						start: median
+					}
+				]
+			}
+
+			d.term.q.lst.forEach(bin => {
+				if (!('label' in bin)) bin.label = get_bin_label(bin, d.term.q)
+			})
+		} else if (d.term.term.type == 'categorical') {
+			// for categorical term, devide values into 2 groups
+			const values = Object.keys(d.term.term.values)
+			if (values.length > 2) {
+				d.term.q.groupsetting.inuse = true
+				let customset = {
+					groups: [
+						{
+							name: 'group 1',
+							values: []
+						},
+						{
+							name: 'group 2',
+							values: []
+						}
+					]
+				}
+				const group_i_cutoff = Math.round(values.length / 2)
+				for (const [i, v] of values.entries()) {
+					if (i < group_i_cutoff) customset.groups[0].values.push({ key: v })
+					else customset.groups[1].values.push({ key: v })
+				}
+				d.term.q.groupsetting.customset = customset
+			}
+		}
+		d.pill.main(d.term)
 	}
 }
 
@@ -321,7 +352,6 @@ function setRenderers(self) {
 			infoDiv: div.append('div')
 		}
 		d.dom.loading_div = d.dom.infoDiv.append('div').text('Loading..')
-		// d.dom.cutoffDiv = d.dom.infoDiv.append('div')
 		d.dom.top_info_div = d.dom.infoDiv.append('div')
 		d.dom.term_info_div = d.dom.top_info_div.append('div').style('display', 'inline-block')
 		d.dom.ref_click_prompt = d.dom.top_info_div.append('div').style('display', 'inline-block')
@@ -350,7 +380,7 @@ function setRenderers(self) {
 			)
 		)
 		d.dom.infoDiv.style('display', d.term ? 'block' : 'none')
-		if (d.section.configKey == 'term') updateCutoff(d)
+		if (d.section.configKey == 'term') updateRefGrp(d)
 		// renderInfo() is required for both outcome and independent variables
 		if (d.term) renderInfo(d)
 	}
@@ -365,12 +395,8 @@ function setRenderers(self) {
 			.remove()
 	}
 
-	function updateCutoff(d) {
+	function updateRefGrp(d) {
 		if (!d.term || self.config.regressionType != 'logistic') return
-		// set cutoff value of logistic numeric term
-		if (d.term.q.lst && d.term.q.lst[0].stop) {
-			self.config.cutoff = d.term.q.lst[0].stop
-		}
 		if (d.term.q.lst && !d.term.q.refGrp) {
 			d.term.q.refGrp = d.term.q.lst[0].label
 			self.refGrpByTermId[d.term.id] = d.term.q.lst[0].label
@@ -421,7 +447,7 @@ function setRenderers(self) {
 				d.dom.term_summmary_div.text(summary_text)
 			}
 		} else if (d.section.configKey == 'term') {
-			if (d.term.term.type == 'float' || d.term.term.type == 'integer') make_values_table(d)
+			make_values_table(d)
 			d.dom.term_summmary_div.text(
 				`${q.totalCount.included} sample included.` +
 					(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded:` : '')

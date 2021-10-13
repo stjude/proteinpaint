@@ -61,7 +61,7 @@ class MassRegression {
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: {
-				cutoff: config.cutoff,
+				// cutoff: config.cutoff,
 				term: config.term,
 				regressionType: config.regressionType,
 				independent: config.independent,
@@ -91,7 +91,6 @@ class MassRegression {
 			// will only show the regression controls when outcome and/or independent terms are empty
 			return
 		}
-		console.log(88, this.dom)
 		this.dom.div.selectAll('*').remove()
 		this.dom.banner.style('display', this.state.formIsComplete ? 'block' : 'none')
 		const dataName = this.getDataName()
@@ -124,9 +123,9 @@ class MassRegression {
 				)
 		]
 		if (c.regressionType == 'logistic') {
-			if (!c.cutoff) throw "Cutoff values in required for 'Outcome variable'"
+			// if (!c.cutoff) throw "Cutoff values in required for 'Outcome variable'"
 			params.push('regressionType=logistic')
-			params.push('cutoff=' + c.cutoff)
+			// params.push('cutoff=' + c.cutoff)
 		}
 
 		const filterData = getNormalRoot(this.state.termfilter.filter)
