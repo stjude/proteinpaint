@@ -134,7 +134,7 @@ tape('use_bins_less', async test => {
 	test.equal(bin_size_input.value, '10', 'has term.bins.less.bin_size as value')
 
 	delete opts.pill.Inner.opts.use_bins_less
-	delete opts.pill.Inner.numqByTermIdType[opts.pill.Inner.term.id]
+	delete opts.pill.Inner.numqByTermIdModeType[opts.pill.Inner.term.id]
 	delete opts.pill.Inner.q
 	//TODO: need to tweak timeout, UI reflects true value
 	pilldiv.click()
@@ -297,7 +297,7 @@ tape('Numerical term: range boundaries', async test => {
 	select1.value = option1.value
 	select1.dispatchEvent(new Event('change'))
 	await sleep(50)
-	const q1 = opts.pill.Inner.numqByTermIdType[opts.pill.Inner.term.id]
+	const q1 = opts.pill.Inner.numqByTermIdModeType.agedx.discrete.regular
 	test.equal(!q1.stopinclusive && q1.startinclusive, true, 'should set the range boundary to start inclusive')
 
 	const select0 = tip.d.node().querySelector('select')
@@ -305,7 +305,7 @@ tape('Numerical term: range boundaries', async test => {
 	select0.value = option0.value
 	select0.dispatchEvent(new Event('change'))
 	await sleep(50)
-	const q0 = opts.pill.Inner.numqByTermIdType[opts.pill.Inner.term.id]
+	const q0 = opts.pill.Inner.numqByTermIdModeType.agedx.discrete.regular
 	test.equal(q0.stopinclusive && !q0.startinclusive, true, 'should set the range boundary to stop inclusive')
 })
 

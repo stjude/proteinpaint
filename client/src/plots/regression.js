@@ -41,7 +41,7 @@ class MassRegression {
 				app: this.app,
 				id: this.id,
 				holder: this.dom.controls,
-				chart: this.api,
+				chart: this.api
 				/*callbacks: {
 					'downloadClick.regression': this.download
 				}*/
@@ -80,10 +80,11 @@ class MassRegression {
 		}
 		if (!this.state.config.term) return
 		this.config = JSON.parse(JSON.stringify(this.state.config))
-		if (!this.config.independent) {
+		if (!this.config.independent.length || !this.config.term) {
 			this.dom.div.style('display', 'none')
 			this.dom.resultsHeading.style('display', 'none')
-			throw 'independent variable(s) is required for regression analysis'
+			// will only show the regression controls when outcome and/or independent terms are empty
+			return
 		}
 		this.dom.div.selectAll('*').remove()
 		this.dom.banner.style('display', this.state.formIsComplete ? 'block' : 'none')
@@ -172,7 +173,6 @@ class MassRegression {
 export const regressionInit = getCompInit(MassRegression)
 // this alias will allow abstracted dynamic imports
 export const componentInit = regressionInit
-
 
 function setInteractivity(self) {
 	self.download = () => {

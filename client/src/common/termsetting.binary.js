@@ -37,7 +37,6 @@ function get_status_msg() {
 }
 
 async function showEditMenu(self, div) {
-	if (!self.numqByTermIdType) self.numqByTermIdType = {}
 	self.num_obj = {}
 
 	self.num_obj.plot_size = {
@@ -96,7 +95,7 @@ async function showEditMenu(self, div) {
 			delete self.q.first_bin
 			delete self.q.last_bin
 			self.q.lst = processCustomBinInputs(self)
-			self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
+			self.numqByTermIdModeType[self.term.id].binary = JSON.parse(JSON.stringify(self.q))
 			self.q.mode = 'binary'
 			self.opts.callback({
 				id: self.term.id,
@@ -122,46 +121,46 @@ async function showEditMenu(self, div) {
 function setqDefaults(self) {
 	const dd = self.num_obj.density_data
 	const boundry_value = self.q && self.q.lst && self.q.lst.length ? self.q.lst[0].stop : undefined
-	if (!(self.term.id in self.numqByTermIdType)) {
-		const cutoff =
-			boundry_value !== undefined
-				? boundry_value
-				: dd.maxvalue != dd.minvalue
-				? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2
-				: dd.maxvalue
+	const cache = self.numqByTermIdModeType
+	const t = self.term
+	if (!cache[t.id]) cache[t.id] = {}
+	if (!cache[t.id].binary) {
+		if (self.q.mode == 'binary' && self.q.type == 'custom') {
+			cache[t.id].binary = self.q
+		} else {
+			const cutoff =
+				boundry_value !== undefined
+					? boundry_value
+					: dd.maxvalue != dd.minvalue
+					? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2
+					: dd.maxvalue
 
-		self.numqByTermIdType[self.term.id] = {
-			custom:
-				self.q && self.q.type == 'custom'
-					? self.q
-					: {
-							type: 'custom',
-							lst: [
-								{
-									startunbounded: true,
-									stopinclusive: true,
-									stop: +cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
-								},
-								{
-									stopunbounded: true,
-									stopinclusive: true,
-									start: +cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
-								}
-							]
-					  }
+			cache[t.id].binary = {
+				type: 'custom',
+				lst: [
+					{
+						startunbounded: true,
+						stopinclusive: true,
+						stop: +cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
+					},
+					{
+						stopunbounded: true,
+						stopinclusive: true,
+						start: +cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
+					}
+				]
+			}
 		}
-		if (!self.numqByTermIdType[self.term.id].custom.type) {
-			self.numqByTermIdType[self.term.id].custom.type = 'custom'
-		}
-	} else if (self.term.q) {
-		if (!self.term.q.type) throw `missing numeric term q.type: should be 'regular' or 'custom'`
-		self.numqByTermIdType[self.term.id][self.q.type] = self.q
+	} else if (t.q) {
+		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
+		if (!t.q.type) throw `missing numeric term q.type: should be 'regular' or 'custom'`
+		cache[t.id][self.q.type] = t.q
 	}
 
 	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
-	if (!self.q) self.q = {}
-	self.q.type = 'custom'
-	self.q = JSON.parse(JSON.stringify(self.numqByTermIdType[self.term.id][self.q.type]))
+	if (!self.q || self.q.mode !== 'binary') self.q = {}
+	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].binary))
+	self.q = Object.assign(cacheCopy, self.q)
 	if (self.q.lst) {
 		self.q.lst.forEach(bin => {
 			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)

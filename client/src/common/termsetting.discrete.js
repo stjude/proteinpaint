@@ -12,7 +12,6 @@ self: a termsetting instance
 */
 
 export async function setNumericMethods(self, closureType = 'closured') {
-
 	if (closureType == 'non-closured') {
 		// TODO: always use this non-closured version later
 		return {
@@ -45,7 +44,6 @@ function get_status_msg() {
 }
 
 async function showEditMenu(self, div) {
-	if (!self.numqByTermIdType) self.numqByTermIdType = {}
 	self.num_obj = {}
 
 	self.num_obj.plot_size = {
@@ -69,7 +67,6 @@ async function showEditMenu(self, div) {
 	div.selectAll('*').remove()
 	self.dom.num_holder = div
 	self.dom.bins_div = div.append('div').style('padding', '5px')
-
 	setqDefaults(self)
 	setDensityPlot(self)
 	renderBoundaryInclusionInput(self)
@@ -98,7 +95,7 @@ function applyEdits(self) {
 			self.q.last_bin.start = +self.dom.last_start_input.property('value')
 			self.q.last_bin.stopunbounded = true
 		}
-		self.numqByTermIdType[self.term.id].regular = JSON.parse(JSON.stringify(self.q))
+		self.numqByTermIdModeType[self.term.id].discrete.regular = JSON.parse(JSON.stringify(self.q))
 	} else {
 		delete self.q.startinclusive
 		delete self.q.stopinclusive
@@ -106,7 +103,7 @@ function applyEdits(self) {
 		delete self.q.first_bin
 		delete self.q.last_bin
 		self.q.lst = processCustomBinInputs(self)
-		self.numqByTermIdType[self.term.id].custom = JSON.parse(JSON.stringify(self.q))
+		self.numqByTermIdModeType[self.term.id].discrete.custom = JSON.parse(JSON.stringify(self.q))
 	}
 	self.q.mode = 'discrete'
 	delete self.q.scale
@@ -161,17 +158,20 @@ function processCustomBinInputs(self) {
 
 function setqDefaults(self) {
 	const dd = self.num_obj.density_data
-	if (!(self.term.id in self.numqByTermIdType)) {
+	const cache = self.numqByTermIdModeType
+	const t = self.term
+	if (!cache[t.id]) cache[t.id] = {}
+	if (!cache[t.id].discrete) {
 		const defaultCustomBoundary =
 			dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2 : dd.maxvalue
 
-		self.numqByTermIdType[self.term.id] = {
+		cache[t.id].discrete = {
 			regular:
 				self.q && self.q.type == 'regular'
 					? JSON.parse(JSON.stringify(self.q))
-					: self.opts.use_bins_less && self.term.bins.less
-					? JSON.parse(JSON.stringify(self.term.bins.less))
-					: JSON.parse(JSON.stringify(self.term.bins.default)),
+					: self.opts.use_bins_less && t.bins.less
+					? JSON.parse(JSON.stringify(t.bins.less))
+					: JSON.parse(JSON.stringify(t.bins.default)),
 			custom:
 				self.q && self.q.type == 'custom'
 					? self.q
@@ -181,28 +181,31 @@ function setqDefaults(self) {
 								{
 									startunbounded: true,
 									stopinclusive: true,
-									stop: +defaultCustomBoundary.toFixed(self.term.type == 'integer' ? 0 : 2)
+									stop: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
 								},
 								{
 									stopunbounded: true,
 									stopinclusive: true,
-									start: +defaultCustomBoundary.toFixed(self.term.type == 'integer' ? 0 : 2)
+									start: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
 								}
 							]
 					  }
 		}
-		if (!self.numqByTermIdType[self.term.id].regular.type) {
-			self.numqByTermIdType[self.term.id].regular.type = 'regular'
+		if (!cache[t.id].discrete.regular.type) {
+			cache[t.id].discrete.regular.type = 'regular'
 		}
-	} else if (self.term.q) {
-		if (!self.term.q.type) throw `missing numeric term q.type: should be 'regular' or 'custom'`
-		self.numqByTermIdType[self.term.id][self.q.type] = self.q
+	} else if (t.q) {
+		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
+		if (!t.q.type) throw `missing numeric term q.type: should be 'regular' or 'custom'`
+		cache[t.id].discrete[t.q.type] = t.q
 	}
 
 	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
-	if (!self.q) self.q = {}
+	if (self.q && !self.q.mode) self.q.mode = 'discrete'
+	if (!self.q || self.q.mode !== 'discrete') self.q = {}
 	if (!self.q.type) self.q.type = 'regular'
-	self.q = JSON.parse(JSON.stringify(self.numqByTermIdType[self.term.id][self.q.type]))
+	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].discrete[self.q.type]))
+	self.q = Object.assign(cacheCopy, self.q)
 	const bin_size = 'bin_size' in self.q && self.q.bin_size.toString()
 	if (!self.q.rounding && typeof bin_size == 'string' && bin_size.includes('.') && !bin_size.endsWith('.')) {
 		const binDecimals = bin_size.split('.')[1].length
@@ -231,8 +234,9 @@ export function renderBoundaryInclusionInput(self) {
 		.append('select')
 		.style('margin-left', '10px')
 		.on('change', function() {
-			self.numqByTermIdType[self.term.id].startinclusive = self.dom.boundaryInput.node().selectedIndex == 1
-			self.numqByTermIdType[self.term.id].stopinclusive = self.dom.boundaryInput.node().selectedIndex == 0
+			const c = self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
+			c.startinclusive = self.dom.boundaryInput.node().selectedIndex == 1
+			c.stopinclusive = self.dom.boundaryInput.node().selectedIndex == 0
 		})
 
 	self.dom.boundaryInput
@@ -422,7 +426,7 @@ function renderLastBinInputs(self, tr) {
 			setDensityPlot(self)
 		},
 		styles: {
-			'padding': '0 10px'
+			padding: '0 10px'
 		}
 	})
 
@@ -649,7 +653,7 @@ function renderButtons(self) {
 		.html('Reset')
 		.on('click', () => {
 			delete self.q
-			delete self.numqByTermIdType[self.term.id]
+			delete self.numqByTermIdModeType[self.term.id]
 			self.showEditMenu(self.dom.num_holder)
 		})
 }

@@ -1,7 +1,6 @@
 import { event as d3event } from 'd3-selection'
 
 export async function setNumericMethods(self, closureType = 'closured') {
-
 	if (closureType == 'non-closured') {
 		// TODO: always use this non-closured version later
 		return {
@@ -34,6 +33,8 @@ function get_status_msg() {
 }
 
 async function showEditMenu(self, div) {
+	setqDefaults(self)
+
 	div
 		.style('padding', '10px')
 		.selectAll('*')
@@ -68,7 +69,7 @@ async function showEditMenu(self, div) {
 		.append('option')
 		.attr('value', d => d.value)
 		.html(d => d.html)
-		.property('selected', d => (self.q.scale ? 1 * d.value == self.q.scale : 0))
+		.property('selected', d => 'scale' in self.q && d.value == self.q.scale)
 
 	const btndiv = div.append('div').style('padding', '3px 10px')
 
@@ -83,16 +84,19 @@ async function showEditMenu(self, div) {
 				q: self.q
 			})
 		})
+}
 
-	// btndiv.append('button')
-	// 	.style('margin', '5px')
-	// 	.html('Reset')
-	// 	.on('click', () => {
-	// 		self.q.mode = 'discrete'
-	// 		delete self.q.scale
-	// 		self.opts.callback({
-	// 			term: self.term,
-	// 			q: self.q
-	// 		})
-	// 	})
+function setqDefaults(self) {
+	const cache = self.numqByTermIdModeType
+	const t = self.term
+	if (!cache[t.id]) cache[t.id] = {}
+	if (!cache[t.id].continuous) {
+		cache[t.id].continuous = {
+			mode: 'continuous',
+			scale: 1
+		}
+	}
+	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].continuous))
+	self.q = Object.assign(cacheCopy, self.q)
+	//*** validate self.q ***//
 }

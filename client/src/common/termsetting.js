@@ -50,6 +50,13 @@ class TermSetting {
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
 		this.abbrCutoff = opts.abbrCutoff
+
+		// numqByTermIdModeType is used if/when a numeric pill term type changes:
+		// it will track numeric term.q by term.id, q.mode, and q.type to enable
+		// the "remember" input values when switching between
+		// discrete, continuous, and binary edit menus for the same term
+		this.numqByTermIdModeType = {}
+
 		// detect if the holder is contained within a floating client Menu instance;
 		// this will be useful in preventing premature closure of the menu in case
 		// a submenu is clicked and is still visible
@@ -102,7 +109,7 @@ class TermSetting {
 		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'
 		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
 		if (!('abbrCutoff' in o)) o.abbrCutoff = 18 //set the default to 18
-		if (!o.numericEditMenuVersion) o.numericEditMenuVersion =  ['discrete']
+		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = ['discrete']
 		return o
 	}
 	validateMainData(d) {
@@ -159,10 +166,14 @@ function setRenderers(self) {
 		}
 
 		const editTypes = self.opts.numericEditMenuVersion
-		const numericMethodsSetter = editTypes.length > 1 ? 
-			setNumericTabs : editTypes[0] == 'continuous' ? 
-			setContNumericMethods : editTypes[0] == 'binary' ? 
-			setBinaryNumericMethods : setDiscreteNumericMethods
+		const numericMethodsSetter =
+			editTypes.length > 1
+				? setNumericTabs
+				: editTypes[0] == 'continuous'
+				? setContNumericMethods
+				: editTypes[0] == 'binary'
+				? setBinaryNumericMethods
+				: setDiscreteNumericMethods
 
 		self.setMethodsByTermType = {
 			integer: numericMethodsSetter,
