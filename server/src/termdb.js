@@ -274,7 +274,7 @@ async function trigger_getpercentile(q, res, ds) {
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.tid)
 	if (!term) throw 'invalid termid'
 	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
-	const p = Number(q.percentile)
+	const p = Number(q.getpercentile)
 	if (!Number.isInteger(p) || p < 1 || p > 99) throw 'percentile is not 1-99 integer'
 	const values = []
 	const rows = termdbsql.get_rows_by_one_key({

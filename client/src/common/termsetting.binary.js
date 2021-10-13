@@ -128,33 +128,30 @@ function setqDefaults(self) {
 	const t = self.term
 	if (!cache[t.id]) cache[t.id] = {}
 	if (!cache[t.id].binary) {
-		if (self.q.mode == 'binary' && self.q.type == 'custom') {
-			cache[t.id].binary = self.q
-		} else {
-			const cutoff =
-				boundry_value !== undefined
-					? boundry_value
-					: dd.maxvalue != dd.minvalue
-					? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2
-					: dd.maxvalue
+		// automatically derive a cutoff to generate binary bins
+		const cutoff =
+			boundry_value !== undefined
+				? boundry_value
+				: dd.maxvalue != dd.minvalue
+				? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2
+				: dd.maxvalue
 
-			cache[t.id].binary = {
-				mode: 'binary',
-				type: 'custom',
-				modeBinaryCutoffType: 'normal', // default value
-				modeBinaryCutoffPercentile: 80, // default value
-				lst: [
-					{
-						startunbounded: true,
-						stopinclusive: true,
-						stop: cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
-					},
-					{
-						stopunbounded: true,
-						start: cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
-					}
-				]
-			}
+		cache[t.id].binary = {
+			mode: 'binary',
+			type: 'custom',
+			modeBinaryCutoffType: 'normal', // default value
+			modeBinaryCutoffPercentile: 50, // default value
+			lst: [
+				{
+					startunbounded: true,
+					stopinclusive: true,
+					stop: cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
+				},
+				{
+					stopunbounded: true,
+					start: cutoff.toFixed(self.term.type == 'integer' ? 0 : 2)
+				}
+			]
 		}
 	} else if (t.q) {
 		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
@@ -185,7 +182,7 @@ async function renderCuttoffInput(self) {
 		.style('width', '100px')
 		.attr('type', 'number')
 		.style('margin-right', '10px')
-		.attr('value', self.q.lst[0].stop)
+		.attr('value', self.q.modeBinaryCutoffType == 'normal' ? self.q.lst[0].stop : self.q.modeBinaryCutoffPercentile)
 		.on('change', handleChange)
 
 	make_one_checkbox({
@@ -225,8 +222,6 @@ async function renderCuttoffInput(self) {
 	}
 
 	async function handleCheckbox() {
-		// FIXME self.q.modeBinaryCutoffType is undefined.
-		// why it is not assigned from setqDefaults()??
 		self.q.modeBinaryCutoffType = self.q.modeBinaryCutoffType == 'percentile' ? 'normal' : 'percentile'
 		if (self.q.modeBinaryCutoffType == 'normal') {
 			const v = self.q.lst[0].stop
@@ -260,7 +255,7 @@ function processCustomBinInputs(self) {
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
 	const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
 	let prevBin
-	const val = +self.dom.customBinBoundaryInput.property('value')
+	const val = self.q.lst[0].stop // should not get value from dom.customBinBoundaryInput as value can be percentile
 
 	const bins = [
 		{
