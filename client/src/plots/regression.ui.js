@@ -207,18 +207,22 @@ class MassRegressionUI {
 			})
 		} else if (d.term.term.type == 'categorical') {
 			if (d.term.q.groupsetting.customset) return // return if it's alrady assinged or initiated
-			// for categorical term, devide values into 2 groups
-			const values = Object.keys(d.term.term.values)
+			if (!d.term.term.values) throw '.values{} missing from categorical term'
+			// for categorical term, devide computable values into 2 groups
+			const values = []
+			for (const k in d.term.term.values) {
+				if (!d.term.term.values[k].uncomputable) values.push(k)
+			}
 			if (values.length > 2) {
 				d.term.q.groupsetting.inuse = true
 				let customset = {
 					groups: [
 						{
-							name: 'group 1',
+							name: 'Group 1',
 							values: []
 						},
 						{
-							name: 'group 2',
+							name: 'Group 2',
 							values: []
 						}
 					]

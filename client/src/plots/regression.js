@@ -61,7 +61,6 @@ class MassRegression {
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: {
-				// cutoff: config.cutoff,
 				term: config.term,
 				regressionType: config.regressionType,
 				independent: config.independent,
@@ -123,9 +122,7 @@ class MassRegression {
 				)
 		]
 		if (c.regressionType == 'logistic') {
-			// if (!c.cutoff) throw "Cutoff values in required for 'Outcome variable'"
 			params.push('regressionType=logistic')
-			// params.push('cutoff=' + c.cutoff)
 		}
 
 		const filterData = getNormalRoot(this.state.termfilter.filter)
