@@ -258,14 +258,14 @@ class MassRegressionUI {
 			term_type = 'logistic numeric outcome term'
 			if (d.term.q.mode !== 'binary') throw 'term.q.mode is not defined correctly for ' + term_type
 			if (d.term.q.type !== 'custom') throw 'term.q.type must be custom for ' + term_type
-			if (d.term.q.lst.length !== 2) throw 'd.term.q.lst must be only 2 bins for ' + term_type
+			if (d.term.q.lst.length !== 2) throw 'must be only 2 bins for ' + term_type
 			if (!d.term.q.lst.every(bin => bin.label !== undefined)) throw 'every bin in q.lst must have label defined for ' + term_type
 		} else if (d.term.term.type == 'categorical') {
 			term_type = 'logistic categorical outcome term'
 			if (!d.term.q.groupsetting.customset) throw 'customset must be defined for ' + term_type
 			if (d.term.q.groupsetting.inuse !== true) throw 'groupsetting.inuse must be true for ' + term_type
-			if (d.term.q.groupsetting.customset.groups.length !== 2) throw 'customset.groups must have only 2 groups for '+ term_type
-			if (!d.term.q.groupsetting.customset.groups.every(g => g.name !== undefined)) throw 'every group in customset.groups must have name defined for ' + term_type
+			if (d.term.q.groupsetting.customset.groups.length !== 2) throw 'groupset must have only 2 groups for '+ term_type
+			if (!d.term.q.groupsetting.customset.groups.every(g => g.name !== undefined)) throw 'every group in groupset must have \'name\' defined for ' + term_type
 		} else if (d.term.term.type == 'condition') {
 			term_type = 'logistic condition outcome term'
 			if (d.term.q.groupsetting.inuse !== true) throw 'groupsetting.inuse must be true for ' + term_type
@@ -275,10 +275,10 @@ class MassRegressionUI {
 				if (d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.length !== 2)
 					throw 'predefined group must have 2 groups for ' + term_type
 				if (!d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.every(g => g.name !== undefined))
-					throw 'every group in predefined group must have name defined ' + term_type
+					throw 'every group in predefined groupset must have name defined ' + term_type
 			} else if (d.term.q.groupsetting.customset) {
-				if (d.term.q.groupsetting.customset.groups.length !== 2) throw 'customset.groups must have only 2 groups for ' + term_type
-				if (!d.term.q.groupsetting.customset.groups.every(g => g.name !== undefined)) throw 'every group in customset.groups must have name defined for ' + term_type
+				if (d.term.q.groupsetting.customset.groups.length !== 2) throw 'custom groupset must have only 2 groups for ' + term_type
+				if (!d.term.q.groupsetting.customset.groups.every(g => g.name !== undefined)) throw 'every group in custom groupset must have name defined for ' + term_type
 			}
 		}
 	}
