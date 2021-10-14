@@ -173,7 +173,6 @@ function setRenderers(self) {
 		// hardcoded logic and data structure
 		// benefit is that specific logic can be applied to rendering each different table
 		// no need for one reusable renderer to support different table types
-		console.log(result)
 
 		sectionHolder('Sample size: ' + result.sampleSize)
 
@@ -190,41 +189,64 @@ function setRenderers(self) {
 
 		if (result.coefficients) {
 			const div = sectionHolder(result.coefficients.label)
-			const table = div.append('table').style('border-spacing', '8px')
+			const table = div.append('table').style('border-spacing', '0px')
+
+			// padding is set on every <td>. need a better solution
+
 			// header
 			{
 				const tr = table.append('tr').style('opacity', 0.4)
-				tr.append('td').text('Variable')
-				tr.append('td').text('Category')
+				tr.append('td')
+					.text('Variable')
+					.style('padding', '8px')
+				tr.append('td')
+					.text('Category')
+					.style('padding', '8px')
 				for (const v of result.coefficients.header) {
-					tr.append('td').text(v)
+					tr.append('td')
+						.text(v)
+						.style('padding', '8px')
 				}
 			}
 			// intercept
 			{
-				const tr = table.append('tr').attr('class', 'sja_clb')
-				tr.append('td').text('(Intercept)')
+				const tr = table.append('tr').style('background', '#eee')
 				tr.append('td')
+					.text('(Intercept)')
+					.style('padding', '8px')
+				tr.append('td').style('padding', '8px')
 				for (const v of result.coefficients.intercept) {
-					tr.append('td').text(v)
+					tr.append('td')
+						.text(v)
+						.style('padding', '8px')
 				}
 			}
 			// independent terms
+			let rowcount = 0
 			for (const tid in result.coefficients.terms) {
 				const termdata = result.coefficients.terms[tid]
 				const term = self.state.config.independent.find(t => t.id == tid)
-				let tr = table.append('tr').attr('class', 'sja_clb')
+				let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 				// term name
-				const termnametd = tr.append('td').text(term ? term.term.name : tid)
+				const termnametd = tr
+					.append('td')
+					.text(term ? term.term.name : tid)
+					.style('padding', '8px')
 
 				if (termdata.fields) {
-					tr.append('td') // no category
-					for (const v of termdata.fields) tr.append('td').text(v)
+					// no category
+					tr.append('td')
+					for (const v of termdata.fields)
+						tr.append('td')
+							.text(v)
+							.style('padding', '8px')
 				} else if (termdata.categories) {
 					// multiple categories. show first category as full row, with first cell spanning rest of categories
+
 					const categories = []
 					for (const k in termdata.categories) categories.push(k)
-					// TODO sort categories array by orderedLabels
+					// TODO sort categories array by orderedLabels, after deleting sorting code from R
+
 					termnametd.attr('rowspan', categories.length).style('vertical-align', 'top')
 					let isfirst = true
 					for (const k in termdata.categories) {
@@ -232,10 +254,15 @@ function setRenderers(self) {
 							isfirst = false
 						} else {
 							// create new row starting from 2nd category
-							tr = table.append('tr').attr('class', 'sja_clb')
+							tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 						}
-						tr.append('td').text(term && term.term.values && term.term.values[k] ? term.term.values[k].label : k)
-						for (const v of termdata.categories[k]) tr.append('td').text(v)
+						tr.append('td')
+							.text(term && term.term.values && term.term.values[k] ? term.term.values[k].label : k)
+							.style('padding', '8px')
+						for (const v of termdata.categories[k])
+							tr.append('td')
+								.text(v)
+								.style('padding', '8px')
 					}
 				} else {
 					tr.append('td').text('ERROR: no .fields[] or .categories{}')
@@ -255,6 +282,12 @@ function setRenderers(self) {
 			}
 			for (const row of result.type3.lst) {
 				const tr = table.append('tr')
+				const v1 = row.shift()
+				const td = tr.append('td')
+				if (v1) {
+					const term = self.state.config.independent.find(t => t.id == v1)
+					td.text(term ? term.term.name : v1)
+				}
 				for (const v of row) tr.append('td').text(v)
 			}
 		}
