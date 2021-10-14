@@ -93,15 +93,12 @@ class MassRegression {
 		this.dom.div.selectAll('*').remove()
 		this.dom.banner.style('display', this.state.formIsComplete ? 'block' : 'none')
 		const dataName = this.getDataName()
-		this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
-		const tables = this.processData(this.data)
+		const data = await this.app.vocabApi.getPlotData(this.id, dataName)
+		if (data.error) throw data.error
 		this.dom.banner.style('display', 'none')
 		this.dom.div.style('display', 'block')
 		this.dom.resultsHeading.style('display', 'block')
-		for (const name in tables) {
-			const [columns, rows] = tables[name]
-			this.renderTable(this.dom.div, name, columns, rows)
-		}
+		this.displayResult(data)
 	}
 
 	// creates URL search parameter string, that also serves as
@@ -130,45 +127,6 @@ class MassRegression {
 			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData))) //encodeNestedFilter(state.termfilter.filter))
 		}
 		return '/termdb?' + params.join('&')
-	}
-
-	processData(multipleData) {
-		const tables = {}
-		for (const data of multipleData) {
-			let columns, rows
-			if (data.format === 'matrix') {
-				columns = data.keys.map(key => {
-					return { key, label: key }
-				})
-				rows = data.rows.map((row, i) => {
-					let config
-					return {
-						lst: row.map((r, i) => {
-							let value = r
-							if (columns[i].label === 'Variable') {
-								config = this.state.config.independent.find(x => x.id === r)
-								if (config) value = config.term.name // get term name to display in table
-							}
-							if (columns[i].label === 'Category') {
-								if (config) {
-									if (config.term.values) {
-										value = r in config.term.values ? config.term.values[r].label : r
-									}
-								}
-							}
-							return { label: columns[i].label, value: value }
-						})
-					}
-				})
-			} else if (data.format === 'vector') {
-				columns = undefined
-				rows = data.rows
-			} else {
-				throw `data format '${data.format}' is not recognized`
-			}
-			tables[data.name] = [columns, rows]
-		}
-		return tables
 	}
 }
 
@@ -207,75 +165,148 @@ function setInteractivity(self) {
 }
 
 function setRenderers(self) {
-	self.renderTable = function(div, name, columns, rows) {
-		// show table title
-		const title_div = div
-			.append('div')
-			.style('text-decoration', 'underline')
-			.style('padding-top', '10px')
-			.style('padding-bottom', '15px')
-			.html(name + ':')
-		// show table
-		const table = div
-			.append('table')
-			.style('margin-bottom', '20px')
-			.style('border-spacing', '3px')
-			.style('border-collapse', 'collapse')
+	self.displayResult = function(result) {
+		// this is work-in-progress and will be redeveloped later
+		// hardcoded logic and data structure
+		// benefit is that specific logic can be applied to rendering each different table
+		// no need for one reusable renderer to support different table types
 
-		// header
-		const tr = table
-			.append('tr')
-			.style('white-space', 'normal')
-			.style('opacity', 0.6)
-			.style('font-size', '.8em')
-			.style('padding', '2px 5px')
+		sectionHolder('Sample size: ' + result.sampleSize)
 
-		// print term2 values as rest of columns
-		if (columns) {
-			for (const value of columns) {
-				const label = value.label
-				tr.append('th')
-					.text(label.length > 20 ? label.slice(0, 16) + '...' : label)
-					.attr('title', label)
-					.style('padding', '3px 10px')
-					.style('text-align', 'left')
-					.style('min-width', '80px')
-					.style('max-width', '150px')
-					.style('word-break', label.length > 12 ? 'break-word' : 'normal')
-					.style('vertical-align', 'top')
-					.style('font-weight', 'normal')
-					.style('color', '#777')
+		if (result.devianceResiduals) {
+			const div = sectionHolder(result.devianceResiduals.label)
+			const table = div.append('table').style('border-spacing', '8px')
+			const tr1 = table.append('tr').style('opacity', 0.4)
+			const tr2 = table.append('tr')
+			for (const v of result.devianceResiduals.lst) {
+				tr1.append('td').text(v[0])
+				tr2.append('td').text(v[1])
 			}
+		}
 
-			let i = 0
-			for (const t1v of rows) {
-				const tr = table.append('tr').style('background-color', i++ % 2 != 0 ? '#fff' : '#ececec')
+		if (result.coefficients) {
+			const div = sectionHolder(result.coefficients.label)
+			const table = div.append('table').style('border-spacing', '0px')
 
-				const column_keys = columns.map(d => d.key)
-				for (const t2label of column_keys) {
-					const td = tr.append('td').style('padding', '3px 10px')
-					const v = t1v.lst.find(i => i.label == t2label)
-					if (v) {
-						td.style('text-align', 'left').html(v.value)
-					}
-				}
-			}
-		} else {
-			let i = 0
-			for (const row of rows) {
-				const tr = table
-					.append('tr')
-					.style('background-color', i++ % 2 != 0 ? '#fff' : '#ececec')
-					.style('padding', '3px 5px')
-					.style('text-align', 'left')
-				for (const [i, cell] of row.entries()) {
+			// padding is set on every <td>. need a better solution
+
+			// header
+			{
+				const tr = table.append('tr').style('opacity', 0.4)
+				tr.append('td')
+					.text('Variable')
+					.style('padding', '8px')
+				tr.append('td')
+					.text('Category')
+					.style('padding', '8px')
+				for (const v of result.coefficients.header) {
 					tr.append('td')
-						.style('padding', '3px 15px')
-						.style('text-align', 'left')
-						.style('color', i == 0 ? '#777' : '#000')
-						.html(cell)
+						.text(v)
+						.style('padding', '8px')
 				}
 			}
+			// intercept
+			{
+				const tr = table.append('tr').style('background', '#eee')
+				tr.append('td')
+					.text('(Intercept)')
+					.style('padding', '8px')
+				tr.append('td').style('padding', '8px')
+				for (const v of result.coefficients.intercept) {
+					tr.append('td')
+						.text(v)
+						.style('padding', '8px')
+				}
+			}
+			// independent terms
+			let rowcount = 0
+			for (const tid in result.coefficients.terms) {
+				const termdata = result.coefficients.terms[tid]
+				const term = self.state.config.independent.find(t => t.id == tid)
+				let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+				// term name
+				const termnametd = tr
+					.append('td')
+					.text(term ? term.term.name : tid)
+					.style('padding', '8px')
+
+				if (termdata.fields) {
+					// no category
+					tr.append('td')
+					for (const v of termdata.fields)
+						tr.append('td')
+							.text(v)
+							.style('padding', '8px')
+				} else if (termdata.categories) {
+					// multiple categories. show first category as full row, with first cell spanning rest of categories
+
+					const categories = []
+					for (const k in termdata.categories) categories.push(k)
+					// TODO sort categories array by orderedLabels, after deleting sorting code from R
+
+					termnametd.attr('rowspan', categories.length).style('vertical-align', 'top')
+					let isfirst = true
+					for (const k in termdata.categories) {
+						if (isfirst) {
+							isfirst = false
+						} else {
+							// create new row starting from 2nd category
+							tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+						}
+						tr.append('td')
+							.text(term && term.term.values && term.term.values[k] ? term.term.values[k].label : k)
+							.style('padding', '8px')
+						for (const v of termdata.categories[k])
+							tr.append('td')
+								.text(v)
+								.style('padding', '8px')
+					}
+				} else {
+					tr.append('td').text('ERROR: no .fields[] or .categories{}')
+				}
+			}
+		}
+
+		if (result.type3) {
+			const div = sectionHolder(result.type3.label)
+			const table = div.append('table').style('border-spacing', '8px')
+			// header
+			{
+				const tr = table.append('tr').style('opacity', 0.4)
+				for (const v of result.type3.header) {
+					tr.append('td').text(v)
+				}
+			}
+			for (const row of result.type3.lst) {
+				const tr = table.append('tr')
+				const v1 = row.shift()
+				const td = tr.append('td')
+				if (v1) {
+					const term = self.state.config.independent.find(t => t.id == v1)
+					td.text(term ? term.term.name : v1)
+				}
+				for (const v of row) tr.append('td').text(v)
+			}
+		}
+		if (result.otherSummary) {
+			const div = sectionHolder(result.otherSummary.label)
+			const table = div.append('table').style('border-spacing', '8px')
+			for (const [k, v] of result.otherSummary.lst) {
+				const tr = table.append('tr')
+				tr.append('td')
+					.style('opacity', 0.4)
+					.text(k)
+				tr.append('td').text(v)
+			}
+		}
+		function sectionHolder(label) {
+			const div = self.dom.div.append('div').style('margin', '20px 0px 10px 0px')
+
+			div
+				.append('div')
+				.style('text-decoration', 'underline')
+				.text(label)
+			return div.append('div').style('margin-left', '20px')
 		}
 	}
 }

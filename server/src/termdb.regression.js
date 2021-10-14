@@ -99,42 +99,98 @@ export async function get_regression(q, ds) {
 			scalingFactors.join(',')
 		])
 
-		const result = [
-			{
-				name: 'Sample size',
-				format: 'vector',
-				rows: [['Number of samples analyzed', sampleSize]]
-			}
-		]
-		let table, lineCnt
+		const type2lines = new Map()
+		// k: type e.g.Deviance Residuals
+		// v: list of lines
+		let lineType // type of current line
+
 		for (const line of data) {
 			if (line.startsWith('#')) {
-				if (table) result.push(table)
-				const [format, name] = line.split('#').slice(1)
-				table = {
-					name: name,
-					format: format,
-					rows: []
-				}
-				lineCnt = 0
+				lineType = line.split('#')[2]
+				type2lines.set(lineType, [])
 				continue
 			}
-			if (table.format === 'matrix') {
-				lineCnt++
-				if (lineCnt === 1) {
-					table.keys = line.split('\t')
-					continue
+			type2lines.get(lineType).push(line)
+		}
+		// parse lines into this result structure
+		const result = { sampleSize }
+
+		{
+			const lines = type2lines.get('Deviance Residuals')
+			if (lines) {
+				if (lines.length != 2) throw 'expect 2 lines for Deviance Residuals but got ' + lines.length
+				result.devianceResiduals = {
+					label: 'Deviance Residuals',
+					lst: []
+				}
+				// 1st line is header
+				const header = lines[0].split('\t')
+				// 2nd line is values
+				const values = lines[1].split('\t')
+				for (const [i, h] of header.entries()) {
+					result.devianceResiduals.lst.push([h, values[i]])
 				}
 			}
-			table.rows.push(line.split('\t'))
 		}
-		result.push(table)
-
+		{
+			const lines = type2lines.get('Coefficients')
+			if (lines) {
+				if (lines.length < 3) throw 'expect at least 3 lines from Coefficients'
+				result.coefficients = {
+					label: 'Coefficients',
+					header: lines
+						.shift()
+						.split('\t')
+						.slice(2), // 1st line is header
+					intercept: lines
+						.shift()
+						.split('\t')
+						.slice(2), // 2nd line is intercept
+					terms: {}
+				}
+				// rest of lines are categories of independent terms
+				for (const line of lines) {
+					const l = line.split('\t')
+					const termid = l.shift()
+					if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
+					const category = l.shift()
+					if (category) {
+						// has category
+						if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
+						result.coefficients.terms[termid].categories[category] = l
+					} else {
+						// no category
+						result.coefficients.terms[termid].fields = l
+					}
+				}
+			}
+		}
+		{
+			const lines = type2lines.get('Type III statistics')
+			if (lines) {
+				result.type3 = {
+					label: 'Type III statistics',
+					header: lines.shift().split('\t'),
+					lst: lines.map(i => i.split('\t'))
+				}
+			}
+		}
+		{
+			const lines = type2lines.get('Other summary statistics')
+			if (lines) {
+				result.otherSummary = {
+					label: 'Other summary statistics',
+					lst: lines.map(i => i.split('\t'))
+				}
+			}
+		}
 		// Verify that the computed sample size is consistent with the degrees of freedom
+		/*
 		const nullDevDf = result
 			.find(table => table.name === 'Other summary statistics')
 			.rows.find(row => row[0] === 'Null deviance df')[1]
 		if (sampleSize !== Number(nullDevDf) + 1) throw 'computed sample size and degrees of freedom are inconsistent'
+			*/
 
 		return result
 	} catch (e) {
