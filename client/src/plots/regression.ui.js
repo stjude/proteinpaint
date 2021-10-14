@@ -129,8 +129,7 @@ class MassRegressionUI {
 				await this.updateLogisticOutcome(d)
 				await this.validateLogisticOutcome(d)
 			} catch (e) {
-				// TODO: show error in UI error bar (not able to figure out)
-				console.log(e)
+				this.app.printError(e)
 				return
 			}
 		}
