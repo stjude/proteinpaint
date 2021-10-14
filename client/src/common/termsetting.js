@@ -470,7 +470,13 @@ function set_hiddenvalues(q, term) {
 }
 
 function valid_binscheme(q) {
+	if (q.type == 'custom') {
+		if (!Array.isArray(q.lst)) return false
+		if (!q.mode) q.mode = 'discrete'
+		return true
+	}
 	if (Number.isFinite(q.bin_size) && q.first_bin) {
+		if (!q.mode) q.mode = 'discrete'
 		if (q.first_bin.startunbounded) {
 			if (Number.isInteger(q.first_bin.stop_percentile) || Number.isFinite(q.first_bin.stop)) {
 				return true
