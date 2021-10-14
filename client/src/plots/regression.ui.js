@@ -234,6 +234,14 @@ class MassRegressionUI {
 				}
 				d.term.q.groupsetting.customset = customset
 			}
+		} else if (d.term.term.type == 'condition') {
+			if (d.term.q.groupsetting.inuse && d.term.q.groupsetting.customset) return // return if customset in use
+			// if one of the predefined groupset in use, return
+			if (d.term.q.groupsetting.inuse && d.term.q.groupsetting.predefined_groupset_idx !== undefined) return
+			// for condition term, use 'any condition vs normal' option
+			d.term.q.groupsetting.inuse = true
+			const default_group_i = d.term.term.groupsetting.lst.findIndex(g => g.name == 'Any condition vs normal')
+			d.term.q.groupsetting.predefined_groupset_idx = default_group_i
 		}
 		d.pill.main(d.term)
 	}
