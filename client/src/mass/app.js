@@ -39,6 +39,7 @@ class MassApp {
 
 	async preApiFreeze(api) {
 		api.tip = new Menu({ padding: '5px' })
+		api.printError = e => this.printError(e)
 		api.vocabApi = await vocabInit({
 			app: api,
 			state: this.opts.state,
