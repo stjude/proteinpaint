@@ -55,7 +55,6 @@ export async function get_regression(q, ds) {
 		q.independent.map(t => {
 			refCategories.push(get_refCategory(t.term, t.q))
 		})
-		console.log('refCategories:', refCategories)
 
 		// Specify scaling factors of variables
 		const indScalingFactors = q.independent.map(t => {
@@ -92,12 +91,14 @@ export async function get_regression(q, ds) {
 		}
 		// console.log('tsv:', tsv.slice(0,10))
 		const sampleSize = tsv.length - 1
-		const data = await lines2R(path.join(serverconfig.binpath, 'utils/regression.R'), tsv, [
-			regressionType,
-			colClasses.join(','),
-			refCategories.join(','),
-			scalingFactors.join(',')
-		])
+		const data = await lines2R(
+			path.join(serverconfig.binpath, 'utils/regression.R'),
+			tsv,
+			[regressionType, colClasses.join(','), refCategories.join(','), scalingFactors.join(',')],
+			false
+		)
+
+		console.log('data:', data)
 
 		const type2lines = new Map()
 		// k: type e.g.Deviance Residuals
@@ -115,6 +116,15 @@ export async function get_regression(q, ds) {
 		// parse lines into this result structure
 		const result = { sampleSize }
 
+		{
+			const lines = type2lines.get('Warning messages')
+			if (lines) {
+				result.warnings = {
+					label: 'Warning messages',
+					lst: lines
+				}
+			}
+		}
 		{
 			const lines = type2lines.get('Deviance Residuals')
 			if (lines) {
@@ -192,6 +202,7 @@ export async function get_regression(q, ds) {
 		if (sampleSize !== Number(nullDevDf) + 1) throw 'computed sample size and degrees of freedom are inconsistent'
 			*/
 
+		console.log('result:', result)
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)

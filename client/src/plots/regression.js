@@ -173,6 +173,15 @@ function setRenderers(self) {
 
 		sectionHolder('Sample size: ' + result.sampleSize)
 
+		if (result.warnings) {
+			const div = sectionHolder(result.warnings.label)
+			const table = div.append('table').style('border-spacing', '8px')
+			for (const line of result.warnings.lst) {
+				const tr = table.append('tr')
+				tr.append('td').text(line)
+			}
+		}
+
 		if (result.devianceResiduals) {
 			const div = sectionHolder(result.devianceResiduals.label)
 			const table = div.append('table').style('border-spacing', '8px')
