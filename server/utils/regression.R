@@ -158,7 +158,15 @@ other_summ["Residual deviance df",] <- res_summ$df.residual
 other_summ["AIC",] <- res_summ$aic
 other_summ <- round(other_summ, 1)
 
+
 #Output summary statistics to stdout.
+if (length(warnings()) > 0){
+  cat("#NA#Warning messages\n", file = "", sep = "")
+  warning_summ <- capture.output(summary(warnings()))
+  for (l in warning_summ){
+    cat(l, "\n", sep = "")
+  }
+}
 cat("#matrix#Deviance Residuals\n", file = "", sep = "")
 write.table(deviance_resid_summ, file = "", sep = "\t", quote = F, row.names = F)
 cat("#matrix#Coefficients\n", file = "", sep = "")

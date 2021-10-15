@@ -173,6 +173,18 @@ function setRenderers(self) {
 
 		sectionHolder('Sample size: ' + result.sampleSize)
 
+		if (result.warnings) {
+			const div = sectionHolder(result.warnings.label)
+			//const p = div.append('p').style('margin', '8px')
+			div.append('div').style('margin', '8px')
+			for (const line of result.warnings.lst) {
+				div
+					.append('p')
+					.style('margin', '5px')
+					.text(line)
+			}
+		}
+
 		if (result.devianceResiduals) {
 			const div = sectionHolder(result.devianceResiduals.label)
 			const table = div.append('table').style('border-spacing', '8px')
