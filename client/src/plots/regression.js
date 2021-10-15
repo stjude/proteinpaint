@@ -105,10 +105,17 @@ class MassRegression {
 	// a unique request identifier to be used for caching server response
 	getDataName() {
 		const c = this.config // the plot object in state
-		const params = [
-			'getregression=1',
-			'term1_id=' + encodeURIComponent(c.term.term.id),
-			'term1_q=' + q_to_param(c.term.q),
+		const params = ['getregression=1', 'term1_id=' + encodeURIComponent(c.term.term.id)]
+		if (c.regressionType == 'logistic') {
+			params.push('term1_q=' + q_to_param(c.term.q))
+			params.push('regressionType=logistic')
+		} else {
+			// TODO: need to add q.scale, why is the mode not set via termsetting callback
+			params.push('term1_q=' + encodeURIComponent(JSON.stringify({ mode: 'continuous' })))
+			params.push('regressionType=linear')
+		}
+
+		params.push(
 			'independent=' +
 				encodeURIComponent(
 					JSON.stringify(
@@ -117,10 +124,7 @@ class MassRegression {
 						})
 					)
 				)
-		]
-		if (c.regressionType == 'logistic') {
-			params.push('regressionType=logistic')
-		}
+		)
 
 		const filterData = getNormalRoot(this.state.termfilter.filter)
 		if (filterData.lst.length) {

@@ -472,16 +472,28 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 		return makesql_oneterm_categorical(tablename, term, q, values)
 	}
 	if (term.type == 'float' || term.type == 'integer') {
-		const bins = makesql_numericBinCTE(term, q, ds, index, filter, values)
-		return {
-			sql: `${bins.sql},
-			${tablename} AS (
-				SELECT bname as key, sample, v as value
-				FROM ${bins.tablename}
-			)`,
-			tablename,
-			name2bin: bins.name2bin,
-			bins: bins.bins
+		if (q.mode == 'continuous') {
+			values.push(term.id)
+			return {
+				sql: `${tablename} AS (
+					SELECT value as key, sample, value
+					FROM annotations
+					WHERE term_id=?
+				)`,
+				tablename
+			}
+		} else {
+			const bins = makesql_numericBinCTE(term, q, ds, index, filter, values)
+			return {
+				sql: `${bins.sql},
+				${tablename} AS (
+					SELECT bname as key, sample, v as value
+					FROM ${bins.tablename}
+				)`,
+				tablename,
+				name2bin: bins.name2bin,
+				bins: bins.bins
+			}
 		}
 	}
 	if (term.type == 'condition') {
@@ -793,6 +805,7 @@ filter
 returns bins{}
 */
 export function get_bins(q, term, ds, index, filter) {
+	if (q.mode == 'continuous') return
 	return binsmodule.compute_bins(q, percentiles => get_numericMinMaxPct(ds, term, filter, percentiles))
 }
 

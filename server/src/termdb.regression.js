@@ -5,6 +5,7 @@ const lines2R = require('./lines2R')
 const serverconfig = require('./serverconfig')
 
 export async function get_regression(q, ds) {
+	const startTime = +new Date()
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
@@ -32,6 +33,7 @@ export async function get_regression(q, ds) {
 
 		// Rest of rows for R matrix, one for each sample
 		const rows = get_matrix(q, regressionType)
+		const queryTime = +new Date() - startTime
 		const tsv = [header.join('\t')]
 		const termYvalues = q.termY.values || {}
 
@@ -197,7 +199,8 @@ export async function get_regression(q, ds) {
 			.rows.find(row => row[0] === 'Null deviance df')[1]
 		if (sampleSize !== Number(nullDevDf) + 1) throw 'computed sample size and degrees of freedom are inconsistent'
 			*/
-
+		result.queryTime = queryTime
+		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -256,32 +259,53 @@ q{}
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
 	const values = filter ? filter.values.slice() : []
-	const outcome = get_term_cte(q, values, 'Y', filter)
-	const ctes = []
-	const columns = []
+	const outCTE = get_term_cte(q, values, 'Y', filter)
+	const indCTEs = []
 	for (const key in q) {
 		if (key.startsWith('term') && key.endsWith('_id') && key != 'termY_id') {
 			const i = Number(key.split('_')[0].replace('term', ''))
-			ctes.push(get_term_cte(q, values, i, filter))
-			columns.push(`t${i}.key AS key${i}, t${i}.value AS val${i}`)
+			indCTEs.push(get_term_cte(q, values, i, filter))
 		}
 	}
 
-	const statement = `WITH
+	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
-		${outcome.sql},
-		${ctes.map(t => t.sql).join(',\n')}
-		SELECT
-			Y.sample AS sample,
-			Y.value AS outcome,
-			Y.key AS outkey,
-      ${columns.join(',\n')}
-		FROM ${outcome.tablename} Y
-		${ctes.map((t, i) => `JOIN ${t.tablename} t${i} ON t${i}.sample = Y.sample`).join('\n')}
-		${filter ? 'WHERE Y.sample IN ' + filter.CTEname : ''}`
-	// console.log(220, statement, values)
-	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
-	return lst
+		${outCTE.sql},
+		${indCTEs.map(t => t.sql).join(',\n')}
+		SELECT sample, key, value, ? as term_id
+		FROM ${outCTE.tablename}
+		WHERE sample IN ${filter.CTEname}
+		UNION ALL
+		${indCTEs
+			.map(
+				(t, i) => `
+		SELECT sample, key, value, ? as term_id
+		FROM ${t.tablename} 
+		WHERE sample IN ${filter.CTEname}
+		`
+			)
+			.join(`UNION ALL`)}`
+
+	const indIds = q.independent.map(d => d.id)
+	values.push(q.termY_id, ...indIds)
+	// console.log(292, sql, values)
+	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+	const bySample = {}
+	for (const r of rows) {
+		if (!bySample[r.sample]) {
+			bySample[r.sample] = { sample: r.sample }
+		}
+		const d = bySample[r.sample]
+		if (r.term_id == q.termY_id) {
+			d.outkey = r.key
+			d.outcome = r.value
+		} else {
+			const i = indIds.indexOf(r.term_id)
+			d['key' + i] = r.key
+			d['val' + i] = r.value
+		}
+	}
+	return Object.values(bySample)
 }
 
 const type2class = new Map([

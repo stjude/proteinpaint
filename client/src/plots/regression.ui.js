@@ -334,6 +334,13 @@ class MassRegressionUI {
 		}
 	}
 
+	async updateLinearOutcome(term) {
+		if (term.term.type != 'float' && term.term.type != 'integer') {
+			throw 'linear outcome term is not numeric'
+		}
+		term.q = { mode: 'continuous' }
+	}
+
 	async validateLogisticOutcome(d) {
 		let term_type
 		if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
@@ -429,6 +436,9 @@ function setRenderers(self) {
 		section.selected = Array.isArray(v) ? v : v ? [v] : []
 		const itemRefs = section.selected.map(term => {
 			if (!(term.id in section.items)) {
+				/*if (section.configKey == 'term') {
+					self.updateLinearOutcome(term)
+				}*/
 				section.items[term.id] = { section, term }
 			}
 			return section.items[term.id]

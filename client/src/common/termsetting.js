@@ -470,6 +470,14 @@ function set_hiddenvalues(q, term) {
 }
 
 function valid_binscheme(q) {
+	/*if (q.mode == 'continuous') { console.log(472, q)
+		// only expect a few keys for now "mode", "scale", "transform" keys for now
+		const supportedKeys = ['mode', 'scale', 'transform']
+		const unsupportedKeys = Object.keys(q).filter(key => supportedKeys.includes(key))
+		if (unsupportedKeys.length) return false 
+		// throw `${JSON.stringify(unsupportedKeys)} not supported for q.mode='continuous'`
+		return true
+	}*/
 	if (q.type == 'custom') {
 		if (!Array.isArray(q.lst)) return false
 		if (!q.mode) q.mode = 'discrete'
