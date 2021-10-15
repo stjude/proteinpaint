@@ -221,11 +221,21 @@ class MassRegressionUI {
 			// if so, use the two categories as outcome and do not apply groupsetting
 
 			if (!d.term.term.values) throw '.values{} missing from categorical term'
-			const values = []
-			for (const k in d.term.term.values) {
-				if (!d.term.term.values[k].uncomputable) values.push(k)
-			}
-			// TODO check the number of samples for computable categories, only use categories with >0 samples
+			let values = []
+			// check the number of samples for computable categories, only use categories with >0 samples
+			const lst = [
+				'/termdb?getcategories=1',
+				'tid=' + d.term.id,
+				'term1_q=' + encodeURIComponent(JSON.stringify(d.term.q)),
+				'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
+				'genome=' + this.state.vocab.genome,
+				'dslabel=' + this.state.vocab.dslabel
+			]
+			if (d.term.term.type == 'condition') lst.push('value_by_max_grade=1')
+			const url = lst.join('&')
+			const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
+			if (data.error) throw data.error
+			values = Object.values(data.lst).map(v => v.key)
 			if (values.length < 2) {
 				// TODO UI should reject this term and prompt user to select a different one
 				throw 'less than 2 categories/grades'
@@ -265,6 +275,16 @@ class MassRegressionUI {
 
 				// step 5: see if any predefined groupset has 2 groups. if so, use that
 				const i = d.term.term.groupsetting.lst.findIndex(g => g.groups.length == 2)
+				// TODO: step 6: return if after filtering predefined groupset has group with no samples
+				// console.log(d.term.term.groupsetting.lst[0].groups)
+				// d.term.term.groupsetting.lst[0].groups.forEach( group => {
+				// 	const grp_vals = Object.values(group.values).map( v => v.key)
+				// 	let empty_grp_flag = false
+				// 	console.log(grp_vals, values)
+				// 	if(!grp_vals.every(gv => values.includes(parseInt(gv))))
+				// 		empty_grp_flag = true
+				// })
+
 				if (i != -1) {
 					// find one
 					d.term.q.groupsetting.predefined_groupset_idx = i
@@ -272,7 +292,7 @@ class MassRegressionUI {
 				}
 			}
 
-			// step 6: last resort. divide values[] array into two groups
+			// step 7: last resort. divide values[] array into two groups
 
 			const customset = {
 				groups: [
@@ -307,6 +327,7 @@ class MassRegressionUI {
 			if (!d.term.q.lst.every(bin => bin.label !== undefined))
 				throw 'every bin in q.lst must have label defined for ' + term_type
 		} else if (d.term.term.type == 'categorical') {
+			if (Object.keys(d.term.term.values).length == 2) return
 			term_type = 'logistic categorical outcome term'
 			if (!d.term.q.groupsetting.customset) throw 'customset must be defined for ' + term_type
 			if (d.term.q.groupsetting.inuse !== true) throw 'groupsetting.inuse must be true for ' + term_type
