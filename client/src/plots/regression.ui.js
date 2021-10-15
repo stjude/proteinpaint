@@ -127,6 +127,7 @@ class MassRegressionUI {
 		if (d.section.configKey == 'term' && this.config.regressionType == 'logistic' && d.term.q.mode != 'binary') {
 			try {
 				await this.updateLogisticOutcome(d)
+				d.pill.main(d.term)
 				await this.validateLogisticOutcome(d)
 			} catch (e) {
 				this.app.printError(e)
@@ -190,7 +191,7 @@ class MassRegressionUI {
 			const url = lst.join('&')
 			const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 			if (data.error) throw data.error
-			const median = d.term.type == 'integer' ? Math.round(data.median) : data.median.toFixed(2)
+			const median = d.term.type == 'integer' ? Math.round(data.median) : Number(data.median.toFixed(2))
 			d.term.q = {
 				mode: 'binary',
 				type: 'custom',
@@ -211,74 +212,159 @@ class MassRegressionUI {
 			d.term.q.lst.forEach(bin => {
 				if (!('label' in bin)) bin.label = get_bin_label(bin, d.term.q)
 			})
-		} else if (d.term.term.type == 'categorical') {
-			if (d.term.q.groupsetting.customset) return // return if it's alrady assinged or initiated
-			if (!d.term.term.values) throw '.values{} missing from categorical term'
-			// for categorical term, devide computable values into 2 groups
-			const values = []
-			for (const k in d.term.term.values) {
-				if (!d.term.term.values[k].uncomputable) values.push(k)
-			}
-			if (values.length > 2) {
-				d.term.q.groupsetting.inuse = true
-				let customset = {
-					groups: [
-						{
-							name: 'Group 1',
-							values: []
-						},
-						{
-							name: 'Group 2',
-							values: []
-						}
-					]
-				}
-				const group_i_cutoff = Math.round(values.length / 2)
-				for (const [i, v] of values.entries()) {
-					if (i < group_i_cutoff) customset.groups[0].values.push({ key: v })
-					else customset.groups[1].values.push({ key: v })
-				}
-				d.term.q.groupsetting.customset = customset
-			}
-		} else if (d.term.term.type == 'condition') {
-			if (d.term.q.groupsetting.inuse && d.term.q.groupsetting.customset) return // return if customset in use
-			// if one of the predefined groupset in use, return
-			if (d.term.q.groupsetting.inuse && d.term.q.groupsetting.predefined_groupset_idx !== undefined) return
-			// for condition term, use 'any condition vs normal' option
-			d.term.q.groupsetting.inuse = true
-			const default_group_i = d.term.term.groupsetting.lst.findIndex(g => g.name == 'Any condition vs normal')
-			d.term.q.groupsetting.predefined_groupset_idx = default_group_i
+			return
 		}
-		d.pill.main(d.term)
+		if (d.term.term.type == 'categorical' || d.term.term.type == 'condition') {
+			// category and condition terms share some logic
+
+			// step 1: check if term has only two computable categories/grades with >0 samples
+			// if so, use the two categories as outcome and do not apply groupsetting
+
+			// check the number of samples for computable categories, only use categories with >0 samples
+
+			// TODO run these queries through vocab
+			const lst = [
+				'/termdb?getcategories=1',
+				'tid=' + d.term.id,
+				'term1_q=' + encodeURIComponent(JSON.stringify(d.term.q)),
+				'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
+				'genome=' + this.state.vocab.genome,
+				'dslabel=' + this.state.vocab.dslabel
+			]
+			if (d.term.term.type == 'condition') lst.push('value_by_max_grade=1')
+			const url = lst.join('&')
+			const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
+			if (data.error) throw data.error
+			const category2samplecount = new Map() // k: category/grade (computable), v: number of samples
+			const computableCategories = []
+			for (const i of data.lst) {
+				category2samplecount.set(i.key, i.samplecount)
+				if (d.term.term.values && d.term.term.values[i.key] && d.term.term.values[i.key].uncomputable) continue
+				computableCategories.push(i.key)
+			}
+			if (computableCategories.length < 2) {
+				// TODO UI should reject this term and prompt user to select a different one
+				throw 'less than 2 categories/grades'
+			}
+			if (computableCategories.length == 2) {
+				// will use the categories from term.values{} and do not apply groupsetting
+				return
+			}
+
+			// step 2: term has 3 or more categories/grades. must apply groupsetting
+			// force to turn on groupsetting
+			d.term.q.groupsetting.inuse = true
+
+			// step 3: find if term already has a usable groupsetting
+			if (
+				d.term.q.groupsetting.customset &&
+				d.term.q.groupsetting.customset.groups &&
+				d.term.q.groupsetting.customset.groups.length == 2 &&
+				groupsetNoEmptyGroup(d.term.q.groupsetting.customset, category2samplecount)
+			) {
+				// has a usable custom set
+				return
+			}
+
+			// step 4: check if the term has predefined groupsetting
+			if (d.term.term.groupsetting && d.term.term.groupsetting.lst) {
+				// has predefined groupsetting
+				// note!!!! check on d.term.term but not d.term.q
+
+				if (
+					d.term.q.groupsetting.predefined_groupset_idx >= 0 &&
+					d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx] &&
+					d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.length == 2 &&
+					groupsetNoEmptyGroup(
+						d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx],
+						category2samplecount
+					)
+				) {
+					// has a usable predefined groupset
+					return
+				}
+
+				// step 5: see if any predefined groupset has 2 groups. if so, use that
+				const i = d.term.term.groupsetting.lst.findIndex(g => g.groups.length == 2)
+				if (i != -1 && groupsetNoEmptyGroup(d.term.term.groupsetting.lst[i], category2samplecount)) {
+					// found a usable groupset
+					d.term.q.groupsetting.predefined_groupset_idx = i
+					return
+				}
+			}
+
+			// step 6: last resort. divide values[] array into two groups
+
+			const customset = {
+				groups: [
+					{
+						name: 'Group 1',
+						values: []
+					},
+					{
+						name: 'Group 2',
+						values: []
+					}
+				]
+			}
+			// TODO use category2samplecount to evenlly divide samples
+			const group_i_cutoff = Math.round(computableCategories.length / 2)
+			for (const [i, v] of computableCategories.entries()) {
+				if (i < group_i_cutoff) customset.groups[0].values.push({ key: v })
+				else customset.groups[1].values.push({ key: v })
+			}
+			d.term.q.groupsetting.customset = customset
+			return
+		}
+		throw 'unknown term type: ' + d.term.term.type
+
+		function groupsetNoEmptyGroup(gs, c2s) {
+			// return true if a groupset does not have empty group
+			for (const g of gs.groups) {
+				let total = 0
+				for (const i of g.values) total += c2s.get(i.key) || 0
+				if (total == 0) return false
+			}
+			return true
+		}
 	}
 
-	async validateLogisticOutcome(d){
+	async validateLogisticOutcome(d) {
 		let term_type
 		if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
 			term_type = 'logistic numeric outcome term'
 			if (d.term.q.mode !== 'binary') throw 'term.q.mode is not defined correctly for ' + term_type
 			if (d.term.q.type !== 'custom') throw 'term.q.type must be custom for ' + term_type
 			if (d.term.q.lst.length !== 2) throw 'must be only 2 bins for ' + term_type
-			if (!d.term.q.lst.every(bin => bin.label !== undefined)) throw 'every bin in q.lst must have label defined for ' + term_type
+			if (!d.term.q.lst.every(bin => bin.label !== undefined))
+				throw 'every bin in q.lst must have label defined for ' + term_type
 		} else if (d.term.term.type == 'categorical') {
+			if (Object.keys(d.term.term.values).length == 2) return
 			term_type = 'logistic categorical outcome term'
 			if (!d.term.q.groupsetting.customset) throw 'customset must be defined for ' + term_type
 			if (d.term.q.groupsetting.inuse !== true) throw 'groupsetting.inuse must be true for ' + term_type
-			if (d.term.q.groupsetting.customset.groups.length !== 2) throw 'groupset must have only 2 groups for '+ term_type
-			if (!d.term.q.groupsetting.customset.groups.every(g => g.name !== undefined)) throw 'every group in groupset must have \'name\' defined for ' + term_type
+			if (d.term.q.groupsetting.customset.groups.length !== 2) throw 'groupset must have only 2 groups for ' + term_type
+			if (!d.term.q.groupsetting.customset.groups.every(g => g.name !== undefined))
+				throw "every group in groupset must have 'name' defined for " + term_type
 		} else if (d.term.term.type == 'condition') {
 			term_type = 'logistic condition outcome term'
 			if (d.term.q.groupsetting.inuse !== true) throw 'groupsetting.inuse must be true for ' + term_type
-			if (d.term.q.groupsetting.predefined_groupset_idx === undefined && !d.term.q.groupsetting.customset) 
+			if (d.term.q.groupsetting.predefined_groupset_idx === undefined && !d.term.q.groupsetting.customset)
 				throw 'either predefined_groupset_idx or customset must be defined for ' + term_type
 			if (d.term.q.groupsetting.predefined_groupset_idx !== undefined) {
 				if (d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.length !== 2)
 					throw 'predefined group must have 2 groups for ' + term_type
-				if (!d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.every(g => g.name !== undefined))
+				if (
+					!d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.every(
+						g => g.name !== undefined
+					)
+				)
 					throw 'every group in predefined groupset must have name defined ' + term_type
 			} else if (d.term.q.groupsetting.customset) {
-				if (d.term.q.groupsetting.customset.groups.length !== 2) throw 'custom groupset must have only 2 groups for ' + term_type
-				if (!d.term.q.groupsetting.customset.groups.every(g => g.name !== undefined)) throw 'every group in custom groupset must have name defined for ' + term_type
+				if (d.term.q.groupsetting.customset.groups.length !== 2)
+					throw 'custom groupset must have only 2 groups for ' + term_type
+				if (!d.term.q.groupsetting.customset.groups.every(g => g.name !== undefined))
+					throw 'every group in custom groupset must have name defined for ' + term_type
 			}
 		}
 	}
@@ -524,7 +610,7 @@ function setRenderers(self) {
 
 		if (!excluded) {
 			const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
-			tr_data.forEach(v => (v.bar_width_frac = (1 - (maxCount - v.samplecount) / maxCount).toFixed(4)))
+			tr_data.forEach(v => (v.bar_width_frac = Number((1 - (maxCount - v.samplecount) / maxCount).toFixed(4))))
 			if (
 				(d.term.term.type !== 'integer' && d.term.term.type !== 'float') ||
 				d.term.q.mode == 'discrete' ||

@@ -249,8 +249,8 @@ async function renderCuttoffInput(self) {
 			'genome=' + self.opts.vocab.genome,
 			'dslabel=' + self.opts.vocab.dslabel
 		]
-		if (self.opts.filter) {
-			lst.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(self.opts.filter))))
+		if (self.filter) {
+			lst.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(self.filter))))
 		}
 		const data = await dofetch3(lst.join('&'), {}, self.opts.fetchOpts)
 		updateUI(data.value)
