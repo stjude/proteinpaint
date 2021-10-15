@@ -127,7 +127,12 @@ class MassRegressionUI {
 		if (d.section.configKey == 'term' && this.config.regressionType == 'logistic' && d.term.q.mode != 'binary') {
 			try {
 				await this.updateLogisticOutcome(d)
-				d.pill.main(d.term)
+				d.pill.main({
+					id: d.term.id,
+					term: d.term.term,
+					q: d.term.q,
+					filter: this.state.termfilter.filter
+				})
 				await this.validateLogisticOutcome(d)
 			} catch (e) {
 				this.app.printError(e)
@@ -182,7 +187,7 @@ class MassRegressionUI {
 		if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
 			// for numeric terms, add 2 custom bins devided at median value
 			const lst = [
-				'/termdb?getmedian=1',
+				'/termdb?getpercentile=50',
 				'tid=' + d.term.id,
 				'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
 				'genome=' + this.state.vocab.genome,
@@ -191,7 +196,7 @@ class MassRegressionUI {
 			const url = lst.join('&')
 			const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 			if (data.error) throw data.error
-			const median = d.term.type == 'integer' ? Math.round(data.median) : Number(data.median.toFixed(2))
+			const median = d.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
 			d.term.q = {
 				mode: 'binary',
 				type: 'custom',
@@ -501,20 +506,20 @@ function setRenderers(self) {
 	function updatePill(d) {
 		select(this).style('border-left', d.term ? '1px solid #bbb' : '')
 		d.dom.loading_div.style('display', 'block')
-		d.pill.main(
-			Object.assign(
-				{
-					disable_terms: self.disable_terms,
-					exclude_types: d.section.exclude_types[self.config.regressionType],
-					usecase: {
-						target: 'regression',
-						detail: d.section.configKey,
-						regressionType: self.config.regressionType
-					}
-				},
-				d.term
-			)
+		const args = Object.assign(
+			{
+				disable_terms: self.disable_terms,
+				exclude_types: d.section.exclude_types[self.config.regressionType],
+				usecase: {
+					target: 'regression',
+					detail: d.section.configKey,
+					regressionType: self.config.regressionType
+				}
+			},
+			d.term
 		)
+		args.filter = self.state.termfilter.filter
+		d.pill.main(args)
 		d.dom.infoDiv.style('display', d.term ? 'block' : 'none')
 		if (d.section.configKey == 'term') updateRefGrp(d)
 		// renderInfo() is required for both outcome and independent variables
