@@ -2,9 +2,9 @@
 Stream JavaScript data into and out of R.
 
 Arguments:
-    - <Rscript>: path to R script.
-    - <lines>: array of JavaScript data lines.
-    - <args>: array of R script arguments.
+	- <Rscript>: path to R script.
+	- <lines>: array of JavaScript data lines.
+	- <args>: array of R script arguments.
 	- <terminateAtWarnings>: boolean for whether to terminate this module if R gives a warning message (default: true).
 
 Given an R script and a JavaScript array of input data lines the data lines are streamed into the standard input of the R script. The standard output of the R script is then returned as a JavaScript array of output data lines.
@@ -29,7 +29,7 @@ module.exports = async function lines2R(Rscript, lines, args = [], terminateAtWa
 		Readable.from(table).pipe(sp.stdin)
 		sp.stdout.on('data', data => stdout.push(data))
 		sp.stderr.on('data', data => stderr.push(data))
-		sp.on('error', err => reject(`this is an error: ${err}`))
+		sp.on('error', err => reject(err))
 		sp.on('close', code => {
 			if (code !== 0) {
 				reject(`R process exited with non-zero status code=${code}` + '\n' + stdout.join('') + '\n' + stderr.join(''))

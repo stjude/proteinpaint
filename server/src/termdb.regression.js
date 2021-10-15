@@ -73,7 +73,6 @@ export async function get_regression(q, ds) {
 			} else {
 				outcomeVal = row.outkey
 			}
-			//console.log('outcomeVal:', outcomeVal)
 			const line = [outcomeVal]
 			for (const i in q.independent) {
 				const term = q.independent[i]
@@ -89,7 +88,6 @@ export async function get_regression(q, ds) {
 			// Discard samples that have an uncomputable value in any variable because these are not useable in the regression analysis
 			if (!line.includes('NA')) tsv.push(line.join('\t'))
 		}
-		// console.log('tsv:', tsv.slice(0,10))
 		const sampleSize = tsv.length - 1
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
@@ -97,8 +95,6 @@ export async function get_regression(q, ds) {
 			[regressionType, colClasses.join(','), refCategories.join(','), scalingFactors.join(',')],
 			false
 		)
-
-		console.log('data:', data)
 
 		const type2lines = new Map()
 		// k: type e.g.Deviance Residuals
@@ -202,7 +198,6 @@ export async function get_regression(q, ds) {
 		if (sampleSize !== Number(nullDevDf) + 1) throw 'computed sample size and degrees of freedom are inconsistent'
 			*/
 
-		console.log('result:', result)
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
