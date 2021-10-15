@@ -127,7 +127,12 @@ class MassRegressionUI {
 		if (d.section.configKey == 'term' && this.config.regressionType == 'logistic' && d.term.q.mode != 'binary') {
 			try {
 				await this.updateLogisticOutcome(d)
-				d.pill.main(d.term)
+				d.pill.main({
+					id: d.term.id,
+					term: d.term.term,
+					q: d.term.q,
+					filter: this.state.termfilter.filter
+				})
 				await this.validateLogisticOutcome(d)
 			} catch (e) {
 				this.app.printError(e)
@@ -182,7 +187,7 @@ class MassRegressionUI {
 		if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
 			// for numeric terms, add 2 custom bins devided at median value
 			const lst = [
-				'/termdb?getmedian=1',
+				'/termdb?getpercentile=50',
 				'tid=' + d.term.id,
 				'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
 				'genome=' + this.state.vocab.genome,
@@ -191,7 +196,7 @@ class MassRegressionUI {
 			const url = lst.join('&')
 			const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
 			if (data.error) throw data.error
-			const median = d.term.type == 'integer' ? Math.round(data.median) : Number(data.median.toFixed(2))
+			const median = d.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
 			d.term.q = {
 				mode: 'binary',
 				type: 'custom',
