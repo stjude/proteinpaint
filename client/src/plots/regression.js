@@ -175,10 +175,13 @@ function setRenderers(self) {
 
 		if (result.warnings) {
 			const div = sectionHolder(result.warnings.label)
-			const table = div.append('table').style('border-spacing', '8px')
+			//const p = div.append('p').style('margin', '8px')
+			div.append('div').style('margin', '8px')
 			for (const line of result.warnings.lst) {
-				const tr = table.append('tr')
-				tr.append('td').text(line)
+				div
+					.append('p')
+					.style('margin', '5px')
+					.text(line)
 			}
 		}
 
