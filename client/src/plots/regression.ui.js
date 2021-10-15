@@ -320,7 +320,6 @@ class MassRegressionUI {
 
 		function groupsetNoEmptyGroup(gs, c2s) {
 			// return true if a groupset does not have empty group
-			console.log(gs, c2s)
 			for (const g of gs.groups) {
 				let total = 0
 				for (const i of g.values) total += c2s.get(i.key) || 0
