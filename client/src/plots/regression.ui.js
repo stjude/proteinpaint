@@ -506,20 +506,20 @@ function setRenderers(self) {
 	function updatePill(d) {
 		select(this).style('border-left', d.term ? '1px solid #bbb' : '')
 		d.dom.loading_div.style('display', 'block')
-		d.pill.main(
-			Object.assign(
-				{
-					disable_terms: self.disable_terms,
-					exclude_types: d.section.exclude_types[self.config.regressionType],
-					usecase: {
-						target: 'regression',
-						detail: d.section.configKey,
-						regressionType: self.config.regressionType
-					}
-				},
-				d.term
-			)
+		const args = Object.assign(
+			{
+				disable_terms: self.disable_terms,
+				exclude_types: d.section.exclude_types[self.config.regressionType],
+				usecase: {
+					target: 'regression',
+					detail: d.section.configKey,
+					regressionType: self.config.regressionType
+				}
+			},
+			d.term
 		)
+		args.filter = self.state.termfilter.filter
+		d.pill.main(args)
 		d.dom.infoDiv.style('display', d.term ? 'block' : 'none')
 		if (d.section.configKey == 'term') updateRefGrp(d)
 		// renderInfo() is required for both outcome and independent variables
