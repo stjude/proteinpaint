@@ -59,35 +59,30 @@ export async function get_regression(q, ds) {
 			// Discard samples that have an uncomputable value in any variable because these are not useable in the regression analysis
 			if (!line.includes('NA')) tsv.push(line.join('\t'))
 		}
-		const sampleSize = tsv.length - 1
 
-		// Specify term types and R classes of variables
-		// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
-		// by default it will be used as continuous, if user selects 'as_bins' radio,
-		// term.q.mode = 'discrete' flag will be added
-		const indTermTypes = q.independent.map(t => {
-			if ((t.type == 'float' || t.type == 'integer') && t.q.mode == 'discrete') return 'categorical'
-			else return t.type
-		})
-		const termTypes = [q.outcome.term.type, ...indTermTypes]
-		// Convert term types to R classes
-		const colClasses = termTypes.map(type => type2class.get(type))
-		// if ('cutoff' in q) colClasses[0] = 'factor'
-		if (q.outcome.q.mode == 'binary') colClasses[0] = 'factor'
+		// create arguments for the R script
+		const refCategories = [get_refCategory(q.outcome.term, q.outcome.q)]
+		const colClasses = [q.outcome.q.mode == 'binary' ? 'factor' : type2class.get(q.outcome.term.type)]
+		const scalingFactors = ['NA']
+		for (const term of q.independent) {
+			const t = term.term
+			const q = term.q
+			refCategories.push(get_refCategory(t, q))
 
-		// Specify reference categories of variables
-		const refCategories = []
-		refCategories.push(get_refCategory(q.outcome.term, q.outcome.q))
-		q.independent.map(t => {
-			refCategories.push(get_refCategory(t.term, t.q))
-		})
+			// Specify term types and R classes of variables
+			// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
+			// by default it will be used as continuous, if user selects 'as_bins' radio,
+			// term.q.mode = 'discrete' flag will be added
+			if ((t.type == 'float' || t.type == 'integer') && q.mode == 'discrete') {
+				colClasses.push(type2class.get('categorical'))
+				scalingFactors.push('NA')
+			} else {
+				colClasses.push(type2class.get(t.type))
+				scalingFactors.push(q.scale || 'NA')
+			}
+		}
+		//console.log(83, refCategories, colClasses, scalingFactors)
 
-		// Specify scaling factors of variables
-		const indScalingFactors = q.independent.map(t => {
-			if ((t.type !== 'float' && t.type !== 'integer') || t.q.mode === 'discrete') return 'NA'
-			return t.q.scale || 'NA'
-		})
-		const scalingFactors = ['NA', ...indScalingFactors]
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			tsv,
@@ -109,7 +104,7 @@ export async function get_regression(q, ds) {
 			type2lines.get(lineType).push(line)
 		}
 		// parse lines into this result structure
-		const result = { sampleSize }
+		const result = { queryTime, sampleSize: tsv.length - 1 }
 
 		{
 			const lines = type2lines.get('Warning messages')
@@ -196,7 +191,6 @@ export async function get_regression(q, ds) {
 			.rows.find(row => row[0] === 'Null deviance df')[1]
 		if (sampleSize !== Number(nullDevDf) + 1) throw 'computed sample size and degrees of freedom are inconsistent'
 			*/
-		result.queryTime = queryTime
 		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
