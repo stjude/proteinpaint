@@ -10,65 +10,31 @@ export async function get_regression(q, ds) {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
 		q.independent = JSON.parse(decodeURIComponent(q.independent))
-		// termY is the outcome term
-		q.termY = ds.cohort.termdb.q.termjsonByOneid(q.term1_id)
-		q.termY_id = q.term1_id
-		q.termY_q = JSON.parse(q.term1_q)
+		q.outcome = {
+			id: q.term1_id,
+			term: ds.cohort.termdb.q.termjsonByOneid(q.term1_id),
+			q: JSON.parse(q.term1_q)
+		}
 		delete q.term1_id
 		delete q.term1_q
 
-		// Specify regression type
-		const regressionType = q.regressionType || 'linear'
-
 		// Header row of the R data matrix
 		const header = ['outcome']
-		for (const i in q.independent) {
-			const term = q.independent[i]
-			const termnum = 'term' + i
-			q[termnum + '_id'] = term.id
-			if (term.q) q[termnum + '_q'] = term.q
+		for (const term of q.independent) {
 			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
-			header.push(term.id) //('var'+i)//(term.term.name)
+			header.push(term.id)
 		}
 
 		// Rest of rows for R matrix, one for each sample
-		const rows = get_matrix(q, regressionType)
+		const rows = get_matrix(q)
 		const queryTime = +new Date() - startTime
 		const tsv = [header.join('\t')]
-		const termYvalues = q.termY.values || {}
-
-		// Specify term types and R classes of variables
-		// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
-		// by default it will be used as continuous, if user selects 'as_bins' radio,
-		// term.q.mode = 'discrete' flag will be added
-		const indTermTypes = q.independent.map(t => {
-			if ((t.type == 'float' || t.type == 'integer') && t.q.mode == 'discrete') return 'categorical'
-			else return t.type
-		})
-		const termTypes = [q.termY.type, ...indTermTypes]
-		// Convert term types to R classes
-		const colClasses = termTypes.map(type => type2class.get(type))
-		// if ('cutoff' in q) colClasses[0] = 'factor'
-		if (q.termY_q.mode == 'binary') colClasses[0] = 'factor'
-
-		// Specify reference categories of variables
-		const refCategories = []
-		refCategories.push(get_refCategory(q.termY, q.termY_q))
-		q.independent.map(t => {
-			refCategories.push(get_refCategory(t.term, t.q))
-		})
-
-		// Specify scaling factors of variables
-		const indScalingFactors = q.independent.map(t => {
-			if ((t.type !== 'float' && t.type !== 'integer') || t.q.mode === 'discrete') return 'NA'
-			return t.q.scale || 'NA'
-		})
-		const scalingFactors = ['NA', ...indScalingFactors]
-
+		const outcomeValues = q.outcome.term.values || {} // Specify regression type
+		const regressionType = q.regressionType || 'linear'
 		// Populate data rows of tsv
 		for (const row of rows) {
 			let outcomeVal
-			if (termYvalues[row.outcome] && termYvalues[row.outcome].uncomputable) {
+			if (outcomeValues[row.outcome] && outcomeValues[row.outcome].uncomputable) {
 				continue
 			} else if (regressionType === 'linear') {
 				outcomeVal = row.outcome
@@ -76,10 +42,13 @@ export async function get_regression(q, ds) {
 				outcomeVal = row.outkey
 			}
 			const line = [outcomeVal]
-			for (const i in q.independent) {
-				const term = q.independent[i]
-				const key = row['key' + i]
-				const value = row['val' + i]
+			for (const term of q.independent) {
+				if (!row[term.id]) {
+					line.push('NA')
+					continue
+				}
+				const key = row[term.id].key
+				const value = row[term.id].val
 				const val = term.term && term.term.values && term.term.values[value]
 				if ((term.type == 'float' || term.type == 'integer') && term.q.mode == 'discrete') {
 					line.push(val && val.uncomputable ? 'NA' : key)
@@ -91,6 +60,34 @@ export async function get_regression(q, ds) {
 			if (!line.includes('NA')) tsv.push(line.join('\t'))
 		}
 		const sampleSize = tsv.length - 1
+
+		// Specify term types and R classes of variables
+		// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
+		// by default it will be used as continuous, if user selects 'as_bins' radio,
+		// term.q.mode = 'discrete' flag will be added
+		const indTermTypes = q.independent.map(t => {
+			if ((t.type == 'float' || t.type == 'integer') && t.q.mode == 'discrete') return 'categorical'
+			else return t.type
+		})
+		const termTypes = [q.outcome.term.type, ...indTermTypes]
+		// Convert term types to R classes
+		const colClasses = termTypes.map(type => type2class.get(type))
+		// if ('cutoff' in q) colClasses[0] = 'factor'
+		if (q.outcome.q.mode == 'binary') colClasses[0] = 'factor'
+
+		// Specify reference categories of variables
+		const refCategories = []
+		refCategories.push(get_refCategory(q.outcome.term, q.outcome.q))
+		q.independent.map(t => {
+			refCategories.push(get_refCategory(t.term, t.q))
+		})
+
+		// Specify scaling factors of variables
+		const indScalingFactors = q.independent.map(t => {
+			if ((t.type !== 'float' && t.type !== 'integer') || t.q.mode === 'discrete') return 'NA'
+			return t.q.scale || 'NA'
+		})
+		const scalingFactors = ['NA', ...indScalingFactors]
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			tsv,
@@ -231,7 +228,7 @@ function get_refCategory(term, q) {
 	throw 'unknown term type for refCategories'
 }
 
-function get_matrix(q, regressionType) {
+function get_matrix(q) {
 	/*
 works for only termdb terms; non-termdb attributes will not work
 
@@ -259,13 +256,10 @@ q{}
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
 	const values = filter ? filter.values.slice() : []
-	const outCTE = get_term_cte(q, values, 'Y', filter)
+	const outCTE = get_term_cte(q, values, 'Y', filter, q.outcome)
 	const indCTEs = []
-	for (const key in q) {
-		if (key.startsWith('term') && key.endsWith('_id') && key != 'termY_id') {
-			const i = Number(key.split('_')[0].replace('term', ''))
-			indCTEs.push(get_term_cte(q, values, i, filter))
-		}
+	for (const i in q.independent) {
+		indCTEs.push(get_term_cte(q, values, i, filter, q.independent[i]))
 	}
 
 	const sql = `WITH
@@ -287,7 +281,7 @@ q{}
 			.join(`UNION ALL`)}`
 
 	const indIds = q.independent.map(d => d.id)
-	values.push(q.termY_id, ...indIds)
+	values.push(q.outcome.id, ...indIds)
 	// console.log(292, sql, values)
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 	const bySample = {}
@@ -296,13 +290,11 @@ q{}
 			bySample[r.sample] = { sample: r.sample }
 		}
 		const d = bySample[r.sample]
-		if (r.term_id == q.termY_id) {
+		if (r.term_id == q.outcome.id) {
 			d.outkey = r.key
 			d.outcome = r.value
 		} else {
-			const i = indIds.indexOf(r.term_id)
-			d['key' + i] = r.key
-			d['val' + i] = r.value
+			d[r.term_id] = { key: r.key, val: r.value }
 		}
 	}
 	return Object.values(bySample)
