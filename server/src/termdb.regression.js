@@ -5,8 +5,6 @@ const lines2R = require('./lines2R')
 const serverconfig = require('./serverconfig')
 
 export async function get_regression(q, ds) {
-	const startTime = +new Date()
-
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
@@ -35,7 +33,8 @@ export async function get_regression(q, ds) {
 		}
 
 		// Rest of rows for R matrix, one for each sample
-		const rows = get_matrix(q)
+		const startTime = +new Date()
+		const rows = getSampleData(q, [q.outcome, ...q.independent])
 		const queryTime = +new Date() - startTime
 		const tsv = [header.join('\t')]
 		const outcomeValues = q.outcome.term.values || {} // Specify regression type
@@ -222,27 +221,35 @@ function get_refCategory(term, q) {
 	throw 'unknown term type for refCategories'
 }
 
-function get_matrix(q) {
+function getSampleData(q, terms) {
 	/*
-works for only termdb terms; non-termdb attributes will not work
+	works for only termdb terms; non-termdb attributes will not work
+	gets data for regression analysis, one row for each sample
+	
+	Arguments
+	q{}
+		.filter
+		.ds
+	
+	terms[]
+		array of {id, term, q}
 
-gets partitioned data for regression analysis
-
-returns
-	[{
-		outcome, 
-		key0, val0, // independent variable 0, required
-		key1, val1, // independent variable 1, optional
-		key?, val?, // additional independent variables, optional
+	Returns
+	[
+		{
+			sample: STRING,
+			
+			// one or more entries by term id
+		  [term.id]: {
+		 		// depending on term type and desired 
+				key: bin label or precomputed label or annotated value, 
+				val: precomputed or annotated value
+			},
+			...
+		}, 
 		...
-	}]
-
-q{}
-	.filter
-	.ds
-	.term[Y,0,1,2, ...]_id
-	.term[Y,0,1,2, ...]_q
-*/
+	]
+	*/
 
 	if (typeof q.filter == 'string') q.filter = JSON.parse(decodeURIComponent(q.filter))
 	const filter = getFilterCTEs(q.filter, q.ds)
@@ -250,29 +257,21 @@ q{}
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
 	const values = filter ? filter.values.slice() : []
-	const outCTE = get_term_cte(q, values, 'Y', filter, q.outcome)
-	const indCTEs = q.independent.map((t, i) => get_term_cte(q, values, i, filter, t))
+	values.push(...terms.map(d => d.id))
+
+	const CTEs = terms.map((t, i) => get_term_cte(q, values, i, filter, t))
 
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
-		${outCTE.sql},
-		${indCTEs.map(t => t.sql).join(',\n')}
-		SELECT sample, key, value, ? as term_id
-		FROM ${outCTE.tablename}
-		WHERE sample IN ${filter.CTEname}
-		UNION ALL
-		${indCTEs
-			.map(
-				(t, i) => `
+		${CTEs.map(t => t.sql).join(',\n')}
+		${CTEs.map(
+			t => `
 		SELECT sample, key, value, ? as term_id
 		FROM ${t.tablename} 
 		WHERE sample IN ${filter.CTEname}
 		`
-			)
-			.join(`UNION ALL`)}`
+		).join(`UNION ALL`)}`
 
-	const indIds = q.independent.map(d => d.id)
-	values.push(q.outcome.id, ...indIds)
 	// console.log(292, sql, values)
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 	const bySample = {}
