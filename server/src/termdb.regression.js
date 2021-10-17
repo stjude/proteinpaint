@@ -22,6 +22,11 @@ export async function get_regression(q, ds) {
 		const header = ['outcome']
 		for (const term of q.independent) {
 			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
+			// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
+			// by default it will be used as continuous, if user selects 'as_bins' radio,
+			// term.q.mode = 'discrete' flag will be added, so R should treat as a factor variable
+			term.isFactored =
+				(term.type == 'float' || term.type == 'integer') && (term.q.mode == 'discrete' || term.q.mode == 'binary')
 			header.push(term.id)
 		}
 
@@ -33,28 +38,21 @@ export async function get_regression(q, ds) {
 		const regressionType = q.regressionType || 'linear'
 		// Populate data rows of tsv
 		for (const row of rows) {
-			let outcomeVal
 			if (outcomeValues[row.outcome] && outcomeValues[row.outcome].uncomputable) {
 				continue
-			} else if (regressionType === 'linear') {
-				outcomeVal = row.outcome
-			} else {
-				outcomeVal = row.outkey
 			}
+			const outcomeVal = regressionType === 'linear' ? row.outcome : row.outkey
 			const line = [outcomeVal]
 			for (const term of q.independent) {
 				if (!row[term.id]) {
 					line.push('NA')
-					continue
+					break
 				}
 				const key = row[term.id].key
 				const value = row[term.id].val
 				const val = term.term && term.term.values && term.term.values[value]
-				if ((term.type == 'float' || term.type == 'integer') && term.q.mode == 'discrete') {
-					line.push(val && val.uncomputable ? 'NA' : key)
-				} else {
-					line.push(val && val.uncomputable ? 'NA' : value)
-				}
+				if (val && val.uncomputable) line.push('NA')
+				else line.push(term.isFactored ? key : value)
 			}
 			// Discard samples that have an uncomputable value in any variable because these are not useable in the regression analysis
 			if (!line.includes('NA')) tsv.push(line.join('\t'))
@@ -62,24 +60,15 @@ export async function get_regression(q, ds) {
 
 		// create arguments for the R script
 		const refCategories = [get_refCategory(q.outcome.term, q.outcome.q)]
+		// Specify term types and R classes of variables
 		const colClasses = [q.outcome.q.mode == 'binary' ? 'factor' : type2class.get(q.outcome.term.type)]
 		const scalingFactors = ['NA']
 		for (const term of q.independent) {
 			const t = term.term
 			const q = term.q
 			refCategories.push(get_refCategory(t, q))
-
-			// Specify term types and R classes of variables
-			// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
-			// by default it will be used as continuous, if user selects 'as_bins' radio,
-			// term.q.mode = 'discrete' flag will be added
-			if ((t.type == 'float' || t.type == 'integer') && q.mode == 'discrete') {
-				colClasses.push(type2class.get('categorical'))
-				scalingFactors.push('NA')
-			} else {
-				colClasses.push(type2class.get(t.type))
-				scalingFactors.push(q.scale || 'NA')
-			}
+			colClasses.push(term.isFactored ? 'factor' : type2class.get(t.type))
+			scalingFactors.push(term.isFactored || !q.scale ? 'NA' : q.scale)
 		}
 		//console.log(83, refCategories, colClasses, scalingFactors)
 
