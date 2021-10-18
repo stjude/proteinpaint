@@ -258,6 +258,7 @@ class MassRegressionUI {
 			}
 			if (computableCategories.length == 2) {
 				// will use the categories from term.values{} and do not apply groupsetting
+				d.term.q.twoComputableCats = true // add temporary flag to bypass validation
 				return
 			}
 
@@ -331,10 +332,8 @@ class MassRegressionUI {
 		function groupsetNoEmptyGroup(gs, c2s) {
 			// return true if a groupset does not have empty group
 			for (const g of gs.groups) {
-				console.log(328)
 				let total = 0
 				for (const i of g.values) total += c2s.get(i.key) || 0
-				console.log(331)
 				if (total == 0) return false
 			}
 			return true
@@ -367,6 +366,10 @@ class MassRegressionUI {
 				throw "every group in groupset must have 'name' defined for " + term_type
 		} else if (d.term.term.type == 'condition') {
 			term_type = 'logistic condition outcome term'
+			if (d.term.q.twoComputableCats) {
+				delete d.term.q.twoComputableCats
+				return
+			}
 			if (d.term.q.groupsetting.inuse !== true) throw 'groupsetting.inuse must be true for ' + term_type
 			if (d.term.q.groupsetting.predefined_groupset_idx === undefined && !d.term.q.groupsetting.customset)
 				throw 'either predefined_groupset_idx or customset must be defined for ' + term_type
