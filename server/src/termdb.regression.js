@@ -255,9 +255,8 @@ function getSampleData(q, terms) {
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
 	const values = filter ? filter.values.slice() : []
-	values.push(...terms.map(d => d.id))
-
 	const CTEs = terms.map((t, i) => get_term_cte(q, values, i, filter, t))
+	values.push(...terms.map(d => d.id))
 
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
