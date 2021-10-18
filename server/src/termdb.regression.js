@@ -27,8 +27,6 @@ export async function get_regression(q, ds) {
 			// term.q.mode = 'discrete' or 'binary' will be set, so R should treat as a factor variable
 			if (term.type == 'float' || term.type == 'integer')
 				term.isBinned = term.q.mode == 'discrete' || term.q.mode == 'binary'
-			if (term.isBinned && regressionType == 'linear')
-				throw `binned outcome variable, should be continuous for linear regression analysis`
 			header.push(term.id)
 		}
 
