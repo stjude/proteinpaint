@@ -548,7 +548,7 @@ function setRenderers(self) {
 
 	function updateRefGrp(d) {
 		if (!d.term || self.config.regressionType != 'logistic') return
-		if (d.term.q.lst && !d.term.q.refGrp) {
+		if (!('refGrp' in d.term.q) && d.term.q.lst) {
 			d.term.q.refGrp = d.term.q.lst[0].label
 			self.refGrpByTermId[d.term.id] = d.term.q.lst[0].label
 		}
@@ -640,6 +640,9 @@ function setRenderers(self) {
 						d.refGrp = tr_data[0].key
 						self.refGrpByTermId[d.term.id] = tr_data[0].key
 					}
+				} else if (!(d.term.id in self.refGrpByTermId)) {
+					// remember the refGrp by term.id
+					self.refGrpByTermId[d.term.id] = d.refGrp
 				}
 			}
 		}
