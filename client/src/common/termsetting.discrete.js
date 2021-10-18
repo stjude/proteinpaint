@@ -235,13 +235,8 @@ export function renderBoundaryInclusionInput(self) {
 		.style('margin-left', '10px')
 		.on('change', function() {
 			const c = self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
-			if (c.type == 'regular') {
-				setBinsInclusion(c)
-			} else {
-				c.lst.forEach(bin => {
-					setBinsInclusion(bin)
-				})
-			}
+			if (c.type == 'regular') setBinsInclusion(c)
+			else c.lst.forEach(setBinsInclusion)
 
 			function setBinsInclusion(par) {
 				par.startinclusive = self.dom.boundaryInput.node().selectedIndex == 1
