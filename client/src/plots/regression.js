@@ -120,6 +120,9 @@ class MassRegression {
 				encodeURIComponent(
 					JSON.stringify(
 						c.independent.map(t => {
+							const q = JSON.parse(JSON.stringify(t.q))
+							delete q.values
+							delete q.totalCount
 							return { id: t.id, q: t.q, type: t.term.type }
 						})
 					)
