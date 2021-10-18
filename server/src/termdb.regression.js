@@ -39,7 +39,7 @@ export async function get_regression(q, ds) {
 		// Populate data rows of tsv
 		for (const row of rows) {
 			const outcome = row[q.outcome.id]
-			if (outcomeValues[outcome.val] && outcomeValues[outcome.val].uncomputable) {
+			if (!outcome || (outcomeValues[outcome.val] && outcomeValues[outcome.val].uncomputable)) {
 				continue
 			}
 			// the first column is the outcome value (if continuous) or key/label (by default)
