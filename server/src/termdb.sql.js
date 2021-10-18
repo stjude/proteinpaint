@@ -484,7 +484,10 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 			values.push(term.id)
 			return {
 				sql: `${tablename} AS (
-					SELECT value as key, sample, value
+					SELECT 
+						sample,
+						value as key, 
+						CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value
 					FROM annotations
 					WHERE term_id=?
 				)`,
