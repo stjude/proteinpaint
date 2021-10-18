@@ -142,6 +142,11 @@ class MassRegressionUI {
 
 		const q = JSON.parse(JSON.stringify(d.term.q))
 		delete q.values
+		/*
+			for continuous term, assume it is numeric and that we'd want counts by bins,
+			so remove the 'mode: continuous' value as it will prevent bin construction in the backend
+		*/
+		if (q.mode == 'continuous' && q.type) delete q.mode
 		const lst = [
 			'/termdb?getcategories=1',
 			'tid=' + d.term.id,
@@ -326,8 +331,10 @@ class MassRegressionUI {
 		function groupsetNoEmptyGroup(gs, c2s) {
 			// return true if a groupset does not have empty group
 			for (const g of gs.groups) {
+				console.log(328)
 				let total = 0
 				for (const i of g.values) total += c2s.get(i.key) || 0
+				console.log(331)
 				if (total == 0) return false
 			}
 			return true
