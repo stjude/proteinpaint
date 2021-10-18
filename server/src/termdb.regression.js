@@ -9,86 +9,77 @@ export async function get_regression(q, ds) {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
 		q.independent = JSON.parse(decodeURIComponent(q.independent))
-		// termY is the outcome term
-		q.termY = ds.cohort.termdb.q.termjsonByOneid(q.term1_id)
-		q.termY_id = q.term1_id
-		q.termY_q = JSON.parse(q.term1_q)
+		q.outcome = {
+			id: q.term1_id,
+			term: ds.cohort.termdb.q.termjsonByOneid(q.term1_id),
+			q: JSON.parse(q.term1_q)
+		}
 		delete q.term1_id
 		delete q.term1_q
 
-		// Specify regression type
 		const regressionType = q.regressionType || 'linear'
-
 		// Header row of the R data matrix
 		const header = ['outcome']
-		for (const i in q.independent) {
-			const term = q.independent[i]
-			const termnum = 'term' + i
-			q[termnum + '_id'] = term.id
-			if (term.q) q[termnum + '_q'] = term.q
+		for (const term of q.independent) {
 			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
-			header.push(term.id) //('var'+i)//(term.term.name)
+			// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
+			// by default it will be used as continuous, if user selects 'as_bins' radio,
+			// term.q.mode = 'discrete' or 'binary' will be set, so R should treat as a factor variable
+			if (term.type == 'float' || term.type == 'integer')
+				term.isBinned = term.q.mode == 'discrete' || term.q.mode == 'binary'
+			header.push(term.id)
 		}
 
 		// Rest of rows for R matrix, one for each sample
-		const rows = get_matrix(q, regressionType)
+		const startTime = +new Date()
+		const rows = getSampleData(q, [q.outcome, ...q.independent])
+		const queryTime = +new Date() - startTime
 		const tsv = [header.join('\t')]
-		const termYvalues = q.termY.values || {}
-
-		// Specify term types and R classes of variables
-		// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
-		// by default it will be used as continuous, if user selects 'as_bins' radio,
-		// term.q.mode = 'discrete' flag will be added
-		const indTermTypes = q.independent.map(t => {
-			if ((t.type == 'float' || t.type == 'integer') && t.q.mode == 'discrete') return 'categorical'
-			else return t.type
-		})
-		const termTypes = [q.termY.type, ...indTermTypes]
-		// Convert term types to R classes
-		const colClasses = termTypes.map(type => type2class.get(type))
-		// if ('cutoff' in q) colClasses[0] = 'factor'
-		if (q.termY_q.mode == 'binary') colClasses[0] = 'factor'
-
-		// Specify reference categories of variables
-		const refCategories = []
-		refCategories.push(get_refCategory(q.termY, q.termY_q))
-		q.independent.map(t => {
-			refCategories.push(get_refCategory(t.term, t.q))
-		})
-
-		// Specify scaling factors of variables
-		const indScalingFactors = q.independent.map(t => {
-			if ((t.type !== 'float' && t.type !== 'integer') || t.q.mode === 'discrete') return 'NA'
-			return t.q.scale || 'NA'
-		})
-		const scalingFactors = ['NA', ...indScalingFactors]
-
+		const outcomeValues = q.outcome.term.values || {} // Specify regression type
 		// Populate data rows of tsv
 		for (const row of rows) {
-			let outcomeVal
-			if (termYvalues[row.outcome] && termYvalues[row.outcome].uncomputable) {
+			const outcome = row[q.outcome.id]
+			if (!outcome || (outcomeValues[outcome.val] && outcomeValues[outcome.val].uncomputable)) {
 				continue
-			} else if (regressionType === 'linear') {
-				outcomeVal = row.outcome
-			} else {
-				outcomeVal = row.outkey
 			}
-			const line = [outcomeVal]
-			for (const i in q.independent) {
-				const term = q.independent[i]
-				const key = row['key' + i]
-				const value = row['val' + i]
-				const val = term.term && term.term.values && term.term.values[value]
-				if ((term.type == 'float' || term.type == 'integer') && term.q.mode == 'discrete') {
-					line.push(val && val.uncomputable ? 'NA' : key)
-				} else {
-					line.push(val && val.uncomputable ? 'NA' : value)
+			// the first column is the outcome value (if continuous) or key/label (by default)
+			const line = [regressionType === 'linear' ? outcome.val : outcome.key]
+			for (const term of q.independent) {
+				if (!row[term.id]) {
+					line.push('NA')
+					break
 				}
+				const key = row[term.id].key
+				const value = row[term.id].val
+				const val = term.term && term.term.values && term.term.values[value]
+				if (val && val.uncomputable) line.push('NA')
+				else line.push(term.isBinned ? key : value)
 			}
 			// Discard samples that have an uncomputable value in any variable because these are not useable in the regression analysis
 			if (!line.includes('NA')) tsv.push(line.join('\t'))
 		}
-		const sampleSize = tsv.length - 1
+
+		// create arguments for the R script
+		const refCategories = [get_refCategory(q.outcome.term, q.outcome.q)]
+		// Specify term types and R classes of variables
+		const termType2varClass = {
+			integer: 'integer',
+			float: 'numeric',
+			survival: 'numeric',
+			categorical: 'factor',
+			condition: 'factor'
+		}
+		const colClasses = [q.outcome.q.mode == 'binary' ? 'factor' : termType2varClass[q.outcome.term.type]]
+		const scalingFactors = ['NA']
+		for (const term of q.independent) {
+			const t = term.term
+			const q = term.q
+			refCategories.push(get_refCategory(t, q))
+			colClasses.push(term.isBinned ? 'factor' : termType2varClass[t.type])
+			scalingFactors.push(term.isBinned || !q.scale ? 'NA' : q.scale)
+		}
+		//console.log(83, refCategories, colClasses, scalingFactors)
+
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			tsv,
@@ -110,7 +101,7 @@ export async function get_regression(q, ds) {
 			type2lines.get(lineType).push(line)
 		}
 		// parse lines into this result structure
-		const result = { sampleSize }
+		const result = { queryTime, sampleSize: tsv.length - 1 }
 
 		{
 			const lines = type2lines.get('Warning messages')
@@ -197,7 +188,7 @@ export async function get_regression(q, ds) {
 			.rows.find(row => row[0] === 'Null deviance df')[1]
 		if (sampleSize !== Number(nullDevDf) + 1) throw 'computed sample size and degrees of freedom are inconsistent'
 			*/
-
+		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -228,27 +219,35 @@ function get_refCategory(term, q) {
 	throw 'unknown term type for refCategories'
 }
 
-function get_matrix(q, regressionType) {
+function getSampleData(q, terms) {
 	/*
-works for only termdb terms; non-termdb attributes will not work
+	works for only termdb terms; non-termdb attributes will not work
+	gets data for regression analysis, one row for each sample
+	
+	Arguments
+	q{}
+		.filter
+		.ds
+	
+	terms[]
+		array of {id, term, q}
 
-gets partitioned data for regression analysis
-
-returns
-	[{
-		outcome, 
-		key0, val0, // independent variable 0, required
-		key1, val1, // independent variable 1, optional
-		key?, val?, // additional independent variables, optional
+	Returns
+	[
+		{
+			sample: STRING,
+			
+			// one or more entries by term id
+		  [term.id]: {
+		 		// depending on term type and desired 
+				key: bin label or precomputed label or annotated value, 
+				val: precomputed or annotated value
+			},
+			...
+		}, 
 		...
-	}]
-
-q{}
-	.filter
-	.ds
-	.term[Y,0,1,2, ...]_id
-	.term[Y,0,1,2, ...]_q
-*/
+	]
+	*/
 
 	if (typeof q.filter == 'string') q.filter = JSON.parse(decodeURIComponent(q.filter))
 	const filter = getFilterCTEs(q.filter, q.ds)
@@ -256,38 +255,31 @@ q{}
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
 	const values = filter ? filter.values.slice() : []
-	const outcome = get_term_cte(q, values, 'Y', filter)
-	const ctes = []
-	const columns = []
-	for (const key in q) {
-		if (key.startsWith('term') && key.endsWith('_id') && key != 'termY_id') {
-			const i = Number(key.split('_')[0].replace('term', ''))
-			ctes.push(get_term_cte(q, values, i, filter))
-			columns.push(`t${i}.key AS key${i}, t${i}.value AS val${i}`)
-		}
-	}
+	values.push(...terms.map(d => d.id))
 
-	const statement = `WITH
+	const CTEs = terms.map((t, i) => get_term_cte(q, values, i, filter, t))
+
+	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
-		${outcome.sql},
-		${ctes.map(t => t.sql).join(',\n')}
-		SELECT
-			Y.sample AS sample,
-			Y.value AS outcome,
-			Y.key AS outkey,
-      ${columns.join(',\n')}
-		FROM ${outcome.tablename} Y
-		${ctes.map((t, i) => `JOIN ${t.tablename} t${i} ON t${i}.sample = Y.sample`).join('\n')}
-		${filter ? 'WHERE Y.sample IN ' + filter.CTEname : ''}`
-	// console.log(220, statement, values)
-	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
-	return lst
-}
+		${CTEs.map(t => t.sql).join(',\n')}
+		${CTEs.map(
+			t => `
+		SELECT sample, key, value, ? as term_id
+		FROM ${t.tablename} 
+		WHERE sample IN ${filter.CTEname}
+		`
+		).join(`UNION ALL`)}`
 
-const type2class = new Map([
-	['integer', 'integer'],
-	['float', 'numeric'],
-	['survival', 'numeric'],
-	['categorical', 'factor'],
-	['condition', 'factor']
-])
+	// console.log(292, sql, values)
+	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+	const bySample = {}
+	for (const r of rows) {
+		if (!bySample[r.sample]) {
+			bySample[r.sample] = { sample: r.sample }
+		}
+		const d = bySample[r.sample]
+		if (r.term_id in d) throw `duplicate '${r.term_id}' entry for sample='${r.sample}'`
+		d[r.term_id] = { key: r.key, val: r.value }
+	}
+	return Object.values(bySample)
+}
