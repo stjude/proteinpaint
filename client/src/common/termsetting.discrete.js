@@ -235,8 +235,18 @@ export function renderBoundaryInclusionInput(self) {
 		.style('margin-left', '10px')
 		.on('change', function() {
 			const c = self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
-			c.startinclusive = self.dom.boundaryInput.node().selectedIndex == 1
-			c.stopinclusive = self.dom.boundaryInput.node().selectedIndex == 0
+			if (c.type == 'regular') {
+				setBinsInclusion(c)
+			} else {
+				c.lst.forEach(bin => {
+					setBinsInclusion(bin)
+				})
+			}
+
+			function setBinsInclusion(par) {
+				par.startinclusive = self.dom.boundaryInput.node().selectedIndex == 1
+				par.stopinclusive = self.dom.boundaryInput.node().selectedIndex == 0
+			}
 		})
 
 	self.dom.boundaryInput
