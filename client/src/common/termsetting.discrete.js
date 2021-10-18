@@ -180,12 +180,14 @@ function setqDefaults(self) {
 							lst: [
 								{
 									startunbounded: true,
-									stopinclusive: true,
+									startinclusive: true,
+									stopinclusive: false,
 									stop: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
 								},
 								{
 									stopunbounded: true,
-									stopinclusive: true,
+									startinclusive: true,
+									stopinclusive: false,
 									start: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
 								}
 							]
@@ -235,8 +237,21 @@ export function renderBoundaryInclusionInput(self) {
 		.style('margin-left', '10px')
 		.on('change', function() {
 			const c = self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
-			c.startinclusive = self.dom.boundaryInput.node().selectedIndex == 1
-			c.stopinclusive = self.dom.boundaryInput.node().selectedIndex == 0
+			if (c.type == 'regular') {
+				setBinsInclusion(c)
+			} else {
+				setBinsInclusion(c)
+				c.lst.forEach(bin => {
+					setBinsInclusion(bin)
+					if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
+				})
+				renderBoundaryInputDivs(self, c.lst)
+			}
+
+			function setBinsInclusion(par) {
+				par.startinclusive = self.dom.boundaryInput.node().selectedIndex == 1
+				par.stopinclusive = self.dom.boundaryInput.node().selectedIndex == 0
+			}
 		})
 
 	self.dom.boundaryInput

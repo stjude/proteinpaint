@@ -3,7 +3,6 @@ import { setNumericMethods as setContMethods } from './termsetting.continuous'
 import { init_tabs } from '../dom/toggleButtons'
 
 export async function setNumericTabs(self) {
-
 	self.get_term_name = function(d) {
 		if (!self.opts.abbrCutoff) return d.name
 		return d.name.length <= self.opts.abbrCutoff + 2
@@ -37,6 +36,7 @@ export async function setNumericTabs(self) {
 				active: self.q.mode && self.q.mode == 'discrete' ? false : true,
 				label: 'Continuous',
 				callback: async div => {
+					self.q.mode = 'continuous'
 					cont.fxns.showEditMenu(self, div)
 					// example of deleting the callback here instead of in toggleButtons
 					delete tabs[0].callback
@@ -46,6 +46,7 @@ export async function setNumericTabs(self) {
 				active: self.q.mode && self.q.mode == 'discrete' ? true : false,
 				label: 'Discrete',
 				callback: async div => {
+					self.q.mode = 'discrete'
 					// example of using a boolean attribute to track whether to exit early
 					if (tabs[1].isRendered) return
 					tabs[1].isRendered = true
