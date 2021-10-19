@@ -72,6 +72,7 @@ class TdbScatter {
 				this.dom.div.style('display', 'none')
 				return
 			}
+			if (this.dom.header) this.dom.header.html(this.config.term.term.name + ' vs ' + this.config.term2.term.name)
 			copyMerge(this.settings, this.state.config.settings.scatter)
 			if (!this.pj) this.pj = getPj(this)
 

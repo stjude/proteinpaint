@@ -86,6 +86,7 @@ class TdbBoxplot {
 				this.dom.div.style('display', 'none')
 				throw `${t2 ? 'numeric ' : ''}term2 is required for boxplot view`
 			}
+			if (this.dom.header) this.dom.header.html(this.config.term.term.name + ' vs ' + t2.term.name)
 			const dataName = this.getDataName(this.state)
 			this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
 			syncParams(this.state.config, this.data)
