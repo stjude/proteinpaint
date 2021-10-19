@@ -382,9 +382,7 @@ function setRenderers(self) {
 			.style('margin', term.isleaf ? '' : '2px')
 			.style('padding', '0px 5px')
 
-		// if (!term.isleaf && term.child_types.filter(type => !self.state.exclude_types.includes(type)).length) {
-		if (!term.isleaf && term.child_types) {
-			//Fix for issue 606. term.child_types
+		if (!term.isleaf && term.child_types.filter(type => !self.state.exclude_types.includes(type)).length) {
 			div
 				.append('div')
 				.attr('class', 'sja_menuoption ' + cls_termbtn)
