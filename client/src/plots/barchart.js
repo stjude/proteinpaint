@@ -128,7 +128,8 @@ class TdbBarchart {
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 			this.config = this.state.config
 			if (!this.setVisibility()) return
-			if (this.dom.header) this.dom.header.html(this.config.term.term.name)
+			if (this.dom.header)
+				this.dom.header.html(this.config.term.term.name + ` <span style="opacity:.6;font-size:.7em">Barchart</span>`)
 
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
