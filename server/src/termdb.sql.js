@@ -420,9 +420,9 @@ function getlabeler(q, i, result) {
 			}
 		}
 	} else {
-		const term_q = q['term' + i + '_q']
+		const term_q = JSON.parse(q['term' + i + '_q'])
 		return row => {
-			row[tlabel] = get_label4key(row[key], term, JSON.parse(term_q), q.ds)
+			row[tlabel] = get_label4key(row[key], term, term_q, q.ds)
 			delete row[value]
 			// remove key index as needed
 			if (tkey !== key) {
