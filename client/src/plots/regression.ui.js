@@ -142,6 +142,7 @@ class MassRegressionUI {
 
 		const q = JSON.parse(JSON.stringify(d.term.q))
 		delete q.values
+		delete q.totalCount
 		/*
 			for continuous term, assume it is numeric and that we'd want counts by bins,
 			so remove the 'mode: continuous' value as it will prevent bin construction in the backend
