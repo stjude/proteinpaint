@@ -871,7 +871,8 @@ export async function init_dictionary(ds) {
 			path: term_path_str,
 			isleaf: true,
 			parent_id: term_paths[term_paths.length - 2],
-			fields: term_path_str.split('.').slice(1)
+			fields: term_path_str.split('.').slice(1),
+			child_types: []
 		}
 		// step 2: add type of leaf terms from _mapping:{}
 		const t_map = re._mapping[dictionary.gdcapi.mapping_prefix + '.' + term_path_str]
@@ -889,7 +890,9 @@ export async function init_dictionary(ds) {
 			id: term_id,
 			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
 			path: term_str,
-			fields: term_str.split('.').slice(1)
+			fields: term_str.split('.').slice(1),
+			// included_types: [], TODO update term.included_types usage to this method
+			child_types: [] //Fix for issue 606. Makes term.child_types accessible
 		}
 		if (term_levels.length > 1) term_obj['parent_id'] = term_levels[term_levels.length - 2]
 		id2term.set(term_id, term_obj)

@@ -288,17 +288,14 @@ function setRenderers(self) {
 				if (t.disabled) self.opts.disable_terms.push(t.id)
 			})
 		self.included_terms = []
-		self.child_terms = [] // Fix for issue 606: Missing reference for child_types.
 		if (self.state.usecase) {
 			for (const t of term.terms) {
 				if (isUsableTerm(t, self.state.usecase)) {
 					if (
-						(!self.state.exclude_types ||
-							t.included_types.filter(type => !self.state.exclude_types.includes(type)).length,
-						t.child_types.filter(type => !self.state.exclude_types.includes(type)).length)
+						!self.state.exclude_types ||
+						t.included_types.filter(type => !self.state.exclude_types.includes(type)).length
 					) {
 						self.included_terms.push(t)
-						self.child_terms.push(t)
 					}
 				}
 			}
@@ -309,9 +306,6 @@ function setRenderers(self) {
 			for (const t of term.terms) {
 				if (t.included_types.filter(type => !self.state.exclude_types.includes(type)).length) {
 					self.included_terms.push(t)
-				}
-				if (t.child_types.filter(type => !self.state.exclude_types.includes(type)).length) {
-					self.child_terms.push(t) //Now term.child_types is accessible.
 				}
 			}
 		}
@@ -388,8 +382,9 @@ function setRenderers(self) {
 			.style('margin', term.isleaf ? '' : '2px')
 			.style('padding', '0px 5px')
 
-		//When Add fields is clicked, new tab with field name and div created for data
+		// if (!term.isleaf && term.child_types.filter(type => !self.state.exclude_types.includes(type)).length) {
 		if (!term.isleaf && term.child_types) {
+			//Fix for issue 606. term.child_types
 			div
 				.append('div')
 				.attr('class', 'sja_menuoption ' + cls_termbtn)
