@@ -258,7 +258,9 @@ class MassRegressionUI {
 			}
 			if (computableCategories.length == 2) {
 				// will use the categories from term.values{} and do not apply groupsetting
-				d.term.q.twoComputableCats = true // add temporary flag to bypass validation
+				// if the two grades happen to be "normal" and "disease" then it will make sense
+				// but if the two grades are both diseaes then may not make sense
+				// e.g. secondary breast cancer has just 3 and 4
 				return
 			}
 
@@ -366,27 +368,25 @@ class MassRegressionUI {
 				throw "every group in groupset must have 'name' defined for " + term_type
 		} else if (d.term.term.type == 'condition') {
 			term_type = 'logistic condition outcome term'
-			if (d.term.q.twoComputableCats) {
-				delete d.term.q.twoComputableCats
-				return
-			}
-			if (d.term.q.groupsetting.inuse !== true) throw 'groupsetting.inuse must be true for ' + term_type
-			if (d.term.q.groupsetting.predefined_groupset_idx === undefined && !d.term.q.groupsetting.customset)
-				throw 'either predefined_groupset_idx or customset must be defined for ' + term_type
-			if (d.term.q.groupsetting.predefined_groupset_idx !== undefined) {
-				if (d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.length !== 2)
-					throw 'predefined group must have 2 groups for ' + term_type
-				if (
-					!d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.every(
-						g => g.name !== undefined
+			if (d.term.q.groupsetting.inuse) {
+				// for now, groupsetting is optional
+				if (d.term.q.groupsetting.predefined_groupset_idx === undefined && !d.term.q.groupsetting.customset)
+					throw 'either predefined_groupset_idx or customset must be defined for ' + term_type
+				if (d.term.q.groupsetting.predefined_groupset_idx !== undefined) {
+					if (d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.length !== 2)
+						throw 'predefined group must have 2 groups for ' + term_type
+					if (
+						!d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.every(
+							g => g.name !== undefined
+						)
 					)
-				)
-					throw 'every group in predefined groupset must have name defined ' + term_type
-			} else if (d.term.q.groupsetting.customset) {
-				if (d.term.q.groupsetting.customset.groups.length !== 2)
-					throw 'custom groupset must have only 2 groups for ' + term_type
-				if (!d.term.q.groupsetting.customset.groups.every(g => g.name !== undefined))
-					throw 'every group in custom groupset must have name defined for ' + term_type
+						throw 'every group in predefined groupset must have name defined ' + term_type
+				} else if (d.term.q.groupsetting.customset) {
+					if (d.term.q.groupsetting.customset.groups.length !== 2)
+						throw 'custom groupset must have only 2 groups for ' + term_type
+					if (!d.term.q.groupsetting.customset.groups.every(g => g.name !== undefined))
+						throw 'every group in custom groupset must have name defined for ' + term_type
+				}
 			}
 		}
 	}
