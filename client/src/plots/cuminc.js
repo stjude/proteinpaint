@@ -101,7 +101,10 @@ class TdbCumInc {
 				this.dom.holder.style('display', 'none')
 				return
 			}
-			if (this.dom.header) this.dom.header.html(this.state.config.term.term.name + ' Cumulative Incidence Plot')
+			if (this.dom.header)
+				this.dom.header.html(
+					this.state.config.term.term.name + ' <span style="opacity:.6;font-size:.7em">CUMULATIVE INCIDENCE</span>'
+				)
 			Object.assign(this.settings, this.state.config.settings)
 			const dataName = this.getDataName(this.state)
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
