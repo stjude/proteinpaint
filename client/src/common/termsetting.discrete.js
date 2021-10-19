@@ -240,10 +240,9 @@ export function renderBoundaryInclusionInput(self) {
 			if (c.type == 'regular') {
 				setBinsInclusion(c)
 			} else {
-				setBinsInclusion(c)
 				c.lst.forEach(bin => {
 					setBinsInclusion(bin)
-					if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
+					bin.label = get_bin_label(bin, self.q)
 				})
 				renderBoundaryInputDivs(self, c.lst)
 			}
@@ -263,7 +262,10 @@ export function renderBoundaryInclusionInput(self) {
 		.enter()
 		.append('option')
 		.property('value', d => d.value)
-		.property('selected', d => self.q[d.value] == true)
+		.property('selected', d => {
+			if (self.q.type == 'regular') return self.q[d.value] == true
+			else return self.q.lst[0][d.value] == true
+		})
 		.html(d => d.html)
 }
 
@@ -600,11 +602,13 @@ function renderCustomBinInputs(self, tablediv) {
 		self.dom.customBinLabelTd.selectAll('input').property('value', '')
 		const data = processCustomBinInputs(self)
 		// update self.q.lst and render bin lines only if bin boundry changed
-		if (binsChanged(data, self.q.lst)) {
-			self.q.lst = data
-			self.renderBinLines(self, self.q)
+		const q = self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
+		if (binsChanged(data, q.lst)) {
+			q.lst = data
+			self.renderBinLines(self, q)
 		}
-		renderBoundaryInputDivs(self, self.q.lst)
+		renderBoundaryInputDivs(self, q.lst)
+		self.q = q
 	}
 
 	function binsChanged(data, qlst) {
