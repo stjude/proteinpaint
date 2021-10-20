@@ -103,7 +103,8 @@ class TdbCumInc {
 			}
 			if (this.dom.header)
 				this.dom.header.html(
-					this.state.config.term.term.name + ' <span style="opacity:.6;font-size:.7em">CUMULATIVE INCIDENCE</span>'
+					this.state.config.term.term.name +
+						' <span style="opacity:.6;font-size:.7em;margin-left:10px;">CUMULATIVE INCIDENCE</span>'
 				)
 			Object.assign(this.settings, this.state.config.settings)
 			const dataName = this.getDataName(this.state)
