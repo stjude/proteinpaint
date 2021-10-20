@@ -79,9 +79,7 @@ tape('linear, outcome type=float', function(test) {
 
 	function testSectionCounts(regres) {
 		const resultsDiv = regres.Inner.dom.div
-		console.log('resultsDiv:', resultsDiv)
 		const actualNumDivs = resultsDiv.selectAll('div').size()
-		console.log('actualNumDivs:', actualNumDivs)
 		const expectedNumDivs = 15
 		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
 
@@ -222,7 +220,7 @@ tape('logistic outcome type=condition', function(test) {
 	}
 })
 
-tape.only('logistic outcome: reference category missing from tsv', function(test) {
+tape('logistic outcome: reference category missing from tsv', function(test) {
 	test.timeoutAfter(5000)
 
 	runpp({
@@ -285,7 +283,7 @@ tape.only('logistic outcome: reference category missing from tsv', function(test
 		test.equal(
 			actualErrMsg,
 			expectedErrMsg,
-			`absence of reference category in tsv should throw error before regression computation`
+			`missing reference category in tsv should error out prior to regression computation`
 		)
 		test.end()
 	}
