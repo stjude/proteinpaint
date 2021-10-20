@@ -6,120 +6,79 @@ const serverconfig = require('./serverconfig')
 
 /*
 q {}
-.regressionType
+.regressionType // client to always specify it
 .filter
 .term1_id
 .term1_q // converted to q.outcome
 .outcome{}
 	.id
 	.term
+	.q{}
+		.refGrp
 .independent[{}]
 	.id
 	.type
 	.isBinned
+	.q{}
+		.scale
+		.refGrp
 
-input tsv matrix for R: first column is outcome variable
+input tsv matrix for R:
+	first column is outcome variable
+	rest of columns are for independent variables
+
+TODO
+- clarify key/val
+- client side to return q.refGrp for each term
 */
+
+// term types mapping to R classes of variables
 
 export async function get_regression(q, ds) {
 	try {
-		if (!ds.cohort) throw 'cohort missing from ds'
 		parse_q(q, ds)
-
-		// client to always specify regressionType
-		const regressionType = q.regressionType || 'linear'
-
-		// Header row of the R data matrix
-		const header = ['outcome', ...q.independent.map(i => i.id)]
 
 		// Rest of rows for R matrix, one for each sample
 		const startTime = +new Date()
 		const sampledata = getSampleData(q, [q.outcome, ...q.independent])
-		// each element is one sample:
-		// {sample, id2value:map}, where value is { key, val }
 		const queryTime = +new Date() - startTime
 
-		// Populate data rows of tsv
-		const tsv = [header.join('\t')]
-		for (const { sample, id2value } of sampledata) {
-			const outcome = id2value.get(q.outcome.id)
-			if (!outcome) {
-				// lacks outcome value for this sample, skip
-				continue
-			}
-			if (q.outcome.term.values) {
-				// outcome term has values{}, need to check if value is uncomputable:
-				// for linear, to only allow numeric values and exclude uncomputable values (can this be done in sql instead?)
-				// for logistic, still only allow numeric
-				// for independent, any need to check?
-				// also, when to use key? when to use val??
-				if (q.outcome.term.values[outcome.val] && q.outcome.term.values[outcome.val].uncomputable) {
-					continue
-				}
-			}
+		/* each element is one sample:
+		{sample, id2value:map}, where value is { key, val }
 
-			// the first column is the outcome variable; if continuous, use val, otherwise use key
-			const line = [regressionType === 'linear' ? outcome.val : outcome.key]
+		TODO clarify what is key and val, when to use which, and when to skip uncomputable
 
-			// rest of columns for independent terms
-			let skipsample = false
-			for (const term of q.independent) {
-				if (!id2value.has(term.id)) {
-					// missing value for this term
-					skipsample = true
-					break
-				}
+		numeric term:
+			continuous: use val and exclude uncomputable values (done in sql?)
+			binning: use key which is bin label
+		categorical and condition term:
+			category/grade: use val and exclude uncomputable categories
+			groupsetting: still use val (both key/val are groupset labels)
 
-				const { key, val } = id2value.get(term.id)
+		*/
 
-				if (term.isBinned) {
-					line.push(key)
-				} else {
-					// to use val, check if is uncomputable
-					if (term.term.values && term.term.values[val] && term.term.values[val].uncomputable) {
-						skipsample = true
-						break
-					}
-					line.push(val)
-				}
-			}
-			if (skipsample) continue
-			tsv.push(line.join('\t'))
-		}
+		const tsvlines = makeMatrix(q, sampledata)
 
 		// create arguments for the R script
-		const refCategories = [get_refCategory(q.outcome.term, q.outcome.q)]
-		// Specify term types and R classes of variables
-		const termType2varClass = {
-			integer: 'integer',
-			float: 'numeric',
-			survival: 'numeric',
-			categorical: 'factor',
-			condition: 'factor'
-		}
-		const colClasses = [q.outcome.q.mode == 'binary' ? 'factor' : termType2varClass[q.outcome.term.type]]
-		const scalingFactors = ['NA']
-		for (const term of q.independent) {
-			const t = term.term
-			const q = term.q
-			refCategories.push(get_refCategory(t, q))
-			colClasses.push(term.isBinned ? 'factor' : termType2varClass[t.type])
-			scalingFactors.push(term.isBinned || !q.scale ? 'NA' : q.scale)
-		}
 
-		//console.log(82)
-		//console.log('regressionType:', regressionType)
-		//console.log('colClasses:', colClasses)
-		//console.log('refCategories:', refCategories)
-		//console.log('scalingFactors:', scalingFactors)
-		//console.log('tsv:', tsv)
+		// for outcome variable
+		const refGroups = [get_refCategory(q.outcome.term, q.outcome.q)]
+		const colClasses = [q.outcome.q.mode == 'binary' ? 'factor' : termType2varClass(q.outcome.term.type)]
+		const scalingFactors = ['NA']
+
+		// independent
+		for (const term of q.independent) {
+			refGroups.push(get_refCategory(term.term, term.q))
+			colClasses.push(term.isBinned ? 'factor' : termType2varClass(term.term.type))
+			scalingFactors.push(term.isBinned || !term.q.scale ? 'NA' : term.q.scale)
+		}
 
 		// Validate tsv prior to R script
-		if (tsv.length === 0) throw 'tsv is empty'
-		if (tsv.length === 1) throw 'tsv only has header'
+		if (tsvlines.length === 0) throw 'tsv is empty'
+		if (tsvlines.length === 1) throw 'tsv only has header'
 		for (const [i, colClass] of colClasses.entries()) {
-			const ref = refCategories[i]
-			const col = tsv.map(line => line.split('\t')[i])
+			const ref = refGroups[i]
+			const col = tsvlines.map(line => line.split('\t')[i])
 			const variable = col.shift()
 			if (colClass === 'factor') {
 				if (ref === 'NA') throw `reference category not given for categorical variable '${variable}'`
@@ -132,112 +91,14 @@ export async function get_regression(q, ds) {
 
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
-			tsv,
-			[regressionType, colClasses.join(','), refCategories.join(','), scalingFactors.join(',')],
+			tsvlines,
+			[q.regressionType, colClasses.join(','), refGroups.join(','), scalingFactors.join(',')],
 			false
 		)
 
-		const type2lines = new Map()
-		// k: type e.g.Deviance Residuals
-		// v: list of lines
-		let lineType // type of current line
+		const result = { queryTime, sampleSize: tsvlines.length - 1 }
+		parseRoutput(data, result)
 
-		for (const line of data) {
-			if (line.startsWith('#')) {
-				lineType = line.split('#')[2]
-				type2lines.set(lineType, [])
-				continue
-			}
-			type2lines.get(lineType).push(line)
-		}
-		// parse lines into this result structure
-		const result = { queryTime, sampleSize: tsv.length - 1 }
-
-		{
-			const lines = type2lines.get('Warning messages')
-			if (lines) {
-				result.warnings = {
-					label: 'Warning messages',
-					lst: lines
-				}
-			}
-		}
-		{
-			const lines = type2lines.get('Deviance Residuals')
-			if (lines) {
-				if (lines.length != 2) throw 'expect 2 lines for Deviance Residuals but got ' + lines.length
-				result.devianceResiduals = {
-					label: 'Deviance Residuals',
-					lst: []
-				}
-				// 1st line is header
-				const header = lines[0].split('\t')
-				// 2nd line is values
-				const values = lines[1].split('\t')
-				for (const [i, h] of header.entries()) {
-					result.devianceResiduals.lst.push([h, values[i]])
-				}
-			}
-		}
-		{
-			const lines = type2lines.get('Coefficients')
-			if (lines) {
-				if (lines.length < 3) throw 'expect at least 3 lines from Coefficients'
-				result.coefficients = {
-					label: 'Coefficients',
-					header: lines
-						.shift()
-						.split('\t')
-						.slice(2), // 1st line is header
-					intercept: lines
-						.shift()
-						.split('\t')
-						.slice(2), // 2nd line is intercept
-					terms: {}
-				}
-				// rest of lines are categories of independent terms
-				for (const line of lines) {
-					const l = line.split('\t')
-					const termid = l.shift()
-					if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
-					const category = l.shift()
-					if (category) {
-						// has category
-						if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
-						result.coefficients.terms[termid].categories[category] = l
-					} else {
-						// no category
-						result.coefficients.terms[termid].fields = l
-					}
-				}
-			}
-		}
-		{
-			const lines = type2lines.get('Type III statistics')
-			if (lines) {
-				result.type3 = {
-					label: 'Type III statistics',
-					header: lines.shift().split('\t'),
-					lst: lines.map(i => i.split('\t'))
-				}
-			}
-		}
-		{
-			const lines = type2lines.get('Other summary statistics')
-			if (lines) {
-				result.otherSummary = {
-					label: 'Other summary statistics',
-					lst: lines.map(i => i.split('\t'))
-				}
-			}
-		}
-		// Verify that the computed sample size is consistent with the degrees of freedom
-		/*
-		const nullDevDf = result
-			.find(table => table.name === 'Other summary statistics')
-			.rows.find(row => row[0] === 'Null deviance df')[1]
-		if (sampleSize !== Number(nullDevDf) + 1) throw 'computed sample size and degrees of freedom are inconsistent'
-			*/
 		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
@@ -246,8 +107,21 @@ export async function get_regression(q, ds) {
 	}
 }
 
+function termType2varClass(t) {
+	// numeric term with binning is 'factor' and is handled outside
+	if (t == 'integer') return 'integer'
+	if (t == 'float') return 'numeric'
+	if (t == 'categorical' || t == 'condition') return 'factor' // including groupset
+	throw 'unknown term type to convert to varClass'
+}
+
 function parse_q(q, ds) {
+	if (!ds.cohort) throw 'cohort missing from ds'
 	q.ds = ds
+
+	// client to always specify regressionType
+	if (!q.regressionType) q.regressionType = 'linear'
+	if (['linear', 'logistic'].indexOf(q.regressionType) == -1) throw 'unknown regressionType'
 
 	// outcome
 	if (!q.term1_id) throw 'term1_id missing'
@@ -274,20 +148,185 @@ function parse_q(q, ds) {
 	}
 }
 
+/* convert sampledata to matrix format
+also collect unique values for variables that are not continuous
+which may consume memory and may need to be improved
+*/
+function makeMatrix(q, sampledata) {
+	// Populate data rows of tsv. first line is header
+	const tsv = [['outcome', ...q.independent.map(i => i.id)].join('\t')]
+
+	for (const { sample, id2value } of sampledata) {
+		const outcome = id2value.get(q.outcome.id)
+		if (!outcome) {
+			// lacks outcome value for this sample, skip
+			continue
+		}
+
+		if (q.outcome.term.values) {
+			// outcome term has values{}, need to check if value is uncomputable:
+			if (q.outcome.term.values[outcome.val] && q.outcome.term.values[outcome.val].uncomputable) {
+				continue
+			}
+		}
+
+		// the first column is the outcome variable; if continuous, use val, otherwise use key
+		const line = [q.regressionType === 'linear' ? outcome.val : outcome.key]
+
+		// rest of columns for independent terms
+		let skipsample = false
+		for (const term of q.independent) {
+			if (!id2value.has(term.id)) {
+				// missing value for this term
+				skipsample = true
+				break
+			}
+
+			const { key, val } = id2value.get(term.id)
+
+			if (term.isBinned) {
+				// key is the bin label and use as data value
+				line.push(key)
+			} else {
+				// term is not binned
+				// for all the other cases will use val
+				// including groupsetting which both val and key are group labels??
+				// to use val, check if is uncomputable
+				if (term.term.values && term.term.values[val] && term.term.values[val].uncomputable) {
+					skipsample = true
+					break
+				}
+				line.push(val)
+			}
+		}
+		if (skipsample) continue
+		tsv.push(line.join('\t'))
+	}
+	return tsv
+}
+
+function parseRoutput(data, result) {
+	const type2lines = new Map()
+	// k: type e.g.Deviance Residuals
+	// v: list of lines
+	let lineType // type of current line
+
+	for (const line of data) {
+		if (line.startsWith('#')) {
+			lineType = line.split('#')[2]
+			type2lines.set(lineType, [])
+			continue
+		}
+		type2lines.get(lineType).push(line)
+	}
+	// parse lines into this result structure
+
+	{
+		const lines = type2lines.get('Warning messages')
+		if (lines) {
+			result.warnings = {
+				label: 'Warning messages',
+				lst: lines
+			}
+		}
+	}
+	{
+		const lines = type2lines.get('Deviance Residuals')
+		if (lines) {
+			if (lines.length != 2) throw 'expect 2 lines for Deviance Residuals but got ' + lines.length
+			result.devianceResiduals = {
+				label: 'Deviance Residuals',
+				lst: []
+			}
+			// 1st line is header
+			const header = lines[0].split('\t')
+			// 2nd line is values
+			const values = lines[1].split('\t')
+			for (const [i, h] of header.entries()) {
+				result.devianceResiduals.lst.push([h, values[i]])
+			}
+		}
+	}
+	{
+		const lines = type2lines.get('Coefficients')
+		if (lines) {
+			if (lines.length < 3) throw 'expect at least 3 lines from Coefficients'
+			result.coefficients = {
+				label: 'Coefficients',
+				header: lines
+					.shift()
+					.split('\t')
+					.slice(2), // 1st line is header
+				intercept: lines
+					.shift()
+					.split('\t')
+					.slice(2), // 2nd line is intercept
+				terms: {}
+			}
+			// rest of lines are categories of independent terms
+			for (const line of lines) {
+				const l = line.split('\t')
+				const termid = l.shift()
+				if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
+				const category = l.shift()
+				if (category) {
+					// has category
+					if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
+					result.coefficients.terms[termid].categories[category] = l
+				} else {
+					// no category
+					result.coefficients.terms[termid].fields = l
+				}
+			}
+		}
+	}
+	{
+		const lines = type2lines.get('Type III statistics')
+		if (lines) {
+			result.type3 = {
+				label: 'Type III statistics',
+				header: lines.shift().split('\t'),
+				lst: lines.map(i => i.split('\t'))
+			}
+		}
+	}
+	{
+		const lines = type2lines.get('Other summary statistics')
+		if (lines) {
+			result.otherSummary = {
+				label: 'Other summary statistics',
+				lst: lines.map(i => i.split('\t'))
+			}
+		}
+	}
+	// Verify that the computed sample size is consistent with the degrees of freedom
+	/*
+	const nullDevDf = result
+		.find(table => table.name === 'Other summary statistics')
+		.rows.find(row => row[0] === 'Null deviance df')[1]
+	if (sampleSize !== Number(nullDevDf) + 1) throw 'computed sample size and degrees of freedom are inconsistent'
+		*/
+}
+
 /*
 decide reference category
 - term: the term json object {type, values, ...}
 - q: client side config for this term (should tell which category is chosen as reference, if applicable)
+
+fix the fault in test URL to always provide refGrp
 */
 function get_refCategory(term, q) {
 	if (q.refGrp) return q.refGrp
 	if (term.type == 'categorical' || term.type == 'condition') {
 		// q attribute will tell which category is reference
 		// else first category as reference
-		if (q.groupsetting && q.groupsetting.inuse && q.groupsetting.predefined_groupset_idx !== undefined)
+		if (q.groupsetting && q.groupsetting.inuse && q.groupsetting.predefined_groupset_idx !== undefined) {
 			return term.groupsetting.lst[q.groupsetting.predefined_groupset_idx].groups[0]['name']
-		else if (q.groupsetting && q.groupsetting.inuse) return q.groupsetting.customset.groups[0]['name']
-		else return Object.keys(term.values)[0]
+		}
+		if (q.groupsetting && q.groupsetting.inuse) {
+			return q.groupsetting.customset.groups[0]['name']
+		}
+		return Object.keys(term.values)[0]
 	}
 	if (term.type == 'integer' || term.type == 'float') {
 		// TODO when numeric term is divided to bins, term should indicate which bin is reference
