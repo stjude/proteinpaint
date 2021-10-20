@@ -78,7 +78,29 @@ export async function get_regression(q, ds) {
 			colClasses.push(term.isBinned ? 'factor' : termType2varClass[t.type])
 			scalingFactors.push(term.isBinned || !q.scale ? 'NA' : q.scale)
 		}
-		//console.log(83, refCategories, colClasses, scalingFactors)
+
+		//console.log(82)
+		//console.log('regressionType:', regressionType)
+		//console.log('colClasses:', colClasses)
+		//console.log('refCategories:', refCategories)
+		//console.log('scalingFactors:', scalingFactors)
+		//console.log('tsv:', tsv)
+
+		// Validate tsv prior to R script
+		if (tsv.length === 0) throw 'tsv is empty'
+		if (tsv.length === 1) throw 'tsv only has header'
+		for (const [i, colClass] of colClasses.entries()) {
+			const ref = refCategories[i]
+			const col = tsv.map(line => line.split('\t')[i])
+			const variable = col.shift()
+			if (colClass === 'factor') {
+				if (ref === 'NA') throw `reference category not given for categorical variable '${variable}'`
+				if (!col.includes(ref))
+					throw `the reference category '${ref}' is not found in the variable '${variable}' in the tsv`
+			} else {
+				if (ref !== 'NA') throw `reference category given for continuous variable '${variable}'`
+			}
+		}
 
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),

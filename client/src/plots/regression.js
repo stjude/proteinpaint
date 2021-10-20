@@ -3,6 +3,7 @@ import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { q_to_param } from '../termdb/plot'
 import { getNormalRoot } from '../common/filter'
+import { sayerror } from '../client'
 
 class MassRegression {
 	constructor(opts) {
@@ -14,17 +15,17 @@ class MassRegression {
 	async init() {
 		this.opts.holder.style('margin-left', 0)
 		const controls = this.opts.holder.append('div')
+		const banner = this.opts.holder
+			.append('div')
+			.style('color', '#bbb')
+			.style('display', 'none')
+			.style('margin', '10px')
 		const resultsDiv = this.opts.holder.append('div').style('margin-left', '40px')
 
 		this.dom = {
 			controls,
 			header: this.opts.header,
-			banner: this.opts.holder
-				.append('div')
-				.style('color', '#bbb')
-				.style('display', 'none')
-				.style('margin-bottom', '10px'),
-
+			banner,
 			resultsHeading: resultsDiv
 				.append('div')
 				.style('margin', '30px 0 10px 0px')
@@ -72,33 +73,37 @@ class MassRegression {
 	}
 
 	async main() {
-		//if (!this.state.config.term) return
-		this.config = JSON.parse(JSON.stringify(this.state.config))
-		if (this.dom.header) {
-			const regressionType = this.config.regressionType
-			const text = regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression'
-			this.dom.header.html(text)
+		try {
+			//if (!this.state.config.term) return
+			this.config = JSON.parse(JSON.stringify(this.state.config))
+			if (this.dom.header) {
+				const regressionType = this.config.regressionType
+				const text = regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression'
+				this.dom.header.html(text)
+			}
+			if (!this.state.isVisible) {
+				this.dom.div.style('display', 'none')
+				this.dom.resultsHeading.style('display', 'none')
+				return
+			}
+			if (!this.config.independent.length || !this.config.term) {
+				this.dom.div.style('display', 'none')
+				this.dom.resultsHeading.style('display', 'none')
+				// will only show the regression controls when outcome and/or independent terms are empty
+				return
+			}
+			this.dom.div.selectAll('*').remove()
+			this.dom.banner.style('display', this.state.formIsComplete ? 'block' : 'none')
+			const dataName = this.getDataName()
+			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			this.dom.banner.style('display', 'none').html('')
+			this.dom.div.style('display', 'block')
+			this.dom.resultsHeading.style('display', 'block')
+			this.displayResult(data)
+		} catch (e) {
+			//this.dom.banner.style('display', 'block').html(e.error || e)
+			sayerror(this.dom.banner.style('display', 'block'), 'Error: ' + (e.error || e))
 		}
-		if (!this.state.isVisible) {
-			this.dom.div.style('display', 'none')
-			this.dom.resultsHeading.style('display', 'none')
-			return
-		}
-		if (!this.config.independent.length || !this.config.term) {
-			this.dom.div.style('display', 'none')
-			this.dom.resultsHeading.style('display', 'none')
-			// will only show the regression controls when outcome and/or independent terms are empty
-			return
-		}
-		this.dom.div.selectAll('*').remove()
-		this.dom.banner.style('display', this.state.formIsComplete ? 'block' : 'none')
-		const dataName = this.getDataName()
-		const data = await this.app.vocabApi.getPlotData(this.id, dataName)
-		if (data.error) throw data.error
-		this.dom.banner.style('display', 'none')
-		this.dom.div.style('display', 'block')
-		this.dom.resultsHeading.style('display', 'block')
-		this.displayResult(data)
 	}
 
 	// creates URL search parameter string, that also serves as
