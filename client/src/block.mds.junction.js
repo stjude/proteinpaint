@@ -2442,7 +2442,7 @@ async function queryOneJunction(j, tk, block, holder) {
 					.append('h3')
 					.text(group.label)
 					.style('text-align', 'center')
-				const p = await import('./plot.boxplot')
+				const p = await import('./old/plot.boxplot')
 				const err = p.default({
 					holder: div,
 					list: group.boxplots,
