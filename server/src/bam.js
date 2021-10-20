@@ -6,6 +6,7 @@ const got = require('got')
 const pipeline = promisify(stream.pipeline)
 const path = require('path')
 const fs = require('fs')
+const Readable = require('stream').Readable
 const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
 const spawn = require('child_process').spawn
@@ -16,6 +17,7 @@ const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvaria
 const bamcommon = require('./bam.common')
 const basecolor = require('../shared/common').basecolor
 const serverconfig = require('./serverconfig')
+const rust_read_alignment = serverconfig.binpath + '/utils/read_alignment/target/release/read_alignment'
 
 /*
 XXX quick fix to be removed/disabled later
@@ -158,7 +160,7 @@ do_query
 		run_samtools_depth
 		collect_softclipmismatch2pileup
 route_getread
-    query_one_read
+    query_oneread
       parse_one_segment
     convertread2html
     convertunmappedread2html  
@@ -679,7 +681,6 @@ async function get_q(genome, req) {
 	if (req.query.drop_pcrduplicates) {
 		q.drop_pcrduplicates = true
 	}
-
 	if (req.query.variant) {
 		q.diff_score_plotwidth = Number(req.query.diff_score_plotwidth)
 		if (req.query.max_diff_score) {
@@ -688,6 +689,7 @@ async function get_q(genome, req) {
 		}
 		const t = req.query.variant.split('.')
 		if (t.length != 5) throw 'invalid variant, not chr.pos.ref.alt.strictness'
+		q.subsequent_request = req.query.subsequent_request
 		q.variant = {
 			chr: t[0],
 			pos: Number(t[1]),
@@ -774,11 +776,17 @@ async function do_query(q) {
 		if (q.variant) {
 			result.ref_allele = out.final_ref // Its possible the input ref allele is "-" or ""(blank). In that case it needs to be queried from the reference genome
 			result.alt_allele = out.final_alt // Its possible the input alt allele is "-" or ""(blank). In that case it needs to be deduced from the reference allele
+
 			result.allele_pos = out.final_pos // Start position needs to be changed if any of the alleles is blank or missing
 			result.strand_probability = out.strand_probability // Contains FS score of strand bias i.e forward/reverse vs alternate/reference
 			if (out.strand_significance == true) {
 				// Tells whether the FS score is significant/insignificant
 				result.strand_significance = true
+			}
+			if (!q.subsequent_request) {
+				// Prevent passing ref and alt sequences to client side in subsequent requests
+				result.refseq = out.refseq // Passing complete reference sequence back to client side for alignment
+				result.altseq = out.altseq // Passing complete alternate sequence back to client side for alignment
 			}
 		}
 
@@ -2437,6 +2445,14 @@ async function route_getread(genome, req) {
 			lst.push(await convertread2html(s, genome, req.query))
 		}
 	}
+	if (seglst.q_align_ref) {
+		lst[0].q_align_ref = seglst.q_align_ref
+		lst[0].align_wrt_ref = seglst.align_wrt_ref
+		lst[0].r_align_ref = seglst.r_align_ref
+		lst[0].q_align_alt = seglst.q_align_alt
+		lst[0].align_wrt_alt = seglst.align_wrt_alt
+		lst[0].r_align_alt = seglst.r_align_alt
+	}
 	return { lst }
 }
 
@@ -2459,6 +2475,7 @@ async function query_oneread(req, r) {
 		if (e) throw e
 		dir = isurl ? await utils.cache_index(_file, req.query.indexURL || _file + '.bai') : null
 	}
+
 	if (req.query.unknownorder) {
 		// unknown order, read start/stop must be provided
 		readstart = Number(req.query.readstart)
@@ -2531,7 +2548,48 @@ async function query_oneread(req, r) {
 			}
 		}
 	})
+
 	if (lst) {
+		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
+		if (req.query.altseq) {
+			const alignment_output = await run_rust_read_alignment(
+				lst[0].seq + ':' + req.query.refseq + ':' + req.query.altseq
+			)
+			const alignment_output_list = alignment_output.toString('utf-8').split('\n')
+			for (let item of alignment_output_list) {
+				if (item.includes('q_seq_ref')) {
+					lst.q_align_ref = item
+						.replace(/"/g, '')
+						.replace(/,/g, '')
+						.replace('q_seq_ref:', '')
+				} else if (item.includes('align_ref')) {
+					lst.align_wrt_ref = item
+						.replace(/"/g, '')
+						.replace(/,/g, '')
+						.replace('align_ref:', '')
+				} else if (item.includes('r_seq_ref')) {
+					lst.r_align_ref = item
+						.replace(/"/g, '')
+						.replace(/,/g, '')
+						.replace('r_seq_ref:', '')
+				} else if (item.includes('q_seq_alt')) {
+					lst.q_align_alt = item
+						.replace(/"/g, '')
+						.replace(/,/g, '')
+						.replace('q_seq_alt:', '')
+				} else if (item.includes('align_alt')) {
+					lst.align_wrt_alt = item
+						.replace(/"/g, '')
+						.replace(/,/g, '')
+						.replace('align_alt:', '')
+				} else if (item.includes('r_seq_alt')) {
+					lst.r_align_alt = item
+						.replace(/"/g, '')
+						.replace(/,/g, '')
+						.replace('r_seq_alt:', '')
+				}
+			}
+		}
 		// result is ready
 		return lst
 	}
@@ -2539,6 +2597,25 @@ async function query_oneread(req, r) {
 	if (firstseg) lst.push(firstseg)
 	if (lastseg) lst.push(lastseg)
 	return lst.length ? lst : null
+}
+
+function run_rust_read_alignment(input_data) {
+	return new Promise((resolve, reject) => {
+		const ps = spawn(rust_read_alignment)
+		const stdout = []
+		const stderr = []
+		Readable.from(input_data).pipe(ps.stdin)
+		ps.stdout.on('data', data => stdout.push(data))
+		ps.stderr.on('data', data => stderr.push(data))
+		ps.on('error', err => {
+			console.log('stderr:', stderr)
+			reject(err)
+		})
+		ps.on('close', code => {
+			//console.log("stdout:",stdout)
+			resolve(stdout)
+		})
+	})
 }
 
 async function convertunmappedread2html(seg, genome, query) {

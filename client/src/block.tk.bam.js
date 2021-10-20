@@ -190,6 +190,10 @@ async function getData(tk, block, additional = []) {
 			lst.push('min_diff_score=' + tk.min_diff_score)
 		}
 	}
+	if (tk.variants && tk.variants.refseq) {
+		// Prevent passing of refseq and altseq from server to client side in subsequent request
+		lst.push('subsequent_request=1')
+	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
 		delete tk.uninitialized
@@ -235,6 +239,10 @@ async function getData(tk, block, additional = []) {
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
 	const data = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
+	if (tk.variants && data.refseq) {
+		tk.variants[0].refseq = data.refseq
+		tk.variants[0].altseq = data.altseq
+	}
 	if (data.error) throw data.error
 	return data
 }
@@ -424,7 +432,6 @@ function may_render_variant(data, tk, block) {
 
 	const variant_string =
 		tk.variants[0].chr + '.' + (data.allele_pos + 1).toString() + '.' + data.ref_allele + '.' + data.alt_allele
-
 	// Determining where to place the text. Before, inside or after the box
 	let variant_start_text_pos = 0
 	const space_param = 10
@@ -1176,8 +1183,11 @@ async function getReadInfo(tk, block, box, ridx) {
 	tk.readpane.body.selectAll('*').remove()
 	const wait = tk.readpane.body.append('div').text('Loading...')
 	const req_data = getparam()
+	if (tk.variants) {
+		req_data.lst.push('refseq=' + tk.variants[0].refseq)
+		req_data.lst.push('altseq=' + tk.variants[0].altseq)
+	}
 	const data = await client.dofetch2('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
-
 	if (data.error) {
 		client.sayerror(wait, data.error)
 		return
@@ -1212,6 +1222,78 @@ async function getReadInfo(tk, block, box, ridx) {
 					.append('span')
 					.html('&nbsp;&check;')
 			})
+
+		if (data.lst[0].q_align_alt) {
+			// Invoked only if variant is specified
+			const alignment_button = div
+				.append('button')
+				.style('margin-left', '10px')
+				.text('Read alignment')
+				.on('click', async () => {
+					alignment_button.property('disabled', true)
+					const read_alignment_table = div.append('table').style('font-family', 'courier')
+					const heading_tr_ref = read_alignment_table
+						.append('tr')
+						.style('opacity', 0.5)
+						.style('font-size', '.8em')
+						.text('Ref alignment')
+					const query_tr_ref = read_alignment_table
+						.append('tr')
+						.style('opacity', 0.5)
+						.style('font-size', '.8em')
+					query_tr_ref.append('td').text('Query')
+					for (const nclt of data.lst[0].q_align_ref) {
+						query_tr_ref.append('td').text(nclt)
+					}
+					const alignment_tr_ref = read_alignment_table
+						.append('tr')
+						.style('opacity', 0.5)
+						.style('font-size', '.8em')
+					alignment_tr_ref.append('td').text('Alignment')
+					for (const align_str of data.lst[0].align_wrt_ref) {
+						alignment_tr_ref.append('td').text(align_str)
+					}
+					const reference_tr_ref = read_alignment_table
+						.append('tr')
+						.style('opacity', 0.5)
+						.style('font-size', '.8em')
+					reference_tr_ref.append('td').text('Ref allele')
+					for (const nclt of data.lst[0].r_align_ref) {
+						reference_tr_ref.append('td').text(nclt)
+					}
+
+					const heading_tr_alt = read_alignment_table
+						.append('tr')
+						.style('opacity', 0.5)
+						.style('font-size', '.8em')
+						.text('Alt alignment')
+					const query_tr_alt = read_alignment_table
+						.append('tr')
+						.style('opacity', 0.5)
+						.style('font-size', '.8em')
+					query_tr_alt.append('td').text('Query')
+					for (const nclt of data.lst[0].q_align_alt) {
+						query_tr_alt.append('td').text(nclt)
+					}
+
+					const alignment_tr_alt = read_alignment_table
+						.append('tr')
+						.style('opacity', 0.5)
+						.style('font-size', '.8em')
+					alignment_tr_alt.append('td').text('Alignment')
+					for (const align_str of data.lst[0].align_wrt_alt) {
+						alignment_tr_alt.append('td').text(align_str)
+					}
+					const alterence_tr_alt = read_alignment_table
+						.append('tr')
+						.style('opacity', 0.5)
+						.style('font-size', '.8em')
+					alterence_tr_alt.append('td').text('Alt allele')
+					for (const nclt of data.lst[0].r_align_alt) {
+						alterence_tr_alt.append('td').text(nclt)
+					}
+				})
+		}
 
 		if (r.unmapped_mate && !tk.asPaired) {
 			// this read has unmapped mate

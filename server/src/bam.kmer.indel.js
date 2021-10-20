@@ -304,7 +304,9 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		final_ref,
 		final_alt,
 		strand_probability,
-		strand_significance
+		strand_significance,
+		refseq,
+		altseq
 	}
 }
 
