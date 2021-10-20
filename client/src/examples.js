@@ -252,7 +252,7 @@ async function openSandbox(track, holder) {
 	sandbox_div.header_row
 	sandbox_div.header.text(track.name)
 
-	sandbox_div.body.style('overflow', 'hidden').style('border', 'none')
+	sandbox_div.body.style('overflow', 'hidden')
 
 	// creates div for instructions or other messaging about the track
 	addMessage(track.sandbox.intro, sandbox_div.body)
