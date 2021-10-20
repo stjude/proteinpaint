@@ -4,59 +4,87 @@ const { getFilterCTEs } = require('./termdb.filter')
 const lines2R = require('./lines2R')
 const serverconfig = require('./serverconfig')
 
+/*
+q {}
+.regressionType
+.filter
+.term1_id
+.term1_q // converted to q.outcome
+.outcome{}
+	.id
+	.term
+.independent[{}]
+	.id
+	.type
+	.isBinned
+
+input tsv matrix for R: first column is outcome variable
+*/
+
 export async function get_regression(q, ds) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
-		q.ds = ds
-		q.independent = JSON.parse(decodeURIComponent(q.independent))
-		q.outcome = {
-			id: q.term1_id,
-			term: ds.cohort.termdb.q.termjsonByOneid(q.term1_id),
-			q: JSON.parse(q.term1_q)
-		}
-		delete q.term1_id
-		delete q.term1_q
+		parse_q(q, ds)
 
+		// client to always specify regressionType
 		const regressionType = q.regressionType || 'linear'
+
 		// Header row of the R data matrix
-		const header = ['outcome']
-		for (const term of q.independent) {
-			term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
-			// QUICK FIX: numeric terms can be used as continuous or as defined by bins,
-			// by default it will be used as continuous, if user selects 'as_bins' radio,
-			// term.q.mode = 'discrete' or 'binary' will be set, so R should treat as a factor variable
-			if (term.type == 'float' || term.type == 'integer')
-				term.isBinned = term.q.mode == 'discrete' || term.q.mode == 'binary'
-			header.push(term.id)
-		}
+		const header = ['outcome', ...q.independent.map(i => i.id)]
 
 		// Rest of rows for R matrix, one for each sample
 		const startTime = +new Date()
-		const rows = getSampleData(q, [q.outcome, ...q.independent])
+		const sampledata = getSampleData(q, [q.outcome, ...q.independent])
+		// each element is one sample:
+		// {sample, id2value:map}, where value is { key, val }
 		const queryTime = +new Date() - startTime
-		const tsv = [header.join('\t')]
-		const outcomeValues = q.outcome.term.values || {} // Specify regression type
+
 		// Populate data rows of tsv
-		for (const row of rows) {
-			const outcome = row[q.outcome.id]
-			if (!outcome || (outcomeValues[outcome.val] && outcomeValues[outcome.val].uncomputable)) {
+		const tsv = [header.join('\t')]
+		for (const { sample, id2value } of sampledata) {
+			const outcome = id2value.get(q.outcome.id)
+			if (!outcome) {
+				// lacks outcome value for this sample, skip
 				continue
 			}
-			// the first column is the outcome value (if continuous) or key/label (by default)
+			if (q.outcome.term.values) {
+				// outcome term has values{}, need to check if value is uncomputable:
+				// for linear, to only allow numeric values and exclude uncomputable values (can this be done in sql instead?)
+				// for logistic, still only allow numeric
+				// for independent, any need to check?
+				// also, when to use key? when to use val??
+				if (q.outcome.term.values[outcome.val] && q.outcome.term.values[outcome.val].uncomputable) {
+					continue
+				}
+			}
+
+			// the first column is the outcome variable; if continuous, use val, otherwise use key
 			const line = [regressionType === 'linear' ? outcome.val : outcome.key]
+
+			// rest of columns for independent terms
+			let skipsample = false
 			for (const term of q.independent) {
-				if (!row[term.id]) {
-					line.push('NA')
+				if (!id2value.has(term.id)) {
+					// missing value for this term
+					skipsample = true
 					break
 				}
-				const key = row[term.id].key
-				const value = row[term.id].val
-				const val = term.term && term.term.values && term.term.values[value]
-				if (val && val.uncomputable) line.push('NA')
-				else line.push(term.isBinned ? key : value)
+
+				const { key, val } = id2value.get(term.id)
+
+				if (term.isBinned) {
+					line.push(key)
+				} else {
+					// to use val, check if is uncomputable
+					if (term.term.values && term.term.values[val] && term.term.values[val].uncomputable) {
+						skipsample = true
+						break
+					}
+					line.push(val)
+				}
 			}
-			// Discard samples that have an uncomputable value in any variable because these are not useable in the regression analysis
-			if (!line.includes('NA')) tsv.push(line.join('\t'))
+			if (skipsample) continue
+			tsv.push(line.join('\t'))
 		}
 
 		// create arguments for the R script
@@ -218,6 +246,34 @@ export async function get_regression(q, ds) {
 	}
 }
 
+function parse_q(q, ds) {
+	q.ds = ds
+
+	// outcome
+	if (!q.term1_id) throw 'term1_id missing'
+	if (!q.term1_q) throw 'term1_q missing'
+	q.outcome = {
+		id: q.term1_id,
+		term: ds.cohort.termdb.q.termjsonByOneid(q.term1_id),
+		q: JSON.parse(q.term1_q)
+	}
+	if (!q.outcome.term) throw 'invalid outcome term: ' + q.term1_id
+	delete q.term1_id
+	delete q.term1_q
+
+	// independent
+	if (!q.independent) throw 'independent[] missing'
+	q.independent = JSON.parse(decodeURIComponent(q.independent))
+	if (!Array.isArray(q.independent) || q.independent.length == 0) throw 'q.independent is not non-empty array'
+	for (const term of q.independent) {
+		if (!term.id) throw '.id missing for an indepdent term'
+		term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
+		if (!term.term) throw 'invalid independent term: ' + term.id
+		if (term.type == 'float' || term.type == 'integer')
+			term.isBinned = term.q.mode == 'discrete' || term.q.mode == 'binary'
+	}
+}
+
 /*
 decide reference category
 - term: the term json object {type, values, ...}
@@ -271,7 +327,6 @@ function getSampleData(q, terms) {
 	]
 	*/
 
-	if (typeof q.filter == 'string') q.filter = JSON.parse(decodeURIComponent(q.filter))
 	const filter = getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
@@ -291,16 +346,17 @@ function getSampleData(q, terms) {
 		`
 		).join(`UNION ALL`)}`
 
-	// console.log(292, sql, values)
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-	const bySample = {}
+	const samples = new Map() // k: sample name, v: {sample, terms:{}}
 	for (const r of rows) {
-		if (!bySample[r.sample]) {
-			bySample[r.sample] = { sample: r.sample }
+		if (!samples.has(r.sample)) {
+			samples.set(r.sample, { sample: r.sample, id2value: new Map() })
 		}
-		const d = bySample[r.sample]
-		if (r.term_id in d) throw `duplicate '${r.term_id}' entry for sample='${r.sample}'`
-		d[r.term_id] = { key: r.key, val: r.value }
+		if (samples.get(r.sample).id2value.has(r.term_id)) {
+			// can duplication happen?
+			throw `duplicate '${r.term_id}' entry for sample='${r.sample}'`
+		}
+		samples.get(r.sample).id2value.set(r.term_id, { key: r.key, val: r.value })
 	}
-	return Object.values(bySample)
+	return samples.values()
 }

@@ -263,7 +263,6 @@ async function trigger_getregression(q, res, ds) {
 	if (typeof q.filter == 'string') {
 		q.filter = JSON.parse(decodeURIComponent(q.filter))
 	}
-	if ('cutoff' in q) q.cutoff = Number(q.cutoff)
 	const data = await regression.get_regression(q, ds)
 	res.send(data)
 }
