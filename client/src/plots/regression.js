@@ -77,9 +77,9 @@ class MassRegression {
 			//if (!this.state.config.term) return
 			this.config = JSON.parse(JSON.stringify(this.state.config))
 			if (this.dom.header) {
-				const regressionType = this.config.regressionType
-				const text = regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression'
-				this.dom.header.html(text)
+				this.dom.header.html(
+					` <span style="opacity:.6;font-size:.7em;margin-left:10px;">${this.config.regressionType.toUpperCase()} REGRESSION</span>`
+				)
 			}
 			if (!this.state.isVisible) {
 				this.dom.div.style('display', 'none')

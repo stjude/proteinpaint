@@ -80,9 +80,11 @@ class TdbTable {
 				this.dom.div.style('display', 'none')
 				throw 'term2 is required for table view'
 			}
+			const c = this.state.config
+			if (this.dom.header) this.dom.header.html(c.term.term.name + ' vs ' + c.term2.term.name)
 			const dataName = this.getDataName(this.state)
 			this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
-			syncParams(this.state.config, this.data)
+			syncParams(c, this.data)
 			const [columns, rows] = this.processData(this.data)
 			this.render(columns, rows)
 		} catch (e) {

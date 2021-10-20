@@ -1,5 +1,5 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import * as client from './client'
+import * as client from '../client'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { format as d3format } from 'd3-format'

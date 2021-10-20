@@ -2347,7 +2347,7 @@ function mayshowcovmafplot(m, tk, holder) {
 
 	const row = holder.append('div').style('margin-bottom', '10px')
 
-	import('./plot.vaf2cov').then(plotter => {
+	import('./old/plot.vaf2cov').then(plotter => {
 		/*
 		import plotter, then plot all groups
 		each plot will return data point -> svg cross,
@@ -2623,7 +2623,7 @@ function mayshowgermline2dvaf(m, tk, holder) {
 	}
 	if (data.length) {
 		const div = holder.append('div').style('display', 'inline-block')
-		import('./plot.2dvaf').then(p => {
+		import('./old/plot.2dvaf').then(p => {
 			p.default(data, cfg, div)
 		})
 		return true
@@ -2667,7 +2667,7 @@ function mayshowgenotype2boxplot(m, tk, holder) {
 			})
 		}
 		const div = holder.append('div').style('display', 'inline-block')
-		import('./plot.boxplot').then(p => {
+		import('./old/plot.boxplot').then(p => {
 			const err = p.default({
 				holder: div,
 				axislabel: cfg.axislabel,
@@ -2716,7 +2716,7 @@ function mayshowgenotype2boxplot(m, tk, holder) {
 		})
 	}
 	const div = holder.append('div').style('display', 'inline-block')
-	import('./plot.boxplot').then(p => {
+	import('./old/plot.boxplot').then(p => {
 		const err = p.default({
 			holder: div,
 			axislabel: cfg.axislabel,

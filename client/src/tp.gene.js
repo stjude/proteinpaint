@@ -962,6 +962,6 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 }
 
 async function barplot(bars, color, label, pos) {
-	const barplot = await import('./plot.barplot')
+	const barplot = await import('./old/plot.barplot')
 	return barplot.default(bars, color, label, pos)
 }
