@@ -3,7 +3,7 @@ import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 //import Menu from './dom/menu'
-//import dofetch3 from './common/dofetch'
+//import dofetch2 from './common/dofetch'
 import { make_radios } from './dom/radiobutton'
 import { make_one_checkbox } from './dom/checkbox'
 import urlmap from './common/urlmap'
@@ -28,6 +28,10 @@ tk.downloadgdc // Downloads bam file from gdc
 tk.gdc // Renders gdc bam file
 tk.variants[ {} ]
 	.chr/pos/ref/alt
+        .altseq
+        .refseq
+        .leftflankseq
+        .rightflankseq 
 tk.pileupheight
 tk.pileupbottompad
 
