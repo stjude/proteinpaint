@@ -220,7 +220,7 @@ tape('logistic outcome type=condition', function(test) {
 	}
 })
 
-tape('logistic outcome: reference category missing from tsv', function(test) {
+tape('logistic outcome: missing reference category', function(test) {
 	test.timeoutAfter(5000)
 
 	runpp({
@@ -279,12 +279,16 @@ tape('logistic outcome: reference category missing from tsv', function(test) {
 		const banner = regres.Inner.dom.banner
 		//banner.node().firstChild.innerText
 		const actualErrMsg = banner.text()
-		const expectedErrMsg = `Error: the reference category '≤22.05' is not found in the variable 'outcome' in the tsv✕`
+		const expectedErrMsg = `Error: the reference category '≤22.05' is not found in the variable 'outcome'✕`
 		test.equal(
 			actualErrMsg,
 			expectedErrMsg,
-			`missing reference category in tsv should error out prior to regression computation`
+			`should error out prior to R script if reference category of variable is missing in data matrix`
 		)
+		const results = regres.Inner.dom.div
+		const actualResultDivCnt = results.selectAll('div').size()
+		const expectedResultDivCnt = 0
+		test.equal(actualResultDivCnt, expectedResultDivCnt, `should not have results divs`)
 		test.end()
 	}
 })
