@@ -28,11 +28,18 @@ input tsv matrix for R:
 	rest of columns are for independent variables
 
 TODO
-- clarify key/val
-- client side to return q.refGrp for each term
+- clarify what is key and val, when to use which, and when to skip uncomputable
+		numeric term:
+			continuous: use val and exclude uncomputable values (done in sql?)
+			binning: use key which is bin label
+		categorical and condition term:
+			category/grade: use val and exclude uncomputable categories
+			groupsetting: still use val (both key/val are groupset labels)
+- client side to return q.refGrp for each term and delete get_refCategory()
 */
 
-// term types mapping to R classes of variables
+// minimum number of samples to run analysis
+const minimumSample = 1
 
 export async function get_regression(q, ds) {
 	try {
@@ -41,62 +48,54 @@ export async function get_regression(q, ds) {
 		// Rest of rows for R matrix, one for each sample
 		const startTime = +new Date()
 		const sampledata = getSampleData(q, [q.outcome, ...q.independent])
-		const queryTime = +new Date() - startTime
-
 		/* each element is one sample:
 		{sample, id2value:map}, where value is { key, val }
-
-		TODO clarify what is key and val, when to use which, and when to skip uncomputable
-
-		numeric term:
-			continuous: use val and exclude uncomputable values (done in sql?)
-			binning: use key which is bin label
-		categorical and condition term:
-			category/grade: use val and exclude uncomputable categories
-			groupsetting: still use val (both key/val are groupset labels)
-
 		*/
 
-		const tsvlines = makeMatrix(q, sampledata)
+		const queryTime = +new Date() - startTime
+
+		const [headerline, samplelines] = makeMatrix(q, sampledata)
+		const sampleSize = samplelines.length
+		if (sampleSize < minimumSample) throw 'too few samples to fit model'
 
 		// create arguments for the R script
-
-		// for outcome variable
+		// outcome
 		const refGroups = [get_refCategory(q.outcome.term, q.outcome.q)]
 		const colClasses = [q.outcome.q.mode == 'binary' ? 'factor' : termType2varClass(q.outcome.term.type)]
 		const scalingFactors = ['NA']
-
-		// independent
+		// independent terms
 		for (const term of q.independent) {
 			refGroups.push(get_refCategory(term.term, term.q))
 			colClasses.push(term.isBinned ? 'factor' : termType2varClass(term.term.type))
 			scalingFactors.push(term.isBinned || !term.q.scale ? 'NA' : term.q.scale)
 		}
 
-		// Validate tsv prior to R script
-		if (tsvlines.length === 0) throw 'tsv is empty'
-		if (tsvlines.length === 1) throw 'tsv only has header'
+		// validate data
 		for (const [i, colClass] of colClasses.entries()) {
-			const ref = refGroups[i]
-			const col = tsvlines.map(line => line.split('\t')[i])
-			const variable = col.shift()
-			if (colClass === 'factor') {
-				if (ref === 'NA') throw `reference category not given for categorical variable '${variable}'`
-				if (!col.includes(ref))
-					throw `the reference category '${ref}' is not found in the variable '${variable}' in the tsv`
+			const refGrp = refGroups[i]
+			if (colClass == 'factor') {
+				if (refGrp == 'NA') throw 'reference category not given for categorical variable ' + headerline[i]
+				// get unique list of values
+				const values = new Set(samplelines.map(l => l[i]))
+				// make sure ref grp exists in data
+				if (!values.has(refGrp))
+					throw `the reference category '${refGrp}' is not found in the variable '${headerline[i]}'`
+				// make sure there's at least 2 categories
+				if (values.size < 2) throw 'fewer than 2 categories: ' + headerline[i]
 			} else {
-				if (ref !== 'NA') throw `reference category given for continuous variable '${variable}'`
+				// not factor type, must be continuous
+				if (refGrp != 'NA') throw 'variable is not factor but ref grp is given: ' + headerline[i]
 			}
 		}
 
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
-			tsvlines,
+			[headerline.join('\t'), ...samplelines.map(i => i.join('\t'))],
 			[q.regressionType, colClasses.join(','), refGroups.join(','), scalingFactors.join(',')],
 			false
 		)
 
-		const result = { queryTime, sampleSize: tsvlines.length - 1 }
+		const result = { queryTime, sampleSize }
 		parseRoutput(data, result)
 
 		result.totalTime = +new Date() - startTime
@@ -154,7 +153,11 @@ which may consume memory and may need to be improved
 */
 function makeMatrix(q, sampledata) {
 	// Populate data rows of tsv. first line is header
-	const tsv = [['outcome', ...q.independent.map(i => i.id)].join('\t')]
+	const headerline = ['outcome', ...q.independent.map(i => i.id)]
+
+	// may generate a line for each sample, if the sample has valid value for all terms
+	// store lines as arrays but not \t joined string, for checking refGrp value
+	const lines = []
 
 	for (const { sample, id2value } of sampledata) {
 		const outcome = id2value.get(q.outcome.id)
@@ -200,9 +203,9 @@ function makeMatrix(q, sampledata) {
 			}
 		}
 		if (skipsample) continue
-		tsv.push(line.join('\t'))
+		lines.push(line)
 	}
-	return tsv
+	return [headerline, lines]
 }
 
 function parseRoutput(data, result) {
