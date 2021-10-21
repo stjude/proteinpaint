@@ -95,18 +95,15 @@ function applyEdits(self) {
 			self.q.last_bin.start = +self.dom.last_start_input.property('value')
 			self.q.last_bin.stopunbounded = true
 		}
+		// TODO having .lst alongwith type=regular will mess up with server for generating bins
+		// after fixing server should delete this line
+		delete self.q.lst
 		self.numqByTermIdModeType[self.term.id].discrete.regular = JSON.parse(JSON.stringify(self.q))
 	} else {
-		delete self.q.startinclusive
-		delete self.q.stopinclusive
-		delete self.q.bin_size
-		delete self.q.first_bin
-		delete self.q.last_bin
 		self.q.lst = processCustomBinInputs(self)
 		self.numqByTermIdModeType[self.term.id].discrete.custom = JSON.parse(JSON.stringify(self.q))
 	}
 	self.q.mode = 'discrete'
-	delete self.q.scale
 	self.dom.tip.hide()
 	self.opts.callback({
 		term: self.term,
@@ -236,7 +233,10 @@ export function renderBoundaryInclusionInput(self) {
 		.append('select')
 		.style('margin-left', '10px')
 		.on('change', function() {
-			const c = self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
+			const c =
+				self.q.mode == 'binary'
+					? self.numqByTermIdModeType[self.term.id].binary
+					: self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
 			if (c.type == 'regular') {
 				setBinsInclusion(c)
 			} else {
@@ -613,6 +613,7 @@ function renderCustomBinInputs(self, tablediv) {
 
 	function binsChanged(data, qlst) {
 		if (data.length != qlst.length) return true
+		if (Object.keys(data[0]).length !== Object.keys(qlst[0]).length) return true
 		for (const [i, bin] of qlst.entries()) {
 			for (const k of Object.keys(bin)) {
 				if (bin[k] && bin[k] !== data[i][k]) {
@@ -673,6 +674,6 @@ function renderButtons(self) {
 		.on('click', () => {
 			delete self.q
 			delete self.numqByTermIdModeType[self.term.id]
-			self.showEditMenu(self.dom.num_holder)
+			showEditMenu(self, self.dom.num_holder)
 		})
 }

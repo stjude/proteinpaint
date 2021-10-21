@@ -59,9 +59,8 @@ async function showEditMenu(self, div) {
 	} catch (err) {
 		console.log(err)
 	}
-
+	self.dom.num_holder = div
 	div.selectAll('*').remove()
-	self.dom.num_holder = div.append('div')
 	self.dom.bins_div = div.append('div').style('padding', '5px')
 
 	setqDefaults(self)
@@ -112,12 +111,12 @@ async function showEditMenu(self, div) {
 		.style('margin', '5px')
 		.html('Reset')
 		.on('click', () => {
-			// TODO: set self.q to default
-			// self.q.mode = 'binary'
-			// self.opts.callback({
-			// 	term: self.term,
-			// 	q: self.q
-			// })
+			// delete self.q and create new with default
+			// TODO: rightnow reset will devide bins at max-min/2 as per logic at line 134
+			// if it must be reset at median, the logic must be changned
+			delete self.q
+			delete self.numqByTermIdModeType[self.term.id]
+			showEditMenu(self, self.dom.num_holder)
 		})
 }
 
@@ -131,7 +130,7 @@ function setqDefaults(self) {
 		// automatically derive a cutoff to generate binary bins
 		const cutoff =
 			boundry_value !== undefined
-				? boundry_value
+				? Number(boundry_value)
 				: dd.maxvalue != dd.minvalue
 				? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2
 				: dd.maxvalue
