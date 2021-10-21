@@ -617,6 +617,7 @@ function renderCustomBinInputs(self, tablediv) {
 
 	function binsChanged(data, qlst) {
 		if (data.length != qlst.length) return true
+		if (Object.keys(data[0]).length !== Object.keys(qlst[0]).length) return true
 		for (const [i, bin] of qlst.entries()) {
 			for (const k of Object.keys(bin)) {
 				if (bin[k] && bin[k] !== data[i][k]) {
