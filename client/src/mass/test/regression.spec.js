@@ -219,3 +219,76 @@ tape('logistic outcome type=condition', function(test) {
 		test.equal(actualNumRows, expectedNumRows, `should have ${expectedNumRows} rows`)
 	}
 })
+
+tape('logistic outcome: missing reference category', function(test) {
+	test.timeoutAfter(5000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'logistic',
+					//cutoff: 57.8,
+					term: {
+						id: 'vincristine_5',
+						q: {
+							mode: 'binary',
+							type: 'custom',
+							lst: [
+								{ startunbounded: true, stopinclusive: true, stop: 22.05, label: '≤22.05' },
+								{ stopunbounded: true, startinclusive: false, start: 22.05, label: '>22.05' }
+							],
+							refGrp: '≤22.05'
+						}
+					},
+					independent: [
+						{
+							id: 'agedx',
+							q: { mode: 'continuous' }
+						},
+						{
+							id: 'idarubicin_5',
+							q: {
+								mode: 'discrete',
+								type: 'regular',
+								startinclusive: true,
+								bin_size: 10,
+								first_bin: { stop: 10, bin: 'first', startunbounded: true },
+								last_bin: { start: 70, bin: 'last', stopunbounded: true },
+								hiddenValues: { '0': 1, '-8888': 1, '-9999': 1 },
+								termtype: 'float',
+								stopinclusive: false,
+								rounding: '.0f',
+								refGrp: '<10'
+							}
+						}
+					]
+				}
+			]
+		},
+		regression: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(regres) {
+		regres.on('postRender.test', null)
+		const banner = regres.Inner.dom.banner
+		//banner.node().firstChild.innerText
+		const actualErrMsg = banner.text()
+		const expectedErrMsg = `Error: the reference category '≤22.05' is not found in the variable 'outcome'✕`
+		test.equal(
+			actualErrMsg,
+			expectedErrMsg,
+			`should error out prior to R script if reference category of variable is missing in data matrix`
+		)
+		const results = regres.Inner.dom.div
+		const actualResultDivCnt = results.selectAll('div').size()
+		const expectedResultDivCnt = 0
+		test.equal(actualResultDivCnt, expectedResultDivCnt, `should not have results divs`)
+		test.end()
+	}
+})
