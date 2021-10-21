@@ -5,7 +5,6 @@ import { get_bin_label } from '../../shared/termdb.bins'
 import { keyupEnter } from '../client'
 import { make_one_checkbox } from '../dom/checkbox'
 import { getNormalRoot } from './filter'
-import { dofetch3 } from './dofetch'
 
 export async function setNumericMethods(self, closureType = 'closured') {
 	if (closureType == 'non-closured') {
@@ -242,16 +241,7 @@ async function renderCuttoffInput(self) {
 		}
 	}
 	async function setPercentile() {
-		const lst = [
-			'/termdb?getpercentile=' + self.q.modeBinaryCutoffPercentile,
-			'tid=' + self.term.id,
-			'genome=' + self.opts.vocab.genome,
-			'dslabel=' + self.opts.vocab.dslabel
-		]
-		if (self.filter) {
-			lst.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(self.filter))))
-		}
-		const data = await dofetch3(lst.join('&'), {}, self.opts.fetchOpts)
+		const data = await self.opts.vocabApi.getPercentile(self.term.id, self.q.modeBinaryCutoffPercentile, self.filter)
 		updateUI(data.value)
 	}
 }

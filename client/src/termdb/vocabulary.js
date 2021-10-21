@@ -179,6 +179,20 @@ class TermdbVocab {
 		return density_data
 	}
 
+	async getPercentile(term_id, percentile, filter) {
+		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
+		const lst = [
+			'termdb?getpercentile=' + percentile,
+			'tid=' + term_id,
+			'genome=' + this.vocab.genome,
+			'dslabel=' + this.vocab.dslabel
+		]
+		if (filter) {
+			lst.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+		}
+		return await dofetch3(lst.join('&'))
+	}
+
 	async getterm(termid, dslabel = null, genome = null) {
 		if (!termid) throw 'getterm: termid missing'
 		if (this && this.state && this.state.vocab) {
@@ -381,6 +395,11 @@ class FrontendVocab {
 			maxvalue,
 			samplecount
 		}
+	}
+
+	async getPercentile(term_id, percentile, filter) {
+		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
+		throw 'getPercentile() is not implemented yet for front-end vocab, should be easy...'
 	}
 
 	async getterm(termid) {
