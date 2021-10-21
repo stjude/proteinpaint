@@ -689,7 +689,13 @@ async function get_q(genome, req) {
 		}
 		const t = req.query.variant.split('.')
 		if (t.length != 5) throw 'invalid variant, not chr.pos.ref.alt.strictness'
-		q.subsequent_request = req.query.subsequent_request
+		q.alleleAlreadyUpdated = req.query.alleleAlreadyUpdated
+		if (q.alleleAlreadyUpdated) {
+			q.altseq = req.query.altseq
+			q.refseq = req.query.refseq
+			q.leftflankseq = req.query.leftflankseq
+			q.rightflankseq = req.query.rightflankseq
+		}
 		q.variant = {
 			chr: t[0],
 			pos: Number(t[1]),
@@ -783,10 +789,12 @@ async function do_query(q) {
 				// Tells whether the FS score is significant/insignificant
 				result.strand_significance = true
 			}
-			if (!q.subsequent_request) {
+			if (!q.alleleAlreadyUpdated) {
 				// Prevent passing ref and alt sequences to client side in subsequent requests
 				result.refseq = out.refseq // Passing complete reference sequence back to client side for alignment
 				result.altseq = out.altseq // Passing complete alternate sequence back to client side for alignment
+				result.leftflankseq = out.leftflankseq // Passing leftflankseq to client side
+				result.rightflankseq = out.rightflankseq // Passing rightflankseq to client side
 			}
 		}
 

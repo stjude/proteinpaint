@@ -15,7 +15,7 @@ fn main() {
         }
         Err(error) => println!("Piping error: {}", error),
     }
-    let args: Vec<&str> = input.split(":").collect(); // Various input from nodejs is separated by ":" characater
+    let args: Vec<&str> = input.split(":").collect(); // Various input from nodejs is separated by ":" character
     let query_seq: String = args[0].parse::<String>().unwrap(); // Query sequence
     let ref_seq: String = args[1].parse::<String>().unwrap().replace("\n", ""); // Reference sequence. Removing "\n" from the end of string
     let alt_seq: String = args[2].parse::<String>().unwrap().replace("\n", ""); // Alternate sequence. Removing "\n" from the end of string
@@ -96,7 +96,7 @@ fn align_reads(query_seq: &String, ref_seq: String) -> (String, String, String) 
             }
             if j > 0 && j < query_vector.len() {
                 // This condition is added so as to suppress part of the reference sequence that do not lie within the read region
-                align += &"x".to_string(); // Add "x" when there is a deletion
+                align += &" ".to_string(); // Add empty space when there is a deletion
             }
         } else if AlignmentOperation::Ins == alignment_seq[i] {
             if j < query_vector.len() {
@@ -104,7 +104,7 @@ fn align_reads(query_seq: &String, ref_seq: String) -> (String, String, String) 
                 j += 1;
             }
             r_seq += &"-".to_string();
-            align += &"x".to_string(); // Add "x" when there is a insertion
+            align += &" ".to_string(); // Add empty space when there is an insertion
         } else {
             println!("Alignment operation not found:{}{:?}", i, alignment_seq[i]);
         }

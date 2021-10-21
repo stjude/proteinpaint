@@ -2,6 +2,8 @@ import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selec
 import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
+//import Menu from './dom/menu'
+//import dofetch3 from './common/dofetch'
 import { make_radios } from './dom/radiobutton'
 import { make_one_checkbox } from './dom/checkbox'
 import urlmap from './common/urlmap'
@@ -139,6 +141,7 @@ export async function loadTk(tk, block) {
 		}
 
 		const data = await getData(tk, block)
+		console.log('data:', data)
 		if (data.error) throw data.error
 		if (data.colorscale) {
 			// available from 1st query, cache
@@ -190,9 +193,13 @@ async function getData(tk, block, additional = []) {
 			lst.push('min_diff_score=' + tk.min_diff_score)
 		}
 	}
-	if (tk.variants && tk.variants.refseq) {
+	if (tk.variants && tk.alleleAlreadyUpdated) {
 		// Prevent passing of refseq and altseq from server to client side in subsequent request
-		lst.push('subsequent_request=1')
+		lst.push('alleleAlreadyUpdated=1')
+		lst.push('refseq=' + tk.variants[0].refseq)
+		lst.push('altseq=' + tk.variants[0].altseq)
+		lst.push('leftflankseq=' + tk.variants[0].leftflankseq)
+		lst.push('rightflankseq=' + tk.variants[0].rightflankseq)
 	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
@@ -239,9 +246,12 @@ async function getData(tk, block, additional = []) {
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
 	const data = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
-	if (tk.variants && data.refseq) {
+	if (tk.variants && !tk.alleleAlreadyUpdated) {
 		tk.variants[0].refseq = data.refseq
 		tk.variants[0].altseq = data.altseq
+		tk.variants[0].leftflankseq = data.leftflankseq
+		tk.variants[0].rightflankseq = data.rightflankseq
+		tk.alleleAlreadyUpdated = true
 	}
 	if (data.error) throw data.error
 	return data

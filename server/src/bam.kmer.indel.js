@@ -58,38 +58,45 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt
 	)
 	*/
-	const leftflankseq = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (final_pos - segbplen) + '-' + final_pos))
 
-		.split('\n')
-		.slice(1)
-		.join('')
-		.toUpperCase()
-	const rightflankseq = (await utils.get_fasta(
-		q.genome,
-		q.variant.chr + ':' + (final_pos + final_ref.length + 1) + '-' + (final_pos + segbplen + final_ref.length + 1)
-	))
-		.split('\n')
-		.slice(1)
-		.join('')
-		.toUpperCase()
-	const refseq = (await utils.get_fasta(
-		q.genome,
-		q.variant.chr + ':' + (final_pos - segbplen) + '-' + (final_pos + segbplen + final_ref.length + 1)
-	))
-		.split('\n')
-		.slice(1)
-		.join('')
-		.toUpperCase()
+	const refallele = final_ref.toUpperCase()
+	const altallele = final_alt.toUpperCase()
+	let leftflankseq, rightflankseq, refseq, altseq
+
+	if (!q.alleleAlreadyUpdated) {
+		leftflankseq = (await utils.get_fasta(q.genome, q.variant.chr + ':' + (final_pos - segbplen) + '-' + final_pos))
+
+			.split('\n')
+			.slice(1)
+			.join('')
+			.toUpperCase()
+		rightflankseq = (await utils.get_fasta(
+			q.genome,
+			q.variant.chr + ':' + (final_pos + final_ref.length + 1) + '-' + (final_pos + segbplen + final_ref.length + 1)
+		))
+			.split('\n')
+			.slice(1)
+			.join('')
+			.toUpperCase()
+		refseq = (await utils.get_fasta(
+			q.genome,
+			q.variant.chr + ':' + (final_pos - segbplen) + '-' + (final_pos + segbplen + final_ref.length + 1)
+		))
+			.split('\n')
+			.slice(1)
+			.join('')
+			.toUpperCase()
+		altseq = leftflankseq + altallele + rightflankseq
+	} else {
+		leftflankseq = q.leftflankseq
+		rightflankseq = q.rightflankseq
+		refseq = q.refseq
+		altseq = q.altseq
+	}
 
 	//console.log(q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt)
 	//console.log('refSeq', refseq)
 	//console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
-
-	const refallele = final_ref.toUpperCase()
-	const altallele = final_alt.toUpperCase()
-
-	//const refseq = leftflankseq + refallele + rightflankseq
-	const altseq = leftflankseq + altallele + rightflankseq
 
 	// console.log(refallele,altallele,refseq,altseq)
 
@@ -306,7 +313,9 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		strand_probability,
 		strand_significance,
 		refseq,
-		altseq
+		altseq,
+		leftflankseq,
+		rightflankseq
 	}
 }
 
