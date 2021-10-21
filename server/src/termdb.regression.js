@@ -187,18 +187,22 @@ function makeMatrix(q, sampledata) {
 
 			const { key, val } = id2value.get(term.id)
 
+			/*
+			TODO
+			if a uncomputable category is part of a groupset, then it must not be excluded
+			*/
+			if (term.term.values && term.term.values[val] && term.term.values[val].uncomputable) {
+				skipsample = true
+				break
+			}
+
 			if (term.isBinned) {
-				// key is the bin label and use as data value
+				// key is the bin label
 				line.push(key)
 			} else {
 				// term is not binned
 				// for all the other cases will use val
-				// including groupsetting which both val and key are group labels??
-				// to use val, check if is uncomputable
-				if (term.term.values && term.term.values[val] && term.term.values[val].uncomputable) {
-					skipsample = true
-					break
-				}
+				// including groupsetting which both val and key are group labels (yes)
 				line.push(val)
 			}
 		}
@@ -339,36 +343,37 @@ function get_refCategory(term, q) {
 	throw 'unknown term type for refCategories'
 }
 
-function getSampleData(q, terms) {
-	/*
-	works for only termdb terms; non-termdb attributes will not work
-	gets data for regression analysis, one row for each sample
-	
-	Arguments
-	q{}
-		.filter
-		.ds
-	
-	terms[]
-		array of {id, term, q}
+/*
+may move to termdb.sql.js later
 
-	Returns
-	[
-		{
-			sample: STRING,
-			
-			// one or more entries by term id
-		  [term.id]: {
-		 		// depending on term type and desired 
-				key: bin label or precomputed label or annotated value, 
-				val: precomputed or annotated value
-			},
-			...
-		}, 
+works for only termdb terms; non-termdb attributes will not work
+gets data for regression analysis, one row for each sample
+
+Arguments
+q{}
+	.filter
+	.ds
+
+terms[]
+	array of {id, term, q}
+
+Returns
+[
+	{
+		sample: STRING,
+		
+		// one or more entries by term id
+	  [term.id]: {
+			// depending on term type and desired 
+			key: bin label or precomputed label or annotated value, 
+			val: precomputed or annotated value
+		},
 		...
-	]
-	*/
-
+	}, 
+	...
+]
+*/
+function getSampleData(q, terms) {
 	const filter = getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
