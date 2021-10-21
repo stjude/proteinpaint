@@ -95,19 +95,15 @@ function applyEdits(self) {
 			self.q.last_bin.start = +self.dom.last_start_input.property('value')
 			self.q.last_bin.stopunbounded = true
 		}
+		// TODO having .lst alongwith type=regular will mess up with server for generating bins
+		// after fixing server should delete this line
 		delete self.q.lst
 		self.numqByTermIdModeType[self.term.id].discrete.regular = JSON.parse(JSON.stringify(self.q))
 	} else {
-		delete self.q.startinclusive
-		delete self.q.stopinclusive
-		delete self.q.bin_size
-		delete self.q.first_bin
-		delete self.q.last_bin
 		self.q.lst = processCustomBinInputs(self)
 		self.numqByTermIdModeType[self.term.id].discrete.custom = JSON.parse(JSON.stringify(self.q))
 	}
 	self.q.mode = 'discrete'
-	delete self.q.scale
 	self.dom.tip.hide()
 	self.opts.callback({
 		term: self.term,
