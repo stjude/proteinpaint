@@ -394,7 +394,8 @@ function getSampleData(q, terms) {
 		).join(`UNION ALL`)}`
 
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-	const samples = new Map() // k: sample name, v: {sample, terms:{}}
+	// each row {sample, term_id, key, val}
+	const samples = new Map() // k: sample name, v: {sample, id2value:Map( tid => {key,val}) }
 	for (const r of rows) {
 		if (!samples.has(r.sample)) {
 			samples.set(r.sample, { sample: r.sample, id2value: new Map() })
