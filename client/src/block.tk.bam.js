@@ -551,16 +551,19 @@ function may_render_variant(data, tk, block) {
 	fs_string.tktip = new Menu({ padding: '15px' })
 	fs_string
 		.on('mouseover', () => {
-			fs_string.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
+			fs_string.tktip.clear().show(d3event.clientX - 150, d3event.clientY - 30)
 			const d = fs_string.tktip.d
 				.append('div')
 				.html(
-					'Fisher strand (FS) analysis score containing </br> p-values in phred scale (-10*log(p-value)).</br> If FS > 60, the variant maybe </br> a sequencing artifact and highlighted in red.</br> </br> The fishers exact test is used for variants </br>with sequencing depth <= 300.</br> If depth > 300, chi-square test is used. '
+					'Fisher strand (FS) analysis score containing </br> p-values in phred scale (-10*log(p-value)).</br> If FS > <a href="https://gatk.broadinstitute.org/hc/en-us/articles/360035890471">60</a> , the variant maybe </br> a sequencing artifact and highlighted in red.</br> </br> The fishers exact test is used for variants </br>with sequencing depth <= 300.</br> If depth > 300, chi-square test is used. '
 				)
-			d.style('margin-bottom', '5px')
+				.style('margin-bottom', '5px')
+				.style('font-size', `12px`)
 		})
 		.on('mouseout', () => {
-			fs_string.tktip.hide()
+			setTimeout(() => {
+				fs_string.tktip.hide()
+			}, 5000)
 		})
 
 	if (Number.isFinite(data.max_diff_score)) {
