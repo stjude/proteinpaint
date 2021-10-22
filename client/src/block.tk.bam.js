@@ -1,9 +1,11 @@
 import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
 import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import * as client from './client'
-//import Menu from './dom/menu'
-//import dofetch2 from './common/dofetch'
+import { axisstyle } from './dom/axisstyle'
+import { newpane } from './client'
+import { sayerror } from './dom/sayerror'
+import { appear } from './dom/animation'
+import { dofetch3 } from './common/dofetch'
 import { make_radios } from './dom/radiobutton'
 import { make_one_checkbox } from './dom/checkbox'
 import urlmap from './common/urlmap'
@@ -145,7 +147,6 @@ export async function loadTk(tk, block) {
 		}
 
 		const data = await getData(tk, block)
-		console.log('data:', data)
 		if (data.error) throw data.error
 		if (data.colorscale) {
 			// available from 1st query, cache
@@ -230,7 +231,7 @@ async function getData(tk, block, additional = []) {
 	let orig_regions = []
 	if (tk.downloadgdc) {
 		lst.push('downloadgdc=' + tk.downloadgdc)
-		gdc_bam_files = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
+		gdc_bam_files = await dofetch3('tkbam?' + lst.join('&'), { headers })
 		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
 		if (gdc_bam_files.error) throw gdc_bam_files.error
 		delete tk.downloadgdc
@@ -249,7 +250,7 @@ async function getData(tk, block, additional = []) {
 	if (tk.drop_pcrduplicates) lst.push('drop_pcrduplicates=1')
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
-	const data = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
+	const data = await dofetch3('tkbam?' + lst.join('&'), { headers })
 	if (tk.variants && !tk.alleleAlreadyUpdated) {
 		tk.variants[0].refseq = data.refseq
 		tk.variants[0].altseq = data.altseq
@@ -284,7 +285,7 @@ or update existing groups, in which groupidx will be provided
 		const scale = scaleLinear()
 			.domain([0, data.pileup_data.maxValue])
 			.range([tk.pileupheight, 0])
-		client.axisstyle({
+		axisstyle({
 			axis: tk.dom.pileup_axis.call(
 				axisRight()
 					.scale(scale)
@@ -686,7 +687,7 @@ function makeTk(tk, block) {
 			configPanel(tk, block)
 		})
 
-	tk.readpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
+	tk.readpane = newpane({ x: 100, y: 100, closekeep: 1 })
 	tk.readpane.pane.style('display', 'none')
 
 	tk.pileupheight = 100
@@ -841,7 +842,7 @@ function makeGroup(gd, tk, block, data) {
 					.domain([tk.min_diff_score.toFixed(1), tk.max_diff_score.toFixed(1)])
 					.range([0, gd.diff_scores_img.width])
 			)
-		client.axisstyle({
+		axisstyle({
 			axis: tk.dom.diff_score_axis
 				.transition()
 				.attr('transform', 'translate(' + 0 + ',' + (diff_score_height + 0.5 * tk.dom.variantrowheight) + ')')
@@ -1192,7 +1193,7 @@ box{}
   qname, start, stop
 */
 async function getReadInfo(tk, block, box, ridx) {
-	client.appear(tk.readpane.pane)
+	appear(tk.readpane.pane)
 	tk.readpane.header.text('Read info')
 	tk.readpane.body.selectAll('*').remove()
 	const wait = tk.readpane.body.append('div').text('Loading...')
@@ -1201,9 +1202,9 @@ async function getReadInfo(tk, block, box, ridx) {
 		req_data.lst.push('refseq=' + tk.variants[0].refseq)
 		req_data.lst.push('altseq=' + tk.variants[0].altseq)
 	}
-	const data = await client.dofetch2('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
+	const data = await dofetch3('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
 	if (data.error) {
-		client.sayerror(wait, data.error)
+		sayerror(wait, data.error)
 		return
 	}
 	wait.remove()
@@ -1321,10 +1322,10 @@ async function getReadInfo(tk, block, box, ridx) {
 					mate_button.property('disabled', true) // disable this button
 					const wait = tk.readpane.body.append('div').text('Loading...')
 					const req_data = getparam('show_unmapped=1')
-					const data2 = await client.dofetch2('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
+					const data2 = await dofetch3('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
 					if (data2.error) {
 						wait.text('')
-						client.sayerror(wait, data2.error)
+						sayerror(wait, data2.error)
 						mate_button.property('disabled', false) // reenable this button
 						return
 					}
@@ -1407,7 +1408,7 @@ function mayshow_blatbutton(read, div, tk, block) {
 			blatdiv.selectAll('*').remove()
 			const wait = blatdiv.append('div').text('Loading...')
 			try {
-				const data = await client.dofetch2(
+				const data = await dofetch3(
 					'blat?genome=' +
 						block.genome.name +
 						'&seq=' +
