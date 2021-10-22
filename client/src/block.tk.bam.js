@@ -1272,7 +1272,7 @@ async function getReadInfo(tk, block, box, ridx) {
 						.append('tr')
 						.style('opacity', 0.5)
 						.style('font-size', '.8em')
-					reference_tr_ref.append('td').text('Ref allele')
+					reference_tr_ref.append('tdnowrap').text('Ref allele')
 					for (const nclt of data.lst[0].r_align_ref) {
 						reference_tr_ref.append('td').text(nclt)
 					}
@@ -1303,7 +1303,7 @@ async function getReadInfo(tk, block, box, ridx) {
 						.append('tr')
 						.style('opacity', 0.5)
 						.style('font-size', '.8em')
-					alterence_tr_alt.append('td').text('Alt allele')
+					alterence_tr_alt.append('tdnowrap').text('Alt allele')
 					for (const nclt of data.lst[0].r_align_alt) {
 						alterence_tr_alt.append('td').text(nclt)
 					}
