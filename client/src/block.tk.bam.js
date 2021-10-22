@@ -3,6 +3,7 @@ import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { axisstyle } from './dom/axisstyle'
 import { newpane } from './client'
+import { Menu } from './dom/menu'
 import { sayerror } from './dom/sayerror'
 import { appear } from './dom/animation'
 import { dofetch3 } from './common/dofetch'
@@ -546,6 +547,21 @@ function may_render_variant(data, tk, block) {
 		// Change color to red if FS score is significant
 		fs_string.style('fill', 'red')
 	}
+
+	fs_string.tktip = new Menu({ padding: '15px' })
+	fs_string
+		.on('mouseover', () => {
+			fs_string.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
+			const d = fs_string.tktip.d
+				.append('div')
+				.html(
+					'Fisher strand (FS) analysis score containing </br> p-values in phred scale (-10*log(p-value)).</br> If FS > 60, the variant maybe </br> a sequencing artifact and highlighted in red.</br> </br> The fishers exact test is used for variants </br>with sequencing depth <= 300.</br> If depth > 300, chi-square test is used. '
+				)
+			d.style('margin-bottom', '5px')
+		})
+		.on('mouseout', () => {
+			fs_string.tktip.hide()
+		})
 
 	if (Number.isFinite(data.max_diff_score)) {
 		// Should always be true if variant field was given by user, but may change in the future
