@@ -61,6 +61,7 @@ class MassPlot {
 			cumincplot4condition: appState.termdbConfig.cumincplot4condition,
 			displayAsSurvival:
 				config.settings &&
+				config.settings.currViews &&
 				config.settings.currViews[0] != 'regression' &&
 				((config.term && config.term.term.type == 'survival') || (config.term2 && config.term2.term.type == 'survival'))
 		}

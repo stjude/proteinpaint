@@ -1,10 +1,10 @@
 import { regressionUIInit } from './regression.ui'
-import { MassRegressionInputs } from './regression.inputs'
-import { MassRegressionResults } from './regression.results'
+import { RegressionInputs } from './regression.inputs'
+import { RegressionResults } from './regression.results'
 import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 
-class MassRegression {
+class Regression {
 	constructor(opts) {
 		this.type = 'regression'
 	}
@@ -25,18 +25,23 @@ class MassRegression {
 			results
 		}
 
-		this.inputs = new MassRegressionInputs({
+		/*** TODO: may not need this config here  ***/
+		const config = this.app.getState().plots.find(p => p.id === this.id)
+
+		this.inputs = new RegressionInputs({
 			app: this.app,
 			parent: this,
 			id: this.id,
-			holder: this.dom.inputs
+			holder: this.dom.inputs,
+			regressionType: config.regressionType
 		})
 
-		this.results = new MassRegressionResults({
+		this.results = new RegressionResults({
 			app: this.app,
 			parent: this,
 			id: this.id,
-			holder: this.dom.results
+			holder: this.dom.results,
+			regressionType: config.regressionType
 		})
 	}
 
@@ -67,9 +72,10 @@ class MassRegression {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		this.dom.banner.style('display', this.state.formIsComplete ? 'block' : 'none')
 		if (this.dom.header) {
+			const termLabel = (this.config.term && this.config.term.term.name) || ''
 			this.dom.header.html(
-				this.config.term.term.name +
-					` <span style="opacity:.6;font-size:.7em;margin-left:10px;">${this.config.regressionType.toUpperCase()} REGRESSION</span>`
+				termLabel +
+					`<span style="opacity:.6;font-size:.7em;margin-left:10px;"> ${this.config.regressionType.toUpperCase()} REGRESSION</span>`
 			)
 		}
 		this.dom.banner.style('display', 'none')
@@ -79,6 +85,6 @@ class MassRegression {
 	}
 }
 
-export const regressionInit = getCompInit(MassRegression)
+export const regressionInit = getCompInit(Regression)
 // this alias will allow abstracted dynamic imports
 export const componentInit = regressionInit

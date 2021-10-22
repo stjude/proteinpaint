@@ -1,7 +1,7 @@
 import { q_to_param } from '../termdb/plot'
 import { getNormalRoot } from '../common/filter'
 
-export class MassRegressionResults {
+export class RegressionResults {
 	constructor(opts) {
 		this.opts = opts
 		this.app = opts.app
@@ -29,7 +29,7 @@ export class MassRegressionResults {
 			// share the writable config copy
 			this.config = this.parent.config
 			this.state = this.parent.state
-			if (!this.state.formIsComplete) {
+			if (!this.state.formIsComplete || this.parent.inputs.hasError) {
 				this.dom.holder.style('display', 'none')
 				return
 			}

@@ -5,13 +5,15 @@ import { dofetch3 } from '../client'
 import { getNormalRoot } from '../common/filter'
 import { get_bin_label } from '../../shared/termdb.bins'
 
-export class MassRegressionInputs {
+export class RegressionInputs {
 	constructor(opts) {
 		this.opts = opts
 		this.app = opts.app
 		// reference to the parent component's mutable instance (not its API)
 		this.parent = opts.parent
 		this.type = 'regressionUI'
+
+		const regressionType = this.opts.regressionType
 		this.sections = [
 			{
 				label: 'Outcome variable',
@@ -28,6 +30,13 @@ export class MassRegressionInputs {
 					linear: ['categorical', 'survival'],
 					logistic: ['survival']
 				},
+				setQ: {
+					integer: regressionType == 'logistic' ? this.maySetTwoBins : this.setContMode,
+					float: regressionType == 'logistic' ? this.maySetTwoBins : this.setContMode,
+					categorical: this.maySetTwoGroups,
+					condition: this.maySetTwoGroups
+				},
+
 				// to track and recover selected term pills, info divs, other dom elements,
 				// and avoid unnecessary jerky full rerenders for the same term
 				items: {}
@@ -64,12 +73,17 @@ export class MassRegressionInputs {
 		setRenderers(this)
 	}
 
-	main() {
-		// share the writable config copy
-		this.config = this.parent.config
-		this.state = this.parent.state
-		if (!this.dom.submitBtn) this.initUI()
-		this.render()
+	async main() {
+		try {
+			this.hasError = false
+			// share the writable config copy
+			this.config = this.parent.config
+			this.state = this.parent.state
+			if (!this.dom.submitBtn) this.initUI()
+			await this.render()
+		} catch (e) {
+			throw e
+		}
 	}
 
 	setDisableTerms() {
@@ -85,272 +99,255 @@ export class MassRegressionInputs {
 		// if outcome term.q.mode != 'binary',
 		// query backend for median and create custom 2 bins with median and boundry
 		// for logistic independet numeric terms
-		if (d.section.configKey == 'term' && this.config.regressionType == 'logistic' && d.term.q.mode != 'binary') {
-			try {
-				await this.updateLogisticOutcome(d)
-				d.pill.main({
-					id: d.term.id,
-					term: d.term.term,
-					q: d.term.q,
-					filter: this.state.termfilter.filter
-				})
-				await this.validateLogisticOutcome(d)
-			} catch (e) {
-				this.app.printError(e)
-				return
+		d.dom.err_div.style('display', 'none').text('')
+		try {
+			if (d.section.setQ && d.section.setQ[d.term.term.type]) {
+				await d.section.setQ[d.term.term.type].call(this, d)
+			} else {
+				// console.log(`maybe okay to not have a section setQ() for type=${d.term.term.type}`)
 			}
+			await d.pill.main({
+				id: d.term.id,
+				term: d.term.term,
+				q: d.term.q,
+				filter: this.state.termfilter.filter
+			})
+
+			// create a q copy to remove unnecessary parameters
+			// from the server request
+			const q = JSON.parse(JSON.stringify(d.term.q))
+			delete q.values
+			delete q.totalCount
+			/*
+				for continuous term, assume it is numeric and that we'd want counts by bins,
+				so remove the 'mode: continuous' value as it will prevent bin construction in the backend
+			*/
+			if (q.mode == 'continuous') delete q.mode
+			const lst = [
+				'/termdb?getcategories=1',
+				'tid=' + d.term.id,
+				'term1_q=' + encodeURIComponent(JSON.stringify(q)),
+				'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
+				'genome=' + this.state.vocab.genome,
+				'dslabel=' + this.state.vocab.dslabel
+			]
+			if (q.bar_by_grade) lst.push('bar_by_grade=1')
+			if (q.bar_by_children) lst.push('bar_by_children=1')
+			if (q.value_by_max_grade) lst.push('value_by_max_grade=1')
+			if (q.value_by_most_recent) lst.push('value_by_most_recent=1')
+			if (q.value_by_computable_grade) lst.push('value_by_computable_grade=1')
+			const url = lst.join('&')
+			const data = await dofetch3(url)
+			if (data.error) throw data.error
+			d.orderedLabels = data.orderedLabels
+
+			// sepeate include and exclude categories based on term.values.uncomputable
+			const excluded_values = d.term.term.values
+				? Object.entries(d.term.term.values)
+						.filter(v => v[1].uncomputable)
+						.map(v => v[1].label)
+				: []
+			d.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label))
+			d.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
+
+			// get include, excluded and total sample count
+			const totalCount = (d.term.q.totalCount = { included: 0, excluded: 0, total: 0 })
+			d.sampleCounts.forEach(v => (totalCount.included = totalCount.included + v.samplecount))
+			d.excludeCounts.forEach(v => (totalCount.excluded = totalCount.excluded + v.samplecount))
+			totalCount.total = totalCount.included + totalCount.excluded
+
+			// store total count from numerical/categorical term as global variable totalSampleCount
+			if (this.totalSampleCount == undefined && d.term.term.type != 'condition')
+				this.totalSampleCount = totalCount.total
+			// for condition term, subtract included count from totalSampleCount to get excluded
+			if (d.term.term.type == 'condition' && this.totalSampleCount) {
+				totalCount.excluded = this.totalSampleCount - totalCount.included
+			}
+
+			await d.pill.main({
+				id: d.term.id,
+				term: d.term.term,
+				q: d.term.q,
+				filter: this.state.termfilter.filter,
+				sampleCounts: d.sampleCounts
+			})
+
+			if (d.term.q.mode !== 'continuous' && Object.keys(d.sampleCounts).length < 2) {
+				throw `there should be two or more discrete values with samples for variable='${d.term.term.name}'`
+			}
+		} catch (e) {
+			this.hasError = true
+			d.dom.err_div.style('display', 'block').text(e)
+			d.dom.loading_div.style('display', 'none')
+			this.dom.submitBtn.property('disabled', true)
+			console.error(e)
+		}
+	}
+
+	async maySetTwoBins(d) {
+		// if the bins are already binary, do not reset
+		if (d.term.q.mode == 'binary' && d.term.q.refGrp) return
+
+		// for numeric terms, add 2 custom bins devided at median value
+		const lst = [
+			'/termdb?getpercentile=50',
+			'tid=' + d.term.id,
+			'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel
+		]
+		const url = lst.join('&')
+		const data = await dofetch3(url, {}, this.parent.app.opts.fetchOpts)
+		if (data.error) throw data.error
+		const median = d.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
+		d.term.q = {
+			mode: 'binary',
+			type: 'custom',
+			lst: [
+				{
+					startunbounded: true,
+					stopinclusive: true,
+					stop: median
+				},
+				{
+					stopunbounded: true,
+					startinclusive: false,
+					start: median
+				}
+			]
 		}
 
-		const q = JSON.parse(JSON.stringify(d.term.q))
-		delete q.values
-		delete q.totalCount
-		/*
-			for continuous term, assume it is numeric and that we'd want counts by bins,
-			so remove the 'mode: continuous' value as it will prevent bin construction in the backend
-		*/
-		if (q.mode == 'continuous' && q.type) delete q.mode
+		d.term.q.lst.forEach(bin => {
+			if (!('label' in bin)) bin.label = get_bin_label(bin, d.term.q)
+		})
+	}
+
+	async maySetTwoGroups(d) {
+		// if the bins are already binary, do not reset
+		const { term, q } = d.term
+		if (q.mode == 'binary') return
+		q.mode = 'binary'
+
+		// category and condition terms share some logic
+
+		// step 1: check if term has only two computable categories/grades with >0 samples
+		// if so, use the two categories as outcome and do not apply groupsetting
+
+		// check the number of samples for computable categories, only use categories with >0 samples
+
+		// TODO run these queries through vocab
 		const lst = [
 			'/termdb?getcategories=1',
-			'tid=' + d.term.id,
+			'tid=' + term.id,
 			'term1_q=' + encodeURIComponent(JSON.stringify(q)),
 			'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
 			'genome=' + this.state.vocab.genome,
 			'dslabel=' + this.state.vocab.dslabel
 		]
-		if (q.bar_by_grade) lst.push('bar_by_grade=1')
-		if (q.bar_by_children) lst.push('bar_by_children=1')
-		if (q.value_by_max_grade) lst.push('value_by_max_grade=1')
-		if (q.value_by_most_recent) lst.push('value_by_most_recent=1')
-		if (q.value_by_computable_grade) lst.push('value_by_computable_grade=1')
+		if (term.type == 'condition') lst.push('value_by_max_grade=1')
 		const url = lst.join('&')
-		const data = await dofetch3(url)
+		const data = await dofetch3(url, {}, this.parent.app.opts.fetchOpts)
 		if (data.error) throw data.error
-		d.orderedLabels = data.orderedLabels
-
-		// sepeate include and exclude categories based on term.values.uncomputable
-		const excluded_values = d.term.term.values
-			? Object.entries(d.term.term.values)
-					.filter(v => v[1].uncomputable)
-					.map(v => v[1].label)
-			: []
-		d.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label))
-		d.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
-
-		// get include, excluded and total sample count
-		const totalCount = (d.term.q.totalCount = { included: 0, excluded: 0, total: 0 })
-		d.sampleCounts.forEach(v => (totalCount.included = totalCount.included + v.samplecount))
-		d.excludeCounts.forEach(v => (totalCount.excluded = totalCount.excluded + v.samplecount))
-		totalCount.total = totalCount.included + totalCount.excluded
-
-		// store total count from numerical/categorical term as global variable totalSampleCount
-		if (this.totalSampleCount == undefined && d.term.term.type != 'condition') this.totalSampleCount = totalCount.total
-		// for condition term, subtract included count from totalSampleCount to get excluded
-		if (d.term.term.type == 'condition' && this.totalSampleCount) {
-			totalCount.excluded = this.totalSampleCount - totalCount.included
+		const category2samplecount = new Map() // k: category/grade (computable), v: number of samples
+		const computableCategories = []
+		for (const i of data.lst) {
+			category2samplecount.set(i.key, i.samplecount, term.values)
+			if (term.values && term.values[i.key] && term.values[i.key].uncomputable) continue
+			computableCategories.push(i.key)
 		}
-	}
-
-	async updateLogisticOutcome(d) {
-		if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
-			// for numeric terms, add 2 custom bins devided at median value
-			const lst = [
-				'/termdb?getpercentile=50',
-				'tid=' + d.term.id,
-				'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
-				'genome=' + this.state.vocab.genome,
-				'dslabel=' + this.state.vocab.dslabel
-			]
-			const url = lst.join('&')
-			const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
-			if (data.error) throw data.error
-			const median = d.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
-			d.term.q = {
-				mode: 'binary',
-				type: 'custom',
-				lst: [
-					{
-						startunbounded: true,
-						stopinclusive: true,
-						stop: median
-					},
-					{
-						stopunbounded: true,
-						startinclusive: false,
-						start: median
-					}
-				]
-			}
-
-			d.term.q.lst.forEach(bin => {
-				if (!('label' in bin)) bin.label = get_bin_label(bin, d.term.q)
-			})
+		if (computableCategories.length < 2) {
+			// TODO UI should reject this term and prompt user to select a different one
+			throw 'less than 2 categories/grades'
+		}
+		if (computableCategories.length == 2) {
+			q.type = 'values'
+			// will use the categories from term.values{} and do not apply groupsetting
+			// if the two grades happen to be "normal" and "disease" then it will make sense
+			// but if the two grades are both diseaes then may not make sense
+			// e.g. secondary breast cancer has just 3 and 4
 			return
 		}
-		if (d.term.term.type == 'categorical' || d.term.term.type == 'condition') {
-			// category and condition terms share some logic
 
-			// step 1: check if term has only two computable categories/grades with >0 samples
-			// if so, use the two categories as outcome and do not apply groupsetting
+		const t_gs = term.groupsetting
+		const q_gs = q.groupsetting
+		// step 2: term has 3 or more categories/grades. must apply groupsetting
+		// force to turn on groupsetting
+		q_gs.inuse = true
 
-			// check the number of samples for computable categories, only use categories with >0 samples
+		// step 3: find if term already has a usable groupsetting
+		if (
+			q_gs.customset &&
+			q_gs.customset.groups &&
+			q_gs.customset.groups.length == 2 &&
+			this.groupsetNoEmptyGroup(q_gs.customset, category2samplecount)
+		) {
+			// has a usable custom set
+			return
+		}
 
-			// TODO run these queries through vocab
-			const lst = [
-				'/termdb?getcategories=1',
-				'tid=' + d.term.id,
-				'term1_q=' + encodeURIComponent(JSON.stringify(d.term.q)),
-				'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(this.state.termfilter.filter))),
-				'genome=' + this.state.vocab.genome,
-				'dslabel=' + this.state.vocab.dslabel
-			]
-			if (d.term.term.type == 'condition') lst.push('value_by_max_grade=1')
-			const url = lst.join('&')
-			const data = await dofetch3(url, {}, this.app.opts.fetchOpts)
-			if (data.error) throw data.error
-			const category2samplecount = new Map() // k: category/grade (computable), v: number of samples
-			const computableCategories = []
-			for (const i of data.lst) {
-				category2samplecount.set(i.key, i.samplecount)
-				if (d.term.term.values && d.term.term.values[i.key] && d.term.term.values[i.key].uncomputable) continue
-				computableCategories.push(i.key)
-			}
-			if (computableCategories.length < 2) {
-				// TODO UI should reject this term and prompt user to select a different one
-				throw 'less than 2 categories/grades'
-			}
-			if (computableCategories.length == 2) {
-				// will use the categories from term.values{} and do not apply groupsetting
-				// if the two grades happen to be "normal" and "disease" then it will make sense
-				// but if the two grades are both diseaes then may not make sense
-				// e.g. secondary breast cancer has just 3 and 4
-				return
-			}
+		// step 4: check if the term has predefined groupsetting
+		if (t_gs && t_gs.lst) {
+			// has predefined groupsetting
+			// note!!!! check on d.term.term but not d.term.q
 
-			// step 2: term has 3 or more categories/grades. must apply groupsetting
-			// force to turn on groupsetting
-			d.term.q.groupsetting.inuse = true
-
-			// step 3: find if term already has a usable groupsetting
 			if (
-				d.term.q.groupsetting.customset &&
-				d.term.q.groupsetting.customset.groups &&
-				d.term.q.groupsetting.customset.groups.length == 2 &&
-				groupsetNoEmptyGroup(d.term.q.groupsetting.customset, category2samplecount)
+				q_gs.predefined_groupset_idx >= 0 &&
+				t_gs.lst[q_gs.predefined_groupset_idx] &&
+				t_gs.lst[q_gs.predefined_groupset_idx].groups.length == 2 &&
+				this.groupsetNoEmptyGroup(t_gs.lst[q_gs.predefined_groupset_idx], category2samplecount)
 			) {
-				// has a usable custom set
+				// has a usable predefined groupset
 				return
 			}
 
-			// step 4: check if the term has predefined groupsetting
-			if (d.term.term.groupsetting && d.term.term.groupsetting.lst) {
-				// has predefined groupsetting
-				// note!!!! check on d.term.term but not d.term.q
-
-				if (
-					d.term.q.groupsetting.predefined_groupset_idx >= 0 &&
-					d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx] &&
-					d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.length == 2 &&
-					groupsetNoEmptyGroup(
-						d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx],
-						category2samplecount
-					)
-				) {
-					// has a usable predefined groupset
-					return
-				}
-
-				// step 5: see if any predefined groupset has 2 groups. if so, use that
-				const i = d.term.term.groupsetting.lst.findIndex(g => g.groups.length == 2)
-				if (i != -1 && groupsetNoEmptyGroup(d.term.term.groupsetting.lst[i], category2samplecount)) {
-					// found a usable groupset
-					d.term.q.groupsetting.predefined_groupset_idx = i
-					return
-				}
+			// step 5: see if any predefined groupset has 2 groups. if so, use that
+			const i = t_gs.lst.findIndex(g => g.groups.length == 2)
+			if (i != -1 && this.groupsetNoEmptyGroup(t_gs.lst[i], category2samplecount)) {
+				// found a usable groupset
+				q_gs.predefined_groupset_idx = i
+				return
 			}
-
-			// step 6: last resort. divide values[] array into two groups
-
-			const customset = {
-				groups: [
-					{
-						name: 'Group 1',
-						values: []
-					},
-					{
-						name: 'Group 2',
-						values: []
-					}
-				]
-			}
-			// TODO use category2samplecount to evenlly divide samples
-			const group_i_cutoff = Math.round(computableCategories.length / 2)
-			for (const [i, v] of computableCategories.entries()) {
-				if (i < group_i_cutoff) customset.groups[0].values.push({ key: v })
-				else customset.groups[1].values.push({ key: v })
-			}
-			d.term.q.groupsetting.customset = customset
-			return
 		}
-		throw 'unknown term type: ' + d.term.term.type
 
-		function groupsetNoEmptyGroup(gs, c2s) {
-			// return true if a groupset does not have empty group
-			for (const g of gs.groups) {
-				let total = 0
-				for (const i of g.values) total += c2s.get(i.key) || 0
-				if (total == 0) return false
-			}
-			return true
+		// step 6: last resort. divide values[] array into two groups
+		const customset = {
+			groups: [
+				{
+					name: 'Group 1',
+					values: []
+				},
+				{
+					name: 'Group 2',
+					values: []
+				}
+			]
 		}
+		// TODO use category2samplecount to evenlly divide samples
+		const group_i_cutoff = Math.round(computableCategories.length / 2)
+		for (const [i, v] of computableCategories.entries()) {
+			if (i < group_i_cutoff) customset.groups[0].values.push({ key: v })
+			else customset.groups[1].values.push({ key: v })
+		}
+		q_gs.customset = customset
+		q.type = 'custom-groupset'
 	}
 
-	async updateLinearOutcome(term) {
-		if (term.term.type != 'float' && term.term.type != 'integer') {
-			throw 'linear outcome term is not numeric'
+	setContMode(d) {
+		if (!d.term.q.type) {
+			console.log('todo: why is d.term.q not yet set for numeric term at this point')
+			// should already be set to default bins
 		}
-		term.q = { mode: 'continuous' }
+		d.term.q.mode = 'continuous'
 	}
 
-	async validateLogisticOutcome(d) {
-		let term_type
-		if (d.term.term.type == 'float' || d.term.term.type == 'integer') {
-			term_type = 'logistic numeric outcome term'
-			if (d.term.q.mode !== 'binary') throw 'term.q.mode is not defined correctly for ' + term_type
-			if (d.term.q.type !== 'custom') throw 'term.q.type must be custom for ' + term_type
-			if (d.term.q.lst.length !== 2) throw 'must be only 2 bins for ' + term_type
-			if (!d.term.q.lst.every(bin => bin.label !== undefined))
-				throw 'every bin in q.lst must have label defined for ' + term_type
-		} else if (d.term.term.type == 'categorical') {
-			if (Object.keys(d.term.term.values).length == 2) return
-			term_type = 'logistic categorical outcome term'
-			if (!d.term.q.groupsetting.customset) throw 'customset must be defined for ' + term_type
-			if (d.term.q.groupsetting.inuse !== true) throw 'groupsetting.inuse must be true for ' + term_type
-			if (d.term.q.groupsetting.customset.groups.length !== 2) throw 'groupset must have only 2 groups for ' + term_type
-			if (!d.term.q.groupsetting.customset.groups.every(g => g.name !== undefined))
-				throw "every group in groupset must have 'name' defined for " + term_type
-		} else if (d.term.term.type == 'condition') {
-			term_type = 'logistic condition outcome term'
-			if (d.term.q.groupsetting.inuse) {
-				// for now, groupsetting is optional
-				if (d.term.q.groupsetting.predefined_groupset_idx === undefined && !d.term.q.groupsetting.customset)
-					throw 'either predefined_groupset_idx or customset must be defined for ' + term_type
-				if (d.term.q.groupsetting.predefined_groupset_idx !== undefined) {
-					if (d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.length !== 2)
-						throw 'predefined group must have 2 groups for ' + term_type
-					if (
-						!d.term.term.groupsetting.lst[d.term.q.groupsetting.predefined_groupset_idx].groups.every(
-							g => g.name !== undefined
-						)
-					)
-						throw 'every group in predefined groupset must have name defined ' + term_type
-				} else if (d.term.q.groupsetting.customset) {
-					if (d.term.q.groupsetting.customset.groups.length !== 2)
-						throw 'custom groupset must have only 2 groups for ' + term_type
-					if (!d.term.q.groupsetting.customset.groups.every(g => g.name !== undefined))
-						throw 'every group in custom groupset must have name defined for ' + term_type
-				}
-			}
+	groupsetNoEmptyGroup(gs, c2s) {
+		// return true if a groupset does not have empty group
+		for (const g of gs.groups) {
+			let total = 0
+			for (const i of g.values) total += c2s.get(i.key) || 0
+			if (total == 0) return false
 		}
+		return true
 	}
 }
 
@@ -369,20 +366,33 @@ function setRenderers(self) {
 		self.updateBtns()
 	}
 
-	self.render = () => {
-		self.setDisableTerms()
-		const grps = self.dom.body.selectAll(':scope > div').data(self.sections || [])
+	self.render = async () => {
+		try {
+			self.pillPromises = []
+			self.setDisableTerms()
+			const grps = self.dom.body.selectAll(':scope > div').data(self.sections || [])
 
-		grps.exit().remove()
-		grps.each(renderSection)
-		grps
-			.enter()
-			.append('div')
-			.style('margin', '3px 5px')
-			.style('padding', '3px 5px')
-			.each(renderSection)
+			grps.exit().remove()
+			grps.each(renderSection)
+			grps
+				.enter()
+				.append('div')
+				.style('margin', '3px 5px')
+				.style('padding', '3px 5px')
+				.each(renderSection)
 
-		self.updateBtns()
+			/* 
+ 				TODO: 
+ 				fix the async-await/try-catch in rendering functions to not have to use sleep() here
+ 				not sure how to await on d3.data().[enter | each | exit]
+ 			*/
+			await sleep(0)
+			await Promise.all(self.pillPromises)
+			self.updateBtns()
+		} catch (e) {
+			self.hasError = true
+			throw e
+		}
 	}
 
 	// initialize the ui sections
@@ -408,9 +418,6 @@ function setRenderers(self) {
 		section.selected = Array.isArray(v) ? v : v ? [v] : []
 		const itemRefs = section.selected.map(term => {
 			if (!(term.id in section.items)) {
-				/*if (section.configKey == 'term') {
-					self.updateLinearOutcome(term)
-				}*/
 				section.items[term.id] = { section, term }
 			}
 			return section.items[term.id]
@@ -439,7 +446,7 @@ function setRenderers(self) {
 		d.values = gs.inuse
 			? i !== undefined
 				? d.term.term.groupsetting.lst[i].groups
-				: gs.customset.groups
+				: gs.customset && gs.customset.groups
 			: d.term.term.values
 		d.label_key = gs.inuse ? 'name' : 'label'
 	}
@@ -452,11 +459,11 @@ function setRenderers(self) {
 			.style('padding', '3px 5px')
 			.style('border-left', d.term ? '1px solid #bbb' : '')
 
-		d.pill = termsettingInit({
+		d.pill = await termsettingInit({
 			placeholder: d.section.prompt[config.regressionType],
 			placeholderIcon: d.section.placeholderIcon,
 			holder: div.append('div'),
-			vocabApi: self.app.vocabApi,
+			vocabApi: self.parent.app.vocabApi,
 			vocab: self.state.vocab,
 			activeCohort: self.state.activeCohort,
 			use_bins_less: true,
@@ -472,11 +479,17 @@ function setRenderers(self) {
 			}
 		})
 		const infoDiv = div.append('div')
+		const err_div = infoDiv
+			.append('div')
+			.style('display', 'none')
+			.style('padding', '5px')
+			.style('background-color', 'rgba(255,100,100,0.2)')
 		const loading_div = infoDiv.append('div').text('Loading..')
 		const top_info_div = infoDiv.append('div')
 		const term_values_div = infoDiv.append('div')
 		d.dom = {
 			infoDiv,
+			err_div,
 			loading_div,
 			top_info_div,
 			term_info_div: top_info_div.append('div').style('display', 'inline-block'),
@@ -486,10 +499,10 @@ function setRenderers(self) {
 			term_summmary_div: term_values_div.append('div'),
 			excluded_table: term_values_div.append('table')
 		}
-		updatePill.call(this, d)
+		self.pillPromises.push(updatePill.call(this, d))
 	}
 
-	function updatePill(d) {
+	async function updatePill(d) {
 		select(this).style('border-left', d.term ? '1px solid #bbb' : '')
 		d.dom.loading_div.style('display', 'block')
 		const args = Object.assign(
@@ -509,7 +522,7 @@ function setRenderers(self) {
 		d.dom.infoDiv.style('display', d.term ? 'block' : 'none')
 		if (d.section.configKey == 'term') updateRefGrp(d)
 		// renderInfo() is required for both outcome and independent variables
-		if (d.term) renderInfo(d)
+		if (d.term) await renderInfo(d)
 	}
 
 	function removePill(d) {
@@ -537,9 +550,13 @@ function setRenderers(self) {
 			.style('font-size', '.8em')
 			.style('text-align', 'left')
 			.style('color', '#999')
-
-		if (d.term) await self.updateValueCount(d)
-		updateTermInfoDiv(d)
+		try {
+			if (d.term) await self.updateValueCount(d)
+			if (!self.error && !d.pill.hasError()) await updateTermInfoDiv(d)
+		} catch (e) {
+			self.hasError = true
+			self.parent.app.printError(e)
+		}
 	}
 
 	function updateTermInfoDiv(d) {
@@ -557,7 +574,7 @@ function setRenderers(self) {
 						(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded.` : '')
 				)
 			} else if (d.term.term.type == 'categorical' || d.term.term.type == 'condition') {
-				const gs = d.term.q.groupsetting || {}
+				const gs = q.groupsetting || {}
 				// d.values is already set by self.setActiveValues() above
 				const term_text = 'Use as ' + d.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
 				make_values_table(d)
@@ -763,7 +780,9 @@ function setRenderers(self) {
 		const hasBothTerms = hasOutcomeTerm && hasIndependetTerm
 		self.dom.submitBtn.style('display', hasBothTerms ? 'block' : 'none')
 
-		if (chartRendered) {
+		if (self.hasError) {
+			self.dom.submitBtn.property('disabled', true).html('Run analysis')
+		} else if (chartRendered) {
 			self.dom.submitBtn.property('disabled', false).html('Run analysis')
 		}
 	}
@@ -799,6 +818,12 @@ function setInteractivity(self) {
 	}
 
 	self.submit = () => {
+		if (self.hasError) {
+			alert('Please fix the input variable errors (highlighted in red background).')
+			self.dom.submitBtn.property('disabled', true)
+			return
+		}
+
 		const config = JSON.parse(JSON.stringify(self.config))
 		//delete config.settings
 		for (const term of config.independent) {
@@ -807,7 +832,7 @@ function setInteractivity(self) {
 		if (config.term.id in self.refGrpByTermId) config.term.q.refGrp = self.refGrpByTermId[config.term.id]
 		// disable submit button on click, reenable after rendering results
 		self.dom.submitBtn.property('disabled', true).html('Running...')
-		self.app.dispatch({
+		self.parent.app.dispatch({
 			type: config.term ? 'plot_edit' : 'plot_show',
 			id: self.parent.id,
 			chartType: 'regression',
@@ -829,4 +854,8 @@ function getMenuVersion(config, d) {
 		return ['continuous', 'discrete']
 	}
 	throw 'unknown d.section.configKey: ' + d.section.configKey
+}
+
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
 }
