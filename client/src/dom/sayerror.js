@@ -1,3 +1,5 @@
+import { disappear } from './animation'
+
 export function sayerror(holder, msg) {
 	const div = holder.append('div').attr('class', 'sja_errorbar')
 	// msg can contain injected XSS, so never do .html(msg)
