@@ -278,12 +278,12 @@ function renderTypeInputs(self) {
 			label: 'Same bin size',
 			callback: async div => {
 				self.q.type = 'regular'
+				setqDefaults(self)
+				setDensityPlot(self)
 				if (!tabs[0].isInitialized) {
 					renderFixedBinsInputs(self, div)
 					tabs[0].isInitialized = true
 				}
-				setqDefaults(self)
-				setDensityPlot(self)
 			}
 		},
 		{
@@ -291,14 +291,12 @@ function renderTypeInputs(self) {
 			label: 'Varying bin sizes',
 			callback: async div => {
 				self.q.type = 'custom'
+				setqDefaults(self)
+				setDensityPlot(self)
 				if (!tabs[1].isInitialized) {
-					setqDefaults(self)
-					setDensityPlot(self)
 					renderCustomBinInputs(self, div)
 					tabs[1].isInitialized = true
 				}
-				setqDefaults(self)
-				setDensityPlot(self)
 			}
 		}
 	]
