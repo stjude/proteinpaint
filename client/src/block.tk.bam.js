@@ -76,6 +76,7 @@ tk.groups[]
         .gdc
         .gdcrowheight
         .gdcrowbottompad
+        .fs_string // For displaying fisher strand score
 .clickedtemplate // set when a template is clicked
 	.qname
 	.isfirst
@@ -90,6 +91,7 @@ tk.groups[]
 
 enter_partstack()
 getReadInfo
+   alignment_button // For displaying read alignment between read vs ref/alt allele when q.variant is true
 */
 
 const labyspace = 5
