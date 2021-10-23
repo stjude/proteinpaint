@@ -560,7 +560,7 @@ function may_render_variant(data, tk, block) {
 					'Fisher strand (FS) analysis score containing </br> p-values in phred scale (-10*log(p-value)).</br> If FS > <a href="https://gatk.broadinstitute.org/hc/en-us/articles/360035890471">60</a> , the variant maybe </br> a sequencing artifact and highlighted in red.</br> </br> The fishers exact test is used for variants </br>with sequencing depth <= 300.</br> If depth > 300, chi-square test is used. '
 				)
 				.style('margin-bottom', '5px')
-				.style('font-size', `12px`)
+				.style('font-size', '12px')
 		})
 		.on('mouseout', () => {
 			setTimeout(() => {
