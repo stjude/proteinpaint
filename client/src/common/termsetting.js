@@ -71,16 +71,15 @@ class TermSetting {
 		this.initUI()
 
 		// this api will be frozen and returned by termsettingInit()
-		let hasError = false
+		this.hasError = false
 		this.api = {
 			main: async (data = {}) => {
 				try {
 					this.dom.tip.hide()
-					hasError = false
+					this.hasError = false
 					this.validateMainData(data)
 					// term is read-only if it comes from state, let it remain read-only
 					this.term = data.term
-					if (this.term) this.term.hasError = false
 					this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
 					if ('disable_terms' in data) this.disable_terms = data.disable_terms
 					if ('exclude_types' in data) this.exclude_types = data.exclude_types
@@ -98,13 +97,23 @@ class TermSetting {
 						}
 					}
 					this.updateUI()
+					if (data.term && this.validateQ) this.validateQ(data)
 				} catch (e) {
-					hasError = true
+					this.hasError = true
 					throw e
 				}
 			},
 			showTree: this.showTree,
-			hasError: () => hasError
+			hasError: () => this.hasError,
+			validateQ: d => {
+				if (!this.validateQ) return
+				try {
+					this.validateQ(d)
+				} catch (e) {
+					this.hasError = true
+					throw e
+				}
+			}
 		}
 	}
 	validateOpts(o) {
@@ -132,13 +141,6 @@ class TermSetting {
 		if (typeof d.q != 'object') throw 'data.q{} is not object'
 		if (d.disable_terms) {
 			if (!Array.isArray(d.disable_terms)) throw 'data.disable_terms[] is not array'
-		}
-		if (this.validateQ) {
-			try {
-				this.validateQ(d)
-			} catch (e) {
-				throw e
-			}
 		}
 	}
 }
