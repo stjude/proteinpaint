@@ -76,21 +76,24 @@ export class RegressionInputs {
 			this.config = this.parent.config
 			this.state = this.parent.state
 			if (!this.dom.submitBtn) this.initUI()
-			await this.render()
-
-			const updates = []
-			for (const section of this.sections) {
-				/* TODO: may need to convert to section.items to an array to support non-term variables */
-				for (const id in section.items) {
-					const d = section.items[id]
-					d.dom.err_div.style('display', 'none').text('')
-					updates.push(d.update())
-				}
-			}
-			await Promise.all(updates)
+			await this.updateSections()
 		} catch (e) {
 			throw e
 		}
+	}
+
+	async updateSections() {
+		await this.render()
+		const updates = []
+		for (const section of this.sections) {
+			/* TODO: may need to convert to section.items to an array to support non-term variables */
+			for (const id in section.items) {
+				const d = section.items[id]
+				d.dom.err_div.style('display', 'none').text('')
+				updates.push(d.update())
+			}
+		}
+		await Promise.all(updates)
 	}
 
 	setDisableTerms() {
@@ -221,16 +224,12 @@ function setRenderers(self) {
 		// so that multiple variable updates can be called in parallel
 		// and not block each other
 		d.update = async () => {
+			d.dom.holder.style('border-left', d.term ? '1px solid #bbb' : '')
 			/* these function calls should depend on what has been set for this variable */
 			if (d.pill) await self.updatePill(d)
 			// the term.q is set within self.updatePill, so must await
 			if (d.dom.values_table) await self.updateValuesTable(d)
 		}
-	}
-
-	async function updateInput(d) {
-		d.dom.holder.style('border-left', d.term ? '1px solid #bbb' : '')
-		d.dom.infoDiv.style('display', d.term ? 'block' : 'none')
 	}
 
 	function removeInput(d) {
@@ -267,6 +266,7 @@ function setInteractivity(self) {
 		const key = d.section.configKey
 		if (term && term.term && !('id' in term)) term.id = term.term.id
 		// edit section data
+
 		if (Array.isArray(c[key])) {
 			if (!d.term) {
 				if (term) c[key].push(term)
@@ -287,7 +287,7 @@ function setInteractivity(self) {
 			d.term = term
 		} // if (!term), do not delete d.term, so that it'll get handled in pillDiv.exit()
 
-		self.render()
+		self.updateSections()
 	}
 
 	self.submit = () => {
