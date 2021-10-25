@@ -552,7 +552,7 @@ function may_render_variant(data, tk, block) {
 
 	fs_string.tktip = new Menu({ padding: '15px' })
 	fs_string
-		.on('mouseover', () => {
+		.on('click', () => {
 			fs_string.tktip.clear().show(d3event.clientX - 150, d3event.clientY - 30)
 			const d = fs_string.tktip.d
 				.append('div')
@@ -1261,7 +1261,10 @@ async function getReadInfo(tk, block, box, ridx) {
 
 		if (data.lst[0].q_align_alt) {
 			// Invoked only if variant is specified
-			const alignment_button = div
+			d3select(this)
+				.append('span')
+				.html('&nbsp;')
+			const alignment_button = row
 				.append('button')
 				.style('margin-left', '10px')
 				.text('Read alignment')
