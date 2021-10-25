@@ -4,6 +4,7 @@ import { scaleLinear } from 'd3-scale'
 import { axisstyle } from './dom/axisstyle'
 import { newpane } from './client'
 import { Menu } from './dom/menu'
+import { showunder } from './dom/menu'
 import { sayerror } from './dom/sayerror'
 import { appear } from './dom/animation'
 import { dofetch3 } from './common/dofetch'
@@ -37,6 +38,7 @@ tk.variants[ {} ]
         .rightflankseq 
 tk.pileupheight
 tk.pileupbottompad
+tk.alleleAlreadyUpdated // When true (in case of pan/zoom by user) prevents repeated reference genome queries for alt/refallele and left/rightflankseq
 
 
 tk.dom{}
@@ -547,22 +549,16 @@ function may_render_variant(data, tk, block) {
 	}
 
 	fs_string.tktip = new Menu({ padding: '15px' })
-	fs_string
-		.on('click', () => {
-			fs_string.tktip.clear().show(d3event.clientX - 150, d3event.clientY - 30)
-			const d = fs_string.tktip.d
-				.append('div')
-				.html(
-					'Fisher strand (FS) analysis score containing </br> p-values in phred scale (-10*log(p-value)).</br> If FS > <a href="https://gatk.broadinstitute.org/hc/en-us/articles/360035890471">60</a> , the variant maybe </br> a sequencing artifact and highlighted in red.</br> </br> The fishers exact test is used for variants </br>with sequencing depth <= 300.</br> If depth > 300, chi-square test is used. '
-				)
-				.style('margin-bottom', '5px')
-				.style('font-size', '12px')
-		})
-		.on('mouseout', () => {
-			setTimeout(() => {
-				fs_string.tktip.hide()
-			}, 5000)
-		})
+	fs_string.on('click', () => {
+		fs_string.tktip.clear().showunder(d3event.target)
+		const d = fs_string.tktip.d
+			.append('div')
+			.html(
+				'Fisher strand (FS) analysis score containing </br> p-values in phred scale (-10*log(p-value)).</br> If FS > <a href="https://gatk.broadinstitute.org/hc/en-us/articles/360035890471" target="_blank">60</a> , the variant maybe </br> a sequencing artifact and highlighted in red.</br> </br> The fishers exact test is used for variants </br>with sequencing depth <= 300.</br> If depth > 300, chi-square test is used. '
+			)
+			.style('margin-bottom', '5px')
+			.style('font-size', '12px')
+	})
 
 	if (Number.isFinite(data.max_diff_score)) {
 		// Should always be true if variant field was given by user, but may change in the future
@@ -1301,7 +1297,7 @@ async function getReadInfo(tk, block, box, ridx) {
 						.append('tr')
 						.style('opacity', 0.5)
 						.style('font-size', '.8em')
-						.text('Alt alignment')
+						.html('</br>Alt alignment')
 					const query_tr_alt = read_alignment_table
 						.append('tr')
 						.style('opacity', 0.5)
