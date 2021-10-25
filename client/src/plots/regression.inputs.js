@@ -23,7 +23,7 @@ export class RegressionInputs {
 			// TODO document purpose
 			selected: [],
 			exclude_types: {
-				linear: ['categorical', 'survival'],
+				linear: ['condition', 'categorical', 'survival'],
 				logistic: ['survival']
 			},
 			// to track and recover selected term pills, info divs, other dom elements,

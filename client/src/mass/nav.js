@@ -25,9 +25,9 @@ class TdbNav {
 		setRenderers(this)
 	}
 
-	async init() {
+	async init(appState) {
 		try {
-			this.cohortFilter = getFilterItemByTag(this.app.getState().termfilter.filter, 'cohortFilter')
+			this.cohortFilter = getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
 			this.initUI()
 			this.components = await multiInit({
 				/*	
