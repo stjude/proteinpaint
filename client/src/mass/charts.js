@@ -143,7 +143,7 @@ function getChartTypeList(self) {
 					clickTo: self.prepPlot,
 					chartType: 'regression',
 					payload: {
-						chartType: 'regression2',
+						chartType: 'regression',
 						regressionType: 'linear',
 						independent: []
 					}
@@ -152,7 +152,7 @@ function getChartTypeList(self) {
 					label: 'Logistic',
 					clickTo: self.prepPlot,
 					payload: {
-						chartType: 'regression2',
+						chartType: 'regression',
 						regressionType: 'logistic',
 						independent: []
 					}

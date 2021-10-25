@@ -22,7 +22,7 @@ function sleep(ms) {
  test sections
 ***************/
 tape('\n', function(test) {
-	test.pass('-***- mass/regression2 -***-')
+	test.pass('-***- mass/regression -***-')
 	test.end()
 })
 
@@ -33,7 +33,7 @@ tape('linear, outcome type=float', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'regression2',
+					chartType: 'regression',
 					regressionType: 'linear',
 					//cutoff: 57.8,
 					term: {
@@ -96,7 +96,7 @@ tape('logistic outcome type=float', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'regression2',
+					chartType: 'regression',
 					regressionType: 'logistic',
 					//cutoff: 57.8,
 					term: {
@@ -165,7 +165,7 @@ tape('logistic outcome type=condition', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'regression2',
+					chartType: 'regression',
 					regressionType: 'logistic',
 					//cutoff: 57.8,
 					term: {
@@ -218,7 +218,7 @@ tape('logistic outcome: missing reference category', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'regression2',
+					chartType: 'regression',
 					regressionType: 'logistic',
 					//cutoff: 57.8,
 					term: {
