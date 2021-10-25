@@ -19,6 +19,7 @@ https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/
 
 class TdbApp {
 	constructor(opts) {
+		this.type = 'termdb'
 		if (!opts.holder) select('body').append('div')
 		// do this in the constructor to have an dom.errdiv
 		// available at any point during initialization

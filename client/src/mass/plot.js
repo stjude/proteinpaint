@@ -28,18 +28,8 @@ class MassPlot {
 				// will hold no data notice or the page title in multichart views
 				banner: this.opts.holder.body.append('div').style('display', 'none'),
 
-				// dom.controls will hold the config input, select, button elements
-				controls: this.opts.holder.body
-					.append('div')
-					.style('display', this.opts.chartType === 'regression' ? 'block' : 'inline-block'),
-
 				// dom.viz will hold the rendered view
-				viz: this.opts.holder.body
-					.append('div')
-					.attr('class', 'pp-termdb-plot-viz')
-					.style('display', 'inline-block')
-					.style('min-width', '300px')
-					.style('margin-left', '50px')
+				viz: this.opts.holder.body.append('div')
 			}
 		} catch (e) {
 			throw e
@@ -67,9 +57,11 @@ class MassPlot {
 			termfilter: { filter },
 			ssid: appState.ssid,
 			config,
+
 			cumincplot4condition: appState.termdbConfig.cumincplot4condition,
 			displayAsSurvival:
 				config.settings &&
+				config.settings.currViews &&
 				config.settings.currViews[0] != 'regression' &&
 				((config.term && config.term.term.type == 'survival') || (config.term2 && config.term2.term.type == 'survival'))
 		}
@@ -79,198 +71,24 @@ class MassPlot {
 		// need to make config writable for filling in term.q default values
 		this.config = rx.copyMerge('{}', this.state.config)
 		if (!this.components) await this.setComponents(this.opts)
-		if (this.state.config.term) {
-			// regression will request its own server data
-			if (this.config.settings.currViews.includes('regression')) return
-			// TODO: migrate data request to other child viz components
-
-			const dataName = this.getDataName(this.state)
-			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
-			if (data.error) throw data.error
-			this.syncParams(this.config, data)
-			this.currData = data
-			return data
-		}
-	}
-
-	// creates URL search parameter string, that also serves as
-	// a unique request identifier to be used for caching server response
-	getDataName(state) {
-		const plot = this.config // the plot object in state
-		const params = []
-		if (state.displayAsSurvival) {
-			params.push('getsurvival=1')
-		} else if (plot.settings.currViews.includes('cuminc')) {
-			params.push('getcuminc=1')
-			params.push(`grade=${plot.settings.cuminc.gradeCutoff}`)
-		}
-
-		const isscatter = plot.settings.currViews.includes('scatter')
-		if (isscatter) params.push('scatter=1')
-		;['term', 'term2', 'term0'].forEach(_key => {
-			// "term" on client is "term1" at backend
-			const term = plot[_key]
-			if (!term) return
-			const key = _key == 'term' ? 'term1' : _key
-			params.push(key + '_id=' + encodeURIComponent(term.term.id))
-			if (isscatter) return
-			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
-			params.push(key + '_q=' + q_to_param(term.q))
-		})
-
-		if (!isscatter) {
-			if (state.ssid) {
-				params.push(
-					'term2_is_genotype=1',
-					'ssid=' + state.ssid.ssid,
-					'mname=' + state.ssid.mutation_name,
-					'chr=' + state.ssid.chr,
-					'pos=' + state.ssid.pos
-				)
-			}
-		}
-
-		if (state.termfilter.filter.lst.length) {
-			const filterData = normalizeFilterData(state.termfilter.filter)
-			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData))) //encodeNestedFilter(state.termfilter.filter))
-		}
-		return '?' + params.join('&')
-	}
-
-	syncParams(config, data) {
-		if (!data || !data.refs) return
-		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
-			const term = config[key]
-			if (term == 'genotype') return
-			if (!term) {
-				if (key == 'term') throw `missing plot.term{}`
-				return
-			}
-			if (data.refs.bins) {
-				term.bins = data.refs.bins[i]
-				if (data.refs.q && data.refs.q[i]) {
-					if (!term.q) term.q = {}
-					const q = data.refs.q[i]
-					if (q !== term.q) {
-						for (const key in term.q) delete term.q[key]
-						Object.assign(term.q, q)
-					}
-				}
-			}
-			if (!term.q) term.q = {}
-			if (!term.q.groupsetting) term.q.groupsetting = {}
-		}
 	}
 
 	async setComponents(opts) {
 		this.components = {}
-		let paneTitle
 
-		if (this.opts.chartType != 'regression') {
-			const _ = await import('../termdb/plot.controls')
-			this.components.controls = await _.controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls'),
-				isleaf: this.opts.term.isleaf,
-				iscondition: this.opts.term.type == 'condition'
-			})
-		}
-
-		switch (opts.chartType) {
-			case 'barchart':
-				paneTitle = 'Barchart'
-				const bar = await import('../termdb/barchart')
-				this.components.chart = bar.barInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls: this.components.controls
-				})
-				/*this.components.stattable = statTableInit(
-					{ app: this.app, holder: this.dom.viz.append('div'), id: this.id }
-				)*/
-				break
-
-			case 'table':
-				paneTitle = 'Table'
-				const t = await import('../termdb/table')
-				this.components.chart = t.tableInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls: this.components.controls
-				})
-				break
-
-			case 'boxplot':
-				paneTitle = 'Boxplot'
-				const box = await import('../termdb/boxplot')
-				this.components.chart = box.boxplotInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls: this.components.controls
-				})
-				break
-
-			case 'scatter':
-				paneTitle = 'Scatter Plot'
-				const sc = await import('../termdb/scatter')
-				this.components.chart = sc.scatterInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls: this.components.controls
-				})
-				break
-
-			case 'cuminc':
-				paneTitle = 'Cumulative Incidence Plot'
-				const ci = await import('../termdb/cuminc')
-				this.components.chart = ci.cumincInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls: this.components.controls
-				})
-				break
-
-			case 'survival':
-				paneTitle = 'Survival Plot'
-				const surv = await import('../termdb/survival')
-				this.components.chart = surv.survivalInit({
-					app: this.app,
-					holder: this.dom.viz.append('div'),
-					id: this.id,
-					controls: this.components.controls
-				})
-				break
-
-			/*
-			case 'regression':
-				const regressionType = this.state.config.regressionType
-				paneTitle = regressionType.charAt(0).toUpperCase() + regressionType.slice(1) + ' Regression'
-			*/
-
-			default:
-				const _ = await import(`../plots/${opts.chartType}`)
-				this.components.chart = await _.componentInit({
-					app: this.app,
-					holder: this.dom.viz,
-					header: this.dom.holder.header,
-					id: this.id,
-					regressionType: this.state.config.regressionType
-				})
-		}
-
-		// label the viz pane
-		this.dom.holder.header
+		const paneTitleDiv = this.dom.holder.header
 			.append('div')
 			.style('display', 'inline-block')
 			.style('color', '#999')
 			.style('padding-left', '7px')
-			.html(paneTitle)
+
+		const _ = await import(`../plots/${opts.chartType}.js`)
+		this.components.chart = await _.componentInit({
+			app: this.app,
+			holder: this.dom.viz,
+			header: paneTitleDiv,
+			id: this.id
+		})
 	}
 }
 
@@ -550,7 +368,7 @@ export function plotConfig(opts, appState = {}) {
 	return rx.copyMerge(config, opts)
 }
 
-function normalizeFilterData(filter) {
+export function normalizeFilterData(filter) {
 	const lst = []
 	for (const item of filter.lst) {
 		if (item.type == 'tvslst') lst.push(normalizeFilterData(item))
@@ -610,4 +428,29 @@ export function fillTermWrapper(wrapper) {
 	if (!wrapper.q) wrapper.q = {}
 	termsetting_fill_q(wrapper.q, wrapper.term)
 	return wrapper
+}
+
+export function syncParams(config, data) {
+	if (!data || !data.refs) return
+	for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
+		const term = config[key]
+		if (term == 'genotype') return
+		if (!term) {
+			if (key == 'term') throw `missing plot.term{}`
+			return
+		}
+		if (data.refs.bins) {
+			term.bins = data.refs.bins[i]
+			if (data.refs.q && data.refs.q[i]) {
+				if (!term.q) term.q = {}
+				const q = data.refs.q[i]
+				if (q !== term.q) {
+					for (const key in term.q) delete term.q[key]
+					Object.assign(term.q, q)
+				}
+			}
+		}
+		if (!term.q) term.q = {}
+		if (!term.q.groupsetting) term.q.groupsetting = {}
+	}
 }

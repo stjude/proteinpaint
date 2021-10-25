@@ -340,8 +340,20 @@ async function make_multiSampleSummaryList(args) {
 	// const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
 	// const summary_label = `Summary <span style='background:#a6a6a6;color:white;font-size:.8em;float:right;margin:2px 5px;padding: 0px 6px; border-radius: 6px;'>${occurrence}</span>`
 	const main_tabs = [
-		{ label: 'Summary', callback: div => tab2box(div, summary_tabs) },
-		{ label: 'List', callback: div => make_multiSampleTable({ arg, holder: div, filter_term: arg.filter_term }) }
+		{ 	
+			label: 'Summary', 
+			callback: async div => {
+				tab2box(div, summary_tabs) 
+				delete main_tabs[0].callback
+			}
+		},
+		{ 	
+			label: 'List', 
+			callback: async div => {
+				make_multiSampleTable({ arg, holder: div, filter_term: arg.filter_term })
+				delete main_tabs[1].callback
+			}
+		}
 	]
 
 	// gather summary data in for download
@@ -354,7 +366,7 @@ async function make_multiSampleSummaryList(args) {
 		}
 	}
 
-	init_tabs({ holder, tabs: main_tabs })
+	await init_tabs({ holder, tabs: main_tabs })
 	init_dictionary_ui(main_tabs.holder, arg, main_tabs)
 	init_download(main_tabs.holder, arg, main_tabs)
 	// TODO: enable and move later in CONFIG

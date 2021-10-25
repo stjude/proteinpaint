@@ -1,5 +1,5 @@
 import {select as d3select,event as d3event} from 'd3-selection'
-import * as client from './client'
+import * as client from '../client'
 import {scaleLinear} from 'd3-scale'
 import {axisBottom, axisLeft, axisRight} from 'd3-axis'
 

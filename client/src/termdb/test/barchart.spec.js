@@ -560,7 +560,7 @@ tape('click non-group bar to add filter', function(test) {
 			.querySelector('.bars-cell')
 			.querySelector('rect')
 		clickedData = elem.__data__
-		currData = plot.Inner.currData
+		currData = plot.Inner.components.barchart.Inner.currServerData
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
@@ -723,7 +723,7 @@ tape('click custom categorical group bar to add filter', function(test) {
 
 	function testTermValues(plot) {
 		const config = plot.Inner.state.config
-		const currData = plot.Inner.currData
+		const currData = plot.Inner.components.barchart.Inner.currServerData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
 		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
@@ -868,7 +868,7 @@ tape('click custom subcondition group bar to add filter', function(test) {
 
 	function testTermValues(plot) {
 		const config = plot.Inner.state.config
-		const currData = plot.Inner.currData
+		const currData = plot.Inner.components.barchart.Inner.currServerData
 		const termfilter = plot.Inner.app.Inner.state.termfilter
 		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(

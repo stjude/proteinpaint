@@ -1,17 +1,50 @@
-import * as rx from '../common/rx.core'
+import { controlsInit } from './controls'
+import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
+import { normalizeFilterData, syncParams } from '../mass/plot'
+import { getNormalRoot } from '../common/filter'
 
 class TdbTable {
 	constructor(opts) {
 		this.type = 'table'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+	async init() {
+		const opts = this.opts
+		const controls = opts.controls ? null : opts.holder.append('div')
+		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
-			div: this.opts.holder.style('margin', '10px 0px').style('display', 'none')
+			header: opts.header,
+			controls,
+			holder,
+			div: holder.style('margin', '10px 0px').style('display', 'none')
 		}
+		if (this.dom.header) this.dom.header.html('Crosstab')
 		setInteractivity(this)
 		setRenderers(this)
-		this.opts.controls.on('downloadClick.table', this.download)
+		await this.setControls()
+	}
+
+	async setControls() {
+		if (this.opts.controls) {
+			this.opts.controls.on('downloadClick.boxplot', this.download)
+		} else {
+			this.dom.holder
+				.attr('class', 'pp-termdb-plot-viz')
+				.style('display', 'inline-block')
+				.style('min-width', '300px')
+				.style('margin-left', '50px')
+
+			this.components = {
+				controls: await controlsInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
+				})
+			}
+
+			this.components.controls.on('downloadClick.boxplot', this.download)
+		}
 	}
 
 	getState(appState, sub) {
@@ -22,7 +55,9 @@ class TdbTable {
 		return {
 			isVisible: config.settings.currViews.includes('table'),
 			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter,
+			termfilter: {
+				filter: getNormalRoot(appState.termfilter.filter)
+			},
 			config: {
 				term: config.term,
 				term2: config.term2,
@@ -34,19 +69,49 @@ class TdbTable {
 		}
 	}
 
-	main(data) {
-		if (data) this.data = data
-		this.config = this.state.config
-		if (!this.state.isVisible) {
-			this.dom.div.style('display', 'none')
-			return
+	async main() {
+		try {
+			this.config = this.state.config
+			if (!this.state.isVisible) {
+				this.dom.div.style('display', 'none')
+				return
+			}
+			if (!this.config.term2) {
+				this.dom.div.style('display', 'none')
+				throw 'term2 is required for table view'
+			}
+			const c = this.state.config
+			if (this.dom.header) this.dom.header.html(c.term.term.name + ' vs ' + c.term2.term.name)
+			const dataName = this.getDataName(this.state)
+			this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			syncParams(c, this.data)
+			const [columns, rows] = this.processData(this.data)
+			this.render(columns, rows)
+		} catch (e) {
+			throw e
 		}
-		if (!this.config.term2) {
-			this.dom.div.style('display', 'none')
-			throw 'term2 is required for table view'
+	}
+
+	// creates URL search parameter string, that also serves as
+	// a unique request identifier to be used for caching server response
+	getDataName(state) {
+		const params = []
+		for (const _key of ['term', 'term2', 'term0']) {
+			// "term" on client is "term1" at backend
+			const term = this.config[_key]
+			if (!term) continue
+			const key = _key == 'term' ? 'term1' : _key
+			params.push(key + '_id=' + encodeURIComponent(term.term.id))
+			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
+			params.push(key + '_q=' + this.app.vocabApi.q_to_param(term.q))
 		}
-		const [columns, rows] = this.processData(this.data)
-		this.render(columns, rows)
+
+		if (state.termfilter.filter.lst.length) {
+			const filterData = normalizeFilterData(state.termfilter.filter)
+			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData)))
+		}
+
+		return '/termdb-barsql?' + params.join('&')
 	}
 
 	processData(data) {
@@ -180,4 +245,4 @@ function setRenderers(self) {
 	}
 }
 
-export const tableInit = rx.getInitFxn(TdbTable)
+export const tableInit = getCompInit(TdbTable)

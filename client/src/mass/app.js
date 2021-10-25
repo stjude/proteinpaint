@@ -34,19 +34,12 @@ class MassApp {
 	validateOpts(o = {}) {
 		if (!o.holder) throw `missing opts.holder in the MassApp constructor argument`
 		if (!o.callbacks) o.callbacks = {}
-		if (o.tree) {
-			if (o.tree.disable_terms && !o.tree.click_term) {
-				throw `opts.tree.disable_terms is used only when opts.tree.click_term is set`
-			}
-			if (!o.search) o.search = {}
-			if (o.tree.click_term) o.search.click_term = o.tree.click_term
-			if (o.tree.disable_terms) o.search.disable_terms = o.tree.disable_terms
-		}
 		return o
 	}
 
 	async preApiFreeze(api) {
 		api.tip = new Menu({ padding: '5px' })
+		api.printError = e => this.printError(e)
 		api.vocabApi = await vocabInit({
 			app: api,
 			state: this.opts.state,

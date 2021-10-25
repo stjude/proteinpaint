@@ -164,7 +164,7 @@ function clientside_plot(obj, plotgroups) {
 	each plot will return data point -> svg cross,
 	so to enable mouse over a sample in one plot, and highlight samples from other plots of the same patient
 	*/
-	import('./plot.vaf2cov').then(plotter => {
+	import('./old/plot.vaf2cov').then(plotter => {
 		const name2sgp = {}
 
 		obj.d.svgdiv.selectAll('*').remove()

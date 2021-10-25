@@ -1,54 +1,131 @@
-import * as rx from '../common/rx.core'
-import { dofetch3 } from '../client'
+import { getCompInit, getInitFxn, copyMerge } from '../common/rx.core'
+
+const defaultState = { isVisible: false, term: null }
 
 class TdbTermInfo {
+	/*
+		Will display background information about a term, 
+		such as rubric, publication source, description, etc
+
+		opts{}
+			.content_holder: required d3-wrapped DOM element
+				****TODO: Create menu on the fly if content_holder is not supplied****
+			
+			.icon_holder: optional, creates information icon for terms
+			
+			.vocabApi: 
+				- for termInfoInit(), required as opts.vocabApi
+				- for termInfoComp(), required as part of opts.app
+				- a vocabulary API that has a getTermInfo() method
+			
+			.state{} optional, see defaultState value above
+				.isVisible: boolean, optional
+				.term: {id, ...} optional (may be supplied with either getState() or main({state}))
+	*/
 	constructor(opts) {
-		this.type = 'termInfo'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
-		this.dom = {
-			holder: opts.holder
-		}
+		this.vocabApi = opts.vocabApi || (opts.app && opts.app.vocabApi)
+		this.state = Object.assign({}, defaultState, opts.state ? opts.state : {})
+		this.api = this
+		setInteractivity(this)
 		setRenderers(this)
-		this.initUI()
+		this.initUI(opts)
 	}
 
-	getState(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
-		if (!config) {
-			throw `No plot with id='${this.id}' found.`
-		}
-		return {
-			isVisible: config.settings.termInfo.isVisible,
-			term: config.term
-		}
-	}
-
-	async main() {
-		if (!this.state.isVisible) {
-			this.dom.holder.style('display', 'none')
-			return
-		}
-		this.dom.holder.style('display', 'block')
-		const data = await this.app.vocabApi.getTermInfo(this.state.term.id)
+	/*
+		state: replace 1 or more state values by attribute key
+	*/
+	async main(state = {}) {
+		copyMerge(this.state, state)
+		this.dom.content_holder.style('display', this.state.isVisible ? 'block' : 'none')
+		this.dom.icon_holder
+			.style('background-color', this.state.isVisible ? 'darkgray' : 'transparent')
+			.style('color', this.state.isVisible ? 'white' : '#797a7a')
+		if (!this.state.isVisible) return
+		const data = await this.vocabApi.getTermInfo(this.state.term.id)
 		this.render(data)
 	}
 }
 
-export const termInfoInit = rx.getInitFxn(TdbTermInfo)
+export const termInfoInit = getInitFxn(TdbTermInfo)
+
+/* 
+	rx-pluggable version: 
+	- extend a class instead of using a parent wrapper component
+	- reference in parentComponent.components for this to get notified of state changes,
+	- the parentComponent does NOT have to call termInfoInstance.main(...)
+	- rx will automatically detect if this component needs to update/rerender
+*/
+class TdbTermInfoComp extends TdbTermInfo {
+	/*
+	opts:
+		same as the constructor opts plus these attributes
+		.id: INT
+			- optional, to be used to get this component's state
+
+		.app 
+			- an app API with a .vocabApi{getTermInfo} instance and a dispatch() method
+	*/
+	constructor(opts) {
+		super(opts)
+		this.type = 'termInfo'
+		this.mainArg = 'state'
+	}
+
+	getState(appState) {
+		const config = appState.infos[this.id]
+		return {
+			isVisible: config && config.isVisible,
+			term: config && config.term
+		}
+	}
+}
+
+export const termInfoComp = getCompInit(TdbTermInfoComp)
 
 function setRenderers(self) {
-	self.initUI = function() {
-		self.dom.holder
-			.attr('class', 'term_info_div')
-			.style('width', '80vh')
-			.style('padding-bottom', '20px')
-			.style('display', 'block')
+	self.initUI = function(opts) {
+		self.dom = {
+			content_holder: opts.content_holder
+				.style('margin-left', '25px')
+				.attr('class', 'term_info_div')
+				.style('display', self.state.isVisible ? 'block' : 'none')
+				.style('width', '80vh')
+				.style('padding-bottom', '20px'),
 
-		self.dom.tbody = self.dom.holder
-			.append('table')
-			.style('white-space', 'normal')
-			.append('tbody')
+			//Term information/description
+			details: opts.content_holder.append('div'),
+
+			tbody: opts.content_holder
+				.append('table')
+				.style('white-space', 'normal')
+				.append('tbody'),
+
+			//Information icon button div. Term description appears in content_holder
+			icon_holder: opts.icon_holder
+				.style('margin', '1px 0px 1px 5px')
+				.style('padding', '2px 5px')
+				.style('font-family', 'Times New Roman')
+				.style('font-size', '14px')
+				.style('font-weight', 'bold')
+				.style('cursor', 'pointer')
+				.style('background-color', 'transparent')
+				.style('color', '#797a7a')
+				.style('align-items', 'center')
+				.style('justify-content', 'center')
+				.style('border', 'none')
+				.style('border-radius', '3px')
+				.attr('title', 'Term Information')
+				.html('&#9432;')
+				.on('mouseenter', () => {
+					if (self.state.isVisible == true) return
+					self.dom.icon_holder.style('color', 'blue')
+				})
+				.on('mouseleave', () => {
+					if (self.state.isVisible == true) return
+					self.dom.icon_holder.style('color', '#797a7a')
+				})
+				.on('click', self.toggleDescription)
+		}
 	}
 
 	self.render = function(data) {
@@ -95,18 +172,19 @@ function setRenderers(self) {
 					.text(grade)
 			}
 		}
-
+		//Term information/description
+		self.dom.details.selectAll('*').remove()
 		if (data.terminfo.description) {
-			const header = self.dom.holder
+			const header = self.dom.details
 				.append('div')
-				.style('padding-top', '40px')
+				.style('padding-top', '30px')
 				.style('padding-bottom', '10px')
 				.style('font-weight', 'bold')
 				.text('Description')
 			for (const d of data.terminfo.description) {
-				self.renderDetail(d, self.dom.holder.append('div').style('padding-bottom', '3px'))
+				self.renderDetail(d, self.dom.details.append('div').style('padding-bottom', '3px'))
 			}
-			self.dom.holder.append('div').style('padding-bottom', '20px')
+			self.dom.details.append('div').style('padding-bottom', '20px')
 		}
 	}
 
@@ -121,5 +199,14 @@ function setRenderers(self) {
 		} else {
 			div.html('<i>' + d.label + ':' + '</i>' + '&nbsp;' + d.value)
 		}
+	}
+}
+
+function setInteractivity(self) {
+	/*toggles the term description div by changing the state. The change in state triggers
+	multiple style changes via .main*/
+	self.toggleDescription = function() {
+		self.state.isVisible = !self.state.isVisible
+		self.main({ isVisible: self.state.isVisible })
 	}
 }

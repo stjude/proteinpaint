@@ -1,4 +1,4 @@
-import * as client from './client'
+import * as client from '../client'
 import {axisTop} from 'd3-axis'
 import {scaleLinear,scaleOrdinal,schemeCategory10} from 'd3-scale'
 

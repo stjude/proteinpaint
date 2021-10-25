@@ -30,7 +30,7 @@ class MassCharts {
 			appState.termdbConfig &&
 			appState.termdbConfig.selectCohort &&
 			appState.termdbConfig.selectCohort.values[appState.activeCohort]
-		const cohortStr = activeCohort && activeCohort.keys.sort().join(',')
+		const cohortStr = activeCohort && [...activeCohort.keys].sort().join(',')
 
 		const state = {
 			vocab: appState.vocab,

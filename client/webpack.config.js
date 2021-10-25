@@ -42,6 +42,7 @@ module.exports = function(env = {}) {
 				},
 				{
 					test: /\.js$/,
+					exclude: /\.spec\.js$/,
 					use: [
 						{
 							loader: 'babel-loader',

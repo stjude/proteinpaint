@@ -19,7 +19,8 @@
 */
 export function make_radios(arg) {
 	const { holder, options, callback, styles } = arg
-	const inputName = arg.inputName || Math.random().toString()
+	let nameSuffix = 0
+	const inputName = arg.inputName || 'dom-radio-' + nameSuffix++
 
 	const divs = holder
 		.selectAll()

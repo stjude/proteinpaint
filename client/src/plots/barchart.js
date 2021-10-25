@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import rendererSettings from '../bars.settings'
 import barsRenderer from '../bars.renderer'
 import htmlLegend from '../html.legend'
@@ -7,32 +7,46 @@ import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
 /* to-do: switch to using rx.Bus */
+import { controlsInit } from './controls'
 import { to_svg } from '../client'
+import { normalizeFilterData, syncParams } from '../mass/plot'
+import { getNormalRoot } from '../common/filter'
 
 class TdbBarchart {
 	constructor(opts) {
+		// rx.getComponentInit() will set this.app, this.id, this.opts
 		this.type = 'barchart'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+	preApiFreeze(api) {
+		api.download = this.download
+	}
+
+	async init() {
+		const opts = this.opts
+		const controls = this.opts.controls ? null : opts.holder.append('div')
+		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
-			holder: opts.holder,
-			banner: opts.holder
+			header: opts.header,
+			controls,
+			holder,
+			banner: holder
 				.append('div')
 				.style('display', 'none')
 				.style('text-align', 'center')
 				.style('padding', '24px')
 				.style('font-size', '16px')
 				.style('color', '#aaa'),
-			barDiv: opts.holder.append('div').style('white-space', 'normal'),
-			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
+			barDiv: holder.append('div').style('white-space', 'normal'),
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
-		this.settings = JSON.parse(rendererSettings) //, this.config.settings.barchart)
-		this.renderers = {}
+		if (this.dom.header) this.dom.header.html('Barchart')
+		this.settings = JSON.parse(rendererSettings)
 
 		setRenderers(this)
 		setInteractivity(this)
-		this.api.download = this.download
 
+		this.renderers = {}
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
 			settings: {
 				legendOrientation: 'vertical'
@@ -41,7 +55,7 @@ class TdbBarchart {
 		})
 		this.controls = {}
 		this.term2toColor = {}
-		opts.controls.on('downloadClick.barchart', this.download)
+		await this.setControls()
 
 		if (this.opts.bar_click_override) {
 			// will use this as callback to bar click
@@ -52,13 +66,37 @@ class TdbBarchart {
 		}
 	}
 
+	async setControls() {
+		if (this.opts.controls) {
+			this.opts.controls.on('downloadClick.boxplot', this.download)
+		} else {
+			this.dom.holder
+				.attr('class', 'pp-termdb-plot-viz')
+				.style('display', 'inline-block')
+				.style('min-width', '300px')
+				.style('margin-left', '50px')
+
+			this.components = {
+				controls: await controlsInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
+				})
+			}
+
+			this.components.controls.on('downloadClick.boxplot', this.download)
+		}
+	}
+
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+
 		const displayAsSurvival =
 			config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
+
 		return {
 			isVisible:
 				!displayAsSurvival &&
@@ -85,21 +123,34 @@ class TdbBarchart {
 		}
 	}
 
-	main(data) {
-		if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
-		if (data) this.currServerData = data
-		this.config = this.state.config
-		if (!this.setVisibility()) return
-		if (this.currServerData && this.currServerData.refs && this.currServerData.refs.q) {
-			for (const q of this.currServerData.refs.q) {
-				if (q.error) throw q.error
+	async main() {
+		try {
+			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
+			this.config = this.state.config
+			if (!this.setVisibility()) return
+			if (this.dom.header)
+				this.dom.header.html(
+					this.config.term.term.name + ` <span style="opacity:.6;font-size:.7em;margin-left:10px;">BARCHART</span>`
+				)
+
+			const dataName = this.getDataName(this.state)
+			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			syncParams(this.state.config, data)
+			this.currServerData = data
+			if (this.currServerData.refs && this.currServerData.refs.q) {
+				for (const q of this.currServerData.refs.q) {
+					if (q.error) throw q.error
+				}
 			}
+
+			this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
+			delete this.colorScale
+			this.updateSettings(this.config)
+			this.chartsData = this.processData(this.currServerData)
+			this.render()
+		} catch (e) {
+			throw e
 		}
-		this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
-		delete this.colorScale
-		this.updateSettings(this.config)
-		this.chartsData = this.processData(this.currServerData)
-		this.render()
 	}
 
 	setVisibility() {
@@ -108,6 +159,39 @@ class TdbBarchart {
 		this.dom.barDiv.style('display', display)
 		this.dom.legendDiv.style('display', display)
 		return isVisible
+	}
+
+	// creates URL search parameter string, that also serves as
+	// a unique request identifier to be used for caching server response
+	getDataName(state) {
+		const params = []
+		for (const _key of ['term', 'term2', 'term0']) {
+			// "term" on client is "term1" at backend
+			const term = this.config[_key]
+			if (!term) continue
+			const key = _key == 'term' ? 'term1' : _key
+			params.push(key + '_id=' + encodeURIComponent(term.term.id))
+			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
+			params.push(key + '_q=' + this.app.vocabApi.q_to_param(term.q))
+		}
+
+		if (state.ssid) {
+			params.push(
+				'term2_is_genotype=1',
+				'ssid=' + state.ssid.ssid,
+				'mname=' + state.ssid.mutation_name,
+				'chr=' + state.ssid.chr,
+				'pos=' + state.ssid.pos
+			)
+		}
+
+		const filter = getNormalRoot(state.termfilter.filter)
+		if (filter.lst.length) {
+			const filterData = normalizeFilterData(filter)
+			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData)))
+		}
+
+		return '/termdb-barsql?' + params.join('&')
 	}
 
 	updateSettings(config) {
@@ -421,7 +505,9 @@ class TdbBarchart {
 	}
 }
 
-export const barInit = rx.getInitFxn(TdbBarchart)
+export const barInit = getCompInit(TdbBarchart)
+// this alias will allow abstracted dynamic imports
+export const componentInit = barInit
 
 function setRenderers(self) {
 	self.render = function() {

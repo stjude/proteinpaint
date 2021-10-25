@@ -1,10 +1,13 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, multiInit } from '../common/rx.core'
 
 class TdbControlsTopBar {
 	constructor(opts) {
 		this.type = 'controlsTopBar'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+	async init() {
+		const opts = this.opts
+
 		this.dom = {
 			holder: opts.holder,
 			burger_div: opts.holder.append('div'),
@@ -12,7 +15,7 @@ class TdbControlsTopBar {
 		}
 
 		const debug = this.opts.debug
-		this.features = {
+		this.features = await multiInit({
 			burgerbtn: burgerBtnInit({
 				holder: this.dom.burger_div,
 				callback: opts.callback,
@@ -23,14 +26,8 @@ class TdbControlsTopBar {
 				holder: this.dom.button_bar.append('div'),
 				callback: opts.downloadHandler,
 				debug
-			}),
-			infobtn: infoBtnInit({
-				id: opts.id,
-				holder: this.dom.button_bar.append('div'),
-				callback: opts.infoHandler,
-				debug
 			})
-		}
+		})
 	}
 
 	getState(appState) {
@@ -50,7 +47,7 @@ class TdbControlsTopBar {
 	}
 }
 
-export const topBarInit = rx.getInitFxn(TdbControlsTopBar)
+export const topBarInit = getCompInit(TdbControlsTopBar)
 
 function setInteractivity(self) {
 	self.toggleVisibility = isVisible => {
@@ -110,42 +107,6 @@ function downloadBtnInit(opts) {
 				self.dom.btn.attr('title', 'Download plot image')
 			} else if (currviews.includes('table')) {
 				self.dom.btn.attr('title', 'Download table data')
-			}
-		}
-	}
-
-	if (opts.debug) api.Inner = self
-	return Object.freeze(api)
-}
-
-function infoBtnInit(opts) {
-	const self = {
-		isOpen: false,
-		dom: {
-			btn: opts.holder
-				.style('display', 'none')
-				.style('margin', '10px')
-				.style('font-family', 'verdana')
-				.style('font-size', '18px')
-				.style('font-weight', 'bold')
-				.style('cursor', 'pointer')
-				.attr('title', 'Grade Details')
-				.html('&#9432;')
-				.on('click', () => {
-					self.isOpen = !self.isOpen
-					opts.callback(self.isOpen)
-				})
-		}
-	}
-
-	const api = {
-		main(isOpen, plot) {
-			if (plot.term && plot.term.term.hashtmldetail) {
-				self.dom.btn
-					.style('display', isOpen ? 'inline-block' : 'block')
-					.style('margin-top', isOpen ? '15px' : '20px')
-					.style('margin-right', isOpen ? '15px' : '10px')
-					.style('margin-left', isOpen ? '15px' : '24px')
 			}
 		}
 	}

@@ -285,10 +285,11 @@ Generates one or more CTEs by a term
 q{}
 	.filter
 	.ds
-	.term[0,1,2]_id
-	.term[0,1,2]_q
+	*** the following may be empty if a 'termWrapper{}' argument is supplied ***
+	.term[0,1,2]_id 			// supported parameters for barchart data  
+	.term[0,1,2]_q 				// supported parameters for barchart data
 		the _q{} is managed by termsetting UI
-	.term?_is_genotype
+	.term?_is_genotype 		// supported parameters for barchart data
 		TODO may improve??
 
 values[]
@@ -303,11 +304,18 @@ filter
 	{} or null
 	returned by getFilterCTEs
 	required when making numeric bins and need to compute percentile for first/last bin
+
+termWrapper{}
+	.id term.id
+	.term
+	.q
 */
-export function get_term_cte(q, values, index, filter) {
-	const termid = q['term' + index + '_id']
-	const term_is_genotype = q['term' + index + '_is_genotype']
-	if (index == 1 && !term_is_genotype) {
+export function get_term_cte(q, values, index, filter, termWrapper = null) {
+	const termid = termWrapper ? termWrapper.id : q['term' + index + '_id']
+	const term_is_genotype = termWrapper ? termWrapper.term.is_genotype : q['term' + index + '_is_genotype']
+	// legacy code support: index=1 is assumed to be barchart term
+	// when there is no termWrapper argument
+	if (!termWrapper && index == 1 && !term_is_genotype) {
 		// only term1 is required
 		if (!termid) throw 'missing term id'
 	} else if (!termid || term_is_genotype) {
@@ -322,9 +330,9 @@ export function get_term_cte(q, values, index, filter) {
 	}
 
 	// otherwise, must be a valid term
-	const term = q.ds.cohort.termdb.q.termjsonByOneid(termid)
+	const term = termWrapper ? termWrapper.term : q.ds.cohort.termdb.q.termjsonByOneid(termid)
 	if (!term) throw 'no term found by id'
-	let termq = q['term' + index + '_q'] || {}
+	let termq = (termWrapper && termWrapper.q) || q['term' + index + '_q'] || {}
 	if (typeof termq == 'string') {
 		termq = JSON.parse(decodeURIComponent(termq))
 	}
@@ -432,7 +440,7 @@ function get_label4key(key, term, q, ds) {
 	}
 	if (term.type == 'condition') {
 		if (!term.values) throw 'missing term.values for condition term'
-		if (q.bar_by_grade) {
+		if (!q.groupsetting.inuse && q.bar_by_grade) {
 			if (!(key in term.values)) throw `unknown grade='${key}'`
 			return term.values[key].label
 		} else {
@@ -472,16 +480,31 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 		return makesql_oneterm_categorical(tablename, term, q, values)
 	}
 	if (term.type == 'float' || term.type == 'integer') {
-		const bins = makesql_numericBinCTE(term, q, ds, index, filter, values)
-		return {
-			sql: `${bins.sql},
-			${tablename} AS (
-				SELECT bname as key, sample, v as value
-				FROM ${bins.tablename}
-			)`,
-			tablename,
-			name2bin: bins.name2bin,
-			bins: bins.bins
+		if (q.mode == 'continuous') {
+			values.push(term.id)
+			return {
+				sql: `${tablename} AS (
+					SELECT 
+						sample,
+						value as key, 
+						CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value
+					FROM annotations
+					WHERE term_id=?
+				)`,
+				tablename
+			}
+		} else {
+			const bins = makesql_numericBinCTE(term, q, ds, index, filter, values)
+			return {
+				sql: `${bins.sql},
+				${tablename} AS (
+					SELECT bname as key, sample, v as value
+					FROM ${bins.tablename}
+				)`,
+				tablename,
+				name2bin: bins.name2bin,
+				bins: bins.bins
+			}
 		}
 	}
 	if (term.type == 'condition') {
@@ -793,6 +816,7 @@ filter
 returns bins{}
 */
 export function get_bins(q, term, ds, index, filter) {
+	if (q.mode == 'continuous') return
 	return binsmodule.compute_bins(q, percentiles => get_numericMinMaxPct(ds, term, filter, percentiles))
 }
 

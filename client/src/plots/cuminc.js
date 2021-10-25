@@ -1,5 +1,7 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
+import { controlsInit } from './controls'
 import { getNormalRoot } from '../common/filter'
+import { normalizeFilterData, syncParams } from '../mass/plot'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
@@ -13,13 +15,20 @@ import { dofetch3, to_svg } from '../client'
 class TdbCumInc {
 	constructor(opts) {
 		this.type = 'cuminc'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+	async init() {
+		const opts = this.opts
+		const controls = this.opts.controls ? null : opts.holder.append('div')
+		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
-			holder: opts.holder,
-			chartsDiv: opts.holder.append('div').style('margin', '10px'),
-			legendDiv: opts.holder.append('div').style('margin', '5px 5px 15px 5px')
+			header: opts.header,
+			controls,
+			holder,
+			chartsDiv: holder.append('div').style('margin', '10px'),
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
+		if (this.dom.header) this.dom.header.html('Cumulative Incidence Plot')
 		// hardcode for now, but may be set as option later
 		this.settings = Object.assign({}, this.opts.settings)
 		this.pj = getPj(this)
@@ -39,6 +48,29 @@ class TdbCumInc {
 				}
 			}
 		})
+		await this.setControls()
+	}
+
+	async setControls() {
+		if (this.opts.controls) {
+			this.opts.controls.on('downloadClick.boxplot', this.download)
+		} else {
+			this.dom.holder
+				.attr('class', 'pp-termdb-plot-viz')
+				.style('display', 'inline-block')
+				.style('min-width', '300px')
+				.style('margin-left', '50px')
+
+			this.components = {
+				controls: await controlsInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
+				})
+			}
+
+			this.components.controls.on('downloadClick.boxplot', this.download)
+		}
 	}
 
 	getState(appState) {
@@ -51,7 +83,9 @@ class TdbCumInc {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter,
+			termfilter: {
+				filter: getNormalRoot(appState.termfilter.filter)
+			},
 			config: {
 				term: JSON.parse(JSON.stringify(config.term)),
 				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,
@@ -61,23 +95,55 @@ class TdbCumInc {
 		}
 	}
 
-	main(data) {
-		if (!this.state.isVisible) {
-			this.dom.holder.style('display', 'none')
-			return
-		}
-		Object.assign(this.settings, this.state.config.settings)
-		if (data) {
-			this.currData = this.getData(data)
+	async main() {
+		try {
+			if (!this.state.isVisible) {
+				this.dom.holder.style('display', 'none')
+				return
+			}
+			if (this.dom.header)
+				this.dom.header.html(
+					this.state.config.term.term.name +
+						' <span style="opacity:.6;font-size:.7em;margin-left:10px;">CUMULATIVE INCIDENCE</span>'
+				)
+			Object.assign(this.settings, this.state.config.settings)
+			const dataName = this.getDataName(this.state)
+			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			syncParams(this.state.config, data)
+			this.currData = this.processData(data)
 			this.refs = data.refs
+			this.pj.refresh({ data: this.currData })
+			this.setTerm2Color(this.pj.tree.charts)
+			this.render()
+			this.legendRenderer(this.legendData)
+		} catch (e) {
+			throw e
 		}
-		this.pj.refresh({ data: this.currData })
-		this.setTerm2Color(this.pj.tree.charts)
-		this.render()
-		this.legendRenderer(this.legendData)
 	}
 
-	getData(data) {
+	// creates URL search parameter string, that also serves as
+	// a unique request identifier to be used for caching server response
+	getDataName(state) {
+		const params = ['getcuminc=1', `grade=${this.settings.gradeCutoff}`]
+		for (const _key of ['term', 'term2', 'term0']) {
+			// "term" on client is "term1" at backend
+			const term = this.state.config[_key]
+			if (!term) continue
+			const key = _key == 'term' ? 'term1' : _key
+			params.push(key + '_id=' + encodeURIComponent(term.term.id))
+			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
+			params.push(key + '_q=' + this.app.vocabApi.q_to_param(term.q))
+		}
+
+		if (state.termfilter.filter.lst.length) {
+			const filterData = normalizeFilterData(state.termfilter.filter)
+			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData)))
+		}
+
+		return '/termdb?' + params.join('&')
+	}
+
+	processData(data) {
 		this.uniqueSeriesIds = new Set()
 		const rows = []
 		const estKeys = ['cuminc', 'low', 'high']
@@ -123,7 +189,9 @@ class TdbCumInc {
 	}
 }
 
-export const cumincInit = rx.getInitFxn(TdbCumInc)
+export const cumincInit = getCompInit(TdbCumInc)
+// this alias will allow abstracted dynamic imports
+export const componentInit = cumincInit
 
 function setRenderers(self) {
 	self.render = function() {
@@ -133,7 +201,7 @@ function setRenderers(self) {
 		chartDivs.each(self.updateCharts)
 		chartDivs.enter().each(self.addCharts)
 
-		self.dom.holder.style('display', 'block')
+		self.dom.holder.style('display', 'inline-block')
 		self.dom.chartsDiv.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 	}
 

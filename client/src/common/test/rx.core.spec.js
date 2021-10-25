@@ -223,7 +223,7 @@ tape('getAppApi', function(test) {
 */
 tape('Reactive flow', async function(test) {
 	test.timeoutAfter(100)
-	test.plan(10)
+	test.plan(8)
 
 	const comp1 = {
 		type: 'type1',
@@ -313,7 +313,8 @@ tape('Reactive flow', async function(test) {
 			action_remove,
 			'dispatch() should notify a subcomponent of a dispatched action via its api.update'
 		)
-		test.equal(data, null, 'dispatch() should notify a subcomponent with null data if not returned by app.main()')
+		/*** DEPRECATED: all components will request its own data instead of the option for a parent to provide it ***/
+		//test.equal(data, null, 'dispatch() should notify a subcomponent with null data if not returned by app.main()')
 	}
 	const action_remove = { type: 'todo_remove', todo }
 	await app.dispatch(action_remove)
@@ -321,7 +322,8 @@ tape('Reactive flow', async function(test) {
 
 	// should cause child component notification wtih actual data
 	updateTests.prop_edit = (action, data) => {
-		test.equal(data, action_edit.prop, 'dispatch() should notify a sub-component with data if returned by app.main()')
+		/*** DEPRECATED: all components will request its own data instead of the option for a parent to provide it ***/
+		// test.equal(data, action_edit.prop, 'dispatch() should notify a sub-component with data if returned by app.main()')
 	}
 	comp2.bus = {
 		emit(eventType) {

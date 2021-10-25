@@ -77,6 +77,7 @@ export function newSandboxDiv(sandbox_holder, close) {
 		.style('padding-right', '8px')
 		.style('display', 'inline-block')
 		.style('box-shadow', '2px 2px 10px #f2f2f2')
+		.style('border', 'solid 1px #f2f2f2')
 		.style('border-top', 'solid 1px white')
 		.style('border-radius', '0  0 5px 5px')
 		.style('width', '95vw')

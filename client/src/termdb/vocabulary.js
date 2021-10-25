@@ -1,5 +1,5 @@
 import { dofetch3 } from '../client'
-import { getBarchartData, getCategoryData } from './barchart.data'
+import { getBarchartData, getCategoryData } from '../plots/barchart.data'
 import { termsetting_fill_q } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { scaleLinear } from 'd3-scale'
@@ -83,17 +83,7 @@ class TermdbVocab {
 
 	// from termdb/plot
 	async getPlotData(plotId, dataName) {
-		const config = this.state.plots.find(p => p.id === plotId)
-		const displayAsSurvival =
-			config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
-		const route =
-			config.settings.currViews.includes('regression') ||
-			config.settings.currViews.includes('scatter') ||
-			config.settings.currViews.includes('cuminc') ||
-			displayAsSurvival
-				? '/termdb'
-				: '/termdb-barsql'
-		const url = route + dataName + '&genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel
+		const url = dataName + '&genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel
 		const data = await dofetch3(url, {}, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
@@ -189,6 +179,20 @@ class TermdbVocab {
 		return density_data
 	}
 
+	async getPercentile(term_id, percentile, filter) {
+		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
+		const lst = [
+			'termdb?getpercentile=' + percentile,
+			'tid=' + term_id,
+			'genome=' + this.vocab.genome,
+			'dslabel=' + this.vocab.dslabel
+		]
+		if (filter) {
+			lst.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+		}
+		return await dofetch3(lst.join('&'))
+	}
+
 	async getterm(termid, dslabel = null, genome = null) {
 		if (!termid) throw 'getterm: termid missing'
 		if (this && this.state && this.state.vocab) {
@@ -228,6 +232,13 @@ class TermdbVocab {
 		} catch (e) {
 			window.alert(e.message || e)
 		}
+	}
+
+	q_to_param(q) {
+		// exclude certain attributes of q from dataName
+		const q2 = JSON.parse(JSON.stringify(q))
+		delete q2.hiddenValues
+		return encodeURIComponent(JSON.stringify(q2))
 	}
 }
 
@@ -386,6 +397,11 @@ class FrontendVocab {
 		}
 	}
 
+	async getPercentile(term_id, percentile, filter) {
+		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
+		throw 'getPercentile() is not implemented yet for front-end vocab, should be easy...'
+	}
+
 	async getterm(termid) {
 		if (!termid) throw 'getterm: termid missing'
 		return this.vocab.terms.find(d => d.id == termid)
@@ -401,6 +417,13 @@ class FrontendVocab {
 		if (!term) throw 'graphable: term is missing'
 		// term.isgenotype??
 		return graphableTypes.has(term.type)
+	}
+
+	q_to_param(q) {
+		// exclude certain attributes of q from dataName
+		const q2 = JSON.parse(JSON.stringify(q))
+		delete q2.hiddenValues
+		return encodeURIComponent(JSON.stringify(q2))
 	}
 }
 

@@ -3,6 +3,7 @@ import { select, selectAll, event } from 'd3-selection'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
 import { isUsableTerm } from '../../shared/termdb.usecase'
+import { termInfoInit } from './termInfo'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -92,6 +93,7 @@ class TdbTree {
 		if (action.type.startsWith('filter_')) return true
 		if (action.type.startsWith('plot_')) return true
 		if (action.type.startsWith('cohort_')) return true
+		if (action.type.startsWith('info_')) return true
 		if (action.type == 'app_refresh') return true
 	}
 
@@ -105,7 +107,8 @@ class TdbTree {
 			bar_click_menu: appState.bar_click_menu,
 			// TODO: deprecate "exclude_types" in favor of "usecase"
 			exclude_types: appState.tree.exclude_types,
-			usecase: appState.tree.usecase
+			usecase: appState.tree.usecase,
+			infos: appState.infos
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
@@ -300,7 +303,6 @@ function setRenderers(self) {
 			// TODO: deprecate exclude_types in favor or tree.usecase
 			self.included_terms.push(...term.terms)
 		} else {
-			//console.log(297, self.state.exclude_types)
 			for (const t of term.terms) {
 				if (t.included_types.filter(type => !self.state.exclude_types.includes(type)).length) {
 					self.included_terms.push(t)
@@ -372,7 +374,7 @@ function setRenderers(self) {
 		div.select('.' + cls_termgraphdiv).style('display', plotIsVisible ? 'block' : 'none')
 	}
 
-	self.addTerm = function(term) {
+	self.addTerm = async function(term) {
 		const termIsDisabled = self.opts.disable_terms && self.opts.disable_terms.includes(term.id)
 
 		const div = select(this)
@@ -380,7 +382,10 @@ function setRenderers(self) {
 			.style('margin', term.isleaf ? '' : '2px')
 			.style('padding', '0px 5px')
 
-		if (!term.isleaf && term.child_types.filter(type => !self.state.exclude_types.includes(type)).length) {
+		if (
+			!term.isleaf &&
+			(!term.child_types || term.child_types.filter(type => !self.state.exclude_types.includes(type)).length)
+		) {
 			div
 				.append('div')
 				.attr('class', 'sja_menuoption ' + cls_termbtn)
@@ -400,6 +405,10 @@ function setRenderers(self) {
 			.style('opacity', termIsDisabled ? 0.4 : null)
 			.text(term.name)
 
+		let infoIcon_div //Empty div for info icon if termInfoInit is called
+		if (term.hashtmldetail) {
+			infoIcon_div = div.append('div').style('display', 'inline-block')
+		}
 		if (graphable(term)) {
 			if (self.opts.click_term) {
 				if (termIsDisabled) {
@@ -451,6 +460,16 @@ function setRenderers(self) {
 
 				div.append('div').attr('class', cls_termgraphdiv)
 			}
+		}
+		//Creates the info icon and description div from termInfo.js
+		if (term.hashtmldetail) {
+			termInfoInit({
+				vocabApi: self.app.vocabApi,
+				icon_holder: infoIcon_div,
+				content_holder: div.append('div'),
+				id: term.id,
+				state: { term }
+			})
 		}
 
 		if (!term.isleaf) {

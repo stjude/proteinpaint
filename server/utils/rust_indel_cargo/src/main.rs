@@ -44,8 +44,21 @@
 //   Other post_processing:
 //     if polyclonal, classify as none
 //     if ref classified read, but contains inserted/deleted nucleotides in indel region, classify as none
+//
+// Strand analysis:
+// strand_analysis() (Inputs alternate_forward, alternate_reverse, reference_forward, reference_reverse and outputs final phred scale p-value)
+//       if number of reads < fisher_limit
+//          choose fisher-test
+//       else chi-square test
+//       strand_analysis_one_iteration (Selects whether to use fisher or chi-sq test depending upon number of reads)
+//              chi_square_test
+//              fishers_exact_test
 
+//use num_traits::Float;
+use fishers_exact::fishers_exact;
+use statrs::distribution::{ChiSquared, ContinuousCDF};
 use std::cmp;
+use std::panic;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
 //use std::env;
@@ -56,11 +69,12 @@ use std::io;
 #[allow(non_snake_case)]
 pub struct read_diff_scores {
     // struct for storing read details, used throughout the code
-    groupID: usize,     // Original read ID
-    value: f64,         // Diff score value
-    abs_value: f64,     // Absolute diff score value
+    groupID: usize,          // Original read ID
+    value: f64,              // Diff score value
+    abs_value: f64,          // Absolute diff score value
     polyclonal: i64, // flag to check if the read harbors polyclonal variant (neither ref nor alt)
     ref_insertion: i64, // flag to check if there is any insertion/deletion nucleotides in reads that may get clasified as supporting ref allele
+    sequence_strand: String, // "F" or "R" depending on the strand of the read
 }
 
 #[allow(non_camel_case_types)]
@@ -106,10 +120,11 @@ struct kmer_data {
 #[allow(non_snake_case)]
 struct read_category {
     // struct for storing in which category a read has been classified
-    category: String,   // Category: Ref/Alt/None
-    groupID: usize,     // Original read ID
-    diff_score: f64,    // Diff score value
+    category: String,        // Category: Ref/Alt/None
+    groupID: usize,          // Original read ID
+    diff_score: f64,         // Diff score value
     ref_insertion: i64, // flag to check if there is any insertion/deletion nucleotides in reads that may get clasified as supporting ref allele
+    sequence_strand: String, // "F" or "R" depending on the strand of the read
 }
 
 fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
@@ -120,6 +135,7 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
     let gID = item.groupID.to_owned();
     let poly = item.polyclonal.to_owned();
     let ref_ins = item.ref_insertion.to_owned();
+    let seq_strand = item.sequence_strand.to_owned();
 
     let read_val = read_diff_scores {
         value: f64::from(val),
@@ -127,6 +143,7 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
         groupID: usize::from(gID),
         polyclonal: i64::from(poly),
         ref_insertion: i64::from(ref_ins),
+        sequence_strand: String::from(seq_strand),
     };
     read_val
 }
@@ -242,17 +259,18 @@ fn main() {
     let args: Vec<&str> = input.split(":").collect(); // Various input from nodejs is separated by ":" characater
     let sequences: String = args[0].parse::<String>().unwrap(); // Variable contains sequences separated by "-" character, the first two sequences contains the ref and alt sequences
     let start_positions: String = args[1].parse::<String>().unwrap(); // Variable contains start position of reads separated by "-" character
-    let cigar_sequences: String = args[2].parse::<String>().unwrap(); // Variable contains caigar sequences separated by "-" character
-    let variant_pos: i64 = args[3].parse::<i64>().unwrap(); // Variant position
-    let segbplen: i64 = args[4].parse::<i64>().unwrap(); // read sequence length
-    let refallele: String = args[5].parse::<String>().unwrap(); // Reference allele
-    let altallele: String = args[6].parse::<String>().unwrap(); // Alternate allele
-    let min_kmer_length: i64 = args[7].parse::<i64>().unwrap(); // Initializing kmer length
-    let weight_no_indel: f64 = args[8].parse::<f64>().unwrap(); // Weight of base pair if outside indel region
-    let weight_indel: f64 = args[9].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
-    let strictness: usize = args[10].parse::<usize>().unwrap(); // strictness of the pipeline
-    let leftflankseq: String = args[11].parse::<String>().unwrap(); //Left flanking sequence
-    let rightflankseq: String = args[12].parse::<String>().unwrap(); //Right flanking sequence
+    let cigar_sequences: String = args[2].parse::<String>().unwrap(); // Variable contains cigar sequences separated by "-" character
+    let sequence_flags: String = args[3].parse::<String>().unwrap(); // Variable contains sam flags of reads separated by "-" character
+    let variant_pos: i64 = args[4].parse::<i64>().unwrap(); // Variant position
+    let segbplen: i64 = args[5].parse::<i64>().unwrap(); // read sequence length
+    let refallele: String = args[6].parse::<String>().unwrap(); // Reference allele
+    let altallele: String = args[7].parse::<String>().unwrap(); // Alternate allele
+    let min_kmer_length: i64 = args[8].parse::<i64>().unwrap(); // Initializing kmer length
+    let weight_no_indel: f64 = args[9].parse::<f64>().unwrap(); // Weight of base pair if outside indel region
+    let weight_indel: f64 = args[10].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
+    let strictness: usize = args[11].parse::<usize>().unwrap(); // strictness of the pipeline
+    let leftflankseq: String = args[12].parse::<String>().unwrap(); //Left flanking sequence
+    let rightflankseq: String = args[13].parse::<String>().unwrap(); //Right flanking sequence
     let rightflank_nucleotides: Vec<char> = rightflankseq.chars().collect(); // Vector containing right flanking nucleotides
     let ref_nucleotides: Vec<char> = refallele.chars().collect(); // Vector containing ref nucleotides
     let alt_nucleotides: Vec<char> = altallele.chars().collect(); // Vector containing alt nucleotides
@@ -261,6 +279,7 @@ fn main() {
     let lines: Vec<&str> = sequences.split("-").collect(); // Vector containing list of sequences, the first two containing ref and alt.
     let start_positions_list: Vec<&str> = start_positions.split("-").collect(); // Vector containing start positions
     let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect(); // Vector containing cigar sequences
+    let sequence_flags_list: Vec<&str> = sequence_flags.split("-").collect(); // Vector containing sam flag of read sequences
     let single_thread_limit: usize = 3000; // If total number of reads is lower than this value the reads will be parsed sequentially in a single thread, if greaterreads will be parsed in parallel
     let max_threads: usize = 3; // Max number of threads in case the parallel processing of reads is invoked
     let left_most_pos = variant_pos - segbplen; // Determining left most position, this is the position from where kmers will be generated. Useful in determining if a nucleotide is within indel region or not.
@@ -420,7 +439,7 @@ fn main() {
         let mut i: i64 = 0;
         //let num_of_reads: f64 = (lines.len() - 2) as f64;
         for read in lines {
-            if i >= 2 && read.len() > 0 {
+            if i >= 2 && read.len() > kmer_length_iter as usize {
                 // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
                 let (
                     within_indel,
@@ -438,6 +457,11 @@ fn main() {
                     strictness,
                 );
                 if within_indel == 1 {
+                    // Checking if the read is in forward or reverse strand
+                    let mut sequence_strand: String = "F".to_string(); // Initializing sequence strand to forward
+                    if sequence_flags_list[i as usize - 2].parse::<i64>().unwrap() & 16 == 16 {
+                        sequence_strand = "R".to_string();
+                    }
                     //println!(
                     //    "start_position:{}",
                     //    start_positions_list[i as usize - 2].to_string()
@@ -541,6 +565,7 @@ fn main() {
                                 + read_ambivalent,
                         ),
                         ref_insertion: i64::from(ref_insertion),
+                        sequence_strand: String::from(sequence_strand),
                     };
                     if diff_score > 0.0 {
                         // If diff_score > 0 put in alt_scores vector otherwise in ref_scores
@@ -559,6 +584,7 @@ fn main() {
         let sequences = Arc::new(sequences);
         let start_positions = Arc::new(start_positions);
         let cigar_sequences = Arc::new(cigar_sequences);
+        let sequence_flags = Arc::new(sequence_flags);
         let refallele = Arc::new(refallele);
         let altallele = Arc::new(altallele);
         let ref_kmers_nodups = Arc::new(ref_kmers_nodups);
@@ -577,6 +603,7 @@ fn main() {
             let sequences = Arc::clone(&sequences);
             let start_positions = Arc::clone(&start_positions);
             let cigar_sequences = Arc::clone(&cigar_sequences);
+            let sequence_flags = Arc::clone(&sequence_flags);
             let ref_kmers_nodups = Arc::clone(&ref_kmers_nodups);
             let ref_kmers_data = Arc::clone(&ref_kmers_data);
             let refallele = Arc::clone(&refallele);
@@ -594,13 +621,16 @@ fn main() {
                 let lines: Vec<&str> = sequences.split("-").collect();
                 let start_positions_list: Vec<&str> = start_positions.split("-").collect();
                 let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect();
+                let sequence_flags_list: Vec<&str> = sequence_flags.split("-").collect();
                 let ref_nucleotides: Vec<char> = refallele.chars().collect();
                 let alt_nucleotides: Vec<char> = altallele.chars().collect();
                 let mut ref_scores_thread = Vec::<read_diff_scores>::new(); // This local variable stores all read_diff_scores (for ref classified reads) parsed by each thread. This variable is then concatenated from other threads later.
                 let mut alt_scores_thread = Vec::<read_diff_scores>::new(); // This local variable stores all read_diff_scores (for alt classified reads) parsed by each thread. This variable is then concatenated from other threads later.
                 for iter in 0..lines.len() - 2 {
                     let remainder: usize = iter % max_threads; // Calculate remainder of read number divided by max_threads to decide which thread parses this read
-                    if remainder == thread_num {
+                    if remainder == thread_num
+                        && lines[iter + 2].to_string().len() > kmer_length_iter as usize
+                    {
                         // Thread analyzing a particular read must have the same remainder as the thread_num, this avoids multiple reads from parsing the same read
                         let (
                             within_indel,
@@ -619,6 +649,11 @@ fn main() {
                         );
 
                         if within_indel == 1 {
+                            // Checking if the read is in forward or reverse strand
+                            let mut sequence_strand: String = "F".to_string(); // Initializing sequence strand to forward
+                            if sequence_flags_list[iter].parse::<i64>().unwrap() & 16 == 16 {
+                                sequence_strand = "R".to_string();
+                            }
                             let read_ambivalent = check_if_read_ambivalent(
                                 // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                                 correct_start_position,
@@ -701,6 +736,7 @@ fn main() {
                                         + read_ambivalent,
                                 ),
                                 ref_insertion: i64::from(ref_insertion),
+                                sequence_strand: String::from(sequence_strand),
                             };
                             if diff_score > 0.0 {
                                 // If diff_score > 0 put in alt_scores vector otherwise in ref_scores
@@ -756,12 +792,21 @@ fn main() {
     #[allow(non_snake_case)]
     let mut output_gID: String = "".to_string(); // Initializing string variable which will store the original read ID and will be printed for being passed onto nodejs
     let mut output_diff_scores: String = "".to_string(); // Initializing string variable which will store the read diff_scores and will be printed for being passed onto nodejs
+    let mut alternate_forward_count: u32 = 0; // Alternate forward read counter
+    let mut alternate_reverse_count: u32 = 0; // Alternate reverse read counter
+    let mut reference_forward_count: u32 = 0; // Reference forward read counter
+    let mut reference_reverse_count: u32 = 0; // Reference reverse read counter
     for item in &ref_indices {
         if item.ref_insertion == 1 {
             // In case of ref-classified reads, if there is any insertion/deletion in the indel region it will get classified into the none category.
             output_cat.push_str("none:"); // Appending none to output_cat string
         } else if item.category == "refalt".to_string() {
             output_cat.push_str("ref:"); // Appending ref to output_cat string
+            if item.sequence_strand == "F".to_string() {
+                reference_forward_count += 1;
+            } else if item.sequence_strand == "R".to_string() {
+                reference_reverse_count += 1;
+            }
         } else {
             output_cat.push_str("none:"); // Appending none to output_cat string
         }
@@ -774,6 +819,11 @@ fn main() {
     for item in &alt_indices {
         if item.category == "refalt".to_string() {
             output_cat.push_str("alt:"); // Appending alt to output_cat string
+            if item.sequence_strand == "F".to_string() {
+                alternate_forward_count += 1;
+            } else if item.sequence_strand == "R".to_string() {
+                alternate_reverse_count += 1;
+            }
         } else {
             output_cat.push_str("none:"); // Appending none to output_cat string
         }
@@ -783,12 +833,222 @@ fn main() {
         output_diff_scores.push_str(&item.diff_score.to_string()); // Appending diff_score to output_diff_scores string
         output_diff_scores.push_str(&":".to_string()); // Appending ":" to string
     }
+
+    //println!("alternate_forward_count:{}", alternate_forward_count);
+    //println!("alternate_reverse_count:{}", alternate_reverse_count);
+    //println!("reference_forward_count:{}", reference_forward_count);
+    //println!("reference_reverse_count:{}", reference_reverse_count);
+
+    let p_value = strand_analysis(
+        alternate_forward_count,
+        alternate_reverse_count,
+        reference_forward_count,
+        reference_reverse_count,
+    );
+
+    println!("strand_probability:{:.2}", p_value);
+    //println!("fisher_test_threshold:{}", fisher_test_threshold);
     output_cat.pop(); // Removing the last ":" character from string
     output_gID.pop(); // Removing the last ":" character from string
     output_diff_scores.pop(); // Removing the last ":" character from string
     println!("output_cat:{:?}", output_cat); // Final read categories assigned
     println!("output_gID:{:?}", output_gID); // Initial read group ID corresponding to read category in output_cat
     println!("output_diff_scores:{:?}", output_diff_scores); // Final diff_scores corresponding to reads in group ID
+}
+
+fn strand_analysis(
+    alternate_forward_count: u32,
+    alternate_reverse_count: u32,
+    reference_forward_count: u32,
+    reference_reverse_count: u32,
+) -> f64 {
+    let mut fisher_chisq_test: u64 = 1; // Initializing to fisher-test
+
+    let fisher_limit = 300; // If number of alternate + reference reads greater than this number, chi-sq test will be invoked
+    if alternate_forward_count
+        + alternate_reverse_count
+        + reference_forward_count
+        + reference_reverse_count
+        > fisher_limit
+    {
+        fisher_chisq_test = 2; // Setting test = chi-sq
+    }
+    let (p_value_original, fisher_chisq_test) = strand_analysis_one_iteration(
+        alternate_forward_count,
+        alternate_reverse_count,
+        reference_forward_count,
+        reference_reverse_count,
+        fisher_chisq_test,
+    );
+    //println!("p_value original:{}", p_value_original);
+
+    // Need to get all possible combination of forward/reverse reads for alternate and reference alleles. For details, please see this link https://gatk.broadinstitute.org/hc/en-us/articles/360035532152-Fisher-s-Exact-Test
+
+    let mut p_sum: f64 = p_value_original;
+    let mut alternate_forward_count_temp: i64 =
+        (alternate_forward_count + alternate_reverse_count) as i64;
+    let mut alternate_reverse_count_temp = 0;
+    let mut reference_forward_count_temp = 0;
+    let mut reference_reverse_count_temp: i64 =
+        (reference_forward_count + reference_reverse_count) as i64;
+    while alternate_forward_count_temp >= 0 && reference_reverse_count_temp >= 0 {
+        alternate_forward_count_temp -= 1;
+        alternate_reverse_count_temp += 1;
+        reference_forward_count_temp += 1;
+        reference_reverse_count_temp -= 1;
+        #[allow(unused_variables)]
+        let (p_temp, fisher_test_temp) = strand_analysis_one_iteration(
+            alternate_forward_count_temp as u32,
+            alternate_reverse_count_temp,
+            reference_forward_count_temp,
+            reference_reverse_count_temp as u32,
+            fisher_chisq_test,
+        );
+        if p_temp <= p_value_original && p_sum + p_temp < 1.0 {
+            // Add to p-value only if its lower or equal to p_value_original
+            p_sum += p_temp;
+        }
+    }
+
+    //println!("Total p_value:{}", p_sum);
+    if p_sum == 0.0 {
+        // When p-value is extremely small say p = 10^(-22) then p-value is returned as 0.0. But log of 0.0 is undefined. In such a case p-value is set to a very small value but not 0.0
+        p_sum = 0.000000000000000001;
+    }
+    -10.0 * p_sum.log(10.0) // Reporting phred-scale p-values (-10*log(p-value))
+}
+
+fn strand_analysis_one_iteration(
+    alternate_forward_count: u32,
+    alternate_reverse_count: u32,
+    reference_forward_count: u32,
+    reference_reverse_count: u32,
+    fisher_chisq_test: u64, // This option is useful id this function has already been preiously run, we can ask to run the spcific tust only rather than having to try out both tests each time. This decreases execution time. 0 = first time (both tests will be tried), 1 = fisher test, 2 = chi-sq test
+) -> (f64, u64) {
+    let mut p_value: f64 = 0.0;
+    let mut fisher_chisq_test_final: u64 = 0;
+    if fisher_chisq_test == 0 {
+        let p_value_result = panic::catch_unwind(|| {
+            let p_value = fishers_exact(&[
+                alternate_forward_count,
+                alternate_reverse_count,
+                reference_forward_count,
+                reference_reverse_count,
+            ])
+            .unwrap()
+            .greater_pvalue;
+            p_value
+        });
+
+        match p_value_result {
+            Ok(res) => {
+                //println!("Fisher test worked:{:?}", p_value_result);
+                p_value = res;
+                fisher_chisq_test_final = 1;
+            }
+            Err(_) => {
+                //println!("Fisher test failed, using Chi-sq test instead");
+                p_value = chi_square_test(
+                    alternate_forward_count,
+                    alternate_reverse_count,
+                    reference_forward_count,
+                    reference_reverse_count,
+                );
+                fisher_chisq_test_final = 2;
+            }
+        }
+    } else if fisher_chisq_test == 1 {
+        let p_value_result = panic::catch_unwind(|| {
+            let p_value = fishers_exact(&[
+                alternate_forward_count,
+                alternate_reverse_count,
+                reference_forward_count,
+                reference_reverse_count,
+            ])
+            .unwrap()
+            .greater_pvalue;
+            p_value
+        });
+
+        match p_value_result {
+            Ok(res) => {
+                //println!("Fisher test worked:{:?}", p_value_result);
+                p_value = res;
+            }
+            Err(_) => {
+                //println!("Fisher test failed, using Chi-sq test instead");
+                p_value = chi_square_test(
+                    alternate_forward_count,
+                    alternate_reverse_count,
+                    reference_forward_count,
+                    reference_reverse_count,
+                );
+            }
+        }
+        fisher_chisq_test_final = 1;
+    } else if fisher_chisq_test == 2 {
+        p_value = chi_square_test(
+            alternate_forward_count,
+            alternate_reverse_count,
+            reference_forward_count,
+            reference_reverse_count,
+        );
+        fisher_chisq_test_final = 2;
+    }
+    (p_value, fisher_chisq_test_final)
+}
+
+fn chi_square_test(
+    alternate_forward_count: u32,
+    alternate_reverse_count: u32,
+    reference_forward_count: u32,
+    reference_reverse_count: u32,
+) -> f64 {
+    if (alternate_reverse_count == 0 && reference_reverse_count == 0)
+        || (alternate_forward_count == 0 && reference_forward_count == 0)
+    {
+        0.05 // Arbitarily put a very high number when there are only forward or reverse reads for alternate/reference
+    } else {
+        let total: f64 = (alternate_forward_count
+            + alternate_reverse_count
+            + reference_forward_count
+            + reference_reverse_count) as f64;
+        let expected_alternate_forward_count: f64 = (alternate_forward_count
+            + alternate_reverse_count) as f64
+            * (alternate_forward_count + reference_forward_count) as f64
+            / total;
+        let expected_alternate_reverse_count: f64 = (alternate_forward_count
+            + alternate_reverse_count) as f64
+            * (alternate_reverse_count + reference_reverse_count) as f64
+            / total;
+        let expected_reference_forward_count: f64 = (alternate_forward_count
+            + reference_forward_count) as f64
+            * (reference_forward_count + reference_reverse_count) as f64
+            / total;
+        let expected_reference_reverse_count: f64 = (reference_forward_count
+            + reference_reverse_count) as f64
+            * (alternate_reverse_count + reference_reverse_count) as f64
+            / total;
+
+        let chi_sq: f64 = ((alternate_forward_count as f64 - expected_alternate_forward_count)
+            * (alternate_forward_count as f64 - expected_alternate_forward_count))
+            / expected_alternate_forward_count
+            + ((reference_forward_count as f64 - expected_reference_forward_count)
+                * (reference_forward_count as f64 - expected_reference_forward_count))
+                / expected_reference_forward_count
+            + ((alternate_reverse_count as f64 - expected_alternate_reverse_count)
+                * (alternate_reverse_count as f64 - expected_alternate_reverse_count))
+                / expected_alternate_reverse_count
+            + ((reference_reverse_count as f64 - expected_reference_reverse_count)
+                * (reference_reverse_count as f64 - expected_reference_reverse_count))
+                / expected_reference_reverse_count;
+
+        //println!("chi_sq:{}", chi_sq);
+        let chi_sq_dist = ChiSquared::new(1.0).unwrap(); // Using degrees of freedom = 1
+        let p_value: f64 = 1.0 - chi_sq_dist.cdf(chi_sq);
+        //println!("p-value:{}", p_value);
+        p_value
+    }
 }
 
 fn assign_kmer_weights(
@@ -1701,7 +1961,7 @@ fn check_read_within_indel_region(
                         splice_stop_pos = nucleotide_position_without_splicing;
                         break;
                     } else {
-                        println!("Somehow fragment containing indel site was not found, please check (within_indel = 0)!");
+                        //println!("Somehow fragment containing indel site was not found, please check (within_indel = 0)!");
                         within_indel = 0;
                         //println!("splice_start_frag:{}", splice_start_frag);
                         //println!("splice_stop_frag:{}", splice_stop_frag);
@@ -2392,6 +2652,7 @@ fn classify_to_three_categories(
                 groupID: usize::from(kmer_diff_scores[i].groupID),
                 diff_score: f64::from(kmer_diff_scores[i].value),
                 ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
+                sequence_strand: String::from(&kmer_diff_scores[i].sequence_strand.to_owned()),
             };
             indices.push(read_cat);
         } else if kmer_diff_scores[i].abs_value <= absolute_threshold_cutoff && strictness >= 1 {
@@ -2401,6 +2662,7 @@ fn classify_to_three_categories(
                 groupID: usize::from(kmer_diff_scores[i].groupID),
                 diff_score: f64::from(kmer_diff_scores[i].value),
                 ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
+                sequence_strand: String::from(&kmer_diff_scores[i].sequence_strand.to_owned()),
             };
             indices.push(read_cat);
         } else {
@@ -2409,6 +2671,7 @@ fn classify_to_three_categories(
                 groupID: usize::from(kmer_diff_scores[i].groupID),
                 diff_score: f64::from(kmer_diff_scores[i].value),
                 ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
+                sequence_strand: String::from(&kmer_diff_scores[i].sequence_strand.to_owned()),
             };
             indices.push(read_cat);
         }

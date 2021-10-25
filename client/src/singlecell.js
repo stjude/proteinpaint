@@ -1,5 +1,4 @@
 import * as client from './client'
-import * as common from '../shared/common'
 import * as d3 from 'd3'
 import { axisTop, axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
@@ -14,7 +13,7 @@ export async function init(arg, holder) {
 		obj.genome = arg.genome
 		obj.holder = holder.style('position', 'relative')
 
-		init_view(obj)
+		await init_view(obj)
 		init_controlpanel(obj)
 
 		await pcd_pipeline(obj)
@@ -180,7 +179,14 @@ or selected a gene for overlaying
 	})
 }
 
-function init_view(obj) {
+async function init_view(obj) {
+	// TODO only load below if to do 3d
+	await add_scriptTag('/static/js/three.js')
+	await add_scriptTag('/static/js/loaders/PCDLoader.js')
+	await add_scriptTag('/static/js/controls/TrackballControls.js')
+	await add_scriptTag('/static/js/WebGL.js')
+	await add_scriptTag('/static/js/libs/stats.min.js')
+
 	if (WEBGL.isWebGLAvailable() === false) {
 		obj.holder.node().appendChild(WEBGL.getWebGLErrorMessage())
 		return
@@ -1568,4 +1574,14 @@ function get_max_labelwidth(items, svg) {
 			.remove()
 	}
 	return textwidth + 4
+}
+
+function add_scriptTag(path) {
+	// path like /static/js/three.js, must begin with /
+	return new Promise((resolve, reject) => {
+		const script = document.createElement('script')
+		script.setAttribute('src', sessionStorage.getItem('hostURL') + path)
+		document.head.appendChild(script)
+		script.onload = resolve
+	})
 }

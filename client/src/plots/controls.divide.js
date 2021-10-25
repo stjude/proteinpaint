@@ -1,4 +1,4 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { termsettingInit } from '../common/termsetting'
 import { Menu } from '../client'
 import { getNormalRoot } from '../common/filter'
@@ -18,8 +18,6 @@ pill is only for altering between (1) and (2)
 class Divide {
 	constructor(opts) {
 		this.type = 'divideByInput'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
 		this.dom = { tr: opts.holder }
 		setRenderers(this)
 		this.initUI()
@@ -28,7 +26,6 @@ class Divide {
 	validateOpts(o) {
 		if (!('id' in o)) throw 'opts.id missing' // plot id?
 		if (!o.holder) throw 'opts.holder missing'
-		return rx.getOpts(o, this)
 	}
 	initPill() {
 		this.pill = termsettingInit({
@@ -96,7 +93,7 @@ class Divide {
 	}
 }
 
-export const divideInit = rx.getInitFxn(Divide)
+export const divideInit = getCompInit(Divide)
 
 function setRenderers(self) {
 	self.initUI = function() {

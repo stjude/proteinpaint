@@ -1,9 +1,11 @@
 import { getInitFxn, copyMerge } from '../common/rx.core'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
-import { setNumericMethods } from './termsetting.discrete'
 import { setCategoricalMethods } from './termsetting.categorical'
 import { setConditionalMethods } from './termsetting.conditional'
+import { setNumericMethods as setDiscreteNumericMethods } from './termsetting.discrete'
+import { setNumericMethods as setContNumericMethods } from './termsetting.continuous'
+import { setNumericMethods as setBinaryNumericMethods } from './termsetting.binary'
 import { setNumericTabs } from './termsetting.numeric'
 
 /*
@@ -48,6 +50,13 @@ class TermSetting {
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
 		this.abbrCutoff = opts.abbrCutoff
+
+		// numqByTermIdModeType is used if/when a numeric pill term type changes:
+		// it will track numeric term.q by term.id, q.mode, and q.type to enable
+		// the "remember" input values when switching between
+		// discrete, continuous, and binary edit menus for the same term
+		this.numqByTermIdModeType = {}
+
 		// detect if the holder is contained within a floating client Menu instance;
 		// this will be useful in preventing premature closure of the menu in case
 		// a submenu is clicked and is still visible
@@ -62,31 +71,49 @@ class TermSetting {
 		this.initUI()
 
 		// this api will be frozen and returned by termsettingInit()
+		this.hasError = false
 		this.api = {
 			main: async (data = {}) => {
-				this.dom.tip.hide()
-				// console.log(data)
-				this.validateMainData(data)
-				// term is read-only if it comes from state, let it remain read-only
-				this.term = data.term
-				this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
-				if ('disable_terms' in data) this.disable_terms = data.disable_terms
-				if ('exclude_types' in data) this.exclude_types = data.exclude_types
-				if ('filter' in data) this.filter = data.filter
-				if ('activeCohort' in data) this.activeCohort = data.activeCohort
-				if (this.term) {
-					// term is present and may have been replaced
-					// reset methods by term type
-					if (this.setMethodsByTermType[this.term.type]) {
-						// see comments above about the class behavior
-						this.setMethodsByTermType[this.term.type](this)
-					} else {
-						throw 'unknown term type for setMethodsByTermType: ' + this.term.type
+				try {
+					this.dom.tip.hide()
+					this.hasError = false
+					this.validateMainData(data)
+					// term is read-only if it comes from state, let it remain read-only
+					this.term = data.term
+					this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
+					if ('disable_terms' in data) this.disable_terms = data.disable_terms
+					if ('exclude_types' in data) this.exclude_types = data.exclude_types
+					if ('filter' in data) this.filter = data.filter
+					if ('activeCohort' in data) this.activeCohort = data.activeCohort
+					if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
+					if (this.term) {
+						// term is present and may have been replaced
+						// reset methods by term type
+						if (this.setMethodsByTermType[this.term.type]) {
+							// see comments above about the class behavior
+							this.setMethodsByTermType[this.term.type](this)
+						} else {
+							throw 'unknown term type for setMethodsByTermType: ' + this.term.type
+						}
 					}
+					this.updateUI()
+					if (data.term && this.validateQ) this.validateQ(data)
+				} catch (e) {
+					this.hasError = true
+					throw e
 				}
-				this.updateUI()
 			},
-			showTree: this.showTree
+			showTree: this.showTree,
+			hasError: () => this.hasError,
+			validateQ: d => {
+				if (!this.validateQ) return
+				try {
+					this.validateQ(d)
+				} catch (e) {
+					this.hasError = true
+					throw e
+				}
+			}
 		}
 	}
 	validateOpts(o) {
@@ -100,7 +127,7 @@ class TermSetting {
 		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'
 		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
 		if (!('abbrCutoff' in o)) o.abbrCutoff = 18 //set the default to 18
-		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = 'default'
+		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = ['discrete']
 		return o
 	}
 	validateMainData(d) {
@@ -156,9 +183,19 @@ function setRenderers(self) {
 				.text(self.opts.placeholderIcon)
 		}
 
+		const editTypes = self.opts.numericEditMenuVersion
+		const numericMethodsSetter =
+			editTypes.length > 1
+				? setNumericTabs
+				: editTypes[0] == 'continuous'
+				? setContNumericMethods
+				: editTypes[0] == 'binary'
+				? setBinaryNumericMethods
+				: setDiscreteNumericMethods
+
 		self.setMethodsByTermType = {
-			integer: self.opts.numericEditMenuVersion == 'toggled' ? setNumericTabs : setNumericMethods,
-			float: self.opts.numericEditMenuVersion == 'toggled' ? setNumericTabs : setNumericMethods,
+			integer: numericMethodsSetter,
+			float: numericMethodsSetter,
 			categorical: setCategoricalMethods,
 			condition: setConditionalMethods,
 			// for now, use default methods as placeholder functions
@@ -451,7 +488,21 @@ function set_hiddenvalues(q, term) {
 }
 
 function valid_binscheme(q) {
+	/*if (q.mode == 'continuous') { console.log(472, q)
+		// only expect a few keys for now "mode", "scale", "transform" keys for now
+		const supportedKeys = ['mode', 'scale', 'transform']
+		const unsupportedKeys = Object.keys(q).filter(key => supportedKeys.includes(key))
+		if (unsupportedKeys.length) return false 
+		// throw `${JSON.stringify(unsupportedKeys)} not supported for q.mode='continuous'`
+		return true
+	}*/
+	if (q.type == 'custom') {
+		if (!Array.isArray(q.lst)) return false
+		if (!q.mode) q.mode = 'discrete'
+		return true
+	}
 	if (Number.isFinite(q.bin_size) && q.first_bin) {
+		if (!q.mode) q.mode = 'discrete'
 		if (q.first_bin.startunbounded) {
 			if (Number.isInteger(q.first_bin.stop_percentile) || Number.isFinite(q.first_bin.stop)) {
 				return true

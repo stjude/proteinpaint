@@ -25,6 +25,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			.slice(1)
 			.join('')
 			.toUpperCase()
+
 		final_alt = final_ref + q.variant.alt // Adding flanking nucleotide before alternate allele
 		q.variant.pos -= 1
 	} else if (q.variant.alt == '-' || q.variant.alt.length == 0) {
@@ -98,6 +99,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const weight_no_indel = 0.1 // Weight when base not inside the indel
 	const weight_indel = 10 // Weight when base is inside the indel
 	//const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
+	const fisher_test_threshold = 60 // Fisher exact-test strand analysis significance parameter. See details in this weblink https://gatk.broadinstitute.org/hc/en-us/articles/360035890471
 	//----------------------------------------------------------------------------
 
 	// Checking to see if reference allele is correct or not
@@ -110,6 +112,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('-')
 	const start_positions = templates_info.map(i => i.sam_info.split('\t')[3]).join('-')
 	const cigar_sequences = templates_info.map(i => i.sam_info.split('\t')[5]).join('-')
+	const sequence_flags = templates_info.map(i => i.sam_info.split('\t')[1]).join('-')
 
 	let sequences = ''
 	sequences += refseq + '-'
@@ -127,6 +130,8 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		start_positions +
 		':' +
 		cigar_sequences +
+		':' +
+		sequence_flags +
 		':' +
 		final_pos.toString() +
 		':' +
@@ -162,6 +167,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	let group_ids = []
 	let categories = []
 	let diff_scores = []
+	let strand_probability = 0 // Contains p_value of strand bias i.e forward/reverse vs alternate/reference
 
 	for (let item of rust_output_list) {
 		if (item.includes('output_gID')) {
@@ -189,15 +195,28 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			//.map(n => Number(n.replace(/\D/g, '')))
 		} else if (item.includes('Final kmer length (from Rust)')) {
 			console.log(item)
+		} else if (item.includes('strand_probability')) {
+			strand_probability = Number(
+				item
+					.replace(/"/g, '')
+					.replace(/,/g, '')
+					.replace('strand_probability:', '')
+			)
 		}
 		//else {
 		//	console.log(item)
 		//}
 	}
 
+	let strand_significance = false
+	if (strand_probability > fisher_test_threshold) {
+		strand_significance = true
+	}
+
 	//console.log("group_ids:",group_ids)
 	//console.log("categories:",categories.length)
 	//console.log("diff_scores:",diff_scores.length)
+	//console.log('strand_probability:', strand_probability)
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
 	const kmer_diff_scores_input = []
@@ -276,7 +295,17 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		g.widths = region_widths
 		groups.push(g)
 	}
-	return { groups, refalleleerror, max_diff_score, min_diff_score, final_pos, final_ref, final_alt }
+	return {
+		groups,
+		refalleleerror,
+		max_diff_score,
+		min_diff_score,
+		final_pos,
+		final_ref,
+		final_alt,
+		strand_probability,
+		strand_significance
+	}
 }
 
 function run_rust_indel_pipeline(input_data) {

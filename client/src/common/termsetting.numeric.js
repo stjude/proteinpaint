@@ -1,15 +1,8 @@
 import { setNumericMethods as setDiscreteMethods } from './termsetting.discrete'
 import { setNumericMethods as setContMethods } from './termsetting.continuous'
-import { init_tabs, update_tabs } from '../dom/toggleButtons'
-
-const tsInstanceTracker = new WeakMap()
-let i = 0
+import { init_tabs } from '../dom/toggleButtons'
 
 export async function setNumericTabs(self) {
-	if (!tsInstanceTracker.has(self)) {
-		tsInstanceTracker.set(self, i++)
-	}
-
 	self.get_term_name = function(d) {
 		if (!self.opts.abbrCutoff) return d.name
 		return d.name.length <= self.opts.abbrCutoff + 2
@@ -44,9 +37,9 @@ export async function setNumericTabs(self) {
 				label: 'Continuous',
 				callback: async div => {
 					self.q.mode = 'continuous'
-					//discrete.div.style('display', 'none')
-					//cont.div.style('display', 'block')
 					cont.fxns.showEditMenu(self, div)
+					// example of deleting the callback here instead of in toggleButtons
+					delete tabs[0].callback
 				}
 			},
 			{
@@ -54,6 +47,9 @@ export async function setNumericTabs(self) {
 				label: 'Discrete',
 				callback: async div => {
 					self.q.mode = 'discrete'
+					// example of using a boolean attribute to track whether to exit early
+					if (tabs[1].isRendered) return
+					tabs[1].isRendered = true
 					discrete.fxns.showEditMenu(self, div)
 				}
 			}

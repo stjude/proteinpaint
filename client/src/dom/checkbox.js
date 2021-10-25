@@ -29,4 +29,5 @@ export function make_one_checkbox(arg) {
 			input.property('disabled', false)
 		})
 	label.append('span').html('&nbsp;' + labeltext)
+	return input
 }

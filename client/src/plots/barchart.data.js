@@ -2,16 +2,11 @@ import Partjson from 'partjson'
 import { compute_bins } from '../../shared/termdb.bins'
 import { sample_match_termvaluesetting } from '../common/termutils'
 
-export function getBarchartData(_q, data0) {
+export function getBarchartData(_q, data) {
 	/*
-  Intended to be used in tests, to generate 
-  alternatively computed results to compare 
-  against sql-based server response
-  
-  q:      objectified URL query string
-  data0:  the response data from /termdb-barsql, 
-          needed to reuse computed bins
-*/
+	  _q: term.q 
+	  data:  rows of data, each row is unique by sample
+	*/
 	// need to not overwrite original term definition data
 	const q = JSON.parse(JSON.stringify(_q))
 
@@ -24,8 +19,7 @@ export function getBarchartData(_q, data0) {
 	if (!q.term2_q) q.term2_q = {}
 	if (!q.filter) q.filter = { type: 'tvslst', join: '', lst: [] }
 
-	const pj = getCharts(q, data0)
-	if (pj.tree.results) pj.tree.results.pjtime = pj.times
+	const pj = getCharts(q, data)
 	return pj.tree.results
 }
 

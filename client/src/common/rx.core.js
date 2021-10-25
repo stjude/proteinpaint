@@ -237,6 +237,7 @@ export function prepApp(self, opts) {
 export function getAppApi(self) {
 	const middlewares = []
 	const api = {
+		type: self.type,
 		opts: self.opts,
 		async dispatch(action) {
 			/*
@@ -264,10 +265,9 @@ export function getAppApi(self) {
 				// replace app.state
 				if (action) self.state = await self.store.write(action)
 				// else an empty action should force components to update
-
-				const data = self.main ? await self.main() : null
+				if (self.main) await self.main()
 				const current = { action, appState: self.state }
-				await notifyComponents(self.components, current, data)
+				await notifyComponents(self.components, current)
 			} catch (e) {
 				if (self.printError) self.printError(e)
 				else console.log(e)
@@ -368,22 +368,25 @@ export function getComponentApi(self) {
 	const api = {
 		type: self.type,
 		id: self.id,
-		async update(current, data) {
+		async update(current) {
 			if (current.action && self.reactsTo && !self.reactsTo(current.action)) return
 			const componentState = self.getState ? self.getState(current.appState) : current.appState
 			// no new state computed for this component
 			if (!componentState) return
-			let componentData = null
 			// force update if there is no action, or
 			// if the current and pending state is not equal
 			if (!current.action || !deepEqual(componentState, self.state)) {
-				self.state = componentState
-				// in some cases, a component may only be a wrapper to child
-				// components, in which case it will not have a
-				componentData = self.main ? await self.main(data) : null
+				if (self.mainArg == 'state') {
+					// some components may require passing state to its .main() method,
+					// for example when extending a simple object class into an rx-component
+					await self.main(componentState)
+				} else {
+					self.state = componentState
+					if (self.main) await self.main()
+				}
 			}
 			// notify children
-			await notifyComponents(self.components, current, componentData)
+			await notifyComponents(self.components, current)
 			if (self.bus) self.bus.emit('postRender')
 			return api
 		},
@@ -562,7 +565,7 @@ export class Bus {
 // Component Helpers
 // -----------------
 
-export async function notifyComponents(components, current, data = null) {
+export async function notifyComponents(components, current) {
 	if (!components) return // allow component-less app
 	const called = []
 
@@ -570,13 +573,13 @@ export async function notifyComponents(components, current, data = null) {
 		// when components is array, name will be index
 		const component = components[name]
 		if (Array.isArray(component)) {
-			for (const c of component) called.push(c.update(current, data))
+			for (const c of component) called.push(c.update(current))
 		} else if (component.hasOwnProperty('update')) {
-			called.push(component.update(current, data))
+			called.push(component.update(current))
 		} else if (component && typeof component == 'object' && !component.main) {
 			for (const name in component) {
 				if (component.hasOwnProperty(name) && typeof component[name].update == 'function') {
-					called.push(component[name].update(current, data))
+					called.push(component[name].update(current))
 				}
 			}
 		}

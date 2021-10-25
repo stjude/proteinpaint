@@ -38,6 +38,7 @@ export function handle_request_closure(genomes) {
 			// process triggers
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
 			if (q.getcategories) return trigger_getcategories(q, res, tdb, ds)
+			if (q.getpercentile) return trigger_getpercentile(q, res, ds)
 			if (q.getnumericcategories) return trigger_getnumericcategories(q, res, tdb, ds)
 			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
 			if (q.get_children) return await trigger_children(q, res, tdb)
@@ -164,24 +165,23 @@ function trigger_getcategories(q, res, tdb, ds) {
 		ds,
 		term1_id: q.tid
 	}
+	if (q.term1_q) arg.term1_q = JSON.parse(q.term1_q)
 	switch (term.type) {
 		case 'categorical':
-			arg.term1_q = q.term1_q
 			break
 		case 'integer':
 		case 'float':
-			arg.term1_q = q.term1_q ? JSON.parse(q.term1_q) : term.bins.default
+			if (q.term1_q == undefined) arg.term1_q = term.bins.default
 			break
 		case 'condition':
-			arg.term1_q = q.term1_q
-				? q.term1_q
-				: {
-						bar_by_grade: q.bar_by_grade,
-						bar_by_children: q.bar_by_children,
-						value_by_max_grade: q.value_by_max_grade,
-						value_by_most_recent: q.value_by_most_recent,
-						value_by_computable_grade: q.value_by_computable_grade
-				  }
+			if (q.term1_q == undefined)
+				arg.term1_q = {
+					bar_by_grade: q.bar_by_grade,
+					bar_by_children: q.bar_by_children,
+					value_by_max_grade: q.value_by_max_grade,
+					value_by_most_recent: q.value_by_most_recent,
+					value_by_computable_grade: q.value_by_computable_grade
+				}
 			break
 		default:
 			throw 'unknown term type'
@@ -263,7 +263,30 @@ async function trigger_getregression(q, res, ds) {
 	if (typeof q.filter == 'string') {
 		q.filter = JSON.parse(decodeURIComponent(q.filter))
 	}
-	if ('cutoff' in q) q.cutoff = Number(q.cutoff)
 	const data = await regression.get_regression(q, ds)
 	res.send(data)
+}
+
+async function trigger_getpercentile(q, res, ds) {
+	const term = ds.cohort.termdb.q.termjsonByOneid(q.tid)
+	if (!term) throw 'invalid termid'
+	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
+	const p = Number(q.getpercentile)
+	if (!Number.isInteger(p) || p < 1 || p > 99) throw 'percentile is not 1-99 integer'
+	const values = []
+	const rows = termdbsql.get_rows_by_one_key({
+		ds,
+		key: q.tid,
+		filter: q.filter ? (typeof q.filter == 'string' ? JSON.parse(q.filter) : q.filter) : null
+	})
+	for (const { value } of rows) {
+		if (term.values && term.values[value]) {
+			// is a special category
+			continue
+		}
+		values.push(Number(value))
+	}
+	const sorted_values = [...values].sort((a, b) => a - b)
+	const value = sorted_values[Math.floor((values.length * p) / 100)]
+	res.send({ value })
 }

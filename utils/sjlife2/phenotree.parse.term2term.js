@@ -469,16 +469,17 @@ function addattributes_conditionterm(t) {
 				groups: [
 					{
 						name: 'No condition',
-						values: [{ key: '0', label: 'No condition' }]
+						// CAREFUL!! grades are integers, not strings. so that max grade computing can happen
+						values: [{ key: 0, label: 'No condition' }]
 					},
 					{
 						name: 'Has condition',
 						values: [
-							{ key: '1', label: '1: Mild' },
-							{ key: '2', label: '2: Moderate' },
-							{ key: '3', label: '3: Severe' },
-							{ key: '4', label: '4: Life-threatening' },
-							{ key: '5', label: '5: Death' }
+							{ key: 1, label: '1: Mild' },
+							{ key: 2, label: '2: Moderate' },
+							{ key: 3, label: '3: Severe' },
+							{ key: 4, label: '4: Life-threatening' },
+							{ key: 5, label: '5: Death' }
 						]
 					}
 				]

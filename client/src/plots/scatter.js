@@ -1,21 +1,45 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, copyMerge } from '../common/rx.core'
+import { controlsInit } from './controls'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import Partjson from 'partjson'
 import { to_svg } from '../client'
+import { normalizeFilterData } from '../mass/plot'
+import { getNormalRoot } from '../common/filter'
 
 class TdbScatter {
 	constructor(opts) {
 		this.type = 'scatter'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+	}
+
+	async init() {
+		const div = this.opts.controls ? this.opts.holder : this.opts.holder.append('div')
 		this.dom = {
-			div: opts.holder
+			header: this.opts.header,
+			controls: this.opts.controls ? null : holder.append('div'),
+			div
 		}
 		this.settings = {}
+		if (this.dom.header) this.dom.header.html('Scatter Plot')
+		await this.setControls()
+		setInteractivity(this)
 		setRenderers(this)
-		opts.controls.on('downloadClick.scatter', this.download)
+	}
+
+	async setControls() {
+		if (this.opts.controls) {
+			this.opts.controls.on('downloadClick.boxplot', this.download)
+		} else {
+			this.components = {
+				controls: await controlsInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls')
+				})
+			}
+			this.components.controls.on('downloadClick.boxplot', this.download)
+		}
 	}
 
 	getState(appState) {
@@ -26,7 +50,9 @@ class TdbScatter {
 		return {
 			isVisible: config.settings.currViews.includes('scatter'),
 			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter,
+			termfilter: {
+				filter: getNormalRoot(appState.termfilter.filter)
+			},
 			config: {
 				term: config.term,
 				term0: config.term0,
@@ -39,22 +65,50 @@ class TdbScatter {
 		}
 	}
 
-	main(data) {
-		this.config = this.state.config
-		if (!this.state.isVisible) {
-			this.dom.div.style('display', 'none')
-			return
-		}
-		rx.copyMerge(this.settings, this.state.config.settings.scatter)
-		if (!this.pj) this.pj = getPj(this)
+	async main() {
+		try {
+			this.config = this.state.config
+			if (!this.state.isVisible) {
+				this.dom.div.style('display', 'none')
+				return
+			}
+			if (this.dom.header) this.dom.header.html(this.config.term.term.name + ' vs ' + this.config.term2.term.name)
+			copyMerge(this.settings, this.state.config.settings.scatter)
+			if (!this.pj) this.pj = getPj(this)
 
-		if (data) this.currData = data
-		this.pj.refresh({ data: this.currData.rows })
-		this.render()
+			const dataName = this.getDataName(this.state)
+			this.currData = await this.app.vocabApi.getPlotData(this.id, dataName)
+			this.pj.refresh({ data: this.currData.rows })
+			this.render()
+		} catch (e) {
+			throw e
+		}
+	}
+
+	// creates URL search parameter string, that also serves as
+	// a unique request identifier to be used for caching server response
+	getDataName(state) {
+		const params = ['scatter=1']
+		for (const _key of ['term', 'term2', 'term0']) {
+			// "term" on client is "term1" at backend
+			const term = this.config[_key]
+			if (!term) continue
+			const key = _key == 'term' ? 'term1' : _key
+			params.push(key + '_id=' + encodeURIComponent(term.term.id))
+			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
+			params.push(key + '_q=' + this.app.vocabApi.q_to_param(term.q))
+		}
+
+		if (state.termfilter.filter.lst.length) {
+			const filterData = normalizeFilterData(state.termfilter.filter)
+			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData)))
+		}
+
+		return '/termdb?' + params.join('&')
 	}
 }
 
-export const scatterInit = rx.getInitFxn(TdbScatter)
+export const scatterInit = getCompInit(TdbScatter)
 
 function setRenderers(self) {
 	self.render = function() {

@@ -50,6 +50,60 @@ export function setCategoricalMethods(self) {
 		return null // for no label
 	}
 
+	self.validateQ = function(data) {
+		const t = data.term
+		const q = data.q
+		const endNote = `(${t.type}, mode='${q.mode}', type='${q.type}')`
+		// validate the configuration
+		if (!('type' in q)) q.type = 'values' // default
+		if (q.type == 'values') {
+			if (!t.values) throw `no term.values defined ${endNote}`
+			if (q.mode == 'binary') {
+				if (Object.keys(t.values).length != 2) throw `term.values must have exactly two keys ${endNote}`
+
+				if (data.sampleCounts) {
+					for (const key in t.values) {
+						if (!data.sampleCounts.find(d => d.key === key))
+							throw `there are no samples for the required binary value=${key} ${endNote}`
+					}
+				}
+			}
+			return
+		}
+
+		if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
+			const tgs = t.groupsetting
+			if (!tgs) throw `no term.groupsetting ${endNote}`
+
+			let groupset
+			if (q.type == 'predefined-groupset') {
+				const idx = q.groupsetting.predefined_groupset_idx
+				if (!tgs.lst[idx]) throw `no groupsetting[predefined_groupset_idx=${idx}] ${endNote}`
+				groupset = tgs.lst[idx]
+			} else {
+				if (!q.groupsetting.customset) throw `no q.groupsetting.customset defined ${endNote}`
+				groupset = q.groupsetting.customset
+			}
+
+			if (!groupset.groups.every(g => g.name !== undefined))
+				throw `every group in groupset must have 'name' defined ${endNote}`
+
+			if (q.mode == 'binary') {
+				if (groupset.groups.length != 2) throw `there must be exactly two groups ${endNote}`
+
+				if (data.sampleCounts) {
+					for (const grp of groupset.groups) {
+						if (!data.sampleCounts.find(d => d.label === grp.name))
+							throw `there are no samples for the required binary value=${key} ${endNote}`
+					}
+				}
+			}
+			return
+		}
+
+		throw `unknown q.type='${q.type}' for categorical q.mode='${q.mode}'`
+	}
+
 	/******************* Functions for Categorical terms *******************/
 	self.showGrpOpts = async function(div) {
 		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse

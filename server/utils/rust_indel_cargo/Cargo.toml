@@ -1,12 +1,15 @@
 [package]
 name = "rust_indel_cargo"
 version = "0.1.0"
-authors = ["rpaul1 <robinpaul85@gmail.com>"]
+authors = ["rpaul1 <rpaul1@stjude.org>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+statrs = "*"
+#num-traits="*"
+fishers_exact="*"
 [profile.release]
 lto = "fat"
 codegen-units = 1

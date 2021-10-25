@@ -107,6 +107,13 @@ makeURL([
 		['example','?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=Test,proteinpaint_demo/hg19/bampile/tk.gz'],
 	]
 },
+
+{name:'study',
+	links:[
+		['ERG','?study=mullighan_dux4_erg'],
+	]
+},
+
 {name:'termdb',
 	links:[
 		['sjlife tree','?noheader=1&termdb='+JSON.stringify( {dslabel:'SJLife',genome:'hg38',nav:{header_mode:'with_tabs'}})],
@@ -309,16 +316,21 @@ makeURL([
 		['sjcloud', '?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json']
 	]
 },
+{name:'single cell',
+	links:[
+		['2D','?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json']
+	]
+},
 {name:'MASS UI',
 	links:[
 		['TermdbTest', '?noheader=1&mass={"genome":"hg38","dslabel": "TermdbTest"}'],
 		['SJLife', '?noheader=1&mass={"genome":"hg38","dslabel": "SJLife"}'],
 
-		['Regression', '?noheader=1&mass='+JSON.stringify({
+		['Linear Regression', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
 			plots: [
-				{
+				/*{
 					chartType: 'regression',
 					regressionType: 'linear',
 					term: {
@@ -329,21 +341,55 @@ makeURL([
 						{"id":"Myocardial infarction","q":{"hiddenValues":{"9":1},"groupsetting":{"inuse":false},"value_by_max_grade":true,"bar_by_grade":true},"type":"condition"}
 						
 					]
-				},
+				},*/
 				{
 					chartType: 'regression',
 					regressionType: 'linear',
 					term: {
-						id: 'BP_SBP1'
+						id: 'BP_SBP1',
+						q: {mode: 'continuous'}
 					},
 					independent: [
 						{"id": "sex"},
-						{"id": "agedx"},
+						//{"id": "agedx"},
 						{"id": "diaggrp"}
 					]
 				},
 			]
 		})],
+		['Logistic Regression', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [{
+				chartType: 'regression',
+				regressionType: 'logistic',
+				term: {
+					id: 'LV_Ejection_Fraction_3D',
+					q: {
+						"mode":"binary",
+						"type":"custom",
+						"lst":[
+							{"startunbounded":true,"stopinclusive":true,"stop":57.8,"label":"≤57.8"},
+							{"stopunbounded":true,"startinclusive":false,"start":57.8,"label":">57.8"}
+						],
+						"refGrp":"≤57.8"
+					}
+				},
+				independent: [
+					{"id": "sex"},
+					{"id": "diaggrp"},
+					{"id":"hrtavg"},
+					{
+						"id":"genetic_race",
+						"q":{
+							"hiddenValues":{},
+							"groupsetting":{"inuse":false},
+							"refGrp":"European Ancestry"
+						},"type":"categorical"
+					}
+				]
+			}]
+		})]
 	]
 },
 ]
