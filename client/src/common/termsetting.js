@@ -71,31 +71,49 @@ class TermSetting {
 		this.initUI()
 
 		// this api will be frozen and returned by termsettingInit()
+		this.hasError = false
 		this.api = {
 			main: async (data = {}) => {
-				this.dom.tip.hide()
-				// console.log(data)
-				this.validateMainData(data)
-				// term is read-only if it comes from state, let it remain read-only
-				this.term = data.term
-				this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
-				if ('disable_terms' in data) this.disable_terms = data.disable_terms
-				if ('exclude_types' in data) this.exclude_types = data.exclude_types
-				if ('filter' in data) this.filter = data.filter
-				if ('activeCohort' in data) this.activeCohort = data.activeCohort
-				if (this.term) {
-					// term is present and may have been replaced
-					// reset methods by term type
-					if (this.setMethodsByTermType[this.term.type]) {
-						// see comments above about the class behavior
-						this.setMethodsByTermType[this.term.type](this)
-					} else {
-						throw 'unknown term type for setMethodsByTermType: ' + this.term.type
+				try {
+					this.dom.tip.hide()
+					this.hasError = false
+					this.validateMainData(data)
+					// term is read-only if it comes from state, let it remain read-only
+					this.term = data.term
+					this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
+					if ('disable_terms' in data) this.disable_terms = data.disable_terms
+					if ('exclude_types' in data) this.exclude_types = data.exclude_types
+					if ('filter' in data) this.filter = data.filter
+					if ('activeCohort' in data) this.activeCohort = data.activeCohort
+					if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
+					if (this.term) {
+						// term is present and may have been replaced
+						// reset methods by term type
+						if (this.setMethodsByTermType[this.term.type]) {
+							// see comments above about the class behavior
+							this.setMethodsByTermType[this.term.type](this)
+						} else {
+							throw 'unknown term type for setMethodsByTermType: ' + this.term.type
+						}
 					}
+					this.updateUI()
+					if (data.term && this.validateQ) this.validateQ(data)
+				} catch (e) {
+					this.hasError = true
+					throw e
 				}
-				this.updateUI()
 			},
-			showTree: this.showTree
+			showTree: this.showTree,
+			hasError: () => this.hasError,
+			validateQ: d => {
+				if (!this.validateQ) return
+				try {
+					this.validateQ(d)
+				} catch (e) {
+					this.hasError = true
+					throw e
+				}
+			}
 		}
 	}
 	validateOpts(o) {

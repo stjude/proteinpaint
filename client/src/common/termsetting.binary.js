@@ -12,7 +12,8 @@ export async function setNumericMethods(self, closureType = 'closured') {
 		return {
 			get_term_name,
 			get_status_msg,
-			showEditMenu
+			showEditMenu,
+			validateQ
 		}
 	} else {
 		// this version maintains a closured reference to 'self'
@@ -21,9 +22,10 @@ export async function setNumericMethods(self, closureType = 'closured') {
 		// TODO: may convert all other termsetting.*.js methods to
 		// just use the non-closured version to simplify
 		//
-		;(self.get_term_name = d => get_term_name(self, d)),
-			(self.get_status_msg = get_status_msg),
-			(self.showEditMenu = async div => await showEditMenu(self, div))
+		self.get_term_name = d => get_term_name(self, d)
+		self.get_status_msg = get_status_msg
+		self.showEditMenu = async div => await showEditMenu(self, div)
+		self.validateQ = validateQ
 	}
 }
 
@@ -55,8 +57,8 @@ async function showEditMenu(self, div) {
 			self.opts.vocabApi = vocabulary.vocabInit({ state: { vocab: self.opts.vocab } })
 		}
 		self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
-	} catch (err) {
-		console.log(err)
+	} catch (e) {
+		throw e
 	}
 	self.dom.num_holder = div
 	div.selectAll('*').remove()
@@ -166,6 +168,19 @@ function setqDefaults(self) {
 		})
 	}
 	//*** validate self.q ***//
+}
+
+function validateQ(data) {
+	const q = data.q
+	if (q.type !== 'custom') throw 'term.q.type must be custom'
+	if (q.lst.length !== 2) throw 'must be only 2 bins'
+	if (!q.lst.every(bin => bin.label !== undefined)) throw 'every bin in q.lst must have label defined'
+	if (data.sampleCounts) {
+		for (const bin of q.lst) {
+			if (!data.sampleCounts.find(d => d.label === bin.label))
+				throw `there are no samples for the required binary bin=${bin.label} (${data.term.type}, mode='${q.mode}', type='${q.type}')`
+		}
+	}
 }
 
 async function renderCuttoffInput(self) {
