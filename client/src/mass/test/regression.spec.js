@@ -22,18 +22,18 @@ function sleep(ms) {
  test sections
 ***************/
 tape('\n', function(test) {
-	test.pass('-***- mass/regression -***-')
+	test.pass('-***- mass/regression2 -***-')
 	test.end()
 })
 
 tape('linear, outcome type=float', function(test) {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(10000)
 
 	runpp({
 		state: {
 			plots: [
 				{
-					chartType: 'regression',
+					chartType: 'regression2',
 					regressionType: 'linear',
 					//cutoff: 57.8,
 					term: {
@@ -78,9 +78,9 @@ tape('linear, outcome type=float', function(test) {
 	}
 
 	function testSectionCounts(regres) {
-		const resultsDiv = regres.Inner.dom.div
+		const resultsDiv = regres.Inner.results.dom.holder
 		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 15
+		const expectedNumDivs = 17
 		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
 
 		const actualNumRows = resultsDiv.selectAll('tr').size()
@@ -96,7 +96,7 @@ tape('logistic outcome type=float', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'regression',
+					chartType: 'regression2',
 					regressionType: 'logistic',
 					//cutoff: 57.8,
 					term: {
@@ -147,9 +147,9 @@ tape('logistic outcome type=float', function(test) {
 	}
 
 	function testSectionCounts(regres) {
-		const resultsDiv = regres.Inner.dom.div
+		const resultsDiv = regres.Inner.results.dom.holder
 		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 15
+		const expectedNumDivs = 17
 		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
 
 		const actualNumRows = resultsDiv.selectAll('tr').size()
@@ -165,20 +165,11 @@ tape('logistic outcome type=condition', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'regression',
+					chartType: 'regression2',
 					regressionType: 'logistic',
 					//cutoff: 57.8,
 					term: {
-						id: 'Arrhythmias',
-						q: {
-							groupsetting: {
-								inuse: true,
-								predefined_groupset_idx: 0
-							},
-							value_by_max_grade: true,
-							bar_by_grade: true,
-							refGrp: 'Has condition'
-						}
+						id: 'Arrhythmias'
 					},
 					independent: [
 						{
@@ -209,9 +200,9 @@ tape('logistic outcome type=condition', function(test) {
 	}
 
 	function testSectionCounts(regres) {
-		const resultsDiv = regres.Inner.dom.div
+		const resultsDiv = regres.Inner.results.dom.holder
 		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 15
+		const expectedNumDivs = 17
 		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
 
 		const actualNumRows = resultsDiv.selectAll('tr').size()
@@ -227,7 +218,7 @@ tape('logistic outcome: missing reference category', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'regression',
+					chartType: 'regression2',
 					regressionType: 'logistic',
 					//cutoff: 57.8,
 					term: {
@@ -285,9 +276,9 @@ tape('logistic outcome: missing reference category', function(test) {
 			expectedErrMsg,
 			`should error out prior to R script if reference category of variable is missing in data matrix`
 		)
-		const results = regres.Inner.dom.div
+		const results = regres.Inner.results.dom.holder
 		const actualResultDivCnt = results.selectAll('div').size()
-		const expectedResultDivCnt = 0
+		const expectedResultDivCnt = 2 // may include empty divs, not rendered divs for results
 		test.equal(actualResultDivCnt, expectedResultDivCnt, `should not have results divs`)
 		test.end()
 	}

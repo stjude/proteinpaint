@@ -30,7 +30,7 @@ export function setPillMethods(self) {
 		if (d.section.configKey == 'term') {
 			d.setQ = getQSetter(self.config.regressionType)
 		}
-		d.pill.main()
+		await d.pill.main()
 	}
 
 	self.updatePill = async function(d) {
@@ -51,7 +51,7 @@ export function setPillMethods(self) {
 				d.term
 			)
 			args.filter = self.state.termfilter.filter
-			await d.pill.main(args)
+			d.pill.main(args)
 		} catch (e) {
 			self.hasError = true
 			d.dom.err_div.style('display', 'block').text(e)
@@ -159,8 +159,13 @@ async function maySetTwoGroups(d, self) {
 	]
 	if (term.type == 'condition') lst.push('value_by_max_grade=1')
 	const url = lst.join('&')
-	const data = await dofetch3(url, {}, self.app.opts.fetchOpts)
-	if (data.error) throw data.error
+	let data
+	try {
+		data = await dofetch3(url, {}, self.app.opts.fetchOpts)
+		if (data.error) throw data.error
+	} catch (e) {
+		throw e
+	}
 	const category2samplecount = new Map() // k: category/grade (computable), v: number of samples
 	const computableCategories = []
 	for (const i of data.lst) {
@@ -194,6 +199,7 @@ async function maySetTwoGroups(d, self) {
 		q_gs.customset.groups.length == 2 &&
 		groupsetNoEmptyGroup(q_gs.customset, category2samplecount)
 	) {
+		q.type = 'custom-groupset'
 		// has a usable custom set
 		return
 	}
@@ -210,6 +216,7 @@ async function maySetTwoGroups(d, self) {
 			groupsetNoEmptyGroup(t_gs.lst[q_gs.predefined_groupset_idx], category2samplecount)
 		) {
 			// has a usable predefined groupset
+			q.type = 'predefined-groupset'
 			return
 		}
 
@@ -218,6 +225,7 @@ async function maySetTwoGroups(d, self) {
 		if (i != -1 && groupsetNoEmptyGroup(t_gs.lst[i], category2samplecount)) {
 			// found a usable groupset
 			q_gs.predefined_groupset_idx = i
+			q.type = 'predefined-groupset'
 			return
 		}
 	}

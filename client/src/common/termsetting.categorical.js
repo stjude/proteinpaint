@@ -53,7 +53,7 @@ export function setCategoricalMethods(self) {
 	self.validateQ = function(data) {
 		const t = data.term
 		const q = data.q
-		const endNote = `(categorical, mode='${q.mode}', type='${q.type}')`
+		const endNote = `(${t.type}, mode='${q.mode}', type='${q.type}')`
 		// validate the configuration
 		if (!('type' in q)) q.type = 'values' // default
 		if (q.type == 'values') {
@@ -72,14 +72,14 @@ export function setCategoricalMethods(self) {
 		}
 
 		if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
-			const gs = t.groupsetting
-			if (!gs) throw `no term.groupsetting for `
+			const tgs = t.groupsetting
+			if (!tgs) throw `no term.groupsetting ${endNote}`
 
 			let groupset
 			if (q.type == 'predefined-groupset') {
-				const idx = gs.predefined_groupset_idx
-				if (!gs.lst[idx]) throw `no groupsetting[predefined_groupset_idx=${idx}] ${endNote}`
-				groupset = gs.lst[idx]
+				const idx = q.groupsetting.predefined_groupset_idx
+				if (!tgs.lst[idx]) throw `no groupsetting[predefined_groupset_idx=${idx}] ${endNote}`
+				groupset = tgs.lst[idx]
 			} else {
 				if (!q.groupsetting.customset) throw `no q.groupsetting.customset defined ${endNote}`
 				groupset = q.groupsetting.customset

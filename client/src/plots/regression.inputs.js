@@ -139,6 +139,9 @@ function setRenderers(self) {
 	}
 
 	// initialize the ui sections
+	/*
+		 ...
+	*/
 	function renderSection(section) {
 		const div = select(this)
 
@@ -157,6 +160,9 @@ function setRenderers(self) {
 			div.append('div')
 		}
 
+		/*
+			... 
+		*/
 		const v = self.config[section.configKey]
 		section.selected = Array.isArray(v) ? v : v ? [v] : []
 		const itemRefs = section.selected.map(term => {
@@ -164,6 +170,13 @@ function setRenderers(self) {
 				section.items[term.id] = { ra: this, section, term }
 			}
 			return section.items[term.id]
+			/*
+				section.items = [
+					{type: 'term', term: {}}, // should use term.id as identifier
+ 					{type: 'genotype', gene: {}}, // 
+					{type: 'sample', }
+				]
+			*/
 		})
 
 		if (itemRefs.length < section.limit && !itemRefs.find(d => !d.term)) {

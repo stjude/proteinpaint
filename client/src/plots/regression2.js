@@ -3,6 +3,7 @@ import { RegressionInputs } from './regression.inputs'
 import { RegressionResults } from './regression.results'
 import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
+import { sayerror } from '../client'
 
 /*
 	Code architecture:
@@ -79,20 +80,24 @@ class Regression {
 	}
 
 	async main() {
-		//if (!this.state.config.term) return
-		this.config = JSON.parse(JSON.stringify(this.state.config))
-		this.dom.banner.style('display', this.state.formIsComplete ? 'block' : 'none')
-		if (this.dom.header) {
-			const termLabel = (this.config.term && this.config.term.term.name) || ''
-			this.dom.header.html(
-				termLabel +
-					`<span style="opacity:.6;font-size:.7em;margin-left:10px;"> ${this.config.regressionType.toUpperCase()} REGRESSION</span>`
-			)
+		try {
+			//if (!this.state.config.term) return
+			this.config = JSON.parse(JSON.stringify(this.state.config))
+			this.dom.banner.style('display', this.state.formIsComplete ? 'block' : 'none')
+			if (this.dom.header) {
+				const termLabel = (this.config.term && this.config.term.term.name) || ''
+				this.dom.header.html(
+					termLabel +
+						`<span style="opacity:.6;font-size:.7em;margin-left:10px;"> ${this.config.regressionType.toUpperCase()} REGRESSION</span>`
+				)
+			}
+			this.dom.banner.style('display', 'none')
+			await this.inputs.main(this.config)
+			await this.results.main(this.config)
+			await this.inputs.updateBtns(true)
+		} catch (e) {
+			sayerror(this.dom.banner.style('display', 'block'), 'Error: ' + (e.error || e))
 		}
-		this.dom.banner.style('display', 'none')
-		await this.inputs.main(this.config)
-		await this.results.main(this.config)
-		await this.inputs.updateBtns(true)
 	}
 }
 
