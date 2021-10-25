@@ -138,9 +138,11 @@ function setRenderers(self) {
 		}
 	}
 
-	// initialize the ui sections
 	/*
-		 ...
+		Render each entry in the this.sections array,
+		one section each for Outcome and Independent Variable
+	
+		see this.sections[] for the expected section key-values
 	*/
 	function renderSection(section) {
 		const div = select(this)
@@ -160,23 +162,23 @@ function setRenderers(self) {
 			div.append('div')
 		}
 
-		/*
-			... 
-		*/
+		// get the terms or variables for config.term or config.independent
 		const v = self.config[section.configKey]
+		// force config.term into an array for ease of handling
+		// the config.independent array will be used as-is
 		section.selected = Array.isArray(v) ? v : v ? [v] : []
+		// process the selected term
 		const itemRefs = section.selected.map(term => {
 			if (!(term.id in section.items)) {
+				// if there are no previous section.item data for this term.id,
+				// create one
 				section.items[term.id] = { ra: this, section, term }
 			}
+			// reuse the same item data for each term;
+			// see the addInput() method for the properties/key-values
+			// that may be attached to the item data, such as
+			// item.pill, item.valuesTable, other variable types in the future
 			return section.items[term.id]
-			/*
-				section.items = [
-					{type: 'term', term: {}}, // should use term.id as identifier
- 					{type: 'genotype', gene: {}}, // 
-					{type: 'sample', }
-				]
-			*/
 		})
 
 		if (itemRefs.length < section.limit && !itemRefs.find(d => !d.term)) {
