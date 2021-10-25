@@ -4,6 +4,17 @@ import { RegressionResults } from './regression.results'
 import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 
+/*
+	Code architecture:
+
+	regression2.js
+	- regression.inputs.js
+		- regression.pills.js // pill.main() validates the term/q
+		- regression.valuesTable.js // termsetting.validateQ()
+		- may add separate code file for each non-term variable type (genotype, sample list)
+	- regression.results.js
+*/
+
 class Regression {
 	constructor(opts) {
 		this.type = 'regression'
