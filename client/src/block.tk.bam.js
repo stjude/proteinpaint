@@ -548,15 +548,16 @@ function may_render_variant(data, tk, block) {
 		fs_string.style('fill', 'red')
 	}
 
+	//Show information about FS in tooltip on click
 	fs_string.tktip = new Menu({ padding: '15px' })
 	fs_string.on('click', () => {
 		fs_string.tktip.clear().showunder(d3event.target)
-		const d = fs_string.tktip.d
+		fs_string.tktip.d
 			.append('div')
+			.style('width', '300px')
 			.html(
-				'Fisher strand (FS) analysis score containing </br> p-values in phred scale (-10*log(p-value)).</br> If FS > <a href="https://gatk.broadinstitute.org/hc/en-us/articles/360035890471" target="_blank">60</a> , the variant maybe </br> a sequencing artifact and highlighted in red.</br> </br> The fishers exact test is used for variants </br>with sequencing depth <= 300.</br> If depth > 300, chi-square test is used. '
+				'<span>Fisher strand (FS) analysis score containing p-values in phred scale (-10*log(p-value)). If FS > <a href="https://gatk.broadinstitute.org/hc/en-us/articles/360035890471" target="_blank">60</a>, the variant maybe a sequencing artifact and highlighted in red. </br></br>The fishers exact test is used for variants with sequencing depth <= 300. If depth > 300, chi-square test is used.</span>'
 			)
-			.style('margin-bottom', '5px')
 			.style('font-size', '12px')
 	})
 
