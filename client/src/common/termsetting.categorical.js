@@ -508,7 +508,7 @@ export function setCategoricalMethods(self) {
 	}
 
 	/******************* Functions for to Conditional terms *******************/
-
+	// TODO: can remove following function as it's alredy included in 'termsetting.conditional.js'
 	self.showConditionOpts = async function(div) {
 		// grade/subcondtion value type
 		const value_type_select = div
