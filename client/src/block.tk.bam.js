@@ -537,12 +537,8 @@ function may_render_variant(data, tk, block) {
 
 	// Rendering FS score
 	let text_fs_score = 0
-	let fs_string = tk.dom.variantg
-		.append('text')
-		.attr('x', text_fs_score)
-		.attr('y', tk.dom.variantrowheight - 2)
-		.attr('text-anchor', 'end')
-		.attr('font-size', tk.dom.variantrowheight)
+	let fs_string = block
+		.maketklefthandle(tk, tk.pileupheight + tk.dom.variantrowheight / 2)
 		.text('FS = ' + data.strand_probability)
 
 	if (data.strand_significance) {
@@ -1288,7 +1284,7 @@ async function getReadInfo(tk, block, box, ridx) {
 						.append('tr')
 						.style('opacity', 0.5)
 						.style('font-size', '.8em')
-					alignment_tr_ref.append('td').text('Alignment')
+					alignment_tr_ref.append('td').text('')
 					for (const align_str of data.lst[0].align_wrt_ref) {
 						alignment_tr_ref.append('td').text(align_str)
 					}
@@ -1319,7 +1315,7 @@ async function getReadInfo(tk, block, box, ridx) {
 						.append('tr')
 						.style('opacity', 0.5)
 						.style('font-size', '.8em')
-					alignment_tr_alt.append('td').text('Alignment')
+					alignment_tr_alt.append('td').text('')
 					for (const align_str of data.lst[0].align_wrt_alt) {
 						alignment_tr_alt.append('td').text(align_str)
 					}
