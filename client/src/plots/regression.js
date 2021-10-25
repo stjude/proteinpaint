@@ -2,12 +2,12 @@ import { RegressionInputs } from './regression.inputs'
 import { RegressionResults } from './regression.results'
 import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
-import { sayerror } from '../client'
+import { sayerror } from '../dom/error'
 
 /*
 	Code architecture:
 
-	regression2.js
+	regression.js
 	- regression.inputs.js
 		- regression.pills.js // pill.main() validates the term/q
 		- regression.valuesTable.js // termsetting.validateQ()
@@ -18,33 +18,28 @@ import { sayerror } from '../client'
 class Regression {
 	constructor(opts) {
 		this.type = 'regression'
+
+		// .opts is provided by plot.setComponents()
+		// .opts.regressionType is required
+		if (!opts.opts) throw 'opts.opts{} missing'
+		if (!['linear', 'logistic'].includes(opts.opts.regressionType)) throw 'invalid opts.regressionType'
+		this.regressionType = opts.opts.regressionType
 	}
 
 	async init() {
-		this.opts.holder.style('margin-left', 0)
-		const inputs = this.opts.holder.append('div')
-		const results = this.opts.holder.append('div').style('margin-left', '40px')
-
 		this.dom = {
-			header: this.opts.header,
-			inputs,
-			banner: this.opts.holder
-				.append('div')
-				.style('color', '#bbb')
-				.style('display', 'none')
-				.style('margin-bottom', '10px'),
-			results
+			header: this.opts.header, // header is optional
+			errordiv: this.opts.holder.append('div'),
+			inputs: this.opts.holder.append('div'),
+			results: this.opts.holder.append('div').style('margin-left', '40px')
 		}
-
-		/*** TODO: may not need this config here  ***/
-		const config = this.app.getState().plots.find(p => p.id === this.id)
 
 		this.inputs = new RegressionInputs({
 			app: this.app,
 			parent: this,
 			id: this.id,
 			holder: this.dom.inputs,
-			regressionType: config.regressionType
+			regressionType: this.regressionType
 		})
 
 		this.results = new RegressionResults({
@@ -52,7 +47,7 @@ class Regression {
 			parent: this,
 			id: this.id,
 			holder: this.dom.results,
-			regressionType: config.regressionType
+			regressionType: this.regressionType
 		})
 	}
 
@@ -62,6 +57,7 @@ class Regression {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		if (!config.regressionType) throw 'regressionType is required'
+		// TODO change config.term to config.outcome{}
 		return {
 			vocab: appState.vocab,
 			formIsComplete: config.term && config.independent.length,
@@ -80,9 +76,8 @@ class Regression {
 
 	async main() {
 		try {
-			//if (!this.state.config.term) return
 			this.config = JSON.parse(JSON.stringify(this.state.config))
-			this.dom.banner.style('display', this.state.formIsComplete ? 'block' : 'none')
+			// TODO update header upon selecting/updating outcome
 			if (this.dom.header) {
 				const termLabel = (this.config.term && this.config.term.term.name) || ''
 				this.dom.header.html(
@@ -90,12 +85,12 @@ class Regression {
 						`<span style="opacity:.6;font-size:.7em;margin-left:10px;"> ${this.config.regressionType.toUpperCase()} REGRESSION</span>`
 				)
 			}
-			this.dom.banner.style('display', 'none')
 			await this.inputs.main(this.config)
 			await this.results.main(this.config)
-			await this.inputs.updateBtns(true)
+			await this.inputs.updateSubmitButton(true)
 		} catch (e) {
-			sayerror(this.dom.banner.style('display', 'block'), 'Error: ' + (e.error || e))
+			sayerror(this.dom.errordiv, 'Error: ' + (e.error || e))
+			if (e.stack) console.log(e.stack)
 		}
 	}
 }

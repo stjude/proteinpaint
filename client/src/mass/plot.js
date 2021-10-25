@@ -87,7 +87,8 @@ class MassPlot {
 			app: this.app,
 			holder: this.dom.viz,
 			header: paneTitleDiv,
-			id: this.id
+			id: this.id,
+			opts // hope it's reasonable to pass this to constructor
 		})
 	}
 }

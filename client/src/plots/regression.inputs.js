@@ -1,4 +1,3 @@
-import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { setPillMethods } from './regression.pill'
 import { setValuesTableMethods } from './regression.valuesTable'
@@ -21,8 +20,8 @@ export class RegressionInputs {
 			placeholderIcon: '',
 			configKey: 'term',
 			limit: 1,
+			// TODO document purpose
 			selected: [],
-			cutoffTermTypes: ['condition', 'integer', 'float'],
 			exclude_types: {
 				linear: ['categorical', 'survival'],
 				logistic: ['survival']
@@ -114,7 +113,7 @@ function setRenderers(self) {
 			.html('Run analysis')
 			.on('click', self.submit)
 
-		self.updateBtns()
+		self.updateSubmitButton()
 	}
 
 	self.render = async () => {
@@ -131,7 +130,7 @@ function setRenderers(self) {
 				.style('padding', '3px 5px')
 				.each(renderSection)
 
-			self.updateBtns()
+			self.updateSubmitButton()
 		} catch (e) {
 			self.hasError = true
 			throw e
@@ -259,7 +258,7 @@ function setRenderers(self) {
 			.remove()
 	}
 
-	self.updateBtns = chartRendered => {
+	self.updateSubmitButton = chartRendered => {
 		if (!self.dom.submitBtn) return
 		const hasOutcomeTerm = self.sections.filter(s => s.configKey == 'term' && s.selected.length).length
 		const hasIndependetTerm = self.sections.filter(s => s.configKey == 'independent' && s.selected.length).length
