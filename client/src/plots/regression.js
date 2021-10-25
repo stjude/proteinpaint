@@ -1,4 +1,3 @@
-import { regressionUIInit } from './regression.ui'
 import { RegressionInputs } from './regression.inputs'
 import { RegressionResults } from './regression.results'
 import { getCompInit } from '../common/rx.core'
