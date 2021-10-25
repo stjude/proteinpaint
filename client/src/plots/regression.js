@@ -18,21 +18,17 @@ import { sayerror } from '../dom/error'
 class Regression {
 	constructor(opts) {
 		this.type = 'regression'
-
-		// .opts is provided by plot.setComponents()
-		// .opts.regressionType is required
-		if (!opts.opts) throw 'opts.opts{} missing'
-		if (!['linear', 'logistic'].includes(opts.opts.regressionType)) throw 'invalid opts.regressionType'
-		this.regressionType = opts.opts.regressionType
 	}
 
-	async init() {
+	async init(appState) {
 		this.dom = {
 			header: this.opts.header, // header is optional
 			errordiv: this.opts.holder.append('div'),
 			inputs: this.opts.holder.append('div'),
 			results: this.opts.holder.append('div').style('margin-left', '40px')
 		}
+
+		const config = appState.plots.find(p => p.id === this.id)
 
 		this.inputs = new RegressionInputs({
 			app: this.app,
@@ -47,7 +43,7 @@ class Regression {
 			parent: this,
 			id: this.id,
 			holder: this.dom.results,
-			regressionType: this.regressionType
+			regressionType: config.regressionType
 		})
 	}
 

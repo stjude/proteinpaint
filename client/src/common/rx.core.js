@@ -129,7 +129,10 @@ function getInitPrepFxn(_Class_, prepFxn) {
 			// instance.init() can be an async function
 			// which is not compatible within a constructor() function,
 			// so call it here if it is available as an instance method
-			if (self.init) await self.init()
+			if (self.init) {
+				if (self.app && self.app != self) await self.init(self.app.getState())
+				else await self.init()
+			}
 			if (self.bus) self.bus.emit('postInit')
 			return api
 		} catch (e) {
