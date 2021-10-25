@@ -1,6 +1,5 @@
 import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
-import { get_bin_label } from '../../shared/termdb.bins'
 import { setPillMethods } from './regression.pill'
 import { setValuesTableMethods } from './regression.valuesTable'
 

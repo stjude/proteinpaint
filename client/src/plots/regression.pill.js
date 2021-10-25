@@ -1,5 +1,6 @@
 import { termsettingInit } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
+import { get_bin_label } from '../../shared/termdb.bins'
 import { dofetch3 } from '../client'
 
 export function setPillMethods(self) {
@@ -34,6 +35,9 @@ export function setPillMethods(self) {
 
 	self.updatePill = async function(d) {
 		try {
+			if (d.term) {
+				if (d.setQ) await d.setQ[d.term.term.type](d, self)
+			}
 			const args = Object.assign(
 				{
 					disable_terms: self.disable_terms,
@@ -47,9 +51,6 @@ export function setPillMethods(self) {
 				d.term
 			)
 			args.filter = self.state.termfilter.filter
-			if (d.term) {
-				if (d.setQ) await d.setQ[d.term.term.type](d, self)
-			}
 			await d.pill.main(args)
 		} catch (e) {
 			self.hasError = true
