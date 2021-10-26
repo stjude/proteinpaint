@@ -45,49 +45,46 @@ export class RegressionInputs {
 				
 				
 				-----  dynamic configuration data  -----
-				*** recomputed on each updateSection() ***  
+				*** recomputed on each updateSection() ***
 
-				.selected[] 
-					a copy of state.config[section.configKey]
-					either [config.term] or config.independent
-					each element is {id, term, q}
-					TODO later expands to this format for an element: {type:'term', term: {id, term, q}}
-
-				.inputs {[term.id]: {*input*}}
+				.inputs[ input{} ]
 					a cache of input configurations and rendered DOM elements 
 					for each selected variable. Removed inputs will be deleted 
 					from this object, and newly selected inputs will be added.
-
-					TODO may convert to an array of same length, so that .inputs[i] and .selected[i] refer to the same thing
 
 					.input.section
 						reference to this section
 						for making this section config accessible to downstream logic handling this input, e.g. pill.js
 					
-					.input.term {id, term, q}
-						may be empty initially
-					
-					.input.pill
-						termsetting pill API
-					
-					.input.valuesTable
-						table to show sample counts for each term value/bin/category and to select refGrp
-
 					.input.update()
 						created in addInput(), run in triggerUpdate()
 
 					.input.dom{}
 						.holder
-						.pillDiv
 						.err_div
+						.* other DOM elements added depending on variable class
+
+					.input.varClass
+						the input's variable class, like "term"
+					
+					**** expected attributes by input.varClass ****
+					[varClass == 'term']
+					.input.term 
+							{id, term, q, varClass: 'term'}
+							may be empty initially
+					
+					.input.pill
+							termsetting pill API
+					
+					.input.valuesTable
+						table to show sample counts for each term value/bin/category and to select refGrp
+
+					.input.dom
+						.pillDiv
 						.infoDiv
 
-					.input.*
-						support non-term input variables in the future
-
-				.inputConfigs[]
-					values of .inputs{}, arranged into the order of .selected[]
-					drives d3 data/enter/update
+					[varClass == '...']
+					input.* TODO: support non-term variable classes
 
 
 				------ tracker for this section's DOM elements -----
@@ -113,8 +110,7 @@ export class RegressionInputs {
 			exclude_types: this.opts.regressionType == 'linear' ? ['condition', 'categorical', 'survival'] : ['survival'],
 
 			/*** dynamic configuration ***/
-			selected: [],
-			inputs: {},
+			inputs: [],
 
 			/*** tracker for this section's DOM elements ***/
 			dom: {}
@@ -131,8 +127,7 @@ export class RegressionInputs {
 			exclude_types: ['condition', 'survival'],
 
 			/*** dynamic configuration ***/
-			selected: [],
-			inputs: {},
+			inputs: [],
 
 			/*** tracker for this section's DOM elements ***/
 			dom: {}
@@ -161,51 +156,17 @@ export class RegressionInputs {
 	}
 
 	async triggerUpdate() {
-		this.setSectionInputConfigs()
 		this.setDisableTerms()
 		const updates = []
 		for (const section of this.sections) {
 			await this.renderSection(section)
-
-			for (const id in section.inputs) {
-				const input = section.inputs[id]
-				input.dom.err_div.style('display', 'none').text('')
-				updates.push(input.update())
+			for (const input of section.inputs) {
+				if (input.dom) input.dom.err_div.style('display', 'none').text('')
+				if (input.update) updates.push(input.update())
 			}
 		}
 		await Promise.all(updates)
 		this.updateSubmitButton()
-	}
-
-	setSectionInputConfigs() {
-		for (const section of this.sections) {
-			// get the terms or variables for config.term or config.independent
-			const v = this.config[section.configKey]
-
-			// force config.term into an array for ease of handling
-			// the config.independent array will be used as-is
-			section.selected = Array.isArray(v) ? v : v ? [v] : []
-
-			// process each selected term
-			const inputConfigs = []
-			for (const term of section.selected) {
-				if (!(term.id in section.inputs)) {
-					// create an input config cache for this term.id, if none exists
-					section.inputs[term.id] = { section, term }
-				}
-				inputConfigs.push(section.inputs[term.id])
-			}
-
-			// detect if a blank input needs to be created
-			if (inputConfigs.length < section.limit && !inputConfigs.find(input => !input.term)) {
-				// create or reuse a blank pill to prompt a new term selection
-				if (!section.inputs.undefined) section.inputs.undefined = { section }
-				inputConfigs.push(section.inputs.undefined)
-			}
-
-			// will use this later as part of rendering a section
-			section.inputConfigs = inputConfigs
-		}
 	}
 
 	setDisableTerms() {
@@ -279,10 +240,11 @@ function setRenderers(self) {
 		// effect is to force user to first select outcome, then independent, but not to select independent first
 		section.dom.holder.style('display', section.configKey == 'term' || self.config.term ? 'block' : 'none')
 
+		updateInputs(section)
 		const inputs = section.dom.inputsDiv
 			.selectAll(':scope > div')
 			// key function (2nd arg) uses (es6 shorthand?) determines datum and element are joined by term id
-			.data(section.inputConfigs, input => input.term && input.term.id)
+			.data(section.inputs, input => input.term && input.term.id)
 
 		inputs.exit().each(removeInput)
 
@@ -292,6 +254,42 @@ function setRenderers(self) {
 			.each(addInput)
 	}
 
+	function updateInputs(section) {
+		// get the input variables from config.term or config.independent
+		const selected = self.config[section.configKey]
+
+		// force the outcome variable into an array for ease of handling
+		// the independent variables array will be used as-is
+		const selectedArray = Array.isArray(selected) ? selected : selected ? [selected] : []
+
+		// process each selected variable
+		for (const variable of selectedArray) {
+			// if the varClass is missing, detect and assign it
+			if (!variable.varClass && variable.term) variable.varClass = 'term'
+			const varClass = variable.varClass
+
+			const input = section.inputs.find(
+				input => input.varClass == varClass && input[varClass] && input[varClass].id == variable.id
+			)
+			if (!input) {
+				section.inputs.push({
+					section,
+					varClass, // varClass = "term" | "..."
+					[varClass]: variable // example: input["term"] = {id, term, q}
+				})
+			}
+		}
+
+		// detect if a blank input needs to be created
+		const blankInput = section.inputs.find(input => input.varClass && !input[input.varClass])
+		if (section.inputs.length < section.limit && !blankInput) {
+			if (!blankInput) {
+				/*** TODO: should determine varClass by context/parent menu choice? ***/
+				section.inputs.push({ section, varClass: 'term' })
+			}
+		}
+	}
+
 	async function addInput(input) {
 		const config = self.config
 		const div = select(this)
@@ -299,42 +297,39 @@ function setRenderers(self) {
 			.style('margin', '15px 15px 5px 45px')
 			.style('padding', '0px 5px')
 
-		input.dom = {
-			holder: div,
-			pillDiv: div.append('div'),
-			err_div: div
-				.append('div')
-				.style('display', 'none')
-				.style('padding', '5px')
-				.style('background-color', 'rgba(255,100,100,0.2)'),
-			infoDiv: div.append('div')
-		}
+		if (input.varClass == 'term') {
+			input.dom = {
+				holder: div,
+				pillDiv: div.append('div'),
+				err_div: div
+					.append('div')
+					.style('display', 'none')
+					.style('padding', '5px')
+					.style('background-color', 'rgba(255,100,100,0.2)'),
+				infoDiv: div.append('div')
+			}
 
-		/*
-			for now, only 'term' variables are supported and will always create termsetting pill
-			TODO support other types of input which may not need pill
-		*/
-		self.addPill(input)
-		// for now, assume will always need a values table
-		self.addValuesTable(input)
+			self.addPill(input)
+			self.addValuesTable(input)
 
-		// collect the update functions for each input
-		// so that multiple input updates can be called in parallel
-		// and not block each other
-		input.update = async () => {
-			input.dom.holder.style('border-left', input.term ? '1px solid #bbb' : '')
-			/* these function calls should depend on what has been set for this input */
-			if (input.pill) await self.updatePill(input)
-			// the term.q is set within self.updatePill, so must await
-			if (input.dom.values_table) await self.updateValuesTable(input)
+			// collect the update functions for each input
+			// so that multiple input updates can be called in parallel
+			// and not block each other
+			input.update = async () => {
+				input.dom.holder.style('border-left', input.term ? '1px solid #bbb' : '')
+				await self.updatePill(input)
+				// the term.q is set within self.updatePill, so must await
+				await self.updateValuesTable(input)
+			}
 		}
 	}
 
 	function removeInput(input) {
-		delete input.section.inputs[input.term.id]
-		for (const name in input.dom) {
-			//input.dom[name].remove()
-			delete input.dom[name]
+		const i = input.section.inputs.find(v => v === input)
+		input.section.inputs.splice(i, 1)
+		for (const key in input.dom) {
+			//input.dom[key].remove()
+			delete input.dom[key]
 		}
 		const div = select(this)
 		div
@@ -346,9 +341,7 @@ function setRenderers(self) {
 
 	self.updateSubmitButton = chartRendered => {
 		if (!self.dom.submitBtn) return
-		const hasOutcomeTerm = self.sections.filter(s => s.configKey == 'term' && s.selected.length).length
-		const hasIndependetTerm = self.sections.filter(s => s.configKey == 'independent' && s.selected.length).length
-		const hasBothTerms = hasOutcomeTerm && hasIndependetTerm
+		const hasBothTerms = self.config.term != undefined && self.config.independent.length
 		self.dom.submitBtn.text('Run analysis').style('display', hasBothTerms ? 'block' : 'none')
 
 		if (self.hasError) {
@@ -360,32 +353,31 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.editConfig = async (input, term) => {
-		const c = self.config
-		const key = input.section.configKey
-		if (term && term.term && !('id' in term)) term.id = term.term.id
-		// edit section data
-
-		if (Array.isArray(c[key])) {
-			if (!input.term) {
-				if (term) c[key].push(term)
-			} else {
-				const i = c[key].findIndex(t => t.id === input.term.id)
-				if (term) c[key][i] = term
-				else c[key].splice(i, 1)
-			}
+	self.editConfig = async (input, variable) => {
+		if (!variable) {
+			const i = input.section.inputs.findIndex(d => d === input)
+			if (i == -1) throw `deleting an unknown input`
+			// delete this input
+			input.section.inputs.splice(i, 1)
+		} else if (input.varClass == 'term') {
+			const term = variable
+			input.term = term
+			// fill in missing attributes in term = {id, term, q, varClass}
+			if (!('id' in term)) term.id = term.term.id
+			if (!variable.varClass) variable.varClass = input.varClass
 		} else {
-			if (term) c[key] = term
-			//else delete c[key]
+			throw `unknown input.varClass *** TODO: support non-term input classes ***`
 		}
 
-		// edit pill data and tracker
-		if (term) {
-			delete input.section.inputs[input.term && input.term.id]
-			input.section.inputs[term.id] = input
-			input.term = term
-		} // if (!term), do not delete input.term, so that it'll get handled in pillDiv.exit()
+		const key = input.section.configKey
+		const selected = input.section.inputs
+			// get only non-empty inputs
+			.filter(input => input.varClass && input[input.varClass])
+			.map(input => input[input.varClass])
 
+		// the target config to fill-in/replace/delete may hold
+		// either one or more selected input variables
+		self.config[key] = Array.isArray(self.config[key]) ? selected : selected[0]
 		self.triggerUpdate()
 	}
 
