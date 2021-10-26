@@ -1,7 +1,12 @@
 import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
 import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import * as client from './client'
+import { axisstyle } from './dom/axisstyle'
+import { newpane } from './client'
+import { Menu } from './dom/menu'
+import { sayerror } from './dom/sayerror'
+import { appear } from './dom/animation'
+import { dofetch3 } from './common/dofetch'
 import { make_radios } from './dom/radiobutton'
 import { make_one_checkbox } from './dom/checkbox'
 import urlmap from './common/urlmap'
@@ -26,8 +31,13 @@ tk.downloadgdc // Downloads bam file from gdc
 tk.gdc // Renders gdc bam file
 tk.variants[ {} ]
 	.chr/pos/ref/alt
+        .altseq  // Contains leftflankseq + alt_allele + rightflankseq
+        .refseq  // Contains leftflankseq + ref_allele + rightflankseq
+        .leftflankseq // Contains sequence on the left hand side of the variant 
+        .rightflankseq // Contains sequence on the right hand side of the variant
 tk.pileupheight
 tk.pileupbottompad
+tk.alleleAlreadyUpdated // When true (in case of pan/zoom by user) prevents repeated reference genome queries for alt/refallele and left/rightflankseq
 
 
 tk.dom{}
@@ -67,6 +77,7 @@ tk.groups[]
         .gdc
         .gdcrowheight
         .gdcrowbottompad
+        .fs_string // For displaying fisher strand score
 .clickedtemplate // set when a template is clicked
 	.qname
 	.isfirst
@@ -81,6 +92,7 @@ tk.groups[]
 
 enter_partstack()
 getReadInfo
+   alignment_button // For displaying read alignment between read vs ref/alt allele when q.variant is true
 */
 
 const labyspace = 5
@@ -190,6 +202,14 @@ async function getData(tk, block, additional = []) {
 			lst.push('min_diff_score=' + tk.min_diff_score)
 		}
 	}
+	if (tk.variants && tk.alleleAlreadyUpdated) {
+		// Prevent passing of refseq and altseq from server to client side in subsequent request
+		lst.push('alleleAlreadyUpdated=1')
+		lst.push('refseq=' + tk.variants[0].refseq)
+		lst.push('altseq=' + tk.variants[0].altseq)
+		lst.push('leftflankseq=' + tk.variants[0].leftflankseq)
+		lst.push('rightflankseq=' + tk.variants[0].rightflankseq)
+	}
 	if (tk.uninitialized) {
 		lst.push('getcolorscale=1')
 		delete tk.uninitialized
@@ -215,7 +235,7 @@ async function getData(tk, block, additional = []) {
 	let orig_regions = []
 	if (tk.downloadgdc) {
 		lst.push('downloadgdc=' + tk.downloadgdc)
-		gdc_bam_files = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
+		gdc_bam_files = await dofetch3('tkbam?' + lst.join('&'), { headers })
 		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
 		if (gdc_bam_files.error) throw gdc_bam_files.error
 		delete tk.downloadgdc
@@ -234,7 +254,14 @@ async function getData(tk, block, additional = []) {
 	if (tk.drop_pcrduplicates) lst.push('drop_pcrduplicates=1')
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
-	const data = await client.dofetch2('tkbam?' + lst.join('&'), { headers })
+	const data = await dofetch3('tkbam?' + lst.join('&'), { headers })
+	if (tk.variants && !tk.alleleAlreadyUpdated) {
+		tk.variants[0].refseq = data.refseq
+		tk.variants[0].altseq = data.altseq
+		tk.variants[0].leftflankseq = data.leftflankseq
+		tk.variants[0].rightflankseq = data.rightflankseq
+		tk.alleleAlreadyUpdated = true
+	}
 	if (data.error) throw data.error
 	return data
 }
@@ -262,7 +289,7 @@ or update existing groups, in which groupidx will be provided
 		const scale = scaleLinear()
 			.domain([0, data.pileup_data.maxValue])
 			.range([tk.pileupheight, 0])
-		client.axisstyle({
+		axisstyle({
 			axis: tk.dom.pileup_axis.call(
 				axisRight()
 					.scale(scale)
@@ -424,7 +451,6 @@ function may_render_variant(data, tk, block) {
 
 	const variant_string =
 		tk.variants[0].chr + '.' + (data.allele_pos + 1).toString() + '.' + data.ref_allele + '.' + data.alt_allele
-
 	// Determining where to place the text. Before, inside or after the box
 	let variant_start_text_pos = 0
 	const space_param = 10
@@ -512,18 +538,27 @@ function may_render_variant(data, tk, block) {
 
 	// Rendering FS score
 	let text_fs_score = 0
-	let fs_string = tk.dom.variantg
-		.append('text')
-		.attr('x', text_fs_score)
-		.attr('y', tk.dom.variantrowheight - 2)
-		.attr('text-anchor', 'end')
-		.attr('font-size', tk.dom.variantrowheight)
-		.text('FS = ' + data.strand_probability)
+	tk.fs_string.text('FS = ' + data.strand_probability)
 
 	if (data.strand_significance) {
 		// Change color to red if FS score is significant
-		fs_string.style('fill', 'red')
+		tk.fs_string.style('fill', 'red')
+	} else {
+		// Change color back to black when its no longer significant
+		tk.fs_string.style('fill', 'black')
 	}
+
+	//Show information about FS in tooltip on click
+	tk.fs_string.on('click', () => {
+		tk.tktip.clear().showunder(d3event.target)
+		tk.tktip.d
+			.append('div')
+			.style('width', '300px')
+			.html(
+				"<span>Fisher strand (FS) analysis score containing p-values in phred scale (-10*log(p-value)). If FS > <a href='https://gatk.broadinstitute.org/hc/en-us/articles/360035890471' target='_blank'>60</a>, the variant maybe a sequencing artifact and highlighted in red.</br></br>To compute the p-value, Fisher's exact test is used for variants with a sequencing depth <= 300. If depth > 300, chi-squared test is used.</span>"
+			)
+			.style('font-size', '12px')
+	})
 
 	if (Number.isFinite(data.max_diff_score)) {
 		// Should always be true if variant field was given by user, but may change in the future
@@ -665,7 +700,7 @@ function makeTk(tk, block) {
 			configPanel(tk, block)
 		})
 
-	tk.readpane = client.newpane({ x: 100, y: 100, closekeep: 1 })
+	tk.readpane = newpane({ x: 100, y: 100, closekeep: 1 })
 	tk.readpane.pane.style('display', 'none')
 
 	tk.pileupheight = 100
@@ -699,6 +734,7 @@ function makeTk(tk, block) {
 		tk.dom.diff_score_g = tk.gright.append('g') // For storing bar plot of diff_score
 		tk.dom.diff_score_axis = tk.gright.append('g') // For storing axis of bar plot of diff_score
 		tk.dom.diff_score_plotwidth = 50
+		tk.fs_string = block.maketklefthandle(tk, tk.pileupheight + tk.dom.variantrowheight / 2) // Will contain Fisher strand value which will be added in may_render_variant function
 	}
 
 	///////////// row #4: gdc region XXX delete and replace with bedj indicator track
@@ -820,7 +856,7 @@ function makeGroup(gd, tk, block, data) {
 					.domain([tk.min_diff_score.toFixed(1), tk.max_diff_score.toFixed(1)])
 					.range([0, gd.diff_scores_img.width])
 			)
-		client.axisstyle({
+		axisstyle({
 			axis: tk.dom.diff_score_axis
 				.transition()
 				.attr('transform', 'translate(' + 0 + ',' + (diff_score_height + 0.5 * tk.dom.variantrowheight) + ')')
@@ -1171,15 +1207,18 @@ box{}
   qname, start, stop
 */
 async function getReadInfo(tk, block, box, ridx) {
-	client.appear(tk.readpane.pane)
+	appear(tk.readpane.pane)
 	tk.readpane.header.text('Read info')
 	tk.readpane.body.selectAll('*').remove()
 	const wait = tk.readpane.body.append('div').text('Loading...')
 	const req_data = getparam()
-	const data = await client.dofetch2('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
-
+	if (tk.variants) {
+		req_data.lst.push('refseq=' + tk.variants[0].refseq)
+		req_data.lst.push('altseq=' + tk.variants[0].altseq)
+	}
+	const data = await dofetch3('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
 	if (data.error) {
-		client.sayerror(wait, data.error)
+		sayerror(wait, data.error)
 		return
 	}
 	wait.remove()
@@ -1212,6 +1251,87 @@ async function getReadInfo(tk, block, box, ridx) {
 					.append('span')
 					.html('&nbsp;&check;')
 			})
+		/*Creates read alignment table when 'Read alignment' button
+		is clicked. 
+		type
+			'Ref' - reference
+			'Alt' - alternate */
+		//TODO: make pane scrollable if the read is too long. Detect if pane is 1000px for example
+		function makeReadAlignmentTable(div, type) {
+			let q_align, align_wrt, r_align
+			if (type == 'Ref') {
+				q_align = data.lst[0].q_align_ref
+				align_wrt = data.lst[0].align_wrt_ref
+				r_align = data.lst[0].r_align_ref
+			}
+			if (type == 'Alt') {
+				q_align = data.lst[0].q_align_alt
+				align_wrt = data.lst[0].align_wrt_alt
+				r_align = data.lst[0].r_align_alt
+			}
+			div
+				.append('span')
+				.text(type + ' alignment')
+				.style('font-family', 'Courier')
+				.style('font-size', '15px')
+				.style('color', '#303030')
+				.style('margin', '5px 5px 10px 5px')
+			const readAlignmentTable = div
+				.append('table')
+				.style('font-family', 'Courier')
+				.style('font-size', '0.8em')
+				.style('color', '#303030')
+				.style('margin', '5px 5px 20px 5px')
+			const query_tr = readAlignmentTable.append('tr')
+			query_tr
+				.append('td')
+				.text('Read')
+				.style('text-align', 'right')
+				.style('font-weight', '550')
+			for (const nclt of q_align) {
+				query_tr.append('td').text(nclt)
+			}
+			const alignment_tr = readAlignmentTable.append('tr')
+			alignment_tr.append('td')
+			for (const align_str of align_wrt) {
+				alignment_tr.append('td').text(align_str)
+			}
+			const refAlt_tr = readAlignmentTable.append('tr')
+			refAlt_tr
+				.append('td')
+				.text(type + ' allele')
+				.style('text-align', 'right')
+				.style('font-weight', '550')
+				.style('white-space', 'nowrap')
+			for (const nclt of r_align) {
+				refAlt_tr.append('td').text(nclt)
+			}
+		}
+
+		if (data.lst[0].q_align_alt) {
+			// Invoked only if variant is specified
+			d3select(this)
+				.append('span')
+				.html('&nbsp;')
+			const alignment_button = row
+				.append('button')
+				.style('margin-left', '10px')
+				.text('Read alignment')
+
+			let first = true // use this flag to only make the table once when clicking the button for the first time
+			alignment_button.on('click', async () => {
+				if (first) {
+					first = false
+					makeReadAlignmentTable(variantAlignmentTable, 'Ref')
+					makeReadAlignmentTable(variantAlignmentTable, 'Alt')
+				}
+				if (variantAlignmentTable.style('display') == 'none') {
+					variantAlignmentTable.style('display', 'block')
+				} else {
+					variantAlignmentTable.style('display', 'none')
+				}
+			})
+		}
 
 		if (r.unmapped_mate && !tk.asPaired) {
 			// this read has unmapped mate
@@ -1225,10 +1345,10 @@ async function getReadInfo(tk, block, box, ridx) {
 					mate_button.property('disabled', true) // disable this button
 					const wait = tk.readpane.body.append('div').text('Loading...')
 					const req_data = getparam('show_unmapped=1')
-					const data2 = await client.dofetch2('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
+					const data2 = await dofetch3('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
 					if (data2.error) {
 						wait.text('')
-						client.sayerror(wait, data2.error)
+						sayerror(wait, data2.error)
 						mate_button.property('disabled', false) // reenable this button
 						return
 					}
@@ -1254,8 +1374,9 @@ async function getReadInfo(tk, block, box, ridx) {
 		}
 
 		mayshow_blatbutton(r, row, tk, block)
-
 		div.append('div').html(r.info)
+		//empty div for read alignment tables
+		const variantAlignmentTable = div.append('div').style('display', 'none')
 	}
 
 	function getparam(extra) {
@@ -1311,7 +1432,7 @@ function mayshow_blatbutton(read, div, tk, block) {
 			blatdiv.selectAll('*').remove()
 			const wait = blatdiv.append('div').text('Loading...')
 			try {
-				const data = await client.dofetch2(
+				const data = await dofetch3(
 					'blat?genome=' +
 						block.genome.name +
 						'&seq=' +
