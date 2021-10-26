@@ -13,6 +13,7 @@ export function setConditionalMethods(self) {
 		const value_type_select = div
 			.append('select')
 			.style('margin', '5px 10px')
+			.property('disabled', self.q.mode == 'binary' ? true : false)
 			.on('change', () => {
 				// if changed from grade to sub or vice versa, set inuse = false
 				if (
