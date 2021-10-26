@@ -540,7 +540,6 @@ function may_render_variant(data, tk, block) {
 	// Rendering FS score
 	let text_fs_score = 0
 	tk.fs_string.text('FS = ' + data.strand_probability)
-	//delete data.strand_probability
 
 	if (data.strand_significance) {
 		// Change color to red if FS score is significant
