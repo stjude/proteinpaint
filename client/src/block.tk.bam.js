@@ -1318,12 +1318,15 @@ async function getReadInfo(tk, block, box, ridx) {
 				.style('margin-left', '10px')
 				.text('Read alignment')
 
+			let first = true // use this flag to only make the table once when clicking the button for the first time
 			alignment_button.on('click', async () => {
-				variantAlignmentTable.selectAll('*').remove()
-				if (variantAlignmentTable.style('display') == 'none') {
-					variantAlignmentTable.style('display', 'block')
+				if (first) {
+					first = false
 					makeReadAlignmentTable(variantAlignmentTable, 'Ref')
 					makeReadAlignmentTable(variantAlignmentTable, 'Alt')
+				}
+				if (variantAlignmentTable.style('display') == 'none') {
+					variantAlignmentTable.style('display', 'block')
 				} else {
 					variantAlignmentTable.style('display', 'none')
 				}
