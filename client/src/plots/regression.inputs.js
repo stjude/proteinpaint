@@ -8,63 +8,116 @@ export class RegressionInputs {
 		this.app = opts.app
 		// reference to the parent component's mutable instance (not its API)
 		this.parent = opts.parent
-		this.type = 'regressionUI'
+		this.regressionType = this.opts.regressionType
 
-		const regressionType = this.opts.regressionType
+		setInteractivity(this)
+		setRenderers(this)
+		setPillMethods(this)
+		setValuesTableMethods(this)
+
+		this.createSectionConfigs()
+		this.initUI()
+	}
+
+	createSectionConfigs() {
+		/*
+			Create configuration data for each section of the input UI
+			
+			section{}
+				-----  static configuration  -----
+				.heading
+					string heading for the section
+
+				.selectPrompt           
+					string label to prompt a user to select a new input variable
+				
+				.configKey        
+					["term" | "independent"], string key to find a section's data from state.config 
+				
+				.limit
+					maximum number inputs that can be selected for this section
+				
+				.exclude_types    
+					term types that cannot be selected as inputs for this section
+				
+				
+				-----  dynamic configuration data  -----
+				*** recomputed on each updateSection() ***  
+				
+				.selected[] 
+					a copy of state.config[section.configKey]
+					either [config.term] or config.independent
+
+				.inputs {[term.id]: {*input*}}
+					a cache of input configurations and rendered DOM elements 
+					for each selected variable. Removed inputs will be deleted 
+					from this object, and newly selected inputs will be added.
+					
+					.input.term {id, term, q}
+						may be empty initially
+					
+					.input.pill 
+						termsetting pill
+					
+					.input.valuesTable
+						table to show sample counts for each term value/bin/category and to select refGrp
+
+					.input.*
+						support non-term input variables in the future
+
+
+				------ tracker for this section's DOM elements -----
+				*** each element is added when it is created/appended ***
+				.dom{} 
+					.headingDiv
+					.inputsDiv 
+		*/
+
+		// configuration for the outcome variable section
 		this.outcome = {
-			label: 'Outcome variable',
-			prompt: {
-				linear: '<u>Select continuous outcome variable</u>',
-				logistic: '<u>Select outcome variable</u>'
-			},
+			/*** static configuration ***/
+			heading: 'Outcome variable',
+			selectPrompt:
+				this.opts.regressionType == 'linear'
+					? '<u>Select continuous outcome variable</u>'
+					: '<u>Select outcome variable</u>',
 			placeholderIcon: '',
 			configKey: 'term',
 			limit: 1,
-			// TODO document purpose
+			exclude_types: this.opts.regressionType == 'linear' ? ['condition', 'categorical', 'survival'] : ['survival'],
+
+			/*** dynamic configuration ***/
 			selected: [],
-			exclude_types: {
-				linear: ['condition', 'categorical', 'survival'],
-				logistic: ['survival']
-			},
-			// to track and recover selected term pills, info divs, other dom elements,
-			// and avoid unnecessary jerky full rerenders for the same term
-			items: {}
+			inputs: {},
+
+			/*** tracker for this section's DOM elements ***/
+			dom: {}
 		}
 
+		// configuration for the independent variable section
 		this.independent = {
-			label: 'Independent variable(s)',
-			prompt: {
-				linear: '<u>Add independent variable</u>',
-				logistic: '<u>Add independent variable</u>'
-			},
+			/*** static configuration ***/
+			heading: 'Independent variable(s)',
+			selectPrompt: '<u>Add independent variable</u>',
 			placeholderIcon: '',
 			configKey: 'independent',
 			limit: 10,
+			exclude_types: ['condition', 'survival'],
+
+			/*** dynamic configuration ***/
 			selected: [],
-			items: {},
-			exclude_types: {
-				linear: ['condition', 'survival'],
-				logistic: ['condition', 'survival']
-			}
+			inputs: {},
+
+			/*** tracker for this section's DOM elements ***/
+			dom: {}
 		}
 
+		// track as an array, used later as an argument to `d3.data(this.sections).enter()`
 		this.sections = [this.outcome, this.independent]
 
 		// track reference category values or groups by term ID
 		this.refGrpByTermId = {}
 		this.totalSampleCount = undefined
-
-		const controls = this.opts.holder.append('div').style('display', 'block')
-		this.dom = {
-			div: this.opts.holder, //.style('margin', '10px 0px'),
-			controls,
-			body: controls.append('div'),
-			foot: controls.append('div')
-		}
-		setInteractivity(this)
-		setRenderers(this)
-		setPillMethods(this)
-		setValuesTableMethods(this)
 	}
 
 	async main() {
@@ -73,25 +126,60 @@ export class RegressionInputs {
 			// share the writable config copy
 			this.config = this.parent.config
 			this.state = this.parent.state
-			if (!this.dom.submitBtn) this.initUI()
-			await this.updateSections()
+			await this.triggerUpdate()
 		} catch (e) {
+			this.hasError = true
 			throw e
 		}
 	}
 
-	async updateSections() {
-		await this.render()
+	async triggerUpdate() {
+		this.setSectionInputConfigs()
+		this.setDisableTerms()
 		const updates = []
 		for (const section of this.sections) {
-			/* TODO: may need to convert to section.items to an array to support non-term variables */
-			for (const id in section.items) {
-				const d = section.items[id]
+			await this.renderSection(section)
+
+			/* TODO: may need to convert to section.inputs to an array to support non-term variables */
+			for (const id in section.inputs) {
+				const d = section.inputs[id]
 				d.dom.err_div.style('display', 'none').text('')
 				updates.push(d.update())
 			}
 		}
 		await Promise.all(updates)
+		this.updateSubmitButton()
+	}
+
+	setSectionInputConfigs() {
+		for (const section of this.sections) {
+			// get the terms or variables for config.term or config.independent
+			const v = this.config[section.configKey]
+
+			// force config.term into an array for ease of handling
+			// the config.independent array will be used as-is
+			section.selected = Array.isArray(v) ? v : v ? [v] : []
+
+			// process each selected term
+			const inputConfigs = []
+			for (const term of section.selected) {
+				if (!(term.id in section.inputs)) {
+					// create an input config cache for this term.id, if none exists
+					section.inputs[term.id] = { section, term }
+				}
+				inputConfigs.push(section.inputs[term.id])
+			}
+
+			// detect if a blank input needs to be created
+			if (inputConfigs.length < section.limit && !inputConfigs.find(d => !d.term)) {
+				// create or reuse a blank pill to prompt a new term selection
+				if (!section.inputs.undefined) section.inputs.undefined = { section }
+				inputConfigs.push(section.inputs.undefined)
+			}
+
+			// will use this later as part of rendering a section
+			section.inputConfigs = inputConfigs
+		}
 	}
 
 	setDisableTerms() {
@@ -103,6 +191,15 @@ export class RegressionInputs {
 
 function setRenderers(self) {
 	self.initUI = () => {
+		const controls = self.opts.holder.append('div').style('display', 'block')
+
+		self.dom = {
+			div: self.opts.holder, //.style('margin', '10px 0px'),
+			controls,
+			body: controls.append('div'),
+			foot: controls.append('div')
+		}
+
 		self.dom.submitBtn = self.dom.foot
 			.style('margin', '3px 15px')
 			.style('padding', '3px 5px')
@@ -113,27 +210,33 @@ function setRenderers(self) {
 			.html('Run analysis')
 			.on('click', self.submit)
 
-		self.updateSubmitButton()
+		/*
+			not using d3.data() here since each section may only
+			be added and re-rendered, but not removed
+		*/
+		for (const section of self.sections) {
+			const div = self.dom.body.append('div')
+			self.addSection(section, div)
+		}
 	}
 
-	self.render = async () => {
-		try {
-			self.setDisableTerms()
-			const grps = self.dom.body.selectAll(':scope > div').data(self.sections || [])
+	self.addSection = function(section, div) {
+		div
+			.style('display', 'none')
+			.style('margin', '3px 5px')
+			.style('padding', '3px 5px')
 
-			grps.exit().remove()
-			grps.each(renderSection)
-			grps
-				.enter()
+		section.dom = {
+			holder: div,
+			headingDiv: div
 				.append('div')
 				.style('margin', '3px 5px')
 				.style('padding', '3px 5px')
-				.each(renderSection)
+				.style('font-size', '17px')
+				.style('color', '#bbb')
+				.text(section.heading),
 
-			self.updateSubmitButton()
-		} catch (e) {
-			self.hasError = true
-			throw e
+			inputsDiv: div.append('div')
 		}
 	}
 
@@ -143,76 +246,40 @@ function setRenderers(self) {
 	
 		see this.sections[] for the expected section key-values
 	*/
-	function renderSection(section) {
-		const div = select(this)
+	self.renderSection = function(section) {
+		section.dom.holder.style('display', section.configKey == 'term' || self.config.term ? 'block' : 'none')
 
-		// in case of an empty div
-		if (!this.lastChild) {
-			// firstChild
-			div
-				.append('div')
-				.style('margin', '3px 5px')
-				.style('padding', '3px 5px')
-				.style('font-size', '17px')
-				.style('color', '#bbb')
-				.text(section.label)
-
-			// this.lastChild
-			div.append('div')
-		}
-
-		// get the terms or variables for config.term or config.independent
-		const v = self.config[section.configKey]
-		// force config.term into an array for ease of handling
-		// the config.independent array will be used as-is
-		section.selected = Array.isArray(v) ? v : v ? [v] : []
-		// process the selected term
-		const itemRefs = section.selected.map(term => {
-			if (!(term.id in section.items)) {
-				// if there are no previous section.item data for this term.id,
-				// create one
-				section.items[term.id] = { ra: this, section, term }
-			}
-			// reuse the same item data for each term;
-			// see the addInput() method for the properties/key-values
-			// that may be attached to the item data, such as
-			// item.pill, item.valuesTable, other variable types in the future
-			return section.items[term.id]
-		})
-
-		if (itemRefs.length < section.limit && !itemRefs.find(d => !d.term)) {
-			// create or reuse a blank pill to prompt a new term selection
-			if (!section.items.undefined) section.items.undefined = { section }
-			itemRefs.push(section.items.undefined)
-		}
-
-		const inputDivs = select(this.lastChild)
+		const inputs = section.dom.inputsDiv
 			.selectAll(':scope > div')
-			.data(itemRefs, d => d.term && d.term.id)
-		inputDivs.exit().each(removeInput)
+			// the second argument here is to tell d3.data() how to
+			// tell which input has been added, removed, or still exists
+			.data(section.inputConfigs, input => input.term && input.term.id)
+
+		inputs.exit().each(removeInput)
 
 		/* 
 			NOTE: will do the input rendering for each variable 
 			after the sections are rendered, in order to properly await 
 			the async update methods 
+		
+			inputDivs.each(updateInput)
 		*/
-		// inputDivs.each(updateInput)
 
-		inputDivs
+		inputs
 			.enter()
 			.append('div')
 			.each(addInput)
 	}
 
-	async function addInput(d) {
+	async function addInput(input) {
 		const config = self.config
 		const div = select(this)
 			.style('width', 'fit-content')
 			.style('margin', '5px 15px 5px 45px')
 			.style('padding', '3px 5px')
-			.style('border-left', d.term ? '1px solid #bbb' : '')
+			.style('border-left', input.term ? '1px solid #bbb' : '')
 
-		d.dom = {
+		input.dom = {
 			holder: div,
 			pillDiv: div.append('div'),
 			err_div: div
@@ -225,30 +292,31 @@ function setRenderers(self) {
 
 		/*
 			for now, only 'term' variables are supported;
-			may add logic later to support other types of variable
+			may add logic later to support other types of input
 		*/
 		// for now, assume will always need a termsetting pill
-		// NOTE: future variable types (genotype, sample list) may not need a ts pill
-		self.addPill(d)
+		// NOTE: future input types (genotype, sample list) may not need a ts pill
+		self.addPill(input)
 		// for now, assume will always need a values table
-		self.addValuesTable(d)
+		self.addValuesTable(input)
 
-		// collect the update functions for each variable
-		// so that multiple variable updates can be called in parallel
+		// collect the update functions for each input
+		// so that multiple input updates can be called in parallel
 		// and not block each other
-		d.update = async () => {
-			d.dom.holder.style('border-left', d.term ? '1px solid #bbb' : '')
-			/* these function calls should depend on what has been set for this variable */
-			if (d.pill) await self.updatePill(d)
+		input.update = async () => {
+			input.dom.holder.style('border-left', input.term ? '1px solid #bbb' : '')
+			/* these function calls should depend on what has been set for this input */
+			if (input.pill) await self.updatePill(input)
 			// the term.q is set within self.updatePill, so must await
-			if (d.dom.values_table) await self.updateValuesTable(d)
+			if (input.dom.values_table) await self.updateValuesTable(input)
 		}
 	}
 
-	function removeInput(d) {
-		delete d.section.items[d.term.id]
-		for (const name in d.dom) {
-			delete d.dom[name]
+	function removeInput(input) {
+		delete input.section.inputs[input.term.id]
+		for (const name in input.dom) {
+			//input.dom[name].remove()
+			delete input.dom[name]
 		}
 		const div = select(this)
 		div
@@ -274,17 +342,17 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.editConfig = async (d, term) => {
+	self.editConfig = async (input, term) => {
 		const c = self.config
-		const key = d.section.configKey
+		const key = input.section.configKey
 		if (term && term.term && !('id' in term)) term.id = term.term.id
 		// edit section data
 
 		if (Array.isArray(c[key])) {
-			if (!d.term) {
+			if (!input.term) {
 				if (term) c[key].push(term)
 			} else {
-				const i = c[key].findIndex(t => t.id === d.term.id)
+				const i = c[key].findIndex(t => t.id === input.term.id)
 				if (term) c[key][i] = term
 				else c[key].splice(i, 1)
 			}
@@ -295,12 +363,12 @@ function setInteractivity(self) {
 
 		// edit pill data and tracker
 		if (term) {
-			delete d.section.items[d.term && d.term.id]
-			d.section.items[term.id] = d
-			d.term = term
-		} // if (!term), do not delete d.term, so that it'll get handled in pillDiv.exit()
+			delete input.section.inputs[input.term && input.term.id]
+			input.section.inputs[term.id] = input
+			input.term = term
+		} // if (!term), do not delete input.term, so that it'll get handled in pillDiv.exit()
 
-		self.updateSections()
+		self.triggerUpdate()
 	}
 
 	self.submit = () => {

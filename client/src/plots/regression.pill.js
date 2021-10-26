@@ -4,66 +4,66 @@ import { get_bin_label } from '../../shared/termdb.bins'
 import { dofetch3 } from '../client'
 
 export function setPillMethods(self) {
-	self.addPill = async function(d) {
+	self.addPill = async function(input) {
 		const config = self.config
 
-		d.pill = await termsettingInit({
-			placeholder: d.section.prompt[config.regressionType],
-			placeholderIcon: d.section.placeholderIcon,
-			holder: d.dom.pillDiv,
+		input.pill = await termsettingInit({
+			placeholder: input.section.selectPrompt,
+			placeholderIcon: input.section.placeholderIcon,
+			holder: input.dom.pillDiv,
 			vocabApi: self.app.vocabApi,
 			vocab: self.state.vocab,
 			activeCohort: self.state.activeCohort,
 			use_bins_less: true,
 			debug: self.opts.debug,
 			//showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
-			buttons: d.section.configKey == 'term' ? ['replace'] : ['delete'],
-			numericEditMenuVersion: getMenuVersion(config, d),
-			usecase: { target: 'regression', detail: d.section.configKey, regressionType: config.regressionType },
+			buttons: input.section.configKey == 'term' ? ['replace'] : ['delete'],
+			numericEditMenuVersion: getMenuVersion(config, input),
+			usecase: { target: 'regression', detail: input.section.configKey, regressionType: config.regressionType },
 			disable_terms: self.disable_terms,
 			abbrCutoff: 50,
 			callback: term => {
-				self.editConfig(d, term)
+				self.editConfig(input, term)
 			}
 		})
 
-		if (d.section.configKey == 'term') {
-			d.setQ = getQSetter(self.config.regressionType)
+		if (input.section.configKey == 'term') {
+			input.setQ = getQSetter(self.config.regressionType)
 		}
-		await d.pill.main()
+		await input.pill.main()
 	}
 
-	self.updatePill = async function(d) {
+	self.updatePill = async function(input) {
 		try {
-			if (d.term) {
-				if (d.setQ) await d.setQ[d.term.term.type](d, self)
+			if (input.term) {
+				if (input.setQ) await input.setQ[input.term.term.type](input, self)
 			}
 			const args = Object.assign(
 				{
 					disable_terms: self.disable_terms,
-					exclude_types: d.section.exclude_types[self.config.regressionType],
+					exclude_types: input.section.exclude_types,
 					usecase: {
 						target: 'regression',
-						detail: d.section.configKey,
+						detail: input.section.configKey,
 						regressionType: self.config.regressionType
 					}
 				},
-				d.term
+				input.term
 			)
 			args.filter = self.state.termfilter.filter
-			d.pill.main(args)
+			input.pill.main(args)
 		} catch (e) {
 			self.hasError = true
-			d.dom.err_div.style('display', 'block').text(e)
-			//d.dom.loading_div.style('display', 'none')
+			input.dom.err_div.style('display', 'block').text(e)
+			//input.dom.loading_div.style('display', 'none')
 			self.dom.submitBtn.property('disabled', true)
 			console.error(e)
 		}
 	}
 
-	self.removePill = function(d) {
-		delete d.section.items[d.term.id]
-		d.dom.pillDiv
+	self.removePill = function(input) {
+		delete input.section.items[input.term.id]
+		input.dom.pillDiv
 			.transition()
 			.duration(500)
 			.style('opacity', 0)
@@ -71,19 +71,19 @@ export function setPillMethods(self) {
 	}
 }
 
-function getMenuVersion(config, d) {
+function getMenuVersion(config, input) {
 	// for the numericEditMenuVersion of termsetting constructor option
-	if (d.section.configKey == 'term') {
+	if (input.section.configKey == 'term') {
 		// outcome
 		if (config.regressionType == 'logistic') return ['binary']
 		if (config.regressionType == 'linear') return ['continuous']
 		throw 'unknown regressionType'
 	}
-	if (d.section.configKey == 'independent') {
+	if (input.section.configKey == 'independent') {
 		// independent
 		return ['continuous', 'discrete']
 	}
-	throw 'unknown d.section.configKey: ' + d.section.configKey
+	throw 'unknown input.section.configKey: ' + input.section.configKey
 }
 
 function getQSetter(regressionType) {
@@ -97,14 +97,14 @@ function getQSetter(regressionType) {
 
 // query backend for median and create custom 2 bins with median and boundry
 // for logistic independet numeric terms
-async function maySetTwoBins(d, self) {
+async function maySetTwoBins(input, self) {
 	// if the bins are already binary, do not reset
-	if (d.term.q.mode == 'binary' && d.term.q.refGrp) return
+	if (input.term.q.mode == 'binary' && input.term.q.refGrp) return
 
 	// for numeric terms, add 2 custom bins devided at median value
 	const lst = [
 		'/termdb?getpercentile=50',
-		'tid=' + d.term.id,
+		'tid=' + input.term.id,
 		'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(self.state.termfilter.filter))),
 		'genome=' + self.state.vocab.genome,
 		'dslabel=' + self.state.vocab.dslabel
@@ -112,8 +112,8 @@ async function maySetTwoBins(d, self) {
 	const url = lst.join('&')
 	const data = await dofetch3(url, {}, self.app.opts.fetchOpts)
 	if (data.error) throw data.error
-	const median = d.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
-	d.term.q = {
+	const median = input.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
+	input.term.q = {
 		mode: 'binary',
 		type: 'custom',
 		lst: [
@@ -130,14 +130,14 @@ async function maySetTwoBins(d, self) {
 		]
 	}
 
-	d.term.q.lst.forEach(bin => {
-		if (!('label' in bin)) bin.label = get_bin_label(bin, d.term.q)
+	input.term.q.lst.forEach(bin => {
+		if (!('label' in bin)) bin.label = get_bin_label(bin, input.term.q)
 	})
 }
 
-async function maySetTwoGroups(d, self) {
+async function maySetTwoGroups(input, self) {
 	// if the bins are already binary, do not reset
-	const { term, q } = d.term
+	const { term, q } = input.term
 	if (q.mode == 'binary') return
 	q.mode = 'binary'
 
@@ -207,7 +207,7 @@ async function maySetTwoGroups(d, self) {
 	// step 4: check if the term has predefined groupsetting
 	if (t_gs && t_gs.lst) {
 		// has predefined groupsetting
-		// note!!!! check on d.term.term but not d.term.q
+		// note!!!! check on input.term.term but not input.term.q
 
 		if (
 			q_gs.predefined_groupset_idx >= 0 &&
@@ -253,12 +253,12 @@ async function maySetTwoGroups(d, self) {
 	q.type = 'custom-groupset'
 }
 
-function setContMode(d) {
-	if (!d.term.q.type) {
-		console.log('may not happen: why is d.term.q not yet set for numeric term at this point')
+function setContMode(input) {
+	if (!input.term.q.type) {
+		console.log('may not happen: why is input.term.q not yet set for numeric term at this point')
 		// should already be set to default bins
 	}
-	d.term.q.mode = 'continuous'
+	input.term.q.mode = 'continuous'
 }
 
 function groupsetNoEmptyGroup(gs, c2s) {

@@ -267,9 +267,7 @@ tape('logistic outcome: missing reference category', function(test) {
 
 	function runTests(regres) {
 		regres.on('postRender.test', null)
-		const banner = regres.Inner.dom.banner
-		//banner.node().firstChild.innerText
-		const actualErrMsg = banner.text()
+		const actualErrMsg = regres.Inner.dom.errordiv.text()
 		const expectedErrMsg = `Error: the reference category '≤22.05' is not found in the variable 'outcome'✕`
 		test.equal(
 			actualErrMsg,
