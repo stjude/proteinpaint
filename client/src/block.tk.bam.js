@@ -1299,10 +1299,11 @@ async function getReadInfo(tk, block, box, ridx) {
 			}
 			const refAlt_tr = readAlignmentTable.append('tr')
 			refAlt_tr
-				.append('tdnowrap')
+				.append('td')
 				.text(type + ' allele')
 				.style('text-align', 'right')
 				.style('font-weight', '550')
+				.style('white-space', 'nowrap')
 			for (const nclt of r_align) {
 				refAlt_tr.append('td').text(nclt)
 			}
