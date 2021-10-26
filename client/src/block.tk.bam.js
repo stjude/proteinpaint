@@ -539,20 +539,22 @@ function may_render_variant(data, tk, block) {
 
 	// Rendering FS score
 	let text_fs_score = 0
-	let fs_string = block
-		.maketklefthandle(tk, tk.pileupheight + tk.dom.variantrowheight / 2)
-		.text('FS = ' + data.strand_probability)
+	tk.fs_string.text('FS = ' + data.strand_probability)
+	//delete data.strand_probability
 
 	if (data.strand_significance) {
 		// Change color to red if FS score is significant
-		fs_string.style('fill', 'red')
+		tk.fs_string.style('fill', 'red')
+	} else {
+		// Change color back to black when its no longer significant
+		tk.fs_string.style('fill', 'black')
 	}
 
 	//Show information about FS in tooltip on click
-	fs_string.tktip = new Menu({ padding: '15px' })
-	fs_string.on('click', () => {
-		fs_string.tktip.clear().showunder(d3event.target)
-		fs_string.tktip.d
+	tk.fs_string.tktip = new Menu({ padding: '15px' })
+	tk.fs_string.on('click', () => {
+		tk.fs_string.tktip.clear().showunder(d3event.target)
+		tk.fs_string.tktip.d
 			.append('div')
 			.style('width', '300px')
 			.html(
@@ -735,6 +737,7 @@ function makeTk(tk, block) {
 		tk.dom.diff_score_g = tk.gright.append('g') // For storing bar plot of diff_score
 		tk.dom.diff_score_axis = tk.gright.append('g') // For storing axis of bar plot of diff_score
 		tk.dom.diff_score_plotwidth = 50
+		tk.fs_string = block.maketklefthandle(tk, tk.pileupheight + tk.dom.variantrowheight / 2) // Will contain Fisher strand value which will be added in may_render_variant function
 	}
 
 	///////////// row #4: gdc region XXX delete and replace with bedj indicator track
