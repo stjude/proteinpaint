@@ -32,7 +32,9 @@ export class RegressionInputs {
 					string label to prompt a user to select a new input variable
 				
 				.configKey        
-					["term" | "independent"], string key to find a section's data from state.config 
+					["term" | "independent"], string configuration key (attribute name)
+					the configuration that receives the selected terms
+					will also be used to find a section's selected terms from state.config  
 				
 				.limit
 					maximum number inputs that can be selected for this section
@@ -112,7 +114,8 @@ export class RegressionInputs {
 			dom: {}
 		}
 
-		// track as an array, used later as an argument to `d3.data(this.sections).enter()`
+		// track sections in an array, for convenience in loops
+		// but not for use in `d3.data()`
 		this.sections = [this.outcome, this.independent]
 
 		// track reference category values or groups by term ID
@@ -240,11 +243,11 @@ function setRenderers(self) {
 		}
 	}
 
-	/*
-		Render each entry in the this.sections array,
-		one section each for Outcome and Independent Variable
-	
-		see this.sections[] for the expected section key-values
+	/* 
+		update each section's visibility,
+		remove and add inputs as needed,
+		and later may do more section restyling based on
+		the state of inputs that are being edited
 	*/
 	self.renderSection = function(section) {
 		section.dom.holder.style('display', section.configKey == 'term' || self.config.term ? 'block' : 'none')
