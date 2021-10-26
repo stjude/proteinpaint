@@ -222,6 +222,7 @@ export function setCategoricalMethods(self) {
 						.on('click', () => {
 							self.q.groupsetting.inuse = true
 							self.q.groupsetting.predefined_groupset_idx = i
+							self.q.type = 'predefined-groupset'
 							self.dom.tip.hide()
 							self.opts.callback({
 								term: self.term,
@@ -365,11 +366,11 @@ export function setCategoricalMethods(self) {
 					}
 
 					customset.groups[i].name = group_name_input.node().value
-					self.q.groupsetting.predefined_groupset_idx = undefined
-
+					self.q.type = 'custom-groupset'
 					self.q.groupsetting = {
 						inuse: true,
 						customset: customset
+						//predefined_groupset_idx: removed from this q.groupsetting
 					}
 
 					self.regroupMenu(default_grp_count, cat_grps)
@@ -494,6 +495,7 @@ export function setCategoricalMethods(self) {
 						group.values.push({ key })
 					}
 				}
+				self.q.type = 'custom-groupset'
 				self.q.groupsetting = {
 					inuse: true,
 					customset: customset
@@ -521,6 +523,7 @@ export function setCategoricalMethods(self) {
 				) {
 					self.q.groupsetting.predefined_groupset_idx = undefined
 					self.q.groupsetting.inuse = false
+					// self.q.type = 'values' ????
 				}
 
 				self.q.bar_by_grade = value_type_select.node().value == 'sub' ? false : true
