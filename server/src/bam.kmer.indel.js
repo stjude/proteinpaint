@@ -1,4 +1,5 @@
 const jStat = require('jstat').jStat
+const path = require('path')
 const features = require('./app').features
 const utils = require('./utils')
 const spawn = require('child_process').spawn
@@ -7,7 +8,7 @@ const readline = require('readline')
 const bamcommon = require('./bam.common')
 const fs = require('fs')
 const serverconfig = require('./serverconfig')
-const rust_indel = serverconfig.binpath + '/utils/rust_indel_cargo/target/release/rust_indel_cargo'
+const rust_indel = path.join(serverconfig.binpath, '/utils/rust_indel_cargo/target/release/rust_indel_cargo')
 
 export async function match_complexvariant_rust(q, templates_info, region_widths) {
 	//const segbplen = templates[0].segments[0].seq.length

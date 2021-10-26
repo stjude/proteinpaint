@@ -17,7 +17,7 @@ const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvaria
 const bamcommon = require('./bam.common')
 const basecolor = require('../shared/common').basecolor
 const serverconfig = require('./serverconfig')
-const rust_read_alignment = serverconfig.binpath + '/utils/read_alignment/target/release/read_alignment'
+const rust_read_alignment = path.join(serverconfig.binpath, '/utils/read_alignment/target/release/read_alignment')
 
 /*
 XXX quick fix to be removed/disabled later

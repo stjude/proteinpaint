@@ -1319,13 +1319,13 @@ async function getReadInfo(tk, block, box, ridx) {
 				.text('Read alignment')
 
 			alignment_button.on('click', async () => {
-				tables_div.selectAll('*').remove()
-				if (tables_div.style('display') == 'none') {
-					tables_div.style('display', 'block')
-					makeReadAlignmentTable(tables_div, 'Ref')
-					makeReadAlignmentTable(tables_div, 'Alt')
+				variantAlignmentTable.selectAll('*').remove()
+				if (variantAlignmentTable.style('display') == 'none') {
+					variantAlignmentTable.style('display', 'block')
+					makeReadAlignmentTable(variantAlignmentTable, 'Ref')
+					makeReadAlignmentTable(variantAlignmentTable, 'Alt')
 				} else {
-					tables_div.style('display', 'none')
+					variantAlignmentTable.style('display', 'none')
 				}
 			})
 		}
@@ -1373,7 +1373,7 @@ async function getReadInfo(tk, block, box, ridx) {
 		mayshow_blatbutton(r, row, tk, block)
 		div.append('div').html(r.info)
 		//empty div for read alignment tables
-		const tables_div = div.append('div').style('display', 'none')
+		const variantAlignmentTable = div.append('div').style('display', 'none')
 	}
 
 	function getparam(extra) {
