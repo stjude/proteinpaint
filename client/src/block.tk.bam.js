@@ -31,10 +31,10 @@ tk.downloadgdc // Downloads bam file from gdc
 tk.gdc // Renders gdc bam file
 tk.variants[ {} ]
 	.chr/pos/ref/alt
-        .altseq
-        .refseq
-        .leftflankseq
-        .rightflankseq 
+        .altseq  // Contains leftflankseq + alt_allele + rightflankseq
+        .refseq  // Contains leftflankseq + ref_allele + rightflankseq
+        .leftflankseq // Contains sequence on the left hand side of the variant 
+        .rightflankseq // Contains sequence on the right hand side of the variant
 tk.pileupheight
 tk.pileupbottompad
 tk.alleleAlreadyUpdated // When true (in case of pan/zoom by user) prevents repeated reference genome queries for alt/refallele and left/rightflankseq
