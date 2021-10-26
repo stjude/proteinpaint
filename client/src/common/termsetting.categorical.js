@@ -180,7 +180,7 @@ export function setCategoricalMethods(self) {
 		div
 			.append('div')
 			.attr('class', 'group_btn sja_menuoption')
-			.style('display', 'block')
+			.style('display', self.q.mode == 'binary' ? 'none' : 'block')
 			// .style('padding', '7px 6px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
@@ -312,6 +312,7 @@ export function setCategoricalMethods(self) {
 			.append('select')
 			.style('margin-left', '15px')
 			.style('margin-bottom', '7px')
+			.property('disabled', self.q.mode == 'binary' ? true : false)
 			.on('change', () => {
 				if (group_ct_select.node().value < default_grp_count) {
 					const grp_diff = default_grp_count - group_ct_select.node().value
@@ -507,7 +508,7 @@ export function setCategoricalMethods(self) {
 	}
 
 	/******************* Functions for to Conditional terms *******************/
-
+	// TODO: can remove following function as it's alredy included in 'termsetting.conditional.js'
 	self.showConditionOpts = async function(div) {
 		// grade/subcondtion value type
 		const value_type_select = div
