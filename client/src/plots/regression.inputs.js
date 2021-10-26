@@ -35,6 +35,7 @@ export class RegressionInputs {
 					["term" | "independent"], string configuration key (attribute name)
 					the configuration that receives the selected terms
 					will also be used to find a section's selected terms from state.config  
+					TODO rename "term" to "outcome"
 				
 				.limit
 					maximum number inputs that can be selected for this section
@@ -45,32 +46,54 @@ export class RegressionInputs {
 				
 				-----  dynamic configuration data  -----
 				*** recomputed on each updateSection() ***  
-				
+
 				.selected[] 
 					a copy of state.config[section.configKey]
 					either [config.term] or config.independent
+					each element is {id, term, q}
+					TODO later expands to this format for an element: {type:'term', term: {id, term, q}}
 
 				.inputs {[term.id]: {*input*}}
 					a cache of input configurations and rendered DOM elements 
 					for each selected variable. Removed inputs will be deleted 
 					from this object, and newly selected inputs will be added.
+
+					TODO may convert to an array of same length, so that .inputs[i] and .selected[i] refer to the same thing
+
+					.input.section
+						reference to this section
+						for making this section config accessible to downstream logic handling this input, e.g. pill.js
 					
 					.input.term {id, term, q}
 						may be empty initially
 					
-					.input.pill 
-						termsetting pill
+					.input.pill
+						termsetting pill API
 					
 					.input.valuesTable
 						table to show sample counts for each term value/bin/category and to select refGrp
 
+					.input.update()
+						created in addInput(), run in triggerUpdate()
+
+					.input.dom{}
+						.holder
+						.pillDiv
+						.err_div
+						.infoDiv
+
 					.input.*
 						support non-term input variables in the future
+
+				.inputConfigs[]
+					values of .inputs{}, arranged into the order of .selected[]
+					drives d3 data/enter/update
 
 
 				------ tracker for this section's DOM elements -----
 				*** each element is added when it is created/appended ***
 				.dom{} 
+					.holder // allow to selectively hide independent section
 					.headingDiv
 					.inputsDiv 
 		*/
@@ -81,7 +104,8 @@ export class RegressionInputs {
 			heading: 'Outcome variable',
 			selectPrompt:
 				this.opts.regressionType == 'linear'
-					? '<u>Select continuous outcome variable</u>'
+					? // FIXME use plain text, termsetting should style this with hover effect
+					  '<u>Select continuous outcome variable</u>'
 					: '<u>Select outcome variable</u>',
 			placeholderIcon: '',
 			configKey: 'term',
@@ -143,7 +167,6 @@ export class RegressionInputs {
 		for (const section of this.sections) {
 			await this.renderSection(section)
 
-			/* TODO: may need to convert to section.inputs to an array to support non-term variables */
 			for (const id in section.inputs) {
 				const d = section.inputs[id]
 				d.dom.err_div.style('display', 'none').text('')
@@ -210,7 +233,7 @@ function setRenderers(self) {
 			.style('display', 'none')
 			.style('padding', '5px 15px')
 			.style('border-radius', '15px')
-			.html('Run analysis')
+			.text('Run analysis')
 			.on('click', self.submit)
 
 		/*
@@ -250,23 +273,18 @@ function setRenderers(self) {
 		the state of inputs that are being edited
 	*/
 	self.renderSection = function(section) {
+		// decide to show/hide this section
+		// only show when this section is for outcome,
+		// or this is independent and only show it when the outcome term has been selected
+		// effect is to force user to first select outcome, then independent, but not to select independent first
 		section.dom.holder.style('display', section.configKey == 'term' || self.config.term ? 'block' : 'none')
 
 		const inputs = section.dom.inputsDiv
 			.selectAll(':scope > div')
-			// the second argument here is to tell d3.data() how to
-			// tell which input has been added, removed, or still exists
+			// key function (2nd arg) uses (es6 shorthand?) determines datum and element are joined by term id
 			.data(section.inputConfigs, input => input.term && input.term.id)
 
 		inputs.exit().each(removeInput)
-
-		/* 
-			NOTE: will do the input rendering for each variable 
-			after the sections are rendered, in order to properly await 
-			the async update methods 
-		
-			inputDivs.each(updateInput)
-		*/
 
 		inputs
 			.enter()
@@ -278,9 +296,8 @@ function setRenderers(self) {
 		const config = self.config
 		const div = select(this)
 			.style('width', 'fit-content')
-			.style('margin', '5px 15px 5px 45px')
-			.style('padding', '3px 5px')
-			.style('border-left', input.term ? '1px solid #bbb' : '')
+			.style('margin', '15px 15px 5px 45px')
+			.style('padding', '0px 5px')
 
 		input.dom = {
 			holder: div,
@@ -294,11 +311,9 @@ function setRenderers(self) {
 		}
 
 		/*
-			for now, only 'term' variables are supported;
-			may add logic later to support other types of input
+			for now, only 'term' variables are supported and will always create termsetting pill
+			TODO support other types of input which may not need pill
 		*/
-		// for now, assume will always need a termsetting pill
-		// NOTE: future input types (genotype, sample list) may not need a ts pill
 		self.addPill(input)
 		// for now, assume will always need a values table
 		self.addValuesTable(input)
@@ -334,12 +349,12 @@ function setRenderers(self) {
 		const hasOutcomeTerm = self.sections.filter(s => s.configKey == 'term' && s.selected.length).length
 		const hasIndependetTerm = self.sections.filter(s => s.configKey == 'independent' && s.selected.length).length
 		const hasBothTerms = hasOutcomeTerm && hasIndependetTerm
-		self.dom.submitBtn.style('display', hasBothTerms ? 'block' : 'none')
+		self.dom.submitBtn.text('Run analysis').style('display', hasBothTerms ? 'block' : 'none')
 
 		if (self.hasError) {
-			self.dom.submitBtn.property('disabled', true).html('Run analysis')
+			self.dom.submitBtn.property('disabled', true)
 		} else if (chartRendered) {
-			self.dom.submitBtn.property('disabled', false).html('Run analysis')
+			self.dom.submitBtn.property('disabled', false)
 		}
 	}
 }
@@ -388,7 +403,7 @@ function setInteractivity(self) {
 		}
 		if (config.term.id in self.refGrpByTermId) config.term.q.refGrp = self.refGrpByTermId[config.term.id]
 		// disable submit button on click, reenable after rendering results
-		self.dom.submitBtn.property('disabled', true).html('Running...')
+		self.dom.submitBtn.property('disabled', true).text('Running...')
 		self.parent.app.dispatch({
 			type: config.term ? 'plot_edit' : 'plot_show',
 			id: self.parent.id,
