@@ -1251,7 +1251,12 @@ async function getReadInfo(tk, block, box, ridx) {
 					.append('span')
 					.html('&nbsp;&check;')
 			})
-
+		/*Creates read alignment table when 'Read alignment' button
+		is clicked. 
+		type
+			'Ref' - reference
+			'Alt' - alternate */
+		//TODO: make pane scrollable if the read is too long. Detect if pane is 1000px for example
 		function makeReadAlignmentTable(div, type) {
 			let q_align, align_wrt, r_align
 			if (type == 'Ref') {
@@ -1264,14 +1269,25 @@ async function getReadInfo(tk, block, box, ridx) {
 				align_wrt = data.lst[0].align_wrt_alt
 				r_align = data.lst[0].r_align_alt
 			}
+			div
+				.append('span')
+				.text(type + ' alignment')
+				.style('font-family', 'Courier')
+				.style('font-size', '15px')
+				.style('color', '#303030')
+				.style('margin', '5px 5px 10px 5px')
 			const readAlignmentTable = div
 				.append('table')
 				.style('font-family', 'Courier')
 				.style('font-size', '0.8em')
-				.style('margin-bottom', '5px')
-			readAlignmentTable.append('tr').text(type + ' alignment')
+				.style('color', '#303030')
+				.style('margin', '5px 5px 20px 5px')
 			const query_tr = readAlignmentTable.append('tr')
-			query_tr.append('td').text('Query')
+			query_tr
+				.append('td')
+				.text('Read')
+				.style('text-align', 'right')
+				.style('font-weight', '550')
 			for (const nclt of q_align) {
 				query_tr.append('td').text(nclt)
 			}
@@ -1281,7 +1297,11 @@ async function getReadInfo(tk, block, box, ridx) {
 				alignment_tr.append('td').text(align_str)
 			}
 			const refAlt_tr = readAlignmentTable.append('tr')
-			refAlt_tr.append('tdnowrap').text(type + ' allele')
+			refAlt_tr
+				.append('tdnowrap')
+				.text(type + ' allele')
+				.style('text-align', 'right')
+				.style('font-weight', '550')
 			for (const nclt of r_align) {
 				refAlt_tr.append('td').text(nclt)
 			}
@@ -1298,75 +1318,14 @@ async function getReadInfo(tk, block, box, ridx) {
 				.text('Read alignment')
 
 			alignment_button.on('click', async () => {
-				alignment_button.property('disabled', true)
-				const tables_div = div.append('div').style('display', 'none')
-				makeReadAlignmentTable(tables_div, 'Ref')
-				makeReadAlignmentTable(tables_div, 'Alt')
+				tables_div.selectAll('*').remove()
 				if (tables_div.style('display') == 'none') {
 					tables_div.style('display', 'block')
+					makeReadAlignmentTable(tables_div, 'Ref')
+					makeReadAlignmentTable(tables_div, 'Alt')
 				} else {
 					tables_div.style('display', 'none')
 				}
-				// const read_alignment_table = div.append('table').style('font-family', 'courier')
-				// const heading_tr_ref = read_alignment_table
-				//  .append('tr')
-				//  .style('opacity', 0.5)
-				//  .style('font-size', '.8em')
-				//  .text('Ref alignment')
-				// const query_tr_ref = read_alignment_table
-				//  .append('tr')
-				//  .style('opacity', 0.5)
-				//  .style('font-size', '.8em')
-				// query_tr_ref.append('td').text('Query')
-				// for (const nclt of data.lst[0].q_align_ref) {
-				//  query_tr_ref.append('td').text(nclt)
-				// }
-				// const alignment_tr_ref = read_alignment_table
-				//  .append('tr')
-				//  .style('opacity', 0.5)
-				//  .style('font-size', '.8em')
-				// alignment_tr_ref.append('td').text('')
-				// for (const align_str of data.lst[0].align_wrt_ref) {
-				//  alignment_tr_ref.append('td').text(align_str)
-				// }
-				// const reference_tr_ref = read_alignment_table
-				//  .append('tr')
-				//  .style('opacity', 0.5)
-				//  .style('font-size', '.8em')
-				// reference_tr_ref.append('tdnowrap').text('Ref allele')
-				// for (const nclt of data.lst[0].r_align_ref) {
-				//  reference_tr_ref.append('td').text(nclt)
-				// }
-				// const heading_tr_alt = read_alignment_table
-				//  .append('tr')
-				//  .style('opacity', 0.5)
-				//  .style('font-size', '.8em')
-				//  .html('</br>Alt alignment')
-				// const query_tr_alt = read_alignment_table
-				//  .append('tr')
-				//  .style('opacity', 0.5)
-				//  .style('font-size', '.8em')
-				// query_tr_alt.append('td').text('Query')
-				// for (const nclt of data.lst[0].q_align_alt) {
-				//  query_tr_alt.append('td').text(nclt)
-				// }
-
-				// const alignment_tr_alt = read_alignment_table
-				//  .append('tr')
-				//  .style('opacity', 0.5)
-				//  .style('font-size', '.8em')
-				// alignment_tr_alt.append('td').text('')
-				// for (const align_str of data.lst[0].align_wrt_alt) {
-				//  alignment_tr_alt.append('td').text(align_str)
-				// }
-				// const alterence_tr_alt = read_alignment_table
-				//  .append('tr')
-				//  .style('opacity', 0.5)
-				//  .style('font-size', '.8em')
-				// alterence_tr_alt.append('tdnowrap').text('Alt allele')
-				// for (const nclt of data.lst[0].r_align_alt) {
-				//  alterence_tr_alt.append('td').text(nclt)
-				// }
 			})
 		}
 
@@ -1411,8 +1370,9 @@ async function getReadInfo(tk, block, box, ridx) {
 		}
 
 		mayshow_blatbutton(r, row, tk, block)
-
 		div.append('div').html(r.info)
+		//empty div for read alignment tables
+		const tables_div = div.append('div').style('display', 'none')
 	}
 
 	function getparam(extra) {
