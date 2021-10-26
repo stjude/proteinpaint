@@ -168,9 +168,9 @@ export class RegressionInputs {
 			await this.renderSection(section)
 
 			for (const id in section.inputs) {
-				const d = section.inputs[id]
-				d.dom.err_div.style('display', 'none').text('')
-				updates.push(d.update())
+				const input = section.inputs[id]
+				input.dom.err_div.style('display', 'none').text('')
+				updates.push(input.update())
 			}
 		}
 		await Promise.all(updates)
@@ -197,7 +197,7 @@ export class RegressionInputs {
 			}
 
 			// detect if a blank input needs to be created
-			if (inputConfigs.length < section.limit && !inputConfigs.find(d => !d.term)) {
+			if (inputConfigs.length < section.limit && !inputConfigs.find(input => !input.term)) {
 				// create or reuse a blank pill to prompt a new term selection
 				if (!section.inputs.undefined) section.inputs.undefined = { section }
 				inputConfigs.push(section.inputs.undefined)
