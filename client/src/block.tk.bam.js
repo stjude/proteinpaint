@@ -1133,50 +1133,58 @@ function configPanel(tk, block) {
 			.append('span')
 			.html('Show reads as:&nbsp;')
 			.style('opacity', 0.5)
+			.style('margin', '10px 5px')
 		make_radios({
 			holder: row,
 			options: [
-				{ label: 'single', value: false, checked: !tk.asPaired },
-				{ label: 'paired', value: true, checked: tk.asPaired }
+				{ label: 'Single', value: false, checked: !tk.asPaired },
+				{ label: 'Paired', value: true, checked: tk.asPaired }
 			],
-			styles: { display: 'inline-block' },
+			styles: { display: 'inline-block', margin: '10px 5px' },
 			callback: v => {
 				tk.asPaired = v
+				loadTk(tk, block)
+			},
+			inputName: 'show-reads-radios' /* Fix for show reads and strictness radio 
+			buttons operating independently */
+		})
+	}
+	{
+		make_one_checkbox({
+			holder: d.append('div'),
+			labeltext: 'Drop PCR or optical duplicates',
+			checked: tk.drop_pcrduplicates,
+			callback: () => {
+				tk.drop_pcrduplicates = !tk.drop_pcrduplicates
 				loadTk(tk, block)
 			}
 		})
 	}
-
-	make_one_checkbox({
-		holder: d.append('div'),
-		labeltext: 'Drop PCR or optical duplicates',
-		checked: tk.drop_pcrduplicates,
-		callback: () => {
-			tk.drop_pcrduplicates = !tk.drop_pcrduplicates
-			loadTk(tk, block)
-		}
-	})
-
 	if (tk.variants) {
 		const row = d.append('div')
 		row
 			.append('span')
 			.html('Strictness:&nbsp;')
 			.style('opacity', 0.5)
-		const radios_output = make_radios({
+			.style('margin', '10px 5px')
+		make_radios({
 			holder: row,
 			options: [
 				{ label: '0', value: 0, checked: tk.variants[0].strictness == 0 },
 				{ label: '1', value: 1, checked: tk.variants[0].strictness == 1 },
 				{ label: '2', value: 2, checked: tk.variants[0].strictness == 2 }
 			],
-			styles: { display: 'inline-block' },
+			styles: { display: 'inline-block', margin: '10px 5px' },
 			callback: v => {
 				tk.variants[0].strictness = v
 				loadTk(tk, block)
-			}
+			},
+			inputName: 'strictness-radios' /* Fix for show reads and strictness radio 
+			buttons operating independently */
 		})
 	}
+
+	console.log(1185, tk.variants[0].strictness)
 
 	d
 		.append('div')
