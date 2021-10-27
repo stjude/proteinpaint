@@ -1136,12 +1136,12 @@ function configPanel(tk, block) {
 		make_radios({
 			holder: row,
 			options: [
-				{ label: 'single', value: 'single', checked: !tk.asPaired },
-				{ label: 'paired', value: 'paired', checked: tk.asPaired }
+				{ label: 'single', value: false, checked: !tk.asPaired },
+				{ label: 'paired', value: true, checked: tk.asPaired }
 			],
 			styles: { display: 'inline-block' },
-			callback: () => {
-				tk.asPaired = !tk.asPaired
+			callback: v => {
+				tk.asPaired = v
 				loadTk(tk, block)
 			}
 		})
