@@ -6,7 +6,6 @@ self: a termsetting instance
 */
 
 export function setCategoricalMethods(self) {
-	
 	setGroupsettingMethods(self)
 
 	self.showEditMenu = function(div) {
@@ -196,6 +195,7 @@ export function setCategoricalMethods(self) {
 			.on('click', () => {
 				self.q.groupsetting.inuse = false
 				delete self.q.groupsetting.predefined_groupset_idx
+				// self.q.type = 'values' ????
 				self.dom.tip.hide()
 				self.opts.callback({
 					term: self.term,
@@ -225,6 +225,7 @@ export function setCategoricalMethods(self) {
 						.on('click', () => {
 							self.q.groupsetting.inuse = true
 							self.q.groupsetting.predefined_groupset_idx = i
+							self.q.type = 'predefined-groupset'
 							self.dom.tip.hide()
 							self.opts.callback({
 								term: self.term,

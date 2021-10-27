@@ -3,11 +3,12 @@ import { select } from 'd3-selection'
 import { dofetch3 } from '../client'
 
 export function setValuesTableMethods(self) {
-	self.addValuesTable = d => {
+	self.addValuesTable = input => {
+		const d = input // abbreviated reference to declutter
 		d.dom.loading_div = d.dom.infoDiv.append('div').text('Loading..')
 		d.dom.top_info_div = d.dom.infoDiv.append('div')
-		;(d.dom.term_info_div = d.dom.top_info_div.append('div').style('display', 'inline-block')),
-			(d.dom.ref_click_prompt = d.dom.top_info_div.append('div').style('display', 'inline-block'))
+		d.dom.term_info_div = d.dom.top_info_div.append('div').style('display', 'inline-block')
+		d.dom.ref_click_prompt = d.dom.top_info_div.append('div').style('display', 'inline-block')
 
 		d.dom.term_values_div = d.dom.infoDiv.append('div')
 		d.dom.values_table = d.dom.term_values_div.append('table')
@@ -15,7 +16,8 @@ export function setValuesTableMethods(self) {
 		d.dom.excluded_table = d.dom.term_values_div.append('table')
 	}
 
-	self.updateValuesTable = async d => {
+	self.updateValuesTable = async input => {
+		const d = input // abbreviated reference to declutter
 		if (!d.term) {
 			d.dom.infoDiv.style('display', 'none')
 			return
@@ -31,7 +33,6 @@ export function setValuesTableMethods(self) {
 			await updateValueCount(d)
 			if (!self.error && !d.pill.hasError()) await updateTermInfoDiv(d)
 		} catch (e) {
-			console.log(26, e)
 			self.hasError = true
 			d.dom.err_div.style('display', 'block').text(e)
 			d.dom.loading_div.style('display', 'none')
@@ -40,7 +41,8 @@ export function setValuesTableMethods(self) {
 		}
 	}
 
-	function updateRefGrp(d) {
+	function updateRefGrp(input) {
+		const d = input // abbreviated reference to declutter
 		if (d.section.configKey != 'term') return
 		if (!d.term || self.config.regressionType != 'logistic') return
 		if (!('refGrp' in d.term.q) && d.term.q.lst) {
@@ -49,7 +51,9 @@ export function setValuesTableMethods(self) {
 		}
 	}
 
-	async function updateValueCount(d) {
+	async function updateValueCount(input) {
+		const d = input // abbreviated reference to declutter
+
 		// query backend for total sample count for each value of categorical or condition terms
 		// and included and excluded sample count for numeric term
 		try {
@@ -122,7 +126,8 @@ export function setValuesTableMethods(self) {
 		}
 	}
 
-	function updateTermInfoDiv(d) {
+	function updateTermInfoDiv(input) {
+		const d = input // abbreviated reference to declutter
 		setActiveValues(d)
 		const q = (d.term && d.term.q) || {}
 		if (!q.totalCount) q.totalCount = { included: 0, excluded: 0, total: 0 }
@@ -337,7 +342,8 @@ export function setValuesTableMethods(self) {
 	}
 }
 
-function setActiveValues(d) {
+function setActiveValues(input) {
+	const d = input // abbreviated reference to declutter
 	const gs = d.term.q.groupsetting || {}
 	const i = gs.inuse && gs.predefined_groupset_idx
 	d.values = gs.inuse
