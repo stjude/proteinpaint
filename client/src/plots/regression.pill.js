@@ -1,7 +1,7 @@
 import { termsettingInit } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { get_bin_label } from '../../shared/termdb.bins'
-import { dofetch3 } from '../client'
+import { dofetch3 } from '../common/dofetch'
 
 export function setPillMethods(self) {
 	self.addPill = async function(input) {

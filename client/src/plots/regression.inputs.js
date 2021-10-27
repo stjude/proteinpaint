@@ -241,6 +241,8 @@ function setRenderers(self) {
 		section.dom.holder.style('display', section.configKey == 'term' || self.config.term ? 'block' : 'none')
 
 		updateInputs(section)
+		// section.inputs[] is now synced with plot config
+
 		const inputs = section.dom.inputsDiv
 			.selectAll(':scope > div')
 			// key function (2nd arg) uses (es6 shorthand?) determines datum and element are joined by term id
@@ -265,6 +267,7 @@ function setRenderers(self) {
 		// process each selected variable
 		for (const variable of selectedArray) {
 			// if the varClass is missing, detect and assign it
+			// FIXME fix later: varClass is required and should not have default value
 			if (!variable.varClass && variable.term) variable.varClass = 'term'
 			const varClass = variable.varClass
 
@@ -285,13 +288,14 @@ function setRenderers(self) {
 		if (section.inputs.length < section.limit && !blankInput) {
 			if (!blankInput) {
 				/*** TODO: should determine varClass by context/parent menu choice? ***/
+				// FIXME should not set varClass=term on blankinput but will allow to choose a varClass supported by this dataset
+				// e.g. termdbConfig should tell if this dataset has genetic data, supports samplelst etc
 				section.inputs.push({ section, varClass: 'term' })
 			}
 		}
 	}
 
 	async function addInput(input) {
-		const config = self.config
 		const div = select(this)
 			.style('width', 'fit-content')
 			.style('margin', '15px 15px 5px 45px')
@@ -321,6 +325,8 @@ function setRenderers(self) {
 				// the term.q is set within self.updatePill, so must await
 				await self.updateValuesTable(input)
 			}
+		} else {
+			throw 'addInput: unknown varClass'
 		}
 	}
 
