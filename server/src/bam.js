@@ -2561,7 +2561,7 @@ async function query_oneread(req, r) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
 		if (req.query.altseq) {
 			const alignment_output = await run_rust_read_alignment(
-				lst[0].seq + ':' + req.query.refseq + ':' + req.query.altseq
+				'single:' + lst[0].seq + ':' + req.query.refseq + ':' + req.query.altseq
 			)
 			const alignment_output_list = alignment_output.toString('utf-8').split('\n')
 			for (let item of alignment_output_list) {
