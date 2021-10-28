@@ -80,7 +80,7 @@ tape('linear, outcome type=float', function(test) {
 	function testSectionCounts(regres) {
 		const resultsDiv = regres.Inner.results.dom.holder
 		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 17
+		const expectedNumDivs = 18
 		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
 
 		const actualNumRows = resultsDiv.selectAll('tr').size()
@@ -149,7 +149,7 @@ tape('logistic outcome type=float', function(test) {
 	function testSectionCounts(regres) {
 		const resultsDiv = regres.Inner.results.dom.holder
 		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 17
+		const expectedNumDivs = 18
 		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
 
 		const actualNumRows = resultsDiv.selectAll('tr').size()
@@ -169,7 +169,18 @@ tape('logistic outcome type=condition', function(test) {
 					regressionType: 'logistic',
 					//cutoff: 57.8,
 					term: {
-						id: 'Arrhythmias'
+						id: 'Arrhythmias',
+						q: {
+							mode: 'binary',
+							groupsetting: {
+								inuse: true,
+								predefined_groupset_idx: 0
+							},
+							value_by_max_grade: true,
+							bar_by_grade: true,
+							type: 'predefined-groupset',
+							refGrp: 'Has condition'
+						}
 					},
 					independent: [
 						{
@@ -202,7 +213,7 @@ tape('logistic outcome type=condition', function(test) {
 	function testSectionCounts(regres) {
 		const resultsDiv = regres.Inner.results.dom.holder
 		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 17
+		const expectedNumDivs = 18
 		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
 
 		const actualNumRows = resultsDiv.selectAll('tr').size()
@@ -267,7 +278,7 @@ tape('logistic outcome: missing reference category', function(test) {
 
 	function runTests(regres) {
 		regres.on('postRender.test', null)
-		const actualErrMsg = regres.Inner.dom.errordiv.text()
+		const actualErrMsg = regres.Inner.results.dom.err_div.text()
 		const expectedErrMsg = `Error: the reference category '≤22.05' is not found in the variable 'outcome'✕`
 		test.equal(
 			actualErrMsg,
@@ -275,8 +286,13 @@ tape('logistic outcome: missing reference category', function(test) {
 			`should error out prior to R script if reference category of variable is missing in data matrix`
 		)
 		const results = regres.Inner.results.dom.holder
-		const actualResultDivCnt = results.selectAll('div').size()
-		const expectedResultDivCnt = 2 // may include empty divs, not rendered divs for results
+		const actualResultDivCnt = results
+			.selectAll('div')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size()
+		const expectedResultDivCnt = 6 // may include empty divs, not rendered divs for results
 		test.equal(actualResultDivCnt, expectedResultDivCnt, `should not have results divs`)
 		test.end()
 	}
