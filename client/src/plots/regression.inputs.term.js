@@ -2,7 +2,7 @@ import { termsettingInit } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { get_bin_label } from '../../shared/termdb.bins'
 import { dofetch3 } from '../common/dofetch'
-import { InputValuesTable } from './regression.input.values.table'
+import { InputValuesTable } from './regression.inputs.values.table'
 
 export class InputTerm {
 	constructor(opts) {

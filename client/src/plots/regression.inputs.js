@@ -1,7 +1,7 @@
 import { deepEqual } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { setPillMethods } from './regression.pill'
-import { InputTerm } from './regression.input.term'
+import { InputTerm } from './regression.inputs.term'
 
 export class RegressionInputs {
 	constructor(opts) {
@@ -141,7 +141,6 @@ export class RegressionInputs {
 			this.config = this.parent.config
 			this.state = this.parent.state
 			await this.triggerUpdate()
-			this.updateSubmitButton()
 		} catch (e) {
 			this.hasError = true
 			throw e
@@ -162,6 +161,7 @@ export class RegressionInputs {
 			}
 		}
 		await Promise.all(updates)
+		this.updateSubmitButton(true)
 	}
 
 	setDisableTerms() {
