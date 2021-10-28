@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { setPillMethods } from './regression.pill'
-import { setValuesTableMethods } from './regression.valuesTable'
+import { getInputTermHandler } from './regression.input.term'
 
 export class RegressionInputs {
 	constructor(opts) {
@@ -12,8 +12,6 @@ export class RegressionInputs {
 
 		setInteractivity(this)
 		setRenderers(this)
-		setPillMethods(this)
-		setValuesTableMethods(this)
 
 		this.createSectionConfigs()
 		this.initUI()
@@ -24,6 +22,9 @@ export class RegressionInputs {
 			Create configuration data for each section of the input UI
 			
 			section{}
+				.parent: reference to this RegressionInputs instance, to make it easy to access 
+								its state, config, app, and other properties from non-rx descendant components
+
 				-----  static configuration  -----
 				.heading
 					string heading for the section
@@ -66,25 +67,11 @@ export class RegressionInputs {
 
 					.input.varClass
 						the input's variable class, like "term"
-					
-					**** expected attributes by input.varClass ****
-					[varClass == 'term']
-					.input.term 
-							{id, term, q, varClass: 'term'}
-							may be empty initially
-					
-					.input.pill
-							termsetting pill API
-					
-					.input.valuesTable
-						table to show sample counts for each term value/bin/category and to select refGrp
 
-					.input.dom
-						.pillDiv
-						.infoDiv
-
-					[varClass == '...']
-					input.* TODO: support non-term variable classes
+					.input.handler
+						the function/object/class instance that will handle
+						the variable selection, one for each varClass;
+						should have a handler.update() method
 
 
 				------ tracker for this section's DOM elements -----
@@ -97,6 +84,7 @@ export class RegressionInputs {
 
 		// configuration for the outcome variable section
 		this.outcome = {
+			parent: this,
 			/*** static configuration ***/
 			heading: 'Outcome variable',
 			selectPrompt:
@@ -118,6 +106,7 @@ export class RegressionInputs {
 
 		// configuration for the independent variable section
 		this.independent = {
+			parent: this,
 			/*** static configuration ***/
 			heading: 'Independent variable(s)',
 			selectPrompt: '<u>Add independent variable</u>',
@@ -161,8 +150,11 @@ export class RegressionInputs {
 		for (const section of this.sections) {
 			await this.renderSection(section)
 			for (const input of section.inputs) {
-				if (input.dom) input.dom.err_div.style('display', 'none').text('')
-				if (input.update) updates.push(input.update())
+				if (input.dom) {
+					input.dom.holder.style('border-left', input.term ? '1px solid #bbb' : '')
+					//input.dom.err_div.style('display', 'none').text('')
+				}
+				if (input.handler) updates.push(input.handler.update(input))
 			}
 		}
 		await Promise.all(updates)
@@ -296,43 +288,28 @@ function setRenderers(self) {
 	}
 
 	async function addInput(input) {
-		const div = select(this)
+		const inputDiv = select(this)
 			.style('width', 'fit-content')
 			.style('margin', '15px 15px 5px 45px')
 			.style('padding', '0px 5px')
 
+		input.dom = {
+			holder: inputDiv
+		}
+
 		if (input.varClass == 'term') {
-			input.dom = {
-				holder: div,
-				pillDiv: div.append('div'),
-				err_div: div
-					.append('div')
-					.style('display', 'none')
-					.style('padding', '5px')
-					.style('background-color', 'rgba(255,100,100,0.2)'),
-				infoDiv: div.append('div')
-			}
-
-			self.addPill(input)
-			self.addValuesTable(input)
-
-			// collect the update functions for each input
-			// so that multiple input updates can be called in parallel
-			// and not block each other
-			input.update = async () => {
-				input.dom.holder.style('border-left', input.term ? '1px solid #bbb' : '')
-				await self.updatePill(input)
-				// the term.q is set within self.updatePill, so must await
-				await self.updateValuesTable(input)
-			}
+			input.handler = await getInputTermHandler({
+				holder: inputDiv.append('div'),
+				input
+			})
 		} else {
 			throw 'addInput: unknown varClass'
 		}
 	}
 
 	function removeInput(input) {
-		const i = input.section.inputs.find(v => v === input)
-		input.section.inputs.splice(i, 1)
+		/* NOTE: editConfig deletes this input from the section.inputs array */
+		input.handler.remove()
 		for (const key in input.dom) {
 			//input.dom[key].remove()
 			delete input.dom[key]

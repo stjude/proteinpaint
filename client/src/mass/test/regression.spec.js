@@ -169,7 +169,18 @@ tape('logistic outcome type=condition', function(test) {
 					regressionType: 'logistic',
 					//cutoff: 57.8,
 					term: {
-						id: 'Arrhythmias'
+						id: 'Arrhythmias',
+						q: {
+							mode: 'binary',
+							groupsetting: {
+								inuse: true,
+								predefined_groupset_idx: 0
+							},
+							value_by_max_grade: true,
+							bar_by_grade: true,
+							type: 'predefined-groupset',
+							refGrp: 'Has condition'
+						}
 					},
 					independent: [
 						{
