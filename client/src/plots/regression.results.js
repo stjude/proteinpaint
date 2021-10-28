@@ -20,6 +20,11 @@ export class RegressionResults {
 				.style('padding', '3px 5px')
 				.style('color', '#bbb')
 				.html('Results'),
+			err_div: holder
+				.append('div')
+				.style('display', 'none')
+				.style('padding', '5px')
+				.style('background-color', 'rgba(255,100,100,0.2)'),
 			content: holder.append('div').style('margin', '10px')
 		}
 	}
@@ -36,6 +41,7 @@ export class RegressionResults {
 			const dataName = this.getDataName()
 			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
 			if (data.error) throw data.error
+			this.dom.err_div.style('display', 'none')
 			this.dom.content.selectAll('*').remove()
 			this.dom.holder.style('display', 'block')
 			this.displayResult(data)

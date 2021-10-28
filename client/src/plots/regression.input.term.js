@@ -4,7 +4,7 @@ import { get_bin_label } from '../../shared/termdb.bins'
 import { dofetch3 } from '../common/dofetch'
 import { InputValuesTable } from './regression.input.values.table'
 
-class InputTerm {
+export class InputTerm {
 	constructor(opts) {
 		this.opts = opts
 		this.input = opts.input
@@ -19,15 +19,17 @@ class InputTerm {
 				.style('background-color', 'rgba(255,100,100,0.2)'),
 			infoDiv: opts.holder.append('div')
 		}
+
+		this.init()
 	}
 
-	async init() {
+	init() {
 		try {
 			// reference shortcuts from this.input
 			const section = this.input.section
 			const { app, config, state, disable_terms, editConfig } = this.input.section.parent
 
-			this.pill = await termsettingInit({
+			this.pill = termsettingInit({
 				placeholder: section.selectPrompt,
 				placeholderIcon: section.placeholderIcon,
 				holder: this.dom.pillDiv,
@@ -49,17 +51,13 @@ class InputTerm {
 
 			if (section.configKey == 'term') {
 				this.setQ = getQSetter(config.regressionType)
-				if (this.input.term) await this.setQ[this.input.term.term.type](this.input)
+				//if (this.input.term) await this.setQ[this.input.term.term.type](this.input)
 			}
-
-			await this.pill.main(this.input.term)
 
 			this.valuesTable = new InputValuesTable({
 				holder: this.dom.infoDiv,
 				handler: this
 			})
-
-			await this.valuesTable.main()
 		} catch (e) {
 			this.displayError(e)
 			this.input.section.parent.hasError = true
@@ -73,16 +71,17 @@ class InputTerm {
 		console.error(e)
 	}
 
-	async update(input) {
-		this.input = input
+	async update() {
+		//this.input = input
 		// reference shortcuts from this.input
 		const section = this.input.section
 		const { config, state, disable_terms } = this.input.section.parent
 
 		try {
 			if (this.input.term && this.setQ) {
-				await this.setQ[input.term.term.type](this.input)
+				await this.setQ[this.input.term.term.type](this.input)
 			}
+			const t = this.input.term
 			const args = Object.assign(
 				{
 					disable_terms,
@@ -116,12 +115,6 @@ class InputTerm {
 	}
 }
 
-export const getInputTermHandler = async function(opts) {
-	const inputHandler = new InputTerm(opts)
-	await inputHandler.init()
-	return inputHandler
-}
-
 function getMenuVersion(config, input) {
 	// for the numericEditMenuVersion of termsetting constructor option
 	if (input.section.configKey == 'term') {
@@ -150,14 +143,14 @@ function getQSetter(regressionType) {
 // for logistic independet numeric terms
 async function maySetTwoBins(input) {
 	const { app, state } = input.section.parent
-
+	const t = input.term
 	// if the bins are already binary, do not reset
-	if (input.term.q.mode == 'binary' && input.term.q.refGrp) return
+	if (t.q.mode == 'binary' && 'refGrp' in t.q) return
 
 	// for numeric terms, add 2 custom bins devided at median value
 	const lst = [
 		'/termdb?getpercentile=50',
-		'tid=' + input.term.id,
+		'tid=' + t.id,
 		'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(state.termfilter.filter))),
 		'genome=' + state.vocab.genome,
 		'dslabel=' + state.vocab.dslabel
@@ -166,7 +159,7 @@ async function maySetTwoBins(input) {
 	const data = await dofetch3(url, {}, app.opts.fetchOpts)
 	if (data.error) throw data.error
 	const median = input.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
-	input.term.q = {
+	t.q = {
 		mode: 'binary',
 		type: 'custom',
 		lst: [
@@ -183,7 +176,7 @@ async function maySetTwoBins(input) {
 		]
 	}
 
-	input.term.q.lst.forEach(bin => {
+	t.q.lst.forEach(bin => {
 		if (!('label' in bin)) bin.label = get_bin_label(bin, input.term.q)
 	})
 }
@@ -193,7 +186,7 @@ async function maySetTwoGroups(input) {
 
 	// if the bins are already binary, do not reset
 	const { term, q } = input.term
-	if (q.mode == 'binary' && q.refGrp) return
+	if (q.mode == 'binary' && 'refGrp' in q) return
 	q.mode = 'binary'
 
 	// category and condition terms share some logic

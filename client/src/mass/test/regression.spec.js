@@ -80,7 +80,7 @@ tape('linear, outcome type=float', function(test) {
 	function testSectionCounts(regres) {
 		const resultsDiv = regres.Inner.results.dom.holder
 		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 17
+		const expectedNumDivs = 18
 		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
 
 		const actualNumRows = resultsDiv.selectAll('tr').size()
@@ -149,7 +149,7 @@ tape('logistic outcome type=float', function(test) {
 	function testSectionCounts(regres) {
 		const resultsDiv = regres.Inner.results.dom.holder
 		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 17
+		const expectedNumDivs = 18
 		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
 
 		const actualNumRows = resultsDiv.selectAll('tr').size()
@@ -213,7 +213,7 @@ tape('logistic outcome type=condition', function(test) {
 	function testSectionCounts(regres) {
 		const resultsDiv = regres.Inner.results.dom.holder
 		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 17
+		const expectedNumDivs = 18
 		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
 
 		const actualNumRows = resultsDiv.selectAll('tr').size()
@@ -287,7 +287,7 @@ tape('logistic outcome: missing reference category', function(test) {
 		)
 		const results = regres.Inner.results.dom.holder
 		const actualResultDivCnt = results.selectAll('div').size()
-		const expectedResultDivCnt = 2 // may include empty divs, not rendered divs for results
+		const expectedResultDivCnt = 3 // may include empty divs, not rendered divs for results
 		test.equal(actualResultDivCnt, expectedResultDivCnt, `should not have results divs`)
 		test.end()
 	}

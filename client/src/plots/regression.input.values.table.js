@@ -12,21 +12,17 @@ export class InputValuesTable {
 
 	async main() {
 		try {
-			if (!this.handler.input.term) {
+			const input = this.handler.input
+			if (!input.term) {
 				this.dom.holder.style('display', 'none')
 				return
 			}
-
 			this.dom.holder.style('display', 'block')
-			// hide loading.. text for categories after table is rendered
 			this.dom.loading_div.style('display', 'block')
-			await this.updateValueCount(this.handler.input)
+			await this.updateValueCount(input)
+			this.mayUpdateModeRefGrp(input, input.section.parent.refGrpByTermId)
 			this.dom.loading_div.style('display', 'none')
-			// FIXME: this condition seems unnecessary,
-			// pill should have thrown before this is called
-			if (!this.handler.error && !this.handler.pill.hasError()) {
-				await this.render()
-			}
+			this.render()
 		} catch (e) {
 			this.dom.loading_div.style('display', 'none')
 			throw e
@@ -46,8 +42,6 @@ export class InputValuesTable {
 			// from the server request
 			const t = input.term
 			const q = JSON.parse(JSON.stringify(t.q))
-			delete q.values
-			delete q.totalCount
 			/*
 				for continuous term, assume it is numeric and that we'd want counts by bins,
 				so remove the 'mode: continuous' value as it will prevent bin construction in the backend
@@ -81,16 +75,13 @@ export class InputValuesTable {
 			this.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
 
 			// get include, excluded and total sample count
-			const totalCount = (t.q.totalCount = { included: 0, excluded: 0, total: 0 })
-			this.sampleCounts.forEach(v => (totalCount.included = totalCount.included + v.samplecount))
-			this.excludeCounts.forEach(v => (totalCount.excluded = totalCount.excluded + v.samplecount))
+			const totalCount = (this.totalCount = { included: 0, excluded: 0, total: 0 })
+			this.sampleCounts.forEach(v => (totalCount.included += v.samplecount))
+			this.excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
 			totalCount.total = totalCount.included + totalCount.excluded
-
-			// store total count from numerical/categorical term as global variable totalSampleCount
-			if (parent.totalSampleCount == undefined && t.term.type != 'condition') parent.totalSampleCount = totalCount.total
-			// for condition term, subtract included count from totalSampleCount to get excluded
-			if (t.term.type == 'condition' && parent.totalSampleCount) {
-				totalCount.excluded = parent.totalSampleCount - totalCount.included
+			// for condition term, subtract included count from totalCount.total to get excluded
+			if (t.term.type == 'condition' && totalCount.total) {
+				totalCount.excluded = totalCount.total - totalCount.included
 			}
 
 			if (t && t.q.mode !== 'continuous' && Object.keys(this.sampleCounts).length < 2) {
@@ -108,6 +99,27 @@ export class InputValuesTable {
 		} catch (e) {
 			throw e
 		}
+	}
+
+	mayUpdateModeRefGrp(input, refGrpByTermId) {
+		const t = input.term
+		if (!t.q.mode) {
+			if (t.term.type == 'categorical' || t.term.type == 'condition') t.q.mode = 'discrete'
+			else t.q.mode = 'continuous'
+		}
+		if (t.q.mode == 'continuous') {
+			delete t.q.refGrp
+			return
+		}
+		if (!('refGrp' in t.q) && t.id in refGrpByTermId) {
+			t.q.refGrp = refGrpByTermId[t.id]
+			return
+		}
+		if (!('refGrp' in t.q) || !this.sampleCounts.find(s => s.key === t.q.refGrp)) {
+			// default to the first value or group
+			t.q.refGrp = this.sampleCounts[0].key
+		}
+		refGrpByTermId[t.id] = t.q.refGrp
 	}
 }
 
@@ -141,8 +153,6 @@ function setRenderers(self) {
 		const dom = self.dom
 		const input = self.handler.input
 		const t = input.term
-		//setActiveValues(t) // see function for FIXME
-		updateRefGrp(self.handler)
 		make_values_table(self.sampleCounts, 'values_table')
 		render_summary_div(input, self.dom)
 
@@ -151,31 +161,6 @@ function setRenderers(self) {
 		} else {
 			dom.excluded_table.selectAll('*').remove()
 		}
-	}
-
-	function setActiveValues(t) {
-		/*
-			FIXME: delete this function? 
-			[self|input].values, .label_key are not used in the code? 
-		*/
-
-		const gs = t.q.groupsetting || {}
-		const i = gs.inuse && gs.predefined_groupset_idx
-		self.values = gs.inuse
-			? i !== undefined
-				? t.term.groupsetting.lst[i].groups
-				: gs.customset && gs.customset.groups
-			: t.term.values
-
-		/* 
-		FIXME: should use the following logic
-		input.values = t.q.type == 'predefined-groupset'
-			? t.term.groupsetting.lst[i]
-			: t.q.type == 'custom-groupset'
-			? gs.customset && gs.customset.groups
-			: t.term.values
-		*/
-		self.label_key = t.q.type.endsWith('groupset') ? 'name' : 'label'
 	}
 
 	function make_values_table(data, tableName = 'values_table') {
@@ -189,23 +174,6 @@ function setRenderers(self) {
 		if (tableName == 'values_table') {
 			const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
 			tr_data.forEach(v => (v.bar_width_frac = Number((1 - (maxCount - v.samplecount) / maxCount).toFixed(4))))
-			if ((t.term.type !== 'integer' && t.term.type !== 'float') || t.q.mode == 'discrete' || t.q.mode == 'binary') {
-				const parent = self.handler.input.section.parent
-
-				if (!('refGrp' in self) && t.q && 'refGrp' in t.q) self.refGrp = t.q.refGrp
-
-				if (!('refGrp' in self) || !tr_data.find(c => c.key === self.refGrp)) {
-					if (t.id in parent.refGrpByTermId && tr_data.find(c => c.key === parent.refGrpByTermId[t.id])) {
-						self.refGrp = parent.refGrpByTermId[t.id]
-					} else {
-						self.refGrp = tr_data[0].key
-						parent.refGrpByTermId[t.id] = tr_data[0].key
-					}
-				} else if (!(t.id in parent.refGrpByTermId)) {
-					// remember the refGrp by term.id
-					parent.refGrpByTermId[t.id] = self.refGrp
-				}
-			}
 		}
 
 		const isContinuousTerm = t && t.q.mode == 'continuous' && (t.term.type == 'float' || t.term.type == 'integer')
@@ -295,8 +263,8 @@ function setRenderers(self) {
 			tr.style('background', 'white')
 			ref_text = select(tr.node().lastChild)
 				.select('div')
-				.style('display', item.key === self.refGrp && hover_flag ? 'inline-block' : 'none')
-				.style('border', item.key === self.refGrp && hover_flag ? '1px solid #bbb' : '')
+				.style('display', item.key === t.q.refGrp && hover_flag ? 'inline-block' : 'none')
+				.style('border', item.key === t.q.refGrp && hover_flag ? '1px solid #bbb' : '')
 		} else {
 			const reference_td = tr
 				.append('td')
@@ -305,9 +273,9 @@ function setRenderers(self) {
 
 			ref_text = reference_td
 				.append('div')
-				.style('display', item.key === self.refGrp && hover_flag ? 'inline-block' : 'none')
+				.style('display', item.key === t.q.refGrp && hover_flag ? 'inline-block' : 'none')
 				.style('padding', '2px 10px')
-				.style('border', item.key === self.refGrp && hover_flag ? '1px solid #bbb' : '')
+				.style('border', item.key === t.q.refGrp && hover_flag ? '1px solid #bbb' : '')
 				.style('border-radius', '10px')
 				.style('color', '#999')
 				.style('font-size', '.7em')
@@ -316,7 +284,7 @@ function setRenderers(self) {
 
 		if (hover_flag) {
 			tr.on('mouseover', () => {
-				if (self.refGrp !== item.key) {
+				if (t.q.refGrp !== item.key) {
 					tr.style('background', '#fff6dc')
 					ref_text
 						.style('display', 'inline-block')
@@ -326,10 +294,10 @@ function setRenderers(self) {
 			})
 				.on('mouseout', () => {
 					tr.style('background', 'white')
-					if (self.refGrp !== item.key) ref_text.style('display', 'none')
+					if (t.q.refGrp !== item.key) ref_text.style('display', 'none')
 				})
 				.on('click', () => {
-					self.refGrp = item.key
+					t.q.refGrp = item.key
 					self.handler.input.section.parent.refGrpByTermId[t.id] = item.key
 					//d.term.q.refGrp = item.key
 					ref_text.style('border', '1px solid #bbb').text('REFERENCE')
@@ -345,30 +313,22 @@ function setRenderers(self) {
 	function render_summary_div(input, dom) {
 		const t = input.term
 		const q = (t && t.q) || {}
-		if (!q.totalCount) q.totalCount = { included: 0, excluded: 0, total: 0 }
+		const { included, excluded, total } = self.totalCount
 
 		if (input.section.configKey == 'term') {
-			dom.term_summmary_div.text(
-				`${q.totalCount.included} sample included.` +
-					(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded:` : '')
-			)
+			dom.term_summmary_div.text(`${included} sample included.` + (excluded ? ` ${excluded} samples excluded:` : ''))
 			// QUICK FIX: hide top_info_div rightnow for linear regression,
 			// for logistic regression, it needs to be changed as required
 			dom.top_info_div.style('display', 'none')
 		} else if (input.section.configKey == 'independent') {
 			if (t.term.type == 'float' || t.term.type == 'integer') {
 				dom.term_info_div.html(`Use as ${q.mode || 'continuous'} variable.` + (q.scale ? `Scale: Per ${q.scale}` : ''))
-				dom.term_summmary_div.html(
-					`${q.totalCount.included} sample included.` +
-						(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded.` : '')
-				)
+				dom.term_summmary_div.html(`${included} sample included.` + (excluded ? ` ${excluded} samples excluded.` : ''))
 			} else if (t.term.type == 'categorical' || t.term.type == 'condition') {
 				const gs = q.groupsetting || {}
 				// self.values is already set by parent.setActiveValues() above
 				const term_text = 'Use as ' + self.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
-				const summary_text =
-					` ${q.totalCount.included} sample included.` +
-					(q.totalCount.excluded ? ` ${q.totalCount.excluded} samples excluded:` : '')
+				const summary_text = ` ${included} sample included.` + (excluded ? ` ${excluded} samples excluded:` : '')
 				dom.term_info_div.html(term_text)
 				dom.ref_click_prompt
 					.style('padding', '5px 10px')
@@ -381,17 +341,5 @@ function setRenderers(self) {
 		} else {
 			throw `uknown input.section.configKey='${input.section.configKey}'`
 		}
-	}
-}
-
-/*** is this not used ***/
-function updateRefGrp(handler) {
-	const section = handler.input.section
-	if (section.configKey != 'term') return
-	const t = handler.input.term
-	if (!t || section.parent.config.regressionType != 'logistic') return
-	if (!('refGrp' in t.q) && t.q.lst) {
-		t.q.refGrp = t.q.lst[0].label
-		section.parent.refGrpByTermId[t.id] = t.q.lst[0].label
 	}
 }

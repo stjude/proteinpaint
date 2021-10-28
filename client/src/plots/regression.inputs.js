@@ -1,6 +1,7 @@
+import { deepEqual } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { setPillMethods } from './regression.pill'
-import { getInputTermHandler } from './regression.input.term'
+import { InputTerm } from './regression.input.term'
 
 export class RegressionInputs {
 	constructor(opts) {
@@ -134,10 +135,13 @@ export class RegressionInputs {
 	async main() {
 		try {
 			this.hasError = false
+			// disable submit button on click, reenable after rendering results
+			this.dom.submitBtn.property('disabled', true).text('Running...')
 			// share the writable config copy
 			this.config = this.parent.config
 			this.state = this.parent.state
 			await this.triggerUpdate()
+			this.updateSubmitButton()
 		} catch (e) {
 			this.hasError = true
 			throw e
@@ -158,7 +162,6 @@ export class RegressionInputs {
 			}
 		}
 		await Promise.all(updates)
-		this.updateSubmitButton()
 	}
 
 	setDisableTerms() {
@@ -298,7 +301,7 @@ function setRenderers(self) {
 		}
 
 		if (input.varClass == 'term') {
-			input.handler = await getInputTermHandler({
+			input.handler = new InputTerm({
 				holder: inputDiv.append('div'),
 				input
 			})
@@ -377,8 +380,6 @@ function setInteractivity(self) {
 			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
 		if (config.term.id in self.refGrpByTermId) config.term.q.refGrp = self.refGrpByTermId[config.term.id]
-		// disable submit button on click, reenable after rendering results
-		self.dom.submitBtn.property('disabled', true).text('Running...')
 		self.parent.app.dispatch({
 			type: config.term ? 'plot_edit' : 'plot_show',
 			id: self.parent.id,
