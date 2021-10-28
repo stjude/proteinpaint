@@ -32,6 +32,10 @@
 # Code
 ###########
 
+#TODO: are we still inputting variables with whitespace/commas? If not, then the commands for handling variables with whitespace are not necessary (see "sprintf" and "gsub" commands. Any others?).
+#TODO: should we use "|" instead of "," for delimiting values within arguments?
+
+
 args <- commandArgs(trailingOnly = T)
 if (length(args) != 4){
   stop("Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories> <scaling factors>] <stdout>")
@@ -90,89 +94,110 @@ outcomeVar <- names(dat)[1]
 independentVars <- names(dat)[-1]
 model <- as.formula(paste(sprintf("`%s`", outcomeVar), paste(sprintf("`%s`", independentVars), collapse = " + "), sep = " ~ "))
 if (regressionType == "linear"){
-  res <- glm(model, data = dat)
-  res_summ <- summary(res)
-  coefficients_summ <- cbind(res_summ$coefficients, suppressMessages(confint(res)))
-  colnames(coefficients_summ)[1] <- "Beta"
-  colnames(coefficients_summ)[5:6] <- c("95% CI (low)","95% CI (high)")
-} else if (regressionType == "logistic"){
-  if (!is.factor(dat[,outcomeVar]) | nlevels(dat[,outcomeVar]) != 2){
-    stop("Outcome variable is not binary. Logistic regression requires a binary outcome variable.")
+  # linear regression
+  if (!is.integer(dat[,outcomeVar]) & !is.numeric(dat[,outcomeVar])){
+    stop("outcome variable needs to be numeric for linear regression")
   }
+  # fit linear model
+  res <- lm(model, data = dat)
+  res_summ <- summary(res)
+  # prepare residuals table
+  residuals_table <- round(data.frame(as.list(fivenum(res_summ$residuals))), 3)
+  colnames(residuals_table) <- c("Minimum","1st quartile","Median","3rd quartile","Maximum")
+  # prepare coefficients table
+  coefficients_table <- cbind(res_summ$coefficients, suppressMessages(confint(res)))
+  colnames(coefficients_table)[1] <- "Beta"
+  colnames(coefficients_table)[5:6] <- c("95% CI (low)","95% CI (high)")
+  # type III statistics
+  typeIII_table <- as.data.frame(drop1(res, test = "F"))
+  # other summary stats
+  other_table <- c(
+    "Residual standard error" = round(res_summ$sigma, 2),
+    "Residual degrees of freedom" = round(res$df.residual, 0),
+    "R-squared" = round(res_summ$r.squared, 5),
+    "Adjusted R-squared" = round(res_summ$adj.r.squared, 5),
+    "F-statistic" = round(unname(res_summ$fstatistic[1]), 2),
+    "P-value" = signif(unname(pf(res_summ$fstatistic[1], res_summ$fstatistic[2], res_summ$fstatistic[3], lower.tail = F)), 4)
+  )
+} else if (regressionType == "logistic"){
+  # logistic regression
+  if (!is.factor(dat[,outcomeVar])){
+    stop("outcome variable needs to be a factor for logistic regression")
+  }
+  if (nlevels(dat[,outcomeVar]) != 2){
+    stop("outcome variable is not binary")
+  }
+  # fit logistic model
   res <- glm(model, family=binomial(link='logit'), data = dat)
   res_summ <- summary(res)
-  coefficients_summ <- res_summ$coefficients
-  coefficients_summ <- cbind(coefficients_summ, "Odds ratio" = exp(coef(res)), exp(suppressMessages(confint(res))))
-  colnames(coefficients_summ)[1] <- "Log Odds"
-  colnames(coefficients_summ)[6:7] <- c("95% CI (low)","95% CI (high)")
+  # prepare residuals table
+  residuals_table <- round(data.frame(as.list(fivenum(res_summ$deviance.resid))), 3)
+  colnames(residuals_table) <- c("Minimum","1st quartile","Median","3rd quartile","Maximum")
+  # prepare coefficients table
+  coefficients_table <- res_summ$coefficients
+  coefficients_table <- cbind(coefficients_table, "Odds ratio" = exp(coef(res)), exp(suppressMessages(confint(res))))
+  colnames(coefficients_table)[1] <- "Log Odds"
+  colnames(coefficients_table)[6:7] <- c("95% CI (low)","95% CI (high)")
+  # type III statistics
+  typeIII_table <- as.data.frame(drop1(res, test = "LRT"))
+  # other summary stats
+  other_table <- c(
+    "Dispersion parameter" = res_summ$dispersion,
+    "Null deviance" = res_summ$null.deviance,
+    "Null deviance degrees of freedom" = res_summ$df.null,
+    "Residual deviance" = res_summ$deviance,
+    "Residual deviance degrees of freedom" = res_summ$df.residual,
+    "AIC" = res_summ$aic
+  )
+  other_table <- round(other_table, 1)
 } else{
   stop("regression type is not recognized")
 }
 
+
 #Reformat the coefficients table
 #Round the non-p-value columns to 3 decimal places
-pvalueCol <- grepl("^Pr\\(>", colnames(coefficients_summ))
-coefficients_summ[,!pvalueCol] <- round(coefficients_summ[,!pvalueCol], 3)
+pvalueCol <- grepl("^Pr\\(>", colnames(coefficients_table))
+coefficients_table[,!pvalueCol] <- round(coefficients_table[,!pvalueCol], 3)
 #Round the p-value column to 4 significant digits
-coefficients_summ[,pvalueCol] <- signif(coefficients_summ[,pvalueCol], 4)
+coefficients_table[,pvalueCol] <- signif(coefficients_table[,pvalueCol], 4)
 #Re-arrange columns
-coefficients_summ <- as.data.frame(coefficients_summ)
-coefficients_summ<- cbind("Variable" = "", "Category" = "", coefficients_summ, stringsAsFactors = F)
-var_and_cat <- strsplit(row.names(coefficients_summ), split = "___")
+coefficients_table <- as.data.frame(coefficients_table)
+coefficients_table<- cbind("Variable" = "", "Category" = "", coefficients_table, stringsAsFactors = F)
+var_and_cat <- strsplit(row.names(coefficients_table), split = "___")
 for(x in 1:length(var_and_cat)){
-  coefficients_summ[x,"Variable"] <- gsub("`","",var_and_cat[[x]][1])
+  coefficients_table[x,"Variable"] <- gsub("`","",var_and_cat[[x]][1])
   if(length(var_and_cat[[x]]) > 1){
-    coefficients_summ[x,"Category"] <- gsub("`","",var_and_cat[[x]][2])
+    coefficients_table[x,"Category"] <- gsub("`","",var_and_cat[[x]][2])
   } else{
-    coefficients_summ[x,"Category"] <- ""
+    coefficients_table[x,"Category"] <- ""
   }
 }
 
-#Type III statistics.
-#For each variable, compare the complete model (i.e. model with all variables) to the model without the variable. This analysis will test whether the model changes significantly in the absence of each variable.
-#Use the F test for linear regression and use the likelihood ratio test for logistic regression.
-if (regressionType == "linear") {
-  typeIIIstats <- as.data.frame(drop1(res, test = "F"))
-} else {
-  typeIIIstats <- as.data.frame(drop1(res, test = "LRT"))
-}
+#Reformat the type III statistics table
 #Round the non-p-value columns to 3 decimal places
-pvalueCol <- grepl("^Pr\\(>", colnames(typeIIIstats))
-typeIIIstats[,!pvalueCol] <- round(typeIIIstats[,!pvalueCol], 3)
+pvalueCol <- grepl("^Pr\\(>", colnames(typeIII_table))
+typeIII_table[,!pvalueCol] <- round(typeIII_table[,!pvalueCol], 3)
 #Round the p-value column to 4 significant digits
-typeIIIstats[,pvalueCol] <- signif(typeIIIstats[,pvalueCol], 4)
+typeIII_table[,pvalueCol] <- signif(typeIII_table[,pvalueCol], 4)
 #Re-arrange columns
-typeIIIstats <- cbind("Variable" = gsub("`", "", gsub("___", "", row.names(typeIIIstats))), typeIIIstats, stringsAsFactors = F)
-
-#Compute summary stats of deviance residuals
-deviance_resid_summ <- round(data.frame(as.list(fivenum(res_summ$deviance.resid))), 3)
-colnames(deviance_resid_summ) <- c("Minimum","1st quartile","Median","3rd quartile","Maximum")
-
-#Extract other summary stats
-other_summ <- matrix(, nrow = 6, dimnames = list(c("Dispersion parameter","Null deviance","Null deviance df", "Residual deviance","Residual deviance df", "AIC")))
-other_summ["Dispersion parameter",] <- res_summ$dispersion
-other_summ["Null deviance",] <- res_summ$null.deviance
-other_summ["Null deviance df",] <- res_summ$df.null
-other_summ["Residual deviance",] <- res_summ$deviance
-other_summ["Residual deviance df",] <- res_summ$df.residual
-other_summ["AIC",] <- res_summ$aic
-other_summ <- round(other_summ, 1)
+typeIII_table <- cbind("Variable" = gsub("`", "", gsub("___", "", row.names(typeIII_table))), typeIII_table, stringsAsFactors = F)
 
 
-#Output summary statistics to stdout.
+#Output summary statistics
 if (length(warnings()) > 0){
-  cat("#NA#Warning messages\n", file = "", sep = "")
+  cat("#warnings\n", file = "", sep = "")
   warning_summ <- capture.output(summary(warnings()))
   for (l in warning_summ){
     cat(l, "\n", sep = "")
   }
 }
-cat("#matrix#Deviance Residuals\n", file = "", sep = "")
-write.table(deviance_resid_summ, file = "", sep = "\t", quote = F, row.names = F)
-cat("#matrix#Coefficients\n", file = "", sep = "")
-write.table(coefficients_summ, file = "", sep = "\t", quote = F, row.names = F)
-cat("#matrix#Type III statistics\n", file = "", sep = "")
-write.table(typeIIIstats, file = "", sep = "\t", quote = F, row.names = F)
-cat("#vector#Other summary statistics\n", file = "", sep = "")
-write.table(other_summ, file = "", sep = "\t", quote = F, row.names = T, col.names = F)
+cat("#residuals\n", file = "", sep = "")
+write.table(residuals_table, file = "", sep = "\t", quote = F, row.names = F)
+cat("#coefficients\n", file = "", sep = "")
+write.table(coefficients_table, file = "", sep = "\t", quote = F, row.names = F)
+cat("#type3\n", file = "", sep = "")
+write.table(typeIII_table, file = "", sep = "\t", quote = F, row.names = F)
+cat("#other\n", file = "", sep = "")
+write.table(as.data.frame(other_table), file = "", sep = "\t", quote = F, row.names = T, col.names = F)
 close(con)

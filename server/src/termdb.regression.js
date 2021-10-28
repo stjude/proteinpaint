@@ -95,7 +95,7 @@ export async function get_regression(q, ds) {
 			false
 		)
 
-		const result = { queryTime, sampleSize }
+		const result = { type: q.regressionType, queryTime, sampleSize }
 		parseRoutput(data, result)
 
 		result.totalTime = +new Date() - startTime
@@ -220,7 +220,7 @@ function parseRoutput(data, result) {
 
 	for (const line of data) {
 		if (line.startsWith('#')) {
-			lineType = line.split('#')[2]
+			lineType = line.substring(1)
 			type2lines.set(lineType, [])
 			continue
 		}
@@ -229,7 +229,7 @@ function parseRoutput(data, result) {
 	// parse lines into this result structure
 
 	{
-		const lines = type2lines.get('Warning messages')
+		const lines = type2lines.get('warnings')
 		if (lines) {
 			result.warnings = {
 				label: 'Warning messages',
@@ -238,11 +238,11 @@ function parseRoutput(data, result) {
 		}
 	}
 	{
-		const lines = type2lines.get('Deviance Residuals')
+		const lines = type2lines.get('residuals')
 		if (lines) {
-			if (lines.length != 2) throw 'expect 2 lines for Deviance Residuals but got ' + lines.length
-			result.devianceResiduals = {
-				label: 'Deviance Residuals',
+			if (lines.length != 2) throw 'expect 2 lines for residuals but got ' + lines.length
+			result.residuals = {
+				label: result.type === 'linear' ? 'Residuals' : 'Deviance residuals',
 				lst: []
 			}
 			// 1st line is header
@@ -250,14 +250,14 @@ function parseRoutput(data, result) {
 			// 2nd line is values
 			const values = lines[1].split('\t')
 			for (const [i, h] of header.entries()) {
-				result.devianceResiduals.lst.push([h, values[i]])
+				result.residuals.lst.push([h, values[i]])
 			}
 		}
 	}
 	{
-		const lines = type2lines.get('Coefficients')
+		const lines = type2lines.get('coefficients')
 		if (lines) {
-			if (lines.length < 3) throw 'expect at least 3 lines from Coefficients'
+			if (lines.length < 3) throw 'expect at least 3 lines from coefficients'
 			result.coefficients = {
 				label: 'Coefficients',
 				header: lines
@@ -288,7 +288,7 @@ function parseRoutput(data, result) {
 		}
 	}
 	{
-		const lines = type2lines.get('Type III statistics')
+		const lines = type2lines.get('type3')
 		if (lines) {
 			result.type3 = {
 				label: 'Type III statistics',
@@ -298,21 +298,14 @@ function parseRoutput(data, result) {
 		}
 	}
 	{
-		const lines = type2lines.get('Other summary statistics')
+		const lines = type2lines.get('other')
 		if (lines) {
-			result.otherSummary = {
+			result.other = {
 				label: 'Other summary statistics',
 				lst: lines.map(i => i.split('\t'))
 			}
 		}
 	}
-	// Verify that the computed sample size is consistent with the degrees of freedom
-	/*
-	const nullDevDf = result
-		.find(table => table.name === 'Other summary statistics')
-		.rows.find(row => row[0] === 'Null deviance df')[1]
-	if (sampleSize !== Number(nullDevDf) + 1) throw 'computed sample size and degrees of freedom are inconsistent'
-		*/
 }
 
 /*

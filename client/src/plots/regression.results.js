@@ -131,12 +131,12 @@ function setRenderers(self) {
 			}
 		}
 
-		if (result.devianceResiduals) {
-			const div = sectionHolder(result.devianceResiduals.label)
+		if (result.residuals) {
+			const div = sectionHolder(result.residuals.label)
 			const table = div.append('table').style('border-spacing', '8px')
 			const tr1 = table.append('tr').style('opacity', 0.4)
 			const tr2 = table.append('tr')
-			for (const v of result.devianceResiduals.lst) {
+			for (const v of result.residuals.lst) {
 				tr1.append('td').text(v[0])
 				tr2.append('td').text(v[1])
 			}
@@ -253,10 +253,10 @@ function setRenderers(self) {
 				for (const v of row) tr.append('td').text(v)
 			}
 		}
-		if (result.otherSummary) {
-			const div = sectionHolder(result.otherSummary.label)
+		if (result.other) {
+			const div = sectionHolder(result.other.label)
 			const table = div.append('table').style('border-spacing', '8px')
-			for (const [k, v] of result.otherSummary.lst) {
+			for (const [k, v] of result.other.lst) {
 				const tr = table.append('tr')
 				tr.append('td')
 					.style('opacity', 0.4)
