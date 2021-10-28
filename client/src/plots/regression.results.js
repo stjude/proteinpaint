@@ -1,5 +1,6 @@
 import { q_to_param } from '../termdb/plot'
 import { getNormalRoot } from '../common/filter'
+import { sayerror } from '../dom/error'
 
 export class RegressionResults {
 	constructor(opts) {
@@ -20,11 +21,7 @@ export class RegressionResults {
 				.style('padding', '3px 5px')
 				.style('color', '#bbb')
 				.html('Results'),
-			err_div: holder
-				.append('div')
-				.style('display', 'none')
-				.style('padding', '5px')
-				.style('background-color', 'rgba(255,100,100,0.2)'),
+			err_div: holder.append('div'),
 			content: holder.append('div').style('margin', '10px')
 		}
 	}
@@ -46,7 +43,11 @@ export class RegressionResults {
 			this.dom.holder.style('display', 'block')
 			this.displayResult(data)
 		} catch (e) {
-			throw e
+			this.hasError = true
+			this.dom.err_div.style('display', 'block')
+			sayerror(this.dom.err_div, 'Error: ' + (e.error || e))
+			this.parent.inputs.dom.submitBtn.property('disabled', true)
+			console.error(e)
 		}
 	}
 

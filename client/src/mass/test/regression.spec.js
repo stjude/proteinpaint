@@ -278,7 +278,7 @@ tape('logistic outcome: missing reference category', function(test) {
 
 	function runTests(regres) {
 		regres.on('postRender.test', null)
-		const actualErrMsg = regres.Inner.dom.errordiv.text()
+		const actualErrMsg = regres.Inner.results.dom.err_div.text()
 		const expectedErrMsg = `Error: the reference category '≤22.05' is not found in the variable 'outcome'✕`
 		test.equal(
 			actualErrMsg,
@@ -286,8 +286,13 @@ tape('logistic outcome: missing reference category', function(test) {
 			`should error out prior to R script if reference category of variable is missing in data matrix`
 		)
 		const results = regres.Inner.results.dom.holder
-		const actualResultDivCnt = results.selectAll('div').size()
-		const expectedResultDivCnt = 3 // may include empty divs, not rendered divs for results
+		const actualResultDivCnt = results
+			.selectAll('div')
+			.filter(function() {
+				return this.style.display !== 'none'
+			})
+			.size()
+		const expectedResultDivCnt = 6 // may include empty divs, not rendered divs for results
 		test.equal(actualResultDivCnt, expectedResultDivCnt, `should not have results divs`)
 		test.end()
 	}

@@ -330,13 +330,13 @@ function setRenderers(self) {
 				const term_text = 'Use as ' + self.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
 				const summary_text = ` ${included} sample included.` + (excluded ? ` ${excluded} samples excluded:` : '')
 				dom.term_info_div.html(term_text)
+				dom.term_summmary_div.text(summary_text)
 				dom.ref_click_prompt
 					.style('padding', '5px 10px')
 					.style('color', '#999')
 					.style('text-transform', 'uppercase')
 					.style('font-size', '.7em')
 					.text('Click to set a row as reference.')
-				dom.term_summmary_div.text(summary_text)
 			}
 		} else {
 			throw `uknown input.section.configKey='${input.section.configKey}'`
