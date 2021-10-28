@@ -3,10 +3,15 @@ import { select } from 'd3-selection'
 
 export function setGroupsettingMethods(self) {
 	self.regroupMenu = function(grp_count, temp_cat_grps) {
+        console.log(self.q.groupsetting)
 		//start with default 2 groups, extra groups can be added by user
 		const default_grp_count = grp_count || 2
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
+        const default_1grp = [{values : Object.values(values).map( v => {return {key: v.label}})}]
+        const default_empty_group = { values: []}
+        const empty_groups = Array(default_grp_count-1).fill(default_empty_group)
+        const default_groupset = {groups: [...default_1grp, ...empty_groups]}
 
 		//initiate empty customset
 		let customset = { groups: [] }
@@ -20,7 +25,7 @@ export function setGroupsettingMethods(self) {
 				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
 				: self.q.groupsetting && self.q.groupsetting.customset
 				? self.q.groupsetting.customset
-				: undefined
+				: default_groupset
 
 		for (let i = 0; i < default_grp_count; i++) {
 			let group_name =
@@ -125,15 +130,14 @@ export function setGroupsettingMethods(self) {
 					q: self.q
 				})
 			})
-	}
 
 	function addGroupDiv(group, i) {
 		console.log(group, i)
 
-		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
-		const cat_grps = JSON.parse(JSON.stringify(values))
+		// const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
+		// const cat_grps = JSON.parse(JSON.stringify(values))
 		const group_val_keys = group.values.map(v => v.key.toString())
-		console.log(group_val_keys, cat_grps)
+		// console.log(group_val_keys, cat_grps)
 
 		const group_div = select(this)
 
@@ -200,7 +204,11 @@ export function setGroupsettingMethods(self) {
 				// self.regroupMenu(default_grp_count, cat_grps)
 			})
 
-		const group_select_div = group_div.append('div').style('margin', '5px')
+		const group_select_div = group_div.append('div')
+            .style('margin', '5px')
+            .style('overflow-x','hidden')
+            .style('overflow-y','auto')
+            .style('max-height','300px')
 
 		const group_table = group_select_div.append('table').style('border-collapse', 'collapse')
 
@@ -239,8 +247,8 @@ export function setGroupsettingMethods(self) {
 				.html(val.label)
 		}
 	}
+    }
 
-	// refactor from here
 	/*
 		const group_rename_div = group_edit_div
 			.append('div')
