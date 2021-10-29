@@ -1,17 +1,23 @@
 import { keyupEnter } from '../client'
-import { select } from 'd3-selection'
+import { select, event } from 'd3-selection'
 
 export function setGroupsettingMethods(self) {
 	self.regroupMenu = function(grp_count, temp_cat_grps) {
-        console.log(self.q.groupsetting)
+		console.log(self.q.groupsetting)
 		//start with default 2 groups, extra groups can be added by user
 		const default_grp_count = grp_count || 2
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
-        const default_1grp = [{values : Object.values(values).map( v => {return {key: v.label}})}]
-        const default_empty_group = { values: []}
-        const empty_groups = Array(default_grp_count-1).fill(default_empty_group)
-        const default_groupset = {groups: [...default_1grp, ...empty_groups]}
+		const default_1grp = [
+			{
+				values: Object.values(values).map(v => {
+					return { key: v.label }
+				})
+			}
+		]
+		const default_empty_group = { values: [] }
+		const empty_groups = Array(default_grp_count - 1).fill(default_empty_group)
+		const default_groupset = { groups: [...default_1grp, ...empty_groups] }
 
 		//initiate empty customset
 		let customset = { groups: [] }
@@ -87,14 +93,46 @@ export function setGroupsettingMethods(self) {
 
 		group_ct_select.node().value = default_grp_count
 
-		const groups_holder = group_edit_div.append('div')
-
-		const groups_divs = groups_holder.selectAll(':scope > div').data(groupset.groups)
-
-		groups_divs
-			.enter()
+		const groups_holder = group_edit_div
 			.append('div')
-			.each(addGroupDiv)
+			.style('display', 'flex')
+			.style('flex-wrap', 'wrap')
+
+		const non_exclude_div = groups_holder.append('div')
+
+		for (let i = 0; i < default_grp_count; i++) {
+			addGroupDiv(groupset.groups[i], i)
+		}
+
+		const exclude_div = groups_holder
+			.append('div')
+			.style('display', 'block')
+			.style('padding', '10px')
+			.style('border', '1px solid #bbb')
+			.style('vertical-align', 'top')
+			// .style('flex-basis','100%')
+			.style('flex-grow', '1')
+			.on('dragover', () => {
+				event.preventDefault()
+			})
+			.on('drop', () => {
+				const id = event.dataTransfer.getData('text')
+				const item = groups_holder.select('#sj-drag-item' + id)
+				exclude_list.node().appendChild(item.node())
+			})
+
+		exclude_div
+			.append('div')
+			.style('display', 'block')
+			.style('margin', '15px')
+			.style('padding', '3px 10px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.style('color', '#999')
+			.text('Exclude')
+
+		const exclude_list = exclude_div.append('div')
 
 		// 'Apply' button
 		button_div
@@ -131,123 +169,123 @@ export function setGroupsettingMethods(self) {
 				})
 			})
 
-	function addGroupDiv(group, i) {
-		console.log(group, i)
+		function addGroupDiv(group, i) {
+			console.log(group, i)
 
-		// const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
-		// const cat_grps = JSON.parse(JSON.stringify(values))
-		const group_val_keys = group.values.map(v => v.key.toString())
-		// console.log(group_val_keys, cat_grps)
-
-		const group_div = select(this)
-
-		const title_div = group_div
-			.append('div')
-			.style('border-top', '1px solid #bbb')
-			.style('margin-top', '25px')
-
-		title_div
-			.append('div')
-			.style('display', 'inline-block')
-			.style('position', 'relative')
-			.style('top', '-25px')
-			.style('border-radius', '13px')
-			.style('margin', '15px')
-			.style('margin-bottom', '-10px')
-			.style('padding', '3px 10px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.style('border', '1px solid #bbb')
-			.style('color', '#999')
-			.style('background-color', '#fff')
-			.text('Group ' + (i + 1))
-
-		const group_rename_div = group_div
-			.append('div')
-			.attr('class', 'group_edit_div')
-			.style('display', 'inline-block')
-
-		group_rename_div
-			.append('label')
-			.attr('for', 'grp_ct')
-			.style('display', 'inline-block')
-			.style('margin-right', '15px')
-			.html('Group name')
-
-		const group_name_input = group_rename_div
-			.append('input')
-			.attr('size', 12)
-			.attr('value', group.name || i + 1)
-			.style('margin', '2px 5px')
-			.style('display', 'inline-block')
-			.style('font-size', '.8em')
-			.style('width', '80px')
-			.on('keyup', () => {
-				if (!keyupEnter()) return
-				// TODO
-				// //update customset and add to self.q
-				// for (const [key, val] of Object.entries(cat_grps)) {
-				// 	for (let j = 0; j < default_grp_count; j++) {
-				// 		if (cat_grps[key].group == j + 1) customset.groups[j].values.push({ key: key })
-				// 	}
-				// }
-
-				// customset.groups[i].name = group_name_input.node().value
-				// self.q.type = 'custom-groupset'
-				// self.q.groupsetting = {
-				// 	inuse: true,
-				// 	customset: customset
-				// 	//predefined_groupset_idx: removed from this q.groupsetting
-				// }
-
-				// self.regroupMenu(default_grp_count, cat_grps)
-			})
-
-		const group_select_div = group_div.append('div')
-            .style('margin', '5px')
-            .style('overflow-x','hidden')
-            .style('overflow-y','auto')
-            .style('max-height','300px')
-
-		const group_table = group_select_div.append('table').style('border-collapse', 'collapse')
-
-		// for each cateogry add new row with radio button for each group and category name
-		for (const [key, val] of Object.entries(cat_grps)) {
-			const cat_tr = group_table
-				.append('tr')
-				.on('mouseover', () => {
-					cat_tr.style('background-color', '#eee')
-				})
-				.on('mouseout', () => {
-					cat_tr.style('background-color', '#fff')
-				})
-
-			cat_tr
-				.append('td')
-				.attr('align', 'center')
-				.style('padding', '2px 5px')
-				.append('input')
-				.attr('type', 'checkbox')
-				.attr('name', key)
-				.attr('value', i)
-				.property('checked', () => {
-					return group_val_keys.includes(key)
-				})
-				.on('click', () => {
-					// TODO
-					// cat_grps[key].group = i + 1
-				})
-
-			cat_tr
-				.append('td')
+			const group_div = non_exclude_div
+				.append('div')
 				.style('display', 'inline-block')
-				.style('margin', '2px')
-				.style('cursor', 'default')
-				.html(val.label)
+				.style('padding', '10px')
+				.style('border', '1px solid #bbb')
+				.style('vertical-align', 'top')
+				// .style('flex-basis','100%')
+				.style('flex-grow', '1')
+				.on('dragover', () => {
+					event.preventDefault()
+				})
+				.on('drop', () => {
+					const id = event.dataTransfer.getData('text')
+					const item = groups_holder.select('#sj-drag-item' + id)
+					group_list.node().appendChild(item.node())
+				})
+
+			group_div
+				.append('div')
+				.style('display', 'block')
+				.style('margin', '15px')
+				.style('padding', '3px 10px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('text-transform', 'uppercase')
+				.style('color', '#999')
+				.text('Group ' + (i + 1))
+
+			const group_rename_div = group_div.append('div').attr('class', 'group_edit_div')
+
+			const group_name_input = group_rename_div
+				.append('input')
+				.attr('size', 12)
+				.attr('value', group ? group.name : i + 1)
+				.style('margin', '2px 5px 15px 5px')
+				.style('display', 'inline-block')
+				.style('font-size', '.8em')
+				.style('width', '90%')
+				.on('keyup', () => {
+					if (!keyupEnter()) return
+					// TODO
+					// //update customset and add to self.q
+					// for (const [key, val] of Object.entries(cat_grps)) {
+					// 	for (let j = 0; j < default_grp_count; j++) {
+					// 		if (cat_grps[key].group == j + 1) customset.groups[j].values.push({ key: key })
+					// 	}
+					// }
+
+					// customset.groups[i].name = group_name_input.node().value
+					// self.q.type = 'custom-groupset'
+					// self.q.groupsetting = {
+					// 	inuse: true,
+					// 	customset: customset
+					// 	//predefined_groupset_idx: removed from this q.groupsetting
+					// }
+
+					// self.regroupMenu(default_grp_count, cat_grps)
+				})
+
+			const group_select_div = group_div.append('div').style('margin', '5px')
+			// .style('overflow-x','hidden')
+			// .style('overflow-y','auto')
+			// .style('max-height','300px')
+
+			const group_list = group_select_div.append('div')
+			// .style('border-collapse', 'collapse')
+
+			// for each cateogry add new row with radio button for each group and category name
+			for (const [key, val] of Object.entries(group.values)) {
+				const cat_tr = group_list
+					.append('div')
+					.attr('draggable', 'true')
+					.attr('id', 'sj-drag-item' + val.key)
+					.style('margin', '3px')
+					.style('cursor', 'default')
+					.style('border-radius', '2px')
+					.html(val.label)
+					.style('background-color', '#eee')
+					.on('mouseover', () => {
+						cat_tr.style('background-color', '#fff2cc')
+					})
+					.on('mouseout', () => {
+						cat_tr.style('background-color', '#eee')
+					})
+					.on('dragstart', () => {
+						cat_tr.style('background-color', '#fff2cc')
+						event.dataTransfer.setData('text/plain', val.key)
+					})
+
+				// cat_tr
+				// 	.append('td')
+				// 	.attr('align', 'center')
+				// 	.style('padding', '2px 5px')
+				// 	.append('input')
+				// 	.attr('type', 'checkbox')
+				// 	.attr('name', key)
+				// 	.attr('value', i)
+				// 	.property('checked', () => {
+				// 		return group_val_keys.includes(key)
+				// 	})
+				// 	.on('click', () => {
+				// 		// TODO
+				// 		// cat_grps[key].group = i + 1
+				// 	})
+
+				// cat_tr
+				// 	.append('td')
+				// 	.style('display', 'inline-block')
+				// 	.style('margin', '2px')
+				// 	.style('cursor', 'default')
+				// 	.html(val.label)
+			}
 		}
 	}
-    }
 
 	/*
 		const group_rename_div = group_edit_div
