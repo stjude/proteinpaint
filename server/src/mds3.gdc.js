@@ -156,6 +156,28 @@ export function validate_query_snvindel_byisoform_2(ds) {
 	if (!api.filters) throw '.filters missing for byisoform.gdcapi'
 	if (typeof api.filters != 'function') throw 'byisoform.gdcapi.filters() is not function'
 	ds.queries.snvindel.byisoform.get = async opts => {
+		/*
+		hardcoded logic!!
+
+		as gdc ssm is based on gencode
+		to allow them to also show up on a refseq pp view
+		will detect if querying isoform is refseq
+		steps:
+		1. convert refseq to ensembl
+		2. set ensembl to opts.isoform to run query
+		3. set refseq to "refseq" holder variable
+		4. in resulting ssm, set isoform to refseq so skewer can show
+		*/
+		let refseq
+		if (opts.isoform[0] == 'N' && ds.refseq2ensembl_query) {
+			const x = ds.refseq2ensembl_query.get(opts.isoform)
+			if (x) {
+				// converted given refseq to an ensembl
+				refseq = opts.isoform
+				opts.isoform = x.ensembl
+			}
+		}
+
 		const headers = getheaders(opts)
 		const response = await got.post(api.apihost, {
 			headers,
@@ -188,6 +210,13 @@ export function validate_query_snvindel_byisoform_2(ds) {
 			snvindel_addclass(m, b.consequence.find(i => i.transcript.transcript_id == opts.isoform))
 			mlst.push(m)
 		}
+
+		if (refseq) {
+			// replace ensembl back to refseq
+			opts.isoform = refseq
+			for (const m of mlst) m.isoform = refseq
+		}
+
 		return mlst
 	}
 }

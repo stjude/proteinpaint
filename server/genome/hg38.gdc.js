@@ -4,7 +4,9 @@ module.exports = {
 	genedb: {
 		dbfile: 'anno/genes.hg38.db',
 		hasalias: true,
-		gene2canonicalisoform: true // see ./app.js
+		gene2canonicalisoform: true, // see ./app.js
+		// enable mapping for refseq and ensembl
+		refseq2ensembl: true
 	},
 	proteindomain: {
 		dbfile: 'anno/db/proteindomain.db',
