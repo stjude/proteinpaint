@@ -430,8 +430,7 @@ function setInteractivity(self) {
 			method: 'POST',
 			body: JSON.stringify(self.app.getState())
 		})
-		self.dom.sessionUrl.html(
-			`Session URL:\n${window.location.protocol}://${window.location.host}/?mass-session-id=` + res.id
-		)
+		const url = `${window.location.protocol}//${window.location.host}/?mass-session-id=${res.id}&noheader=1`
+		self.dom.sessionUrl.html(`Session URL: <a href='${url}' target=_blank>${url}</a>`)
 	}
 }
