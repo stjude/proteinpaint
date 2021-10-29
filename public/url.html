@@ -317,7 +317,7 @@ makeURL([
 		['2D','?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json']
 	]
 },
-{name:'MASS UIaa',
+{name:'MASS UI',
 	links:[
 		['TermdbTest', '?noheader=1&mass={"genome":"hg38","dslabel": "TermdbTest"}'],
 		['SJLife', '?noheader=1&mass={"genome":"hg38","dslabel": "SJLife"}'],
@@ -331,7 +331,7 @@ makeURL([
 				{
 					chartType: 'regression',
 					regressionType: 'linear',
-					term: {
+					outcome: {
 						id: 'LV_Ejection_Fraction_3D'
 					},
 				},
@@ -345,7 +345,7 @@ makeURL([
 				{
 					chartType: 'regression',
 					regressionType: 'linear',
-					term: {
+					outcome: {
 						id: 'LV_Ejection_Fraction_3D',
 					},
 					independent: [
@@ -376,7 +376,7 @@ makeURL([
 				{
 					chartType: 'regression',
 					regressionType: 'linear',
-					term: {
+					outcome: {
 						id: 'LV_Ejection_Fraction_3D',
 					},
 					independent: [
@@ -395,7 +395,7 @@ makeURL([
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
-				term: {
+				outcome: {
 					id: 'LV_Ejection_Fraction_3D',
 				}
 			}]
@@ -407,7 +407,7 @@ makeURL([
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
-				term: {
+				outcome: {
 					id: 'LV_Ejection_Fraction_3D',
 					q: {
 						"mode":"binary",
@@ -440,7 +440,7 @@ makeURL([
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
-				term: {
+				outcome: {
 					id: 'Arrhythmias',
 				}
 			}]
@@ -452,7 +452,7 @@ makeURL([
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
-				term: {
+				outcome: {
 					id: 'Arrhythmias',
 				},
 				independent: [

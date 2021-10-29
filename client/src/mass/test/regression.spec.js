@@ -36,7 +36,7 @@ tape('linear, outcome type=float', function(test) {
 					chartType: 'regression',
 					regressionType: 'linear',
 					//cutoff: 57.8,
-					term: {
+					outcome: {
 						id: 'LV_Cardiac_Output_3D',
 						q: {
 							mode: 'continuous'
@@ -99,7 +99,7 @@ tape('logistic outcome type=float', function(test) {
 					chartType: 'regression',
 					regressionType: 'logistic',
 					//cutoff: 57.8,
-					term: {
+					outcome: {
 						id: 'LV_Cardiac_Output_3D',
 						q: {
 							mode: 'binary',
@@ -168,7 +168,7 @@ tape('logistic outcome type=condition', function(test) {
 					chartType: 'regression',
 					regressionType: 'logistic',
 					//cutoff: 57.8,
-					term: {
+					outcome: {
 						id: 'Arrhythmias',
 						q: {
 							mode: 'binary',
@@ -232,7 +232,7 @@ tape('logistic outcome: missing reference category', function(test) {
 					chartType: 'regression',
 					regressionType: 'logistic',
 					//cutoff: 57.8,
-					term: {
+					outcome: {
 						id: 'vincristine_5',
 						q: {
 							mode: 'binary',

@@ -1,6 +1,5 @@
 import { deepEqual } from '../common/rx.core'
 import { select } from 'd3-selection'
-import { setPillMethods } from './regression.pill'
 import { InputTerm } from './regression.inputs.term'
 
 export class RegressionInputs {
@@ -34,16 +33,16 @@ export class RegressionInputs {
 					string label to prompt a user to select a new input variable
 				
 				.configKey        
-					["term" | "independent"], string configuration key (attribute name)
+					["outcome" | "independent"], string configuration key (attribute name)
 					the configuration that receives the selected terms
 					will also be used to find a section's selected terms from state.config  
-					TODO rename "term" to "outcome"
 				
 				.limit
 					maximum number inputs that can be selected for this section
 				
 				.exclude_types    
 					term types that cannot be selected as inputs for this section
+					// FIXME: should group these handler-specific options by input.varClass
 				
 				
 				-----  dynamic configuration data  -----
@@ -68,6 +67,9 @@ export class RegressionInputs {
 
 					.input.varClass
 						the input's variable class, like "term"
+
+					.input[input.varClass]
+						the input data for this given varClass	
 
 					.input.handler
 						the function/object/class instance that will handle
@@ -94,7 +96,7 @@ export class RegressionInputs {
 					  '<u>Select continuous outcome variable</u>'
 					: '<u>Select outcome variable</u>',
 			placeholderIcon: '',
-			configKey: 'term',
+			configKey: 'outcome',
 			limit: 1,
 			exclude_types: this.opts.regressionType == 'linear' ? ['condition', 'categorical', 'survival'] : ['survival'],
 
@@ -166,7 +168,7 @@ export class RegressionInputs {
 
 	setDisableTerms() {
 		this.disable_terms = []
-		if (this.config.term) this.disable_terms.push(this.config.term.id)
+		if (this.config.outcome) this.disable_terms.push(this.config.outcome.id)
 		if (this.config.independent) for (const term of this.config.independent) this.disable_terms.push(term.id)
 	}
 }
@@ -233,15 +235,15 @@ function setRenderers(self) {
 		// only show when this section is for outcome,
 		// or this is independent and only show it when the outcome term has been selected
 		// effect is to force user to first select outcome, then independent, but not to select independent first
-		section.dom.holder.style('display', section.configKey == 'term' || self.config.term ? 'block' : 'none')
+		section.dom.holder.style('display', section.configKey == 'outcome' || self.config.outcome ? 'block' : 'none')
 
 		updateInputs(section)
 		// section.inputs[] is now synced with plot config
 
 		const inputs = section.dom.inputsDiv
 			.selectAll(':scope > div')
-			// key function (2nd arg) uses (es6 shorthand?) determines datum and element are joined by term id
-			.data(section.inputs, input => input.term && input.term.id)
+			// key function (2nd arg) uses a function to determine how datum and element are joined by term id
+			.data(section.inputs, input => input.varClass && input[input.varClass] && input[input.varClass].id)
 
 		inputs.exit().each(removeInput)
 
@@ -252,7 +254,7 @@ function setRenderers(self) {
 	}
 
 	function updateInputs(section) {
-		// get the input variables from config.term or config.independent
+		// get the input variables from config.outcome or config.independent
 		const selected = self.config[section.configKey]
 
 		// force the outcome variable into an array for ease of handling
@@ -327,7 +329,7 @@ function setRenderers(self) {
 
 	self.updateSubmitButton = chartRendered => {
 		if (!self.dom.submitBtn) return
-		const hasBothTerms = self.config.term != undefined && self.config.independent.length
+		const hasBothTerms = self.config.outcome != undefined && self.config.independent.length
 		self.dom.submitBtn.text('Run analysis').style('display', hasBothTerms ? 'block' : 'none')
 
 		if (self.hasError) {
@@ -379,9 +381,9 @@ function setInteractivity(self) {
 		for (const term of config.independent) {
 			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
-		if (config.term.id in self.refGrpByTermId) config.term.q.refGrp = self.refGrpByTermId[config.term.id]
+		if (config.outcome.id in self.refGrpByTermId) config.outcome.q.refGrp = self.refGrpByTermId[config.outcome.id]
 		self.parent.app.dispatch({
-			type: config.term ? 'plot_edit' : 'plot_show',
+			type: config.outcome ? 'plot_edit' : 'plot_show',
 			id: self.parent.id,
 			chartType: 'regression',
 			config
