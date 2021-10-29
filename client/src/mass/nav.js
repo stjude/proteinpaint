@@ -225,8 +225,6 @@ function setRenderers(self) {
 			.append('button')
 			.html('Share')
 			.on('click', self.getSessionUrl)
-
-		self.dom.sessionUrl = self.dom.sessionDiv.append('div').style('padding', '5px')
 	}
 	self.updateUI = () => {
 		const selectCohort = self.state.termdbConfig.selectCohort
@@ -431,6 +429,7 @@ function setInteractivity(self) {
 			body: JSON.stringify(self.app.getState())
 		})
 		const url = `${window.location.protocol}//${window.location.host}/?mass-session-id=${res.id}&noheader=1`
-		self.dom.sessionUrl.html(`Session URL: <a href='${url}' target=_blank>${url}</a>`)
+		self.dom.tip.clear().showunder(self.dom.sessionDiv.node())
+		self.dom.tip.d.append('div').html(`Session URL: <a href='${url}' target=_blank>${url}</a>`)
 	}
 }
