@@ -18,6 +18,7 @@ const bamcommon = require('./bam.common')
 const basecolor = require('../shared/common').basecolor
 const serverconfig = require('./serverconfig')
 const rust_read_alignment = path.join(serverconfig.binpath, '/utils/read_alignment/target/release/read_alignment')
+const clustalo_read_alignment = path.join(serverconfig.binpath, '/utils/clustalo')
 
 /*
 XXX quick fix to be removed/disabled later
@@ -29,7 +30,7 @@ XXX quick fix to be removed/disabled later
    upon first query, will produce all possible groups based on variant type
    - snv/indel yields up to 3 groups
      1. if by snv, will require mismatches
-     2. if by complex variant, require read sequence to do k-mer or blast
+     2. if by complex variant, require read sequence to do k-mer
    - sv yields up to 2 groups
      method to be developed
    - default just 1 group with all the reads
@@ -827,6 +828,13 @@ async function do_query(q) {
 		// parse reads and cigar
 		let templates = get_templates(q, group)
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
+		if (q.variant) {
+			if (group.type == 'support_alt') {
+				align_multiple_reads(group, result.altseq)
+			} else if (group.type == 'support_ref') {
+				align_multiple_reads(group, result.refseq)
+			}
+		}
 		await poststack_adjustq(group, q, templates)
 		// read quality is not parsed yet
 		await may_checkrefseq4mismatch(templates, q)
@@ -888,6 +896,83 @@ async function do_query(q) {
 	}
 
 	return result
+}
+
+async function align_multiple_reads(group, reference_sequence) {
+	const sequence_reads = group.templates.map(i => i.sam_info.split('\t')[9])
+	const max_read_alignment = 100 // Max number of reads that can be aligned
+	let fasta_sequence = ''
+	const segbplen = sequence_reads[0].length // Getting length of read
+
+	fasta_sequence += '>seq\n' + reference_sequence + '\n'
+	let i = 0
+	for (const read of sequence_reads) {
+		if (i < max_read_alignment) {
+			fasta_sequence += '>seq\n' + read + '\n'
+		} else {
+			break
+		}
+		i += 1
+	}
+	//console.log('fasta_sequence:', fasta_sequence)
+	group.multi_read_alignment = await run_clustalo(fasta_sequence, max_read_alignment, segbplen, sequence_reads.length) // Its possible for no alignment to be displayed. This can happen when the classification is completely wrong and there is no match between any of the reads and the reference sequence
+	//console.log('Alignment:', group.multi_read_alignment)
+}
+
+function run_clustalo(fasta_sequence, max_read_alignment, segbplen, num_reads) {
+	return new Promise((resolve, reject) => {
+		const ps = spawn(clustalo_read_alignment, [
+			'-i',
+			'-', // Instructs ClustalO to accept input from stdin
+			'-t',
+			'DNA', // Input type - DNA
+			'--outfmt=clu', // Output format ClustalW
+			'--wrap=5000', // Allows upto 5000 nucleotides to be shown in a single row
+			'--maxnumseq=' + max_read_alignment, // Maximum number of sequences to analyze set to max_read_alignment
+			'--maxseqlen=250' // Maximum length of each sequence = 250
+		])
+		const stdout = []
+		const stderr = []
+		Readable.from(fasta_sequence).pipe(ps.stdin)
+		ps.stdout.on('data', data => stdout.push(data))
+		ps.stderr.on('data', data => stderr.push(data))
+		ps.on('error', err => {
+			console.log('stderr (clustalo):', stderr)
+			reject(err)
+		})
+		ps.on('close', code => {
+			console.log('RawAlignment:', stdout.toString())
+			let final_read_align = ''
+			let read_count = 0
+			for (const read of stdout.toString().split('\n')) {
+				if (read.includes('seq      ')) {
+					// Remove "-" before/after the start/end of a sequence
+					let nuc_count = 0
+					let aligned_read = ''
+					for (const nucl of read.replace('seq      ', '')) {
+						if (nucl != '-') {
+							nuc_count += 1
+							aligned_read += nucl
+						} else {
+							if (nuc_count > 0 && nuc_count < segbplen) {
+								// Only allows "-" inside reads to be displayed, removing those before/after the start/end of read
+								aligned_read += nucl
+							} else {
+								aligned_read += ' '
+							}
+						}
+					}
+					if (read_count < num_reads) {
+						final_read_align += aligned_read + ':'
+					} else if (read_count == num_reads) {
+						final_read_align += aligned_read
+					}
+					read_count += 1
+				}
+			}
+			resolve(final_read_align)
+		})
+	})
 }
 
 async function query_reads(q) {
