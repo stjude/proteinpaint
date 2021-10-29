@@ -366,6 +366,12 @@ function setInteractivity(self) {
 		// the target config to fill-in/replace/delete may hold
 		// either one or more selected input variables
 		self.config[key] = Array.isArray(self.config[key]) ? selected : selected[0]
+		self.parent.app.save({
+			type: 'plot_edit',
+			id: input.section.parent.parent.id,
+			chartType: 'regression',
+			config: JSON.parse(JSON.stringify(self.config))
+		})
 		self.triggerUpdate()
 	}
 

@@ -50,8 +50,8 @@ export async function get(req, res) {
 		} catch (e) {
 			throw 'invalid session'
 		}
-		const data = await utils.read_file(file)
-		res.send({ data })
+		const state = await utils.read_file(file)
+		res.send({ state: JSON.parse(state) })
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}
