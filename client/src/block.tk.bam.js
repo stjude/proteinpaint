@@ -1184,8 +1184,6 @@ function configPanel(tk, block) {
 		})
 	}
 
-	console.log(1185, tk.variants[0].strictness)
-
 	d
 		.append('div')
 		.style('font-size', '.8em')
