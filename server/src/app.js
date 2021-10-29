@@ -322,7 +322,7 @@ function setOptionalRoutes() {
 async function handle_healthcheck(req, res) {
 	try {
 		const health = { status: 'ok' }
-		const keys = serverconfig.features.healthcheck_keys || []
+		const keys = exports.features.healthcheck_keys || []
 
 		if (keys.includes('w')) {
 			health.w = child_process
@@ -3545,8 +3545,14 @@ async function handle_mdssvcnv_vcf(
 
 	let viewrangeupperlimit = vcfquery.viewrangeupperlimit
 	if (!viewrangeupperlimit && dsquery.iscustom) {
-		// no limit set for custom track, set a hard limit
-		viewrangeupperlimit = 2000000
+		// no limit set for custom track
+		if (exports.features.customMdsSingleSampleVcfNoRangeLimit) {
+			// this server has no range limit
+			viewrangeupperlimit = 0
+		} else {
+			// set a hard limit
+			viewrangeupperlimit = 2000000
+		}
 	}
 
 	if (req.query.singlesample) {
