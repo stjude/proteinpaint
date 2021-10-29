@@ -72,6 +72,7 @@ const express = require('express'),
 	mds2_init = require('./mds2.init'),
 	mds3_init = require('./mds3.init'),
 	mds2_load = require('./mds2.load'),
+	massSession = require('./massSession'),
 	singlecell = require('./singlecell'),
 	fimo = require('./fimo'),
 	draw_partition = require('./partitionmatrix').draw_partition,
@@ -223,6 +224,8 @@ app.post(basepath + '/fimo', fimo.handle_closure(genomes))
 app.get(basepath + '/termdb', termdb.handle_request_closure(genomes))
 app.get(basepath + '/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
 app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
+app.post(basepath + '/massSession-save', massSession.save)
+app.get(basepath + '/massSession-get', massSession.get)
 app.post(basepath + '/isoformbycoord', handle_isoformbycoord)
 app.post(basepath + '/ase', handle_ase)
 app.post(basepath + '/bamnochr', handle_bamnochr)
