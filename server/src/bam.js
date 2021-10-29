@@ -915,7 +915,7 @@ async function align_multiple_reads(group, reference_sequence) {
 		i += 1
 	}
 	//console.log('fasta_sequence:', fasta_sequence)
-	group.multi_read_alignment = await run_clustalo(fasta_sequence, max_read_alignment, segbplen, sequence_reads.length) // Its possible for no alignment to be displayed. This can happen when the classification is completely wrong and there is no match between any of the reads and the reference sequence
+	group.multi_read_alignment = await run_clustalo(fasta_sequence, max_read_alignment, segbplen, sequence_reads.length) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
 	//console.log('Alignment:', group.multi_read_alignment)
 }
 
@@ -929,7 +929,7 @@ function run_clustalo(fasta_sequence, max_read_alignment, segbplen, num_reads) {
 			'--outfmt=clu', // Output format ClustalW
 			'--wrap=5000', // Allows upto 5000 nucleotides to be shown in a single row
 			'--maxnumseq=' + max_read_alignment, // Maximum number of sequences to analyze set to max_read_alignment
-			'--maxseqlen=250' // Maximum length of each sequence = 250
+			'--maxseqlen=1000' // Maximum length of each sequence = 1000
 		])
 		const stdout = []
 		const stderr = []
