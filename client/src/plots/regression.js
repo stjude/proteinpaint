@@ -53,20 +53,12 @@ class Regression {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		if (!config.regressionType) throw 'regressionType is required'
-		// TODO change config.term to config.outcome{}
 		return {
 			vocab: appState.vocab,
-			formIsComplete: config.term && config.independent.length,
+			formIsComplete: config.outcome && config.independent.length,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			config: {
-				term: config.term,
-				regressionType: config.regressionType,
-				independent: config.independent,
-				settings: {
-					table: config.settings && config.settings.regression
-				}
-			}
+			config
 		}
 	}
 
@@ -75,7 +67,7 @@ class Regression {
 			this.config = JSON.parse(JSON.stringify(this.state.config))
 			// TODO update header upon selecting/updating outcome
 			if (this.dom.header) {
-				const termLabel = (this.config.term && this.config.term.term.name) || ''
+				const termLabel = (this.config.outcome && this.config.outcome.term.name) || ''
 				this.dom.header.html(
 					termLabel +
 						`<span style="opacity:.6;font-size:.7em;margin-left:10px;"> ${this.config.regressionType.toUpperCase()} REGRESSION</span>`

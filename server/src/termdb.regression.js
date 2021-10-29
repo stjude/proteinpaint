@@ -123,16 +123,13 @@ function parse_q(q, ds) {
 	if (['linear', 'logistic'].indexOf(q.regressionType) == -1) throw 'unknown regressionType'
 
 	// outcome
-	if (!q.term1_id) throw 'term1_id missing'
-	if (!q.term1_q) throw 'term1_q missing'
-	q.outcome = {
-		id: q.term1_id,
-		term: ds.cohort.termdb.q.termjsonByOneid(q.term1_id),
-		q: JSON.parse(q.term1_q)
-	}
-	if (!q.outcome.term) throw 'invalid outcome term: ' + q.term1_id
-	delete q.term1_id
-	delete q.term1_q
+	if (!q.outcome) throw `missing 'outcome' parameter`
+	q.outcome = JSON.parse(decodeURIComponent(q.outcome))
+	if (!q.outcome) throw `empty 'outcome' parameter`
+	if (!('id' in q.outcome)) throw 'outcome.id missing'
+	if (!q.outcome.q) throw 'outcome.q missing'
+	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
+	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
 
 	// independent
 	if (!q.independent) throw 'independent[] missing'
@@ -351,20 +348,22 @@ terms[]
 	array of {id, term, q}
 
 Returns
-[
-	{
-		sample: STRING,
-		
-		// one or more entries by term id
-	  [term.id]: {
-			// depending on term type and desired 
-			key: bin label or precomputed label or annotated value, 
-			val: precomputed or annotated value
+	[
+		{
+	  	sample: STRING,
+
+			// one or more entries by term id
+			id2value: Map[
+				term.id,
+				{
+					// depending on term type and desired 
+					key: bin label or precomputed label or annotated value, 
+					val: precomputed or annotated value
+				}
+			]
 		},
 		...
-	}, 
-	...
-]
+	]
 */
 function getSampleData(q, terms) {
 	const filter = getFilterCTEs(q.filter, q.ds)

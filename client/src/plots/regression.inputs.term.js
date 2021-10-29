@@ -39,7 +39,7 @@ export class InputTerm {
 				use_bins_less: true,
 				debug: app.opts.debug,
 				//showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
-				buttons: section.configKey == 'term' ? ['replace'] : ['delete'],
+				buttons: section.configKey == 'outcome' ? ['replace'] : ['delete'],
 				numericEditMenuVersion: getMenuVersion(config, this.input),
 				usecase: { target: 'regression', detail: section.configKey, regressionType: config.regressionType },
 				disable_terms,
@@ -49,7 +49,7 @@ export class InputTerm {
 				}
 			})
 
-			if (section.configKey == 'term') {
+			if (section.configKey == 'outcome') {
 				this.setQ = getQSetter(config.regressionType)
 				//if (this.input.term) await this.setQ[this.input.term.term.type](this.input)
 			}
@@ -117,7 +117,7 @@ export class InputTerm {
 
 function getMenuVersion(config, input) {
 	// for the numericEditMenuVersion of termsetting constructor option
-	if (input.section.configKey == 'term') {
+	if (input.section.configKey == 'outcome') {
 		// outcome
 		if (config.regressionType == 'logistic') return ['binary']
 		if (config.regressionType == 'linear') return ['continuous']

@@ -55,17 +55,11 @@ export class RegressionResults {
 	// a unique request identifier to be used for caching server response
 	getDataName() {
 		const c = this.config // the plot object in state
-		const params = ['getregression=1', 'term1_id=' + encodeURIComponent(c.term.term.id)]
-		if (c.regressionType == 'logistic') {
-			params.push('term1_q=' + q_to_param(c.term.q))
-			params.push('regressionType=logistic')
-		} else {
-			// TODO: need to add q.scale, why is the mode not set via termsetting callback
-			params.push('term1_q=' + encodeURIComponent(JSON.stringify({ mode: 'continuous' })))
-			params.push('regressionType=linear')
-		}
-
-		params.push(
+		const outcome = encodeURIComponent(JSON.stringify({ id: c.outcome.id, q: c.outcome.q }))
+		const params = [
+			'getregression=1',
+			`regressionType=${c.regressionType}`,
+			`outcome=${outcome}`,
 			'independent=' +
 				encodeURIComponent(
 					JSON.stringify(
@@ -77,7 +71,7 @@ export class RegressionResults {
 						})
 					)
 				)
-		)
+		]
 
 		const filterData = getNormalRoot(this.state.termfilter.filter)
 		if (filterData.lst.length) {

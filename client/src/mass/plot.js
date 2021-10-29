@@ -113,6 +113,10 @@ export function q_to_param(q) {
 }
 
 export function plotConfig(opts, appState = {}) {
+	if (opts.chartType == 'regression') {
+		return regressionConfig(opts)
+	}
+
 	if (!opts.term) throw 'plotConfig: opts.term{} missing'
 	if (!opts.term.term) throw 'plotConfig: opts.term.term{} missing'
 	if (!opts.term.term.id) throw 'plotConfig: opts.term.term.id missing'
@@ -124,7 +128,6 @@ export function plotConfig(opts, appState = {}) {
 
 	const config = {
 		id: opts.term.term.id,
-		independent: [],
 		settings: {
 			currViews: ['barchart'],
 			controls: {
@@ -216,6 +219,32 @@ export function plotConfig(opts, appState = {}) {
 		}
 	}
 
+	// may apply term-specific changes to the default object
+	return rx.copyMerge(config, opts)
+}
+
+let _ID_ = 0
+
+export function regressionConfig(opts) {
+	if (!opts.outcome) throw 'regression config: opts.outcome{} missing'
+	if (!opts.outcome.term) throw 'regression config: opts.outcome.term{} missing'
+	if (!('id' in opts.outcome.term)) throw 'regression config: opts.outcome.term.id missing'
+
+	const id = 'id' in opts ? opts.id : `_PLOTID_${_ID_++}`
+	const config = { id }
+
+	fillTermWrapper(opts.outcome)
+	config.outcome = opts.outcome
+
+	if (opts.independent) {
+		for (const t of opts.independent) {
+			// FIXME: once varClass if fully supported, does not have to test for t.term
+			if (t.varClass == 'term' || t.term) fillTermWrapper(t)
+		}
+		config.independent = opts.independent
+	} else {
+		config.independent = []
+	}
 	// may apply term-specific changes to the default object
 	return rx.copyMerge(config, opts)
 }

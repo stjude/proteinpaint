@@ -315,7 +315,7 @@ function setRenderers(self) {
 		const q = (t && t.q) || {}
 		const { included, excluded, total } = self.totalCount
 
-		if (input.section.configKey == 'term') {
+		if (input.section.configKey == 'outcome') {
 			dom.term_summmary_div.text(`${included} sample included.` + (excluded ? ` ${excluded} samples excluded:` : ''))
 			// QUICK FIX: hide top_info_div rightnow for linear regression,
 			// for logistic regression, it needs to be changed as required

@@ -89,12 +89,13 @@ class TdbStore {
 
 			for (const savedPlot of this.state.plots) {
 				// .term{} is required, if missing, add with plotId
-				if (!savedPlot.term) savedPlot.term = {}
-				if (!savedPlot.term.id) savedPlot.term.id = plotId
+				const termKey = savedPlot.chartType == 'regression' ? 'outcome' : 'term'
+				if (!savedPlot[termKey]) savedPlot[termKey] = {}
+				if (!savedPlot[termKey].id && savedPlot.id) savedPlot[termKey].id = savedPlot.id
 				// .term2 and term0 are optional, but .id is required as that's a different term than plotId
 				if (savedPlot.term2 && !savedPlot.term2.id) delete savedPlot.term2
 				if (savedPlot.term0 && !savedPlot.term0.id) delete savedPlot.term0
-				for (const t of ['term', 'term2', 'term0']) {
+				for (const t of ['outcome', 'term', 'term2', 'term0']) {
 					if (!savedPlot[t]) continue
 					savedPlot[t].term = await this.app.vocabApi.getterm(savedPlot[t].id)
 				}
@@ -183,11 +184,8 @@ class TdbStore {
 	}
 
 	adjustPlotCurrViews(plotConfig) {
-		if (!plotConfig) return
+		if (!plotConfig || plotConfig.chartType == 'regression') return
 		const currViews = plotConfig.settings.currViews || []
-		if (plotConfig.chartType == 'regression') {
-			plotConfig.settings.currViews = ['regression']
-		}
 		if (currViews.includes('table') && !plotConfig.term2) {
 			plotConfig.settings.currViews = ['barchart']
 		}
@@ -334,9 +332,21 @@ function validatePlot(p, vocabApi) {
 	not for the saved state
 	*/
 	if (!('id' in p)) throw 'plot error: plot.id missing'
+	try {
+		if (p.chartType == 'regression') {
+			validateRegressionPlot(p, vocabApi)
+		} else {
+			validateGenericPlot(p, vocabApi)
+		}
+	} catch (e) {
+		throw e
+	}
+}
+
+function validateGenericPlot(p, vocabApi) {
 	if (!p.term) throw 'plot error: plot.term{} not an object'
 	try {
-		validatePlotTerm(p.term, vocabApi)
+		validatePlotTerm(p.chartType == 'regression' ? p.outcome : p.term, vocabApi)
 	} catch (e) {
 		throw 'plot.term error: ' + e
 	}
@@ -359,6 +369,25 @@ function validatePlot(p, vocabApi) {
 			validatePlotTerm(p.term0, vocabApi)
 		} catch (e) {
 			throw 'plot.term0 error: ' + e
+		}
+	}
+}
+
+function validateRegressionPlot(p, vocabApi) {
+	if (!p.outcome) throw 'plot error: plot.outcome{} not an object'
+	try {
+		validatePlotTerm(p.chartType == 'regression' ? p.outcome : p.term, vocabApi)
+	} catch (e) {
+		throw 'plot.outcome error: ' + e
+	}
+
+	if (p.independent) {
+		for (const item of p.independent) {
+			if (item.varClass == 'term') {
+				validatePlotTerm(item, vocabApi)
+			} else {
+				throw `cannot validate varClass=${item.varClass}`
+			}
 		}
 	}
 }
