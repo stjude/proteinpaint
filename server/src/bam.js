@@ -928,7 +928,7 @@ function run_clustalo(fasta_sequence, max_read_alignment, segbplen, num_reads) {
 			'DNA', // Input type - DNA
 			'--outfmt=clu', // Output format ClustalW
 			'--wrap=5000', // Allows upto 5000 nucleotides to be shown in a single row
-			'--maxnumseq=' + max_read_alignment, // Maximum number of sequences to analyze set to max_read_alignment
+			'--maxnumseq=' + (max_read_alignment + 1), // Maximum number of sequences to analyze set to max_read_alignment
 			'--maxseqlen=1000' // Maximum length of each sequence = 1000
 		])
 		const stdout = []
