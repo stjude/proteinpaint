@@ -950,7 +950,7 @@ function run_clustalo(fasta_sequence, max_read_alignment, segbplen, num_reads) {
 					let nuc_count = 0
 					let aligned_read = ''
 					for (const nucl of read.replace('seq      ', '')) {
-						if (nucl != '-') {
+						if (nucl != '-' && nucl != ',') {
 							nuc_count += 1
 							aligned_read += nucl
 						} else {
@@ -968,6 +968,10 @@ function run_clustalo(fasta_sequence, max_read_alignment, segbplen, num_reads) {
 						final_read_align += aligned_read
 					}
 					read_count += 1
+				} else if (read.includes('FATAL:') || read.includes('ERROR:')) {
+					// Possible problem in read-alignment
+					console.log(read)
+					reject(read)
 				}
 			}
 			resolve(final_read_align)
