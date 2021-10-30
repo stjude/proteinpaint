@@ -828,13 +828,6 @@ async function do_query(q) {
 		// parse reads and cigar
 		let templates = get_templates(q, group)
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
-		if (q.variant) {
-			if (group.type == 'support_alt') {
-				align_multiple_reads(group, result.altseq)
-			} else if (group.type == 'support_ref') {
-				align_multiple_reads(group, result.refseq)
-			}
-		}
 		await poststack_adjustq(group, q, templates)
 		// read quality is not parsed yet
 		await may_checkrefseq4mismatch(templates, q)
@@ -852,6 +845,13 @@ async function do_query(q) {
 			count: { r: templates.reduce((i, j) => i + j.segments.length, 0) } // group.templates
 		}
 
+		if (q.variant) {
+			if (group.type == 'support_alt') {
+				gr.aligned_reads = await align_multiple_reads(group, result.altseq) // Aligning alt-classified reads to alternate allele
+			} else if (group.type == 'support_ref') {
+				gr.aligned_reads = await align_multiple_reads(group, result.refseq) // Aligning ref-classified reads to reference allele
+			}
+		}
 		const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
 		const ctx = canvas.getContext('2d')
 		if (q.devicePixelRatio > 1) {
@@ -915,8 +915,7 @@ async function align_multiple_reads(group, reference_sequence) {
 		i += 1
 	}
 	//console.log('fasta_sequence:', fasta_sequence)
-	group.multi_read_alignment = await run_clustalo(fasta_sequence, max_read_alignment, segbplen, sequence_reads.length) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
-	//console.log('Alignment:', group.multi_read_alignment)
+	return await run_clustalo(fasta_sequence, max_read_alignment, segbplen, sequence_reads.length) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
 }
 
 function run_clustalo(fasta_sequence, max_read_alignment, segbplen, num_reads) {
@@ -941,7 +940,7 @@ function run_clustalo(fasta_sequence, max_read_alignment, segbplen, num_reads) {
 			reject(err)
 		})
 		ps.on('close', code => {
-			console.log('RawAlignment:', stdout.toString())
+			//console.log('RawAlignment:', stdout.toString())
 			let final_read_align = ''
 			let read_count = 0
 			for (const read of stdout.toString().split('\n')) {
