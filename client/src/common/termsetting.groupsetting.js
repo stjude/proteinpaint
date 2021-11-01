@@ -10,13 +10,18 @@ export function setGroupsettingMethods(self) {
 		const default_1grp = [
 			{
 				values: Object.keys(values).map(key => {
-					return { key, label: values[key].label}
+					return { key, label: values[key].label }
 				})
 			}
 		]
 		const default_empty_group = { values: [] }
 		const empty_groups = Array(default_grp_count - 1).fill(default_empty_group)
 		const default_groupset = { groups: [...default_1grp, ...empty_groups] }
+        const excluded_cats = []
+        Object.keys(cat_grps).forEach(key => {
+            if(cat_grps[key].group == 0)
+            excluded_cats.push({ key, label: cat_grps[key].label }) 
+        })
 
 		//initiate empty customset
 		let customset = { groups: [] }
@@ -32,7 +37,6 @@ export function setGroupsettingMethods(self) {
 				? self.q.groupsetting.customset
 				: default_groupset
 
-        console.log(groupset)
 		for (let i = 0; i < default_grp_count; i++) {
 			let group_name =
 				groupset && groupset.groups && groupset.groups[i] && groupset.groups[i].name
@@ -114,7 +118,10 @@ export function setGroupsettingMethods(self) {
                 cat_grps[val.key].group = 0
             })
 
-         const exclude_list = exclude_div.append('div')
+        const exclude_list = exclude_div.append('div')
+
+        // show excluded categories
+        add_group_items(exclude_list, excluded_cats)
 
 		// 'Apply' button
 		button_div
@@ -160,7 +167,6 @@ export function setGroupsettingMethods(self) {
 					const item = groups_holder.select('#sj-drag-item-' + id)
 					group_list.node().appendChild(item.node())
                     const val = item._groups[0][0].__data__
-                    console.log(val, cat_grps)
                     cat_grps[val.key].group = i+1
 				})
 
@@ -191,40 +197,12 @@ export function setGroupsettingMethods(self) {
 						customset
 						//predefined_groupset_idx: removed from this q.groupsetting
 					}
-
-					// self.regroupMenu(default_grp_count, cat_grps)
 				})
 
 
 			const group_list = group_div.append('div').style('margin', '5px')
-
-            const group_items = group_list.selectAll('div').data(group.values)
-            group_items.enter()
-			    .append('div')
-                .each(function (val) {
-                    if(cat_grps[val.key].group == undefined) cat_grps[val.key].group = 1
-                    const dom_id = typeof(val.key) == 'string' 
-                        ? val.key.replace(/[^A-Z0-9]/ig, '') : val.key
-                    const item = select(this)
-                        .attr('draggable', 'true')
-                        .attr('id', 'sj-drag-item-' + dom_id)
-                        .attr('class','sj-drag-item')
-                        .style('margin', '3px')
-                        .style('cursor', 'default')
-                        .style('border-radius', '2px')
-                        .html(val.label ? val.label : val.key)
-                        .style('background-color', '#eee')
-                        .on('mouseover', () => {
-                            item.style('background-color', '#fff2cc')
-                        })
-                        .on('mouseout', () => {
-                            item.style('background-color', '#eee')
-                        })
-                        .on('dragstart', () => {
-                            item.style('background-color', '#fff2cc')
-                            event.dataTransfer.setData('text/plain', dom_id)
-                        })
-                })
+            // show categories from the group
+            add_group_items(group_list, group.values)
 		}
 
         function init_dragable_div(holder, group_name){
@@ -267,6 +245,36 @@ export function setGroupsettingMethods(self) {
                 .text(group_name)
 
             return dragable_div
+        }
+
+        function add_group_items(list_holder, values){
+            const group_items = list_holder.selectAll('div').data(values)
+            group_items.enter()
+			    .append('div')
+                .each(function (val) {
+                    if(cat_grps[val.key].group == undefined) cat_grps[val.key].group = 1
+                    const dom_id = typeof(val.key) == 'string' 
+                        ? val.key.replace(/[^A-Z0-9]/ig, '') : val.key
+                    const item = select(this)
+                        .attr('draggable', 'true')
+                        .attr('id', 'sj-drag-item-' + dom_id)
+                        .attr('class','sj-drag-item')
+                        .style('margin', '3px')
+                        .style('cursor', 'default')
+                        .style('border-radius', '2px')
+                        .html(val.label ? val.label : val.key)
+                        .style('background-color', '#eee')
+                        .on('mouseover', () => {
+                            item.style('background-color', '#fff2cc')
+                        })
+                        .on('mouseout', () => {
+                            item.style('background-color', '#eee')
+                        })
+                        .on('dragstart', () => {
+                            item.style('background-color', '#fff2cc')
+                            event.dataTransfer.setData('text/plain', dom_id)
+                        })
+                })
         }
 	}
 
