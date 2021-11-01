@@ -136,7 +136,10 @@ function setRenderers(self) {
 				.style('width', '300px')
 				.style('margin', '10px')
 				.style('vertical-align', 'top'),
-			sessionDiv: header.append('div').style('display', 'inline-block'),
+			sessionDiv: header
+				.append('div')
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top'),
 			subheaderDiv: self.opts.holder
 				.append('div')
 				.style('display', 'none')
@@ -217,6 +220,11 @@ function setRenderers(self) {
 		self.dom.trs = table.selectAll('tr')
 		self.dom.tds = table.selectAll('td')
 		self.subheaderKeys = ['charts', 'cohort', 'filter', 'cart']
+
+		self.dom.sessionDiv
+			.append('button')
+			.html('Share')
+			.on('click', self.getSessionUrl)
 	}
 	self.updateUI = () => {
 		const selectCohort = self.state.termdbConfig.selectCohort
@@ -413,5 +421,15 @@ function setInteractivity(self) {
 		self.searching = false
 		self.hideSubheader = false
 		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
+	}
+
+	self.getSessionUrl = async () => {
+		const res = await dofetch3('/massSession', {
+			method: 'POST',
+			body: JSON.stringify(self.app.getState())
+		})
+		const url = `${window.location.protocol}//${window.location.host}/?mass-session-id=${res.id}&noheader=1`
+		self.dom.tip.clear().showunder(self.dom.sessionDiv.node())
+		self.dom.tip.d.append('div').html(`Session URL: <a href='${url}' target=_blank>${url}</a>`)
 	}
 }

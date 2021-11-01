@@ -70,6 +70,19 @@ upon error, throw err message as a string
 		return
 	}
 
+	if (urlp.has('mass-session-id')) {
+		const id = urlp.get('mass-session-id')
+		const res = await client.dofetch3(`/massSession?id=${id}`)
+		if (res.error) throw res.error
+		const opts = {
+			holder: arg.holder,
+			state: res.state
+		}
+		const _ = await import('./mass/app')
+		_.appInit(opts)
+		return
+	}
+
 	if (urlp.has('genome') && arg.selectgenome) {
 		const n = urlp.get('genome')
 		const genome_options = [...arg.selectgenome.node().childNodes]

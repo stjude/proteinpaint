@@ -13,16 +13,19 @@ export class InputValuesTable {
 	async main() {
 		try {
 			const input = this.handler.input
-			if (!input.term) {
+			const t = input.term
+			if (!t) {
 				this.dom.holder.style('display', 'none')
 				return
 			}
+			delete t.error
 			this.dom.holder.style('display', 'block')
 			this.dom.loading_div.style('display', 'block')
 			await this.updateValueCount(input)
 			this.mayUpdateModeRefGrp(input, input.section.parent.refGrpByTermId)
 			this.dom.loading_div.style('display', 'none')
 			this.render()
+			if (t.error) throw t.error
 		} catch (e) {
 			this.dom.loading_div.style('display', 'none')
 			throw e
@@ -32,6 +35,7 @@ export class InputValuesTable {
 	async updateValueCount(input) {
 		const parent = input.section.parent
 		const state = parent.state
+		const t = input.term
 
 		// query backend for total sample count for each value of categorical or condition terms
 		// and included and excluded sample count for numeric term
@@ -40,7 +44,6 @@ export class InputValuesTable {
 			/*  !!! NOTE: assumes that term.q has already been validated !!! */
 			// create a q copy to remove unnecessary parameters
 			// from the server request
-			const t = input.term
 			const q = JSON.parse(JSON.stringify(t.q))
 			/*
 				for continuous term, assume it is numeric and that we'd want counts by bins,
@@ -97,7 +100,7 @@ export class InputValuesTable {
 				})
 			}
 		} catch (e) {
-			throw e
+			t.error = e
 		}
 	}
 

@@ -26,12 +26,12 @@ export class RegressionResults {
 		}
 	}
 
-	async main(config) {
+	async main() {
 		try {
 			// share the writable config copy
 			this.config = this.parent.config
 			this.state = this.parent.state
-			if (!this.state.formIsComplete || this.parent.inputs.hasError) {
+			if (!this.state.formIsComplete || this.parent.inputs.hasError || this.config.hasUnsubmittedEdits) {
 				this.dom.holder.style('display', 'none')
 				return
 			}

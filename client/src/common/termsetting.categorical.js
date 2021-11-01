@@ -59,14 +59,14 @@ export function setCategoricalMethods(self) {
 		// validate the configuration
 		if (!('type' in q)) q.type = 'values' // default
 		if (q.type == 'values') {
-			if (!t.values) throw `no term.values defined ${endNote}`
+			if (!t.values) self.error = `no term.values defined ${endNote}`
 			if (q.mode == 'binary') {
-				if (Object.keys(t.values).length != 2) throw `term.values must have exactly two keys ${endNote}`
+				if (Object.keys(t.values).length != 2) self.error = `term.values must have exactly two keys ${endNote}`
 
 				if (data.sampleCounts) {
 					for (const key in t.values) {
 						if (!data.sampleCounts.find(d => d.key === key))
-							throw `there are no samples for the required binary value=${key} ${endNote}`
+							self.error = `there are no samples for the required binary value=${key} ${endNote}`
 					}
 				}
 			}
@@ -117,7 +117,6 @@ export function setCategoricalMethods(self) {
 				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
 				: ''
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
-
 		const active_group_info_div = div.append('div').style('margin', '10px')
 
 		// if using predfined groupset, display name
