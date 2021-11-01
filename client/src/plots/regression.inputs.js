@@ -136,7 +136,6 @@ export class RegressionInputs {
 
 	async main() {
 		try {
-			this.hasError = false
 			// disable submit button on click, reenable after rendering results
 			this.dom.submitBtn.property('disabled', true).text('Running...')
 			// share the writable config copy
@@ -145,11 +144,14 @@ export class RegressionInputs {
 			await this.triggerUpdate()
 		} catch (e) {
 			this.hasError = true
+			// FIXME: does not seem right to modify results dom from the inputs code here
+			this.parent.results.dom.holder.style('display', 'none')
 			throw e
 		}
 	}
 
 	async triggerUpdate() {
+		this.hasError = false
 		this.setDisableTerms()
 		const updates = []
 		for (const section of this.sections) {
@@ -163,6 +165,14 @@ export class RegressionInputs {
 			}
 		}
 		await Promise.all(updates)
+		for (const section of this.sections) {
+			for (const input of section.inputs) {
+				if ((input.term && input.term.error) || (input.handler && input.handler.hasError)) {
+					this.hasError = true
+					this.parent.results.dom.holder.style('display', 'none')
+				}
+			}
+		}
 		this.updateSubmitButton(true)
 	}
 
@@ -366,13 +376,14 @@ function setInteractivity(self) {
 		// the target config to fill-in/replace/delete may hold
 		// either one or more selected input variables
 		self.config[key] = Array.isArray(self.config[key]) ? selected : selected[0]
-		self.parent.app.save({
+		self.config.hasUnsubmittedEdits = true
+
+		self.parent.app.dispatch({
 			type: 'plot_edit',
 			id: input.section.parent.parent.id,
 			chartType: 'regression',
 			config: JSON.parse(JSON.stringify(self.config))
 		})
-		self.triggerUpdate()
 	}
 
 	self.submit = () => {
@@ -383,11 +394,14 @@ function setInteractivity(self) {
 		}
 
 		const config = JSON.parse(JSON.stringify(self.config))
+		config.hasUnsubmittedEdits = false
+
 		//delete config.settings
 		for (const term of config.independent) {
 			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
 		if (config.outcome.id in self.refGrpByTermId) config.outcome.q.refGrp = self.refGrpByTermId[config.outcome.id]
+
 		self.parent.app.dispatch({
 			type: config.outcome ? 'plot_edit' : 'plot_show',
 			id: self.parent.id,

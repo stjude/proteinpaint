@@ -73,11 +73,12 @@ class Regression {
 						`<span style="opacity:.6;font-size:.7em;margin-left:10px;"> ${this.config.regressionType.toUpperCase()} REGRESSION</span>`
 				)
 			}
-			await this.inputs.main(this.config)
-			await this.results.main(this.config)
+			await this.inputs.main()
+			await this.results.main()
 			await this.inputs.updateSubmitButton(true)
 		} catch (e) {
-			sayerror(this.dom.errordiv, 'Error: ' + (e.error || e))
+			if (this.inputs.hasError) this.results.main(this.config)
+			sayerror(this.dom.errordiv, 'Errorxxxx: ' + (e.error || e))
 			if (e.stack) console.log(e.stack)
 		}
 	}

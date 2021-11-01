@@ -77,6 +77,7 @@ class TermSetting {
 				try {
 					this.dom.tip.hide()
 					this.hasError = false
+					delete this.error
 					this.validateMainData(data)
 					// term is read-only if it comes from state, let it remain read-only
 					this.term = data.term

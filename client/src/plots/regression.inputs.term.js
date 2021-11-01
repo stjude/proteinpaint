@@ -72,34 +72,43 @@ export class InputTerm {
 	}
 
 	async update() {
-		//this.input = input
-		// reference shortcuts from this.input
-		const section = this.input.section
-		const { config, state, disable_terms } = this.input.section.parent
+		const t = this.input.term
+
+		// clear previous errors
+		if (t) delete t.error
+		this.dom.err_div.style('display', 'none').text('')
+		this.hasError = false
 
 		try {
-			if (this.input.term && this.setQ) {
-				await this.setQ[this.input.term.term.type](this.input)
+			if (t && this.setQ) {
+				await this.setQ[t.term.type](this.input)
 			}
-			const t = this.input.term
-			const args = Object.assign(
-				{
-					disable_terms,
-					exclude_types: section.exclude_types,
-					usecase: {
-						target: 'regression',
-						detail: section.configKey,
-						regressionType: config.regressionType
-					}
-				},
-				this.input.term
-			)
-			args.filter = state.termfilter.filter
-			await this.pill.main(args)
+			await this.pill.main(this.getPillArgs())
 			await this.valuesTable.main()
+			if (t && t.error) this.displayError(t.error)
+			else if (this.pill.error) this.displayError(this.pill.error)
 		} catch (e) {
 			this.displayError(e)
 		}
+	}
+
+	getPillArgs() {
+		const section = this.input.section
+		const { config, state, disable_terms } = section.parent
+		const args = Object.assign(
+			{
+				disable_terms,
+				exclude_types: section.exclude_types,
+				usecase: {
+					target: 'regression',
+					detail: section.configKey,
+					regressionType: config.regressionType
+				}
+			},
+			this.input.term
+		)
+		args.filter = state.termfilter.filter
+		return args
 	}
 
 	remove(input) {
@@ -223,7 +232,9 @@ async function maySetTwoGroups(input) {
 	}
 	if (computableCategories.length < 2) {
 		// TODO UI should reject this term and prompt user to select a different one
-		throw 'less than 2 categories/grades'
+		q.type = 'values'
+		input.term.error = 'less than 2 categories/grades - cannot create separate groups'
+		return
 	}
 	if (computableCategories.length == 2) {
 		q.type = 'values'
