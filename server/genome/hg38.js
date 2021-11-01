@@ -10,6 +10,8 @@ module.exports = {
 		// in debugmode, keep this table for the convenience of browser testing when working on gdc features,
 		// so no need of switching to "hg38.gdc.js" and back
 		gene2canonicalisoform: serverconfig.debugmode,
+		// enable mapping for refseq and ensembl
+		refseq2ensembl: true,
 		// TO BE DELETED once gene2coord table is added to all genomes
 		gene2coord: true
 	},

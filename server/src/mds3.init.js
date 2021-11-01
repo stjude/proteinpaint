@@ -19,6 +19,8 @@ export async function init(ds, genome, _servconfig) {
 	validate_query_genecnv(ds, genome)
 	validate_ssm2canonicalisoform(ds)
 	init_dictionary(ds)
+
+	may_add_refseq2ensembl(ds, genome)
 }
 
 export function client_copy(ds) {
@@ -703,4 +705,14 @@ async function init_dictionary(ds) {
 		ds.cohort = {}
 		await gdc.init_dictionary(ds)
 	}
+}
+
+/* if genome allows converting refseq/ensembl
+add a convertor in ds to map refseq to ensembl
+this is required for gdc dataset
+so that gencode-annotated stuff can show under a refseq name
+*/
+function may_add_refseq2ensembl(ds, genome) {
+	if (!genome.genedb.refseq2ensembl) return
+	ds.refseq2ensembl_query = genome.genedb.db.prepare('select ensembl from refseq2ensembl where refseq=?')
 }
