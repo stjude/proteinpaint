@@ -922,6 +922,12 @@ function makeGroup(gd, tk, block, data) {
 				return
 			}
 			if (!group.data.templatebox) return
+			//console.log('group.data:', group.data)
+
+			if (tk.variants) {
+				const multi_read_alig_data = align_reads_to_allele(tk, group, block)
+				console.log('multi_read_alig_data:', multi_read_alig_data)
+			}
 			for (const t of group.data.templatebox) {
 				const bx1 = Math.max(0, t.x1)
 				const bx2 = Math.min(block.width, t.x2)
@@ -1121,6 +1127,39 @@ function makeGroup(gd, tk, block, data) {
 			})
 		})
 	return group
+}
+
+async function align_reads_to_allele(tk, group, block) {
+	// Read alignment against allele is only done when tk.variants is defined
+	const alig_lst = []
+	alig_lst.push('alignOneGroup=' + group.data.type)
+	alig_lst.push('genome=' + block.genome.name)
+	alig_lst.push('regions=' + JSON.stringify(tk.regions))
+	if (tk.file) alig_lst.push('file=' + tk.file)
+	alig_lst.push(
+		'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
+	)
+	if (tk.alleleAlreadyUpdated) {
+		// This should always be true when this function is invoked, but adding this if condition for safety sake
+		alig_lst.push('alleleAlreadyUpdated=1')
+		alig_lst.push('refseq=' + tk.variants[0].refseq)
+		alig_lst.push('altseq=' + tk.variants[0].altseq)
+		alig_lst.push('leftflankseq=' + tk.variants[0].leftflankseq)
+		alig_lst.push('rightflankseq=' + tk.variants[0].rightflankseq)
+	}
+	if (tk.uninitialized) {
+		alig_lst.push('getcolorscale=1')
+		delete tk.uninitialized
+	}
+	if (tk.asPaired) {
+		alig_lst.push('asPaired=1')
+	}
+	if ('nochr' in tk) {
+		alig_lst.push('nochr=' + tk.nochr)
+	}
+	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	return await dofetch3('tkbam?' + alig_lst.join('&'), { headers })
+	//console.log('multi_read_alig_data:', multi_read_alig_data)
 }
 
 function configPanel(tk, block) {

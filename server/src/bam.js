@@ -18,7 +18,7 @@ const bamcommon = require('./bam.common')
 const basecolor = require('../shared/common').basecolor
 const serverconfig = require('./serverconfig')
 const rust_read_alignment = path.join(serverconfig.binpath, '/utils/read_alignment/target/release/read_alignment')
-const clustalo_read_alignment = path.join(serverconfig.binpath, '/utils/clustalo')
+const clustalo_read_alignment = serverconfig.clustalo || 'clustalo'
 
 /*
 XXX quick fix to be removed/disabled later
@@ -254,6 +254,14 @@ module.exports = genomes => {
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
+
+			console.log('req.query:', req.query)
+			if (req.query.alignOneGroup) {
+				const q = await get_q(genome, req)
+				res.send(await do_query(q))
+				return
+			}
+
 			if (req.query.getread) {
 				res.send(await route_getread(genome, req))
 				return
@@ -660,6 +668,7 @@ async function get_q(genome, req) {
 	} else {
 		const [e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
+
 		// a query object to collect all the bits
 		q = {
 			genome,
@@ -674,7 +683,6 @@ async function get_q(genome, req) {
 			q.dir = await utils.cache_index(_file, req.query.indexURL || _file + '.bai')
 		}
 	}
-
 	if (req.query.pileupheight) {
 		q.pileupheight = Number(req.query.pileupheight)
 		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
@@ -703,6 +711,9 @@ async function get_q(genome, req) {
 			ref: t[2].toUpperCase(),
 			alt: t[3].toUpperCase(),
 			strictness: t[4]
+		}
+		if (req.query.alignOneGroup) {
+			q.alignOneGroup = req.query.alignOneGroup
 		}
 		if (Number.isNaN(q.variant.pos)) throw 'variant pos not integer'
 	} else if (req.query.sv) {
@@ -775,7 +786,6 @@ async function do_query(q) {
 		// When maximum read limit is reached
 		result.count.read_limit_reached = q.read_limit_reached
 	}
-
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 	{
 		const out = await divide_reads_togroups(q) // templates
@@ -825,9 +835,32 @@ async function do_query(q) {
 		// do stacking for each group separately
 		// attach temp attributes directly to "group", rendering result push to results.groups[]
 
+		if (q.alignOneGroup && q.alignOneGroup != group.type) {
+			// When its a q.alignOneGroup request and the group type does not match the one requested, no need to process this iteration
+			continue
+		}
+
 		// parse reads and cigar
 		let templates = get_templates(q, group)
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
+		if (q.alignOneGroup && q.alignOneGroup == group.type) {
+			// do alignment
+			// call a function from a new script
+			// get alignment data (text)
+			let alignmentData
+			if (q.variant) {
+				if (group.type == 'support_alt') {
+					alignmentData = await align_multiple_reads(group, result.altseq) // Aligning alt-classified reads to alternate allele
+				} else if (group.type == 'support_ref') {
+					alignmentData = await align_multiple_reads(group, result.refseq) // Aligning ref-classified reads to reference allele
+				} else {
+					// when category type is none category
+					console.log('None category, no alignments')
+				}
+			}
+			//console.log('alignmentData:', alignmentData)
+			return { alignmentData }
+		}
 		await poststack_adjustq(group, q, templates)
 		// read quality is not parsed yet
 		await may_checkrefseq4mismatch(templates, q)
@@ -845,13 +878,6 @@ async function do_query(q) {
 			count: { r: templates.reduce((i, j) => i + j.segments.length, 0) } // group.templates
 		}
 
-		if (q.variant) {
-			if (group.type == 'support_alt') {
-				gr.aligned_reads = await align_multiple_reads(group, result.altseq) // Aligning alt-classified reads to alternate allele
-			} else if (group.type == 'support_ref') {
-				gr.aligned_reads = await align_multiple_reads(group, result.refseq) // Aligning ref-classified reads to reference allele
-			}
-		}
 		const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
 		const ctx = canvas.getContext('2d')
 		if (q.devicePixelRatio > 1) {
@@ -1231,6 +1257,7 @@ async function divide_reads_togroups(q) {
 
 	const widths = []
 	let width = 0
+
 	for (const r of q.regions) {
 		for (const line of r.lines) {
 			// FIXME to support multi-region
