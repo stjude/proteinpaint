@@ -9,8 +9,8 @@ export function setGroupsettingMethods(self) {
 		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
 		const default_1grp = [
 			{
-				values: Object.values(values).map(v => {
-					return { key: v.label }
+				values: Object.keys(values).map(key => {
+					return { key, label: values[key].label}
 				})
 			}
 		]
@@ -32,6 +32,7 @@ export function setGroupsettingMethods(self) {
 				? self.q.groupsetting.customset
 				: default_groupset
 
+        console.log(groupset)
 		for (let i = 0; i < default_grp_count; i++) {
 			let group_name =
 				groupset && groupset.groups && groupset.groups[i] && groupset.groups[i].name
@@ -109,6 +110,8 @@ export function setGroupsettingMethods(self) {
                 const id = event.dataTransfer.getData('text')
                 const item = groups_holder.select('#sj-drag-item-' + id)
                 exclude_list.node().appendChild(item.node())
+                const val = item._groups[0][0].__data__
+                cat_grps[val.key].group = 0
             })
 
          const exclude_list = exclude_div.append('div')
@@ -119,21 +122,20 @@ export function setGroupsettingMethods(self) {
 			.attr('class', 'apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '13px')
-			// .style('padding', '7px 6px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
 			.style('text-transform', 'uppercase')
 			.text('Apply')
 			.on('click', () => {
-				const name_inputs = group_rename_div.node().querySelectorAll('input')
+				const name_inputs = groups_holder.node().querySelectorAll('input')
 				//update customset and add to self.q
-				for (const key in cat_grps) {
+				for (const [key, val] of Object.entries(cat_grps)) {
 					const i = cat_grps[key].group - 1
 					const group = customset.groups[i]
 					if (group) {
 						group.name = name_inputs[i].value
-						group.values.push({ key })
+                        group.values.push({key: typeof(key) == 'string' ? parseInt(key) : key, label: val.label})
 					}
 				}
 				self.q.type = 'custom-groupset'
@@ -149,14 +151,17 @@ export function setGroupsettingMethods(self) {
 			})
 
 		function addGroupDiv(group, i) {
-			console.log(group, i)
 
             const group_div = init_dragable_div(non_exclude_div, 'Group ' + (i + 1))
 
-			group_div.on('drop', () => {
+			group_div
+                .on('drop', () => {
 					const id = event.dataTransfer.getData('text')
 					const item = groups_holder.select('#sj-drag-item-' + id)
 					group_list.node().appendChild(item.node())
+                    const val = item._groups[0][0].__data__
+                    console.log(val, cat_grps)
+                    cat_grps[val.key].group = i+1
 				})
 
 			const group_rename_div = group_div.append('div').attr('class', 'group_edit_div')
@@ -172,20 +177,20 @@ export function setGroupsettingMethods(self) {
 				.on('keyup', () => {
 					if (!keyupEnter()) return
 					// TODO
-					// //update customset and add to self.q
+					//update customset and add to self.q
 					// for (const [key, val] of Object.entries(cat_grps)) {
 					// 	for (let j = 0; j < default_grp_count; j++) {
-					// 		if (cat_grps[key].group == j + 1) customset.groups[j].values.push({ key: key })
+					// 		if (cat_grps[key].group == j + 1) customset.groups[j].values.push({key, label: val.label})
 					// 	}
 					// }
 
-					// customset.groups[i].name = group_name_input.node().value
-					// self.q.type = 'custom-groupset'
-					// self.q.groupsetting = {
-					// 	inuse: true,
-					// 	customset: customset
-					// 	//predefined_groupset_idx: removed from this q.groupsetting
-					// }
+					customset.groups[i].name = group_name_input.node().value
+					self.q.type = 'custom-groupset'
+					self.q.groupsetting = {
+						inuse: true,
+						customset
+						//predefined_groupset_idx: removed from this q.groupsetting
+					}
 
 					// self.regroupMenu(default_grp_count, cat_grps)
 				})
@@ -193,33 +198,37 @@ export function setGroupsettingMethods(self) {
 
 			const group_list = group_div.append('div').style('margin', '5px')
 
-			// for each cateogry add new row with radio button for each group and category name
-			for (const [key, val] of Object.entries(group.values)) {
-                console.log(val)
-				const cat_tr = group_list
-					.append('div')
-					.attr('draggable', 'true')
-					.attr('id', 'sj-drag-item-' + val.key)
-					.style('margin', '3px')
-					.style('cursor', 'default')
-					.style('border-radius', '2px')
-					.html(val.label ? val.label : val.key)
-					.style('background-color', '#eee')
-					.on('mouseover', () => {
-						cat_tr.style('background-color', '#fff2cc')
-					})
-					.on('mouseout', () => {
-						cat_tr.style('background-color', '#eee')
-					})
-					.on('dragstart', () => {
-						cat_tr.style('background-color', '#fff2cc')
-						event.dataTransfer.setData('text/plain', val.key)
-					})
-			}
+            const group_items = group_list.selectAll('div').data(group.values)
+            group_items.enter()
+			    .append('div')
+                .each(function (val) {
+                    if(cat_grps[val.key].group == undefined) cat_grps[val.key].group = 1
+                    const dom_id = typeof(val.key) == 'string' 
+                        ? val.key.replace(/[^A-Z0-9]/ig, '') : val.key
+                    const item = select(this)
+                        .attr('draggable', 'true')
+                        .attr('id', 'sj-drag-item-' + dom_id)
+                        .attr('class','sj-drag-item')
+                        .style('margin', '3px')
+                        .style('cursor', 'default')
+                        .style('border-radius', '2px')
+                        .html(val.label ? val.label : val.key)
+                        .style('background-color', '#eee')
+                        .on('mouseover', () => {
+                            item.style('background-color', '#fff2cc')
+                        })
+                        .on('mouseout', () => {
+                            item.style('background-color', '#eee')
+                        })
+                        .on('dragstart', () => {
+                            item.style('background-color', '#fff2cc')
+                            event.dataTransfer.setData('text/plain', dom_id)
+                        })
+                })
 		}
 
-        function init_dragable_div(holder, list_name){
-            const exclude_div = holder
+        function init_dragable_div(holder, group_name){
+            const dragable_div = holder
                 .append('div')
                 .style('display', 'block')
                 .style('padding', '10px')
@@ -228,25 +237,25 @@ export function setGroupsettingMethods(self) {
                 .on('dragover', () => {
                     event.preventDefault()
                     event.stopPropagation()
-                    exclude_div.style('background-color', '#cfe2f3')
+                    dragable_div.style('background-color', '#cfe2f3')
                 })
                 .on('dragenter', ()=>{
                     event.preventDefault()
                     event.stopPropagation()
-                    exclude_div.style('background-color', '#cfe2f3')
+                    dragable_div.style('background-color', '#cfe2f3')
                 })
                 .on('dragleave', ()=>{
                     event.preventDefault()
                     event.stopPropagation()
-                    exclude_div.style('background-color', '#fff')
+                    dragable_div.style('background-color', '#fff')
                 })
                 .on('dragend',()=>{
                     event.preventDefault()
                     event.stopPropagation()
-                    exclude_div.style('background-color', '#fff')  
+                    dragable_div.style('background-color', '#fff')  
                 })
 
-            exclude_div
+            dragable_div
                 .append('div')
                 .style('display', 'block')
                 .style('margin', '15px')
@@ -255,9 +264,9 @@ export function setGroupsettingMethods(self) {
                 .style('font-size', '.8em')
                 .style('text-transform', 'uppercase')
                 .style('color', '#999')
-                .text(list_name)
+                .text(group_name)
 
-            return exclude_div
+            return dragable_div
         }
 	}
 
