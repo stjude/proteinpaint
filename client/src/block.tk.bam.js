@@ -914,7 +914,7 @@ function makeGroup(gd, tk, block, data) {
 				}
 			}
 		})
-		.on('click', () => {
+		.on('click', async () => {
 			if (mousedownx != d3event.clientX) return
 			const [mx, my] = d3mouse(group.dom.img_cover.node())
 			if (group.data.allowpartstack) {
@@ -925,7 +925,7 @@ function makeGroup(gd, tk, block, data) {
 			//console.log('group.data:', group.data)
 
 			if (tk.variants) {
-				const multi_read_alig_data = align_reads_to_allele(tk, group, block)
+				const multi_read_alig_data = await align_reads_to_allele(tk, group, block)
 				console.log('multi_read_alig_data:', multi_read_alig_data)
 			}
 			for (const t of group.data.templatebox) {
