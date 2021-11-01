@@ -238,6 +238,7 @@ const maxreadcount = 7000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 const max_returntemplatebox = 2000 // maximum number of reads per group, for which to return the "templatebox"
 const minstackheight_returntemplatebox = 7 // minimum stack height (number of pixels) for which to return templatebox
+const max_read_alignment = 100 // Max number of reads that can be aligned to reference sequence
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 
@@ -850,9 +851,9 @@ async function do_query(q) {
 			let alignmentData
 			if (q.variant) {
 				if (group.type == 'support_alt') {
-					alignmentData = await align_multiple_reads(group, result.altseq) // Aligning alt-classified reads to alternate allele
+					alignmentData = await align_multiple_reads(group, q.altseq) // Aligning alt-classified reads to alternate allele
 				} else if (group.type == 'support_ref') {
-					alignmentData = await align_multiple_reads(group, result.refseq) // Aligning ref-classified reads to reference allele
+					alignmentData = await align_multiple_reads(group, q.refseq) // Aligning ref-classified reads to reference allele
 				} else {
 					// when category type is none category
 					console.log('None category, no alignments')
@@ -926,7 +927,6 @@ async function do_query(q) {
 
 async function align_multiple_reads(group, reference_sequence) {
 	const sequence_reads = group.templates.map(i => i.sam_info.split('\t')[9])
-	const max_read_alignment = 100 // Max number of reads that can be aligned
 	let fasta_sequence = ''
 	const segbplen = sequence_reads[0].length // Getting length of read
 
@@ -940,7 +940,6 @@ async function align_multiple_reads(group, reference_sequence) {
 		}
 		i += 1
 	}
-	//console.log('fasta_sequence:', fasta_sequence)
 	return await run_clustalo(fasta_sequence, max_read_alignment, segbplen, sequence_reads.length) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
 }
 
