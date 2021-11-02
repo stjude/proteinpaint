@@ -12,20 +12,6 @@ Code architecture:
 		- regression.inputs.term.js // for varClass=term
 		- add new scripts for new varClass
 	- regression.results.js
-
-state structure:
-
-	config.outcome{}
-		if set, defines the outcome variable
-		.varClass
-		[varClass]{}
-		.name // shown on sandbox header
-		.id // uniquely identify a variable e.g. term id
-		    // used in renderSection() and updateInputs()
-
-	config.independent[]
-		if set, defines one or multiple independent variables
-		same as outcome
 */
 
 class Regression {
@@ -49,7 +35,7 @@ class Regression {
 			parent: this,
 			id: this.id,
 			holder: this.dom.inputs,
-			regressionType: this.regressionType
+			regressionType: config.regressionType
 		})
 
 		this.results = new RegressionResults({
@@ -84,14 +70,6 @@ class Regression {
 	async main() {
 		try {
 			this.config = JSON.parse(JSON.stringify(this.state.config))
-			// TODO update header upon selecting/updating outcome
-			if (this.dom.header) {
-				const termLabel = (this.config.outcome && this.config.outcome.term.name) || ''
-				this.dom.header.html(
-					termLabel +
-						`<span style="opacity:.6;font-size:.7em;margin-left:10px;"> ${this.config.regressionType.toUpperCase()} REGRESSION</span>`
-				)
-			}
 			await this.inputs.main()
 			await this.results.main()
 			await this.inputs.updateSubmitButton(true)

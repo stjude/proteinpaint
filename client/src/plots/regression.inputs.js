@@ -15,6 +15,7 @@ constructor
 		submit (by clicking button)
 		addSection
 main
+	mayUpdateSandboxHeader
 	triggerUpdate
 		setDisableTerms
 		renderSection
@@ -178,6 +179,7 @@ export class RegressionInputs {
 	}
 
 	async triggerUpdate() {
+		this.mayUpdateSandboxHeader()
 		this.hasError = false
 		this.setDisableTerms()
 		const updates = []
@@ -373,6 +375,18 @@ function setRenderers(self) {
 			self.dom.submitBtn.property('disabled', false)
 		}
 	}
+
+	self.mayUpdateSandboxHeader = () => {
+		if (!self.parent.dom.header) return
+		// based on data in config state, but not section
+		const o = self.config.outcome
+		self.parent.dom.header.html(
+			(o ? o[o.varClass].name : '') +
+				'<span style="opacity:.6;font-size:.7em;margin-left:10px;">' +
+				self.opts.regressionType.toUpperCase() +
+				'</span>'
+		)
+	}
 }
 
 function setInteractivity(self) {
@@ -393,6 +407,7 @@ function setInteractivity(self) {
 		}
 
 		const key = input.section.configKey
+
 		const selected = input.section.inputs
 			// get only non-empty inputs
 			.filter(input => input.varClass && input[input.varClass])
