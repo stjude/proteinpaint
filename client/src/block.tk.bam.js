@@ -1162,6 +1162,12 @@ async function align_reads_to_allele(tk, group, block) {
 	if ('nochr' in tk) {
 		alig_lst.push('nochr=' + tk.nochr)
 	}
+	if (group.partstack && group.partstack.start) {
+		console.log('group.partstack:', group.partstack)
+		alig_lst.push('stackstart=' + group.partstack.start)
+		alig_lst.push('stackstop=' + group.partstack.stop)
+		alig_lst.push('grouptype=' + group.data.type)
+	}
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	return await dofetch3('tkbam?' + alig_lst.join('&'), { headers })
 	//console.log('multi_read_alig_data:', multi_read_alig_data)
@@ -1263,7 +1269,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 	tk.alignpane.header.text('Alignment info')
 	tk.alignpane.body.selectAll('*').remove()
 	const wait = tk.alignpane.body.append('div').text('Loading...')
-	const multi_read_alig_data = await align_reads_to_allele(tk, group, block)
+	const multi_read_alig_data = await align_reads_to_allele(tk, group, block) // Sending server side request for aligning reads to ref/alt
 	//console.log('multi_read_alig_data:', multi_read_alig_data.alignmentData)
 	wait.remove()
 

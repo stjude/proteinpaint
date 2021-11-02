@@ -256,7 +256,6 @@ module.exports = genomes => {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
 
-			console.log('req.query:', req.query)
 			if (req.query.alignOneGroup) {
 				const q = await get_q(genome, req)
 				res.send(await do_query(q))
@@ -737,6 +736,7 @@ async function get_q(genome, req) {
 			start: Number(req.query.stackstart),
 			stop: Number(req.query.stackstop)
 		}
+
 		if (Number.isNaN(q.partstack.start)) throw '.stackstart not integer'
 		if (Number.isNaN(q.partstack.stop)) throw '.stackstop not integer'
 		if (!req.query.grouptype) throw '.grouptype required for partstack'
@@ -851,9 +851,9 @@ async function do_query(q) {
 			let alignmentData
 			if (q.variant) {
 				if (group.type == 'support_alt') {
-					alignmentData = await align_multiple_reads(group, q.altseq) // Aligning alt-classified reads to alternate allele
+					alignmentData = await align_multiple_reads(templates, q.altseq) // Aligning alt-classified reads to alternate allele
 				} else if (group.type == 'support_ref') {
-					alignmentData = await align_multiple_reads(group, q.refseq) // Aligning ref-classified reads to reference allele
+					alignmentData = await align_multiple_reads(templates, q.refseq) // Aligning ref-classified reads to reference allele
 				} else {
 					// when category type is none category
 					console.log('None category, no alignments')
@@ -925,8 +925,8 @@ async function do_query(q) {
 	return result
 }
 
-async function align_multiple_reads(group, reference_sequence) {
-	const sequence_reads = group.templates.map(i => i.sam_info.split('\t')[9])
+async function align_multiple_reads(templates, reference_sequence) {
+	const sequence_reads = templates.map(i => i.segments[0].seq)
 	let fasta_sequence = ''
 	const segbplen = sequence_reads[0].length // Getting length of read
 
