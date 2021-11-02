@@ -5,14 +5,27 @@ import { select } from 'd3-selection'
 import { sayerror } from '../dom/error'
 
 /*
-	Code architecture:
+Code architecture:
 
 	regression.js
 	- regression.inputs.js
-		- regression.pills.js // pill.main() validates the term/q
-		- regression.valuesTable.js // termsetting.validateQ()
-		- may add separate code file for each non-term variable type (genotype, sample list)
+		- regression.inputs.term.js // for varClass=term
+		- add new scripts for new varClass
 	- regression.results.js
+
+state structure:
+
+	config.outcome{}
+		if set, defines the outcome variable
+		.varClass
+		[varClass]{}
+		.name // shown on sandbox header
+		.id // uniquely identify a variable e.g. term id
+		    // used in renderSection() and updateInputs()
+
+	config.independent[]
+		if set, defines one or multiple independent variables
+		same as outcome
 */
 
 class Regression {
@@ -28,6 +41,7 @@ class Regression {
 			results: this.opts.holder.append('div').style('margin-left', '40px')
 		}
 
+		// where is this.id assigned?
 		const config = appState.plots.find(p => p.id === this.id)
 
 		this.inputs = new RegressionInputs({
@@ -62,6 +76,11 @@ class Regression {
 		}
 	}
 
+	/* do not set reactsTo
+	so it reacts to all actions
+	including filter/cohort change
+	*/
+
 	async main() {
 		try {
 			this.config = JSON.parse(JSON.stringify(this.state.config))
@@ -77,8 +96,8 @@ class Regression {
 			await this.results.main()
 			await this.inputs.updateSubmitButton(true)
 		} catch (e) {
-			if (this.inputs.hasError) this.results.main(this.config)
-			sayerror(this.dom.errordiv, 'Errorxxxx: ' + (e.error || e))
+			if (this.inputs.hasError) this.results.main(this.config) // purpose??
+			sayerror(this.dom.errordiv, 'Error: ' + (e.error || e))
 			if (e.stack) console.log(e.stack)
 		}
 	}

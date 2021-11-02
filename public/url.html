@@ -333,6 +333,7 @@ makeURL([
 					chartType: 'regression',
 					regressionType: 'linear',
 					outcome: {
+						varClass:'term',
 						id: 'LV_Ejection_Fraction_3D'
 					},
 				},
@@ -347,10 +348,13 @@ makeURL([
 					chartType: 'regression',
 					regressionType: 'linear',
 					outcome: {
+						varClass:'term',
 						id: 'LV_Ejection_Fraction_3D',
 					},
 					independent: [
 						{
+							// adding varclass to independent term will break at termsetting.js line 417. why??
+							varClass:'term',
 							id: 'anthracyclines_jco_5',
 							q: {
 								mode:'discrete',
@@ -378,11 +382,12 @@ makeURL([
 					chartType: 'regression',
 					regressionType: 'linear',
 					outcome: {
+						varClass:'term',
 						id: 'LV_Ejection_Fraction_3D',
 					},
 					independent: [
-						{"id": "agedx"},
-						{"id": "diaggrp"}
+						{ varClass:'term', id: "agedx"},
+						{ varClass:'term', id: "diaggrp"}
 					]
 				},
 			]
@@ -397,6 +402,7 @@ makeURL([
 				chartType: 'regression',
 				regressionType: 'logistic',
 				outcome: {
+					varClass:'term',
 					id: 'LV_Ejection_Fraction_3D',
 				}
 			}]
@@ -409,6 +415,7 @@ makeURL([
 				chartType: 'regression',
 				regressionType: 'logistic',
 				outcome: {
+					varClass:'term',
 					id: 'LV_Ejection_Fraction_3D',
 					q: {
 						"mode":"binary",
@@ -421,9 +428,10 @@ makeURL([
 					}
 				},
 				independent: [
-					{"id": "diaggrp"},
-					{"id":"hrtavg"},
+					{ varClass:'term', id: "diaggrp"},
+					{varClass:'term',id:"hrtavg"},
 					{
+						varClass:'term',
 						"id":"genetic_race",
 						"q":{
 							"hiddenValues":{},
@@ -442,6 +450,7 @@ makeURL([
 				chartType: 'regression',
 				regressionType: 'logistic',
 				outcome: {
+					varClass:'term',
 					id: 'Arrhythmias',
 				}
 			}]
@@ -454,10 +463,12 @@ makeURL([
 				chartType: 'regression',
 				regressionType: 'logistic',
 				outcome: {
+					varClass:'term',
 					id: 'Arrhythmias',
 				},
 				independent: [
 					{
+						varClass:'term',
 						id:"chestrt_yn",
 						q: {
 							mode:'discrete',
