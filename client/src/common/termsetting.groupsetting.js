@@ -20,6 +20,7 @@ export function setGroupsettingMethods(self) {
 		const default_grp_count = grp_count || 2
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
+		console.log(cat_grps)
 		const default_1grp = [
 			{
 				values: Object.keys(values).map(key => {
@@ -125,10 +126,13 @@ export function setGroupsettingMethods(self) {
 			// move dom from one holder to exclude holder
 			const id = event.dataTransfer.getData('text') // get id from event.dataTrasfer
 			const item = groups_holder.select('#sj-drag-item-' + id) // select dom by id
-			exclude_list.node().appendChild(item.node()) // append dragged dom to list
+			
+			// move dom from one holder to exclude holder
+			const val = item._groups[0][0].__data__ // get data attached to dom
+			if (cat_grps[val.key].group == 0) return
+			else exclude_list.node().appendChild(item.node()) // append dragged dom to list
 
 			// update metadata for the category list (.group = 0 for excluded)
-			const val = item._groups[0][0].__data__ // get data attached to dom
 			cat_grps[val.key].group = 0 // update .group value based on drop holder type
 		})
 
@@ -156,7 +160,9 @@ export function setGroupsettingMethods(self) {
 					const group = customset.groups[i]
 					if (group) {
 						group.name = name_inputs[i].value
-						group.values.push({ key: typeof key == 'string' ? parseInt(key) : key, label: val.label })
+						// for conditional terms, keys are string but digits, so check if it's parseInt(str)
+						const key_ = typeof key == 'string' && !isNaN(parseInt(key)) ? parseInt(key) : key
+						group.values.push({ key: key_, label: val.label })
 					}
 				}
 				self.q.type = 'custom-groupset'
@@ -179,10 +185,14 @@ export function setGroupsettingMethods(self) {
 				// move dom from one group holder to another group holder
 				const id = event.dataTransfer.getData('text') // get id from event.dataTrasfer
 				const item = groups_holder.select('#sj-drag-item-' + id) // append dragged dom to list
-				group_list.node().appendChild(item.node())
+                    
+				// move dom from one group holder to another group holder
+				// if .group is same as previous, return (don't move or reorder categories)
+				const val = item._groups[0][0].__data__ // get data attached to dom
+				if (cat_grps[val.key].group == i+1) return
+				else group_list.node().appendChild(item.node())
 
 				// update metadata for the category list (.group = 1 or 2 ..)
-				const val = item._groups[0][0].__data__ // get data attached to dom
 				cat_grps[val.key].group = i + 1 // update .group value based on drop group holder
 			})
 
