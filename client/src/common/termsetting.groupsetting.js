@@ -1,6 +1,19 @@
 import { keyupEnter } from '../client'
 import { select, event } from 'd3-selection'
 
+/*
+Arguments
+self: a termsetting instance
+
+methods added to self
+regroupMenu()
+
+other internal functions:
+    addGroupHolder() //create holder for each group from groupset with group name input
+    initDraggableDiv() // make draggable div to render drag-drop list of categories
+    addGroupItems() // make drag-drop list of categories
+*/
+
 export function setGroupsettingMethods(self) {
 	self.regroupMenu = function(grp_count, temp_cat_grps) {
 		//start with default 2 groups, extra groups can be added by user
@@ -103,25 +116,30 @@ export function setGroupsettingMethods(self) {
 		const non_exclude_div = groups_holder.append('div')
             .style('display', 'flex')
 
+        // add holder for each group from groupset
 		for (let i = 0; i < default_grp_count; i++) {
-			addGroupDiv(groupset.groups[i], i)
+			addGroupHolder(groupset.groups[i], i)
 		}
 
-        const exclude_div = init_dragable_div(groups_holder, 'Exclude')
+        // add Div for exclude without group rename input
+        const exclude_div = initDraggableDiv(groups_holder, 'Exclude')
 
         exclude_div
             .on('drop', () => {
-                const id = event.dataTransfer.getData('text')
-                const item = groups_holder.select('#sj-drag-item-' + id)
-                exclude_list.node().appendChild(item.node())
-                const val = item._groups[0][0].__data__
-                cat_grps[val.key].group = 0
+                // move dom from one holder to exclude holder
+                const id = event.dataTransfer.getData('text') // get id from event.dataTrasfer
+                const item = groups_holder.select('#sj-drag-item-' + id) // select dom by id
+                exclude_list.node().appendChild(item.node()) // append dragged dom to list
+
+                // update metadata for the category list (.group = 0 for excluded)
+                const val = item._groups[0][0].__data__ // get data attached to dom
+                cat_grps[val.key].group = 0 // update .group value based on drop holder type
             })
 
         const exclude_list = exclude_div.append('div')
 
         // show excluded categories
-        add_group_items(exclude_list, excluded_cats)
+        addGroupItems(exclude_list, excluded_cats)
 
 		// 'Apply' button
 		button_div
@@ -157,17 +175,20 @@ export function setGroupsettingMethods(self) {
 				})
 			})
 
-		function addGroupDiv(group, i) {
-
-            const group_div = init_dragable_div(non_exclude_div, 'Group ' + (i + 1))
+        // create holder for each group from groupset with group name input
+		function addGroupHolder(group, i) {
+            const group_div = initDraggableDiv(non_exclude_div, 'Group ' + (i + 1))
 
 			group_div
                 .on('drop', () => {
-					const id = event.dataTransfer.getData('text')
-					const item = groups_holder.select('#sj-drag-item-' + id)
-					group_list.node().appendChild(item.node())
-                    const val = item._groups[0][0].__data__
-                    cat_grps[val.key].group = i+1
+                    // move dom from one group holder to another group holder
+					const id = event.dataTransfer.getData('text') // get id from event.dataTrasfer
+					const item = groups_holder.select('#sj-drag-item-' + id) // append dragged dom to list
+                    group_list.node().appendChild(item.node())
+
+                    // update metadata for the category list (.group = 1 or 2 ..)
+                    const val = item._groups[0][0].__data__ // get data attached to dom
+                    cat_grps[val.key].group = i+1 // update .group value based on drop group holder
 				})
 
 			const group_rename_div = group_div.append('div').attr('class', 'group_edit_div')
@@ -182,30 +203,23 @@ export function setGroupsettingMethods(self) {
 				.style('width', '90%')
 				.on('keyup', () => {
 					if (!keyupEnter()) return
-					// TODO
-					//update customset and add to self.q
-					// for (const [key, val] of Object.entries(cat_grps)) {
-					// 	for (let j = 0; j < default_grp_count; j++) {
-					// 		if (cat_grps[key].group == j + 1) customset.groups[j].values.push({key, label: val.label})
-					// 	}
-					// }
 
 					customset.groups[i].name = group_name_input.node().value
 					self.q.type = 'custom-groupset'
 					self.q.groupsetting = {
 						inuse: true,
 						customset
-						//predefined_groupset_idx: removed from this q.groupsetting
 					}
 				})
 
 
 			const group_list = group_div.append('div').style('margin', '5px')
             // show categories from the group
-            add_group_items(group_list, group.values)
+            addGroupItems(group_list, group.values)
 		}
 
-        function init_dragable_div(holder, group_name){
+        // make draggable div to render drag-drop list of categories
+        function initDraggableDiv(holder, group_name) {
             const dragable_div = holder
                 .append('div')
                 .style('display', 'block')
@@ -247,12 +261,14 @@ export function setGroupsettingMethods(self) {
             return dragable_div
         }
 
-        function add_group_items(list_holder, values){
+        // make drag-drop list of categories
+        function addGroupItems(list_holder, values) {
             const group_items = list_holder.selectAll('div').data(values)
             group_items.enter()
 			    .append('div')
                 .each(function (val) {
                     if(cat_grps[val.key].group == undefined) cat_grps[val.key].group = 1
+                    // for css id, remove special chars and white spaces from key
                     const dom_id = typeof(val.key) == 'string' 
                         ? val.key.replace(/[^A-Z0-9]/ig, '') : val.key
                     const item = select(this)
@@ -272,149 +288,10 @@ export function setGroupsettingMethods(self) {
                         })
                         .on('dragstart', () => {
                             item.style('background-color', '#fff2cc')
+                            // attach id to dom, which is used by drop div to grab this dropped dom by id
                             event.dataTransfer.setData('text/plain', dom_id)
                         })
                 })
         }
 	}
-
-	/*
-		const group_rename_div = group_edit_div
-			.append('div')
-			.attr('class', 'group_edit_div')
-			.style('display', 'inline-block')
-
-		group_rename_div
-			.append('label')
-			.attr('for', 'grp_ct')
-			.style('display', 'inline-block')
-			.style('margin-right', '15px')
-			.html('Names')
-
-		for (let i = 0; i < default_grp_count; i++) {
-			const group_name_input = group_rename_div
-				.append('input')
-				.attr('size', 12)
-				.attr('value', group_names[i] || i + 1)
-				.style('margin', '2px 5px')
-				.style('display', 'inline-block')
-				.style('font-size', '.8em')
-				.style('width', '80px')
-				.on('keyup', () => {
-					if (!keyupEnter()) return
-
-					//update customset and add to self.q
-					for (const [key, val] of Object.entries(cat_grps)) {
-						for (let j = 0; j < default_grp_count; j++) {
-							if (cat_grps[key].group == j + 1) customset.groups[j].values.push({ key: key })
-						}
-					}
-
-					customset.groups[i].name = group_name_input.node().value
-					self.q.type = 'custom-groupset'
-					self.q.groupsetting = {
-						inuse: true,
-						customset: customset
-						//predefined_groupset_idx: removed from this q.groupsetting
-					}
-
-					self.regroupMenu(default_grp_count, cat_grps)
-				})
-		}
-
-		group_edit_div
-			.append('div')
-			.style('font-size', '.6em')
-			.style('margin-left', '10px')
-			.style('color', '#858585')
-			.text('Note: Press ENTER to update group names.')
-
-		const group_select_div = regroup_div.append('div').style('margin', '5px')
-
-		const group_table = group_select_div.append('table').style('border-collapse', 'collapse')
-
-		// this row will have group names/number
-		const group_name_tr = group_table.append('tr').style('height', '50px')
-
-		group_name_tr
-			.append('th')
-			.style('padding', '2px 5px')
-			.style('font-size', '.8em')
-			.style('transform', 'rotate(315deg)')
-			.html('Exclude')
-
-		for (let i = 0; i < default_grp_count; i++) {
-			group_name_tr
-				.append('th')
-				.style('padding', '2px 5px')
-				.style('font-size', '.8em')
-				.style('transform', 'rotate(315deg)')
-				.html(group_names[i] || i + 1)
-		}
-
-		// for each cateogry add new row with radio button for each group and category name
-		for (const [key, val] of Object.entries(values)) {
-			const cat_tr = group_table
-				.append('tr')
-				.on('mouseover', () => {
-					cat_tr.style('background-color', '#eee')
-				})
-				.on('mouseout', () => {
-					cat_tr.style('background-color', '#fff')
-				})
-
-			//checkbox for exclude group
-			cat_tr
-				.append('td')
-				.attr('align', 'center')
-				.style('padding', '2px 5px')
-				.append('input')
-				.attr('type', 'radio')
-				.attr('name', key)
-				.attr('value', 0)
-				.property('checked', () => {
-					if (cat_grps[key].group === 0) {
-						// cat_grps[key].group = 0
-						return true
-					}
-				})
-				.on('click', () => {
-					cat_grps[key].group = 0
-				})
-
-			// checkbox for each group
-			for (let i = 0; i < default_grp_count; i++) {
-				cat_tr
-					.append('td')
-					.attr('align', 'center')
-					.style('padding', '2px 5px')
-					.append('input')
-					.attr('type', 'radio')
-					.attr('name', key)
-					.attr('value', i)
-					.property('checked', () => {
-						if (!cat_grps[key].group && cat_grps[key].group !== 0) {
-							cat_grps[key].group = 1
-							return true
-						} else {
-							return cat_grps[key].group == i + 1 ? true : false
-						}
-					})
-					.on('click', () => {
-						cat_grps[key].group = i + 1
-					})
-			}
-
-			// extra empty column for '+' button
-			cat_tr.append('td')
-
-			// categories
-			cat_tr
-				.append('td')
-				.style('display', 'inline-block')
-				.style('margin', '2px')
-				.style('cursor', 'default')
-				.html(val.label)
-		}
-		*/
 }
