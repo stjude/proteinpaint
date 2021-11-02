@@ -21,7 +21,6 @@ main
 		updateInputs
 		removeInput
 		addInput
-	updateSubmitButton
 
 FIXME submit button toggling is broken
 should be disabled when:

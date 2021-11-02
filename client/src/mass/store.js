@@ -214,11 +214,11 @@ TdbStore.prototype.actions = {
 		this.state.plots.push(plot)
 	},
 
-	plot_hide(action) {
-		const i = this.state.tree.visiblePlotIds.indexOf(action.id)
-		if (i != -1) {
-			this.state.tree.visiblePlotIds.splice(i, 1)
-		}
+	async plot_create(action) {
+		const _ = await import(`../plots/${action.config.chartType}.js`)
+		const plot = await _.getPlotConfig(action.config, this.app)
+		plot.id = action.id
+		this.state.plots.push(plot)
 	},
 
 	plot_edit(action) {
