@@ -433,12 +433,14 @@ function setInteractivity(self) {
 		self.config[key] = Array.isArray(self.config[key]) ? selected : selected[0]
 		self.config.hasUnsubmittedEdits = true
 
-		self.app.dispatch({
+		self.app.save({
 			type: 'plot_edit',
 			id: self.parent.id,
 			chartType: 'regression',
 			config: JSON.parse(JSON.stringify(self.config))
 		})
+
+		self.triggerUpdate()
 	}
 
 	self.submit = () => {

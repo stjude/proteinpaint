@@ -112,9 +112,9 @@ export function q_to_param(q) {
 	return encodeURIComponent(JSON.stringify(q2))
 }
 
-export function plotConfig(opts, appState = {}) {
+export async function plotConfig(opts, app) {
 	if (opts.chartType == 'regression') {
-		return regressionConfig(opts)
+		return await regressionConfig(opts, app)
 	}
 
 	if (!opts.term) throw 'plotConfig: opts.term{} missing'
@@ -225,15 +225,21 @@ export function plotConfig(opts, appState = {}) {
 
 let _ID_ = 0
 
-export function regressionConfig(opts) {
-	if (!opts.outcome) throw 'regression config: opts.outcome{} missing'
-	if (!opts.outcome.term) throw 'regression config: opts.outcome.term{} missing'
-	if (!('id' in opts.outcome.term)) throw 'regression config: opts.outcome.term.id missing'
+export async function regressionConfig(opts, app) {
+	if (!opts.outcome) {
+		opts.outcome = {}
+	}
+	if (!opts.outcome.varClass) {
+		// FIXME: harcoded empty varClass, for now
+		opts.outcome.varClass = 'term'
+	}
+	if (opts.outcome.varClass == 'term' && opts.outcome.id) {
+		opts.outcome.term = await app.vocabApi.getterm(opts.outcome.id)
+	}
+	if (opts.outcome && opts.outcome.varClass == 'term' && opts.outcome.term) fillTermWrapper(opts.outcome)
 
 	const id = 'id' in opts ? opts.id : `_PLOTID_${_ID_++}`
 	const config = { id }
-
-	fillTermWrapper(opts.outcome)
 	config.outcome = opts.outcome
 
 	if (opts.independent) {
