@@ -310,6 +310,7 @@ function setRenderers(self) {
 		// process each selected variable
 		for (const variable of selectedArray) {
 			const varClass = variable.varClass
+			if (!varClass) throw 'varClass missing on an input from config'
 
 			const input = section.inputs.find(
 				input => input.varClass == varClass && input[varClass] && input[varClass].id == variable.id
@@ -398,7 +399,7 @@ function setRenderers(self) {
 			(o ? o[o.varClass].name : '') +
 				'<span style="opacity:.6;font-size:.7em;margin-left:10px;">' +
 				self.opts.regressionType.toUpperCase() +
-				'</span>'
+				' REGRESSION</span>'
 		)
 	}
 }

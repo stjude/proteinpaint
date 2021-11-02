@@ -27,7 +27,7 @@ class Regression {
 			results: this.opts.holder.append('div').style('margin-left', '40px')
 		}
 
-		// where is this.id assigned?
+		// this.id is from opts.id and assigned by rx
 		const config = appState.plots.find(p => p.id === this.id)
 
 		this.inputs = new RegressionInputs({
@@ -74,7 +74,10 @@ class Regression {
 			await this.results.main()
 			this.inputs.resetSubmitButton()
 		} catch (e) {
-			if (this.inputs.hasError) this.results.main(this.config) // purpose??
+			if (this.inputs.hasError) {
+				// will hide the results ui
+				this.results.main()
+			}
 			sayerror(this.dom.errordiv, 'Error: ' + (e.error || e))
 			if (e.stack) console.log(e.stack)
 		}
