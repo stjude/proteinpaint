@@ -15,14 +15,19 @@ constructor
 		submit (by clicking button)
 		addSection
 main
-	mayUpdateSandboxHeader
 	triggerUpdate
+		mayUpdateSandboxHeader
 		setDisableTerms
 		renderSection
 			updateInputs
 			removeInput
 			addInput
 		updateSubmitButton
+
+FIXME submit button toggling is broken
+should be disabled when:
+1. click run analysis button
+2. 
 */
 
 export class RegressionInputs {
@@ -165,7 +170,8 @@ export class RegressionInputs {
 	async main() {
 		try {
 			// disable submit button on click, reenable after rendering results
-			this.dom.submitBtn.property('disabled', true).text('Running...')
+			//this.dom.submitBtn.property('disabled', true).text('Running...')
+
 			// share the writable config copy
 			this.config = this.parent.config
 			this.state = this.parent.state
@@ -199,7 +205,7 @@ export class RegressionInputs {
 				}
 			}
 		}
-		this.updateSubmitButton(true)
+		//this.updateSubmitButton(true)
 	}
 
 	setDisableTerms() {
@@ -364,8 +370,16 @@ function setRenderers(self) {
 			.remove()
 	}
 
+	self.resetSubmitButton = () => {
+		// do not disable button upon ui error. only disable after clicking button and analysis is running
+		self.dom.submitBtn
+			.text('Run analysis')
+			.style('display', self.config.outcome && self.config.independent.length ? 'block' : 'none')
+			.property('disabled', false)
+	}
+
 	self.updateSubmitButton = chartRendered => {
-		if (!self.dom.submitBtn) return
+		// not used
 		const hasBothTerms = self.config.outcome != undefined && self.config.independent.length
 		self.dom.submitBtn.text('Run analysis').style('display', hasBothTerms ? 'block' : 'none')
 
@@ -427,9 +441,10 @@ function setInteractivity(self) {
 	}
 
 	self.submit = () => {
+		// disable button upon clicking to prevent double-clicking
+		self.dom.submitBtn.property('disabled', true)
 		if (self.hasError) {
 			alert('Please fix the input variable errors (highlighted in red background).')
-			self.dom.submitBtn.property('disabled', true)
 			return
 		}
 

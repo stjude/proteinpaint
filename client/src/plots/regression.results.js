@@ -28,6 +28,7 @@ export class RegressionResults {
 
 	async main() {
 		try {
+			this.parent.inputs.dom.submitBtn.text('Running...')
 			// share the writable config copy
 			this.config = this.parent.config
 			this.state = this.parent.state

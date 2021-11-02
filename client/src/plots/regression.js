@@ -72,7 +72,7 @@ class Regression {
 			this.config = JSON.parse(JSON.stringify(this.state.config))
 			await this.inputs.main()
 			await this.results.main()
-			await this.inputs.updateSubmitButton(true)
+			this.inputs.resetSubmitButton()
 		} catch (e) {
 			if (this.inputs.hasError) this.results.main(this.config) // purpose??
 			sayerror(this.dom.errordiv, 'Error: ' + (e.error || e))
