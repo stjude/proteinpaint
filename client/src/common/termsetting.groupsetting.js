@@ -20,7 +20,6 @@ export function setGroupsettingMethods(self) {
 		const default_grp_count = grp_count || 2
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
-		console.log(cat_grps)
 		const default_1grp = [
 			{
 				values: Object.keys(values).map(key => {
@@ -32,6 +31,8 @@ export function setGroupsettingMethods(self) {
 		const empty_groups = Array(default_grp_count - 1).fill(default_empty_group)
 		const default_groupset = { groups: [...default_1grp, ...empty_groups] }
 		const excluded_cats = []
+		// to not change background of native group, keep track of dragged items original group
+		let drag_native_grp
 		Object.keys(cat_grps).forEach(key => {
 			if (cat_grps[key].group == 0) excluded_cats.push({ key, label: cat_grps[key].label })
 		})
@@ -116,7 +117,8 @@ export function setGroupsettingMethods(self) {
 
 		// add holder for each group from groupset
 		for (let i = 0; i < default_grp_count; i++) {
-			addGroupHolder(groupset.groups[i], i)
+			const group = groupset.groups[i] || default_empty_group
+			addGroupHolder(group, i)
 		}
 
 		// add Div for exclude without group rename input
@@ -179,7 +181,7 @@ export function setGroupsettingMethods(self) {
 
 		// create holder for each group from groupset with group name input
 		function addGroupHolder(group, i) {
-			const group_div = initDraggableDiv(non_exclude_div, 'Group ' + (i + 1))
+			const group_div = initDraggableDiv(non_exclude_div, 'Group ' + (i + 1), i+1 )
 
 			group_div.on('drop', () => {
 				// move dom from one group holder to another group holder
@@ -223,7 +225,7 @@ export function setGroupsettingMethods(self) {
 		}
 
 		// make draggable div to render drag-drop list of categories
-		function initDraggableDiv(holder, group_name) {
+		function initDraggableDiv(holder, group_name, group_i) {
 			const dragable_div = holder
 				.append('div')
 				.style('display', 'block')
@@ -233,12 +235,12 @@ export function setGroupsettingMethods(self) {
 				.on('dragover', () => {
 					event.preventDefault()
 					event.stopPropagation()
-					dragable_div.style('background-color', '#cfe2f3')
+					dragable_div.style('background-color', group_i !== drag_native_grp ? '#cfe2f3' : '#fff')
 				})
 				.on('dragenter', () => {
 					event.preventDefault()
 					event.stopPropagation()
-					dragable_div.style('background-color', '#cfe2f3')
+					dragable_div.style('background-color', group_i !== drag_native_grp ? '#cfe2f3' : '#fff')
 				})
 				.on('dragleave', () => {
 					event.preventDefault()
@@ -294,6 +296,7 @@ export function setGroupsettingMethods(self) {
 							item.style('background-color', '#fff2cc')
 							// attach id to dom, which is used by drop div to grab this dropped dom by id
 							event.dataTransfer.setData('text/plain', dom_id)
+							drag_native_grp = cat_grps[val.key].group
 						})
 				})
 		}
