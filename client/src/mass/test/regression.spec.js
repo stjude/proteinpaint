@@ -37,6 +37,7 @@ tape('linear, outcome type=float', function(test) {
 					regressionType: 'linear',
 					//cutoff: 57.8,
 					outcome: {
+						varClass: 'term',
 						id: 'LV_Cardiac_Output_3D',
 						q: {
 							mode: 'continuous'
@@ -44,6 +45,7 @@ tape('linear, outcome type=float', function(test) {
 					},
 					independent: [
 						{
+							varClass: 'term',
 							id: 'sex',
 							q: {
 								groupsetting: { disabled: true },
@@ -52,9 +54,11 @@ tape('linear, outcome type=float', function(test) {
 							type: 'categorical'
 						},
 						{
+							varClass: 'term',
 							id: 'genetic_race'
 						},
 						{
+							varClass: 'term',
 							id: 'hrtavg',
 							q: { mode: 'continuous' }
 						}
@@ -100,6 +104,7 @@ tape('logistic outcome type=float', function(test) {
 					regressionType: 'logistic',
 					//cutoff: 57.8,
 					outcome: {
+						varClass: 'term',
 						id: 'LV_Cardiac_Output_3D',
 						q: {
 							mode: 'binary',
@@ -113,6 +118,7 @@ tape('logistic outcome type=float', function(test) {
 					},
 					independent: [
 						{
+							varClass: 'term',
 							id: 'sex',
 							q: {
 								groupsetting: { disabled: true },
@@ -121,9 +127,11 @@ tape('logistic outcome type=float', function(test) {
 							type: 'categorical'
 						},
 						{
+							varClass: 'term',
 							id: 'genetic_race'
 						},
 						{
+							varClass: 'term',
 							id: 'hrtavg',
 							q: { mode: 'continuous' }
 						}
@@ -169,6 +177,7 @@ tape('logistic outcome type=condition', function(test) {
 					regressionType: 'logistic',
 					//cutoff: 57.8,
 					outcome: {
+						varClass: 'term',
 						id: 'Arrhythmias',
 						q: {
 							mode: 'binary',
@@ -184,6 +193,7 @@ tape('logistic outcome type=condition', function(test) {
 					},
 					independent: [
 						{
+							varClass: 'term',
 							id: 'sex',
 							q: {
 								groupsetting: { disabled: true },
@@ -233,6 +243,7 @@ tape('logistic outcome: missing reference category', function(test) {
 					regressionType: 'logistic',
 					//cutoff: 57.8,
 					outcome: {
+						varClass: 'term',
 						id: 'vincristine_5',
 						q: {
 							mode: 'binary',
@@ -246,10 +257,12 @@ tape('logistic outcome: missing reference category', function(test) {
 					},
 					independent: [
 						{
+							varClass: 'term',
 							id: 'agedx',
 							q: { mode: 'continuous' }
 						},
 						{
+							varClass: 'term',
 							id: 'idarubicin_5',
 							q: {
 								mode: 'discrete',

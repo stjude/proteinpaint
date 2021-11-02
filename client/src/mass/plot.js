@@ -238,8 +238,8 @@ export function regressionConfig(opts) {
 
 	if (opts.independent) {
 		for (const t of opts.independent) {
-			// FIXME: once varClass if fully supported, does not have to test for t.term
-			if (t.varClass == 'term' || t.term) fillTermWrapper(t)
+			// NOTE: fillTermWrapper(t) may be called before or after this function, instead of here
+			if (t.varClass == 'term' && t.term) fillTermWrapper(t)
 		}
 		config.independent = opts.independent
 	} else {

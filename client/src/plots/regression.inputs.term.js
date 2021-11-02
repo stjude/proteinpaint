@@ -154,7 +154,7 @@ async function maySetTwoBins(input) {
 	const { app, state } = input.section.parent
 	const t = input.term
 	// if the bins are already binary, do not reset
-	if (t.q.mode == 'binary' && 'refGrp' in t.q) return
+	if (t.q.mode == 'binary') return
 
 	// for numeric terms, add 2 custom bins devided at median value
 	const lst = [
@@ -195,7 +195,7 @@ async function maySetTwoGroups(input) {
 
 	// if the bins are already binary, do not reset
 	const { term, q } = input.term
-	if (q.mode == 'binary' && 'refGrp' in q) return
+	if (q.mode == 'binary') return
 	q.mode = 'binary'
 
 	// category and condition terms share some logic
