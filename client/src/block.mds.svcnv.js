@@ -162,6 +162,7 @@ export function loadTk(tk, block) {
 		.then(_final => {
 			block.tkcloakoff(tk, { error: _final.error })
 			block.block_setheight()
+			block.setllabel()
 		})
 }
 
