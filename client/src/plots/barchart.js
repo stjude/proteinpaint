@@ -649,9 +649,9 @@ function setInteractivity(self) {
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'barchart getPlotConfig: opts.term{} missing'
 	try {
-		await fillTermWrapper(opts.term, app)
-		if (opts.term2) await fillTermWrapper(opts.term2, app)
-		if (opts.term0) await fillTermWrapper(opts.term0, app)
+		await fillTermWrapper(opts.term, app.vocabApi)
+		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
+		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 	} catch (e) {
 		throw `${e} [barchart getPlotConfig()]`
 	}

@@ -1,6 +1,7 @@
-import { getCompInit } from '../common/rx.core'
+import { getCompInit, copyMerge } from '../common/rx.core'
 import { controlsInit } from './controls'
 import { getNormalRoot } from '../common/filter'
+import { fillTermWrapper } from '../common/termsetting'
 import { normalizeFilterData, syncParams } from '../mass/plot'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
@@ -530,6 +531,63 @@ function setInteractivity(self) {
 			}
 		})
 	}
+}
+
+export async function getPlotConfig(opts, app) {
+	if (!opts.term) throw 'cuminc: opts.term{} missing'
+	try {
+		await fillTermWrapper(opts.term, app.vocabApi)
+		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
+		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
+	} catch (e) {
+		throw `${e} [cuminc getPlotConfig()]`
+	}
+
+	const config = {
+		id: opts.term.term.id,
+		settings: {
+			currViews: ['cuminc'],
+			controls: {
+				isOpen: false, // control panel is hidden by default
+				term2: null, // the previous overlay value may be displayed as a convenience for toggling
+				term0: null
+			},
+			common: {
+				use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
+				use_percentage: false,
+				barheight: 300, // maximum bar length
+				barwidth: 20, // bar thickness
+				barspace: 2 // space between two bars
+			},
+			cuminc: {
+				gradeCutoff: 3,
+				radius: 5,
+				fill: '#fff',
+				stroke: '#000',
+				fillOpacity: 0,
+				chartMargin: 10,
+				svgw: 400,
+				svgh: 300,
+				svgPadding: {
+					top: 20,
+					left: 55,
+					right: 20,
+					bottom: 50
+				},
+				axisTitleFontSize: 16,
+				hidden: []
+			},
+
+			/* LEGACY SUPPORT 
+				 DELETE once all chart code is removed from the termdb app
+			*/
+			barchart: {},
+			survival: {}
+		}
+	}
+
+	// may apply term-specific changes to the default object
+	return copyMerge(config, opts)
 }
 
 function getPj(self) {

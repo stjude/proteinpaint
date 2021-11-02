@@ -91,7 +91,7 @@ export const componentInit = regressionInit
 
 let _ID_ = 1
 
-export async function getPlotConfig(opts, vocabApi) {
+export async function getPlotConfig(opts, app) {
 	if (!opts.outcome) {
 		opts.outcome = {}
 	}
@@ -99,11 +99,7 @@ export async function getPlotConfig(opts, vocabApi) {
 		// FIXME: harcoded empty varClass, for now
 		opts.outcome.varClass = 'term'
 	}
-	if (opts.outcome.varClass == 'term' && opts.outcome.id) {
-		opts.outcome.term = await vocabApi.getterm(opts.outcome.id)
-	}
-	if (opts.outcome && opts.outcome.varClass == 'term' && opts.outcome.term)
-		await fillTermWrapper(opts.outcome, vocabApi)
+	if (opts.outcome && opts.outcome.varClass == 'term') await fillTermWrapper(opts.outcome, app.vocabApi)
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
 	const config = { id }
@@ -111,7 +107,7 @@ export async function getPlotConfig(opts, vocabApi) {
 
 	if (opts.independent) {
 		for (const t of opts.independent) {
-			if (t.varClass == 'term') await fillTermWrapper(t, vocabApi)
+			if (t.varClass == 'term') await fillTermWrapper(t, app.vocabApi)
 		}
 		config.independent = opts.independent
 		delete opts.independent
