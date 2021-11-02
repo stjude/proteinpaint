@@ -703,6 +703,9 @@ function makeTk(tk, block) {
 	tk.readpane = newpane({ x: 100, y: 100, closekeep: 1 })
 	tk.readpane.pane.style('display', 'none')
 
+	tk.alignpane = newpane({ x: 100, y: 100, closekeep: 1 }) // Panel for showing multi_read alignment to ref/alt allele
+	tk.alignpane.pane.style('display', 'none')
+
 	tk.pileupheight = 100
 	tk.pileupbottompad = 6
 
@@ -914,7 +917,7 @@ function makeGroup(gd, tk, block, data) {
 				}
 			}
 		})
-		.on('click', async () => {
+		.on('click', () => {
 			if (mousedownx != d3event.clientX) return
 			const [mx, my] = d3mouse(group.dom.img_cover.node())
 			if (group.data.allowpartstack) {
@@ -925,8 +928,7 @@ function makeGroup(gd, tk, block, data) {
 			//console.log('group.data:', group.data)
 
 			if (tk.variants) {
-				const multi_read_alig_data = await align_reads_to_allele(tk, group, block)
-				console.log('multi_read_alig_data:', multi_read_alig_data)
+				getMultiReadAligInfo(tk, group, block) // Generating multiple sequence alignment against ref/alt allele
 			}
 			for (const t of group.data.templatebox) {
 				const bx1 = Math.max(0, t.x1)
@@ -1251,6 +1253,37 @@ if is pair mode, is the template
 box{}
   qname, start, stop
 */
+
+async function getMultiReadAligInfo(tk, group, block) {
+	tk.alignpane.pane.style('display', 'table')
+	tk.alignpane.header.text('Alignment info')
+	tk.alignpane.body.selectAll('*').remove()
+	const wait = tk.alignpane.body.append('div').text('Loading...')
+	const multi_read_alig_data = await align_reads_to_allele(tk, group, block)
+	console.log('multi_read_alig_data:', multi_read_alig_data.alignmentData)
+	wait.remove()
+
+	const div = tk.alignpane.body.append('div').style('margin', '20px')
+	const readAlignmentTable = div
+		.append('table')
+		.style('font-family', 'Courier')
+		.style('font-size', '0.8em')
+		.style('color', '#303030')
+		.style('margin', '5px 5px 20px 5px')
+	for (const read of multi_read_alig_data.alignmentData) {
+		//console.log('read:', read)
+		const read_tr = readAlignmentTable.append('tr')
+		read_tr
+			.append('td')
+			.text('Read')
+			.style('text-align', 'right')
+			.style('font-weight', '550')
+		for (const nclt of read) {
+			read_tr.append('td').text(nclt)
+		}
+	}
+}
+
 async function getReadInfo(tk, block, box, ridx) {
 	appear(tk.readpane.pane)
 	tk.readpane.header.text('Read info')

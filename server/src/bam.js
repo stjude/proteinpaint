@@ -966,8 +966,7 @@ function run_clustalo(fasta_sequence, max_read_alignment, segbplen, num_reads) {
 		})
 		ps.on('close', code => {
 			//console.log('RawAlignment:', stdout.toString())
-			let final_read_align = ''
-			let read_count = 0
+			const final_read_align = []
 			for (const read of stdout.toString().split('\n')) {
 				if (read.includes('seq      ')) {
 					// Remove "-" before/after the start/end of a sequence
@@ -986,12 +985,8 @@ function run_clustalo(fasta_sequence, max_read_alignment, segbplen, num_reads) {
 							}
 						}
 					}
-					if (read_count < num_reads) {
-						final_read_align += aligned_read + ':'
-					} else if (read_count == num_reads) {
-						final_read_align += aligned_read
-					}
-					read_count += 1
+
+					final_read_align.push(aligned_read)
 				} else if (read.includes('FATAL:') || read.includes('ERROR:')) {
 					// Possible problem in read-alignment
 					console.log(read)
