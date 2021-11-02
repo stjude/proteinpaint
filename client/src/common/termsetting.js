@@ -529,3 +529,19 @@ function setDefaultMethods(self) {
 			: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 	}
 }
+
+// termWrapper = {id, term?, q?}
+// vocabApi
+export async function fillTermWrapper(termWrapper, vocabApi) {
+	const t = termWrapper
+	if (!('id' in t)) {
+		if (t.term && 'id' in t.term) t.id = t.term.id
+		else throw 'term.id missing'
+	}
+	if (!t.term) {
+		t.term = await vocabApi.getterm(t.id)
+	}
+	if (!t.q) t.q = {}
+	if (!t.varClass) t.varClass = 'term'
+	termsetting_fill_q(t.q, t.term)
+}

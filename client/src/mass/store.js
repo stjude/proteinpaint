@@ -1,6 +1,6 @@
 import { getStoreInit } from '../common/rx.core'
 import { root_ID } from '../termdb/tree'
-import { plotConfig, fillTermWrapper } from './plot'
+import { plotConfig } from './plot'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
@@ -203,36 +203,6 @@ TdbStore.prototype.actions = {
 		const i = this.state.tree.expandedTermIds.indexOf(action.termId)
 		if (i == -1) return
 		this.state.tree.expandedTermIds.splice(i, 1)
-	},
-
-	async plot_show(action) {
-		const plot = plotConfig(
-			{
-				id: action.id,
-				term: action.config.term.term ? action.config.term : { term: action.config.term },
-				chartType: action.config.chartType,
-				settings: { currViews: [action.config.chartType] }
-			},
-			await this.api.copyState()
-		)
-		if (action.config.independent) {
-			plot.independent = action.config.independent.map(term => {
-				return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
-			})
-		}
-		if (!action.config.termSequence) {
-			action.config.termSequence = getTermSelectionSequence(action.config.chartType)
-		}
-		if ('cutoff' in action.config) {
-			plot.cutoff = action.config.cutoff
-		} else {
-			delete plot.cutoff
-		}
-		if (action.config.regressionType) {
-			plot.regressionType = action.config.regressionType
-		}
-		this.state.plots.push(plot)
-		this.state.tree.visiblePlotIds.push(action.id)
 	},
 
 	async plot_prep(action) {

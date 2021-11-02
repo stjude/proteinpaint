@@ -11,7 +11,7 @@ import { controlsInit } from './controls'
 import { to_svg } from '../client'
 import { normalizeFilterData, syncParams } from '../mass/plot'
 import { getNormalRoot } from '../common/filter'
-import { termsetting_fill_q } from '../common/termsetting'
+import { fillTermWrapper } from '../common/termsetting'
 
 class TdbBarchart {
 	constructor(opts) {
@@ -689,19 +689,4 @@ export async function getPlotConfig(opts, app) {
 
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
-}
-
-// termWrapper = {id, term?, q?}
-// vocabApi
-async function fillTermWrapper(termWrapper, vocabApi) {
-	const t = termWrapper
-	if (!('id' in t)) {
-		if (t.term && 'id' in t.term) t.id = t.term.id
-		else throw 'term.id missing'
-	}
-	if (!t.term) {
-		t.term = await vocabApi.getterm(t.id)
-	}
-	if (!t.q) t.q = {}
-	termsetting_fill_q(t.q, t.term)
 }

@@ -1,8 +1,8 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, copyMerge } from '../common/rx.core'
 import { select, event } from 'd3-selection'
 //import { termInfoInit } from './termInfo'
 //import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
-import { termsetting_fill_q } from '../common/termsetting'
+import { fillTermWrapper } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { Menu } from '../client'
 
@@ -69,7 +69,7 @@ class MassPlot {
 
 	async main() {
 		// need to make config writable for filling in term.q default values
-		this.config = rx.copyMerge('{}', this.state.config)
+		this.config = copyMerge('{}', this.state.config)
 		if (!this.components) await this.setComponents(this.opts)
 	}
 
@@ -92,7 +92,7 @@ class MassPlot {
 	}
 }
 
-export const plotInit = rx.getCompInit(MassPlot)
+export const plotInit = getCompInit(MassPlot)
 
 function setRenderers(self) {
 	self.updateBtns = config => {
@@ -122,9 +122,9 @@ export async function plotConfig(opts, app) {
 	if (!opts.term.term.id) throw 'plotConfig: opts.term.term.id missing'
 
 	// initiate .q{}
-	fillTermWrapper(opts.term)
-	if (opts.term2) fillTermWrapper(opts.term2)
-	if (opts.term0) fillTermWrapper(opts.term0)
+	fillTermWrapper(opts.term, app.vocabApi)
+	if (opts.term2) fillTermWrapper(opts.term2, app.vocabApi)
+	if (opts.term0) fillTermWrapper(opts.term0, app.vocabApi)
 
 	const config = {
 		id: opts.term.term.id,
@@ -220,39 +220,7 @@ export async function plotConfig(opts, app) {
 	}
 
 	// may apply term-specific changes to the default object
-	return rx.copyMerge(config, opts)
-}
-
-let _ID_ = 0
-
-export async function regressionConfig(opts, app) {
-	if (!opts.outcome) {
-		opts.outcome = {}
-	}
-	if (!opts.outcome.varClass) {
-		// FIXME: harcoded empty varClass, for now
-		opts.outcome.varClass = 'term'
-	}
-	if (opts.outcome.varClass == 'term' && opts.outcome.id) {
-		opts.outcome.term = await app.vocabApi.getterm(opts.outcome.id)
-	}
-	if (opts.outcome && opts.outcome.varClass == 'term' && opts.outcome.term) fillTermWrapper(opts.outcome)
-
-	const id = 'id' in opts ? opts.id : `_PLOTID_${_ID_++}`
-	const config = { id }
-	config.outcome = opts.outcome
-
-	if (opts.independent) {
-		for (const t of opts.independent) {
-			// NOTE: fillTermWrapper(t) may be called before or after this function, instead of here
-			if (t.varClass == 'term' && t.term) fillTermWrapper(t)
-		}
-		config.independent = opts.independent
-	} else {
-		config.independent = []
-	}
-	// may apply term-specific changes to the default object
-	return rx.copyMerge(config, opts)
+	return copyMerge(config, opts)
 }
 
 export function normalizeFilterData(filter) {
@@ -308,13 +276,6 @@ function tvslst_to_parameter(tv) {
 		value_by_computable_grade: tv.value_by_computable_grade,
 		grade_and_child: tv.grade_and_child
 	}
-}
-
-export function fillTermWrapper(wrapper) {
-	if (!('id' in wrapper)) wrapper.id = wrapper.term.id
-	if (!wrapper.q) wrapper.q = {}
-	termsetting_fill_q(wrapper.q, wrapper.term)
-	return wrapper
 }
 
 export function syncParams(config, data) {
