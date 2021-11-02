@@ -1,6 +1,5 @@
 import { getStoreInit } from '../common/rx.core'
 import { root_ID } from '../termdb/tree'
-import { plotConfig } from './plot'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
