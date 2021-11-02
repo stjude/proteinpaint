@@ -928,7 +928,10 @@ function makeGroup(gd, tk, block, data) {
 			//console.log('group.data:', group.data)
 
 			if (tk.variants) {
-				getMultiReadAligInfo(tk, group, block) // Generating multiple sequence alignment against ref/alt allele
+				if (group.data.type == 'support_alt' || group.data.type == 'support_ref') {
+					// Only alignments for ref and alt allele , not the none category
+					getMultiReadAligInfo(tk, group, block) // Generating multiple sequence alignment against ref/alt allele
+				}
 			}
 			for (const t of group.data.templatebox) {
 				const bx1 = Math.max(0, t.x1)
@@ -1270,17 +1273,36 @@ async function getMultiReadAligInfo(tk, group, block) {
 		.style('font-size', '0.8em')
 		.style('color', '#303030')
 		.style('margin', '5px 5px 20px 5px')
+	let read_count = 0
 	for (const read of multi_read_alig_data.alignmentData) {
-		//console.log('read:', read)
 		const read_tr = readAlignmentTable.append('tr')
-		read_tr
-			.append('td')
-			.text('Read')
-			.style('text-align', 'right')
-			.style('font-weight', '550')
+		if (read_count == 0) {
+			if (group.data.type == 'support_alt') {
+				read_tr
+					.append('td')
+					.text('Alt allele')
+					.style('text-align', 'right')
+					.style('font-weight', '550')
+					.style('margin', '5px 5px 10px 5px')
+			} else if (group.data.type == 'support_ref') {
+				read_tr
+					.append('td')
+					.text('Ref allele')
+					.style('text-align', 'right')
+					.style('font-weight', '550')
+					.style('margin', '5px 5px 10px 5px')
+			}
+		} else {
+			read_tr
+				.append('td')
+				.text('Read' + read_count)
+				.style('text-align', 'right')
+				.style('font-weight', '550')
+		}
 		for (const nclt of read) {
 			read_tr.append('td').text(nclt)
 		}
+		read_count += 1
 	}
 }
 
