@@ -2,6 +2,34 @@ import { deepEqual } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { InputTerm } from './regression.inputs.term'
 
+/*
+outcome and independent are two sections sharing same structure
+"inputs[]" collect one or multiple variables for each section
+"input" tracks attributes from a variable
+
+**** function cascade ****
+
+constructor
+	createSectionConfigs
+	initUI
+		submit (by clicking button)
+		addSection
+main
+	triggerUpdate
+		mayUpdateSandboxHeader
+		setDisableTerms
+		renderSection
+			updateInputs
+			removeInput
+			addInput
+		updateSubmitButton
+
+FIXME submit button toggling is broken
+should be disabled when:
+1. click run analysis button
+2. 
+*/
+
 export class RegressionInputs {
 	constructor(opts) {
 		this.opts = opts
@@ -44,23 +72,22 @@ export class RegressionInputs {
 					term types that cannot be selected as inputs for this section
 					// FIXME: should group these handler-specific options by input.varClass
 				
-				
 				-----  dynamic configuration data  -----
-				*** recomputed on each updateSection() ***
 
 				.inputs[ input{} ]
+					from state config.outcome or config.independent
 					a cache of input configurations and rendered DOM elements 
 					for each selected variable. Removed inputs will be deleted 
 					from this object, and newly selected inputs will be added.
+
+					created in updateInputs()
 
 					.input.section
 						reference to this section
 						for making this section config accessible to downstream logic handling this input, e.g. pill.js
 					
-					.input.update()
-						created in addInput(), run in triggerUpdate()
-
 					.input.dom{}
+						created in addInput()
 						.holder
 						.err_div
 						.* other DOM elements added depending on variable class
@@ -72,9 +99,13 @@ export class RegressionInputs {
 						the input data for this given varClass	
 
 					.input.handler
+						created in addInput()
 						the function/object/class instance that will handle
 						the variable selection, one for each varClass;
-						should have a handler.update() method
+						.update()
+							called in triggerUpdate()
+						.remove()
+						.hasError
 
 
 				------ tracker for this section's DOM elements -----
@@ -130,6 +161,8 @@ export class RegressionInputs {
 		this.sections = [this.outcome, this.independent]
 
 		// track reference category values or groups by term ID
+		// k: variable id
+		// v: reference group name
 		this.refGrpByTermId = {}
 		this.totalSampleCount = undefined
 	}
@@ -137,7 +170,8 @@ export class RegressionInputs {
 	async main() {
 		try {
 			// disable submit button on click, reenable after rendering results
-			this.dom.submitBtn.property('disabled', true).text('Running...')
+			//this.dom.submitBtn.property('disabled', true).text('Running...')
+
 			// share the writable config copy
 			this.config = this.parent.config
 			this.state = this.parent.state
@@ -151,16 +185,14 @@ export class RegressionInputs {
 	}
 
 	async triggerUpdate() {
+		this.mayUpdateSandboxHeader()
 		this.hasError = false
 		this.setDisableTerms()
 		const updates = []
 		for (const section of this.sections) {
 			await this.renderSection(section)
 			for (const input of section.inputs) {
-				if (input.dom) {
-					input.dom.holder.style('border-left', input.term ? '1px solid #bbb' : '')
-					//input.dom.err_div.style('display', 'none').text('')
-				}
+				input.dom.holder.style('border-left', input[input.varClass] ? '1px solid #bbb' : '')
 				if (input.handler) updates.push(input.handler.update(input))
 			}
 		}
@@ -173,13 +205,17 @@ export class RegressionInputs {
 				}
 			}
 		}
-		this.updateSubmitButton(true)
+		//this.updateSubmitButton(true)
 	}
 
 	setDisableTerms() {
 		this.disable_terms = []
-		if (this.config.outcome) this.disable_terms.push(this.config.outcome.id)
-		if (this.config.independent) for (const term of this.config.independent) this.disable_terms.push(term.id)
+		if (this.config.outcome && this.config.outcome.varClass == 'term') this.disable_terms.push(this.config.outcome.id)
+		if (this.config.independent) {
+			for (const term of this.config.independent) {
+				if (term.varClass == 'term') this.disable_terms.push(term.id)
+			}
+		}
 	}
 }
 
@@ -273,9 +309,6 @@ function setRenderers(self) {
 
 		// process each selected variable
 		for (const variable of selectedArray) {
-			// if the varClass is missing, detect and assign it
-			// FIXME fix later: varClass is required and should not have default value
-			if (!variable.varClass && variable.term) variable.varClass = 'term'
 			const varClass = variable.varClass
 
 			const input = section.inputs.find(
@@ -337,8 +370,16 @@ function setRenderers(self) {
 			.remove()
 	}
 
+	self.resetSubmitButton = () => {
+		// do not disable button upon ui error. only disable after clicking button and analysis is running
+		self.dom.submitBtn
+			.text('Run analysis')
+			.style('display', self.config.outcome && self.config.independent.length ? 'block' : 'none')
+			.property('disabled', false)
+	}
+
 	self.updateSubmitButton = chartRendered => {
-		if (!self.dom.submitBtn) return
+		// not used
 		const hasBothTerms = self.config.outcome != undefined && self.config.independent.length
 		self.dom.submitBtn.text('Run analysis').style('display', hasBothTerms ? 'block' : 'none')
 
@@ -347,6 +388,18 @@ function setRenderers(self) {
 		} else if (chartRendered) {
 			self.dom.submitBtn.property('disabled', false)
 		}
+	}
+
+	self.mayUpdateSandboxHeader = () => {
+		if (!self.parent.dom.header) return
+		// based on data in config state, but not section
+		const o = self.config.outcome
+		self.parent.dom.header.html(
+			(o ? o[o.varClass].name : '') +
+				'<span style="opacity:.6;font-size:.7em;margin-left:10px;">' +
+				self.opts.regressionType.toUpperCase() +
+				'</span>'
+		)
 	}
 }
 
@@ -368,6 +421,7 @@ function setInteractivity(self) {
 		}
 
 		const key = input.section.configKey
+
 		const selected = input.section.inputs
 			// get only non-empty inputs
 			.filter(input => input.varClass && input[input.varClass])
@@ -378,32 +432,32 @@ function setInteractivity(self) {
 		self.config[key] = Array.isArray(self.config[key]) ? selected : selected[0]
 		self.config.hasUnsubmittedEdits = true
 
-		self.parent.app.dispatch({
+		self.app.dispatch({
 			type: 'plot_edit',
-			id: input.section.parent.parent.id,
+			id: self.parent.id,
 			chartType: 'regression',
 			config: JSON.parse(JSON.stringify(self.config))
 		})
 	}
 
 	self.submit = () => {
+		// disable button upon clicking to prevent double-clicking
+		self.dom.submitBtn.property('disabled', true)
 		if (self.hasError) {
 			alert('Please fix the input variable errors (highlighted in red background).')
-			self.dom.submitBtn.property('disabled', true)
 			return
 		}
 
 		const config = JSON.parse(JSON.stringify(self.config))
 		config.hasUnsubmittedEdits = false
 
-		//delete config.settings
 		for (const term of config.independent) {
 			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
 		if (config.outcome.id in self.refGrpByTermId) config.outcome.q.refGrp = self.refGrpByTermId[config.outcome.id]
 
-		self.parent.app.dispatch({
-			type: config.outcome ? 'plot_edit' : 'plot_show',
+		self.app.dispatch({
+			type: 'plot_edit',
 			id: self.parent.id,
 			chartType: 'regression',
 			config
