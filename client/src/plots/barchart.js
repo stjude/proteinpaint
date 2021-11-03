@@ -1,4 +1,4 @@
-import { getCompInit } from '../common/rx.core'
+import { getCompInit, copyMerge } from '../common/rx.core'
 import rendererSettings from '../bars.settings'
 import barsRenderer from '../bars.renderer'
 import htmlLegend from '../html.legend'
@@ -11,6 +11,7 @@ import { controlsInit } from './controls'
 import { to_svg } from '../client'
 import { normalizeFilterData, syncParams } from '../mass/plot'
 import { getNormalRoot } from '../common/filter'
+import { fillTermWrapper } from '../common/termsetting'
 
 class TdbBarchart {
 	constructor(opts) {
@@ -101,7 +102,7 @@ class TdbBarchart {
 			isVisible:
 				!displayAsSurvival &&
 				config.settings.currViews.includes('barchart') &&
-				appState.tree.visiblePlotIds.includes(this.id),
+				(config.chartType || appState.tree.visiblePlotIds.includes(this.id)),
 			genome: appState.vocab.genome,
 			dslabel: appState.vocab.dslabel,
 			nav: appState.nav,
@@ -643,4 +644,49 @@ function setInteractivity(self) {
 		const svg_name = self.config.term.term.name + ' barchart'
 		to_svg(svg, svg_name) //,{apply_dom_styles:true})
 	}
+}
+
+export async function getPlotConfig(opts, app) {
+	if (!opts.term) throw 'barchart getPlotConfig: opts.term{} missing'
+	try {
+		await fillTermWrapper(opts.term, app.vocabApi)
+		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
+		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
+	} catch (e) {
+		throw `${e} [barchart getPlotConfig()]`
+	}
+
+	const config = {
+		id: opts.term.term.id,
+		settings: {
+			currViews: ['barchart'],
+			controls: {
+				isOpen: false, // control panel is hidden by default
+				term2: null, // the previous overlay value may be displayed as a convenience for toggling
+				term0: null
+			},
+			common: {
+				use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
+				use_percentage: false,
+				barheight: 300, // maximum bar length
+				barwidth: 20, // bar thickness
+				barspace: 2 // space between two bars
+			},
+			barchart: {
+				orientation: 'horizontal',
+				unit: 'abs',
+				overlay: 'none',
+				divideBy: 'none'
+			},
+
+			/* LEGACY SUPPORT 
+				 DELETE once all chart code is removed from the termdb app
+			*/
+			cuminc: {},
+			survival: {}
+		}
+	}
+
+	// may apply term-specific changes to the default object
+	return copyMerge(config, opts)
 }

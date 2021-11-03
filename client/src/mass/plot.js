@@ -1,8 +1,8 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, copyMerge } from '../common/rx.core'
 import { select, event } from 'd3-selection'
 //import { termInfoInit } from './termInfo'
 //import { to_parameter as tvslst_to_parameter } from '../mds.termdb.termvaluesetting.ui'
-import { termsetting_fill_q } from '../common/termsetting'
+import { fillTermWrapper } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { Menu } from '../client'
 
@@ -69,7 +69,7 @@ class MassPlot {
 
 	async main() {
 		// need to make config writable for filling in term.q default values
-		this.config = rx.copyMerge('{}', this.state.config)
+		this.config = copyMerge('{}', this.state.config)
 		if (!this.components) await this.setComponents(this.opts)
 	}
 
@@ -92,7 +92,7 @@ class MassPlot {
 	}
 }
 
-export const plotInit = rx.getCompInit(MassPlot)
+export const plotInit = getCompInit(MassPlot)
 
 function setRenderers(self) {
 	self.updateBtns = config => {
@@ -110,143 +110,6 @@ export function q_to_param(q) {
 	const q2 = JSON.parse(JSON.stringify(q))
 	delete q2.hiddenValues
 	return encodeURIComponent(JSON.stringify(q2))
-}
-
-export function plotConfig(opts, appState = {}) {
-	if (opts.chartType == 'regression') {
-		return regressionConfig(opts)
-	}
-
-	if (!opts.term) throw 'plotConfig: opts.term{} missing'
-	if (!opts.term.term) throw 'plotConfig: opts.term.term{} missing'
-	if (!opts.term.term.id) throw 'plotConfig: opts.term.term.id missing'
-
-	// initiate .q{}
-	fillTermWrapper(opts.term)
-	if (opts.term2) fillTermWrapper(opts.term2)
-	if (opts.term0) fillTermWrapper(opts.term0)
-
-	const config = {
-		id: opts.term.term.id,
-		settings: {
-			currViews: ['barchart'],
-			controls: {
-				isOpen: false, // control panel is hidden by default
-				term2: null, // the previous overlay value may be displayed as a convenience for toggling
-				term0: null
-			},
-			common: {
-				use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
-				use_percentage: false,
-				barheight: 300, // maximum bar length
-				barwidth: 20, // bar thickness
-				barspace: 2 // space between two bars
-			},
-			boxplot: {
-				toppad: 20, // top padding
-				yaxis_width: 100,
-				label_fontsize: 15,
-				barheight: 400, // maximum bar length
-				barwidth: 25, // bar thickness
-				barspace: 5 // space between two bars
-			},
-			barchart: {
-				orientation: 'horizontal',
-				unit: 'abs',
-				overlay: 'none',
-				divideBy: 'none'
-			},
-			scatter: {
-				currLine: 0,
-				svgw: 400,
-				svgh: 400,
-				svgPadding: {
-					top: 10,
-					left: 80,
-					right: 10,
-					bottom: 50
-				},
-				chartMargin: 5,
-				chartTitleDivHt: 30,
-				radius: 5,
-				axisTitleFontSize: 14,
-				scale: 'byChart', // byGroup | byChart
-				ciVisible: true,
-				fillOpacity: 0.2,
-				duration: 1000
-			},
-			cuminc: {
-				gradeCutoff: 3,
-				radius: 5,
-				fill: '#fff',
-				stroke: '#000',
-				fillOpacity: 0,
-				chartMargin: 10,
-				svgw: 400,
-				svgh: 300,
-				svgPadding: {
-					top: 20,
-					left: 55,
-					right: 20,
-					bottom: 50
-				},
-				axisTitleFontSize: 16,
-				hidden: []
-			},
-
-			termInfo: {
-				isVisible: false
-			},
-
-			survival: {
-				radius: 5,
-				ciVisible: false,
-				fill: '#fff',
-				stroke: '#000',
-				fillOpacity: 0,
-				chartMargin: 10,
-				svgw: 400,
-				svgh: 300,
-				svgPadding: {
-					top: 20,
-					left: 55,
-					right: 20,
-					bottom: 50
-				},
-				axisTitleFontSize: 16,
-				hidden: []
-			}
-		}
-	}
-
-	// may apply term-specific changes to the default object
-	return rx.copyMerge(config, opts)
-}
-
-let _ID_ = 0
-
-export function regressionConfig(opts) {
-	if (!opts.outcome) throw 'regression config: opts.outcome{} missing'
-	if (!opts.outcome.term) throw 'regression config: opts.outcome.term{} missing'
-	if (!('id' in opts.outcome.term)) throw 'regression config: opts.outcome.term.id missing'
-
-	const id = 'id' in opts ? opts.id : `_PLOTID_${_ID_++}`
-	const config = { id }
-
-	fillTermWrapper(opts.outcome)
-	config.outcome = opts.outcome
-
-	if (opts.independent) {
-		for (const t of opts.independent) {
-			// NOTE: fillTermWrapper(t) may be called before or after this function, instead of here
-			if (t.varClass == 'term' && t.term) fillTermWrapper(t)
-		}
-		config.independent = opts.independent
-	} else {
-		config.independent = []
-	}
-	// may apply term-specific changes to the default object
-	return rx.copyMerge(config, opts)
 }
 
 export function normalizeFilterData(filter) {
@@ -302,13 +165,6 @@ function tvslst_to_parameter(tv) {
 		value_by_computable_grade: tv.value_by_computable_grade,
 		grade_and_child: tv.grade_and_child
 	}
-}
-
-export function fillTermWrapper(wrapper) {
-	if (!('id' in wrapper)) wrapper.id = wrapper.term.id
-	if (!wrapper.q) wrapper.q = {}
-	termsetting_fill_q(wrapper.q, wrapper.term)
-	return wrapper
 }
 
 export function syncParams(config, data) {

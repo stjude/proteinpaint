@@ -1,6 +1,5 @@
 import { getStoreInit } from '../common/rx.core'
 import { root_ID } from '../termdb/tree'
-import { plotConfig, fillTermWrapper } from './plot'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
@@ -87,88 +86,15 @@ class TdbStore {
 				delete this.state.tree.plots
 			}
 
-			for (const savedPlot of this.state.plots) {
-				// .term{} is required, if missing, add with plotId
-				const termKey = savedPlot.chartType == 'regression' ? 'outcome' : 'term'
-				if (!savedPlot[termKey]) savedPlot[termKey] = {}
-				if (!savedPlot[termKey].id && savedPlot.id) savedPlot[termKey].id = savedPlot.id
-				// .term2 and term0 are optional, but .id is required as that's a different term than plotId
-				if (savedPlot.term2 && !savedPlot.term2.id) delete savedPlot.term2
-				if (savedPlot.term0 && !savedPlot.term0.id) delete savedPlot.term0
-				for (const t of ['outcome', 'term', 'term2', 'term0']) {
-					if (!savedPlot[t]) continue
-					savedPlot[t].term = await this.app.vocabApi.getterm(savedPlot[t].id)
-				}
-				if (!savedPlot.settings) savedPlot.settings = {}
-				if (!savedPlot.settings.currViews) savedPlot.settings.currViews = [savedPlot.chartType]
-				const plot = plotConfig(savedPlot, await this.api.copyState())
-				const i = this.state.plots.indexOf(savedPlot)
+			for (const [i, savedPlot] of this.state.plots.entries()) {
+				const _ = await import(`../plots/${savedPlot.chartType}.js`)
+				const plot = await _.getPlotConfig(savedPlot, this.app)
 				this.state.plots[i] = plot
 				if (!('id' in plot)) plot.id = '_AUTOID_' + i
-				if (plot.independent) {
-					plot.independent = await Promise.all(
-						plot.independent.map(async term => {
-							if (!term.term) term.term = await this.app.vocabApi.getterm(term.id)
-							return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
-						})
-					)
-				}
-				this.adjustPlotCurrViews(plot)
 			}
 
 			// maybe no need to provide term filter at this query
-			let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
-			if (!filterUiRoot) {
-				this.state.termfilter.filter.tag = 'filterUiRoot'
-				filterUiRoot = this.state.termfilter.filter
-			}
-
-			if (this.state.termdbConfig.selectCohort) {
-				let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
-				if (!cohortFilter) {
-					// support legacy state.termfilter and test scripts that
-					// that does not specify a cohort when required;
-					// will use state.activeCohort if not -1
-					cohortFilter = {
-						tag: 'cohortFilter',
-						type: 'tvs',
-						tvs: {
-							term: JSON.parse(JSON.stringify(this.state.termdbConfig.selectCohort.term)),
-							values:
-								this.state.activeCohort == -1
-									? []
-									: this.state.termdbConfig.selectCohort.values[this.state.activeCohort].keys.map(key => {
-											return { key, label: key }
-									  })
-						}
-					}
-					this.state.termfilter.filter = {
-						type: 'tvslst',
-						in: true,
-						join: 'and',
-						lst: [cohortFilter, filterUiRoot]
-					}
-				} else {
-					const sorter = (a, b) => (a < b ? -1 : 1)
-					cohortFilter.tvs.values.sort((a, b) => (a.key < b.key ? -1 : 1))
-					const keysStr = JSON.stringify(cohortFilter.tvs.values.map(v => v.key).sort(sorter))
-					const i = this.state.termdbConfig.selectCohort.values.findIndex(
-						v => keysStr == JSON.stringify(v.keys.sort(sorter))
-					)
-					if (this.state.activeCohort !== -1 && this.state.activeCohort !== 0 && i !== this.state.activeCohort) {
-						console.log('Warning: cohortFilter will override the state.activeCohort due to mismatch')
-					}
-					this.state.activeCohort = i
-				}
-			} else {
-				this.state.activeCohort = -1
-				// since the cohort tab will be hidden, default to making the filter tab active
-				if (this.state.activeTab === 0) this.state.activeTab = 1
-				if (this.state.nav.header_mode === 'with_cohortHtmlSelect') {
-					console.warn(`no termdbConfig.selectCohort to use for nav.header_mode = 'with_cohortHtmlSelect'`)
-					this.state.nav.header_mode = 'search_only'
-				}
-			}
+			this.setTermfilter()
 		} catch (e) {
 			throw e
 		}
@@ -183,17 +109,58 @@ class TdbStore {
 		}
 	}
 
-	adjustPlotCurrViews(plotConfig) {
-		if (!plotConfig || plotConfig.chartType == 'regression') return
-		const currViews = plotConfig.settings.currViews || []
-		if (currViews.includes('table') && !plotConfig.term2) {
-			plotConfig.settings.currViews = ['barchart']
+	setTermfilter() {
+		let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
+		if (!filterUiRoot) {
+			this.state.termfilter.filter.tag = 'filterUiRoot'
+			filterUiRoot = this.state.termfilter.filter
 		}
-		if (
-			currViews.includes('boxplot') &&
-			(!plotConfig.term2 || (plotConfig.term2.term.type !== 'integer' && plotConfig.term2.term.type !== 'float'))
-		) {
-			plotConfig.settings.currViews = ['barchart']
+
+		if (!this.state.termdbConfig.selectCohort) {
+			this.state.activeCohort = -1
+			// since the cohort tab will be hidden, default to making the filter tab active
+			if (this.state.activeTab === 0) this.state.activeTab = 1
+			if (this.state.nav.header_mode === 'with_cohortHtmlSelect') {
+				console.warn(`no termdbConfig.selectCohort to use for nav.header_mode = 'with_cohortHtmlSelect'`)
+				this.state.nav.header_mode = 'search_only'
+			}
+		} else {
+			let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
+			if (!cohortFilter) {
+				// support legacy state.termfilter and test scripts that
+				// that does not specify a cohort when required;
+				// will use state.activeCohort if not -1
+				cohortFilter = {
+					tag: 'cohortFilter',
+					type: 'tvs',
+					tvs: {
+						term: JSON.parse(JSON.stringify(this.state.termdbConfig.selectCohort.term)),
+						values:
+							this.state.activeCohort == -1
+								? []
+								: this.state.termdbConfig.selectCohort.values[this.state.activeCohort].keys.map(key => {
+										return { key, label: key }
+								  })
+					}
+				}
+				this.state.termfilter.filter = {
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: [cohortFilter, filterUiRoot]
+				}
+			} else {
+				const sorter = (a, b) => (a < b ? -1 : 1)
+				cohortFilter.tvs.values.sort((a, b) => (a.key < b.key ? -1 : 1))
+				const keysStr = JSON.stringify(cohortFilter.tvs.values.map(v => v.key).sort(sorter))
+				const i = this.state.termdbConfig.selectCohort.values.findIndex(
+					v => keysStr == JSON.stringify(v.keys.sort(sorter))
+				)
+				if (this.state.activeCohort !== -1 && this.state.activeCohort !== 0 && i !== this.state.activeCohort) {
+					console.log('Warning: cohortFilter will override the state.activeCohort due to mismatch')
+				}
+				this.state.activeCohort = i
+			}
 		}
 	}
 }
@@ -213,9 +180,6 @@ TdbStore.prototype.actions = {
 		// initial render is not meant to be modified yet
 		//
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
-		for (const plot of this.state.plots) {
-			this.adjustPlotCurrViews(plot)
-		}
 	},
 	tab_set(action) {
 		this.state.nav.activeTab = action.activeTab
@@ -240,36 +204,6 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTermIds.splice(i, 1)
 	},
 
-	async plot_show(action) {
-		const plot = plotConfig(
-			{
-				id: action.id,
-				term: action.config.term.term ? action.config.term : { term: action.config.term },
-				chartType: action.config.chartType,
-				settings: { currViews: [action.config.chartType] }
-			},
-			await this.api.copyState()
-		)
-		if (action.config.independent) {
-			plot.independent = action.config.independent.map(term => {
-				return term.term ? fillTermWrapper(term) : fillTermWrapper({ term })
-			})
-		}
-		if (!action.config.termSequence) {
-			action.config.termSequence = getTermSelectionSequence(action.config.chartType)
-		}
-		if ('cutoff' in action.config) {
-			plot.cutoff = action.config.cutoff
-		} else {
-			delete plot.cutoff
-		}
-		if (action.config.regressionType) {
-			plot.regressionType = action.config.regressionType
-		}
-		this.state.plots.push(plot)
-		this.state.tree.visiblePlotIds.push(action.id)
-	},
-
 	async plot_prep(action) {
 		const plot = {
 			id: action.id
@@ -279,11 +213,11 @@ TdbStore.prototype.actions = {
 		this.state.plots.push(plot)
 	},
 
-	plot_hide(action) {
-		const i = this.state.tree.visiblePlotIds.indexOf(action.id)
-		if (i != -1) {
-			this.state.tree.visiblePlotIds.splice(i, 1)
-		}
+	async plot_create(action) {
+		const _ = await import(`../plots/${action.config.chartType}.js`)
+		const plot = await _.getPlotConfig(action.config, this.app)
+		plot.id = action.id
+		this.state.plots.push(plot)
 	},
 
 	plot_edit(action) {
@@ -297,7 +231,6 @@ TdbStore.prototype.actions = {
 		} else {
 			delete plot.cutoff
 		}
-		this.adjustPlotCurrViews(plot)
 	},
 
 	plot_delete(action) {

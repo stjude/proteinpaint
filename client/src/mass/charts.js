@@ -203,7 +203,7 @@ function setRenderers(self) {
 
 	/*	
 		show termdb tree to select a term
-		once selected, dispatch "plot_show" action (with the selected term) to produce the plot
+		once selected, dispatch "plot_create" action (with the selected term) to produce the plot
 		example: barchart
 	*/
 	self.showTree_select1term = async chart => {
@@ -217,7 +217,7 @@ function setRenderers(self) {
 		}
 
 		const action = {
-			type: 'plot_show',
+			type: 'plot_create',
 			id: idPrefix + id++,
 			config: { chartType: chart.chartType } // may replaced by payload to be consistent
 		}

@@ -1,8 +1,9 @@
 import { RegressionInputs } from './regression.inputs'
 import { RegressionResults } from './regression.results'
-import { getCompInit } from '../common/rx.core'
+import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { sayerror } from '../dom/error'
+import { fillTermWrapper } from '../common/termsetting'
 
 /*
 Code architecture:
@@ -87,3 +88,32 @@ class Regression {
 export const regressionInit = getCompInit(Regression)
 // this alias will allow abstracted dynamic imports
 export const componentInit = regressionInit
+
+let _ID_ = 1
+
+export async function getPlotConfig(opts, app) {
+	if (!opts.outcome) {
+		opts.outcome = {}
+	}
+	if (!opts.outcome.varClass) {
+		// FIXME: harcoded empty varClass, for now
+		opts.outcome.varClass = 'term'
+	}
+	if (opts.outcome && opts.outcome.varClass == 'term') await fillTermWrapper(opts.outcome, app.vocabApi)
+
+	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
+	const config = { id }
+	config.outcome = opts.outcome
+
+	if (opts.independent) {
+		for (const t of opts.independent) {
+			if (t.varClass == 'term') await fillTermWrapper(t, app.vocabApi)
+		}
+		config.independent = opts.independent
+		delete opts.independent
+	} else {
+		config.independent = []
+	}
+	// may apply term-specific changes to the default object
+	return copyMerge(config, opts)
+}

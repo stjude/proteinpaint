@@ -15,14 +15,12 @@ constructor
 		submit (by clicking button)
 		addSection
 main
-	triggerUpdate
-		mayUpdateSandboxHeader
-		setDisableTerms
-		renderSection
-			updateInputs
-			removeInput
-			addInput
-		updateSubmitButton
+	mayUpdateSandboxHeader
+	setDisableTerms
+	renderSection
+		updateInputs
+		removeInput
+		addInput
 
 FIXME submit button toggling is broken
 should be disabled when:
@@ -103,7 +101,7 @@ export class RegressionInputs {
 						the function/object/class instance that will handle
 						the variable selection, one for each varClass;
 						.update()
-							called in triggerUpdate()
+							called in main()
 						.remove()
 						.hasError
 
@@ -169,43 +167,35 @@ export class RegressionInputs {
 
 	async main() {
 		try {
-			// disable submit button on click, reenable after rendering results
-			//this.dom.submitBtn.property('disabled', true).text('Running...')
-
-			// share the writable config copy
 			this.config = this.parent.config
 			this.state = this.parent.state
-			await this.triggerUpdate()
+			this.mayUpdateSandboxHeader()
+			this.hasError = false
+			this.setDisableTerms()
+			const updates = []
+			for (const section of this.sections) {
+				await this.renderSection(section)
+				for (const input of section.inputs) {
+					input.dom.holder.style('border-left', input[input.varClass] ? '1px solid #bbb' : '')
+					if (input.handler) updates.push(input.handler.update(input))
+				}
+			}
+			await Promise.all(updates)
+			for (const section of this.sections) {
+				for (const input of section.inputs) {
+					if ((input.term && input.term.error) || (input.handler && input.handler.hasError)) {
+						this.hasError = true
+						this.parent.results.dom.holder.style('display', 'none')
+					}
+				}
+			}
+			//this.updateSubmitButton(true)
 		} catch (e) {
 			this.hasError = true
 			// FIXME: does not seem right to modify results dom from the inputs code here
 			this.parent.results.dom.holder.style('display', 'none')
 			throw e
 		}
-	}
-
-	async triggerUpdate() {
-		this.mayUpdateSandboxHeader()
-		this.hasError = false
-		this.setDisableTerms()
-		const updates = []
-		for (const section of this.sections) {
-			await this.renderSection(section)
-			for (const input of section.inputs) {
-				input.dom.holder.style('border-left', input[input.varClass] ? '1px solid #bbb' : '')
-				if (input.handler) updates.push(input.handler.update(input))
-			}
-		}
-		await Promise.all(updates)
-		for (const section of this.sections) {
-			for (const input of section.inputs) {
-				if ((input.term && input.term.error) || (input.handler && input.handler.hasError)) {
-					this.hasError = true
-					this.parent.results.dom.holder.style('display', 'none')
-				}
-			}
-		}
-		//this.updateSubmitButton(true)
 	}
 
 	setDisableTerms() {
@@ -377,18 +367,6 @@ function setRenderers(self) {
 			.text('Run analysis')
 			.style('display', self.config.outcome && self.config.independent.length ? 'block' : 'none')
 			.property('disabled', false)
-	}
-
-	self.updateSubmitButton = chartRendered => {
-		// not used
-		const hasBothTerms = self.config.outcome != undefined && self.config.independent.length
-		self.dom.submitBtn.text('Run analysis').style('display', hasBothTerms ? 'block' : 'none')
-
-		if (self.hasError) {
-			self.dom.submitBtn.property('disabled', true)
-		} else if (chartRendered) {
-			self.dom.submitBtn.property('disabled', false)
-		}
 	}
 
 	self.mayUpdateSandboxHeader = () => {
