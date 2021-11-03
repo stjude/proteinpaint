@@ -876,8 +876,14 @@ function makeGroup(gd, tk, block, data) {
 		.attr('font-size', gd.messagerowheights)
 		.text(gd.messagerows[0].t)
 
-	group.dom.message_row.attr('text-align', 'center')
-
+	if (tk.variants) {
+		if (gd.type == 'support_alt' || gd.type == 'support_ref') {
+			group.dom.message_row.on('click', () => {
+				tk.tktip.clear().showunder(d3event.target)
+				getMultiReadAligInfo(tk, gd, block) // Generating multiple sequence alignment against ref/alt allele
+			})
+		}
+	}
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
 		.attr('xlink:href', group.data.src)
@@ -937,12 +943,12 @@ function makeGroup(gd, tk, block, data) {
 			if (!group.data.templatebox) return
 			//console.log('group.data:', group.data)
 
-			if (tk.variants) {
-				if (group.data.type == 'support_alt' || group.data.type == 'support_ref') {
-					// Only alignments for ref and alt allele , not the none category
-					getMultiReadAligInfo(tk, group, block) // Generating multiple sequence alignment against ref/alt allele
-				}
-			}
+			//if (tk.variants) {
+			//	if (group.data.type == 'support_alt' || group.data.type == 'support_ref') {
+			//		// Only alignments for ref and alt allele , not the none category
+			//		getMultiReadAligInfo(tk, group, block) // Generating multiple sequence alignment against ref/alt allele
+			//	}
+			//}
 			for (const t of group.data.templatebox) {
 				const bx1 = Math.max(0, t.x1)
 				const bx2 = Math.min(block.width, t.x2)
