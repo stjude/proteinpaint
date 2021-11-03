@@ -6,9 +6,9 @@ module.exports = function(common) {
 
 		about: [],
 
-		sampleAssayTrack: {
+		/*sampleAssayTrack: {
 			file: 'hg38/als/mds/assaytracks/__table'
-		},
+		},*/
 
 		cohort: {
 			files: [{ file: 'hg38/als/mds/sample.table' }],
@@ -25,15 +25,31 @@ module.exports = function(common) {
 			},
 			sampleAttribute: {
 				attributes: {
-					ALSRD_Dx: {
-						label: 'ALSRD_Dx',
+					Batch: {
+						label: 'Batch',
+						filter: 1
+					},
+					ClinDx_WGS: {
+						label: 'ClinDx_WGS',
+						filter: 1
+					},
+					Sex_c: {
+						label: 'Sex_c',
+						filter: 1
+					},
+					OsAge: {
+						label: 'OsAge',
+						filter: 1
+					},
+					SurvOs_mo: {
+						label: 'SurvOs_mo',
 						filter: 1
 					}
 				}
 			}
 		},
 
-		locusAttribute: {
+		/*locusAttribute: {
 			// FIXME
 			attributes: {
 				CLNSIG: {
@@ -42,9 +58,9 @@ module.exports = function(common) {
 					values: {}
 				}
 			}
-		},
+		},*/
 
-		alleleAttribute: {
+		/*alleleAttribute: {
 			attributes: {
 				ExAC_AF: {
 					label: 'ExAC',
@@ -67,19 +83,19 @@ module.exports = function(common) {
 					cutoffvalue: 10
 				}
 			}
-		},
+		},*/
 
-		mutationAttribute: {
+		/*mutationAttribute: {
 			attributes: {
 				discordantreads: {
 					label: 'Discordant read pairs'
 				}
 			}
-		},
+		},*/
 
 		queries: {
 			svcnv: {
-				name: 'ALS germline mutation',
+				name: 'CReATe ALS mutation',
 
 				//showfullmode:true,
 
@@ -91,15 +107,6 @@ module.exports = function(common) {
 				valueCutoff: 0.2,
 				bplengthUpperLimit: 2000000, // limit cnv length to focal events
 
-				groupsamplebyattr: {
-					attrlst: [{ k: 'ALSRD_Dx', label: 'ALSRD_Dx' }],
-					sortgroupby: {
-						key: 'ALSRD_Dx',
-						order: ['ALS', 'ALS-FTD', 'FTD', 'HSP (complicated)', 'HSP (pure)', 'PLS', 'PMA']
-					},
-					attrnamespacer: ', '
-				},
-
 				vcf_querykey: 'snvindel',
 
 				multihidelabel_vcf: false,
@@ -109,17 +116,14 @@ module.exports = function(common) {
 			},
 
 			snvindel: {
-				name: 'ALS germline SNV/indel',
+				name: 'CReATe ALS SNV/indel',
 				istrack: true,
 				type: common.tkt.mdsvcf,
 				viewrangeupperlimit: 2000000,
 				tracks: [
 					{
-						file: 'hg38/als/mds/vcf/ALS329.vep.ann.hg38_multianno.clinvar.ExAC.NFE.vcf.gz',
-						type: 'vcf',
-						samplenameconvert: str => {
-							return str.split('-')[0]
-						}
+						file: 'hg38/als/mds/vcf/CReATe_gatk4.1.8.0_hg38_multianno.705_2021Oct22.vepanno.vcf.gz',
+						type: 'vcf'
 					}
 				]
 			}
