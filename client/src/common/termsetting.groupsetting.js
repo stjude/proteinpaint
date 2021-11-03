@@ -103,7 +103,7 @@ export function setGroupsettingMethods(self) {
 				}
 			})
 
-		for (let i = 0; i < default_grp_count + 2; i++)
+		for (let i = 1; i < default_grp_count + 2; i++)
 			group_ct_select
 				.append('option')
 				.attr('value', i + 1)
@@ -128,7 +128,7 @@ export function setGroupsettingMethods(self) {
 			// move dom from one holder to exclude holder
 			const id = event.dataTransfer.getData('text') // get id from event.dataTrasfer
 			const item = groups_holder.select('#sj-drag-item-' + id) // select dom by id
-			
+
 			// move dom from one holder to exclude holder
 			const val = item._groups[0][0].__data__ // get data attached to dom
 			if (cat_grps[val.key].group == 0) return
@@ -181,17 +181,17 @@ export function setGroupsettingMethods(self) {
 
 		// create holder for each group from groupset with group name input
 		function addGroupHolder(group, i) {
-			const group_div = initDraggableDiv(non_exclude_div, 'Group ' + (i + 1), i+1 )
+			const group_div = initDraggableDiv(non_exclude_div, 'Group ' + (i + 1), i + 1)
 
 			group_div.on('drop', () => {
 				// move dom from one group holder to another group holder
 				const id = event.dataTransfer.getData('text') // get id from event.dataTrasfer
 				const item = groups_holder.select('#sj-drag-item-' + id) // append dragged dom to list
-                    
+
 				// move dom from one group holder to another group holder
 				// if .group is same as previous, return (don't move or reorder categories)
 				const val = item._groups[0][0].__data__ // get data attached to dom
-				if (cat_grps[val.key].group == i+1) return
+				if (cat_grps[val.key].group == i + 1) return
 				else group_list.node().appendChild(item.node())
 
 				// update metadata for the category list (.group = 1 or 2 ..)
