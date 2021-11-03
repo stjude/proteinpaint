@@ -57,11 +57,22 @@ export class RegressionResults {
 	// a unique request identifier to be used for caching server response
 	getDataName() {
 		const c = this.config // the plot object in state
-		const outcome = encodeURIComponent(JSON.stringify({ id: c.outcome.id, q: c.outcome.q, refGrp: c.outcome.refGrp }))
+		const outcome = { id: c.outcome.id, q: JSON.parse(JSON.stringify(c.outcome.q)) }
+		if (!outcome.q.mode && c.regressionType == 'linear') outcome.q.mode = 'continuous'
+		const contQkeys = ['mode', 'scale']
+		outcome.refGrp = outcome.q.mode == 'continuous' ? 'NA' : c.outcome.refGrp
+
+		if (outcome.q.mode == 'continuous') {
+			// remove unneeded parameters from q
+			for (const key in outcome.q) {
+				if (!contQkeys.includes(key)) delete outcome.q[key]
+			}
+		}
+
 		const params = [
 			'getregression=1',
 			`regressionType=${c.regressionType}`,
-			`outcome=${outcome}`,
+			`outcome=${encodeURIComponent(JSON.stringify(outcome))}`,
 			'independent=' +
 				encodeURIComponent(
 					JSON.stringify(
@@ -69,7 +80,18 @@ export class RegressionResults {
 							const q = JSON.parse(JSON.stringify(t.q))
 							delete q.values
 							delete q.totalCount
-							return { id: t.id, q: t.q, type: t.term.type, refGrp: t.refGrp }
+							if (t.q.mode == 'continuous') {
+								// remove unneeded parameters from q
+								for (const key in q) {
+									if (!contQkeys.includes(key)) delete q[key]
+								}
+							}
+							return {
+								id: t.id,
+								q,
+								type: t.term.type,
+								refGrp: t.q.mode == 'continuous' ? 'NA' : t.refGrp
+							}
 						})
 					)
 				)

@@ -202,7 +202,7 @@ async function maySetTwoGroups(input) {
 
 	// if the bins are already binary, do not reset
 	const { term, q } = input.term
-	if (q.mode == 'binary') return
+	if (q.mode == 'binary' && 'refGrp' in q) return
 	q.mode = 'binary'
 
 	// category and condition terms share some logic
