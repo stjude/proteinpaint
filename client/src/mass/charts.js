@@ -96,7 +96,7 @@ function getChartTypeList(self) {
 		required for clickTo=showMenu
 		each menu option will have its own clickTo to determine the behavior of clicking on it
 
-	.payload:{}
+	.config:{}
 		required for clickTo=prepPlot
 		describe private details for creating a chart of a particular type
 		to be attached to action and used by store
@@ -142,7 +142,7 @@ function getChartTypeList(self) {
 					label: 'Linear',
 					clickTo: self.prepPlot,
 					chartType: 'regression',
-					payload: {
+					config: {
 						chartType: 'regression',
 						regressionType: 'linear',
 						independent: []
@@ -151,7 +151,7 @@ function getChartTypeList(self) {
 				{
 					label: 'Logistic',
 					clickTo: self.prepPlot,
-					payload: {
+					config: {
 						chartType: 'regression',
 						regressionType: 'logistic',
 						independent: []
@@ -219,7 +219,7 @@ function setRenderers(self) {
 		const action = {
 			type: 'plot_create',
 			id: idPrefix + id++,
-			config: { chartType: chart.chartType } // may replaced by payload to be consistent
+			config: { chartType: chart.chartType }
 		}
 
 		const termdb = await import('../termdb/app')
@@ -248,7 +248,7 @@ function setRenderers(self) {
 		example: table, scatterplot which requires user to select two terms
 	*/
 	self.prepPlot = function(chart) {
-		const action = { type: 'plot_prep', payload: chart.payload, id: idPrefix + id++ }
+		const action = { type: 'plot_prep', config: chart.config, id: idPrefix + id++ }
 		self.app.dispatch(action)
 	}
 }

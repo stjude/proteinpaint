@@ -208,8 +208,8 @@ TdbStore.prototype.actions = {
 		const plot = {
 			id: action.id
 		}
-		if (!action.payload) throw '.payload{} missing for plot_prep'
-		Object.assign(plot, action.payload)
+		if (!action.config) throw '.config{} missing for plot_prep'
+		Object.assign(plot, action.config)
 		this.state.plots.push(plot)
 	},
 

@@ -14,14 +14,14 @@ q {}
 	.id
 	.term
 	.q{}
-		.refGrp
+	.refGrp
 .independent[{}]
 	.id
 	.type
 	.isBinned
 	.q{}
 		.scale
-		.refGrp
+	.refGrp
 
 input tsv matrix for R:
 	first column is outcome variable
@@ -35,7 +35,6 @@ TODO
 		categorical and condition term:
 			category/grade: use val and exclude uncomputable categories
 			groupsetting: still use val (both key/val are groupset labels)
-- client side to return q.refGrp for each term and delete get_refCategory()
 */
 
 // minimum number of samples to run analysis
@@ -60,12 +59,12 @@ export async function get_regression(q, ds) {
 
 		// create arguments for the R script
 		// outcome
-		const refGroups = [get_refCategory(q.outcome.term, q.outcome.q)]
+		const refGroups = [q.outcome.refGrp]
 		const colClasses = [q.outcome.q.mode == 'binary' ? 'factor' : termType2varClass(q.outcome.term.type)]
 		const scalingFactors = ['NA']
 		// independent terms
 		for (const term of q.independent) {
-			refGroups.push(get_refCategory(term.term, term.q))
+			refGroups.push(term.refGrp)
 			colClasses.push(term.isBinned ? 'factor' : termType2varClass(term.term.type))
 			scalingFactors.push(term.isBinned || !term.q.scale ? 'NA' : term.q.scale)
 		}
@@ -303,34 +302,6 @@ function parseRoutput(data, result) {
 			}
 		}
 	}
-}
-
-/*
-decide reference category
-- term: the term json object {type, values, ...}
-- q: client side config for this term (should tell which category is chosen as reference, if applicable)
-
-fix the fault in test URL to always provide refGrp
-*/
-function get_refCategory(term, q) {
-	if (q.refGrp) return q.refGrp
-	if (term.type == 'categorical' || term.type == 'condition') {
-		// q attribute will tell which category is reference
-		// else first category as reference
-		if (q.groupsetting && q.groupsetting.inuse && q.groupsetting.predefined_groupset_idx !== undefined) {
-			return term.groupsetting.lst[q.groupsetting.predefined_groupset_idx].groups[0]['name']
-		}
-		if (q.groupsetting && q.groupsetting.inuse) {
-			return q.groupsetting.customset.groups[0]['name']
-		}
-		return Object.keys(term.values)[0]
-	}
-	if (term.type == 'integer' || term.type == 'float') {
-		// TODO when numeric term is divided to bins, term should indicate which bin is reference
-		// this currently won't work if term is divided to bins
-		return 'NA'
-	}
-	throw 'unknown term type for refCategories'
 }
 
 /*
