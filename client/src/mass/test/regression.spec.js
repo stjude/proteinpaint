@@ -251,9 +251,9 @@ tape('logistic outcome: missing reference category', function(test) {
 							lst: [
 								{ startunbounded: true, stopinclusive: true, stop: 22.05, label: '≤22.05' },
 								{ stopunbounded: true, startinclusive: false, start: 22.05, label: '>22.05' }
-							],
-							refGrp: '≤22.05'
-						}
+							]
+						},
+						refGrp: '≤22.05'
 					},
 					independent: [
 						{

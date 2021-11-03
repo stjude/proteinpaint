@@ -154,10 +154,10 @@ async function maySetTwoBins(input) {
 	const { app, state } = input.section.parent
 	const t = input.term
 	// if the bins are already binary, do not reset
-	if (t.q.mode == 'binary' && 'refGrp' in t) return
-	if (t.q.lst && t.q.lst.length == 2) {
+	if (t.q.mode == 'binary' && t.q.lst && t.q.lst.length == 2) {
 		t.q.mode = 'binary'
-		t.refGrp = t.q.lst[0].label
+		// NOTE: refGrp may be reset as needed in regression.values.table.js
+		// if (!t.q.lst.find(bin => bin.label === t.refGrp)) t.refGrp = t.q.lst[0].label
 		return
 	}
 
@@ -201,9 +201,21 @@ async function maySetTwoGroups(input) {
 	const { app, state } = input.section.parent
 
 	// if the bins are already binary, do not reset
-	const { term, q } = input.term
-	if (q.mode == 'binary' && 'refGrp' in q) return
-	q.mode = 'binary'
+	const { term, q, refGrp } = input.term
+	if (q.mode == 'binary') {
+		if (q.type == 'values' && Object.keys(term.values).length == 2) return
+		if (q.type == 'predefined-groupset') {
+			const idx = q.groupsetting.predefined_groupset_idx
+			const t_gs = term.groupsetting
+			if (t_gs[idx] && Object.keys(t_gs[idx]).length == 2) return
+		}
+		if (q.type == 'custom-groupset') {
+			const gs = q.groupsetting
+			if (gs.groups.length == 2) return
+		}
+	} else {
+		q.mode = 'binary'
+	}
 
 	// category and condition terms share some logic
 

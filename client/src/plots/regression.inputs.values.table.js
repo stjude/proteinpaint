@@ -114,7 +114,7 @@ export class InputValuesTable {
 			delete t.refGrp
 			return
 		}
-		if (!('refGrp' in t) && t.id in refGrpByTermId) {
+		if (!('refGrp' in t) && t.id in refGrpByTermId && this.sampleCounts.find(d => d.key === t.refGrp)) {
 			t.refGrp = refGrpByTermId[t.id]
 			return
 		}
