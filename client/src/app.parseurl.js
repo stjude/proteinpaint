@@ -188,7 +188,7 @@ upon error, throw err message as a string
 		if (urlp.has('tsnejson')) {
 			const file_str = urlp.get('tsnejson')
 			const data = await client.dofetch('textfile', { file: file_str })
-			if (data.error) throw tmp.error
+			if (data.error) throw data.error
 			else if (data.text) {
 				plot_data = {
 					mdssamplescatterplot: {
