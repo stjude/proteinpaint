@@ -255,6 +255,7 @@ async function getData(tk, block, additional = []) {
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
 	const data = await dofetch3('tkbam?' + lst.join('&'), { headers })
+	console.log('data:', data)
 	if (tk.variants && !tk.alleleAlreadyUpdated) {
 		tk.variants[0].refseq = data.refseq
 		tk.variants[0].altseq = data.altseq
@@ -868,6 +869,15 @@ function makeGroup(gd, tk, block, data) {
 			showline: true
 		})
 	}
+	group.dom.message_row = group.dom.imgg
+		.append('text')
+		.attr('x', data.pileup_data.width / 3)
+		.attr('y', gd.messagerowheights)
+		.attr('font-size', gd.messagerowheights)
+		.text(gd.messagerows[0].t)
+
+	group.dom.message_row.attr('text-align', 'center')
+
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
 		.attr('xlink:href', group.data.src)

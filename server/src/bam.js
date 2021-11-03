@@ -889,7 +889,7 @@ async function do_query(q) {
 		ctx.textBaseline = 'middle'
 
 		gr.messagerowheights = plot_messagerows(ctx, group, q)
-
+		gr.messagerows = group.messagerows
 		for (const template of templates) {
 			// group.templates
 			plot_template(ctx, template, group, q)
@@ -1889,9 +1889,9 @@ function qual2int(s) {
 function plot_messagerows(ctx, group, q) {
 	let y = 0
 	for (const row of group.messagerows) {
-		ctx.font = Math.min(12, row.h - 2) + 'pt Arial'
-		ctx.fillStyle = 'black'
-		ctx.fillText(row.t, q.canvaswidth / 2, y + row.h / 2)
+		//ctx.font = Math.min(12, row.h - 2) + 'pt Arial'
+		//ctx.fillStyle = 'black'
+		//ctx.fillText(row.t, q.canvaswidth / 2, y + row.h / 2)
 		y += row.h
 	}
 	return y
