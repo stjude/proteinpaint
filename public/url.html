@@ -365,9 +365,9 @@ makeURL([
 									{startinclusive:false,stopinclusive:true,start:0,stop:100,label:'>0 to 100'},
 									{startinclusive:false,stopinclusive:true,start:100,stop:250,label:'>100 to 250'},
 									{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
-								],
-								refGrp:'Not exposed'
-							}
+								]
+							},
+							refGrp:'Not exposed'
 						},
 					]
 				},
@@ -423,9 +423,9 @@ makeURL([
 						"lst":[
 							{"startunbounded":true,"stopinclusive":true,"stop":57.8,"label":"≤57.8"},
 							{"stopunbounded":true,"startinclusive":false,"start":57.8,"label":">57.8"}
-						],
-						"refGrp":"≤57.8"
-					}
+						]
+					},
+					"refGrp":"≤57.8"
 				},
 				independent: [
 					{ varClass:'term', id: "diaggrp"},
@@ -435,9 +435,10 @@ makeURL([
 						"id":"genetic_race",
 						"q":{
 							"hiddenValues":{},
-							"groupsetting":{"inuse":false},
-							"refGrp":"European Ancestry"
-						},"type":"categorical"
+							"groupsetting":{"inuse":false}
+						},
+						"refGrp":"European Ancestry",
+						"type":"categorical"
 					}
 				]
 			}]
@@ -478,9 +479,9 @@ makeURL([
 								// FIXME no need to define startinclusive
 								{startinclusive:false,stopinclusive:true,start:0,stop:100,label:'>0 to 100'},
 								{startinclusive:false,stopunbounded:true,start:100,label:'>100'}
-							],
-							refGrp:'Not exposed'
-						}
+							]
+						},
+						refGrp:'Not exposed'
 					},
 				]
 			}]

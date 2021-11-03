@@ -132,8 +132,8 @@ function setRenderers(self) {
 				.style('vertical-align', 'bottom'),
 			searchDiv: header
 				.append('div')
-				.style('display', 'inline-block')
-				.style('width', '300px')
+				.style('display', 'none')
+				.style('width', '0px')
 				.style('margin', '10px')
 				.style('vertical-align', 'top'),
 			sessionDiv: header

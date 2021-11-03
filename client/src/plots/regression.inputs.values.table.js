@@ -111,18 +111,18 @@ export class InputValuesTable {
 			else t.q.mode = 'continuous'
 		}
 		if (t.q.mode == 'continuous') {
-			delete t.q.refGrp
+			delete t.refGrp
 			return
 		}
-		if (!('refGrp' in t.q) && t.id in refGrpByTermId) {
-			t.q.refGrp = refGrpByTermId[t.id]
+		if (!('refGrp' in t) && t.id in refGrpByTermId) {
+			t.refGrp = refGrpByTermId[t.id]
 			return
 		}
-		if (!('refGrp' in t.q) || !this.sampleCounts.find(s => s.key === t.q.refGrp)) {
+		if (!('refGrp' in t) || !this.sampleCounts.find(s => s.key === t.refGrp)) {
 			// default to the first value or group
-			t.q.refGrp = this.sampleCounts[0].key
+			t.refGrp = this.sampleCounts[0].key
 		}
-		refGrpByTermId[t.id] = t.q.refGrp
+		refGrpByTermId[t.id] = t.refGrp
 	}
 }
 
@@ -266,8 +266,8 @@ function setRenderers(self) {
 			tr.style('background', 'white')
 			ref_text = select(tr.node().lastChild)
 				.select('div')
-				.style('display', item.key === t.q.refGrp && hover_flag ? 'inline-block' : 'none')
-				.style('border', item.key === t.q.refGrp && hover_flag ? '1px solid #bbb' : '')
+				.style('display', item.key === t.refGrp && hover_flag ? 'inline-block' : 'none')
+				.style('border', item.key === t.refGrp && hover_flag ? '1px solid #bbb' : '')
 		} else {
 			const reference_td = tr
 				.append('td')
@@ -276,9 +276,9 @@ function setRenderers(self) {
 
 			ref_text = reference_td
 				.append('div')
-				.style('display', item.key === t.q.refGrp && hover_flag ? 'inline-block' : 'none')
+				.style('display', item.key === t.refGrp && hover_flag ? 'inline-block' : 'none')
 				.style('padding', '2px 10px')
-				.style('border', item.key === t.q.refGrp && hover_flag ? '1px solid #bbb' : '')
+				.style('border', item.key === t.refGrp && hover_flag ? '1px solid #bbb' : '')
 				.style('border-radius', '10px')
 				.style('color', '#999')
 				.style('font-size', '.7em')
@@ -287,7 +287,7 @@ function setRenderers(self) {
 
 		if (hover_flag) {
 			tr.on('mouseover', () => {
-				if (t.q.refGrp !== item.key) {
+				if (t.refGrp !== item.key) {
 					tr.style('background', '#fff6dc')
 					ref_text
 						.style('display', 'inline-block')
@@ -297,12 +297,12 @@ function setRenderers(self) {
 			})
 				.on('mouseout', () => {
 					tr.style('background', 'white')
-					if (t.q.refGrp !== item.key) ref_text.style('display', 'none')
+					if (t.refGrp !== item.key) ref_text.style('display', 'none')
 				})
 				.on('click', () => {
-					t.q.refGrp = item.key
+					t.refGrp = item.key
 					self.handler.input.section.parent.refGrpByTermId[t.id] = item.key
-					//d.term.q.refGrp = item.key
+					//d.term.refGrp = item.key
 					ref_text.style('border', '1px solid #bbb').text('REFERENCE')
 					make_values_table(self.sampleCounts, 'values_table')
 				})

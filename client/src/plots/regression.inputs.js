@@ -431,9 +431,11 @@ function setInteractivity(self) {
 		config.hasUnsubmittedEdits = false
 
 		for (const term of config.independent) {
-			term.q.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
+			term.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
 		}
-		if (config.outcome.id in self.refGrpByTermId) config.outcome.q.refGrp = self.refGrpByTermId[config.outcome.id]
+		if (config.outcome.id in self.refGrpByTermId) {
+			config.outcome.refGrp = self.refGrpByTermId[config.outcome.id]
+		}
 
 		self.app.dispatch({
 			type: 'plot_edit',

@@ -154,7 +154,12 @@ async function maySetTwoBins(input) {
 	const { app, state } = input.section.parent
 	const t = input.term
 	// if the bins are already binary, do not reset
-	if (t.q.mode == 'binary') return
+	if (t.q.mode == 'binary' && 'refGrp' in t) return
+	if (t.q.lst && t.q.lst.length == 2) {
+		t.q.mode = 'binary'
+		t.refGrp = t.q.lst[0].label
+		return
+	}
 
 	// for numeric terms, add 2 custom bins devided at median value
 	const lst = [
@@ -188,6 +193,8 @@ async function maySetTwoBins(input) {
 	t.q.lst.forEach(bin => {
 		if (!('label' in bin)) bin.label = get_bin_label(bin, input.term.q)
 	})
+
+	t.refGrp = t.q.lst[0].label
 }
 
 async function maySetTwoGroups(input) {

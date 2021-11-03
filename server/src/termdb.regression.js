@@ -14,14 +14,14 @@ q {}
 	.id
 	.term
 	.q{}
-		.refGrp
+	.refGrp
 .independent[{}]
 	.id
 	.type
 	.isBinned
 	.q{}
 		.scale
-		.refGrp
+	.refGrp
 
 input tsv matrix for R:
 	first column is outcome variable
@@ -35,7 +35,7 @@ TODO
 		categorical and condition term:
 			category/grade: use val and exclude uncomputable categories
 			groupsetting: still use val (both key/val are groupset labels)
-- client side to return q.refGrp for each term and delete get_refCategory()
+- client side to return refGrp for each term and delete get_refCategory()
 */
 
 // minimum number of samples to run analysis
@@ -60,12 +60,12 @@ export async function get_regression(q, ds) {
 
 		// create arguments for the R script
 		// outcome
-		const refGroups = [get_refCategory(q.outcome.term, q.outcome.q)]
+		const refGroups = [get_refCategory(q.outcome)]
 		const colClasses = [q.outcome.q.mode == 'binary' ? 'factor' : termType2varClass(q.outcome.term.type)]
 		const scalingFactors = ['NA']
 		// independent terms
 		for (const term of q.independent) {
-			refGroups.push(get_refCategory(term.term, term.q))
+			refGroups.push(get_refCategory(term))
 			colClasses.push(term.isBinned ? 'factor' : termType2varClass(term.term.type))
 			scalingFactors.push(term.isBinned || !term.q.scale ? 'NA' : term.q.scale)
 		}
@@ -312,8 +312,9 @@ decide reference category
 
 fix the fault in test URL to always provide refGrp
 */
-function get_refCategory(term, q) {
-	if (q.refGrp) return q.refGrp
+function get_refCategory(termWrapper) {
+	if (termWrapper.refGrp) return termWrapper.refGrp
+	const { term, q } = termWrapper
 	if (term.type == 'categorical' || term.type == 'condition') {
 		// q attribute will tell which category is reference
 		// else first category as reference

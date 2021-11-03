@@ -48,9 +48,9 @@ tape('linear, outcome type=float', function(test) {
 							varClass: 'term',
 							id: 'sex',
 							q: {
-								groupsetting: { disabled: true },
-								refGrp: '1'
+								groupsetting: { disabled: true }
 							},
+							refGrp: '1',
 							type: 'categorical'
 						},
 						{
@@ -112,18 +112,18 @@ tape('logistic outcome type=float', function(test) {
 							lst: [
 								{ startunbounded: true, stopinclusive: true, stop: '4.72', label: '≤4.72' },
 								{ stopunbounded: true, startinclusive: false, start: '4.72', label: '>4.72' }
-							],
-							refGrp: '≤4.72'
-						}
+							]
+						},
+						refGrp: '≤4.72'
 					},
 					independent: [
 						{
 							varClass: 'term',
 							id: 'sex',
 							q: {
-								groupsetting: { disabled: true },
-								refGrp: '1'
+								groupsetting: { disabled: true }
 							},
+							refGrp: '1',
 							type: 'categorical'
 						},
 						{
@@ -187,18 +187,18 @@ tape('logistic outcome type=condition', function(test) {
 							},
 							value_by_max_grade: true,
 							bar_by_grade: true,
-							type: 'predefined-groupset',
-							refGrp: 'Has condition'
-						}
+							type: 'predefined-groupset'
+						},
+						refGrp: 'Has condition'
 					},
 					independent: [
 						{
 							varClass: 'term',
 							id: 'sex',
 							q: {
-								groupsetting: { disabled: true },
-								refGrp: '1'
+								groupsetting: { disabled: true }
 							},
+							refGrp: '1',
 							type: 'categorical'
 						}
 					]
@@ -274,9 +274,9 @@ tape('logistic outcome: missing reference category', function(test) {
 								hiddenValues: { '0': 1, '-8888': 1, '-9999': 1 },
 								termtype: 'float',
 								stopinclusive: false,
-								rounding: '.0f',
-								refGrp: '<10'
-							}
+								rounding: '.0f'
+							},
+							refGrp: '<10'
 						}
 					]
 				}

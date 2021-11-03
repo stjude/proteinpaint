@@ -45,6 +45,7 @@ export class RegressionResults {
 			this.displayResult(data)
 		} catch (e) {
 			this.hasError = true
+			this.dom.holder.style('display', 'block')
 			this.dom.err_div.style('display', 'block')
 			sayerror(this.dom.err_div, 'Error: ' + (e.error || e))
 			this.parent.inputs.dom.submitBtn.property('disabled', true)
@@ -56,7 +57,7 @@ export class RegressionResults {
 	// a unique request identifier to be used for caching server response
 	getDataName() {
 		const c = this.config // the plot object in state
-		const outcome = encodeURIComponent(JSON.stringify({ id: c.outcome.id, q: c.outcome.q }))
+		const outcome = encodeURIComponent(JSON.stringify({ id: c.outcome.id, q: c.outcome.q, refGrp: c.outcome.refGrp }))
 		const params = [
 			'getregression=1',
 			`regressionType=${c.regressionType}`,
@@ -68,7 +69,7 @@ export class RegressionResults {
 							const q = JSON.parse(JSON.stringify(t.q))
 							delete q.values
 							delete q.totalCount
-							return { id: t.id, q: t.q, type: t.term.type }
+							return { id: t.id, q: t.q, type: t.term.type, refGrp: t.refGrp }
 						})
 					)
 				)
