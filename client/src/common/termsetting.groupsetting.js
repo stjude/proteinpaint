@@ -277,6 +277,14 @@ export function setGroupsettingMethods(self) {
 					if (cat_grps[val.key].group == undefined) cat_grps[val.key].group = 1
 					// for css id, remove special chars and white spaces from key
 					const dom_id = typeof val.key == 'string' ? val.key.replace(/[^A-Z0-9]/gi, '') : val.key
+					const samplecount_obj = self.sampleCountsGs ? self.sampleCountsGs.find(d => d.key == val.key) : 'n/a'
+					const count =
+						samplecount_obj !== undefined && samplecount_obj !== 'n/a'
+							? samplecount_obj.count
+							: samplecount_obj == undefined
+							? 0
+							: undefined
+
 					const item = select(this)
 						.attr('draggable', 'true')
 						.attr('id', 'sj-drag-item-' + dom_id)
@@ -284,7 +292,7 @@ export function setGroupsettingMethods(self) {
 						.style('margin', '3px')
 						.style('cursor', 'default')
 						.style('border-radius', '2px')
-						.html(val.label ? val.label : val.key)
+						.html((val.label ? val.label : val.key) + (count !== undefined ? ' (n=' + count + ')' : ''))
 						.style('background-color', '#eee')
 						.on('mouseover', () => {
 							item.style('background-color', '#fff2cc')

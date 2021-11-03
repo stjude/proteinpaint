@@ -96,7 +96,7 @@ export function setCategoricalMethods(self) {
 				if (data.sampleCounts) {
 					for (const grp of groupset.groups) {
 						if (!data.sampleCounts.find(d => d.label === grp.name))
-							throw `there are no samples for the required binary value=${key} ${endNote}`
+							throw `there are no samples for the required binary value=${grp.name} ${endNote}`
 					}
 				}
 			}
