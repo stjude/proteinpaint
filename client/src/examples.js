@@ -260,6 +260,7 @@ async function openSandbox(track, holder) {
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div.body)
 	addButtons(track.sandbox.buttons, sandbox_div.body)
+	addArrowBtns(track.sandbox.arrowButtons, '', sandbox_div.body, sandbox_div.body)
 
 	const toptab_div = sandbox_div.body
 		.append('div')
@@ -624,7 +625,9 @@ function makeArrowButtons(arrows, btns) {
 
 function addArrowBtns(arg, call, bdiv, rdiv) {
 	let btns = []
-	showCode(call, btns)
+	if (call) {
+		showCode(call, btns)
+	}
 	makeArrowButtons(arg, btns)
 
 	const active_btn = btns.findIndex(b => b.active) == -1 ? false : true

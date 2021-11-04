@@ -18,8 +18,7 @@
             ],
             "ppcalls":[
                 {
-                    "label":"TCGA DLBC",
-                    "note": "IF download data reimplemented later -> https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/GP/GPDemoData.tar.gz",
+                    "label":"Launch a Custom Dataset",
                     "urlparam":"?genome=hg38&block=1&position=chr22:22569655-23013766&svcnvfpkmfile=TCGA_DLBC,svcnv,proteinpaint_demo/hg38/GP/TCGA_DLBC.CNV.gz,vcf,proteinpaint_demo/hg38/GP/TCGA_DLBC.vcf.gz,fpkm,proteinpaint_demo/hg38/GP/TCGA_DLBC.fpkm.gz",
                     "runargs":{
                         "parseurl": true,
@@ -43,6 +42,40 @@
                             }
                         ]
                     },
+                    "buttons": [
+                        {
+                            "name": "Custom Dataset Documentation",
+                            "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.6fe745w9b3hf"
+                        }
+                    ],
+                    "testSpec": {
+                        "expected": {"rect": 20 }
+                    }
+                },
+                {
+                    "label":"Launch an Official Dataset",
+                    "message": "This is an example of how to launch one of the official datasets available in ProteinPaint.",
+                    "urlparam": "?genome=hg19&block=1&mds=Pediatric2,svcnv",
+                    "runargs": {
+                        "parseurl": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "block": true,
+                        "genome": "hg19",
+                        "position": "chr8:128688997-128888997",
+                        "datasetqueries": [
+                            {
+                                "dataset":"Pediatric2",
+                                "querykey": "svcnv"
+                            }
+                        ]
+                    },
+                    "buttons": [
+                        {
+                            "name": "Official Dataset Documentation",
+                            "link": "https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit#heading=h.jibbdhrfuw7f"
+                        }
+                    ],
                     "testSpec": {
                         "expected": {"rect": 20 }
                     }
@@ -1088,6 +1121,20 @@
                         "nobox": 1,
                         "noheader": 1,
                         "project": { "uionly": true }
+                    }
+                },
+                {
+                    "message": "A few tips on how to interact with the study view: <ul><li>Clicking on the gene tab opens the gene table with detailed information about mutation and sample counts.</li><li>Launch the genome browser by clicking on the heatmap gene labels.</li><li>Hover over the heatmap cells to reveal the mutation and sample information</li></ul>",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/heatmap/heatmapDemoData.tar.gz",
+                    "runargs":{
+                        "noheader": true,
+                        "nobox": 1,
+                        "genome": "hg19",
+                        "study": "proteinpaint_demo/hg19/heatmap/heatmapDemo.json"
+                    },
+                    "testSpec": {
+                        "timeout": 7000,
+                        "expected": { "rect": 20, "line": 20, "text": 5 }
                     }
                 }
             ],
