@@ -99,7 +99,7 @@ class TermSetting {
 					}
 					this.updateUI()
 					if (data.term && this.validateQ) this.validateQ(data)
-					if (data.term) this.addCategory2sampleCounts()
+					if (data.term && data.term.type !== 'integer' && data.term.type !== 'float') this.addCategory2sampleCounts()
 				} catch (e) {
 					this.hasError = true
 					throw e

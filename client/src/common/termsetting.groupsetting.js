@@ -22,9 +22,13 @@ export function setGroupsettingMethods(self) {
 		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
 		const default_1grp = [
 			{
-				values: Object.keys(values).map(key => {
-					return { key, label: values[key].label }
-				})
+				values: Object.keys(values)
+					.filter(key => {
+						if (!values[key].uncomputable) return true
+					})
+					.map(key => {
+						return { key, label: values[key].label }
+					})
 			}
 		]
 		const default_empty_group = { values: [] }
@@ -34,7 +38,8 @@ export function setGroupsettingMethods(self) {
 		// to not change background of native group, keep track of dragged items original group
 		let drag_native_grp, dragged_item
 		Object.keys(cat_grps).forEach(key => {
-			if (cat_grps[key].group == 0) excluded_cats.push({ key, label: cat_grps[key].label })
+			if (cat_grps[key].group == 0 || cat_grps[key].uncomputable == true)
+				excluded_cats.push({ key, label: cat_grps[key].label })
 		})
 
 		//initiate empty customset
@@ -125,13 +130,7 @@ export function setGroupsettingMethods(self) {
 		const exclude_div = initDraggableDiv(groups_holder, 'Exclude')
 
 		exclude_div.on('drop', () => {
-			// move dom from one holder to exclude holder
-			const val = dragged_item._groups[0][0].__data__ // get data attached to dom
-			if (cat_grps[val.key].group == 0) return
-			else exclude_list.node().appendChild(dragged_item.node()) // append dragged dom to list
-
-			// update metadata for the category list (.group = 0 for excluded)
-			cat_grps[val.key].group = 0 // update .group value based on drop holder type
+			addOnDrop(exclude_div, 0)
 		})
 
 		const exclude_list = exclude_div.append('div')
@@ -180,14 +179,7 @@ export function setGroupsettingMethods(self) {
 			const group_div = initDraggableDiv(non_exclude_div, 'Group ' + (i + 1), i + 1)
 
 			group_div.on('drop', () => {
-				// move dom from one group holder to another group holder
-				// if .group is same as previous, return (don't move or reorder categories)
-				const val = dragged_item._groups[0][0].__data__ // get data attached to dom
-				if (cat_grps[val.key].group == i + 1) return
-				else group_list.node().appendChild(dragged_item.node())
-
-				// update metadata for the category list (.group = 1 or 2 ..)
-				cat_grps[val.key].group = i + 1 // update .group value based on drop group holder
+				addOnDrop(group_list, i + 1)
 			})
 
 			const group_rename_div = group_div.append('div').attr('class', 'group_edit_div')
@@ -266,7 +258,9 @@ export function setGroupsettingMethods(self) {
 				.enter()
 				.append('div')
 				.each(function(val) {
-					if (cat_grps[val.key].group == undefined) cat_grps[val.key].group = 1
+					if (cat_grps[val.key].group == undefined && !cat_grps[val.key].uncomputable) cat_grps[val.key].group = 1
+					else cat_grps[val.key].group == undefined && cat_grps[val.key].uncomputable == true
+					cat_grps[val.key].group = 0
 					const samplecount_obj = self.category2samplecount
 						? self.category2samplecount.find(d => d.key == val.key)
 						: 'n/a'
@@ -299,6 +293,23 @@ export function setGroupsettingMethods(self) {
 							drag_native_grp = cat_grps[val.key].group
 						})
 				})
+		}
+
+		function addOnDrop(group_list, group_i) {
+			// move dom from one group holder to another group holder
+			// if .group is same as previous, return (don't move or reorder categories)
+			const val = dragged_item._groups[0][0].__data__ // get data attached to dom
+			if (cat_grps[val.key].group == group_i) return
+			else group_list.node().appendChild(dragged_item.node())
+
+			// add transition effect on dragged item background
+			dragged_item
+				.style('transition-property', 'background-color')
+				.style('transition-duration', '1s')
+				.style('background-color', '#fff2cc')
+
+			// update metadata for the category list (.group = 1 or 2 ..)
+			cat_grps[val.key].group = group_i // update .group value based on drop group holder
 		}
 	}
 }
