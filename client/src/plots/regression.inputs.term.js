@@ -95,10 +95,6 @@ export class InputTerm {
 	getPillArgs() {
 		const section = this.input.section
 		const { config, state, disable_terms } = section.parent
-		const sampleCountsMap = this.input.term && this.input.term.term && this.input.term.term.category2samplecount
-		const sampleCounts = sampleCountsMap
-			? Array.from(sampleCountsMap, ([key, value]) => ({ key, count: value }))
-			: undefined
 		const args = Object.assign(
 			{
 				disable_terms,
@@ -111,7 +107,6 @@ export class InputTerm {
 			},
 			this.input.term
 		)
-		if (sampleCounts !== undefined) args.sampleCountsGs = sampleCounts
 		args.filter = state.termfilter.filter
 		return args
 	}
@@ -228,10 +223,10 @@ async function maySetTwoGroups(input) {
 	} catch (e) {
 		throw e
 	}
-	term.category2samplecount = new Map() // k: category/grade (computable), v: number of samples
+	const category2samplecount = new Map() // k: category/grade (computable), v: number of samples
 	const computableCategories = []
 	for (const i of data.lst) {
-		term.category2samplecount.set(i.key, i.samplecount, term.values)
+		category2samplecount.set(i.key, i.samplecount, term.values)
 		if (term.values && term.values[i.key] && term.values[i.key].uncomputable) continue
 		computableCategories.push(i.key)
 	}
@@ -261,7 +256,7 @@ async function maySetTwoGroups(input) {
 		q_gs.customset &&
 		q_gs.customset.groups &&
 		q_gs.customset.groups.length == 2 &&
-		groupsetNoEmptyGroup(q_gs.customset, term.category2samplecount)
+		groupsetNoEmptyGroup(q_gs.customset, category2samplecount)
 	) {
 		q.type = 'custom-groupset'
 		// has a usable custom set
@@ -277,7 +272,7 @@ async function maySetTwoGroups(input) {
 			q_gs.predefined_groupset_idx >= 0 &&
 			t_gs.lst[q_gs.predefined_groupset_idx] &&
 			t_gs.lst[q_gs.predefined_groupset_idx].groups.length == 2 &&
-			groupsetNoEmptyGroup(t_gs.lst[q_gs.predefined_groupset_idx], term.category2samplecount)
+			groupsetNoEmptyGroup(t_gs.lst[q_gs.predefined_groupset_idx], category2samplecount)
 		) {
 			// has a usable predefined groupset
 			q.type = 'predefined-groupset'
@@ -286,7 +281,7 @@ async function maySetTwoGroups(input) {
 
 		// step 5: see if any predefined groupset has 2 groups. if so, use that
 		const i = t_gs.lst.findIndex(g => g.groups.length == 2)
-		if (i != -1 && groupsetNoEmptyGroup(t_gs.lst[i], term.category2samplecount)) {
+		if (i != -1 && groupsetNoEmptyGroup(t_gs.lst[i], category2samplecount)) {
 			// found a usable groupset
 			q_gs.predefined_groupset_idx = i
 			q.type = 'predefined-groupset'

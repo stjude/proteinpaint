@@ -87,7 +87,6 @@ class TermSetting {
 					if ('filter' in data) this.filter = data.filter
 					if ('activeCohort' in data) this.activeCohort = data.activeCohort
 					if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
-					if ('sampleCountsGs' in data) this.sampleCountsGs = data.sampleCountsGs
 					if (this.term) {
 						// term is present and may have been replaced
 						// reset methods by term type
@@ -100,6 +99,7 @@ class TermSetting {
 					}
 					this.updateUI()
 					if (data.term && this.validateQ) this.validateQ(data)
+					if (data.term) this.addCategory2sampleCounts()
 				} catch (e) {
 					this.hasError = true
 					throw e

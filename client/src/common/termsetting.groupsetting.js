@@ -267,7 +267,9 @@ export function setGroupsettingMethods(self) {
 				.append('div')
 				.each(function(val) {
 					if (cat_grps[val.key].group == undefined) cat_grps[val.key].group = 1
-					const samplecount_obj = self.sampleCountsGs ? self.sampleCountsGs.find(d => d.key == val.key) : 'n/a'
+					const samplecount_obj = self.category2samplecount
+						? self.category2samplecount.find(d => d.key == val.key)
+						: 'n/a'
 					const count =
 						samplecount_obj !== undefined && samplecount_obj !== 'n/a'
 							? samplecount_obj.count
@@ -280,7 +282,7 @@ export function setGroupsettingMethods(self) {
 						.attr('class', 'sj-drag-item')
 						.style('margin', '3px')
 						.style('cursor', 'default')
-						.style('padding','3px 10px')
+						.style('padding', '3px 10px')
 						.style('border-radius', '5px')
 						.html((val.label ? val.label : val.key) + (count !== undefined ? ' (n=' + count + ')' : ''))
 						.style('background-color', '#eee')
