@@ -1,8 +1,7 @@
 import { controlsInit } from './controls'
 import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
-import { normalizeFilterData, syncParams } from '../mass/plot'
-import { getNormalRoot } from '../common/filter'
+import { getTermFilterParams, syncParams } from '../mass/termdb.helpers.js'
 
 class TdbTable {
 	constructor(opts) {
@@ -55,9 +54,7 @@ class TdbTable {
 		return {
 			isVisible: config.settings.currViews.includes('table'),
 			activeCohort: appState.activeCohort,
-			termfilter: {
-				filter: getNormalRoot(appState.termfilter.filter)
-			},
+			termfilter: appState.termfilter,
 			config: {
 				term: config.term,
 				term2: config.term2,
@@ -95,22 +92,7 @@ class TdbTable {
 	// creates URL search parameter string, that also serves as
 	// a unique request identifier to be used for caching server response
 	getDataName(state) {
-		const params = []
-		for (const _key of ['term', 'term2', 'term0']) {
-			// "term" on client is "term1" at backend
-			const term = this.config[_key]
-			if (!term) continue
-			const key = _key == 'term' ? 'term1' : _key
-			params.push(key + '_id=' + encodeURIComponent(term.term.id))
-			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
-			params.push(key + '_q=' + this.app.vocabApi.q_to_param(term.q))
-		}
-
-		if (state.termfilter.filter.lst.length) {
-			const filterData = normalizeFilterData(state.termfilter.filter)
-			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData)))
-		}
-
+		const params = getTermFilterParams(this.config, this.app.vocabApi, state.termfilter)
 		return '/termdb-barsql?' + params.join('&')
 	}
 

@@ -6,11 +6,9 @@ import { select, event } from 'd3-selection'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
-/* to-do: switch to using rx.Bus */
 import { controlsInit } from './controls'
 import { to_svg } from '../client'
-import { normalizeFilterData, syncParams } from '../mass/plot'
-import { getNormalRoot } from '../common/filter'
+import { getTermFilterParams, syncParams } from '../mass/termdb.helpers.js'
 import { fillTermWrapper } from '../common/termsetting'
 
 class TdbBarchart {
@@ -166,16 +164,6 @@ class TdbBarchart {
 	// a unique request identifier to be used for caching server response
 	getDataName(state) {
 		const params = []
-		for (const _key of ['term', 'term2', 'term0']) {
-			// "term" on client is "term1" at backend
-			const term = this.config[_key]
-			if (!term) continue
-			const key = _key == 'term' ? 'term1' : _key
-			params.push(key + '_id=' + encodeURIComponent(term.term.id))
-			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
-			params.push(key + '_q=' + this.app.vocabApi.q_to_param(term.q))
-		}
-
 		if (state.ssid) {
 			params.push(
 				'term2_is_genotype=1',
@@ -185,13 +173,7 @@ class TdbBarchart {
 				'pos=' + state.ssid.pos
 			)
 		}
-
-		const filter = getNormalRoot(state.termfilter.filter)
-		if (filter.lst.length) {
-			const filterData = normalizeFilterData(filter)
-			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData)))
-		}
-
+		params.push(...getTermFilterParams(this.config, this.app.vocabApi, state.termfilter))
 		return '/termdb-barsql?' + params.join('&')
 	}
 
