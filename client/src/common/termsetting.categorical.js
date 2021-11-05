@@ -1,6 +1,4 @@
 import { setGroupsettingMethods } from './termsetting.groupsetting'
-import { getNormalRoot } from './filter'
-import { dofetch3 } from './dofetch'
 
 /*
 Arguments

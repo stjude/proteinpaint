@@ -53,13 +53,7 @@ async function showEditMenu(self, div) {
 		ypad: 20
 	}
 	try {
-		// check if termsettingInit() was called outside of termdb/app
-		// in which case it will not have an opts.vocabApi
-		if (!self.opts.vocabApi) {
-			const vocabulary = await import('../termdb/vocabulary')
-			self.opts.vocabApi = vocabulary.vocabInit({ state: { vocab: self.opts.vocab } })
-		}
-		self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
+		self.num_obj.density_data = await self.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
 	} catch (err) {
 		console.log(err)
 	}
