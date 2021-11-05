@@ -199,7 +199,7 @@ async function maySetTwoGroups(input) {
 			if (t_gs[idx] && Object.keys(t_gs[idx]).length == 2) return
 		}
 		if (q.type == 'custom-groupset') {
-			const gs = q.groupsetting
+			const gs = q.groupsetting.customset
 			if (gs.groups.length == 2) return
 		}
 	} else {
