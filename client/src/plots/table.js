@@ -1,7 +1,6 @@
 import { controlsInit } from './controls'
 import { getCompInit } from '../common/rx.core'
 import { select } from 'd3-selection'
-import { getTermFilterParams, syncParams } from '../mass/termdb.helpers.js'
 
 class TdbTable {
 	constructor(opts) {
@@ -79,9 +78,9 @@ class TdbTable {
 			}
 			const c = this.state.config
 			if (this.dom.header) this.dom.header.html(c.term.term.name + ' vs ' + c.term2.term.name)
-			const dataName = this.getDataName(this.state)
-			this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
-			syncParams(c, this.data)
+			const reqOpts = this.getDataRequestOpts()
+			this.data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			this.app.vocabApi.syncTermData(this.state.config, this.data)
 			const [columns, rows] = this.processData(this.data)
 			this.render(columns, rows)
 		} catch (e) {
@@ -89,11 +88,14 @@ class TdbTable {
 		}
 	}
 
-	// creates URL search parameter string, that also serves as
-	// a unique request identifier to be used for caching server response
-	getDataName(state) {
-		const params = getTermFilterParams(this.config, this.app.vocabApi, state.termfilter)
-		return '/termdb-barsql?' + params.join('&')
+	// creates an opts object for the vocabApi.getNestedChartsData()
+	getDataRequestOpts() {
+		const c = this.config
+		const opts = { term: c.term, filter: this.state.termfilter.filter }
+		if (c.term2) opts.term2 = c.term2
+		if (c.term0) opts.term0 = c.term0
+		if (this.state.ssid) opts.ssid = this.state.ssid
+		return opts
 	}
 
 	processData(data) {

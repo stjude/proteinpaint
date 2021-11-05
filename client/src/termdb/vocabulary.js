@@ -204,6 +204,64 @@ class TermdbVocab {
 		}
 	}
 
+	/* 
+		Generate regression analysis results
+		config{}
+		.regressionType: 'linear' | 'logistic'
+		.outcome {id, term, q, refGrp}
+		.independent[ {id, term, q, refGrp}, ... ]
+	*/
+	async getRegressionData(opts) {
+		const outcome = { id: opts.outcome.id, q: JSON.parse(JSON.stringify(opts.outcome.q)) }
+		if (!outcome.q.mode && opts.regressionType == 'linear') outcome.q.mode = 'continuous'
+		const contQkeys = ['mode', 'scale']
+		outcome.refGrp = outcome.q.mode == 'continuous' ? 'NA' : opts.outcome.refGrp
+
+		if (outcome.q.mode == 'continuous') {
+			// remove unneeded parameters from q
+			for (const key in outcome.q) {
+				if (!contQkeys.includes(key)) delete outcome.q[key]
+			}
+		}
+
+		const params = [
+			'getregression=1',
+			`regressionType=${opts.regressionType}`,
+			`outcome=${encodeURIComponent(JSON.stringify(outcome))}`,
+			'independent=' +
+				encodeURIComponent(
+					JSON.stringify(
+						opts.independent.map(t => {
+							const q = JSON.parse(JSON.stringify(t.q))
+							delete q.values
+							delete q.totalCount
+							if (t.q.mode == 'continuous') {
+								// remove unneeded parameters from q
+								for (const key in q) {
+									if (!contQkeys.includes(key)) delete q[key]
+								}
+							}
+							return {
+								id: t.id,
+								q,
+								type: t.term.type,
+								refGrp: t.q.mode == 'continuous' ? 'NA' : t.refGrp
+							}
+						})
+					)
+				)
+		]
+
+		const filterData = getNormalRoot(opts.filter)
+		if (filterData.lst.length) {
+			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData))) //encodeNestedFilter(state.termfilter.filter))
+		}
+		const url = `/termdb?${params.join('&')}&genome=${this.vocab.genome}&dslabel=${this.vocab.dslabel}`
+		const data = await dofetch3(url, {}, this.opts.fetchOpts)
+		if (data.error) throw data.error
+		return data
+	}
+
 	// from termdb/search
 	async findTerm(str, cohortStr, exclude_types = []) {
 		const lst = [

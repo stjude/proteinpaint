@@ -97,11 +97,11 @@ class TdbBoxplot {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
 		const c = this.config
-		const params = { term: c.term, filter: this.state.termfilter.filter }
-		if (c.term2) params.term2 = c.term2
-		if (c.term0) params.term0 = c.term0
-		if (this.state.ssid) params.ssid = this.state.ssid
-		return params
+		const opts = { term: c.term, filter: this.state.termfilter.filter }
+		if (c.term2) opts.term2 = c.term2
+		if (c.term0) opts.term0 = c.term0
+		if (this.state.ssid) opts.ssid = this.state.ssid
+		return opts
 	}
 
 	processData(data) {

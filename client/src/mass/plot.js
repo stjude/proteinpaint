@@ -5,7 +5,7 @@ class MassPlot {
 	constructor(opts) {
 		this.type = 'plot'
 		setRenderers(this)
-		this.initUi()
+		this.initUi(opts)
 	}
 
 	reactsTo(action) {
