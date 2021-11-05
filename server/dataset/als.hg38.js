@@ -27,7 +27,8 @@ module.exports = function(common) {
 				attributes: {
 					Batch: {
 						label: 'Batch',
-						filter: 1
+						filter: 1,
+						hidden: 1
 					},
 					ClinDx_WGS: {
 						label: 'ClinDx_WGS',
@@ -39,11 +40,13 @@ module.exports = function(common) {
 					},
 					OsAge: {
 						label: 'OsAge',
-						filter: 1
+						filter: 1,
+						hidden: 1
 					},
 					SurvOs_mo: {
 						label: 'SurvOs_mo',
-						filter: 1
+						filter: 1,
+						hidden: 1
 					}
 				}
 			}
