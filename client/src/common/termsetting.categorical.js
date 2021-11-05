@@ -1,4 +1,6 @@
 import { setGroupsettingMethods } from './termsetting.groupsetting'
+import { getNormalRoot } from './filter'
+import { dofetch3 } from './dofetch'
 
 /*
 Arguments
@@ -52,6 +54,42 @@ export function setCategoricalMethods(self) {
 		return null // for no label
 	}
 
+	self.addCategory2sampleCounts = async function() {
+		const lst = [
+			'/termdb?getcategories=1',
+			'tid=' + self.term.id,
+			'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(self.filter))),
+			'genome=' + self.vocab.genome,
+			'dslabel=' + self.vocab.dslabel
+		]
+		if (self.term.type == 'condition') {
+			// bar_by_grade / bar_by_children
+			lst.push(self.q.bar_by_grade ? 'bar_by_grade=1' : self.q.bar_by_children ? 'bar_by_children=1' : null)
+			// value_by_max_grade / value_by_most_recent / value_by_computable_grade
+			lst.push(
+				self.q.value_by_max_grade
+					? 'value_by_max_grade=1'
+					: self.q.value_by_most_recent
+					? 'value_by_most_recent=1'
+					: self.q.value_by_computable_grade
+					? 'value_by_computable_grade=1'
+					: null
+			)
+		}
+		const url = lst.join('&')
+		let data
+		try {
+			data = await dofetch3(url)
+			if (data.error) throw data.error
+		} catch (e) {
+			throw e
+		}
+		self.category2samplecount = []
+		for (const i of data.lst) {
+			self.category2samplecount.push({ key: i.key, count: i.samplecount })
+		}
+	}
+
 	self.validateQ = function(data) {
 		const t = data.term
 		const q = JSON.parse(JSON.stringify(data.q))
@@ -96,7 +134,7 @@ export function setCategoricalMethods(self) {
 				if (data.sampleCounts) {
 					for (const grp of groupset.groups) {
 						if (!data.sampleCounts.find(d => d.label === grp.name))
-							throw `there are no samples for the required binary value=${key} ${endNote}`
+							throw `there are no samples for the required binary value=${grp.name} ${endNote}`
 					}
 				}
 			}

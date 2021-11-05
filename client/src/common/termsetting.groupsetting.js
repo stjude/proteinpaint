@@ -22,9 +22,13 @@ export function setGroupsettingMethods(self) {
 		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
 		const default_1grp = [
 			{
-				values: Object.keys(values).map(key => {
-					return { key, label: values[key].label }
-				})
+				values: Object.keys(values)
+					.filter(key => {
+						if (!values[key].uncomputable) return true
+					})
+					.map(key => {
+						return { key, label: values[key].label }
+					})
 			}
 		]
 		const default_empty_group = { values: [] }
@@ -32,9 +36,10 @@ export function setGroupsettingMethods(self) {
 		const default_groupset = { groups: [...default_1grp, ...empty_groups] }
 		const excluded_cats = []
 		// to not change background of native group, keep track of dragged items original group
-		let drag_native_grp
+		let drag_native_grp, dragged_item
 		Object.keys(cat_grps).forEach(key => {
-			if (cat_grps[key].group == 0) excluded_cats.push({ key, label: cat_grps[key].label })
+			if (cat_grps[key].group == 0 || cat_grps[key].uncomputable == true)
+				excluded_cats.push({ key, label: cat_grps[key].label })
 		})
 
 		//initiate empty customset
@@ -72,20 +77,18 @@ export function setGroupsettingMethods(self) {
 
 		const regroup_div = self.dom.tip.d.append('div').style('margin', '10px')
 
-		const button_div = regroup_div
+		const header_buttons_div = regroup_div
 			.append('div')
-			.style('text-align', 'center')
-			.style('margin', '5px')
+			.attr('class', 'group_edit_div')
+			.style('margin', '10px 5px 5px 5px')
 
-		const group_edit_div = regroup_div.append('div').style('margin', '5px')
-		const group_ct_div = group_edit_div.append('div').attr('class', 'group_edit_div')
-		group_ct_div
+		header_buttons_div
 			.append('label')
 			.attr('for', 'grp_ct')
 			.style('display', 'inline-block')
-			.html('#groups')
+			.html('Number of groups')
 
-		const group_ct_select = group_ct_div
+		const group_ct_select = header_buttons_div
 			.append('select')
 			.style('margin-left', '15px')
 			.style('margin-bottom', '7px')
@@ -94,11 +97,16 @@ export function setGroupsettingMethods(self) {
 				if (group_ct_select.node().value < default_grp_count) {
 					const grp_diff = default_grp_count - group_ct_select.node().value
 					for (const [key, val] of Object.entries(cat_grps)) {
+						if (cat_grps[key].uncomputable) continue
 						if (cat_grps[key].group > group_ct_select.node().value) cat_grps[key].group = 1
 					}
 					self.regroupMenu(default_grp_count - grp_diff, cat_grps)
 				} else if (group_ct_select.node().value > default_grp_count) {
 					const grp_diff = group_ct_select.node().value - default_grp_count
+					for (const [key, val] of Object.entries(cat_grps)) {
+						if (cat_grps[key].uncomputable) continue
+						if (!cat_grps[key].group) cat_grps[key].group = 1
+					}
 					self.regroupMenu(default_grp_count + grp_diff, cat_grps)
 				}
 			})
@@ -111,7 +119,7 @@ export function setGroupsettingMethods(self) {
 
 		group_ct_select.node().value = default_grp_count
 
-		const groups_holder = group_edit_div.append('div')
+		const groups_holder = regroup_div.append('div').style('border', '1px solid #efefef')
 
 		const non_exclude_div = groups_holder.append('div').style('display', 'flex')
 
@@ -122,36 +130,26 @@ export function setGroupsettingMethods(self) {
 		}
 
 		// add Div for exclude without group rename input
-		const exclude_div = initDraggableDiv(groups_holder, 'Exclude')
+		const exclude_div = initDraggableDiv(groups_holder, 'Excluded categories')
 
-		exclude_div.on('drop', () => {
-			// move dom from one holder to exclude holder
-			const id = event.dataTransfer.getData('text') // get id from event.dataTrasfer
-			const item = groups_holder.select('#sj-drag-item-' + id) // select dom by id
-
-			// move dom from one holder to exclude holder
-			const val = item._groups[0][0].__data__ // get data attached to dom
-			if (cat_grps[val.key].group == 0) return
-			else exclude_list.node().appendChild(item.node()) // append dragged dom to list
-
-			// update metadata for the category list (.group = 0 for excluded)
-			cat_grps[val.key].group = 0 // update .group value based on drop holder type
+		exclude_div.style('border-top', '1px solid #efefef').on('drop', () => {
+			addOnDrop(exclude_list, 0)
 		})
 
-		const exclude_list = exclude_div.append('div')
+		const exclude_list = exclude_div.append('div').style('margin', '5px')
 
 		// show excluded categories
 		addGroupItems(exclude_list, excluded_cats)
 
 		// 'Apply' button
-		button_div
+		header_buttons_div
 			.append('div')
 			.attr('class', 'apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '13px')
-			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
+			.style('float', 'right')
 			.style('text-transform', 'uppercase')
 			.text('Apply')
 			.on('click', () => {
@@ -183,19 +181,8 @@ export function setGroupsettingMethods(self) {
 		function addGroupHolder(group, i) {
 			const group_div = initDraggableDiv(non_exclude_div, 'Group ' + (i + 1), i + 1)
 
-			group_div.on('drop', () => {
-				// move dom from one group holder to another group holder
-				const id = event.dataTransfer.getData('text') // get id from event.dataTrasfer
-				const item = groups_holder.select('#sj-drag-item-' + id) // append dragged dom to list
-
-				// move dom from one group holder to another group holder
-				// if .group is same as previous, return (don't move or reorder categories)
-				const val = item._groups[0][0].__data__ // get data attached to dom
-				if (cat_grps[val.key].group == i + 1) return
-				else group_list.node().appendChild(item.node())
-
-				// update metadata for the category list (.group = 1 or 2 ..)
-				cat_grps[val.key].group = i + 1 // update .group value based on drop group holder
+			group_div.style('border-right', i < default_grp_count - 1 ? '1px solid #efefef' : '').on('drop', () => {
+				addOnDrop(group_list, i + 1)
 			})
 
 			const group_rename_div = group_div.append('div').attr('class', 'group_edit_div')
@@ -204,10 +191,11 @@ export function setGroupsettingMethods(self) {
 				.append('input')
 				.attr('size', 12)
 				.attr('value', group && group.name ? group.name : i + 1)
-				.style('margin', '2px 5px 15px 5px')
+				.style('margin', '5px')
+				.style('margin-left', '8px')
 				.style('display', 'inline-block')
 				.style('font-size', '.8em')
-				.style('width', '90%')
+				.style('width', '87%')
 				.on('keyup', () => {
 					if (!keyupEnter()) return
 
@@ -222,6 +210,18 @@ export function setGroupsettingMethods(self) {
 			const group_list = group_div.append('div').style('margin', '5px')
 			// show categories from the group
 			addGroupItems(group_list, group.values)
+
+			// help note for user to drag-drop in first group
+			if (i == 0)
+				group_div
+					.style('position', 'relative')
+					.append('div')
+					.style('text-align', 'left')
+					.style('font-size', '.6em')
+					.style('color', '#999')
+					// .style('position','absolute')
+					.style('bottom', '10px')
+					.text('Drag-and-drop to assign categories to groups.')
 		}
 
 		// make draggable div to render drag-drop list of categories
@@ -230,7 +230,7 @@ export function setGroupsettingMethods(self) {
 				.append('div')
 				.style('display', 'block')
 				.style('padding', '10px')
-				.style('border', '1px solid #bbb')
+				// .style('border', '1px solid #efefef')
 				.style('vertical-align', 'top')
 				.on('dragover', () => {
 					event.preventDefault()
@@ -253,13 +253,13 @@ export function setGroupsettingMethods(self) {
 					dragable_div.style('background-color', '#fff')
 				})
 
+			// group title
 			dragable_div
 				.append('div')
 				.style('display', 'block')
-				.style('margin', '15px')
 				.style('padding', '3px 10px')
-				.style('text-align', 'center')
-				.style('font-size', '.8em')
+				.style('text-align', 'left')
+				.style('font-size', '.6em')
 				.style('text-transform', 'uppercase')
 				.style('color', '#999')
 				.text(group_name)
@@ -274,17 +274,27 @@ export function setGroupsettingMethods(self) {
 				.enter()
 				.append('div')
 				.each(function(val) {
-					if (cat_grps[val.key].group == undefined) cat_grps[val.key].group = 1
-					// for css id, remove special chars and white spaces from key
-					const dom_id = typeof val.key == 'string' ? val.key.replace(/[^A-Z0-9]/gi, '') : val.key
+					if (cat_grps[val.key].group == undefined && !cat_grps[val.key].uncomputable) cat_grps[val.key].group = 1
+					else if (cat_grps[val.key].group == undefined && cat_grps[val.key].uncomputable == true)
+						cat_grps[val.key].group = 0
+					const samplecount_obj = self.category2samplecount
+						? self.category2samplecount.find(d => d.key == val.key)
+						: 'n/a'
+					const count =
+						samplecount_obj !== undefined && samplecount_obj !== 'n/a'
+							? samplecount_obj.count
+							: samplecount_obj == undefined
+							? 0
+							: undefined
+
 					const item = select(this)
 						.attr('draggable', 'true')
-						.attr('id', 'sj-drag-item-' + dom_id)
 						.attr('class', 'sj-drag-item')
 						.style('margin', '3px')
 						.style('cursor', 'default')
-						.style('border-radius', '2px')
-						.html(val.label ? val.label : val.key)
+						.style('padding', '3px 10px')
+						.style('border-radius', '5px')
+						.html((val.label ? val.label : val.key) + (count !== undefined ? ' (n=' + count + ')' : ''))
 						.style('background-color', '#eee')
 						.on('mouseover', () => {
 							item.style('background-color', '#fff2cc')
@@ -295,10 +305,27 @@ export function setGroupsettingMethods(self) {
 						.on('dragstart', () => {
 							item.style('background-color', '#fff2cc')
 							// attach id to dom, which is used by drop div to grab this dropped dom by id
-							event.dataTransfer.setData('text/plain', dom_id)
+							dragged_item = item
 							drag_native_grp = cat_grps[val.key].group
 						})
 				})
+		}
+
+		function addOnDrop(group_list, group_i) {
+			// move dom from one group holder to another group holder
+			// if .group is same as previous, return (don't move or reorder categories)
+			const val = dragged_item._groups[0][0].__data__ // get data attached to dom
+			if (cat_grps[val.key].group == group_i) return
+			else group_list.node().appendChild(dragged_item.node())
+
+			// add transition effect on dragged item background
+			dragged_item
+				.style('transition-property', 'background-color')
+				.style('transition-duration', '1s')
+				.style('background-color', '#fff2cc')
+
+			// update metadata for the category list (.group = 1 or 2 ..)
+			cat_grps[val.key].group = group_i // update .group value based on drop group holder
 		}
 	}
 }
