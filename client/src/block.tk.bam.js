@@ -60,6 +60,7 @@ tk.groups[]
 	.imgg
 	.img_fullstack
 	.img_partstack
+        .message_row
 	.box_move
 	.box_stay
 	.vslider{}
@@ -255,7 +256,6 @@ async function getData(tk, block, additional = []) {
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
 	const data = await dofetch3('tkbam?' + lst.join('&'), { headers })
-	console.log('data:', data)
 	if (tk.variants && !tk.alleleAlreadyUpdated) {
 		tk.variants[0].refseq = data.refseq
 		tk.variants[0].altseq = data.altseq
@@ -327,7 +327,14 @@ or update existing groups, in which groupidx will be provided
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
-			tk.groups.push(makeGroup(g, tk, block, data))
+			const gd = makeGroup(g, tk, block, data)
+			tk.groups.push(gd)
+			if (tk.variants && (gd.data.type == 'support_alt' || gd.data.type == 'support_ref')) {
+				//tk.tktip.clear().showunder()
+				gd.dom.message_row.on('click', async () => {
+					getMultiReadAligInfo(tk, gd, block) // Generating multiple sequence alignment against ref/alt allele
+				})
+			}
 		}
 	} else {
 		updateExistingGroups(data, tk, block)
@@ -591,6 +598,8 @@ function setTkHeight(tk) {
 		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
 	}
 	for (const g of tk.groups) {
+		//console.log('g:', g.data.messagerowheights)
+		h += g.data.messagerowheights
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
 		if (tk.variants) {
 			g.dom.diff_score_barplot_fullstack
@@ -613,7 +622,7 @@ function setTkHeight(tk) {
 				g.dom.vslider.g.transition().attr('transform', 'translate(0,' + (h + g.data.messagerowheights) + ') scale(1)')
 			}
 		}
-		h += g.data.height
+		h += g.data.height + g.data.messagerowheights
 	}
 	tk.height_main = tk.height = h
 	tk.height_main += tk.toppad + tk.bottompad
@@ -872,18 +881,17 @@ function makeGroup(gd, tk, block, data) {
 	group.dom.message_row = group.dom.imgg
 		.append('text')
 		.attr('x', data.pileup_data.width / 3)
-		.attr('y', gd.messagerowheights)
+		.attr('y', 0) // -0.5 * gd.messagerowheights
 		.attr('font-size', gd.messagerowheights)
 		.text(gd.messagerows[0].t)
 
-	if (tk.variants) {
-		if (gd.type == 'support_alt' || gd.type == 'support_ref') {
-			group.dom.message_row.on('click', () => {
-				tk.tktip.clear().showunder(d3event.target)
-				getMultiReadAligInfo(tk, gd, block) // Generating multiple sequence alignment against ref/alt allele
-			})
-		}
-	}
+	//if (tk.variants && (gd.type == 'support_alt' || gd.type == 'support_ref')) {
+	//	//tk.tktip.clear().showunder()
+	//	group.dom.message_row.on('click', async () => {
+	//		getMultiReadAligInfo(tk, gd, block) // Generating multiple sequence alignment against ref/alt allele
+	//	})
+	//}
+
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
 		.attr('xlink:href', group.data.src)
@@ -941,14 +949,6 @@ function makeGroup(gd, tk, block, data) {
 				return
 			}
 			if (!group.data.templatebox) return
-			//console.log('group.data:', group.data)
-
-			//if (tk.variants) {
-			//	if (group.data.type == 'support_alt' || group.data.type == 'support_ref') {
-			//		// Only alignments for ref and alt allele , not the none category
-			//		getMultiReadAligInfo(tk, group, block) // Generating multiple sequence alignment against ref/alt allele
-			//	}
-			//}
 			for (const t of group.data.templatebox) {
 				const bx1 = Math.max(0, t.x1)
 				const bx2 = Math.min(block.width, t.x2)
@@ -1147,6 +1147,7 @@ function makeGroup(gd, tk, block, data) {
 				block.block_setheight()
 			})
 		})
+
 	return group
 }
 
@@ -1178,15 +1179,13 @@ async function align_reads_to_allele(tk, group, block) {
 	if ('nochr' in tk) {
 		alig_lst.push('nochr=' + tk.nochr)
 	}
-	if (group.partstack && group.partstack.start) {
-		console.log('group.partstack:', group.partstack)
+	if (group.partstack) {
 		alig_lst.push('stackstart=' + group.partstack.start)
 		alig_lst.push('stackstop=' + group.partstack.stop)
 		alig_lst.push('grouptype=' + group.data.type)
 	}
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	return await dofetch3('tkbam?' + alig_lst.join('&'), { headers })
-	//console.log('multi_read_alig_data:', multi_read_alig_data)
 }
 
 function configPanel(tk, block) {
