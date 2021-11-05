@@ -330,7 +330,13 @@ or update existing groups, in which groupidx will be provided
 			const gd = makeGroup(g, tk, block, data)
 			tk.groups.push(gd)
 			if (tk.variants && (gd.data.type == 'support_alt' || gd.data.type == 'support_ref')) {
-				//tk.tktip.clear().showunder()
+				gd.dom.message_row
+					.on('mouseover', () => {
+						gd.dom.message_row.style('text-decoration', 'underline')
+					})
+					.on('mouseleave', () => {
+						gd.dom.message_row.style('text-decoration', 'none')
+					})
 				gd.dom.message_row.on('click', async () => {
 					getMultiReadAligInfo(tk, gd, block) // Generating multiple sequence alignment against ref/alt allele
 				})
