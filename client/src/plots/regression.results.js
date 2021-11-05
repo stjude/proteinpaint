@@ -173,7 +173,7 @@ function setRenderers(self) {
 
 			// padding is set on every <td>. need a better solution
 
-			// header
+			// header row
 			{
 				const tr = table.append('tr').style('opacity', 0.4)
 				tr.append('td')
@@ -188,7 +188,7 @@ function setRenderers(self) {
 						.style('padding', '8px')
 				}
 			}
-			// intercept
+			// intercept row
 			{
 				const tr = table.append('tr').style('background', '#eee')
 				tr.append('td')
@@ -207,11 +207,10 @@ function setRenderers(self) {
 				const termdata = result.coefficients.terms[tid]
 				const term = self.state.config.independent.find(t => t.id == tid)
 				let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+
 				// term name
-				const termnametd = tr
-					.append('td')
-					.text(term ? term.term.name : tid)
-					.style('padding', '8px')
+				const termNameTd = tr.append('td').style('padding', '8px')
+				fillTdName(termNameTd, term ? term.term.name : tid)
 
 				if (termdata.fields) {
 					// no category
@@ -235,7 +234,7 @@ function setRenderers(self) {
 
 					// multiple categories
 					// show first category as full row, with first cell spanning rest of categories
-					termnametd.attr('rowspan', orderedCategories.length).style('vertical-align', 'top')
+					termNameTd.attr('rowspan', orderedCategories.length).style('vertical-align', 'top')
 
 					let isfirst = true
 					for (const k of orderedCategories) {
@@ -276,7 +275,7 @@ function setRenderers(self) {
 				const td = tr.append('td')
 				if (v1) {
 					const term = self.state.config.independent.find(t => t.id == v1)
-					td.text(term ? term.term.name : v1)
+					fillTdName(td, term ? term.term.name : v1)
 				}
 				for (const v of row) tr.append('td').text(v)
 			}
@@ -301,5 +300,13 @@ function setRenderers(self) {
 				.text(label)
 			return div.append('div').style('margin-left', '20px')
 		}
+	}
+}
+
+function fillTdName(td, name) {
+	if (name.length < 30) {
+		td.text(name)
+	} else {
+		td.text(name.substring(0, 25) + ' ...').attr('title', name)
 	}
 }
