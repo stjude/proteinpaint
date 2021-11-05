@@ -878,19 +878,12 @@ function makeGroup(gd, tk, block, data) {
 			showline: true
 		})
 	}
-	group.dom.message_row = group.dom.imgg
+	group.dom.message_row = group.dom.imgg // Element to render meessage from each group. This is later made clickable to display multi-read alignment
 		.append('text')
 		.attr('x', data.pileup_data.width / 3)
 		.attr('y', 0) // -0.5 * gd.messagerowheights
 		.attr('font-size', gd.messagerowheights)
 		.text(gd.messagerows[0].t)
-
-	//if (tk.variants && (gd.type == 'support_alt' || gd.type == 'support_ref')) {
-	//	//tk.tktip.clear().showunder()
-	//	group.dom.message_row.on('click', async () => {
-	//		getMultiReadAligInfo(tk, gd, block) // Generating multiple sequence alignment against ref/alt allele
-	//	})
-	//}
 
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
