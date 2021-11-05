@@ -133,7 +133,7 @@ export function setGroupsettingMethods(self) {
 		const exclude_div = initDraggableDiv(groups_holder, 'Excluded categories')
 
 		exclude_div.style('border-top', '1px solid #efefef').on('drop', () => {
-			addOnDrop(exclude_div, 0)
+			addOnDrop(exclude_list, 0)
 		})
 
 		const exclude_list = exclude_div.append('div').style('margin', '5px')
