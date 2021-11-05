@@ -221,22 +221,24 @@ function setRenderers(self) {
 							.text(v)
 							.style('padding', '8px')
 				} else if (termdata.categories) {
-					// multiple categories. show first category as full row, with first cell spanning rest of categories
-
-					const categories = []
-					for (const k in termdata.categories) categories.push(k)
-					/*
-						TODO sort categories array by orderedLabels, after deleting sorting code from R
-						may use self.inputs.sections[1].items[tid].orderedLabels, such as
-						```
-						const order = self.inputs.sections[1].items[tid].orderedLabels
-						if (order.length) categories.sort((a, b)=> order.indexOf(a) - order.indexOf(b))
-						```
-					*/
-
-					termnametd.attr('rowspan', categories.length).style('vertical-align', 'top')
-					let isfirst = true
+					const orderedCategories = []
+					const input = self.parent.inputs.independent.inputs.find(i => i[i.varClass].id == tid)
+					if (input.handler.valuesTable.orderedLabels) {
+						// reorder rows by predefined order
+						for (const k of input.handler.valuesTable.orderedLabels) {
+							if (termdata.categories[k]) orderedCategories.push(k)
+						}
+					}
 					for (const k in termdata.categories) {
+						if (!orderedCategories.includes(k)) orderedCategories.push(k)
+					}
+
+					// multiple categories
+					// show first category as full row, with first cell spanning rest of categories
+					termnametd.attr('rowspan', orderedCategories.length).style('vertical-align', 'top')
+
+					let isfirst = true
+					for (const k of orderedCategories) {
 						if (isfirst) {
 							isfirst = false
 						} else {
@@ -246,10 +248,11 @@ function setRenderers(self) {
 						tr.append('td')
 							.text(term && term.term.values && term.term.values[k] ? term.term.values[k].label : k)
 							.style('padding', '8px')
-						for (const v of termdata.categories[k])
+						for (const v of termdata.categories[k]) {
 							tr.append('td')
 								.text(v)
 								.style('padding', '8px')
+						}
 					}
 				} else {
 					tr.append('td').text('ERROR: no .fields[] or .categories{}')
