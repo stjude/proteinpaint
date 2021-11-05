@@ -1,7 +1,6 @@
 import { termsettingInit } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { get_bin_label } from '../../shared/termdb.bins'
-import { dofetch3 } from '../common/dofetch'
 import { InputValuesTable } from './regression.inputs.values.table'
 
 export class InputTerm {
@@ -27,7 +26,7 @@ export class InputTerm {
 		try {
 			// reference shortcuts from this.input
 			const section = this.input.section
-			const { app, config, state, disable_terms, editConfig } = this.input.section.parent
+			const { app, config, state, disable_terms, editConfig } = section.parent
 
 			this.pill = termsettingInit({
 				placeholder: section.selectPrompt,
@@ -38,7 +37,6 @@ export class InputTerm {
 				activeCohort: state.activeCohort,
 				use_bins_less: true,
 				debug: app.opts.debug,
-				//showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
 				buttons: section.configKey == 'outcome' ? ['replace'] : ['delete'],
 				numericEditMenuVersion: getMenuVersion(config, this.input),
 				usecase: { target: 'regression', detail: section.configKey, regressionType: config.regressionType },
@@ -50,8 +48,8 @@ export class InputTerm {
 			})
 
 			if (section.configKey == 'outcome') {
+				// special treatment for terms selected for outcome
 				this.setQ = getQSetter(config.regressionType)
-				//if (this.input.term) await this.setQ[this.input.term.term.type](this.input)
 			}
 
 			this.valuesTable = new InputValuesTable({
@@ -161,17 +159,8 @@ async function maySetTwoBins(input) {
 		return
 	}
 
-	// for numeric terms, add 2 custom bins devided at median value
-	const lst = [
-		'/termdb?getpercentile=50',
-		'tid=' + t.id,
-		'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(state.termfilter.filter))),
-		'genome=' + state.vocab.genome,
-		'dslabel=' + state.vocab.dslabel
-	]
-	const url = lst.join('&')
-	const data = await dofetch3(url, {}, app.opts.fetchOpts)
-	if (data.error) throw data.error
+	const data = await app.vocabApi.getPercentile(t.id, 50, state.termfilter.filter)
+	if (data.error || !Number.isFinite(data.value)) throw 'cannot get median value: ' + (data.error || 'no data')
 	const median = input.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
 	t.q = {
 		mode: 'binary',
@@ -191,7 +180,7 @@ async function maySetTwoBins(input) {
 	}
 
 	t.q.lst.forEach(bin => {
-		if (!('label' in bin)) bin.label = get_bin_label(bin, input.term.q)
+		bin.label = get_bin_label(bin, input.term.q)
 	})
 
 	t.refGrp = t.q.lst[0].label
@@ -224,28 +213,15 @@ async function maySetTwoGroups(input) {
 
 	// check the number of samples for computable categories, only use categories with >0 samples
 
-	// TODO run these queries through vocab
-	const lst = [
-		'/termdb?getcategories=1',
-		'tid=' + term.id,
-		'term1_q=' + encodeURIComponent(JSON.stringify(q)),
-		'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(state.termfilter.filter))),
-		'genome=' + state.vocab.genome,
-		'dslabel=' + state.vocab.dslabel
-	]
-	if (term.type == 'condition') lst.push('value_by_max_grade=1')
-	const url = lst.join('&')
-	let data
-	try {
-		data = await dofetch3(url, {}, app.opts.fetchOpts)
-		if (data.error) throw data.error
-	} catch (e) {
-		throw e
-	}
-	const category2samplecount = new Map() // k: category/grade (computable), v: number of samples
-	const computableCategories = []
+	// q should not have groupsetting enabled, as we only want to get number of cases for categories/grades
+	// TODO detect if groupsetting is enabled, then turn it off??
+	const lst = ['term1_q=' + encodeURIComponent(JSON.stringify(q))]
+	const data = await app.vocabApi.getCategories(term, state.termfilter.filter, lst)
+	if (data.error) throw 'cannot get categories: ' + data.error
+	const category2samplecount = new Map() // k: category/grade, v: number of samples
+	const computableCategories = [] // list of computable keys
 	for (const i of data.lst) {
-		category2samplecount.set(i.key, i.samplecount, term.values)
+		category2samplecount.set(i.key, i.samplecount)
 		if (term.values && term.values[i.key] && term.values[i.key].uncomputable) continue
 		computableCategories.push(i.key)
 	}

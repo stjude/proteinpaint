@@ -99,7 +99,11 @@ export async function getPlotConfig(opts, app) {
 		// FIXME: harcoded empty varClass, for now
 		opts.outcome.varClass = 'term'
 	}
-	if (opts.outcome && opts.outcome.varClass == 'term') await fillTermWrapper(opts.outcome, app.vocabApi)
+	if (opts.outcome.varClass == 'term') {
+		await fillTermWrapper(opts.outcome, app.vocabApi)
+	} else {
+		throw 'unknown outcome.varClass'
+	}
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
 	const config = { id }
@@ -107,7 +111,11 @@ export async function getPlotConfig(opts, app) {
 
 	if (opts.independent) {
 		for (const t of opts.independent) {
-			if (t.varClass == 'term') await fillTermWrapper(t, app.vocabApi)
+			if (t.varClass == 'term') {
+				await fillTermWrapper(t, app.vocabApi)
+			} else {
+				throw 'unknown independent.varClass'
+			}
 		}
 		config.independent = opts.independent
 		delete opts.independent
