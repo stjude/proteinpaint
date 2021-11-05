@@ -114,7 +114,7 @@ export async function getPlotConfig(opts, app) {
 			if (t.varClass == 'term') {
 				await fillTermWrapper(t, app.vocabApi)
 			} else {
-				throw 'unknown outcome.varClass'
+				throw 'unknown independent.varClass'
 			}
 		}
 		config.independent = opts.independent
