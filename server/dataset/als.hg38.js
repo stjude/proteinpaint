@@ -71,12 +71,62 @@ module.exports = function(common) {
 					filter: 1
 				},
 				CADD_phred: {
-					label: 'CADD_phred',
+					label: 'CADD phred',
 					isnumeric: 1,
 					filter: 1
 				},
 				REVEL_score: {
 					label: 'REVEL score',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF: {
+					label: 'gnomAD v3 allele frequency',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_afr: {
+					label: 'gnomAD v3 allele frequency - African/African American',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_ami: {
+					label: 'gnomAD v3 allele frequency - Amish',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_amr: {
+					label: 'gnomAD v3 allele frequency - American Admixed/Latino',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_asj: {
+					label: 'gnomAD v3 allele frequency - Ashkenazi Jewish',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_eas: {
+					label: 'gnomAD v3 allele frequency - East Asian',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_fin: {
+					label: 'gnomAD v3 allele frequency - Finnish',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_nfe: {
+					label: 'gnomAD v3 allele frequency - Non-Finnish European',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_oth: {
+					label: 'gnomAD v3 allele frequency - other',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_sas: {
+					label: 'gnomAD v3 allele frequency - South Asian',
 					isnumeric: 1,
 					filter: 1
 				}
