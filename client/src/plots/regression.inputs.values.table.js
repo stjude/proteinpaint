@@ -1,6 +1,7 @@
-import { getNormalRoot } from '../common/filter'
 import { select } from 'd3-selection'
-import { dofetch3 } from '../client'
+
+// this sub component is currently hardcoded for varClass=term and accesses input.term without checking varClass
+// later may be generally applicable to any varClass?
 
 export class InputValuesTable {
 	constructor(opts) {
@@ -13,19 +14,19 @@ export class InputValuesTable {
 	async main() {
 		try {
 			const input = this.handler.input
-			const t = input.term
-			if (!t) {
+			const variable = input[input.varClass]
+			if (!variable) {
 				this.dom.holder.style('display', 'none')
 				return
 			}
-			delete t.error
+			delete variable.error
 			this.dom.holder.style('display', 'block')
 			this.dom.loading_div.style('display', 'block')
 			await this.updateValueCount(input)
 			this.mayUpdateModeRefGrp(input, input.section.parent.refGrpByTermId)
 			this.dom.loading_div.style('display', 'none')
 			this.render()
-			if (t.error) throw t.error
+			if (variable.error) throw variable.error
 		} catch (e) {
 			this.dom.loading_div.style('display', 'none')
 			throw e
@@ -35,12 +36,13 @@ export class InputValuesTable {
 	async updateValueCount(input) {
 		const parent = input.section.parent
 		const state = parent.state
+
+		// TODO may detect condition varClass=term
 		const t = input.term
 
-		// query backend for total sample count for each value of categorical or condition terms
+		// get total sample count for each value of categorical or condition terms
 		// and included and excluded sample count for numeric term
 		try {
-			//if (input.term.id == 'sex') throw 'test'
 			/*  !!! NOTE: assumes that term.q has already been validated !!! */
 			// create a q copy to remove unnecessary parameters
 			// from the server request
@@ -50,21 +52,9 @@ export class InputValuesTable {
 				so remove the 'mode: continuous' value as it will prevent bin construction in the backend
 			*/
 			if (q.mode == 'continuous') delete q.mode
-			const lst = [
-				'/termdb?getcategories=1',
-				'tid=' + t.term.id,
-				'term1_q=' + encodeURIComponent(JSON.stringify(q)),
-				'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(state.termfilter.filter))),
-				'genome=' + state.vocab.genome,
-				'dslabel=' + state.vocab.dslabel
-			]
-			if (q.bar_by_grade) lst.push('bar_by_grade=1')
-			if (q.bar_by_children) lst.push('bar_by_children=1')
-			if (q.value_by_max_grade) lst.push('value_by_max_grade=1')
-			if (q.value_by_most_recent) lst.push('value_by_most_recent=1')
-			if (q.value_by_computable_grade) lst.push('value_by_computable_grade=1')
-			const url = lst.join('&')
-			const data = await dofetch3(url)
+			const data = await parent.app.vocabApi.getCategories(t.term, state.termfilter.filter, [
+				'term1_q=' + encodeURIComponent(JSON.stringify(q))
+			])
 			if (data.error) throw data.error
 			this.orderedLabels = data.orderedLabels
 

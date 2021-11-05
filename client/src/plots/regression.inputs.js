@@ -7,6 +7,9 @@ outcome and independent are two sections sharing same structure
 "inputs[]" collect one or multiple variables for each section
 "input" tracks attributes from a variable
 
+should be varClass-agnostic "input[input.varClass]"
+but not to explicitly access things like "input.term"
+
 **** function cascade ****
 
 constructor
@@ -22,10 +25,7 @@ main
 		removeInput
 		addInput
 
-FIXME submit button toggling is broken
-should be disabled when:
-1. click run analysis button
-2. 
+FIXME submit button toggling behavior
 */
 
 export class RegressionInputs {
@@ -39,79 +39,19 @@ export class RegressionInputs {
 		setInteractivity(this)
 		setRenderers(this)
 
+		// track reference category values or groups by term ID
+		// k: variable id
+		// v: reference group name
+		this.refGrpByTermId = {}
+		this.totalSampleCount = undefined
+
 		this.createSectionConfigs()
 		this.initUI()
 	}
 
 	createSectionConfigs() {
-		/*
-			Create configuration data for each section of the input UI
-			
-			section{}
-				.parent: reference to this RegressionInputs instance, to make it easy to access 
-								its state, config, app, and other properties from non-rx descendant components
-
-				-----  static configuration  -----
-				.heading
-					string heading for the section
-
-				.selectPrompt           
-					string label to prompt a user to select a new input variable
-				
-				.configKey        
-					["outcome" | "independent"], string configuration key (attribute name)
-					the configuration that receives the selected terms
-					will also be used to find a section's selected terms from state.config  
-				
-				.limit
-					maximum number inputs that can be selected for this section
-				
-				.exclude_types    
-					term types that cannot be selected as inputs for this section
-					// FIXME: should group these handler-specific options by input.varClass
-				
-				-----  dynamic configuration data  -----
-
-				.inputs[ input{} ]
-					from state config.outcome or config.independent
-					a cache of input configurations and rendered DOM elements 
-					for each selected variable. Removed inputs will be deleted 
-					from this object, and newly selected inputs will be added.
-
-					created in updateInputs()
-
-					.input.section
-						reference to this section
-						for making this section config accessible to downstream logic handling this input, e.g. pill.js
-					
-					.input.dom{}
-						created in addInput()
-						.holder
-						.err_div
-						.* other DOM elements added depending on variable class
-
-					.input.varClass
-						the input's variable class, like "term"
-
-					.input[input.varClass]
-						the input data for this given varClass	
-
-					.input.handler
-						created in addInput()
-						the function/object/class instance that will handle
-						the variable selection, one for each varClass;
-						.update()
-							called in main()
-						.remove()
-						.hasError
-
-
-				------ tracker for this section's DOM elements -----
-				*** each element is added when it is created/appended ***
-				.dom{} 
-					.holder // allow to selectively hide independent section
-					.headingDiv
-					.inputsDiv 
+		/* Create configuration data for each section of the input UI
+		see google doc "Regression UI"
 		*/
 
 		// configuration for the outcome variable section
@@ -157,12 +97,6 @@ export class RegressionInputs {
 		// track sections in an array, for convenience in loops
 		// but not for use in `d3.data()`
 		this.sections = [this.outcome, this.independent]
-
-		// track reference category values or groups by term ID
-		// k: variable id
-		// v: reference group name
-		this.refGrpByTermId = {}
-		this.totalSampleCount = undefined
 	}
 
 	async main() {
@@ -183,7 +117,7 @@ export class RegressionInputs {
 			await Promise.all(updates)
 			for (const section of this.sections) {
 				for (const input of section.inputs) {
-					if ((input.term && input.term.error) || (input.handler && input.handler.hasError)) {
+					if ((input[input.varClass] && input[input.varClass].error) || (input.handler && input.handler.hasError)) {
 						this.hasError = true
 						this.parent.results.dom.holder.style('display', 'none')
 					}
@@ -202,8 +136,8 @@ export class RegressionInputs {
 		this.disable_terms = []
 		if (this.config.outcome && this.config.outcome.varClass == 'term') this.disable_terms.push(this.config.outcome.id)
 		if (this.config.independent) {
-			for (const term of this.config.independent) {
-				if (term.varClass == 'term') this.disable_terms.push(term.id)
+			for (const vb of this.config.independent) {
+				if (vb.varClass == 'term') this.disable_terms.push(vb.id)
 			}
 		}
 	}
@@ -269,7 +203,7 @@ function setRenderers(self) {
 	self.renderSection = function(section) {
 		// decide to show/hide this section
 		// only show when this section is for outcome,
-		// or this is independent and only show it when the outcome term has been selected
+		// or this is independent and only show it when the outcome has been selected
 		// effect is to force user to first select outcome, then independent, but not to select independent first
 		section.dom.holder.style('display', section.configKey == 'outcome' || self.config.outcome ? 'block' : 'none')
 
@@ -278,7 +212,7 @@ function setRenderers(self) {
 
 		const inputs = section.dom.inputsDiv
 			.selectAll(':scope > div')
-			// key function (2nd arg) uses a function to determine how datum and element are joined by term id
+			// key function (2nd arg) uses a function to determine how datum and element are joined by variable id
 			.data(section.inputs, input => input.varClass && input[input.varClass] && input[input.varClass].id)
 
 		inputs.exit().each(removeInput)
@@ -308,8 +242,8 @@ function setRenderers(self) {
 			if (!input) {
 				section.inputs.push({
 					section,
-					varClass, // varClass = "term" | "..."
-					[varClass]: variable // example: input["term"] = {id, term, q}
+					varClass,
+					[varClass]: variable
 				})
 			}
 		}
@@ -430,8 +364,8 @@ function setInteractivity(self) {
 		const config = JSON.parse(JSON.stringify(self.config))
 		config.hasUnsubmittedEdits = false
 
-		for (const term of config.independent) {
-			term.refGrp = term.id in self.refGrpByTermId ? self.refGrpByTermId[term.id] : 'NA'
+		for (const vb of config.independent) {
+			vb.refGrp = vb.id in self.refGrpByTermId ? self.refGrpByTermId[vb.id] : 'NA'
 		}
 		if (config.outcome.id in self.refGrpByTermId) {
 			config.outcome.refGrp = self.refGrpByTermId[config.outcome.id]

@@ -213,22 +213,47 @@ class TermdbVocab {
 		return graphableTypes.has(term.type)
 	}
 
-	async getCategories(term, filter, lst = null) {
-		const param = lst ? 'getcategories' : 'getnumericcategories'
+	async getCategories(term, filter, lst = []) {
+		// for all term types
+		// return number of samples per category/bin/grade/group etc
+		// optionally, caller can supply parameter "term1_q=stringifiedJSON" in lst[]
+		// as this function does not deal with q by default
 		const args = [
-			`${param}=1`,
+			'getcategories=1',
 			'genome=' + this.state.vocab.genome,
 			'dslabel=' + this.state.vocab.dslabel,
 			'tid=' + term.id,
-			'filter=' + encodeURIComponent(JSON.stringify(filter))
+			...lst
 		]
-
-		if (lst && lst.length) args.push(...lst)
+		if (filter) {
+			args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+		}
 
 		try {
 			const data = await dofetch3('/termdb?' + args.join('&'))
 			if (data.error) throw data.error
-			return lst ? data : data.lst
+			return data
+		} catch (e) {
+			window.alert(e.message || e)
+		}
+	}
+
+	async getNumericUncomputableCategories(term, filter) {
+		// for numeric term
+		// return number of samples per uncomputable categories
+		const args = [
+			'getnumericcategories=1',
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel,
+			'tid=' + term.id
+		]
+		if (filter) {
+			args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+		}
+		try {
+			const data = await dofetch3('/termdb?' + args.join('&'))
+			if (data.error) throw data.error
+			return data
 		} catch (e) {
 			window.alert(e.message || e)
 		}
@@ -411,6 +436,9 @@ class FrontendVocab {
 		const q = { term, filter }
 		const data = getCategoryData(q, this.datarows)
 		return data
+	}
+	getNumericUncomputableCategories(term, filter) {
+		throw 'to be implemented!! getNumericUncomputableCategories'
 	}
 
 	graphable(term) {

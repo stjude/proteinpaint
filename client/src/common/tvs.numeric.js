@@ -761,7 +761,7 @@ export function getNumericMethods(self) {
 			return
 		}
 		// numerical checkbox for unannotated cats
-		const values = await self.opts.vocabApi.getCategories(tvs.term, self.filter)
+		const values = await self.opts.vocabApi.getNumericUncomputableCategories(tvs.term, self.filter)
 		const unannotated_cats = []
 		const lst = values.lst ? values.lst : values
 		for (const cat of lst) {
