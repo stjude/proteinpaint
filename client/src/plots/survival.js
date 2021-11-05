@@ -1,6 +1,5 @@
 import { getCompInit } from '../common/rx.core'
 import { controlsInit } from './controls'
-import { getTermFilterParams, syncParams } from '../mass/termdb.helpers.js'
 import { select, event } from 'd3-selection'
 import { scaleLinear, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
@@ -99,9 +98,9 @@ class TdbSurvival {
 				return
 			}
 			Object.assign(this.settings, this.state.config.settings)
-			const dataName = this.getDataName(this.state)
-			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
-			syncParams(this.state.config, data)
+			const reqOpts = this.getDataRequestOpts()
+			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.currData = this.processData(data)
 			this.refs = data.refs
 			this.pj.refresh({ data: this.currData })
@@ -114,12 +113,18 @@ class TdbSurvival {
 		}
 	}
 
-	/// creates URL search parameter string, that also serves as
-	// a unique request identifier to be used for caching server response
-	getDataName(state) {
-		const params = ['getsurvival=1']
-		params.push(...getTermFilterParams(state.config, this.app.vocabApi, state.termfilter))
-		return '/termdb?' + params.join('&')
+	// creates an opts object for the vocabApi.getNestedChartsData()
+	getDataRequestOpts() {
+		const c = this.state.config
+		const params = {
+			chartType: 'survival',
+			term: c.term,
+			filter: this.state.termfilter.filter
+		}
+		if (c.term2) params.term2 = c.term2
+		if (c.term0) params.term0 = c.term0
+		if (this.state.ssid) params.ssid = this.state.ssid
+		return params
 	}
 
 	processData(data) {

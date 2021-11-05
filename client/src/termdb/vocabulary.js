@@ -82,11 +82,126 @@ class TermdbVocab {
 	}
 
 	// from termdb/plot
-	async getPlotData(plotId, dataName) {
-		const url = dataName + '&genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel
+	async getNestedChartSeriesData(opts) {
+		const url = this.getTdbDataUrl(opts)
 		const data = await dofetch3(url, {}, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
+	}
+
+	/*
+		Create URL parameters for charts that use the 
+		`/termdb*` server route, which expects the  
+		term0, term, term2 variable naming convention
+
+		Arguments:
+		opts
+		- chart configuration object with termwrappers of
+			term (required), term0 (optional) and term2 (optional)
+		
+		.term 
+			required, {term, q}
+		.term2
+			optional overlay term, {term, q}
+		.term0
+			optional divide-by term, {term, q}
+		.filter
+			optional filter object 
+		.ssid 
+			optional genotype parameter {ssid, mname, chr, pos}
+	*/
+	getTdbDataUrl(opts) {
+		const params = []
+
+		if (opts.chartType == 'scatter') params.push('scatter=1')
+		if (opts.chartType == 'cuminc') params.push('getcuminc=1')
+		if (opts.chartType == 'survival') params.push('getsurvival=1')
+
+		for (const _key of ['term', 'term2', 'term0']) {
+			// "term" on client is "term1" at backend
+			const term = opts[_key]
+			if (!term) continue
+			const key = _key == 'term' ? 'term1' : _key
+			params.push(key + '_id=' + encodeURIComponent(term.term.id))
+			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
+			params.push(key + '_q=' + q_to_param(term.q))
+		}
+
+		if (opts.filter) {
+			const filter = getNormalRoot(opts.filter)
+			if (filter.lst.length) {
+				params.push('filter=' + encodeURIComponent(JSON.stringify(filter)))
+			}
+		}
+
+		if (opts.ssid) {
+			params.push(
+				'term2_is_genotype=1',
+				'ssid=' + opts.ssid.ssid,
+				'mname=' + opts.ssid.mutation_name,
+				'chr=' + opts.ssid.chr,
+				'pos=' + opts.ssid.pos
+			)
+		}
+
+		if ('grade' in opts) params.push(`grade=${opts.grade}`)
+
+		const route = opts.chartType ? 'termdb' : 'termdb-barsql'
+		return `/${route}?${params.join('&')}&genome=${this.vocab.genome}&dslabel=${this.vocab.dslabel}`
+	}
+
+	/*
+		May override certain term-related configuration (like bins),
+		from the server response data to the corresponding term's 
+		current state.
+
+		Arguments
+		config
+		- chart configuration object with termwrappers of
+			term (required), term0 (optional) and term2 (optional)
+
+		- data
+			server response data in the format of 
+			{
+				charts: [{
+					chartId: '...',
+					serieses: [{
+						seriesId: '...',
+						data: [{
+							dataId: '...',
+							total: *samplecount*
+						}, ...],
+						total: *samplecount*
+					}, ...],
+					total: *samplecount*
+				}, ...],
+
+				refs: {...}
+			}
+	*/
+	syncTermData(config, data) {
+		if (!data || !data.refs) return
+		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
+			const term = config[key]
+			if (term == 'genotype') return
+			if (!term) {
+				if (key == 'term') throw `missing plot.term{}`
+				return
+			}
+			if (data.refs.bins) {
+				term.bins = data.refs.bins[i]
+				if (data.refs.q && data.refs.q[i]) {
+					if (!term.q) term.q = {}
+					const q = data.refs.q[i]
+					if (q !== term.q) {
+						for (const key in term.q) delete term.q[key]
+						Object.assign(term.q, q)
+					}
+				}
+			}
+			if (!term.q) term.q = {}
+			if (!term.q.groupsetting) term.q.groupsetting = {}
+		}
 	}
 
 	// from termdb/search
@@ -258,13 +373,13 @@ class TermdbVocab {
 			window.alert(e.message || e)
 		}
 	}
+}
 
-	q_to_param(q) {
-		// exclude certain attributes of q from dataName
-		const q2 = JSON.parse(JSON.stringify(q))
-		delete q2.hiddenValues
-		return encodeURIComponent(JSON.stringify(q2))
-	}
+function q_to_param(q) {
+	// exclude certain attributes of q from dataName
+	const q2 = JSON.parse(JSON.stringify(q))
+	delete q2.hiddenValues
+	return encodeURIComponent(JSON.stringify(q2))
 }
 
 // to-do
@@ -309,8 +424,13 @@ class FrontendVocab {
 	}
 
 	// from termdb/plot
-	async getPlotData(plotId, dataName) {
-		let config = this.state.plots.find(p => p.id === plotId)
+	async getNestedChartSeriesData(opts) {
+		/*
+		TODO: 
+			- figure out why config may not be available
+			- delete this block if not needed
+			
+		let config = this.state.plots.find(p => p.id === plotId); console.log(382, plotId, Object.keys(config))
 		if (!config) {
 			const term = this.vocab.terms.find(t => t.id === plotId)
 			const q = {}
@@ -320,16 +440,71 @@ class FrontendVocab {
 			}
 			this.state.plots.push(config)
 		}
+		*/
 		const q = {
-			term1: config.term ? config.term.term : {},
-			term1_q: config.term ? config.term.q : undefined,
-			term0: config.term0 ? config.term0.term : undefined,
-			term0_q: config.term0 ? config.term0.q : undefined,
-			term2: config.term2 ? config.term2.term : undefined,
-			term2_q: config.term2 ? config.term2.q : undefined,
+			term1: opts.term ? opts.term.term : {},
+			term1_q: opts.term ? opts.term.q : undefined,
+			term0: opts.term0 ? opts.term0.term : undefined,
+			term0_q: opts.term0 ? opts.term0.q : undefined,
+			term2: opts.term2 ? opts.term2.term : undefined,
+			term2_q: opts.term2 ? opts.term2.q : undefined,
 			filter: this.state.termfilter && this.state.termfilter.filter
 		}
 		return getBarchartData(q, this.datarows)
+	}
+
+	/*
+		May override certain term-related configuration (like bins),
+		from the server response data to the corresponding term's 
+		current state.
+
+		Arguments
+		config
+		- chart configuration object with termwrappers of
+			term (required), term0 (optional) and term2 (optional)
+
+		- data
+			server response data in the format of 
+			{
+				charts: [{
+					chartId: '...',
+					serieses: [{
+						seriesId: '...',
+						data: [{
+							dataId: '...',
+							total: *samplecount*
+						}, ...],
+						total: *samplecount*
+					}, ...],
+					total: *samplecount*
+				}, ...],
+
+				refs: {...}
+			}
+	*/
+	syncTermData(config, data) {
+		if (!data || !data.refs) return
+		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
+			const term = config[key]
+			if (term == 'genotype') return
+			if (!term) {
+				if (key == 'term') throw `missing plot.term{}`
+				return
+			}
+			if (data.refs.bins) {
+				term.bins = data.refs.bins[i]
+				if (data.refs.q && data.refs.q[i]) {
+					if (!term.q) term.q = {}
+					const q = data.refs.q[i]
+					if (q !== term.q) {
+						for (const key in term.q) delete term.q[key]
+						Object.assign(term.q, q)
+					}
+				}
+			}
+			if (!term.q) term.q = {}
+			if (!term.q.groupsetting) term.q.groupsetting = {}
+		}
 	}
 
 	// from termdb/search

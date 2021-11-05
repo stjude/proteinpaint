@@ -8,7 +8,6 @@ import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
 import { controlsInit } from './controls'
 import { to_svg } from '../client'
-import { getTermFilterParams, syncParams } from '../mass/termdb.helpers.js'
 import { fillTermWrapper } from '../common/termsetting'
 
 class TdbBarchart {
@@ -132,9 +131,9 @@ class TdbBarchart {
 					this.config.term.term.name + ` <span style="opacity:.6;font-size:.7em;margin-left:10px;">BARCHART</span>`
 				)
 
-			const dataName = this.getDataName(this.state)
-			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
-			syncParams(this.state.config, data)
+			const reqOpts = this.getDataRequestOpts()
+			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.currServerData = data
 			if (this.currServerData.refs && this.currServerData.refs.q) {
 				for (const q of this.currServerData.refs.q) {
@@ -160,21 +159,14 @@ class TdbBarchart {
 		return isVisible
 	}
 
-	// creates URL search parameter string, that also serves as
-	// a unique request identifier to be used for caching server response
-	getDataName(state) {
-		const params = []
-		if (state.ssid) {
-			params.push(
-				'term2_is_genotype=1',
-				'ssid=' + state.ssid.ssid,
-				'mname=' + state.ssid.mutation_name,
-				'chr=' + state.ssid.chr,
-				'pos=' + state.ssid.pos
-			)
-		}
-		params.push(...getTermFilterParams(this.config, this.app.vocabApi, state.termfilter))
-		return '/termdb-barsql?' + params.join('&')
+	// creates an opts object for the vocabApi.getNestedChartsData()
+	getDataRequestOpts() {
+		const c = this.config
+		const params = { term: c.term, filter: this.state.termfilter.filter }
+		if (c.term2) params.term2 = c.term2
+		if (c.term0) params.term0 = c.term0
+		if (this.state.ssid) params.ssid = this.state.ssid
+		return params
 	}
 
 	updateSettings(config) {

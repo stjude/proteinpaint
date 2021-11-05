@@ -5,32 +5,7 @@ class MassPlot {
 	constructor(opts) {
 		this.type = 'plot'
 		setRenderers(this)
-	}
-
-	async init() {
-		const holder = this.opts.holder
-		try {
-			this.dom = {
-				tip: new Menu({ padding: '0px' }),
-				holder,
-				body: holder.body
-					// .style('margin-top', '-1px')
-					.style('white-space', 'nowrap')
-					.style('overflow-x', 'auto'),
-
-				// will hold no data notice or the page title in multichart views
-				errdiv: holder.body
-					.append('div')
-					.style('display', 'none')
-					.style('padding', '5px')
-					.style('background-color', 'rgba(255,100,100,0.2)'),
-
-				// dom.viz will hold the rendered view
-				viz: holder.body.append('div')
-			}
-		} catch (e) {
-			this.dom.errdiv.style('display', 'none').text(e)
-		}
+		this.initUi()
 	}
 
 	reactsTo(action) {
@@ -69,6 +44,32 @@ class MassPlot {
 export const plotInit = getCompInit(MassPlot)
 
 function setRenderers(self) {
+	self.initUi = function(opts) {
+		const holder = opts.holder
+		try {
+			self.dom = {
+				tip: new Menu({ padding: '0px' }),
+				holder,
+				body: holder.body
+					// .style('margin-top', '-1px')
+					.style('white-space', 'nowrap')
+					.style('overflow-x', 'auto'),
+
+				// will hold no data notice or the page title in multichart views
+				errdiv: holder.body
+					.append('div')
+					.style('display', 'none')
+					.style('padding', '5px')
+					.style('background-color', 'rgba(255,100,100,0.2)'),
+
+				// dom.viz will hold the rendered view
+				viz: holder.body.append('div')
+			}
+		} catch (e) {
+			self.dom.errdiv.style('display', 'none').text(e)
+		}
+	}
+
 	/*
 		TODO: may create option for a custom filter for this plot only,
 		which will override the app-wide filter that is set from the nav tab

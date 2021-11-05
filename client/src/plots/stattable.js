@@ -1,5 +1,4 @@
 import { getCompInit } from '../common/rx.core'
-import { getTermFilterParams, syncParams } from '../mass/termdb.helpers.js'
 
 class TdbStatTable {
 	constructor(opts) {
@@ -43,9 +42,9 @@ class TdbStatTable {
 		try {
 			this.config = this.state.config
 			if (this.state.isVisible) {
-				const dataName = this.getDataName(this.state)
-				this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
-				syncParams(this.state.config, this.data)
+				const reqOpts = this.getDataRequestOpts()
+				const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+				this.app.vocabApi.syncTermData(this.state.config, data)
 			}
 			if (!this.state.isVisible || !this.data || !this.data.boxplot) {
 				this.dom.div.style('display', 'none')
@@ -57,11 +56,14 @@ class TdbStatTable {
 		}
 	}
 
-	// creates URL search parameter string, that also serves as
-	// a unique request identifier to be used for caching server response
-	getDataName(state) {
-		const params = getTermFilterParams(this.config, this.app.vocabApi, state.termfilter)
-		return '/termdb-barsql?' + params.join('&')
+	// creates an opts object for the vocabApi.getNestedChartsData()
+	getDataRequestOpts() {
+		const c = this.config
+		const params = { term: c.term, filter: this.state.termfilter.filter }
+		if (c.term2) params.term2 = c.term2
+		if (c.term0) params.term0 = c.term0
+		if (this.state.ssid) params.ssid = this.state.ssid
+		return params
 	}
 }
 

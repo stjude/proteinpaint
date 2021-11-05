@@ -1,4 +1,3 @@
-import { q_to_param } from '../termdb/plot'
 import { getNormalRoot } from '../common/filter'
 import { sayerror } from '../dom/error'
 
