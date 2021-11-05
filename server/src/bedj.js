@@ -460,9 +460,20 @@ async function do_query(req, genomes) {
 				const a = Math.max(e[0], region.start)
 				const b = Math.min(e[1], region.stop)
 				if (a < b) {
+					if (item.exon2color) {
+						for (const f of item.exon2color) {
+							if (a >= f.start && b <= f.stop) {
+								ctx.fillStyle = f.color // temporarily use the given color for this exon
+								break
+							}
+						}
+					}
+
 					const pxa = cumx + region.scale(region.reverse ? b : a)
 					const pxb = cumx + region.scale(region.reverse ? a : b)
 					ctx.fillRect(pxa, y + thinpad, Math.max(1, pxb - pxa), stackheight - thinpad * 2)
+
+					if (item.exon2color) ctx.fillStyle = fillcolor // restore color
 				}
 			}
 			const thick = []
@@ -481,9 +492,20 @@ async function do_query(req, genomes) {
 				const a = Math.max(e[0], region.start)
 				const b = Math.min(e[1], region.stop)
 				if (a < b) {
+					if (item.exon2color) {
+						for (const f of item.exon2color) {
+							if (a >= f.start && b <= f.stop) {
+								ctx.fillStyle = f.color // temporarily use the given color for this exon
+								break
+							}
+						}
+					}
+
 					const pxa = cumx + region.scale(region.reverse ? b : a)
 					const pxb = cumx + region.scale(region.reverse ? a : b)
 					ctx.fillRect(pxa, y, Math.max(1, pxb - pxa), stackheight)
+
+					if (item.exon2color) ctx.fillStyle = fillcolor // restore color
 
 					// strand marks inside box
 
