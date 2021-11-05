@@ -63,30 +63,25 @@ module.exports = function(common) {
 			}
 		},*/
 
-		/*alleleAttribute: {
+		alleleAttribute: {
 			attributes: {
-				ExAC_AF: {
-					label: 'ExAC',
-					isnumeric: 1,
-					filter: 1,
-					cutoffvalue: 0.01,
-					keeplowerthan: true
-				},
 				AF: {
-					label: 'AF',
+					label: 'Allele frequency',
 					isnumeric: 1,
-					filter: 1,
-					cutoffvalue: 0.01,
-					keeplowerthan: true
+					filter: 1
 				},
 				CADD_phred: {
 					label: 'CADD_phred',
-					filter: 1,
 					isnumeric: 1,
-					cutoffvalue: 10
+					filter: 1
+				},
+				REVEL_score: {
+					label: 'REVEL score',
+					isnumeric: 1,
+					filter: 1
 				}
 			}
-		},*/
+		},
 
 		/*mutationAttribute: {
 			attributes: {
