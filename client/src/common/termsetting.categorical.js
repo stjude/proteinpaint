@@ -55,13 +55,7 @@ export function setCategoricalMethods(self) {
 	}
 
 	self.addCategory2sampleCounts = async function() {
-		const lst = [
-			'/termdb?getcategories=1',
-			'tid=' + self.term.id,
-			'filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(self.filter))),
-			'genome=' + self.vocab.genome,
-			'dslabel=' + self.vocab.dslabel
-		]
+		const lst = []
 		if (self.term.type == 'condition') {
 			// bar_by_grade / bar_by_children
 			lst.push(self.q.bar_by_grade ? 'bar_by_grade=1' : self.q.bar_by_children ? 'bar_by_children=1' : null)
@@ -76,14 +70,7 @@ export function setCategoricalMethods(self) {
 					: null
 			)
 		}
-		const url = lst.join('&')
-		let data
-		try {
-			data = await dofetch3(url)
-			if (data.error) throw data.error
-		} catch (e) {
-			throw e
-		}
+		const data = await self.vocabApi.getCategories(self.term, self.filter, lst)
 		self.category2samplecount = []
 		for (const i of data.lst) {
 			self.category2samplecount.push({ key: i.key, count: i.samplecount })
