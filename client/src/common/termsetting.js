@@ -44,6 +44,7 @@ class TermSetting {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
 		this.vocab = opts.vocab
+		this.vocabApi = opts.vocabApi
 		this.activeCohort = opts.activeCohort
 		this.placeholder = opts.placeholder
 		this.durations = { exit: 500 }

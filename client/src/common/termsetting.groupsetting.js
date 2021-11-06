@@ -119,6 +119,14 @@ export function setGroupsettingMethods(self) {
 
 		group_ct_select.node().value = default_grp_count
 
+		// help note for user to drag-drop in first group
+		regroup_div
+			.append('div')
+			.style('margin', '5px 2px')
+			.style('font-size', '.6em')
+			.style('color', '#999')
+			.text('Drag-and-drop to assign categories to groups.')
+
 		const groups_holder = regroup_div.append('div').style('border', '1px solid #efefef')
 
 		const non_exclude_div = groups_holder.append('div').style('display', 'flex')
@@ -210,18 +218,6 @@ export function setGroupsettingMethods(self) {
 			const group_list = group_div.append('div').style('margin', '5px')
 			// show categories from the group
 			addGroupItems(group_list, group.values)
-
-			// help note for user to drag-drop in first group
-			if (i == 0)
-				group_div
-					.style('position', 'relative')
-					.append('div')
-					.style('text-align', 'left')
-					.style('font-size', '.6em')
-					.style('color', '#999')
-					// .style('position','absolute')
-					.style('bottom', '10px')
-					.text('Drag-and-drop to assign categories to groups.')
 		}
 
 		// make draggable div to render drag-drop list of categories
@@ -294,6 +290,7 @@ export function setGroupsettingMethods(self) {
 						.style('cursor', 'default')
 						.style('padding', '3px 10px')
 						.style('border-radius', '5px')
+						.style('color', count == 0 ? '#777' : 'black')
 						.html((val.label ? val.label : val.key) + (count !== undefined ? ' (n=' + count + ')' : ''))
 						.style('background-color', '#eee')
 						.on('mouseover', () => {
