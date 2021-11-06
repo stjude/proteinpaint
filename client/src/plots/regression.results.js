@@ -173,7 +173,7 @@ function setRenderers(self) {
 
 			// padding is set on every <td>. need a better solution
 
-			// header
+			// header row
 			{
 				const tr = table.append('tr').style('opacity', 0.4)
 				tr.append('td')
@@ -188,7 +188,7 @@ function setRenderers(self) {
 						.style('padding', '8px')
 				}
 			}
-			// intercept
+			// intercept row
 			{
 				const tr = table.append('tr').style('background', '#eee')
 				tr.append('td')
@@ -207,11 +207,10 @@ function setRenderers(self) {
 				const termdata = result.coefficients.terms[tid]
 				const term = self.state.config.independent.find(t => t.id == tid)
 				let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+
 				// term name
-				const termnametd = tr
-					.append('td')
-					.text(term ? term.term.name : tid)
-					.style('padding', '8px')
+				const termNameTd = tr.append('td').style('padding', '8px')
+				fillTdName(termNameTd, term ? term.term.name : tid)
 
 				if (termdata.fields) {
 					// no category
@@ -221,22 +220,24 @@ function setRenderers(self) {
 							.text(v)
 							.style('padding', '8px')
 				} else if (termdata.categories) {
-					// multiple categories. show first category as full row, with first cell spanning rest of categories
-
-					const categories = []
-					for (const k in termdata.categories) categories.push(k)
-					/*
-						TODO sort categories array by orderedLabels, after deleting sorting code from R
-						may use self.inputs.sections[1].items[tid].orderedLabels, such as
-						```
-						const order = self.inputs.sections[1].items[tid].orderedLabels
-						if (order.length) categories.sort((a, b)=> order.indexOf(a) - order.indexOf(b))
-						```
-					*/
-
-					termnametd.attr('rowspan', categories.length).style('vertical-align', 'top')
-					let isfirst = true
+					const orderedCategories = []
+					const input = self.parent.inputs.independent.inputs.find(i => i[i.varClass].id == tid)
+					if (input.handler.valuesTable.orderedLabels) {
+						// reorder rows by predefined order
+						for (const k of input.handler.valuesTable.orderedLabels) {
+							if (termdata.categories[k]) orderedCategories.push(k)
+						}
+					}
 					for (const k in termdata.categories) {
+						if (!orderedCategories.includes(k)) orderedCategories.push(k)
+					}
+
+					// multiple categories
+					// show first category as full row, with first cell spanning rest of categories
+					termNameTd.attr('rowspan', orderedCategories.length).style('vertical-align', 'top')
+
+					let isfirst = true
+					for (const k of orderedCategories) {
 						if (isfirst) {
 							isfirst = false
 						} else {
@@ -246,10 +247,11 @@ function setRenderers(self) {
 						tr.append('td')
 							.text(term && term.term.values && term.term.values[k] ? term.term.values[k].label : k)
 							.style('padding', '8px')
-						for (const v of termdata.categories[k])
+						for (const v of termdata.categories[k]) {
 							tr.append('td')
 								.text(v)
 								.style('padding', '8px')
+						}
 					}
 				} else {
 					tr.append('td').text('ERROR: no .fields[] or .categories{}')
@@ -273,7 +275,7 @@ function setRenderers(self) {
 				const td = tr.append('td')
 				if (v1) {
 					const term = self.state.config.independent.find(t => t.id == v1)
-					td.text(term ? term.term.name : v1)
+					fillTdName(td, term ? term.term.name : v1)
 				}
 				for (const v of row) tr.append('td').text(v)
 			}
@@ -298,5 +300,13 @@ function setRenderers(self) {
 				.text(label)
 			return div.append('div').style('margin-left', '20px')
 		}
+	}
+}
+
+function fillTdName(td, name) {
+	if (name.length < 30) {
+		td.text(name)
+	} else {
+		td.text(name.substring(0, 25) + ' ...').attr('title', name)
 	}
 }
