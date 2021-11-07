@@ -1,4 +1,3 @@
-import { q_to_param } from '../termdb/plot'
 import { getNormalRoot } from '../common/filter'
 import { sayerror } from '../dom/error'
 
@@ -36,8 +35,8 @@ export class RegressionResults {
 				this.dom.holder.style('display', 'none')
 				return
 			}
-			const dataName = this.getDataName()
-			const data = await this.app.vocabApi.getPlotData(this.id, dataName)
+			const reqOpts = this.getDataRequestOpts()
+			const data = await this.app.vocabApi.getRegressionData(reqOpts)
 			if (data.error) throw data.error
 			this.dom.err_div.style('display', 'none')
 			this.dom.content.selectAll('*').remove()
@@ -53,55 +52,16 @@ export class RegressionResults {
 		}
 	}
 
-	// creates URL search parameter string, that also serves as
-	// a unique request identifier to be used for caching server response
-	getDataName() {
-		const c = this.config // the plot object in state
-		const outcome = { id: c.outcome.id, q: JSON.parse(JSON.stringify(c.outcome.q)) }
-		if (!outcome.q.mode && c.regressionType == 'linear') outcome.q.mode = 'continuous'
-		const contQkeys = ['mode', 'scale']
-		outcome.refGrp = outcome.q.mode == 'continuous' ? 'NA' : c.outcome.refGrp
-
-		if (outcome.q.mode == 'continuous') {
-			// remove unneeded parameters from q
-			for (const key in outcome.q) {
-				if (!contQkeys.includes(key)) delete outcome.q[key]
-			}
+	// creates an opts object for the vocabApi.getRegressionData()
+	getDataRequestOpts() {
+		const c = this.config
+		const opts = {
+			regressionType: c.regressionType,
+			outcome: c.outcome,
+			independent: c.independent,
+			filter: this.state.termfilter.filter
 		}
-
-		const params = [
-			'getregression=1',
-			`regressionType=${c.regressionType}`,
-			`outcome=${encodeURIComponent(JSON.stringify(outcome))}`,
-			'independent=' +
-				encodeURIComponent(
-					JSON.stringify(
-						c.independent.map(t => {
-							const q = JSON.parse(JSON.stringify(t.q))
-							delete q.values
-							delete q.totalCount
-							if (t.q.mode == 'continuous') {
-								// remove unneeded parameters from q
-								for (const key in q) {
-									if (!contQkeys.includes(key)) delete q[key]
-								}
-							}
-							return {
-								id: t.id,
-								q,
-								type: t.term.type,
-								refGrp: t.q.mode == 'continuous' ? 'NA' : t.refGrp
-							}
-						})
-					)
-				)
-		]
-
-		const filterData = getNormalRoot(this.state.termfilter.filter)
-		if (filterData.lst.length) {
-			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData))) //encodeNestedFilter(state.termfilter.filter))
-		}
-		return '/termdb?' + params.join('&')
+		return opts
 	}
 }
 

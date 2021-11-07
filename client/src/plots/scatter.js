@@ -5,7 +5,6 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import Partjson from 'partjson'
 import { to_svg } from '../client'
-import { getTermFilterParams, syncParams } from '../mass/termdb.helpers.js'
 
 class TdbScatter {
 	constructor(opts) {
@@ -73,8 +72,9 @@ class TdbScatter {
 			copyMerge(this.settings, this.state.config.settings.scatter)
 			if (!this.pj) this.pj = getPj(this)
 
-			const dataName = this.getDataName(this.state)
-			this.currData = await this.app.vocabApi.getPlotData(this.id, dataName)
+			const reqOpts = this.getDataRequestOpts()
+			this.currData = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			this.app.vocabApi.syncTermData(this.state.config, this.currData)
 			this.pj.refresh({ data: this.currData.rows })
 			this.render()
 		} catch (e) {
@@ -82,13 +82,14 @@ class TdbScatter {
 		}
 	}
 
-	// creates URL search parameter string, that also serves as
-	// a unique request identifier to be used for caching server response
-	getDataName(state) {
-		const params = ['scatter=1']
-		params.push(...getTermFilterParams(this.config, this.app.vocabApi, state.termfilter))
-
-		return '/termdb?' + params.join('&')
+	// creates an opts object for the vocabApi.getNestedChartsData()
+	getDataRequestOpts() {
+		const c = this.config
+		const opts = { chartType: 'scatter', term: c.term, filter: this.state.termfilter.filter }
+		if (c.term2) opts.term2 = c.term2
+		if (c.term0) opts.term0 = c.term0
+		if (this.state.ssid) opts.ssid = this.state.ssid
+		return opts
 	}
 }
 

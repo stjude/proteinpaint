@@ -5,7 +5,6 @@ import { event as d3event } from 'd3-selection'
 import { scaleLinear, scaleLog, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { format as d3format } from 'd3-format'
 import { axisLeft } from 'd3-axis'
-import { getTermFilterParams, syncParams } from '../mass/termdb.helpers.js'
 
 class TdbBoxplot {
 	constructor(opts) {
@@ -84,9 +83,9 @@ class TdbBoxplot {
 				throw `${t2 ? 'numeric ' : ''}term2 is required for boxplot view`
 			}
 			if (this.dom.header) this.dom.header.html(this.config.term.term.name + ' vs ' + t2.term.name)
-			const dataName = this.getDataName(this.state)
-			this.data = await this.app.vocabApi.getPlotData(this.id, dataName)
-			syncParams(this.state.config, this.data)
+			const reqOpts = this.getDataRequestOpts()
+			this.data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			this.app.vocabApi.syncTermData(this.state.config, this.data)
 			const [lst, binmax] = this.processData(this.data)
 			this.dom.div.style('display', 'block')
 			this.render(lst.filter(d => d != null), binmax)
@@ -95,11 +94,14 @@ class TdbBoxplot {
 		}
 	}
 
-	// creates URL search parameter string, that also serves as
-	// a unique request identifier to be used for caching server response
-	getDataName(state) {
-		const params = getTermFilterParams(this.config, this.app.vocabApi, state.termfilter)
-		return '/termdb-barsql?' + params.join('&')
+	// creates an opts object for the vocabApi.getNestedChartsData()
+	getDataRequestOpts() {
+		const c = this.config
+		const opts = { term: c.term, filter: this.state.termfilter.filter }
+		if (c.term2) opts.term2 = c.term2
+		if (c.term0) opts.term0 = c.term0
+		if (this.state.ssid) opts.ssid = this.state.ssid
+		return opts
 	}
 
 	processData(data) {
