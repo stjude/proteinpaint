@@ -23,7 +23,6 @@ export class InputValuesTable {
 			this.dom.holder.style('display', 'block')
 			this.dom.loading_div.style('display', 'block')
 			await this.updateValueCount(input)
-			//this.mayUpdateModeRefGrp(input, input.section.parent.refGrpByTermId)
 			this.dom.loading_div.style('display', 'none')
 			this.render()
 			if (variable.error) throw variable.error
@@ -53,31 +52,6 @@ export class InputValuesTable {
 			t.error = e
 		}
 	}
-
-	/*
-	mayUpdateModeRefGrp(input, refGrpByTermId) {
-		const t = input.term
-		if (!t.q.mode) {
-			if (t.term.type == 'categorical' || t.term.type == 'condition') t.q.mode = 'discrete'
-			else t.q.mode = 'continuous'
-		}
-		if (t.q.mode == 'continuous') {
-			//delete t.refGrp
-			input.refGrp = 'NA' // hardcoded for R
-			return
-		}
-		input.refGrp = this.sampleCounts[0].key
-		if (!('refGrp' in t) && t.id in refGrpByTermId && this.sampleCounts.find(d => d.key === t.refGrp)) {
-			t.refGrp = refGrpByTermId[t.id]
-			return
-		}
-		if (!('refGrp' in t) || !this.sampleCounts.find(s => s.key === t.refGrp)) {
-			// default to the first value or group
-			t.refGrp = this.sampleCounts[0].key
-		}
-		refGrpByTermId[t.id] = t.refGrp
-	}
-		*/
 }
 
 function setRenderers(self) {
@@ -218,8 +192,8 @@ function setRenderers(self) {
 			tr.style('background', 'white')
 			ref_text = select(tr.node().lastChild)
 				.select('div')
-				.style('display', item.key === input.refGrp && hover_flag ? 'inline-block' : 'none')
-				.style('border', item.key === input.refGrp && hover_flag ? '1px solid #bbb' : '')
+				.style('display', item.key === t.refGrp && hover_flag ? 'inline-block' : 'none')
+				.style('border', item.key === t.refGrp && hover_flag ? '1px solid #bbb' : '')
 		} else {
 			const reference_td = tr
 				.append('td')
@@ -228,9 +202,9 @@ function setRenderers(self) {
 
 			ref_text = reference_td
 				.append('div')
-				.style('display', item.key === input.refGrp && hover_flag ? 'inline-block' : 'none')
+				.style('display', item.key === t.refGrp && hover_flag ? 'inline-block' : 'none')
 				.style('padding', '2px 10px')
-				.style('border', item.key === input.refGrp && hover_flag ? '1px solid #bbb' : '')
+				.style('border', item.key === t.refGrp && hover_flag ? '1px solid #bbb' : '')
 				.style('border-radius', '10px')
 				.style('color', '#999')
 				.style('font-size', '.7em')
@@ -239,7 +213,7 @@ function setRenderers(self) {
 
 		if (hover_flag) {
 			tr.on('mouseover', () => {
-				if (input.refGrp !== item.key) {
+				if (t.refGrp !== item.key) {
 					tr.style('background', '#fff6dc')
 					ref_text
 						.style('display', 'inline-block')
@@ -249,13 +223,10 @@ function setRenderers(self) {
 			})
 				.on('mouseout', () => {
 					tr.style('background', 'white')
-					if (input.refGrp !== item.key) ref_text.style('display', 'none')
+					if (t.refGrp !== item.key) ref_text.style('display', 'none')
 				})
 				.on('click', () => {
-					//t.refGrp = item.key
-					input.refGrp = item.key
-					//self.handler.input.section.parent.refGrpByTermId[t.id] = item.key
-					//d.term.refGrp = item.key
+					t.refGrp = item.key
 					ref_text.style('border', '1px solid #bbb').text('REFERENCE')
 					make_values_table(self.handler.input.sampleCounts, 'values_table')
 				})
@@ -269,7 +240,7 @@ function setRenderers(self) {
 	function render_summary_div(input, dom) {
 		const t = input.term
 		const q = (t && t.q) || {}
-		const { included, excluded, total } = self.totalCount
+		const { included, excluded, total } = self.handler.input.totalCount
 
 		if (input.section.configKey == 'outcome') {
 			dom.term_summmary_div.text(`${included} sample included.` + (excluded ? ` ${excluded} samples excluded:` : ''))

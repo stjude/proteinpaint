@@ -89,6 +89,9 @@ export class InputTerm {
 			if (t && this.setQ) {
 				await this.setQ[t.term.type](this.input)
 			}
+
+			await this.updateTerm()
+
 			await this.pill.main(this.getPillArgs())
 			await this.valuesTable.main()
 			if (t && t.error) this.displayError(t.error)
@@ -98,16 +101,24 @@ export class InputTerm {
 		}
 	}
 
-	async setRefGroup() {
-		/* called in inputs.editConfig()
-		before committing data of this term to state
+	async updateTerm() {
+		/*
+		only used in handler.update() above
 		to derive bins/groups based on q{} setting of this term
-		and also set refGrp
+		create following attributes:
+
+		input.orderedLabels
+		input.totalCount
+		input.sampleCounts
+		input.excludeCounts
+		input.term.refGrp
 		*/
 		const t = this.input.term
+		if (!t) return
+
 		const parent = this.input.section.parent // should be fine as "parent" is not a reserved keyword
 
-		if (!t || !t.q) throw '.term.q missing on this input'
+		if (!t.q) throw '.term.q missing on this input'
 
 		if (!t.q.mode) {
 			if (t.term.type == 'categorical' || t.term.type == 'condition') t.q.mode = 'discrete'
@@ -137,7 +148,7 @@ export class InputTerm {
 		this.input.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
 
 		// get include, excluded and total sample count
-		const totalCount = (this.totalCount = { included: 0, excluded: 0, total: 0 })
+		const totalCount = (this.input.totalCount = { included: 0, excluded: 0, total: 0 })
 		this.input.sampleCounts.forEach(v => (totalCount.included += v.samplecount))
 		this.input.excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
 		totalCount.total = totalCount.included + totalCount.excluded
@@ -155,7 +166,10 @@ export class InputTerm {
 		if (t.q.mode == 'continuous') {
 			t.refGrp = 'NA' // hardcoded in R
 		} else {
-			t.refGrp = this.input.sampleCounts[0].key
+			if (!t.refGrp || !this.input.sampleCounts.find(i => i.key == t.refGrp)) {
+				// refGrp not defined or no longer exists
+				t.refGrp = this.input.sampleCounts[0].key
+			}
 		}
 	}
 
@@ -223,8 +237,6 @@ async function maySetTwoBins(input) {
 	// if the bins are already binary, do not reset
 	if (t.q.mode == 'binary' && t.q.lst && t.q.lst.length == 2) {
 		t.q.mode = 'binary'
-		// NOTE: refGrp may be reset as needed in regression.values.table.js
-		// if (!t.q.lst.find(bin => bin.label === t.refGrp)) t.refGrp = t.q.lst[0].label
 		return
 	}
 
@@ -252,7 +264,7 @@ async function maySetTwoBins(input) {
 		bin.label = get_bin_label(bin, input.term.q)
 	})
 
-	input.refGrp = t.q.lst[0].label
+	t.refGrp = t.q.lst[0].label
 }
 
 async function maySetTwoGroups(input) {

@@ -182,9 +182,9 @@ function setRenderers(self) {
 				} else if (termdata.categories) {
 					const orderedCategories = []
 					const input = self.parent.inputs.independent.inputs.find(i => i[i.varClass].id == tid)
-					if (input.handler.valuesTable.orderedLabels) {
+					if (input.orderedLabels) {
 						// reorder rows by predefined order
-						for (const k of input.handler.valuesTable.orderedLabels) {
+						for (const k of input.orderedLabels) {
 							if (termdata.categories[k]) orderedCategories.push(k)
 						}
 					}
