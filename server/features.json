@@ -291,7 +291,7 @@
                     },
                     "buttons": [
                         {
-                            "name": "Track Declaration Documentation",
+                            "name": "'URL Linkout' Documentation",
                             "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.eqwpaqaeo973"
                         }
                     ],
@@ -322,7 +322,7 @@
                     },
                     "buttons": [
                         {
-                            "name": "Track Declaration Documentation",
+                            "name": "'Hide item names' Documentation",
                             "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.eqwpaqaeo973"
                         }
                     ],
@@ -354,7 +354,7 @@
                     },
                     "buttons": [
                         {
-                            "name": "Track Declaration Documentation",
+                            "name": "'Show item by name' Documentation",
                             "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.eqwpaqaeo973"
                         }
                     ],
