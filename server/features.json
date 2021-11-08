@@ -366,7 +366,7 @@
                     "label": "Color exons",
                     "message": "<p style='margin:5px'>To color the exons, create an 'exon2color' array with {'color': 'XX', 'start': ##, 'stop': ##} objects. For instance, this array</p><pre style='color:#656566'><code>'exon2color': [{'color': 'red', 'start': 129146958, 'stop': 129147048},...]</code></pre><p style='margin:5px'>defines the exon colors for this example.</p>",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/bedj/bedjExonColorDemoData.tar.gz",
-                    "urlparam": "?genome=hg38&block=1&bedjfile=Exon2Color_Example,proteinpaint_demo/hg38/bedj/bedjExonColorDemo.gz",
+                    "urlparam": "?genome=hg38&block=1&position=chr6:128566421-129833285&bedjfile=Exon2Color_Example,proteinpaint_demo/hg38/bedj/bedjExonColorDemo.gz",
                     "runargs": {
                         "block": true,
                         "nobox": 1,
