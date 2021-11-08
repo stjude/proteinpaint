@@ -1437,7 +1437,7 @@ async function getReadInfo(tk, block, box, ridx) {
 			let nclt_count = 0
 			for (const nclt of q_align) {
 				nclt_count += 1
-				if (nclt_count < Math.abs(tk.variants[0].pos - read_start_pos)) {
+				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
 					query_tr.append('td').text(nclt)
 				} else if (
 					type == 'Ref' &&
@@ -1463,8 +1463,32 @@ async function getReadInfo(tk, block, box, ridx) {
 			}
 			const alignment_tr = readAlignmentTable.append('tr')
 			alignment_tr.append('td')
+			nclt_count = 0
 			for (const align_str of align_wrt) {
-				alignment_tr.append('td').text(align_str)
+				nclt_count += 1
+				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
+					alignment_tr.append('td').text(align_str)
+				} else if (
+					type == 'Ref' &&
+					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
+					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
+				) {
+					alignment_tr
+						.append('td')
+						.text(align_str)
+						.style('color', 'red')
+				} else if (
+					type == 'Alt' &&
+					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
+					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
+				) {
+					alignment_tr
+						.append('td')
+						.text(align_str)
+						.style('color', 'red')
+				} else {
+					alignment_tr.append('td').text(align_str)
+				}
 			}
 			const refAlt_tr = readAlignmentTable.append('tr')
 			refAlt_tr
@@ -1476,7 +1500,7 @@ async function getReadInfo(tk, block, box, ridx) {
 			nclt_count = 0
 			for (const nclt of r_align) {
 				nclt_count += 1
-				if (nclt_count < Math.abs(tk.variants[0].pos - read_start_pos)) {
+				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
 					refAlt_tr.append('td').text(nclt)
 				} else if (
 					type == 'Ref' &&
@@ -1516,8 +1540,8 @@ async function getReadInfo(tk, block, box, ridx) {
 			alignment_button.on('click', async () => {
 				if (first) {
 					first = false
-					makeReadAlignmentTable(variantAlignmentTable, 'Ref', tk, data.lst[0].start_readpos)
-					makeReadAlignmentTable(variantAlignmentTable, 'Alt', tk, data.lst[0].start_readpos)
+					makeReadAlignmentTable(variantAlignmentTable, 'Ref', tk, data.lst[0].start_readpos - 1)
+					makeReadAlignmentTable(variantAlignmentTable, 'Alt', tk, data.lst[0].start_readpos - 1)
 				}
 				if (variantAlignmentTable.style('display') == 'none') {
 					variantAlignmentTable.style('display', 'block')
