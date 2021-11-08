@@ -1366,7 +1366,6 @@ async function getReadInfo(tk, block, box, ridx) {
 		sayerror(wait, data.error)
 		return
 	}
-	console.log('data:', data)
 	wait.remove()
 
 	for (const r of data.lst) {
