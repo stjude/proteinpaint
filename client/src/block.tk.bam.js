@@ -1320,8 +1320,32 @@ async function getMultiReadAligInfo(tk, group, block) {
 				.style('text-align', 'right')
 				.style('font-weight', '550')
 		}
+		let nclt_count = 0
 		for (const nclt of read) {
-			read_tr.append('td').text(nclt)
+			nclt_count += 1
+			if (nclt_count < tk.variants[0].leftflankseq.length) {
+				read_tr.append('td').text(nclt)
+			} else if (
+				group.data.type == 'support_alt' &&
+				nclt_count > tk.variants[0].leftflankseq.length &&
+				nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].alt.length
+			) {
+				read_tr
+					.append('td')
+					.text(nclt)
+					.style('color', 'red')
+			} else if (
+				group.data.type == 'support_ref' &&
+				nclt_count > tk.variants[0].leftflankseq.length &&
+				nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].ref.length
+			) {
+				read_tr
+					.append('td')
+					.text(nclt)
+					.style('color', 'red')
+			} else {
+				read_tr.append('td').text(nclt)
+			}
 		}
 		read_count += 1
 	}
