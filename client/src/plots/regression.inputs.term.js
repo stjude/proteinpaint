@@ -166,8 +166,8 @@ export class InputTerm {
 		if (t.q.mode == 'continuous') {
 			t.refGrp = 'NA' // hardcoded in R
 		} else {
-			if (!t.refGrp || !this.input.sampleCounts.find(i => i.key == t.refGrp)) {
-				// refGrp not defined or no longer exists
+			if (!('refGrp' in t) || !this.input.sampleCounts.find(i => i.key == t.refGrp)) {
+				// refGrp not defined or no longer exists according to sampleCounts[]
 				t.refGrp = this.input.sampleCounts[0].key
 			}
 		}

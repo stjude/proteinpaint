@@ -11,7 +11,7 @@ export class InputValuesTable {
 		this.setDOM(opts.holder)
 	}
 
-	async main() {
+	main() {
 		try {
 			const input = this.handler.input
 			const variable = input[input.varClass]
@@ -22,7 +22,7 @@ export class InputValuesTable {
 			delete variable.error
 			this.dom.holder.style('display', 'block')
 			this.dom.loading_div.style('display', 'block')
-			await this.updateValueCount(input)
+			this.updateValueCount(input)
 			this.dom.loading_div.style('display', 'none')
 			this.render()
 			if (variable.error) throw variable.error
@@ -32,10 +32,7 @@ export class InputValuesTable {
 		}
 	}
 
-	async updateValueCount(input) {
-		const parent = input.section.parent
-		const state = parent.state
-
+	updateValueCount(input) {
 		// TODO may detect condition varClass=term
 		const t = input.term
 
