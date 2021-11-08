@@ -5,7 +5,7 @@
 // Single-read alignment mode: When first word in input is "single", it triggers the single-read alignment mode. The first sequence is the query sequence, second is reference sequence and third is alternate sequence. Each read/ref/alt sequence is separated by ":" character.
 //       align_single_reads(query_sequence, reference_sequence)
 //       align_single_reads(query_sequence, alternate_sequence)
-// Multi-read alignment mode: When first word in input is "multi", it triggers the multi-read alignment mode in which multiple reads are aligned against a single reference using pairwise alignment. Each read/ref/alt sequence is separated by ":" character.
+// Multi-read alignment mode: When first word in input is "multi", it triggers the multi-read alignment mode in which multiple reads are aligned against a single reference using pairwise alignment. Each read/ref sequence is separated by ":" character.
 //       for read in reads
 //          align_multi_reads(read, reference_sequence)
 //
