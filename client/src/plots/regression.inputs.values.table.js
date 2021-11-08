@@ -225,7 +225,8 @@ function setRenderers(self) {
 				.on('click', () => {
 					t.refGrp = item.key
 					ref_text.style('border', '1px solid #bbb').text('REFERENCE')
-					make_values_table(self.handler.input.sampleCounts, 'values_table')
+					// below will save to state, ui code should react to it
+					input.section.parent.editConfig(input, t)
 				})
 		} else {
 			tr.on('mouseover', null)
