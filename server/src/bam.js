@@ -2873,7 +2873,6 @@ async function convertread2html(seg, genome, query) {
 	}
 
 	const lst = []
-
 	// indicate discordant read status
 	if (seg.rnext) {
 		lst.push(
@@ -2957,7 +2956,8 @@ async function convertread2html(seg, genome, query) {
 			<span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
 			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
 		  </div>
-		  <ul style='padding-left:15px'>${lst.join('')}</ul>`
+		  <ul style='padding-left:15px'>${lst.join('')}</ul>`,
+		start_readpos: refstart + 1 // Start position of read
 	}
 	if (soft_present == 1) {
 		seq_data.soft_starts = soft_starts

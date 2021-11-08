@@ -1366,6 +1366,7 @@ async function getReadInfo(tk, block, box, ridx) {
 		sayerror(wait, data.error)
 		return
 	}
+	console.log('data:', data)
 	wait.remove()
 
 	for (const r of data.lst) {
@@ -1402,7 +1403,7 @@ async function getReadInfo(tk, block, box, ridx) {
 			'Ref' - reference
 			'Alt' - alternate */
 		//TODO: make pane scrollable if the read is too long. Detect if pane is 1000px for example
-		function makeReadAlignmentTable(div, type) {
+		function makeReadAlignmentTable(div, type, tk, read_start_pos) {
 			let q_align, align_wrt, r_align
 			if (type == 'Ref') {
 				q_align = data.lst[0].q_align_ref
@@ -1433,8 +1434,32 @@ async function getReadInfo(tk, block, box, ridx) {
 				.text('Read')
 				.style('text-align', 'right')
 				.style('font-weight', '550')
+			let nclt_count = 0
 			for (const nclt of q_align) {
-				query_tr.append('td').text(nclt)
+				nclt_count += 1
+				if (nclt_count < Math.abs(tk.variants[0].pos - read_start_pos)) {
+					query_tr.append('td').text(nclt)
+				} else if (
+					type == 'Ref' &&
+					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
+					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
+				) {
+					query_tr
+						.append('td')
+						.text(nclt)
+						.style('color', 'red')
+				} else if (
+					type == 'Alt' &&
+					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
+					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
+				) {
+					query_tr
+						.append('td')
+						.text(nclt)
+						.style('color', 'red')
+				} else {
+					query_tr.append('td').text(nclt)
+				}
 			}
 			const alignment_tr = readAlignmentTable.append('tr')
 			alignment_tr.append('td')
@@ -1448,8 +1473,32 @@ async function getReadInfo(tk, block, box, ridx) {
 				.style('text-align', 'right')
 				.style('font-weight', '550')
 				.style('white-space', 'nowrap')
+			nclt_count = 0
 			for (const nclt of r_align) {
-				refAlt_tr.append('td').text(nclt)
+				nclt_count += 1
+				if (nclt_count < Math.abs(tk.variants[0].pos - read_start_pos)) {
+					refAlt_tr.append('td').text(nclt)
+				} else if (
+					type == 'Ref' &&
+					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
+					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
+				) {
+					refAlt_tr
+						.append('td')
+						.text(nclt)
+						.style('color', 'red')
+				} else if (
+					type == 'Alt' &&
+					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
+					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
+				) {
+					refAlt_tr
+						.append('td')
+						.text(nclt)
+						.style('color', 'red')
+				} else {
+					refAlt_tr.append('td').text(nclt)
+				}
 			}
 		}
 
@@ -1467,8 +1516,8 @@ async function getReadInfo(tk, block, box, ridx) {
 			alignment_button.on('click', async () => {
 				if (first) {
 					first = false
-					makeReadAlignmentTable(variantAlignmentTable, 'Ref')
-					makeReadAlignmentTable(variantAlignmentTable, 'Alt')
+					makeReadAlignmentTable(variantAlignmentTable, 'Ref', tk, data.lst[0].start_readpos)
+					makeReadAlignmentTable(variantAlignmentTable, 'Alt', tk, data.lst[0].start_readpos)
 				}
 				if (variantAlignmentTable.style('display') == 'none') {
 					variantAlignmentTable.style('display', 'block')
