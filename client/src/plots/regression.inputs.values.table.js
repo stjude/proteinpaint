@@ -23,7 +23,7 @@ export class InputValuesTable {
 			this.dom.holder.style('display', 'block')
 			this.dom.loading_div.style('display', 'block')
 			await this.updateValueCount(input)
-			this.mayUpdateModeRefGrp(input, input.section.parent.refGrpByTermId)
+			//this.mayUpdateModeRefGrp(input, input.section.parent.refGrpByTermId)
 			this.dom.loading_div.style('display', 'none')
 			this.render()
 			if (variable.error) throw variable.error
@@ -40,53 +40,13 @@ export class InputValuesTable {
 		// TODO may detect condition varClass=term
 		const t = input.term
 
-		// get total sample count for each value of categorical or condition terms
-		// and included and excluded sample count for numeric term
 		try {
-			/*  !!! NOTE: assumes that term.q has already been validated !!! */
-			// create a q copy to remove unnecessary parameters
-			// from the server request
-			const q = JSON.parse(JSON.stringify(t.q))
-			/*
-				for continuous term, assume it is numeric and that we'd want counts by bins,
-				so remove the 'mode: continuous' value as it will prevent bin construction in the backend
-			*/
-			if (q.mode == 'continuous') delete q.mode
-			const data = await parent.app.vocabApi.getCategories(t.term, state.termfilter.filter, [
-				'term1_q=' + encodeURIComponent(JSON.stringify(q))
-			])
-			if (data.error) throw data.error
-			this.orderedLabels = data.orderedLabels
-
-			// sepeate include and exclude categories based on term.values.uncomputable
-			const excluded_values = t.term.values
-				? Object.entries(t.term.values)
-						.filter(v => v[1].uncomputable)
-						.map(v => v[1].label)
-				: []
-			this.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label))
-			this.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
-
-			// get include, excluded and total sample count
-			const totalCount = (this.totalCount = { included: 0, excluded: 0, total: 0 })
-			this.sampleCounts.forEach(v => (totalCount.included += v.samplecount))
-			this.excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
-			totalCount.total = totalCount.included + totalCount.excluded
-			// for condition term, subtract included count from totalCount.total to get excluded
-			if (t.term.type == 'condition' && totalCount.total) {
-				totalCount.excluded = totalCount.total - totalCount.included
-			}
-
-			if (t && t.q.mode !== 'continuous' && Object.keys(this.sampleCounts).length < 2) {
-				throw `there should be two or more discrete values with samples for variable='${t.term.name}'`
-			}
-
 			/* TODO: may need to move validateQ out of a ts.pill */
 			if (this.handler.pill && this.handler.pill.validateQ) {
 				this.handler.pill.validateQ({
 					term: t.term,
 					q: t.q,
-					sampleCounts: this.sampleCounts
+					sampleCounts: input.sampleCounts
 				})
 			}
 		} catch (e) {
@@ -94,6 +54,7 @@ export class InputValuesTable {
 		}
 	}
 
+	/*
 	mayUpdateModeRefGrp(input, refGrpByTermId) {
 		const t = input.term
 		if (!t.q.mode) {
@@ -101,9 +62,11 @@ export class InputValuesTable {
 			else t.q.mode = 'continuous'
 		}
 		if (t.q.mode == 'continuous') {
-			delete t.refGrp
+			//delete t.refGrp
+			input.refGrp = 'NA' // hardcoded for R
 			return
 		}
+		input.refGrp = this.sampleCounts[0].key
 		if (!('refGrp' in t) && t.id in refGrpByTermId && this.sampleCounts.find(d => d.key === t.refGrp)) {
 			t.refGrp = refGrpByTermId[t.id]
 			return
@@ -114,6 +77,7 @@ export class InputValuesTable {
 		}
 		refGrpByTermId[t.id] = t.refGrp
 	}
+		*/
 }
 
 function setRenderers(self) {
@@ -146,21 +110,20 @@ function setRenderers(self) {
 		const dom = self.dom
 		const input = self.handler.input
 		const t = input.term
-		make_values_table(self.sampleCounts, 'values_table')
+		make_values_table(self.handler.input.sampleCounts, 'values_table')
 		render_summary_div(input, self.dom)
 
-		if (self.excludeCounts.length) {
-			make_values_table(self.excludeCounts, 'excluded_table')
+		if (self.handler.input.excludeCounts.length) {
+			make_values_table(self.handler.input.excludeCounts, 'excluded_table')
 		} else {
 			dom.excluded_table.selectAll('*').remove()
 		}
 	}
 
 	function make_values_table(data, tableName = 'values_table') {
+		const l = self.handler.input.orderedLabels
 		const sortFxn =
-			self.orderedLabels && self.orderedLabels.length
-				? (a, b) => self.orderedLabels.indexOf(a.label) - self.orderedLabels.indexOf(b.label)
-				: (a, b) => b.samplecount - a.samplecount
+			l && l.length ? (a, b) => l.indexOf(a.label) - l.indexOf(b.label) : (a, b) => b.samplecount - a.samplecount
 		const tr_data = data.sort(sortFxn)
 
 		const t = self.handler.input.term
@@ -184,7 +147,6 @@ function setRenderers(self) {
 			.enter()
 			.append('tr')
 			.each(trEnter)
-		//d.values_table.selectAll('tr').sort((a,b) => d.sampleCounts[b.key] - d.sampleCounts[a.key])
 
 		// change color of excluded_table text
 		if (tableName == 'excluded_table') {
@@ -256,8 +218,8 @@ function setRenderers(self) {
 			tr.style('background', 'white')
 			ref_text = select(tr.node().lastChild)
 				.select('div')
-				.style('display', item.key === t.refGrp && hover_flag ? 'inline-block' : 'none')
-				.style('border', item.key === t.refGrp && hover_flag ? '1px solid #bbb' : '')
+				.style('display', item.key === input.refGrp && hover_flag ? 'inline-block' : 'none')
+				.style('border', item.key === input.refGrp && hover_flag ? '1px solid #bbb' : '')
 		} else {
 			const reference_td = tr
 				.append('td')
@@ -266,9 +228,9 @@ function setRenderers(self) {
 
 			ref_text = reference_td
 				.append('div')
-				.style('display', item.key === t.refGrp && hover_flag ? 'inline-block' : 'none')
+				.style('display', item.key === input.refGrp && hover_flag ? 'inline-block' : 'none')
 				.style('padding', '2px 10px')
-				.style('border', item.key === t.refGrp && hover_flag ? '1px solid #bbb' : '')
+				.style('border', item.key === input.refGrp && hover_flag ? '1px solid #bbb' : '')
 				.style('border-radius', '10px')
 				.style('color', '#999')
 				.style('font-size', '.7em')
@@ -277,7 +239,7 @@ function setRenderers(self) {
 
 		if (hover_flag) {
 			tr.on('mouseover', () => {
-				if (t.refGrp !== item.key) {
+				if (input.refGrp !== item.key) {
 					tr.style('background', '#fff6dc')
 					ref_text
 						.style('display', 'inline-block')
@@ -287,14 +249,15 @@ function setRenderers(self) {
 			})
 				.on('mouseout', () => {
 					tr.style('background', 'white')
-					if (t.refGrp !== item.key) ref_text.style('display', 'none')
+					if (input.refGrp !== item.key) ref_text.style('display', 'none')
 				})
 				.on('click', () => {
-					t.refGrp = item.key
-					self.handler.input.section.parent.refGrpByTermId[t.id] = item.key
+					//t.refGrp = item.key
+					input.refGrp = item.key
+					//self.handler.input.section.parent.refGrpByTermId[t.id] = item.key
 					//d.term.refGrp = item.key
 					ref_text.style('border', '1px solid #bbb').text('REFERENCE')
-					make_values_table(self.sampleCounts, 'values_table')
+					make_values_table(self.handler.input.sampleCounts, 'values_table')
 				})
 		} else {
 			tr.on('mouseover', null)
@@ -320,7 +283,7 @@ function setRenderers(self) {
 			} else if (t.term.type == 'categorical' || t.term.type == 'condition') {
 				const gs = q.groupsetting || {}
 				// self.values is already set by parent.setActiveValues() above
-				const term_text = 'Use as ' + self.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
+				const term_text = 'Use as ' + self.handler.input.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
 				const summary_text = ` ${included} sample included.` + (excluded ? ` ${excluded} samples excluded:` : '')
 				dom.term_info_div.html(term_text)
 				dom.term_summmary_div.text(summary_text)

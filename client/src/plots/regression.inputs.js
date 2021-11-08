@@ -42,7 +42,7 @@ export class RegressionInputs {
 		// track reference category values or groups by term ID
 		// k: variable id
 		// v: reference group name
-		this.refGrpByTermId = {}
+		//this.refGrpByTermId = {}
 		this.totalSampleCount = undefined
 
 		this.createSectionConfigs()
@@ -319,37 +319,45 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.editConfig = async (input, variable) => {
 		if (!variable) {
+			// the variable has been deleted from this input; will delete this input from state
 			const i = input.section.inputs.findIndex(d => d === input)
 			if (i == -1) throw `deleting an unknown input`
 			// delete this input
 			input.section.inputs.splice(i, 1)
-		} else if (input.varClass == 'term') {
-			const term = variable
-			input.term = term
-			// fill in missing attributes in term = {id, term, q, varClass}
-			if (!('id' in term)) term.id = term.term.id
-			if (!variable.varClass) variable.varClass = input.varClass
 		} else {
-			throw `unknown input.varClass *** TODO: support non-term input classes ***`
+			// variable is selected for this input
+			if (!variable.varClass) variable.varClass = input.varClass
+			if (input.varClass == 'term') {
+				input.term = variable
+				// fill in missing attributes in term = {id, term, q, varClass}
+				if (!('id' in variable)) variable.id = input.term.id
+			} else {
+				throw `unknown input.varClass *** TODO: support non-term input classes ***`
+			}
+
+			await input.handler.setRefGroup()
 		}
 
-		const key = input.section.configKey
+		// update self.config
+		const c = self.config
 
-		const selected = input.section.inputs
-			// get only non-empty inputs
-			.filter(input => input.varClass && input[input.varClass])
-			.map(input => input[input.varClass])
+		if (input.section.configKey == 'outcome') {
+			c.outcome = input[input.varClass]
+		} else {
+			// indepdendent: get only non-empty inputs
+			c.independent = []
+			for (const i of input.section.inputs) {
+				if (i[i.varClass]) c.independent.push(i[i.varClass])
+			}
+		}
 
-		// the target config to fill-in/replace/delete may hold
-		// either one or more selected input variables
-		self.config[key] = Array.isArray(self.config[key]) ? selected : selected[0]
-		self.config.hasUnsubmittedEdits = true
+		c.hasUnsubmittedEdits = true
 
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.parent.id,
 			chartType: 'regression',
-			config: JSON.parse(JSON.stringify(self.config))
+			config: JSON.parse(JSON.stringify(c))
 		})
 	}
 
@@ -364,12 +372,14 @@ function setInteractivity(self) {
 		const config = JSON.parse(JSON.stringify(self.config))
 		config.hasUnsubmittedEdits = false
 
+		/*
 		for (const vb of config.independent) {
 			vb.refGrp = vb.id in self.refGrpByTermId ? self.refGrpByTermId[vb.id] : 'NA'
 		}
 		if (config.outcome.id in self.refGrpByTermId) {
 			config.outcome.refGrp = self.refGrpByTermId[config.outcome.id]
 		}
+		*/
 
 		self.app.dispatch({
 			type: 'plot_edit',
