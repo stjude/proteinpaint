@@ -9,6 +9,8 @@
 //       for read in reads
 //          align_multi_reads(read, reference_sequence)
 //
+// NOTE: Currently the multi-read alignment mode is not in use because it will not be able to handle cases where a read opens a gap in the reference sequence outside the proposed variant region. This will require a more complex implementation. For now "clustalo" is being used.
+
 use bio::alignment::pairwise::*;
 use bio::alignment::AlignmentOperation;
 //use bio::scores::blosum62;
