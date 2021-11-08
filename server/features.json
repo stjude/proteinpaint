@@ -289,6 +289,12 @@
                             }
                         ]
                     },
+                    "buttons": [
+                        {
+                            "name": "'URL Linkout' Documentation",
+                            "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.eqwpaqaeo973"
+                        }
+                    ],
                     "testSpec": {
                         "expected": {"image": 1, "rect": 1}
                     }
@@ -314,6 +320,12 @@
                             }
                         ]
                     },
+                    "buttons": [
+                        {
+                            "name": "'Hide item names' Documentation",
+                            "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.eqwpaqaeo973"
+                        }
+                    ],
                     "testSpec": {
                         "expected": {"image": 1 }
                     }
@@ -340,6 +352,43 @@
                             }
                         ]
                     },
+                    "buttons": [
+                        {
+                            "name": "'Show item by name' Documentation",
+                            "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.eqwpaqaeo973"
+                        }
+                    ],
+                    "testSpec": {
+                        "expected": {"image": 1 }
+                    }
+                },
+                {
+                    "label": "Color exons",
+                    "message": "<p style='margin:5px'>In the bedj file JSON object, create an \"exon2color\" array with {\"color\": \"XX\", \"start\": ##, \"stop\": ##} objects. For instance, this array defines the exon colors for this example.</p><pre style='color:#656566'><code>\"exon2color\": [{\"color\": \"red\", \"start\": 129146958, \"stop\": 129147048},...]</code></pre></p>",
+                    "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/bedj/bedjExonColorDemoData.tar.gz",
+                    "urlparam": "?genome=hg38&block=1&position=chr6:128566421-129833285&bedjfile=Exon2Color_Example,proteinpaint_demo/hg38/bedj/bedjExonColorDemo.gz",
+                    "runargs": {
+                        "block": true,
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg38",
+                        "position":"chr6:128843664-129561504",
+                        "tracks":[
+                            {
+                                "type":"bedj",
+                                "name":"Color exons demo",
+                                "file":"proteinpaint_demo/hg38/bedj/bedjExonColorDemo.gz",
+                                "stackheight": 16,
+                                "stackspace": 1
+                            }
+                        ]
+                    },
+                    "buttons": [
+                        {
+                            "name": "\"exon2color\" Documentation",
+                            "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.j87g4brufqhu"
+                        }
+                    ],
                     "testSpec": {
                         "expected": {"image": 1 }
                     }
