@@ -1225,6 +1225,10 @@ function configPanel(tk, block) {
 		})
 	}
 	if (tk.variants) {
+		if (!tk.variants[0].strictness) {
+			// When using example.bam.indel.html the strictness value is not defined. In such cases using a default value of strictness = 1.
+			tk.variants[0].strictness = 1
+		}
 		const row = d.append('div')
 		row
 			.append('span')
