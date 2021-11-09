@@ -1324,7 +1324,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 		} else {
 			read_tr
 				.append('td')
-				.text('Read' + read_count)
+				.text('')
 				.style('text-align', 'right')
 				.style('font-weight', '550')
 		}
