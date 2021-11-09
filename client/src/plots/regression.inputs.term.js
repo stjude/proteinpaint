@@ -3,6 +3,10 @@ import { getNormalRoot } from '../common/filter'
 import { get_bin_label } from '../../shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
 
+/*
+class instance is the handler object of an input
+*/
+
 export class InputTerm {
 	constructor(opts) {
 		this.opts = opts
@@ -70,6 +74,10 @@ export class InputTerm {
 	}
 
 	async update() {
+		/* called in inputs.main()
+		when the regression component is notified of a change
+		*/
+
 		const t = this.input.term
 
 		// clear previous errors
@@ -81,12 +89,87 @@ export class InputTerm {
 			if (t && this.setQ) {
 				await this.setQ[t.term.type](this.input)
 			}
+
+			await this.updateTerm()
+
 			await this.pill.main(this.getPillArgs())
 			await this.valuesTable.main()
 			if (t && t.error) this.displayError(t.error)
 			else if (this.pill.error) this.displayError(this.pill.error)
 		} catch (e) {
 			this.displayError(e)
+		}
+	}
+
+	async updateTerm() {
+		/*
+		only used in handler.update() above
+		to derive bins/groups based on q{} setting of this term
+		create following attributes:
+
+		input.orderedLabels
+		input.totalCount
+		input.sampleCounts
+		input.excludeCounts
+		input.term.refGrp
+		*/
+		const t = this.input.term
+		if (!t) return
+
+		const parent = this.input.section.parent // should be fine as "parent" is not a reserved keyword
+
+		if (!t.q) throw '.term.q missing on this input'
+
+		if (!t.q.mode) {
+			if (t.term.type == 'categorical' || t.term.type == 'condition') t.q.mode = 'discrete'
+			else t.q.mode = 'continuous'
+		}
+
+		const q = JSON.parse(JSON.stringify(t.q))
+		/*
+			for continuous term, assume it is numeric and that we'd want counts by bins,
+			so remove the 'mode: continuous' value as it will prevent bin construction in the backend
+		*/
+		if (q.mode == 'continuous') delete q.mode
+
+		const data = await parent.app.vocabApi.getCategories(t, parent.state.termfilter.filter, [
+			'term1_q=' + encodeURIComponent(JSON.stringify(q))
+		])
+		if (data.error) throw data.error
+		this.input.orderedLabels = data.orderedLabels
+
+		// sepeate include and exclude categories based on term.values.uncomputable
+		const excluded_values = t.term.values
+			? Object.entries(t.term.values)
+					.filter(v => v[1].uncomputable)
+					.map(v => v[1].label)
+			: []
+		this.input.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label))
+		this.input.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
+
+		// get include, excluded and total sample count
+		const totalCount = (this.input.totalCount = { included: 0, excluded: 0, total: 0 })
+		this.input.sampleCounts.forEach(v => (totalCount.included += v.samplecount))
+		this.input.excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
+		totalCount.total = totalCount.included + totalCount.excluded
+		// for condition term, subtract included count from totalCount.total to get excluded
+		if (t.term.type == 'condition' && totalCount.total) {
+			totalCount.excluded = totalCount.total - totalCount.included
+		}
+
+		if (t && t.q.mode !== 'continuous' && this.input.sampleCounts.length < 2)
+			throw `there should be two or more discrete values with samples for variable='${t.term.name}'`
+
+		if (!t.q.mode) throw 'q.mode missing'
+
+		// set term.refGrp
+		if (t.q.mode == 'continuous') {
+			t.refGrp = 'NA' // hardcoded in R
+		} else {
+			if (!('refGrp' in t) || !this.input.sampleCounts.find(i => i.key == t.refGrp)) {
+				// refGrp not defined or no longer exists according to sampleCounts[]
+				t.refGrp = this.input.sampleCounts[0].key
+			}
 		}
 	}
 
@@ -154,8 +237,6 @@ async function maySetTwoBins(input) {
 	// if the bins are already binary, do not reset
 	if (t.q.mode == 'binary' && t.q.lst && t.q.lst.length == 2) {
 		t.q.mode = 'binary'
-		// NOTE: refGrp may be reset as needed in regression.values.table.js
-		// if (!t.q.lst.find(bin => bin.label === t.refGrp)) t.refGrp = t.q.lst[0].label
 		return
 	}
 
@@ -190,7 +271,7 @@ async function maySetTwoGroups(input) {
 	const { app, state } = input.section.parent
 
 	// if the bins are already binary, do not reset
-	const { term, q, refGrp } = input.term
+	const { term, q } = input.term
 	if (q.mode == 'binary') {
 		if (q.type == 'values' && Object.keys(term.values).length == 2) return
 		if (q.type == 'predefined-groupset') {
