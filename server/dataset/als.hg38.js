@@ -65,11 +65,6 @@ module.exports = function(common) {
 
 		alleleAttribute: {
 			attributes: {
-				AF: {
-					label: 'Allele frequency',
-					isnumeric: 1,
-					filter: 1
-				},
 				CADD_phred: {
 					label: 'CADD phred',
 					isnumeric: 1,
@@ -77,6 +72,11 @@ module.exports = function(common) {
 				},
 				REVEL_score: {
 					label: 'REVEL score',
+					isnumeric: 1,
+					filter: 1
+				},
+				AF: {
+					label: 'Allele frequency',
 					isnumeric: 1,
 					filter: 1
 				},
@@ -120,13 +120,13 @@ module.exports = function(common) {
 					isnumeric: 1,
 					filter: 1
 				},
-				gnomad30_genome_AF_oth: {
-					label: 'gnomAD v3 allele frequency - other',
+				gnomad30_genome_AF_sas: {
+					label: 'gnomAD v3 allele frequency - South Asian',
 					isnumeric: 1,
 					filter: 1
 				},
-				gnomad30_genome_AF_sas: {
-					label: 'gnomAD v3 allele frequency - South Asian',
+				gnomad30_genome_AF_oth: {
+					label: 'gnomAD v3 allele frequency - Other',
 					isnumeric: 1,
 					filter: 1
 				}
