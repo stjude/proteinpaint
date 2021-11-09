@@ -884,12 +884,16 @@ function makeGroup(gd, tk, block, data) {
 			showline: true
 		})
 	}
-	group.dom.message_row = group.dom.imgg // Element to render meessage from each group. This is later made clickable to display multi-read alignment
-		.append('text')
-		.attr('x', data.pileup_data.width / 3)
-		.attr('y', 0) // -0.5 * gd.messagerowheights
-		.attr('font-size', gd.messagerowheights)
-		.text(gd.messagerows[0].t)
+
+	if (tk.variants) {
+		// No messagerows are printed when tk.variants are specified?
+		group.dom.message_row = group.dom.imgg // Element to render meessage from each group. This is later made clickable to display multi-read alignment
+			.append('text')
+			.attr('x', data.pileup_data.width / 3)
+			.attr('y', 0) // -0.5 * gd.messagerowheights
+			.attr('font-size', gd.messagerowheights)
+			.text(gd.messagerows[0].t)
+	}
 
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
