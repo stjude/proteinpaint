@@ -3,6 +3,12 @@ set -u
 set -o pipefail
 
 ###############################################
+# this is a temporary step!
+# input is phenotree/matrix.tree.original
+# output to phenotree/matrix.tree
+node ~/proteinpaint/utils/sjlife2/phenotree.tempfix.chemo.js > phenotree/matrix.tree
+
+###############################################
 # procedures to build database table files
 # on mac, run `brew install csvkit` first to get the "csvformat" command
 # illustrated at https://docs.google.com/drawings/d/1iaiMRt4YWyheGU_w-uZytNXBImdbrB-GfzZBYaAXaps/edit
