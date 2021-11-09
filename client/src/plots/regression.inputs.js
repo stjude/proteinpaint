@@ -241,8 +241,9 @@ function setRenderers(self) {
 					varClass,
 					[varClass]: variable
 				})
-			} else if (input[varClass] !== variable) {
-				// replace the variable with the value from state
+			} else {
+				// reassign the variable reference to the mutable variable copy
+				// from state.config.outcome | .independent
 				input[varClass] = variable
 			}
 		}
@@ -325,6 +326,16 @@ function setInteractivity(self) {
 				// so `const prevVar = input[input.varClass]` but that would assume that
 				// there will be an `id` property for all input variable classes
 				const prevTerm = input.term
+
+				/*
+					For a new term (replacing a blank input), the refGrp will be missing.
+					In that case, updateTerm() in regression.inputs.term.js will assign a
+					default refGrp based on sample counts. 
+
+					For a replacement term that happens to match the previous term's ID, 
+					for example adjusting a group other than the refGrp, the refGrp may be 
+					reused if there happen to be sample counts for it.
+				*/
 				if (prevTerm && variable.id === prevTerm.id) {
 					for (const k in prevTerm) {
 						// reapply any unedited key-values to the variable, such as refGrp
@@ -342,6 +353,7 @@ function setInteractivity(self) {
 			.filter(input => input.varClass && input[input.varClass])
 			.map(input => input[input.varClass])
 
+		// key could be 'outcome' or 'independent'
 		const key = input.section.configKey
 		// the target config to fill-in/replace/delete may hold one or more selected input variables
 		// config.outcome is not an array (exactly one selected variable)
@@ -354,6 +366,7 @@ function setInteractivity(self) {
 			chartType: 'regression',
 			config: {
 				hasUnsubmittedEdits: true,
+				// replace config.outcome or config.independent
 				[key]: JSON.parse(JSON.stringify(configValue))
 			}
 		})
