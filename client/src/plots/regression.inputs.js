@@ -23,6 +23,7 @@ main
 	setDisableTerms
 	renderSection
 		updateInputs
+			mayAddBlankInput
 		removeInput
 		addInput
 
@@ -246,16 +247,7 @@ function setRenderers(self) {
 			}
 		}
 
-		// detect if a blank input needs to be created
-		const blankInput = section.inputs.find(input => input.varClass && !input[input.varClass])
-		if (section.inputs.length < section.limit && !blankInput) {
-			if (!blankInput) {
-				/*** TODO: should determine varClass by context/parent menu choice? ***/
-				// FIXME should not set varClass=term on blankinput but will allow to choose a varClass supported by this dataset
-				// e.g. termdbConfig should tell if this dataset has genetic data, supports samplelst etc
-				section.inputs.push({ section, varClass: 'term' })
-			}
-		}
+		mayAddBlankInput(section)
 	}
 
 	async function addInput(input) {
@@ -384,5 +376,17 @@ function setInteractivity(self) {
 			chartType: 'regression',
 			config
 		})
+	}
+}
+
+function mayAddBlankInput(section) {
+	// on this section, detect if a blank input needs to be created
+	if (section.inputs.length < section.limit) {
+		const hasblankInput = section.inputs.find(input => input.varClass && !input[input.varClass])
+		if (!hasblankInput) {
+			// FIXME should not set varClass=term on blankinput but will allow to choose a varClass supported by this dataset
+			// e.g. termdbConfig should tell if this dataset has genetic data, supports samplelst etc
+			section.inputs.push({ section, varClass: 'term' })
+		}
 	}
 }
