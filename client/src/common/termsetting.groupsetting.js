@@ -138,7 +138,7 @@ export function setGroupsettingMethods(self) {
 		}
 
 		// add Div for exclude without group rename input
-		const exclude_div = initDraggableDiv(groups_holder, 'Excluded categories')
+		const exclude_div = initDraggableDiv(groups_holder, 'Excluded categories', 0)
 
 		exclude_div.style('border-top', '1px solid #efefef').on('drop', () => {
 			addOnDrop(exclude_list, 0)
@@ -226,14 +226,21 @@ export function setGroupsettingMethods(self) {
 				.append('div')
 				.style('display', 'block')
 				.style('padding', '10px')
-				// .style('border', '1px solid #efefef')
 				.style('vertical-align', 'top')
 				.on('dragover', () => {
+					if (group_i == drag_native_grp){
+						dragged_item
+							.style('transition-property', 'background-color')
+							.style('transition-duration', '1s')
+							.style('background-color', '#eee')
+						return
+					}
 					event.preventDefault()
 					event.stopPropagation()
 					dragable_div.style('background-color', group_i !== drag_native_grp ? '#cfe2f3' : '#fff')
 				})
 				.on('dragenter', () => {
+					if (group_i == drag_native_grp) return
 					event.preventDefault()
 					event.stopPropagation()
 					dragable_div.style('background-color', group_i !== drag_native_grp ? '#cfe2f3' : '#fff')
