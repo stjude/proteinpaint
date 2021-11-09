@@ -27,7 +27,8 @@ module.exports = function(common) {
 				attributes: {
 					Batch: {
 						label: 'Batch',
-						filter: 1
+						filter: 1,
+						hidden: 1
 					},
 					ClinDx_WGS: {
 						label: 'ClinDx_WGS',
@@ -39,11 +40,13 @@ module.exports = function(common) {
 					},
 					OsAge: {
 						label: 'OsAge',
-						filter: 1
+						filter: 1,
+						hidden: 1
 					},
 					SurvOs_mo: {
 						label: 'SurvOs_mo',
-						filter: 1
+						filter: 1,
+						hidden: 1
 					}
 				}
 			}
@@ -60,30 +63,75 @@ module.exports = function(common) {
 			}
 		},*/
 
-		/*alleleAttribute: {
+		alleleAttribute: {
 			attributes: {
-				ExAC_AF: {
-					label: 'ExAC',
+				CADD_phred: {
+					label: 'CADD phred',
 					isnumeric: 1,
-					filter: 1,
-					cutoffvalue: 0.01,
-					keeplowerthan: true
+					filter: 1
+				},
+				REVEL_score: {
+					label: 'REVEL score',
+					isnumeric: 1,
+					filter: 1
 				},
 				AF: {
-					label: 'AF',
+					label: 'Allele frequency',
 					isnumeric: 1,
-					filter: 1,
-					cutoffvalue: 0.01,
-					keeplowerthan: true
+					filter: 1
 				},
-				CADD_phred: {
-					label: 'CADD_phred',
-					filter: 1,
+				gnomad30_genome_AF: {
+					label: 'gnomAD v3 allele frequency',
 					isnumeric: 1,
-					cutoffvalue: 10
+					filter: 1
+				},
+				gnomad30_genome_AF_afr: {
+					label: 'gnomAD v3 allele frequency - African/African American',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_ami: {
+					label: 'gnomAD v3 allele frequency - Amish',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_amr: {
+					label: 'gnomAD v3 allele frequency - American Admixed/Latino',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_asj: {
+					label: 'gnomAD v3 allele frequency - Ashkenazi Jewish',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_eas: {
+					label: 'gnomAD v3 allele frequency - East Asian',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_fin: {
+					label: 'gnomAD v3 allele frequency - Finnish',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_nfe: {
+					label: 'gnomAD v3 allele frequency - Non-Finnish European',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_sas: {
+					label: 'gnomAD v3 allele frequency - South Asian',
+					isnumeric: 1,
+					filter: 1
+				},
+				gnomad30_genome_AF_oth: {
+					label: 'gnomAD v3 allele frequency - Other',
+					isnumeric: 1,
+					filter: 1
 				}
 			}
-		},*/
+		},
 
 		/*mutationAttribute: {
 			attributes: {
