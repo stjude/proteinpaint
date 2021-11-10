@@ -11,6 +11,7 @@ export class InputTerm {
 	constructor(opts) {
 		this.opts = opts
 		this.input = opts.input
+		this.parent = opts.parent
 
 		this.dom = {
 			holder: opts.holder,
@@ -30,7 +31,7 @@ export class InputTerm {
 		try {
 			// reference shortcuts from this.input
 			const section = this.input.section
-			const { app, config, state, disable_terms, editConfig } = section.parent
+			const { app, config, state, disable_terms } = this.opts.parent
 
 			this.pill = termsettingInit({
 				placeholder: section.selectPrompt,
@@ -47,7 +48,7 @@ export class InputTerm {
 				disable_terms,
 				abbrCutoff: 50,
 				callback: term => {
-					editConfig(this.input, term)
+					this.parent.editConfig(this.input, term)
 				}
 			})
 
@@ -58,19 +59,29 @@ export class InputTerm {
 
 			this.valuesTable = new InputValuesTable({
 				holder: this.dom.infoDiv,
-				handler: this
+				handler: this,
+				callback: term => {
+					this.parent.editConfig(this.input, term)
+				}
 			})
 		} catch (e) {
-			this.displayError(e)
-			this.input.section.parent.hasError = true
+			this.displayError([e])
+			this.opts.callbacks.error()
 		}
 	}
 
-	displayError(e) {
+	displayError(errors) {
 		this.hasError = true
-		this.dom.err_div.style('display', 'block').text(e)
-		this.input.section.parent.dom.submitBtn.property('disabled', true)
-		console.error(e)
+		this.dom.err_div.selectAll('*').remove()
+		this.dom.err_div
+			.style('display', 'block')
+			.selectAll('div')
+			.data(errors)
+			.enter()
+			.append('div')
+			.text(e => e)
+		this.opts.callbacks.error()
+		console.error(errors)
 	}
 
 	async update() {
@@ -85,19 +96,29 @@ export class InputTerm {
 		this.dom.err_div.style('display', 'none').text('')
 		this.hasError = false
 
+		const errors = []
 		try {
 			if (t && this.setQ) {
-				await this.setQ[t.term.type](this.input)
+				const { app, state } = this.parent
+				await this.setQ[t.term.type](this.input, app.vocabApi, state.termfilter.filter)
 			}
 
-			await this.updateTerm()
+			try {
+				await this.updateTerm()
+			} catch (e) {
+				// will allow pill to update to a new term as needed,
+				// so that the rendered pill matches the error message
+				errors.push(e)
+			}
 
 			await this.pill.main(this.getPillArgs())
 			await this.valuesTable.main()
-			if (t && t.error) this.displayError(t.error)
-			else if (this.pill.error) this.displayError(this.pill.error)
-		} catch (e) {
-			this.displayError(e)
+			const e = (t && t.error) || this.pill.error
+			if (e) errors.push(e)
+			if (errors.length) throw errors
+		} catch (errors) {
+			this.displayError(errors)
+			this.opts.callbacks.error()
 		}
 	}
 
@@ -116,7 +137,7 @@ export class InputTerm {
 		const t = this.input.term
 		if (!t) return
 
-		const parent = this.input.section.parent // should be fine as "parent" is not a reserved keyword
+		const parent = this.parent // should be fine as "parent" is not a reserved keyword
 
 		if (!t.q) throw '.term.q missing on this input'
 
@@ -165,17 +186,18 @@ export class InputTerm {
 		// set term.refGrp
 		if (t.q.mode == 'continuous') {
 			t.refGrp = 'NA' // hardcoded in R
-		} else {
-			if (!('refGrp' in t) || !this.input.sampleCounts.find(i => i.key == t.refGrp)) {
-				// refGrp not defined or no longer exists according to sampleCounts[]
-				t.refGrp = this.input.sampleCounts[0].key
-			}
+		} else if (!('refGrp' in t) || !this.input.sampleCounts.find(i => i.key == t.refGrp)) {
+			// refGrp not defined or no longer exists according to sampleCounts[]
+			const o = this.input.orderedLabels
+			if (o.length) this.input.sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
+			else this.input.sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
+			t.refGrp = this.input.sampleCounts[0].key
 		}
 	}
 
 	getPillArgs() {
 		const section = this.input.section
-		const { config, state, disable_terms } = section.parent
+		const { config, state, disable_terms } = this.parent
 		const args = Object.assign(
 			{
 				disable_terms,
@@ -231,8 +253,7 @@ function getQSetter(regressionType) {
 
 // query backend for median and create custom 2 bins with median and boundry
 // for logistic independet numeric terms
-async function maySetTwoBins(input) {
-	const { app, state } = input.section.parent
+async function maySetTwoBins(input, vocabApi, filter) {
 	const t = input.term
 	// if the bins are already binary, do not reset
 	if (t.q.mode == 'binary' && t.q.lst && t.q.lst.length == 2) {
@@ -240,7 +261,7 @@ async function maySetTwoBins(input) {
 		return
 	}
 
-	const data = await app.vocabApi.getPercentile(t.id, 50, state.termfilter.filter)
+	const data = await vocabApi.getPercentile(t.id, 50, filter)
 	if (data.error || !Number.isFinite(data.value)) throw 'cannot get median value: ' + (data.error || 'no data')
 	const median = input.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
 	t.q = {
@@ -267,9 +288,7 @@ async function maySetTwoBins(input) {
 	t.refGrp = t.q.lst[0].label
 }
 
-async function maySetTwoGroups(input) {
-	const { app, state } = input.section.parent
-
+async function maySetTwoGroups(input, vocabApi, filter) {
 	// if the bins are already binary, do not reset
 	const { term, q } = input.term
 	if (q.mode == 'binary') {
@@ -297,7 +316,7 @@ async function maySetTwoGroups(input) {
 	// q should not have groupsetting enabled, as we only want to get number of cases for categories/grades
 	// TODO detect if groupsetting is enabled, then turn it off??
 	const lst = ['term1_q=' + encodeURIComponent(JSON.stringify(q))]
-	const data = await app.vocabApi.getCategories(term, state.termfilter.filter, lst)
+	const data = await vocabApi.getCategories(term, filter, lst)
 	if (data.error) throw 'cannot get categories: ' + data.error
 	const category2samplecount = new Map() // k: category/grade, v: number of samples
 	const computableCategories = [] // list of computable keys

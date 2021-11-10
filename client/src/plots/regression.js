@@ -71,6 +71,7 @@ class Regression {
 	async main() {
 		try {
 			this.config = JSON.parse(JSON.stringify(this.state.config))
+			this.mayUpdateSandboxHeader()
 			await this.inputs.main()
 			await this.results.main()
 			this.inputs.resetSubmitButton()
@@ -82,6 +83,18 @@ class Regression {
 			sayerror(this.dom.errordiv, 'Error: ' + (e.error || e))
 			if (e.stack) console.log(e.stack)
 		}
+	}
+
+	mayUpdateSandboxHeader() {
+		if (!this.dom.header) return
+		// based on data in config state, but not section
+		const o = this.config.outcome
+		this.dom.header.html(
+			(o ? o[o.varClass].name : '') +
+				'<span style="opacity:.6;font-size:.7em;margin-left:10px;">' +
+				this.config.regressionType.toUpperCase() +
+				' REGRESSION</span>'
+		)
 	}
 }
 

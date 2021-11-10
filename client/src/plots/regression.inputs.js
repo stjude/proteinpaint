@@ -52,7 +52,6 @@ export class RegressionInputs {
 
 		// configuration for the outcome variable section
 		this.outcome = {
-			parent: this,
 			/*** static configuration ***/
 			heading: 'Outcome variable',
 			selectPrompt:
@@ -74,7 +73,6 @@ export class RegressionInputs {
 
 		// configuration for the independent variable section
 		this.independent = {
-			parent: this,
 			/*** static configuration ***/
 			heading: 'Independent variable(s)',
 			selectPrompt: '<u>Add independent variable</u>',
@@ -99,7 +97,6 @@ export class RegressionInputs {
 		try {
 			this.config = this.parent.config
 			this.state = this.parent.state
-			this.mayUpdateSandboxHeader()
 			this.hasError = false
 			this.setDisableTerms()
 			const updates = []
@@ -115,15 +112,11 @@ export class RegressionInputs {
 				for (const input of section.inputs) {
 					if ((input[input.varClass] && input[input.varClass].error) || (input.handler && input.handler.hasError)) {
 						this.hasError = true
-						this.parent.results.dom.holder.style('display', 'none')
 					}
 				}
 			}
-			//this.updateSubmitButton(true)
 		} catch (e) {
 			this.hasError = true
-			// FIXME: does not seem right to modify results dom from the inputs code here
-			this.parent.results.dom.holder.style('display', 'none')
 			throw e
 		}
 	}
@@ -264,7 +257,14 @@ function setRenderers(self) {
 		if (input.varClass == 'term') {
 			input.handler = new InputTerm({
 				holder: inputDiv.append('div'),
-				input
+				input,
+				parent: self,
+				callbacks: {
+					error: () => {
+						self.hasError = true
+						self.dom.submitBtn.property('disabled', true)
+					}
+				}
 			})
 		} else {
 			throw 'addInput: unknown varClass'
@@ -291,19 +291,7 @@ function setRenderers(self) {
 		self.dom.submitBtn
 			.text('Run analysis')
 			.style('display', self.config.outcome && self.config.independent.length ? 'block' : 'none')
-			.property('disabled', false)
-	}
-
-	self.mayUpdateSandboxHeader = () => {
-		if (!self.parent.dom.header) return
-		// based on data in config state, but not section
-		const o = self.config.outcome
-		self.parent.dom.header.html(
-			(o ? o[o.varClass].name : '') +
-				'<span style="opacity:.6;font-size:.7em;margin-left:10px;">' +
-				self.opts.regressionType.toUpperCase() +
-				' REGRESSION</span>'
-		)
+			.property('disabled', self.hasError)
 	}
 }
 
