@@ -1059,6 +1059,7 @@
             "name": "GDC BAM slicing",
             "app": "Genome Browser",
             "isbeta": 1,
+            "disable_topTabs": true,
             "blurb": "Visualize sequencing reads in NCI GDC",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
             "ppcalls": [

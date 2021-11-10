@@ -244,7 +244,9 @@ function makeRibbon(e, text, color) {
 		.style('text-align', 'center')
 }
 
-// ******* Create Sandbox Function ********* Opens a sandbox with track example(s) or app ui with links and other information
+/******* Create Sandbox Function ********* 
+ 	Opens a sandbox with track example(s) or app ui with links and other information
+*/
 
 async function openSandbox(track, holder) {
 	// create unique id for each app div
@@ -272,8 +274,13 @@ async function openSandbox(track, holder) {
 		.style('width', '100%')
 	const maincontent_div = sandbox_div.body.append('div')
 
-	// Creates the overarching tab menu and subsequent content
-	sandboxTabMenu(track, toptab_div, maincontent_div)
+	//Disables top, horizontal tabs for api queries or other special circumstances
+	if (track.disable_topTabs == true) {
+		renderContent(track.ppcalls[0], sandbox_div.body)
+	} else {
+		// Creates the overarching tab menu and subsequent content
+		sandboxTabMenu(track, toptab_div, maincontent_div)
+	}
 }
 
 // Single content layout for examples only - buttons not used for UIs
