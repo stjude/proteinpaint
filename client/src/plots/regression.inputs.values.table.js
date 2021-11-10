@@ -15,17 +15,21 @@ export class InputValuesTable {
 		try {
 			const input = this.handler.input
 			const variable = input[input.varClass]
-			if (!variable) {
+			// may allow the values table even if there is a variable error,
+			// in case it helps clarify the error message such as having
+			// not exactly two samplecount bars available for a binary outcome term
+			if (!variable /*|| variable.error*/) {
 				this.dom.holder.style('display', 'none')
+				this.dom.loading_div.style('display', 'none')
 				return
 			}
-			delete variable.error
+			//delete variable.error
 			this.dom.holder.style('display', 'block')
 			this.dom.loading_div.style('display', 'block')
 			this.updateValueCount(input)
 			this.dom.loading_div.style('display', 'none')
 			this.render()
-			if (variable.error) throw variable.error
+			//if (variable.error) throw variable.error
 		} catch (e) {
 			this.dom.loading_div.style('display', 'none')
 			throw e
@@ -64,7 +68,10 @@ function setRenderers(self) {
 
 		self.dom = {
 			holder,
-			loading_div: holder.append('div').text('Loading..'),
+			loading_div: holder
+				.append('div')
+				.text('Loading..')
+				.style('display', 'none'),
 
 			top_info_div,
 			term_info_div: top_info_div.append('div').style('display', 'inline-block'),
@@ -226,7 +233,7 @@ function setRenderers(self) {
 					t.refGrp = item.key
 					ref_text.style('border', '1px solid #bbb').text('REFERENCE')
 					// below will save to state, ui code should react to it
-					input.section.parent.editConfig(input, t)
+					self.opts.callback(t)
 				})
 		} else {
 			tr.on('mouseover', null)
