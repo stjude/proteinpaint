@@ -1,75 +1,70 @@
-module.exports={
-	species:'mouse',
-	genomefile:'genomes/mm10.gz',
-	genedb:{
-		dbfile:'anno/genes.mm10.db',
+module.exports = {
+	species: 'mouse',
+	genomefile: 'genomes/mm10.gz',
+	genedb: {
+		dbfile: 'anno/genes.mm10.db'
 	},
-	snp:{
-		dbfile:'anno/db/snp142.mm10.db',
-		statement_getbyname:'select * from snp142 where name=?',
-		statement_getbycoord:'select * from snp142 where chrom=? and bin=? and chromStart>=? and chromEnd<=?'
-	},
-	tracks:[
+	tracks: [
 		{
-			__isgene:true, // only for initialization 
-			translatecoding:true,
-			file:'anno/refGene.mm10.gz',
-			type:'bedj',
-			name:'RefGene',
-			stackheight:16,
-			stackspace:1,
-			vpad:4,
-			color:'#1D591D',
+			__isgene: true, // only for initialization
+			translatecoding: true,
+			file: 'anno/refGene.mm10.gz',
+			type: 'bedj',
+			name: 'RefGene',
+			stackheight: 16,
+			stackspace: 1,
+			vpad: 4,
+			color: '#1D591D'
 		},
 		{
-			"type":"bedj",
-			"name":"RepeatMasker",
-			"stackheight":14,
-			"file":"anno/rmsk.mm10.gz",
-			"onerow":true,
-			"categories":{
-				"SINE":{"color":"#ED8C8E","label":"SINE"},
-				"LINE":{"color":"#EDCB8C","label":"LINE"},
-				"LTR":{"color":"#E38CED","label":"LTR"},
-				"DNA":{"color":"#8C8EED","label": "DNA transposon"},
-				"simple":{"color":"#8EB88C","label":"Simple repeats"},
-				"low_complexity":{"color":"#ACEBA9","label":"Low complexity"},
-				"satellite":{"color":"#B59A84","label":"Satellite"},
-				"RNA":{"color":"#9DE0E0","label":"RNA repeat"},
-				"other":{"color":"#9BADC2","label":"Other"},
-				"unknown":{"color":"#858585","label":"Unknown"}
+			type: 'bedj',
+			name: 'RepeatMasker',
+			stackheight: 14,
+			file: 'anno/rmsk.mm10.gz',
+			onerow: true,
+			categories: {
+				SINE: { color: '#ED8C8E', label: 'SINE' },
+				LINE: { color: '#EDCB8C', label: 'LINE' },
+				LTR: { color: '#E38CED', label: 'LTR' },
+				DNA: { color: '#8C8EED', label: 'DNA transposon' },
+				simple: { color: '#8EB88C', label: 'Simple repeats' },
+				low_complexity: { color: '#ACEBA9', label: 'Low complexity' },
+				satellite: { color: '#B59A84', label: 'Satellite' },
+				RNA: { color: '#9DE0E0', label: 'RNA repeat' },
+				other: { color: '#9BADC2', label: 'Other' },
+				unknown: { color: '#858585', label: 'Unknown' }
 			}
 		}
 	],
-	defaultcoord:{
-		chr:'chr12',
-		start:56694342,
-		stop:56713689
+	defaultcoord: {
+		chr: 'chr12',
+		start: 56694342,
+		stop: 56713689
 	},
-	hicenzymefragment:[
+	hicenzymefragment: [
 		{
-		enzyme: 'DpnII',
-		file: 'anno/hicFragment/hic.DpnII.mm10.gz'
+			enzyme: 'DpnII',
+			file: 'anno/hicFragment/hic.DpnII.mm10.gz'
 		},
 		{
-		enzyme: 'EcoRI',
-		file: 'anno/hicFragment/hic.EcoRI.mm10.gz'
+			enzyme: 'EcoRI',
+			file: 'anno/hicFragment/hic.EcoRI.mm10.gz'
 		},
 		{
-		enzyme: 'HindIII',
-		file: 'anno/hicFragment/hic.HindIII.mm10.gz'
+			enzyme: 'HindIII',
+			file: 'anno/hicFragment/hic.HindIII.mm10.gz'
 		},
 		{
-		enzyme: 'MboI',
-		file: 'anno/hicFragment/hic.MboI.mm10.gz'
+			enzyme: 'MboI',
+			file: 'anno/hicFragment/hic.MboI.mm10.gz'
 		},
 		{
-		enzyme: 'NcoI',
-		file: 'anno/hicFragment/hic.NcoI.mm10.gz'
+			enzyme: 'NcoI',
+			file: 'anno/hicFragment/hic.NcoI.mm10.gz'
 		}
 	],
 
-	majorchr:`
+	majorchr: `
 chr1	195471971
 chr2	182113224
 chrX	171031299
@@ -92,7 +87,7 @@ chrY	91744698
 chr18	90702639
 chr19	61431566
 chrM	16299`,
-	minorchr:`
+	minorchr: `
 chr5_JH584299_random	953012
 chrX_GL456233_random	336933
 chrY_JH584301_random	259875
