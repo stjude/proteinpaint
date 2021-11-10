@@ -928,22 +928,21 @@ async function do_query(q) {
 async function align_multiple_reads(templates, reference_sequence) {
 	const sequence_reads = templates.map(i => i.segments[0].seq)
 	let fasta_sequence = ''
-	const segbplen = sequence_reads[0].length // Getting length of read
 
-	fasta_sequence += '>seq\n' + reference_sequence + '\n'
+	fasta_sequence += '>seq\n' + reference_sequence.replace('\n', '') + '\n'
 	let i = 0
 	for (const read of sequence_reads) {
 		if (i < max_read_alignment) {
-			fasta_sequence += '>seq\n' + read + '\n'
+			fasta_sequence += '>seq\n' + read.replace('\n', '') + '\n'
 		} else {
 			break
 		}
 		i += 1
 	}
-	return await run_clustalo(fasta_sequence, max_read_alignment, segbplen, sequence_reads.length) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
+	return await run_clustalo(fasta_sequence, max_read_alignment, sequence_reads.length) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
 }
 
-function run_clustalo(fasta_sequence, max_read_alignment, segbplen, num_reads) {
+function run_clustalo(fasta_sequence, max_read_alignment, num_reads) {
 	return new Promise((resolve, reject) => {
 		const ps = spawn(clustalo_read_alignment, [
 			'-i',
@@ -977,7 +976,14 @@ function run_clustalo(fasta_sequence, max_read_alignment, segbplen, num_reads) {
 							nuc_count += 1
 							aligned_read += nucl
 						} else {
-							if (nuc_count > 0 && nuc_count < segbplen) {
+							if (
+								nuc_count > 0 &&
+								nuc_count <
+									read
+										.replace(/-/g, '')
+										.replace(/,/g, '')
+										.replace('seq      ', '').length
+							) {
 								// Only allows "-" inside reads to be displayed, removing those before/after the start/end of read
 								aligned_read += nucl
 							} else {
