@@ -45,22 +45,26 @@ tk.dom{}
 .pileup_g // contains image
 .pileup_img
 .vsliderg
+.read_limit_g
+.read_limit_text
 
 tk.groups[]
 .data{}
+	.type
+	.messages[ {t} ] 
 	.templatebox[{}] // optional, about the templates in view range
 	         // server decides if to return template boxes (at poststack_adjustq)
 	.count {r,t} // r for reads, t for templates
 .data_fullstack{}
-	.messagerowheights
 	.stackcount
 	.stackheight
 	.allowpartstack
 .dom{}
+	.groupg
+	.message_rowg
 	.imgg
 	.img_fullstack
 	.img_partstack
-        .message_row
 	.box_move
 	.box_stay
 	.vslider{}
@@ -102,6 +106,7 @@ const slider_rail_color = '#eee'
 const slider_color = '#c7edc5'
 const slider_color_dark = '#9ed19b'
 const slider_color_dark_line = '#36a32f'
+const messagerowheight = 15 // message row height
 
 export async function loadTk(tk, block) {
 	block.tkcloakon(tk)
@@ -152,7 +157,7 @@ export async function loadTk(tk, block) {
 		}
 
 		const data = await getData(tk, block)
-		if (data.error) throw data.error
+		if (data.error) throw data.error // including "no reads" message
 		if (data.colorscale) {
 			// available from 1st query, cache
 			tk.colorscale = data.colorscale
@@ -170,6 +175,10 @@ export async function loadTk(tk, block) {
 		block.tkcloakoff(tk, {})
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
+		if (tk.pileup_shown) {
+			tk.dom.pileup_axis.selectAll('*').remove()
+			tk.dom.pileup_img.attr('width', 0)
+		}
 		if (tk.groups) {
 			for (const g of tk.groups) {
 				g.dom.img_fullstack.attr('width', 0).attr('height', 0)
@@ -329,6 +338,7 @@ or update existing groups, in which groupidx will be provided
 		for (const g of data.groups) {
 			const gd = makeGroup(g, tk, block, data)
 			tk.groups.push(gd)
+			/*
 			if (tk.variants && (gd.data.type == 'support_alt' || gd.data.type == 'support_ref')) {
 				gd.dom.message_row
 					.on('mouseover', () => {
@@ -341,9 +351,32 @@ or update existing groups, in which groupidx will be provided
 					getMultiReadAligInfo(tk, gd, block) // Generating multiple sequence alignment against ref/alt allele
 				})
 			}
+			*/
 		}
 	} else {
 		updateExistingGroups(data, tk, block)
+	}
+
+	// show messages
+	for (const g of tk.groups) {
+		g.dom.message_rowg.selectAll('*').remove()
+		let y = 0
+		for (const m of g.data.messages) {
+			const msg = g.dom.message_rowg
+				.append('text')
+				.attr('x', block.width / 2)
+				.attr('y', y + messagerowheight - 1)
+				.attr('font-size', messagerowheight)
+				.attr('text-anchor', 'middle')
+				.text(m.t)
+			if (m.isheader) {
+				// this message is the header of the group, allow clickable
+				msg.attr('class', 'sja_clbtext2').on('click', () => {
+					click_groupheader(tk, g, block)
+				})
+			}
+			y += messagerowheight
+		}
 	}
 
 	setTkHeight(tk)
@@ -604,31 +637,31 @@ function setTkHeight(tk) {
 		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
 	}
 	for (const g of tk.groups) {
-		//console.log('g:', g.data.messagerowheights)
-		h += g.data.messagerowheights
-		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
+		g.dom.groupg.transition().attr('transform', 'translate(0,' + h + ')')
+
+		const msgheight = messagerowheight * g.data.messages.length // sum of height from all messages
+		g.dom.imgg.transition().attr('transform', 'translate(0,' + msgheight + ')')
+
+		// h is the global height. to set y position for these components of this group, should not directly use h, but. following code using diff_score_* need to be clarified
 		if (tk.variants) {
 			g.dom.diff_score_barplot_fullstack
 				.transition()
-				.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height + g.data.messagerowheights) + ')') // + g.data.diff_scores_img.row_height
+				.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height) + ')')
 		}
 		if (g.partstack) {
 			// slider visible
 			if (tk.variants) {
 				g.dom.diff_score_barplot_partstack
 					.transition()
-					.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height + g.data.messagerowheights) + ')')
+					.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height) + ')')
 				g.dom.vslider.g
 					.transition()
-					.attr(
-						'transform',
-						'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + (h + g.data.messagerowheights) + ') scale(1)'
-					)
+					.attr('transform', 'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + h + ') scale(1)')
 			} else {
-				g.dom.vslider.g.transition().attr('transform', 'translate(0,' + (h + g.data.messagerowheights) + ') scale(1)')
+				g.dom.vslider.g.transition().attr('transform', 'translate(0,' + h + ') scale(1)')
 			}
 		}
-		h += g.data.height + g.data.messagerowheights
+		h += g.data.height
 	}
 	tk.height_main = tk.height = h
 	tk.height_main += tk.toppad + tk.bottompad
@@ -838,12 +871,22 @@ function makeGroup(gd, tk, block, data) {
 	const group = {
 		data: gd,
 		dom: {
-			imgg: tk.glider.append('g'),
+			groupg: tk.glider.append('g'),
 			vslider: {
 				g: tk.dom.vsliderg.append('g').attr('transform', 'scale(0)')
 			}
 		}
 	}
+	/*
+	groupg contains two <g>: message_rowg and imgg
+	message_rowg:
+	  render message from each group. This is later made clickable to display multi-read alignment
+	  is always on the top, position does not change
+	  if not empty, message_rowg will push down imgg
+	*/
+	group.dom.message_rowg = group.dom.groupg.append('g')
+	group.dom.imgg = group.dom.groupg.append('g')
+
 	if (tk.variants) {
 		group.dom.diff_score_barplot_fullstack = tk.dom.diff_score_g
 			.append('image')
@@ -883,16 +926,6 @@ function makeGroup(gd, tk, block, data) {
 			color: 'black',
 			showline: true
 		})
-	}
-
-	if (tk.variants) {
-		// No messagerows are printed when tk.variants are specified?
-		group.dom.message_row = group.dom.imgg // Element to render meessage from each group. This is later made clickable to display multi-read alignment
-			.append('text')
-			.attr('x', data.pileup_data.width / 3)
-			.attr('y', 0) // -0.5 * gd.messagerowheights
-			.attr('font-size', gd.messagerowheights)
-			.text(gd.messagerows[0].t)
 	}
 
 	group.dom.img_fullstack = group.dom.imgg
@@ -948,7 +981,7 @@ function makeGroup(gd, tk, block, data) {
 			if (mousedownx != d3event.clientX) return
 			const [mx, my] = d3mouse(group.dom.img_cover.node())
 			if (group.data.allowpartstack) {
-				enter_partstack(group, tk, block, my - group.data.messagerowheights, data)
+				enter_partstack(group, tk, block, my, data)
 				return
 			}
 			if (!group.data.templatebox) return
@@ -1016,7 +1049,7 @@ function makeGroup(gd, tk, block, data) {
 		.on('mousedown', () => {
 			d3event.preventDefault()
 			group.dom.vslider.box.attr('fill', slider_color_dark)
-			const scrollableheight = group.data.height - group.data.messagerowheights
+			const scrollableheight = group.data.height
 			const y0 = d3event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
@@ -1068,7 +1101,7 @@ function makeGroup(gd, tk, block, data) {
 		.on('mouseout', () => group.dom.vslider.boxtopline.attr('stroke', slider_color_dark))
 		.on('mousedown', () => {
 			d3event.preventDefault()
-			const scrollableheight = group.data.height - group.data.messagerowheights
+			const scrollableheight = group.data.height
 			const y0 = d3event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
@@ -1114,7 +1147,7 @@ function makeGroup(gd, tk, block, data) {
 		.on('mouseout', () => group.dom.vslider.boxbotline.attr('stroke', slider_color_dark))
 		.on('mousedown', () => {
 			d3event.preventDefault()
-			const scrollableheight = group.data.height - group.data.messagerowheights
+			const scrollableheight = group.data.height
 			const y0 = d3event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
@@ -1285,6 +1318,14 @@ box{}
   qname, start, stop
 */
 
+function click_groupheader(tk, group, block) {
+	if (tk.variants && (group.data.type == 'support_alt' || group.data.type == 'support_ref')) {
+		// when merge to master, add this condition
+		//if(urlmap().has('clustalo')) {
+		getMultiReadAligInfo(tk, group, block)
+		//}
+	}
+}
 async function getMultiReadAligInfo(tk, group, block) {
 	appear(tk.alignpane.pane)
 	tk.alignpane.pane.style('display', 'table')
@@ -1916,7 +1957,7 @@ function renderGroup(group, tk, block) {
 			group.dom.diff_score_barplot_fullstack.attr('width', 0).attr('height', 0)
 		}
 		// group vslider.g y position is set and turned visible in setTkHeight(), but not here
-		const scrollableheight = group.data.height - group.data.messagerowheights
+		const scrollableheight = group.data.height
 		group.dom.vslider.bar.transition().attr('height', scrollableheight)
 		group.dom.vslider.boxy = (scrollableheight * group.partstack.start) / group.data_fullstack.stackcount
 		group.dom.vslider.boxh =

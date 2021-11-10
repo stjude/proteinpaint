@@ -35,7 +35,7 @@ export function make_type2group(q) {
 		g.type = k
 		g.templates = []
 		g.regions = duplicateRegions(q.regions)
-		g.messagerows = []
+		g.messages = []
 	}
 	return type2group
 }

@@ -289,8 +289,8 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	for (const k in type2group) {
 		const g = type2group[k]
 		if (g.templates.length == 0) continue // empty group, do not include
-		g.messagerows.push({
-			h: 15,
+		g.messages.push({
+			isheader: true,
 			t:
 				g.templates.length +
 				' reads supporting ' +
@@ -658,8 +658,7 @@ export async function match_complexvariant(q, templates_info, region_widths) {
 	for (const k in type2group) {
 		const g = type2group[k]
 		if (g.templates.length == 0) continue // empty group, do not include
-		g.messagerows.push({
-			h: 15,
+		g.messages.push({
 			t:
 				g.templates.length +
 				' reads supporting ' +

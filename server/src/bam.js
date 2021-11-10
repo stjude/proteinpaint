@@ -82,10 +82,8 @@ when client zooms into one read group, server needs to know which group it is an
 	.overlapRP_multirows -- if to show overlap read pairs at separate rows, otherwise in one row one on top of the other
 	.overlapRP_hlline  -- at overlap read pairs on separate rows, if to highlight with horizontal line
 	.canvasheight
-	.messagerows[ {} ]
-.messagerows[ {} ]
-	.h int
-	.t str
+	.messages[ {} ] -- list of messages about this group. no longer server-rendered but passed to client for svg rendering
+		.t str
 
 *********************** template - segment - box
 
@@ -153,7 +151,6 @@ do_query
 			get_stacky
 				overlapRP_setflag
 				getrowheight_template_overlapread
-		plot_messagerows
 		plot_template
 			plot_segment
 		plot_insertions
@@ -334,7 +331,7 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
 	const diff_scores_list = templates.map(i => parseFloat(i.__tempscore))
-	const read_height = (group.canvasheight - group.messagerows[0].h) / diff_scores_list.length
+	const read_height = group.canvasheight / diff_scores_list.length
 	let i = 0
 	const dist_bw_reads = group.stackspace / group.canvasheight
 	for (const diff_score of diff_scores_list) {
@@ -659,7 +656,6 @@ async function get_q(genome, req) {
 			asPaired: req.query.asPaired,
 			getcolorscale: req.query.getcolorscale,
 			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
-			messagerows: [],
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
 		//q.gdc_token = req.get('x-auth-token').split(',')[0]
@@ -676,7 +672,6 @@ async function get_q(genome, req) {
 			asPaired: req.query.asPaired,
 			getcolorscale: req.query.getcolorscale,
 			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
-			messagerows: [],
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
 		if (isurl) {
@@ -824,10 +819,9 @@ async function do_query(q) {
 	}
 
 	if (result.count.r == 0) {
-		q.groups[0].messagerows.push({
-			h: 30,
-			t: 'No reads in view range.'
-		})
+		// simply show this message in the track on client
+		throw 'No reads in view range.'
+		//q.groups[0].messages.push({ t: 'No reads in view range.' })
 	}
 
 	// XXX TODO not to collect all reads into array
@@ -888,14 +882,14 @@ async function do_query(q) {
 		ctx.textAlign = 'center'
 		ctx.textBaseline = 'middle'
 
-		gr.messagerowheights = plot_messagerows(ctx, group, q)
-		gr.messagerows = group.messagerows
+		gr.messages = group.messages
+		gr.messagerowheights = 0
 		for (const template of templates) {
 			// group.templates
 			plot_template(ctx, template, group, q)
 		}
 
-		plot_insertions(ctx, group, q, templates, gr.messagerowheights)
+		plot_insertions(ctx, group, q, templates)
 
 		if (q.asPaired) gr.count.t = templates.length // group.templates
 		if (q.variant) {
@@ -1137,19 +1131,6 @@ async function query_region(r, q) {
 			}
 
 			r.lines.push(line)
-
-			/*
-			old logic to kill samtools process; no longer doing this with down sampling
-			q._numofreads++
-			if (q._numofreads >= maxreadcount) {
-				ps.kill()
-				q.read_limit_reached = true
-				q.messagerows.push({
-					h: 13,
-					t: '11Too many reads in view range. Try zooming into a smaller region.'
-				})
-			}
-			*/
 		}
 	})
 }
@@ -1276,7 +1257,7 @@ async function divide_reads_togroups(q) {
 					type: bamcommon.type_all,
 					regions: bamcommon.duplicateRegions(q.regions),
 					templates: templates_info,
-					messagerows: [],
+					messages: [],
 					partstack: q.partstack,
 					widths: widths
 				}
@@ -1305,59 +1286,12 @@ async function divide_reads_togroups(q) {
 				type: bamcommon.type_all,
 				regions: bamcommon.duplicateRegions(q.regions),
 				templates: templates_info,
-				messagerows: [],
+				messages: [],
 				partstack: q.partstack,
 				widths: widths
 			}
 		]
 	}
-}
-
-// NOT IN USE
-function may_match_snv(templates, q) {
-	const refallele = q.variant.ref.toUpperCase()
-	const altallele = q.variant.alt.toUpperCase()
-	if (!bases.has(refallele) || !bases.has(altallele)) return
-	const type2group = bamcommon.make_type2group(q)
-	for (const t of templates) {
-		let used = false
-		for (const s of t.segments) {
-			for (const b of s.boxes) {
-				if (b.opr == 'X' && b.start == q.variant.pos) {
-					// mismatch on this pos
-					if (b.s == altallele) {
-						if (type2group[bamcommon.type_supportalt]) type2group[bamcommon.type_supportalt].templates.push(t)
-					} else {
-						if (type2group[bamcommon.type_supportno]) type2group[bamcommon.type_supportno].templates.push(t)
-					}
-					used = true
-					break
-				}
-			}
-			if (used) break
-		}
-		if (!used) {
-			if (type2group[bamcommon.type_supportref]) type2group[bamcommon.type_supportref].templates.push(t)
-		}
-	}
-	const groups = []
-	for (const k in type2group) {
-		const g = type2group[k]
-		if (g.templates.length == 0) continue // empty group, do not include
-		g.messagerows.push({
-			h: 15,
-			t:
-				g.templates.length +
-				' reads supporting ' +
-				(k == bamcommon.type_supportref
-					? 'reference allele'
-					: k == bamcommon.type_supportalt
-					? 'mutant allele'
-					: 'neither reference or mutant alleles')
-		})
-		groups.push(g)
-	}
-	return groups
 }
 
 function match_sv(templates, q) {
@@ -1892,17 +1826,6 @@ function qual2int(s) {
 	return lst
 }
 
-function plot_messagerows(ctx, group, q) {
-	let y = 0
-	for (const row of group.messagerows) {
-		//ctx.font = Math.min(12, row.h - 2) + 'pt Arial'
-		//ctx.fillStyle = 'black'
-		//ctx.fillText(row.t, q.canvaswidth / 2, y + row.h / 2)
-		y += row.h
-	}
-	return y
-}
-
 function get_stacky(group, templates, q) {
 	// get y off for each stack, may account for fat rows created by overlapping read pairs
 	const stackrowheight = []
@@ -1918,7 +1841,7 @@ function get_stacky(group, templates, q) {
 		}
 	}
 	const stacky = []
-	let y = group.messagerows.reduce((i, j) => i + j.h, 0) + group.stackspace
+	let y = group.stackspace
 	for (const h of stackrowheight) {
 		stacky.push(y)
 		y += h + group.stackspace
@@ -2388,7 +2311,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	//}
 }
 
-function plot_insertions(ctx, group, q, templates, messagerowheights) {
+function plot_insertions(ctx, group, q, templates) {
 	/*
 after all template boxes are drawn, mark out insertions on top of that by cyan text labels
 if single basepair, use the nt; else, use # of nt
@@ -2415,7 +2338,7 @@ if b.qual is available, set text color based on it
 		ctx.strokeStyle = insertion_vlinecolor
 		for (const x of xpos) {
 			ctx.beginPath()
-			ctx.moveTo(x, messagerowheights)
+			ctx.moveTo(x, 0)
 			ctx.lineTo(x, group.canvasheight)
 			ctx.stroke()
 		}
