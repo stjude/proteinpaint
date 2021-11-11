@@ -583,8 +583,9 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
             "ppcalls": [
                 {
+                    "label": "Pediatric dataset",
+                    "urlparam": "?genome=hg19&gene=JAK2&dataset=Pediatric",
                     "runargs": {
-                        "parseurl": true,
                         "gene":"jak2",
                         "nobox": 1,
                         "noheader": 1,
@@ -592,7 +593,45 @@
                         "dataset":"Pediatric"
                     },
                     "testSpec": {
-                        "expected": {"circle": 10 }
+                        "expected": { "circle": 10 }
+                    }
+                },
+                {
+                    "label": "GDC API (GENCODE)",
+                    "urlparam": "?genome=hg38&gene=ENST00000407796&mds3=GDC",
+                    "runargs": {
+                        "gene":"ENST00000407796",
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg38",
+                        "tracks":[
+                            {
+                                "type": "mds3",
+                                "dslabel":"GDC"
+                            }
+                        ]
+                    },
+                    "testSpec": {
+                        "expected": { "circle": 10 }
+                    }
+                },
+                {
+                    "label": "GDC API (RefSeq)",
+                    "urlparam": "?genome=hg38&gene=NM_005163&mds3=GDC",
+                    "runargs": {
+                        "gene":"NM_005163",
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg38",
+                        "tracks":[
+                            {
+                                "type": "mds3",
+                                "dslabel":"GDC"
+                            }
+                        ]
+                    },
+                    "testSpec": {
+                        "expected": { "circle": 10 }
                     }
                 }
             ],
@@ -1011,7 +1050,7 @@
                     }
                 },
                 {
-                    "label": "Kmer typing",
+                    "label": "SNV/indel typing",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/bamDemoData.exon8del.tar.gz",
                     "urlparam": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A",
                     "runargs": {
