@@ -612,7 +612,7 @@ function may_render_variant(data, tk, block) {
 		tk.dom.variantg
 			.append('text')
 			.attr('x', data.pileup_data.width + 5)
-			.attr('y', -10 + tk.dom.variantrowheight)
+			.attr('y', -20 + tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
 			.text('Diff Score')
 	}
@@ -644,24 +644,22 @@ function setTkHeight(tk) {
 
 		// h is the global height. to set y position for these components of this group, should not directly use h, but. following code using diff_score_* need to be clarified
 		if (tk.variants) {
-			g.dom.diff_score_barplot_fullstack
-				.transition()
-				.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height) + ')')
+			g.dom.diff_score_barplot_fullstack.transition().attr('transform', 'translate(0,0)')
 		}
 		if (g.partstack) {
 			// slider visible
 			if (tk.variants) {
-				g.dom.diff_score_barplot_partstack
-					.transition()
-					.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height) + ')')
+				g.dom.diff_score_barplot_partstack.transition().attr('transform', 'translate(0,0)')
 				g.dom.vslider.g
 					.transition()
-					.attr('transform', 'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + h + ') scale(1)')
+					//.attr('transform', 'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + h + ') scale(1)')
+					.attr('transform', 'translate(0,0) scale(1)')
 			} else {
-				g.dom.vslider.g.transition().attr('transform', 'translate(0,' + h + ') scale(1)')
+				//g.dom.vslider.g.transition().attr('transform', 'translate(0,' + h + ') scale(1)')
+				g.dom.vslider.g.transition().attr('transform', 'translate(0,0) scale(1)')
 			}
 		}
-		h += g.data.height
+		h += g.data.height + msgheight
 	}
 	tk.height_main = tk.height = h
 	tk.height_main += tk.toppad + tk.bottompad
@@ -921,7 +919,7 @@ function makeGroup(gd, tk, block, data) {
 		axisstyle({
 			axis: tk.dom.diff_score_axis
 				.transition()
-				.attr('transform', 'translate(' + 0 + ',' + (diff_score_height + 0.5 * tk.dom.variantrowheight) + ')')
+				.attr('transform', 'translate(' + 0 + ',' + diff_score_height + ')')
 				.call(axis),
 			color: 'black',
 			showline: true
