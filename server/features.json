@@ -583,8 +583,9 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
             "ppcalls": [
                 {
+                    "label": "Pediatric dataset example",
+                    "urlparam": "?genome=hg19&gene=JAK2&dataset=Pediatric",
                     "runargs": {
-                        "parseurl": true,
                         "gene":"jak2",
                         "nobox": 1,
                         "noheader": 1,
@@ -592,7 +593,45 @@
                         "dataset":"Pediatric"
                     },
                     "testSpec": {
-                        "expected": {"circle": 10 }
+                        "expected": { "circle": 10 }
+                    }
+                },
+                {
+                    "label": "GENCODE example",
+                    "urlparam": "?genome=hg38&gene=ENST00000407796&mds3=GDC",
+                    "runargs": {
+                        "gene":"ENST00000407796",
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg38",
+                        "tracks":[
+                            {
+                                "type": "mds3",
+                                "dslabel":"GDC"
+                            }
+                        ]
+                    },
+                    "testSpec": {
+                        "expected": { "circle": 10 }
+                    }
+                },
+                {
+                    "label": "RefSeq example",
+                    "urlparam": "?genome=hg38&gene=NM_005163&mds3=GDC",
+                    "runargs": {
+                        "gene":"NM_005163",
+                        "nobox": 1,
+                        "noheader": 1,
+                        "genome": "hg38",
+                        "tracks":[
+                            {
+                                "type": "mds3",
+                                "dslabel":"GDC"
+                            }
+                        ]
+                    },
+                    "testSpec": {
+                        "expected": { "circle": 10 }
                     }
                 }
             ],
