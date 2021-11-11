@@ -31,7 +31,7 @@ export class InputTerm {
 		try {
 			// reference shortcuts from this.input
 			const section = this.input.section
-			const { app, config, state, disable_terms } = this.opts.parent
+			const { app, config, state, disable_terms } = this.parent
 
 			this.pill = termsettingInit({
 				placeholder: section.selectPrompt,
@@ -66,7 +66,6 @@ export class InputTerm {
 			})
 		} catch (e) {
 			this.displayError([e])
-			this.opts.callbacks.error()
 		}
 	}
 
@@ -80,7 +79,7 @@ export class InputTerm {
 			.enter()
 			.append('div')
 			.text(e => e)
-		this.opts.callbacks.error()
+		this.parent.handleError()
 		console.error(errors)
 	}
 
@@ -107,7 +106,7 @@ export class InputTerm {
 				await this.updateTerm()
 			} catch (e) {
 				// will allow pill to update to a new term as needed,
-				// so that the rendered pill matches the error message
+				// so that the rendered pill and values table match the error message
 				errors.push(e)
 			}
 
@@ -118,7 +117,6 @@ export class InputTerm {
 			if (errors.length) throw errors
 		} catch (errors) {
 			this.displayError(errors)
-			this.opts.callbacks.error()
 		}
 	}
 
@@ -137,8 +135,6 @@ export class InputTerm {
 		const t = this.input.term
 		if (!t) return
 
-		const parent = this.parent // should be fine as "parent" is not a reserved keyword
-
 		if (!t.q) throw '.term.q missing on this input'
 
 		if (!t.q.mode) {
@@ -153,7 +149,7 @@ export class InputTerm {
 		*/
 		if (q.mode == 'continuous') delete q.mode
 
-		const data = await parent.app.vocabApi.getCategories(t, parent.state.termfilter.filter, [
+		const data = await this.parent.app.vocabApi.getCategories(t, this.parent.state.termfilter.filter, [
 			'term1_q=' + encodeURIComponent(JSON.stringify(q))
 		])
 		if (data.error) throw data.error

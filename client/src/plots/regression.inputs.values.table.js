@@ -18,7 +18,7 @@ export class InputValuesTable {
 			// may allow the values table even if there is a variable error,
 			// in case it helps clarify the error message such as having
 			// not exactly two samplecount bars available for a binary outcome term
-			if (!variable /*|| variable.error*/) {
+			if (!variable || !input.sampleCounts) {
 				this.dom.holder.style('display', 'none')
 				this.dom.loading_div.style('display', 'none')
 				return
@@ -88,11 +88,11 @@ function setRenderers(self) {
 		const dom = self.dom
 		const input = self.handler.input
 		const t = input.term
-		make_values_table(self.handler.input.sampleCounts, 'values_table')
+		make_values_table(input.sampleCounts, 'values_table')
 		render_summary_div(input, self.dom)
 
-		if (self.handler.input.excludeCounts.length) {
-			make_values_table(self.handler.input.excludeCounts, 'excluded_table')
+		if (input.excludeCounts.length) {
+			make_values_table(input.excludeCounts, 'excluded_table')
 		} else {
 			dom.excluded_table.selectAll('*').remove()
 		}

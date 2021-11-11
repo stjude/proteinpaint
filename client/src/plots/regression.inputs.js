@@ -130,6 +130,11 @@ export class RegressionInputs {
 			}
 		}
 	}
+
+	handleError() {
+		this.hasError = true
+		this.dom.submitBtn.property('disabled', true)
+	}
 }
 
 function setRenderers(self) {
@@ -258,13 +263,7 @@ function setRenderers(self) {
 			input.handler = new InputTerm({
 				holder: inputDiv.append('div'),
 				input,
-				parent: self,
-				callbacks: {
-					error: () => {
-						self.hasError = true
-						self.dom.submitBtn.property('disabled', true)
-					}
-				}
+				parent: self
 			})
 		} else {
 			throw 'addInput: unknown varClass'
