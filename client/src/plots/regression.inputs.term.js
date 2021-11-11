@@ -75,7 +75,7 @@ export class InputTerm {
 		this.dom.err_div
 			.style('display', 'block')
 			.selectAll('div')
-			.data(errors)
+			.data(Array.isArray(errors) ? errors : [errors])
 			.enter()
 			.append('div')
 			.text(e => e)

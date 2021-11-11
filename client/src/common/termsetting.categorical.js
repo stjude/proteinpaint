@@ -5,53 +5,84 @@ Arguments
 self: a termsetting instance
 */
 
-export function setCategoricalMethods(self) {
+export function getCategoricalHandler(self) {
 	setGroupsettingMethods(self)
+	setCategoricalMethods(self)
 
-	self.showEditMenu = function(div) {
-		self.showGrpOpts(div)
-	}
+	return {
+		showEditMenu(div) {
+			self.showGrpOpts(div)
+		},
 
-	self.get_term_name = function(d) {
-		if (!self.opts.abbrCutoff) return d.name
-		return d.name.length <= self.opts.abbrCutoff + 2
-			? d.name
-			: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
-	}
+		get_term_name(d) {
+			if (!self.opts.abbrCutoff) return d.name
+			return d.name.length <= self.opts.abbrCutoff + 2
+				? d.name
+				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+		},
 
-	self.get_status_msg = function() {
-		// get message text for the right half pill; may return null
-		if (self.q.groupsetting && self.q.groupsetting.inuse) {
-			if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
-				if (!self.term.groupsetting) return 'term.groupsetting missing'
-				if (!self.term.groupsetting.lst) return 'term.groupsetting.lst[] missing'
-				const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-				if (!i) return 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing'
-				return i.name
+		get_status_msg() {
+			// get message text for the right half pill; may return null
+			return self.validateGroupsetting()
+		},
+
+		validateQ(data) {
+			const t = data.term
+			const q = JSON.parse(JSON.stringify(data.q))
+			const endNote = `(${t.type}, mode='${q.mode}', type='${q.type}')`
+			// validate the configuration
+			if (!('type' in q)) q.type = 'values' // default
+			if (q.type == 'values') {
+				if (!t.values) self.error = `no term.values defined ${endNote}`
+				if (q.mode == 'binary') {
+					if (Object.keys(t.values).length != 2) self.error = `term.values must have exactly two keys ${endNote}`
+
+					if (data.sampleCounts) {
+						for (const key in t.values) {
+							if (!data.sampleCounts.find(d => d.key === key))
+								self.error = `there are no samples for the required binary value=${key} ${endNote}`
+						}
+					}
+				}
+				return
 			}
-			if (self.q.groupsetting.customset) {
-				const n = self.q.groupsetting.customset.groups.length
-				if (self.q.bar_by_grade) return n + ' groups of grades'
-				if (self.q.bar_by_children) return n + ' groups of sub-conditions'
-				return 'Divided into ' + n + ' groups'
+
+			if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
+				const tgs = t.groupsetting
+				if (!tgs) throw `no term.groupsetting ${endNote}`
+
+				let groupset
+				if (q.type == 'predefined-groupset') {
+					const idx = q.groupsetting.predefined_groupset_idx
+					if (!tgs.lst[idx]) throw `no groupsetting[predefined_groupset_idx=${idx}] ${endNote}`
+					groupset = tgs.lst[idx]
+				} else {
+					if (!q.groupsetting.customset) throw `no q.groupsetting.customset defined ${endNote}`
+					groupset = q.groupsetting.customset
+				}
+
+				if (!groupset.groups.every(g => g.name !== undefined))
+					throw `every group in groupset must have 'name' defined ${endNote}`
+
+				if (q.mode == 'binary') {
+					if (groupset.groups.length != 2) throw `there must be exactly two groups ${endNote}`
+
+					if (data.sampleCounts) {
+						for (const grp of groupset.groups) {
+							if (!data.sampleCounts.find(d => d.label === grp.name))
+								throw `there are no samples for the required binary value=${grp.name} ${endNote}`
+						}
+					}
+				}
+				return
 			}
-			return 'Unknown setting for groupsetting'
+
+			throw `unknown q.type='${q.type}' for categorical q.mode='${q.mode}'`
 		}
-		if (self.term.type == 'condition') {
-			if (self.q.bar_by_grade) {
-				if (self.q.value_by_max_grade) return 'Max. Grade'
-				if (self.q.value_by_most_recent) return 'Most Recent Grade'
-				if (self.q.value_by_computable_grade) return 'Any Grade'
-				return 'Error: unknown grade setting'
-			}
-			if (self.q.bar_by_children) {
-				return 'Sub-condition'
-			}
-			return 'Error: unknown setting for term.type == "condition"'
-		}
-		return null // for no label
 	}
+}
 
+export function setCategoricalMethods(self) {
 	self.addCategory2sampleCounts = async function() {
 		const lst = []
 		if (self.term.type == 'condition') {
@@ -75,58 +106,22 @@ export function setCategoricalMethods(self) {
 		}
 	}
 
-	self.validateQ = function(data) {
-		const t = data.term
-		const q = JSON.parse(JSON.stringify(data.q))
-		const endNote = `(${t.type}, mode='${q.mode}', type='${q.type}')`
-		// validate the configuration
-		if (!('type' in q)) q.type = 'values' // default
-		if (q.type == 'values') {
-			if (!t.values) self.error = `no term.values defined ${endNote}`
-			if (q.mode == 'binary') {
-				if (Object.keys(t.values).length != 2) self.error = `term.values must have exactly two keys ${endNote}`
-
-				if (data.sampleCounts) {
-					for (const key in t.values) {
-						if (!data.sampleCounts.find(d => d.key === key))
-							self.error = `there are no samples for the required binary value=${key} ${endNote}`
-					}
-				}
-			}
-			return
+	self.validateGroupsetting = function() {
+		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
+		if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
+			if (!self.term.groupsetting) return 'term.groupsetting missing'
+			if (!self.term.groupsetting.lst) return 'term.groupsetting.lst[] missing'
+			const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+			if (!i) return 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing'
+			return i.name
 		}
-
-		if (q.type == 'predefined-groupset' || q.type == 'custom-groupset') {
-			const tgs = t.groupsetting
-			if (!tgs) throw `no term.groupsetting ${endNote}`
-
-			let groupset
-			if (q.type == 'predefined-groupset') {
-				const idx = q.groupsetting.predefined_groupset_idx
-				if (!tgs.lst[idx]) throw `no groupsetting[predefined_groupset_idx=${idx}] ${endNote}`
-				groupset = tgs.lst[idx]
-			} else {
-				if (!q.groupsetting.customset) throw `no q.groupsetting.customset defined ${endNote}`
-				groupset = q.groupsetting.customset
-			}
-
-			if (!groupset.groups.every(g => g.name !== undefined))
-				throw `every group in groupset must have 'name' defined ${endNote}`
-
-			if (q.mode == 'binary') {
-				if (groupset.groups.length != 2) throw `there must be exactly two groups ${endNote}`
-
-				if (data.sampleCounts) {
-					for (const grp of groupset.groups) {
-						if (!data.sampleCounts.find(d => d.label === grp.name))
-							throw `there are no samples for the required binary value=${grp.name} ${endNote}`
-					}
-				}
-			}
-			return
+		if (self.q.groupsetting.customset) {
+			const n = self.q.groupsetting.customset.groups.length
+			if (self.q.bar_by_grade) return n + ' groups of grades'
+			if (self.q.bar_by_children) return n + ' groups of sub-conditions'
+			return 'Divided into ' + n + ' groups'
 		}
-
-		throw `unknown q.type='${q.type}' for categorical q.mode='${q.mode}'`
+		return 'Unknown setting for groupsetting'
 	}
 
 	/******************* Functions for Categorical terms *******************/

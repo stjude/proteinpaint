@@ -1,12 +1,12 @@
 import { getInitFxn, copyMerge } from '../common/rx.core'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
-import { setCategoricalMethods } from './termsetting.categorical'
-import { setConditionalMethods } from './termsetting.conditional'
-import { setNumericMethods as setDiscreteNumericMethods } from './termsetting.discrete'
-import { setNumericMethods as setContNumericMethods } from './termsetting.continuous'
-import { setNumericMethods as setBinaryNumericMethods } from './termsetting.binary'
-import { setNumericTabs } from './termsetting.numeric'
+import { getCategoricalHandler } from './termsetting.categorical'
+import { getConditionHandler } from './termsetting.condition'
+import { getNumericDiscreteHandler } from './termsetting.numeric.discrete'
+import { getNumericContHandler } from './termsetting.numeric.continuous'
+import { getNumericBinaryHandler } from './termsetting.numeric.binary'
+import { getNumericToggleHandler } from './termsetting.numeric.toggle'
 
 /*
 constructor option and API are documented at
@@ -30,8 +30,9 @@ https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/
 
 ************** explain behavior here:
 
-setMethodsByTermType[this.term.type](self)
-- this will attach these methods to 'self', as appropriate for a given term type:
+initHandlerByType(self)
+- this will create a handler{} for each known term.type and "subtype" ('discrete', 'binary', etc)
+- a handler object will have the following methods
 	- get_term_name(term): will return the term label to use in the pill, including potential abbreviation
 	- get_status_msg(): either empty or error string, displayed on the right side of the pill
 	- showEditMenu(div): content/inputs to show for editing a term's binning or groupsetting
@@ -70,6 +71,7 @@ class TermSetting {
 		setInteractivity(this)
 		setRenderers(this)
 		this.initUI()
+		this.initHandlerByType()
 
 		// this api will be frozen and returned by termsettingInit()
 		this.hasError = false
@@ -88,16 +90,7 @@ class TermSetting {
 					if ('filter' in data) this.filter = data.filter
 					if ('activeCohort' in data) this.activeCohort = data.activeCohort
 					if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
-					if (this.term) {
-						// term is present and may have been replaced
-						// reset methods by term type
-						if (this.setMethodsByTermType[this.term.type]) {
-							// see comments above about the class behavior
-							this.setMethodsByTermType[this.term.type](this)
-						} else {
-							throw 'unknown term type for setMethodsByTermType: ' + this.term.type
-						}
-					}
+					this.setHandler()
 					this.updateUI()
 					if (data.term && this.validateQ) this.validateQ(data)
 					if (data.term && data.term.type !== 'integer' && data.term.type !== 'float') this.addCategory2sampleCounts()
@@ -109,9 +102,9 @@ class TermSetting {
 			showTree: this.showTree,
 			hasError: () => this.hasError,
 			validateQ: d => {
-				if (!this.validateQ) return
+				if (!this.handler || !this.handler.validateQ) return
 				try {
-					this.validateQ(d)
+					this.handler.validateQ(d)
 				} catch (e) {
 					this.hasError = true
 					throw e
@@ -119,6 +112,7 @@ class TermSetting {
 			}
 		}
 	}
+
 	validateOpts(o) {
 		if (!o.holder) throw '.holder missing'
 		if (!o.vocab) throw '.vocab missing'
@@ -133,6 +127,7 @@ class TermSetting {
 		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = ['discrete']
 		return o
 	}
+
 	validateMainData(d) {
 		if (d.term) {
 			// term is optional
@@ -144,6 +139,37 @@ class TermSetting {
 		if (typeof d.q != 'object') throw 'data.q{} is not object'
 		if (d.disable_terms) {
 			if (!Array.isArray(d.disable_terms)) throw 'data.disable_terms[] is not array'
+		}
+	}
+
+	initHandlerByType() {
+		const defaultHandler = getDefaultHandler(this)
+		this.handlerByType = {
+			categorical: getCategoricalHandler(this),
+			condition: getConditionHandler(this),
+			'numeric.discrete': getNumericDiscreteHandler(this),
+			'numeric.continuous': getNumericContHandler(this),
+			'numeric.binary': getNumericBinaryHandler(this),
+			'numeric.toggle': getNumericToggleHandler(this),
+			survival: defaultHandler,
+			default: defaultHandler
+		}
+	}
+
+	setHandler() {
+		if (!this.term) {
+			this.handler = this.handlerByType.default
+			return
+		}
+		const type = this.term.type == 'integer' || this.term.type == 'float' ? 'numeric' : this.term.type // 'categorical', 'condition', 'survival', etc
+		const numEditVers = this.opts.numericEditMenuVersion
+		const subtype = type != 'numeric' ? '' : numEditVers.length > 1 ? '.toggle' : '.' + numEditVers[0] // defaults to 'discrete'
+		const typeSubtype = `${type}${subtype}`
+
+		if (this.handlerByType[typeSubtype]) {
+			this.handler = this.handlerByType[typeSubtype]
+		} else {
+			throw `unknown term type[.subtype] for setActiveHandler: ${this.term.type}${subtype}`
 		}
 	}
 }
@@ -184,26 +210,6 @@ function setRenderers(self) {
 				.style('border-radius', '6px')
 				.style('background-color', '#4888BF')
 				.text(self.opts.placeholderIcon)
-		}
-
-		const editTypes = self.opts.numericEditMenuVersion
-		const numericMethodsSetter =
-			editTypes.length > 1
-				? setNumericTabs
-				: editTypes[0] == 'continuous'
-				? setContNumericMethods
-				: editTypes[0] == 'binary'
-				? setBinaryNumericMethods
-				: setDiscreteNumericMethods
-
-		self.setMethodsByTermType = {
-			integer: numericMethodsSetter,
-			float: numericMethodsSetter,
-			categorical: setCategoricalMethods,
-			condition: setConditionalMethods,
-			// for now, use default methods as placeholder functions
-			// until there is actual need to group survival term values
-			survival: setDefaultMethods
 		}
 
 		self.dom.btnDiv = self.dom.holder.append('div')
@@ -273,7 +279,7 @@ function setRenderers(self) {
 			.attr('class', 'term_name_btn  sja_filter_tag_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
-			.html(self.get_term_name)
+			.html(self.handler.get_term_name)
 
 		self.updatePill.call(this)
 	}
@@ -291,7 +297,7 @@ function setRenderers(self) {
 		// allow more than 1 flags for future expansion
 		const grpsetting_flag = self.q.groupsetting && self.q.groupsetting.inuse
 
-		const status_msg = self.get_status_msg()
+		const status_msg = self.handler.get_status_msg()
 
 		self.dom.pill_termname.style(
 			'border-radius',
@@ -377,10 +383,8 @@ function setInteractivity(self) {
 		self.dom.tip.clear().showunder(self.dom.holder.node())
 		if (self.opts.showFullMenu) {
 			self.showEditReplaceRemoveMenu(self.dom.tip.d)
-		} /*else if (self.opts.) {
-			
-		}*/ else {
-			self.showEditMenu(self.dom.tip.d)
+		} else {
+			self.handler.showEditMenu(self.dom.tip.d)
 		}
 	}
 
@@ -392,7 +396,7 @@ function setInteractivity(self) {
 			.text('Edit')
 			.on('click', () => {
 				self.dom.tip.clear()
-				self.showEditMenu(self.dom.tip.d)
+				self.handler.showEditMenu(self.dom.tip.d)
 			})
 		div
 			.append('div')
@@ -519,16 +523,16 @@ function valid_binscheme(q) {
 	return false
 }
 
-function emptyMethod() {}
-
-function setDefaultMethods(self) {
-	self.showEditMenu = emptyMethod
-	self.get_status_msg = emptyMethod
-	self.get_term_name = d => {
-		if (!self.opts.abbrCutoff) return d.name
-		return d.name.length <= self.opts.abbrCutoff + 2
-			? d.name
-			: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+function getDefaultHandler(self) {
+	return {
+		showEditMenu() {},
+		get_status_msg() {},
+		get_term_name(d) {
+			if (!self.opts.abbrCutoff) return d.name
+			return d.name.length <= self.opts.abbrCutoff + 2
+				? d.name
+				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+		}
 	}
 }
 
