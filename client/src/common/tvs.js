@@ -264,3 +264,14 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	// optional event handlers
 }
+
+// opts is the same argument for the TVS constructor()
+export function showTvsMenu(opts) {
+	const self = new TVS(opts)
+	self.tvs = {
+		term: opts.term,
+		values: [],
+		ranges: []
+	}
+	self.methodsByTermType[opts.term.type].fillMenu(opts.holder, self.tvs)
+}

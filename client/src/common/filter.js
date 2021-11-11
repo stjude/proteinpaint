@@ -828,31 +828,15 @@ function setInteractivity(self) {
 								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
 								.map(d => d.tvs.term.id)
 						: [],
-				set_custombtns(term, div, termIsDisabled) {
-					console.log(832, 'set_custombtns')
-					div.selectAll('*').remove()
-					const holder = div.append('div')
 
-					const pill = TVSInit({
-						vocabApi: self.vocabApi,
-						holder,
-						debug: self.opts.debug,
-						callback: tvs => {
-							console.log(838, tvs)
-
-							const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
-							filterUiRoot.lst.push({ type: 'tvs', tvs })
-							if (filterUiRoot.lst.length > 1 && !filterUiRoot.join) {
-								filterUiRoot.join = 'and'
-							}
-							self.refresh(filterUiRoot)
-						}
-					})
-					//self.pills[item.$id] = pill
-					pill.main({ tvs: { term, values: [], ranges: [] } })
-					holder.on('click', () => {
-						pill.showMenu(div.append('div'))
-					})
+				click_term2select_tvs(tvs) {
+					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+					filterUiRoot.lst.push({ type: 'tvs', tvs })
+					if (filterUiRoot.lst.length > 1 && !filterUiRoot.join) {
+						filterUiRoot.join = 'and'
+					}
+					self.dom.treeTip.hide()
+					self.refresh(filterUiRoot)
 				}
 			},
 			barchart: {
