@@ -91,7 +91,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'negate_btn')
 			.style('cursor', 'default')
-			.style('display', self.tvs.values.length ? 'inline-block' : 'none')
+			//.style('display', 'inline-block' : 'none')
 			.style('padding', '6px 6px 3px 6px')
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
 			.html(self.tvs.isnot ? 'NOT' : 'IS')
@@ -114,11 +114,12 @@ function setRenderers(self) {
 	self.updatePill = async function() {
 		const one_term_div = select(this)
 		const tvs = one_term_div.datum()
+		const lstlen = (self.tvs.values && self.tvs.values.length) || (self.tvs.ranges && self.tvs.ranges.length)
 
 		// negate button
 		one_term_div
 			.select('.negate_btn')
-			.style('display', self.tvs.values.length ? 'inline-block' : 'none')
+			.style('display', lstlen ? 'inline-block' : 'none')
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
 			.html(tvs.isnot ? 'NOT' : 'IS')
 
@@ -133,7 +134,7 @@ function setRenderers(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'value_btn sja_filter_tag_btn')
-			.style('display', self.tvs.values.length ? 'inline-block' : 'none')
+			.style('display', lstlen ? 'inline-block' : 'none')
 			.style('padding', '6px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')
 			.style('font-style', 'italic')

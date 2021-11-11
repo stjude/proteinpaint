@@ -838,15 +838,18 @@ function setInteractivity(self) {
 						holder,
 						debug: self.opts.debug,
 						callback: tvs => {
-							console.log(838, tvs, 'TODO: append tvs to filter lst')
+							console.log(838, tvs)
 
 							const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 							filterUiRoot.lst.push({ type: 'tvs', tvs })
+							if (filterUiRoot.lst.length > 1 && !filterUiRoot.join) {
+								filterUiRoot.join = 'and'
+							}
 							self.refresh(filterUiRoot)
 						}
 					})
 					//self.pills[item.$id] = pill
-					pill.main({ tvs: { term, values: [] } })
+					pill.main({ tvs: { term, values: [], ranges: [] } })
 					holder.on('click', () => {
 						pill.showMenu(div.append('div'))
 					})
