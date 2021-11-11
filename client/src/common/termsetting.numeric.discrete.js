@@ -6,67 +6,47 @@ import { get_bin_label } from '../../shared/termdb.bins'
 import { init_tabs } from '../dom/toggleButtons'
 import { make_radios } from '../dom/radiobutton'
 
-/*
-Arguments
-self: a termsetting instance
-*/
+// self is the termsetting instance
+export function getNumericDiscreteHandler(self) {
+	return {
+		get_term_name(d) {
+			if (!self.opts.abbrCutoff) return d.name
+			return d.name.length <= self.opts.abbrCutoff + 2
+				? d.name
+				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+		},
 
-export async function setNumericMethods(self, closureType = 'closured') {
-	if (closureType == 'non-closured') {
-		// TODO: always use this non-closured version later
-		return {
-			get_term_name,
-			get_status_msg,
-			showEditMenu
+		get_status_msg() {
+			return ''
+		},
+
+		async showEditMenu(div) {
+			self.num_obj = {}
+
+			self.num_obj.plot_size = {
+				width: 500,
+				height: 100,
+				xpad: 10,
+				ypad: 20
+			}
+			try {
+				self.num_obj.density_data = await self.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
+			} catch (err) {
+				console.log(err)
+			}
+
+			div.selectAll('*').remove()
+			self.dom.num_holder = div
+			self.dom.bins_div = div.append('div').style('padding', '5px')
+			setqDefaults(self)
+			setDensityPlot(self)
+			renderBoundaryInclusionInput(self)
+			renderTypeInputs(self)
+			renderButtons(self)
 		}
-	} else {
-		// this version maintains a closured reference to 'self'
-		// so the 'self' argument does not need to be passed
-		//
-		// TODO: may convert all other termsetting.*.js methods to
-		// just use the non-closured version to simplify
-		//
-		self.get_term_name = d => get_term_name(self, d)
-		self.get_status_msg = get_status_msg
-		self.showEditMenu = async div => await showEditMenu(self, div)
 	}
 }
 
-function get_term_name(self, d) {
-	if (!self.opts.abbrCutoff) return d.name
-	return d.name.length <= self.opts.abbrCutoff + 2
-		? d.name
-		: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
-}
-
-function get_status_msg() {
-	return ''
-}
-
-async function showEditMenu(self, div) {
-	self.num_obj = {}
-
-	self.num_obj.plot_size = {
-		width: 500,
-		height: 100,
-		xpad: 10,
-		ypad: 20
-	}
-	try {
-		self.num_obj.density_data = await self.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
-	} catch (err) {
-		console.log(err)
-	}
-
-	div.selectAll('*').remove()
-	self.dom.num_holder = div
-	self.dom.bins_div = div.append('div').style('padding', '5px')
-	setqDefaults(self)
-	setDensityPlot(self)
-	renderBoundaryInclusionInput(self)
-	renderTypeInputs(self)
-	renderButtons(self)
-}
 
 function applyEdits(self) {
 	if (self.q.type == 'regular') {

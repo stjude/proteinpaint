@@ -1,119 +1,101 @@
 import { event as d3event } from 'd3-selection'
 import { setDensityPlot } from './termsetting.density'
-import { renderBoundaryInclusionInput, renderBoundaryInputDivs } from './termsetting.discrete'
+import { renderBoundaryInclusionInput, renderBoundaryInputDivs } from './termsetting.numeric.discrete'
 import { get_bin_label } from '../../shared/termdb.bins'
 import { keyupEnter } from '../client'
 import { make_one_checkbox } from '../dom/checkbox'
 
-export async function setNumericMethods(self, closureType = 'closured') {
-	if (closureType == 'non-closured') {
-		// TODO: always use this non-closured version later
-		return {
-			get_term_name,
-			get_status_msg,
-			showEditMenu,
-			validateQ
+// self is the termsetting instance
+export function getNumericBinaryHandler(self) {
+	return {
+		get_term_name(d) {
+			if (!self.opts.abbrCutoff) return d.name
+			return d.name.length <= self.opts.abbrCutoff + 2
+				? d.name
+				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+		},
+
+		get_status_msg() {
+			return ''
+		},
+
+		async showEditMenu(div) {
+			self.num_obj = {}
+
+			self.num_obj.plot_size = {
+				width: 500,
+				height: 100,
+				xpad: 10,
+				ypad: 20
+			}
+			try {
+				self.num_obj.density_data = await self.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
+			} catch (e) {
+				throw e
+			}
+			self.dom.num_holder = div
+			div.selectAll('*').remove()
+			self.dom.bins_div = div.append('div').style('padding', '5px')
+
+			setqDefaults(self)
+			setDensityPlot(self)
+			renderBoundaryInclusionInput(self)
+
+			// cutoff input
+			self.dom.cutoff_div = self.dom.bins_div.append('div').style('margin', '10px')
+			renderCuttoffInput(self)
+
+			// render bin labels
+			self.dom.bins_div
+				.append('div')
+				.style('padding', '5px')
+				.style('margin', '5px')
+				.style('color', 'rgb(136, 136, 136)')
+				.html('Bin labels')
+			self.dom.customBinLabelTd = self.dom.bins_div
+				.append('div')
+				.style('padding', '5px')
+				.style('margin', '5px')
+			renderBoundaryInputDivs(self, self.q.lst)
+
+			const btndiv = div.append('div').style('padding', '3px 10px')
+
+			btndiv
+				.append('button')
+				.style('margin', '5px')
+				.html('Apply')
+				.on('click', async () => {
+					delete self.q.startinclusive
+					delete self.q.stopinclusive
+					delete self.q.bin_size
+					delete self.q.first_bin
+					delete self.q.last_bin
+					self.q.lst = processCustomBinInputs(self)
+					self.numqByTermIdModeType[self.term.id].binary = JSON.parse(JSON.stringify(self.q))
+					self.q.mode = 'binary'
+					self.opts.callback({
+						id: self.term.id,
+						term: self.term,
+						q: self.q
+					})
+				})
+
+			btndiv
+				.append('button')
+				.style('margin', '5px')
+				.html('Reset')
+				.on('click', () => {
+					// delete self.q and create new with default
+					// TODO: rightnow reset will devide bins at max-min/2 as per logic at line 134
+					// if it must be reset at median, the logic must be changned
+					delete self.q
+					delete self.numqByTermIdModeType[self.term.id]
+					showEditMenu(self, self.dom.num_holder)
+				})
 		}
-	} else {
-		// this version maintains a closured reference to 'self'
-		// so the 'self' argument does not need to be passed
-		//
-		// TODO: may convert all other termsetting.*.js methods to
-		// just use the non-closured version to simplify
-		//
-		self.get_term_name = d => get_term_name(self, d)
-		self.get_status_msg = get_status_msg
-		self.showEditMenu = async div => await showEditMenu(self, div)
-		self.validateQ = validateQ
 	}
 }
-
-function get_term_name(self, d) {
-	if (!self.opts.abbrCutoff) return d.name
-	return d.name.length <= self.opts.abbrCutoff + 2
-		? d.name
-		: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
-}
-
-function get_status_msg() {
-	return ''
-}
-
-async function showEditMenu(self, div) {
-	self.num_obj = {}
-
-	self.num_obj.plot_size = {
-		width: 500,
-		height: 100,
-		xpad: 10,
-		ypad: 20
-	}
-	try {
-		self.num_obj.density_data = await self.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
-	} catch (e) {
-		throw e
-	}
-	self.dom.num_holder = div
-	div.selectAll('*').remove()
-	self.dom.bins_div = div.append('div').style('padding', '5px')
-
-	setqDefaults(self)
-	setDensityPlot(self)
-	renderBoundaryInclusionInput(self)
-
-	// cutoff input
-	self.dom.cutoff_div = self.dom.bins_div.append('div').style('margin', '10px')
-	renderCuttoffInput(self)
-
-	// render bin labels
-	self.dom.bins_div
-		.append('div')
-		.style('padding', '5px')
-		.style('margin', '5px')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('Bin labels')
-	self.dom.customBinLabelTd = self.dom.bins_div
-		.append('div')
-		.style('padding', '5px')
-		.style('margin', '5px')
-	renderBoundaryInputDivs(self, self.q.lst)
-
-	const btndiv = div.append('div').style('padding', '3px 10px')
-
-	btndiv
-		.append('button')
-		.style('margin', '5px')
-		.html('Apply')
-		.on('click', async () => {
-			delete self.q.startinclusive
-			delete self.q.stopinclusive
-			delete self.q.bin_size
-			delete self.q.first_bin
-			delete self.q.last_bin
-			self.q.lst = processCustomBinInputs(self)
-			self.numqByTermIdModeType[self.term.id].binary = JSON.parse(JSON.stringify(self.q))
-			self.q.mode = 'binary'
-			self.opts.callback({
-				id: self.term.id,
-				term: self.term,
-				q: self.q
-			})
-		})
-
-	btndiv
-		.append('button')
-		.style('margin', '5px')
-		.html('Reset')
-		.on('click', () => {
-			// delete self.q and create new with default
-			// TODO: rightnow reset will devide bins at max-min/2 as per logic at line 134
-			// if it must be reset at median, the logic must be changned
-			delete self.q
-			delete self.numqByTermIdModeType[self.term.id]
-			showEditMenu(self, self.dom.num_holder)
-		})
-}
-
+ 
 function setqDefaults(self) {
 	const dd = self.num_obj.density_data
 	const boundry_value = self.q && self.q.lst && self.q.lst.length ? self.q.lst[0].stop : undefined
@@ -161,19 +143,6 @@ function setqDefaults(self) {
 		})
 	}
 	//*** validate self.q ***//
-}
-
-function validateQ(data) {
-	const q = data.q
-	if (q.type !== 'custom') throw 'term.q.type must be custom'
-	if (q.lst.length !== 2) throw 'must be only 2 bins'
-	if (!q.lst.every(bin => bin.label !== undefined)) throw 'every bin in q.lst must have label defined'
-	if (data.sampleCounts) {
-		for (const bin of q.lst) {
-			if (!data.sampleCounts.find(d => d.label === bin.label))
-				throw `there are no samples for the required binary bin=${bin.label} (${data.term.type}, mode='${q.mode}', type='${q.type}')`
-		}
-	}
 }
 
 async function renderCuttoffInput(self) {
