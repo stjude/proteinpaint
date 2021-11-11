@@ -443,7 +443,7 @@ function setRenderers(self) {
 						.text('n=' + term.samplecount)
 				}
 			} else if (self.opts.set_custombtns) {
-				self.opts.set_custombtns(term, div.append('div').style('display', 'inline-block'), termIsDisabled, cls_termview)
+				self.opts.set_custombtns(term, div, termIsDisabled, cls_termview)
 				// div.append('div').attr('class', cls_termgraphdiv)
 			} else {
 				// no modifier, show view button and graph div

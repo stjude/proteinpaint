@@ -86,12 +86,12 @@ function setRenderers(self) {
 			.html(self.methodsByTermType[self.tvs.term.type].term_name_gen)
 			.style('text-transform', 'uppercase')
 
-		// // negate button
+		// negate button
 		one_term_div
 			.append('div')
 			.attr('class', 'negate_btn')
 			.style('cursor', 'default')
-			.style('display', 'inline-block')
+			.style('display', self.tvs.values.length ? 'inline-block' : 'none')
 			.style('padding', '6px 6px 3px 6px')
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
 			.html(self.tvs.isnot ? 'NOT' : 'IS')
@@ -118,6 +118,7 @@ function setRenderers(self) {
 		// negate button
 		one_term_div
 			.select('.negate_btn')
+			.style('display', self.tvs.values.length ? 'inline-block' : 'none')
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
 			.html(tvs.isnot ? 'NOT' : 'IS')
 
@@ -132,7 +133,7 @@ function setRenderers(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'value_btn sja_filter_tag_btn')
-			.style('display', 'inline-block')
+			.style('display', self.tvs.values.length ? 'inline-block' : 'none')
 			.style('padding', '6px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')
 			.style('font-style', 'italic')

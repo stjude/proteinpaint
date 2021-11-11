@@ -827,7 +827,30 @@ function setInteractivity(self) {
 						? self.activeData.filter.lst
 								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
 								.map(d => d.tvs.term.id)
-						: []
+						: [],
+				set_custombtns(term, div, termIsDisabled) {
+					console.log(832, 'set_custombtns')
+					div.selectAll('*').remove()
+					const holder = div.append('div')
+
+					const pill = TVSInit({
+						vocabApi: self.vocabApi,
+						holder,
+						debug: self.opts.debug,
+						callback: tvs => {
+							console.log(838, tvs, 'TODO: append tvs to filter lst')
+
+							const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+							filterUiRoot.lst.push({ type: 'tvs', tvs })
+							self.refresh(filterUiRoot)
+						}
+					})
+					//self.pills[item.$id] = pill
+					pill.main({ tvs: { term, values: [] } })
+					holder.on('click', () => {
+						pill.showMenu(div.append('div'))
+					})
+				}
 			},
 			barchart: {
 				bar_click_override: tvslst => {
