@@ -261,24 +261,26 @@ async function openSandbox(track, holder) {
 
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div.body)
+	// buttons for links and/or downloads for the entire track/app
 	addButtons(track.sandbox.buttons, sandbox_div.body)
+	// arrow buttons for the entire track/app that open a new div underneath
 	addArrowBtns(track.sandbox.arrowButtons, '', sandbox_div.body, sandbox_div.body)
-
-	const toptab_div = sandbox_div.body
-		.append('div')
-		.style('display', 'flex')
-		.style('align-content', 'end')
-		.style('justify-content', 'center')
-		.style('border', 'none')
-		.style('border-bottom', '1px solid lightgray')
-		.style('width', '100%')
-	const maincontent_div = sandbox_div.body.append('div')
 
 	//Disables top, horizontal tabs for api queries or other special circumstances
 	if (track.disable_topTabs == true) {
 		renderContent(track.ppcalls[0], sandbox_div.body)
 	} else {
 		// Creates the overarching tab menu and subsequent content
+		const toptab_div = sandbox_div.body
+			.append('div')
+			.style('display', 'flex')
+			.style('align-content', 'end')
+			.style('justify-content', 'center')
+			.style('border', 'none')
+			.style('border-bottom', '1px solid lightgray')
+			.style('width', '100%')
+		const maincontent_div = sandbox_div.body.append('div')
+
 		sandboxTabMenu(track, toptab_div, maincontent_div)
 	}
 }
