@@ -47,7 +47,6 @@ export function getNumericDiscreteHandler(self) {
 	}
 }
 
-
 function applyEdits(self) {
 	if (self.q.type == 'regular') {
 		self.q.first_bin.startunbounded = true
@@ -643,6 +642,6 @@ function renderButtons(self) {
 		.on('click', () => {
 			delete self.q
 			delete self.numqByTermIdModeType[self.term.id]
-			showEditMenu(self, self.dom.num_holder)
+			self.handler.showEditMenu(self.dom.num_holder)
 		})
 }

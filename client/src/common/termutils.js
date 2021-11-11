@@ -39,7 +39,7 @@ export function graphable(term) {
 
 export function sample_match_termvaluesetting(row, filter) {
 	// console.log(row, filter)
-	const lst = filter.type == 'tvslst' ? filter.lst : [filter]
+	const lst = !filter ? [] : filter.type == 'tvslst' ? filter.lst : [filter]
 	let numberofmatchedterms = 0
 
 	/* for AND, require all terms to match */
