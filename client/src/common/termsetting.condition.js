@@ -1,11 +1,12 @@
+import { setCategoricalMethods, setGroupsettingMethods } from './termsetting.categorical'
+
 /*
 Arguments
 self: a termsetting instance
 */
-
-export function getConditionHandler(self) {
-	// NOTE: methods that are similar between categorical and condition terms
-	// have been set using setCategoricalMethods(self) in termsetting.categorical
+export function getHandler(self) {
+	//setGroupsettingMethods(self)
+	setCategoricalMethods(self)
 
 	return {
 		get_term_name(d) {

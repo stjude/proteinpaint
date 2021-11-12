@@ -1,12 +1,7 @@
 import { getInitFxn, copyMerge } from '../common/rx.core'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
-import { getCategoricalHandler } from './termsetting.categorical'
-import { getConditionHandler } from './termsetting.condition'
-import { getNumericDiscreteHandler } from './termsetting.numeric.discrete'
-import { getNumericContHandler } from './termsetting.numeric.continuous'
-import { getNumericBinaryHandler } from './termsetting.numeric.binary'
-import { getNumericToggleHandler } from './termsetting.numeric.toggle'
+import { getHandler } from './termsetting.categorical'
 
 /*
 constructor option and API are documented at
@@ -90,7 +85,7 @@ class TermSetting {
 					if ('filter' in data) this.filter = data.filter
 					if ('activeCohort' in data) this.activeCohort = data.activeCohort
 					if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
-					this.setHandler()
+					await this.setHandler()
 					this.updateUI()
 					if (data.term && this.validateQ) this.validateQ(data)
 					if (data.term && data.term.type !== 'integer' && data.term.type !== 'float') this.addCategory2sampleCounts()
@@ -145,18 +140,12 @@ class TermSetting {
 	initHandlerByType() {
 		const defaultHandler = getDefaultHandler(this)
 		this.handlerByType = {
-			categorical: getCategoricalHandler(this),
-			condition: getConditionHandler(this),
-			'numeric.discrete': getNumericDiscreteHandler(this),
-			'numeric.continuous': getNumericContHandler(this),
-			'numeric.binary': getNumericBinaryHandler(this),
-			'numeric.toggle': getNumericToggleHandler(this),
-			survival: defaultHandler,
-			default: defaultHandler
+			default: defaultHandler,
+			survival: defaultHandler
 		}
 	}
 
-	setHandler() {
+	async setHandler() {
 		if (!this.term) {
 			this.handler = this.handlerByType.default
 			return
@@ -165,12 +154,31 @@ class TermSetting {
 		const numEditVers = this.opts.numericEditMenuVersion
 		const subtype = type != 'numeric' ? '' : numEditVers.length > 1 ? '.toggle' : '.' + numEditVers[0] // defaults to 'discrete'
 		const typeSubtype = `${type}${subtype}`
+		if (!this.handlerByType[typeSubtype]) {
+			try {
+				const _ = // await import(`./termsetting.${typeSubtype}.js`)
+					// FIXME: tape tests break when filenames in dynamic imports
+					// are not simple strings, such as when using a variable in the filename
+					typeSubtype == 'categorical'
+						? await import(`./termsetting.categorical.js`)
+						: typeSubtype == 'condition'
+						? await import(`./termsetting.condition.js`)
+						: typeSubtype == 'numeric.discrete'
+						? await import(`./termsetting.numeric.discrete.js`)
+						: typeSubtype == 'numeric.continuous'
+						? await import(`./termsetting.numeric.continuous.js`)
+						: typeSubtype == 'numeric.binary'
+						? await import(`./termsetting.numeric.binary.js`)
+						: typeSubtype == 'numeric.discrete'
+						? await import(`./termsetting.numeric.toggle.js`)
+						: null
 
-		if (this.handlerByType[typeSubtype]) {
-			this.handler = this.handlerByType[typeSubtype]
-		} else {
-			throw `unknown term type[.subtype] for setActiveHandler: ${this.term.type}${subtype}`
+				this.handlerByType[typeSubtype] = _.getHandler(this)
+			} catch (e) {
+				throw `error with handler='./termsetting.${typeSubtype}.js': ${e}`
+			}
 		}
+		this.handler = this.handlerByType[typeSubtype]
 	}
 }
 

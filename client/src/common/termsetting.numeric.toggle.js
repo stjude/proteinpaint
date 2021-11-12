@@ -1,7 +1,16 @@
 import { init_tabs } from '../dom/toggleButtons'
+import { getHandler as getNumericDiscreteHandler } from './termsetting.numeric.discrete'
+import { getHandler as getNumericContHandler } from './termsetting.numeric.continuous'
 
 // self is the termsetting instance
-export function getNumericToggleHandler(self) {
+export function getHandler(self) {
+	if (!self.handlerByType['numeric.discrete']) {
+		self.handlerByType['numeric.discrete'] = getNumericDiscreteHandler(self)
+	}
+	if (!self.handlerByType['numeric.continuous']) {
+		self.handlerByType['numeric.continuous'] = getNumericContHandler(self)
+	}
+
 	return {
 		get_term_name(d) {
 			if (!self.opts.abbrCutoff) return d.name

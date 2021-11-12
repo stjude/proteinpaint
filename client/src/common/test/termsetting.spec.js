@@ -636,12 +636,13 @@ tape('Conditional term', async test => {
 	// test.equal(tip.d.selectAll('.remove_btn').size(), 1, 'Should have 1 button to remove the term')
 	test.true(
 		tip.d.selectAll('.group_btn')._groups[0][0].innerText.includes('Using'),
-		'Should have "default" group button be active'
+		'Should have an active "default" group button'
 	)
 
 	//change grade type
 	tip.d.select('select')._groups[0][0].selectedIndex = 1
 	tip.d.select('select')._groups[0][0].dispatchEvent(new Event('change'))
+	await sleep(50)
 	test.equal(
 		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
 		'Most Recent Grade',
@@ -651,7 +652,7 @@ tape('Conditional term', async test => {
 	// select 'Any condition vs normal'
 	pilldiv.click()
 	tip.d.selectAll('.group_btn')._groups[0][1].click()
-
+	await sleep(50)
 	// check tvspill and group menu
 	const groupset_idx = opts.pill.Inner.q.groupsetting.predefined_groupset_idx
 	const groupset = opts.tsData.term.groupsetting.lst[groupset_idx]
@@ -698,6 +699,7 @@ tape('Conditional term', async test => {
 	pilldiv.click()
 	tip.d.selectAll('select')._groups[0][0].selectedIndex = 3
 	tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
+	await sleep(50)
 	test.equal(
 		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
 		'Sub-condition',
