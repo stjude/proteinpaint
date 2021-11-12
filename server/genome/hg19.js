@@ -15,9 +15,7 @@ module.exports = {
 		statement: 'RepeatMasker database'
 	},
 	snp: {
-		dbfile: 'anno/db/snp146.hg19.db',
-		statement_getbyname: 'select * from snp146 where name=?',
-		statement_getbycoord: 'select * from snp146 where chrom=? and bin=? and chromStart>=? and chromEnd<=?'
+		bigbedfile: 'anno/dbsnp.hg19.bb'
 	},
 	fimo_motif: {
 		db: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme',

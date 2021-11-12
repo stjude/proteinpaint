@@ -7733,7 +7733,6 @@ async function pp_init() {
 			if (!g.snp.bigbedfile) throw genomename + '.snp: missing bigBed file'
 			g.snp.bigbedfile = path.join(serverconfig.tpmasterdir, g.snp.bigbedfile)
 			await utils.file_is_readable(g.snp.bigbedfile)
-			//g.snp.getbyname = db.prepare(g.snp.statement_getbyname)
 		}
 
 		if (g.clinvarVCF) {
