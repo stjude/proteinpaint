@@ -169,7 +169,7 @@ class TermSetting {
 						? await import(`./termsetting.numeric.continuous.js`)
 						: typeSubtype == 'numeric.binary'
 						? await import(`./termsetting.numeric.binary.js`)
-						: typeSubtype == 'numeric.discrete'
+						: typeSubtype == 'numeric.toggle'
 						? await import(`./termsetting.numeric.toggle.js`)
 						: null
 
