@@ -18,6 +18,7 @@ const bamcommon = require('./bam.common')
 const basecolor = require('../shared/common').basecolor
 const serverconfig = require('./serverconfig')
 const rust_read_alignment = path.join(serverconfig.binpath, '/utils/read_alignment/target/release/read_alignment')
+const clustalo_read_alignment = serverconfig.clustalo || 'clustalo'
 
 /*
 XXX quick fix to be removed/disabled later
@@ -29,7 +30,7 @@ XXX quick fix to be removed/disabled later
    upon first query, will produce all possible groups based on variant type
    - snv/indel yields up to 3 groups
      1. if by snv, will require mismatches
-     2. if by complex variant, require read sequence to do k-mer or blast
+     2. if by complex variant, require read sequence to do k-mer
    - sv yields up to 2 groups
      method to be developed
    - default just 1 group with all the reads
@@ -81,10 +82,8 @@ when client zooms into one read group, server needs to know which group it is an
 	.overlapRP_multirows -- if to show overlap read pairs at separate rows, otherwise in one row one on top of the other
 	.overlapRP_hlline  -- at overlap read pairs on separate rows, if to highlight with horizontal line
 	.canvasheight
-	.messagerows[ {} ]
-.messagerows[ {} ]
-	.h int
-	.t str
+	.messages[ {} ] -- list of messages about this group. no longer server-rendered but passed to client for svg rendering
+		.t str
 
 *********************** template - segment - box
 
@@ -152,7 +151,6 @@ do_query
 			get_stacky
 				overlapRP_setflag
 				getrowheight_template_overlapread
-		plot_messagerows
 		plot_template
 			plot_segment
 		plot_insertions
@@ -237,6 +235,7 @@ const maxreadcount = 7000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 const max_returntemplatebox = 2000 // maximum number of reads per group, for which to return the "templatebox"
 const minstackheight_returntemplatebox = 7 // minimum stack height (number of pixels) for which to return templatebox
+const max_read_alignment = 100 // Max number of reads that can be aligned to reference sequence
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 
@@ -253,6 +252,13 @@ module.exports = genomes => {
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
+
+			if (req.query.alignOneGroup) {
+				const q = await get_q(genome, req)
+				res.send(await do_query(q))
+				return
+			}
+
 			if (req.query.getread) {
 				res.send(await route_getread(genome, req))
 				return
@@ -325,7 +331,7 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
 	const diff_scores_list = templates.map(i => parseFloat(i.__tempscore))
-	const read_height = (group.canvasheight - group.messagerows[0].h) / diff_scores_list.length
+	const read_height = group.canvasheight / diff_scores_list.length
 	let i = 0
 	const dist_bw_reads = group.stackspace / group.canvasheight
 	for (const diff_score of diff_scores_list) {
@@ -336,7 +342,7 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 		}
 		ctx.fillRect(
 			min_diff_score * -1 * multiplication_factor,
-			(i + 1) * read_height,
+			i * read_height,
 			//(diff_score * 50 * -1) / min_diff_score,
 			diff_score * multiplication_factor,
 			read_height - dist_bw_reads * read_height
@@ -650,7 +656,6 @@ async function get_q(genome, req) {
 			asPaired: req.query.asPaired,
 			getcolorscale: req.query.getcolorscale,
 			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
-			messagerows: [],
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
 		//q.gdc_token = req.get('x-auth-token').split(',')[0]
@@ -659,6 +664,7 @@ async function get_q(genome, req) {
 	} else {
 		const [e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
+
 		// a query object to collect all the bits
 		q = {
 			genome,
@@ -666,14 +672,12 @@ async function get_q(genome, req) {
 			asPaired: req.query.asPaired,
 			getcolorscale: req.query.getcolorscale,
 			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
-			messagerows: [],
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
 		if (isurl) {
 			q.dir = await utils.cache_index(_file, req.query.indexURL || _file + '.bai')
 		}
 	}
-
 	if (req.query.pileupheight) {
 		q.pileupheight = Number(req.query.pileupheight)
 		if (Number.isNaN(q.pileupheight)) throw '.pileupheight is not integer'
@@ -703,6 +707,9 @@ async function get_q(genome, req) {
 			alt: t[3].toUpperCase(),
 			strictness: t[4]
 		}
+		if (req.query.alignOneGroup) {
+			q.alignOneGroup = req.query.alignOneGroup
+		}
 		if (Number.isNaN(q.variant.pos)) throw 'variant pos not integer'
 	} else if (req.query.sv) {
 		const t = req.query.sv.split('.')
@@ -724,6 +731,7 @@ async function get_q(genome, req) {
 			start: Number(req.query.stackstart),
 			stop: Number(req.query.stackstop)
 		}
+
 		if (Number.isNaN(q.partstack.start)) throw '.stackstart not integer'
 		if (Number.isNaN(q.partstack.stop)) throw '.stackstop not integer'
 		if (!req.query.grouptype) throw '.grouptype required for partstack'
@@ -774,7 +782,6 @@ async function do_query(q) {
 		// When maximum read limit is reached
 		result.count.read_limit_reached = q.read_limit_reached
 	}
-
 	q.canvaswidth = q.regions[q.regions.length - 1].x + q.regions[q.regions.length - 1].width
 	{
 		const out = await divide_reads_togroups(q) // templates
@@ -812,10 +819,9 @@ async function do_query(q) {
 	}
 
 	if (result.count.r == 0) {
-		q.groups[0].messagerows.push({
-			h: 30,
-			t: 'No reads in view range.'
-		})
+		// simply show this message in the track on client
+		throw 'No reads in view range.'
+		//q.groups[0].messages.push({ t: 'No reads in view range.' })
 	}
 
 	// XXX TODO not to collect all reads into array
@@ -824,9 +830,32 @@ async function do_query(q) {
 		// do stacking for each group separately
 		// attach temp attributes directly to "group", rendering result push to results.groups[]
 
+		if (q.alignOneGroup && q.alignOneGroup != group.type) {
+			// When its a q.alignOneGroup request and the group type does not match the one requested, no need to process this iteration
+			continue
+		}
+
 		// parse reads and cigar
 		let templates = get_templates(q, group)
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
+		if (q.alignOneGroup && q.alignOneGroup == group.type) {
+			// do alignment
+			// call a function from a new script
+			// get alignment data (text)
+			let alignmentData
+			if (q.variant) {
+				if (group.type == 'support_alt') {
+					alignmentData = await align_multiple_reads(templates, q.altseq) // Aligning alt-classified reads to alternate allele
+				} else if (group.type == 'support_ref') {
+					alignmentData = await align_multiple_reads(templates, q.refseq) // Aligning ref-classified reads to reference allele
+				} else {
+					// when category type is none category
+					console.log('None category, no alignments')
+				}
+			}
+			//console.log('alignmentData:', alignmentData)
+			return { alignmentData }
+		}
 		await poststack_adjustq(group, q, templates)
 		// read quality is not parsed yet
 		await may_checkrefseq4mismatch(templates, q)
@@ -853,14 +882,14 @@ async function do_query(q) {
 		ctx.textAlign = 'center'
 		ctx.textBaseline = 'middle'
 
-		gr.messagerowheights = plot_messagerows(ctx, group, q)
-
+		gr.messages = group.messages
+		gr.messagerowheights = 0
 		for (const template of templates) {
 			// group.templates
 			plot_template(ctx, template, group, q)
 		}
 
-		plot_insertions(ctx, group, q, templates, gr.messagerowheights)
+		plot_insertions(ctx, group, q, templates)
 
 		if (q.asPaired) gr.count.t = templates.length // group.templates
 		if (q.variant) {
@@ -888,6 +917,85 @@ async function do_query(q) {
 	}
 
 	return result
+}
+
+async function align_multiple_reads(templates, reference_sequence) {
+	const sequence_reads = templates.map(i => i.segments[0].seq)
+	let fasta_sequence = ''
+
+	fasta_sequence += '>seq\n' + reference_sequence.replace('\n', '') + '\n'
+	let i = 0
+	for (const read of sequence_reads) {
+		if (i < max_read_alignment) {
+			fasta_sequence += '>seq\n' + read.replace('\n', '') + '\n'
+		} else {
+			break
+		}
+		i += 1
+	}
+	return await run_clustalo(fasta_sequence, max_read_alignment, sequence_reads.length) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
+}
+
+function run_clustalo(fasta_sequence, max_read_alignment, num_reads) {
+	return new Promise((resolve, reject) => {
+		const ps = spawn(clustalo_read_alignment, [
+			'-i',
+			'-', // Instructs ClustalO to accept input from stdin
+			'-t',
+			'DNA', // Input type - DNA
+			'--outfmt=clu', // Output format ClustalW
+			'--wrap=5000', // Allows upto 5000 nucleotides to be shown in a single row
+			'--maxnumseq=' + (max_read_alignment + 1), // Maximum number of sequences to analyze set to max_read_alignment
+			'--maxseqlen=1000' // Maximum length of each sequence = 1000
+		])
+		const stdout = []
+		const stderr = []
+		Readable.from(fasta_sequence).pipe(ps.stdin)
+		ps.stdout.on('data', data => stdout.push(data))
+		ps.stderr.on('data', data => stderr.push(data))
+		ps.on('error', err => {
+			console.log('stderr (clustalo):', stderr)
+			reject(err)
+		})
+		ps.on('close', code => {
+			//console.log('RawAlignment:', stdout.toString())
+			const final_read_align = []
+			for (const read of stdout.toString().split('\n')) {
+				if (read.includes('seq      ')) {
+					// Remove "-" before/after the start/end of a sequence
+					let nuc_count = 0
+					let aligned_read = ''
+					for (const nucl of read.replace('seq      ', '')) {
+						if (nucl != '-' && nucl != ',') {
+							nuc_count += 1
+							aligned_read += nucl
+						} else {
+							if (
+								nuc_count > 0 &&
+								nuc_count <
+									read
+										.replace(/-/g, '')
+										.replace(/,/g, '')
+										.replace('seq      ', '').length
+							) {
+								// Only allows "-" inside reads to be displayed, removing those before/after the start/end of read
+								aligned_read += nucl
+							} else {
+								aligned_read += ' '
+							}
+						}
+					}
+
+					final_read_align.push(aligned_read)
+				} else if (read.includes('FATAL:') || read.includes('ERROR:')) {
+					// Possible problem in read-alignment
+					console.log(read)
+					reject(read)
+				}
+			}
+			resolve(final_read_align)
+		})
+	})
 }
 
 async function query_reads(q) {
@@ -1023,19 +1131,6 @@ async function query_region(r, q) {
 			}
 
 			r.lines.push(line)
-
-			/*
-			old logic to kill samtools process; no longer doing this with down sampling
-			q._numofreads++
-			if (q._numofreads >= maxreadcount) {
-				ps.kill()
-				q.read_limit_reached = true
-				q.messagerows.push({
-					h: 13,
-					t: '11Too many reads in view range. Try zooming into a smaller region.'
-				})
-			}
-			*/
 		}
 	})
 }
@@ -1143,6 +1238,7 @@ async function divide_reads_togroups(q) {
 
 	const widths = []
 	let width = 0
+
 	for (const r of q.regions) {
 		for (const line of r.lines) {
 			// FIXME to support multi-region
@@ -1161,7 +1257,7 @@ async function divide_reads_togroups(q) {
 					type: bamcommon.type_all,
 					regions: bamcommon.duplicateRegions(q.regions),
 					templates: templates_info,
-					messagerows: [],
+					messages: [],
 					partstack: q.partstack,
 					widths: widths
 				}
@@ -1190,59 +1286,12 @@ async function divide_reads_togroups(q) {
 				type: bamcommon.type_all,
 				regions: bamcommon.duplicateRegions(q.regions),
 				templates: templates_info,
-				messagerows: [],
+				messages: [],
 				partstack: q.partstack,
 				widths: widths
 			}
 		]
 	}
-}
-
-// NOT IN USE
-function may_match_snv(templates, q) {
-	const refallele = q.variant.ref.toUpperCase()
-	const altallele = q.variant.alt.toUpperCase()
-	if (!bases.has(refallele) || !bases.has(altallele)) return
-	const type2group = bamcommon.make_type2group(q)
-	for (const t of templates) {
-		let used = false
-		for (const s of t.segments) {
-			for (const b of s.boxes) {
-				if (b.opr == 'X' && b.start == q.variant.pos) {
-					// mismatch on this pos
-					if (b.s == altallele) {
-						if (type2group[bamcommon.type_supportalt]) type2group[bamcommon.type_supportalt].templates.push(t)
-					} else {
-						if (type2group[bamcommon.type_supportno]) type2group[bamcommon.type_supportno].templates.push(t)
-					}
-					used = true
-					break
-				}
-			}
-			if (used) break
-		}
-		if (!used) {
-			if (type2group[bamcommon.type_supportref]) type2group[bamcommon.type_supportref].templates.push(t)
-		}
-	}
-	const groups = []
-	for (const k in type2group) {
-		const g = type2group[k]
-		if (g.templates.length == 0) continue // empty group, do not include
-		g.messagerows.push({
-			h: 15,
-			t:
-				g.templates.length +
-				' reads supporting ' +
-				(k == bamcommon.type_supportref
-					? 'reference allele'
-					: k == bamcommon.type_supportalt
-					? 'mutant allele'
-					: 'neither reference or mutant alleles')
-		})
-		groups.push(g)
-	}
-	return groups
 }
 
 function match_sv(templates, q) {
@@ -1777,17 +1826,6 @@ function qual2int(s) {
 	return lst
 }
 
-function plot_messagerows(ctx, group, q) {
-	let y = 0
-	for (const row of group.messagerows) {
-		ctx.font = Math.min(12, row.h - 2) + 'pt Arial'
-		ctx.fillStyle = 'black'
-		ctx.fillText(row.t, q.canvaswidth / 2, y + row.h / 2)
-		y += row.h
-	}
-	return y
-}
-
 function get_stacky(group, templates, q) {
 	// get y off for each stack, may account for fat rows created by overlapping read pairs
 	const stackrowheight = []
@@ -1803,7 +1841,7 @@ function get_stacky(group, templates, q) {
 		}
 	}
 	const stacky = []
-	let y = group.messagerows.reduce((i, j) => i + j.h, 0) + group.stackspace
+	let y = group.stackspace
 	for (const h of stackrowheight) {
 		stacky.push(y)
 		y += h + group.stackspace
@@ -2273,7 +2311,7 @@ function plot_segment(ctx, segment, y, group, q) {
 	//}
 }
 
-function plot_insertions(ctx, group, q, templates, messagerowheights) {
+function plot_insertions(ctx, group, q, templates) {
 	/*
 after all template boxes are drawn, mark out insertions on top of that by cyan text labels
 if single basepair, use the nt; else, use # of nt
@@ -2300,7 +2338,7 @@ if b.qual is available, set text color based on it
 		ctx.strokeStyle = insertion_vlinecolor
 		for (const x of xpos) {
 			ctx.beginPath()
-			ctx.moveTo(x, messagerowheights)
+			ctx.moveTo(x, 0)
 			ctx.lineTo(x, group.canvasheight)
 			ctx.stroke()
 		}
@@ -2561,7 +2599,7 @@ async function query_oneread(req, r) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
 		if (req.query.altseq) {
 			const alignment_output = await run_rust_read_alignment(
-				lst[0].seq + ':' + req.query.refseq + ':' + req.query.altseq
+				'single:' + lst[0].seq + ':' + req.query.refseq + ':' + req.query.altseq
 			)
 			const alignment_output_list = alignment_output.toString('utf-8').split('\n')
 			for (let item of alignment_output_list) {
@@ -2764,7 +2802,6 @@ async function convertread2html(seg, genome, query) {
 	}
 
 	const lst = []
-
 	// indicate discordant read status
 	if (seg.rnext) {
 		lst.push(
@@ -2848,7 +2885,8 @@ async function convertread2html(seg, genome, query) {
 			<span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
 			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
 		  </div>
-		  <ul style='padding-left:15px'>${lst.join('')}</ul>`
+		  <ul style='padding-left:15px'>${lst.join('')}</ul>`,
+		start_readpos: refstart + 1 // Start position of read
 	}
 	if (soft_present == 1) {
 		seq_data.soft_starts = soft_starts

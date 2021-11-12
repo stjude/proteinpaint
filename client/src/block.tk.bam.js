@@ -45,18 +45,23 @@ tk.dom{}
 .pileup_g // contains image
 .pileup_img
 .vsliderg
+.read_limit_g
+.read_limit_text
 
 tk.groups[]
 .data{}
+	.type
+	.messages[ {t} ] 
 	.templatebox[{}] // optional, about the templates in view range
 	         // server decides if to return template boxes (at poststack_adjustq)
 	.count {r,t} // r for reads, t for templates
 .data_fullstack{}
-	.messagerowheights
 	.stackcount
 	.stackheight
 	.allowpartstack
 .dom{}
+	.groupg
+	.message_rowg
 	.imgg
 	.img_fullstack
 	.img_partstack
@@ -101,6 +106,7 @@ const slider_rail_color = '#eee'
 const slider_color = '#c7edc5'
 const slider_color_dark = '#9ed19b'
 const slider_color_dark_line = '#36a32f'
+const messagerowheight = 15 // message row height
 
 export async function loadTk(tk, block) {
 	block.tkcloakon(tk)
@@ -146,12 +152,12 @@ export async function loadTk(tk, block) {
 		if (tk.groups) {
 			for (const g of tk.groups) {
 				delete g.partstack
-				delete g.dom.vslider.boxy
+				delete g.dom.rightg.vslider.boxy
 			}
 		}
 
 		const data = await getData(tk, block)
-		if (data.error) throw data.error
+		if (data.error) throw data.error // including "no reads" message
 		if (data.colorscale) {
 			// available from 1st query, cache
 			tk.colorscale = data.colorscale
@@ -169,6 +175,10 @@ export async function loadTk(tk, block) {
 		block.tkcloakoff(tk, {})
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
+		if (tk.pileup_shown) {
+			tk.dom.pileup_axis.selectAll('*').remove()
+			tk.dom.pileup_img.attr('width', 0)
+		}
 		if (tk.groups) {
 			for (const g of tk.groups) {
 				g.dom.img_fullstack.attr('width', 0).attr('height', 0)
@@ -326,10 +336,47 @@ or update existing groups, in which groupidx will be provided
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
-			tk.groups.push(makeGroup(g, tk, block, data))
+			const gd = makeGroup(g, tk, block, data)
+			tk.groups.push(gd)
+			/*
+			if (tk.variants && (gd.data.type == 'support_alt' || gd.data.type == 'support_ref')) {
+				gd.dom.message_row
+					.on('mouseover', () => {
+						gd.dom.message_row.style('text-decoration', 'underline')
+					})
+					.on('mouseleave', () => {
+						gd.dom.message_row.style('text-decoration', 'none')
+					})
+				gd.dom.message_row.on('click', async () => {
+					getMultiReadAligInfo(tk, gd, block) // Generating multiple sequence alignment against ref/alt allele
+				})
+			}
+			*/
 		}
 	} else {
 		updateExistingGroups(data, tk, block)
+	}
+
+	// show messages
+	for (const g of tk.groups) {
+		g.dom.message_rowg.selectAll('*').remove()
+		let y = 0
+		for (const m of g.data.messages) {
+			const msg = g.dom.message_rowg
+				.append('text')
+				.attr('x', block.width / 2)
+				.attr('y', y + messagerowheight - 1)
+				.attr('font-size', messagerowheight)
+				.attr('text-anchor', 'middle')
+				.text(m.t)
+			if (m.isheader) {
+				// this message is the header of the group, allow clickable
+				msg.attr('class', 'sja_clbtext2').on('click', () => {
+					click_groupheader(tk, g, block)
+				})
+			}
+			y += messagerowheight
+		}
 	}
 
 	setTkHeight(tk)
@@ -565,7 +612,7 @@ function may_render_variant(data, tk, block) {
 		tk.dom.variantg
 			.append('text')
 			.attr('x', data.pileup_data.width + 5)
-			.attr('y', -10 + tk.dom.variantrowheight)
+			.attr('y', -20 + tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
 			.text('Diff Score')
 	}
@@ -590,29 +637,28 @@ function setTkHeight(tk) {
 		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
 	}
 	for (const g of tk.groups) {
-		g.dom.imgg.transition().attr('transform', 'translate(0,' + h + ')')
+		g.dom.groupg.transition().attr('transform', 'translate(0,' + h + ')')
+		g.dom.rightg.transition().attr('transform', 'translate(0,' + h + ')') // Both diff_score plot and vslider are inside this
+
+		const msgheight = messagerowheight * g.data.messages.length // sum of height from all messages
+		//g.dom.message_rowg.transition().attr('transform', 'translate(0,0)') //not needed
+		g.dom.imgg.transition().attr('transform', 'translate(0,' + msgheight + ')')
+
 		if (tk.variants) {
-			g.dom.diff_score_barplot_fullstack
-				.transition()
-				.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height + g.data.messagerowheights) + ')') // + g.data.diff_scores_img.row_height
+			g.dom.diff_score_barplot_fullstack.transition().attr('transform', 'translate(0,' + msgheight + ')')
 		}
 		if (g.partstack) {
 			// slider visible
 			if (tk.variants) {
-				g.dom.diff_score_barplot_partstack
+				g.dom.diff_score_barplot_partstack.transition().attr('transform', 'translate(0,' + msgheight + ')')
+				g.dom.rightg.vslider.g
 					.transition()
-					.attr('transform', 'translate(0,' + (h - g.data.diff_scores_img.read_height + g.data.messagerowheights) + ')')
-				g.dom.vslider.g
-					.transition()
-					.attr(
-						'transform',
-						'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + (h + g.data.messagerowheights) + ') scale(1)'
-					)
+					.attr('transform', 'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + msgheight + ') scale(1)')
 			} else {
-				g.dom.vslider.g.transition().attr('transform', 'translate(0,' + (h + g.data.messagerowheights) + ') scale(1)')
+				g.dom.rightg.vslider.g.transition().attr('transform', 'translate(0,0) scale(1)')
 			}
 		}
-		h += g.data.height
+		h += g.data.height + msgheight
 	}
 	tk.height_main = tk.height = h
 	tk.height_main += tk.toppad + tk.bottompad
@@ -646,7 +692,7 @@ function updateExistingGroups(data, tk, block) {
 		}
 
 		//tk.config_handle.transition().attr('x', 0)
-		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
+		group.dom.rightg.vslider.g.transition().attr('transform', 'scale(0)')
 		group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
 	}
 }
@@ -703,6 +749,9 @@ function makeTk(tk, block) {
 	tk.readpane = newpane({ x: 100, y: 100, closekeep: 1 })
 	tk.readpane.pane.style('display', 'none')
 
+	tk.alignpane = newpane({ x: 100, y: 100, closekeep: 1 }) // Panel for showing multi_read alignment to ref/alt allele
+	tk.alignpane.pane.style('display', 'none')
+
 	tk.pileupheight = 100
 	tk.pileupbottompad = 6
 
@@ -710,7 +759,6 @@ function makeTk(tk, block) {
 	tk.dom = {
 		pileup_g: tk.glider.append('g'),
 		pileup_axis: tk.glider.append('g'),
-		vsliderg: tk.gright.append('g'),
 		read_limit_height: 15,
 		read_limit_bottompad: 6,
 		read_limit_g: tk.glider.append('g')
@@ -731,7 +779,6 @@ function makeTk(tk, block) {
 		tk.dom.variantg = tk.glider.append('g')
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
-		tk.dom.diff_score_g = tk.gright.append('g') // For storing bar plot of diff_score
 		tk.dom.diff_score_axis = tk.gright.append('g') // For storing axis of bar plot of diff_score
 		tk.dom.diff_score_plotwidth = 50
 		tk.fs_string = block.maketklefthandle(tk, tk.pileupheight + tk.dom.variantrowheight / 2) // Will contain Fisher strand value which will be added in may_render_variant function
@@ -819,19 +866,30 @@ function makeGroup(gd, tk, block, data) {
 	const group = {
 		data: gd,
 		dom: {
-			imgg: tk.glider.append('g'),
-			vslider: {
-				g: tk.dom.vsliderg.append('g').attr('transform', 'scale(0)')
-			}
+			groupg: tk.glider.append('g'),
+			rightg: tk.gright.append('g')
 		}
 	}
+	/*
+	groupg contains two <g>: message_rowg and imgg
+	message_rowg:
+	  render message from each group. This is later made clickable to display multi-read alignment
+	  is always on the top, position does not change
+	  if not empty, message_rowg will push down imgg
+	*/
+	group.dom.message_rowg = group.dom.groupg.append('g')
+	group.dom.imgg = group.dom.groupg.append('g')
+	group.dom.rightg.vslider = group.dom.rightg.append('g')
+	group.dom.rightg.vslider.g = group.dom.rightg.vslider.append('g').attr('transform', 'scale(0)')
+
 	if (tk.variants) {
-		group.dom.diff_score_barplot_fullstack = tk.dom.diff_score_g
+		group.dom.diff_score_g = group.dom.rightg.append('g') // For storing bar plot of diff_score
+		group.dom.diff_score_barplot_fullstack = group.dom.diff_score_g
 			.append('image')
 			.attr('xlink:href', gd.diff_scores_img.src)
 			.attr('width', gd.diff_scores_img.width)
 			.attr('height', gd.diff_scores_img.height)
-		group.dom.diff_score_barplot_partstack = tk.dom.diff_score_g
+		group.dom.diff_score_barplot_partstack = group.dom.diff_score_g
 			.append('image')
 			.attr('xlink:href', gd.diff_scores_img.src)
 			.attr('width', 0)
@@ -859,12 +917,13 @@ function makeGroup(gd, tk, block, data) {
 		axisstyle({
 			axis: tk.dom.diff_score_axis
 				.transition()
-				.attr('transform', 'translate(' + 0 + ',' + (diff_score_height + 0.5 * tk.dom.variantrowheight) + ')')
+				.attr('transform', 'translate(' + 0 + ',' + diff_score_height + ')')
 				.call(axis),
 			color: 'black',
 			showline: true
 		})
 	}
+
 	group.dom.img_fullstack = group.dom.imgg
 		.append('image')
 		.attr('xlink:href', group.data.src)
@@ -918,7 +977,7 @@ function makeGroup(gd, tk, block, data) {
 			if (mousedownx != d3event.clientX) return
 			const [mx, my] = d3mouse(group.dom.img_cover.node())
 			if (group.data.allowpartstack) {
-				enter_partstack(group, tk, block, my - group.data.messagerowheights, data)
+				enter_partstack(group, tk, block, my, data)
 				return
 			}
 			if (!group.data.templatebox) return
@@ -963,30 +1022,30 @@ function makeGroup(gd, tk, block, data) {
 			}
 		})
 
-	group.dom.vslider.bar = group.dom.vslider.g
+	group.dom.rightg.vslider.bar = group.dom.rightg.vslider.g
 		.append('rect')
 		.attr('fill', slider_rail_color)
 		.attr('x', 10)
 		.attr('width', 20)
-		.on('mouseover', () => group.dom.vslider.bar.attr('fill', '#fae8e8'))
-		.on('mouseout', () => group.dom.vslider.bar.attr('fill', slider_rail_color))
+		.on('mouseover', () => group.dom.rightg.vslider.bar.attr('fill', '#fae8e8'))
+		.on('mouseout', () => group.dom.rightg.vslider.bar.attr('fill', slider_rail_color))
 		.on('click', () => {
-			delete group.dom.vslider.boxy
+			delete group.dom.rightg.vslider.boxy
 			delete group.partstack
 			group.data = group.data_fullstack
 			renderGroup(group, tk, block)
 			setTkHeight(tk)
 			block.block_setheight()
 		})
-	group.dom.vslider.boxg = group.dom.vslider.g.append('g')
-	group.dom.vslider.box = group.dom.vslider.boxg
+	group.dom.rightg.vslider.boxg = group.dom.rightg.vslider.g.append('g')
+	group.dom.rightg.vslider.box = group.dom.rightg.vslider.boxg
 		.append('rect')
 		.attr('fill', slider_color)
 		.attr('width', 40)
 		.on('mousedown', () => {
 			d3event.preventDefault()
-			group.dom.vslider.box.attr('fill', slider_color_dark)
-			const scrollableheight = group.data.height - group.data.messagerowheights
+			group.dom.rightg.vslider.box.attr('fill', slider_color_dark)
+			const scrollableheight = group.data.height
 			const y0 = d3event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
@@ -994,12 +1053,12 @@ function makeGroup(gd, tk, block, data) {
 				const y1 = d3event.clientY
 				const d = y1 - y0
 				if (d < 0) {
-					if (group.dom.vslider.boxy + d <= 0) return
+					if (group.dom.rightg.vslider.boxy + d <= 0) return
 				} else {
-					if (group.dom.vslider.boxy + d >= scrollableheight - group.dom.vslider.boxh) return
+					if (group.dom.rightg.vslider.boxy + d >= scrollableheight - group.dom.rightg.vslider.boxh) return
 				}
 				deltay = d
-				group.dom.vslider.boxg.attr('transform', 'translate(0,' + (group.dom.vslider.boxy + deltay) + ')')
+				group.dom.rightg.vslider.boxg.attr('transform', 'translate(0,' + (group.dom.rightg.vslider.boxy + deltay) + ')')
 				group.dom.img_partstack.attr(
 					'y',
 					-((deltay * group.data_fullstack.stackcount * group.data.stackheight) / scrollableheight)
@@ -1008,10 +1067,10 @@ function makeGroup(gd, tk, block, data) {
 				group.dom.box_stay.attr('width', 0)
 			})
 			b.on('mouseup', async () => {
-				group.dom.vslider.box.attr('fill', slider_color)
+				group.dom.rightg.vslider.box.attr('fill', slider_color)
 				b.on('mousemove', null).on('mouseup', null)
 				if (deltay == 0) return
-				group.dom.vslider.boxy += deltay
+				group.dom.rightg.vslider.boxy += deltay
 				const delta = Math.ceil((group.data_fullstack.stackcount * deltay) / scrollableheight)
 				group.partstack.start += delta
 				group.partstack.stop += delta
@@ -1029,16 +1088,16 @@ function makeGroup(gd, tk, block, data) {
 			})
 		})
 
-	group.dom.vslider.boxtopline = group.dom.vslider.boxg
+	group.dom.rightg.vslider.boxtopline = group.dom.rightg.vslider.boxg
 		.append('line')
 		.attr('stroke', slider_color_dark)
 		.attr('stroke-width', 3)
 		.attr('x2', 40)
-		.on('mouseover', () => group.dom.vslider.boxtopline.attr('stroke', slider_color_dark_line))
-		.on('mouseout', () => group.dom.vslider.boxtopline.attr('stroke', slider_color_dark))
+		.on('mouseover', () => group.dom.rightg.vslider.boxtopline.attr('stroke', slider_color_dark_line))
+		.on('mouseout', () => group.dom.rightg.vslider.boxtopline.attr('stroke', slider_color_dark))
 		.on('mousedown', () => {
 			d3event.preventDefault()
-			const scrollableheight = group.data.height - group.data.messagerowheights
+			const scrollableheight = group.data.height
 			const y0 = d3event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
@@ -1046,21 +1105,22 @@ function makeGroup(gd, tk, block, data) {
 				const y1 = d3event.clientY
 				const d = y1 - y0
 				if (d < 0) {
-					if (group.dom.vslider.boxy + d <= 0) return
+					if (group.dom.rightg.vslider.boxy + d <= 0) return
 				} else {
-					if (group.dom.vslider.boxh - d <= (stackpagesize * scrollableheight) / group.data_fullstack.stackcount) return
+					if (group.dom.rightg.vslider.boxh - d <= (stackpagesize * scrollableheight) / group.data_fullstack.stackcount)
+						return
 				}
 				deltay = d
-				group.dom.vslider.boxg.attr('transform', 'translate(0,' + (group.dom.vslider.boxy + deltay) + ')')
-				group.dom.vslider.box.attr('height', group.dom.vslider.boxh - deltay)
-				group.dom.vslider.boxbotline
-					.attr('y1', group.dom.vslider.boxh - deltay)
-					.attr('y2', group.dom.vslider.boxh - deltay)
+				group.dom.rightg.vslider.boxg.attr('transform', 'translate(0,' + (group.dom.rightg.vslider.boxy + deltay) + ')')
+				group.dom.rightg.vslider.box.attr('height', group.dom.rightg.vslider.boxh - deltay)
+				group.dom.rightg.vslider.boxbotline
+					.attr('y1', group.dom.rightg.vslider.boxh - deltay)
+					.attr('y2', group.dom.rightg.vslider.boxh - deltay)
 			})
 			b.on('mouseup', async () => {
 				b.on('mousemove', null).on('mouseup', null)
 				if (deltay == 0) return
-				group.dom.vslider.boxy += deltay
+				group.dom.rightg.vslider.boxy += deltay
 				group.partstack.start += Math.ceil((group.data_fullstack.stackcount * deltay) / scrollableheight)
 				block.tkcloakon(tk)
 				const _d = await getData(tk, block, [
@@ -1075,16 +1135,16 @@ function makeGroup(gd, tk, block, data) {
 				block.block_setheight()
 			})
 		})
-	group.dom.vslider.boxbotline = group.dom.vslider.boxg
+	group.dom.rightg.vslider.boxbotline = group.dom.rightg.vslider.boxg
 		.append('line')
 		.attr('stroke', slider_color_dark)
 		.attr('stroke-width', 3)
 		.attr('x2', 40)
-		.on('mouseover', () => group.dom.vslider.boxbotline.attr('stroke', slider_color_dark_line))
-		.on('mouseout', () => group.dom.vslider.boxbotline.attr('stroke', slider_color_dark))
+		.on('mouseover', () => group.dom.rightg.vslider.boxbotline.attr('stroke', slider_color_dark_line))
+		.on('mouseout', () => group.dom.rightg.vslider.boxbotline.attr('stroke', slider_color_dark))
 		.on('mousedown', () => {
 			d3event.preventDefault()
-			const scrollableheight = group.data.height - group.data.messagerowheights
+			const scrollableheight = group.data.height
 			const y0 = d3event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
@@ -1092,20 +1152,21 @@ function makeGroup(gd, tk, block, data) {
 				const y1 = d3event.clientY
 				const d = y1 - y0
 				if (d < 0) {
-					if (group.dom.vslider.boxh + d <= (stackpagesize * scrollableheight) / group.data_fullstack.stackcount) return
+					if (group.dom.rightg.vslider.boxh + d <= (stackpagesize * scrollableheight) / group.data_fullstack.stackcount)
+						return
 				} else {
-					if (group.dom.vslider.boxy + d >= scrollableheight - group.dom.vslider.boxh) return
+					if (group.dom.rightg.vslider.boxy + d >= scrollableheight - group.dom.rightg.vslider.boxh) return
 				}
 				deltay = d
-				group.dom.vslider.box.attr('height', group.dom.vslider.boxh + deltay)
-				group.dom.vslider.boxbotline
-					.attr('y1', group.dom.vslider.boxh + deltay)
-					.attr('y2', group.dom.vslider.boxh + deltay)
+				group.dom.rightg.vslider.box.attr('height', group.dom.rightg.vslider.boxh + deltay)
+				group.dom.rightg.vslider.boxbotline
+					.attr('y1', group.dom.rightg.vslider.boxh + deltay)
+					.attr('y2', group.dom.rightg.vslider.boxh + deltay)
 			})
 			b.on('mouseup', async () => {
 				b.on('mousemove', null).on('mouseup', null)
 				if (deltay == 0) return
-				group.dom.vslider.boxh += deltay
+				group.dom.rightg.vslider.boxh += deltay
 				group.partstack.stop += Math.ceil((group.data_fullstack.stackcount * deltay) / scrollableheight)
 				block.tkcloakon(tk)
 				const _d = await getData(tk, block, [
@@ -1120,7 +1181,45 @@ function makeGroup(gd, tk, block, data) {
 				block.block_setheight()
 			})
 		})
+
 	return group
+}
+
+async function align_reads_to_allele(tk, group, block) {
+	// Read alignment against allele is only done when tk.variants is defined
+	const alig_lst = []
+	alig_lst.push('alignOneGroup=' + group.data.type)
+	alig_lst.push('genome=' + block.genome.name)
+	alig_lst.push('regions=' + JSON.stringify(tk.regions))
+	if (tk.file) alig_lst.push('file=' + tk.file)
+	alig_lst.push(
+		'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
+	)
+	if (tk.alleleAlreadyUpdated) {
+		// This should always be true when this function is invoked, but adding this if condition for safety sake
+		alig_lst.push('alleleAlreadyUpdated=1')
+		alig_lst.push('refseq=' + tk.variants[0].refseq)
+		alig_lst.push('altseq=' + tk.variants[0].altseq)
+		alig_lst.push('leftflankseq=' + tk.variants[0].leftflankseq)
+		alig_lst.push('rightflankseq=' + tk.variants[0].rightflankseq)
+	}
+	if (tk.uninitialized) {
+		alig_lst.push('getcolorscale=1')
+		delete tk.uninitialized
+	}
+	if (tk.asPaired) {
+		alig_lst.push('asPaired=1')
+	}
+	if ('nochr' in tk) {
+		alig_lst.push('nochr=' + tk.nochr)
+	}
+	if (group.partstack) {
+		alig_lst.push('stackstart=' + group.partstack.start)
+		alig_lst.push('stackstop=' + group.partstack.stop)
+		alig_lst.push('grouptype=' + group.data.type)
+	}
+	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	return await dofetch3('tkbam?' + alig_lst.join('&'), { headers })
 }
 
 function configPanel(tk, block) {
@@ -1133,48 +1232,58 @@ function configPanel(tk, block) {
 			.append('span')
 			.html('Show reads as:&nbsp;')
 			.style('opacity', 0.5)
+			.style('margin', '10px 5px')
 		make_radios({
 			holder: row,
 			options: [
-				{ label: 'single', value: 'single', checked: !tk.asPaired },
-				{ label: 'paired', value: 'paired', checked: tk.asPaired }
+				{ label: 'Single', value: false, checked: !tk.asPaired },
+				{ label: 'Paired', value: true, checked: tk.asPaired }
 			],
-			styles: { display: 'inline-block' },
+			styles: { display: 'inline-block', margin: '10px 5px' },
+			callback: v => {
+				tk.asPaired = v
+				loadTk(tk, block)
+			},
+			inputName: 'show-reads-radios' /* Fix for show reads and strictness radio 
+			buttons operating independently */
+		})
+	}
+	{
+		make_one_checkbox({
+			holder: d.append('div'),
+			labeltext: 'Drop PCR or optical duplicates',
+			checked: tk.drop_pcrduplicates,
 			callback: () => {
-				tk.asPaired = !tk.asPaired
+				tk.drop_pcrduplicates = !tk.drop_pcrduplicates
 				loadTk(tk, block)
 			}
 		})
 	}
-
-	make_one_checkbox({
-		holder: d.append('div'),
-		labeltext: 'Drop PCR or optical duplicates',
-		checked: tk.drop_pcrduplicates,
-		callback: () => {
-			tk.drop_pcrduplicates = !tk.drop_pcrduplicates
-			loadTk(tk, block)
-		}
-	})
-
 	if (tk.variants) {
+		if (!tk.variants[0].strictness) {
+			// When using example.bam.indel.html the strictness value is not defined. In such cases using a default value of strictness = 1.
+			tk.variants[0].strictness = 1
+		}
 		const row = d.append('div')
 		row
 			.append('span')
 			.html('Strictness:&nbsp;')
 			.style('opacity', 0.5)
-		const radios_output = make_radios({
+			.style('margin', '10px 5px')
+		make_radios({
 			holder: row,
 			options: [
 				{ label: '0', value: 0, checked: tk.variants[0].strictness == 0 },
 				{ label: '1', value: 1, checked: tk.variants[0].strictness == 1 },
 				{ label: '2', value: 2, checked: tk.variants[0].strictness == 2 }
 			],
-			styles: { display: 'inline-block' },
+			styles: { display: 'inline-block', margin: '10px 5px' },
 			callback: v => {
 				tk.variants[0].strictness = v
 				loadTk(tk, block)
-			}
+			},
+			inputName: 'strictness-radios' /* Fix for show reads and strictness radio 
+			buttons operating independently */
 		})
 	}
 
@@ -1206,6 +1315,89 @@ if is pair mode, is the template
 box{}
   qname, start, stop
 */
+
+function click_groupheader(tk, group, block) {
+	if (tk.variants && (group.data.type == 'support_alt' || group.data.type == 'support_ref')) {
+		// when merge to master, add this condition
+		//if(urlmap().has('clustalo')) {
+		getMultiReadAligInfo(tk, group, block)
+		//}
+	}
+}
+async function getMultiReadAligInfo(tk, group, block) {
+	appear(tk.alignpane.pane)
+	tk.alignpane.pane.style('display', 'table')
+	tk.alignpane.header.text('Alignment info')
+	tk.alignpane.body.selectAll('*').remove()
+	const wait = tk.alignpane.body.append('div').text('Loading...')
+	const multi_read_alig_data = await align_reads_to_allele(tk, group, block) // Sending server side request for aligning reads to ref/alt
+	//console.log('multi_read_alig_data:', multi_read_alig_data.alignmentData)
+	wait.remove()
+
+	const div = tk.alignpane.body.append('div').style('margin', '20px')
+	const readAlignmentTable = div
+		.append('table')
+		.style('font-family', 'Courier')
+		.style('font-size', '0.8em')
+		.style('color', '#303030')
+		.style('margin', '5px 5px 20px 5px')
+	let read_count = 0
+	for (const read of multi_read_alig_data.alignmentData) {
+		const read_tr = readAlignmentTable.append('tr')
+		if (read_count == 0) {
+			if (group.data.type == 'support_alt') {
+				read_tr
+					.append('td')
+					.text('Alt allele')
+					.style('text-align', 'right')
+					.style('font-weight', '550')
+					.style('margin', '5px 5px 10px 5px')
+			} else if (group.data.type == 'support_ref') {
+				read_tr
+					.append('td')
+					.text('Ref allele')
+					.style('text-align', 'right')
+					.style('font-weight', '550')
+					.style('margin', '5px 5px 10px 5px')
+			}
+		} else {
+			read_tr
+				.append('td')
+				.text('')
+				.style('text-align', 'right')
+				.style('font-weight', '550')
+		}
+		let nclt_count = 0
+		for (const nclt of read) {
+			nclt_count += 1
+			if (nclt_count < tk.variants[0].leftflankseq.length) {
+				read_tr.append('td').text(nclt)
+			} else if (
+				group.data.type == 'support_alt' &&
+				nclt_count > tk.variants[0].leftflankseq.length &&
+				nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].alt.length
+			) {
+				read_tr
+					.append('td')
+					.text(nclt)
+					.style('color', 'red')
+			} else if (
+				group.data.type == 'support_ref' &&
+				nclt_count > tk.variants[0].leftflankseq.length &&
+				nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].ref.length
+			) {
+				read_tr
+					.append('td')
+					.text(nclt)
+					.style('color', 'red')
+			} else {
+				read_tr.append('td').text(nclt)
+			}
+		}
+		read_count += 1
+	}
+}
+
 async function getReadInfo(tk, block, box, ridx) {
 	appear(tk.readpane.pane)
 	tk.readpane.header.text('Read info')
@@ -1257,7 +1449,7 @@ async function getReadInfo(tk, block, box, ridx) {
 			'Ref' - reference
 			'Alt' - alternate */
 		//TODO: make pane scrollable if the read is too long. Detect if pane is 1000px for example
-		function makeReadAlignmentTable(div, type) {
+		function makeReadAlignmentTable(div, type, tk, read_start_pos) {
 			let q_align, align_wrt, r_align
 			if (type == 'Ref') {
 				q_align = data.lst[0].q_align_ref
@@ -1288,13 +1480,61 @@ async function getReadInfo(tk, block, box, ridx) {
 				.text('Read')
 				.style('text-align', 'right')
 				.style('font-weight', '550')
+			let nclt_count = 0
 			for (const nclt of q_align) {
-				query_tr.append('td').text(nclt)
+				nclt_count += 1
+				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
+					query_tr.append('td').text(nclt)
+				} else if (
+					type == 'Ref' &&
+					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
+					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
+				) {
+					query_tr
+						.append('td')
+						.text(nclt)
+						.style('color', 'red')
+				} else if (
+					type == 'Alt' &&
+					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
+					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
+				) {
+					query_tr
+						.append('td')
+						.text(nclt)
+						.style('color', 'red')
+				} else {
+					query_tr.append('td').text(nclt)
+				}
 			}
 			const alignment_tr = readAlignmentTable.append('tr')
 			alignment_tr.append('td')
+			nclt_count = 0
 			for (const align_str of align_wrt) {
-				alignment_tr.append('td').text(align_str)
+				nclt_count += 1
+				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
+					alignment_tr.append('td').text(align_str)
+				} else if (
+					type == 'Ref' &&
+					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
+					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
+				) {
+					alignment_tr
+						.append('td')
+						.text(align_str)
+						.style('color', 'red')
+				} else if (
+					type == 'Alt' &&
+					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
+					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
+				) {
+					alignment_tr
+						.append('td')
+						.text(align_str)
+						.style('color', 'red')
+				} else {
+					alignment_tr.append('td').text(align_str)
+				}
 			}
 			const refAlt_tr = readAlignmentTable.append('tr')
 			refAlt_tr
@@ -1303,8 +1543,32 @@ async function getReadInfo(tk, block, box, ridx) {
 				.style('text-align', 'right')
 				.style('font-weight', '550')
 				.style('white-space', 'nowrap')
+			nclt_count = 0
 			for (const nclt of r_align) {
-				refAlt_tr.append('td').text(nclt)
+				nclt_count += 1
+				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
+					refAlt_tr.append('td').text(nclt)
+				} else if (
+					type == 'Ref' &&
+					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
+					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
+				) {
+					refAlt_tr
+						.append('td')
+						.text(nclt)
+						.style('color', 'red')
+				} else if (
+					type == 'Alt' &&
+					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
+					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
+				) {
+					refAlt_tr
+						.append('td')
+						.text(nclt)
+						.style('color', 'red')
+				} else {
+					refAlt_tr.append('td').text(nclt)
+				}
 			}
 		}
 
@@ -1322,8 +1586,8 @@ async function getReadInfo(tk, block, box, ridx) {
 			alignment_button.on('click', async () => {
 				if (first) {
 					first = false
-					makeReadAlignmentTable(variantAlignmentTable, 'Ref')
-					makeReadAlignmentTable(variantAlignmentTable, 'Alt')
+					makeReadAlignmentTable(variantAlignmentTable, 'Ref', tk, data.lst[0].start_readpos - 1)
+					makeReadAlignmentTable(variantAlignmentTable, 'Alt', tk, data.lst[0].start_readpos - 1)
 				}
 				if (variantAlignmentTable.style('display') == 'none') {
 					variantAlignmentTable.style('display', 'block')
@@ -1691,17 +1955,17 @@ function renderGroup(group, tk, block) {
 			group.dom.diff_score_barplot_fullstack.attr('width', 0).attr('height', 0)
 		}
 		// group vslider.g y position is set and turned visible in setTkHeight(), but not here
-		const scrollableheight = group.data.height - group.data.messagerowheights
-		group.dom.vslider.bar.transition().attr('height', scrollableheight)
-		group.dom.vslider.boxy = (scrollableheight * group.partstack.start) / group.data_fullstack.stackcount
-		group.dom.vslider.boxh =
+		const scrollableheight = group.data.height
+		group.dom.rightg.vslider.bar.transition().attr('height', scrollableheight)
+		group.dom.rightg.vslider.boxy = (scrollableheight * group.partstack.start) / group.data_fullstack.stackcount
+		group.dom.rightg.vslider.boxh =
 			(scrollableheight * (group.partstack.stop - group.partstack.start)) / group.data_fullstack.stackcount
-		group.dom.vslider.box.transition().attr('height', group.dom.vslider.boxh)
-		group.dom.vslider.boxbotline
+		group.dom.rightg.vslider.box.transition().attr('height', group.dom.rightg.vslider.boxh)
+		group.dom.rightg.vslider.boxbotline
 			.transition()
-			.attr('y1', group.dom.vslider.boxh)
-			.attr('y2', group.dom.vslider.boxh)
-		group.dom.vslider.boxg.transition().attr('transform', 'translate(0,' + group.dom.vslider.boxy + ')')
+			.attr('y1', group.dom.rightg.vslider.boxh)
+			.attr('y2', group.dom.rightg.vslider.boxh)
+		group.dom.rightg.vslider.boxg.transition().attr('transform', 'translate(0,' + group.dom.rightg.vslider.boxy + ')')
 	} else {
 		group.dom.img_fullstack
 			.attr('xlink:href', group.data.src)
@@ -1716,7 +1980,7 @@ function renderGroup(group, tk, block) {
 				.attr('width', group.data.diff_scores_img.width)
 				.attr('height', group.data.diff_scores_img.height)
 		}
-		group.dom.vslider.g.transition().attr('transform', 'scale(0)')
+		group.dom.rightg.vslider.g.transition().attr('transform', 'scale(0)')
 	}
 	group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
 }
