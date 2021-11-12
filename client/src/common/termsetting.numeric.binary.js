@@ -6,7 +6,7 @@ import { keyupEnter } from '../client'
 import { make_one_checkbox } from '../dom/checkbox'
 
 // self is the termsetting instance
-export function getNumericBinaryHandler(self) {
+export function getHandler(self) {
 	return {
 		get_term_name(d) {
 			if (!self.opts.abbrCutoff) return d.name
@@ -95,7 +95,7 @@ export function getNumericBinaryHandler(self) {
 		}
 	}
 }
- 
+
 function setqDefaults(self) {
 	const dd = self.num_obj.density_data
 	const boundry_value = self.q && self.q.lst && self.q.lst.length ? self.q.lst[0].stop : undefined

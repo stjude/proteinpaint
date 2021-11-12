@@ -1,10 +1,9 @@
 import { event as d3event } from 'd3-selection'
 
 // self is the termsetting instance
-export function getNumericContHandler(self) {
+export function getHandler(self) {
 	return {
 		get_term_name(d) {
-			console.log(6, self)
 			if (!self.opts.abbrCutoff) return d.name
 			return d.name.length <= self.opts.abbrCutoff + 2
 				? d.name

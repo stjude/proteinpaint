@@ -5,7 +5,7 @@ Arguments
 self: a termsetting instance
 */
 
-export function getCategoricalHandler(self) {
+export function getHandler(self) {
 	setGroupsettingMethods(self)
 	setCategoricalMethods(self)
 

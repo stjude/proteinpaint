@@ -7,7 +7,7 @@ import { init_tabs } from '../dom/toggleButtons'
 import { make_radios } from '../dom/radiobutton'
 
 // self is the termsetting instance
-export function getNumericDiscreteHandler(self) {
+export function getHandler(self) {
 	return {
 		get_term_name(d) {
 			if (!self.opts.abbrCutoff) return d.name
