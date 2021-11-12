@@ -759,7 +759,6 @@ function makeTk(tk, block) {
 	tk.dom = {
 		pileup_g: tk.glider.append('g'),
 		pileup_axis: tk.glider.append('g'),
-		//vsliderg: tk.gright.append('g'),
 		read_limit_height: 15,
 		read_limit_bottompad: 6,
 		read_limit_g: tk.glider.append('g')
@@ -780,7 +779,6 @@ function makeTk(tk, block) {
 		tk.dom.variantg = tk.glider.append('g')
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
-		//tk.dom.diff_score_g = tk.gright.append('g') // For storing bar plot of diff_score
 		tk.dom.diff_score_axis = tk.gright.append('g') // For storing axis of bar plot of diff_score
 		tk.dom.diff_score_plotwidth = 50
 		tk.fs_string = block.maketklefthandle(tk, tk.pileupheight + tk.dom.variantrowheight / 2) // Will contain Fisher strand value which will be added in may_render_variant function
@@ -870,11 +868,6 @@ function makeGroup(gd, tk, block, data) {
 		dom: {
 			groupg: tk.glider.append('g'),
 			rightg: tk.gright.append('g')
-			//{
-			//	vslider: {
-			//		g: tk.dom.vsliderg.append('g').attr('transform', 'scale(0)'),
-			//	},
-			//},
 		}
 	}
 	/*
@@ -888,11 +881,9 @@ function makeGroup(gd, tk, block, data) {
 	group.dom.imgg = group.dom.groupg.append('g')
 	group.dom.rightg.vslider = group.dom.rightg.append('g')
 	group.dom.rightg.vslider.g = group.dom.rightg.vslider.append('g').attr('transform', 'scale(0)')
-	if (tk.variants) {
-		group.dom.diff_score_g = group.dom.rightg.append('g')
-	}
 
 	if (tk.variants) {
+		group.dom.diff_score_g = group.dom.rightg.append('g') // For storing bar plot of diff_score
 		group.dom.diff_score_barplot_fullstack = group.dom.diff_score_g
 			.append('image')
 			.attr('xlink:href', gd.diff_scores_img.src)
@@ -1168,7 +1159,7 @@ function makeGroup(gd, tk, block, data) {
 				}
 				deltay = d
 				group.dom.rightg.vslider.box.attr('height', group.dom.rightg.vslider.boxh + deltay)
-				group.dom.vslider.boxbotline
+				group.dom.rightg.vslider.boxbotline
 					.attr('y1', group.dom.rightg.vslider.boxh + deltay)
 					.attr('y2', group.dom.rightg.vslider.boxh + deltay)
 			})
