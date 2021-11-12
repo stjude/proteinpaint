@@ -1,7 +1,6 @@
 import { getInitFxn, copyMerge } from '../common/rx.core'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
-import { getHandler } from './termsetting.categorical'
 
 /*
 constructor option and API are documented at

@@ -1,11 +1,12 @@
-import { setCategoricalMethods, setGroupsettingMethods } from './termsetting.categorical'
+import { setCategoricalMethods } from './termsetting.categorical'
+import { setGroupsettingMethods } from './termsetting.groupsetting'
 
 /*
 Arguments
 self: a termsetting instance
 */
 export function getHandler(self) {
-	//setGroupsettingMethods(self)
+	setGroupsettingMethods(self)
 	setCategoricalMethods(self)
 
 	return {
