@@ -83,6 +83,7 @@ export function getNumericMethods(self) {
 		self.num_obj.brushes = []
 		addBrushes()
 		addRangeTable()
+		if (self.opts.add_tvs_brush) addNewBrush()
 		self.num_obj.brushes.forEach(brush => brush.init())
 		await showCheckList_numeric(tvs, div)
 	}
@@ -236,16 +237,7 @@ export function getNumericMethods(self) {
 					.style('text-align', 'center')
 					.style('font-size', '.8em')
 					.text('Add a Range')
-					.on('click', () => {
-						//Add new blank range temporary, save after entering values
-						const new_range = { start: '', stop: '', index: self.tvs.ranges.length }
-						self.num_obj.ranges.push(new_range)
-						const brush = { orig: new_range, range: JSON.parse(JSON.stringify(new_range)) }
-						brushes.push(brush)
-						addBrushes()
-						addRangeTable()
-						brush.init()
-					})
+					.on('click', () => addNewBrush())
 
 		add_range_btn.style(
 			'display',
@@ -253,6 +245,17 @@ export function getNumericMethods(self) {
 				? 'none'
 				: 'inline-block'
 		)
+	}
+
+	//Add new blank range temporary, save after entering values
+	function addNewBrush() {
+		const new_range = { start: '', stop: '', index: self.tvs.ranges.length }
+		self.num_obj.ranges.push(new_range)
+		const brush = { orig: new_range, range: JSON.parse(JSON.stringify(new_range)) }
+		self.num_obj.brushes.push(brush)
+		addBrushes()
+		addRangeTable()
+		brush.init()
 	}
 
 	function applyBrush(brush) {
