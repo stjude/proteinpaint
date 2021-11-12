@@ -273,5 +273,8 @@ export function showTvsMenu(opts) {
 		values: [],
 		ranges: []
 	}
+	if (opts.term.type == 'float' || opts.term.type == 'integer') {
+		opts.add_tvs_brush = true
+	}
 	self.methodsByTermType[opts.term.type].fillMenu(opts.holder, self.tvs)
 }
