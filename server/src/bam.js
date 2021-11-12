@@ -342,7 +342,7 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 		}
 		ctx.fillRect(
 			min_diff_score * -1 * multiplication_factor,
-			(i + 1) * read_height,
+			i * read_height,
 			//(diff_score * 50 * -1) / min_diff_score,
 			diff_score * multiplication_factor,
 			read_height - dist_bw_reads * read_height
