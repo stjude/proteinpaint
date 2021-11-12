@@ -181,7 +181,7 @@ function setRenderers(self) {
 							.style('padding', '8px')
 				} else if (termdata.categories) {
 					const orderedCategories = []
-					const input = self.parent.inputs.independent.inputs.find(i => i[i.varClass].id == tid)
+					const input = self.parent.inputs.independent.inputs.find(i => i.term.id == tid)
 					if (input.orderedLabels) {
 						// reorder rows by predefined order
 						for (const k of input.orderedLabels) {
