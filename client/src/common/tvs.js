@@ -275,6 +275,9 @@ export function showTvsMenu(opts) {
 	}
 	if (opts.term.type == 'float' || opts.term.type == 'integer') {
 		opts.add_tvs_brush = true
+	} else if (opts.term.type == 'condition') {
+		self.tvs.bar_by_grade = true
+		self.tvs.value_by_max_grade = true
 	}
 	self.methodsByTermType[opts.term.type].fillMenu(opts.holder, self.tvs)
 }
