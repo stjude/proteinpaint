@@ -163,6 +163,9 @@ function setRenderers(self) {
 
 	self.makeValueTable = function(div, tvs, values) {
 		const values_table = div.append('table').style('border-collapse', 'collapse')
+		// add barchart bar_width for values
+		const maxCount = Math.max(...values.map(v => v.samplecount), 0)
+		values.forEach(v => (v.bar_width_frac = Number((1 - (maxCount - v.samplecount) / maxCount).toFixed(4))))
 
 		// this row will have group names/number
 		const all_checkbox_tr = values_table.append('tr').style('height', '20px')
@@ -212,6 +215,12 @@ function setRenderers(self) {
 
 		function enter_td(d) {
 			const value_tr = select(this)
+				.on('mouseover', () => {
+					value_tr.style('background', '#fff6dc')
+				})
+				.on('mouseout', () => {
+					value_tr.style('background', 'white')
+				})
 
 			const value_label = value_tr
 				.append('td')
@@ -241,6 +250,20 @@ function setRenderers(self) {
 				.style('padding', '2px 5px')
 				.style('font-size', '.8em')
 				.html(d.label + ' (n=' + d.samplecount + ')')
+
+			const maxBarWidth = 100
+			const barWidth = maxBarWidth * d.bar_width_frac
+
+			const bar_td = value_tr.append('td').on('click', () => {
+				value_label.node().click()
+			})
+
+			bar_td
+				.append('div')
+				.style('margin', '1px 10px')
+				.style('width', barWidth + 'px')
+				.style('height', '15px')
+				.style('background-color', '#ddd')
 		}
 		return values_table
 	}
