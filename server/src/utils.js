@@ -463,9 +463,33 @@ exports.bam_ifnochr = async (file, genome, dir) => {
 	return common.contigNameNoChr(genome, chrlst)
 }
 
-exports.get_bigbed_coord = function(bigbed, chr, start, end) {
+exports.query_bigbed_by_coord = function(bigbed, chr, start, end) {
+	// input coordinates need to be 0-based
+	// output data is in bed format and output lines are split into an array
 	return new Promise((resolve, reject) => {
 		const ps = spawn(bigBedToBed, [`-chrom=${chr}`, `-start=${start}`, `-end=${end}`, bigbed, 'stdout'])
+		const out = []
+		const err = []
+		ps.stdout.on('data', i => out.push(i))
+		ps.stderr.on('data', i => err.push(i))
+		ps.on('close', code => {
+			if (code !== 0) reject(`bigBed query exited with non-zero status and this standard error:\n${err.join('')}`)
+			if (err.length > 0) reject(err.join(''))
+			resolve(
+				out
+					.join('')
+					.trim()
+					.split('\n')
+			)
+		})
+	})
+}
+
+exports.query_bigbed_by_name = function(bigbed, name) {
+	// query bigbed by name field
+	// output data is in bed format and output lines are split into an array
+	return new Promise((resolve, reject) => {
+		const ps = spawn(bigBedNamedItems, [bigbed, name, 'stdout'])
 		const out = []
 		const err = []
 		ps.stdout.on('data', i => out.push(i))

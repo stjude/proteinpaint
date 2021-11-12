@@ -1834,6 +1834,7 @@ genome{ name }
 */
 	if (!genome || !genome.hasSNP) return
 	const p = {
+		byCoord: true,
 		genome: genome.name,
 		chr: chr,
 		ranges: []

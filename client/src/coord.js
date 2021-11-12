@@ -97,9 +97,9 @@ export function string2pos(s, genome, donotextend) {
 
 export function string2snp(genome, str, hostURL, jwt) {
 	return fetch(
-		new Request(hostURL + '/snpbyname', {
+		new Request(hostURL + '/snp', {
 			method: 'POST',
-			body: JSON.stringify({ genome: genome, lst: [str], jwt: jwt })
+			body: JSON.stringify({ byName: true, genome: genome, lst: [str], jwt: jwt })
 		})
 	)
 		.then(data => {
@@ -107,11 +107,11 @@ export function string2snp(genome, str, hostURL, jwt) {
 		})
 		.then(data => {
 			if (data.error) throw { message: data.error }
-			if (!data.lst || data.lst.length == 0) throw { message: str + ': not a SNP' }
+			if (!data.results || data.results.length == 0) throw { message: str + ': not a SNP' }
 			/*
 		start/stop are ucsc bed format, include start, not stop
 		*/
-			const r = data.lst[0]
+			const r = data.results[0]
 			return {
 				chr: r.chrom,
 				start: r.chromStart,

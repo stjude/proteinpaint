@@ -183,13 +183,12 @@ app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
 app.get(basepath + '/blat', blat_request_closure(genomes))
 app.get(basepath + '/mds3', mds3_request_closure(genomes))
 app.get(basepath + '/tkbampile', bampile_request)
-app.post(basepath + '/snpbyname', handle_snpbyname)
 app.post(basepath + '/dsdata', handle_dsdata) // old official ds, replace by mds
 
 app.post(basepath + '/tkbigwig', handle_tkbigwig)
 
 app.get(basepath + '/tabixheader', handle_tabixheader)
-app.post(basepath + '/snp', handle_snpbycoord)
+app.post(basepath + '/snp', handle_snp)
 app.get(basepath + '/clinvarVCF', handle_clinvarVCF)
 app.post(basepath + '/isoformlst', handle_isoformlst)
 app.post(basepath + '/dbdata', handle_dbdata)
@@ -1232,7 +1231,7 @@ if file/url ends with .gz, it is bedgraph
 		})
 }
 
-function handle_snpbyname(req, res) {
+async function handle_snp(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
 	const n = req.query.genome
 	if (!n) return res.send({ error: 'no genome' })
@@ -1240,48 +1239,52 @@ function handle_snpbyname(req, res) {
 	if (!g) return res.send({ error: 'invalid genome' })
 	if (!g.snp) return res.send({ error: 'snp is not configured for this genome' })
 	const hits = []
-	for (const n of req.query.lst) {
-		const lst = g.snp.getbyname.all(n)
-		for (const i of lst) {
-			hits.push(i)
-		}
-	}
-	res.send({ lst: hits })
-}
-
-async function handle_snpbycoord(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
-	const n = req.query.genome
-	if (!n) return res.send({ error: 'no genome' })
-	const g = genomes[n]
-	if (!g) return res.send({ error: 'invalid genome' })
-	if (!g.snp) return res.send({ error: 'snp is not configured for this genome' })
-	const hits = []
-	for (const r of req.query.ranges) {
-		// query dbsnp bigbed file by coordinates
-		// input query coordinates need to be 0-based
-		// output snp coordinates are 0-based
-		// output snp fields: chrom, chromStart, chromEnd, name, ref, altCount, alts, shiftBases, freqSourceCount, minorAlleleFreq, majorAllele, minorAllele, maxFuncImpact, class, ucscNotes, _dataOffset, _dataLen
-		const snps = await utils.get_bigbed_coord(g.snp.bigbedfile, req.query.chr, r.start, r.stop)
-		for (const snp of snps) {
-			const fields = snp.split('\t')
-			const ref = fields[4]
-			const alts = fields[6]
-				.split(',')
-				.filter(Boolean)
-				.join('/')
-			const observed = ref + '/' + alts
-			const hit = {
-				chrom: fields[0],
-				chromStart: fields[1],
-				chromEnd: fields[2],
-				name: fields[3],
-				observed: observed
+	if (req.query.byCoord) {
+		if (!(req.query.chr && req.query.ranges)) return res.send({ error: 'no coordinates' })
+		for (const r of req.query.ranges) {
+			// query dbSNP bigbed file by coordinate
+			// input query coordinates need to be 0-based
+			// output snp coordinates are 0-based
+			// output snp fields: chrom, chromStart, chromEnd, name, ref, altCount, alts, shiftBases, freqSourceCount, minorAlleleFreq, majorAllele, minorAllele, maxFuncImpact, class, ucscNotes, _dataOffset, _dataLen
+			const snps = await utils.query_bigbed_by_coord(g.snp.bigbedfile, req.query.chr, r.start, r.stop)
+			for (const snp of snps) {
+				const hit = snp2hit(snp)
+				hits.push(hit)
 			}
-			hits.push(hit)
 		}
+	} else if (req.query.byName) {
+		if (!req.query.lst) return res.send({ error: 'no rsID query' })
+		for (const n of req.query.lst) {
+			// query dbSNP bigbed file by rsID
+			// see above for description of output snp fields
+			const snps = await utils.query_bigbed_by_name(g.snp.bigbedfile, n)
+			for (const snp of snps) {
+				const hit = snp2hit(snp)
+				hits.push(hit)
+			}
+		}
+	} else {
+		return res.send({ error: 'undefined snp query method' })
 	}
 	res.send({ results: hits })
+}
+
+function snp2hit(snp) {
+	const fields = snp.split('\t')
+	const ref = fields[4]
+	const alts = fields[6]
+		.split(',')
+		.filter(Boolean)
+		.join('/')
+	const observed = ref + '/' + alts
+	const hit = {
+		chrom: fields[0],
+		chromStart: Number(fields[1]),
+		chromEnd: Number(fields[2]),
+		name: fields[3],
+		observed: observed
+	}
+	return hit
 }
 
 async function handle_clinvarVCF(req, res) {
