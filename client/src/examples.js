@@ -424,7 +424,10 @@ async function makeLeftsideTabMenu(track, div) {
 	const tabs = track.ppcalls.map(getTabData)
 
 	const menu_wrapper = div.append('div').classed('sjpp-vertical-tab-menu', true)
-	const tabs_div = menu_wrapper.append('div').classed('sjpp-tabs-div', true)
+	const tabs_div = menu_wrapper
+		.append('div')
+		.classed('sjpp-tabs-div', true)
+		.style('min-width', '150px') //Fixes the unsightly problem of tabs dramatically changing size on click.
 	const content_div = menu_wrapper.append('div').classed('sjpp-content-div', true)
 
 	for (const tab of tabs) {
@@ -583,7 +586,7 @@ function showCode(call, btns) {
 		{ language: 'javascript' }
 	).value
 
-	const contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 30px 5px 30px;"><code style="font-size:14px;">${code}</code></pre>`
+	const contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 30px 5px 30px; max-height: 400px; overflow-x: auto; overflow-y:auto;" ><code style="font-size:14px;">${code}</code></pre>`
 
 	btns.push({
 		name: 'Code',

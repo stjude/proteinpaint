@@ -1294,6 +1294,7 @@
         {
             "name": "MAF-timeline",
             "app": "Apps",
+            "hidden": true, 
             "blurb": "Mutant allele fraction timeline chart by date",
             "image": "https://pecan.stjude.cloud/static/examples/images/maf-timeline-square.png",
             "ppcalls": [
