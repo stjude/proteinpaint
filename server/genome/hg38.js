@@ -20,9 +20,7 @@ module.exports = {
 		statement: 'select data from domain where isoform=? collate nocase'
 	},
 	snp: {
-		dbfile: 'anno/db/snp146.hg38.db',
-		statement_getbyname: 'select * from snp146 where name=?',
-		statement_getbycoord: 'select * from snp146 where chrom=? and bin=? and chromStart>=? and chromEnd<=?'
+		bigbedfile: 'anno/dbsnp.hg38.bb'
 	},
 	fimo_motif: {
 		db: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme',

@@ -1249,7 +1249,7 @@ function handle_snpbyname(req, res) {
 	res.send({ lst: hits })
 }
 
-function handle_snpbycoord(req, res) {
+async function handle_snpbycoord(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
 	const n = req.query.genome
 	if (!n) return res.send({ error: 'no genome' })
@@ -1258,11 +1258,27 @@ function handle_snpbycoord(req, res) {
 	if (!g.snp) return res.send({ error: 'snp is not configured for this genome' })
 	const hits = []
 	for (const r of req.query.ranges) {
-		const bin = getbin(r.start, r.stop)
-		if (bin == null) continue
-		const lst = g.snp.getbycoord.all(req.query.chr, bin, r.start, r.stop)
-		for (const i of lst) {
-			hits.push(i)
+		// query dbsnp bigbed file by coordinates
+		// input query coordinates need to be 0-based
+		// output snp coordinates are 0-based
+		// output snp fields: chrom, chromStart, chromEnd, name, ref, altCount, alts, shiftBases, freqSourceCount, minorAlleleFreq, majorAllele, minorAllele, maxFuncImpact, class, ucscNotes, _dataOffset, _dataLen
+		const snps = await utils.get_bigbed_coord(g.snp.bigbedfile, req.query.chr, r.start, r.stop)
+		for (const snp of snps) {
+			const fields = snp.split('\t')
+			const ref = fields[4]
+			const alts = fields[6]
+				.split(',')
+				.filter(Boolean)
+				.join('/')
+			const observed = ref + '/' + alts
+			const hit = {
+				chrom: fields[0],
+				chromStart: fields[1],
+				chromEnd: fields[2],
+				name: fields[3],
+				observed: observed
+			}
+			hits.push(hit)
 		}
 	}
 	res.send({ results: hits })
@@ -7272,21 +7288,6 @@ function validate_tabixfile(file) {
 
 var binOffsets = [512 + 64 + 8 + 1, 64 + 8 + 1, 8 + 1, 1, 0]
 
-function getbin(start, stop) {
-	var startbin = start >> 17,
-		stopbin = stop >> 17,
-		bin = null
-	for (var i = 0; i < binOffsets.length; i++) {
-		if (startbin == stopbin) {
-			bin = binOffsets[i] + startbin
-			break
-		}
-		startbin >>= 3
-		stopbin >>= 3
-	}
-	return bin
-}
-
 function local_init_bulk_flag() {
 	var flag = common.init_bulk_flag()
 	return flag
@@ -7726,18 +7727,10 @@ async function pp_init() {
 		}
 
 		if (g.snp) {
-			if (!g.snp.dbfile) throw genomename + '.snp: missing sqlite dbfile'
-			if (!g.snp.statement_getbyname) throw genomename + '.snp: missing statement_getbyname'
-			if (!g.snp.statement_getbycoord) throw genomename + '.snp: missing statement_getbycoord'
-
-			let db
-			try {
-				db = utils.connect_db(g.snp.dbfile)
-			} catch (e) {
-				throw 'Error with ' + g.snp.dbfile + ': ' + e
-			}
-			g.snp.getbyname = db.prepare(g.snp.statement_getbyname)
-			g.snp.getbycoord = db.prepare(g.snp.statement_getbycoord)
+			if (!g.snp.bigbedfile) throw genomename + '.snp: missing bigBed file'
+			g.snp.bigbedfile = path.join(serverconfig.tpmasterdir, g.snp.bigbedfile)
+			await utils.file_is_readable(g.snp.bigbedfile)
+			//g.snp.getbyname = db.prepare(g.snp.statement_getbyname)
 		}
 
 		if (g.clinvarVCF) {
