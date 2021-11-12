@@ -1,8 +1,5 @@
 import { select } from 'd3-selection'
 
-// this sub component is currently hardcoded for varClass=term and accesses input.term without checking varClass
-// later may be generally applicable to any varClass?
-
 export class InputValuesTable {
 	constructor(opts) {
 		this.opts = opts
@@ -14,22 +11,20 @@ export class InputValuesTable {
 	main() {
 		try {
 			const input = this.handler.input
-			const variable = input[input.varClass]
+			const term = input.term
 			// may allow the values table even if there is a variable error,
 			// in case it helps clarify the error message such as having
 			// not exactly two samplecount bars available for a binary outcome term
-			if (!variable || !input.sampleCounts) {
+			if (!term || !input.sampleCounts) {
 				this.dom.holder.style('display', 'none')
 				this.dom.loading_div.style('display', 'none')
 				return
 			}
-			//delete variable.error
 			this.dom.holder.style('display', 'block')
 			this.dom.loading_div.style('display', 'block')
 			this.updateValueCount(input)
 			this.dom.loading_div.style('display', 'none')
 			this.render()
-			//if (variable.error) throw variable.error
 		} catch (e) {
 			this.dom.loading_div.style('display', 'none')
 			throw e
@@ -37,7 +32,6 @@ export class InputValuesTable {
 	}
 
 	updateValueCount(input) {
-		// TODO may detect condition varClass=term
 		const t = input.term
 
 		try {

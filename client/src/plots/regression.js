@@ -8,11 +8,11 @@ import { fillTermWrapper } from '../common/termsetting'
 /*
 Code architecture:
 
-	regression.js
-	- regression.inputs.js
-		- regression.inputs.term.js // for varClass=term
-		- add new scripts for new varClass
-	- regression.results.js
+regression.js
+	regression.inputs.js
+		regression.inputs.term.js
+			regression.inputs.values.table.js
+	regression.results.js
 */
 
 class Regression {
@@ -64,7 +64,7 @@ class Regression {
 	}
 
 	/* do not set reactsTo
-	so it reacts to all actions
+	so it reacts to all actions matching with the plot id (controlled by store method)
 	including filter/cohort change
 	*/
 
@@ -90,7 +90,7 @@ class Regression {
 		// based on data in config state, but not section
 		const o = this.config.outcome
 		this.dom.header.html(
-			(o ? o[o.varClass].name : '') +
+			(o ? o.term.name : '') +
 				'<span style="opacity:.6;font-size:.7em;margin-left:10px;">' +
 				this.config.regressionType.toUpperCase() +
 				' REGRESSION</span>'
@@ -108,27 +108,16 @@ export async function getPlotConfig(opts, app) {
 	if (!opts.outcome) {
 		opts.outcome = {}
 	}
-	if (!opts.outcome.varClass) {
-		// FIXME: harcoded empty varClass, for now
-		opts.outcome.varClass = 'term'
-	}
-	if (opts.outcome.varClass == 'term') {
-		await fillTermWrapper(opts.outcome, app.vocabApi)
-	} else {
-		throw 'unknown outcome.varClass'
-	}
+	await fillTermWrapper(opts.outcome, app.vocabApi)
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
 	const config = { id }
 	config.outcome = opts.outcome
 
 	if (opts.independent) {
+		if (!Array.isArray(opts.independent)) throw '.independent[] is not array'
 		for (const t of opts.independent) {
-			if (t.varClass == 'term') {
-				await fillTermWrapper(t, app.vocabApi)
-			} else {
-				throw 'unknown independent.varClass'
-			}
+			await fillTermWrapper(t, app.vocabApi)
 		}
 		config.independent = opts.independent
 		delete opts.independent

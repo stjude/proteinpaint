@@ -7,9 +7,6 @@ outcome and independent are two sections sharing same structure
 "inputs[]" collect one or multiple variables for each section
 "input" tracks attributes from a variable
 
-should be varClass-agnostic "input[input.varClass]"
-but not to explicitly access things like "input.term"
-
 **** function cascade ****
 
 constructor
@@ -22,7 +19,7 @@ main
 	mayUpdateSandboxHeader
 	setDisableTerms
 	renderSection
-		updateInputs
+		syncInputsWithConfig
 			mayAddBlankInput
 		removeInput
 		addInput
@@ -36,7 +33,6 @@ export class RegressionInputs {
 		this.app = opts.app
 		// reference to the parent component's mutable instance (not its API)
 		this.parent = opts.parent
-		this.regressionType = this.opts.regressionType
 
 		setInteractivity(this)
 		setRenderers(this)
@@ -103,14 +99,14 @@ export class RegressionInputs {
 			for (const section of this.sections) {
 				await this.renderSection(section)
 				for (const input of section.inputs) {
-					input.dom.holder.style('border-left', input[input.varClass] ? '1px solid #bbb' : '')
+					input.dom.holder.style('border-left', input.term ? '1px solid #bbb' : '')
 					if (input.handler) updates.push(input.handler.update(input))
 				}
 			}
 			await Promise.all(updates)
 			for (const section of this.sections) {
 				for (const input of section.inputs) {
-					if ((input[input.varClass] && input[input.varClass].error) || (input.handler && input.handler.hasError)) {
+					if ((input.term && input.term.error) || input.hasError) {
 						this.hasError = true
 					}
 				}
@@ -123,10 +119,10 @@ export class RegressionInputs {
 
 	setDisableTerms() {
 		this.disable_terms = []
-		if (this.config.outcome && this.config.outcome.varClass == 'term') this.disable_terms.push(this.config.outcome.id)
+		if (this.config.outcome && this.config.outcome.term) this.disable_terms.push(this.config.outcome.id)
 		if (this.config.independent) {
 			for (const vb of this.config.independent) {
-				if (vb.varClass == 'term') this.disable_terms.push(vb.id)
+				this.disable_terms.push(vb.id)
 			}
 		}
 	}
@@ -201,13 +197,13 @@ function setRenderers(self) {
 		// effect is to force user to first select outcome, then independent, but not to select independent first
 		section.dom.holder.style('display', section.configKey == 'outcome' || self.config.outcome ? 'block' : 'none')
 
-		updateInputs(section)
+		syncInputsWithConfig(section)
 		// section.inputs[] is now synced with plot config
 
 		const inputs = section.dom.inputsDiv
 			.selectAll(':scope > div')
 			// key function (2nd arg) uses a function to determine how datum and element are joined by variable id
-			.data(section.inputs, input => input.varClass && input[input.varClass] && input[input.varClass].id)
+			.data(section.inputs, input => input.term && input.term.id)
 
 		inputs.exit().each(removeInput)
 
@@ -217,7 +213,7 @@ function setRenderers(self) {
 			.each(addInput)
 	}
 
-	function updateInputs(section) {
+	function syncInputsWithConfig(section) {
 		// get the input variables from config.outcome or config.independent
 		const selected = self.config[section.configKey]
 
@@ -227,22 +223,16 @@ function setRenderers(self) {
 
 		// process each selected variable
 		for (const variable of selectedArray) {
-			const varClass = variable.varClass
-			if (!varClass) throw 'varClass missing on an input from config'
-
-			const input = section.inputs.find(
-				input => input.varClass == varClass && input[varClass] && input[varClass].id == variable.id
-			)
+			const input = section.inputs.find(input => input.term && input.term.id == variable.id)
 			if (!input) {
 				section.inputs.push({
 					section,
-					varClass,
-					[varClass]: variable
+					term: variable
 				})
 			} else {
 				// reassign the variable reference to the mutable variable copy
 				// from state.config.outcome | .independent
-				input[varClass] = variable
+				input.term = variable
 			}
 		}
 
@@ -259,15 +249,11 @@ function setRenderers(self) {
 			holder: inputDiv
 		}
 
-		if (input.varClass == 'term') {
-			input.handler = new InputTerm({
-				holder: inputDiv.append('div'),
-				input,
-				parent: self
-			})
-		} else {
-			throw 'addInput: unknown varClass'
-		}
+		input.handler = new InputTerm({
+			holder: inputDiv.append('div'),
+			input,
+			parent: self
+		})
 	}
 
 	function removeInput(input) {
@@ -295,6 +281,9 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
+	/* this function is called when any change is made to a term of an input
+	e.g. by termsetting callback
+	*/
 	self.editConfig = async (input, variable) => {
 		if (!variable) {
 			// the variable has been deleted from this input; will delete this input from section
@@ -304,43 +293,33 @@ function setInteractivity(self) {
 			input.section.inputs.splice(i, 1)
 		} else {
 			// variable is selected for this input
-			variable.varClass = input.varClass
 
-			if (input.varClass == 'term') {
-				variable.id = variable.term.id // when switching between continuous/discrete for independent, variable.id missing (termsetting issue?)
+			variable.id = variable.term.id // when switching between continuous/discrete for independent, variable.id missing (termsetting issue?)
 
-				// TODO: maybe the following logic can be generalized outside of this code block,
-				// so `const prevVar = input[input.varClass]` but that would assume that
-				// there will be an `id` property for all input variable classes
-				const prevTerm = input.term
+			const prevTerm = input.term
 
-				/*
-					For a new term (replacing a blank input), the refGrp will be missing.
-					In that case, updateTerm() in regression.inputs.term.js will assign a
-					default refGrp based on sample counts. 
+			/*
+				For a new term (replacing a blank input), the refGrp will be missing.
+				In that case, updateTerm() in regression.inputs.term.js will assign a
+				default refGrp based on sample counts. 
 
-					For a replacement term that happens to match the previous term's ID, 
-					for example adjusting a group other than the refGrp, the refGrp may be 
-					reused if there happen to be sample counts for it.
-				*/
-				if (prevTerm && variable.id === prevTerm.id) {
-					for (const k in prevTerm) {
-						// reapply any unedited key-values to the variable, such as refGrp
-						if (!(k in variable)) variable[k] = prevTerm[k]
-					}
+				For a replacement term that happens to match the previous term's ID, 
+				for example adjusting a group other than the refGrp, the refGrp may be 
+				reused if there happen to be sample counts for it.
+			*/
+			if (prevTerm && variable.id === prevTerm.id) {
+				for (const k in prevTerm) {
+					// reapply any unedited key-values to the variable, such as refGrp
+					if (!(k in variable)) variable[k] = prevTerm[k]
 				}
-				input.term = variable
-			} else {
-				throw `unknown input.varClass *** TODO: support non-term input classes ***`
 			}
+			input.term = variable
 		}
 
-		const selected = input.section.inputs
-			// get only non-empty inputs
-			.filter(input => input.varClass && input[input.varClass])
-			.map(input => input[input.varClass])
-
-		// key could be 'outcome' or 'independent'
+		const selected = []
+		for (const i of input.section.inputs) {
+			if (i.term) selected.push(i.term)
+		}
 		const key = input.section.configKey
 		// the target config to fill-in/replace/delete may hold one or more selected input variables
 		// config.outcome is not an array (exactly one selected variable)
@@ -382,11 +361,8 @@ function setInteractivity(self) {
 function mayAddBlankInput(section) {
 	// on this section, detect if a blank input needs to be created
 	if (section.inputs.length < section.limit) {
-		const hasblankInput = section.inputs.find(input => input.varClass && !input[input.varClass])
-		if (!hasblankInput) {
-			// FIXME should not set varClass=term on blankinput but will allow to choose a varClass supported by this dataset
-			// e.g. termdbConfig should tell if this dataset has genetic data, supports samplelst etc
-			section.inputs.push({ section, varClass: 'term' })
+		if (!section.inputs.find(input => !input.term)) {
+			section.inputs.push({ section })
 		}
 	}
 }

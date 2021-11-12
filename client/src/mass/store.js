@@ -316,11 +316,7 @@ function validateRegressionPlot(p, vocabApi) {
 
 	if (p.independent) {
 		for (const item of p.independent) {
-			if (item.varClass == 'term') {
-				validatePlotTerm(item, vocabApi)
-			} else {
-				throw `cannot validate varClass=${item.varClass}`
-			}
+			validatePlotTerm(item, vocabApi)
 		}
 	}
 }
