@@ -1,5 +1,3 @@
-import { dofetch3 } from '../client'
-
 export function getConditionMethods(self) {
 	/*** self is a TVS instance, see src/common/tvs.js ***/
 

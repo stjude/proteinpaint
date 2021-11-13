@@ -827,64 +827,78 @@ function setInteractivity(self) {
 						? self.activeData.filter.lst
 								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
 								.map(d => d.tvs.term.id)
-						: []
+						: [],
+
+				click_term2select_tvs(tvs) {
+					self.editFilterRoot(d, [{ type: 'tvs', tvs }])
+				}
 			},
 			barchart: {
 				bar_click_override: tvslst => {
-					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
-
-					if (!filterUiRoot.lst.length) {
-						if (tvslst.length > 1) filterUiRoot.join = 'and'
-						filterUiRoot.lst.push(...tvslst)
-						self.refresh(filterUiRoot)
-					} else if (d != 'or' && d != 'and') {
-						throw 'unhandled new term(s): invalid appender join value'
-					} else {
-						if (!filterUiRoot.join) filterUiRoot.join = d // 'and' || 'or'
-
-						if (filterUiRoot.join == d) {
-							if (tvslst.length < 2 || filterUiRoot.join == 'and') {
-								filterUiRoot.lst.push(...tvslst)
-							} else {
-								filterUiRoot.push({
-									type: 'tvslst',
-									in: true,
-									join: 'and',
-									lst: tvslst
-								})
-							}
-							self.refresh(filterUiRoot)
-						} else if (d == 'and' || tvslst.length < 2) {
-							delete filterUiRoot.tag
-							self.refresh({
-								tag: 'filterUiRoot',
-								type: 'tvslst',
-								in: true,
-								join: d,
-								lst: [filterUiRoot, ...tvslst]
-							})
-						} else {
-							delete filterUiRoot.tag
-							self.refresh({
-								tag: 'filterUiRoot',
-								type: 'tvslst',
-								in: true,
-								join: 'or',
-								lst: [
-									filterUiRoot,
-									{
-										type: 'tvslst',
-										in: true,
-										join: 'and',
-										lst: tvslst
-									}
-								]
-							})
-						}
-					}
+					self.editFilterRoot(d, tvslst)
 				}
 			}
 		})
+	}
+
+	/*
+		Arguments: 
+		d: the data bound to a button element like +New, AND, OR
+		tvslst
+	*/
+	self.editFilterRoot = (d, tvslst) => {
+		// NOTE: default to 'tvs' argument once bar_click_override is unsupported
+		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+
+		if (!filterUiRoot.lst.length) {
+			if (tvslst.length > 1) filterUiRoot.join = 'and'
+			filterUiRoot.lst.push(...tvslst)
+			self.refresh(filterUiRoot)
+		} else if (d != 'or' && d != 'and') {
+			throw 'unhandled new term(s): invalid appender join value'
+		} else {
+			if (!filterUiRoot.join) filterUiRoot.join = d // 'and' || 'or'
+
+			if (filterUiRoot.join == d) {
+				if (tvslst.length < 2 || filterUiRoot.join == 'and') {
+					filterUiRoot.lst.push(...tvslst)
+				} else {
+					filterUiRoot.push({
+						type: 'tvslst',
+						in: true,
+						join: 'and',
+						lst: tvslst
+					})
+				}
+				self.refresh(filterUiRoot)
+			} else if (d == 'and' || tvslst.length < 2) {
+				delete filterUiRoot.tag
+				self.refresh({
+					tag: 'filterUiRoot',
+					type: 'tvslst',
+					in: true,
+					join: d,
+					lst: [filterUiRoot, ...tvslst]
+				})
+			} else {
+				delete filterUiRoot.tag
+				self.refresh({
+					tag: 'filterUiRoot',
+					type: 'tvslst',
+					in: true,
+					join: 'or',
+					lst: [
+						filterUiRoot,
+						{
+							type: 'tvslst',
+							in: true,
+							join: 'and',
+							lst: tvslst
+						}
+					]
+				})
+			}
+		}
 	}
 
 	// menu to replace a term or add a subnested filter
@@ -917,7 +931,20 @@ function setInteractivity(self) {
 				disable_terms:
 					filter && filter.lst && filter.join == 'and'
 						? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional').map(d => d.tvs.term.id)
-						: [self.activeData.item.tvs.term.id]
+						: !self.activeData.item
+						? []
+						: self.activeData.item.type == 'tvs'
+						? [self.activeData.item.tvs.term.id]
+						: self.activeData.item.lst
+						? self.activeData.item.lst.filter(f => f.type == 'tvs').map(f => f.tvs.term.id)
+						: [],
+
+				click_term2select_tvs:
+					!filter.join ||
+					!filter.lst.length ||
+					(self.activeData.elem && self.activeData.elem.className.includes('join'))
+						? self.appendTerm
+						: self.subnestFilter
 			},
 			barchart: {
 				bar_click_override: d.bar_click_override
@@ -963,12 +990,13 @@ function setInteractivity(self) {
 		self.refresh(filterUiRoot)
 	}
 
-	self.replaceTerm = tvslst => {
-		const item = self.activeData.item
-		const filter = self.activeData.filter
+	self.replaceTerm = _tvs_ => {
+		// NOTE: default to type: 'tvs' argument once bar_click_override is unsupported
+		const tvslst = Array.isArray(_tvs_) ? _tvs_ : [{ type: 'tvs', tvs: _tvs_ }]
 		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = findItem(filterUiRoot, filter.$id)
-		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
+		const filterCopy = findItem(filterUiRoot, self.activeData.filter.$id)
+		const i = filterCopy.lst.findIndex(t => t.$id === self.activeData.item.$id)
+		// FIXME: will replace with just one tvs, once bar_click_override is unsupported
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
 			filterCopy.lst.splice(i, 1, ...tvslst)
 		} else {
@@ -983,11 +1011,12 @@ function setInteractivity(self) {
 		self.refresh(filterUiRoot)
 	}
 
-	self.appendTerm = tvslst => {
-		const item = self.activeData.item
-		const filter = self.activeData.filter
+	self.appendTerm = _tvs_ => {
+		// FIXME: default to type: 'tvs' argument once bar_click_override is unsupported
+		const tvslst = Array.isArray(_tvs_) ? _tvs_ : [{ type: 'tvs', tvs: _tvs_ }]
 		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = findItem(filterUiRoot, filter.$id)
+		const filterCopy = findItem(filterUiRoot, self.activeData.filter.$id)
+		// FIXME: will just push one tvs, once bar_click_override is unsupported
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
 			filterCopy.lst.push(...tvslst)
 		} else {

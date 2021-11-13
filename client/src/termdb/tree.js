@@ -4,6 +4,7 @@ import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
 import { isUsableTerm } from '../../shared/termdb.usecase'
 import { termInfoInit } from './termInfo'
+import { showTvsMenu } from '../common/tvs'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -69,7 +70,8 @@ class TdbTree {
 		rx.prepComponent(this, opts)
 		this.dom = {
 			holder: opts.holder,
-			treeDiv: opts.holder.append('div')
+			treeDiv: opts.holder.append('div'),
+			nextDiv: opts.holder.append('div').style('display', 'none')
 		}
 
 		// attach instance-specific methods via closure
@@ -410,7 +412,7 @@ function setRenderers(self) {
 			infoIcon_div = div.append('div').style('display', 'inline-block')
 		}
 		if (graphable(term)) {
-			if (self.opts.click_term) {
+			if (self.opts.click_term || self.opts.click_term2select_tvs) {
 				if (termIsDisabled) {
 					labeldiv
 						.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
@@ -428,7 +430,11 @@ function setRenderers(self) {
 						.style('margin', '1px 0px')
 						.style('cursor', 'default')
 						.on('click', () => {
-							self.opts.click_term(term)
+							if (self.opts.click_term2select_tvs) {
+								self.handle_select_tvs(term)
+							} else {
+								self.opts.click_term(term)
+							}
 						})
 				}
 
@@ -443,7 +449,7 @@ function setRenderers(self) {
 						.text('n=' + term.samplecount)
 				}
 			} else if (self.opts.set_custombtns) {
-				self.opts.set_custombtns(term, div.append('div').style('display', 'inline-block'), termIsDisabled, cls_termview)
+				self.opts.set_custombtns(term, div, termIsDisabled, cls_termview)
 				// div.append('div').attr('class', cls_termgraphdiv)
 			} else {
 				// no modifier, show view button and graph div
@@ -539,5 +545,31 @@ function setInteractivity(self) {
 		}
 		const type = self.state.visiblePlotIds.includes(term.id) ? 'plot_hide' : 'plot_show'
 		self.app.dispatch({ type, id: term.id, term })
+	}
+
+	self.handle_select_tvs = function(term) {
+		// need to hide search: dispatch({type:'search_hide'})?
+		self.dom.treeDiv.style('display', 'none')
+		self.dom.nextDiv.selectAll('*').remove()
+		self.dom.nextDiv
+			.style('display', 'block')
+			.append('div')
+			.style('margin', '20px')
+			.append('span')
+			.html('&laquo; Back to variable selection')
+			.attr('class', 'sja_clbtext')
+			.on('click', () => {
+				// show search: dispatch({type:'search_show'})
+				self.dom.treeDiv.style('display', 'block')
+				self.dom.nextDiv.style('display', 'none')
+			})
+
+		showTvsMenu({
+			term,
+			holder: self.dom.nextDiv.append('div'),
+			vocabApi: self.app.vocabApi,
+			debug: self.app.debug,
+			callback: self.opts.click_term2select_tvs
+		})
 	}
 }

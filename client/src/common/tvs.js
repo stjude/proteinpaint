@@ -86,12 +86,12 @@ function setRenderers(self) {
 			.html(self.methodsByTermType[self.tvs.term.type].term_name_gen)
 			.style('text-transform', 'uppercase')
 
-		// // negate button
+		// negate button
 		one_term_div
 			.append('div')
 			.attr('class', 'negate_btn')
 			.style('cursor', 'default')
-			.style('display', 'inline-block')
+			//.style('display', 'inline-block' : 'none')
 			.style('padding', '6px 6px 3px 6px')
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
 			.html(self.tvs.isnot ? 'NOT' : 'IS')
@@ -114,10 +114,12 @@ function setRenderers(self) {
 	self.updatePill = async function() {
 		const one_term_div = select(this)
 		const tvs = one_term_div.datum()
+		const lstlen = (self.tvs.values && self.tvs.values.length) || (self.tvs.ranges && self.tvs.ranges.length)
 
 		// negate button
 		one_term_div
 			.select('.negate_btn')
+			.style('display', lstlen ? 'inline-block' : 'none')
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
 			.html(tvs.isnot ? 'NOT' : 'IS')
 
@@ -132,7 +134,7 @@ function setRenderers(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'value_btn sja_filter_tag_btn')
-			.style('display', 'inline-block')
+			.style('display', lstlen ? 'inline-block' : 'none')
 			.style('padding', '6px 6px 3px 6px')
 			.style('border-radius', '0 6px 6px 0')
 			.style('font-style', 'italic')
@@ -161,6 +163,9 @@ function setRenderers(self) {
 
 	self.makeValueTable = function(div, tvs, values) {
 		const values_table = div.append('table').style('border-collapse', 'collapse')
+		// add barchart bar_width for values
+		const maxCount = Math.max(...values.map(v => v.samplecount), 0)
+		values.forEach(v => (v.bar_width_frac = Number((1 - (maxCount - v.samplecount) / maxCount).toFixed(4))))
 
 		// this row will have group names/number
 		const all_checkbox_tr = values_table.append('tr').style('height', '20px')
@@ -210,6 +215,12 @@ function setRenderers(self) {
 
 		function enter_td(d) {
 			const value_tr = select(this)
+				.on('mouseover', () => {
+					value_tr.style('background', '#fff6dc')
+				})
+				.on('mouseout', () => {
+					value_tr.style('background', 'white')
+				})
 
 			const value_label = value_tr
 				.append('td')
@@ -239,6 +250,20 @@ function setRenderers(self) {
 				.style('padding', '2px 5px')
 				.style('font-size', '.8em')
 				.html(d.label + ' (n=' + d.samplecount + ')')
+
+			const maxBarWidth = 100
+			const barWidth = maxBarWidth * d.bar_width_frac
+
+			const bar_td = value_tr.append('td').on('click', () => {
+				value_label.node().click()
+			})
+
+			bar_td
+				.append('div')
+				.style('margin', '1px 10px')
+				.style('width', barWidth + 'px')
+				.style('height', '15px')
+				.style('background-color', '#ddd')
 		}
 		return values_table
 	}
@@ -261,4 +286,21 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	// optional event handlers
+}
+
+// opts is the same argument for the TVS constructor()
+export function showTvsMenu(opts) {
+	const self = new TVS(opts)
+	self.tvs = {
+		term: opts.term,
+		values: [],
+		ranges: []
+	}
+	if (opts.term.type == 'float' || opts.term.type == 'integer') {
+		opts.add_tvs_brush = true
+	} else if (opts.term.type == 'condition') {
+		self.tvs.bar_by_grade = true
+		self.tvs.value_by_max_grade = true
+	}
+	self.methodsByTermType[opts.term.type].fillMenu(opts.holder, self.tvs)
 }

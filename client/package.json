@@ -7,7 +7,7 @@
     "dev": "rm -rf ../public/bin && webpack --env.NODE_ENV=development --watch --progress --colors",
     "pretest": "./test/pretest.js",
     "test": "rm -f ../public/bin/bundle.*; browserify ./test/init.js ../public/bin/proteinpaint.js src/*/test/*.spec.js | tape-run --static ../public",
-    "browser": "rm -f ../public/bin/bundle.*; watchify src/*/test/*.spec.js -o ../public/bin/spec.bundle.js -v",
+    "browser": "rm -f ../public/bin/bundle.*; watchify src/*/test/filter*.spec.js -o ../public/bin/spec.bundle.js -v",
     "examples": "rm -f ../public/bin/bundle.*; watchify src/test/examples.spec.js -o ../public/bin/spec.bundle.js -v",
     "gdc": "rm -f ../public/bin/bundle.*; browserify src/wrappers/test/gdc*.spec.js | tape-run --static ../public",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w"
