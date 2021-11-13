@@ -548,13 +548,18 @@ function setInteractivity(self) {
 	}
 
 	self.handle_select_tvs = function(term) {
+		// need to hide search: dispatch({type:'search_hide'})?
 		self.dom.treeDiv.style('display', 'none')
 		self.dom.nextDiv.selectAll('*').remove()
 		self.dom.nextDiv
 			.style('display', 'block')
 			.append('div')
-			.html('<< Back to variable selection')
+			.style('margin', '20px')
+			.append('span')
+			.html('&laquo; Back to variable selection')
+			.attr('class', 'sja_clbtext')
 			.on('click', () => {
+				// show search: dispatch({type:'search_show'})
 				self.dom.treeDiv.style('display', 'block')
 				self.dom.nextDiv.style('display', 'none')
 			})
