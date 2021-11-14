@@ -1,9 +1,9 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const termsettingInit = require('../termsetting').termsettingInit
 const vocabData = require('../../termdb/test/vocabData')
 const vocabInit = require('../../termdb/vocabulary').vocabInit
 const termjson = require('../../../test/testdata/termjson').termjson
+//const termsettingInit = require('../termsetting').termsettingInit
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -17,7 +17,9 @@ $ npx watchify termsetting.spec.js -o ../../../public/bin/spec.bundle.js -v
  reusable helper functions
 **************************/
 
-function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
+let termsettingInit
+
+async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 	const holder = d3s
 		.select('body')
 		.append('div')
@@ -34,6 +36,11 @@ function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 			return state
 		},
 		opts: { state }
+	}
+
+	if (!termsettingInit) {
+		const app = await window.runproteinpaint({ debug: true, noheader: true })
+		termsettingInit = app.testInternals.termsettingInit
 	}
 
 	opts.pill = termsettingInit({
@@ -67,7 +74,7 @@ tape('\n', test => {
 })
 
 tape('editMenu', async test => {
-	const opts = getOpts({
+	const opts = await getOpts({
 		showFullMenu: true,
 		tsData: {
 			term: termjson['diaggrp']
@@ -94,7 +101,7 @@ tape('editMenu', async test => {
 })
 
 tape('use_bins_less', async test => {
-	const opts = getOpts({
+	const opts = await getOpts({
 		use_bins_less: true,
 		tsData: {
 			term: termjson['agedx']
@@ -128,7 +135,7 @@ tape.skip('Categorical term', async test => {
 	/*
 		FIXME: detect draggable divs instead of checkboxes
 	*/
-	const opts = getOpts({
+	const opts = await getOpts({
 		tsData: {
 			term: termjson['diaggrp']
 		}
@@ -205,7 +212,7 @@ tape('Numerical term: range boundaries', async test => {
 	test.timeoutAfter(3000)
 	test.plan(5)
 
-	const opts = getOpts({
+	const opts = await getOpts({
 		tsData: {
 			term: termjson['agedx']
 		}
@@ -265,7 +272,7 @@ tape('Numerical term: fixed bins', async test => {
 	test.timeoutAfter(3000)
 	test.plan(10)
 
-	const opts = getOpts({
+	const opts = await getOpts({
 		tsData: {
 			term: termjson['agedx']
 		}
@@ -432,7 +439,7 @@ tape('Numerical term: float custom bins', async test => {
 	test.timeoutAfter(3000)
 	test.plan(1)
 
-	const opts = getOpts({
+	const opts = await getOpts({
 		tsData: {
 			term: termjson['agedx'],
 			q: {
@@ -489,7 +496,7 @@ tape('Numerical term: integer custom bins', async test => {
 	test.timeoutAfter(3000)
 	test.plan(3)
 
-	const opts = getOpts({
+	const opts = await getOpts({
 		tsData: {
 			term: termjson['agedx'],
 			q: {
@@ -571,7 +578,7 @@ tape('Numerical term: integer custom bins', async test => {
 })
 
 tape('Conditional term', async test => {
-	const opts = getOpts({
+	const opts = await getOpts({
 		tsData: {
 			term: {
 				id: 'Arrhythmias',
@@ -751,7 +758,7 @@ tape('Custom vocabulary', async test => {
 	test.timeoutAfter(5000)
 	test.plan(6)
 	const vocab = vocabData.getExample()
-	const opts = getOpts(
+	const opts = await getOpts(
 		{
 			showFullMenu: true,
 			tsData: {

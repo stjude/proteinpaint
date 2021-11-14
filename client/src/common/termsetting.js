@@ -139,8 +139,8 @@ class TermSetting {
 	initHandlerByType() {
 		const defaultHandler = getDefaultHandler(this)
 		this.handlerByType = {
-			default: defaultHandler,
-			survival: defaultHandler
+			survival: defaultHandler,
+			default: defaultHandler
 		}
 	}
 
@@ -155,23 +155,7 @@ class TermSetting {
 		const typeSubtype = `${type}${subtype}`
 		if (!this.handlerByType[typeSubtype]) {
 			try {
-				const _ = // await import(`./termsetting.${typeSubtype}.js`)
-					// FIXME: tape tests break when filenames in dynamic imports
-					// are not simple strings, such as when using a variable in the filename
-					typeSubtype == 'categorical'
-						? await import(`./termsetting.categorical.js`)
-						: typeSubtype == 'condition'
-						? await import(`./termsetting.condition.js`)
-						: typeSubtype == 'numeric.discrete'
-						? await import(`./termsetting.numeric.discrete.js`)
-						: typeSubtype == 'numeric.continuous'
-						? await import(`./termsetting.numeric.continuous.js`)
-						: typeSubtype == 'numeric.binary'
-						? await import(`./termsetting.numeric.binary.js`)
-						: typeSubtype == 'numeric.toggle'
-						? await import(`./termsetting.numeric.toggle.js`)
-						: null
-
+				const _ = await import(`./termsetting.${typeSubtype}.js`)
 				this.handlerByType[typeSubtype] = _.getHandler(this)
 			} catch (e) {
 				throw `error with handler='./termsetting.${typeSubtype}.js': ${e}`

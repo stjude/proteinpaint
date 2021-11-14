@@ -41,6 +41,11 @@ module.exports = function(env = {}) {
 					use: ['style-loader', 'css-loader']
 				},
 				{
+					// will remove this rule in development mode
+					test: path.join(__dirname, './test/internals.js'),
+					use: [path.join(__dirname, './test/empty-wp-loader.js')]
+				},
+				{
 					test: /\.js$/,
 					exclude: /\.spec\.js$/,
 					use: [
@@ -57,6 +62,9 @@ module.exports = function(env = {}) {
 
 	if (config.mode == 'development') {
 		config.plugins = [new WebpackNotifierPlugin()]
+		// delete the rule that empties the test internals code,
+		// so that selected internals may be exposed during development or testing
+		config.module.rules.splice(1, 1)
 	}
 	if (config.mode != 'production') {
 		// do not minify

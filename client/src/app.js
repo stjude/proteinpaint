@@ -15,7 +15,6 @@ import { init_mdsjson } from './app.mdsjson'
 import { drawer_init } from './app.drawer'
 import urlmap from './common/urlmap'
 import { renderSandboxFormDiv, newSandboxDiv } from './dom/sandbox'
-
 import * as wrappers from './wrappers/PpReact'
 
 /*
@@ -53,8 +52,6 @@ launch_fimo
 launch_singlecell
 */
 
-const ppsrc = (document && document.currentScript && document.currentScript.src) || ''
-
 const headtip = new client.Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
 headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
@@ -68,11 +65,6 @@ export function runproteinpaint(arg) {
 			client.sayerror(app.holder0, m)
 		},
 
-		// default data host, may be overriden later by arg.host
-		// will allow different hostURLs for each holder
-		// when calling runproteinpaint() multiple times in the same page
-		hostURL: ppsrc.includes('://') ? ppsrc.split('://')[0] + '://' + ppsrc.split('://')[1].split('/')[0] : '',
-
 		/*
 		server emitted state, if true, will trigger globals e.g. window.bb
 		it needs to be set before launching any apps
@@ -84,6 +76,8 @@ export function runproteinpaint(arg) {
 		// the default is to have a unique tracker per Proteinpaint app instance
 		instanceTracker: arg.instanceTracker || { sjcharts: {} }
 	}
+
+	setHostUrl(arg, app)
 
 	// subnest an sjcharts object to track its app instances by rendererType,
 	// to avoid namespace conflicts with PP renderer instances
@@ -108,25 +102,6 @@ export function runproteinpaint(arg) {
 		.style('color', 'black')
 	app.sandbox_header = arg.sandbox_header || undefined
 
-	if (arg.host) {
-		app.hostURL = arg.host
-	} else if (window.location.hostname == 'localhost') {
-		// easily switch server host for testing in developer machine,
-		// for example the rendered data from a docker container vs host machine
-		const urlp = urlmap()
-		if (urlp.has('hosturl')) app.hostURL = urlp.get('hosturl')
-		else {
-			const hostname = urlp.get('hostname')
-			const hostport = urlp.get('hostport')
-			const prot = window.location.protocol + '//'
-			if (hostname && hostport) app.hostURL = prot + hostname + ':' + hostport
-			else if (hostname) app.hostURL = prot + hostname
-			else if (hostport) app.hostURL = prot + window.location.hostname + ':' + hostport
-		}
-	}
-
-	// store fetch parameters
-	sessionStorage.setItem('hostURL', app.hostURL)
 	if (arg.jwt) {
 		sessionStorage.setItem('jwt', arg.jwt)
 	}
@@ -160,7 +135,7 @@ export function runproteinpaint(arg) {
 	const response = client.dofetch2('genomes', {}, { serverData })
 
 	return response
-		.then(data => {
+		.then(async data => {
 			if (data.error) throw { message: 'Cannot get genomes: ' + data.error }
 			if (!data.genomes) throw { message: 'no genome data!?' }
 
@@ -172,6 +147,7 @@ export function runproteinpaint(arg) {
 
 			if (data.debugmode) {
 				app.debugmode = true
+				app.testInternals = await import('../test/internals')
 			}
 
 			// genome data init
@@ -188,7 +164,7 @@ export function runproteinpaint(arg) {
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')
 
-			const subapp = parseembedthenurl(arg, app)
+			const subapp = await parseembedthenurl(arg, app)
 			return subapp ? subapp : app
 		})
 		.catch(err => {
@@ -198,6 +174,48 @@ export function runproteinpaint(arg) {
 }
 
 runproteinpaint.wrappers = wrappers
+
+// KEEP THIS ppsrc DECLARATION AT THE TOP SCOPE !!!
+// need to know the script src when pp is first loaded
+// the source context may be lost after the pp script is loaded
+// and a different script gets loaded in the page
+const ppsrc = (document && document.currentScript && document.currentScript.src) || ''
+
+function setHostUrl(arg, app) {
+	// attaching hostURL to app will allow different hostURLs for each holder
+	// when calling runproteinpaint() multiple times in the same page
+
+	if (arg.host) {
+		app.hostURL = arg.host
+	} else if (window.location.hostname == 'localhost') {
+		// easily switch server host for testing in developer machine,
+		// for example the rendered data from a docker container vs host machine
+		const urlp = urlmap()
+		if (urlp.has('hosturl')) app.hostURL = urlp.get('hosturl')
+		else if (window.testHost) {
+			app.hostURL = window.testHost
+		} else {
+			const hostname = urlp.get('hostname')
+			const hostport = urlp.get('hostport')
+			const prot = window.location.protocol + '//'
+			if (hostname && hostport) app.hostURL = prot + hostname + ':' + hostport
+			else if (hostname) app.hostURL = prot + hostname
+			else if (hostport) app.hostURL = prot + window.location.hostname + ':' + hostport
+		}
+	}
+
+	if (!app.hostURL) {
+		if (ppsrc.includes('://')) {
+			// use the script source as the host URL
+			app.hostURL = ppsrc.split('://')[0] + '://' + ppsrc.split('://')[1].split('/')[0]
+		} else {
+			app.hostURL = ''
+		}
+	}
+
+	// store fetch parameters
+	sessionStorage.setItem('hostURL', app.hostURL)
+}
 
 function makeheader(app, obj, jwt) {
 	/*

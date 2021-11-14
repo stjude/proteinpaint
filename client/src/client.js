@@ -267,7 +267,7 @@ export function dofetch(path, arg, opts = null) {
 		}
 
 		let url = path
-		const host = sessionStorage.getItem('hostURL') || window.testHost || ''
+		const host = sessionStorage.getItem('hostURL') || ''
 		if (host) {
 			// hostURL can end with / or not, must use 'host/path'
 			if (host.endsWith('/')) {
@@ -318,7 +318,7 @@ export function dofetch2(path, init = {}, opts = {}) {
 	}
 
 	let url = path
-	const host = sessionStorage.getItem('hostURL') || window.testHost || ''
+	const host = sessionStorage.getItem('hostURL') || ''
 	if (host) {
 		// hostURL can end with / or not, must use 'host/path'
 		if (host.endsWith('/')) {
