@@ -17,11 +17,18 @@ export class InputTerm {
 	}
 
 	init(holder) {
-		// only run once when the input is added in inputs.js via data/enter/update
+		// only run once when a new input variable is added to the user interface via data/enter() in inputs.js
+
+		const termRow = holder.append('div')
+		// the row contains two cells: left to show ts pill, right to show interaction
+		const pillDiv = termRow.append('span')
+		const interactionDiv = termRow.append('span').style('margin-left', '20px')
 
 		this.dom = {
 			holder,
-			pillDiv: holder.append('div'),
+			termRow,
+			pillDiv,
+			interactionDiv,
 			err_div: holder
 				.append('div')
 				.style('display', 'none')
@@ -106,7 +113,14 @@ export class InputTerm {
 		const tw = this.term // term wrapper
 
 		// clear previous errors
-		if (tw) delete tw.error
+		if (tw) {
+			// a term has been selected
+			delete tw.error
+			// just a test!
+			// do not show +interaction for blank input
+			this.dom.interactionDiv.text('+ Interaction')
+		}
+
 		this.dom.err_div.style('display', 'none').text('')
 		this.hasError = false
 
@@ -226,7 +240,7 @@ export class InputTerm {
 	}
 
 	remove() {
-		this.dom.pillDiv
+		this.dom.termRow
 			.transition()
 			.duration(500)
 			.style('opacity', 0)
