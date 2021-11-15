@@ -37,13 +37,15 @@
 
 
 args <- commandArgs(trailingOnly = T)
-if (length(args) != 4){
-  stop("Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories> <scaling factors>] <stdout>")
+if (length(args) != 5){
+  stop("Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories> <scaling factors> <model>] <stdout>")
 }
 regressionType <- args[1]
 variableClasses <- strsplit(args[2], split = ",")[[1]]
 refCategories <- strsplit(args[3], split = ",")[[1]]
 scalingFactors <- strsplit(args[4], split = ",")[[1]]
+modelStr <- args[5]
+
 
 #Read in input data and assign variable classes
 con <- file("stdin","r")
@@ -77,8 +79,9 @@ for(i in 1:length(scalingFactors)) {
 #Perform the regression analysis
 names(dat) <- paste(names(dat), "___", sep = "")
 outcomeVar <- names(dat)[1]
-independentVars <- names(dat)[-1]
-model <- as.formula(paste(sprintf("`%s`", outcomeVar), paste(sprintf("`%s`", independentVars), collapse = " + "), sep = " ~ "))
+#independentVars <- names(dat)[-1]
+#model <- as.formula(paste(sprintf("`%s`", outcomeVar), paste(sprintf("`%s`", independentVars), collapse = " + "), sep = " ~ "))
+model <- as.formula(modelStr)
 if (regressionType == "linear"){
   # linear regression
   if (!is.integer(dat[,outcomeVar]) & !is.numeric(dat[,outcomeVar])){
