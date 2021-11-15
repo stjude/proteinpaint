@@ -4,69 +4,84 @@ import { get_bin_label } from '../../shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
 
 /*
-class instance is the handler object of an input
+class instance is an input
 */
 
 export class InputTerm {
 	constructor(opts) {
+		// opts { section, term, parent }
 		this.opts = opts
-		this.input = opts.input
-		this.parent = opts.parent
+		this.section = opts.section
+		this.term = opts.term // term wrapper {id, term, q}; will be missing for a blank input
+		this.parent = opts.parent // the inputs instance
+	}
+
+	init(holder) {
+		// only run once when the input is added in inputs.js via data/enter/update
 
 		this.dom = {
-			holder: opts.holder,
-			pillDiv: opts.holder.append('div'),
-			err_div: opts.holder
+			holder,
+			pillDiv: holder.append('div'),
+			err_div: holder
 				.append('div')
 				.style('display', 'none')
 				.style('padding', '5px')
 				.style('background-color', 'rgba(255,100,100,0.2)'),
-			infoDiv: opts.holder.append('div')
+			infoDiv: holder.append('div')
 		}
 
-		this.init()
-	}
-
-	init() {
 		try {
-			// reference shortcuts from this.input
-			const section = this.input.section
 			const { app, config, state, disable_terms } = this.parent
 
 			this.pill = termsettingInit({
-				placeholder: section.selectPrompt,
-				placeholderIcon: section.placeholderIcon,
+				placeholder: this.section.selectPrompt,
+				placeholderIcon: this.section.placeholderIcon,
 				holder: this.dom.pillDiv,
 				vocabApi: app.vocabApi,
 				vocab: state.vocab,
 				activeCohort: state.activeCohort,
 				use_bins_less: true,
 				debug: app.opts.debug,
-				buttons: section.configKey == 'outcome' ? ['replace'] : ['delete'],
-				numericEditMenuVersion: getMenuVersion(config, this.input),
-				usecase: { target: 'regression', detail: section.configKey, regressionType: config.regressionType },
+				buttons: this.section.configKey == 'outcome' ? ['replace'] : ['delete'],
+				numericEditMenuVersion: this.getMenuVersion(config),
+				usecase: { target: 'regression', detail: this.section.configKey, regressionType: config.regressionType },
 				disable_terms,
 				abbrCutoff: 50,
 				callback: term => {
-					this.parent.editConfig(this.input, term)
+					this.parent.editConfig(this, term)
 				}
 			})
 
-			if (section.configKey == 'outcome') {
+			if (this.section.configKey == 'outcome') {
 				// special treatment for terms selected for outcome
 				this.setQ = getQSetter(config.regressionType)
 			}
 
 			this.valuesTable = new InputValuesTable({
 				holder: this.dom.infoDiv,
-				handler: this,
+				input: this,
 				callback: term => {
-					this.parent.editConfig(this.input, term)
+					this.parent.editConfig(this, term)
 				}
 			})
 		} catch (e) {
 			this.displayError([e])
 		}
+	}
+
+	getMenuVersion(config) {
+		// for the numericEditMenuVersion of termsetting constructor option
+		if (this.section.configKey == 'outcome') {
+			// outcome
+			if (config.regressionType == 'logistic') return ['binary']
+			if (config.regressionType == 'linear') return ['continuous']
+			throw 'unknown regressionType'
+		}
+		if (this.section.configKey == 'independent') {
+			// independent
+			return ['continuous', 'discrete']
+		}
+		throw 'unknown section.configKey: ' + this.section.configKey
 	}
 
 	displayError(errors) {
@@ -88,18 +103,18 @@ export class InputTerm {
 		when the regression component is notified of a change
 		*/
 
-		const t = this.input.term
+		const tw = this.term // term wrapper
 
 		// clear previous errors
-		if (t) delete t.error
+		if (tw) delete tw.error
 		this.dom.err_div.style('display', 'none').text('')
 		this.hasError = false
 
 		const errors = []
 		try {
-			if (t && this.setQ) {
+			if (tw && this.setQ) {
 				const { app, state } = this.parent
-				await this.setQ[t.term.type](this.input, app.vocabApi, state.termfilter.filter)
+				await this.setQ[tw.term.type](tw, app.vocabApi, state.termfilter.filter)
 			}
 
 			try {
@@ -112,7 +127,7 @@ export class InputTerm {
 
 			await this.pill.main(this.getPillArgs())
 			await this.valuesTable.main()
-			const e = (t && t.error) || this.pill.error
+			const e = (tw && tw.error) || this.pill.error
 			if (e) errors.push(e)
 			if (errors.length) throw errors
 		} catch (errors) {
@@ -132,67 +147,67 @@ export class InputTerm {
 		input.excludeCounts
 		input.term.refGrp
 		*/
-		const t = this.input.term
-		if (!t) return
+		const tw = this.term
+		if (!tw) return
 
-		if (!t.q) throw '.term.q missing on this input'
+		if (!tw.q) throw '.term.q missing on this input'
 
-		if (!t.q.mode) {
-			if (t.term.type == 'categorical' || t.term.type == 'condition') t.q.mode = 'discrete'
-			else t.q.mode = 'continuous'
+		if (!tw.q.mode) {
+			if (tw.term.type == 'categorical' || tw.term.type == 'condition') tw.q.mode = 'discrete'
+			else tw.q.mode = 'continuous'
 		}
 
-		const q = JSON.parse(JSON.stringify(t.q))
+		const q = JSON.parse(JSON.stringify(tw.q))
 		/*
 			for continuous term, assume it is numeric and that we'd want counts by bins,
 			so remove the 'mode: continuous' value as it will prevent bin construction in the backend
 		*/
 		if (q.mode == 'continuous') delete q.mode
 
-		const data = await this.parent.app.vocabApi.getCategories(t, this.parent.state.termfilter.filter, [
+		const data = await this.parent.app.vocabApi.getCategories(tw, this.parent.state.termfilter.filter, [
 			'term1_q=' + encodeURIComponent(JSON.stringify(q))
 		])
 		if (data.error) throw data.error
-		this.input.orderedLabels = data.orderedLabels
+		this.orderedLabels = data.orderedLabels
 
 		// sepeate include and exclude categories based on term.values.uncomputable
-		const excluded_values = t.term.values
-			? Object.entries(t.term.values)
+		const excluded_values = tw.term.values
+			? Object.entries(tw.term.values)
 					.filter(v => v[1].uncomputable)
 					.map(v => v[1].label)
 			: []
-		this.input.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label))
-		this.input.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
+		this.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label))
+		this.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
 
 		// get include, excluded and total sample count
-		const totalCount = (this.input.totalCount = { included: 0, excluded: 0, total: 0 })
-		this.input.sampleCounts.forEach(v => (totalCount.included += v.samplecount))
-		this.input.excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
+		const totalCount = (this.totalCount = { included: 0, excluded: 0, total: 0 })
+		this.sampleCounts.forEach(v => (totalCount.included += v.samplecount))
+		this.excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
 		totalCount.total = totalCount.included + totalCount.excluded
 		// for condition term, subtract included count from totalCount.total to get excluded
-		if (t.term.type == 'condition' && totalCount.total) {
+		if (tw.term.type == 'condition' && totalCount.total) {
 			totalCount.excluded = totalCount.total - totalCount.included
 		}
 
-		if (t && t.q.mode !== 'continuous' && this.input.sampleCounts.length < 2)
-			throw `there should be two or more discrete values with samples for variable='${t.term.name}'`
+		if (tw && tw.q.mode !== 'continuous' && this.sampleCounts.length < 2)
+			throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
 
-		if (!t.q.mode) throw 'q.mode missing'
+		if (!tw.q.mode) throw 'q.mode missing'
 
 		// set term.refGrp
-		if (t.q.mode == 'continuous') {
-			t.refGrp = 'NA' // hardcoded in R
-		} else if (!('refGrp' in t) || !this.input.sampleCounts.find(i => i.key == t.refGrp)) {
+		if (tw.q.mode == 'continuous') {
+			tw.refGrp = 'NA' // hardcoded in R
+		} else if (!('refGrp' in tw) || !this.sampleCounts.find(i => i.key == tw.refGrp)) {
 			// refGrp not defined or no longer exists according to sampleCounts[]
-			const o = this.input.orderedLabels
-			if (o.length) this.input.sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
-			else this.input.sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
-			t.refGrp = this.input.sampleCounts[0].key
+			const o = this.orderedLabels
+			if (o.length) this.sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
+			else this.sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
+			tw.refGrp = this.sampleCounts[0].key
 		}
 	}
 
 	getPillArgs() {
-		const section = this.input.section
+		const section = this.section
 		const { config, state, disable_terms } = this.parent
 		const args = Object.assign(
 			{
@@ -204,13 +219,13 @@ export class InputTerm {
 					regressionType: config.regressionType
 				}
 			},
-			this.input.term
+			this.term
 		)
 		args.filter = state.termfilter.filter
 		return args
 	}
 
-	remove(input) {
+	remove() {
 		this.dom.pillDiv
 			.transition()
 			.duration(500)
@@ -221,21 +236,6 @@ export class InputTerm {
 			delete this.dom[key]
 		}
 	}
-}
-
-function getMenuVersion(config, input) {
-	// for the numericEditMenuVersion of termsetting constructor option
-	if (input.section.configKey == 'outcome') {
-		// outcome
-		if (config.regressionType == 'logistic') return ['binary']
-		if (config.regressionType == 'linear') return ['continuous']
-		throw 'unknown regressionType'
-	}
-	if (input.section.configKey == 'independent') {
-		// independent
-		return ['continuous', 'discrete']
-	}
-	throw 'unknown input.section.configKey: ' + input.section.configKey
 }
 
 function getQSetter(regressionType) {
@@ -249,18 +249,17 @@ function getQSetter(regressionType) {
 
 // query backend for median and create custom 2 bins with median and boundry
 // for logistic independet numeric terms
-async function maySetTwoBins(input, vocabApi, filter) {
-	const t = input.term
+async function maySetTwoBins(tw, vocabApi, filter) {
 	// if the bins are already binary, do not reset
-	if (t.q.mode == 'binary' && t.q.lst && t.q.lst.length == 2) {
-		t.q.mode = 'binary'
+	if (tw.q.mode == 'binary' && tw.q.lst && tw.q.lst.length == 2) {
+		tw.q.mode = 'binary'
 		return
 	}
 
-	const data = await vocabApi.getPercentile(t.id, 50, filter)
+	const data = await vocabApi.getPercentile(tw.id, 50, filter)
 	if (data.error || !Number.isFinite(data.value)) throw 'cannot get median value: ' + (data.error || 'no data')
-	const median = input.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
-	t.q = {
+	const median = tw.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
+	tw.q = {
 		mode: 'binary',
 		type: 'custom',
 		lst: [
@@ -277,16 +276,16 @@ async function maySetTwoBins(input, vocabApi, filter) {
 		]
 	}
 
-	t.q.lst.forEach(bin => {
-		bin.label = get_bin_label(bin, input.term.q)
+	tw.q.lst.forEach(bin => {
+		bin.label = get_bin_label(bin, tw.q)
 	})
 
-	t.refGrp = t.q.lst[0].label
+	tw.refGrp = tw.q.lst[0].label
 }
 
-async function maySetTwoGroups(input, vocabApi, filter) {
+async function maySetTwoGroups(tw, vocabApi, filter) {
 	// if the bins are already binary, do not reset
-	const { term, q } = input.term
+	const { term, q } = tw
 	if (q.mode == 'binary') {
 		if (q.type == 'values' && Object.keys(term.values).length == 2) return
 		if (q.type == 'predefined-groupset') {
@@ -403,12 +402,12 @@ async function maySetTwoGroups(input, vocabApi, filter) {
 	q.type = 'custom-groupset'
 }
 
-function setContMode(input) {
-	if (!input.term.q.type) {
+function setContMode(tw) {
+	if (!tw.q.type) {
 		console.log('may not happen: why is input.term.q not yet set for numeric term at this point')
 		// should already be set to default bins
 	}
-	input.term.q.mode = 'continuous'
+	tw.q.mode = 'continuous'
 }
 
 function groupsetNoEmptyGroup(gs, c2s) {

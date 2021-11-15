@@ -2,27 +2,27 @@ import { select } from 'd3-selection'
 
 export class InputValuesTable {
 	constructor(opts) {
+		// opts {holder, input, callback}
 		this.opts = opts
-		this.handler = opts.handler
+		this.input = opts.input
 		setRenderers(this)
 		this.setDOM(opts.holder)
 	}
 
 	main() {
 		try {
-			const input = this.handler.input
-			const term = input.term
+			const term = this.input.term
 			// may allow the values table even if there is a variable error,
 			// in case it helps clarify the error message such as having
 			// not exactly two samplecount bars available for a binary outcome term
-			if (!term || !input.sampleCounts) {
+			if (!term || !this.input.sampleCounts) {
 				this.dom.holder.style('display', 'none')
 				this.dom.loading_div.style('display', 'none')
 				return
 			}
 			this.dom.holder.style('display', 'block')
 			this.dom.loading_div.style('display', 'block')
-			this.updateValueCount(input)
+			this.updateValueCount()
 			this.dom.loading_div.style('display', 'none')
 			this.render()
 		} catch (e) {
@@ -31,20 +31,19 @@ export class InputValuesTable {
 		}
 	}
 
-	updateValueCount(input) {
-		const t = input.term
-
+	updateValueCount() {
+		const i = this.input
 		try {
 			/* TODO: may need to move validateQ out of a ts.pill */
-			if (this.handler.pill && this.handler.pill.validateQ) {
-				this.handler.pill.validateQ({
-					term: t.term,
-					q: t.q,
-					sampleCounts: input.sampleCounts
+			if (i.pill && i.pill.validateQ) {
+				i.pill.validateQ({
+					term: i.term.term,
+					q: i.term.q,
+					sampleCounts: i.sampleCounts
 				})
 			}
 		} catch (e) {
-			t.error = e
+			i.term.error = e
 		}
 	}
 }
@@ -80,7 +79,7 @@ function setRenderers(self) {
 
 	self.render = () => {
 		const dom = self.dom
-		const input = self.handler.input
+		const input = self.input
 		const t = input.term
 		make_values_table(input.sampleCounts, 'values_table')
 		render_summary_div(input, self.dom)
@@ -93,12 +92,12 @@ function setRenderers(self) {
 	}
 
 	function make_values_table(data, tableName = 'values_table') {
-		const l = self.handler.input.orderedLabels
+		const l = self.input.orderedLabels
 		const sortFxn =
 			l && l.length ? (a, b) => l.indexOf(a.label) - l.indexOf(b.label) : (a, b) => b.samplecount - a.samplecount
 		const tr_data = data.sort(sortFxn)
 
-		const t = self.handler.input.term
+		const t = self.input.term
 		if (tableName == 'values_table') {
 			const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
 			tr_data.forEach(v => (v.bar_width_frac = Number((1 - (maxCount - v.samplecount) / maxCount).toFixed(4))))
@@ -239,7 +238,7 @@ function setRenderers(self) {
 	function render_summary_div(input, dom) {
 		const t = input.term
 		const q = (t && t.q) || {}
-		const { included, excluded, total } = self.handler.input.totalCount
+		const { included, excluded, total } = self.input.totalCount
 
 		if (input.section.configKey == 'outcome') {
 			dom.term_summmary_div.text(`${included} sample included.` + (excluded ? ` ${excluded} samples excluded:` : ''))
@@ -253,7 +252,7 @@ function setRenderers(self) {
 			} else if (t.term.type == 'categorical' || t.term.type == 'condition') {
 				const gs = q.groupsetting || {}
 				// self.values is already set by parent.setActiveValues() above
-				const term_text = 'Use as ' + self.handler.input.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
+				const term_text = 'Use as ' + self.input.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
 				const summary_text = ` ${included} sample included.` + (excluded ? ` ${excluded} samples excluded:` : '')
 				dom.term_info_div.html(term_text)
 				dom.term_summmary_div.text(summary_text)

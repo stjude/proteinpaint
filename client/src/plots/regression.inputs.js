@@ -23,8 +23,6 @@ main
 			mayAddBlankInput
 		removeInput
 		addInput
-
-FIXME submit button toggling behavior
 */
 
 export class RegressionInputs {
@@ -100,7 +98,7 @@ export class RegressionInputs {
 				await this.renderSection(section)
 				for (const input of section.inputs) {
 					input.dom.holder.style('border-left', input.term ? '1px solid #bbb' : '')
-					if (input.handler) updates.push(input.handler.update(input))
+					updates.push(input.update(input))
 				}
 			}
 			await Promise.all(updates)
@@ -225,10 +223,13 @@ function setRenderers(self) {
 		for (const variable of selectedArray) {
 			const input = section.inputs.find(input => input.term && input.term.id == variable.id)
 			if (!input) {
-				section.inputs.push({
-					section,
-					term: variable
-				})
+				section.inputs.push(
+					new InputTerm({
+						section,
+						term: variable,
+						parent: self
+					})
+				)
 			} else {
 				// reassign the variable reference to the mutable variable copy
 				// from state.config.outcome | .independent
@@ -236,29 +237,21 @@ function setRenderers(self) {
 			}
 		}
 
-		mayAddBlankInput(section)
+		mayAddBlankInput(section, self)
 	}
 
 	async function addInput(input) {
-		const inputDiv = select(this)
-			.style('width', 'fit-content')
-			.style('margin', '15px 15px 5px 45px')
-			.style('padding', '0px 5px')
-
-		input.dom = {
-			holder: inputDiv
-		}
-
-		input.handler = new InputTerm({
-			holder: inputDiv.append('div'),
-			input,
-			parent: self
-		})
+		input.init(
+			select(this)
+				.style('width', 'fit-content')
+				.style('margin', '15px 15px 5px 45px')
+				.style('padding', '0px 5px')
+		)
 	}
 
 	function removeInput(input) {
 		/* NOTE: editConfig deletes this input from the section.inputs array */
-		input.handler.remove()
+		input.remove()
 		for (const key in input.dom) {
 			//input.dom[key].remove()
 			delete input.dom[key]
@@ -358,11 +351,11 @@ function setInteractivity(self) {
 	}
 }
 
-function mayAddBlankInput(section) {
+function mayAddBlankInput(section, self) {
 	// on this section, detect if a blank input needs to be created
 	if (section.inputs.length < section.limit) {
 		if (!section.inputs.find(input => !input.term)) {
-			section.inputs.push({ section })
+			section.inputs.push(new InputTerm({ section, parent: self }))
 		}
 	}
 }
