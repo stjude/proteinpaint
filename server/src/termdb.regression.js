@@ -95,8 +95,7 @@ export async function get_regression(q, ds) {
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			[headerline.join('\t'), ...samplelines.map(i => i.join('\t'))],
-			[q.regressionType, colClasses.join(','), refGroups.join(','), scalingFactors.join(',')],
-			model,
+			[q.regressionType, colClasses.join(','), refGroups.join(','), scalingFactors.join(','), model],
 			false
 		)
 
