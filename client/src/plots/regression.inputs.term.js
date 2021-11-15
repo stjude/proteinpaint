@@ -278,7 +278,7 @@ export class InputTerm {
 			.style('padding', '5px')
 			.style('font-size', '0.8em')
 			.style('color', 'rgb(153, 153, 153)')
-			.html('Selected variables will each form pairwise interaction with Chest radiation.')
+			.html(`Selected variables will each form pairwise interaction with ${this.term.term.name}`)
 
 		self.dom.tip.d
 			.append('div')
