@@ -959,16 +959,38 @@ function run_clustalo(fasta_sequence, max_read_alignment, num_reads) {
 		})
 		ps.on('close', code => {
 			//console.log('RawAlignment:', stdout.toString())
-			const final_read_align = []
+			let read_count = 0
+			const ref_nucleotides = []
+			const clustalo_output = {
+				final_read_align: [],
+				mismatched_nucl_align: [] // If the nucleotide of a read matches ref allele at that position, it is labeled "0", if there is a mismatch it is labelled as "1"
+			}
 			for (const read of stdout.toString().split('\n')) {
 				if (read.includes('seq      ')) {
 					// Remove "-" before/after the start/end of a sequence
 					let nuc_count = 0
 					let aligned_read = ''
+					let mismatched_string = '' // For each position of the read either 0 (match) or 1 (mismatch) is added
+					//console.log('read_count:', read_count)
+					let global_nuc_count = 0 // This variable counts nucleotide positions w.r.t reference sequence
+					console.log('Read:', read.replace('seq      ', ''))
 					for (const nucl of read.replace('seq      ', '')) {
 						if (nucl != '-' && nucl != ',') {
 							nuc_count += 1
 							aligned_read += nucl
+							if (read_count == 0) {
+								// Looking at reference sequence
+								ref_nucleotides.push(nucl)
+							} else {
+								//console.log('global_nuc_count:', global_nuc_count)
+								//console.log('nucl:', nucl)
+								//console.log('ref_nucleotide:', ref_nucleotides[global_nuc_count])
+								if (nucl == ref_nucleotides[global_nuc_count]) {
+									mismatched_string += '0'
+								} else if (nucl != ref_nucleotides[global_nuc_count]) {
+									mismatched_string += '1'
+								}
+							}
 						} else {
 							if (
 								nuc_count > 0 &&
@@ -980,20 +1002,38 @@ function run_clustalo(fasta_sequence, max_read_alignment, num_reads) {
 							) {
 								// Only allows "-" inside reads to be displayed, removing those before/after the start/end of read
 								aligned_read += nucl
+								if (read_count == 0) {
+									// Looking at reference sequence
+									ref_nucleotides.push(nucl)
+								} else {
+									if (nucl == ref_nucleotides[global_nuc_count]) {
+										mismatched_string += '0'
+									} else if (nucl != ref_nucleotides[global_nuc_count]) {
+										mismatched_string += '1'
+									}
+								}
 							} else {
 								aligned_read += ' '
+								if (read_count == 0) {
+									// Looking at reference sequence
+									ref_nucleotides.push(nucl)
+								} else if (read_count != 0) {
+									mismatched_string += '0' // Don't need to highlight regions which are outside the region of the read, therefore setting it to zero.
+								}
 							}
 						}
+						global_nuc_count += 1
 					}
-
-					final_read_align.push(aligned_read)
+					read_count += 1
+					clustalo_output.mismatched_nucl_align.push(mismatched_string)
+					clustalo_output.final_read_align.push(aligned_read)
 				} else if (read.includes('FATAL:') || read.includes('ERROR:')) {
 					// Possible problem in read-alignment
 					console.log(read)
 					reject(read)
 				}
 			}
-			resolve(final_read_align)
+			resolve(clustalo_output)
 		})
 	})
 }
