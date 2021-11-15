@@ -4,10 +4,10 @@
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "scripts": {
-    "dev": "rm -rf ../public/bin/*proteinpaint.js && webpack --env.NODE_ENV=development --watch --progress --colors",
+    "dev": "rm -rf ../public/bin/*proteinpaint.js; webpack --env.NODE_ENV=development --watch --progress --colors",
     "pretest": "./test/pretest.js",
-    "test": "rm -f ../public/bin/bundle.*; browserify ./test/init.js ../public/bin/proteinpaint.js src/*/test/*.spec.js | tape-run --static ../public",
-    "browser": "rm -f ../public/bin/bundle.*; watchify src/*/test/filter*.spec.js -o ../public/bin/spec.bundle.js -v",
+    "test": "browserify ./test/init.js ../public/bin/proteinpaint.js ../public/bin/spec.bundle.js | tape-run --static ../public",
+    "browser": "rm -f ../public/bin/*bundle.*; webpack --config=./test/webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
     "examples": "rm -f ../public/bin/bundle.*; watchify src/test/examples.spec.js -o ../public/bin/spec.bundle.js -v",
     "gdc": "rm -f ../public/bin/bundle.*; browserify src/wrappers/test/gdc*.spec.js | tape-run --static ../public",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w"
@@ -66,24 +66,5 @@
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"
-  },
-  "browserify": {
-    "transform": [
-      "browserify-css",
-      [
-        "babelify",
-        {
-          "babelrc": false,
-          "presets": [
-            "@babel/preset-env",
-            "@babel/preset-react"
-          ],
-          "plugins": [
-            "@babel/plugin-syntax-dynamic-import",
-            "@babel/plugin-transform-runtime"
-          ] 
-        }
-      ]
-    ]
   }
 }

@@ -3,7 +3,7 @@ const d3s = require('d3-selection')
 const vocabData = require('../../termdb/test/vocabData')
 const vocabInit = require('../../termdb/vocabulary').vocabInit
 const termjson = require('../../../test/testdata/termjson').termjson
-//const termsettingInit = require('../termsetting').termsettingInit
+const termsettingInit = require('../termsetting').termsettingInit
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -16,8 +16,6 @@ $ npx watchify termsetting.spec.js -o ../../../public/bin/spec.bundle.js -v
 /*************************
  reusable helper functions
 **************************/
-
-let termsettingInit
 
 async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 	const holder = d3s
@@ -36,11 +34,6 @@ async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 			return state
 		},
 		opts: { state }
-	}
-
-	if (!termsettingInit) {
-		const app = await window.runproteinpaint({ debug: true, noheader: true })
-		termsettingInit = app.testInternals.termsettingInit
 	}
 
 	opts.pill = termsettingInit({

@@ -147,7 +147,6 @@ export function runproteinpaint(arg) {
 
 			if (data.debugmode) {
 				app.debugmode = true
-				app.testInternals = await import('../test/internals')
 			}
 
 			// genome data init
