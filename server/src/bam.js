@@ -975,7 +975,8 @@ function run_clustalo(fasta_sequence, max_read_alignment, num_reads) {
 					let global_nuc_count = 0 // This variable counts nucleotide positions w.r.t reference sequence
 					console.log('Read:', read.replace('seq      ', ''))
 					for (const nucl of read.replace('seq      ', '')) {
-						if (nucl != '-' && nucl != ',') {
+						if (nucl == ',') continue // Ignoring ,
+						if (nucl != '-') {
 							nuc_count += 1
 							aligned_read += nucl
 							if (read_count == 0) {
