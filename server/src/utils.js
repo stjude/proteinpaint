@@ -14,6 +14,8 @@ exports.serverconfig = serverconfig
 const tabix = serverconfig.tabix || 'tabix'
 const samtools = serverconfig.samtools || 'samtools'
 const bcftools = serverconfig.bcftools || 'bcftools'
+const bigBedToBed = serverconfig.bigBedToBed || 'bigBedToBed'
+const bigBedNamedItems = serverconfig.bigBedNamedItems || 'bigBedNamedItems'
 
 /* p4 ready
 ********************** EXPORTED
@@ -142,10 +144,11 @@ exports.file_is_readable = async file => {
 	try {
 		await fs.promises.stat(file)
 	} catch (e) {
-		if (e.code == 'EACCES') throw 'Permission denied'
-		if (e.code == 'ENOENT') throw 'No such file or directory'
-		if (e.code == 'EPERM') throw 'Operation not permitted'
-		throw 'cannot access file (' + e.code + ')'
+		const fileInfo = serverconfig.debugmode ? `file='${file}'` : ''
+		if (e.code == 'EACCES') throw `Permission denied ${fileInfo}`
+		if (e.code == 'ENOENT') throw `No such file or directory ${fileInfo}`
+		if (e.code == 'EPERM') throw `Operation not permitted ${fileInfo}`
+		throw `cannot access file (' + e.code + ') ${fileInfo}`
 	}
 }
 
@@ -459,4 +462,48 @@ exports.bam_ifnochr = async (file, genome, dir) => {
 		chrlst.push(l[1])
 	}
 	return common.contigNameNoChr(genome, chrlst)
+}
+
+exports.query_bigbed_by_coord = function(bigbed, chr, start, end) {
+	// input coordinates need to be 0-based
+	// output data is in bed format and output lines are split into an array
+	return new Promise((resolve, reject) => {
+		const ps = spawn(bigBedToBed, [`-chrom=${chr}`, `-start=${start}`, `-end=${end}`, bigbed, 'stdout'])
+		const out = []
+		const err = []
+		ps.stdout.on('data', i => out.push(i))
+		ps.stderr.on('data', i => err.push(i))
+		ps.on('close', code => {
+			if (code !== 0) reject(`bigBed query exited with non-zero status and this standard error:\n${err.join('')}`)
+			if (err.length > 0) reject(err.join(''))
+			resolve(
+				out
+					.join('')
+					.trim()
+					.split('\n')
+			)
+		})
+	})
+}
+
+exports.query_bigbed_by_name = function(bigbed, name) {
+	// query bigbed by name field
+	// output data is in bed format and output lines are split into an array
+	return new Promise((resolve, reject) => {
+		const ps = spawn(bigBedNamedItems, [bigbed, name, 'stdout'])
+		const out = []
+		const err = []
+		ps.stdout.on('data', i => out.push(i))
+		ps.stderr.on('data', i => err.push(i))
+		ps.on('close', code => {
+			if (code !== 0) reject(`bigBed query exited with non-zero status and this standard error:\n${err.join('')}`)
+			if (err.length > 0) reject(err.join(''))
+			resolve(
+				out
+					.join('')
+					.trim()
+					.split('\n')
+			)
+		})
+	})
 }

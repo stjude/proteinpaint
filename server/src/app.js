@@ -183,13 +183,12 @@ app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
 app.get(basepath + '/blat', blat_request_closure(genomes))
 app.get(basepath + '/mds3', mds3_request_closure(genomes))
 app.get(basepath + '/tkbampile', bampile_request)
-app.post(basepath + '/snpbyname', handle_snpbyname)
 app.post(basepath + '/dsdata', handle_dsdata) // old official ds, replace by mds
 
 app.post(basepath + '/tkbigwig', handle_tkbigwig)
 
 app.get(basepath + '/tabixheader', handle_tabixheader)
-app.post(basepath + '/snp', handle_snpbycoord)
+app.post(basepath + '/snp', handle_snp)
 app.get(basepath + '/clinvarVCF', handle_clinvarVCF)
 app.post(basepath + '/isoformlst', handle_isoformlst)
 app.post(basepath + '/dbdata', handle_dbdata)
@@ -1232,7 +1231,7 @@ if file/url ends with .gz, it is bedgraph
 		})
 }
 
-function handle_snpbyname(req, res) {
+async function handle_snp(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
 	const n = req.query.genome
 	if (!n) return res.send({ error: 'no genome' })
@@ -1240,32 +1239,52 @@ function handle_snpbyname(req, res) {
 	if (!g) return res.send({ error: 'invalid genome' })
 	if (!g.snp) return res.send({ error: 'snp is not configured for this genome' })
 	const hits = []
-	for (const n of req.query.lst) {
-		const lst = g.snp.getbyname.all(n)
-		for (const i of lst) {
-			hits.push(i)
+	if (req.query.byCoord) {
+		if (!(req.query.chr && req.query.ranges)) return res.send({ error: 'no coordinates' })
+		for (const r of req.query.ranges) {
+			// query dbSNP bigbed file by coordinate
+			// input query coordinates need to be 0-based
+			// output snp coordinates are 0-based
+			// output snp fields: chrom, chromStart, chromEnd, name, ref, altCount, alts, shiftBases, freqSourceCount, minorAlleleFreq, majorAllele, minorAllele, maxFuncImpact, class, ucscNotes, _dataOffset, _dataLen
+			const snps = await utils.query_bigbed_by_coord(g.snp.bigbedfile, req.query.chr, r.start, r.stop)
+			for (const snp of snps) {
+				const hit = snp2hit(snp)
+				hits.push(hit)
+			}
 		}
-	}
-	res.send({ lst: hits })
-}
-
-function handle_snpbycoord(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
-	const n = req.query.genome
-	if (!n) return res.send({ error: 'no genome' })
-	const g = genomes[n]
-	if (!g) return res.send({ error: 'invalid genome' })
-	if (!g.snp) return res.send({ error: 'snp is not configured for this genome' })
-	const hits = []
-	for (const r of req.query.ranges) {
-		const bin = getbin(r.start, r.stop)
-		if (bin == null) continue
-		const lst = g.snp.getbycoord.all(req.query.chr, bin, r.start, r.stop)
-		for (const i of lst) {
-			hits.push(i)
+	} else if (req.query.byName) {
+		if (!req.query.lst) return res.send({ error: 'no rsID query' })
+		for (const n of req.query.lst) {
+			// query dbSNP bigbed file by rsID
+			// see above for description of output snp fields
+			const snps = await utils.query_bigbed_by_name(g.snp.bigbedfile, n)
+			for (const snp of snps) {
+				const hit = snp2hit(snp)
+				hits.push(hit)
+			}
 		}
+	} else {
+		return res.send({ error: 'undefined snp query method' })
 	}
 	res.send({ results: hits })
+}
+
+function snp2hit(snp) {
+	const fields = snp.split('\t')
+	const ref = fields[4]
+	const alts = fields[6]
+		.split(',')
+		.filter(Boolean)
+		.join('/')
+	const observed = ref + '/' + alts
+	const hit = {
+		chrom: fields[0],
+		chromStart: Number(fields[1]),
+		chromEnd: Number(fields[2]),
+		name: fields[3],
+		observed: observed
+	}
+	return hit
 }
 
 async function handle_clinvarVCF(req, res) {
@@ -7272,21 +7291,6 @@ function validate_tabixfile(file) {
 
 var binOffsets = [512 + 64 + 8 + 1, 64 + 8 + 1, 8 + 1, 1, 0]
 
-function getbin(start, stop) {
-	var startbin = start >> 17,
-		stopbin = stop >> 17,
-		bin = null
-	for (var i = 0; i < binOffsets.length; i++) {
-		if (startbin == stopbin) {
-			bin = binOffsets[i] + startbin
-			break
-		}
-		startbin >>= 3
-		stopbin >>= 3
-	}
-	return bin
-}
-
 function local_init_bulk_flag() {
 	var flag = common.init_bulk_flag()
 	return flag
@@ -7726,18 +7730,9 @@ async function pp_init() {
 		}
 
 		if (g.snp) {
-			if (!g.snp.dbfile) throw genomename + '.snp: missing sqlite dbfile'
-			if (!g.snp.statement_getbyname) throw genomename + '.snp: missing statement_getbyname'
-			if (!g.snp.statement_getbycoord) throw genomename + '.snp: missing statement_getbycoord'
-
-			let db
-			try {
-				db = utils.connect_db(g.snp.dbfile)
-			} catch (e) {
-				throw 'Error with ' + g.snp.dbfile + ': ' + e
-			}
-			g.snp.getbyname = db.prepare(g.snp.statement_getbyname)
-			g.snp.getbycoord = db.prepare(g.snp.statement_getbycoord)
+			if (!g.snp.bigbedfile) throw genomename + '.snp: missing bigBed file'
+			g.snp.bigbedfile = path.join(serverconfig.tpmasterdir, g.snp.bigbedfile)
+			await utils.file_is_readable(g.snp.bigbedfile)
 		}
 
 		if (g.clinvarVCF) {

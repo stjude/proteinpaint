@@ -1834,6 +1834,7 @@ genome{ name }
 */
 	if (!genome || !genome.hasSNP) return
 	const p = {
+		byCoord: true,
 		genome: genome.name,
 		chr: chr,
 		ranges: []
@@ -1855,19 +1856,12 @@ export function snp_printhtml(m, d) {
 	/*
 m{}
 	.name
-	.class
 	.observed
 */
 	d.append('a')
 		.text(m.name)
 		.attr('href', 'https://www.ncbi.nlm.nih.gov/snp/' + m.name)
 		.attr('target', '_blank')
-	d.append('div')
-		.attr('class', 'sja_tinylogo_body')
-		.text(m.class)
-	d.append('div')
-		.attr('class', 'sja_tinylogo_head')
-		.text('CLASS')
 	d.append('div')
 		.attr('class', 'sja_tinylogo_body')
 		.text(m.observed)
