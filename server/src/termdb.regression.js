@@ -100,7 +100,7 @@ export async function get_regression(q, ds) {
 		)
 
 		const result = { type: q.regressionType, queryTime, sampleSize }
-		parseRoutput(data, result)
+		parseRoutput(data, id2originalId, result)
 
 		result.totalTime = +new Date() - startTime
 		return result
@@ -227,7 +227,7 @@ function makeMatrix(q, sampledata) {
 	return [headerline, lines, id2originalId, originalId2id]
 }
 
-function parseRoutput(data, result) {
+function parseRoutput(data, id2originalId, result) {
 	const type2lines = new Map()
 	// k: type e.g.Deviance Residuals
 	// v: list of lines
@@ -288,7 +288,8 @@ function parseRoutput(data, result) {
 			// rest of lines are categories of independent terms
 			for (const line of lines) {
 				const l = line.split('\t')
-				const termid = l.shift()
+				const id = l.shift()
+				const termid = id2originalId[id] || id
 				if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
 				const category = l.shift()
 				if (category) {
@@ -308,7 +309,12 @@ function parseRoutput(data, result) {
 			result.type3 = {
 				label: 'Type III statistics',
 				header: lines.shift().split('\t'),
-				lst: lines.map(i => i.split('\t'))
+				lst: []
+			}
+			for (const line of lines) {
+				const l = line.split('\t')
+				l[0] = id2originalId[l[0]] || l[0]
+				result.type3.lst.push(l)
 			}
 		}
 	}
