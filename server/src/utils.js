@@ -144,10 +144,11 @@ exports.file_is_readable = async file => {
 	try {
 		await fs.promises.stat(file)
 	} catch (e) {
-		if (e.code == 'EACCES') throw `Permission denied file='${file}'`
-		if (e.code == 'ENOENT') throw `No such file or directory file='${file}'`
-		if (e.code == 'EPERM') throw `Operation not permitted file='${file}'`
-		throw `cannot access file (' + e.code + ') file='${file}'`
+		const fileInfo = serverconfig.debugmode ? `file='${file}'` : ''
+		if (e.code == 'EACCES') throw `Permission denied ${fileInfo}`
+		if (e.code == 'ENOENT') throw `No such file or directory ${fileInfo}`
+		if (e.code == 'EPERM') throw `Operation not permitted ${fileInfo}`
+		throw `cannot access file (' + e.code + ') ${fileInfo}`
 	}
 }
 
