@@ -71,6 +71,7 @@ class TdbNav {
 		return (
 			action.type.startsWith('tab_') ||
 			action.type.startsWith('filter_') ||
+			action.type.startsWith('search_') ||
 			action.type.startsWith('cohort_') ||
 			action.type == 'app_refresh'
 		)
