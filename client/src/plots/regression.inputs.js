@@ -220,27 +220,26 @@ function setRenderers(self) {
 		const selectedArray = Array.isArray(selected) ? selected : selected ? [selected] : []
 
 		// process each selected variable
-		const prevInteractions = {}
 		for (const variable of selectedArray) {
 			if (section.configKey == 'independent') {
-				const interactions = []
-				// if a term has been removed from the config.independent array,
-				// then remove that term from this term's list of interacting terms
+				// find every paired-term whose interactions array includes this variable's id
+				const interactions = selected
+					.filter(tw => tw.id !== variable.id && tw.interactions && tw.interactions.includes(variable.id))
+					.map(tw => tw.id)
+
+				// add a paired term when it is only specified under this variable's interactions array,
+				// and this variable is not found in the other term
 				if (variable.interactions) {
 					for (const tid of variable.interactions) {
+						// ensure that the interaction entry has not been deleted from the state.config.independent,
+						// before adding the term back to the interactions array
 						if (selected.find(tw => tw.id === tid)) {
-							interactions.push(tid)
-							if (!prevInteractions[tid]) prevInteractions[tid] = new Set()
-							prevInteractions[tid].add(variable.id)
+							if (!interactions.includes(tid)) interactions.push(tid)
 						}
 					}
 				}
-				if (variable.id in prevInteractions) {
-					// this may result in duplicate entries for the same term.id, will remove later using Set()
-					interactions.push(...prevInteractions[variable.id])
-				}
-				// remove duplicate entries by feeding interactions into a Set(), then convert back into array
-				variable.interactions = [...new Set(interactions)]
+
+				variable.interactions = interactions
 			}
 
 			const input = section.inputs.find(input => input.term && input.term.id == variable.id)

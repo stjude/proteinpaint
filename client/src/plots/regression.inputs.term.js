@@ -307,6 +307,14 @@ export class InputTerm {
 				self.dom.tip.d.selectAll('input').each(function(tw) {
 					if (select(this).property('checked')) self.term.interactions.push(tw.id)
 				})
+				for (const tw of self.parent.config.independent) {
+					const i = tw.interactions.indexOf(self.term.id)
+					if (self.term.interactions.includes(tw.id)) {
+						if (i == -1) tw.interactions.push(self.term.id)
+					} else if (i != -1) {
+						tw.interactions.splice(i, 1)
+					}
+				}
 				self.parent.editConfig(self, self.term)
 			})
 	}
