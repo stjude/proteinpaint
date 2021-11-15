@@ -2,6 +2,8 @@ import { termsettingInit } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { get_bin_label } from '../../shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
+import { Menu } from '../dom/menu'
+import { select } from 'd3-selection'
 
 /*
 class instance is an input
@@ -34,7 +36,8 @@ export class InputTerm {
 				.style('display', 'none')
 				.style('padding', '5px')
 				.style('background-color', 'rgba(255,100,100,0.2)'),
-			infoDiv: holder.append('div')
+			infoDiv: holder.append('div'),
+			tip: new Menu()
 		}
 
 		try {
@@ -116,9 +119,6 @@ export class InputTerm {
 		if (tw) {
 			// a term has been selected
 			delete tw.error
-			// just a test!
-			// do not show +interaction for blank input
-			this.dom.interactionDiv.text('+ Interaction')
 		}
 
 		this.dom.err_div.style('display', 'none').text('')
@@ -140,6 +140,7 @@ export class InputTerm {
 			}
 
 			await this.pill.main(this.getPillArgs())
+			this.renderInteractionPrompt()
 			await this.valuesTable.main()
 			const e = (tw && tw.error) || this.pill.error
 			if (e) errors.push(e)
@@ -249,6 +250,65 @@ export class InputTerm {
 		for (const key in this.dom) {
 			delete this.dom[key]
 		}
+	}
+
+	renderInteractionPrompt() {
+		if (!this.term || this.section.configKey != 'independent') {
+			this.dom.interactionDiv.style('display', 'none')
+			return
+		}
+
+		const n = this.term.interactions.length
+		this.dom.interactionDiv
+			.html(n == 0 ? '+ Interaction' : `${n} Interaction${n > 1 ? 's' : ''}`)
+			.style('padding', '5px')
+			.style('background-color', n == 0 ? null : '#ececec')
+			.style('border-radius', n == 0 ? null : '6px')
+			.style('color', n == 0 ? 'rgb(153, 153, 153)' : '#000')
+			.style('font-size', n == 0 ? '0.8em' : '')
+			.style('cursor', 'pointer')
+			.on('click', () => this.renderInteractionOptions())
+	}
+
+	renderInteractionOptions() {
+		const self = this
+		self.dom.tip.clear().showunder(self.dom.interactionDiv.node())
+		self.dom.tip.d
+			.append('div')
+			.style('padding', '5px')
+			.style('font-size', '0.8em')
+			.style('color', 'rgb(153, 153, 153)')
+			.html('Selected variables will each form pairwise interaction with Chest radiation.')
+
+		self.dom.tip.d
+			.append('div')
+			.selectAll('div')
+			.data(self.parent.config.independent.filter(tw => tw && tw.id !== self.term.id))
+			.enter()
+			.append('div')
+			.style('margin', '5px')
+			.each(function(tw) {
+				const elem = select(this).append('label')
+				const checkbox = elem
+					.append('input')
+					.attr('type', 'checkbox')
+					.property('checked', self.term.interactions.includes(tw.id))
+
+				elem.append('span').text(' ' + tw.term.name)
+			})
+
+		self.dom.tip.d
+			.append('button')
+			.text('Apply')
+			.style('margin', '5px')
+			.on('click', () => {
+				self.dom.tip.hide()
+				self.term.interactions = []
+				self.dom.tip.d.selectAll('input').each(function(tw) {
+					if (select(this).property('checked')) self.term.interactions.push(tw.id)
+				})
+				self.parent.editConfig(self, self.term)
+			})
 	}
 }
 

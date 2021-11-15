@@ -220,7 +220,29 @@ function setRenderers(self) {
 		const selectedArray = Array.isArray(selected) ? selected : selected ? [selected] : []
 
 		// process each selected variable
+		const prevInteractions = {}
 		for (const variable of selectedArray) {
+			if (section.configKey == 'independent') {
+				const interactions = []
+				// if a term has been removed from the config.independent array,
+				// then remove that term from this term's list of interacting terms
+				if (variable.interactions) {
+					for (const tid of variable.interactions) {
+						if (selected.find(tw => tw.id === tid)) {
+							interactions.push(tid)
+							if (!prevInteractions[tid]) prevInteractions[tid] = new Set()
+							prevInteractions[tid].add(variable.id)
+						}
+					}
+				}
+				if (variable.id in prevInteractions) {
+					// this may result in duplicate entries for the same term.id, will remove later using Set()
+					interactions.push(...prevInteractions[variable.id])
+				}
+				// remove duplicate entries by feeding interactions into a Set(), then convert back into array
+				variable.interactions = [...new Set(interactions)]
+			}
+
 			const input = section.inputs.find(input => input.term && input.term.id == variable.id)
 			if (!input) {
 				section.inputs.push(
