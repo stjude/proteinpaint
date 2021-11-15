@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "rm -rf ../public/bin/*proteinpaint.js; webpack --env.NODE_ENV=development --watch --progress --colors",
     "pretest": "./test/pretest.js",
-    "test": "browserify ./test/init.js ../public/bin/proteinpaint.js ../public/bin/spec.bundle.js | tape-run --static ../public",
-    "browser": "rm -f ../public/bin/*bundle.*; webpack --config=./test/webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
-    "examples": "rm -f ../public/bin/bundle.*; watchify src/test/examples.spec.js -o ../public/bin/spec.bundle.js -v",
-    "gdc": "rm -f ../public/bin/bundle.*; browserify src/wrappers/test/gdc*.spec.js | tape-run --static ../public",
+    "test": "cat ../public/bin/proteinpaint.js ./test/init.js | tape-run --static ../public",
+    "browser": "node ./test/import-specs.js",
+    "examples": "node ./test/import-specs.js name=examples",
+    "gdc": "node ./test/import-specs.js name=gdc.views && npm run test",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w"
   },
   "author": "",

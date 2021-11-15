@@ -1,7 +1,7 @@
 <html>
 <head>
   <script src="/bin/proteinpaint.js"></script>
-  <script src="/bin/spec.bundle.js"></script>
+  <!--<script src="/bin/spec.bundle.js"></script>-->
   <style>
   .code-snippet {
     padding: 1px 3px;
@@ -18,5 +18,8 @@
   <p>Run <span id='pp-test-runner-banner' class='code-snippet'>$ npm run test-browser</span> 
     to (re)compile the <span class='code-snippet'>*.spec.js</span> files. See the test results in the browser console.</p>
 </div>
+<script>
+window.runproteinpaint({noheader: true, testInternals: true})
+</script>
 </body>
 </html>

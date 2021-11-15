@@ -787,6 +787,9 @@ async function parseembedthenurl(arg, app) {
 	if (arg.mass) {
 		await launchmass(arg.mass, app)
 	}
+	if (arg.testInternals && app.debugmode) {
+		await import('../test/internals.js')
+	}
 }
 
 async function may_launchGeneView(arg, app) {

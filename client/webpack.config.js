@@ -14,13 +14,11 @@ module.exports = function(env = {}) {
 	const config = {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'web',
-		entry: {
-			proteinpaint: path.join(__dirname, './src/app.js')
-		},
+		entry: path.join(__dirname, './src/app.js'),
 		output: {
 			path: path.join(__dirname, '../public/bin'),
 			publicPath: (env.url || '') + '/bin/',
-			filename: '[name].js',
+			filename: 'proteinpaint.js',
 			jsonpFunction: 'ppJsonp',
 			// the library name exposed by this bundle
 			library: 'runproteinpaint',
@@ -35,12 +33,20 @@ module.exports = function(env = {}) {
 			react: 'React',
 			'react-dom': 'ReactDOM'
 		},
+		node: {
+			fs: 'empty'
+		},
 		module: {
 			strictExportPresence: true,
 			rules: [
 				{
 					test: /\.css$/,
 					use: ['style-loader', 'css-loader']
+				},
+				{
+					// will remove this rule in development mode
+					test: path.join(__dirname, './test/internals.js'),
+					use: [path.join(__dirname, './test/empty-wp-loader.js')]
 				},
 				{
 					test: /\.js$/,
@@ -60,6 +66,12 @@ module.exports = function(env = {}) {
 	/*** OVERRIDES ***/
 	if (config.mode == 'development') {
 		config.plugins = [new WebpackNotifierPlugin()]
+		// allow react to be bundled
+		delete config.externals
+		// delete the rule that empties the ./test/internals.js code,
+		// so that the app.testInternals() function will be functional
+		config.module.rules.splice(1, 1)
+		delete config.module.rules[1].exclude
 	}
 	if (config.mode != 'production') {
 		// do not minify
