@@ -1319,7 +1319,7 @@ box{}
 function click_groupheader(tk, group, block) {
 	if (tk.variants && (group.data.type == 'support_alt' || group.data.type == 'support_ref')) {
 		// when merge to master, add this condition
-		//if(urlmap().has('clustalo')) {
+		//if (urlmap().has('clustalo')) {
 		getMultiReadAligInfo(tk, group, block)
 		//}
 	}
@@ -1331,7 +1331,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 	tk.alignpane.body.selectAll('*').remove()
 	const wait = tk.alignpane.body.append('div').text('Loading...')
 	const multi_read_alig_data = await align_reads_to_allele(tk, group, block) // Sending server side request for aligning reads to ref/alt
-	//console.log('multi_read_alig_data:', multi_read_alig_data.alignmentData)
+	console.log('multi_read_alig_data:', multi_read_alig_data.alignmentData)
 	wait.remove()
 
 	const div = tk.alignpane.body.append('div').style('margin', '20px')
@@ -1341,9 +1341,17 @@ async function getMultiReadAligInfo(tk, group, block) {
 		.style('font-size', '0.8em')
 		.style('color', '#303030')
 		.style('margin', '5px 5px 20px 5px')
+	readAlignmentTable
+		.style('border-spacing', 0)
+		.style('border-collapse', 'separate')
+		.style('text-align', 'center')
 	let read_count = 0
-	for (const read of multi_read_alig_data.alignmentData) {
-		const read_tr = readAlignmentTable.append('tr')
+	for (const read of multi_read_alig_data.alignmentData.final_read_align) {
+		const read_tr = readAlignmentTable
+			.append('tr')
+			.style('color', 'white')
+			.style('background-color', 'black')
+		const mismatched_string = multi_read_alig_data.alignmentData.mismatched_nucl_align[read_count] // Extracting mismatched string for the read
 		if (read_count == 0) {
 			if (group.data.type == 'support_alt') {
 				read_tr
@@ -1352,6 +1360,8 @@ async function getMultiReadAligInfo(tk, group, block) {
 					.style('text-align', 'right')
 					.style('font-weight', '550')
 					.style('margin', '5px 5px 10px 5px')
+					.style('color', 'black')
+					.style('background-color', 'white')
 			} else if (group.data.type == 'support_ref') {
 				read_tr
 					.append('td')
@@ -1359,6 +1369,8 @@ async function getMultiReadAligInfo(tk, group, block) {
 					.style('text-align', 'right')
 					.style('font-weight', '550')
 					.style('margin', '5px 5px 10px 5px')
+					.style('color', 'black')
+					.style('background-color', 'white')
 			}
 		} else {
 			read_tr
@@ -1366,32 +1378,44 @@ async function getMultiReadAligInfo(tk, group, block) {
 				.text('')
 				.style('text-align', 'right')
 				.style('font-weight', '550')
+				.style('color', 'black')
+				.style('background-color', 'white')
 		}
 		let nclt_count = 0
+		console.log('read:', read)
 		for (const nclt of read) {
 			nclt_count += 1
-			if (nclt_count < tk.variants[0].leftflankseq.length) {
-				read_tr.append('td').text(nclt)
-			} else if (
+			let nclt_tr
+			if (read_count == 0) {
+				nclt_tr = read_tr.append('td').text(nclt)
+			} else {
+				if (mismatched_string[nclt_count - 1] == '0') {
+					nclt_tr = read_tr.append('td').text(nclt)
+					if (nclt != 'A' && nclt != 'T' && nclt != 'C' && nclt != 'G') {
+						nclt_tr.style('color', 'white').style('background-color', 'white')
+					}
+				} else if (mismatched_string[nclt_count - 1] == '1') {
+					nclt_tr = read_tr
+						.append('td')
+						.text(nclt)
+						.style('color', 'white')
+						.style('background-color', 'red')
+				}
+			}
+
+			// Highlighting nucleotides that are within the ref/alt allele
+			if (
 				group.data.type == 'support_alt' &&
 				nclt_count > tk.variants[0].leftflankseq.length &&
 				nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].alt.length
 			) {
-				read_tr
-					.append('td')
-					.text(nclt)
-					.style('color', 'red')
+				nclt_tr.style('font-weight', 'bold')
 			} else if (
 				group.data.type == 'support_ref' &&
 				nclt_count > tk.variants[0].leftflankseq.length &&
 				nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].ref.length
 			) {
-				read_tr
-					.append('td')
-					.text(nclt)
-					.style('color', 'red')
-			} else {
-				read_tr.append('td').text(nclt)
+				nclt_tr.style('font-weight', 'bold')
 			}
 		}
 		read_count += 1
