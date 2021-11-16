@@ -314,6 +314,15 @@ function setInteractivity(self) {
 			if (i == -1) throw `deleting an unknown input`
 			// delete this input
 			input.section.inputs.splice(i, 1)
+			if (input.term) {
+				// if the input.term has interaction pairs, then
+				// delete this term.id from those other input term.interactions
+				for (const other of input.section.inputs) {
+					if (!other.term || !other.term.interactions) continue
+					const i = other.term.interactions.indexOf(input.term.id)
+					if (i != -1) other.term.interactions.splice(i, 1)
+				}
+			}
 		} else {
 			// variable is selected for this input
 
