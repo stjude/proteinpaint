@@ -102,7 +102,7 @@ function setRenderers(self) {
 	// optional _holder, for example when called by filter.js
 	self.showMenu = _holder => {
 		const holder = _holder ? _holder : self.dom.tip
-		const term = self.tvs.term
+		addExcludeCheckbox(holder, self.tvs)
 		self.methodsByTermType[self.tvs.term.type].fillMenu(holder, self.tvs)
 	}
 
@@ -302,13 +302,18 @@ export function showTvsMenu(opts) {
 		self.tvs.bar_by_grade = true
 		self.tvs.value_by_max_grade = true
 	}
-	const isNotLabels = self.dom.holder
+	addExcludeCheckbox(opts.holder, self.tvs)
+	self.methodsByTermType[opts.term.type].fillMenu(opts.holder, self.tvs)
+}
+
+function addExcludeCheckbox(holder, tvs){
+	const isNotLabels = holder
 		.selectAll('label')
-		.data([{ label: 'Exclude', value: 'false', checked: false }])
+		.data([{ label: 'Exclude', value: 'false', checked: tvs.isnot !== undefined ? tvs.isnot : false }])
 		.enter()
 		.append('label')
 		.style('margin', '0 5px')
-	self.dom.isNotInput = isNotLabels
+	const isNotInput = isNotLabels
 		.append('input')
 		.attr('type', 'checkbox')
 		.attr('name', 'sja_filter_isnot_input')
@@ -317,14 +322,14 @@ export function showTvsMenu(opts) {
 		.style('vertical-align', 'top')
 		.style('margin-right', '3px')
 		.on('change', ()=>{
-			if (self.dom.isNotInput.property('checked'))
-				self.tvs.isnot = true
+			if (isNotInput.property('checked'))
+				tvs.isnot = true
+			else if (isNotInput.property('checked') == false)
+				tvs.isnot = false
 		})
 	isNotLabels
 		.append('span')
 		.style('margin-right', '5px')
 		.style('vertical-align', 'top')
 		.html(d => d.label)
-
-	self.methodsByTermType[opts.term.type].fillMenu(opts.holder, self.tvs)
 }
