@@ -1331,7 +1331,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 	tk.alignpane.body.selectAll('*').remove()
 	const wait = tk.alignpane.body.append('div').text('Loading...')
 	const multi_read_alig_data = await align_reads_to_allele(tk, group, block) // Sending server side request for aligning reads to ref/alt
-	console.log('multi_read_alig_data:', multi_read_alig_data.alignmentData)
+	//console.log('multi_read_alig_data:', multi_read_alig_data.alignmentData)
 	wait.remove()
 
 	const div = tk.alignpane.body.append('div').style('margin', '20px')
@@ -1345,12 +1345,76 @@ async function getMultiReadAligInfo(tk, group, block) {
 		.style('border-spacing', 0)
 		.style('border-collapse', 'separate')
 		.style('text-align', 'center')
+
+	// Drawing ref/alt allele bar
+	let refallele_tr = readAlignmentTable
+		.append('tr')
+		.style('color', 'white')
+		.style('background-color', 'black')
+	if (group.data.type == 'support_alt') {
+		const refallele_td = readAlignmentTable
+			.append('td')
+			.text('Alt allele pos')
+			.style('color', 'black')
+			.style('font-weight', '550')
+			.style('background-color', 'white')
+	} else if (group.data.type == 'support_ref') {
+		const altallele_td = readAlignmentTable
+			.append('td')
+			.text('Ref allele pos')
+			.style('color', 'black')
+			.style('font-weight', '550')
+			.style('background-color', 'white')
+	}
+
+	let nclt_count = 0
+	for (const nclt of multi_read_alig_data.alignmentData.final_read_align[0]) {
+		nclt_count += 1
+		const refallele_td = refallele_tr.append('td')
+
+		// Highlighting nucleotides that are within the ref/alt allele
+		if (
+			group.data.type == 'support_alt' &&
+			nclt_count > tk.variants[0].leftflankseq.length + 1 &&
+			nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].alt.length + 1
+		) {
+			refallele_td
+				.text('O')
+				.style('text-align', 'right')
+				.style('font-weight', '550')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'black')
+				.style('background-color', 'black')
+		} else if (
+			group.data.type == 'support_ref' &&
+			nclt_count > tk.variants[0].leftflankseq.length + 1 &&
+			nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].ref.length + 1
+		) {
+			refallele_td
+				.text('O')
+				.style('text-align', 'right')
+				.style('font-weight', '550')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'black')
+				.style('background-color', 'black')
+		} else {
+			refallele_td
+				.text('')
+				.style('text-align', 'right')
+				.style('font-weight', '550')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'white')
+				.style('background-color', 'white')
+		}
+	}
+
+	// Drawing alignments for ref/alt allele and each of the reads
 	let read_count = 0
 	for (const read of multi_read_alig_data.alignmentData.final_read_align) {
 		const read_tr = readAlignmentTable
 			.append('tr')
 			.style('color', 'white')
-			.style('background-color', 'black')
+			.style('background-color', 'grey')
 		const mismatched_string = multi_read_alig_data.alignmentData.mismatched_nucl_align[read_count] // Extracting mismatched string for the read
 		if (read_count == 0) {
 			if (group.data.type == 'support_alt') {
@@ -1382,7 +1446,6 @@ async function getMultiReadAligInfo(tk, group, block) {
 				.style('background-color', 'white')
 		}
 		let nclt_count = 0
-		console.log('read:', read)
 		for (const nclt of read) {
 			nclt_count += 1
 			let nclt_tr
