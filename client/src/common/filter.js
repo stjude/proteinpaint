@@ -153,7 +153,7 @@ class Filter {
 		// clear menu click
 		if (this.dom.controlsTip.d.style('display') == 'none') {
 			this.activeData = { item: {}, filter: {} }
-			this.dom.isNotInput.property('checked', false)
+			// this.dom.isNotInput.property('checked', false)
 		} else {
 			this.activeData = {
 				item: findItem(filter, this.activeData.item.$id),
@@ -343,25 +343,6 @@ function setRenderers(self) {
 		self.dom.termSrcDiv = self.dom.treeTip.d.append('div').attr('class', 'sja_term_src_body')
 
 		self.dom.treeHeadTitle = self.dom.treeHead.append('div')
-		const isNotLabels = self.dom.treeHead
-			.selectAll('label')
-			.data([{ label: 'Exclude', value: 'false', checked: false }])
-			.enter()
-			.append('label')
-			.style('margin', '0 5px')
-		self.dom.isNotInput = isNotLabels
-			.append('input')
-			.attr('type', 'checkbox')
-			.attr('name', 'sja_filter_isnot_input')
-			.attr('value', d => d.value)
-			.property('checked', d => d.checked)
-			.style('vertical-align', 'top')
-			.style('margin-right', '3px')
-		isNotLabels
-			.append('span')
-			.style('margin-right', '5px')
-			.style('vertical-align', 'top')
-			.html(d => d.label)
 
 		select('body').on('mousedown.sja_filter_' + filterIndex++, () => {
 			if (
@@ -552,7 +533,7 @@ function setRenderers(self) {
 					const filterCopy = findItem(filterUiRoot, filter.$id)
 					const i = filter.lst.indexOf(item)
 					if (i == -1) return
-					tvs.isnot = self.dom.isNotInput.property('checked')
+					// tvs.isnot = self.dom.isNotInput.property('checked')
 					// if tvs already present in the filterCopy just replace it rather than adding new one
 					const item_i = filterCopy.lst.findIndex(t => t.$id == item.$id)
 					if (item_i == -1) filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
@@ -788,7 +769,7 @@ function setInteractivity(self) {
 	self.displayTreeNew = async function(d) {
 		if (self.opts.newBtn && this.className !== 'sja_filter_add_transformer' && self.filter.lst.length) return
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
-		self.dom.isNotInput.property('checked', !self.filter.in)
+		// self.dom.isNotInput.property('checked', !self.filter.in)
 		if (self.filter.lst.length > 0) {
 			self.activeData = {
 				item: self.filter,
@@ -964,7 +945,7 @@ function setInteractivity(self) {
 			.style('background-color', self.highlightEditRow)
 		const holder = self.dom.termSrcDiv
 		const item = self.activeData.item
-		self.dom.isNotInput.property('checked', item.tvs.isnot)
+		// self.dom.isNotInput.property('checked', item.tvs.isnot)
 		self.dom.treeTip.clear()
 		self.pills[item.$id].showMenu(holder)
 		self.dom.treeTip.showunderoffset(elem.lastChild)
