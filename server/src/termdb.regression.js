@@ -56,7 +56,6 @@ export async function get_regression(q, ds) {
 		const queryTime = +new Date() - startTime
 
 		const [headerline, samplelines, id2originalId, originalId2id] = makeMatrix(q, sampledata)
-		console.log(333, headerline)
 		const sampleSize = samplelines.length
 		if (sampleSize < minimumSample) throw 'too few samples to fit model'
 
@@ -91,7 +90,6 @@ export async function get_regression(q, ds) {
 		}
 
 		const model = make_model(q, originalId2id)
-		console.log(111, model)
 
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
@@ -229,6 +227,7 @@ function makeMatrix(q, sampledata) {
 }
 
 function parseRoutput(data, id2originalId, result) {
+	console.log(data)
 	const type2lines = new Map()
 	// k: type e.g.Deviance Residuals
 	// v: list of lines
@@ -274,32 +273,49 @@ function parseRoutput(data, id2originalId, result) {
 		const lines = type2lines.get('coefficients')
 		if (lines) {
 			if (lines.length < 3) throw 'expect at least 3 lines from coefficients'
+			// 1st line is header
+			const header = lines.shift().split('\t')
+			header.unshift('Category')
+			header.unshift('Variable')
+			// 2nd line is intercept
+			const intercept = lines
+				.shift()
+				.split('\t')
+				.slice(1)
 			result.coefficients = {
 				label: 'Coefficients',
-				header: lines
-					.shift()
-					.split('\t')
-					.slice(2), // 1st line is header
-				intercept: lines
-					.shift()
-					.split('\t')
-					.slice(2), // 2nd line is intercept
-				terms: {}
+				header,
+				intercept,
+				terms: {}, // individual independent terms, not interaction
+				interactions: [] // interaction rows
 			}
-			// rest of lines are categories of independent terms
 			for (const line of lines) {
 				const l = line.split('\t')
-				const id = l.shift()
-				const termid = id2originalId[id] || id
-				if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
-				const category = l.shift()
-				if (category) {
-					// has category
-					if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
-					result.coefficients.terms[termid].categories[category] = l
+				if (l[0].indexOf(':') != -1) {
+					// this row is an interaction
+					const row = {}
+					const [t1, t2] = l[0].split(':')
+					const [id1, cat1] = t1.split('___')
+					row.term1 = id2originalId[id1]
+					row.category1 = cat1
+					const [id2, cat2] = t2.split('___')
+					row.term2 = id2originalId[id2]
+					row.category2 = cat2
+					row.lst = l.slice(1)
+					result.coefficients.interactions.push(row)
 				} else {
-					// no category
-					result.coefficients.terms[termid].fields = l
+					// not interaction
+					const [id, category] = l[0].split('___')
+					const termid = id2originalId[id] || id
+					if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
+					if (category) {
+						// has category
+						if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
+						result.coefficients.terms[termid].categories[category] = l.slice(1)
+					} else {
+						// no category
+						result.coefficients.terms[termid].fields = l.slice(1)
+					}
 				}
 			}
 		}
@@ -307,15 +323,30 @@ function parseRoutput(data, id2originalId, result) {
 	{
 		const lines = type2lines.get('type3')
 		if (lines) {
+			const header = lines.shift().split('\t')
+			header.unshift('Variable')
 			result.type3 = {
 				label: 'Type III statistics',
-				header: lines.shift().split('\t'),
+				header,
 				lst: []
 			}
 			for (const line of lines) {
 				const l = line.split('\t')
-				l[0] = id2originalId[l[0]] || l[0]
-				result.type3.lst.push(l)
+				const t = l[0]
+				const row = {}
+				if (t == '<none>') {
+					row.lst = l.slice(1)
+				} else {
+					if (t.indexOf(':') != -1) {
+						const [t1, t2] = t.split(':')
+						row.id1 = id2originalId[t1.replace('___', '')]
+						row.id2 = id2originalId[t2.replace('___', '')]
+					} else {
+						row.id1 = id2originalId[t.replace('___', '')]
+					}
+					row.lst = l.slice(1)
+				}
+				result.type3.lst.push(row)
 			}
 		}
 	}
