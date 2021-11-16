@@ -153,7 +153,6 @@ class Filter {
 		// clear menu click
 		if (this.dom.controlsTip.d.style('display') == 'none') {
 			this.activeData = { item: {}, filter: {} }
-			// this.dom.isNotInput.property('checked', false)
 		} else {
 			this.activeData = {
 				item: findItem(filter, this.activeData.item.$id),
@@ -533,7 +532,6 @@ function setRenderers(self) {
 					const filterCopy = findItem(filterUiRoot, filter.$id)
 					const i = filter.lst.indexOf(item)
 					if (i == -1) return
-					// tvs.isnot = self.dom.isNotInput.property('checked')
 					// if tvs already present in the filterCopy just replace it rather than adding new one
 					const item_i = filterCopy.lst.findIndex(t => t.$id == item.$id)
 					if (item_i == -1) filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
@@ -769,7 +767,6 @@ function setInteractivity(self) {
 	self.displayTreeNew = async function(d) {
 		if (self.opts.newBtn && this.className !== 'sja_filter_add_transformer' && self.filter.lst.length) return
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
-		// self.dom.isNotInput.property('checked', !self.filter.in)
 		if (self.filter.lst.length > 0) {
 			self.activeData = {
 				item: self.filter,
@@ -925,7 +922,7 @@ function setInteractivity(self) {
 					!filter.lst.length ||
 					(self.activeData.elem && self.activeData.elem.className.includes('join'))
 						? self.appendTerm
-						: self.subnestFilter
+						: self.replaceTerm
 			},
 			barchart: {
 				bar_click_override: d.bar_click_override
@@ -945,7 +942,6 @@ function setInteractivity(self) {
 			.style('background-color', self.highlightEditRow)
 		const holder = self.dom.termSrcDiv
 		const item = self.activeData.item
-		// self.dom.isNotInput.property('checked', item.tvs.isnot)
 		self.dom.treeTip.clear()
 		self.pills[item.$id].showMenu(holder)
 		self.dom.treeTip.showunderoffset(elem.lastChild)
@@ -983,7 +979,7 @@ function setInteractivity(self) {
 		} else {
 			filterCopy.lst[i] = {
 				// transform from tvs to tvslst
-				in: !self.dom.isNotInput.property('checked'),
+				in: !_tvs_.isnot,
 				type: 'tvslst',
 				join: 'and',
 				lst: tvslst
@@ -1003,7 +999,7 @@ function setInteractivity(self) {
 		} else {
 			filterCopy.lst.push({
 				// transform from tvs to tvslst
-				in: !self.dom.isNotInput.property('checked'),
+				in: true,
 				type: 'tvslst',
 				join: 'and',
 				lst: tvslst
@@ -1020,32 +1016,12 @@ function setInteractivity(self) {
 		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
 		// transform from tvs to tvslst
 		filterCopy.lst[i] = {
-			in: !self.dom.isNotInput.property('checked'),
+			in: true,
 			type: 'tvslst',
 			join: filter.join == 'or' ? 'and' : 'or',
 			lst: [item, ...tvslst]
 		}
 		self.refresh(filterUiRoot)
-	}
-
-	self.editFilter = tvslst => {
-		const item = self.activeData.item
-		const filter = self.activeData.filter
-		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = findParent(filterUiRoot, filter.$id)
-		if (filterCopy == filterUiRoot) {
-			delete filterCopy.tag
-			self.refresh({
-				tag: 'filterUiRoot',
-				type: 'tvslst',
-				in: !self.dom.isNotInput.property('checked'),
-				join: filter.join == 'or' ? 'and' : 'or',
-				lst: [filterCopy, ...tvslst]
-			})
-		} else {
-			filterCopy.lst.push(...tvslst)
-			self.refresh(filterUiRoot)
-		}
 	}
 
 	self.removeTransform = function() {
