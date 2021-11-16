@@ -391,7 +391,7 @@ makeURL([
 			]
 		})],
 
-		['EF ~ agedx*diaggrp', '?noheader=1&mass='+JSON.stringify({
+		['EF ~ agedx*sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
 			plots: [
@@ -400,8 +400,8 @@ makeURL([
 					regressionType: 'linear',
 					outcome: { id: 'LV_Ejection_Fraction_3D' },
 					independent: [
-						{ id: 'agedx', interactions:['diaggrp']},
-						{ id: 'diaggrp', interactions:['agedx']}
+						{ id: 'agedx', interactions:['sex']},
+						{ id: 'sex', interactions:['agedx']}
 					]
 				},
 			]
