@@ -6,13 +6,12 @@ const serverconfig = require('./serverconfig')
 
 /*
 q {}
-.regressionType // client to always specify it
+.regressionType
 .filter
-.term1_id
-.term1_q // converted to q.outcome
 .outcome{}
 	.id
-	.term
+	.type // type will be required later to support molecular datatypes
+	.term{} // rehydrated
 	.q{}
 	.refGrp
 .independent[{}]
@@ -22,8 +21,10 @@ q {}
 	.q{}
 		.scale
 	.refGrp
+	.interactions[]
 
 input tsv matrix for R:
+	first row is variable name, with space and comma removed
 	first column is outcome variable
 	rest of columns are for independent variables
 
@@ -39,6 +40,7 @@ TODO
 
 // minimum number of samples to run analysis
 const minimumSample = 1
+const idsep = '___' // term id separator used in R input data
 
 export async function get_regression(q, ds) {
 	try {
@@ -49,11 +51,12 @@ export async function get_regression(q, ds) {
 		const sampledata = getSampleData(q, [q.outcome, ...q.independent])
 		/* each element is one sample:
 		{sample, id2value:map}, where value is { key, val }
+
 		*/
 
 		const queryTime = +new Date() - startTime
 
-		const [headerline, samplelines] = makeMatrix(q, sampledata)
+		const [headerline, samplelines, id2originalId, originalId2id] = makeMatrix(q, sampledata)
 		const sampleSize = samplelines.length
 		if (sampleSize < minimumSample) throw 'too few samples to fit model'
 
@@ -87,15 +90,17 @@ export async function get_regression(q, ds) {
 			}
 		}
 
+		const model = make_model(q, originalId2id)
+
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			[headerline.join('\t'), ...samplelines.map(i => i.join('\t'))],
-			[q.regressionType, colClasses.join(','), refGroups.join(','), scalingFactors.join(',')],
+			[q.regressionType, colClasses.join(','), refGroups.join(','), scalingFactors.join(','), model],
 			false
 		)
 
 		const result = { type: q.regressionType, queryTime, sampleSize }
-		parseRoutput(data, result)
+		parseRoutput(data, id2originalId, result)
 
 		result.totalTime = +new Date() - startTime
 		return result
@@ -118,7 +123,7 @@ function parse_q(q, ds) {
 	q.ds = ds
 
 	// client to always specify regressionType
-	if (!q.regressionType) q.regressionType = 'linear'
+	if (!q.regressionType) throw 'regressionType missing'
 	if (['linear', 'logistic'].indexOf(q.regressionType) == -1) throw 'unknown regressionType'
 
 	// outcome
@@ -141,6 +146,13 @@ function parse_q(q, ds) {
 		if (term.type == 'float' || term.type == 'integer')
 			term.isBinned = term.q.mode == 'discrete' || term.q.mode == 'binary'
 	}
+	// interaction of independent
+	for (const i of q.independent) {
+		if (!i.interactions) i.interactions = []
+		for (const x of i.interactions) {
+			if (!q.independent.find(y => y.id == x)) throw 'interacting term id missing from independent[]: ' + x
+		}
+	}
 }
 
 /* convert sampledata to matrix format
@@ -149,7 +161,14 @@ which may consume memory and may need to be improved
 */
 function makeMatrix(q, sampledata) {
 	// Populate data rows of tsv. first line is header
-	const headerline = ['outcome', ...q.independent.map(i => i.id)]
+	// in the header line, use new id e.g. `id0` to replace original id, to avoid introducing space/comma into R data
+	const id2originalId = {} // k: new id, v: original term id
+	const originalId2id = {} // k: original term id, v: new id
+	for (const [i, t] of q.independent.entries()) {
+		id2originalId['id' + i] = t.id
+		originalId2id[t.id] = 'id' + i
+	}
+	const headerline = ['outcome', ...q.independent.map(i => originalId2id[i.id])]
 
 	// may generate a line for each sample, if the sample has valid value for all terms
 	// store lines as arrays but not \t joined string, for checking refGrp value
@@ -205,10 +224,11 @@ function makeMatrix(q, sampledata) {
 		if (skipsample) continue
 		lines.push(line)
 	}
-	return [headerline, lines]
+	return [headerline, lines, id2originalId, originalId2id]
 }
 
-function parseRoutput(data, result) {
+function parseRoutput(data, id2originalId, result) {
+	//console.log(data)
 	const type2lines = new Map()
 	// k: type e.g.Deviance Residuals
 	// v: list of lines
@@ -254,31 +274,53 @@ function parseRoutput(data, result) {
 		const lines = type2lines.get('coefficients')
 		if (lines) {
 			if (lines.length < 3) throw 'expect at least 3 lines from coefficients'
+
+			// 1st line is header
+			const header = lines.shift().split('\t')
+			header.unshift('Category')
+			header.unshift('Variable')
+			// 2nd line is intercept
+			const intercept = lines
+				.shift()
+				.split('\t')
+				.slice(1)
+
 			result.coefficients = {
 				label: 'Coefficients',
-				header: lines
-					.shift()
-					.split('\t')
-					.slice(2), // 1st line is header
-				intercept: lines
-					.shift()
-					.split('\t')
-					.slice(2), // 2nd line is intercept
-				terms: {}
+				header,
+				intercept,
+				terms: {}, // individual independent terms, not interaction
+				interactions: [] // interaction rows
 			}
-			// rest of lines are categories of independent terms
+
+			// rest of lines are either individual independent variables, or interactions
 			for (const line of lines) {
 				const l = line.split('\t')
-				const termid = l.shift()
-				if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
-				const category = l.shift()
-				if (category) {
-					// has category
-					if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
-					result.coefficients.terms[termid].categories[category] = l
+				if (l[0].indexOf(':') != -1) {
+					// is an interaction
+					const row = {}
+					const [t1, t2] = l[0].split(':')
+					const [id1, cat1] = t1.split(idsep)
+					row.term1 = id2originalId[id1]
+					row.category1 = cat1
+					const [id2, cat2] = t2.split(idsep)
+					row.term2 = id2originalId[id2]
+					row.category2 = cat2
+					row.lst = l.slice(1)
+					result.coefficients.interactions.push(row)
 				} else {
-					// no category
-					result.coefficients.terms[termid].fields = l
+					// not interaction, individual variable
+					const [id, category] = l[0].split(idsep)
+					const termid = id2originalId[id] || id
+					if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
+					if (category) {
+						// has category
+						if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
+						result.coefficients.terms[termid].categories[category] = l.slice(1)
+					} else {
+						// no category
+						result.coefficients.terms[termid].fields = l.slice(1)
+					}
 				}
 			}
 		}
@@ -286,10 +328,30 @@ function parseRoutput(data, result) {
 	{
 		const lines = type2lines.get('type3')
 		if (lines) {
+			const header = lines.shift().split('\t')
+			header.unshift('Variable')
 			result.type3 = {
 				label: 'Type III statistics',
-				header: lines.shift().split('\t'),
-				lst: lines.map(i => i.split('\t'))
+				header,
+				lst: []
+			}
+			for (const line of lines) {
+				const l = line.split('\t')
+				const t = l[0]
+				const row = {}
+				if (t == '<none>') {
+					row.lst = l.slice(1)
+				} else {
+					if (t.indexOf(':') != -1) {
+						const [t1, t2] = t.split(':')
+						row.id1 = id2originalId[t1.replace(idsep, '')]
+						row.id2 = id2originalId[t2.replace(idsep, '')]
+					} else {
+						row.id1 = id2originalId[t.replace(idsep, '')]
+					}
+					row.lst = l.slice(1)
+				}
+				result.type3.lst.push(row)
 			}
 		}
 	}
@@ -318,7 +380,8 @@ q{}
 terms[]
 	array of {id, term, q}
 
-Returns
+Returns two data structures
+1.
 	[
 		{
 	  	sample: STRING,
@@ -335,6 +398,7 @@ Returns
 		},
 		...
 	]
+2.
 */
 function getSampleData(q, terms) {
 	const filter = getFilterCTEs(q.filter, q.ds)
@@ -358,11 +422,13 @@ function getSampleData(q, terms) {
 
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 	// each row {sample, term_id, key, val}
+
 	const samples = new Map() // k: sample name, v: {sample, id2value:Map( tid => {key,val}) }
 	for (const r of rows) {
 		if (!samples.has(r.sample)) {
 			samples.set(r.sample, { sample: r.sample, id2value: new Map() })
 		}
+
 		if (samples.get(r.sample).id2value.has(r.term_id)) {
 			// can duplication happen?
 			throw `duplicate '${r.term_id}' entry for sample='${r.sample}'`
@@ -370,4 +436,30 @@ function getSampleData(q, terms) {
 		samples.get(r.sample).id2value.set(r.term_id, { key: r.key, val: r.value })
 	}
 	return samples.values()
+}
+
+function make_model(q, originalId2id) {
+	const independent = q.independent.map(i => originalId2id[i.id] + idsep)
+
+	// get unique list of interaction pairs
+	const a2b = {}
+	for (const i of q.independent) {
+		const a = originalId2id[i.id]
+		for (const j of i.interactions) {
+			const b = originalId2id[j]
+			if (a2b[a] == b || a2b[b] == a) {
+				// already seen
+			} else {
+				a2b[a] = b
+			}
+		}
+	}
+
+	const interactions = []
+	for (const i in a2b) {
+		interactions.push(i + idsep + ' : ' + a2b[i] + idsep)
+	}
+
+	// excluding space but should be fine to include them
+	return 'outcome___ ~ ' + independent.join(' + ') + (interactions.length ? ' + ' + interactions.join(' + ') : '')
 }

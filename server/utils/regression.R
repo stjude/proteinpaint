@@ -37,13 +37,15 @@
 
 
 args <- commandArgs(trailingOnly = T)
-if (length(args) != 4){
-  stop("Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories> <scaling factors>] <stdout>")
+if (length(args) != 5){
+  stop("Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories> <scaling factors> <model>] <stdout>")
 }
 regressionType <- args[1]
 variableClasses <- strsplit(args[2], split = ",")[[1]]
 refCategories <- strsplit(args[3], split = ",")[[1]]
 scalingFactors <- strsplit(args[4], split = ",")[[1]]
+modelStr <- args[5]
+
 
 #Read in input data and assign variable classes
 con <- file("stdin","r")
@@ -77,8 +79,9 @@ for(i in 1:length(scalingFactors)) {
 #Perform the regression analysis
 names(dat) <- paste(names(dat), "___", sep = "")
 outcomeVar <- names(dat)[1]
-independentVars <- names(dat)[-1]
-model <- as.formula(paste(sprintf("`%s`", outcomeVar), paste(sprintf("`%s`", independentVars), collapse = " + "), sep = " ~ "))
+#independentVars <- names(dat)[-1]
+#model <- as.formula(paste(sprintf("`%s`", outcomeVar), paste(sprintf("`%s`", independentVars), collapse = " + "), sep = " ~ "))
+model <- as.formula(modelStr)
 if (regressionType == "linear"){
   # linear regression
   if (!is.integer(dat[,outcomeVar]) & !is.numeric(dat[,outcomeVar])){
@@ -95,7 +98,7 @@ if (regressionType == "linear"){
   colnames(coefficients_table)[1] <- "Beta"
   colnames(coefficients_table)[5:6] <- c("95% CI (low)","95% CI (high)")
   # type III statistics
-  typeIII_table <- as.data.frame(drop1(res, test = "F"))
+  typeIII_table <- as.data.frame(drop1(res, scope = ~., test = "F"))
   # other summary stats
   other_table <- c(
     "Residual standard error" = round(res_summ$sigma, 2),
@@ -125,7 +128,7 @@ if (regressionType == "linear"){
   colnames(coefficients_table)[1] <- "Log Odds"
   colnames(coefficients_table)[6:7] <- c("95% CI (low)","95% CI (high)")
   # type III statistics
-  typeIII_table <- as.data.frame(drop1(res, test = "LRT"))
+  typeIII_table <- as.data.frame(drop1(res, scope = ~., test = "LRT"))
   # other summary stats
   other_table <- c(
     "Dispersion parameter" = res_summ$dispersion,
@@ -140,7 +143,6 @@ if (regressionType == "linear"){
   stop("regression type is not recognized")
 }
 
-
 #Reformat the coefficients table
 #Round the non-p-value columns to 3 decimal places
 pvalueCol <- grepl("^Pr\\(>", colnames(coefficients_table))
@@ -149,16 +151,18 @@ coefficients_table[,!pvalueCol] <- round(coefficients_table[,!pvalueCol], 3)
 coefficients_table[,pvalueCol] <- signif(coefficients_table[,pvalueCol], 4)
 #Re-arrange columns
 coefficients_table <- as.data.frame(coefficients_table)
-coefficients_table<- cbind("Variable" = "", "Category" = "", coefficients_table, stringsAsFactors = F)
-var_and_cat <- strsplit(row.names(coefficients_table), split = "___")
-for(x in 1:length(var_and_cat)){
-  coefficients_table[x,"Variable"] <- gsub("`","",var_and_cat[[x]][1])
-  if(length(var_and_cat[[x]]) > 1){
-    coefficients_table[x,"Category"] <- gsub("`","",var_and_cat[[x]][2])
-  } else{
-    coefficients_table[x,"Category"] <- ""
-  }
-}
+
+# do not add in Variable and Category columns
+#coefficients_table<- cbind("Variable" = "", "Category" = "", coefficients_table, stringsAsFactors = F)
+#var_and_cat <- strsplit(row.names(coefficients_table), split = "___")
+#for(x in 1:length(var_and_cat)){
+#  coefficients_table[x,"Variable"] <- gsub("`","",var_and_cat[[x]][1])
+#  if(length(var_and_cat[[x]]) > 1){
+#    coefficients_table[x,"Category"] <- gsub("`","",var_and_cat[[x]][2])
+#  } else{
+#    coefficients_table[x,"Category"] <- ""
+#  }
+#}
 
 #Reformat the type III statistics table
 #Round the non-p-value columns to 3 decimal places
@@ -166,8 +170,10 @@ pvalueCol <- grepl("^Pr\\(>", colnames(typeIII_table))
 typeIII_table[,!pvalueCol] <- round(typeIII_table[,!pvalueCol], 3)
 #Round the p-value column to 4 significant digits
 typeIII_table[,pvalueCol] <- signif(typeIII_table[,pvalueCol], 4)
+
+# do not add the Variable column
 #Re-arrange columns
-typeIII_table <- cbind("Variable" = gsub("`", "", gsub("___", "", row.names(typeIII_table))), typeIII_table, stringsAsFactors = F)
+#typeIII_table <- cbind("Variable" = gsub("`", "", gsub("___", "", row.names(typeIII_table))), typeIII_table, stringsAsFactors = F)
 
 
 #Output summary statistics
@@ -181,9 +187,9 @@ if (length(warnings()) > 0){
 cat("#residuals\n", file = "", sep = "")
 write.table(residuals_table, file = "", sep = "\t", quote = F, row.names = F)
 cat("#coefficients\n", file = "", sep = "")
-write.table(coefficients_table, file = "", sep = "\t", quote = F, row.names = F)
+write.table(coefficients_table, file = "", sep = "\t", quote = F, row.names = T)
 cat("#type3\n", file = "", sep = "")
-write.table(typeIII_table, file = "", sep = "\t", quote = F, row.names = F)
+write.table(typeIII_table, file = "", sep = "\t", quote = F, row.names = T)
 cat("#other\n", file = "", sep = "")
 write.table(as.data.frame(other_table), file = "", sep = "\t", quote = F, row.names = T, col.names = F)
 close(con)

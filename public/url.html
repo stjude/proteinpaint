@@ -335,7 +335,6 @@ makeURL([
 					chartType: 'regression',
 					regressionType: 'linear',
 					outcome: {
-						varClass:'term',
 						id: 'LV_Ejection_Fraction_3D'
 					},
 				},
@@ -350,13 +349,11 @@ makeURL([
 					chartType: 'regression',
 					regressionType: 'linear',
 					outcome: {
-						varClass:'term',
 						id: 'LV_Ejection_Fraction_3D',
 					},
 					independent: [
 						{
 							// adding varclass to independent term will break at termsetting.js line 417. why??
-							varClass:'term',
 							id: 'anthracyclines_jco_5',
 							q: {
 								mode:'discrete',
@@ -384,12 +381,27 @@ makeURL([
 					chartType: 'regression',
 					regressionType: 'linear',
 					outcome: {
-						varClass:'term',
 						id: 'LV_Ejection_Fraction_3D',
 					},
 					independent: [
-						{ varClass:'term', id: "agedx"},
-						{ varClass:'term', id: "diaggrp"}
+						{ id: "agedx"},
+						{ id: "diaggrp"}
+					]
+				},
+			]
+		})],
+
+		['EF ~ agedx*sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: { id: 'LV_Ejection_Fraction_3D' },
+					independent: [
+						{ id: 'agedx', interactions:['sex']},
+						{ id: 'sex', interactions:['agedx']}
 					]
 				},
 			]
@@ -404,7 +416,6 @@ makeURL([
 				chartType: 'regression',
 				regressionType: 'logistic',
 				outcome: {
-					varClass:'term',
 					id: 'LV_Ejection_Fraction_3D',
 				}
 			}]
@@ -417,7 +428,6 @@ makeURL([
 				chartType: 'regression',
 				regressionType: 'logistic',
 				outcome: {
-					varClass:'term',
 					id: 'LV_Ejection_Fraction_3D',
 					q: {
 						"mode":"binary",
@@ -430,10 +440,9 @@ makeURL([
 					"refGrp":"≤57.8"
 				},
 				independent: [
-					{ varClass:'term', id: "diaggrp"},
-					{varClass:'term',id:"hrtavg"},
+					{ id: "diaggrp"},
+					{id:"hrtavg"},
 					{
-						varClass:'term',
 						"id":"genetic_race",
 						"q":{
 							"hiddenValues":{},
@@ -453,7 +462,6 @@ makeURL([
 				chartType: 'regression',
 				regressionType: 'logistic',
 				outcome: {
-					varClass:'term',
 					id: 'Arrhythmias',
 				}
 			}]
@@ -466,12 +474,10 @@ makeURL([
 				chartType: 'regression',
 				regressionType: 'logistic',
 				outcome: {
-					varClass:'term',
 					id: 'Arrhythmias',
 				},
 				independent: [
 					{
-						varClass:'term',
 						id:"chestrt_yn",
 						q: {
 							mode:'discrete',

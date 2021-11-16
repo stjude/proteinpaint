@@ -106,7 +106,6 @@ function setRenderers(self) {
 
 		if (result.warnings) {
 			const div = sectionHolder(result.warnings.label)
-			//const p = div.append('p').style('margin', '8px')
 			div.append('div').style('margin', '8px')
 			for (const line of result.warnings.lst) {
 				div
@@ -136,12 +135,6 @@ function setRenderers(self) {
 			// header row
 			{
 				const tr = table.append('tr').style('opacity', 0.4)
-				tr.append('td')
-					.text('Variable')
-					.style('padding', '8px')
-				tr.append('td')
-					.text('Category')
-					.style('padding', '8px')
 				for (const v of result.coefficients.header) {
 					tr.append('td')
 						.text(v)
@@ -175,10 +168,11 @@ function setRenderers(self) {
 				if (termdata.fields) {
 					// no category
 					tr.append('td')
-					for (const v of termdata.fields)
+					for (const v of termdata.fields) {
 						tr.append('td')
 							.text(v)
 							.style('padding', '8px')
+					}
 				} else if (termdata.categories) {
 					const orderedCategories = []
 					const input = self.parent.inputs.independent.inputs.find(i => i.term.id == tid)
@@ -217,27 +211,76 @@ function setRenderers(self) {
 					tr.append('td').text('ERROR: no .fields[] or .categories{}')
 				}
 			}
+			// interactions
+			for (const row of result.coefficients.interactions) {
+				const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+
+				const term1 = self.state.config.independent.find(t => t.id == row.term1)
+				const term2 = self.state.config.independent.find(t => t.id == row.term2)
+
+				// variable column
+				{
+					const td = tr.append('td').style('padding', '8px')
+					fillTdName(td.append('div'), term1 ? term1.term.name : row.term1)
+					fillTdName(td.append('div'), term2 ? term2.term.name : row.term2)
+				}
+				// category column
+				{
+					const td = tr.append('td').style('padding', '8px')
+					const d1 = td.append('div')
+					if (row.category1) {
+						d1.text(
+							term1 && term1.term.values && term1.term.values[row.category1]
+								? term1.term.values[row.category1].label
+								: row.category1
+						)
+					}
+					const d2 = td.append('div')
+					if (row.category2) {
+						d2.text(
+							term2 && term2.term.values && term2.term.values[row.category2]
+								? term2.term.values[row.category2].label
+								: row.category2
+						)
+					}
+				}
+				for (const v of row.lst) {
+					tr.append('td')
+						.text(v)
+						.style('padding', '8px')
+				}
+			}
 		}
 
 		if (result.type3) {
 			const div = sectionHolder(result.type3.label)
-			const table = div.append('table').style('border-spacing', '8px')
+			const table = div.append('table').style('border-spacing', '0px')
 			// header
 			{
 				const tr = table.append('tr').style('opacity', 0.4)
 				for (const v of result.type3.header) {
-					tr.append('td').text(v)
+					tr.append('td')
+						.text(v)
+						.style('padding', '8px')
 				}
 			}
+			let rowcount = 1
 			for (const row of result.type3.lst) {
-				const tr = table.append('tr')
-				const v1 = row.shift()
-				const td = tr.append('td')
-				if (v1) {
-					const term = self.state.config.independent.find(t => t.id == v1)
-					fillTdName(td, term ? term.term.name : v1)
+				const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+				// column 1 for variable
+				const td = tr.append('td').style('padding', '8px')
+				if (row.id1) {
+					const term1 = self.state.config.independent.find(t => t.id == row.id1)
+					fillTdName(td.append('div'), term1 ? term1.term.name : row.id1)
+					if (row.id2) {
+						const term2 = self.state.config.independent.find(t => t.id == row.id2)
+						fillTdName(td.append('div'), term2 ? term2.term.name : row.id2)
+					}
 				}
-				for (const v of row) tr.append('td').text(v)
+				for (const v of row.lst)
+					tr.append('td')
+						.text(v)
+						.style('padding', '8px')
 			}
 		}
 		if (result.other) {

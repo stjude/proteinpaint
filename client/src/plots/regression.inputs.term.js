@@ -2,6 +2,8 @@ import { termsettingInit } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { get_bin_label } from '../../shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
+import { Menu } from '../dom/menu'
+import { select } from 'd3-selection'
 
 /*
 class instance is an input
@@ -17,17 +19,25 @@ export class InputTerm {
 	}
 
 	init(holder) {
-		// only run once when the input is added in inputs.js via data/enter/update
+		// only run once when a new input variable is added to the user interface via data/enter() in inputs.js
+
+		const termRow = holder.append('div')
+		// the row contains two cells: left to show ts pill, right to show interaction
+		const pillDiv = termRow.append('span')
+		const interactionDiv = termRow.append('span').style('margin-left', '20px')
 
 		this.dom = {
 			holder,
-			pillDiv: holder.append('div'),
+			termRow,
+			pillDiv,
+			interactionDiv,
 			err_div: holder
 				.append('div')
 				.style('display', 'none')
 				.style('padding', '5px')
 				.style('background-color', 'rgba(255,100,100,0.2)'),
-			infoDiv: holder.append('div')
+			infoDiv: holder.append('div'),
+			tip: new Menu()
 		}
 
 		try {
@@ -106,7 +116,11 @@ export class InputTerm {
 		const tw = this.term // term wrapper
 
 		// clear previous errors
-		if (tw) delete tw.error
+		if (tw) {
+			// a term has been selected
+			delete tw.error
+		}
+
 		this.dom.err_div.style('display', 'none').text('')
 		this.hasError = false
 
@@ -126,6 +140,7 @@ export class InputTerm {
 			}
 
 			await this.pill.main(this.getPillArgs())
+			this.renderInteractionPrompt()
 			await this.valuesTable.main()
 			const e = (tw && tw.error) || this.pill.error
 			if (e) errors.push(e)
@@ -226,7 +241,7 @@ export class InputTerm {
 	}
 
 	remove() {
-		this.dom.pillDiv
+		this.dom.termRow
 			.transition()
 			.duration(500)
 			.style('opacity', 0)
@@ -235,6 +250,74 @@ export class InputTerm {
 		for (const key in this.dom) {
 			delete this.dom[key]
 		}
+	}
+
+	renderInteractionPrompt() {
+		if (!this.term || this.section.configKey != 'independent' || this.section.inputs.filter(i => i.term).length < 2) {
+			this.dom.interactionDiv.style('display', 'none')
+			return
+		}
+
+		const n = this.term.interactions.length
+		this.dom.interactionDiv
+			.style('display', 'inline')
+			.html(n == 0 ? '+ Interaction' : `${n} Interaction${n > 1 ? 's' : ''}`)
+			.style('padding', '5px')
+			.style('background-color', n == 0 ? null : '#ececec')
+			.style('border-radius', n == 0 ? null : '6px')
+			.style('color', n == 0 ? 'rgb(153, 153, 153)' : '#000')
+			.style('font-size', n == 0 ? '0.8em' : '')
+			.style('cursor', 'pointer')
+			.on('click', () => this.renderInteractionOptions())
+	}
+
+	renderInteractionOptions() {
+		const self = this
+		self.dom.tip.clear().showunder(self.dom.interactionDiv.node())
+		self.dom.tip.d
+			.append('div')
+			.style('padding', '5px')
+			.style('font-size', '0.8em')
+			.style('color', 'rgb(153, 153, 153)')
+			.html(`Selected variables will each form pairwise interaction with ${this.term.term.name}`)
+
+		self.dom.tip.d
+			.append('div')
+			.selectAll('div')
+			.data(self.parent.config.independent.filter(tw => tw && tw.id !== self.term.id))
+			.enter()
+			.append('div')
+			.style('margin', '5px')
+			.each(function(tw) {
+				const elem = select(this).append('label')
+				const checkbox = elem
+					.append('input')
+					.attr('type', 'checkbox')
+					.property('checked', self.term.interactions.includes(tw.id))
+
+				elem.append('span').text(' ' + tw.term.name)
+			})
+
+		self.dom.tip.d
+			.append('button')
+			.text('Apply')
+			.style('margin', '5px')
+			.on('click', () => {
+				self.dom.tip.hide()
+				self.term.interactions = []
+				self.dom.tip.d.selectAll('input').each(function(tw) {
+					if (select(this).property('checked')) self.term.interactions.push(tw.id)
+				})
+				for (const tw of self.parent.config.independent) {
+					const i = tw.interactions.indexOf(self.term.id)
+					if (self.term.interactions.includes(tw.id)) {
+						if (i == -1) tw.interactions.push(self.term.id)
+					} else if (i != -1) {
+						tw.interactions.splice(i, 1)
+					}
+				}
+				self.parent.editConfig(self, self.term)
+			})
 	}
 }
 
