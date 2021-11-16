@@ -253,13 +253,14 @@ export class InputTerm {
 	}
 
 	renderInteractionPrompt() {
-		if (!this.term || this.section.configKey != 'independent') {
+		if (!this.term || this.section.configKey != 'independent' || this.section.inputs.filter(i => i.term).length < 2) {
 			this.dom.interactionDiv.style('display', 'none')
 			return
 		}
 
 		const n = this.term.interactions.length
 		this.dom.interactionDiv
+			.style('display', 'inline')
 			.html(n == 0 ? '+ Interaction' : `${n} Interaction${n > 1 ? 's' : ''}`)
 			.style('padding', '5px')
 			.style('background-color', n == 0 ? null : '#ececec')
