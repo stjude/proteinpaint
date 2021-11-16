@@ -168,10 +168,11 @@ function setRenderers(self) {
 				if (termdata.fields) {
 					// no category
 					tr.append('td')
-					for (const v of termdata.fields)
+					for (const v of termdata.fields) {
 						tr.append('td')
 							.text(v)
 							.style('padding', '8px')
+					}
 				} else if (termdata.categories) {
 					const orderedCategories = []
 					const input = self.parent.inputs.independent.inputs.find(i => i.term.id == tid)
@@ -219,13 +220,13 @@ function setRenderers(self) {
 
 				// variable column
 				{
-					const td = tr.append('td')
+					const td = tr.append('td').style('padding', '8px')
 					fillTdName(td.append('div'), term1 ? term1.term.name : row.term1)
 					fillTdName(td.append('div'), term2 ? term2.term.name : row.term2)
 				}
 				// category column
 				{
-					const td = tr.append('td')
+					const td = tr.append('td').style('padding', '8px')
 					const d1 = td.append('div')
 					if (row.category1) {
 						d1.text(
@@ -252,20 +253,22 @@ function setRenderers(self) {
 		}
 
 		if (result.type3) {
-			console.log(result.type3)
 			const div = sectionHolder(result.type3.label)
-			const table = div.append('table').style('border-spacing', '8px')
+			const table = div.append('table').style('border-spacing', '0px')
 			// header
 			{
 				const tr = table.append('tr').style('opacity', 0.4)
 				for (const v of result.type3.header) {
-					tr.append('td').text(v)
+					tr.append('td')
+						.text(v)
+						.style('padding', '8px')
 				}
 			}
+			let rowcount = 1
 			for (const row of result.type3.lst) {
-				const tr = table.append('tr')
+				const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 				// column 1 for variable
-				const td = tr.append('td')
+				const td = tr.append('td').style('padding', '8px')
 				if (row.id1) {
 					const term1 = self.state.config.independent.find(t => t.id == row.id1)
 					fillTdName(td.append('div'), term1 ? term1.term.name : row.id1)
@@ -274,7 +277,10 @@ function setRenderers(self) {
 						fillTdName(td.append('div'), term2 ? term2.term.name : row.id2)
 					}
 				}
-				for (const v of row.lst) tr.append('td').text(v)
+				for (const v of row.lst)
+					tr.append('td')
+						.text(v)
+						.style('padding', '8px')
 			}
 		}
 		if (result.other) {

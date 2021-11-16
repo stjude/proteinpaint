@@ -40,6 +40,7 @@ TODO
 
 // minimum number of samples to run analysis
 const minimumSample = 1
+const idsep = '___' // term id separator used in R input data
 
 export async function get_regression(q, ds) {
 	try {
@@ -227,7 +228,7 @@ function makeMatrix(q, sampledata) {
 }
 
 function parseRoutput(data, id2originalId, result) {
-	console.log(data)
+	//console.log(data)
 	const type2lines = new Map()
 	// k: type e.g.Deviance Residuals
 	// v: list of lines
@@ -273,6 +274,7 @@ function parseRoutput(data, id2originalId, result) {
 		const lines = type2lines.get('coefficients')
 		if (lines) {
 			if (lines.length < 3) throw 'expect at least 3 lines from coefficients'
+
 			// 1st line is header
 			const header = lines.shift().split('\t')
 			header.unshift('Category')
@@ -282,6 +284,7 @@ function parseRoutput(data, id2originalId, result) {
 				.shift()
 				.split('\t')
 				.slice(1)
+
 			result.coefficients = {
 				label: 'Coefficients',
 				header,
@@ -289,23 +292,25 @@ function parseRoutput(data, id2originalId, result) {
 				terms: {}, // individual independent terms, not interaction
 				interactions: [] // interaction rows
 			}
+
+			// rest of lines are either individual independent variables, or interactions
 			for (const line of lines) {
 				const l = line.split('\t')
 				if (l[0].indexOf(':') != -1) {
-					// this row is an interaction
+					// is an interaction
 					const row = {}
 					const [t1, t2] = l[0].split(':')
-					const [id1, cat1] = t1.split('___')
+					const [id1, cat1] = t1.split(idsep)
 					row.term1 = id2originalId[id1]
 					row.category1 = cat1
-					const [id2, cat2] = t2.split('___')
+					const [id2, cat2] = t2.split(idsep)
 					row.term2 = id2originalId[id2]
 					row.category2 = cat2
 					row.lst = l.slice(1)
 					result.coefficients.interactions.push(row)
 				} else {
-					// not interaction
-					const [id, category] = l[0].split('___')
+					// not interaction, individual variable
+					const [id, category] = l[0].split(idsep)
 					const termid = id2originalId[id] || id
 					if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
 					if (category) {
@@ -339,10 +344,10 @@ function parseRoutput(data, id2originalId, result) {
 				} else {
 					if (t.indexOf(':') != -1) {
 						const [t1, t2] = t.split(':')
-						row.id1 = id2originalId[t1.replace('___', '')]
-						row.id2 = id2originalId[t2.replace('___', '')]
+						row.id1 = id2originalId[t1.replace(idsep, '')]
+						row.id2 = id2originalId[t2.replace(idsep, '')]
 					} else {
-						row.id1 = id2originalId[t.replace('___', '')]
+						row.id1 = id2originalId[t.replace(idsep, '')]
 					}
 					row.lst = l.slice(1)
 				}
@@ -434,7 +439,7 @@ function getSampleData(q, terms) {
 }
 
 function make_model(q, originalId2id) {
-	const independent = q.independent.map(i => originalId2id[i.id] + '___')
+	const independent = q.independent.map(i => originalId2id[i.id] + idsep)
 
 	// get unique list of interaction pairs
 	const a2b = {}
@@ -452,7 +457,7 @@ function make_model(q, originalId2id) {
 
 	const interactions = []
 	for (const i in a2b) {
-		interactions.push(i + '___ : ' + a2b[i] + '___')
+		interactions.push(i + idsep + ' : ' + a2b[i] + idsep)
 	}
 
 	// excluding space but should be fine to include them
