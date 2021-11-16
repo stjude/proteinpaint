@@ -4,7 +4,8 @@
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "scripts": {
-    "dev": "rm -rf ../public/bin/*proteinpaint.js; webpack --env.NODE_ENV=development --watch --progress --colors",
+    "predev": "node ./test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js",
+    "dev": "webpack --env.NODE_ENV=development --watch --progress --colors",
     "pretest": "./test/pretest.js",
     "test": "cat ../public/bin/proteinpaint.js ./test/init.js | tape-run --static ../public",
     "browser": "node ./test/import-specs.js",

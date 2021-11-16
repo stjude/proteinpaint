@@ -44,7 +44,10 @@ module.exports = function(env = {}) {
 					use: ['style-loader', 'css-loader']
 				},
 				{
-					// will remove this rule in development mode
+					// by default, this rule will empty out internals.js,
+					// so that no spec files are imported into it
+					// and thus not bundled -- UNLESS this rule is
+					// removed in mode=development
 					test: path.join(__dirname, './test/internals.js'),
 					use: [path.join(__dirname, './test/empty-wp-loader.js')]
 				},

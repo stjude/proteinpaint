@@ -1,7 +1,25 @@
-const glob = require('glob')
-const fs = require('fs')
-const path = require('path')
+/*
+	Creates a target file to import matching test spec files.
+	Whenever that target file is updated, it will 
+	trigger a rebundling of the app in development mode.
 
+	Usage:
+	node import-specs.js [name=STR] [dir=STR]
+	
+	name: 
+		- a glob string to match against spec filenames under client/src
+		- defaults to '*'
+		- name=? (question mark) will create a target file if missing,
+			but will not overwrite if it exists
+	
+	dir: 
+		- a glob string to match against spec dir names under client/src
+		- defaults to '**'
+*/
+const path = require('path')
+const writeImportCode = require('./specHelpers').writeImportCode
+
+// get user-supplied arguments from the command line
 const opts = process.argv
 	.filter(v => v.includes('='))
 	.reduce((obj, opt) => {
@@ -10,26 +28,8 @@ const opts = process.argv
 		return obj
 	}, {})
 
-const SPECDIR = opts.dir || '**'
-const SPECNAME = opts.name || '*'
-const srcDir = __dirname.replace('client/test', 'client/src')
-const pattern = path.join(__dirname, `../src/${SPECDIR}/test/${SPECNAME}.spec.js`)
-
-// hardcoded list of excluded specs, unless specified using SPECNAME
-const exclude = ['examples']
-const specs = glob.sync(pattern).filter(f => f === SPECNAME || !exclude.includes(f))
-
-// sorting preference for running the tests
-const specOrder = [`${srcDir}/common/test/rx.core.spec.js`]
-specs.sort((a, b) => {
-	const i = specOrder.indexOf(a)
-	const j = specOrder.indexOf(b)
-	if (i == -1 && j == -1) return 0
-	if (i == -1) return 1
-	if (j == -1) return -1
-	return i - j
-})
-
-const code = specs.map(file => `import '${file.replace(srcDir, '../src')}'`).join('\n')
 const targetFile = path.join(__dirname, './internals.js')
-fs.writeFileSync(targetFile, code, { encoding: 'utf8' })
+
+if (opts.name != '?' || !fs.existsSync(targetFile)) {
+	writeImportCode(opts, targetFile)
+}

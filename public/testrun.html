@@ -15,8 +15,10 @@
 </head>
 <body>
 <div style='padding: 10px 15px; background: #3a3a3a; color: #fff; font-family: Menlo, Courier'>
-  <p>Run <span id='pp-test-runner-banner' class='code-snippet'>$ npm run test-browser</span> 
-    to (re)compile the <span class='code-snippet'>*.spec.js</span> files. See the test results in the browser console.</p>
+  <p><span id='pp-test-runner-banner' class='code-snippet'>$ npm run dev</span> must be active to 
+    to (re)compile <span class='code-snippet'>*.spec.js</span> files, as selected by 
+    <span class='code-snippet'>node ./client/test/import-specs.js [name='...' ] [dir='...']</span>. 
+    See the test results in the browser console.</p>
 </div>
 <script>
 window.runproteinpaint({noheader: true, testInternals: true})
