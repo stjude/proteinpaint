@@ -56,6 +56,7 @@ export async function get_regression(q, ds) {
 		const queryTime = +new Date() - startTime
 
 		const [headerline, samplelines, id2originalId, originalId2id] = makeMatrix(q, sampledata)
+		console.log(333, headerline)
 		const sampleSize = samplelines.length
 		if (sampleSize < minimumSample) throw 'too few samples to fit model'
 
@@ -168,7 +169,7 @@ function makeMatrix(q, sampledata) {
 		id2originalId['id' + i] = t.id
 		originalId2id[t.id] = 'id' + i
 	}
-	const headerline = ['outcome', ...q.independent.map(i => id2originalId[i.id])]
+	const headerline = ['outcome', ...q.independent.map(i => originalId2id[i.id])]
 
 	// may generate a line for each sample, if the sample has valid value for all terms
 	// store lines as arrays but not \t joined string, for checking refGrp value
@@ -402,7 +403,7 @@ function getSampleData(q, terms) {
 }
 
 function make_model(q, originalId2id) {
-	const independent = q.independent.map(i => originalId2id[i.id])
+	const independent = q.independent.map(i => originalId2id[i.id] + '___')
 
 	// get unique list of interaction pairs
 	const a2b = {}
@@ -420,9 +421,9 @@ function make_model(q, originalId2id) {
 
 	const interactions = []
 	for (const i in a2b) {
-		interactions.push(i + '*' + a2b[i])
+		interactions.push(i + '___ : ' + a2b[i] + '___')
 	}
 
 	// excluding space but should be fine to include them
-	return 'outcome~' + independent.join('+') + (interactions.length ? '+' + interactions.join('+') : '')
+	return 'outcome___ ~ ' + independent.join(' + ') + (interactions.length ? ' + ' + interactions.join(' + ') : '')
 }

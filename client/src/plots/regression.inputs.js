@@ -98,7 +98,7 @@ export class RegressionInputs {
 				await this.renderSection(section)
 				for (const input of section.inputs) {
 					input.dom.holder.style('border-left', input.term ? '1px solid #bbb' : '')
-					updates.push(input.update(input))
+					updates.push(input.update())
 				}
 			}
 			await Promise.all(updates)
@@ -222,6 +222,14 @@ function setRenderers(self) {
 		// process each selected variable
 		for (const variable of selectedArray) {
 			if (section.configKey == 'independent') {
+				if (!variable.interactions) variable.interactions = []
+				for (const id of variable.interactions) {
+					const tw = selected.find(i => i.id == id)
+					if (!tw) throw 'interacting partner not found in independents: ' + id
+					if (!tw.interactions) tw.interactions = []
+					if (!tw.interactions.includes(variable.id)) tw.interactions.push(variable.id)
+				}
+				/*
 				// find every paired-term whose interactions array includes this variable's id
 				const interactions = selected
 					.filter(tw => tw.id !== variable.id && tw.interactions && tw.interactions.includes(variable.id))
@@ -240,6 +248,7 @@ function setRenderers(self) {
 				}
 
 				variable.interactions = interactions
+				*/
 			}
 
 			const input = section.inputs.find(input => input.term && input.term.id == variable.id)
