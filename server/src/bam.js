@@ -997,15 +997,6 @@ function run_clustalo(fasta_sequence, max_read_alignment, num_reads, qual_sequen
 								ref_nucleotides.push(nucl)
 							} else {
 								if (nucl == ref_nucleotides[global_nuc_count]) {
-									//console.log('nuc_count:', nuc_count)
-									//console.log('read_quality[nuc_count - 1]:', read_quality[nuc_count - 1])
-									//console.log(
-									//	'qual2match:',
-									//	qual2match(read_quality[nuc_count - 1] / maxqual)
-									//		.replace('rgb(', '')
-									//		.replace(')', '')
-									//		.split(',')
-									//)
 									const colors = qual2match(read_quality[nuc_count - 1] / maxqual)
 										.replace('rgb(', '')
 										.replace(')', '')
@@ -1014,9 +1005,6 @@ function run_clustalo(fasta_sequence, max_read_alignment, num_reads, qual_sequen
 									qual_g += colors[1] + ','
 									qual_b += colors[2] + ','
 								} else if (nucl != ref_nucleotides[global_nuc_count]) {
-									//console.log('nuc_count:', nuc_count)
-									//console.log('read_quality[nuc_count]:', read_quality[nuc_count - 1])
-									//console.log('qual2mismatchbg:', qual2mismatchbg(read_quality[nuc_count - 1] / maxqual))
 									const colors = qual2mismatchbg(read_quality[nuc_count - 1] / maxqual)
 										.replace('rgb(', '')
 										.replace(')', '')

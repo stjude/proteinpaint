@@ -1213,6 +1213,7 @@ async function align_reads_to_allele(tk, group, block) {
 	if ('nochr' in tk) {
 		alig_lst.push('nochr=' + tk.nochr)
 	}
+	if (tk.drop_pcrduplicates) alig_lst.push('drop_pcrduplicates=1')
 	if (group.partstack) {
 		alig_lst.push('stackstart=' + group.partstack.start)
 		alig_lst.push('stackstop=' + group.partstack.stop)
@@ -1463,11 +1464,15 @@ async function getMultiReadAligInfo(tk, group, block) {
 				nclt_td = read_tr
 					.append('td')
 					.text(nclt)
-					.style('color', 'white')
 					.style(
 						'background-color',
 						'rgb(' + r_colors[nclt_count - 1] + ',' + g_colors[nclt_count - 1] + ',' + b_colors[nclt_count - 1] + ')'
 					)
+				if (nclt != '-') {
+					nclt_td.style('color', 'white')
+				} else {
+					nclt_td.style('color', 'black')
+				}
 			}
 
 			// Highlighting nucleotides that are within the ref/alt allele
