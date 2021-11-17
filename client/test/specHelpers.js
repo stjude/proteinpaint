@@ -1,16 +1,25 @@
 const glob = require('glob')
 const fs = require('fs')
 const path = require('path')
+const bundleFile = path.join(__dirname, '../../public/bin/proteinpaint.js')
 
-exports.writeImportCode = function writeImportCode(opts, targetFile) {
+exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 	const specs = findMatchingSpecs(opts)
 	// the import code to write to the target file
 	const importCode = specs.map(file => `import '${file}'`).join('\n')
 	const currImportCode = getImportedSpecs(targetFile)
 	if (currImportCode != importCode) {
 		console.log(`Writing ${specs.length} import(s) of test specs to '${targetFile}'.`)
+		// remember the bundle's modified time before editing the target file
+		const mtime = await getModTime(bundleFile)
 		// editing the targetFile would trigger rebundling by webpack
 		fs.writeFileSync(targetFile, importCode, { encoding: 'utf8' })
+		// detect when the rebundling is completed, by comparing its modified time
+		for (let i = 0; i < 40; i++) {
+			const time = await getModTime(bundleFile)
+			if (time > mtime) break
+			await sleep(400)
+		}
 		return specs.length
 	} else {
 		return 0
@@ -57,3 +66,12 @@ function getImportedSpecs(targetFile, format = '') {
 	}
 }
 exports.getImportedSpecs = getImportedSpecs
+
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function getModTime(file) {
+	const mtime = (await fs.promises.stat(file)).mtime
+	return +new Date(mtime)
+}

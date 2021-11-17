@@ -32,5 +32,7 @@ const opts = process.argv
 const targetFile = path.join(__dirname, './internals.js')
 
 if (opts.name != '?' || !fs.existsSync(targetFile)) {
-	writeImportCode(opts, targetFile)
+	;(async () => {
+		await writeImportCode(opts, targetFile)
+	})()
 }

@@ -39,6 +39,11 @@
     text-align: center;
     cursor: pointer;
   }
+
+  #testrun-loading-div {
+    font-family: Menlo, Monospace, Consolas, Arial, sans-serif;
+    font-size: 14px;
+  }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
@@ -47,7 +52,7 @@
   <p><span id='pp-test-runner-banner' class='code-snippet'>$ npm run dev</span> must be active 
     to (re)compile <span class='code-snippet'>*.spec.js</span> files.</span></p>
 </div>
-<div style='padding: 0px 20px'>
+<div style='padding: 5px 30px'>
   <h1>
     <span id='testrun-back-arrows' style='display: none'>&lt;&lt; </span>
     <a href='testrun.html' style='text-decoration: underline;'>client/src</a>
@@ -76,6 +81,7 @@ function updateNavCrumbs(display, params={}) {
   currTest.style('display', display).text(`${dir}/${name}`)
   backArrows.style('display', display)
   if (display == 'none') loadingDiv.html(
+    `Click on a directory or file name to trigger a test. ` +
     `Tests in <span style='color: ${activeColor}'>red</span> are currently imported in 'client/test/internals.js'.`
   )
 }
@@ -151,10 +157,13 @@ async function triggerImportSpecs(params) {
     if (data.error) {
       loadingDiv.html(`Error: ${data.error}`)
     } else {
+      if (data.numSpecs) await sleep(numSpecs*100)
       d3.select('body')
         .append('script')
         .attr('src', '/bin/proteinpaint.js')
-        .on('load', ()=>runproteinpaint({noheader: true, testInternals: true}))
+        .on('load', async ()=>{
+          runproteinpaint({noheader: true, testInternals: true})
+        })
       loadingDiv.html('See the test results in the browser console.')
     }
   } catch(e) {
