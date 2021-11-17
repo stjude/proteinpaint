@@ -58,6 +58,12 @@ export function getConditionMethods(self) {
 				new_tvs.value_by_max_grade = value === 'max'
 				new_tvs.value_by_most_recent = value === 'recent'
 				new_tvs.value_by_computable_grade = value === 'computable' || value === 'sub'
+				try {
+					validateConditionTvs(new_tvs)
+				} catch (e) {
+					window.alert(e)
+					return
+				}
 				self.dom.tip.hide()
 				self.opts.callback(new_tvs)
 			})
@@ -125,6 +131,12 @@ export function getConditionMethods(self) {
 				const new_tvs = JSON.parse(JSON.stringify(tvs))
 				delete new_tvs.groupset_label
 				new_tvs.values = new_vals
+				try {
+					validateConditionTvs(new_tvs)
+				} catch (e) {
+					window.alert(e)
+					return
+				}
 				self.dom.tip.hide()
 				self.opts.callback(new_tvs)
 			})
@@ -182,4 +194,29 @@ function get_value_text(tvs) {
 
 function getSelectRemovePos(j) {
 	return j
+}
+
+function validateConditionTvs(tvs){
+	console.log(tvs)
+	if (!tvs.term) throw 'tvs.term is not defined'
+	if (!tvs.values) throw `.values[] missing for a term ${tvs.term.name}`
+	if (!Array.isArray(tvs.values)) throw `.values[] is not an array for a term ${tvs.term.name}`
+	if (!tvs.values.length) throw `no categories selected for ${tvs.term.name}`
+	if (!tvs.values.every(v => v.key !== undefined)) throw `every value in tvs.values[] must have 'key' defined for ${tvs.term.name}`
+	if (tvs.term.isleaf == true) {
+		if (!tvs.bar_by_grade) throw `tvs.bar_by_grade must be true for leaf term ${tvs.term.name}`
+		if (!tvs.value_by_max_grade && !tvs.value_by_most_recent && !tvs.value_by_computable_grade) 
+			throw `unknown value_type for a bar_by_grade for condition term ${tvs.term.name}`
+	} else {
+		// non-leaf terms
+		if (tvs.bar_by_grade) {
+			if (!tvs.value_by_max_grade && !tvs.value_by_most_recent && !tvs.value_by_computable_grade) 
+				throw `unknown value_type for a bar_by_grade for condition term ${tvs.term.name}`
+		} else if (tvs.bar_by_children) {
+			if (!tvs.value_by_computable_grade) 
+				throw `value_type must be value_by_computable_grade for bar_by_children for condition term ${tvs.term.name}`
+		} else {
+			throw `neither bar_by_grade or bar_by_children is set for a condition term ${tvs.term.name}`
+		}
+	}
 }

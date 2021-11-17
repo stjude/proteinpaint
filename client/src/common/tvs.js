@@ -2,7 +2,7 @@ import * as rx from './rx.core'
 import { select } from 'd3-selection'
 import * as client from '../client'
 import { getCategoricalMethods } from './tvs.categorical'
-import { getConditionMethods } from './tvs.conditional'
+import { getConditionMethods } from './tvs.condition'
 import { getNumericMethods } from './tvs.numeric'
 
 class TVS {
@@ -306,7 +306,7 @@ export function showTvsMenu(opts) {
 	self.methodsByTermType[opts.term.type].fillMenu(opts.holder, self.tvs)
 }
 
-function addExcludeCheckbox(holder, tvs){
+function addExcludeCheckbox(holder, tvs) {
 	const isNotLabels = holder
 		.selectAll('label')
 		.data([{ label: 'Exclude', value: 'false', checked: tvs.isnot !== undefined ? tvs.isnot : false }])
@@ -321,11 +321,9 @@ function addExcludeCheckbox(holder, tvs){
 		.property('checked', d => d.checked)
 		.style('vertical-align', 'top')
 		.style('margin-right', '3px')
-		.on('change', ()=>{
-			if (isNotInput.property('checked'))
-				tvs.isnot = true
-			else if (isNotInput.property('checked') == false)
-				tvs.isnot = false
+		.on('change', () => {
+			if (isNotInput.property('checked')) tvs.isnot = true
+			else if (isNotInput.property('checked') == false) tvs.isnot = false
 		})
 	isNotLabels
 		.append('span')

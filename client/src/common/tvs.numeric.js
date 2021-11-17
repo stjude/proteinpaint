@@ -697,6 +697,7 @@ export function getNumericMethods(self) {
 				// merge overlapping ranges
 				if (self.num_obj.ranges.length > 1) new_tvs.ranges = mergeOverlapRanges(range)
 				else new_tvs.ranges[range.index] = range
+				// validte new_tvs
 				self.opts.callback(new_tvs)
 			} catch (e) {
 				window.alert(e)
