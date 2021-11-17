@@ -3,11 +3,38 @@ const fs = require('fs')
 const path = require('path')
 const bundleFile = path.join(__dirname, '../../public/bin/proteinpaint.js')
 
+/*
+	Creates a target file to import matching test spec files.
+	Whenever that target file is updated, it will 
+	trigger a rebundling of the app in development mode
+
+	opts{}
+	.name 
+		- a glob string to match against spec filenames under client/src
+		- defaults to '*'
+		- name=? (question mark) will create a target file if missing,
+			but will not overwrite if it exists
+	
+	.dir 
+		- a glob string to match against spec dir names under client/src
+		- defaults to '**'
+*/
 exports.writeImportCode = async function writeImportCode(opts, targetFile) {
+	// detect if the targetFile is missing and create as needed
+	if (!fs.existsSync(targetFile)) {
+		console.log(`Creating '${targetFile}'.`)
+		fs.writeFileSync(targetFile, '', { encoding: 'utf8' })
+	}
+	// target file should exist at this point,
+	// may exit now if this function is meant to just
+	// create a missing target file and not overwrite
+	if (opts.name == '?') return
+
 	const specs = findMatchingSpecs(opts)
 	// the import code to write to the target file
 	const importCode = specs.map(file => `import '${file}'`).join('\n')
-	const currImportCode = fs.existsSync(targetFile) ? getImportedSpecs(targetFile) : ''
+	// the current import code as found in the target file
+	const currImportCode = getImportedSpecs(targetFile)
 	if (currImportCode != importCode) {
 		console.log(`Writing ${specs.length} import(s) of test specs to '${targetFile}'.`)
 		// remember the bundle's modified time before editing the target file
@@ -15,15 +42,13 @@ exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 		// editing the targetFile would trigger rebundling by webpack
 		fs.writeFileSync(targetFile, importCode, { encoding: 'utf8' })
 		// detect when the rebundling is completed, by comparing its modified time
-		for (let i = 0; i < 40; i++) {
+		for (let i = 0; i < 60; i++) {
 			const time = await getModTime(bundleFile)
 			if (time > mtime) break
 			await sleep(400)
 		}
-		return specs.length
-	} else {
-		return 0
 	}
+	return specs.length
 }
 
 function findMatchingSpecs(opts) {

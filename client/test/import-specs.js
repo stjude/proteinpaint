@@ -1,20 +1,11 @@
 /*
-	Creates a target file to import matching test spec files.
-	Whenever that target file is updated, it will 
-	trigger a rebundling of the app in development mode.
+	Command-line trigger for specHelpers.writeImportCode()
 
 	Usage:
 	node import-specs.js [name=STR] [dir=STR]
 	
-	name: 
-		- a glob string to match against spec filenames under client/src
-		- defaults to '*'
-		- name=? (question mark) will create a target file if missing,
-			but will not overwrite if it exists
-	
-	dir: 
-		- a glob string to match against spec dir names under client/src
-		- defaults to '**'
+	See the specHelpers.writeImportCode() opts arguments
+	for description of the 'name', 'dir' options
 */
 const path = require('path')
 const fs = require('fs')
