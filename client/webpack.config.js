@@ -33,12 +33,23 @@ module.exports = function(env = {}) {
 			react: 'React',
 			'react-dom': 'ReactDOM'
 		},
+		node: {
+			fs: 'empty'
+		},
 		module: {
 			strictExportPresence: true,
 			rules: [
 				{
 					test: /\.css$/,
 					use: ['style-loader', 'css-loader']
+				},
+				{
+					// by default, this rule will empty out internals.js,
+					// so that no spec files are imported into it
+					// and thus not bundled -- UNLESS this rule is
+					// removed in mode=development
+					test: path.join(__dirname, './test/internals.js'),
+					use: [path.join(__dirname, './test/empty-wp-loader.js')]
 				},
 				{
 					test: /\.js$/,
@@ -55,8 +66,15 @@ module.exports = function(env = {}) {
 		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : ''
 	}
 
+	/*** OVERRIDES ***/
 	if (config.mode == 'development') {
 		config.plugins = [new WebpackNotifierPlugin()]
+		// allow react to be bundled
+		delete config.externals
+		// delete the rule that empties the ./test/internals.js code,
+		// so that the app.testInternals() function will be functional
+		config.module.rules.splice(1, 1)
+		delete config.module.rules[1].exclude
 	}
 	if (config.mode != 'production') {
 		// do not minify

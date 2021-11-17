@@ -51,6 +51,7 @@ server/utils/read_alignment/*.lock
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
 
 test/copies/*
+client/test/internals.js
 
 cairo-*/*
 canvas/*
