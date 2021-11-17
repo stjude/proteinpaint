@@ -1376,8 +1376,12 @@ async function getMultiReadAligInfo(tk, group, block) {
 		// Drawing ref/alt allele bar
 		if (
 			group.data.type == 'support_alt' &&
-			nclt_count > tk.variants[0].leftflankseq.length + 1 &&
-			nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].alt.length + 1
+			nclt_count > tk.variants[0].leftflankseq.length + 1 + multi_read_alig_data.alignmentData.gaps_before_variant &&
+			nclt_count <=
+				tk.variants[0].leftflankseq.length +
+					tk.variants[0].alt.length +
+					1 +
+					+multi_read_alig_data.alignmentData.gaps_before_variant
 		) {
 			refallele_td
 				.text('O')
@@ -1388,8 +1392,12 @@ async function getMultiReadAligInfo(tk, group, block) {
 				.style('background-color', 'black')
 		} else if (
 			group.data.type == 'support_ref' &&
-			nclt_count > tk.variants[0].leftflankseq.length + 1 &&
-			nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].ref.length + 1
+			nclt_count > tk.variants[0].leftflankseq.length + 1 + +multi_read_alig_data.alignmentData.gaps_before_variant &&
+			nclt_count <=
+				tk.variants[0].leftflankseq.length +
+					tk.variants[0].ref.length +
+					1 +
+					+multi_read_alig_data.alignmentData.gaps_before_variant
 		) {
 			refallele_td
 				.text('O')
@@ -1478,14 +1486,20 @@ async function getMultiReadAligInfo(tk, group, block) {
 			// Highlighting nucleotides that are within the ref/alt allele
 			if (
 				group.data.type == 'support_alt' &&
-				nclt_count > tk.variants[0].leftflankseq.length &&
-				nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].alt.length
+				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+				nclt_count <=
+					tk.variants[0].leftflankseq.length +
+						tk.variants[0].alt.length +
+						multi_read_alig_data.alignmentData.gaps_before_variant
 			) {
 				nclt_td.style('font-weight', 'bold')
 			} else if (
 				group.data.type == 'support_ref' &&
-				nclt_count > tk.variants[0].leftflankseq.length &&
-				nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].ref.length
+				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+				nclt_count <=
+					tk.variants[0].leftflankseq.length +
+						tk.variants[0].ref.length +
+						multi_read_alig_data.alignmentData.gaps_before_variant
 			) {
 				nclt_td.style('font-weight', 'bold')
 			}

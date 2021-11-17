@@ -838,6 +838,7 @@ async function do_query(q) {
 		// parse reads and cigar
 		let templates = get_templates(q, group)
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
+		console.log('q:', q.leftflankseq)
 		if (q.alignOneGroup && q.alignOneGroup == group.type) {
 			// do alignment
 			// call a function from a new script
@@ -845,9 +846,9 @@ async function do_query(q) {
 			let alignmentData
 			if (q.variant) {
 				if (group.type == 'support_alt') {
-					alignmentData = await align_multiple_reads(templates, q.altseq) // Aligning alt-classified reads to alternate allele
+					alignmentData = await align_multiple_reads(templates, q.altseq, q.leftflankseq.length) // Aligning alt-classified reads to alternate allele
 				} else if (group.type == 'support_ref') {
-					alignmentData = await align_multiple_reads(templates, q.refseq) // Aligning ref-classified reads to reference allele
+					alignmentData = await align_multiple_reads(templates, q.refseq, q.leftflankseq.length) // Aligning ref-classified reads to reference allele
 				} else {
 					// when category type is none category
 					console.log('None category, no alignments')
@@ -919,7 +920,7 @@ async function do_query(q) {
 	return result
 }
 
-async function align_multiple_reads(templates, reference_sequence) {
+async function align_multiple_reads(templates, reference_sequence, leftflankseq_length) {
 	const sequence_reads = templates.map(i => i.segments[0].seq)
 	const qual_reads = templates.map(i => i.segments[0].qual)
 	let fasta_sequence = ''
@@ -937,10 +938,16 @@ async function align_multiple_reads(templates, reference_sequence) {
 		}
 		i += 1
 	}
-	return await run_clustalo(fasta_sequence, max_read_alignment, sequence_reads.length, qual_sequence) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
+	return await run_clustalo(
+		fasta_sequence,
+		max_read_alignment,
+		sequence_reads.length,
+		qual_sequence,
+		leftflankseq_length
+	) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
 }
 
-function run_clustalo(fasta_sequence, max_read_alignment, num_reads, qual_sequence) {
+function run_clustalo(fasta_sequence, max_read_alignment, num_reads, qual_sequence, leftflankseq_length) {
 	return new Promise((resolve, reject) => {
 		const ps = spawn(clustalo_read_alignment, [
 			'-i',
@@ -971,7 +978,7 @@ function run_clustalo(fasta_sequence, max_read_alignment, num_reads, qual_sequen
 				qual_g: [],
 				qual_b: []
 			}
-
+			let gaps_before_variant = 0 // This variable stores the number of gaps that have occured before the variant region. This helps in placing the variant bar in the correct position when there are gaps in ref sequence before variant region
 			for (const read of stdout.toString().split('\n')) {
 				if (read.includes('seq      ')) {
 					// Remove "-" before/after the start/end of a sequence
@@ -1028,6 +1035,9 @@ function run_clustalo(fasta_sequence, max_read_alignment, num_reads, qual_sequen
 								if (read_count == 0) {
 									// Adding reference nucleotides
 									ref_nucleotides.push(nucl)
+									if (global_nuc_count < leftflankseq_length) {
+										gaps_before_variant += 1 // Calculating gaps in ref sequence before variant region
+									}
 								}
 							} else {
 								aligned_read += ' '
@@ -1043,6 +1053,7 @@ function run_clustalo(fasta_sequence, max_read_alignment, num_reads, qual_sequen
 						global_nuc_count += 1
 					}
 					read_count += 1
+					clustalo_output.gaps_before_variant = gaps_before_variant
 					clustalo_output.qual_r.push(qual_r)
 					clustalo_output.qual_g.push(qual_g)
 					clustalo_output.qual_b.push(qual_b)
