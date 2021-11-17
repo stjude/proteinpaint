@@ -307,8 +307,6 @@ export function bulkin(p, callback = null) {
 		cohort.variantgene = flag.variantgene
 	}
 
-	/*
-	temporary fix for vizcom: suppress alert
 	if (flag.snv.badlines.length > 0) {
 		client.bulk_badline(flag.snv.header, flag.snv.badlines)
 	}
@@ -330,7 +328,6 @@ export function bulkin(p, callback = null) {
 	if (flag.truncation.badlines.length > 0) {
 		client.bulk_badline(flag.truncation.header, flag.truncation.badlines)
 	}
-	*/
 
 	// newdt
 	if (flag.good == 0) {

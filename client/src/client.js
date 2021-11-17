@@ -1509,6 +1509,9 @@ export function category2legend(categories, holder) {
 }
 
 export function bulk_badline(header, lines) {
+	// surpress warnings on selected sites
+	if (window.location.hostname == 'viz.stjude.cloud') return
+
 	const np = newpane({ x: 400, y: 60 })
 	np.body.style('margin', '20px 10px 10px 10px')
 	np.header.text(lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' rejected, click to check')
