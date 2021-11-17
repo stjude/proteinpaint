@@ -1501,7 +1501,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 						tk.variants[0].alt.length +
 						multi_read_alig_data.alignmentData.gaps_before_variant
 			) {
-				nclt_td.style('font-weight', 'bold')
+				nclt_td.style('color', 'black')
 			} else if (
 				group.data.type == 'support_ref' &&
 				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
@@ -1510,7 +1510,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 						tk.variants[0].ref.length +
 						multi_read_alig_data.alignmentData.gaps_before_variant
 			) {
-				nclt_td.style('font-weight', 'bold')
+				nclt_td.style('color', 'black')
 			}
 		}
 		read_count += 1

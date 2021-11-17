@@ -235,7 +235,7 @@ const maxreadcount = 7000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 const max_returntemplatebox = 2000 // maximum number of reads per group, for which to return the "templatebox"
 const minstackheight_returntemplatebox = 7 // minimum stack height (number of pixels) for which to return templatebox
-const max_read_alignment = 100 // Max number of reads that can be aligned to reference sequence
+const max_read_alignment = 200 // Max number of reads that can be aligned to reference sequence
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 
