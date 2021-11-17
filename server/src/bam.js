@@ -854,9 +854,29 @@ async function do_query(q) {
 					console.log('Cannot find leftflankseq length')
 				}
 				if (group.type == 'support_alt') {
-					alignmentData = await align_multiple_reads(templates, q.altseq, leftflankseq_length) // Aligning alt-classified reads to alternate allele
+					if (group.partstack) {
+						alignmentData = await align_multiple_reads(
+							templates,
+							q.altseq,
+							leftflankseq_length,
+							group.partstack.start,
+							group.partstack.stop
+						) // Aligning alt-classified reads to alternate allele
+					} else {
+						alignmentData = await align_multiple_reads(templates, q.altseq, leftflankseq_length) // Aligning alt-classified reads to alternate allele
+					}
 				} else if (group.type == 'support_ref') {
-					alignmentData = await align_multiple_reads(templates, q.refseq, leftflankseq_length) // Aligning ref-classified reads to reference allele
+					if (group.partstack) {
+						alignmentData = await align_multiple_reads(
+							templates,
+							q.refseq,
+							leftflankseq_length,
+							group.partstack.start,
+							group.partstack.stop
+						) // Aligning ref-classified reads to reference allele
+					} else {
+						alignmentData = await align_multiple_reads(templates, q.refseq, leftflankseq_length) // Aligning ref-classified reads to reference allele
+					}
 				} else {
 					// when category type is none category
 					console.log('None category, no alignments')
@@ -928,7 +948,13 @@ async function do_query(q) {
 	return result
 }
 
-async function align_multiple_reads(templates, reference_sequence, leftflankseq_length) {
+async function align_multiple_reads(
+	templates,
+	reference_sequence,
+	leftflankseq_length,
+	partstack_start,
+	partstack_stop
+) {
 	const sequence_reads = templates.map(i => i.segments[0].seq)
 	const qual_reads = templates.map(i => i.segments[0].qual)
 	let fasta_sequence = ''
@@ -951,11 +977,21 @@ async function align_multiple_reads(templates, reference_sequence, leftflankseq_
 		max_read_alignment,
 		sequence_reads.length,
 		qual_sequence,
-		leftflankseq_length
+		leftflankseq_length,
+		partstack_start,
+		partstack_stop
 	) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
 }
 
-function run_clustalo(fasta_sequence, max_read_alignment, num_reads, qual_sequence, leftflankseq_length) {
+function run_clustalo(
+	fasta_sequence,
+	max_read_alignment,
+	num_reads,
+	qual_sequence,
+	leftflankseq_length,
+	partstack_start,
+	partstack_stop
+) {
 	return new Promise((resolve, reject) => {
 		const ps = spawn(clustalo_read_alignment, [
 			'-i',
@@ -1062,10 +1098,16 @@ function run_clustalo(fasta_sequence, max_read_alignment, num_reads, qual_sequen
 					}
 					read_count += 1
 					clustalo_output.gaps_before_variant = gaps_before_variant // This variable stores the number of gaps that have occured before the variant region. This helps in placing the variant bar in the correct position when there are gaps in ref sequence before variant region
+					clustalo_output.read_count = read_count - 1 // Total reads aligned, subtracted one so as to exclude reference sequence
 					clustalo_output.qual_r.push(qual_r)
 					clustalo_output.qual_g.push(qual_g)
 					clustalo_output.qual_b.push(qual_b)
 					clustalo_output.final_read_align.push(aligned_read)
+					if (partstack_start) {
+						// In partstack mode
+						clustalo_output.partstack_start = partstack_start
+						clustalo_output.partstack_stop = partstack_stop
+					}
 				} else if (read.includes('FATAL:') || read.includes('ERROR:')) {
 					// Possible problem in read-alignment
 					console.log(read)

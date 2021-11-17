@@ -1332,8 +1332,25 @@ async function getMultiReadAligInfo(tk, group, block) {
 	tk.alignpane.body.selectAll('*').remove()
 	const wait = tk.alignpane.body.append('div').text('Loading...')
 	const multi_read_alig_data = await align_reads_to_allele(tk, group, block) // Sending server side request for aligning reads to ref/alt
-	//console.log('multi_read_alig_data:', multi_read_alig_data.alignmentData)
+	console.log('multi_read_alig_data:', multi_read_alig_data.alignmentData)
 	wait.remove()
+
+	const num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
+		.append('div')
+		.text('Number of reads aligned = ' + multi_read_alig_data.alignmentData.read_count)
+		.style('text-align', 'center')
+	if (multi_read_alig_data.alignmentData.partstack_start) {
+		// In partstack mode
+		const partstack_div = tk.alignpane.body
+			.append('div')
+			.text(
+				'Reads aligned from ' +
+					multi_read_alig_data.alignmentData.partstack_start +
+					' from ' +
+					multi_read_alig_data.alignmentData.partstack_stop
+			)
+			.style('text-align', 'center')
+	}
 
 	const div = tk.alignpane.body.append('div').style('margin', '20px')
 	const readAlignmentTable = div
