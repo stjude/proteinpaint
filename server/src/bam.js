@@ -1053,7 +1053,7 @@ function run_clustalo(fasta_sequence, max_read_alignment, num_reads, qual_sequen
 						global_nuc_count += 1
 					}
 					read_count += 1
-					clustalo_output.gaps_before_variant = gaps_before_variant
+					clustalo_output.gaps_before_variant = gaps_before_variant // This variable stores the number of gaps that have occured before the variant region. This helps in placing the variant bar in the correct position when there are gaps in ref sequence before variant region
 					clustalo_output.qual_r.push(qual_r)
 					clustalo_output.qual_g.push(qual_g)
 					clustalo_output.qual_b.push(qual_b)

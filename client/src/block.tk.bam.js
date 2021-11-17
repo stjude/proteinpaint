@@ -1346,27 +1346,34 @@ async function getMultiReadAligInfo(tk, group, block) {
 		.style('border-spacing', 0)
 		.style('border-collapse', 'separate')
 		.style('text-align', 'center')
+		.style('empty-cells', 'show')
 
 	// Drawing ref/alt allele bar
 	let refallele_tr = readAlignmentTable
 		.append('tr')
 		.style('color', 'white')
-		.style('background-color', 'black')
+		.style('background-color', 'white')
 	if (group.data.type == 'support_alt') {
-		const refallele_td = readAlignmentTable
+		const refallele_td = refallele_tr
 			.append('td')
-			.text('Alt allele pos')
+			.text('Alt pos')
 			.style('color', 'black')
 			.style('font-weight', '550')
 			.style('background-color', 'white')
 	} else if (group.data.type == 'support_ref') {
-		const altallele_td = readAlignmentTable
+		const altallele_td = refallele_tr
 			.append('td')
-			.text('Ref allele pos')
+			.text('Ref pos')
 			.style('color', 'black')
 			.style('font-weight', '550')
 			.style('background-color', 'white')
 	}
+
+	refallele_tr // Adding blank column
+		.append('td')
+		.text('-')
+		.style('color', 'white')
+		.style('background-color', 'white')
 
 	let nclt_count = 0
 	for (const nclt of multi_read_alig_data.alignmentData.final_read_align[0]) {
@@ -1376,12 +1383,11 @@ async function getMultiReadAligInfo(tk, group, block) {
 		// Drawing ref/alt allele bar
 		if (
 			group.data.type == 'support_alt' &&
-			nclt_count > tk.variants[0].leftflankseq.length + 1 + multi_read_alig_data.alignmentData.gaps_before_variant &&
+			nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
 			nclt_count <=
 				tk.variants[0].leftflankseq.length +
 					tk.variants[0].alt.length +
-					1 +
-					+multi_read_alig_data.alignmentData.gaps_before_variant
+					multi_read_alig_data.alignmentData.gaps_before_variant
 		) {
 			refallele_td
 				.text('O')
@@ -1392,12 +1398,11 @@ async function getMultiReadAligInfo(tk, group, block) {
 				.style('background-color', 'black')
 		} else if (
 			group.data.type == 'support_ref' &&
-			nclt_count > tk.variants[0].leftflankseq.length + 1 + +multi_read_alig_data.alignmentData.gaps_before_variant &&
+			nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
 			nclt_count <=
 				tk.variants[0].leftflankseq.length +
 					tk.variants[0].ref.length +
-					1 +
-					+multi_read_alig_data.alignmentData.gaps_before_variant
+					multi_read_alig_data.alignmentData.gaps_before_variant
 		) {
 			refallele_td
 				.text('O')
@@ -1453,10 +1458,14 @@ async function getMultiReadAligInfo(tk, group, block) {
 				.append('td')
 				.text('')
 				.style('text-align', 'right')
-				.style('font-weight', '550')
-				.style('color', 'black')
 				.style('background-color', 'white')
 		}
+		read_tr // Empty column
+			.append('td')
+			.text('')
+			.style('text-align', 'right')
+			.style('background-color', 'white')
+			.style('color', 'white')
 		let nclt_count = 0
 		for (const nclt of read) {
 			nclt_count += 1
