@@ -1,8 +1,11 @@
 import { getNormalRoot } from '../common/filter'
 import { sayerror } from '../dom/error'
 import { scaleLinear, scaleLog } from 'd3-scale'
+import { axisBottom } from 'd3-axis'
+import { axisstyle } from '../dom/axisstyle'
 
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
+const forestcolor = '#126e08'
 
 export class RegressionResults {
 	constructor(opts) {
@@ -322,6 +325,13 @@ function setRenderers(self) {
 					.style('padding', '8px')
 			}
 		}
+
+		// last row to show forest plot axis
+		const tr = table.append('tr')
+		tr.append('td') // col 1
+		tr.append('td') // col 2
+		forestPlotter(tr.append('td')) // col 3, axis
+		for (const v of result.coefficients.header) tr.append('td')
 	}
 
 	self.mayshow_other = result => {
@@ -393,8 +403,10 @@ function setRenderers(self) {
 			}
 		}
 
-		const canvaswidth = 150
-		const canvasheight = 20
+		const width = 150 // plottable dimension
+		const height = 20
+		const xleftpad = 10,
+			xrightpad = 10 // leave space for axis
 
 		// todo: logistic, add center line; linear: 0 value
 
@@ -402,14 +414,34 @@ function setRenderers(self) {
 		if (self.config.regressionType == 'logistic') {
 			scale = scaleLog()
 				.domain([axisMin == 0 ? 0.00001 : axisMin, axisMax])
-				.range([0, canvaswidth])
+				.range([0, width])
 		} else {
 			scale = scaleLinear()
 				.domain([axisMin, axisMax])
-				.range([0, canvaswidth])
+				.range([0, width])
 		}
 		return (td, lst) => {
-			// lst is a row from either terms or interactions
+			// lst is data from a row from either terms or interactions
+
+			const svg = td
+				.append('svg')
+				.attr('width', width + xleftpad + xrightpad)
+				.attr('height', height)
+			const g = svg.append('g').attr('transform', 'translate(' + xleftpad + ',0)')
+
+			if (!lst) {
+				// if lst is missing, render axis
+				const axis = axisBottom()
+					.ticks(4)
+					.scale(scale)
+				axisstyle({
+					axis: g.call(axis),
+					color: forestcolor,
+					showline: true
+				})
+				return
+			}
+
 			const mid = Number(lst[midIdx]),
 				cilow = Number(lst[CIlow]),
 				cihigh = Number(lst[CIhigh])
@@ -417,22 +449,15 @@ function setRenderers(self) {
 				// not plottable
 				return
 			}
-			const canvas = td.append('canvas').node()
-			canvas.width = canvaswidth * window.devicePixelRatio
-			canvas.height = canvasheight * window.devicePixelRatio
-			canvas.style.width = canvaswidth + 'px'
-			canvas.style.height = canvasheight + 'px'
-			const ctx = canvas.getContext('2d')
-			if (window.devicePixelRatio > 1) {
-				ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
-			}
-			ctx.fillStyle = ctx.strokeStyle = '#126e08'
 
 			const x = scale(mid)
-			ctx.beginPath()
-			ctx.arc(x, canvasheight / 2, 3, 0, Math.PI * 2)
-			ctx.fill()
-			ctx.closePath()
+			if (x != -Infinity && x != Infinity) {
+				g.append('circle')
+					.attr('cx', x)
+					.attr('cy', height / 2)
+					.attr('r', 3)
+					.attr('fill', forestcolor)
+			}
 
 			if (Number.isNaN(cilow) || Number.isNaN(cihigh)) {
 				// cannot plot confidence interval
@@ -440,10 +465,12 @@ function setRenderers(self) {
 			}
 			const x1 = scale(cilow),
 				x2 = scale(cihigh)
-			ctx.beginPath()
-			ctx.moveTo(x1, canvasheight / 2)
-			ctx.lineTo(x2, canvasheight / 2)
-			ctx.stroke()
+			g.append('line')
+				.attr('x1', x1)
+				.attr('y1', height / 2)
+				.attr('x2', x2)
+				.attr('y2', height / 2)
+				.attr('stroke', forestcolor)
 		}
 	}
 }
