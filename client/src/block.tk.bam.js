@@ -1346,7 +1346,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 			.text(
 				'Reads aligned from ' +
 					multi_read_alig_data.alignmentData.partstack_start +
-					' from ' +
+					' to ' +
 					multi_read_alig_data.alignmentData.partstack_stop
 			)
 			.style('text-align', 'center')
