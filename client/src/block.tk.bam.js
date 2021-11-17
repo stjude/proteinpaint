@@ -1353,29 +1353,29 @@ async function getMultiReadAligInfo(tk, group, block) {
 		.append('tr')
 		.style('color', 'white')
 		.style('background-color', 'white')
+	let variant_string // This will contain the variant bar along with Refeerence/ Alternate allele label
+	let nclt_count = 0
+	let allele_start = 0 // Flag to tell if the variant region has been reached or not. After that position alternate/reference allele will be rendered
+	let variant_string_count = 0 // Iterator for variant string letters
+
+	// Determine if alt/ref allele string needs to be placed inside variant box
+	let inside_variant_box = 1 // Flag for determining if variant string needs to be placed inside variant box or to the right of it. 0 for inside and 1 for being placed on the right
 	if (group.data.type == 'support_alt') {
-		const refallele_td = refallele_tr
-			.append('td')
-			.text('Alt pos')
-			.style('color', 'black')
-			.style('font-weight', '550')
-			.style('background-color', 'white')
+		variant_string = 'Alternate allele'
+		if (variant_string.length < tk.variants[0].alt.length) {
+			inside_variant_box = 0
+		} else {
+			variant_string = ' Alternate allele'
+		}
 	} else if (group.data.type == 'support_ref') {
-		const altallele_td = refallele_tr
-			.append('td')
-			.text('Ref pos')
-			.style('color', 'black')
-			.style('font-weight', '550')
-			.style('background-color', 'white')
+		variant_string = 'Reference allele'
+		if (variant_string.length < tk.variants[0].ref.length) {
+			inside_variant_box = 0
+		} else {
+			variant_string = ' Reference allele'
+		}
 	}
 
-	refallele_tr // Adding blank column
-		.append('td')
-		.text('-')
-		.style('color', 'white')
-		.style('background-color', 'white')
-
-	let nclt_count = 0
 	for (const nclt of multi_read_alig_data.alignmentData.final_read_align[0]) {
 		nclt_count += 1
 		const refallele_td = refallele_tr.append('td')
@@ -1389,13 +1389,35 @@ async function getMultiReadAligInfo(tk, group, block) {
 					tk.variants[0].alt.length +
 					multi_read_alig_data.alignmentData.gaps_before_variant
 		) {
-			refallele_td
-				.text('O')
-				.style('text-align', 'right')
-				.style('font-weight', '550')
-				.style('margin', '5px 5px 10px 5px')
-				.style('color', 'black')
-				.style('background-color', 'black')
+			if (inside_variant_box == 1) {
+				allele_start = 1
+				refallele_td
+					.text(' ')
+					.style('text-align', 'right')
+					.style('font-weight', '550')
+					.style('margin', '5px 5px 10px 5px')
+					.style('color', 'black')
+					.style('background-color', 'black')
+			} else {
+				if (variant_string_count < variant_string.length) {
+					refallele_td
+						.text(variant_string[variant_string_count])
+						.style('text-align', 'right')
+						.style('font-weight', '550')
+						.style('margin', '5px 5px 10px 5px')
+						.style('color', 'white')
+						.style('background-color', 'black')
+					variant_string_count += 1
+				} else {
+					refallele_td
+						.text(' ')
+						.style('text-align', 'right')
+						.style('font-weight', '550')
+						.style('margin', '5px 5px 10px 5px')
+						.style('color', 'black')
+						.style('background-color', 'black')
+				}
+			}
 		} else if (
 			group.data.type == 'support_ref' &&
 			nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
@@ -1404,13 +1426,47 @@ async function getMultiReadAligInfo(tk, group, block) {
 					tk.variants[0].ref.length +
 					multi_read_alig_data.alignmentData.gaps_before_variant
 		) {
+			if (inside_variant_box == 1) {
+				allele_start = 1
+				refallele_td
+					.text('')
+					.style('text-align', 'right')
+					.style('font-weight', '550')
+					.style('margin', '5px 5px 10px 5px')
+					.style('color', 'black')
+					.style('background-color', 'black')
+			} else {
+				if (variant_string_count < variant_string.length) {
+					refallele_td
+						.text(variant_string[variant_string_count])
+						.style('text-align', 'right')
+						.style('font-weight', '550')
+						.style('margin', '5px 5px 10px 5px')
+						.style('color', 'white')
+						.style('background-color', 'black')
+					variant_string_count += 1
+				} else {
+					refallele_td
+						.text('')
+						.style('text-align', 'right')
+						.style('font-weight', '550')
+						.style('margin', '5px 5px 10px 5px')
+						.style('color', 'black')
+						.style('background-color', 'black')
+				}
+			}
+		} else if (allele_start == 1 && inside_variant_box == 1) {
 			refallele_td
-				.text('O')
+				.text(variant_string[variant_string_count])
 				.style('text-align', 'right')
 				.style('font-weight', '550')
 				.style('margin', '5px 5px 10px 5px')
 				.style('color', 'black')
-				.style('background-color', 'black')
+				.style('background-color', 'white')
+			variant_string_count += 1
+			if (variant_string_count == variant_string.length) {
+				allele_start = 0
+			}
 		} else {
 			refallele_td
 				.text('')
@@ -1433,39 +1489,6 @@ async function getMultiReadAligInfo(tk, group, block) {
 		const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
 		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
 
-		if (read_count == 0) {
-			if (group.data.type == 'support_alt') {
-				read_tr
-					.append('td')
-					.text('Alt allele')
-					.style('text-align', 'right')
-					.style('font-weight', '550')
-					.style('margin', '5px 5px 10px 5px')
-					.style('color', 'black')
-					.style('background-color', 'white')
-			} else if (group.data.type == 'support_ref') {
-				read_tr
-					.append('td')
-					.text('Ref allele')
-					.style('text-align', 'right')
-					.style('font-weight', '550')
-					.style('margin', '5px 5px 10px 5px')
-					.style('color', 'black')
-					.style('background-color', 'white')
-			}
-		} else {
-			read_tr
-				.append('td')
-				.text('')
-				.style('text-align', 'right')
-				.style('background-color', 'white')
-		}
-		read_tr // Empty column
-			.append('td')
-			.text('')
-			.style('text-align', 'right')
-			.style('background-color', 'white')
-			.style('color', 'white')
 		let nclt_count = 0
 		for (const nclt of read) {
 			nclt_count += 1
