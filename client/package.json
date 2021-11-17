@@ -9,8 +9,8 @@
     "pretest": "./test/pretest.js",
     "test": "cat ../public/bin/proteinpaint.js ./test/init.js | tape-run --static ../public",
     "browser": "node ./test/import-specs.js",
-    "examples": "node ./test/import-specs.js name=examples",
-    "gdc": "node ./test/import-specs.js name=gdc.views && npm run test",
+    "examples": "node ./test/import-specs.js name=_x_.examples",
+    "gdc": "node ./test/import-specs.js name=_x_.gdc.views && npm run test",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w"
   },
   "author": "",

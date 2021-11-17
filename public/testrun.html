@@ -88,7 +88,7 @@ function updateNavCrumbs(display, params={}) {
 
 async function showAvailableSpecs() {
   try {
-    const data = await fetch('/specs').then(r=>r.json())
+    const data = await fetch(`/specs?exclude=`).then(r=>r.json())
     const byDir = processData(data)
     const dirNames = Object.keys(byDir).sort((a,b)=> a < b ? -1 : 1)
 
@@ -144,6 +144,9 @@ function processData(data) {
 }
 
 async function triggerImportSpecs(params) {
+  if (params.name && params.name.startsWith('_x_.')) {
+    if (!('exclude' in params)) params.exclude = ''
+  }
   try {
     const opts = {
       method: 'POST',

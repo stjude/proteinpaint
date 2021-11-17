@@ -1,6 +1,7 @@
 const WebpackNotifierPlugin = require('webpack-notifier')
 const path = require('path')
 const fs = require('fs')
+const SpecHelpersWpPlugin = require('./test/specHelpers.js').SpecHelpersWpPlugin
 
 let babelrc
 try {
@@ -68,7 +69,7 @@ module.exports = function(env = {}) {
 
 	/*** OVERRIDES ***/
 	if (config.mode == 'development') {
-		config.plugins = [new WebpackNotifierPlugin()]
+		config.plugins = [new WebpackNotifierPlugin(), new SpecHelpersWpPlugin()]
 		// allow react to be bundled
 		delete config.externals
 		// delete the rule that empties the ./test/internals.js code,

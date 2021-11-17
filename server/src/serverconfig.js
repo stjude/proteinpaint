@@ -74,21 +74,28 @@ if (!serverconfig.binpath) {
 if (serverconfig.debugmode) {
 	// only apply optional routeSetters in debugmode
 	const routeSetters = []
+	const defaultDir = path.join(serverconfig.binpath, 'src/test/routes')
+	// will add testing routes as needed and if found, such as in dev environment
+	const testRouteSetters = ['gdc.js', 'specs.js']
 
 	if (serverconfig.routeSetters) {
 		for (const f of serverconfig.routeSetters) {
-			if (fs.existsSync(f)) routeSetters.push(f)
-			else {
+			if (testRouteSetters.includes(f)) continue // will set in the next for-of block, to avoid duplicate entry
+			if (fs.existsSync(f)) {
+				routeSetters.push(f)
+			} else if (fs.existsSync(`${defaultDir}/${f}`)) {
+				routeSetters.push(`${defaultDir}/${f}`)
+			} else {
 				const absf = path.join(serverconfig.binpath, f)
 				if (fs.existsSync(absf)) routeSetters.push(absf)
 			}
 		}
 	}
 
-	// also add testing routes if found
-	const files = [path.join(serverconfig.binpath, './src/test/routes/gdc.js')]
-	for (const f of files) {
-		if (fs.existsSync(f)) routeSetters.push(f)
+	for (const f of testRouteSetters) {
+		const absf = `${defaultDir}/${f}`
+		// avoid duplicate entries; these test route setters should only exist in dev environment and not deployed to prod
+		if (!routeSetters.includes(absf) && fs.existsSync(absf)) routeSetters.push(absf)
 	}
 
 	// may replace the original routeSetters value,
@@ -143,7 +150,7 @@ if (!serverconfig.features) {
 
 if (!serverconfig.examplejson) {
 	serverconfig.examplejson = path.join(serverconfig.binpath, 'features.json')
-  }
+}
 
 //Object.freeze(serverconfig)
 module.exports = serverconfig

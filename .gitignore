@@ -52,6 +52,7 @@ server/utils/read_alignment/*.lock
 
 test/copies/*
 client/test/internals.js
+client/test/wpCompileTime.js
 
 cairo-*/*
 canvas/*
