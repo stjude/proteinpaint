@@ -7,7 +7,7 @@ exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 	const specs = findMatchingSpecs(opts)
 	// the import code to write to the target file
 	const importCode = specs.map(file => `import '${file}'`).join('\n')
-	const currImportCode = getImportedSpecs(targetFile)
+	const currImportCode = fs.existsSync(targetFile) ? getImportedSpecs(targetFile) : ''
 	if (currImportCode != importCode) {
 		console.log(`Writing ${specs.length} import(s) of test specs to '${targetFile}'.`)
 		// remember the bundle's modified time before editing the target file
