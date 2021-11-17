@@ -1372,7 +1372,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 		nclt_count += 1
 		const refallele_td = refallele_tr.append('td')
 
-		// Highlighting nucleotides that are within the ref/alt allele
+		// Drawing ref/alt allele bar
 		if (
 			group.data.type == 'support_alt' &&
 			nclt_count > tk.variants[0].leftflankseq.length + 1 &&
@@ -1415,7 +1415,10 @@ async function getMultiReadAligInfo(tk, group, block) {
 			.append('tr')
 			.style('color', 'white')
 			.style('background-color', 'grey')
-		const mismatched_string = multi_read_alig_data.alignmentData.mismatched_nucl_align[read_count] // Extracting mismatched string for the read
+		const r_colors = multi_read_alig_data.alignmentData.qual_r[read_count].split(',')
+		const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
+		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
+
 		if (read_count == 0) {
 			if (group.data.type == 'support_alt') {
 				read_tr
@@ -1448,22 +1451,23 @@ async function getMultiReadAligInfo(tk, group, block) {
 		let nclt_count = 0
 		for (const nclt of read) {
 			nclt_count += 1
-			let nclt_tr
+			let nclt_td
 			if (read_count == 0) {
-				nclt_tr = read_tr.append('td').text(nclt)
+				nclt_td = read_tr
+					.append('td')
+					.text(nclt)
+					.style('background-color', 'white')
+					.style('color', 'black')
+					.style('font-weight', '550')
 			} else {
-				if (mismatched_string[nclt_count - 1] == '0') {
-					nclt_tr = read_tr.append('td').text(nclt)
-					if (nclt != 'A' && nclt != 'T' && nclt != 'C' && nclt != 'G') {
-						nclt_tr.style('color', 'white').style('background-color', 'white')
-					}
-				} else if (mismatched_string[nclt_count - 1] == '1') {
-					nclt_tr = read_tr
-						.append('td')
-						.text(nclt)
-						.style('color', 'white')
-						.style('background-color', 'red')
-				}
+				nclt_td = read_tr
+					.append('td')
+					.text(nclt)
+					.style('color', 'white')
+					.style(
+						'background-color',
+						'rgb(' + r_colors[nclt_count - 1] + ',' + g_colors[nclt_count - 1] + ',' + b_colors[nclt_count - 1] + ')'
+					)
 			}
 
 			// Highlighting nucleotides that are within the ref/alt allele
@@ -1472,13 +1476,13 @@ async function getMultiReadAligInfo(tk, group, block) {
 				nclt_count > tk.variants[0].leftflankseq.length &&
 				nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].alt.length
 			) {
-				nclt_tr.style('font-weight', 'bold')
+				nclt_td.style('font-weight', 'bold')
 			} else if (
 				group.data.type == 'support_ref' &&
 				nclt_count > tk.variants[0].leftflankseq.length &&
 				nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].ref.length
 			) {
-				nclt_tr.style('font-weight', 'bold')
+				nclt_td.style('font-weight', 'bold')
 			}
 		}
 		read_count += 1
