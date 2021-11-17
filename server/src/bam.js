@@ -838,17 +838,25 @@ async function do_query(q) {
 		// parse reads and cigar
 		let templates = get_templates(q, group)
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
-		console.log('q:', q.leftflankseq)
 		if (q.alignOneGroup && q.alignOneGroup == group.type) {
 			// do alignment
 			// call a function from a new script
 			// get alignment data (text)
 			let alignmentData
 			if (q.variant) {
+				let leftflankseq_length
+				if (q.leftflankseq) {
+					leftflankseq_length = q.leftflankseq.length
+				} else if (result.leftflankseq) {
+					leftflankseq_length = result.leftflankseq.length
+				} else {
+					// Should not happen
+					console.log('Cannot find leftflankseq length')
+				}
 				if (group.type == 'support_alt') {
-					alignmentData = await align_multiple_reads(templates, q.altseq, q.leftflankseq.length) // Aligning alt-classified reads to alternate allele
+					alignmentData = await align_multiple_reads(templates, q.altseq, leftflankseq_length) // Aligning alt-classified reads to alternate allele
 				} else if (group.type == 'support_ref') {
-					alignmentData = await align_multiple_reads(templates, q.refseq, q.leftflankseq.length) // Aligning ref-classified reads to reference allele
+					alignmentData = await align_multiple_reads(templates, q.refseq, leftflankseq_length) // Aligning ref-classified reads to reference allele
 				} else {
 					// when category type is none category
 					console.log('None category, no alignments')
