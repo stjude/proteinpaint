@@ -17,6 +17,7 @@
 		- defaults to '**'
 */
 const path = require('path')
+const fs = require('fs')
 const writeImportCode = require('./specHelpers').writeImportCode
 
 // get user-supplied arguments from the command line

@@ -3,6 +3,21 @@ const fs = require('fs')
 const path = require('path')
 
 exports.writeImportCode = function writeImportCode(opts, targetFile) {
+	const specs = findMatchingSpecs(opts)
+	// the import code to write to the target file
+	const importCode = specs.map(file => `import '${file}'`).join('\n')
+	const currImportCode = getImportedSpecs(targetFile)
+	if (currImportCode != importCode) {
+		console.log(`Writing ${specs.length} import(s) of test specs to '${targetFile}'.`)
+		// editing the targetFile would trigger rebundling by webpack
+		fs.writeFileSync(targetFile, importCode, { encoding: 'utf8' })
+		return specs.length
+	} else {
+		return 0
+	}
+}
+
+function findMatchingSpecs(opts) {
 	// may assign default patterns
 	const SPECDIR = opts.dir || '**'
 	const SPECNAME = opts.name || '*'
@@ -24,15 +39,9 @@ exports.writeImportCode = function writeImportCode(opts, targetFile) {
 		return i - j
 	})
 
-	// the import code to write to the target file
-	const importCode = specs.map(file => `import '${file.replace(srcDir, '../src')}'`).join('\n')
-	const currImportCode = getImportedSpecs(targetFile)
-	if (currImportCode != importCode) {
-		console.log(`Writing ${specs.length} import(s) of test specs to '${targetFile}'.`)
-		// editing the targetFile would trigger rebundling by webpack
-		fs.writeFileSync(targetFile, importCode, { encoding: 'utf8' })
-	}
+	return specs.map(file => file.replace(srcDir, '../src'))
 }
+exports.findMatchingSpecs = findMatchingSpecs
 
 function getImportedSpecs(targetFile, format = '') {
 	if (!fs.existsSync(targetFile)) throw `missing '${targetFile}' in getImportedSpecs()`

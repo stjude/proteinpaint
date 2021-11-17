@@ -1,8 +1,16 @@
 <html>
 <head>
-  <script src="/bin/proteinpaint.js"></script>
-  <!--<script src="/bin/spec.bundle.js"></script>-->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css" integrity="sha512-NhSC1YmyruXifcj/KFRWoC561YpHpc5Jtzgvbuzx5VozKpWvQ+4nXhPdFgmx8xqexRcpAglTj9sIBWINXa8x5w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
+  a {
+    text-decoration: none;
+    color: #333;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
   .code-snippet {
     padding: 1px 3px;
     font-family: Menlo, Monospace, Consolas, Arial, sans-serif;
@@ -11,17 +19,162 @@
     font-style: normal;
     background: #ddd;
   }
+
+  .testrun-dir-div {
+    display: inline-block;
+    vertical-align: top;
+    margin: 20px;
+    padding: 10px;
+    border: 1px solid #555;
+    background-color: rgba(200,200,200,0.5);
+    text-align: center;
+    font-family: Menlo, Monospace, Consolas, Arial, sans-serif;
+  }
+
+  .testrun-file-div {
+    padding: 5px;
+    font-family: Menlo, Monospace, Consolas, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    cursor: pointer;
+  }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 <div style='padding: 10px 15px; background: #3a3a3a; color: #fff; font-family: Menlo, Courier'>
-  <p><span id='pp-test-runner-banner' class='code-snippet'>$ npm run dev</span> must be active to 
-    to (re)compile <span class='code-snippet'>*.spec.js</span> files, as selected by 
-    <span class='code-snippet'>node ./client/test/import-specs.js [name='...' ] [dir='...']</span>. 
-    See the test results in the browser console.</p>
+  <p><span id='pp-test-runner-banner' class='code-snippet'>$ npm run dev</span> must be active 
+    to (re)compile <span class='code-snippet'>*.spec.js</span> files.</span></p>
+</div>
+<div style='padding: 0px 20px'>
+  <h1>
+    <span id='testrun-back-arrows' style='display: none'>&lt;&lt; </span>
+    <a href='testrun.html' style='text-decoration: underline;'>client/src</a>
+    <span id='testrun-curr-test' style='font-weight: 400; color: #aaa'></span>
+  </h1>
+  <div id='testrun-loading-div'></div>
 </div>
 <script>
-window.runproteinpaint({noheader: true, testInternals: true})
+const backArrows = d3.select('#testrun-back-arrows')
+const currTest = d3.select('#testrun-curr-test')
+const loadingDiv = d3.select('#testrun-loading-div')
+const activeColor = '#990033'
+const params = getParams()
+
+if (!Object.keys(params).length) {
+  updateNavCrumbs('none')
+  showAvailableSpecs()
+} else {
+  updateNavCrumbs('inline', params)
+  triggerImportSpecs(params)
+}
+
+function updateNavCrumbs(display, params={}) {
+  const dir = params.dir ? `/${params.dir}` : '/**/test'
+  const name = params.name ? `${params.name}.spec.js` : '*'
+  currTest.style('display', display).text(`${dir}/${name}`)
+  backArrows.style('display', display)
+  if (display == 'none') loadingDiv.html(
+    `Tests in <span style='color: ${activeColor}'>red</span> are currently imported in 'client/test/internals.js'.`
+  )
+}
+
+async function showAvailableSpecs() {
+  try {
+    const data = await fetch('/specs').then(r=>r.json())
+    const byDir = processData(data)
+    const dirNames = Object.keys(byDir).sort((a,b)=> a < b ? -1 : 1)
+
+    const div = d3.select('body')
+      .append('div')
+      .style('margin', '10px')
+      .style('padding', '10px')
+    
+    div.append('div')
+      .selectAll('.testrun-dir-div')
+      .data(dirNames)
+      .enter()
+      .append('div')
+      .attr('class', 'testrun-dir-div')
+      .each(function(dir){
+        const dirDiv = d3.select(this)
+        const dirName = `${dir}/test`
+        dirDiv
+          .append('h3')
+          .append('a')
+          .attr('href', d => `testrun.html?dir=${dir}`)
+          .text(dirName)
+
+        dirDiv.append('div')
+          .style('padding', '5px 5px 5px 20px')
+          .selectAll('div')
+            .data(byDir[dir])
+            .enter()
+            .append('div')
+            .attr('class', 'testrun-file-div')
+            .style('font-weight', d => d.isActive ? 600 : '')
+            .append('a')
+            .attr('href', d => `testrun.html?name=${d.name}`)
+            .style('color', d => d.isActive ? activeColor : '')
+            .text(d => d.name)
+      })
+  } catch(e) {
+    throw e
+  }
+}
+
+function processData(data) {
+  const byDir = {}
+  for(const file of data.specs) {
+    const d = file.split('/')
+    const name = d.pop().replace('.spec.js', '')
+    // the last subdir is /test/, remove from the dir name
+    const dir = d.slice(0,-1).join('/')
+    if (!byDir[dir]) byDir[dir] = []
+    byDir[dir].push({name, file, isActive: data.active.includes(file)})
+  }
+  return byDir
+}
+
+async function triggerImportSpecs(params) {
+  try {
+    const opts = {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(params)
+    }
+    loadingDiv.html('Loading tests ...')
+    const data = await fetch('/specs', opts).then(r => r.json)
+    if (data.error) {
+      loadingDiv.html(`Error: ${data.error}`)
+    } else {
+      d3.select('body')
+        .append('script')
+        .attr('src', '/bin/proteinpaint.js')
+        .on('load', ()=>runproteinpaint({noheader: true, testInternals: true}))
+      loadingDiv.html('See the test results in the browser console.')
+    }
+  } catch(e) {
+    throw e
+  }
+}
+
+function getParams() {
+  const params={}
+  if (!window.location.search.length) return params
+  window.location.search.substr(1).split("&").forEach(kv=>{
+    const [key,value] = kv.split("=")
+    params[key] = value
+  })
+  return params
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
 </script>
 </body>
 </html>
