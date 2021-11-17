@@ -1,6 +1,8 @@
 import { getNormalRoot } from '../common/filter'
 import { sayerror } from '../dom/error'
 
+const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
+
 export class RegressionResults {
 	constructor(opts) {
 		this.opts = opts
@@ -102,206 +104,227 @@ function setRenderers(self) {
 		// benefit is that specific logic can be applied to rendering each different table
 		// no need for one reusable renderer to support different table types
 
-		sectionHolder('Sample size: ' + result.sampleSize)
+		self.newDiv('Sample size: ' + result.sampleSize)
+		self.mayshow_warnings(result)
+		self.mayshow_residuals(result)
+		self.mayshow_coefficients(result)
+		self.mayshow_type3(result)
+		self.mayshow_other(result)
+	}
+	self.newDiv = label => {
+		// create div to show a section of the result
+		const div = self.dom.content.append('div').style('margin', '20px 0px 10px 0px')
+		div
+			.append('div')
+			.style('text-decoration', 'underline')
+			.text(label)
+		return div.append('div').style('margin-left', '20px')
+	}
 
-		if (result.warnings) {
-			const div = sectionHolder(result.warnings.label)
-			div.append('div').style('margin', '8px')
-			for (const line of result.warnings.lst) {
-				div
-					.append('p')
-					.style('margin', '5px')
-					.text(line)
-			}
+	self.mayshow_warnings = result => {
+		if (!result.warnings) return
+		const div = self.newDiv(result.warnings.label)
+		div.append('div').style('margin', '8px')
+		for (const line of result.warnings.lst) {
+			div
+				.append('p')
+				.style('margin', '5px')
+				.text(line)
 		}
+	}
 
-		if (result.residuals) {
-			const div = sectionHolder(result.residuals.label)
-			const table = div.append('table').style('border-spacing', '8px')
-			const tr1 = table.append('tr').style('opacity', 0.4)
-			const tr2 = table.append('tr')
-			for (const v of result.residuals.lst) {
-				tr1.append('td').text(v[0])
-				tr2.append('td').text(v[1])
-			}
+	self.mayshow_residuals = result => {
+		if (!result.residuals) return
+		const div = self.newDiv(result.residuals.label)
+		const table = div.append('table').style('border-spacing', '8px')
+		const tr1 = table.append('tr').style('opacity', 0.4)
+		const tr2 = table.append('tr')
+		for (const v of result.residuals.lst) {
+			tr1.append('td').text(v[0])
+			tr2.append('td').text(v[1])
 		}
+	}
 
-		if (result.coefficients) {
-			const div = sectionHolder(result.coefficients.label)
-			const table = div.append('table').style('border-spacing', '0px')
-
-			// padding is set on every <td>. need a better solution
-
-			// header row
-			{
-				const tr = table.append('tr').style('opacity', 0.4)
-				for (const v of result.coefficients.header) {
-					tr.append('td')
-						.text(v)
-						.style('padding', '8px')
-				}
-			}
-			// intercept row
-			{
-				const tr = table.append('tr').style('background', '#eee')
+	self.mayshow_type3 = result => {
+		if (!result.type3) return
+		const div = self.newDiv(result.type3.label)
+		const table = div.append('table').style('border-spacing', '0px')
+		// header
+		{
+			const tr = table.append('tr').style('opacity', 0.4)
+			for (const v of result.type3.header) {
 				tr.append('td')
-					.text('(Intercept)')
+					.text(v)
 					.style('padding', '8px')
-				tr.append('td').style('padding', '8px')
-				for (const v of result.coefficients.intercept) {
+			}
+		}
+		let rowcount = 1
+		for (const row of result.type3.lst) {
+			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+			// column 1 for variable
+			const td = tr.append('td').style('padding', '8px')
+			if (row.id1) {
+				const term1 = self.state.config.independent.find(t => t.id == row.id1)
+				fillTdName(td.append('div'), term1 ? term1.term.name : row.id1)
+				if (row.id2) {
+					const term2 = self.state.config.independent.find(t => t.id == row.id2)
+					fillTdName(td.append('div'), term2 ? term2.term.name : row.id2)
+				}
+			}
+			for (const v of row.lst)
+				tr.append('td')
+					.text(v)
+					.style('padding', '8px')
+		}
+	}
+
+	self.mayshow_coefficients = result => {
+		if (!result.coefficients) return
+		const div = self.newDiv(result.coefficients.label)
+		const table = div.append('table').style('border-spacing', '0px')
+
+		// padding is set on every <td>. need a better solution
+
+		// header row
+		{
+			const tr = table.append('tr').style('opacity', 0.4)
+			for (const v of result.coefficients.header) {
+				tr.append('td')
+					.text(v)
+					.style('padding', '8px')
+			}
+		}
+		// intercept row
+		{
+			const tr = table.append('tr').style('background', '#eee')
+			tr.append('td')
+				.text('(Intercept)')
+				.style('padding', '8px')
+			tr.append('td').style('padding', '8px')
+			for (const v of result.coefficients.intercept) {
+				tr.append('td')
+					.text(v)
+					.style('padding', '8px')
+			}
+		}
+		// independent terms, individually
+		let rowcount = 0
+		for (const tid in result.coefficients.terms) {
+			const termdata = result.coefficients.terms[tid]
+			const term = self.state.config.independent.find(t => t.id == tid)
+			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+
+			// term name
+			const termNameTd = tr.append('td').style('padding', '8px')
+			fillTdName(termNameTd, term ? term.term.name : tid)
+			if ('refGrp' in term && term.refGrp != refGrp_NA) {
+				termNameTd
+					.append('div')
+					.style('font-size', '.8em')
+					.style('opacity', 0.6)
+					.text(
+						'REF: ' +
+							(term.term.values && term.term.values[term.refGrp] ? term.term.values[term.refGrp].label : term.refGrp)
+					)
+			}
+
+			if (termdata.fields) {
+				// no category
+				tr.append('td')
+				for (const v of termdata.fields) {
 					tr.append('td')
 						.text(v)
 						.style('padding', '8px')
 				}
-			}
-			// independent terms
-			let rowcount = 0
-			for (const tid in result.coefficients.terms) {
-				const termdata = result.coefficients.terms[tid]
-				const term = self.state.config.independent.find(t => t.id == tid)
-				let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+			} else if (termdata.categories) {
+				const orderedCategories = []
+				const input = self.parent.inputs.independent.inputs.find(i => i.term.id == tid)
+				if (input.orderedLabels) {
+					// reorder rows by predefined order
+					for (const k of input.orderedLabels) {
+						if (termdata.categories[k]) orderedCategories.push(k)
+					}
+				}
+				for (const k in termdata.categories) {
+					if (!orderedCategories.includes(k)) orderedCategories.push(k)
+				}
 
-				// term name
-				const termNameTd = tr.append('td').style('padding', '8px')
-				fillTdName(termNameTd, term ? term.term.name : tid)
+				// multiple categories
+				// show first category as full row, with first cell spanning rest of categories
+				termNameTd.attr('rowspan', orderedCategories.length).style('vertical-align', 'top')
 
-				if (termdata.fields) {
-					// no category
+				let isfirst = true
+				for (const k of orderedCategories) {
+					if (isfirst) {
+						isfirst = false
+					} else {
+						// create new row starting from 2nd category
+						tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+					}
 					tr.append('td')
-					for (const v of termdata.fields) {
+						.text(term && term.term.values && term.term.values[k] ? term.term.values[k].label : k)
+						.style('padding', '8px')
+					for (const v of termdata.categories[k]) {
 						tr.append('td')
 							.text(v)
 							.style('padding', '8px')
 					}
-				} else if (termdata.categories) {
-					const orderedCategories = []
-					const input = self.parent.inputs.independent.inputs.find(i => i.term.id == tid)
-					if (input.orderedLabels) {
-						// reorder rows by predefined order
-						for (const k of input.orderedLabels) {
-							if (termdata.categories[k]) orderedCategories.push(k)
-						}
-					}
-					for (const k in termdata.categories) {
-						if (!orderedCategories.includes(k)) orderedCategories.push(k)
-					}
-
-					// multiple categories
-					// show first category as full row, with first cell spanning rest of categories
-					termNameTd.attr('rowspan', orderedCategories.length).style('vertical-align', 'top')
-
-					let isfirst = true
-					for (const k of orderedCategories) {
-						if (isfirst) {
-							isfirst = false
-						} else {
-							// create new row starting from 2nd category
-							tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
-						}
-						tr.append('td')
-							.text(term && term.term.values && term.term.values[k] ? term.term.values[k].label : k)
-							.style('padding', '8px')
-						for (const v of termdata.categories[k]) {
-							tr.append('td')
-								.text(v)
-								.style('padding', '8px')
-						}
-					}
-				} else {
-					tr.append('td').text('ERROR: no .fields[] or .categories{}')
 				}
-			}
-			// interactions
-			for (const row of result.coefficients.interactions) {
-				const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
-
-				const term1 = self.state.config.independent.find(t => t.id == row.term1)
-				const term2 = self.state.config.independent.find(t => t.id == row.term2)
-
-				// variable column
-				{
-					const td = tr.append('td').style('padding', '8px')
-					fillTdName(td.append('div'), term1 ? term1.term.name : row.term1)
-					fillTdName(td.append('div'), term2 ? term2.term.name : row.term2)
-				}
-				// category column
-				{
-					const td = tr.append('td').style('padding', '8px')
-					const d1 = td.append('div')
-					if (row.category1) {
-						d1.text(
-							term1 && term1.term.values && term1.term.values[row.category1]
-								? term1.term.values[row.category1].label
-								: row.category1
-						)
-					}
-					const d2 = td.append('div')
-					if (row.category2) {
-						d2.text(
-							term2 && term2.term.values && term2.term.values[row.category2]
-								? term2.term.values[row.category2].label
-								: row.category2
-						)
-					}
-				}
-				for (const v of row.lst) {
-					tr.append('td')
-						.text(v)
-						.style('padding', '8px')
-				}
+			} else {
+				tr.append('td').text('ERROR: no .fields[] or .categories{}')
 			}
 		}
+		// interactions
+		for (const row of result.coefficients.interactions) {
+			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 
-		if (result.type3) {
-			const div = sectionHolder(result.type3.label)
-			const table = div.append('table').style('border-spacing', '0px')
-			// header
+			const term1 = self.state.config.independent.find(t => t.id == row.term1)
+			const term2 = self.state.config.independent.find(t => t.id == row.term2)
+
+			// variable column
 			{
-				const tr = table.append('tr').style('opacity', 0.4)
-				for (const v of result.type3.header) {
-					tr.append('td')
-						.text(v)
-						.style('padding', '8px')
-				}
-			}
-			let rowcount = 1
-			for (const row of result.type3.lst) {
-				const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
-				// column 1 for variable
 				const td = tr.append('td').style('padding', '8px')
-				if (row.id1) {
-					const term1 = self.state.config.independent.find(t => t.id == row.id1)
-					fillTdName(td.append('div'), term1 ? term1.term.name : row.id1)
-					if (row.id2) {
-						const term2 = self.state.config.independent.find(t => t.id == row.id2)
-						fillTdName(td.append('div'), term2 ? term2.term.name : row.id2)
-					}
+				fillTdName(td.append('div'), term1 ? term1.term.name : row.term1)
+				fillTdName(td.append('div'), term2 ? term2.term.name : row.term2)
+			}
+			// category column
+			{
+				const td = tr.append('td').style('padding', '8px')
+				const d1 = td.append('div')
+				if (row.category1) {
+					d1.text(
+						term1 && term1.term.values && term1.term.values[row.category1]
+							? term1.term.values[row.category1].label
+							: row.category1
+					)
 				}
-				for (const v of row.lst)
-					tr.append('td')
-						.text(v)
-						.style('padding', '8px')
+				const d2 = td.append('div')
+				if (row.category2) {
+					d2.text(
+						term2 && term2.term.values && term2.term.values[row.category2]
+							? term2.term.values[row.category2].label
+							: row.category2
+					)
+				}
 			}
-		}
-		if (result.other) {
-			const div = sectionHolder(result.other.label)
-			const table = div.append('table').style('border-spacing', '8px')
-			for (const [k, v] of result.other.lst) {
-				const tr = table.append('tr')
+			for (const v of row.lst) {
 				tr.append('td')
-					.style('opacity', 0.4)
-					.text(k)
-				tr.append('td').text(v)
+					.text(v)
+					.style('padding', '8px')
 			}
 		}
-		function sectionHolder(label) {
-			const div = self.dom.content.append('div').style('margin', '20px 0px 10px 0px')
+	}
 
-			div
-				.append('div')
-				.style('text-decoration', 'underline')
-				.text(label)
-			return div.append('div').style('margin-left', '20px')
+	self.mayshow_other = result => {
+		if (!result.other) return
+		const div = self.newDiv(result.other.label)
+		const table = div.append('table').style('border-spacing', '8px')
+		for (const [k, v] of result.other.lst) {
+			const tr = table.append('tr')
+			tr.append('td')
+				.style('opacity', 0.4)
+				.text(k)
+			tr.append('td').text(v)
 		}
 	}
 }
