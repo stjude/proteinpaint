@@ -32,19 +32,18 @@
 # Code
 ###########
 
-#TODO: are we still inputting variables with whitespace/commas? If not, then the commands for handling variables with whitespace are not necessary (see "sprintf" and "gsub" commands. Any others?).
-#TODO: should we use "|" instead of "," for delimiting values within arguments?
+#TODO: should we use "|" instead of "," for delimiting values within arguments? Use JSON input for arguments.
 
 
 args <- commandArgs(trailingOnly = T)
 if (length(args) != 5){
-  stop("Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories> <scaling factors> <model>] <stdout>")
+  stop("Usage: Rscript regression.R <stdin> [<regression type> <variable classes> <reference categories> <scaling factors> <formula>] <stdout>")
 }
 regressionType <- args[1]
 variableClasses <- strsplit(args[2], split = ",")[[1]]
 refCategories <- strsplit(args[3], split = ",")[[1]]
 scalingFactors <- strsplit(args[4], split = ",")[[1]]
-modelStr <- args[5]
+formulaStr <- args[5]
 
 
 #Read in input data and assign variable classes
@@ -77,26 +76,24 @@ for(i in 1:length(scalingFactors)) {
 }
 
 #Perform the regression analysis
-names(dat) <- paste(names(dat), "___", sep = "")
 outcomeVar <- names(dat)[1]
-#independentVars <- names(dat)[-1]
-#model <- as.formula(paste(sprintf("`%s`", outcomeVar), paste(sprintf("`%s`", independentVars), collapse = " + "), sep = " ~ "))
-model <- as.formula(modelStr)
 if (regressionType == "linear"){
   # linear regression
   if (!is.integer(dat[,outcomeVar]) & !is.numeric(dat[,outcomeVar])){
     stop("outcome variable needs to be numeric for linear regression")
   }
   # fit linear model
-  res <- lm(model, data = dat)
+  res <- lm(as.formula(formulaStr), data = dat)
   res_summ <- summary(res)
   # prepare residuals table
   residuals_table <- round(data.frame(as.list(fivenum(res_summ$residuals))), 3)
   colnames(residuals_table) <- c("Minimum","1st quartile","Median","3rd quartile","Maximum")
   # prepare coefficients table
-  coefficients_table <- cbind(res_summ$coefficients, suppressMessages(confint(res)))
+  coefficients_table <- res_summ$coefficients
   colnames(coefficients_table)[1] <- "Beta"
-  colnames(coefficients_table)[5:6] <- c("95% CI (low)","95% CI (high)")
+  # prepare confidence intervals table (confidence intervals are for beta values)
+  ci_table <- suppressMessages(confint(res))
+  colnames(ci_table) <- c("95% CI (low)","95% CI (high)")
   # type III statistics
   typeIII_table <- as.data.frame(drop1(res, scope = ~., test = "F"))
   # other summary stats
@@ -117,16 +114,17 @@ if (regressionType == "linear"){
     stop("outcome variable is not binary")
   }
   # fit logistic model
-  res <- glm(model, family=binomial(link='logit'), data = dat)
+  res <- glm(as.formula(formulaStr), family=binomial(link='logit'), data = dat)
   res_summ <- summary(res)
   # prepare residuals table
   residuals_table <- round(data.frame(as.list(fivenum(res_summ$deviance.resid))), 3)
   colnames(residuals_table) <- c("Minimum","1st quartile","Median","3rd quartile","Maximum")
   # prepare coefficients table
-  coefficients_table <- res_summ$coefficients
-  coefficients_table <- cbind(coefficients_table, "Odds ratio" = exp(coef(res)), exp(suppressMessages(confint(res))))
-  colnames(coefficients_table)[1] <- "Log Odds"
-  colnames(coefficients_table)[6:7] <- c("95% CI (low)","95% CI (high)")
+  coefficients_table <- cbind("Odds ratio" = exp(coef(res)), res_summ$coefficients)
+  colnames(coefficients_table)[2] <- "Log odds"
+  # prepare confidence intervals table (confidence intervals are for odds ratios)
+  ci_table <- exp(suppressMessages(confint(res)))
+  colnames(ci_table) <- c("95% CI (low)","95% CI (high)")
   # type III statistics
   typeIII_table <- as.data.frame(drop1(res, scope = ~., test = "LRT"))
   # other summary stats
@@ -143,40 +141,45 @@ if (regressionType == "linear"){
   stop("regression type is not recognized")
 }
 
-#Reformat the coefficients table
-#Round the non-p-value columns to 3 decimal places
+
+# reformat the coefficients table
+# round the non-p-value columns to 3 decimal places and the p-value columns to 4 significant digits
 pvalueCol <- grepl("^Pr\\(>", colnames(coefficients_table))
 coefficients_table[,!pvalueCol] <- round(coefficients_table[,!pvalueCol], 3)
-#Round the p-value column to 4 significant digits
 coefficients_table[,pvalueCol] <- signif(coefficients_table[,pvalueCol], 4)
-#Re-arrange columns
-coefficients_table <- as.data.frame(coefficients_table)
+# add variable and category columns
+vCol <- c("Intercept")
+cCol <- c("")
+vlst <- attr(res$terms, "term.labels", exact = T)
+for (v in vlst) {
+  if (v %in% names(res$xlevels)) {
+    clst <- res$xlevels[[v]][-1] # extract categories (without reference category)
+    for (c in clst) {
+      vCol <- c(vCol, v)
+      cCol <- c(cCol, c)
+    }
+  } else {
+    vCol <- c(vCol, v)
+    cCol <- c(cCol, "")
+  }
+}
+coefficients_table <- cbind.data.frame("Variable" = vCol, "Category" = cCol, coefficients_table, stringsAsFactors = F)
 
-# do not add in Variable and Category columns
-#coefficients_table<- cbind("Variable" = "", "Category" = "", coefficients_table, stringsAsFactors = F)
-#var_and_cat <- strsplit(row.names(coefficients_table), split = "___")
-#for(x in 1:length(var_and_cat)){
-#  coefficients_table[x,"Variable"] <- gsub("`","",var_and_cat[[x]][1])
-#  if(length(var_and_cat[[x]]) > 1){
-#    coefficients_table[x,"Category"] <- gsub("`","",var_and_cat[[x]][2])
-#  } else{
-#    coefficients_table[x,"Category"] <- ""
-#  }
-#}
+# reformat the confidence intervals table
+ci_table <- round(ci_table, 3)
+ci_table <- cbind.data.frame("Variable" = vCol, "Category" = cCol, ci_table, stringsAsFactors = F)
 
-#Reformat the type III statistics table
-#Round the non-p-value columns to 3 decimal places
+# reformat the type III statistics table
+# round the non-p-value columns to 3 decimal places and the p-value column to 4 significant digits
 pvalueCol <- grepl("^Pr\\(>", colnames(typeIII_table))
 typeIII_table[,!pvalueCol] <- round(typeIII_table[,!pvalueCol], 3)
-#Round the p-value column to 4 significant digits
 typeIII_table[,pvalueCol] <- signif(typeIII_table[,pvalueCol], 4)
+# add a variable column
+typeIII_table <- cbind.data.frame("Variable" = row.names(typeIII_table), typeIII_table, stringsAsFactors = F)
 
-# do not add the Variable column
-#Re-arrange columns
-#typeIII_table <- cbind("Variable" = gsub("`", "", gsub("___", "", row.names(typeIII_table))), typeIII_table, stringsAsFactors = F)
+save.image("temp.regression.RData")
 
-
-#Output summary statistics
+# output summary statistics
 if (length(warnings()) > 0){
   cat("#warnings\n", file = "", sep = "")
   warning_summ <- capture.output(summary(warnings()))
