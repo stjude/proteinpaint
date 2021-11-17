@@ -1,5 +1,6 @@
 import { getNormalRoot } from '../common/filter'
 import { sayerror } from '../dom/error'
+import { scaleLinear, scaleLog } from 'd3-scale'
 
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
 
@@ -67,35 +68,7 @@ export class RegressionResults {
 	}
 }
 
-function setInteractivity(self) {
-	self.download = () => {
-		if (!self.state || !self.state.isVisible) return
-		const data = []
-		self.dom.content.selectAll('tr').each(function() {
-			const series = []
-			select(this)
-				.selectAll('th, td')
-				.each(function() {
-					series.push(select(this).text())
-				})
-			data.push(series)
-		})
-		const matrix = data.map(row => row.join('\t')).join('\n')
-
-		const a = document.createElement('a')
-		document.body.appendChild(a)
-		a.addEventListener(
-			'click',
-			function() {
-				a.download = self.config.term.term.name + ' table.txt'
-				a.href = URL.createObjectURL(new Blob([matrix], { type: 'text/tab-separated-values' }))
-				document.body.removeChild(a)
-			},
-			false
-		)
-		a.click()
-	}
-}
+function setInteractivity(self) {}
 
 function setRenderers(self) {
 	self.displayResult = function(result) {
@@ -188,33 +161,59 @@ function setRenderers(self) {
 		// header row
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
+
+			// temp fix: node will not add first two fields to header and will delete these two lines
+			result.coefficients.header.shift()
+			result.coefficients.header.shift()
+
+			// col 1: variable
+			tr.append('td')
+				.text('Variable')
+				.style('padding', '8px')
+			// col 2: category
+			tr.append('td')
+				.text('Category')
+				.style('padding', '8px')
+			// col 3: forest plot
+			tr.append('td')
+			// rest of columns
 			for (const v of result.coefficients.header) {
 				tr.append('td')
 					.text(v)
 					.style('padding', '8px')
 			}
 		}
+
 		// intercept row
 		{
 			const tr = table.append('tr').style('background', '#eee')
+			// col 1
 			tr.append('td')
 				.text('(Intercept)')
 				.style('padding', '8px')
-			tr.append('td').style('padding', '8px')
+			// col 2
+			tr.append('td')
+			// col 3
+			tr.append('td')
+			// rest of columns
 			for (const v of result.coefficients.intercept) {
 				tr.append('td')
 					.text(v)
 					.style('padding', '8px')
 			}
 		}
-		// independent terms, individually
+
+		// add forest plot as col 3 to each of subsequent rows
+		const forestPlotter = self.getForestPlotter(result.coefficients.terms, result.coefficients.interactions)
+
+		// one row for each independent term, individually, no interaction
 		let rowcount = 0
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
 			const term = self.state.config.independent.find(t => t.id == tid)
 			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 
-			// term name
+			// col 1: term name
 			const termNameTd = tr.append('td').style('padding', '8px')
 			fillTdName(termNameTd, term ? term.term.name : tid)
 			if ('refGrp' in term && term.refGrp != refGrp_NA) {
@@ -229,8 +228,11 @@ function setRenderers(self) {
 			}
 
 			if (termdata.fields) {
-				// no category
+				// col 2: no category
 				tr.append('td')
+				// col 3
+				forestPlotter(tr.append('td'), termdata.fields)
+				// rest of columns
 				for (const v of termdata.fields) {
 					tr.append('td')
 						.text(v)
@@ -261,9 +263,13 @@ function setRenderers(self) {
 						// create new row starting from 2nd category
 						tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 					}
+					// col 2
 					tr.append('td')
 						.text(term && term.term.values && term.term.values[k] ? term.term.values[k].label : k)
 						.style('padding', '8px')
+					// col 3
+					forestPlotter(tr.append('td'), termdata.categories[k])
+					// rest of columns
 					for (const v of termdata.categories[k]) {
 						tr.append('td')
 							.text(v)
@@ -281,13 +287,13 @@ function setRenderers(self) {
 			const term1 = self.state.config.independent.find(t => t.id == row.term1)
 			const term2 = self.state.config.independent.find(t => t.id == row.term2)
 
-			// variable column
+			// col 1: variable
 			{
 				const td = tr.append('td').style('padding', '8px')
 				fillTdName(td.append('div'), term1 ? term1.term.name : row.term1)
 				fillTdName(td.append('div'), term2 ? term2.term.name : row.term2)
 			}
-			// category column
+			// col 2: category
 			{
 				const td = tr.append('td').style('padding', '8px')
 				const d1 = td.append('div')
@@ -307,6 +313,9 @@ function setRenderers(self) {
 					)
 				}
 			}
+			// col 3
+			forestPlotter(tr.append('td'), row.lst)
+			// rest of columns
 			for (const v of row.lst) {
 				tr.append('td')
 					.text(v)
@@ -325,6 +334,116 @@ function setRenderers(self) {
 				.style('opacity', 0.4)
 				.text(k)
 			tr.append('td').text(v)
+		}
+	}
+
+	self.getForestPlotter = (terms, interactions) => {
+		let axisMin = null,
+			axisMax = null,
+			CIlow,
+			CIhigh,
+			midIdx // array index of these fields
+		if (self.config.regressionType == 'linear') {
+			midIdx = 0
+			CIlow = 4
+			CIhigh = 5
+		} else if (self.config.regressionType == 'logistic') {
+			midIdx = 4
+			CIlow = 5
+			CIhigh = 6
+		} else {
+			throw 'unknown regressionType'
+		}
+		const rows = [] // collect val/CIlow/CIhigh values
+		for (const tid in terms) {
+			const d = terms[tid]
+			if (d.fields) {
+				const v = d.fields
+				rows.push([Number(v[midIdx]), Number(v[CIlow]), Number(v[CIhigh])])
+			} else {
+				for (const k in d.categories) {
+					const v = d.categories[k]
+					rows.push([Number(v[midIdx]), Number(v[CIlow]), Number(v[CIhigh])])
+				}
+			}
+		}
+		for (const i of interactions) {
+			const v = i.lst
+			rows.push([Number(v[midIdx]), Number(v[CIlow]), Number(v[CIhigh])])
+		}
+		for (const [val, cilow, cihigh] of rows) {
+			if (Number.isNaN(cilow) || Number.isNaN(cihigh)) {
+				// use val
+				if (Number.isNaN(val)) continue
+				if (axisMin == null) {
+					axisMin = axisMax = val
+				} else {
+					axisMin = Math.min(val, axisMin)
+					axisMax = Math.max(val, axisMax)
+				}
+			} else {
+				// use confidence interval range
+				if (axisMin == null) {
+					axisMin = cilow
+					axisMax = cihigh
+				} else {
+					axisMin = Math.min(cilow, axisMin)
+					axisMax = Math.max(cihigh, axisMax)
+				}
+			}
+		}
+
+		const canvaswidth = 150
+		const canvasheight = 20
+
+		// todo: logistic, add center line; linear: 0 value
+
+		let scale
+		if (self.config.regressionType == 'logistic') {
+			scale = scaleLog()
+				.domain([axisMin == 0 ? 0.00001 : axisMin, axisMax])
+				.range([0, canvaswidth])
+		} else {
+			scale = scaleLinear()
+				.domain([axisMin, axisMax])
+				.range([0, canvaswidth])
+		}
+		return (td, lst) => {
+			// lst is a row from either terms or interactions
+			const mid = Number(lst[midIdx]),
+				cilow = Number(lst[CIlow]),
+				cihigh = Number(lst[CIhigh])
+			if (Number.isNaN(mid)) {
+				// not plottable
+				return
+			}
+			const canvas = td.append('canvas').node()
+			canvas.width = canvaswidth * window.devicePixelRatio
+			canvas.height = canvasheight * window.devicePixelRatio
+			canvas.style.width = canvaswidth + 'px'
+			canvas.style.height = canvasheight + 'px'
+			const ctx = canvas.getContext('2d')
+			if (window.devicePixelRatio > 1) {
+				ctx.scale(window.devicePixelRatio, window.devicePixelRatio)
+			}
+			ctx.fillStyle = ctx.strokeStyle = '#126e08'
+
+			const x = scale(mid)
+			ctx.beginPath()
+			ctx.arc(x, canvasheight / 2, 3, 0, Math.PI * 2)
+			ctx.fill()
+			ctx.closePath()
+
+			if (Number.isNaN(cilow) || Number.isNaN(cihigh)) {
+				// cannot plot confidence interval
+				return
+			}
+			const x1 = scale(cilow),
+				x2 = scale(cihigh)
+			ctx.beginPath()
+			ctx.moveTo(x1, canvasheight / 2)
+			ctx.lineTo(x2, canvasheight / 2)
+			ctx.stroke()
 		}
 	}
 }
