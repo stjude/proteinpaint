@@ -23,6 +23,7 @@ const defaultState = {
 	},
 	plots: [],
 	infos: {},
+	search: { isVisible: true },
 	termfilter: {
 		filter: {
 			type: 'tvslst',
@@ -236,6 +237,10 @@ TdbStore.prototype.actions = {
 		const i = this.state.tree.expandedTermIds.indexOf(action.termId)
 		if (i == -1) return
 		this.state.tree.expandedTermIds.splice(i, 1)
+	},
+
+	search_visibility_change(action) {
+		this.state.search.isVisible = action.search_show
 	},
 
 	info_expand(action) {

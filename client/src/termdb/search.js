@@ -56,8 +56,14 @@ class TermSearch {
 							.join(','),
 			expandedTermIds: appState.tree.expandedTermIds,
 			plots: appState.plots,
-			exclude_types: appState.tree.exclude_types || []
+			exclude_types: appState.tree.exclude_types || [],
+			search: appState.search
 		}
+	}
+
+	async main(){
+		// show/hide search input from the tree
+		this.dom.holder.style('display', this.state.search.isVisible ? 'block' : 'none')
 	}
 
 	async doSearch(str) {
@@ -81,6 +87,8 @@ export const searchInit = rx.getInitFxn(TermSearch)
 
 function setRenderers(self) {
 	self.initUI = () => {
+		self.dom.holder
+			.style('display', self.search && self.search.isVisible == false ? 'none' : 'block')
 		self.dom.input = self.dom.holder
 			.style('text-align', 'center')
 			.append('input')
