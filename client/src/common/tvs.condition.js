@@ -28,7 +28,11 @@ export function getConditionMethods(self) {
 				new_tvs.bar_by_grade = value === 'grade'
 				new_tvs.bar_by_children = value === 'sub'
 				// when switching to 'By grade', default to value_by_max_grade
-				if (value === 'grade') tvs.value_by_max_grade = true
+				if (value === 'grade') {
+					new_tvs.value_by_max_grade = true
+					delete new_tvs.value_by_most_recent
+					delete new_tvs.value_by_computable_grade
+				}
 				div.selectAll('*').remove()
 				fillMenu(div, new_tvs)
 			})
@@ -52,6 +56,12 @@ export function getConditionMethods(self) {
 			.style('margin', '5px 10px')
 			.style('padding', '3px')
 			.style('display', tvs.bar_by_grade ? 'block' : 'none')
+			.on('change', () => {
+				const new_tvs = JSON.parse(JSON.stringify(tvs))
+				update_value_by(new_tvs)
+				div.selectAll('*').remove()
+				fillMenu(div, new_tvs)
+			})
 
 		grade_type_select
 			.append('option')
@@ -116,21 +126,12 @@ export function getConditionMethods(self) {
 				const new_tvs = JSON.parse(JSON.stringify(tvs))
 				delete new_tvs.groupset_label
 				new_tvs.values = new_vals
-				// bar_by_*
+				// update bar_by_*
 				const bar_by_value = bar_by_select.node().value
 				new_tvs.bar_by_grade = bar_by_value !== 'sub'
 				new_tvs.bar_by_children = bar_by_value === 'sub'
-				// value_by_*
-				const grade_type_value = grade_type_select.node().value
-				if (bar_by_value === 'sub') {
-					new_tvs.value_by_computable_grade = true
-					new_tvs.value_by_max_grade = false
-					new_tvs.value_by_most_recent = false
-				} else {
-					new_tvs.value_by_max_grade = grade_type_value === 'max'
-					new_tvs.value_by_most_recent = grade_type_value === 'recent'
-					new_tvs.value_by_computable_grade = grade_type_value === 'computable'
-				}
+				// update value_by_*
+				update_value_by(new_tvs)
 				try {
 					validateConditionTvs(new_tvs)
 				} catch (e) {
@@ -142,6 +143,20 @@ export function getConditionMethods(self) {
 			})
 
 		self.values_table = self.makeValueTable(div, tvs, data.lst).node()
+
+		function update_value_by(new_tvs) {
+			const bar_by_value = bar_by_select.node().value
+			const grade_type_value = grade_type_select.node().value
+			if (bar_by_value === 'sub') {
+				new_tvs.value_by_computable_grade = true
+				delete new_tvs.value_by_max_grade
+				delete new_tvs.value_by_most_recent
+			} else {
+				new_tvs.value_by_max_grade = grade_type_value === 'max'
+				new_tvs.value_by_most_recent = grade_type_value === 'recent'
+				new_tvs.value_by_computable_grade = grade_type_value === 'computable'
+			}
+		}
 	}
 }
 
