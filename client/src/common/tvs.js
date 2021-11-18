@@ -296,6 +296,7 @@ export function showTvsMenu(opts) {
 		values: [],
 		ranges: []
 	}
+	self.filter = opts.filter
 	if (opts.term.type == 'float' || opts.term.type == 'integer') {
 		opts.add_tvs_brush = true
 	} else if (opts.term.type == 'condition') {

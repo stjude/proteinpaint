@@ -83,7 +83,7 @@ export function getNumericMethods(self) {
 		self.num_obj.brushes = []
 		addBrushes()
 		addRangeTable()
-		if (self.opts.add_tvs_brush) addNewBrush()
+		if (self.opts.add_tvs_brush) addNewBrush('center')
 		self.num_obj.brushes.forEach(brush => brush.init())
 		await showCheckList_numeric(tvs, div)
 	}
@@ -149,11 +149,12 @@ export function getNumericMethods(self) {
 			.attr('transform', `translate(${self.num_obj.plot_size.xpad}, ${self.num_obj.plot_size.ypad})`)
 	}
 
-	function addBrushes() {
+	function addBrushes(new_brush_location) {
 		// const ranges = self.num_obj.ranges
 		const brushes = self.num_obj.brushes
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
+		const ten_percent_range = Math.floor((maxvalue - minvalue) / 10)
 
 		for (const [i, r] of self.num_obj.ranges.entries()) {
 			const _b = brushes.find(b => b.orig === r)
@@ -167,10 +168,12 @@ export function getNumericMethods(self) {
 
 			// strict equality to not have false positive with start=0
 			if (r.start === '') {
-				brush.range.start = Math.floor(maxvalue - (maxvalue - minvalue) / 10)
+				if (new_brush_location == 'center') brush.range.start = minvalue + ten_percent_range * 4
+				else brush.range.start = minvalue + ten_percent_range * 8
 			}
 			if (r.stop === '') {
-				brush.range.stop = Math.floor(maxvalue)
+				if (new_brush_location == 'center') brush.range.stop = minvalue + ten_percent_range * 6
+				else brush.range.stop = Math.floor(maxvalue)
 			}
 		}
 
@@ -248,12 +251,12 @@ export function getNumericMethods(self) {
 	}
 
 	//Add new blank range temporary, save after entering values
-	function addNewBrush() {
+	function addNewBrush(new_brush_location = 'end') {
 		const new_range = { start: '', stop: '', index: self.tvs.ranges.length }
 		self.num_obj.ranges.push(new_range)
 		const brush = { orig: new_range, range: JSON.parse(JSON.stringify(new_range)) }
 		self.num_obj.brushes.push(brush)
-		addBrushes()
+		addBrushes(new_brush_location)
 		addRangeTable()
 		brush.init()
 	}
