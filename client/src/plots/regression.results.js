@@ -163,12 +163,12 @@ function setRenderers(self) {
 			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 			// column 1 for variable
 			const td = tr.append('td').style('padding', '8px')
-			if (row.id1) {
-				const term1 = self.state.config.independent.find(t => t.id == row.id1)
-				fillTdName(td.append('div'), term1 ? term1.term.name : row.id1)
-				if (row.id2) {
-					const term2 = self.state.config.independent.find(t => t.id == row.id2)
-					fillTdName(td.append('div'), term2 ? term2.term.name : row.id2)
+			if (row.term1) {
+				const term1 = self.state.config.independent.find(t => t.id == row.term1)
+				fillTdName(td.append('div'), term1 ? term1.term.name : row.term1)
+				if (row.term2) {
+					const term2 = self.state.config.independent.find(t => t.id == row.term2)
+					fillTdName(td.append('div'), term2 ? term2.term.name : row.term2)
 				}
 			}
 			for (const v of row.lst)
@@ -197,10 +197,6 @@ function setRenderers(self) {
 		// intercept row
 		{
 			const tr = table.append('tr').style('background', '#eee')
-			tr.append('td')
-				.text('(Intercept)')
-				.style('padding', '8px')
-			tr.append('td').style('padding', '8px')
 			for (const v of result.coefficients.intercept) {
 				tr.append('td')
 					.text(v)

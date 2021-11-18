@@ -40,7 +40,6 @@ TODO
 
 // minimum number of samples to run analysis
 const minimumSample = 1
-const idsep = '___' // term id separator used in R input data
 
 export async function get_regression(q, ds) {
 	try {
@@ -90,14 +89,18 @@ export async function get_regression(q, ds) {
 			}
 		}
 
-		const model = make_model(q, originalId2id)
+		const formula = make_formula(q, originalId2id)
+
+		console.log('formula:', formula)
 
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			[headerline.join('\t'), ...samplelines.map(i => i.join('\t'))],
-			[q.regressionType, colClasses.join(','), refGroups.join(','), scalingFactors.join(','), model],
+			[q.regressionType, colClasses.join(','), refGroups.join(','), scalingFactors.join(','), formula],
 			false
 		)
+
+		console.log('data:', data)
 
 		const result = { type: q.regressionType, queryTime, sampleSize }
 		parseRoutput(data, id2originalId, result)
@@ -228,22 +231,21 @@ function makeMatrix(q, sampledata) {
 }
 
 function parseRoutput(data, id2originalId, result) {
-	//console.log(data)
 	const type2lines = new Map()
-	// k: type e.g.Deviance Residuals
+	// k: table type e.g. residuals
 	// v: list of lines
-	let lineType // type of current line
 
+	let tableType
 	for (const line of data) {
 		if (line.startsWith('#')) {
-			lineType = line.substring(1)
-			type2lines.set(lineType, [])
+			tableType = line.substring(1)
+			type2lines.set(tableType, [])
 			continue
 		}
-		type2lines.get(lineType).push(line)
+		type2lines.get(tableType).push(line)
 	}
-	// parse lines into this result structure
 
+	// parse lines into the result object
 	{
 		const lines = type2lines.get('warnings')
 		if (lines) {
@@ -277,13 +279,8 @@ function parseRoutput(data, id2originalId, result) {
 
 			// 1st line is header
 			const header = lines.shift().split('\t')
-			header.unshift('Category')
-			header.unshift('Variable')
 			// 2nd line is intercept
-			const intercept = lines
-				.shift()
-				.split('\t')
-				.slice(1)
+			const intercept = lines.shift().split('\t')
 
 			result.coefficients = {
 				label: 'Coefficients',
@@ -299,27 +296,29 @@ function parseRoutput(data, id2originalId, result) {
 				if (l[0].indexOf(':') != -1) {
 					// is an interaction
 					const row = {}
-					const [t1, t2] = l[0].split(':')
-					const [id1, cat1] = t1.split(idsep)
+					const [id1, id2] = l.shift().split(':')
+					const [cat1, cat2] = l.shift().split(':')
+					// l is now only data fields
 					row.term1 = id2originalId[id1]
 					row.category1 = cat1
-					const [id2, cat2] = t2.split(idsep)
 					row.term2 = id2originalId[id2]
 					row.category2 = cat2
-					row.lst = l.slice(1)
+					row.lst = l
 					result.coefficients.interactions.push(row)
 				} else {
 					// not interaction, individual variable
-					const [id, category] = l[0].split(idsep)
+					const id = l.shift()
+					const category = l.shift()
+					// l is now only data fields
 					const termid = id2originalId[id] || id
 					if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
 					if (category) {
 						// has category
 						if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
-						result.coefficients.terms[termid].categories[category] = l.slice(1)
+						result.coefficients.terms[termid].categories[category] = l
 					} else {
 						// no category
-						result.coefficients.terms[termid].fields = l.slice(1)
+						result.coefficients.terms[termid].fields = l
 					}
 				}
 			}
@@ -329,7 +328,6 @@ function parseRoutput(data, id2originalId, result) {
 		const lines = type2lines.get('type3')
 		if (lines) {
 			const header = lines.shift().split('\t')
-			header.unshift('Variable')
 			result.type3 = {
 				label: 'Type III statistics',
 				header,
@@ -337,19 +335,20 @@ function parseRoutput(data, id2originalId, result) {
 			}
 			for (const line of lines) {
 				const l = line.split('\t')
-				const t = l[0]
+				const t = l.shift()
+				// l is now only data fields
 				const row = {}
 				if (t == '<none>') {
-					row.lst = l.slice(1)
+					row.lst = l
 				} else {
 					if (t.indexOf(':') != -1) {
-						const [t1, t2] = t.split(':')
-						row.id1 = id2originalId[t1.replace(idsep, '')]
-						row.id2 = id2originalId[t2.replace(idsep, '')]
+						const [id1, id2] = t.split(':')
+						row.term1 = id2originalId[id1]
+						row.term2 = id2originalId[id2]
 					} else {
-						row.id1 = id2originalId[t.replace(idsep, '')]
+						row.term1 = id2originalId[t]
 					}
-					row.lst = l.slice(1)
+					row.lst = l
 				}
 				result.type3.lst.push(row)
 			}
@@ -438,8 +437,8 @@ function getSampleData(q, terms) {
 	return samples.values()
 }
 
-function make_model(q, originalId2id) {
-	const independent = q.independent.map(i => originalId2id[i.id] + idsep)
+function make_formula(q, originalId2id) {
+	const independent = q.independent.map(i => originalId2id[i.id])
 
 	// get unique list of interaction pairs
 	const a2b = {}
@@ -457,9 +456,8 @@ function make_model(q, originalId2id) {
 
 	const interactions = []
 	for (const i in a2b) {
-		interactions.push(i + idsep + ' : ' + a2b[i] + idsep)
+		interactions.push(i + ':' + a2b[i])
 	}
 
-	// excluding space but should be fine to include them
-	return 'outcome___ ~ ' + independent.join(' + ') + (interactions.length ? ' + ' + interactions.join(' + ') : '')
+	return 'outcome ~ ' + independent.join(' + ') + (interactions.length ? ' + ' + interactions.join(' + ') : '')
 }
