@@ -697,7 +697,12 @@ export function getNumericMethods(self) {
 				// merge overlapping ranges
 				if (self.num_obj.ranges.length > 1) new_tvs.ranges = mergeOverlapRanges(range)
 				else new_tvs.ranges[range.index] = range
-				// validte new_tvs
+				try {
+					validateNumericTvs(new_tvs)
+				} catch (e) {
+					window.alert(e)
+					return
+				}
 				self.opts.callback(new_tvs)
 			} catch (e) {
 				window.alert(e)
@@ -831,7 +836,15 @@ export function getNumericMethods(self) {
 					self.dom.tip.hide()
 					if (new_tvs.ranges.length == 0) throw 'select at least one range or category'
 					//callback only if tvs is changed
-					if (JSON.parse(JSON.stringify(tvs) != new_tvs)) self.opts.callback(new_tvs)
+					if (JSON.parse(JSON.stringify(tvs) != new_tvs)) {
+						try {
+							validateNumericTvs(new_tvs)
+						} catch (e) {
+							window.alert(e)
+							return
+						}
+						self.opts.callback(new_tvs)
+					}
 				} catch (e) {
 					window.alert(e)
 				}
@@ -916,4 +929,30 @@ function format_val_text(range) {
 
 function getSelectRemovePos(j, tvs) {
 	return j - tvs.ranges.slice(0, j).filter(a => a.start || a.stop).length
+}
+
+function validateNumericTvs(tvs) {
+	if (!tvs.term) throw 'tvs.term is not defined'
+	if (!tvs.ranges) throw `.values[] missing for a term ${tvs.term.name}`
+	if (!Array.isArray(tvs.ranges)) throw `.values[] is not an array for a term ${tvs.term.name}`
+	if (!tvs.ranges.length) throw `no categories selected for ${tvs.term.name}`
+	for (const range of tvs.ranges) {
+		if (range.value != undefined) {
+			// a special category, not a value from numerical range
+			if (!range.label) throw `.label missing for special category for a term ${tvs.term.name}`
+		} else {
+			// a regular range
+			if (range.startunbounded) {
+				if (range.stopunbounded) throw `both start & stop are unbounded for a term ${tvs.term.name}`
+				if (!Number.isFinite(range.stop)) throw `.stop undefined when start is unbounded for a term ${tvs.term.name}`
+			} else if (range.stopunbounded) {
+				if (!Number.isFinite(range.start)) throw `.start undefined when stop is unbounded for a term ${tvs.term.name}`
+			} else {
+				if (!Number.isFinite(range.start))
+					throw `.start undefined when start is not unbounded for a term ${tvs.term.name}`
+				if (!Number.isFinite(range.stop)) throw `.stop undefined when stop is not unbounded for a term ${tvs.term.name}`
+				if (range.start >= range.stop) throw `.start is not lower than stop for a term ${tvs.term.name}`
+			}
+		}
+	}
 }
