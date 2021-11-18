@@ -235,7 +235,7 @@ const maxreadcount = 7000 // maximum number of reads to load
 const maxcanvasheight = 1500 // ideal max canvas height in pixels
 const max_returntemplatebox = 2000 // maximum number of reads per group, for which to return the "templatebox"
 const minstackheight_returntemplatebox = 7 // minimum stack height (number of pixels) for which to return templatebox
-const max_read_alignment = 100 // Max number of reads that can be aligned to reference sequence
+const max_read_alignment = 200 // Max number of reads that can be aligned to reference sequence
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 
@@ -844,10 +844,39 @@ async function do_query(q) {
 			// get alignment data (text)
 			let alignmentData
 			if (q.variant) {
+				let leftflankseq_length
+				if (q.leftflankseq) {
+					leftflankseq_length = q.leftflankseq.length
+				} else if (result.leftflankseq) {
+					leftflankseq_length = result.leftflankseq.length
+				} else {
+					// Should not happen
+					console.log('Cannot find leftflankseq length')
+				}
 				if (group.type == 'support_alt') {
-					alignmentData = await align_multiple_reads(templates, q.altseq) // Aligning alt-classified reads to alternate allele
+					if (group.partstack) {
+						alignmentData = await align_multiple_reads(
+							templates,
+							q.altseq,
+							leftflankseq_length,
+							group.partstack.start,
+							group.partstack.stop
+						) // Aligning alt-classified reads to alternate allele
+					} else {
+						alignmentData = await align_multiple_reads(templates, q.altseq, leftflankseq_length) // Aligning alt-classified reads to alternate allele
+					}
 				} else if (group.type == 'support_ref') {
-					alignmentData = await align_multiple_reads(templates, q.refseq) // Aligning ref-classified reads to reference allele
+					if (group.partstack) {
+						alignmentData = await align_multiple_reads(
+							templates,
+							q.refseq,
+							leftflankseq_length,
+							group.partstack.start,
+							group.partstack.stop
+						) // Aligning ref-classified reads to reference allele
+					} else {
+						alignmentData = await align_multiple_reads(templates, q.refseq, leftflankseq_length) // Aligning ref-classified reads to reference allele
+					}
 				} else {
 					// when category type is none category
 					console.log('None category, no alignments')
@@ -919,24 +948,50 @@ async function do_query(q) {
 	return result
 }
 
-async function align_multiple_reads(templates, reference_sequence) {
+async function align_multiple_reads(
+	templates,
+	reference_sequence,
+	leftflankseq_length,
+	partstack_start,
+	partstack_stop
+) {
 	const sequence_reads = templates.map(i => i.segments[0].seq)
+	const qual_reads = templates.map(i => i.segments[0].qual)
 	let fasta_sequence = ''
 
+	let qual_sequence = ''
 	fasta_sequence += '>seq\n' + reference_sequence.replace('\n', '') + '\n'
 	let i = 0
 	for (const read of sequence_reads) {
 		if (i < max_read_alignment) {
 			fasta_sequence += '>seq\n' + read.replace('\n', '') + '\n'
+			qual_sequence += qual2int(qual_reads[i].replace('\n', '')) + '\n'
+			//console.log('qual_reads:', qual_reads)
 		} else {
 			break
 		}
 		i += 1
 	}
-	return await run_clustalo(fasta_sequence, max_read_alignment, sequence_reads.length) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
+	return await run_clustalo(
+		fasta_sequence,
+		max_read_alignment,
+		sequence_reads.length,
+		qual_sequence,
+		leftflankseq_length,
+		partstack_start,
+		partstack_stop
+	) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
 }
 
-function run_clustalo(fasta_sequence, max_read_alignment, num_reads) {
+function run_clustalo(
+	fasta_sequence,
+	max_read_alignment,
+	num_reads,
+	qual_sequence,
+	leftflankseq_length,
+	partstack_start,
+	partstack_stop
+) {
 	return new Promise((resolve, reject) => {
 		const ps = spawn(clustalo_read_alignment, [
 			'-i',
@@ -959,16 +1014,57 @@ function run_clustalo(fasta_sequence, max_read_alignment, num_reads) {
 		})
 		ps.on('close', code => {
 			//console.log('RawAlignment:', stdout.toString())
-			const final_read_align = []
+			let read_count = 0
+			const ref_nucleotides = []
+			const clustalo_output = {
+				final_read_align: [],
+				qual_r: [],
+				qual_g: [],
+				qual_b: []
+			}
+			let gaps_before_variant = 0 // This variable stores the number of gaps that have occured before the variant region. This helps in placing the variant bar in the correct position when there are gaps in ref sequence before variant region
 			for (const read of stdout.toString().split('\n')) {
 				if (read.includes('seq      ')) {
 					// Remove "-" before/after the start/end of a sequence
-					let nuc_count = 0
+					let nuc_count = 0 // This variable counts nucleotide positions w.r.t read
 					let aligned_read = ''
+					let global_nuc_count = 0 // This variable counts nucleotide positions w.r.t reference sequence
+
+					let read_quality = ''
+					if (read_count != 0) {
+						// First sequence is reference sequence
+						read_quality = qual_sequence.split('\n')[read_count - 1].split(',')
+					}
+					let qual_r = ''
+					let qual_g = ''
+					let qual_b = ''
 					for (const nucl of read.replace('seq      ', '')) {
-						if (nucl != '-' && nucl != ',') {
+						if (nucl == ',') continue // Ignoring ,
+						if (nucl != '-') {
 							nuc_count += 1
 							aligned_read += nucl
+							if (read_count == 0) {
+								// Looking at reference sequence
+								ref_nucleotides.push(nucl)
+							} else {
+								if (nucl == ref_nucleotides[global_nuc_count]) {
+									const colors = qual2match(read_quality[nuc_count - 1] / maxqual)
+										.replace('rgb(', '')
+										.replace(')', '')
+										.split(',')
+									qual_r += colors[0] + ','
+									qual_g += colors[1] + ','
+									qual_b += colors[2] + ','
+								} else if (nucl != ref_nucleotides[global_nuc_count]) {
+									const colors = qual2mismatchbg(read_quality[nuc_count - 1] / maxqual)
+										.replace('rgb(', '')
+										.replace(')', '')
+										.split(',')
+									qual_r += colors[0] + ','
+									qual_g += colors[1] + ','
+									qual_b += colors[2] + ','
+								}
+							}
 						} else {
 							if (
 								nuc_count > 0 &&
@@ -980,20 +1076,45 @@ function run_clustalo(fasta_sequence, max_read_alignment, num_reads) {
 							) {
 								// Only allows "-" inside reads to be displayed, removing those before/after the start/end of read
 								aligned_read += nucl
+								if (read_count == 0) {
+									// Adding reference nucleotides
+									ref_nucleotides.push(nucl)
+									if (global_nuc_count < leftflankseq_length) {
+										gaps_before_variant += 1 // Calculating gaps in ref sequence before variant region
+									}
+								}
 							} else {
 								aligned_read += ' '
+								if (read_count == 0) {
+									// Adding reference nucleotides
+									ref_nucleotides.push(nucl)
+								}
 							}
+							qual_r += '255,'
+							qual_g += '255,'
+							qual_b += '255,'
 						}
+						global_nuc_count += 1
 					}
-
-					final_read_align.push(aligned_read)
+					read_count += 1
+					clustalo_output.gaps_before_variant = gaps_before_variant // This variable stores the number of gaps that have occured before the variant region. This helps in placing the variant bar in the correct position when there are gaps in ref sequence before variant region
+					clustalo_output.read_count = read_count - 1 // Total reads aligned, subtracted one so as to exclude reference sequence
+					clustalo_output.qual_r.push(qual_r)
+					clustalo_output.qual_g.push(qual_g)
+					clustalo_output.qual_b.push(qual_b)
+					clustalo_output.final_read_align.push(aligned_read)
+					if (partstack_start) {
+						// In partstack mode
+						clustalo_output.partstack_start = partstack_start
+						clustalo_output.partstack_stop = partstack_stop
+					}
 				} else if (read.includes('FATAL:') || read.includes('ERROR:')) {
 					// Possible problem in read-alignment
 					console.log(read)
 					reject(read)
 				}
 			}
-			resolve(final_read_align)
+			resolve(clustalo_output)
 		})
 	})
 }

@@ -1213,6 +1213,7 @@ async function align_reads_to_allele(tk, group, block) {
 	if ('nochr' in tk) {
 		alig_lst.push('nochr=' + tk.nochr)
 	}
+	if (tk.drop_pcrduplicates) alig_lst.push('drop_pcrduplicates=1')
 	if (group.partstack) {
 		alig_lst.push('stackstart=' + group.partstack.start)
 		alig_lst.push('stackstop=' + group.partstack.stop)
@@ -1319,7 +1320,7 @@ box{}
 function click_groupheader(tk, group, block) {
 	if (tk.variants && (group.data.type == 'support_alt' || group.data.type == 'support_ref')) {
 		// when merge to master, add this condition
-		//if(urlmap().has('clustalo')) {
+		//if (urlmap().has('clustalo')) {
 		getMultiReadAligInfo(tk, group, block)
 		//}
 	}
@@ -1334,6 +1335,23 @@ async function getMultiReadAligInfo(tk, group, block) {
 	//console.log('multi_read_alig_data:', multi_read_alig_data.alignmentData)
 	wait.remove()
 
+	const num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
+		.append('div')
+		.text('Number of reads aligned = ' + multi_read_alig_data.alignmentData.read_count)
+		.style('text-align', 'center')
+	if (multi_read_alig_data.alignmentData.partstack_start) {
+		// In partstack mode
+		const partstack_div = tk.alignpane.body
+			.append('div')
+			.text(
+				'Reads aligned from ' +
+					multi_read_alig_data.alignmentData.partstack_start +
+					' to ' +
+					multi_read_alig_data.alignmentData.partstack_stop
+			)
+			.style('text-align', 'center')
+	}
+
 	const div = tk.alignpane.body.append('div').style('margin', '20px')
 	const readAlignmentTable = div
 		.append('table')
@@ -1341,57 +1359,198 @@ async function getMultiReadAligInfo(tk, group, block) {
 		.style('font-size', '0.8em')
 		.style('color', '#303030')
 		.style('margin', '5px 5px 20px 5px')
-	let read_count = 0
-	for (const read of multi_read_alig_data.alignmentData) {
-		const read_tr = readAlignmentTable.append('tr')
-		if (read_count == 0) {
-			if (group.data.type == 'support_alt') {
-				read_tr
-					.append('td')
-					.text('Alt allele')
+	readAlignmentTable
+		.style('border-spacing', 0)
+		.style('border-collapse', 'separate')
+		.style('text-align', 'center')
+		.style('empty-cells', 'show')
+
+	// Drawing ref/alt allele bar
+	let refallele_tr = readAlignmentTable
+		.append('tr')
+		.style('color', 'white')
+		.style('background-color', 'white')
+	let variant_string // This will contain the variant bar along with Refeerence/ Alternate allele label
+	let nclt_count = 0
+	let allele_start = 0 // Flag to tell if the variant region has been reached or not. After that position alternate/reference allele will be rendered
+	let variant_string_count = 0 // Iterator for variant string letters
+
+	// Determine if alt/ref allele string needs to be placed inside variant box
+	let inside_variant_box = 1 // Flag for determining if variant string needs to be placed inside variant box or to the right of it. 0 for inside and 1 for being placed on the right
+	if (group.data.type == 'support_alt') {
+		variant_string = 'Alternate allele'
+		if (variant_string.length < tk.variants[0].alt.length) {
+			inside_variant_box = 0
+		} else {
+			variant_string = ' Alternate allele'
+		}
+	} else if (group.data.type == 'support_ref') {
+		variant_string = 'Reference allele'
+		if (variant_string.length < tk.variants[0].ref.length) {
+			inside_variant_box = 0
+		} else {
+			variant_string = ' Reference allele'
+		}
+	}
+
+	for (const nclt of multi_read_alig_data.alignmentData.final_read_align[0]) {
+		nclt_count += 1
+		const refallele_td = refallele_tr.append('td')
+
+		// Drawing ref/alt allele bar
+		if (
+			group.data.type == 'support_alt' &&
+			nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+			nclt_count <=
+				tk.variants[0].leftflankseq.length +
+					tk.variants[0].alt.length +
+					multi_read_alig_data.alignmentData.gaps_before_variant
+		) {
+			if (inside_variant_box == 1) {
+				allele_start = 1
+				refallele_td
+					.text(' ')
 					.style('text-align', 'right')
 					.style('font-weight', '550')
 					.style('margin', '5px 5px 10px 5px')
-			} else if (group.data.type == 'support_ref') {
-				read_tr
-					.append('td')
-					.text('Ref allele')
+					.style('color', 'black')
+					.style('background-color', 'black')
+			} else {
+				if (variant_string_count < variant_string.length) {
+					refallele_td
+						.text(variant_string[variant_string_count])
+						.style('text-align', 'right')
+						.style('font-weight', '550')
+						.style('margin', '5px 5px 10px 5px')
+						.style('color', 'white')
+						.style('background-color', 'black')
+					variant_string_count += 1
+				} else {
+					refallele_td
+						.text(' ')
+						.style('text-align', 'right')
+						.style('font-weight', '550')
+						.style('margin', '5px 5px 10px 5px')
+						.style('color', 'black')
+						.style('background-color', 'black')
+				}
+			}
+		} else if (
+			group.data.type == 'support_ref' &&
+			nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+			nclt_count <=
+				tk.variants[0].leftflankseq.length +
+					tk.variants[0].ref.length +
+					multi_read_alig_data.alignmentData.gaps_before_variant
+		) {
+			if (inside_variant_box == 1) {
+				allele_start = 1
+				refallele_td
+					.text('')
 					.style('text-align', 'right')
 					.style('font-weight', '550')
 					.style('margin', '5px 5px 10px 5px')
+					.style('color', 'black')
+					.style('background-color', 'black')
+			} else {
+				if (variant_string_count < variant_string.length) {
+					refallele_td
+						.text(variant_string[variant_string_count])
+						.style('text-align', 'right')
+						.style('font-weight', '550')
+						.style('margin', '5px 5px 10px 5px')
+						.style('color', 'white')
+						.style('background-color', 'black')
+					variant_string_count += 1
+				} else {
+					refallele_td
+						.text('')
+						.style('text-align', 'right')
+						.style('font-weight', '550')
+						.style('margin', '5px 5px 10px 5px')
+						.style('color', 'black')
+						.style('background-color', 'black')
+				}
+			}
+		} else if (allele_start == 1 && inside_variant_box == 1) {
+			refallele_td
+				.text(variant_string[variant_string_count])
+				.style('text-align', 'right')
+				.style('font-weight', '550')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'black')
+				.style('background-color', 'white')
+			variant_string_count += 1
+			if (variant_string_count == variant_string.length) {
+				allele_start = 0
 			}
 		} else {
-			read_tr
-				.append('td')
+			refallele_td
 				.text('')
 				.style('text-align', 'right')
 				.style('font-weight', '550')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'white')
+				.style('background-color', 'white')
 		}
+	}
+
+	// Drawing alignments for ref/alt allele and each of the reads
+	let read_count = 0
+	for (const read of multi_read_alig_data.alignmentData.final_read_align) {
+		const read_tr = readAlignmentTable
+			.append('tr')
+			.style('color', 'white')
+			.style('background-color', 'grey')
+		const r_colors = multi_read_alig_data.alignmentData.qual_r[read_count].split(',')
+		const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
+		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
+
 		let nclt_count = 0
 		for (const nclt of read) {
 			nclt_count += 1
-			if (nclt_count < tk.variants[0].leftflankseq.length) {
-				read_tr.append('td').text(nclt)
-			} else if (
-				group.data.type == 'support_alt' &&
-				nclt_count > tk.variants[0].leftflankseq.length &&
-				nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].alt.length
-			) {
-				read_tr
+			let nclt_td
+			if (read_count == 0) {
+				nclt_td = read_tr
 					.append('td')
 					.text(nclt)
-					.style('color', 'red')
+					.style('background-color', 'white')
+					.style('color', 'black')
+					.style('font-weight', '550')
+			} else {
+				nclt_td = read_tr
+					.append('td')
+					.text(nclt)
+					.style(
+						'background-color',
+						'rgb(' + r_colors[nclt_count - 1] + ',' + g_colors[nclt_count - 1] + ',' + b_colors[nclt_count - 1] + ')'
+					)
+				if (nclt != '-') {
+					nclt_td.style('color', 'white')
+				} else {
+					nclt_td.style('color', 'black')
+				}
+			}
+
+			// Highlighting nucleotides that are within the ref/alt allele
+			if (
+				group.data.type == 'support_alt' &&
+				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+				nclt_count <=
+					tk.variants[0].leftflankseq.length +
+						tk.variants[0].alt.length +
+						multi_read_alig_data.alignmentData.gaps_before_variant
+			) {
+				nclt_td.style('color', 'black')
 			} else if (
 				group.data.type == 'support_ref' &&
-				nclt_count > tk.variants[0].leftflankseq.length &&
-				nclt_count <= tk.variants[0].leftflankseq.length + tk.variants[0].ref.length
+				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+				nclt_count <=
+					tk.variants[0].leftflankseq.length +
+						tk.variants[0].ref.length +
+						multi_read_alig_data.alignmentData.gaps_before_variant
 			) {
-				read_tr
-					.append('td')
-					.text(nclt)
-					.style('color', 'red')
-			} else {
-				read_tr.append('td').text(nclt)
+				nclt_td.style('color', 'black')
 			}
 		}
 		read_count += 1
