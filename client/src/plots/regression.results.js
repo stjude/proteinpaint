@@ -347,80 +347,72 @@ function setRenderers(self) {
 		}
 	}
 
+	/*
+	the function takes all data rows (except intercept) from coefficients table, and return a callback
+	the callback scopes the axis range of all data
+	run callback on each coefficient table row to plot the forest plot
+
+	collect all numeric data points from terms/interactons
+	to derive forest plot axis range
+	sort numbers in an array
+	in logistic, if array[0]=0 then cannot use log(0) as axis min,
+	in that case should use array[1] or next to find the smallest real number as axis min
+	*/
 	self.getForestPlotter = (terms, interactions) => {
-		let axisMin = null,
-			axisMax = null,
-			CIlow,
-			CIhigh,
-			midIdx // array index of these fields
+		let midIdx, // array index of the beta/odds ratio, depending on regression type; the value is usually in the middle of CI low/high, thus called mid
+			CIlow, // array(column) index of low end of confidence interval of midIdx
+			CIhigh, // array index of high end of confidence interval
+			axislab, // data type to show as axis label
+			baselineValue // baseline value to show a vertical line
 		if (self.config.regressionType == 'linear') {
 			midIdx = 0
 			CIlow = 1
 			CIhigh = 2
+			axislab = 'Beta value'
+			baselineValue = 0
 		} else if (self.config.regressionType == 'logistic') {
 			midIdx = 0
 			CIlow = 1
 			CIhigh = 2
+			axislab = 'Odds ratio'
+			baselineValue = 1
 		} else {
 			throw 'unknown regressionType'
 		}
-		const rows = [] // collect val/CIlow/CIhigh values
+
+		// collect mid/CIlow/CIhigh numeric values into a flat array
+		const values = []
 		for (const tid in terms) {
 			const d = terms[tid]
 			if (d.fields) {
-				const v = d.fields
-				rows.push([Number(v[midIdx]), Number(v[CIlow]), Number(v[CIhigh])])
+				numbers2array(d.fields)
 			} else {
 				for (const k in d.categories) {
-					const v = d.categories[k]
-					rows.push([Number(v[midIdx]), Number(v[CIlow]), Number(v[CIhigh])])
+					numbers2array(d.categories[k])
 				}
 			}
 		}
 		for (const i of interactions) {
-			const v = i.lst
-			rows.push([Number(v[midIdx]), Number(v[CIlow]), Number(v[CIhigh])])
+			numbers2array(i.lst)
 		}
-		for (const [val, cilow, cihigh] of rows) {
-			if (Number.isNaN(cilow) || Number.isNaN(cihigh)) {
-				// use val
-				if (Number.isNaN(val)) continue
-				if (axisMin == null) {
-					axisMin = axisMax = val
-				} else {
-					axisMin = Math.min(val, axisMin)
-					axisMax = Math.max(val, axisMax)
-				}
-			} else {
-				// use confidence interval range
-				if (axisMin == null) {
-					axisMin = cilow
-					axisMax = cihigh
-				} else {
-					axisMin = Math.min(cilow, axisMin)
-					axisMax = Math.max(cihigh, axisMax)
-				}
-			}
-		}
+		values.sort((a, b) => a - b) // ascending
+		// all valid numbers are collected into values[]
 
+		// graph dimension
 		const width = 150 // plottable dimension
 		const height = 20
 		const xleftpad = 10,
 			xrightpad = 10 // leave space for axis
 
-		// todo: logistic, add center line; linear: 0 value
+		const scale = get_scale(values)
 
-		let scale
-		if (self.config.regressionType == 'logistic') {
-			scale = scaleLog()
-				.domain([axisMin == 0 ? 0.00001 : axisMin, axisMax])
-				.range([0, width])
-		} else {
-			scale = scaleLinear()
-				.domain([axisMin, axisMax])
-				.range([0, width])
-		}
+		// todo: logistic, add center line; linear: 0 value
 		return (td, lst) => {
+			if (!scale) {
+				// scale is not built, do not plot
+				return
+			}
+
 			// lst is data from a row from either terms or interactions
 
 			const svg = td
@@ -430,7 +422,8 @@ function setRenderers(self) {
 			const g = svg.append('g').attr('transform', 'translate(' + xleftpad + ',0)')
 
 			if (!lst) {
-				// if lst is missing, render axis
+				//////////////////////////////
+				// no data; render axis instead
 				const axis = axisBottom()
 					.ticks(4)
 					.scale(scale)
@@ -439,7 +432,25 @@ function setRenderers(self) {
 					color: forestcolor,
 					showline: true
 				})
+				const fontsize = 12
+				g.append('text')
+					.attr('fill', forestcolor)
+					.text(axislab)
+					.attr('x', width / 2)
+					.attr('y', height + fontsize)
+				svg.attr('height', height + fontsize)
 				return
+			}
+
+			{
+				// baseline
+				const x = scale(baselineValue)
+				g.append('line')
+					.attr('x1', x)
+					.attr('y1', 0)
+					.attr('x2', x)
+					.attr('y2', height)
+					.attr('stroke', '#ccc')
 			}
 
 			const mid = Number(lst[midIdx]),
@@ -471,6 +482,42 @@ function setRenderers(self) {
 				.attr('x2', x2)
 				.attr('y2', height / 2)
 				.attr('stroke', forestcolor)
+		}
+		///////// helpers
+		function numbers2array(lst) {
+			const m = Number(lst[midIdx])
+			if (!Number.isNaN(m)) values.push(m)
+			const l = Number(lst[CIlow]),
+				h = Number(lst[CIhigh])
+			if (!Number.isNaN(l) && !Number.isNaN(h)) {
+				// if either low/high is NA, do not use
+				// this prevent the case of low=NA, high=3e+41 (somehow high is extremely large value)
+				values.push(l)
+				values.push(h)
+			}
+		}
+		function get_scale(values) {
+			if (self.config.regressionType == 'logistic') {
+				// apply log to odds ratio
+				// iterate to find a non-0 value
+				let i = 0
+				while (values[i] <= 0) {
+					i++
+				}
+				if (i >= values.length || values[i] <= 0) {
+					// no valid value, won't build scale
+					return
+				}
+				const min = values[i]
+				const max = values[values.length - 1]
+				return scaleLog()
+					.domain([min, max])
+					.range([0, width])
+			} else {
+				return scaleLinear()
+					.domain([values[0], values[values.length - 1]])
+					.range([0, width])
+			}
 		}
 	}
 }
