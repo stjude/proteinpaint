@@ -91,16 +91,12 @@ export async function get_regression(q, ds) {
 
 		const formula = make_formula(q, originalId2id)
 
-		console.log('formula:', formula)
-
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			[headerline.join('\t'), ...samplelines.map(i => i.join('\t'))],
 			[q.regressionType, colClasses.join(','), refGroups.join(','), scalingFactors.join(','), formula],
 			false
 		)
-
-		console.log('data:', data)
 
 		const result = { type: q.regressionType, queryTime, sampleSize }
 		parseRoutput(data, id2originalId, result)
