@@ -190,6 +190,19 @@ function setRenderers(self) {
 		// intercept row
 		{
 			const tr = table.append('tr').style('background', '#eee')
+
+			result.coefficients.intercept.shift()
+			result.coefficients.intercept.shift()
+
+			// col 1
+			tr.append('td')
+				.text('(Intercept)')
+				.style('padding', '8px')
+			// col 2
+			tr.append('td')
+			// col 3
+			tr.append('td')
+			// rest of columns
 			for (const v of result.coefficients.intercept) {
 				tr.append('td')
 					.text(v)
