@@ -27,6 +27,8 @@ export function getConditionMethods(self) {
 				const value = bar_by_select.node().value
 				new_tvs.bar_by_grade = value === 'grade'
 				new_tvs.bar_by_children = value === 'sub'
+				// when switching to 'By grade', default to value_by_max_grade
+				if (value === 'grade') tvs.value_by_max_grade = true
 				div.selectAll('*').remove()
 				fillMenu(div, new_tvs)
 			})
@@ -50,23 +52,6 @@ export function getConditionMethods(self) {
 			.style('margin', '5px 10px')
 			.style('padding', '3px')
 			.style('display', tvs.bar_by_grade ? 'block' : 'none')
-			.on('change', () => {
-				const new_tvs = JSON.parse(JSON.stringify(tvs))
-				const value = grade_type_select.node().value
-				new_tvs.bar_by_grade = value !== 'sub'
-				new_tvs.bar_by_children = value === 'sub'
-				new_tvs.value_by_max_grade = value === 'max'
-				new_tvs.value_by_most_recent = value === 'recent'
-				new_tvs.value_by_computable_grade = value === 'computable' || value === 'sub'
-				try {
-					validateConditionTvs(new_tvs)
-				} catch (e) {
-					window.alert(e)
-					return
-				}
-				self.dom.tip.hide()
-				self.opts.callback(new_tvs)
-			})
 
 		grade_type_select
 			.append('option')
@@ -131,6 +116,21 @@ export function getConditionMethods(self) {
 				const new_tvs = JSON.parse(JSON.stringify(tvs))
 				delete new_tvs.groupset_label
 				new_tvs.values = new_vals
+				// bar_by_*
+				const bar_by_value = bar_by_select.node().value
+				new_tvs.bar_by_grade = bar_by_value !== 'sub'
+				new_tvs.bar_by_children = bar_by_value === 'sub'
+				// value_by_*
+				const grade_type_value = grade_type_select.node().value
+				if (bar_by_value === 'sub') {
+					new_tvs.value_by_computable_grade = true
+					new_tvs.value_by_max_grade = false
+					new_tvs.value_by_most_recent = false
+				} else {
+					new_tvs.value_by_max_grade = grade_type_value === 'max'
+					new_tvs.value_by_most_recent = grade_type_value === 'recent'
+					new_tvs.value_by_computable_grade = grade_type_value === 'computable'
+				}
 				try {
 					validateConditionTvs(new_tvs)
 				} catch (e) {
@@ -196,24 +196,24 @@ function getSelectRemovePos(j) {
 	return j
 }
 
-function validateConditionTvs(tvs){
-	console.log(tvs)
+function validateConditionTvs(tvs) {
 	if (!tvs.term) throw 'tvs.term is not defined'
 	if (!tvs.values) throw `.values[] missing for a term ${tvs.term.name}`
 	if (!Array.isArray(tvs.values)) throw `.values[] is not an array for a term ${tvs.term.name}`
 	if (!tvs.values.length) throw `no categories selected for ${tvs.term.name}`
-	if (!tvs.values.every(v => v.key !== undefined)) throw `every value in tvs.values[] must have 'key' defined for ${tvs.term.name}`
+	if (!tvs.values.every(v => v.key !== undefined))
+		throw `every value in tvs.values[] must have 'key' defined for ${tvs.term.name}`
 	if (tvs.term.isleaf == true) {
 		if (!tvs.bar_by_grade) throw `tvs.bar_by_grade must be true for leaf term ${tvs.term.name}`
-		if (!tvs.value_by_max_grade && !tvs.value_by_most_recent && !tvs.value_by_computable_grade) 
+		if (!tvs.value_by_max_grade && !tvs.value_by_most_recent && !tvs.value_by_computable_grade)
 			throw `unknown value_type for a bar_by_grade for condition term ${tvs.term.name}`
 	} else {
 		// non-leaf terms
 		if (tvs.bar_by_grade) {
-			if (!tvs.value_by_max_grade && !tvs.value_by_most_recent && !tvs.value_by_computable_grade) 
+			if (!tvs.value_by_max_grade && !tvs.value_by_most_recent && !tvs.value_by_computable_grade)
 				throw `unknown value_type for a bar_by_grade for condition term ${tvs.term.name}`
 		} else if (tvs.bar_by_children) {
-			if (!tvs.value_by_computable_grade) 
+			if (!tvs.value_by_computable_grade)
 				throw `value_type must be value_by_computable_grade for bar_by_children for condition term ${tvs.term.name}`
 		} else {
 			throw `neither bar_by_grade or bar_by_children is set for a condition term ${tvs.term.name}`
