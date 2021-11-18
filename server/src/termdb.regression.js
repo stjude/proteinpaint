@@ -273,8 +273,11 @@ function parseRoutput(data, id2originalId, result) {
 		if (lines) {
 			if (lines.length < 3) throw 'expect at least 3 lines from coefficients'
 
-			// 1st line is header
-			const header = lines.shift().split('\t')
+			// 1st line is header, remove "variable,category" fields as data rows don't have them
+			const header = lines
+				.shift()
+				.split('\t')
+				.slice(2)
 			// 2nd line is intercept
 			const intercept = lines.shift().split('\t')
 

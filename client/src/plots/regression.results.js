@@ -165,10 +165,6 @@ function setRenderers(self) {
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
 
-			// temp fix: node will not add first two fields to header and will delete these two lines
-			result.coefficients.header.shift()
-			result.coefficients.header.shift()
-
 			// col 1: variable
 			tr.append('td')
 				.text('Variable')
@@ -359,12 +355,12 @@ function setRenderers(self) {
 			midIdx // array index of these fields
 		if (self.config.regressionType == 'linear') {
 			midIdx = 0
-			CIlow = 4
-			CIhigh = 5
+			CIlow = 1
+			CIhigh = 2
 		} else if (self.config.regressionType == 'logistic') {
-			midIdx = 4
-			CIlow = 5
-			CIhigh = 6
+			midIdx = 0
+			CIlow = 1
+			CIhigh = 2
 		} else {
 			throw 'unknown regressionType'
 		}
