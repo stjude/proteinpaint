@@ -11,6 +11,11 @@ try {
 	throw e
 }
 
+const internalsFile = path.join(__dirname, './test/internals.js')
+if (!fs.existsSync(internalsFile)) {
+	fs.writeFileSync(internalsFile)
+}
+
 module.exports = function(env = {}) {
 	const config = {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
