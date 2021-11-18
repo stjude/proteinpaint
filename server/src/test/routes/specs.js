@@ -11,7 +11,7 @@ const targetFile = `${clientTestDir}/internals.js`
 module.exports = function setRoutes(app, basepath) {
 	app.get(basepath + '/specs', async (req, res) => {
 		try {
-			const specs = helpers.findMatchingSpecs(req.query).map(replaceFilePath)
+			const specs = helpers.findMatchingSpecs(req.query).matched.map(replaceFilePath)
 			const active = helpers.getImportedSpecs(targetFile, (format = 'array')).map(replaceFilePath)
 			res.send({ specs, active })
 		} catch (e) {
@@ -24,8 +24,8 @@ module.exports = function setRoutes(app, basepath) {
 			const q = req.body
 			const name = q.name || ''
 			const dir = q.dir || ''
-			const numSpecs = await helpers.writeImportCode(q, targetFile)
-			res.send({ numSpecs })
+			const specs = await helpers.writeImportCode(q, targetFile)
+			res.send(specs)
 		} catch (e) {
 			console.log(e)
 			res.send({ error: e })

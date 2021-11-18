@@ -156,18 +156,22 @@ async function triggerImportSpecs(params) {
       body: JSON.stringify(params)
     }
     loadingDiv.html('Loading tests ...')
-    const data = await fetch('/specs', opts).then(r => r.json)
-    if (data.error) {
-      loadingDiv.html(`Error: ${data.error}`)
+    const specs = await fetch('/specs', opts).then(r => r.json())
+    if (specs.error) {
+      loadingDiv.html(`Error: ${specs.error}`)
     } else {
-      if (data.numSpecs) await sleep(numSpecs*100)
+      console.log('Specs: ', specs)
+      currTest.text(specs.pattern.split('/client/src')[1])
+      if (specs.n) await sleep(specs*10)
       d3.select('body')
         .append('script')
         .attr('src', '/bin/proteinpaint.js')
         .on('load', async ()=>{
           runproteinpaint({noheader: true, testInternals: true})
         })
-      loadingDiv.html('See the test results in the browser console.')
+      const df = specs.exclude === '_x_.' ? ' (default)' : ''
+      const info = `[exclude glob='${specs.exclude}'${df}]`
+      loadingDiv.html(`See the test results in the browser console. ${info}`)
     }
   } catch(e) {
     throw e

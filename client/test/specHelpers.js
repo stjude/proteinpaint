@@ -47,28 +47,28 @@ exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 
 	const specs = findMatchingSpecs(opts)
 	// the import code to write to the target file
-	const importCode = specs.map(file => `import '${file}'`).join('\n')
+	const importCode = specs.matched.map(file => `import '${file}'`).join('\n')
 	// the current import code as found in the target file
 	const currImportCode = getImportedSpecs(targetFile)
 	if (currImportCode != importCode || !currImportCode.includes(importCode)) {
 		const prevModTime = await getModTime(wpCompileTime)
-		console.log(`Writing ${specs.length} import(s) of test specs to '${targetFile}'.`)
+		console.log(`Writing ${specs.n} import(s) of test specs to '${targetFile}'.`)
 		// editing the targetFile would trigger rebundling by webpack
 		fs.writeFileSync(targetFile, importCode, { encoding: 'utf8' })
 		await monitorBundling(prevModTime)
 	}
-	return specs.length
+	return specs
 }
 
 function findMatchingSpecs(opts) {
 	// may assign default patterns
 	const SPECDIR = opts.dir || '**'
 	const SPECNAME = opts.name || '*'
-	const EXCLUDE = 'exclude' in opts ? opts.exclude : SPECNAME.includes('_x_.') ? '' : '_x_.'
+	const exclude = 'exclude' in opts ? opts.exclude : SPECNAME.includes('_x_.') ? '' : '_x_.'
 	const pattern = path.join(__dirname, `../src/${SPECDIR}/test/${SPECNAME}.spec.js`)
 	const specs = glob
 		.sync(pattern, { cwd: path.join(__dirname, `../src`) })
-		.filter(f => !EXCLUDE || !f.includes(EXCLUDE))
+		.filter(f => !exclude || !f.includes(exclude))
 
 	const srcDir = __dirname.replace('client/test', 'client/src')
 	// sorting preference for running the tests
@@ -82,7 +82,12 @@ function findMatchingSpecs(opts) {
 		return i - j
 	})
 
-	return specs.map(file => file.replace(srcDir, '../src'))
+	return {
+		matched: specs.map(file => file.replace(srcDir, '../src')),
+		n: specs.length,
+		pattern,
+		exclude
+	}
 }
 exports.findMatchingSpecs = findMatchingSpecs
 
@@ -101,10 +106,6 @@ function getImportedSpecs(targetFile, format = '') {
 }
 exports.getImportedSpecs = getImportedSpecs
 
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
-}
-
 async function getModTime(file) {
 	const mtime = (await fs.promises.stat(file)).mtime
 	return +new Date(mtime)
@@ -112,12 +113,7 @@ async function getModTime(file) {
 
 class WpPlugin {
 	apply(compiler) {
-		compiler.hooks.beforeCompile.tapAsync('SpecsHelperPlugin', (compilation, callback) => {
-			touchFile(wpCompileTime)
-			callback()
-		})
-
-		compiler.hooks.afterCompile.tapAsync('SpecsHelperPlugin', (compilation, callback) => {
+		compiler.hooks.afterEmit.tapAsync('SpecsHelperPlugin', (compilation, callback) => {
 			touchFile(wpCompileTime)
 			callback()
 		})
@@ -132,29 +128,15 @@ function touchFile(filename) {
 }
 
 async function monitorBundling(prevModTime) {
-	let currModTime = await getModTime(wpCompileTime)
-
-	if (currModTime <= prevModTime) {
-		// the rebundling has not been triggered yet by Webpack,
-		// it's possible that it is NOT needed, so detect
-		// whether to assume the monitoring can exit early
-		for (let i = 0; i < 30; i++) {
-			await sleep(40)
-			currModTime = await getModTime(wpCompileTime) // the rebundling has been triggered
-			if (currModTime > prevModTime) break
-		}
-		// if no rebundling has started within the total loop time,
-		// assume it is not needed
-		if (currModTime <= prevModTime) {
-			return
-		}
-	}
-
-	const startTime = currModTime
+	//const startTime = currModTime
 	// a rebundling has been triggered, monitor when it ends
 	for (let i = 0; i < 50; i++) {
 		await sleep(400)
 		currModTime = await getModTime(wpCompileTime)
-		if (currModTime > startTime) return
+		if (currModTime > prevModTime) return
 	}
+}
+
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
 }
