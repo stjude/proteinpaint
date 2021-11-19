@@ -549,7 +549,7 @@ function setInteractivity(self) {
 
 	self.handle_select_tvs = function(term) {
 		// hide search
-		self.app.dispatch({type:'search_visibility_change', search_show: false})
+		self.app.dispatch({ type: 'search_visibility_change', search_show: false })
 		self.dom.treeDiv.style('display', 'none')
 		self.dom.nextDiv.selectAll('*').remove()
 		self.dom.nextDiv
@@ -561,13 +561,14 @@ function setInteractivity(self) {
 			.attr('class', 'sja_clbtext')
 			.on('click', () => {
 				// show search
-				self.app.dispatch({type:'search_visibility_change', search_show: true})
+				self.app.dispatch({ type: 'search_visibility_change', search_show: true })
 				self.dom.treeDiv.style('display', 'block')
 				self.dom.nextDiv.style('display', 'none')
 			})
 
 		showTvsMenu({
 			term,
+			filter: self.state.termfilter.filter,
 			holder: self.dom.nextDiv.append('div'),
 			vocabApi: self.app.vocabApi,
 			debug: self.app.debug,

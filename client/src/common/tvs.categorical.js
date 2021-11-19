@@ -43,6 +43,12 @@ export function getCategoricalMethods(self) {
 				const new_tvs = JSON.parse(JSON.stringify(tvs))
 				delete new_tvs.groupset_label
 				new_tvs.values = new_vals
+				try {
+					validateCategoricalTvs(new_tvs)
+				} catch (e) {
+					window.alert(e)
+					return
+				}
 				self.dom.tip.hide()
 				self.opts.callback(new_tvs)
 			})
@@ -82,4 +88,13 @@ function get_pill_label(tvs) {
 
 function getSelectRemovePos(j) {
 	return j
+}
+
+function validateCategoricalTvs(tvs) {
+	if (!tvs.term) throw 'tvs.term is not defined'
+	if (!tvs.values) throw `.values[] missing for a term ${tvs.term.name}`
+	if (!Array.isArray(tvs.values)) throw `.values[] is not an array for a term ${tvs.term.name}`
+	if (!tvs.values.length) throw `no categories selected for ${tvs.term.name}`
+	if (!tvs.values.every(v => v.key !== undefined))
+		throw `every value in tvs.values[] must have 'key' defined for ${tvs.term.name}`
 }
