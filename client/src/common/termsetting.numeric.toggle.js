@@ -1,6 +1,7 @@
 import { init_tabs } from '../dom/toggleButtons'
 import { getHandler as getNumericDiscreteHandler } from './termsetting.numeric.discrete'
 import { getHandler as getNumericContHandler } from './termsetting.numeric.continuous'
+import { getHandler as getNumericSplineHandler } from './termsetting.numeric.spline'
 
 // self is the termsetting instance
 export function getHandler(self) {
@@ -9,6 +10,9 @@ export function getHandler(self) {
 	}
 	if (!self.handlerByType['numeric.continuous']) {
 		self.handlerByType['numeric.continuous'] = getNumericContHandler(self)
+	}
+	if (!self.handlerByType['numeric.spline']) {
+		self.handlerByType['numeric.spline'] = getNumericSplineHandler(self)
 	}
 
 	return {
@@ -36,7 +40,7 @@ export function getHandler(self) {
 
 			const tabs = [
 				{
-					active: self.q.mode && self.q.mode == 'discrete' ? false : true,
+					active: self.q.mode && (self.q.mode == 'discrete' || self.q.mode == 'spline') ? false : true,
 					label: 'Continuous',
 					callback: async div => {
 						self.q.mode = 'continuous'
@@ -50,10 +54,22 @@ export function getHandler(self) {
 					label: 'Discrete',
 					callback: async div => {
 						self.q.mode = 'discrete'
+						self.q.type = 'regular'
 						// example of using a boolean attribute to track whether to exit early
 						if (tabs[1].isRendered) return
 						tabs[1].isRendered = true
 						self.handlerByType['numeric.discrete'].showEditMenu(div)
+						// delete tabs[1].callback
+					}
+				},
+				{
+					active: self.q.mode && self.q.mode == 'spline' ? true : false,
+					label: 'Spline',
+					callback: async div => {
+						self.q.mode = 'spline'
+						self.q.type = 'spline_auto'
+						self.handlerByType['numeric.spline'].showEditMenu(div)
+						// delete tabs[2].callback
 					}
 				}
 			]
