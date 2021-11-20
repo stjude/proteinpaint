@@ -87,7 +87,7 @@ class TermSetting {
 					await this.setHandler()
 					this.updateUI()
 					if (data.term && this.validateQ) this.validateQ(data)
-					if (data.term && data.term.type !== 'integer' && data.term.type !== 'float') this.addCategory2sampleCounts()
+					if (this.addCategory2sampleCounts) this.addCategory2sampleCounts()
 				} catch (e) {
 					this.hasError = true
 					throw e
@@ -236,7 +236,7 @@ function setRenderers(self) {
 
 		self.dom.nopilldiv.style('display', 'none')
 		self.dom.pilldiv.style('display', self.opts.buttons ? 'inline-block' : 'block')
-		self.dom.btnDiv.style('display', 'inline-block')
+		self.dom.btnDiv.style('display', self.opts.buttons ? 'inline-block' : 'none')
 
 		const pills = self.dom.pilldiv.selectAll('.ts_pill').data([self.term], d => d.id)
 
