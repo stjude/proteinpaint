@@ -89,12 +89,11 @@ class TdbNav {
 		this.activeCohort = +this.state.activeCohort
 		this.filterUiRoot = getFilterItemByTag(this.state.filter, 'filterUiRoot')
 		this.cohortFilter = getFilterItemByTag(this.state.filter, 'cohortFilter')
-		if (!this.dom.cohortTable)
-			if (this.cohortNames) {
-				this.activeCohortName = this.cohortNames[this.activeCohort]
-				if (this.activeCohort !== -1)
-					this.activeCohortLabel = this.state.termdbConfig.selectCohort.values[this.activeCohort].shortLabel
-			}
+		if (this.cohortNames) {
+			this.activeCohortName = this.cohortNames[this.activeCohort]
+			if (this.activeCohort !== -1)
+				this.activeCohortLabel = this.state.termdbConfig.selectCohort.values[this.activeCohort].shortLabel
+		}
 		this.filterJSON = JSON.stringify(this.state.filter)
 
 		if (this.state.nav.header_mode === 'with_tabs') {
