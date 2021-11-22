@@ -19,44 +19,23 @@ runproteinpaint({
 	nobox:1,
 	noheader:1,
 	debug: 1,
-	termdb:{
+	mass:{
 		state: {
 			dslabel: 'PNET',
 			genome: 'hg19',
-			nav: {
-				header_mode: 'with_tabs',
-				activeTab: 1,
-			},
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Age',
-					'Gender'
-				],
-				visiblePlotIds: ['Age', 'Gender'],
-				plots: {
-					Age: {
-						term: {
-							id: 'Age'
-						},
-						term2: {
-							id: 'Event-free survival'
-						},
-						settings: {
-							currViews: ['barchart']
-						}
-					},
-					Gender: {
-						term: {
-							id: 'Gender'
-						},
-						settings: {
-							//currViews: ['survival']
-						}
-					}
+			plots: [{
+				chartType: 'survival',
+				term: {
+					id: 'Event-free survival'
+				},
+				term2: {
+					id: 'Age'
+				},
+				settings: {
+					currViews: ['barchart']
 				}
-			},
-		},
+			}],
+		}
 	}
 })
 

@@ -11,7 +11,7 @@ drop index if exists terms_id;
 drop index if exists terms_p;
 drop index if exists terms_n;
 drop table if exists terms;
-create table terms2 (
+create table terms (
   id character varying(100) not null,
   name character varying(100) not null,
   parent_id character varying(100),
@@ -126,7 +126,7 @@ CREATE INDEX p_value_for on precomputed(value_for);
 DROP TABLE IF EXISTS subcohort_terms;
 DROP INDEX IF EXISTS subcohort_terms_cohort;
 DROP INDEX IF EXISTS subcohort_terms_termid;
-CREATE TABLE subcohort_terms_2 (
+CREATE TABLE subcohort_terms (
  cohort TEXT,
  term_id TEXT,
  count INT,

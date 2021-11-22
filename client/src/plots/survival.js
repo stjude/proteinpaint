@@ -1,4 +1,4 @@
-import { getCompInit } from '../common/rx.core'
+import { getCompInit, copyMerge } from '../common/rx.core'
 import { controlsInit } from './controls'
 import { select, event } from 'd3-selection'
 import { scaleLinear, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
@@ -8,6 +8,7 @@ import { rgb } from 'd3-color'
 import htmlLegend from '../html.legend'
 import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
+import { fillTermWrapper } from '../common/termsetting'
 
 class TdbSurvival {
 	constructor(opts) {
@@ -97,6 +98,9 @@ class TdbSurvival {
 				this.dom.holder.style('display', 'none')
 				return
 			}
+
+			if (this.dom.header) this.dom.header.html(this.state.config.term.term.name + ` plot`)
+
 			Object.assign(this.settings, this.state.config.settings)
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
@@ -176,6 +180,8 @@ class TdbSurvival {
 }
 
 export const survivalInit = getCompInit(TdbSurvival)
+// this alias will allow abstracted dynamic imports
+export const componentInit = survivalInit
 
 function setRenderers(self) {
 	self.render = function() {
@@ -559,6 +565,55 @@ function setInteractivity(self) {
 			}
 		})
 	}
+}
+
+export async function getPlotConfig(opts, app) {
+	if (!opts.term) throw 'survival getPlotConfig: opts.term{} missing'
+	try {
+		await fillTermWrapper(opts.term, app.vocabApi)
+		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
+		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
+	} catch (e) {
+		throw `${e} [barchart getPlotConfig()]`
+	}
+
+	const config = {
+		id: opts.term.term.id,
+		settings: {
+			currViews: ['survival'],
+			controls: {
+				isOpen: false, // control panel is hidden by default
+				term2: null, // the previous overlay value may be displayed as a convenience for toggling
+				term0: null
+			},
+			survival: {
+				radius: 5,
+				ciVisible: false,
+				fill: '#fff',
+				stroke: '#000',
+				fillOpacity: 0,
+				chartMargin: 10,
+				svgw: 400,
+				svgh: 300,
+				svgPadding: {
+					top: 20,
+					left: 55,
+					right: 20,
+					bottom: 50
+				},
+				axisTitleFontSize: 16,
+				hidden: []
+			},
+			/* LEGACY SUPPORT 
+				 DELETE once all chart code is removed from the termdb app
+			*/
+			barchart: {},
+			cuminc: {}
+		}
+	}
+
+	// may apply term-specific changes to the default object
+	return copyMerge(config, opts)
 }
 
 function getPj(self) {
