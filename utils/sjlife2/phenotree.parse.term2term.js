@@ -146,7 +146,7 @@ const make_groupsetting = t => {
 								type: 'tvslst',
 								in: true,
 								join: '',
-								lst: [tvs_ctcaeGraded()]
+								lst: [tvs_grade1_9(t)]
 							},
 							// 2 - sjlife+ccss
 							{
