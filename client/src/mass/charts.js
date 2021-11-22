@@ -30,14 +30,14 @@ class MassCharts {
 			appState.termdbConfig &&
 			appState.termdbConfig.selectCohort &&
 			appState.termdbConfig.selectCohort.values[appState.activeCohort]
-		const cohortStr = activeCohort && [...activeCohort.keys].sort().join(',')
+		const cohortStr = (activeCohort && [...activeCohort.keys].sort().join(',')) || ''
+		const chartTypes = appState.termdbConfig.supportedChartTypes || {}
 
 		const state = {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			supportedChartTypes: (appState.termdbConfig.supportedChartTypes &&
-				appState.termdbConfig.supportedChartTypes[cohortStr]) || ['barchart']
+			supportedChartTypes: chartTypes[cohortStr] || ['barchart']
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
@@ -46,6 +46,7 @@ class MassCharts {
 	}
 
 	main() {
+		//this.dom.holder.style('display', 'block')
 		this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
 }

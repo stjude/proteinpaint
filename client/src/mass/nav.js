@@ -19,7 +19,6 @@ class TdbNav {
 		this.activeTab = 0
 		this.activeCohort = -1
 		this.searching = false
-		this.hideSubheader = false
 		this.samplecounts = {}
 		setInteractivity(this)
 		setRenderers(this)
@@ -28,7 +27,8 @@ class TdbNav {
 	async init(appState) {
 		try {
 			this.cohortFilter = getFilterItemByTag(appState.termfilter.filter, 'cohortFilter')
-			this.initUI()
+			this.initUI(appState)
+			this.initCohort(appState)
 			this.components = await multiInit({
 				/*	
 				DISABLE SEARCH, for now: 
@@ -70,7 +70,6 @@ class TdbNav {
 	}*/
 
 	getState(appState) {
-		this.cohortKey = appState.termdbConfig.selectCohort && appState.termdbConfig.selectCohort.term.id
 		return {
 			searching: this.searching, // for detection of internal state change
 			nav: appState.nav,
@@ -90,14 +89,13 @@ class TdbNav {
 		this.activeCohort = +this.state.activeCohort
 		this.filterUiRoot = getFilterItemByTag(this.state.filter, 'filterUiRoot')
 		this.cohortFilter = getFilterItemByTag(this.state.filter, 'cohortFilter')
-		if (!this.dom.cohortTable) this.initCohort()
-		if (this.cohortNames) {
-			this.activeCohortName = this.cohortNames[this.activeCohort]
-			if (this.activeCohort !== -1)
-				this.activeCohortLabel = this.state.termdbConfig.selectCohort.values[this.activeCohort].shortLabel
-		}
+		if (!this.dom.cohortTable)
+			if (this.cohortNames) {
+				this.activeCohortName = this.cohortNames[this.activeCohort]
+				if (this.activeCohort !== -1)
+					this.activeCohortLabel = this.state.termdbConfig.selectCohort.values[this.activeCohort].shortLabel
+			}
 		this.filterJSON = JSON.stringify(this.state.filter)
-		//this.hideSubheader = false
 
 		if (this.state.nav.header_mode === 'with_tabs') {
 			if (!(this.activeCohortName in this.samplecounts)) {
@@ -121,7 +119,7 @@ class TdbNav {
 export const navInit = getCompInit(TdbNav)
 
 function setRenderers(self) {
-	self.initUI = () => {
+	self.initUI = appState => {
 		const header = self.opts.holder.append('div')
 		self.dom = {
 			holder: self.opts.holder,
@@ -142,13 +140,12 @@ function setRenderers(self) {
 				.style('vertical-align', 'top'),
 			subheaderDiv: self.opts.holder
 				.append('div')
-				.style('display', 'none')
+				.style('display', 'block')
 				.style('padding-top', '5px')
 				.style('border-bottom', '1px solid #000'),
 			tip: new Menu({ padding: '5px' })
 		}
 
-		const appState = self.app.getState()
 		if (self.opts.header_mode === 'with_cohortHtmlSelect') {
 			// not part of filter div
 			self.dom.cohortStandaloneDiv = header
@@ -183,12 +180,16 @@ function setRenderers(self) {
 		})
 
 		const table = self.dom.tabDiv.append('table').style('border-collapse', 'collapse')
-		self.tabs = [
-			{ top: 'CHARTS', mid: 'NONE', btm: '' },
-			{ top: 'COHORT', mid: 'NONE', btm: '' }, //, hidetab: !self.state.termdbConfig.selectCohort },
-			{ top: 'FILTER', mid: 'NONE', btm: '' },
-			{ top: 'CART', mid: 'NONE', btm: '' }
-		]
+		const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
+		const cohortTab = { top: 'COHORT', mid: 'NONE', btm: '', subheader: 'cohort' }
+		const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
+		const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
+		self.tabs = appState.termdbConfig.selectCohort
+			? [chartTab, cohortTab, filterTab, cartTab]
+			: [chartTab, filterTab, cartTab]
+
+		// using a table layout for tabs, iterate through each tab
+		// once for each of [top, mid, btm] row
 		table
 			.selectAll('tr')
 			.data(['top', 'mid', 'btm'])
@@ -197,11 +198,9 @@ function setRenderers(self) {
 			.style('font-size', (d, i) => (i == 1 ? '20px' : '12px'))
 			.selectAll('td')
 			.data((key, i) =>
-				self.tabs
-					.filter(d => !d.hidetab)
-					.map((row, colNum) => {
-						return { rowNum: i, key, colNum, label: row[key] }
-					})
+				self.tabs.map((row, colNum) => {
+					return { rowNum: i, key, colNum, label: row[key], subheader: row.subheader }
+				})
 			)
 			.enter()
 			.append('td')
@@ -219,38 +218,31 @@ function setRenderers(self) {
 
 		self.dom.trs = table.selectAll('tr')
 		self.dom.tds = table.selectAll('td')
-		self.subheaderKeys = ['charts', 'cohort', 'filter', 'cart']
+		self.subheaderKeys = self.tabs.map(d => d.subheader)
 
 		self.dom.sessionDiv
 			.append('button')
 			.html('Share')
 			.on('click', self.getSessionUrl)
 	}
+
 	self.updateUI = () => {
 		const selectCohort = self.state.termdbConfig.selectCohort
 		self.dom.searchDiv.style('display', selectCohort && self.activeCohort == -1 ? 'none' : 'inline-block')
 		self.dom.holder.style('margin-bottom', self.state.nav.header_mode === 'with_tabs' ? '20px' : '')
 		self.dom.header.style('border-bottom', self.state.nav.header_mode === 'with_tabs' ? '1px solid #000' : '')
 		self.dom.tds
-			.style('display', d =>
-				(self.activeCohort !== -1 || !selectCohort) && d.colNum !== 0
-					? ''
-					: !selectCohort && d.colNum === 0
-					? 'none'
-					: d.colNum === 0 || self.activeCohort !== -1
-					? ''
-					: 'none'
-			)
-			.style('color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#000' : '#aaa'))
-			.style('background-color', d => (d.colNum == self.activeTab && !self.hideSubheader ? '#ececec' : 'transparent'))
+			.style('display', '')
+			.style('color', d => (d.colNum == self.activeTab ? '#000' : '#aaa'))
+			.style('background-color', d => (d.colNum == self.activeTab ? '#ececec' : 'transparent'))
 			.html(function(d, i) {
 				if (d.key == 'top') return this.innerHTML
-				// the column index number for the cohort tab
-				if (d.colNum === 0) {
+
+				if (d.subheader === 'charts') {
 					const n = self.state.plots.length
 					if (d.key == 'mid') return !n ? 'NONE' : n
 					else return ''
-				} else if (d.colNum === 1) {
+				} else if (d.subheader === 'cohort') {
 					if (self.activeCohortName && self.activeCohortName in self.samplecounts) {
 						return d.key == 'top'
 							? this.innerHTML
@@ -260,7 +252,7 @@ function setRenderers(self) {
 					} else {
 						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
 					}
-				} else if (d.colNum === 2) {
+				} else if (d.subheader === 'filter') {
 					const filter = self.filterUiRoot ? self.filterUiRoot : { lst: [] }
 					if (filter.lst.length === 0) {
 						return d.key === 'mid' ? 'NONE' : '&nbsp;'
@@ -272,36 +264,11 @@ function setRenderers(self) {
 				}
 			})
 
-		self.dom.subheaderDiv.style(
-			'display',
-			self.hideSubheader
-				? 'none'
-				: self.state.nav.header_mode !== 'with_tabs' && self.activeTab !== 1
-				? 'none'
-				: 'block'
-		)
-
 		const visibleSubheaders = []
 		for (const key in self.dom.subheader) {
-			const display =
-				/*key == 'cohort' && self.prevCohort == -1 && self.activeCohort != -1
-					? 'none'
-					:*/ key == 'search' ||
-				self.activeTab == self.subheaderKeys.indexOf(key)
-					? 'block'
-					: 'none'
-
-			self.dom.subheader[key].style('display', display)
-			if (display != 'none' && key != 'search') visibleSubheaders.push(key)
+			self.dom.subheader[key].style('display', self.tabs[self.activeTab].subheader === key ? 'block' : 'none')
 		}
-		self.dom.subheaderDiv.style(
-			'border-bottom',
-			self.state.nav.header_mode == 'with_tabs' &&
-				visibleSubheaders.length &&
-				(self.activeCohort != -1 || !selectCohort)
-				? '1px solid #000'
-				: ''
-		)
+
 		if (self.highlightCohortBy && self.activeCohort != -1) {
 			const activeCohort = selectCohort.values[self.activeCohort]
 			const activeSelector = activeCohort[self.highlightCohortBy]
@@ -320,10 +287,10 @@ function setRenderers(self) {
 		}
 	}
 
-	self.initCohort = () => {
-		const selectCohort = self.state.termdbConfig.selectCohort
+	self.initCohort = appState => {
+		const selectCohort = appState.termdbConfig.selectCohort
 		if (!selectCohort) {
-			if (self.activeTab === 0) self.activeTab = 1
+			if (self.activeTab === 1) self.activeTab = 0
 			return
 		}
 		self.dom.tds.filter(d => d.colNum === 0).style('display', '')
@@ -409,7 +376,6 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.setTab = d => {
 		if (d.colNum == self.activeTab && !self.searching) {
-			self.hideSubheader = /*self.prevCohort != -1 &&*/ !self.hideSubheader
 			self.prevCohort = self.activeCohort
 			self.updateUI()
 			// since the app.dispatch() is not called directly,
@@ -419,7 +385,6 @@ function setInteractivity(self) {
 		}
 		self.activeTab = d.colNum
 		self.searching = false
-		self.hideSubheader = false
 		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
 	}
 

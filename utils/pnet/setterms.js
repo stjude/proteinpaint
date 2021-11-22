@@ -9,25 +9,27 @@ const cn = new bettersqlite('db', {
 
 const annoSamples = cn.prepare(`SELECT distinct(sample) FROM annotations`).all()
 for (const sample of annoSamples) {
+	// clean up the sample name
 	const sname = sample.sample
 		.split(';')[0]
 		.trim()
 		.split('_')[0]
 		.trim()
 	if (sname != sample.sample) {
-		cn.prepare(`UPDATE annotations SET sample=? WHERE sample=?`).run([sname, sname])
+		cn.prepare(`UPDATE annotations SET sample=? WHERE sample=?`).run([sname, sample.sample])
 	}
 }
 
 const survSamples = cn.prepare(`SELECT distinct(sample) FROM survival`).all()
 for (const sample of survSamples) {
+	// clean up the sample name
 	const sname = sample.sample
 		.split(';')[0]
 		.trim()
 		.split('_')[0]
 		.trim()
 	if (sname != sample.sample) {
-		cn.prepare(`UPDATE survival SET sample=? WHERE sample=?`).run([sname, sname])
+		cn.prepare(`UPDATE survival SET sample=? WHERE sample=?`).run([sname, sample.sample])
 	}
 }
 
@@ -41,21 +43,23 @@ for (const term of annoTerms) {
 		const bins = {
 			default: initBinConfig(vals)
 		}
+		const type = vals.filter(Number.isInteger).length == vals.length ? 'integer' : 'float'
 		const jsondata = JSON.stringify({
-			type: vals.filter(Number.isInteger).length == vals.length ? 'integer' : 'float',
+			type,
 			name: term.id,
 			bins,
 			isleaf: true
 		})
 
-		cn.prepare(`UPDATE terms SET jsondata=? WHERE id=?`).run([jsondata, term.id])
+		cn.prepare(`UPDATE terms SET jsondata=?, type=?, isleaf=? WHERE id=?`).run([jsondata, type, 1, term.id])
 	} else {
 		const termvals = {}
 		for (const v of values) {
 			termvals[v] = { key: v, label: v }
 		}
+		const type = 'categorical'
 		const jsondata = JSON.stringify({
-			type: 'categorical',
+			type,
 			name: term.id,
 			values: termvals,
 			groupsetting: {
@@ -64,20 +68,21 @@ for (const term of annoTerms) {
 			isleaf: true
 		})
 
-		cn.prepare(`UPDATE terms SET jsondata=? WHERE id=?`).run([jsondata, term.id])
+		cn.prepare(`UPDATE terms SET jsondata=?, type=?, isleaf=? WHERE id=?`).run([jsondata, type, 1, term.id])
 	}
 }
 
 const survRoot = 'Survival outcome'
 const survTerms = cn.prepare(`SELECT distinct(term_id) as id FROM survival`).all()
 for (const term of survTerms) {
+	const type = 'survival'
 	const jsondata = JSON.stringify({
-		type: 'survival',
+		type,
 		name: term.id,
 		isleaf: true,
 		unit: 'days'
 	})
-	cn.prepare(`UPDATE terms SET jsondata=? WHERE id=?`).run([jsondata, term.id])
+	cn.prepare(`UPDATE terms SET jsondata=?, type=?, isleaf=? WHERE id=?`).run([jsondata, type, 1, term.id])
 }
 
 function isNumeric(n) {
