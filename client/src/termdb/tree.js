@@ -329,7 +329,6 @@ function setRenderers(self) {
 			infoIcon_div = div.append('div').style('display', 'inline-block')
 		}
 		if (graphable(term)) {
-			console.log(331)
 			if (termIsDisabled) {
 				labeldiv
 					.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)

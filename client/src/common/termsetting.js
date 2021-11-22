@@ -433,6 +433,7 @@ export function termsetting_fill_q(q, term) {
 	if (term.type == 'categorical' || term.type == 'condition') {
 		set_hiddenvalues(q, term)
 		if (!q.groupsetting) q.groupsetting = {}
+		if (!term.groupsetting) term.groupsetting = {}
 		if (term.groupsetting.disabled) {
 			q.groupsetting.disabled = true
 			return
