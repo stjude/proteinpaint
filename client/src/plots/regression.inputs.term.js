@@ -406,7 +406,7 @@ async function maySetTwoGroups(tw, vocabApi, filter) {
 	if (computableCategories.length < 2) {
 		// TODO UI should reject this term and prompt user to select a different one
 		q.type = 'values'
-		input.term.error = 'less than 2 categories/grades - cannot create separate groups'
+		tw.error = 'less than 2 categories/grades - cannot create separate groups'
 		return
 	}
 	if (computableCategories.length == 2) {
