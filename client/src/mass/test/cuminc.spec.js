@@ -6,11 +6,10 @@ const helpers = require('../../../test/front.helpers.js')
  reusable helper functions
 **************************/
 
-const runpp = helpers.getRunPp('termdb', {
+const runpp = helpers.getRunPp('mass', {
 	state: {
 		dslabel: 'TermdbTest',
 		genome: 'hg38'
-		//nav: { header_mode: 'with_tabs' }
 	},
 	debug: 1
 })
@@ -23,35 +22,20 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('basic cuminc plot', function(test) {
+tape('basic cuminc cuminc', function(test) {
 	test.timeoutAfter(2000)
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Clinically-assessed Variables',
-					'ctcae_graded',
-					'Cardiovascular System',
-					'Arrhythmias',
-					'Cardiac dysrhythmia'
-				],
-				visiblePlotIds: ['Cardiac dysrhythmia'],
-				plots: {
-					'Cardiac dysrhythmia': {
-						term: {
-							id: 'Cardiac dysrhythmia',
-							term: termjson['Cardiac dysrhythmia'],
-							q: { bar_by_grade: true, value_by_max_grade: true }
-						},
-						settings: {
-							currViews: ['cuminc']
-						}
-					}
+			plots: [{
+				chartType: 'cuminc',
+				term: {
+					id: 'Cardiac dysrhythmia',
+					term: termjson['Cardiac dysrhythmia'],
+					q: { bar_by_grade: true, value_by_max_grade: true }
 				}
-			}
+			}]
 		},
-		plot: {
+		cuminc: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -59,8 +43,8 @@ tape('basic cuminc plot', function(test) {
 	})
 
 	let cumincDiv
-	async function runTests(plot) {
-		cumincDiv = plot.Inner.components.cuminc.Inner.dom.chartsDiv
+	async function runTests(cuminc) {
+		cumincDiv = cuminc.Inner.dom.chartsDiv
 		test.equal(cumincDiv && cumincDiv.selectAll('.sjpcb-cuminc-series').size(), 1, 'should render 1 cuminc series g')
 		test.equal(
 			cumincDiv && cumincDiv.selectAll('.sjpcb-cuminc-series path').size(),

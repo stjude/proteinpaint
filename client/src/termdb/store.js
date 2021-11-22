@@ -1,6 +1,5 @@
 import * as rx from '../common/rx.core'
 import { root_ID } from './tree'
-import { plotConfig } from './plot'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
@@ -17,11 +16,8 @@ const defaultState = {
 	activeCohort: 0,
 	tree: {
 		exclude_types: [],
-		expandedTermIds: [],
-		visiblePlotIds: []
-		// plots: {} // deprecated but back-supported, use the root plots[] array instead
+		expandedTermIds: []
 	},
-	plots: [],
 	infos: {},
 	search: { isVisible: true },
 	termfilter: {
@@ -77,38 +73,6 @@ class TdbStore {
 
 	async init() {
 		this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
-
-		// support any legacy examples and tests that use the deprecated state.tree.plots object,
-		// by converting to a state.plots array
-		if (this.state.tree.plots) {
-			for (const plotId in this.state.tree.plots) {
-				const plot = this.state.tree.plots[plotId]
-				const plotCopy = this.state.plots.find(p => p.id === plotId)
-				if (plotCopy && plotCopy != plot) {
-					throw `Plot ID conflict in deprecated state.tree.plots`
-				}
-				plot.id = plotId
-				this.state.plots.push(plot)
-			}
-			delete this.state.tree.plots
-		}
-
-		for (const savedPlot of this.state.plots) {
-			// .term{} is required, if missing, add with plotId
-			if (!savedPlot.term) savedPlot.term = {}
-			if (!savedPlot.term.id) savedPlot.term.id = savedPlot.id
-			// .term2 and term0 are optional, but .id is required as that's a different term than plotId
-			if (savedPlot.term2 && !savedPlot.term2.id) delete savedPlot.term2
-			if (savedPlot.term0 && !savedPlot.term0.id) delete savedPlot.term0
-			for (const t of ['term', 'term2', 'term0']) {
-				if (!savedPlot[t]) continue
-				savedPlot[t].term = await this.app.vocabApi.getterm(savedPlot[t].id)
-			}
-			const i = this.state.plots.indexOf(savedPlot)
-			this.state.plots[i] = plotConfig(savedPlot, await this.api.copyState())
-			if (!('id' in this.state.plots[i])) this.state.plots[i].id = '_AUTOID_' + i
-			this.adjustPlotCurrViews(this.state.plots[i])
-		}
 
 		// maybe no need to provide term filter at this query
 		let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
@@ -178,23 +142,6 @@ class TdbStore {
 			}
 		}
 	}
-
-	adjustPlotCurrViews(plotConfig) {
-		if (!plotConfig) return
-		const currViews = plotConfig.settings.currViews
-		if (plotConfig.chartType == 'regression') {
-			plotConfig.settings.currViews = ['regression']
-		}
-		if (currViews.includes('table') && !plotConfig.term2) {
-			plotConfig.settings.currViews = ['barchart']
-		}
-		if (
-			currViews.includes('boxplot') &&
-			(!plotConfig.term2 || (plotConfig.term2.term.type !== 'integer' && plotConfig.term2.term.type !== 'float'))
-		) {
-			plotConfig.settings.currViews = ['barchart']
-		}
-	}
 }
 
 /*
@@ -212,9 +159,6 @@ TdbStore.prototype.actions = {
 		// initial render is not meant to be modified yet
 		//
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
-		for (const plot of this.state.plots) {
-			this.adjustPlotCurrViews(plot)
-		}
 	},
 	tab_set(action) {
 		this.state.nav.activeTab = action.activeTab
@@ -252,31 +196,6 @@ TdbStore.prototype.actions = {
 
 	info_collapse(action) {
 		this.state.infos[action.term.id].isVisible = false
-	},
-
-	async plot_show(action) {
-		if (!this.state.plots.find(p => p.id == action.id)) {
-			this.state.plots.push(plotConfig({ id: action.id, term: { term: action.term } }, await this.api.copyState()))
-		}
-		if (!this.state.tree.visiblePlotIds.includes(action.id)) {
-			this.state.tree.visiblePlotIds.push(action.id)
-		}
-	},
-
-	plot_hide(action) {
-		const i = this.state.tree.visiblePlotIds.indexOf(action.id)
-		if (i != -1) {
-			this.state.tree.visiblePlotIds.splice(i, 1)
-		}
-	},
-
-	plot_edit(action) {
-		const plot = this.state.plots.find(p => p.id === action.id)
-		if (plot) {
-			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
-			validatePlot(plot, this.app.vocabApi)
-		}
-		this.adjustPlotCurrViews(plot)
 	},
 
 	filter_replace(action) {

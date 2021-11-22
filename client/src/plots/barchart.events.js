@@ -4,6 +4,7 @@ import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normal
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
+	self.dom.tip = tip
 	const s = self.settings
 
 	function barLabelClickHandler() {

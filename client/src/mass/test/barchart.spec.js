@@ -3,19 +3,18 @@ const tape = require('tape')
 const termjson = require('../../../test/testdata/termjson').termjson
 const helpers = require('../../../test/front.helpers.js')
 const getFilterItemByTag = require('../../common/filter').getFilterItemByTag
-const vocabData = require('./vocabData')
+const vocabData = require('../../termdb/test/vocabData')
 
 /*************************
  reusable helper functions
 **************************/
 
-const runpp = helpers.getRunPp('termdb', {
+const runpp = helpers.getRunPp('mass', {
 	state: {
 		vocab: {
 			dslabel: 'TermdbTest',
 			genome: 'hg38'
-		},
-		nav: { header_mode: 'with_tabs' }
+		}
 	},
 	debug: 1
 })
@@ -37,39 +36,33 @@ tape('single barchart, categorical bars', function(test) {
 
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
-				visiblePlotIds: ['diaggrp'],
-				plots: {
-					diaggrp: {
-						term: {
-							id: 'diaggrp'
-						},
-						settings: {
-							currViews: ['barchart']
-						}
-					}
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					id: 'diaggrp'
+				},
+				settings: {
+					currViews: ['barchart']
 				}
-			}
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	function runTests(plot) {
-		plot.on('postRender.test', null)
-		testBarCount(plot)
-		testAxisDimension(plot)
-		if (test._ok) plot.Inner.app.destroy()
+	function runTests(barchart) {
+		testBarCount(barchart)
+		testAxisDimension(barchart)
+		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 
 	let barDiv
-	function testBarCount(plot) {
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+	function testBarCount(barchart) {
+		barDiv = barchart.Inner.dom.barDiv
 		const minBars = 5
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
@@ -77,7 +70,7 @@ tape('single barchart, categorical bars', function(test) {
 		test.equal(numBars, numOverlays, 'should have equal numbers of bars and overlays')
 	}
 
-	function testAxisDimension(plot) {
+	function testAxisDimension(barchart) {
 		const xAxis = barDiv.select('.sjpcb-bar-chart-x-axis').node()
 		const seriesG = barDiv.select('.bars-series').node()
 		test.true(xAxis.getBBox().width >= seriesG.getBBox().width, 'x-axis width should be >= series width')
@@ -91,30 +84,22 @@ tape('single chart, with overlay', function(test) {
 	runpp({
 		state: {
 			termfilter,
-			nav: {
-				header_mode: 'search_only'
-			},
-			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
-				visiblePlotIds: ['diaggrp'],
-				plots: {
-					diaggrp: {
-						term: { id: 'diaggrp' },
-						term2: { id: 'agedx' },
-						settings: {
-							currViews: ['barchart'],
-							controls: {
-								term2: { id: 'agedx', term: termjson['agedx'] }
-							},
-							barchart: {
-								overlay: 'tree'
-							}
-						}
+			plots: [{
+				chartType: 'barchart',
+				term: { id: 'diaggrp' },
+				term2: { id: 'agedx' },
+				settings: {
+					currViews: ['barchart'],
+					controls: {
+						term2: { id: 'agedx', term: termjson['agedx'] }
+					},
+					barchart: {
+						overlay: 'tree'
 					}
 				}
-			}
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -122,11 +107,11 @@ tape('single chart, with overlay', function(test) {
 	})
 
 	let barDiv
-	async function runTests(plot) {
-		plot.on('postRender.test', null)
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+	async function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		barDiv = barchart.Inner.dom.barDiv
 		/*helpers
-			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test', preserve: true })
+			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test', preserve: true })
 			.run(testBarCount)
 			.run(testOverlayOrder)
 			.run(triggerUncomputableOverlay, 200)
@@ -134,19 +119,19 @@ tape('single chart, with overlay', function(test) {
 			.run(testHiddenOverlayData, 2000)
 			.done(test)*/
 
-		testBarCount(plot)
+		testBarCount()
 		await sleep(100)
-		testOverlayOrder(plot)
+		testOverlayOrder()
 		await sleep(1000)
-		triggerUncomputableOverlay(plot)
+		triggerUncomputableOverlay(barchart)
 		await sleep(1100)
-		clickLegendToHideOverlay(plot)
+		clickLegendToHideOverlay(barchart)
 		await sleep(1200)
-		testHiddenOverlayData(plot)
+		testHiddenOverlayData(barchart)
 		test.end()
 	}
 
-	function testBarCount(plot) {
+	function testBarCount() {
 		const minBars = 5
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
@@ -154,7 +139,7 @@ tape('single chart, with overlay', function(test) {
 		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
 	}
 
-	function testOverlayOrder(plot) {
+	function testOverlayOrder() {
 		const bars_grp = barDiv.selectAll('.bars-cell-grp')
 		const legend_rows = barDiv.selectAll('.legend-row')
 		//flag to indicate unordered bars
@@ -172,8 +157,8 @@ tape('single chart, with overlay', function(test) {
 		test.true(overlay_ordered, 'overlays order is same as legend')
 	}
 
-	function triggerUncomputableOverlay(plot) {
-		plot.Inner.app.dispatch({
+	function triggerUncomputableOverlay(barchart) {
+		barchart.Inner.app.dispatch({
 			type: 'plot_edit',
 			id: 'diaggrp',
 			config: {
@@ -188,8 +173,8 @@ tape('single chart, with overlay', function(test) {
 
 	const legendDataId = 'not exposed'
 
-	async function clickLegendToHideOverlay(plot) {
-		const legendDiv = plot.Inner.components.barchart.Inner.dom.legendDiv
+	async function clickLegendToHideOverlay(barchart) {
+		const legendDiv = barchart.Inner.dom.legendDiv
 		const item = legendDiv
 			.selectAll('.legend-row')
 			.filter(d => d.dataId == legendDataId)
@@ -197,8 +182,8 @@ tape('single chart, with overlay', function(test) {
 		item.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	async function testHiddenOverlayData(plot) {
-		const legendDiv = plot.Inner.components.barchart.Inner.dom.legendDiv
+	async function testHiddenOverlayData(barchart) {
+		const legendDiv = barchart.Inner.dom.legendDiv
 		const item = legendDiv.selectAll('.legend-row').filter(function(d) {
 			return +this.style.opacity < 1 && d.dataId == legendDataId
 		})
@@ -210,27 +195,22 @@ tape('multiple charts', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
-				visiblePlotIds: ['diaggrp'],
-				plots: {
-					diaggrp: {
-						term: { id: 'diaggrp' },
-						term0: { id: 'agedx' },
-						settings: {
-							currViews: ['barchart'],
-							barchart: {
-								divideBy: 'tree'
-							},
-							controls: {
-								term0: { id: 'agedx', term: termjson['agedx'] }
-							}
-						}
+			plots: [{
+				chartType: 'barchart',
+				term: { id: 'diaggrp' },
+				term0: { id: 'agedx' },
+				settings: {
+					currViews: ['barchart'],
+					barchart: {
+						divideBy: 'tree'
+					},
+					controls: {
+						term0: { id: 'agedx', term: termjson['agedx'] }
 					}
 				}
-			}
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': testNumCharts
 			}
@@ -238,57 +218,53 @@ tape('multiple charts', function(test) {
 	})
 
 	let barDiv
-	function testNumCharts(plot) {
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+	function testNumCharts(barchart) {
+		barDiv = barchart.Inner.dom.barDiv
 		const numCharts = barDiv.selectAll('.pp-sbar-div').size()
 		test.true(numCharts > 2, 'should have more than 2 charts by Age at Cancer Diagnosis')
-		if (test._ok) plot.Inner.app.destroy()
+		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
 
 tape('series visibility - q.hiddenValues', function(test) {
 	test.timeoutAfter(5000)
+	test.plan(2)
 
 	const hiddenValues = { 1: 1 }
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: ['root', 'Demographic Variables', 'sex'],
-				visiblePlotIds: ['sex'],
-				plots: {
-					sex: {
-						term: {
-							id: 'sex',
-							q: {
-								hiddenValues
-							}
-						},
-						settings: { currViews: ['barchart'] }
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					id: 'sex',
+					q: {
+						hiddenValues
 					}
-				}
-			}
+				},
+				settings: { currViews: ['barchart'] }
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': testHiddenValues
 			}
 		}
 	})
 
-	function testHiddenValues(plot) {
-		const bar = plot.Inner.components.barchart.Inner
+	function testHiddenValues(barchart) {
+		const bar = barchart.Inner
 		test.deepEqual(
 			bar.settings.exclude.cols.sort(),
 			Object.keys(hiddenValues).sort(),
 			'should have the correct number of hidden bars by q.hiddenValues'
 		)
 		test.equal(
-			plot.Inner.dom.viz.selectAll('.bars-cell').size(),
+			bar.dom.holder.selectAll('.bars-cell').size(),
 			bar.settings.cols.length - bar.settings.exclude.cols.length,
 			'should render the correct number of visible bars'
 		)
-		if (test._ok) plot.Inner.app.destroy()
+		if (test._ok) bar.app.destroy()
 		test.end()
 	}
 })
@@ -298,33 +274,22 @@ tape('series visibility - numeric', function(test) {
 
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Cancer-related Variables',
-					'Treatment',
-					'Chemotherapy, Lifetime',
-					'Alkylating Agents, mg/m2'
-				],
-				visiblePlotIds: ['aaclassic_5'],
-				plots: {
-					aaclassic_5: {
-						term: { id: 'aaclassic_5' },
-						settings: { currViews: ['barchart'] }
-					}
-				}
-			}
+			plots: [{
+				chartType: 'barchart',
+				term: { id: 'aaclassic_5' },
+				settings: { currViews: ['barchart'] }
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runNumericExcludedTests
 			}
 		}
 	})
 
-	function runNumericExcludedTests(plot) {
+	function runNumericExcludedTests(barchart) {
 		helpers
-			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
 			.run(testHiddenByValues)
 			.use(triggerHiddenLegendClick, { wait: 800 })
 			.to(testRevealedBar, { wait: 100 })
@@ -333,57 +298,57 @@ tape('series visibility - numeric', function(test) {
 			.done(test)
 	}
 
-	function testHiddenByValues(plot) {
-		const bar = plot.Inner.components.barchart.Inner
+	function testHiddenByValues(barchart) {
+		const bar = barchart.Inner
 		const excluded = bar.settings.exclude.cols
 		test.true(
 			excluded.length > 1 && excluded.length == Object.keys(bar.config.term.q.hiddenValues).length,
 			'should have the correct number of excluded numeric series by q.hiddenValues'
 		)
 		test.equal(
-			plot.Inner.components.barchart.Inner.dom.legendDiv.selectAll('.legend-row').size(),
+			bar.dom.legendDiv.selectAll('.legend-row').size(),
 			2,
 			'should display the correct number of hidden legend labels'
 		)
 	}
 
 	let numHiddenLegendBeforeClick
-	function triggerHiddenLegendClick(plot) {
-		numHiddenLegendBeforeClick = plot.Inner.components.barchart.Inner.settings.exclude.cols.length
-		plot.Inner.components.barchart.Inner.dom.legendDiv
+	function triggerHiddenLegendClick(barchart) {
+		numHiddenLegendBeforeClick = barchart.Inner.settings.exclude.cols.length
+		barchart.Inner.dom.legendDiv
 			.node()
 			.querySelector('.legend-row')
 			.click()
 	}
 
-	function testRevealedBar(plot) {
-		const bar = plot.Inner.components.barchart.Inner
+	function testRevealedBar(barchart) {
+		const bar = barchart.Inner
 		const excluded = bar.settings.exclude.cols
 		test.equal(excluded.length, numHiddenLegendBeforeClick - 1, 'should adjust the number of excluded series data')
 		test.equal(
-			plot.Inner.components.barchart.Inner.dom.legendDiv.selectAll('.legend-row').size(),
+			bar.dom.legendDiv.selectAll('.legend-row').size(),
 			1,
 			'should adjust the number of hidden legend labels after clicking to reveal one'
 		)
 	}
 
-	function triggerMenuClickToHide(plot) {
-		plot.Inner.components.barchart.Inner.dom.holder
+	function triggerMenuClickToHide(barchart) {
+		barchart.Inner.dom.holder
 			.selectAll('.bars-cell-grp')
 			.filter(d => d.seriesId == 'not exposed')
 			.node()
 			.dispatchEvent(new Event('click', { bubbles: true }))
 
-		plot.Inner.app.Inner.dom.tip.d
+		barchart.Inner.app.tip.d
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('Hide'))
 			.node()
 			.click()
 	}
 
-	function testHiddenLegendDisplay(plot) {
+	function testHiddenLegendDisplay(barchart) {
 		test.equal(
-			plot.Inner.components.barchart.Inner.dom.legendDiv
+			barchart.Inner.dom.legendDiv
 				.selectAll('.legend-row')
 				.filter(function() {
 					return this.innerHTML.includes('not exposed')
@@ -401,41 +366,30 @@ tape('series visibility - condition', function(test) {
 	const conditionHiddenValues = { '1: Mild': 1 }
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Clinically-assessed Variables',
-					'ctcae_graded',
-					'Cardiovascular System',
-					'Arrhythmias'
-				],
-				visiblePlotIds: ['Arrhythmias'],
-				plots: {
-					Arrhythmias: {
-						term: {
-							id: 'Arrhythmias',
-							q: {
-								hiddenValues: conditionHiddenValues
-							}
-						},
-						settings: { currViews: ['barchart'] }
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					id: 'Arrhythmias',
+					q: {
+						hiddenValues: conditionHiddenValues
 					}
-				}
-			}
+				},
+				settings: { currViews: ['barchart'] }
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': testConditionHiddenValues
 			}
 		}
 	})
 
-	function testConditionHiddenValues(plot) {
-		const bar = plot.Inner.components.barchart.Inner
+	function testConditionHiddenValues(barchart) {
+		const bar = barchart.Inner
 		const excluded = bar.settings.exclude.cols
 		// exclude "Unknown status" and "1: Mild"
 		test.equal(excluded.length, 2, 'should have the correct number of hidden condition bars by q.hiddenValues')
-		if (test._ok) plot.Inner.app.destroy()
+		if (test._ok) bar.app.destroy()
 		test.end()
 	}
 })
@@ -468,37 +422,32 @@ tape('single barchart, filtered', function(test) {
 					]
 				}
 			},
-			tree: {
-				expandedTermIds: ['root', 'Demographic Variables', 'sex'],
-				visiblePlotIds: ['sex'],
-				plots: {
-					sex: {
-						term: {
-							id: 'sex'
-						},
-						settings: {
-							currViews: ['barchart']
-						}
-					}
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					id: 'sex'
+				},
+				settings: {
+					currViews: ['barchart']
 				}
-			}
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	function runTests(plot) {
-		plot.on('postRender.test', null)
-		test.equal(plot.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length, 1, 'should show one bar series')
+	function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		test.equal(barchart.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length, 1, 'should show one bar series')
 		test.equal(
-			plot.Inner.dom.holder.node().querySelector('.bars-cell-grp').__data__.seriesId,
+			barchart.Inner.dom.holder.node().querySelector('.bars-cell-grp').__data__.seriesId,
 			'1',
 			'should show one bar series that matches filter value'
 		)
-		if (test._ok) plot.Inner.app.destroy()
+		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -513,27 +462,22 @@ tape('click non-group bar to add filter', function(test) {
 				activeCohort: 0
 			},
 			termfilter,
-			tree: {
-				expandedTermIds: ['root', 'Demographic Variables', 'Age (years)', 'agedx'],
-				visiblePlotIds: ['agedx'],
-				plots: {
-					agedx: {
-						term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.less },
-						term2: {
-							id: 'Arrhythmias',
-							term: termjson['Arrhythmias'],
-							q: {
-								hiddenValues: {
-									'Unknown status': 1
-								}
-							}
-						},
-						settings: { currViews: ['barchart'] }
+			plots: [{
+				chartType: 'barchart',
+				term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.less },
+				term2: {
+					id: 'Arrhythmias',
+					term: termjson['Arrhythmias'],
+					q: {
+						hiddenValues: {
+							'Unknown status': 1
+						}
 					}
-				}
-			}
+				},
+				settings: { currViews: ['barchart'] }
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -541,12 +485,12 @@ tape('click non-group bar to add filter', function(test) {
 	})
 
 	let barDiv
-	function runTests(plot) {
+	function runTests(barchart) {
 		if (barDiv) return
-		plot.Inner.bus.on('postRender.test', null)
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		barchart.Inner.bus.on('postRender.test', null)
+		barDiv = barchart.Inner.dom.barDiv
 		helpers
-			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
 			.run(triggerBarClick, { wait: 500 })
 			.use(triggerMenuClick, { wait: 300 })
 			.to(testTermValues, { wait: 1000 })
@@ -554,27 +498,27 @@ tape('click non-group bar to add filter', function(test) {
 	}
 
 	let clickedData, currData
-	function triggerBarClick(plot) {
+	function triggerBarClick(barchart) {
 		const elem = barDiv
 			.node()
 			.querySelector('.bars-cell')
 			.querySelector('rect')
 		clickedData = elem.__data__
-		currData = plot.Inner.components.barchart.Inner.currServerData
+		currData = barchart.Inner.currServerData
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function triggerMenuClick(plot) {
-		plot.Inner.app.Inner.dom.tip.d
+	function triggerMenuClick(barchart) {
+		barchart.Inner.app.tip.d
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('filter'))
 			.node()
 			.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function testTermValues(plot) {
-		const config = plot.Inner.state.config
-		const termfilter = plot.Inner.app.Inner.state.termfilter
+	function testTermValues(barchart) {
+		const config = barchart.Inner.state.config
+		const termfilter = barchart.Inner.app.Inner.state.termfilter
 		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
 			filter && filter.lst.length,
@@ -661,29 +605,24 @@ tape('click custom categorical group bar to add filter', function(test) {
 	runpp({
 		state: {
 			termfilter,
-			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
-				visiblePlotIds: ['diaggrp'],
-				plots: {
-					diaggrp: {
-						term: {
-							id: 'diaggrp',
-							term: termjson['diaggrp'],
-							q: {
-								groupsetting: {
-									disabled: false,
-									inuse: true,
-									//predefined_groupset_idx: INT,
-									customset
-								}
-							}
-						},
-						settings: { currViews: ['barchart'] }
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					id: 'diaggrp',
+					term: termjson['diaggrp'],
+					q: {
+						groupsetting: {
+							disabled: false,
+							inuse: true,
+							//predefined_groupset_idx: INT,
+							customset
+						}
 					}
-				}
-			}
+				},
+				settings: { currViews: ['barchart'] }
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -691,12 +630,12 @@ tape('click custom categorical group bar to add filter', function(test) {
 	})
 
 	let barDiv
-	function runTests(plot) {
+	function runTests(barchart) {
 		if (barDiv) return
-		plot.Inner.bus.on('postRender.test', null)
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		barchart.Inner.bus.on('postRender.test', null)
+		barDiv = barchart.Inner.dom.barDiv
 		helpers
-			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
 			.run(triggerBarClick, { wait: 600 })
 			.use(triggerMenuClick, { wait: 500 })
 			.to(testTermValues, { wait: 100 })
@@ -704,7 +643,7 @@ tape('click custom categorical group bar to add filter', function(test) {
 	}
 
 	let clickedData
-	function triggerBarClick(plot) {
+	function triggerBarClick(barchart) {
 		const elem = barDiv
 			.node()
 			.querySelector('.bars-cell')
@@ -713,18 +652,18 @@ tape('click custom categorical group bar to add filter', function(test) {
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function triggerMenuClick(plot) {
-		plot.Inner.app.Inner.dom.tip.d
+	function triggerMenuClick(barchart) {
+		barchart.Inner.app.tip.d
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('filter'))
 			.node()
 			.click() //dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function testTermValues(plot) {
-		const config = plot.Inner.state.config
-		const currData = plot.Inner.components.barchart.Inner.currServerData
-		const termfilter = plot.Inner.app.Inner.state.termfilter
+	function testTermValues(barchart) {
+		const config = barchart.Inner.state.config
+		const currData = barchart.Inner.currServerData
+		const termfilter = barchart.Inner.app.Inner.state.termfilter
 		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
 			filter && filter.lst.length,
@@ -797,37 +736,26 @@ tape('click custom subcondition group bar to add filter', function(test) {
 	runpp({
 		state: {
 			termfilter,
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Clinically-assessed Variables',
-					'ctcae_graded',
-					'Cardiovascular System',
-					'Arrhythmias'
-				],
-				visiblePlotIds: ['Arrhythmias'],
-				plots: {
-					Arrhythmias: {
-						term: {
-							id: 'Arrhythmias',
-							term: termjson['Arrhythmias'],
-							q: {
-								bar_by_children: true,
-								value_by_max_grade: 1,
-								groupsetting: {
-									disabled: false,
-									inuse: true,
-									//predefined_groupset_idx: INT,
-									customset
-								}
-							}
-						},
-						settings: { currViews: ['barchart'] }
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					id: 'Arrhythmias',
+					term: termjson['Arrhythmias'],
+					q: {
+						bar_by_children: true,
+						value_by_max_grade: 1,
+						groupsetting: {
+							disabled: false,
+							inuse: true,
+							//predefined_groupset_idx: INT,
+							customset
+						}
 					}
-				}
-			}
+				},
+				settings: { currViews: ['barchart'] }
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -835,12 +763,12 @@ tape('click custom subcondition group bar to add filter', function(test) {
 	})
 
 	let barDiv
-	function runTests(plot) {
+	function runTests(barchart) {
 		if (barDiv) return
-		plot.Inner.bus.on('postRender.test', null)
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+		barchart.Inner.bus.on('postRender.test', null)
+		barDiv = barchart.Inner.dom.barDiv
 		helpers
-			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
 			.run(triggerBarClick, { wait: 600 })
 			.use(triggerMenuClick, { wait: 500 })
 			.to(testTermValues, { wait: 100 })
@@ -848,7 +776,7 @@ tape('click custom subcondition group bar to add filter', function(test) {
 	}
 
 	let clickedData
-	function triggerBarClick(plot) {
+	function triggerBarClick(barchart) {
 		const elem = barDiv
 			.selectAll('.bars-cell')
 			.selectAll('rect')
@@ -858,18 +786,18 @@ tape('click custom subcondition group bar to add filter', function(test) {
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function triggerMenuClick(plot) {
-		plot.Inner.app.Inner.dom.tip.d
+	function triggerMenuClick(barchart) {
+		barchart.Inner.app.tip.d
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('filter'))
 			.node()
 			.click()
 	}
 
-	function testTermValues(plot) {
-		const config = plot.Inner.state.config
-		const currData = plot.Inner.components.barchart.Inner.currServerData
-		const termfilter = plot.Inner.app.Inner.state.termfilter
+	function testTermValues(barchart) {
+		const config = barchart.Inner.state.config
+		const currData = barchart.Inner.currServerData
+		const termfilter = barchart.Inner.app.Inner.state.termfilter
 		const filter = getFilterItemByTag(termfilter.filter, 'filterUiRoot')
 		test.equal(
 			filter && filter.lst.length,
@@ -893,22 +821,17 @@ tape('click custom subcondition group bar to add filter', function(test) {
 	}
 })
 
-tape('single chart, genotype overlay', function(test) {
+tape.skip('single chart, genotype overlay', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
-				visiblePlotIds: ['diaggrp'],
-				plots: {
-					diaggrp: {
-						term: { id: 'diaggrp', term: termjson['diaggrp'] },
-						term2: 'genotype',
-						settings: { currViews: ['barchart'] }
-					}
-				}
-			},
+			plots: [{
+				chartType: 'barchart',
+				term: { id: 'diaggrp', term: termjson['diaggrp'] },
+				term2: 'genotype',
+				settings: { currViews: ['barchart'] }
+			}],
 			ssid: {
 				mutation_name: 'TEST',
 				ssid: 'genotype-test.txt',
@@ -919,22 +842,22 @@ tape('single chart, genotype overlay', function(test) {
 				}
 			}
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': testBarCount
 			}
 		}
 	})
 
-	function testBarCount(plot) {
-		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+	function testBarCount(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		const minBars = 5
 		const expectedOverlays = 15
 		test.true(numBars > minBars, `should have more than ${minBars} Diagnosis Group bars`)
 		test.equal(numOverlays, expectedOverlays, `should have a total of ${expectedOverlays} overlays`)
-		if (test._ok) plot.Inner.app.destroy()
+		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -944,24 +867,12 @@ tape('numeric exclude range', function(test) {
 
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Cancer-related Variables',
-					'Treatment',
-					'Chemotherapy, Lifetime',
-					'Alkylating Agents, mg/m2',
-					'aaclassic_5'
-				],
-				visiblePlotIds: ['aaclassic_5'],
-				plots: {
-					aaclassic_5: {
-						term: { id: 'aaclassic_5', term: termjson['aaclassic_5'] },
-						term2: 'genotype',
-						settings: { currViews: ['barchart'] }
-					}
-				}
-			},
+			plots: [{
+				chartType: 'barchart',
+				term: { id: 'aaclassic_5', term: termjson['aaclassic_5'] },
+				term2: {id: 'sex'},
+				settings: { currViews: ['barchart'] }
+			}],
 			termfilter: {
 				filter: {
 					type: 'tvslst',
@@ -1003,18 +914,18 @@ tape('numeric exclude range', function(test) {
 			},
 			activeCohort: -1
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': testBarCount
 			}
 		}
 	})
 
-	function testBarCount(plot) {
-		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+	function testBarCount(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 2, 'should have 2 bars')
-		if (test._ok) plot.Inner.app.destroy()
+		test.equal(numBars, 8, 'should have 8 bars')
+		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -1024,22 +935,11 @@ tape('numeric filter - only special value', function(test) {
 
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Cancer-related Variables',
-					'Treatment',
-					'Chemotherapy, Lifetime',
-					'Alkylating Agents, mg/m2'
-				],
-				visiblePlotIds: ['aaclassic_5'],
-				plots: {
-					aaclassic_5: {
-						term: { id: 'aaclassic_5' },
-						settings: { currViews: ['barchart'] }
-					}
-				}
-			},
+			plots: [{
+				chartType: 'barchart',
+				term: { id: 'aaclassic_5' },
+				settings: { currViews: ['barchart'] }
+			}],
 			termfilter: {
 				filter: {
 					type: 'tvslst',
@@ -1057,47 +957,47 @@ tape('numeric filter - only special value', function(test) {
 				}
 			}
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runNumericValueTests
 			}
 		}
 	})
 
-	function runNumericValueTests(plot) {
+	function runNumericValueTests(barchart) {
 		helpers
-			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
 			//.run(testNoBar, { wait: 300 })
 			//.use(triggerHiddenLegendClick, { wait: 300 })
 			.run(testHasBar, { wait: 300 })
 			.done(test)
 	}
 
-	function testNoBar(plot) {
-		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+	function testNoBar(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(numBars, 0, 'should have 0 bar')
 	}
 
-	function triggerHiddenLegendClick(plot) {
-		plot.Inner.components.barchart.Inner.dom.legendDiv
+	function triggerHiddenLegendClick(barchart) {
+		barchart.Inner.dom.legendDiv
 			.node()
 			.querySelector('.legend-row')
 			.click()
 	}
 
-	function testHasBar(plot) {
-		const barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+	function testHasBar(barchart) {
+		const barDiv = barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(
 			numBars,
 			1,
-			'should have 1 bar, forced to be visible on first render to avoid confusion with a blank plot'
+			'should have 1 bar, forced to be visible on first render to avoid confusion with a blank barchart'
 		)
 	}
 })
 
-tape('custom vocab: categorical terms with numeric filter', test => {
+tape.skip('custom vocab: categorical terms with numeric filter', test => {
 	test.timeoutAfter(3000)
 
 	const custom_runpp = helpers.getRunPp('termdb', {
@@ -1127,38 +1027,33 @@ tape('custom vocab: categorical terms with numeric filter', test => {
 					]
 				}
 			},
-			tree: {
-				expandedTermIds: ['root', 'a'],
-				visiblePlotIds: ['c'],
-				plots: {
-					c: {
-						term: {
-							term: vocabData.terms.find(t => t.id == 'c')
-						},
-						settings: {
-							currViews: ['barchart']
-						}
-					}
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					term: vocabData.terms.find(t => t.id == 'c')
+				},
+				settings: {
+					currViews: ['barchart']
 				}
-			}
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	function runTests(plot) {
-		plot.on('postRender.test', null)
-		testBarCount(plot)
-		if (test._ok) plot.Inner.app.destroy()
+	function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		testBarCount(barchart)
+		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 
 	let barDiv
-	function testBarCount(plot) {
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+	function testBarCount(barchart) {
+		barDiv = barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.equal(numBars, 2, 'should have 2 bars')
@@ -1166,7 +1061,7 @@ tape('custom vocab: categorical terms with numeric filter', test => {
 	}
 })
 
-tape('custom vocab: numeric terms with categorical filter', test => {
+tape.skip('custom vocab: numeric terms with categorical filter', test => {
 	test.timeoutAfter(3000)
 	const vocab = vocabData.getExample()
 	const custom_runpp = helpers.getRunPp('termdb', {
@@ -1197,39 +1092,34 @@ tape('custom vocab: numeric terms with categorical filter', test => {
 					]
 				}
 			},
-			tree: {
-				expandedTermIds: ['root', 'a'],
-				visiblePlotIds: ['d'],
-				plots: {
-					d: {
-						term: {
-							term: dterm,
-							q: dterm.bins.default
-						},
-						settings: {
-							currViews: ['barchart']
-						}
-					}
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					term: dterm,
+					q: dterm.bins.default
+				},
+				settings: {
+					currViews: ['barchart']
 				}
-			}
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	function runTests(plot) {
-		plot.on('postRender.test', null)
-		testBarCount(plot)
-		if (test._ok) plot.Inner.app.destroy()
+	function runTests(barchart) {
+		barchart.on('postRender.test', null)
+		testBarCount(barchart)
+		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 
 	let barDiv
-	function testBarCount(plot) {
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+	function testBarCount(barchart) {
+		barDiv = barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.equal(numBars, 5, 'should have 5 bars')
@@ -1242,37 +1132,23 @@ tape('max number of bins: exceeded', test => {
 
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Cancer-related Variables',
-					'Treatment',
-					'Chemotherapy, Lifetime',
-					'Alkylating Agents, mg/m2',
-					'aaclassic_5'
-				],
-				visiblePlotIds: ['aaclassic_5'],
-				plots: {
-					aaclassic_5: {
-						term: {
-							term: {
-								id: 'aaclassic_5'
-							},
-							q: {
-								type: 'regular',
-								bin_size: 1000,
-								stopinclusive: true,
-								first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
-								numDecimals: 1,
-								last_bin: { start: 30000, bin: 'last', stopunbounded: true },
-								startinclusive: false
-							}
-						}
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					term: termjson['aaclassic_5'],
+					q: {
+						type: 'regular',
+						bin_size: 1000,
+						stopinclusive: true,
+						first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+						numDecimals: 1,
+						last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+						startinclusive: false
 					}
 				}
-			}
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -1280,29 +1156,29 @@ tape('max number of bins: exceeded', test => {
 	})
 
 	let barDiv
-	async function runTests(plot) {
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
-		testBarCount(plot)
-		triggerExceedMaxBin(plot)
+	async function runTests(barchart) {
+		barDiv = barchart.Inner.dom.barDiv
+		testBarCount(barchart)
+		triggerExceedMaxBin(barchart)
 		await sleep(1000)
-		testExceedMaxBin(plot)
-		if (test._ok) plot.Inner.app.destroy()
+		testExceedMaxBin(barchart)
+		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
 
-	function testBarCount(plot) {
+	function testBarCount(barchart) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 21, 'should have 21 age bars')
+		test.equal(numBars, 23, 'should have 23 age bars')
 	}
 
-	function triggerExceedMaxBin(plot) {
-		plot.Inner.app.dispatch({
+	function triggerExceedMaxBin(barchart) {
+		barchart.Inner.app.dispatch({
 			type: 'plot_edit',
 			id: 'aaclassic_5',
 			config: {
 				term: {
 					id: 'aaclassic_5',
-					term: plot.Inner.config.term.term,
+					term: barchart.Inner.config.term.term,
 					q: {
 						type: 'regular',
 						bin_size: 100,
@@ -1317,10 +1193,10 @@ tape('max number of bins: exceeded', test => {
 		})
 	}
 
-	function testExceedMaxBin(plot) {
+	function testExceedMaxBin(barchart) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 21, 'should still have 31 age bars and not re-render on error')
-		const errorbar = plot.Inner.app.Inner.dom.holder.node().querySelector('.sja_errorbar')
+		test.equal(numBars, 23, 'should still have 23 age bars and not re-render on error')
+		const errorbar = barchart.Inner.app.Inner.dom.holder.node().querySelector('.sja_errorbar')
 		test.true(errorbar && errorbar.innerText.includes('max_num_bins_reached'), 'should show a max number of bins error')
 	}
 })
@@ -1333,40 +1209,28 @@ tape('no visible series data, no overlay', function(test) {
 			nav: {
 				header_mode: 'search_only'
 			},
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Cancer-related Variables',
-					'Treatment',
-					'Chemotherapy, Lifetime',
-					'Platinum Agents, mg/m2',
-					'cisplateq_5'
-				],
-				visiblePlotIds: ['cisplateq_5'],
-				plots: {
-					cisplateq_5: {
-						term: {
-							id: 'cisplateq_5'
-						},
-						settings: {
-							currViews: ['barchart']
-						}
-					}
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					id: 'cisplateq_5'
+				},
+				settings: {
+					currViews: ['barchart']
 				}
-			}
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	function runTests(plot) {
-		plot.on('postRender.test', null)
+	function runTests(barchart) {
+		barchart.on('postRender.test', null)
 
 		helpers
-			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
 			.run(testBarCount)
 			.use(triggerHideBar, { wait: 1000 })
 			.to(testEmptyChart, { wait: 100 })
@@ -1376,8 +1240,8 @@ tape('no visible series data, no overlay', function(test) {
 	}
 
 	let barDiv
-	function testBarCount(plot) {
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+	function testBarCount(barchart) {
+		barDiv = barchart.Inner.dom.barDiv
 		const numBars = barDiv.node().querySelectorAll('.bars-cell-grp').length
 		test.equal(
 			numBars,
@@ -1385,45 +1249,45 @@ tape('no visible series data, no overlay', function(test) {
 			'should have 1 visible bar on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
 		)
 		test.equal(
-			plot.Inner.components.barchart.Inner.dom.banner.style('display'),
+			barchart.Inner.dom.banner.style('display'),
 			'none',
 			'should hide the banner when at least one chart is visible'
 		)
 	}
 
-	function triggerHideBar(plot) {
+	function triggerHideBar(barchart) {
 		barDiv
 			.node()
 			.querySelector('.bars-rowlabels text')
 			.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function testEmptyChart(plot) {
+	function testEmptyChart(barchart) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(numBars, 0, 'should have 0 visible bars when the only visible row label is clicked')
 		test.equal(
-			plot.Inner.components.barchart.Inner.dom.banner.style('display'),
+			barchart.Inner.dom.banner.style('display'),
 			'block',
 			'should display a banner when no charts are visible'
 		)
 		test.true(
-			plot.Inner.components.barchart.Inner.dom.banner.text().includes('No visible'),
+			barchart.Inner.dom.banner.text().includes('No visible'),
 			'should label the banner with no visible data'
 		)
 	}
 
-	function triggerUnhideBar(plot) {
-		plot.Inner.components.barchart.Inner.dom.legendDiv
+	function triggerUnhideBar(barchart) {
+		barchart.Inner.dom.legendDiv
 			.node()
 			.querySelector('.legend-row')
 			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function testUnhiddenChart(plot) {
+	function testUnhiddenChart(barchart) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(numBars, 1, 'should have 1 visible bar1 when the hidden row legend is clicked')
 		/*test.equal(
-			plot.Inner.components.barchart.Inner.dom.banner.style("display"),
+			barchart.Inner.dom.banner.style("display"),
 			'none',
 			'should hide the banner when the chart is unhidden'
 		)*/
@@ -1438,43 +1302,31 @@ tape('all hidden + with overlay, legend click', function(test) {
 			nav: {
 				header_mode: 'search_only'
 			},
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Cancer-related Variables',
-					'Treatment',
-					'Chemotherapy, Lifetime',
-					'Platinum Agents, mg/m2',
-					'cisplateq_5'
-				],
-				visiblePlotIds: ['cisplateq_5'],
-				plots: {
-					cisplateq_5: {
-						term: {
-							id: 'cisplateq_5'
-						},
-						term2: {
-							id: 'sex'
-						},
-						settings: {
-							currViews: ['barchart']
-						}
-					}
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					id: 'cisplateq_5'
+				},
+				term2: {
+					id: 'sex'
+				},
+				settings: {
+					currViews: ['barchart']
 				}
-			}
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	function runTests(plot) {
-		plot.on('postRender.test', null)
+	function runTests(barchart) {
+		barchart.on('postRender.test', null)
 
 		helpers
-			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test' })
+			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
 			.run(testBarCount)
 			.run(triggerBarClick)
 			.use(triggerMenuClick, { wait: 1100 })
@@ -1487,8 +1339,8 @@ tape('all hidden + with overlay, legend click', function(test) {
 	}
 
 	let barDiv
-	function testBarCount(plot) {
-		barDiv = plot.Inner.components.barchart.Inner.dom.barDiv
+	function testBarCount(barchart) {
+		barDiv = barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(
 			numBars,
@@ -1502,14 +1354,14 @@ tape('all hidden + with overlay, legend click', function(test) {
 			'should have 2 visible overlays on first render when Object.keys(q.hiddenValues).length > chart.serieses.length'
 		)
 		test.equal(
-			plot.Inner.components.barchart.Inner.dom.banner.style('display'),
+			barchart.Inner.dom.banner.style('display'),
 			'none',
 			'should hide the banner when at least one chart is visible'
 		)
 	}
 
 	let clickedData
-	function triggerBarClick(plot) {
+	function triggerBarClick(barchart) {
 		const elem = barDiv
 			.node()
 			.querySelector('.bars-cell')
@@ -1517,44 +1369,44 @@ tape('all hidden + with overlay, legend click', function(test) {
 		elem.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function triggerMenuClick(plot) {
-		plot.Inner.app.Inner.dom.tip.d
+	function triggerMenuClick(barchart) {
+		barchart.Inner.app.tip.d
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('Hide "Female"'))
 			.node()
 			.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function testRemovedOverlayByMenu(plot) {
+	function testRemovedOverlayByMenu(barchart) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay')
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.equal(numOverlays, 1, 'should have 1 visible overlay left after hiding an overlay')
 	}
 
-	function triggerUnhideOverlay(plot) {
-		plot.Inner.components.barchart.Inner.dom.legendDiv
+	function triggerUnhideOverlay(barchart) {
+		barchart.Inner.dom.legendDiv
 			.selectAll('.legend-row')
 			.filter(d => d.dataId == '2')
 			.node()
 			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function testUnhiddenOverlay(plot) {
+	function testUnhiddenOverlay(barchart) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(numBars, 1, 'should have 1 visible bar after unhiding an overlay')
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
 		test.equal(numOverlays, 2, 'should have 2 visible overlays after unhiding an overlay')
 	}
 
-	function triggerOverlayHideByLegendClick(plot) {
-		plot.Inner.components.barchart.Inner.dom.legendDiv
+	function triggerOverlayHideByLegendClick(barchart) {
+		barchart.Inner.dom.legendDiv
 			.select('.legend-row')
 			.node()
 			.firstChild.dispatchEvent(new Event('click', { bubbles: true }))
 	}
 
-	function testhiddenOverlayByLegendClick(plot) {
+	function testhiddenOverlayByLegendClick(barchart) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
 		test.equal(numBars, 1, 'should have 1 visible bar after hiding an overlay by legend click')
 		const numOverlays = barDiv.selectAll('.bars-cell').size()
@@ -1562,7 +1414,7 @@ tape('all hidden + with overlay, legend click', function(test) {
 	}
 })
 
-tape('unhidden chart and legend', test => {
+tape.skip('unhidden chart and legend', test => {
 	test.timeoutAfter(8000)
 
 	runpp({
@@ -1570,46 +1422,32 @@ tape('unhidden chart and legend', test => {
 			nav: {
 				header_mode: 'search_only'
 			},
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Cancer-related Variables',
-					'Treatment',
-					'Chemotherapy, Lifetime',
-					'Alkylating Agents, mg/m2',
-					'aaclassic_5'
-				],
-				visiblePlotIds: ['aaclassic_5'],
-				plots: {
-					aaclassic_5: {
-						term: {
-							term: {
-								id: 'aaclassic_5'
-							},
-							q: {
-								type: 'regular',
-								bin_size: 10000,
-								stopinclusive: true,
-								first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
-								numDecimals: 1,
-								last_bin: { start: 30000, bin: 'last', stopunbounded: true },
-								startinclusive: false
-							}
-						}
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					term: termjson['aaclassic_5'],
+					q: {
+						type: 'regular',
+						bin_size: 10000,
+						stopinclusive: true,
+						first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+						numDecimals: 1,
+						last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+						startinclusive: false
 					}
 				}
-			}
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	async function runTests(plot) {
+	async function runTests(barchart) {
 		helpers
-			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test', preserve: true })
+			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test', preserve: true })
 			.run(testVisibleChart)
 			.run(triggerHideChart, 300)
 			.run(testHiddenChart, 300)
@@ -1618,49 +1456,49 @@ tape('unhidden chart and legend', test => {
 			.done(test)
 	}
 
-	function testVisibleChart(plot) {
+	function testVisibleChart(barchart) {
 		test.notEqual(
-			plot.Inner.dom.holder.node().style.display,
+			barchart.Inner.dom.holder.node().style.display,
 			'none',
 			'should start with both visible and not overlapping'
 		)
 	}
 
-	function triggerHideChart(plot) {
-		plot.Inner.app.dispatch({
+	function triggerHideChart(barchart) {
+		barchart.Inner.app.dispatch({
 			type: 'plot_hide',
 			id: 'aaclassic_5'
 		})
 	}
 
-	function testHiddenChart(plot) {
-		test.equal(plot.Inner.dom.holder.node().style.display, 'none', 'should trigger hiding both chart and legend')
+	function testHiddenChart(barchart) {
+		test.equal(barchart.Inner.dom.holder.node().style.display, 'none', 'should trigger hiding both chart and legend')
 	}
 
-	function triggerShowChart(plot) {
+	function triggerShowChart(barchart) {
 		// issue to fix: clicking the view button will cause the stat table
 		// to overlap from the bottom of the chart
-		plot.Inner.dom.holder
+		barchart.Inner.dom.holder
 			.node()
 			.parentNode.querySelector('.termview')
 			.click()
 
 		// same result when using dispatch
-		/*plot.Inner.app.dispatch({
+		/*barchart.Inner.app.dispatch({
 			type: 'plot_show',
 			id: 'aaclassic_5'
 		})*/
 	}
 
-	function testReshownChart(plot) {
+	function testReshownChart(barchart) {
 		test.true(
-			+plot.Inner.dom.holder.select('svg').property('height').baseVal.value > 100,
-			'should not have a small barchart svg when reshowing a plot, not overlap with legend'
+			+barchart.Inner.dom.holder.select('svg').property('height').baseVal.value > 100,
+			'should not have a small barchart svg when reshowing a barchart, not overlap with legend'
 		)
 	}
 })
 
-tape('customized bins', test => {
+tape.skip('customized bins', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -1668,37 +1506,23 @@ tape('customized bins', test => {
 			nav: {
 				header_mode: 'search_only'
 			},
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Cancer-related Variables',
-					'Treatment',
-					'Chemotherapy, Lifetime',
-					'Alkylating Agents, mg/m2',
-					'aaclassic_5'
-				],
-				visiblePlotIds: ['aaclassic_5'],
-				plots: {
-					aaclassic_5: {
-						term: {
-							term: {
-								id: 'aaclassic_5'
-							}
-						}
-					}
+			plots: [{
+				chartType: 'barchart',
+				term: {
+					term: termjson['aaclassic_5']
 				}
-			}
+			}]
 		},
-		plot: {
+		barchart: {
 			callbacks: {
 				'postRender.test': runTests
 			}
 		}
 	})
 
-	async function runTests(plot) {
+	async function runTests(barchart) {
 		helpers
-			.rideInit({ arg: plot, bus: plot, eventType: 'postRender.test', preserve: true })
+			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test', preserve: true })
 			.run(triggerCustomBins, 400)
 			.run(triggerSearch, 300)
 			.run(testReversion, 1000)
@@ -1715,22 +1539,22 @@ tape('customized bins', test => {
 		startinclusive: false
 	}
 
-	function triggerCustomBins(plot) {
-		plot.Inner.app.dispatch({
+	function triggerCustomBins(barchart) {
+		barchart.Inner.app.dispatch({
 			type: 'plot_edit',
 			id: 'aaclassic_5',
 			config: {
 				term: {
 					id: 'aaclassic_5',
-					term: plot.Inner.config.term.term,
+					term: barchart.Inner.config.term.term,
 					q: q1
 				}
 			}
 		})
 	}
 
-	async function triggerSearch(plot) {
-		const dom = plot.Inner.app.getComponents('nav.search').Inner.dom
+	async function triggerSearch(barchart) {
+		const dom = barchart.Inner.app.getComponents('nav.search').Inner.dom
 		dom.input.property('value', 'Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)')
 		dom.input.on('input')()
 		await sleep(500)
@@ -1740,7 +1564,7 @@ tape('customized bins', test => {
 			.dispatchEvent(new Event('click'))
 	}
 
-	function testReversion(plot) {
-		test.deepEqual(plot.Inner.config.term.q, q1, 'should not be reverted when using a searched term')
+	function testReversion(barchart) {
+		test.deepEqual(barchart.Inner.config.term.q, q1, 'should not be reverted when using a searched term')
 	}
 })

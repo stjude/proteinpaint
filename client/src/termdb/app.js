@@ -1,10 +1,10 @@
 import { getAppInit, multiInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { vocabInit } from './vocabulary'
-import { navInit } from './nav'
 import { treeInit } from './tree'
 import { storeInit } from './store'
-import { recoverInit } from '../common/recover'
+import { searchInit } from './search'
+import { filterInit } from './filter3'
 import { sayerror, Menu } from '../client'
 
 /*
@@ -14,7 +14,7 @@ opts{}
 .app{} .tree{} etc
 see doc for full spec
 https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit
-
+git branch 
 */
 
 class TdbApp {
@@ -23,9 +23,12 @@ class TdbApp {
 		if (!opts.holder) select('body').append('div')
 		// do this in the constructor to have an dom.errdiv
 		// available at any point during initialization
+		const topbar = opts.holder.append('div')
 		this.dom = {
 			holder: opts.holder,
-			topbar: opts.holder.append('div'),
+			topbar,
+			searchDiv: topbar.append('div').style('display', 'inline-block'),
+			filterDiv: topbar.append('div').style('display', 'inline-block'),
 			errdiv: opts.holder.append('div'),
 			tip: new Menu({ padding: '5px' })
 		}
@@ -64,16 +67,16 @@ class TdbApp {
 	async setComponents() {
 		try {
 			this.components = await multiInit({
-				nav: navInit({
+				search: searchInit({
 					app: this.api,
-					holder: this.dom.topbar,
-					header_mode: this.state && this.state.nav && this.state.nav.header_mode
+					holder: this.dom.searchDiv
 				}),
-				recover: recoverInit({
-					app: this.api,
-					holder: this.dom.holder,
-					appType: 'termdb'
-				}),
+				/*
+				// TODO: support with_cohortHtmlSelect, previously a nav option
+				filter: filterInit({
+					app: this.app,
+					holder: this.dom.filterDiv
+				}),*/
 				tree: treeInit({
 					app: this.api,
 					holder: this.dom.holder.append('div')
