@@ -1,5 +1,5 @@
 import { getCompInit, multiInit } from '../common/rx.core'
-//import { searchInit } from '../termdb/search'
+import { searchInit } from './search'
 import { filter3Init } from '../termdb/filter3'
 import { chartsInit } from './charts'
 import { select } from 'd3-selection'
@@ -30,14 +30,10 @@ class TdbNav {
 			this.initUI(appState)
 			this.initCohort(appState)
 			this.components = await multiInit({
-				/*	
-				DISABLE SEARCH, for now: 
-				not sure what type of chart should open when a term search result is clicked
-
 				search: searchInit({
 					app: this.app,
 					holder: this.dom.searchDiv,
-					resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
+					resultsHolder: this.dom.tip.d,
 					callbacks: {
 						'postSearch.nav': data => {
 							if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
@@ -46,7 +42,7 @@ class TdbNav {
 							}
 						}
 					}
-				}),*/
+				}),
 				filter: filter3Init({
 					app: this.app,
 					holder: this.dom.subheader.filter.append('div'),
@@ -76,7 +72,6 @@ class TdbNav {
 			activeCohort: appState.activeCohort,
 			termdbConfig: appState.termdbConfig,
 			filter: appState.termfilter.filter,
-			expandedTermIds: appState.tree.expandedTermIds,
 			plots: appState.plots
 		}
 	}
@@ -129,8 +124,7 @@ function setRenderers(self) {
 				.style('vertical-align', 'bottom'),
 			searchDiv: header
 				.append('div')
-				.style('display', 'none')
-				.style('width', '0px')
+				//.style('display', 'none')
 				.style('margin', '10px')
 				.style('vertical-align', 'top'),
 			sessionDiv: header
@@ -221,6 +215,7 @@ function setRenderers(self) {
 
 		self.dom.sessionDiv
 			.append('button')
+			.style('margin', '10px')
 			.html('Share')
 			.on('click', self.getSessionUrl)
 	}
