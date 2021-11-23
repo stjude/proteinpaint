@@ -24,7 +24,7 @@ may_sum_samples
 
 const serverconfig = require('./serverconfig')
 
-export async function init_db(ds, app, basepath) {
+export async function init_db(ds, app = null, basepath = null) {
 	/* db should be required
 	must initiate db first, then process other things
 	as db may be needed (e.g. getting json of a term)
@@ -34,7 +34,7 @@ export async function init_db(ds, app, basepath) {
 	server_init_db_queries(ds)
 	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
 	// for a genome dataset, using "updateAttr: [[...]]
-	if (ds.cohort.db.refresh) setRefreshRoute(ds, app, basepath)
+	if (ds.cohort.db.refresh && app) setDbRefreshRoute(ds, app, basepath)
 }
 export async function init_track(ds, genome) {
 	/* initiate the mds2 track upon launching server
@@ -336,6 +336,8 @@ function may_sum_samples(tk) {
 	}
 }
 
+/* TODO: may move this function elsewhere so that it
+	can be used for mds3 or other datasets besides mds2 */
 export function server_updateAttr(db, sdb) {
 	/*
 sdb:
@@ -385,7 +387,7 @@ sdb:
 				/abs/path/to/proteinpaint/utils/pnet/do.sh
 */
 
-function setRefreshRoute(ds, app, basepath) {
+function setDbRefreshRoute(ds, app, basepath) {
 	const r = ds.cohort.db.refresh
 	// delete the optional 'refresh' attribute
 	// so that the routes below will not be reset again
