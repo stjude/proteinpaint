@@ -27,7 +27,6 @@ if (!params.route) {
 async function showForm() {
 	try {
 		const data = await fetch(params.route).then(r=>r.json())
-		console.log(24, data)
 		const div = d3.select('#aaa').style('margin', '20px').style('padding', '10px')
 		div.append('h1').text(`${data.label} database update`)
 		

@@ -8149,47 +8149,7 @@ async function mds_init(ds, genome, _servconfig) {
 	}
 
 	if (ds.cohort && ds.cohort.db && ds.cohort.termdb) {
-		await mds2_init.init_db(ds, genome)
-		if (ds.cohort.db.refresh) {
-			const r = ds.cohort.db.refresh
-			// show a form
-			app.get(`${basepath}/${r.route}`, async (req, res) => {
-				res.send({ label: ds.label, files: Object.keys(r.files) })
-			})
-			// refresh the ds database without server restart
-			// requires the following entry in the serverconfig.json under a genome.dataset:
-			// dataset = {"updateAttr": ["cohort", 'db', {"refresh": {route, files: {name: "/abs/directory/"}, cmd}}]}
-			app.post(`${basepath}/${r.route}`, async (req, res) => {
-				try {
-					// save file to text
-					const q = req.body
-					for (const name in q) {
-						console.log(`Updating ${r.files[name]}`)
-						fs.writeFileSync(r.files[name], q[name], { encoding: 'utf8' })
-					}
-					if (r.cmd) {
-						const ps = spawn(...r.cmd)
-						const stderr = []
-						ps.stdout.on('data', data => {
-							console.log(`stdout: ${data}`)
-						})
-						ps.stderr.on('data', data => {
-							stderr.push(data)
-						})
-						ps.on('close', code => {
-							if (code !== 0) throw `child process exited with code ${code}`
-						})
-
-						if (stderr.length) throw stderr.join('')
-					}
-					await mds2_init.init_db(ds, genome)
-					res.send({ status: 'ok' })
-				} catch (e) {
-					console.log(e)
-					res.send({ error: e.error || e })
-				}
-			})
-		}
+		await mds2_init.init_db(ds, app, basepath)
 	}
 
 	if (ds.cohort && ds.cohort.files) {

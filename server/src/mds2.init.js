@@ -1,6 +1,7 @@
 const app = require('./app')
 const path = require('path')
 const fs = require('fs')
+const spawn = require('child_process').spawn
 const utils = require('./utils')
 const server_init_db_queries = require('./termdb.sql').server_init_db_queries
 const validate_single_numericrange = require('../shared/mds.termdb.termvaluesetting').validate_single_numericrange
@@ -23,7 +24,7 @@ may_sum_samples
 
 const serverconfig = require('./serverconfig')
 
-export async function init_db(ds, genome) {
+export async function init_db(ds, app, basepath) {
 	/* db should be required
 	must initiate db first, then process other things
 	as db may be needed (e.g. getting json of a term)
@@ -31,6 +32,9 @@ export async function init_db(ds, genome) {
 	if (!ds.cohort.termdb) throw 'cohort.termdb missing when cohort.db is used'
 	validate_termdbconfig(ds.cohort.termdb)
 	server_init_db_queries(ds)
+	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
+	// for a genome dataset, using "updateAttr: [[...]]
+	if (ds.cohort.db.refresh) setRefreshRoute(ds, app, basepath)
 }
 export async function init_track(ds, genome) {
 	/* initiate the mds2 track upon launching server
@@ -350,4 +354,85 @@ sdb:
 			}
 		}
 	}
+}
+
+/* 
+	Set server routes to trigger the refresh the ds database from the web browser,
+	without having to restart the server.
+	
+	Requires the following entry in the serverconfig.json under a genome.dataset:
+	dataset = {"updateAttr": ["cohort", 'db', {"refresh": {route, files, cmd}}]}
+	where
+		.route STRING
+			- the server route that exposes the db refresh feature
+			- should contain a random substring for weak security,
+			  for example 'pnet-refresh-r4Nd0m-5tr1n8', which will then be used as
+			  http://sub.domain.ext:port/termdb-refresh.html?route=pnet-refresh-r4Nd0m-5tr1n8
+		
+		.files{}
+			- key: a short string alias to a data file that may be updated,
+					such as 'annotations', 'survival', etc 
+			- value: the absolute path to the data file that will be updated 
+		
+		.cmd STRING
+			- the command to run after updates are written to the data files
+			- for example, "cmd": "/abs/path/to/tp/files/hg19/pnet/clinical/update.sh",
+			  where the update file can have commands like this:
+				
+				// content of update.sh 
+			  #!/bin/bash
+				cd "/abs/path/to/tp/files/hg19/pnet/clinical"
+				/abs/path/to/proteinpaint/utils/pnet/do.sh
+*/
+
+function setRefreshRoute(ds, app, basepath) {
+	const r = ds.cohort.db.refresh
+	// delete the optional 'refresh' attribute
+	// so that the routes below will not be reset again
+	// when mds2_init.init_db() is called after a
+	// data file has been updated
+	delete ds.cohort.db.refresh
+
+	// return the file aliases that may be updated
+	// no need to expose the target absolute paths on this server
+	app.get(`${basepath}/${r.route}`, async (req, res) => {
+		res.send({ label: ds.label, files: Object.keys(r.files) })
+	})
+
+	/*
+		req.body{}
+		- has one or more key-values, where
+		- key: short string alias of the data file to update
+		- value: tab-delimited string data to write to the data file
+	*/
+	app.post(`${basepath}/${r.route}`, async (req, res) => {
+		try {
+			// save file to text
+			const q = req.body
+			for (const name in q) {
+				console.log(`Updating ${r.files[name]}`)
+				fs.writeFileSync(r.files[name], q[name], { encoding: 'utf8' })
+			}
+			if (r.cmd) {
+				const ps = spawn(...r.cmd)
+				const stderr = []
+				ps.stdout.on('data', data => {
+					console.log(`stdout: ${data}`)
+				})
+				ps.stderr.on('data', data => {
+					stderr.push(data)
+				})
+				ps.on('close', code => {
+					if (code !== 0) throw `child process exited with code ${code}`
+				})
+
+				if (stderr.length) throw stderr.join('')
+			}
+			await init_db(ds)
+			res.send({ status: 'ok' })
+		} catch (e) {
+			console.log(e)
+			res.send({ error: e.error || e })
+		}
+	})
 }
