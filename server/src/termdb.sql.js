@@ -691,9 +691,16 @@ function makesql_groupset(term, q) {
 	const categories = []
 	for (const [i, g] of s.groups.entries()) {
 		const groupname = g.name || 'Group ' + (i + 1)
-		if (!Array.isArray(g.values)) throw 'groupset.groups[' + i + '].values[] is not array'
-		for (const v of g.values) {
-			categories.push(`SELECT '${groupname}' AS name, '${v.key}' AS value`)
+		if (g.type == 'values' && !Array.isArray(g.values)) throw 'groupset.groups[' + i + '].values[] is not array'
+		if (g.type == 'values') {
+			for (const v of g.values) {
+				categories.push(`SELECT '${groupname}' AS name, '${v.key}' AS value`)
+			}
+		} else if (g.type == 'filter') {
+			// TODO: create filter query for group.type == 'filter'
+			// const qfilter = typeof g.filter == 'string' ? JSON.parse(decodeURIComponent(g.filter)) : g.filter
+			// const filter = getFilterCTEs(qfilter, q.ds)
+			// console.log(filter)
 		}
 	}
 	return categories.join(' UNION ALL ')

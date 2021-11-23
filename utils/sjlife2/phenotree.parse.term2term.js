@@ -80,6 +80,7 @@ const tvs_ctcaeGraded = () => {
 		tvs: {
 			term: {
 				id: 'ctcae_graded',
+				name: 'graded adverse events',
 				type: 'categorical'
 			},
 			values: [{ key: '1', label: 'Yes' }]
@@ -89,13 +90,15 @@ const tvs_ctcaeGraded = () => {
 const tvs_grade1_9 = t => {
 	return {
 		type: 'tvs',
-		isnot: true,
 		tvs: {
 			term: {
 				id: t.id,
 				name: t.name,
 				type: 'condition'
 			},
+			isnot: true,
+			value_by_max_grade: true,
+			bar_by_grade: true,
 			values: [
 				{ key: 1, label: '1: Mild' },
 				{ key: 2, label: '2: Moderate' },

@@ -497,8 +497,10 @@ function groupsetNoEmptyGroup(gs, c2s) {
 	// return true if a groupset does not have empty group
 	for (const g of gs.groups) {
 		let total = 0
-		for (const i of g.values) total += c2s.get(i.key) || 0
-		if (total == 0) return false
+		if (g.type == 'values') {
+			for (const i of g.values) total += c2s.get(i.key) || 0
+			if (total == 0) return false
+		}
 	}
 	return true
 }
