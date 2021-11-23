@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" style="margin:0px;width:100%;height:100%">
+<head>
+	 <meta charset="utf-8">
+	 <title>Termdb Refresh</title>
+	 <style>
+	 	body {
+	 		font-family: Menlo, Monospace, Consolas, Arial, sans-serif;
+	 	}
+	 </style>
+	 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body style="margin:0px;width:100%;height:100%">
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+const params = getParams()
+if (!params.route) {
+	alert(`Please specify a 'route=' parameter value in the URL.`)
+} else {
+	showForm()
+}
+
+async function showForm() {
+	try {
+		const data = await fetch(params.route).then(r=>r.json())
+		console.log(24, data)
+		const div = d3.select('#aaa').style('margin', '20px').style('padding', '10px')
+		div.append('h1').text(`${data.label} database update`)
+		
+		const subdivs = div.selectAll('.refresh-subdiv')
+			.data(data.files)
+			.enter()
+			.append('div')
+			.attr('class', 'refresh-subdiv')
+			.style('text-align', 'left')
+			.style('padding', '15px')
+
+		subdivs.append('div')
+			.style('display', 'inline-block')
+			.style('width', '120px')
+			.style('margin', '10px')
+			.style('vertical-align', 'top')
+			.text(name=>name)
+
+		subdivs.append('textarea')
+			.style('width', '600px')
+			.style('height', '300px')
+			.style('margin', '10px')
+
+		div.append('button')
+			.style('margin', '10px')
+			.text('Submit')
+			.on('click', ()=>{
+				const tsv = {}
+				subdivs.each(function(name) {
+					const content = d3.select(this).select('textarea').property('value')
+					if (content) tsv[name] = content
+				})
+				try {
+					if (!Object.keys(tsv).length) {
+						throw 'No data to submit.'
+					}
+
+					const opts = {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json'
+						},
+						body: JSON.stringify(tsv)
+					}
+					fetch(params.route, opts)
+						.then(r=>r.json())
+						.then(r => {
+							if (r.error) throw r.error
+							if (r.status != 'ok') throw 'server response not ok'
+						})
+						.catch(e => {throw e})
+				} catch(e) {
+					alert(e)
+				}
+			})
+
+	} catch(e) {
+		alert(e.error || e)
+	}
+}
+
+function getParams() {
+  const params={}
+  if (!window.location.search.length) return params
+  window.location.search.substr(1).split("&").forEach(kv=>{
+    const [key,value] = kv.split("=")
+    params[key] = value
+  })
+  return params
+}
+</script>
+
+</body>
+</html>
