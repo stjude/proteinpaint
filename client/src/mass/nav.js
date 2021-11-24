@@ -3,7 +3,8 @@ import { searchInit } from './search'
 import { filter3Init } from '../termdb/filter3'
 import { chartsInit } from './charts'
 import { select } from 'd3-selection'
-import { dofetch3, Menu } from '../client'
+import { dofetch3 } from '../common/dofetch'
+import { Menu } from '../dom/menu'
 import { getNormalRoot, getFilterItemByTag } from '../common/filter'
 
 // to be used for assigning unique
@@ -32,16 +33,7 @@ class TdbNav {
 			this.components = await multiInit({
 				search: searchInit({
 					app: this.app,
-					holder: this.dom.searchDiv,
-					resultsHolder: this.dom.tip.d,
-					callbacks: {
-						'postSearch.nav': data => {
-							if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
-							else if (this.opts.header_mode === 'with_tabs') {
-								this.dom.tip.showunder(this.dom.searchDiv.node())
-							}
-						}
-					}
+					holder: this.dom.searchDiv
 				}),
 				filter: filter3Init({
 					app: this.app,
@@ -213,7 +205,7 @@ function setRenderers(self) {
 		self.dom.tds = table.selectAll('td')
 		self.subheaderKeys = self.tabs.map(d => d.subheader)
 
-		self.dom.sessionDiv
+		self.dom.shareBtn = self.dom.sessionDiv
 			.append('button')
 			.style('margin', '10px')
 			.html('Share')
@@ -388,7 +380,7 @@ function setInteractivity(self) {
 			body: JSON.stringify(self.app.getState())
 		})
 		const url = `${window.location.protocol}//${window.location.host}/?mass-session-id=${res.id}&noheader=1`
-		self.dom.tip.clear().showunder(self.dom.sessionDiv.node())
+		self.dom.tip.clear().showunder(self.dom.shareBtn.node())
 		self.dom.tip.d.append('div').html(`Session URL: <a href='${url}' target=_blank>${url}</a>`)
 	}
 }

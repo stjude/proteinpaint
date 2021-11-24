@@ -1,6 +1,8 @@
 import { getCompInit } from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch3, sayerror } from '../client'
+import { dofetch3 } from '../common/dofetch'
+import { dom } from '../dom/error'
+import { Menu } from '../dom/menu'
 import { debounce } from 'debounce'
 import { graphable } from '../common/termutils'
 
@@ -25,15 +27,16 @@ allow to search categories, e.g. hodgkin lymphoma from diaggrp, how to act upon 
 class MassSearch {
 	constructor(opts) {
 		this.type = 'search'
-		// currently postSearch is only used for testing
-		this.customEvents = ['postSearch']
 		setRenderers(this)
 		setInteractivity(this)
 	}
 
 	async init(appState) {
 		this.state = this.getState(appState)
-		this.dom = { holder: this.opts.holder }
+		this.dom = {
+			holder: this.opts.holder,
+			tip: new Menu({ padding: '5px' })
+		}
 		this.initUI()
 	}
 
@@ -91,10 +94,8 @@ function setRenderers(self) {
 			.style('display', 'block')
 			.on('input', debounce(self.onInput, 300))
 
-		self.dom.resultDiv = self.opts.resultsHolder ? self.opts.resultsHolder : self.dom.holder.append('div')
-		self.dom.resultDiv
+		self.dom.resultDiv = self.dom.tip.d
 			.style('border-left', self.opts.resultsHolder ? '' : 'solid 1px rgb(133,182,225)')
-			.style('margin', '0px 0px 10px 10px')
 			.style('padding-left', '5px')
 	}
 	self.noResult = () => {
@@ -149,7 +150,7 @@ function setRenderers(self) {
 			.style('font-size', '.7em')
 	}
 	self.clear = () => {
-		self.dom.resultDiv.selectAll('*').remove()
+		self.dom.tip.clear().showunder(self.dom.holder.node())
 	}
 }
 
