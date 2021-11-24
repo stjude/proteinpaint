@@ -82,5 +82,5 @@ export function newSandboxDiv(sandbox_holder, close) {
 		.style('border-radius', '0  0 5px 5px')
 		.style('width', '95vw')
 
-	return { header_row, header, body }
+	return { header_row, header, body, app_div }
 }

@@ -23,6 +23,11 @@ class MassDict {
 							term: { id: term.id, term }
 						}
 					})
+
+					this.app.dispatch({
+						type: 'plot_delete',
+						id: this.id
+					})
 				}
 			}
 		})
