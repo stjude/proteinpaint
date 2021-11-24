@@ -204,6 +204,13 @@ else
 	mv server/features.json $APP/
 	mv server/src/serverconfig.js $APP/src
 	mv server/shared $APP/
+	if [[ "$SUBDOMAIN" == "ppr" ]]; then
+		# may need to support cohort.db.refresh,
+		# as set via serverconfig dataset updateAttr
+		mkdir $APP/utils
+		mv utils/termdb $APP/utils/
+		mv utils/pnet  $APP/utils/
+	fi
 	mv public/bin $APP/public/bin
 	echo "$ENV $REV $(date)" > $APP/public/rev.txt
 

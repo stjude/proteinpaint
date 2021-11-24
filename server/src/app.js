@@ -8149,7 +8149,7 @@ async function mds_init(ds, genome, _servconfig) {
 	}
 
 	if (ds.cohort && ds.cohort.db && ds.cohort.termdb) {
-		await mds2_init.init_db(ds, genome)
+		await mds2_init.init_db(ds, app, basepath)
 	}
 
 	if (ds.cohort && ds.cohort.files) {
