@@ -35,6 +35,7 @@ class MassSearch {
 		this.state = this.getState(appState)
 		this.dom = {
 			holder: this.opts.holder,
+			holderNode: this.opts.holder.node(),
 			tip: new Menu({ padding: '5px' })
 		}
 		this.initUI()
@@ -64,7 +65,7 @@ class MassSearch {
 
 	async doSearch(str) {
 		if (!str) {
-			this.clear()
+			this.clear({ hide: true })
 			this.bus.emit('postSearch', [])
 			return
 		}
@@ -112,14 +113,16 @@ function setRenderers(self) {
 			data.lst.forEach(t => {
 				if (t.disabled) self.opts.disable_terms.push(t.id)
 			})
-		self.clear()
-		self.dom.resultDiv
-			.append('table')
-			.selectAll()
-			.data(data.lst)
-			.enter()
-			.append('tr')
-			.each(self.showTerm)
+		self.clear({ hide: !data.lst.length })
+		if (data.lst.length) {
+			self.dom.resultDiv
+				.append('table')
+				.selectAll()
+				.data(data.lst)
+				.enter()
+				.append('tr')
+				.each(self.showTerm)
+		}
 	}
 	self.showTerm = function(term) {
 		const tr = select(this)
@@ -149,8 +152,10 @@ function setRenderers(self) {
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
 	}
-	self.clear = () => {
-		self.dom.tip.clear().showunder(self.dom.holder.node())
+	self.clear = (opts = {}) => {
+		self.dom.tip.clear()
+		if (opts.hide) self.dom.tip.hide()
+		else self.dom.tip.showunder(self.dom.holderNode)
 	}
 }
 
