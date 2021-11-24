@@ -338,20 +338,25 @@ function may_sum_samples(tk) {
 
 /* TODO: may move this function elsewhere so that it
 	can be used for mds3 or other datasets besides mds2 */
-export function server_updateAttr(db, sdb) {
+export function server_updateAttr(ds, sds) {
 	/*
-sdb:
-	bootstrap objects, that are elements of the "datasets" array from serverconfig, may contain .updateAttr[]
-*/
-	if (!sdb.updateAttr) return
-	for (const row of sdb.updateAttr) {
-		let pointer = db
+	ds: 
+		an entry in genomes[{datasets:[ ... ]}]
+
+	sds:
+		bootstrap objects, that are elements of the "datasets" array from serverconfig, may contain .updateAttr[]
+	*/
+	if (!sds.updateAttr) return
+	for (const row of sds.updateAttr) {
+		let pointer = ds
 		for (const field of row) {
 			if (typeof field == 'object') {
+				// apply the key-value overrides to the object that is pointed to
 				for (const k in field) {
 					pointer[k] = field[k]
 				}
 			} else {
+				// reset the reference to a subnested object
 				pointer = pointer[field]
 			}
 		}
