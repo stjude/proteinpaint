@@ -1,9 +1,8 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch3, sayerror } from '../client'
+import { Menu } from '../dom/menu'
 import { debounce } from 'debounce'
-import { root_ID } from './tree'
-import { graphable } from '../common/termutils'
+//import { graphable } from '../common/termutils'
 
 /*
 steps:
@@ -23,21 +22,21 @@ allow to search categories, e.g. hodgkin lymphoma from diaggrp, how to act upon 
 
  */
 
-class TermSearch {
+class MassSearch {
 	constructor(opts) {
 		this.type = 'search'
-		// currently postSearch is only used for testing
-		this.customEvents = ['postSearch']
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
 		setRenderers(this)
 		setInteractivity(this)
-		this.dom = { holder: opts.holder }
-		this.initUI()
 	}
 
-	async init() {
-		this.state = this.getState(this.app.getState())
+	async init(appState) {
+		this.state = this.getState(appState)
+		this.dom = {
+			holder: this.opts.holder,
+			holderNode: this.opts.holder.node(),
+			tip: new Menu({ padding: '5px' })
+		}
+		this.initUI()
 	}
 
 	reactsTo(action) {
@@ -53,20 +52,18 @@ class TermSearch {
 							.slice()
 							.sort()
 							.join(','),
-			expandedTermIds: appState.tree.expandedTermIds,
-			exclude_types: appState.tree.exclude_types || [],
 			search: appState.search
 		}
 	}
 
 	async main() {
 		// show/hide search input from the tree
-		this.dom.holder.style('display', this.state.search.isVisible ? 'block' : 'none')
+		this.dom.holder.style('display', this.state.search.isVisible ? 'inline-block' : 'none')
 	}
 
 	async doSearch(str) {
 		if (!str) {
-			this.clear()
+			this.clear({ hide: true })
 			this.bus.emit('postSearch', [])
 			return
 		}
@@ -81,7 +78,7 @@ class TermSearch {
 	}
 }
 
-export const searchInit = rx.getInitFxn(TermSearch)
+export const searchInit = getCompInit(MassSearch)
 
 function setRenderers(self) {
 	self.initUI = () => {
@@ -96,10 +93,8 @@ function setRenderers(self) {
 			.style('display', 'block')
 			.on('input', debounce(self.onInput, 300))
 
-		self.dom.resultDiv = self.opts.resultsHolder ? self.opts.resultsHolder : self.dom.holder.append('div')
-		self.dom.resultDiv
+		self.dom.resultDiv = self.dom.tip.d
 			.style('border-left', self.opts.resultsHolder ? '' : 'solid 1px rgb(133,182,225)')
-			.style('margin', '0px 0px 10px 10px')
 			.style('padding-left', '5px')
 	}
 	self.noResult = () => {
@@ -116,81 +111,50 @@ function setRenderers(self) {
 			data.lst.forEach(t => {
 				if (t.disabled) self.opts.disable_terms.push(t.id)
 			})
-		self.clear()
-		self.dom.resultDiv
-			.append('table')
-			.selectAll()
-			.data(data.lst)
-			.enter()
-			.append('tr')
-			.each(self.showTerm)
+		self.clear({ hide: !data.lst.length })
+		if (data.lst.length) {
+			self.dom.resultDiv
+				.append('table')
+				.selectAll()
+				.data(data.lst)
+				.enter()
+				.append('tr')
+				.each(self.showTerm)
+		}
 	}
 	self.showTerm = function(term) {
 		const tr = select(this)
 		const button = tr.append('td').text(term.name)
 
-		if (self.opts.click_term && graphable(term)) {
-			// to click a graphable term, show as blue button
-			if (self.opts.disable_terms && self.opts.disable_terms.includes(term.id)) {
-				// but it's disabled
-				button
-					.attr('class', 'sja_tree_click_term_disabled')
-					.style('display', 'block')
-					.style('padding', '5px 8px')
-					.style('margin', '1px 0px')
-					.style('opacity', 0.4)
-			} else {
-				// clickable button
-				button
-					.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term')
-					.style('display', 'block')
-					.style('color', 'black')
-					.style('padding', '5px 8px')
-					.style('border-radius', '6px')
-					.style('background-color', '#cfe2f3')
-					.style('margin', '1px 0px')
-					.style('cursor', 'default')
-					.on('click', () => {
-						self.opts.click_term(term)
-						self.clear()
-						self.dom.input.property('value', '')
-					})
-			}
-			//show sample count for a term
-			if (term.samplecount !== undefined) {
-				tr.append('td')
-					.append('div')
-					.style('font-size', '.8em')
-					.style('display', 'inline-block')
-					.style('margin-left', '5px')
-					.style('color', term.samplecount ? '#777' : '#ddd')
-					.text('n=' + term.samplecount)
-			}
-		} else {
-			// as regular button, click to expand tree
-			button.attr('class', 'sja_menuoption').on('click', () => {
-				self.clear()
-				self.dom.input.property('value', '')
-				const expandedTermIds = [root_ID]
-				if (term.__ancestors) {
-					expandedTermIds.push(...term.__ancestors)
-				} else {
+		if (term.type) {
+			// has term type, show button for clicking
+			button
+				.style('cursor', 'pointer')
+				.attr('class', 'sja_menuoption')
+				.on('click', () => {
 					self.app.dispatch({
-						type: 'app_refresh',
-						state: {
-							tree: { expandedTermIds }
+						type: 'plot_create',
+						config: {
+							chartType: term.type == 'survival' ? 'survival' : 'barchart',
+							term: { id: term.id, term }
 						}
 					})
-				}
-			})
+					self.clear({ hide: true })
+				})
+		} else {
+			// no term type, not clickable
+			button.style('padding', '5px 10px').style('opacity', 0.5)
 		}
+
 		tr.append('td')
 			.text((term.__ancestorNames || []).join(' > '))
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
 	}
-	self.clear = () => {
-		self.dom.resultDiv.selectAll('*').remove()
+	self.clear = (opts = {}) => {
+		self.dom.tip.clear()
+		if (opts.hide) self.dom.tip.hide()
+		else self.dom.tip.showunder(self.dom.holderNode)
 	}
 }
 

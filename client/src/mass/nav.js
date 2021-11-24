@@ -1,9 +1,10 @@
 import { getCompInit, multiInit } from '../common/rx.core'
-//import { searchInit } from '../termdb/search'
+import { searchInit } from './search'
 import { filter3Init } from '../termdb/filter3'
 import { chartsInit } from './charts'
 import { select } from 'd3-selection'
-import { dofetch3, Menu } from '../client'
+import { dofetch3 } from '../common/dofetch'
+import { Menu } from '../dom/menu'
 import { getNormalRoot, getFilterItemByTag } from '../common/filter'
 
 // to be used for assigning unique
@@ -30,23 +31,10 @@ class TdbNav {
 			this.initUI(appState)
 			this.initCohort(appState)
 			this.components = await multiInit({
-				/*	
-				DISABLE SEARCH, for now: 
-				not sure what type of chart should open when a term search result is clicked
-
 				search: searchInit({
 					app: this.app,
-					holder: this.dom.searchDiv,
-					resultsHolder: this.opts.header_mode === 'with_tabs' ? this.dom.tip.d : null,
-					callbacks: {
-						'postSearch.nav': data => {
-							if (!data || !data.lst || !data.lst.length) this.dom.tip.hide()
-							else if (this.opts.header_mode === 'with_tabs') {
-								this.dom.tip.showunder(this.dom.searchDiv.node())
-							}
-						}
-					}
-				}),*/
+					holder: this.dom.searchDiv
+				}),
 				filter: filter3Init({
 					app: this.app,
 					holder: this.dom.subheader.filter.append('div'),
@@ -76,7 +64,6 @@ class TdbNav {
 			activeCohort: appState.activeCohort,
 			termdbConfig: appState.termdbConfig,
 			filter: appState.termfilter.filter,
-			expandedTermIds: appState.tree.expandedTermIds,
 			plots: appState.plots
 		}
 	}
@@ -129,8 +116,7 @@ function setRenderers(self) {
 				.style('vertical-align', 'bottom'),
 			searchDiv: header
 				.append('div')
-				.style('display', 'none')
-				.style('width', '0px')
+				//.style('display', 'none')
 				.style('margin', '10px')
 				.style('vertical-align', 'top'),
 			sessionDiv: header
@@ -219,8 +205,9 @@ function setRenderers(self) {
 		self.dom.tds = table.selectAll('td')
 		self.subheaderKeys = self.tabs.map(d => d.subheader)
 
-		self.dom.sessionDiv
+		self.dom.shareBtn = self.dom.sessionDiv
 			.append('button')
+			.style('margin', '10px')
 			.html('Share')
 			.on('click', self.getSessionUrl)
 	}
@@ -393,7 +380,7 @@ function setInteractivity(self) {
 			body: JSON.stringify(self.app.getState())
 		})
 		const url = `${window.location.protocol}//${window.location.host}/?mass-session-id=${res.id}&noheader=1`
-		self.dom.tip.clear().showunder(self.dom.sessionDiv.node())
+		self.dom.tip.clear().showunder(self.dom.shareBtn.node())
 		self.dom.tip.d.append('div').html(`Session URL: <a href='${url}' target=_blank>${url}</a>`)
 	}
 }
