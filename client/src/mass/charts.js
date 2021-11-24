@@ -31,7 +31,7 @@ class MassCharts {
 			appState.termdbConfig.selectCohort &&
 			appState.termdbConfig.selectCohort.values[appState.activeCohort]
 		const cohortStr = (activeCohort && [...activeCohort.keys].sort().join(',')) || ''
-		const chartTypes = appState.termdbConfig.supportedChartTypes || {}
+		const chartTypes = JSON.parse(JSON.stringify(appState.termdbConfig.supportedChartTypes)) || {}
 
 		const state = {
 			vocab: appState.vocab,
@@ -41,6 +41,11 @@ class MassCharts {
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
+		}
+		if (!state.supportedChartTypes.includes('dictionary')) {
+			// force to show a dictionary chart button
+			// TODO: may want the server to decide this, and as defined for a dataset
+			state.supportedChartTypes.push('dictionary')
 		}
 		return state
 	}
@@ -159,6 +164,14 @@ function getChartTypeList(self) {
 					}
 				}
 			]
+		},
+		{
+			label: 'Dictionary',
+			clickTo: self.prepPlot,
+			chartType: 'dictionary',
+			config: {
+				chartType: 'dictionary'
+			}
 		}
 	]
 }
