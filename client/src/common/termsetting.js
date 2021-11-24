@@ -410,7 +410,7 @@ function setInteractivity(self) {
 	}
 }
 
-export function termsetting_fill_q(q, term) {
+export function termsetting_fill_q(q, term, activeCohort) {
 	if (term.type == 'integer' || term.type == 'float') {
 		if (!valid_binscheme(q)) {
 			/*
@@ -461,6 +461,8 @@ export function termsetting_fill_q(q, term) {
 			// inuse:false is either from automatic setup or predefined in state
 			// then no need for additional setup
 			return
+		} else {
+			q.groupsetting.activeCohort = activeCohort
 		}
 		// if to apply the groupsetting
 		if (term.groupsetting.lst && term.groupsetting.useIndex >= 0 && term.groupsetting.lst[term.groupsetting.useIndex]) {
@@ -541,5 +543,5 @@ export async function fillTermWrapper(termWrapper, vocabApi) {
 	}
 	if (!t.q) t.q = {}
 	if (!t.varClass) t.varClass = 'term'
-	termsetting_fill_q(t.q, t.term)
+	termsetting_fill_q(t.q, t.term, vocabApi.state.activeCohort)
 }

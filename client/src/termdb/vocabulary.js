@@ -111,6 +111,7 @@ class TermdbVocab {
 			optional genotype parameter {ssid, mname, chr, pos}
 	*/
 	getTdbDataUrl(opts) {
+		console.log(opts)
 		const params = []
 
 		if (opts.chartType == 'scatter') params.push('scatter=1')

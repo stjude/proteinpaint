@@ -273,7 +273,7 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? 'WHERE t1.sample IN ' + filter.CTEname : ''}
 		${opts.endclause}`
-	//console.log(statement, values)
+	// console.log(statement, values)
 	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
 
 	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
@@ -589,7 +589,7 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 	const table2 = tablename + '_groupset'
 	return {
 		sql: `${table2} AS (
-			${makesql_groupset(term, q)}
+			${makesql_groupset(term, q, values)}
 		),
 		${tablename} AS (
 			SELECT
@@ -674,7 +674,7 @@ function makesql_survivaltte(tablename, term, q, values, filter) {
 	}
 }
 
-function makesql_groupset(term, q) {
+function makesql_groupset(term, q, values = []) {
 	let s
 	if (Number.isInteger(q.groupsetting.predefined_groupset_idx)) {
 		if (q.groupsetting.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
@@ -697,10 +697,26 @@ function makesql_groupset(term, q) {
 				categories.push(`SELECT '${groupname}' AS name, '${v.key}' AS value`)
 			}
 		} else if (g.type == 'filter') {
-			// TODO: create filter query for group.type == 'filter'
-			// const qfilter = typeof g.filter == 'string' ? JSON.parse(decodeURIComponent(g.filter)) : g.filter
-			// const filter = getFilterCTEs(qfilter, q.ds)
-			// console.log(filter)
+			// TODO: create filter sql for group.type == 'filter'
+			if ('activeCohort' in q.groupsetting && g.filter4activeCohort) {
+				const tvs_filter = g.filter4activeCohort[q.groupsetting.activeCohort]
+				// TODO: remove following 4 lines after recreating termdb.gz
+				tvs_filter.lst[0].tvs.term.name = 'Graded adverse events'
+				tvs_filter.lst[1].tvs.value_by_max_grade = true
+				tvs_filter.lst[1].tvs.bar_by_grade = true
+				tvs_filter.lst[1].tvs.isnot = true
+				const filter = getFilterCTEs(tvs_filter, q.ds, 'xf')
+				const f_values = filter ? filter.values.slice() : []
+				values.push(...f_values)
+				const sql = `
+					${filter ? 'WITH ' + filter.filters : ''}
+					SELECT a.sample, value
+					FROM annotations a
+					WHERE term_id=?
+					${filter ? ' AND a.sample IN ' + filter.CTEname : ''}`
+				console.log(sql)
+				categories.push(sql)
+			}
 		}
 	}
 	return categories.join(' UNION ALL ')
