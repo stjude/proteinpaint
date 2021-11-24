@@ -1,10 +1,8 @@
 import { getCompInit } from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch3 } from '../common/dofetch'
-import { dom } from '../dom/error'
 import { Menu } from '../dom/menu'
 import { debounce } from 'debounce'
-import { graphable } from '../common/termutils'
+//import { graphable } from '../common/termutils'
 
 /*
 steps:
@@ -126,22 +124,23 @@ function setRenderers(self) {
 	}
 	self.showTerm = function(term) {
 		const tr = select(this)
-		const button = tr
-			.append('td')
-			.style('cursor', 'pointer')
-			.text(term.name)
+		const button = tr.append('td').text(term.name)
 
 		if (term.type) {
 			// has term type, show button for clicking
-			button.attr('class', 'sja_menuoption').on('click', () => {
-				self.app.dispatch({
-					type: 'plot_create',
-					config: {
-						chartType: term.type == 'survival' ? 'survival' : 'barchart',
-						term: { id: term.id, term }
-					}
+			button
+				.style('cursor', 'pointer')
+				.attr('class', 'sja_menuoption')
+				.on('click', () => {
+					self.app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: term.type == 'survival' ? 'survival' : 'barchart',
+							term: { id: term.id, term }
+						}
+					})
+					self.clear({ hide: true })
 				})
-			})
 		} else {
 			// no term type, not clickable
 			button.style('padding', '5px 10px').style('opacity', 0.5)
