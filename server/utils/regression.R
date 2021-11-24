@@ -6,22 +6,37 @@
 # Usage
 ###########
 
-# Usage: Rscript regression.R < jsonIn > jsonOut
-#
+# Usage: Rscript regression.R < input > output
+
 # Parameters:
-#   - jsonIn: json-formatted input of regression analysis streamed from standard input.
+#   - input: [string] input data for regression analysis. The input is in JSON format and is streamed from standard input. Note that newline characters are treated as separators of JSON records; therefore, ensure that the JSON string does not contain any newline characters.
+#     
+#     JSON input specifications:
+#     {
+#       "type": [string] regression type (e.g. "linear", "logistic")
+#       "formula": [string] formula of regression model (e.g. "outcome ~ id0 + id1 + id2").
+#       "outcome": {
+#         "id": [string] term id (e.g. "outcome")
+#         "type": [string] termdb term type (e.g. "integer", "float", "categorical", "condition")
+#         "values": [array] data values
+#         "refGrp": [string] reference value of the term (required for categorical/condition term)
+#       }
+#       "independent": [
+#         {
+#           "id": [string] term id (e.g. "id0", "id1")
+#           "type": [string] termdb term type (e.g. "integer", "float", "categorical", "condition")
+#           "values": [array] data values
+#           "refGrp": [string] reference value of the term (required for categorical/condition term)
+#           "scale": [number] scaling factor of the term. All term values will be divided by this number (optional)
+#         },
+#         ...
+#        ]
+#     }
 #
-#     jsonIn {}
-#     .type: [string] regression type (e.g. "linear" or "logistic")
-#     .formula: [string] formula of regression model (e.g. "outcome ~ id0 + id1 + id2"). All terms in the formula must be present in .terms{}.
-#     .terms: {}
-#       .id: [string] term id (e.g. "outcome", "id0", "id1", etc.). Must be present in .formula.
-#       .type: [string] termdb term type (e.g. "integer", "float", "categorical", or "condition")
-#       .values: [array] data values
-#       .refGrp: [string (optional, but required for categorical/condition term)] reference value of the term
-#       .scale: [number (optional)] scaling factor of the term. All term values will be divided by this number.
-#   - output: 
+#
+#   - output (in progress: convert output to JSON format): 
 #       - <stdout>: [string] output summary statistics of the regression analysis streamed to stdout. The output will consist of different tables of summary statistics where the tables are delimited by header lines (i.e. lines beginning with "#"). Each header line has the following format: #<name of table>
+
 
 
 ###########
@@ -31,41 +46,45 @@
 ######## Data preparation ##########
 
 args <- commandArgs(trailingOnly = T)
-if (length(args) != 0){
-  stop("Usage: Rscript regression.R < jsonIn > jsonOut")
-}
-
-library(jsonlite)
-
+if (length(args) != 0) stop("Usage: Rscript regression.R < jsonIn > jsonOut")
 
 # read in json input
+library(jsonlite)
 con <- file("stdin","r")
-lst <- fromJSON(con, simplifyDataFrame = F, simplifyMatrix = F)
+lst <- stream_in(con, verbose = F, simplifyVector = T, simplifyDataFrame = F, simplifyMatrix = F)
+if (length(lst) != 1) stop("input json does not have 1 record")
+lst <- lst[[1]]
 
-# prepare a data table to store term values
-data <- as.data.frame(matrix(data = NA, nrow = length(lst$terms[[1]]$values), ncol = length(lst$terms)))
-
-# populate the data table
-for (i in 1:length(lst$terms)) {
-  term <- lst$terms[[i]]
-  colnames(data)[i] <- term$id
+# build data table
+#  - variable ids as column names
+#  - variable values as column values
+#  - specify variable types (e.g. numeric, factor)
+#  - if applicable, specify reference groups and scale values
+dat <- as.data.frame(matrix(data = NA, nrow = length(lst$outcome$values), ncol = length(lst$independent) + 1))
+for (i in 1:ncol(dat)) {
+  if (i == 1) {
+    term <- lst$outcome
+  } else {
+    term <- lst$independent[[i - 1]]
+  }
+  colnames(dat)[i] <- term$id
   if (term$type == "integer" | term$type == "float") {
-    # numeric terms
+    # numeric term
     if ("scale" %in% names(term)) {
-      data[,i] <- term$values/term$scale
+      dat[,i] <- term$values/term$scale
     } else {
-      data[,i] <- term$values
+      dat[,i] <- term$values
     }
   } else if (term$type == "categorical" | term$type == "condition") {
-    # categorical/condition terms
-    data[,i] <- relevel(factor(term$values), ref = term$refGrp)
+    # categorical/condition term
+    dat[,i] <- relevel(factor(term$values), ref = term$refGrp)
   } else {
     stop(paste0("term type '", term$type, "' is not recognized"))
   }
 }
 
 
-######### Regression analysis ##########
+########## Regression analysis ###########
 
 # function to build coefficients table
 build_coef_table <- function(res_summ) {
@@ -82,11 +101,11 @@ build_coef_table <- function(res_summ) {
 # perform the regression analysis
 if (lst$type == "linear"){
   # linear regression
-  if (!is.numeric(data$outcome)){
+  if (!is.numeric(dat$outcome)){
     stop("linear regression requires a numeric outcome variable")
   }
   # fit linear model
-  res <- lm(as.formula(lst$formula), data = data)
+  res <- lm(as.formula(lst$formula), data = dat)
   res_summ <- summary(res)
   # prepare residuals table
   residuals_table <- round(data.frame(as.list(fivenum(res_summ$residuals))), 3)
@@ -112,14 +131,14 @@ if (lst$type == "linear"){
   )
 } else if (lst$type == "logistic"){
   # logistic regression
-  if (!is.factor(data$outcome)){
+  if (!is.factor(dat$outcome)){
     stop("logistic regression requires a factor outcome variable")
   }
-  if (nlevels(data$outcome) != 2){
+  if (nlevels(dat$outcome) != 2){
     stop("outcome variable is not binary")
   }
   # fit logistic model
-  res <- glm(as.formula(lst$formula), family=binomial(link='logit'), data = data)
+  res <- glm(as.formula(lst$formula), family=binomial(link='logit'), data = dat)
   res_summ <- summary(res)
   # prepare residuals table
   residuals_table <- round(data.frame(as.list(fivenum(res_summ$deviance.resid))), 3)
@@ -151,7 +170,8 @@ if (lst$type == "linear"){
 }
 
 
-######### Formatting regression results
+########## Formatting regression results ############
+
 # reformat the coefficients table
 # round the non-p-value columns to 3 decimal places and the p-value columns to 4 significant digits
 pvalueCol <- grepl("^Pr\\(>", colnames(coefficients_table))
@@ -205,7 +225,8 @@ typeIII_table[,pvalueCol] <- signif(typeIII_table[,pvalueCol], 4)
 typeIII_table <- cbind.data.frame("Variable" = row.names(typeIII_table), typeIII_table, stringsAsFactors = F)
 
 
-# output regression results
+########## Export regression results ############
+
 if (length(warnings()) > 0){
   cat("#warnings\n", file = "", sep = "")
   warning_summ <- capture.output(summary(warnings()))

@@ -45,59 +45,71 @@ export async function get_regression(q, ds) {
 	try {
 		parse_q(q, ds)
 
-		// Rest of rows for R matrix, one for each sample
 		const startTime = +new Date()
 		const sampledata = getSampleData(q, [q.outcome, ...q.independent])
 		/* each element is one sample:
 		{sample, id2value:map}, where value is { key, val }
-
 		*/
-
 		const queryTime = +new Date() - startTime
 
-		const [headerline, samplelines, id2originalId, originalId2id] = makeMatrix(q, sampledata)
-		const sampleSize = samplelines.length
+		// build the input for R script
+		const Rinput = makeRinput(q, sampledata)
+
+		// validate the input dataset
+		// validate sample size
+		const sampleSize = Rinput.outcome.values.length
 		if (sampleSize < minimumSample) throw 'too few samples to fit model'
-
-		// create arguments for the R script
-		// outcome
-		const refGroups = [q.outcome.refGrp]
-		const colClasses = [q.outcome.q.mode == 'binary' ? 'factor' : termType2varClass(q.outcome.term.type)]
-		const scalingFactors = ['NA']
-		// independent terms
-		for (const term of q.independent) {
-			refGroups.push(term.refGrp)
-			colClasses.push(term.isBinned ? 'factor' : termType2varClass(term.term.type))
-			scalingFactors.push(term.isBinned || !term.q.scale ? 'NA' : term.q.scale)
+		if (Rinput.independent.find(x => x.values.length !== sampleSize)) throw 'variables have unequal sample sizes'
+		// validate outcome variable
+		if (q.regressionType === 'linear') {
+			// validation for linear regression
+			if (Rinput.outcome.type !== 'integer' && Rinput.outcome.type !== 'float') throw 'outcome is not continuous'
+			if (Rinput.outcome.refGrp) throw 'outcome contains reference group'
+		} else {
+			// validation for logistic regression
+			if (Rinput.outcome.type === 'integer' || Rinput.outcome.type === 'float') throw 'outcome is continuous'
+			if (!Rinput.outcome.refGrp) throw 'outcome does not contain a reference group'
+			const values = new Set(Rinput.outcome.values) // get unique values
+			if (values.size !== 2) throw 'outcome is not binary'
+			if (!values.has(Rinput.outcome.refGrp)) throw 'outcome values do not contain reference group'
 		}
-
-		// validate data
-		for (const [i, colClass] of colClasses.entries()) {
-			const refGrp = refGroups[i]
-			if (colClass == 'factor') {
-				if (refGrp == 'NA') throw 'reference category not given for categorical variable ' + headerline[i]
-				// get unique list of values
-				const values = new Set(samplelines.map(l => l[i]))
-				// make sure ref grp exists in data
-				if (!values.has(refGrp))
-					throw `the reference category '${refGrp}' is not found in the variable '${headerline[i]}'`
-				// make sure there's at least 2 categories
-				if (values.size < 2) throw 'fewer than 2 categories: ' + headerline[i]
+		// validate independent variables
+		for (const variable of Rinput.independent) {
+			if (variable.type === 'integer' || variable.type === 'float') {
+				if (variable.refGrp) throw `'${variable.id}' contains reference group`
 			} else {
-				// not factor type, must be continuous
-				if (refGrp != 'NA') throw 'variable is not factor but ref grp is given: ' + headerline[i]
+				if (!variable.refGrp) throw `'${variable.id}' does not contain reference group`
+				const values = new Set(variable.values) // get unique values
+				if (!values.has(variable.refGrp)) throw `'${variable.id}' values do not contain reference group`
+				// make sure there's at least 2 categories
+				if (values.size < 2) throw `'${variable.id}' has fewer than 2 categories`
 			}
 		}
 
-		const formula = make_formula(q, originalId2id)
+		// convert term IDs to arbitrary IDs (to avoid introducing space/comma into R data)
+		// outcome term
+		Rinput.outcome.id = 'outcome'
+		// independent terms
+		const id2originalId = {} // k: new id, v: original term id
+		const originalId2id = {} // k: original term id, v: new id
+		for (const [i, t] of Rinput.independent.entries()) {
+			id2originalId['id' + i] = t.id
+			originalId2id[t.id] = 'id' + i
+			Rinput.independent[i].id = originalId2id[t.id]
+		}
 
+		// specify the formula for fitting regression model
+		Rinput.formula = make_formula(q, originalId2id)
+
+		// run regression analysis in R
 		const data = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
-			[headerline.join('\t'), ...samplelines.map(i => i.join('\t'))],
-			[q.regressionType, colClasses.join(','), refGroups.join(','), scalingFactors.join(','), formula],
+			[JSON.stringify(Rinput)],
+			[],
 			false
 		)
 
+		// parse the R output
 		const result = { type: q.regressionType, queryTime, sampleSize }
 		parseRoutput(data, id2originalId, result)
 
@@ -107,14 +119,6 @@ export async function get_regression(q, ds) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
 	}
-}
-
-function termType2varClass(t) {
-	// numeric term with binning is 'factor' and is handled outside
-	if (t == 'integer') return 'integer'
-	if (t == 'float') return 'numeric'
-	if (t == 'categorical' || t == 'condition') return 'factor' // including groupset
-	throw 'unknown term type to convert to varClass'
 }
 
 function parse_q(q, ds) {
@@ -154,76 +158,78 @@ function parse_q(q, ds) {
 	}
 }
 
-/* convert sampledata to matrix format
-also collect unique values for variables that are not continuous
-which may consume memory and may need to be improved
-*/
-function makeMatrix(q, sampledata) {
-	// Populate data rows of tsv. first line is header
-	// in the header line, use new id e.g. `id0` to replace original id, to avoid introducing space/comma into R data
-	const id2originalId = {} // k: new id, v: original term id
-	const originalId2id = {} // k: original term id, v: new id
-	for (const [i, t] of q.independent.entries()) {
-		id2originalId['id' + i] = t.id
-		originalId2id[t.id] = 'id' + i
+// prepare input for R script
+function makeRinput(q, sampledata) {
+	// input for R script will be in json format
+	const Rinput = {
+		type: q.regressionType,
+		outcome: {},
+		independent: []
 	}
-	const headerline = ['outcome', ...q.independent.map(i => originalId2id[i.id])]
 
-	// may generate a line for each sample, if the sample has valid value for all terms
-	// store lines as arrays but not \t joined string, for checking refGrp value
-	const lines = []
+	// outcome term
+	const outcome = {
+		id: q.outcome.id,
+		type: q.outcome.q.mode == 'binary' ? 'condition' : q.outcome.term.type,
+		values: []
+	}
+	if (outcome.type === 'categorical' || outcome.type === 'condition') outcome.refGrp = q.outcome.refGrp
+	Rinput.outcome = outcome
 
+	// independent terms
+	for (const term of q.independent) {
+		const independent = {
+			id: term.id,
+			type: term.isBinned ? 'categorical' : term.term.type,
+			values: []
+		}
+		if (independent.type === 'categorical' || independent.type === 'condition') independent.refGrp = term.refGrp
+		if (term.q.scale && !term.isBinned) independent.scale = term.q.scale
+		Rinput.independent.push(independent)
+	}
+
+	// enter sample values for each term
 	for (const { sample, id2value } of sampledata) {
-		const outcome = id2value.get(q.outcome.id)
-		if (!outcome) {
-			// lacks outcome value for this sample, skip
-			continue
-		}
-
-		if (q.outcome.term.values) {
-			// outcome term has values{}, need to check if value is uncomputable:
-			if (q.outcome.term.values[outcome.val] && q.outcome.term.values[outcome.val].uncomputable) {
-				continue
-			}
-		}
-
-		// the first column is the outcome variable; if continuous, use val, otherwise use key
-		const line = [q.regressionType === 'linear' ? outcome.val : outcome.key]
-
-		// rest of columns for independent terms
 		let skipsample = false
+		// discard samples that do not have computable values for all terms
+		const outcome = id2value.get(q.outcome.id)
+		if (!outcome) skipsample = true
+		if (q.outcome.term.values) {
+			if (q.outcome.term.values[outcome.val] && q.outcome.term.values[outcome.val].uncomputable) skipsample = true
+		}
 		for (const term of q.independent) {
-			if (!id2value.has(term.id)) {
-				// missing value for this term
+			const independent = id2value.get(term.id)
+			if (!independent) {
 				skipsample = true
 				break
 			}
-
-			const { key, val } = id2value.get(term.id)
-
-			/*
-			TODO
-			if a uncomputable category is part of a groupset, then it must not be excluded
-			*/
-			if (term.term.values && term.term.values[val] && term.term.values[val].uncomputable) {
+			// TODO: if an uncomputable category is part of a groupset, then it must not be excluded
+			if (term.term.values && term.term.values[independent.val] && term.term.values[independent.val].uncomputable) {
 				skipsample = true
 				break
-			}
-
-			if (term.isBinned) {
-				// key is the bin label
-				line.push(key)
-			} else {
-				// term is not binned
-				// for all the other cases will use val
-				// including groupsetting which both val and key are group labels (yes)
-				line.push(val)
 			}
 		}
-		if (skipsample) continue
-		lines.push(line)
+		if (skipsample) {
+			continue
+		} else {
+			// sample values can be added to regression input
+			Rinput.outcome.values.push(Rinput.type === 'linear' ? outcome.val : outcome.key)
+			for (const term of q.independent) {
+				const independent = id2value.get(term.id)
+				const idx = Rinput.independent.findIndex(x => x.id === term.id)
+				if (term.isBinned) {
+					// key is the bin label
+					Rinput.independent[idx].values.push(independent.key)
+				} else {
+					// term is not binned
+					// for all the other cases will use val
+					// including groupsetting which both val and key are group labels (yes)
+					Rinput.independent[idx].values.push(independent.val)
+				}
+			}
+		}
 	}
-	return [headerline, lines, id2originalId, originalId2id]
+	return Rinput
 }
 
 function parseRoutput(data, id2originalId, result) {
