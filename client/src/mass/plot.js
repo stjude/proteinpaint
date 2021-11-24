@@ -39,6 +39,18 @@ class MassPlot {
 			id: this.id
 		})
 	}
+
+	destroy() {
+		// the dom.holder itself is not a d3-selection,
+		// so need to specify a destroy function here
+		// since the default rx.componentApi.destroy()
+		// does not work when dom.holder is not a d3-selection
+		this.dom.holder.app_div.selectAll('*').remove()
+		this.dom.holder.app_div.remove()
+		for (const key in this.dom) {
+			delete this.dom[key]
+		}
+	}
 }
 
 export const plotInit = getCompInit(MassPlot)

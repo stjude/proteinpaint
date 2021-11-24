@@ -97,6 +97,7 @@ class MassApp {
 
 		for (const plotId in this.components.plots) {
 			if (!this.state.plots.find(p => p.id === plotId)) {
+				this.components.plots[plotId].destroy()
 				delete this.components.plots[plotId]
 			}
 		}

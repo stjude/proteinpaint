@@ -3,6 +3,9 @@ import { root_ID } from '../termdb/tree'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
+const idPrefix = '_STORE_AUTOID_' // to distinguish from user-assigned chart IDs
+let id = 0
+
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
 const defaultState = {
@@ -15,7 +18,18 @@ const defaultState = {
 	// as 'cohortfilter' in state.termfilter.filter
 	activeCohort: 0,
 	search: { isVisible: true },
-	plots: [],
+	// default to showing a dictionary when there are no other plots to show;
+	// this default plots value will be overriden completely if a
+	// mass.state.plots[] is provided in the runpp argument
+	plots: [
+		{
+			id: idPrefix + id++,
+			chartType: 'dictionary',
+			config: {
+				chartType: 'dictionary'
+			}
+		}
+	],
 	termfilter: {
 		filter: {
 			type: 'tvslst',
@@ -32,9 +46,6 @@ const defaultState = {
 		visiblePlotIds: []
 	}
 }
-
-const idPrefix = '_STORE_AUTOID_' // to distinguish from user-assigned chart IDs
-let id = 0
 
 // one store for the whole MASS app
 class TdbStore {
