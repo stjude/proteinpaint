@@ -185,7 +185,7 @@ function setRenderers(self) {
 			})
 		}
 		tr.append('td')
-			.text((term.__ancestors || []).join(' > '))
+			.text((term.__ancestorNames || []).join(' > '))
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
 	}

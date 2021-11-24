@@ -42,7 +42,6 @@ class MassSearch {
 	}
 
 	getState(appState) {
-		console.log(44, appState)
 		return {
 			cohortStr:
 				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
@@ -127,8 +126,10 @@ function setRenderers(self) {
 			.append('td')
 			.style('cursor', 'pointer')
 			.text(term.name)
-			.on('click', () => {
-				console.log(129, term)
+
+		if (term.type) {
+			// has term type, show button for clicking
+			button.attr('class', 'sja_menuoption').on('click', () => {
 				self.app.dispatch({
 					type: 'plot_create',
 					config: {
@@ -137,9 +138,13 @@ function setRenderers(self) {
 					}
 				})
 			})
+		} else {
+			// no term type, not clickable
+			button.style('padding', '5px 10px').style('opacity', 0.5)
+		}
 
 		tr.append('td')
-			.text((term.__ancestors || []).join(' > '))
+			.text((term.__ancestorNames || []).join(' > '))
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
 	}
