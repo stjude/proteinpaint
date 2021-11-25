@@ -187,8 +187,8 @@ export function setCategoricalMethods(self) {
 							btn: values_td.append('div'),
 							btnLabel: 'Filter',
 							emptyLabel: '+New Filter',
-							holder: values_td.append('div').style('width','300px'),
-							vocab: self.vocab, 
+							holder: values_td.append('div').style('width', '300px'),
+							vocab: self.vocab,
 							callback: () => {}
 						}).main(filter)
 					}
@@ -264,6 +264,7 @@ export function setCategoricalMethods(self) {
 						.on('click', () => {
 							self.q.groupsetting.inuse = true
 							self.q.groupsetting.predefined_groupset_idx = i
+							self.q.groupsetting.activeCohort = self.activeCohort
 							self.q.type = 'predefined-groupset'
 							self.dom.tip.hide()
 							self.opts.callback({

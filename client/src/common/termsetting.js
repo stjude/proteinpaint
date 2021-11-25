@@ -542,6 +542,5 @@ export async function fillTermWrapper(termWrapper, vocabApi) {
 		t.term = await vocabApi.getterm(t.id)
 	}
 	if (!t.q) t.q = {}
-	if (!t.varClass) t.varClass = 'term'
 	termsetting_fill_q(t.q, t.term, vocabApi.state.activeCohort)
 }
