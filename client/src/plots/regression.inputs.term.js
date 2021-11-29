@@ -423,6 +423,7 @@ async function maySetTwoGroups(tw, vocabApi, filter) {
 	// step 2: term has 3 or more categories/grades. must apply groupsetting
 	// force to turn on groupsetting
 	q_gs.inuse = true
+	q_gs.activeCohort = vocabApi.state.activeCohort
 
 	// step 3: find if term already has a usable groupsetting
 	if (
