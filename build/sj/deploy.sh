@@ -207,7 +207,6 @@ else
 	if [[ "$SUBDOMAIN" == "ppr" ]]; then
 		# may need to support cohort.db.refresh,
 		# as set via serverconfig dataset updateAttr
-		mkdir $APP/utils
 		mv utils/termdb $APP/utils/
 		mv utils/pnet  $APP/utils/
 	fi
