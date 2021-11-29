@@ -23,6 +23,7 @@ export function setGroupsettingMethods(self) {
 		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
 		const default_1grp = [
 			{
+				type: 'values',
 				values: Object.keys(values)
 					.filter(key => {
 						if (!values[key].uncomputable) return true
@@ -32,7 +33,7 @@ export function setGroupsettingMethods(self) {
 					})
 			}
 		]
-		const default_empty_group = { values: [] }
+		const default_empty_group = { type: 'values', values: [] }
 		const empty_groups = Array(default_grp_count - 1).fill(default_empty_group)
 		const default_groupset = { groups: [...default_1grp, ...empty_groups] }
 		const excluded_cats = []
@@ -231,7 +232,7 @@ export function setGroupsettingMethods(self) {
 			const group_items_div = group_div.append('div').style('margin', '5px')
 			// show categories from the group
 			if (group.type == 'values') addGroupItems(group_items_div, group.values)
-			else if (group.type == 'filter'){
+			else if (group.type == 'filter') {
 				if (!group.filter && self.term.groupsetting.lst[0].groups[i].filter4activeCohort) {
 					const filter_ = self.term.groupsetting.lst[0].groups[i].filter4activeCohort[self.activeCohort]
 					const filter = JSON.parse(JSON.stringify(filter_))
@@ -251,6 +252,8 @@ export function setGroupsettingMethods(self) {
 						callback: () => {}
 					}).main(filter)
 				}
+			} else {
+				throw 'group.values must be defined'
 			}
 		}
 
