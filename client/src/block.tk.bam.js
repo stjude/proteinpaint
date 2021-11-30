@@ -38,7 +38,8 @@ tk.variants[ {} ]
 tk.pileupheight
 tk.pileupbottompad
 tk.alleleAlreadyUpdated // When true (in case of pan/zoom by user) prevents repeated reference genome queries for alt/refallele and left/rightflankseq
-
+tk.drop_pcrduplicates // By default, hides PCR duplicates. Can be changed to show PCR duplicates from config panel
+tk.show_readnames // Shows read names when this flag is true. By default, read names are hidden
 
 tk.dom{}
 .pileup_axis // left side
@@ -585,7 +586,6 @@ function may_render_variant(data, tk, block) {
 	}
 
 	// Rendering FS score
-	let text_fs_score = 0
 	tk.fs_string.text('FS = ' + data.strand_probability)
 
 	if (data.strand_significance) {
@@ -642,6 +642,7 @@ function setTkHeight(tk) {
 		g.dom.rightg.transition().attr('transform', 'translate(0,' + h + ')') // Both diff_score plot and vslider are inside this
 
 		const msgheight = messagerowheight * g.data.messages.length // sum of height from all messages
+		g.dom.leftg.transition().attr('transform', 'translate(0,' + (h + msgheight) + ')') // read_names_g are inside this
 		//g.dom.message_rowg.transition().attr('transform', 'translate(0,0)') //not needed
 		g.dom.imgg.transition().attr('transform', 'translate(0,' + msgheight + ')')
 
@@ -685,6 +686,26 @@ function updateExistingGroups(data, tk, block) {
 				.attr('xlink:href', gd.diff_scores_img.src)
 				.attr('width', gd.diff_scores_img.width)
 				.attr('height', gd.diff_scores_img.height)
+			if (tk.show_readnames) {
+				//console.log('group.data:', group.data)
+				if (group.data.templatebox) {
+					group.dom.read_names_g.selectAll('*').remove()
+					let read_count = 1
+					for (const read of group.data.templatebox) {
+						group.dom.read_names_g
+							.append('text')
+							.attr('x', 0)
+							.attr('y', (group.data.height * read_count) / group.data.templatebox.length)
+							.attr('text-anchor', 'end')
+							.style('fill', 'black')
+							.attr('font-size', group.data.height / group.data.templatebox.length)
+							.text(read.qname)
+						read_count += 1
+					}
+				}
+			} else {
+				group.dom.read_names_g.selectAll('*').remove()
+			}
 		}
 
 		group.dom.img_partstack.attr('width', 0).attr('height', 0)
@@ -738,6 +759,10 @@ function makeTk(tk, block) {
 	if (tk.drop_pcrduplicates == undefined) {
 		// attribute is not set, set to true by default
 		tk.drop_pcrduplicates = true
+	}
+
+	if (tk.show_readnames == undefined) {
+		tk.show_readnames = false
 	}
 
 	tk.config_handle = block
@@ -868,7 +893,8 @@ function makeGroup(gd, tk, block, data) {
 		data: gd,
 		dom: {
 			groupg: tk.glider.append('g'),
-			rightg: tk.gright.append('g')
+			rightg: tk.gright.append('g'),
+			leftg: tk.gleft.append('g')
 		}
 	}
 	/*
@@ -885,6 +911,7 @@ function makeGroup(gd, tk, block, data) {
 
 	if (tk.variants) {
 		group.dom.diff_score_g = group.dom.rightg.append('g') // For storing bar plot of diff_score
+		group.dom.read_names_g = group.dom.leftg.append('g') // For storing read names
 		group.dom.diff_score_barplot_fullstack = group.dom.diff_score_g
 			.append('image')
 			.attr('xlink:href', gd.diff_scores_img.src)
@@ -1263,6 +1290,17 @@ function configPanel(tk, block) {
 			checked: tk.drop_pcrduplicates,
 			callback: () => {
 				tk.drop_pcrduplicates = !tk.drop_pcrduplicates
+				loadTk(tk, block)
+			}
+		})
+	}
+	{
+		make_one_checkbox({
+			holder: d.append('div'),
+			labeltext: 'Show read names',
+			checked: tk.show_readnames,
+			callback: () => {
+				tk.show_readnames = !tk.show_readnames
 				loadTk(tk, block)
 			}
 		})
