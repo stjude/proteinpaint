@@ -974,7 +974,7 @@ function makeGroup(gd, tk, block, data) {
 						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
 					if (tk.readAlignmentTable && tk.readAlignmentTableGroup == group.data.type) {
 						// Checking to see if the group being hovered over is the same as that whose reads have been realigned
-						updateExistingMultiReadAligInfo(tk, group, block, read_number)
+						updateExistingMultiReadAligInfo(tk, read_number)
 					}
 					return
 				}
@@ -1333,7 +1333,7 @@ function click_groupheader(tk, group, block) {
 	}
 }
 
-function updateExistingMultiReadAligInfo(tk, group, block, read_number) {
+function updateExistingMultiReadAligInfo(tk, read_number) {
 	const rows = tk.readAlignmentTable._groups[0][0].querySelectorAll('tr')
 	rows.forEach(row => {
 		if (row.rowIndex == read_number + 1) {
