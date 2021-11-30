@@ -159,13 +159,6 @@ function parse_q(q, ds) {
 
 // prepare input for R script
 function makeRinput(q, sampledata) {
-	// input for R script will be in json format
-	const Rinput = {
-		type: q.regressionType,
-		outcome: {},
-		independent: []
-	}
-
 	// outcome term
 	const outcome = {
 		id: q.outcome.id,
@@ -173,7 +166,13 @@ function makeRinput(q, sampledata) {
 		values: []
 	}
 	if (outcome.type === 'categorical' || outcome.type === 'condition') outcome.refGrp = q.outcome.refGrp
-	Rinput.outcome = outcome
+
+	// input for R script will be in json format
+	const Rinput = {
+		type: q.regressionType,
+		outcome,
+		independent: []
+	}
 
 	// independent terms
 	for (const term of q.independent) {
@@ -189,42 +188,39 @@ function makeRinput(q, sampledata) {
 
 	// enter sample values for each term
 	for (const { sample, id2value } of sampledata) {
-		let skipsample = false
-		// discard samples that do not have computable values for all terms
-		const outcome = id2value.get(q.outcome.id)
-		if (!outcome) skipsample = true
+		if (!id2value.has(q.outcome.id)) continue
+		const out = id2value.get(q.outcome.id)
+
 		if (q.outcome.term.values) {
-			if (q.outcome.term.values[outcome.val] && q.outcome.term.values[outcome.val].uncomputable) skipsample = true
+			if (q.outcome.term.values[out.val] && q.outcome.term.values[out.val].uncomputable) continue
 		}
-		for (const term of q.independent) {
+
+		let skipsample = false
+		for (const { term } of q.independent) {
 			const independent = id2value.get(term.id)
 			if (!independent) {
 				skipsample = true
-				break
-			}
-			// TODO: if an uncomputable category is part of a groupset, then it must not be excluded
-			if (term.term.values && term.term.values[independent.val] && term.term.values[independent.val].uncomputable) {
+			} else if (term.values && term.values[independent.val] && term.values[independent.val].uncomputable) {
+				// TODO: if an uncomputable category is part of a groupset, then it must not be excluded
 				skipsample = true
-				break
 			}
+			if (skipsample) break
 		}
-		if (skipsample) {
-			continue
-		} else {
-			// sample values can be added to regression input
-			Rinput.outcome.values.push(Rinput.type === 'linear' ? outcome.val : outcome.key)
-			for (const term of q.independent) {
-				const independent = id2value.get(term.id)
-				const idx = Rinput.independent.findIndex(x => x.id === term.id)
-				if (term.isBinned) {
-					// key is the bin label
-					Rinput.independent[idx].values.push(independent.key)
-				} else {
-					// term is not binned
-					// for all the other cases will use val
-					// including groupsetting which both val and key are group labels (yes)
-					Rinput.independent[idx].values.push(independent.val)
-				}
+
+		if (skipsample) continue
+		// sample values can be added to regression input
+		Rinput.outcome.values.push(Rinput.type === 'linear' ? out.val : out.key)
+		for (const term of q.independent) {
+			const independent = id2value.get(term.id)
+			const idx = Rinput.independent.findIndex(x => x.id === term.id)
+			if (term.isBinned) {
+				// key is the bin label
+				Rinput.independent[idx].values.push(independent.key)
+			} else {
+				// term is not binned
+				// for all the other cases will use val
+				// including groupsetting which both val and key are group labels (yes)
+				Rinput.independent[idx].values.push(independent.val)
 			}
 		}
 	}
