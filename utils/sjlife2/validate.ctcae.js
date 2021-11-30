@@ -108,7 +108,7 @@ const patient2condition = new Map()
 k: patient
 v: {}
    k: condition
-   v: [ {grade,age}, {} ]
+   v: [ {grade,age,yearstoevent}, {} ]
 */
 
 let sampleid,
@@ -212,18 +212,35 @@ rl.on('close', () => {
 	if (L4err.size) for (const w of L4err) console.error('Forth branch mismatch:', w)
 
 	let numberofevents = 0
-	const conditions = new Set()
+	const condition2samples = new Map()
+	const grade2samplecount = new Map()
 
 	for (const [patient, o] of patient2condition) {
 		const o2 = {}
-		for (const k in o) {
-			conditions.add(k)
-			numberofevents += o[k].length
-			o2[k] = { conditionevents: o[k] }
+		for (const term in o) {
+			if (!condition2samples.has(term)) condition2samples.set(term, new Set())
+			condition2samples.get(term).add(patient)
+
+			numberofevents += o[term].length
+			o2[term] = { conditionevents: o[term] }
+			for (const e of o[term]) {
+				grade2samplecount.set(e.grade, 1 + (grade2samplecount.get(e.grade) || 0))
+			}
 		}
 	}
-	console.error(patient2condition.size + ' patients, ' + conditions.size + ' conditions, ' + numberofevents + ' events')
+	console.error(
+		patient2condition.size + ' patients, ' + condition2samples.size + ' conditions, ' + numberofevents + ' events'
+	)
+	console.error('samplecount per grade')
+	for (const [g, c] of grade2samplecount) {
+		console.error(c + '\t' + g)
+	}
+	console.error('samplecount per condition')
+	for (const [c, o] of condition2samples) {
+		console.error(o.size + '\t' + c)
+	}
 
+	/*
 	for (const [w, o] of L1words) {
 		console.error('L1', w)
 		for (const [g, c] of o) {
@@ -248,6 +265,7 @@ rl.on('close', () => {
 			console.error('\tgrade ' + g + ': ' + c)
 		}
 	}
+	*/
 
 	//get_summary({ term: 'Cardiovascular System', bar_by_children: 1, value_by_most_recent: 1 }, patient2condition)
 })
