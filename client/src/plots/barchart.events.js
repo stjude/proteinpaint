@@ -236,7 +236,7 @@ function handle_click(self) {
 				const term = self.config.term
 				self.app.dispatch({
 					type: 'plot_edit',
-					id: term.id,
+					id: self.id,
 					config: {
 						term: {
 							id: term.id,
@@ -255,7 +255,7 @@ function handle_click(self) {
 					const term2 = self.config.term2
 					self.app.dispatch({
 						type: 'plot_edit',
-						id: self.config.term.id,
+						id: self.id,
 						config: {
 							term2: {
 								id: term2.id,
