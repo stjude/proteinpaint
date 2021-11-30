@@ -182,6 +182,7 @@ export class InputTerm {
 		const data = await this.parent.app.vocabApi.getCategories(tw, this.parent.state.termfilter.filter, [
 			'term1_q=' + encodeURIComponent(JSON.stringify(q))
 		])
+		console.log(data)
 		if (data.error) throw data.error
 		this.orderedLabels = data.orderedLabels
 
@@ -398,18 +399,24 @@ async function maySetTwoGroups(tw, vocabApi, filter) {
 	if (data.error) throw 'cannot get categories: ' + data.error
 	const category2samplecount = new Map() // k: category/grade, v: number of samples
 	const computableCategories = [] // list of computable keys
+	let has_filter_gs = false
+	for (const group of term.groupsetting.lst[0].groups) {
+		if (group.type == 'filter' && group.filter4activeCohort) {
+				has_filter_gs = true
+			}
+	}
 	for (const i of data.lst) {
 		category2samplecount.set(i.key, i.samplecount)
 		if (term.values && term.values[i.key] && term.values[i.key].uncomputable) continue
 		computableCategories.push(i.key)
 	}
-	if (computableCategories.length < 2) {
+	if (computableCategories.length < 2 && !has_filter_gs) {
 		// TODO UI should reject this term and prompt user to select a different one
 		q.type = 'values'
 		tw.error = 'less than 2 categories/grades - cannot create separate groups'
 		return
 	}
-	if (computableCategories.length == 2) {
+	if (computableCategories.length == 2 && !has_filter_gs) {
 		q.type = 'values'
 		// will use the categories from term.values{} and do not apply groupsetting
 		// if the two grades happen to be "normal" and "disease" then it will make sense
