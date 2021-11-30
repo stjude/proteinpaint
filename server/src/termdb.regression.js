@@ -102,7 +102,7 @@ export async function get_regression(q, ds) {
 		Rinput.formula = make_formula(q, originalId2id)
 
 		// run regression analysis in R
-		const data = await lines2R(
+		const Routput = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			[JSON.stringify(Rinput)],
 			[],
@@ -111,8 +111,7 @@ export async function get_regression(q, ds) {
 
 		// parse the R output
 		const result = { type: q.regressionType, queryTime, sampleSize }
-		parseRoutput(data, id2originalId, result)
-
+		parseRoutput(Routput, id2originalId, result)
 		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
@@ -232,142 +231,84 @@ function makeRinput(q, sampledata) {
 	return Rinput
 }
 
-function parseRoutput(data, id2originalId, result) {
-	const type2lines = new Map()
-	// k: table type e.g. residuals
-	// v: list of lines
+function parseRoutput(Routput, id2originalId, result) {
+	if (Routput.length !== 1) throw 'expected 1 line in R output'
+	const data = JSON.parse(Routput[0])
 
-	let tableType
-	for (const line of data) {
-		if (line.startsWith('#')) {
-			tableType = line.substring(1)
-			type2lines.set(tableType, [])
-			continue
+	// residuals
+	result.residuals = data.residuals
+
+	// coefficients
+	if (data.coefficients.rows.length < 2)
+		throw 'expect at least 2 rows in coefficients table but got ' + data.coefficients.rows.length
+	result.coefficients = {
+		header: data.coefficients.header,
+		intercept: data.coefficients.rows.shift(),
+		terms: {}, // individual independent terms, not interaction
+		interactions: [] // interactions
+	}
+	for (const row of data.coefficients.rows) {
+		if (row[0].indexOf(':') != -1) {
+			// is an interaction
+			const interaction = {}
+			const [id1, id2] = row.shift().split(':')
+			const [cat1, cat2] = row.shift().split(':')
+			// row is now only data fields
+			interaction.term1 = id2originalId[id1]
+			interaction.category1 = cat1
+			interaction.term2 = id2originalId[id2]
+			interaction.category2 = cat2
+			interaction.lst = row
+			result.coefficients.interactions.push(interaction)
+		} else {
+			// not interaction, individual variable
+			const id = row.shift()
+			const category = row.shift()
+			// row is now only data fields
+			const termid = id2originalId[id]
+			if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
+			if (category) {
+				// has category
+				if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
+				result.coefficients.terms[termid].categories[category] = row
+			} else {
+				// no category
+				result.coefficients.terms[termid].fields = row
+			}
 		}
-		type2lines.get(tableType).push(line)
 	}
 
-	// parse lines into the result object
-	{
-		const lines = type2lines.get('warnings')
-		if (lines) {
-			result.warnings = {
-				label: 'Warning messages',
-				lst: lines
-			}
+	// type III statistics
+	result.type3 = {
+		header: data.type3.header,
+		intercept: data.type3.rows.shift(),
+		terms: {}, // individual independent terms, not interaction
+		interactions: [] // interactions
+	}
+	for (const row of data.type3.rows) {
+		if (row[0].indexOf(':') != -1) {
+			// is an interaction
+			const interaction = {}
+			const [id1, id2] = row.shift().split(':')
+			// row is now only data fields
+			interaction.term1 = id2originalId[id1]
+			interaction.term2 = id2originalId[id2]
+			interaction.lst = row
+			result.type3.interactions.push(interaction)
+		} else {
+			// not interaction, individual variable
+			const id = row.shift()
+			// row is now only data fields
+			const termid = id2originalId[id]
+			if (!result.type3.terms[termid]) result.type3.terms[termid] = row
 		}
 	}
-	{
-		const lines = type2lines.get('residuals')
-		if (lines) {
-			if (lines.length != 2) throw 'expect 2 lines for residuals but got ' + lines.length
-			result.residuals = {
-				label: result.type === 'linear' ? 'Residuals' : 'Deviance residuals',
-				lst: []
-			}
-			// 1st line is header
-			const header = lines[0].split('\t')
-			// 2nd line is values
-			const values = lines[1].split('\t')
-			for (const [i, h] of header.entries()) {
-				result.residuals.lst.push([h, values[i]])
-			}
-		}
-	}
-	{
-		const lines = type2lines.get('coefficients')
-		if (lines) {
-			if (lines.length < 3) throw 'expect at least 3 lines from coefficients'
 
-			// 1st line is header, remove "variable,category" fields as data rows don't have them
-			const header = lines
-				.shift()
-				.split('\t')
-				.slice(2)
-			// 2nd line is intercept
-			const intercept = lines.shift().split('\t')
+	// other summary statistics
+	result.other = data.other
 
-			result.coefficients = {
-				label: 'Coefficients',
-				header,
-				intercept,
-				terms: {}, // individual independent terms, not interaction
-				interactions: [] // interaction rows
-			}
-
-			// rest of lines are either individual independent variables, or interactions
-			for (const line of lines) {
-				const l = line.split('\t')
-				if (l[0].indexOf(':') != -1) {
-					// is an interaction
-					const row = {}
-					const [id1, id2] = l.shift().split(':')
-					const [cat1, cat2] = l.shift().split(':')
-					// l is now only data fields
-					row.term1 = id2originalId[id1]
-					row.category1 = cat1
-					row.term2 = id2originalId[id2]
-					row.category2 = cat2
-					row.lst = l
-					result.coefficients.interactions.push(row)
-				} else {
-					// not interaction, individual variable
-					const id = l.shift()
-					const category = l.shift()
-					// l is now only data fields
-					const termid = id2originalId[id] || id
-					if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
-					if (category) {
-						// has category
-						if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
-						result.coefficients.terms[termid].categories[category] = l
-					} else {
-						// no category
-						result.coefficients.terms[termid].fields = l
-					}
-				}
-			}
-		}
-	}
-	{
-		const lines = type2lines.get('type3')
-		if (lines) {
-			const header = lines.shift().split('\t')
-			result.type3 = {
-				label: 'Type III statistics',
-				header,
-				lst: []
-			}
-			for (const line of lines) {
-				const l = line.split('\t')
-				const t = l.shift()
-				// l is now only data fields
-				const row = {}
-				if (t == '<none>') {
-					row.lst = l
-				} else {
-					if (t.indexOf(':') != -1) {
-						const [id1, id2] = t.split(':')
-						row.term1 = id2originalId[id1]
-						row.term2 = id2originalId[id2]
-					} else {
-						row.term1 = id2originalId[t]
-					}
-					row.lst = l
-				}
-				result.type3.lst.push(row)
-			}
-		}
-	}
-	{
-		const lines = type2lines.get('other')
-		if (lines) {
-			result.other = {
-				label: 'Other summary statistics',
-				lst: lines.map(i => i.split('\t'))
-			}
-		}
-	}
+	// warnings
+	if (data.warnings) result.warnings = data.warnings
 }
 
 /*

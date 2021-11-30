@@ -6,10 +6,10 @@
 # Usage
 ###########
 
-# Usage: Rscript regression.R < input > output
+# Usage: Rscript regression.R < jsonIn > jsonOut
 
 # Parameters:
-#   - input: [string] input data for regression analysis. The input is in JSON format and is streamed from standard input. Note that newline characters are treated as separators of JSON records; therefore, ensure that the JSON string does not contain any newline characters.
+#   - jsonIn: [string] JSON-formatted input data for regression analysis streamed from standard input. Ensure that the JSON string does not contain any newline characters, because newline characters are treated as separators of JSON records (trailing newline characters are ok).
 #     
 #     JSON input specifications:
 #     {
@@ -29,14 +29,34 @@
 #           "refGrp": [string] reference value of the term (required for categorical/condition term)
 #           "scale": [number] scaling factor of the term. All term values will be divided by this number (optional)
 #         },
-#         ...
+#         {...}
 #        ]
 #     }
 #
 #
-#   - output (in progress: convert output to JSON format): 
-#       - <stdout>: [string] output summary statistics of the regression analysis streamed to stdout. The output will consist of different tables of summary statistics where the tables are delimited by header lines (i.e. lines beginning with "#"). Each header line has the following format: #<name of table>
-
+#   - jsonOut: [string] JSON-formatted results from the regression analysis streamed to standard output. The various results tables are stored as separate keys in the JSON object.
+#     
+#     JSON output specifications:
+#     {
+#       "type": [string] regression type (e.g. "linear", "logistic")
+#       "residuals": {
+#           "header": []
+#           "rows": []
+#       }
+#       "coefficients": {
+#           "header": []
+#           "rows": []
+#       }
+#       "type3": {
+#           "header": []
+#           "rows": []
+#       }
+#       "other": {
+#           <label>: <value>
+#           <label>: <value>
+#           ...
+#       }
+#     }
 
 
 ###########
@@ -58,8 +78,8 @@ lst <- lst[[1]]
 # build data table
 #  - variable ids as column names
 #  - variable values as column values
-#  - specify variable types (e.g. numeric, factor)
-#  - if applicable, specify reference groups and scale values
+#  - assign variable types (e.g. numeric, factor)
+#  - assign reference groups and scale values (if applicable)
 dat <- as.data.frame(matrix(data = NA, nrow = length(lst$outcome$values), ncol = length(lst$independent) + 1))
 for (i in 1:ncol(dat)) {
   if (i == 1) {
@@ -108,8 +128,7 @@ if (lst$type == "linear"){
   res <- lm(as.formula(lst$formula), data = dat)
   res_summ <- summary(res)
   # prepare residuals table
-  residuals_table <- round(data.frame(as.list(fivenum(res_summ$residuals))), 3)
-  colnames(residuals_table) <- c("Minimum","1st quartile","Median","3rd quartile","Maximum")
+  residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$residuals),3)))
   # prepare coefficients table
   coefficients_table <- build_coef_table(res_summ)
   colnames(coefficients_table)[1] <- "Beta"
@@ -119,9 +138,12 @@ if (lst$type == "linear"){
   coefficients_table <- cbind(coefficients_table, ci)
   coefficients_table <- coefficients_table[,c(1,5,6,2,3,4)]
   # prepare type III statistics table
-  typeIII_table <- as.data.frame(drop1(res, scope = ~., test = "F"))
+  typeIII_table <- as.matrix(drop1(res, scope = ~., test = "F"))
+  typeIII_table[,c("Sum of Sq","RSS","AIC")] <- round(typeIII_table[,c("Sum of Sq","RSS","AIC")], 1)
+  typeIII_table[,"F value"] <- round(typeIII_table[,"F value"], 3)
+  typeIII_table[,"Pr(>F)"] <- signif(typeIII_table[,"Pr(>F)"], 4)
   # prepare other summary stats table
-  other_table <- c(
+  other_table <- list(
     "Residual standard error" = round(res_summ$sigma, 2),
     "Residual degrees of freedom" = round(res$df.residual, 0),
     "R-squared" = round(res_summ$r.squared, 5),
@@ -141,8 +163,7 @@ if (lst$type == "linear"){
   res <- glm(as.formula(lst$formula), family=binomial(link='logit'), data = dat)
   res_summ <- summary(res)
   # prepare residuals table
-  residuals_table <- round(data.frame(as.list(fivenum(res_summ$deviance.resid))), 3)
-  colnames(residuals_table) <- c("Minimum","1st quartile","Median","3rd quartile","Maximum")
+  residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$deviance.resid),3)))
   # prepare coefficients table
   coefficients_table <- build_coef_table(res_summ)
   colnames(coefficients_table)[1] <- "Log odds"
@@ -154,17 +175,19 @@ if (lst$type == "linear"){
   coefficients_table <- cbind(coefficients_table, ci)
   coefficients_table <- coefficients_table[,c(1,6,7,2,3,4,5)]
   # prepare type III statistics table
-  typeIII_table <- as.data.frame(drop1(res, scope = ~., test = "LRT"))
+  typeIII_table <- as.matrix(drop1(res, scope = ~., test = "LRT"))
+  typeIII_table[,c("Deviance","AIC")] <- round(typeIII_table[,c("Deviance","AIC")], 1)
+  typeIII_table[,"LRT"] <- round(typeIII_table[,"LRT"], 3)
+  typeIII_table[,"Pr(>Chi)"] <- signif(typeIII_table[,"Pr(>Chi)"], 4)
   # prepare other summary stats table
-  other_table <- c(
-    "Dispersion parameter" = res_summ$dispersion,
-    "Null deviance" = res_summ$null.deviance,
-    "Null deviance degrees of freedom" = res_summ$df.null,
-    "Residual deviance" = res_summ$deviance,
-    "Residual deviance degrees of freedom" = res_summ$df.residual,
-    "AIC" = res_summ$aic
+  other_table <- list(
+    "Dispersion parameter" = round(res_summ$dispersion, 1),
+    "Null deviance" = round(res_summ$null.deviance, 1),
+    "Null deviance degrees of freedom" = round(res_summ$df.null, 1),
+    "Residual deviance" = round(res_summ$deviance, 1),
+    "Residual deviance degrees of freedom" = round(res_summ$df.residual, 1),
+    "AIC" = round(res_summ$aic, 1)
   )
-  other_table <- round(other_table, 1)
 } else{
   stop("regression type is not recognized")
 }
@@ -214,32 +237,29 @@ for (v in vlst) {
     }
   }
 }
-coefficients_table <- cbind.data.frame("Variable" = vCol, "Category" = cCol, coefficients_table, stringsAsFactors = F)
+coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, coefficients_table)
+coefficients_table <- list("header" = colnames(coefficients_table), "rows" = coefficients_table)
 
 # reformat the type III statistics table
-# round the non-p-value columns to 3 decimal places and the p-value column to 4 significant digits
-pvalueCol <- grepl("^Pr\\(>", colnames(typeIII_table))
-typeIII_table[,!pvalueCol] <- round(typeIII_table[,!pvalueCol], 3)
-typeIII_table[,pvalueCol] <- signif(typeIII_table[,pvalueCol], 4)
 # add a variable column
-typeIII_table <- cbind.data.frame("Variable" = row.names(typeIII_table), typeIII_table, stringsAsFactors = F)
+typeIII_table <- cbind("Variable" = row.names(typeIII_table), typeIII_table)
+typeIII_table <- list("header" = colnames(typeIII_table), "rows" = typeIII_table)
 
 
 ########## Export regression results ############
 
-if (length(warnings()) > 0){
-  cat("#warnings\n", file = "", sep = "")
-  warning_summ <- capture.output(summary(warnings()))
-  for (l in warning_summ){
-    cat(l, "\n", sep = "")
-  }
+# combine the results tables into a list
+out_lst <- list("type" = lst$type, "residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = typeIII_table, "other" = other_table)
+
+if (length(warnings()) > 0) {
+  warnings_table <- capture.output(summary(warnings()))
+  out_lst[["warnings"]] <- warnings_table
 }
-cat("#residuals\n", file = "", sep = "")
-write.table(residuals_table, file = "", sep = "\t", quote = F, row.names = F)
-cat("#coefficients\n", file = "", sep = "")
-write.table(coefficients_table, file = "", sep = "\t", quote = F, row.names = F)
-cat("#type3\n", file = "", sep = "")
-write.table(typeIII_table, file = "", sep = "\t", quote = F, row.names = F)
-cat("#other\n", file = "", sep = "")
-write.table(as.data.frame(other_table), file = "", sep = "\t", quote = F, row.names = T, col.names = F)
+
+# convert to json
+out_json <- toJSON(out_lst, digits = NA, na = "string", auto_unbox = T)
+
+# output json to stdout
+cat(out_json, file = "", sep = "")
+
 close(con)
