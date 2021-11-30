@@ -425,7 +425,7 @@ function setRenderers(self) {
 				//////////////////////////////
 				// no data; render axis instead
 				const axis = axisBottom()
-					.ticks(4)
+					.ticks(4, '.1r')
 					.scale(scale)
 				axisstyle({
 					axis: g.call(axis),
@@ -513,6 +513,7 @@ function setRenderers(self) {
 				return scaleLog()
 					.domain([min, max])
 					.range([0, width])
+					.nice()
 			} else {
 				return scaleLinear()
 					.domain([values[0], values[values.length - 1]])

@@ -3,6 +3,9 @@ import { root_ID } from '../termdb/tree'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
+const idPrefix = '_STORE_AUTOID_' // to distinguish from user-assigned chart IDs
+let id = 0
+
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
 const defaultState = {
@@ -14,12 +17,19 @@ const defaultState = {
 	// or value will be set to match a filter node that has been tagged
 	// as 'cohortfilter' in state.termfilter.filter
 	activeCohort: 0,
-	tree: {
-		exclude_types: [],
-		expandedTermIds: [],
-		visiblePlotIds: []
-	},
-	plots: [],
+	search: { isVisible: true },
+	// default to showing a dictionary when there are no other plots to show;
+	// this default plots value will be overriden completely if a
+	// mass.state.plots[] is provided in the runpp argument
+	plots: [
+		{
+			id: idPrefix + id++,
+			chartType: 'dictionary',
+			config: {
+				chartType: 'dictionary'
+			}
+		}
+	],
 	termfilter: {
 		filter: {
 			type: 'tvslst',
@@ -28,7 +38,13 @@ const defaultState = {
 			lst: []
 		}
 	},
-	autoSave: true
+	autoSave: true,
+	// legacy support, can take out after tree is fully migrated
+	tree: {
+		exclude_types: [],
+		expandedTermIds: [],
+		visiblePlotIds: []
+	}
 }
 
 // one store for the whole MASS app
@@ -57,14 +73,7 @@ class TdbStore {
 	}
 
 	validateState() {
-		const s = this.state
-		if (s.tree.expandedTermIds.length == 0) {
-			s.tree.expandedTermIds.push(root_ID)
-		} else {
-			if (s.tree.expandedTermIds[0] != root_ID) {
-				s.tree.expandedTermIds.unshift(root_ID)
-			}
-		}
+		// todo
 	}
 
 	async init() {
@@ -73,7 +82,7 @@ class TdbStore {
 
 			// support any legacy examples and tests that use the deprecated state.tree.plots object,
 			// by converting to a state.plots array
-			if (this.state.tree.plots) {
+			if (this.state.tree && this.state.tree.plots) {
 				for (const plotId in this.state.tree.plots) {
 					const plot = this.state.tree.plots[plotId]
 					const plotCopy = this.state.plots.find(p => p.id === plotId)
@@ -206,7 +215,7 @@ TdbStore.prototype.actions = {
 
 	async plot_prep(action) {
 		const plot = {
-			id: action.id
+			id: 'id' in action ? action.id : idPrefix + id++
 		}
 		if (!action.config) throw '.config{} missing for plot_prep'
 		Object.assign(plot, action.config)
@@ -216,6 +225,7 @@ TdbStore.prototype.actions = {
 	async plot_create(action) {
 		const _ = await import(`../plots/${action.config.chartType}.js`)
 		const plot = await _.getPlotConfig(action.config, this.app)
+		if (!('id' in action)) action.id = idPrefix + id++
 		plot.id = action.id
 		this.state.plots.push(plot)
 	},

@@ -6,11 +6,10 @@ const helpers = require('../../../test/front.helpers.js')
  reusable helper functions
 **************************/
 
-const runpp = helpers.getRunPp('termdb', {
+const runpp = helpers.getRunPp('mass', {
 	state: {
 		dslabel: 'TermdbTest',
 		genome: 'hg38'
-		//nav: { header_mode: 'with_tabs' }
 	},
 	debug: 1
 })
@@ -27,19 +26,14 @@ tape('survival term as term1', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: ['root', 'Survival outcome', 'efs'],
-				visiblePlotIds: ['efs'],
-				plots: {
-					efs: {
-						term: {
-							id: 'efs'
-						}
-					}
+			plots: [{
+				chartType: 'survival',
+				term: {
+					id: 'efs'
 				}
-			}
+			}]
 		},
-		plot: {
+		survival: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -47,8 +41,8 @@ tape('survival term as term1', function(test) {
 	})
 
 	let survivalDiv
-	async function runTests(plot) {
-		survivalDiv = plot.Inner.components.survival.Inner.dom.chartsDiv
+	async function runTests(survival) {
+		survivalDiv = survival.Inner.dom.chartsDiv
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 1, 'should render 1 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
@@ -68,22 +62,17 @@ tape('survival term as term1, with overlay', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: ['root', 'Survival outcome', 'efs'],
-				visiblePlotIds: ['efs'],
-				plots: {
-					efs: {
-						term: {
-							id: 'efs'
-						},
-						term2: {
-							id: 'diaggrp'
-						}
-					}
+			plots: [{
+				chartType: 'survival',
+				term: {
+					id: 'efs'
+				},
+				term2: {
+					id: 'diaggrp'
 				}
-			}
+			}]
 		},
-		plot: {
+		survival: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -91,8 +80,8 @@ tape('survival term as term1, with overlay', function(test) {
 	})
 
 	let survivalDiv
-	async function runTests(plot) {
-		survivalDiv = plot.Inner.components.survival.Inner.dom.chartsDiv
+	async function runTests(survival) {
+		survivalDiv = survival.Inner.dom.chartsDiv
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 7, 'should render 7 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
@@ -112,22 +101,17 @@ tape('survival term as overlay', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
-				visiblePlotIds: ['diaggrp'],
-				plots: {
-					diaggrp: {
-						term: {
-							id: 'diaggrp'
-						},
-						term2: {
-							id: 'efs'
-						}
-					}
+			plots: [{
+				chartType: 'survival',
+				term: {
+					id: 'diaggrp'
+				},
+				term2: {
+					id: 'efs'
 				}
-			}
+			}]
 		},
-		plot: {
+		survival: {
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -135,8 +119,8 @@ tape('survival term as overlay', function(test) {
 	})
 
 	let survivalDiv
-	async function runTests(plot) {
-		survivalDiv = plot.Inner.components.survival.Inner.dom.chartsDiv
+	async function runTests(survival) {
+		survivalDiv = survival.Inner.dom.chartsDiv
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 7, 'should render 7 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),

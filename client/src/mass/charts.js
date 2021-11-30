@@ -5,7 +5,7 @@ import { select, event } from 'd3-selection'
 
 // to assign chart ID to distinguish
 // between chart instances
-const idPrefix = '_AUTOID_' // to distinguish from user-assigned chart IDs
+const idPrefix = '_CHART_AUTOID_' // to distinguish from user-assigned chart IDs
 let id = 0
 
 class MassCharts {
@@ -30,22 +30,28 @@ class MassCharts {
 			appState.termdbConfig &&
 			appState.termdbConfig.selectCohort &&
 			appState.termdbConfig.selectCohort.values[appState.activeCohort]
-		const cohortStr = activeCohort && [...activeCohort.keys].sort().join(',')
+		const cohortStr = (activeCohort && [...activeCohort.keys].sort().join(',')) || ''
+		const chartTypes = JSON.parse(JSON.stringify(appState.termdbConfig.supportedChartTypes)) || {}
 
 		const state = {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			supportedChartTypes: (appState.termdbConfig.supportedChartTypes &&
-				appState.termdbConfig.supportedChartTypes[cohortStr]) || ['barchart']
+			supportedChartTypes: chartTypes[cohortStr] || ['barchart']
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
+		}
+		if (!state.supportedChartTypes.includes('dictionary')) {
+			// force to show a dictionary chart button
+			// TODO: may want the server to decide this, and as defined for a dataset
+			state.supportedChartTypes.push('dictionary')
 		}
 		return state
 	}
 
 	main() {
+		//this.dom.holder.style('display', 'block')
 		this.dom.btns.style('display', d => (this.state.supportedChartTypes.includes(d.chartType) ? '' : 'none'))
 	}
 }
@@ -158,6 +164,14 @@ function getChartTypeList(self) {
 					}
 				}
 			]
+		},
+		{
+			label: 'Dictionary',
+			clickTo: self.prepPlot,
+			chartType: 'dictionary',
+			config: {
+				chartType: 'dictionary'
+			}
 		}
 	]
 }

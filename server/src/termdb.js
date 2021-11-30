@@ -148,6 +148,7 @@ async function trigger_findterm(q, res, termdb) {
 	const id2ancestors = {}
 	terms.forEach(term => {
 		term.__ancestors = termdb.q.getAncestorIDs(term.id)
+		term.__ancestorNames = termdb.q.getAncestorNames(term.id)
 	})
 	if (q.exclude_types) {
 		res.send({ lst: terms.filter(t => true) })
