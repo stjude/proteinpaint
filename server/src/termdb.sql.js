@@ -518,8 +518,9 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 }
 
 function makesql_oneterm_categorical(tablename, term, q, values) {
-	values.push(term.id)
-	if (!q.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) {
+	const groupset = get_active_groupset(q, term)
+	if (!groupset) {
+		values.push(term.id)
 		// groupsetting not applied
 		return {
 			sql: `${tablename} AS (
@@ -529,25 +530,31 @@ function makesql_oneterm_categorical(tablename, term, q, values) {
 			)`,
 			tablename
 		}
-	}
-	// use groupset
-	const table2 = tablename + '_groupset'
-	return {
-		sql: `${table2} AS (
-			${makesql_groupset(term, q)}
-		),
-		${tablename} AS (
-			SELECT
-				sample,
-				${table2}.name AS key,
-				${table2}.name AS value
-			FROM annotations a
-			JOIN
-				${table2} ON a.value = ${table2}.value
-			WHERE
-				term_id=?
-		) `,
-		tablename
+	} else if (!groupset.groups) {
+		throw '.groups[] missing from a group-set'
+	} else if (!groupset.groups.find(g => g.type == 'filter')) {
+		values.push(term.id)
+		// use groupset
+		const table2 = tablename + '_groupset'
+		return {
+			sql: `${table2} AS (
+				${makesql_values_groupset(table2, term, q)}
+			),
+			${tablename} AS (
+				SELECT
+					sample,
+					${table2}.name AS key,
+					${table2}.name AS value
+				FROM annotations a
+				JOIN
+					${table2} ON a.value = ${table2}.value
+				WHERE
+					term_id=?
+			) `,
+			tablename
+		}
+	} else {
+		return makesql_condition_groupset(tablename, term, groupset, q, values)
 	}
 }
 
@@ -566,9 +573,10 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 		? 'computable_grade'
 		: ''
 	if (!restriction) throw 'must set a valid value_by_*'
-	values.push(term.id, value_for)
 
-	if (!q.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) {
+	const groupset = get_active_groupset(q, term)
+	if (!groupset) {
+		values.push(term.id, value_for)
 		return {
 			sql: `${tablename} AS (
 				SELECT
@@ -584,26 +592,32 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 			)`,
 			tablename
 		}
-	}
-	// use groupset
-	const table2 = tablename + '_groupset'
-	return {
-		sql: `${table2} AS (
-			${makesql_groupset(term, q)}
-		),
-		${tablename} AS (
-			SELECT
-				sample,
-				${table2}.name AS key,
-				${table2}.name AS value
-			FROM precomputed a
-			JOIN ${table2} ON ${table2}.value=${q.bar_by_grade ? 'CAST(a.value AS integer)' : 'a.value'}
-			WHERE
-				term_id=?
-				AND value_for=?
-				AND ${restriction}=1
-		)`,
-		tablename
+	} else if (!groupset.groups) {
+		throw '.groups[] missing from a group-set'
+	} else if (!groupset.groups.find(g => g.type == 'filter')) {
+		values.push(term.id, value_for)
+		// use groupset
+		const table2 = tablename + '_groupset'
+		return {
+			sql: `${table2} AS (
+				${makesql_values_groupset(table2, term, q)}
+			),
+			${tablename} AS (
+				SELECT
+					sample,
+					${table2}.name AS key,
+					${table2}.name AS value
+				FROM precomputed a
+				JOIN ${table2} ON ${table2}.value=${q.bar_by_grade ? 'CAST(a.value AS integer)' : 'a.value'}
+				WHERE
+					term_id=?
+					AND value_for=?
+					AND ${restriction}=1
+			)`,
+			tablename
+		}
+	} else {
+		return makesql_complex_groupset(tablename, term, groupset, q, values, value_for, restriction)
 	}
 }
 
@@ -617,15 +631,15 @@ function makesql_chronictte(tablename, term, q, values, filter) {
 	const termsCTE = term.isleaf
 		? ''
 		: `parentTerms AS (
-SELECT distinct(ancestor_id) 
-FROM ancestry
-),
-eventTerms AS (
-SELECT a.term_id 
-FROM ancestry a
-JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
-WHERE a.ancestor_id = ?
-),`
+				SELECT distinct(ancestor_id) 
+				FROM ancestry
+				),
+				eventTerms AS (
+				SELECT a.term_id 
+				FROM ancestry a
+				JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
+				WHERE a.ancestor_id = ?
+			),`
 
 	const termsClause = term.isleaf ? `term_id = ?` : 'term_id IN eventTerms'
 
@@ -674,7 +688,23 @@ function makesql_survivaltte(tablename, term, q, values, filter) {
 	}
 }
 
-function makesql_groupset(term, q) {
+function get_active_groupset(q, term) {
+	if (!q.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) return
+	if (Number.isInteger(q.groupsetting.predefined_groupset_idx)) {
+		if (q.groupsetting.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
+		if (!term.groupsetting) throw 'term.groupsetting missing when q.predefined_groupset_idx in use'
+		if (!term.groupsetting.lst) throw 'term.groupsetting.lst missing when q.predefined_groupset_idx in use'
+		const s = term.groupsetting.lst[q.groupsetting.predefined_groupset_idx]
+		if (!s) throw 'q.predefined_groupset_idx out of bound'
+		return s
+	} else if (q.groupsetting.customset) {
+		return q.groupsetting.customset
+	} else {
+		throw 'do not know how to get groupset'
+	}
+}
+
+function makesql_values_groupset(tablename, term, q) {
 	let s
 	if (Number.isInteger(q.groupsetting.predefined_groupset_idx)) {
 		if (q.groupsetting.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
@@ -689,6 +719,7 @@ function makesql_groupset(term, q) {
 	}
 	if (!s.groups) throw '.groups[] missing from a group-set'
 	const categories = []
+	let filter
 	for (const [i, g] of s.groups.entries()) {
 		const groupname = g.name || 'Group ' + (i + 1)
 		if (!Array.isArray(g.values)) throw 'groupset.groups[' + i + '].values[] is not array'
@@ -696,7 +727,63 @@ function makesql_groupset(term, q) {
 			categories.push(`SELECT '${groupname}' AS name, '${v.key}' AS value`)
 		}
 	}
-	return categories.join(' UNION ALL ')
+	return categories.join('\nUNION ALL\n')
+}
+
+let xfIndex = 0
+
+function makesql_complex_groupset(tablename, term, groupset, q, values, value_for, restriction) {
+	const categories = []
+	const filters = []
+	for (const g of groupset.groups) {
+		if (g.type == 'values') {
+			if (term.type == 'categorical') {
+				categories.push(`SELECT sample, ? as key, value
+					FROM annotations a
+					WHERE term_id=?
+						AND value IN (${g.values.map(v => '?').join(',')})
+				`)
+				values.push(g.name, term.id, ...g.values.map(v => v.key.toString()))
+			} else if (term.type == 'condition') {
+				categories.push(`SELECT sample, ? as key, value
+					FROM precomputed a
+					WHERE
+						term_id=?
+						AND value_for=?
+						AND ${restriction}=1
+						AND value IN (${g.values.map(v => '?').join(',')})
+				`)
+				values.push(g.name, term.id, value_for, ...g.values.map(v => v.key.toString()))
+			}
+		} else if (g.type == 'filter') {
+			// TODO: create filter sql for group.type == 'filter'
+			if ('activeCohort' in q.groupsetting && g.filter4activeCohort) {
+				const tvs_filter = g.filter4activeCohort[q.groupsetting.activeCohort]
+
+				const filter = getFilterCTEs(tvs_filter, q.ds, 'xf' + xfIndex++)
+				if (!filter) throw `unable to construct a group='${g.name}' filter for term.id='${term.id}'`
+				filters.push(filter.filters)
+				values.push(...filter.values.slice(), g.name, g.name)
+
+				categories.push(
+					`SELECT sample, ? AS key, ? AS value
+					FROM ${filter.CTEname}`
+				)
+			} else {
+				throw `activeCohort error: cannot construct filter statement for group name='${g.name}', term.id=${term.id}`
+			}
+		} else {
+			throw `unsupported groupset type='${g.type}'`
+		}
+	}
+
+	return {
+		sql: `${filters},
+		${tablename} AS (
+			${categories.join('\nUNION ALL\n')}
+		)`,
+		tablename
+	}
 }
 
 /*

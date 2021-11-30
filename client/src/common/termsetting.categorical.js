@@ -1,4 +1,5 @@
 import { setGroupsettingMethods } from './termsetting.groupsetting'
+import { filterInit } from './filter'
 
 /*
 Arguments
@@ -167,9 +168,25 @@ export function setCategoricalMethods(self) {
 					.html(g.name != undefined ? g.name + ':' : 'Group ' + (i + 1) + ':')
 
 				const values_td = group_tr.append('td')
+				if (!g.type || g.type == 'values') {
+					for (const v of g.values) {
+						values_td.append('div').html(values[v.key].label)
+					}
+				} else if (g.type == 'filter') {
+					if (!g.filter && self.term.groupsetting.lst[0].groups[i].filter4activeCohort) {
+						const filter_ = self.term.groupsetting.lst[0].groups[i].filter4activeCohort[self.activeCohort]
+						const filter = JSON.parse(JSON.stringify(filter_))
 
-				for (const v of g.values) {
-					values_td.append('div').html(values[v.key].label)
+						// show filter for predefined tvslst for activeCohort
+						filterInit({
+							btn: values_td.append('div'),
+							btnLabel: 'Filter',
+							emptyLabel: '+New Filter',
+							holder: values_td.append('div').style('width', '300px'),
+							vocab: self.vocab,
+							callback: () => {}
+						}).main(filter)
+					}
 				}
 			}
 
@@ -242,6 +259,7 @@ export function setCategoricalMethods(self) {
 						.on('click', () => {
 							self.q.groupsetting.inuse = true
 							self.q.groupsetting.predefined_groupset_idx = i
+							self.q.groupsetting.activeCohort = self.activeCohort
 							self.q.type = 'predefined-groupset'
 							self.dom.tip.hide()
 							self.opts.callback({
@@ -279,8 +297,10 @@ export function setCategoricalMethods(self) {
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 		const vals_with_grp = JSON.parse(JSON.stringify(values))
 		for (const [i, g] of groupset.groups.entries()) {
-			for (const v of g.values) {
-				vals_with_grp[v.key].group = i + 1
+			if (!g.type || g.type == 'values') {
+				for (const v of g.values) {
+					vals_with_grp[v.key].group = i + 1
+				}
 			}
 		}
 

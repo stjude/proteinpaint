@@ -1,5 +1,6 @@
 import { keyupEnter } from '../client'
 import { select, event } from 'd3-selection'
+import { filterInit } from './filter'
 
 /*
 Arguments
@@ -10,7 +11,7 @@ regroupMenu()
 
 other internal functions:
 		addGroupHolder() //create holder for each group from groupset with group name input
-		initDraggableDiv() // make draggable div to render drag-drop list of categories
+		initGroupDiv() // make draggable div to render drag-drop list of categories
 		addGroupItems() // make drag-drop list of categories
 */
 
@@ -22,6 +23,7 @@ export function setGroupsettingMethods(self) {
 		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
 		const default_1grp = [
 			{
+				type: 'values',
 				values: Object.keys(values)
 					.filter(key => {
 						if (!values[key].uncomputable) return true
@@ -31,7 +33,7 @@ export function setGroupsettingMethods(self) {
 					})
 			}
 		]
-		const default_empty_group = { values: [] }
+		const default_empty_group = { type: 'values', values: [] }
 		const empty_groups = Array(default_grp_count - 1).fill(default_empty_group)
 		const default_groupset = { groups: [...default_1grp, ...empty_groups] }
 		const excluded_cats = []
@@ -138,7 +140,13 @@ export function setGroupsettingMethods(self) {
 		}
 
 		// add Div for exclude without group rename input
-		const exclude_div = initDraggableDiv(groups_holder, 'Excluded categories', 0)
+		const exclude_grp_args = {
+			holder: groups_holder, 
+			name: 'Excluded categories', 
+			group_idx: 0
+		}
+
+		const exclude_div = initGroupDiv(exclude_grp_args)
 
 		exclude_div.style('border-top', '1px solid #efefef').on('drop', () => {
 			addOnDrop(exclude_list, 0)
@@ -187,10 +195,16 @@ export function setGroupsettingMethods(self) {
 
 		// create holder for each group from groupset with group name input
 		function addGroupHolder(group, i) {
-			const group_div = initDraggableDiv(non_exclude_div, 'Group ' + (i + 1), i + 1)
+			const group_args = {
+				holder: non_exclude_div, 
+				name: 'Group ' + (i + 1), 
+				group_idx : i + 1,
+				group_type: group.type
+			}
+			const group_div = initGroupDiv(group_args)
 
 			group_div.style('border-right', i < default_grp_count - 1 ? '1px solid #efefef' : '').on('drop', () => {
-				addOnDrop(group_list, i + 1)
+				addOnDrop(group_items_div, i + 1)
 			})
 
 			const group_rename_div = group_div.append('div').attr('class', 'group_edit_div')
@@ -215,19 +229,40 @@ export function setGroupsettingMethods(self) {
 					}
 				})
 
-			const group_list = group_div.append('div').style('margin', '5px')
+			const group_items_div = group_div.append('div').style('margin', '5px')
 			// show categories from the group
-			addGroupItems(group_list, group.values)
+			if (!group.type || group.type == 'values') addGroupItems(group_items_div, group.values)
+			else if (group.type == 'filter') {
+				if (!group.filter && self.term.groupsetting.lst[0].groups[i].filter4activeCohort) {
+					const filter_ = self.term.groupsetting.lst[0].groups[i].filter4activeCohort[self.activeCohort]
+					const filter = JSON.parse(JSON.stringify(filter_))
+
+					// show filter for predefined tvslst for activeCohort
+					filterInit({
+						btn: group_items_div,
+						btnLabel: 'Filter',
+						emptyLabel: '+New Filter',
+						holder: group_items_div.style('width','320px'),
+						vocab: self.vocab, 
+						callback: () => {}
+					}).main(filter)
+				}
+			} else {
+				throw 'group.values must be defined'
+			}
 		}
 
 		// make draggable div to render drag-drop list of categories
-		function initDraggableDiv(holder, group_name, group_i) {
+		function initGroupDiv(args) {
+			const { holder, group_name, group_i, group_type } = args
 			const dragable_div = holder
 				.append('div')
 				.style('display', 'block')
 				.style('padding', '10px')
 				.style('vertical-align', 'top')
-				.on('dragover', () => {
+
+			if (group_type !== 'filter') {
+				dragable_div.on('dragover', () => {
 					if (group_i == drag_native_grp){
 						dragged_item
 							.style('transition-property', 'background-color')
@@ -255,6 +290,7 @@ export function setGroupsettingMethods(self) {
 					event.stopPropagation()
 					dragable_div.style('background-color', '#fff')
 				})
+			}
 
 			// group title
 			dragable_div

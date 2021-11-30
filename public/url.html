@@ -494,6 +494,18 @@ makeURL([
 				]
 			}]
 		})],
+		['BreastSN ', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [{
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: {
+					id:'Breast',
+					refGrp:'No condition / not tested'
+				},
+			}]
+		})],
 	]
 },
 ]
