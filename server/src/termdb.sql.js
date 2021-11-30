@@ -775,7 +775,7 @@ function makesql_complex_groupset(tablename, term, groupset, q, values, value_fo
 					FROM ${filter.CTEname}`
 				)
 			} else {
-				throw `cannot construct filter statement for group name='${g.name}', term.id=${term.id}`
+				throw `activeCohort error: cannot construct filter statement for group name='${g.name}', term.id=${term.id}`
 			}
 		} else {
 			throw `unsupported groupset type='${g.type}'`

@@ -128,7 +128,7 @@ export class InputTerm {
 		try {
 			if (tw && this.setQ) {
 				const { app, state } = this.parent
-				await this.setQ[tw.term.type](tw, app.vocabApi, state.termfilter.filter)
+				await this.setQ[tw.term.type](tw, app.vocabApi, state.termfilter.filter, state)
 			}
 
 			try {
@@ -182,7 +182,7 @@ export class InputTerm {
 		const data = await this.parent.app.vocabApi.getCategories(tw, this.parent.state.termfilter.filter, [
 			'term1_q=' + encodeURIComponent(JSON.stringify(q))
 		])
-		console.log(data)
+		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 		this.orderedLabels = data.orderedLabels
 
@@ -227,6 +227,7 @@ export class InputTerm {
 		const { config, state, disable_terms } = this.parent
 		const args = Object.assign(
 			{
+				activeCohort: state.activeCohort,
 				disable_terms,
 				exclude_types: section.exclude_types,
 				usecase: {
@@ -333,7 +334,7 @@ function getQSetter(regressionType) {
 
 // query backend for median and create custom 2 bins with median and boundry
 // for logistic independet numeric terms
-async function maySetTwoBins(tw, vocabApi, filter) {
+async function maySetTwoBins(tw, vocabApi, filter, state) {
 	// if the bins are already binary, do not reset
 	if (tw.q.mode == 'binary' && tw.q.lst && tw.q.lst.length == 2) {
 		tw.q.mode = 'binary'
@@ -367,7 +368,7 @@ async function maySetTwoBins(tw, vocabApi, filter) {
 	tw.refGrp = tw.q.lst[0].label
 }
 
-async function maySetTwoGroups(tw, vocabApi, filter) {
+async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	// if the bins are already binary, do not reset
 	const { term, q } = tw
 	if (q.mode == 'binary') {
@@ -402,8 +403,8 @@ async function maySetTwoGroups(tw, vocabApi, filter) {
 	let has_filter_gs = false
 	for (const group of term.groupsetting.lst[0].groups) {
 		if (group.type == 'filter' && group.filter4activeCohort) {
-				has_filter_gs = true
-			}
+			has_filter_gs = true
+		}
 	}
 	for (const i of data.lst) {
 		category2samplecount.set(i.key, i.samplecount)
@@ -457,6 +458,7 @@ async function maySetTwoGroups(tw, vocabApi, filter) {
 		) {
 			// has a usable predefined groupset
 			q.type = 'predefined-groupset'
+			if (state.activeCohort != -1) q.groupsetting.activeCohort = state.activeCohort
 			return
 		}
 
@@ -466,12 +468,14 @@ async function maySetTwoGroups(tw, vocabApi, filter) {
 			// found a usable groupset
 			q_gs.predefined_groupset_idx = i
 			q.type = 'predefined-groupset'
+			if (state.activeCohort != -1) q.groupsetting.activeCohort = state.activeCohort
 			return
 		}
 	}
 
 	// step 6: last resort. divide values[] array into two groups
 	const customset = {
+		activeCohort: state.activeCohort,
 		groups: [
 			{
 				name: 'Group 1',
