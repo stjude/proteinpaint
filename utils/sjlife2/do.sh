@@ -69,6 +69,9 @@ node ~/proteinpaint/utils/sjlife2/validate.ctcae.js phenotree/sn.tree raw/intID/
 # created "annotation.outcome"
 node ~/proteinpaint/utils/sjlife2/precompute.ctcae.js termdb annotation.outcome > chronicevents.precomputed
 # created "chronicevents.precomputed"
+node ~/proteinpaint/utils/sjlife2/precompute.ctcae.addNotTested.js >> chronicevents.precomputed
+# grade=-1 rows appended to indicate "not tested" cases
+
 node ~/proteinpaint/utils/sjlife2/term2subcohort.js termdb annotation.matrix annotation.outcome > term2subcohort
 # created "term2subcohort"
 
