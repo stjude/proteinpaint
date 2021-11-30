@@ -373,6 +373,7 @@ or update existing groups, in which groupidx will be provided
 				// this message is the header of the group, allow clickable
 				msg.attr('class', 'sja_clbtext2').on('click', () => {
 					click_groupheader(tk, g, block)
+					//tk.alignpane.body.selectAll('*').remove()
 				})
 			}
 			y += messagerowheight
@@ -961,7 +962,9 @@ function makeGroup(gd, tk, block, data) {
 			}
 			if (!group.data.templatebox) return
 			const [mx, my] = d3mouse(group.dom.img_cover.node())
+			let read_number = 0
 			for (const t of group.data.templatebox) {
+				read_number += 1
 				const bx1 = Math.max(0, t.x1)
 				const bx2 = Math.min(block.width, t.x2)
 				if (mx > bx1 && mx < bx2 && my > t.y1 && my < t.y2) {
@@ -969,6 +972,10 @@ function makeGroup(gd, tk, block, data) {
 						.attr('width', bx2 - bx1)
 						.attr('height', t.y2 - t.y1)
 						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
+					if (tk.readAlignmentTable && tk.readAlignmentTableGroup == group.data.type) {
+						// Checking to see if the group being hovered over is the same as that whose reads have been realigned
+						updateExistingMultiReadAligInfo(tk, group, block, read_number)
+					}
 					return
 				}
 			}
@@ -1325,6 +1332,18 @@ function click_groupheader(tk, group, block) {
 		//}
 	}
 }
+
+function updateExistingMultiReadAligInfo(tk, group, block, read_number) {
+	const rows = tk.readAlignmentTable._groups[0][0].querySelectorAll('tr')
+	rows.forEach(row => {
+		if (row.rowIndex == read_number + 1) {
+			row.style.setProperty('font-weight', 'bold')
+		} else {
+			row.style.setProperty('font-weight', 'normal')
+		}
+	})
+}
+
 async function getMultiReadAligInfo(tk, group, block) {
 	appear(tk.alignpane.pane)
 	tk.alignpane.pane.style('display', 'table')
@@ -1332,7 +1351,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 	tk.alignpane.body.selectAll('*').remove()
 	const wait = tk.alignpane.body.append('div').text('Loading...')
 	const multi_read_alig_data = await align_reads_to_allele(tk, group, block) // Sending server side request for aligning reads to ref/alt
-	//console.log('multi_read_alig_data:', multi_read_alig_data.alignmentData)
+	//console.log('multi_read_alig_data.alignmentData:', multi_read_alig_data.alignmentData)
 	wait.remove()
 
 	const num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
@@ -1353,20 +1372,19 @@ async function getMultiReadAligInfo(tk, group, block) {
 	}
 
 	const div = tk.alignpane.body.append('div').style('margin', '20px')
-	const readAlignmentTable = div
+	tk.readAlignmentTable = div
 		.append('table')
 		.style('font-family', 'Courier')
 		.style('font-size', '0.8em')
 		.style('color', '#303030')
 		.style('margin', '5px 5px 20px 5px')
-	readAlignmentTable
 		.style('border-spacing', 0)
 		.style('border-collapse', 'separate')
 		.style('text-align', 'center')
 		.style('empty-cells', 'show')
 
 	// Drawing ref/alt allele bar
-	let refallele_tr = readAlignmentTable
+	let refallele_tr = tk.readAlignmentTable
 		.append('tr')
 		.style('color', 'white')
 		.style('background-color', 'white')
@@ -1392,7 +1410,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 			variant_string = ' Reference allele'
 		}
 	}
-
+	tk.readAlignmentTableGroup = group.data.type
 	for (const nclt of multi_read_alig_data.alignmentData.final_read_align[0]) {
 		nclt_count += 1
 		const refallele_td = refallele_tr.append('td')
@@ -1498,7 +1516,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 	// Drawing alignments for ref/alt allele and each of the reads
 	let read_count = 0
 	for (const read of multi_read_alig_data.alignmentData.final_read_align) {
-		const read_tr = readAlignmentTable
+		const read_tr = tk.readAlignmentTable
 			.append('tr')
 			.style('color', 'white')
 			.style('background-color', 'grey')
