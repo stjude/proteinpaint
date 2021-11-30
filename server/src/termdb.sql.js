@@ -759,11 +759,6 @@ function makesql_complex_groupset(tablename, term, groupset, q, values, value_fo
 			// TODO: create filter sql for group.type == 'filter'
 			if ('activeCohort' in q.groupsetting && g.filter4activeCohort) {
 				const tvs_filter = g.filter4activeCohort[q.groupsetting.activeCohort]
-				// TODO: remove following 4 lines after recreating termdb.gz
-				tvs_filter.lst[0].tvs.term.name = 'Graded adverse events'
-				tvs_filter.lst[1].tvs.value_by_max_grade = true
-				tvs_filter.lst[1].tvs.bar_by_grade = true
-				tvs_filter.lst[1].tvs.isnot = true
 
 				const filter = getFilterCTEs(tvs_filter, q.ds, 'xf' + xfIndex++)
 				if (!filter) throw `unable to construct a group='${g.name}' filter for term.id='${term.id}'`

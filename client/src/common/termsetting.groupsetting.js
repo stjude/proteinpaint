@@ -231,16 +231,11 @@ export function setGroupsettingMethods(self) {
 
 			const group_items_div = group_div.append('div').style('margin', '5px')
 			// show categories from the group
-			if (group.type == 'values') addGroupItems(group_items_div, group.values)
+			if (!group.type || group.type == 'values') addGroupItems(group_items_div, group.values)
 			else if (group.type == 'filter') {
 				if (!group.filter && self.term.groupsetting.lst[0].groups[i].filter4activeCohort) {
 					const filter_ = self.term.groupsetting.lst[0].groups[i].filter4activeCohort[self.activeCohort]
 					const filter = JSON.parse(JSON.stringify(filter_))
-					// TODO: remove following 4 lines after recreating termdb.gz
-					filter.lst[0].tvs.term.name = 'Graded adverse events'
-					filter.lst[1].tvs.value_by_max_grade = true
-					filter.lst[1].tvs.bar_by_grade = true
-					filter.lst[1].tvs.isnot = true
 
 					// show filter for predefined tvslst for activeCohort
 					filterInit({

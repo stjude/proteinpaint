@@ -168,7 +168,7 @@ export function setCategoricalMethods(self) {
 					.html(g.name != undefined ? g.name + ':' : 'Group ' + (i + 1) + ':')
 
 				const values_td = group_tr.append('td')
-				if (g.type == 'values') {
+				if (!g.type || g.type == 'values') {
 					for (const v of g.values) {
 						values_td.append('div').html(values[v.key].label)
 					}
@@ -176,11 +176,6 @@ export function setCategoricalMethods(self) {
 					if (!g.filter && self.term.groupsetting.lst[0].groups[i].filter4activeCohort) {
 						const filter_ = self.term.groupsetting.lst[0].groups[i].filter4activeCohort[self.activeCohort]
 						const filter = JSON.parse(JSON.stringify(filter_))
-						// TODO: remove following 4 lines after recreating termdb.gz
-						filter.lst[0].tvs.term.name = 'Graded adverse events'
-						filter.lst[1].tvs.value_by_max_grade = true
-						filter.lst[1].tvs.bar_by_grade = true
-						filter.lst[1].tvs.isnot = true
 
 						// show filter for predefined tvslst for activeCohort
 						filterInit({
@@ -302,7 +297,7 @@ export function setCategoricalMethods(self) {
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 		const vals_with_grp = JSON.parse(JSON.stringify(values))
 		for (const [i, g] of groupset.groups.entries()) {
-			if (g.type == 'values') {
+			if (!g.type || g.type == 'values') {
 				for (const v of g.values) {
 					vals_with_grp[v.key].group = i + 1
 				}
