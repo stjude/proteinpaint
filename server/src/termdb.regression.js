@@ -28,14 +28,15 @@ input tsv matrix for R:
 	first column is outcome variable
 	rest of columns are for independent variables
 
-TODO
-- clarify what is key and val, when to use which, and when to skip uncomputable
-		numeric term:
-			continuous: use val and exclude uncomputable values (done in sql?)
-			binning: use key which is bin label
-		categorical and condition term:
-			category/grade: use val and exclude uncomputable categories
-			groupsetting: still use val (both key/val are groupset labels)
+	The sql results {key, val} are returned by getSampleData()
+	and used as follows in makeRinput(): 
+
+	q.mode = 'continuous': 
+	- use val and exclude uncomputable values as done in makeRinput() below
+			
+	q.mode != 'continuous': (default)
+	(a) bin or groupset label
+	(b) the annotated or precomputed value if no binconfig or groupset is used
 */
 
 // minimum number of samples to run analysis
@@ -174,15 +175,15 @@ function makeRinput(q, sampledata) {
 		independent: []
 	}
 
-	// independent terms
-	for (const term of q.independent) {
+	// independent terms, tw = termWrapper
+	for (const tw of q.independent) {
 		const independent = {
-			id: term.id,
-			type: term.isBinned ? 'categorical' : term.term.type,
+			id: tw.id,
+			type: tw.isBinned ? 'categorical' : tw.term.type,
 			values: []
 		}
-		if (independent.type === 'categorical' || independent.type === 'condition') independent.refGrp = term.refGrp
-		if (term.q.scale && !term.isBinned) independent.scale = term.q.scale
+		if (independent.type === 'categorical' || independent.type === 'condition') independent.refGrp = tw.refGrp
+		if (tw.q.scale && !tw.isBinned) independent.scale = tw.q.scale
 		Rinput.independent.push(independent)
 	}
 
@@ -191,23 +192,31 @@ function makeRinput(q, sampledata) {
 		if (!id2value.has(q.outcome.id)) continue
 		const out = id2value.get(q.outcome.id)
 
-		if (q.outcome.term.values) {
+		if (q.mode == 'continuous' && q.outcome.term.values) {
 			if (q.outcome.term.values[out.val] && q.outcome.term.values[out.val].uncomputable) continue
 		}
 
 		let skipsample = false
-		for (const { term } of q.independent) {
-			const independent = id2value.get(term.id)
+		for (const tw of q.independent) {
+			// tw = termWrapper
+			const independent = id2value.get(tw.id)
+			const valeus = tw.term.values
 			if (!independent) {
 				skipsample = true
-			} else if (term.values && term.values[independent.val] && term.values[independent.val].uncomputable) {
+			} else if (
+				tw.q &&
+				tw.q.mode == 'continuous' &&
+				values &&
+				values[independent.val] &&
+				values[independent.val].uncomputable
+			) {
 				// TODO: if an uncomputable category is part of a groupset, then it must not be excluded
 				skipsample = true
 			}
 			if (skipsample) break
 		}
-
 		if (skipsample) continue
+
 		// sample values can be added to regression input
 		Rinput.outcome.values.push(Rinput.type === 'linear' ? out.val : out.key)
 		for (const term of q.independent) {
@@ -332,7 +341,7 @@ Returns two data structures
 				term.id,
 				{
 					// depending on term type and desired 
-					key: bin label or precomputed label or annotated value, 
+					key: either (a) bin or groupsetting label, or (b) precomputed or annotated value if no bin/groupset is used, 
 					val: precomputed or annotated value
 				}
 			]
