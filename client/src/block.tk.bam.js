@@ -1375,9 +1375,19 @@ function updateExistingMultiReadAligInfo(tk, read_number) {
 	const rows = tk.readAlignmentTable._groups[0][0].querySelectorAll('tr')
 	rows.forEach(row => {
 		if (row.rowIndex == read_number + 1) {
-			row.style.setProperty('font-weight', 'bold')
+			const cols = row.querySelectorAll('td')
+			cols.forEach(col => {
+				if (col.style.backgroundColor.toString() == 'rgb(255, 255, 255)') {
+					col.style.setProperty('background-color', 'lightyellow')
+				}
+			})
 		} else {
-			row.style.setProperty('font-weight', 'normal')
+			const cols = row.querySelectorAll('td')
+			cols.forEach(col => {
+				if (col.style.backgroundColor.toString() == 'lightyellow') {
+					col.style.setProperty('background-color', 'rgb(255, 255, 255)')
+				}
+			})
 		}
 	})
 }
@@ -1557,7 +1567,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 		const read_tr = tk.readAlignmentTable
 			.append('tr')
 			.style('color', 'white')
-			.style('background-color', 'grey')
+			.style('background-color', 'white')
 		const r_colors = multi_read_alig_data.alignmentData.qual_r[read_count].split(',')
 		const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
 		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
