@@ -20,6 +20,21 @@ get_term_cte
 			makesql_groupset
 		makesql_oneterm_condition
 		makesql_numericBinCTE
+
+	!!!
+	NOTE: all constructed sql to get sample-value, regardless of term.type, must return 
+	{
+		sample,
+		key: may be a bin or groupset label, or if none is used, the actual column value
+		value: the actual column value in the table
+	}
+
+	For example, returning both the bin label and actual value for a numeric term
+	would allow the calling app to create compute boxplot inputs, which is not
+	possible if only the bin labels are returned. Similar use cases may be supported
+	later.  
+	!!!
+	
 uncomputablegrades_clause
 grade_age_select_clause
 get_label4key
@@ -472,6 +487,19 @@ filter
 returns { sql, tablename }
 */
 function makesql_oneterm(term, ds, q, values, index, filter) {
+	/*
+		NOTE: all constructed sql, regardless of term.type, must return 
+		{
+			sample,
+			key: may be a bin or groupset label, or if none is used, the actual column value
+			value: the actual column value in the table
+		}
+
+		For example, returning both the bin label and actual value for a numeric term
+		would allow the calling app to create compute boxplot inputs, which is not
+		possible if only the bin labels are returned. Similar use cases may be supported
+		later.  
+	*/
 	const tablename = 'samplekey_' + index
 	if (term.type == 'survival') {
 		return makesql_survivaltte(tablename, term, q, values, filter)
@@ -540,7 +568,7 @@ function makesql_oneterm_categorical(tablename, term, q, values) {
 			SELECT
 				sample,
 				${table2}.name AS key,
-				${table2}.name AS value
+				${table2}.value AS value
 			FROM annotations a
 			JOIN
 				${table2} ON a.value = ${table2}.value
@@ -595,9 +623,9 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 			SELECT
 				sample,
 				${table2}.name AS key,
-				${table2}.name AS value
+				${table2}.value AS value
 			FROM precomputed a
-			JOIN ${table2} ON ${table2}.value=${q.bar_by_grade ? 'CAST(a.value AS integer)' : 'a.value'}
+			JOIN ${table2} ON ${table2}.value=a.value
 			WHERE
 				term_id=?
 				AND value_for=?
