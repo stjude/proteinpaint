@@ -592,6 +592,12 @@
                         "genome": "hg19",
                         "dataset":"Pediatric"
                     },
+                    "buttons": [
+                        {
+                            "name": "Documentation",
+                            "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+                        }
+                    ],
                     "testSpec": {
                         "expected": { "circle": 10 }
                     }
@@ -635,14 +641,7 @@
                     }
                 }
             ],
-            "sandbox":{
-                "buttons": [
-                    {
-                        "name": "Documentation",
-                        "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
-                    }
-                ]
-            },
+            "sandbox": {},
             "searchterms": []
         },
         {
