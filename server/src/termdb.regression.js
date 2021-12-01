@@ -188,7 +188,7 @@ function makeRinput(q, sampledata) {
 		if (!id2value.has(q.outcome.id)) continue
 		const out = id2value.get(q.outcome.id)
 
-		if (q.mode == 'continuous' && q.outcome.term.values) {
+		if (q.outcome.q.mode == 'continuous' && q.outcome.term.values) {
 			if (q.outcome.term.values[out.val] && q.outcome.term.values[out.val].uncomputable) continue
 		}
 
