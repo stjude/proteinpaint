@@ -286,6 +286,7 @@ or update existing groups, in which groupidx will be provided
 3. change/cancel variant
 */
 
+	//console.log('tk.groups:', tk.groups)
 	if ('nochr' in data) tk.nochr = data.nochr // only set to tk when nochr is returned from server
 
 	if (data.pileup_data) {
@@ -333,7 +334,6 @@ or update existing groups, in which groupidx will be provided
 	}
 
 	may_render_variant(data, tk, block)
-
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
@@ -687,7 +687,6 @@ function updateExistingGroups(data, tk, block) {
 				.attr('width', gd.diff_scores_img.width)
 				.attr('height', gd.diff_scores_img.height)
 			if (tk.show_readnames) {
-				//console.log('group.data:', group.data)
 				if (group.data.templatebox) {
 					group.dom.read_names_g.selectAll('*').remove()
 					let read_count = 1
@@ -1375,16 +1374,18 @@ function updateExistingMultiReadAligInfo(tk, read_number) {
 	const rows = tk.readAlignmentTable._groups[0][0].querySelectorAll('tr')
 	rows.forEach(row => {
 		if (row.rowIndex == read_number + 1) {
+			row.style.setProperty('font-weight', 'bold')
 			const cols = row.querySelectorAll('td')
 			cols.forEach(col => {
 				if (col.style.backgroundColor.toString() == 'rgb(255, 255, 255)') {
-					col.style.setProperty('background-color', 'lightyellow')
+					col.style.setProperty('background-color', 'yellow')
 				}
 			})
 		} else {
+			row.style.setProperty('font-weight', 'normal')
 			const cols = row.querySelectorAll('td')
 			cols.forEach(col => {
-				if (col.style.backgroundColor.toString() == 'lightyellow') {
+				if (col.style.backgroundColor.toString() == 'yellow') {
 					col.style.setProperty('background-color', 'rgb(255, 255, 255)')
 				}
 			})
@@ -2169,6 +2170,25 @@ function renderGroup(group, tk, block) {
 				.attr('xlink:href', group.data.diff_scores_img.src)
 				.attr('width', group.data.diff_scores_img.width)
 				.attr('height', group.data.diff_scores_img.height)
+			if (tk.show_readnames) {
+				if (group.data.templatebox) {
+					group.dom.read_names_g.selectAll('*').remove()
+					let read_count = 1
+					for (const read of group.data.templatebox) {
+						group.dom.read_names_g
+							.append('text')
+							.attr('x', 0)
+							.attr('y', (group.data.height * read_count) / group.data.templatebox.length)
+							.attr('text-anchor', 'end')
+							.style('fill', 'black')
+							.attr('font-size', group.data.height / group.data.templatebox.length)
+							.text(read.qname)
+						read_count += 1
+					}
+				}
+			} else {
+				group.dom.read_names_g.selectAll('*').remove()
+			}
 		}
 		group.dom.img_partstack
 			.attr('xlink:href', group.data.src)
@@ -2204,6 +2224,9 @@ function renderGroup(group, tk, block) {
 			group.dom.diff_score_barplot_fullstack
 				.attr('width', group.data.diff_scores_img.width)
 				.attr('height', group.data.diff_scores_img.height)
+			if (tk.show_readnames) {
+				group.dom.read_names_g.selectAll('*').remove()
+			}
 		}
 		group.dom.rightg.vslider.g.transition().attr('transform', 'scale(0)')
 	}
