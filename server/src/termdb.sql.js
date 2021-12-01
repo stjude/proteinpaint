@@ -767,7 +767,9 @@ function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
 	const excludevalues = []
 	if (term.values) {
 		for (const key in term.values) {
-			if (!term.values[key].uncomputable) continue
+			const isUncomputable = term.values[key].uncomputable
+			if (q.computableValuesOnly && isUncomputable) continue
+			if (!q.computableValuesOnly && !isUncomputable) continue
 			excludevalues.push(key)
 			const v = term.values[key]
 			bin_def_lst.push(

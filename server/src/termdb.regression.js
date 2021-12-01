@@ -131,6 +131,7 @@ function parse_q(q, ds) {
 	if (!q.outcome) throw `empty 'outcome' parameter`
 	if (!('id' in q.outcome)) throw 'outcome.id missing'
 	if (!q.outcome.q) throw 'outcome.q missing'
+	q.outcome.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
 	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
 	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
 
@@ -138,12 +139,15 @@ function parse_q(q, ds) {
 	if (!q.independent) throw 'independent[] missing'
 	q.independent = JSON.parse(decodeURIComponent(q.independent))
 	if (!Array.isArray(q.independent) || q.independent.length == 0) throw 'q.independent is not non-empty array'
-	for (const term of q.independent) {
-		if (!term.id) throw '.id missing for an indepdent term'
-		term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
-		if (!term.term) throw 'invalid independent term: ' + term.id
-		if (term.type == 'float' || term.type == 'integer')
-			term.isBinned = term.q.mode == 'discrete' || term.q.mode == 'binary'
+	// tw = termWrapper
+	for (const tw of q.independent) {
+		if (!tw.id) throw '.id missing for an independent term'
+		tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
+		if (!tw.term) throw `invalid independent term='${tw.id}'`
+		if (!tw.q) throw `missing q for term.id='${tw.id}'`
+		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
+		if (tw.term.type == 'float' || tw.term.type == 'integer')
+			tw.isBinned = tw.q.mode == 'discrete' || tw.q.mode == 'binary'
 	}
 	// interaction of independent
 	for (const i of q.independent) {
