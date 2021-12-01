@@ -128,7 +128,7 @@ export class InputTerm {
 		try {
 			if (tw && this.setQ) {
 				const { app, state } = this.parent
-				await this.setQ[tw.term.type](tw, app.vocabApi, state.termfilter.filter)
+				await this.setQ[tw.term.type](tw, app.vocabApi, state.termfilter.filter, state)
 			}
 
 			try {
@@ -182,6 +182,7 @@ export class InputTerm {
 		const data = await this.parent.app.vocabApi.getCategories(tw, this.parent.state.termfilter.filter, [
 			'term1_q=' + encodeURIComponent(JSON.stringify(q))
 		])
+		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 		this.orderedLabels = data.orderedLabels
 
@@ -226,6 +227,7 @@ export class InputTerm {
 		const { config, state, disable_terms } = this.parent
 		const args = Object.assign(
 			{
+				activeCohort: state.activeCohort,
 				disable_terms,
 				exclude_types: section.exclude_types,
 				usecase: {
@@ -332,7 +334,7 @@ function getQSetter(regressionType) {
 
 // query backend for median and create custom 2 bins with median and boundry
 // for logistic independet numeric terms
-async function maySetTwoBins(tw, vocabApi, filter) {
+async function maySetTwoBins(tw, vocabApi, filter, state) {
 	// if the bins are already binary, do not reset
 	if (tw.q.mode == 'binary' && tw.q.lst && tw.q.lst.length == 2) {
 		tw.q.mode = 'binary'
@@ -366,7 +368,7 @@ async function maySetTwoBins(tw, vocabApi, filter) {
 	tw.refGrp = tw.q.lst[0].label
 }
 
-async function maySetTwoGroups(tw, vocabApi, filter) {
+async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	// if the bins are already binary, do not reset
 	const { term, q } = tw
 	if (q.mode == 'binary') {
@@ -398,18 +400,24 @@ async function maySetTwoGroups(tw, vocabApi, filter) {
 	if (data.error) throw 'cannot get categories: ' + data.error
 	const category2samplecount = new Map() // k: category/grade, v: number of samples
 	const computableCategories = [] // list of computable keys
+	let has_filter_gs = false
+	for (const group of term.groupsetting.lst[0].groups) {
+		if (group.type == 'filter' && group.filter4activeCohort) {
+			has_filter_gs = true
+		}
+	}
 	for (const i of data.lst) {
 		category2samplecount.set(i.key, i.samplecount)
 		if (term.values && term.values[i.key] && term.values[i.key].uncomputable) continue
 		computableCategories.push(i.key)
 	}
-	if (computableCategories.length < 2) {
+	if (computableCategories.length < 2 && !has_filter_gs) {
 		// TODO UI should reject this term and prompt user to select a different one
 		q.type = 'values'
-		input.term.error = 'less than 2 categories/grades - cannot create separate groups'
+		tw.error = 'less than 2 categories/grades - cannot create separate groups'
 		return
 	}
-	if (computableCategories.length == 2) {
+	if (computableCategories.length == 2 && !has_filter_gs) {
 		q.type = 'values'
 		// will use the categories from term.values{} and do not apply groupsetting
 		// if the two grades happen to be "normal" and "disease" then it will make sense
@@ -423,6 +431,7 @@ async function maySetTwoGroups(tw, vocabApi, filter) {
 	// step 2: term has 3 or more categories/grades. must apply groupsetting
 	// force to turn on groupsetting
 	q_gs.inuse = true
+	q_gs.activeCohort = vocabApi.state.activeCohort
 
 	// step 3: find if term already has a usable groupsetting
 	if (
@@ -449,6 +458,7 @@ async function maySetTwoGroups(tw, vocabApi, filter) {
 		) {
 			// has a usable predefined groupset
 			q.type = 'predefined-groupset'
+			if (state.activeCohort != -1) q.groupsetting.activeCohort = state.activeCohort
 			return
 		}
 
@@ -458,12 +468,14 @@ async function maySetTwoGroups(tw, vocabApi, filter) {
 			// found a usable groupset
 			q_gs.predefined_groupset_idx = i
 			q.type = 'predefined-groupset'
+			if (state.activeCohort != -1) q.groupsetting.activeCohort = state.activeCohort
 			return
 		}
 	}
 
 	// step 6: last resort. divide values[] array into two groups
 	const customset = {
+		activeCohort: state.activeCohort,
 		groups: [
 			{
 				name: 'Group 1',
@@ -497,8 +509,10 @@ function groupsetNoEmptyGroup(gs, c2s) {
 	// return true if a groupset does not have empty group
 	for (const g of gs.groups) {
 		let total = 0
-		for (const i of g.values) total += c2s.get(i.key) || 0
-		if (total == 0) return false
+		if (g.type == 'values') {
+			for (const i of g.values) total += c2s.get(i.key) || 0
+			if (total == 0) return false
+		}
 	}
 	return true
 }

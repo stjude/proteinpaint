@@ -235,11 +235,12 @@ TdbStore.prototype.actions = {
 		if (plot) {
 			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
 			validatePlot(plot, this.app.vocabApi)
-		}
-		if ('cutoff' in action.config) {
-			plot.cutoff = action.config.cutoff
-		} else {
-			delete plot.cutoff
+
+			if ('cutoff' in action.config) {
+				plot.cutoff = action.config.cutoff
+			} else {
+				delete plot.cutoff
+			}
 		}
 	},
 

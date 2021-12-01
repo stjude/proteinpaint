@@ -47,6 +47,148 @@ outputs these files:
 console.log('\nRUNNING phenotree.parse.term2term.js ...')
 
 const level2_ctcaegraded = 'Graded Adverse Events'
+const groupsetting_old = {
+	// old definition
+	useIndex: -1,
+	lst: [
+		{
+			name: 'Any condition vs normal',
+			is_grade: true,
+			groups: [
+				{
+					name: 'No condition',
+					// CAREFUL!! grades are integers, not strings. so that max grade computing can happen
+					values: [{ key: 0, label: 'No condition' }]
+				},
+				{
+					name: 'Has condition',
+					values: [
+						{ key: 1, label: '1: Mild' },
+						{ key: 2, label: '2: Moderate' },
+						{ key: 3, label: '3: Severe' },
+						{ key: 4, label: '4: Life-threatening' },
+						{ key: 5, label: '5: Death' }
+					]
+				}
+			]
+		}
+	]
+}
+const tvs_ctcaeGraded = () => {
+	return {
+		type: 'tvs',
+		tvs: {
+			term: {
+				id: 'ctcae_graded',
+				name: 'graded adverse events',
+				type: 'categorical'
+			},
+			values: [{ key: '1', label: 'Yes' }]
+		}
+	}
+}
+const tvs_grade1_9 = t => {
+	return {
+		type: 'tvs',
+		tvs: {
+			term: {
+				id: t.id,
+				name: t.name,
+				type: 'condition'
+			},
+			isnot: true,
+			value_by_max_grade: true,
+			bar_by_grade: true,
+			values: [
+				{ key: 1, label: '1: Mild' },
+				{ key: 2, label: '2: Moderate' },
+				{ key: 3, label: '3: Severe' },
+				{ key: 4, label: '4: Life-threatening' },
+				{ key: 5, label: '5: Death' },
+				{ key: 9, label: '9: Unknown' }
+			]
+		}
+	}
+}
+const tvs_subcohort = cohort => {
+	return {
+		type: 'tvs',
+		tvs: {
+			term: {
+				id: 'subcohort',
+				type: 'categorical'
+			},
+			values: [{ key: cohort, label: cohort }]
+		}
+	}
+}
+
+const make_groupsetting = t => {
+	// new def
+	return {
+		useIndex: -1,
+		lst: [
+			{
+				name: 'Any condition vs normal',
+				is_grade: true,
+				groups: [
+					{
+						name: 'No condition / not tested',
+						type: 'filter',
+						filter4activeCohort: [
+							// shares array index with termdb.selectCohort.values[]
+							// 0 - sjlife
+							{
+								type: 'tvslst',
+								in: true,
+								join: 'and',
+								lst: [tvs_ctcaeGraded(), tvs_grade1_9(t)]
+							},
+							// 1 - ccss
+							{
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: [tvs_grade1_9(t)]
+							},
+							// 2 - sjlife+ccss
+							{
+								type: 'tvslst',
+								in: true,
+								join: 'or',
+								lst: [
+									{
+										type: 'tvslst',
+										in: true,
+										join: 'and',
+										lst: [tvs_subcohort('SJLIFE'), tvs_ctcaeGraded(), tvs_grade1_9(t)]
+									},
+									{
+										type: 'tvslst',
+										in: true,
+										join: 'and',
+										lst: [tvs_subcohort('CCSS'), tvs_grade1_9(t)]
+									}
+								]
+							}
+						]
+					},
+					{
+						name: 'Has condition',
+						type: 'values',
+						values: [
+							{ key: 1, label: '1: Mild' },
+							{ key: 2, label: '2: Moderate' },
+							{ key: 3, label: '3: Severe' },
+							{ key: 4, label: '4: Life-threatening' },
+							{ key: 5, label: '5: Death' }
+						]
+					}
+				]
+			}
+		]
+	}
+}
 
 const abort = m => {
 	console.error('ERROR: ' + m)
@@ -460,32 +602,7 @@ function addattributes_conditionterm(t) {
 		}
 	}
 
-	t.groupsetting = {
-		useIndex: -1,
-		lst: [
-			{
-				name: 'Any condition vs normal',
-				is_grade: true,
-				groups: [
-					{
-						name: 'No condition',
-						// CAREFUL!! grades are integers, not strings. so that max grade computing can happen
-						values: [{ key: 0, label: 'No condition' }]
-					},
-					{
-						name: 'Has condition',
-						values: [
-							{ key: 1, label: '1: Mild' },
-							{ key: 2, label: '2: Moderate' },
-							{ key: 3, label: '3: Severe' },
-							{ key: 4, label: '4: Life-threatening' },
-							{ key: 5, label: '5: Death' }
-						]
-					}
-				]
-			}
-		]
-	}
+	t.groupsetting = make_groupsetting(t)
 }
 
 function output_termdb() {
