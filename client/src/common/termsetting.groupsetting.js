@@ -39,8 +39,16 @@ export function setGroupsettingMethods(self) {
 		const excluded_cats = []
 		// to not change background of native group, keep track of dragged items original group
 		let drag_native_grp, dragged_item
+
+		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
+		const groupset = grpsetting_flag && self.q.groupsetting.predefined_groupset_idx != undefined
+				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+				: self.q.groupsetting && self.q.groupsetting.customset
+				? self.q.groupsetting.customset
+				: default_groupset
+
 		Object.keys(cat_grps).forEach(key => {
-			if (cat_grps[key].group == 0 || cat_grps[key].uncomputable == true)
+			if ( cat_grps[key].group == 0 || (!grpsetting_flag && cat_grps[key].uncomputable == true))
 				excluded_cats.push({ key, label: cat_grps[key].label })
 		})
 
@@ -49,14 +57,6 @@ export function setGroupsettingMethods(self) {
 		let group_names = []
 		if (self.q.bar_by_grade) customset.is_grade = true
 		else if (self.q.bar_by_children) customset.is_subcondition = true
-
-		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
-		const groupset =
-			grpsetting_flag && self.q.groupsetting.predefined_groupset_idx != undefined
-				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-				: self.q.groupsetting && self.q.groupsetting.customset
-				? self.q.groupsetting.customset
-				: default_groupset
 
 		for (let i = 0; i < default_grp_count; i++) {
 			let group_name =
