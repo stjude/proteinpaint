@@ -55,41 +55,37 @@ export async function get_regression(q, ds) {
 		// build the input for R script
 		const Rinput = makeRinput(q, sampledata)
 
-		// validate the input dataset
+		// validate R input
 		// validate sample size
 		const sampleSize = Rinput.outcome.values.length
 		if (sampleSize < minimumSample) throw 'too few samples to fit model'
 		if (Rinput.independent.find(x => x.values.length !== sampleSize)) throw 'variables have unequal sample sizes'
 		// validate outcome variable
 		if (q.regressionType === 'linear') {
-			// validation for linear regression
-			if (Rinput.outcome.type !== 'integer' && Rinput.outcome.type !== 'float') throw 'outcome is not continuous'
-			if (Rinput.outcome.refGrp) throw 'outcome contains reference group'
+			if (Rinput.outcome.rtype !== 'numeric') throw 'outcome is not continuous'
+			if (Rinput.outcome.refGrp) throw 'reference group given for outcome'
 		} else {
-			// validation for logistic regression
-			if (Rinput.outcome.type === 'integer' || Rinput.outcome.type === 'float') throw 'outcome is continuous'
-			if (!Rinput.outcome.refGrp) throw 'outcome does not contain a reference group'
+			if (Rinput.outcome.rtype === 'numeric') throw 'outcome is continuous'
+			if (!Rinput.outcome.refGrp) throw 'reference group not given for outcome'
 			const values = new Set(Rinput.outcome.values) // get unique values
 			if (values.size !== 2) throw 'outcome is not binary'
-			if (!values.has(Rinput.outcome.refGrp)) throw 'outcome values do not contain reference group'
+			if (!values.has(Rinput.outcome.refGrp)) throw 'reference group not found in outcome values'
 		}
 		// validate independent variables
 		for (const variable of Rinput.independent) {
-			if (variable.type === 'integer' || variable.type === 'float') {
-				if (variable.refGrp) throw `'${variable.id}' contains reference group`
+			if (variable.rtype === 'numeric') {
+				if (variable.refGrp) throw `reference group given for '${variable.id}'`
 			} else {
-				if (!variable.refGrp) throw `'${variable.id}' does not contain reference group`
+				if (!variable.refGrp) throw `reference group not given for '${variable.id}'`
 				const values = new Set(variable.values) // get unique values
-				if (!values.has(variable.refGrp)) throw `'${variable.id}' values do not contain reference group`
+				if (!values.has(variable.refGrp)) throw `reference group not found in '${variable.id}' values`
 				// make sure there's at least 2 categories
 				if (values.size < 2) throw `'${variable.id}' has fewer than 2 categories`
 			}
 		}
 
-		// convert term IDs to arbitrary IDs (to avoid introducing space/comma into R data)
-		// outcome term
+		// use dummy variable IDs in R (to avoid using spaces/commas)
 		Rinput.outcome.id = 'outcome'
-		// independent terms
 		const id2originalId = {} // k: new id, v: original term id
 		const originalId2id = {} // k: original term id, v: new id
 		for (const [i, t] of Rinput.independent.entries()) {
@@ -110,8 +106,8 @@ export async function get_regression(q, ds) {
 		)
 
 		// parse the R output
-		const result = { type: q.regressionType, queryTime, sampleSize }
-		parseRoutput(Routput, id2originalId, result)
+		const result = { queryTime, sampleSize }
+		parseRoutput(Routput, id2originalId, q, result)
 		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
@@ -162,10 +158,10 @@ function makeRinput(q, sampledata) {
 	// outcome term
 	const outcome = {
 		id: q.outcome.id,
-		type: q.outcome.q.mode == 'binary' ? 'condition' : q.outcome.term.type,
+		rtype: q.outcome.q.mode === 'continuous' ? 'numeric' : 'factor',
 		values: []
 	}
-	if (outcome.type === 'categorical' || outcome.type === 'condition') outcome.refGrp = q.outcome.refGrp
+	if (outcome.rtype === 'factor') outcome.refGrp = q.outcome.refGrp
 
 	// input for R script will be in json format
 	const Rinput = {
@@ -178,11 +174,11 @@ function makeRinput(q, sampledata) {
 	for (const term of q.independent) {
 		const independent = {
 			id: term.id,
-			type: term.isBinned ? 'categorical' : term.term.type,
+			rtype: term.q.mode === 'continuous' ? 'numeric' : 'factor',
 			values: []
 		}
-		if (independent.type === 'categorical' || independent.type === 'condition') independent.refGrp = term.refGrp
-		if (term.q.scale && !term.isBinned) independent.scale = term.q.scale
+		if (independent.rtype === 'factor') independent.refGrp = term.refGrp
+		if (term.q.scale) independent.scale = term.q.scale
 		Rinput.independent.push(independent)
 	}
 
@@ -227,12 +223,13 @@ function makeRinput(q, sampledata) {
 	return Rinput
 }
 
-function parseRoutput(Routput, id2originalId, result) {
+function parseRoutput(Routput, id2originalId, q, result) {
 	if (Routput.length !== 1) throw 'expected 1 line in R output'
 	const data = JSON.parse(Routput[0])
 
 	// residuals
 	result.residuals = data.residuals
+	result.residuals.label = q.regressionType === 'linear' ? 'Residuals' : 'Deviance residuals'
 
 	// coefficients
 	if (data.coefficients.rows.length < 2)
@@ -273,6 +270,7 @@ function parseRoutput(Routput, id2originalId, result) {
 			}
 		}
 	}
+	result.coefficients.label = 'Coefficients'
 
 	// type III statistics
 	result.type3 = {
@@ -299,12 +297,17 @@ function parseRoutput(Routput, id2originalId, result) {
 			if (!result.type3.terms[termid]) result.type3.terms[termid] = row
 		}
 	}
+	result.type3.label = 'Type III statistics'
 
 	// other summary statistics
 	result.other = data.other
+	result.other.label = 'Other summary statistics'
 
 	// warnings
-	if (data.warnings) result.warnings = data.warnings
+	if (data.warnings) {
+		result.warnings = data.warnings
+		result.warnings.label = 'Warnings'
+	}
 }
 
 /*

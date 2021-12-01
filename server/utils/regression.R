@@ -13,21 +13,21 @@
 #     
 #     JSON input specifications:
 #     {
-#       "type": [string] regression type (e.g. "linear", "logistic")
+#       "type": [string] regression type (e.g. "linear" or "logistic")
 #       "formula": [string] formula of regression model (e.g. "outcome ~ id0 + id1 + id2").
 #       "outcome": {
-#         "id": [string] term id (e.g. "outcome")
-#         "type": [string] termdb term type (e.g. "integer", "float", "categorical", "condition")
+#         "id": [string] variable id (e.g. "outcome")
+#         "rtype": [string] variable type in R (e.g. "numeric" or "factor")
 #         "values": [array] data values
-#         "refGrp": [string] reference value of the term (required for categorical/condition term)
+#         "refGrp": [string] reference group (required for factor variables)
 #       }
 #       "independent": [
 #         {
-#           "id": [string] term id (e.g. "id0", "id1")
-#           "type": [string] termdb term type (e.g. "integer", "float", "categorical", "condition")
+#           "id": [string] variable id (e.g. "outcome")
+#           "rtype": [string] variable type in R (e.g. "numeric" or "factor")
 #           "values": [array] data values
-#           "refGrp": [string] reference value of the term (required for categorical/condition term)
-#           "scale": [number] scaling factor of the term. All term values will be divided by this number (optional)
+#           "refGrp": [string] reference group (required for factor variables)
+#           "scale": [number] scaling factor. All data values will be divided by this number (optional)
 #         },
 #         {...}
 #        ]
@@ -38,19 +38,18 @@
 #     
 #     JSON output specifications:
 #     {
-#       "type": [string] regression type (e.g. "linear", "logistic")
 #       "residuals": {
 #           "header": []
 #           "rows": []
-#       }
+#       },
 #       "coefficients": {
 #           "header": []
 #           "rows": []
-#       }
+#       },
 #       "type3": {
 #           "header": []
 #           "rows": []
-#       }
+#       },
 #       "other": {
 #           <label>: <value>
 #           <label>: <value>
@@ -78,7 +77,7 @@ lst <- lst[[1]]
 # build data table
 #  - variable ids as column names
 #  - variable values as column values
-#  - assign variable types (e.g. numeric, factor)
+#  - assign variable types
 #  - assign reference groups and scale values (if applicable)
 dat <- as.data.frame(matrix(data = NA, nrow = length(lst$outcome$values), ncol = length(lst$independent) + 1))
 for (i in 1:ncol(dat)) {
@@ -88,18 +87,18 @@ for (i in 1:ncol(dat)) {
     term <- lst$independent[[i - 1]]
   }
   colnames(dat)[i] <- term$id
-  if (term$type == "integer" | term$type == "float") {
-    # numeric term
+  if (term$rtype == "numeric") {
+    # numeric variable
     if ("scale" %in% names(term)) {
       dat[,i] <- term$values/term$scale
     } else {
       dat[,i] <- term$values
     }
-  } else if (term$type == "categorical" | term$type == "condition") {
-    # categorical/condition term
+  } else if (term$rtype == "factor") {
+    # factor variable
     dat[,i] <- relevel(factor(term$values), ref = term$refGrp)
   } else {
-    stop(paste0("term type '", term$type, "' is not recognized"))
+    stop(paste0("term rtype '", term$rtype, "' is not recognized"))
   }
 }
 
@@ -144,13 +143,9 @@ if (lst$type == "linear"){
   typeIII_table[,"Pr(>F)"] <- signif(typeIII_table[,"Pr(>F)"], 4)
   # prepare other summary stats table
   other_table <- list(
-    "Residual standard error" = round(res_summ$sigma, 2),
-    "Residual degrees of freedom" = round(res$df.residual, 0),
-    "R-squared" = round(res_summ$r.squared, 5),
-    "Adjusted R-squared" = round(res_summ$adj.r.squared, 5),
-    "F-statistic" = round(unname(res_summ$fstatistic[1]), 2),
-    "P-value" = signif(unname(pf(res_summ$fstatistic[1], res_summ$fstatistic[2], res_summ$fstatistic[3], lower.tail = F)), 4)
-  )
+    "header" = c("Residual standard error", "Residual degrees of freedom", "R-squared", "Adjusted R-squared", "F-statistic", "P-value"),
+    "rows" = c(round(res_summ$sigma, 2), round(res$df.residual, 0), round(res_summ$r.squared, 5), round(res_summ$adj.r.squared, 5), round(unname(res_summ$fstatistic[1]), 2), signif(unname(pf(res_summ$fstatistic[1], res_summ$fstatistic[2], res_summ$fstatistic[3], lower.tail = F)), 4))
+    )
 } else if (lst$type == "logistic"){
   # logistic regression
   if (!is.factor(dat$outcome)){
@@ -181,13 +176,9 @@ if (lst$type == "linear"){
   typeIII_table[,"Pr(>Chi)"] <- signif(typeIII_table[,"Pr(>Chi)"], 4)
   # prepare other summary stats table
   other_table <- list(
-    "Dispersion parameter" = round(res_summ$dispersion, 1),
-    "Null deviance" = round(res_summ$null.deviance, 1),
-    "Null deviance degrees of freedom" = round(res_summ$df.null, 1),
-    "Residual deviance" = round(res_summ$deviance, 1),
-    "Residual deviance degrees of freedom" = round(res_summ$df.residual, 1),
-    "AIC" = round(res_summ$aic, 1)
-  )
+    "header" = c("Dispersion parameter", "Null deviance", "Null deviance degrees of freedom", "Residual deviance", "Residual deviance degrees of freedom", "AIC"),
+    "rows" = round(c(res_summ$dispersion, res_summ$null.deviance, res_summ$df.null, res_summ$deviance, res_summ$df.residual, res_summ$aic), 1)
+    )
 } else{
   stop("regression type is not recognized")
 }
@@ -249,7 +240,7 @@ typeIII_table <- list("header" = colnames(typeIII_table), "rows" = typeIII_table
 ########## Export regression results ############
 
 # combine the results tables into a list
-out_lst <- list("type" = lst$type, "residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = typeIII_table, "other" = other_table)
+out_lst <- list("residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = typeIII_table, "other" = other_table)
 
 if (length(warnings()) > 0) {
   warnings_table <- capture.output(summary(warnings()))

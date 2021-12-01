@@ -99,7 +99,7 @@ function setRenderers(self) {
 
 	self.mayshow_warnings = result => {
 		if (!result.warnings) return
-		const div = self.newDiv('Warnings')
+		const div = self.newDiv(result.warnings.label)
 		div.append('div').style('margin', '8px')
 		for (const line of result.warnings) {
 			div
@@ -111,7 +111,7 @@ function setRenderers(self) {
 
 	self.mayshow_residuals = result => {
 		if (!result.residuals) return
-		const div = self.newDiv(result.type === 'linear' ? 'Residuals' : 'Deviance residuals')
+		const div = self.newDiv(result.residuals.label)
 		const table = div.append('table').style('border-spacing', '8px')
 		const tr1 = table.append('tr').style('opacity', 0.4)
 		const tr2 = table.append('tr')
@@ -123,7 +123,7 @@ function setRenderers(self) {
 
 	self.mayshow_coefficients = result => {
 		if (!result.coefficients) return
-		const div = self.newDiv('Coefficients')
+		const div = self.newDiv(result.coefficients.label)
 		const table = div.append('table').style('border-spacing', '0px')
 
 		// padding is set on every <td>. need a better solution
@@ -280,7 +280,7 @@ function setRenderers(self) {
 
 	self.mayshow_type3 = result => {
 		if (!result.type3) return
-		const div = self.newDiv('Type III statistics')
+		const div = self.newDiv(result.type3.label)
 		const table = div.append('table').style('border-spacing', '0px')
 
 		// header row
@@ -340,14 +340,14 @@ function setRenderers(self) {
 
 	self.mayshow_other = result => {
 		if (!result.other) return
-		const div = self.newDiv('Other summary statistics')
+		const div = self.newDiv(result.other.label)
 		const table = div.append('table').style('border-spacing', '8px')
-		for (const k in result.other) {
+		for (let i = 0; i < result.other.header.length; i++) {
 			const tr = table.append('tr')
 			tr.append('td')
 				.style('opacity', 0.4)
-				.text(k)
-			tr.append('td').text(result.other[k])
+				.text(result.other.header[i])
+			tr.append('td').text(result.other.rows[i])
 		}
 	}
 
