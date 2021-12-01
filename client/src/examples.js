@@ -4,6 +4,39 @@ import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
 import { highlight } from 'highlight.js/lib/common'
 
+/*
+
+-------EXPORTED-------
+init_examples
+	- creates the app drawer
+
+-------Internal-------
+make_examples_page
+make_main_track_grid
+make_col
+make_subheader_contents
+make_searchbar (disabled until further notice)
+loadTracks
+displayTracks
+makeRibbon
+openSandbox
+renderContent
+makeSandboxTabs
+sandboxTabMenu
+makeLeftsideTabMenu
+getTabData
+addMessage
+addUpdateMessage
+makeButton
+addButtons
+showURLLaunch
+makeDataDownload
+makeArrowButtons
+addArrowBtns
+
+Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl0xIJqDRbyhahA4/edit#heading=h.jwyqi1mhacps
+*/
+
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
 	const re = await dofetch2('/examplejson')
@@ -286,16 +319,16 @@ async function openSandbox(track, holder) {
 }
 
 // Single content layout for examples only - buttons not used for UIs
-function renderContent(call, div) {
-	addMessage(call.message, div)
+function renderContent(ppcalls, div) {
+	addMessage(ppcalls.message, div)
 
 	const buttons_div = div.append('div').style('margin-bottom', '20px')
 	const reuse_div = div.append('div')
 
-	addButtons(call.buttons, buttons_div)
-	makeDataDownload(call.download, buttons_div)
-	showURLLaunch(call.urlparam, buttons_div)
-	addArrowBtns(call.arrowButtons, call.runargs, buttons_div, reuse_div)
+	addButtons(ppcalls.buttons, buttons_div)
+	makeDataDownload(ppcalls.download, buttons_div)
+	showURLLaunch(ppcalls.urlparam, buttons_div)
+	addArrowBtns(ppcalls.arrowButtons, ppcalls, buttons_div, reuse_div)
 
 	const line = div
 		.append('hr')
@@ -311,7 +344,7 @@ function renderContent(call, div) {
 		host: window.location.origin
 	}
 
-	const callpp = JSON.parse(JSON.stringify(call.runargs))
+	const callpp = JSON.parse(JSON.stringify(ppcalls.runargs))
 
 	runproteinpaint(Object.assign(runpp_arg, callpp))
 }
@@ -635,10 +668,10 @@ function makeArrowButtons(arrows, btns) {
 	}
 }
 
-function addArrowBtns(arg, call, bdiv, rdiv) {
+function addArrowBtns(arg, ppcalls, bdiv, rdiv) {
 	let btns = []
-	if (call) {
-		showCode(call, btns)
+	if (ppcalls) {
+		showCode(ppcalls, btns)
 	}
 	makeArrowButtons(arg, btns)
 
