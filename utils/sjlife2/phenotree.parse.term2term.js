@@ -47,8 +47,7 @@ outputs these files:
 console.log('\nRUNNING phenotree.parse.term2term.js ...')
 
 const level2_ctcaegraded = 'Graded Adverse Events'
-const groupsetting_old = {
-	// old definition
+const groupsetting = {
 	useIndex: -1,
 	lst: [
 		{
@@ -56,9 +55,9 @@ const groupsetting_old = {
 			is_grade: true,
 			groups: [
 				{
-					name: 'No condition',
+					name: 'No condition / not tested',
 					// CAREFUL!! grades are integers, not strings. so that max grade computing can happen
-					values: [{ key: 0, label: 'No condition' }]
+					values: [{ key: 0, label: 'No condition' }, { key: -1, label: 'Not tested' }]
 				},
 				{
 					name: 'Has condition',
@@ -74,6 +73,7 @@ const groupsetting_old = {
 		}
 	]
 }
+/*
 const tvs_ctcaeGraded = () => {
 	return {
 		type: 'tvs',
@@ -189,6 +189,7 @@ const make_groupsetting = t => {
 		]
 	}
 }
+*/
 
 const abort = m => {
 	console.error('ERROR: ' + m)
@@ -588,7 +589,8 @@ function addattributes_conditionterm(t) {
 		'3': { label: '3: Severe' },
 		'4': { label: '4: Life-threatening' },
 		'5': { label: '5: Death' },
-		'9': { label: 'Unknown status', uncomputable: true }
+		'9': { label: 'Unknown status', uncomputable: true },
+		'-1': { label: 'Not tested', uncomputable: true }
 	}
 
 	if (!t.isleaf) {
@@ -602,7 +604,7 @@ function addattributes_conditionterm(t) {
 		}
 	}
 
-	t.groupsetting = make_groupsetting(t)
+	t.groupsetting = JSON.parse(JSON.stringify(groupsetting))
 }
 
 function output_termdb() {
