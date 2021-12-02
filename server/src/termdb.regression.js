@@ -17,7 +17,6 @@ q {}
 .independent[{}]
 	.id
 	.type
-	.isBinned
 	.q{}
 		.scale
 	.refGrp
@@ -26,21 +25,6 @@ q {}
 input to R is an json object {type, outcome:{rtype}, independent:[ {rtype} ]}
 rtype with values numeric/factor is used instead of actual term type
 so that R script will not need to interpret term type
-
-input tsv matrix for R:
-	first row is variable name, with space and comma removed
-	first column is outcome variable
-	rest of columns are for independent variables
-
-	The sql results {key, value} are returned by getSampleData()
-	and used as follows in makeRinput(): 
-
-	q.mode = 'continuous': 
-	- use value and exclude uncomputable values as done in makeRinput() below
-			
-	q.mode != 'continuous': (default)
-	(a) bin or groupset label
-	(b) the annotated or precomputed value if no binconfig or groupset is used
 */
 
 // minimum number of samples to run analysis
@@ -106,6 +90,7 @@ function parse_q(q, ds) {
 	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
 	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
 	q.outcome.isNumeric = q.outcome.term.type == 'integer' || q.outcome.term.type == 'float'
+	q.outcome.isContinuous = q.outcome.q.mode == 'continuous'
 
 	// independent
 	if (!q.independent) throw 'independent[] missing'
@@ -118,10 +103,8 @@ function parse_q(q, ds) {
 		if (!tw.term) throw `invalid independent term='${tw.id}'`
 		if (!tw.q) throw `missing q for term.id='${tw.id}'`
 		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
-		if (tw.term.type == 'float' || tw.term.type == 'integer') {
-			tw.isNumeric = true
-			tw.isBinned = tw.q.mode == 'discrete' || tw.q.mode == 'binary'
-		}
+		tw.isNumeric = tw.term.type == 'float' || tw.term.type == 'integer'
+		tw.isContinuous = tw.q.mode == 'continuous'
 	}
 	// interaction of independent
 	for (const i of q.independent) {
@@ -160,8 +143,9 @@ function makeRinput(q, sampledata) {
 		Rinput.independent.push(independent)
 	}
 
-	// fill in values into values arrays of all terms by the order of samples
-	// the order of sample is the same across all values arrays
+	// for each sample, decide if it has value for all terms
+	// if so, the sample can be included for analysis
+	// and will fill in values into values[] of all terms, thus ensuring the order of samples are the same across values[] of all terms
 	for (const { sample, id2value } of sampledata) {
 		if (!id2value.has(q.outcome.id)) continue
 		const out = id2value.get(q.outcome.id)
@@ -191,10 +175,10 @@ function makeRinput(q, sampledata) {
 
 		// this sample has value for all terms and is eligible for regression analysis
 		// add its value to values[] of each term
-		Rinput.outcome.values.push(Rinput.outcome.rtype === 'numeric' ? Number(out.key) : out.key)
-		for (const t of Rinput.independent) {
+		Rinput.outcome.values.push(q.outcome.isContinuous ? Number(out.key) : out.key)
+		for (const [idx, t] of Rinput.independent.entries()) {
 			const v = id2value.get(t.id)
-			t.values.push(t.rtype == 'numeric' ? Number(v.key) : v.key)
+			t.values.push(q.independent[idx].isContinuous ? Number(v.key) : v.key)
 		}
 	}
 	return Rinput
