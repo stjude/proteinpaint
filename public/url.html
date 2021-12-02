@@ -421,6 +421,24 @@ makeURL([
 			}]
 		})],
 
+		['EF ~ agedx diaggrp', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'logistic',
+					outcome: {
+						id: 'LV_Ejection_Fraction_3D',
+					},
+					independent: [
+						{ id: "agedx"},
+						{ id: "diaggrp"}
+					]
+				},
+			]
+		})],
+
 		['EF ~ diaggrp hrtavg', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',

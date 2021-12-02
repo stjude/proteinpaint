@@ -89,7 +89,6 @@ function parse_q(q, ds) {
 	q.outcome.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
 	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
 	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
-	q.outcome.isNumeric = q.outcome.term.type == 'integer' || q.outcome.term.type == 'float'
 
 	// independent
 	if (!q.independent) throw 'independent[] missing'
@@ -102,7 +101,6 @@ function parse_q(q, ds) {
 		if (!tw.term) throw `invalid independent term='${tw.id}'`
 		if (!tw.q) throw `missing q for term.id='${tw.id}'`
 		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
-		tw.isNumeric = tw.term.type == 'float' || tw.term.type == 'integer'
 	}
 	// interaction of independent
 	for (const i of q.independent) {
