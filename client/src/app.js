@@ -509,7 +509,14 @@ async function findgene2paint(app, str, genomename, jwt) {
 		console.error('unknown genome ' + genomename)
 		return
 	}
-	sandbox_div.header.text(genomename + ' ' + str)
+
+	sandbox_div.header.html(
+		'<div style="display:inline-block;">' +
+			str +
+			'</div><div style="border-radius:4px; color:white; background-color: #969696; padding: 1px 5px; display:inline-block; font-size:0.8em; margin-left:4px;">' +
+			genomename +
+			'</div>'
+	)
 	// app.holder0.selectAll('*').remove()
 	// may yield tklst from url parameters
 	const urlp = urlmap()
