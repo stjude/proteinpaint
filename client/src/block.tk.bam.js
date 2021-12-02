@@ -374,7 +374,6 @@ or update existing groups, in which groupidx will be provided
 				// this message is the header of the group, allow clickable
 				msg.attr('class', 'sja_clbtext2').on('click', () => {
 					click_groupheader(tk, g, block)
-					//tk.alignpane.body.selectAll('*').remove()
 				})
 			}
 			y += messagerowheight
@@ -775,7 +774,16 @@ function makeTk(tk, block) {
 	tk.readpane = newpane({ x: 100, y: 100, closekeep: 1 })
 	tk.readpane.pane.style('display', 'none')
 
-	tk.alignpane = newpane({ x: 100, y: 100, closekeep: 1 }) // Panel for showing multi_read alignment to ref/alt allele
+	tk.alignpane = newpane({
+		x: 100,
+		y: 100,
+		close: () => {
+			if (tk.readAlignmentTable) {
+				delete tk.readAlignmentTable
+			}
+			tk.alignpane.pane.style('display', 'none')
+		}
+	}) // Panel for showing multi_read alignment to ref/alt allele
 	tk.alignpane.pane.style('display', 'none')
 
 	tk.pileupheight = 100
