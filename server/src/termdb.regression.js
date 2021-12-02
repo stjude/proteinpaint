@@ -23,16 +23,20 @@ q {}
 	.refGrp
 	.interactions[]
 
+input to R is an json object {type, outcome:{rtype}, independent:[ {rtype} ]}
+rtype with values numeric/factor is used instead of actual term type
+so that R script will not need to interpret term type
+
 input tsv matrix for R:
 	first row is variable name, with space and comma removed
 	first column is outcome variable
 	rest of columns are for independent variables
 
-	The sql results {key, val} are returned by getSampleData()
+	The sql results {key, value} are returned by getSampleData()
 	and used as follows in makeRinput(): 
 
 	q.mode = 'continuous': 
-	- use val and exclude uncomputable values as done in makeRinput() below
+	- use value and exclude uncomputable values as done in makeRinput() below
 			
 	q.mode != 'continuous': (default)
 	(a) bin or groupset label
@@ -48,52 +52,19 @@ export async function get_regression(q, ds) {
 
 		const startTime = +new Date()
 		const sampledata = getSampleData(q, [q.outcome, ...q.independent])
-		/* each element is one sample:
-		{sample, id2value:map}, where value is { key, val }
+		/* each element is one sample with a key-val map for all its annotations:
+		{sample, id2value:Map( tid => {key,value}) }
 		*/
 		const queryTime = +new Date() - startTime
 
 		// build the input for R script
 		const Rinput = makeRinput(q, sampledata)
 
-		// validate R input
-		// validate sample size
 		const sampleSize = Rinput.outcome.values.length
-		if (sampleSize < minimumSample) throw 'too few samples to fit model'
-		if (Rinput.independent.find(x => x.values.length !== sampleSize)) throw 'variables have unequal sample sizes'
-		// validate outcome variable
-		if (q.regressionType === 'linear') {
-			if (Rinput.outcome.rtype !== 'numeric') throw 'outcome is not continuous'
-			if (Rinput.outcome.refGrp) throw 'reference group given for outcome'
-		} else {
-			if (Rinput.outcome.rtype === 'numeric') throw 'outcome is continuous'
-			if (!Rinput.outcome.refGrp) throw 'reference group not given for outcome'
-			const values = new Set(Rinput.outcome.values) // get unique values
-			if (values.size !== 2) throw 'outcome is not binary'
-			if (!values.has(Rinput.outcome.refGrp)) throw 'reference group not found in outcome values'
-		}
-		// validate independent variables
-		for (const variable of Rinput.independent) {
-			if (variable.rtype === 'numeric') {
-				if (variable.refGrp) throw `reference group given for '${variable.id}'`
-			} else {
-				if (!variable.refGrp) throw `reference group not given for '${variable.id}'`
-				const values = new Set(variable.values) // get unique values
-				if (!values.has(variable.refGrp)) throw `reference group not found in '${variable.id}' values`
-				// make sure there's at least 2 categories
-				if (values.size < 2) throw `'${variable.id}' has fewer than 2 categories`
-			}
-		}
 
-		// use dummy variable IDs in R (to avoid using spaces/commas)
-		Rinput.outcome.id = 'outcome'
-		const id2originalId = {} // k: new id, v: original term id
-		const originalId2id = {} // k: original term id, v: new id
-		for (const [i, t] of Rinput.independent.entries()) {
-			id2originalId['id' + i] = t.id
-			originalId2id[t.id] = 'id' + i
-			Rinput.independent[i].id = originalId2id[t.id]
-		}
+		validateRinput(q, Rinput, sampleSize)
+
+		const [id2originalId, originalId2id] = replaceTermId(Rinput)
 
 		// specify the formula for fitting regression model
 		Rinput.formula = make_formula(q, originalId2id)
@@ -161,7 +132,6 @@ function parse_q(q, ds) {
 	}
 }
 
-// prepare input for R script
 function makeRinput(q, sampledata) {
 	// outcome term
 	const outcome = {
@@ -190,13 +160,15 @@ function makeRinput(q, sampledata) {
 		Rinput.independent.push(independent)
 	}
 
-	// enter sample values for each term
+	// fill in values into values arrays of all terms by the order of samples
+	// the order of sample is the same across all values arrays
 	for (const { sample, id2value } of sampledata) {
 		if (!id2value.has(q.outcome.id)) continue
 		const out = id2value.get(q.outcome.id)
+		// is uncomputable-checking still needed??
 		const excludeUncomputable = q.outcome.isNumeric || (q.outcome.q.groupsetting && q.outcome.q.groupsetting.inuse)
 		if (excludeUncomputable && q.outcome.term.values) {
-			if (q.outcome.term.values[out.val] && q.outcome.term.values[out.val].uncomputable) continue
+			if (q.outcome.term.values[out.value] && q.outcome.term.values[out.value].uncomputable) continue
 		}
 
 		let skipsample = false
@@ -209,7 +181,7 @@ function makeRinput(q, sampledata) {
 				break
 			}
 			const excludeUncomputable = tw.isNumeric || (tw.q.groupsetting && tw.q.groupsetting.inuse)
-			if (excludeUncomputable && values[independent.val] && values[independent.val].uncomputable) {
+			if (excludeUncomputable && values[independent.value] && values[independent.value].uncomputable) {
 				// TODO: if an uncomputable category is part of a groupset, then it must not be excluded
 				skipsample = true
 			}
@@ -217,23 +189,45 @@ function makeRinput(q, sampledata) {
 		}
 		if (skipsample) continue
 
-		// sample values can be added to regression input
-		Rinput.outcome.values.push(Rinput.type === 'linear' ? out.val : out.key)
-		for (const term of q.independent) {
-			const independent = id2value.get(term.id)
-			const idx = Rinput.independent.findIndex(x => x.id === term.id)
-			if (term.isBinned) {
-				// key is the bin label
-				Rinput.independent[idx].values.push(independent.key)
-			} else {
-				// term is not binned
-				// for all the other cases will use val
-				// including groupsetting which both val and key are group labels (yes)
-				Rinput.independent[idx].values.push(independent.val)
-			}
+		// this sample has value for all terms and is eligible for regression analysis
+		// add its value to values[] of each term
+		Rinput.outcome.values.push(Rinput.outcome.rtype === 'numeric' ? Number(out.key) : out.key)
+		for (const t of Rinput.independent) {
+			const v = id2value.get(t.id)
+			t.values.push(t.rtype == 'numeric' ? Number(v.key) : v.key)
 		}
 	}
 	return Rinput
+}
+
+function validateRinput(q, Rinput, sampleSize) {
+	// validate R input
+	// validate sample size
+	if (sampleSize < minimumSample) throw 'too few samples to fit model'
+	if (Rinput.independent.find(x => x.values.length !== sampleSize)) throw 'variables have unequal sample sizes'
+	// validate outcome variable
+	if (q.regressionType === 'linear') {
+		if (Rinput.outcome.rtype !== 'numeric') throw 'outcome is not continuous'
+		if (Rinput.outcome.refGrp) throw 'reference group given for outcome'
+	} else {
+		if (Rinput.outcome.rtype === 'numeric') throw 'outcome is continuous'
+		if (!Rinput.outcome.refGrp) throw 'reference group not given for outcome'
+		const values = new Set(Rinput.outcome.values) // get unique values
+		if (values.size !== 2) throw 'outcome is not binary'
+		if (!values.has(Rinput.outcome.refGrp)) throw 'reference group not found in outcome values'
+	}
+	// validate independent variables
+	for (const variable of Rinput.independent) {
+		if (variable.rtype === 'numeric') {
+			if (variable.refGrp) throw `reference group given for '${variable.id}'`
+		} else {
+			if (!variable.refGrp) throw `reference group not given for '${variable.id}'`
+			const values = new Set(variable.values) // get unique values
+			if (!values.has(variable.refGrp)) throw `reference group not found in '${variable.id}' values`
+			// make sure there's at least 2 categories
+			if (values.size < 2) throw `'${variable.id}' has fewer than 2 categories`
+		}
+	}
 }
 
 function parseRoutput(Routput, id2originalId, q, result) {
@@ -349,7 +343,7 @@ Returns two data structures
 				{
 					// depending on term type and desired 
 					key: either (a) bin or groupsetting label, or (b) precomputed or annotated value if no bin/groupset is used, 
-					val: precomputed or annotated value
+					value: precomputed or annotated value
 				}
 			]
 		},
@@ -371,26 +365,25 @@ function getSampleData(q, terms) {
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map(
 			t => `
-		SELECT sample, key, value, ? as term_id
-		FROM ${t.tablename} 
-		WHERE sample IN ${filter.CTEname}
-		`
+			SELECT sample, key, value, ? as term_id
+			FROM ${t.tablename} 
+			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
+			`
 		).join(`UNION ALL`)}`
 
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-	// each row {sample, term_id, key, val}
 
-	const samples = new Map() // k: sample name, v: {sample, id2value:Map( tid => {key,val}) }
-	for (const r of rows) {
-		if (!samples.has(r.sample)) {
-			samples.set(r.sample, { sample: r.sample, id2value: new Map() })
+	const samples = new Map() // k: sample name, v: {sample, id2value:Map( tid => {key,value}) }
+	for (const { sample, term_id, key, value } of rows) {
+		if (!samples.has(sample)) {
+			samples.set(sample, { sample, id2value: new Map() })
 		}
 
-		if (samples.get(r.sample).id2value.has(r.term_id)) {
+		if (samples.get(sample).id2value.has(term_id)) {
 			// can duplication happen?
-			throw `duplicate '${r.term_id}' entry for sample='${r.sample}'`
+			throw `duplicate '${term_id}' entry for sample='${sample}'`
 		}
-		samples.get(r.sample).id2value.set(r.term_id, { key: r.key, val: r.value })
+		samples.get(sample).id2value.set(term_id, { key, value })
 	}
 	return samples.values()
 }
@@ -418,4 +411,17 @@ function make_formula(q, originalId2id) {
 	}
 
 	return 'outcome ~ ' + independent.join(' + ') + (interactions.length ? ' + ' + interactions.join(' + ') : '')
+}
+
+function replaceTermId(Rinput) {
+	// use dummy variable IDs in R (to avoid using spaces/commas)
+	Rinput.outcome.id = 'outcome'
+	const id2originalId = {} // k: new id, v: original term id
+	const originalId2id = {} // k: original term id, v: new id
+	for (const [i, t] of Rinput.independent.entries()) {
+		id2originalId['id' + i] = t.id
+		originalId2id[t.id] = 'id' + i
+		Rinput.independent[i].id = originalId2id[t.id]
+	}
+	return [id2originalId, originalId2id]
 }
