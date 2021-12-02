@@ -90,7 +90,6 @@ function parse_q(q, ds) {
 	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
 	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
 	q.outcome.isNumeric = q.outcome.term.type == 'integer' || q.outcome.term.type == 'float'
-	q.outcome.isContinuous = q.outcome.q.mode == 'continuous'
 
 	// independent
 	if (!q.independent) throw 'independent[] missing'
@@ -104,7 +103,6 @@ function parse_q(q, ds) {
 		if (!tw.q) throw `missing q for term.id='${tw.id}'`
 		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
 		tw.isNumeric = tw.term.type == 'float' || tw.term.type == 'integer'
-		tw.isContinuous = tw.q.mode == 'continuous'
 	}
 	// interaction of independent
 	for (const i of q.independent) {
@@ -119,7 +117,7 @@ function makeRinput(q, sampledata) {
 	// outcome term
 	const outcome = {
 		id: q.outcome.id,
-		rtype: q.outcome.isContinuous ? 'numeric' : 'factor',
+		rtype: q.outcome.q.mode == 'continuous' ? 'numeric' : 'factor',
 		values: []
 	}
 	if (outcome.rtype === 'factor') outcome.refGrp = q.outcome.refGrp
@@ -135,7 +133,7 @@ function makeRinput(q, sampledata) {
 	for (const tw of q.independent) {
 		const independent = {
 			id: tw.id,
-			rtype: tw.isContinuous ? 'numeric' : 'factor',
+			rtype: tw.q.mode == 'continuous' ? 'numeric' : 'factor',
 			values: []
 		}
 		if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
