@@ -403,9 +403,11 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	let has_filter_gs = false // if groupset group.type = filter, ignore step 1
 	// if condition term with predefined 'no condition vs has condition', ignore step 1
 	const graded_with_predefind_gs = term.type == 'condition' && term.groupsetting.lst.length
-	for (const group of term.groupsetting.lst[0].groups) {
-		if (group.type == 'filter' && group.filter4activeCohort) {
-			has_filter_gs = true
+	if (term.groupsetting && term.groupsetting.inuse) {
+		for (const group of term.groupsetting.lst[0].groups) {
+			if (group.type == 'filter' && group.filter4activeCohort) {
+				has_filter_gs = true
+			}
 		}
 	}
 	for (const i of data.lst) {

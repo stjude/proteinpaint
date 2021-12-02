@@ -20,6 +20,21 @@ get_term_cte
 			makesql_groupset
 		makesql_oneterm_condition
 		makesql_numericBinCTE
+
+	!!!
+	NOTE: all constructed sql to get sample-value, regardless of term.type, must return 
+	{
+		sample,
+		key: may be a bin or groupset label, or if none is used, the actual column value
+		value: the actual column value in the table
+	}
+
+	For example, returning both the bin label and actual value for a numeric term
+	would allow the calling app to create compute boxplot inputs, which is not
+	possible if only the bin labels are returned. Similar use cases may be supported
+	later.  
+	!!!
+	
 uncomputablegrades_clause
 grade_age_select_clause
 get_label4key
@@ -472,16 +487,31 @@ filter
 returns { sql, tablename }
 */
 function makesql_oneterm(term, ds, q, values, index, filter) {
+	/*
+		NOTE: all constructed sql, regardless of term.type, must return 
+		{
+			sample,
+			key: may be a bin or groupset label, or if none is used, the actual column value
+			value: the actual column value in the table
+		}
+
+		For example, returning both the bin label and actual value for a numeric term
+		would allow the calling app to create compute boxplot inputs, which is not
+		possible if only the bin labels are returned. Similar use cases may be supported
+		later.  
+	*/
 	const tablename = 'samplekey_' + index
 	if (term.type == 'survival') {
 		return makesql_survivaltte(tablename, term, q, values, filter)
 	}
 	if (term.type == 'categorical') {
-		return makesql_oneterm_categorical(tablename, term, q, values)
+		return makesql_oneterm_categorical(tablename, term, q, values, ds)
 	}
 	if (term.type == 'float' || term.type == 'integer') {
 		if (q.mode == 'continuous') {
 			values.push(term.id)
+			const uncomputable = getUncomputableClause(term, q)
+			values.push(...uncomputable.values)
 			return {
 				sql: `${tablename} AS (
 					SELECT 
@@ -489,7 +519,7 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 						value as key, 
 						CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value
 					FROM annotations
-					WHERE term_id=?
+					WHERE term_id=? ${uncomputable.clause}
 				)`,
 				tablename
 			}
@@ -511,22 +541,24 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 		if (index == 1 && q.getcuminc) {
 			return makesql_chronictte(tablename, term, q, values, filter)
 		} else {
-			return makesql_oneterm_condition(tablename, term, q, values)
+			return makesql_oneterm_condition(tablename, term, q, values, ds)
 		}
 	}
 	throw 'unknown term type'
 }
 
-function makesql_oneterm_categorical(tablename, term, q, values) {
-	const groupset = get_active_groupset(q, term)
+function makesql_oneterm_categorical(tablename, term, q, values, ds) {
+	const groupset = get_active_groupset(term, q)
 	if (!groupset) {
 		values.push(term.id)
+		const uncomputable = getUncomputableClause(term, q)
+		values.push(...uncomputable.values)
 		// groupsetting not applied
 		return {
 			sql: `${tablename} AS (
 				SELECT sample,value as key, value as value
 				FROM annotations
-				WHERE term_id=?
+				WHERE term_id=? ${uncomputable.clause}
 			)`,
 			tablename
 		}
@@ -536,29 +568,43 @@ function makesql_oneterm_categorical(tablename, term, q, values) {
 		values.push(term.id)
 		// use groupset
 		const table2 = tablename + '_groupset'
+		const uncomputable = getUncomputableClause(term, q)
+		values.push(...uncomputable.values)
+		// NOTE: if a value is not included in any groupset, it will not be returned
+		// in this CTE's query results because the JOIN ... ON ... matches by value
 		return {
 			sql: `${table2} AS (
-				${makesql_values_groupset(table2, term, q)}
+				${makesql_values_groupset(term, q)}
 			),
 			${tablename} AS (
 				SELECT
 					sample,
 					${table2}.name AS key,
-					${table2}.name AS value
+					${table2}.value AS value
 				FROM annotations a
 				JOIN
 					${table2} ON a.value = ${table2}.value
 				WHERE
-					term_id=?
+					term_id=? ${uncomputable.clause}
 			) `,
 			tablename
 		}
 	} else {
-		return makesql_condition_groupset(tablename, term, groupset, q, values)
+		// this CTE will exclude uncomputable values, EXCEPT IF such value is in a groupset
+		return makesql_complex_groupset(tablename, term, groupset, values, ds)
 	}
 }
 
-function makesql_oneterm_condition(tablename, term, q, values) {
+function getUncomputableClause(term, q) {
+	if (!term.values || !q.computableValuesOnly) return { values: [], clause: '' }
+	const values = Object.keys(term.values).filter(k => term.values[k].uncomputable)
+	return {
+		values,
+		clause: values.length ? `AND value NOT IN (${values.map(() => '?').join(',')})` : ''
+	}
+}
+
+function makesql_oneterm_condition(tablename, term, q, values, ds) {
 	/*
 	return {sql, tablename}
 */
@@ -574,21 +620,25 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 		: ''
 	if (!restriction) throw 'must set a valid value_by_*'
 
-	const groupset = get_active_groupset(q, term)
+	const castType = term.type == 'integer' ? 'integer' : 'real'
+	const groupset = get_active_groupset(term, q)
 	if (!groupset) {
 		values.push(term.id, value_for)
+		const uncomputable = getUncomputableClause(term, q)
+		values.push(...uncomputable.values)
 		return {
 			sql: `${tablename} AS (
 				SELECT
 					sample,
-					${value_for == 'grade' ? 'CAST(value AS integer) as key' : 'value as key'},
-					${value_for == 'grade' ? 'CAST(value AS integer) as value' : 'value'}
+					${value_for == 'grade' ? `CAST(value AS ${castType}) as key` : 'value as key'},
+					${value_for == 'grade' ? `CAST(value AS ${castType}) as value` : 'value'}
 				FROM
 					precomputed
 				WHERE
 					term_id = ?
 					AND value_for = ?
 					AND ${restriction} = 1
+					${uncomputable.clause}
 			)`,
 			tablename
 		}
@@ -598,26 +648,32 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 		values.push(term.id, value_for)
 		// use groupset
 		const table2 = tablename + '_groupset'
+		// NOTE: if a value is not included in any groupset, it will not be returned
+		// in this CTE's query results because the JOIN ... ON ... matches by value
+		const uncomputable = getUncomputableClause(term, q)
+		values.push(...uncomputable.values)
 		return {
 			sql: `${table2} AS (
-				${makesql_values_groupset(table2, term, q)}
+				${makesql_values_groupset(term, q)}
 			),
 			${tablename} AS (
 				SELECT
 					sample,
 					${table2}.name AS key,
-					${table2}.name AS value
+					${table2}.value AS value
 				FROM precomputed a
-				JOIN ${table2} ON ${table2}.value=${q.bar_by_grade ? 'CAST(a.value AS integer)' : 'a.value'}
+				JOIN ${table2} ON ${table2}.value=${q.bar_by_grade ? `CAST(a.value AS ${castType})` : 'a.value'}
 				WHERE
 					term_id=?
 					AND value_for=?
 					AND ${restriction}=1
+					${uncomputable.clause}
 			)`,
 			tablename
 		}
 	} else {
-		return makesql_complex_groupset(tablename, term, groupset, q, values, value_for, restriction)
+		// this CTE will exclude uncomputable values, EXCEPT IF such value is in a groupset
+		return makesql_complex_groupset(tablename, term, groupset, values, ds, value_for, restriction)
 	}
 }
 
@@ -688,7 +744,7 @@ function makesql_survivaltte(tablename, term, q, values, filter) {
 	}
 }
 
-function get_active_groupset(q, term) {
+function get_active_groupset(term, q) {
 	if (!q.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) return
 	if (Number.isInteger(q.groupsetting.predefined_groupset_idx)) {
 		if (q.groupsetting.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
@@ -704,19 +760,17 @@ function get_active_groupset(q, term) {
 	}
 }
 
-function makesql_values_groupset(tablename, term, q) {
-	let s
-	if (Number.isInteger(q.groupsetting.predefined_groupset_idx)) {
-		if (q.groupsetting.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
-		if (!term.groupsetting) throw 'term.groupsetting missing when q.predefined_groupset_idx in use'
-		if (!term.groupsetting.lst) throw 'term.groupsetting.lst missing when q.predefined_groupset_idx in use'
-		s = term.groupsetting.lst[q.groupsetting.predefined_groupset_idx]
-		if (!s) throw 'q.predefined_groupset_idx out of bound'
-	} else if (q.groupsetting.customset) {
-		s = q.groupsetting.customset
-	} else {
-		throw 'do not know how to get groupset'
-	}
+/*
+	Arguments
+	- term{}
+	- q{}: must have a groupset
+	
+	Return
+	- a series of "SELECT name, value" statements that are joined by UNION ALL
+	- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
+*/
+function makesql_values_groupset(term, q) {
+	const s = get_active_groupset(term, q)
 	if (!s.groups) throw '.groups[] missing from a group-set'
 	const categories = []
 	let filter
@@ -730,9 +784,24 @@ function makesql_values_groupset(tablename, term, q) {
 	return categories.join('\nUNION ALL\n')
 }
 
+// used to assign a unique CTE name to extra filters (xf) for groupsets
 let xfIndex = 0
 
-function makesql_complex_groupset(tablename, term, groupset, q, values, value_for, restriction) {
+/*
+	Arguments
+	- tablename: string name for this CTE
+	- term{}
+	- groupset: the active groupset, such as returned by get_active_groupset()
+	- values: the array of values to fill-in the '?' in the prepared sql statement, may append to this array
+	- ds: dataset with db connection
+	- value_for: required for condition terms, "grade" or "child"
+	- restriction: required for condition terms, "computable_grade" | "max_grade" | "most_recent_grade"
+	
+	Return
+	- a series of "SELECT name, value" statements that are joined by UNION ALL
+	- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
+*/
+function makesql_complex_groupset(tablename, term, groupset, values, ds, value_for, restriction) {
 	const categories = []
 	const filters = []
 	for (const g of groupset.groups) {
@@ -760,7 +829,7 @@ function makesql_complex_groupset(tablename, term, groupset, q, values, value_fo
 			if ('activeCohort' in q.groupsetting && g.filter4activeCohort) {
 				const tvs_filter = g.filter4activeCohort[q.groupsetting.activeCohort]
 
-				const filter = getFilterCTEs(tvs_filter, q.ds, 'xf' + xfIndex++)
+				const filter = getFilterCTEs(tvs_filter, ds, 'xf' + xfIndex++)
 				if (!filter) throw `unable to construct a group='${g.name}' filter for term.id='${term.id}'`
 				filters.push(filter.filters)
 				values.push(...filter.values.slice(), g.name, g.name)
@@ -826,7 +895,9 @@ function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
 	const excludevalues = []
 	if (term.values) {
 		for (const key in term.values) {
-			if (!term.values[key].uncomputable) continue
+			const isUncomputable = term.values[key].uncomputable
+			if (q.computableValuesOnly && isUncomputable) continue
+			if (!q.computableValuesOnly && !isUncomputable) continue
 			excludevalues.push(key)
 			const v = term.values[key]
 			bin_def_lst.push(
@@ -850,6 +921,9 @@ function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
 
 	const bin_def_table = 'bin_defs_' + index
 	const bin_sample_table = 'bin_sample_' + index
+	const uncomputable = getUncomputableClause(term, q)
+	console.log(919, uncomputable)
+	values.push(...uncomputable.values)
 
 	const sql = `${bin_def_table} AS (
 			${bin_def_lst.join(' UNION ALL ')}
@@ -882,7 +956,7 @@ function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
 					)
 				)
 			WHERE
-			term_id=?
+			term_id=? ${uncomputable.clause}
 		)`
 
 	return {

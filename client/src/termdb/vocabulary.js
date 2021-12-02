@@ -246,7 +246,8 @@ class TermdbVocab {
 								q,
 								type: t.term.type,
 								refGrp: t.q.mode == 'continuous' ? 'NA' : t.refGrp,
-								interactions: t.interactions || []
+								interactions: t.interactions || [],
+								values: t.term.values
 							}
 						})
 					)

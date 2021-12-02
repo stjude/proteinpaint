@@ -17,25 +17,14 @@ q {}
 .independent[{}]
 	.id
 	.type
-	.isBinned
 	.q{}
 		.scale
 	.refGrp
 	.interactions[]
 
-input tsv matrix for R:
-	first row is variable name, with space and comma removed
-	first column is outcome variable
-	rest of columns are for independent variables
-
-TODO
-- clarify what is key and val, when to use which, and when to skip uncomputable
-		numeric term:
-			continuous: use val and exclude uncomputable values (done in sql?)
-			binning: use key which is bin label
-		categorical and condition term:
-			category/grade: use val and exclude uncomputable categories
-			groupsetting: still use val (both key/val are groupset labels)
+input to R is an json object {type, outcome:{rtype}, independent:[ {rtype} ]}
+rtype with values numeric/factor is used instead of actual term type
+so that R script will not need to interpret term type
 */
 
 // minimum number of samples to run analysis
@@ -45,76 +34,42 @@ export async function get_regression(q, ds) {
 	try {
 		parse_q(q, ds)
 
-		// Rest of rows for R matrix, one for each sample
 		const startTime = +new Date()
 		const sampledata = getSampleData(q, [q.outcome, ...q.independent])
-		/* each element is one sample:
-		{sample, id2value:map}, where value is { key, val }
-
+		/* each element is one sample with a key-val map for all its annotations:
+		{sample, id2value:Map( tid => {key,value}) }
 		*/
-
 		const queryTime = +new Date() - startTime
 
-		const [headerline, samplelines, id2originalId, originalId2id] = makeMatrix(q, sampledata)
-		const sampleSize = samplelines.length
-		if (sampleSize < minimumSample) throw 'too few samples to fit model'
+		// build the input for R script
+		const Rinput = makeRinput(q, sampledata)
 
-		// create arguments for the R script
-		// outcome
-		const refGroups = [q.outcome.refGrp]
-		const colClasses = [q.outcome.q.mode == 'binary' ? 'factor' : termType2varClass(q.outcome.term.type)]
-		const scalingFactors = ['NA']
-		// independent terms
-		for (const term of q.independent) {
-			refGroups.push(term.refGrp)
-			colClasses.push(term.isBinned ? 'factor' : termType2varClass(term.term.type))
-			scalingFactors.push(term.isBinned || !term.q.scale ? 'NA' : term.q.scale)
-		}
+		const sampleSize = Rinput.outcome.values.length
 
-		// validate data
-		for (const [i, colClass] of colClasses.entries()) {
-			const refGrp = refGroups[i]
-			if (colClass == 'factor') {
-				if (refGrp == 'NA') throw 'reference category not given for categorical variable ' + headerline[i]
-				// get unique list of values
-				const values = new Set(samplelines.map(l => l[i]))
-				// make sure ref grp exists in data
-				if (!values.has(refGrp))
-					throw `the reference category '${refGrp}' is not found in the variable '${headerline[i]}'`
-				// make sure there's at least 2 categories
-				if (values.size < 2) throw 'fewer than 2 categories: ' + headerline[i]
-			} else {
-				// not factor type, must be continuous
-				if (refGrp != 'NA') throw 'variable is not factor but ref grp is given: ' + headerline[i]
-			}
-		}
+		validateRinput(q, Rinput, sampleSize)
 
-		const formula = make_formula(q, originalId2id)
+		const [id2originalId, originalId2id] = replaceTermId(Rinput)
 
-		const data = await lines2R(
+		// specify the formula for fitting regression model
+		Rinput.formula = make_formula(q, originalId2id)
+
+		// run regression analysis in R
+		const Routput = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
-			[headerline.join('\t'), ...samplelines.map(i => i.join('\t'))],
-			[q.regressionType, colClasses.join(','), refGroups.join(','), scalingFactors.join(','), formula],
+			[JSON.stringify(Rinput)],
+			[],
 			false
 		)
 
-		const result = { type: q.regressionType, queryTime, sampleSize }
-		parseRoutput(data, id2originalId, result)
-
+		// parse the R output
+		const result = { queryTime, sampleSize }
+		parseRoutput(Routput, id2originalId, q, result)
 		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
 	}
-}
-
-function termType2varClass(t) {
-	// numeric term with binning is 'factor' and is handled outside
-	if (t == 'integer') return 'integer'
-	if (t == 'float') return 'numeric'
-	if (t == 'categorical' || t == 'condition') return 'factor' // including groupset
-	throw 'unknown term type to convert to varClass'
 }
 
 function parse_q(q, ds) {
@@ -131,6 +86,7 @@ function parse_q(q, ds) {
 	if (!q.outcome) throw `empty 'outcome' parameter`
 	if (!('id' in q.outcome)) throw 'outcome.id missing'
 	if (!q.outcome.q) throw 'outcome.q missing'
+	q.outcome.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
 	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
 	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
 
@@ -138,12 +94,13 @@ function parse_q(q, ds) {
 	if (!q.independent) throw 'independent[] missing'
 	q.independent = JSON.parse(decodeURIComponent(q.independent))
 	if (!Array.isArray(q.independent) || q.independent.length == 0) throw 'q.independent is not non-empty array'
-	for (const term of q.independent) {
-		if (!term.id) throw '.id missing for an indepdent term'
-		term.term = ds.cohort.termdb.q.termjsonByOneid(term.id)
-		if (!term.term) throw 'invalid independent term: ' + term.id
-		if (term.type == 'float' || term.type == 'integer')
-			term.isBinned = term.q.mode == 'discrete' || term.q.mode == 'binary'
+	// tw = termWrapper
+	for (const tw of q.independent) {
+		if (!tw.id) throw '.id missing for an independent term'
+		tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
+		if (!tw.term) throw `invalid independent term='${tw.id}'`
+		if (!tw.q) throw `missing q for term.id='${tw.id}'`
+		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
 	}
 	// interaction of independent
 	for (const i of q.independent) {
@@ -154,213 +111,178 @@ function parse_q(q, ds) {
 	}
 }
 
-/* convert sampledata to matrix format
-also collect unique values for variables that are not continuous
-which may consume memory and may need to be improved
-*/
-function makeMatrix(q, sampledata) {
-	// Populate data rows of tsv. first line is header
-	// in the header line, use new id e.g. `id0` to replace original id, to avoid introducing space/comma into R data
-	const id2originalId = {} // k: new id, v: original term id
-	const originalId2id = {} // k: original term id, v: new id
-	for (const [i, t] of q.independent.entries()) {
-		id2originalId['id' + i] = t.id
-		originalId2id[t.id] = 'id' + i
+function makeRinput(q, sampledata) {
+	// outcome term
+	const outcome = {
+		id: q.outcome.id,
+		rtype: q.outcome.q.mode == 'continuous' ? 'numeric' : 'factor',
+		values: []
 	}
-	const headerline = ['outcome', ...q.independent.map(i => originalId2id[i.id])]
+	if (outcome.rtype === 'factor') outcome.refGrp = q.outcome.refGrp
 
-	// may generate a line for each sample, if the sample has valid value for all terms
-	// store lines as arrays but not \t joined string, for checking refGrp value
-	const lines = []
+	// input for R script will be in json format
+	const Rinput = {
+		type: q.regressionType,
+		outcome,
+		independent: []
+	}
 
+	// independent terms, tw = termWrapper
+	for (const tw of q.independent) {
+		const independent = {
+			id: tw.id,
+			rtype: tw.q.mode == 'continuous' ? 'numeric' : 'factor',
+			values: []
+		}
+		if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
+		if (tw.q.scale) independent.scale = tw.q.scale
+		Rinput.independent.push(independent)
+	}
+
+	// for each sample, decide if it has value for all terms
+	// if so, the sample can be included for analysis
+	// and will fill in values into values[] of all terms, thus ensuring the order of samples are the same across values[] of all terms
 	for (const { sample, id2value } of sampledata) {
-		const outcome = id2value.get(q.outcome.id)
-		if (!outcome) {
-			// lacks outcome value for this sample, skip
-			continue
-		}
+		if (!id2value.has(q.outcome.id)) continue
+		const out = id2value.get(q.outcome.id)
 
-		if (q.outcome.term.values) {
-			// outcome term has values{}, need to check if value is uncomputable:
-			if (q.outcome.term.values[outcome.val] && q.outcome.term.values[outcome.val].uncomputable) {
-				continue
-			}
-		}
-
-		// the first column is the outcome variable; if continuous, use val, otherwise use key
-		const line = [q.regressionType === 'linear' ? outcome.val : outcome.key]
-
-		// rest of columns for independent terms
 		let skipsample = false
-		for (const term of q.independent) {
-			if (!id2value.has(term.id)) {
-				// missing value for this term
+		for (const tw of q.independent) {
+			// tw = termWrapper
+			const independent = id2value.get(tw.id)
+			const values = tw.term.values || {}
+			if (!independent) {
 				skipsample = true
 				break
-			}
-
-			const { key, val } = id2value.get(term.id)
-
-			/*
-			TODO
-			if a uncomputable category is part of a groupset, then it must not be excluded
-			*/
-			if (term.term.values && term.term.values[val] && term.term.values[val].uncomputable) {
-				skipsample = true
-				break
-			}
-
-			if (term.isBinned) {
-				// key is the bin label
-				line.push(key)
-			} else {
-				// term is not binned
-				// for all the other cases will use val
-				// including groupsetting which both val and key are group labels (yes)
-				line.push(val)
 			}
 		}
 		if (skipsample) continue
-		lines.push(line)
+
+		// this sample has value for all terms and is eligible for regression analysis
+		// add its value to values[] of each term
+		Rinput.outcome.values.push(Rinput.outcome.rtype === 'numeric' ? out.value : out.key)
+		for (const t of Rinput.independent) {
+			const v = id2value.get(t.id)
+			t.values.push(t.rtype === 'numeric' ? v.value : v.key)
+		}
 	}
-	return [headerline, lines, id2originalId, originalId2id]
+	return Rinput
 }
 
-function parseRoutput(data, id2originalId, result) {
-	const type2lines = new Map()
-	// k: table type e.g. residuals
-	// v: list of lines
-
-	let tableType
-	for (const line of data) {
-		if (line.startsWith('#')) {
-			tableType = line.substring(1)
-			type2lines.set(tableType, [])
-			continue
-		}
-		type2lines.get(tableType).push(line)
+function validateRinput(q, Rinput, sampleSize) {
+	// validate R input
+	// validate sample size
+	if (sampleSize < minimumSample) throw 'too few samples to fit model'
+	if (Rinput.independent.find(x => x.values.length !== sampleSize)) throw 'variables have unequal sample sizes'
+	// validate outcome variable
+	if (q.regressionType === 'linear') {
+		if (Rinput.outcome.rtype !== 'numeric') throw 'outcome is not continuous'
+		if (Rinput.outcome.refGrp) throw 'reference group given for outcome'
+	} else {
+		if (Rinput.outcome.rtype === 'numeric') throw 'outcome is continuous'
+		if (!Rinput.outcome.refGrp) throw 'reference group not given for outcome'
+		const values = new Set(Rinput.outcome.values) // get unique values
+		if (values.size !== 2) throw 'outcome is not binary'
+		if (!values.has(Rinput.outcome.refGrp)) throw 'reference group not found in outcome values'
 	}
-
-	// parse lines into the result object
-	{
-		const lines = type2lines.get('warnings')
-		if (lines) {
-			result.warnings = {
-				label: 'Warning messages',
-				lst: lines
-			}
-		}
-	}
-	{
-		const lines = type2lines.get('residuals')
-		if (lines) {
-			if (lines.length != 2) throw 'expect 2 lines for residuals but got ' + lines.length
-			result.residuals = {
-				label: result.type === 'linear' ? 'Residuals' : 'Deviance residuals',
-				lst: []
-			}
-			// 1st line is header
-			const header = lines[0].split('\t')
-			// 2nd line is values
-			const values = lines[1].split('\t')
-			for (const [i, h] of header.entries()) {
-				result.residuals.lst.push([h, values[i]])
-			}
+	// validate independent variables
+	for (const variable of Rinput.independent) {
+		if (variable.rtype === 'numeric') {
+			if (variable.refGrp) throw `reference group given for '${variable.id}'`
+		} else {
+			if (!variable.refGrp) throw `reference group not given for '${variable.id}'`
+			const values = new Set(variable.values) // get unique values
+			if (!values.has(variable.refGrp)) throw `reference group not found in '${variable.id}' values`
+			// make sure there's at least 2 categories
+			if (values.size < 2) throw `'${variable.id}' has fewer than 2 categories`
 		}
 	}
-	{
-		const lines = type2lines.get('coefficients')
-		if (lines) {
-			if (lines.length < 3) throw 'expect at least 3 lines from coefficients'
+}
 
-			// 1st line is header, remove "variable,category" fields as data rows don't have them
-			const header = lines
-				.shift()
-				.split('\t')
-				.slice(2)
-			// 2nd line is intercept
-			const intercept = lines.shift().split('\t')
+function parseRoutput(Routput, id2originalId, q, result) {
+	if (Routput.length !== 1) throw 'expected 1 line in R output'
+	const data = JSON.parse(Routput[0])
 
-			result.coefficients = {
-				label: 'Coefficients',
-				header,
-				intercept,
-				terms: {}, // individual independent terms, not interaction
-				interactions: [] // interaction rows
-			}
+	// residuals
+	result.residuals = data.residuals
+	result.residuals.label = q.regressionType === 'linear' ? 'Residuals' : 'Deviance residuals'
 
-			// rest of lines are either individual independent variables, or interactions
-			for (const line of lines) {
-				const l = line.split('\t')
-				if (l[0].indexOf(':') != -1) {
-					// is an interaction
-					const row = {}
-					const [id1, id2] = l.shift().split(':')
-					const [cat1, cat2] = l.shift().split(':')
-					// l is now only data fields
-					row.term1 = id2originalId[id1]
-					row.category1 = cat1
-					row.term2 = id2originalId[id2]
-					row.category2 = cat2
-					row.lst = l
-					result.coefficients.interactions.push(row)
-				} else {
-					// not interaction, individual variable
-					const id = l.shift()
-					const category = l.shift()
-					// l is now only data fields
-					const termid = id2originalId[id] || id
-					if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
-					if (category) {
-						// has category
-						if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
-						result.coefficients.terms[termid].categories[category] = l
-					} else {
-						// no category
-						result.coefficients.terms[termid].fields = l
-					}
-				}
+	// coefficients
+	if (data.coefficients.rows.length < 2)
+		throw 'expect at least 2 rows in coefficients table but got ' + data.coefficients.rows.length
+	result.coefficients = {
+		header: data.coefficients.header,
+		intercept: data.coefficients.rows.shift(),
+		terms: {}, // individual independent terms, not interaction
+		interactions: [] // interactions
+	}
+	for (const row of data.coefficients.rows) {
+		if (row[0].indexOf(':') != -1) {
+			// is an interaction
+			const interaction = {}
+			const [id1, id2] = row.shift().split(':')
+			const [cat1, cat2] = row.shift().split(':')
+			// row is now only data fields
+			interaction.term1 = id2originalId[id1]
+			interaction.category1 = cat1
+			interaction.term2 = id2originalId[id2]
+			interaction.category2 = cat2
+			interaction.lst = row
+			result.coefficients.interactions.push(interaction)
+		} else {
+			// not interaction, individual variable
+			const id = row.shift()
+			const category = row.shift()
+			// row is now only data fields
+			const termid = id2originalId[id]
+			if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
+			if (category) {
+				// has category
+				if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
+				result.coefficients.terms[termid].categories[category] = row
+			} else {
+				// no category
+				result.coefficients.terms[termid].fields = row
 			}
 		}
 	}
-	{
-		const lines = type2lines.get('type3')
-		if (lines) {
-			const header = lines.shift().split('\t')
-			result.type3 = {
-				label: 'Type III statistics',
-				header,
-				lst: []
-			}
-			for (const line of lines) {
-				const l = line.split('\t')
-				const t = l.shift()
-				// l is now only data fields
-				const row = {}
-				if (t == '<none>') {
-					row.lst = l
-				} else {
-					if (t.indexOf(':') != -1) {
-						const [id1, id2] = t.split(':')
-						row.term1 = id2originalId[id1]
-						row.term2 = id2originalId[id2]
-					} else {
-						row.term1 = id2originalId[t]
-					}
-					row.lst = l
-				}
-				result.type3.lst.push(row)
-			}
+	result.coefficients.label = 'Coefficients'
+
+	// type III statistics
+	result.type3 = {
+		header: data.type3.header,
+		intercept: data.type3.rows.shift(),
+		terms: {}, // individual independent terms, not interaction
+		interactions: [] // interactions
+	}
+	for (const row of data.type3.rows) {
+		if (row[0].indexOf(':') != -1) {
+			// is an interaction
+			const interaction = {}
+			const [id1, id2] = row.shift().split(':')
+			// row is now only data fields
+			interaction.term1 = id2originalId[id1]
+			interaction.term2 = id2originalId[id2]
+			interaction.lst = row
+			result.type3.interactions.push(interaction)
+		} else {
+			// not interaction, individual variable
+			const id = row.shift()
+			// row is now only data fields
+			const termid = id2originalId[id]
+			if (!result.type3.terms[termid]) result.type3.terms[termid] = row
 		}
 	}
-	{
-		const lines = type2lines.get('other')
-		if (lines) {
-			result.other = {
-				label: 'Other summary statistics',
-				lst: lines.map(i => i.split('\t'))
-			}
-		}
+	result.type3.label = 'Type III statistics'
+
+	// other summary statistics
+	result.other = data.other
+	result.other.label = 'Other summary statistics'
+
+	// warnings
+	if (data.warnings) {
+		result.warnings = data.warnings
+		result.warnings.label = 'Warnings'
 	}
 }
 
@@ -389,8 +311,8 @@ Returns two data structures
 				term.id,
 				{
 					// depending on term type and desired 
-					key: bin label or precomputed label or annotated value, 
-					val: precomputed or annotated value
+					key: either (a) bin or groupsetting label, or (b) precomputed or annotated value if no bin/groupset is used, 
+					value: precomputed or annotated value
 				}
 			]
 		},
@@ -412,26 +334,25 @@ function getSampleData(q, terms) {
 		${CTEs.map(t => t.sql).join(',\n')}
 		${CTEs.map(
 			t => `
-		SELECT sample, key, value, ? as term_id
-		FROM ${t.tablename} 
-		WHERE sample IN ${filter.CTEname}
-		`
+			SELECT sample, key, value, ? as term_id
+			FROM ${t.tablename} 
+			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
+			`
 		).join(`UNION ALL`)}`
 
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-	// each row {sample, term_id, key, val}
 
-	const samples = new Map() // k: sample name, v: {sample, id2value:Map( tid => {key,val}) }
-	for (const r of rows) {
-		if (!samples.has(r.sample)) {
-			samples.set(r.sample, { sample: r.sample, id2value: new Map() })
+	const samples = new Map() // k: sample name, v: {sample, id2value:Map( tid => {key,value}) }
+	for (const { sample, term_id, key, value } of rows) {
+		if (!samples.has(sample)) {
+			samples.set(sample, { sample, id2value: new Map() })
 		}
 
-		if (samples.get(r.sample).id2value.has(r.term_id)) {
+		if (samples.get(sample).id2value.has(term_id)) {
 			// can duplication happen?
-			throw `duplicate '${r.term_id}' entry for sample='${r.sample}'`
+			throw `duplicate '${term_id}' entry for sample='${sample}'`
 		}
-		samples.get(r.sample).id2value.set(r.term_id, { key: r.key, val: r.value })
+		samples.get(sample).id2value.set(term_id, { key, value })
 	}
 	return samples.values()
 }
@@ -459,4 +380,17 @@ function make_formula(q, originalId2id) {
 	}
 
 	return 'outcome ~ ' + independent.join(' + ') + (interactions.length ? ' + ' + interactions.join(' + ') : '')
+}
+
+function replaceTermId(Rinput) {
+	// use dummy variable IDs in R (to avoid using spaces/commas)
+	Rinput.outcome.id = 'outcome'
+	const id2originalId = {} // k: new id, v: original term id
+	const originalId2id = {} // k: original term id, v: new id
+	for (const [i, t] of Rinput.independent.entries()) {
+		id2originalId['id' + i] = t.id
+		originalId2id[t.id] = 'id' + i
+		Rinput.independent[i].id = originalId2id[t.id]
+	}
+	return [id2originalId, originalId2id]
 }

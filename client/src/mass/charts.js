@@ -6,7 +6,7 @@ import { select, event } from 'd3-selection'
 // to assign chart ID to distinguish
 // between chart instances
 const idPrefix = '_CHART_AUTOID_' // to distinguish from user-assigned chart IDs
-let id = 0
+let id = +new Date()
 
 class MassCharts {
 	constructor(opts = {}) {

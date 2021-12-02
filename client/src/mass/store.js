@@ -4,7 +4,7 @@ import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
 const idPrefix = '_STORE_AUTOID_' // to distinguish from user-assigned chart IDs
-let id = 0
+let id = +new Date()
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 

@@ -101,7 +101,7 @@ function setRenderers(self) {
 		if (!result.warnings) return
 		const div = self.newDiv(result.warnings.label)
 		div.append('div').style('margin', '8px')
-		for (const line of result.warnings.lst) {
+		for (const line of result.warnings) {
 			div
 				.append('p')
 				.style('margin', '5px')
@@ -115,42 +115,9 @@ function setRenderers(self) {
 		const table = div.append('table').style('border-spacing', '8px')
 		const tr1 = table.append('tr').style('opacity', 0.4)
 		const tr2 = table.append('tr')
-		for (const v of result.residuals.lst) {
-			tr1.append('td').text(v[0])
-			tr2.append('td').text(v[1])
-		}
-	}
-
-	self.mayshow_type3 = result => {
-		if (!result.type3) return
-		const div = self.newDiv(result.type3.label)
-		const table = div.append('table').style('border-spacing', '0px')
-		// header
-		{
-			const tr = table.append('tr').style('opacity', 0.4)
-			for (const v of result.type3.header) {
-				tr.append('td')
-					.text(v)
-					.style('padding', '8px')
-			}
-		}
-		let rowcount = 1
-		for (const row of result.type3.lst) {
-			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
-			// column 1 for variable
-			const td = tr.append('td').style('padding', '8px')
-			if (row.term1) {
-				const term1 = self.state.config.independent.find(t => t.id == row.term1)
-				fillTdName(td.append('div'), term1 ? term1.term.name : row.term1)
-				if (row.term2) {
-					const term2 = self.state.config.independent.find(t => t.id == row.term2)
-					fillTdName(td.append('div'), term2 ? term2.term.name : row.term2)
-				}
-			}
-			for (const v of row.lst)
-				tr.append('td')
-					.text(v)
-					.style('padding', '8px')
+		for (let i = 0; i < result.residuals.header.length; i++) {
+			tr1.append('td').text(result.residuals.header[i])
+			tr2.append('td').text(result.residuals.rows[i])
 		}
 	}
 
@@ -164,52 +131,29 @@ function setRenderers(self) {
 		// header row
 		{
 			const tr = table.append('tr').style('opacity', 0.4)
-
-			// col 1: variable
-			tr.append('td')
-				.text('Variable')
-				.style('padding', '8px')
-			// col 2: category
-			tr.append('td')
-				.text('Category')
-				.style('padding', '8px')
-			// col 3: forest plot
-			tr.append('td')
-			// rest of columns
-			for (const v of result.coefficients.header) {
+			result.coefficients.header.forEach((v, i) => {
 				tr.append('td')
 					.text(v)
 					.style('padding', '8px')
-			}
+				if (i === 1) tr.append('td') // column 3 will be for forest plot
+			})
 		}
 
 		// intercept row
 		{
 			const tr = table.append('tr').style('background', '#eee')
-
-			result.coefficients.intercept.shift()
-			result.coefficients.intercept.shift()
-
-			// col 1
-			tr.append('td')
-				.text('(Intercept)')
-				.style('padding', '8px')
-			// col 2
-			tr.append('td')
-			// col 3
-			tr.append('td')
-			// rest of columns
-			for (const v of result.coefficients.intercept) {
+			result.coefficients.intercept.forEach((v, i) => {
 				tr.append('td')
 					.text(v)
 					.style('padding', '8px')
-			}
+				if (i === 1) tr.append('td') // column 3 will be for forest plot
+			})
 		}
 
-		// add forest plot as col 3 to each of subsequent rows
+		// term rows
+		// add forest plot as col 3 to each term row
 		const forestPlotter = self.getForestPlotter(result.coefficients.terms, result.coefficients.interactions)
-
-		// one row for each independent term, individually, no interaction
+		// independent terms (no interactions)
 		let rowcount = 0
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
@@ -334,16 +278,76 @@ function setRenderers(self) {
 		for (const v of result.coefficients.header) tr.append('td')
 	}
 
+	self.mayshow_type3 = result => {
+		if (!result.type3) return
+		const div = self.newDiv(result.type3.label)
+		const table = div.append('table').style('border-spacing', '0px')
+
+		// header row
+		{
+			const tr = table.append('tr').style('opacity', 0.4)
+			for (const v of result.type3.header) {
+				tr.append('td')
+					.text(v)
+					.style('padding', '8px')
+			}
+		}
+
+		// intercept row
+		{
+			const tr = table.append('tr').style('background', '#eee')
+			for (const v of result.type3.intercept) {
+				tr.append('td')
+					.text(v)
+					.style('padding', '8px')
+			}
+		}
+
+		// term rows
+		// independent terms (no interaction)
+		let rowcount = 0
+		for (const tid in result.type3.terms) {
+			const termdata = result.type3.terms[tid]
+			const term = self.state.config.independent.find(t => t.id == tid)
+			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+			// col 1: variable
+			const termNameTd = tr.append('td').style('padding', '8px')
+			fillTdName(termNameTd, term ? term.term.name : tid)
+			// rest of columns
+			for (const v of termdata) {
+				tr.append('td')
+					.text(v)
+					.style('padding', '8px')
+			}
+		}
+		// interactions
+		for (const row of result.type3.interactions) {
+			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+			const term1 = self.state.config.independent.find(t => t.id == row.term1)
+			const term2 = self.state.config.independent.find(t => t.id == row.term2)
+			// col 1: variable
+			const td = tr.append('td').style('padding', '8px')
+			fillTdName(td.append('div'), term1 ? term1.term.name : row.term1)
+			fillTdName(td.append('div'), term2 ? term2.term.name : row.term2)
+			// rest of columns
+			for (const v of row.lst) {
+				tr.append('td')
+					.text(v)
+					.style('padding', '8px')
+			}
+		}
+	}
+
 	self.mayshow_other = result => {
 		if (!result.other) return
 		const div = self.newDiv(result.other.label)
 		const table = div.append('table').style('border-spacing', '8px')
-		for (const [k, v] of result.other.lst) {
+		for (let i = 0; i < result.other.header.length; i++) {
 			const tr = table.append('tr')
 			tr.append('td')
 				.style('opacity', 0.4)
-				.text(k)
-			tr.append('td').text(v)
+				.text(result.other.header[i])
+			tr.append('td').text(result.other.rows[i])
 		}
 	}
 

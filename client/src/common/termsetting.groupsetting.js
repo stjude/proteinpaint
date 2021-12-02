@@ -141,8 +141,8 @@ export function setGroupsettingMethods(self) {
 
 		// add Div for exclude without group rename input
 		const exclude_grp_args = {
-			holder: groups_holder, 
-			name: 'Excluded categories', 
+			holder: groups_holder,
+			name: 'Excluded categories',
 			group_idx: 0
 		}
 
@@ -196,9 +196,9 @@ export function setGroupsettingMethods(self) {
 		// create holder for each group from groupset with group name input
 		function addGroupHolder(group, i) {
 			const group_args = {
-				holder: non_exclude_div, 
-				name: 'Group ' + (i + 1), 
-				group_idx : i + 1,
+				holder: non_exclude_div,
+				name: 'Group ' + (i + 1),
+				group_idx: i + 1,
 				group_type: group.type
 			}
 			const group_div = initGroupDiv(group_args)
@@ -242,8 +242,8 @@ export function setGroupsettingMethods(self) {
 						btn: group_items_div,
 						btnLabel: 'Filter',
 						emptyLabel: '+New Filter',
-						holder: group_items_div.style('width','320px'),
-						vocab: self.vocab, 
+						holder: group_items_div.style('width', '320px'),
+						vocab: self.vocab,
 						callback: () => {}
 					}).main(filter)
 				}
@@ -262,34 +262,35 @@ export function setGroupsettingMethods(self) {
 				.style('vertical-align', 'top')
 
 			if (group_type !== 'filter') {
-				dragable_div.on('dragover', () => {
-					if (group_i == drag_native_grp){
-						dragged_item
-							.style('transition-property', 'background-color')
-							.style('transition-duration', '1s')
-							.style('background-color', '#eee')
-						return
-					}
-					event.preventDefault()
-					event.stopPropagation()
-					dragable_div.style('background-color', group_i !== drag_native_grp ? '#cfe2f3' : '#fff')
-				})
-				.on('dragenter', () => {
-					if (group_i == drag_native_grp) return
-					event.preventDefault()
-					event.stopPropagation()
-					dragable_div.style('background-color', group_i !== drag_native_grp ? '#cfe2f3' : '#fff')
-				})
-				.on('dragleave', () => {
-					event.preventDefault()
-					event.stopPropagation()
-					dragable_div.style('background-color', '#fff')
-				})
-				.on('dragend', () => {
-					event.preventDefault()
-					event.stopPropagation()
-					dragable_div.style('background-color', '#fff')
-				})
+				dragable_div
+					.on('dragover', () => {
+						if (group_i == drag_native_grp) {
+							dragged_item
+								.style('transition-property', 'background-color')
+								.style('transition-duration', '1s')
+								.style('background-color', '#eee')
+							return
+						}
+						event.preventDefault()
+						event.stopPropagation()
+						dragable_div.style('background-color', group_i !== drag_native_grp ? '#cfe2f3' : '#fff')
+					})
+					.on('dragenter', () => {
+						if (group_i == drag_native_grp) return
+						event.preventDefault()
+						event.stopPropagation()
+						dragable_div.style('background-color', group_i !== drag_native_grp ? '#cfe2f3' : '#fff')
+					})
+					.on('dragleave', () => {
+						event.preventDefault()
+						event.stopPropagation()
+						dragable_div.style('background-color', '#fff')
+					})
+					.on('dragend', () => {
+						event.preventDefault()
+						event.stopPropagation()
+						dragable_div.style('background-color', '#fff')
+					})
 			}
 
 			// group title
