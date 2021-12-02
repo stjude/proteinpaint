@@ -510,6 +510,8 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 	if (term.type == 'float' || term.type == 'integer') {
 		if (q.mode == 'continuous') {
 			values.push(term.id)
+			const uncomputable = getUncomputableClause(term, q)
+			values.push(...uncomputable.values)
 			return {
 				sql: `${tablename} AS (
 					SELECT 
@@ -517,7 +519,7 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 						value as key, 
 						CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value
 					FROM annotations
-					WHERE term_id=?
+					WHERE term_id=? ${uncomputable.clause}
 				)`,
 				tablename
 			}
@@ -546,15 +548,17 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 }
 
 function makesql_oneterm_categorical(tablename, term, q, values, ds) {
-	const groupset = get_active_groupset(q, term)
+	const groupset = get_active_groupset(term, q)
 	if (!groupset) {
 		values.push(term.id)
+		const uncomputable = getUncomputableClause(term, q)
+		values.push(...uncomputable.values)
 		// groupsetting not applied
 		return {
 			sql: `${tablename} AS (
 				SELECT sample,value as key, value as value
 				FROM annotations
-				WHERE term_id=?
+				WHERE term_id=? ${uncomputable.clause}
 			)`,
 			tablename
 		}
@@ -568,7 +572,7 @@ function makesql_oneterm_categorical(tablename, term, q, values, ds) {
 		// in this CTE's query results because the JOIN ... ON ... matches by value
 		return {
 			sql: `${table2} AS (
-				${makesql_values_groupset(table2, term, q)}
+				${makesql_values_groupset(term, q)}
 			),
 			${tablename} AS (
 				SELECT
@@ -589,6 +593,15 @@ function makesql_oneterm_categorical(tablename, term, q, values, ds) {
 	}
 }
 
+function getUncomputableClause(term, q) {
+	if (!term.values || !q.computableValuesOnly) return { values: [], clause: '' }
+	const values = Object.keys(term.values).filter(k => term.values[k].uncomputable)
+	return {
+		values,
+		clause: values.length ? `AND value NOT IN (${values.map(() => '?').join(',')})` : ''
+	}
+}
+
 function makesql_oneterm_condition(tablename, term, q, values, ds) {
 	/*
 	return {sql, tablename}
@@ -605,21 +618,25 @@ function makesql_oneterm_condition(tablename, term, q, values, ds) {
 		: ''
 	if (!restriction) throw 'must set a valid value_by_*'
 
-	const groupset = get_active_groupset(q, term)
+	const castType = term.type == 'integer' ? 'integer' : 'real'
+	const groupset = get_active_groupset(term, q)
 	if (!groupset) {
 		values.push(term.id, value_for)
+		const uncomputable = getUncomputableClause(term, q)
+		values.push(...uncomputable.values)
 		return {
 			sql: `${tablename} AS (
 				SELECT
 					sample,
-					${value_for == 'grade' ? 'CAST(value AS integer) as key' : 'value as key'},
-					${value_for == 'grade' ? 'CAST(value AS integer) as value' : 'value'}
+					${value_for == 'grade' ? `CAST(value AS ${castType}) as key` : 'value as key'},
+					${value_for == 'grade' ? `CAST(value AS ${castType}) as value` : 'value'}
 				FROM
 					precomputed
 				WHERE
 					term_id = ?
 					AND value_for = ?
 					AND ${restriction} = 1
+					${uncomputable.clause}
 			)`,
 			tablename
 		}
@@ -641,7 +658,7 @@ function makesql_oneterm_condition(tablename, term, q, values, ds) {
 					${table2}.name AS key,
 					${table2}.value AS value
 				FROM precomputed a
-				JOIN ${table2} ON ${table2}.value=${q.bar_by_grade ? 'CAST(a.value AS integer)' : 'a.value'}
+				JOIN ${table2} ON ${table2}.value=${q.bar_by_grade ? `CAST(a.value AS ${castType})` : 'a.value'}
 				WHERE
 					term_id=?
 					AND value_for=?
@@ -722,7 +739,7 @@ function makesql_survivaltte(tablename, term, q, values, filter) {
 	}
 }
 
-function get_active_groupset(q, term) {
+function get_active_groupset(term, q) {
 	if (!q.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) return
 	if (Number.isInteger(q.groupsetting.predefined_groupset_idx)) {
 		if (q.groupsetting.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
@@ -748,18 +765,7 @@ function get_active_groupset(q, term) {
 	- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
 */
 function makesql_values_groupset(term, q) {
-	let s
-	if (Number.isInteger(q.groupsetting.predefined_groupset_idx)) {
-		if (q.groupsetting.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
-		if (!term.groupsetting) throw 'term.groupsetting missing when q.predefined_groupset_idx in use'
-		if (!term.groupsetting.lst) throw 'term.groupsetting.lst missing when q.predefined_groupset_idx in use'
-		s = term.groupsetting.lst[q.groupsetting.predefined_groupset_idx]
-		if (!s) throw 'q.predefined_groupset_idx out of bound'
-	} else if (q.groupsetting.customset) {
-		s = q.groupsetting.customset
-	} else {
-		throw 'do not know how to get groupset'
-	}
+	const s = get_active_groupset(term, q)
 	if (!s.groups) throw '.groups[] missing from a group-set'
 	const categories = []
 	let filter

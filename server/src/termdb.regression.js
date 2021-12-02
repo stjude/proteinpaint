@@ -147,11 +147,6 @@ function makeRinput(q, sampledata) {
 	for (const { sample, id2value } of sampledata) {
 		if (!id2value.has(q.outcome.id)) continue
 		const out = id2value.get(q.outcome.id)
-		// is uncomputable-checking still needed??
-		const excludeUncomputable = q.outcome.isNumeric || (q.outcome.q.groupsetting && q.outcome.q.groupsetting.inuse)
-		if (excludeUncomputable && q.outcome.term.values) {
-			if (q.outcome.term.values[out.value] && q.outcome.term.values[out.value].uncomputable) continue
-		}
 
 		let skipsample = false
 		for (const tw of q.independent) {
@@ -162,12 +157,6 @@ function makeRinput(q, sampledata) {
 				skipsample = true
 				break
 			}
-			const excludeUncomputable = tw.isNumeric || (tw.q.groupsetting && tw.q.groupsetting.inuse)
-			if (excludeUncomputable && values[independent.value] && values[independent.value].uncomputable) {
-				// TODO: if an uncomputable category is part of a groupset, then it must not be excluded
-				skipsample = true
-			}
-			if (skipsample) break
 		}
 		if (skipsample) continue
 
