@@ -568,6 +568,8 @@ function makesql_oneterm_categorical(tablename, term, q, values, ds) {
 		values.push(term.id)
 		// use groupset
 		const table2 = tablename + '_groupset'
+		const uncomputable = getUncomputableClause(term, q)
+		values.push(...uncomputable.values)
 		// NOTE: if a value is not included in any groupset, it will not be returned
 		// in this CTE's query results because the JOIN ... ON ... matches by value
 		return {
@@ -583,7 +585,7 @@ function makesql_oneterm_categorical(tablename, term, q, values, ds) {
 				JOIN
 					${table2} ON a.value = ${table2}.value
 				WHERE
-					term_id=?
+					term_id=? ${uncomputable.clause}
 			) `,
 			tablename
 		}
@@ -648,6 +650,8 @@ function makesql_oneterm_condition(tablename, term, q, values, ds) {
 		const table2 = tablename + '_groupset'
 		// NOTE: if a value is not included in any groupset, it will not be returned
 		// in this CTE's query results because the JOIN ... ON ... matches by value
+		const uncomputable = getUncomputableClause(term, q)
+		values.push(...uncomputable.values)
 		return {
 			sql: `${table2} AS (
 				${makesql_values_groupset(term, q)}
@@ -663,6 +667,7 @@ function makesql_oneterm_condition(tablename, term, q, values, ds) {
 					term_id=?
 					AND value_for=?
 					AND ${restriction}=1
+					${uncomputable.clause}
 			)`,
 			tablename
 		}
@@ -916,6 +921,9 @@ function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
 
 	const bin_def_table = 'bin_defs_' + index
 	const bin_sample_table = 'bin_sample_' + index
+	const uncomputable = getUncomputableClause(term, q)
+	console.log(919, uncomputable)
+	values.push(...uncomputable.values)
 
 	const sql = `${bin_def_table} AS (
 			${bin_def_lst.join(' UNION ALL ')}
@@ -948,7 +956,7 @@ function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
 					)
 				)
 			WHERE
-			term_id=?
+			term_id=? ${uncomputable.clause}
 		)`
 
 	return {
