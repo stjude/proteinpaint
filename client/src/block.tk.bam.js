@@ -403,7 +403,7 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		tk.label_skip.text('')
 	}
-	block.setllabel()
+	block.setllabel() // calculate left margin based on max left width
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
 }
 
@@ -691,7 +691,7 @@ function updateExistingGroups(data, tk, block) {
 					group.dom.read_names_g.selectAll('*').remove()
 					let read_count = 1
 					for (const read of group.data.templatebox) {
-						group.dom.read_names_g
+						const read_name_bbox = group.dom.read_names_g
 							.append('text')
 							.attr('x', 0)
 							.attr('y', (group.data.height * read_count) / group.data.templatebox.length)
@@ -699,6 +699,7 @@ function updateExistingGroups(data, tk, block) {
 							.style('fill', 'black')
 							.attr('font-size', group.data.height / group.data.templatebox.length)
 							.text(read.qname)
+						tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, read_name_bbox.node().getBBox().width)
 						read_count += 1
 					}
 				}
@@ -2175,7 +2176,7 @@ function renderGroup(group, tk, block) {
 					group.dom.read_names_g.selectAll('*').remove()
 					let read_count = 1
 					for (const read of group.data.templatebox) {
-						group.dom.read_names_g
+						const read_name_bbox = group.dom.read_names_g
 							.append('text')
 							.attr('x', 0)
 							.attr('y', (group.data.height * read_count) / group.data.templatebox.length)
@@ -2183,6 +2184,7 @@ function renderGroup(group, tk, block) {
 							.style('fill', 'black')
 							.attr('font-size', group.data.height / group.data.templatebox.length)
 							.text(read.qname)
+						tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, read_name_bbox.node().getBBox().width)
 						read_count += 1
 					}
 				}
@@ -2231,4 +2233,5 @@ function renderGroup(group, tk, block) {
 		group.dom.rightg.vslider.g.transition().attr('transform', 'scale(0)')
 	}
 	group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
+	block.setllabel() // calculate left margin based on max left width
 }
