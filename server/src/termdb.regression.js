@@ -119,7 +119,7 @@ function makeRinput(q, sampledata) {
 	// outcome term
 	const outcome = {
 		id: q.outcome.id,
-		rtype: q.outcome.q.mode === 'continuous' ? 'numeric' : 'factor',
+		rtype: q.outcome.isContinuous ? 'numeric' : 'factor',
 		values: []
 	}
 	if (outcome.rtype === 'factor') outcome.refGrp = q.outcome.refGrp
@@ -135,8 +135,7 @@ function makeRinput(q, sampledata) {
 	for (const tw of q.independent) {
 		const independent = {
 			id: tw.id,
-			rtype: tw.q.mode === 'continuous' ? 'numeric' : 'factor',
-			isContinuous: tw.isContinuous,
+			rtype: tw.isContinuous ? 'numeric' : 'factor',
 			values: []
 		}
 		if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
@@ -176,10 +175,10 @@ function makeRinput(q, sampledata) {
 
 		// this sample has value for all terms and is eligible for regression analysis
 		// add its value to values[] of each term
-		Rinput.outcome.values.push(q.outcome.isContinuous ? out.value : out.key)
+		Rinput.outcome.values.push(Rinput.outcome.rtype === 'numeric' ? out.value : out.key)
 		for (const t of Rinput.independent) {
 			const v = id2value.get(t.id)
-			t.values.push(t.isContinuous ? v.value : v.key)
+			t.values.push(t.rtype === 'numeric' ? v.value : v.key)
 		}
 	}
 	return Rinput
