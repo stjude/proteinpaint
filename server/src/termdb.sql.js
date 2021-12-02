@@ -598,7 +598,7 @@ function makesql_oneterm_categorical(tablename, term, q, values, ds) {
 function getUncomputableClause(term, q, tableAlias = '') {
 	if (!term.values || !q.computableValuesOnly) return { values: [], clause: '' }
 	const values = Object.keys(term.values).filter(k => term.values[k].uncomputable)
-	const aliasValue = tableAlias ? 'a.value' : 'value'
+	const aliasValue = tableAlias ? `${tableAlias}.value` : 'value'
 	return {
 		values,
 		clause: values.length ? `AND ${aliasValue} NOT IN (${values.map(() => '?').join(',')})` : ''
