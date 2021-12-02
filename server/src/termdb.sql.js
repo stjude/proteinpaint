@@ -505,7 +505,7 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 		return makesql_survivaltte(tablename, term, q, values, filter)
 	}
 	if (term.type == 'categorical') {
-		return makesql_oneterm_categorical(tablename, term, q, values)
+		return makesql_oneterm_categorical(tablename, term, q, values, ds)
 	}
 	if (term.type == 'float' || term.type == 'integer') {
 		if (q.mode == 'continuous') {
@@ -539,13 +539,13 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 		if (index == 1 && q.getcuminc) {
 			return makesql_chronictte(tablename, term, q, values, filter)
 		} else {
-			return makesql_oneterm_condition(tablename, term, q, values)
+			return makesql_oneterm_condition(tablename, term, q, values, ds)
 		}
 	}
 	throw 'unknown term type'
 }
 
-function makesql_oneterm_categorical(tablename, term, q, values) {
+function makesql_oneterm_categorical(tablename, term, q, values, ds) {
 	const groupset = get_active_groupset(q, term)
 	if (!groupset) {
 		values.push(term.id)
@@ -564,6 +564,8 @@ function makesql_oneterm_categorical(tablename, term, q, values) {
 		values.push(term.id)
 		// use groupset
 		const table2 = tablename + '_groupset'
+		// NOTE: if a value is not included in any groupset, it will not be returned
+		// in this CTE's query results because the JOIN ... ON ... matches by value
 		return {
 			sql: `${table2} AS (
 				${makesql_values_groupset(table2, term, q)}
@@ -582,11 +584,12 @@ function makesql_oneterm_categorical(tablename, term, q, values) {
 			tablename
 		}
 	} else {
-		return makesql_condition_groupset(tablename, term, groupset, q, values)
+		// this CTE will exclude uncomputable values, EXCEPT IF such value is in a groupset
+		return makesql_complex_groupset(tablename, term, groupset, values, ds)
 	}
 }
 
-function makesql_oneterm_condition(tablename, term, q, values) {
+function makesql_oneterm_condition(tablename, term, q, values, ds) {
 	/*
 	return {sql, tablename}
 */
@@ -626,9 +629,11 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 		values.push(term.id, value_for)
 		// use groupset
 		const table2 = tablename + '_groupset'
+		// NOTE: if a value is not included in any groupset, it will not be returned
+		// in this CTE's query results because the JOIN ... ON ... matches by value
 		return {
 			sql: `${table2} AS (
-				${makesql_values_groupset(table2, term, q)}
+				${makesql_values_groupset(term, q)}
 			),
 			${tablename} AS (
 				SELECT
@@ -645,7 +650,8 @@ function makesql_oneterm_condition(tablename, term, q, values) {
 			tablename
 		}
 	} else {
-		return makesql_complex_groupset(tablename, term, groupset, q, values, value_for, restriction)
+		// this CTE will exclude uncomputable values, EXCEPT IF such value is in a groupset
+		return makesql_complex_groupset(tablename, term, groupset, values, ds, value_for, restriction)
 	}
 }
 
@@ -732,7 +738,16 @@ function get_active_groupset(q, term) {
 	}
 }
 
-function makesql_values_groupset(tablename, term, q) {
+/*
+	Arguments
+	- term{}
+	- q{}: must have a groupset
+	
+	Return
+	- a series of "SELECT name, value" statements that are joined by UNION ALL
+	- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
+*/
+function makesql_values_groupset(term, q) {
 	let s
 	if (Number.isInteger(q.groupsetting.predefined_groupset_idx)) {
 		if (q.groupsetting.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
@@ -758,9 +773,24 @@ function makesql_values_groupset(tablename, term, q) {
 	return categories.join('\nUNION ALL\n')
 }
 
+// used to assign a unique CTE name to extra filters (xf) for groupsets
 let xfIndex = 0
 
-function makesql_complex_groupset(tablename, term, groupset, q, values, value_for, restriction) {
+/*
+	Arguments
+	- tablename: string name for this CTE
+	- term{}
+	- groupset: the active groupset, such as returned by get_active_groupset()
+	- values: the array of values to fill-in the '?' in the prepared sql statement, may append to this array
+	- ds: dataset with db connection
+	- value_for: required for condition terms, "grade" or "child"
+	- restriction: required for condition terms, "computable_grade" | "max_grade" | "most_recent_grade"
+	
+	Return
+	- a series of "SELECT name, value" statements that are joined by UNION ALL
+	- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
+*/
+function makesql_complex_groupset(tablename, term, groupset, values, ds, value_for, restriction) {
 	const categories = []
 	const filters = []
 	for (const g of groupset.groups) {
@@ -788,7 +818,7 @@ function makesql_complex_groupset(tablename, term, groupset, q, values, value_fo
 			if ('activeCohort' in q.groupsetting && g.filter4activeCohort) {
 				const tvs_filter = g.filter4activeCohort[q.groupsetting.activeCohort]
 
-				const filter = getFilterCTEs(tvs_filter, q.ds, 'xf' + xfIndex++)
+				const filter = getFilterCTEs(tvs_filter, ds, 'xf' + xfIndex++)
 				if (!filter) throw `unable to construct a group='${g.name}' filter for term.id='${term.id}'`
 				filters.push(filter.filters)
 				values.push(...filter.values.slice(), g.name, g.name)

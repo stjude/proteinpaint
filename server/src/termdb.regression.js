@@ -134,6 +134,7 @@ function parse_q(q, ds) {
 	q.outcome.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
 	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
 	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
+	q.outcome.isNumeric = q.outcome.term.type == 'integer' || q.outcome.term.type == 'float'
 
 	// independent
 	if (!q.independent) throw 'independent[] missing'
@@ -146,8 +147,10 @@ function parse_q(q, ds) {
 		if (!tw.term) throw `invalid independent term='${tw.id}'`
 		if (!tw.q) throw `missing q for term.id='${tw.id}'`
 		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
-		if (tw.term.type == 'float' || tw.term.type == 'integer')
+		if (tw.term.type == 'float' || tw.term.type == 'integer') {
+			tw.isNumeric = true
 			tw.isBinned = tw.q.mode == 'discrete' || tw.q.mode == 'binary'
+		}
 	}
 	// interaction of independent
 	for (const i of q.independent) {
@@ -191,8 +194,8 @@ function makeRinput(q, sampledata) {
 	for (const { sample, id2value } of sampledata) {
 		if (!id2value.has(q.outcome.id)) continue
 		const out = id2value.get(q.outcome.id)
-
-		if (q.outcome.q.mode == 'continuous' && q.outcome.term.values) {
+		const excludeUncomputable = q.outcome.isNumeric || (q.outcome.q.groupsetting && q.outcome.q.groupsetting.inuse)
+		if (excludeUncomputable && q.outcome.term.values) {
 			if (q.outcome.term.values[out.val] && q.outcome.term.values[out.val].uncomputable) continue
 		}
 
@@ -200,16 +203,13 @@ function makeRinput(q, sampledata) {
 		for (const tw of q.independent) {
 			// tw = termWrapper
 			const independent = id2value.get(tw.id)
-			const values = tw.term.values
+			const values = tw.term.values || {}
 			if (!independent) {
 				skipsample = true
-			} else if (
-				tw.q &&
-				tw.q.mode == 'continuous' &&
-				values &&
-				values[independent.val] &&
-				values[independent.val].uncomputable
-			) {
+				break
+			}
+			const excludeUncomputable = tw.isNumeric || (tw.q.groupsetting && tw.q.groupsetting.inuse)
+			if (excludeUncomputable && values[independent.val] && values[independent.val].uncomputable) {
 				// TODO: if an uncomputable category is part of a groupset, then it must not be excluded
 				skipsample = true
 			}
