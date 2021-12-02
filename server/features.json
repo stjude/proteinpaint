@@ -1105,6 +1105,7 @@
             "ppcalls": [
                 {
                     "is_ui": true,
+                    "nodashedline": true,
                     "runargs": {
                         "nobox": 1,
                         "noheader": 1,

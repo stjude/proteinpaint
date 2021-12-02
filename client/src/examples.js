@@ -330,11 +330,13 @@ function renderContent(ppcalls, div) {
 	showURLLaunch(ppcalls.urlparam, buttons_div)
 	addArrowBtns(ppcalls.arrowButtons, ppcalls, buttons_div, reuse_div)
 
-	const line = div
-		.append('hr')
-		.style('border', '0')
-		.style('border-top', '1px dashed #e3e3e6')
-		.style('width', '100%')
+	if (ppcalls.nodashedline == (false || undefined)) {
+		div
+			.append('hr')
+			.style('border', '0')
+			.style('border-top', '1px dashed #e3e3e6')
+			.style('width', '100%')
+	}
 
 	const runpp_arg = {
 		holder: div
@@ -502,14 +504,14 @@ async function makeLeftsideTabMenu(track, div) {
 	}
 }
 
-function getTabData(call, i) {
+function getTabData(ppcalls, i) {
 	return {
-		label: call.label,
+		label: ppcalls.label,
 		active: i === 0,
 		callback: async div => {
 			const wait = tab_wait(div)
 			try {
-				renderContent(call, div)
+				renderContent(ppcalls, div)
 				wait.remove()
 			} catch (e) {
 				wait.text('Error: ' + (e.message || e))
@@ -600,8 +602,8 @@ function makeDataDownload(arg, div) {
 	}
 }
 
-function showCode(call, btns) {
-	if (call.is_ui == true) return
+function showCode(ppcalls, btns) {
+	if (ppcalls.is_ui == true) return
 
 	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
 	const code = highlight(
@@ -609,7 +611,7 @@ function showCode(call, btns) {
     host: "${window.location.origin}",
     holder: document.getElementById('a'),
     ` + // Fix for first argument not properly appearing underneath holder
-			JSON.stringify(call, '', 4)
+			JSON.stringify(ppcalls.runargs, '', 4)
 				.replaceAll(/"(.+)"\s*:/g, '$1:')
 				.replaceAll(/\\t/g, '	')
 				.replaceAll(/\\n/g, '\r\t')
