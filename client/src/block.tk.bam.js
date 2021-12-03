@@ -2285,5 +2285,7 @@ function renderGroup(group, tk, block) {
 		group.dom.rightg.vslider.g.transition().attr('transform', 'scale(0)')
 	}
 	group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
-	update_left_margin(tk, block)
+	if (tk.show_readnames) {
+		update_left_margin(tk, block)
+	}
 }
