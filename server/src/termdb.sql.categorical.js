@@ -1,9 +1,4 @@
-import {
-	get_active_groupset,
-	getUncomputableClause,
-	makesql_values_groupset,
-	makesql_complex_groupset
-} from './termdb.sql'
+import { getUncomputableClause } from './termdb.sql'
 
 export const values = {
 	getCTE(tablename, term, ds, q, values, index) {
@@ -41,31 +36,18 @@ export const groupset = {
 		- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
 	*/
 	getCTE(tablename, term, ds, q, values, index, groupset) {
-		if (!groupset.groups) throw '.groups[] missing from a group-set'
-		return makesql_complex_groupset(tablename, term, groupset, values, ds)
+		if (!groupset.groups) throw `.groups[] missing from a group-set, term.id='${term.id}'`
 
 		const categories = []
 		const filters = []
 		for (const g of groupset.groups) {
 			if (g.type == 'values') {
-				if (term.type == 'categorical') {
-					categories.push(`SELECT sample, ? as key, value
-						FROM anno_categorical a
-						WHERE term_id=?
-							AND value IN (${g.values.map(v => '?').join(',')})
-					`)
-					values.push(g.name, term.id, ...g.values.map(v => v.key.toString()))
-				} else if (term.type == 'condition') {
-					categories.push(`SELECT sample, ? as key, value
-						FROM precomputed a
-						WHERE
-							term_id=?
-							AND value_for=?
-							AND ${restriction}=1
-							AND value IN (${g.values.map(v => '?').join(',')})
-					`)
-					values.push(g.name, term.id, value_for, ...g.values.map(v => v.key.toString()))
-				}
+				categories.push(`SELECT sample, ? as key, value
+					FROM anno_categorical a
+					WHERE term_id=?
+						AND value IN (${g.values.map(v => '?').join(',')})
+				`)
+				values.push(g.name, term.id, ...g.values.map(v => v.key.toString()))
 			} else if (g.type == 'filter') {
 				// TODO: create filter sql for group.type == 'filter'
 				if ('activeCohort' in q.groupsetting && g.filter4activeCohort) {
