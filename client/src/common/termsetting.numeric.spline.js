@@ -1,6 +1,6 @@
-import { event as d3event } from 'd3-selection'
+import { select, event } from 'd3-selection'
 import { setDensityPlot } from './termsetting.density'
-import { renderBoundaryInclusionInput, renderBoundaryInputDivs } from './termsetting.numeric.discrete'
+import { renderBoundaryInclusionInput } from './termsetting.numeric.discrete'
 import { get_bin_label } from '../../shared/termdb.bins'
 import { init_tabs } from '../dom/toggleButtons'
 import { keyupEnter } from '../client'
@@ -90,6 +90,7 @@ function setqDefaults(self) {
 	if (self.q && !self.q.mode) self.q.mode = 'spline'
 	if (!self.q || self.q.mode !== 'spline') self.q = {}
 	if (!self.q.type) self.q.type = 'spline_auto'
+	delete self.q.lst
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].spline[self.q.type]))
 	self.q = Object.assign(cacheCopy, self.q)
 	const bin_size = 'bin_size' in self.q && self.q.bin_size.toString()
@@ -99,7 +100,7 @@ function setqDefaults(self) {
 	}
 	if (self.q.lst) {
 		self.q.lst.forEach(bin => {
-			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
+			if (!('label' in bin)) bin.label = bin.start || ''
 		})
 	}
 	//*** validate self.q ***//
@@ -108,6 +109,7 @@ function setqDefaults(self) {
 
 function renderTypeInputs(self) {
 	// toggle switch
+	const bins_div = self.dom.bins_div
 	const div = self.dom.bins_div.append('div').style('margin', '10px')
 	const tabs = [
 		{
@@ -115,10 +117,11 @@ function renderTypeInputs(self) {
 			label: 'Auto compute knots',
 			callback: async div => {
 				self.q.type = 'spline_auto'
+				self.dom.bins_div = bins_div
 				setqDefaults(self)
 				setDensityPlot(self)
 				if (!tabs[0].isInitialized) {
-					// renderFixedBinsInputs(self, div)
+					renderAutoSplineInputs(self, div)
 					tabs[0].isInitialized = true
 				}
 			}
@@ -128,14 +131,159 @@ function renderTypeInputs(self) {
 			label: 'Specity custom knots',
 			callback: async div => {
 				self.q.type = 'spline_custom'
+				self.dom.bins_div = bins_div
 				setqDefaults(self)
 				setDensityPlot(self)
 				if (!tabs[1].isInitialized) {
-					// renderCustomBinInputs(self, div)
+					renderCustomSplineInputs(self, div)
 					tabs[1].isInitialized = true
 				}
 			}
 		}
 	]
 	init_tabs({ holder: div, tabs })
+}
+
+/******************* Functions for Auto Spline knots *******************/
+function renderAutoSplineInputs(self, tablediv) {}
+
+/******************* Functions for Custom Spline knots *******************/
+function renderCustomSplineInputs(self, tablediv) {
+	self.dom.bins_table = tablediv.append('table')
+	const thead = self.dom.bins_table.append('thead').append('tr')
+	thead
+		.append('th')
+		.style('font-weight', 'normal')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Knots')
+	thead
+		.append('th')
+		.style('font-weight', 'normal')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Knot Labels')
+	self.dom.customBintbody = self.dom.bins_table.append('tbody')
+	const tr = self.dom.customBintbody.append('tr')
+
+	self.dom.customBinBoundaryInput = tr
+		.append('td')
+		.append('textarea')
+		.style('height', '100px')
+		.style('width', '100px')
+		.text(
+			self.q.lst
+				.slice(1)
+				.map(d => d.start)
+				.join('\n')
+		)
+		.on('change', handleChange)
+		.on('keyup', async () => {
+			// enter or backspace/delete
+			// i don't think backspace works
+			if (!keyupEnter() && event.key != 8) return
+			handleChange.call(this)
+		})
+
+	function handleChange() {
+		self.dom.customBinLabelTd.selectAll('input').property('value', '')
+		const data = processKnotsInputs(self)
+		// update self.q.lst and render bin lines only if bin boundry changed
+		const q = self.numqByTermIdModeType[self.term.id].spline[self.q.type]
+		if (binsChanged(data, q.lst)) {
+			q.lst = data
+			self.renderBinLines(self, q)
+		}
+		renderKnotInputDivs(self, q.lst)
+		self.q = q
+	}
+
+	function binsChanged(data, qlst) {
+		if (data.length != qlst.length) return true
+		if (Object.keys(data[0]).length !== Object.keys(qlst[0]).length) return true
+		for (const [i, bin] of qlst.entries()) {
+			for (const k of Object.keys(bin)) {
+				if (bin[k] && bin[k] !== data[i][k]) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+
+	self.dom.customBinLabelTd = tr.append('td')
+	renderKnotInputDivs(self, self.q.lst)
+}
+
+function renderKnotInputDivs(self, data) {
+	self.dom.customBinLabelTd.selectAll('div').remove('*')
+	data.shift()
+	const inputDivs = self.dom.customBinLabelTd.selectAll('div').data(data)
+	inputDivs.exit().remove()
+	inputDivs.each(function(d, i) {
+		select(this)
+			.select('span')
+			.html('Knot ' + (i + 1) + '&nbsp;')
+		select(this)
+			.select('input')
+			.property('value', d.label)
+	})
+	inputDivs
+		.enter()
+		.append('div')
+		.each(function(d, i) {
+			select(this)
+				.append('span')
+				.style('color', 'rgb(136, 136, 136)')
+				.html('Knot ' + (i + 1) + '&nbsp;')
+			select(this)
+				.append('input')
+				.attr('type', 'text')
+				.property('value', d.label)
+				.on('change', function() {
+					self.q.lst[i].label = this.value
+				})
+		})
+
+	self.dom.customBinLabelInput = self.dom.customBinLabelTd.selectAll('input')
+}
+
+function processKnotsInputs(self) {
+	const startinclusive = true
+	const stopinclusive = false
+	const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
+	let prevBin
+	const data = self.dom.customBinBoundaryInput
+		.property('value')
+		.split('\n')
+		.filter(d => d != '')
+		.map(d => +d)
+		.sort((a, b) => a - b)
+		.map((d, i) => {
+			const bin = {
+				start: +d,
+				startinclusive,
+				stopinclusive
+			}
+			if (prevBin) {
+				delete prevBin.stopunbounded
+				prevBin.stop = bin.start
+				const label = inputDivs[i - 1].querySelector('input').value
+				prevBin.label = label ? label : prevBin.start ? prevBin.start : ''
+			}
+			prevBin = bin
+			return bin
+		})
+
+	prevBin.stopunbounded = true
+	const label = inputDivs[data.length] && inputDivs[data.length].querySelector('input').value
+	prevBin.label = label ? label : data[data.length - 1].start
+
+	data.unshift({
+		startunbounded: true,
+		stop: data[0].start,
+		startinclusive,
+		stopinclusive,
+		label: inputDivs[0].querySelector('input').value
+	})
+	if (!data[0].label) data[0].label = data[0].start || ''
+	return data
 }
