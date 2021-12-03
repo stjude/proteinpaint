@@ -14,7 +14,6 @@
 #     JSON input specifications:
 #     {
 #       "type": [string] regression type (e.g. "linear" or "logistic")
-#       "formula": [string] formula of regression model (e.g. "outcome ~ id0 + id1 + id2").
 #       "outcome": {
 #         "id": [string] variable id (e.g. "outcome")
 #         "rtype": [string] variable type in R (e.g. "numeric" or "factor")
@@ -51,9 +50,8 @@
 #           "rows": []
 #       },
 #       "other": {
-#           <label>: <value>
-#           <label>: <value>
-#           ...
+#           "header": []
+#           "rows": []
 #       }
 #     }
 
@@ -102,6 +100,31 @@ for (i in 1:ncol(dat)) {
   }
 }
 
+# build formula of regression model
+outcomeTerm <- "outcome"
+independentTerms <- vector(mode = "character")
+interactionTerms <- vector(mode = "character")
+for (i in 1:length(lst$independent)) {
+  term <- lst$independent[[i]]
+  independentTerms <- c(independentTerms, term$id)
+  for (intTerm in term$interactions) {
+    # get unique set of interactions
+    int1 <- paste(term$id, intTerm, sep = ":")
+    int2 <- paste(intTerm, term$id, sep = ":")
+    if (!(int1 %in% interactionTerms) & !(int2 %in% interactionTerms)) {
+      interactionTerms <- c(interactionTerms, int1)
+    }
+  }
+}
+
+independentTerms <- paste(independentTerms, collapse = " + ")
+if (length(interactionTerms) > 0) {
+  interactionTerms <- paste(interactionTerms, collapse = " + ")
+  mod <- as.formula(paste(outcomeTerm, paste(independentTerms, interactionTerms, sep = " + "), sep = " ~ "))
+} else {
+  mod <- as.formula(paste(outcomeTerm, independentTerms, sep = " ~ "))
+}
+
 
 ########## Regression analysis ###########
 
@@ -124,7 +147,7 @@ if (lst$type == "linear"){
     stop("linear regression requires a numeric outcome variable")
   }
   # fit linear model
-  res <- lm(as.formula(lst$formula), data = dat)
+  res <- lm(mod, data = dat)
   res_summ <- summary(res)
   # prepare residuals table
   residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$residuals),3)))
@@ -155,7 +178,7 @@ if (lst$type == "linear"){
     stop("outcome variable is not binary")
   }
   # fit logistic model
-  res <- glm(as.formula(lst$formula), family=binomial(link='logit'), data = dat)
+  res <- glm(mod, family = binomial(link='logit'), data = dat)
   res_summ <- summary(res)
   # prepare residuals table
   residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$deviance.resid),3)))

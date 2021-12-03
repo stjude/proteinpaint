@@ -43,15 +43,9 @@ export async function get_regression(q, ds) {
 
 		// build the input for R script
 		const Rinput = makeRinput(q, sampledata)
-
 		const sampleSize = Rinput.outcome.values.length
-
 		validateRinput(q, Rinput, sampleSize)
-
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
-
-		// specify the formula for fitting regression model
-		Rinput.formula = make_formula(q, originalId2id)
 
 		// run regression analysis in R
 		const Routput = await lines2R(
@@ -132,6 +126,7 @@ function makeRinput(q, sampledata) {
 		const independent = {
 			id: tw.id,
 			rtype: tw.q.mode == 'continuous' ? 'numeric' : 'factor',
+			interactions: tw.interactions,
 			values: []
 		}
 		if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
@@ -357,40 +352,22 @@ function getSampleData(q, terms) {
 	return samples.values()
 }
 
-function make_formula(q, originalId2id) {
-	const independent = q.independent.map(i => originalId2id[i.id])
-
-	// get unique list of interaction pairs
-	const a2b = {}
-	for (const i of q.independent) {
-		const a = originalId2id[i.id]
-		for (const j of i.interactions) {
-			const b = originalId2id[j]
-			if (a2b[a] == b || a2b[b] == a) {
-				// already seen
-			} else {
-				a2b[a] = b
-			}
-		}
-	}
-
-	const interactions = []
-	for (const i in a2b) {
-		interactions.push(i + ':' + a2b[i])
-	}
-
-	return 'outcome ~ ' + independent.join(' + ') + (interactions.length ? ' + ' + interactions.join(' + ') : '')
-}
-
 function replaceTermId(Rinput) {
-	// use dummy variable IDs in R (to avoid using spaces/commas)
+	// replace term IDs with custom IDs (to avoid spaces/commas in R)
 	Rinput.outcome.id = 'outcome'
+	// make conversion table between IDs
 	const id2originalId = {} // k: new id, v: original term id
 	const originalId2id = {} // k: original term id, v: new id
 	for (const [i, t] of Rinput.independent.entries()) {
 		id2originalId['id' + i] = t.id
 		originalId2id[t.id] = 'id' + i
+	}
+	// replace IDs of terms and interacting terms
+	for (const [i, t] of Rinput.independent.entries()) {
 		Rinput.independent[i].id = originalId2id[t.id]
+		for (const [j, k] of Rinput.independent[i].interactions.entries()) {
+			Rinput.independent[i].interactions[j] = originalId2id[k]
+		}
 	}
 	return [id2originalId, originalId2id]
 }
