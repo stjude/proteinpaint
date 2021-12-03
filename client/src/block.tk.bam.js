@@ -383,6 +383,9 @@ or update existing groups, in which groupidx will be provided
 			}
 			y += messagerowheight
 		}
+		if (tk.show_readnames) {
+			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, g.ReadNameMaxwidth)
+		}
 	}
 
 	setTkHeight(tk)
@@ -407,11 +410,21 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		tk.label_skip.text('')
 	}
+	block.setllabel() // calculate left margin based on max left width
 	if (!tk.show_readnames) {
 		tk.OriginalleftLabelMaxwidth = tk.leftLabelMaxwidth // Original leftlabelmaxwidth without read names
+	} else {
+		tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
+	}
+	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
+}
+
+function update_left_margin(tk, block) {
+	tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
+	for (const g of tk.groups) {
+		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, g.ReadNameMaxwidth)
 	}
 	block.setllabel() // calculate left margin based on max left width
-	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
 }
 
 function may_render_gdc(data, tk, block) {
@@ -694,6 +707,7 @@ function updateExistingGroups(data, tk, block) {
 				.attr('width', gd.diff_scores_img.width)
 				.attr('height', gd.diff_scores_img.height)
 			if (tk.show_readnames) {
+				group.ReadNameMaxwidth = 0
 				if (group.data.templatebox) {
 					group.dom.read_names_g.selectAll('*').remove()
 					let read_count = 1
@@ -706,13 +720,13 @@ function updateExistingGroups(data, tk, block) {
 							.style('fill', 'black')
 							.attr('font-size', group.data.height / group.data.templatebox.length)
 							.text(read.qname)
-						tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, read_name_bbox.node().getBBox().width)
+						group.ReadNameMaxwidth = Math.max(group.ReadNameMaxwidth, read_name_bbox.node().getBBox().width)
 						read_count += 1
 					}
 				}
 			} else {
 				group.dom.read_names_g.selectAll('*').remove()
-				tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
+				group.ReadNameMaxwidth = 0
 			}
 		}
 
@@ -1093,6 +1107,10 @@ function makeGroup(gd, tk, block, data) {
 				delete tk.readAlignmentTable
 				delete tk.readAlignmentTableGroup
 				tk.alignpane.pane.style('display', 'none')
+			}
+			if (tk.show_readnames) {
+				group.ReadNameMaxwidth = 0
+				update_left_margin(tk, block)
 			}
 			group.data = group.data_fullstack
 			renderGroup(group, tk, block)
@@ -2159,7 +2177,6 @@ async function enter_partstack(group, tk, block, y, data) {
 	])
 	group.data = _d.groups[0]
 	renderGroup(group, tk, block)
-
 	setTkHeight(tk)
 	block.tkcloakoff(tk, {})
 	block.block_setheight()
@@ -2204,6 +2221,7 @@ function renderGroup(group, tk, block) {
 				.attr('width', group.data.diff_scores_img.width)
 				.attr('height', group.data.diff_scores_img.height)
 			if (tk.show_readnames) {
+				group.ReadNameMaxwidth = 0
 				if (group.data.templatebox) {
 					group.dom.read_names_g.selectAll('*').remove()
 					let read_count = 1
@@ -2216,12 +2234,13 @@ function renderGroup(group, tk, block) {
 							.style('fill', 'black')
 							.attr('font-size', group.data.height / group.data.templatebox.length)
 							.text(read.qname)
-						tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, read_name_bbox.node().getBBox().width)
+						group.ReadNameMaxwidth = Math.max(group.ReadNameMaxwidth, read_name_bbox.node().getBBox().width)
 						read_count += 1
 					}
 				}
 			} else {
 				group.dom.read_names_g.selectAll('*').remove()
+				group.ReadNameMaxwidth = 0
 			}
 		}
 		group.dom.img_partstack
@@ -2266,5 +2285,5 @@ function renderGroup(group, tk, block) {
 		group.dom.rightg.vslider.g.transition().attr('transform', 'scale(0)')
 	}
 	group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
-	block.setllabel() // calculate left margin based on max left width
+	update_left_margin(tk, block)
 }
