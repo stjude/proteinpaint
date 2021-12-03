@@ -402,6 +402,9 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		tk.label_skip.text('')
 	}
+	if (!tk.show_readnames) {
+		tk.OriginalleftLabelMaxwidth = tk.leftLabelMaxwidth // Original leftlabelmaxwidth without read names
+	}
 	block.setllabel() // calculate left margin based on max left width
 	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
 }
@@ -704,6 +707,7 @@ function updateExistingGroups(data, tk, block) {
 				}
 			} else {
 				group.dom.read_names_g.selectAll('*').remove()
+				tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
 			}
 		}
 
@@ -1302,7 +1306,7 @@ function configPanel(tk, block) {
 			}
 		})
 	}
-	{
+	if (tk.variants) {
 		make_one_checkbox({
 			holder: d.append('div'),
 			labeltext: 'Show read names',
@@ -1312,8 +1316,7 @@ function configPanel(tk, block) {
 				loadTk(tk, block)
 			}
 		})
-	}
-	if (tk.variants) {
+
 		if (!tk.variants[0].strictness) {
 			// When using example.bam.indel.html the strictness value is not defined. In such cases using a default value of strictness = 1.
 			tk.variants[0].strictness = 1
@@ -2236,6 +2239,7 @@ function renderGroup(group, tk, block) {
 				.attr('height', group.data.diff_scores_img.height)
 			if (tk.show_readnames) {
 				group.dom.read_names_g.selectAll('*').remove()
+				tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
 			}
 		}
 		group.dom.rightg.vslider.g.transition().attr('transform', 'scale(0)')
