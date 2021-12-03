@@ -1,7 +1,8 @@
 const app = require('./app')
 const binsmodule = require('../shared/termdb.bins')
 const getFilterCTEs = require('./termdb.filter').getFilterCTEs
-const numericCTE = require('./termdb.cte.numeric')
+const numericSql = require('./termdb.sql.numeric')
+const categoricalSql = require('./termdb.sql.categorical')
 const connect_db = require('./utils').connect_db
 
 /*
@@ -17,7 +18,6 @@ server_init_db_queries
 ********************** INTERNAL
 get_term_cte
 	makesql_oneterm
-		makesql_oneterm_categorical
 			makesql_groupset
 		makesql_oneterm_condition
 
@@ -363,20 +363,18 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 		}
 	}
 
-	if (term.type == 'integer' || term.type == 'float') {
-		const tablename = 'samplekey_' + index
-		const CTE = numericCTE[termq.mode || 'discrete'].getCTE(tablename, term, q.ds, termq, values, index, filter)
-		if (index != 1) {
-			CTE.join_on_clause = `ON t${index}.sample = t1.sample`
-		}
-		return CTE
+	const tablename = 'samplekey_' + index
+	let CTE
+	if (term.type == 'categorical') {
+		const groupset = get_active_groupset(term, termq)
+		CTE = categoricalSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, index, groupset)
+	} else if (term.type == 'integer' || term.type == 'float') {
+		CTE = numericSql[termq.mode || 'discrete'].getCTE(tablename, term, q.ds, termq, values, index, filter)
 	} else {
-		const CTE = makesql_oneterm(term, q.ds, termq, values, index, filter)
-		if (index != 1) {
-			CTE.join_on_clause = `ON t${index}.sample = t1.sample`
-		}
-		return CTE
+		CTE = makesql_oneterm(tablename, term, q.ds, termq, values, index, filter)
 	}
+	if (index != 1) CTE.join_on_clause = `ON t${index}.sample = t1.sample`
+	return CTE
 }
 
 export function get_summary(q) {
@@ -519,12 +517,6 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 	if (term.type == 'survival') {
 		return makesql_survivaltte(tablename, term, q, values, filter)
 	}
-	if (term.type == 'categorical') {
-		return makesql_oneterm_categorical(tablename, term, q, values, ds)
-	}
-	if (term.type == 'float' || term.type == 'integer') {
-		/*** tablename ***/
-	}
 	if (term.type == 'condition') {
 		if (index == 1 && q.getcuminc) {
 			return makesql_chronictte(tablename, term, q, values, filter)
@@ -533,54 +525,6 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 		}
 	}
 	throw 'unknown term type'
-}
-
-function makesql_oneterm_categorical(tablename, term, q, values, ds) {
-	const groupset = get_active_groupset(term, q)
-	if (!groupset) {
-		values.push(term.id)
-		const uncomputable = getUncomputableClause(term, q)
-		values.push(...uncomputable.values)
-		// groupsetting not applied
-		return {
-			sql: `${tablename} AS (
-				SELECT sample,value as key, value as value
-				FROM annotations
-				WHERE term_id=? ${uncomputable.clause}
-			)`,
-			tablename
-		}
-	} else if (!groupset.groups) {
-		throw '.groups[] missing from a group-set'
-	} else if (!groupset.groups.find(g => g.type == 'filter')) {
-		values.push(term.id)
-		// use groupset
-		const table2 = tablename + '_groupset'
-		const uncomputable = getUncomputableClause(term, q, 'a')
-		values.push(...uncomputable.values)
-		// NOTE: if a value is not included in any groupset, it will not be returned
-		// in this CTE's query results because the JOIN ... ON ... matches by value
-		return {
-			sql: `${table2} AS (
-				${makesql_values_groupset(term, q)}
-			),
-			${tablename} AS (
-				SELECT
-					sample,
-					${table2}.name AS key,
-					${table2}.value AS value
-				FROM annotations a
-				JOIN
-					${table2} ON a.value = ${table2}.value
-				WHERE
-					term_id=? ${uncomputable.clause}
-			) `,
-			tablename
-		}
-	} else {
-		// this CTE will exclude uncomputable values, EXCEPT IF such value is in a groupset
-		return makesql_complex_groupset(tablename, term, groupset, values, ds)
-	}
 }
 
 export function getUncomputableClause(term, q, tableAlias = '') {
@@ -771,77 +715,6 @@ function makesql_values_groupset(term, q) {
 		}
 	}
 	return categories.join('\nUNION ALL\n')
-}
-
-// used to assign a unique CTE name to extra filters (xf) for groupsets
-let xfIndex = 0
-
-/*
-	Arguments
-	- tablename: string name for this CTE
-	- term{}
-	- groupset: the active groupset, such as returned by get_active_groupset()
-	- values: the array of values to fill-in the '?' in the prepared sql statement, may append to this array
-	- ds: dataset with db connection
-	- value_for: required for condition terms, "grade" or "child"
-	- restriction: required for condition terms, "computable_grade" | "max_grade" | "most_recent_grade"
-	
-	Return
-	- a series of "SELECT name, value" statements that are joined by UNION ALL
-	- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
-*/
-function makesql_complex_groupset(tablename, term, groupset, values, ds, value_for, restriction) {
-	const categories = []
-	const filters = []
-	for (const g of groupset.groups) {
-		if (g.type == 'values') {
-			if (term.type == 'categorical') {
-				categories.push(`SELECT sample, ? as key, value
-					FROM annotations a
-					WHERE term_id=?
-						AND value IN (${g.values.map(v => '?').join(',')})
-				`)
-				values.push(g.name, term.id, ...g.values.map(v => v.key.toString()))
-			} else if (term.type == 'condition') {
-				categories.push(`SELECT sample, ? as key, value
-					FROM precomputed a
-					WHERE
-						term_id=?
-						AND value_for=?
-						AND ${restriction}=1
-						AND value IN (${g.values.map(v => '?').join(',')})
-				`)
-				values.push(g.name, term.id, value_for, ...g.values.map(v => v.key.toString()))
-			}
-		} else if (g.type == 'filter') {
-			// TODO: create filter sql for group.type == 'filter'
-			if ('activeCohort' in q.groupsetting && g.filter4activeCohort) {
-				const tvs_filter = g.filter4activeCohort[q.groupsetting.activeCohort]
-
-				const filter = getFilterCTEs(tvs_filter, ds, 'xf' + xfIndex++)
-				if (!filter) throw `unable to construct a group='${g.name}' filter for term.id='${term.id}'`
-				filters.push(filter.filters)
-				values.push(...filter.values.slice(), g.name, g.name)
-
-				categories.push(
-					`SELECT sample, ? AS key, ? AS value
-					FROM ${filter.CTEname}`
-				)
-			} else {
-				throw `activeCohort error: cannot construct filter statement for group name='${g.name}', term.id=${term.id}`
-			}
-		} else {
-			throw `unsupported groupset type='${g.type}'`
-		}
-	}
-
-	return {
-		sql: `${filters},
-		${tablename} AS (
-			${categories.join('\nUNION ALL\n')}
-		)`,
-		tablename
-	}
 }
 
 /*
