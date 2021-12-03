@@ -75,11 +75,35 @@ create table annotations (
   term_id character varying(100) not null,
   value character varying(255) not null
 );
-
-
 create index a_sample on annotations(sample);
 create index a_termid on annotations(term_id);
 create index a_value on annotations(value);
+
+drop table if exists anno_integer;
+drop index if exists a_int_sample;
+drop index if exists a_int_termid;
+drop index if exists a_int_value;
+create table anno_integer (
+  sample integer not null,
+  term_id character varying(100) not null,
+  value integer not null
+);
+create index a_int_sample on anno_integer(sample);
+create index a_int_termid on anno_integer(term_id);
+create index a_int_value on anno_integer(value);
+
+drop table if exists anno_float;
+drop index if exists a_float_sample;
+drop index if exists a_float_termid;
+drop index if exists a_float_value;
+create table anno_float (
+  sample integer not null,
+  term_id character varying(100) not null,
+  value REAL not null
+);
+create index a_float_sample on anno_integer(sample);
+create index a_float_termid on anno_integer(term_id);
+create index a_float_value on anno_integer(value);
 
 
 drop table if exists chronicevents;

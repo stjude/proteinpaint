@@ -1,6 +1,7 @@
 const app = require('./app')
 const binsmodule = require('../shared/termdb.bins')
 const getFilterCTEs = require('./termdb.filter').getFilterCTEs
+const numericCTE = require('./termdb.cte.numeric')
 const connect_db = require('./utils').connect_db
 
 /*
@@ -19,7 +20,6 @@ get_term_cte
 		makesql_oneterm_categorical
 			makesql_groupset
 		makesql_oneterm_condition
-		makesql_numericBinCTE
 
 	!!!
 	NOTE: all constructed sql to get sample-value, regardless of term.type, must return 
@@ -270,7 +270,7 @@ opts{} options to tweak the query, see const default_opts = below
 	const CTE1 = get_term_cte(q, values, 1, filter)
 	const CTE2 = get_term_cte(q, values, 2, filter)
 
-	const statement = `WITH
+	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTE0.sql},
 		${CTE1.sql},
@@ -288,10 +288,15 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? 'WHERE t1.sample IN ' + filter.CTEname : ''}
 		${opts.endclause}`
-	//console.log(statement, values)
-	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
+	console.log(interpolateSqlValues(sql, values))
 
-	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
+	try {
+		const lst = q.ds.cohort.db.connection.prepare(sql).all(values)
+		return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
+	} catch (e) {
+		console.log('error in sql:\n', interpolateSqlValues(sql, values))
+		throw e
+	}
 }
 
 /*
@@ -357,11 +362,21 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 			termq.grade = q.grade
 		}
 	}
-	const CTE = makesql_oneterm(term, q.ds, termq, values, index, filter)
-	if (index != 1) {
-		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
+
+	if (term.type == 'integer' || term.type == 'float') {
+		const tablename = 'samplekey_' + index
+		const CTE = numericCTE[termq.mode || 'discrete'].getCTE(tablename, term, q.ds, termq, values, index, filter)
+		if (index != 1) {
+			CTE.join_on_clause = `ON t${index}.sample = t1.sample`
+		}
+		return CTE
+	} else {
+		const CTE = makesql_oneterm(term, q.ds, termq, values, index, filter)
+		if (index != 1) {
+			CTE.join_on_clause = `ON t${index}.sample = t1.sample`
+		}
+		return CTE
 	}
-	return CTE
 }
 
 export function get_summary(q) {
@@ -508,34 +523,7 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 		return makesql_oneterm_categorical(tablename, term, q, values, ds)
 	}
 	if (term.type == 'float' || term.type == 'integer') {
-		if (q.mode == 'continuous') {
-			values.push(term.id)
-			const uncomputable = getUncomputableClause(term, q)
-			values.push(...uncomputable.values)
-			return {
-				sql: `${tablename} AS (
-					SELECT 
-						sample,
-						value as key, 
-						CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value
-					FROM annotations
-					WHERE term_id=? ${uncomputable.clause}
-				)`,
-				tablename
-			}
-		} else {
-			const bins = makesql_numericBinCTE(term, q, ds, index, filter, values)
-			return {
-				sql: `${bins.sql},
-				${tablename} AS (
-					SELECT bname as key, sample, v as value
-					FROM ${bins.tablename}
-				)`,
-				tablename,
-				name2bin: bins.name2bin,
-				bins: bins.bins
-			}
-		}
+		/*** tablename ***/
 	}
 	if (term.type == 'condition') {
 		if (index == 1 && q.getcuminc) {
@@ -595,7 +583,7 @@ function makesql_oneterm_categorical(tablename, term, q, values, ds) {
 	}
 }
 
-function getUncomputableClause(term, q, tableAlias = '') {
+export function getUncomputableClause(term, q, tableAlias = '') {
 	if (!term.values || !q.computableValuesOnly) return { values: [], clause: '' }
 	const values = Object.keys(term.values).filter(k => term.values[k].uncomputable)
 	const aliasValue = tableAlias ? `${tableAlias}.value` : 'value'
@@ -853,118 +841,6 @@ function makesql_complex_groupset(tablename, term, groupset, values, ds, value_f
 			${categories.join('\nUNION ALL\n')}
 		)`,
 		tablename
-	}
-}
-
-/*
-decide bins and produce CTE
-
-q{}
-	managed by termsetting
-
-index
-
-filter
-	{} or null
-
-returns { sql, tablename, name2bin, bins }
-*/
-function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
-	values.push(term.id)
-	const bins = get_bins(q, term, ds, index, filter)
-	//console.log('last2', bins[bins.length - 2], 'last1', bins[bins.length - 1])
-	const bin_def_lst = []
-	const name2bin = new Map() // k: name str, v: bin{}
-	const bin_size = q.bin_size
-	let has_percentiles = false
-	let binid = 0
-	for (const b of bins) {
-		if (!('name' in b) && b.label) b.name = b.label
-		name2bin.set(b.name, b)
-		bin_def_lst.push(
-			`SELECT '${b.name}' AS name,
-			${b.start == undefined ? 0 : b.start} AS start,
-			${b.stop == undefined ? 0 : b.stop} AS stop,
-			0 AS unannotated,
-			${b.startunbounded ? 1 : 0} AS startunbounded,
-			${b.stopunbounded ? 1 : 0} AS stopunbounded,
-			${b.startinclusive ? 1 : 0} AS startinclusive,
-			${b.stopinclusive ? 1 : 0} AS stopinclusive,
-			${binid++} AS binorder`
-		)
-	}
-	const excludevalues = []
-	if (term.values) {
-		for (const key in term.values) {
-			const isUncomputable = term.values[key].uncomputable
-			if (q.computableValuesOnly && isUncomputable) continue
-			if (!q.computableValuesOnly && !isUncomputable) continue
-			excludevalues.push(key)
-			const v = term.values[key]
-			bin_def_lst.push(
-				`SELECT '${v.label}' AS name,
-        ${key} AS start,
-        0 AS stop,
-        1 AS unannotated,
-        0 AS startunbounded,
-        0 AS stopunbounded,
-        0 AS startinclusive,
-        0 AS stopinclusive,
-        ${binid++} AS binorder`
-			)
-			name2bin.set(v.label, {
-				is_unannotated: true,
-				value: key,
-				label: v.label
-			})
-		}
-	}
-
-	const bin_def_table = 'bin_defs_' + index
-	const bin_sample_table = 'bin_sample_' + index
-	const uncomputable = getUncomputableClause(term, q, 'a')
-	console.log(919, uncomputable)
-	values.push(...uncomputable.values)
-
-	const sql = `${bin_def_table} AS (
-			${bin_def_lst.join(' UNION ALL ')}
-		),
-		${bin_sample_table} AS (
-			SELECT
-				sample,
-				CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS v,
-				CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value,
-				b.name AS bname,
-				b.binorder AS binorder
-			FROM
-				annotations a
-			JOIN ${bin_def_table} b ON
-				( b.unannotated=1 AND v=b.start )
-				OR
-				(
-					b.unannotated=0 AND
-					${excludevalues.length ? 'v NOT IN (' + excludevalues.join(',') + ') AND' : ''}
-					(
-						b.startunbounded=1
-						OR v>b.start
-						OR (b.startinclusive=1 AND v=b.start)
-					)
-					AND
-					(
-						b.stopunbounded
-						OR v<b.stop
-						OR (b.stopinclusive=1 AND v=b.stop)
-					)
-				)
-			WHERE
-			term_id=? ${uncomputable.clause}
-		)`
-
-	return {
-		sql,
-		tablename: bin_sample_table,
-		name2bin,
-		bins
 	}
 }
 
@@ -1484,4 +1360,28 @@ function test_tables(cn) {
 		subcohort_terms: s.get('subcohort_terms'),
 		sampleidmap: s.get('sampleidmap')
 	}
+}
+
+// helper function to display or log the filled-in, constructed sql statement
+// use for debugging only, do not feed directly into better-sqlite3
+function interpolateSqlValues(sql, values) {
+	const vals = values.slice() // use a copy
+	let prevChar
+	return sql
+		.split('')
+		.map(char => {
+			if (char == '?') {
+				prevChar = char
+				const v = vals.shift()
+				return typeof v == 'string' ? `'${v}'` : v
+			} else if (char == '\t') {
+				// ignore tabs and do not track in case it's in between newlines or spaces
+				return ''
+			} else if (char == '\n' || char == ' ') {
+				if (prevChar === char) return ''
+			}
+			prevChar = char
+			return char
+		})
+		.join('')
 }
