@@ -301,6 +301,7 @@ opts{} options to tweak the query, see const default_opts = below
 /*
 Generates one or more CTEs by a term
 
+ARGUMENTS
 q{}
 	.filter
 	.ds
@@ -328,6 +329,9 @@ termWrapper{}
 	.id term.id
 	.term
 	.q
+
+RETURNS 
+{ sql, tablename }
 */
 export function get_term_cte(q, values, index, filter, termWrapper = null) {
 	const termid = termWrapper ? termWrapper.id : q['term' + index + '_id']
@@ -363,6 +367,19 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 	}
 
 	const tablename = 'samplekey_' + index
+	/*
+		NOTE: all constructed sql/CTE, regardless of term.type, must return 
+		{
+			sample,
+			key: may be a bin or groupset label, or if none is used, the actual column value
+			value: the actual column value in the table
+		}
+
+		For example, returning both the bin label and actual value for a numeric term
+		would allow the calling app to create compute boxplot inputs, which is not
+		possible if only the bin labels are returned. Similar use cases may be supported
+		later.  
+	*/
 	let CTE
 	if (term.type == 'categorical') {
 		const groupset = get_active_groupset(term, termq)
@@ -376,8 +393,10 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 			const groupset = get_active_groupset(term, termq)
 			CTE = conditionSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, index, groupset)
 		}
+	} else if (term.type == 'survival') {
+		CTE = makesql_survival(tablename, term, q, values, filter)
 	} else {
-		CTE = makesql_oneterm(tablename, term, q.ds, termq, values, index, filter)
+		throw 'unknown term type'
 	}
 	if (index != 1) CTE.join_on_clause = `ON t${index}.sample = t1.sample`
 	return CTE
@@ -488,44 +507,6 @@ function get_label4key(key, term, q, ds) {
 	throw 'unknown term type'
 }
 
-/*
-form the query for one of the table in term0-term1-term2 overlaying
-CTE for each term resolves to a table of {sample,key}
-
-term{}
-q{}
-	managed by termsetting UI on client
-	see doc for spec
-values[]
-	collector of bind parameters
-
-index
-
-filter
-
-returns { sql, tablename }
-*/
-function makesql_oneterm(term, ds, q, values, index, filter) {
-	/*
-		NOTE: all constructed sql, regardless of term.type, must return 
-		{
-			sample,
-			key: may be a bin or groupset label, or if none is used, the actual column value
-			value: the actual column value in the table
-		}
-
-		For example, returning both the bin label and actual value for a numeric term
-		would allow the calling app to create compute boxplot inputs, which is not
-		possible if only the bin labels are returned. Similar use cases may be supported
-		later.  
-	*/
-	const tablename = 'samplekey_' + index
-	if (term.type == 'survival') {
-		return makesql_survivaltte(tablename, term, q, values, filter)
-	}
-	throw 'unknown term type'
-}
-
 export function getUncomputableClause(term, q, tableAlias = '') {
 	if (!term.values || !q.computableValuesOnly) return { values: [], clause: '' }
 	const values = Object.keys(term.values).filter(k => term.values[k].uncomputable)
@@ -536,7 +517,7 @@ export function getUncomputableClause(term, q, tableAlias = '') {
 	}
 }
 
-function makesql_survivaltte(tablename, term, q, values, filter) {
+function makesql_survival(tablename, term, q, values, filter) {
 	values.push(term.id)
 	return {
 		sql: `${tablename} AS (
