@@ -154,6 +154,11 @@ export async function loadTk(tk, block) {
 			for (const g of tk.groups) {
 				delete g.partstack
 				delete g.dom.rightg.vslider.boxy
+				if (tk.readAlignmentTable) {
+					delete tk.readAlignmentTable
+					delete tk.readAlignmentTableGroup
+					tk.alignpane.pane.style('display', 'none')
+				}
 			}
 		}
 
@@ -784,6 +789,7 @@ function makeTk(tk, block) {
 		close: () => {
 			if (tk.readAlignmentTable) {
 				delete tk.readAlignmentTable
+				delete tk.readAlignmentTableGroup
 			}
 			tk.alignpane.pane.style('display', 'none')
 		}
@@ -1024,6 +1030,11 @@ function makeGroup(gd, tk, block, data) {
 			const [mx, my] = d3mouse(group.dom.img_cover.node())
 			if (group.data.allowpartstack) {
 				enter_partstack(group, tk, block, my, data)
+				if (tk.readAlignmentTable) {
+					delete tk.readAlignmentTable
+					delete tk.readAlignmentTableGroup
+					tk.alignpane.pane.style('display', 'none')
+				}
 				return
 			}
 			if (!group.data.templatebox) return
@@ -1078,6 +1089,11 @@ function makeGroup(gd, tk, block, data) {
 		.on('click', () => {
 			delete group.dom.rightg.vslider.boxy
 			delete group.partstack
+			if (tk.readAlignmentTable) {
+				delete tk.readAlignmentTable
+				delete tk.readAlignmentTableGroup
+				tk.alignpane.pane.style('display', 'none')
+			}
 			group.data = group.data_fullstack
 			renderGroup(group, tk, block)
 			setTkHeight(tk)
@@ -1109,6 +1125,11 @@ function makeGroup(gd, tk, block, data) {
 					'y',
 					-((deltay * group.data_fullstack.stackcount * group.data.stackheight) / scrollableheight)
 				)
+				if (tk.readAlignmentTable) {
+					delete tk.readAlignmentTable
+					delete tk.readAlignmentTableGroup
+					tk.alignpane.pane.style('display', 'none')
+				}
 				group.dom.box_move.attr('width', 0)
 				group.dom.box_stay.attr('width', 0)
 			})
