@@ -702,31 +702,38 @@ function updateExistingGroups(data, tk, block) {
 			.attr('height', group.data.height)
 
 		if (tk.variants) {
-			group.dom.diff_score_barplot_fullstack
-				.attr('xlink:href', gd.diff_scores_img.src)
-				.attr('width', gd.diff_scores_img.width)
-				.attr('height', gd.diff_scores_img.height)
-			if (tk.show_readnames) {
-				group.ReadNameMaxwidth = 0
-				if (group.data.templatebox) {
-					group.dom.read_names_g.selectAll('*').remove()
-					let read_count = 1
-					for (const read of group.data.templatebox) {
-						const read_name_bbox = group.dom.read_names_g
-							.append('text')
-							.attr('x', 0)
-							.attr('y', (group.data.height * read_count) / group.data.templatebox.length)
-							.attr('text-anchor', 'end')
-							.style('fill', 'black')
-							.attr('font-size', group.data.height / group.data.templatebox.length)
-							.text(read.qname)
-						group.ReadNameMaxwidth = Math.max(group.ReadNameMaxwidth, read_name_bbox.node().getBBox().width)
-						read_count += 1
-					}
+			if (group.my_partstack) {
+				// Checks if the y-position of click is defined or not. Helpful when show_readnames button is clicked without having to click again to invoke partstack
+				if (group.data.allowpartstack) {
+					enter_partstack(group, tk, block, group.my_partstack, data)
 				}
 			} else {
-				group.dom.read_names_g.selectAll('*').remove()
-				group.ReadNameMaxwidth = 0
+				group.dom.diff_score_barplot_fullstack
+					.attr('xlink:href', gd.diff_scores_img.src)
+					.attr('width', gd.diff_scores_img.width)
+					.attr('height', gd.diff_scores_img.height)
+				if (tk.show_readnames) {
+					group.ReadNameMaxwidth = 0
+					if (group.data.templatebox) {
+						group.dom.read_names_g.selectAll('*').remove()
+						let read_count = 1
+						for (const read of group.data.templatebox) {
+							const read_name_bbox = group.dom.read_names_g
+								.append('text')
+								.attr('x', 0)
+								.attr('y', (group.data.height * read_count) / group.data.templatebox.length)
+								.attr('text-anchor', 'end')
+								.style('fill', 'black')
+								.attr('font-size', group.data.height / group.data.templatebox.length)
+								.text(read.qname)
+							group.ReadNameMaxwidth = Math.max(group.ReadNameMaxwidth, read_name_bbox.node().getBBox().width)
+							read_count += 1
+						}
+					}
+				} else {
+					group.dom.read_names_g.selectAll('*').remove()
+					group.ReadNameMaxwidth = 0
+				}
 			}
 		}
 
@@ -1042,6 +1049,7 @@ function makeGroup(gd, tk, block, data) {
 		.on('click', () => {
 			if (mousedownx != d3event.clientX) return
 			const [mx, my] = d3mouse(group.dom.img_cover.node())
+			group.my_partstack = my // Stores y-position of the mouse click in group
 			if (group.data.allowpartstack) {
 				enter_partstack(group, tk, block, my, data)
 				if (tk.readAlignmentTable) {
@@ -1107,6 +1115,9 @@ function makeGroup(gd, tk, block, data) {
 				delete tk.readAlignmentTable
 				delete tk.readAlignmentTableGroup
 				tk.alignpane.pane.style('display', 'none')
+			}
+			if (group.my_partstack) {
+				delete group.my_partstack // y-position of click that invoked partstack originally
 			}
 			if (tk.show_readnames) {
 				group.ReadNameMaxwidth = 0
