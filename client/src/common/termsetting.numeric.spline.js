@@ -51,21 +51,21 @@ function setqDefaults(self) {
 	const cache = self.numqByTermIdModeType
 	const t = self.term
 	if (!cache[t.id]) cache[t.id] = {}
-	if (!cache[t.id].cubic_spline) {
+	if (!cache[t.id]['cubic-spline']) {
 		const defaultCustomBoundary =
 			dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2 : dd.maxvalue
 		const default_first_knot = 
 			dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 5 : dd.minvalue
 
-		cache[t.id].cubic_spline = {
-			auto_knots: {
-				type: 'auto_knots',
-				auto_knot_count: 4,
-				auto_lst: []
+		cache[t.id]['cubic-spline'] = {
+			'auto-knots': {
+				type: 'auto-knots',
+				auto_knots_count: 4,
+				auto_knots_lst: []
 			},
-			custom_knots: {
-				type: 'custom_knots',
-				custom_lst: [
+			'custom-knots': {
+				type: 'custom-knots',
+				custom_knots_lst: [
 					{
 						start: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
 					}
@@ -73,24 +73,24 @@ function setqDefaults(self) {
 			}
 		}
 
-		const auto_knots_count = cache[t.id].cubic_spline.auto_knots.auto_knot_count
-		const auto_knots_lst = cache[t.id].cubic_spline.auto_knots.auto_lst
+		const auto_knots_count = cache[t.id]['cubic-spline']['auto-knots'].auto_knots_count
+		const auto_knots_lst = cache[t.id]['cubic-spline']['auto-knots'].auto_knots_lst
 		for(let i = 1; i < auto_knots_count + 1 ; i++)
 			auto_knots_lst.push({ start: (default_first_knot*i).toFixed(t.type == 'integer' ? 0 : 2) })
 	} else if (t.q) {
 		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
 		if (!t.q.type) throw `missing numeric term spline q.type: should be 'spline-auto' or 'spline-custom'`
-		cache[t.id].cubic_spline[t.q.type] = t.q
+		cache[t.id]['cubic-spline'][t.q.type] = t.q
 	}
 
 	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
-	if (self.q && !self.q.mode) self.q.mode = 'cubic_spline'
-	if (!self.q || self.q.mode !== 'cubic_spline') self.q = {}
-	if (!self.q.type) self.q.type = 'auto_knots'
-	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].cubic_spline[self.q.type]))
+	if (self.q && !self.q.mode) self.q.mode = 'cubic-spline'
+	if (!self.q || self.q.mode !== 'cubic-spline') self.q = {}
+	if (!self.q.type) self.q.type = 'auto-knots'
+	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id]['cubic-spline'][self.q.type]))
 	self.q = Object.assign(cacheCopy, self.q)
-	if (self.q.custom_lst) {
-		self.q.custom_lst.forEach(knot => {
+	if (self.q.custom_knots_lst) {
+		self.q.custom_knots_lst.forEach(knot => {
 			if (!('label' in knot)) knot.label = knot.start || ''
 		})
 	}
@@ -104,10 +104,10 @@ function renderTypeInputs(self) {
 	const div = self.dom.knots_div.append('div').style('margin', '10px')
 	const tabs = [
 		{
-			active: self.q.type == 'auto_knots' ? true : false,
+			active: self.q.type == 'auto-knots' ? true : false,
 			label: 'Auto compute knots',
 			callback: async div => {
-				self.q.type = 'auto_knots'
+				self.q.type = 'auto-knots'
 				self.dom.knots_div = knots_div
 				setqDefaults(self)
 				setDensityPlot(self)
@@ -118,10 +118,10 @@ function renderTypeInputs(self) {
 			}
 		},
 		{
-			active: self.q.type == 'custom_knots' ? true : false,
+			active: self.q.type == 'custom-knots' ? true : false,
 			label: 'Specity custom knots',
 			callback: async div => {
-				self.q.type = 'custom_knots'
+				self.q.type = 'custom-knots'
 				self.dom.knots_div = knots_div
 				setqDefaults(self)
 				setDensityPlot(self)
@@ -153,7 +153,7 @@ function renderAutoSplineInputs(self, div) {
 		.on('change', () => {
 			knot_caclualte_btn
 				.property('disabled', knot_count == knot_ct_select.node().value)
-			self.q.auto_knot_count = knot_ct_select.node().value
+			self.q.auto_knots_count = knot_ct_select.node().value
 		})
 
 	for (let i = default_knot_count -1; i < default_knot_count + 5; i++) {
@@ -200,7 +200,7 @@ function renderCustomSplineInputs(self, tablediv) {
 		.style('height', '100px')
 		.style('width', '100px')
 		.text(
-			self.q.custom_lst
+			self.q.custom_knots_lst
 				.map(d => d.start)
 				.join('\n')
 		)
@@ -215,13 +215,13 @@ function renderCustomSplineInputs(self, tablediv) {
 	function handleChange() {
 		self.dom.customBinLabelTd.selectAll('input').property('value', '')
 		const data = processKnotsInputs(self)
-		// update self.q.custom_lst and render bin lines only if bin boundry changed
-		const q = self.numqByTermIdModeType[self.term.id].cubic_spline[self.q.type]
-		if (binsChanged(data, q.custom_lst)) {
-			q.custom_lst = data
+		// update self.q.custom_knots_lst and render bin lines only if bin boundry changed
+		const q = self.numqByTermIdModeType[self.term.id]['cubic-spline'][self.q.type]
+		if (binsChanged(data, q.custom_knots_lst)) {
+			q.custom_knots_lst = data
 			self.renderBinLines(self, q)
 		}
-		renderKnotInputDivs(self, q.custom_lst)
+		renderKnotInputDivs(self, q.custom_knots_lst)
 		self.q = q
 	}
 
@@ -239,7 +239,7 @@ function renderCustomSplineInputs(self, tablediv) {
 	}
 
 	self.dom.customBinLabelTd = tr.append('td')
-	renderKnotInputDivs(self, self.q.custom_lst)
+	renderKnotInputDivs(self, self.q.custom_knots_lst)
 }
 
 function renderKnotInputDivs(self, data) {
@@ -267,7 +267,7 @@ function renderKnotInputDivs(self, data) {
 				.attr('type', 'text')
 				.property('value', d.label)
 				.on('change', function() {
-					self.q.custom_lst[i].label = this.value
+					self.q.custom_knots_lst[i].label = this.value
 				})
 		})
 

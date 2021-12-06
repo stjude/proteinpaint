@@ -10,7 +10,7 @@ export async function setDensityPlot(self) {
 		})
 	} else {
 		// svg for range plot
-		const div = self.q.mode == 'cubic_spline' ? self.dom.knots_div : self.dom.bins_div
+		const div = self.q.mode == 'cubic-spline' ? self.dom.knots_div : self.dom.bins_div
 		self.num_obj.svg = div.select('svg').size() ? div.select('svg') : div.append('svg')
 		self.num_obj.svg.selectAll('*').remove()
 		makeDensityPlot(self)
@@ -196,15 +196,15 @@ function renderBinLines(self, data) {
 				return { x: d.start, index, scaledX: Math.round(o.xscale(d.start)) }
 			})
 		)
-	} else if (data.type == 'auto_knots'){
+	} else if (data.type == 'auto-knots'){
 		lines.push(
-			...data.auto_lst.map((d, index) => {
+			...data.auto_knots_lst.map((d, index) => {
 				return { x: d.start, index, scaledX: Math.round(o.xscale(d.start)) }
 			})
 		)	
-	} else if (data.type == 'custom_knots') {
+	} else if (data.type == 'custom-knots') {
 		lines.push(
-			...data.custom_lst.map((d, index) => {
+			...data.custom_knots_lst.map((d, index) => {
 				return { x: d.start, index, scaledX: Math.round(o.xscale(d.start)) }
 			})
 		)

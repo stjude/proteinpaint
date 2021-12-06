@@ -40,7 +40,7 @@ export function getHandler(self) {
 
 			const tabs = [
 				{
-					active: self.q.mode && (self.q.mode == 'discrete' || self.q.mode == 'cubic_spline') ? false : true,
+					active: self.q.mode && (self.q.mode == 'discrete' || self.q.mode == 'cubic-spline') ? false : true,
 					label: 'Continuous',
 					callback: async div => {
 						self.q.mode = 'continuous'
@@ -63,11 +63,11 @@ export function getHandler(self) {
 					}
 				},
 				{
-					active: self.q.mode && self.q.mode == 'cubic_spline' ? true : false,
+					active: self.q.mode && self.q.mode == 'cubic-spline' ? true : false,
 					label: 'Cubic spline',
 					callback: async div => {
-						self.q.mode = 'cubic_spline'
-						self.q.type = 'auto_knots'
+						self.q.mode = 'cubic-spline'
+						self.q.type = 'auto-knots'
 						self.handlerByType['numeric.spline'].showEditMenu(div)
 						// delete tabs[2].callback
 					}
