@@ -81,11 +81,17 @@ function setRenderers(self) {
 		// no need for one reusable renderer to support different table types
 
 		self.newDiv('Sample size: ' + result.sampleSize)
-		self.mayshow_warnings(result)
-		self.mayshow_residuals(result)
-		self.mayshow_coefficients(result)
-		self.mayshow_type3(result)
-		self.mayshow_other(result)
+		if (result.splinePlots) {
+			// for result with spline terms, only show spline plot
+			self.mayshow_splinePlots(result)
+		} else {
+			// for result with no spline terms, only show data tables
+			self.mayshow_warnings(result)
+			self.mayshow_residuals(result)
+			self.mayshow_coefficients(result)
+			self.mayshow_type3(result)
+			self.mayshow_other(result)
+		}
 	}
 	self.newDiv = label => {
 		// create div to show a section of the result
@@ -95,6 +101,18 @@ function setRenderers(self) {
 			.style('text-decoration', 'underline')
 			.text(label)
 		return div.append('div').style('margin-left', '20px')
+	}
+
+	self.mayshow_splinePlots = result => {
+		if (!result.splinePlots) return
+		for (const plot of result.splinePlots) {
+			const div = self.newDiv(plot.label)
+			div
+				.append('img')
+				.attr('src', plot.src)
+				.style('width', plot.size.width)
+				.style('height', plot.size.height)
+		}
 	}
 
 	self.mayshow_warnings = result => {

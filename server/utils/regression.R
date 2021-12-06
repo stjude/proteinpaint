@@ -154,7 +154,7 @@ build_coef_table <- function(res_summ) {
 plot_spline <- function(splineTerm, dat, plotfile) {
   # prepare test data
   sampleSize <- 1000
-  newdat <- dat[1:sampleSize,-1]
+  newdat <- dat[1:sampleSize, -1, drop = F]
   for (term in names(newdat)) {
     if (term == splineTerm) {
       # for spline term, generate regularly spaced data points within the data range
@@ -170,8 +170,8 @@ plot_spline <- function(splineTerm, dat, plotfile) {
   # predict test data outcome based on the model
   preddat <- predict(res, newdata = newdat, se.fit = T)
   # plot the results
-  ppi <- 300
-  png(filename = plotfile, width = 7*ppi, height = 6*ppi, res = ppi)
+  #ppi <- 300
+  png(filename = plotfile)
   plot(dat[,splineTerm], dat[,"outcome"], xlab = splineTerm, ylab = "outcome")
   lines(lowess(newdat[,splineTerm], preddat$fit), col = "red", lwd = 3)
   dev.off()

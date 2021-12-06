@@ -76,6 +76,7 @@ export async function get_regression(q, ds) {
 				if (term.spline) {
 					const data = await fs.promises.readFile(term.spline.plotfile)
 					result.splinePlots.push({
+						label: term.id + ' spline regression',
 						src: 'data:image/jpeg;base64,' + new Buffer.from(data).toString('base64'),
 						size: imagesize(term.spline.plotfile)
 					})
