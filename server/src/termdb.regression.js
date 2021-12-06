@@ -2,6 +2,8 @@ const path = require('path')
 const { get_term_cte } = require('./termdb.sql')
 const { getFilterCTEs } = require('./termdb.filter')
 const lines2R = require('./lines2R')
+const fs = require('fs')
+const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 
 /*
@@ -48,16 +50,41 @@ export async function get_regression(q, ds) {
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
 
 		// run regression analysis in R
+		Rinput.independent[0].spline = {
+			knots: [1.13422, 3.427355, 6.302092, 11.592603, 17.352192],
+			plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
+		}
+
+		const terminateAtWarnings = Rinput.independent.some(x => x.spline)
+
 		const Routput = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			[JSON.stringify(Rinput)],
 			[],
-			false
+			terminateAtWarnings
 		)
+
+		//remember to delete the temp plot file
+		//fs.unlink(splineplot, function () {})
 
 		// parse the R output
 		const result = { queryTime, sampleSize }
-		parseRoutput(Routput, id2originalId, q, result)
+		if (Rinput.independent.find(x => x.spline)) {
+			// spline term present
+			result.splinePlots = []
+			for (const term of Rinput.independent) {
+				if (term.spline) {
+					const data = await fs.promises.readFile(term.spline.plotfile)
+					result.splinePlots.push({
+						src: 'data:image/jpeg;base64,' + new Buffer.from(data).toString('base64'),
+						size: imagesize(term.spline.plotfile)
+					})
+				}
+			}
+		} else {
+			// spline term not present
+			parseRoutput(Routput, id2originalId, q, result)
+		}
 		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
