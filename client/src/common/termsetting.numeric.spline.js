@@ -37,10 +37,11 @@ export function getHandler(self) {
 
 			div.selectAll('*').remove()
 			self.dom.num_holder = div
-			self.dom.bins_div = div.append('div').style('padding', '5px')
+			self.dom.knots_div = div.append('div').style('padding', '5px')
 			setqDefaults(self)
 			setDensityPlot(self)
 			renderTypeInputs(self)
+			renderButtons(self)
 		}
 	}
 }
@@ -53,11 +54,14 @@ function setqDefaults(self) {
 	if (!cache[t.id].cubic_spline) {
 		const defaultCustomBoundary =
 			dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2 : dd.maxvalue
+		const default_first_knot = 
+			dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 5 : dd.minvalue
 
 		cache[t.id].cubic_spline = {
-			auto_knots: { 
+			auto_knots: {
 				type: 'auto_knots',
-				auto_lst: [] 
+				auto_knot_count: 4,
+				auto_lst: []
 			},
 			custom_knots: {
 				type: 'custom_knots',
@@ -68,6 +72,11 @@ function setqDefaults(self) {
 				]
 			}
 		}
+
+		const auto_knots_count = cache[t.id].cubic_spline.auto_knots.auto_knot_count
+		const auto_knots_lst = cache[t.id].cubic_spline.auto_knots.auto_lst
+		for(let i = 1; i < auto_knots_count + 1 ; i++)
+			auto_knots_lst.push({ start: (default_first_knot*i).toFixed(t.type == 'integer' ? 0 : 2) })
 	} else if (t.q) {
 		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
 		if (!t.q.type) throw `missing numeric term spline q.type: should be 'spline-auto' or 'spline-custom'`
@@ -91,15 +100,15 @@ function setqDefaults(self) {
 
 function renderTypeInputs(self) {
 	// toggle switch
-	const bins_div = self.dom.bins_div
-	const div = self.dom.bins_div.append('div').style('margin', '10px')
+	const knots_div = self.dom.knots_div
+	const div = self.dom.knots_div.append('div').style('margin', '10px')
 	const tabs = [
 		{
 			active: self.q.type == 'auto_knots' ? true : false,
 			label: 'Auto compute knots',
 			callback: async div => {
 				self.q.type = 'auto_knots'
-				self.dom.bins_div = bins_div
+				self.dom.knots_div = knots_div
 				setqDefaults(self)
 				setDensityPlot(self)
 				if (!tabs[0].isInitialized) {
@@ -113,7 +122,7 @@ function renderTypeInputs(self) {
 			label: 'Specity custom knots',
 			callback: async div => {
 				self.q.type = 'custom_knots'
-				self.dom.bins_div = bins_div
+				self.dom.knots_div = knots_div
 				setqDefaults(self)
 				setDensityPlot(self)
 				if (!tabs[1].isInitialized) {
@@ -127,7 +136,46 @@ function renderTypeInputs(self) {
 }
 
 /******************* Functions for Auto Spline knots *******************/
-function renderAutoSplineInputs(self, tablediv) {}
+function renderAutoSplineInputs(self, div) {
+	let knot_count
+	const default_knot_count = knot_count = 4
+	self.dom.knot_select_div = div.append('div')
+
+	self.dom.knot_select_div.append('div')
+		.style('display','inline-block')
+		.style('margin-left', '15px')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Knots count')
+
+	const knot_ct_select = self.dom.knot_select_div.append('select')
+		.style('margin-left', '15px')
+		.style('margin-bottom', '7px')
+		.on('change', () => {
+			knot_caclualte_btn
+				.property('disabled', knot_count == knot_ct_select.node().value)
+			self.q.auto_knot_count = knot_ct_select.node().value
+		})
+
+	for (let i = default_knot_count -1; i < default_knot_count + 5; i++) {
+		knot_ct_select
+			.append('option')
+			.attr('value', i)
+			.html(i)
+	}
+
+	knot_ct_select.node().value = default_knot_count
+
+	const knot_caclualte_btn = self.dom.knot_select_div.append('button')
+		.style('margin', '15px')
+		.property('disabled', knot_count == knot_ct_select.node().value)
+		.html('Calculate knots')
+		.on('click', () => getKnots(self))
+
+}
+
+function getKnots(self){
+	//TODO: qnery knots from backend
+}
 
 /******************* Functions for Custom Spline knots *******************/
 function renderCustomSplineInputs(self, tablediv) {
@@ -252,4 +300,26 @@ function processKnotsInputs(self) {
 
 	if (!data[0].label) data[0].label = data[0].start || ''
 	return data
+}
+
+function renderButtons(self) {
+	const btndiv = self.dom.knots_div.append('div')
+	btndiv
+		.append('button')
+		.style('margin', '5px')
+		.html('Apply')
+		.on('click', () => applyEdits(self))
+	btndiv
+		.append('button')
+		.style('margin', '5px')
+		.html('Reset')
+		.on('click', () => {
+			delete self.q
+			delete self.numqByTermIdModeType[self.term.id]
+			self.handler.showEditMenu(self.dom.num_holder)
+		})
+}
+
+function applyEdits(self){
+	// TODO: apply edits to self.q
 }
