@@ -661,26 +661,26 @@ function setTkHeight(tk) {
 		g.dom.groupg.transition().attr('transform', 'translate(0,' + h + ')')
 		g.dom.rightg.transition().attr('transform', 'translate(0,' + h + ')') // Both diff_score plot and vslider are inside this
 
-		const msgheight = messagerowheight * g.data.messages.length // sum of height from all messages
-		g.dom.leftg.transition().attr('transform', 'translate(0,' + (h + msgheight) + ')') // read_names_g are inside this
+		g.msgheight = messagerowheight * g.data.messages.length // sum of height from all messages
+		g.dom.leftg.transition().attr('transform', 'translate(0,' + (h + g.msgheight) + ')') // read_names_g are inside this
 		//g.dom.message_rowg.transition().attr('transform', 'translate(0,0)') //not needed
-		g.dom.imgg.transition().attr('transform', 'translate(0,' + msgheight + ')')
+		g.dom.imgg.transition().attr('transform', 'translate(0,' + g.msgheight + ')')
 
 		if (tk.variants) {
-			g.dom.diff_score_barplot_fullstack.transition().attr('transform', 'translate(0,' + msgheight + ')')
+			g.dom.diff_score_barplot_fullstack.transition().attr('transform', 'translate(0,' + g.msgheight + ')')
 		}
 		if (g.partstack) {
 			// slider visible
 			if (tk.variants) {
-				g.dom.diff_score_barplot_partstack.transition().attr('transform', 'translate(0,' + msgheight + ')')
+				g.dom.diff_score_barplot_partstack.transition().attr('transform', 'translate(0,' + g.msgheight + ')')
 				g.dom.rightg.vslider.g
 					.transition()
-					.attr('transform', 'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + msgheight + ') scale(1)')
+					.attr('transform', 'translate(' + tk.dom.diff_score_plotwidth * 1.1 + ',' + g.msgheight + ') scale(1)')
 			} else {
 				g.dom.rightg.vslider.g.transition().attr('transform', 'translate(0,0) scale(1)')
 			}
 		}
-		h += g.data.height + msgheight
+		h += g.data.height + g.msgheight
 	}
 	tk.height_main = tk.height = h
 	tk.height_main += tk.toppad + tk.bottompad
@@ -1156,13 +1156,14 @@ function makeGroup(gd, tk, block, data) {
 				group.dom.diff_score_barplot_partstack.attr(
 					'transform',
 					'translate(0,' +
-						(-1 * (deltay * group.data_fullstack.stackcount * group.data.stackheight)) / scrollableheight +
+						((-1 * deltay * group.data_fullstack.stackcount * group.data.stackheight) / scrollableheight +
+							group.msgheight) +
 						')'
 				)
 				group.dom.read_names_g.attr(
 					'transform',
 					'translate(0,' +
-						(-1 * (deltay * group.data_fullstack.stackcount * group.data.stackheight)) / scrollableheight +
+						(-1 * deltay * group.data_fullstack.stackcount * group.data.stackheight) / scrollableheight +
 						')'
 				)
 
