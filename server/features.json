@@ -592,12 +592,19 @@
                         "genome": "hg19",
                         "dataset":"Pediatric"
                     },
+                    "buttons": [
+                        {
+                            "name": "Documentation",
+                            "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+                        }
+                    ],
                     "testSpec": {
                         "expected": { "circle": 10 }
                     }
                 },
                 {
                     "label": "GDC API (GENCODE)",
+                    "message": "To view a different gene from the GDC dataset: <ul><li>Scroll to the top of the page. Select 'human hg38' from the dropdown menu in the header.</li><li>Start typing the gene into the search bar. A vertical menu of gene options will appear. Click the appropriate option or hit enter.</li><li>The protein view of the gene will appear. Click on <div class='sja_opaque8' style='display: inline-block; color: black; padding: 1px 2px; border: solid 1px #545454; font-size: .9em;'>GDC</div> in the toolbar.</li></ul>",
                     "urlparam": "?genome=hg38&gene=ENST00000407796&mds3=GDC",
                     "runargs": {
                         "gene":"ENST00000407796",
@@ -617,6 +624,7 @@
                 },
                 {
                     "label": "GDC API (RefSeq)",
+                    "message": "To view a different gene from the GDC dataset: <ul><li>Scroll to the top of the page. Select 'human hg38' from the dropdown menu in the header.</li><li>Start typing the gene into the search bar. A vertical menu of gene options will appear. Click the appropriate option or hit enter.</li><li>The protein view of the gene will appear. Click on <div class='sja_opaque8' style='display: inline-block; color: black; padding: 1px 2px; border: solid 1px #545454; font-size: .9em;'>GDC</div> in the toolbar.</li></ul>",
                     "urlparam": "?genome=hg38&gene=NM_005163&mds3=GDC",
                     "runargs": {
                         "gene":"NM_005163",
@@ -635,14 +643,7 @@
                     }
                 }
             ],
-            "sandbox":{
-                "buttons": [
-                    {
-                        "name": "Documentation",
-                        "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
-                    }
-                ]
-            },
+            "sandbox": {},
             "searchterms": []
         },
         {
@@ -1104,6 +1105,7 @@
             "ppcalls": [
                 {
                     "is_ui": true,
+                    "nodashedline": true,
                     "runargs": {
                         "nobox": 1,
                         "noheader": 1,

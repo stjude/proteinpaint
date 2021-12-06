@@ -502,13 +502,21 @@ function findgenelst(app, str, genome, tip, jwt) {
 }
 
 async function findgene2paint(app, str, genomename, jwt) {
+	let sandbox_div = newSandboxDiv(app.drawer.apps_sandbox_div)
+
 	const g = app.genomes[genomename]
 	if (!g) {
 		console.error('unknown genome ' + genomename)
 		return
 	}
-	app.holder0.selectAll('*').remove()
 
+	sandbox_div.header.html(
+		'<div style="display:inline-block;">' +
+			str +
+			'</div><div style="border-radius:4px; color:white; background-color: #969696; padding: 1px 5px; display:inline-block; font-size:0.8em; margin-left:4px;">' +
+			genomename +
+			'</div>'
+	)
 	// may yield tklst from url parameters
 	const urlp = urlmap()
 	const tklst = await parseurl.get_tklst(urlp, g)
@@ -519,8 +527,9 @@ async function findgene2paint(app, str, genomename, jwt) {
 		const par = {
 			hostURL: app.hostURL,
 			jwt,
-			holder: app.holder0,
+			holder: sandbox_div.body,
 			genome: g,
+			nobox: true,
 			chr: pos.chr,
 			start: pos.start,
 			stop: pos.stop,
@@ -541,13 +550,12 @@ async function findgene2paint(app, str, genomename, jwt) {
 	}
 
 	// input string is not coordinate, find gene match
-
 	const par = {
 		hostURL: app.hostURL,
 		jwt,
 		query: str,
 		genome: g,
-		holder: app.holder0,
+		holder: sandbox_div.body,
 		variantPageCall_snv: app.variantPageCall_snv,
 		samplecart: app.samplecart,
 		tklst,
