@@ -1042,6 +1042,9 @@ function makeGroup(gd, tk, block, data) {
 					if (tk.readAlignmentTable && tk.readAlignmentTableGroup == group.data.type) {
 						// Checking to see if the group being hovered over is the same as that whose reads have been realigned
 						updateExistingMultiReadAligInfo(tk, read_number)
+					} else if (tk.readAlignmentTable && tk.readAlignmentTableGroup != group.data.type) {
+						// Checking to see if the group being hovered over is the same as that whose reads have been realigned. In this case it is not, so removing the yellow highlighting and bolding of text from the read that was previously being highlighted.
+						updateExistingMultiReadAligInfo(tk, group.data.templatebox.length + 1)
 					}
 					return
 				}
