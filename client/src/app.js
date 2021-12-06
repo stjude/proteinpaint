@@ -517,7 +517,6 @@ async function findgene2paint(app, str, genomename, jwt) {
 			genomename +
 			'</div>'
 	)
-	// app.holder0.selectAll('*').remove()
 	// may yield tklst from url parameters
 	const urlp = urlmap()
 	const tklst = await parseurl.get_tklst(urlp, g)
@@ -530,6 +529,7 @@ async function findgene2paint(app, str, genomename, jwt) {
 			jwt,
 			holder: sandbox_div.body,
 			genome: g,
+			nobox: true,
 			chr: pos.chr,
 			start: pos.start,
 			stop: pos.stop,
@@ -550,7 +550,6 @@ async function findgene2paint(app, str, genomename, jwt) {
 	}
 
 	// input string is not coordinate, find gene match
-
 	const par = {
 		hostURL: app.hostURL,
 		jwt,

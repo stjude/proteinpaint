@@ -330,7 +330,7 @@ function renderContent(ppcalls, div) {
 	showURLLaunch(ppcalls.urlparam, buttons_div)
 	addArrowBtns(ppcalls.arrowButtons, ppcalls, buttons_div, reuse_div)
 
-	if (ppcalls.nodashedline == (false || undefined)) {
+	if (!ppcalls.nodashedline) {
 		div
 			.append('hr')
 			.style('border', '0')
