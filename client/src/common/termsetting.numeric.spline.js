@@ -50,57 +50,39 @@ function setqDefaults(self) {
 	const cache = self.numqByTermIdModeType
 	const t = self.term
 	if (!cache[t.id]) cache[t.id] = {}
-	if (!cache[t.id].spline) {
+	if (!cache[t.id].cubic_spline) {
 		const defaultCustomBoundary =
 			dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2 : dd.maxvalue
 
-		cache[t.id].spline = {
-			spline_auto: { lst: [] },
-			spline_custom:
-				self.q && self.q.type == 'spline_custom'
-					? self.q
-					: {
-							type: 'spline_custom',
-							lst: [
-								{
-									startunbounded: true,
-									startinclusive: true,
-									stopinclusive: false,
-									stop: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
-								},
-								{
-									stopunbounded: true,
-									startinclusive: true,
-									stopinclusive: false,
-									start: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
-								}
-							]
-					  }
-		}
-		if (!cache[t.id].spline.spline_auto.type) {
-			cache[t.id].spline.spline_auto.type = 'spline_auto'
+		cache[t.id].cubic_spline = {
+			auto_knots: { 
+				type: 'auto_knots',
+				auto_lst: [] 
+			},
+			custom_knots: {
+				type: 'custom_knots',
+				custom_lst: [
+					{
+						start: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
+					}
+				]
+			}
 		}
 	} else if (t.q) {
 		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
 		if (!t.q.type) throw `missing numeric term spline q.type: should be 'spline-auto' or 'spline-custom'`
-		cache[t.id].discrete[t.q.type] = t.q
+		cache[t.id].cubic_spline[t.q.type] = t.q
 	}
 
 	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
-	if (self.q && !self.q.mode) self.q.mode = 'spline'
-	if (!self.q || self.q.mode !== 'spline') self.q = {}
-	if (!self.q.type) self.q.type = 'spline_auto'
-	delete self.q.lst
-	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].spline[self.q.type]))
+	if (self.q && !self.q.mode) self.q.mode = 'cubic_spline'
+	if (!self.q || self.q.mode !== 'cubic_spline') self.q = {}
+	if (!self.q.type) self.q.type = 'auto_knots'
+	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].cubic_spline[self.q.type]))
 	self.q = Object.assign(cacheCopy, self.q)
-	const bin_size = 'bin_size' in self.q && self.q.bin_size.toString()
-	if (!self.q.rounding && typeof bin_size == 'string' && bin_size.includes('.') && !bin_size.endsWith('.')) {
-		const binDecimals = bin_size.split('.')[1].length
-		self.q.rounding = '.' + binDecimals + 'f'
-	}
-	if (self.q.lst) {
-		self.q.lst.forEach(bin => {
-			if (!('label' in bin)) bin.label = bin.start || ''
+	if (self.q.custom_lst) {
+		self.q.custom_lst.forEach(knot => {
+			if (!('label' in knot)) knot.label = knot.start || ''
 		})
 	}
 	//*** validate self.q ***//
@@ -113,10 +95,10 @@ function renderTypeInputs(self) {
 	const div = self.dom.bins_div.append('div').style('margin', '10px')
 	const tabs = [
 		{
-			active: self.q.type == 'spline_auto' ? true : false,
+			active: self.q.type == 'auto_knots' ? true : false,
 			label: 'Auto compute knots',
 			callback: async div => {
-				self.q.type = 'spline_auto'
+				self.q.type = 'auto_knots'
 				self.dom.bins_div = bins_div
 				setqDefaults(self)
 				setDensityPlot(self)
@@ -127,10 +109,10 @@ function renderTypeInputs(self) {
 			}
 		},
 		{
-			active: self.q.type == 'spline_custom' ? true : false,
+			active: self.q.type == 'custom_knots' ? true : false,
 			label: 'Specity custom knots',
 			callback: async div => {
-				self.q.type = 'spline_custom'
+				self.q.type = 'custom_knots'
 				self.dom.bins_div = bins_div
 				setqDefaults(self)
 				setDensityPlot(self)
@@ -170,8 +152,7 @@ function renderCustomSplineInputs(self, tablediv) {
 		.style('height', '100px')
 		.style('width', '100px')
 		.text(
-			self.q.lst
-				.slice(1)
+			self.q.custom_lst
 				.map(d => d.start)
 				.join('\n')
 		)
@@ -186,13 +167,13 @@ function renderCustomSplineInputs(self, tablediv) {
 	function handleChange() {
 		self.dom.customBinLabelTd.selectAll('input').property('value', '')
 		const data = processKnotsInputs(self)
-		// update self.q.lst and render bin lines only if bin boundry changed
-		const q = self.numqByTermIdModeType[self.term.id].spline[self.q.type]
-		if (binsChanged(data, q.lst)) {
-			q.lst = data
+		// update self.q.custom_lst and render bin lines only if bin boundry changed
+		const q = self.numqByTermIdModeType[self.term.id].cubic_spline[self.q.type]
+		if (binsChanged(data, q.custom_lst)) {
+			q.custom_lst = data
 			self.renderBinLines(self, q)
 		}
-		renderKnotInputDivs(self, q.lst)
+		renderKnotInputDivs(self, q.custom_lst)
 		self.q = q
 	}
 
@@ -210,12 +191,11 @@ function renderCustomSplineInputs(self, tablediv) {
 	}
 
 	self.dom.customBinLabelTd = tr.append('td')
-	renderKnotInputDivs(self, self.q.lst)
+	renderKnotInputDivs(self, self.q.custom_lst)
 }
 
 function renderKnotInputDivs(self, data) {
 	self.dom.customBinLabelTd.selectAll('div').remove('*')
-	data.shift()
 	const inputDivs = self.dom.customBinLabelTd.selectAll('div').data(data)
 	inputDivs.exit().remove()
 	inputDivs.each(function(d, i) {
@@ -239,7 +219,7 @@ function renderKnotInputDivs(self, data) {
 				.attr('type', 'text')
 				.property('value', d.label)
 				.on('change', function() {
-					self.q.lst[i].label = this.value
+					self.q.custom_lst[i].label = this.value
 				})
 		})
 
@@ -247,8 +227,6 @@ function renderKnotInputDivs(self, data) {
 }
 
 function processKnotsInputs(self) {
-	const startinclusive = true
-	const stopinclusive = false
 	const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
 	let prevBin
 	const data = self.dom.customBinBoundaryInput
@@ -259,13 +237,9 @@ function processKnotsInputs(self) {
 		.sort((a, b) => a - b)
 		.map((d, i) => {
 			const bin = {
-				start: +d,
-				startinclusive,
-				stopinclusive
+				start: +d
 			}
 			if (prevBin) {
-				delete prevBin.stopunbounded
-				prevBin.stop = bin.start
 				const label = inputDivs[i - 1].querySelector('input').value
 				prevBin.label = label ? label : prevBin.start ? prevBin.start : ''
 			}
@@ -273,17 +247,9 @@ function processKnotsInputs(self) {
 			return bin
 		})
 
-	prevBin.stopunbounded = true
 	const label = inputDivs[data.length] && inputDivs[data.length].querySelector('input').value
 	prevBin.label = label ? label : data[data.length - 1].start
 
-	data.unshift({
-		startunbounded: true,
-		stop: data[0].start,
-		startinclusive,
-		stopinclusive,
-		label: inputDivs[0].querySelector('input').value
-	})
 	if (!data[0].label) data[0].label = data[0].start || ''
 	return data
 }
