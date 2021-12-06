@@ -1,4 +1,4 @@
-.mode tab
+.mode tabs
 
 .import pnet_annotations.txt annotations
 .import survival.txt survival
