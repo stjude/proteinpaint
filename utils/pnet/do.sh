@@ -28,4 +28,7 @@ sqlite3 db < $DIR/../termdb/set-default-subcohort.sql
 echo "setting the included types ..."
 sqlite3 db < $DIR/../termdb/set-included-types.sql
 
+echo "setting anno-by-type tables ..."
+sqlite3 db < $DIR/../termdb/anno-by-type.sql
+
 echo "done!"
