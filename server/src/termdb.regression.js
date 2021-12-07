@@ -44,25 +44,28 @@ export async function get_regression(q, ds) {
 		const queryTime = +new Date() - startTime
 
 		// build the input for R script
+		console.log('q:', q)
+		console.log('q.independent:', q.independent)
+
 		const Rinput = makeRinput(q, sampledata)
 		const sampleSize = Rinput.outcome.values.length
 		validateRinput(q, Rinput, sampleSize)
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
 
 		// run regression analysis in R
-		Rinput.independent[0].spline = {
+		/*Rinput.independent[0].spline = {
 			knots: [1.13422, 3.427355, 6.302092, 11.592603, 17.352192],
 			plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
-		}
+		}*/
 
 		const terminateAtWarnings = Rinput.independent.some(x => x.spline)
 
-		const Routput = await lines2R(
+		/*const Routput = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			[JSON.stringify(Rinput)],
 			[],
 			terminateAtWarnings
-		)
+		)*/
 
 		//remember to delete the temp plot file
 		//fs.unlink(splineplot, function () {})
@@ -153,11 +156,17 @@ function makeRinput(q, sampledata) {
 	for (const tw of q.independent) {
 		const independent = {
 			id: tw.id,
-			rtype: tw.q.mode == 'continuous' ? 'numeric' : 'factor',
-			interactions: tw.interactions,
-			values: []
+			rtype: tw.q.mode == 'continuous' || tw.q.mode == 'cubic-spline' ? 'numeric' : 'factor',
+			values: [],
+			interactions: tw.interactions
 		}
 		if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
+		if (tw.q.mode == 'cubic-spline') {
+			independent.spline = {
+				knots: tw.q.knots_lst.map(x => x.value),
+				plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
+			}
+		}
 		if (tw.q.scale) independent.scale = tw.q.scale
 		Rinput.independent.push(independent)
 	}

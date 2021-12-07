@@ -65,6 +65,8 @@
 # Code
 ###########
 
+# TODO: warning/error using these conditions: outcome = blood pressure; independent variables= age at last sjlife assessment
+
 library(jsonlite)
 library(splines)
 
