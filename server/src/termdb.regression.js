@@ -164,8 +164,11 @@ function makeRinput(q, sampledata) {
 		}
 		if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
 		if (tw.q.mode == 'cubic-spline') {
+			let knots_lst
+			if (tw.q.type == 'auto-knots') knots_lst = tw.q.auto_knots_lst
+			else if (tw.q.type == 'custom-knots') knots_lst = tw.q.custom_knots_lst
 			independent.spline = {
-				knots: tw.q.knots_lst.map(x => x.value),
+				knots: knots_lst.map(x => x.value),
 				plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
 			}
 		}

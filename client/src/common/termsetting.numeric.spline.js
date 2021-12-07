@@ -104,7 +104,7 @@ function renderTypeInputs(self) {
 	const tabs = [
 		{
 			active: self.q.type == 'auto-knots' ? true : false,
-			label: 'Auto compute knots',
+			label: 'Number of knots',
 			callback: async div => {
 				self.q.type = 'auto-knots'
 				self.dom.knots_div = knots_div
@@ -118,7 +118,7 @@ function renderTypeInputs(self) {
 		},
 		{
 			active: self.q.type == 'custom-knots' ? true : false,
-			label: 'Specity custom knots',
+			label: 'Custom knots list',
 			callback: async div => {
 				self.q.type = 'custom-knots'
 				self.dom.knots_div = knots_div
@@ -144,7 +144,7 @@ function renderAutoSplineInputs(self, div) {
 		.style('display','inline-block')
 		.style('margin-left', '15px')
 		.style('color', 'rgb(136, 136, 136)')
-		.html('Knots count')
+		.html('Number of knots')
 
 	const knot_ct_select = self.dom.knot_select_div.append('select')
 		.style('margin-left', '15px')
@@ -320,7 +320,7 @@ function renderButtons(self) {
 		})
 }
 
-function applyEdits(self){
+function applyEdits(self) {
 	self.q.mode = 'cubic-spline'
 	self.dom.tip.hide()
 	self.opts.callback({

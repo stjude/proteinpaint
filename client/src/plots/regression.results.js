@@ -43,6 +43,7 @@ export class RegressionResults {
 			}
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getRegressionData(reqOpts)
+			console.log(data)
 			if (data.error) throw data.error
 			this.dom.err_div.style('display', 'none')
 			this.dom.content.selectAll('*').remove()

@@ -508,7 +508,7 @@ function makesql_oneterm(term, ds, q, values, index, filter) {
 		return makesql_oneterm_categorical(tablename, term, q, values, ds)
 	}
 	if (term.type == 'float' || term.type == 'integer') {
-		if (q.mode == 'continuous') {
+		if (q.mode == 'continuous' || q.mode == 'cubic-spline') {
 			values.push(term.id)
 			const uncomputable = getUncomputableClause(term, q)
 			values.push(...uncomputable.values)
@@ -978,7 +978,7 @@ filter
 returns bins{}
 */
 export function get_bins(q, term, ds, index, filter) {
-	if (q.mode == 'continuous') return
+	if (q.mode == 'continuous' || q.mode == 'cubic-spline') return
 	return binsmodule.compute_bins(q, percentiles => get_numericMinMaxPct(ds, term, filter, percentiles))
 }
 
