@@ -178,6 +178,7 @@ export class InputTerm {
 			so remove the 'mode: continuous' value as it will prevent bin construction in the backend
 		*/
 		if (q.mode == 'continuous') delete q.mode
+		if (q.mode == 'cubic-spline') return
 
 		const data = await this.parent.app.vocabApi.getCategories(tw, this.parent.state.termfilter.filter, [
 			'term1_q=' + encodeURIComponent(JSON.stringify(q))

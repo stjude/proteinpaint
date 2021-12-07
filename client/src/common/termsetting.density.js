@@ -199,13 +199,13 @@ function renderBinLines(self, data) {
 	} else if (data.type == 'auto-knots'){
 		lines.push(
 			...data.auto_knots_lst.map((d, index) => {
-				return { x: d.start, index, scaledX: Math.round(o.xscale(d.start)) }
+				return { x: d.value, index, scaledX: Math.round(o.xscale(d.value)) }
 			})
 		)	
 	} else if (data.type == 'custom-knots') {
 		lines.push(
 			...data.custom_knots_lst.map((d, index) => {
-				return { x: d.start, index, scaledX: Math.round(o.xscale(d.start)) }
+				return { x: d.value, index, scaledX: Math.round(o.xscale(d.value)) }
 			})
 		)
 	}

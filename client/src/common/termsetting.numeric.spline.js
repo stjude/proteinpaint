@@ -7,7 +7,7 @@ import { keyupEnter } from '../client'
 import { make_one_checkbox } from '../dom/checkbox'
 
 // self is the termsetting instance
-export function getHandler(self) {
+export function getHandler(self) {``
 	return {
 		get_term_name(d) {
 			if (!self.opts.abbrCutoff) return d.name
@@ -60,23 +60,22 @@ function setqDefaults(self) {
 		cache[t.id]['cubic-spline'] = {
 			'auto-knots': {
 				type: 'auto-knots',
-				auto_knots_count: 4,
 				auto_knots_lst: []
 			},
 			'custom-knots': {
 				type: 'custom-knots',
 				custom_knots_lst: [
 					{
-						start: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
+						value: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
 					}
 				]
 			}
 		}
 
-		const auto_knots_count = cache[t.id]['cubic-spline']['auto-knots'].auto_knots_count
+		const auto_knots_count = 4
 		const auto_knots_lst = cache[t.id]['cubic-spline']['auto-knots'].auto_knots_lst
 		for(let i = 1; i < auto_knots_count + 1 ; i++)
-			auto_knots_lst.push({ start: (default_first_knot*i).toFixed(t.type == 'integer' ? 0 : 2) })
+			auto_knots_lst.push({ value: (default_first_knot*i).toFixed(t.type == 'integer' ? 0 : 2) })
 	} else if (t.q) {
 		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
 		if (!t.q.type) throw `missing numeric term spline q.type: should be 'spline-auto' or 'spline-custom'`
@@ -91,7 +90,7 @@ function setqDefaults(self) {
 	self.q = Object.assign(cacheCopy, self.q)
 	if (self.q.custom_knots_lst) {
 		self.q.custom_knots_lst.forEach(knot => {
-			if (!('label' in knot)) knot.label = knot.start || ''
+			if (!('label' in knot)) knot.label = knot.value || ''
 		})
 	}
 	//*** validate self.q ***//
@@ -153,7 +152,8 @@ function renderAutoSplineInputs(self, div) {
 		.on('change', () => {
 			knot_caclualte_btn
 				.property('disabled', knot_count == knot_ct_select.node().value)
-			self.q.auto_knots_count = knot_ct_select.node().value
+			// TODO: cacluate knots based on dropdown count
+			// const auto_knots_count = knot_ct_select.node().value
 		})
 
 	for (let i = default_knot_count -1; i < default_knot_count + 5; i++) {
@@ -201,7 +201,7 @@ function renderCustomSplineInputs(self, tablediv) {
 		.style('width', '100px')
 		.text(
 			self.q.custom_knots_lst
-				.map(d => d.start)
+				.map(d => d.value)
 				.join('\n')
 		)
 		.on('change', handleChange)
@@ -276,7 +276,7 @@ function renderKnotInputDivs(self, data) {
 
 function processKnotsInputs(self) {
 	const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
-	let prevBin
+	let prevKnot
 	const data = self.dom.customBinBoundaryInput
 		.property('value')
 		.split('\n')
@@ -284,21 +284,21 @@ function processKnotsInputs(self) {
 		.map(d => +d)
 		.sort((a, b) => a - b)
 		.map((d, i) => {
-			const bin = {
-				start: +d
+			const knot = {
+				value: +d
 			}
-			if (prevBin) {
+			if (prevKnot) {
 				const label = inputDivs[i - 1].querySelector('input').value
-				prevBin.label = label ? label : prevBin.start ? prevBin.start : ''
+				prevKnot.label = label ? label : prevKnot.value ? prevKnot.value : ''
 			}
-			prevBin = bin
-			return bin
+			prevKnot = knot
+			return knot
 		})
 
 	const label = inputDivs[data.length] && inputDivs[data.length].querySelector('input').value
-	prevBin.label = label ? label : data[data.length - 1].start
+	prevKnot.label = label ? label : data[data.length - 1].value
 
-	if (!data[0].label) data[0].label = data[0].start || ''
+	if (!data[0].label) data[0].label = data[0].value || ''
 	return data
 }
 
@@ -321,5 +321,10 @@ function renderButtons(self) {
 }
 
 function applyEdits(self){
-	// TODO: apply edits to self.q
+	self.q.mode = 'cubic-spline'
+	self.dom.tip.hide()
+	self.opts.callback({
+		term: self.term,
+		q: self.q
+	})
 }
