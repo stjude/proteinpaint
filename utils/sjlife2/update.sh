@@ -19,3 +19,5 @@ echo "running load.sql ..."
 sqlite3 db < $DIR/load.sql
 echo "running set-included-types.sql ..."
 sqlite3 db < $DIR/../termdb/set-included-types.sql
+echo "running anno-by-type.sql ..."
+sqlite3 db < $DIR/../termdb/anno-by-type.sql

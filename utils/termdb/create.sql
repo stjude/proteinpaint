@@ -75,12 +75,9 @@ create table annotations (
   term_id character varying(100) not null,
   value character varying(255) not null
 );
-
-
 create index a_sample on annotations(sample);
 create index a_termid on annotations(term_id);
 create index a_value on annotations(value);
-
 
 drop table if exists chronicevents;
 drop index if exists c_sample;
