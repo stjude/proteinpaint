@@ -80,8 +80,10 @@ node ~/proteinpaint/utils/sjlife2/term2subcohort.js termdb annotation.matrix ann
 #node ~/proteinpaint/utils/sjlife2/category2sample.removegrade9.js category2vcfsample termdb annotation.outcome > category2vcfsample.nograde9
 
 ### before running following sqlite commands, softlink the sql scripts to the "clinical/" folder
+# the following lines are performed in update.sh
 #sqlite3 db < load.sql
 #sqlite3 db < set-included-types.sql
+# sqlite3 db < ../termdb/anno-by-type.sql
 
 # scp db $ppr:/opt/data/pp/tp_native_dir/files/hg38/sjlife/clinical/
 # scp db $prp1:~/data-pp/files/hg38/sjlife/clinical/
