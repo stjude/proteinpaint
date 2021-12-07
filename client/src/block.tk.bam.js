@@ -1483,10 +1483,18 @@ async function getMultiReadAligInfo(tk, group, block) {
 	//console.log('multi_read_alig_data.alignmentData:', multi_read_alig_data.alignmentData)
 	wait.remove()
 
-	const num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
-		.append('div')
-		.text('Number of reads aligned = ' + multi_read_alig_data.alignmentData.read_count)
-		.style('text-align', 'center')
+	let num_read_div
+	if (group.data.type == 'support_alt') {
+		num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
+			.append('div')
+			.text('Number of reads aligned to alternate allele = ' + multi_read_alig_data.alignmentData.read_count)
+			.style('text-align', 'center')
+	} else if (group.data.type == 'support_ref') {
+		num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
+			.append('div')
+			.text('Number of reads aligned to reference allele = ' + multi_read_alig_data.alignmentData.read_count)
+			.style('text-align', 'center')
+	}
 	if (multi_read_alig_data.alignmentData.partstack_start) {
 		// In partstack mode
 		const partstack_div = tk.alignpane.body
