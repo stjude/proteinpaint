@@ -151,12 +151,12 @@ build_coef_table <- function(res_summ) {
 }
 
 # plot spline regression
-plot_spline <- function(splineTerm, dat, plotfile) {
+plot_spline <- function(splineTerm, dat, res) {
   # prepare test data
   sampleSize <- 1000
   newdat <- dat[1:sampleSize, -1, drop = F]
   for (term in names(newdat)) {
-    if (term == splineTerm) {
+    if (term == splineTerm$id) {
       # for spline term, generate regularly spaced data points within the data range
       newdat[,term] <- seq(from = min(dat[,term]), to = max(dat[,term]), length.out = sampleSize)
     } else if (is.factor(dat[,term])) {
@@ -167,15 +167,16 @@ plot_spline <- function(splineTerm, dat, plotfile) {
       newdat[,term] <- median(dat[,term])
     }
   }
-  # predict test data outcome based on the model
-  preddat <- predict(res, newdata = newdat, se.fit = T)
+  # run test data through the model
+  preddat <- predict(res, newdata = newdat, type = "response", se.fit = T)
   # plot the results
   #ppi <- 300
-  png(filename = plotfile)
-  plot(dat[,splineTerm], dat[,"outcome"], xlab = splineTerm, ylab = "outcome")
-  lines(lowess(newdat[,splineTerm], preddat$fit), col = "red", lwd = 3)
+  png(filename = splineTerm$spline$plotfile)
+  plot(dat[,splineTerm$id], dat[,"outcome"], xlab = splineTerm$id, ylab = "outcome")
+  lines(lowess(newdat[,splineTerm$id], preddat$fit), col = "red", lwd = 3)
   dev.off()
 }
+
 
 ####### perform regression analysis
 if (lst$type == "linear"){
@@ -190,7 +191,7 @@ if (lst$type == "linear"){
     # plot spline regression
     # do not generate results tables
     for (term in splineTerms) {
-      plot_spline(term$id, dat, term$spline$plotfile)
+      plot_spline(term, dat, res)
     }
     quit(save = "no")
   } else {
@@ -228,29 +229,41 @@ if (lst$type == "linear"){
   }
   # fit logistic model
   res <- glm(mod, family = binomial(link='logit'), data = dat)
-  res_summ <- summary(res)
-  # prepare residuals table
-  residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$deviance.resid),3)))
-  # prepare coefficients table
-  coefficients_table <- build_coef_table(res_summ)
-  colnames(coefficients_table)[1] <- "Log odds"
-  # compute odds ratio
-  coefficients_table <- cbind("Odds ratio" = exp(coef(res)), coefficients_table)
-  # compute confidence intervals of odds ratios
-  ci <- exp(suppressMessages(confint(res)))
-  colnames(ci) <- c("95% CI (low)","95% CI (high)")
-  coefficients_table <- cbind(coefficients_table, ci)
-  coefficients_table <- coefficients_table[,c(1,6,7,2,3,4,5)]
-  # prepare type III statistics table
-  typeIII_table <- as.matrix(drop1(res, scope = ~., test = "LRT"))
-  typeIII_table[,c("Deviance","AIC")] <- round(typeIII_table[,c("Deviance","AIC")], 1)
-  typeIII_table[,"LRT"] <- round(typeIII_table[,"LRT"], 3)
-  typeIII_table[,"Pr(>Chi)"] <- signif(typeIII_table[,"Pr(>Chi)"], 4)
-  # prepare other summary stats table
-  other_table <- list(
-    "header" = c("Dispersion parameter", "Null deviance", "Null deviance degrees of freedom", "Residual deviance", "Residual deviance degrees of freedom", "AIC"),
-    "rows" = round(c(res_summ$dispersion, res_summ$null.deviance, res_summ$df.null, res_summ$deviance, res_summ$df.residual, res_summ$aic), 1)
-    )
+  if (length(splineTerms) > 0) {
+    # model contains spline term
+    # plot spline regression
+    # do not generate results tables
+    for (term in splineTerms) {
+      plot_spline(term, dat, res)
+    }
+    quit(save = "no")
+  } else {
+    # model does not contain spline term
+    # generate results tables
+    res_summ <- summary(res)
+    # prepare residuals table
+    residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$deviance.resid),3)))
+    # prepare coefficients table
+    coefficients_table <- build_coef_table(res_summ)
+    colnames(coefficients_table)[1] <- "Log odds"
+    # compute odds ratio
+    coefficients_table <- cbind("Odds ratio" = exp(coef(res)), coefficients_table)
+    # compute confidence intervals of odds ratios
+    ci <- exp(suppressMessages(confint(res)))
+    colnames(ci) <- c("95% CI (low)","95% CI (high)")
+    coefficients_table <- cbind(coefficients_table, ci)
+    coefficients_table <- coefficients_table[,c(1,6,7,2,3,4,5)]
+    # prepare type III statistics table
+    typeIII_table <- as.matrix(drop1(res, scope = ~., test = "LRT"))
+    typeIII_table[,c("Deviance","AIC")] <- round(typeIII_table[,c("Deviance","AIC")], 1)
+    typeIII_table[,"LRT"] <- round(typeIII_table[,"LRT"], 3)
+    typeIII_table[,"Pr(>Chi)"] <- signif(typeIII_table[,"Pr(>Chi)"], 4)
+    # prepare other summary stats table
+    other_table <- list(
+      "header" = c("Dispersion parameter", "Null deviance", "Null deviance degrees of freedom", "Residual deviance", "Residual deviance degrees of freedom", "AIC"),
+      "rows" = round(c(res_summ$dispersion, res_summ$null.deviance, res_summ$df.null, res_summ$deviance, res_summ$df.residual, res_summ$aic), 1)
+      )
+  }
 } else{
   stop("regression type is not recognized")
 }
