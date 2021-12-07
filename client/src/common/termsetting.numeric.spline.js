@@ -321,5 +321,10 @@ function renderButtons(self) {
 }
 
 function applyEdits(self){
-	// TODO: apply edits to self.q
+	self.q.mode = 'cubic-spline'
+	self.dom.tip.hide()
+	self.opts.callback({
+		term: self.term,
+		q: self.q
+	})
 }
