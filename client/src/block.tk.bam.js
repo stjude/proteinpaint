@@ -1194,6 +1194,11 @@ function makeGroup(gd, tk, block, data) {
 					'stackstop=' + group.partstack.stop,
 					'grouptype=' + group.data.type
 				])
+				if (tk.readAlignmentTable) {
+					delete tk.readAlignmentTable
+					delete tk.readAlignmentTableGroup
+					tk.alignpane.pane.style('display', 'none')
+				}
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
 				setTkHeight(tk)
@@ -1242,6 +1247,11 @@ function makeGroup(gd, tk, block, data) {
 					'stackstop=' + group.partstack.stop,
 					'grouptype=' + group.data.type
 				])
+				if (tk.readAlignmentTable) {
+					delete tk.readAlignmentTable
+					delete tk.readAlignmentTableGroup
+					tk.alignpane.pane.style('display', 'none')
+				}
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
 				block.tkcloakoff(tk, {})
@@ -1288,6 +1298,11 @@ function makeGroup(gd, tk, block, data) {
 					'stackstop=' + group.partstack.stop,
 					'grouptype=' + group.data.type
 				])
+				if (tk.readAlignmentTable) {
+					delete tk.readAlignmentTable
+					delete tk.readAlignmentTableGroup
+					tk.alignpane.pane.style('display', 'none')
+				}
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
 				setTkHeight(tk)
@@ -2212,6 +2227,11 @@ async function enter_partstack(group, tk, block, y, data) {
 		'stackstop=' + group.partstack.stop,
 		'grouptype=' + group.data.type
 	])
+	if (tk.readAlignmentTable) {
+		delete tk.readAlignmentTable
+		delete tk.readAlignmentTableGroup
+		tk.alignpane.pane.style('display', 'none')
+	}
 	group.data = _d.groups[0]
 	renderGroup(group, tk, block)
 	setTkHeight(tk)
