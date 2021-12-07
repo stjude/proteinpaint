@@ -174,7 +174,7 @@ plot_spline <- function(splineTerm, dat, res) {
   # plot the results
   #ppi <- 300
   png(filename = splineTerm$spline$plotfile)
-  plot(dat[,splineTerm$id], dat[,"outcome"], xlab = splineTerm$id, ylab = "outcome")
+  plot(dat[,splineTerm$id], dat[,"outcome"], xlab = splineTerm$name, ylab = "outcome")
   lines(lowess(newdat[,splineTerm$id], preddat$fit), col = "red", lwd = 3)
   dev.off()
 }

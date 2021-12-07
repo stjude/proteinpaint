@@ -53,19 +53,19 @@ export async function get_regression(q, ds) {
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
 
 		// run regression analysis in R
-		/*Rinput.independent[0].spline = {
+		Rinput.independent[0].spline = {
 			knots: [1.13422, 3.427355, 6.302092, 11.592603, 17.352192],
 			plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
-		}*/
+		}
 
 		const terminateAtWarnings = Rinput.independent.some(x => x.spline)
 
-		/*const Routput = await lines2R(
+		const Routput = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			[JSON.stringify(Rinput)],
 			[],
 			terminateAtWarnings
-		)*/
+		)
 
 		//remember to delete the temp plot file
 		//fs.unlink(splineplot, function () {})
@@ -79,7 +79,7 @@ export async function get_regression(q, ds) {
 				if (term.spline) {
 					const data = await fs.promises.readFile(term.spline.plotfile)
 					result.splinePlots.push({
-						label: term.id + ' spline regression',
+						label: term.name + ' spline regression',
 						src: 'data:image/jpeg;base64,' + new Buffer.from(data).toString('base64'),
 						size: imagesize(term.spline.plotfile)
 					})
@@ -140,6 +140,7 @@ function makeRinput(q, sampledata) {
 	// outcome term
 	const outcome = {
 		id: q.outcome.id,
+		name: q.outcome.term.name,
 		rtype: q.outcome.q.mode == 'continuous' ? 'numeric' : 'factor',
 		values: []
 	}
@@ -156,6 +157,7 @@ function makeRinput(q, sampledata) {
 	for (const tw of q.independent) {
 		const independent = {
 			id: tw.id,
+			name: tw.term.name,
 			rtype: tw.q.mode == 'continuous' || tw.q.mode == 'cubic-spline' ? 'numeric' : 'factor',
 			values: [],
 			interactions: tw.interactions
