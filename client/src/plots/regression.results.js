@@ -400,7 +400,6 @@ function setRenderers(self) {
 			numbers2array(i.lst)
 		}
 		values.sort((a, b) => a - b) // ascending
-		console.log(values)
 		// all valid numbers are collected into values[]
 
 		// graph dimension
