@@ -14,12 +14,12 @@
     "public/bin",
     "server/bin.js",
     "server/dataset/clinvar*.js",
-    "server/dataset/gdc*.js",
     "server/genome",
     "server/src/serverconfig.js",
     "server/server.js",
     "server/utils",
-    "server/shared"
+    "server/shared",
+    "server/features.json"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"

@@ -2,7 +2,11 @@ import { dofetch2, sayerror, tab_wait, appear } from './client'
 import { newSandboxDiv } from './dom/sandbox'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
-import { highlight } from 'highlight.js/lib/common'
+// js-only syntax highlighting for smallest bundle, see https://highlightjs.org/usage/
+// also works in rollup and not just webpack, without having to use named imports
+import hljs from 'highlight.js/lib/core'
+import javascript from 'highlight.js/lib/languages/javascript'
+hljs.registerLanguage('javascript', javascript)
 
 /*
 
@@ -606,7 +610,7 @@ function showCode(ppcalls, btns) {
 	if (ppcalls.is_ui == true) return
 
 	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
-	const code = highlight(
+	const code = hljs.highlight(
 		`runproteinpaint({
     host: "${window.location.origin}",
     holder: document.getElementById('a'),
