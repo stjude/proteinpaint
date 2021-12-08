@@ -108,6 +108,7 @@ const slider_color = '#c7edc5'
 const slider_color_dark = '#9ed19b'
 const slider_color_dark_line = '#36a32f'
 const messagerowheight = 15 // message row height
+const stackheight_min = 7 // Minimum stack height for displaying read names
 
 export async function loadTk(tk, block) {
 	block.tkcloakon(tk)
@@ -2280,8 +2281,8 @@ function renderGroup(group, tk, block) {
 			if (tk.show_readnames) {
 				group.dom.read_names_g.attr('transform', 'translate(0,0)')
 				group.ReadNameMaxwidth = 0
-				if (group.data.templatebox) {
-					group.dom.read_names_g.selectAll('*').remove()
+				group.dom.read_names_g.selectAll('*').remove()
+				if (group.data.templatebox && group.data.stackheight >= stackheight_min) {
 					let read_count = 1
 					for (const read of group.data.templatebox) {
 						const read_name_bbox = group.dom.read_names_g
