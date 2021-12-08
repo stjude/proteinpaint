@@ -701,9 +701,12 @@ function getPj(self) {
 			xScale(row, context) {
 				const s = self.settings
 				const xMin = s.method == 2 ? 0 : context.self.xMin
-				return scaleLinear()
-					.domain([xMin, context.self.xMax])
-					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
+				return (
+					scaleLinear()
+						// force x to start at 0, padAndSortSerieses() prepends this data point
+						.domain([0, context.self.xMax])
+						.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
+				)
 			},
 			scaledX(row, context) {
 				return context.context.context.context.parent.xScale(context.self.x)
