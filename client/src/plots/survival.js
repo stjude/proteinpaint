@@ -164,6 +164,10 @@ class TdbSurvival {
 				}
 			}
 		}
+		if (this.refs.orderedKeys) {
+			const s = this.refs.orderedKeys.series
+			legendItems.sort((a, b) => s.indexOf(a.seriesId) - s.indexOf(b.seriesId))
+		}
 		const config = this.state.config
 		if ((!config.term.term.type == 'survival' || config.term2) && legendItems.length) {
 			const termNum = config.term.term.type == 'survival' ? 'term2' : 'term'
@@ -655,7 +659,8 @@ function getPj(self) {
 					'@done()': '=padAndSortSerieses()'
 				},
 				'=chartTitle()'
-			]
+			],
+			'@done()': '=sortCharts()'
 		},
 		'=': {
 			chartTitle(row) {
@@ -732,9 +737,19 @@ function getPj(self) {
 						scaledY: [result.yScale(1), result.yScale(1), result.yScale(1)]
 					})
 				}
-				if (self.refs.bins) return
-				const labelOrder = self.refs.bins.map(b => b.label)
-				result.serieses.sort((a, b) => labelOrder.indexOf(a.seriesId) - labelOrder.indexOf(b.seriesId))
+				if (self.refs.orderedKeys) {
+					const s = self.refs.orderedKeys.series
+					result.serieses.sort((a, b) => s.indexOf(a.seriesId) - s.indexOf(b.seriesId))
+				}
+				if (self.refs.bins) {
+					const labelOrder = self.refs.bins.map(b => b.label)
+					result.serieses.sort((a, b) => labelOrder.indexOf(a.seriesId) - labelOrder.indexOf(b.seriesId))
+				}
+			},
+			sortCharts(result) {
+				if (!self.refs.orderedKeys) return
+				const c = self.refs.orderedKeys.chart
+				result.charts.sort((a, b) => c.indexOf(a.chartId) - c.indexOf(b.chartId))
 			}
 		}
 	})
