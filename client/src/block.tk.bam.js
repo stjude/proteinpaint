@@ -423,7 +423,9 @@ or update existing groups, in which groupidx will be provided
 function update_left_margin(tk, block) {
 	tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
 	for (const g of tk.groups) {
-		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, g.ReadNameMaxwidth)
+		if (g.ReadNameMaxwidth) {
+			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, g.ReadNameMaxwidth)
+		}
 	}
 	block.setllabel() // calculate left margin based on max left width
 }
@@ -693,7 +695,6 @@ function updateExistingGroups(data, tk, block) {
 		const group = tk.groups.find(g => g.data.type == gd.type)
 		if (!group) continue // throw 'unknown group type: ' + gd.type
 		group.data = gd
-
 		update_boxes(group, tk, block)
 
 		// in full stack
@@ -701,10 +702,9 @@ function updateExistingGroups(data, tk, block) {
 			.attr('xlink:href', group.data.src)
 			.attr('width', group.data.width)
 			.attr('height', group.data.height)
-
 		if (tk.variants) {
+			group.ReadNameMaxwidth = 0
 			if (tk.show_readnames) {
-				group.ReadNameMaxwidth = 0
 				if (group.data.templatebox) {
 					group.dom.read_names_g.selectAll('*').remove()
 					let read_count = 1
@@ -1124,8 +1124,8 @@ function makeGroup(gd, tk, block, data) {
 			if (group.my_partstack) {
 				delete group.my_partstack // y-position of click that invoked partstack originally
 			}
+			group.ReadNameMaxwidth = 0
 			if (tk.show_readnames) {
-				group.ReadNameMaxwidth = 0
 				update_left_margin(tk, block)
 			}
 			group.data = group.data_fullstack
@@ -2278,9 +2278,9 @@ function renderGroup(group, tk, block) {
 				.attr('xlink:href', group.data.diff_scores_img.src)
 				.attr('width', group.data.diff_scores_img.width)
 				.attr('height', group.data.diff_scores_img.height)
+			group.ReadNameMaxwidth = 0
 			if (tk.show_readnames) {
 				group.dom.read_names_g.attr('transform', 'translate(0,0)')
-				group.ReadNameMaxwidth = 0
 				group.dom.read_names_g.selectAll('*').remove()
 				if (group.data.templatebox && group.data.stackheight >= stackheight_min) {
 					let read_count = 1
