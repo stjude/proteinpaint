@@ -31,15 +31,20 @@ export async function get_survival(q, ds) {
 		const results = get_rows(q)
 		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
 		const byChartSeries = {}
+		const keys = { chart: new Set(), series: new Set() }
 		for (const d of results.lst) {
 			// do not include data when years_to_event < 0
 			if (d[vNum] < 0) continue
 			// clearer alias for censored boolean
 			d.censored = d[kNum]
-			if (!(d.key0 in byChartSeries)) byChartSeries[d.key0] = ['cohort\ttime\tstatus']
+			if (!(d.key0 in byChartSeries)) {
+				byChartSeries[d.key0] = ['cohort\ttime\tstatus']
+				keys.chart.add(d.key0)
+			}
 			// R errors on an empty string cohort value,
 			// so use '*' as a placeholder for now and will reconvert later
 			const sKey = d[sNum] === '' ? '*' : d[sNum]
+			keys.series.add(sKey)
 			// negate the d.censored value (where 1 is censored) to transform to survfit() status value
 			// since status=TRUE or 2 means 'dead' or 'event' in R's survival.survfit()
 			byChartSeries[d.key0].push([sKey, d[vNum], d.censored == 0 ? 1 : 0].join('\t'))
@@ -72,6 +77,10 @@ export async function get_survival(q, ds) {
 		}
 		// sort by d.x
 		final_data.case.sort((a, b) => a[2] - b[2])
+		final_data.refs.orderedKeys = {
+			chart: [...keys.chart].sort(),
+			series: [...keys.series].sort()
+		}
 		return final_data
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
