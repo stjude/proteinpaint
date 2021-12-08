@@ -68,7 +68,6 @@
 # TODO: warning/error using these conditions: outcome = blood pressure; independent variables= age at last sjlife assessment
 
 library(jsonlite)
-library(splines)
 
 
 ######## Data preparation ##########
@@ -119,7 +118,7 @@ for (i in 1:length(lst$independent)) {
   term <- lst$independent[[i]]
   if ("spline" %in% names(term)) {
     splineTerms[[length(splineTerms) + 1]] <- term
-    splineCmd <- paste0("ns(", term$id, ",", "knots=", paste0("c(", paste(term$spline$knots,collapse = ","), ")"), ")")
+    splineCmd <- paste0("cubic_spline(", term$id, ", ", paste0("c(", paste(term$spline$knots,collapse = ","), ")"), ")")
     independentTerms <- c(independentTerms, splineCmd)
   } else {
     independentTerms <- c(independentTerms, term$id)
@@ -139,8 +138,9 @@ mod <- as.formula(paste(outcomeTerm, paste(independentTerms, collapse = "+"), se
 
 ########## Regression analysis ###########
 
-####### helper functions
-# build coefficients table
+#### helper functions ####
+
+# function to build coefficients table
 build_coef_table <- function(res_summ) {
   coefficients_table <- res_summ$coefficients
   if (any(aliased <- res_summ$aliased)) {
@@ -152,7 +152,22 @@ build_coef_table <- function(res_summ) {
   return(coefficients_table)
 }
 
-# plot spline regression
+# function to generate cubic spline
+# args: values = variable values; knots = knot values
+cubic_spline <- function(values, knots) {
+  nknots <- length(knots) # there will be (nknots-1) cubic spline functions
+  f <- matrix(nrow = length(values), ncol = (nknots-1))
+  f[,1] <- values
+  for (j in 1:(nknots-2)) {
+    for (i in 1:length(values)) {
+      f[i,(j+1)] <- max(0,(values[i]-knots[j])^3)-max(0,(values[i]-knots[nknots-1])^3)*(knots[nknots]-knots[j])/(knots[nknots]-knots[nknots-1])+
+        max(0,(values[i]-knots[nknots])^3)*(knots[nknots-1]-knots[j])/(knots[nknots]-knots[nknots-1])
+    }
+  }
+  return(f)
+}
+
+# function to plot spline regression
 plot_spline <- function(splineTerm, dat, res) {
   # prepare test data
   sampleSize <- 1000
@@ -180,7 +195,11 @@ plot_spline <- function(splineTerm, dat, res) {
 }
 
 
-####### perform regression analysis
+save.image("temp.regression.RData")
+
+
+#### perform regression analysis ####
+
 if (lst$type == "linear"){
   # linear regression
   if (!is.numeric(dat$outcome)){
