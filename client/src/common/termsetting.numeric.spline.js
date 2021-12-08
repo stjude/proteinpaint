@@ -1,10 +1,7 @@
 import { select, event } from 'd3-selection'
 import { setDensityPlot } from './termsetting.density'
-import { renderBoundaryInclusionInput } from './termsetting.numeric.discrete'
-import { get_bin_label } from '../../shared/termdb.bins'
 import { init_tabs } from '../dom/toggleButtons'
 import { keyupEnter } from '../client'
-import { make_one_checkbox } from '../dom/checkbox'
 
 // self is the termsetting instance
 export function getHandler(self) {``
@@ -88,11 +85,6 @@ function setqDefaults(self) {
 	if (!self.q.type) self.q.type = 'auto-knots'
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id]['cubic-spline'][self.q.type]))
 	self.q = Object.assign(cacheCopy, self.q)
-	if (self.q.custom_knots_lst) {
-		self.q.custom_knots_lst.forEach(knot => {
-			if (!('label' in knot)) knot.label = knot.value || ''
-		})
-	}
 	//*** validate self.q ***//
 	// console.log(self.q)
 }
@@ -178,24 +170,19 @@ function getKnots(self){
 }
 
 /******************* Functions for Custom Spline knots *******************/
-function renderCustomSplineInputs(self, tablediv) {
-	self.dom.bins_table = tablediv.append('table')
-	const thead = self.dom.bins_table.append('thead').append('tr')
-	thead
-		.append('th')
+function renderCustomSplineInputs(self, div) {
+	self.dom.custom_knots_div = div.append('div')
+	
+	self.dom.custom_knots_div
+		.append('div')
+		.style('padding', '3px 15px')
 		.style('font-weight', 'normal')
 		.style('color', 'rgb(136, 136, 136)')
 		.html('Knots')
-	thead
-		.append('th')
-		.style('font-weight', 'normal')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('Knot Labels')
-	self.dom.customBintbody = self.dom.bins_table.append('tbody')
-	const tr = self.dom.customBintbody.append('tr')
 
-	self.dom.customBinBoundaryInput = tr
-		.append('td')
+	self.dom.customKnotsInput = self.dom.custom_knots_div
+		.append('div')
+		.style('padding', '3px 15px')
 		.append('textarea')
 		.style('height', '100px')
 		.style('width', '100px')
@@ -212,72 +199,39 @@ function renderCustomSplineInputs(self, tablediv) {
 			handleChange.call(this)
 		})
 
+	self.dom.custom_knots_div.append('div')
+		.style('font-size', '.8em')
+		.style('padding', '3px 15px')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Note: Press \'Enter\' key after adding each knot.')	
+
 	function handleChange() {
-		self.dom.customBinLabelTd.selectAll('input').property('value', '')
 		const data = processKnotsInputs(self)
-		// update self.q.custom_knots_lst and render bin lines only if bin boundry changed
+		// update self.q.custom_knots_lst and render knot lines only if knot values changed
 		const q = self.numqByTermIdModeType[self.term.id]['cubic-spline'][self.q.type]
-		if (binsChanged(data, q.custom_knots_lst)) {
+		if (knotsChanged(data, q.custom_knots_lst)) {
 			q.custom_knots_lst = data
 			self.renderBinLines(self, q)
 		}
-		renderKnotInputDivs(self, q.custom_knots_lst)
 		self.q = q
 	}
 
-	function binsChanged(data, qlst) {
+	function knotsChanged(data, qlst) {
 		if (data.length != qlst.length) return true
 		if (Object.keys(data[0]).length !== Object.keys(qlst[0]).length) return true
-		for (const [i, bin] of qlst.entries()) {
-			for (const k of Object.keys(bin)) {
-				if (bin[k] && bin[k] !== data[i][k]) {
+		for (const [i, knot] of qlst.entries()) {
+			for (const k of Object.keys(knot)) {
+				if (knot[k] && knot[k] !== data[i][k]) {
 					return true
 				}
 			}
 		}
 		return false
 	}
-
-	self.dom.customBinLabelTd = tr.append('td')
-	renderKnotInputDivs(self, self.q.custom_knots_lst)
-}
-
-function renderKnotInputDivs(self, data) {
-	self.dom.customBinLabelTd.selectAll('div').remove('*')
-	const inputDivs = self.dom.customBinLabelTd.selectAll('div').data(data)
-	inputDivs.exit().remove()
-	inputDivs.each(function(d, i) {
-		select(this)
-			.select('span')
-			.html('Knot ' + (i + 1) + '&nbsp;')
-		select(this)
-			.select('input')
-			.property('value', d.label)
-	})
-	inputDivs
-		.enter()
-		.append('div')
-		.each(function(d, i) {
-			select(this)
-				.append('span')
-				.style('color', 'rgb(136, 136, 136)')
-				.html('Knot ' + (i + 1) + '&nbsp;')
-			select(this)
-				.append('input')
-				.attr('type', 'text')
-				.property('value', d.label)
-				.on('change', function() {
-					self.q.custom_knots_lst[i].label = this.value
-				})
-		})
-
-	self.dom.customBinLabelInput = self.dom.customBinLabelTd.selectAll('input')
 }
 
 function processKnotsInputs(self) {
-	const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
-	let prevKnot
-	const data = self.dom.customBinBoundaryInput
+	const data = self.dom.customKnotsInput
 		.property('value')
 		.split('\n')
 		.filter(d => d != '')
@@ -287,18 +241,8 @@ function processKnotsInputs(self) {
 			const knot = {
 				value: +d
 			}
-			if (prevKnot) {
-				const label = inputDivs[i - 1].querySelector('input').value
-				prevKnot.label = label ? label : prevKnot.value ? prevKnot.value : ''
-			}
-			prevKnot = knot
 			return knot
 		})
-
-	const label = inputDivs[data.length] && inputDivs[data.length].querySelector('input').value
-	prevKnot.label = label ? label : data[data.length - 1].value
-
-	if (!data[0].label) data[0].label = data[0].value || ''
 	return data
 }
 
