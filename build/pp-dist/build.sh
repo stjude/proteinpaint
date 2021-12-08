@@ -6,14 +6,11 @@ set -e
 # ARGUMENTS
 ###############
 
-usage() {
-	echo "Usage:
-
+USAGE="Usage:
 	./build/pp-dist/build.sh [-r]
 
 	-r REV: git revision to checkout, if empty will use the current code state
-	"
-}
+"
 
 REV=latest
 while getopts "r:h:" opt; do
@@ -22,7 +19,7 @@ while getopts "r:h:" opt; do
 		REV=${OPTARG}
 		;;
 	h)
-		usage
+		echo $USAGE
 		exit 1
 		;;
 	esac
