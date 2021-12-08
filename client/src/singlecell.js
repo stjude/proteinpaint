@@ -28,56 +28,7 @@ export async function init(arg, holder) {
 			}
 
 			let shown = !arg.foldlegend
-
-			img_div
-				.append('div')
-				.text('LEGEND')
-				.attr('class', 'sja_clb')
-				.style('display', 'inline-block')
-				.style('font-size', '.7em')
-				.style('color', obj.legend.legendcolor)
-				.style('font-family', client.font)
-				.on('click', () => {
-					if (shown) {
-						shown = false
-						client.disappear(div2)
-					} else {
-						shown = true
-						client.appear(div2)
-					}
-				})
-
-			const div2 = obj.holder
-				.append('div')
-				.style('border-top', 'solid 1px ' + obj.legend.legendcolor)
-				.style('background-color', '#FCFBF7')
-
-			obj.legend.holder = div2
-				.append('table')
-				.style('border-spacing', '15px')
-				.style('border-collapse', 'separate')
-
-			const [tr, td] = Legend.legend_newrow(obj, obj.legendimg.name || '')
-			const data = await client.dofetch2('img?file=' + obj.legendimg.file)
-			if (data.error) {
-				td.text(data.error)
-				return
-			}
-			let fold = true
-			const img = td
-				.append('img')
-				.attr('class', 'sja_clbb')
-				.attr('src', data.src)
-				.style('height', '80px')
-			img.on('click', () => {
-				if (fold) {
-					fold = false
-					img.transition().style('height', obj.legendimg.height ? obj.legendimg.height + 'px' : 'auto')
-				} else {
-					fold = true
-					img.transition().style('height', '80px')
-				}
-			})
+			make_legend(obj, img_div, shown)
 		}
 	} catch (e) {
 		client.sayerror(holder, e.message || e)
@@ -1645,5 +1596,57 @@ function add_scriptTag(path) {
 		script.setAttribute('src', sessionStorage.getItem('hostURL') + path)
 		document.head.appendChild(script)
 		script.onload = resolve
+	})
+}
+
+async function make_legend(obj, div, shown) {
+	div
+		.append('div')
+		.text('LEGEND')
+		.attr('class', 'sja_clb')
+		.style('display', 'inline-block')
+		.style('font-size', '.7em')
+		.style('color', obj.legend.legendcolor)
+		.style('font-family', client.font)
+		.on('click', () => {
+			if (shown) {
+				shown = false
+				client.disappear(div2)
+			} else {
+				shown = true
+				client.appear(div2)
+			}
+		})
+
+	const div2 = obj.holder
+		.append('div')
+		.style('border-top', 'solid 1px ' + obj.legend.legendcolor)
+		.style('background-color', '#FCFBF7')
+
+	obj.legend.holder = div2
+		.append('table')
+		.style('border-spacing', '15px')
+		.style('border-collapse', 'separate')
+
+	const [tr, td] = Legend.legend_newrow(obj, obj.legendimg.name || '')
+	const data = await client.dofetch2('img?file=' + obj.legendimg.file)
+	if (data.error) {
+		td.text(data.error)
+		return
+	}
+	let fold = true
+	const img = td
+		.append('img')
+		.attr('class', 'sja_clbb')
+		.attr('src', data.src)
+		.style('height', '80px')
+	img.on('click', () => {
+		if (fold) {
+			fold = false
+			img.transition().style('height', obj.legendimg.height ? obj.legendimg.height + 'px' : 'auto')
+		} else {
+			fold = true
+			img.transition().style('height', '80px')
+		}
 	})
 }
