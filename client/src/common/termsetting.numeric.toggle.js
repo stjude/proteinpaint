@@ -56,8 +56,8 @@ export function getHandler(self) {
 						self.q.mode = 'discrete'
 						if (!self.q.type || self.q.type != 'custom') self.q.type = 'regular'
 						// example of using a boolean attribute to track whether to exit early
-						if (tabs[1].isRendered) return
-						tabs[1].isRendered = true
+						// if (tabs[1].isRendered) return
+						// tabs[1].isRendered = true
 						self.handlerByType['numeric.discrete'].showEditMenu(div)
 						// delete tabs[1].callback
 					}
@@ -68,8 +68,8 @@ export function getHandler(self) {
 					callback: async div => {
 						self.q.mode = 'cubic-spline'
 						if (!self.q.type || self.q.type != 'custom-knots') self.q.type = 'auto-knots'
-						if (tabs[2].isRendered) return
-						tabs[2].isRendered = true
+						// if (tabs[2].isRendered) return
+						// tabs[2].isRendered = true
 						self.handlerByType['numeric.spline'].showEditMenu(div)
 						// delete tabs[2].callback
 					}
