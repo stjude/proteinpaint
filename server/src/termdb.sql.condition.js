@@ -138,6 +138,7 @@ export const cuminc = {
 				FROM chronicevents
 				WHERE grade >= ?
 				  AND grade <= 5
+				  AND years_to_event >=5
 				  AND ${termsClause}
 				  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
 				GROUP BY sample
@@ -151,6 +152,7 @@ export const cuminc = {
 				FROM chronicevents
 				WHERE grade <= 5 
 					AND sample NOT IN event1samples
+					AND years_to_event >= 5
 				  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
 				GROUP BY sample
 			),

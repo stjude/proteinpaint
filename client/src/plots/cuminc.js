@@ -433,7 +433,7 @@ function setRenderers(self) {
 		)
 
 		xTitle.select('text, title').remove()
-		const xTitleLabel = 'Time to Event (years)'
+		const xTitleLabel = 'Years since diagnosis'
 		const xText = xTitle
 			.attr(
 				'transform',
