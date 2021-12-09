@@ -44,10 +44,8 @@ export async function get_regression(q, ds) {
 		const queryTime = +new Date() - startTime
 
 		// build the input for R script
-		console.log('q:', q)
-		console.log('q.independent:', q.independent)
-
 		const Rinput = makeRinput(q, sampledata)
+
 		const sampleSize = Rinput.outcome.values.length
 		validateRinput(q, Rinput, sampleSize)
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
@@ -141,10 +139,8 @@ function makeRinput(q, sampledata) {
 	const outcome = {
 		id: q.outcome.id,
 		name: q.outcome.term.name,
-		rtype: q.outcome.q.mode == 'continuous' ? 'numeric' : 'factor',
 		values: []
 	}
-	if (outcome.rtype === 'factor') outcome.refGrp = q.outcome.refGrp
 
 	// input for R script will be in json format
 	const Rinput = {
@@ -192,9 +188,14 @@ function makeRinput(q, sampledata) {
 		}
 		if (skipsample) continue
 
-		// this sample has value for all terms and is eligible for regression analysis
-		// add its value to values[] of each term
-		Rinput.outcome.values.push(Rinput.outcome.rtype === 'numeric' ? out.value : out.key)
+		// this sample has values for all terms and is eligible for regression analysis
+		// add its values to values[] of each term
+		// for categorical outcome term, convert ref and non-ref values to 0 and 1, respectively
+		if (q.outcome.q.mode == 'continuous') {
+			Rinput.outcome.values.push(out.value)
+		} else {
+			Rinput.outcome.values.push(out.key == q.outcome.refGrp ? 0 : 1)
+		}
 		for (const t of Rinput.independent) {
 			const v = id2value.get(t.id)
 			t.values.push(t.rtype === 'numeric' ? v.value : v.key)
@@ -209,15 +210,10 @@ function validateRinput(q, Rinput, sampleSize) {
 	if (sampleSize < minimumSample) throw 'too few samples to fit model'
 	if (Rinput.independent.find(x => x.values.length !== sampleSize)) throw 'variables have unequal sample sizes'
 	// validate outcome variable
-	if (q.regressionType === 'linear') {
-		if (Rinput.outcome.rtype !== 'numeric') throw 'outcome is not continuous'
-		if (Rinput.outcome.refGrp) throw 'reference group given for outcome'
-	} else {
-		if (Rinput.outcome.rtype === 'numeric') throw 'outcome is continuous'
-		if (!Rinput.outcome.refGrp) throw 'reference group not given for outcome'
+	if (q.regressionType == 'logistic') {
 		const values = new Set(Rinput.outcome.values) // get unique values
 		if (values.size !== 2) throw 'outcome is not binary'
-		if (!values.has(Rinput.outcome.refGrp)) throw 'reference group not found in outcome values'
+		if (!(values.has(0) && values.has(1))) throw 'outcome values are not 0/1'
 	}
 	// validate independent variables
 	for (const variable of Rinput.independent) {

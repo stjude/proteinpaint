@@ -70,6 +70,84 @@
 library(jsonlite)
 
 
+########## Functions ############
+
+# function to build coefficients table
+build_coef_table <- function(res_summ) {
+  coefficients_table <- res_summ$coefficients
+  if (any(aliased <- res_summ$aliased)) {
+    # to keep coefficients with "NA" estimates in the table
+    cn <- names(aliased)
+    coefficients_table <- matrix(NA, length(aliased), 4, dimnames = list(cn, colnames(coefficients_table)))
+    coefficients_table[!aliased, ] <- res_summ$coefficients
+  }
+  return(coefficients_table)
+}
+
+# function to generate cubic spline
+# args: values = variable values; knots = knot values
+cubic_spline <- function(values, knots) {
+  nknots <- length(knots) # there will be (nknots-1) cubic spline functions
+  f <- matrix(nrow = length(values), ncol = (nknots-1))
+  f[,1] <- values
+  for (j in 1:(nknots-2)) {
+    for (i in 1:length(values)) {
+      f[i,(j+1)] <- max(0,(values[i]-knots[j])^3)-max(0,(values[i]-knots[nknots-1])^3)*(knots[nknots]-knots[j])/(knots[nknots]-knots[nknots-1])+
+        max(0,(values[i]-knots[nknots])^3)*(knots[nknots-1]-knots[j])/(knots[nknots]-knots[nknots-1])
+    }
+  }
+  return(f)
+}
+
+# function to plot spline regression
+plot_spline <- function(splineTerm, regressionType, dat, res) {
+  ## prepare test data
+  sampleSize <- 1000
+  # newdat: test data table for predicting model outcome values
+  # columns are all independent variables
+  # for spline variables, use regularly spaced data; for continuous variables, use data median; for categorical variables, use reference category
+  newdat <- dat[1:sampleSize, -1, drop = F]
+  # newdat2: test data table for adjusting model outcome values
+  # columns are the proportions and effect sizes of non-reference categorical coefficients 
+  newdat2 <- matrix(data = NA, nrow = 0, ncol = 2, dimnames = list(c(),c("prop", "effectSize")))
+  # populate the test data tables
+  for (term in colnames(newdat)) {
+    if (term == splineTerm$id) {
+      newdat[,term] <- seq(from = min(dat[,term]), to = max(dat[,term]), length.out = sampleSize)
+    } else if (is.factor(dat[,term])) {
+      ref <- levels(dat[,term])[1]
+      newdat[,term] <- ref
+      props <- table(dat[,term], exclude = ref)/length(dat[,term])
+      for (category in names(props)) {
+        newdat2 <- rbind(newdat2, c(props[category], res$coefficients[paste0(term,category)]))
+      }
+    } else {
+      newdat[,term] <- median(dat[,term])
+    }
+  }
+  
+  ## test model
+  # predict outcome values of the model using the test data
+  preddat <- predict(res, newdata = newdat, se.fit = T)
+  # adjust the predicted outcome values 
+  # adjusted outcome values = outcome values + ((prop category A * coef category A) + (prop category B * coef category B) + etc.)
+  preddat_adj <- preddat$fit + sum(apply(newdat2, 1, prod))
+  
+  ## plot data
+  png(filename = splineTerm$spline$plotfile)
+  plot(dat[,splineTerm$id], dat[,"outcome"], xlab = splineTerm$name, ylab = "outcome")
+  if (regressionType == "linear") {
+    # for linear regression, plot the adjusted predicted values
+    lines(lowess(newdat[,splineTerm$id], preddat_adj), col = "red", lwd = 3)
+  } else {
+    # for logistic regression, convert the adjusted predicted values to adjusted predicted probabilities
+    predp_adj <- 1/(1+exp(-preddat_adj))
+    lines(lowess(newdat[,splineTerm$id], predp_adj), col = "red", lwd = 3)
+  }
+  dev.off()
+}
+
+
 ######## Data preparation ##########
 
 args <- commandArgs(trailingOnly = T)
@@ -82,17 +160,13 @@ if (length(lst) != 1) stop("input json does not have 1 record")
 lst <- lst[[1]]
 
 # build data table
-#  - variable ids as column names
-#  - variable values as column values
-#  - assign variable types
-#  - assign reference groups and scale values (if applicable)
+# first column is outcome variable, rest of columns are independent variables
+# assign variable types, reference groups and scale values (if applicable)
 dat <- as.data.frame(matrix(data = NA, nrow = length(lst$outcome$values), ncol = length(lst$independent) + 1))
-for (i in 1:ncol(dat)) {
-  if (i == 1) {
-    term <- lst$outcome
-  } else {
-    term <- lst$independent[[i - 1]]
-  }
+colnames(dat)[1] <- lst$outcome$id
+dat[,1] <- lst$outcome$values
+for (i in 2:ncol(dat)) {
+  term <- lst$independent[[i - 1]]
   colnames(dat)[i] <- term$id
   if (term$rtype == "numeric") {
     # numeric variable
@@ -138,68 +212,6 @@ mod <- as.formula(paste(outcomeTerm, paste(independentTerms, collapse = "+"), se
 
 ########## Regression analysis ###########
 
-#### helper functions ####
-
-# function to build coefficients table
-build_coef_table <- function(res_summ) {
-  coefficients_table <- res_summ$coefficients
-  if (any(aliased <- res_summ$aliased)) {
-    # to keep coefficients with "NA" estimates in the table
-    cn <- names(aliased)
-    coefficients_table <- matrix(NA, length(aliased), 4, dimnames = list(cn, colnames(coefficients_table)))
-    coefficients_table[!aliased, ] <- res_summ$coefficients
-  }
-  return(coefficients_table)
-}
-
-# function to generate cubic spline
-# args: values = variable values; knots = knot values
-cubic_spline <- function(values, knots) {
-  nknots <- length(knots) # there will be (nknots-1) cubic spline functions
-  f <- matrix(nrow = length(values), ncol = (nknots-1))
-  f[,1] <- values
-  for (j in 1:(nknots-2)) {
-    for (i in 1:length(values)) {
-      f[i,(j+1)] <- max(0,(values[i]-knots[j])^3)-max(0,(values[i]-knots[nknots-1])^3)*(knots[nknots]-knots[j])/(knots[nknots]-knots[nknots-1])+
-        max(0,(values[i]-knots[nknots])^3)*(knots[nknots-1]-knots[j])/(knots[nknots]-knots[nknots-1])
-    }
-  }
-  return(f)
-}
-
-# function to plot spline regression
-plot_spline <- function(splineTerm, dat, res) {
-  # prepare test data
-  sampleSize <- 1000
-  newdat <- dat[1:sampleSize, -1, drop = F]
-  for (term in names(newdat)) {
-    if (term == splineTerm$id) {
-      # for spline term, generate regularly spaced data points within the data range
-      newdat[,term] <- seq(from = min(dat[,term]), to = max(dat[,term]), length.out = sampleSize)
-    } else if (is.factor(dat[,term])) {
-      # for non-spline factor term, use the most frequent category
-      newdat[,term] <- names(which.max(table(dat[,term])))
-    } else {
-      # for non-spline numeric term, use the median value
-      newdat[,term] <- median(dat[,term])
-    }
-  }
-  # run test data through the model
-  preddat <- predict(res, newdata = newdat, type = "response", se.fit = T)
-  # plot the results
-  #ppi <- 300
-  png(filename = splineTerm$spline$plotfile)
-  plot(dat[,splineTerm$id], dat[,"outcome"], xlab = splineTerm$name, ylab = "outcome")
-  lines(lowess(newdat[,splineTerm$id], preddat$fit), col = "red", lwd = 3)
-  dev.off()
-}
-
-
-save.image("temp.regression.RData")
-
-
-#### perform regression analysis ####
-
 if (lst$type == "linear"){
   # linear regression
   if (!is.numeric(dat$outcome)){
@@ -212,7 +224,7 @@ if (lst$type == "linear"){
     # plot spline regression
     # do not generate results tables
     for (term in splineTerms) {
-      plot_spline(term, dat, res)
+      plot_spline(term, lst$type, dat, res)
     }
     quit(save = "no")
   } else {
@@ -242,10 +254,7 @@ if (lst$type == "linear"){
   }
 } else if (lst$type == "logistic"){
   # logistic regression
-  if (!is.factor(dat$outcome)){
-    stop("logistic regression requires a factor outcome variable")
-  }
-  if (nlevels(dat$outcome) != 2){
+  if (length(unique(dat$outcome)) != 2){
     stop("outcome variable is not binary")
   }
   # fit logistic model
@@ -255,7 +264,7 @@ if (lst$type == "linear"){
     # plot spline regression
     # do not generate results tables
     for (term in splineTerms) {
-      plot_spline(term, dat, res)
+      plot_spline(term, lst$type, dat, res)
     }
     quit(save = "no")
   } else {
