@@ -58,7 +58,7 @@ export function getHandler(self) {
 						// example of using a boolean attribute to track whether to exit early
 						// if (tabs[1].isRendered) return
 						// tabs[1].isRendered = true
-						self.handlerByType['numeric.discrete'].showEditMenu(div)
+						await self.handlerByType['numeric.discrete'].showEditMenu(div)
 						// delete tabs[1].callback
 					}
 				},
