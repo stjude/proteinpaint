@@ -110,38 +110,47 @@ export const groupset = {
 
 export const cuminc = {
 	getCTE(tablename, term, q, values, filter) {
-		if (!term.isleaf) {
-			values.push(...[term.id, q.grade])
+		// NOTE: may be user configurable later via client-side UI
+		const minYearsToEvent = 'minYearsToEvent' in q ? q.minYearsToEvent : 5
+		let event1CTE
+		if (term.isleaf) {
+			event1CTE = `event1 AS (
+				SELECT sample, 1 as key, MIN(years_to_event) as value
+				FROM chronicevents
+				WHERE term_id = ?
+					AND grade >= ?
+				  AND grade <= 5
+				  AND years_to_event >= ?
+				  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
+				GROUP BY sample
+			)`
+			values.push(term.id, q.grade, minYearsToEvent, minYearsToEvent)
 		} else {
-			values.push(...[q.grade, term.id])
-		}
-
-		const termsCTE = term.isleaf
-			? ''
-			: `parentTerms AS (
-					SELECT distinct(ancestor_id) 
-					FROM ancestry
-					),
-					eventTerms AS (
-					SELECT a.term_id 
-					FROM ancestry a
-					JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
-					WHERE a.ancestor_id = ?
-				),`
-
-		const termsClause = term.isleaf ? `term_id = ?` : 'term_id IN eventTerms'
-
-		return {
-			sql: `${termsCTE}
+			event1CTE = `parentTerms AS (
+				SELECT distinct(ancestor_id) 
+				FROM ancestry
+			),
+			eventTerms AS (
+				SELECT a.term_id 
+				FROM ancestry a
+				JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
+				WHERE a.ancestor_id = ?
+			),
 			event1 AS (
 				SELECT sample, 1 as key, MIN(years_to_event) as value
 				FROM chronicevents
-				WHERE grade >= ?
+				WHERE term_id in eventTerms
+					AND grade >= ?
 				  AND grade <= 5
-				  AND ${termsClause}
+				  AND years_to_event >= ?
 				  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
 				GROUP BY sample
-			),
+			)`
+			values.push(term.id, q.grade, minYearsToEvent, minYearsToEvent)
+		}
+
+		return {
+			sql: `${event1CTE},
 			event1samples AS (
 				SELECT sample
 				FROM event1
@@ -151,6 +160,7 @@ export const cuminc = {
 				FROM chronicevents
 				WHERE grade <= 5 
 					AND sample NOT IN event1samples
+					AND years_to_event >= ?
 				  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
 				GROUP BY sample
 			),
