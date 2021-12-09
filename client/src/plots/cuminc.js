@@ -127,6 +127,7 @@ class TdbCumInc {
 			grade: this.settings.gradeCutoff,
 			term: c.term,
 			filter: this.state.termfilter.filter
+			//minYearsToEvent: 5 // may have user input for this later
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
@@ -654,9 +655,12 @@ function getPj(self) {
 			},
 			xScale(row, context) {
 				const s = self.settings
-				return d3Linear()
-					.domain([context.self.xMin, context.self.xMax])
-					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
+				return (
+					d3Linear()
+						// force min x=0, instead of using min time in server data
+						.domain([0, context.self.xMax])
+						.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
+				)
 			},
 			scaledX(row, context) {
 				return context.context.context.context.parent.xScale(context.self.x)
