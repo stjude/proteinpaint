@@ -4,7 +4,7 @@ import { axisTop, axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import { gene_searchbox, findgenemodel_bysymbol } from './gene'
-import * as Legend from './block.legend'
+import { legend_newrow } from './block.legend'
 
 export async function init(arg, holder) {
 	try {
@@ -1628,7 +1628,7 @@ async function make_legend(obj, div, shown) {
 		.style('border-spacing', '15px')
 		.style('border-collapse', 'separate')
 
-	const [tr, td] = Legend.legend_newrow(obj, obj.legendimg.name || '')
+	const [tr, td] = legend_newrow(obj, obj.legendimg.name || '')
 	const data = await client.dofetch2('img?file=' + obj.legendimg.file)
 	if (data.error) {
 		td.text(data.error)
