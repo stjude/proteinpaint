@@ -4,6 +4,7 @@ import { axisTop, axisRight, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import { gene_searchbox, findgenemodel_bysymbol } from './gene'
+import { legend_newrow } from './block.legend'
 
 export async function init(arg, holder) {
 	try {
@@ -12,11 +13,23 @@ export async function init(arg, holder) {
 
 		obj.genome = arg.genome
 		obj.holder = holder.style('position', 'relative')
-
 		await init_view(obj)
 		init_controlpanel(obj)
 
 		await pcd_pipeline(obj)
+
+		if (arg.legendimg) {
+			const img_div = obj.holder.append('div').style('margin-top', '5px')
+
+			obj.legendimg = arg.legendimg
+			obj.legend = {
+				holder: img_div,
+				legendcolor: '#7D6836'
+			}
+
+			let shown = !arg.foldlegend
+			make_legend(obj, img_div, shown)
+		}
 	} catch (e) {
 		client.sayerror(holder, e.message || e)
 	}
@@ -1583,5 +1596,57 @@ function add_scriptTag(path) {
 		script.setAttribute('src', sessionStorage.getItem('hostURL') + path)
 		document.head.appendChild(script)
 		script.onload = resolve
+	})
+}
+
+async function make_legend(obj, div, shown) {
+	div
+		.append('div')
+		.text('LEGEND')
+		.attr('class', 'sja_clb')
+		.style('display', 'inline-block')
+		.style('font-size', '.7em')
+		.style('color', obj.legend.legendcolor)
+		.style('font-family', client.font)
+		.on('click', () => {
+			if (shown) {
+				shown = false
+				client.disappear(div2)
+			} else {
+				shown = true
+				client.appear(div2)
+			}
+		})
+
+	const div2 = obj.holder
+		.append('div')
+		.style('border-top', 'solid 1px ' + obj.legend.legendcolor)
+		.style('background-color', '#FCFBF7')
+
+	obj.legend.holder = div2
+		.append('table')
+		.style('border-spacing', '15px')
+		.style('border-collapse', 'separate')
+
+	const [tr, td] = legend_newrow(obj, obj.legendimg.name || '')
+	const data = await client.dofetch2('img?file=' + obj.legendimg.file)
+	if (data.error) {
+		td.text(data.error)
+		return
+	}
+	let fold = true
+	const img = td
+		.append('img')
+		.attr('class', 'sja_clbb')
+		.attr('src', data.src)
+		.style('height', '80px')
+	img.on('click', () => {
+		if (fold) {
+			fold = false
+			img.transition().style('height', obj.legendimg.height ? obj.legendimg.height + 'px' : 'auto')
+		} else {
+			fold = true
+			img.transition().style('height', '80px')
+		}
 	})
 }
