@@ -34,7 +34,7 @@ export function getHandler(self) {
 			div.selectAll('*').remove()
 			self.dom.num_holder = div
 			self.dom.knots_div = div.append('div').style('padding', '5px')
-			setqDefaults(self)
+			await setqDefaults(self)
 			setDensityPlot(self)
 			// renderTypeInputs(self)
 			renderEditMenu(self)
@@ -43,7 +43,7 @@ export function getHandler(self) {
 	}
 }
 
-function setqDefaults(self) {
+async function setqDefaults(self) {
 	const cache = self.numqByTermIdModeType
 	const t = self.term
 	if (!cache[t.id]) cache[t.id] = {}
@@ -53,15 +53,12 @@ function setqDefaults(self) {
 		}
 	}
 
-	// create default knots when menu renderes for first time
-	const dd = self.num_obj.density_data
-	const default_first_knot = dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 5 : dd.minvalue
-	const auto_knots_count = 4
-	const knots_lst = cache[t.id]['cubic-spline'].knots_lst
-	for (let i = 1; i < auto_knots_count + 1; i++)
-		knots_lst.push({ value: (default_first_knot * i).toFixed(t.type == 'integer' ? 0 : 2) })
+	// const knots_lst = cache[t.id]['cubic-spline'].knots_lst
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id]['cubic-spline']))
 	self.q = Object.assign(cacheCopy, self.q)
+	// create default knots when menu renderes for first time
+	const default_knots_count = 4
+	await getKnots(self, default_knots_count)
 	delete self.q.type
 	//*** validate self.q ***//
 }
@@ -89,11 +86,6 @@ function renderAutoSplineInputs(self, div) {
 		.append('select')
 		.style('margin-left', '10px')
 		.style('margin-bottom', '7px')
-		.on('change', () => {
-			knot_caclualte_btn.property('disabled', knot_count == knot_ct_select.node().value)
-			// TODO: cacluate knots based on dropdown count
-			// const auto_knots_count = knot_ct_select.node().value
-		})
 
 	for (let i = default_knot_count - 1; i < default_knot_count + 5; i++) {
 		knot_ct_select
@@ -111,12 +103,16 @@ function renderAutoSplineInputs(self, div) {
 		.style('color', 'rgb(136, 136, 136)')
 		.html('knots')
 
-	const knot_caclualte_btn = self.dom.knot_select_div
+	self.dom.knot_select_div
 		.append('button')
 		.style('margin', '15px')
 		// .property('disabled', knot_count == knot_ct_select.node().value)
 		.html('Compute')
-		.on('click', () => getKnots(self))
+		.on('click', async () => {
+			await getKnots(self, parseInt(knot_ct_select.node().value))
+			updateCustomSplineInputs(self)
+			setDensityPlot(self)
+		})
 
 	self.dom.knot_select_div
 		.append('div')
@@ -128,8 +124,29 @@ function renderAutoSplineInputs(self, div) {
 		.html('Will overwrite existing values.')
 }
 
-function getKnots(self) {
-	//TODO: qnery knots from backend
+async function getKnots(self, knot_count) {
+	// qnery knots from backend
+	// TODO: rightnow, knots are calcualted by node backend, 1st knot at 5 percentile,
+	// last knot at 95, and inbetween knots at equidistance
+	// Later, the auto knot calculation will be replaced by R formula
+	const middle_knot_count = knot_count - 2
+	const t = self.term
+	const knots_lst = (self.q.knots_lst = [])
+	const perc_value_5 = await getPercentile2Value(5)
+	const perc_value_95 = await getPercentile2Value(95)
+	const default_second_knot = (perc_value_95 - perc_value_5) / (middle_knot_count + 1)
+	knots_lst.push({ value: perc_value_5.toFixed(t.type == 'integer' ? 0 : 2) })
+	for (let i = 1; i < middle_knot_count + 1; i++) {
+		const value = (perc_value_5 + default_second_knot * i).toFixed(t.type == 'integer' ? 0 : 2)
+		knots_lst.push({ value })
+	}
+	knots_lst.push({ value: perc_value_95.toFixed(t.type == 'integer' ? 0 : 2) })
+
+	async function getPercentile2Value(percentile) {
+		const data = await self.vocabApi.getPercentile(self.term.id, percentile, self.filter)
+		if (data.error || !Number.isFinite(data.value)) throw 'cannot get median value: ' + (data.error || 'no data')
+		return data.value
+	}
 }
 
 /******************* Functions for Custom Spline knots *******************/
@@ -196,6 +213,10 @@ function renderCustomSplineInputs(self, div) {
 		}
 		return false
 	}
+}
+
+function updateCustomSplineInputs(self) {
+	self.dom.customKnotsInput.text(self.q.knots_lst.map(d => d.value).join('\n'))
 }
 
 function processKnotsInputs(self) {
