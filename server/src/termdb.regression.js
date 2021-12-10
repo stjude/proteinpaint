@@ -56,13 +56,11 @@ export async function get_regression(q, ds) {
 			plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
 		}
 
-		const terminateAtWarnings = Rinput.independent.some(x => x.spline)
-
 		const Routput = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			[JSON.stringify(Rinput)],
 			[],
-			terminateAtWarnings
+			false
 		)
 
 		//remember to delete the temp plot file
@@ -70,23 +68,7 @@ export async function get_regression(q, ds) {
 
 		// parse the R output
 		const result = { queryTime, sampleSize }
-		if (Rinput.independent.find(x => x.spline)) {
-			// spline term present
-			result.splinePlots = []
-			for (const term of Rinput.independent) {
-				if (term.spline) {
-					const data = await fs.promises.readFile(term.spline.plotfile)
-					result.splinePlots.push({
-						label: term.name + ' spline regression',
-						src: 'data:image/jpeg;base64,' + new Buffer.from(data).toString('base64'),
-						size: imagesize(term.spline.plotfile)
-					})
-				}
-			}
-		} else {
-			// spline term not present
-			parseRoutput(Routput, id2originalId, q, result)
-		}
+		await parseRoutput(Routput, id2originalId, q, result)
 		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
@@ -229,7 +211,7 @@ function validateRinput(q, Rinput, sampleSize) {
 	}
 }
 
-function parseRoutput(Routput, id2originalId, q, result) {
+async function parseRoutput(Routput, id2originalId, q, result) {
 	if (Routput.length !== 1) throw 'expected 1 line in R output'
 	const data = JSON.parse(Routput[0])
 
@@ -308,6 +290,18 @@ function parseRoutput(Routput, id2originalId, q, result) {
 	// other summary statistics
 	result.other = data.other
 	result.other.label = 'Other summary statistics'
+
+	// plots
+	if (data.plots) {
+		result.plots = []
+		for (const file of data.plots) {
+			const plot = await fs.promises.readFile(file)
+			result.plots.push({
+				src: 'data:image/jpeg;base64,' + new Buffer.from(plot).toString('base64'),
+				size: imagesize(file)
+			})
+		}
+	}
 
 	// warnings
 	if (data.warnings) {

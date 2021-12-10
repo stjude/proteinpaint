@@ -100,7 +100,7 @@ cubic_spline <- function(values, knots) {
 }
 
 # function to plot spline regression
-plot_spline <- function(splineTerm, regressionType, dat, res) {
+plot_spline <- function(splineTerm, lst, dat, res) {
   ## prepare test data
   sampleSize <- 1000
   # newdat: test data table for predicting model outcome values
@@ -134,9 +134,15 @@ plot_spline <- function(splineTerm, regressionType, dat, res) {
   preddat_adj <- preddat$fit + sum(apply(newdat2, 1, prod))
   
   ## plot data
-  png(filename = splineTerm$spline$plotfile)
-  plot(dat[,splineTerm$id], dat[,"outcome"], xlab = splineTerm$name, ylab = "outcome")
-  if (regressionType == "linear") {
+  plotfile <- splineTerm$spline$plotfile
+  png(filename = plotfile)
+  plot(dat[,splineTerm$id],
+       dat[,"outcome"],
+       main = "Cubic spline regression",
+       xlab = splineTerm$name,
+       ylab = lst$outcome$name
+  )
+  if (lst$type == "linear") {
     # for linear regression, plot the adjusted predicted values
     lines(lowess(newdat[,splineTerm$id], preddat_adj), col = "red", lwd = 3)
   } else {
@@ -145,6 +151,7 @@ plot_spline <- function(splineTerm, regressionType, dat, res) {
     lines(lowess(newdat[,splineTerm$id], predp_adj), col = "red", lwd = 3)
   }
   dev.off()
+  return(plotfile)
 }
 
 
@@ -212,6 +219,7 @@ mod <- as.formula(paste(outcomeTerm, paste(independentTerms, collapse = "+"), se
 
 ########## Regression analysis ###########
 
+plots <- vector(mode = "character")
 if (lst$type == "linear"){
   # linear regression
   if (!is.numeric(dat$outcome)){
@@ -220,38 +228,34 @@ if (lst$type == "linear"){
   # fit linear model
   res <- lm(mod, data = dat)
   if (length(splineTerms) > 0) {
-    # model contains spline term
-    # plot spline regression
-    # do not generate results tables
+    # model contains spline term(s)
+    # plot spline regression for each spline term
     for (term in splineTerms) {
-      plot_spline(term, lst$type, dat, res)
+      plotfile <- plot_spline(term, lst, dat, res)
+      plots <- c(plots, plotfile)
     }
-    quit(save = "no")
-  } else {
-    # model does not contain spline term
-    # generate results tables
-    res_summ <- summary(res)
-    # prepare residuals table
-    residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$residuals),3)))
-    # prepare coefficients table
-    coefficients_table <- build_coef_table(res_summ)
-    colnames(coefficients_table)[1] <- "Beta"
-    # compute confidence intervals of beta values
-    ci <- suppressMessages(confint(res))
-    colnames(ci) <- c("95% CI (low)","95% CI (high)")
-    coefficients_table <- cbind(coefficients_table, ci)
-    coefficients_table <- coefficients_table[,c(1,5,6,2,3,4)]
-    # prepare type III statistics table
-    typeIII_table <- as.matrix(drop1(res, scope = ~., test = "F"))
-    typeIII_table[,c("Sum of Sq","RSS","AIC")] <- round(typeIII_table[,c("Sum of Sq","RSS","AIC")], 1)
-    typeIII_table[,"F value"] <- round(typeIII_table[,"F value"], 3)
-    typeIII_table[,"Pr(>F)"] <- signif(typeIII_table[,"Pr(>F)"], 4)
-    # prepare other summary stats table
-    other_table <- list(
-      "header" = c("Residual standard error", "Residual degrees of freedom", "R-squared", "Adjusted R-squared", "F-statistic", "P-value"),
-      "rows" = c(round(res_summ$sigma, 2), round(res$df.residual, 0), round(res_summ$r.squared, 5), round(res_summ$adj.r.squared, 5), round(unname(res_summ$fstatistic[1]), 2), signif(unname(pf(res_summ$fstatistic[1], res_summ$fstatistic[2], res_summ$fstatistic[3], lower.tail = F)), 4))
-      )
   }
+  res_summ <- summary(res)
+  # prepare residuals table
+  residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$residuals),3)))
+  # prepare coefficients table
+  coefficients_table <- build_coef_table(res_summ)
+  colnames(coefficients_table)[1] <- "Beta"
+  # compute confidence intervals of beta values
+  ci <- suppressMessages(confint(res))
+  colnames(ci) <- c("95% CI (low)","95% CI (high)")
+  coefficients_table <- cbind(coefficients_table, ci)
+  coefficients_table <- coefficients_table[,c(1,5,6,2,3,4)]
+  # prepare type III statistics table
+  typeIII_table <- as.matrix(drop1(res, scope = ~., test = "F"))
+  typeIII_table[,c("Sum of Sq","RSS","AIC")] <- round(typeIII_table[,c("Sum of Sq","RSS","AIC")], 1)
+  typeIII_table[,"F value"] <- round(typeIII_table[,"F value"], 3)
+  typeIII_table[,"Pr(>F)"] <- signif(typeIII_table[,"Pr(>F)"], 4)
+  # prepare other summary stats table
+  other_table <- list(
+    "header" = c("Residual standard error", "Residual degrees of freedom", "R-squared", "Adjusted R-squared", "F-statistic", "P-value"),
+    "rows" = c(round(res_summ$sigma, 2), round(res$df.residual, 0), round(res_summ$r.squared, 5), round(res_summ$adj.r.squared, 5), round(unname(res_summ$fstatistic[1]), 2), signif(unname(pf(res_summ$fstatistic[1], res_summ$fstatistic[2], res_summ$fstatistic[3], lower.tail = F)), 4))
+    )
 } else if (lst$type == "logistic"){
   # logistic regression
   if (length(unique(dat$outcome)) != 2){
@@ -260,40 +264,36 @@ if (lst$type == "linear"){
   # fit logistic model
   res <- glm(mod, family = binomial(link='logit'), data = dat)
   if (length(splineTerms) > 0) {
-    # model contains spline term
-    # plot spline regression
-    # do not generate results tables
+    # model contains spline term(s)
+    # plot spline regression for each spline term
     for (term in splineTerms) {
-      plot_spline(term, lst$type, dat, res)
+      plotfile <- plot_spline(term, lst, dat, res)
+      plots <- c(plots, plotfile)
     }
-    quit(save = "no")
-  } else {
-    # model does not contain spline term
-    # generate results tables
-    res_summ <- summary(res)
-    # prepare residuals table
-    residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$deviance.resid),3)))
-    # prepare coefficients table
-    coefficients_table <- build_coef_table(res_summ)
-    colnames(coefficients_table)[1] <- "Log odds"
-    # compute odds ratio
-    coefficients_table <- cbind("Odds ratio" = exp(coef(res)), coefficients_table)
-    # compute confidence intervals of odds ratios
-    ci <- exp(suppressMessages(confint(res)))
-    colnames(ci) <- c("95% CI (low)","95% CI (high)")
-    coefficients_table <- cbind(coefficients_table, ci)
-    coefficients_table <- coefficients_table[,c(1,6,7,2,3,4,5)]
-    # prepare type III statistics table
-    typeIII_table <- as.matrix(drop1(res, scope = ~., test = "LRT"))
-    typeIII_table[,c("Deviance","AIC")] <- round(typeIII_table[,c("Deviance","AIC")], 1)
-    typeIII_table[,"LRT"] <- round(typeIII_table[,"LRT"], 3)
-    typeIII_table[,"Pr(>Chi)"] <- signif(typeIII_table[,"Pr(>Chi)"], 4)
-    # prepare other summary stats table
-    other_table <- list(
-      "header" = c("Dispersion parameter", "Null deviance", "Null deviance degrees of freedom", "Residual deviance", "Residual deviance degrees of freedom", "AIC"),
-      "rows" = round(c(res_summ$dispersion, res_summ$null.deviance, res_summ$df.null, res_summ$deviance, res_summ$df.residual, res_summ$aic), 1)
-      )
   }
+  res_summ <- summary(res)
+  # prepare residuals table
+  residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$deviance.resid),3)))
+  # prepare coefficients table
+  coefficients_table <- build_coef_table(res_summ)
+  colnames(coefficients_table)[1] <- "Log odds"
+  # compute odds ratio
+  coefficients_table <- cbind("Odds ratio" = exp(coef(res)), coefficients_table)
+  # compute confidence intervals of odds ratios
+  ci <- exp(suppressMessages(confint(res)))
+  colnames(ci) <- c("95% CI (low)","95% CI (high)")
+  coefficients_table <- cbind(coefficients_table, ci)
+  coefficients_table <- coefficients_table[,c(1,6,7,2,3,4,5)]
+  # prepare type III statistics table
+  typeIII_table <- as.matrix(drop1(res, scope = ~., test = "LRT"))
+  typeIII_table[,c("Deviance","AIC")] <- round(typeIII_table[,c("Deviance","AIC")], 1)
+  typeIII_table[,"LRT"] <- round(typeIII_table[,"LRT"], 3)
+  typeIII_table[,"Pr(>Chi)"] <- signif(typeIII_table[,"Pr(>Chi)"], 4)
+  # prepare other summary stats table
+  other_table <- list(
+    "header" = c("Dispersion parameter", "Null deviance", "Null deviance degrees of freedom", "Residual deviance", "Residual deviance degrees of freedom", "AIC"),
+    "rows" = round(c(res_summ$dispersion, res_summ$null.deviance, res_summ$df.null, res_summ$deviance, res_summ$df.residual, res_summ$aic), 1)
+    )
 } else{
   stop("regression type is not recognized")
 }
@@ -331,13 +331,23 @@ for (v in vlst) {
     }
   } else {
     # single variable
-    if (v %in% names(res$xlevels)) {
-      clst <- res$xlevels[[v]][-1] # extract categories (without reference category)
+    if (grepl("^cubic_spline", v)) {
+      # spline variable
+      vid <- sub("cubic_spline\\(", "", sub(", c\\(.*", "", v))
+      clst <- paste("spline function", 1:ncol(res$model[,v])) # determine the number of spline functions
+      for (c in clst) {
+        vCol <- c(vCol, vid)
+        cCol <- c(cCol, c)
+      }
+    } else if (v %in% names(res$xlevels)) {
+      # categorical variable
+      clst <- res$xlevels[[v]][-1] # extract non-ref categories
       for (c in clst) {
         vCol <- c(vCol, v)
         cCol <- c(cCol, c)
       }
     } else {
+      # continuous variable
       vCol <- c(vCol, v)
       cCol <- c(cCol, "")
     }
@@ -348,7 +358,7 @@ coefficients_table <- list("header" = colnames(coefficients_table), "rows" = coe
 
 # reformat the type III statistics table
 # add a variable column
-typeIII_table <- cbind("Variable" = row.names(typeIII_table), typeIII_table)
+typeIII_table <- cbind("Variable" = sub("cubic_spline\\(", "", sub(", c\\(.*", "", row.names(typeIII_table))), typeIII_table)
 typeIII_table <- list("header" = colnames(typeIII_table), "rows" = typeIII_table)
 
 
@@ -357,13 +367,17 @@ typeIII_table <- list("header" = colnames(typeIII_table), "rows" = typeIII_table
 # combine the results tables into a list
 out_lst <- list("residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = typeIII_table, "other" = other_table)
 
+if (length(plots) > 0) {
+  out_lst[["plots"]] <- plots
+}
+
 if (length(warnings()) > 0) {
   warnings_table <- capture.output(summary(warnings()))
   out_lst[["warnings"]] <- warnings_table
 }
 
 # convert to json
-out_json <- toJSON(out_lst, digits = NA, na = "string", auto_unbox = T)
+out_json <- toJSON(out_lst, digits = NA, na = "string")
 
 # output json to stdout
 cat(out_json, file = "", sep = "")
