@@ -1,6 +1,5 @@
 import { select, event } from 'd3-selection'
 import { setDensityPlot } from './termsetting.density'
-import { init_tabs } from '../dom/toggleButtons'
 import { keyupEnter } from '../client'
 
 // self is the termsetting instance
@@ -45,91 +44,32 @@ export function getHandler(self) {
 }
 
 function setqDefaults(self) {
-	const dd = self.num_obj.density_data
 	const cache = self.numqByTermIdModeType
 	const t = self.term
 	if (!cache[t.id]) cache[t.id] = {}
 	if (!cache[t.id]['cubic-spline']) {
-		const defaultCustomBoundary =
-			dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2 : dd.maxvalue
-		const default_first_knot = dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 5 : dd.minvalue
-
 		cache[t.id]['cubic-spline'] = {
-			'auto-knots': {
-				type: 'auto-knots',
-				knots_lst: []
-			},
-			'custom-knots': {
-				type: 'custom-knots',
-				knots_lst: [
-					{
-						value: +defaultCustomBoundary.toFixed(t.type == 'integer' ? 0 : 2)
-					}
-				]
-			}
+			knots_lst: []
 		}
-
-		const auto_knots_count = 4
-		const knots_lst = cache[t.id]['cubic-spline']['auto-knots'].knots_lst
-		for (let i = 1; i < auto_knots_count + 1; i++)
-			knots_lst.push({ value: (default_first_knot * i).toFixed(t.type == 'integer' ? 0 : 2) })
-	} else if (t.q) {
-		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
-		if (!t.q.type) throw `missing numeric term spline q.type: should be 'spline-auto' or 'spline-custom'`
-		cache[t.id]['cubic-spline'][t.q.type] = t.q
 	}
 
-	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
-	if (self.q && !self.q.mode) self.q.mode = 'cubic-spline'
-	if (!self.q || self.q.mode !== 'cubic-spline') self.q = {}
-	if (!self.q.type) self.q.type = 'auto-knots'
-	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id]['cubic-spline'][self.q.type]))
+	// create default knots when menu renderes for first time
+	const dd = self.num_obj.density_data
+	const default_first_knot = dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 5 : dd.minvalue
+	const auto_knots_count = 4
+	const knots_lst = cache[t.id]['cubic-spline'].knots_lst
+	for (let i = 1; i < auto_knots_count + 1; i++)
+		knots_lst.push({ value: (default_first_knot * i).toFixed(t.type == 'integer' ? 0 : 2) })
+	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id]['cubic-spline']))
 	self.q = Object.assign(cacheCopy, self.q)
+	delete self.q.type
 	//*** validate self.q ***//
-	// console.log(self.q)
 }
 
 function renderEditMenu(self) {
 	const edit_div = self.dom.knots_div
 	renderCustomSplineInputs(self, edit_div)
 	renderAutoSplineInputs(self, edit_div)
-}
-
-function renderTypeInputs(self) {
-	// toggle switch
-	const knots_div = self.dom.knots_div
-	const div = self.dom.knots_div.append('div').style('margin', '10px')
-	const tabs = [
-		{
-			active: self.q.type == 'auto-knots' ? true : false,
-			label: 'Number of knots',
-			callback: async div => {
-				self.q.type = 'auto-knots'
-				self.dom.knots_div = knots_div
-				setqDefaults(self)
-				setDensityPlot(self)
-				if (!tabs[0].isInitialized) {
-					renderAutoSplineInputs(self, div)
-					tabs[0].isInitialized = true
-				}
-			}
-		},
-		{
-			active: self.q.type == 'custom-knots' ? true : false,
-			label: 'Custom knots list',
-			callback: async div => {
-				self.q.type = 'custom-knots'
-				self.dom.knots_div = knots_div
-				setqDefaults(self)
-				setDensityPlot(self)
-				if (!tabs[1].isInitialized) {
-					renderCustomSplineInputs(self, div)
-					tabs[1].isInitialized = true
-				}
-			}
-		}
-	]
-	init_tabs({ holder: div, tabs })
 }
 
 /******************* Functions for Auto Spline knots *******************/
