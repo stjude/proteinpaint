@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y \
 	libgif-dev \
 	sqlite3 libsqlite3-dev \
 	r-base \
-	g++ \
+	g++; \
     set -eux; \
     wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"; \
     chmod +x rustup-init; \
@@ -38,7 +38,28 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \ 
     && rm -rf /var/lib/apt/lists/ \ 
     && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
-  
+
+RUN set -eux; \
+    wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"; \
+    chmod +x rustup-init; \
+    ./rustup-init -y --no-modify-path --default-toolchain nightly; \
+    rm rustup-init; \
+    chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
+    rustup --version; \
+    cargo --version; \
+    rustc --version; \
+    cargo install sccache
+
+RUN apt-get update && apt-get install -y r-base \
+	&& R -e "install.packages('cmprsk',dependencies=TRUE, repos='http://cran.rstudio.com/')" \
+	&& R -e "install.packages('hwde',dependencies=TRUE, repos='http://cran.rstudio.com/')" \
+	&& R -e "install.packages('jsonlite',dependencies=TRUE, repos='http://cran.rstudio.com/')" \
+	&& R -e "install.packages('survival',dependencies=TRUE, repos='http://cran.rstudio.com/')" \
+	## clean up
+    && apt-get clean \ 
+    && rm -rf /var/lib/apt/lists/ \ 
+    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
 ARG htsversion=1.11
 
 RUN curl -L https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \
