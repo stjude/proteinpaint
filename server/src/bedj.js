@@ -16,6 +16,13 @@ const namespace = 1 // one pixel between the gene label name and the item struct
 const namepad = 10 // box no struct: [pad---name---pad]
 const packfull_cutoff = 200 //the number of items in the view range; below the cutoff will render in 'packfull' mode
 
+// color for translated codons
+const altcolor = 'rgba(122,103,44,.7)',
+	errcolor = 'red',
+	startcolor = 'rgba(0,255,0,.4)',
+	stopcolor = 'rgba(255,0,0,.5)',
+	skippedBpColor = '#ccc'
+
 /*
 item.canvas{}: The coordinates and attributes of items (i.e. exons and introns) and, 
 if applicable, the gene name/label. Necessary for event handlers, specifically click events
@@ -618,10 +625,6 @@ async function do_query(req, genomes) {
 	// have genes to be translated
 	const mapaa = []
 
-	const altcolor = 'rgba(122,103,44,.7)',
-		errcolor = 'red',
-		startcolor = 'rgba(0,255,0,.4)',
-		stopcolor = 'rgba(255,0,0,.5)'
 	ctx.textAlign = 'center'
 	ctx.textBaseline = 'middle'
 	for (const [i, item] of translateitem.entries()) {
@@ -644,42 +647,81 @@ async function do_query(req, genomes) {
 			}
 			const bppx = region.width / (region.stop - region.start)
 			const _fs = Math.min(stackheight, bppx * 3)
-			const aafontsize = _fs < 8 ? null : _fs
+			const aafontsize = _fs < 8 ? null : _fs // if a codon is too narrow, won't draw aa letter
 			let minustrand = false
 			if (c.stranded && item.strand == '-') {
 				minustrand = true
 			}
-			let cds = 0
+			let cds = 0 // cumulative #bp thus seen, for coding exons
 			if (aafontsize) {
 				ctx.font = aafontsize + 'px Arial'
 			}
-			for (const e of item.coding) {
+			for (const [e_idx, e] of item.coding.entries()) {
 				// each exon, they are ordered 5' to 3'
 				if (minustrand) {
 					if (e[0] >= item.stop) {
+						// e is not yet in view range
 						cds += e[1] - e[0]
+						if (e_idx == 0 && item.startCodonFrame) {
+							cds -= 3 - item.startCodonFrame // see below
+						}
 						continue
 					}
 					if (e[1] <= item.start) {
+						// e is out of view range
 						break
 					}
 				} else {
 					if (e[1] <= item.start) {
+						// e is not yet in view range
 						cds += e[1] - e[0]
+						if (e_idx == 0 && item.startCodonFrame) {
+							cds -= 3 - item.startCodonFrame
+						}
 						continue
 					}
 					if (e[0] >= item.stop) {
+						// e is out of view range
 						break
 					}
 				}
-				const lookstart = Math.max(item.start, e[0]),
-					lookstop = Math.min(item.stop, e[1])
-				if (minustrand) {
-					cds += e[1] - lookstop
-				} else {
-					cds += lookstart - e[0]
+
+				// this exon "e" overlaps with view range; will print codon on it
+				let [e0, e1] = e // e0/e1 for translatable bp range of this exon
+				if (e_idx == 0 && item.startCodonFrame) {
+					// this is first coding exon and the gene is not using default frame;
+					// must skip 1 or 2 bp from 5' of this exon, thus adding to e0 or removing from e1
+					if (minustrand) {
+						e1 -= 3 - item.startCodonFrame
+					} else {
+						e0 += 3 - item.startCodonFrame
+					}
+					// now fill gray to the basepairs skipped from 5' end of this exon
+					let a = Math.max(e[0], region.start),
+						b = Math.min(e[1], region.stop)
+					if (minustrand) {
+						a = Math.max(e1, region.start)
+					} else {
+						b = Math.min(e0, region.stop)
+					}
+					if (a < b) {
+						ctx.fillStyle = skippedBpColor
+						const pxa = cumx + region.scale(region.reverse ? b : a)
+						const pxb = cumx + region.scale(region.reverse ? a : b)
+						ctx.fillRect(pxa, y, Math.max(1, pxb - pxa), stackheight)
+					}
 				}
+
+				const lookstart = Math.max(item.start, e0),
+					lookstop = Math.min(item.stop, e1)
+				if (minustrand) {
+					cds += e1 - lookstop
+				} else {
+					cds += lookstart - e0
+				}
+
 				let codonspan = 0
+
 				for (let k = 0; k < lookstop - lookstart; k++) {
 					// each coding base
 					cds++

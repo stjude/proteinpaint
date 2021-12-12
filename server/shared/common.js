@@ -493,8 +493,19 @@ export function nt2aa(gm) {
 	if (!gm.genomicseq) return undefined
 	const enlst = []
 	if (gm.coding) {
-		for (const e of gm.coding) {
-			const s = gm.genomicseq.substr(e[0] - gm.start, e[1] - e[0])
+		for (const [i, e] of gm.coding.entries()) {
+			let [e0, e1] = e // exon coord start/stop
+
+			if (i == 0 && gm.startCodonFrame) {
+				// not starting from the default frame, but will need skip 1/2 nucleotides from first coding exon
+				if (gm.strand == '+') {
+					e0 += 3 - gm.startCodonFrame
+				} else {
+					e1 -= 3 - gm.startCodonFrame
+				}
+			}
+
+			const s = gm.genomicseq.substr(e0 - gm.start, e1 - e0)
 			if (gm.strand == '-') {
 				enlst.push(reversecompliment(s))
 			} else {

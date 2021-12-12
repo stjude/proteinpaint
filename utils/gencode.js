@@ -244,7 +244,7 @@ function checkReadingFrame(obj, str) {
 	if (frame == '-1') abort('start codon frame is -1: ' + obj.isoform)
 	if (frame != '0') {
 		if (frame == '1' || frame == '2') {
-			obj.startCodonFrame = frame
+			obj.startCodonFrame = Number.parseInt(frame)
 			console.error(obj.isoform, obj.name, frame)
 		} else {
 			abort('start codon frame not 0/1/2: ' + frame + ' ' + obj.isoform)
