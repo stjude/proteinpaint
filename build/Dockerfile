@@ -2,7 +2,7 @@
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
 
-FROM ${registry}/node:12-stretch AS ppdeps
+FROM ${registry}/node:12-stretch AS ppbase
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
@@ -22,39 +22,7 @@ RUN apt-get update && apt-get install -y \
 	libpango1.0-dev \
 	libgif-dev \
 	sqlite3 libsqlite3-dev \
-	r-base \
-	g++; \
-    set -eux; \
-    wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"; \
-    chmod +x rustup-init; \
-    ./rustup-init -y --no-modify-path --default-toolchain nightly; \
-    rm rustup-init; \
-    chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
-    rustup --version; \
-    cargo --version; \
-    rustc --version; \
-    cargo install sccache \
-    ## clean up
-    && apt-get clean \ 
-    && rm -rf /var/lib/apt/lists/ \ 
-    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
-
-RUN set -eux; \
-    wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"; \
-    chmod +x rustup-init; \
-    ./rustup-init -y --no-modify-path --default-toolchain nightly; \
-    rm rustup-init; \
-    chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
-    rustup --version; \
-    cargo --version; \
-    rustc --version; \
-    cargo install sccache
-
-RUN apt-get update && apt-get install -y r-base \
-	&& R -e "install.packages('cmprsk',dependencies=TRUE, repos='http://cran.rstudio.com/')" \
-	&& R -e "install.packages('hwde',dependencies=TRUE, repos='http://cran.rstudio.com/')" \
-	&& R -e "install.packages('jsonlite',dependencies=TRUE, repos='http://cran.rstudio.com/')" \
-	&& R -e "install.packages('survival',dependencies=TRUE, repos='http://cran.rstudio.com/')" \
+	g++ \
 	## clean up
     && apt-get clean \ 
     && rm -rf /var/lib/apt/lists/ \ 
@@ -70,6 +38,14 @@ RUN curl -L https://github.com/samtools/htslib/releases/download/${htsversion}/h
     curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
     (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
 
+RUN apt-get update && apt-get install -y r-base \
+	## install R packages
+ 	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
+	## clean up
+    && apt-get clean \ 
+    && rm -rf /var/lib/apt/lists/ \ 
+    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
 
 RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ && \
@@ -77,3 +53,22 @@ RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/
 
 # need npm v7 to support workspaces
 RUN npm install --global npm@7
+
+
+# Separate rust build so that the compiled code may be copied later
+# in isolation, without including all the rust toolchain in the image
+FROM ppbase AS pprust
+
+RUN set -eux; \
+    wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"; \
+    chmod +x rustup-init; \
+    ./rustup-init -y --no-modify-path --default-toolchain nightly; \
+    rm rustup-init; \
+    chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
+    rustup --version; \
+    cargo --version; \
+    rustc --version; \
+    cargo install sccache \
+    ## clean up
+    && apt-get clean \ 
+    && rm -rf /var/lib/apt/lists/ \ 
