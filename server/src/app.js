@@ -7580,6 +7580,13 @@ async function pp_init() {
 		if (!g.name) throw '.name missing from a genome: ' + JSON.stringify(g)
 		if (!g.file) throw '.file missing from genome ' + g.name
 
+		/*
+			When using a Docker container, the mounted app directory
+			may have an optional genome directory, which if present
+			will be symlinked to the app directory and potentially override any
+			similarly named genome js file that are part of the standard
+			Proteinpaint packaged files[] 
+		*/
 		const overrideFile = path.join(process.cwd(), g.file)
 		const g2 = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : g.file)
 
@@ -7829,7 +7836,13 @@ async function pp_init() {
 			if (g.datasets[d.name]) throw genomename + ' has duplicating dataset name: ' + d.name
 			if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename
 
-			// FIXME document the purpose of being able to use override file
+			/*
+				When using a Docker container, the mounted app directory
+				may have an optional dataset directory, which if present
+				will be symlinked to the app directory and potentially override any
+				similarly named dataset js file that are part of the standard
+				Proteinpaint packaged files[] 
+			*/
 			const overrideFile = path.join(process.cwd(), d.jsfile)
 			const _ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
 			const ds = typeof _ds == 'function' ? _ds(common) : _ds

@@ -35,9 +35,11 @@ FROM pppkg AS ppapp
 WORKDIR /home/root/pp/app/node_modules/@stjude/proteinpaint/server/utils/rust_indel_cargo
 RUN rm -rf src Cargo.*
 COPY --from=ppcargo /home/root/rust_indel_cargo/target ./target
+RUN rm -rf target/release/deps target/release/build
 WORKDIR /home/root/pp/app/node_modules/@stjude/proteinpaint/server/utils/read_alignment
 RUN rm -rf src Cargo.*
 COPY --from=ppcargo /home/root/read_alignment/target ./target
+RUN rm -rf target/release/deps target/release/build
 
 WORKDIR /home/root/pp/app
 EXPOSE 3456
