@@ -2,8 +2,8 @@ set -e
 
 TYPE=$1
 
-if [[ "$TYPE" != "minor" && "$TYPE" != "patch" ]]; then
-	echo "Usage: ./build/version.sh [minor | patch]"
+if [[ "$TYPE" != "major" && "$TYPE" != "minor" && "$TYPE" != "patch" ]]; then
+	echo "Usage: ./build/version.sh [major | minor | patch]"
 	exit 1
 fi
 

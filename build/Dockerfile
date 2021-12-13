@@ -49,7 +49,11 @@ RUN apt-get update && apt-get install -y r-base \
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
 
 RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ && \
-	wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64.v369/bigWigSummary -P /home/root/pp/tools/
+    wget http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-x86_64 -P /usr/local/bin && \
+    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64.v369/bigWigSummary -P /home/root/pp/tools/ && \
+    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigBedToBed -P /home/root/pp/tools/ && \
+    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigBedNamedItems -P /home/root/pp/tools/
+
 
 # need npm v7 to support workspaces
 RUN npm install --global npm@7

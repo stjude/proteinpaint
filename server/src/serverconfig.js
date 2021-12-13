@@ -119,8 +119,10 @@ if (serverconfig.allow_env_overrides) {
 			port: 3456,
 			tpmasterdir: '/home/root/pp/tp',
 			cachedir: '/home/root/pp/cache',
+			hicstraw: '/home/root/pp/tools/straw',
 			bigwigsummary: '/home/root/pp/tools/bigWigSummary',
-			hicstraw: '/home/root/pp/tools/straw'
+			bigBedToBed: '/home/root/pp/tools/bigBedToBed',
+			bigBedNamedItems: '/home/root/pp/tools/bigBedNamedItems'
 			// note that tabix, samtools, and similar binaries are
 			// saved in the usual */bin/ paths so locating them
 			// is not needed when calling via Node child_process.spawn() or exec()
