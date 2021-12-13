@@ -54,11 +54,11 @@ export function getHandler(self) {
 					label: 'Discrete',
 					callback: async div => {
 						self.q.mode = 'discrete'
-						self.q.type = 'regular'
+						if (!self.q.type || self.q.type != 'custom') self.q.type = 'regular'
 						// example of using a boolean attribute to track whether to exit early
 						if (tabs[1].isRendered) return
 						tabs[1].isRendered = true
-						self.handlerByType['numeric.discrete'].showEditMenu(div)
+						await self.handlerByType['numeric.discrete'].showEditMenu(div)
 						// delete tabs[1].callback
 					}
 				},
@@ -67,9 +67,8 @@ export function getHandler(self) {
 					label: 'Cubic spline',
 					callback: async div => {
 						self.q.mode = 'cubic-spline'
-						self.q.type = 'auto-knots'
 						self.handlerByType['numeric.spline'].showEditMenu(div)
-						// delete tabs[2].callback
+						delete tabs[2].callback
 					}
 				}
 			]
