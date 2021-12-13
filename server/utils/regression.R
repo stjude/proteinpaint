@@ -57,7 +57,8 @@
 #       "other": {
 #           "header": []
 #           "rows": []
-#       }
+#       },
+#       "plots": []
 #     }
 
 
@@ -129,27 +130,88 @@ plot_spline <- function(splineTerm, lst, dat, res) {
   ## test model
   # predict outcome values of the model using the test data
   preddat <- predict(res, newdata = newdat, se.fit = T)
-  # adjust the predicted outcome values 
-  # adjusted outcome values = outcome values + ((prop category A * coef category A) + (prop category B * coef category B) + etc.)
-  preddat_adj <- preddat$fit + sum(apply(newdat2, 1, prod))
+  # compute 95% confidence intervals
+  ci_upr <- preddat$fit + (1.96 * preddat$se.fit)
+  ci_lwr <- preddat$fit - (1.96 * preddat$se.fit)
+  preddat_ci <- cbind("fit" = preddat$fit, "lwr" = ci_lwr, "upr" = ci_upr)
+  # adjust the predicted values 
+  # adjusted predicted values = predicted values + ((prop category A * coef category A) + (prop category B * coef category B) + etc.)
+  preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod))
   
   ## plot data
+  if (lst$type == "linear") {
+    pointtype <- 16
+    pointsize <- 0.3
+  } else {
+    # for logistic regression, plot predicted probabilities
+    preddat_ci_adj <- 1/(1+exp(-preddat_ci_adj))
+    pointtype <- 124
+    pointsize <- 0.7
+  }
   plotfile <- splineTerm$spline$plotfile
-  png(filename = plotfile)
+  png(filename = plotfile, width = 1100, height = 650, res = 200)
+  par(mar = c(3, 3, 2, 6), mgp = c(3, 0.5, 0), xpd = T)
+  # plot coordinate space
   plot(dat[,splineTerm$id],
        dat[,"outcome"],
-       main = "Cubic spline regression",
-       xlab = splineTerm$name,
-       ylab = lst$outcome$name
+       cex.axis = 0.5,
+       ann = F,
+       type = "n"
   )
-  if (lst$type == "linear") {
-    # for linear regression, plot the adjusted predicted values
-    lines(lowess(newdat[,splineTerm$id], preddat_adj), col = "red", lwd = 3)
-  } else {
-    # for logistic regression, convert the adjusted predicted values to adjusted predicted probabilities
-    predp_adj <- 1/(1+exp(-preddat_adj))
-    lines(lowess(newdat[,splineTerm$id], predp_adj), col = "red", lwd = 3)
-  }
+  # main title
+  title(main = "Cubic spline regression",
+        cex.main = 0.5
+  )
+  # axis titles
+  title(xlab = splineTerm$name,
+        ylab = lst$outcome$name,
+        line = 1.5,
+        cex.lab = 0.5
+  )
+  # knots
+  abline(v = splineTerm$spline$knots,
+         col = "grey60",
+         lty = 2,
+         lwd = 0.8,
+         xpd = F
+  )
+  # spline term vs. outcome term actual data
+  points(dat[,splineTerm$id],
+         dat[,"outcome"],
+         pch = pointtype,
+         cex = pointsize
+  )
+  # confidence intervals of regression line
+  polygon(x = c(newdat[,splineTerm$id], rev(newdat[,splineTerm$id])),
+          y = c(preddat_ci_adj[,"lwr"], rev(preddat_ci_adj[,"upr"])),
+          col = adjustcolor("grey", alpha.f = 0.8),
+          border = NA
+  )
+  # regression line
+  lines(newdat[,splineTerm$id],
+        preddat_ci_adj[,"fit"],
+        col = "red",
+        lwd = 2
+  )
+  # legend for lines
+  legend("topright",
+         cex = 0.5,
+         inset = c(-0.25, 0.1),
+         legend = c("knots", "cubic spline fit", "95% CI"),
+         text.col = "white",
+         lty = c(2, 1, NA),
+         col = c("grey60", "red", NA)
+  )
+  # legend for ci
+  legend("topright",
+         cex = 0.5,
+         inset = c(-0.25, 0.1),
+         legend = c("knots", "cubic spline fit", "95% CI"),
+         text.col = "black",
+         bty = "n",
+         fill = c(NA, NA, adjustcolor("grey", alpha.f = 0.8)),
+         border = c(NA, NA, NA)
+  )
   dev.off()
   return(plotfile)
 }

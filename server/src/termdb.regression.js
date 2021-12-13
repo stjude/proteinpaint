@@ -297,7 +297,7 @@ async function parseRoutput(Routput, id2originalId, q, result) {
 		for (const file of data.plots) {
 			const plot = await fs.promises.readFile(file)
 			result.plots.push({
-				src: 'data:image/jpeg;base64,' + new Buffer.from(plot).toString('base64'),
+				src: 'data:image/pdf;base64,' + new Buffer.from(plot).toString('base64'),
 				size: imagesize(file)
 			})
 		}
