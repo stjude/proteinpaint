@@ -7,8 +7,9 @@ var gencode = process.argv[2],
 	attrfile = process.argv[3],
 	outfile = process.argv[4]
 
-var fs = require('fs'),
-	exec = require('child_process').execSync
+const fs = require('fs'),
+	exec = require('child_process').execSync,
+	checkReadingFrame = require('./checkReadingFrame')
 
 var attr = {}
 // k: ENST id
@@ -206,7 +207,7 @@ for (const line of fs
 		if (thin3.length) obj.utr3 = thin3
 	}
 
-	checkReadingFrame(obj, l[15])
+	checkReadingFrame.default(obj, l[15])
 
 	out.push(l[2] + '\t' + l[4] + '\t' + l[5] + '\t' + JSON.stringify(obj))
 }
@@ -224,30 +225,3 @@ function abort(m) {
 	process.exit()
 }
 
-function checkReadingFrame(obj, str) {
-	if (!obj.codingstart) {
-		// not coding
-		return
-	}
-	const startCodonPos = obj.strand == '+' ? obj.codingstart : obj.codingstop
-	let idx = obj.exon.findIndex(i => i[1] >= startCodonPos && i[0] <= startCodonPos)
-	if (idx == -1) abort('start codon not matched to an exon: ' + JSON.stringify(obj))
-
-	// ucsc frame string is sorted with ascending order of exon positions
-	// and idx is from 5' to 3'
-	// so if strant=-, must reverse idx to match with ucsc frame string order
-	if (strand == '-') {
-		idx = obj.exon.length - idx - 1
-	}
-
-	const frame = str.split(',')[idx]
-	if (frame == '-1') abort('start codon frame is -1: ' + obj.isoform)
-	if (frame != '0') {
-		if (frame == '1' || frame == '2') {
-			obj.startCodonFrame = Number.parseInt(frame)
-			console.error(obj.isoform, obj.name, frame)
-		} else {
-			abort('start codon frame not 0/1/2: ' + frame + ' ' + obj.isoform)
-		}
-	}
-}

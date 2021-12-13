@@ -8,7 +8,8 @@ var reflink=process.argv[2],
 	outfile=process.argv[4]
 
 var fs=require('fs'),
-	exec=require('child_process').execSync
+	exec=require('child_process').execSync,
+	checkReadingFrame = require('./checkReadingFrame')
 
 var desc={}
 if(reflink!='NA') {
@@ -153,6 +154,9 @@ fs.readFileSync(refgene,'utf8').trim().split('\n').forEach(function(line){
 		if(thin5.length) obj.utr5=thin5
 		if(thin3.length) obj.utr3=thin3
 	}
+
+	checkReadingFrame.default(obj, l[15])
+
 	out.push(l[2]+'\t'+l[4]+'\t'+l[5]+'\t'+JSON.stringify(obj))
 })
 

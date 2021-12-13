@@ -207,9 +207,7 @@ function step2_getseq(paint) {
 		}
 	)
 	function checker() {
-		if (paint.model.cdseq && paint.model.cdseq.length % 3 != 0) {
-			paint.error('Dubious CDS of ' + paint.model.isoform + ': AA count ' + paint.model.aacount)
-		}
+		//if (paint.model.cdseq && paint.model.cdseq.length % 3 != 0)  paint.error('Dubious CDS of ' + paint.model.isoform + ': AA count ' + paint.model.aacount)
 		if (paint.model.aaseq) {
 			// stop codon check
 			const stop = paint.model.aaseq.indexOf(codon_stop)

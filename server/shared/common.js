@@ -494,21 +494,7 @@ export function nt2aa(gm) {
 	const enlst = []
 	if (gm.coding) {
 		for (const [i, e] of gm.coding.entries()) {
-			let [e0, e1] = e // exon coord start/stop
-
-			if (i == 0 && gm.startCodonFrame) {
-				// not starting from the default frame, but will need skip 1/2 nucleotides from first coding exon
-				// in case of IGKC, frame=1 means it will borrow 1 nt from the previous IGKJ exons
-				// so the first two nt from the current exon will not be translated when looking at IGKC alone
-				// TODO get skipped nt to add to cdseq
-				if (gm.strand == '+') {
-					e0 += 3 - gm.startCodonFrame
-				} else {
-					e1 -= 3 - gm.startCodonFrame
-				}
-			}
-
-			const s = gm.genomicseq.substr(e0 - gm.start, e1 - e0)
+			const s = gm.genomicseq.substr(e[0] - gm.start, e[1] - e[0])
 			if (gm.strand == '-') {
 				enlst.push(reversecompliment(s))
 			} else {
@@ -518,9 +504,16 @@ export function nt2aa(gm) {
 	}
 	const nt = enlst.join('')
 	const pep = []
-	for (let i = 0; i < nt.length; i += 3) {
+
+	/*
+	if startCodonFrame is set, will not begin translation from first nt, but will skip 1 or 2 nt at the beginning
+	in case of IGKC, frame=1 means it will borrow 1 nt from the previous IGKJ exons
+	so the first two nucleotides from the current exon will have to be skipped when translating IGKC alone
+	*/
+	const startntidx = gm.startCodonFrame ? 3 - gm.startCodonFrame : 0
+	for (let i = startntidx; i < nt.length; i += 3) {
 		const a = codon[nt.substr(i, 3)]
-		pep.push(a ? a : codon_stop)
+		pep.push(a || codon_stop)
 	}
 	gm.cdseq = nt
 	return pep.join('')
