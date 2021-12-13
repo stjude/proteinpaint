@@ -676,6 +676,9 @@ block:
 				cdsstart = rstartexonbp - utr5len
 				pxstart = 0
 			}
+
+			//if(gm.startCodonFrame) { cdsstart += 3-gm.startCodonFrame }
+
 			const cdsstop = Math.min(gm.cdslen, rstopexonbp - utr5len)
 
 			/*

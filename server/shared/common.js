@@ -498,6 +498,9 @@ export function nt2aa(gm) {
 
 			if (i == 0 && gm.startCodonFrame) {
 				// not starting from the default frame, but will need skip 1/2 nucleotides from first coding exon
+				// in case of IGKC, frame=1 means it will borrow 1 nt from the previous IGKJ exons
+				// so the first two nt from the current exon will not be translated when looking at IGKC alone
+				// TODO get skipped nt to add to cdseq
 				if (gm.strand == '+') {
 					e0 += 3 - gm.startCodonFrame
 				} else {
