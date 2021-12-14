@@ -137,7 +137,7 @@ if (UC.URL) {
 	}
 }
 
-// bin/
+// if binpath is provided, will download binaries
 if (UC.BINPATH) {
 	{
 		const a = path.join(UC.BINPATH, 'bigWigSummary')
@@ -362,7 +362,6 @@ function add_mm9() {
 	trydownload(path.join(path_tpanno, 'rmsk.mm9.gz'), 'https://pecan.stjude.cloud/static/mm9/rmsk.mm9.gz')
 	trydownload(path.join(path_tpanno, 'rmsk.mm9.gz.tbi'), 'https://pecan.stjude.cloud/static/mm9/rmsk.mm9.gz.tbi')
 	trydownload(path.join(path_tpanno, 'genes.mm9.db'), 'https://pecan.stjude.cloud/static/mm9/genes.mm9.db')
-	trydownload(path.join(path_tpannodb, 'snp128.mm9.db'), 'https://pecan.stjude.cloud/static/mm9/snp128.mm9.db')
 	{
 		const a = path.join(path_tpanno, 'hicFragment')
 		mkdir(a)
@@ -396,7 +395,6 @@ function add_mm10() {
 	trydownload(path.join(path_tpanno, 'rmsk.mm10.gz'), 'https://pecan.stjude.cloud/static/mm10/rmsk.mm10.gz')
 	trydownload(path.join(path_tpanno, 'rmsk.mm10.gz.tbi'), 'https://pecan.stjude.cloud/static/mm10/rmsk.mm10.gz.tbi')
 	trydownload(path.join(path_tpanno, 'genes.mm10.db'), 'https://pecan.stjude.cloud/static/mm10/genes.mm10.db')
-	trydownload(path.join(path_tpannodb, 'snp142.mm10.db'), 'https://pecan.stjude.cloud/static/mm10/snp142.mm10.db')
 	{
 		const a = path.join(path_tpanno, 'hicFragment')
 		mkdir(a)
@@ -442,8 +440,7 @@ function add_hg38() {
 	trydownload(path.join(path_tpanno, 'rmsk.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/rmsk.hg38.gz.tbi')
 	trydownload(path.join(path_tpanno, 'genes.hg38.db'), 'https://pecan.stjude.cloud/static/hg38/genes.hg38.db')
 	trydownload(path.join(path_tpannodb, 'proteindomain.db'), 'https://pecan.stjude.cloud/static/hg19/proteindomain.db')
-	// NOTE: SHOULD DOWNLOAD bigbed instead
-	// trydownload(path.join(path_tpannodb, 'snp146.hg38.db'), 'https://pecan.stjude.cloud/static/hg38/snp146.hg38.db')
+	trydownload(path.join(path_tpannodb, 'dbsnp.hg38.bb'), 'https://hgdownload.soe.ucsc.edu/gbdb/hg38/snp/dbSnp153.bb')
 
 	{
 		const a = path.join(path_tpanno, 'hicFragment')
@@ -516,8 +513,7 @@ function add_hg19() {
 	trydownload(path.join(path_tpanno, 'rmsk.hg19.gz.tbi'), 'https://pecan.stjude.cloud/static/hg19/rmsk.hg19.gz.tbi')
 	trydownload(path.join(path_tpanno, 'genes.hg19.db'), 'https://pecan.stjude.cloud/static/hg19/genes.hg19.db')
 	trydownload(path.join(path_tpannodb, 'proteindomain.db'), 'https://pecan.stjude.cloud/static/hg19/proteindomain.db')
-	// NOTE: SHOULD DOWNLOAD bigbed instead
-	// trydownload(path.join(path_tpannodb, 'snp146.hg19.db'), 'https://pecan.stjude.cloud/static/hg19/snp146.hg19.db')
+	trydownload(path.join(path_tpannodb, 'dbsnp.hg19.bb'), 'https://hgdownload.soe.ucsc.edu/gbdb/hg19/snp/dbSnp153.bb')
 
 	{
 		const a = path.join(path_tpanno, 'hicFragment')
