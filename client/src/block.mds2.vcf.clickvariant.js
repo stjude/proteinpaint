@@ -33,7 +33,7 @@ p{}
 	const tabs = []
 	addtab_functionalannotation(tabs, m, tk, block)
 	mayaddtab_fishertable(tabs, m, tk, block)
-	mayaddtab_termdbbygenotype(tabs, m, tk, block)
+	//mayaddtab_termdbbygenotype(tabs, m, tk, block)
 	mayaddtab_phewas(tabs, m, tk, block)
 	mayaddtab_mafcovplot(tabs, m, tk, block)
 	mayaddtab_fimo(tabs, m, tk, block)
