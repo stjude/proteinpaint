@@ -43,7 +43,7 @@ module.exports = {
 			translatecoding: true,
 			file: 'anno/gencode.v38.hg19.gz',
 			type: 'bedj',
-			name: 'GENCODE v34',
+			name: 'GENCODE v38',
 			stackheight: 16,
 			stackspace: 1,
 			vpad: 4,
