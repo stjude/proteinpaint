@@ -249,14 +249,18 @@ for (i in 2:ncol(dat)) {
   }
 }
 
+
+save.image("temp.regression.RData")
+
+
 # build formula of regression model
-# TODO: do we need to account for interaction with a spline term?
 outcomeTerm <- "outcome"
 independentTerms <- vector(mode = "character")
 splineTerms <- list()
 for (i in 1:length(lst$independent)) {
   term <- lst$independent[[i]]
   if ("spline" %in% names(term)) {
+    if (length(term$interactions) > 0) stop("interactions with spline terms are not supported")
     splineTerms[[length(splineTerms) + 1]] <- term
     splineCmd <- paste0("cubic_spline(", term$id, ", ", paste0("c(", paste(term$spline$knots,collapse = ","), ")"), ")")
     independentTerms <- c(independentTerms, splineCmd)
