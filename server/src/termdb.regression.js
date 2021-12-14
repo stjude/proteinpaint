@@ -51,11 +51,6 @@ export async function get_regression(q, ds) {
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
 
 		// run regression analysis in R
-		Rinput.independent[0].spline = {
-			knots: [1.13422, 3.427355, 6.302092, 11.592603, 17.352192],
-			plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
-		}
-
 		const Routput = await lines2R(
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			[JSON.stringify(Rinput)],
@@ -143,7 +138,7 @@ function makeRinput(q, sampledata) {
 		if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
 		if (tw.q.mode == 'cubic-spline') {
 			independent.spline = {
-				knots: tw.q.knots_lst.map(x => x.value),
+				knots: tw.q.knots_lst.map(x => Number(x.value)),
 				plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
 			}
 		}

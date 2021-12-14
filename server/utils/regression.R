@@ -149,18 +149,15 @@ plot_spline <- function(splineTerm, lst, dat, res) {
     pointsize <- 0.7
   }
   plotfile <- splineTerm$spline$plotfile
-  png(filename = plotfile, width = 1100, height = 650, res = 200)
-  par(mar = c(3, 3, 2, 6), mgp = c(3, 0.5, 0), xpd = T)
+  #png(filename = plotfile, width = 1100, height = 650, res = 200)
+  png(filename = plotfile, width = 950, height = 550, res = 200)
+  par(mar = c(3, 2.5, 1, 5), mgp = c(1, 0.5, 0), xpd = T)
   # plot coordinate space
   plot(dat[,splineTerm$id],
        dat[,"outcome"],
        cex.axis = 0.5,
        ann = F,
        type = "n"
-  )
-  # main title
-  title(main = "Cubic spline regression",
-        cex.main = 0.5
   )
   # axis titles
   title(xlab = splineTerm$name,
@@ -196,7 +193,7 @@ plot_spline <- function(splineTerm, lst, dat, res) {
   # legend for lines
   legend("topright",
          cex = 0.5,
-         inset = c(-0.25, 0.1),
+         inset = c(-0.3, 0.1),
          legend = c("knots", "cubic spline fit", "95% CI"),
          text.col = "white",
          lty = c(2, 1, NA),
@@ -205,7 +202,7 @@ plot_spline <- function(splineTerm, lst, dat, res) {
   # legend for ci
   legend("topright",
          cex = 0.5,
-         inset = c(-0.25, 0.1),
+         inset = c(-0.3, 0.1),
          legend = c("knots", "cubic spline fit", "95% CI"),
          text.col = "black",
          bty = "n",
