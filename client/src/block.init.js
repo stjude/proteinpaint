@@ -207,20 +207,19 @@ function step2_getseq(paint) {
 		}
 	)
 	function checker() {
-		if (paint.model.cdseq && paint.model.cdseq.length % 3 != 0) {
-			paint.error('Dubious CDS of ' + paint.model.isoform + ': AA count ' + paint.model.aacount)
-		}
+		//if (paint.model.cdseq && paint.model.cdseq.length % 3 != 0)  paint.error('Dubious CDS of ' + paint.model.isoform + ': AA count ' + paint.model.aacount)
 		if (paint.model.aaseq) {
 			// stop codon check
 			const stop = paint.model.aaseq.indexOf(codon_stop)
-			if (stop != -1 && stop < paint.model.cdslen / 3 - 1) {
-				paint.error(
-					'Translating ' + paint.model.isoform + ' ends at ' + stop + ' AA, expecting ' + paint.model.cdslen / 3
-				)
+			const cdslen = paint.model.cdslen - (paint.model.startCodonFrame ? 3 - paint.model.startCodonFrame : 0) // subtrack non-translating nt from cds
+			if (stop != -1 && stop < cdslen / 3 - 1) {
+				paint.error('Translating ' + paint.model.isoform + ' ends at ' + stop + ' AA, expecting ' + cdslen / 3)
 			}
+			/*
 			if (paint.model.aaseq[0] != 'M') {
 				paint.error('Translated protein does not start with "M" in ' + paint.model.isoform)
 			}
+			*/
 		}
 	}
 }
