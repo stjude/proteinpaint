@@ -58,6 +58,8 @@ Certain reference files are large and may take a while to download.
 Use "-v" to see the size of each file (in #bytes) from each genome.
 My apologies that I do not know how to print download progress, as wget does.
 If the downloading process is interrupted, you can always rerun the script to resume the downloading.
+
+This script is available from https://proteinpaint.stjude.org/utils/install.pp.js
 `)
 	process.exit()
 }
