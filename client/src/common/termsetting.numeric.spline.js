@@ -57,8 +57,11 @@ async function setqDefaults(self) {
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id]['cubic-spline']))
 	self.q = Object.assign(cacheCopy, self.q)
 	// create default knots when menu renderes for first time
-	const default_knots_count = 4
-	await getKnots(self, default_knots_count)
+	if (!self.q.knots_lst.length) {
+		const default_knots_count = 4
+		await getKnots(self, default_knots_count)
+		self.numqByTermIdModeType[self.term.id]['cubic-spline'].knots_lst = self.q.knots_lst
+	}
 	delete self.q.type
 	//*** validate self.q ***//
 }
@@ -134,11 +137,11 @@ async function getKnots(self, knot_count) {
 	const knots_lst = (self.q.knots_lst = [])
 	const perc_value_5 = await getPercentile2Value(5)
 	const perc_value_95 = await getPercentile2Value(95)
-	const default_second_knot = (perc_value_95 - perc_value_5) / (middle_knot_count + 1)
+	const second_knot_perc = (90 / (middle_knot_count + 1)).toFixed(0)
 	knots_lst.push({ value: perc_value_5.toFixed(t.type == 'integer' ? 0 : 2) })
 	for (let i = 1; i < middle_knot_count + 1; i++) {
-		const value = (perc_value_5 + default_second_knot * i).toFixed(t.type == 'integer' ? 0 : 2)
-		knots_lst.push({ value })
+		const knot_value = await getPercentile2Value(i*second_knot_perc)
+		knots_lst.push({ value: knot_value.toFixed(t.type == 'integer' ? 0 : 2) })
 	}
 	knots_lst.push({ value: perc_value_95.toFixed(t.type == 'integer' ? 0 : 2) })
 
@@ -193,7 +196,7 @@ function renderCustomSplineInputs(self, div) {
 	function handleChange() {
 		const data = processKnotsInputs(self)
 		// update self.q.knots_lst and render knot lines only if knot values changed
-		const q = self.numqByTermIdModeType[self.term.id]['cubic-spline'][self.q.type]
+		const q = self.q
 		if (knotsChanged(data, q.knots_lst)) {
 			q.knots_lst = data
 			self.renderBinLines(self, q)
