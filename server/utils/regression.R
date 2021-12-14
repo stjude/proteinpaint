@@ -9,36 +9,34 @@
 # Usage: Rscript regression.R < jsonIn > jsonOut
 
 # Parameters:
-#   - jsonIn: [string] JSON-formatted input data for regression analysis streamed from standard input. Ensure that the JSON string does not contain any newline characters, because newline characters are treated as separators of JSON records (trailing newline characters are ok).
+#   - jsonIn: [string] input data for regression analysis in JSON format. Input data is streamed from standard input. The JSON string should not contain any newline characters, because newline characters are treated as separators of JSON records (trailing newline characters are ok).
 #     
 #     JSON input specifications:
 #     {
 #       "type": [string] regression type (e.g. "linear" or "logistic")
-#       "outcome": {
-#         "id": [string] variable id (e.g. "outcome")
-#         "rtype": [string] R variable type (e.g. "numeric" or "factor")
-#         "values": [array] data values
-#         "refGrp": [string] reference group (required for factor variables)
-#       }
-#       "independent": [
-#         {
-#           "id": [string] variable id (e.g. "id0", "id1")
-#           "rtype": [string] R variable type (e.g. "numeric" or "factor")
-#           "values": [array] data values
-#           "refGrp": [string] reference group (required for factor variables)
-#           "interactions": [array] ids of interacting variables
-#           "spline": {
-#             "knots": [array] knot values
-#             "plotfile": [string] output png file of spline plot
-#           }
-#           "scale": [number] scaling factor. All data values will be divided by this number (optional)
-#         },
-#         {...}
-#        ]
+#       "outcome": [object] outcome variable
+#           "id": [string] variable id (e.g. "outcome")
+#           "name": [string] variable name (e.g. "Blood Pressure")
+#           "values": [array] data values. For logistic regression, use 0/1 values (0 = ref; 1 = non-ref)
+#       "independent": [array] independent variables
+#           {
+#             "id": [string] variable id (e.g. "id0", "id1")
+#             "name": [string] variable name (e.g. "Age")
+#             "rtype": [string] R variable type (e.g. "numeric" or "factor")
+#             "values": [array] data values
+#             "interactions": [array] ids of interacting variables
+#             "refGrp": [string] reference group (required for factor variables)
+#             "spline": {
+#               "knots": [array] knot values
+#               "plotfile": [string] output png file of spline plot
+#             } (optional)
+#             "scale": [number] scaling factor. All data values will be divided by this number (optional)
+#           },
+#           {...}
 #     }
 #
 #
-#   - jsonOut: [string] JSON-formatted results from the regression analysis streamed to standard output. The various results tables are stored as separate keys in the JSON object.
+#   - jsonOut: [string] output data from the regression analysis in JSON format. Output data is streamed to standard output. The various results tables are stored as separate keys in the JSON string.
 #     
 #     JSON output specifications:
 #     {
@@ -66,10 +64,7 @@
 # Code
 ###########
 
-# TODO: warning/error using these conditions: outcome = blood pressure; independent variables= age at last sjlife assessment
-
 library(jsonlite)
-
 
 ########## Functions ############
 

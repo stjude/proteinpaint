@@ -58,9 +58,6 @@ export async function get_regression(q, ds) {
 			false
 		)
 
-		//remember to delete the temp plot file
-		//fs.unlink(splineplot, function () {})
-
 		// parse the R output
 		const result = { queryTime, sampleSize }
 		await parseRoutput(Routput, id2originalId, q, result)
@@ -294,6 +291,9 @@ async function parseRoutput(Routput, id2originalId, q, result) {
 			result.plots.push({
 				src: 'data:image/pdf;base64,' + new Buffer.from(plot).toString('base64'),
 				size: imagesize(file)
+			})
+			fs.unlink(file, err => {
+				if (err) throw err
 			})
 		}
 	}
