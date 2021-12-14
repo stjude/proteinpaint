@@ -49,6 +49,7 @@ async function setqDefaults(self) {
 	if (!cache[t.id]) cache[t.id] = {}
 	if (!cache[t.id]['cubic-spline']) {
 		cache[t.id]['cubic-spline'] = {
+			mode: 'cubic-spline',
 			knots_lst: []
 		}
 	}
@@ -97,7 +98,8 @@ function renderAutoSplineInputs(self, div) {
 			.html(i)
 	}
 
-	knot_ct_select.node().value = default_knot_count
+	const knots_count = self.q.knots_lst && self.q.knots_lst.length ? self.q.knots_lst.length : default_knot_count
+	knot_ct_select.node().value = knots_count
 
 	self.dom.knot_select_div
 		.append('div')
@@ -252,6 +254,7 @@ function renderButtons(self) {
 		.on('click', () => {
 			delete self.q
 			delete self.numqByTermIdModeType[self.term.id]
+			self.handler = getHandler(self)
 			self.handler.showEditMenu(self.dom.num_holder)
 		})
 }
