@@ -5,7 +5,6 @@ const numericSql = require('./termdb.sql.numeric')
 const categoricalSql = require('./termdb.sql.categorical')
 const conditionSql = require('./termdb.sql.condition')
 const connect_db = require('./utils').connect_db
-
 /*
 
 ********************** EXPORTED
@@ -385,7 +384,8 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 		const groupset = get_active_groupset(term, termq)
 		CTE = categoricalSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, index, groupset)
 	} else if (term.type == 'integer' || term.type == 'float') {
-		CTE = numericSql[termq.mode || 'discrete'].getCTE(tablename, term, q.ds, termq, values, index, filter)
+		const mode = termq.mode == 'cubic-spline' ? 'cubicSpline' : termq.mode || 'discrete'
+		CTE = numericSql[mode].getCTE(tablename, term, q.ds, termq, values, index, filter)
 	} else if (term.type == 'condition') {
 		if (index == 1 && q.getcuminc) {
 			return conditionSql.cuminc.getCTE(tablename, term, q, values, filter)

@@ -19,6 +19,8 @@ export const continuous = {
 	}
 }
 
+export const cubicSpline = continuous
+
 export const discrete = {
 	/*
 	decide bins and produce CTE
