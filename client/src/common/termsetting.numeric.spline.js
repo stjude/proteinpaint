@@ -50,18 +50,18 @@ async function setqDefaults(self) {
 	if (!cache[t.id]['cubic-spline']) {
 		cache[t.id]['cubic-spline'] = {
 			mode: 'cubic-spline',
-			knots_lst: []
+			knots: []
 		}
 	}
 
-	// const knots_lst = cache[t.id]['cubic-spline'].knots_lst
+	// const knots = cache[t.id]['cubic-spline'].knots
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id]['cubic-spline']))
 	self.q = Object.assign(cacheCopy, self.q)
 	// create default knots when menu renderes for first time
-	if (!self.q.knots_lst.length) {
+	if (!self.q.knots.length) {
 		const default_knots_count = 4
 		await getKnots(self, default_knots_count)
-		self.numqByTermIdModeType[self.term.id]['cubic-spline'].knots_lst = self.q.knots_lst
+		self.numqByTermIdModeType[self.term.id]['cubic-spline'].knots = self.q.knots
 	}
 	delete self.q.type
 	//*** validate self.q ***//
@@ -98,7 +98,7 @@ function renderAutoSplineInputs(self, div) {
 			.html(i)
 	}
 
-	const knots_count = self.q.knots_lst && self.q.knots_lst.length ? self.q.knots_lst.length : default_knot_count
+	const knots_count = self.q.knots && self.q.knots.length ? self.q.knots.length : default_knot_count
 	knot_ct_select.node().value = knots_count
 
 	self.dom.knot_select_div
@@ -135,7 +135,7 @@ async function getKnots(self, knot_count) {
 	// last knot at 95, and inbetween knots at equidistance
 	const middle_knot_count = knot_count - 2
 	const t = self.term
-	const knots_lst = (self.q.knots_lst = [])
+	const knots = (self.q.knots = [])
 	const percentile_lst = [5]
 	const second_knot_perc = (90 / (middle_knot_count + 1)).toFixed(0)
 	for (let i = 1; i < middle_knot_count + 1; i++) {
@@ -144,7 +144,7 @@ async function getKnots(self, knot_count) {
 	percentile_lst.push(95)
 	const values = await getPercentile2Value(percentile_lst)
 	for (const val of values) {
-		knots_lst.push({ value: val.toFixed(t.type == 'integer' ? 0 : 2) })
+		knots.push({ value: val.toFixed(t.type == 'integer' ? 0 : 2) })
 	}
 
 	async function getPercentile2Value(percentile_lst) {
@@ -176,7 +176,7 @@ function renderCustomSplineInputs(self, div) {
 		.append('textarea')
 		.style('height', '100px')
 		.style('width', '100px')
-		.text(self.q.knots_lst.map(d => d.value).join('\n'))
+		.text(self.q.knots.map(d => d.value).join('\n'))
 		.on('change', handleChange)
 		.on('keyup', async () => {
 			// enter or backspace/delete
@@ -198,10 +198,10 @@ function renderCustomSplineInputs(self, div) {
 
 	function handleChange() {
 		const data = processKnotsInputs(self)
-		// update self.q.knots_lst and render knot lines only if knot values changed
+		// update self.q.knots and render knot lines only if knot values changed
 		const q = self.q
-		if (knotsChanged(data, q.knots_lst)) {
-			q.knots_lst = data
+		if (knotsChanged(data, q.knots)) {
+			q.knots = data
 			self.renderBinLines(self, q)
 		}
 		self.q = q
@@ -222,7 +222,7 @@ function renderCustomSplineInputs(self, div) {
 }
 
 function updateCustomSplineInputs(self) {
-	self.dom.customKnotsInput.text(self.q.knots_lst.map(d => d.value).join('\n'))
+	self.dom.customKnotsInput.text(self.q.knots.map(d => d.value).join('\n'))
 }
 
 function processKnotsInputs(self) {

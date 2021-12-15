@@ -249,7 +249,7 @@ for (i in 2:ncol(dat)) {
 }
 
 
-save.image("temp.regression.RData")
+# save.image("temp.regression.RData")
 
 
 # build formula of regression model
@@ -279,7 +279,7 @@ for (i in 1:length(lst$independent)) {
 mod <- as.formula(paste(outcomeTerm, paste(independentTerms, collapse = "+"), sep = "~"))
 
 
-save.image("temp.regression.RData")
+# save.image("temp.regression.RData")
 
 
 ########## Regression analysis ###########

@@ -89,7 +89,7 @@ export class InputTerm {
 		}
 		if (this.section.configKey == 'independent') {
 			// independent
-			return ['continuous', 'discrete']
+			return ['continuous', 'discrete', 'cubic-spline']
 		}
 		throw 'unknown section.configKey: ' + this.section.configKey
 	}

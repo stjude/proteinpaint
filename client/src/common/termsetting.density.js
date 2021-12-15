@@ -198,7 +198,7 @@ function renderBinLines(self, data) {
 		)
 	} else if (data.mode == 'cubic-spline') {
 		lines.push(
-			...data.knots_lst.map((d, index) => {
+			...data.knots.map((d, index) => {
 				return { x: d.value, index, scaledX: Math.round(o.xscale(d.value)) }
 			})
 		)
@@ -323,9 +323,9 @@ function renderBinLines(self, data) {
 				self.dom.customBinLabelInput.property('value', c => c.label)
 			}
 		} else if (self.q.mode == 'cubic-spline') {
-			self.q.knots_lst[d.index].value = value
+			self.q.knots[d.index].value = value
 			if (self.dom.customKnotsInput) {
-				self.dom.customKnotsInput.property('value', self.q.knots_lst.map(d => d.value).join('\n'))
+				self.dom.customKnotsInput.property('value', self.q.knots.map(d => d.value).join('\n'))
 			}
 		} else {
 			throw 'Dragging not allowed for this term type'
@@ -364,7 +364,7 @@ function renderBinLines(self, data) {
 			self.q.lst[d.index + 1].start = d.x
 			self.q.lst[d.index].stop = d.x
 		} else if (self.q.mode == 'cubic-spline') {
-			self.q.knots_lst[d.index].value = d.x
+			self.q.knots[d.index].value = d.x
 		}
 	}
 }
