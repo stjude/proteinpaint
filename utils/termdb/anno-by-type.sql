@@ -68,7 +68,7 @@ drop index if exists a_cat_value;
 create table anno_categorical (
   sample integer not null,
   term_id character varying(100) not null,
-  value REAL not null
+  value character not null
 );
 create index a_cat_sample on anno_categorical(sample);
 create index a_cat_termid on anno_categorical(term_id);
