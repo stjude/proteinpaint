@@ -82,7 +82,7 @@ function setRenderers(self) {
 
 		self.mayshow_warnings(result)
 		self.newDiv('Sample size: ' + result.sampleSize)
-		self.mayshow_plots(result)
+		self.mayshow_splinePlots(result)
 		self.mayshow_residuals(result)
 		self.mayshow_coefficients(result)
 		self.mayshow_type3(result)
@@ -99,10 +99,10 @@ function setRenderers(self) {
 		return div.append('div').style('margin-left', '20px')
 	}
 
-	self.mayshow_plots = result => {
-		if (!result.plots) return
-		const div = self.newDiv('Plots')
-		for (const plot of result.plots) {
+	self.mayshow_splinePlots = result => {
+		if (!result.splinePlots) return
+		const div = self.newDiv('Cubic spline plots')
+		for (const plot of result.splinePlots) {
 			div
 				.append('img')
 				.attr('src', plot.src)
