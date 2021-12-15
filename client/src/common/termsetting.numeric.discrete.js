@@ -172,7 +172,7 @@ function setqDefaults(self) {
 	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
 	if (self.q && !self.q.mode) self.q.mode = 'discrete'
 	if (!self.q || self.q.mode !== 'discrete') self.q = {}
-	if (!self.q.type) self.q.type = 'regular'
+	// if (!self.q.type) self.q.type = 'regular'
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].discrete[self.q.type]))
 	self.q = Object.assign(cacheCopy, self.q)
 	const bin_size = 'bin_size' in self.q && self.q.bin_size.toString()
@@ -241,6 +241,7 @@ export function renderBoundaryInclusionInput(self) {
 
 function renderTypeInputs(self) {
 	// toggle switch
+	const bins_div = self.dom.bins_div
 	const div = self.dom.bins_div.append('div').style('margin', '10px')
 	const tabs = [
 		{
@@ -248,6 +249,7 @@ function renderTypeInputs(self) {
 			label: 'Same bin size',
 			callback: async div => {
 				self.q.type = 'regular'
+				self.dom.bins_div = bins_div
 				setqDefaults(self)
 				setDensityPlot(self)
 				if (!tabs[0].isInitialized) {
@@ -261,6 +263,7 @@ function renderTypeInputs(self) {
 			label: 'Varying bin sizes',
 			callback: async div => {
 				self.q.type = 'custom'
+				self.dom.bins_div = bins_div
 				setqDefaults(self)
 				setDensityPlot(self)
 				if (!tabs[1].isInitialized) {

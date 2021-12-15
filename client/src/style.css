@@ -913,6 +913,11 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     border-radius: 5px 0px 0px 5px;
   }
 
+  .sj-center-toggle {
+    margin-left: -2px;
+    border-left: 2px solid #999;
+  }
+
   .sj-right-toggle {
     margin-left: -2px;
     border-left: 2px solid #999;

@@ -1,6 +1,7 @@
 import { init_tabs } from '../dom/toggleButtons'
 import { getHandler as getNumericDiscreteHandler } from './termsetting.numeric.discrete'
 import { getHandler as getNumericContHandler } from './termsetting.numeric.continuous'
+import { getHandler as getNumericSplineHandler } from './termsetting.numeric.spline'
 
 // self is the termsetting instance
 export function getHandler(self) {
@@ -9,6 +10,9 @@ export function getHandler(self) {
 	}
 	if (!self.handlerByType['numeric.continuous']) {
 		self.handlerByType['numeric.continuous'] = getNumericContHandler(self)
+	}
+	if (!self.handlerByType['numeric.spline']) {
+		self.handlerByType['numeric.spline'] = getNumericSplineHandler(self)
 	}
 
 	return {
@@ -34,29 +38,44 @@ export function getHandler(self) {
 
 			const tabDiv = topBar.append('div').style('display', 'inline-block')
 
-			const tabs = [
-				{
-					active: self.q.mode && self.q.mode == 'discrete' ? false : true,
+			const tab_options = {
+				continuous: {
+					active: !self.q.mode || (self.q.mode != 'discrete' && self.q.mode != 'cubic-spline'),
 					label: 'Continuous',
 					callback: async div => {
 						self.q.mode = 'continuous'
 						self.handlerByType['numeric.continuous'].showEditMenu(div)
 						// example of deleting the callback here instead of in toggleButtons
-						delete tabs[0].callback
+						delete tabs.find(t => t.label == 'Continuous').callback
 					}
 				},
-				{
-					active: self.q.mode && self.q.mode == 'discrete' ? true : false,
+				discrete: {
+					active: self.q.mode && self.q.mode == 'discrete',
 					label: 'Discrete',
 					callback: async div => {
 						self.q.mode = 'discrete'
+						if (!self.q.type || self.q.type != 'custom') self.q.type = 'regular'
 						// example of using a boolean attribute to track whether to exit early
 						if (tabs[1].isRendered) return
 						tabs[1].isRendered = true
-						self.handlerByType['numeric.discrete'].showEditMenu(div)
+						await self.handlerByType['numeric.discrete'].showEditMenu(div)
+						// delete tabs[1].callback
+					}
+				},
+				'cubic-spline': {
+					active: self.q.mode && self.q.mode == 'cubic-spline',
+					label: 'Cubic spline',
+					callback: async div => {
+						self.q.mode = 'cubic-spline'
+						self.handlerByType['numeric.spline'].showEditMenu(div)
+						delete tabs.find(t => t.label == 'Cubic spline').callback
 					}
 				}
-			]
+			}
+			const tabs = []
+			self.opts.numericEditMenuVersion.forEach(e => {
+				tabs.push(tab_options[e])
+			})
 
 			init_tabs({ holder: tabDiv, contentHolder: div.append('div'), tabs })
 		}

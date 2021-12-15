@@ -272,8 +272,8 @@ async function trigger_getpercentile(q, res, ds) {
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.tid)
 	if (!term) throw 'invalid termid'
 	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
-	const p = Number(q.getpercentile)
-	if (!Number.isInteger(p) || p < 1 || p > 99) throw 'percentile is not 1-99 integer'
+	const percentile_lst = q.getpercentile.split(',').map(p => parseInt(p))
+	const perc_values = []
 	const values = []
 	const rows = termdbsql.get_rows_by_one_key({
 		ds,
@@ -287,7 +287,11 @@ async function trigger_getpercentile(q, res, ds) {
 		}
 		values.push(Number(value))
 	}
-	const sorted_values = [...values].sort((a, b) => a - b)
-	const value = sorted_values[Math.floor((values.length * p) / 100)]
-	res.send({ value })
+	values.sort((a, b) => a - b)
+	for (const p of percentile_lst) {
+		if (!Number.isInteger(p) || p < 1 || p > 99) throw 'percentile is not 1-99 integer'
+		const value = values[Math.floor((values.length * p) / 100)]
+		perc_values.push(value)
+	}
+	res.send({ values: perc_values })
 }

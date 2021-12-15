@@ -580,7 +580,7 @@ filter
 returns bins{}
 */
 export function get_bins(q, term, ds, index, filter) {
-	if (q.mode == 'continuous') return
+	if (q.mode == 'continuous' || q.mode == 'cubic-spline') return
 	return binsmodule.compute_bins(q, percentiles => get_numericMinMaxPct(ds, term, filter, percentiles))
 }
 

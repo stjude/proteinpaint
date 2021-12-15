@@ -2,6 +2,8 @@ const path = require('path')
 const { get_term_cte } = require('./termdb.sql')
 const { getFilterCTEs } = require('./termdb.filter')
 const lines2R = require('./lines2R')
+const fs = require('fs')
+const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 
 /*
@@ -45,13 +47,8 @@ export async function get_regression(q, ds) {
 		const Rinput = makeRinput(q, sampledata)
 
 		const sampleSize = Rinput.outcome.values.length
-
 		validateRinput(q, Rinput, sampleSize)
-
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
-
-		// specify the formula for fitting regression model
-		Rinput.formula = make_formula(q, originalId2id)
 
 		// run regression analysis in R
 		const Routput = await lines2R(
@@ -63,7 +60,7 @@ export async function get_regression(q, ds) {
 
 		// parse the R output
 		const result = { queryTime, sampleSize }
-		parseRoutput(Routput, id2originalId, q, result)
+		await parseRoutput(Rinput, Routput, id2originalId, result)
 		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
@@ -113,12 +110,22 @@ function parse_q(q, ds) {
 
 function makeRinput(q, sampledata) {
 	// outcome term
+	// for linear regression, 'values' will be sample values
+	// for logisitc regression, 'values' will be 0/1 (0 = ref; 1 = non-ref)
+	// therefore, 'rtype' will always be 'numeric'
 	const outcome = {
 		id: q.outcome.id,
-		rtype: q.outcome.q.mode == 'continuous' ? 'numeric' : 'factor',
+		name: q.outcome.term.name,
+		rtype: 'numeric',
 		values: []
 	}
-	if (outcome.rtype === 'factor') outcome.refGrp = q.outcome.refGrp
+	// for logistic regression, specify ref and non-ref categories of outcome for the purpose of labeling plot in R
+	if (q.regressionType == 'logistic') {
+		outcome.categories = {}
+		const categories = q.outcome.q.lst.map(x => x.label)
+		outcome.categories.ref = categories.find(x => x == q.outcome.refGrp)
+		outcome.categories.nonref = categories.find(x => x != q.outcome.refGrp)
+	}
 
 	// input for R script will be in json format
 	const Rinput = {
@@ -131,10 +138,18 @@ function makeRinput(q, sampledata) {
 	for (const tw of q.independent) {
 		const independent = {
 			id: tw.id,
-			rtype: tw.q.mode == 'continuous' ? 'numeric' : 'factor',
-			values: []
+			name: tw.term.name,
+			rtype: tw.q.mode == 'continuous' || tw.q.mode == 'cubic-spline' ? 'numeric' : 'factor',
+			values: [],
+			interactions: tw.interactions
 		}
 		if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
+		if (tw.q.mode == 'cubic-spline') {
+			independent.spline = {
+				knots: tw.q.knots.map(x => Number(x.value)),
+				plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
+			}
+		}
 		if (tw.q.scale) independent.scale = tw.q.scale
 		Rinput.independent.push(independent)
 	}
@@ -158,9 +173,14 @@ function makeRinput(q, sampledata) {
 		}
 		if (skipsample) continue
 
-		// this sample has value for all terms and is eligible for regression analysis
-		// add its value to values[] of each term
-		Rinput.outcome.values.push(Rinput.outcome.rtype === 'numeric' ? out.value : out.key)
+		// this sample has values for all terms and is eligible for regression analysis
+		// add its values to values[] of each term
+		// for categorical outcome term, convert ref and non-ref values to 0 and 1, respectively
+		if (q.outcome.q.mode == 'continuous') {
+			Rinput.outcome.values.push(out.value)
+		} else {
+			Rinput.outcome.values.push(out.key == q.outcome.refGrp ? 0 : 1)
+		}
 		for (const t of Rinput.independent) {
 			const v = id2value.get(t.id)
 			t.values.push(t.rtype === 'numeric' ? v.value : v.key)
@@ -175,15 +195,10 @@ function validateRinput(q, Rinput, sampleSize) {
 	if (sampleSize < minimumSample) throw 'too few samples to fit model'
 	if (Rinput.independent.find(x => x.values.length !== sampleSize)) throw 'variables have unequal sample sizes'
 	// validate outcome variable
-	if (q.regressionType === 'linear') {
-		if (Rinput.outcome.rtype !== 'numeric') throw 'outcome is not continuous'
-		if (Rinput.outcome.refGrp) throw 'reference group given for outcome'
-	} else {
-		if (Rinput.outcome.rtype === 'numeric') throw 'outcome is continuous'
-		if (!Rinput.outcome.refGrp) throw 'reference group not given for outcome'
+	if (q.regressionType == 'logistic') {
 		const values = new Set(Rinput.outcome.values) // get unique values
 		if (values.size !== 2) throw 'outcome is not binary'
-		if (!values.has(Rinput.outcome.refGrp)) throw 'reference group not found in outcome values'
+		if (!(values.has(0) && values.has(1))) throw 'outcome values are not 0/1'
 	}
 	// validate independent variables
 	for (const variable of Rinput.independent) {
@@ -199,13 +214,13 @@ function validateRinput(q, Rinput, sampleSize) {
 	}
 }
 
-function parseRoutput(Routput, id2originalId, q, result) {
+async function parseRoutput(Rinput, Routput, id2originalId, result) {
 	if (Routput.length !== 1) throw 'expected 1 line in R output'
 	const data = JSON.parse(Routput[0])
 
 	// residuals
 	result.residuals = data.residuals
-	result.residuals.label = q.regressionType === 'linear' ? 'Residuals' : 'Deviance residuals'
+	result.residuals.label = Rinput.type == 'linear' ? 'Residuals' : 'Deviance residuals'
 
 	// coefficients
 	if (data.coefficients.rows.length < 2)
@@ -278,6 +293,22 @@ function parseRoutput(Routput, id2originalId, q, result) {
 	// other summary statistics
 	result.other = data.other
 	result.other.label = 'Other summary statistics'
+
+	// plots
+	for (const tw of Rinput.independent) {
+		if (tw.spline) {
+			if (!result.splinePlots) result.splinePlots = []
+			const file = tw.spline.plotfile
+			const plot = await fs.promises.readFile(file)
+			result.splinePlots.push({
+				src: 'data:image/png;base64,' + new Buffer.from(plot).toString('base64'),
+				size: imagesize(file)
+			})
+			fs.unlink(file, err => {
+				if (err) throw err
+			})
+		}
+	}
 
 	// warnings
 	if (data.warnings) {
@@ -357,40 +388,22 @@ function getSampleData(q, terms) {
 	return samples.values()
 }
 
-function make_formula(q, originalId2id) {
-	const independent = q.independent.map(i => originalId2id[i.id])
-
-	// get unique list of interaction pairs
-	const a2b = {}
-	for (const i of q.independent) {
-		const a = originalId2id[i.id]
-		for (const j of i.interactions) {
-			const b = originalId2id[j]
-			if (a2b[a] == b || a2b[b] == a) {
-				// already seen
-			} else {
-				a2b[a] = b
-			}
-		}
-	}
-
-	const interactions = []
-	for (const i in a2b) {
-		interactions.push(i + ':' + a2b[i])
-	}
-
-	return 'outcome ~ ' + independent.join(' + ') + (interactions.length ? ' + ' + interactions.join(' + ') : '')
-}
-
 function replaceTermId(Rinput) {
-	// use dummy variable IDs in R (to avoid using spaces/commas)
+	// replace term IDs with custom IDs (to avoid spaces/commas in R)
 	Rinput.outcome.id = 'outcome'
+	// make conversion table between IDs
 	const id2originalId = {} // k: new id, v: original term id
 	const originalId2id = {} // k: original term id, v: new id
 	for (const [i, t] of Rinput.independent.entries()) {
 		id2originalId['id' + i] = t.id
 		originalId2id[t.id] = 'id' + i
+	}
+	// replace IDs of terms and interacting terms
+	for (const [i, t] of Rinput.independent.entries()) {
 		Rinput.independent[i].id = originalId2id[t.id]
+		for (const [j, k] of Rinput.independent[i].interactions.entries()) {
+			Rinput.independent[i].interactions[j] = originalId2id[k]
+		}
 	}
 	return [id2originalId, originalId2id]
 }

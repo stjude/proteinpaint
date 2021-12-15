@@ -89,7 +89,7 @@ export class InputTerm {
 		}
 		if (this.section.configKey == 'independent') {
 			// independent
-			return ['continuous', 'discrete']
+			return ['continuous', 'discrete', 'cubic-spline']
 		}
 		throw 'unknown section.configKey: ' + this.section.configKey
 	}
@@ -177,7 +177,7 @@ export class InputTerm {
 			for continuous term, assume it is numeric and that we'd want counts by bins,
 			so remove the 'mode: continuous' value as it will prevent bin construction in the backend
 		*/
-		if (q.mode == 'continuous') delete q.mode
+		if (q.mode == 'continuous' || q.mode == 'cubic-spline') delete q.mode
 
 		const data = await this.parent.app.vocabApi.getCategories(tw, this.parent.state.termfilter.filter, [
 			'term1_q=' + encodeURIComponent(JSON.stringify(q))
@@ -341,9 +341,10 @@ async function maySetTwoBins(tw, vocabApi, filter, state) {
 		return
 	}
 
-	const data = await vocabApi.getPercentile(tw.id, 50, filter)
-	if (data.error || !Number.isFinite(data.value)) throw 'cannot get median value: ' + (data.error || 'no data')
-	const median = tw.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
+	const data = await vocabApi.getPercentile(tw.id, [50], filter)
+	if (data.error || !data.values.length || !Number.isFinite(data.values[0]))
+		throw 'cannot get median value: ' + (data.error || 'no data')
+	const median = tw.term.type == 'integer' ? Math.round(data.values[0]) : Number(data.values[0].toFixed(2))
 	tw.q = {
 		mode: 'binary',
 		type: 'custom',

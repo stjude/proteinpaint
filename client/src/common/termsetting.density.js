@@ -10,7 +10,7 @@ export async function setDensityPlot(self) {
 		})
 	} else {
 		// svg for range plot
-		const div = self.dom.bins_div
+		const div = self.q.mode == 'cubic-spline' ? self.dom.knots_div : self.dom.bins_div
 		self.num_obj.svg = div.select('svg').size() ? div.select('svg') : div.append('svg')
 		self.num_obj.svg.selectAll('*').remove()
 		makeDensityPlot(self)
@@ -190,16 +190,26 @@ function renderBinLines(self, data) {
 		if (data.last_bin && data.last_bin.start && data.last_bin.start !== lastVisibleLine.x) {
 			lines.push({ x: data.last_bin.start, index, scaledX: Math.round(o.xscale(data.last_bin.start)) })
 		}
-	} else {
+	} else if (data.type == 'custom') {
 		lines.push(
 			...data.lst.slice(1).map((d, index) => {
 				return { x: d.start, index, scaledX: Math.round(o.xscale(d.start)) }
 			})
 		)
+	} else if (data.mode == 'cubic-spline') {
+		lines.push(
+			...data.knots.map((d, index) => {
+				return { x: d.value, index, scaledX: Math.round(o.xscale(d.value)) }
+			})
+		)
 	}
 
 	lines.forEach((d, i) => {
-		d.isDraggable = self.q.type == 'custom' || i === 0 || (self.q.last_bin && self.q.last_bin.start === d.x)
+		d.isDraggable =
+			self.q.type == 'custom' ||
+			self.q.mode == 'cubic-spline' ||
+			i === 0 ||
+			(self.q.last_bin && self.q.last_bin.start === d.x)
 	})
 
 	self.num_obj.binsize_g.selectAll('line').remove()
@@ -288,7 +298,7 @@ function renderBinLines(self, data) {
 				self.q.last_bin.start = value
 				middleLines.style('display', c => (c.scaledX >= d.draggedX ? 'none' : ''))
 			}
-		} else {
+		} else if (self.q.type == 'custom') {
 			self.q.lst[d.index + 1].start = value
 			self.q.lst[d.index + 1].label = get_bin_label(self.q.lst[d.index + 1], self.q)
 			self.q.lst[d.index].stop = value
@@ -312,6 +322,13 @@ function renderBinLines(self, data) {
 			if (self.dom.customBinLabelInput) {
 				self.dom.customBinLabelInput.property('value', c => c.label)
 			}
+		} else if (self.q.mode == 'cubic-spline') {
+			self.q.knots[d.index].value = value
+			if (self.dom.customKnotsInput) {
+				self.dom.customKnotsInput.property('value', self.q.knots.map(d => d.value).join('\n'))
+			}
+		} else {
+			throw 'Dragging not allowed for this term type'
 		}
 	}
 
@@ -343,9 +360,11 @@ function renderBinLines(self, data) {
 				.slice()
 				.reverse()
 				.find(d => d.scaledX < scaledMaxX).scaledX
-		} else {
+		} else if (self.q.type == 'custom') {
 			self.q.lst[d.index + 1].start = d.x
 			self.q.lst[d.index].stop = d.x
+		} else if (self.q.mode == 'cubic-spline') {
+			self.q.knots[d.index].value = d.x
 		}
 	}
 }

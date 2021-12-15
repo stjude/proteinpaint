@@ -28,8 +28,7 @@ export async function init_tabs(opts) {
 	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
 
 	const tabs = opts.tabs
-	tabs.holder = opts.holder.append('div')
-		.style('padding', '10px 10px 0 10px')
+	tabs.holder = opts.holder.append('div').style('padding', '10px 10px 0 10px')
 	// default width is 90px, if label is longer than that, it will be adjusted
 	let tab_width = 90
 	tabs.contentHolder = opts.contentHolder ? opts.contentHolder : opts.holder.append('div')
@@ -38,9 +37,10 @@ export async function init_tabs(opts) {
 	if (!has_active_tab) tabs[0].active = true
 
 	for (const [i, tab] of tabs.entries()) {
+		const toggle_btn_class = i == 0 ? ' sj-left-toggle' : i < tabs.length - 1 ? ' sj-center-toggle' : ' sj-right-toggle'
 		tab.tab = tabs.holder
 			.append('div')
-			.attr('class', 'sj-toggle-button' + (i == 0 ? ' sj-left-toggle' : ' sj-right-toggle'))
+			.attr('class', 'sj-toggle-button' + toggle_btn_class)
 			.classed('active', tab.active ? true : false)
 			.style('padding', '5px')
 			.style('display', 'inline-block')
