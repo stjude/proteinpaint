@@ -18,6 +18,9 @@
 #           "id": [string] variable id (e.g. "outcome")
 #           "name": [string] variable name (e.g. "Blood Pressure")
 #           "values": [array] data values. For logistic regression, use 0/1 values (0 = ref; 1 = non-ref)
+#           "categories": [object] variable categories (only for logistic regression)
+#               "ref": [string] reference category
+#               "nonref": [string] non-reference category
 #       "independent": [array] independent variables
 #           {
 #             "id": [string] variable id (e.g. "id0", "id1")
@@ -26,10 +29,9 @@
 #             "values": [array] data values
 #             "interactions": [array] ids of interacting variables
 #             "refGrp": [string] reference group (required for factor variables)
-#             "spline": {
-#               "knots": [array] knot values
-#               "plotfile": [string] output png file of spline plot
-#             } (optional)
+#             "spline": [object] cubic spline settings (optional)
+#                 "knots": [array] knot values
+#                 "plotfile": [string] output png file of spline plot
 #             "scale": [number] scaling factor. All data values will be divided by this number (optional)
 #           },
 #           {...}
@@ -137,11 +139,13 @@ plot_spline <- function(splineTerm, lst, dat, res) {
   if (lst$type == "linear") {
     pointtype <- 16
     pointsize <- 0.3
+    ylab <- lst$outcome$name
   } else {
     # for logistic regression, plot predicted probabilities
     preddat_ci_adj <- 1/(1+exp(-preddat_ci_adj))
     pointtype <- 124
     pointsize <- 0.7
+    ylab <- paste0("Pr(", lst$outcome$name, " ", lst$outcome$categories$nonref, ")")
   }
   plotfile <- splineTerm$spline$plotfile
   #png(filename = plotfile, width = 1100, height = 650, res = 200)
@@ -156,7 +160,7 @@ plot_spline <- function(splineTerm, lst, dat, res) {
   )
   # axis titles
   title(xlab = splineTerm$name,
-        ylab = lst$outcome$name,
+        ylab = ylab,
         line = 1.5,
         cex.lab = 0.5
   )
@@ -273,6 +277,9 @@ for (i in 1:length(lst$independent)) {
 }
 
 mod <- as.formula(paste(outcomeTerm, paste(independentTerms, collapse = "+"), sep = "~"))
+
+
+save.image("temp.regression.RData")
 
 
 ########## Regression analysis ###########

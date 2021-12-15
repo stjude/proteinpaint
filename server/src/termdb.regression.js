@@ -115,6 +115,12 @@ function makeRinput(q, sampledata) {
 		name: q.outcome.term.name,
 		values: []
 	}
+	if (q.regressionType == 'logistic') {
+		outcome.categories = {}
+		const categories = q.outcome.q.lst.map(x => x.label)
+		outcome.categories.ref = categories.find(x => x == q.outcome.refGrp)
+		outcome.categories.nonref = categories.find(x => x != q.outcome.refGrp)
+	}
 
 	// input for R script will be in json format
 	const Rinput = {
