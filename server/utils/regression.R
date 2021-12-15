@@ -17,6 +17,7 @@
 #       "outcome": [object] outcome variable
 #           "id": [string] variable id (e.g. "outcome")
 #           "name": [string] variable name (e.g. "Blood Pressure")
+#           "rtype": [string] R variable type (e.g. "numeric" or "factor")
 #           "values": [array] data values. For logistic regression, use 0/1 values (0 = ref; 1 = non-ref)
 #           "categories": [object] variable categories (only for logistic regression)
 #               "ref": [string] reference category
@@ -57,8 +58,7 @@
 #       "other": {
 #           "header": []
 #           "rows": []
-#       },
-#       "plots": []
+#       }
 #     }
 
 
@@ -148,7 +148,6 @@ plot_spline <- function(splineTerm, lst, dat, res) {
     ylab <- paste0("Pr(", lst$outcome$name, " ", lst$outcome$categories$nonref, ")")
   }
   plotfile <- splineTerm$spline$plotfile
-  #png(filename = plotfile, width = 1100, height = 650, res = 200)
   png(filename = plotfile, width = 950, height = 550, res = 200)
   par(mar = c(3, 2.5, 1, 5), mgp = c(1, 0.5, 0), xpd = T)
   # plot coordinate space
@@ -209,7 +208,6 @@ plot_spline <- function(splineTerm, lst, dat, res) {
          border = c(NA, NA, NA)
   )
   dev.off()
-  return(plotfile)
 }
 
 
@@ -229,16 +227,16 @@ lst <- lst[[1]]
 # assign variable types, reference groups and scale values (if applicable)
 dat <- as.data.frame(matrix(data = NA, nrow = length(lst$outcome$values), ncol = length(lst$independent) + 1))
 colnames(dat)[1] <- lst$outcome$id
-dat[,1] <- lst$outcome$values
+dat[,1] <- as.numeric(lst$outcome$values)
 for (i in 2:ncol(dat)) {
   term <- lst$independent[[i - 1]]
   colnames(dat)[i] <- term$id
   if (term$rtype == "numeric") {
     # numeric variable
     if ("scale" %in% names(term)) {
-      dat[,i] <- term$values/term$scale
+      dat[,i] <- as.numeric(term$values)/as.numeric(term$scale)
     } else {
-      dat[,i] <- term$values
+      dat[,i] <- as.numeric(term$values)
     }
   } else if (term$rtype == "factor") {
     # factor variable
@@ -247,10 +245,6 @@ for (i in 2:ncol(dat)) {
     stop(paste0("term rtype '", term$rtype, "' is not recognized"))
   }
 }
-
-
-# save.image("temp.regression.RData")
-
 
 # build formula of regression model
 outcomeTerm <- "outcome"
@@ -279,12 +273,8 @@ for (i in 1:length(lst$independent)) {
 mod <- as.formula(paste(outcomeTerm, paste(independentTerms, collapse = "+"), sep = "~"))
 
 
-# save.image("temp.regression.RData")
-
-
 ########## Regression analysis ###########
 
-plots <- vector(mode = "character")
 if (lst$type == "linear"){
   # linear regression
   if (!is.numeric(dat$outcome)){
@@ -296,8 +286,7 @@ if (lst$type == "linear"){
     # model contains spline term(s)
     # plot spline regression for each spline term
     for (term in splineTerms) {
-      plotfile <- plot_spline(term, lst, dat, res)
-      plots <- c(plots, plotfile)
+      plot_spline(term, lst, dat, res)
     }
   }
   res_summ <- summary(res)
@@ -332,8 +321,7 @@ if (lst$type == "linear"){
     # model contains spline term(s)
     # plot spline regression for each spline term
     for (term in splineTerms) {
-      plotfile <- plot_spline(term, lst, dat, res)
-      plots <- c(plots, plotfile)
+      plot_spline(term, lst, dat, res)
     }
   }
   res_summ <- summary(res)
@@ -431,10 +419,6 @@ typeIII_table <- list("header" = colnames(typeIII_table), "rows" = typeIII_table
 
 # combine the results tables into a list
 out_lst <- list("residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = typeIII_table, "other" = other_table)
-
-if (length(plots) > 0) {
-  out_lst[["plots"]] <- plots
-}
 
 if (length(warnings()) > 0) {
   warnings_table <- capture.output(summary(warnings()))

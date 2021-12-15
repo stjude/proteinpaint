@@ -60,7 +60,7 @@ export async function get_regression(q, ds) {
 
 		// parse the R output
 		const result = { queryTime, sampleSize }
-		await parseRoutput(Routput, id2originalId, q, result)
+		await parseRoutput(Rinput, Routput, id2originalId, result)
 		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
@@ -110,11 +110,16 @@ function parse_q(q, ds) {
 
 function makeRinput(q, sampledata) {
 	// outcome term
+	// for linear regression, 'values' will be sample values
+	// for logisitc regression, 'values' will be 0/1 (0 = ref; 1 = non-ref)
+	// therefore, 'rtype' will always be 'numeric'
 	const outcome = {
 		id: q.outcome.id,
 		name: q.outcome.term.name,
+		rtype: 'numeric',
 		values: []
 	}
+	// for logistic regression, specify ref and non-ref categories of outcome for the purpose of labeling plot in R
 	if (q.regressionType == 'logistic') {
 		outcome.categories = {}
 		const categories = q.outcome.q.lst.map(x => x.label)
@@ -209,13 +214,13 @@ function validateRinput(q, Rinput, sampleSize) {
 	}
 }
 
-async function parseRoutput(Routput, id2originalId, q, result) {
+async function parseRoutput(Rinput, Routput, id2originalId, result) {
 	if (Routput.length !== 1) throw 'expected 1 line in R output'
 	const data = JSON.parse(Routput[0])
 
 	// residuals
 	result.residuals = data.residuals
-	result.residuals.label = q.regressionType === 'linear' ? 'Residuals' : 'Deviance residuals'
+	result.residuals.label = Rinput.type == 'linear' ? 'Residuals' : 'Deviance residuals'
 
 	// coefficients
 	if (data.coefficients.rows.length < 2)
@@ -290,11 +295,12 @@ async function parseRoutput(Routput, id2originalId, q, result) {
 	result.other.label = 'Other summary statistics'
 
 	// plots
-	if (data.plots) {
-		result.plots = []
-		for (const file of data.plots) {
+	for (const tw of Rinput.independent) {
+		if (tw.spline) {
+			if (!result.splinePlots) result.splinePlots = []
+			const file = tw.spline.plotfile
 			const plot = await fs.promises.readFile(file)
-			result.plots.push({
+			result.splinePlots.push({
 				src: 'data:image/png;base64,' + new Buffer.from(plot).toString('base64'),
 				size: imagesize(file)
 			})
