@@ -342,9 +342,10 @@ async function maySetTwoBins(tw, vocabApi, filter, state) {
 		return
 	}
 
-	const data = await vocabApi.getPercentile(tw.id, 50, filter)
-	if (data.error || !Number.isFinite(data.value)) throw 'cannot get median value: ' + (data.error || 'no data')
-	const median = tw.term.type == 'integer' ? Math.round(data.value) : Number(data.value.toFixed(2))
+	const data = await vocabApi.getPercentile(tw.id, [50], filter)
+	if (data.error || !data.values.length || !Number.isFinite(data.values[0]))
+		throw 'cannot get median value: ' + (data.error || 'no data')
+	const median = tw.term.type == 'integer' ? Math.round(data.values[0]) : Number(data.values[0].toFixed(2))
 	tw.q = {
 		mode: 'binary',
 		type: 'custom',

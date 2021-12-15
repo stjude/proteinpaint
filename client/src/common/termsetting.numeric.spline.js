@@ -139,20 +139,18 @@ async function getKnots(self, knot_count) {
 	const percentile_lst = [5]
 	const second_knot_perc = (90 / (middle_knot_count + 1)).toFixed(0)
 	for (let i = 1; i < middle_knot_count + 1; i++) {
-		percentile_lst.push( i * second_knot_perc )
+		percentile_lst.push(i * second_knot_perc)
 	}
 	percentile_lst.push(95)
 	const values = await getPercentile2Value(percentile_lst)
-	for(const val of values){
+	for (const val of values) {
 		knots_lst.push({ value: val.toFixed(t.type == 'integer' ? 0 : 2) })
 	}
 
 	async function getPercentile2Value(percentile_lst) {
-		// TODO: rightnow vocabApi.getPercentiles is used only at this place, 
-		// if it looks good, will replace original function with this one and
-		// modify all places where vocabApi.getPercentile is used
-		const data = await self.vocabApi.getPercentiles(self.term.id, percentile_lst, self.filter)
-		if (data.error || !data.values.length) throw 'cannot get median value: ' + (data.error || 'no data')
+		const data = await self.vocabApi.getPercentile(self.term.id, percentile_lst, self.filter)
+		if (data.error || !data.values.length || !data.values.every(v => Number.isFinite(v)))
+			throw 'cannot get median value: ' + (data.error || 'no data')
 		return data.values
 	}
 }

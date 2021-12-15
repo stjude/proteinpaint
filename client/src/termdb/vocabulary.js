@@ -354,24 +354,10 @@ class TermdbVocab {
 		return density_data
 	}
 
-	async getPercentile(term_id, percentile, filter) {
+	async getPercentile(term_id, percentile_lst, filter) {
 		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
 		const lst = [
-			'termdb?getpercentile=' + percentile,
-			'tid=' + term_id,
-			'genome=' + this.vocab.genome,
-			'dslabel=' + this.vocab.dslabel
-		]
-		if (filter) {
-			lst.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
-		}
-		return await dofetch3(lst.join('&'))
-	}
-
-	async getPercentiles(term_id, percentile_lst, filter) {
-		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
-		const lst = [
-			'termdb?getpercentiles=' + percentile_lst,
+			'termdb?getpercentile=' + percentile_lst,
 			'tid=' + term_id,
 			'genome=' + this.vocab.genome,
 			'dslabel=' + this.vocab.dslabel
