@@ -60,7 +60,7 @@ export async function get_regression(q, ds) {
 
 		// parse the R output
 		const result = { queryTime, sampleSize }
-		await parseRoutput(Rinput, Routput, id2originalId, q, result)
+		await parseRoutput(Rinput, Routput, id2originalId, result)
 		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
@@ -214,14 +214,13 @@ function validateRinput(q, Rinput, sampleSize) {
 	}
 }
 
-// TODO: is 'q' necessary here?
-async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
+async function parseRoutput(Rinput, Routput, id2originalId, result) {
 	if (Routput.length !== 1) throw 'expected 1 line in R output'
 	const data = JSON.parse(Routput[0])
 
 	// residuals
 	result.residuals = data.residuals
-	result.residuals.label = q.regressionType === 'linear' ? 'Residuals' : 'Deviance residuals'
+	result.residuals.label = Rinput.type == 'linear' ? 'Residuals' : 'Deviance residuals'
 
 	// coefficients
 	if (data.coefficients.rows.length < 2)
