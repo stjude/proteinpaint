@@ -49,6 +49,7 @@ async function setqDefaults(self) {
 	if (!cache[t.id]) cache[t.id] = {}
 	if (!cache[t.id]['cubic-spline']) {
 		cache[t.id]['cubic-spline'] = {
+			mode: 'cubic-spline',
 			knots_lst: []
 		}
 	}
@@ -97,7 +98,8 @@ function renderAutoSplineInputs(self, div) {
 			.html(i)
 	}
 
-	knot_ct_select.node().value = default_knot_count
+	const knots_count = self.q.knots_lst && self.q.knots_lst.length ? self.q.knots_lst.length : default_knot_count
+	knot_ct_select.node().value = knots_count
 
 	self.dom.knot_select_div
 		.append('div')
@@ -129,26 +131,27 @@ function renderAutoSplineInputs(self, div) {
 
 async function getKnots(self, knot_count) {
 	// qnery knots from backend
-	// TODO: rightnow, knots are calcualted by node backend, 1st knot at 5 percentile,
+	// knots are calcualted by node backend, 1st knot at 5 percentile,
 	// last knot at 95, and inbetween knots at equidistance
-	// Later, the auto knot calculation will be replaced by R formula
 	const middle_knot_count = knot_count - 2
 	const t = self.term
 	const knots_lst = (self.q.knots_lst = [])
-	const perc_value_5 = await getPercentile2Value(5)
-	const perc_value_95 = await getPercentile2Value(95)
+	const percentile_lst = [5]
 	const second_knot_perc = (90 / (middle_knot_count + 1)).toFixed(0)
-	knots_lst.push({ value: perc_value_5.toFixed(t.type == 'integer' ? 0 : 2) })
 	for (let i = 1; i < middle_knot_count + 1; i++) {
-		const knot_value = await getPercentile2Value(i*second_knot_perc)
-		knots_lst.push({ value: knot_value.toFixed(t.type == 'integer' ? 0 : 2) })
+		percentile_lst.push(i * second_knot_perc)
 	}
-	knots_lst.push({ value: perc_value_95.toFixed(t.type == 'integer' ? 0 : 2) })
+	percentile_lst.push(95)
+	const values = await getPercentile2Value(percentile_lst)
+	for (const val of values) {
+		knots_lst.push({ value: val.toFixed(t.type == 'integer' ? 0 : 2) })
+	}
 
-	async function getPercentile2Value(percentile) {
-		const data = await self.vocabApi.getPercentile(self.term.id, percentile, self.filter)
-		if (data.error || !Number.isFinite(data.value)) throw 'cannot get median value: ' + (data.error || 'no data')
-		return data.value
+	async function getPercentile2Value(percentile_lst) {
+		const data = await self.vocabApi.getPercentile(self.term.id, percentile_lst, self.filter)
+		if (data.error || !data.values.length || !data.values.every(v => Number.isFinite(v)))
+			throw 'cannot get median value: ' + (data.error || 'no data')
+		return data.values
 	}
 }
 
@@ -252,6 +255,7 @@ function renderButtons(self) {
 		.on('click', () => {
 			delete self.q
 			delete self.numqByTermIdModeType[self.term.id]
+			self.handler = getHandler(self)
 			self.handler.showEditMenu(self.dom.num_holder)
 		})
 }

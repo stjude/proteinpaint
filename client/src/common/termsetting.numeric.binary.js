@@ -218,8 +218,8 @@ async function renderCuttoffInput(self) {
 		}
 	}
 	async function setPercentile() {
-		const data = await self.opts.vocabApi.getPercentile(self.term.id, self.q.modeBinaryCutoffPercentile, self.filter)
-		updateUI(data.value)
+		const data = await self.opts.vocabApi.getPercentile(self.term.id, [self.q.modeBinaryCutoffPercentile], self.filter)
+		updateUI(data.values[0])
 	}
 }
 

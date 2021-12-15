@@ -354,10 +354,10 @@ class TermdbVocab {
 		return density_data
 	}
 
-	async getPercentile(term_id, percentile, filter) {
+	async getPercentile(term_id, percentile_lst, filter) {
 		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
 		const lst = [
-			'termdb?getpercentile=' + percentile,
+			'termdb?getpercentile=' + percentile_lst,
 			'tid=' + term_id,
 			'genome=' + this.vocab.genome,
 			'dslabel=' + this.vocab.dslabel
