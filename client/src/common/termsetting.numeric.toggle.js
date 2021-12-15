@@ -40,7 +40,7 @@ export function getHandler(self) {
 
 			const tab_options = {
 				continuous: {
-					active: self.q.mode && (self.q.mode == 'discrete' || self.q.mode == 'cubic-spline') ? false : true,
+					active: !self.q.mode || (self.q.mode != 'discrete' && self.q.mode != 'cubic-spline'),
 					label: 'Continuous',
 					callback: async div => {
 						self.q.mode = 'continuous'
@@ -50,7 +50,7 @@ export function getHandler(self) {
 					}
 				},
 				discrete: {
-					active: self.q.mode && self.q.mode == 'discrete' ? true : false,
+					active: self.q.mode && self.q.mode == 'discrete',
 					label: 'Discrete',
 					callback: async div => {
 						self.q.mode = 'discrete'
@@ -63,7 +63,7 @@ export function getHandler(self) {
 					}
 				},
 				'cubic-spline': {
-					active: self.q.mode && self.q.mode == 'cubic-spline' ? true : false,
+					active: self.q.mode && self.q.mode == 'cubic-spline',
 					label: 'Cubic spline',
 					callback: async div => {
 						self.q.mode = 'cubic-spline'

@@ -287,10 +287,10 @@ async function trigger_getpercentile(q, res, ds) {
 		}
 		values.push(Number(value))
 	}
-	const sorted_values = [...values].sort((a, b) => a - b)
+	values.sort((a, b) => a - b)
 	for (const p of percentile_lst) {
 		if (!Number.isInteger(p) || p < 1 || p > 99) throw 'percentile is not 1-99 integer'
-		const value = sorted_values[Math.floor((values.length * p) / 100)]
+		const value = values[Math.floor((values.length * p) / 100)]
 		perc_values.push(value)
 	}
 	res.send({ values: perc_values })
