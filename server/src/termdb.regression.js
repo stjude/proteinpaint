@@ -119,13 +119,8 @@ function makeRinput(q, sampledata) {
 		rtype: 'numeric',
 		values: []
 	}
-	// for logistic regression, specify ref and non-ref categories of outcome for the purpose of labeling plot in R
-	if (q.regressionType == 'logistic') {
-		outcome.categories = {}
-		const categories = q.outcome.q.lst.map(x => x.label)
-		outcome.categories.ref = categories.find(x => x == q.outcome.refGrp)
-		outcome.categories.nonref = categories.find(x => x != q.outcome.refGrp)
-	}
+	// specify ref and non-ref categories for plot labeling purposes in R
+	if (q.regressionType == 'logistic') outcome.categories = { ref: q.outcome.refGrp }
 
 	// input for R script will be in json format
 	const Rinput = {
@@ -175,11 +170,14 @@ function makeRinput(q, sampledata) {
 
 		// this sample has values for all terms and is eligible for regression analysis
 		// add its values to values[] of each term
-		// for categorical outcome term, convert ref and non-ref values to 0 and 1, respectively
+		// for categorical/condition outcome term, convert ref and non-ref values to 0 and 1, respectively
 		if (q.outcome.q.mode == 'continuous') {
 			Rinput.outcome.values.push(out.value)
+		} else if (out.key === q.outcome.refGrp) {
+			Rinput.outcome.values.push(0)
 		} else {
-			Rinput.outcome.values.push(out.key == q.outcome.refGrp ? 0 : 1)
+			Rinput.outcome.values.push(1)
+			if (!('nonref' in Rinput.outcome.categories)) Rinput.outcome.categories.nonref = out.key
 		}
 		for (const t of Rinput.independent) {
 			const v = id2value.get(t.id)
