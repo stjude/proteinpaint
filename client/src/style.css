@@ -907,6 +907,7 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     color: #000;
     background-color: #f2f2f2;
     font-weight: normal;
+    box-sizing: content-box;
   }
 
   .sj-left-toggle {
