@@ -175,55 +175,6 @@ makeURL([
 			},
 			activeCohort:0
 		})],
-		['cuminc','?noheader=1&termdb='+JSON.stringify( {
-			dslabel:'SJLife',
-			genome:'hg38',
-			tree: {
-				expandedTermIds: [ 'root', 'Clinically-assessed Variables', 'ctcae_graded', 'Cardiovascular System' ],
-				visiblePlotIds: ['Cardiovascular System'],
-				plots: {
-					'Cardiovascular System': {
-						term: {
-							id: 'Cardiovascular System'
-						},
-						settings: {
-							currViews: ['cuminc']
-						}
-					}
-				}
-			},
-			nav: {
-				header_mode: 'with_tabs',
-				activeTab: -1
-			},
-			activeCohort:0
-		})],
-		['survival','?noheader=1&termdb='+JSON.stringify( {
-			dslabel:'TermdbTest',
-			genome:'hg38',
-			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
-				visiblePlotIds: ['diaggrp'],
-				plots: {
-					'diaggrp': {
-						term: {
-							id: 'diaggrp'
-						},
-						term2: {
-							id: 'efs'
-						},
-						settings: {
-							currViews: ['survival']
-						}
-					}
-				}
-			},
-			nav: {
-				header_mode: 'with_tabs',
-				activeTab: -1
-			},
-			activeCohort:0
-		})],
 		['filter','?noheader=1&termdb='+JSON.stringify( {
 			dslabel:'SJLife',
 			genome:'hg38',
@@ -324,6 +275,42 @@ makeURL([
 		['SJLife', '?noheader=1&mass={"genome":"hg38","dslabel": "SJLife"}'],
 
 		['barchart', '?noheader=1&mass={"genome":"hg38","dslabel": "SJLife","plots":[{"chartType":"barchart","term":{"id":"diaggrp"}}]}'],
+
+		['cuminc','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'cuminc',
+					term: {
+						id: 'Cardiomyopathy'
+					}
+				}
+			],
+		})],
+
+		['survival','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'TermdbTest',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'survival',
+					term: {
+						id: 'diaggrp'
+					},
+					term2: {
+						id: 'efs'
+					},
+					settings: {
+						currViews: ['survival']
+					}
+				}
+			],
+		})],
+	]
+},
+{name:'Regression',
+	links:[
 
 		'LINEAR',
 
@@ -473,18 +460,6 @@ makeURL([
 			}]
 		})],
 
-		['Arrhythmias', '?noheader=1&mass='+JSON.stringify({
-			genome: 'hg38',
-			dslabel: 'SJLife',
-			plots: [{
-				chartType: 'regression',
-				regressionType: 'logistic',
-				outcome: {
-					id: 'Arrhythmias',
-				}
-			}]
-		})],
-
 		['Arrhythmias ~ chestrt', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
@@ -512,7 +487,7 @@ makeURL([
 				]
 			}]
 		})],
-		['BreastSN ', '?noheader=1&mass='+JSON.stringify({
+		['BreastSN ~ PGS + age + chestRT', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
 			plots: [{
@@ -522,6 +497,57 @@ makeURL([
 					id:'Breast',
 					refGrp:'No condition / not tested'
 				},
+				independent:[
+					{
+						id:'prs_PGS000332',
+						q:{
+							"mode": "discrete",
+							"scale": 1,
+							"type": "regular",
+							"startinclusive": true,
+							"bin_size": 0.4,
+							"first_bin": {
+								"stop": -1,
+								"bin": "first",
+								"startunbounded": true
+							},
+							"rounding": ".1f",
+							"termtype": "float",
+						},
+						refGrp:'-0.2 to <0.2'
+					},
+					{id:'agelastvisit'},
+					{id:'chestrt_yn',
+						q: {
+							"type": "custom",
+							"lst": [
+								{
+									"startunbounded": true,
+									"stop": 0,
+									"startinclusive": false,
+									"stopinclusive": true,
+									"label": "Not exposed"
+								},
+								{
+									"start": 0,
+									"startinclusive": false,
+									"stopinclusive": true,
+									"stop": 1000,
+									"label": ">0 to 1000"
+								},
+								{
+									"start": 1000,
+									"startinclusive": false,
+									"stopinclusive": true,
+									"stopunbounded": true,
+									"label": ">1000"
+								}
+							],
+							"mode": "discrete"
+						},
+						refGrp:'Not exposed'
+					}
+				]
 			}]
 		})],
 	]

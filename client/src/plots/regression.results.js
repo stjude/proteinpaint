@@ -480,7 +480,8 @@ function setRenderers(self) {
 			}
 
 			const x = scale(mid)
-			if (x != -Infinity && x != Infinity) {
+			if (Number.isFinite(x)) {
+				// guard against infinity values
 				g.append('circle')
 					.attr('cx', x)
 					.attr('cy', height / 2)
@@ -494,12 +495,14 @@ function setRenderers(self) {
 			}
 			const x1 = scale(cilow),
 				x2 = scale(cihigh)
-			g.append('line')
-				.attr('x1', x1)
-				.attr('y1', height / 2)
-				.attr('x2', x2)
-				.attr('y2', height / 2)
-				.attr('stroke', forestcolor)
+			if (Number.isFinite(x1) && Number.isFinite(x2)) {
+				g.append('line')
+					.attr('x1', x1)
+					.attr('y1', height / 2)
+					.attr('x2', x2)
+					.attr('y2', height / 2)
+					.attr('stroke', forestcolor)
+			}
 		}
 		///////// helpers
 		function numbers2array(lst) {

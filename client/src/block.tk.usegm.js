@@ -261,7 +261,6 @@ function configpanel_gmsum(block, holder) {
 
 export function gmtkrender(tk, block) {
 	tk.busy = false
-	const thincolor = '#858585'
 	block.ifbusy()
 	tk.glider
 		.attr('transform', 'translate(0,0)')
@@ -676,6 +675,15 @@ block:
 				cdsstart = rstartexonbp - utr5len
 				pxstart = 0
 			}
+
+			/* TRICKY!!!
+			offset value is usually 0
+			if startCodonFrame is specified, will set non-0 value
+			for modifying nt array index below while iterating through whose nt that will be translated
+			this is because gm.cdseq (CDS sequence) contains extra nts associated with startCodonFrame
+			*/
+			const codonNtOffset = gm.startCodonFrame ? 3 - gm.startCodonFrame : 0
+
 			const cdsstop = Math.min(gm.cdslen, rstopexonbp - utr5len)
 
 			/*
@@ -689,8 +697,11 @@ block:
 			if (showntseq) {
 				// must not include cdsstop
 				for (let j = cdsstart; j < cdsstop; j++) {
-					// shade
-					if (Math.floor(j / 3) % 2 == 0) {
+					// shade over a codon
+
+					const j2 = j - codonNtOffset // modified index
+
+					if (Math.floor(j2 / 3) % 2 == 0) {
 						tkg
 							.append('rect')
 							.attr('x', x + pxstart + (j - cdsstart) * block.exonsf)
@@ -698,11 +709,10 @@ block:
 							.attr('height', rowh * 2)
 							.attr('fill', 'black')
 							.attr('fill-opacity', 0.1)
-						//.attr('shape-rendering','crispEdges')
 					}
 					tkg
 						.append('text')
-						.text(gm.cdseq[j])
+						.text(gm.cdseq[j]) // do not use j2 here
 						.attr('font-family', 'Courier')
 						.attr('font-size', rowh)
 						.attr('dominant-baseline', 'central')
@@ -720,19 +730,21 @@ block:
 			if (showaaseq) {
 				// must not include cdsstop
 				for (let j = cdsstart; j < cdsstop; j++) {
-					if (j % 3 != 1) {
+					const j2 = j - codonNtOffset // modified index
+
+					if (j2 % 3 != 1) {
 						continue
 					}
 					tkg
 						.append('text')
-						.text(gm.aaseq[Math.floor(j / 3)])
+						.text(gm.aaseq[Math.floor(j2 / 3)])
 						.attr('font-family', 'Courier')
 						.attr('font-size', rowh)
 						.attr('font-weight', 'bold')
 						.attr('fill', 'black')
 						.attr('dominant-baseline', showntseq ? 'central' : 'auto')
 						.attr('text-anchor', 'middle')
-						.attr('x', x + pxstart + (j - cdsstart + 0.5) * block.exonsf)
+						.attr('x', x + pxstart + (j - cdsstart + 0.5) * block.exonsf) // do not use j2 here
 						.attr('y', h / 2)
 				}
 			}

@@ -34,7 +34,7 @@ set -e
 
 EXPOSED_PORT=3456
 
-docker run \
+docker run -d \
 	--name $CONTAINER_ID \
 	--mount type=bind,source=$SRCDIR,target=/home/root/pp/tp,readonly \
 	--publish $HOSTPORT:$EXPOSED_PORT \

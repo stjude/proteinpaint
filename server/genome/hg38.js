@@ -45,6 +45,7 @@ module.exports = {
 		},
 		{
 			__isgene: true,
+			file: 'anno/gencode.v38.hg38.gz',
 			translatecoding: true,
 			categories: {
 				coding: { color: '#004D99', label: 'Coding gene' },
@@ -52,9 +53,8 @@ module.exports = {
 				problem: { color: '#FF3300', label: 'Problem' },
 				pseudo: { color: '#FF00CC', label: 'Pseudogene' }
 			},
-			file: 'anno/gencode.v34.hg38.gz',
 			type: 'bedj',
-			name: 'GENCODE v34',
+			name: 'GENCODE v38',
 			stackheight: 16,
 			stackspace: 1,
 			vpad: 4

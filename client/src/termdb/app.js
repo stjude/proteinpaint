@@ -4,7 +4,7 @@ import { vocabInit } from './vocabulary'
 import { treeInit } from './tree'
 import { storeInit } from './store'
 import { searchInit } from './search'
-import { filterInit } from './filter3'
+//import { filter3Init } from './filter3'
 import { sayerror, Menu } from '../client'
 
 /*
@@ -73,7 +73,7 @@ class TdbApp {
 				}),
 				/*
 				// TODO: support with_cohortHtmlSelect, previously a nav option
-				filter: filterInit({
+				filter: filter3Init({
 					app: this.app,
 					holder: this.dom.filterDiv
 				}),*/

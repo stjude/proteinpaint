@@ -145,6 +145,8 @@ class TermdbVocab {
 		}
 
 		if ('grade' in opts) params.push(`grade=${opts.grade}`)
+		// TODO: may support user input for minimum years_to_event for cuminc plot
+		// if ('minYearsToEvent' in opts) params.push(`minYearsToEvent=${opts.minYearsToEvent}`)
 
 		const route = opts.chartType ? 'termdb' : 'termdb-barsql'
 		return `/${route}?${params.join('&')}&genome=${this.vocab.genome}&dslabel=${this.vocab.dslabel}`

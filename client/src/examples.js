@@ -2,7 +2,44 @@ import { dofetch2, sayerror, tab_wait, appear } from './client'
 import { newSandboxDiv } from './dom/sandbox'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
-import { highlight } from 'highlight.js/lib/common'
+// js-only syntax highlighting for smallest bundle, see https://highlightjs.org/usage/
+// also works in rollup and not just webpack, without having to use named imports
+import hljs from 'highlight.js/lib/core'
+import javascript from 'highlight.js/lib/languages/javascript'
+hljs.registerLanguage('javascript', javascript)
+
+/*
+
+-------EXPORTED-------
+init_examples
+	- creates the app drawer
+
+-------Internal-------
+make_examples_page
+make_main_track_grid
+make_col
+make_subheader_contents
+make_searchbar (disabled until further notice)
+loadTracks
+displayTracks
+makeRibbon
+openSandbox
+renderContent
+makeSandboxTabs
+sandboxTabMenu
+makeLeftsideTabMenu
+getTabData
+addMessage
+addUpdateMessage
+makeButton
+addButtons
+showURLLaunch
+makeDataDownload
+makeArrowButtons
+addArrowBtns
+
+Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl0xIJqDRbyhahA4/edit#heading=h.jwyqi1mhacps
+*/
 
 export async function init_examples(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
@@ -286,22 +323,24 @@ async function openSandbox(track, holder) {
 }
 
 // Single content layout for examples only - buttons not used for UIs
-function renderContent(call, div) {
-	addMessage(call.message, div)
+function renderContent(ppcalls, div) {
+	addMessage(ppcalls.message, div)
 
 	const buttons_div = div.append('div').style('margin-bottom', '20px')
 	const reuse_div = div.append('div')
 
-	addButtons(call.buttons, buttons_div)
-	makeDataDownload(call.download, buttons_div)
-	showURLLaunch(call.urlparam, buttons_div)
-	addArrowBtns(call.arrowButtons, call.runargs, buttons_div, reuse_div)
+	addButtons(ppcalls.buttons, buttons_div)
+	makeDataDownload(ppcalls.download, buttons_div)
+	showURLLaunch(ppcalls.urlparam, buttons_div)
+	addArrowBtns(ppcalls.arrowButtons, ppcalls, buttons_div, reuse_div)
 
-	const line = div
-		.append('hr')
-		.style('border', '0')
-		.style('border-top', '1px dashed #e3e3e6')
-		.style('width', '100%')
+	if (!ppcalls.nodashedline) {
+		div
+			.append('hr')
+			.style('border', '0')
+			.style('border-top', '1px dashed #e3e3e6')
+			.style('width', '100%')
+	}
 
 	const runpp_arg = {
 		holder: div
@@ -311,7 +350,7 @@ function renderContent(call, div) {
 		host: window.location.origin
 	}
 
-	const callpp = JSON.parse(JSON.stringify(call.runargs))
+	const callpp = JSON.parse(JSON.stringify(ppcalls.runargs))
 
 	runproteinpaint(Object.assign(runpp_arg, callpp))
 }
@@ -469,14 +508,14 @@ async function makeLeftsideTabMenu(track, div) {
 	}
 }
 
-function getTabData(call, i) {
+function getTabData(ppcalls, i) {
 	return {
-		label: call.label,
+		label: ppcalls.label,
 		active: i === 0,
 		callback: async div => {
 			const wait = tab_wait(div)
 			try {
-				renderContent(call, div)
+				renderContent(ppcalls, div)
 				wait.remove()
 			} catch (e) {
 				wait.text('Error: ' + (e.message || e))
@@ -567,16 +606,16 @@ function makeDataDownload(arg, div) {
 	}
 }
 
-function showCode(call, btns) {
-	if (call.is_ui == true) return
+function showCode(ppcalls, btns) {
+	if (ppcalls.is_ui == true) return
 
 	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
-	const code = highlight(
+	const code = hljs.highlight(
 		`runproteinpaint({
     host: "${window.location.origin}",
     holder: document.getElementById('a'),
     ` + // Fix for first argument not properly appearing underneath holder
-			JSON.stringify(call, '', 4)
+			JSON.stringify(ppcalls.runargs, '', 4)
 				.replaceAll(/"(.+)"\s*:/g, '$1:')
 				.replaceAll(/\\t/g, '	')
 				.replaceAll(/\\n/g, '\r\t')
@@ -635,10 +674,10 @@ function makeArrowButtons(arrows, btns) {
 	}
 }
 
-function addArrowBtns(arg, call, bdiv, rdiv) {
+function addArrowBtns(arg, ppcalls, bdiv, rdiv) {
 	let btns = []
-	if (call) {
-		showCode(call, btns)
+	if (ppcalls) {
+		showCode(ppcalls, btns)
 	}
 	makeArrowButtons(arg, btns)
 

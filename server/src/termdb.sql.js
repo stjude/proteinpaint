@@ -1,6 +1,9 @@
 const app = require('./app')
 const binsmodule = require('../shared/termdb.bins')
 const getFilterCTEs = require('./termdb.filter').getFilterCTEs
+const numericSql = require('./termdb.sql.numeric')
+const categoricalSql = require('./termdb.sql.categorical')
+const conditionSql = require('./termdb.sql.condition')
 const connect_db = require('./utils').connect_db
 
 /*
@@ -16,10 +19,7 @@ server_init_db_queries
 ********************** INTERNAL
 get_term_cte
 	makesql_oneterm
-		makesql_oneterm_categorical
 			makesql_groupset
-		makesql_oneterm_condition
-		makesql_numericBinCTE
 
 	!!!
 	NOTE: all constructed sql to get sample-value, regardless of term.type, must return 
@@ -270,7 +270,7 @@ opts{} options to tweak the query, see const default_opts = below
 	const CTE1 = get_term_cte(q, values, 1, filter)
 	const CTE2 = get_term_cte(q, values, 2, filter)
 
-	const statement = `WITH
+	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTE0.sql},
 		${CTE1.sql},
@@ -288,15 +288,20 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? 'WHERE t1.sample IN ' + filter.CTEname : ''}
 		${opts.endclause}`
-	//console.log(statement, values)
-	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
-
-	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
+	//console.log(interpolateSqlValues(sql, values))
+	try {
+		const lst = q.ds.cohort.db.connection.prepare(sql).all(values)
+		return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
+	} catch (e) {
+		console.log('error in sql:\n', interpolateSqlValues(sql, values))
+		throw e
+	}
 }
 
 /*
 Generates one or more CTEs by a term
 
+ARGUMENTS
 q{}
 	.filter
 	.ds
@@ -324,6 +329,9 @@ termWrapper{}
 	.id term.id
 	.term
 	.q
+
+RETURNS 
+{ sql, tablename }
 */
 export function get_term_cte(q, values, index, filter, termWrapper = null) {
 	const termid = termWrapper ? termWrapper.id : q['term' + index + '_id']
@@ -357,10 +365,40 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 			termq.grade = q.grade
 		}
 	}
-	const CTE = makesql_oneterm(term, q.ds, termq, values, index, filter)
-	if (index != 1) {
-		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
+
+	const tablename = 'samplekey_' + index
+	/*
+		NOTE: all constructed sql/CTE, regardless of term.type, must return 
+		{
+			sample,
+			key: may be a bin or groupset label, or if none is used, the actual column value
+			value: the actual column value in the table
+		}
+
+		For example, returning both the bin label and actual value for a numeric term
+		would allow the calling app to create compute boxplot inputs, which is not
+		possible if only the bin labels are returned. Similar use cases may be supported
+		later.  
+	*/
+	let CTE
+	if (term.type == 'categorical') {
+		const groupset = get_active_groupset(term, termq)
+		CTE = categoricalSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, index, groupset)
+	} else if (term.type == 'integer' || term.type == 'float') {
+		CTE = numericSql[termq.mode || 'discrete'].getCTE(tablename, term, q.ds, termq, values, index, filter)
+	} else if (term.type == 'condition') {
+		if (index == 1 && q.getcuminc) {
+			return conditionSql.cuminc.getCTE(tablename, term, q, values, filter)
+		} else {
+			const groupset = get_active_groupset(term, termq)
+			CTE = conditionSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, index, groupset)
+		}
+	} else if (term.type == 'survival') {
+		CTE = makesql_survival(tablename, term, q, values, filter)
+	} else {
+		throw 'unknown term type'
 	}
+	if (index != 1) CTE.join_on_clause = `ON t${index}.sample = t1.sample`
 	return CTE
 }
 
@@ -469,133 +507,7 @@ function get_label4key(key, term, q, ds) {
 	throw 'unknown term type'
 }
 
-/*
-form the query for one of the table in term0-term1-term2 overlaying
-CTE for each term resolves to a table of {sample,key}
-
-term{}
-q{}
-	managed by termsetting UI on client
-	see doc for spec
-values[]
-	collector of bind parameters
-
-index
-
-filter
-
-returns { sql, tablename }
-*/
-function makesql_oneterm(term, ds, q, values, index, filter) {
-	/*
-		NOTE: all constructed sql, regardless of term.type, must return 
-		{
-			sample,
-			key: may be a bin or groupset label, or if none is used, the actual column value
-			value: the actual column value in the table
-		}
-
-		For example, returning both the bin label and actual value for a numeric term
-		would allow the calling app to create compute boxplot inputs, which is not
-		possible if only the bin labels are returned. Similar use cases may be supported
-		later.  
-	*/
-	const tablename = 'samplekey_' + index
-	if (term.type == 'survival') {
-		return makesql_survivaltte(tablename, term, q, values, filter)
-	}
-	if (term.type == 'categorical') {
-		return makesql_oneterm_categorical(tablename, term, q, values, ds)
-	}
-	if (term.type == 'float' || term.type == 'integer') {
-		if (q.mode == 'continuous' || q.mode == 'cubic-spline') {
-			values.push(term.id)
-			const uncomputable = getUncomputableClause(term, q)
-			values.push(...uncomputable.values)
-			return {
-				sql: `${tablename} AS (
-					SELECT 
-						sample,
-						value as key, 
-						CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value
-					FROM annotations
-					WHERE term_id=? ${uncomputable.clause}
-				)`,
-				tablename
-			}
-		} else {
-			const bins = makesql_numericBinCTE(term, q, ds, index, filter, values)
-			return {
-				sql: `${bins.sql},
-				${tablename} AS (
-					SELECT bname as key, sample, v as value
-					FROM ${bins.tablename}
-				)`,
-				tablename,
-				name2bin: bins.name2bin,
-				bins: bins.bins
-			}
-		}
-	}
-	if (term.type == 'condition') {
-		if (index == 1 && q.getcuminc) {
-			return makesql_chronictte(tablename, term, q, values, filter)
-		} else {
-			return makesql_oneterm_condition(tablename, term, q, values, ds)
-		}
-	}
-	throw 'unknown term type'
-}
-
-function makesql_oneterm_categorical(tablename, term, q, values, ds) {
-	const groupset = get_active_groupset(term, q)
-	if (!groupset) {
-		values.push(term.id)
-		const uncomputable = getUncomputableClause(term, q)
-		values.push(...uncomputable.values)
-		// groupsetting not applied
-		return {
-			sql: `${tablename} AS (
-				SELECT sample,value as key, value as value
-				FROM annotations
-				WHERE term_id=? ${uncomputable.clause}
-			)`,
-			tablename
-		}
-	} else if (!groupset.groups) {
-		throw '.groups[] missing from a group-set'
-	} else if (!groupset.groups.find(g => g.type == 'filter')) {
-		values.push(term.id)
-		// use groupset
-		const table2 = tablename + '_groupset'
-		const uncomputable = getUncomputableClause(term, q, 'a')
-		values.push(...uncomputable.values)
-		// NOTE: if a value is not included in any groupset, it will not be returned
-		// in this CTE's query results because the JOIN ... ON ... matches by value
-		return {
-			sql: `${table2} AS (
-				${makesql_values_groupset(term, q)}
-			),
-			${tablename} AS (
-				SELECT
-					sample,
-					${table2}.name AS key,
-					${table2}.value AS value
-				FROM annotations a
-				JOIN
-					${table2} ON a.value = ${table2}.value
-				WHERE
-					term_id=? ${uncomputable.clause}
-			) `,
-			tablename
-		}
-	} else {
-		// this CTE will exclude uncomputable values, EXCEPT IF such value is in a groupset
-		return makesql_complex_groupset(tablename, term, groupset, values, ds)
-	}
-}
-
-function getUncomputableClause(term, q, tableAlias = '') {
+export function getUncomputableClause(term, q, tableAlias = '') {
 	if (!term.values || !q.computableValuesOnly) return { values: [], clause: '' }
 	const values = Object.keys(term.values).filter(k => term.values[k].uncomputable)
 	const aliasValue = tableAlias ? `${tableAlias}.value` : 'value'
@@ -605,134 +517,7 @@ function getUncomputableClause(term, q, tableAlias = '') {
 	}
 }
 
-function makesql_oneterm_condition(tablename, term, q, values, ds) {
-	/*
-	return {sql, tablename}
-*/
-	const value_for = q.bar_by_children ? 'child' : q.bar_by_grade ? 'grade' : ''
-	if (!value_for) throw 'must set the bar_by_grade or bar_by_children query parameter'
-
-	const restriction = q.value_by_max_grade
-		? 'max_grade'
-		: q.value_by_most_recent
-		? 'most_recent'
-		: q.value_by_computable_grade
-		? 'computable_grade'
-		: ''
-	if (!restriction) throw 'must set a valid value_by_*'
-
-	const castType = term.type == 'integer' ? 'integer' : 'real'
-	const groupset = get_active_groupset(term, q)
-	if (!groupset) {
-		values.push(term.id, value_for)
-		const uncomputable = getUncomputableClause(term, q)
-		values.push(...uncomputable.values)
-		return {
-			sql: `${tablename} AS (
-				SELECT
-					sample,
-					${value_for == 'grade' ? `CAST(value AS ${castType}) as key` : 'value as key'},
-					${value_for == 'grade' ? `CAST(value AS ${castType}) as value` : 'value'}
-				FROM
-					precomputed
-				WHERE
-					term_id = ?
-					AND value_for = ?
-					AND ${restriction} = 1
-					${uncomputable.clause}
-			)`,
-			tablename
-		}
-	} else if (!groupset.groups) {
-		throw '.groups[] missing from a group-set'
-	} else if (!groupset.groups.find(g => g.type == 'filter')) {
-		values.push(term.id, value_for)
-		// use groupset
-		const table2 = tablename + '_groupset'
-		// NOTE: if a value is not included in any groupset, it will not be returned
-		// in this CTE's query results because the JOIN ... ON ... matches by value
-		const uncomputable = getUncomputableClause(term, q, 'a')
-		values.push(...uncomputable.values)
-		return {
-			sql: `${table2} AS (
-				${makesql_values_groupset(term, q)}
-			),
-			${tablename} AS (
-				SELECT
-					sample,
-					${table2}.name AS key,
-					${table2}.value AS value
-				FROM precomputed a
-				JOIN ${table2} ON ${table2}.value=${q.bar_by_grade ? `CAST(a.value AS ${castType})` : 'a.value'}
-				WHERE
-					term_id=?
-					AND value_for=?
-					AND ${restriction}=1
-					${uncomputable.clause}
-			)`,
-			tablename
-		}
-	} else {
-		// this CTE will exclude uncomputable values, EXCEPT IF such value is in a groupset
-		return makesql_complex_groupset(tablename, term, groupset, values, ds, value_for, restriction)
-	}
-}
-
-function makesql_chronictte(tablename, term, q, values, filter) {
-	if (!term.isleaf) {
-		values.push(...[term.id, q.grade])
-	} else {
-		values.push(...[q.grade, term.id])
-	}
-
-	const termsCTE = term.isleaf
-		? ''
-		: `parentTerms AS (
-				SELECT distinct(ancestor_id) 
-				FROM ancestry
-				),
-				eventTerms AS (
-				SELECT a.term_id 
-				FROM ancestry a
-				JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
-				WHERE a.ancestor_id = ?
-			),`
-
-	const termsClause = term.isleaf ? `term_id = ?` : 'term_id IN eventTerms'
-
-	return {
-		sql: `${termsCTE}
-		event1 AS (
-			SELECT sample, 1 as key, MIN(years_to_event) as value
-			FROM chronicevents
-			WHERE grade >= ?
-			  AND grade <= 5
-			  AND ${termsClause}
-			  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
-			GROUP BY sample
-		),
-		event1samples AS (
-			SELECT sample
-			FROM event1
-		),
-		event0 AS (
-			SELECT sample, 0 as key, MAX(years_to_event) as value
-			FROM chronicevents
-			WHERE grade <= 5 
-				AND sample NOT IN event1samples
-			  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
-			GROUP BY sample
-		),
-		${tablename} AS (
-			SELECT * FROM event1
-			UNION ALL
-			SELECT * FROM event0
-		)`,
-		tablename
-	}
-}
-
-function makesql_survivaltte(tablename, term, q, values, filter) {
+function makesql_survival(tablename, term, q, values, filter) {
 	values.push(term.id)
 	return {
 		sql: `${tablename} AS (
@@ -783,189 +568,6 @@ function makesql_values_groupset(term, q) {
 		}
 	}
 	return categories.join('\nUNION ALL\n')
-}
-
-// used to assign a unique CTE name to extra filters (xf) for groupsets
-let xfIndex = 0
-
-/*
-	Arguments
-	- tablename: string name for this CTE
-	- term{}
-	- groupset: the active groupset, such as returned by get_active_groupset()
-	- values: the array of values to fill-in the '?' in the prepared sql statement, may append to this array
-	- ds: dataset with db connection
-	- value_for: required for condition terms, "grade" or "child"
-	- restriction: required for condition terms, "computable_grade" | "max_grade" | "most_recent_grade"
-	
-	Return
-	- a series of "SELECT name, value" statements that are joined by UNION ALL
-	- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
-*/
-function makesql_complex_groupset(tablename, term, groupset, values, ds, value_for, restriction) {
-	const categories = []
-	const filters = []
-	for (const g of groupset.groups) {
-		if (g.type == 'values') {
-			if (term.type == 'categorical') {
-				categories.push(`SELECT sample, ? as key, value
-					FROM annotations a
-					WHERE term_id=?
-						AND value IN (${g.values.map(v => '?').join(',')})
-				`)
-				values.push(g.name, term.id, ...g.values.map(v => v.key.toString()))
-			} else if (term.type == 'condition') {
-				categories.push(`SELECT sample, ? as key, value
-					FROM precomputed a
-					WHERE
-						term_id=?
-						AND value_for=?
-						AND ${restriction}=1
-						AND value IN (${g.values.map(v => '?').join(',')})
-				`)
-				values.push(g.name, term.id, value_for, ...g.values.map(v => v.key.toString()))
-			}
-		} else if (g.type == 'filter') {
-			// TODO: create filter sql for group.type == 'filter'
-			if ('activeCohort' in q.groupsetting && g.filter4activeCohort) {
-				const tvs_filter = g.filter4activeCohort[q.groupsetting.activeCohort]
-
-				const filter = getFilterCTEs(tvs_filter, ds, 'xf' + xfIndex++)
-				if (!filter) throw `unable to construct a group='${g.name}' filter for term.id='${term.id}'`
-				filters.push(filter.filters)
-				values.push(...filter.values.slice(), g.name, g.name)
-
-				categories.push(
-					`SELECT sample, ? AS key, ? AS value
-					FROM ${filter.CTEname}`
-				)
-			} else {
-				throw `activeCohort error: cannot construct filter statement for group name='${g.name}', term.id=${term.id}`
-			}
-		} else {
-			throw `unsupported groupset type='${g.type}'`
-		}
-	}
-
-	return {
-		sql: `${filters},
-		${tablename} AS (
-			${categories.join('\nUNION ALL\n')}
-		)`,
-		tablename
-	}
-}
-
-/*
-decide bins and produce CTE
-
-q{}
-	managed by termsetting
-
-index
-
-filter
-	{} or null
-
-returns { sql, tablename, name2bin, bins }
-*/
-function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
-	values.push(term.id)
-	const bins = get_bins(q, term, ds, index, filter)
-	//console.log('last2', bins[bins.length - 2], 'last1', bins[bins.length - 1])
-	const bin_def_lst = []
-	const name2bin = new Map() // k: name str, v: bin{}
-	const bin_size = q.bin_size
-	let has_percentiles = false
-	let binid = 0
-	for (const b of bins) {
-		if (!('name' in b) && b.label) b.name = b.label
-		name2bin.set(b.name, b)
-		bin_def_lst.push(
-			`SELECT '${b.name}' AS name,
-			${b.start == undefined ? 0 : b.start} AS start,
-			${b.stop == undefined ? 0 : b.stop} AS stop,
-			0 AS unannotated,
-			${b.startunbounded ? 1 : 0} AS startunbounded,
-			${b.stopunbounded ? 1 : 0} AS stopunbounded,
-			${b.startinclusive ? 1 : 0} AS startinclusive,
-			${b.stopinclusive ? 1 : 0} AS stopinclusive,
-			${binid++} AS binorder`
-		)
-	}
-	const excludevalues = []
-	if (term.values) {
-		for (const key in term.values) {
-			const isUncomputable = term.values[key].uncomputable
-			if (q.computableValuesOnly && isUncomputable) continue
-			if (!q.computableValuesOnly && !isUncomputable) continue
-			excludevalues.push(key)
-			const v = term.values[key]
-			bin_def_lst.push(
-				`SELECT '${v.label}' AS name,
-        ${key} AS start,
-        0 AS stop,
-        1 AS unannotated,
-        0 AS startunbounded,
-        0 AS stopunbounded,
-        0 AS startinclusive,
-        0 AS stopinclusive,
-        ${binid++} AS binorder`
-			)
-			name2bin.set(v.label, {
-				is_unannotated: true,
-				value: key,
-				label: v.label
-			})
-		}
-	}
-
-	const bin_def_table = 'bin_defs_' + index
-	const bin_sample_table = 'bin_sample_' + index
-	const uncomputable = getUncomputableClause(term, q, 'a')
-	console.log(919, uncomputable)
-	values.push(...uncomputable.values)
-
-	const sql = `${bin_def_table} AS (
-			${bin_def_lst.join(' UNION ALL ')}
-		),
-		${bin_sample_table} AS (
-			SELECT
-				sample,
-				CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS v,
-				CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value,
-				b.name AS bname,
-				b.binorder AS binorder
-			FROM
-				annotations a
-			JOIN ${bin_def_table} b ON
-				( b.unannotated=1 AND v=b.start )
-				OR
-				(
-					b.unannotated=0 AND
-					${excludevalues.length ? 'v NOT IN (' + excludevalues.join(',') + ') AND' : ''}
-					(
-						b.startunbounded=1
-						OR v>b.start
-						OR (b.startinclusive=1 AND v=b.start)
-					)
-					AND
-					(
-						b.stopunbounded
-						OR v<b.stop
-						OR (b.stopinclusive=1 AND v=b.stop)
-					)
-				)
-			WHERE
-			term_id=? ${uncomputable.clause}
-		)`
-
-	return {
-		sql,
-		tablename: bin_sample_table,
-		name2bin,
-		bins
-	}
 }
 
 /*
@@ -1484,4 +1086,28 @@ function test_tables(cn) {
 		subcohort_terms: s.get('subcohort_terms'),
 		sampleidmap: s.get('sampleidmap')
 	}
+}
+
+// helper function to display or log the filled-in, constructed sql statement
+// use for debugging only, do not feed directly into better-sqlite3
+function interpolateSqlValues(sql, values) {
+	const vals = values.slice() // use a copy
+	let prevChar
+	return sql
+		.split('')
+		.map(char => {
+			if (char == '?') {
+				prevChar = char
+				const v = vals.shift()
+				return typeof v == 'string' ? `'${v}'` : v
+			} else if (char == '\t') {
+				// ignore tabs and do not track in case it's in between newlines or spaces
+				return ''
+			} else if (char == '\n' || char == ' ') {
+				if (prevChar === char) return ''
+			}
+			prevChar = char
+			return char
+		})
+		.join('')
 }

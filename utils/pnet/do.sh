@@ -17,15 +17,18 @@ echo "loading data into tables ..."
 sqlite3 db < $DIR/load.sql
 
 echo "updating the terms table"
-node $DIR/setterms.js
+node $DIR/setterms.bundle.js
 
 echo "updating the ancestry table"
-node $DIR/setterms.js
+sqlite3 db < $DIR/setancestry.sql
 
 echo "setting the default subcohort ..."
 sqlite3 db < $DIR/../termdb/set-default-subcohort.sql
 
 echo "setting the included types ..."
 sqlite3 db < $DIR/../termdb/set-included-types.sql
+
+echo "setting anno-by-type tables ..."
+sqlite3 db < $DIR/../termdb/anno-by-type.sql
 
 echo "done!"

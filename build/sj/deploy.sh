@@ -183,12 +183,17 @@ else
 	# npm update
 
 	# create webpack bundle
-	wp="./node_modules/.bin/webpack"
 	echo "Packing frontend bundles ..."
-	$wp --config=client/webpack.config.js --env.url=https://$HOSTNAME --env.devtool=$WPCLIENTDEVTOOL
+	npx webpack --config=client/webpack.config.js --env.url=https://$HOSTNAME --env.devtool=$WPCLIENTDEVTOOL
 
 	echo "Packing backend bundle ..."
-	$wp --config=server/webpack.config.js --env.NODE_ENV=$WPSERVERMODE --env.devtool=$WPSERVERDEVTOOL
+	npx webpack --config=server/webpack.config.js --env.NODE_ENV=$WPSERVERMODE --env.devtool=$WPSERVERDEVTOOL
+
+	if [[ "$SUBDOMAIN" == "ppr" ]]; then
+		# may need to support cohort.db.refresh,
+		# as set via serverconfig dataset updateAttr
+		npx webpack --config=utils/pnet/webpack.config.js
+	fi
 
 	# create dirs to put extracted files
 	rm -rf $APP

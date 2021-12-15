@@ -3,11 +3,11 @@
 # link from mounted optional working dirs
 # to the pp/app directory
 if [[ -d ../active/genome ]]; then
-	cp -s ../active/genome .
+	ln -s ../active/genome .
 fi
 
 if [[ -d ../active/dataset ]]; then
-	cp -s ../active/dataset .
+	ln -s ../active/dataset .
 fi
 
 if [[ -d ../active/public ]]; then

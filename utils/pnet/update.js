@@ -6,7 +6,7 @@ if (!route)
 `
 
 const fs = require('fs')
-const http = require('http')
+const https = require('https')
 
 // use JSON.stringify() to encode tab, newlines in tab-delimited data
 const anno = fs.readFileSync(`../pnet_annotations.txt`, { encoding: 'utf8' })
@@ -19,7 +19,7 @@ const data = JSON.stringify({
 //console.log(data)
 
 const options = {
-	hostname: 'localhost',
+	hostname: 'ppr.stjude.org',
 	port: 3000,
 	path: route,
 	method: 'POST',
@@ -29,7 +29,7 @@ const options = {
 	}
 }
 
-const req = http.request(options, res => {
+const req = https.request(options, res => {
 	console.log(`statusCode: ${res.statusCode}`)
 
 	res.on('data', d => {

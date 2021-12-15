@@ -9,6 +9,7 @@ export async function get_incidence(q, ds) {
 		q.ds = ds
 		const results = get_rows(q)
 		const byChartSeries = {}
+		let minTime
 		for (const d of results.lst) {
 			// do not include data when years_to_event < 0
 			if (d.val1 < 0) continue
@@ -17,6 +18,7 @@ export async function get_incidence(q, ds) {
 			if (!(d.key0 in byChartSeries)) byChartSeries[d.key0] = {}
 			if (!(d.key2 in byChartSeries[d.key0])) byChartSeries[d.key0][d.key2] = []
 			byChartSeries[d.key0][d.key2].push({ time: d.val1, event: d.key1 })
+			if (minTime === undefined || d.val1 < minTime) minTime = d.val1
 		}
 		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
 		const final_data = {
@@ -40,6 +42,13 @@ export async function get_incidence(q, ds) {
 						} else if (!ci_data.case_time || !ci_data.case_time.length) {
 							// do nothing
 						} else {
+							// Cohort enrollment requires a minimum of 5 year survival after diagnosis,
+							// the sql uses `AND years_to_event >= 5`, so reset the first data timepoint
+							// to the actual queried minimum time. This first data point (case_est=0) is added
+							// automatically by cuminc to its computed series data. 5 is the target x-axis min,
+							// but check anyway to make sure that the constructed SQL result for min time
+							// is used if lower than the expected 5 years_to_event.
+							ci_data.case_time[0] = Math.min(5, Math.floor(minTime))
 							for (let i = 0; i < ci_data.case_time.length; i++) {
 								final_data.case.push([
 									chartId,
