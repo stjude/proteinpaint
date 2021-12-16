@@ -1335,6 +1335,7 @@
                         "noheader": 1,
                         "genome": "hg38",
                         "mdssamplescatterplot": {
+                            "mds":{"dslabel":"Pediatric","querykey":"svcnv"},
                             "analysisdata_file": "proteinpaint_demo/hg38/mdstsne/file.json",
                             "dimensions": {
                                 "width": 700,
