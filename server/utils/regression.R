@@ -58,8 +58,7 @@
 #       "other": {
 #           "header": []
 #           "rows": []
-#       },
-#       "warnings": []
+#       }
 #     }
 
 
@@ -67,6 +66,7 @@
 # Code
 ###########
 
+options(warn = 1)
 library(jsonlite)
 
 ########## Functions ############
@@ -420,11 +420,6 @@ typeIII_table <- list("header" = colnames(typeIII_table), "rows" = typeIII_table
 
 # combine the results tables into a list
 out_lst <- list("residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = typeIII_table, "other" = other_table)
-
-if (length(warnings()) > 0) {
-  warnings_table <- capture.output(summary(warnings()))
-  out_lst[["warnings"]] <- warnings_table
-}
 
 # convert to json
 out_json <- toJSON(out_lst, digits = NA, na = "string")

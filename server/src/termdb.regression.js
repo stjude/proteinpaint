@@ -55,7 +55,7 @@ export async function get_regression(q, ds) {
 			path.join(serverconfig.binpath, 'utils/regression.R'),
 			[JSON.stringify(Rinput)],
 			[],
-			false
+			true
 		)
 
 		// parse the R output
@@ -213,7 +213,14 @@ function validateRinput(q, Rinput, sampleSize) {
 }
 
 async function parseRoutput(Rinput, Routput, id2originalId, result) {
-	if (Routput.length !== 1) throw 'expected 1 line in R output'
+	// handle errors/warnings from R
+	if (Routput.includes('R stderr:')) {
+		const erridx = Routput.findIndex(x => x == 'R stderr:')
+		result.err = [...new Set(Routput.splice(erridx).slice(1))]
+	}
+
+	// Routput is now only a JSON of results
+	if (Routput.length !== 1) throw 'expected 1 json line in R output'
 	const data = JSON.parse(Routput[0])
 
 	// residuals
@@ -307,9 +314,6 @@ async function parseRoutput(Rinput, Routput, id2originalId, result) {
 			})
 		}
 	}
-
-	// warnings
-	if (data.warnings) result.warnings = data.warnings
 }
 
 /*

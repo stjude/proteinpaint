@@ -80,7 +80,7 @@ function setRenderers(self) {
 		// benefit is that specific logic can be applied to rendering each different table
 		// no need for one reusable renderer to support different table types
 
-		self.mayshow_warnings(result)
+		self.mayshow_err(result)
 		self.newDiv('Sample size: ' + result.sampleSize)
 		self.mayshow_splinePlots(result)
 		self.mayshow_residuals(result)
@@ -99,6 +99,18 @@ function setRenderers(self) {
 		return div.append('div').style('margin-left', '20px')
 	}
 
+	self.mayshow_err = result => {
+		if (!result.err) return
+		const div = self.newDiv('Errors/warnings')
+		div.append('div').style('margin', '8px')
+		for (const line of result.err) {
+			div
+				.append('p')
+				.style('margin', '5px')
+				.text(line)
+		}
+	}
+
 	self.mayshow_splinePlots = result => {
 		if (!result.splinePlots) return
 		const div = self.newDiv('Cubic spline plots')
@@ -108,18 +120,6 @@ function setRenderers(self) {
 				.attr('src', plot.src)
 				.style('width', plot.size.width)
 				.style('height', plot.size.height)
-		}
-	}
-
-	self.mayshow_warnings = result => {
-		if (!result.warnings) return
-		const div = self.newDiv('Warnings')
-		div.append('div').style('margin', '8px')
-		for (const line of result.warnings) {
-			div
-				.append('p')
-				.style('margin', '5px')
-				.text(line)
 		}
 	}
 
