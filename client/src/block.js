@@ -1730,7 +1730,7 @@ reverseorient() {
 							this.inputerr('Not a gene or SNP: ' + s)
 						}
 					} else {
-						input.inputerr('Unknown gene name: ' + s)
+						this.inputerr('Unknown gene name: ' + s)
 					}
 					return
 				}
