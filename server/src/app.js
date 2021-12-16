@@ -244,7 +244,7 @@ app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 ***/
 
 pp_init()
-	.then(() => {
+	.then(async () => {
 		// no error from server initiation
 		if (process.argv[2] == 'validate') {
 			console.log('\nValidation succeeded. You may now run the server.\n')
@@ -263,7 +263,7 @@ pp_init()
 			return
 		}
 
-		startServer()
+		await startServer()
 	})
 	.catch(err => {
 		let exitCode = 1
@@ -293,20 +293,38 @@ pp_init()
 		process.exit(exitCode)
 	})
 
-function startServer() {
-	const port = serverconfig.port || 3000
-	if (serverconfig.ssl) {
-		const options = {
-			key: fs.readFileSync(serverconfig.ssl.key),
-			cert: fs.readFileSync(serverconfig.ssl.cert)
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function startServer() {
+	try {
+		if (serverconfig.preListenScript) {
+			while (true) {
+				const ps = child_process.spawnSync('bash', [serverconfig.preListenScript], { encoding: 'utf-8' })
+				console.log([306, ps.stdout, ps.stderr])
+				if (ps.stderr) throw ps.stderr
+				if (!ps.stdout.trim()) break
+				else await sleep(200)
+			}
 		}
-		const server = https.createServer(options, app)
-		server.listen(port, () => {
-			console.log('HTTPS STANDBY AT PORT ' + port)
-		})
-	} else {
-		const server = app.listen(port)
-		console.log('STANDBY AT PORT ' + port)
+
+		const port = serverconfig.port || 3000
+		if (serverconfig.ssl) {
+			const options = {
+				key: fs.readFileSync(serverconfig.ssl.key),
+				cert: fs.readFileSync(serverconfig.ssl.cert)
+			}
+			const server = https.createServer(options, app)
+			server.listen(port, () => {
+				console.log('HTTPS STANDBY AT PORT ' + port)
+			})
+		} else {
+			const server = app.listen(port)
+			console.log('STANDBY AT PORT ' + port)
+		}
+	} catch (e) {
+		throw e
 	}
 }
 
