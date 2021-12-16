@@ -476,12 +476,10 @@ exports.query_bigbed_by_coord = function(bigbed, chr, start, end) {
 		ps.on('close', code => {
 			if (code !== 0) reject(`bigBed query exited with non-zero status and this standard error:\n${err.join('')}`)
 			if (err.length > 0) reject(err.join(''))
-			resolve(
-				out
-					.join('')
-					.trim()
-					.split('\n')
-			)
+			const str = out.join('').trim()
+			// do not return array of one empty string ['']
+			// if str is empty string, return blank array; otherwise split by newline
+			resolve(str ? str.split('\n') : [])
 		})
 	})
 }
@@ -498,12 +496,9 @@ exports.query_bigbed_by_name = function(bigbed, name) {
 		ps.on('close', code => {
 			if (code !== 0) reject(`bigBed query exited with non-zero status and this standard error:\n${err.join('')}`)
 			if (err.length > 0) reject(err.join(''))
-			resolve(
-				out
-					.join('')
-					.trim()
-					.split('\n')
-			)
+			// same as above
+			const str = out.join('').trim()
+			resolve(str ? str.split('\n') : [])
 		})
 	})
 }

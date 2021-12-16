@@ -1270,6 +1270,7 @@ async function handle_snp(req, res) {
 }
 
 function snp2hit(snp) {
+	// snp must be nonempty string
 	const fields = snp.split('\t')
 	const ref = fields[4]
 	const alts = fields[6]
