@@ -7,7 +7,7 @@
 
 // Strictness:
 //   0: No postprocessing, pure indel typing results
-//   1: Postprocessing will be carried out (In the future, there will be different levels of postprocessing)
+//   1: Postprocessing will be carried out (Checks if read is polyclonal, reads with insertion near indel but classified as reference by kmer algorithm is put into none category)
 //   2: In addition to postprocessing in 1, insertions/deletions near indel region also get classified into none
 
 // Function cascade:
@@ -72,6 +72,8 @@ pub struct read_diff_scores {
     groupID: usize,          // Original read ID
     value: f64,              // Diff score value
     abs_value: f64,          // Absolute diff score value
+    alt_comparison: i64,     // alt comparison (0 if true, 1 if false)
+    ref_comparison: i64,     // ref comparison (0 if true, 1 if false)
     polyclonal: i64, // flag to check if the read harbors polyclonal variant (neither ref nor alt)
     ref_insertion: i64, // flag to check if there is any insertion/deletion nucleotides in reads that may get clasified as supporting ref allele
     sequence_strand: String, // "F" or "R" depending on the strand of the read
@@ -122,6 +124,8 @@ struct read_category {
     // struct for storing in which category a read has been classified
     category: String,        // Category: Ref/Alt/None
     groupID: usize,          // Original read ID
+    ref_comparison: i64,     // ref comparison (0 if true, 1 if false)
+    alt_comparison: i64,     // alt comparison (0 if true, 1 if false)
     diff_score: f64,         // Diff score value
     ref_insertion: i64, // flag to check if there is any insertion/deletion nucleotides in reads that may get clasified as supporting ref allele
     sequence_strand: String, // "F" or "R" depending on the strand of the read
@@ -133,6 +137,8 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
     let abs_val = item.abs_value.to_owned();
     #[allow(non_snake_case)]
     let gID = item.groupID.to_owned();
+    let ref_comparison = item.ref_comparison.to_owned();
+    let alt_comparison = item.alt_comparison.to_owned();
     let poly = item.polyclonal.to_owned();
     let ref_ins = item.ref_insertion.to_owned();
     let seq_strand = item.sequence_strand.to_owned();
@@ -141,6 +147,8 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
         value: f64::from(val),
         abs_value: f64::from(abs_val),
         groupID: usize::from(gID),
+        alt_comparison: i64::from(alt_comparison),
+        ref_comparison: i64::from(ref_comparison),
         polyclonal: i64::from(poly),
         ref_insertion: i64::from(ref_ins),
         sequence_strand: String::from(seq_strand),
@@ -270,17 +278,23 @@ fn main() {
     let weight_indel: f64 = args[10].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
     let strictness: usize = args[11].parse::<usize>().unwrap(); // strictness of the pipeline
     let leftflankseq: String = args[12].parse::<String>().unwrap(); //Left flanking sequence
-    let rightflankseq: String = args[13].parse::<String>().unwrap(); //Right flanking sequence
+    let rightflankseq: String = args[13].parse::<String>().unwrap().replace("\n", ""); //Right flanking sequence. Removing "\n" from the end of the string
+
+    //let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
+    let mut leftflank_nucleotides: Vec<char> = leftflankseq.chars().collect(); // Vector containing left flanking nucleotides
     let rightflank_nucleotides: Vec<char> = rightflankseq.chars().collect(); // Vector containing right flanking nucleotides
+
+    //println!("rightflank_nucleotides:{:?}", rightflank_nucleotides);
     let ref_nucleotides: Vec<char> = refallele.chars().collect(); // Vector containing ref nucleotides
     let alt_nucleotides: Vec<char> = altallele.chars().collect(); // Vector containing alt nucleotides
-    let mut ref_nucleotides_all = Vec::<char>::new(); // Vector containing ref nucleotides of length similar to indel_length (used in strictness >=2)
-    let mut alt_nucleotides_all = Vec::<char>::new(); // Vector containing alt nucleotides of length similar to indel_length (used in strictness >=2)
+    let mut ref_nucleotides_all = Vec::<char>::new(); // Vector containing ref nucleotides of length similar to indel_length (used in strictness >=1)
+    let mut alt_nucleotides_all_right = Vec::<char>::new(); // Vector containing alt nucleotides of length similar to indel_length (used in strictness >=1). In case of deletion contains nucleotides on the right hand side of the deletion
+    let mut alt_nucleotides_all_left = Vec::<char>::new(); // Vector containing alt nucleotides of length similar to indel_length (used in strictness >=1). In case of deletion contains nucleotides on the left hand side of the deletion
     let lines: Vec<&str> = sequences.split("-").collect(); // Vector containing list of sequences, the first two containing ref and alt.
     let start_positions_list: Vec<&str> = start_positions.split("-").collect(); // Vector containing start positions
     let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect(); // Vector containing cigar sequences
     let sequence_flags_list: Vec<&str> = sequence_flags.split("-").collect(); // Vector containing sam flag of read sequences
-    let single_thread_limit: usize = 3000; // If total number of reads is lower than this value the reads will be parsed sequentially in a single thread, if greaterreads will be parsed in parallel
+    let single_thread_limit: usize = 2000; // If total number of reads is lower than this value the reads will be parsed sequentially in a single thread, if greaterreads will be parsed in parallel
     let max_threads: usize = 3; // Max number of threads in case the parallel processing of reads is invoked
     let left_most_pos = variant_pos - segbplen; // Determining left most position, this is the position from where kmers will be generated. Useful in determining if a nucleotide is within indel region or not.
     let ref_length: i64 = refallele.len() as i64; // Determining length of ref allele
@@ -289,7 +303,6 @@ fn main() {
     let mut ref_status = "break_point".to_string(); // Flag to assign how weights of the indel are to be assigned to ref allele. If "break_point" only the kmer containing the complete insertion point of the indel will be assigned weights. If "complete" then each nucleotide in the indel will be assigned weights.
     let mut alt_status = "complete".to_string(); // Flag to assign how weights of the indel are to be assigned to alt allele. If "break_point" only the kmer containing the complete insertion point of the indel will be assigned weights. If "complete" then each nucleotide in the indel will be assigned weights.
     let indel_length_sign: i64 = altallele.len() as i64 - refallele.len() as i64; // Length of indel. Will be positive for insertion and negative for deletion.
-
     if ref_length == alt_length {
         ref_status = "complete".to_string();
     } else if ref_length > alt_length {
@@ -312,6 +325,7 @@ fn main() {
         &alt_nucleotides,
         &refallele,
         &altallele,
+        variant_pos,
         indel_length,
         leftflankseq,
         rightflankseq,
@@ -328,16 +342,32 @@ fn main() {
     let mut optimized_indel_length = optimized_alt_allele.len();
     if optimized_ref_allele.len() > optimized_alt_allele.len() {
         let optimized_ref_nucleotides: Vec<char> = optimized_ref_allele.chars().collect();
-        let optimized_alt_nucleotides: Vec<char> = optimized_alt_allele.chars().collect();
+        //let optimized_alt_nucleotides: Vec<char> = optimized_alt_allele.chars().collect();
         optimized_indel_length = optimized_ref_allele.len();
+        leftflank_nucleotides.reverse();
+        //println!("leftflank_nucleotides:{:?}", leftflank_nucleotides);
         for i in 0..optimized_indel_length as usize {
             if i < optimized_alt_allele.len() {
                 // Getting all nucleotides from optmized alt allele
                 ref_nucleotides_all.push(optimized_ref_nucleotides[i]);
-                alt_nucleotides_all.push(optimized_alt_nucleotides[i]);
+                //alt_nucleotides_all_right.push(optimized_alt_nucleotides[i]);
+                //let j = optimized_alt_allele.len() - i - 1;
+                //alt_nucleotides_all_left.push(optimized_alt_nucleotides[j]);
             } else {
-                alt_nucleotides_all.push(rightflank_nucleotides[i - optimized_alt_allele.len()]); // For alt nucleotide, after getting first nucleotide from alt allele getting subsequent nucleotides from right-flanking sequence
+                //alt_nucleotides_all_right.push(rightflank_nucleotides[i - altallele.len()]); // For alt nucleotide, after getting first nucleotide from alt allele getting subsequent nucleotides from right-flanking sequence
+
+                //alt_nucleotides_all_left
+                //    .push(leftflank_nucleotides[i - optimized_alt_allele.len()]); // For alt nucleotide, after getting first nucleotide from alt allele getting subsequent nucleotides from right-flanking sequence
                 ref_nucleotides_all.push(optimized_ref_nucleotides[i]);
+            }
+
+            if i < alt_nucleotides.len() {
+                alt_nucleotides_all_right.push(alt_nucleotides[i]);
+                let j = alt_nucleotides.len() - i - 1;
+                alt_nucleotides_all_left.push(alt_nucleotides[j]);
+            } else {
+                alt_nucleotides_all_left.push(leftflank_nucleotides[i - alt_nucleotides.len()]);
+                alt_nucleotides_all_right.push(rightflank_nucleotides[i - alt_nucleotides.len()]);
             }
         }
     } else {
@@ -347,15 +377,17 @@ fn main() {
             if i < optimized_ref_allele.len() {
                 // The ref length array probably only has length of size 1 so getting the first nucleotide from ref_nucleotides vector
                 ref_nucleotides_all.push(optimized_ref_nucleotides[i]);
-                alt_nucleotides_all.push(optimized_alt_nucleotides[i]);
+                alt_nucleotides_all_right.push(optimized_alt_nucleotides[i]);
             } else {
-                ref_nucleotides_all.push(rightflank_nucleotides[i - optimized_ref_allele.len()]); // For ref nucleotide, after getting first nucleotide from ref allele getting subsequent nucleotides from right-flanking sequence
-                alt_nucleotides_all.push(optimized_alt_nucleotides[i]);
+                ref_nucleotides_all.push(rightflank_nucleotides[i - refallele.len()]); // For ref nucleotide, after getting first nucleotide from ref allele getting subsequent nucleotides from right-flanking sequence
+                alt_nucleotides_all_right.push(optimized_alt_nucleotides[i]);
             }
         }
     }
+    //alt_nucleotides_all_left.reverse();
     //println!("ref_nucleotides_all:{:?}", ref_nucleotides_all);
-    //println!("alt_nucleotides_all:{:?}", alt_nucleotides_all);
+    //println!("alt_nucleotides_all_right:{:?}", alt_nucleotides_all_right);
+    //println!("alt_nucleotides_all_left:{:?}", alt_nucleotides_all_left);
     drop(rightflank_nucleotides);
 
     #[allow(unused_variables)]
@@ -393,12 +425,12 @@ fn main() {
         indel_length_sign,
     );
 
-    println!(
-        "{}{}",
-        "Number of original reads in input (from Rust):",
-        (lines.len() - 2).to_string()
-    );
-
+    //println!(
+    //    "{}{}",
+    //    "Number of original reads in input (from Rust):",
+    //    (lines.len() - 2).to_string()
+    //);
+    //
     //for i in 0..ref_kmers_nodups.len() {
     //    if ref_kmers_data[i].kmer_weight > weight_no_indel * kmer_length_iter as f64 {
     //        println!(
@@ -455,21 +487,19 @@ fn main() {
                     variant_pos,
                     indel_length as usize,
                     strictness,
+                    read.len(),
                 );
+                //println!("correct_start_position:{}", correct_start_position);
+                //println!(
+                //    "cigar_sequence:{}",
+                //    &cigar_sequences_list[i as usize - 2].to_string()
+                //);
                 if within_indel == 1 {
                     // Checking if the read is in forward or reverse strand
                     let mut sequence_strand: String = "F".to_string(); // Initializing sequence strand to forward
                     if sequence_flags_list[i as usize - 2].parse::<i64>().unwrap() & 16 == 16 {
                         sequence_strand = "R".to_string();
                     }
-                    //println!(
-                    //    "start_position:{}",
-                    //    start_positions_list[i as usize - 2].to_string()
-                    //);
-                    //println!(
-                    //    "cigar_sequence:{}",
-                    //    &cigar_sequences_list[i as usize - 2].to_string()
-                    //);
                     let read_ambivalent = check_if_read_ambivalent(
                         // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                         correct_start_position,
@@ -481,24 +511,30 @@ fn main() {
                         &ref_nucleotides,
                         &alt_nucleotides,
                         optimized_allele,
+                        indel_length,
+                        splice_freq,
                     );
                     let (
                         ref_polyclonal_read_status,
                         alt_polyclonal_read_status,
                         ref_insertion,
                         alignment_side,
-                        correct_start_position,
                         right_most_pos,
+                        spliced_sequence, // This variable contains only the spliced part which contains the indel. If no splicing has occured, it will retain the entire original read sequence
                     ) = check_polyclonal(
                         // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
                         read.to_string(),
-                        start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
+                        correct_start_position,
+                        correct_end_position,
                         cigar_sequences_list[i as usize - 2].to_string(),
                         variant_pos,
+                        splice_start_pos,
+                        splice_stop_pos,
                         &ref_nucleotides,
                         &alt_nucleotides,
                         &ref_nucleotides_all,
-                        &alt_nucleotides_all,
+                        &alt_nucleotides_all_right,
+                        &alt_nucleotides_all_left,
                         optimized_indel_length as usize,
                         ref_length as usize,
                         alt_length as usize,
@@ -506,27 +542,23 @@ fn main() {
                         strictness,
                         0,
                         ref_alt_same_base_start,
+                        splice_freq,
                     );
                     //println!("alignment_side:{}", &alignment_side);
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
                     //println!("read_ambivalent:{}", read_ambivalent);
                     //println!("ref_insertion:{}", ref_insertion);
+
                     //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
 
-                    //let kmers = build_kmers(read.to_string(), kmer_length_iter); // Generates kmers for the given read
-                    let kmers = build_kmers_reads(
-                        read.to_string(),
-                        kmer_length_iter,
-                        splice_freq,
-                        splice_start_pos,
-                        splice_stop_pos,
-                    ); // Generates kmers for the given read
-
-                    //println!("read:{}", read.to_string());
+                    //println!("spliced_sequence:{}", &spliced_sequence);
                     //println!("left most pos:{}", correct_start_position);
                     //println!("right most pos:{}", right_most_pos);
-                    //println!("Reference:");
+                    //println!("splice_start_pos:{}", splice_start_pos);
+                    //println!("splice_stop_pos:{}", splice_stop_pos);
+                    let kmers = build_kmers_reads(spliced_sequence, kmer_length_iter); // Generates kmers for the given read
+                                                                                       //println!("Reference:");
                     let ref_comparison = jaccard_similarity_weights(
                         // Computes jaccard similarity w.r.t ref sequence
                         &kmers,
@@ -559,6 +591,8 @@ fn main() {
                         value: f64::from(diff_score),
                         abs_value: f64::from(diff_score.abs()), // Absolute value of diff_score
                         groupID: usize::from(i as usize - 2), // The -2 has been added since the first two sequences in the file are reference and alternate
+                        alt_comparison: i64::from(alt_polyclonal_read_status),
+                        ref_comparison: i64::from(ref_polyclonal_read_status),
                         polyclonal: i64::from(
                             ref_polyclonal_read_status
                                 + alt_polyclonal_read_status
@@ -593,8 +627,9 @@ fn main() {
         let alt_kmers_data = Arc::new(alt_kmers_data);
         let ref_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new())); // This variable will store read_diff_scores struct of reads classifed as ref, but can be written into by all threads. When Mutex is not define (as in the variables above) they are read-only.
         let alt_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new())); // This variable will store read_diff_scores struct of reads classifed as alt, but can be written into by all threads. When Mutex is not define (as in the variables above) they are read-only.
-        let ref_nucleotides_temp = Arc::new(ref_nucleotides_all); // Vector containing ref nucleotides of length similar to indel_length (used in strictness >=2)
-        let alt_nucleotides_temp = Arc::new(alt_nucleotides_all); // Vector containing alt nucleotides of length similar to indel_length (used in strictness >=2)
+        let ref_nucleotides_temp = Arc::new(ref_nucleotides_all); // Vector containing ref nucleotides of length similar to indel_length (used in strictness >=1)
+        let alt_nucleotides_temp_right = Arc::new(alt_nucleotides_all_right); // Vector containing alt nucleotides of length similar to indel_length (used in strictness >=1). Contains nucleotides on the right hand side of the indel.
+        let alt_nucleotides_temp_left = Arc::new(alt_nucleotides_all_left); // Vector containing alt nucleotides of length similar to indel_length (used in strictness >=1).  Contains nucleotides on the left hand side of the indel.
         let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
 
         for thread_num in 0..max_threads {
@@ -613,7 +648,8 @@ fn main() {
             let ref_scores_temp = Arc::clone(&ref_scores_temp);
             let alt_scores_temp = Arc::clone(&alt_scores_temp);
             let ref_nucleotides_temp = Arc::clone(&ref_nucleotides_temp);
-            let alt_nucleotides_temp = Arc::clone(&alt_nucleotides_temp);
+            let alt_nucleotides_temp_right = Arc::clone(&alt_nucleotides_temp_right);
+            let alt_nucleotides_temp_left = Arc::clone(&alt_nucleotides_temp_left);
 
             let handle = thread::spawn(move || {
                 // Thread is initiallized here
@@ -631,7 +667,13 @@ fn main() {
                     if remainder == thread_num
                         && lines[iter + 2].to_string().len() > kmer_length_iter as usize
                     {
-                        // Thread analyzing a particular read must have the same remainder as the thread_num, this avoids multiple reads from parsing the same read
+                        // Thread analyzing a particular read must have the same remainder as the thread_num, this avoids multiple reads from parsing the same read. Also checking if the read length > 0
+
+                        //println!(
+                        //    "start_positions_list:{}",
+                        //    start_positions_list[iter].parse::<i64>().unwrap() - 1
+                        //);
+                        //println!("cigar_sequences_list[iter]:{}", cigar_sequences_list[iter]);
                         let (
                             within_indel,
                             correct_start_position,
@@ -646,8 +688,8 @@ fn main() {
                             variant_pos,
                             indel_length as usize,
                             strictness,
+                            lines[iter + 2].to_string().len(),
                         );
-
                         if within_indel == 1 {
                             // Checking if the read is in forward or reverse strand
                             let mut sequence_strand: String = "F".to_string(); // Initializing sequence strand to forward
@@ -665,6 +707,8 @@ fn main() {
                                 &ref_nucleotides,
                                 &alt_nucleotides,
                                 optimized_allele,
+                                indel_length,
+                                splice_freq,
                             );
 
                             let (
@@ -672,18 +716,22 @@ fn main() {
                                 alt_polyclonal_read_status,
                                 ref_insertion,
                                 alignment_side,
-                                correct_start_position,
                                 right_most_pos,
+                                spliced_sequence, // This variable contains only the spliced part which contains the indel. If no splicing has occured, it will retain the entire original read sequence
                             ) = check_polyclonal(
                                 // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
                                 lines[iter + 2].to_string(),
-                                start_positions_list[iter].parse::<i64>().unwrap() - 1,
+                                correct_start_position,
+                                correct_end_position,
                                 cigar_sequences_list[iter].to_string(),
                                 variant_pos,
+                                splice_start_pos,
+                                splice_stop_pos,
                                 &ref_nucleotides,
                                 &alt_nucleotides,
                                 &ref_nucleotides_temp,
-                                &alt_nucleotides_temp,
+                                &alt_nucleotides_temp_right,
+                                &alt_nucleotides_temp_left,
                                 optimized_indel_length as usize,
                                 ref_length as usize,
                                 alt_length as usize,
@@ -691,17 +739,11 @@ fn main() {
                                 strictness,
                                 0,
                                 ref_alt_same_base_start,
+                                splice_freq,
                             );
-
                             //let kmers = build_kmers(lines[iter + 2].to_string(), kmer_length_iter); // Generate kmers for a given read sequence
 
-                            let kmers = build_kmers_reads(
-                                lines[iter + 2].to_string(),
-                                kmer_length_iter,
-                                splice_freq,
-                                splice_start_pos,
-                                splice_stop_pos,
-                            ); // Generates kmers for the given read
+                            let kmers = build_kmers_reads(spliced_sequence, kmer_length_iter); // Generates kmers for the given read
                             let ref_comparison = jaccard_similarity_weights(
                                 // Computer jaccard similarity w.r.t ref
                                 &kmers,
@@ -730,6 +772,8 @@ fn main() {
                                 value: f64::from(diff_score),
                                 abs_value: f64::from(diff_score.abs()),
                                 groupID: usize::from(iter),
+                                alt_comparison: i64::from(alt_polyclonal_read_status),
+                                ref_comparison: i64::from(ref_polyclonal_read_status),
                                 polyclonal: i64::from(
                                     ref_polyclonal_read_status
                                         + alt_polyclonal_read_status
@@ -800,6 +844,8 @@ fn main() {
         if item.ref_insertion == 1 {
             // In case of ref-classified reads, if there is any insertion/deletion in the indel region it will get classified into the none category.
             output_cat.push_str("none:"); // Appending none to output_cat string
+        } else if strictness >= 2 && item.ref_comparison == 1 {
+            output_cat.push_str("none:"); // Appending none to output_cat string
         } else if item.category == "refalt".to_string() {
             output_cat.push_str("ref:"); // Appending ref to output_cat string
             if item.sequence_strand == "F".to_string() {
@@ -817,7 +863,9 @@ fn main() {
     }
 
     for item in &alt_indices {
-        if item.category == "refalt".to_string() {
+        if strictness >= 2 && item.alt_comparison == 1 {
+            output_cat.push_str("none:"); // Appending none to output_cat string
+        } else if item.category == "refalt".to_string() {
             output_cat.push_str("alt:"); // Appending alt to output_cat string
             if item.sequence_strand == "F".to_string() {
                 alternate_forward_count += 1;
@@ -833,7 +881,6 @@ fn main() {
         output_diff_scores.push_str(&item.diff_score.to_string()); // Appending diff_score to output_diff_scores string
         output_diff_scores.push_str(&":".to_string()); // Appending ":" to string
     }
-
     //println!("alternate_forward_count:{}", alternate_forward_count);
     //println!("alternate_reverse_count:{}", alternate_reverse_count);
     //println!("reference_forward_count:{}", reference_forward_count);
@@ -847,7 +894,7 @@ fn main() {
     );
 
     println!("strand_probability:{:.2}", p_value);
-    //println!("fisher_test_threshold:{}", fisher_test_threshold);
+
     output_cat.pop(); // Removing the last ":" character from string
     output_gID.pop(); // Removing the last ":" character from string
     output_diff_scores.pop(); // Removing the last ":" character from string
@@ -892,10 +939,18 @@ fn strand_analysis(
     let mut reference_reverse_count_temp: i64 =
         (reference_forward_count + reference_reverse_count) as i64;
     while alternate_forward_count_temp >= 0 && reference_reverse_count_temp >= 0 {
-        alternate_forward_count_temp -= 1;
+        if alternate_forward_count_temp == 0 {
+            break;
+        } else {
+            alternate_forward_count_temp -= 1;
+        }
         alternate_reverse_count_temp += 1;
         reference_forward_count_temp += 1;
-        reference_reverse_count_temp -= 1;
+        if reference_reverse_count_temp == 0 {
+            break;
+        } else {
+            reference_reverse_count_temp -= 1;
+        }
         #[allow(unused_variables)]
         let (p_temp, fisher_test_temp) = strand_analysis_one_iteration(
             alternate_forward_count_temp as u32,
@@ -923,10 +978,11 @@ fn strand_analysis_one_iteration(
     alternate_reverse_count: u32,
     reference_forward_count: u32,
     reference_reverse_count: u32,
-    fisher_chisq_test: u64, // This option is useful id this function has already been preiously run, we can ask to run the spcific tust only rather than having to try out both tests each time. This decreases execution time. 0 = first time (both tests will be tried), 1 = fisher test, 2 = chi-sq test
+    fisher_chisq_test: u64, // This option is useful id this function has already been preiously run, we can ask to run the spcific test only rather than having to try out both tests each time. This decreases execution time. 0 = first time (both tests will be tried), 1 = fisher test, 2 = chi-sq test
 ) -> (f64, u64) {
     let mut p_value: f64 = 0.0;
     let mut fisher_chisq_test_final: u64 = 0;
+
     if fisher_chisq_test == 0 {
         let p_value_result = panic::catch_unwind(|| {
             let p_value = fishers_exact(&[
@@ -995,6 +1051,7 @@ fn strand_analysis_one_iteration(
         );
         fisher_chisq_test_final = 2;
     }
+
     (p_value, fisher_chisq_test_final)
 }
 
@@ -1382,6 +1439,8 @@ fn check_if_read_ambivalent(
     ref_nucleotides: &Vec<char>,
     alt_nucleotides: &Vec<char>,
     optimized_allele: usize,
+    indel_length: i64,
+    splice_freq: usize, // Number of splice junctions in read
 ) -> i64 {
     let mut read_ambivalent: i64 = 0;
     let mut ref_stop = ref_start + ref_length as i64;
@@ -1412,13 +1471,13 @@ fn check_if_read_ambivalent(
         && correct_end_position <= ref_start
     {
         read_ambivalent = 2;
-        //println!("Case1");
+        //println!("Case1 read ambivalent");
     } else if ref_stop < correct_start_position
         && correct_start_position < repeat_stop
         && correct_end_position > repeat_stop
     {
         read_ambivalent = 2;
-        //println!("Case2");
+        //println!("Case2 read ambivalent");
     }
     if repeat_start <= correct_start_position
         && correct_start_position < ref_start
@@ -1426,18 +1485,18 @@ fn check_if_read_ambivalent(
         && optimized_allele == 1
     {
         read_ambivalent = 2;
-        //println!("Case3");
+        //println!("Case3 read ambivalent");
     } else if ref_stop <= correct_end_position
         && correct_end_position < repeat_stop
         && correct_start_position < repeat_start
         && optimized_allele == 1
     {
         read_ambivalent = 2;
-        //println!("Case4");
+        //println!("Case4 read ambivalent");
     } else if repeat_start <= correct_end_position && correct_end_position < ref_stop {
         if (correct_end_position - ref_start).abs() <= right_offset as i64 {
             read_ambivalent = 2;
-            //println!("Case5");
+            //println!("Case5 read ambivalent");
         }
     } else if ref_nucleotides.len() > alt_nucleotides.len()
         && ref_nucleotides[0] == ref_nucleotides[ref_nucleotides.len() - 1]
@@ -1445,24 +1504,28 @@ fn check_if_read_ambivalent(
     // When deletion starts and ends with the same nucleotide, a read containing only last nucleotide only should be considered ambivalent
     {
         read_ambivalent = 2;
+        //println!("Case6 read ambivalent");
     } else if alt_nucleotides.len() > ref_nucleotides.len()
         && alt_nucleotides[0] == alt_nucleotides[alt_nucleotides.len() - 1]
         && correct_start_position == ref_stop
     // When insertion starts and ends with the same nucleotide, a read containing only last nucleotide only should be considered ambivalent
     {
         read_ambivalent = 2;
+        //println!("Case7 read ambivalent");
     } else if ref_nucleotides.len() > alt_nucleotides.len()
         && ref_nucleotides[0] == ref_nucleotides[ref_nucleotides.len() - 1]
         && correct_end_position == ref_start
     // When deletion starts and ends with the same nucleotide, a read containing only first nucleotide only should be considered ambivalent
     {
         read_ambivalent = 2;
+        //println!("Case8 read ambivalent");
     } else if alt_nucleotides.len() > ref_nucleotides.len()
         && alt_nucleotides[0] == alt_nucleotides[alt_nucleotides.len() - 1]
         && correct_end_position == ref_start
     // When insertion starts and ends with the same nucleotide, a read containing only first nucleotide only should be considered ambivalent
     {
         read_ambivalent = 2;
+        //println!("Case9 read ambivalent");
     }
 
     // This part of the code is not tested, so its commented out for now.
@@ -1472,6 +1535,19 @@ fn check_if_read_ambivalent(
     //        read_ambivalent = 2;
     //    }
     //}
+    if splice_freq > 0 {
+        // When read is spliced
+        //println!("correct_start_position:{}", correct_start_position);
+        //println!("correct_end_position:{}", correct_end_position);
+        //println!("ref_start:{}", ref_start);
+        //println!("indel_length:{}", indel_length);
+        if correct_start_position <= ref_start && ref_start + indel_length <= correct_end_position {
+        } else {
+            read_ambivalent = 2;
+            //println!("Case10 read ambivalent");
+        }
+    }
+
     read_ambivalent
 }
 
@@ -1480,6 +1556,7 @@ fn preprocess_input(
     alt_nucleotides: &Vec<char>,
     ref_allele: &String,
     alt_allele: &String,
+    variant_pos: i64,
     indel_length: i64,
     leftflankseq: String,
     rightflankseq: String,
@@ -1487,7 +1564,7 @@ fn preprocess_input(
 ) -> (String, String, usize, usize, usize, usize) {
     let mut optimized_ref_allele = ref_allele.clone();
     let mut optimized_alt_allele = alt_allele.clone();
-    let mut right_subseq = String::new(); // String for storing kmer sequence
+    let mut right_subseq = String::new(); // String for storing sequence on right side of indel
     let right_sequence_vector: Vec<_> = rightflankseq.chars().collect(); // A vector which contains all the nucleotides of the right flanking sequence
 
     // Selecting minimum of surrounding region length and rightflankseq
@@ -1497,7 +1574,7 @@ fn preprocess_input(
     for k in 0..surrounding_region_length as usize {
         right_subseq += &right_sequence_vector[k].to_string();
     }
-    let mut left_subseq = String::new(); // String for storing kmer sequence. In case of left_subseq the nucleotides are stored in reverse order i.e nucleotides closest to the indel are first
+    let mut left_subseq = String::new(); // String for storing sequence on left hand side. In case of left_subseq the nucleotides are stored in reverse order i.e nucleotides closest to the indel are first
     let left_sequence_vector: Vec<_> = leftflankseq.chars().collect(); // A vector which contains all the nucleotides of the left flanking sequence
     for k in 0..surrounding_region_length as usize {
         let j = left_sequence_vector.len() - k - 1;
@@ -1506,7 +1583,10 @@ fn preprocess_input(
     let left_flanking_nucleotides: Vec<char> = left_subseq.chars().collect(); // Vector containing left flanking  nucleotides
     let right_flanking_nucleotides: Vec<char> = right_subseq.chars().collect(); // Vector containing right flanking  nucleotides
 
+    // In the future, will need to check if there are repeats within the indel.
+
     // Check if the alt allele starts with ref nucleotide
+    println!("indel_length:{}", indel_length);
     let mut original_indel_length = indel_length;
     let mut actual_indel = String::new();
     let mut ref_alt_same_base_start: usize = 0; // Flag to see if the original ref/alt nucleotide start with the same base i.e the ref start position of the indel is in the alt allele (e.g. ACGA/A representing 3bp deletion)
@@ -1537,62 +1617,79 @@ fn preprocess_input(
             }
         }
     }
+    println!("original_indel_length:{}", original_indel_length);
     let actual_indel_nucleotides: Vec<char> = actual_indel.chars().collect(); // Vector containing left flanking  nucleotides
-    let mut no_repeats: usize = 1; // Flag to check if non-repeating region has been reached
+                                                                              //let no_repeats: usize = 1; // Flag to check if non-repeating region has been reached
     let mut left_offset: usize = 0; // Position in left-flanking sequence from where nearby nucleotides will be parsed
     let mut right_offset: usize = 0; // Position in right-flanking sequence from where nearby nucleotides will be parsed
-    let mut iter: usize = 0;
-    while actual_indel.len() as i64 <= surrounding_region_length && no_repeats == 1 {
-        let mut left_nearby_seq = String::new();
-        let mut right_nearby_seq = String::new();
+    let left_nearby_seq;
+    let mut left_nearby_seq_reverse = String::new();
+    let mut right_nearby_seq = String::new();
+    let mut optimized_variant_pos = variant_pos;
 
-        for j in left_offset..left_offset + original_indel_length as usize {
-            left_nearby_seq += &left_flanking_nucleotides[j].to_string();
-        }
-        for j in right_offset..right_offset + original_indel_length as usize {
-            right_nearby_seq += &right_flanking_nucleotides[j].to_string();
-        }
+    //println!("left_flanking_nucleotides:{:?}", left_flanking_nucleotides);
+    //println!(
+    //    "right_flanking_nucleotides:{:?}",
+    //    right_flanking_nucleotides
+    //);
 
-        //println!("left_nearby_seq:{}", left_nearby_seq);
-        //println!("right_nearby_seq:{}", right_nearby_seq);
-        //println!("actual_indel:{}", actual_indel);
-        if left_nearby_seq != actual_indel && right_nearby_seq != actual_indel {
-            no_repeats = 0;
-            if iter != 0 {
-                // If no repeats are found in the very first iteration of the while loop, the region is probably not a repeat region, so no need to add flanking region to optimized ref and alt alleles
-                optimized_ref_allele = optimized_ref_allele + &right_nearby_seq; // Trying to get the first non-repeating nucleotide in ref allele
-                optimized_alt_allele = optimized_alt_allele + &right_nearby_seq;
-                // Trying to get the first non-repeating nucleotide in alt allele
-            }
-        } else if left_nearby_seq != actual_indel && right_nearby_seq == actual_indel {
-            right_offset += &right_nearby_seq.len();
-            optimized_ref_allele = optimized_ref_allele + &right_nearby_seq;
-            optimized_alt_allele = optimized_alt_allele + &right_nearby_seq;
-        } else if left_nearby_seq == actual_indel && right_nearby_seq != actual_indel {
-            left_offset += &left_nearby_seq.len();
-            optimized_ref_allele = left_nearby_seq.clone() + &optimized_ref_allele;
-            optimized_alt_allele = left_nearby_seq + &optimized_alt_allele;
-        } else if left_nearby_seq == actual_indel && right_nearby_seq == actual_indel {
-            left_offset += &left_nearby_seq.len();
-            optimized_ref_allele =
-                left_nearby_seq.clone() + &optimized_ref_allele + &right_nearby_seq;
-            optimized_alt_allele =
-                left_nearby_seq.clone() + &optimized_alt_allele + &right_nearby_seq;
-            right_offset += &right_nearby_seq.len();
-        } else {
-            // Should not happen at all
-            println!("Something unexpected happened. Please check!");
-        }
-        //println!("actual_indel:{}", actual_indel);
-        //println!("no_repeats:{}", no_repeats);
-        iter += 1;
+    //while iter < actual_indel.len() {
+    //    for j in left_offset..left_offset + original_indel_length as usize {
+    //        let k = left_offset + original_indel_length as usize - 1 - j;
+    //        left_nearby_seq += &left_flanking_nucleotides[k].to_string();
+    //        //println!("left_nearby_seq:{}", left_nearby_seq);
+    //    }
+    //    for j in right_offset..right_offset + original_indel_length as usize {
+    //        right_nearby_seq += &right_flanking_nucleotides[j].to_string();
+    //        //println!("right_nearby_seq:{}", right_nearby_seq);
+    //    }
+    //    iter += 1;
+    //}
+
+    for i in 0..original_indel_length as usize {
+        let k = original_indel_length as usize - 1 - i;
+        left_nearby_seq_reverse += &left_flanking_nucleotides[k].to_string();
+        right_nearby_seq += &right_flanking_nucleotides[i].to_string();
     }
+
+    left_nearby_seq = reverse_string(&left_nearby_seq_reverse);
+    //println!("left_nearby_seq:{}", left_nearby_seq);
+    //println!("right_nearby_seq:{}", right_nearby_seq);
+    //println!("actual_indel:{}", actual_indel);
+
+    if left_nearby_seq != actual_indel && right_nearby_seq != actual_indel {
+        println!("No repeating region");
+    } else if left_nearby_seq == actual_indel && right_nearby_seq != actual_indel {
+        println!("Left side is repeating");
+        let repeating_sequence_left = check_flanking_sequence_for_repeats(
+            &left_nearby_seq,
+            &left_subseq,
+            surrounding_region_length,
+            "L",
+        );
+        optimized_variant_pos -= repeating_sequence_left.len() as i64; // Need to pass this to main and also change optimized ref and alt allele. Will need to do this later
+    } else if left_nearby_seq != actual_indel && right_nearby_seq == actual_indel {
+        println!("Right side is repeating");
+        let repeating_sequence_right = check_flanking_sequence_for_repeats(
+            &right_nearby_seq,
+            &right_subseq,
+            surrounding_region_length,
+            "R",
+        );
+        optimized_alt_allele = optimized_alt_allele + &repeating_sequence_right;
+        optimized_ref_allele = optimized_ref_allele + &repeating_sequence_right;
+        right_offset += repeating_sequence_right.len();
+    } else if left_nearby_seq == actual_indel && right_nearby_seq == actual_indel {
+        println!("Both sides are repeating");
+    }
+
+    println!("optimized_variant_pos:{}", optimized_variant_pos);
 
     // Testing if the original indel starts with similar sequence as right flanking sequence or vice-versa (i.e original indel finishes with similar sequence as left-flanking sequence finishes with)
     let mut left_offset_part: usize = 0; // Position in left-flanking sequence from where nearby nucleotides will be parsed
     let mut right_offset_part: usize = 0; // Position in right-flanking sequence from where nearby nucleotides will be parsed
     let mut no_repeats_part: usize = 1; // Flag to check if non-repeating region has been reached
-    iter = 0;
+    let mut iter = 0;
     if ref_alt_same_base_start == 1 {
         // If ref/alt nucleotide start with the same base (e.g ACGA/A representing 3bp deletion),increment right_offset_part by 1
         right_offset_part += 1;
@@ -1664,6 +1761,47 @@ fn preprocess_input(
         ref_alt_same_base_start,
         optimized_allele,
     )
+}
+
+fn reverse_string(input: &str) -> String {
+    let mut result = String::new();
+    for c in input.chars().rev() {
+        result.push(c)
+    }
+    result
+}
+
+// Function to check if the monomer is present in flanking region
+fn check_flanking_sequence_for_repeats(
+    monomer: &String,
+    flanking_sequence: &String,
+    surrounding_region_length: i64, // Checks for monomer in the flanking region but only upto surrounding_region_length
+    side: &str,                     // "L" for left, "R" for right flanking sequence
+) -> String {
+    let sequence_vector: Vec<_> = flanking_sequence.chars().collect(); // Vector containing all the nucleotides of the reads as individual elements
+    let num_iterations: i64 = surrounding_region_length / (monomer.len() as i64); // Number of times the monomer will have to be checked for repeating units from the variant region. e.g if monomer length is 2 and surrounding_region_length is 9, it will be 4 times at distances of 2, 4, 6 and 8 from the indel region
+    let mut repeat_flanking_sequence = String::new();
+    for i in 0..num_iterations {
+        let mut subseq = String::new(); // String where putative repeat unit will be stored
+        if &side == &"R" {
+            for j in 0..monomer.len() {
+                subseq += &sequence_vector[(i as usize) * monomer.len() + j].to_string();
+                //
+            }
+        } else if &side == &"L" {
+            for j in 0..monomer.len() {
+                let k = monomer.len() - 1 - j;
+                subseq += &sequence_vector[(i as usize) * monomer.len() + k].to_string();
+                //
+            }
+        }
+        repeat_flanking_sequence.push_str(&subseq);
+        if &subseq != monomer {
+            break;
+        }
+    }
+    //println!("repeat_flanking_sequence:{}", repeat_flanking_sequence);
+    repeat_flanking_sequence
 }
 
 fn build_kmers_refalt(
@@ -1752,7 +1890,12 @@ fn build_kmers_refalt(
             //}
         } else if status == &"break_point".to_string() {
             // Check if the kmer covers the complete break point
-            if kmer_start <= indel_start + 1 && indel_stop <= kmer_stop {
+            if kmer_start <= indel_start + 1 && indel_stop < kmer_stop {
+                //println!("subseq:{}", subseq);
+                //println!("kmer_start:{}", kmer_start);
+                //println!("kmer_stop:{}", kmer_stop);
+                //println!("indel_start:{}", indel_start);
+                //println!("indel_stop:{}", indel_stop);
                 for _k in kmer_start..kmer_stop {
                     // Looping over each nucleotide position covered by the kmer
                     if indel_start <= (_k as i64) && (_k as i64) < indel_stop {
@@ -1763,10 +1906,7 @@ fn build_kmers_refalt(
                     }
                 }
             } else {
-                for _k in kmer_start..kmer_stop {
-                    // Looping over each nucleotide position covered by the kmer
-                    kmer_score += weight_no_indel; // Incrementing kmer_score by weight_no_indel if outside indel region
-                }
+                kmer_score = kmer_length as f64 * weight_no_indel;
             }
             //if kmer_score > weight_no_indel * kmer_length as f64 {
             //    println!("break point kmer:{}", subseq);
@@ -1848,6 +1988,7 @@ fn check_read_within_indel_region(
     indel_start: i64,   // Indel start position
     indel_length: usize, // Length of indel
     strictness: usize,  // Strictness of the indel pipeline
+    original_read_length: usize, // Original read length
 ) -> (usize, i64, i64, usize, i64, i64) {
     let mut within_indel = 0; // 0 if read does not contain indel region and 1 if it contains indel region
     let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
@@ -1867,6 +2008,7 @@ fn check_read_within_indel_region(
                 correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
             // Correcting for incorrect left position (when read starts with a softclip) by subtracting length of softclip from original left most position of read
         }
+        let mut correct_start_position_without_splicing = correct_start_position; // Correct start position without splicing (if read is spliced);
         correct_end_position = correct_start_position;
         for i in 0..cigar_length {
             //if &alphabets[i].to_string().as_str() == &"D" {
@@ -1877,10 +2019,18 @@ fn check_read_within_indel_region(
             } else if &alphabets[i].to_string().as_str() == &"N" {
                 splice_freq += 1;
                 correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
+                correct_start_position_without_splicing +=
+                    numbers[i].to_string().parse::<i64>().unwrap();
+            } else if &alphabets[i].to_string().as_str() == &"I" {
             } else {
                 correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
             }
         }
+        let correct_end_position_without_splicing = correct_end_position;
+        //println!(
+        //    "correct_start_position_without_splicing(orig):{}",
+        //    correct_start_position_without_splicing
+        //);
         //println!(
         //    "&cigar_sequence.to_string():{}",
         //    &cigar_sequence.to_string()
@@ -1889,7 +2039,7 @@ fn check_read_within_indel_region(
         //println!("correct_end_position:{}", correct_end_position);
         //println!("indel_start:{}", indel_start);
         //println!("indel_stop:{}", indel_stop);
-        if strictness >= 2 {
+        if strictness >= 1 {
             let percentage_indel_length: f64 = 0.1;
             let indel_cutoff: i64 = (indel_length as f64 * percentage_indel_length).ceil() as i64;
             if (indel_start + indel_cutoff <= correct_start_position
@@ -1906,16 +2056,22 @@ fn check_read_within_indel_region(
             {
                 within_indel = 1;
             }
-        } else if (indel_start < correct_start_position && correct_end_position < indel_stop)
-            || (correct_start_position < indel_start && indel_stop < correct_end_position)
+        } else if (indel_start <= correct_start_position && correct_end_position <= indel_stop)
+            || (correct_start_position <= indel_start && indel_stop <= correct_end_position)
         // When the indel region is completely inside the read or the read is completely inside the indel region
         {
             within_indel = 1;
-        } else if (indel_start < correct_start_position && correct_start_position < indel_stop)
-            || (indel_start < correct_end_position && correct_end_position < indel_stop)
+        } else if (indel_start <= correct_start_position && correct_start_position <= indel_stop)
+            || (indel_start <= correct_end_position && correct_end_position <= indel_stop)
         // When read contains only part of a read
         {
             within_indel = 1;
+        } else {
+            //println!("Case not addressed in within indel region. Please look!!");
+            //println!("correct_start_position:{}", correct_start_position);
+            //println!("correct_end_position:{}", correct_end_position);
+            //println!("indel_start:{}", indel_start);
+            //println!("indel_stop:{}", indel_stop);
         }
 
         // Checking if read is missing indel site due to splicing such as exon-skipping
@@ -1928,29 +2084,40 @@ fn check_read_within_indel_region(
             let mut new_frag = 1; // Flag indicating start of a new fragment after splicing
             for i in 0..alphabets.len() {
                 if new_frag == 1 {
+                    splice_start_frag += nucleotide_position;
+                    splice_stop_frag = splice_start_frag;
                     splice_start_pos = nucleotide_position_without_splicing;
+                    splice_stop_pos = nucleotide_position_without_splicing;
                     new_frag = 0
                 }
-                if &alphabets[i].to_string().as_str() == &"N" {
-                    new_frag = 1;
-                    splice_stop_frag += nucleotide_position;
-                    // Check if this fragment of read contains indel region or not
-                    if (splice_start_frag <= indel_start && indel_start <= splice_stop_frag)
-                        || (splice_start_frag <= indel_start + indel_length as i64
-                            && indel_start + indel_length as i64 <= splice_stop_frag)
-                    {
-                        correct_start_position = splice_start_frag;
-                        correct_end_position = splice_stop_frag;
-                        splice_stop_pos = nucleotide_position_without_splicing;
-                        break;
-                    }
-                    splice_stop_frag -= nucleotide_position;
-                } else if i == alphabets.len() - 1 {
-                    // Last entry in CIGAR
-                    nucleotide_position += numbers[i].to_string().parse::<i64>().unwrap();
+
+                nucleotide_position += numbers[i].to_string().parse::<i64>().unwrap();
+                if &alphabets[i].to_string().as_str() != &"N" {
                     nucleotide_position_without_splicing +=
                         numbers[i].to_string().parse::<i64>().unwrap();
-                    splice_stop_frag += nucleotide_position;
+                }
+                if &alphabets[i].to_string().as_str() == &"I" {
+                    // In case of an insertion, the position w.r.t to read will change, but no change will occur w.r.t reference genome since the inserted nucleotides are not present in the reference genome
+                    splice_stop_pos += numbers[i].to_string().parse::<i64>().unwrap();
+                }
+
+                if &alphabets[i].to_string().as_str() == &"D" {
+                    // In case of a deletion, the position w.r.t reference genome will change but no change will occur w.r.t reads since the deleted nucleotides are not present in the read
+                    splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
+                }
+
+                if &alphabets[i].to_string().as_str() == &"M" {
+                    splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
+                    splice_stop_pos += numbers[i].to_string().parse::<i64>().unwrap();
+                }
+
+                //println!("alphabet:{}", &alphabets[i].to_string().as_str());
+                //println!("splice_start_frag:{}", splice_start_frag);
+                //println!("splice_stop_frag2:{}", splice_stop_frag);
+
+                if &alphabets[i].to_string().as_str() == &"N" {
+                    new_frag = 1;
+                    //splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
                     // Check if this fragment of read contains indel region or not
                     if (splice_start_frag <= indel_start && indel_start <= splice_stop_frag)
                         || (splice_start_frag <= indel_start + indel_length as i64
@@ -1958,7 +2125,23 @@ fn check_read_within_indel_region(
                     {
                         correct_start_position = splice_start_frag;
                         correct_end_position = splice_stop_frag;
-                        splice_stop_pos = nucleotide_position_without_splicing;
+                        //splice_start_pos = splice_start_frag;
+                        //splice_stop_pos = nucleotide_position_without_splicing;
+                        break;
+                    }
+                    //splice_stop_frag -= numbers[i].to_string().parse::<i64>().unwrap();
+                } else if i == alphabets.len() - 1 {
+                    // Last entry in CIGAR
+                    //splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
+                    // Check if this fragment of read contains indel region or not
+                    if (splice_start_frag <= indel_start && indel_start <= splice_stop_frag)
+                        || (splice_start_frag <= indel_start + indel_length as i64
+                            && indel_start + indel_length as i64 <= splice_stop_frag)
+                    {
+                        correct_start_position = splice_start_frag;
+                        correct_end_position = splice_stop_frag;
+                        //splice_start_pos = splice_start_frag;
+                        //splice_stop_pos = nucleotide_position_without_splicing;
                         break;
                     } else {
                         //println!("Somehow fragment containing indel site was not found, please check (within_indel = 0)!");
@@ -1969,22 +2152,29 @@ fn check_read_within_indel_region(
                         //println!("indel_stop:{}", indel_start + indel_length as i64);
                     }
                 }
+            }
 
-                nucleotide_position += numbers[i].to_string().parse::<i64>().unwrap();
-                if &alphabets[i].to_string().as_str() == &"N" {
-                    splice_start_frag += nucleotide_position;
-                } else if &alphabets[i].to_string().as_str() != &"D"
-                    && &alphabets[i].to_string().as_str() != &"H"
-                {
-                    nucleotide_position_without_splicing +=
-                        numbers[i].to_string().parse::<i64>().unwrap();
-                }
-                //println!("alphabet:{}", &alphabets[i].to_string().as_str());
-                //println!("splice_start_frag:{}", splice_start_frag);
-                //println!("splice_stop_frag:{}", splice_stop_frag);
+            // Check if the insertion (if variant is an insertion) is too close to the splice-site or not. In that case the start/end position of the read will have to be updated so that read containing the complete indel region is parsed
+            if indel_start - (indel_length as i64) < correct_start_position
+                && correct_start_position_without_splicing < indel_start - (indel_length as i64)
+                && splice_start_pos - indel_length as i64 > 0
+            // The second condition has been added to make sure that there is actually a spliced part of the sequence (adjoining to current one) where part of the sequence may have got wrongly spliced otherwise its possible that read only spans part of the variant region
+            {
+                //println!("Indel too close to splice site");
+                correct_start_position = indel_start - (indel_length as i64);
+                splice_start_pos = splice_start_pos - indel_length as i64;
+            } else if indel_start + (indel_length as i64) > correct_end_position
+                && correct_end_position_without_splicing > indel_start + (indel_length as i64)
+                && splice_stop_pos as usize + indel_length < original_read_length
+            // The second condition has been added to make sure that there is actually a spliced part of the sequence (adjoining to current one) where part of the sequence may have got wrongly spliced otherwise its possible that read only spans part of the variant region
+            {
+                //println!("Indel too close to splice site");
+                correct_end_position = indel_start + (indel_length as i64);
+                splice_stop_pos = splice_stop_pos + indel_length as i64;
             }
         }
     }
+
     (
         within_indel,
         correct_start_position,
@@ -1995,43 +2185,81 @@ fn check_read_within_indel_region(
     )
 }
 
+#[allow(unused_variables)] // This is added to silence warnings because ref_alt_same_base_start variable is currently not being used. Maybe deprecated in the future
 fn check_polyclonal(
-    sequence: String,                // Read sequence
-    left_most_pos: i64, // Left most pos, contains start_positions_list input for that particular read i.e the nucleotide position from where that particular read starts from
-    cigar_sequence: String, // Cigar sequence of that read
-    indel_start: i64,   // Indel start position
+    mut sequence: String,                  // Read sequence
+    correct_start_position: i64,           // Left most pos
+    correct_end_position: i64,             // Right most pos
+    cigar_sequence: String,                // Cigar sequence of that read
+    indel_start: i64,                      // Indel start position
+    left_most_spliced: i64, // Left most position of fragment in read containing indel region (Used when read is spliced)
+    right_most_spliced: i64, // Right most position of fragment in read containing indel region (Used when read is spliced)
     ref_nucleotides: &Vec<char>, // Vector containing ref allele nucleotides
     alt_nucleotides: &Vec<char>, // Vector containing alt allele nucleotides
-    ref_nucleotides_all: &Vec<char>, // Vector containing ref allele nucleotides of size indel_length (Used when strictness >= 2)
-    alt_nucleotides_all: &Vec<char>, // Vector containing alt allele nucleotides of size indel_length (Used when strictness >= 2)
-    optimized_indel_length: usize,   // Optimized indel length
+    ref_nucleotides_all: &Vec<char>, // Vector containing ref allele nucleotides of size indel_length (Used when strictness >= 1)
+    alt_nucleotides_all_right: &Vec<char>, // Vector containing alt allele nucleotides of size indel_length (Used when strictness >= 1).In case of deletion, contains nucleotides on the right hand side of the deletion
+    alt_nucleotides_all_left: &Vec<char>, // Vector containing alt allele nucleotides of size indel_length (Used when strictness >= 1).In case of deletion, contains nucleotides on the left hand side of the deletion
+    optimized_indel_length: usize,        // Optimized indel length
     ref_length: usize, // Ref allele length (This is passed and not calculated inside function since that would be repeating the same calculation (as this function is called inside for loop) increasing execution time)
     alt_length: usize, // Alt allele length
     indel_length: usize, // Length of indel
     strictness: usize, // Strictness of the pipeline
     found_duplicate_kmers: usize, // Flag to tell if there are duplicated kmers (Currently hardcoded to 0 in main function, but maybe used in the future)
     ref_alt_same_base_start: usize, // Flag to check if the ref and alt allele start with the last ref nucleotide (e.g A/ATCGT)
-) -> (i64, i64, i64, String, i64, i64) {
-    let sequence_vector: Vec<_> = sequence.chars().collect(); // Vector containing each sequence nucleotides as separate elements in the vector
+    splice_freq: usize,             // Number of splice junctions in read
+) -> (i64, i64, i64, String, i64, String) {
+    let mut sequence_vector: Vec<_> = sequence.chars().collect(); // Vector containing each sequence nucleotides as separate elements in the vector
     let mut ref_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches ref allele (Will be used later to determine if the read harbors a polyclonal variant)
     let mut alt_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches alt allele (Will be used later to determine if the read harbors a polyclonal variant)
-    let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
     let mut ref_insertion: i64 = 0; // Keep tab whether there is an insertion within the ref allele (This variable will be used later to parse out ref-classified reads that have insertions/deletions in indel region and evebtually classified as 'none')
     let mut alignment_side: String = "left".to_string(); // Flag to check whether kmers should be compared from the left or right-side in jaccard_similarity_weights() function
     let mut right_most_pos: i64 = 0;
 
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
     } else {
+        if splice_freq > 0 {
+            // When read is spliced
+            let mut spliced_seq = String::new(); // Contains spliced sequences which overlaps with indel region. If read not spliced, contains entire sequence
+
+            //println!("Length of sequence:{}", sequence_vector.len());
+            //println!("left_most_spliced:{}", left_most_spliced);
+            //println!("right_most_spliced:{}", right_most_spliced);
+            for k in left_most_spliced..right_most_spliced {
+                if (k as usize) < sequence_vector.len() {
+                    spliced_seq += &sequence_vector[k as usize].to_string();
+                }
+            }
+            sequence = spliced_seq.clone();
+            sequence_vector = sequence.chars().collect();
+            //println!("spliced_seq:{}", spliced_seq);
+        }
         let (alphabets, numbers) = parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
 
-        // Check to see if the first item in cigar is a soft clip
-        if &alphabets[0].to_string().as_str() == &"S" {
-            correct_start_position =
-                correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
-            // Correcting for incorrect left position (when read starts with a softclip) by subtracting length of softclip from original left most position of read
-        }
         // Looking for insertions and deletions in cigar sequence
-        let mut read_indel_start: usize = (indel_start - correct_start_position) as usize; // Position of cigar sequence starts in reference genome coordinates (i.e if cigar sequence is 47M3S, this will initialize to the reference genome coordinate of the start of the first matched nucleotide)
+        let mut read_offset: usize = 0; // When read starts after the start of an indel insertion, this variable instructs the iterator (looking for wrong base calls instead of zero) to start from the position of ref/alt overlapping with the read insertion site
+        let mut read_indel_start: usize = (indel_start - correct_start_position) as usize;
+
+        // Position of cigar sequence starts in reference genome coordinates (i.e if cigar sequence is 47M3S, this will initialize to the reference genome coordinate of the start of the first matched nucleotide)
+        //println!("indel start:{}", indel_start);
+        //println!(
+        //    "correct_start_position_without_splicing:{}",
+        //    correct_start_position_without_splicing
+        //);
+        //println!("read_indel_start1:{}", read_indel_start);
+
+        //if splice_freq > 0 {
+        //    // When read is spliced
+        //    let mut temp_position = correct_start_position;
+        //    for i in 0..alphabets.len() {
+        //        if &alphabets[i].to_string().as_str() == &"N" {
+        //            read_indel_start = (indel_start - temp_position) as usize;
+        //            break;
+        //        } else {
+        //            temp_position += numbers[i].to_string().parse::<i64>().unwrap();
+        //        }
+        //    }
+        //}
+
         let mut parse_position: usize = 0; // This contains the current cigar position being analyzed
         let mut old_parse_position: usize = 0; // This contains the previous cigar position being analyzed
         let mut indel_insertion_starts = Vec::<usize>::new(); // Vector storing insertion starts if inside indel region
@@ -2039,6 +2267,8 @@ fn check_polyclonal(
 
         // When read starts with softclip, right_most_pos is initialized to left_most_pos and subsequently incremented using the CIGAR entries
         right_most_pos = correct_start_position;
+        let mut numbers_position = Vec::<usize>::new();
+        let mut position: usize = 0;
         for i in 0..alphabets.len() {
             // Looping over each CIGAR item
             if &alphabets[i].to_string().as_str() != &"H" {
@@ -2046,6 +2276,13 @@ fn check_polyclonal(
                 right_most_pos += numbers[i].to_string().parse::<i64>().unwrap();
                 // right_most_pos incremented when read starts with soft-clip
             }
+            if &alphabets[i].to_string().as_str() == &"N"
+                || &alphabets[i].to_string().as_str() == &"H"
+            {
+            } else {
+                position += numbers[i].to_string().parse::<usize>().unwrap();
+            }
+            numbers_position.push(position);
         }
 
         //Determine if left or right_alignment
@@ -2073,28 +2310,181 @@ fn check_polyclonal(
             && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
         {
             alignment_side = "right".to_string();
-            read_indel_start = right_most_pos as usize - sequence.len();
+            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+            //read_indel_start = correct_end_position as usize - sequence.len();
         } else if correct_start_position > indel_start
             && correct_start_position < indel_start + indel_length as i64
             && right_most_pos > indel_start + indel_length as i64
         {
             alignment_side = "right".to_string();
-            read_indel_start = right_most_pos as usize - sequence.len();
+            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+            //read_indel_start = correct_end_position as usize - sequence.len();
         } else if correct_start_position + alignment_offset > indel_start
             && right_most_pos > indel_start + indel_length as i64
         {
             alignment_side = "right".to_string();
-            read_indel_start = right_most_pos as usize - sequence.len();
+            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+            //read_indel_start = correct_end_position as usize - sequence.len();
         }
+
+        // Determining read_indel_start based on whether read is left or right-aligned
+        if correct_start_position > indel_start && alt_length >= ref_length {
+            // If read starts after the indel insertion, read_indel_start is set to 0.
+            read_indel_start = 0;
+            read_offset = (correct_start_position - indel_start) as usize;
+            //println!("case1");
+            for i in 0..numbers_position.len() {
+                if numbers_position[i] < indel_start as usize - correct_start_position as usize
+                    && &alphabets[i].to_string().as_str() == &"I"
+                {
+                    read_indel_start += numbers[i] as usize;
+                } else if i == 0 { // Avoid panic error in the next else if statement when i==0
+                } else if numbers_position[i]
+                    < indel_start as usize - correct_start_position as usize
+                    && &alphabets[i].to_string().as_str() == &"D"
+                    && numbers_position[i - 1] != read_indel_start
+                    && (numbers_position[i - 1] as i64 - read_indel_start as i64).abs()
+                        >= indel_length as i64
+                // Avoid identical deletions where first and last nucleotide might be same leading to equivalent deletions. for e.g ACGA/A
+                {
+                    //println!("numbers_position[i]:{}", numbers_position[i]);
+                    //println!("numbers[i]:{}", numbers[i]);
+                    read_indel_start -= numbers[i] as usize;
+                }
+            }
+        }
+        //else if indel_start < correct_start_position_without_splicing
+        //    && correct_start_position_without_splicing < indel_start + (indel_length as i64) // In case of deletion and read starts after indel start site, the first nucleotides will contain nucleotides from the left-hand side of the indel
+        //    && indel_start + (indel_length as i64) < correct_end_position
+        //    && ref_length > alt_length
+        //{
+        //    read_indel_start = (indel_start + (indel_length as i64)
+        //        - correct_start_position_without_splicing) as usize;
+        //    println!("case2");
+        //}
+        //else if alignment_side == "right"
+        //    && correct_start_position_without_splicing <= indel_start
+        //{
+        //    read_indel_start = (indel_start + (indel_length as i64)
+        //        - correct_start_position_without_splicing) as usize;
+        //    println!("case3");
+        //}
+        else if alignment_side == "right" && ref_length > alt_length {
+            read_indel_start = sequence.len() - correct_end_position as usize
+                + indel_start as usize
+                + indel_length;
+            //println!("case2");
+            // Check if there any deletions or insertions between indel end-point and end-position of read
+            for i in 0..numbers_position.len() {
+                if numbers_position[i]
+                    > sequence.len() - correct_end_position as usize
+                        + indel_start as usize
+                        + indel_length
+                    && &alphabets[i].to_string().as_str() == &"I"
+                {
+                    read_indel_start -= numbers[i] as usize;
+                } else if i == 0 { // Avoid panic error in the next else if statement when i==0
+                } else if numbers_position[i]
+                    > sequence.len() - correct_end_position as usize
+                        + indel_start as usize
+                        + indel_length
+                    && &alphabets[i].to_string().as_str() == &"D"
+                    && numbers_position[i - 1] != read_indel_start
+                    && (numbers_position[i - 1] as i64 - read_indel_start as i64).abs()
+                        >= indel_length as i64
+                // Avoid identical deletions where first and last nucleotide might be same leading to equivalent deletions. for e.g ACGA/A
+                {
+                    //println!("numbers_position[i]:{}", numbers_position[i]);
+                    //println!("numbers[i]:{}", numbers[i]);
+                    read_indel_start += numbers[i] as usize;
+                }
+            }
+        } else if alignment_side == "right" && alt_length > ref_length {
+            read_indel_start =
+                sequence.len() - correct_end_position as usize + indel_start as usize + ref_length;
+            //println!("read_indel_start case3:{}", read_indel_start);
+            //println!("sequence.len():{}", sequence.len());
+            //println!("correct_end_position:{}", correct_end_position);
+            //println!("indel_start:{}", indel_start);
+            //println!("ref_length:{}", ref_length);
+            //println!(
+            //    "correct_end_position as usize - indel_start as usize - ref_length:{}",
+            //    correct_end_position as usize - indel_start as usize - ref_length
+            //);
+            //println!("case3");
+
+            // Check if there any deletions or insertions between indel end-point and end-position of read
+            for i in 0..numbers_position.len() {
+                if numbers_position[i]
+                    > sequence.len() - correct_end_position as usize
+                        + indel_start as usize
+                        + indel_length
+                    && &alphabets[i].to_string().as_str() == &"I"
+                {
+                    //println!("numbers_position[i]:{}", numbers_position[i]);
+                    //println!(
+                    //    "sequence.len() - correct_end_position as usize
+                    //    + indel_start as usize
+                    //    + indel_length:{}",
+                    //    sequence.len() - correct_end_position as usize
+                    //        + indel_start as usize
+                    //        + indel_length
+                    //);
+                    read_indel_start -= numbers[i] as usize;
+                    //println!("Insertion found between indel end-point and end-position")
+                } else if i == 0 { // Avoid panic error in the next else if statement when i==0
+                } else if numbers_position[i]
+                    > sequence.len() - correct_end_position as usize
+                        + indel_start as usize
+                        + indel_length
+                    && &alphabets[i].to_string().as_str() == &"D"
+                    && numbers_position[i - 1] != read_indel_start
+                    && (numbers_position[i - 1] as i64 - read_indel_start as i64).abs()
+                        >= indel_length as i64
+                // Avoid identical deletions where first and last nucleotide might be same leading to equivalent deletions. for e.g ACGA/A
+                {
+                    //println!("numbers_position[i]:{}", numbers_position[i]);
+                    //println!("numbers[i]:{}", numbers[i]);
+                    read_indel_start += numbers[i] as usize;
+                }
+            }
+        } else if alignment_side == "left" {
+            //println!("case4");
+            for i in 0..numbers_position.len() {
+                if numbers_position[i] < indel_start as usize - correct_start_position as usize
+                    && &alphabets[i].to_string().as_str() == &"I"
+                {
+                    read_indel_start += numbers[i] as usize;
+                } else if i == 0 { // Avoid panic error in the next else if statement when i==0
+                } else if numbers_position[i]
+                    < indel_start as usize - correct_start_position as usize
+                    && &alphabets[i].to_string().as_str() == &"D"
+                    && numbers_position[i - 1] != read_indel_start
+                    && (numbers_position[i - 1] as i64 - read_indel_start as i64).abs()
+                        >= indel_length as i64
+                // Avoid identical deletions where first and last nucleotide might be same leading to equivalent deletions. for e.g ACGA/A
+                {
+                    //println!("numbers_position[i]:{}", numbers_position[i]);
+                    //println!("numbers[i]:{}", numbers[i]);
+                    read_indel_start -= numbers[i] as usize;
+                }
+            }
+        } else {
+            println!("case5");
+        }
+
+        //println!("read_indel_start2:{}", read_indel_start);
+        //println!("sequence length:{}", sequence.len());
+        //println!("correct_end_position:{}", correct_end_position);
 
         for i in 0..alphabets.len() {
             if parse_position < read_indel_start {
                 parse_position += numbers[i].to_string().parse::<usize>().unwrap();
-                if (&alphabets[i].to_string().as_str() == &"I"
-                    || &alphabets[i].to_string().as_str() == &"S")
-                    && strictness >= 2
+                if (&alphabets[i].to_string().as_str() == &"I")
+                    //|| &alphabets[i].to_string().as_str() == &"S")
+                    && strictness >= 1
                 {
-                    read_indel_start += numbers[i].to_string().parse::<usize>().unwrap(); // Incrementing read_indel_start by the number of nucleotides described by CIGAR sequence
+                    //read_indel_start += numbers[i].to_string().parse::<usize>().unwrap(); // Incrementing read_indel_start by the number of nucleotides described by CIGAR sequence
 
                     if read_indel_start <= old_parse_position
                         && parse_position <= read_indel_start + indel_length
@@ -2103,6 +2493,7 @@ fn check_polyclonal(
                         indel_insertion_starts.push(old_parse_position); // Adding indel start to vector
                         indel_insertion_stops.push(parse_position); // Adding indel stop to vector
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                           //println!("Case 1 ref");
                     } else if old_parse_position <= read_indel_start
                         && read_indel_start + indel_length <= parse_position
                     {
@@ -2110,7 +2501,9 @@ fn check_polyclonal(
                         indel_insertion_starts.push(old_parse_position);
                         indel_insertion_stops.push(parse_position);
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                           //println!("Case 2 ref");
                     } else if old_parse_position <= read_indel_start
+                        && read_indel_start <= parse_position
                         && parse_position <= read_indel_start + indel_length
                         && found_duplicate_kmers == 0
                     // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
@@ -2119,7 +2512,9 @@ fn check_polyclonal(
                         //indel_insertion_starts.push(old_parse_position);
                         //indel_insertion_stops.push(parse_position);
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                           //println!("Case 3 ref");
                     } else if read_indel_start <= old_parse_position
+                        && old_parse_position <= read_indel_start + indel_length
                         && read_indel_start + indel_length <= parse_position
                         && found_duplicate_kmers == 0
                     // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
@@ -2128,6 +2523,7 @@ fn check_polyclonal(
                         //indel_insertion_starts.push(old_parse_position);
                         //indel_insertion_stops.push(parse_position);
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                           //println!("Case 4 ref");
                     }
                 } else if &alphabets[i].to_string().as_str() == &"I" && strictness >= 1 {
                     //read_indel_start += numbers[i].to_string().parse::<usize>().unwrap(); // Incrementing read_indel_start by the number of nucleotides described by CIGAR sequence
@@ -2139,6 +2535,7 @@ fn check_polyclonal(
                         indel_insertion_starts.push(old_parse_position); // Adding indel start to vector
                         indel_insertion_stops.push(parse_position); // Adding indel stop to vector
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                           //println!("Case 5 ref");
                     } else if old_parse_position <= read_indel_start
                         && read_indel_start + indel_length <= parse_position
                     {
@@ -2146,6 +2543,7 @@ fn check_polyclonal(
                         indel_insertion_starts.push(old_parse_position);
                         indel_insertion_stops.push(parse_position);
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                           //println!("Case 6 ref");
                     } else if old_parse_position <= read_indel_start
                         && parse_position >= read_indel_start
                         && parse_position <= read_indel_start + indel_length
@@ -2156,6 +2554,7 @@ fn check_polyclonal(
                         //indel_insertion_starts.push(old_parse_position);
                         //indel_insertion_stops.push(parse_position);
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                           //println!("Case 7 ref");
                     } else if read_indel_start <= old_parse_position
                         && read_indel_start + indel_length > old_parse_position
                         && read_indel_start + indel_length <= parse_position
@@ -2166,6 +2565,7 @@ fn check_polyclonal(
                         //indel_insertion_starts.push(old_parse_position);
                         //indel_insertion_stops.push(parse_position);
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                           //println!("Case 8 ref");
                     }
                 } else if &alphabets[i].to_string().as_str() == &"D" && strictness >= 1 {
                     //read_indel_start -= numbers[i].to_string().parse::<usize>().unwrap(); // In case of a deletion, position is pushed back to account for it
@@ -2190,6 +2590,7 @@ fn check_polyclonal(
                     {
                         // Making sure the insertion is within the indel region
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                           //println!("Case 9 ref");
                     } else if old_parse_position <= read_indel_start
                         && parse_position >= read_indel_start
                         && parse_position <= read_indel_start + indel_length
@@ -2198,6 +2599,7 @@ fn check_polyclonal(
                     {
                         // Making sure part of the insertion is within the indel region
                         ref_insertion = 1;
+                        //println!("Case 10 ref");
                     } else if read_indel_start <= old_parse_position
                         && read_indel_start + indel_length > old_parse_position
                         && read_indel_start + indel_length <= parse_position
@@ -2206,6 +2608,7 @@ fn check_polyclonal(
                     {
                         // Making sure part of the insertion is within the indel region
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                           //println!("Case 11 ref");
                     }
                 }
                 old_parse_position = parse_position;
@@ -2223,6 +2626,7 @@ fn check_polyclonal(
                     //indel_insertion_starts.push(old_parse_position);
                     //indel_insertion_stops.push(parse_position);
                     ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                       //println!("Case 12 ref");
                 } else if old_parse_position <= read_indel_start
                     && read_indel_start + indel_length <= parse_position
                 {
@@ -2231,23 +2635,27 @@ fn check_polyclonal(
                     //indel_insertion_stops.push(parse_position);
                     ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
                 } else if old_parse_position <= read_indel_start
+                    && read_indel_start <= parse_position
                     && parse_position <= read_indel_start + indel_length
                     && found_duplicate_kmers == 0
-                    && strictness >= 2
+                    && strictness >= 1
                 {
                     // Making sure part of the insertion is within the indel region
                     //indel_insertion_starts.push(old_parse_position);
                     //indel_insertion_stops.push(parse_position);
                     ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                       //println!("Case 13 ref");
                 } else if read_indel_start <= old_parse_position
+                    && old_parse_position <= read_indel_start + indel_length
                     && read_indel_start + indel_length <= parse_position
                     && found_duplicate_kmers == 0
-                    && strictness >= 2
+                    && strictness >= 1
                 {
                     // Making sure part of the insertion is within the indel region
                     //indel_insertion_starts.push(old_parse_position);
                     //indel_insertion_stops.push(parse_position);
                     ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
+                                       //println!("Case 14 ref");
                                        //println!("read_indel_start:{}", read_indel_start);
                                        //println!("old_parse_position:{}", old_parse_position);
                                        //println!("parse_position:{}", parse_position);
@@ -2286,63 +2694,150 @@ fn check_polyclonal(
         //        }
         //    }
         //} else
-        if strictness >= 2 {
-            if &alphabets[0].to_string().as_str() != &"S" {
-                // When a read starts with a softclip, then the indel will be on the left-side. Then this logic below will not work. Will have to compare each nucleotide from the end of the indel rather than from the beginning
-                for i in 0..optimized_indel_length as usize {
-                    if read_indel_start + i < sequence.len() {
-                        if i == 0 && ref_alt_same_base_start == 1 {
-                            if &ref_nucleotides_all[i] != &sequence_vector[read_indel_start + i] {
-                                // Check to see its starting from the correct bp position (e.g if insertion is A/ATCG will check if its starting from A)
-                                break;
-                            }
-                        }
 
+        //println!("ref_nucleotides_all:{:?}", ref_nucleotides_all);
+        //println!("read_indel_start:{}", read_indel_start);
+        //println!("sequence_vector:{:?}", sequence_vector);
+        if strictness >= 1 {
+            //if &alphabets[0].to_string().as_str() != &"S" {
+            // When a read starts with a softclip, then the indel will be on the left-side. Then this logic below will not work. Will have to compare each nucleotide from the end of the indel rather than from the beginning
+            for i in 0..optimized_indel_length as usize {
+                //println!("correct_start_position:{}", correct_start_position);
+                //println!("read_indel_start + i:{}", read_indel_start + i);
+                //println!("sequence.len():{}", sequence.len());
+                if alignment_side == "right" {
+                    if ref_nucleotides.len() as i64 - 1 - i as i64 >= 0
+                        && read_indel_start - i - 1 < sequence_vector.len()
+                        && 0 <= read_indel_start as i64 - i as i64 - 1
+                    {
+                        if &ref_nucleotides[ref_nucleotides.len() - 1 - i]
+                            != &sequence_vector[read_indel_start - i - 1]
+                        {
+                            //println!("Ref not same");
+                            ref_polyclonal_status = 1; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                } else if read_indel_start + i < sequence.len()
+                    && i + read_offset < ref_nucleotides_all.len()
+                {
+                    //if i == 0 && ref_alt_same_base_start == 1 {
+                    //    if &ref_nucleotides_all[i] != &sequence_vector[read_indel_start + i] {
+                    //        // Check to see its starting from the correct bp position (e.g if insertion is A/ATCG will check if its starting from A)
+                    //        break;
+                    //    }
+                    //}
+
+                    //println!(
+                    //    "sequence_vector[read_indel_start + i]:{},{}",
+                    //    &sequence_vector[read_indel_start + i],
+                    //    read_indel_start + i
+                    //);
+                    //println!(
+                    //    "ref_nucleotides_all[i + read_offset]:{},{}",
+                    //    ref_nucleotides_all[i + read_offset],
+                    //    i + read_offset
+                    //);
+                    if &ref_nucleotides_all[i + read_offset]
+                        != &sequence_vector[read_indel_start + i]
+                    {
+                        //println!("Ref not same");
+                        ref_polyclonal_status = 1; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+
+            for i in 0..optimized_indel_length as usize {
+                if ref_length > alt_length && alignment_side == "right"
+                // Example case: Deletion: ACT{ATCGATAC/A}GCAT . If read is ATACGCAT.
+                {
+                    #[allow(unused_comparisons)]
+                    if read_indel_start - i - 1 < sequence.len()
+                        && i < alt_nucleotides_all_left.len()
+                        && read_indel_start as i64 - i as i64 - 1 >= 0
+                    {
+                        //if i == 0 && ref_alt_same_base_start == 1 {
+                        //    if &alt_nucleotides_all[i] != &sequence_vector[read_indel_start + i] {
+                        //        // Check to see its starting from the correct bp position (e.g if insertion is A/ATCG will check if its starting from A)
+                        //        break;
+                        //    }
+                        //}
+
+                        //println!("i:{}", i);
+                        //println!("read_indel_start - i - 1 :{}", read_indel_start - i - 1);
+                        //println!(
+                        //    "sequence_vector[read_indel_start - i]:{}",
+                        //    &sequence_vector[read_indel_start - i - 1]
+                        //);
+                        //println!(
+                        //    "alt_nucleotides_all_left[i]:{}",
+                        //    alt_nucleotides_all_left[i]
+                        //);
+                        if &alt_nucleotides_all_left[i]
+                            != &sequence_vector[read_indel_start - i - 1]
+                        {
+                            //println!("Alt not same");
+                            alt_polyclonal_status = 1; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                } else if alignment_side == "right" && alt_length >= ref_length {
+                    if alt_nucleotides.len() as i64 - 1 - i as i64 >= 0
+                        && read_indel_start - i - 1 < sequence_vector.len()
+                        && 0 <= read_indel_start as i64 - i as i64 - 1
+                    {
+                        //println!("i:{}", i);
+                        //println!("read_indel_start - i - 1 :{}", read_indel_start - i - 1);
+                        //println!(
+                        //    "sequence_vector[read_indel_start - i - 1]:{}",
+                        //    &sequence_vector[read_indel_start - i - 1]
+                        //);
+                        //println!(
+                        //    "alt_nucleotides[alt_nucleotides.len() - 1 - i]:{}",
+                        //    alt_nucleotides[alt_nucleotides.len() - 1 - i]
+                        //);
+
+                        if &alt_nucleotides[alt_nucleotides.len() - 1 - i]
+                            != &sequence_vector[read_indel_start - i - 1]
+                        {
+                            //println!("Alt not same");
+                            alt_polyclonal_status = 1; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                } else {
+                    if read_indel_start + i < sequence.len()
+                        && i + read_offset < alt_nucleotides_all_right.len()
+                    {
+                        //if i == 0 && ref_alt_same_base_start == 1 {
+                        //    if &alt_nucleotides_all[i] != &sequence_vector[read_indel_start + i] {
+                        //        // Check to see its starting from the correct bp position (e.g if insertion is A/ATCG will check if its starting from A)
+                        //        break;
+                        //    }
+                        //}
+
+                        //println!("read_offset:{}", read_offset);
                         //println!(
                         //    "sequence_vector[read_indel_start + i]:{}",
                         //    &sequence_vector[read_indel_start + i]
                         //);
-                        if &ref_nucleotides_all[i] != &sequence_vector[read_indel_start + i] {
-                            ref_polyclonal_status = 1; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-
-                for i in 0..optimized_indel_length as usize {
-                    if read_indel_start + i < sequence.len() {
-                        if i == 0 && ref_alt_same_base_start == 1 {
-                            if &alt_nucleotides_all[i] != &sequence_vector[read_indel_start + i] {
-                                // Check to see its starting from the correct bp position (e.g if insertion is A/ATCG will check if its starting from A)
-                                break;
-                            }
-                        }
-
-                        if &alt_nucleotides_all[i] != &sequence_vector[read_indel_start + i] {
-                            alt_polyclonal_status = 1; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            } else {
-                for i in optimized_indel_length..0 as usize {
-                    if read_indel_start as i64 - i as i64 >= 0 {
-                        if &ref_nucleotides_all[i] != &sequence_vector[read_indel_start - i] {
-                            ref_polyclonal_status = 1; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-
-                for i in optimized_indel_length..0 as usize {
-                    if read_indel_start as i64 - i as i64 >= 0 {
-                        if &alt_nucleotides_all[i] != &sequence_vector[read_indel_start - i] {
+                        //println!(
+                        //    "alt_nucleotides_all_right[i + read_offset]:{}",
+                        //    alt_nucleotides_all_right[i + read_offset]
+                        //);
+                        if &alt_nucleotides_all_right[i + read_offset]
+                            != &sequence_vector[read_indel_start + i]
+                        {
+                            //println!("Alt not same");
                             alt_polyclonal_status = 1; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
                             break;
                         }
@@ -2351,66 +2846,63 @@ fn check_polyclonal(
                     }
                 }
             }
-        } else if strictness >= 1 {
-            if &alphabets[0].to_string().as_str() != &"S" {
-                // When a read starts with a softclip, then the indel will be on the left-side. Then this logic below will not work. Will have to compare each nucleotide from the end of the indel rather than from the beginning
-                for i in 0..ref_length as usize {
-                    if read_indel_start + i < sequence.len() {
-                        if i == 0 && ref_alt_same_base_start == 1 {
-                            if &ref_nucleotides[i] != &sequence_vector[read_indel_start + i] {
-                                // Check to see its starting from the correct bp position (e.g if insertion is A/ATCG will check if its starting from A)
-                                break;
-                            }
-                        }
-                        if &ref_nucleotides[i] != &sequence_vector[read_indel_start + i] {
-                            ref_polyclonal_status = 1; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
 
-                for i in 0..alt_length as usize {
-                    if read_indel_start + i < sequence.len() {
-                        if i == 0 && ref_alt_same_base_start == 1 {
-                            if &alt_nucleotides[i] != &sequence_vector[read_indel_start + i] {
-                                // Check to see its starting from the correct bp position (e.g if insertion is A/ATCG will check if its starting from A)
-                                break;
-                            }
-                        }
-
-                        if &alt_nucleotides[i] != &sequence_vector[read_indel_start + i] {
-                            alt_polyclonal_status = 1; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            } else {
-                for i in ref_length..0 as usize {
-                    if read_indel_start as i64 - i as i64 >= 0 {
-                        if &ref_nucleotides[i] != &sequence_vector[read_indel_start - i] {
-                            ref_polyclonal_status = 1; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-
-                for i in alt_length..0 as usize {
-                    if read_indel_start as i64 - i as i64 >= 0 {
-                        if &alt_nucleotides[i] != &sequence_vector[read_indel_start - i] {
-                            alt_polyclonal_status = 1; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
-                            break;
-                        }
-                    } else {
-                        break;
-                    }
-                }
-            }
+            //} else {
+            //  println!("optimized_indel_length:{}", optimized_indel_length);
+            //  for i in 0..optimized_indel_length as usize {
+            //      let j = optimized_indel_length - i;
+            //      println!("read_indel_start:{}", read_indel_start);
+            //      println!("j:{}", j);
+            //      if read_indel_start as i64 - j as i64 > 0
+            //          && read_indel_start - j < sequence.len()
+            //          && j + read_offset < ref_nucleotides_all.len()
+            //      {
+            //          println!(
+            //              "ref_nucleotides_all[j + read_offset]:{}",
+            //              &ref_nucleotides_all[j + read_offset]
+            //          );
+            //          println!(
+            //              "sequence_vector[read_indel_start - j]:{}",
+            //              &sequence_vector[read_indel_start - j]
+            //          );
+            //          if &ref_nucleotides_all[j + read_offset]
+            //              != &sequence_vector[read_indel_start - j]
+            //          {
+            //              ref_polyclonal_status = 1; // If ref nucleotides don't match, the flag ref_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
+            //              break;
+            //          }
+            //      } else {
+            //          break;
+            //      }
+            //  }
+            //
+            //  for i in 0..optimized_indel_length as usize {
+            //      let j = optimized_indel_length - i;
+            //      println!("read_indel_start:{}", read_indel_start);
+            //      println!("j:{}", j);
+            //      if read_indel_start as i64 - j as i64 > 0
+            //          && read_indel_start - j < sequence.len()
+            //          && j + read_offset < alt_nucleotides_all_right.len()
+            //      {
+            //          println!(
+            //              "alt_nucleotides_all_right[j + read_offset]:{}",
+            //              &alt_nucleotides_all_right[j + read_offset]
+            //          );
+            //          println!(
+            //              "sequence_vector[read_indel_start - j]:{}",
+            //              &sequence_vector[read_indel_start - j]
+            //          );
+            //          if &alt_nucleotides_all_right[j + read_offset]
+            //              != &sequence_vector[read_indel_start - j]
+            //          {
+            //              alt_polyclonal_status = 1; // If alt nucleotides don't match, the flag alt_polyclonal_status is set to 1. Later this will flag will be used to determine if the read harbors a polyclonal variant
+            //              break;
+            //          }
+            //      } else {
+            //          break;
+            //      }
+            //  }
+            // }
         }
 
         //println!("ref_polyclonal_status:{}", ref_polyclonal_status);
@@ -2423,7 +2915,7 @@ fn check_polyclonal(
                 let insertion_stop: usize = indel_insertion_stops[i];
                 for j in (insertion_start - 1)..insertion_stop {
                     let k: usize = j - insertion_start + 1;
-                    if k < indel_length && k < alt_nucleotides.len() {
+                    if k < indel_length && k < alt_nucleotides.len() && j < sequence_vector.len() {
                         if (&alt_nucleotides[k] != &sequence_vector[j])
                             && ((read_indel_start as usize) <= j)
                             && (j <= (read_indel_start as usize) + indel_length)
@@ -2444,34 +2936,18 @@ fn check_polyclonal(
         alt_polyclonal_status,
         ref_insertion,
         alignment_side,
-        correct_start_position,
         right_most_pos,
+        sequence, // This variable is being passed back because in case of splicing only the part which contains the indel will be retained
     )
 }
 
 fn build_kmers_reads(
-    mut sequence: String,    // Sequence of kmer
-    kmer_length: i64,        // Length of kmer
-    splice_freq: usize,      // Number of splice junctions in read
-    left_most_spliced: i64, // Left most position of fragment in read containing indel region (Used when read is spliced)
-    right_most_spliced: i64, // Right most position of fragment in read containing indel region (Used when read is spliced)
+    sequence: String, // Sequence of kmer
+    kmer_length: i64, // Length of kmer
 ) -> Vec<String> {
     // This function is used to build kmers for each of the reads
-    let mut sequence_vector: Vec<_> = sequence.chars().collect(); // Vector containing all the nucleotides of the reads as individual elements
+    let sequence_vector: Vec<_> = sequence.chars().collect(); // Vector containing all the nucleotides of the reads as individual elements
 
-    if splice_freq > 0 {
-        // When read is spliced
-        let mut spliced_seq = String::new(); // Contains spliced sequences which overlaps with indel region. If read not spliced, contains entire sequence
-                                             //println!("Length of sequence:{}", sequence.len());
-                                             //println!("left_most_spliced:{}", left_most_spliced);
-                                             //println!("right_most_spliced:{}", right_most_spliced);
-        for k in left_most_spliced..right_most_spliced {
-            spliced_seq += &sequence_vector[k as usize].to_string();
-        }
-        sequence = spliced_seq.clone();
-        sequence_vector = sequence.chars().collect();
-        //println!("spliced_seq:{}", spliced_seq);
-    }
     let num_iterations = sequence.len() as i64 - kmer_length + 1; // This variable contains the number of iteration required to generate the complete set of kmers for any given sequence
     let mut kmers = Vec::<String>::new(); // Vector where all kmers of the reads shall be inserted below
     kmers.reserve(200); // This in advance creates space for data to be added so that each time push function is called, it does not have to make space reducing execution time
@@ -2485,7 +2961,6 @@ fn build_kmers_reads(
         }
         kmers.push(subseq); // Adding kmer to vector
     }
-    //println!("kmers{:?}", kmers);
     kmers.shrink_to_fit(); // Getting rid of excess space that may have been added initially
     kmers // Returning vector of kmers back to the main function
 }
@@ -2517,20 +2992,22 @@ fn jaccard_similarity_weights(
             //|| kmers2_nodups[i].to_owned() == "GAAACA".to_string()
             //|| kmers2_nodups[i].to_owned() == "CAAGAA".to_string()
             //{
-            //    println!("kmer:{}", kmers2_nodups[i].to_owned());
-            //    println!("weight:{}", &kmers2_data[i].kmer_weight);
-            //    println!("left:{}", kmers2_data[i].left_position);
-            //    println!("right:{}", kmers2_data[i].right_position);
-            //    println!("left_most_pos:{}", left_most_pos);
-            //    println!("right_most_pos:{}", right_most_pos + 1);
+            //println!("kmer:{}", kmers2_nodups[i].to_owned());
+            //println!("weight:{}", &kmers2_data[i].kmer_weight);
+            //println!("left:{}", kmers2_data[i].left_position);
+            //println!("right:{}", kmers2_data[i].right_position);
+            //println!("left_most_pos:{}", left_most_pos);
+            //println!("right_most_pos:{}", right_most_pos + 1);
             //}
 
             let kmer_start = kmers2_data[i].left_position;
             if kmer_start > left_most_pos && kmer_start + kmer_length <= right_most_pos + 1 {
-                //println!("kmer:{}", kmers2_nodups[i].to_owned());
-                //println!("weight:{}", &kmers2_data[i].kmer_weight);
-                //println!("left:{}", kmers2_data[i].left_position);
-                //println!("right:{}", kmers2_data[i].left_position + kmer_length);
+                //if kmers2_data[i].kmer_weight > 0.91 {
+                //    println!("kmer:{}", kmers2_nodups[i].to_owned());
+                //    println!("weight:{}", kmers2_data[i].kmer_weight);
+                //    println!("left:{}", kmers2_data[i].left_position);
+                //    println!("right:{}", kmers2_data[i].left_position + kmer_length);
+                //}
                 kmers_refalt_nodups.push(kmers2_nodups[i].to_owned());
                 kmers_refalt_data.push(&kmers2_data[i]);
                 kmers_refalt_weight += &kmers2_data[i].kmer_weight;
@@ -2541,29 +3018,14 @@ fn jaccard_similarity_weights(
         //println!("Right most pos (inside read):{}", right_most_pos);
         for i in 0..kmers2_nodups.len() {
             let j = kmers2_nodups.len() - i - 1;
-            //println!(
-            //    "kmers2_data[j].right_position:{}",
-            //    kmers2_data[j].right_position
-            //);
-
-            //if kmers2_nodups[j].to_owned() == "CCCCAG".to_string()
-            //    || kmers2_nodups[j].to_owned() == "GAAACA".to_string()
-            //    || kmers2_nodups[j].to_owned() == "CAAGAA".to_string()
-            //{
-            //    println!("kmer:{}", kmers2_nodups[j].to_owned());
-            //    println!("weight:{}", &kmers2_data[j].kmer_weight);
-            //    println!("left:{}", kmers2_data[j].left_position);
-            //    println!("right:{}", kmers2_data[j].right_position);
-            //    println!("left_most_pos:{}", left_most_pos);
-            //    println!("right_most_pos:{}", right_most_pos + 1);
-            //}
-
             let kmer_start = kmers2_data[j].right_position;
             if kmer_start > left_most_pos && kmer_start + kmer_length <= right_most_pos + 1 {
-                //println!("kmer selected:{}", kmers2_nodups[j].to_owned());
-                //println!("weight:{}", &kmers2_data[j].kmer_weight);
-                //println!("left:{}", kmers2_data[j].left_position);
-                //println!("right:{}", kmers2_data[j].right_position);
+                //if kmers2_data[j].kmer_weight > 0.91 {
+                //    println!("kmer selected:{}", kmers2_nodups[j].to_owned());
+                //    println!("weight:{}", &kmers2_data[j].kmer_weight);
+                //    println!("left:{}", kmers2_data[j].left_position);
+                //    println!("right:{}", kmers2_data[j].right_position);
+                //}
                 kmers_refalt_nodups.push(kmers2_nodups[j].to_owned());
                 kmers_refalt_data.push(&kmers2_data[j]);
                 kmers_refalt_weight += &kmers2_data[j].kmer_weight;
@@ -2605,6 +3067,11 @@ fn jaccard_similarity_weights(
         } else {
             score = kmers2_data[index as usize].kmer_weight; // Getting score from ref/alt set
             kmers1_weight += (kmer_count as f64) * score; // Adding weight of each kmer by multiplying frequency (or counts) with the weight of that particular kmer
+
+            //if score > 0.91 {
+            //    println!("kmer selected:{}", &kmer1);
+            //    println!("kmer selected score:{}", score);
+            //}
         }
         kmer1_counts.push(kmer_count); // Adding kmer_counts to the kmer_counts vector
     }
@@ -2650,6 +3117,8 @@ fn classify_to_three_categories(
             let read_cat = read_category {
                 category: String::from("none"),
                 groupID: usize::from(kmer_diff_scores[i].groupID),
+                alt_comparison: i64::from(kmer_diff_scores[i].alt_comparison),
+                ref_comparison: i64::from(kmer_diff_scores[i].ref_comparison),
                 diff_score: f64::from(kmer_diff_scores[i].value),
                 ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
                 sequence_strand: String::from(&kmer_diff_scores[i].sequence_strand.to_owned()),
@@ -2660,6 +3129,8 @@ fn classify_to_three_categories(
             let read_cat = read_category {
                 category: String::from("none"),
                 groupID: usize::from(kmer_diff_scores[i].groupID),
+                alt_comparison: i64::from(kmer_diff_scores[i].alt_comparison),
+                ref_comparison: i64::from(kmer_diff_scores[i].ref_comparison),
                 diff_score: f64::from(kmer_diff_scores[i].value),
                 ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
                 sequence_strand: String::from(&kmer_diff_scores[i].sequence_strand.to_owned()),
@@ -2669,6 +3140,8 @@ fn classify_to_three_categories(
             let read_cat = read_category {
                 category: String::from("refalt"),
                 groupID: usize::from(kmer_diff_scores[i].groupID),
+                alt_comparison: i64::from(kmer_diff_scores[i].alt_comparison),
+                ref_comparison: i64::from(kmer_diff_scores[i].ref_comparison),
                 diff_score: f64::from(kmer_diff_scores[i].value),
                 ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
                 sequence_strand: String::from(&kmer_diff_scores[i].sequence_strand.to_owned()),
