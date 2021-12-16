@@ -114,7 +114,13 @@ function renderAutoSplineInputs(self, div) {
 		// .property('disabled', knot_count == knot_ct_select.node().value)
 		.html('Compute')
 		.on('click', async () => {
-			await getKnots(self, parseInt(knot_ct_select.node().value))
+			let desired_knots_ct = parseInt(knot_ct_select.node().value)
+			let requested_knots_ct = parseInt(knot_ct_select.node().value)
+			// request knots util desired_knots are available
+			while (self.q.knots.length < desired_knots_ct) {
+				await getKnots(self, requested_knots_ct)
+				requested_knots_ct = requested_knots_ct + 1
+			}
 			updateCustomSplineInputs(self)
 			setDensityPlot(self)
 		})
@@ -151,7 +157,8 @@ async function getKnots(self, knot_count) {
 		const data = await self.vocabApi.getPercentile(self.term.id, percentile_lst, self.filter)
 		if (data.error || !data.values.length || !data.values.every(v => Number.isFinite(v)))
 			throw 'cannot get median value: ' + (data.error || 'no data')
-		return data.values
+		const perc_values = [...new Set(data.values)]
+		return perc_values
 	}
 }
 
