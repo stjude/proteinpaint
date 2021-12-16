@@ -309,10 +309,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, result) {
 	}
 
 	// warnings
-	if (data.warnings) {
-		result.warnings = data.warnings
-		result.warnings.label = 'Warnings'
-	}
+	if (data.warnings) result.warnings = data.warnings
 }
 
 /*

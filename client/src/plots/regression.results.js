@@ -113,7 +113,7 @@ function setRenderers(self) {
 
 	self.mayshow_warnings = result => {
 		if (!result.warnings) return
-		const div = self.newDiv(result.warnings.label)
+		const div = self.newDiv('Warnings')
 		div.append('div').style('margin', '8px')
 		for (const line of result.warnings) {
 			div

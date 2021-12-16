@@ -58,7 +58,8 @@
 #       "other": {
 #           "header": []
 #           "rows": []
-#       }
+#       },
+#       "warnings": []
 #     }
 
 
