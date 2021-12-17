@@ -230,7 +230,7 @@ function renderAutoSplineInputs(self, div) {
 			let desired_knots_ct = Number.parseInt(knot_ct_select.node().value)
 			let requested_knots_ct = Number.parseInt(knot_ct_select.node().value)
 			// request knots util desired_knots are available
-			while (self.q.knots.length < desired_knots_ct) {
+			while (self.q.knots.length != desired_knots_ct) {
 				await getKnots(self, requested_knots_ct)
 				requested_knots_ct = requested_knots_ct + 1
 			}
