@@ -2,7 +2,32 @@ import { select, event } from 'd3-selection'
 import { setDensityPlot } from './termsetting.density'
 import { keyupEnter } from '../client'
 
-// self is the termsetting instance
+/*
+********************** EXPORTED
+getHandler(self)
+	- self: a termsetting instance
+	get_term_name(term): will return the term label to use in the pill, including potential abbreviation
+	get_status_msg(): either empty or error string, displayed on the right side of the pill
+	showEditMenu(div): content/inputs to show for editing cubic spline knots
+	- sequence of function calls:
+		setqDefaults() // set self.q from self.numqByTermIdModeType or if not prsent create default self.q
+		setDensityPlot() // create density plot and set knot lines
+		renderEditMenu() // render knot edit menu
+		renderButtons() // apply and reset buttons
+
+********************** INTERNAL
+setqDefaults()
+renderEditMenu()
+	renderCustomSplineInputs() // knots list as textarea input, displaying auto knots can be edited and apply
+		updateCustomSplineInputs() // apply custom knots if changed from density plot to textarea
+		processKnotsInputs() // apply custom knots to self.q.knots
+	renderAutoSplineInputs() // dropdown for knots count to get auto knots
+		getKnots() // get autoknots for given knots count. e.g. 1st knot at 5 percentile, 
+		           // last at 95 and devide inbetween at equal percentile
+	renderButtons()
+	applyEdits() // when apply button clicked
+*/
+
 export function getHandler(self) {
 	return {
 		get_term_name(d) {
@@ -71,6 +96,94 @@ function renderEditMenu(self) {
 	const edit_div = self.dom.knots_div
 	renderCustomSplineInputs(self, edit_div)
 	renderAutoSplineInputs(self, edit_div)
+}
+
+/******************* Functions for Custom Spline knots *******************/
+function renderCustomSplineInputs(self, div) {
+	self.dom.custom_knots_div = div.append('div')
+
+	self.dom.custom_knots_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('vertical-align', 'top')
+		.style('padding', '3px 15px')
+		.style('font-weight', 'normal')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Knots')
+
+	self.dom.customKnotsInput = self.dom.custom_knots_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding', '3px 15px')
+		.style('padding-left', '5px')
+		.append('textarea')
+		.style('height', '100px')
+		.style('width', '100px')
+		.text(self.q.knots.map(d => d.value).join('\n'))
+		.on('change', handleChange)
+		.on('keyup', async () => {
+			// enter or backspace/delete
+			// i don't think backspace works
+			if (!keyupEnter() && event.key != 8) return
+			handleChange.call(this)
+		})
+
+	self.dom.custom_knots_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('vertical-align', 'top')
+		.style('font-size', '.7em')
+		.style('padding', '3px 15px')
+		.style('padding-left', '5px')
+		.style('color', 'rgb(136, 136, 136)').html(`Enter knot values, one knot per line.</br> 
+			Adjust knot by dragging on the vertical line.</br>
+		 	Or autocompute knots from below.`)
+
+	function handleChange() {
+		const data = processKnotsInputs(self)
+		// update self.q.knots and render knot lines only if knot values changed
+		const q = self.q
+		if (knotsChanged(data, q.knots)) {
+			q.knots = data
+			self.renderBinLines(self, q)
+		}
+		self.q = q
+	}
+
+	function knotsChanged(data, qlst) {
+		if (data.length != qlst.length) return true
+		if (Object.keys(data[0]).length !== Object.keys(qlst[0]).length) return true
+		for (const [i, knot] of qlst.entries()) {
+			for (const k of Object.keys(knot)) {
+				if (knot[k] && knot[k] !== data[i][k]) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+}
+
+// apply custom knots if changed from density plot to textarea
+function updateCustomSplineInputs(self) {
+	self.dom.customKnotsInput.property('value', self.q.knots.map(d => d.value).join('\n'))
+}
+
+// apply custom knots to self.q.knots
+function processKnotsInputs(self) {
+	const data = self.dom.customKnotsInput
+		.property('value')
+		.split('\n')
+		.filter(d => d != '')
+		.map(d => +d)
+		.sort((a, b) => a - b)
+		.map((d, i) => {
+			const knot = {
+				value: +d
+			}
+			return knot
+		})
+	return data
 }
 
 /******************* Functions for Auto Spline knots *******************/
@@ -160,92 +273,6 @@ async function getKnots(self, knot_count) {
 		const perc_values = [...new Set(data.values)]
 		return perc_values
 	}
-}
-
-/******************* Functions for Custom Spline knots *******************/
-function renderCustomSplineInputs(self, div) {
-	self.dom.custom_knots_div = div.append('div')
-
-	self.dom.custom_knots_div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('vertical-align', 'top')
-		.style('padding', '3px 15px')
-		.style('font-weight', 'normal')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('Knots')
-
-	self.dom.customKnotsInput = self.dom.custom_knots_div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding', '3px 15px')
-		.style('padding-left', '5px')
-		.append('textarea')
-		.style('height', '100px')
-		.style('width', '100px')
-		.text(self.q.knots.map(d => d.value).join('\n'))
-		.on('change', handleChange)
-		.on('keyup', async () => {
-			// enter or backspace/delete
-			// i don't think backspace works
-			if (!keyupEnter() && event.key != 8) return
-			handleChange.call(this)
-		})
-
-	self.dom.custom_knots_div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('vertical-align', 'top')
-		.style('font-size', '.7em')
-		.style('padding', '3px 15px')
-		.style('padding-left', '5px')
-		.style('color', 'rgb(136, 136, 136)').html(`Enter knot values, one knot per line.</br> 
-			Adjust knot by dragging on the vertical line.</br>
-		 	Or autocompute knots from below.`)
-
-	function handleChange() {
-		const data = processKnotsInputs(self)
-		// update self.q.knots and render knot lines only if knot values changed
-		const q = self.q
-		if (knotsChanged(data, q.knots)) {
-			q.knots = data
-			self.renderBinLines(self, q)
-		}
-		self.q = q
-	}
-
-	function knotsChanged(data, qlst) {
-		if (data.length != qlst.length) return true
-		if (Object.keys(data[0]).length !== Object.keys(qlst[0]).length) return true
-		for (const [i, knot] of qlst.entries()) {
-			for (const k of Object.keys(knot)) {
-				if (knot[k] && knot[k] !== data[i][k]) {
-					return true
-				}
-			}
-		}
-		return false
-	}
-}
-
-function updateCustomSplineInputs(self) {
-	self.dom.customKnotsInput.property('value', self.q.knots.map(d => d.value).join('\n'))
-}
-
-function processKnotsInputs(self) {
-	const data = self.dom.customKnotsInput
-		.property('value')
-		.split('\n')
-		.filter(d => d != '')
-		.map(d => +d)
-		.sort((a, b) => a - b)
-		.map((d, i) => {
-			const knot = {
-				value: +d
-			}
-			return knot
-		})
-	return data
 }
 
 function renderButtons(self) {
