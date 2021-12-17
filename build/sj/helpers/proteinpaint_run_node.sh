@@ -8,6 +8,7 @@ echo "*** RESTARTING proteinpaint node server ***"
 
 timestamp=$(date +"%Y-%m-%d-%H%M%S")
 logdir=/opt/data/pp/pp-log/forever-$timestamp
+echo "making logdir=$logdir"
 mkdir $logdir
 
 # start a new pp server. 
@@ -45,3 +46,11 @@ ln -sfn $logdir /opt/data/pp/pp-log/forever
 cd ..
 echo "RESTARTED"
 ./helpers/record.sh restart 
+
+# restart blat server if it is not running AND if there is a blat script
+blatscript=/opt/data/pp/blatserver.sh
+if [[ $(ps aux | grep gfServer | wc -l) -lt 2  && -f $blatscript ]]; then
+  echo "triggering $blatscript"
+  sh $blatscript
+fi
+

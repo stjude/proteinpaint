@@ -28,7 +28,7 @@ forever.list(false, (err, lst) => {
 		// default to keep the most recent process
 		retain = pplst.slice(-1)
 	}
-	console.log('arg2=', arg2, 'retain=', retain)
+	console.log('arg2=', arg2, 'retain.length=', retain.length)
 	for (const ps of pplst) {
 		if (!retain.includes(ps)) {
 			const i = lst.indexOf(ps)
