@@ -114,8 +114,8 @@ function renderAutoSplineInputs(self, div) {
 		// .property('disabled', knot_count == knot_ct_select.node().value)
 		.html('Compute')
 		.on('click', async () => {
-			let desired_knots_ct = parseInt(knot_ct_select.node().value)
-			let requested_knots_ct = parseInt(knot_ct_select.node().value)
+			let desired_knots_ct = Number.parseInt(knot_ct_select.node().value)
+			let requested_knots_ct = Number.parseInt(knot_ct_select.node().value)
 			// request knots util desired_knots are available
 			while (self.q.knots.length < desired_knots_ct) {
 				await getKnots(self, requested_knots_ct)
@@ -229,7 +229,7 @@ function renderCustomSplineInputs(self, div) {
 }
 
 function updateCustomSplineInputs(self) {
-	self.dom.customKnotsInput.text(self.q.knots.map(d => d.value).join('\n'))
+	self.dom.customKnotsInput.property('value', self.q.knots.map(d => d.value).join('\n'))
 }
 
 function processKnotsInputs(self) {
