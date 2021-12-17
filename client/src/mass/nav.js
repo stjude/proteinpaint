@@ -205,10 +205,10 @@ function setRenderers(self) {
 		self.dom.tds = table.selectAll('td')
 		self.subheaderKeys = self.tabs.map(d => d.subheader)
 
-		self.dom.shareBtn = self.dom.sessionDiv
+		self.dom.saveBtn = self.dom.sessionDiv
 			.append('button')
 			.style('margin', '10px')
-			.html('Share')
+			.text('Save')
 			.on('click', self.getSessionUrl)
 	}
 
@@ -380,7 +380,12 @@ function setInteractivity(self) {
 			body: JSON.stringify(self.app.getState())
 		})
 		const url = `${window.location.protocol}//${window.location.host}/?mass-session-id=${res.id}&noheader=1`
-		self.dom.tip.clear().showunder(self.dom.shareBtn.node())
-		self.dom.tip.d.append('div').html(`Session URL: <a href='${url}' target=_blank>${url}</a>`)
+		self.dom.tip.clear().showunder(self.dom.saveBtn.node())
+		self.dom.tip.d
+			.append('div')
+			.style('margin', '10px')
+			.html(
+				`<a href='${url}' target=_blank>${url}</a><br><span style="font-size:.8em;opacity:.5">Click URL to recover this session. You can bookmark or share this URL.</span>`
+			)
 	}
 }
