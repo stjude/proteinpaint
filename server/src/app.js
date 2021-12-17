@@ -268,7 +268,7 @@ pp_init()
 			return
 		}
 
-		await startServer(serverconfig.switchPortFrom)
+		await startServer()
 	})
 	.catch(err => {
 		let exitCode = 1
@@ -302,7 +302,7 @@ function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-async function startServer(switchPortFrom = 0) {
+async function startServer() {
 	try {
 		if (serverconfig.preListenScript) {
 			const { cmd, args } = serverconfig.preListenScript
@@ -311,7 +311,7 @@ async function startServer(switchPortFrom = 0) {
 			console.log(ps.stdout)
 		}
 
-		const port = switchPortFrom || serverconfig.port
+		const port = serverconfig.port
 		if (serverconfig.ssl) {
 			const options = {
 				key: fs.readFileSync(serverconfig.ssl.key),
