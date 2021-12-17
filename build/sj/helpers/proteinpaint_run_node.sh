@@ -18,7 +18,7 @@ set -o pipefail
 node ./server.js validate 2>&1 | tee -a ../../validate.log
 set +o pipefail
 
-echo "iiq:RESTARTING proteint paint node server."
+echo "*** RESTARTING proteinpaint node server ***"
 
 # get the process index for any active pp server that is already running
 # must set serverconfig.preListenScript=/opt/app/pp/psindex.sh
@@ -32,13 +32,31 @@ mkdir $logdir
 # move the log/forever symlink to the newest log directory
 ln -sfn $logdir /opt/data/pp/pp-log/forever
 
-# the newly launched server will wait until an active process exits 
-# before proceeding to app.listen(), thus avoiding port usage conflict
+set -e
+logLastLines=""
+sleep 1
+while [[ "$logLastLines" == "" ]]
+do
+  # detect if there are startup errors
+  if [[ -f $logdir/err && "$(cat $logdir/err)" != "" ]]; then
+    echo "Error in server startup"
+    exit 1
+  fi
+  if [[ -f $logdir/log ]]; then
+    logLastLines=$(tail $logdir/log | grep "PORT 3999" | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g')
+  fi
+  echo "testing port ... [$logLastLines]"
+  sleep 1
+done
+
 if [[ "$psindex" != "" ]]; then
-   echo "stopping the previous proces='$psindex'"
-   forever stop $psindex
+  echo "stopping the previous process='$psindex'"
+  forever stop $psindex
 fi
 
+echo "triggering /switchPorts ..."
+curl http://localhost:3999/switchPorts
+echo -e "\n"
 cd ..
 echo "RESTARTED"
 ./helpers/record.sh restart 

@@ -263,7 +263,8 @@ pp_init()
 			return
 		}
 
-		await startServer()
+		const server = await startServer(serverconfig.switchPortFrom)
+		if (serverconfig.switchPortFrom) set_switchPortsRoute(server)
 	})
 	.catch(err => {
 		let exitCode = 1
@@ -297,35 +298,44 @@ function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-async function startServer() {
+async function startServer(switchPortFrom = 0) {
 	try {
-		if (serverconfig.preListenScript) {
-			while (true) {
-				const ps = child_process.spawnSync('bash', [serverconfig.preListenScript], { encoding: 'utf-8' })
-				console.log([306, ps.stdout, ps.stderr])
-				if (ps.stderr) throw ps.stderr
-				if (!ps.stdout.trim()) break
-				else await sleep(200)
-			}
-		}
-
-		const port = serverconfig.port || 3000
+		const port = switchPortFrom || serverconfig.port
 		if (serverconfig.ssl) {
 			const options = {
 				key: fs.readFileSync(serverconfig.ssl.key),
 				cert: fs.readFileSync(serverconfig.ssl.cert)
 			}
-			const server = https.createServer(options, app)
+			const server = await https.createServer(options, app)
 			server.listen(port, () => {
 				console.log('HTTPS STANDBY AT PORT ' + port)
 			})
+			return server
 		} else {
-			const server = app.listen(port)
-			console.log('STANDBY AT PORT ' + port)
+			const server = await http.createServer(app)
+			server.listen(port, () => {
+				console.log('STANDBY AT PORT ' + port)
+			})
+			return server
 		}
 	} catch (e) {
 		throw e
 	}
+}
+
+function set_switchPortsRoute(server) {
+	app.get('/switchPorts', (req, res) => {
+		if (!serverconfig.switchPortFrom) return
+		try {
+			server.close()
+			server.listen(serverconfig.port)
+			console.log(`switched from port=[${serverconfig.switchPortFrom}] to [${serverconfig.port}]`)
+			delete serverconfig.switchPortFrom
+			res.send('ok')
+		} catch (e) {
+			res.send({ error: e.message || e })
+		}
+	})
 }
 
 function setOptionalRoutes() {
