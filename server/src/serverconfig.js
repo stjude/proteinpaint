@@ -34,6 +34,9 @@ if (fs.existsSync(serverconfigfile)) {
 	}
 }
 
+// this default port may be overwritten when using a Docker container
+if (!serverconfig.port) serverconfig.port = process.env.PP_PORT || 3000
+
 /******************
 	APPLY OVERRIDES 
 ******************/

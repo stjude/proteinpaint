@@ -231,7 +231,7 @@ app.post(basepath + '/bamnochr', handle_bamnochr)
 app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 /****
 	- validate and start the server
-	This enables the coorect monitoring by the forever module. 
+	This enables the correct monitoring by the forever module. 
 	Whereas before 'forever' will endlessly restart the server
 	even if it cannot be initialized in a full working state,
 	the usage in a bash script should now be: 
@@ -239,12 +239,17 @@ app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 	set -e
 	node server validate 
 	# only proceed to using forever on successful validation
-	npx forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
+	forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
+	
+	# - OR -
+	# use the serverconfig.preListenScript option to stop the previous process
+	# after all configurations, genomes, and datasets have been loaded in the current process, 
+	# so that the validation happens from within the same monitored process (see startServer())
 	```
 ***/
 
 pp_init()
-	.then(() => {
+	.then(async () => {
 		// no error from server initiation
 		if (process.argv[2] == 'validate') {
 			console.log('\nValidation succeeded. You may now run the server.\n')
@@ -263,7 +268,7 @@ pp_init()
 			return
 		}
 
-		startServer()
+		await startServer()
 	})
 	.catch(err => {
 		let exitCode = 1
@@ -293,20 +298,39 @@ pp_init()
 		process.exit(exitCode)
 	})
 
-function startServer() {
-	const port = serverconfig.port || 3000
-	if (serverconfig.ssl) {
-		const options = {
-			key: fs.readFileSync(serverconfig.ssl.key),
-			cert: fs.readFileSync(serverconfig.ssl.cert)
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function startServer() {
+	try {
+		if (serverconfig.preListenScript) {
+			const { cmd, args } = serverconfig.preListenScript
+			const ps = child_process.spawnSync(cmd, args, { encoding: 'utf-8' })
+			if (ps.stderr.trim()) throw ps.stderr.trim()
+			console.log(ps.stdout)
 		}
-		const server = https.createServer(options, app)
-		server.listen(port, () => {
-			console.log('HTTPS STANDBY AT PORT ' + port)
-		})
-	} else {
-		const server = app.listen(port)
-		console.log('STANDBY AT PORT ' + port)
+
+		const port = serverconfig.port
+		if (serverconfig.ssl) {
+			const options = {
+				key: fs.readFileSync(serverconfig.ssl.key),
+				cert: fs.readFileSync(serverconfig.ssl.cert)
+			}
+			const server = await https.createServer(options, app)
+			server.listen(port, () => {
+				console.log('HTTPS STANDBY AT PORT ' + port)
+			})
+			return server
+		} else {
+			const server = await http.createServer(app)
+			server.listen(port, () => {
+				console.log('STANDBY AT PORT ' + port)
+			})
+			return server
+		}
+	} catch (e) {
+		throw e
 	}
 }
 
