@@ -1154,20 +1154,22 @@ function makeGroup(gd, tk, block, data) {
 					if (group.dom.rightg.vslider.boxy + d >= scrollableheight - group.dom.rightg.vslider.boxh) return
 				}
 				deltay = d
-				group.dom.diff_score_barplot_partstack.attr(
-					'transform',
-					'translate(0,' +
-						((-1 * deltay * group.data_fullstack.stackcount * group.data.stackheight) / scrollableheight +
-							group.msgheight) +
-						')'
-				)
-				group.dom.read_names_g.attr(
-					'transform',
-					'translate(0,' +
-						(-1 * deltay * group.data_fullstack.stackcount * group.data.stackheight) / scrollableheight +
-						')'
-				)
+				if (tk.variants) {
+					group.dom.diff_score_barplot_partstack.attr(
+						'transform',
+						'translate(0,' +
+							((-1 * deltay * group.data_fullstack.stackcount * group.data.stackheight) / scrollableheight +
+								group.msgheight) +
+							')'
+					)
 
+					group.dom.read_names_g.attr(
+						'transform',
+						'translate(0,' +
+							(-1 * deltay * group.data_fullstack.stackcount * group.data.stackheight) / scrollableheight +
+							')'
+					)
+				}
 				group.dom.rightg.vslider.boxg.attr('transform', 'translate(0,' + (group.dom.rightg.vslider.boxy + deltay) + ')')
 				group.dom.img_partstack.attr(
 					'y',
