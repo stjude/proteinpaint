@@ -102,7 +102,6 @@ function setRenderers(self) {
 	self.mayshow_err = result => {
 		if (!result.err) return
 		const div = self.newDiv('Errors/warnings')
-		div.append('div').style('margin', '8px')
 		for (const line of result.err) {
 			div
 				.append('p')
