@@ -231,7 +231,7 @@ app.post(basepath + '/bamnochr', handle_bamnochr)
 app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 /****
 	- validate and start the server
-	This enables the coorect monitoring by the forever module. 
+	This enables the correct monitoring by the forever module. 
 	Whereas before 'forever' will endlessly restart the server
 	even if it cannot be initialized in a full working state,
 	the usage in a bash script should now be: 
@@ -239,7 +239,12 @@ app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 	set -e
 	node server validate 
 	# only proceed to using forever on successful validation
-	npx forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
+	forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
+	
+	# - OR -
+	# use the serverconfig.preListenScript option to stop the previous process
+	# after all configurations, genomes, and datasets have been loaded in the current process, 
+	# so that the validation happens from within the same monitored process (see startServer())
 	```
 ***/
 
@@ -263,8 +268,7 @@ pp_init()
 			return
 		}
 
-		const server = await startServer(serverconfig.switchPortFrom)
-		if (serverconfig.switchPortFrom) set_switchPortsRoute(server)
+		await startServer(serverconfig.switchPortFrom)
 	})
 	.catch(err => {
 		let exitCode = 1
@@ -300,6 +304,13 @@ function sleep(ms) {
 
 async function startServer(switchPortFrom = 0) {
 	try {
+		if (serverconfig.preListenScript) {
+			const { cmd, args } = serverconfig.preListenScript
+			const ps = child_process.spawnSync(cmd, args, { encoding: 'utf-8' })
+			if (ps.stderr.trim()) throw ps.stderr.trim()
+			console.log(ps.stdout)
+		}
+
 		const port = switchPortFrom || serverconfig.port
 		if (serverconfig.ssl) {
 			const options = {
@@ -321,21 +332,6 @@ async function startServer(switchPortFrom = 0) {
 	} catch (e) {
 		throw e
 	}
-}
-
-function set_switchPortsRoute(server) {
-	app.get('/switchPorts', (req, res) => {
-		if (!serverconfig.switchPortFrom) return
-		try {
-			server.close()
-			server.listen(serverconfig.port)
-			console.log(`switched from port=[${serverconfig.switchPortFrom}] to [${serverconfig.port}]`)
-			delete serverconfig.switchPortFrom
-			res.send('ok')
-		} catch (e) {
-			res.send({ error: e.message || e })
-		}
-	})
 }
 
 function setOptionalRoutes() {
