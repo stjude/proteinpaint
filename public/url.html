@@ -378,6 +378,24 @@ makeURL([
 			]
 		})],
 
+		['EF ~ agedxSpline diaggrp', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: {
+						id: 'LV_Ejection_Fraction_3D',
+					},
+					independent: [
+						{ id: "agedx", q:{mode:'cubic-spline',knots:[{value:1},{value:4.5},{value:8.64},{value:17}]}},
+						{ id: "diaggrp"}
+					]
+				},
+			]
+		})],
+
 		['EF ~ agedx*sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
@@ -420,6 +438,24 @@ makeURL([
 					},
 					independent: [
 						{ id: "agedx"},
+						{ id: "diaggrp"}
+					]
+				},
+			]
+		})],
+
+		['EF ~ agedxSpline diaggrp', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'logistic',
+					outcome: {
+						id: 'LV_Ejection_Fraction_3D',
+					},
+					independent: [
+						{ id: "agedx", q:{mode:'cubic-spline',knots:[{value:1},{value:4.5},{value:8.64},{value:17}]}},
 						{ id: "diaggrp"}
 					]
 				},

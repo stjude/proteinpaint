@@ -2,7 +2,32 @@ import { select, event } from 'd3-selection'
 import { setDensityPlot } from './termsetting.density'
 import { keyupEnter } from '../client'
 
-// self is the termsetting instance
+/*
+********************** EXPORTED
+getHandler(self)
+	- self: a termsetting instance
+	get_term_name(term): will return the term label to use in the pill, including potential abbreviation
+	get_status_msg(): either empty or error string, displayed on the right side of the pill
+	showEditMenu(div): content/inputs to show for editing cubic spline knots
+	- sequence of function calls:
+		setqDefaults() // set self.q from self.numqByTermIdModeType or if not prsent create default self.q
+		setDensityPlot() // create density plot and set knot lines
+		renderEditMenu() // render knot edit menu
+		renderButtons() // apply and reset buttons
+
+********************** INTERNAL
+setqDefaults()
+renderEditMenu()
+	renderCustomSplineInputs() // knots list as textarea input, displaying auto knots can be edited and apply
+		updateCustomSplineInputs() // apply custom knots if changed from density plot to textarea
+		processKnotsInputs() // apply custom knots to self.q.knots
+	renderAutoSplineInputs() // dropdown for knots count to get auto knots
+		getKnots() // get autoknots for given knots count. e.g. 1st knot at 5 percentile, 
+		           // last at 95 and devide inbetween at equal percentile
+	renderButtons()
+	applyEdits() // when apply button clicked
+*/
+
 export function getHandler(self) {
 	return {
 		get_term_name(d) {
@@ -73,95 +98,6 @@ function renderEditMenu(self) {
 	renderAutoSplineInputs(self, edit_div)
 }
 
-/******************* Functions for Auto Spline knots *******************/
-function renderAutoSplineInputs(self, div) {
-	let knot_count
-	const default_knot_count = (knot_count = 4)
-	self.dom.knot_select_div = div.append('div')
-
-	self.dom.knot_select_div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin-left', '15px')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('Autocompute')
-
-	const knot_ct_select = self.dom.knot_select_div
-		.append('select')
-		.style('margin-left', '10px')
-		.style('margin-bottom', '7px')
-
-	for (let i = default_knot_count - 1; i < default_knot_count + 5; i++) {
-		knot_ct_select
-			.append('option')
-			.attr('value', i)
-			.html(i)
-	}
-
-	const knots_count = self.q.knots && self.q.knots.length ? self.q.knots.length : default_knot_count
-	knot_ct_select.node().value = knots_count
-
-	self.dom.knot_select_div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin-left', '10px')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('knots')
-
-	self.dom.knot_select_div
-		.append('button')
-		.style('margin', '15px')
-		// .property('disabled', knot_count == knot_ct_select.node().value)
-		.html('Compute')
-		.on('click', async () => {
-			let desired_knots_ct = parseInt(knot_ct_select.node().value)
-			let requested_knots_ct = parseInt(knot_ct_select.node().value)
-			// request knots util desired_knots are available
-			while (self.q.knots.length < desired_knots_ct) {
-				await getKnots(self, requested_knots_ct)
-				requested_knots_ct = requested_knots_ct + 1
-			}
-			updateCustomSplineInputs(self)
-			setDensityPlot(self)
-		})
-
-	self.dom.knot_select_div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('font-size', '.7em')
-		.style('padding', '3px 15px')
-		.style('padding-left', '5px')
-		.style('color', 'rgb(136, 136, 136)')
-		.html('Will overwrite existing values.')
-}
-
-async function getKnots(self, knot_count) {
-	// qnery knots from backend
-	// knots are calcualted by node backend, 1st knot at 5 percentile,
-	// last knot at 95, and inbetween knots at equidistance
-	const middle_knot_count = knot_count - 2
-	const t = self.term
-	const knots = (self.q.knots = [])
-	const percentile_lst = [5]
-	const second_knot_perc = (90 / (middle_knot_count + 1)).toFixed(0)
-	for (let i = 1; i < middle_knot_count + 1; i++) {
-		percentile_lst.push(i * second_knot_perc)
-	}
-	percentile_lst.push(95)
-	const values = await getPercentile2Value(percentile_lst)
-	for (const val of values) {
-		knots.push({ value: val.toFixed(t.type == 'integer' ? 0 : 2) })
-	}
-
-	async function getPercentile2Value(percentile_lst) {
-		const data = await self.vocabApi.getPercentile(self.term.id, percentile_lst, self.filter)
-		if (data.error || !data.values.length || !data.values.every(v => Number.isFinite(v)))
-			throw 'cannot get median value: ' + (data.error || 'no data')
-		const perc_values = [...new Set(data.values)]
-		return perc_values
-	}
-}
-
 /******************* Functions for Custom Spline knots *******************/
 function renderCustomSplineInputs(self, div) {
 	self.dom.custom_knots_div = div.append('div')
@@ -228,10 +164,12 @@ function renderCustomSplineInputs(self, div) {
 	}
 }
 
+// apply custom knots if changed from density plot to textarea
 function updateCustomSplineInputs(self) {
-	self.dom.customKnotsInput.text(self.q.knots.map(d => d.value).join('\n'))
+	self.dom.customKnotsInput.property('value', self.q.knots.map(d => d.value).join('\n'))
 }
 
+// apply custom knots to self.q.knots
 function processKnotsInputs(self) {
 	const data = self.dom.customKnotsInput
 		.property('value')
@@ -246,6 +184,95 @@ function processKnotsInputs(self) {
 			return knot
 		})
 	return data
+}
+
+/******************* Functions for Auto Spline knots *******************/
+function renderAutoSplineInputs(self, div) {
+	let knot_count
+	const default_knot_count = (knot_count = 4)
+	self.dom.knot_select_div = div.append('div')
+
+	self.dom.knot_select_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin-left', '15px')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Autocompute')
+
+	const knot_ct_select = self.dom.knot_select_div
+		.append('select')
+		.style('margin-left', '10px')
+		.style('margin-bottom', '7px')
+
+	for (let i = default_knot_count - 1; i < default_knot_count + 5; i++) {
+		knot_ct_select
+			.append('option')
+			.attr('value', i)
+			.html(i)
+	}
+
+	const knots_count = self.q.knots && self.q.knots.length ? self.q.knots.length : default_knot_count
+	knot_ct_select.node().value = knots_count
+
+	self.dom.knot_select_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin-left', '10px')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('knots')
+
+	self.dom.knot_select_div
+		.append('button')
+		.style('margin', '15px')
+		// .property('disabled', knot_count == knot_ct_select.node().value)
+		.html('Compute')
+		.on('click', async () => {
+			let desired_knots_ct = Number.parseInt(knot_ct_select.node().value)
+			let requested_knots_ct = Number.parseInt(knot_ct_select.node().value)
+			// request knots util desired_knots are available
+			while (self.q.knots.length != desired_knots_ct) {
+				await getKnots(self, requested_knots_ct)
+				requested_knots_ct = requested_knots_ct + 1
+			}
+			updateCustomSplineInputs(self)
+			setDensityPlot(self)
+		})
+
+	self.dom.knot_select_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('font-size', '.7em')
+		.style('padding', '3px 15px')
+		.style('padding-left', '5px')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Will overwrite existing values.')
+}
+
+async function getKnots(self, knot_count) {
+	// qnery knots from backend
+	// knots are calcualted by node backend, 1st knot at 5 percentile,
+	// last knot at 95, and inbetween knots at equidistance
+	const middle_knot_count = knot_count - 2
+	const t = self.term
+	const knots = (self.q.knots = [])
+	const percentile_lst = [5]
+	const second_knot_perc = (90 / (middle_knot_count + 1)).toFixed(0)
+	for (let i = 1; i < middle_knot_count + 1; i++) {
+		percentile_lst.push(i * second_knot_perc)
+	}
+	percentile_lst.push(95)
+	const values = await getPercentile2Value(percentile_lst)
+	for (const val of values) {
+		knots.push({ value: val.toFixed(t.type == 'integer' ? 0 : 2) })
+	}
+
+	async function getPercentile2Value(percentile_lst) {
+		const data = await self.vocabApi.getPercentile(self.term.id, percentile_lst, self.filter)
+		if (data.error || !data.values.length || !data.values.every(v => Number.isFinite(v)))
+			throw 'cannot get median value: ' + (data.error || 'no data')
+		const perc_values = [...new Set(data.values)]
+		return perc_values
+	}
 }
 
 function renderButtons(self) {
