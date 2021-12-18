@@ -245,19 +245,11 @@ ssh -t $USERatREMOTE "
 	cp -Rn active/dataset/ available/$APP-$REV/
 
   chmod -R 755 available/$APP-$REV
+	
 	cd available/$APP-$REV/utils/rust_indel_cargo
-	mkdir -p target/release
-  cp -r $REMOTEDIR/active/utils/rust_indel_cargo/target/release/build target/release/
-  cp -r $REMOTEDIR/active/utils/rust_indel_cargo/target/release/deps target/release/
-  rm target/release/deps/rust_indel_cargo*
 	cargo build --release
 	#rm -rf src
-
 	cd $REMOTEDIR/available/$APP-$REV/utils/read_alignment
-	mkdir -p target/release
-  cp -r $REMOTEDIR/active/utils/read_alignment/target/release/build target/release/
-  cp -r $REMOTEDIR/active/utils/read_alignment/target/release/deps target/release/
-  rm target/release/deps/read_alignment*
   cargo build --release
   #rm -rf src
 
