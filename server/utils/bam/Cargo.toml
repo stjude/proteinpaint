@@ -10,7 +10,7 @@ edition = "2018"
 statrs = "*"
 #num-traits="*"
 fishers_exact="*"
+bio = "*"
 [profile.release]
 lto = "fat"
 codegen-units = 1
-bio = "*"
