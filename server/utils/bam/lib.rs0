@@ -1,0 +1,21 @@
+
+// as a library module
+// called as bam::align, bam::indel
+
+mod bam {
+    #[path = "bin/align.rs"] mod align;
+
+    #[path = "bin/indel.rs"] mod indel;
+
+    // - OR - 
+    // something similar to this idea
+    /*
+    mod {super::align::main as align} {
+    
+    }  
+    
+    mod {super::indel::main as indel} {
+        
+    }
+    */
+}
