@@ -84,6 +84,7 @@
                     "label":"Customize with a Mds JSON",
                     "message": "<div>This example of a mdsjson demostrates how to separate samples into subgroups. The json file may available from the server and accessed via the <span style='font-family: courier; display: inline-block; color:gray;font-size:16px;'>mdsjsonfile</span> key or available from a URL and accessed via the <span style='font-family: courier; display: inline-block; color:gray; font-size:16px;'>mdsjsonurl</span> key.",
                     "urlparam": "?genome=hg38&block=1&position=chr22:22569655-23013766&mdsjson=proteinpaint_demo/hg38/GP/mdsjson/mdsjsondemo.json</div>",
+                    "jsonpath":"proteinpaint_demo/hg38/GP/mdsjson/mdsjsonDemo.json",
                     "runargs": {
                         "nobox": 1,
                         "noheader": 1,
@@ -101,12 +102,6 @@
                         {
                             "name": "Mds JSON Documentation",
                             "link": "https://docs.google.com/document/d/1_eUrRsR9D-6AD5buNe30tmGICU-B3w67nz-XjpjnDyI/edit#heading=h.pmuzrkapwipq"
-                        }
-                    ],
-                    "arrowButtons":[
-                        {
-                            "name": "Mds JSON Code",
-                            "jsonlink": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/GP/mdsjson/mdsjsonDemo.json"
                         }
                     ],
                     "testSpec": {
@@ -790,6 +785,7 @@
             "app": "Genome Browser",
             "blurb": " ",
             "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
+            "jsonpath": "proteinpaint_demo/hg19/tklist/tracks.json",
             "ppcalls": [
                 {
                     "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/tklist/tklistDemoData.tar.gz",
@@ -1250,6 +1246,7 @@
                 {
                     "message": "A few tips on how to interact with the study view: <ul><li>Clicking on the gene tab opens the gene table with detailed information about mutation and sample counts.</li><li>Launch the genome browser by clicking on the heatmap gene labels.</li><li>Hover over the heatmap cells to reveal the mutation and sample information</li></ul>",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/heatmap/heatmapDemoData.tar.gz",
+                    "jsonpath": "proteinpaint_demo/hg19/heatmap/heatmapDemo.json",
                     "runargs":{
                         "noheader": true,
                         "nobox": 1,
@@ -1362,6 +1359,7 @@
                     "label": "From an External JSON",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/mdstsne/scatterplotDemoData.json.gz",
                     "urlparam": "?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json",
+                    "jsonpath": "proteinpaint_demo/hg38/mdstsne/file.json",
                     "runargs": {
                         "parseurl": true,
                         "nobox": 1,
@@ -1512,6 +1510,7 @@
             "app": "Apps",
             "blurb": "Single-cell omics viewer",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
+            "jsonpath": "proteinpaint_demo/hg19/singlecell/singlecell.json",
             "ppcalls": [
                 {
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/singlecell/singlecellDemoData.tar.gz",
