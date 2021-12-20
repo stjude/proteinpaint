@@ -38,7 +38,6 @@ NOTE: For numeric terms, there is an option to show a toggled edit menu, where c
 class TermSetting {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
-		this.vocab = opts.vocab
 		this.vocabApi = opts.vocabApi
 		this.activeCohort = opts.activeCohort
 		this.placeholder = opts.placeholder
@@ -109,9 +108,6 @@ class TermSetting {
 
 	validateOpts(o) {
 		if (!o.holder) throw '.holder missing'
-		if (!o.vocab) throw '.vocab missing'
-		if (o.vocab.route && !o.vocab.genome) throw '.genome missing'
-		if (o.vocab.route && !o.vocab.dslabel) throw '.dslabel missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		if ('placeholder' in o && !o.placeholder && 'placeholderIcon' in o && !o.placeholderIcon)
 			throw 'must specify a non-empty opts.placeholder and/or .placeholderIcon'
