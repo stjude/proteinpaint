@@ -1387,12 +1387,10 @@ async function divide_reads_togroups(q) {
 
 	if (q.variant) {
 		if (q.regions.length == 1) {
-			if (serverconfig.features.rust_indel) {
-				// If this toggle is on, the rust indel pipeline is invoked otherwise the nodejs indel pipeline is invoked
-				return await rust_match_complexvariant(q, templates_info, widths)
-			} else {
-				return await match_complexvariant(q, templates_info, widths)
-			}
+			return await rust_match_complexvariant(q, templates_info, widths)
+		} else {
+			// Should not happen as indel works only in single region
+			console.log('Indel pipeline works only in single region. Please check!')
 		}
 	}
 	if (q.sv) {
