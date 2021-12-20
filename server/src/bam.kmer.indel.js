@@ -8,7 +8,6 @@ const readline = require('readline')
 const bamcommon = require('./bam.common')
 const fs = require('fs')
 const serverconfig = require('./serverconfig')
-const rust_indel = path.join(serverconfig.binpath, '/utils/rust_indel_cargo/target/release/rust_indel_cargo')
 
 export async function match_complexvariant_rust(q, templates_info, region_widths) {
 	//const segbplen = templates[0].segments[0].seq.length
@@ -168,7 +167,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	//	if (err) return console.log(err)
 	//})
 	const time1 = new Date()
-	const rust_output = await run_rust_indel_pipeline(input_data)
+	const rust_output = await utils.run_rust('indel', input_data)
 	const time2 = new Date()
 	console.log('Time taken to run rust indel pipeline:', time2 - time1, 'ms')
 	const rust_output_list = rust_output.toString('utf-8').split('\n')
@@ -318,25 +317,6 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		leftflankseq,
 		rightflankseq
 	}
-}
-
-function run_rust_indel_pipeline(input_data) {
-	return new Promise((resolve, reject) => {
-		const ps = spawn(rust_indel)
-		const stdout = []
-		const stderr = []
-		Readable.from(input_data).pipe(ps.stdin)
-		ps.stdout.on('data', data => stdout.push(data))
-		ps.stderr.on('data', data => stderr.push(data))
-		ps.on('error', err => {
-			console.log('stderr:', stderr)
-			reject(err)
-		})
-		ps.on('close', code => {
-			//console.log("stdout:",stdout)
-			resolve(stdout)
-		})
-	})
 }
 
 export async function match_complexvariant(q, templates_info, region_widths) {

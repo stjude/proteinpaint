@@ -1,9 +1,0 @@
-// something like this
-use bin::align;
-use bin::indel;
-
-fn main() {
-	let args = ...
-	if (args == ...) align()
-	if (args == ...) indel()
-}

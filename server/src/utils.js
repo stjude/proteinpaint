@@ -502,3 +502,23 @@ exports.query_bigbed_by_name = function(bigbed, name) {
 		})
 	})
 }
+
+exports.run_rust = function(script_name, input_data) {
+	return new Promise((resolve, reject) => {
+		const binary = path.join(serverconfig.binpath, '/utils/rust/target/release/' + script_name)
+		const ps = spawn(binary)
+		const stdout = []
+		const stderr = []
+		Readable.from(input_data).pipe(ps.stdin)
+		ps.stdout.on('data', data => stdout.push(data))
+		ps.stderr.on('data', data => stderr.push(data))
+		ps.on('error', err => {
+			console.log('stderr:', stderr)
+			reject(err)
+		})
+		ps.on('close', code => {
+			//console.log("stdout:",stdout)
+			resolve(stdout)
+		})
+	})
+}

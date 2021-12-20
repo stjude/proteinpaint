@@ -43,12 +43,8 @@ public/rev.txt
 /utils/countbamallele.phased/bin*
 /utils/*/*.bundle.js*
 
-server/utils/rust_indel_cargo/target/*
-server/utils/rust_indel_cargo/*.lock
-server/utils/read_alignment/target/*
-server/utils/read_alignment/*.lock
-server/utils/bam/target/*
-server/utils/bam/*.lock
+server/utils/rust/*.lock
+server/utils/rust/target/*
 
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
 

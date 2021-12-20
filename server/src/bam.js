@@ -17,7 +17,6 @@ const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvaria
 const bamcommon = require('./bam.common')
 const basecolor = require('../shared/common').basecolor
 const serverconfig = require('./serverconfig')
-const rust_read_alignment = path.join(serverconfig.binpath, '/utils/read_alignment/target/release/read_alignment')
 const clustalo_read_alignment = serverconfig.clustalo || 'clustalo'
 
 /*
@@ -2719,7 +2718,8 @@ async function query_oneread(req, r) {
 	if (lst) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
 		if (req.query.altseq) {
-			const alignment_output = await run_rust_read_alignment(
+			const alignment_output = await utils.run_rust(
+				'align',
 				'single:' + lst[0].seq + ':' + req.query.refseq + ':' + req.query.altseq
 			)
 			const alignment_output_list = alignment_output.toString('utf-8').split('\n')
@@ -2764,25 +2764,6 @@ async function query_oneread(req, r) {
 	if (firstseg) lst.push(firstseg)
 	if (lastseg) lst.push(lastseg)
 	return lst.length ? lst : null
-}
-
-function run_rust_read_alignment(input_data) {
-	return new Promise((resolve, reject) => {
-		const ps = spawn(rust_read_alignment)
-		const stdout = []
-		const stderr = []
-		Readable.from(input_data).pipe(ps.stdin)
-		ps.stdout.on('data', data => stdout.push(data))
-		ps.stderr.on('data', data => stderr.push(data))
-		ps.on('error', err => {
-			console.log('stderr:', stderr)
-			reject(err)
-		})
-		ps.on('close', code => {
-			//console.log("stdout:",stdout)
-			resolve(stdout)
-		})
-	})
 }
 
 async function convertunmappedread2html(seg, genome, query) {
