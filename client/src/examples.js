@@ -627,7 +627,7 @@ async function showCode(ppcalls, btns) {
 		{ language: 'javascript' }
 	).value
 
-	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 30px 5px 30px; max-height: 400px; overflow-x: auto; overflow-y:auto;" ><code style="font-size:14px;">${runpp_code}</code></pre>`
+	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 30px 5px 40px; max-height: 400px; overflow-x: auto; overflow-y:auto;" ><code style="font-size:14px;">${runpp_code}</code></pre>`
 
 	btns.push({
 		name: 'Code',
@@ -635,7 +635,7 @@ async function showCode(ppcalls, btns) {
 			try {
 				if (ppcalls.jsonpath) {
 					const include_json = await showJsonCode(ppcalls)
-					const runpp_header = "<p style='margin:20px 30px; justify-content:center;'>RunProteinPaint JS code</p>"
+					const runpp_header = "<p style='margin:20px 25px; justify-content:center;'>ProteinPaint JS code</p>"
 					rdiv.append('div').html(runpp_header + runpp_contents + include_json)
 				} else {
 					rdiv.append('div').html(runpp_contents)
@@ -650,9 +650,13 @@ async function showCode(ppcalls, btns) {
 async function showJsonCode(ppcalls) {
 	const jsondata = await dofetch('textfile', { file: ppcalls.jsonpath })
 	const json_code = JSON.parse(jsondata.text)
+
+	const splitpath = ppcalls.jsonpath.split('/')
+	const filename = splitpath[splitpath.length - 1]
+
 	const code = hljs.highlight(JSON.stringify(json_code, '', 4), { language: 'json' }).value
 
-	const json_contents = `<p style="margin:20px 30px; justify-content:center;" >JSON code</p><pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 5px 30px 5px 30px; max-height: 400px; overflow-x: auto; overflow-y:auto;" ><code style="font-size:14px;">${code}</code></pre>`
+	const json_contents = `<p style="margin:20px 5px 0px 25px; justify-content:center; display: inline-block;">JSON code </p><p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p><pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 5px 30px 5px 40px; max-height: 400px; overflow-x: auto; overflow-y:auto;" ><code style="font-size:14px;">${code}</code></pre>`
 
 	return json_contents
 }

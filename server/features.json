@@ -785,11 +785,11 @@
             "app": "Genome Browser",
             "blurb": " ",
             "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
-            "jsonpath": "proteinpaint_demo/hg19/tklist/tracks.json",
             "ppcalls": [
                 {
                     "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/tklist/tklistDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/tklist/tracks.json",
+                    "jsonpath": "proteinpaint_demo/hg19/tklist/tracks.json",
                     "runargs": {
                         "block": 1,
                         "nobox": 1,
@@ -1371,7 +1371,7 @@
                             "dimensions": {
                                 "width": 700,
                                 "height": 400
-                                }
+                            }
                         }
                     },
                     "testSpec": {
@@ -1510,11 +1510,11 @@
             "app": "Apps",
             "blurb": "Single-cell omics viewer",
             "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
-            "jsonpath": "proteinpaint_demo/hg19/singlecell/singlecell.json",
             "ppcalls": [
                 {
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/singlecell/singlecellDemoData.tar.gz",
                     "urlparam": "?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json",
+                    "jsonpath": "proteinpaint_demo/hg19/singlecell/singlecell.json",
                     "runargs": {
                         "noheader": 1,
                         "singlecell": {
