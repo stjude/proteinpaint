@@ -170,7 +170,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const rust_output = await utils.run_rust('indel', input_data)
 	const time2 = new Date()
 	console.log('Time taken to run rust indel pipeline:', time2 - time1, 'ms')
-	const rust_output_list = rust_output.toString('utf-8').split('\n')
+	const rust_output_list = rust_output.split('\n')
 	let group_ids = []
 	let categories = []
 	let diff_scores = []

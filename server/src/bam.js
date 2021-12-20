@@ -2720,7 +2720,7 @@ async function query_oneread(req, r) {
 				'align',
 				'single:' + lst[0].seq + ':' + req.query.refseq + ':' + req.query.altseq
 			)
-			const alignment_output_list = alignment_output.toString('utf-8').split('\n')
+			const alignment_output_list = alignment_output.split('\n')
 			for (let item of alignment_output_list) {
 				if (item.includes('q_seq_ref')) {
 					lst.q_align_ref = item
