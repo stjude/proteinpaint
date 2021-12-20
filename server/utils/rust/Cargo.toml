@@ -9,17 +9,17 @@ autobins = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-statrs = "*"
-#num-traits="*"
-fishers_exact="*"
-bio = "*"
+statrs = "^0.15"
+fishers_exact="^1.0"
+bio = "^0.39"
+
 [profile.release]
 lto = "fat"
 codegen-units = 1
 
 # 
 # manually define which source code to compile.
-# this is to avoid the use of a `bin/` folder to 
+# this is to avoid the use of a `src/bin/` folder to 
 # hold source code, which goes against the 
 # directory naming convention in the Proteinpaint project
 # 

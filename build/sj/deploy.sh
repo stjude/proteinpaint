@@ -246,14 +246,9 @@ ssh -t $USERatREMOTE "
 
 	chmod -R 755 available/$APP-$REV
 	
-	cd available/$APP-$REV/utils/rust_indel_cargo
+	cd available/$APP-$REV/utils/rust
 	# copy previous builds to allow reuse if validated by sccache and cargo
-	cp -r $REMOTEDIR/active/utils/rust_indel_cargo/target ./
-	cargo build --release
-	#rm -rf src
-	cd $REMOTEDIR/available/$APP-$REV/utils/read_alignment
-	# copy previous builds to allow reuse if validated by sccache and cargo
-	cp -r $REMOTEDIR/active/utils/read_alignment/target ./
+	[[ -d $REMOTEDIR/active/utils/rust/target ]] && cp -rf $REMOTEDIR/active/utils/rust/target ./
 	cargo build --release
 	#rm -rf src
 
