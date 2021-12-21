@@ -20,6 +20,7 @@ mkdir $logdir
 
 # detect errors in the launched process' log files
 logLastLines=""
+isvalidated=""
 sleep 1
 while [[ "$logLastLines" == "" ]]
 do
@@ -27,12 +28,21 @@ do
   # this replaces `node server.js validate`, so no need for separate
   # server starts, a validated server can proceed to listening after 
   # the active server process gets stopped
-  if [[ -f $logdir/err && "$(cat $logdir/err)" != "" ]]; then
+  if [[ "$isvalidated" != "" ]]; then
+    # any logged error will NOT be related to the initial server validation,
+    # so allow the server process switchover is allowed even though
+    # the first requests to the new server process may trigger an error
+    :
+  elif [[ -f $logdir/log && "$(grep -c "Validation succeeded." $logdir/log)" != "0" ]]; then
+    isvalidated=true
+    echo "Validation succeeded."
+  elif [[ -f $logdir/err && "$(cat $logdir/err)" != "" ]]; then
     echo "Error in server startup"
     cat $logdir/err
     node /opt/app/pp/ppstop.js error
     exit 1
   fi
+
   if [[ -f $logdir/log ]]; then
     logLastLines=$(tail $logdir/log | grep "PORT 3000" | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g')
   fi

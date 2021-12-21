@@ -5,7 +5,6 @@
 
 const fs = require('fs')
 const path = require('path')
-const execSync = require('child_process').execSync
 
 // do not assume that serverconfig.json is in the same dir as server.js
 // for example, when using proteinpaint as an npm module or binary
@@ -164,6 +163,12 @@ if (!serverconfig.features) {
 
 if (!serverconfig.examplejson) {
 	serverconfig.examplejson = path.join(serverconfig.binpath, 'features.json')
+}
+
+if (fs.existsSync('./public/rev.txt')) {
+	const revtxt = fs.readFileSync('./public/rev.txt', { encoding: 'utf8' })
+	const commitHash = revtxt.trim().split(' ')[1]
+	if (commitHash) serverconfig.commitHash = commitHash
 }
 
 //Object.freeze(serverconfig)

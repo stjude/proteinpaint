@@ -251,10 +251,11 @@ app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 pp_init()
 	.then(async () => {
 		// no error from server initiation
-		if (process.argv[2] == 'validate') {
-			console.log('\nValidation succeeded. You may now run the server.\n')
-			return
-		}
+		console.log(`\n${new Date()}`)
+		console.log(`\nValidation succeeded. You may now run the server. [commitHash=${serverconfig.commitHash}]\n`)
+
+		// exit early if only doing a validation of configuration + data + startup code
+		if (process.argv[2] == 'validate') return
 
 		if (process.argv[2] == 'phewas-precompute') {
 			// argv[3] is genome, argv[4] is dslabel
@@ -369,14 +370,7 @@ async function handle_healthcheck(req, res) {
 					.split('\n').length - 1
 		}
 
-		if (fs.existsSync('./public/rev.txt')) {
-			health.version = child_process
-				.execSync(`cat ./public/rev.txt`)
-				.toString()
-				.trim()
-				.split(' ')[1]
-		}
-
+		if (serverconfig.commitHash) health.version = serverconfig.commitHash
 		res.send(health)
 	} catch (e) {
 		throw { error: e }

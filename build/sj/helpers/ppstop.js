@@ -38,8 +38,13 @@ forever.list(false, (err, lst) => {
 			$ Control^C
 			$ ssh [host]
 			$ cd /opt/app/pp
+			
 			$ forever stop ${i} # may have to repeat multiple times
-			$ # fix your error in data, code, and/or configuration
+			# - OR - 
+			$ ps aux | forever
+			$ kill [process ID of pp-forever process]
+			
+			# fix your error in data, code, and/or configuration
 			$ ./proteinpaint_run_node.sh # or re-deploy again
 			`)
 		}
