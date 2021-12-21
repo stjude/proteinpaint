@@ -76,6 +76,7 @@ function applyEdits(self) {
 	self.q.mode = 'discrete'
 	self.dom.tip.hide()
 	self.opts.callback({
+		id: self.term.id,
 		term: self.term,
 		q: self.q
 	})

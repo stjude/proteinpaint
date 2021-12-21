@@ -176,6 +176,7 @@ export function setGroupsettingMethods(self) {
 					const group = customset.groups[i]
 					if (group) {
 						group.name = name_inputs[i].value
+						group.type = 'values'
 						// for conditional terms, keys are string but digits, so check if it's parseInt(str)
 						const key_ = typeof key == 'string' && !isNaN(parseInt(key)) ? parseInt(key) : key
 						group.values.push({ key: key_, label: val.label })
@@ -188,6 +189,7 @@ export function setGroupsettingMethods(self) {
 				}
 				self.dom.tip.hide()
 				self.opts.callback({
+					id: self.term.id,
 					term: self.term,
 					q: self.q
 				})

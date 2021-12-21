@@ -33,10 +33,11 @@ export function getHandler(self) {
 			const select = div.append('select').on('change', () => {
 				if (d3event.target.value != 1) self.q.scale = Number(d3event.target.value)
 				else delete self.q.scale
-				// self.opts.callback({
-				// 	term: self.term,
-				// 	q: self.q
-				// })
+				self.opts.callback({
+					id: self.term.id,
+					term: self.term,
+					q: self.q
+				})
 			})
 
 			select
@@ -62,6 +63,7 @@ export function getHandler(self) {
 				.on('click', () => {
 					self.q.mode = 'continuous'
 					self.opts.callback({
+						id: self.term.id,
 						term: self.term,
 						q: self.q
 					})
