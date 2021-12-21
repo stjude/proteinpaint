@@ -658,7 +658,9 @@ function getPj(self) {
 				return (
 					d3Linear()
 						// force min x=0, instead of using min time in server data
-						.domain([0, context.self.xMax])
+						// add 2 years to x max value to ensure a horizontally flat ending
+						// and avoid the potential for a vertical line ending
+						.domain([0, context.self.xMax + 2])
 						.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 				)
 			},
