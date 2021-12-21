@@ -31,13 +31,8 @@ export function getHandler(self) {
 				.html('Scale values')
 
 			const select = div.append('select').on('change', () => {
-				if (d3event.target.value != 1) self.q.scale = Number(d3event.target.value)
+				if (d3event.target.value != '1') self.q.scale = Number(d3event.target.value)
 				else delete self.q.scale
-				self.opts.callback({
-					id: self.term.id,
-					term: self.term,
-					q: self.q
-				})
 			})
 
 			select

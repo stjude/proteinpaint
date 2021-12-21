@@ -164,10 +164,6 @@ function setqDefaults(self) {
 		if (!cache[t.id].discrete.regular.type) {
 			cache[t.id].discrete.regular.type = 'regular'
 		}
-	} else if (t.q) {
-		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
-		if (!t.q.type) throw `missing numeric term q.type: should be 'regular' or 'custom'`
-		cache[t.id].discrete[t.q.type] = t.q
 	}
 
 	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
