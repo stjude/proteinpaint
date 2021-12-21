@@ -4,7 +4,6 @@ import { vocabInit } from './vocabulary'
 import { treeInit } from './tree'
 import { storeInit } from './store'
 import { searchInit } from './search'
-//import { filter3Init } from './filter3'
 import { sayerror, Menu } from '../client'
 
 /*
@@ -71,12 +70,6 @@ class TdbApp {
 					app: this.api,
 					holder: this.dom.searchDiv
 				}),
-				/*
-				// TODO: support with_cohortHtmlSelect, previously a nav option
-				filter: filter3Init({
-					app: this.app,
-					holder: this.dom.filterDiv
-				}),*/
 				tree: treeInit({
 					app: this.api,
 					holder: this.dom.holder.append('div')
