@@ -244,14 +244,15 @@ ssh -t $USERatREMOTE "
 	cp -Rn active/public/ available/$APP-$REV/
 	cp -Rn active/dataset/ available/$APP-$REV/
 
-  chmod -R 755 available/$APP-$REV
-	cd available/$APP-$REV/utils/rust_indel_cargo && cargo build --release
-	cd $REMOTEDIR
-	rm -rf available/$APP-$REV/utils/rust_indel_cargo/src
-  cd available/$APP-$REV/utils/read_alignment && cargo build --release
-  cd $REMOTEDIR
-	rm -rf available/$APP-$REV/utils/read_alignment/src
+	chmod -R 755 available/$APP-$REV
+	
+	cd available/$APP-$REV/utils/rust
+	# copy previous builds to allow reuse if validated by sccache and cargo
+	[[ -d $REMOTEDIR/active/utils/rust/target ]] && cp -rf $REMOTEDIR/active/utils/rust/target ./
+	cargo build --release
+	#rm -rf src
 
+	cd $REMOTEDIR
 	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$REV/public/sjcharts
 	ln -sfn ./bin available/$APP-$REV/public/no-babel-polyfill
 	ln -sfn available/$APP-$REV active

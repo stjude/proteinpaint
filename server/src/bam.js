@@ -12,12 +12,10 @@ const createCanvas = require('canvas').createCanvas
 const spawn = require('child_process').spawn
 const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
-const match_complexvariant = require('./bam.kmer.indel').match_complexvariant
 const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvariant_rust
 const bamcommon = require('./bam.common')
 const basecolor = require('../shared/common').basecolor
 const serverconfig = require('./serverconfig')
-const rust_read_alignment = path.join(serverconfig.binpath, '/utils/read_alignment/target/release/read_alignment')
 const clustalo_read_alignment = serverconfig.clustalo || 'clustalo'
 
 /*
@@ -1388,12 +1386,10 @@ async function divide_reads_togroups(q) {
 
 	if (q.variant) {
 		if (q.regions.length == 1) {
-			if (serverconfig.features.rust_indel) {
-				// If this toggle is on, the rust indel pipeline is invoked otherwise the nodejs indel pipeline is invoked
-				return await rust_match_complexvariant(q, templates_info, widths)
-			} else {
-				return await match_complexvariant(q, templates_info, widths)
-			}
+			return await rust_match_complexvariant(q, templates_info, widths)
+		} else {
+			// Should not happen as indel works only in single region
+			console.log('Indel pipeline works only in single region. Please check!')
 		}
 	}
 	if (q.sv) {
@@ -2719,10 +2715,11 @@ async function query_oneread(req, r) {
 	if (lst) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
 		if (req.query.altseq) {
-			const alignment_output = await run_rust_read_alignment(
+			const alignment_output = await utils.run_rust(
+				'align',
 				'single:' + lst[0].seq + ':' + req.query.refseq + ':' + req.query.altseq
 			)
-			const alignment_output_list = alignment_output.toString('utf-8').split('\n')
+			const alignment_output_list = alignment_output.split('\n')
 			for (let item of alignment_output_list) {
 				if (item.includes('q_seq_ref')) {
 					lst.q_align_ref = item
@@ -2764,25 +2761,6 @@ async function query_oneread(req, r) {
 	if (firstseg) lst.push(firstseg)
 	if (lastseg) lst.push(lastseg)
 	return lst.length ? lst : null
-}
-
-function run_rust_read_alignment(input_data) {
-	return new Promise((resolve, reject) => {
-		const ps = spawn(rust_read_alignment)
-		const stdout = []
-		const stderr = []
-		Readable.from(input_data).pipe(ps.stdin)
-		ps.stdout.on('data', data => stdout.push(data))
-		ps.stderr.on('data', data => stderr.push(data))
-		ps.on('error', err => {
-			console.log('stderr:', stderr)
-			reject(err)
-		})
-		ps.on('close', code => {
-			//console.log("stdout:",stdout)
-			resolve(stdout)
-		})
-	})
 }
 
 async function convertunmappedread2html(seg, genome, query) {

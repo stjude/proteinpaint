@@ -1,10 +1,8 @@
 const tape = require('tape')
-const spawn = require('child_process').spawn
-const Readable = require('stream').Readable
-const serverconfig = require('../../src/serverconfig')
+const utils = require('../../src/utils')
 
 /**************
-requires a compiled rust code, see rust_indel_bin below 
+requires compiled rust code, see server/utils/rust/README.md
 
 examples data structure
 [
@@ -32,7 +30,6 @@ examples data structure
 	}
 ]
 ***************/
-const rust_indel_bin = serverconfig.binpath + '/utils/rust_indel_cargo/target/release/rust_indel_cargo'
 const pphost = 'http://pp-int-test.stjude.org/' // show links using this host
 
 // these are constants. can be overwritten by the same settings in the examples
@@ -56,7 +53,7 @@ tape('rust indel binary', async function(test) {
 	test.end()
 })
 
-function runTest(e, test) {
+async function runTest(e, test) {
 	// validate data structure of e
 	if (!e.pplink) throw '.pplink missing'
 	test.pass(`Testing "${e.comment}" at ${e.pplink}`)
@@ -111,67 +108,52 @@ function runTest(e, test) {
 		':' +
 		e.rightFlank
 
-	// run rust binary
-	return new Promise((resolve, reject) => {
-		const ps = spawn(rust_indel_bin)
-		Readable.from(input).pipe(ps.stdin)
-		const stdout = []
-		const err = []
-		ps.stderr.on('data', d => err.push(d))
-		ps.stdout.on('data', data => stdout.push(data))
-		ps.on('close', code => {
-			const errmsg = err.join('').trim()
-			if (errmsg) throw errmsg
-
-			let groups, indices
-			for (const line of stdout.join('').split('\n')) {
-				if (line.includes('output_cat')) {
-					groups = line
-						.replace(/"/g, '')
-						.replace(/,/g, '')
-						.replace('output_cat:', '')
-						.split(':')
-				} else if (line.includes('output_gID')) {
-					indices = line
-						.replace(/"/g, '')
-						.replace(/,/g, '')
-						.replace('output_gID:', '')
-						.split(':')
-						.map(Number)
-				}
+	try {
+		const stdout = await utils.run_rust('indel', input)
+		console.log([112, stdout])
+		let groups, indices
+		for (const line of stdout.split('\n')) {
+			if (line.includes('output_cat')) {
+				groups = line
+					.replace(/"/g, '')
+					.replace(/,/g, '')
+					.replace('output_cat:', '')
+					.split(':')
+			} else if (line.includes('output_gID')) {
+				indices = line
+					.replace(/"/g, '')
+					.replace(/,/g, '')
+					.replace('output_gID:', '')
+					.split(':')
+					.map(Number)
 			}
-			if (groups.length != indices.length) test.fail('output_cat and output_gID are of different length')
-			if (indices.length != e.reads.length)
-				test.fail('Expecting ' + e.reads.length + ' reads but got ' + indices.length)
-			const results = [] // in the same order as e.reads[]
-			for (let i = 0; i < indices.length; i++) results[indices[i]] = groups[i]
+		}
+		if (groups.length != indices.length) test.fail('output_cat and output_gID are of different length')
+		if (indices.length != e.reads.length) test.fail('Expecting ' + e.reads.length + ' reads but got ' + indices.length)
+		const results = [] // in the same order as e.reads[]
+		for (let i = 0; i < indices.length; i++) results[indices[i]] = groups[i]
 
-			// detect reads that fail the test
-			let wrongcount = 0
-			for (let i = 0; i < results.length; i++) {
-				if (e.reads[i].g != results[i]) wrongcount++
+		// detect reads that fail the test
+		let wrongcount = 0
+		for (let i = 0; i < results.length; i++) {
+			if (e.reads[i].g != results[i]) wrongcount++
+		}
+		if (wrongcount) {
+			const lst = []
+			for (let i = 0; i < e.reads.length; i++) {
+				const truth = e.reads[i].g
+				const result = results[i]
+				lst.push(
+					i + '\t\t' + truth + '\t' + (truth != result ? result + (e.reads[i].n ? ' (' + e.reads[i].n + ')' : '') : '')
+				)
 			}
-			if (wrongcount) {
-				const lst = []
-				for (let i = 0; i < e.reads.length; i++) {
-					const truth = e.reads[i].g
-					const result = results[i]
-					lst.push(
-						i +
-							'\t\t' +
-							truth +
-							'\t' +
-							(truth != result ? result + (e.reads[i].n ? ' (' + e.reads[i].n + ')' : '') : '')
-					)
-				}
-				test.fail(`Misassigned ${wrongcount} reads:\nRead\tTruth\tResult\n${lst.join('\n')}`)
-			} else {
-				test.pass(`all passed`)
-			}
-
-			resolve() // this is necessary to end the test in the async call
-		})
-	})
+			test.fail(`Misassigned ${wrongcount} reads:\nRead\tTruth\tResult\n${lst.join('\n')}`)
+		} else {
+			test.pass(`all passed`)
+		}
+	} catch (e) {
+		throw e
+	}
 }
 
 const examples = [
