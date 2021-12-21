@@ -1,6 +1,7 @@
 import { getInitFxn, copyMerge } from '../common/rx.core'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
+import { termInfoInit } from '../termdb/termInfo'
 
 /*
 constructor option and API are documented at
@@ -197,6 +198,23 @@ function setRenderers(self) {
 		}
 
 		self.dom.btnDiv = self.dom.holder.append('div')
+	}
+
+	self.updateUI = () => {
+		if (!self.term) {
+			// no term
+			self.dom.nopilldiv.style('display', 'block')
+			self.dom.pilldiv.style('display', 'none')
+			self.dom.btnDiv.style('display', 'none')
+			return
+		}
+
+		// has term
+		// add info button for terms with meta data
+		if (self.term && self.term && self.term.hashtmldetail) {
+			if (self.opts.buttons) self.opts.buttons.push('info')
+			else self.opts.buttons = ['info']
+		}
 		if (self.opts.buttons) {
 			self.dom.btnDiv
 				.selectAll('div')
@@ -213,19 +231,20 @@ function setRenderers(self) {
 					if (d == 'delete') self.removeTerm()
 					else if (d == 'replace') self.showTree()
 				})
-		}
-	}
 
-	self.updateUI = () => {
-		if (!self.term) {
-			// no term
-			self.dom.nopilldiv.style('display', 'block')
-			self.dom.pilldiv.style('display', 'none')
-			self.dom.btnDiv.style('display', 'none')
-			return
-		}
+				const infoIcon_div = self.dom.btnDiv.selectAll('div')
+					.filter( function(){ return select(this).text() === 'INFO'})
 
-		// has term
+				// TODO: modify termInfoInit() to display term info in tip rather than in div
+				// can be content_tip: self.dom.tip.d to separate it from content_holder
+				termInfoInit({
+					vocabApi: self.opts.vocabApi,
+					icon_holder: infoIcon_div,
+					content_holder: self.dom.holder.append('div'),
+					id: self.term.id,
+					state: { term: self.term }
+				})
+		}
 
 		self.dom.nopilldiv.style('display', 'none')
 		self.dom.pilldiv.style('display', self.opts.buttons ? 'inline-block' : 'block')
