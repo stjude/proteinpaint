@@ -212,7 +212,8 @@ function setRenderers(self) {
 		// has term
 		// add info button for terms with meta data
 		if (self.term && self.term && self.term.hashtmldetail) {
-			if (self.opts.buttons) self.opts.buttons.push('info')
+			if (self.opts.buttons && !self.opts.buttons.includes('info')) 
+				self.opts.buttons.push('info')
 			else self.opts.buttons = ['info']
 		}
 		if (self.opts.buttons) {
