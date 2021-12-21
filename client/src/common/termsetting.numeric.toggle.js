@@ -44,9 +44,9 @@ export function getHandler(self) {
 					label: 'Continuous',
 					callback: async div => {
 						self.q.mode = 'continuous'
+						if (tabs[0].isRendered) return
+						tabs[0].isRendered = true
 						self.handlerByType['numeric.continuous'].showEditMenu(div)
-						// example of deleting the callback here instead of in toggleButtons
-						delete tabs.find(t => t.label == 'Continuous').callback
 					}
 				},
 				discrete: {
@@ -55,11 +55,9 @@ export function getHandler(self) {
 					callback: async div => {
 						self.q.mode = 'discrete'
 						if (!self.q.type || self.q.type != 'custom') self.q.type = 'regular'
-						// example of using a boolean attribute to track whether to exit early
 						if (tabs[1].isRendered) return
 						tabs[1].isRendered = true
 						await self.handlerByType['numeric.discrete'].showEditMenu(div)
-						// delete tabs[1].callback
 					}
 				},
 				'cubic-spline': {
@@ -67,8 +65,9 @@ export function getHandler(self) {
 					label: 'Cubic spline',
 					callback: async div => {
 						self.q.mode = 'cubic-spline'
+						if (tabs[2].isRendered) return
+						tabs[2].isRendered = true
 						self.handlerByType['numeric.spline'].showEditMenu(div)
-						delete tabs.find(t => t.label == 'Cubic spline').callback
 					}
 				}
 			}
