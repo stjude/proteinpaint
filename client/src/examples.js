@@ -1,4 +1,4 @@
-import { dofetch2, sayerror, tab_wait, appear } from './client'
+import { dofetch, dofetch2, sayerror, tab_wait, appear } from './client'
 import { newSandboxDiv } from './dom/sandbox'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
@@ -7,6 +7,8 @@ import { event, select } from 'd3-selection'
 import hljs from 'highlight.js/lib/core'
 import javascript from 'highlight.js/lib/languages/javascript'
 hljs.registerLanguage('javascript', javascript)
+import json from 'highlight.js/lib/languages/json'
+hljs.registerLanguage('json', json)
 
 /*
 
@@ -606,11 +608,11 @@ function makeDataDownload(arg, div) {
 	}
 }
 
-function showCode(ppcalls, btns) {
+async function showCode(ppcalls, btns) {
 	if (ppcalls.is_ui == true) return
 
 	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
-	const code = hljs.highlight(
+	const runpp_code = hljs.highlight(
 		`runproteinpaint({
     host: "${window.location.origin}",
     holder: document.getElementById('a'),
@@ -625,18 +627,38 @@ function showCode(ppcalls, btns) {
 		{ language: 'javascript' }
 	).value
 
-	const contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 30px 5px 30px; max-height: 400px; overflow-x: auto; overflow-y:auto;" ><code style="font-size:14px;">${code}</code></pre>`
+	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 30px 5px 40px; max-height: 400px; overflow-x: auto; overflow-y:auto;" ><code style="font-size:14px;">${runpp_code}</code></pre>`
 
 	btns.push({
 		name: 'Code',
 		callback: async rdiv => {
 			try {
-				rdiv.append('div').html(contents)
+				if (ppcalls.jsonpath) {
+					const include_json = await showJsonCode(ppcalls)
+					const runpp_header = "<p style='margin:20px 25px; justify-content:center;'>ProteinPaint JS code</p>"
+					rdiv.append('div').html(runpp_header + runpp_contents + include_json)
+				} else {
+					rdiv.append('div').html(runpp_contents)
+				}
 			} catch (e) {
 				alert('Error: ' + e)
 			}
 		}
 	})
+}
+
+async function showJsonCode(ppcalls) {
+	const jsondata = await dofetch('textfile', { file: ppcalls.jsonpath })
+	const json_code = JSON.parse(jsondata.text)
+
+	const splitpath = ppcalls.jsonpath.split('/')
+	const filename = splitpath[splitpath.length - 1]
+
+	const code = hljs.highlight(JSON.stringify(json_code, '', 4), { language: 'json' }).value
+
+	const json_contents = `<p style="margin:20px 5px 0px 25px; justify-content:center; display: inline-block;">JSON code </p><p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p><pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 5px 30px 5px 40px; max-height: 400px; overflow-x: auto; overflow-y:auto;" ><code style="font-size:14px;">${code}</code></pre>`
+
+	return json_contents
 }
 
 function makeArrowButtons(arrows, btns) {
