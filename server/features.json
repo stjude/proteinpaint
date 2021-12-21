@@ -669,6 +669,33 @@
                     "testSpec": {
                         "expected": { "circle": 10 }
                     }
+                },
+                {
+                    "label": "Launch an Ad hoc Mutation Plot",
+                    "runargs": { 
+                        "parseurl":true,
+                        "noheader": true,
+                        "nobox":1,
+                        "genome": "hg19",
+                        "gene": "MYC",
+                        "mset":[{
+                            "name":"Ad hoc Mutation Plot Demo",
+                            "mlst":[
+                                {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750685,"mname":"P75S","class":"M","dt":1},
+                                {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750680,"mname":"T73I","class":"M","dt":1},
+                                {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1}
+                            ]
+                        }]
+                    },
+                    "buttons":[
+                        {
+                            "name": "Documentation",
+                            "link": "https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit#heading=h.gj4rj4njhaz8"
+                        }
+                    ],
+                    "testSpec": {
+                        "expected": { "circle": 10 }
+                    }
                 }
             ],
             "sandbox": {},
