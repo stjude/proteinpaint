@@ -695,17 +695,6 @@ tape('Conditional term', async test => {
 		'Should have "default" group button be inactive'
 	)
 
-	//chage to subcondition
-	pilldiv.click()
-	tip.d.selectAll('select')._groups[0][0].selectedIndex = 3
-	tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
-	await sleep(50)
-	test.equal(
-		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
-		'Sub-condition',
-		'Should have bluepill summary btn changed to "By Subcondition"'
-	)
-
 	/*
 
 	FIXME: detect draggable divs instead of checkboxes
