@@ -16,7 +16,7 @@ const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvaria
 const bamcommon = require('./bam.common')
 const basecolor = require('../shared/common').basecolor
 const serverconfig = require('./serverconfig')
-const clustalo_read_alignment = serverconfig.clustalo || 'clustalo'
+const clustalo_read_alignment = serverconfig.clustalo
 
 /*
 XXX quick fix to be removed/disabled later

@@ -44,6 +44,7 @@ if (!serverconfig.hicstraw) serverconfig.hicstraw = 'straw'
 if (!serverconfig.bigwigsummary) serverconfig.bigwigsummary = 'bigWigSummary'
 if (!serverconfig.bigBedToBed) serverconfig.bigBedToBed = 'bigBedToBed'
 if (!serverconfig.bigBedNamedItems) serverconfig.bigBedNamedItems = 'bigBedNamedItems'
+if (!serverconfig.clustalo) serverconfig.clustalo = 'clustalo'
 
 /******************
 	APPLY OVERRIDES 
