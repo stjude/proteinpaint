@@ -73,8 +73,7 @@ function setqDefaults(self) {
 	if (!cache[t.id]) cache[t.id] = {}
 	if (!cache[t.id].continuous) {
 		cache[t.id].continuous = {
-			mode: 'continuous',
-			scale: 1
+			mode: 'continuous'
 		}
 	}
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].continuous))

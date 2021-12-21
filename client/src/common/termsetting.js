@@ -24,7 +24,7 @@ https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/
 
 ************** explain behavior here:
 
-initHandlerByType(self)
+setHandler(self)
 - this will create a handler{} for each known term.type and "subtype" ('discrete', 'binary', etc)
 - a handler object will have the following methods
 	- get_term_name(term): will return the term label to use in the pill, including potential abbreviation
@@ -64,7 +64,6 @@ class TermSetting {
 		setInteractivity(this)
 		setRenderers(this)
 		this.initUI()
-		this.initHandlerByType()
 
 		// this api will be frozen and returned by termsettingInit()
 		this.hasError = false
@@ -132,15 +131,13 @@ class TermSetting {
 		}
 	}
 
-	initHandlerByType() {
+	async setHandler() {
 		const defaultHandler = getDefaultHandler(this)
 		this.handlerByType = {
 			survival: defaultHandler,
 			default: defaultHandler
 		}
-	}
 
-	async setHandler() {
 		if (!this.term) {
 			this.handler = this.handlerByType.default
 			return
