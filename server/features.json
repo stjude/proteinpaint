@@ -694,7 +694,7 @@
                         }
                     ],
                     "testSpec": {
-                        "expected": { "circle": 10 }
+                        "expected": { "circle": 1 }
                     }
                 }
             ],
