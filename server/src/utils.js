@@ -10,12 +10,11 @@ const fs = require('fs'),
 	Readable = require('stream').Readable
 
 exports.serverconfig = serverconfig
-
-const tabix = serverconfig.tabix || 'tabix'
-const samtools = serverconfig.samtools || 'samtools'
-const bcftools = serverconfig.bcftools || 'bcftools'
-const bigBedToBed = serverconfig.bigBedToBed || 'bigBedToBed'
-const bigBedNamedItems = serverconfig.bigBedNamedItems || 'bigBedNamedItems'
+const tabix = serverconfig.tabix
+const samtools = serverconfig.samtools
+const bcftools = serverconfig.bcftools
+const bigBedToBed = serverconfig.bigBedToBed
+const bigBedNamedItems = serverconfig.bigBedNamedItems
 
 /* p4 ready
 ********************** EXPORTED
