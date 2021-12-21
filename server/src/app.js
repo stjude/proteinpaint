@@ -85,11 +85,11 @@ const express = require('express'),
 valuable globals
 */
 const genomes = {}
-const tabix = serverconfig.tabix || 'tabix'
-const samtools = serverconfig.samtools || 'samtools'
-const bcftools = serverconfig.bcftools || 'bcftools'
-const bigwigsummary = serverconfig.bigwigsummary || 'bigWigSummary'
-const hicstraw = serverconfig.hicstraw || 'straw'
+const tabix = serverconfig.tabix
+const samtools = serverconfig.samtools
+const bcftools = serverconfig.bcftools
+const bigwigsummary = serverconfig.bigwigsummary
+const hicstraw = serverconfig.hicstraw
 let codedate, // date for code files last updated
 	launchdate // server launch date
 /*

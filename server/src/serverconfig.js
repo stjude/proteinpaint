@@ -40,6 +40,8 @@ if (!serverconfig.port) serverconfig.port = process.env.PP_PORT || 3000
 if (!serverconfig.tabix) serverconfig.tabix = 'tabix'
 if (!serverconfig.samtools) serverconfig.samtools = 'samtools'
 if (!serverconfig.bcftools) serverconfig.bcftools = 'bcftools'
+if (!serverconfig.hicstraw) serverconfig.hicstraw = 'straw'
+if (!serverconfig.bigwigsummary) serverconfig.bigwigsummary = 'bigWigSummary'
 if (!serverconfig.bigBedToBed) serverconfig.bigBedToBed = 'bigBedToBed'
 if (!serverconfig.bigBedNamedItems) serverconfig.bigBedNamedItems = 'bigBedNamedItems'
 
