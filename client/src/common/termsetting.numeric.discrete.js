@@ -169,6 +169,7 @@ function setqDefaults(self) {
 	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
 	if (self.q && !self.q.mode) self.q.mode = 'discrete'
 	if (!self.q || self.q.mode !== 'discrete') self.q = {}
+	if (!self.q.type) self.q.type = 'regular'
 	// if (!self.q.type) self.q.type = 'regular'
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].discrete[self.q.type]))
 	self.q = Object.assign(cacheCopy, self.q)

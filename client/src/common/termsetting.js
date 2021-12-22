@@ -66,32 +66,20 @@ class TermSetting {
 		setRenderers(this)
 		this.initUI()
 
-		// this api will be frozen and returned by termsettingInit()
+		const defaultHandler = getDefaultHandler(this)
+		this.handlerByType = {
+			survival: defaultHandler,
+			default: defaultHandler
+		}
+
 		this.hasError = false
+
+		// this api will be frozen and returned by termsettingInit()
 		this.api = {
-			main: async (data = {}) => {
-				try {
-					this.dom.tip.hide()
-					this.hasError = false
-					delete this.error
-					this.validateMainData(data)
-					// term is read-only if it comes from state, let it remain read-only
-					this.term = data.term
-					this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
-					if ('disable_terms' in data) this.disable_terms = data.disable_terms
-					if ('exclude_types' in data) this.exclude_types = data.exclude_types
-					if ('filter' in data) this.filter = data.filter
-					if ('activeCohort' in data) this.activeCohort = data.activeCohort
-					if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
-					await this.setHandler()
-					this.updateUI()
-					if (data.term && this.validateQ) this.validateQ(data)
-					if (this.addCategory2sampleCounts) this.addCategory2sampleCounts()
-				} catch (e) {
-					this.hasError = true
-					throw e
-				}
-			},
+			// bind the 'this' context of api.main() to the Termsetting instance
+			// instead of to the this.api object
+			main: this.main.bind(this),
+			// do not change the this context of showTree, d3 sets it to the DOM element
 			showTree: this.showTree,
 			hasError: () => this.hasError,
 			validateQ: d => {
@@ -118,6 +106,30 @@ class TermSetting {
 		return o
 	}
 
+	async main(data = {}) {
+		try {
+			this.dom.tip.hide()
+			this.hasError = false
+			delete this.error
+			this.validateMainData(data)
+			// term is read-only if it comes from state, let it remain read-only
+			this.term = data.term
+			this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
+			if ('disable_terms' in data) this.disable_terms = data.disable_terms
+			if ('exclude_types' in data) this.exclude_types = data.exclude_types
+			if ('filter' in data) this.filter = data.filter
+			if ('activeCohort' in data) this.activeCohort = data.activeCohort
+			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
+			await this.setHandler()
+			this.updateUI()
+			if (data.term && this.validateQ) this.validateQ(data)
+			if (this.addCategory2sampleCounts) this.addCategory2sampleCounts()
+		} catch (e) {
+			this.hasError = true
+			throw e
+		}
+	}
+
 	validateMainData(d) {
 		if (d.term) {
 			// term is optional
@@ -133,12 +145,6 @@ class TermSetting {
 	}
 
 	async setHandler() {
-		const defaultHandler = getDefaultHandler(this)
-		this.handlerByType = {
-			survival: defaultHandler,
-			default: defaultHandler
-		}
-
 		if (!this.term) {
 			this.handler = this.handlerByType.default
 			return
@@ -212,8 +218,7 @@ function setRenderers(self) {
 		// has term
 		// add info button for terms with meta data
 		if (self.term && self.term && self.term.hashtmldetail) {
-			if (self.opts.buttons && !self.opts.buttons.includes('info')) 
-				self.opts.buttons.unshift('info')
+			if (self.opts.buttons && !self.opts.buttons.includes('info')) self.opts.buttons.unshift('info')
 			else self.opts.buttons = ['info']
 		}
 		if (self.opts.buttons) {
@@ -233,20 +238,21 @@ function setRenderers(self) {
 					else if (d == 'replace') self.showTree()
 				})
 
-				const infoIcon_div = self.dom.btnDiv.selectAll('div')
-					.filter( function(){ return select(this).text() === 'INFO'})
+			const infoIcon_div = self.dom.btnDiv.selectAll('div').filter(function() {
+				return select(this).text() === 'INFO'
+			})
 
-				const content_holder = select(self.dom.holder.node().parentNode).append('div')
+			const content_holder = select(self.dom.holder.node().parentNode).append('div')
 
-				// TODO: modify termInfoInit() to display term info in tip rather than in div
-				// can be content_tip: self.dom.tip.d to separate it from content_holder
-				termInfoInit({
-					vocabApi: self.opts.vocabApi,
-					icon_holder: infoIcon_div,
-					content_holder,
-					id: self.term.id,
-					state: { term: self.term }
-				})
+			// TODO: modify termInfoInit() to display term info in tip rather than in div
+			// can be content_tip: self.dom.tip.d to separate it from content_holder
+			termInfoInit({
+				vocabApi: self.opts.vocabApi,
+				icon_holder: infoIcon_div,
+				content_holder,
+				id: self.term.id,
+				state: { term: self.term }
+			})
 		}
 
 		self.dom.nopilldiv.style('display', 'none')
