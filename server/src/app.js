@@ -1258,58 +1258,99 @@ if file/url ends with .gz, it is bedgraph
 }
 
 async function handle_snp(req, res) {
+	/*
+.byCoord
+	if true, query bigbed file by coordinate
+.byName
+	if true, query bigbed file by rs id
+.genome
+	name of genome
+.chr
+	used for byCoord
+.ranges[ {start, stop} ]
+	used for byCoord
+.alleleLst[ str ]
+	used for byCoord, if provided will only return snps with matching alleles
+.lst[ str ]
+	used for byName
+*/
 	if (reqbodyisinvalidjson(req, res)) return
-	const n = req.query.genome
-	if (!n) return res.send({ error: 'no genome' })
-	const g = genomes[n]
-	if (!g) return res.send({ error: 'invalid genome' })
-	if (!g.snp) return res.send({ error: 'snp is not configured for this genome' })
-	const hits = []
-	if (req.query.byCoord) {
-		if (!(req.query.chr && req.query.ranges)) return res.send({ error: 'no coordinates' })
-		for (const r of req.query.ranges) {
+	try {
+		const n = req.query.genome
+		if (!n) throw 'no genome'
+		const g = genomes[n]
+		if (!g) throw 'invalid genome'
+		if (!g.snp) throw 'snp is not configured for this genome'
+		const hits = []
+		if (req.query.byCoord) {
 			// query dbSNP bigbed file by coordinate
 			// input query coordinates need to be 0-based
 			// output snp coordinates are 0-based
-			// output snp fields: chrom, chromStart, chromEnd, name, ref, altCount, alts, shiftBases, freqSourceCount, minorAlleleFreq, majorAllele, minorAllele, maxFuncImpact, class, ucscNotes, _dataOffset, _dataLen
-			const snps = await utils.query_bigbed_by_coord(g.snp.bigbedfile, req.query.chr, r.start, r.stop)
-			for (const snp of snps) {
-				const hit = snp2hit(snp)
-				hits.push(hit)
+			if (!req.query.chr) throw 'chr missing'
+			if (!Array.isArray(req.query.ranges)) throw 'ranges not an array'
+			for (const r of req.query.ranges) {
+				// require start/stop of a range to be non-neg integers, as a measure against attack
+				if (!Number.isInteger(r.start) || !Number.isInteger(r.stop) || r.start < 0 || r.stop < r.start)
+					throw 'invalid start/stop'
+				if (r.stop - r.start >= 100) {
+					// quick fix!
+					// as this function only works as spot checking snps
+					// guard against big range and avoid retrieving snps from whole chromosome that will overwhelm server
+					throw 'range too big'
+				}
+				const snps = await utils.query_bigbed_by_coord(g.snp.bigbedfile, req.query.chr, r.start, r.stop)
+				for (const snp of snps) {
+					const hit = snp2hit(snp)
+					if (req.query.alleleLst) {
+						// given alleles must be found in a snp for it to be returned
+						let missing = false
+						for (const i of req.query.alleleLst) {
+							// only test on non-empty strings
+							if (i && !hit.alleles.includes(i)) {
+								missing = true
+								break
+							}
+						}
+						if (missing) continue
+					}
+					hits.push(hit)
+				}
 			}
-		}
-	} else if (req.query.byName) {
-		if (!req.query.lst) return res.send({ error: 'no rsID query' })
-		for (const n of req.query.lst) {
-			// query dbSNP bigbed file by rsID
-			// see above for description of output snp fields
-			const snps = await utils.query_bigbed_by_name(g.snp.bigbedfile, n)
-			for (const snp of snps) {
-				const hit = snp2hit(snp)
-				hits.push(hit)
+		} else if (req.query.byName) {
+			if (!req.query.lst) throw 'lst missing'
+			for (const n of req.query.lst) {
+				// query dbSNP bigbed file by rsID
+				// see above for description of output snp fields
+				const snps = await utils.query_bigbed_by_name(g.snp.bigbedfile, n)
+				for (const snp of snps) {
+					const hit = snp2hit(snp)
+					hits.push(hit)
+				}
 			}
+		} else {
+			throw 'unknown query method'
 		}
-	} else {
-		return res.send({ error: 'undefined snp query method' })
+		res.send({ results: hits })
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		return res.send({ error: e.message || e })
 	}
-	res.send({ results: hits })
 }
 
 function snp2hit(snp) {
-	// snp must be nonempty string
+	// snp must be non-empty string
+	// output snp fields: [0]chrom, [1]chromStart, [2]chromEnd, [3]name, [4]ref, altCount, [6]alts, shiftBases, freqSourceCount, minorAlleleFreq, majorAllele, minorAllele, maxFuncImpact, class, ucscNotes, _dataOffset, _dataLen
 	const fields = snp.split('\t')
 	const ref = fields[4]
-	const alts = fields[6]
-		.split(',')
-		.filter(Boolean)
-		.join('/')
-	const observed = ref + '/' + alts
+	const alts = fields[6].split(',').filter(Boolean)
+	const observed = ref + '/' + alts.join('/')
 	const hit = {
 		chrom: fields[0],
 		chromStart: Number(fields[1]),
 		chromEnd: Number(fields[2]),
 		name: fields[3],
-		observed: observed
+		observed: observed,
+		alleles: [ref, ...alts]
 	}
 	return hit
 }

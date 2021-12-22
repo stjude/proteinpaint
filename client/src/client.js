@@ -1828,24 +1828,27 @@ export function keyupEnter() {
 	return d3event.code == 'Enter' || d3event.code == 'NumpadEnter'
 }
 
-export function may_findmatchingsnp(chr, poslst, genome) {
+export function may_findmatchingsnp(chr, poslst, genome, alleleLst) {
 	/*
-chr: string
+chr: string, required
 poslst[]
 	int, or {start, stop}
-genome{ name }
+	required
+genome{ name }, required
+alleleLst[], optional
 */
 	if (!genome || !genome.hasSNP) return
 	const p = {
 		byCoord: true,
 		genome: genome.name,
 		chr: chr,
-		ranges: []
+		ranges: [],
+		alleleLst
 	}
 	for (const i of poslst) {
 		if (Number.isFinite(i)) {
 			p.ranges.push({ start: i, stop: i + 1 })
-		} else if (i.start & i.stop) {
+		} else if (i.start && i.stop) {
 			p.ranges.push(i)
 		}
 	}
