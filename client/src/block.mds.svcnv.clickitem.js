@@ -2501,9 +2501,9 @@ async function may_findmatchingsnp_printintable(m, block, table) {
 	const td = tr.append('td')
 	const wait = td.append('div').text('Loading...')
 	try {
-		const hits = await client.may_findmatchingsnp(m.chr, [m.pos], block.genome)
+		const hits = await client.may_findmatchingsnp(m.chr, [m.pos], block.genome, [m.ref, m.altstr])
 		if (!hits || hits.length == 0) {
-			wait.text('No SNP')
+			wait.text('No match')
 			return
 		}
 		wait.remove()
