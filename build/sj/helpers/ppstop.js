@@ -41,8 +41,8 @@ forever.list(false, (err, lst) => {
 			
 			$ forever stop ${i} # may have to repeat multiple times
 			# - OR - 
-			$ ps aux | forever
-			$ kill [process ID of pp-forever process]
+			$ ps aux | grep forever
+			$ kill [highest process ID of pp-forever process]
 			
 			# fix your error in data, code, and/or configuration
 			$ ./proteinpaint_run_node.sh # or re-deploy again

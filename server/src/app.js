@@ -251,11 +251,16 @@ app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 pp_init()
 	.then(async () => {
 		// no error from server initiation
-		console.log(`\n${new Date()}`)
-		console.log(`\nValidation succeeded. You may now run the server. [commitHash=${serverconfig.commitHash}]\n`)
+		console.log(`\n${new Date()} ${serverconfig.commitHash || ''}`)
+		// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
+		// a serverconfig.preListenScript may rely on detecting this exact pre-listen() message
+		console.log(`\nValidation succeeded.\n`)
 
 		// exit early if only doing a validation of configuration + data + startup code
-		if (process.argv[2] == 'validate') return
+		if (process.argv[2] == 'validate') {
+			console.log(`You may now run the server.`)
+			return
+		}
 
 		if (process.argv[2] == 'phewas-precompute') {
 			// argv[3] is genome, argv[4] is dslabel
@@ -313,6 +318,9 @@ async function startServer() {
 		}
 
 		const port = serverconfig.port
+		// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
+		// a serverconfig.preListenScript may rely on detecting this exact post-listen() message
+		const message = `STANDBY AT PORT ${port}`
 		if (serverconfig.ssl) {
 			const options = {
 				key: fs.readFileSync(serverconfig.ssl.key),
@@ -320,13 +328,13 @@ async function startServer() {
 			}
 			const server = await https.createServer(options, app)
 			server.listen(port, () => {
-				console.log('HTTPS STANDBY AT PORT ' + port)
+				console.log(`HTTPS ${message}`)
 			})
 			return server
 		} else {
 			const server = await http.createServer(app)
 			server.listen(port, () => {
-				console.log('STANDBY AT PORT ' + port)
+				console.log(message)
 			})
 			return server
 		}
