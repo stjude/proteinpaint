@@ -232,6 +232,7 @@ export function setCategoricalMethods(self) {
 				// self.q.type = 'values' ????
 				self.dom.tip.hide()
 				self.opts.callback({
+					id: self.term.id,
 					term: self.term,
 					q: self.q
 				})
@@ -263,6 +264,7 @@ export function setCategoricalMethods(self) {
 							self.q.type = 'predefined-groupset'
 							self.dom.tip.hide()
 							self.opts.callback({
+								id: self.term.id,
 								term: self.term,
 								q: self.q
 							})

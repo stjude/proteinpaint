@@ -128,10 +128,6 @@ function setqDefaults(self) {
 				}
 			]
 		}
-	} else if (t.q) {
-		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
-		if (!t.q.type) throw `missing numeric term q.type: should be 'regular' or 'custom'`
-		cache[t.id][self.q.type] = t.q
 	}
 
 	if (!self.q || self.q.mode !== 'binary') self.q = {}

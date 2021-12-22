@@ -59,6 +59,7 @@ export function getHandler(self) {
 
 					self.dom.tip.hide()
 					self.opts.callback({
+						id: self.term.id,
 						term: self.term,
 						q: self.q
 					})
@@ -79,14 +80,8 @@ export function getHandler(self) {
 				.attr('value', 'computable')
 				.text('Any grade per patient')
 
-			value_type_select
-				.append('option')
-				.attr('value', 'sub')
-				.text('Sub-conditions')
-
-			value_type_select.node().selectedIndex = self.q.bar_by_children
-				? 3
-				: self.q.value_by_computable_grade
+			value_type_select.node().selectedIndex = 
+			self.q.value_by_computable_grade
 				? 2
 				: self.q.value_by_most_recent
 				? 1

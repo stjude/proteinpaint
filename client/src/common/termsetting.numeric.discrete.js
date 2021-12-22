@@ -76,6 +76,7 @@ function applyEdits(self) {
 	self.q.mode = 'discrete'
 	self.dom.tip.hide()
 	self.opts.callback({
+		id: self.term.id,
 		term: self.term,
 		q: self.q
 	})
@@ -163,15 +164,12 @@ function setqDefaults(self) {
 		if (!cache[t.id].discrete.regular.type) {
 			cache[t.id].discrete.regular.type = 'regular'
 		}
-	} else if (t.q) {
-		/*** is this deprecated? term.q will always be tracked outside of the main term object? ***/
-		if (!t.q.type) throw `missing numeric term q.type: should be 'regular' or 'custom'`
-		cache[t.id].discrete[t.q.type] = t.q
 	}
 
 	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
 	if (self.q && !self.q.mode) self.q.mode = 'discrete'
 	if (!self.q || self.q.mode !== 'discrete') self.q = {}
+	if (!self.q.type) self.q.type = 'regular'
 	// if (!self.q.type) self.q.type = 'regular'
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].discrete[self.q.type]))
 	self.q = Object.assign(cacheCopy, self.q)
