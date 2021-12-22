@@ -1283,14 +1283,21 @@ async function handle_snp(req, res) {
 		if (!g.snp) throw 'snp is not configured for this genome'
 		const hits = []
 		if (req.query.byCoord) {
+			// query dbSNP bigbed file by coordinate
+			// input query coordinates need to be 0-based
+			// output snp coordinates are 0-based
 			if (!req.query.chr) throw 'chr missing'
-			if (!req.query.ranges) throw 'ranges missing'
+			if (!Array.isArray(req.query.ranges)) throw 'ranges not an array'
 			for (const r of req.query.ranges) {
-				// query dbSNP bigbed file by coordinate
-				// input query coordinates need to be 0-based
-				// output snp coordinates are 0-based
+				// require start/stop of a range to be non-neg integers, as a measure against attack
 				if (!Number.isInteger(r.start) || !Number.isInteger(r.stop) || r.start < 0 || r.stop < r.start)
 					throw 'invalid start/stop'
+				if (r.stop - r.start >= 100) {
+					// quick fix!
+					// as this function only works as spot checking snps
+					// guard against big range and avoid retrieving snps from whole chromosome that will overwhelm server
+					throw 'range too big'
+				}
 				const snps = await utils.query_bigbed_by_coord(g.snp.bigbedfile, req.query.chr, r.start, r.stop)
 				for (const snp of snps) {
 					const hit = snp2hit(snp)
