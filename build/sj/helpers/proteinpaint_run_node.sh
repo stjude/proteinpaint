@@ -18,24 +18,26 @@ mkdir $logdir
 # before app.listen()
 ./node_modules/.bin/forever -m 10000 -a --minUptime 5000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
 
-# detect errors in the launched process' log files
-logLastLines=""
-isvalidated=""
-sleep 1
-while [[ "$logLastLines" == "" ]]
+logtail=""
+vstatus=""
+i=0
+while [[ "$logtail" == "" ]]
 do
+  sleep 1
+  i=$[i+1]
+
   # detect if there are startup errors
   # this replaces `node server.js validate`, so no need for separate
   # server starts, a validated server can proceed to listening after 
   # the active server process gets stopped
-  if [[ "$isvalidated" != "" ]]; then
+  if [[ "$vstatus" == "passed" ]]; then
     # any logged error will NOT be related to the initial server validation,
     # so allow the server process switchover is allowed even though
     # the first requests to the new server process may trigger an error
     :
   elif [[ -f $logdir/log && "$(grep -c "Validation succeeded." $logdir/log)" != "0" ]]; then
-    isvalidated=true
-    echo "Validation succeeded."
+    vstatus="passed"
+    printf "\rvalidation passed after $i seconds.\n"
   elif [[ -f $logdir/err && "$(cat $logdir/err)" != "" ]]; then
     echo "Error in server startup"
     cat $logdir/err
@@ -43,18 +45,24 @@ do
     exit 1
   fi
 
+  # detect if the post-app.listen() message has been logged
   if [[ -f $logdir/log ]]; then
-    logLastLines=$(tail $logdir/log | grep "PORT 3000" | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g')
+    logtail=$(tail -n1 $logdir/log | grep "PORT 3000" | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g')
   fi
-  echo "detecting server startup ... [$logLastLines]"
-  sleep 1
+  
+  if [[ "$logtail" != "" ]]; then
+    printf "\rdetecting server startup [$logtail] (total startup time: $i seconds)\n"
+  elif [[ "$vstatus" == "passed" ]]; then
+    printf "\rdetecting server startup [$i seconds]"
+  else
+    printf "\rvalidating ... [$i seconds]"
+  fi
 done
-
 # point the log/forever symlink to the newest log directory
 ln -sfn $logdir /opt/data/pp/pp-log/forever
 
-cd ..
 echo "RESTARTED"
+cd ..
 ./helpers/record.sh restart 
 
 # restart blat server if it is not running AND if there is a blat script
