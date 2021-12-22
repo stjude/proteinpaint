@@ -1305,7 +1305,8 @@ async function handle_snp(req, res) {
 						// given alleles must be found in a snp for it to be returned
 						let missing = false
 						for (const i of req.query.alleleLst) {
-							if (!hit.alleles.includes(i)) {
+							// only test on non-empty strings
+							if (i && !hit.alleles.includes(i)) {
 								missing = true
 								break
 							}

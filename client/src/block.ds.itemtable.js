@@ -248,6 +248,7 @@ function table_snvindel(mlst, holder, tk, block) {
 	}
 	if (mlst.length == 1) {
 		const m = mlst[0]
+		snpfind.alleleLst = [m.ref, m.alt]
 		if (block.variantPageCall_snv) {
 			if (m.chr != undefined && m.pos != undefined && m.ref != undefined && m.alt != undefined) {
 				variantpage.set.set(m.chr + separatorvp + m.pos + separatorvp + m.ref + separatorvp + m.alt, {
@@ -467,7 +468,7 @@ function table_snvindel(mlst, holder, tk, block) {
 
 	if (hasSNP && snpfind.bprange.length) {
 		client
-			.may_findmatchingsnp(snpfind.chr, snpfind.bprange, block.genome)
+			.may_findmatchingsnp(snpfind.chr, snpfind.bprange, block.genome, snpfind.alleleLst)
 			.then(hits => {
 				if (!hits || hits.length == 0) throw { message: 'no SNP' }
 				snpfind.says.text('')
