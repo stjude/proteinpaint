@@ -79,7 +79,8 @@ const express = require('express'),
 	do_hicstat = require('./hicstat').do_hicstat,
 	mdsgeneboxplot_closure = require('./mds.geneboxplot').default,
 	phewas = require('./termdb.phewas'),
-	handle_mdssurvivalplot = require('./km').handle_mdssurvivalplot
+	handle_mdssurvivalplot = require('./km').handle_mdssurvivalplot,
+	validator = require('./validator')
 
 /*
 valuable globals
@@ -120,6 +121,8 @@ app.use((req, res, next) => {
 	}
 	next()
 })
+
+app.use(validator.middleware)
 
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
@@ -830,7 +833,9 @@ function handle_genelookup(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
 	const g = genomes[req.query.genome]
 	if (!g) return res.send({ error: 'invalid genome name' })
-	if (!req.query.input) return res.send({ error: 'no input' })
+	//if (!req.query.input) return res.send({ error: 'no input' })
+	req.query.input = validator.byExpectedVal.alphaNumeric('input gene', req.query.input, res)
+
 	if (req.query.deep) {
 		///////////// deep
 
@@ -7534,7 +7539,16 @@ exports.fileurl = fileurl
 
 function reqbodyisinvalidjson(req, res) {
 	try {
-		req.query = JSON.parse(req.body)
+		console.log([7542, req.body, req.headers])
+		if (req.headers['content-type'] == 'application/json') {
+			console.log(7545, req.body)
+			req.query = req.body
+		} else {
+			req.query = JSON.parse(req.body)
+		}
+
+		if (typeof req.query != 'object') throw 'invalid'
+		return false
 	} catch (e) {
 		res.send({ error: 'invalid request body' })
 		return true
