@@ -110,7 +110,15 @@ app.use(bodyParser.json({}))
 app.use(bodyParser.text({ limit: '1mb' }))
 app.use(bodyParser.urlencoded({ extended: true }))
 
-app.use((req, res, next) => {
+app.use((error, req, res, next) => {
+	if (error) {
+		if (error && error.type == 'entity.parse.failed') {
+			res.send({ error: 'invalid request body, must be a valid JSON-encoded object' })
+		} else {
+			res.send({ error })
+		}
+		return
+	}
 	res.header('Access-Control-Allow-Origin', '*')
 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
 	if (req.method == 'GET' && !req.path.includes('.')) {
@@ -7539,18 +7547,17 @@ exports.fileurl = fileurl
 
 function reqbodyisinvalidjson(req, res) {
 	try {
-		console.log([7542, req.body, req.headers])
 		if (req.headers['content-type'] == 'application/json') {
-			console.log(7545, req.body)
+			// the bodyParser.json() middleware will pre-parse the req.body
 			req.query = req.body
 		} else {
 			req.query = JSON.parse(req.body)
 		}
 
-		if (typeof req.query != 'object') throw 'invalid'
+		if (typeof req.query != 'object') throw 'invalid request body'
 		return false
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
+	} catch (error) {
+		res.send({ error })
 		return true
 	}
 	log(req)

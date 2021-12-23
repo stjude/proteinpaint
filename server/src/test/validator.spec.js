@@ -17,8 +17,24 @@ tape('\n', test => {
 
 tape('genome validation', async test => {
 	test.timeoutAfter(1000)
-	test.plan(1)
-	const message = 'should return an error message on invalid character'
+	test.plan(2)
+	const message0 = 'should use bodyParser.json() to detect invalid req.body'
+	try {
+		const opts = {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json'
+			},
+			body: `[[}`
+		}
+		const res = await fetch(`${host}/genelookup`, opts).then(r => r.json())
+		test.equal(res.error, 'invalid request body, must be a valid JSON-encoded object', message0)
+	} catch (e) {
+		console.log(32, e)
+		test.fail(message0 + ': ' + e)
+	}
+
+	const message1 = 'should return an error message on invalid character'
 	try {
 		const opts = {
 			method: 'POST',
@@ -31,9 +47,9 @@ tape('genome validation', async test => {
 			})
 		}
 		const res = await fetch(`${host}/genelookup`, opts).then(r => r.json())
-		test.equal(res.error, 'invalid genome character', message)
+		test.equal(res.error, 'invalid genome character', message1)
 	} catch (e) {
-		test.fail(message + ': ' + e)
+		test.fail(message1 + ': ' + e)
 	}
 
 	test.end()
