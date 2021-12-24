@@ -841,8 +841,8 @@ function handle_genelookup(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
 	const g = genomes[req.query.genome]
 	if (!g) return res.send({ error: 'invalid genome name' })
-	//if (!req.query.input) return res.send({ error: 'no input' })
-	req.query.input = validator.byExpectedVal.alphaNumeric('input gene', req.query.input, res)
+
+	if (!validator.genomicName(req.query.input, g)) return res.send({ error: 'invalid character in gene name' })
 
 	if (req.query.deep) {
 		///////////// deep
@@ -943,9 +943,9 @@ function handle_pdomain(req, res) {
 			return res.send({ lst: [] })
 		}
 		if (!req.query.isoforms) throw 'isoforms missing'
-
+		const set = validator.genomicNameLst(req.query.isoforms, g)
 		const lst = []
-		for (const isoform of req.query.isoforms) {
+		for (const isoform of set) {
 			const tmp = g.proteindomain.getbyisoform.all(isoform)
 			// FIXME returned {data} is text not json
 			lst.push({
@@ -1299,7 +1299,7 @@ async function handle_snp(req, res) {
 			// query dbSNP bigbed file by coordinate
 			// input query coordinates need to be 0-based
 			// output snp coordinates are 0-based
-			if (!req.query.chr) throw 'chr missing'
+			if (!validator.genomicName(req.query.chr, g)) throw 'invalid chr'
 			if (!Array.isArray(req.query.ranges)) throw 'ranges not an array'
 			for (const r of req.query.ranges) {
 				// require start/stop of a range to be non-neg integers, as a measure against attack
@@ -1330,8 +1330,8 @@ async function handle_snp(req, res) {
 				}
 			}
 		} else if (req.query.byName) {
-			if (!req.query.lst) throw 'lst missing'
-			for (const n of req.query.lst) {
+			const set = validator.genomicNameLst(req.query.lst, g)
+			for (const n of set) {
 				// query dbSNP bigbed file by rsID
 				// see above for description of output snp fields
 				const snps = await utils.query_bigbed_by_name(g.snp.bigbedfile, n)
@@ -1477,6 +1477,12 @@ async function handle_dsdata(req, res) {
 
 function handle_dsdata_makequery(ds, query, req) {
 	// query from ds.newconn
+
+	if (req.query.isoform) {
+		// quick fix!! deflect attacks from isoform parameter to avoid db query
+		if (!validator.genomicName(req.query.isoform, genomes[req.query.genome])) return
+	}
+
 	const [sqlstr, values] = query.makequery(req.query)
 	if (!sqlstr) {
 		// when not using gm, will not query tables such as expression
@@ -1550,9 +1556,9 @@ function handle_isoformlst(req, res) {
 	try {
 		const g = genomes[req.query.genome]
 		if (!g) throw 'invalid genome'
-		if (!req.query.lst) return res.send({ lst: [] })
+		const set = validator.genomicNameLst(req.query.lst, g)
 		const lst = []
-		for (const isoform of req.query.lst) {
+		for (const isoform of set) {
 			const tmp = g.genedb.getjsonbyisoform.all(isoform)
 			lst.push(
 				tmp.map(i => {
