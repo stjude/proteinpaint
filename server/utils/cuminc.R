@@ -24,8 +24,8 @@
 #       "time": [array] times where estimates are computed
 #       "est": [array] estimated cumulative incidence values
 #       "var": [array] variances of cumulative incidence values
-#       "ci_low": [array] 95% confidence intervals - lower bounds
-#       "ci_up": [array] 95% confidence intervals - upper bounds
+#       "low": [array] 95% confidence intervals - lower bounds
+#       "up": [array] 95% confidence intervals - upper bounds
 #     }
 
 
@@ -53,8 +53,8 @@ out <- res[[1]]
 low <- out$est - (1.96 * sqrt(out$var))
 low[low < 0] <- 0
 up <- out$est + (1.96 * sqrt(out$var))
-out[["ci_low"]] <- low
-out[["ci_up"]] <- up
+out[["low"]] <- low
+out[["up"]] <- up
 
 # output results in json format
 cat(toJSON(out, digits = NA, na = "string"), file = "", sep = "")

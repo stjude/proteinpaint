@@ -37,33 +37,19 @@ export async function get_incidence(q, ds) {
 					times: data.map(d => d.time),
 					events: data.map(d => d.event)
 				}
-				const Routput = await lines2R(path.join(serverconfig.binpath, 'utils/cuminc.R'), [JSON.stringify(Rinput)])
-				console.log('Routput:', JSON.parse(Routput))
-
 				promises.push(
-					calculate_cuminc(year_to_events, events).then(ci_data => {
-						if (ci_data == null) {
-							return { error: 'No output from R script' }
-						} else if (!ci_data.case_time || !ci_data.case_time.length) {
-							// do nothing
-						} else {
-							// Cohort enrollment requires a minimum of 5 year survival after diagnosis,
-							// the sql uses `AND years_to_event >= 5`, so reset the first data timepoint
-							// to the actual queried minimum time. This first data point (case_est=0) is added
-							// automatically by cuminc to its computed series data. 5 is the target x-axis min,
-							// but check anyway to make sure that the constructed SQL result for min time
-							// is used if lower than the expected 5 years_to_event.
-							ci_data.case_time[0] = Math.min(5, Math.floor(minTime))
-							for (let i = 0; i < ci_data.case_time.length; i++) {
-								final_data.case.push([
-									chartId,
-									seriesId,
-									ci_data.case_time[i],
-									ci_data.case_est[i],
-									ci_data.low_case[i],
-									ci_data.up_case[i]
-								])
-							}
+					lines2R(path.join(serverconfig.binpath, 'utils/cuminc.R'), [JSON.stringify(Rinput)]).then(Routput => {
+						if (Routput.length != 1) throw 'R output is not one line in length'
+						const ci_data = JSON.parse(Routput[0])
+						// Cohort enrollment requires a minimum of 5 year survival after diagnosis,
+						// the sql uses `AND years_to_event >= 5`, so reset the first data timepoint
+						// to the actual queried minimum time. This first data point (case_est=0) is added
+						// automatically by cuminc to its computed series data. 5 is the target x-axis min,
+						// but check anyway to make sure that the constructed SQL result for min time
+						// is used if lower than the expected 5 years_to_event.
+						ci_data.time[0] = Math.min(5, Math.floor(minTime))
+						for (let i = 0; i < ci_data.time.length; i++) {
+							final_data.case.push([chartId, seriesId, ci_data.time[i], ci_data.est[i], ci_data.low[i], ci_data.up[i]])
 						}
 					})
 				)
@@ -75,61 +61,4 @@ export async function get_incidence(q, ds) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
 	}
-}
-
-function calculate_cuminc(year_to_events, events) {
-	//console.log('year_to_events:', year_to_events)
-	//console.log()
-	//console.log('events:', events)
-	return new Promise((resolve, reject) => {
-		const ps = spawn('Rscript', [path.join(serverconfig.binpath, './utils/cuminc.R'), year_to_events, events]) // Should we define Rscript in serverconfig.json?
-		const out = [],
-			out2 = []
-		ps.stdout.on('data', d => out.push(d))
-		ps.stderr.on('data', d => out2.push(d))
-		ps.on('close', code => {
-			const e = out2.join('').trim()
-			if (e) {
-				// got error running r script
-				reject(e)
-				return
-			}
-			const lines = out
-				.join('')
-				.trim()
-				.split('\n')
-			const ci_data = {}
-			for (const line of lines) {
-				if (line.includes('p_value')) {
-					const line2 = line.split(':')
-					ci_data.pvalue = Number.parseFloat(line2[1].replace('"', '').replace(' ', ''), 10)
-				} else if (line.includes('control_time')) {
-					const char_array = line.split(':')[1].split(',')
-					ci_data.control_time = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
-				} else if (line.includes('control_est')) {
-					const char_array = line.split(':')[1].split(',')
-					ci_data.control_est = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
-				} else if (line.includes('case_time')) {
-					const char_array = line.split(':')[1].split(',')
-					ci_data.case_time = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
-				} else if (line.includes('case_est')) {
-					const char_array = line.split(':')[1].split(',')
-					ci_data.case_est = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
-				} else if (line.includes('low_control')) {
-					const char_array = line.split(':')[1].split(',')
-					ci_data.low_control = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
-				} else if (line.includes('up_control')) {
-					const char_array = line.split(':')[1].split(',')
-					ci_data.up_control = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
-				} else if (line.includes('low_case')) {
-					const char_array = line.split(':')[1].split(',')
-					ci_data.low_case = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
-				} else if (line.includes('up_case')) {
-					const char_array = line.split(':')[1].split(',')
-					ci_data.up_case = char_array.map(v => Number.parseFloat(v.replace(' ', ''), 10))
-				}
-			}
-			resolve(ci_data)
-		})
-	})
 }
