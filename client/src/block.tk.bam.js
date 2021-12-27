@@ -1751,7 +1751,7 @@ async function getReadInfo(tk, block, box, ridx) {
 		// {seq, alignment (html), info (html) }
 		const div = tk.readpane.body.append('div').style('margin', '20px')
 
-		div.append('div').html(r.alignment)
+		const read_reference_div = div.append('div').html(r.alignment) // This stores the HTML table displaying the read against the reference
 
 		/*** 
 			Firefox does not seem to support the permision query name == 'clipboard-write'. 
@@ -1969,6 +1969,42 @@ async function getReadInfo(tk, block, box, ridx) {
 				})
 		}
 
+		const gene_button = row
+			.append('button')
+			.style('margin-left', '10px')
+			.text('Show gene model')
+			.on('click', async () => {
+				const read_reference_div_width = read_reference_div
+				console.log('read_reference_div_width:', read_reference_div_width)
+				gene_button.property('disabled', true) // disable this button
+				// Determine how many calls to bedj track need to be made. This depends on whether the read has insertions/deletions or spliced. In these cases, each part of the read will need a separate bedj track
+				// Parsing cigar sequence
+				let i = 0
+				let segstart
+				let segstop
+				let junction_break = 1
+				for (const item of data.lst[0].boxes) {
+					console.log(item)
+					if (i == 0 || junction_break == 1) {
+						if (i != 0) {
+							await get_gene_models(block, ridx, segstart, segstop) // Send bedj client request to render gene model for this segment
+						}
+						segstart = item.start
+						junction_break = 0
+					} else if (junction_break == 0 && (item.opr == 'M' || item.opr == 'S')) {
+						continue
+					} else if (item.opr == 'I' || item.opr == 'D' || item.opr == 'N') {
+						junction_break = 1
+						segstop = item.start
+					} else if (i == data.lst[0].boxes.length - 1) {
+						// Render bedj gene model if it has reached the last entry in CIGAR sequence
+						segstop = item.start
+						await get_gene_models(block, ridx, segstart, segstop) // Send bedj client request to render gene model for this segment
+					}
+					i += 1
+				}
+			})
+
 		mayshow_blatbutton(r, row, tk, block)
 		div.append('div').html(r.info)
 		//empty div for read alignment tables
@@ -2012,6 +2048,14 @@ async function getReadInfo(tk, block, box, ridx) {
 		if (extra) lst.push(extra)
 		return { lst, headers }
 	}
+}
+
+async function get_gene_models(block, ridx, segstart, segstop) {
+	const lst = [
+		'name=RefGene', // Check if its Refgene always or Gencode ?
+		'genome=' + block.genome.name,
+		'rglst=' + '[{' + block.rglst[ridx].chr + ',' + segstart + ',' + segstop + '}]'
+	]
 }
 
 function mayshow_blatbutton(read, div, tk, block) {

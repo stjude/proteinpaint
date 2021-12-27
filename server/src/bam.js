@@ -2985,7 +2985,8 @@ async function convertread2html(seg, genome, query) {
 			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
 		  </div>
 		  <ul style='padding-left:15px'>${lst.join('')}</ul>`,
-		start_readpos: refstart + 1 // Start position of read
+		start_readpos: refstart + 1, // Start position of read
+		boxes: seg.boxes
 	}
 	if (soft_present == 1) {
 		seq_data.soft_starts = soft_starts
