@@ -431,12 +431,12 @@ function add_hg38() {
 		'https://pecan.stjude.cloud/static/hg38/refGene.hg38.gz.tbi'
 	)
 	trydownload(
-		path.join(path_tpanno, 'gencode.v34.hg38.gz'),
-		'https://pecan.stjude.cloud/static/hg38/gencode.v34.hg38.gz'
+		path.join(path_tpanno, 'gencode.v38.hg38.gz'),
+		'https://pecan.stjude.cloud/static/hg38/gencode.v38.hg38.gz'
 	)
 	trydownload(
-		path.join(path_tpanno, 'gencode.v34.hg38.gz.tbi'),
-		'https://pecan.stjude.cloud/static/hg38/gencode.v34.hg38.gz.tbi'
+		path.join(path_tpanno, 'gencode.v38.hg38.gz.tbi'),
+		'https://pecan.stjude.cloud/static/hg38/gencode.v38.hg38.gz.tbi'
 	)
 	trydownload(path.join(path_tpanno, 'rmsk.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/rmsk.hg38.gz')
 	trydownload(path.join(path_tpanno, 'rmsk.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/rmsk.hg38.gz.tbi')
@@ -504,12 +504,12 @@ function add_hg19() {
 		'https://pecan.stjude.cloud/static/hg19/refGene.hg19.gz.tbi'
 	)
 	trydownload(
-		path.join(path_tpanno, 'gencode.v34.hg19.gz'),
-		'https://pecan.stjude.cloud/static/hg19/gencode.v34.hg19.gz'
+		path.join(path_tpanno, 'gencode.v38.hg19.gz'),
+		'https://pecan.stjude.cloud/static/hg19/gencode.v38.hg19.gz'
 	)
 	trydownload(
-		path.join(path_tpanno, 'gencode.v34.hg19.gz.tbi'),
-		'https://pecan.stjude.cloud/static/hg19/gencode.v34.hg19.gz.tbi'
+		path.join(path_tpanno, 'gencode.v38.hg19.gz.tbi'),
+		'https://pecan.stjude.cloud/static/hg19/gencode.v38.hg19.gz.tbi'
 	)
 	trydownload(path.join(path_tpanno, 'rmsk.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/rmsk.hg19.gz')
 	trydownload(path.join(path_tpanno, 'rmsk.hg19.gz.tbi'), 'https://pecan.stjude.cloud/static/hg19/rmsk.hg19.gz.tbi')
