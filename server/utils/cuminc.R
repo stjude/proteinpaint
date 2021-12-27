@@ -1,20 +1,62 @@
-# Rscript cuminc.R 0.3_0.4_0.1_0.2 1_1_0_0
+################################
+# Cumulative incidence analysis
+################################
 
-#library(survival) #for survfit function
-suppressPackageStartupMessages(library(cmprsk)) #for cuminc function
-args <- commandArgs(TRUE)
+###########
+# Usage
+###########
 
-year_to_events <- as.numeric(unlist(strsplit(args[1], split = "_")))
-events <- as.integer(unlist(strsplit(args[2], split = "_")))
+# Usage: Rscript cuminc.R < jsonIn > jsonOut
 
-ci_output <- cuminc(ftime=year_to_events, fstatus=events, cencode = 0)
+# Parameters:
+#   - jsonIn: [json string] input data streamed from standard input. The json string should not contain any newline characters, because newline characters are treated as separators of json records (trailing newline characters are ok).
+#     
+#     JSON input specifications:
+#     {
+#       "times": [array] times to events
+#       "events": [array] event codes (e.g. 0, 1). An event code of 0 indicates  a censored event. An event code of 1 indicates an event of interest.
+#     }
+#
+#   - jsonOut: [json string] cumulative incidence results streamed to standard out.
+#
+#     JSON output specifications:
+#     {
+#       "time": [array] times where estimates are computed
+#       "est": [array] estimated cumulative incidence values
+#       "var": [array] variances of cumulative incidence values
+#       "ci_low": [array] 95% confidence intervals - lower bounds
+#       "ci_up": [array] 95% confidence intervals - upper bounds
+#     }
 
-print (paste("case_time:",toString(ci_output[[1]]$time)))
-print (paste("case_est:", toString(ci_output[[1]]$est)))
 
-low_case <- ci_output[[1]]$est-1.96*sqrt(ci_output[[1]]$var)
-low_case [low_case < 0]  <- 0
-print (paste("low_case:", toString(low_case)))
-up_case  <- ci_output[[1]]$est+1.96*sqrt(ci_output[[1]]$var)
-up_case [up_case < 0]  <- 0
-print (paste("up_case:", toString(up_case)))
+###########
+# Code
+###########
+
+library(jsonlite)
+suppressPackageStartupMessages(library(cmprsk))
+
+# data preparation
+con <- file("stdin","r")
+lst <- stream_in(con, verbose = F, simplifyVector = T, simplifyDataFrame = F, simplifyMatrix = F)
+if (length(lst) != 1) stop("input json must have only 1 record")
+lst <- lst[[1]]
+lst$events <- as.factor(lst$events)
+
+# compute cumulative incidence
+res <- cuminc(ftime = lst$times, fstatus = lst$events, cencode = 0)
+
+# extract cumulative incidence of event of interest
+out <- res[[1]]
+
+# 95% confidence intervals
+low <- out$est - (1.96 * sqrt(out$var))
+low[low < 0] <- 0
+up <- out$est + (1.96 * sqrt(out$var))
+out[["ci_low"]] <- low
+out[["ci_up"]] <- up
+
+# output results in json format
+cat(toJSON(out, digits = NA, na = "string"), file = "", sep = "")
+
+close(con)

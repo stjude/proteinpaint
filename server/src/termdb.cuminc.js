@@ -1,6 +1,6 @@
 const path = require('path')
 const get_rows = require('./termdb.sql').get_rows
-const spawn = require('child_process').spawn
+const lines2R = require('./lines2R')
 const serverconfig = require('./serverconfig')
 
 export async function get_incidence(q, ds) {
@@ -33,8 +33,13 @@ export async function get_incidence(q, ds) {
 				if (!data.length) continue
 				// if there are no event=1, an error in the R script execution is issued (NAs in foreign function call (arg 3))
 				if (!data.filter(d => d.event === 1).length) continue
-				const year_to_events = data.map(d => +d.time).join('_')
-				const events = data.map(d => +d.event).join('_')
+				const Rinput = {
+					times: data.map(d => d.time),
+					events: data.map(d => d.event)
+				}
+				const Routput = await lines2R(path.join(serverconfig.binpath, 'utils/cuminc.R'), [JSON.stringify(Rinput)])
+				console.log('Routput:', JSON.parse(Routput))
+
 				promises.push(
 					calculate_cuminc(year_to_events, events).then(ci_data => {
 						if (ci_data == null) {
@@ -73,6 +78,9 @@ export async function get_incidence(q, ds) {
 }
 
 function calculate_cuminc(year_to_events, events) {
+	//console.log('year_to_events:', year_to_events)
+	//console.log()
+	//console.log('events:', events)
 	return new Promise((resolve, reject) => {
 		const ps = spawn('Rscript', [path.join(serverconfig.binpath, './utils/cuminc.R'), year_to_events, events]) // Should we define Rscript in serverconfig.json?
 		const out = [],
