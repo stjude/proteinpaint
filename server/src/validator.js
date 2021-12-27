@@ -3,12 +3,19 @@ const app = require('./app')
 /* characters that are not supposed to be found in names of gene/isoform/chr/snp etc
 when these are found, will avoid querying against db or bb file using these strings
 as a way to deflect attacks
-when the gene/isoform/chr names of a genome do contain such characters, may delete it from this array
-or to set a flag in the genomeobj to disable the check on that character,
-while still allowing to check on other genomes
+
+when names from a genome do contain such characters:
+option 1: delete it from this array to disable checking it on all genomes
+option 2: set a flag in the genomeobj to disable the check on that character,
+          while still allowing to check on other genomes
+          see genomicName() for implementation
+
+allowed characters: : . - _
 */
 const illegalNameChar = [
 	' ',
+	',',
+	';',
 	'~',
 	'`',
 	'!',
@@ -135,6 +142,10 @@ export function genomicName(str, genome) {
 	if (typeof str != 'string') return
 	// genome may define if certain characters are allowed for isoform names of a genome
 	for (const c of illegalNameChar) {
+		/*
+		example implementation of allowing certain char for a genome
+		if(genome.allowInName_semicolon && c==';') continue
+		*/
 		if (str.includes(c)) return
 	}
 	return true

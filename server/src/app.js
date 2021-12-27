@@ -942,7 +942,6 @@ function handle_pdomain(req, res) {
 			// no error
 			return res.send({ lst: [] })
 		}
-		if (!req.query.isoforms) throw 'isoforms missing'
 		const set = validator.genomicNameLst(req.query.isoforms, g)
 		const lst = []
 		for (const isoform of set) {
