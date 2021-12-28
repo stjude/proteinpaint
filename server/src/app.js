@@ -7560,13 +7560,13 @@ function reqbodyisinvalidjson(req, res) {
 		}
 
 		if (typeof req.query != 'object') throw 'invalid request body'
+		// FIXME should log request in validator middleware
+		log(req)
 		return false
 	} catch (error) {
 		res.send({ error })
 		return true
 	}
-	log(req)
-	return false
 }
 exports.reqbodyisinvalidjson = reqbodyisinvalidjson
 

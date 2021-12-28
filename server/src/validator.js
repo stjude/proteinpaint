@@ -72,8 +72,7 @@ export function middleware(req, res, next) {
 		for (const key in q) {
 			if (key in byReqKey) q[key] = byReqKey[key](q[key])
 		}
-		// TODO log() doesn't quite work and should be moved into validate.js
-		app.log(req)
+		// TODO log out request here to eliminate repeating log(req) in handlers; may skip the bundle-loading lines?
 		next()
 	} catch (e) {
 		app.catch(req, res, e.message || e)
