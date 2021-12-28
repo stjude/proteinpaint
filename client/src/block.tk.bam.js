@@ -1992,24 +1992,42 @@ async function getReadInfo(tk, block, box, ridx) {
 				let segstart = data.lst[0].boxes[0].start
 				let segstop
 				let local_alignment_width = 0 // This variable stores the width of each gene model that needs to be rendered using bedj track
-				const gene_models = []
+				//tk.readpane.body.gene_models = []
+				tk.readpane.body.gene_models = tk.readpane.body.append('img')
 				for (const item of data.lst[0].boxes) {
-					console.log('i:', i)
+					//console.log('i:', i)
 					//console.log('item:', item)
 					if (item.opr == 'H') {
 						// Hard clip should be towards an end of a segment and there should be no corresponding sequence, so no gene models need to be shown (Needs to be tested with an example)
 						break
-					} else if (item.opr == 'M' || item.opr == 'S') {
+					} else if (
+						item.opr == 'M' ||
+						item.opr == 'S' ||
+						(item.opr == 'N' && item.len < data.lst[0].readpanel_DN_maxlength) ||
+						(item.opr == 'D' && item.len < data.lst[0].readpanel_DN_maxlength)
+					) {
 						for (let j = 0; j < item.len; j++) {
-							local_alignment_width += read_reference_div.node().children[0].children[0].children[0].children[
-								nuc_count + 1
-							].offsetWidth // Adding the number of pixels from this column to local_alignment_width
+							if (nuc_count + 1 < read_reference_div.node().children[0].children[0].children[0].cells.length) {
+								local_alignment_width += read_reference_div.node().children[0].children[0].children[0].children[
+									nuc_count + 1
+								].offsetWidth // Adding the number of pixels from this column to local_alignment_width
+							}
 							nuc_count += 1
 						}
-					} else if (item.opr == 'I' || item.opr == 'D' || item.opr == 'N') {
+					} else if (
+						item.opr == 'I' ||
+						(item.opr == 'N' && item.len >= data.lst[0].readpanel_DN_maxlength) ||
+						(item.opr == 'D' && item.len >= data.lst[0].readpanel_DN_maxlength)
+					) {
 						segstop = item.start
 						//console.log('Hello1', segstart, segstop)
-						gene_models.push(await get_gene_models(tk, block, ridx, segstart, segstop, local_alignment_width)) // Send bedj client request to render gene model for this segment
+						const gene_model = await get_gene_models(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+						tk.readpane.body.gene_models
+							.attr('xlink:href', gene_model.src)
+							.attr('width', local_alignment_width)
+							.attr('height', gene_model.height)
+
+						console.log('gene_model:', gene_model)
 
 						nuc_count += item.len
 						segstart = item.start + item.len
@@ -2020,11 +2038,16 @@ async function getReadInfo(tk, block, box, ridx) {
 						// Render bedj gene model if it has reached the last entry in CIGAR sequence
 						segstop = item.start
 						//console.log('Hello2', segstart, segstop)
-						gene_models.push(await get_gene_models(tk, block, ridx, segstart, segstop, local_alignment_width)) // Send bedj client request to render gene model for this segment
+						const gene_model = await get_gene_models(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+						tk.readpane.body.gene_models
+							.attr('xlink:href', gene_model.src)
+							.attr('width', local_alignment_width)
+							.attr('height', gene_model.height)
+
+						console.log('gene_model:', gene_model)
 					}
 					i += 1
 				}
-				console.log('gene_models:', gene_models)
 			})
 
 		mayshow_blatbutton(r, row, tk, block)
@@ -2072,9 +2095,10 @@ async function getReadInfo(tk, block, box, ridx) {
 	}
 }
 
-async function get_gene_models(tk, block, ridx, segstart, segstop, local_alignment_width) {
+async function get_gene_models(block, ridx, segstart, segstop, local_alignment_width) {
+	const genetk = block.genome.tracks.find(i => i.__isgene)
 	const args = {
-		name: 'RefGene', // For now hardcoding to Refgene.
+		name: genetk.name,
 		genome: block.genome.name,
 		rglst: [
 			{
@@ -2088,12 +2112,12 @@ async function get_gene_models(tk, block, ridx, segstart, segstop, local_alignme
 		stackheight: 16,
 		stackspace: 1,
 		regionspace: 0,
-		file: block.genome.tracks.find(i => i.__isgene).file,
+		file: genetk.file,
 		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
-		color: tk.color
+		color: genetk.color,
+		translatecoding: 1,
+		__isgene: true
 	}
-	if (tk.translatecoding) args.translatecoding = 1
-	if (tk.__isgene) args.__isgene = true
 	//console.log('args:', JSON.stringify(args))
 	return await dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(args) })
 }
