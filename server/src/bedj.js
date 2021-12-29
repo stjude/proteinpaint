@@ -8,8 +8,61 @@ const nt2aa = require('../shared/common').nt2aa
 /*
 should guard against file content error e.g. two tabs separating columns
 
-genome=? is only required for gene tracks that will be translated, otherwise not required
+************ req.query{}
+.genome: str
+	only required for gene tracks that will be translated, otherwise not required
+.name: str
+	not used
+.file:
+	tp file path
+.rglst: []
+	{chr, start, stop, width}
+	start is 0-based
+	stop is non-inclusive (e.g. start:019, stop:119 to show 100bp range)
+	width: real number, #pixel width of this region
 
+## filtering on bed items
+
+## short cut to retrieve data without rendering
+
+.getdata: true
+	if true, will return bed data and do not render image
+	rendering-related parameters will be ignored
+.getBED: true
+	may set when getdata=true.
+	will only return first 3 columns of each bed item
+	used for getting data from hic fragment file
+	may generalize as getBED=n to return n columns of data
+
+## rendering parameters
+
+.regionspace: int
+	#pixel width between two regions
+.width: real
+	total width of all regions
+.stackheight: int
+	row height shared by all rows
+.stackspace: int
+	#pixel spacing between rows
+.color:
+	optional global color; can be overwritten by item.color
+.translatecoding: true
+	if true, will translate coding sequence as defined by item.coding[]
+.__isgene: true
+	if true, while rendering, will return gene model data when there're less than 50 in view range
+	quick fix for old junction track
+.noNameHover: true
+	if true, do not render the left-side "hovering" item name when the item is clipped on both ends
+	used for showing sections of gene model in bam read panel
+.categories: { key: { color } }
+	if provided, for items with .category attribute, will look for the given color in this hash
+	and use to render that item
+
+************ item data structure
+.canvas{}
+	The coordinates and attributes of items (i.e. exons and introns) and, 
+	if applicable, the gene name/label. Necessary for event handlers, specifically click events
+	and tooltip rendering. 
 */
 
 const namespace = 1 // one pixel between the gene label name and the item structure
@@ -22,12 +75,6 @@ const altcolor = 'rgba(122,103,44,.7)',
 	startcolor = 'rgba(0,255,0,.4)',
 	stopcolor = 'rgba(255,0,0,.5)',
 	skippedBpColor = '#ccc'
-
-/*
-item.canvas{}: The coordinates and attributes of items (i.e. exons and introns) and, 
-if applicable, the gene name/label. Necessary for event handlers, specifically click events
-and tooltip rendering. 
-*/
 
 module.exports = genomes => {
 	return async (req, res) => {
@@ -595,7 +642,7 @@ async function do_query(req, genomes) {
 			ctx.textAlign = c.textalign
 			ctx.fillStyle = fillcolor
 			ctx.fillText(c.namestr, c.namestart, y + stackheight / 2)
-		} else if (c.namehover) {
+		} else if (c.namehover && !req.query.noNameHover) {
 			const x = Math.max(10, c.start + 10)
 			ctx.fillStyle = 'white'
 			ctx.fillRect(x, y, c.namewidth + 10, stackheight)
@@ -658,36 +705,39 @@ async function do_query(req, genomes) {
 			}
 			for (const [e_idx, e] of item.coding.entries()) {
 				// each exon, they are ordered 5' to 3'
+				// e0/e1 for translatable bp range of this exon; may be modified for non-default reading frame
+				let [e0, e1] = e
+
 				if (minustrand) {
-					if (e[0] >= item.stop) {
+					if (e0 >= region.stop) {
 						// e is not yet in view range
-						cds += e[1] - e[0]
+						cds += e1 - e0
 						if (e_idx == 0 && item.startCodonFrame) {
 							cds -= 3 - item.startCodonFrame // see below
 						}
 						continue
 					}
-					if (e[1] <= item.start) {
+					if (e1 <= region.start) {
 						// e is out of view range
 						break
 					}
 				} else {
-					if (e[1] <= item.start) {
+					if (e1 <= region.start) {
 						// e is not yet in view range
-						cds += e[1] - e[0]
+						cds += e1 - e0
 						if (e_idx == 0 && item.startCodonFrame) {
 							cds -= 3 - item.startCodonFrame
 						}
 						continue
 					}
-					if (e[0] >= item.stop) {
+					if (e0 >= region.stop) {
 						// e is out of view range
 						break
 					}
 				}
 
 				// this exon "e" overlaps with view range; will print codon on it
-				let [e0, e1] = e // e0/e1 for translatable bp range of this exon
+
 				if (e_idx == 0 && item.startCodonFrame) {
 					// this is first coding exon and the gene is not using default frame;
 					// must skip 1 or 2 bp from 5' of this exon, thus adding to e0 or removing from e1
@@ -712,8 +762,8 @@ async function do_query(req, genomes) {
 					}
 				}
 
-				const lookstart = Math.max(item.start, e0),
-					lookstop = Math.min(item.stop, e1)
+				const lookstart = Math.max(region.start, e0),
+					lookstop = Math.min(region.stop, e1)
 				if (minustrand) {
 					cds += e1 - lookstop
 				} else {
@@ -783,7 +833,7 @@ async function do_query(req, genomes) {
 				}
 			}
 		}
-		if (c.namehover) {
+		if (c.namehover && !req.query.noNameHover) {
 			ctx.font = 'bold ' + fontsize + 'px Arial'
 			const x = Math.max(10, c.start + 10)
 			ctx.fillStyle = 'white'

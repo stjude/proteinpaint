@@ -1751,7 +1751,7 @@ async function getReadInfo(tk, block, box, ridx) {
 		// {seq, alignment (html), info (html) }
 		const div = tk.readpane.body.append('div').style('margin', '20px')
 
-		div.append('div').html(r.alignment)
+		const read_reference_div = div.append('div').html(r.alignment) // This stores the HTML table displaying the read against the reference
 
 		/*** 
 			Firefox does not seem to support the permision query name == 'clipboard-write'. 
@@ -1969,6 +1969,118 @@ async function getReadInfo(tk, block, box, ridx) {
 				})
 		}
 
+		const gene_button = row
+			.append('button')
+			.style('margin-left', '10px')
+			.text('Show gene model')
+			.on('click', async () => {
+				gene_button.property('disabled', true) // disable this button
+				// Determine how many calls to bedj track need to be made. This depends on whether the read has insertions/deletions or spliced. In these cases, each part of the read will need a separate bedj track
+				// Parsing cigar sequence
+				let i = 0
+				let nuc_count = 0 // Nucleotide iterator
+				let gm_nuc_count = 0 // Nucleotide iterator containing the number of nucleotides spanned by the gene model
+				let segstart = data.lst[0].boxes[0].start
+				let segstop
+				let local_alignment_width = 0 // This variable stores the width of each gene model that needs to be rendered using bedj track
+				const tbodyRef = read_reference_div.node().children[0].getElementsByTagName('tbody')[0]
+				const gene_model_tr = tbodyRef.insertRow()
+				//const blank_gene_td = gene_model_tr.append('td').text('Hello')
+				const heading_gene_cell = gene_model_tr.insertCell()
+				const heading_gene_text = document.createTextNode('')
+				heading_gene_cell.appendChild(heading_gene_text)
+
+				const gene_models = []
+				const break_points = []
+				let num_break_points = 0 // Number of break points in reference sequence w.r.t read
+				let gene_model_td
+				const refseq_row = read_reference_div.node().children[0].children[0].children[0]
+				for (const item of data.lst[0].boxes) {
+					if (item.opr == 'H') {
+						// Hard clip should be towards an end of a segment and there should be no corresponding sequence, so no gene models need to be shown (Needs to be tested with an example)
+						continue
+					} else if (
+						item.opr == 'M' ||
+						item.opr == 'S' ||
+						(item.opr == 'N' && item.len < data.lst[0].readpanel_DN_maxlength) ||
+						(item.opr == 'D' && item.len < data.lst[0].readpanel_DN_maxlength) // if length of deletion is less than readpanel_DN_maxlength the reference sequence is retained and no break is observed, so this part will be covered by the gene model
+					) {
+						for (let j = 0; j < item.len; j++) {
+							local_alignment_width += refseq_row.children[nuc_count + 1].getBoundingClientRect().width // Adding the number of pixels from this column to local_alignment_width
+							nuc_count += 1
+						}
+						gm_nuc_count += item.len
+					} else if (
+						item.opr == 'I' ||
+						(item.opr == 'N' && item.len >= data.lst[0].readpanel_DN_maxlength) ||
+						(item.opr == 'D' && item.len >= data.lst[0].readpanel_DN_maxlength) // if length of deletion is greater or equal to readpanel_DN_maxlength the reference sequence is not retained and break is observed, therefore current gene model will end here and a new gene model will start at the end of the deletion
+					) {
+						segstop = item.start
+						const gene_model = await get_gene_models(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+						const gm = {
+							src: gene_model.src,
+							width: local_alignment_width,
+							height: gene_model.height,
+							colspan: gm_nuc_count
+						}
+						gene_models.push(gm)
+
+						if (item.opr == 'I') {
+							break_points.push(item.len) // Passing the length of insertion
+						} else if (item.opr == 'N' || item.opr == 'D') {
+							break_points.push(1) // In case of big deletions and splicing it only occupies a single cell
+						}
+
+						if (item.opr == 'D' || item.opr == 'N') {
+							segstart = item.start + item.len
+						} else if (item.opr == 'I') {
+							segstart = item.start
+						}
+
+						local_alignment_width = 0
+						gm_nuc_count = 0
+						num_break_points += 1
+					}
+
+					if (i == data.lst[0].boxes.length - 1) {
+						// Render bedj gene model if it has reached the last entry in CIGAR sequence
+						segstop = item.start + item.len
+						const gene_model = await get_gene_models(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+						const gm = {
+							src: gene_model.src,
+							width: local_alignment_width,
+							height: gene_model.height,
+							colspan: gm_nuc_count
+						}
+						gene_models.push(gm)
+					}
+					i += 1
+				}
+
+				// Filling gene model row
+				let num_gene_cells = num_break_points + gene_models.length // Number of gene cells required in gene row
+				let j = 0
+				let k = 0
+				for (let i = 0; i < num_gene_cells; i++) {
+					const gene_model_cell = gene_model_tr.insertCell()
+					if (i % 2 == 0) {
+						// Render gene model
+						const img = document.createElement('img')
+						img.src = gene_models[k].src
+						img.width = gene_models[k].width
+						img.height = gene_models[k].height
+						gene_model_cell.appendChild(img)
+						gene_model_cell.colSpan = gene_models[k].colspan
+						k += 1
+					} else {
+						// Gap representing insertion / (big) deletion / (big) splicing showing break in reference sequence
+						gene_model_cell.colSpan = break_points[j]
+						j += 1
+					}
+				}
+				//console.log('gene_model_tr:', gene_model_tr)
+			})
+
 		mayshow_blatbutton(r, row, tk, block)
 		div.append('div').html(r.info)
 		//empty div for read alignment tables
@@ -2012,6 +2124,34 @@ async function getReadInfo(tk, block, box, ridx) {
 		if (extra) lst.push(extra)
 		return { lst, headers }
 	}
+}
+
+async function get_gene_models(block, ridx, segstart, segstop, local_alignment_width) {
+	const genetk = block.genome.tracks.find(i => i.__isgene)
+	const args = {
+		name: genetk.name,
+		genome: block.genome.name,
+		rglst: [
+			{
+				chr: block.rglst[ridx].chr,
+				start: segstart,
+				stop: segstop,
+				width: local_alignment_width
+			}
+		],
+		width: local_alignment_width,
+		stackheight: 16,
+		stackspace: 1,
+		regionspace: 0,
+		file: genetk.file,
+		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
+		color: genetk.color,
+		translatecoding: 1,
+		__isgene: true,
+		noNameHover: true
+	}
+	//console.log('args:', JSON.stringify(args))
+	return await dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(args) })
 }
 
 function mayshow_blatbutton(read, div, tk, block) {

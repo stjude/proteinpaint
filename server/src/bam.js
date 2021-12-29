@@ -234,6 +234,7 @@ const maxcanvasheight = 1500 // ideal max canvas height in pixels
 const max_returntemplatebox = 2000 // maximum number of reads per group, for which to return the "templatebox"
 const minstackheight_returntemplatebox = 7 // minimum stack height (number of pixels) for which to return templatebox
 const max_read_alignment = 200 // Max number of reads that can be aligned to reference sequence
+const readpanel_DN_maxlength = 20 // Variable to define whether a deletion is rendered showing the reference or simply shown how big the deletion is. If greater, only the size of deletion is shown. If lower, the reference sequence is shown
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 
@@ -2843,7 +2844,7 @@ async function convertread2html(seg, genome, query) {
 			continue
 		}
 		if (b.opr == 'D' || b.opr == 'N') {
-			if (b.len >= 20) {
+			if (b.len >= readpanel_DN_maxlength) {
 				reflst.push('<td style="font-size:.8em;opacity:.5;white-space:nowrap">' + b.len + ' bp</td>')
 				querylst.push('<td style="color:black;white-space:nowrap">-----------</td>')
 			} else {
@@ -2972,7 +2973,7 @@ async function convertread2html(seg, genome, query) {
 
 	let seq_data = {
 		seq: seg.seq,
-		alignment: `<table style="border-spacing:0px;border-collapse:separate;text-align:center">
+		alignment: `<table style="border-spacing:0px;border-collapse:separate;text-align:center;font-family:courier">
 			  <tr style="opacity:.6">${reflst.join('')}</tr>
 			  <tr style="color:white">${querylst.join('')}</tr>
 			</table>`,
@@ -2985,7 +2986,9 @@ async function convertread2html(seg, genome, query) {
 			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
 		  </div>
 		  <ul style='padding-left:15px'>${lst.join('')}</ul>`,
-		start_readpos: refstart + 1 // Start position of read
+		start_readpos: refstart + 1, // Start position of read
+		boxes: seg.boxes,
+		readpanel_DN_maxlength: readpanel_DN_maxlength
 	}
 	if (soft_present == 1) {
 		seq_data.soft_starts = soft_starts
