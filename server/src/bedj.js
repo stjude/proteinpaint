@@ -664,36 +664,39 @@ async function do_query(req, genomes) {
 			}
 			for (const [e_idx, e] of item.coding.entries()) {
 				// each exon, they are ordered 5' to 3'
+				// e0/e1 for translatable bp range of this exon; may be modified for non-default reading frame
+				let [e0, e1] = e
+
 				if (minustrand) {
-					if (e[0] >= item.stop) {
+					if (e0 >= region.stop) {
 						// e is not yet in view range
-						cds += e[1] - e[0]
+						cds += e1 - e0
 						if (e_idx == 0 && item.startCodonFrame) {
 							cds -= 3 - item.startCodonFrame // see below
 						}
 						continue
 					}
-					if (e[1] <= item.start) {
+					if (e1 <= region.start) {
 						// e is out of view range
 						break
 					}
 				} else {
-					if (e[1] <= item.start) {
+					if (e1 <= region.start) {
 						// e is not yet in view range
-						cds += e[1] - e[0]
+						cds += e1 - e0
 						if (e_idx == 0 && item.startCodonFrame) {
 							cds -= 3 - item.startCodonFrame
 						}
 						continue
 					}
-					if (e[0] >= item.stop) {
+					if (e0 >= region.stop) {
 						// e is out of view range
 						break
 					}
 				}
 
 				// this exon "e" overlaps with view range; will print codon on it
-				let [e0, e1] = e // e0/e1 for translatable bp range of this exon
+
 				if (e_idx == 0 && item.startCodonFrame) {
 					// this is first coding exon and the gene is not using default frame;
 					// must skip 1 or 2 bp from 5' of this exon, thus adding to e0 or removing from e1
@@ -718,8 +721,8 @@ async function do_query(req, genomes) {
 					}
 				}
 
-				const lookstart = Math.max(item.start, e0),
-					lookstop = Math.min(item.stop, e1)
+				const lookstart = Math.max(region.start, e0),
+					lookstop = Math.min(region.stop, e1)
 				if (minustrand) {
 					cds += e1 - lookstop
 				} else {
