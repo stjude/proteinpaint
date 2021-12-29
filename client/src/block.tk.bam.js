@@ -1986,23 +1986,24 @@ async function getReadInfo(tk, block, box, ridx) {
 				let segstop
 				let local_alignment_width = 0 // This variable stores the width of each gene model that needs to be rendered using bedj track
 				//const gene_model_tr = read_reference_div.node().children[0].append('tr')
-				console.log('read_reference_div:', read_reference_div.node().children[0].getElementsByTagName('tbody')[0])
+				//console.log('read_reference_div:', read_reference_div.node().children[0].getElementsByTagName('tbody')[0])
 				const tbodyRef = read_reference_div.node().children[0].getElementsByTagName('tbody')[0]
 				const gene_model_tr = tbodyRef.insertRow()
-				console.log('gene_model_tr:', gene_model_tr)
 				//const blank_gene_td = gene_model_tr.append('td').text('Hello')
 				const heading_gene_cell = gene_model_tr.insertCell()
 				const heading_gene_text = document.createTextNode('Gene models')
 				heading_gene_cell.appendChild(heading_gene_text)
 
 				const gene_models = []
+				const break_points = []
 				let num_break_points = 0 // Number of break points in reference sequence w.r.t read
+				let gene_model_td
 				for (const item of data.lst[0].boxes) {
 					//console.log('i:', i)
 					//console.log('item:', item)
 					if (item.opr == 'H') {
 						// Hard clip should be towards an end of a segment and there should be no corresponding sequence, so no gene models need to be shown (Needs to be tested with an example)
-						break
+						continue
 					} else if (
 						item.opr == 'M' ||
 						item.opr == 'S' ||
@@ -2010,14 +2011,16 @@ async function getReadInfo(tk, block, box, ridx) {
 						(item.opr == 'D' && item.len < data.lst[0].readpanel_DN_maxlength) // if length of deletion is less than readpanel_DN_maxlength the reference sequence is retained and no break is observed, so this part will be covered by the gene model
 					) {
 						for (let j = 0; j < item.len; j++) {
-							if (nuc_count + 1 < read_reference_div.node().children[0].children[0].children[0].cells.length) {
-								local_alignment_width += read_reference_div.node().children[0].children[0].children[0].children[
-									nuc_count + 1
-								].offsetWidth // Adding the number of pixels from this column to local_alignment_width
-							}
+							//if (nuc_count + 1 < read_reference_div.node().children[0].children[0].children[0].cells.length) {
+							local_alignment_width += read_reference_div.node().children[0].children[0].children[0].children[
+								nuc_count + 1
+							].offsetWidth // Adding the number of pixels from this column to local_alignment_width
+							//}
 							nuc_count += 1
 						}
 						gm_nuc_count += item.len
+						//console.log('item.opr:', item.opr)
+						//console.log('gm_nuc_count:', gm_nuc_count)
 					} else if (
 						item.opr == 'I' ||
 						(item.opr == 'N' && item.len >= data.lst[0].readpanel_DN_maxlength) ||
@@ -2032,11 +2035,21 @@ async function getReadInfo(tk, block, box, ridx) {
 							height: gene_model.height,
 							colspan: gm_nuc_count
 						}
+						//console.log('gm:', gm)
 						gene_models.push(gm)
-						//console.log('gene_model:', gene_model)
 
-						nuc_count += item.len
-						segstart = item.start + item.len
+						if (item.opr == 'I') {
+							break_points.push(item.len) // Passing the length of insertion
+						} else if (item.opr == 'N' || item.opr == 'D') {
+							break_points.push(1) // In case of big deletions and splicing it only occupies a single cell
+						}
+
+						if (item.opr == 'D' || item.opr == 'N') {
+							segstart = item.start + item.len
+						} else if (item.opr == 'I') {
+							segstart = item.start
+						}
+
 						local_alignment_width = 0
 						gm_nuc_count = 0
 						num_break_points += 1
@@ -2044,8 +2057,7 @@ async function getReadInfo(tk, block, box, ridx) {
 
 					if (i == data.lst[0].boxes.length - 1) {
 						// Render bedj gene model if it has reached the last entry in CIGAR sequence
-						segstop = item.start
-						//console.log('Hello2', segstart, segstop)
+						segstop = item.start + item.len
 						const gene_model = await get_gene_models(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
 						const gm = {
 							src: gene_model.src,
@@ -2053,15 +2065,33 @@ async function getReadInfo(tk, block, box, ridx) {
 							height: gene_model.height,
 							colspan: gm_nuc_count
 						}
+						//console.log('gm:', gm)
 						gene_models.push(gm)
-						//console.log('gene_model:', gene_model)
 					}
 					i += 1
 				}
 
 				let num_gene_cells = num_break_points + gene_models.length // Number of gene cells required in gene row
-
-				for (let i = 0; i < num_gene_cells; i++) {}
+				let j = 0
+				let k = 0
+				for (let i = 0; i < num_gene_cells; i++) {
+					const gene_model_cell = gene_model_tr.insertCell()
+					if (i % 2 == 0) {
+						// Render gene model
+						const img = document.createElement('img')
+						img.src = gene_models[k].src
+						img.width = gene_models[k].width
+						img.height = gene_models[k].height
+						gene_model_cell.appendChild(img)
+						gene_model_cell.colSpan = gene_models[k].colspan
+						k += 1
+					} else {
+						// Gap representing insertion / (big) deletion showing break in reference sequence
+						gene_model_cell.colSpan = break_points[j]
+						j += 1
+					}
+				}
+				//console.log('gene_model_tr:', gene_model_tr)
 			})
 
 		mayshow_blatbutton(r, row, tk, block)
