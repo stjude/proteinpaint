@@ -2973,7 +2973,7 @@ async function convertread2html(seg, genome, query) {
 
 	let seq_data = {
 		seq: seg.seq,
-		alignment: `<table style="border-spacing:0px;border-collapse:separate;text-align:center">
+		alignment: `<table style="border-spacing:0px;border-collapse:separate;text-align:center;font-family:courier">
 			  <tr style="opacity:.6">${reflst.join('')}</tr>
 			  <tr style="color:white">${querylst.join('')}</tr>
 			</table>`,
