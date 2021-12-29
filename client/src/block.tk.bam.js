@@ -1991,7 +1991,7 @@ async function getReadInfo(tk, block, box, ridx) {
 				const gene_model_tr = tbodyRef.insertRow()
 				//const blank_gene_td = gene_model_tr.append('td').text('Hello')
 				const heading_gene_cell = gene_model_tr.insertCell()
-				const heading_gene_text = document.createTextNode('Gene models')
+				const heading_gene_text = document.createTextNode('')
 				heading_gene_cell.appendChild(heading_gene_text)
 
 				const gene_models = []
