@@ -10,6 +10,12 @@ should guard against file content error e.g. two tabs separating columns
 
 genome=? is only required for gene tracks that will be translated, otherwise not required
 
+req.query{}
+.noNameHover
+	if true, do not show "hovering" name on the bed item
+	used for showing gene model in bam read panel
+TODO add parameters
+
 */
 
 const namespace = 1 // one pixel between the gene label name and the item structure
@@ -595,7 +601,7 @@ async function do_query(req, genomes) {
 			ctx.textAlign = c.textalign
 			ctx.fillStyle = fillcolor
 			ctx.fillText(c.namestr, c.namestart, y + stackheight / 2)
-		} else if (c.namehover) {
+		} else if (c.namehover && !req.query.noNameHover) {
 			const x = Math.max(10, c.start + 10)
 			ctx.fillStyle = 'white'
 			ctx.fillRect(x, y, c.namewidth + 10, stackheight)
@@ -783,7 +789,7 @@ async function do_query(req, genomes) {
 				}
 			}
 		}
-		if (c.namehover) {
+		if (c.namehover && !req.query.noNameHover) {
 			ctx.font = 'bold ' + fontsize + 'px Arial'
 			const x = Math.max(10, c.start + 10)
 			ctx.fillStyle = 'white'

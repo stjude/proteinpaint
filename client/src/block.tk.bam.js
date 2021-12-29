@@ -2160,7 +2160,8 @@ async function get_gene_models(block, ridx, segstart, segstop, local_alignment_w
 		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
 		color: genetk.color,
 		translatecoding: 1,
-		__isgene: true
+		__isgene: true,
+		noNameHover: true
 	}
 	//console.log('args:', JSON.stringify(args))
 	return await dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(args) })
