@@ -8,14 +8,61 @@ const nt2aa = require('../shared/common').nt2aa
 /*
 should guard against file content error e.g. two tabs separating columns
 
-genome=? is only required for gene tracks that will be translated, otherwise not required
+************ req.query{}
+.genome: str
+	only required for gene tracks that will be translated, otherwise not required
+.name: str
+	not used
+.file:
+	tp file path
+.rglst: []
+	{chr, start, stop, width}
+	start is 0-based
+	stop is non-inclusive (e.g. start:019, stop:119 to show 100bp range)
+	width: real number, #pixel width of this region
 
-req.query{}
-.noNameHover
-	if true, do not show "hovering" name on the bed item
-	used for showing gene model in bam read panel
-TODO add parameters
+## filtering on bed items
 
+## short cut to retrieve data without rendering
+
+.getdata: true
+	if true, will return bed data and do not render image
+	rendering-related parameters will be ignored
+.getBED: true
+	may set when getdata=true.
+	will only return first 3 columns of each bed item
+	used for getting data from hic fragment file
+	may generalize as getBED=n to return n columns of data
+
+## rendering parameters
+
+.regionspace: int
+	#pixel width between two regions
+.width: real
+	total width of all regions
+.stackheight: int
+	row height shared by all rows
+.stackspace: int
+	#pixel spacing between rows
+.color:
+	optional global color; can be overwritten by item.color
+.translatecoding: true
+	if true, will translate coding sequence as defined by item.coding[]
+.__isgene: true
+	if true, while rendering, will return gene model data when there're less than 50 in view range
+	quick fix for old junction track
+.noNameHover: true
+	if true, do not render the left-side "hovering" item name when the item is clipped on both ends
+	used for showing sections of gene model in bam read panel
+.categories: { key: { color } }
+	if provided, for items with .category attribute, will look for the given color in this hash
+	and use to render that item
+
+************ item data structure
+.canvas{}
+	The coordinates and attributes of items (i.e. exons and introns) and, 
+	if applicable, the gene name/label. Necessary for event handlers, specifically click events
+	and tooltip rendering. 
 */
 
 const namespace = 1 // one pixel between the gene label name and the item structure
@@ -28,12 +75,6 @@ const altcolor = 'rgba(122,103,44,.7)',
 	startcolor = 'rgba(0,255,0,.4)',
 	stopcolor = 'rgba(255,0,0,.5)',
 	skippedBpColor = '#ccc'
-
-/*
-item.canvas{}: The coordinates and attributes of items (i.e. exons and introns) and, 
-if applicable, the gene name/label. Necessary for event handlers, specifically click events
-and tooltip rendering. 
-*/
 
 module.exports = genomes => {
 	return async (req, res) => {
