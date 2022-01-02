@@ -14,12 +14,11 @@
 <script>
 /*
 call the makeURL() to make URLs
-each element defines one type of feature showing in a row
-with a number of URLs demonstrating different examples of this feature
+argument is an array; each element defines a set of example URLs showing in a row
 .name: string
 .links: []
    each element is a text or array of length 2
-   text: create <span> to display text
+   text: create <span> to display text, no url
    array: [0]: URL label
           [1]: URL path name
 */
@@ -54,6 +53,12 @@ makeURL([
 		['ETV6 SV', '?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/etv6runx1.bam&position=chr12:12023245-12023802'],
 		['CBFB inversion','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/CBFB-MYH11.bam&position=chr16:67115815-67117415'],
 		['FLAG 0/16','?genome=hg19&block=1&position=chr12:25380685-25381606&bamfile=flag,proteinpaint_demo/hg19/bam/flagproblem.bam'],
+		'ERR:',
+		['missing','?genome=hg19&block=1&bamfile=flag,path/to/missing.bam'],
+		['text','?genome=hg19&block=1&bamfile=flag,proteinpaint_demo/hg19/junction/rnapeg'],
+		['gz','?genome=hg19&block=1&bamfile=flag,proteinpaint_demo/hg19/junction/file.gz'],
+		['no index','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/noIndex.bam'],
+		['wrong index','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/wrongIndex.bam'],
 	]
 },
 { name:'GDC BAM slice',
@@ -96,7 +101,13 @@ makeURL([
 {name:'bedj',
 	links:[
 		['bedj','?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz'],
-		['bed3','?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz']
+		['bed3','?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz'],
+		'ERR:',
+		['missing','?block=on&genome=hg19&bedjfile=JSON-BED,path/to/missing.gz'],
+		['text file','?genome=hg19&block=1&bedjfile=flag,proteinpaint_demo/hg19/junction/rnapeg'],
+		['bam','?genome=hg19&block=1&position=chr12:25380685-25381606&bedjfile=flag,proteinpaint_demo/hg19/bam/flagproblem.bam'],
+		['no index','?genome=hg19&block=1&bedjfile=no%20index,proteinpaint_demo/hg19/bedj/noIndex.gz'],
+		['wrong index','?genome=hg19&block=1&bedjfile=wrong%20index,proteinpaint_demo/hg19/bedj/wrongIndex.gz'],
 	]
 },
 {name:'bampile',
@@ -646,6 +657,13 @@ function makeURL(rows) {
 }
 
 </script>
+
+<div style="margin-top:30px;color:#858585">
+<p>Above links use files from "tp/proteinpaint_demo/" folder on your system, and share files with App Drawer and <code>server/features.json</code>.</p>
+<p>These test files should be publicly sharable (with patient identifier removed etc), and should be kept in sync between your computer, hpc, and prp1.</p>
+<p>A tarball of the entire proteinpaint_demo/ folder is available at https://pecan.stjude.cloud/static/pp-support/pp.demo.tgz</p>
+
+</div>
 
 </body>
 </html>
