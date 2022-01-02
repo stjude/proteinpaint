@@ -842,7 +842,7 @@ function handle_genelookup(req, res) {
 	const g = genomes[req.query.genome]
 	if (!g) return res.send({ error: 'invalid genome name' })
 
-	if (!validator.genomicName(req.query.input, g)) return res.send({ error: 'invalid character in gene name' })
+	if (g.genomicNameRegexp.test(req.query.input)) return res.send({ error: 'invalid character in gene name' })
 
 	if (req.query.deep) {
 		///////////// deep
@@ -942,9 +942,10 @@ function handle_pdomain(req, res) {
 			// no error
 			return res.send({ lst: [] })
 		}
-		const set = validator.genomicNameLst(req.query.isoforms, g)
+		if (!Array.isArray(req.query.isoforms)) throw 'isoforms[] missing'
 		const lst = []
-		for (const isoform of set) {
+		for (const isoform of req.query.isoforms) {
+			if (g.genomicNameRegexp.test(isoform)) continue
 			const tmp = g.proteindomain.getbyisoform.all(isoform)
 			// FIXME returned {data} is text not json
 			lst.push({
@@ -1298,7 +1299,7 @@ async function handle_snp(req, res) {
 			// query dbSNP bigbed file by coordinate
 			// input query coordinates need to be 0-based
 			// output snp coordinates are 0-based
-			if (!validator.genomicName(req.query.chr, g)) throw 'invalid chr'
+			if (g.genomicNameRegexp.test(req.query.chr)) throw 'invalid chr name'
 			if (!Array.isArray(req.query.ranges)) throw 'ranges not an array'
 			for (const r of req.query.ranges) {
 				// require start/stop of a range to be non-neg integers, as a measure against attack
@@ -1329,10 +1330,11 @@ async function handle_snp(req, res) {
 				}
 			}
 		} else if (req.query.byName) {
-			const set = validator.genomicNameLst(req.query.lst, g)
-			for (const n of set) {
+			if (!Array.isArray(req.query.lst)) throw '.lst[] missing'
+			for (const n of req.query.lst) {
 				// query dbSNP bigbed file by rsID
 				// see above for description of output snp fields
+				if (g.genomicNameRegexp.test(n)) continue
 				const snps = await utils.query_bigbed_by_name(g.snp.bigbedfile, n)
 				for (const snp of snps) {
 					const hit = snp2hit(snp)
@@ -1479,7 +1481,7 @@ function handle_dsdata_makequery(ds, query, req) {
 
 	if (req.query.isoform) {
 		// quick fix!! deflect attacks from isoform parameter to avoid db query
-		if (!validator.genomicName(req.query.isoform, genomes[req.query.genome])) return
+		if (genomes[req.query.genome].genomicNameRegexp.test(req.query.isoform)) return
 	}
 
 	const [sqlstr, values] = query.makequery(req.query)
@@ -1555,9 +1557,10 @@ function handle_isoformlst(req, res) {
 	try {
 		const g = genomes[req.query.genome]
 		if (!g) throw 'invalid genome'
-		const set = validator.genomicNameLst(req.query.lst, g)
+		if (!Array.isArray(req.query.lst)) throw '.lst missing'
 		const lst = []
-		for (const isoform of set) {
+		for (const isoform of req.query.lst) {
+			if (g.genomicNameRegexp.test(isoform)) continue
 			const tmp = g.genedb.getjsonbyisoform.all(isoform)
 			lst.push(
 				tmp.map(i => {
@@ -7682,12 +7685,22 @@ async function pp_init() {
 			Proteinpaint packaged files[] 
 		*/
 		const overrideFile = path.join(process.cwd(), g.file)
+
+		/* g is the object from serverconfig.json, for instance-specific customizations of this genome
+		g2 is the standard-issue obj loaded from the js file
+		settings in g will modify g2
+		g2 is registered in the global "genomes"
+		*/
 		const g2 = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : g.file)
+		genomes[g.name] = g2
 
 		if (!g2.genomefile) throw '.genomefile missing from .js file of genome ' + g.name
 		g2.genomefile = path.join(serverconfig.tpmasterdir, g2.genomefile)
 
-		genomes[g.name] = g2
+		// for testing if gene/isoform/chr/snp names have only allowed characters
+		// test to true if name has extra characters which could be attack strings
+		// allow for genome-specific pattern setting, otherwise default is used
+		g2.genomicNameRegexp = new RegExp(g2.genomicNameRegexpString || '[^a-zA-Z0-9.:_-]')
 
 		if (!g2.tracks) {
 			g2.tracks = [] // must always have .tracks even if empty

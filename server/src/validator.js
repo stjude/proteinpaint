@@ -1,49 +1,5 @@
 const app = require('./app')
 
-/* characters that are not supposed to be found in names of gene/isoform/chr/snp etc
-when these are found, will avoid querying against db or bb file using these strings
-as a way to deflect attacks
-
-when names from a genome do contain such characters:
-option 1: delete it from this array to disable checking it on all genomes
-option 2: set a flag in the genomeobj to disable the check on that character,
-          while still allowing to check on other genomes
-          see genomicName() for implementation
-
-allowed characters: : . - _
-*/
-const illegalNameChar = [
-	' ',
-	',',
-	';',
-	'~',
-	'`',
-	'!',
-	'@',
-	'#',
-	'$',
-	'%',
-	'^',
-	'&',
-	'*',
-	'(',
-	')',
-	'=',
-	'+',
-	'{',
-	'}',
-	'[',
-	']',
-	'|',
-	'\\',
-	'/',
-	'<',
-	'>',
-	"'",
-	'"',
-	'?'
-]
-
 const byIpAddr = {}
 
 app.catch = function(req, res, error) {
@@ -120,32 +76,4 @@ export const byExpectedVal = {
 			throw error
 		}
 	}
-}
-
-export function genomicNameLst(lst, genome) {
-	// lst is array of gene/isoform/chr/snp names from request parameter
-	// skip empty string, non-string, those with illegal characters
-	// deduplicate
-	if (!Array.isArray(lst)) throw 'input is not array'
-	const set = new Set()
-	for (const i of lst) {
-		if (genomicName(i, genome)) set.add(i)
-	}
-	return set
-}
-
-export function genomicName(str, genome) {
-	// if anything invalid, return undefined
-	// else, return true
-	if (str == '') return // skip empty string
-	if (typeof str != 'string') return
-	// genome may define if certain characters are allowed for isoform names of a genome
-	for (const c of illegalNameChar) {
-		/*
-		example implementation of allowing certain char for a genome
-		if(genome.allowInName_semicolon && c==';') continue
-		*/
-		if (str.includes(c)) return
-	}
-	return true
 }
