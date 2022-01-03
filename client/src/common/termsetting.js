@@ -122,7 +122,7 @@ class TermSetting {
 			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
 			await this.setHandler()
 			this.updateUI()
-			if (data.term && this.validateQ) this.validateQ(data)
+			if (data.term && this.term.handler && this.handler.validateQ) this.handler.validateQ(data)
 			if (this.addCategory2sampleCounts) this.addCategory2sampleCounts()
 		} catch (e) {
 			this.hasError = true
@@ -217,7 +217,7 @@ function setRenderers(self) {
 
 		// has term
 		// add info button for terms with meta data
-		if (self.term && self.term && self.term.hashtmldetail) {
+		if (self.term && self.term.hashtmldetail) {
 			if (self.opts.buttons && !self.opts.buttons.includes('info')) self.opts.buttons.unshift('info')
 			else self.opts.buttons = ['info']
 		}
@@ -518,7 +518,7 @@ function valid_binscheme(q) {
 		// throw `${JSON.stringify(unsupportedKeys)} not supported for q.mode='continuous'`
 		return true
 	}*/
-	if (q.type == 'custom') {
+	if (q.type == 'custom-bin') {
 		if (!Array.isArray(q.lst)) return false
 		if (!q.mode) q.mode = 'discrete'
 		return true

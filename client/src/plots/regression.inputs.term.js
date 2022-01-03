@@ -347,7 +347,7 @@ async function maySetTwoBins(tw, vocabApi, filter, state) {
 	const median = tw.term.type == 'integer' ? Math.round(data.values[0]) : Number(data.values[0].toFixed(2))
 	tw.q = {
 		mode: 'binary',
-		type: 'custom',
+		type: 'custom-bin',
 		lst: [
 			{
 				startunbounded: true,

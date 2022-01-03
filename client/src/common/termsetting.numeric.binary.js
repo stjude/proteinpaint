@@ -113,7 +113,7 @@ function setqDefaults(self) {
 
 		cache[t.id].binary = {
 			mode: 'binary',
-			type: 'custom',
+			type: 'custom-bin',
 			modeBinaryCutoffType: 'normal', // default value
 			modeBinaryCutoffPercentile: 50, // default value
 			lst: [

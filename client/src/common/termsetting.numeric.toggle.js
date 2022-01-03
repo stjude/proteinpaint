@@ -54,7 +54,7 @@ export function getHandler(self) {
 					label: 'Discrete',
 					callback: async div => {
 						self.q.mode = 'discrete'
-						if (!self.q.type || self.q.type != 'custom') self.q.type = 'regular'
+						if (!self.q.type || self.q.type != 'custom-bin') self.q.type = 'regular'
 						if (tabs[1].isRendered) return
 						tabs[1].isRendered = true
 						await self.handlerByType['numeric.discrete'].showEditMenu(div)

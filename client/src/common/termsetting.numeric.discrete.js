@@ -71,7 +71,7 @@ function applyEdits(self) {
 		self.numqByTermIdModeType[self.term.id].discrete.regular = JSON.parse(JSON.stringify(self.q))
 	} else {
 		self.q.lst = processCustomBinInputs(self)
-		self.numqByTermIdModeType[self.term.id].discrete.custom = JSON.parse(JSON.stringify(self.q))
+		self.numqByTermIdModeType[self.term.id].discrete['custom-bin'] = JSON.parse(JSON.stringify(self.q))
 	}
 	self.q.mode = 'discrete'
 	self.dom.tip.hide()
@@ -140,11 +140,11 @@ function setqDefaults(self) {
 					: self.opts.use_bins_less && t.bins.less
 					? JSON.parse(JSON.stringify(t.bins.less))
 					: JSON.parse(JSON.stringify(t.bins.default)),
-			custom:
-				self.q && self.q.type == 'custom'
+			'custom-bin':
+				self.q && self.q.type == 'custom-bin'
 					? self.q
 					: {
-							type: 'custom',
+							type: 'custom-bin',
 							lst: [
 								{
 									startunbounded: true,
@@ -257,10 +257,10 @@ function renderTypeInputs(self) {
 			}
 		},
 		{
-			active: self.q.type == 'custom' ? true : false,
+			active: self.q.type == 'custom-bin' ? true : false,
 			label: 'Varying bin sizes',
 			callback: async div => {
-				self.q.type = 'custom'
+				self.q.type = 'custom-bin'
 				self.dom.bins_div = bins_div
 				setqDefaults(self)
 				setDensityPlot(self)
