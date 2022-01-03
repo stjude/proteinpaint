@@ -1491,16 +1491,7 @@ function updateExistingMultiReadAligInfo(tk, read_number) {
 	})
 }
 
-async function getMultiReadAligInfo(tk, group, block) {
-	appear(tk.alignpane.pane)
-	tk.alignpane.pane.style('display', 'table')
-	tk.alignpane.header.text('Alignment info')
-	tk.alignpane.body.selectAll('*').remove()
-	const wait = tk.alignpane.body.append('div').text('Loading...')
-	const multi_read_alig_data = await align_reads_to_allele(tk, group, block) // Sending server side request for aligning reads to ref/alt
-	//console.log('multi_read_alig_data.alignmentData:', multi_read_alig_data.alignmentData)
-	wait.remove()
-
+async function create_read_alignment_table(tk, multi_read_alig_data, group, gene_models) {
 	let num_read_div
 	if (group.data.type == 'support_alt') {
 		num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
@@ -1670,6 +1661,9 @@ async function getMultiReadAligInfo(tk, group, block) {
 
 	// Drawing alignments for ref/alt allele and each of the reads
 	let read_count = 0
+	let refalt_seq
+	let left_most_pos // Left most position of reference/alternate sequence, useful when displaying gene models
+	let right_most_pos // Right most position of reference/alternate sequence, useful when displaying gene models
 	for (const read of multi_read_alig_data.alignmentData.final_read_align) {
 		const read_tr = tk.readAlignmentTable
 			.append('tr')
@@ -1679,6 +1673,12 @@ async function getMultiReadAligInfo(tk, group, block) {
 		const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
 		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
 
+		// Determine breaks in reference/alternate sequence
+		if (read_count == 0 && gene_models == true) {
+			refalt_seq = read
+			left_most_pos = tk.variants[0].pos - tk.variants[0].leftflankseq.length
+			right_most_pos = tk.variants[0].pos + tk.variants[0].rightflankseq.length
+		}
 		let nclt_count = 0
 		for (const nclt of read) {
 			nclt_count += 1
@@ -1690,6 +1690,10 @@ async function getMultiReadAligInfo(tk, group, block) {
 					.style('background-color', 'white')
 					.style('color', 'black')
 					.style('font-weight', '550')
+			} else if (read_count == 1 && gene_models == true) {
+				// Drawing gene models after ref/alt sequence when gene_models button is clicked
+				const gene_models_td = read_tr.append('td')
+				continue // Prevent highlighting of nucleotides since its irrelevant when showing gene models
 			} else {
 				nclt_td = read_tr
 					.append('td')
@@ -1728,6 +1732,29 @@ async function getMultiReadAligInfo(tk, group, block) {
 		}
 		read_count += 1
 	}
+}
+
+async function getMultiReadAligInfo(tk, group, block) {
+	appear(tk.alignpane.pane)
+	tk.alignpane.pane.style('display', 'table')
+	tk.alignpane.header.text('Alignment info')
+	tk.alignpane.body.selectAll('*').remove()
+	const wait = tk.alignpane.body.append('div').text('Loading...')
+	const multi_read_alig_data = await align_reads_to_allele(tk, group, block) // Sending server side request for aligning reads to ref/alt
+	//console.log('multi_read_alig_data.alignmentData:', multi_read_alig_data.alignmentData)
+	wait.remove()
+
+	console.log('tk:', tk)
+	let gene_button_div = tk.alignpane.body
+	const gene_button = gene_button_div
+		.append('button')
+		.style('margin-left', '10px')
+		.text('Show gene model')
+		.on('click', async () => {
+			gene_button.property('disabled', true) // disable this button
+			create_read_alignment_table(tk, multi_read_alig_data, group, true)
+		})
+	create_read_alignment_table(tk, multi_read_alig_data, group, false)
 }
 
 async function getReadInfo(tk, block, box, ridx) {
