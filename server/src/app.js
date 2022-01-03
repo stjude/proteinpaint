@@ -79,7 +79,8 @@ const express = require('express'),
 	do_hicstat = require('./hicstat').do_hicstat,
 	mdsgeneboxplot_closure = require('./mds.geneboxplot').default,
 	phewas = require('./termdb.phewas'),
-	handle_mdssurvivalplot = require('./km').handle_mdssurvivalplot
+	handle_mdssurvivalplot = require('./km').handle_mdssurvivalplot,
+	validator = require('./validator')
 
 /*
 valuable globals
@@ -109,7 +110,15 @@ app.use(bodyParser.json({}))
 app.use(bodyParser.text({ limit: '1mb' }))
 app.use(bodyParser.urlencoded({ extended: true }))
 
-app.use((req, res, next) => {
+app.use((error, req, res, next) => {
+	if (error) {
+		if (error && error.type == 'entity.parse.failed') {
+			res.send({ error: 'invalid request body, must be a valid JSON-encoded object' })
+		} else {
+			res.send({ error })
+		}
+		return
+	}
 	res.header('Access-Control-Allow-Origin', '*')
 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
 	if (req.method == 'GET' && !req.path.includes('.')) {
@@ -120,6 +129,8 @@ app.use((req, res, next) => {
 	}
 	next()
 })
+
+app.use(validator.middleware)
 
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
@@ -830,7 +841,9 @@ function handle_genelookup(req, res) {
 	if (reqbodyisinvalidjson(req, res)) return
 	const g = genomes[req.query.genome]
 	if (!g) return res.send({ error: 'invalid genome name' })
-	if (!req.query.input) return res.send({ error: 'no input' })
+
+	if (g.genomicNameRegexp.test(req.query.input)) return res.send({ error: 'invalid character in gene name' })
+
 	if (req.query.deep) {
 		///////////// deep
 
@@ -929,10 +942,10 @@ function handle_pdomain(req, res) {
 			// no error
 			return res.send({ lst: [] })
 		}
-		if (!req.query.isoforms) throw 'isoforms missing'
-
+		if (!Array.isArray(req.query.isoforms)) throw 'isoforms[] missing'
 		const lst = []
 		for (const isoform of req.query.isoforms) {
+			if (g.genomicNameRegexp.test(isoform)) continue
 			const tmp = g.proteindomain.getbyisoform.all(isoform)
 			// FIXME returned {data} is text not json
 			lst.push({
@@ -1286,7 +1299,7 @@ async function handle_snp(req, res) {
 			// query dbSNP bigbed file by coordinate
 			// input query coordinates need to be 0-based
 			// output snp coordinates are 0-based
-			if (!req.query.chr) throw 'chr missing'
+			if (g.genomicNameRegexp.test(req.query.chr)) throw 'invalid chr name'
 			if (!Array.isArray(req.query.ranges)) throw 'ranges not an array'
 			for (const r of req.query.ranges) {
 				// require start/stop of a range to be non-neg integers, as a measure against attack
@@ -1317,10 +1330,11 @@ async function handle_snp(req, res) {
 				}
 			}
 		} else if (req.query.byName) {
-			if (!req.query.lst) throw 'lst missing'
+			if (!Array.isArray(req.query.lst)) throw '.lst[] missing'
 			for (const n of req.query.lst) {
 				// query dbSNP bigbed file by rsID
 				// see above for description of output snp fields
+				if (g.genomicNameRegexp.test(n)) continue
 				const snps = await utils.query_bigbed_by_name(g.snp.bigbedfile, n)
 				for (const snp of snps) {
 					const hit = snp2hit(snp)
@@ -1464,6 +1478,12 @@ async function handle_dsdata(req, res) {
 
 function handle_dsdata_makequery(ds, query, req) {
 	// query from ds.newconn
+
+	if (req.query.isoform) {
+		// quick fix!! deflect attacks from isoform parameter to avoid db query
+		if (genomes[req.query.genome].genomicNameRegexp.test(req.query.isoform)) return
+	}
+
 	const [sqlstr, values] = query.makequery(req.query)
 	if (!sqlstr) {
 		// when not using gm, will not query tables such as expression
@@ -1537,9 +1557,10 @@ function handle_isoformlst(req, res) {
 	try {
 		const g = genomes[req.query.genome]
 		if (!g) throw 'invalid genome'
-		if (!req.query.lst) return res.send({ lst: [] })
+		if (!Array.isArray(req.query.lst)) throw '.lst missing'
 		const lst = []
 		for (const isoform of req.query.lst) {
+			if (g.genomicNameRegexp.test(isoform)) continue
 			const tmp = g.genedb.getjsonbyisoform.all(isoform)
 			lst.push(
 				tmp.map(i => {
@@ -7534,13 +7555,21 @@ exports.fileurl = fileurl
 
 function reqbodyisinvalidjson(req, res) {
 	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
+		if (req.headers['content-type'] == 'application/json') {
+			// the bodyParser.json() middleware will pre-parse the req.body
+			req.query = req.body
+		} else {
+			req.query = JSON.parse(req.body)
+		}
+
+		if (typeof req.query != 'object') throw 'invalid request body'
+		// FIXME should log request in validator middleware
+		log(req)
+		return false
+	} catch (error) {
+		res.send({ error })
 		return true
 	}
-	log(req)
-	return false
 }
 exports.reqbodyisinvalidjson = reqbodyisinvalidjson
 
@@ -7656,12 +7685,22 @@ async function pp_init() {
 			Proteinpaint packaged files[] 
 		*/
 		const overrideFile = path.join(process.cwd(), g.file)
+
+		/* g is the object from serverconfig.json, for instance-specific customizations of this genome
+		g2 is the standard-issue obj loaded from the js file
+		settings in g will modify g2
+		g2 is registered in the global "genomes"
+		*/
 		const g2 = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : g.file)
+		genomes[g.name] = g2
 
 		if (!g2.genomefile) throw '.genomefile missing from .js file of genome ' + g.name
 		g2.genomefile = path.join(serverconfig.tpmasterdir, g2.genomefile)
 
-		genomes[g.name] = g2
+		// for testing if gene/isoform/chr/snp names have only allowed characters
+		// test to true if name has extra characters which could be attack strings
+		// allow for genome-specific pattern setting, otherwise default is used
+		if (!g2.genomicNameRegexp) g2.genomicNameRegexp = /[^a-zA-Z0-9.:_-]/
 
 		if (!g2.tracks) {
 			g2.tracks = [] // must always have .tracks even if empty
