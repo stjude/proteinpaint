@@ -18,7 +18,7 @@ module.exports = function setRoutes(app, basepath) {
 		next()
 	})
 	app.post('/gdc/ssid', async (req, res) => {
-		const q = JSON.parse(req.body)
+		const q = req.body
 		const i = sessions.indexOf(q.token)
 		if (q.action == 'delete') {
 			if (i != -1) {

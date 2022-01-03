@@ -24,7 +24,8 @@ app.catch = function(req, res, error) {
 
 export function middleware(req, res, next) {
 	try {
-		const q = typeof req.body === 'string' ? JSON.parse(req.body) : req.body // || req.params
+		// NOTE: a preceding middleware combines req.query with req.body in a POST request
+		const q = req.query
 		for (const key in q) {
 			if (key in byReqKey) q[key] = byReqKey[key](q[key])
 		}

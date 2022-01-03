@@ -113,7 +113,6 @@ const altcolor = 'rgba(122,103,44,.7)',
 
 module.exports = genomes => {
 	return async (req, res) => {
-		if (app.reqbodyisinvalidjson(req, res)) return
 		try {
 			res.send(await do_query(req, genomes))
 		} catch (e) {

@@ -1,10 +1,3 @@
-// track fetch urls to restrict
-// simultaneous reporting for the same issue
-const fetchTimers = {}
-const fetchReported = {}
-const maxAcceptableFetchResponseTime = 15000 // disable with 0, or default to 15000 milliseconds
-const maxNumReportsPerSession = 2
-
 /*
 	path: URL
 	arg: HTTP request body
@@ -19,7 +12,17 @@ export function dofetch(path, arg, opts = null) {
 				opts.serverData = dofetch.serverData
 			}
 		}
-		return dofetch2(path, { method: 'POST', body: JSON.stringify(arg) }, opts)
+		return dofetch2(
+			path,
+			{
+				method: 'POST',
+				headers: {
+					'content-type': 'application/json'
+				},
+				body: JSON.stringify(arg)
+			},
+			opts
+		)
 	} else {
 		// path should be "path" but not "/path"
 		if (path[0] == '/') {
@@ -42,14 +45,15 @@ export function dofetch(path, arg, opts = null) {
 			}
 		}
 
-		trackfetch(url, arg)
-
-		return fetch(new Request(url, { method: 'POST', body: JSON.stringify(arg) })).then(data => {
-			if (fetchTimers[url]) {
-				clearTimeout(fetchTimers[url])
-			}
-			return data.json()
-		})
+		return fetch(
+			new Request(url, {
+				method: 'POST',
+				headers: {
+					'content-type': 'application/json'
+				},
+				body: JSON.stringify(arg)
+			})
+		).then(r => r.json())
 	}
 }
 
@@ -74,14 +78,6 @@ export function dofetch2(path, init = {}, opts = {}) {
 		path = path.slice(1)
 	}
 
-	const jwt = sessionStorage.getItem('jwt')
-	if (jwt) {
-		if (!init.headers) {
-			init.headers = {}
-		}
-		init.headers.authorization = 'Bearer ' + jwt
-	}
-
 	let url = path
 	const host = sessionStorage.getItem('hostURL') || window.testHost || ''
 	if (host) {
@@ -93,20 +89,26 @@ export function dofetch2(path, init = {}, opts = {}) {
 		}
 	}
 
+	if (!init.headers) {
+		init.headers = {}
+	}
+
+	if (!init.headers['content-type']) {
+		init.headers['content-type'] = 'application/json'
+	}
+
+	const jwt = sessionStorage.getItem('jwt')
+	if (jwt) {
+		init.headers.authorization = 'Bearer ' + jwt
+	}
+
 	const dataName = url + ' | ' + init.method + ' | ' + init.body
 
 	if (opts.serverData) {
 		if (!(dataName in opts.serverData)) {
-			trackfetch(url, init)
-			opts.serverData[dataName] = fetch(url, init).then(data => {
-				if (fetchTimers[url]) {
-					clearTimeout(fetchTimers[url])
-				}
-				// stringify to not share parsed response object
-				// to-do: support opt.freeze to enforce Object.freeze(data.json())
-				const prom = data.text()
-				return prom
-			})
+			// will cache data as text to not share parsed response object
+			// to-do: support opt.freeze to enforce Object.freeze(data.json())
+			opts.serverData[dataName] = fetch(url, init).then(data => data.text())
 		}
 
 		// manage the number of stored keys in serverData
@@ -120,13 +122,7 @@ export function dofetch2(path, init = {}, opts = {}) {
 
 		return opts.serverData[dataName].then(str => JSON.parse(str))
 	} else {
-		trackfetch(url, init)
-		return fetch(url, init).then(data => {
-			if (fetchTimers[url]) {
-				clearTimeout(fetchTimers[url])
-			}
-			return data.json()
-		})
+		return fetch(url, init).then(r => r.json())
 	}
 }
 
@@ -137,40 +133,4 @@ export function dofetch3(path, init = {}, opts = {}) {
 	*/
 	opts.serverData = defaultServerDataCache
 	return dofetch2(path, init, opts)
-}
-
-function trackfetch(url, arg) {
-	if (maxAcceptableFetchResponseTime < 1) return
-
-	// report slowness if the fetch does not respond
-	// within the acceptableResponseTime;
-	// if the server does respond in time,
-	// this timer will just be cleared by the
-	// fetch promise handler
-	if (
-		!fetchTimers[url] &&
-		!fetchReported[url] &&
-		Object.keys(fetchReported).length <= maxNumReportsPerSession &&
-		(window.location.hostname == 'proteinpaint.stjude.org' || sessionStorage.hostURL == 'proteinpaint.stjude.org')
-	) {
-		fetchTimers[url] = setTimeout(() => {
-			// do not send multiple reports for the same page
-			fetchReported[url] = 1
-
-			const opts = {
-				method: 'POST',
-				headers: {
-					'content-type': 'application/json'
-				},
-				body: JSON.stringify({
-					issue: 'slow response',
-					url, // server route
-					arg, // request body
-					page: window.location.href
-				})
-			}
-
-			fetch('https://pecan.stjude.cloud/api/issue-tracker', opts)
-		}, maxAcceptableFetchResponseTime)
-	}
 }
