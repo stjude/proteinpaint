@@ -1674,12 +1674,25 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group, gene
 		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
 
 		// Determine breaks in reference/alternate sequence
-		if (read_count == 0 && gene_models == true) {
+		let nclt_count = 0
+		if (gene_models == true) {
 			refalt_seq = read
 			left_most_pos = tk.variants[0].pos - tk.variants[0].leftflankseq.length
 			right_most_pos = tk.variants[0].pos + tk.variants[0].rightflankseq.length
+			for (const nclt of refalt_seq) {
+				if (nclt == '-') {
+					// Break in reference/alternate sequence caused by a read(s), will invoke a bedj request here
+				} else if (tk.variants[0].pos == nclt_count) {
+					// Variant causes break in gene model
+					if (tk.variants[0].ref.length == 1 && tk.variants[0].alt.length == 1) {
+						// In case of SNP no break in gene model is necessary
+						continue
+					}
+				}
+			}
+			nclt_count += 1
 		}
-		let nclt_count = 0
+		nclt_count = 0
 		for (const nclt of read) {
 			nclt_count += 1
 			let nclt_td
@@ -1752,6 +1765,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 		.text('Show gene model')
 		.on('click', async () => {
 			gene_button.property('disabled', true) // disable this button
+			tk.alignpane.body.selectAll('*').remove()
 			create_read_alignment_table(tk, multi_read_alig_data, group, true)
 		})
 	create_read_alignment_table(tk, multi_read_alig_data, group, false)
