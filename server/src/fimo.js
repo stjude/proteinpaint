@@ -8,7 +8,6 @@ const fimo = serverconfig.fimo || 'fimo'
 
 exports.handle_closure = genomes => {
 	return async (req, res) => {
-		if (app.reqbodyisinvalidjson(req, res)) return
 		try {
 			const q = req.query
 			if (!q.m) throw 'no mutation'

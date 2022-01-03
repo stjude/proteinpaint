@@ -12,7 +12,6 @@ const serverconfig = require('./serverconfig')
 
 module.exports = genomes => {
 	return async (req, res) => {
-		if (app.reqbodyisinvalidjson(req, res)) return
 		try {
 			const q = req.query
 			const gn = genomes[q.genome]

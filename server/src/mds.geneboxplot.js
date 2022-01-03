@@ -46,7 +46,6 @@ divide into groups by L1/L2 hierarchy levels
 
 export default genomes => {
 	return async (req, res) => {
-		if (app.reqbodyisinvalidjson(req, res)) return
 		try {
 			const [gn, ds, dsquery, svcnv] = get_param(genomes, req)
 

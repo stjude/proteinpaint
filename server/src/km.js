@@ -29,8 +29,6 @@ do_plot
 
 exports.handle_mdssurvivalplot = genomes => {
 	return async (req, res) => {
-		// module.exports = async (req, res) => {
-		if (app.reqbodyisinvalidjson(req, res)) return
 		try {
 			const q = req.query
 			const gn = genomes[q.genome]

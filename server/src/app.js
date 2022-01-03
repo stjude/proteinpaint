@@ -109,15 +109,17 @@ if (serverconfig.users) {
 app.use(bodyParser.json({}))
 app.use(bodyParser.text({ limit: '1mb' }))
 app.use(bodyParser.urlencoded({ extended: true }))
+app.use(validator.middleware)
 
-app.use((error, req, res, next) => {
-	if (error) {
-		if (error && error.type == 'entity.parse.failed') {
-			res.send({ error: 'invalid request body, must be a valid JSON-encoded object' })
-		} else {
-			res.send({ error })
-		}
+app.use((req, res, next) => {
+	if (req.method.toUpperCase() == 'POST' && req.body && req.headers['content-type'] != 'application/json') {
+		res.send({ error: `invalid HTTP request.header['content-type'], must be 'application/json'` })
 		return
+	}
+	if (req.headers['content-type'] == 'application/json') {
+		if (!req.query) req.query = {}
+		Object.assign(req.query, req.body)
+		log(req)
 	}
 	res.header('Access-Control-Allow-Origin', '*')
 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
@@ -130,7 +132,18 @@ app.use((error, req, res, next) => {
 	next()
 })
 
-app.use(validator.middleware)
+// NOTE: The error handling middleware should be used after all other app.use() middlewares
+app.use((error, req, res, next) => {
+	log(req)
+	if (error) {
+		if (error && error.type == 'entity.parse.failed') {
+			res.send({ error: 'invalid request body, must be a valid JSON-encoded object' })
+		} else {
+			res.send({ error })
+		}
+		return
+	}
+})
 
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
@@ -424,7 +437,6 @@ async function handle_examples(req, res) {
 }
 
 async function handle_mdsjsonform(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	if (!exports.features.mdsjsonform) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query.deposit) {
 		const id = Math.random().toString()
@@ -838,7 +850,6 @@ function mds_clientcopy(ds) {
 }
 
 function handle_genelookup(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	const g = genomes[req.query.genome]
 	if (!g) return res.send({ error: 'invalid genome name' })
 
@@ -912,7 +923,6 @@ async function handle_img(req, res) {
 }
 
 async function handle_ntseq(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		if (!req.query.coord) throw 'coord missing'
 		const g = genomes[req.query.genome]
@@ -932,7 +942,6 @@ async function handle_ntseq(req, res) {
 }
 
 function handle_pdomain(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		const gn = req.query.genome
 		if (!gn) throw 'no genome'
@@ -1026,8 +1035,6 @@ if file/url ends with .gz, it is bedgraph
 	- not to be used in production!!!
 	- bedgraph should render bars while reading data, with predefined y axis; no storing data
 */
-	if (reqbodyisinvalidjson(req, res)) return
-
 	let fixminv,
 		fixmaxv,
 		percentile,
@@ -1287,7 +1294,6 @@ async function handle_snp(req, res) {
 .lst[ str ]
 	used for byName
 */
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		const n = req.query.genome
 		if (!n) throw 'no genome'
@@ -1423,8 +1429,6 @@ async function handle_dsdata(req, res) {
 
     to be totally replaced by mds, which can identify queries in a mds by querykeys
     */
-
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		if (!genomes[req.query.genome]) throw 'invalid genome'
 		if (!req.query.dsname) throw '.dsname missing'
@@ -1553,7 +1557,6 @@ function handle_dsdata_vcf(query, req) {
 }
 
 function handle_isoformlst(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		const g = genomes[req.query.genome]
 		if (!g) throw 'invalid genome'
@@ -1884,7 +1887,6 @@ function handle_dsgenestat(req, res) {
 }
 
 function handle_study(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	if (illegalpath(req.query.file)) {
 		res.send({ error: 'Illegal file path' })
 		return
@@ -2213,7 +2215,6 @@ function handle_textfile(req, res) {
     .to
     	optional, if present, will get range [from to] 1-based, else will get the entire file
     */
-	if (reqbodyisinvalidjson(req, res)) return
 	if (!req.query.file) return res.send({ error: 'no file' })
 	if (illegalpath(req.query.file)) return res.send({ error: 'invalid file name' })
 
@@ -2254,7 +2255,6 @@ function handle_textfile(req, res) {
 }
 
 async function handle_urltextfile(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	const url = req.query.url
 	try {
 		const response = await got(url)
@@ -2304,9 +2304,6 @@ function handle_mdscnv(req, res) {
     ******* routes
 
     */
-
-	if (reqbodyisinvalidjson(req, res)) return
-
 	const [err, gn, ds, dsquery] = mds_query_arg_check(req.query)
 	if (err) return res.send({ error: err })
 
@@ -2600,7 +2597,6 @@ function handle_mdscnv(req, res) {
 }
 
 async function handle_mdsgenecount(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	log(req)
 	try {
 		const genome = genomes[req.query.genome]
@@ -2665,9 +2661,6 @@ async function handle_mdssvcnv(req, res) {
     .showonlycnvwithsv
 
     */
-
-	if (reqbodyisinvalidjson(req, res)) return
-
 	let gn, ds, dsquery
 
 	if (req.query.iscustom) {
@@ -4719,7 +4712,6 @@ function ase_testarg(q) {
 }
 
 async function handle_ase(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	const q = req.query
 
 	const fpkmrangelimit = 3000000
@@ -5267,7 +5259,6 @@ function mpileup_parsevcf_dp_ad(line) {
 }
 
 async function handle_bamnochr(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	const q = req.query
 	try {
 		const genome = genomes[q.genome]
@@ -5516,8 +5507,6 @@ function handle_mdsexpressionrank(req, res) {
     cohort: for official, defined by req.query.attributes
             for custom, will use all available samples other than this one
     */
-	if (reqbodyisinvalidjson(req, res)) return
-
 	let gn,
 		ds,
 		dsquery,
@@ -6025,8 +6014,6 @@ async function handle_mdsgenevalueonesample(req, res) {
 .url
 .sample
 */
-
-	if (reqbodyisinvalidjson(req, res)) return
 	const q = req.query
 
 	try {
@@ -6355,7 +6342,6 @@ async function handle_mdssamplescatterplot(req, res) {
 }
 
 function handle_mdssamplesignature(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		const q = req.query
 		if (!q.sample) throw '.sample missing'
@@ -6441,7 +6427,6 @@ async function mds_genenumeric_querygene(query, dir, chr, start, stop, gene) {
 }
 
 async function handle_isoformbycoord(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		const genome = genomes[req.query.genome]
 		if (!genome) throw 'invalid genome'
@@ -6498,8 +6483,6 @@ function handle_samplematrix(req, res) {
     for singular feature, the datatype & file format is implied
     for feature spanning multiple data types, will need to query multiple data tracks, each track must be identified with "type" e.g. common.tkt.mdsvcf
     */
-
-	if (reqbodyisinvalidjson(req, res)) return
 
 	Promise.resolve()
 		.then(() => {
@@ -7315,7 +7298,6 @@ async function handle_vcfheader(req, res) {
 
 async function handle_vcf(req, res) {
 	// single vcf
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		const [e, file, isurl] = fileurl(req)
 		if (e) throw e
@@ -7337,7 +7319,6 @@ async function handle_vcf(req, res) {
 }
 
 async function handle_translategm(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		const g = genomes[req.query.genome]
 		if (!g) throw 'invalid genome'
@@ -7552,26 +7533,6 @@ function fileurl(req) {
 	return [null, file, isurl]
 }
 exports.fileurl = fileurl
-
-function reqbodyisinvalidjson(req, res) {
-	try {
-		if (req.headers['content-type'] == 'application/json') {
-			// the bodyParser.json() middleware will pre-parse the req.body
-			req.query = req.body
-		} else {
-			req.query = JSON.parse(req.body)
-		}
-
-		if (typeof req.query != 'object') throw 'invalid request body'
-		// FIXME should log request in validator middleware
-		log(req)
-		return false
-	} catch (error) {
-		res.send({ error })
-		return true
-	}
-}
-exports.reqbodyisinvalidjson = reqbodyisinvalidjson
 
 function log(req) {
 	const j = {}
