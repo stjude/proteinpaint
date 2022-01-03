@@ -118,7 +118,6 @@ app.use((req, res, next) => {
 app.use(bodyParser.json()) // default limit: '100kb'
 app.use(bodyParser.text({ limit: '1mb' }))
 app.use(bodyParser.urlencoded({ extended: true }))
-app.use(validator.middleware)
 
 app.use((req, res, next) => {
 	if (req.method.toUpperCase() == 'POST' && req.body && req.headers['content-type'] != 'application/json') {
@@ -127,6 +126,8 @@ app.use((req, res, next) => {
 	}
 	if (req.headers['content-type'] == 'application/json') {
 		if (!req.query) req.query = {}
+		// TODO: in the future, may have to combine req.query + req.params + req.body
+		// if using req.params based on expressjs server route /:paramName interpolation
 		Object.assign(req.query, req.body)
 		log(req)
 	}
@@ -140,6 +141,8 @@ app.use((req, res, next) => {
 	}
 	next()
 })
+
+app.use(validator.middleware)
 
 // NOTE: The error handling middleware should be used after all other app.use() middlewares
 app.use((error, req, res, next) => {
@@ -169,16 +172,8 @@ if (serverconfig.jwt) {
 	app.use((req, res, next) => {
 		let j = {}
 		if (req.body && req.method == 'POST') {
-			if (typeof req.body == 'object') {
-				j = req.body
-			} else {
-				try {
-					j = JSON.parse(req.body)
-				} catch (err) {
-					res.send({ error: 'Invalid JSON for request body' })
-					return
-				}
-			}
+			// a preceding middleware assumes all POST contents are json-encoded and processed by bodyParser()
+			j = req.body
 		}
 		const jwt = j.jwt
 			? j.jwt
@@ -1590,13 +1585,6 @@ function handle_isoformlst(req, res) {
 }
 
 function handle_dbdata(req, res) {
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
-	log(req)
 	const query = () => {
 		const config = ch_dbtable.get(req.query.db)
 		let sql
@@ -1658,12 +1646,6 @@ function handle_dbdata(req, res) {
 }
 
 function handle_svmr(req, res) {
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
 	if (req.query.file) {
 		const [e, file, isurl] = fileurl(req)
 		if (e) {
@@ -1700,14 +1682,6 @@ async function handle_hicstat(req, res) {
 }
 
 function handle_hicdata(req, res) {
-	// juicebox straw
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
-	log(req)
 	const [e, file, isurl] = fileurl(req)
 	if (e) {
 		res.send({ error: 'illegal file name' })
@@ -1777,13 +1751,6 @@ function handle_putfile(req,res) {
 */
 
 function handle_dsgenestat(req, res) {
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
-	log(req)
 	const gn = req.query.genome
 	if (!gn) return res.send({ error: 'genome unspecified' })
 	const g = genomes[gn]
