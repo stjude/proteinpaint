@@ -190,7 +190,7 @@ function renderBinLines(self, data) {
 		if (data.last_bin && data.last_bin.start && data.last_bin.start !== lastVisibleLine.x) {
 			lines.push({ x: data.last_bin.start, index, scaledX: Math.round(o.xscale(data.last_bin.start)) })
 		}
-	} else if (data.type == 'custom') {
+	} else if (data.type == 'custom-bin') {
 		lines.push(
 			...data.lst.slice(1).map((d, index) => {
 				return { x: d.start, index, scaledX: Math.round(o.xscale(d.start)) }
@@ -206,7 +206,7 @@ function renderBinLines(self, data) {
 
 	lines.forEach((d, i) => {
 		d.isDraggable =
-			self.q.type == 'custom' ||
+			self.q.type == 'custom-bin' ||
 			self.q.mode == 'cubic-spline' ||
 			i === 0 ||
 			(self.q.last_bin && self.q.last_bin.start === d.x)
@@ -298,7 +298,7 @@ function renderBinLines(self, data) {
 				self.q.last_bin.start = value
 				middleLines.style('display', c => (c.scaledX >= d.draggedX ? 'none' : ''))
 			}
-		} else if (self.q.type == 'custom') {
+		} else if (self.q.type == 'custom-bin') {
 			self.q.lst[d.index + 1].start = value
 			self.q.lst[d.index + 1].label = get_bin_label(self.q.lst[d.index + 1], self.q)
 			self.q.lst[d.index].stop = value
@@ -360,7 +360,7 @@ function renderBinLines(self, data) {
 				.slice()
 				.reverse()
 				.find(d => d.scaledX < scaledMaxX).scaledX
-		} else if (self.q.type == 'custom') {
+		} else if (self.q.type == 'custom-bin') {
 			self.q.lst[d.index + 1].start = d.x
 			self.q.lst[d.index].stop = d.x
 		} else if (self.q.mode == 'cubic-spline') {

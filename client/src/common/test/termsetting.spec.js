@@ -436,7 +436,7 @@ tape('Numerical term: float custom bins', async test => {
 		tsData: {
 			term: termjson['agedx'],
 			q: {
-				type: 'custom',
+				type: 'custom-bin',
 				lst: [
 					{
 						startunbounded: true,
@@ -493,7 +493,7 @@ tape('Numerical term: integer custom bins', async test => {
 		tsData: {
 			term: termjson['agedx'],
 			q: {
-				type: 'custom',
+				type: 'custom-bin',
 				lst: [
 					{
 						startunbounded: true,
