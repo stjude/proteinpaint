@@ -7700,7 +7700,7 @@ async function pp_init() {
 		// for testing if gene/isoform/chr/snp names have only allowed characters
 		// test to true if name has extra characters which could be attack strings
 		// allow for genome-specific pattern setting, otherwise default is used
-		g2.genomicNameRegexp = new RegExp(g2.genomicNameRegexpString || '[^a-zA-Z0-9.:_-]')
+		if (!g2.genomicNameRegexp) g2.genomicNameRegexp = /[^a-zA-Z0-9.:_-]/
 
 		if (!g2.tracks) {
 			g2.tracks = [] // must always have .tracks even if empty
