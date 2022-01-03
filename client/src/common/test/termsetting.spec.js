@@ -619,6 +619,10 @@ tape('Conditional term', async test => {
 						}
 					]
 				}
+			},
+			q: {
+				value_by_max_grade: true,
+				groupsetting: {inuse: false}
 			}
 		}
 	})

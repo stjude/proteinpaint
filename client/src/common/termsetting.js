@@ -299,11 +299,6 @@ function setRenderers(self) {
 	self.updatePill = async function() {
 		// only modify right half of the pill
 		const one_term_div = select(this)
-		if (self.term.type == 'condition' && !self.q.bar_by_children && !self.q.bar_by_grade) {
-			self.q.bar_by_grade = true
-			self.q.value_by_max_grade = true
-			self.q.groupsetting = {}
-		}
 
 		// if using group setting, will show right half
 		// allow more than 1 flags for future expansion
