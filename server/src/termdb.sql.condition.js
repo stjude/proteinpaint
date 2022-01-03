@@ -1,8 +1,7 @@
 import { getUncomputableClause } from './termdb.sql'
 
 function validateQ(q) {
-	const value_for = q.bar_by_children ? 'child' : q.bar_by_grade ? 'grade' : ''
-	if (!value_for) throw 'must set the bar_by_grade or bar_by_children query parameter'
+	const value_for = 'grade'
 
 	const restriction = q.value_by_max_grade
 		? 'max_grade'
