@@ -31,7 +31,8 @@ export async function save(req, res) {
 		// not checking duplicating id
 
 		// req.body is some string data, save it to file named by the session id
-		await utils.write_file(path.join(sessionDir, sessionID), req.body)
+		const content = JSON.stringify(req.body)
+		await utils.write_file(path.join(sessionDir, sessionID), content)
 
 		res.send({ id: sessionID })
 	} catch (e) {

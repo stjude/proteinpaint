@@ -106,7 +106,16 @@ if (serverconfig.users) {
 	app.use(basicAuth({ users: serverconfig.users, challenge: true }))
 }
 
-app.use(bodyParser.json({}))
+app.use((req, res, next) => {
+	if (req.method.toUpperCase() == 'POST') {
+		// assume all post requests have json-encoded content
+		// TODO: change all client-side fetch(new Request(...)) to use dofetch*() to preset the content-type
+		req.headers['content-type'] = 'application/json'
+	}
+	next()
+})
+
+app.use(bodyParser.json()) // default limit: '100kb'
 app.use(bodyParser.text({ limit: '1mb' }))
 app.use(bodyParser.urlencoded({ extended: true }))
 app.use(validator.middleware)
