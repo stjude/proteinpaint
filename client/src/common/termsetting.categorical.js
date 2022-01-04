@@ -78,33 +78,34 @@ export function getHandler(self) {
 			}
 
 			throw `unknown q.type='${data.q.type}' for categorical q.mode='${data.q.mode}'`
+		},
+
+		async postMain(){
+			const lst = []
+			if (self.term.type == 'condition') {
+				// bar_by_grade / bar_by_children
+				lst.push(self.q.bar_by_grade ? 'bar_by_grade=1' : self.q.bar_by_children ? 'bar_by_children=1' : null)
+				// value_by_max_grade / value_by_most_recent / value_by_computable_grade
+				lst.push(
+					self.q.value_by_max_grade
+						? 'value_by_max_grade=1'
+						: self.q.value_by_most_recent
+						? 'value_by_most_recent=1'
+						: self.q.value_by_computable_grade
+						? 'value_by_computable_grade=1'
+						: null
+				)
+			}
+			const data = await self.vocabApi.getCategories(self.term, self.filter, lst)
+			self.category2samplecount = []
+			for (const i of data.lst) {
+				self.category2samplecount.push({ key: i.key, count: i.samplecount })
+			}
 		}
 	}
 }
 
 export function setCategoricalMethods(self) {
-	self.addCategory2sampleCounts = async function() {
-		const lst = []
-		if (self.term.type == 'condition') {
-			// bar_by_grade / bar_by_children
-			lst.push(self.q.bar_by_grade ? 'bar_by_grade=1' : self.q.bar_by_children ? 'bar_by_children=1' : null)
-			// value_by_max_grade / value_by_most_recent / value_by_computable_grade
-			lst.push(
-				self.q.value_by_max_grade
-					? 'value_by_max_grade=1'
-					: self.q.value_by_most_recent
-					? 'value_by_most_recent=1'
-					: self.q.value_by_computable_grade
-					? 'value_by_computable_grade=1'
-					: null
-			)
-		}
-		const data = await self.vocabApi.getCategories(self.term, self.filter, lst)
-		self.category2samplecount = []
-		for (const i of data.lst) {
-			self.category2samplecount.push({ key: i.key, count: i.samplecount })
-		}
-	}
 
 	self.validateGroupsetting = function() {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return

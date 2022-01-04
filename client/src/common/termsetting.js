@@ -123,7 +123,7 @@ class TermSetting {
 			await this.setHandler()
 			this.updateUI()
 			if (data.term && this.term.handler && this.handler.validateQ) this.handler.validateQ(data)
-			if (this.addCategory2sampleCounts) this.addCategory2sampleCounts()
+			if (this.handler.postMain) await this.handler.postMain()
 		} catch (e) {
 			this.hasError = true
 			throw e
