@@ -215,6 +215,7 @@ export class InputTerm {
 			tw.refGrp = 'NA' // hardcoded in R
 		} else if (!('refGrp' in tw) || !this.sampleCounts.find(i => i.key == tw.refGrp)) {
 			// refGrp not defined or no longer exists according to sampleCounts[]
+			// refGrp is missing from state and is now assigned only to tw, creating inconsistency
 			const o = this.orderedLabels
 			if (o.length) this.sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
 			else this.sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
