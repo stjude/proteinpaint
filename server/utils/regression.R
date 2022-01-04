@@ -356,10 +356,8 @@ if (lst$type == "linear"){
 ########## Formatting regression results ############
 
 # reformat the coefficients table
-# round the non-p-value columns to 3 decimal places and the p-value columns to 4 significant digits
-pvalueCol <- grepl("^Pr\\(>", colnames(coefficients_table))
-coefficients_table[,!pvalueCol] <- round(coefficients_table[,!pvalueCol], 3)
-coefficients_table[,pvalueCol] <- signif(coefficients_table[,pvalueCol], 4)
+# round all columns to 4 significant digits
+coefficients_table <- signif(coefficients_table, 4)
 # add variable and category columns
 vCol <- c("Intercept")
 cCol <- c("")
