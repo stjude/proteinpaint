@@ -22,8 +22,6 @@ TODO need to test the existence of the json file
 
 exports.handle_singlecell_closure = genomes => {
 	return async (req, res) => {
-		if (app.reqbodyisinvalidjson(req, res)) return
-
 		try {
 			const q = req.query
 			const gn = genomes[q.genome]

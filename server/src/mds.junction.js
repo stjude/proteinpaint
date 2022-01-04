@@ -49,7 +49,6 @@ const infoFilter_unannotated = 'Unannotated'
 
 module.exports = genomes => {
 	return async (req, res) => {
-		if (app.reqbodyisinvalidjson(req, res)) return
 		try {
 			const [q, ds, dsquery] = await get_q(req, genomes)
 			const data = await do_query(q, ds, dsquery)
