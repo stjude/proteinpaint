@@ -238,21 +238,23 @@ function setRenderers(self) {
 					else if (d == 'replace') self.showTree()
 				})
 
-			const infoIcon_div = self.dom.btnDiv.selectAll('div').filter(function() {
-				return select(this).text() === 'INFO'
-			})
+			// render info button only if term has html details
+			if (self.term && self.term.hashtmldetail) {
+				const infoIcon_div = self.dom.btnDiv.selectAll('div').filter(function() {
+					return select(this).text() === 'INFO'
+				})
+				const content_holder = select(self.dom.holder.node().parentNode).append('div')
 
-			const content_holder = select(self.dom.holder.node().parentNode).append('div')
-
-			// TODO: modify termInfoInit() to display term info in tip rather than in div
-			// can be content_tip: self.dom.tip.d to separate it from content_holder
-			termInfoInit({
-				vocabApi: self.opts.vocabApi,
-				icon_holder: infoIcon_div,
-				content_holder,
-				id: self.term.id,
-				state: { term: self.term }
-			})
+				// TODO: modify termInfoInit() to display term info in tip rather than in div
+				// can be content_tip: self.dom.tip.d to separate it from content_holder
+				termInfoInit({
+					vocabApi: self.opts.vocabApi,
+					icon_holder: infoIcon_div,
+					content_holder,
+					id: self.term.id,
+					state: { term: self.term }
+				})
+			}
 		}
 
 		self.dom.nopilldiv.style('display', 'none')
