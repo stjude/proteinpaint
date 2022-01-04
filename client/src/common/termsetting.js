@@ -478,7 +478,9 @@ export function termsetting_fill_q(q, term, activeCohort) {
 			// then no need for additional setup
 			return
 		} else {
-			q.groupsetting.activeCohort = activeCohort
+			// used for groupsetting if one of the group is filter rahter than values,
+			// Not in use rightnow, if used in future, uncomment following line
+			// q.groupsetting.activeCohort = activeCohort
 		}
 		// if to apply the groupsetting
 		if (term.groupsetting.lst && term.groupsetting.useIndex >= 0 && term.groupsetting.lst[term.groupsetting.useIndex]) {

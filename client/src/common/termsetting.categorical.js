@@ -259,7 +259,9 @@ export function setCategoricalMethods(self) {
 						.on('click', () => {
 							self.q.groupsetting.inuse = true
 							self.q.groupsetting.predefined_groupset_idx = i
-							self.q.groupsetting.activeCohort = self.activeCohort
+							// used for groupsetting if one of the group is filter rahter than values,
+							// Not in use rightnow, if used in future, uncomment following line
+							// self.q.groupsetting.activeCohort = self.activeCohort
 							self.q.type = 'predefined-groupset'
 							self.dom.tip.hide()
 							self.opts.callback({
