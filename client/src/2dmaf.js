@@ -64,9 +64,7 @@ export function d2mafui(genomes, holder) {
 				'<li>To define samples differently than "Diagnosis/Relapse", <a href=https://plus.google.com/+XinZhou_s/posts/WqBVvmd3wYR target=_blank>see how</a>.</li>' +
 				'</ul>'
 		)
-	inputdiv
-		.append('p')
-		.html('<a href=https://www.dropbox.com/s/9mc35sz9obkvaz5/2dmaf.txt?dl=0 target=_blank>Example file</a>')
+	inputdiv.append('p').html('<a href=https://pecan.stjude.cloud/static/hg19/2dmaf.txt target=_blank>Example file</a>')
 	function cmt(t, red) {
 		saydiv.style('color', red ? 'red' : 'black').html(t)
 	}
