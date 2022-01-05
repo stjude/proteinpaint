@@ -57,11 +57,7 @@ export function getHandler(self) {
 				.html('Apply')
 				.on('click', () => {
 					self.q.mode = 'continuous'
-					self.opts.callback({
-						id: self.term.id,
-						term: self.term,
-						q: self.q
-					})
+					self.runCallback()
 				})
 		}
 	}

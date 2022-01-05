@@ -72,6 +72,14 @@ class TermSetting {
 			default: defaultHandler
 		}
 
+		this.runCallback = () => {
+			this.opts.callback({
+				id: this.term.id,
+				term: this.term,
+				q: this.q
+			})
+		}
+
 		this.hasError = false
 
 		// this api will be frozen and returned by termsettingInit()

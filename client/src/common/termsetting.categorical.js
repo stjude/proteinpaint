@@ -80,7 +80,7 @@ export function getHandler(self) {
 			throw `unknown q.type='${data.q.type}' for categorical q.mode='${data.q.mode}'`
 		},
 
-		async postMain(){
+		async postMain() {
 			const lst = []
 			if (self.term.type == 'condition') {
 				// bar_by_grade / bar_by_children
@@ -106,7 +106,6 @@ export function getHandler(self) {
 }
 
 export function setCategoricalMethods(self) {
-
 	self.validateGroupsetting = function() {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
 		if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
@@ -231,11 +230,7 @@ export function setCategoricalMethods(self) {
 				delete self.q.groupsetting.predefined_groupset_idx
 				// self.q.type = 'values' ????
 				self.dom.tip.hide()
-				self.opts.callback({
-					id: self.term.id,
-					term: self.term,
-					q: self.q
-				})
+				self.runCallback()
 			})
 
 		//show button/s for default groups
@@ -265,11 +260,7 @@ export function setCategoricalMethods(self) {
 							// self.q.groupsetting.activeCohort = self.activeCohort
 							self.q.type = 'predefined-groupset'
 							self.dom.tip.hide()
-							self.opts.callback({
-								id: self.term.id,
-								term: self.term,
-								q: self.q
-							})
+							self.runCallback()
 						})
 			}
 		}
