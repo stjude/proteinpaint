@@ -170,7 +170,8 @@ function setRenderers(self) {
 		let rowcount = 0
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
-			const term = self.state.config.independent.find(t => t.id == tid)
+			//const term = self.state.config.independent.find(t => t.id == tid)
+			const term = self.config.independent.find(t => t.id == tid)
 			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 
 			// col 1: term name
