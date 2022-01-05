@@ -294,7 +294,7 @@ function setInteractivity(self) {
 }
 
 // opts is the same argument for the TVS constructor()
-export function showTvsMenu(opts) {
+export async function showTvsMenu(opts) {
 	const self = new TVS(opts)
 	self.tvs = {
 		term: opts.term,
@@ -309,6 +309,7 @@ export function showTvsMenu(opts) {
 		self.tvs.value_by_max_grade = true
 	}
 	addExcludeCheckbox(opts.holder, self.tvs)
+	await self.setHandler()
 	self.handler.fillMenu(self, opts.holder, self.tvs)
 }
 
