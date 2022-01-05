@@ -43,7 +43,7 @@ class TVS {
 		if (!this.handlerByType[type]) {
 			try {
 				const _ = await import(`./tvs.${type}.js`)
-				this.handlerByType[type] = _.getHandler(this)
+				this.handlerByType[type] = _.handler
 			} catch (e) {
 				throw `error with handler='./tvs.${type}.js': ${e}`
 			}
@@ -108,7 +108,7 @@ function setRenderers(self) {
 	self.showMenu = _holder => {
 		const holder = _holder ? _holder : self.dom.tip
 		addExcludeCheckbox(holder, self.tvs)
-		self.handler.fillMenu(holder, self.tvs)
+		self.handler.fillMenu(self, holder, self.tvs)
 	}
 
 	self.removeTerm = tvs => {
@@ -309,7 +309,7 @@ export function showTvsMenu(opts) {
 		self.tvs.value_by_max_grade = true
 	}
 	addExcludeCheckbox(opts.holder, self.tvs)
-	self.handler.fillMenu(opts.holder, self.tvs)
+	self.handler.fillMenu(self, opts.holder, self.tvs)
 }
 
 function addExcludeCheckbox(holder, tvs) {

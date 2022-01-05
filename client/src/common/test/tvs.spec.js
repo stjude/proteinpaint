@@ -285,7 +285,7 @@ tape('tvs: Numeric', async test => {
 	const pill = opts.holder.select('.tvs_pill').node()
 	pill.click()
 
-	await sleep(150)
+	await sleep(350)
 	const controlTipd = opts.filter.Inner.dom.controlsTip.d
 	const menuRows = controlTipd.selectAll('tr')
 	const editOpt = menuRows.filter(d => d.action == 'edit')
