@@ -1491,7 +1491,7 @@ function updateExistingMultiReadAligInfo(tk, read_number) {
 	})
 }
 
-async function create_read_alignment_table(tk, multi_read_alig_data, group, gene_models) {
+async function create_read_alignment_table(tk, block, multi_read_alig_data, group, gene_models) {
 	let num_read_div
 	if (group.data.type == 'support_alt') {
 		num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
@@ -1659,11 +1659,110 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group, gene
 		}
 	}
 
+	const gene_model_images = []
+	const break_points = []
+	const gene_model_order = []
+	// Determine breaks in reference/alternate sequence (if gene model button is clicked)
+	if (gene_models == true) {
+		let refalt_seq = multi_read_alig_data.alignmentData.final_read_align[0]
+		let left_most_pos = tk.variants[0].pos - tk.variants[0].leftflankseq.length
+		let right_most_pos = tk.variants[0].pos + tk.variants[0].rightflankseq.length
+		console.log('left_most_pos:', left_most_pos)
+		console.log('right_most_pos:', right_most_pos)
+		let segstart = left_most_pos // This variable stores the left most position of a segment (spliced unit) of reference/alternate sequence, the first segment is initialized to the left most position of the reference/alternate sequence
+		let segstop = left_most_pos // This variable stores the right most position of a segment (spliced unit) of reference/alternate sequence
+		let local_alignment_width = 0 // This variable stores the width of each gene model that needs to be rendered using bedj track
+		//console.log('tk.readAlignmentTable:', tk.readAlignmentTable.node())
+		let first_row = tk.readAlignmentTable.node().children[0]
+		let gm_nuc_count = 0
+		let prev_nclt_not_blank = false // Flag to store if previous nucleotide is "-"
+		let nclt_count = 0
+		console.log('refalt_seq.length:', refalt_seq.length)
+		for (const nclt of refalt_seq) {
+			if (nclt == '-') {
+				if (prev_nclt_not_blank == true) {
+					// Flag to check if previous nucleotide is "-", if yes no gene model is rendered
+					break_points.push(1)
+					gene_model_order.push('break')
+				} else {
+					// Break in reference/alternate sequence caused by a read(s), will invoke a bedj request here
+					console.log('nclt_count1:', nclt_count)
+					console.log('segstart1:', segstart)
+					console.log('segstop1:', segstop)
+					const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+					const gm = {
+						src: gene_model_image.src,
+						width: local_alignment_width,
+						height: gene_model_image.height,
+						colspan: gm_nuc_count
+					}
+					gene_model_images.push(gm)
+					gene_model_order.push('gene_model')
+					gm_nuc_count = 0
+					segstart = left_most_pos + nclt_count + 1
+					segstop = left_most_pos + nclt_count + 1
+					local_alignment_width = 0
+					prev_nclt_not_blank = true
+					break_points.push(1)
+					gene_model_order.push('break')
+				}
+			} else if (tk.variants[0].pos == left_most_pos + nclt_count) {
+				// Variant causes break in gene model
+				if (tk.variants[0].ref.length == 1 && tk.variants[0].alt.length == 1) {
+					// In case of SNP no break in gene model is necessary
+					continue
+				}
+				console.log('nclt_count2:', nclt_count)
+				console.log('segstart2:', segstart)
+				console.log('segstop2:', segstop)
+				const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+				const gm = {
+					src: gene_model_image.src,
+					width: local_alignment_width,
+					height: gene_model_image.height,
+					colspan: gm_nuc_count
+				}
+				gene_model_images.push(gm)
+				gene_model_order.push('gene_model')
+				gm_nuc_count = 0
+				if (group.data.type == 'support_ref') {
+					segstart = left_most_pos + nclt_count + tk.variants[0].ref.length
+					segstop = left_most_pos + nclt_count + tk.variants[0].ref.length
+					break_points.push(tk.variants[0].ref.length)
+				} else if (group.data.type == 'support_alt') {
+					segstart = left_most_pos + nclt_count + tk.variants[0].alt.length
+					segstop = left_most_pos + nclt_count + tk.variants[0].alt.length
+					break_points.push(tk.variants[0].alt.length)
+				}
+				local_alignment_width = 0
+				prev_nclt_not_blank = false
+				gene_model_order.push('break')
+			} else if (nclt_count == refalt_seq.length - 1) {
+				// When last nucleotide of reference/alternate sequence is parsed, rendering of gene model is invoked
+				console.log('nclt_count3:', nclt_count)
+				console.log('segstart3:', segstart)
+				console.log('segstop3:', segstop)
+				const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+				const gm = {
+					src: gene_model_image.src,
+					width: local_alignment_width,
+					height: gene_model_image.height,
+					colspan: gm_nuc_count
+				}
+				gene_model_images.push(gm)
+				gene_model_order.push('gene_model')
+			} else {
+				segstop += 1
+				gm_nuc_count += 1
+				local_alignment_width += first_row.children[nclt_count].getBoundingClientRect().width
+				prev_nclt_not_blank = false
+			}
+			nclt_count += 1
+		}
+	}
+
 	// Drawing alignments for ref/alt allele and each of the reads
 	let read_count = 0
-	let refalt_seq
-	let left_most_pos // Left most position of reference/alternate sequence, useful when displaying gene models
-	let right_most_pos // Right most position of reference/alternate sequence, useful when displaying gene models
 	for (const read of multi_read_alig_data.alignmentData.final_read_align) {
 		const read_tr = tk.readAlignmentTable
 			.append('tr')
@@ -1673,26 +1772,33 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group, gene
 		const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
 		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
 
-		// Determine breaks in reference/alternate sequence
 		let nclt_count = 0
-		if (gene_models == true) {
-			refalt_seq = read
-			left_most_pos = tk.variants[0].pos - tk.variants[0].leftflankseq.length
-			right_most_pos = tk.variants[0].pos + tk.variants[0].rightflankseq.length
-			for (const nclt of refalt_seq) {
-				if (nclt == '-') {
-					// Break in reference/alternate sequence caused by a read(s), will invoke a bedj request here
-				} else if (tk.variants[0].pos == nclt_count) {
-					// Variant causes break in gene model
-					if (tk.variants[0].ref.length == 1 && tk.variants[0].alt.length == 1) {
-						// In case of SNP no break in gene model is necessary
-						continue
-					}
+		if (read_count == 1 && gene_models == true) {
+			// Drawing gene models after ref/alt sequence when gene_models button is clicked
+			let j = 0
+			let k = 0
+			const gene_model_tr = tk.readAlignmentTable.node().insertRow()
+			for (let i = 0; i < gene_model_order.length; i++) {
+				const gene_models_cell = gene_model_tr.insertCell()
+				if (gene_model_order[i] == 'gene_model') {
+					// Render gene model
+					const img = document.createElement('img')
+					img.src = gene_model_images[k].src
+					img.width = gene_model_images[k].width
+					img.height = gene_model_images[k].height
+					gene_models_cell.appendChild(img)
+					gene_models_cell.colSpan = gene_model_images[k].colspan
+					k += 1
+				} else if (gene_model_order[i] == 'break') {
+					// Gap representing '-' or variant
+					gene_models_cell.colSpan = break_points[j]
+					j += 1
 				}
 			}
-			nclt_count += 1
+			read_count += 1
+			continue // Prevent highlighting of nucleotides since its irrelevant when showing gene models
 		}
-		nclt_count = 0
+
 		for (const nclt of read) {
 			nclt_count += 1
 			let nclt_td
@@ -1703,10 +1809,6 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group, gene
 					.style('background-color', 'white')
 					.style('color', 'black')
 					.style('font-weight', '550')
-			} else if (read_count == 1 && gene_models == true) {
-				// Drawing gene models after ref/alt sequence when gene_models button is clicked
-				const gene_models_td = read_tr.append('td')
-				continue // Prevent highlighting of nucleotides since its irrelevant when showing gene models
 			} else {
 				nclt_td = read_tr
 					.append('td')
@@ -1757,7 +1859,6 @@ async function getMultiReadAligInfo(tk, group, block) {
 	//console.log('multi_read_alig_data.alignmentData:', multi_read_alig_data.alignmentData)
 	wait.remove()
 
-	console.log('tk:', tk)
 	let gene_button_div = tk.alignpane.body
 	const gene_button = gene_button_div
 		.append('button')
@@ -1766,9 +1867,9 @@ async function getMultiReadAligInfo(tk, group, block) {
 		.on('click', async () => {
 			gene_button.property('disabled', true) // disable this button
 			tk.alignpane.body.selectAll('*').remove()
-			create_read_alignment_table(tk, multi_read_alig_data, group, true)
+			create_read_alignment_table(tk, block, multi_read_alig_data, group, true)
 		})
-	create_read_alignment_table(tk, multi_read_alig_data, group, false)
+	create_read_alignment_table(tk, block, multi_read_alig_data, group, false)
 }
 
 async function getReadInfo(tk, block, box, ridx) {
@@ -2057,7 +2158,7 @@ async function getReadInfo(tk, block, box, ridx) {
 						(item.opr == 'D' && item.len >= data.lst[0].readpanel_DN_maxlength) // if length of deletion is greater or equal to readpanel_DN_maxlength the reference sequence is not retained and break is observed, therefore current gene model will end here and a new gene model will start at the end of the deletion
 					) {
 						segstop = item.start
-						const gene_model = await get_gene_models(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+						const gene_model = await get_gene_models_reads(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
 						const gm = {
 							src: gene_model.src,
 							width: local_alignment_width,
@@ -2086,7 +2187,7 @@ async function getReadInfo(tk, block, box, ridx) {
 					if (i == data.lst[0].boxes.length - 1) {
 						// Render bedj gene model if it has reached the last entry in CIGAR sequence
 						segstop = item.start + item.len
-						const gene_model = await get_gene_models(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+						const gene_model = await get_gene_models_reads(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
 						const gm = {
 							src: gene_model.src,
 							width: local_alignment_width,
@@ -2099,7 +2200,7 @@ async function getReadInfo(tk, block, box, ridx) {
 				}
 
 				// Filling gene model row
-				let num_gene_cells = num_break_points + gene_models.length // Number of gene cells required in gene row
+				const num_gene_cells = num_break_points + gene_models.length // Number of gene cells required in gene row
 				let j = 0
 				let k = 0
 				for (let i = 0; i < num_gene_cells; i++) {
@@ -2167,7 +2268,35 @@ async function getReadInfo(tk, block, box, ridx) {
 	}
 }
 
-async function get_gene_models(block, ridx, segstart, segstop, local_alignment_width) {
+async function get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) {
+	const genetk = block.genome.tracks.find(i => i.__isgene)
+	const args = {
+		name: genetk.name,
+		genome: block.genome.name,
+		rglst: [
+			{
+				chr: tk.variants[0].chr,
+				start: segstart,
+				stop: segstop,
+				width: local_alignment_width
+			}
+		],
+		width: local_alignment_width,
+		stackheight: 16,
+		stackspace: 1,
+		regionspace: 0,
+		file: genetk.file,
+		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
+		color: genetk.color,
+		translatecoding: 1,
+		__isgene: true,
+		noNameHover: true
+	}
+	//console.log('args:', JSON.stringify(args))
+	return await dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(args) })
+}
+
+async function get_gene_models_reads(block, ridx, segstart, segstop, local_alignment_width) {
 	const genetk = block.genome.tracks.find(i => i.__isgene)
 	const args = {
 		name: genetk.name,
