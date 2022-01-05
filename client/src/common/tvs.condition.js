@@ -18,7 +18,7 @@ export function getHandler(self) {
 		// grade/subcondtion select
 		const bar_by_select = div
 			.append('select')
-			.attr('class', '.value_select')
+			.attr('class', 'value_select')
 			.style('display', 'block')
 			.style('margin', '5px 10px')
 			.style('padding', '3px')
@@ -52,7 +52,7 @@ export function getHandler(self) {
 		// grade type type
 		const grade_type_select = div
 			.append('select')
-			.attr('class', '.grade_select')
+			.attr('class', 'grade_select')
 			.style('margin', '5px 10px')
 			.style('padding', '3px')
 			.style('display', tvs.bar_by_grade ? 'block' : 'none')
@@ -145,8 +145,8 @@ export function getHandler(self) {
 		self.values_table = self.makeValueTable(div, tvs, data.lst).node()
 
 		function update_value_by(new_tvs) {
-			const bar_by_value = bar_by_select.node().value
-			const grade_type_value = grade_type_select.node().value
+			const bar_by_value = bar_by_select.property('value')
+			const grade_type_value = grade_type_select.property('value')
 			if (bar_by_value === 'sub') {
 				new_tvs.value_by_computable_grade = true
 				delete new_tvs.value_by_max_grade
