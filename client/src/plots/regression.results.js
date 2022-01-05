@@ -187,7 +187,11 @@ function setRenderers(self) {
 					.append('div')
 					.style('font-size', '.8em')
 					.style('opacity', 0.6)
-					.text('REF: ' + (tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp))
+					.html(
+						'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">REF</span> ' +
+							(tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp) +
+							'</span>'
+					)
 			}
 
 			if (termdata.fields) {
