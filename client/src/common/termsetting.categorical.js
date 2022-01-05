@@ -8,7 +8,7 @@ self: a termsetting instance
 
 export function getHandler(self) {
 	setGroupsettingMethods(self)
-	setCategoricalMethods(self)
+	setCategoryConditionMethods(self)
 
 	return {
 		showEditMenu(div) {
@@ -105,7 +105,8 @@ export function getHandler(self) {
 	}
 }
 
-export function setCategoricalMethods(self) {
+// same method used to set methods for categorical and condition terms
+export function setCategoryConditionMethods(self) {
 	self.validateGroupsetting = function() {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
 		if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {

@@ -1,4 +1,4 @@
-import { setCategoricalMethods } from './termsetting.categorical'
+import { setCategoryConditionMethods } from './termsetting.categorical'
 import { setGroupsettingMethods } from './termsetting.groupsetting'
 
 /*
@@ -7,7 +7,7 @@ self: a termsetting instance
 */
 export function getHandler(self) {
 	setGroupsettingMethods(self)
-	setCategoricalMethods(self)
+	setCategoryConditionMethods(self)
 
 	return {
 		get_term_name(d) {
