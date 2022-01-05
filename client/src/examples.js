@@ -640,6 +640,15 @@ async function showCode(ppcalls, btns) {
 					const include_json = await showJsonCode(ppcalls)
 					const runpp_header = "<p style='margin:20px 25px; justify-content:center;'>ProteinPaint JS code</p>"
 					rdiv.append('div').html(runpp_header + runpp_contents + include_json)
+					const e = await isEllipsisActive().then(res => {
+						if (res == true) {
+							rdiv
+								.append('div')
+								.html(
+									"<p style='margin:20px 25px; justify-content:center;'> To see the full JSON, click the download button above.</p>"
+								)
+						}
+					})
 				} else {
 					rdiv.append('div').html(runpp_contents)
 				}
@@ -648,6 +657,11 @@ async function showCode(ppcalls, btns) {
 			}
 		}
 	})
+}
+
+async function isEllipsisActive() {
+	const e = document.querySelector('code.sjpp-json-code')
+	return e.scrollHeight > e.clientHeight
 }
 
 async function showJsonCode(ppcalls) {
@@ -659,7 +673,7 @@ async function showJsonCode(ppcalls) {
 
 	const code = hljs.highlight(JSON.stringify(json_code, '', 4), { language: 'json' }).value
 
-	const json_contents = `<p style="margin:20px 5px 0px 25px; justify-content:center; display: inline-block;">JSON code </p><p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p><pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 5px 30px 5px 40px; max-height: 400px; overflow-x: auto; overflow-y:auto;" ><code style="font-size:14px;">${code}</code></pre>`
+	const json_contents = `<p style="margin:20px 5px 0px 25px; justify-content:center; display: inline-block;">JSON code </p><p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p><pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 5px 30px 5px 40px; max-height: 400px; overflow-x: auto; overflow-y:auto; display: block;" ><code class="sjpp-json-code" style="font-size:14px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1000; line-clamp: 1000; -webkit-box-orient: vertical;">${code}</code></pre>`
 
 	return json_contents
 }
