@@ -1672,7 +1672,7 @@ async function create_read_alignment_table(tk, block, multi_read_alig_data, grou
 		let segstart = left_most_pos // This variable stores the left most position of a segment (spliced unit) of reference/alternate sequence, the first segment is initialized to the left most position of the reference/alternate sequence
 		let segstop = left_most_pos // This variable stores the right most position of a segment (spliced unit) of reference/alternate sequence
 		let local_alignment_width = 0 // This variable stores the width of each gene model that needs to be rendered using bedj track
-		console.log('tk.readAlignmentTable:', tk.readAlignmentTable.node().children)
+		console.log('tk.readAlignmentTable:', tk.readAlignmentTable.node().children[0])
 		let first_row = tk.readAlignmentTable.node().children[0]
 		let gm_nuc_count = 0
 		let prev_nclt_not_blank = false // Flag to store if previous nucleotide is "-"
@@ -1770,14 +1770,6 @@ async function create_read_alignment_table(tk, block, multi_read_alig_data, grou
 	// Drawing alignments for ref/alt allele and each of the reads
 	let read_count = 0
 	for (const read of multi_read_alig_data.alignmentData.final_read_align) {
-		const read_tr = tk.readAlignmentTable
-			.append('tr')
-			.style('color', 'white')
-			.style('background-color', 'white')
-		const r_colors = multi_read_alig_data.alignmentData.qual_r[read_count].split(',')
-		const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
-		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
-
 		let nclt_count = 0
 		if (read_count == 1 && gene_models == true) {
 			// Drawing gene models after ref/alt sequence when gene_models button is clicked
@@ -1805,6 +1797,13 @@ async function create_read_alignment_table(tk, block, multi_read_alig_data, grou
 			continue // Prevent highlighting of nucleotides since its irrelevant when showing gene models
 		}
 
+		const read_tr = tk.readAlignmentTable
+			.append('tr')
+			.style('color', 'white')
+			.style('background-color', 'white')
+		const r_colors = multi_read_alig_data.alignmentData.qual_r[read_count].split(',')
+		const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
+		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
 		for (const nclt of read) {
 			nclt_count += 1
 			let nclt_td
