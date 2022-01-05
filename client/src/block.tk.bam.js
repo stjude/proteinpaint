@@ -1659,6 +1659,66 @@ async function create_read_alignment_table(tk, block, multi_read_alig_data, grou
 		}
 	}
 
+	// Drawing alignments for ref/alt allele and each of the reads
+	let read_count = 0
+	for (const read of multi_read_alig_data.alignmentData.final_read_align) {
+		let nclt_count = 0
+		const read_tr = tk.readAlignmentTable
+			.append('tr')
+			.style('color', 'white')
+			.style('background-color', 'white')
+		const r_colors = multi_read_alig_data.alignmentData.qual_r[read_count].split(',')
+		const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
+		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
+		for (const nclt of read) {
+			nclt_count += 1
+			let nclt_td
+			if (read_count == 0) {
+				nclt_td = read_tr
+					.append('td')
+					.text(nclt)
+					.style('background-color', 'white')
+					.style('color', 'black')
+					.style('font-weight', '550')
+			} else {
+				nclt_td = read_tr
+					.append('td')
+					.text(nclt)
+					.style(
+						'background-color',
+						'rgb(' + r_colors[nclt_count - 1] + ',' + g_colors[nclt_count - 1] + ',' + b_colors[nclt_count - 1] + ')'
+					)
+				if (nclt != '-') {
+					nclt_td.style('color', 'white')
+				} else {
+					nclt_td.style('color', 'black')
+				}
+			}
+
+			// Highlighting nucleotides that are within the ref/alt allele
+			if (
+				group.data.type == 'support_alt' &&
+				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+				nclt_count <=
+					tk.variants[0].leftflankseq.length +
+						tk.variants[0].alt.length +
+						multi_read_alig_data.alignmentData.gaps_before_variant
+			) {
+				nclt_td.style('color', 'black')
+			} else if (
+				group.data.type == 'support_ref' &&
+				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+				nclt_count <=
+					tk.variants[0].leftflankseq.length +
+						tk.variants[0].ref.length +
+						multi_read_alig_data.alignmentData.gaps_before_variant
+			) {
+				nclt_td.style('color', 'black')
+			}
+		}
+		read_count += 1
+	}
+
 	const gene_model_images = []
 	const break_points = []
 	const gene_model_order = []
@@ -1672,7 +1732,7 @@ async function create_read_alignment_table(tk, block, multi_read_alig_data, grou
 		let segstart = left_most_pos // This variable stores the left most position of a segment (spliced unit) of reference/alternate sequence, the first segment is initialized to the left most position of the reference/alternate sequence
 		let segstop = left_most_pos // This variable stores the right most position of a segment (spliced unit) of reference/alternate sequence
 		let local_alignment_width = 0 // This variable stores the width of each gene model that needs to be rendered using bedj track
-		console.log('tk.readAlignmentTable:', tk.readAlignmentTable.node().children[0])
+		console.log('tk.readAlignmentTable:', tk.readAlignmentTable.node().children)
 		let first_row = tk.readAlignmentTable.node().children[0]
 		let gm_nuc_count = 0
 		let prev_nclt_not_blank = false // Flag to store if previous nucleotide is "-"
@@ -1747,7 +1807,7 @@ async function create_read_alignment_table(tk, block, multi_read_alig_data, grou
 				//console.log('segstop3:', segstop)
 				//console.log('gm_nuc_count3:', gm_nuc_count)
 				//console.log('local_alignment_width3:', local_alignment_width)
-				const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+				const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop + 1, local_alignment_width) // Send bedj client request to render gene model for this segment
 				const gm = {
 					src: gene_model_image.src,
 					width: local_alignment_width,
@@ -1759,98 +1819,36 @@ async function create_read_alignment_table(tk, block, multi_read_alig_data, grou
 			} else {
 				segstop += 1
 				gm_nuc_count += 1
-				console.log('cell width:', first_row.children[nclt_count].getBoundingClientRect().width)
+				//console.log('cell width:', first_row.children[nclt_count].getBoundingClientRect().width)
 				local_alignment_width += first_row.children[nclt_count].getBoundingClientRect().width
 				prev_nclt_not_blank = false
 			}
 			nclt_count += 1
 		}
-	}
 
-	// Drawing alignments for ref/alt allele and each of the reads
-	let read_count = 0
-	for (const read of multi_read_alig_data.alignmentData.final_read_align) {
-		let nclt_count = 0
-		if (read_count == 1 && gene_models == true) {
-			// Drawing gene models after ref/alt sequence when gene_models button is clicked
-			let j = 0
-			let k = 0
-			const gene_model_tr = tk.readAlignmentTable.node().insertRow()
-			for (let i = 0; i < gene_model_order.length; i++) {
-				const gene_models_cell = gene_model_tr.insertCell()
-				if (gene_model_order[i] == 'gene_model') {
-					// Render gene model
-					const img = document.createElement('img')
-					img.src = gene_model_images[k].src
-					img.width = gene_model_images[k].width
-					img.height = gene_model_images[k].height
-					gene_models_cell.appendChild(img)
-					gene_models_cell.colSpan = gene_model_images[k].colspan
-					k += 1
-				} else if (gene_model_order[i] == 'break') {
-					// Gap representing '-' or variant
-					gene_models_cell.colSpan = break_points[j]
-					j += 1
-				}
-			}
-			read_count += 1
-			continue // Prevent highlighting of nucleotides since its irrelevant when showing gene models
-		}
-
-		const read_tr = tk.readAlignmentTable
-			.append('tr')
-			.style('color', 'white')
-			.style('background-color', 'white')
-		const r_colors = multi_read_alig_data.alignmentData.qual_r[read_count].split(',')
-		const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
-		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
-		for (const nclt of read) {
-			nclt_count += 1
-			let nclt_td
-			if (read_count == 0) {
-				nclt_td = read_tr
-					.append('td')
-					.text(nclt)
-					.style('background-color', 'white')
-					.style('color', 'black')
-					.style('font-weight', '550')
-			} else {
-				nclt_td = read_tr
-					.append('td')
-					.text(nclt)
-					.style(
-						'background-color',
-						'rgb(' + r_colors[nclt_count - 1] + ',' + g_colors[nclt_count - 1] + ',' + b_colors[nclt_count - 1] + ')'
-					)
-				if (nclt != '-') {
-					nclt_td.style('color', 'white')
-				} else {
-					nclt_td.style('color', 'black')
-				}
-			}
-
-			// Highlighting nucleotides that are within the ref/alt allele
-			if (
-				group.data.type == 'support_alt' &&
-				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
-				nclt_count <=
-					tk.variants[0].leftflankseq.length +
-						tk.variants[0].alt.length +
-						multi_read_alig_data.alignmentData.gaps_before_variant
-			) {
-				nclt_td.style('color', 'black')
-			} else if (
-				group.data.type == 'support_ref' &&
-				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
-				nclt_count <=
-					tk.variants[0].leftflankseq.length +
-						tk.variants[0].ref.length +
-						multi_read_alig_data.alignmentData.gaps_before_variant
-			) {
-				nclt_td.style('color', 'black')
+		// Drawing gene models after ref/alt sequence when gene_models button is clicked
+		let j = 0
+		let k = 0
+		const gene_model_tr = tk.readAlignmentTable.node().insertRow()
+		for (let i = 0; i < gene_model_order.length; i++) {
+			const gene_models_cell = gene_model_tr.insertCell()
+			if (gene_model_order[i] == 'gene_model') {
+				// Render gene model
+				const img = document.createElement('img')
+				img.src = gene_model_images[k].src
+				img.width = gene_model_images[k].width
+				img.height = gene_model_images[k].height
+				gene_models_cell.appendChild(img)
+				gene_models_cell.colSpan = gene_model_images[k].colspan
+				k += 1
+			} else if (gene_model_order[i] == 'break') {
+				// Gap representing '-' or variant
+				gene_models_cell.colSpan = break_points[j]
+				j += 1
 			}
 		}
 		read_count += 1
+		//continue // Prevent highlighting of nucleotides since its irrelevant when showing gene models
 	}
 }
 
