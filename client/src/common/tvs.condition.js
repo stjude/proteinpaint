@@ -1,4 +1,4 @@
-export function getConditionMethods(self) {
+export function getHandler(self) {
 	/*** self is a TVS instance, see src/common/tvs.js ***/
 
 	// hoisted functions can be returned out of code sequence

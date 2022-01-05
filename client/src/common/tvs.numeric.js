@@ -2,7 +2,7 @@ import { select, event } from 'd3-selection'
 import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, brushX } from 'd3'
 import * as client from '../client'
 
-export function getNumericMethods(self) {
+export function getHandler(self) {
 	/*** self is a TVS instance, see src/common/tvs.js ***/
 
 	// hoisted functions can be returned out of code sequence
