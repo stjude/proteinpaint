@@ -671,9 +671,14 @@ async function showJsonCode(ppcalls) {
 	const splitpath = ppcalls.jsonpath.split('/')
 	const filename = splitpath[splitpath.length - 1]
 
-	const code = hljs.highlight(JSON.stringify(json_code, '', 4), { language: 'json' }).value
+	let lines = JSON.stringify(json_code, '', 4).split('\n')
+	if (lines.length > 120) {
+		lines = lines.slice(0, 100)
+		// TODO need to indicate at the bottom "Showing first 100 lines. To see all..."
+	}
+	const code = hljs.highlight(lines.join('\n'), { language: 'json' }).value
 
-	const json_contents = `<p style="margin:20px 5px 0px 25px; justify-content:center; display: inline-block;">JSON code </p><p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p><pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 5px 30px 5px 40px; max-height: 400px; overflow-x: auto; overflow-y:auto; display: block;" ><code class="sjpp-json-code" style="font-size:14px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1000; line-clamp: 1000; -webkit-box-orient: vertical;">${code}</code></pre>`
+	const json_contents = `<p style="margin:20px 5px 0px 25px; justify-content:center; display: inline-block;">JSON code </p><p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p><pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 5px 30px 5px 40px; max-height: 400px; overflow-x: auto; overflow-y:auto; display: block;" ><code class="sjpp-json-code" style="font-size:14px; overflow: hidden; text-overflow: ellipsis; -webkit-box-orient: vertical;">${code}</code></pre>`
 
 	return json_contents
 }
