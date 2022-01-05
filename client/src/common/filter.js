@@ -263,7 +263,7 @@ class FilterStateless extends Filter {
 		const rawCopy = JSON.stringify(rawFilter)
 		//
 		if (this.rawCopy == rawCopy && JSON.stringify(this.activeCohort) == JSON.stringify(activeCohort)) return
-		this.update(rawCopy, opts)
+		super.main(rawCopy, opts)
 	}
 }
 
@@ -386,6 +386,7 @@ function setRenderers(self) {
 				action: 'replace',
 				html: ['', 'Replace', '&rsaquo;'],
 				handler: self.displayTreeMenu,
+				click_term2select_tvs: self.replaceTerm,
 				bar_click_override: self.replaceTerm
 			})
 		}
@@ -883,11 +884,7 @@ function setInteractivity(self) {
 					self.editFilterRoot(d, [{ type: 'tvs', tvs }])
 				}
 			},
-			barchart: {
-				bar_click_override: tvslst => {
-					self.editFilterRoot(d, tvslst)
-				}
-			}
+			barchart: {}
 		})
 	}
 
@@ -994,17 +991,9 @@ function setInteractivity(self) {
 					!filter.lst.length ||
 					(self.activeData.elem && self.activeData.elem.className.includes('join'))
 						? self.appendTerm
-						: self.replaceTerm
+						: self.subnestFilter
 			},
-			barchart: {
-				bar_click_override: d.bar_click_override
-					? d.bar_click_override
-					: !filter.join ||
-					  !filter.lst.length ||
-					  (self.activeData.elem && self.activeData.elem.className.includes('join'))
-					? self.appendTerm
-					: self.subnestFilter
-			}
+			barchart: {}
 		})
 	}
 
@@ -1080,7 +1069,14 @@ function setInteractivity(self) {
 		self.refresh(filterUiRoot)
 	}
 
-	self.subnestFilter = tvslst => {
+	self.subnestFilter = t => {
+		let tvslst
+		if (Array.isArray(t)) {
+			tvslst = t
+		} else {
+			tvslst = [{ type: 'tvs', tvs: t }]
+		}
+
 		const item = self.activeData.item
 		const filter = self.activeData.filter
 		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
