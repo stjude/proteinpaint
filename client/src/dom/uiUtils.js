@@ -13,7 +13,7 @@ isURL
 
 export function isURL(path) {
 	const checkpath = path.toLowerCase()
-	if (checkpath.startsWith('https://' || 'http://')) return true
+	if (checkpath.startsWith('https://' || 'http://' || 'ftp://')) return true
 	else return false
 }
 
@@ -22,7 +22,6 @@ export function makeGenomeDropDown(div, genomes) {
 
 	const select = g_row
 		.append('select')
-		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('border-radius', '5px')
 		.style('padding', '5px 10px')
 		.style('margin', '1px 20px 1px 10px')
@@ -32,11 +31,10 @@ export function makeGenomeDropDown(div, genomes) {
 	return select
 }
 
-export function textInput(div, placeholder) {
+export function makeTextInput(div, placeholder) {
 	const text = div
 		.append('input')
 		.attr('type', 'text')
-		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('border-radius', '5px')
 		.style('padding', '5px 10px')
 		.style('margin', '1px 20px 1px 10px')
@@ -45,4 +43,16 @@ export function textInput(div, placeholder) {
 	}
 
 	return text
+}
+
+export function makeTextAreaInput(div, placeholder) {
+	const textarea = div
+		.append('textarea')
+		.attr('rows', '5')
+		.attr('cols', '70')
+	if (placeholder) {
+		textarea.attr('placeholder', placeholder)
+	}
+
+	return textarea
 }
