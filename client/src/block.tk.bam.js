@@ -1672,12 +1672,11 @@ async function create_read_alignment_table(tk, block, multi_read_alig_data, grou
 		let segstart = left_most_pos // This variable stores the left most position of a segment (spliced unit) of reference/alternate sequence, the first segment is initialized to the left most position of the reference/alternate sequence
 		let segstop = left_most_pos // This variable stores the right most position of a segment (spliced unit) of reference/alternate sequence
 		let local_alignment_width = 0 // This variable stores the width of each gene model that needs to be rendered using bedj track
-		//console.log('tk.readAlignmentTable:', tk.readAlignmentTable.node())
+		console.log('tk.readAlignmentTable:', tk.readAlignmentTable.node().children)
 		let first_row = tk.readAlignmentTable.node().children[0]
 		let gm_nuc_count = 0
 		let prev_nclt_not_blank = false // Flag to store if previous nucleotide is "-"
 		let nclt_count = 0
-		console.log('refalt_seq.length:', refalt_seq.length)
 		for (const nclt of refalt_seq) {
 			if (nclt == '-') {
 				if (prev_nclt_not_blank == true) {
@@ -1686,9 +1685,11 @@ async function create_read_alignment_table(tk, block, multi_read_alig_data, grou
 					gene_model_order.push('break')
 				} else {
 					// Break in reference/alternate sequence caused by a read(s), will invoke a bedj request here
-					console.log('nclt_count1:', nclt_count)
-					console.log('segstart1:', segstart)
-					console.log('segstop1:', segstop)
+					//console.log('nclt_count1:', nclt_count)
+					//console.log('segstart1:', segstart)
+					//console.log('segstop1:', segstop)
+					//console.log('gm_nuc_count1:', gm_nuc_count)
+					//console.log('local_alignment_width1:', local_alignment_width)
 					const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
 					const gm = {
 						src: gene_model_image.src,
@@ -1712,9 +1713,11 @@ async function create_read_alignment_table(tk, block, multi_read_alig_data, grou
 					// In case of SNP no break in gene model is necessary
 					continue
 				}
-				console.log('nclt_count2:', nclt_count)
-				console.log('segstart2:', segstart)
-				console.log('segstop2:', segstop)
+				//console.log('nclt_count2:', nclt_count)
+				//console.log('segstart2:', segstart)
+				//console.log('segstop2:', segstop)
+				//console.log('gm_nuc_count2:', gm_nuc_count)
+				//console.log('local_alignment_width2:', local_alignment_width)
 				const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
 				const gm = {
 					src: gene_model_image.src,
@@ -1739,9 +1742,11 @@ async function create_read_alignment_table(tk, block, multi_read_alig_data, grou
 				gene_model_order.push('break')
 			} else if (nclt_count == refalt_seq.length - 1) {
 				// When last nucleotide of reference/alternate sequence is parsed, rendering of gene model is invoked
-				console.log('nclt_count3:', nclt_count)
-				console.log('segstart3:', segstart)
-				console.log('segstop3:', segstop)
+				//console.log('nclt_count3:', nclt_count)
+				//console.log('segstart3:', segstart)
+				//console.log('segstop3:', segstop)
+				//console.log('gm_nuc_count3:', gm_nuc_count)
+				//console.log('local_alignment_width3:', local_alignment_width)
 				const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
 				const gm = {
 					src: gene_model_image.src,
@@ -1754,6 +1759,7 @@ async function create_read_alignment_table(tk, block, multi_read_alig_data, grou
 			} else {
 				segstop += 1
 				gm_nuc_count += 1
+				console.log('cell width:', first_row.children[nclt_count].getBoundingClientRect().width)
 				local_alignment_width += first_row.children[nclt_count].getBoundingClientRect().width
 				prev_nclt_not_blank = false
 			}
@@ -1948,23 +1954,24 @@ async function getReadInfo(tk, block, box, ridx) {
 				.style('font-size', '0.8em')
 				.style('color', '#303030')
 				.style('margin', '5px 5px 20px 5px')
-			const query_tr = readAlignmentTable.append('tr')
-			query_tr
+			let nclt_count = 0
+			const refAlt_tr = readAlignmentTable.append('tr')
+			refAlt_tr
 				.append('td')
-				.text('Read')
+				.text(type + ' allele')
 				.style('text-align', 'right')
 				.style('font-weight', '550')
-			let nclt_count = 0
-			for (const nclt of q_align) {
+				.style('white-space', 'nowrap')
+			for (const nclt of r_align) {
 				nclt_count += 1
 				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
-					query_tr.append('td').text(nclt)
+					refAlt_tr.append('td').text(nclt)
 				} else if (
 					type == 'Ref' &&
 					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
 					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
 				) {
-					query_tr
+					refAlt_tr
 						.append('td')
 						.text(nclt)
 						.style('color', 'red')
@@ -1973,12 +1980,12 @@ async function getReadInfo(tk, block, box, ridx) {
 					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
 					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
 				) {
-					query_tr
+					refAlt_tr
 						.append('td')
 						.text(nclt)
 						.style('color', 'red')
 				} else {
-					query_tr.append('td').text(nclt)
+					refAlt_tr.append('td').text(nclt)
 				}
 			}
 			const alignment_tr = readAlignmentTable.append('tr')
@@ -2010,24 +2017,24 @@ async function getReadInfo(tk, block, box, ridx) {
 					alignment_tr.append('td').text(align_str)
 				}
 			}
-			const refAlt_tr = readAlignmentTable.append('tr')
-			refAlt_tr
+
+			const query_tr = readAlignmentTable.append('tr')
+			query_tr
 				.append('td')
-				.text(type + ' allele')
+				.text('Read')
 				.style('text-align', 'right')
 				.style('font-weight', '550')
-				.style('white-space', 'nowrap')
 			nclt_count = 0
-			for (const nclt of r_align) {
+			for (const nclt of q_align) {
 				nclt_count += 1
 				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
-					refAlt_tr.append('td').text(nclt)
+					query_tr.append('td').text(nclt)
 				} else if (
 					type == 'Ref' &&
 					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
 					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
 				) {
-					refAlt_tr
+					query_tr
 						.append('td')
 						.text(nclt)
 						.style('color', 'red')
@@ -2036,12 +2043,12 @@ async function getReadInfo(tk, block, box, ridx) {
 					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
 					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
 				) {
-					refAlt_tr
+					query_tr
 						.append('td')
 						.text(nclt)
 						.style('color', 'red')
 				} else {
-					refAlt_tr.append('td').text(nclt)
+					query_tr.append('td').text(nclt)
 				}
 			}
 		}
