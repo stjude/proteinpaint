@@ -2,7 +2,8 @@ export const handler = {
 	term_name_gen,
 	get_pill_label,
 	getSelectRemovePos,
-	fillMenu
+	fillMenu,
+	setTvsDefaults
 }
 
 async function fillMenu(self, div, tvs) {
@@ -70,6 +71,10 @@ function get_pill_label(tvs) {
 
 function getSelectRemovePos(j) {
 	return j
+}
+
+function setTvsDefaults(tvs) {
+	if (!tvs.values) tvs.values = []
 }
 
 function validateCategoricalTvs(tvs) {

@@ -297,7 +297,7 @@ export async function showTvsMenu(opts) {
 	self.filter = opts.filter
 	//addExcludeCheckbox(opts.holder, self.tvs)
 	await self.setHandler()
-	if (self.setDefaults) self.setDefaults(tvs)
+	if (self.handler.setTvsDefaults) self.handler.setTvsDefaults(self.tvs)
 	self.handler.fillMenu(self, opts.holder, self.tvs)
 }
 

@@ -7,7 +7,7 @@ export const handler = {
 	get_pill_label,
 	getSelectRemovePos,
 	fillMenu,
-	validateTvs: validateNumericTvs
+	setTvsDefaults
 }
 
 async function fillMenu(self, div, tvs) {
