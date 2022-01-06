@@ -1865,8 +1865,13 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 	let k = 0
 	const gene_model_tr = tk.readAlignmentTable.node().insertRow()
 	// Check if there are reads aligned to reference/alternate sequence
-	const first_read = tk.readAlignmentTable.node().children[2]
-	tk.readAlignmentTable.node().insertBefore(gene_model_tr, first_read)
+	if (tk.readAlignmentTable.node().children.length >= 3) {
+		// Ensure that there is atleast one read in the alignment before trying to place the gene model before it (not tested, maybe should not happen at all)
+		const first_read = tk.readAlignmentTable.node().children[2]
+		tk.readAlignmentTable.node().insertBefore(gene_model_tr, first_read)
+	} else {
+		console.log('Posibble problem in placing gene model in table. Please check')
+	}
 	for (let i = 0; i < gene_model_order.length; i++) {
 		const gene_models_cell = gene_model_tr.insertCell()
 		if (gene_model_order[i] == 'gene_model') {
