@@ -1,11 +1,20 @@
 /*
 
 -------EXPORTED-------
+isURL
+    - path: checks if str input is URL and returns boolean
+
 makeGenomeDropDown
     - div: element to append select element
     - genomes: genome must be an arg in the ui init() and passed to this fn
-isURL
-    - path: checks if str input is URL and returns boolean
+
+makeTextInput
+    - div: element to append input element
+    - placeholder (optional)
+
+makeTextAreaInput
+    - div: element to append textarea element
+    - placeholder (optional)
 
 -------Internal-------
 
@@ -36,7 +45,7 @@ export function makeTextInput(div, placeholder) {
 		.append('input')
 		.attr('type', 'text')
 		.style('border-radius', '5px')
-		.style('padding', '5px 10px')
+		.style('padding', '5px 20px')
 		.style('margin', '1px 20px 1px 10px')
 	if (placeholder) {
 		text.attr('placeholder', placeholder)
@@ -50,6 +59,7 @@ export function makeTextAreaInput(div, placeholder) {
 		.append('textarea')
 		.attr('rows', '5')
 		.attr('cols', '70')
+		.style('border-radius', '5px')
 	if (placeholder) {
 		textarea.attr('placeholder', placeholder)
 	}

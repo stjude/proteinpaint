@@ -146,6 +146,15 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
             "ppcalls":[
                 {
+                    "is_ui": true, 
+                    "runargs": {
+                        "noheader": true,
+                        "nobox": 1, 
+                        "parseurl": 1, 
+                        "uionly": "bigwig"
+                    }
+                },
+                {
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bigwig/file.bw",
                     "urlparam": "?block=on&genome=hg19&bigwigfile=BigWig_Demo,proteinpaint_demo/hg19/bigwig/file.bw",
                     "runargs":{
