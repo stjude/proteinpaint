@@ -1534,6 +1534,7 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 		.append('tr')
 		.style('color', 'white')
 		.style('background-color', 'white')
+	refallele_tr.attr('id', 'RefAltBar')
 	let variant_string // This will contain the variant bar along with Refeerence/ Alternate allele label
 	let nclt_count = 0
 	let allele_start = 0 // Flag to tell if the variant region has been reached or not. After that position alternate/reference allele will be rendered
@@ -1667,6 +1668,12 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 			.append('tr')
 			.style('color', 'white')
 			.style('background-color', 'white')
+		// Setting attribute of row
+		if (read_count == 0) {
+			read_tr.attr('id', 'RefAltSeq')
+		} else {
+			read_tr.attr('id', read_count.toString())
+		}
 		const r_colors = multi_read_alig_data.alignmentData.qual_r[read_count].split(',')
 		const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
 		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
@@ -1848,6 +1855,8 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 	let j = 0
 	let k = 0
 	const gene_model_tr = tk.readAlignmentTable.node().insertRow()
+	const first_read = tk.readAlignmentTable.node().children[2]
+	tk.readAlignmentTable.node().insertBefore(gene_model_tr, first_read)
 	for (let i = 0; i < gene_model_order.length; i++) {
 		const gene_models_cell = gene_model_tr.insertCell()
 		if (gene_model_order[i] == 'gene_model') {
