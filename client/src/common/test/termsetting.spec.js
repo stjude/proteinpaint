@@ -43,6 +43,7 @@ async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 		use_bins_less: opts.use_bins_less,
 		showFullMenu: opts.showFullMenu,
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,
+		numericEditMenuVersion: opts.numericEditMenuVersion,
 		debug: true,
 		callback: function(termsetting) {
 			opts.tsData = termsetting
@@ -485,6 +486,30 @@ tape('Numerical term: float custom bins', async test => {
 	test.equal(lines.length, 2, 'should have 2 lines')
 })
 
+tape('Numerical term: toggle menu', async test => {
+	test.timeoutAfter(9000)
+	test.plan(0)
+
+	const opts = await getOpts({
+		numericEditMenuVersion: ['continuous', 'discrete', 'cubic-spline'],
+		tsData: {
+			term: termjson['agedx']
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
+	pilldiv.click()
+
+	// const tip = opts.pill.Inner.dom.tip
+	// const lines = tip.d
+	// 	.select('.binsize_g')
+	// 	.node()
+	// 	.querySelectorAll('line')
+	// test.equal(lines.length, 2, 'should have 2 lines')
+})
+
 tape('Numerical term: integer custom bins', async test => {
 	test.timeoutAfter(3000)
 	test.plan(3)
@@ -622,7 +647,7 @@ tape('Conditional term', async test => {
 			},
 			q: {
 				value_by_max_grade: true,
-				groupsetting: {inuse: false}
+				groupsetting: { inuse: false }
 			}
 		}
 	})
