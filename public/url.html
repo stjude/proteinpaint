@@ -132,111 +132,6 @@ makeURL([
 {name:'termdb',
 	links:[
 		['sjlife tree','?noheader=1&termdb='+JSON.stringify( {dslabel:'SJLife',genome:'hg38',nav:{header_mode:'with_tabs'}})],
-		['categorical','?noheader=1&termdb='+JSON.stringify( {
-			dslabel:'SJLife',
-			genome:'hg38',
-			tree: {
-				//exclude_types: ['integer'],
-				expandedTermIds: [ 'root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp' ],
-				visiblePlotIds: ['diaggrp'],
-				plots: {
-					diaggrp: {
-						term: {
-							id: 'diaggrp'
-						}
-					}
-				}
-			},
-			nav: {
-				header_mode: 'with_tabs',
-				activeTab: -1 // close all tabs
-			},
-			activeCohort:0
-		})],
-		['numerical','?noheader=1&termdb='+JSON.stringify( {
-			dslabel:'SJLife',
-			genome:'hg38',
-			tree: {
-				expandedTermIds: [ 'root', 'Cancer-related Variables', 'Diagnosis','yeardx' ],
-				visiblePlotIds: ['yeardx'],
-				plots: {
-					yeardx: {
-						term: {
-							id: 'yeardx'
-						}
-					}
-				}
-			},
-			nav: {
-				header_mode: 'with_tabs',
-				activeTab: -1
-			},
-			activeCohort:0
-		})],
-		['condition','?noheader=1&termdb='+JSON.stringify( {
-			dslabel:'SJLife',
-			genome:'hg38',
-			tree: {
-				expandedTermIds: [ 'root', 'Clinically-assessed Variables', 'ctcae_graded', 'Cardiovascular System' ],
-				visiblePlotIds: ['Cardiovascular System'],
-				plots: {
-					'Cardiovascular System': {
-						term: {
-							id: 'Cardiovascular System'
-						}
-					}
-				}
-			},
-			nav: {
-				header_mode: 'with_tabs',
-				activeTab: -1
-			},
-			activeCohort:0
-		})],
-		['filter','?noheader=1&termdb='+JSON.stringify( {
-			dslabel:'SJLife',
-			genome:'hg38',
-			tree: {
-				expandedTermIds: [
-					'root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'
-				],
-				visiblePlotIds: ['diaggrp'],
-				plots: {
-					diaggrp: {
-						term: {
-							id: 'diaggrp'
-						}
-					}
-				}
-			},
-			termfilter: {
-				filter:{
-					type:'tvslst',
-					join:'',
-					in:true,
-					lst:[
-						{type:'tvs',tvs: {
-							term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float',
-								"values":{
-									"0": { "label":"Not exposed", "uncomputable":true },
-									"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
-									"-9999": { "label":"Unknown treatment record", "uncomputable":true }
-								}
-							},
-							ranges: [
-								{ value: '0', label: "Not exposed"},
-								{startunbounded:true,stop:2000,stopinclusive:true}
-							]
-						}}
-					]
-				}
-			},
-			nav: {
-				header_mode: 'with_tabs',
-				activeTab: 1
-			},
-			activeCohort:0
-		})],
 		['pnet','?noheader=1&termdb='+JSON.stringify({
 			dslabel: 'PNET',
 			genome: 'hg19',
@@ -291,8 +186,48 @@ makeURL([
 	links:[
 		['TermdbTest', '?noheader=1&mass={"genome":"hg38","dslabel": "TermdbTest"}'],
 		['SJLife', '?noheader=1&mass={"genome":"hg38","dslabel": "SJLife"}'],
+		['CCSS','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			activeCohort:1
+		})],
 
-		['barchart', '?noheader=1&mass={"genome":"hg38","dslabel": "SJLife","plots":[{"chartType":"barchart","term":{"id":"diaggrp"}}]}'],
+		['categorical','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'barchart',
+					term: {
+						id: 'diaggrp'
+					}
+				}
+			],
+		})],
+		['numerical','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'barchart',
+					term: {
+						id: 'hrtavg'
+					}
+				}
+			],
+		})],
+		['condition','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'barchart',
+					term: {
+						id: 'Arrhythmias'
+					}
+				}
+			],
+		})],
 
 		['cuminc','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'SJLife',
@@ -324,6 +259,32 @@ makeURL([
 					}
 				}
 			],
+		})],
+		['filter','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			termfilter: {
+				filter:{
+					type:'tvslst',
+					join:'',
+					in:true,
+					lst:[
+						{type:'tvs',tvs: {
+							term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float',
+								"values":{
+									"0": { "label":"Not exposed", "uncomputable":true },
+									"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+									"-9999": { "label":"Unknown treatment record", "uncomputable":true }
+								}
+							},
+							ranges: [
+								{ value: '0', label: "Not exposed"},
+								{startunbounded:true,stop:2000,stopinclusive:true}
+							]
+						}}
+					]
+				}
+			},
 		})],
 	]
 },

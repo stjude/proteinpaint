@@ -170,20 +170,27 @@ function setRenderers(self) {
 		let rowcount = 0
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
-			const term = self.state.config.independent.find(t => t.id == tid)
+			/* in order to reliably access tw.refGrp,
+			must use termwrapper from self.config but not self.state.config
+			due to a specific condition when refGrp is set in self.config, but is missing from state
+			when launching from a parameterized url that's missing refgrp for the term
+			and the refGrp is dynamically filled by input.updateTerm() but not propagated to state
+			*/
+			const tw = self.config.independent.find(t => t.id == tid)
 			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 
 			// col 1: term name
 			const termNameTd = tr.append('td').style('padding', '8px')
-			fillTdName(termNameTd, term ? term.term.name : tid)
-			if ('refGrp' in term && term.refGrp != refGrp_NA) {
+			fillTdName(termNameTd, tw ? tw.term.name : tid) // can tw ever be missing??
+			if ('refGrp' in tw && tw.refGrp != refGrp_NA) {
 				termNameTd
 					.append('div')
 					.style('font-size', '.8em')
 					.style('opacity', 0.6)
-					.text(
-						'REF: ' +
-							(term.term.values && term.term.values[term.refGrp] ? term.term.values[term.refGrp].label : term.refGrp)
+					.html(
+						'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">REF</span> ' +
+							(tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp) +
+							'</span>'
 					)
 			}
 
@@ -225,7 +232,7 @@ function setRenderers(self) {
 					}
 					// col 2
 					tr.append('td')
-						.text(term && term.term.values && term.term.values[k] ? term.term.values[k].label : k)
+						.text(tw && tw.term.values && tw.term.values[k] ? tw.term.values[k].label : k)
 						.style('padding', '8px')
 					// col 3
 					forestPlotter(tr.append('td'), termdata.categories[k])

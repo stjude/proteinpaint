@@ -307,7 +307,7 @@ async function openSandbox(track, holder) {
 
 	//Disables top, horizontal tabs for api queries or other special circumstances
 	if (track.disable_topTabs == true) {
-		renderContent(track.ppcalls[0], sandbox_div.body)
+		renderContent(track.ppcalls[0], sandbox_div.body, track.app)
 	} else {
 		// Creates the overarching tab menu and subsequent content
 		const toptab_div = sandbox_div.body
@@ -325,15 +325,15 @@ async function openSandbox(track, holder) {
 }
 
 // Single content layout for examples only - buttons not used for UIs
-function renderContent(ppcalls, div) {
+function renderContent(ppcalls, div, app) {
 	addMessage(ppcalls.message, div)
 
 	const buttons_div = div.append('div').style('margin-bottom', '20px')
 	const reuse_div = div.append('div')
 
 	addButtons(ppcalls.buttons, buttons_div)
-	makeDataDownload(ppcalls.download, buttons_div)
-	showURLLaunch(ppcalls.urlparam, buttons_div)
+	makeDataDownload(ppcalls.download, buttons_div, app)
+	showURLLaunch(ppcalls.urlparam, buttons_div, app)
 	addArrowBtns(ppcalls.arrowButtons, ppcalls, buttons_div, reuse_div)
 
 	if (!ppcalls.nodashedline) {
@@ -395,7 +395,7 @@ function makeSandboxTabs(track) {
 			active: false,
 			callback: async div => {
 				try {
-					renderContent(track.ppcalls[notui], div)
+					renderContent(track.ppcalls[notui], div, track.app)
 				} catch (e) {
 					alert('Error: ' + (e.message || e))
 				}
@@ -462,7 +462,10 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 
 //Creates the subtab menu for pursing through examples, on the left-hand side of the sandbox, below the main tabs
 async function makeLeftsideTabMenu(track, div) {
-	const tabs = track.ppcalls.map(getTabData)
+	// const tabs = track.ppcalls.map(getTabData)
+	const trackORapp = track.app
+
+	const tabs = track.ppcalls.map((p, index) => getTabData(p, index, trackORapp))
 
 	const menu_wrapper = div.append('div').classed('sjpp-vertical-tab-menu', true)
 	const tabs_div = menu_wrapper
@@ -510,14 +513,14 @@ async function makeLeftsideTabMenu(track, div) {
 	}
 }
 
-function getTabData(ppcalls, i) {
+function getTabData(ppcalls, i, app) {
 	return {
 		label: ppcalls.label,
 		active: i === 0,
 		callback: async div => {
 			const wait = tab_wait(div)
 			try {
-				renderContent(ppcalls, div)
+				renderContent(ppcalls, div, app)
 				wait.remove()
 			} catch (e) {
 				wait.text('Error: ' + (e.message || e))
@@ -588,22 +591,22 @@ function addButtons(buttons, div) {
 	}
 }
 
-function showURLLaunch(arg, div) {
-	if (arg) {
-		const URLbtn = makeButton(div, 'Run track from URL')
+function showURLLaunch(urlparam, div, app) {
+	if (urlparam) {
+		const URLbtn = makeButton(div, app == 'Apps' ? 'Run app from URL' : 'Run track from URL')
 		URLbtn.on('click', () => {
 			event.stopPropagation()
-			window.open(`${arg}`, '_blank')
+			window.open(`${urlparam}`, '_blank')
 		})
 	}
 }
 
-function makeDataDownload(arg, div) {
-	if (arg) {
-		const dataBtn = makeButton(div, 'Download Track File(s)')
+function makeDataDownload(download, div, app) {
+	if (download) {
+		const dataBtn = makeButton(div, app == 'Apps' ? 'Download App File(s)' : 'Download Track File(s)')
 		dataBtn.on('click', () => {
 			event.stopPropagation()
-			window.open(`${arg}`, '_self', 'download')
+			window.open(`${download}`, '_self', 'download')
 		})
 	}
 }
@@ -654,9 +657,19 @@ async function showJsonCode(ppcalls) {
 	const splitpath = ppcalls.jsonpath.split('/')
 	const filename = splitpath[splitpath.length - 1]
 
-	const code = hljs.highlight(JSON.stringify(json_code, '', 4), { language: 'json' }).value
+	let lines = JSON.stringify(json_code, '', 4).split('\n')
+	let slicedjson
+	if (lines.length > 120) {
+		lines = lines.slice(0, 100)
+		slicedjson = true
+	}
+	const code = hljs.highlight(lines.join('\n'), { language: 'json' }).value
 
-	const json_contents = `<p style="margin:20px 5px 0px 25px; justify-content:center; display: inline-block;">JSON code </p><p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p><pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 5px 30px 5px 40px; max-height: 400px; overflow-x: auto; overflow-y:auto;" ><code style="font-size:14px;">${code}</code></pre>`
+	const json_contents = `<p style="margin:20px 5px 0px 25px; justify-content:center; display: inline-block;">JSON code </p><p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p><pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 5px 30px 5px 40px; max-height: 400px; overflow-x: auto; overflow-y:auto; display: block;" ><code class="sjpp-json-code" style="font-size:14px;">${
+		slicedjson == true
+			? `${code} ...<br><p style='margin:20px 25px; justify-content:center;'>Showing first 100 lines. To see the entire JSON, download ${filename} from the button above.</p></code></pre>`
+			: `${code}</code></pre>`
+	}`
 
 	return json_contents
 }

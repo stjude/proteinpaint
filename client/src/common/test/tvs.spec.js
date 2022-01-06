@@ -103,9 +103,9 @@ tape('tvs (common): buttons', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-
+	await sleep(100)
 	// test common bluepill components
-	test.equal(opts.holder.node().querySelectorAll('.tvs_pill').length, 1, 'should have one filter buttons')
+	test.equal(opts.holder.node().querySelectorAll('.tvs_pill').length, 1, 'should have one filter button')
 
 	test.equal(
 		opts.holder.node().querySelectorAll('.term_name_btn')[0].innerHTML,
@@ -137,16 +137,16 @@ tape('tvs (common): buttons', async test => {
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
 	await sleep(700)
-	const tipd = opts.filter.Inner.dom.treeHead
+	const tipd = opts.filter.Inner.dom.termSrcDiv
 	tipd
 		.node()
-		.querySelectorAll('input')[0]
+		.querySelector('input[name=sja_filter_isnot_input]')
 		.click()
 	opts.filter.Inner.dom.termSrcDiv
-		.selectAll('.apply_btn')
+		.select('.apply_btn')
 		.node()
 		.click()
-
+	await sleep(50)
 	test.equal(
 		opts.holder.node().querySelectorAll('.negate_btn')[0].innerHTML,
 		'NOT',
@@ -174,7 +174,7 @@ tape('tvs: Categorical', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-
+	await sleep(100)
 	//trigeer and check tip menu
 	const pill = opts.holder.select('.tvs_pill').node()
 	pill.click()
@@ -222,7 +222,7 @@ tape('tvs: Categorical', async test => {
 	test.end()
 })
 
-tape('tvs: Numerical', async test => {
+tape('tvs: Numeric', async test => {
 	test.timeoutAfter(20000)
 	test.plan(19)
 
@@ -260,7 +260,7 @@ tape('tvs: Numerical', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-
+	await sleep(100)
 	// test common bluepill components
 	test.equal(
 		opts.holder
@@ -285,7 +285,7 @@ tape('tvs: Numerical', async test => {
 	const pill = opts.holder.select('.tvs_pill').node()
 	pill.click()
 
-	await sleep(150)
+	await sleep(350)
 	const controlTipd = opts.filter.Inner.dom.controlsTip.d
 	const menuRows = controlTipd.selectAll('tr')
 	const editOpt = menuRows.filter(d => d.action == 'edit')
@@ -534,7 +534,7 @@ tape('tvs: Numerical', async test => {
 	test.end()
 })
 
-tape('tvs: Conditional', async test => {
+tape('tvs: Condition', async test => {
 	test.timeoutAfter(8000)
 
 	const opts = getOpts({
@@ -557,7 +557,7 @@ tape('tvs: Conditional', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-
+	await sleep(100)
 	// test common bluepill components
 	test.equal(
 		opts.holder.node().querySelectorAll('.term_name_btn')[0].innerHTML,
@@ -631,14 +631,18 @@ tape('tvs: Conditional', async test => {
 	editOpt.node().click()
 	await sleep(1000)
 
-	tipd.node().querySelectorAll('select')[1].selectedIndex = 1
+	tipd.node().querySelector('.grade_select').selectedIndex = 1
 	tipd
 		.node()
-		.querySelectorAll('select')[1]
+		.querySelector('.grade_select')
 		.dispatchEvent(new Event('change'))
+	await sleep(100)
+	tipd
+		.selectAll('.apply_btn')
+		.node()
+		.click()
 
 	await sleep(800)
-
 	test.equal(
 		opts.holder.node().querySelectorAll('.grade_type_btn')[0].innerHTML,
 		'[Most Recent Grade]',

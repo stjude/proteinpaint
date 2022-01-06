@@ -1,9 +1,6 @@
 import * as rx from './rx.core'
 import { select } from 'd3-selection'
 import * as client from '../client'
-import { getCategoricalMethods } from './tvs.categorical'
-import { getConditionMethods } from './tvs.condition'
-import { getNumericMethods } from './tvs.numeric'
 
 class TVS {
 	constructor(opts) {
@@ -14,19 +11,12 @@ class TVS {
 		setInteractivity(this)
 		setRenderers(this)
 		this.categoryData = {}
-
-		this.methodsByTermType = {
-			categorical: getCategoricalMethods(this),
-			integer: getNumericMethods(this),
-			float: getNumericMethods(this),
-			condition: getConditionMethods(this)
-		}
-
+		this.handlerByType = {}
 		this.api = {
 			main: async (data = {}) => {
 				this.tvs = data.tvs
 				this.filter = data.filter
-				if (!(this.tvs.term.type in this.methodsByTermType)) throw `invalid tvs.term.type='${this.tvs.term.type}'`
+				await this.setHandler()
 				this.updateUI()
 
 				// when there are filters to be removed, must account for the delayed
@@ -39,11 +29,26 @@ class TVS {
 			showMenu: this.showMenu
 		}
 	}
+
 	validateOpts(o) {
 		if (!o.holder) throw '.holder missing'
 		if (!o.vocabApi) throw '.vocabApi missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
+	}
+
+	async setHandler() {
+		const term = this.tvs.term
+		const type = term.type == 'integer' || term.type == 'float' ? 'numeric' : term.type // 'categorical', 'condition', 'survival', etc
+		if (!this.handlerByType[type]) {
+			try {
+				const _ = await import(`./tvs.${type}.js`)
+				this.handlerByType[type] = _.handler
+			} catch (e) {
+				throw `error with handler='./tvs.${type}.js': ${e}`
+			}
+		}
+		this.handler = this.handlerByType[type]
 	}
 }
 
@@ -83,7 +88,7 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('border-radius', '6px 0 0 6px')
 			.style('padding', '6px 6px 3px 6px')
-			.html(self.methodsByTermType[self.tvs.term.type].term_name_gen)
+			.html(self.handler.term_name_gen)
 			.style('text-transform', 'uppercase')
 
 		// negate button
@@ -103,7 +108,7 @@ function setRenderers(self) {
 	self.showMenu = _holder => {
 		const holder = _holder ? _holder : self.dom.tip
 		addExcludeCheckbox(holder, self.tvs)
-		self.methodsByTermType[self.tvs.term.type].fillMenu(holder, self.tvs)
+		self.handler.fillMenu(self, holder, self.tvs)
 	}
 
 	self.removeTerm = tvs => {
@@ -123,7 +128,7 @@ function setRenderers(self) {
 			.style('background', self.tvs.isnot ? '#f4cccc' : '#a2c4c9')
 			.html(tvs.isnot ? 'NOT' : 'IS')
 
-		const label = self.methodsByTermType[self.tvs.term.type].get_pill_label(tvs)
+		const label = self.handler.get_pill_label(tvs)
 		if (!('grade_type' in label)) label.grade_type = ''
 
 		const value_btns = one_term_div.selectAll('.value_btn').data(label ? [label] : [], d => d.txt + d.grade_type)
@@ -271,7 +276,7 @@ function setRenderers(self) {
 	self.removeValueBtn = function(d, j) {
 		const one_term_div = select(this.parentNode)
 		const tvs = one_term_div.datum()
-		const select_remove_pos = self.methodsByTermType[self.tvs.term.type].getSelectRemovePos(j, tvs)
+		const select_remove_pos = self.handler.getSelectRemovePos(j, tvs)
 
 		select(one_term_div.selectAll('.value_select')._groups[0][select_remove_pos]).remove()
 		select(one_term_div.selectAll('.or_btn')._groups[0][j]).remove()
@@ -289,7 +294,7 @@ function setInteractivity(self) {
 }
 
 // opts is the same argument for the TVS constructor()
-export function showTvsMenu(opts) {
+export async function showTvsMenu(opts) {
 	const self = new TVS(opts)
 	self.tvs = {
 		term: opts.term,
@@ -304,7 +309,8 @@ export function showTvsMenu(opts) {
 		self.tvs.value_by_max_grade = true
 	}
 	addExcludeCheckbox(opts.holder, self.tvs)
-	self.methodsByTermType[opts.term.type].fillMenu(opts.holder, self.tvs)
+	await self.setHandler()
+	self.handler.fillMenu(self, opts.holder, self.tvs)
 }
 
 function addExcludeCheckbox(holder, tvs) {
