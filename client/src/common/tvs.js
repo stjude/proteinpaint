@@ -111,11 +111,6 @@ function setRenderers(self) {
 		self.handler.fillMenu(self, holder, self.tvs)
 	}
 
-	self.removeTerm = tvs => {
-		// const termfilter = self.termfilter.terms.filter(d => d.term.id != tvs.term.id)
-		self.opts.callback(null)
-	}
-
 	self.updatePill = async function() {
 		const one_term_div = select(this)
 		const tvs = one_term_div.datum()

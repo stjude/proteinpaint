@@ -1,6 +1,6 @@
 import { getCompInit, multiInit } from '../common/rx.core'
 import { searchInit } from './search'
-import { filter3Init } from '../termdb/filter3'
+import { filterRxCompInit } from '../common/filter'
 import { chartsInit } from './charts'
 import { select } from 'd3-selection'
 import { dofetch3 } from '../common/dofetch'
@@ -35,11 +35,18 @@ class TdbNav {
 					app: this.app,
 					holder: this.dom.searchDiv
 				}),
-				filter: filter3Init({
+				filter: filterRxCompInit({
 					app: this.app,
+					vocab: this.opts.vocab,
 					holder: this.dom.subheader.filter.append('div'),
 					hideLabel: this.opts.header_mode === 'with_tabs',
-					emptyLabel: '+Add new filter'
+					emptyLabel: '+Add new filter',
+					callback: filter => {
+						this.app.dispatch({
+							type: 'filter_replace',
+							filter
+						})
+					}
 				}),
 				charts: chartsInit({
 					app: this.app,

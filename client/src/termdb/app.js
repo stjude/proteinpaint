@@ -4,7 +4,6 @@ import { vocabInit } from './vocabulary'
 import { treeInit } from './tree'
 import { storeInit } from './store'
 import { searchInit } from './search'
-//import { filter3Init } from './filter3'
 import { sayerror, Menu } from '../client'
 
 /*
@@ -37,11 +36,17 @@ class TdbApp {
 	validateOpts(o) {
 		if (!o.callbacks) o.callbacks = {}
 		if (o.tree) {
-			if (o.tree.disable_terms && !o.tree.click_term && !(o.barchart || !o.barchart.bar_click_override)) {
-				throw `opts.tree.disable_terms is used only when opts.tree.click_term or opts.barchart.bar_click_override is set`
+			if (
+				o.tree.disable_terms &&
+				!o.tree.click_term &&
+				!o.tree.click_term2select_tvs &&
+				(!o.barchart || !o.barchart.bar_click_override)
+			) {
+				throw `opts.tree.disable_terms is used only when opts.tree.click_term, opts.tree.click_term2select_tvs, or opts.barchart.bar_click_override is set`
 			}
 			if (!o.search) o.search = {}
 			if (o.tree.click_term) o.search.click_term = o.tree.click_term
+			else if (o.tree.click_term2select_tvs) o.search.click_term = o.tree.click_term2select_tvs
 			if (o.tree.disable_terms) o.search.disable_terms = o.tree.disable_terms
 		}
 		return o
@@ -71,12 +76,6 @@ class TdbApp {
 					app: this.api,
 					holder: this.dom.searchDiv
 				}),
-				/*
-				// TODO: support with_cohortHtmlSelect, previously a nav option
-				filter: filter3Init({
-					app: this.app,
-					holder: this.dom.filterDiv
-				}),*/
 				tree: treeInit({
 					app: this.api,
 					holder: this.dom.holder.append('div')

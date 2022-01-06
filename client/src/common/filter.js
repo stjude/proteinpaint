@@ -1,4 +1,4 @@
-import * as rx from './rx.core'
+import { getInitFxn, getCompInit } from './rx.core'
 import { select, event } from 'd3-selection'
 import { Menu } from '../client'
 import { TVSInit } from './tvs'
@@ -61,54 +61,8 @@ class Filter {
 			in: true,
 			lst: []
 		}
-
-		this.api = {
-			main: async (rawFilter, opts = {}) => {
-				this.dom.controlsTip.hide()
-				this.dom.treeTip.hide()
-				/*
-				rawFilter{}
-				  the raw filter data structure
-				*/
-
-				const tempOpts = Object.assign({}, this.opts, opts)
-				// to-do: should use deepEquals as part of rx.core
-				const rawCopy = JSON.stringify(rawFilter)
-				if (this.rawCopy == rawCopy && JSON.stringify(this.activeCohort) == JSON.stringify(tempOpts.activeCohort))
-					return
-				this.opts = tempOpts
-				this.activeCohort = tempOpts.activeCohort
-				this.rawCopy = rawCopy
-				this.rawFilter = JSON.parse(this.rawCopy)
-				this.validateFilter(this.rawFilter)
-				this.filter = getFilterItemByTag(this.rawFilter, 'filterUiRoot')
-				if (!this.filter) {
-					this.filter = this.rawFilter
-					this.filter.tag = 'filterUiRoot'
-				}
-				this.resetActiveData(this.filter)
-
-				// reset interaction-related styling
-				this.removeBlankPill()
-				this.dom.newBtn.style('display', this.opts.newBtn ? '' : this.filter.lst.length == 0 ? 'inline-block' : 'none')
-				this.dom.holder.selectAll('.sja_filter_add_transformer').style('display', this.getAddTransformerBtnDisplay)
-				//this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
-				this.setVocabApi()
-				this.updateUI(this.dom.filterContainer, this.filter)
-			},
-			/*
-				WARNING!!!
-				When using this filter.api.getNormalRoot(),
-				make sure this instance has been updated before the caller,
-				otherwise the normalized root will be stale
-
-				or for reliability, import getNormalRoot() directly 
-				from the common/filter.js component and supply the 
-				caller's known raw filter state
-			*/
-			getNormalRoot: () => getNormalRoot(this.rawFilter)
-		}
 	}
+
 	validateOpts(o) {
 		if (!o.holder) throw '.holder missing'
 		if (!o.vocab) throw '.vocab missing'
@@ -125,6 +79,34 @@ class Filter {
 		if (!o.emptyLabel) o.emptyLabel = '+NEW'
 		return o
 	}
+
+	/*
+		rawCopy'' JSON-stringified rawFilter object
+		opts{}
+		.activeCohort
+	*/
+	async main(rawCopy, opts = {}) {
+		this.opts = Object.assign({}, this.opts, opts)
+		this.activeCohort = this.opts.activeCohort
+		this.rawCopy = rawCopy
+		this.rawFilter = JSON.parse(this.rawCopy)
+		this.validateFilter(this.rawFilter)
+		this.filter = getFilterItemByTag(this.rawFilter, 'filterUiRoot')
+		if (!this.filter) {
+			this.filter = this.rawFilter
+			this.filter.tag = 'filterUiRoot'
+		}
+		this.resetActiveData(this.filter)
+
+		// reset interaction-related styling
+		this.removeBlankPill()
+		this.dom.newBtn.style('display', this.opts.newBtn ? '' : this.filter.lst.length == 0 ? 'inline-block' : 'none')
+		this.dom.holder.selectAll('.sja_filter_add_transformer').style('display', this.getAddTransformerBtnDisplay)
+		//this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
+		this.setVocabApi()
+		this.updateUI(this.dom.filterContainer, this.filter)
+	}
+
 	validateFilter(item) {
 		// for reliably binding data to DOM elements
 		// and associating updated data copy to
@@ -253,7 +235,100 @@ class Filter {
 	}
 }
 
-export const filterInit = rx.getInitFxn(Filter)
+class FilterStateless extends Filter {
+	constructor(opts) {
+		super(opts)
+		this.api = {
+			// make sure to bind the 'this' context to the filter instance
+			// instead of to the this.api object
+			main: this.main.bind(this),
+			/*
+				WARNING!!!
+				When using this filter.api.getNormalRoot(),
+				make sure this instance has been updated before the caller,
+				otherwise the normalized root will be stale
+
+				or for reliability, import getNormalRoot() directly 
+				from the common/filter.js component and supply the 
+				caller's known raw filter state
+			*/
+			getNormalRoot: () => getNormalRoot(this.rawFilter)
+		}
+	}
+
+	async main(rawFilter, opts = {}) {
+		this.dom.controlsTip.hide()
+		this.dom.treeTip.hide()
+		const activeCohort = 'activeCohort' in opts ? opts.activeCohort : this.activeCohort
+		const rawCopy = JSON.stringify(rawFilter)
+		// if the filter data and active cohort has not changed, do not trigger a re-render
+		if (this.rawCopy == rawCopy && JSON.stringify(this.activeCohort) == JSON.stringify(activeCohort)) return
+		super.main(rawCopy, opts)
+	}
+}
+
+export const filterInit = getInitFxn(FilterStateless)
+
+class FilterRxComp extends Filter {
+	constructor(opts) {
+		super(opts)
+		this.type = 'filter'
+		this.initHolder()
+		// rx.getCompInit() will create this.opts, this.api
+	}
+
+	async preApiFreeze(api) {
+		api.main = this.main.bind(this)
+		api.getNormalRoot = () => getNormalRoot(this.rawFilter)
+	}
+
+	getState(appState) {
+		return {
+			termfilter: appState.termfilter,
+			activeCohort: appState.activeCohort
+		}
+	}
+
+	async main(rawFilter = null) {
+		this.dom.controlsTip.hide()
+		this.dom.treeTip.hide()
+		const f = this.state && this.state.termfilter
+		if (!f) {
+			this.dom.holder.style('display', 'none')
+			return
+		}
+		this.dom.holder.style('display', 'inline-block')
+		const rawCopy = JSON.stringify(rawFilter || f.filter)
+		super.main(rawCopy, { activeCohort: this.state.activeCohort })
+	}
+
+	initHolder() {
+		const div = this.dom.holder
+			.attr('class', 'filter_div')
+			.style('position', 'relative')
+			.style('width', 'fit-content')
+			.style('margin', '10px')
+			.style('margin-top', '5px')
+			.style('display', 'table')
+			.style('border', this.opts.hideLabel ? 'none' : 'solid 1px #ddd')
+
+		if (this.opts.hideLabel) {
+			this.dom.filterDiv = div.style('display', 'inline-block').style('padding', '5px 10px')
+		} else {
+			div
+				.append('span')
+				.text('Filter')
+				.style('padding', '0 10px')
+
+			this.dom.filterDiv = div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('padding', '5px 10px')
+		}
+	}
+}
+
+export const filterRxCompInit = getCompInit(FilterRxComp)
 
 // will assign an incremented index to each filter UI instance
 // to help namespace the body.on('click') event handler;
@@ -314,7 +389,7 @@ function setRenderers(self) {
 				action: 'replace',
 				html: ['', 'Replace', '&rsaquo;'],
 				handler: self.displayTreeMenu,
-				bar_click_override: self.replaceTerm
+				click_term2select_tvs: self.replaceTerm
 			})
 		}
 
@@ -810,11 +885,6 @@ function setInteractivity(self) {
 				click_term2select_tvs(tvs) {
 					self.editFilterRoot(d, [{ type: 'tvs', tvs }])
 				}
-			},
-			barchart: {
-				bar_click_override: tvslst => {
-					self.editFilterRoot(d, tvslst)
-				}
 			}
 		})
 	}
@@ -922,16 +992,7 @@ function setInteractivity(self) {
 					!filter.lst.length ||
 					(self.activeData.elem && self.activeData.elem.className.includes('join'))
 						? self.appendTerm
-						: self.replaceTerm
-			},
-			barchart: {
-				bar_click_override: d.bar_click_override
-					? d.bar_click_override
-					: !filter.join ||
-					  !filter.lst.length ||
-					  (self.activeData.elem && self.activeData.elem.className.includes('join'))
-					? self.appendTerm
-					: self.subnestFilter
+						: self.subnestFilter
 			}
 		})
 	}
@@ -1008,7 +1069,14 @@ function setInteractivity(self) {
 		self.refresh(filterUiRoot)
 	}
 
-	self.subnestFilter = tvslst => {
+	self.subnestFilter = t => {
+		let tvslst
+		if (Array.isArray(t)) {
+			tvslst = t
+		} else {
+			tvslst = [{ type: 'tvs', tvs: t }]
+		}
+
 		const item = self.activeData.item
 		const filter = self.activeData.filter
 		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
