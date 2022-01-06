@@ -169,7 +169,6 @@ makeURL([
 				}
 			}
 		})],
-		// TODO add filter combinations
 	]
 },
 {name:'scatterplot',
@@ -263,6 +262,7 @@ makeURL([
 		['filter','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'SJLife',
 			genome:'hg38',
+			nav: { activeTab:2, },
 			termfilter: {
 				filter:{
 					type:'tvslst',
