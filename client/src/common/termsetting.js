@@ -72,6 +72,14 @@ class TermSetting {
 			default: defaultHandler
 		}
 
+		this.runCallback = () => {
+			this.opts.callback({
+				id: this.term.id,
+				term: this.term,
+				q: this.q
+			})
+		}
+
 		this.hasError = false
 
 		// this api will be frozen and returned by termsettingInit()
@@ -122,8 +130,8 @@ class TermSetting {
 			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
 			await this.setHandler()
 			this.updateUI()
-			if (data.term && this.validateQ) this.validateQ(data)
-			if (this.addCategory2sampleCounts) this.addCategory2sampleCounts()
+			if (data.term && this.term.handler && this.handler.validateQ) this.handler.validateQ(data)
+			if (this.handler.postMain) await this.handler.postMain()
 		} catch (e) {
 			this.hasError = true
 			throw e
@@ -217,7 +225,7 @@ function setRenderers(self) {
 
 		// has term
 		// add info button for terms with meta data
-		if (self.term && self.term && self.term.hashtmldetail) {
+		if (self.term && self.term.hashtmldetail) {
 			if (self.opts.buttons && !self.opts.buttons.includes('info')) self.opts.buttons.unshift('info')
 			else self.opts.buttons = ['info']
 		}
@@ -238,21 +246,23 @@ function setRenderers(self) {
 					else if (d == 'replace') self.showTree()
 				})
 
-			const infoIcon_div = self.dom.btnDiv.selectAll('div').filter(function() {
-				return select(this).text() === 'INFO'
-			})
+			// render info button only if term has html details
+			if (self.term && self.term.hashtmldetail) {
+				const infoIcon_div = self.dom.btnDiv.selectAll('div').filter(function() {
+					return select(this).text() === 'INFO'
+				})
+				const content_holder = select(self.dom.holder.node().parentNode).append('div')
 
-			const content_holder = select(self.dom.holder.node().parentNode).append('div')
-
-			// TODO: modify termInfoInit() to display term info in tip rather than in div
-			// can be content_tip: self.dom.tip.d to separate it from content_holder
-			termInfoInit({
-				vocabApi: self.opts.vocabApi,
-				icon_holder: infoIcon_div,
-				content_holder,
-				id: self.term.id,
-				state: { term: self.term }
-			})
+				// TODO: modify termInfoInit() to display term info in tip rather than in div
+				// can be content_tip: self.dom.tip.d to separate it from content_holder
+				termInfoInit({
+					vocabApi: self.opts.vocabApi,
+					icon_holder: infoIcon_div,
+					content_holder,
+					id: self.term.id,
+					state: { term: self.term }
+				})
+			}
 		}
 
 		self.dom.nopilldiv.style('display', 'none')
@@ -299,11 +309,6 @@ function setRenderers(self) {
 	self.updatePill = async function() {
 		// only modify right half of the pill
 		const one_term_div = select(this)
-		if (self.term.type == 'condition' && !self.q.bar_by_children && !self.q.bar_by_grade) {
-			self.q.bar_by_grade = true
-			self.q.value_by_max_grade = true
-			self.q.groupsetting = {}
-		}
 
 		// if using group setting, will show right half
 		// allow more than 1 flags for future expansion
@@ -483,7 +488,9 @@ export function termsetting_fill_q(q, term, activeCohort) {
 			// then no need for additional setup
 			return
 		} else {
-			q.groupsetting.activeCohort = activeCohort
+			// used for groupsetting if one of the group is filter rahter than values,
+			// Not in use rightnow, if used in future, uncomment following line
+			// q.groupsetting.activeCohort = activeCohort
 		}
 		// if to apply the groupsetting
 		if (term.groupsetting.lst && term.groupsetting.useIndex >= 0 && term.groupsetting.lst[term.groupsetting.useIndex]) {
@@ -518,7 +525,7 @@ function valid_binscheme(q) {
 		// throw `${JSON.stringify(unsupportedKeys)} not supported for q.mode='continuous'`
 		return true
 	}*/
-	if (q.type == 'custom') {
+	if (q.type == 'custom-bin') {
 		if (!Array.isArray(q.lst)) return false
 		if (!q.mode) q.mode = 'discrete'
 		return true

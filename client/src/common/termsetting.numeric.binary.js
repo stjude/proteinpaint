@@ -73,11 +73,7 @@ export function getHandler(self) {
 					self.q.lst = processCustomBinInputs(self)
 					self.numqByTermIdModeType[self.term.id].binary = JSON.parse(JSON.stringify(self.q))
 					self.q.mode = 'binary'
-					self.opts.callback({
-						id: self.term.id,
-						term: self.term,
-						q: self.q
-					})
+					self.runCallback()
 				})
 
 			btndiv
@@ -113,7 +109,7 @@ function setqDefaults(self) {
 
 		cache[t.id].binary = {
 			mode: 'binary',
-			type: 'custom',
+			type: 'custom-bin',
 			modeBinaryCutoffType: 'normal', // default value
 			modeBinaryCutoffPercentile: 50, // default value
 			lst: [

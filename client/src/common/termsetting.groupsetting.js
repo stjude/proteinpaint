@@ -41,14 +41,15 @@ export function setGroupsettingMethods(self) {
 		let drag_native_grp, dragged_item
 
 		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
-		const groupset = grpsetting_flag && self.q.groupsetting.predefined_groupset_idx != undefined
+		const groupset =
+			grpsetting_flag && self.q.groupsetting.predefined_groupset_idx != undefined
 				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
 				: self.q.groupsetting && self.q.groupsetting.customset
 				? self.q.groupsetting.customset
 				: default_groupset
 
 		Object.keys(cat_grps).forEach(key => {
-			if ( cat_grps[key].group == 0 || (!grpsetting_flag && cat_grps[key].uncomputable == true))
+			if (cat_grps[key].group == 0 || (!grpsetting_flag && cat_grps[key].uncomputable == true))
 				excluded_cats.push({ key, label: cat_grps[key].label })
 		})
 
@@ -188,11 +189,7 @@ export function setGroupsettingMethods(self) {
 					customset: customset
 				}
 				self.dom.tip.hide()
-				self.opts.callback({
-					id: self.term.id,
-					term: self.term,
-					q: self.q
-				})
+				self.runCallback()
 			})
 
 		// create holder for each group from groupset with group name input

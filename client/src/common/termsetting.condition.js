@@ -1,4 +1,4 @@
-import { setCategoricalMethods } from './termsetting.categorical'
+import { setCategoryConditionMethods } from './termsetting.categorical'
 import { setGroupsettingMethods } from './termsetting.groupsetting'
 
 /*
@@ -7,7 +7,7 @@ self: a termsetting instance
 */
 export function getHandler(self) {
 	setGroupsettingMethods(self)
-	setCategoricalMethods(self)
+	setCategoryConditionMethods(self)
 
 	return {
 		get_term_name(d) {
@@ -58,11 +58,7 @@ export function getHandler(self) {
 						value_type_select.node().value == 'computable' || value_type_select.node().value == 'sub' ? true : false
 
 					self.dom.tip.hide()
-					self.opts.callback({
-						id: self.term.id,
-						term: self.term,
-						q: self.q
-					})
+					self.runCallback()
 				})
 
 			value_type_select
@@ -80,8 +76,7 @@ export function getHandler(self) {
 				.attr('value', 'computable')
 				.text('Any grade per patient')
 
-			value_type_select.node().selectedIndex = 
-			self.q.value_by_computable_grade
+			value_type_select.node().selectedIndex = self.q.value_by_computable_grade
 				? 2
 				: self.q.value_by_most_recent
 				? 1

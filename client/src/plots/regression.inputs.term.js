@@ -347,7 +347,7 @@ async function maySetTwoBins(tw, vocabApi, filter, state) {
 	const median = tw.term.type == 'integer' ? Math.round(data.values[0]) : Number(data.values[0].toFixed(2))
 	tw.q = {
 		mode: 'binary',
-		type: 'custom',
+		type: 'custom-bin',
 		lst: [
 			{
 				startunbounded: true,
@@ -463,7 +463,9 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 		) {
 			// has a usable predefined groupset
 			q.type = 'predefined-groupset'
-			if (state.activeCohort != -1) q.groupsetting.activeCohort = state.activeCohort
+			// used for groupsetting if one of the group is filter (group.type) rahter than values,
+			// Not in use rightnow, if used in future, uncomment following line
+			// if (state.activeCohort != -1) q.groupsetting.activeCohort = state.activeCohort
 			return
 		}
 
@@ -473,7 +475,9 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 			// found a usable groupset
 			q_gs.predefined_groupset_idx = i
 			q.type = 'predefined-groupset'
-			if (state.activeCohort != -1) q.groupsetting.activeCohort = state.activeCohort
+			// used for groupsetting if one of the group is filter (group.type) rahter than values,
+			// Not in use rightnow, if used in future, uncomment following line
+			// if (state.activeCohort != -1) q.groupsetting.activeCohort = state.activeCohort
 			return
 		}
 	}
@@ -484,10 +488,12 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 		groups: [
 			{
 				name: 'Group 1',
+				type: 'values',
 				values: []
 			},
 			{
 				name: 'Group 2',
+				type: 'values',
 				values: []
 			}
 		]

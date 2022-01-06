@@ -8,7 +8,7 @@ export function validate_bins(binconfig) {
 	// assign default type
 	if (!('type' in bc)) bc.type = 'regular'
 
-	if (bc.type == 'custom') {
+	if (bc.type == 'custom-bin') {
 		if (!Array.isArray(bc.lst)) throw 'binconfig.lst must be an array'
 		if (!bc.lst.length) throw 'binconfig.lst must have entries'
 		const first_bin = bc.lst[0]
@@ -123,7 +123,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 */
 	const bc = binconfig
 	validate_bins(bc)
-	if (bc.type == 'custom') return JSON.parse(JSON.stringify(bc.lst))
+	if (bc.type == 'custom-bin') return JSON.parse(JSON.stringify(bc.lst))
 	if (typeof summaryfxn != 'function') throw 'summaryfxn required for modules/termdb.bins.js compute_bins()'
 	const percentiles = target_percentiles(bc)
 	const summary = summaryfxn(percentiles)
