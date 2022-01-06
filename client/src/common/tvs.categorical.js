@@ -30,7 +30,8 @@ async function fillMenu(self, div, tvs) {
 			const checked_vals = [...values_table.querySelectorAll('.value_checkbox')]
 				.filter(elem => elem.checked)
 				.map(elem => elem.value)
-			const new_vals = sortedVals.filter(v => checked_vals.includes(v.key))
+			// for categorical terms, force v.key to a string
+			const new_vals = sortedVals.filter(v => checked_vals.includes('' + v.key))
 			const new_tvs = JSON.parse(JSON.stringify(tvs))
 			delete new_tvs.groupset_label
 			new_tvs.values = new_vals

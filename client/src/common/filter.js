@@ -386,8 +386,7 @@ function setRenderers(self) {
 				action: 'replace',
 				html: ['', 'Replace', '&rsaquo;'],
 				handler: self.displayTreeMenu,
-				click_term2select_tvs: self.replaceTerm,
-				bar_click_override: self.replaceTerm
+				click_term2select_tvs: self.replaceTerm
 			})
 		}
 
@@ -883,8 +882,7 @@ function setInteractivity(self) {
 				click_term2select_tvs(tvs) {
 					self.editFilterRoot(d, [{ type: 'tvs', tvs }])
 				}
-			},
-			barchart: {}
+			}
 		})
 	}
 
@@ -992,8 +990,7 @@ function setInteractivity(self) {
 					(self.activeData.elem && self.activeData.elem.className.includes('join'))
 						? self.appendTerm
 						: self.subnestFilter
-			},
-			barchart: {}
+			}
 		})
 	}
 
