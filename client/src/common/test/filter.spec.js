@@ -148,7 +148,7 @@ function gettvs(id, val = '', overrides = {}) {
 				},
 				values: [
 					{
-						key: val ? val : i++,
+						key: val ? val : (i++).toString(),
 						label: val ? val : i.toString()
 					}
 				]

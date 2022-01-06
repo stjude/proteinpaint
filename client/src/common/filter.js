@@ -261,7 +261,7 @@ class FilterStateless extends Filter {
 		this.dom.treeTip.hide()
 		const activeCohort = 'activeCohort' in opts ? opts.activeCohort : this.activeCohort
 		const rawCopy = JSON.stringify(rawFilter)
-		//
+		// if the filter data and active cohort has not changed, do not trigger a re-render
 		if (this.rawCopy == rawCopy && JSON.stringify(this.activeCohort) == JSON.stringify(activeCohort)) return
 		super.main(rawCopy, opts)
 	}
@@ -283,7 +283,10 @@ class FilterRxComp extends Filter {
 	}
 
 	getState(appState) {
-		return appState
+		return {
+			termfilter: appState.termfilter,
+			activeCohort: appState.activeCohort
+		}
 	}
 
 	async main(rawFilter = null) {
