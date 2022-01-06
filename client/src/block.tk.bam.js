@@ -1794,6 +1794,11 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 			//console.log('segstop2:', segstop)
 			//console.log('gm_nuc_count2:', gm_nuc_count)
 			//console.log('local_alignment_width2:', local_alignment_width)
+			if (tk.variants[0].ref.length >= tk.variants[0].alt.length) {
+				segstop += 1
+				gm_nuc_count += 1
+				local_alignment_width += first_row.children[nclt_count + 1].getBoundingClientRect().width
+			}
 			const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
 			const gm = {
 				src: gene_model_image.src,
@@ -1806,10 +1811,13 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 			gm_nuc_count = 0
 			segstart = left_most_pos + nclt_count + tk.variants[0].ref.length
 			segstop = left_most_pos + nclt_count + tk.variants[0].ref.length
-			break_points.push(tk.variants[0].alt.length)
+			if (tk.variants[0].ref.length < tk.variants[0].alt.length) {
+				// Break point in variant region only in case of an insertion
+				break_points.push(tk.variants[0].alt.length)
+				gene_model_order.push('break')
+			}
 			local_alignment_width = 0
 			prev_nclt_not_blank = false
-			gene_model_order.push('break')
 		} else if (nclt_count == refalt_seq.length - 1) {
 			// When last nucleotide of reference/alternate sequence is parsed, rendering of gene model is invoked
 			//console.log('nclt_count3:', nclt_count)
