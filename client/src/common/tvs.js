@@ -38,6 +38,7 @@ class TVS {
 	}
 
 	async setHandler() {
+		if (!this.tvs || !this.tvs.term) return
 		const term = this.tvs.term
 		const type = term.type == 'integer' || term.type == 'float' ? 'numeric' : term.type // 'categorical', 'condition', 'survival', etc
 		if (!this.handlerByType[type]) {
