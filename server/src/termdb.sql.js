@@ -492,10 +492,11 @@ function get_label4key(key, term, q, ds) {
 		return term.values && key in term.values ? term.values[key].label : key
 	}
 	if (term.type == 'condition') {
-		if (!term.values) throw 'missing term.values for condition term'
+		const values = term.grades || term.values
+		if (!values) throw 'missing term.grades or term.values for condition term'
 		if ((!q.groupsetting || (q.groupsetting && !q.groupsetting.inuse)) && q.bar_by_grade) {
-			if (!(key in term.values)) throw `unknown grade='${key}'`
-			return term.values[key].label
+			if (!(key in values)) throw `unknown grade='${key}'`
+			return values[key].label
 		} else {
 			return key
 		}

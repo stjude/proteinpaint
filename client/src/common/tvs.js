@@ -1,11 +1,11 @@
 import * as rx from './rx.core'
 import { select } from 'd3-selection'
-import * as client from '../client'
+import { Menu } from '../dom/menu'
 
 class TVS {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
-		this.dom = { holder: opts.holder, controlsTip: opts.controlsTip, tip: new client.Menu({ padding: '5px' }) }
+		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 0 }
 
 		setInteractivity(this)
@@ -292,19 +292,12 @@ function setInteractivity(self) {
 export async function showTvsMenu(opts) {
 	const self = new TVS(opts)
 	self.tvs = {
-		term: opts.term,
-		values: [],
-		ranges: []
+		term: opts.term
 	}
 	self.filter = opts.filter
-	if (opts.term.type == 'float' || opts.term.type == 'integer') {
-		opts.add_tvs_brush = true
-	} else if (opts.term.type == 'condition') {
-		self.tvs.bar_by_grade = true
-		self.tvs.value_by_max_grade = true
-	}
-	addExcludeCheckbox(opts.holder, self.tvs)
+	//addExcludeCheckbox(opts.holder, self.tvs)
 	await self.setHandler()
+	if (self.setDefaults) self.setDefaults(tvs)
 	self.handler.fillMenu(self, opts.holder, self.tvs)
 }
 

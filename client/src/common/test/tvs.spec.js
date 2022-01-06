@@ -648,7 +648,7 @@ tape('tvs: Condition', async test => {
 		'[Most Recent Grade]',
 		'should have grade type changed'
 	)
-
+	/* Do not test the inactivated subcondition option, may reactivate later
 	// trigger and test subcondition selection
 	pill.click()
 	await sleep(150)
@@ -681,7 +681,7 @@ tape('tvs: Condition', async test => {
 		opts.filterData.lst[0].tvs.values[0].label,
 		'should change pill value to subcondtion'
 	)
-
+	*/
 	test.end()
 })
 

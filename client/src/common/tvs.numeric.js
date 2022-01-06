@@ -6,7 +6,8 @@ export const handler = {
 	term_name_gen,
 	get_pill_label,
 	getSelectRemovePos,
-	fillMenu
+	fillMenu,
+	validateTvs: validateNumericTvs
 }
 
 async function fillMenu(self, div, tvs) {
@@ -74,7 +75,7 @@ async function fillMenu(self, div, tvs) {
 	self.num_obj.brushes = []
 	addBrushes(self)
 	addRangeTable(self)
-	if (self.opts.add_tvs_brush) addNewBrush(self, 'center')
+	if (!ranges.length) addNewBrush(self, 'center')
 	self.num_obj.brushes.forEach(brush => brush.init())
 	await showCheckList_numeric(self, tvs, div)
 }
@@ -917,6 +918,10 @@ function format_val_text(range) {
 
 function getSelectRemovePos(j, tvs) {
 	return j - tvs.ranges.slice(0, j).filter(a => a.start || a.stop).length
+}
+
+function setTvsDefaults(tvs) {
+	if (!tvs.ranges) tvs.ranges = []
 }
 
 function validateNumericTvs(tvs) {

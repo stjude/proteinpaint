@@ -6,8 +6,9 @@ export const handler = {
 }
 
 async function fillMenu(self, div, tvs) {
+	/*** Inactivate the subcondition options for now, default to grade, may reactivate later ***/
 	// grade/subcondtion select
-	const bar_by_select = div
+	/*const bar_by_select = div
 		.append('select')
 		.attr('class', 'value_select')
 		.style('display', 'block')
@@ -39,6 +40,7 @@ async function fillMenu(self, div, tvs) {
 		.attr('value', 'sub')
 		.text('By Subcondition')
 		.property('selected', tvs.bar_by_children)
+	*/
 
 	// grade type type
 	const grade_type_select = div
@@ -118,7 +120,7 @@ async function fillMenu(self, div, tvs) {
 			delete new_tvs.groupset_label
 			new_tvs.values = new_vals
 			// update bar_by_*
-			const bar_by_value = bar_by_select.node().value
+			const bar_by_value = 'grade' //bar_by_select.node().value
 			new_tvs.bar_by_grade = bar_by_value !== 'sub'
 			new_tvs.bar_by_children = bar_by_value === 'sub'
 			// update value_by_*
@@ -136,7 +138,7 @@ async function fillMenu(self, div, tvs) {
 	self.values_table = self.makeValueTable(div, tvs, data.lst).node()
 
 	function update_value_by(new_tvs) {
-		const bar_by_value = bar_by_select.property('value')
+		const bar_by_value = 'grade' //bar_by_select.property('value')
 		const grade_type_value = grade_type_select.property('value')
 		if (bar_by_value === 'sub') {
 			new_tvs.value_by_computable_grade = true
@@ -199,6 +201,15 @@ function get_value_text(tvs) {
 
 function getSelectRemovePos(j) {
 	return j
+}
+
+function setTvsDefaults(tvs) {
+	if (!tvs.bar_by_grade && !tvs.bar_by_children_) {
+		tvs.bar_by_grade = true
+	}
+	if (!tvs.value_by_max_grade && !tvs.value_by_most_recent && !tvs.value_by_computable_grade) {
+		tvs.value_by_max_grade = true
+	}
 }
 
 function validateConditionTvs(tvs) {
