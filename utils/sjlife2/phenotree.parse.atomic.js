@@ -16,6 +16,7 @@ input files:
 4. subcohort column idx in "matrix" file
    if this is given, will summarize term values by sub-cohorts
    otherwise, will summarize by the entire cohort
+   (to be implemented later; only summarize the whole cohort now)
 
 
 output:
@@ -159,6 +160,19 @@ function step1_parsephenotree() {
 			const term = parseconfig(configstr)
 			term.name = name
 			key2terms[key] = term
+
+			/*
+			!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			         quick fix
+			do not apply this step for another dataest
+			!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+			this is to exclude 0 values from treatment variables when computing percentiles,
+			to address issue in auto-computing knots
+			*/
+			if (t2 == 'Treatment' && (term.type == 'integer' || term.type == 'float')) {
+				term.skip0forPercentile = true
+			}
 		} catch (e) {
 			throw 'Line ' + (i + 1) + ' error: ' + e
 		}
