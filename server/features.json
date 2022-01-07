@@ -609,9 +609,10 @@
             "app": "Genome Browser",
             "blurb": "Coding mutations and gene fusions",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
+            "update_expire": "2022-02-07",
             "ppcalls": [
                 {
-                    "label": "Pediatric dataset",
+                    "label": "Official dataset",
                     "urlparam": "?genome=hg19&gene=JAK2&dataset=Pediatric",
                     "runargs": {
                         "gene":"jak2",
@@ -620,10 +621,10 @@
                         "genome": "hg19",
                         "dataset":"Pediatric"
                     },
-                    "buttons": [
+                    "buttons":[
                         {
-                            "name": "Documentation",
-                            "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+                            "name":"Build an Official Dataset",
+                            "link": "https://docs.google.com/document/d/1iY7x9PzAzLKzdABam_Tfg8h-kQ0oh2UyyKC0cP-9YWA/edit"
                         }
                     ],
                     "testSpec": {
@@ -699,17 +700,25 @@
                     }
                 }
             ],
-            "sandbox": {},
+            "sandbox": {
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+                    }
+                ],
+                "update_message": "Create your own official dataset! See the 'Official Dataset' example and click on 'Build an Official Dataset' button."
+            },
             "searchterms": []
         },
         {
-            "name": "RNA splice junction of one sample",
+            "name": "Splice Junction",
             "app": "Genome Browser",
-            "blurb": " ",
-            "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
+            "blurb": "Single sample and cohort",
+            "image": "https://pecan.stjude.cloud/static/examples/images/junction-cohort-square.png",
             "ppcalls": [
                 {
-                    "label": "RNA Splice Junction",
+                    "label": "A sample splice junction",
                     "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionDemoData.tar.gz",
                     "urlparam": "?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz",
                     "runargs": {
@@ -729,27 +738,9 @@
                     "testSpec": {
                         "expected": {"circle": 15, "line": 15}
                     }
-                }
-            ],
-            "sandbox":{
-                "buttons": [
-                    {
-                        "name": "Documentation",
-                        "link": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
-                    }
-                ]
-            },
-            "searchterms": []
-        },
-        {
-            "name": "Splice junctions of a cohort",
-            "app": "Genome Browser",
-            "blurb": " ",
-            "image": "https://pecan.stjude.cloud/static/examples/images/junction-cohort-square.png",
-            "new_expire": "2021-08-15",
-            "ppcalls": [
+                },
                 {
-                    "label":"From an External JSON",
+                    "label":"Cohort from an External JSON",
                     "message": "",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionJsonDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz",
@@ -771,7 +762,7 @@
                     }
                 },
                 {
-                    "label":"From a JSON Matrix File",
+                    "label":"Cohort from a JSON Matrix File",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionMatrixDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz",
                     "runargs": {
@@ -802,7 +793,7 @@
                 "buttons": [
                     {
                         "name": "Documentation",
-                        "link": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.s58v64uwsl45"
+                        "link": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
                     }
                 ]
             },
@@ -932,7 +923,6 @@
         {
             "name": "Arc Track",
             "app": "Genome Browser",
-            "new_expire": "2021-07-02",
             "blurb": "Pairwise chromatin interactions",
             "image": "https://pecan.stjude.cloud/static/examples/images/arc-square.png",
             "ppcalls": [
@@ -1211,6 +1201,7 @@
             "app": "Apps",
             "blurb": "Review CICERO output",
             "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
+            "update_expire": "2022-02-01",
             "ppcalls": [
                 {
                     "is_ui": true,
@@ -1242,7 +1233,8 @@
                         "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1DRVzE_WenG490eRYB7VGFOygtSqtF5L97rhK0HOUCNY/edit"
                     }
-                ]
+                ],
+                "update_message": "Please use the new example to explore the FusionEditor."
             },
             "searchterms": []
         },
@@ -1251,6 +1243,7 @@
             "app": "Apps",
             "blurb": "Somatic mutations from diagnosis & relapse",
             "image": "https://pecan.stjude.cloud/static/examples/images/2dmaf-square.png",
+            "update_expire": "2022-02-01",
             "ppcalls": [
                 {
                     "is_ui": true,
@@ -1285,7 +1278,8 @@
                         "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13"
                     }
-                ]
+                ],
+                "update_message": "Please use the new example to explore the 2DMAF plot."
             },
             "searchterms": ["2dmaf", "clonal evolution", "point mutations"]
         },
