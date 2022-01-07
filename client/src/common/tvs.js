@@ -1,11 +1,11 @@
 import * as rx from './rx.core'
 import { select } from 'd3-selection'
-import * as client from '../client'
+import { Menu } from '../dom/menu'
 
 class TVS {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
-		this.dom = { holder: opts.holder, controlsTip: opts.controlsTip, tip: new client.Menu({ padding: '5px' }) }
+		this.dom = { holder: opts.holder, tip: new Menu({ padding: '5px' }) }
 		this.durations = { exit: 0 }
 
 		setInteractivity(this)
@@ -38,6 +38,7 @@ class TVS {
 	}
 
 	async setHandler() {
+		if (!this.tvs || !this.tvs.term) return
 		const term = this.tvs.term
 		const type = term.type == 'integer' || term.type == 'float' ? 'numeric' : term.type // 'categorical', 'condition', 'survival', etc
 		if (!this.handlerByType[type]) {
@@ -292,19 +293,12 @@ function setInteractivity(self) {
 export async function showTvsMenu(opts) {
 	const self = new TVS(opts)
 	self.tvs = {
-		term: opts.term,
-		values: [],
-		ranges: []
+		term: opts.term
 	}
 	self.filter = opts.filter
-	if (opts.term.type == 'float' || opts.term.type == 'integer') {
-		opts.add_tvs_brush = true
-	} else if (opts.term.type == 'condition') {
-		self.tvs.bar_by_grade = true
-		self.tvs.value_by_max_grade = true
-	}
-	addExcludeCheckbox(opts.holder, self.tvs)
+	//addExcludeCheckbox(opts.holder, self.tvs)
 	await self.setHandler()
+	if (self.handler.setTvsDefaults) self.handler.setTvsDefaults(self.tvs)
 	self.handler.fillMenu(self, opts.holder, self.tvs)
 }
 
