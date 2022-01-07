@@ -285,6 +285,13 @@ async function trigger_getpercentile(q, res, ds) {
 			// is a special category
 			continue
 		}
+
+		if (term.skip0forPercentile && value == 0) {
+			// quick fix: when the flag is true, will exclude 0 values from percentile computing
+			// to address an issue with computing knots
+			continue
+		}
+
 		values.push(Number(value))
 	}
 	values.sort((a, b) => a - b)
