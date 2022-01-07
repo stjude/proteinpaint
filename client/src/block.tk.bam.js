@@ -1734,9 +1734,12 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 }
 
 async function create_gene_models_refalt(tk, block, multi_read_alig_data, group) {
-	const gene_model_images = []
-	const break_points = []
-	const gene_model_order = []
+	// Function to display gene models in the multi read alignment info panel
+	// This function parses through the alternate/reference sequence and looks for gaps. At each of these gaps it ends existing gene model, renders it puts a gap and then starts the next gene model. At the end of the sequence, it finishes current model and renders it
+
+	const gene_model_images = [] // This array stores the gene model images, width and height of the gene model
+	const break_points = [] // This array stores the length of break points in case of breaks outside variant region ("-") or the variant (if its an insertion)
+	const gene_model_order = [] // This array stores the order of gene models and breaks as needed from the left
 	// Determine breaks in reference/alternate sequence (if gene model button is clicked)
 	let refalt_seq = multi_read_alig_data.alignmentData.final_read_align[0]
 	//console.log('refalt_seq:', refalt_seq)
@@ -1757,6 +1760,7 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 	let nclt_count = 0
 	for (const nclt of refalt_seq) {
 		if (nclt == '-') {
+			// Checks for breaks in ref/alt sequence other than variant of interest
 			if (prev_nclt_not_blank == true) {
 				// Flag to check if previous nucleotide is "-", if yes no gene model is rendered
 				break_points.push(1)
@@ -1771,7 +1775,7 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 				//console.log('segstop1:', segstop)
 				//console.log('gm_nuc_count1:', gm_nuc_count)
 				//console.log('local_alignment_width1:', local_alignment_width)
-				const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop - 1, local_alignment_width) // Send bedj client request to render gene model for this segment
+				const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop - 1, local_alignment_width) // Send bedj server side request to render gene model for this segment
 				const gm = {
 					src: gene_model_image.src,
 					width: local_alignment_width,
@@ -1792,10 +1796,11 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 			local_alignment_width += first_row.children[nclt_count].getBoundingClientRect().width
 		} else if (
 			group.data.type == 'support_alt' &&
-			tk.variants[0].alt.length > tk.variants[0].ref.length &&
+			tk.variants[0].alt.length > tk.variants[0].ref.length && // Insertion case
 			tk.variants[0].pos < left_most_pos + nclt_count &&
-			tk.variants[0].pos + tk.variants[0].alt.length - tk.variants[0].ref.length >= left_most_pos + nclt_count
+			tk.variants[0].pos + tk.variants[0].alt.length - 1 >= left_most_pos + nclt_count // Subtracting 1 here because by convention the first nucleotide in alternate allele is the last nucleotide in reference sequence after which the indel starts
 		) {
+			// Ignores inserted nucleotides (if an insertion) as no gene model can be rendered for it
 		} else if (tk.variants[0].pos == left_most_pos + nclt_count && group.data.type == 'support_alt') {
 			// Variant causes break in gene model but only if the alternate allele is being displayed
 			if (tk.variants[0].ref.length == 1 && tk.variants[0].alt.length == 1) {
@@ -1833,14 +1838,14 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 			prev_nclt_not_blank = false
 		} else if (nclt_count == refalt_seq.length - 1) {
 			// When last nucleotide of reference/alternate sequence is parsed, rendering of gene model is invoked
+			segstop += 1
+			gm_nuc_count += 1
+			local_alignment_width += first_row.children[nclt_count].getBoundingClientRect().width
 			//console.log('nclt_count3:', nclt_count)
 			//console.log('segstart3:', segstart)
 			//console.log('segstop3:', segstop)
 			//console.log('gm_nuc_count3:', gm_nuc_count)
 			//console.log('local_alignment_width3:', local_alignment_width)
-			segstop += 1
-			gm_nuc_count += 1
-			local_alignment_width += first_row.children[nclt_count].getBoundingClientRect().width
 			const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
 			const gm = {
 				src: gene_model_image.src,
@@ -1851,10 +1856,15 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 			gene_model_images.push(gm)
 			gene_model_order.push('gene_model')
 		} else {
+			// For all other positions the stop position, number of nucleotides and width of gene model will be incremented
 			segstop += 1
 			gm_nuc_count += 1
-			//console.log('cell width:', first_row.children[nclt_count].getBoundingClientRect().width)
 			local_alignment_width += first_row.children[nclt_count].getBoundingClientRect().width
+			//console.log('nclt:', nclt)
+			//console.log('segstop:', segstop)
+			//console.log('gm_nuc_count:', gm_nuc_count)
+			//console.log('local_alignment_width:', local_alignment_width)
+			//console.log('nclt_count:', nclt_count)
 			prev_nclt_not_blank = false
 		}
 		nclt_count += 1
@@ -1870,11 +1880,12 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 		const first_read = tk.readAlignmentTable.node().children[2]
 		tk.readAlignmentTable.node().insertBefore(gene_model_tr, first_read)
 	} else {
-		console.log('Posibble problem in placing gene model in table. Please check')
+		console.log('Possible problem in placing gene model in table. Please check')
 	}
 	for (let i = 0; i < gene_model_order.length; i++) {
 		const gene_models_cell = gene_model_tr.insertCell()
 		if (gene_model_order[i] == 'gene_model') {
+			// If a gene model, display gene model
 			// Render gene model
 			const img = document.createElement('img')
 			img.src = gene_model_images[k].src
@@ -1884,7 +1895,8 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 			gene_models_cell.colSpan = gene_model_images[k].colspan
 			k += 1
 		} else if (gene_model_order[i] == 'break') {
-			// Gap representing '-' or variant
+			// Keep it blank, if a break needs to be shown
+			// Gap representing '-' or variant (insertion)
 			gene_models_cell.colSpan = break_points[j]
 			j += 1
 		}
@@ -1897,7 +1909,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 	tk.alignpane.header.text('Alignment info')
 	tk.alignpane.body.selectAll('*').remove()
 	const wait = tk.alignpane.body.append('div').text('Loading...')
-	const multi_read_alig_data = await align_reads_to_allele(tk, group, block) // Sending server side request for aligning reads to ref/alt
+	const multi_read_alig_data = await align_reads_to_allele(tk, group, block) // Sending server side bam request for aligning reads to ref/alt
 	//console.log('multi_read_alig_data.alignmentData:', multi_read_alig_data.alignmentData)
 	wait.remove()
 
