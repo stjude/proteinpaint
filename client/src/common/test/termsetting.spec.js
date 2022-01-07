@@ -260,6 +260,7 @@ tape('Numerical term: range boundaries', async test => {
 	await sleep(50)
 	const q0 = opts.pill.Inner.numqByTermIdModeType.agedx.discrete.regular
 	test.equal(q0.stopinclusive && !q0.startinclusive, true, 'should set the range boundary to stop inclusive')
+	tip.hide()
 })
 
 tape('Numerical term: fixed bins', async test => {
@@ -427,6 +428,7 @@ tape('Numerical term: fixed bins', async test => {
 	await sleep(500)
 	window.removeEventListener('error.firstBinStopTest', detectFirstBinStopError)
 	test.pass(firstBinStopMessage)
+	tip.hide()
 })
 
 tape('Numerical term: float custom bins', async test => {
@@ -484,9 +486,10 @@ tape('Numerical term: float custom bins', async test => {
 		.node()
 		.querySelectorAll('line')
 	test.equal(lines.length, 2, 'should have 2 lines')
+	tip.hide()
 })
 
-tape.only('Numerical term: toggle menu - 4 options', async test => {
+tape('Numerical term: toggle menu - 4 options', async test => {
 	test.timeoutAfter(3000)
 	test.plan(9)
 
@@ -558,6 +561,7 @@ tape.only('Numerical term: toggle menu - 4 options', async test => {
 		.querySelectorAll('.binsize_g')[2]
 		.querySelectorAll('line')
 	test.equal(binary_lines.length, 1, 'Should have rendered UI for Binary menu')
+	tip.hide()
 })
 
 tape('Numerical term: toggle menu - 2 options', async test => {
@@ -584,6 +588,7 @@ tape('Numerical term: toggle menu - 2 options', async test => {
 		2,
 		'Should have 2 toggle buttons for nuermic edit menu'
 	)
+	tip.hide()
 })
 
 tape('Numerical term: toggle menu - 1 option', async test => {
@@ -610,6 +615,7 @@ tape('Numerical term: toggle menu - 1 option', async test => {
 		0,
 		'Should not have any toggle buttons for nuermic edit menu'
 	)
+	tip.hide()
 })
 
 tape('Numerical term: integer custom bins', async test => {
@@ -695,6 +701,7 @@ tape('Numerical term: integer custom bins', async test => {
 		0,
 		'should not have commas in the x-axis tick labels'
 	)
+	tip.hide()
 })
 
 tape('Conditional term', async test => {
@@ -825,6 +832,7 @@ tape('Conditional term', async test => {
 		tip.d.selectAll('.group_btn')._groups[0][1].innerText.includes('Use'),
 		'Should have "default" group button be inactive'
 	)
+	tip.hide()
 
 	/*
 
