@@ -27,7 +27,7 @@ class TdbApp {
 			holder: opts.holder,
 			topbar,
 			searchDiv: topbar.append('div').style('display', 'inline-block'),
-			filterDiv: topbar.append('div').style('display', 'inline-block'),
+			filterDiv: topbar.append('div').style('display', 'none'),
 			errdiv: opts.holder.append('div'),
 			tip: new Menu({ padding: '5px' })
 		}
@@ -72,6 +72,13 @@ class TdbApp {
 	async setComponents() {
 		try {
 			this.components = await multiInit({
+				/*
+			 	TODO: may need to handle a cohort filter option as an OPTIONAL component 
+			  filter: filterInit({
+					app: this.api,
+					holder: this.dom.filterDiv
+			  }),
+				***/
 				search: searchInit({
 					app: this.api,
 					holder: this.dom.searchDiv

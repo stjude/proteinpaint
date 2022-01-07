@@ -25,9 +25,7 @@ function getOpts(_opts = {}) {
 	const opts = Object.assign(
 		{
 			holder,
-			nav: {
-				activeCohort: 0
-			},
+			activeCohort: 0,
 			callback(filter) {
 				opts.filterData = filter
 				opts.filterUiRoot = getFilterItemByTag(filter, 'filterUiRoot')
@@ -45,7 +43,7 @@ function getOpts(_opts = {}) {
 		btnLabel: 'Filter',
 		holder: holder.append('div'),
 		vocab,
-		nav: opts.nav,
+		header_mode: opts.header_mode,
 		termdbConfig: opts.termdbConfig,
 		debug: true,
 		callback: opts.callback

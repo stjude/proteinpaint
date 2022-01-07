@@ -131,14 +131,11 @@ makeURL([
 
 {name:'termdb',
 	links:[
-		['sjlife tree','?noheader=1&termdb='+JSON.stringify( {dslabel:'SJLife',genome:'hg38',nav:{header_mode:'with_tabs'}})],
+		['sjlife tree','?noheader=1&termdb='+JSON.stringify( {dslabel:'SJLife',genome:'hg38',header_mode:'with_cohortHtmlSelect'})],
 		['pnet','?noheader=1&termdb='+JSON.stringify({
 			dslabel: 'PNET',
 			genome: 'hg19',
-			nav: {
-				header_mode: 'with_tabs',
-				activeTab: 1,
-			},
+			header_mode: 'with_tabs',
 			tree: {
 				expandedTermIds: [
 					'root',

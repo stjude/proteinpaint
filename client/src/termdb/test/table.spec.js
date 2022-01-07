@@ -33,7 +33,7 @@ tape('default behavior', function(test) {
 	runpp({
 		termfilter,
 		state: {
-			nav: { header_mode: 'with_tabs' },
+			header_mode: 'with_tabs',
 			tree: {
 				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis', 'diaggrp'],
 				visiblePlotIds: ['diaggrp'],

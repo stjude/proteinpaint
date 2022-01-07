@@ -869,9 +869,6 @@ function setInteractivity(self) {
 			state: {
 				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,
-				nav: {
-					header_mode: 'search_only'
-				},
 				termfilter: { filter: rootFilterCopy }
 			},
 			tree: {
@@ -970,9 +967,7 @@ function setInteractivity(self) {
 			state: {
 				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,
-				nav: {
-					header_mode: 'search_only'
-				},
+				header_mode: 'search_only',
 				termfilter: { filter: self.getAdjustedRoot(filter.$id, filter.join) }
 			},
 			tree: {

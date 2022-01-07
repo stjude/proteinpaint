@@ -6,11 +6,13 @@ const helpers = require('../../../test/front.helpers.js')
  reusable helper functions
 **************************/
 
-const runpp = helpers.getRunPp('termdb', {
+const runpp = helpers.getRunPp('mass', {
 	state: {
 		dslabel: 'TermdbTest',
 		genome: 'hg38',
-		nav: { header_mode: 'with_tabs' }
+		nav: {
+			header_mode: 'with_tabs'
+		}
 	},
 	debug: 1
 })
@@ -41,14 +43,14 @@ async function addDemographicSexFilter(opts, btn) {
  test sections
 ***************/
 tape('\n', function(test) {
-	test.pass('-***- termdb/nav -***-')
+	test.pass('-***- mass/nav -***-')
 	test.end()
 })
 
 tape('default hidden tabs, no filter', function(test) {
 	runpp({
 		state: {
-			nav: { header_mode: 'search_only' }
+			header_mode: 'search_only'
 		},
 		nav: {
 			callbacks: {

@@ -6,10 +6,7 @@ import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
 const defaultState = {
-	nav: {
-		header_mode: 'search_only',
-		activeTab: 0
-	},
+	header_mode: 'search_only',
 	// will be ignored if there is no dataset termdb.selectCohort
 	// or value will be set to match a filter node that has been tagged
 	// as 'cohortfilter' in state.termfilter.filter
@@ -120,11 +117,9 @@ class TdbStore {
 			}
 		} else {
 			this.state.activeCohort = -1
-			// since the cohort tab will be hidden, default to making the filter tab active
-			if (this.state.activeTab === 0) this.state.activeTab = 1
-			if (this.state.nav.header_mode === 'with_cohortHtmlSelect') {
-				console.warn(`no termdbConfig.selectCohort to use for nav.header_mode = 'with_cohortHtmlSelect'`)
-				this.state.nav.header_mode = 'search_only'
+			if (this.state.header_mode === 'with_cohortHtmlSelect') {
+				console.warn(`no termdbConfig.selectCohort to use for state.header_mode = 'with_cohortHtmlSelect'`)
+				this.state.header_mode = 'search_only'
 			}
 		}
 	}
@@ -159,9 +154,6 @@ TdbStore.prototype.actions = {
 		// initial render is not meant to be modified yet
 		//
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
-	},
-	tab_set(action) {
-		this.state.nav.activeTab = action.activeTab
 	},
 	cohort_set(action) {
 		this.state.activeCohort = action.activeCohort

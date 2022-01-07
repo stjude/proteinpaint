@@ -200,6 +200,7 @@ tape('state rehydrate: by cohortFilter', function(test) {
 		state: {
 			genome: 'hg38',
 			dslabel: 'TermdbTest',
+			header_mode: 'with_cohortHtmlSelect',
 			termfilter: {
 				filter: {
 					type: 'tvslst',
@@ -226,9 +227,6 @@ tape('state rehydrate: by cohortFilter', function(test) {
 						}
 					]
 				}
-			},
-			nav: {
-				header_mode: 'with_tabs'
 			}
 		},
 		callbacks: {
