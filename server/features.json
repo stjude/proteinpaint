@@ -609,6 +609,7 @@
             "app": "Genome Browser",
             "blurb": "Coding mutations and gene fusions",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
+            "update_expire": "2022-02-07",
             "ppcalls": [
                 {
                     "label": "Official dataset",
@@ -705,7 +706,8 @@
                         "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
                     }
-                ]
+                ],
+                "update_message": "Create your own official dataset! See the 'Official Dataset' example and click on 'Build an Official Dataset' button."
             },
             "searchterms": []
         },
@@ -714,7 +716,6 @@
             "app": "Genome Browser",
             "blurb": "Single sample and cohort",
             "image": "https://pecan.stjude.cloud/static/examples/images/junction-cohort-square.png",
-            "new_expire": "2021-08-15",
             "ppcalls": [
                 {
                     "label": "A sample splice junction",
@@ -922,7 +923,6 @@
         {
             "name": "Arc Track",
             "app": "Genome Browser",
-            "new_expire": "2021-07-02",
             "blurb": "Pairwise chromatin interactions",
             "image": "https://pecan.stjude.cloud/static/examples/images/arc-square.png",
             "ppcalls": [
@@ -1201,6 +1201,7 @@
             "app": "Apps",
             "blurb": "Review CICERO output",
             "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
+            "update_expire": "2022-02-01",
             "ppcalls": [
                 {
                     "is_ui": true,
@@ -1232,7 +1233,8 @@
                         "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1DRVzE_WenG490eRYB7VGFOygtSqtF5L97rhK0HOUCNY/edit"
                     }
-                ]
+                ],
+                "update_message": "Please use the new example to explore the FusionEditor."
             },
             "searchterms": []
         },
@@ -1241,6 +1243,7 @@
             "app": "Apps",
             "blurb": "Somatic mutations from diagnosis & relapse",
             "image": "https://pecan.stjude.cloud/static/examples/images/2dmaf-square.png",
+            "update_expire": "2022-02-01",
             "ppcalls": [
                 {
                     "is_ui": true,
@@ -1275,7 +1278,8 @@
                         "name": "Documentation",
                         "link": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13"
                     }
-                ]
+                ],
+                "update_message": "Please use the new example to explore the 2DMAF plot."
             },
             "searchterms": ["2dmaf", "clonal evolution", "point mutations"]
         },
