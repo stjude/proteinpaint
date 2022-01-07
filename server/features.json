@@ -611,7 +611,7 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
             "ppcalls": [
                 {
-                    "label": "Pediatric dataset",
+                    "label": "Official dataset",
                     "urlparam": "?genome=hg19&gene=JAK2&dataset=Pediatric",
                     "runargs": {
                         "gene":"jak2",
@@ -620,10 +620,10 @@
                         "genome": "hg19",
                         "dataset":"Pediatric"
                     },
-                    "buttons": [
+                    "buttons":[
                         {
-                            "name": "Documentation",
-                            "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+                            "name":"Build an Official Dataset Document",
+                            "link": "https://docs.google.com/document/d/1iY7x9PzAzLKzdABam_Tfg8h-kQ0oh2UyyKC0cP-9YWA/edit"
                         }
                     ],
                     "testSpec": {
@@ -699,7 +699,14 @@
                     }
                 }
             ],
-            "sandbox": {},
+            "sandbox": {
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+                    }
+                ]
+            },
             "searchterms": []
         },
         {
