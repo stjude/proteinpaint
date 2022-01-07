@@ -4,17 +4,22 @@ import { init_tabs } from '../dom/toggleButtons'
 export async function getHandler(self) {
 	const handlerPromises = []
 	// set handlerByType based on entries from numericEditMenuVersion
-	for (const subType of self.opts.numericEditMenuVersion) {
+	for (const subtype of self.opts.numericEditMenuVersion) {
 		handlerPromises.push(
-			(async () => {
-				const type = 'numeric'
-				const typeSubtype = `${type}.${subType}`
-				const _ = await import(`./termsetting.${typeSubtype}.js`)
-				self.handlerByType[typeSubtype] = _.getHandler(self)
-			})()
+			import(`./termsetting.numeric.${subtype}.js`).then(async _ => {
+				self.handlerByType['numeric.' + subtype] = await _.getHandler(self)
+			})
 		)
 	}
 	await Promise.all(handlerPromises)
+
+	// NOTE: following code is for demo only, remove it after testing
+	// self.opts.numericEditMenuVersion.forEach(async subType => {
+	// 	const type = 'numeric'
+	// 	const typeSubtype = `${type}.${subType}`
+	// 	const _ = await import(`./termsetting.${typeSubtype}.js`)
+	// 	self.handlerByType[typeSubtype] = _.getHandler(self)
+	// })
 
 	return {
 		get_term_name(d) {
@@ -42,9 +47,7 @@ export async function getHandler(self) {
 			const tabs = []
 			function get_default_tab(subType) {
 				const type = 'numeric'
-				let _subType = subType
-				if (subType == 'cubic-spline') _subType = 'spline'
-				const typeSubtype = `${type}.${_subType}`
+				const typeSubtype = `${type}.${subType}`
 
 				const default_tab_callback = async div => {
 					self.q.mode = subType
@@ -69,8 +72,7 @@ export async function getHandler(self) {
 				if (subType == 'continuous') {
 					tab = get_default_tab(subType)
 					// for toggle numeric menu, continuous will be default active tab
-					tab.active =
-						!self.q.mode || (self.q.mode != 'discrete' && self.q.mode != 'cubic-spline' && self.q.mode != 'binary')
+					tab.active = !self.q.mode || (self.q.mode != 'discrete' && self.q.mode != 'spline' && self.q.mode != 'binary')
 				} else if (subType == 'discrete') {
 					const typeSubtype = 'numeric.discrete'
 					tab = get_default_tab(subType)
@@ -82,7 +84,7 @@ export async function getHandler(self) {
 						tab.isRendered = true
 						await self.handlerByType[typeSubtype].showEditMenu(div)
 					}
-				} else if (subType == 'cubic-spline') {
+				} else if (subType == 'spline') {
 					tab = get_default_tab(subType)
 					tab.label = 'Cubic spline'
 				} else if (subType == 'binary') {

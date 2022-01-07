@@ -134,12 +134,12 @@ function makeRinput(q, sampledata) {
 		const independent = {
 			id: tw.id,
 			name: tw.term.name,
-			rtype: tw.q.mode == 'continuous' || tw.q.mode == 'cubic-spline' ? 'numeric' : 'factor',
+			rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor',
 			values: [],
 			interactions: tw.interactions
 		}
 		if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
-		if (tw.q.mode == 'cubic-spline') {
+		if (tw.q.mode == 'spline') {
 			independent.spline = {
 				knots: tw.q.knots.map(x => Number(x.value)),
 				plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')

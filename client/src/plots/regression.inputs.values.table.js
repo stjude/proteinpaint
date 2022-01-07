@@ -104,9 +104,7 @@ function setRenderers(self) {
 		}
 
 		const isContinuousTerm =
-			t &&
-			(t.q.mode == 'continuous' || t.q.mode == 'cubic-spline') &&
-			(t.term.type == 'float' || t.term.type == 'integer')
+			t && (t.q.mode == 'continuous' || t.q.mode == 'spline') && (t.term.type == 'float' || t.term.type == 'integer')
 
 		const trs = self.dom[tableName]
 			.style('margin', '10px 5px')
@@ -252,9 +250,9 @@ function setRenderers(self) {
 			if (t.term.type == 'float' || t.term.type == 'integer') {
 				dom.term_info_div.html(
 					`Use as ${q.mode || 'continuous'} ` +
-						(q.mode !== 'cubic-spline' ? 'variable.' : '') +
+						(q.mode !== 'spline' ? 'variable.' : '') +
 						(q.mode == 'continuous' && q.scale ? ` Scale: Per ${q.scale}` : '') +
-						(q.mode == 'cubic-spline' ? ` with ${q.knots.length} Knots: ${q.knots.map(v => v.value).join(', ')}` : '')
+						(q.mode == 'spline' ? ` with ${q.knots.length} Knots: ${q.knots.map(v => v.value).join(', ')}` : '')
 				)
 				dom.term_summmary_div.html(`${included} sample included.` + (excluded ? ` ${excluded} samples excluded.` : ''))
 			} else if (t.term.type == 'categorical' || t.term.type == 'condition') {

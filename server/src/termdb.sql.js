@@ -384,7 +384,7 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 		const groupset = get_active_groupset(term, termq)
 		CTE = categoricalSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, index, groupset)
 	} else if (term.type == 'integer' || term.type == 'float') {
-		const mode = termq.mode == 'cubic-spline' ? 'cubicSpline' : termq.mode || 'discrete'
+		const mode = termq.mode == 'spline' ? 'cubicSpline' : termq.mode || 'discrete'
 		CTE = numericSql[mode].getCTE(tablename, term, q.ds, termq, values, index, filter)
 	} else if (term.type == 'condition') {
 		if (index == 1 && q.getcuminc) {
@@ -580,7 +580,7 @@ filter
 returns bins{}
 */
 export function get_bins(q, term, ds, index, filter) {
-	if (q.mode == 'continuous' || q.mode == 'cubic-spline') return
+	if (q.mode == 'continuous' || q.mode == 'spline') return
 	return binsmodule.compute_bins(q, percentiles => get_numericMinMaxPct(ds, term, filter, percentiles))
 }
 
