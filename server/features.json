@@ -623,7 +623,7 @@
                     },
                     "buttons":[
                         {
-                            "name":"Build an Official Dataset Document",
+                            "name":"Build an Official Dataset",
                             "link": "https://docs.google.com/document/d/1iY7x9PzAzLKzdABam_Tfg8h-kQ0oh2UyyKC0cP-9YWA/edit"
                         }
                     ],
