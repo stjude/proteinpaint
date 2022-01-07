@@ -710,13 +710,14 @@
             "searchterms": []
         },
         {
-            "name": "RNA splice junction of one sample",
+            "name": "Splice Junction",
             "app": "Genome Browser",
-            "blurb": " ",
-            "image": "https://pecan.stjude.cloud/static/examples/images/junction-square.png",
+            "blurb": "Single sample and cohort",
+            "image": "https://pecan.stjude.cloud/static/examples/images/junction-cohort-square.png",
+            "new_expire": "2021-08-15",
             "ppcalls": [
                 {
-                    "label": "RNA Splice Junction",
+                    "label": "A sample splice junction",
                     "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionDemoData.tar.gz",
                     "urlparam": "?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz",
                     "runargs": {
@@ -736,27 +737,9 @@
                     "testSpec": {
                         "expected": {"circle": 15, "line": 15}
                     }
-                }
-            ],
-            "sandbox":{
-                "buttons": [
-                    {
-                        "name": "Documentation",
-                        "link": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
-                    }
-                ]
-            },
-            "searchterms": []
-        },
-        {
-            "name": "Splice junctions of a cohort",
-            "app": "Genome Browser",
-            "blurb": " ",
-            "image": "https://pecan.stjude.cloud/static/examples/images/junction-cohort-square.png",
-            "new_expire": "2021-08-15",
-            "ppcalls": [
+                },
                 {
-                    "label":"From an External JSON",
+                    "label":"Cohort from an External JSON",
                     "message": "",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionJsonDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz",
@@ -778,7 +761,7 @@
                     }
                 },
                 {
-                    "label":"From a JSON Matrix File",
+                    "label":"Cohort from a JSON Matrix File",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionMatrixDemoData.tar.gz",
                     "urlparam": "?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz",
                     "runargs": {
@@ -809,7 +792,7 @@
                 "buttons": [
                     {
                         "name": "Documentation",
-                        "link": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.s58v64uwsl45"
+                        "link": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
                     }
                 ]
             },
