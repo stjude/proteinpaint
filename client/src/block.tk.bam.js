@@ -158,8 +158,8 @@ export async function loadTk(tk, block) {
 				if (tk.readAlignmentTable) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
-					if (tk.is_align_gene_button) {
-						tk.is_align_gene_button = false
+					if (tk.is_align_gene) {
+						tk.is_align_gene = false
 					}
 					tk.alignpane.pane.style('display', 'none')
 				}
@@ -816,8 +816,8 @@ function makeTk(tk, block) {
 			if (tk.readAlignmentTable) {
 				delete tk.readAlignmentTable
 				delete tk.readAlignmentTableGroup
-				if (tk.is_align_gene_button) {
-					tk.is_align_gene_button = false
+				if (tk.is_align_gene) {
+					tk.is_align_gene = false
 				}
 			}
 			tk.alignpane.pane.style('display', 'none')
@@ -1068,8 +1068,8 @@ function makeGroup(gd, tk, block, data) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
 					tk.alignpane.pane.style('display', 'none')
-					if (tk.is_align_gene_button) {
-						tk.is_align_gene_button = false
+					if (tk.is_align_gene) {
+						tk.is_align_gene = false
 					}
 				}
 				return
@@ -1130,8 +1130,8 @@ function makeGroup(gd, tk, block, data) {
 				delete tk.readAlignmentTable
 				delete tk.readAlignmentTableGroup
 				tk.alignpane.pane.style('display', 'none')
-				if (tk.is_align_gene_button) {
-					tk.is_align_gene_button = false
+				if (tk.is_align_gene) {
+					tk.is_align_gene = false
 				}
 			}
 			if (group.my_partstack) {
@@ -1192,8 +1192,8 @@ function makeGroup(gd, tk, block, data) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
 					tk.alignpane.pane.style('display', 'none')
-					if (tk.is_align_gene_button) {
-						tk.is_align_gene_button = false
+					if (tk.is_align_gene) {
+						tk.is_align_gene = false
 					}
 				}
 				group.dom.box_move.attr('width', 0)
@@ -1217,8 +1217,8 @@ function makeGroup(gd, tk, block, data) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
 					tk.alignpane.pane.style('display', 'none')
-					if (tk.is_align_gene_button) {
-						tk.is_align_gene_button = false
+					if (tk.is_align_gene) {
+						tk.is_align_gene = false
 					}
 				}
 				group.data = _d.groups[0]
@@ -1273,8 +1273,8 @@ function makeGroup(gd, tk, block, data) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
 					tk.alignpane.pane.style('display', 'none')
-					if (tk.is_align_gene_button) {
-						tk.is_align_gene_button = false
+					if (tk.is_align_gene) {
+						tk.is_align_gene = false
 					}
 				}
 				group.data = _d.groups[0]
@@ -1327,8 +1327,8 @@ function makeGroup(gd, tk, block, data) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
 					tk.alignpane.pane.style('display', 'none')
-					if (tk.is_align_gene_button) {
-						tk.is_align_gene_button = false
+					if (tk.is_align_gene) {
+						tk.is_align_gene = false
 					}
 				}
 				group.data = _d.groups[0]
@@ -1496,7 +1496,7 @@ function click_groupheader(tk, group, block) {
 function updateExistingMultiReadAligInfo(tk, read_number) {
 	const rows = tk.readAlignmentTable._groups[0][0].querySelectorAll('tr')
 	rows.forEach(row => {
-		if (row.rowIndex == read_number + 1 && !tk.is_align_gene_button) {
+		if (row.rowIndex == read_number + 1 && !tk.is_align_gene) {
 			// 1 is added because the top in the HTML table consists of the variant box. So read index in the actual bam track is equal to read_number + 1 in the realignment panel
 			row.style.setProperty('font-weight', 'bold')
 			const cols = row.querySelectorAll('td')
@@ -1505,7 +1505,7 @@ function updateExistingMultiReadAligInfo(tk, read_number) {
 					col.style.setProperty('background-color', 'yellow')
 				}
 			})
-		} else if (row.rowIndex == read_number + 2 && tk.is_align_gene_button) {
+		} else if (row.rowIndex == read_number + 2 && tk.is_align_gene) {
 			// 2 is added because the top in the HTML table consists of the variant box. In addition, when gene models are displayed after the reference/alternate sequence, the read index in the actual bam track is equal to read_number + 2 in the realignment panel
 			row.style.setProperty('font-weight', 'bold')
 			const cols = row.querySelectorAll('td')
@@ -1957,7 +1957,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 			.style('margin-left', '10px')
 			.text('Show gene model')
 			.on('click', async () => {
-				tk.is_align_gene_button = true // This flag is set to true so that when the read is hovered, the same read is highlighted in the realignment panel
+				tk.is_align_gene = true // This flag is set to true so that when the read is hovered, the same read is highlighted in the realignment panel
 				gene_button.property('disabled', true) // disable this button
 				await create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 			})
@@ -2638,8 +2638,8 @@ async function enter_partstack(group, tk, block, y, data) {
 		delete tk.readAlignmentTable
 		delete tk.readAlignmentTableGroup
 		tk.alignpane.pane.style('display', 'none')
-		if (tk.is_align_gene_button) {
-			tk.is_align_gene_button = false
+		if (tk.is_align_gene) {
+			tk.is_align_gene = false
 		}
 	}
 	group.data = _d.groups[0]
