@@ -72,21 +72,21 @@ async function setqDefaults(self) {
 	const cache = self.numqByTermIdModeType
 	const t = self.term
 	if (!cache[t.id]) cache[t.id] = {}
-	if (!cache[t.id]['cubic-spline']) {
-		cache[t.id]['cubic-spline'] = {
-			mode: 'cubic-spline',
+	if (!cache[t.id]['spline']) {
+		cache[t.id]['spline'] = {
+			mode: 'spline',
 			knots: []
 		}
 	}
 
-	// const knots = cache[t.id]['cubic-spline'].knots
-	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id]['cubic-spline']))
+	// const knots = cache[t.id]['spline'].knots
+	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id]['spline']))
 	self.q = Object.assign(cacheCopy, self.q)
 	// create default knots when menu renderes for first time
 	if (!self.q.knots.length) {
 		const default_knots_count = 4
 		await getKnots(self, default_knots_count)
-		self.numqByTermIdModeType[self.term.id]['cubic-spline'].knots = self.q.knots
+		self.numqByTermIdModeType[self.term.id]['spline'].knots = self.q.knots
 	}
 	delete self.q.type
 	//*** validate self.q ***//
@@ -295,7 +295,7 @@ function renderButtons(self) {
 }
 
 function applyEdits(self) {
-	self.q.mode = 'cubic-spline'
+	self.q.mode = 'spline'
 	self.dom.tip.hide()
 	self.runCallback()
 }

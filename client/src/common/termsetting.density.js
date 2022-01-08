@@ -10,7 +10,7 @@ export async function setDensityPlot(self) {
 		})
 	} else {
 		// svg for range plot
-		const div = self.q.mode == 'cubic-spline' ? self.dom.knots_div : self.dom.bins_div
+		const div = self.q.mode == 'spline' ? self.dom.knots_div : self.dom.bins_div
 		self.num_obj.svg = div.select('svg').size() ? div.select('svg') : div.append('svg')
 		self.num_obj.svg.selectAll('*').remove()
 		makeDensityPlot(self)
@@ -196,7 +196,7 @@ function renderBinLines(self, data) {
 				return { x: d.start, index, scaledX: Math.round(o.xscale(d.start)) }
 			})
 		)
-	} else if (data.mode == 'cubic-spline') {
+	} else if (data.mode == 'spline') {
 		lines.push(
 			...data.knots.map((d, index) => {
 				return { x: d.value, index, scaledX: Math.round(o.xscale(d.value)) }
@@ -207,7 +207,7 @@ function renderBinLines(self, data) {
 	lines.forEach((d, i) => {
 		d.isDraggable =
 			self.q.type == 'custom-bin' ||
-			self.q.mode == 'cubic-spline' ||
+			self.q.mode == 'spline' ||
 			i === 0 ||
 			(self.q.last_bin && self.q.last_bin.start === d.x)
 	})
@@ -322,7 +322,7 @@ function renderBinLines(self, data) {
 			if (self.dom.customBinLabelInput) {
 				self.dom.customBinLabelInput.property('value', c => c.label)
 			}
-		} else if (self.q.mode == 'cubic-spline') {
+		} else if (self.q.mode == 'spline') {
 			self.q.knots[d.index].value = value
 			if (self.dom.customKnotsInput) {
 				self.dom.customKnotsInput.property('value', self.q.knots.map(d => d.value).join('\n'))
@@ -363,7 +363,7 @@ function renderBinLines(self, data) {
 		} else if (self.q.type == 'custom-bin') {
 			self.q.lst[d.index + 1].start = d.x
 			self.q.lst[d.index].stop = d.x
-		} else if (self.q.mode == 'cubic-spline') {
+		} else if (self.q.mode == 'spline') {
 			self.q.knots[d.index].value = d.x
 		}
 	}

@@ -43,6 +43,7 @@ async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 		use_bins_less: opts.use_bins_less,
 		showFullMenu: opts.showFullMenu,
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,
+		numericEditMenuVersion: opts.numericEditMenuVersion,
 		debug: true,
 		callback: function(termsetting) {
 			opts.tsData = termsetting
@@ -259,6 +260,7 @@ tape('Numerical term: range boundaries', async test => {
 	await sleep(50)
 	const q0 = opts.pill.Inner.numqByTermIdModeType.agedx.discrete.regular
 	test.equal(q0.stopinclusive && !q0.startinclusive, true, 'should set the range boundary to stop inclusive')
+	tip.hide()
 })
 
 tape('Numerical term: fixed bins', async test => {
@@ -426,6 +428,7 @@ tape('Numerical term: fixed bins', async test => {
 	await sleep(500)
 	window.removeEventListener('error.firstBinStopTest', detectFirstBinStopError)
 	test.pass(firstBinStopMessage)
+	tip.hide()
 })
 
 tape('Numerical term: float custom bins', async test => {
@@ -483,6 +486,136 @@ tape('Numerical term: float custom bins', async test => {
 		.node()
 		.querySelectorAll('line')
 	test.equal(lines.length, 2, 'should have 2 lines')
+	tip.hide()
+})
+
+tape('Numerical term: toggle menu - 4 options', async test => {
+	test.timeoutAfter(3000)
+	test.plan(9)
+
+	const opts = await getOpts({
+		numericEditMenuVersion: ['continuous', 'discrete', 'spline', 'binary'],
+		tsData: {
+			term: termjson['agedx']
+		}
+	})
+	opts.tsData.q = termjson['agedx'].bins.less
+
+	await opts.pill.main(opts.tsData)
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
+	pilldiv.click()
+	await sleep(300)
+
+	const tip = opts.pill.Inner.dom.tip
+	const toggleButtons = tip.d.node().querySelectorAll('.sj-toggle-button')
+
+	test.equal(toggleButtons.length, 4, 'Should have 4 toggle buttons for nuermic edit menu')
+
+	test.equal(toggleButtons[0].innerText, 'Continuous', 'Should have title for first tab as Continuous')
+
+	test.equal(
+		tip.d
+			.node()
+			.querySelector('select')
+			.querySelectorAll('option')[0].innerText,
+		'No Scaling',
+		'Should have rendered UI for Continuous menu'
+	)
+
+	toggleButtons[1].click()
+	await sleep(300)
+
+	test.equal(toggleButtons[1].innerText, 'Discrete', 'Should have title for 2nd tab as Discrete')
+
+	test.equal(
+		tip.d
+			.node()
+			.querySelector('tr')
+			.querySelector('td').innerText,
+		'Bin Size',
+		'Should have rendered UI for Discrete menu'
+	)
+
+	toggleButtons[2].click()
+	await sleep(300)
+
+	test.equal(toggleButtons[2].innerText, 'Cubic spline', 'Should have title for 3nd tab as Cubic spline')
+
+	test.equal(
+		tip.d
+			.node()
+			.querySelector('textarea')
+			.value.split('\n').length,
+		parseInt(tip.d.node().querySelectorAll('select')[2].value),
+		'Should have rendered UI for Continuous menu'
+	)
+
+	toggleButtons[3].click()
+	await sleep(300)
+
+	test.equal(toggleButtons[3].innerText, 'Binary', 'Should have title for 4nd tab as Binary')
+
+	const binary_lines = tip.d
+		.node()
+		.querySelectorAll('.binsize_g')[2]
+		.querySelectorAll('line')
+	test.equal(binary_lines.length, 1, 'Should have rendered UI for Binary menu')
+	tip.hide()
+})
+
+tape('Numerical term: toggle menu - 2 options', async test => {
+	test.timeoutAfter(3000)
+	test.plan(1)
+
+	const opts = await getOpts({
+		numericEditMenuVersion: ['continuous', 'discrete'],
+		tsData: {
+			term: termjson['agedx']
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
+	pilldiv.click()
+	await sleep(300)
+
+	const tip = opts.pill.Inner.dom.tip
+
+	test.equal(
+		tip.d.node().querySelectorAll('.sj-toggle-button').length,
+		2,
+		'Should have 2 toggle buttons for nuermic edit menu'
+	)
+	tip.hide()
+})
+
+tape('Numerical term: toggle menu - 1 option', async test => {
+	test.timeoutAfter(3000)
+	test.plan(1)
+
+	const opts = await getOpts({
+		numericEditMenuVersion: ['continuous'],
+		tsData: {
+			term: termjson['agedx']
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+
+	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
+	pilldiv.click()
+	await sleep(300)
+
+	const tip = opts.pill.Inner.dom.tip
+
+	test.equal(
+		tip.d.node().querySelectorAll('.sj-toggle-button').length,
+		0,
+		'Should not have any toggle buttons for nuermic edit menu'
+	)
+	tip.hide()
 })
 
 tape('Numerical term: integer custom bins', async test => {
@@ -568,6 +701,7 @@ tape('Numerical term: integer custom bins', async test => {
 		0,
 		'should not have commas in the x-axis tick labels'
 	)
+	tip.hide()
 })
 
 tape('Conditional term', async test => {
@@ -622,7 +756,7 @@ tape('Conditional term', async test => {
 			},
 			q: {
 				value_by_max_grade: true,
-				groupsetting: {inuse: false}
+				groupsetting: { inuse: false }
 			}
 		}
 	})
@@ -698,6 +832,7 @@ tape('Conditional term', async test => {
 		tip.d.selectAll('.group_btn')._groups[0][1].innerText.includes('Use'),
 		'Should have "default" group button be inactive'
 	)
+	tip.hide()
 
 	/*
 

@@ -1,16 +1,14 @@
 import { init_tabs } from '../dom/toggleButtons'
 
 // self is the termsetting instance
-export function getHandler(self) {
+export async function getHandler(self) {
 	// set handlerByType based on entries from numericEditMenuVersion
-	self.opts.numericEditMenuVersion.forEach(async subType => {
+	for (const subType of self.opts.numericEditMenuVersion) {
 		const type = 'numeric'
-		let _subType = subType
-		if (subType == 'cubic-spline') _subType = 'spline'
-		const typeSubtype = `${type}.${_subType}`
+		const typeSubtype = `${type}.${subType}`
 		const _ = await import(`./termsetting.${typeSubtype}.js`)
 		self.handlerByType[typeSubtype] = _.getHandler(self)
-	})
+	}
 
 	return {
 		get_term_name(d) {
@@ -38,9 +36,7 @@ export function getHandler(self) {
 			const tabs = []
 			function get_default_tab(subType) {
 				const type = 'numeric'
-				let _subType = subType
-				if (subType == 'cubic-spline') _subType = 'spline'
-				const typeSubtype = `${type}.${_subType}`
+				const typeSubtype = `${type}.${subType}`
 
 				const default_tab_callback = async div => {
 					self.q.mode = subType
@@ -65,8 +61,7 @@ export function getHandler(self) {
 				if (subType == 'continuous') {
 					tab = get_default_tab(subType)
 					// for toggle numeric menu, continuous will be default active tab
-					tab.active =
-						!self.q.mode || (self.q.mode != 'discrete' && self.q.mode != 'cubic-spline' && self.q.mode != 'binary')
+					tab.active = !self.q.mode || (self.q.mode != 'discrete' && self.q.mode != 'spline' && self.q.mode != 'binary')
 				} else if (subType == 'discrete') {
 					const typeSubtype = 'numeric.discrete'
 					tab = get_default_tab(subType)
@@ -78,7 +73,7 @@ export function getHandler(self) {
 						tab.isRendered = true
 						await self.handlerByType[typeSubtype].showEditMenu(div)
 					}
-				} else if (subType == 'cubic-spline') {
+				} else if (subType == 'spline') {
 					tab = get_default_tab(subType)
 					tab.label = 'Cubic spline'
 				} else if (subType == 'binary') {

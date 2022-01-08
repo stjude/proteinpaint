@@ -164,7 +164,7 @@ class TermSetting {
 		if (!this.handlerByType[typeSubtype]) {
 			try {
 				const _ = await import(`./termsetting.${typeSubtype}.js`)
-				this.handlerByType[typeSubtype] = _.getHandler(this)
+				this.handlerByType[typeSubtype] = await _.getHandler(this)
 			} catch (e) {
 				throw `error with handler='./termsetting.${typeSubtype}.js': ${e}`
 			}
