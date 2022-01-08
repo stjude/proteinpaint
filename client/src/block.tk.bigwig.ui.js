@@ -73,6 +73,7 @@ function validateInput(doms, genomes) {
 			}
 		}
 		runpp_args.tracks.push(tk)
+		first_genetrack_tolist(g, runpp_args.tracks)
 		return runpp_args
 	}
 
@@ -100,10 +101,10 @@ function validateInput(doms, genomes) {
 				runpp_args.tracks.push(tk)
 			}
 		}
+		first_genetrack_tolist(g, runpp_args.tracks)
+		return runpp_args
 	}
-
-	first_genetrack_tolist(g, runpp_args.tracks) //Not working
-	return runpp_args
+	throw 'unknown option'
 }
 
 function makePrompt(div, text) {
