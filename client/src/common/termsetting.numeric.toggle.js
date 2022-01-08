@@ -2,24 +2,13 @@ import { init_tabs } from '../dom/toggleButtons'
 
 // self is the termsetting instance
 export async function getHandler(self) {
-	const handlerPromises = []
 	// set handlerByType based on entries from numericEditMenuVersion
-	for (const subtype of self.opts.numericEditMenuVersion) {
-		handlerPromises.push(
-			import(`./termsetting.numeric.${subtype}.js`).then(async _ => {
-				self.handlerByType['numeric.' + subtype] = await _.getHandler(self)
-			})
-		)
+	for (const subType of self.opts.numericEditMenuVersion) {
+		const type = 'numeric'
+		const typeSubtype = `${type}.${subType}`
+		const _ = await import(`./termsetting.${typeSubtype}.js`)
+		self.handlerByType[typeSubtype] = _.getHandler(self)
 	}
-	await Promise.all(handlerPromises)
-
-	// NOTE: following code is for demo only, remove it after testing
-	// self.opts.numericEditMenuVersion.forEach(async subType => {
-	// 	const type = 'numeric'
-	// 	const typeSubtype = `${type}.${subType}`
-	// 	const _ = await import(`./termsetting.${typeSubtype}.js`)
-	// 	self.handlerByType[typeSubtype] = _.getHandler(self)
-	// })
 
 	return {
 		get_term_name(d) {
