@@ -158,6 +158,9 @@ export async function loadTk(tk, block) {
 				if (tk.readAlignmentTable) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
+					if (tk.is_align_gene) {
+						tk.is_align_gene = false
+					}
 					tk.alignpane.pane.style('display', 'none')
 				}
 			}
@@ -813,6 +816,9 @@ function makeTk(tk, block) {
 			if (tk.readAlignmentTable) {
 				delete tk.readAlignmentTable
 				delete tk.readAlignmentTableGroup
+				if (tk.is_align_gene) {
+					tk.is_align_gene = false
+				}
 			}
 			tk.alignpane.pane.style('display', 'none')
 		}
@@ -1045,7 +1051,8 @@ function makeGroup(gd, tk, block, data) {
 						updateExistingMultiReadAligInfo(tk, read_number)
 					} else if (tk.readAlignmentTable && tk.readAlignmentTableGroup != group.data.type) {
 						// Checking to see if the group being hovered over is the same as that whose reads have been realigned. In this case it is not, so removing the yellow highlighting and bolding of text from the read that was previously being highlighted.
-						updateExistingMultiReadAligInfo(tk, group.data.templatebox.length + 1)
+						// NOTE: This logic does not work if adjoining group has lot of reads and requires partstack mode to view it. In that case the hover function does not work.
+						updateExistingMultiReadAligInfo(tk, group.data.templatebox.length + 10) // Adding an arbitary number so that read_number never matches and all reads turn white
 					}
 					return
 				}
@@ -1061,6 +1068,9 @@ function makeGroup(gd, tk, block, data) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
 					tk.alignpane.pane.style('display', 'none')
+					if (tk.is_align_gene) {
+						tk.is_align_gene = false
+					}
 				}
 				return
 			}
@@ -1120,6 +1130,9 @@ function makeGroup(gd, tk, block, data) {
 				delete tk.readAlignmentTable
 				delete tk.readAlignmentTableGroup
 				tk.alignpane.pane.style('display', 'none')
+				if (tk.is_align_gene) {
+					tk.is_align_gene = false
+				}
 			}
 			if (group.my_partstack) {
 				delete group.my_partstack // y-position of click that invoked partstack originally
@@ -1179,6 +1192,9 @@ function makeGroup(gd, tk, block, data) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
 					tk.alignpane.pane.style('display', 'none')
+					if (tk.is_align_gene) {
+						tk.is_align_gene = false
+					}
 				}
 				group.dom.box_move.attr('width', 0)
 				group.dom.box_stay.attr('width', 0)
@@ -1201,6 +1217,9 @@ function makeGroup(gd, tk, block, data) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
 					tk.alignpane.pane.style('display', 'none')
+					if (tk.is_align_gene) {
+						tk.is_align_gene = false
+					}
 				}
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
@@ -1254,6 +1273,9 @@ function makeGroup(gd, tk, block, data) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
 					tk.alignpane.pane.style('display', 'none')
+					if (tk.is_align_gene) {
+						tk.is_align_gene = false
+					}
 				}
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
@@ -1305,6 +1327,9 @@ function makeGroup(gd, tk, block, data) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
 					tk.alignpane.pane.style('display', 'none')
+					if (tk.is_align_gene) {
+						tk.is_align_gene = false
+					}
 				}
 				group.data = _d.groups[0]
 				renderGroup(group, tk, block)
@@ -1471,7 +1496,17 @@ function click_groupheader(tk, group, block) {
 function updateExistingMultiReadAligInfo(tk, read_number) {
 	const rows = tk.readAlignmentTable._groups[0][0].querySelectorAll('tr')
 	rows.forEach(row => {
-		if (row.rowIndex == read_number + 1) {
+		if (row.rowIndex == read_number + 1 && !tk.is_align_gene) {
+			// 1 is added because the top in the HTML table consists of the variant box. So read index in the actual bam track is equal to read_number + 1 in the realignment panel
+			row.style.setProperty('font-weight', 'bold')
+			const cols = row.querySelectorAll('td')
+			cols.forEach(col => {
+				if (col.style.backgroundColor.toString() == 'rgb(255, 255, 255)') {
+					col.style.setProperty('background-color', 'yellow')
+				}
+			})
+		} else if (row.rowIndex == read_number + 2 && tk.is_align_gene) {
+			// 2 is added because the top in the HTML table consists of the variant box. In addition, when gene models are displayed after the reference/alternate sequence, the read index in the actual bam track is equal to read_number + 2 in the realignment panel
 			row.style.setProperty('font-weight', 'bold')
 			const cols = row.querySelectorAll('td')
 			cols.forEach(col => {
@@ -1480,6 +1515,7 @@ function updateExistingMultiReadAligInfo(tk, read_number) {
 				}
 			})
 		} else {
+			// When read_number does not match rowIndex then the background color for each cells in the row is turned to white
 			row.style.setProperty('font-weight', 'normal')
 			const cols = row.querySelectorAll('td')
 			cols.forEach(col => {
@@ -1491,17 +1527,12 @@ function updateExistingMultiReadAligInfo(tk, read_number) {
 	})
 }
 
-async function getMultiReadAligInfo(tk, group, block) {
-	appear(tk.alignpane.pane)
-	tk.alignpane.pane.style('display', 'table')
-	tk.alignpane.header.text('Alignment info')
-	tk.alignpane.body.selectAll('*').remove()
-	const wait = tk.alignpane.body.append('div').text('Loading...')
-	const multi_read_alig_data = await align_reads_to_allele(tk, group, block) // Sending server side request for aligning reads to ref/alt
-	//console.log('multi_read_alig_data.alignmentData:', multi_read_alig_data.alignmentData)
-	wait.remove()
-
+async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 	let num_read_div
+	if (!multi_read_alig_data.alignmentData.read_count) {
+		// This condition is true when there are no reads mapped against reference/alternate sequence. This happens when user pans too far away from the variant region
+		multi_read_alig_data.alignmentData.read_count = 0
+	}
 	if (group.data.type == 'support_alt') {
 		num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
 			.append('div')
@@ -1543,6 +1574,7 @@ async function getMultiReadAligInfo(tk, group, block) {
 		.append('tr')
 		.style('color', 'white')
 		.style('background-color', 'white')
+	refallele_tr.attr('id', 'RefAltBar')
 	let variant_string // This will contain the variant bar along with Refeerence/ Alternate allele label
 	let nclt_count = 0
 	let allele_start = 0 // Flag to tell if the variant region has been reached or not. After that position alternate/reference allele will be rendered
@@ -1566,146 +1598,12 @@ async function getMultiReadAligInfo(tk, group, block) {
 		}
 	}
 	tk.readAlignmentTableGroup = group.data.type
-	for (const nclt of multi_read_alig_data.alignmentData.final_read_align[0]) {
-		nclt_count += 1
-		const refallele_td = refallele_tr.append('td')
-
-		// Drawing ref/alt allele bar
-		if (
-			group.data.type == 'support_alt' &&
-			nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
-			nclt_count <=
-				tk.variants[0].leftflankseq.length +
-					tk.variants[0].alt.length +
-					multi_read_alig_data.alignmentData.gaps_before_variant
-		) {
-			if (inside_variant_box == 1) {
-				allele_start = 1
-				refallele_td
-					.text(' ')
-					.style('text-align', 'right')
-					.style('font-weight', '550')
-					.style('margin', '5px 5px 10px 5px')
-					.style('color', 'black')
-					.style('background-color', 'black')
-			} else {
-				if (variant_string_count < variant_string.length) {
-					refallele_td
-						.text(variant_string[variant_string_count])
-						.style('text-align', 'right')
-						.style('font-weight', '550')
-						.style('margin', '5px 5px 10px 5px')
-						.style('color', 'white')
-						.style('background-color', 'black')
-					variant_string_count += 1
-				} else {
-					refallele_td
-						.text(' ')
-						.style('text-align', 'right')
-						.style('font-weight', '550')
-						.style('margin', '5px 5px 10px 5px')
-						.style('color', 'black')
-						.style('background-color', 'black')
-				}
-			}
-		} else if (
-			group.data.type == 'support_ref' &&
-			nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
-			nclt_count <=
-				tk.variants[0].leftflankseq.length +
-					tk.variants[0].ref.length +
-					multi_read_alig_data.alignmentData.gaps_before_variant
-		) {
-			if (inside_variant_box == 1) {
-				allele_start = 1
-				refallele_td
-					.text('')
-					.style('text-align', 'right')
-					.style('font-weight', '550')
-					.style('margin', '5px 5px 10px 5px')
-					.style('color', 'black')
-					.style('background-color', 'black')
-			} else {
-				if (variant_string_count < variant_string.length) {
-					refallele_td
-						.text(variant_string[variant_string_count])
-						.style('text-align', 'right')
-						.style('font-weight', '550')
-						.style('margin', '5px 5px 10px 5px')
-						.style('color', 'white')
-						.style('background-color', 'black')
-					variant_string_count += 1
-				} else {
-					refallele_td
-						.text('')
-						.style('text-align', 'right')
-						.style('font-weight', '550')
-						.style('margin', '5px 5px 10px 5px')
-						.style('color', 'black')
-						.style('background-color', 'black')
-				}
-			}
-		} else if (allele_start == 1 && inside_variant_box == 1) {
-			refallele_td
-				.text(variant_string[variant_string_count])
-				.style('text-align', 'right')
-				.style('font-weight', '550')
-				.style('margin', '5px 5px 10px 5px')
-				.style('color', 'black')
-				.style('background-color', 'white')
-			variant_string_count += 1
-			if (variant_string_count == variant_string.length) {
-				allele_start = 0
-			}
-		} else {
-			refallele_td
-				.text('')
-				.style('text-align', 'right')
-				.style('font-weight', '550')
-				.style('margin', '5px 5px 10px 5px')
-				.style('color', 'white')
-				.style('background-color', 'white')
-		}
-	}
-
-	// Drawing alignments for ref/alt allele and each of the reads
-	let read_count = 0
-	for (const read of multi_read_alig_data.alignmentData.final_read_align) {
-		const read_tr = tk.readAlignmentTable
-			.append('tr')
-			.style('color', 'white')
-			.style('background-color', 'white')
-		const r_colors = multi_read_alig_data.alignmentData.qual_r[read_count].split(',')
-		const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
-		const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
-
-		let nclt_count = 0
-		for (const nclt of read) {
+	if (multi_read_alig_data.alignmentData.final_read_align.length > 0) {
+		for (const nclt of multi_read_alig_data.alignmentData.final_read_align[0]) {
 			nclt_count += 1
-			let nclt_td
-			if (read_count == 0) {
-				nclt_td = read_tr
-					.append('td')
-					.text(nclt)
-					.style('background-color', 'white')
-					.style('color', 'black')
-					.style('font-weight', '550')
-			} else {
-				nclt_td = read_tr
-					.append('td')
-					.text(nclt)
-					.style(
-						'background-color',
-						'rgb(' + r_colors[nclt_count - 1] + ',' + g_colors[nclt_count - 1] + ',' + b_colors[nclt_count - 1] + ')'
-					)
-				if (nclt != '-') {
-					nclt_td.style('color', 'white')
-				} else {
-					nclt_td.style('color', 'black')
-				}
-			}
+			const refallele_td = refallele_tr.append('td')
 
-			// Highlighting nucleotides that are within the ref/alt allele
+			// Drawing ref/alt allele bar
 			if (
 				group.data.type == 'support_alt' &&
 				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
@@ -1714,7 +1612,35 @@ async function getMultiReadAligInfo(tk, group, block) {
 						tk.variants[0].alt.length +
 						multi_read_alig_data.alignmentData.gaps_before_variant
 			) {
-				nclt_td.style('color', 'black')
+				if (inside_variant_box == 1) {
+					allele_start = 1
+					refallele_td
+						.text(' ')
+						.style('text-align', 'right')
+						.style('font-weight', '550')
+						.style('margin', '5px 5px 10px 5px')
+						.style('color', 'black')
+						.style('background-color', 'black')
+				} else {
+					if (variant_string_count < variant_string.length) {
+						refallele_td
+							.text(variant_string[variant_string_count])
+							.style('text-align', 'right')
+							.style('font-weight', '550')
+							.style('margin', '5px 5px 10px 5px')
+							.style('color', 'white')
+							.style('background-color', 'black')
+						variant_string_count += 1
+					} else {
+						refallele_td
+							.text(' ')
+							.style('text-align', 'right')
+							.style('font-weight', '550')
+							.style('margin', '5px 5px 10px 5px')
+							.style('color', 'black')
+							.style('background-color', 'black')
+					}
+				}
 			} else if (
 				group.data.type == 'support_ref' &&
 				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
@@ -1723,11 +1649,320 @@ async function getMultiReadAligInfo(tk, group, block) {
 						tk.variants[0].ref.length +
 						multi_read_alig_data.alignmentData.gaps_before_variant
 			) {
-				nclt_td.style('color', 'black')
+				if (inside_variant_box == 1) {
+					allele_start = 1
+					refallele_td
+						.text('')
+						.style('text-align', 'right')
+						.style('font-weight', '550')
+						.style('margin', '5px 5px 10px 5px')
+						.style('color', 'black')
+						.style('background-color', 'black')
+				} else {
+					if (variant_string_count < variant_string.length) {
+						refallele_td
+							.text(variant_string[variant_string_count])
+							.style('text-align', 'right')
+							.style('font-weight', '550')
+							.style('margin', '5px 5px 10px 5px')
+							.style('color', 'white')
+							.style('background-color', 'black')
+						variant_string_count += 1
+					} else {
+						refallele_td
+							.text('')
+							.style('text-align', 'right')
+							.style('font-weight', '550')
+							.style('margin', '5px 5px 10px 5px')
+							.style('color', 'black')
+							.style('background-color', 'black')
+					}
+				}
+			} else if (allele_start == 1 && inside_variant_box == 1) {
+				refallele_td
+					.text(variant_string[variant_string_count])
+					.style('text-align', 'right')
+					.style('font-weight', '550')
+					.style('margin', '5px 5px 10px 5px')
+					.style('color', 'black')
+					.style('background-color', 'white')
+				variant_string_count += 1
+				if (variant_string_count == variant_string.length) {
+					allele_start = 0
+				}
+			} else {
+				refallele_td
+					.text('')
+					.style('text-align', 'right')
+					.style('font-weight', '550')
+					.style('margin', '5px 5px 10px 5px')
+					.style('color', 'white')
+					.style('background-color', 'white')
 			}
 		}
-		read_count += 1
+
+		// Drawing alignments for ref/alt allele and each of the reads
+		let read_count = 0
+		for (const read of multi_read_alig_data.alignmentData.final_read_align) {
+			let nclt_count = 0
+			const read_tr = tk.readAlignmentTable
+				.append('tr')
+				.style('color', 'white')
+				.style('background-color', 'white')
+			// Setting attribute of row
+			if (read_count == 0) {
+				read_tr.attr('id', 'RefAltSeq')
+			} else {
+				read_tr.attr('id', read_count.toString())
+			}
+			const r_colors = multi_read_alig_data.alignmentData.qual_r[read_count].split(',')
+			const g_colors = multi_read_alig_data.alignmentData.qual_g[read_count].split(',')
+			const b_colors = multi_read_alig_data.alignmentData.qual_b[read_count].split(',')
+			for (const nclt of read) {
+				nclt_count += 1
+				let nclt_td
+				if (read_count == 0) {
+					nclt_td = read_tr
+						.append('td')
+						.text(nclt)
+						.style('background-color', 'white')
+						.style('color', 'black')
+						.style('font-weight', '550')
+				} else {
+					nclt_td = read_tr
+						.append('td')
+						.text(nclt)
+						.style(
+							'background-color',
+							'rgb(' + r_colors[nclt_count - 1] + ',' + g_colors[nclt_count - 1] + ',' + b_colors[nclt_count - 1] + ')'
+						)
+					if (nclt != '-') {
+						nclt_td.style('color', 'white')
+					} else {
+						nclt_td.style('color', 'black')
+					}
+				}
+
+				// Highlighting nucleotides that are within the ref/alt allele
+				if (
+					group.data.type == 'support_alt' &&
+					nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+					nclt_count <=
+						tk.variants[0].leftflankseq.length +
+							tk.variants[0].alt.length +
+							multi_read_alig_data.alignmentData.gaps_before_variant
+				) {
+					nclt_td.style('color', 'black')
+				} else if (
+					group.data.type == 'support_ref' &&
+					nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+					nclt_count <=
+						tk.variants[0].leftflankseq.length +
+							tk.variants[0].ref.length +
+							multi_read_alig_data.alignmentData.gaps_before_variant
+				) {
+					nclt_td.style('color', 'black')
+				}
+			}
+			read_count += 1
+		}
 	}
+}
+
+async function create_gene_models_refalt(tk, block, multi_read_alig_data, group) {
+	// Function to display gene models in the multi read alignment info panel
+	// This function parses through the alternate/reference sequence and looks for gaps. At each of these gaps it ends existing gene model, renders it puts a gap and then starts the next gene model. At the end of the sequence, it finishes current model and renders it
+
+	const gene_model_images = [] // This array stores the gene model images, width and height of the gene model
+	const break_points = [] // This array stores the length of break points in case of breaks outside variant region ("-") or the variant (if its an insertion)
+	const gene_model_order = [] // This array stores the order of gene models and breaks as needed from the left
+	// Determine breaks in reference/alternate sequence (if gene model button is clicked)
+	let refalt_seq = multi_read_alig_data.alignmentData.final_read_align[0]
+	//console.log('refalt_seq:', refalt_seq)
+	let left_most_pos = tk.variants[0].pos - tk.variants[0].leftflankseq.length
+	let right_most_pos = tk.variants[0].pos + tk.variants[0].rightflankseq.length
+	//console.log('group.data.type:', group.data.type)
+	//console.log('left_most_pos:', left_most_pos)
+	//console.log('right_most_pos:', right_most_pos)
+	//console.log('tk.variants[0].pos:', tk.variants[0].pos)
+	//console.log('tk.variants[0].alt.length:', tk.variants[0].alt.length)
+	//console.log('tk.variants[0].ref.length:', tk.variants[0].ref.length)
+	let segstart = left_most_pos // This variable stores the left most position of a segment (spliced unit) of reference/alternate sequence, the first segment is initialized to the left most position of the reference/alternate sequence
+	let segstop = left_most_pos // This variable stores the right most position of a segment (spliced unit) of reference/alternate sequence
+	let local_alignment_width = 0 // This variable stores the width of each gene model that needs to be rendered using bedj track
+	let first_row = tk.readAlignmentTable.node().children[0]
+	let gm_nuc_count = 0
+	let prev_nclt_not_blank = false // Flag to store if previous nucleotide is "-"
+	let nclt_count = 0
+	for (const nclt of refalt_seq) {
+		if (nclt == '-') {
+			// Checks for breaks in ref/alt sequence other than variant of interest
+			if (prev_nclt_not_blank == true) {
+				// Flag to check if previous nucleotide is "-", if yes no gene model is rendered
+				break_points.push(1)
+				gene_model_order.push('break')
+				segstart += 1
+				segstop += 1
+			} else {
+				// Break in reference/alternate sequence caused by a read(s), will invoke a bedj request here
+
+				//console.log('nclt_count1:', nclt_count)
+				//console.log('segstart1:', segstart)
+				//console.log('segstop1:', segstop)
+				//console.log('gm_nuc_count1:', gm_nuc_count)
+				//console.log('local_alignment_width1:', local_alignment_width)
+				const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop - 1, local_alignment_width) // Send bedj server side request to render gene model for this segment
+				const gm = {
+					src: gene_model_image.src,
+					width: local_alignment_width,
+					height: gene_model_image.height,
+					colspan: gm_nuc_count
+				}
+				gene_model_images.push(gm)
+				gene_model_order.push('gene_model')
+				gm_nuc_count = 0
+				segstart = left_most_pos + nclt_count + 1
+				segstop = left_most_pos + nclt_count + 1
+				local_alignment_width = 0
+				prev_nclt_not_blank = true
+				break_points.push(1)
+				gene_model_order.push('break')
+			}
+			gm_nuc_count += 1
+			local_alignment_width += first_row.children[nclt_count].getBoundingClientRect().width
+		} else if (
+			group.data.type == 'support_alt' &&
+			tk.variants[0].alt.length > tk.variants[0].ref.length && // Insertion case
+			tk.variants[0].pos < left_most_pos + nclt_count &&
+			tk.variants[0].pos + tk.variants[0].alt.length - 1 >= left_most_pos + nclt_count // Subtracting 1 here because by convention the first nucleotide in alternate allele is the last nucleotide in reference sequence after which the indel starts
+		) {
+			// Ignores inserted nucleotides (if an insertion) as no gene model can be rendered for it
+		} else if (tk.variants[0].pos == left_most_pos + nclt_count && group.data.type == 'support_alt') {
+			// Variant causes break in gene model but only if the alternate allele is being displayed
+			if (tk.variants[0].ref.length == 1 && tk.variants[0].alt.length == 1) {
+				// In case of SNP no break in gene model is necessary
+				continue
+			}
+			//console.log('nclt_count2:', nclt_count)
+			//console.log('segstart2:', segstart)
+			//console.log('segstop2:', segstop)
+			//console.log('gm_nuc_count2:', gm_nuc_count)
+			//console.log('local_alignment_width2:', local_alignment_width)
+			if (tk.variants[0].ref.length >= tk.variants[0].alt.length) {
+				segstop += 1
+				gm_nuc_count += 1
+				local_alignment_width += first_row.children[nclt_count + 1].getBoundingClientRect().width
+			}
+			const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+			const gm = {
+				src: gene_model_image.src,
+				width: local_alignment_width,
+				height: gene_model_image.height,
+				colspan: gm_nuc_count
+			}
+			gene_model_images.push(gm)
+			gene_model_order.push('gene_model')
+			gm_nuc_count = 0
+			segstart = left_most_pos + nclt_count + tk.variants[0].ref.length
+			segstop = left_most_pos + nclt_count + tk.variants[0].ref.length
+			if (tk.variants[0].ref.length < tk.variants[0].alt.length) {
+				// Break point in variant region only in case of an insertion
+				break_points.push(tk.variants[0].alt.length)
+				gene_model_order.push('break')
+			}
+			local_alignment_width = 0
+			prev_nclt_not_blank = false
+		} else if (nclt_count == refalt_seq.length - 1) {
+			// When last nucleotide of reference/alternate sequence is parsed, rendering of gene model is invoked
+			segstop += 1
+			gm_nuc_count += 1
+			local_alignment_width += first_row.children[nclt_count].getBoundingClientRect().width
+			//console.log('nclt_count3:', nclt_count)
+			//console.log('segstart3:', segstart)
+			//console.log('segstop3:', segstop)
+			//console.log('gm_nuc_count3:', gm_nuc_count)
+			//console.log('local_alignment_width3:', local_alignment_width)
+			const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+			const gm = {
+				src: gene_model_image.src,
+				width: local_alignment_width,
+				height: gene_model_image.height,
+				colspan: gm_nuc_count
+			}
+			gene_model_images.push(gm)
+			gene_model_order.push('gene_model')
+		} else {
+			// For all other positions the stop position, number of nucleotides and width of gene model will be incremented
+			segstop += 1
+			gm_nuc_count += 1
+			local_alignment_width += first_row.children[nclt_count].getBoundingClientRect().width
+			//console.log('nclt:', nclt)
+			//console.log('segstop:', segstop)
+			//console.log('gm_nuc_count:', gm_nuc_count)
+			//console.log('local_alignment_width:', local_alignment_width)
+			//console.log('nclt_count:', nclt_count)
+			prev_nclt_not_blank = false
+		}
+		nclt_count += 1
+	}
+
+	// Drawing gene models after ref/alt sequence when gene_models button is clicked
+	let j = 0
+	let k = 0
+	const gene_model_tr = tk.readAlignmentTable.node().insertRow()
+	// Check if there are reads aligned to reference/alternate sequence
+	if (tk.readAlignmentTable.node().children.length >= 3) {
+		// Ensure that there is atleast one read in the alignment before trying to place the gene model before it (not tested, maybe should not happen at all)
+		const first_read = tk.readAlignmentTable.node().children[2]
+		tk.readAlignmentTable.node().insertBefore(gene_model_tr, first_read)
+	} else {
+		console.log('Possible problem in placing gene model in table. Please check')
+	}
+	for (let i = 0; i < gene_model_order.length; i++) {
+		const gene_models_cell = gene_model_tr.insertCell()
+		if (gene_model_order[i] == 'gene_model') {
+			// If a gene model, display gene model
+			// Render gene model
+			const img = document.createElement('img')
+			img.src = gene_model_images[k].src
+			img.width = gene_model_images[k].width
+			img.height = gene_model_images[k].height
+			gene_models_cell.appendChild(img)
+			gene_models_cell.colSpan = gene_model_images[k].colspan
+			k += 1
+		} else if (gene_model_order[i] == 'break') {
+			// Keep it blank, if a break needs to be shown
+			// Gap representing '-' or variant (insertion)
+			gene_models_cell.colSpan = break_points[j]
+			j += 1
+		}
+	}
+}
+
+async function getMultiReadAligInfo(tk, group, block) {
+	appear(tk.alignpane.pane)
+	tk.alignpane.pane.style('display', 'table')
+	tk.alignpane.header.text('Alignment info')
+	tk.alignpane.body.selectAll('*').remove()
+	const wait = tk.alignpane.body.append('div').text('Loading...')
+	const multi_read_alig_data = await align_reads_to_allele(tk, group, block) // Sending server side bam request for aligning reads to ref/alt
+	//console.log('multi_read_alig_data.alignmentData:', multi_read_alig_data.alignmentData)
+	wait.remove()
+
+	if (multi_read_alig_data.alignmentData.final_read_align.length > 0) {
+		// Gene models are displayed only if there is a reference/alternate sequence being displayed
+		let gene_button_div = tk.alignpane.body
+		const gene_button = gene_button_div
+			.append('button')
+			.style('margin-left', '10px')
+			.text('Show gene model')
+			.on('click', async () => {
+				tk.is_align_gene = true // This flag is set to true so that when the read is hovered, the same read is highlighted in the realignment panel
+				gene_button.property('disabled', true) // disable this button
+				await create_gene_models_refalt(tk, block, multi_read_alig_data, group)
+			})
+	}
+	create_read_alignment_table(tk, multi_read_alig_data, group)
 }
 
 async function getReadInfo(tk, block, box, ridx) {
@@ -1806,23 +2041,24 @@ async function getReadInfo(tk, block, box, ridx) {
 				.style('font-size', '0.8em')
 				.style('color', '#303030')
 				.style('margin', '5px 5px 20px 5px')
-			const query_tr = readAlignmentTable.append('tr')
-			query_tr
+			let nclt_count = 0
+			const refAlt_tr = readAlignmentTable.append('tr')
+			refAlt_tr
 				.append('td')
-				.text('Read')
+				.text(type + ' allele')
 				.style('text-align', 'right')
 				.style('font-weight', '550')
-			let nclt_count = 0
-			for (const nclt of q_align) {
+				.style('white-space', 'nowrap')
+			for (const nclt of r_align) {
 				nclt_count += 1
 				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
-					query_tr.append('td').text(nclt)
+					refAlt_tr.append('td').text(nclt)
 				} else if (
 					type == 'Ref' &&
 					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
 					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
 				) {
-					query_tr
+					refAlt_tr
 						.append('td')
 						.text(nclt)
 						.style('color', 'red')
@@ -1831,12 +2067,12 @@ async function getReadInfo(tk, block, box, ridx) {
 					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
 					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
 				) {
-					query_tr
+					refAlt_tr
 						.append('td')
 						.text(nclt)
 						.style('color', 'red')
 				} else {
-					query_tr.append('td').text(nclt)
+					refAlt_tr.append('td').text(nclt)
 				}
 			}
 			const alignment_tr = readAlignmentTable.append('tr')
@@ -1868,24 +2104,24 @@ async function getReadInfo(tk, block, box, ridx) {
 					alignment_tr.append('td').text(align_str)
 				}
 			}
-			const refAlt_tr = readAlignmentTable.append('tr')
-			refAlt_tr
+
+			const query_tr = readAlignmentTable.append('tr')
+			query_tr
 				.append('td')
-				.text(type + ' allele')
+				.text('Read')
 				.style('text-align', 'right')
 				.style('font-weight', '550')
-				.style('white-space', 'nowrap')
 			nclt_count = 0
-			for (const nclt of r_align) {
+			for (const nclt of q_align) {
 				nclt_count += 1
 				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
-					refAlt_tr.append('td').text(nclt)
+					query_tr.append('td').text(nclt)
 				} else if (
 					type == 'Ref' &&
 					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
 					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
 				) {
-					refAlt_tr
+					query_tr
 						.append('td')
 						.text(nclt)
 						.style('color', 'red')
@@ -1894,12 +2130,12 @@ async function getReadInfo(tk, block, box, ridx) {
 					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
 					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
 				) {
-					refAlt_tr
+					query_tr
 						.append('td')
 						.text(nclt)
 						.style('color', 'red')
 				} else {
-					refAlt_tr.append('td').text(nclt)
+					query_tr.append('td').text(nclt)
 				}
 			}
 		}
@@ -2016,7 +2252,7 @@ async function getReadInfo(tk, block, box, ridx) {
 						(item.opr == 'D' && item.len >= data.lst[0].readpanel_DN_maxlength) // if length of deletion is greater or equal to readpanel_DN_maxlength the reference sequence is not retained and break is observed, therefore current gene model will end here and a new gene model will start at the end of the deletion
 					) {
 						segstop = item.start
-						const gene_model = await get_gene_models(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+						const gene_model = await get_gene_models_reads(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
 						const gm = {
 							src: gene_model.src,
 							width: local_alignment_width,
@@ -2045,7 +2281,7 @@ async function getReadInfo(tk, block, box, ridx) {
 					if (i == data.lst[0].boxes.length - 1) {
 						// Render bedj gene model if it has reached the last entry in CIGAR sequence
 						segstop = item.start + item.len
-						const gene_model = await get_gene_models(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
+						const gene_model = await get_gene_models_reads(block, ridx, segstart, segstop, local_alignment_width) // Send bedj client request to render gene model for this segment
 						const gm = {
 							src: gene_model.src,
 							width: local_alignment_width,
@@ -2058,7 +2294,7 @@ async function getReadInfo(tk, block, box, ridx) {
 				}
 
 				// Filling gene model row
-				let num_gene_cells = num_break_points + gene_models.length // Number of gene cells required in gene row
+				const num_gene_cells = num_break_points + gene_models.length // Number of gene cells required in gene row
 				let j = 0
 				let k = 0
 				for (let i = 0; i < num_gene_cells; i++) {
@@ -2126,7 +2362,35 @@ async function getReadInfo(tk, block, box, ridx) {
 	}
 }
 
-async function get_gene_models(block, ridx, segstart, segstop, local_alignment_width) {
+async function get_gene_models_refalt(block, tk, segstart, segstop, local_alignment_width) {
+	const genetk = block.genome.tracks.find(i => i.__isgene)
+	const args = {
+		name: genetk.name,
+		genome: block.genome.name,
+		rglst: [
+			{
+				chr: tk.variants[0].chr,
+				start: segstart,
+				stop: segstop,
+				width: local_alignment_width
+			}
+		],
+		width: local_alignment_width,
+		stackheight: 16,
+		stackspace: 1,
+		regionspace: 0,
+		file: genetk.file,
+		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
+		color: genetk.color,
+		translatecoding: 1,
+		__isgene: true,
+		noNameHover: true
+	}
+	//console.log('args:', JSON.stringify(args))
+	return await dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(args) })
+}
+
+async function get_gene_models_reads(block, ridx, segstart, segstop, local_alignment_width) {
 	const genetk = block.genome.tracks.find(i => i.__isgene)
 	const args = {
 		name: genetk.name,
@@ -2374,6 +2638,9 @@ async function enter_partstack(group, tk, block, y, data) {
 		delete tk.readAlignmentTable
 		delete tk.readAlignmentTableGroup
 		tk.alignpane.pane.style('display', 'none')
+		if (tk.is_align_gene) {
+			tk.is_align_gene = false
+		}
 	}
 	group.data = _d.groups[0]
 	renderGroup(group, tk, block)
