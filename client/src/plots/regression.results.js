@@ -163,10 +163,14 @@ function setRenderers(self) {
 			})
 		}
 
-		// term rows
-		// add forest plot as col 3 to each term row
+		/* term rows:
+		for each independent terms, show 1 or multiple rows
+		these rows do not cover interactions, which are rendered afterwards
+		*/
+
+		// forest plot is shown for both interacting and non-interacting rows
+		// a plot is added to 3rd column of each row
 		const forestPlotter = self.getForestPlotter(result.coefficients.terms, result.coefficients.interactions)
-		// independent terms (no interactions)
 		let rowcount = 0
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
@@ -195,6 +199,8 @@ function setRenderers(self) {
 			}
 
 			if (termdata.fields) {
+				// only 1 row for this term, no categories
+
 				// col 2: no category
 				tr.append('td')
 				// col 3
@@ -206,6 +212,8 @@ function setRenderers(self) {
 						.style('padding', '8px')
 				}
 			} else if (termdata.categories) {
+				// term has categories, one sub-row for each category
+
 				const orderedCategories = []
 				const input = self.parent.inputs.independent.inputs.find(i => i.term.id == tid)
 				if (input.orderedLabels) {
@@ -290,7 +298,7 @@ function setRenderers(self) {
 			}
 		}
 
-		// last row to show forest plot axis
+		// last row to show forest plot axis (call function without data)
 		const tr = table.append('tr')
 		tr.append('td') // col 1
 		tr.append('td') // col 2
@@ -373,33 +381,41 @@ function setRenderers(self) {
 
 	/*
 	the function takes all data rows (except intercept) from coefficients table, and return a callback
-	the callback scopes the axis range of all data
+	the callback closures the axis range of all data
 	run callback on each coefficient table row to plot the forest plot
 
 	collect all numeric data points from terms/interactons
 	to derive forest plot axis range
 	sort numbers in an array
-	in logistic, if array[0]=0 then cannot use log(0) as axis min,
-	in that case should use array[1] or next to find the smallest real number as axis min
+	in logistic, if array[i]=0 then cannot use log(0) as axis min,
+	in that case should use array[i+1] or next to find the smallest real number as axis min
+	an arbitary cap is used to guard against extreme estimate values
 	*/
 	self.getForestPlotter = (terms, interactions) => {
-		let midIdx, // array index of the beta/odds ratio, depending on regression type; the value is usually in the middle of CI low/high, thus called mid
+		// array indices are the same for both non-interacting and interacting rows
+		let midIdx, // array index of the beta/odds ratio
 			CIlow, // array(column) index of low end of confidence interval of midIdx
 			CIhigh, // array index of high end of confidence interval
 			axislab, // data type to show as axis label
-			baselineValue // baseline value to show a vertical line
+			baselineValue, // baseline value to show a vertical line
+			capMin,
+			capMax // min/max value capping the axis, to guard against extreme estimates
 		if (self.config.regressionType == 'linear') {
 			midIdx = 0
 			CIlow = 1
 			CIhigh = 2
 			axislab = 'Beta value'
 			baselineValue = 0
+			capMin = -10
+			capMax = 10
 		} else if (self.config.regressionType == 'logistic') {
 			midIdx = 0
 			CIlow = 1
 			CIhigh = 2
 			axislab = 'Odds ratio'
 			baselineValue = 1
+			capMin = 0.1
+			capMax = 10
 		} else {
 			throw 'unknown regressionType'
 		}
@@ -419,8 +435,8 @@ function setRenderers(self) {
 		for (const i of interactions) {
 			numbers2array(i.lst)
 		}
-		values.sort((a, b) => a - b) // ascending
 		// all valid numbers are collected into values[]
+		values.sort((a, b) => a - b) // ascending
 
 		// graph dimension
 		const width = 150 // plottable dimension
@@ -485,30 +501,22 @@ function setRenderers(self) {
 				return
 			}
 
-			const x = scale(mid)
-			if (Number.isFinite(x)) {
-				// guard against infinity values
-				g.append('circle')
-					.attr('cx', x)
-					.attr('cy', height / 2)
-					.attr('r', 3)
-					.attr('fill', forestcolor)
-			}
+			g.append('circle')
+				.attr('cx', scale(Math.min(Math.max(mid, capMin), capMax)))
+				.attr('cy', height / 2)
+				.attr('r', 3)
+				.attr('fill', forestcolor)
 
 			if (Number.isNaN(cilow) || Number.isNaN(cihigh)) {
 				// cannot plot confidence interval
 				return
 			}
-			const x1 = scale(cilow),
-				x2 = scale(cihigh)
-			if (Number.isFinite(x1) && Number.isFinite(x2)) {
-				g.append('line')
-					.attr('x1', x1)
-					.attr('y1', height / 2)
-					.attr('x2', x2)
-					.attr('y2', height / 2)
-					.attr('stroke', forestcolor)
-			}
+			g.append('line')
+				.attr('x1', scale(Math.min(Math.max(cilow, capMin), capMax)))
+				.attr('y1', height / 2)
+				.attr('x2', scale(Math.min(Math.max(cihigh, capMin), capMax)))
+				.attr('y2', height / 2)
+				.attr('stroke', forestcolor)
 		}
 		///////// helpers
 		function numbers2array(lst) {
@@ -538,14 +546,16 @@ function setRenderers(self) {
 				const min = values[i]
 				const max = values[values.length - 1]
 				return scaleLog()
-					.domain([min, max])
+					.domain([Math.max(min, capMin), Math.min(max, capMax)])
 					.range([0, width])
 					.nice()
-			} else {
+			}
+			if (self.config.regressionType == 'linear') {
 				return scaleLinear()
-					.domain([values[0], values[values.length - 1]])
+					.domain([Math.max(values[0], capMin), Math.min(values[values.length - 1], capMax)])
 					.range([0, width])
 			}
+			throw 'unknown type'
 		}
 	}
 }
