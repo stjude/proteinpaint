@@ -229,26 +229,6 @@ function setRenderers(self) {
 					if (!tw.interactions) tw.interactions = []
 					if (!tw.interactions.includes(variable.id)) tw.interactions.push(variable.id)
 				}
-				/*
-				// find every paired-term whose interactions array includes this variable's id
-				const interactions = selected
-					.filter(tw => tw.id !== variable.id && tw.interactions && tw.interactions.includes(variable.id))
-					.map(tw => tw.id)
-
-				// add a paired term when it is only specified under this variable's interactions array,
-				// and this variable is not found in the other term
-				if (variable.interactions) {
-					for (const tid of variable.interactions) {
-						// ensure that the interaction entry has not been deleted from the state.config.independent,
-						// before adding the term back to the interactions array
-						if (selected.find(tw => tw.id === tid)) {
-							if (!interactions.includes(tid)) interactions.push(tid)
-						}
-					}
-				}
-
-				variable.interactions = interactions
-				*/
 			}
 
 			const input = section.inputs.find(input => input.term && input.term.id == variable.id)
@@ -346,6 +326,16 @@ function setInteractivity(self) {
 				}
 			}
 			input.term = variable
+
+			if (variable.q.mode == 'spline' && variable.interactions) {
+				// this is a spline term, delete existing interactions with this term
+				for (const other of input.section.inputs) {
+					if (!other.term || !other.term.interactions) continue
+					const i = other.term.interactions.indexOf(input.term.id)
+					if (i != -1) other.term.interactions.splice(i, 1)
+				}
+				variable.interactions = []
+			}
 		}
 
 		const selected = []
