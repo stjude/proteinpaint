@@ -43,8 +43,6 @@ export async function bigwigUI(genomes, holder) {
 	// addBorder(wrapper)
 	infoSection(wrapper)
 	submitButton(wrapper, doms, holder, genomes)
-
-	window.doms = doms
 }
 
 function validateInput(doms, genomes) {
@@ -138,7 +136,7 @@ function makeTrackEntryTabs(tabs_div, doms) {
 				makePrompt(singlediv, 'Name')
 				doms.trackname = trackNameInput(singlediv)
 				makePrompt(singlediv, 'File Path')
-				trackFilePathInput(singlediv)
+				trackFilePathInput(singlediv, doms)
 			}
 		},
 		{
@@ -186,7 +184,7 @@ function trackNameInput(div) {
 		)
 }
 
-function trackFilePathInput(div) {
+function trackFilePathInput(div, doms) {
 	const track_div = div.append('div').style('display', 'inline-block')
 	const filepath = uiutils
 		.makeTextInput(track_div)

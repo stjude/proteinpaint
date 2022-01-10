@@ -1381,9 +1381,8 @@ async function launch_singlecell(arg, app) {
 
 async function launch_tkUIs(arg, app) {
 	if (arg.uionly == 'bigwig') {
-		await import('./block.tk.bigwig.ui').then(p => {
-			p.bigwigUI(app.genomes, app.holder)
-		})
+		const p = await import('./block.tk.bigwig.ui')
+		p.bigwigUI(app.genomes, app.holder)
 	}
 }
 
