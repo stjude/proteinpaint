@@ -47,7 +47,7 @@ export async function bigwigUI(genomes, holder) {
 
 function validateInput(doms, genomes) {
 	//Creates the runpp arguments on submit
-	if (!doms.filepath && !doms.multitrackdata) alert('Provide either data for a single track or multiple tracks.')
+	if (!doms.filepath && !doms.multitrackdata) alert('Provide data for either a single track or multiple tracks.')
 	const runpp_args = {
 		block: true,
 		nobox: 1,
@@ -78,8 +78,7 @@ function validateInput(doms, genomes) {
 	if (doms.multiInUse == true) {
 		for (const data of doms.multitrackdata.split(/[\r\n]/)) {
 			const line = data.split(',')
-			if (line[0] && !line[1])
-				alert('Problem with submission. Were there commas between the track names and filepaths?')
+			if (line[0] && !line[1]) alert('Problem with submission. Are commas between the track names and filepaths?')
 			if (line[0] && line[1]) {
 				let file, url
 				const tmp = line[1].trim()
@@ -134,7 +133,7 @@ function makeTrackEntryTabs(tabs_div, doms) {
 					.style('place-items', 'center left')
 				appear(div)
 				makePrompt(singlediv, 'Name')
-				doms.trackname = trackNameInput(singlediv)
+				doms.trackname = trackNameInput(singlediv, doms)
 				makePrompt(singlediv, 'File Path')
 				trackFilePathInput(singlediv, doms)
 			}
@@ -152,7 +151,7 @@ function makeTrackEntryTabs(tabs_div, doms) {
 					.html(
 						'<p>Paste data. Enter one track per line, track name then the filepath separated by a comma. <br> e.g. [track name],[path/to/file.bw or URL]</p>'
 					)
-				doms.multiInput = multiTrackInput(div)
+				doms.multiInput = multiTrackInput(div, doms)
 			}
 		}
 	]
@@ -170,7 +169,7 @@ async function genomeSelection(div, genomes, doms) {
 	})
 }
 
-function trackNameInput(div) {
+function trackNameInput(div, doms) {
 	const track_div = div.append('div').style('display', 'inline-block')
 	const name = uiutils
 		.makeTextInput(track_div, 'BigWig track')
@@ -179,8 +178,7 @@ function trackNameInput(div) {
 			'keyup',
 			debounce(async () => {
 				doms.trackname = name.property('value').trim()
-			}),
-			700
+			}, 700)
 		)
 }
 
@@ -189,16 +187,12 @@ function trackFilePathInput(div, doms) {
 	const filepath = uiutils
 		.makeTextInput(track_div)
 		.style('border', '1px solid rgb(138, 177, 212)')
-		.on(
-			'keyup',
-			debounce(async () => {
-				doms.filepath = filepath.property('value').trim()
-			}),
-			700
-		)
+		.on('keyup', async () => {
+			doms.filepath = filepath.property('value').trim()
+		})
 }
 
-function multiTrackInput(div) {
+function multiTrackInput(div, doms) {
 	const pasteTrack_div = div.append('div').style('display', 'block')
 	const multi = uiutils
 		.makeTextAreaInput(pasteTrack_div)
@@ -208,8 +202,7 @@ function multiTrackInput(div) {
 			'keyup',
 			debounce(async () => {
 				doms.multitrackdata = multi.property('value').trim()
-			}),
-			700
+			}, 700)
 		)
 }
 
