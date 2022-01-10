@@ -258,13 +258,12 @@ export class InputTerm {
 		// set to hidden in the beginning; redisplay when interaction is enabled
 		this.dom.interactionDiv.style('display', 'none')
 
-		// quit if doesn't meet the requirement for showing interaction
-		if (!this.term || this.section.configKey != 'independent') {
-			// missing term or is not independent
-			return
-		}
-		// require minimum of 2 independent terms eligible for interaction
+		// identify situations not eligible for showing prompt
+		if (!this.term) return // missing term
+		if (this.section.configKey != 'independent') return
+		if (this.term.q.mode == 'spline') return // not on a spline term
 		{
+			// require minimum of 2 independent terms eligible for interaction
 			let count = 0
 			for (const input of this.section.inputs) {
 				if (input.term && input.term.q.mode != 'spline') {
@@ -301,7 +300,7 @@ export class InputTerm {
 		self.dom.tip.d
 			.append('div')
 			.selectAll('div')
-			.data(self.parent.config.independent.filter(tw => tw && tw.id !== self.term.id))
+			.data(self.parent.config.independent.filter(tw => tw && tw.id !== self.term.id && tw.q.mode != 'spline'))
 			.enter()
 			.append('div')
 			.style('margin', '5px')
