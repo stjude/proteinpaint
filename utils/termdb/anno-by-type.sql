@@ -1,4 +1,4 @@
-/*drop table if exists anno_integer;
+drop table if exists anno_integer;
 drop index if exists a_int_sample;
 drop index if exists a_int_termid;
 drop index if exists a_int_value;
@@ -59,7 +59,7 @@ from subcohort_terms s
 join terms t on t.id = s.term_id 
 where t.type = 'float' and cohort != 'CCSS,SJLIFE' ;
 
-----------------------------------*/
+----------------------------------
 
 drop table if exists anno_categorical;
 drop index if exists a_cat_sample;
