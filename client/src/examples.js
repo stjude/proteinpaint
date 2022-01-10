@@ -402,7 +402,7 @@ function makeSandboxTabs(track) {
 			}
 		})
 	}
-	if (track.ppcalls.length > 1 && ui_present == false) {
+	if ((track.ppcalls.length > 1 && ui_present == false) || (track.ppcalls.length > 2 && ui_present == true)) {
 		tabs.push({
 			name: 'Examples',
 			active: false,
