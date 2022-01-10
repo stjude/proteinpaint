@@ -18,6 +18,8 @@ export async function getHandler(self) {
 	// set numeric toggle tabs data here as a closure,
 	// so that the data is not recreated each time that showEditMenu() is called;
 	// also, do not trigger `await import(handler_code)` until needed
+	// *** ASSUMES that the numericEditMenuVersion[] remains the same
+	//     after pill initialization and throughout its lifetime ***
 	const tabs = []
 	if (self.opts.numericEditMenuVersion.includes('continuous')) {
 		tabs.push({
