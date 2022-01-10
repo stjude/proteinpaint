@@ -22,8 +22,7 @@ makeTextAreaInput
 
 export function isURL(path) {
 	const checkpath = path.toLowerCase()
-	if (checkpath.startsWith('https://' || 'http://' || 'ftp://')) return true
-	else return false
+	if (checkpath.startsWith('https://') || checkpath.startsWith('http://') || checkpath.startsWith('ftp://')) return true
 }
 
 export function makeGenomeDropDown(div, genomes) {
