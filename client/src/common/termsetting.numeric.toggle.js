@@ -2,20 +2,17 @@ import { init_tabs } from '../dom/toggleButtons'
 
 // self is the termsetting instance
 export async function getHandler(self) {
-	function get_tab_callback(subType, maySetQtype = null) {
-		return async div => {
-			if (maySetQtype) maySetQtype()
-			self.q.mode = subType
-			const typeSubtype = `numeric.${subType}`
-			const tab = tabs.find(t => t.subType == subType)
-			if (tab.isRendered) return
-			if (!self.handlerByType[typeSubtype]) {
-				const _ = await import(`./termsetting.${typeSubtype}.js`)
-				self.handlerByType[typeSubtype] = await _.getHandler(self)
-			}
-			tab.isRendered = true
-			await self.handlerByType[typeSubtype].showEditMenu(div)
+	async function callback(div) {
+		const tab = this // since this function gets attached to a tab{} entry in tabs[]
+		if (tab.maySetQtype) tab.maySetQtype()
+		self.q.mode = tab.subType
+		const typeSubtype = `numeric.${tab.subType}`
+		if (!self.handlerByType[typeSubtype]) {
+			const _ = await import(`./termsetting.${typeSubtype}.js`)
+			self.handlerByType[typeSubtype] = await _.getHandler(self)
 		}
+		tab.isRendered = true
+		await self.handlerByType[typeSubtype].showEditMenu(div)
 	}
 
 	// set numeric toggle tabs data here as a closure,
@@ -26,7 +23,7 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'continuous',
 			label: 'Continuous',
-			callback: get_tab_callback('continuous')
+			callback
 		})
 	}
 
@@ -34,10 +31,11 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'discrete',
 			label: 'Discrete',
-			callback: get_tab_callback('discrete', () => {
+			callback,
+			maySetQtype() {
 				if (!self.q.type) self.q.type = 'regular'
 				if (self.q.type != 'regular' && self.q.type != 'custom-bin') throw `invalid q.type='${self.q.type}'`
-			})
+			}
 		})
 	}
 
@@ -45,7 +43,7 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'spline',
 			label: 'Cubic spline',
-			callback: get_tab_callback('spline')
+			callback
 		})
 	}
 
@@ -53,7 +51,7 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'binary',
 			label: 'Binary',
-			callback: get_tab_callback('binary')
+			callback
 		})
 	}
 
