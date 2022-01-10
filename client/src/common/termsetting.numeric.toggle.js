@@ -2,12 +2,59 @@ import { init_tabs } from '../dom/toggleButtons'
 
 // self is the termsetting instance
 export async function getHandler(self) {
-	// set handlerByType based on entries from numericEditMenuVersion
-	for (const subType of self.opts.numericEditMenuVersion) {
-		const type = 'numeric'
-		const typeSubtype = `${type}.${subType}`
-		const _ = await import(`./termsetting.${typeSubtype}.js`)
-		self.handlerByType[typeSubtype] = _.getHandler(self)
+	function get_tab_callback(subType, maySetQtype = null) {
+		return async div => {
+			if (maySetQtype) maySetQtype()
+			self.q.mode = subType
+			const typeSubtype = `numeric.${subType}`
+			const tab = tabs.find(t => t.subType == subType)
+			if (tab.isRendered) return
+			if (!self.handlerByType[typeSubtype]) {
+				const _ = await import(`./termsetting.${typeSubtype}.js`)
+				self.handlerByType[typeSubtype] = await _.getHandler(self)
+			}
+			tab.isRendered = true
+			await self.handlerByType[typeSubtype].showEditMenu(div)
+		}
+	}
+
+	// set numeric toggle tabs data here as a closure,
+	// so that the data is not recreated each time that showEditMenu() is called;
+	// also, do not trigger `await import(handler_code)` until needed
+	const tabs = []
+	if (self.opts.numericEditMenuVersion.includes('continuous')) {
+		tabs.push({
+			subType: 'continuous',
+			label: 'Continuous',
+			callback: get_tab_callback('continuous')
+		})
+	}
+
+	if (self.opts.numericEditMenuVersion.includes('discrete')) {
+		tabs.push({
+			subType: 'discrete',
+			label: 'Discrete',
+			callback: get_tab_callback('discrete', () => {
+				if (!self.q.type) self.q.type = 'regular'
+				if (self.q.type != 'regular' && self.q.type != 'custom-bin') throw `invalid q.type='${self.q.type}'`
+			})
+		})
+	}
+
+	if (self.opts.numericEditMenuVersion.includes('spline')) {
+		tabs.push({
+			subType: 'spline',
+			label: 'Cubic spline',
+			callback: get_tab_callback('spline')
+		})
+	}
+
+	if (self.opts.numericEditMenuVersion.includes('binary')) {
+		tabs.push({
+			subType: 'binary',
+			label: 'Binary',
+			callback: get_tab_callback('binary')
+		})
 	}
 
 	return {
@@ -31,57 +78,15 @@ export async function getHandler(self) {
 				.style('display', 'inline-block')
 				.html('Use as')
 
-			const tabDiv = topBar.append('div').style('display', 'inline-block')
-
-			const tabs = []
-			function get_default_tab(subType) {
-				const type = 'numeric'
-				const typeSubtype = `${type}.${subType}`
-
-				const default_tab_callback = async div => {
-					self.q.mode = subType
-					const tab = tabs.find(t => t.subType == subType)
-					if (tab.isRendered) return
-					tab.isRendered = true
-					await self.handlerByType[typeSubtype].showEditMenu(div)
-				}
-
-				const default_tab = {
-					active: self.q.mode && self.q.mode == subType,
-					label: subType[0].toUpperCase() + subType.slice(1),
-					subType,
-					callback: default_tab_callback
-				}
-				return default_tab
+			for (const t of tabs) {
+				// reset the tracked state of each tab data on each call of showEditMenu();
+				// NOTE: when clicking on a tab on the parent menu, showEditMenu() will not be called again,
+				// so this loop will not be called and the tracked rendered state in the tab.callback will apply
+				delete t.isRendered
+				t.active = self.q.mode == t.subType || (t.subType == 'continuous' && !self.q.mode)
 			}
 
-			// set tabs for numeric toggle menu based on entries from numericEditMenuVersion
-			self.opts.numericEditMenuVersion.forEach(async subType => {
-				let tab
-				if (subType == 'continuous') {
-					tab = get_default_tab(subType)
-					// for toggle numeric menu, continuous will be default active tab
-					tab.active = !self.q.mode || (self.q.mode != 'discrete' && self.q.mode != 'spline' && self.q.mode != 'binary')
-				} else if (subType == 'discrete') {
-					const typeSubtype = 'numeric.discrete'
-					tab = get_default_tab(subType)
-					tab.callback = async div => {
-						self.q.mode = subType
-						if (!self.q.type || self.q.type != 'custom-bin') self.q.type = 'regular'
-						const tab = tabs.find(t => t.subType == subType)
-						if (tab.isRendered) return
-						tab.isRendered = true
-						await self.handlerByType[typeSubtype].showEditMenu(div)
-					}
-				} else if (subType == 'spline') {
-					tab = get_default_tab(subType)
-					tab.label = 'Cubic spline'
-				} else if (subType == 'binary') {
-					tab = get_default_tab(subType)
-				}
-				tabs.push(tab)
-			})
-
+			const tabDiv = topBar.append('div').style('display', 'inline-block')
 			init_tabs({ holder: tabDiv, contentHolder: div.append('div'), tabs })
 		}
 	}
