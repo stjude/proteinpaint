@@ -255,9 +255,24 @@ export class InputTerm {
 	}
 
 	renderInteractionPrompt() {
-		if (!this.term || this.section.configKey != 'independent' || this.section.inputs.filter(i => i.term).length < 2) {
-			this.dom.interactionDiv.style('display', 'none')
+		// set to hidden in the beginning; redisplay when interaction is enabled
+		this.dom.interactionDiv.style('display', 'none')
+
+		// quit if doesn't meet the requirement for showing interaction
+		if (!this.term || this.section.configKey != 'independent') {
+			// missing term or is not independent
 			return
+		}
+		// require minimum of 2 independent terms eligible for interaction
+		{
+			let count = 0
+			for (const input of this.section.inputs) {
+				if (input.term && input.term.q.mode != 'spline') {
+					// spline term cannot be used for interaction
+					count++
+				}
+			}
+			if (count < 2) return
 		}
 
 		const n = this.term.interactions.length
