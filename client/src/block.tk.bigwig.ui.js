@@ -1,7 +1,6 @@
 import * as uiutils from './dom/uiUtils'
 import * as toggle from './dom/toggleButtons'
 import { appear } from './dom/animation'
-import { debounce } from 'debounce'
 import { select as d3select } from 'd3-selection'
 import { first_genetrack_tolist } from './client'
 
@@ -40,9 +39,8 @@ export async function bigwigUI(genomes, holder) {
 	makePrompt(wrapper, 'Data')
 	const tabs_div = wrapper.append('div')
 	makeTrackEntryTabs(tabs_div, doms)
-	// addBorder(wrapper)
-	infoSection(wrapper)
 	submitButton(wrapper, doms, holder, genomes)
+	infoSection(wrapper)
 }
 
 function validateInput(doms, genomes) {
@@ -64,8 +62,8 @@ function validateInput(doms, genomes) {
 		const tk = {
 			type: 'bigwig',
 			name: doms.trackname || 'BigWig track',
-			file: file,
-			url: url,
+			file,
+			url,
 			scale: {
 				auto: 1
 			}
@@ -88,8 +86,8 @@ function validateInput(doms, genomes) {
 				const tk = {
 					type: 'bigwig',
 					name: line[0].trim(),
-					file: file,
-					url: url,
+					file,
+					url,
 					scale: {
 						auto: 1
 					},
@@ -149,7 +147,7 @@ function makeTrackEntryTabs(tabs_div, doms) {
 				div
 					.append('div')
 					.html(
-						'<p>Paste data. Enter one track per line, track name then the filepath separated by a comma. <br> e.g. [track name],[path/to/file.bw or URL]</p>'
+						'<p>Enter one track per line in the following format: [track name],[path/to/file.bw or URL]</p><p style="margin-left: 10px; color: #7d7c7c;">e.g. BigWig Track, proteinpaint_demo/hg19/bigwig/file.bw</p>'
 					)
 				doms.multiInput = multiTrackInput(div, doms)
 			}
@@ -174,12 +172,9 @@ function trackNameInput(div, doms) {
 	const name = uiutils
 		.makeTextInput(track_div, 'BigWig track')
 		.style('border', '1px solid rgb(138, 177, 212)')
-		.on(
-			'keyup',
-			debounce(async () => {
-				doms.trackname = name.property('value').trim()
-			}, 700)
-		)
+		.on('keyup', async () => {
+			doms.trackname = name.property('value').trim()
+		})
 }
 
 function trackFilePathInput(div, doms) {
@@ -198,12 +193,9 @@ function multiTrackInput(div, doms) {
 		.makeTextAreaInput(pasteTrack_div)
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
-		.on(
-			'keyup',
-			debounce(async () => {
-				doms.multitrackdata = multi.property('value').trim()
-			}, 700)
-		)
+		.on('keyup', async () => {
+			doms.multitrackdata = multi.property('value').trim()
+		})
 }
 
 function submitButton(div, doms, holder, genomes) {
@@ -216,18 +208,7 @@ function submitButton(div, doms, holder, genomes) {
 		.style('background-color', '#F2F2F2')
 		.style('border', '2px solid #999')
 		.style('padding', '5px 10px')
-		.on('mouseenter', () => {
-			submit
-				.style('color', '#1043c4')
-				.style('background-color', 'white')
-				.style('border', '0.5px solid #1043c4')
-		})
-		.on('mouseleave', () => {
-			submit
-				.style('color', 'black')
-				.style('background-color', '#F2F2F2')
-				.style('border', '2px solid #999')
-		})
+		.style('cursor', 'pointer')
 		.on('click', () => {
 			d3select('.sjpp-bw-ui').remove()
 			const runpp_arg = {
@@ -244,20 +225,10 @@ function submitButton(div, doms, holder, genomes) {
 		})
 }
 
-// function addBorder(div){
-//     div.append('span')
-//         .style('position', 'absolute')
-//         .style('left', '12%')
-//         .style('width', '0.5px')
-//         .style('height', '100%')
-//         .style('background-color', 'grey')
-//         .style('top', '-15%')
-// }
-
 function infoSection(div) {
 	div
 		.append('div')
-		.style('margin', '15px')
+		.style('margin', '10px')
 		.style('opacity', '0.6')
 		.style('grid-column', 'span 2').html(`<ul>
                 <li>
