@@ -369,9 +369,6 @@ function setInteractivity(self) {
 			state: {
 				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,
-				nav: {
-					header_mode: 'search_only'
-				},
 				tree: {
 					exclude_types: self.exclude_types,
 					usecase: self.usecase

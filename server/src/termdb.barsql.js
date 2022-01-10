@@ -191,6 +191,11 @@ function getPj(q, data, tdb, ds) {
 					} else if (d.term.type == 'float' || d.term.type == 'integer') {
 						// only computable values are included for boxplot
 						if (d.isComputableVal(row[d.val])) row[d.nval] = row[d.val]
+					} else if (d.term.type == 'categorical') {
+						// convert key and values to string, since sqlite3 or better-sqlite3
+						// TODO: !!! FIX should be made in sql schema/statement/utility !!!
+						row[d.key] = '' + row[d.key]
+						row[d.val] = '' + row[d.val]
 					}
 				}
 				return true

@@ -340,15 +340,15 @@ async function make_multiSampleSummaryList(args) {
 	// const occurrence = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
 	// const summary_label = `Summary <span style='background:#a6a6a6;color:white;font-size:.8em;float:right;margin:2px 5px;padding: 0px 6px; border-radius: 6px;'>${occurrence}</span>`
 	const main_tabs = [
-		{ 	
-			label: 'Summary', 
+		{
+			label: 'Summary',
 			callback: async div => {
-				tab2box(div, summary_tabs) 
+				tab2box(div, summary_tabs)
 				delete main_tabs[0].callback
 			}
 		},
-		{ 	
-			label: 'List', 
+		{
+			label: 'List',
 			callback: async div => {
 				make_multiSampleTable({ arg, holder: div, filter_term: arg.filter_term })
 				delete main_tabs[1].callback
@@ -399,9 +399,7 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 						tid2value: arg.tid2value,
 						ssm_id_lst: arg.mlst.map(i => i.ssm_id).join(',')
 					},
-					nav: {
-						header_mode: 'search_only'
-					}
+					header_mode: 'search_only'
 				},
 				tree: {
 					click_term: term => {

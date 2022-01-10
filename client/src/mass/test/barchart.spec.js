@@ -36,15 +36,17 @@ tape('single barchart, categorical bars', function(test) {
 
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'barchart',
-				term: {
-					id: 'diaggrp'
-				},
-				settings: {
-					currViews: ['barchart']
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'diaggrp'
+					},
+					settings: {
+						currViews: ['barchart']
+					}
 				}
-			}]
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -84,20 +86,22 @@ tape('single chart, with overlay', function(test) {
 	runpp({
 		state: {
 			termfilter,
-			plots: [{
-				chartType: 'barchart',
-				term: { id: 'diaggrp' },
-				term2: { id: 'agedx' },
-				settings: {
-					currViews: ['barchart'],
-					controls: {
-						term2: { id: 'agedx', term: termjson['agedx'] }
-					},
-					barchart: {
-						overlay: 'tree'
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'diaggrp' },
+					term2: { id: 'agedx' },
+					settings: {
+						currViews: ['barchart'],
+						controls: {
+							term2: { id: 'agedx', term: termjson['agedx'] }
+						},
+						barchart: {
+							overlay: 'tree'
+						}
 					}
 				}
-			}]
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -195,20 +199,22 @@ tape('multiple charts', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'barchart',
-				term: { id: 'diaggrp' },
-				term0: { id: 'agedx' },
-				settings: {
-					currViews: ['barchart'],
-					barchart: {
-						divideBy: 'tree'
-					},
-					controls: {
-						term0: { id: 'agedx', term: termjson['agedx'] }
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'diaggrp' },
+					term0: { id: 'agedx' },
+					settings: {
+						currViews: ['barchart'],
+						barchart: {
+							divideBy: 'tree'
+						},
+						controls: {
+							term0: { id: 'agedx', term: termjson['agedx'] }
+						}
 					}
 				}
-			}]
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -231,19 +237,21 @@ tape('series visibility - q.hiddenValues', function(test) {
 	test.timeoutAfter(5000)
 	test.plan(2)
 
-	const hiddenValues = { 1: 1 }
+	const hiddenValues = { 1: true }
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'barchart',
-				term: {
-					id: 'sex',
-					q: {
-						hiddenValues
-					}
-				},
-				settings: { currViews: ['barchart'] }
-			}]
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'sex',
+						q: {
+							hiddenValues
+						}
+					},
+					settings: { currViews: ['barchart'] }
+				}
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -274,11 +282,13 @@ tape('series visibility - numeric', function(test) {
 
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'barchart',
-				term: { id: 'aaclassic_5' },
-				settings: { currViews: ['barchart'] }
-			}]
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'aaclassic_5' },
+					settings: { currViews: ['barchart'] }
+				}
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -366,16 +376,18 @@ tape('series visibility - condition', function(test) {
 	const conditionHiddenValues = { '1: Mild': 1 }
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'barchart',
-				term: {
-					id: 'Arrhythmias',
-					q: {
-						hiddenValues: conditionHiddenValues
-					}
-				},
-				settings: { currViews: ['barchart'] }
-			}]
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'Arrhythmias',
+						q: {
+							hiddenValues: conditionHiddenValues
+						}
+					},
+					settings: { currViews: ['barchart'] }
+				}
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -422,15 +434,17 @@ tape('single barchart, filtered', function(test) {
 					]
 				}
 			},
-			plots: [{
-				chartType: 'barchart',
-				term: {
-					id: 'sex'
-				},
-				settings: {
-					currViews: ['barchart']
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'sex'
+					},
+					settings: {
+						currViews: ['barchart']
+					}
 				}
-			}]
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -441,7 +455,11 @@ tape('single barchart, filtered', function(test) {
 
 	function runTests(barchart) {
 		barchart.on('postRender.test', null)
-		test.equal(barchart.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length, 1, 'should show one bar series')
+		test.equal(
+			barchart.Inner.dom.holder.node().querySelectorAll('.bars-cell-grp').length,
+			1,
+			'should show one bar series'
+		)
 		test.equal(
 			barchart.Inner.dom.holder.node().querySelector('.bars-cell-grp').__data__.seriesId,
 			'1',
@@ -462,20 +480,22 @@ tape('click non-group bar to add filter', function(test) {
 				activeCohort: 0
 			},
 			termfilter,
-			plots: [{
-				chartType: 'barchart',
-				term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.less },
-				term2: {
-					id: 'Arrhythmias',
-					term: termjson['Arrhythmias'],
-					q: {
-						hiddenValues: {
-							'Unknown status': 1
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.less },
+					term2: {
+						id: 'Arrhythmias',
+						term: termjson['Arrhythmias'],
+						q: {
+							hiddenValues: {
+								'Unknown status': 1
+							}
 						}
-					}
-				},
-				settings: { currViews: ['barchart'] }
-			}]
+					},
+					settings: { currViews: ['barchart'] }
+				}
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -576,6 +596,7 @@ tape('click custom categorical group bar to add filter', function(test) {
 		groups: [
 			{
 				name: 'Test A',
+				type: 'values',
 				values: [
 					{
 						key: 'Acute lymphoblastic leukemia',
@@ -589,6 +610,7 @@ tape('click custom categorical group bar to add filter', function(test) {
 			},
 			{
 				name: 'Test B',
+				type: 'values',
 				values: [
 					{
 						key: 'Central nervous system (CNS)',
@@ -605,22 +627,25 @@ tape('click custom categorical group bar to add filter', function(test) {
 	runpp({
 		state: {
 			termfilter,
-			plots: [{
-				chartType: 'barchart',
-				term: {
-					id: 'diaggrp',
-					term: termjson['diaggrp'],
-					q: {
-						groupsetting: {
-							disabled: false,
-							inuse: true,
-							//predefined_groupset_idx: INT,
-							customset
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'diaggrp',
+						term: termjson['diaggrp'],
+						q: {
+							groupsetting: {
+								type: 'values',
+								disabled: false,
+								inuse: true,
+								//predefined_groupset_idx: INT,
+								customset
+							}
 						}
-					}
-				},
-				settings: { currViews: ['barchart'] }
-			}]
+					},
+					settings: { currViews: ['barchart'] }
+				}
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -685,7 +710,8 @@ tape('click custom categorical group bar to add filter', function(test) {
 	}
 })
 
-tape('click custom subcondition group bar to add filter', function(test) {
+/* bar_by_children handling has been inactivated
+tape.skip('click custom subcondition group bar to add filter', function(test) {
 	test.timeoutAfter(3000)
 
 	const termfilter = { filter: [] }
@@ -694,6 +720,7 @@ tape('click custom subcondition group bar to add filter', function(test) {
 		groups: [
 			{
 				name: 'Test A',
+				type: 'values',
 				values: [
 					{
 						key: 'Sinus tachycardia',
@@ -707,6 +734,7 @@ tape('click custom subcondition group bar to add filter', function(test) {
 			},
 			{
 				name: 'Test B',
+				type: 'values',
 				values: [
 					{
 						key: 'Conduction abnormalities',
@@ -720,6 +748,7 @@ tape('click custom subcondition group bar to add filter', function(test) {
 			},
 			{
 				name: 'Test C',
+				type: 'values',
 				values: [
 					{
 						key: 'Prolonged QT interval',
@@ -820,18 +849,21 @@ tape('click custom subcondition group bar to add filter', function(test) {
 		)
 	}
 })
+*/
 
 tape.skip('single chart, genotype overlay', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'barchart',
-				term: { id: 'diaggrp', term: termjson['diaggrp'] },
-				term2: 'genotype',
-				settings: { currViews: ['barchart'] }
-			}],
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'diaggrp', term: termjson['diaggrp'] },
+					term2: 'genotype',
+					settings: { currViews: ['barchart'] }
+				}
+			],
 			ssid: {
 				mutation_name: 'TEST',
 				ssid: 'genotype-test.txt',
@@ -867,12 +899,14 @@ tape('numeric exclude range', function(test) {
 
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'barchart',
-				term: { id: 'aaclassic_5', term: termjson['aaclassic_5'] },
-				term2: {id: 'sex'},
-				settings: { currViews: ['barchart'] }
-			}],
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'aaclassic_5', term: termjson['aaclassic_5'] },
+					term2: { id: 'sex' },
+					settings: { currViews: ['barchart'] }
+				}
+			],
 			termfilter: {
 				filter: {
 					type: 'tvslst',
@@ -935,11 +969,13 @@ tape('numeric filter - only special value', function(test) {
 
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'barchart',
-				term: { id: 'aaclassic_5' },
-				settings: { currViews: ['barchart'] }
-			}],
+			plots: [
+				{
+					chartType: 'barchart',
+					term: { id: 'aaclassic_5' },
+					settings: { currViews: ['barchart'] }
+				}
+			],
 			termfilter: {
 				filter: {
 					type: 'tvslst',
@@ -1027,15 +1063,17 @@ tape.skip('custom vocab: categorical terms with numeric filter', test => {
 					]
 				}
 			},
-			plots: [{
-				chartType: 'barchart',
-				term: {
-					term: vocabData.terms.find(t => t.id == 'c')
-				},
-				settings: {
-					currViews: ['barchart']
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						term: vocabData.terms.find(t => t.id == 'c')
+					},
+					settings: {
+						currViews: ['barchart']
+					}
 				}
-			}]
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -1092,16 +1130,18 @@ tape.skip('custom vocab: numeric terms with categorical filter', test => {
 					]
 				}
 			},
-			plots: [{
-				chartType: 'barchart',
-				term: {
-					term: dterm,
-					q: dterm.bins.default
-				},
-				settings: {
-					currViews: ['barchart']
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						term: dterm,
+						q: dterm.bins.default
+					},
+					settings: {
+						currViews: ['barchart']
+					}
 				}
-			}]
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -1132,21 +1172,23 @@ tape('max number of bins: exceeded', test => {
 
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'barchart',
-				term: {
-					term: termjson['aaclassic_5'],
-					q: {
-						type: 'regular',
-						bin_size: 1000,
-						stopinclusive: true,
-						first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
-						numDecimals: 1,
-						last_bin: { start: 30000, bin: 'last', stopunbounded: true },
-						startinclusive: false
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						term: termjson['aaclassic_5'],
+						q: {
+							type: 'regular',
+							bin_size: 1000,
+							stopinclusive: true,
+							first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+							numDecimals: 1,
+							last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+							startinclusive: false
+						}
 					}
 				}
-			}]
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -1209,15 +1251,17 @@ tape('no visible series data, no overlay', function(test) {
 			nav: {
 				header_mode: 'search_only'
 			},
-			plots: [{
-				chartType: 'barchart',
-				term: {
-					id: 'cisplateq_5'
-				},
-				settings: {
-					currViews: ['barchart']
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'cisplateq_5'
+					},
+					settings: {
+						currViews: ['barchart']
+					}
 				}
-			}]
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -1270,10 +1314,7 @@ tape('no visible series data, no overlay', function(test) {
 			'block',
 			'should display a banner when no charts are visible'
 		)
-		test.true(
-			barchart.Inner.dom.banner.text().includes('No visible'),
-			'should label the banner with no visible data'
-		)
+		test.true(barchart.Inner.dom.banner.text().includes('No visible'), 'should label the banner with no visible data')
 	}
 
 	function triggerUnhideBar(barchart) {
@@ -1302,18 +1343,20 @@ tape('all hidden + with overlay, legend click', function(test) {
 			nav: {
 				header_mode: 'search_only'
 			},
-			plots: [{
-				chartType: 'barchart',
-				term: {
-					id: 'cisplateq_5'
-				},
-				term2: {
-					id: 'sex'
-				},
-				settings: {
-					currViews: ['barchart']
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						id: 'cisplateq_5'
+					},
+					term2: {
+						id: 'sex'
+					},
+					settings: {
+						currViews: ['barchart']
+					}
 				}
-			}]
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -1422,21 +1465,23 @@ tape.skip('unhidden chart and legend', test => {
 			nav: {
 				header_mode: 'search_only'
 			},
-			plots: [{
-				chartType: 'barchart',
-				term: {
-					term: termjson['aaclassic_5'],
-					q: {
-						type: 'regular',
-						bin_size: 10000,
-						stopinclusive: true,
-						first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
-						numDecimals: 1,
-						last_bin: { start: 30000, bin: 'last', stopunbounded: true },
-						startinclusive: false
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						term: termjson['aaclassic_5'],
+						q: {
+							type: 'regular',
+							bin_size: 10000,
+							stopinclusive: true,
+							first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
+							numDecimals: 1,
+							last_bin: { start: 30000, bin: 'last', stopunbounded: true },
+							startinclusive: false
+						}
 					}
 				}
-			}]
+			]
 		},
 		barchart: {
 			callbacks: {
@@ -1506,12 +1551,14 @@ tape.skip('customized bins', test => {
 			nav: {
 				header_mode: 'search_only'
 			},
-			plots: [{
-				chartType: 'barchart',
-				term: {
-					term: termjson['aaclassic_5']
+			plots: [
+				{
+					chartType: 'barchart',
+					term: {
+						term: termjson['aaclassic_5']
+					}
 				}
-			}]
+			]
 		},
 		barchart: {
 			callbacks: {

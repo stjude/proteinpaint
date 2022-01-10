@@ -1,4 +1,4 @@
-drop table if exists anno_integer;
+/*drop table if exists anno_integer;
 drop index if exists a_int_sample;
 drop index if exists a_int_termid;
 drop index if exists a_int_value;
@@ -40,9 +40,9 @@ create table anno_float (
   term_id character varying(100) not null,
   value REAL not null
 );
-create index a_float_sample on anno_integer(sample);
-create index a_float_termid on anno_integer(term_id);
-create index a_float_value on anno_integer(value);
+create index a_float_sample on anno_float(sample);
+create index a_float_termid on anno_float(term_id);
+create index a_float_value on anno_float(value);
 
 -- copy entries from the annotations table
 insert into anno_float (sample, term_id, value) 
@@ -59,7 +59,7 @@ from subcohort_terms s
 join terms t on t.id = s.term_id 
 where t.type = 'float' and cohort != 'CCSS,SJLIFE' ;
 
-----------------------------------
+----------------------------------*/
 
 drop table if exists anno_categorical;
 drop index if exists a_cat_sample;
@@ -68,7 +68,7 @@ drop index if exists a_cat_value;
 create table anno_categorical (
   sample integer not null,
   term_id character varying(100) not null,
-  value character not null
+  value character varying(255) not null
 );
 create index a_cat_sample on anno_categorical(sample);
 create index a_cat_termid on anno_categorical(term_id);
@@ -76,7 +76,7 @@ create index a_cat_value on anno_categorical(value);
 
 -- copy entries from the annotations table
 insert into anno_categorical (sample, term_id, value) 
-select sample, term_id, value 
+select sample, term_id, ''+value 
 from annotations a 
 join terms t on t.id=a.term_id and t.type='categorical';
 

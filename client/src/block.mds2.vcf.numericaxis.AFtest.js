@@ -296,10 +296,13 @@ groupindex:
 					state: {
 						genome: block.genome.name,
 						dslabel: tk.mds.label,
-						activeCohort,
-						nav: {
-							header_mode: 'with_cohortHtmlSelect'
-						}
+						activeCohort
+						/*
+					 	TODO: may need to handle a cohort filter option in an optional termdb app filter component 
+					  termfilter: {
+							filter: [{type: 'tvs', renderAs: 'htmlSelect', tvs: {...}}]
+					  },
+						***/
 					},
 					barchart: {
 						bar_click_override: tvslst => {
@@ -501,6 +504,7 @@ function show_group_termdb(group, tk, block) {
 	}
 	group.filterApi.main(combine_groupfilter_with_hidden(group.filter, tk)) // async
 	if (!group.dom.samplehandle) {
+		console.log(501)
 		// "n=?, view stats" handle and for porting to term tree filter
 		group.dom.samplehandle = group.dom.td3
 			.append('span')
