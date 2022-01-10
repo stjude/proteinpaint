@@ -46,14 +46,15 @@ export async function bigwigUI(genomes, holder) {
 function validateInput(doms, genomes) {
 	//Creates the runpp arguments on submit
 	if (!doms.filepath && !doms.multitrackdata) alert('Provide data for either a single track or multiple tracks.')
+	let genome = doms.genomeselect.options[doms.genomeselect.selectedIndex].text
 	const runpp_args = {
 		block: true,
 		nobox: 1,
 		noheader: true,
-		genome: doms.genome,
+		genome,
 		tracks: []
 	}
-	const g = genomes[doms.genome]
+	const g = genomes[genome]
 
 	if (doms.singleInUse == true) {
 		let file, url
@@ -159,12 +160,8 @@ function makeTrackEntryTabs(tabs_div, doms) {
 
 async function genomeSelection(div, genomes, doms) {
 	const genome_div = div.append('div')
-	doms.genome = 'hg19' //default
 	const g = uiutils.makeGenomeDropDown(genome_div, genomes).style('border', '1px solid rgb(138, 177, 212)')
-	g.on('change', () => {
-		const n = g.node()
-		doms.genome = n.options[n.selectedIndex].text
-	})
+	doms.genomeselect = g.node()
 }
 
 function trackNameInput(div, doms) {
