@@ -631,7 +631,7 @@ async function showCode(ppcalls, btns) {
 	).value
 
 	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 30px; max-height:400px; min-height:400px; overflow-x: auto; overflow-y:auto;">
-		<code style="font-size:14px;">${runpp_code}</code>
+		<code style="font-size:14px; display:block; ">${runpp_code}</code>
 	</pre>`
 
 	btns.push({
@@ -684,7 +684,7 @@ async function showJsonCode(ppcalls) {
 			<p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p>
 		</div> 
 		<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 10px; max-height:400px; min-height:400px; overflow-x: auto; overflow-y:auto;">
-			<code class="sjpp-json-code" style="font-size:14px;">${
+			<code class="sjpp-json-code" style="font-size:14px; display:block;">${
 				slicedjson == true
 					? `${code} ...<br><p style='margin:20px 25px; justify-content:center;'>Showing first 100 lines. To see the entire JSON, download ${filename} from the button above.</p>`
 					: `${code}`
