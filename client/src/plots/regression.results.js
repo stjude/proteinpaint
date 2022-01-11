@@ -475,7 +475,7 @@ function setRenderers(self) {
 				//////////////////////////////
 				// no data; render axis instead
 				const axis = axisBottom()
-					.ticks(4, '.1r')
+					.ticks(4) // encountered a bug where '.1r' as 2nd arg will print "20" at the tick of "15"
 					.scale(scale)
 				axisstyle({
 					axis: g.call(axis),
