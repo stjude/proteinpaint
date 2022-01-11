@@ -186,7 +186,8 @@ function setRenderers(self) {
 			// col 1: term name
 			const termNameTd = tr.append('td').style('padding', '8px')
 			fillTdName(termNameTd, tw ? tw.term.name : tid) // can tw ever be missing??
-			if ('refGrp' in tw && tw.refGrp != refGrp_NA) {
+			if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
+				// do not display ref for spline variable
 				termNameTd
 					.append('div')
 					.style('font-size', '.8em')
@@ -398,16 +399,19 @@ function setRenderers(self) {
 			CIhigh, // array index of high end of confidence interval
 			axislab, // data type to show as axis label
 			baselineValue, // baseline value to show a vertical line
+			// min/max value capping the axis, to guard against extreme estimates
+			// only used for logistic odds ratio
+			// for linear, will use actual range from estimates and confidence interval
 			capMin,
-			capMax // min/max value capping the axis, to guard against extreme estimates
+			capMax
 		if (self.config.regressionType == 'linear') {
 			midIdx = 0
 			CIlow = 1
 			CIhigh = 2
 			axislab = 'Beta value'
 			baselineValue = 0
-			capMin = -10
-			capMax = 10
+			capMin = null
+			capMax = null
 		} else if (self.config.regressionType == 'logistic') {
 			midIdx = 0
 			CIlow = 1
@@ -437,6 +441,12 @@ function setRenderers(self) {
 		}
 		// all valid numbers are collected into values[]
 		values.sort((a, b) => a - b) // ascending
+
+		if (capMin == null) {
+			// use actual range as cap; all values are valid numbers
+			capMin = values[0]
+			capMax = values[values.length - 1]
+		}
 
 		// graph dimension
 		const width = 150 // plottable dimension
@@ -483,7 +493,7 @@ function setRenderers(self) {
 			}
 
 			{
-				// baseline
+				// vertical baseline
 				const x = scale(baselineValue)
 				g.append('line')
 					.attr('x1', x)
@@ -511,6 +521,8 @@ function setRenderers(self) {
 				// cannot plot confidence interval
 				return
 			}
+
+			// confidence interval
 			g.append('line')
 				.attr('x1', scale(Math.min(Math.max(cilow, capMin), capMax)))
 				.attr('y1', height / 2)
