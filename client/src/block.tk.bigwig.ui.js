@@ -206,6 +206,10 @@ function submitButton(div, doms, holder, genomes) {
 		.style('margin', '20px 20px 20px 130px')
 		.style('font-size', '16px')
 		.on('click', () => {
+			const bigwig_arg = validateInput(doms, genomes)
+			if (!bigwig_arg) {
+				return
+			}
 			div.remove()
 			const runpp_arg = {
 				holder: holder
@@ -214,8 +218,6 @@ function submitButton(div, doms, holder, genomes) {
 					.node(),
 				host: window.location.origin
 			}
-
-			const bigwig_arg = validateInput(doms, genomes)
 
 			runproteinpaint(Object.assign(runpp_arg, bigwig_arg))
 		})
