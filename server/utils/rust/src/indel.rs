@@ -65,6 +65,8 @@ use std::thread;
 //use std::time::{SystemTime};
 use std::io;
 
+mod realign;
+
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
 pub struct read_diff_scores {
@@ -235,22 +237,24 @@ fn binary_search_repeat(kmers: &Vec<String>, y: &String) -> Vec<usize> {
     indexes_vec
 }
 
-fn parse_cigar(cigar_seq: &String) -> (Vec<char>, Vec<i64>) {
-    // function to parse out all letters (e.g S, M, I) and their corresponding numbers given a CIGAR sequence
-    let sequence_vector: Vec<_> = cigar_seq.chars().collect();
-    let mut subseq = String::new();
-    let mut alphabets = Vec::<char>::new();
-    let mut numbers = Vec::<i64>::new();
-    for i in 0..sequence_vector.len() {
-        if sequence_vector[i].is_alphabetic() == true {
-            alphabets.push(sequence_vector[i]);
-            numbers.push(subseq.parse::<i64>().unwrap());
-            subseq = "".to_string();
-        } else {
-            subseq += &sequence_vector[i].to_string();
+mod cigar {
+    pub fn parse_cigar(cigar_seq: &String) -> (Vec<char>, Vec<i64>) {
+        // function to parse out all letters (e.g S, M, I) and their corresponding numbers given a CIGAR sequence
+        let sequence_vector: Vec<_> = cigar_seq.chars().collect();
+        let mut subseq = String::new();
+        let mut alphabets = Vec::<char>::new();
+        let mut numbers = Vec::<i64>::new();
+        for i in 0..sequence_vector.len() {
+            if sequence_vector[i].is_alphabetic() == true {
+                alphabets.push(sequence_vector[i]);
+                numbers.push(subseq.parse::<i64>().unwrap());
+                subseq = "".to_string();
+            } else {
+                subseq += &sequence_vector[i].to_string();
+            }
         }
+        (alphabets, numbers)
     }
-    (alphabets, numbers)
 }
 
 fn main() {
@@ -278,8 +282,15 @@ fn main() {
     let weight_indel: f64 = args[10].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
     let strictness: usize = args[11].parse::<usize>().unwrap(); // strictness of the pipeline
     let leftflankseq: String = args[12].parse::<String>().unwrap(); //Left flanking sequence
-    let rightflankseq: String = args[13].parse::<String>().unwrap().replace("\n", ""); //Right flanking sequence. Removing "\n" from the end of the string
+    let rightflankseq: String = args[13].parse::<String>().unwrap(); //Right flanking sequence.
+    let clustalo_path: String = args[14].parse::<String>().unwrap().replace("\n", ""); // Removing "\n" from the end of the string
 
+    realign::realign_reads(
+        &sequences,
+        &start_positions,
+        &cigar_sequences,
+        &clustalo_path,
+    );
     //let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
     let mut leftflank_nucleotides: Vec<char> = leftflankseq.chars().collect(); // Vector containing left flanking nucleotides
     let rightflank_nucleotides: Vec<char> = rightflankseq.chars().collect(); // Vector containing right flanking nucleotides
@@ -2000,7 +2011,7 @@ fn check_read_within_indel_region(
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
     } else {
         let indel_stop: i64 = indel_start + indel_length as i64;
-        let (alphabets, numbers) = parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
+        let (alphabets, numbers) = cigar::parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
         let cigar_length: usize = alphabets.len();
         // Check to see if the first item in cigar is a soft clip
         if &alphabets[0].to_string().as_str() == &"S" {
@@ -2233,7 +2244,7 @@ fn check_polyclonal(
             sequence_vector = sequence.chars().collect();
             //println!("spliced_seq:{}", spliced_seq);
         }
-        let (alphabets, numbers) = parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
+        let (alphabets, numbers) = cigar::parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
 
         // Looking for insertions and deletions in cigar sequence
         let mut read_offset: usize = 0; // When read starts after the start of an indel insertion, this variable instructs the iterator (looking for wrong base calls instead of zero) to start from the position of ref/alt overlapping with the read insertion site

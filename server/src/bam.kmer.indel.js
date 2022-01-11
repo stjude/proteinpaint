@@ -8,6 +8,7 @@ const readline = require('readline')
 const bamcommon = require('./bam.common')
 const fs = require('fs')
 const serverconfig = require('./serverconfig')
+const clustalo_read_alignment = serverconfig.clustalo
 
 export async function match_complexvariant_rust(q, templates_info, region_widths) {
 	//const segbplen = templates[0].segments[0].seq.length
@@ -158,8 +159,9 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		':' +
 		leftflankseq +
 		':' +
-		rightflankseq
-
+		rightflankseq +
+		':' +
+		clustalo_read_alignment
 	//console.log({seqRef:refseq, seqMut:altseq, leftFlank:leftflankseq, rightFlank:rightflankseq, readlen: segbplen, variant: q.variant}) // uncomment this line to help creating tests at server/utils/test/rust_indel.spec.js
 
 	//fs.writeFile('test.txt', input_data, function (err) {
