@@ -93,6 +93,7 @@ function setRenderers(self) {
 			.attr('class', 'tree_search')
 			.attr('placeholder', 'Search')
 			.style('width', '180px')
+			.style('margin', '10px')
 			.style('display', 'block')
 			.on('input', debounce(self.onInput, 300))
 

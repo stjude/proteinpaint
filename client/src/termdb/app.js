@@ -34,7 +34,6 @@ class TdbApp {
 	}
 
 	validateOpts(o) {
-		if (!o.callbacks) o.callbacks = {}
 		if (o.tree) {
 			if (
 				o.tree.disable_terms &&
@@ -53,7 +52,9 @@ class TdbApp {
 	}
 
 	async preApiFreeze(api) {
-		api.vocabApi = await vocabInit({ app: this.api, state: this.opts.state, fetchOpts: this.opts.fetchOpts })
+		api.vocabApi = this.opts.vocabApi
+			? this.opts.vocabApi
+			: await vocabInit({ app: this.api, state: this.opts.state, fetchOpts: this.opts.fetchOpts })
 		api.tip = this.dom.tip
 		api.appInit = appInit
 	}
@@ -107,17 +108,5 @@ class TdbApp {
 export const appInit = getAppInit(TdbApp)
 
 function setInteractivity(self) {
-	self.downloadView = id => {
-		const components = app.getComponents('plots.' + opts.id)
-		for (const name in self.components) {
-			// the download function in each component will be called,
-			// but should first check inside that function
-			// whether the component view is active before reacting
-			if (typeof self.components[name].download == 'function') {
-				components[name].download()
-			}
-		}
-	}
-
-	self.showTermSrc = showTermSrc
+	// set optional event handlers
 }
