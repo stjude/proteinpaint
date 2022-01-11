@@ -190,7 +190,7 @@ function renderBinLines(self, data) {
 		if (data.last_bin && data.last_bin.start && data.last_bin.start !== lastVisibleLine.x) {
 			lines.push({ x: data.last_bin.start, index, scaledX: Math.round(o.xscale(data.last_bin.start)) })
 		}
-	} else if (data.mode == 'discrete' && data.type == 'custom-bin' || (data.mode == 'binary')) {
+	} else if ((data.mode == 'discrete' && data.type == 'custom-bin') || data.mode == 'binary') {
 		lines.push(
 			...data.lst.slice(1).map((d, index) => {
 				return { x: d.start, index, scaledX: Math.round(o.xscale(d.start)) }
