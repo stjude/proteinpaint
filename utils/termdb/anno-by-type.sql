@@ -76,7 +76,7 @@ create index a_cat_value on anno_categorical(value);
 
 -- copy entries from the annotations table
 insert into anno_categorical (sample, term_id, value) 
-select sample, term_id, ''+value 
+select sample, term_id, value 
 from annotations a 
 join terms t on t.id=a.term_id and t.type='categorical';
 
