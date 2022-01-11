@@ -287,14 +287,6 @@ fn main() {
     let clustalo_path: String = args[15].parse::<String>().unwrap(); // Removing "\n" from the end of the string
     let is_realignment_reads: u64 = args[16].replace("\n", "").parse::<u64>().unwrap() as u64; // Flag to decide if realignment of reads will be carried out to determine correct indel sequence (1: Carry out realignment, 0: No realignment)
 
-    if is_realignment_reads == 1 {
-        realign::realign_reads(
-            &sequences,
-            &start_positions,
-            &cigar_sequences,
-            &clustalo_path,
-        );
-    }
     //let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
     let mut leftflank_nucleotides: Vec<char> = leftflankseq.chars().collect(); // Vector containing left flanking nucleotides
     let rightflank_nucleotides: Vec<char> = rightflankseq.chars().collect(); // Vector containing right flanking nucleotides
@@ -326,6 +318,19 @@ fn main() {
         alt_status = "break_point".to_string();
     }
     let surrounding_region_length: i64 = 80; // Flanking region on both sides upto which it will search for duplicate kmers
+
+    if is_realignment_reads == 1 {
+        realign::realign_reads(
+            &sequences,
+            &start_positions,
+            &cigar_sequences,
+            &quality_scores,
+            &clustalo_path,
+            &lines[0].to_string(),
+            &lines[1].to_string(),
+            variant_pos,
+        );
+    }
 
     // Preprocessing of input
     let (
