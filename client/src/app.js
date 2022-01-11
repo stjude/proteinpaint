@@ -798,7 +798,7 @@ async function parseembedthenurl(arg, app) {
 	if (arg.testInternals && app.debugmode) {
 		await import('../test/internals.js')
 	}
-	if (arg.uionly) {
+	if (arg.tkui) {
 		launch_tkUIs(arg, app)
 	}
 }
@@ -1380,7 +1380,7 @@ async function launch_singlecell(arg, app) {
 }
 
 async function launch_tkUIs(arg, app) {
-	if (arg.uionly == 'bigwig') {
+	if (arg.tkui == 'bigwig') {
 		const p = await import('./block.tk.bigwig.ui')
 		p.bigwigUI(app.genomes, app.holder)
 	}

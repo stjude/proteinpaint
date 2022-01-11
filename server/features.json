@@ -151,7 +151,7 @@
                         "noheader": true,
                         "nobox": 1, 
                         "parseurl": 1, 
-                        "uionly": "bigwig"
+                        "tkui": "bigwig"
                     }
                 },
                 {
