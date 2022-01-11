@@ -4,7 +4,6 @@ import { init_tabs } from '../dom/toggleButtons'
 export async function getHandler(self) {
 	async function callback(div) {
 		const tab = this // since this function gets attached to a tab{} entry in tabs[]
-		if (tab.maySetQtype) tab.maySetQtype()
 		self.q.mode = tab.subType
 		const typeSubtype = `numeric.${tab.subType}`
 		if (!self.handlerByType[typeSubtype]) {
@@ -33,11 +32,7 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'discrete',
 			label: 'Discrete',
-			callback,
-			maySetQtype() {
-				if (!self.q.type) self.q.type = 'regular'
-				if (self.q.type != 'regular' && self.q.type != 'custom-bin') throw `invalid q.type='${self.q.type}'`
-			}
+			callback
 		})
 	}
 
