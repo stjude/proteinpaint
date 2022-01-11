@@ -27,7 +27,7 @@ tape('\n', function(test) {
 })
 
 tape('term search, default behavior', function(test) {
-	test.timeoutAfter(10000)
+	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
@@ -92,10 +92,6 @@ tape('term search, default behavior', function(test) {
 			termdivs.filter(i => i.id == clickedTerm_firstSearch.id).size(),
 			1,
 			'clicked term now appears in the updated tree'
-		)
-		test.ok(
-			tree.Inner.components.plots[clickedTerm_firstSearch.id],
-			'clicked term ID is now a key in tree.components.plots{}'
 		)
 	}
 

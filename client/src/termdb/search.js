@@ -107,6 +107,7 @@ function setRenderers(self) {
 		self.dom.resultDiv
 			.append('div')
 			.text('No match')
+			.style('text-align', 'left')
 			.style('padding', '3px 3px 3px 0px')
 			.style('opacity', 0.5)
 	}
@@ -174,14 +175,13 @@ function setRenderers(self) {
 				const expandedTermIds = [root_ID]
 				if (term.__ancestors) {
 					expandedTermIds.push(...term.__ancestors)
-				} else {
-					self.app.dispatch({
-						type: 'app_refresh',
-						state: {
-							tree: { expandedTermIds }
-						}
-					})
 				}
+				self.app.dispatch({
+					type: 'app_refresh',
+					state: {
+						tree: { expandedTermIds }
+					}
+				})
 			})
 		}
 		tr.append('td')
