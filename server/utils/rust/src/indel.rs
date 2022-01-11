@@ -3,7 +3,7 @@
 // Test case below:
 // echo AATAGCCTTTACATTATGTAATAGTGTAATACAAATAATAATTTATTATAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCGAAAACCCTAACCCTAAAACCCTAACATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTTACCCTTACCCTTACCCTGACCCTAACCCTAATCCTTACCCTTATCCTACCCCTAACCCTTAACCC-AATAGCCTTTACATTATGTAATAGTGTAATACAAATAATAATTTATTATAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCCTAACCCCTAACCCTAACCCGAAAACCCTAACCCTAAAACCCTAACATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTTACCCTTACCCTTACCCTGACCCTAACCCTAATCCTTACCCTTATCCTACCCCTAACCCTTAACCC-TAGTAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAAC-AGTAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCAAACCCTAACCCCTAACCCTAACCCAAAAACCCTAACCCTAAAACCC-TAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAAC-TAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACC-TAAAGTGAAATTATTGACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTATCCCCTAACCCTAATCCTAACCCTAACCCTAACCCTATCCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAAC-TAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACC-CAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACCATAACCCTTACCCTTAC-CTGACCCTTAACCCTAACCCTAACCCCTAACCCTAACCCTTAACCCTTAAACCTTAACCCTCATCCTCACCCTCACCCTCACCCCTAACCCTAACCCCTAACCCAAACCCTCACCCTAAACCCTAACCCTAAACCCAACCCAAACCCTAAC-ACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAGCCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACCATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTT-CTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACCATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTTACCCTTACCCTTACCC:16357-16358-16363-16363-16363-16363-16380-16388-16402-16418:108M1I42M-151M-102M1I48M-151M-101M1I49M-151M-132M1I18M-8S31M1I6M1I32M1I30M41S-110M1I40M-94M1I56M:147-99-65-81-83-83-177-163-147-113:16463:151:A:AC:6:0.1:10:1:AATAGCCTTTACATTATGTAATAGTGTAATACAAATAATAATTTATTATAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTA:CCCTAACCCCTAACCCTAACCCGAAAACCCTAACCCTAAAACCCTAACATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTTACCCTTACCCTTACCCTGACCCTAACCCTAATCCTTACCCTTATCCTACCCCTAACCCTTAACCC | ../target/release/indel
 
-//Debug syntax: cat ~/proteinpaint/test.txt | ~/proteinpaint/server/utils/rust_indel_cargo/target/release/rust_indel_cargo
+//Debug syntax: cat ~/proteinpaint/test.txt | ~/proteinpaint/server/utils/rust/target/release/indel
 
 // Strictness:
 //   0: No postprocessing, pure indel typing results
@@ -268,29 +268,33 @@ fn main() {
         }
         Err(error) => println!("Piping error: {}", error),
     }
-    let args: Vec<&str> = input.split(":").collect(); // Various input from nodejs is separated by ":" characater
+    let args: Vec<&str> = input.split("_").collect(); // Various input from nodejs is separated by ":" character
     let sequences: String = args[0].parse::<String>().unwrap(); // Variable contains sequences separated by "-" character, the first two sequences contains the ref and alt sequences
     let start_positions: String = args[1].parse::<String>().unwrap(); // Variable contains start position of reads separated by "-" character
     let cigar_sequences: String = args[2].parse::<String>().unwrap(); // Variable contains cigar sequences separated by "-" character
     let sequence_flags: String = args[3].parse::<String>().unwrap(); // Variable contains sam flags of reads separated by "-" character
-    let variant_pos: i64 = args[4].parse::<i64>().unwrap(); // Variant position
-    let segbplen: i64 = args[5].parse::<i64>().unwrap(); // read sequence length
-    let refallele: String = args[6].parse::<String>().unwrap(); // Reference allele
-    let altallele: String = args[7].parse::<String>().unwrap(); // Alternate allele
-    let min_kmer_length: i64 = args[8].parse::<i64>().unwrap(); // Initializing kmer length
-    let weight_no_indel: f64 = args[9].parse::<f64>().unwrap(); // Weight of base pair if outside indel region
-    let weight_indel: f64 = args[10].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
-    let strictness: usize = args[11].parse::<usize>().unwrap(); // strictness of the pipeline
-    let leftflankseq: String = args[12].parse::<String>().unwrap(); //Left flanking sequence
-    let rightflankseq: String = args[13].parse::<String>().unwrap(); //Right flanking sequence.
-    let clustalo_path: String = args[14].parse::<String>().unwrap().replace("\n", ""); // Removing "\n" from the end of the string
+    let quality_scores: String = args[4].parse::<String>().unwrap(); // Variable contains quality scores of reads separated by "-" character
+    let variant_pos: i64 = args[5].parse::<i64>().unwrap(); // Variant position
+    let segbplen: i64 = args[6].parse::<i64>().unwrap(); // read sequence length
+    let refallele: String = args[7].parse::<String>().unwrap(); // Reference allele
+    let altallele: String = args[8].parse::<String>().unwrap(); // Alternate allele
+    let min_kmer_length: i64 = args[9].parse::<i64>().unwrap(); // Initializing kmer length
+    let weight_no_indel: f64 = args[10].parse::<f64>().unwrap(); // Weight of base pair if outside indel region
+    let weight_indel: f64 = args[11].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
+    let strictness: usize = args[12].parse::<usize>().unwrap(); // strictness of the pipeline
+    let leftflankseq: String = args[13].parse::<String>().unwrap(); //Left flanking sequence
+    let rightflankseq: String = args[14].parse::<String>().unwrap(); //Right flanking sequence.
+    let clustalo_path: String = args[15].parse::<String>().unwrap(); // Removing "\n" from the end of the string
+    let is_realignment_reads: u64 = args[16].replace("\n", "").parse::<u64>().unwrap() as u64; // Flag to decide if realignment of reads will be carried out to determine correct indel sequence (1: Carry out realignment, 0: No realignment)
 
-    realign::realign_reads(
-        &sequences,
-        &start_positions,
-        &cigar_sequences,
-        &clustalo_path,
-    );
+    if is_realignment_reads == 1 {
+        realign::realign_reads(
+            &sequences,
+            &start_positions,
+            &cigar_sequences,
+            &clustalo_path,
+        );
+    }
     //let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
     let mut leftflank_nucleotides: Vec<char> = leftflankseq.chars().collect(); // Vector containing left flanking nucleotides
     let rightflank_nucleotides: Vec<char> = rightflankseq.chars().collect(); // Vector containing right flanking nucleotides

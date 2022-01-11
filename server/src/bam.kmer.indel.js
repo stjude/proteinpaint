@@ -108,6 +108,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const weight_indel = 10 // Weight when base is inside the indel
 	//const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
 	const fisher_test_threshold = 60 // Fisher exact-test strand analysis significance parameter. See details in this weblink https://gatk.broadinstitute.org/hc/en-us/articles/360035890471
+	const is_realignment_reads = 1 // Realign reads to obtain correct indel sequence (If 1 realignment of reads will be attempted, if 0 no realignment of reads will be performed )
 	//----------------------------------------------------------------------------
 
 	// Checking to see if reference allele is correct or not
@@ -118,6 +119,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	}
 
 	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('-')
+	const quality_scores = templates_info.map(i => i.sam_info.split('\t')[10]).join('-')
 	const start_positions = templates_info.map(i => i.sam_info.split('\t')[3]).join('-')
 	const cigar_sequences = templates_info.map(i => i.sam_info.split('\t')[5]).join('-')
 	const sequence_flags = templates_info.map(i => i.sam_info.split('\t')[1]).join('-')
@@ -134,40 +136,44 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 
 	const input_data =
 		sequences +
-		':' +
+		'_' +
 		start_positions +
-		':' +
+		'_' +
 		cigar_sequences +
-		':' +
+		'_' +
 		sequence_flags +
-		':' +
+		'_' +
+		quality_scores +
+		'_' +
 		final_pos.toString() +
-		':' +
+		'_' +
 		segbplen.toString() +
-		':' +
+		'_' +
 		refallele +
-		':' +
+		'_' +
 		altallele +
-		':' +
+		'_' +
 		kmer_length.toString() +
-		':' +
+		'_' +
 		weight_no_indel.toString() +
-		':' +
+		'_' +
 		weight_indel.toString() +
-		':' +
+		'_' +
 		q.variant.strictness +
-		':' +
+		'_' +
 		leftflankseq +
-		':' +
+		'_' +
 		rightflankseq +
-		':' +
-		clustalo_read_alignment
+		'_' +
+		clustalo_read_alignment +
+		'_' +
+		is_realignment_reads
 	//console.log({seqRef:refseq, seqMut:altseq, leftFlank:leftflankseq, rightFlank:rightflankseq, readlen: segbplen, variant: q.variant}) // uncomment this line to help creating tests at server/utils/test/rust_indel.spec.js
 
-	//fs.writeFile('test.txt', input_data, function (err) {
-	//	// For catching input to rust pipeline, in case of an error
-	//	if (err) return console.log(err)
-	//})
+	fs.writeFile('test.txt', input_data, function(err) {
+		// For catching input to rust pipeline, in case of an error
+		if (err) return console.log(err)
+	})
 	const time1 = new Date()
 	const rust_output = await utils.run_rust('indel', input_data)
 	const time2 = new Date()
