@@ -18,6 +18,15 @@ bigwigUI
                 1. Pasted tracks data (required): name, filepath
 
 -------Internal-------
+makePrompt()
+makeTrackEntryTabs()
+genomeSelection()
+trackNameInput()
+trackFilePathInput()
+multiTrackInput()
+submitButton()
+validateInput()
+infoSection()
 
 */
 
@@ -41,6 +50,127 @@ export async function bigwigUI(genomes, holder) {
 	makeTrackEntryTabs(tabs_div, doms)
 	submitButton(wrapper, doms, holder, genomes)
 	infoSection(wrapper)
+}
+
+function makePrompt(div, text) {
+	const prompt = div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin', '15px')
+		.style('place-items', 'center left')
+		.html(text)
+	return prompt
+}
+
+function makeTrackEntryTabs(tabs_div, doms) {
+	//Tabs for 'Data' entry.
+	const tabs = [
+		{
+			label: 'Single Track',
+			callback: async div => {
+				// can be single flag, no need to attach to dom
+				doms.singleInUse = true
+				doms.multiInUse = false
+				if (!tabs[0].rendered) {
+					div.style('border', 'none').style('display', 'block')
+					const singlediv = div
+						.append('div')
+						.style('border', 'none')
+						.style('display', 'grid')
+						.style('grid-template-columns', '100px auto')
+						.style('grid-template-rows', 'repeat(1, auto)')
+						.style('gap', '5px')
+						.style('place-items', 'center left')
+					appear(div)
+					makePrompt(singlediv, 'Name')
+					doms.trackname = trackNameInput(singlediv, doms) // no need to pass doms as name is returned
+					makePrompt(singlediv, 'File Path')
+					trackFilePathInput(singlediv, doms) // no need to pass doms as filepath is returned, same as trackname
+					tabs[0].rendered = true
+				}
+			}
+		},
+		{
+			label: 'Multiple Tracks',
+			callback: async div => {
+				doms.singleInUse = false
+				doms.multiInUse = true
+				if (!tabs[1].rendered) {
+					div.style('border', 'none').style('display', 'block')
+					appear(div)
+					div
+						.append('div')
+						.html(
+							'<p style="margin-left: 10px;">Enter one track per line in the following format: [track name],[path/to/file.bw or URL]</p><p style="margin-left: 20px; color: #7d7c7c;">e.g. BigWig Track, proteinpaint_demo/hg19/bigwig/file.bw</p>'
+						)
+					doms.multiInput = multiTrackInput(div, doms) // same as doms.trackname
+					tabs[1].rendered = true
+				}
+			}
+		}
+	]
+
+	init_tabs({ holder: tabs_div, tabs })
+}
+
+async function genomeSelection(div, genomes, doms) {
+	const genome_div = div.append('div')
+	const g = uiutils.makeGenomeDropDown(genome_div, genomes).style('border', '1px solid rgb(138, 177, 212)')
+	doms.genomeselect = g.node()
+}
+
+function trackNameInput(div, doms) {
+	const track_div = div.append('div').style('display', 'inline-block')
+	const name = uiutils
+		.makeTextInput(track_div, 'BigWig track')
+		.style('border', '1px solid rgb(138, 177, 212)')
+		.on('keyup', async () => {
+			doms.trackname = name.property('value').trim()
+			// return name
+		})
+}
+
+function trackFilePathInput(div, doms) {
+	const track_div = div.append('div').style('display', 'inline-block')
+	const filepath = uiutils
+		.makeTextInput(track_div)
+		.style('border', '1px solid rgb(138, 177, 212)')
+		.on('keyup', async () => {
+			doms.filepath = filepath.property('value').trim()
+			// return filepath
+		})
+}
+
+function multiTrackInput(div, doms) {
+	const pasteTrack_div = div.append('div').style('display', 'block')
+	const multi = uiutils
+		.makeTextAreaInput(pasteTrack_div)
+		.style('border', '1px solid rgb(138, 177, 212)')
+		.style('margin', '0px 0px 0px 20px')
+		.on('keyup', async () => {
+			doms.multitrackdata = multi.property('value').trim()
+			//return multi
+		})
+}
+
+function submitButton(div, doms, holder, genomes) {
+	const submit = uiutils.makeBtn(div, 'Submit')
+	submit
+		.style('margin', '20px 20px 20px 130px')
+		.style('font-size', '16px')
+		.on('click', () => {
+			const runpp_arg = {
+				holder: holder
+					.append('div')
+					.style('margin', '20px')
+					.node(),
+				host: window.location.origin
+			}
+			const bigwig_arg = validateInput(doms, genomes)
+			if (!bigwig_arg) return
+			div.remove()
+			runproteinpaint(Object.assign(runpp_arg, bigwig_arg))
+		})
 }
 
 function validateInput(doms, genomes) {
@@ -104,123 +234,6 @@ function validateInput(doms, genomes) {
 		return runpp_args
 	}
 	throw 'unknown option'
-}
-
-function makePrompt(div, text) {
-	const prompt = div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin', '15px')
-		.style('place-items', 'center left')
-		.html(text)
-	return prompt
-}
-
-function makeTrackEntryTabs(tabs_div, doms) {
-	//Tabs for 'Data' entry.
-	const tabs = [
-		{
-			label: 'Single Track',
-			callback: async div => {
-				doms.singleInUse = true
-				doms.multiInUse = false
-				if (!tabs[0].rendered) {
-					div.style('border', 'none').style('display', 'block')
-					const singlediv = div
-						.append('div')
-						.style('border', 'none')
-						.style('display', 'grid')
-						.style('grid-template-columns', '100px auto')
-						.style('grid-template-rows', 'repeat(1, auto)')
-						.style('gap', '5px')
-						.style('place-items', 'center left')
-					appear(div)
-					makePrompt(singlediv, 'Name')
-					doms.trackname = trackNameInput(singlediv, doms)
-					makePrompt(singlediv, 'File Path')
-					trackFilePathInput(singlediv, doms)
-					tabs[0].rendered = true
-				}
-			}
-		},
-		{
-			label: 'Multiple Tracks',
-			callback: async div => {
-				doms.singleInUse = false
-				doms.multiInUse = true
-				if (!tabs[1].rendered) {
-					div.style('border', 'none').style('display', 'block')
-					appear(div)
-					div
-						.append('div')
-						.html(
-							'<p style="margin-left: 10px;">Enter one track per line in the following format: [track name],[path/to/file.bw or URL]</p><p style="margin-left: 20px; color: #7d7c7c;">e.g. BigWig Track, proteinpaint_demo/hg19/bigwig/file.bw</p>'
-						)
-					doms.multiInput = multiTrackInput(div, doms)
-					tabs[1].rendered = true
-				}
-			}
-		}
-	]
-
-	init_tabs({ holder: tabs_div, tabs })
-}
-
-async function genomeSelection(div, genomes, doms) {
-	const genome_div = div.append('div')
-	const g = uiutils.makeGenomeDropDown(genome_div, genomes).style('border', '1px solid rgb(138, 177, 212)')
-	doms.genomeselect = g.node()
-}
-
-function trackNameInput(div, doms) {
-	const track_div = div.append('div').style('display', 'inline-block')
-	const name = uiutils
-		.makeTextInput(track_div, 'BigWig track')
-		.style('border', '1px solid rgb(138, 177, 212)')
-		.on('keyup', async () => {
-			doms.trackname = name.property('value').trim()
-		})
-}
-
-function trackFilePathInput(div, doms) {
-	const track_div = div.append('div').style('display', 'inline-block')
-	const filepath = uiutils
-		.makeTextInput(track_div)
-		.style('border', '1px solid rgb(138, 177, 212)')
-		.on('keyup', async () => {
-			doms.filepath = filepath.property('value').trim()
-		})
-}
-
-function multiTrackInput(div, doms) {
-	const pasteTrack_div = div.append('div').style('display', 'block')
-	const multi = uiutils
-		.makeTextAreaInput(pasteTrack_div)
-		.style('border', '1px solid rgb(138, 177, 212)')
-		.style('margin', '0px 0px 0px 20px')
-		.on('keyup', async () => {
-			doms.multitrackdata = multi.property('value').trim()
-		})
-}
-
-function submitButton(div, doms, holder, genomes) {
-	const submit = uiutils.makeBtn(div, 'Submit')
-	submit
-		.style('margin', '20px 20px 20px 130px')
-		.style('font-size', '16px')
-		.on('click', () => {
-			const runpp_arg = {
-				holder: holder
-					.append('div')
-					.style('margin', '20px')
-					.node(),
-				host: window.location.origin
-			}
-			const bigwig_arg = validateInput(doms, genomes)
-			if (!bigwig_arg) return
-			div.remove()
-			runproteinpaint(Object.assign(runpp_arg, bigwig_arg))
-		})
 }
 
 function infoSection(div) {
