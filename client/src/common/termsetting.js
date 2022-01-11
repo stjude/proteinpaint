@@ -367,6 +367,9 @@ function setInteractivity(self) {
 		termdb.appInit({
 			holder: self.dom.tip.d,
 			state: {
+				// TODO: decide whether to avoid passing self.vocabApi here,
+				// in order not to share the app.state with the tree menu which is
+				// likely to have different filter, disable_terms, etc.
 				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,
 				tree: {

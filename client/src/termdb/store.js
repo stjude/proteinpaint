@@ -24,8 +24,7 @@ const defaultState = {
 			join: '',
 			lst: []
 		}
-	},
-	autoSave: true
+	}
 }
 
 // one store for the whole tdb app
@@ -210,82 +209,3 @@ TdbStore.prototype.actions = {
 
 // must use the await keyword when using this storeInit()
 export const storeInit = rx.getInitFxn(TdbStore)
-
-function validatePlot(p, vocabApi) {
-	/*
-	only work for hydrated plot object already in the state
-	not for the saved state
-	*/
-	if (!p.id) throw 'plot error: plot.id missing'
-	if (!p.term) throw 'plot error: plot.term{} not an object'
-	try {
-		validatePlotTerm(p.term, vocabApi)
-	} catch (e) {
-		throw 'plot.term error: ' + e
-	}
-	if (p.term2) {
-		try {
-			validatePlotTerm(p.term2, vocabApi)
-		} catch (e) {
-			throw 'plot.term2 error: ' + e
-		}
-		if (p.term.term.type == 'condition' && p.term.id == p.term2.id) {
-			// term and term2 are the same CHC, potentially allows grade-subcondition overlay
-			if (p.term.q.bar_by_grade && p.term2.q.bar_by_grade)
-				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_grade'
-			if (p.term.q.bar_by_children && p.term2.q.bar_by_children)
-				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_children'
-		}
-	}
-	if (p.term0) {
-		try {
-			validatePlotTerm(p.term0, vocabApi)
-		} catch (e) {
-			throw 'plot.term0 error: ' + e
-		}
-	}
-}
-
-function validatePlotTerm(t, vocabApi) {
-	/*
-	for p.term, p.term2, p.term0
-	{ id, term, q }
-	*/
-
-	// somehow plots are missing this
-	if (!t.term) throw '.term{} missing'
-	if (!vocabApi.graphable(t.term)) throw '.term is not graphable (not a valid type)'
-	if (!t.term.name) throw '.term.name missing'
-	t.id = t.term.id
-
-	if (!t.q) throw '.q{} missing'
-	// term-type specific validation of q
-	switch (t.term.type) {
-		case 'integer':
-		case 'float':
-		case 'survival':
-			// t.q is binning scheme, it is validated on server
-			break
-		case 'categorical':
-			if (t.q.groupsetting && !t.q.groupsetting.disabled) {
-				// groupsetting allowed on this term
-				if (!t.term.values) throw '.values{} missing when groupsetting is allowed'
-				// groupsetting is validated on server
-			}
-			// term may not have .values{} when groupsetting is disabled
-			break
-		case 'condition':
-			if (!t.term.values) throw '.values{} missing'
-			if (!t.q.bar_by_grade && !t.q.bar_by_children) throw 'neither q.bar_by_grade or q.bar_by_children is set to true'
-			if (!t.q.value_by_max_grade && !t.q.value_by_most_recent && !t.q.value_by_computable_grade)
-				throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
-			break
-		default:
-			if (t.term.isgenotype) {
-				// don't do anything for now
-				console.log('to add in type:"genotype"')
-				break
-			}
-			throw 'unknown term type'
-	}
-}
