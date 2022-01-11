@@ -630,7 +630,9 @@ async function showCode(ppcalls, btns) {
 		{ language: 'javascript' }
 	).value
 
-	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 30px 5px 40px; max-height: 400px; overflow-x: auto; overflow-y:auto;" ><code style="font-size:14px;">${runpp_code}</code></pre>`
+	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 30px; max-height:400px; min-height:400px; overflow-x: auto; overflow-y:auto;">
+		<code style="font-size:14px; display:block; ">${runpp_code}</code>
+	</pre>`
 
 	btns.push({
 		name: 'Code',
@@ -638,8 +640,20 @@ async function showCode(ppcalls, btns) {
 			try {
 				if (ppcalls.jsonpath) {
 					const include_json = await showJsonCode(ppcalls)
-					const runpp_header = "<p style='margin:20px 25px; justify-content:center;'>ProteinPaint JS code</p>"
-					rdiv.append('div').html(runpp_header + runpp_contents + include_json)
+					const runpp_header = "<p style='margin:20px 5px 20px 25px;'>ProteinPaint JS code</p>"
+					const grid = rdiv
+						.append('div')
+						.style('display', 'grid')
+						.style('grid-template-columns', 'repeat(auto-fit, minmax(100px, 1fr))')
+						.style('gap', '5px')
+					grid
+						.append('div')
+						.style('display', 'block')
+						.html(runpp_header + runpp_contents)
+					grid
+						.append('div')
+						.style('display', 'block')
+						.html(include_json)
 				} else {
 					rdiv.append('div').html(runpp_contents)
 				}
@@ -665,11 +679,18 @@ async function showJsonCode(ppcalls) {
 	}
 	const code = hljs.highlight(lines.join('\n'), { language: 'json' }).value
 
-	const json_contents = `<p style="margin:20px 5px 0px 25px; justify-content:center; display: inline-block;">JSON code </p><p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p><pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 5px 30px 5px 40px; max-height: 400px; overflow-x: auto; overflow-y:auto; display: block;" ><code class="sjpp-json-code" style="font-size:14px;">${
-		slicedjson == true
-			? `${code} ...<br><p style='margin:20px 25px; justify-content:center;'>Showing first 100 lines. To see the entire JSON, download ${filename} from the button above.</p></code></pre>`
-			: `${code}</code></pre>`
-	}`
+	const json_contents = `<div>
+			<p style="margin: 20px 5px 20px 25px; display: inline-block;">JSON code </p>
+			<p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p>
+		</div> 
+		<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 10px; max-height:400px; min-height:400px; overflow-x: auto; overflow-y:auto;">
+			<code class="sjpp-json-code" style="font-size:14px; display:block;">${
+				slicedjson == true
+					? `${code} ...<br><p style='margin:20px 25px; justify-content:center;'>Showing first 100 lines. To see the entire JSON, download ${filename} from the button above.</p>`
+					: `${code}`
+			}
+			</code>
+		</pre>`
 
 	return json_contents
 }
