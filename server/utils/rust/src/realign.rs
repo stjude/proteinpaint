@@ -1,15 +1,49 @@
+// Syntax: cd .. && cargo build --release
+
 use std::process::Command;
 use std::str;
 
-fn check_quality_scores(
+fn check_base_pair_quality_scores(
     // Function that checks for base pair quality score to ensure all reads being aligned have high quality reads near the variant position
-    quality_score_sequence: &String,
-    variant_pos: i64,
-    flanking_region_length: usize,
-    cigar_seq: &String,
-    indel_length: i64, // Indel length
+    quality_score_sequence: &String, // String containing read base pair sequence
+    alphabets: &Vec<char>,           // Alphabets from CIGAR sequence
+    numbers: &Vec<i64>,              // Numbers from CIGAR sequence
+    mut start_position: i64,         // Start position of read
+    variant_pos: i64,                // Start position of variant
+    flanking_region_length: i64, // Flanking region uptil where base-pair quality of nucleotides need to be checked
+    indel_length: i64,           // Indel length
+    left_flanking_region_limit: i64, // Left hand region upto where base-pair quality check needs to be carried out
+    right_flanking_region_limit: i64, // Right hand region upto where base-pair quality check needs to be carried out
 ) -> bool {
     let quality_check_pass_fail = true; // Flag to record whether base pair quality check passed or failed
+
+    if &alphabets[0].to_string().as_str() == &"S" {
+        start_position -= numbers[0].to_string().parse::<i64>().unwrap();
+    }
+
+    // Parsing part of read base-pair quality sequence which covers the variant and flanking region
+    let mut current_pos = start_position;
+    let mut nclt_pos = 0;
+    for i in 0..alphabets.len() {
+        if &alphabets[i].to_string().as_str() == &"H" {
+            // Ignore hardclips
+            continue;
+        } else if &alphabets[i].to_string().as_str() == &"M"
+            || &alphabets[i].to_string().as_str() == &"S"
+        {
+            // Checking to see if within variant region or flanking region
+        } else if &alphabets[i].to_string().as_str() == &"D"
+            || &alphabets[i].to_string().as_str() == &"N"
+        {
+            current_pos += numbers[i].to_string().parse::<i64>().unwrap();
+        } else if &alphabets[i].to_string().as_str() == &"I" {
+            nclt_pos += numbers[i].to_string().parse::<i64>().unwrap();
+        } else {
+            // Should not happen
+            println!("CIGAR character not accounted for in check_base_pair_quality_scores()");
+            // Flanking region could start from within inserted nucleotides
+        }
+    }
     quality_check_pass_fail
 }
 
@@ -32,6 +66,8 @@ pub fn realign_reads(
     let start_positions_list: Vec<&str> = start_positions.split("-").collect(); // Vector containing start positions
     let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect(); // Vector containing cigar sequences
     let quality_scores_list: Vec<&str> = quality_scores.split("-").collect(); // Vector containing quality scores
+    let left_flanking_region_limit: i64 = variant_pos - flanking_region_length; // Left hand region upto where base-pair quality check needs to be carried out
+    let right_flanking_region_limit: i64 = variant_pos + indel_length + flanking_region_length; // Right hand region upto where base-pair quality check needs to be carried out
 
     // Parsing through every read to select appropriate reads for alignments with clustalo
     let mut sequences_to_be_aligned = Vec::<String>::new(); // Vector containing sequences to be aligned using clustalo
@@ -50,8 +86,14 @@ pub fn realign_reads(
             let mut current_pos = start_positions_list[i].to_string().parse::<i64>().unwrap();
             let no_ins_del = 0;
             for j in 0..alphabets.len() {
-                if &alphabets[0].to_string().as_str() == &"S" {
+                if &alphabets[0].to_string().as_str() == &"S"
+                    || &alphabets[0].to_string().as_str() == &"H"
+                // Ignore hardclips at start of sequence
+                {
                     // When the first entry in the cigar sequence is a softclip the start position is generally starts from the next CIGAR entry
+                    continue;
+                } else if j == alphabets.len() - 1 && &alphabets[j].to_string().as_str() == &"H" {
+                    // Ignore hardclips at end of sequence
                     continue;
                 } else if &alphabets[j].to_string().as_str() == &"N" {
                     let ins_del_end = current_pos + numbers[j].to_string().parse::<i64>().unwrap(); // Position of end-point of insertion/deletion
@@ -70,6 +112,11 @@ pub fn realign_reads(
                     || &alphabets[j].to_string().as_str() == &"D"
                 {
                     let ins_del_end = current_pos + numbers[j].to_string().parse::<i64>().unwrap(); // Position of end-point of insertion/deletion
+
+                    //println!("current_pos:{}", current_pos);
+                    //println!("ins_del_end:{}", ins_del_end);
+                    //println!("variant_pos:{}", variant_pos);
+                    //println!("variant_end:{}", variant_pos + indel_length);
                     if (variant_pos < current_pos && variant_pos + indel_length >= current_pos)
                         || (variant_pos < current_pos + ins_del_end
                             && variant_pos + indel_length >= current_pos + ins_del_end)
@@ -79,7 +126,20 @@ pub fn realign_reads(
                             && variant_pos + indel_length + flanking_region_length >= current_pos)
                     {
                         // Need to check if the bases near the variant region are of high quality
-
+                        println!("Success");
+                        println!("i:{}", i);
+                        println!("cigar_seq:{}", cigar_seq);
+                        check_base_pair_quality_scores(
+                            &quality_score_seq,
+                            &alphabets,
+                            &numbers,
+                            start_positions_list[i].to_string().parse::<i64>().unwrap(),
+                            variant_pos,
+                            flanking_region_length,
+                            indel_length,
+                            left_flanking_region_limit,
+                            right_flanking_region_limit,
+                        );
                         sequences_to_be_aligned.push(sequences_list[i + 2].to_owned());
                         // 2 added because first two sequences are reference and alternate sequence
                         num_reads_aligned += 1;
