@@ -87,7 +87,7 @@ function setRenderers(self) {
 	self.initUI = () => {
 		self.dom.holder.style('display', self.search && self.search.isVisible == false ? 'none' : 'block')
 		self.dom.input = self.dom.holder
-			.style('text-align', 'center')
+			.style('text-align', 'left')
 			.append('input')
 			.attr('type', 'search')
 			.attr('class', 'tree_search')
@@ -108,7 +108,6 @@ function setRenderers(self) {
 		self.dom.resultDiv
 			.append('div')
 			.text('No match')
-			.style('text-align', 'left')
 			.style('padding', '3px 3px 3px 0px')
 			.style('opacity', 0.5)
 	}
