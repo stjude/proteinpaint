@@ -1,5 +1,5 @@
 import * as uiutils from './dom/uiUtils'
-import * as toggle from './dom/toggleButtons'
+import { init_tabs } from './dom/toggleButtons'
 import { appear } from './dom/animation'
 import { select as d3select } from 'd3-selection'
 import { first_genetrack_tolist } from './client'
@@ -120,21 +120,23 @@ function makeTrackEntryTabs(tabs_div, doms) {
 			callback: async div => {
 				doms.singleInUse = true
 				doms.multiInUse = false
-				div.selectAll('*').remove()
-				div.style('border', 'none').style('display', 'block')
-				const singlediv = div
-					.append('div')
-					.style('border', 'none')
-					.style('display', 'grid')
-					.style('grid-template-columns', '100px auto')
-					.style('grid-template-rows', 'repeat(1, auto)')
-					.style('gap', '5px')
-					.style('place-items', 'center left')
-				appear(div)
-				makePrompt(singlediv, 'Name')
-				doms.trackname = trackNameInput(singlediv, doms)
-				makePrompt(singlediv, 'File Path')
-				trackFilePathInput(singlediv, doms)
+				if (!tabs[0].rendered) {
+					div.style('border', 'none').style('display', 'block')
+					const singlediv = div
+						.append('div')
+						.style('border', 'none')
+						.style('display', 'grid')
+						.style('grid-template-columns', '100px auto')
+						.style('grid-template-rows', 'repeat(1, auto)')
+						.style('gap', '5px')
+						.style('place-items', 'center left')
+					appear(div)
+					makePrompt(singlediv, 'Name')
+					doms.trackname = trackNameInput(singlediv, doms)
+					makePrompt(singlediv, 'File Path')
+					trackFilePathInput(singlediv, doms)
+					tabs[0].rendered = true
+				}
 			}
 		},
 		{
@@ -142,20 +144,22 @@ function makeTrackEntryTabs(tabs_div, doms) {
 			callback: async div => {
 				doms.singleInUse = false
 				doms.multiInUse = true
-				div.selectAll('*').remove()
-				div.style('border', 'none').style('display', 'block')
-				appear(div)
-				div
-					.append('div')
-					.html(
-						'<p>Enter one track per line in the following format: [track name],[path/to/file.bw or URL]</p><p style="margin-left: 10px; color: #7d7c7c;">e.g. BigWig Track, proteinpaint_demo/hg19/bigwig/file.bw</p>'
-					)
-				doms.multiInput = multiTrackInput(div, doms)
+				if (!tabs[1].rendered) {
+					div.style('border', 'none').style('display', 'block')
+					appear(div)
+					div
+						.append('div')
+						.html(
+							'<p>Enter one track per line in the following format: [track name],[path/to/file.bw or URL]</p><p style="margin-left: 10px; color: #7d7c7c;">e.g. BigWig Track, proteinpaint_demo/hg19/bigwig/file.bw</p>'
+						)
+					doms.multiInput = multiTrackInput(div, doms)
+					tabs[1].rendered = true
+				}
 			}
 		}
 	]
 
-	toggle.init_tabs({ holder: tabs_div, tabs })
+	init_tabs({ holder: tabs_div, tabs })
 }
 
 async function genomeSelection(div, genomes, doms) {
