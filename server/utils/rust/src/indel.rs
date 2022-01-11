@@ -329,6 +329,7 @@ fn main() {
             &lines[0].to_string(),
             &lines[1].to_string(),
             variant_pos,
+            indel_length,
         );
     }
 

@@ -1,6 +1,18 @@
 use std::process::Command;
 use std::str;
 
+fn check_quality_scores(
+    // Function that checks for base pair quality score to ensure all reads being aligned have high quality reads near the variant position
+    quality_score_sequence: &String,
+    variant_pos: i64,
+    flanking_region_length: usize,
+    cigar_seq: &String,
+    indel_length: i64, // Indel length
+) -> bool {
+    let quality_check_pass_fail = true; // Flag to record whether base pair quality check passed or failed
+    quality_check_pass_fail
+}
+
 pub fn realign_reads(
     sequences: &String, // Variable contains sequences separated by "-" character, the first two sequences contains the ref and alt sequences
     start_positions: &String, // Variable contains start position of reads separated by "-" character
@@ -10,6 +22,7 @@ pub fn realign_reads(
     ref_sequence: &String,   // Complete original reference sequence
     alt_sequence: &String,   // Complete original alternate sequence
     variant_pos: i64,        // Original variant position
+    indel_length: i64,       // Indel length
 ) {
     // Select appropriate reads for clustalo alignment
     let flanking_region_length = 10; // This constant describes the region flanking the variant region where each read will be checked for insertions/deletions
@@ -27,6 +40,7 @@ pub fn realign_reads(
             break;
         }
         let cigar_seq = cigar_sequences_list[i].to_string();
+        let quality_score_seq = quality_scores_list[i].to_string();
         let (alphabets, numbers) = crate::cigar::parse_cigar(&cigar_seq); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
         if alphabets.len() == 1 && &alphabets[0].to_string().as_str() == &"M" {
             // If the read is representing the reference allele, they are not interesting and can be discarded
@@ -36,23 +50,41 @@ pub fn realign_reads(
             let mut current_pos = start_positions_list[i].to_string().parse::<i64>().unwrap();
             let no_ins_del = 0;
             for j in 0..alphabets.len() {
-                if &alphabets[j].to_string().as_str() == &"I"
+                if &alphabets[0].to_string().as_str() == &"S" {
+                    // When the first entry in the cigar sequence is a softclip the start position is generally starts from the next CIGAR entry
+                    continue;
+                } else if &alphabets[j].to_string().as_str() == &"N" {
+                    let ins_del_end = current_pos + numbers[j].to_string().parse::<i64>().unwrap(); // Position of end-point of insertion/deletion
+                    if (variant_pos - current_pos).abs() <= flanking_region_length
+                        || (current_pos + ins_del_end - variant_pos).abs() <= flanking_region_length
+                        || (variant_pos + indel_length - current_pos).abs()
+                            <= flanking_region_length
+                        || (current_pos + ins_del_end - variant_pos - indel_length).abs()
+                            <= flanking_region_length
+                    // Checking if there is a splice site near the variant region. If yes, that read is not considered for realignment
+                    {
+                        break;
+                    }
+                    current_pos += numbers[j].to_string().parse::<i64>().unwrap();
+                } else if &alphabets[j].to_string().as_str() == &"I"
                     || &alphabets[j].to_string().as_str() == &"D"
                 {
-                    let ins_del_end = current_pos + numbers[j].to_string().parse::<i64>().unwrap();
-                    if (variant_pos < current_pos
-                        && variant_pos + flanking_region_length >= current_pos)
+                    let ins_del_end = current_pos + numbers[j].to_string().parse::<i64>().unwrap(); // Position of end-point of insertion/deletion
+                    if (variant_pos < current_pos && variant_pos + indel_length >= current_pos)
                         || (variant_pos < current_pos + ins_del_end
-                            && variant_pos + flanking_region_length >= current_pos + ins_del_end)
+                            && variant_pos + indel_length >= current_pos + ins_del_end)
+                        || (variant_pos >= current_pos + ins_del_end
+                            && variant_pos - flanking_region_length <= current_pos + ins_del_end)
+                        || (variant_pos + indel_length <= current_pos
+                            && variant_pos + indel_length + flanking_region_length >= current_pos)
                     {
+                        // Need to check if the bases near the variant region are of high quality
+
                         sequences_to_be_aligned.push(sequences_list[i + 2].to_owned());
                         // 2 added because first two sequences are reference and alternate sequence
                         num_reads_aligned += 1;
                     }
                     current_pos += numbers[j].to_string().parse::<i64>().unwrap();
-                } else if &alphabets[0].to_string().as_str() == &"S" {
-                    // When the first entry in the cigar sequence is a softclip the start position is generally starts from the next CIGAR entry
-                    continue;
                 } else {
                     current_pos += numbers[j].to_string().parse::<i64>().unwrap();
                 }
