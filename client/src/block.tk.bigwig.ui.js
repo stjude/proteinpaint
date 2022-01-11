@@ -45,7 +45,10 @@ export async function bigwigUI(genomes, holder) {
 
 function validateInput(doms, genomes) {
 	//Creates the runpp arguments on submit
-	if (!doms.filepath && !doms.multitrackdata) alert('Provide data for either a single track or multiple tracks.')
+	if (!doms.filepath && !doms.multitrackdata) {
+		alert('Provide data for either a single track or multiple tracks.')
+		return
+	}
 	let genome = doms.genomeselect.options[doms.genomeselect.selectedIndex].text
 	const runpp_args = {
 		block: true,
@@ -206,11 +209,6 @@ function submitButton(div, doms, holder, genomes) {
 		.style('margin', '20px 20px 20px 130px')
 		.style('font-size', '16px')
 		.on('click', () => {
-			const bigwig_arg = validateInput(doms, genomes)
-			if (!bigwig_arg) {
-				return
-			}
-			div.remove()
 			const runpp_arg = {
 				holder: holder
 					.append('div')
@@ -218,7 +216,9 @@ function submitButton(div, doms, holder, genomes) {
 					.node(),
 				host: window.location.origin
 			}
-
+			const bigwig_arg = validateInput(doms, genomes)
+			if (!bigwig_arg) return
+			div.remove()
 			runproteinpaint(Object.assign(runpp_arg, bigwig_arg))
 		})
 }
