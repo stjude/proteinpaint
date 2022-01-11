@@ -248,11 +248,11 @@ function setRenderers(self) {
 			dom.top_info_div.style('display', 'none')
 		} else if (input.section.configKey == 'independent') {
 			if (t.term.type == 'float' || t.term.type == 'integer') {
-				dom.term_info_div.html(
+				dom.term_info_div.text(
 					`Use as ${q.mode || 'continuous'} ` +
 						(q.mode !== 'spline' ? 'variable.' : '') +
-						(q.mode == 'continuous' && q.scale ? ` Scale: Per ${q.scale}` : '') +
-						(q.mode == 'spline' ? ` with ${q.knots.length} Knots: ${q.knots.map(v => v.value).join(', ')}` : '')
+						(q.mode == 'continuous' && q.scale && q.scale != 1 ? ` Scale: Per ${q.scale}` : '') +
+						(q.mode == 'spline' ? ` with ${q.knots.length} knots: ${q.knots.map(v => v.value).join(', ')}` : '')
 				)
 				dom.term_summmary_div.html(`${included} sample included.` + (excluded ? ` ${excluded} samples excluded.` : ''))
 			} else if (t.term.type == 'categorical' || t.term.type == 'condition') {
