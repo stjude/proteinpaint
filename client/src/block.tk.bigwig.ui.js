@@ -36,7 +36,7 @@ export async function bigwigUI(genomes, holder) {
 	const doms = {}
 	makePrompt(wrapper, 'Genome')
 	genomeSelection(wrapper, genomes, doms)
-	makePrompt(wrapper, 'Data')
+	makePrompt(wrapper, 'Data').style('align-self', 'baseline')
 	const tabs_div = wrapper.append('div')
 	makeTrackEntryTabs(tabs_div, doms)
 	submitButton(wrapper, doms, holder, genomes)
@@ -104,12 +104,13 @@ function validateInput(doms, genomes) {
 }
 
 function makePrompt(div, text) {
-	div
+	const prompt = div
 		.append('div')
 		.style('display', 'inline-block')
 		.style('margin', '15px')
 		.style('place-items', 'center left')
 		.html(text)
+	return prompt
 }
 
 function makeTrackEntryTabs(tabs_div, doms) {
@@ -150,7 +151,7 @@ function makeTrackEntryTabs(tabs_div, doms) {
 					div
 						.append('div')
 						.html(
-							'<p>Enter one track per line in the following format: [track name],[path/to/file.bw or URL]</p><p style="margin-left: 10px; color: #7d7c7c;">e.g. BigWig Track, proteinpaint_demo/hg19/bigwig/file.bw</p>'
+							'<p style="margin-left: 10px;">Enter one track per line in the following format: [track name],[path/to/file.bw or URL]</p><p style="margin-left: 20px; color: #7d7c7c;">e.g. BigWig Track, proteinpaint_demo/hg19/bigwig/file.bw</p>'
 						)
 					doms.multiInput = multiTrackInput(div, doms)
 					tabs[1].rendered = true
