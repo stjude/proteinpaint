@@ -88,7 +88,6 @@ async function setqDefaults(self) {
 		await getKnots(self, default_knots_count)
 		self.numqByTermIdModeType[self.term.id]['spline'].knots = self.q.knots
 	}
-	delete self.q.type
 	//*** validate self.q ***//
 }
 

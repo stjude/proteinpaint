@@ -1,7 +1,6 @@
 import { getInitFxn, copyMerge } from '../common/rx.core'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
-import { termInfoInit } from '../termdb/termInfo'
 
 /*
 constructor option and API are documented at
@@ -214,7 +213,7 @@ function setRenderers(self) {
 		self.dom.btnDiv = self.dom.holder.append('div')
 	}
 
-	self.updateUI = () => {
+	self.updateUI = async () => {
 		if (!self.term) {
 			// no term
 			self.dom.nopilldiv.style('display', 'block')
@@ -225,7 +224,7 @@ function setRenderers(self) {
 
 		// has term
 		// add info button for terms with meta data
-		if (self.term && self.term.hashtmldetail) {
+		if (self.term.hashtmldetail) {
 			if (self.opts.buttons && !self.opts.buttons.includes('info')) self.opts.buttons.unshift('info')
 			else self.opts.buttons = ['info']
 		}
@@ -247,7 +246,7 @@ function setRenderers(self) {
 				})
 
 			// render info button only if term has html details
-			if (self.term && self.term.hashtmldetail) {
+			if (self.term.hashtmldetail) {
 				const infoIcon_div = self.dom.btnDiv.selectAll('div').filter(function() {
 					return select(this).text() === 'INFO'
 				})
@@ -255,7 +254,8 @@ function setRenderers(self) {
 
 				// TODO: modify termInfoInit() to display term info in tip rather than in div
 				// can be content_tip: self.dom.tip.d to separate it from content_holder
-				termInfoInit({
+				const termInfo = await import('../termdb/termInfo')
+				termInfo.termInfoInit({
 					vocabApi: self.opts.vocabApi,
 					icon_holder: infoIcon_div,
 					content_holder,
@@ -310,15 +310,15 @@ function setRenderers(self) {
 		// only modify right half of the pill
 		const one_term_div = select(this)
 
-		// if using group setting, will show right half
+		// if using groupsetting or term type is condition, will show right half
 		// allow more than 1 flags for future expansion
 		const grpsetting_flag = self.q.groupsetting && self.q.groupsetting.inuse
-
 		const status_msg = self.handler.get_status_msg()
+		const ts_summary_flag = self.term.type == 'condition' || status_msg
 
 		self.dom.pill_termname.style(
 			'border-radius',
-			grpsetting_flag || self.term.type == 'condition' ? '6px 0 0 6px' : '6px'
+			(grpsetting_flag || ts_summary_flag) ? '6px 0 0 6px' : '6px'
 		)
 
 		const pill_settingSummary = one_term_div

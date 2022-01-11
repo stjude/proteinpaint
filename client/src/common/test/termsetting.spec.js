@@ -832,34 +832,31 @@ tape('Conditional term', async test => {
 		tip.d.selectAll('.group_btn')._groups[0][1].innerText.includes('Use'),
 		'Should have "default" group button be inactive'
 	)
-	tip.hide()
 
-	/*
-
-	FIXME: detect draggable divs instead of checkboxes
+	//TODO: detect draggable divs and change groupset by dragging divs
 
 	// devide into 2 groups
 	pilldiv.click()
 	tip.d.selectAll('.group_btn')._groups[0][2].click()
-	d3s
-		.select(tip.d.selectAll('tr')._groups[0][3])
-		.selectAll('input')
-		._groups[0][2].click()
+	tip.d.selectAll('input')
+		._groups[0][1]
+		.innerText = '1'
 	tip.d
 		.selectAll('.apply_btn')
 		.node()
 		.click()
-
+	await sleep(50)
 	test.equal(
 		opts.holder.selectAll('.ts_summary_btn')._groups[0][0].innerText,
-		'2 groups of sub-conditions',
+		'2 groups of grades',
 		'Should have blue pill summary changed by group change'
 	)
 
-	//change back subcondition to grade
 	pilldiv.click()
 	tip.d.selectAll('select')._groups[0][0].selectedIndex = 0
 	tip.d.selectAll('select')._groups[0][0].dispatchEvent(new Event('change'))
+	tip.d.selectAll('.group_btn')._groups[0][1].click()
+	await sleep(50)
 
 	test.equal(
 		opts.holder.selectAll('.term_name_btn')._groups[0][0].innerText,
@@ -871,7 +868,7 @@ tape('Conditional term', async test => {
 		'Max. Grade',
 		'Should have bluepill summary btn "By Max Grade" as default'
 	)
-	*/
+	tip.hide()
 	test.end()
 })
 
