@@ -65,3 +65,16 @@ export function makeTextAreaInput(div, placeholder) {
 
 	return textarea
 }
+
+export function makeBtn(div, text) {
+	const btn = div
+		.append('button')
+		.text(text)
+		.style('color', 'black')
+		.style('background-color', '#F2F2F2')
+		.style('border', '2px solid #999')
+		.style('padding', '5px 10px')
+		.style('cursor', 'pointer')
+
+	return btn
+}

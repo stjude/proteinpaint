@@ -196,18 +196,12 @@ function multiTrackInput(div, doms) {
 }
 
 function submitButton(div, doms, holder, genomes) {
-	const submit = div
-		.append('button')
-		.text('Submit')
+	const submit = uiutils.makeBtn(div, 'Submit')
+	submit
 		.style('margin', '20px 20px 20px 130px')
 		.style('font-size', '16px')
-		.style('color', 'black')
-		.style('background-color', '#F2F2F2')
-		.style('border', '2px solid #999')
-		.style('padding', '5px 10px')
-		.style('cursor', 'pointer')
 		.on('click', () => {
-			d3select('.sjpp-bw-ui').remove()
+			div.remove()
 			const runpp_arg = {
 				holder: holder
 					.append('div')
