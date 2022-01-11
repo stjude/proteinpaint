@@ -408,7 +408,8 @@ function makeSandboxTabs(track) {
 			active: false,
 			callback: async div => {
 				try {
-					makeLeftsideTabMenu(track, div)
+					const examplesOnly = track.ppcalls.filter(p => p.is_ui != true) //Fix to rm UIs from Examples tab
+					makeLeftsideTabMenu(track, div, examplesOnly)
 				} catch (e) {
 					alert('Error: ' + (e.message || e))
 				}
@@ -461,11 +462,8 @@ function sandboxTabMenu(track, tabs_div, content_div) {
 }
 
 //Creates the subtab menu for pursing through examples, on the left-hand side of the sandbox, below the main tabs
-async function makeLeftsideTabMenu(track, div) {
-	// const tabs = track.ppcalls.map(getTabData)
-	const trackORapp = track.app
-
-	const tabs = track.ppcalls.map((p, index) => getTabData(p, index, trackORapp))
+async function makeLeftsideTabMenu(track, div, examplesOnly) {
+	const tabs = examplesOnly.map((p, index) => getTabData(p, index, track.app))
 
 	const menu_wrapper = div.append('div').classed('sjpp-vertical-tab-menu', true)
 	const tabs_div = menu_wrapper
