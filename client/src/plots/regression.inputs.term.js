@@ -255,9 +255,23 @@ export class InputTerm {
 	}
 
 	renderInteractionPrompt() {
-		if (!this.term || this.section.configKey != 'independent' || this.section.inputs.filter(i => i.term).length < 2) {
-			this.dom.interactionDiv.style('display', 'none')
-			return
+		// set to hidden in the beginning; redisplay when interaction is enabled
+		this.dom.interactionDiv.style('display', 'none')
+
+		// identify situations not eligible for showing prompt
+		if (!this.term) return // missing term
+		if (this.section.configKey != 'independent') return
+		if (this.term.q.mode == 'spline') return // not on a spline term
+		{
+			// require minimum of 2 independent terms eligible for interaction
+			let count = 0
+			for (const input of this.section.inputs) {
+				if (input.term && input.term.q.mode != 'spline') {
+					// spline term cannot be used for interaction
+					count++
+				}
+			}
+			if (count < 2) return
 		}
 
 		const n = this.term.interactions.length
@@ -286,7 +300,7 @@ export class InputTerm {
 		self.dom.tip.d
 			.append('div')
 			.selectAll('div')
-			.data(self.parent.config.independent.filter(tw => tw && tw.id !== self.term.id))
+			.data(self.parent.config.independent.filter(tw => tw && tw.id !== self.term.id && tw.q.mode != 'spline'))
 			.enter()
 			.append('div')
 			.style('margin', '5px')
