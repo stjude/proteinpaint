@@ -3,6 +3,8 @@
 use std::process::Command;
 use std::str;
 
+#[allow(unused_mut)] // Remove this line when further building this function
+#[allow(unused_variables)] // Remove this line when further building this function
 fn check_base_pair_quality_scores(
     // Function that checks for base pair quality score to ensure all reads being aligned have high quality reads near the variant position
     quality_score_sequence: &String, // String containing read base pair sequence
@@ -16,14 +18,15 @@ fn check_base_pair_quality_scores(
     right_flanking_region_limit: i64, // Right hand region upto where base-pair quality check needs to be carried out
 ) -> bool {
     let quality_check_pass_fail = true; // Flag to record whether base pair quality check passed or failed
-
+    let high_quality_score_characters: [&str; 11] =
+        ["?", "@", "A", "B", "C", "D", "E", "F", "G", "H", "I"]; // Array storing phred33 base pair quality scores >= 30
     if &alphabets[0].to_string().as_str() == &"S" {
         start_position -= numbers[0].to_string().parse::<i64>().unwrap();
     }
 
     // Parsing part of read base-pair quality sequence which covers the variant and flanking region
-    let mut current_pos = start_position;
-    let mut nclt_pos = 0;
+    let mut current_pos = start_position; // Nucleotide iterator w.r.t genomic coordinates
+    let mut nclt_pos = 0; // Nucleotide iterator w.r.t read being analyzed
     for i in 0..alphabets.len() {
         if &alphabets[i].to_string().as_str() == &"H" {
             // Ignore hardclips
@@ -32,6 +35,19 @@ fn check_base_pair_quality_scores(
             || &alphabets[i].to_string().as_str() == &"S"
         {
             // Checking to see if within variant region or flanking region
+            let fragment_length = numbers[i].to_string().parse::<i64>().unwrap(); // Length of CIGAR fragment
+            let mut current_nucl = current_pos; // Nucleotide iterator w.r.t genomic coordinates (used in for loop below)
+            let mut current_nucl_read = nclt_pos; // Nucleotide iterator w.r.t read being analyzed (used in for loop below)
+            for j in 0..fragment_length {
+                if left_flanking_region_limit <= current_nucl
+                    && current_nucl <= right_flanking_region_limit
+                {}
+
+                current_nucl += 1;
+            }
+
+            current_pos += fragment_length;
+            nclt_pos += fragment_length;
         } else if &alphabets[i].to_string().as_str() == &"D"
             || &alphabets[i].to_string().as_str() == &"N"
         {
@@ -47,6 +63,7 @@ fn check_base_pair_quality_scores(
     quality_check_pass_fail
 }
 
+#[allow(unused_variables)] // Remove this line when further building this function
 pub fn realign_reads(
     sequences: &String, // Variable contains sequences separated by "-" character, the first two sequences contains the ref and alt sequences
     start_positions: &String, // Variable contains start position of reads separated by "-" character
@@ -58,6 +75,8 @@ pub fn realign_reads(
     variant_pos: i64,        // Original variant position
     indel_length: i64,       // Indel length
 ) {
+    // NOTE: This function assumes there is only ONE alternate allele. In case of multi-allelelic variants in a region, may have to employ some machine-learning techniques like KMeans clustering to determine number of alternate alleles at a particular region.
+
     // Select appropriate reads for clustalo alignment
     let flanking_region_length = 10; // This constant describes the region flanking the variant region where each read will be checked for insertions/deletions
     let max_num_reads_alignment = 10; // The maximum number of reads used for clustalo alignment
@@ -126,9 +145,9 @@ pub fn realign_reads(
                             && variant_pos + indel_length + flanking_region_length >= current_pos)
                     {
                         // Need to check if the bases near the variant region are of high quality
-                        println!("Success");
-                        println!("i:{}", i);
-                        println!("cigar_seq:{}", cigar_seq);
+                        //println!("Success");
+                        //println!("i:{}", i);
+                        //println!("cigar_seq:{}", cigar_seq);
                         check_base_pair_quality_scores(
                             &quality_score_seq,
                             &alphabets,

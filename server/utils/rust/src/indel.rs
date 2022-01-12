@@ -902,10 +902,10 @@ fn main() {
         output_diff_scores.push_str(&item.diff_score.to_string()); // Appending diff_score to output_diff_scores string
         output_diff_scores.push_str(&":".to_string()); // Appending ":" to string
     }
-    //println!("alternate_forward_count:{}", alternate_forward_count);
-    //println!("alternate_reverse_count:{}", alternate_reverse_count);
-    //println!("reference_forward_count:{}", reference_forward_count);
-    //println!("reference_reverse_count:{}", reference_reverse_count);
+    println!("alternate_forward_count:{}", alternate_forward_count);
+    println!("alternate_reverse_count:{}", alternate_reverse_count);
+    println!("reference_forward_count:{}", reference_forward_count);
+    println!("reference_reverse_count:{}", reference_reverse_count);
 
     let p_value = strand_analysis(
         alternate_forward_count,

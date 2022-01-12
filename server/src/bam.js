@@ -791,6 +791,11 @@ async function do_query(q) {
 
 			result.allele_pos = out.final_pos // Start position needs to be changed if any of the alleles is blank or missing
 			result.strand_probability = out.strand_probability // Contains FS score of strand bias i.e forward/reverse vs alternate/reference
+			result.alternate_forward_count = out.alternate_forward_count // Number of reads classified as alternate forward
+			result.reference_forward_count = out.reference_forward_count // Number of reads classified as reference forward
+			result.alternate_reverse_count = out.alternate_reverse_count // Number of reads classified as alternate reverse
+			result.reference_reverse_count = out.reference_reverse_count // Number of reads classified as reference reverse
+
 			if (out.strand_significance == true) {
 				// Tells whether the FS score is significant/insignificant
 				result.strand_significance = true

@@ -108,7 +108,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const weight_indel = 10 // Weight when base is inside the indel
 	//const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
 	const fisher_test_threshold = 60 // Fisher exact-test strand analysis significance parameter. See details in this weblink https://gatk.broadinstitute.org/hc/en-us/articles/360035890471
-	const is_realignment_reads = 1 // Realign reads to obtain correct indel sequence (If 1 realignment of reads will be attempted, if 0 no realignment of reads will be performed )
+	const is_realignment_reads = 0 // Realign reads to obtain correct indel sequence (If 1 realignment of reads will be attempted, if 0 no realignment of reads will be performed )
 	//----------------------------------------------------------------------------
 
 	// Checking to see if reference allele is correct or not
@@ -170,10 +170,10 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		is_realignment_reads
 	//console.log({seqRef:refseq, seqMut:altseq, leftFlank:leftflankseq, rightFlank:rightflankseq, readlen: segbplen, variant: q.variant}) // uncomment this line to help creating tests at server/utils/test/rust_indel.spec.js
 
-	fs.writeFile('test.txt', input_data, function(err) {
-		// For catching input to rust pipeline, in case of an error
-		if (err) return console.log(err)
-	})
+	//fs.writeFile('test.txt', input_data, function (err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
 	const time1 = new Date()
 	const rust_output = await utils.run_rust('indel', input_data)
 	const time2 = new Date()
@@ -183,7 +183,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	let categories = []
 	let diff_scores = []
 	let strand_probability = 0 // Contains p_value of strand bias i.e forward/reverse vs alternate/reference
-
+	let alternate_forward_count, alternate_reverse_count, reference_forward_count, reference_reverse_count
 	for (let item of rust_output_list) {
 		if (item.includes('output_gID')) {
 			group_ids = item
@@ -210,6 +210,34 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			//.map(n => Number(n.replace(/\D/g, '')))
 		} else if (item.includes('Final kmer length (from Rust)')) {
 			console.log(item)
+		} else if (item.includes('alternate_forward_count:')) {
+			alternate_forward_count = Number(
+				item
+					.replace(/"/g, '')
+					.replace(/,/g, '')
+					.replace('alternate_forward_count:', '')
+			)
+		} else if (item.includes('alternate_reverse_count:')) {
+			alternate_reverse_count = Number(
+				item
+					.replace(/"/g, '')
+					.replace(/,/g, '')
+					.replace('alternate_reverse_count:', '')
+			)
+		} else if (item.includes('reference_forward_count:')) {
+			reference_forward_count = Number(
+				item
+					.replace(/"/g, '')
+					.replace(/,/g, '')
+					.replace('reference_forward_count:', '')
+			)
+		} else if (item.includes('reference_reverse_count:')) {
+			reference_reverse_count = Number(
+				item
+					.replace(/"/g, '')
+					.replace(/,/g, '')
+					.replace('reference_reverse_count:', '')
+			)
 		} else if (item.includes('strand_probability')) {
 			strand_probability = Number(
 				item
@@ -323,6 +351,10 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		refseq,
 		altseq,
 		leftflankseq,
-		rightflankseq
+		rightflankseq,
+		alternate_forward_count,
+		alternate_reverse_count,
+		reference_forward_count,
+		reference_reverse_count
 	}
 }
