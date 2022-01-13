@@ -89,7 +89,7 @@ function handleNoDensity(self) {
 	}
 }
 
-function makeDensityPlot(self) {
+export function makeDensityPlot(self) {
 	const svg = self.num_obj.svg
 	const data = self.num_obj.density_data
 
@@ -112,7 +112,7 @@ function makeDensityPlot(self) {
 		.range([xpad, width - xpad])
 
 	const x_axis = axisBottom().scale(xscale)
-	if (self.term.type == 'integer') x_axis.tickFormat(format('')) //'.4r'))
+	if (self.term && self.term.type == 'integer') x_axis.tickFormat(format('')) //'.4r'))
 
 	// y-scale
 	const yscale = scaleLinear()
@@ -146,7 +146,7 @@ function makeDensityPlot(self) {
 	g.append('text')
 		.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
 		.attr('font-size', '13px')
-		.text(self.term.unit)
+		.text(self.term ? self.term.unit : '')
 
 	self.num_obj.brush_g = svg
 		.append('g')
