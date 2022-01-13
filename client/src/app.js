@@ -798,6 +798,9 @@ async function parseembedthenurl(arg, app) {
 	if (arg.testInternals && app.debugmode) {
 		await import('../test/internals.js')
 	}
+	if (arg.tkui) {
+		launch_tkUIs(arg, app)
+	}
 }
 
 async function may_launchGeneView(arg, app) {
@@ -1373,6 +1376,13 @@ async function launch_singlecell(arg, app) {
 	} catch (e) {
 		app.error0('Error launching single cell viewer: ' + e)
 		if (e.stack) console.log(e.stack)
+	}
+}
+
+async function launch_tkUIs(arg, app) {
+	if (arg.tkui == 'bigwig') {
+		const p = await import('./block.tk.bigwig.ui')
+		p.bigwigUI(app.genomes, app.holder)
 	}
 }
 

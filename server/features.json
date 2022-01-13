@@ -45,7 +45,7 @@
                     "buttons": [
                         {
                             "name": "Custom Dataset Documentation",
-                            "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.6fe745w9b3hf"
+                            "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.2sz0rhdexazf"
                         }
                     ],
                     "testSpec": {
@@ -146,6 +146,16 @@
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
             "ppcalls":[
                 {
+                    "is_ui": true, 
+                    "runargs": {
+                        "noheader": true,
+                        "nobox": 1, 
+                        "parseurl": 1, 
+                        "tkui": "bigwig"
+                    }
+                },
+                {
+                    "label": "BigWig",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bigwig/file.bw",
                     "urlparam": "?block=on&genome=hg19&bigwigfile=BigWig_Demo,proteinpaint_demo/hg19/bigwig/file.bw",
                     "runargs":{
@@ -162,28 +172,18 @@
                             "height": 100
                         }]
                     },
+                    "buttons": [
+                        {
+                            "name": "Documentation",
+                            "link": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
+                        }
+                    ],
                     "testSpec": {
                         "expected": {"image": 2 }
                     }
-                }
-            ],
-            "sandbox":{
-                "buttons": [
-                    {
-                        "name": "Documentation",
-                        "link": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
-                    }
-                ]
-            },
-            "searchterms": ["coverage", "numeric"]
-        },
-        {
-            "name": "Stranded BigWig",
-            "app": "Genome Browser",
-            "blurb": "With forward & reverse strands",
-            "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-stranded-square.png",
-            "ppcalls": [
+                },
                 {
+                    "label": "Stranded BigWig",
                     "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/strandedbigwig/strandedbigwigDemoData.tar.gz",
                     "runargs": {
                         "parseurl": true,
@@ -200,20 +200,19 @@
                             "type": "bigwigstranded"
                         }]
                     },
+                    "buttons": [
+                        {
+                            "name": "Documentation",
+                            "link": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
+                        }
+                    ],
                     "testSpec": {
                         "expected": {"image": 2 }
                     }
                 }
             ],
-            "sandbox":{
-                "buttons": [
-                    {
-                        "name": "Documentation",
-                        "link": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
-                    }
-                ]
-            },
-            "searchterms": ["bigwig stranded"]
+            "sandbox":{},
+            "searchterms": ["coverage", "numeric"]
         },
         {
             "name": "JSON BED",
