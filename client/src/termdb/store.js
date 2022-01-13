@@ -15,7 +15,7 @@ const defaultState = {
 	tree: {
 		exclude_types: [],
 		expandedTermIds: [],
-		tvsMenuTerm: undefined
+		tvsTerm: undefined
 	},
 	infos: {},
 	search: { isVisible: true },
@@ -176,10 +176,6 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTermIds.splice(i, 1)
 	},
 
-	search_visibility_change(action) {
-		this.state.search.isVisible = action.search_show
-	},
-
 	info_expand(action) {
 		if (!this.state.infos[action.term.id]) {
 			this.state.infos[action.term.id] = { term: action.term, isVisible: true }
@@ -208,15 +204,29 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	filter_search(action) {
-		if (!action.term) throw `missing term for action.type='filter_search'`
-		this.state.tree.tvsMenuTerm = action.term
-		const expandedTermIds = [root_ID]
-		if (action.term.__ancestors) {
-			expandedTermIds.push(...action.term.__ancestors)
+	/*** TODO: may set as state.tvs instead of state.tree.tvs ***/
+	tvs_set_term(action) {
+		if (!action.term) {
+			delete this.state.tree.tvsTerm
+			this.state.search.isVisible = true
+			this.state.tree.expandedTermIds = [root_ID]
+		} else {
+			const expandedTermIds = [root_ID]
+			if (action.term.__ancestors) {
+				expandedTermIds.push(...action.term.__ancestors)
+			}
+
+			if (graphable(action.term)) {
+				this.state.tree.tvsTerm = action.term
+				this.state.search.isVisible = false
+			} else {
+				expandedTermIds.push(action.term.id)
+				this.state.search.isVisible = true
+				delete this.state.tree.tvsTerm
+			}
+
+			this.state.tree.expandedTermIds = expandedTermIds
 		}
-		if (!graphable(action.term)) expandedTermIds.push(action.term.id)
-		this.state.tree.expandedTermIds = expandedTermIds
 	}
 }
 
