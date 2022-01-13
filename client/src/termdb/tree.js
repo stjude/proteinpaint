@@ -77,7 +77,7 @@ class TdbTree {
 		if (action.type.startsWith('filter_')) return true
 		if (action.type.startsWith('cohort_')) return true
 		if (action.type.startsWith('info_')) return true
-		if (action.type == 'tvs_term_set') return true
+		if (action.type == 'tvs_set_term') return true
 		if (action.type == 'app_refresh') return true
 	}
 
@@ -119,7 +119,7 @@ class TdbTree {
 		this.termsById = this.getTermsById()
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
-		/*
+
 		if (this.state.tvsTerm) this.handle_select_tvs(this.state.tvsTerm)
 		else {
 			this.dom.treeDiv.style('display', 'block')
@@ -356,7 +356,7 @@ function setRenderers(self) {
 					.style('cursor', 'default')
 					.on('click', () => {
 						if (self.opts.click_term2select_tvs) {
-							self.app.dispatch({ type: 'tvs_term_set', term })
+							self.app.dispatch({ type: 'tvs_set_term', term })
 						} else if (self.opts.click_term) {
 							self.opts.click_term(term)
 						} else {
@@ -448,7 +448,7 @@ function setInteractivity(self) {
 			.append('span')
 			.html('&laquo; Back to variable selection')
 			.attr('class', 'sja_clbtext')
-			.on('click', () => self.app.dispatch({ type: 'tvs_term_set', term: null }))
+			.on('click', () => self.app.dispatch({ type: 'tvs_set_term', term: null }))
 
 		showTvsMenu({
 			term,

@@ -48,7 +48,7 @@ class TdbApp {
 			else if (o.tree.click_term2select_tvs) {
 				o.search.click_term = term =>
 					this.api.dispatch({
-						type: 'tvs_term_set',
+						type: 'tvs_set_term',
 						term
 					})
 			}

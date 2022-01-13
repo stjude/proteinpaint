@@ -41,7 +41,7 @@ class TermSearch {
 	}
 
 	reactsTo(action) {
-		return action.type.startsWith('search') || action.type.startsWith('cohort') || action.type == 'tvs_term_set'
+		return action.type.startsWith('search') || action.type.startsWith('cohort') || action.type == 'tvs_set_term'
 	}
 
 	getState(appState) {
