@@ -754,6 +754,7 @@ tape('tvs: Cohort + Numerical', async test => {
 
 	const sjcsDensityData = opts.filter.Inner.pills['2'].Inner.num_obj.density_data
 	test.notDeepEqual(sjlifeDensityData, sjcsDensityData, 'should have different density data when changing the cohort')
+	opts.filter.Inner.dom.controlsTip.hide()
 	test.end()
 })
 

@@ -2,7 +2,7 @@ import { select, event } from 'd3-selection'
 import { scaleLinear } from 'd3'
 import * as client from '../client'
 import { addBrushes, addNewBrush } from './tvs.density'
-import { makeDensityPlot } from './termsetting.density'
+import { makeDensityPlot } from './densityplot'
 
 /*
 ********************** EXPORTED
@@ -140,7 +140,8 @@ async function fillMenu(self, div, tvs) {
 
 	if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 
-	makeDensityPlot(self)
+	const density_obj = makeDensityPlot(self.num_obj.svg, self.num_obj.density_data)
+	self.num_obj.brush_g = density_obj.brush_g
 	const maxvalue = self.num_obj.density_data.maxvalue
 	const minvalue = self.num_obj.density_data.minvalue
 
