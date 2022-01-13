@@ -77,6 +77,7 @@ class TdbTree {
 		if (action.type.startsWith('filter_')) return true
 		if (action.type.startsWith('cohort_')) return true
 		if (action.type.startsWith('info_')) return true
+		if (action.type == 'tvs_set_term') return true
 		if (action.type == 'app_refresh') return true
 	}
 
@@ -90,7 +91,9 @@ class TdbTree {
 			// TODO: deprecate "exclude_types" in favor of "usecase"
 			exclude_types: appState.tree.exclude_types,
 			usecase: appState.tree.usecase,
-			infos: appState.infos
+			infos: appState.infos,
+			/*** TODO: may handle as state.tvs, in a separate component ***/
+			tvsTerm: appState.tree.tvsTerm
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
@@ -116,7 +119,13 @@ class TdbTree {
 		this.termsById = this.getTermsById()
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
-		this.renderBranch(root, this.dom.treeDiv)
+
+		if (this.state.tvsTerm) this.handle_select_tvs(this.state.tvsTerm)
+		else {
+			this.dom.treeDiv.style('display', 'block')
+			this.dom.nextDiv.style('display', 'none')
+			this.renderBranch(root, this.dom.treeDiv)
+		}
 	}
 
 	getTermsById() {
@@ -347,7 +356,7 @@ function setRenderers(self) {
 					.style('cursor', 'default')
 					.on('click', () => {
 						if (self.opts.click_term2select_tvs) {
-							self.handle_select_tvs(term)
+							self.app.dispatch({ type: 'tvs_set_term', term })
 						} else if (self.opts.click_term) {
 							self.opts.click_term(term)
 						} else {
@@ -427,9 +436,9 @@ function setInteractivity(self) {
 		self.app.dispatch({ type, termId: term.id })
 	}
 
+	/*** TODO: may handle tvs as a separate component, and not in this tree component ***/
 	self.handle_select_tvs = function(term) {
 		// hide search
-		self.app.dispatch({ type: 'search_visibility_change', search_show: false })
 		self.dom.treeDiv.style('display', 'none')
 		self.dom.nextDiv.selectAll('*').remove()
 		self.dom.nextDiv
@@ -439,12 +448,7 @@ function setInteractivity(self) {
 			.append('span')
 			.html('&laquo; Back to variable selection')
 			.attr('class', 'sja_clbtext')
-			.on('click', () => {
-				// show search
-				self.app.dispatch({ type: 'search_visibility_change', search_show: true })
-				self.dom.treeDiv.style('display', 'block')
-				self.dom.nextDiv.style('display', 'none')
-			})
+			.on('click', () => self.app.dispatch({ type: 'tvs_set_term', term: null }))
 
 		showTvsMenu({
 			term,

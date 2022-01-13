@@ -2,6 +2,7 @@ import * as rx from '../common/rx.core'
 import { root_ID } from './tree'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
+import { graphable } from '../common/termutils'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
@@ -13,7 +14,8 @@ const defaultState = {
 	activeCohort: 0,
 	tree: {
 		exclude_types: [],
-		expandedTermIds: []
+		expandedTermIds: [],
+		tvsTerm: undefined
 	},
 	infos: {},
 	search: { isVisible: true },
@@ -174,10 +176,6 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTermIds.splice(i, 1)
 	},
 
-	search_visibility_change(action) {
-		this.state.search.isVisible = action.search_show
-	},
-
 	info_expand(action) {
 		if (!this.state.infos[action.term.id]) {
 			this.state.infos[action.term.id] = { term: action.term, isVisible: true }
@@ -203,6 +201,31 @@ TdbStore.prototype.actions = {
 				const i = parent.lst.indexOf(filter)
 				parent.lst[i] = replacementFilter
 			}
+		}
+	},
+
+	/*** TODO: may set as state.tvs instead of state.tree.tvs ***/
+	tvs_set_term(action) {
+		if (!action.term) {
+			delete this.state.tree.tvsTerm
+			this.state.search.isVisible = true
+			this.state.tree.expandedTermIds = [root_ID]
+		} else {
+			const expandedTermIds = [root_ID]
+			if (action.term.__ancestors) {
+				expandedTermIds.push(...action.term.__ancestors)
+			}
+
+			if (graphable(action.term)) {
+				this.state.tree.tvsTerm = action.term
+				this.state.search.isVisible = false
+			} else {
+				expandedTermIds.push(action.term.id)
+				this.state.search.isVisible = true
+				delete this.state.tree.tvsTerm
+			}
+
+			this.state.tree.expandedTermIds = expandedTermIds
 		}
 	}
 }

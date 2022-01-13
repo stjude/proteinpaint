@@ -41,7 +41,7 @@ class TermSearch {
 	}
 
 	reactsTo(action) {
-		return action.type.startsWith('search') || action.type.startsWith('cohort')
+		return action.type.startsWith('search') || action.type.startsWith('cohort') || action.type == 'tvs_set_term'
 	}
 
 	getState(appState) {
@@ -176,6 +176,8 @@ function setRenderers(self) {
 				if (term.__ancestors) {
 					expandedTermIds.push(...term.__ancestors)
 				}
+				// pre-expand non-selectable parent term
+				if (!graphable(term)) expandedTermIds.push(term.id)
 				self.app.dispatch({
 					type: 'app_refresh',
 					state: {

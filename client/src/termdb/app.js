@@ -45,7 +45,14 @@ class TdbApp {
 			}
 			if (!o.search) o.search = {}
 			if (o.tree.click_term) o.search.click_term = o.tree.click_term
-			else if (o.tree.click_term2select_tvs) o.search.click_term = o.tree.click_term2select_tvs
+			else if (o.tree.click_term2select_tvs) {
+				o.search.click_term = term =>
+					this.api.dispatch({
+						type: 'tvs_set_term',
+						term
+					})
+			}
+
 			if (o.tree.disable_terms) o.search.disable_terms = o.tree.disable_terms
 		}
 		return o
