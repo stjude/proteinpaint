@@ -90,7 +90,8 @@ class TdbTree {
 			// TODO: deprecate "exclude_types" in favor of "usecase"
 			exclude_types: appState.tree.exclude_types,
 			usecase: appState.tree.usecase,
-			infos: appState.infos
+			infos: appState.infos,
+			tvsMenuTerm: appState.tree.tvsMenuTerm
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
@@ -116,7 +117,8 @@ class TdbTree {
 		this.termsById = this.getTermsById()
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
-		this.renderBranch(root, this.dom.treeDiv)
+		if (this.state.tvsMenuTerm && graphable(this.state.tvsMenuTerm)) this.handle_select_tvs(this.state.tvsMenuTerm)
+		else this.renderBranch(root, this.dom.treeDiv)
 	}
 
 	getTermsById() {

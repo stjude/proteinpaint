@@ -2,6 +2,7 @@ import * as rx from '../common/rx.core'
 import { root_ID } from './tree'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
+import { graphable } from '../common/termutils'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
@@ -13,7 +14,8 @@ const defaultState = {
 	activeCohort: 0,
 	tree: {
 		exclude_types: [],
-		expandedTermIds: []
+		expandedTermIds: [],
+		tvsMenuTerm: undefined
 	},
 	infos: {},
 	search: { isVisible: true },
@@ -204,6 +206,17 @@ TdbStore.prototype.actions = {
 				parent.lst[i] = replacementFilter
 			}
 		}
+	},
+
+	filter_search(action) {
+		if (!action.term) throw `missing term for action.type='filter_search'`
+		this.state.tree.tvsMenuTerm = action.term
+		const expandedTermIds = [root_ID]
+		if (action.term.__ancestors) {
+			expandedTermIds.push(...action.term.__ancestors)
+		}
+		if (!graphable(action.term)) expandedTermIds.push(action.term.id)
+		this.state.tree.expandedTermIds = expandedTermIds
 	}
 }
 

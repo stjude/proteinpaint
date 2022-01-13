@@ -205,6 +205,7 @@ function getSelectRemovePos(j) {
 }
 
 function setTvsDefaults(tvs) {
+	if (!tvs.values) tvs.values = []
 	if (!tvs.bar_by_grade && !tvs.bar_by_children_) {
 		tvs.bar_by_grade = true
 	}
