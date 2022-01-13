@@ -332,7 +332,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 				(k == bamcommon.type_supportref
 					? 'reference allele'
 					: k == bamcommon.type_supportalt
-					? 'mutant allele'
+					? 'alternate allele'
 					: 'neither reference or mutant alleles')
 		})
 		g.widths = region_widths
