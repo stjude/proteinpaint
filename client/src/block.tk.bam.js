@@ -641,7 +641,8 @@ function may_render_variant(data, tk, block) {
 			.style('font-size', '0.8em')
 			.style('color', '#303030')
 			.style('margin', '5px 5px 20px 5px')
-			.style('border-spacing', 0)
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
 			.style('border-collapse', 'collapse')
 			.style('text-align', 'center')
 			.style('empty-cells', 'show')
@@ -650,7 +651,11 @@ function may_render_variant(data, tk, block) {
 			.style('color', 'white')
 			.style('background-color', 'white')
 		label_tr.attr('id', 'LabelRow')
-		const blank_cell = label_tr.append('td')
+		const blank_cell = label_tr
+			.append('td')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
 		const alternate_td = label_tr
 			.append('td')
 			.text('Alternate')
@@ -659,6 +664,12 @@ function may_render_variant(data, tk, block) {
 			.style('margin', '5px 5px 10px 5px')
 			.style('color', 'black')
 			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
 		const reference_td = label_tr
 			.append('td')
 			.text('Reference')
@@ -667,6 +678,12 @@ function may_render_variant(data, tk, block) {
 			.style('margin', '5px 5px 10px 5px')
 			.style('color', 'black')
 			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
 		const forward_tr = contigent_table
 			.append('tr')
 			.style('color', 'white')
@@ -680,6 +697,9 @@ function may_render_variant(data, tk, block) {
 			.style('margin', '5px 5px 10px 5px')
 			.style('color', 'black')
 			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
 		const alternate_forward_td = forward_tr
 			.append('td')
 			.text(data.alternate_forward_count)
@@ -694,6 +714,9 @@ function may_render_variant(data, tk, block) {
 			.style('margin', '5px 5px 10px 5px')
 			.style('color', 'black')
 			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
 		const reverse_tr = contigent_table
 			.append('tr')
 			.style('color', 'white')
@@ -707,6 +730,9 @@ function may_render_variant(data, tk, block) {
 			.style('margin', '5px 5px 10px 5px')
 			.style('color', 'black')
 			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
 		const alternate_reverse_td = reverse_tr
 			.append('td')
 			.text(data.alternate_reverse_count)
@@ -714,6 +740,9 @@ function may_render_variant(data, tk, block) {
 			.style('margin', '5px 5px 10px 5px')
 			.style('color', 'black')
 			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
 		const reference_reverse_td = reverse_tr
 			.append('td')
 			.text(data.reference_reverse_count)
@@ -721,6 +750,9 @@ function may_render_variant(data, tk, block) {
 			.style('margin', '5px 5px 10px 5px')
 			.style('color', 'black')
 			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
 	})
 
 	if (Number.isFinite(data.max_diff_score)) {
