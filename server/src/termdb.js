@@ -86,7 +86,8 @@ function trigger_gettermdbconfig(res, tdb) {
 			selectCohort: tdb.selectCohort, // optional
 			cumincplot4condition: tdb.cumincplot4condition, // optional
 			survivalplot: tdb.survivalplot, // optional
-			supportedChartTypes: tdb.q.getSupportedChartTypes()
+			supportedChartTypes: tdb.q.getSupportedChartTypes(),
+			allowedTermTypes: tdb.allowedTermTypes || []
 		}
 	})
 }

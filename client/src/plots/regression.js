@@ -59,7 +59,8 @@ class Regression {
 			formIsComplete: config.outcome && config.independent.length,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			config
+			config,
+			allowedTermTypes: appState.termdbConfig.allowedTermTypes
 		}
 	}
 
