@@ -14,10 +14,12 @@ const defaultState = {
 	activeCohort: 0,
 	tree: {
 		exclude_types: [],
-		expandedTermIds: [],
-		tvsTerm: undefined
+		expandedTermIds: []
 	},
-	infos: {},
+	submenu: {
+		// type: 'tvs', may add other types later
+		// term: {} or undefined
+	},
 	search: { isVisible: true },
 	termfilter: {
 		filter: {
@@ -176,17 +178,6 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTermIds.splice(i, 1)
 	},
 
-	info_expand(action) {
-		if (!this.state.infos[action.term.id]) {
-			this.state.infos[action.term.id] = { term: action.term, isVisible: true }
-		}
-		this.state.infos[action.term.id].isVisible = true
-	},
-
-	info_collapse(action) {
-		this.state.infos[action.term.id].isVisible = false
-	},
-
 	filter_replace(action) {
 		const replacementFilter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
 		if (!action.filter.tag) {
@@ -204,25 +195,22 @@ TdbStore.prototype.actions = {
 		}
 	},
 
-	/*** TODO: may set as state.tvs instead of state.tree.tvs ***/
-	tvs_set_term(action) {
-		if (!action.term) {
-			delete this.state.tree.tvsTerm
-			this.state.search.isVisible = true
+	submenu_set(action) {
+		const term = action.submenu && action.submenu.term
+		if (!term) {
+			this.state.submenu = {}
 			this.state.tree.expandedTermIds = [root_ID]
 		} else {
 			const expandedTermIds = [root_ID]
-			if (action.term.__ancestors) {
-				expandedTermIds.push(...action.term.__ancestors)
+			if (term.__ancestors) {
+				expandedTermIds.push(...term.__ancestors)
 			}
 
-			if (graphable(action.term)) {
-				this.state.tree.tvsTerm = action.term
-				this.state.search.isVisible = false
+			if (graphable(term)) {
+				Object.assign(this.state.submenu, action.submenu)
 			} else {
-				expandedTermIds.push(action.term.id)
-				this.state.search.isVisible = true
-				delete this.state.tree.tvsTerm
+				expandedTermIds.push(term.id)
+				delete this.state.submenu.term
 			}
 
 			this.state.tree.expandedTermIds = expandedTermIds

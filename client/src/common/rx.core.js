@@ -347,7 +347,8 @@ export function getAppApi(self) {
 		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender']
 		if (self.customEvents) self.eventTypes.push(...self.customEvents)
 		// set up a required event bus
-		self.bus = new Bus(api, self.eventTypes, self.opts.callbacks || {})
+		const callbacks = self.opts.callbacks || (self.type == 'app' && self.opts.app && self.opts.app.callbacks) || {}
+		self.bus = new Bus(api, self.eventTypes, callbacks)
 	}
 	return api
 }
