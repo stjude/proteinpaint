@@ -119,7 +119,6 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	}
 
 	const sequence_reads = templates_info.map(i => i.sam_info.split('\t')[9]).join('-')
-	const quality_scores = templates_info.map(i => i.sam_info.split('\t')[10]).join('-')
 	const start_positions = templates_info.map(i => i.sam_info.split('\t')[3]).join('-')
 	const cigar_sequences = templates_info.map(i => i.sam_info.split('\t')[5]).join('-')
 	const sequence_flags = templates_info.map(i => i.sam_info.split('\t')[1]).join('-')
@@ -134,7 +133,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		q.variant.strictness = 1
 	}
 
-	const input_data =
+	let input_data =
 		sequences +
 		'_' +
 		start_positions +
@@ -142,8 +141,6 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		cigar_sequences +
 		'_' +
 		sequence_flags +
-		'_' +
-		quality_scores +
 		'_' +
 		final_pos.toString() +
 		'_' +
@@ -163,11 +160,13 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		'_' +
 		leftflankseq +
 		'_' +
-		rightflankseq +
-		'_' +
-		clustalo_read_alignment +
-		'_' +
-		is_realignment_reads
+		rightflankseq
+
+	if (is_realignment_reads == 1) {
+		// When realignment of reads is neccessary, quality scores and path to clustalo is passed for determining correct indel sequence (not functional, currently in development)
+		const quality_scores = templates_info.map(i => i.sam_info.split('\t')[10]).join('-')
+		input_data += clustalo_read_alignment + '_' + quality_scores + '_' + is_realignment_reads
+	}
 	//console.log({seqRef:refseq, seqMut:altseq, leftFlank:leftflankseq, rightFlank:rightflankseq, readlen: segbplen, variant: q.variant}) // uncomment this line to help creating tests at server/utils/test/rust_indel.spec.js
 
 	//fs.writeFile('test.txt', input_data, function (err) {

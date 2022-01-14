@@ -273,19 +273,16 @@ fn main() {
     let start_positions: String = args[1].parse::<String>().unwrap(); // Variable contains start position of reads separated by "-" character
     let cigar_sequences: String = args[2].parse::<String>().unwrap(); // Variable contains cigar sequences separated by "-" character
     let sequence_flags: String = args[3].parse::<String>().unwrap(); // Variable contains sam flags of reads separated by "-" character
-    let quality_scores: String = args[4].parse::<String>().unwrap(); // Variable contains quality scores of reads separated by "-" character
-    let variant_pos: i64 = args[5].parse::<i64>().unwrap(); // Variant position
-    let segbplen: i64 = args[6].parse::<i64>().unwrap(); // read sequence length
-    let refallele: String = args[7].parse::<String>().unwrap(); // Reference allele
-    let altallele: String = args[8].parse::<String>().unwrap(); // Alternate allele
-    let min_kmer_length: i64 = args[9].parse::<i64>().unwrap(); // Initializing kmer length
-    let weight_no_indel: f64 = args[10].parse::<f64>().unwrap(); // Weight of base pair if outside indel region
-    let weight_indel: f64 = args[11].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
-    let strictness: usize = args[12].parse::<usize>().unwrap(); // strictness of the pipeline
-    let leftflankseq: String = args[13].parse::<String>().unwrap(); //Left flanking sequence
-    let rightflankseq: String = args[14].parse::<String>().unwrap(); //Right flanking sequence.
-    let clustalo_path: String = args[15].parse::<String>().unwrap(); // Removing "\n" from the end of the string
-    let is_realignment_reads: u64 = args[16].replace("\n", "").parse::<u64>().unwrap() as u64; // Flag to decide if realignment of reads will be carried out to determine correct indel sequence (1: Carry out realignment, 0: No realignment)
+    let variant_pos: i64 = args[4].parse::<i64>().unwrap(); // Variant position
+    let segbplen: i64 = args[5].parse::<i64>().unwrap(); // read sequence length
+    let refallele: String = args[6].parse::<String>().unwrap(); // Reference allele
+    let altallele: String = args[7].parse::<String>().unwrap(); // Alternate allele
+    let min_kmer_length: i64 = args[8].parse::<i64>().unwrap(); // Initializing kmer length
+    let weight_no_indel: f64 = args[9].parse::<f64>().unwrap(); // Weight of base pair if outside indel region
+    let weight_indel: f64 = args[10].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
+    let strictness: usize = args[11].parse::<usize>().unwrap(); // strictness of the pipeline
+    let leftflankseq: String = args[12].parse::<String>().unwrap(); //Left flanking sequence
+    let rightflankseq: String = args[13].parse::<String>().unwrap(); //Right flanking sequence.
 
     //let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
     let mut leftflank_nucleotides: Vec<char> = leftflankseq.chars().collect(); // Vector containing left flanking nucleotides
@@ -319,7 +316,10 @@ fn main() {
     }
     let surrounding_region_length: i64 = 80; // Flanking region on both sides upto which it will search for duplicate kmers
 
-    if is_realignment_reads == 1 {
+    if args.len() > 14 {
+        // This is true when realigning reads to determine correct indel sequence. Currently in development (not functional)
+        let clustalo_path: String = args[14].parse::<String>().unwrap(); // Removing "\n" from the end of the string
+        let quality_scores: String = args[15].parse::<String>().unwrap(); // Variable contains quality scores of reads separated by "-" character
         realign::realign_reads(
             &sequences,
             &start_positions,
