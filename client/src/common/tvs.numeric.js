@@ -166,7 +166,7 @@ async function fillMenu(self, div, tvs) {
 	addRangeTable(self)
 	if (!ranges.length) {
 		const callback = () => addRangeTable(self)
-		addNewBrush(self, null, callback)
+		addNewBrush(self, 'center', callback)
 	}
 	self.num_obj.brushes.forEach(brush => brush.init())
 	await showCheckList_numeric(self, tvs, div)
