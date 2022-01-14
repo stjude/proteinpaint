@@ -1,6 +1,7 @@
 import { select, mouse } from 'd3-selection'
-import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, drag as d3drag, format } from 'd3'
+import { scaleLinear, drag as d3drag } from 'd3'
 import { get_bin_label } from '../../shared/termdb.bins'
+import { makeDensityPlot } from './densityplot'
 
 export async function setDensityPlot(self) {
 	if (self.num_obj.density_data.maxvalue == self.num_obj.density_data.minvalue) {
@@ -13,7 +14,19 @@ export async function setDensityPlot(self) {
 		const div = self.q.mode == 'spline' ? self.dom.knots_div : self.dom.bins_div
 		self.num_obj.svg = div.select('svg').size() ? div.select('svg') : div.append('svg')
 		self.num_obj.svg.selectAll('*').remove()
-		makeDensityPlot(self)
+		const density_plot_opts = {
+			svg: self.num_obj.svg,
+			data: self.num_obj.density_data,
+			term: self.term,
+			plot_size: self.num_obj.plot_size
+		}
+		makeDensityPlot(density_plot_opts)
+
+		// add binsize_g for termsetting lines
+		self.num_obj.binsize_g = self.num_obj.svg
+			.append('g')
+			.attr('transform', `translate(${self.num_obj.plot_size.xpad}, ${self.num_obj.plot_size.ypad})`)
+			.attr('class', 'binsize_g')
 
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
@@ -87,82 +100,6 @@ function handleNoDensity(self) {
 			self.num_obj.custom_bins_q.lst = custom_bins
 		}
 	}
-}
-
-function makeDensityPlot(self) {
-	const svg = self.num_obj.svg
-	const data = self.num_obj.density_data
-
-	const width = 500,
-		height = 100,
-		xpad = 10,
-		ypad = 20,
-		xaxis_height = 20
-
-	svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
-
-	//density data, add first and last values to array
-	const density_data = data.density
-	density_data.unshift([data.minvalue, 0])
-	density_data.push([data.maxvalue, 0])
-
-	// x-axis
-	const xscale = scaleLinear()
-		.domain([data.minvalue, data.maxvalue])
-		.range([xpad, width - xpad])
-
-	const x_axis = axisBottom().scale(xscale)
-	if (self.term.type == 'integer') x_axis.tickFormat(format('')) //'.4r'))
-
-	// y-scale
-	const yscale = scaleLinear()
-		.domain([0, data.densitymax])
-		.range([height + ypad, ypad])
-
-	const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
-
-	// SVG line generator
-	const line = d3line()
-		.x(function(d) {
-			return xscale(d[0])
-		})
-		.y(function(d) {
-			return yscale(d[1])
-		})
-		.curve(curveMonotoneX)
-
-	// plot the data as a line
-	g.append('path')
-		.datum(density_data)
-		.attr('class', 'line')
-		.attr('d', line)
-		.style('fill', '#eee')
-		.style('stroke', '#000')
-
-	g.append('g')
-		.attr('transform', `translate(0, ${ypad + height})`)
-		.call(x_axis)
-
-	g.append('text')
-		.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
-		.attr('font-size', '13px')
-		.text(self.term.unit)
-
-	self.num_obj.brush_g = svg
-		.append('g')
-		.attr('class', 'brush_g')
-		.attr('transform', `translate(${xpad}, ${ypad})`)
-
-	self.num_obj.binsize_g = svg
-		.append('g')
-		.attr('class', 'binsize_g')
-		.attr('transform', `translate(${xpad}, ${ypad})`)
-
-	self.num_obj.custombins_g = svg
-		.append('g')
-		.attr('class', 'custombins_g')
-		.attr('transform', `translate(${xpad}, ${ypad})`)
-		.style('display', 'none')
 }
 
 function renderBinLines(self, data) {
