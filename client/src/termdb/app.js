@@ -1,9 +1,10 @@
 import { getAppInit, multiInit } from '../common/rx.core'
-import { select } from 'd3-selection'
+import { storeInit } from './store'
 import { vocabInit } from './vocabulary'
 import { treeInit } from './tree'
-import { storeInit } from './store'
+import { submenuInit } from './submenu'
 import { searchInit } from './search'
+import { select } from 'd3-selection'
 import { sayerror, Menu } from '../client'
 
 /*
@@ -18,7 +19,7 @@ git branch
 
 class TdbApp {
 	constructor(opts) {
-		this.type = 'termdb'
+		this.type = 'app'
 		if (!opts.holder) select('body').append('div')
 		// do this in the constructor to have an dom.errdiv
 		// available at any point during initialization
@@ -48,8 +49,8 @@ class TdbApp {
 			else if (o.tree.click_term2select_tvs) {
 				o.search.click_term = term =>
 					this.api.dispatch({
-						type: 'tvs_set_term',
-						term
+						type: 'submenu_set',
+						submenu: { term, type: 'tvs' }
 					})
 			}
 
@@ -79,7 +80,7 @@ class TdbApp {
 
 	async setComponents() {
 		try {
-			this.components = await multiInit({
+			const compPromises = {
 				/*
 			 	TODO: may need to handle a cohort filter option as an OPTIONAL component 
 			  filter: filterInit({
@@ -93,9 +94,18 @@ class TdbApp {
 				}),
 				tree: treeInit({
 					app: this.api,
-					holder: this.dom.holder.append('div')
+					holder: this.dom.holder.append('div').style('display', 'block')
 				})
-			})
+			}
+
+			if (this.opts.tree && this.opts.tree.click_term2select_tvs) {
+				compPromises.submenu = submenuInit({
+					app: this.api,
+					holder: this.dom.holder.append('div').style('display', 'none')
+				})
+			}
+
+			this.components = await multiInit(compPromises)
 		} catch (e) {
 			throw e
 		}

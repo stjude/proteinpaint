@@ -1,10 +1,9 @@
-import * as rx from '../common/rx.core'
+import { getCompInit } from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
 import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
 import { isUsableTerm } from '../../shared/termdb.usecase'
 import { termInfoInit } from './termInfo'
-import { showTvsMenu } from '../common/tvs'
 
 const childterm_indent = '25px'
 export const root_ID = 'root'
@@ -55,12 +54,9 @@ class TdbTree {
 	*/
 	constructor(opts) {
 		this.type = 'tree'
-		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
+
 		this.dom = {
-			holder: opts.holder,
-			treeDiv: opts.holder.append('div'),
-			nextDiv: opts.holder.append('div').style('display', 'none')
+			holder: opts.holder
 		}
 
 		// attach instance-specific methods via closure
@@ -70,6 +66,8 @@ class TdbTree {
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
 		this.termsByCohort = {}
+
+		//getCompInit(TdbTree) will set this.id, .app, .opts, .api
 	}
 
 	reactsTo(action) {
@@ -77,13 +75,14 @@ class TdbTree {
 		if (action.type.startsWith('filter_')) return true
 		if (action.type.startsWith('cohort_')) return true
 		if (action.type.startsWith('info_')) return true
-		if (action.type == 'tvs_set_term') return true
+		if (action.type.startsWith('submenu_')) return true
 		if (action.type == 'app_refresh') return true
 	}
 
 	getState(appState) {
 		const filter = getNormalRoot(appState.termfilter.filter)
 		const state = {
+			isVisible: !appState.submenu.term,
 			activeCohort: appState.activeCohort,
 			expandedTermIds: appState.tree.expandedTermIds,
 			termfilter: { filter },
@@ -91,9 +90,7 @@ class TdbTree {
 			// TODO: deprecate "exclude_types" in favor of "usecase"
 			exclude_types: appState.tree.exclude_types,
 			usecase: appState.tree.usecase,
-			infos: appState.infos,
-			/*** TODO: may handle as state.tvs, in a separate component ***/
-			tvsTerm: appState.tree.tvsTerm
+			infos: appState.infos
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
@@ -108,6 +105,11 @@ class TdbTree {
 	}
 
 	async main() {
+		if (!this.state.isVisible) {
+			this.dom.holder.style('display', 'none')
+			return
+		}
+
 		if (this.state.toSelectCohort) {
 			// dataset requires a cohort to be selected
 			if (!this.state.cohortValuelst) {
@@ -119,13 +121,8 @@ class TdbTree {
 		this.termsById = this.getTermsById()
 		const root = this.termsById[root_ID]
 		root.terms = await this.requestTermRecursive(root)
-
-		if (this.state.tvsTerm) this.handle_select_tvs(this.state.tvsTerm)
-		else {
-			this.dom.treeDiv.style('display', 'block')
-			this.dom.nextDiv.style('display', 'none')
-			this.renderBranch(root, this.dom.treeDiv)
-		}
+		this.dom.holder.style('display', 'block')
+		this.renderBranch(root, this.dom.holder)
 	}
 
 	getTermsById() {
@@ -193,7 +190,7 @@ class TdbTree {
 	}
 }
 
-export const treeInit = rx.getInitFxn(TdbTree)
+export const treeInit = getCompInit(TdbTree)
 
 function setRenderers(self) {
 	/*
@@ -356,7 +353,7 @@ function setRenderers(self) {
 					.style('cursor', 'default')
 					.on('click', () => {
 						if (self.opts.click_term2select_tvs) {
-							self.app.dispatch({ type: 'tvs_set_term', term })
+							self.app.dispatch({ type: 'submenu_set', submenu: { term, type: 'tvs' } })
 						} else if (self.opts.click_term) {
 							self.opts.click_term(term)
 						} else {
@@ -434,29 +431,5 @@ function setInteractivity(self) {
 		const expanded = self.state.expandedTermIds.includes(term.id)
 		const type = expanded ? 'tree_collapse' : 'tree_expand'
 		self.app.dispatch({ type, termId: term.id })
-	}
-
-	/*** TODO: may handle tvs as a separate component, and not in this tree component ***/
-	self.handle_select_tvs = function(term) {
-		// hide search
-		self.dom.treeDiv.style('display', 'none')
-		self.dom.nextDiv.selectAll('*').remove()
-		self.dom.nextDiv
-			.style('display', 'block')
-			.append('div')
-			.style('margin', '20px')
-			.append('span')
-			.html('&laquo; Back to variable selection')
-			.attr('class', 'sja_clbtext')
-			.on('click', () => self.app.dispatch({ type: 'tvs_set_term', term: null }))
-
-		showTvsMenu({
-			term,
-			filter: self.state.termfilter.filter,
-			holder: self.dom.nextDiv.append('div'),
-			vocabApi: self.app.vocabApi,
-			debug: self.app.debug,
-			callback: self.opts.click_term2select_tvs
-		})
 	}
 }

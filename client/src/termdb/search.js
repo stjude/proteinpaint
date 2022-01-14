@@ -41,11 +41,13 @@ class TermSearch {
 	}
 
 	reactsTo(action) {
-		return action.type.startsWith('search') || action.type.startsWith('cohort') || action.type == 'tvs_set_term'
+		const prefix = action.type.split('_')[0]
+		return ['search', 'cohort', 'submenu'].includes(prefix)
 	}
 
 	getState(appState) {
 		return {
+			isVisible: !appState.submenu.term,
 			cohortStr:
 				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
 					? ''
@@ -61,7 +63,7 @@ class TermSearch {
 
 	async main() {
 		// show/hide search input from the tree
-		this.dom.holder.style('display', this.state.search.isVisible ? 'block' : 'none')
+		this.dom.holder.style('display', this.state.isVisible ? 'block' : 'none')
 	}
 
 	async doSearch(str) {

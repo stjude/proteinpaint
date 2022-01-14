@@ -86,7 +86,7 @@ tape('term search, default behavior', function(test) {
 	}
 
 	function testClickResult_firstSearch(tree) {
-		const termdivs = tree.Inner.dom.treeDiv.selectAll('.termdiv')
+		const termdivs = tree.Inner.dom.holder.selectAll('.termdiv')
 		test.ok(termdivs.nodes().length > 3, 'updated tree should show more than 3 terms')
 		test.equal(
 			termdivs.filter(i => i.id == clickedTerm_firstSearch.id).size(),
@@ -171,9 +171,10 @@ tape('tree.click_term2select_tvs', test => {
 		}
 	})
 
-	let tree
+	let tree, app
 	function runTests(search) {
-		tree = search.Inner.app.getComponents('tree')
+		app = search.Inner.app.Inner
+		tree = app.components.tree
 		helpers
 			.rideInit({ arg: search, bus: search, eventType: 'postSearch' })
 			.use(triggerSearch, { wait: 200 })
@@ -195,12 +196,12 @@ tape('tree.click_term2select_tvs', test => {
 	}
 	function testTvsMenu(search) {
 		test.equal(
-			tree.Inner.dom.treeDiv.style('display'),
+			tree.Inner.dom.holder.style('display'),
 			'none',
 			'should hide the tree div when a search result is clicked to a open tvs menu'
 		)
 		test.notEqual(
-			tree.Inner.dom.nextDiv.style('display'),
+			app.components.submenu.Inner.dom.holder.style('display'),
 			'none',
 			'should show the next div when a search result is clicked to a open tvs menu'
 		)
