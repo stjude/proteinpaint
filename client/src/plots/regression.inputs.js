@@ -385,27 +385,31 @@ function mayAddBlankInput(section, self) {
 	if (section.inputs.length < section.limit) {
 		if (!section.inputs.find(input => !input.term)) {
 			// section doesn't have blank input, create one; works for both outcome/independent
+
+			// TODO mark out this Input is for dictionary terms, in termsetting?
 			section.inputs.push(new InputTerm({ section, parent: self }))
 
 			if (section.configKey == 'independent') {
 				// this section is independent, not outcome
-				// may show additional term types
-				if (self.state.allowedTermTypes.includes('snplst')) {
-					// TODO trying to reuse existing function and show "Supply a list of SNPs"
-					section.inputs.push(
-						new InputTerm({
-							section,
-							parent: self,
-							term: {
-								id: '?',
+				// may show prompts for adding additional term types
+				const supportedTypes = ['snplst']
+				for (const type of supportedTypes) {
+					if (self.state.allowedTermTypes.includes(type)) {
+						section.inputs.push(
+							new InputTerm({
+								section,
+								parent: self,
 								term: {
 									id: '?',
-									type: 'snplst'
-								},
-								q: {}
-							}
-						})
-					)
+									term: {
+										id: '?',
+										type
+									},
+									q: {}
+								}
+							})
+						)
+					}
 				}
 			}
 		}
