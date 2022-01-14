@@ -20,7 +20,6 @@ const defaultState = {
 		// type: 'tvs', may add other types later
 		// term: {} or undefined
 	},
-	infos: {},
 	search: { isVisible: true },
 	termfilter: {
 		filter: {
@@ -177,17 +176,6 @@ TdbStore.prototype.actions = {
 		const i = this.state.tree.expandedTermIds.indexOf(action.termId)
 		if (i == -1) return
 		this.state.tree.expandedTermIds.splice(i, 1)
-	},
-
-	info_expand(action) {
-		if (!this.state.infos[action.term.id]) {
-			this.state.infos[action.term.id] = { term: action.term, isVisible: true }
-		}
-		this.state.infos[action.term.id].isVisible = true
-	},
-
-	info_collapse(action) {
-		this.state.infos[action.term.id].isVisible = false
 	},
 
 	filter_replace(action) {

@@ -86,11 +86,9 @@ class TdbTree {
 			activeCohort: appState.activeCohort,
 			expandedTermIds: appState.tree.expandedTermIds,
 			termfilter: { filter },
-			bar_click_menu: appState.bar_click_menu,
 			// TODO: deprecate "exclude_types" in favor of "usecase"
 			exclude_types: appState.tree.exclude_types,
-			usecase: appState.tree.usecase,
-			infos: appState.infos
+			usecase: appState.tree.usecase
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {

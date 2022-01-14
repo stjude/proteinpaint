@@ -48,40 +48,6 @@ class TdbTermInfo {
 
 export const termInfoInit = getInitFxn(TdbTermInfo)
 
-/* 
-	rx-pluggable version: 
-	- extend a class instead of using a parent wrapper component
-	- reference in parentComponent.components for this to get notified of state changes,
-	- the parentComponent does NOT have to call termInfoInstance.main(...)
-	- rx will automatically detect if this component needs to update/rerender
-*/
-class TdbTermInfoComp extends TdbTermInfo {
-	/*
-	opts:
-		same as the constructor opts plus these attributes
-		.id: INT
-			- optional, to be used to get this component's state
-
-		.app 
-			- an app API with a .vocabApi{getTermInfo} instance and a dispatch() method
-	*/
-	constructor(opts) {
-		super(opts)
-		this.type = 'termInfo'
-		this.mainArg = 'state'
-	}
-
-	getState(appState) {
-		const config = appState.infos[this.id]
-		return {
-			isVisible: config && config.isVisible,
-			term: config && config.term
-		}
-	}
-}
-
-export const termInfoComp = getCompInit(TdbTermInfoComp)
-
 function setRenderers(self) {
 	self.initUI = function(opts) {
 		self.dom = {
