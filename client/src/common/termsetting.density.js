@@ -14,8 +14,8 @@ export async function setDensityPlot(self) {
 		const div = self.q.mode == 'spline' ? self.dom.knots_div : self.dom.bins_div
 		self.num_obj.svg = div.select('svg').size() ? div.select('svg') : div.append('svg')
 		self.num_obj.svg.selectAll('*').remove()
-		const density_obj = makeDensityPlot(self.num_obj.svg, self.num_obj.density_data, self.term)
-		self.num_obj.binsize_g = density_obj.binsize_g
+		self.num_obj.binsize_g = makeDensityPlot(self.num_obj.svg, self.num_obj.density_data, self.term)
+		self.num_obj.binsize_g.attr('class', 'binsize_g')
 
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue

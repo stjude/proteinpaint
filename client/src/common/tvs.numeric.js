@@ -140,8 +140,8 @@ async function fillMenu(self, div, tvs) {
 
 	if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 
-	const density_obj = makeDensityPlot(self.num_obj.svg, self.num_obj.density_data)
-	self.num_obj.brush_g = density_obj.brush_g
+	self.num_obj.brush_g = makeDensityPlot(self.num_obj.svg, self.num_obj.density_data)
+	self.num_obj.brush_g.attr('class', 'brush_g')
 	const maxvalue = self.num_obj.density_data.maxvalue
 	const minvalue = self.num_obj.density_data.minvalue
 

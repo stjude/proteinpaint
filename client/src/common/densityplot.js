@@ -56,21 +56,8 @@ export function makeDensityPlot(svg, data, term) {
 		.attr('font-size', '13px')
 		.text(term ? term.unit : '')
 
-	const brush_g = svg
-		.append('g')
-		.attr('class', 'brush_g')
-		.attr('transform', `translate(${xpad}, ${ypad})`)
+	// svg.g where brush or line will be rendered
+	const interaction_g = svg.append('g').attr('transform', `translate(${xpad}, ${ypad})`)
 
-	const binsize_g = svg
-		.append('g')
-		.attr('class', 'binsize_g')
-		.attr('transform', `translate(${xpad}, ${ypad})`)
-
-	// num_obj.custombins_g = svg
-	// 	.append('g')
-	// 	.attr('class', 'custombins_g')
-	// 	.attr('transform', `translate(${xpad}, ${ypad})`)
-	// 	.style('display', 'none')
-
-	return { brush_g, binsize_g }
+	return interaction_g
 }
