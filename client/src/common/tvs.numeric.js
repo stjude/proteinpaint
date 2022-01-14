@@ -162,7 +162,7 @@ function setTvsDefaults(tvs) {
 	if (!tvs.ranges) tvs.ranges = []
 }
 
-async function addRangeTable(self) {
+function addRangeTable(self) {
 	const num_div = self.num_obj.num_div
 	const ranges = self.num_obj.ranges
 	const brushes = self.num_obj.brushes
