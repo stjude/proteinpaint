@@ -1,11 +1,39 @@
 import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, format } from 'd3'
 
-export function makeDensityPlot(svg, data, term) {
-	const width = 500,
-		height = 100,
-		xpad = 10,
-		ypad = 20,
-		xaxis_height = 20
+/*
+	opts{}
+		svg // (required) svg holder where density_plot will be rendered
+		data: { // (required)
+			density: [
+				[x, y], // x and y position of density plot, both float
+				...
+			]
+			minvalue: FLOAT // min value of x
+			maxvalue: FLOAT // max value of x
+			densitymax: FLOAT // max value of y
+		} 
+		term: { // (optional)
+			type: STR // type of numeric variable, default - 'float'
+					  // it can be specified as 'integer' 
+					  // NOTE: rightnow tickFormat is same for 'integer' and 'float'
+			unit: STR // unit of numeric varaible
+		}
+		plot_size: { // (optional)
+			width: INT
+			height: INT
+			xpad: INT
+			ypad: INT
+			xasis_height: INT
+		}
+*/
+
+export function makeDensityPlot(opts) {
+	const { svg, data, term, plot_size } = opts
+	const width = plot_size.width || 500,
+		height = plot_size.height || 100,
+		xpad = plot_size.xpad || 10,
+		ypad = plot_size.ypad || 20,
+		xaxis_height = plot_size.xaxis_height || 20
 
 	svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
 
@@ -51,13 +79,9 @@ export function makeDensityPlot(svg, data, term) {
 		.attr('transform', `translate(0, ${ypad + height})`)
 		.call(x_axis)
 
-	g.append('text')
-		.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
-		.attr('font-size', '13px')
-		.text(term ? term.unit : '')
-
-	// svg.g where brush or line will be rendered
-	const interaction_g = svg.append('g').attr('transform', `translate(${xpad}, ${ypad})`)
-
-	return interaction_g
+	if (term && term.unit)
+		g.append('text')
+			.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
+			.attr('font-size', '13px')
+			.text(term.unit)
 }

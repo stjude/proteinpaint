@@ -140,8 +140,19 @@ async function fillMenu(self, div, tvs) {
 
 	if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 
-	self.num_obj.brush_g = makeDensityPlot(self.num_obj.svg, self.num_obj.density_data)
-	self.num_obj.brush_g.attr('class', 'brush_g')
+	const density_plot_opts = {
+		svg: self.num_obj.svg,
+		data: self.num_obj.density_data,
+		plot_size: self.num_obj.plot_size
+	}
+
+	makeDensityPlot(density_plot_opts)
+	// add brush_g for tvs brushes
+	self.num_obj.brush_g = self.num_obj.svg
+		.append('g')
+		.attr('transform', `translate(${self.num_obj.plot_size.xpad}, ${self.num_obj.plot_size.ypad})`)
+		.attr('class', 'brush_g')
+
 	const maxvalue = self.num_obj.density_data.maxvalue
 	const minvalue = self.num_obj.density_data.minvalue
 
@@ -153,7 +164,10 @@ async function fillMenu(self, div, tvs) {
 	self.num_obj.brushes = []
 	addBrushes(self)
 	addRangeTable(self)
-	if (!ranges.length) addNewBrush(self, 'center')
+	if (!ranges.length) {
+		const callback = () => addRangeTable(self)
+		addNewBrush(self, null, callback)
+	}
 	self.num_obj.brushes.forEach(brush => brush.init())
 	await showCheckList_numeric(self, tvs, div)
 }
