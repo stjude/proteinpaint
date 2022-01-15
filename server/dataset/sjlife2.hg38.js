@@ -314,7 +314,8 @@ module.exports = {
 			// quick fix: list non-dictionary term types
 			// expose to client via termdbConfig
 			allowedTermTypes: [
-				'snplst' // snplst allows terms of this type as independent variable in mass regression
+				'snplst', // as independent variable in mass regression
+				'prs' // as independent variable in mass regression
 			],
 
 			//// this attribute is optional

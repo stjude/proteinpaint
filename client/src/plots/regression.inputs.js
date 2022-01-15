@@ -25,6 +25,19 @@ main
 		addInput
 */
 
+// non-dictionary term types to use as independent variable
+// check against allowedTermTypes from a dataset
+const nonDictionaryTerms = [
+	{
+		type: 'snplst',
+		prompt: 'Use list of SNPs'
+	},
+	{
+		type: 'prs',
+		prompt: 'Use a polygenic risk score'
+	}
+]
+
 export class RegressionInputs {
 	constructor(opts) {
 		this.opts = opts
@@ -382,36 +395,42 @@ function setInteractivity(self) {
 
 function mayAddBlankInput(section, self) {
 	// on this section, detect if a blank input needs to be created
-	if (section.inputs.length < section.limit) {
-		if (!section.inputs.find(input => !input.term)) {
-			// section doesn't have blank input, create one; works for both outcome/independent
+	if (section.inputs.length >= section.limit) {
+		// number of inputs in this section is beyond limit, do not create more
+		return
+	}
+	if (section.inputs.find(input => !input.term)) {
+		// section already has blank input (without a term), do not create more
+		return
+	}
+	// section doesn't have blank input, create one; works for both outcome/independent
+	// TODO mark out this Input is for dictionary terms, in termsetting?
+	section.inputs.push(new InputTerm({ section, parent: self }))
 
-			// TODO mark out this Input is for dictionary terms, in termsetting?
-			section.inputs.push(new InputTerm({ section, parent: self }))
-
-			if (section.configKey == 'independent') {
-				// this section is independent, not outcome
-				// may show prompts for adding additional term types
-				const supportedTypes = ['snplst']
-				for (const type of supportedTypes) {
-					if (self.state.allowedTermTypes.includes(type)) {
-						section.inputs.push(
-							new InputTerm({
-								section,
-								parent: self,
-								term: {
-									id: '?',
-									term: {
-										id: '?',
-										type
-									},
-									q: {}
-								}
-							})
-						)
+	if (section.configKey == 'outcome') {
+		// done for outcome section
+		return
+	}
+	// independent section
+	// may show additional prompts
+	for (const item of nonDictionaryTerms) {
+		if (self.state.allowedTermTypes.includes(item.type)) {
+			// this dataset support this type
+			section.inputs.push(
+				new InputTerm({
+					section,
+					parent: self,
+					prompt: item.prompt,
+					term: {
+						id: '?',
+						term: {
+							id: '?',
+							type: item.type
+						},
+						q: {}
 					}
-				}
-			}
+				})
+			)
 		}
 	}
 }
