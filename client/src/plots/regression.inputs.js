@@ -63,9 +63,8 @@ export class RegressionInputs {
 			heading: 'Outcome variable',
 			selectPrompt:
 				this.opts.regressionType == 'linear'
-					? // FIXME use plain text, termsetting should style this with hover effect
-					  '<u>Select continuous outcome variable</u>'
-					: '<u>Select outcome variable</u>',
+					? 'Select continuous outcome variable from dictionary'
+					: 'Select outcome variable from dictionary',
 			placeholderIcon: '',
 			configKey: 'outcome',
 			limit: 1,
@@ -82,7 +81,7 @@ export class RegressionInputs {
 		this.independent = {
 			/*** static configuration ***/
 			heading: 'Independent variable(s)',
-			selectPrompt: '<u>Add independent variable</u>',
+			selectPrompt: 'Add independent variable from dictionary',
 			placeholderIcon: '',
 			configKey: 'independent',
 			limit: 10,
@@ -399,36 +398,40 @@ function mayAddBlankInput(section, self) {
 		// number of inputs in this section is beyond limit, do not create more
 		return
 	}
-	if (section.inputs.find(input => !input.term)) {
-		// section already has blank input (without a term), do not create more
-		return
+
+	const blanks = section.inputs.filter(i => !i.term) // list of blank inputs already in the section
+	/* there can be multiple types of blank inputs:
+	- non-dict blank inputs, will have "forTermType"
+	- dict term blank input, do not have "forTermType",
+	  independent section must always have one dict blank
+	logic is still shaky
+	*/
+	if (!blanks.find(i => !i.opts.forTermType)) {
+		// no blank for dictionary term, add one
+		section.inputs.push(new InputTerm({ section, parent: self }))
 	}
 	// section doesn't have blank input, create one; works for both outcome/independent
-	// TODO mark out this Input is for dictionary terms, in termsetting?
-	section.inputs.push(new InputTerm({ section, parent: self }))
 
-	if (section.configKey == 'outcome') {
-		// done for outcome section
+	if (section.configKey == 'outcome') return // done for outcome section
+
+	// independent section
+	if (blanks.find(i => i.opts.forTermType)) {
+		// already have at least one blank input for non-dict term
+		// quick fix!! do not add anymore
 		return
 	}
-	// independent section
+
 	// may show additional prompts
 	for (const item of nonDictionaryTerms) {
 		if (self.state.allowedTermTypes.includes(item.type)) {
 			// this dataset support this type
+			console.log(item)
 			section.inputs.push(
 				new InputTerm({
 					section,
 					parent: self,
-					prompt: item.prompt,
-					term: {
-						id: '?',
-						term: {
-							id: '?',
-							type: item.type
-						},
-						q: {}
-					}
+					prompt: item.prompt, // override the prompt from this section
+					forTermType: item.type // pass to termsetting to directly launch its own UI but not tree
 				})
 			)
 		}

@@ -44,13 +44,13 @@ export class InputTerm {
 			const { app, config, state, disable_terms } = this.parent
 
 			this.pill = termsettingInit({
-				placeholder: this.section.selectPrompt,
+				placeholder: this.opts.prompt || this.section.selectPrompt,
 				placeholderIcon: this.section.placeholderIcon,
 				holder: this.dom.pillDiv,
 				vocabApi: app.vocabApi,
 				vocab: state.vocab,
+				forTermType: this.opts.forTermType,
 				activeCohort: state.activeCohort,
-				use_bins_less: true,
 				debug: app.opts.debug,
 				buttons: this.section.configKey == 'outcome' ? ['replace'] : ['delete'],
 				numericEditMenuVersion: this.getMenuVersion(config),
