@@ -38,11 +38,6 @@ NOTE: For numeric terms, there is an option to show a toggled edit menu, where c
 class TermSetting {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
-		// if set, this blank termsetting can only be filled with this type of term
-		// clicking nopilldiv will display input UI of this term
-		// (as compared to default behavior is to display tree to select a dictionary term)
-		// once term is created by the UI, should delete forTermType
-		this.forTermType = opts.forTermType
 		this.vocabApi = opts.vocabApi
 		this.activeCohort = opts.activeCohort
 		this.placeholder = opts.placeholder
@@ -362,15 +357,33 @@ function setInteractivity(self) {
 	}
 
 	self.clickNoPillDiv = async () => {
+		// support various behaviors upon clicking nopilldiv
 		self.dom.tip.clear().showunder(self.dom.nopilldiv.node())
-		if (!self.forTermType) {
-			// default behavior, show tree to select a dictionary term
+		if (!self.opts.noTermPromptOptions || self.opts.noTermPromptOptions.length == 0) {
+			// show tree to select a dictionary term
 			await self.showTree()
 			return
 		}
+		// create small menu, one option for each ele in noTermPromptOptions[]
+		for (const option of self.opts.noTermPromptOptions) {
+			// {isDictionary, termtype, text}
+			self.dom.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text(option.text)
+				.on('click', async () => {
+					self.dom.tip.clear()
+					if (option.isDictionary) {
+						await self.showTree()
+					} else if (option.termtype) {
+						await self.setHandler(d.termtype)
+						self.handler.showEditMenu(self.dom.tip.d)
+					} else {
+						throw 'termtype missing'
+					}
+				})
+		}
 		// load the input ui for this term type
-		await self.setHandler(self.forTermType)
-		self.handler.showInputMenu(self.dom.tip.d)
 	}
 
 	self.showTree = async function(holder) {

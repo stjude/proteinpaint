@@ -6,6 +6,7 @@ import { InputTerm } from './regression.inputs.term'
 outcome and independent are two sections sharing same structure
 "inputs[]" collect one or multiple variables for each section
 "input" tracks attributes from a variable
+blank input: a blank input is a termsetting instance. once a term is created for it, the term is filled to the same instance, and a new blank input may need to be created (for independent section)
 
 **** function cascade ****
 
@@ -27,14 +28,14 @@ main
 
 // non-dictionary term types to use as independent variable
 // check against allowedTermTypes from a dataset
-const nonDictionaryTerms = [
+const allNonDictionaryTerms = [
 	{
-		type: 'snplst',
-		prompt: 'Use list of SNPs'
+		termtype: 'snplst',
+		text: 'A list of SNPs'
 	},
 	{
-		type: 'prs',
-		prompt: 'Use a polygenic risk score'
+		termtype: 'prs',
+		text: 'Polygenic risk score'
 	}
 ]
 
@@ -62,9 +63,7 @@ export class RegressionInputs {
 			/*** static configuration ***/
 			heading: 'Outcome variable',
 			selectPrompt:
-				this.opts.regressionType == 'linear'
-					? 'Select continuous outcome variable from dictionary'
-					: 'Select outcome variable from dictionary',
+				this.opts.regressionType == 'linear' ? 'Select continuous outcome variable' : 'Select outcome variable',
 			placeholderIcon: '',
 			configKey: 'outcome',
 			limit: 1,
@@ -81,7 +80,7 @@ export class RegressionInputs {
 		this.independent = {
 			/*** static configuration ***/
 			heading: 'Independent variable(s)',
-			selectPrompt: 'Add independent variable from dictionary',
+			selectPrompt: 'Add independent variable',
 			placeholderIcon: '',
 			configKey: 'independent',
 			limit: 10,
@@ -393,47 +392,38 @@ function setInteractivity(self) {
 }
 
 function mayAddBlankInput(section, self) {
+	// for outcome section, there can just be one input, it's either blank or filled
+	// for independent, there should always be one blank input, among other filled inputs
 	// on this section, detect if a blank input needs to be created
 	if (section.inputs.length >= section.limit) {
 		// number of inputs in this section is beyond limit, do not create more
 		return
 	}
-
-	const blanks = section.inputs.filter(i => !i.term) // list of blank inputs already in the section
-	/* there can be multiple types of blank inputs:
-	- non-dict blank inputs, will have "forTermType"
-	- dict term blank input, do not have "forTermType",
-	  independent section must always have one dict blank
-	logic is still shaky
-	*/
-	if (!blanks.find(i => !i.opts.forTermType)) {
-		// no blank for dictionary term, add one
-		section.inputs.push(new InputTerm({ section, parent: self }))
-	}
-	// section doesn't have blank input, create one; works for both outcome/independent
-
-	if (section.configKey == 'outcome') return // done for outcome section
-
-	// independent section
-	if (blanks.find(i => i.opts.forTermType)) {
-		// already have at least one blank input for non-dict term
-		// quick fix!! do not add anymore
-		return
-	}
-
-	// may show additional prompts
-	for (const item of nonDictionaryTerms) {
-		if (self.state.allowedTermTypes.includes(item.type)) {
-			// this dataset support this type
-			console.log(item)
-			section.inputs.push(
-				new InputTerm({
-					section,
-					parent: self,
-					prompt: item.prompt, // override the prompt from this section
-					forTermType: item.type // pass to termsetting to directly launch its own UI but not tree
-				})
-			)
+	if (section.inputs.find(i => !i.term)) return // already have a blank input
+	// make parameter for this blank input
+	let noTermPromptOptions
+	if (section.configKey == 'independent') {
+		// only add this for independent, not for outcome section
+		noTermPromptOptions = [] // each ele will correspond to a menu option
+		for (const item of allNonDictionaryTerms) {
+			if (self.state.allowedTermTypes.includes(item.termtype)) {
+				noTermPromptOptions.push(item)
+			}
+		}
+		if (noTermPromptOptions.length) {
+			// added at least one term type; to show mini menu in termsetting prompt, add dict option
+			noTermPromptOptions.unshift({
+				isDictionary: true,
+				text: 'Dictionary variable'
+			})
 		}
 	}
+	// create this blank input
+	section.inputs.push(
+		new InputTerm({
+			section,
+			parent: self,
+			noTermPromptOptions // pass to termsetting
+		})
+	)
 }
