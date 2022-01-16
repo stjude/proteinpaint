@@ -376,7 +376,7 @@ function setInteractivity(self) {
 					if (option.isDictionary) {
 						await self.showTree()
 					} else if (option.termtype) {
-						await self.setHandler(d.termtype)
+						await self.setHandler(option.termtype)
 						self.handler.showEditMenu(self.dom.tip.d)
 					} else {
 						throw 'termtype missing'
