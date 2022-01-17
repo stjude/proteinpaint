@@ -435,6 +435,19 @@ class TermdbVocab {
 			window.alert(e.message || e)
 		}
 	}
+
+	async validateSnps(snptext, filter) {
+		const args = [
+			'validateSnps=1',
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel,
+			'snptext=' + encodeURIComponent(snptext)
+		]
+		if (filter) {
+			args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+		}
+		return await dofetch3('/termdb?' + args.join('&'))
+	}
 }
 
 function q_to_param(q) {

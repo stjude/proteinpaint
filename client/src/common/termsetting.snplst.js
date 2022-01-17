@@ -1,5 +1,15 @@
-import { event as d3event } from 'd3-selection'
-import { keyupEnter } from '../client'
+/* instance attributes
+
+self.term{}
+	.type: "snplst"
+self.q{}
+	.snps[ {} ]
+		.rsid: str
+		.effectAllele: str
+	.alleleType: int
+	.geneticModel: int
+	.missingGenotype: int
+*/
 
 // self is the termsetting instance
 export function getHandler(self) {
@@ -14,13 +24,31 @@ export function getHandler(self) {
 
 		async showEditMenu(div) {
 			makeEditMenu(self, div)
+		},
+
+		async postMain() {
+			// TODO show "loading..." on pill
+			await mayValidateSnps(self)
+			// close "loading..."
 		}
 	}
 }
 
-/* if self.term is set, the term has been created, with both self.term, self.q
-show the ui based on the setting and allow updating the term
-otherwise, show ui to take user input and create the term
+/*
+scenario I
+when user accesses snplst option from noTermPromptOptions, this termsetting instance is "blank"
+clicking Submit button from this UI will create self.term and self.q
+it's important to note that, before clicking Submit, user can still hide the menu,
+and launch another option from noTermPromptOptions.
+thus, this UI must not alter self attributes (term and q) until Submit is created
+to avoid creating attributes on self that's irrelevant to the new term
+
+scenario II
+self.term is set, either recovered from state, or from user input in scenario I
+both .term and .q should be present
+run the same ui code but is populated with existing settings
+user can make changes to snp list, and other controls
+and must click Submit to save
 */
 function makeEditMenu(self, div) {
 	// the ui will create following controls, to be accessed upon clicking Submit button
@@ -49,7 +77,7 @@ function makeEditMenu(self, div) {
 		.append('div')
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
-		.html('One rs ID per line; define optional<br>effect allele on 2nd column.')
+		.html('One rs ID per line; define optional<br>effect allele on 2nd column.<br>Separate columns by tab or space.')
 
 	// right column
 	const tdright = tr.append('td').style('vertical-align', 'top')
@@ -96,12 +124,7 @@ function makeEditMenu(self, div) {
 
 	if (self.term) {
 		// .term and .q is available on the instance; populate UI with values
-		const lines = []
-		for (const a of self.q.snps) {
-			const l = a.rsid + (a.effectAllele ? ' ' + a.effectAllele : '')
-			lines.push(l)
-		}
-		textarea.text(lines.join('\n'))
+		textarea.text(snp2text(self))
 		select_alleleType.property('selectedIndex', self.q.alleleType)
 		select_geneticModel.property('selectedIndex', self.q.geneticModel)
 		select_missingGenotype.property('selectedIndex', self.q.missingGenotype)
@@ -132,12 +155,13 @@ function makeEditMenu(self, div) {
 			if (!self.term) {
 				// doesn't have a term, create new one on this instance
 				self.term = {
-					id: 'dummy',
-					name: 'dummy',
-					type: 'snplst'
+					id: 'dummy.required.by.store',
+					name: 'dummy.required.by.store'
 				}
 				self.q = {}
 			}
+			// set term type in case the instance had a different term before
+			self.term.type = 'snplst'
 			self.q.snps = snps
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
@@ -160,4 +184,27 @@ function parseSnpFromText(ta) {
 		}
 	}
 	return snps
+}
+
+function snp2text(self) {
+	if (!self.q || !self.q.snps) return ''
+	const lines = []
+	for (const a of self.q.snps) {
+		const l = a.rsid + (a.effectAllele ? ' ' + a.effectAllele : '')
+		lines.push(l)
+	}
+	return lines.join('\n')
+}
+
+/* snp validation requires finding out #cases with a valid gt call for each snp
+will query bigbed to convert to pos, and bcf file
+very expensive step
+when filter/subcohort changes, the underlying cohort changes and have to rerun validation again
+thus the validation must run in postMain()
+*/
+async function mayValidateSnps(self) {
+	if (!self.q || !self.q.snps) return
+	const data = await self.vocabApi.validateSnps(snp2text(self), self.filter)
+	if (data.error) throw data.error
+	console.log(data)
 }
