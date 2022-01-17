@@ -6,7 +6,7 @@ import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
 import initBinConfig from '../../shared/termdb.initbinconfig'
 
-const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival'])
+const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst'])
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/

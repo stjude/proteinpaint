@@ -165,6 +165,10 @@ export class InputTerm {
 		const tw = this.term
 		if (!tw) return
 
+		//!!!!!!!!!!!!!!!!! quick fix
+		// non-dictionary terms should not run this step
+		if (tw.term.type == 'snplst') return
+
 		if (!tw.q) throw '.term.q missing on this input'
 
 		if (!tw.q.mode) {
