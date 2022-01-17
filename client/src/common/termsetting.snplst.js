@@ -1,21 +1,32 @@
+import { event as d3event } from 'd3-selection'
+
 /* instance attributes
 
 self.term{}
 	.type: "snplst"
+self.snps[ {} ]
+	// storing snps on self but not self.q will prevent snps to show up in regression query string
+	// but how will self.main() accept snps from restored state?
+	.rsid: str
+	.effectAllele: str
+	// following snp attr are computed by validation
+	.invalid
+	.chr
+	.pos
+	.alleles
+	.validgtcount
 self.q{}
-	.snps[ {} ]
-		.rsid: str
-		.effectAllele: str
 	.alleleType: int
 	.geneticModel: int
 	.missingGenotype: int
+	.cacheid_gtmatrix: str
 */
 
 // self is the termsetting instance
 export function getHandler(self) {
 	return {
 		get_term_name(d) {
-			return self.q.snps.length + ' SNP' + (self.q.snps.length > 1 ? 's' : '')
+			return self.term.name
 		},
 
 		get_status_msg() {
@@ -27,9 +38,8 @@ export function getHandler(self) {
 		},
 
 		async postMain() {
-			// TODO show "loading..." on pill
+			// remake cacheid_gtmatrix on server, and recount samples to account for filter/subcohort change
 			await mayValidateSnps(self)
-			// close "loading..."
 		}
 	}
 }
@@ -78,6 +88,11 @@ function makeEditMenu(self, div) {
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
 		.html('One rs ID per line; define optional<br>effect allele on 2nd column.<br>Separate columns by tab or space.')
+
+	if (self.snps) {
+		// TODO show list of snps as well as status for each: {invalid, alleles, validgtcount}
+		// allow to delete or add to this list
+	}
 
 	// right column
 	const tdright = tr.append('td').style('vertical-align', 'top')
@@ -162,10 +177,18 @@ function makeEditMenu(self, div) {
 			}
 			// set term type in case the instance had a different term before
 			self.term.type = 'snplst'
-			self.q.snps = snps
+			self.term.name = snps.length + ' SNP' + (snps.length > 1 ? 's' : '')
+			self.snps = snps
+			d3event.target.disabled = true
+			d3event.target.innerHTML = 'Validating SNPs...'
+			/* validate snps here so cache id can be set on self.q prior to calling callback
+			so the cache id can be written to app store
+			*/
+			await mayValidateSnps(self)
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
 			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
+			self.dom.tip.hide()
 			self.runCallback()
 		})
 }
@@ -187,9 +210,9 @@ function parseSnpFromText(ta) {
 }
 
 function snp2text(self) {
-	if (!self.q || !self.q.snps) return ''
+	if (!self.snps) return ''
 	const lines = []
-	for (const a of self.q.snps) {
+	for (const a of self.snps) {
 		const l = a.rsid + (a.effectAllele ? ' ' + a.effectAllele : '')
 		lines.push(l)
 	}
@@ -203,8 +226,23 @@ when filter/subcohort changes, the underlying cohort changes and have to rerun v
 thus the validation must run in postMain()
 */
 async function mayValidateSnps(self) {
-	if (!self.q || !self.q.snps) return
+	if (!self.snps) return
 	const data = await self.vocabApi.validateSnps(snp2text(self), self.filter)
 	if (data.error) throw data.error
-	console.log(data)
+	// copy result to instace
+	self.q.cacheid_gtmatrix = data.cacheid
+	self.q.numOfSampleWithAllValidGT = data.numOfSampleWithAllValidGT
+	self.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
+	let invalidcount = 0
+	for (const [i, s] of self.snps.entries()) {
+		const s1 = data.snps[i]
+		s.invalid = s1.invalid
+		if (s.invalid) invalidcount++
+		s.alleles = s1.alleles
+		s.validgtcount = s1.validgtcount
+	}
+
+	// TODO synthesize brief summary text, so it can be displayed in inputs.values.table.js
+	// #invalid
+	// #samples etc
 }
