@@ -13,7 +13,7 @@ hljs.registerLanguage('json', json)
 /*
 
 -------EXPORTED-------
-init_examples
+init_appDrawer
 	- creates the app drawer
 
 -------Internal-------
@@ -43,7 +43,7 @@ addArrowBtns
 Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl0xIJqDRbyhahA4/edit#heading=h.jwyqi1mhacps
 */
 
-export async function init_examples(par) {
+export async function init_appDrawer(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
 	const re = await dofetch2('/examplejson')
 	if (re.error) {
