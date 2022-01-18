@@ -401,40 +401,93 @@ async function getSampleData(q, terms) {
 	}
 
 	for (const term of nonDictTerms) {
-		// for each non dictionary term, query sample data with its own method and append results to the same structure
+		// for each non dictionary term type
+		// query sample data with its own method and append results to "samples"
 		if (term.type == 'snplst') {
 			// each snp is one indepedent variable
-			const lines = (await utils.read_file(path.join(serverconfig.cachedir, term.id))).split('\n')
-			// header:  rsid  effAle  chr  pos  alleles  <s1>  <s2> ...
-			const samples = lines[0]
-				.split('\t')
-				.slice(5) // from 5th column
-				.map(Number) // sample ids are integer
-			const snp2sample = new Map()
-			// k: snp name, rsid or chr:pos string
-			// v: { effAle, alleles, samples: map { k: sample id, v: gt } }
-			for (let i = 1; i < lines.length; i++) {
-				const l = lines[i].split('\t')
-				// TODO reliable identifiers for each snp must be decided early
-				const snpid = l[0] || l[2] + ':' + l[3]
-				snp2sample.set(snpid, {
-					effAle: l[1],
-					alleles: l[4].split(','),
-					samples: new Map()
-				})
-				for (const [j, sampleid] of samples.entries()) {
-					const gt = l[j + 5]
-					if (gt) {
-						snp2sample.get(snpid).samples.set(sampleid, gt)
-					}
-				}
-			}
+			await loadSampleData_snplst(term, samples)
 		} else {
 			throw 'unknown type of independent non-dictionary term'
 		}
 	}
 
 	return samples.values()
+}
+
+async function loadSampleData_snplst(term, samples) {
+	const lines = (await utils.read_file(path.join(serverconfig.cachedir, term.id))).split('\n')
+	// header:  rsid  effAle  chr  pos  alleles  <s1>  <s2> ...
+	const sampleheader = lines[0]
+		.split('\t')
+		.slice(5) // from 5th column
+		.map(Number) // sample ids are integer
+	const snp2sample = new Map()
+	// k: snp name, rsid or chr:pos string
+	// v: { effAle, alleles, samples: map { k: sample id, v: gt } }
+	for (let i = 1; i < lines.length; i++) {
+		const l = lines[i].split('\t')
+		// TODO reliable identifiers for each snp must be decided early
+		const snpid = l[0] || l[2] + ':' + l[3]
+		snp2sample.set(snpid, {
+			effAle: l[1],
+			alleles: l[4].split(','),
+			samples: new Map()
+		})
+		for (const [j, sampleid] of sampleheader.entries()) {
+			const gt = l[j + 5]
+			if (gt) {
+				snp2sample.get(snpid).samples.set(sampleid, gt)
+			}
+		}
+	}
+	for (const [snpid, o] of snp2sample) {
+		const effAle = get_effAle4snp(o, term)
+		for (const [sampleid, gt] of o.samples) {
+			// for this sample, convert gt to value
+			const [gtA1, gtA2] = gt.split(',') // assuming diploid
+			const v = get_gtValue4sample(term, effAle, gtA1, gtA2)
+
+			// register value of this sample in samples
+			if (!samples.has(sampleid)) {
+				samples.set(sampleid, { sample: sampleid, id2value: new Map() })
+			}
+			samples.get(sampleid).id2value.set(snpid, { key: v, value: v }) // difference between key/value?
+		}
+	}
+}
+
+function get_gtValue4sample(term, effAle, a1, a2) {
+	switch (term.q.geneticModel) {
+		case 0:
+			// additive
+			return (a1 == effAle ? 1 : 0) + (a2 == effAle ? 1 : 0)
+		case 1:
+			// dominant
+			if (a1 == effAle || a2 == effAle) return 1
+			return 0
+		case 2:
+			// recessive
+			return a1 == effAle && a2 == effAle ? 1 : 0
+		case 3:
+			// by genotype
+			return a1 + '/' + a2
+		default:
+			throw 'unknown geneticModel option'
+	}
+}
+
+function get_effAle4snp(snp, term) {
+	if (snp.effAle) return snp.effAle
+	// determine based on term setting
+	if (term.q.alleleType == 0) {
+		// major/minor
+		throw 'not done'
+	}
+	if (term.q.alleleType == 1) {
+		// ref/alt
+		throw 'not done'
+	}
+	throw 'unknown alleleType value'
 }
 
 function divideTerms(lst) {
