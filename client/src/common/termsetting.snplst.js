@@ -8,6 +8,9 @@ and prevent snps from being included in regression request string
 instance attributes
 
 self.term{}
+	.id: str, the cache file name
+		!!NOTE!! id changes for every validation, e.g. for snp/cohort/filter update
+		small changes can be made for term.id to remain unchanged if that's ever needed
 	.type: "snplst"
 	.snps[ {} ]
 		.rsid: str
@@ -22,7 +25,6 @@ self.q{}
 	.alleleType: int
 	.geneticModel: int
 	.missingGenotype: int
-	.cacheid_gtmatrix: str
 */
 
 // self is the termsetting instance
@@ -41,8 +43,10 @@ export function getHandler(self) {
 		},
 
 		async postMain() {
-			// remake cacheid_gtmatrix on server, and recount samples to account for filter/subcohort change
-			await mayValidateSnps(self)
+			// rerun server-side validation to generate new cache id, and recount samples to account for filter/subcohort change
+			if (self.term && self.term.snps) {
+				await validateSnps(self)
+			}
 		}
 	}
 }
@@ -170,24 +174,16 @@ function makeEditMenu(self, div) {
 			// parse input text
 			const snps = parseSnpFromText(textarea)
 			if (snps.length == 0) return window.alert('No valid SNPs')
-			if (!self.term) {
-				// doesn't have a term, create new one on this instance
-				self.term = {
-					id: 'dummy.required.by.store',
-					name: 'dummy.required.by.store'
-				}
-				self.q = {}
-			}
+			if (!self.term) self.term = {}
+			if (!self.q) self.q = {}
 			// set term type in case the instance had a different term before
 			self.term.type = 'snplst'
 			self.term.name = getTermName(snps)
 			self.term.snps = snps
 			d3event.target.disabled = true
 			d3event.target.innerHTML = 'Validating SNPs...'
-			/* validate snps here so cache id can be set on self.q prior to calling callback
-			so the cache id can be written to app store
-			*/
-			await mayValidateSnps(self)
+			await validateSnps(self)
+			// self.term.id is now cache file name
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
 			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
@@ -237,12 +233,11 @@ very expensive step
 when filter/subcohort changes, the underlying cohort changes and have to rerun validation again
 thus the validation must run in postMain()
 */
-async function mayValidateSnps(self) {
-	if (!self.term || !self.term.snps) return
+async function validateSnps(self) {
 	const data = await self.vocabApi.validateSnps(snp2text(self), self.filter)
 	if (data.error) throw data.error
 	// copy result to instace
-	self.q.cacheid_gtmatrix = data.cacheid
+	self.term.id = data.cacheid
 	self.q.numOfSampleWithAllValidGT = data.numOfSampleWithAllValidGT
 	self.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
 	let invalidcount = 0
