@@ -237,7 +237,7 @@ thus the validation must run in postMain()
 async function validateSnps(self) {
 	const data = await self.vocabApi.validateSnps(snp2text(self), self.filter)
 	if (data.error) throw data.error
-	// copy result to instace
+	// copy result to instance
 	self.q.cacheid = data.cacheid
 	self.q.numOfSampleWithAllValidGT = data.numOfSampleWithAllValidGT
 	self.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
@@ -253,4 +253,13 @@ async function validateSnps(self) {
 	// TODO synthesize brief summary text, so it can be displayed in inputs.values.table.js
 	// #invalid
 	// #samples etc
+}
+
+export async function fillTermWrapper(tw, vocabApi) {
+	if (!tw.q) tw.q = {}
+	await validateSnps({
+		term: tw.term,
+		q: tw.q,
+		vocabApi
+	})
 }

@@ -2,6 +2,8 @@ import { getInitFxn, copyMerge } from '../common/rx.core'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
 
+export const nonDictionaryTermTypes = new Set(['snplst'])
+
 /*
 constructor option and API are documented at
 https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/edit#heading=h.qajstgcfxci
@@ -140,9 +142,10 @@ class TermSetting {
 	validateMainData(d) {
 		if (d.term) {
 			// term is optional
-			if (!d.term.id) throw 'data.term.id missing'
 			if (!d.term.type) throw 'data.term.type missing'
-			if (d.term.type != 'snplst') {
+			// hardcode non
+			if (!nonDictionaryTermTypes.has(d.term.type)) {
+				if (!d.term.id) throw 'data.term.id missing'
 				if (!d.term.name) throw 'data.term.name missing'
 			}
 		}
@@ -465,6 +468,7 @@ function setInteractivity(self) {
 	}
 }
 
+// TODO: may move this to the handler code file by term type
 export function termsetting_fill_q(q, term, activeCohort) {
 	if (term.type == 'integer' || term.type == 'float') {
 		if (!valid_binscheme(q)) {
@@ -591,17 +595,34 @@ function getDefaultHandler(self) {
 	}
 }
 
-// termWrapper = {id, term?, q?}
+// tw: termWrapper = {id, term?, q?}
 // vocabApi
-export async function fillTermWrapper(termWrapper, vocabApi) {
-	const t = termWrapper
-	if (!('id' in t)) {
-		if (t.term && 'id' in t.term) t.id = t.term.id
+export async function fillTermWrapper(tw, vocabApi) {
+	// assume that tw.id implies a dictionary term
+	if ('id' in tw) {
+		if (!tw.term || !nonDictionaryTermTypes.has(tw.term.type)) {
+			tw.term = await vocabApi.getterm(tw.id)
+		}
+
+		if (tw.term && 'id' in tw.term) tw.id = tw.term.id
 		else throw 'term.id missing'
+
+		if (!tw.q) tw.q = {}
+		termsetting_fill_q(tw.q, tw.term, vocabApi.state.activeCohort)
+	} else if (!tw.term) {
+		throw `missing tw.term`
+	} else if (!tw.term.type) {
+		throw `missing tw.term.type`
+	} else if ('id' in tw.term) {
+		// some state may assign term.id as tw.id, by default if missing
+		// this assumes that
+	} else {
+		try {
+			const _ = await import(`../common/termsetting.${tw.term.type}.js`)
+			// fill-in wrapper, term and q
+			await _.fillTermWrapper(tw, vocabApi)
+		} catch (e) {
+			throw e
+		}
 	}
-	if (!t.term) {
-		t.term = await vocabApi.getterm(t.id)
-	}
-	if (!t.q) t.q = {}
-	termsetting_fill_q(t.q, t.term, vocabApi.state.activeCohort)
 }
