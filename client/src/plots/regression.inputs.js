@@ -6,6 +6,7 @@ import { InputTerm } from './regression.inputs.term'
 outcome and independent are two sections sharing same structure
 "inputs[]" collect one or multiple variables for each section
 "input" tracks attributes from a variable
+blank input: a blank input is a termsetting instance. once a term is created for it, the term is filled to the same instance, and a new blank input may need to be created (for independent section)
 
 **** function cascade ****
 
@@ -24,6 +25,19 @@ main
 		removeInput
 		addInput
 */
+
+// non-dictionary term types to use as independent variable
+// check against allowedTermTypes from a dataset
+const allNonDictionaryTerms = [
+	{
+		termtype: 'snplst',
+		text: 'A list of SNPs'
+	},
+	{
+		termtype: 'prs',
+		text: 'Polygenic risk score'
+	}
+]
 
 export class RegressionInputs {
 	constructor(opts) {
@@ -49,10 +63,7 @@ export class RegressionInputs {
 			/*** static configuration ***/
 			heading: 'Outcome variable',
 			selectPrompt:
-				this.opts.regressionType == 'linear'
-					? // FIXME use plain text, termsetting should style this with hover effect
-					  '<u>Select continuous outcome variable</u>'
-					: '<u>Select outcome variable</u>',
+				this.opts.regressionType == 'linear' ? 'Select continuous outcome variable' : 'Select outcome variable',
 			placeholderIcon: '',
 			configKey: 'outcome',
 			limit: 1,
@@ -69,7 +80,7 @@ export class RegressionInputs {
 		this.independent = {
 			/*** static configuration ***/
 			heading: 'Independent variable(s)',
-			selectPrompt: '<u>Add independent variable</u>',
+			selectPrompt: 'Add independent variable',
 			placeholderIcon: '',
 			configKey: 'independent',
 			limit: 10,
@@ -381,10 +392,38 @@ function setInteractivity(self) {
 }
 
 function mayAddBlankInput(section, self) {
+	// for outcome section, there can just be one input, it's either blank or filled
+	// for independent, there should always be one blank input, among other filled inputs
 	// on this section, detect if a blank input needs to be created
-	if (section.inputs.length < section.limit) {
-		if (!section.inputs.find(input => !input.term)) {
-			section.inputs.push(new InputTerm({ section, parent: self }))
+	if (section.inputs.length >= section.limit) {
+		// number of inputs in this section is beyond limit, do not create more
+		return
+	}
+	if (section.inputs.find(i => !i.term)) return // already have a blank input
+	// make parameter for this blank input
+	let noTermPromptOptions
+	if (section.configKey == 'independent') {
+		// only add this for independent, not for outcome section
+		noTermPromptOptions = [] // each ele will correspond to a menu option
+		for (const item of allNonDictionaryTerms) {
+			if (self.state.allowedTermTypes.includes(item.termtype)) {
+				noTermPromptOptions.push(item)
+			}
+		}
+		if (noTermPromptOptions.length) {
+			// added at least one term type; to show mini menu in termsetting prompt, add dict option
+			noTermPromptOptions.unshift({
+				isDictionary: true,
+				text: 'Dictionary variable'
+			})
 		}
 	}
+	// create this blank input
+	section.inputs.push(
+		new InputTerm({
+			section,
+			parent: self,
+			noTermPromptOptions // pass to termsetting
+		})
+	)
 }

@@ -49,8 +49,8 @@ export class InputTerm {
 				holder: this.dom.pillDiv,
 				vocabApi: app.vocabApi,
 				vocab: state.vocab,
+				noTermPromptOptions: this.opts.noTermPromptOptions,
 				activeCohort: state.activeCohort,
-				use_bins_less: true,
 				debug: app.opts.debug,
 				buttons: this.section.configKey == 'outcome' ? ['replace'] : ['delete'],
 				numericEditMenuVersion: this.getMenuVersion(config),
@@ -164,6 +164,10 @@ export class InputTerm {
 		*/
 		const tw = this.term
 		if (!tw) return
+
+		//!!!!!!!!!!!!!!!!! quick fix
+		// non-dictionary terms should not run this step
+		if (tw.term.type == 'snplst') return
 
 		if (!tw.q) throw '.term.q missing on this input'
 

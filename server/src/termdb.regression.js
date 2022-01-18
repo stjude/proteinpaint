@@ -37,7 +37,7 @@ export async function get_regression(q, ds) {
 		parse_q(q, ds)
 
 		const startTime = +new Date()
-		const sampledata = getSampleData(q, [q.outcome, ...q.independent])
+		const sampledata = await getSampleData(q, [q.outcome, ...q.independent])
 		/* each element is one sample with a key-val map for all its annotations:
 		{sample, id2value:Map( tid => {key,value}) }
 		*/
@@ -93,9 +93,13 @@ function parse_q(q, ds) {
 	if (!Array.isArray(q.independent) || q.independent.length == 0) throw 'q.independent is not non-empty array'
 	// tw = termWrapper
 	for (const tw of q.independent) {
-		if (!tw.id) throw '.id missing for an independent term'
-		tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
-		if (!tw.term) throw `invalid independent term='${tw.id}'`
+		if (tw.type == 'snplst') {
+			// !!!!!!!!!QUICK FIX!! detect non-dict term and do not query termdb
+		} else {
+			if (!tw.id) throw '.id missing for an independent term'
+			tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
+			if (!tw.term) throw `invalid independent term='${tw.id}'`
+		}
 		if (!tw.q) throw `missing q for term.id='${tw.id}'`
 		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
 	}
@@ -350,7 +354,7 @@ Returns two data structures
 	]
 2.
 */
-function getSampleData(q, terms) {
+async function getSampleData(q, terms) {
 	const filter = getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would

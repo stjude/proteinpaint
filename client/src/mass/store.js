@@ -366,6 +366,8 @@ function validatePlotTerm(t, vocabApi) {
 			if (!t.q.value_by_max_grade && !t.q.value_by_most_recent && !t.q.value_by_computable_grade)
 				throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
 			break
+		case 'snplst':
+			break
 		default:
 			if (t.term.isgenotype) {
 				// don't do anything for now

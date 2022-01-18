@@ -6,7 +6,7 @@ import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
 import initBinConfig from '../../shared/termdb.initbinconfig'
 
-const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival'])
+const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst'])
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
@@ -434,6 +434,19 @@ class TermdbVocab {
 		} catch (e) {
 			window.alert(e.message || e)
 		}
+	}
+
+	async validateSnps(snptext, filter) {
+		const args = [
+			'validateSnps=1',
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel,
+			'snptext=' + encodeURIComponent(snptext)
+		]
+		if (filter) {
+			args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+		}
+		return await dofetch3('/termdb?' + args.join('&'))
 	}
 }
 

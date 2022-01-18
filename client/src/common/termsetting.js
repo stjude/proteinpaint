@@ -127,7 +127,7 @@ class TermSetting {
 			if ('filter' in data) this.filter = data.filter
 			if ('activeCohort' in data) this.activeCohort = data.activeCohort
 			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
-			await this.setHandler()
+			await this.setHandler(this.term ? this.term.type : null)
 			this.updateUI()
 			if (data.term && this.term.handler && this.handler.validateQ) this.handler.validateQ(data)
 			if (this.handler.postMain) await this.handler.postMain()
@@ -151,12 +151,12 @@ class TermSetting {
 		}
 	}
 
-	async setHandler() {
-		if (!this.term) {
+	async setHandler(termtype) {
+		if (!termtype) {
 			this.handler = this.handlerByType.default
 			return
 		}
-		const type = this.term.type == 'integer' || this.term.type == 'float' ? 'numeric' : this.term.type // 'categorical', 'condition', 'survival', etc
+		const type = termtype == 'integer' || termtype == 'float' ? 'numeric' : termtype // 'categorical', 'condition', 'survival', etc
 		const numEditVers = this.opts.numericEditMenuVersion
 		const subtype = type != 'numeric' ? '' : numEditVers.length > 1 ? '.toggle' : '.' + numEditVers[0] // defaults to 'discrete'
 		const typeSubtype = `${type}${subtype}`
@@ -185,7 +185,7 @@ function setRenderers(self) {
 		self.dom.nopilldiv = self.dom.holder
 			.append('div')
 			.style('cursor', 'pointer')
-			.on('click', self.showTree)
+			.on('click', self.clickNoPillDiv)
 		self.dom.pilldiv = self.dom.holder.append('div')
 
 		// nopilldiv - placeholder label
@@ -316,10 +316,7 @@ function setRenderers(self) {
 		const status_msg = self.handler.get_status_msg()
 		const ts_summary_flag = self.term.type == 'condition' || status_msg
 
-		self.dom.pill_termname.style(
-			'border-radius',
-			(grpsetting_flag || ts_summary_flag) ? '6px 0 0 6px' : '6px'
-		)
+		self.dom.pill_termname.style('border-radius', grpsetting_flag || ts_summary_flag ? '6px 0 0 6px' : '6px')
 
 		const pill_settingSummary = one_term_div
 			.selectAll('.ts_summary_btn')
@@ -357,6 +354,36 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.removeTerm = () => {
 		self.opts.callback(null)
+	}
+
+	self.clickNoPillDiv = async () => {
+		// support various behaviors upon clicking nopilldiv
+		self.dom.tip.clear().showunder(self.dom.nopilldiv.node())
+		if (!self.opts.noTermPromptOptions || self.opts.noTermPromptOptions.length == 0) {
+			// show tree to select a dictionary term
+			await self.showTree()
+			return
+		}
+		// create small menu, one option for each ele in noTermPromptOptions[]
+		for (const option of self.opts.noTermPromptOptions) {
+			// {isDictionary, termtype, text}
+			self.dom.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text(option.text)
+				.on('click', async () => {
+					self.dom.tip.clear()
+					if (option.isDictionary) {
+						await self.showTree()
+					} else if (option.termtype) {
+						await self.setHandler(option.termtype)
+						self.handler.showEditMenu(self.dom.tip.d)
+					} else {
+						throw 'termtype missing'
+					}
+				})
+		}
+		// load the input ui for this term type
 	}
 
 	self.showTree = async function(holder) {

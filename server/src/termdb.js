@@ -8,6 +8,7 @@ const density_plot = require('./termdb.densityPlot')
 const cuminc = require('./termdb.cuminc')
 const survival = require('./termdb.survival')
 const regression = require('./termdb.regression')
+const termdbsnp = require('./termdb.snp')
 
 /*
 ********************** EXPORTED
@@ -59,6 +60,8 @@ export function handle_request_closure(genomes) {
 			if (q.getsurvival) return await trigger_getsurvival(q, res, ds)
 			if (q.getregression) return await trigger_getregression(q, res, ds)
 
+			if (q.validateSnps) return res.send(await termdbsnp.validate(q, tdb, ds, genome))
+
 			throw "termdb: don't know what to do"
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -86,7 +89,8 @@ function trigger_gettermdbconfig(res, tdb) {
 			selectCohort: tdb.selectCohort, // optional
 			cumincplot4condition: tdb.cumincplot4condition, // optional
 			survivalplot: tdb.survivalplot, // optional
-			supportedChartTypes: tdb.q.getSupportedChartTypes()
+			supportedChartTypes: tdb.q.getSupportedChartTypes(),
+			allowedTermTypes: tdb.allowedTermTypes || []
 		}
 	})
 }
