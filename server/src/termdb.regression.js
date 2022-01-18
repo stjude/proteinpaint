@@ -5,6 +5,7 @@ const lines2R = require('./lines2R')
 const fs = require('fs')
 const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
+const utils = require('./utils')
 
 /*
 q {}
@@ -75,7 +76,7 @@ function parse_q(q, ds) {
 
 	// client to always specify regressionType
 	if (!q.regressionType) throw 'regressionType missing'
-	if (['linear', 'logistic'].indexOf(q.regressionType) == -1) throw 'unknown regressionType'
+	if (!['linear', 'logistic'].includes(q.regressionType)) throw 'unknown regressionType'
 
 	// outcome
 	if (!q.outcome) throw `missing 'outcome' parameter`
@@ -84,6 +85,7 @@ function parse_q(q, ds) {
 	if (!('id' in q.outcome)) throw 'outcome.id missing'
 	if (!q.outcome.q) throw 'outcome.q missing'
 	q.outcome.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
+	// outcome is always a dictionary term
 	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
 	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
 
@@ -360,35 +362,95 @@ async function getSampleData(q, terms) {
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
 	const values = filter ? filter.values.slice() : []
-	const CTEs = terms.map((t, i) => get_term_cte(q, values, i, filter, t))
-	values.push(...terms.map(d => d.id))
 
-	const sql = `WITH
-		${filter ? filter.filters + ',' : ''}
-		${CTEs.map(t => t.sql).join(',\n')}
-		${CTEs.map(
-			t => `
-			SELECT sample, key, value, ? as term_id
-			FROM ${t.tablename} 
-			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
-			`
-		).join(`UNION ALL`)}`
+	const [dictTerms, nonDictTerms] = divideTerms(terms)
 
-	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+	// dict and non-dict terms require different methods for data prep
+	// sample data from both term groups are loaded into this structure
+	const samples = new Map()
+	// k: sample name, v: {sample, id2value:Map( tid => {key,value}) }
 
-	const samples = new Map() // k: sample name, v: {sample, id2value:Map( tid => {key,value}) }
-	for (const { sample, term_id, key, value } of rows) {
-		if (!samples.has(sample)) {
-			samples.set(sample, { sample, id2value: new Map() })
+	if (dictTerms.length) {
+		const CTEs = dictTerms.map((t, i) => get_term_cte(q, values, i, filter, t))
+		values.push(...dictTerms.map(d => d.id))
+
+		const sql = `WITH
+			${filter ? filter.filters + ',' : ''}
+			${CTEs.map(t => t.sql).join(',\n')}
+			${CTEs.map(
+				t => `
+				SELECT sample, key, value, ? as term_id
+				FROM ${t.tablename} 
+				${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
+				`
+			).join(`UNION ALL`)}`
+
+		const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+
+		for (const { sample, term_id, key, value } of rows) {
+			if (!samples.has(sample)) {
+				samples.set(sample, { sample, id2value: new Map() })
+			}
+
+			if (samples.get(sample).id2value.has(term_id)) {
+				// can duplication happen?
+				throw `duplicate '${term_id}' entry for sample='${sample}'`
+			}
+			samples.get(sample).id2value.set(term_id, { key, value })
 		}
-
-		if (samples.get(sample).id2value.has(term_id)) {
-			// can duplication happen?
-			throw `duplicate '${term_id}' entry for sample='${sample}'`
-		}
-		samples.get(sample).id2value.set(term_id, { key, value })
 	}
+
+	for (const term of nonDictTerms) {
+		// for each non dictionary term, query sample data with its own method and append results to the same structure
+		if (term.type == 'snplst') {
+			// each snp is one indepedent variable
+			const lines = (await utils.read_file(path.join(serverconfig.cachedir, term.id))).split('\n')
+			// header:  rsid  effAle  chr  pos  alleles  <s1>  <s2> ...
+			const samples = lines[0]
+				.split('\t')
+				.slice(5) // from 5th column
+				.map(Number) // sample ids are integer
+			const snp2sample = new Map()
+			// k: snp name, rsid or chr:pos string
+			// v: { effAle, alleles, samples: map { k: sample id, v: gt } }
+			for (let i = 1; i < lines.length; i++) {
+				const l = lines[i].split('\t')
+				// TODO reliable identifiers for each snp must be decided early
+				const snpid = l[0] || l[2] + ':' + l[3]
+				snp2sample.set(snpid, {
+					effAle: l[1],
+					alleles: l[4].split(','),
+					samples: new Map()
+				})
+				for (const [j, sampleid] of samples.entries()) {
+					const gt = l[j + 5]
+					if (gt) {
+						snp2sample.get(snpid).samples.set(sampleid, gt)
+					}
+				}
+			}
+		} else {
+			throw 'unknown type of independent non-dictionary term'
+		}
+	}
+
 	return samples.values()
+}
+
+function divideTerms(lst) {
+	// quick fix to divide list of term to two lists
+	// TODO ways to generalize; may use `shared/usecase2termtypes.js` with "regression":{nonDictTypes:['snplst','prs']}
+	// shared between server and client
+	const dict = [],
+		nonDict = []
+	for (const t of lst) {
+		if (t.type == 'snplst' || t.type == 'prs') {
+			nonDict.push(t)
+		} else {
+			dict.push(t)
+		}
+	}
+	return [dict, nonDict]
 }
 
 function replaceTermId(Rinput) {
