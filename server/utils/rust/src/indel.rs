@@ -32,7 +32,7 @@
 // Analyze each read
 //   for each read {
 //      check_read_within_indel_region() (Checks if the read contains indel region)
-//      check_if_read_ambivalent() (Checks if a read starts/ends within repeat region (if present))
+//      check_if_read_ambiguous() (Checks if a read starts/ends within repeat region (if present))
 //      check_polyclonal() (checking if read is polyclonal)
 //      build_kmers()
 //      jaccard_similarity_weights() (w.r.t ref and alt)
@@ -69,6 +69,7 @@ mod realign;
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
+#[derive(Debug)]
 pub struct read_diff_scores {
     // struct for storing read details, used throughout the code
     groupID: usize,          // Original read ID
@@ -78,6 +79,7 @@ pub struct read_diff_scores {
     ref_comparison: i64,     // ref comparison (0 if true, 1 if false)
     polyclonal: i64, // flag to check if the read harbors polyclonal variant (neither ref nor alt)
     ref_insertion: i64, // flag to check if there is any insertion/deletion nucleotides in reads that may get clasified as supporting ref allele
+    ambiguous: i64,     // flag to indicate whether read is ambiguous or not (1 = true, 0 = false)
     sequence_strand: String, // "F" or "R" depending on the strand of the read
 }
 
@@ -122,9 +124,10 @@ struct kmer_data {
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
+#[derive(Debug)]
 struct read_category {
     // struct for storing in which category a read has been classified
-    category: String,        // Category: Ref/Alt/None
+    category: String,        // Category: Ref/Alt/None/Ambiguous
     groupID: usize,          // Original read ID
     ref_comparison: i64,     // ref comparison (0 if true, 1 if false)
     alt_comparison: i64,     // alt comparison (0 if true, 1 if false)
@@ -144,6 +147,7 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
     let poly = item.polyclonal.to_owned();
     let ref_ins = item.ref_insertion.to_owned();
     let seq_strand = item.sequence_strand.to_owned();
+    let ambiguous = item.ambiguous.to_owned();
 
     let read_val = read_diff_scores {
         value: f64::from(val),
@@ -152,6 +156,7 @@ fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
         alt_comparison: i64::from(alt_comparison),
         ref_comparison: i64::from(ref_comparison),
         polyclonal: i64::from(poly),
+        ambiguous: i64::from(ambiguous),
         ref_insertion: i64::from(ref_ins),
         sequence_strand: String::from(seq_strand),
     };
@@ -521,7 +526,7 @@ fn main() {
                     if sequence_flags_list[i as usize - 2].parse::<i64>().unwrap() & 16 == 16 {
                         sequence_strand = "R".to_string();
                     }
-                    let read_ambivalent = check_if_read_ambivalent(
+                    let read_ambiguous = check_if_read_ambiguous(
                         // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                         correct_start_position,
                         correct_end_position,
@@ -568,7 +573,7 @@ fn main() {
                     //println!("alignment_side:{}", &alignment_side);
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
-                    //println!("read_ambivalent:{}", read_ambivalent);
+                    //println!("read_ambiguous:{}", read_ambiguous);
                     //println!("ref_insertion:{}", ref_insertion);
 
                     //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
@@ -604,7 +609,7 @@ fn main() {
                     //println!("ref_comparison:{}", ref_comparison);
                     //println!("alt_comparison:{}", alt_comparison);
                     let mut diff_score: f64 = 0.0;
-                    if read_ambivalent < 2 {
+                    if read_ambiguous < 2 {
                         diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
                     }
 
@@ -615,10 +620,9 @@ fn main() {
                         alt_comparison: i64::from(alt_polyclonal_read_status),
                         ref_comparison: i64::from(ref_polyclonal_read_status),
                         polyclonal: i64::from(
-                            ref_polyclonal_read_status
-                                + alt_polyclonal_read_status
-                                + read_ambivalent,
+                            ref_polyclonal_read_status + alt_polyclonal_read_status,
                         ),
+                        ambiguous: read_ambiguous,
                         ref_insertion: i64::from(ref_insertion),
                         sequence_strand: String::from(sequence_strand),
                     };
@@ -717,7 +721,7 @@ fn main() {
                             if sequence_flags_list[iter].parse::<i64>().unwrap() & 16 == 16 {
                                 sequence_strand = "R".to_string();
                             }
-                            let read_ambivalent = check_if_read_ambivalent(
+                            let read_ambiguous = check_if_read_ambiguous(
                                 // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                                 correct_start_position,
                                 correct_end_position,
@@ -786,7 +790,7 @@ fn main() {
                                 &alignment_side,
                             );
                             let mut diff_score: f64 = 0.0;
-                            if read_ambivalent < 2 {
+                            if read_ambiguous < 2 {
                                 diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
                             }
                             let item = read_diff_scores {
@@ -796,10 +800,9 @@ fn main() {
                                 alt_comparison: i64::from(alt_polyclonal_read_status),
                                 ref_comparison: i64::from(ref_polyclonal_read_status),
                                 polyclonal: i64::from(
-                                    ref_polyclonal_read_status
-                                        + alt_polyclonal_read_status
-                                        + read_ambivalent,
+                                    ref_polyclonal_read_status + alt_polyclonal_read_status,
                                 ),
+                                ambiguous: read_ambiguous,
                                 ref_insertion: i64::from(ref_insertion),
                                 sequence_strand: String::from(sequence_strand),
                             };
@@ -862,7 +865,9 @@ fn main() {
     let mut reference_forward_count: u32 = 0; // Reference forward read counter
     let mut reference_reverse_count: u32 = 0; // Reference reverse read counter
     for item in &ref_indices {
-        if item.ref_insertion == 1 {
+        if item.category == "amb" {
+            output_cat.push_str("amb:"); // Appending amb (i.e ambiguous) to output_cat string
+        } else if item.ref_insertion == 1 {
             // In case of ref-classified reads, if there is any insertion/deletion in the indel region it will get classified into the none category.
             output_cat.push_str("none:"); // Appending none to output_cat string
         } else if strictness >= 2 && item.ref_comparison == 1 {
@@ -884,7 +889,9 @@ fn main() {
     }
 
     for item in &alt_indices {
-        if strictness >= 2 && item.alt_comparison == 1 {
+        if item.category == "amb" {
+            output_cat.push_str("amb:"); // Appending amb (i.e ambiguous) to output_cat string
+        } else if strictness >= 2 && item.alt_comparison == 1 {
             output_cat.push_str("none:"); // Appending none to output_cat string
         } else if item.category == "refalt".to_string() {
             output_cat.push_str("alt:"); // Appending alt to output_cat string
@@ -1450,7 +1457,7 @@ fn assign_kmer_weights(
     )
 }
 
-fn check_if_read_ambivalent(
+fn check_if_read_ambiguous(
     correct_start_position: i64,
     correct_end_position: i64,
     left_offset: usize,
@@ -1463,7 +1470,7 @@ fn check_if_read_ambivalent(
     indel_length: i64,
     splice_freq: usize, // Number of splice junctions in read
 ) -> i64 {
-    let mut read_ambivalent: i64 = 0;
+    let mut read_ambiguous: i64 = 0;
     let mut ref_stop = ref_start + ref_length as i64;
     if ref_nucleotides[0] == alt_nucleotides[0] {
         // Generally the alt position contains the nucleotide preceding the indel. In that case one is subtracted from ref_stop
@@ -1480,10 +1487,10 @@ fn check_if_read_ambivalent(
     //println!("repeat_stop:{}", repeat_stop);
 
     //if repeat_start <= correct_start_position && correct_start_position <= ref_start {
-    //    read_ambivalent = 2;
+    //    read_ambiguous = 2;
     //    println!("Case1");
     //} else if ref_stop <= correct_end_position && correct_end_position <= repeat_stop {
-    //    read_ambivalent = 2;
+    //    read_ambiguous = 2;
     //    println!("Case2");
     //}
 
@@ -1491,69 +1498,69 @@ fn check_if_read_ambivalent(
         && repeat_start < correct_end_position
         && correct_end_position <= ref_start
     {
-        read_ambivalent = 2;
-        //println!("Case1 read ambivalent");
+        read_ambiguous = 2;
+        //println!("Case1 read ambiguous");
     } else if ref_stop < correct_start_position
         && correct_start_position < repeat_stop
         && correct_end_position > repeat_stop
     {
-        read_ambivalent = 2;
-        //println!("Case2 read ambivalent");
+        read_ambiguous = 2;
+        //println!("Case2 read ambiguous");
     }
     if repeat_start <= correct_start_position
         && correct_start_position < ref_start
         && correct_end_position > repeat_stop
         && optimized_allele == 1
     {
-        read_ambivalent = 2;
-        //println!("Case3 read ambivalent");
+        read_ambiguous = 2;
+        //println!("Case3 read ambiguous");
     } else if ref_stop <= correct_end_position
         && correct_end_position < repeat_stop
         && correct_start_position < repeat_start
         && optimized_allele == 1
     {
-        read_ambivalent = 2;
-        //println!("Case4 read ambivalent");
+        read_ambiguous = 2;
+        //println!("Case4 read ambiguous");
     } else if repeat_start <= correct_end_position && correct_end_position < ref_stop {
         if (correct_end_position - ref_start).abs() <= right_offset as i64 {
-            read_ambivalent = 2;
-            //println!("Case5 read ambivalent");
+            read_ambiguous = 2;
+            //println!("Case5 read ambiguous");
         }
     } else if ref_nucleotides.len() > alt_nucleotides.len()
         && ref_nucleotides[0] == ref_nucleotides[ref_nucleotides.len() - 1]
         && correct_start_position == ref_stop
-    // When deletion starts and ends with the same nucleotide, a read containing only last nucleotide only should be considered ambivalent
+    // When deletion starts and ends with the same nucleotide, a read containing only last nucleotide only should be considered ambiguous
     {
-        read_ambivalent = 2;
-        //println!("Case6 read ambivalent");
+        read_ambiguous = 2;
+        //println!("Case6 read ambiguous");
     } else if alt_nucleotides.len() > ref_nucleotides.len()
         && alt_nucleotides[0] == alt_nucleotides[alt_nucleotides.len() - 1]
         && correct_start_position == ref_stop
-    // When insertion starts and ends with the same nucleotide, a read containing only last nucleotide only should be considered ambivalent
+    // When insertion starts and ends with the same nucleotide, a read containing only last nucleotide only should be considered ambiguous
     {
-        read_ambivalent = 2;
-        //println!("Case7 read ambivalent");
+        read_ambiguous = 2;
+        //println!("Case7 read ambiguous");
     } else if ref_nucleotides.len() > alt_nucleotides.len()
         && ref_nucleotides[0] == ref_nucleotides[ref_nucleotides.len() - 1]
         && correct_end_position == ref_start
-    // When deletion starts and ends with the same nucleotide, a read containing only first nucleotide only should be considered ambivalent
+    // When deletion starts and ends with the same nucleotide, a read containing only first nucleotide only should be considered ambiguous
     {
-        read_ambivalent = 2;
-        //println!("Case8 read ambivalent");
+        read_ambiguous = 2;
+        //println!("Case8 read ambiguous");
     } else if alt_nucleotides.len() > ref_nucleotides.len()
         && alt_nucleotides[0] == alt_nucleotides[alt_nucleotides.len() - 1]
         && correct_end_position == ref_start
-    // When insertion starts and ends with the same nucleotide, a read containing only first nucleotide only should be considered ambivalent
+    // When insertion starts and ends with the same nucleotide, a read containing only first nucleotide only should be considered ambiguous
     {
-        read_ambivalent = 2;
-        //println!("Case9 read ambivalent");
+        read_ambiguous = 2;
+        //println!("Case9 read ambiguous");
     }
 
     // This part of the code is not tested, so its commented out for now.
 
     //else if ref_start <= correct_start_position && correct_start_position <= repeat_stop {
     //    if (correct_start_position - ref_stop).abs() <= left_offset as i64 {
-    //        read_ambivalent = 2;
+    //        read_ambiguous = 2;
     //    }
     //}
     if splice_freq > 0 {
@@ -1564,12 +1571,12 @@ fn check_if_read_ambivalent(
         //println!("indel_length:{}", indel_length);
         if correct_start_position <= ref_start && ref_start + indel_length <= correct_end_position {
         } else {
-            read_ambivalent = 2;
-            //println!("Case10 read ambivalent");
+            read_ambiguous = 2;
+            //println!("Case10 read ambiguous");
         }
     }
 
-    read_ambivalent
+    read_ambiguous
 }
 
 fn preprocess_input(
@@ -3137,6 +3144,18 @@ fn classify_to_three_categories(
             // If polyclonal is 2, it is automatically classified as 'none' since the allele neither matches ref allele or alt allele of interest
             let read_cat = read_category {
                 category: String::from("none"),
+                groupID: usize::from(kmer_diff_scores[i].groupID),
+                alt_comparison: i64::from(kmer_diff_scores[i].alt_comparison),
+                ref_comparison: i64::from(kmer_diff_scores[i].ref_comparison),
+                diff_score: f64::from(kmer_diff_scores[i].value),
+                ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
+                sequence_strand: String::from(&kmer_diff_scores[i].sequence_strand.to_owned()),
+            };
+            indices.push(read_cat);
+        } else if kmer_diff_scores[i].ambiguous == 2 as i64 {
+            // If ambiguous is 1, it is automatically classified as 'amb' since the read start/ends in a region which has the same sequence as that in the flanking region
+            let read_cat = read_category {
+                category: String::from("amb"),
                 groupID: usize::from(kmer_diff_scores[i].groupID),
                 alt_comparison: i64::from(kmer_diff_scores[i].alt_comparison),
                 ref_comparison: i64::from(kmer_diff_scores[i].ref_comparison),

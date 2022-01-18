@@ -193,6 +193,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 				//.map(Number)
 				.map(n => Number(n.replace(/\D/g, ''))) // Removing characters that are not digits
 		} else if (item.includes('output_cat')) {
+			console.log(item)
 			categories = item
 				.replace(/"/g, '')
 				.replace(/,/g, '')
@@ -294,6 +295,21 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 				}
 				kmer_diff_scores_input.push(input_items)
 			}
+		} else if (categories[i] == 'amb') {
+			if (type2group[bamcommon.type_supportamb]) {
+				index = group_ids[i]
+				//console.log("index:",index)
+				//console.log("diff_scores[i]:",diff_scores[i])
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
+				//}
+				type2group[bamcommon.type_supportamb].templates.push(templates_info[index])
+				const input_items = {
+					value: diff_scores[i],
+					groupID: 'amb'
+				}
+				kmer_diff_scores_input.push(input_items)
+			}
 		} else if (categories[i] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
 				index = group_ids[i]
@@ -323,17 +339,31 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	for (const k in type2group) {
 		const g = type2group[k]
 		if (g.templates.length == 0) continue // empty group, do not include
-		g.messages.push({
-			isheader: true,
-			t:
-				g.templates.length +
-				' reads supporting ' +
-				(k == bamcommon.type_supportref
-					? 'reference allele'
-					: k == bamcommon.type_supportalt
-					? 'alternate allele'
-					: 'neither reference or mutant alleles')
-		})
+		if (k == bamcommon.type_supportamb) {
+			if (g.templates.length == 1) {
+				g.messages.push({
+					isheader: true,
+					t: g.templates.length + ' ambiguous read'
+				})
+			} else {
+				g.messages.push({
+					isheader: true,
+					t: g.templates.length + ' ambiguous reads'
+				})
+			}
+		} else {
+			g.messages.push({
+				isheader: true,
+				t:
+					g.templates.length +
+					' reads supporting ' +
+					(k == bamcommon.type_supportref
+						? 'reference allele'
+						: k == bamcommon.type_supportalt
+						? 'alternate allele'
+						: 'neither reference or mutant alleles')
+			})
+		}
 		g.widths = region_widths
 		groups.push(g)
 	}
