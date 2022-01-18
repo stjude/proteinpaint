@@ -8,9 +8,7 @@ and prevent snps from being included in regression request string
 instance attributes
 
 self.term{}
-	.id: str, the cache file name
-		!!NOTE!! id changes for every validation, e.g. for snp/cohort/filter update
-		small changes can be made for term.id to remain unchanged if that's ever needed
+	.id: str, not really used
 	.type: "snplst"
 	.snps[ {} ]
 		.rsid: str
@@ -25,6 +23,9 @@ self.q{}
 	.alleleType: int
 	.geneticModel: int
 	.missingGenotype: int
+	.cacheid
+		the cache file name storing the snp-by-sample genotypes, for samples based on current filter
+		!!NOTE!! id changes for every validation, e.g. for snp/cohort/filter update
 */
 
 // self is the termsetting instance
@@ -174,7 +175,7 @@ function makeEditMenu(self, div) {
 			// parse input text
 			const snps = parseSnpFromText(textarea)
 			if (snps.length == 0) return window.alert('No valid SNPs')
-			if (!self.term) self.term = {}
+			if (!self.term) self.term = { id: 'dummy' }
 			if (!self.q) self.q = {}
 			// set term type in case the instance had a different term before
 			self.term.type = 'snplst'
@@ -237,7 +238,7 @@ async function validateSnps(self) {
 	const data = await self.vocabApi.validateSnps(snp2text(self), self.filter)
 	if (data.error) throw data.error
 	// copy result to instace
-	self.term.id = data.cacheid
+	self.q.cacheid = data.cacheid
 	self.q.numOfSampleWithAllValidGT = data.numOfSampleWithAllValidGT
 	self.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
 	let invalidcount = 0

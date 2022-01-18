@@ -415,7 +415,7 @@ async function getSampleData(q, terms) {
 }
 
 async function loadSampleData_snplst(term, samples) {
-	const lines = (await utils.read_file(path.join(serverconfig.cachedir, term.id))).split('\n')
+	const lines = (await utils.read_file(path.join(serverconfig.cachedir, term.q.cacheid))).split('\n')
 	// header:  rsid  effAle  chr  pos  alleles  <s1>  <s2> ...
 	const sampleheader = lines[0]
 		.split('\t')
