@@ -28,7 +28,7 @@ upon error, throw err message as a string
 	const urlp = urlmap()
 
 	if (urlp.has('examples')) {
-		const _ = await import('./examples')
+		const _ = await import('./app.drawer.ui')
 		await _.init_examples(arg)
 		return
 	}
