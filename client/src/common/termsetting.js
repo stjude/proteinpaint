@@ -141,8 +141,10 @@ class TermSetting {
 		if (d.term) {
 			// term is optional
 			if (!d.term.id) throw 'data.term.id missing'
-			if (!d.term.name) throw 'data.term.name missing'
 			if (!d.term.type) throw 'data.term.type missing'
+			if (d.term.type != 'snplst') {
+				if (!d.term.name) throw 'data.term.name missing'
+			}
 		}
 		if (!d.q) d.q = {}
 		if (typeof d.q != 'object') throw 'data.q{} is not object'
@@ -529,7 +531,11 @@ export function termsetting_fill_q(q, term, activeCohort) {
 		q.type = 'survival'
 		return
 	}
-	throw 'unknown term type'
+	if (term.type == 'snplst') {
+		// may set q.type later?
+		return
+	}
+	throw `unknown term type='${term.type}'`
 }
 
 function set_hiddenvalues(q, term) {
