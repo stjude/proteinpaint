@@ -1683,9 +1683,12 @@ fn preprocess_input(
     left_nearby_seq = reverse_string(&left_nearby_seq_reverse);
     //println!("left_nearby_seq:{}", left_nearby_seq);
     //println!("right_nearby_seq:{}", right_nearby_seq);
-    //println!("actual_indel:{}", actual_indel);
+    //println!("right_subseq:{}", right_subseq);
+    println!("actual_indel:{}", actual_indel);
 
+    let mut no_repeat_region = 0;
     if left_nearby_seq != actual_indel && right_nearby_seq != actual_indel {
+        no_repeat_region = 1;
         println!("No repeating region");
     } else if left_nearby_seq == actual_indel && right_nearby_seq != actual_indel {
         println!("Left side is repeating");
@@ -1704,6 +1707,7 @@ fn preprocess_input(
             surrounding_region_length,
             "R",
         );
+        println!("repeating_sequence_right:{}", repeating_sequence_right);
         optimized_alt_allele = optimized_alt_allele + &repeating_sequence_right;
         optimized_ref_allele = optimized_ref_allele + &repeating_sequence_right;
         right_offset += repeating_sequence_right.len();
@@ -1773,11 +1777,11 @@ fn preprocess_input(
         // When the alt allele has been optimized, the right offset part needs to be increased
     }
 
-    if right_offset_part > right_offset {
+    if right_offset_part > right_offset && no_repeat_region == 1 {
         right_offset = right_offset_part;
     }
 
-    if left_offset_part > left_offset {
+    if left_offset_part > left_offset && no_repeat_region == 1 {
         left_offset = left_offset_part;
     }
 
@@ -1823,10 +1827,10 @@ fn check_flanking_sequence_for_repeats(
                 //
             }
         }
-        repeat_flanking_sequence.push_str(&subseq);
         if &subseq != monomer {
             break;
         }
+        repeat_flanking_sequence.push_str(&subseq);
     }
     //println!("repeat_flanking_sequence:{}", repeat_flanking_sequence);
     repeat_flanking_sequence
