@@ -162,7 +162,7 @@ if (!serverconfig.features) {
 }
 
 if (!serverconfig.examplejson) {
-	serverconfig.examplejson = path.join(serverconfig.binpath, 'features.json')
+	serverconfig.examplejson = path.join(serverconfig.binpath, 'features/index.json')
 }
 
 if (fs.existsSync('./public/rev.txt')) {
