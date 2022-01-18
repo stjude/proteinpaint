@@ -1,20 +1,23 @@
 import { event as d3event } from 'd3-selection'
 
-/* instance attributes
+/* 
+storing snps on self.term but not self so it can be written to state,
+allow snps to be supplied from self.main(),
+and prevent snps from being included in regression request string
+
+instance attributes
 
 self.term{}
 	.type: "snplst"
-self.snps[ {} ]
-	// storing snps on self but not self.q will prevent snps to show up in regression query string
-	// but how will self.main() accept snps from restored state?
-	.rsid: str
-	.effectAllele: str
-	// following snp attr are computed by validation
-	.invalid
-	.chr
-	.pos
-	.alleles
-	.validgtcount
+	.snps[ {} ]
+		.rsid: str
+		.effectAllele: str
+		// following attributes are computed by validation
+		.invalid
+		.chr
+		.pos
+		.alleles
+		.validgtcount
 self.q{}
 	.alleleType: int
 	.geneticModel: int
@@ -89,7 +92,7 @@ function makeEditMenu(self, div) {
 		.style('font-size', '.7em')
 		.html('One rs ID per line; define optional<br>effect allele on 2nd column.<br>Separate columns by tab or space.')
 
-	if (self.snps) {
+	if (self.term && self.term.snps) {
 		// TODO show list of snps as well as status for each: {invalid, alleles, validgtcount}
 		// allow to delete or add to this list
 	}
@@ -177,8 +180,8 @@ function makeEditMenu(self, div) {
 			}
 			// set term type in case the instance had a different term before
 			self.term.type = 'snplst'
-			self.term.name = snps.length + ' SNP' + (snps.length > 1 ? 's' : '')
-			self.snps = snps
+			self.term.name = getTermName(snps)
+			self.term.snps = snps
 			d3event.target.disabled = true
 			d3event.target.innerHTML = 'Validating SNPs...'
 			/* validate snps here so cache id can be set on self.q prior to calling callback
@@ -191,6 +194,15 @@ function makeEditMenu(self, div) {
 			self.dom.tip.hide()
 			self.runCallback()
 		})
+}
+
+function getTermName(snps) {
+	if (snps.length == 1) {
+		const s = snps[0]
+		if (s.rsid) return s.rsid
+		return s.chr + ':' + s.pos
+	}
+	return snps.length + ' SNP' + (snps.length > 1 ? 's' : '')
 }
 
 function parseSnpFromText(ta) {
@@ -210,9 +222,9 @@ function parseSnpFromText(ta) {
 }
 
 function snp2text(self) {
-	if (!self.snps) return ''
+	if (!self.term || !self.term.snps) return ''
 	const lines = []
-	for (const a of self.snps) {
+	for (const a of self.term.snps) {
 		const l = a.rsid + (a.effectAllele ? ' ' + a.effectAllele : '')
 		lines.push(l)
 	}
@@ -226,7 +238,7 @@ when filter/subcohort changes, the underlying cohort changes and have to rerun v
 thus the validation must run in postMain()
 */
 async function mayValidateSnps(self) {
-	if (!self.snps) return
+	if (!self.term || !self.term.snps) return
 	const data = await self.vocabApi.validateSnps(snp2text(self), self.filter)
 	if (data.error) throw data.error
 	// copy result to instace
@@ -234,7 +246,7 @@ async function mayValidateSnps(self) {
 	self.q.numOfSampleWithAllValidGT = data.numOfSampleWithAllValidGT
 	self.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
 	let invalidcount = 0
-	for (const [i, s] of self.snps.entries()) {
+	for (const [i, s] of self.term.snps.entries()) {
 		const s1 = data.snps[i]
 		s.invalid = s1.invalid
 		if (s.invalid) invalidcount++

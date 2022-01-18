@@ -400,9 +400,13 @@ makeURL([
 					outcome: { id: 'LV_Ejection_Fraction_3D' },
 					independent: [
 						{
-							term:{type:'snplst',id: 'dummy'}, // doesn't work
-							q:{
+							// doesn't work
+							term:{
+								type:'snplst',
+								id: 'dummy',
 								snps:[{rsid:'rs1641548'},{rsid:'rs858528'},{rsid:'rs1642793'}],
+							},
+							q:{
 								alleleType:0,
 								geneticModel:0,
 								missingGenotype:0
