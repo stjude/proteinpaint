@@ -2,7 +2,7 @@ import { getInitFxn, copyMerge } from '../common/rx.core'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
 
-export const nonDictionaryTermTypes = new Set(['snplst'])
+export const nonDictionaryTermTypes = new Set(['snplst', 'prs'])
 
 /*
 constructor option and API are documented at
@@ -600,6 +600,7 @@ function getDefaultHandler(self) {
 export async function fillTermWrapper(tw, vocabApi) {
 	// assume that tw.id implies a dictionary term
 	if ('id' in tw) {
+		// previous behavior for dictionary terms
 		if (!tw.term || !nonDictionaryTermTypes.has(tw.term.type)) {
 			tw.term = await vocabApi.getterm(tw.id)
 		}
@@ -609,20 +610,24 @@ export async function fillTermWrapper(tw, vocabApi) {
 
 		if (!tw.q) tw.q = {}
 		termsetting_fill_q(tw.q, tw.term, vocabApi.state.activeCohort)
-	} else if (!tw.term) {
-		throw `missing tw.term`
-	} else if (!tw.term.type) {
+		return
+	}
+
+	if (!tw.term) {
+		// if there is no tw.id, then tw.term is required
+		throw `missing both tw.id and tw.term`
+	}
+
+	if (!tw.term.type) {
 		throw `missing tw.term.type`
-	} else if ('id' in tw.term) {
-		// some state may assign term.id as tw.id, by default if missing
-		// this assumes that
-	} else {
-		try {
-			const _ = await import(`../common/termsetting.${tw.term.type}.js`)
-			// fill-in wrapper, term and q
-			await _.fillTermWrapper(tw, vocabApi)
-		} catch (e) {
-			throw e
-		}
+	}
+
+	// tw.term.type must be present
+	try {
+		const _ = await import(`../common/termsetting.${tw.term.type}.js`)
+		// fill-in wrapper, term and q
+		await _.fillTermWrapper(tw, vocabApi)
+	} catch (e) {
+		throw e
 	}
 }

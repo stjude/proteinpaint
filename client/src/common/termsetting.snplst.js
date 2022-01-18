@@ -228,7 +228,11 @@ function snp2text(self) {
 	return lines.join('\n')
 }
 
-/* snp validation requires finding out #cases with a valid gt call for each snp
+/* 
+Argument
+self: may be a termsetting instance or any object
+
+snp validation requires finding out #cases with a valid gt call for each snp
 will query bigbed to convert to pos, and bcf file
 very expensive step
 when filter/subcohort changes, the underlying cohort changes and have to rerun validation again
@@ -257,6 +261,7 @@ async function validateSnps(self) {
 
 export async function fillTermWrapper(tw, vocabApi) {
 	if (!tw.q) tw.q = {}
+	if (!tw.term.name) tw.term.name = getTermName(tw.term.snps)
 	await validateSnps({
 		term: tw.term,
 		q: tw.q,
