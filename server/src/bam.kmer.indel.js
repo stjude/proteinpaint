@@ -193,7 +193,6 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 				//.map(Number)
 				.map(n => Number(n.replace(/\D/g, ''))) // Removing characters that are not digits
 		} else if (item.includes('output_cat')) {
-			console.log(item)
 			categories = item
 				.replace(/"/g, '')
 				.replace(/,/g, '')

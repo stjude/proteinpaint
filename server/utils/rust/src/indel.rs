@@ -32,16 +32,16 @@
 // Analyze each read
 //   for each read {
 //      check_read_within_indel_region() (Checks if the read contains indel region)
-//      check_if_read_ambiguous() (Checks if a read starts/ends within repeat region (if present))
+//      check_if_read_ambiguous() (Checks if a read starts/ends within repeat region (if present) or if start/end of variant is similar to flanking sequence such that read does not contain sufficient part of variant region to infer whether it supports ref or alt allele)
 //      check_polyclonal() (checking if read is polyclonal)
 //      build_kmers()
 //      jaccard_similarity_weights() (w.r.t ref and alt)
 //      diff_score = j.s[alt] - j.s[ref]
 //      if diff_score > 0 classify read as alt; else classify read as ref
 //   }
-// Determine cutoff for both ref and alt categories
-//   classify_to_three_categories() (for both ref and alt)
-//   Other post_processing:
+//
+// classify_to_four_categories() (classify into ref,alt,none and amb)
+// Other post_processing:
 //     if polyclonal, classify as none
 //     if ref classified read, but contains inserted/deleted nucleotides in indel region, classify as none
 //
@@ -844,15 +844,15 @@ fn main() {
 
     let reads_analyzed_num: usize = ref_scores.len() + alt_scores.len();
     println!("Number of reads analyzed: {}", reads_analyzed_num);
-    let mut ref_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for ref-classified reads. This importantly contains the read category ref or none as categorized by classify_to_three_categories function
+    let mut ref_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for ref-classified reads. This importantly contains the read category ref or none as categorized by classify_to_four_categories function
     if ref_scores.len() > 0 {
-        ref_indices = classify_to_three_categories(&mut ref_scores, strictness);
+        ref_indices = classify_to_four_categories(&mut ref_scores, strictness);
         // Function to classify reads as either ref or as none
     }
 
-    let mut alt_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for alt-classified reads. This importantly contains the read category alt or none as categorized by classify_to_three_categories function
+    let mut alt_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for alt-classified reads. This importantly contains the read category alt or none as categorized by classify_to_four_categories function
     if alt_scores.len() > 0 {
-        alt_indices = classify_to_three_categories(&mut alt_scores, strictness);
+        alt_indices = classify_to_four_categories(&mut alt_scores, strictness);
         // Function to classify reads as either alt or as none
     }
 
@@ -3133,7 +3133,7 @@ fn jaccard_similarity_weights(
     // Jaccard similarity i.e (A intersection B) / (A union B)
 }
 
-fn classify_to_three_categories(
+fn classify_to_four_categories(
     kmer_diff_scores: &mut Vec<read_diff_scores>, // Vector containing read diff_scores for all reads classified as ref/alt
     strictness: usize,                            // Strictness of the pipeline
 ) -> Vec<read_category> {
