@@ -28,9 +28,16 @@ submitButton()
 validateInput()
 infoSection()
 
+doms: {}
+.genomeselect SELECT
+.tabInUse STR
+.trackname STR
+.filepath STR
+.multitrackdata STR
 */
 
 export async function bigwigUI(genomes, holder) {
+	//UI layout: two column flexbox grid: Prompts | Inputs
 	const wrapper = holder
 		.append('div')
 		.style('margin', '5px 5px 5px 20px')
@@ -43,15 +50,20 @@ export async function bigwigUI(genomes, holder) {
 		.style('overflow', 'hidden')
 
 	const doms = {}
+	//User selects genome
 	makePrompt(wrapper, 'Genome')
 	genomeSelection(wrapper, genomes, doms)
+	//User file input for bigwig tracks
+	//TODO: add option for stranded bigwig tracks
 	makePrompt(wrapper, 'Data').style('align-self', 'baseline')
 	const tabs_div = wrapper.append('div')
 	makeTrackEntryTabs(tabs_div, doms)
+	//Submit and information for user
 	submitButton(wrapper, doms, holder, genomes)
 	infoSection(wrapper)
 }
 
+//Creates simple text divs as prompts for user inputs
 function makePrompt(div, text) {
 	const prompt = div
 		.append('div')
@@ -62,15 +74,13 @@ function makePrompt(div, text) {
 	return prompt
 }
 
+//Tabs for 'Data' entry.
 function makeTrackEntryTabs(tabs_div, doms) {
-	//Tabs for 'Data' entry.
 	const tabs = [
 		{
 			label: 'Single Track',
 			callback: async div => {
-				// can be single flag, no need to attach to dom
-				doms.singleInUse = true
-				doms.multiInUse = false
+				doms.tabInUse = 'single'
 				if (!tabs[0].rendered) {
 					div.style('border', 'none').style('display', 'block')
 					const singlediv = div
@@ -83,9 +93,9 @@ function makeTrackEntryTabs(tabs_div, doms) {
 						.style('place-items', 'center left')
 					appear(div)
 					makePrompt(singlediv, 'Name')
-					doms.trackname = trackNameInput(singlediv, doms) // no need to pass doms as name is returned
+					trackNameInput(singlediv, doms)
 					makePrompt(singlediv, 'File Path')
-					trackFilePathInput(singlediv, doms) // no need to pass doms as filepath is returned, same as trackname
+					trackFilePathInput(singlediv, doms)
 					tabs[0].rendered = true
 				}
 			}
@@ -93,8 +103,7 @@ function makeTrackEntryTabs(tabs_div, doms) {
 		{
 			label: 'Multiple Tracks',
 			callback: async div => {
-				doms.singleInUse = false
-				doms.multiInUse = true
+				doms.tabInUse = 'multi'
 				if (!tabs[1].rendered) {
 					div.style('border', 'none').style('display', 'block')
 					appear(div)
@@ -103,7 +112,7 @@ function makeTrackEntryTabs(tabs_div, doms) {
 						.html(
 							'<p style="margin-left: 10px;">Enter one track per line in the following format: [track name],[path/to/file.bw or URL]</p><p style="margin-left: 20px; color: #7d7c7c;">e.g. BigWig Track, proteinpaint_demo/hg19/bigwig/file.bw</p>'
 						)
-					doms.multiInput = multiTrackInput(div, doms) // same as doms.trackname
+					multiTrackInput(div, doms)
 					tabs[1].rendered = true
 				}
 			}
@@ -118,7 +127,7 @@ async function genomeSelection(div, genomes, doms) {
 	const g = uiutils.makeGenomeDropDown(genome_div, genomes).style('border', '1px solid rgb(138, 177, 212)')
 	doms.genomeselect = g.node()
 }
-
+//Creates name input under Single Track tab
 function trackNameInput(div, doms) {
 	const track_div = div.append('div').style('display', 'inline-block')
 	const name = uiutils
@@ -126,10 +135,9 @@ function trackNameInput(div, doms) {
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.on('keyup', async () => {
 			doms.trackname = name.property('value').trim()
-			// return name
 		})
 }
-
+//Creates filepath input under Single Track tab
 function trackFilePathInput(div, doms) {
 	const track_div = div.append('div').style('display', 'inline-block')
 	const filepath = uiutils
@@ -137,10 +145,9 @@ function trackFilePathInput(div, doms) {
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.on('keyup', async () => {
 			doms.filepath = filepath.property('value').trim()
-			// return filepath
 		})
 }
-
+//Creates textarea input to input multiple bigwig tracks under Multiple Tracks tab
 function multiTrackInput(div, doms) {
 	const pasteTrack_div = div.append('div').style('display', 'block')
 	const multi = uiutils
@@ -149,7 +156,6 @@ function multiTrackInput(div, doms) {
 		.style('margin', '0px 0px 0px 20px')
 		.on('keyup', async () => {
 			doms.multitrackdata = multi.property('value').trim()
-			//return multi
 		})
 }
 
@@ -173,8 +179,8 @@ function submitButton(div, doms, holder, genomes) {
 		})
 }
 
+//Creates the runpp arguments on submit
 function validateInput(doms, genomes) {
-	//Creates the runpp arguments on submit
 	if (!doms.filepath && !doms.multitrackdata) {
 		alert('Provide data for either a single track or multiple tracks.')
 		return
@@ -189,7 +195,7 @@ function validateInput(doms, genomes) {
 	}
 	const g = genomes[genome]
 
-	if (doms.singleInUse == true) {
+	if (doms.tabInUse == 'single') {
 		let file, url
 		if (uiutils.isURL(doms.filepath)) url = doms.filepath
 		else file = doms.filepath
@@ -203,12 +209,13 @@ function validateInput(doms, genomes) {
 			}
 		}
 		runpp_args.tracks.push(tk)
-		first_genetrack_tolist(g, runpp_args.tracks)
+		first_genetrack_tolist(g, runpp_args.tracks) //Creates nativetracks arg
 		return runpp_args
 	}
 
-	if (doms.multiInUse == true) {
+	if (doms.tabInUse == 'multi') {
 		for (const data of doms.multitrackdata.split(/[\r\n]/)) {
+			//Name must be separated from filepath by a comma
 			const line = data.split(',')
 			if (line[0] && !line[1]) alert('Problem with submission. Are commas between the track names and filepaths?')
 			if (line[0] && line[1]) {
@@ -230,7 +237,7 @@ function validateInput(doms, genomes) {
 				runpp_args.tracks.push(tk)
 			}
 		}
-		first_genetrack_tolist(g, runpp_args.tracks)
+		first_genetrack_tolist(g, runpp_args.tracks) //Creates nativetracks arg
 		return runpp_args
 	}
 	throw 'unknown option'
@@ -240,7 +247,7 @@ function infoSection(div) {
 	div
 		.append('div')
 		.style('margin', '10px')
-		.style('opacity', '0.6')
+		.style('opacity', '0.65')
 		.style('grid-column', 'span 2').html(`<ul>
                 <li>
                     <a href=https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9 target=_blank>BigWig track documentation</a>
