@@ -145,7 +145,7 @@
             "blurb": "Quantitative data at genomic positions",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
             "update_expire": "2022-02-15",
-            "sandboxjson": "server/cards/bigwig.json",
+            "sandboxjson": "bigwig",
             "sandbox":{
                 "update_message": "Create your own bigwig track! Use the new form on the Add Your Data tab to create your own bigwig track. Additional configuration options coming soon."
             },

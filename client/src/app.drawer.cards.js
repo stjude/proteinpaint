@@ -45,7 +45,7 @@ Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl
 
 export async function init_appDrawer(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
-	const re = await dofetch2('/examplejson')
+	const re = await dofetch2('/cardsjson')
 	if (re.error) {
 		sayerror(holder.append('div'), re.error)
 		return
@@ -279,21 +279,17 @@ function makeRibbon(e, text, color) {
 		.style('text-align', 'center')
 }
 
-
 /******* Create Sandbox Function ********* 
  	Opens a sandbox with track example(s) or app ui with links and other information
 */
 
 async function openSandbox(track, holder) {
-	const res = await dofetch2('textfile', {method: 'POST', body: JSON.stringify(track.sandbox)})
+	const res = await dofetch2('textfile', { method: 'POST', body: JSON.stringify(track.sandbox) })
 	if (res.error) {
 		sayerror(holder.append('div'), res.error)
 		return
 	}
 	console.log(293, res)
-
-
-
 
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
