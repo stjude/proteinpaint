@@ -259,7 +259,7 @@ async function validateSnps(self) {
 	// #samples etc
 }
 
-export async function fillTermWrapper(tw, vocabApi) {
+export async function fillTW(tw, vocabApi) {
 	if (!tw.q) tw.q = {}
 	if (!tw.term.name) tw.term.name = getTermName(tw.term.snps)
 	await validateSnps({

@@ -106,6 +106,7 @@ export const componentInit = regressionInit
 let _ID_ = 1
 
 export async function getPlotConfig(opts, app) {
+	// TODO need to supply term filter of app to fillTermWrapper
 	if (!opts.outcome) {
 		opts.outcome = {}
 	}
