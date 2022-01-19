@@ -438,7 +438,6 @@ async function handle_cards(req, res) {
 		if (req.query.sandboxjson) {
 			const jsontxt = await utils.read_file(path.join(dir, req.query.sandboxjson + '.json'))
 			const sjson = JSON.parse(jsontxt)
-			console.log(sjson.ppcalls)
 			res.send({ sandboxjson: sjson.ppcalls, allow_mdsform: exports.features.mdsjsonform })
 		} else {
 			res.send({ examples: json.examples, allow_mdsform: exports.features.mdsjsonform })
