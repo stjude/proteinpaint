@@ -83,7 +83,7 @@ tape('linear, outcome type=float', function(test) {
 	function testSectionCounts(regres) {
 		const resultsDiv = regres.Inner.results.dom.holder
 		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 19
+		const expectedNumDivs = 20
 		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
 
 		const actualNumRows = resultsDiv.selectAll('tr').size()
@@ -156,7 +156,7 @@ tape('logistic outcome type=float', function(test) {
 	function testSectionCounts(regres) {
 		const resultsDiv = regres.Inner.results.dom.holder
 		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 19
+		const expectedNumDivs = 23
 		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
 
 		const actualNumRows = resultsDiv.selectAll('tr').size()
