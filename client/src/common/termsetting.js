@@ -595,27 +595,31 @@ function getDefaultHandler(self) {
 	}
 }
 
-// tw: termWrapper = {id, term?, q?}
+// tw: termWrapper = {id, term{}, q{}}
 // vocabApi
 export async function fillTermWrapper(tw, vocabApi) {
-	// if the tw is a non-dictionary term, it must have tw.term.type, and tw.id does not matter
-	if (tw.term && nonDictionaryTermTypes.has(tw.term.type)) {
-		// is non-dict term, must run fillTW()
+	if (!tw.term) {
+		if (!('id' in tw)) throw 'missing both .id and .term'
+		// has .id but no .term, must be a dictionary term
+		// as non-dict term must have tw.term{}
+		tw.term = await vocabApi.getterm(tw.id)
+	}
+
+	if (nonDictionaryTermTypes.has(tw.term.type)) {
+		// is non-dict term, must run fillTW() and done
 		const _ = await import(`../common/termsetting.${tw.term.type}.js`)
 		// fill-in wrapper, term and q
 		await _.fillTW(tw, vocabApi)
 		return
 	}
-	// the term must be a dictionary term, tw.id is required?
 
-	if (!('id' in tw)) throw 'tw.id missing'
-	if (!tw.term) {
-		tw.term = await vocabApi.getterm(tw.id)
+	// is dictionary term; now has tw.term{}, tw.id and tw.q{} can be missing
+
+	if (!('id' in tw)) {
+		tw.id = tw.term.id
+	} else if (tw.id != tw.term.id) {
+		throw 'the given ids (tw.id and tw.term.id) are different'
 	}
-
-	if (tw.term && 'id' in tw.term) tw.id = tw.term.id
-	// ???
-	else throw 'term.id missing'
 
 	if (!tw.q) tw.q = {}
 	termsetting_fill_q(tw.q, tw.term, vocabApi.state.activeCohort)
