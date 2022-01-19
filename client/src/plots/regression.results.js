@@ -180,6 +180,7 @@ function setRenderers(self) {
 			when launching from a parameterized url that's missing refgrp for the term
 			and the refGrp is dynamically filled by input.updateTerm() but not propagated to state
 			*/
+			// add getTermHelper() to match tid (snp name) to the snplst term
 			const tw = self.config.independent.find(t => t.id == tid)
 			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 

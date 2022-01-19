@@ -7,6 +7,9 @@ const readline = require('readline')
 const serverconfig = require('./serverconfig')
 
 /*
+TODO improve bcftools usage
+TODO support on-the-fly prs computing
+
 ********************** EXPORTED
 validate()
 ********************** INTERNAL
@@ -22,7 +25,9 @@ q{}
 snps[ {} ]
 	.rsid: raw str, to be validated in genome bb file
 	.effectAllele: optional
+	// following attr are assigned during validation and are returned to client
 	.invalid: true if this item is invalid for any reason
+	.snpid: consistent id, in regression analysis will be equivalent to "term id"
 	.chr: if not given, will query bb file to map to chr; if no match then missing
 	.pos: if not given, match from bb file. 0-based!
 	.alleles[]: from bcf file, [0] is ref, [1:] are alts
@@ -52,10 +57,15 @@ function parseSnpText(text) {
 		const [rsid, ale] = tmp.trim().split(/[\s\t]/)
 		if (rsid) {
 			if (snps.find(i => i.rsid == rsid)) continue // duplicate
-			const s = { rsid }
+			const s = {
+				rsid,
+				snpid: rsid
+			}
 			if (ale) s.effectAllele = ale
 			snps.push(s)
+			continue
 		}
+		// may support chr:pos
 	}
 	return snps
 }
@@ -124,7 +134,7 @@ async function queryBcf(q, snps, ds) {
 	}
 	if (sampleheader.length == 0) throw 'no samples'
 
-	const lines = ['rsid\teffAle\tchr\tpos\talleles\t' + sampleheader.join('\t')] // lines to write to cache file
+	const lines = ['snpid\trsid\teffAle\tchr\tpos\talleles\t' + sampleheader.join('\t')] // lines to write to cache file
 
 	const sample2snpcount = new Map()
 	// k: sample
@@ -162,9 +172,19 @@ async function queryBcf(q, snps, ds) {
 			}
 		})
 		lines.push(
-			`${snp.rsid || ''}\t${snp.effectAllele || ''}\t${snp.chr}\t${snp.pos}\t${snp.alleles.join(',')}\t${gtlst.join(
-				'\t'
-			)}`
+			snp.snpid +
+				'\t' +
+				(snp.rsid || '') +
+				'\t' +
+				(snp.effectAllele || '') +
+				'\t' +
+				snp.chr +
+				'\t' +
+				snp.pos +
+				'\t' +
+				snp.alleles.join(',') +
+				'\t' +
+				gtlst.join('\t')
 		)
 	}
 

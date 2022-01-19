@@ -5,6 +5,7 @@ const lines2R = require('./lines2R')
 const fs = require('fs')
 const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
+const utils = require('./utils')
 
 /*
 q {}
@@ -23,6 +24,7 @@ q {}
 		.scale
 	.refGrp
 	.interactions[]
+	.snps[] // list of snp ids, for type=snplst, added when parsing cache file
 
 input to R is an json object {type, outcome:{rtype}, independent:[ {rtype} ]}
 rtype with values numeric/factor is used instead of actual term type
@@ -75,7 +77,7 @@ function parse_q(q, ds) {
 
 	// client to always specify regressionType
 	if (!q.regressionType) throw 'regressionType missing'
-	if (['linear', 'logistic'].indexOf(q.regressionType) == -1) throw 'unknown regressionType'
+	if (!['linear', 'logistic'].includes(q.regressionType)) throw 'unknown regressionType'
 
 	// outcome
 	if (!q.outcome) throw `missing 'outcome' parameter`
@@ -84,6 +86,7 @@ function parse_q(q, ds) {
 	if (!('id' in q.outcome)) throw 'outcome.id missing'
 	if (!q.outcome.q) throw 'outcome.q missing'
 	q.outcome.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
+	// outcome is always a dictionary term
 	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
 	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
 
@@ -95,6 +98,7 @@ function parse_q(q, ds) {
 	for (const tw of q.independent) {
 		if (tw.type == 'snplst') {
 			// !!!!!!!!!QUICK FIX!! detect non-dict term and do not query termdb
+			// snplst tw lacks tw.term{}; tw.snps[] will be added when parsing cache file
 		} else {
 			if (!tw.id) throw '.id missing for an independent term'
 			tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
@@ -135,22 +139,36 @@ function makeRinput(q, sampledata) {
 
 	// independent terms, tw = termWrapper
 	for (const tw of q.independent) {
-		const independent = {
-			id: tw.id,
-			name: tw.term.name,
-			rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor',
-			values: [],
-			interactions: tw.interactions
-		}
-		if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
-		if (tw.q.mode == 'spline') {
-			independent.spline = {
-				knots: tw.q.knots.map(x => Number(x.value)),
-				plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
+		if (tw.type == 'snplst') {
+			// create one independent variable for each snp
+			for (const snp of tw.snps) {
+				const independent = {
+					id: snp,
+					name: snp,
+					rtype: tw.q.geneticModel == 3 /*bygenotype*/ ? 'factor' : 'numeric',
+					values: [], // to collect sample values
+					interactions: []
+				}
+				Rinput.independent.push(independent)
 			}
+		} else {
+			const independent = {
+				id: tw.id,
+				name: tw.term.name,
+				rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor',
+				values: [], // to collect raw sample values
+				interactions: tw.interactions
+			}
+			if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
+			if (tw.q.mode == 'spline') {
+				independent.spline = {
+					knots: tw.q.knots.map(x => Number(x.value)),
+					plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
+				}
+			}
+			if (tw.q.scale) independent.scale = tw.q.scale
+			Rinput.independent.push(independent)
 		}
-		if (tw.q.scale) independent.scale = tw.q.scale
-		Rinput.independent.push(independent)
 	}
 
 	// for each sample, decide if it has value for all terms
@@ -163,11 +181,19 @@ function makeRinput(q, sampledata) {
 		let skipsample = false
 		for (const tw of q.independent) {
 			// tw = termWrapper
-			const independent = id2value.get(tw.id)
-			const values = tw.term.values || {}
-			if (!independent) {
-				skipsample = true
-				break
+			if (tw.type == 'snplst') {
+				for (const snp of tw.snps) {
+					if (!id2value.get(snp)) {
+						skipsample = true
+						break
+					}
+				}
+			} else {
+				const independent = id2value.get(tw.id)
+				if (!independent) {
+					skipsample = true
+					break
+				}
 			}
 		}
 		if (skipsample) continue
@@ -355,40 +381,160 @@ Returns two data structures
 2.
 */
 async function getSampleData(q, terms) {
-	const filter = getFilterCTEs(q.filter, q.ds)
-	// must copy filter.values as its copy may be used in separate SQL statements,
-	// for example get_rows or numeric min-max, and each CTE generator would
-	// have to independently extend its copy of filter values
-	const values = filter ? filter.values.slice() : []
-	const CTEs = terms.map((t, i) => get_term_cte(q, values, i, filter, t))
-	values.push(...terms.map(d => d.id))
+	// dict and non-dict terms require different methods for data prep
+	const [dictTerms, nonDictTerms] = divideTerms(terms)
+	// sample data from all terms are loaded into this structure
+	const samples = new Map()
+	// k: sample name, v: {sample, id2value:Map( tid => {key,value}) }
 
-	const sql = `WITH
-		${filter ? filter.filters + ',' : ''}
-		${CTEs.map(t => t.sql).join(',\n')}
-		${CTEs.map(
-			t => `
-			SELECT sample, key, value, ? as term_id
-			FROM ${t.tablename} 
-			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
-			`
-		).join(`UNION ALL`)}`
+	if (dictTerms.length) {
+		const filter = getFilterCTEs(q.filter, q.ds)
+		// must copy filter.values as its copy may be used in separate SQL statements,
+		// for example get_rows or numeric min-max, and each CTE generator would
+		// have to independently extend its copy of filter values
+		const values = filter ? filter.values.slice() : []
+		const CTEs = dictTerms.map((t, i) => get_term_cte(q, values, i, filter, t))
+		values.push(...dictTerms.map(d => d.id))
 
-	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+		const sql = `WITH
+			${filter ? filter.filters + ',' : ''}
+			${CTEs.map(t => t.sql).join(',\n')}
+			${CTEs.map(
+				t => `
+				SELECT sample, key, value, ? as term_id
+				FROM ${t.tablename} 
+				${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
+				`
+			).join(`UNION ALL`)}`
 
-	const samples = new Map() // k: sample name, v: {sample, id2value:Map( tid => {key,value}) }
-	for (const { sample, term_id, key, value } of rows) {
-		if (!samples.has(sample)) {
-			samples.set(sample, { sample, id2value: new Map() })
+		const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+
+		for (const { sample, term_id, key, value } of rows) {
+			if (!samples.has(sample)) {
+				samples.set(sample, { sample, id2value: new Map() })
+			}
+
+			if (samples.get(sample).id2value.has(term_id)) {
+				// can duplication happen?
+				throw `duplicate '${term_id}' entry for sample='${sample}'`
+			}
+			samples.get(sample).id2value.set(term_id, { key, value })
 		}
-
-		if (samples.get(sample).id2value.has(term_id)) {
-			// can duplication happen?
-			throw `duplicate '${term_id}' entry for sample='${sample}'`
-		}
-		samples.get(sample).id2value.set(term_id, { key, value })
 	}
+
+	for (const tw of nonDictTerms) {
+		// for each non dictionary term type
+		// query sample data with its own method and append results to "samples"
+		if (tw.type == 'snplst') {
+			// each snp is one indepedent variable
+			// record list of snps on term.snps
+			await getSampleData_snplst(tw, samples)
+		} else {
+			throw 'unknown type of independent non-dictionary term'
+		}
+	}
+
 	return samples.values()
+}
+
+async function getSampleData_snplst(tw, samples) {
+	// tw: { type, q{} }
+
+	// tricky!
+	// record list of snp names found in cache file on tw.snps[]
+	tw.snps = []
+
+	const lines = (await utils.read_file(path.join(serverconfig.cachedir, tw.q.cacheid))).split('\n')
+	// header:  snpid  rsid  effAle  chr  pos  alleles  <s1>  <s2> ...
+	const sampleheader = lines[0]
+		.split('\t')
+		.slice(6) // from 7th column
+		.map(Number) // sample ids are integer
+	const snp2sample = new Map()
+	// k: snpid
+	// v: { effAle, alleles, samples: map { k: sample id, v: gt } }
+	for (let i = 1; i < lines.length; i++) {
+		const l = lines[i].split('\t')
+
+		const snpid = l[0] // snpid is used as "term id"
+		tw.snps.push(snpid)
+
+		snp2sample.set(snpid, {
+			effAle: l[2],
+			alleles: l[5].split(','),
+			samples: new Map()
+		})
+		for (const [j, sampleid] of sampleheader.entries()) {
+			const gt = l[j + 6]
+			if (gt) {
+				snp2sample.get(snpid).samples.set(sampleid, gt)
+			}
+		}
+	}
+	for (const [snpid, o] of snp2sample) {
+		const effAle = get_effAle4snp(o, tw)
+		for (const [sampleid, gt] of o.samples) {
+			// for this sample, convert gt to value
+			const [gtA1, gtA2] = gt.split(',') // assuming diploid
+			const v = applyGeneticModel(tw, effAle, gtA1, gtA2)
+
+			// register value of this sample in samples
+			if (!samples.has(sampleid)) {
+				samples.set(sampleid, { sample: sampleid, id2value: new Map() })
+			}
+			samples.get(sampleid).id2value.set(snpid, { key: v, value: v }) // difference between key/value?
+		}
+	}
+}
+
+function applyGeneticModel(tw, effAle, a1, a2) {
+	switch (tw.q.geneticModel) {
+		case 0:
+			// additive
+			return (a1 == effAle ? 1 : 0) + (a2 == effAle ? 1 : 0)
+		case 1:
+			// dominant
+			if (a1 == effAle || a2 == effAle) return 1
+			return 0
+		case 2:
+			// recessive
+			return a1 == effAle && a2 == effAle ? 1 : 0
+		case 3:
+			// by genotype
+			return a1 + '/' + a2
+		default:
+			throw 'unknown geneticModel option'
+	}
+}
+
+function get_effAle4snp(snp, tw) {
+	if (snp.effAle) return snp.effAle
+	// determine based on tw setting
+	if (tw.q.alleleType == 0) {
+		// major/minor
+		throw 'not done'
+	}
+	if (tw.q.alleleType == 1) {
+		// ref/alt
+		throw 'not done'
+	}
+	throw 'unknown alleleType value'
+}
+
+function divideTerms(lst) {
+	// quick fix to divide list of term to two lists
+	// TODO ways to generalize; may use `shared/usecase2termtypes.js` with "regression":{nonDictTypes:['snplst','prs']}
+	// shared between server and client
+	const dict = [],
+		nonDict = []
+	for (const t of lst) {
+		if (t.type == 'snplst' || t.type == 'prs') {
+			nonDict.push(t)
+		} else {
+			dict.push(t)
+		}
+	}
+	return [dict, nonDict]
 }
 
 function replaceTermId(Rinput) {

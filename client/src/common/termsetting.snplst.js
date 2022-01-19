@@ -8,14 +8,13 @@ and prevent snps from being included in regression request string
 instance attributes
 
 self.term{}
-	.id: str, the cache file name
-		!!NOTE!! id changes for every validation, e.g. for snp/cohort/filter update
-		small changes can be made for term.id to remain unchanged if that's ever needed
+	.id: str, not really used
 	.type: "snplst"
 	.snps[ {} ]
 		.rsid: str
 		.effectAllele: str
 		// following attributes are computed by validation
+		.snpid
 		.invalid
 		.chr
 		.pos
@@ -25,6 +24,9 @@ self.q{}
 	.alleleType: int
 	.geneticModel: int
 	.missingGenotype: int
+	.cacheid
+		the cache file name storing the snp-by-sample genotypes, for samples based on current filter
+		!!NOTE!! id changes for every validation, e.g. for snp/cohort/filter update
 */
 
 // self is the termsetting instance
@@ -174,7 +176,7 @@ function makeEditMenu(self, div) {
 			// parse input text
 			const snps = parseSnpFromText(textarea)
 			if (snps.length == 0) return window.alert('No valid SNPs')
-			if (!self.term) self.term = {}
+			if (!self.term) self.term = { id: 'dummy' }
 			if (!self.q) self.q = {}
 			// set term type in case the instance had a different term before
 			self.term.type = 'snplst'
@@ -227,7 +229,11 @@ function snp2text(self) {
 	return lines.join('\n')
 }
 
-/* snp validation requires finding out #cases with a valid gt call for each snp
+/* 
+Argument
+self: may be a termsetting instance or any object
+
+snp validation requires finding out #cases with a valid gt call for each snp
 will query bigbed to convert to pos, and bcf file
 very expensive step
 when filter/subcohort changes, the underlying cohort changes and have to rerun validation again
@@ -236,13 +242,14 @@ thus the validation must run in postMain()
 async function validateSnps(self) {
 	const data = await self.vocabApi.validateSnps(snp2text(self), self.filter)
 	if (data.error) throw data.error
-	// copy result to instace
-	self.term.id = data.cacheid
+	// copy result to instance
+	self.q.cacheid = data.cacheid
 	self.q.numOfSampleWithAllValidGT = data.numOfSampleWithAllValidGT
 	self.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
 	let invalidcount = 0
 	for (const [i, s] of self.term.snps.entries()) {
 		const s1 = data.snps[i]
+		s.snpid = s1.snpid
 		s.invalid = s1.invalid
 		if (s.invalid) invalidcount++
 		s.alleles = s1.alleles
@@ -252,4 +259,14 @@ async function validateSnps(self) {
 	// TODO synthesize brief summary text, so it can be displayed in inputs.values.table.js
 	// #invalid
 	// #samples etc
+}
+
+export async function fillTW(tw, vocabApi) {
+	if (!tw.q) tw.q = {}
+	if (!tw.term.name) tw.term.name = getTermName(tw.term.snps)
+	await validateSnps({
+		term: tw.term,
+		q: tw.q,
+		vocabApi
+	})
 }
