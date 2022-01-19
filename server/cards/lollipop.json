@@ -1,0 +1,92 @@
+{
+    "ppcalls": [
+        {
+            "label": "Official dataset",
+            "urlparam": "?genome=hg19&gene=JAK2&dataset=Pediatric",
+            "runargs": {
+                "gene":"jak2",
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "dataset":"Pediatric"
+            },
+            "buttons":[
+                {
+                    "name":"Build an Official Dataset",
+                    "link": "https://docs.google.com/document/d/1iY7x9PzAzLKzdABam_Tfg8h-kQ0oh2UyyKC0cP-9YWA/edit"
+                }
+            ],
+            "testSpec": {
+                "expected": { "circle": 10 }
+            }
+        },
+        {
+            "label": "GDC API (GENCODE)",
+            "message": "To view a different gene from the GDC dataset: <ul><li>Scroll to the top of the page. Select 'human hg38' from the dropdown menu in the header.</li><li>Start typing the gene into the search bar. A vertical menu of gene options will appear. Click the appropriate option or hit enter.</li><li>The protein view of the gene will appear. Click on <div class='sja_opaque8' style='display: inline-block; color: black; padding: 1px 2px; border: solid 1px #545454; font-size: .9em;'>GDC</div> in the toolbar.</li></ul>",
+            "urlparam": "?genome=hg38&gene=ENST00000407796&mds3=GDC",
+            "runargs": {
+                "gene":"ENST00000407796",
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "tracks":[
+                    {
+                        "type": "mds3",
+                        "dslabel":"GDC"
+                    }
+                ]
+            },
+            "testSpec": {
+                "expected": { "circle": 10 }
+            }
+        },
+        {
+            "label": "GDC API (RefSeq)",
+            "message": "To view a different gene from the GDC dataset: <ul><li>Scroll to the top of the page. Select 'human hg38' from the dropdown menu in the header.</li><li>Start typing the gene into the search bar. A vertical menu of gene options will appear. Click the appropriate option or hit enter.</li><li>The protein view of the gene will appear. Click on <div class='sja_opaque8' style='display: inline-block; color: black; padding: 1px 2px; border: solid 1px #545454; font-size: .9em;'>GDC</div> in the toolbar.</li></ul>",
+            "urlparam": "?genome=hg38&gene=NM_005163&mds3=GDC",
+            "runargs": {
+                "gene":"NM_005163",
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "tracks":[
+                    {
+                        "type": "mds3",
+                        "dslabel":"GDC"
+                    }
+                ]
+            },
+            "testSpec": {
+                "expected": { "circle": 10 }
+            }
+        },
+        {
+            "label": "Custom mutations",
+            "runargs": { 
+                "parseurl":true,
+                "noheader": true,
+                "nobox":1,
+                "genome": "hg19",
+                "gene": "MYC",
+                "mset":[{
+                    "name":"Custom Mutation Plot Demo",
+                    "mlst":[
+                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750685,"mname":"P75S","class":"M","dt":1},
+                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750680,"mname":"T73I","class":"M","dt":1},
+                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1},
+                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750911,"mname":"A Custom Label","class":"F","dt":1}
+                    ]
+                }]
+            },
+            "buttons":[
+                {
+                    "name": "Documentation",
+                    "link": "https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit#heading=h.gj4rj4njhaz8"
+                }
+            ],
+            "testSpec": {
+                "expected": { "circle": 1 }
+            }
+        }
+    ]
+}

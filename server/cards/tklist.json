@@ -1,0 +1,20 @@
+{
+    "ppcalls": [
+        {
+            "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/tklist/tklistDemoData.tar.gz",
+            "urlparam": "?genome=hg19&block=1&tkjsonfile=proteinpaint_demo/hg19/tklist/tracks.json",
+            "jsonpath": "proteinpaint_demo/hg19/tklist/tracks.json",
+            "runargs": {
+                "block": 1,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "nativetracks":"refgene",
+                "tkjsonfile": "proteinpaint_demo/hg19/tklist/tracks.json"
+            },
+            "testSpec": {
+                "expected": {"image": 2 }
+            }
+        }
+    ]
+}
