@@ -19,7 +19,7 @@
     "server/server.js*",
     "server/utils",
     "server/shared",
-    "server/features/index.json"
+    "server/cards/index.json"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"

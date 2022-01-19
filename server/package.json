@@ -65,7 +65,7 @@
     "dataset/gdc*.js",
     "genome",
     "src/serverconfig.js",
-    "features/index.json",
+    "cards/index.json",
     "server.js*",
     "shared/common.js",
     "utils"

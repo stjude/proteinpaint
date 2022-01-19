@@ -72,10 +72,6 @@ export async function init_appDrawer(par) {
 		apps_off,
 		allow_mdsform: re.allow_mdsform
 	}
-	//Creates error when obj is modified to avoid issues when using the same obj or stringifying it.
-	for (const example of re.examples) {
-		if (example.buttons && example.media.example) deepFreeze(example.media.example)
-	}
 	// make_searchbar(track_args, page_args, searchbar_div)
 	await loadTracks(track_args, page_args)
 }
@@ -201,7 +197,7 @@ function displayTracks(tracks, holder, page_args) {
 			.on('click', async () => {
 				event.stopPropagation()
 				page_args.apps_off()
-				if (track.ppcalls) {
+				if (track.sandboxjson) {
 					openSandbox(track, page_args.apps_sandbox_div)
 				}
 			})
@@ -232,31 +228,31 @@ function displayTracks(tracks, holder, page_args) {
 		// create custom track button for genomepaint card
 		// TODO: rightnow only custom button is for genomepaint card,
 		// if more buttons are added, this code will need to be changed as needed
-		if (track.custom_buttons) {
-			for (const button of track.custom_buttons) {
-				if (button.check_mdsjosonform && !page_args.allow_mdsform) continue
-				li.select('.track-btns')
-					.append('button')
-					.attr('class', 'sjpp-landing-page-a')
-					.style('padding', '7px')
-					.style('cursor', 'pointer')
-					.text(button.name)
-					.on('click', () => {
-						event.stopPropagation()
-						page_args.apps_off()
-						if (button.example) {
-							const btn_args = {
-								name: button.name,
-								buttons: {
-									example: button.example
-								}
-							}
-							openSandbox(btn_args, page_args.apps_sandbox_div)
-						}
-						// TODO: Add logic if custom button has url or some other link
-					})
-			}
-		}
+		// if (track.custom_buttons) {
+		// 	for (const button of track.custom_buttons) {
+		// 		if (button.check_mdsjosonform && !page_args.allow_mdsform) continue
+		// 		li.select('.track-btns')
+		// 			.append('button')
+		// 			.attr('class', 'sjpp-landing-page-a')
+		// 			.style('padding', '7px')
+		// 			.style('cursor', 'pointer')
+		// 			.text(button.name)
+		// 			.on('click', () => {
+		// 				event.stopPropagation()
+		// 				page_args.apps_off()
+		// 				if (button.example) {
+		// 					const btn_args = {
+		// 						name: button.name,
+		// 						buttons: {
+		// 							example: button.example
+		// 						}
+		// 					}
+		// 					openSandbox(btn_args, page_args.apps_sandbox_div)
+		// 				}
+		// 				// TODO: Add logic if custom button has url or some other link
+		// 			})
+		// 	}
+		// }
 
 		return JSON.stringify(li)
 	})
@@ -283,11 +279,22 @@ function makeRibbon(e, text, color) {
 		.style('text-align', 'center')
 }
 
+
 /******* Create Sandbox Function ********* 
  	Opens a sandbox with track example(s) or app ui with links and other information
 */
 
 async function openSandbox(track, holder) {
+	const res = await dofetch2('textfile', {method: 'POST', body: JSON.stringify(track.sandbox)})
+	if (res.error) {
+		sayerror(holder.append('div'), res.error)
+		return
+	}
+	console.log(293, res)
+
+
+
+
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header_row
