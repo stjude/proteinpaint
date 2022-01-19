@@ -604,7 +604,6 @@ export async function fillTermWrapper(tw, vocabApi) {
 		const _ = await import(`../common/termsetting.${tw.term.type}.js`)
 		// fill-in wrapper, term and q
 		await _.fillTW(tw, vocabApi)
-		console.log(tw)
 		return
 	}
 	// the term must be a dictionary term, tw.id is required?
