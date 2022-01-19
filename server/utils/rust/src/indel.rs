@@ -506,6 +506,8 @@ fn main() {
                     splice_freq,
                     splice_start_pos,
                     splice_stop_pos,
+                    splice_start_cigar,
+                    splice_stop_cigar,
                 ) = check_read_within_indel_region(
                     // Checks if the read contains the indel region (or a part of it)
                     start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
@@ -516,6 +518,7 @@ fn main() {
                     read.len(),
                 );
                 //println!("correct_start_position:{}", correct_start_position);
+                //println!("correct_end_position:{}", correct_end_position);
                 //println!(
                 //    "cigar_sequence:{}",
                 //    &cigar_sequences_list[i as usize - 2].to_string()
@@ -537,15 +540,12 @@ fn main() {
                         &ref_nucleotides,
                         &alt_nucleotides,
                         optimized_allele,
-                        indel_length,
-                        splice_freq,
                     );
                     let (
                         ref_polyclonal_read_status,
                         alt_polyclonal_read_status,
                         ref_insertion,
                         alignment_side,
-                        right_most_pos,
                         spliced_sequence, // This variable contains only the spliced part which contains the indel. If no splicing has occured, it will retain the entire original read sequence
                     ) = check_polyclonal(
                         // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
@@ -569,6 +569,8 @@ fn main() {
                         0,
                         ref_alt_same_base_start,
                         splice_freq,
+                        splice_start_cigar,
+                        splice_stop_cigar,
                     );
                     //println!("alignment_side:{}", &alignment_side);
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
@@ -579,8 +581,6 @@ fn main() {
                     //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
 
                     //println!("spliced_sequence:{}", &spliced_sequence);
-                    //println!("left most pos:{}", correct_start_position);
-                    //println!("right most pos:{}", right_most_pos);
                     //println!("splice_start_pos:{}", splice_start_pos);
                     //println!("splice_stop_pos:{}", splice_stop_pos);
                     let kmers = build_kmers_reads(spliced_sequence, kmer_length_iter); // Generates kmers for the given read
@@ -591,18 +591,18 @@ fn main() {
                         &ref_kmers_nodups,
                         &ref_kmers_data,
                         correct_start_position,
-                        right_most_pos,
+                        correct_end_position,
                         kmer_length_iter,
                         &alignment_side,
                     );
-                    //println!("Alternate");
+                    //println!("Alternate:");
                     let alt_comparison = jaccard_similarity_weights(
                         // Computes jaccard similarity w.r.t alt sequence
                         &kmers,
                         &alt_kmers_nodups,
                         &alt_kmers_data,
                         correct_start_position,
-                        right_most_pos,
+                        correct_end_position,
                         kmer_length_iter,
                         &alignment_side,
                     );
@@ -706,6 +706,8 @@ fn main() {
                             splice_freq,
                             splice_start_pos,
                             splice_stop_pos,
+                            splice_start_cigar,
+                            splice_stop_cigar,
                         ) = check_read_within_indel_region(
                             // Checks if the read contains the indel region (or a part of it)
                             start_positions_list[iter].parse::<i64>().unwrap() - 1,
@@ -732,8 +734,6 @@ fn main() {
                                 &ref_nucleotides,
                                 &alt_nucleotides,
                                 optimized_allele,
-                                indel_length,
-                                splice_freq,
                             );
 
                             let (
@@ -741,7 +741,6 @@ fn main() {
                                 alt_polyclonal_read_status,
                                 ref_insertion,
                                 alignment_side,
-                                right_most_pos,
                                 spliced_sequence, // This variable contains only the spliced part which contains the indel. If no splicing has occured, it will retain the entire original read sequence
                             ) = check_polyclonal(
                                 // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
@@ -765,6 +764,8 @@ fn main() {
                                 0,
                                 ref_alt_same_base_start,
                                 splice_freq,
+                                splice_start_cigar,
+                                splice_stop_cigar,
                             );
                             //let kmers = build_kmers(lines[iter + 2].to_string(), kmer_length_iter); // Generate kmers for a given read sequence
 
@@ -775,7 +776,7 @@ fn main() {
                                 &ref_kmers_nodups,
                                 &ref_kmers_data,
                                 correct_start_position,
-                                right_most_pos,
+                                correct_end_position,
                                 kmer_length_iter,
                                 &alignment_side,
                             );
@@ -785,7 +786,7 @@ fn main() {
                                 &alt_kmers_nodups,
                                 &alt_kmers_data,
                                 correct_start_position,
-                                right_most_pos,
+                                correct_end_position,
                                 kmer_length_iter,
                                 &alignment_side,
                             );
@@ -1467,8 +1468,6 @@ fn check_if_read_ambiguous(
     ref_nucleotides: &Vec<char>,
     alt_nucleotides: &Vec<char>,
     optimized_allele: usize,
-    indel_length: i64,
-    splice_freq: usize, // Number of splice junctions in read
 ) -> i64 {
     let mut read_ambiguous: i64 = 0;
     let mut ref_stop = ref_start + ref_length as i64;
@@ -1563,18 +1562,19 @@ fn check_if_read_ambiguous(
     //        read_ambiguous = 2;
     //    }
     //}
-    if splice_freq > 0 {
-        // When read is spliced
-        //println!("correct_start_position:{}", correct_start_position);
-        //println!("correct_end_position:{}", correct_end_position);
-        //println!("ref_start:{}", ref_start);
-        //println!("indel_length:{}", indel_length);
-        if correct_start_position <= ref_start && ref_start + indel_length <= correct_end_position {
-        } else {
-            read_ambiguous = 2;
-            //println!("Case10 read ambiguous");
-        }
-    }
+
+    //if splice_freq > 0 {
+    //    // When read is spliced
+    //    println!("correct_start_position:{}", correct_start_position);
+    //    println!("correct_end_position:{}", correct_end_position);
+    //    println!("ref_start:{}", ref_start);
+    //    println!("indel_length:{}", indel_length);
+    //    if correct_start_position <= ref_start && ref_start + indel_length <= correct_end_position {
+    //    } else {
+    //        read_ambiguous = 2;
+    //        println!("Case10 read ambiguous");
+    //    }
+    //}
 
     read_ambiguous
 }
@@ -2021,13 +2021,15 @@ fn check_read_within_indel_region(
     indel_length: usize, // Length of indel
     strictness: usize,  // Strictness of the indel pipeline
     original_read_length: usize, // Original read length
-) -> (usize, i64, i64, usize, i64, i64) {
+) -> (usize, i64, i64, usize, i64, i64, usize, usize) {
     let mut within_indel = 0; // 0 if read does not contain indel region and 1 if it contains indel region
     let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
     let mut correct_end_position = correct_start_position; // Correct end position of read
     let mut splice_freq: usize = 0; // Number of times the read has been spliced
     let mut splice_start_pos: i64 = 0; // Start position of the spliced part of the region containing indel site relative to the read
     let mut splice_stop_pos: i64 = 0; // Stop position of the spliced part of the region containing indel site relative to the read
+    let mut splice_start_cigar: usize = 0; // First cigar entry in the spliced fragment containing the variant to see if its a softclip
+    let mut splice_stop_cigar: usize = 0; // Last cigar entry in the spliced fragment containing the variant to see if its a softclip
 
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
     } else {
@@ -2074,11 +2076,13 @@ fn check_read_within_indel_region(
         if strictness >= 1 {
             let percentage_indel_length: f64 = 0.1;
             let indel_cutoff: i64 = (indel_length as f64 * percentage_indel_length).ceil() as i64;
+            //println!("indel_cutoff:{}", indel_cutoff);
             if (indel_start + indel_cutoff <= correct_start_position
                 && correct_end_position <= indel_stop - indel_cutoff)
                 || (correct_start_position <= indel_start && indel_stop <= correct_end_position)
             // When the indel region is completely inside the read or the read is completely inside the indel region
             {
+                //println!("case1 within_indel");
                 within_indel = 1;
             } else if (indel_start + indel_cutoff <= correct_start_position
                 && correct_start_position <= indel_stop - indel_cutoff)
@@ -2086,17 +2090,20 @@ fn check_read_within_indel_region(
                     && correct_end_position <= indel_stop - indel_cutoff)
             // When read contains only part of a read
             {
+                //println!("case2 within_indel");
                 within_indel = 1;
             }
         } else if (indel_start <= correct_start_position && correct_end_position <= indel_stop)
             || (correct_start_position <= indel_start && indel_stop <= correct_end_position)
         // When the indel region is completely inside the read or the read is completely inside the indel region
         {
+            //println!("case3 within_indel");
             within_indel = 1;
         } else if (indel_start <= correct_start_position && correct_start_position <= indel_stop)
             || (indel_start <= correct_end_position && correct_end_position <= indel_stop)
         // When read contains only part of a read
         {
+            //println!("case4 within_indel");
             within_indel = 1;
         } else {
             //println!("Case not addressed in within indel region. Please look!!");
@@ -2116,6 +2123,11 @@ fn check_read_within_indel_region(
             let mut new_frag = 1; // Flag indicating start of a new fragment after splicing
             for i in 0..alphabets.len() {
                 if new_frag == 1 {
+                    splice_start_cigar = 0;
+                    splice_stop_cigar = 0;
+                    if &alphabets[i].to_string().as_str() == &"S" {
+                        splice_start_cigar = 1;
+                    }
                     splice_start_frag += nucleotide_position;
                     splice_stop_frag = splice_start_frag;
                     splice_start_pos = nucleotide_position_without_splicing;
@@ -2138,7 +2150,9 @@ fn check_read_within_indel_region(
                     splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
                 }
 
-                if &alphabets[i].to_string().as_str() == &"M" {
+                if &alphabets[i].to_string().as_str() == &"M"
+                    || &alphabets[i].to_string().as_str() == &"S"
+                {
                     splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
                     splice_stop_pos += numbers[i].to_string().parse::<i64>().unwrap();
                 }
@@ -2157,6 +2171,9 @@ fn check_read_within_indel_region(
                     {
                         correct_start_position = splice_start_frag;
                         correct_end_position = splice_stop_frag;
+                        if &alphabets[i].to_string().as_str() == &"S" {
+                            splice_stop_cigar = 1;
+                        }
                         //splice_start_pos = splice_start_frag;
                         //splice_stop_pos = nucleotide_position_without_splicing;
                         break;
@@ -2164,7 +2181,6 @@ fn check_read_within_indel_region(
                     //splice_stop_frag -= numbers[i].to_string().parse::<i64>().unwrap();
                 } else if i == alphabets.len() - 1 {
                     // Last entry in CIGAR
-                    //splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
                     // Check if this fragment of read contains indel region or not
                     if (splice_start_frag <= indel_start && indel_start <= splice_stop_frag)
                         || (splice_start_frag <= indel_start + indel_length as i64
@@ -2172,6 +2188,9 @@ fn check_read_within_indel_region(
                     {
                         correct_start_position = splice_start_frag;
                         correct_end_position = splice_stop_frag;
+                        if &alphabets[i].to_string().as_str() == &"S" {
+                            splice_stop_cigar = 1;
+                        }
                         //splice_start_pos = splice_start_frag;
                         //splice_stop_pos = nucleotide_position_without_splicing;
                         break;
@@ -2214,10 +2233,12 @@ fn check_read_within_indel_region(
         splice_freq,
         splice_start_pos,
         splice_stop_pos,
+        splice_start_cigar,
+        splice_stop_cigar,
     )
 }
 
-#[allow(unused_variables)] // This is added to silence warnings because ref_alt_same_base_start variable is currently not being used. Maybe deprecated in the future
+#[allow(unused_variables)] // This is added to silence warnings because ref_alt_same_base_start and splice_stop_cigar variable is currently not being used. Maybe deprecated in the future
 fn check_polyclonal(
     mut sequence: String,                  // Read sequence
     correct_start_position: i64,           // Left most pos
@@ -2239,13 +2260,15 @@ fn check_polyclonal(
     found_duplicate_kmers: usize, // Flag to tell if there are duplicated kmers (Currently hardcoded to 0 in main function, but maybe used in the future)
     ref_alt_same_base_start: usize, // Flag to check if the ref and alt allele start with the last ref nucleotide (e.g A/ATCGT)
     splice_freq: usize,             // Number of splice junctions in read
-) -> (i64, i64, i64, String, i64, String) {
+    splice_start_cigar: usize, // First cigar entry in the spliced fragment containing the variant to see if its a softclip
+    splice_stop_cigar: usize, // Last cigar entry in the spliced fragment containing the variant to see if its a softclip
+) -> (i64, i64, i64, String, String) {
     let mut sequence_vector: Vec<_> = sequence.chars().collect(); // Vector containing each sequence nucleotides as separate elements in the vector
     let mut ref_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches ref allele (Will be used later to determine if the read harbors a polyclonal variant)
     let mut alt_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches alt allele (Will be used later to determine if the read harbors a polyclonal variant)
     let mut ref_insertion: i64 = 0; // Keep tab whether there is an insertion within the ref allele (This variable will be used later to parse out ref-classified reads that have insertions/deletions in indel region and evebtually classified as 'none')
     let mut alignment_side: String = "left".to_string(); // Flag to check whether kmers should be compared from the left or right-side in jaccard_similarity_weights() function
-    let mut right_most_pos: i64 = 0;
+    let mut right_most_pos: i64;
 
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
     } else {
@@ -2339,6 +2362,14 @@ fn check_polyclonal(
         //);
 
         if &alphabets[0].to_string().as_str() == &"S"
+            && splice_freq == 0
+            && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
+        {
+            alignment_side = "right".to_string();
+            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+            //read_indel_start = correct_end_position as usize - sequence.len();
+        } else if splice_freq > 0
+            && splice_start_cigar == 1
             && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
         {
             alignment_side = "right".to_string();
@@ -2772,6 +2803,8 @@ fn check_polyclonal(
                     //    ref_nucleotides_all[i + read_offset],
                     //    i + read_offset
                     //);
+                    //println!("sequence.len():{}", sequence.len());
+                    //println!("ref_nucleotides_all.len():{}", ref_nucleotides_all.len());
                     if &ref_nucleotides_all[i + read_offset]
                         != &sequence_vector[read_indel_start + i]
                     {
@@ -2968,7 +3001,6 @@ fn check_polyclonal(
         alt_polyclonal_status,
         ref_insertion,
         alignment_side,
-        right_most_pos,
         sequence, // This variable is being passed back because in case of splicing only the part which contains the indel will be retained
     )
 }
@@ -3017,24 +3049,11 @@ fn jaccard_similarity_weights(
     let mut kmers_refalt_weight: f64 = 0.0; // Total weight of all kmers which lie between left_most_pos and right_most_pos
 
     // Determine kmers in ref/alt that are within the range of the left and right most position of the read
-
     if alignment_side == &"left" {
         for i in 0..kmers2_nodups.len() {
-            //if kmers2_nodups[i].to_owned() == "AGCCAC".to_string()
-            //|| kmers2_nodups[i].to_owned() == "GAAACA".to_string()
-            //|| kmers2_nodups[i].to_owned() == "CAAGAA".to_string()
-            //{
-            //println!("kmer:{}", kmers2_nodups[i].to_owned());
-            //println!("weight:{}", &kmers2_data[i].kmer_weight);
-            //println!("left:{}", kmers2_data[i].left_position);
-            //println!("right:{}", kmers2_data[i].right_position);
-            //println!("left_most_pos:{}", left_most_pos);
-            //println!("right_most_pos:{}", right_most_pos + 1);
-            //}
-
             let kmer_start = kmers2_data[i].left_position;
             if kmer_start > left_most_pos && kmer_start + kmer_length <= right_most_pos + 1 {
-                //if kmers2_data[i].kmer_weight > 0.91 {
+                //if kmers2_data[i].kmer_weight > 1.1 {
                 //    println!("kmer:{}", kmers2_nodups[i].to_owned());
                 //    println!("weight:{}", kmers2_data[i].kmer_weight);
                 //    println!("left:{}", kmers2_data[i].left_position);
@@ -3052,7 +3071,7 @@ fn jaccard_similarity_weights(
             let j = kmers2_nodups.len() - i - 1;
             let kmer_start = kmers2_data[j].right_position;
             if kmer_start > left_most_pos && kmer_start + kmer_length <= right_most_pos + 1 {
-                //if kmers2_data[j].kmer_weight > 0.91 {
+                //if kmers2_data[j].kmer_weight > 1.1 {
                 //    println!("kmer selected:{}", kmers2_nodups[j].to_owned());
                 //    println!("weight:{}", &kmers2_data[j].kmer_weight);
                 //    println!("left:{}", kmers2_data[j].left_position);
@@ -3100,7 +3119,7 @@ fn jaccard_similarity_weights(
             score = kmers2_data[index as usize].kmer_weight; // Getting score from ref/alt set
             kmers1_weight += (kmer_count as f64) * score; // Adding weight of each kmer by multiplying frequency (or counts) with the weight of that particular kmer
 
-            //if score > 0.91 {
+            //if score > 1.2 {
             //    println!("kmer selected:{}", &kmer1);
             //    println!("kmer selected score:{}", score);
             //}
