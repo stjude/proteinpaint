@@ -24,6 +24,7 @@ q {}
 		.scale
 	.refGrp
 	.interactions[]
+	.snps[] // list of snp ids, for type=snplst, added when parsing cache file
 
 input to R is an json object {type, outcome:{rtype}, independent:[ {rtype} ]}
 rtype with values numeric/factor is used instead of actual term type
@@ -97,7 +98,7 @@ function parse_q(q, ds) {
 	for (const tw of q.independent) {
 		if (tw.type == 'snplst') {
 			// !!!!!!!!!QUICK FIX!! detect non-dict term and do not query termdb
-			// also snplst tw lacks tw.term{}
+			// snplst tw lacks tw.term{}; tw.snps[] will be added when parsing cache file
 		} else {
 			if (!tw.id) throw '.id missing for an independent term'
 			tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
@@ -145,7 +146,7 @@ function makeRinput(q, sampledata) {
 					id: snp,
 					name: snp,
 					rtype: tw.q.geneticModel == 3 /*bygenotype*/ ? 'factor' : 'numeric',
-					values: [],
+					values: [], // to collect sample values
 					interactions: []
 				}
 				Rinput.independent.push(independent)
@@ -155,7 +156,7 @@ function makeRinput(q, sampledata) {
 				id: tw.id,
 				name: tw.term.name,
 				rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor',
-				values: [], // ?
+				values: [], // to collect raw sample values
 				interactions: tw.interactions
 			}
 			if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
@@ -421,13 +422,13 @@ async function getSampleData(q, terms) {
 		}
 	}
 
-	for (const term of nonDictTerms) {
+	for (const tw of nonDictTerms) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
-		if (term.type == 'snplst') {
+		if (tw.type == 'snplst') {
 			// each snp is one indepedent variable
 			// record list of snps on term.snps
-			await getSampleData_snplst(term, samples)
+			await getSampleData_snplst(tw, samples)
 		} else {
 			throw 'unknown type of independent non-dictionary term'
 		}
@@ -436,45 +437,46 @@ async function getSampleData(q, terms) {
 	return samples.values()
 }
 
-async function getSampleData_snplst(term, samples) {
-	// tricky!
-	// record list of snp names found in cache file on term.snps[]
-	term.snps = []
+async function getSampleData_snplst(tw, samples) {
+	// tw: { type, q{} }
 
-	const lines = (await utils.read_file(path.join(serverconfig.cachedir, term.q.cacheid))).split('\n')
-	// header:  rsid  effAle  chr  pos  alleles  <s1>  <s2> ...
+	// tricky!
+	// record list of snp names found in cache file on tw.snps[]
+	tw.snps = []
+
+	const lines = (await utils.read_file(path.join(serverconfig.cachedir, tw.q.cacheid))).split('\n')
+	// header:  snpid  rsid  effAle  chr  pos  alleles  <s1>  <s2> ...
 	const sampleheader = lines[0]
 		.split('\t')
-		.slice(5) // from 5th column
+		.slice(6) // from 7th column
 		.map(Number) // sample ids are integer
 	const snp2sample = new Map()
-	// k: snp name, rsid or chr:pos string
+	// k: snpid
 	// v: { effAle, alleles, samples: map { k: sample id, v: gt } }
 	for (let i = 1; i < lines.length; i++) {
 		const l = lines[i].split('\t')
 
-		// TODO reliable identifiers for each snp must be decided early
-		const snpid = l[0] || l[2] + ':' + l[3]
-		term.snps.push(snpid)
+		const snpid = l[0] // snpid is used as "term id"
+		tw.snps.push(snpid)
 
 		snp2sample.set(snpid, {
-			effAle: l[1],
-			alleles: l[4].split(','),
+			effAle: l[2],
+			alleles: l[5].split(','),
 			samples: new Map()
 		})
 		for (const [j, sampleid] of sampleheader.entries()) {
-			const gt = l[j + 5]
+			const gt = l[j + 6]
 			if (gt) {
 				snp2sample.get(snpid).samples.set(sampleid, gt)
 			}
 		}
 	}
 	for (const [snpid, o] of snp2sample) {
-		const effAle = get_effAle4snp(o, term)
+		const effAle = get_effAle4snp(o, tw)
 		for (const [sampleid, gt] of o.samples) {
 			// for this sample, convert gt to value
 			const [gtA1, gtA2] = gt.split(',') // assuming diploid
-			const v = applyGeneticModel(term, effAle, gtA1, gtA2)
+			const v = applyGeneticModel(tw, effAle, gtA1, gtA2)
 
 			// register value of this sample in samples
 			if (!samples.has(sampleid)) {
@@ -485,8 +487,8 @@ async function getSampleData_snplst(term, samples) {
 	}
 }
 
-function applyGeneticModel(term, effAle, a1, a2) {
-	switch (term.q.geneticModel) {
+function applyGeneticModel(tw, effAle, a1, a2) {
+	switch (tw.q.geneticModel) {
 		case 0:
 			// additive
 			return (a1 == effAle ? 1 : 0) + (a2 == effAle ? 1 : 0)
@@ -505,14 +507,14 @@ function applyGeneticModel(term, effAle, a1, a2) {
 	}
 }
 
-function get_effAle4snp(snp, term) {
+function get_effAle4snp(snp, tw) {
 	if (snp.effAle) return snp.effAle
-	// determine based on term setting
-	if (term.q.alleleType == 0) {
+	// determine based on tw setting
+	if (tw.q.alleleType == 0) {
 		// major/minor
 		throw 'not done'
 	}
-	if (term.q.alleleType == 1) {
+	if (tw.q.alleleType == 1) {
 		// ref/alt
 		throw 'not done'
 	}

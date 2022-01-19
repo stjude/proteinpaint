@@ -14,6 +14,7 @@ self.term{}
 		.rsid: str
 		.effectAllele: str
 		// following attributes are computed by validation
+		.snpid
 		.invalid
 		.chr
 		.pos
@@ -248,6 +249,7 @@ async function validateSnps(self) {
 	let invalidcount = 0
 	for (const [i, s] of self.term.snps.entries()) {
 		const s1 = data.snps[i]
+		s.snpid = s1.snpid
 		s.invalid = s1.invalid
 		if (s.invalid) invalidcount++
 		s.alleles = s1.alleles
