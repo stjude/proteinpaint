@@ -432,7 +432,7 @@ async function handle_cards(req, res) {
 	try {
 		// more flexibility by reading a file pointed by exports.features.examples
 		if (req.query.file) {
-			if (!req.query.file.match(/^[\w]+$/)) throw 'Invalid file'
+			if (!req.query.file.match(/[^\w]/)) throw 'Invalid file'
 			const jsontxt = await utils.read_file(path.join(serverconfig.cardsjsondir, req.query.file + '.json'))
 			res.send({ file: JSON.parse(jsontxt) })
 		} else {
