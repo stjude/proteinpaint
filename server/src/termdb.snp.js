@@ -7,7 +7,7 @@ const readline = require('readline')
 const serverconfig = require('./serverconfig')
 
 /*
-TODO improve bcftools usage
+TODO improve bigBed query usage
 TODO support on-the-fly prs computing
 
 ********************** EXPORTED
@@ -30,10 +30,15 @@ snps[ {} ]
 	.snpid: consistent id, in regression analysis will be equivalent to "term id"
 	.chr: if not given, will query bb file to map to chr; if no match then missing
 	.pos: if not given, match from bb file. 0-based!
-	.alleles[]: from bcf file, [0] is ref, [1:] are alts
+	.dbsnpRef: ref allele from dbSNP
+	.dbsnpAlts[]: alt alleles from dbSNP
+	.sjlifeRef: ref allele from SJLIFE/CCSS bcf file
+	.sjlifeAlts[]: alt alleles from SJLIFE/CCSS bcf file
+	.validgtcount: count of samples with valid genotypes
+	.gtlst[]: per-sample genotypes
 */
 
-const bcfformatbase = '%REF\t%ALT\t%FORMAT\n'
+const bcfformatbase = '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n'
 
 export async function validate(q, tdb, ds, genome) {
 	try {
@@ -99,6 +104,8 @@ async function mapRsid2chr(snps, genome) {
 			const l = hit.split('\t')
 			snp.chr = l[0]
 			snp.pos = Number.parseInt(l[1])
+			snp.dbsnpRef = l[4]
+			snp.dbsnpAlts = l[6].split(',').filter(Boolean)
 			continue
 		}
 		// unknown entry
@@ -116,75 +123,117 @@ async function queryBcf(q, snps, ds) {
 	if (!tk) throw 'ds.track.vcf missing'
 	// samples are at tk.samples[], ele: {name: int ID}
 
-	const sampleheader = [] // represent the order of sample columns in the snp-by-sample matrix, after filtering
-	const sampleinclude = [] // same length of list of true/false
-	let set
+	// collect samples that will be queried
+	let samples
 	if (q.filter) {
-		set = new Set(termdbsql.get_samples(JSON.parse(decodeURIComponent(q.filter)), ds))
+		const fsamples = termdbsql.get_samples(JSON.parse(decodeURIComponent(q.filter)), ds)
+		samples = tk.samples.map(x => x.name).filter(sample => fsamples.includes(sample))
+	} else {
+		samples = tk.samples.map(x => x.name)
 	}
-	for (const s of tk.samples) {
-		if (set) {
-			const y = set.has(s.name)
-			sampleinclude.push(y)
-			if (y) sampleheader.push(s.name)
-		} else {
-			sampleinclude.push(true)
-			sampleheader.push(s.name)
-		}
-	}
-	if (sampleheader.length == 0) throw 'no samples'
+	if (samples.length == 0) throw 'no samples'
 
-	const lines = ['snpid\trsid\teffAle\tchr\tpos\talleles\t' + sampleheader.join('\t')] // lines to write to cache file
-
-	const sample2snpcount = new Map()
-	// k: sample
-	// v: number of snps with valid gt
-	// to compute two numbers: #samples with valid gt for at least one snp, and for all snps
+	// collect coordinates and bcf file paths that will be queried
+	const bcfs = new Set()
+	const coords = []
 	let validsnpcount = 0
-
 	for (const snp of snps) {
 		if (snp.invalid) continue
 		validsnpcount++
-		const file = tk.chr2bcffile[snp.chr]
-		if (!file) throw 'chr not in chr2bcffile'
-		const coord = (tk.nochr ? snp.chr.replace('chr', '') : snp.chr) + ':' + (snp.pos + 1) + '-' + (snp.pos + 1)
-		const gtlst = [] // in the same order as sampleheader
-		snp.validgtcount = 0
-		await utils.get_lines_bigfile({
-			isbcf: true,
-			args: ['query', file, '-r', coord, '-f', bcfformatbase],
-			dir: tk.dir,
-			callback: line => {
-				// 'T', 'C', 'GT', '1/1', '0/1', ...
-				const l = line.split('\t')
-				const alleles = [l[0], ...l[1].split(',')]
-				snp.alleles = alleles
-				for (let i = 3; i < l.length; i++) {
-					const gt = parseGT(i, l[i], sampleinclude, alleles)
-					gtlst.push(gt)
-					if (gt) {
-						// this sample has a valid gt for this snp
-						snp.validgtcount++
-						const sid = tk.samples[i - 3].name
-						sample2snpcount.set(sid, 1 + (sample2snpcount.get(sid) || 0))
-					}
+		const bcffile = tk.chr2bcffile[snp.chr]
+		if (!bcffile) throw 'chr not in chr2bcffile'
+		bcfs.add(bcffile)
+		const chr = tk.nochr ? snp.chr.replace('chr', '') : snp.chr
+		const pos = snp.pos + 1 // 0-based
+		const coord = chr + '\t' + pos
+		coords.push(coord)
+	}
+
+	// write samples, coordinates, and bcf file paths to temp files for bcf query
+	const samplesfile = path.join(serverconfig.cachedir, Math.random() + '.' + 'samples.txt')
+	const coordsfile = path.join(serverconfig.cachedir, Math.random() + '.' + 'coords.txt')
+	const bcffiles = path.join(serverconfig.cachedir, Math.random() + '.' + 'bcffiles.txt')
+	await utils.write_file(samplesfile, samples.join('\n'))
+	await utils.write_file(coordsfile, coords.join('\n'))
+	await utils.write_file(bcffiles, [...bcfs].join('\n'))
+
+	// query bcf files for snp coordinates and sample genotypes
+	const sample2snpcount = new Map(samples.map(sample => [sample, 0])) // {k: sample, v: number of snps with valid gt}
+	await utils.get_lines_bigfile({
+		isbcf: true,
+		args: ['query', '-S', samplesfile, '-T', coordsfile, '-f', bcfformatbase, '-v', bcffiles],
+		dir: tk.dir,
+		callback: line => {
+			// chr, pos, ref, alt, '0/0', '0/0', '0/1', '1/1', ...
+			const l = line.split('\t')
+			const chr = l[0]
+			const pos = l[1]
+			const ref = l[2]
+			const alts = l[3].split(',')
+			const alleles = [ref, ...alts]
+
+			// find matching query snp
+			const snp = snps.find(snp => {
+				if (
+					snp.chr == 'chr' + chr &&
+					snp.pos === pos - 1 &&
+					snp.dbsnpRef == ref &&
+					snp.dbsnpAlts.some(allele => alts.includes(allele))
+				) {
+					return snp
+				}
+			})
+			if (!snp) {
+				const sjlifeSNP = chr + ':' + pos + '_' + ref + '_' + alts.join(',')
+				throw `sjlife snp: '${sjlifeSNP}' does not match a query snp`
+			}
+			snp.sjlifeRef = ref
+			snp.sjlifeAlts = alts
+
+			// determine sample genotypes
+			const gtlst = [] // same order as samples
+			snp.validgtcount = 0
+			for (let i = 4; i < l.length; i++) {
+				const gt = parseGT(l[i], alleles)
+				gtlst.push(gt)
+				if (gt != '.') {
+					// this sample has a valid gt for this snp
+					snp.validgtcount++
+					const sample = samples[i - 4]
+					sample2snpcount.set(sample, sample2snpcount.get(sample) + 1)
 				}
 			}
-		})
+			snp.gtlst = gtlst
+		}
+	})
+
+	fs.unlink(samplesfile, err => {
+		if (err) throw err
+	})
+	fs.unlink(coordsfile, err => {
+		if (err) throw err
+	})
+	fs.unlink(bcffiles, err => {
+		if (err) throw err
+	})
+
+	// write snp data to cache file
+	const lines = ['snpid\tchr\tpos\tref\talt\teff\t' + samples.join('\t')]
+	for (const snp of snps) {
 		lines.push(
 			snp.snpid +
-				'\t' +
-				(snp.rsid || '') +
-				'\t' +
-				(snp.effectAllele || '') +
 				'\t' +
 				snp.chr +
 				'\t' +
 				snp.pos +
 				'\t' +
-				snp.alleles.join(',') +
+				snp.sjlifeRef +
 				'\t' +
-				gtlst.join('\t')
+				snp.sjlifeAlts.join(',') +
+				'\t' +
+				(snp.effectAllele || '') +
+				'\t' +
+				snp.gtlst.join('\t')
 		)
 	}
 
@@ -199,19 +248,12 @@ async function queryBcf(q, snps, ds) {
 	return [cacheid, sample2snpcount.size, numOfSampleWithAllValidGT]
 }
 
-function parseGT(i, str, sampleinclude, alleles) {
-	// i-3 is the array index of tk.samples
-	// return reconstructed diploid genotype: A,T
-	// if no call or any error in parsing, return empty string
-	if (!sampleinclude[i - 3]) return '' // this sample is not used
-	if (str == '.' || str == './.') return '' // no call
-	const gtidx = str.split('/').map(Number)
-	if (gtidx.length != 2) {
-		// autosome only for the monent
-		return ''
-	}
-	const ale1 = alleles[gtidx[0]],
-		ale2 = alleles[gtidx[1]]
-	if (!ale1 || !ale2) return ''
+function parseGT(gt, alleles) {
+	if (gt == '.' || gt == './.') return '.'
+	const gtidx = gt.split('/').map(Number)
+	if (gtidx.length != 2) return '.' // autosome only for the moment
+	const ale1 = alleles[gtidx[0]]
+	const ale2 = alleles[gtidx[1]]
+	if (!ale1 || !ale2) throw `invalid genotype`
 	return ale1 + ',' + ale2
 }
