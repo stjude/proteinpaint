@@ -15,7 +15,17 @@ export class InputValuesTable {
 			// may allow the values table even if there is a variable error,
 			// in case it helps clarify the error message such as having
 			// not exactly two samplecount bars available for a binary outcome term
-			if (!term || !this.input.sampleCounts) {
+
+			// for term.type 'snplst' show summary_div with sample count and invalid snps count
+			if (term && term.term && term.term.type && term.term.type == 'snplst') {
+				this.dom.holder.style('display', 'block')
+				this.dom.top_info_div.style('display', 'none')
+				this.dom.values_div.style('display', 'block')
+				this.dom.values_table.style('display', 'none')
+				this.dom.term_summmary_div.style('display', 'block')
+				this.render()
+				return
+			} else if (!term || !this.input.sampleCounts) {
 				this.dom.holder.style('display', 'none')
 				this.dom.loading_div.style('display', 'none')
 				return
@@ -81,10 +91,9 @@ function setRenderers(self) {
 		const dom = self.dom
 		const input = self.input
 		const t = input.term
-		make_values_table(input.sampleCounts, 'values_table')
+		if (input.sampleCounts && input.sampleCounts.length) make_values_table(input.sampleCounts, 'values_table')
 		render_summary_div(input, self.dom)
-
-		if (input.excludeCounts.length) {
+		if (input.excludeCounts && input.excludeCounts.length) {
 			make_values_table(input.excludeCounts, 'excluded_table')
 		} else {
 			dom.excluded_table.selectAll('*').remove()
@@ -239,10 +248,12 @@ function setRenderers(self) {
 	function render_summary_div(input, dom) {
 		const t = input.term
 		const q = (t && t.q) || {}
-		const { included, excluded, total } = self.input.totalCount
+		const tc = input.totalCount || {}
 
 		if (input.section.configKey == 'outcome') {
-			dom.term_summmary_div.text(`${included} sample included.` + (excluded ? ` ${excluded} samples excluded:` : ''))
+			dom.term_summmary_div.text(
+				`${tc.included} sample included.` + (tc.excluded ? ` ${tc.excluded} samples excluded:` : '')
+			)
 			// QUICK FIX: hide top_info_div rightnow for linear regression,
 			// for logistic regression, it needs to be changed as required
 			dom.top_info_div.style('display', 'none')
@@ -254,12 +265,15 @@ function setRenderers(self) {
 						(q.mode == 'continuous' && q.scale && q.scale != 1 ? ` Scale: Per ${q.scale}` : '') +
 						(q.mode == 'spline' ? ` with ${q.knots.length} knots: ${q.knots.map(v => v.value).join(', ')}` : '')
 				)
-				dom.term_summmary_div.html(`${included} sample included.` + (excluded ? ` ${excluded} samples excluded.` : ''))
+				dom.term_summmary_div.html(
+					`${tc.included} sample included.` + (tc.excluded ? ` ${tc.excluded} samples excluded.` : '')
+				)
 			} else if (t.term.type == 'categorical' || t.term.type == 'condition') {
 				const gs = q.groupsetting || {}
 				// self.values is already set by parent.setActiveValues() above
 				const term_text = 'Use as ' + self.input.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
-				const summary_text = ` ${included} sample included.` + (excluded ? ` ${excluded} samples excluded:` : '')
+				const summary_text =
+					` ${tc.included} sample included.` + (tc.excluded ? ` ${tc.excluded} samples excluded:` : '')
 				dom.term_info_div.html(term_text)
 				dom.term_summmary_div.text(summary_text)
 				dom.ref_click_prompt
@@ -268,6 +282,14 @@ function setRenderers(self) {
 					.style('text-transform', 'uppercase')
 					.style('font-size', '.7em')
 					.text('Click to set a row as reference.')
+			} else if (t.term.type == 'snplst') {
+				const invalid_snps_count = t.term.snps.filter(s => s.invalid == true).length
+				dom.term_summmary_div.html(
+					`${q.numOfSampleWithAllValidGT} / ${q.numOfSampleWithAnyValidGT} samples with all / any valid genotypes.` +
+						(invalid_snps_count > 0 ? ` ${invalid_snps_count} invalid SNP${invalid_snps_count > 1 ? `s` : ``}.` : '')
+				)
+			} else {
+				throw 'unkonw term type'
 			}
 		} else {
 			throw `uknown input.section.configKey='${input.section.configKey}'`
