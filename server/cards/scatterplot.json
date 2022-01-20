@@ -139,5 +139,11 @@
                 "expected": {"circle": 10 }
             }
         }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit"
+        }
     ]
 }

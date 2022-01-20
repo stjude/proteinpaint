@@ -1,4 +1,4 @@
-import { dofetch, dofetch2, sayerror, tab_wait, appear } from './client'
+import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from './client'
 import { newSandboxDiv } from './dom/sandbox'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
@@ -198,7 +198,7 @@ function displayTracks(tracks, holder, page_args) {
 				event.stopPropagation()
 				page_args.apps_off()
 				if (track.sandboxjson) {
-					openSandbox(track, page_args.apps_sandbox_div)
+					await openSandbox(track, page_args.apps_sandbox_div)
 				}
 			})
 
@@ -212,47 +212,21 @@ function displayTracks(tracks, holder, page_args) {
 			const update = new Date(track.update_expire)
 			const newtrack = new Date(track.new_expire)
 
-			if (update > today && !track.sandbox.update_message) {
-				console.log(
-					'No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required'
-				)
-			}
-			if (update > today && track.sandbox.update_message) {
+			// if (update > today && !track.sandbox.update_message) {
+			// 	console.log(
+			// 		'No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required'
+			// 	)
+			// }
+			// if (update > today && track.sandbox.update_message) {
+			// 	makeRibbon(li, 'UPDATED', '#e67d15')
+			// }
+			if (update > today) {
 				makeRibbon(li, 'UPDATED', '#e67d15')
 			}
 			if (newtrack > today) {
 				makeRibbon(li, 'NEW', '#1ba176')
 			}
 		}
-
-		// create custom track button for genomepaint card
-		// TODO: rightnow only custom button is for genomepaint card,
-		// if more buttons are added, this code will need to be changed as needed
-		// if (track.custom_buttons) {
-		// 	for (const button of track.custom_buttons) {
-		// 		if (button.check_mdsjosonform && !page_args.allow_mdsform) continue
-		// 		li.select('.track-btns')
-		// 			.append('button')
-		// 			.attr('class', 'sjpp-landing-page-a')
-		// 			.style('padding', '7px')
-		// 			.style('cursor', 'pointer')
-		// 			.text(button.name)
-		// 			.on('click', () => {
-		// 				event.stopPropagation()
-		// 				page_args.apps_off()
-		// 				if (button.example) {
-		// 					const btn_args = {
-		// 						name: button.name,
-		// 						buttons: {
-		// 							example: button.example
-		// 						}
-		// 					}
-		// 					openSandbox(btn_args, page_args.apps_sandbox_div)
-		// 				}
-		// 				// TODO: Add logic if custom button has url or some other link
-		// 			})
-		// 	}
-		// }
 
 		return JSON.stringify(li)
 	})
@@ -284,33 +258,39 @@ function makeRibbon(e, text, color) {
 */
 
 async function openSandbox(track, holder) {
-	const res = await dofetch2(`/cardsjson?sandboxjson=${track.sandboxjson}`)
+	//queries relevant json file with sandbox args
+	const res = await dofetch3(`/cardsjson?file=${track.sandboxjson}`) //Fix for loading the sandbox json only once
 	if (res.error) {
 		sayerror(holder.append('div'), res.error)
 		return
 	}
-	const ppcalls = res.sandboxjson
 
+	const sandbox_args = {
+		intro: res.file.intro,
+		ppcalls: res.file.ppcalls,
+		buttons: res.file.buttons,
+		arrowButtons: res.file.arrowButtons,
+		update_message: res.file.update_message
+	}
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header_row
 	sandbox_div.header.text(track.name)
-
 	sandbox_div.body.style('overflow', 'hidden')
 
 	// creates div for instructions or other messaging about the track
-	addMessage(track.sandbox.intro, sandbox_div.body)
+	addMessage(sandbox_args.intro, sandbox_div.body)
 
 	// message explaining the update ribbon
-	addUpdateMessage(track, sandbox_div.body)
+	addUpdateMessage(track, sandbox_args.update_message, sandbox_div.body)
 	// buttons for links and/or downloads for the entire track/app
-	addButtons(track.sandbox.buttons, sandbox_div.body)
+	addButtons(sandbox_args.buttons, sandbox_div.body)
 	// arrow buttons for the entire track/app that open a new div underneath
-	addArrowBtns(track.sandbox.arrowButtons, '', sandbox_div.body, sandbox_div.body)
+	addArrowBtns(sandbox_args.arrowButtons, '', sandbox_div.body, sandbox_div.body)
 
 	//Disables top, horizontal tabs for api queries or other special circumstances
 	if (track.disable_topTabs == true) {
-		renderContent(ppcalls[0], sandbox_div.body, track.app)
+		renderContent(sandbox_args.ppcalls[0], sandbox_div.body, track.app)
 	} else {
 		// Creates the overarching tab menu and subsequent content
 		const toptab_div = sandbox_div.body
@@ -323,11 +303,11 @@ async function openSandbox(track, holder) {
 			.style('width', '100%')
 		const maincontent_div = sandbox_div.body.append('div')
 
-		sandboxTabMenu(ppcalls, track, toptab_div, maincontent_div)
+		sandboxTabMenu(sandbox_args.ppcalls, track, toptab_div, maincontent_div)
 	}
 }
 
-// Single content layout for examples only - buttons not used for UIs
+// Single content layout - buttons not used for UIs
 function renderContent(ppcalls, div, app) {
 	addMessage(ppcalls.message, div)
 
@@ -534,7 +514,7 @@ function getTabData(ppcalls, i, app) {
 
 function addMessage(arg, div) {
 	if (arg != undefined && arg) {
-		const message = div
+		div
 			.append('div')
 			.style('margin', '20px')
 			.html(arg)
@@ -542,18 +522,18 @@ function addMessage(arg, div) {
 }
 
 // Update message corresponding to the update ribbon. Expires on the same date as the ribbon
-async function addUpdateMessage(track, div) {
-	if (track.sandbox.update_message != undefined && !track.update_expire) {
+async function addUpdateMessage(track, update_message, div) {
+	if (update_message != undefined && !track.update_expire) {
 		console.log('Must provide expiration date: track.update_expire')
 	}
-	if (track.sandbox.update_message != undefined && track.update_expire) {
+	if (update_message != undefined && track.update_expire) {
 		const today = new Date()
 		const update = new Date(track.update_expire)
 		if (update > today) {
-			const message = div
+			div
 				.append('div')
 				.style('margin', '20px')
-				.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
+				.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + update_message)
 		}
 	}
 }
@@ -631,9 +611,10 @@ async function showCode(ppcalls, btns) {
 		{ language: 'javascript' }
 	).value
 
-	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 30px; max-height:400px; min-height:400px; overflow-x: auto; overflow-y:auto;">
-		<code style="font-size:14px; display:block; ">${runpp_code}</code>
-	</pre>`
+	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 30px; overflow-x: auto; overflow-y:auto; max-height:400px; ${
+		ppcalls.jsonpath ? `min-height:400px;` : `min-height: auto;`
+	}">
+	<code style="font-size:14px; display:block;">${runpp_code}</code></pre>`
 
 	btns.push({
 		name: 'Code',

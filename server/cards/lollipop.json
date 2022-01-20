@@ -88,5 +88,12 @@
                 "expected": { "circle": 1 }
             }
         }
-    ]
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+        }
+    ],
+    "update_message": "<p style='display:inline-block;'>Create your own official dataset! See the <span style='color:#1575ad;'>Official Dataset</span> example and click on <button style='display:inline-block; background-color:#CFE2F3;border-radius:3px; border:none; padding:8px;'>Build an Official Dataset</button></p>"
 }
