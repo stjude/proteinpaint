@@ -15,5 +15,11 @@
                 "expected": {"canvas": 1 }
             }
         }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
+        }
     ]
 }

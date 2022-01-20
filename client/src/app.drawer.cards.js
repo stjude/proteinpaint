@@ -212,12 +212,15 @@ function displayTracks(tracks, holder, page_args) {
 			const update = new Date(track.update_expire)
 			const newtrack = new Date(track.new_expire)
 
-			if (update > today && !track.sandbox.update_message) {
-				console.log(
-					'No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required'
-				)
-			}
-			if (update > today && track.sandbox.update_message) {
+			// if (update > today && !track.sandbox.update_message) {
+			// 	console.log(
+			// 		'No update message for sandbox div provided. Both the update_expire and sandbox.update_message are required'
+			// 	)
+			// }
+			// if (update > today && track.sandbox.update_message) {
+			// 	makeRibbon(li, 'UPDATED', '#e67d15')
+			// }
+			if (update > today) {
 				makeRibbon(li, 'UPDATED', '#e67d15')
 			}
 			if (newtrack > today) {
@@ -289,13 +292,14 @@ async function openSandbox(track, holder) {
 		sayerror(holder.append('div'), res.error)
 		return
 	}
-	// console.log(292, res)
+
 	const sandbox_args = {
+		intro: res.file.intro,
 		ppcalls: res.file.ppcalls,
 		buttons: res.file.buttons,
-		arrowButtons: res.file.arrowButtons
+		arrowButtons: res.file.arrowButtons,
+		update_message: res.file.update_message
 	}
-	console.log(296, sandbox_args)
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header_row
@@ -303,10 +307,10 @@ async function openSandbox(track, holder) {
 	sandbox_div.body.style('overflow', 'hidden')
 
 	// creates div for instructions or other messaging about the track
-	addMessage(track.sandbox.intro, sandbox_div.body)
+	addMessage(sandbox_args.intro, sandbox_div.body)
 
 	// message explaining the update ribbon
-	addUpdateMessage(track, sandbox_div.body)
+	addUpdateMessage(track, sandbox_args.update_message, sandbox_div.body)
 	// buttons for links and/or downloads for the entire track/app
 	addButtons(sandbox_args.buttons, sandbox_div.body)
 	// arrow buttons for the entire track/app that open a new div underneath
@@ -538,7 +542,7 @@ function getTabData(ppcalls, i, app) {
 
 function addMessage(arg, div) {
 	if (arg != undefined && arg) {
-		const message = div
+		div
 			.append('div')
 			.style('margin', '20px')
 			.html(arg)
@@ -546,18 +550,18 @@ function addMessage(arg, div) {
 }
 
 // Update message corresponding to the update ribbon. Expires on the same date as the ribbon
-async function addUpdateMessage(track, div) {
-	if (track.sandbox.update_message != undefined && !track.update_expire) {
+async function addUpdateMessage(track, update_message, div) {
+	if (update_message != undefined && !track.update_expire) {
 		console.log('Must provide expiration date: track.update_expire')
 	}
-	if (track.sandbox.update_message != undefined && track.update_expire) {
+	if (update_message != undefined && track.update_expire) {
 		const today = new Date()
 		const update = new Date(track.update_expire)
 		if (update > today) {
-			const message = div
+			div
 				.append('div')
 				.style('margin', '20px')
-				.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + track.sandbox.update_message)
+				.html('<p style="display:inline-block;font-weight:bold">Update:&nbsp</p>' + update_message)
 		}
 	}
 }

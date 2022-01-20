@@ -88,5 +88,12 @@
                 "expected": { "circle": 1 }
             }
         }
-    ]
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+        }
+    ],
+    "update_message": "Create your own official dataset! See the 'Official Dataset' example and click on 'Build an Official Dataset' button."
 }

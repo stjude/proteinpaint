@@ -36,5 +36,11 @@
                 "expected": { "rect": 2, "circle": 10 }
             }
         }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit"
+        }
     ]
 }

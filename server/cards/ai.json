@@ -21,5 +21,11 @@
                 "expected": {"image": 2 }
             }
         }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
+        }
     ]
 }

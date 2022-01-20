@@ -23,5 +23,11 @@
                 "expected": { "rect": 20, "line": 20, "text": 5 }
             }
         }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit"
+        }
     ]
 }

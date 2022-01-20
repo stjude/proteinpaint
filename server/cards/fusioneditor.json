@@ -23,5 +23,12 @@
                 "expected": { "span": 2, "li": 1 }
             }
         }
-    ]
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1DRVzE_WenG490eRYB7VGFOygtSqtF5L97rhK0HOUCNY/edit"
+        }
+    ],
+    "update_message": "Please use the new example to explore the FusionEditor!"
 }
