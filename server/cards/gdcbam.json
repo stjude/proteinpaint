@@ -1,0 +1,16 @@
+{
+    "ppcalls": [
+        {
+            "is_ui": true,
+            "nodashedline": true,
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "gdcbamslice": { "uionly": true }
+            },
+            "testSpec": {
+                "expected": {"image": 1 }
+            }
+        }
+    ]
+}

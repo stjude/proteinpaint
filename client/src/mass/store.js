@@ -79,6 +79,12 @@ class TdbStore {
 	async init() {
 		try {
 			this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
+			this.setTermfilter()
+			// vocab.state.termfilter may be used in getPlotConfig() when rehydrating terms,
+			// so manually set it here
+			this.app.vocabApi.main({
+				termfilter: JSON.parse(JSON.stringify(this.state.termfilter))
+			})
 
 			// support any legacy examples and tests that use the deprecated state.tree.plots object,
 			// by converting to a state.plots array
@@ -99,11 +105,8 @@ class TdbStore {
 				const _ = await import(`../plots/${savedPlot.chartType}.js`)
 				const plot = await _.getPlotConfig(savedPlot, this.app)
 				this.state.plots[i] = plot
-				if (!('id' in plot)) plot.id = '_AUTOID_' + i
+				if (!('id' in plot)) plot.id = `_AUTOID_${id++}_${i}`
 			}
-
-			// maybe no need to provide term filter at this query
-			this.setTermfilter()
 		} catch (e) {
 			throw e
 		}

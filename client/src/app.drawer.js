@@ -40,8 +40,8 @@ export function drawer_init(app, features, overrides = {}) {
 		// prevent reloading
 		if (examples_rendered) return
 		examples_rendered = true
-		const _ = await import('./examples')
-		await _.init_examples({
+		const _ = await import('./app.drawer.cards')
+		await _.init_appDrawer({
 			holder: dom.drawer_div,
 			apps_sandbox_div: dom.sandbox_div,
 			apps_off

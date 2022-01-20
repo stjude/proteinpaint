@@ -190,6 +190,7 @@ function makeEditMenu(self, div) {
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
 			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
 			self.dom.tip.hide()
+			self.updateUI()
 			self.runCallback()
 		})
 }

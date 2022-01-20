@@ -197,7 +197,7 @@ if (serverconfig.jwt) {
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
 app.get(basepath + '/healthcheck', handle_healthcheck)
-app.get(basepath + '/examplejson', handle_examples)
+app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
 app.post(basepath + '/genelookup', handle_genelookup)
@@ -428,13 +428,20 @@ function handle_gene2canonicalisoform(req, res) {
 	}
 }
 
-async function handle_examples(req, res) {
+async function handle_cards(req, res) {
 	log(req)
 	try {
 		// more flexibility by reading a file pointed by exports.features.examples
-		const txt = await utils.read_file(serverconfig.examplejson)
-		const json = JSON.parse(txt)
-		res.send({ examples: json.examples, allow_mdsform: exports.features.mdsjsonform })
+		const cardsjson = await utils.read_file(serverconfig.cardsjson)
+		const json = JSON.parse(cardsjson)
+		const dir = json.dir || path.join(serverconfig.binpath, 'cards')
+		if (req.query.sandboxjson) {
+			const jsontxt = await utils.read_file(path.join(dir, req.query.sandboxjson + '.json'))
+			const sjson = JSON.parse(jsontxt)
+			res.send({ sandboxjson: sjson.ppcalls, allow_mdsform: exports.features.mdsjsonform })
+		} else {
+			res.send({ examples: json.examples, allow_mdsform: exports.features.mdsjsonform })
+		}
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}

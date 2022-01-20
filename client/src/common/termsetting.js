@@ -321,7 +321,9 @@ function setRenderers(self) {
 		const status_msg = self.handler.get_status_msg()
 		const ts_summary_flag = self.term.type == 'condition' || status_msg
 
-		self.dom.pill_termname.style('border-radius', grpsetting_flag || ts_summary_flag ? '6px 0 0 6px' : '6px')
+		self.dom.pill_termname
+			.style('border-radius', grpsetting_flag || ts_summary_flag ? '6px 0 0 6px' : '6px')
+			.html(self.handler.get_term_name)
 
 		const pill_settingSummary = one_term_div
 			.selectAll('.ts_summary_btn')

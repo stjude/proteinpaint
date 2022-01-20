@@ -13,7 +13,7 @@ hljs.registerLanguage('json', json)
 /*
 
 -------EXPORTED-------
-init_examples
+init_appDrawer
 	- creates the app drawer
 
 -------Internal-------
@@ -43,9 +43,9 @@ addArrowBtns
 Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl0xIJqDRbyhahA4/edit#heading=h.jwyqi1mhacps
 */
 
-export async function init_examples(par) {
+export async function init_appDrawer(par) {
 	const { holder, apps_sandbox_div, apps_off } = par
-	const re = await dofetch2('/examplejson')
+	const re = await dofetch2('/cardsjson')
 	if (re.error) {
 		sayerror(holder.append('div'), re.error)
 		return
@@ -71,10 +71,6 @@ export async function init_examples(par) {
 		apps_sandbox_div,
 		apps_off,
 		allow_mdsform: re.allow_mdsform
-	}
-	//Creates error when obj is modified to avoid issues when using the same obj or stringifying it.
-	for (const example of re.examples) {
-		if (example.buttons && example.media.example) deepFreeze(example.media.example)
 	}
 	// make_searchbar(track_args, page_args, searchbar_div)
 	await loadTracks(track_args, page_args)
@@ -201,7 +197,7 @@ function displayTracks(tracks, holder, page_args) {
 			.on('click', async () => {
 				event.stopPropagation()
 				page_args.apps_off()
-				if (track.ppcalls) {
+				if (track.sandboxjson) {
 					openSandbox(track, page_args.apps_sandbox_div)
 				}
 			})
@@ -232,31 +228,31 @@ function displayTracks(tracks, holder, page_args) {
 		// create custom track button for genomepaint card
 		// TODO: rightnow only custom button is for genomepaint card,
 		// if more buttons are added, this code will need to be changed as needed
-		if (track.custom_buttons) {
-			for (const button of track.custom_buttons) {
-				if (button.check_mdsjosonform && !page_args.allow_mdsform) continue
-				li.select('.track-btns')
-					.append('button')
-					.attr('class', 'sjpp-landing-page-a')
-					.style('padding', '7px')
-					.style('cursor', 'pointer')
-					.text(button.name)
-					.on('click', () => {
-						event.stopPropagation()
-						page_args.apps_off()
-						if (button.example) {
-							const btn_args = {
-								name: button.name,
-								buttons: {
-									example: button.example
-								}
-							}
-							openSandbox(btn_args, page_args.apps_sandbox_div)
-						}
-						// TODO: Add logic if custom button has url or some other link
-					})
-			}
-		}
+		// if (track.custom_buttons) {
+		// 	for (const button of track.custom_buttons) {
+		// 		if (button.check_mdsjosonform && !page_args.allow_mdsform) continue
+		// 		li.select('.track-btns')
+		// 			.append('button')
+		// 			.attr('class', 'sjpp-landing-page-a')
+		// 			.style('padding', '7px')
+		// 			.style('cursor', 'pointer')
+		// 			.text(button.name)
+		// 			.on('click', () => {
+		// 				event.stopPropagation()
+		// 				page_args.apps_off()
+		// 				if (button.example) {
+		// 					const btn_args = {
+		// 						name: button.name,
+		// 						buttons: {
+		// 							example: button.example
+		// 						}
+		// 					}
+		// 					openSandbox(btn_args, page_args.apps_sandbox_div)
+		// 				}
+		// 				// TODO: Add logic if custom button has url or some other link
+		// 			})
+		// 	}
+		// }
 
 		return JSON.stringify(li)
 	})
@@ -288,6 +284,13 @@ function makeRibbon(e, text, color) {
 */
 
 async function openSandbox(track, holder) {
+	const res = await dofetch2(`/cardsjson?sandboxjson=${track.sandboxjson}`)
+	if (res.error) {
+		sayerror(holder.append('div'), res.error)
+		return
+	}
+	const ppcalls = res.sandboxjson
+
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header_row
@@ -307,7 +310,7 @@ async function openSandbox(track, holder) {
 
 	//Disables top, horizontal tabs for api queries or other special circumstances
 	if (track.disable_topTabs == true) {
-		renderContent(track.ppcalls[0], sandbox_div.body, track.app)
+		renderContent(ppcalls[0], sandbox_div.body, track.app)
 	} else {
 		// Creates the overarching tab menu and subsequent content
 		const toptab_div = sandbox_div.body
@@ -320,7 +323,7 @@ async function openSandbox(track, holder) {
 			.style('width', '100%')
 		const maincontent_div = sandbox_div.body.append('div')
 
-		sandboxTabMenu(track, toptab_div, maincontent_div)
+		sandboxTabMenu(ppcalls, track, toptab_div, maincontent_div)
 	}
 }
 
@@ -360,10 +363,10 @@ function renderContent(ppcalls, div, app) {
 //********* Tab Menu Functions *********
 
 //Creates the larger tabs above all examples and uis
-function makeSandboxTabs(track) {
+function makeSandboxTabs(ppcalls, track) {
 	const tabs = []
-	const ui = track.ppcalls.findIndex(t => t.is_ui == true)
-	const notui = track.ppcalls.findIndex(t => t.is_ui == (false || undefined))
+	const ui = ppcalls.findIndex(t => t.is_ui == true)
+	const notui = ppcalls.findIndex(t => t.is_ui == (false || undefined))
 	const ui_present = ui != -1 ? true : false
 	if (ui_present == true) {
 		tabs.push({
@@ -380,7 +383,7 @@ function makeSandboxTabs(track) {
 						host: window.location.origin
 					}
 
-					const callpp = JSON.parse(JSON.stringify(track.ppcalls[ui].runargs))
+					const callpp = JSON.parse(JSON.stringify(ppcalls[ui].runargs))
 
 					runproteinpaint(Object.assign(runpp_arg, callpp))
 				} catch (e) {
@@ -389,27 +392,27 @@ function makeSandboxTabs(track) {
 			}
 		})
 	}
-	if ((track.ppcalls.length == 1 && ui_present != true) || (track.ppcalls.length == 2 && ui_present == true)) {
+	if ((ppcalls.length == 1 && ui_present != true) || (ppcalls.length == 2 && ui_present == true)) {
 		tabs.push({
 			name: 'Example',
 			active: false,
 			callback: async div => {
 				try {
-					renderContent(track.ppcalls[notui], div, track.app)
+					renderContent(ppcalls[notui], div, track.app)
 				} catch (e) {
 					alert('Error: ' + (e.message || e))
 				}
 			}
 		})
 	}
-	if ((track.ppcalls.length > 1 && ui_present == false) || (track.ppcalls.length > 2 && ui_present == true)) {
+	if ((ppcalls.length > 1 && ui_present == false) || (ppcalls.length > 2 && ui_present == true)) {
 		tabs.push({
 			name: 'Examples',
 			active: false,
 			callback: async div => {
 				try {
-					const examplesOnly = track.ppcalls.filter(p => p.is_ui != true) //Fix to rm UIs from Examples tab
-					makeLeftsideTabMenu(track, div, examplesOnly)
+					const examplesOnly = ppcalls.filter(p => p.is_ui != true) //Fix to rm UIs from Examples tab
+					makeLeftsideTabMenu(ppcalls, div, examplesOnly)
 				} catch (e) {
 					alert('Error: ' + (e.message || e))
 				}
@@ -419,8 +422,8 @@ function makeSandboxTabs(track) {
 	return tabs
 }
 //Creates the main tab menu over the examples and/or app uis
-function sandboxTabMenu(track, tabs_div, content_div) {
-	const tabs = makeSandboxTabs(track)
+function sandboxTabMenu(ppcalls, track, tabs_div, content_div) {
+	const tabs = makeSandboxTabs(ppcalls, track)
 
 	for (const tab of tabs) {
 		tabs[0].active = true

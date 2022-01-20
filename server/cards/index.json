@@ -1,0 +1,397 @@
+{
+    "examples": [
+        {
+            "name": "GenomePaint",
+            "app": "Genome Browser",
+            "blurb": "Explore coding and non-coding variants in cancer",
+            "image": "https://pecan.stjude.cloud/static/examples/images/gpaint-square.png",
+            "sandboxjson": "genomepaint",
+            "custom_buttons":[
+                {
+                    "name": "Create custom track",
+                    "check_mdsjosonform":true,
+                    "example": {
+                        "nobox": 1,
+                        "noheader": 1,
+                        "mdsjsonform": { "uionly": true }
+                    }
+                }
+            ],
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Launch GenomePaint",
+                        "link": "https://genomepaint.stjude.cloud/"
+                    },
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
+                    }
+                ],
+                "arrowButtons": [
+                    {
+                        "name": "Data Processing",
+                        "message": "<p>Download the data and data processing scripts from the Download Data & Processing Pipeline link. Please use the Data Processing Docs for instructions</p>",
+                        "links": [
+                            {
+                                "name": "Download Data & Processing Pipeline",
+                                "download": "https://pecan.stjude.cloud/static/genomepaint-support/script/GDC.variation.datafile.processing.zip"
+                            },
+                            {
+                                "name": "Data Processing Docs",
+                                "link": "https://docs.google.com/document/d/1TC6pcAByqugzMWQ0C7mhHIHIkIxkqqDt1ATBBt_ehes/edit"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "searchterms": ["GenomePaint"]
+        },
+        {
+            "name": "BigWig",
+            "app": "Genome Browser",
+            "blurb": "Quantitative data at genomic positions",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
+            "update_expire": "2022-02-15",
+            "sandboxjson": "bigwig",
+            "sandbox":{
+                "update_message": "Create your own bigwig track! Use the new form on the Add Your Data tab to create your own bigwig track. Additional configuration options coming soon."
+            },
+            "searchterms": ["coverage", "numeric"]
+        },
+        {
+            "name": "JSON BED",
+            "app": "Genome Browser",
+            "blurb": "Genomic feature annotation",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
+            "sandboxjson": "bedj",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A"
+                    }
+                ]
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Allelic imbalance",
+            "app": "Genome Browser",
+            "blurb": "From tumor and germline DNA",
+            "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
+            "sandboxjson": "ai",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
+                    }
+                ]
+            },
+            "searchterms": ["aicheck", "tumor", "normal", "DNA"]
+        },
+        {
+            "name": "Profile gene value",
+            "app": "Genome Browser",
+            "blurb": "Profiling results & gene-level values",
+            "image": "https://pecan.stjude.cloud/static/examples/images/pgv-square.png",
+            "sandboxjson": "pgv",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit"
+                    }
+                ]
+            },
+            "searchterms": ["pgv", "chromHMM", "profiling results", "gene level", "gene expression"]
+        },
+        {
+            "name": "Expression rank",
+            "app": "Genome Browser",
+            "blurb": "Against all samples from a cohort",
+            "image": "https://pecan.stjude.cloud/static/examples/images/exprank-square.png",
+            "sandboxjson": "exprank",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s"
+                    }
+                ]
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Hi-C",
+            "app": "Genome Browser",
+            "blurb": "Chromatin interaction at a locus",
+            "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
+            "sandboxjson": "hic",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
+                    }
+                ]
+            },
+            "searchterms": ["hic", "hicstraw", "chromatin interaction", "conformation"]
+        },
+        {
+            "name": "Lollipop",
+            "app": "Genome Browser",
+            "blurb": "Coding mutations and gene fusions",
+            "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
+            "update_expire": "2022-02-07",
+            "sandboxjson": "lollipop",
+            "sandbox": {
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+                    }
+                ],
+                "update_message": "Create your own official dataset! See the 'Official Dataset' example and click on 'Build an Official Dataset' button."
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Splice Junction",
+            "app": "Genome Browser",
+            "blurb": "Single sample and cohort",
+            "image": "https://pecan.stjude.cloud/static/examples/images/junction-cohort-square.png",
+            "sandboxjson": "junction",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1PFva3Mn-U4VPNW0vHHC-CSnYBeotRnqbhCMQPmyLQG4/edit"
+                    }
+                ]
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Track list & facet table",
+            "app": "Genome Browser",
+            "blurb": " ",
+            "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
+            "sandboxjson": "tklist",
+            "sandbox":{
+                "intro": "<p>To view the facet table:</p><ul><li>Click on the <button>Tracks</button> in the genome browser toolbar</li><li>A button appears under FACET. Click on <button style='border:none;font-size:15px;padding:5px'>77 tracks from My facet table</button></li><li>Launch tracks by clicking on individual cells, samples (row labels), or assays (column labels).</li></ul>",
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1e0JVdcf1yQDZst3j77Xeoj_hDN72B6XZ1bo_cAd2rss/edit#heading=h.pkybixxj4p6"
+                    }
+                ]
+            },
+            "searchterms": []
+        },
+        {
+            "name": "Arc Track",
+            "app": "Genome Browser",
+            "blurb": "Pairwise chromatin interactions",
+            "image": "https://pecan.stjude.cloud/static/examples/images/arc-square.png",
+            "sandboxjson":"arc",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.8zct8j3cscak"
+                    }
+                ]
+            },
+            "searchterms": []
+        },
+        {
+            "name": "ASE",
+            "app": "Genome Browser",
+            "isbeta": 1,
+            "blurb": "Allele-specific expression analysis",
+            "image": "https://pecan.stjude.cloud/static/examples/images/ase-square.png",
+            "sandboxjson": "ase",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz"
+                    }
+                ]
+            },
+            "searchterms": ["Allele-specific gene expression"]
+        },
+        {
+            "name": "BAM",
+            "app": "Genome Browser",
+            "isbeta": 1,
+            "blurb": "Sequence reads alignment",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
+            "sandboxjson": "bam",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
+                    },
+                    {
+                        "name": "Download BAM Slicing Script",
+                        "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/slice_bam4pp.py.gz"
+                    }
+                ]
+            },
+            "searchterms": ["BLAT"]
+        },
+        {
+            "name": "GDC BAM slicing",
+            "app": "Genome Browser",
+            "isbeta": 1,
+            "disable_topTabs": true,
+            "blurb": "Visualize sequencing reads in NCI GDC",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
+            "sandboxjson": "gdcbam",
+            "sandbox": {},
+            "searchterms": []
+        },
+        {
+            "name": "Bampile",
+            "hidden": true,
+            "app": "Genome Browser",
+            "isbeta": 1,
+            "blurb": "Deep sequencing",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
+            "sandboxjson": "bampile",
+            "sandbox":{},
+            "searchterms": []
+        },
+        {
+            "name": "FusionEditor",
+            "app": "Apps",
+            "blurb": "Review CICERO output",
+            "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
+            "update_expire": "2022-02-01",
+            "sandboxjson": "fusioneditor",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1DRVzE_WenG490eRYB7VGFOygtSqtF5L97rhK0HOUCNY/edit"
+                    }
+                ],
+                "update_message": "Please use the new example to explore the FusionEditor."
+            },
+            "searchterms": []
+        },
+        {
+            "name": "2DMAF",
+            "app": "Apps",
+            "blurb": "Somatic mutations from diagnosis & relapse",
+            "image": "https://pecan.stjude.cloud/static/examples/images/2dmaf-square.png",
+            "update_expire": "2022-02-01",
+            "sandboxjson": "2dmaf",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13"
+                    }
+                ],
+                "update_message": "Please use the new example to explore the 2DMAF plot."
+            },
+            "searchterms": ["2dmaf", "clonal evolution", "point mutations"]
+        },
+        {
+            "name": "Load mutations from text files",
+            "app": "Apps",
+            "blurb": "Mutation heatmap",
+            "image": "https://pecan.stjude.cloud/static/examples/images/heatmap-square.png",
+            "sandboxjson": "study",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1bx3VRdTzJDYdmt4CaU4PfHCOz5JSfTyuSFIuGTx-X2g/edit"
+                    }
+                ]
+            },
+            "searchterms": ["heat map"]
+        },
+        {
+            "name": "MA+Volcano plots",
+            "app": "Apps",
+            "blurb": "Differential gene expression",
+            "image": "https://pecan.stjude.cloud/static/examples/images/mavb-square.png",
+            "sandboxjson": "mavb",
+            "sandbox":{
+                
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit"
+                    }
+                ]
+            },
+            "searchterms": ["differential gene expression", "RNAseq coverage"]
+        },
+        {
+            "name": "MAF-timeline",
+            "app": "Apps",
+            "hidden": true, 
+            "blurb": "Mutant allele fraction timeline chart by date",
+            "image": "https://pecan.stjude.cloud/static/examples/images/maf-timeline-square.png",
+            "sandboxjson": "maf.timeline",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit"
+                    }
+                ]
+            },
+            "searchterms": ["mutant allele fraction", "snv", "snv4"]
+        },
+        {
+            "name": "Scatterplot",
+            "app": "Apps",
+            "blurb": "2D scatterplot of samples & metadata",
+            "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
+            "sandboxjson": "scatterplot",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1XHi_WqVdarUNbc_ESMEBp2l-zwhnGcIfiBWA5n2omZQ/edit"
+                    }
+                ]
+            },
+            "searchterms": ["tSNE", "lasso"]
+        },
+        {
+            "name": "Single Cell",
+            "app": "Apps",
+            "blurb": "Single-cell omics viewer",
+            "image": "https://pecan.stjude.cloud/static/examples/images/singlecell-square.png",
+            "sandboxjson": "singlecell",
+            "sandbox":{
+                "buttons": [
+                    {
+                        "name": "Documentation",
+                        "link": "https://docs.google.com/document/d/1YVxw2aPru6bAlTzUfE9GAQAvzbiBiqJiBR1X-g5ZBLI/edit"
+                    }
+                ]
+            },
+            "searchterms": ["tsne", "gene expression", "multi-gene heatmap", "violin plot", "box plot"]
+        },
+        {
+            "name": "termdb with custom vocabulary",
+            "app": "Apps",
+            "hidden": true,
+            "blurb": "TODO: Brief description of track or app",
+            "image": "",
+            "sandbox":{},
+            "searchterms": ["clinical", "dictionary"]
+        }
+    ]
+}
