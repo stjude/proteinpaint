@@ -1,0 +1,12 @@
+{
+    "ppcalls": [
+        {
+            "is_ui": true,
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "maftimeline": { "uionly": true }
+            }
+        }
+    ]
+}

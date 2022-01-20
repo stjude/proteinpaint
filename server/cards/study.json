@@ -1,0 +1,27 @@
+{
+    "ppcalls": [
+        {
+            "is_ui": true,
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "project": { "uionly": true }
+            }
+        },
+        {
+            "message": "A few tips on how to interact with the study view: <ul><li>Clicking on the gene tab opens the gene table with detailed information about mutation and sample counts.</li><li>Launch the genome browser by clicking on the heatmap gene labels.</li><li>Hover over the heatmap cells to reveal the mutation and sample information</li></ul>",
+            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/heatmap/heatmapDemoData.tar.gz",
+            "jsonpath": "proteinpaint_demo/hg19/heatmap/heatmapDemo.json",
+            "runargs":{
+                "noheader": true,
+                "nobox": 1,
+                "genome": "hg19",
+                "study": "proteinpaint_demo/hg19/heatmap/heatmapDemo.json"
+            },
+            "testSpec": {
+                "timeout": 7000,
+                "expected": { "rect": 20, "line": 20, "text": 5 }
+            }
+        }
+    ]
+}
