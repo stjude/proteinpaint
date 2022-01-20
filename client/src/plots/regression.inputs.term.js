@@ -1,4 +1,4 @@
-import { termsettingInit } from '../common/termsetting'
+import { termsettingInit, nonDictionaryTermTypes } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { get_bin_label } from '../../shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
@@ -167,7 +167,7 @@ export class InputTerm {
 
 		//!!!!!!!!!!!!!!!!! quick fix
 		// non-dictionary terms should not run this step
-		if (tw.term.type == 'snplst') return
+		if (nonDictionaryTermTypes.has(tw.term.type)) return
 
 		if (!tw.q) throw '.term.q missing on this input'
 

@@ -1,6 +1,6 @@
 import { dofetch3 } from '../client'
 import { getBarchartData, getCategoryData } from '../plots/barchart.data'
-import { termsetting_fill_q } from '../common/termsetting'
+import { termsetting_fill_q, nonDictionaryTermTypes } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
@@ -43,8 +43,9 @@ class TermdbVocab {
 		this.vocab = opts.state.vocab
 	}
 
-	main() {
-		this.state = this.app ? this.app.getState() : this.opts.state
+	main(stateOverride = null) {
+		if (stateOverride) Object.assign(this.state, stateOverride)
+		else this.state = this.app ? this.app.getState() : this.opts.state
 		this.vocab = this.state.vocab
 	}
 
@@ -390,8 +391,8 @@ class TermdbVocab {
 		return graphableTypes.has(term.type)
 	}
 
-	async getCategories(term, filter, lst = []) {
-		// for all term types
+	async getCategories(tw, filter, lst = []) {
+		// for dictionary term types
 		// return number of samples per category/bin/grade/group etc
 		// optionally, caller can supply parameter "term1_q=stringifiedJSON" in lst[]
 		// as this function does not deal with q by default
@@ -399,7 +400,7 @@ class TermdbVocab {
 			'getcategories=1',
 			'genome=' + this.state.vocab.genome,
 			'dslabel=' + this.state.vocab.dslabel,
-			'tid=' + term.id,
+			'tid=' + tw.id,
 			...lst
 		]
 		if (filter) {
@@ -436,13 +437,14 @@ class TermdbVocab {
 		}
 	}
 
-	async validateSnps(snptext, filter) {
+	async validateSnps(snptext, _filter) {
 		const args = [
 			'validateSnps=1',
 			'genome=' + this.state.vocab.genome,
 			'dslabel=' + this.state.vocab.dslabel,
 			'snptext=' + encodeURIComponent(snptext)
 		]
+		const filter = _filter || this.state.termfilter.filter
 		if (filter) {
 			args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
 		}
