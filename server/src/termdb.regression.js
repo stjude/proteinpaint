@@ -461,7 +461,7 @@ async function getSampleData_snplst(tw, samples) {
 
 		snp2sample.set(snpid, {
 			effAle: l[2],
-			alleles: l[5].split(','),
+			alleles: l[5].split(','), // [0] is ref, [1,] are alts
 			samples: new Map()
 		})
 		for (const [j, sampleid] of sampleheader.entries()) {
@@ -508,15 +508,24 @@ function applyGeneticModel(tw, effAle, a1, a2) {
 }
 
 function get_effAle4snp(snp, tw) {
-	if (snp.effAle) return snp.effAle
-	// determine based on tw setting
+	// get effect allele for a snp
+	// snp: { effAle, alleles, samples: map { k: sample id, v: gt } }
+	if (snp.effAle) return snp.effAle // use user supplied allele
+	// compute based on q.alleleType choice
 	if (tw.q.alleleType == 0) {
 		// major/minor
-		throw 'not done'
+		const ale2count = new Map() // k: allele from gt, v: number of times it shows up in snp.samples
+		for (const gt of snp.samples.values()) {
+			for (const a of gt.split(',')) {
+				ale2count.set(a, 1 + (ale2count.get(a) || 0))
+			}
+		}
+		const lst = [...ale2count].sort((a, b) => a[1] - b[1]) // sort to ascending
+		return lst[0][0] // lst[0] is the allele with smallest number of appearances
 	}
 	if (tw.q.alleleType == 1) {
 		// ref/alt
-		throw 'not done'
+		return snp.alleles[0]
 	}
 	throw 'unknown alleleType value'
 }
