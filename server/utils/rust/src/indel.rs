@@ -1795,6 +1795,7 @@ fn preprocess_input(
     )
 }
 
+// Reversing a string
 fn reverse_string(input: &str) -> String {
     let mut result = String::new();
     for c in input.chars().rev() {
@@ -2074,9 +2075,9 @@ fn check_read_within_indel_region(
         //println!("indel_start:{}", indel_start);
         //println!("indel_stop:{}", indel_stop);
         if strictness >= 1 {
-            let percentage_indel_length: f64 = 0.1;
-            let indel_cutoff: i64 = (indel_length as f64 * percentage_indel_length).ceil() as i64;
-            //println!("indel_cutoff:{}", indel_cutoff);
+            let percentage_indel_length: f64 = 0.2; // Minimum fraction of length of indel needed to decide the max distance a read can be from the start of an indel so as to decide if the read harbors variant region
+            let indel_cutoff: i64 = (indel_length as f64 * percentage_indel_length).ceil() as i64; // Max distance from start of an indel a read can start so as to consider if read contains variant region
+                                                                                                   //println!("indel_cutoff:{}", indel_cutoff);
             if (indel_start + indel_cutoff <= correct_start_position
                 && correct_end_position <= indel_stop - indel_cutoff)
                 || (correct_start_position <= indel_start && indel_stop <= correct_end_position)
