@@ -27,12 +27,6 @@ upon error, throw err message as a string
 */
 	const urlp = urlmap()
 
-	if (urlp.has('examples')) {
-		const _ = await import('./app.drawer.cards')
-		await _.init_appDrawer(arg)
-		return
-	}
-
 	if (urlp.has('gdcbamslice')) {
 		const _ = await import('./block.tk.bam.gdc')
 		_.bamsliceui(arg.genomes, arg.holder)
