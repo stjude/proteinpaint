@@ -165,6 +165,10 @@ if (!serverconfig.cardsjson) {
 	serverconfig.cardsjson = path.join(serverconfig.binpath, 'cards/index.json')
 }
 
+if (!serverconfig.cardsjsondir) {
+	serverconfig.cardsjsondir = path.join(serverconfig.binpath, 'cards')
+}
+
 if (fs.existsSync('./public/rev.txt')) {
 	const revtxt = fs.readFileSync('./public/rev.txt', { encoding: 'utf8' })
 	const commitHash = revtxt.trim().split(' ')[1]

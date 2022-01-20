@@ -198,7 +198,7 @@ function displayTracks(tracks, holder, page_args) {
 				event.stopPropagation()
 				page_args.apps_off()
 				if (track.sandboxjson) {
-					openSandbox(track, page_args.apps_sandbox_div)
+					await openSandbox(track, page_args.apps_sandbox_div)
 				}
 			})
 
@@ -284,18 +284,22 @@ function makeRibbon(e, text, color) {
 */
 
 async function openSandbox(track, holder) {
-	const res = await dofetch2(`/cardsjson?sandboxjson=${track.sandboxjson}`)
+	const res = await dofetch2(`/cardsjson?file=${track.sandboxjson}`)
 	if (res.error) {
 		sayerror(holder.append('div'), res.error)
 		return
 	}
-	const ppcalls = res.sandboxjson
-
+	// console.log(292, res)
+	const sandbox_args = {
+		ppcalls: res.file.ppcalls,
+		buttons: res.file.buttons,
+		arrowButtons: res.file.arrowButtons
+	}
+	console.log(296, sandbox_args)
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header_row
 	sandbox_div.header.text(track.name)
-
 	sandbox_div.body.style('overflow', 'hidden')
 
 	// creates div for instructions or other messaging about the track
@@ -304,13 +308,13 @@ async function openSandbox(track, holder) {
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_div.body)
 	// buttons for links and/or downloads for the entire track/app
-	addButtons(track.sandbox.buttons, sandbox_div.body)
+	addButtons(sandbox_args.buttons, sandbox_div.body)
 	// arrow buttons for the entire track/app that open a new div underneath
-	addArrowBtns(track.sandbox.arrowButtons, '', sandbox_div.body, sandbox_div.body)
+	addArrowBtns(sandbox_args.arrowButtons, '', sandbox_div.body, sandbox_div.body)
 
 	//Disables top, horizontal tabs for api queries or other special circumstances
 	if (track.disable_topTabs == true) {
-		renderContent(ppcalls[0], sandbox_div.body, track.app)
+		renderContent(sandbox_args.ppcalls[0], sandbox_div.body, track.app)
 	} else {
 		// Creates the overarching tab menu and subsequent content
 		const toptab_div = sandbox_div.body
@@ -323,7 +327,7 @@ async function openSandbox(track, holder) {
 			.style('width', '100%')
 		const maincontent_div = sandbox_div.body.append('div')
 
-		sandboxTabMenu(ppcalls, track, toptab_div, maincontent_div)
+		sandboxTabMenu(sandbox_args.ppcalls, track, toptab_div, maincontent_div)
 	}
 }
 
