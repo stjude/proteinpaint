@@ -1,4 +1,4 @@
-import { dofetch, dofetch2, sayerror, tab_wait, appear } from './client'
+import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from './client'
 import { newSandboxDiv } from './dom/sandbox'
 import { debounce } from 'debounce'
 import { event, select } from 'd3-selection'
@@ -259,7 +259,7 @@ function makeRibbon(e, text, color) {
 
 async function openSandbox(track, holder) {
 	//queries relevant json file with sandbox args
-	const res = await dofetch2(`/cardsjson?file=${track.sandboxjson}`)
+	const res = await dofetch3(`/cardsjson?file=${track.sandboxjson}`) //Fix for loading the sandbox json only once
 	if (res.error) {
 		sayerror(holder.append('div'), res.error)
 		return
