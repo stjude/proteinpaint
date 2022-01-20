@@ -69,6 +69,28 @@ export class RegressionResults {
 		}
 		return opts
 	}
+
+	getIndependentTerm(tid) {
+		/*
+		arg is independent term id; return term wrapper 
+
+		in order to reliably access tw.refGrp,
+		must use termwrapper from this.config but not this.state.config
+		due to a specific condition when refGrp is set in self.config, but is missing from state
+		when launching from a parameterized url that's missing refgrp for the term
+		and the refGrp is dynamically filled by input.updateTerm() but not propagated to state
+		*/
+		const tw = this.config.independent.find(t => t.id == tid)
+		if (tw) return tw
+		// not found by tid; check for snps in snplst
+		for (const tw of this.config.independent) {
+			if (tw.term.snps) {
+				const snp = tw.term.snps.find(i => i.snpid == tid)
+				if (snp) return snp
+			}
+		}
+		throw 'unknown independent term'
+	}
 }
 
 function setInteractivity(self) {}
@@ -174,20 +196,18 @@ function setRenderers(self) {
 		let rowcount = 0
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
-			/* in order to reliably access tw.refGrp,
-			must use termwrapper from self.config but not self.state.config
-			due to a specific condition when refGrp is set in self.config, but is missing from state
-			when launching from a parameterized url that's missing refgrp for the term
-			and the refGrp is dynamically filled by input.updateTerm() but not propagated to state
-			*/
-			// add getTermHelper() to match tid (snp name) to the snplst term
-			const tw = self.config.independent.find(t => t.id == tid)
+			const tw = self.getIndependentTerm(tid)
 			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 
 			// col 1: term name
 			const termNameTd = tr.append('td').style('padding', '8px')
-			fillTdName(termNameTd, tw ? tw.term.name : tid) // can tw ever be missing??
-			if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
+			fillTdName(termNameTd, tw.term ? tw.term.name : tid) // can tw ever be missing??
+
+			// TODO
+			// add snp.q and snp.refGrp in tw.term.snps[] to mark out reference group for geneticModel=3
+			// so that refgrp can be displayed
+
+			if (tw.q && tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
 				// do not display ref for spline variable
 				termNameTd
 					.append('div')
