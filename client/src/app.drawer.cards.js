@@ -228,35 +228,6 @@ function displayTracks(tracks, holder, page_args) {
 			}
 		}
 
-		// create custom track button for genomepaint card
-		// TODO: rightnow only custom button is for genomepaint card,
-		// if more buttons are added, this code will need to be changed as needed
-		// if (track.custom_buttons) {
-		// 	for (const button of track.custom_buttons) {
-		// 		if (button.check_mdsjosonform && !page_args.allow_mdsform) continue
-		// 		li.select('.track-btns')
-		// 			.append('button')
-		// 			.attr('class', 'sjpp-landing-page-a')
-		// 			.style('padding', '7px')
-		// 			.style('cursor', 'pointer')
-		// 			.text(button.name)
-		// 			.on('click', () => {
-		// 				event.stopPropagation()
-		// 				page_args.apps_off()
-		// 				if (button.example) {
-		// 					const btn_args = {
-		// 						name: button.name,
-		// 						buttons: {
-		// 							example: button.example
-		// 						}
-		// 					}
-		// 					openSandbox(btn_args, page_args.apps_sandbox_div)
-		// 				}
-		// 				// TODO: Add logic if custom button has url or some other link
-		// 			})
-		// 	}
-		// }
-
 		return JSON.stringify(li)
 	})
 }
@@ -287,6 +258,7 @@ function makeRibbon(e, text, color) {
 */
 
 async function openSandbox(track, holder) {
+	//queries relevant json file with sandbox args
 	const res = await dofetch2(`/cardsjson?file=${track.sandboxjson}`)
 	if (res.error) {
 		sayerror(holder.append('div'), res.error)
@@ -335,7 +307,7 @@ async function openSandbox(track, holder) {
 	}
 }
 
-// Single content layout for examples only - buttons not used for UIs
+// Single content layout - buttons not used for UIs
 function renderContent(ppcalls, div, app) {
 	addMessage(ppcalls.message, div)
 
@@ -639,9 +611,10 @@ async function showCode(ppcalls, btns) {
 		{ language: 'javascript' }
 	).value
 
-	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 30px; max-height:400px; min-height:400px; overflow-x: auto; overflow-y:auto;">
-		<code style="font-size:14px; display:block; ">${runpp_code}</code>
-	</pre>`
+	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 30px; overflow-x: auto; overflow-y:auto; max-height:400px; ${
+		ppcalls.jsonpath ? `min-height:400px;` : `min-height: auto;`
+	}">
+	<code style="font-size:14px; display:block;">${runpp_code}</code></pre>`
 
 	btns.push({
 		name: 'Code',
