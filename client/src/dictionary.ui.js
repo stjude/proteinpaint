@@ -1,6 +1,7 @@
 import * as uiutils from './dom/uiUtils'
 import { appear } from './dom/animation'
 import { init_tabs } from './dom/toggleButtons'
+import { event as d3event } from 'd3-selection'
 import { getVocabFromSamplesArray } from './termdb/vocabulary'
 
 /* 
@@ -11,6 +12,7 @@ init_dictionaryUI()
     - holder
 
 ------ Internal ------ 
+TODO
 
 doms:{}
 
@@ -85,7 +87,7 @@ function makeDataEntryTabs(tabs_div, doms) {
 			}
 		}
 	]
-	init_tabs({ holder: tabs_div.style('justify-content', 'center'), tabs })
+	init_tabs({ holder: tabs_div, tabs })
 }
 
 function makeTextEntryFilePathInput(div, doms) {
@@ -94,13 +96,30 @@ function makeTextEntryFilePathInput(div, doms) {
 		.makeTextInput(filepath_div)
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.on('keyup', async () => {
-			doms.filepath = filepath.property('value').trim()
+			const data = filepath.property('value').trim()
+			if (uiutils.isURL(data)) {
+				fetch(data)
+					.then(req => req.text())
+					.then(txt => {
+						parseTabDelimitedData(txt, doms)
+					})
+			} else {
+				//TODO: implement serverside filepaths(?)
+			}
 		})
 }
 
 function makeFileUpload(div, doms) {
 	const upload_div = div.append('div').style('display', 'block')
 	const upload = uiutils.makeFileUpload(upload_div)
+	upload.on('change', () => {
+		const file = d3event.target.files[0]
+		const reader = new FileReader()
+		reader.onload = event => {
+			parseTabDelimitedData(event.target.result, doms)
+		}
+		reader.readAsText(file, 'utf8')
+	})
 }
 
 function makeCopyPasteInput(div, doms) {
@@ -110,8 +129,66 @@ function makeCopyPasteInput(div, doms) {
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.on('keyup', async () => {
-			doms.pastedData = paste.property('value').trim()
+			parseTabDelimitedData(paste.property('value').trim(), doms)
 		})
+}
+
+//Parse tab delimited files only
+function parseTabDelimitedData(input, doms) {
+	const data = {
+		contents: [],
+		attributes: {}
+	}
+
+	const required_headers = ['Level_1', 'variable_name', 'variable_note'] //Maybe arg to reuse for other data uploads (i.e sample anno matrix)
+	const lines = input.split(/\r?\n/)
+	const headers = lines.shift().split('\t')
+
+	//Check for bare minimum data elements
+	const searchHeaders = headers.map(e => {
+		return e.toLowerCase()
+	})
+	for (const i in required_headers) {
+		let headIndex = searchHeaders.indexOf(required_headers[i].toLowerCase())
+		if (headIndex == -1) throw 'Missing data column: ' + required_headers[i]
+	}
+	//Key column allowed to be anywhere in the data - support hierarchy needs later.
+	//Maybe arg to reuse for other data uploads (i.e sample anno matrix)
+	const colKey = 'variable_name'
+	const dataKeyIndex = searchHeaders.indexOf(colKey.toLocaleLowerCase())
+	data.key = headers[dataKeyIndex]
+
+	for (const line of lines) {
+		const values = line.split('\t')
+		const content = {}
+		for (const [i, v] of values.entries()) {
+			content[headers[i]] = v
+		}
+
+		data.contents.push(content)
+	}
+
+	for (const [i, key] of headers.entries()) {
+		if (i == dataKeyIndex) continue
+		data.attributes[key] = { label: key }
+	}
+
+	//reformat data
+	let contentMap = new Map()
+	for (const d in data.contents) {
+		if (data.key) {
+			d.content = d[data.key]
+			delete d[data.key]
+		}
+		if (data.attributes) {
+			d.s = {}
+			for (const k in data.attributes) {
+				d.s[k] = d[k]
+				delete d[k]
+			}
+		}
+		contentMap.set(d.content, d)
+	}
 }
 
 function submitButton(div, doms, holder) {
@@ -120,11 +197,25 @@ function submitButton(div, doms, holder) {
 		.style('margin', '20px 20px 20px 130px')
 		.style('font-size', '16px')
 		.on('click', () => {
-			div.remove()
+			validateInput(doms)
+			// div.remove()
 		})
 }
 
-function validateInput(doms) {}
+function validateInput(doms) {
+	if (!doms.contents && !doms.attributes) {
+		alert('Provide data')
+		return
+	}
+	// const data = {
+	//     samples: doms.content,
+	//     sample_attributes: doms.attributes
+	// }
+	// console.log(data.samples)
+
+	const vocab = getVocabFromSamplesArray(data)
+	// console.log(vocab)
+}
 
 function infoSection(div) {
 	div
