@@ -165,13 +165,10 @@ export class InputTerm {
 		const tw = this.term
 		if (!tw) return
 
-		//!!!!!!!!!!!!!!!!! quick fix
-		// non-dictionary terms should not run this step
-		//if (nonDictionaryTermTypes.has(tw.term.type)) return
-
 		if (!tw.q) throw '.term.q missing on this input'
 
-		if (!tw.q.mode) {
+		if (!tw.q.mode && !nonDictionaryTermTypes.has(tw.term.type)) {
+			// fill in q.mode for dictionary terms
 			if (tw.term.type == 'categorical' || tw.term.type == 'condition') tw.q.mode = 'discrete'
 			else tw.q.mode = 'continuous'
 		}
@@ -203,8 +200,6 @@ export class InputTerm {
 				snp.allele2count = s.allele2count
 			}
 			tw.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
-			// q.mode must not be 'continuous', which will cause cacheid be stripped from dataname
-			delete tw.q.mode
 		}
 
 		// condition check is quick fix!!!
