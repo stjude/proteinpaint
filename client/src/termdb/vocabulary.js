@@ -391,7 +391,7 @@ class TermdbVocab {
 		return graphableTypes.has(term.type)
 	}
 
-	async getCategories(tw, filter, lst = []) {
+	async getCategories(term, filter, lst = []) {
 		// works for both dictionary and non-dict term types
 		// for non-dict terms, will handle each type individually
 		// for dictionary terms, use same method to query backend termdb
@@ -399,13 +399,13 @@ class TermdbVocab {
 		// optionally, caller can supply parameter "term1_q=stringifiedJSON" in lst[]
 		// as this function does not deal with q by default
 
-		if (tw.term.type == 'snplst') {
+		if (term.type == 'snplst') {
 			const args = [
 				'validateSnps=1',
 				'sumSamples=1',
 				'genome=' + this.state.vocab.genome,
 				'dslabel=' + this.state.vocab.dslabel,
-				'cacheid=' + tw.q.cacheid
+				...lst
 			]
 			if (filter) {
 				args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
@@ -417,7 +417,7 @@ class TermdbVocab {
 			'getcategories=1',
 			'genome=' + this.state.vocab.genome,
 			'dslabel=' + this.state.vocab.dslabel,
-			'tid=' + tw.id,
+			'tid=' + term.id,
 			...lst
 		]
 		if (filter) {

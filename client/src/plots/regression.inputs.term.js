@@ -180,9 +180,10 @@ export class InputTerm {
 		*/
 		if (q.mode == 'continuous' || q.mode == 'spline') delete q.mode
 
-		const data = await this.parent.app.vocabApi.getCategories(tw, this.parent.state.termfilter.filter, [
-			'term1_q=' + encodeURIComponent(JSON.stringify(q))
-		])
+		// the 3rd argument to getCategories() is different for snplst and dictionary term types
+		const qlst =
+			tw.term.type == 'snplst' ? [`cacheid=${tw.q.cacheid}`] : ['term1_q=' + encodeURIComponent(JSON.stringify(q))]
+		const data = await this.parent.app.vocabApi.getCategories(tw.term, this.parent.state.termfilter.filter, qlst)
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 
