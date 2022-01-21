@@ -174,7 +174,8 @@ function makeEditMenu(self, div) {
 			// parse input text
 			const snps = parseSnpFromText(textarea)
 			if (snps.length == 0) return window.alert('No valid SNPs')
-			if (!self.term) self.term = { id: 'dummy' }
+			// a snplst term is expected to not have a term.id
+			if (!self.term) self.term = {}
 			if (!self.q) self.q = {}
 			// set term type in case the instance had a different term before
 			self.term.type = 'snplst'
