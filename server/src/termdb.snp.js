@@ -28,8 +28,8 @@ snps[ {} ]
 	.pos: if not given, match from bb file. 0-based!
 	.dbsnpRef: ref allele from dbSNP
 	.dbsnpAlts[]: alt alleles from dbSNP
-	.sjlifeRef: ref allele from SJLIFE/CCSS bcf file TODO rename sjlife to bcf
-	.sjlifeAlts[]: alt alleles from SJLIFE/CCSS bcf file
+	.bcfRef: ref allele from bcf file
+	.bcfAlts[]: alt alleles from bcf file
 	.gtlst[]: per-sample genotypes
 */
 
@@ -242,11 +242,11 @@ async function queryBcf(q, snps, ds) {
 				}
 			})
 			if (!snp) {
-				const sjlifeSNP = chr + ':' + pos + '_' + ref + '_' + alts.join(',')
-				throw `sjlife snp: '${sjlifeSNP}' does not match a query snp`
+				const bcfSNP = chr + ':' + pos + '_' + ref + '_' + alts.join(',')
+				throw `bcf snp: '${bcfSNP}' does not match a query snp`
 			}
-			snp.sjlifeRef = ref // TODO change attribute name
-			snp.sjlifeAlts = alts
+			snp.bcfRef = ref // TODO change attribute name
+			snp.bcfAlts = alts
 
 			// determine sample genotypes
 			snp.gtlst = [] // same order as tk.samples
@@ -271,9 +271,9 @@ async function queryBcf(q, snps, ds) {
 				'\t' +
 				snp.pos +
 				'\t' +
-				snp.sjlifeRef +
+				snp.bcfRef +
 				'\t' +
-				snp.sjlifeAlts.join(',') +
+				snp.bcfAlts.join(',') +
 				'\t' +
 				(snp.effectAllele || '') +
 				'\t' +
