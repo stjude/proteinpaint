@@ -33,7 +33,6 @@ snps[ {} ]
 	.dbsnpAlts[]: alt alleles from dbSNP
 	.sjlifeRef: ref allele from SJLIFE/CCSS bcf file TODO rename sjlife to bcf
 	.sjlifeAlts[]: alt alleles from SJLIFE/CCSS bcf file
-	.validgtcount: count of samples with valid genotypes
 	.gtlst[]: per-sample genotypes
 */
 
@@ -156,21 +155,8 @@ async function queryBcf(q, snps, ds) {
 	const tk = ds.track.vcf
 	if (!tk) throw 'ds.track.vcf missing'
 	// samples are at tk.samples[], each element: {name: int ID}
-
-	/*
-	do not filter on samples. write all samples to cache file
-	(unless the number of samples is too high for that to become a problem)
-
-	// collect samples that will be queried
-	let samples
-	if (q.filter) {
-		const fsamples = termdbsql.get_samples(JSON.parse(decodeURIComponent(q.filter)), ds)
-		samples = tk.samples.map(x => x.name).filter(sample => fsamples.includes(sample))
-	} else {
-		samples = tk.samples.map(x => x.name)
-	}
-	if (samples.length == 0) throw 'no samples'
-	*/
+	// do not filter on samples. write all samples to cache file
+	// (unless the number of samples is too high for that to become a problem)
 
 	// collect coordinates and bcf file paths that will be queried
 	const bcfs = new Set()
@@ -227,18 +213,9 @@ async function queryBcf(q, snps, ds) {
 
 			// determine sample genotypes
 			snp.gtlst = [] // same order as tk.samples
-			//snp.validgtcount = 0
 			for (let i = 4; i < l.length; i++) {
 				const gt = parseGT(l[i], alleles)
 				snp.gtlst.push(gt)
-				/*
-				if (gt != '.') {
-					// this sample has a valid gt for this snp
-					snp.validgtcount++
-					const sample = samples[i - 4]
-					sample2snpcount.set(sample, sample2snpcount.get(sample) + 1)
-				}
-				*/
 			}
 		}
 	})
@@ -269,21 +246,12 @@ async function queryBcf(q, snps, ds) {
 	const cacheid = 'snpgt.' + q.genome + '.' + q.dslabel + '.' + new Date() / 1 + '.' + Math.random()
 	await utils.write_file(path.join(serverconfig.cachedir, cacheid), lines.join('\n'))
 	return cacheid
-
-	/*
-	let numOfSampleWithAllValidGT = 0 // number of samples with valid gt for all snps
-	for (const c of sample2snpcount.values()) {
-		if (c == validsnpcount) numOfSampleWithAllValidGT++
-	}
-	*/
-
-	//return [cacheid, sample2snpcount.size, numOfSampleWithAllValidGT]
 }
 
 function parseGT(gt, alleles) {
-	if (gt == '.' || gt == './.') return '.'
+	if (gt == '.' || gt == './.') return ''
 	const gtidx = gt.split('/').map(Number)
-	if (gtidx.length != 2) return '.' // autosome only for the moment
+	if (gtidx.length != 2) return '' // autosome only for the moment
 	const ale1 = alleles[gtidx[0]]
 	const ale2 = alleles[gtidx[1]]
 	if (!ale1 || !ale2) throw `invalid genotype`

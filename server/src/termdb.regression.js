@@ -467,7 +467,7 @@ async function getSampleData_snplst(tw, samples) {
 		})
 		for (const [j, sampleid] of sampleheader.entries()) {
 			const gt = l[j + 6]
-			if (gt != '.') {
+			if (gt) {
 				snp2sample.get(snpid).samples.set(sampleid, gt)
 			}
 		}
