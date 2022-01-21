@@ -189,44 +189,62 @@ export class InputTerm {
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 
-		// TODO adapt following code to outputs from snplst as well as dict terms
-		console.log(tw, data)
-
-		this.orderedLabels = data.orderedLabels
-
-		// sepeate include and exclude categories based on term.values.uncomputable
-		const excluded_values = tw.term.values
-			? Object.entries(tw.term.values)
-					.filter(v => v[1].uncomputable)
-					.map(v => v[1].label)
-			: []
-		this.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label))
-		this.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
-
-		// get include, excluded and total sample count
-		const totalCount = (this.totalCount = { included: 0, excluded: 0, total: 0 })
-		this.sampleCounts.forEach(v => (totalCount.included += v.samplecount))
-		this.excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
-		totalCount.total = totalCount.included + totalCount.excluded
-		// for condition term, subtract included count from totalCount.total to get excluded
-		if (tw.term.type == 'condition' && totalCount.total) {
-			totalCount.excluded = totalCount.total - totalCount.included
+		// TODO quick fix!!! run arbitrary logic specific to snplst
+		// will be best if here won't be term type-specific code
+		if (tw.term.type == 'snplst') {
+			if (!Array.isArray(data.snps)) throw 'data.snps[] not array'
+			// note!
+			// will add attributes to tw which are not written to state
+			// but should be fine
+			for (const s of data.snps) {
+				// { snpid, allele2count{} }
+				const snp = tw.term.snps.find(i => i.snpid == s.snpid)
+				if (!snp) throw 'snp not found by id'
+				snp.allele2count = s.allele2count
+			}
+			tw.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
+			// q.mode must not be 'continuous', which will cause cacheid be stripped from dataname
+			delete tw.q.mode
 		}
 
-		if (tw && tw.q.mode !== 'continuous' && this.sampleCounts.length < 2)
-			throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
+		// condition check is quick fix!!!
+		if (data.lst) {
+			this.orderedLabels = data.orderedLabels
 
-		if (!tw.q.mode) throw 'q.mode missing'
+			// sepeate include and exclude categories based on term.values.uncomputable
+			const excluded_values = tw.term.values
+				? Object.entries(tw.term.values)
+						.filter(v => v[1].uncomputable)
+						.map(v => v[1].label)
+				: []
+			this.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label))
+			this.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
 
-		// set term.refGrp
-		if (tw.q.mode == 'continuous') {
-			tw.refGrp = 'NA' // hardcoded in R
-		} else if (!('refGrp' in tw) || !this.sampleCounts.find(i => i.key == tw.refGrp)) {
-			// refGrp not defined or no longer exists according to sampleCounts[]
-			const o = this.orderedLabels
-			if (o.length) this.sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
-			else this.sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
-			tw.refGrp = this.sampleCounts[0].key
+			// get include, excluded and total sample count
+			const totalCount = (this.totalCount = { included: 0, excluded: 0, total: 0 })
+			this.sampleCounts.forEach(v => (totalCount.included += v.samplecount))
+			this.excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
+			totalCount.total = totalCount.included + totalCount.excluded
+			// for condition term, subtract included count from totalCount.total to get excluded
+			if (tw.term.type == 'condition' && totalCount.total) {
+				totalCount.excluded = totalCount.total - totalCount.included
+			}
+
+			if (tw && tw.q.mode !== 'continuous' && this.sampleCounts.length < 2)
+				throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
+
+			if (!tw.q.mode) throw 'q.mode missing'
+
+			// set term.refGrp
+			if (tw.q.mode == 'continuous') {
+				tw.refGrp = 'NA' // hardcoded in R
+			} else if (!('refGrp' in tw) || !this.sampleCounts.find(i => i.key == tw.refGrp)) {
+				// refGrp not defined or no longer exists according to sampleCounts[]
+				const o = this.orderedLabels
+				if (o.length) this.sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
+				else this.sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
+				tw.refGrp = this.sampleCounts[0].key
+			}
 		}
 	}
 

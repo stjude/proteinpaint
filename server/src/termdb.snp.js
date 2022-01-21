@@ -51,6 +51,8 @@ export async function validate(q, tdb, ds, genome) {
 }
 
 async function summarizeSamplesFromCache(q, tdb, ds, genome) {
+	if (!q.cacheid) throw 'cacheid missing'
+	if (q.cacheid.match(/[^\w]/)) throw 'invalid cacheid'
 	const tk = ds.track.vcf
 	if (!tk) throw 'ds.track.vcf missing'
 	// samples are at tk.samples[], each element: {name: int ID}
@@ -59,14 +61,40 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 	let samples
 	if (q.filter) {
 		samples = termdbsql.get_samples(JSON.parse(decodeURIComponent(q.filter)), ds)
-	} else {
-		samples = tk.samples.map(x => x.name)
+		if (samples.length == 0) throw 'no samples from filter'
 	}
-	if (samples.length == 0) throw 'no samples'
+	const sampleinfilter = [] // list of true/false, same length of tk.samples, to tell if a sample is in use
+	for (const i of tk.samples) {
+		if (samples) {
+			sampleinfilter.push(samples.includes(i.name))
+		} else {
+			sampleinfilter.push(true)
+		}
+	}
 
-	// TODO read and parse cache file to sum samples
+	const lines = (await utils.read_file(path.join(serverconfig.cachedir, q.cacheid))).split('\n')
+	const samplewithgt = new Set() // collect samples with valid gt for any snp
+	const snps = []
+	for (let i = 1; i < lines.length; i++) {
+		const l = lines[i].split('\t')
+		const snpid = l[0]
+		// count per allele count from this snp
+		const allele2count = {} // k: allele, v: number of appearances
+		for (let j = 6; j < l.length; j++) {
+			if (!sampleinfilter[j - 6]) continue //sample not in use
+			samplewithgt.add(tk.samples[j - 6].name) // this sample has valid gt
+			const alleles = l[j].split(',')
+			for (const a of alleles) {
+				allele2count[a] = 1 + (allele2count[a] || 0)
+			}
+		}
+		snps.push({ snpid, allele2count })
+	}
 
-	return { numOfSampleWithAllValidGT: 3333, numOfSampleWithAnyValidGT: 6666 }
+	return {
+		numOfSampleWithAnyValidGT: samplewithgt.size,
+		snps
+	}
 }
 
 async function validateInputCreateCache(q, tdb, ds, genome) {
@@ -241,9 +269,12 @@ async function queryBcf(q, snps, ds) {
 				'\t' +
 				snp.gtlst.join('\t')
 		)
+		delete snp.gtlst // do not return to client
 	}
 
-	const cacheid = 'snpgt.' + q.genome + '.' + q.dslabel + '.' + new Date() / 1 + '.' + Math.random()
+	// cache id is a file name and its characters are covered by \w
+	// will apply /[^\w]/ to check against attack
+	const cacheid = 'snpgt_' + q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
 	await utils.write_file(path.join(serverconfig.cachedir, cacheid), lines.join('\n'))
 	return cacheid
 }
