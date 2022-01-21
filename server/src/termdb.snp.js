@@ -28,8 +28,8 @@ snps[ {} ]
 	.pos: if not given, match from bb file. 0-based!
 	.dbsnpRef: ref allele from dbSNP
 	.dbsnpAlts[]: alt alleles from dbSNP
-	.sjlifeRef: ref allele from SJLIFE/CCSS bcf file TODO rename sjlife to bcf
-	.sjlifeAlts[]: alt alleles from SJLIFE/CCSS bcf file
+	.bcfRef: ref allele from bcf file
+	.bcfAlts[]: alt alleles from bcf file
 	.gtlst[]: per-sample genotypes
 */
 
@@ -121,7 +121,8 @@ function parseSnpText(text) {
 	const snps = []
 	for (const tmp of text.trim().split('\n')) {
 		const [rsid, ale] = tmp.trim().split(/[\s\t]/)
-		if (rsid) {
+		if (rsid && rsid.startsWith('rs')) {
+			// valid rsID
 			if (snps.find(i => i.rsid == rsid)) continue // duplicate
 			const s = {
 				rsid,
@@ -129,7 +130,13 @@ function parseSnpText(text) {
 			}
 			if (ale) s.effectAllele = ale
 			snps.push(s)
-			continue
+		} else {
+			// invalid rsID
+			snps.push({
+				rsid,
+				snpid: rsid,
+				invalid: true
+			})
 		}
 		// may support chr:pos
 	}
@@ -139,6 +146,7 @@ function parseSnpText(text) {
 async function mapRsid2chr(snps, genome) {
 	// TODO process all rsid in one bigbed query
 	for (const snp of snps) {
+		if (snp.invalid) continue
 		if (snp.chr && typeof snp.chr == 'string') {
 			// supplied chr/pos, verify if correct; no need to check rsid
 			const chr = genome.chrlookup[snp.chr.toUpperCase()]
@@ -234,11 +242,11 @@ async function queryBcf(q, snps, ds) {
 				}
 			})
 			if (!snp) {
-				const sjlifeSNP = chr + ':' + pos + '_' + ref + '_' + alts.join(',')
-				throw `sjlife snp: '${sjlifeSNP}' does not match a query snp`
+				const bcfSNP = chr + ':' + pos + '_' + ref + '_' + alts.join(',')
+				throw `bcf snp: '${bcfSNP}' does not match a query snp`
 			}
-			snp.sjlifeRef = ref // TODO change attribute name
-			snp.sjlifeAlts = alts
+			snp.bcfRef = ref // TODO change attribute name
+			snp.bcfAlts = alts
 
 			// determine sample genotypes
 			snp.gtlst = [] // same order as tk.samples
@@ -263,9 +271,9 @@ async function queryBcf(q, snps, ds) {
 				'\t' +
 				snp.pos +
 				'\t' +
-				snp.sjlifeRef +
+				snp.bcfRef +
 				'\t' +
-				snp.sjlifeAlts.join(',') +
+				snp.bcfAlts.join(',') +
 				'\t' +
 				(snp.effectAllele || '') +
 				'\t' +
