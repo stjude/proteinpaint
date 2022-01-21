@@ -103,6 +103,7 @@ async function validateInputCreateCache(q, tdb, ds, genome) {
 	if (!q.snptext) throw '.snptext missing'
 
 	const snps = parseSnpText(q.snptext)
+	console.log('snps:', snps)
 	if (!snps.length) throw 'no snps'
 	// the unique id .snpid is assigned on each snp, no matter valid or not
 
@@ -121,7 +122,8 @@ function parseSnpText(text) {
 	const snps = []
 	for (const tmp of text.trim().split('\n')) {
 		const [rsid, ale] = tmp.trim().split(/[\s\t]/)
-		if (rsid) {
+		if (rsid && rsid.startsWith('rs')) {
+			// valid rsID
 			if (snps.find(i => i.rsid == rsid)) continue // duplicate
 			const s = {
 				rsid,
@@ -129,7 +131,13 @@ function parseSnpText(text) {
 			}
 			if (ale) s.effectAllele = ale
 			snps.push(s)
-			continue
+		} else {
+			// invalid rsID
+			snps.push({
+				rsid,
+				snpid: rsid,
+				invalid: true
+			})
 		}
 		// may support chr:pos
 	}
@@ -139,6 +147,7 @@ function parseSnpText(text) {
 async function mapRsid2chr(snps, genome) {
 	// TODO process all rsid in one bigbed query
 	for (const snp of snps) {
+		if (snp.invalid) continue
 		if (snp.chr && typeof snp.chr == 'string') {
 			// supplied chr/pos, verify if correct; no need to check rsid
 			const chr = genome.chrlookup[snp.chr.toUpperCase()]
@@ -255,6 +264,7 @@ async function queryBcf(q, snps, ds) {
 	// write snp data to cache file
 	const lines = ['snpid\tchr\tpos\tref\talt\teff\t' + tk.samples.map(i => i.name).join('\t')]
 	for (const snp of snps) {
+		if (snp.invalid) continue
 		lines.push(
 			snp.snpid +
 				'\t' +
