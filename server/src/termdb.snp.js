@@ -103,7 +103,6 @@ async function validateInputCreateCache(q, tdb, ds, genome) {
 	if (!q.snptext) throw '.snptext missing'
 
 	const snps = parseSnpText(q.snptext)
-	console.log('snps:', snps)
 	if (!snps.length) throw 'no snps'
 	// the unique id .snpid is assigned on each snp, no matter valid or not
 
