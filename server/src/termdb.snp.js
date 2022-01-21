@@ -175,10 +175,9 @@ async function queryBcf(q, snps, ds) {
 			// find matching query snp
 			const snp = snps.find(snp => {
 				if (
-					snp.chr == 'chr' + chr &&
-					snp.pos === pos - 1 &&
-					snp.dbsnpRef == ref &&
-					snp.dbsnpAlts.some(allele => alts.includes(allele))
+					snp.chr == tk.nochr
+						? 'chr' + chr
+						: chr && snp.pos === pos - 1 && snp.dbsnpRef == ref && snp.dbsnpAlts.some(allele => alts.includes(allele))
 				) {
 					return snp
 				}

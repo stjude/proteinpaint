@@ -445,14 +445,14 @@ async function getSampleData_snplst(tw, samples) {
 	tw.snps = []
 
 	const lines = (await utils.read_file(path.join(serverconfig.cachedir, tw.q.cacheid))).split('\n')
-	// header:  snpid  rsid  effAle  chr  pos  alleles  <s1>  <s2> ...
+	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 	const sampleheader = lines[0]
 		.split('\t')
 		.slice(6) // from 7th column
 		.map(Number) // sample ids are integer
 	const snp2sample = new Map()
 	// k: snpid
-	// v: { effAle, alleles, samples: map { k: sample id, v: gt } }
+	// v: { effAle, refAle, altAles, samples: map { k: sample id, v: gt } }
 	for (let i = 1; i < lines.length; i++) {
 		const l = lines[i].split('\t')
 
@@ -460,13 +460,14 @@ async function getSampleData_snplst(tw, samples) {
 		tw.snps.push(snpid)
 
 		snp2sample.set(snpid, {
-			effAle: l[2],
-			alleles: l[5].split(','), // [0] is ref, [1,] are alts
+			effAle: l[5],
+			refAle: l[3],
+			altAles: l[4].split(','),
 			samples: new Map()
 		})
 		for (const [j, sampleid] of sampleheader.entries()) {
 			const gt = l[j + 6]
-			if (gt) {
+			if (gt != '.') {
 				snp2sample.get(snpid).samples.set(sampleid, gt)
 			}
 		}
