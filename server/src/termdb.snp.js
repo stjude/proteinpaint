@@ -7,9 +7,6 @@ const readline = require('readline')
 const serverconfig = require('./serverconfig')
 
 /*
-TODO improve bigBed query usage
-TODO support on-the-fly prs computing
-
 ********************** EXPORTED
 validate()
 ********************** INTERNAL
@@ -80,15 +77,19 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 		const snpid = l[0]
 		// count per allele count from this snp
 		const allele2count = {} // k: allele, v: number of appearances
+		const gt2count = {} // k: gt string, v: number of samples
 		for (let j = 6; j < l.length; j++) {
+			const gt = l[j]
+			if (!gt) continue // no gt call for this sample
 			if (!sampleinfilter[j - 6]) continue //sample not in use
 			samplewithgt.add(tk.samples[j - 6].name) // this sample has valid gt
-			const alleles = l[j].split(',')
+			gt2count[gt] = 1 + (gt2count[gt] || 0)
+			const alleles = gt.split(',')
 			for (const a of alleles) {
 				allele2count[a] = 1 + (allele2count[a] || 0)
 			}
 		}
-		snps.push({ snpid, allele2count })
+		snps.push({ snpid, allele2count, gt2count })
 	}
 
 	return {

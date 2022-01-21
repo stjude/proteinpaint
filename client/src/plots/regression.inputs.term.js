@@ -199,6 +199,7 @@ export class InputTerm {
 				const snp = tw.term.snps.find(i => i.snpid == s.snpid)
 				if (!snp) throw 'snp not found by id'
 				snp.allele2count = s.allele2count
+				snp.gt2count = s.gt2count
 			}
 			tw.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
 		}
