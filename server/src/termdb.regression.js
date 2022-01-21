@@ -445,14 +445,14 @@ async function getSampleData_snplst(tw, samples) {
 	tw.snps = []
 
 	const lines = (await utils.read_file(path.join(serverconfig.cachedir, tw.q.cacheid))).split('\n')
-	// header:  snpid  rsid  effAle  chr  pos  alleles  <s1>  <s2> ...
+	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 	const sampleheader = lines[0]
 		.split('\t')
 		.slice(6) // from 7th column
 		.map(Number) // sample ids are integer
 	const snp2sample = new Map()
 	// k: snpid
-	// v: { effAle, alleles, samples: map { k: sample id, v: gt } }
+	// v: { effAle, refAle, altAles, samples: map { k: sample id, v: gt } }
 	for (let i = 1; i < lines.length; i++) {
 		const l = lines[i].split('\t')
 
@@ -460,13 +460,14 @@ async function getSampleData_snplst(tw, samples) {
 		tw.snps.push(snpid)
 
 		snp2sample.set(snpid, {
-			effAle: l[2],
-			alleles: l[5].split(','),
+			effAle: l[5],
+			refAle: l[3],
+			altAles: l[4].split(','),
 			samples: new Map()
 		})
 		for (const [j, sampleid] of sampleheader.entries()) {
 			const gt = l[j + 6]
-			if (gt) {
+			if (gt != '.') {
 				snp2sample.get(snpid).samples.set(sampleid, gt)
 			}
 		}
@@ -508,15 +509,24 @@ function applyGeneticModel(tw, effAle, a1, a2) {
 }
 
 function get_effAle4snp(snp, tw) {
-	if (snp.effAle) return snp.effAle
-	// determine based on tw setting
+	// get effect allele for a snp
+	// snp: { effAle, alleles, samples: map { k: sample id, v: gt } }
+	if (snp.effAle) return snp.effAle // use user supplied allele
+	// compute based on q.alleleType choice
 	if (tw.q.alleleType == 0) {
 		// major/minor
-		throw 'not done'
+		const ale2count = new Map() // k: allele from gt, v: number of times it shows up in snp.samples
+		for (const gt of snp.samples.values()) {
+			for (const a of gt.split(',')) {
+				ale2count.set(a, 1 + (ale2count.get(a) || 0))
+			}
+		}
+		const lst = [...ale2count].sort((a, b) => a[1] - b[1]) // sort to ascending
+		return lst[0][0] // lst[0] is the allele with smallest number of appearances
 	}
 	if (tw.q.alleleType == 1) {
 		// ref/alt
-		throw 'not done'
+		return snp.alleles[0]
 	}
 	throw 'unknown alleleType value'
 }
