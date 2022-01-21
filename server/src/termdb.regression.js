@@ -438,7 +438,9 @@ async function getSampleData(q, terms) {
 }
 
 async function getSampleData_snplst(tw, samples) {
-	// tw: { type, q{} }
+	// tw: { type, q{cacheid} }
+	if (!tw.q.cacheid) throw 'q.cacheid missing'
+	if (tw.q.cacheid.match(/[^\w]/)) throw 'invalid cacheid'
 
 	// tricky!
 	// record list of snp names found in cache file on tw.snps[]
@@ -467,11 +469,14 @@ async function getSampleData_snplst(tw, samples) {
 		})
 		for (const [j, sampleid] of sampleheader.entries()) {
 			const gt = l[j + 6]
-			if (gt != '.') {
+			if (gt) {
 				snp2sample.get(snpid).samples.set(sampleid, gt)
 			}
 		}
 	}
+
+	// TODO imputation
+
 	for (const [snpid, o] of snp2sample) {
 		const effAle = get_effAle4snp(o, tw)
 		for (const [sampleid, gt] of o.samples) {
