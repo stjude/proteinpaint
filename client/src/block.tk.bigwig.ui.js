@@ -1,13 +1,12 @@
 import * as uiutils from './dom/uiUtils'
 import { init_tabs } from './dom/toggleButtons'
 import { appear } from './dom/animation'
-import { select as d3select } from 'd3-selection'
 import { first_genetrack_tolist } from './client'
 
 /*
 
 -------EXPORTED-------
-bigwigUI
+bigwigUI()
     user inputs
         - genome (required): default hg19
         - either single or multiple track data
@@ -18,7 +17,6 @@ bigwigUI
                 1. Pasted tracks data (required): name, filepath
 
 -------Internal-------
-makePrompt()
 makeTrackEntryTabs()
 genomeSelection()
 trackNameInput()
@@ -51,27 +49,18 @@ export async function bigwigUI(genomes, holder) {
 
 	const doms = {}
 	//User selects genome
-	makePrompt(wrapper, 'Genome')
+	uiutils.makePrompt(wrapper, 'Genome')
 	genomeSelection(wrapper, genomes, doms)
+
 	//User file input for bigwig tracks
-	//TODO: add option for stranded bigwig tracks
-	makePrompt(wrapper, 'Data').style('align-self', 'baseline')
+	//*****TODO: add option for stranded bigwig tracks
+	uiutils.makePrompt(wrapper, 'Data').style('align-self', 'baseline')
 	const tabs_div = wrapper.append('div')
 	makeTrackEntryTabs(tabs_div, doms)
+
 	//Submit and information for user
 	submitButton(wrapper, doms, holder, genomes)
 	infoSection(wrapper)
-}
-
-//Creates simple text divs as prompts for user inputs
-function makePrompt(div, text) {
-	const prompt = div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin', '15px')
-		.style('place-items', 'center left')
-		.html(text)
-	return prompt
 }
 
 //Tabs for 'Data' entry.
@@ -92,9 +81,9 @@ function makeTrackEntryTabs(tabs_div, doms) {
 						.style('gap', '5px')
 						.style('place-items', 'center left')
 					appear(div)
-					makePrompt(singlediv, 'Name')
+					uiutils.makePrompt(singlediv, 'Name')
 					trackNameInput(singlediv, doms)
-					makePrompt(singlediv, 'File Path')
+					uiutils.makePrompt(singlediv, 'File Path')
 					trackFilePathInput(singlediv, doms)
 					tabs[0].rendered = true
 				}

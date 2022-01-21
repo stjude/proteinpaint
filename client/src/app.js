@@ -1384,6 +1384,10 @@ async function launch_tkUIs(arg, app) {
 		const p = await import('./block.tk.bigwig.ui')
 		p.bigwigUI(app.genomes, app.holder)
 	}
+	if (arg.tkui == 'dictionary') {
+		const p = await import('./dictionary.ui')
+		p.init_dictionaryUI(app.holder)
+	}
 }
 
 /* 

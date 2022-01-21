@@ -188,11 +188,12 @@
             "searchterms": ["tsne", "gene expression", "multi-gene heatmap", "violin plot", "box plot"]
         },
         {
-            "name": "termdb with custom vocabulary",
+            "name": "Cohort Dictionary",
             "app": "Apps",
-            "hidden": true,
-            "blurb": "TODO: Brief description of track or app",
+            "blurb": "Custom vocabulary",
             "image": "",
+            "new_expire": "2022-04-01",
+            "sandboxjson": "dictionary",
             "searchterms": ["clinical", "dictionary"]
         }
     ]
