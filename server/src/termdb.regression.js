@@ -29,6 +29,21 @@ q {}
 input to R is an json object {type, outcome:{rtype}, independent:[ {rtype} ]}
 rtype with values numeric/factor is used instead of actual term type
 so that R script will not need to interpret term type
+
+***  function cascade  ***
+get_regression()
+	parse_q
+	getSampleData
+		divideTerms
+		getSampleData_dictionaryTerms
+		getSampleData_snplst
+			get_effAle4snp
+			applyGeneticModel
+	makeRinput
+	validateRinput
+	replaceTermId
+	... run R ...
+	parseRoutput
 */
 
 // minimum number of samples to run analysis
@@ -381,46 +396,11 @@ Returns two data structures
 2.
 */
 async function getSampleData(q, terms) {
-	// dict and non-dict terms require different methods for data prep
+	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
-	// sample data from all terms are loaded into this structure
-	const samples = new Map()
-	// k: sample name, v: {sample, id2value:Map( tid => {key,value}) }
 
-	if (dictTerms.length) {
-		const filter = getFilterCTEs(q.filter, q.ds)
-		// must copy filter.values as its copy may be used in separate SQL statements,
-		// for example get_rows or numeric min-max, and each CTE generator would
-		// have to independently extend its copy of filter values
-		const values = filter ? filter.values.slice() : []
-		const CTEs = dictTerms.map((t, i) => get_term_cte(q, values, i, filter, t))
-		values.push(...dictTerms.map(d => d.id))
-
-		const sql = `WITH
-			${filter ? filter.filters + ',' : ''}
-			${CTEs.map(t => t.sql).join(',\n')}
-			${CTEs.map(
-				t => `
-				SELECT sample, key, value, ? as term_id
-				FROM ${t.tablename} 
-				${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
-				`
-			).join(`UNION ALL`)}`
-
-		const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-
-		for (const { sample, term_id, key, value } of rows) {
-			if (!samples.has(sample)) {
-				samples.set(sample, { sample, id2value: new Map() })
-			}
-
-			if (samples.get(sample).id2value.has(term_id)) {
-				// can duplication happen?
-				throw `duplicate '${term_id}' entry for sample='${sample}'`
-			}
-			samples.get(sample).id2value.set(term_id, { key, value })
-		}
-	}
+	const samples = getSampleData_dictionaryTerms(q, dictTerms)
+	// sample data from all terms are loaded into "samples"
 
 	for (const tw of nonDictTerms) {
 		// for each non dictionary term type
@@ -437,13 +417,62 @@ async function getSampleData(q, terms) {
 	return samples.values()
 }
 
+function getSampleData_dictionaryTerms(q, terms) {
+	// outcome can only be dictionary term so terms array must have at least 1 term
+	const samples = new Map()
+	// k: sample name, v: {sample, id2value:Map( tid => {key,value}) }
+
+	const filter = getFilterCTEs(q.filter, q.ds)
+	// must copy filter.values as its copy may be used in separate SQL statements,
+	// for example get_rows or numeric min-max, and each CTE generator would
+	// have to independently extend its copy of filter values
+	const values = filter ? filter.values.slice() : []
+	const CTEs = terms.map((t, i) => get_term_cte(q, values, i, filter, t))
+	values.push(...terms.map(d => d.id))
+
+	const sql = `WITH
+		${filter ? filter.filters + ',' : ''}
+		${CTEs.map(t => t.sql).join(',\n')}
+		${CTEs.map(
+			t => `
+			SELECT sample, key, value, ? as term_id
+			FROM ${t.tablename}
+			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
+			`
+		).join(`UNION ALL`)}`
+
+	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+
+	for (const { sample, term_id, key, value } of rows) {
+		if (!samples.has(sample)) {
+			samples.set(sample, { sample, id2value: new Map() })
+		}
+
+		if (samples.get(sample).id2value.has(term_id)) {
+			// can duplication happen?
+			throw `duplicate '${term_id}' entry for sample='${sample}'`
+		}
+		samples.get(sample).id2value.set(term_id, { key, value })
+	}
+	return samples
+}
+
+/*
+tw{}
+	type
+	q{}
+		cacheid
+		alleleType: 0/1
+		geneticModel: 0/1/2/3
+		missingGenotype: 0/1/2
+	snps[]
+		// list of snpid; tricky!! added in this function
+samples {Map} // results are added into it
+*/
 async function getSampleData_snplst(tw, samples) {
-	// tw: { type, q{cacheid} }
 	if (!tw.q.cacheid) throw 'q.cacheid missing'
 	if (tw.q.cacheid.match(/[^\w]/)) throw 'invalid cacheid'
 
-	// tricky!
-	// record list of snp names found in cache file on tw.snps[]
 	tw.snps = []
 
 	const lines = (await utils.read_file(path.join(serverconfig.cachedir, tw.q.cacheid))).split('\n')
