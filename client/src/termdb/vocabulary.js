@@ -392,10 +392,27 @@ class TermdbVocab {
 	}
 
 	async getCategories(tw, filter, lst = []) {
-		// for dictionary term types
+		// works for both dictionary and non-dict term types
+		// for non-dict terms, will handle each type individually
+		// for dictionary terms, use same method to query backend termdb
 		// return number of samples per category/bin/grade/group etc
 		// optionally, caller can supply parameter "term1_q=stringifiedJSON" in lst[]
 		// as this function does not deal with q by default
+
+		if (tw.term.type == 'snplst') {
+			const args = [
+				'validateSnps=1',
+				'sumSamples=1',
+				'genome=' + this.state.vocab.genome,
+				'dslabel=' + this.state.vocab.dslabel,
+				'cacheid=' + tw.q.cacheid
+			]
+			if (filter) {
+				args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+			}
+			return await dofetch3('/termdb?' + args.join('&'))
+		}
+		// use same query method for all dictionary terms
 		const args = [
 			'getcategories=1',
 			'genome=' + this.state.vocab.genome,
@@ -437,17 +454,19 @@ class TermdbVocab {
 		}
 	}
 
-	async validateSnps(snptext, _filter) {
+	async validateSnps(snptext) {
 		const args = [
 			'validateSnps=1',
 			'genome=' + this.state.vocab.genome,
 			'dslabel=' + this.state.vocab.dslabel,
 			'snptext=' + encodeURIComponent(snptext)
 		]
+		/*
 		const filter = _filter || this.state.termfilter.filter
 		if (filter) {
 			args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
 		}
+		*/
 		return await dofetch3('/termdb?' + args.join('&'))
 	}
 }

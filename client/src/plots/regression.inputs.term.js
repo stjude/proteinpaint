@@ -167,7 +167,7 @@ export class InputTerm {
 
 		//!!!!!!!!!!!!!!!!! quick fix
 		// non-dictionary terms should not run this step
-		if (nonDictionaryTermTypes.has(tw.term.type)) return
+		//if (nonDictionaryTermTypes.has(tw.term.type)) return
 
 		if (!tw.q) throw '.term.q missing on this input'
 
@@ -188,6 +188,10 @@ export class InputTerm {
 		])
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
+
+		// TODO adapt following code to outputs from snplst as well as dict terms
+		console.log(tw, data)
+
 		this.orderedLabels = data.orderedLabels
 
 		// sepeate include and exclude categories based on term.values.uncomputable
