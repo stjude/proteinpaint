@@ -255,6 +255,7 @@ async function queryBcf(q, snps, ds) {
 	// write snp data to cache file
 	const lines = ['snpid\tchr\tpos\tref\talt\teff\t' + tk.samples.map(i => i.name).join('\t')]
 	for (const snp of snps) {
+		if (snp.invalid) continue
 		lines.push(
 			snp.snpid +
 				'\t' +
