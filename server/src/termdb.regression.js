@@ -6,6 +6,7 @@ const fs = require('fs')
 const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 const utils = require('./utils')
+const termdbsql = require('./termdb.sql')
 
 /*
 q {}
@@ -408,7 +409,7 @@ async function getSampleData(q, terms) {
 		if (tw.type == 'snplst') {
 			// each snp is one indepedent variable
 			// record list of snps on term.snps
-			await getSampleData_snplst(tw, samples)
+			await getSampleData_snplst(tw, samples, q)
 		} else {
 			throw 'unknown type of independent non-dictionary term'
 		}
@@ -469,18 +470,36 @@ tw{}
 		// list of snpid; tricky!! added in this function
 samples {Map} // results are added into it
 */
-async function getSampleData_snplst(tw, samples) {
+async function getSampleData_snplst(tw, samples, q) {
 	if (!tw.q.cacheid) throw 'q.cacheid missing'
 	if (tw.q.cacheid.match(/[^\w]/)) throw 'invalid cacheid'
 
-	tw.snps = []
+	tw.snps = [] // snpid are added to this list while reading cache file
 
 	const lines = (await utils.read_file(path.join(serverconfig.cachedir, tw.q.cacheid))).split('\n')
 	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
-	const sampleheader = lines[0]
+
+	// array of sample ids from the cache file; note cache file contains all the samples from the dataset
+	const cachesampleheader = lines[0]
 		.split('\t')
 		.slice(6) // from 7th column
 		.map(Number) // sample ids are integer
+
+	// apply optional filter to filter down samples in cache file
+	let fsample
+	if (q.filter) {
+		fsample = termdbsql.get_samples(q.filter, q.ds)
+		if (fsample.length == 0) throw 'no samples from filter'
+	}
+	const sampleinfilter = [] // list of true/false, same length of cachesampleheader, to tell if a sample is in use
+	for (const i of cachesampleheader) {
+		if (fsample) {
+			sampleinfilter.push(fsample.includes(i))
+		} else {
+			sampleinfilter.push(true)
+		}
+	}
+
 	const snp2sample = new Map()
 	// k: snpid
 	// v: { effAle, refAle, altAles, samples: map { k: sample id, v: gt } }
@@ -496,7 +515,11 @@ async function getSampleData_snplst(tw, samples) {
 			altAles: l[4].split(','),
 			samples: new Map()
 		})
-		for (const [j, sampleid] of sampleheader.entries()) {
+		for (const [j, sampleid] of cachesampleheader.entries()) {
+			if (!sampleinfilter[j]) {
+				// this sample is filtered out
+				continue
+			}
 			const gt = l[j + 6]
 			if (gt) {
 				snp2sample.get(snpid).samples.set(sampleid, gt)
