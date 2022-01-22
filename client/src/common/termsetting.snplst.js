@@ -83,79 +83,21 @@ function makeEditMenu(self, div) {
 		.style('vertical-align', 'top')
 		.style('padding-right', '20px')
 
+	const snp_edit_div = tdleft.append('div').style('display', 'none')
+
+	const textarea_title = tdleft
+		.append('div')
+		.style('display', 'none')
+		.style('opacity', 0.4)
+		.style('font-size', '.7em')
+		.style('margin-bottom', '5px')
+		.text('ADDITIONAL SNPs')
+
 	if (self.term && self.term.snps) {
 		// show list of snps as well as status for each: {invalid, alleles, validgtcount}
-		// allow to delete or add to this list
-		let rowcount = 0,
-			maxAllelCount = 0,
-			maxGenotypeCount = 0
-		maxAllelCount = Math.max.apply(Math, self.term.snps.map(s => s.allele2count).map(o => Object.keys(o).length))
-		maxGenotypeCount = Math.max.apply(Math, self.term.snps.map(s => s.gt2count).map(o => Object.keys(o).length))
-
-		const splst_table = tdleft
-			.append('table')
-			.style('font-size', '.8em')
-			.style('padding', '5px')
-
-		const title_tr = splst_table.append('tr').style('opacity', 0.4)
-		const col_titles = [
-			{ title: 'SNPs' },
-			{ title: 'Valid' },
-			{ title: '#samples' },
-			{ title: 'Alleles (frquency)', colspan: maxAllelCount },
-			{ title: 'Genotype (frequency)', colspan: maxGenotypeCount }
-		]
-		col_titles.forEach((c, i) => {
-			title_tr
-				.append('td')
-				.text(c.title)
-				.attr('colspan', c.colspan || 1)
-				.style('padding', '8px')
-		})
-		// delete button column
-		title_tr.append('td')
-
-		// SNPs
-		for (const snp of self.term.snps) {
-			console.log(snp)
-			const tr = splst_table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
-
-			// col 1: rsid
-			tr.append('td').text(snp.rsid)
-
-			// col 2: valid
-			tr.append('td')
-				.style('text-align', 'center')
-				.style('color', snp.invalid ? 'red' : 'green')
-				.html(snp.invalid ? '&#10060;' : '&#10003;')
-
-			// col 3: sample count
-			const sample_count = Object.values(snp.gt2count).reduce((a, b) => a + b)
-			tr.append('td').text(sample_count)
-
-			// col 4: alleles (frequency)
-			for (const [allele, freq] of Object.entries(snp.allele2count)) {
-				tr.append('td')
-					.style('padding', '3px')
-					// .style('display','inline-block')
-					.style('border-radius', '3px')
-					.style('border', allele == snp.effectAllele ? '2px solid #bbb' : '')
-					.text(`${allele} (${freq})`)
-			}
-
-			// col 5: genetype (frequency)
-			for (const [gt, freq] of Object.entries(snp.gt2count)) {
-				tr.append('td')
-					.style('padding', '0 3px')
-					.text(`${gt} (${freq})`)
-			}
-
-			// col 6: delete button
-			tr.append('td')
-				.append('button')
-				.style('margin', '3px')
-				.text('Remove')
-		}
+		snp_edit_div.style('display', 'block')
+		textarea_title.style('display', 'block')
+		makeSnpEditTable()
 	}
 
 	// temporary implementation: textarea can be created when no term;
@@ -170,11 +112,6 @@ function makeEditMenu(self, div) {
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
 		.html('One rs ID per line; define optional<br>effect allele on 2nd column.<br>Separate columns by tab or space.')
-
-	// if (self.term && self.term.snps) {
-	// 	// TODO show list of snps as well as status for each: {invalid, alleles, validgtcount}
-	// 	// allow to delete or add to this list
-	// }
 
 	// right column
 	const tdright = tr.append('td').style('vertical-align', 'top')
@@ -248,14 +185,14 @@ function makeEditMenu(self, div) {
 		.on('click', async () => {
 			// parse input text
 			const snps = parseSnpFromText(textarea)
-			if (snps.length == 0) return window.alert('No valid SNPs')
+			if (self.term.snps.length == 0 && snps.length == 0) return window.alert('No valid SNPs')
 			// a snplst term is expected to not have a term.id
 			if (!self.term) self.term = {}
 			if (!self.q) self.q = {}
 			// set term type in case the instance had a different term before
 			self.term.type = 'snplst'
-			self.term.name = getTermName(snps)
-			self.term.snps = snps
+			self.term.snps = self.term.snps.length ? [...self.term.snps, ...snps] : snps
+			self.term.name = getTermName(self.term.snps)
 			d3event.target.disabled = true
 			d3event.target.innerHTML = 'Validating SNPs...'
 			await validateInput(self)
@@ -267,6 +204,84 @@ function makeEditMenu(self, div) {
 			self.updateUI()
 			self.runCallback()
 		})
+
+	function makeSnpEditTable() {
+		// allow to delete or add to this list
+		let rowcount = 0,
+			maxAllelCount = 0,
+			maxGenotypeCount = 0
+		maxAllelCount = Math.max.apply(Math, self.term.snps.map(s => s.allele2count).map(o => Object.keys(o).length))
+		maxGenotypeCount = Math.max.apply(Math, self.term.snps.map(s => s.gt2count).map(o => Object.keys(o).length))
+
+		snp_edit_div.selectAll('*').remove()
+		const splst_table = snp_edit_div
+			.append('table')
+			.style('font-size', '.8em')
+			.style('padding', '5px')
+
+		const title_tr = splst_table.append('tr').style('opacity', 0.4)
+		const col_titles = [
+			{ title: 'SNPs' },
+			{ title: 'Valid' },
+			{ title: '#samples' },
+			{ title: 'Alleles (frquency)', colspan: maxAllelCount },
+			{ title: 'Genotype (frequency)', colspan: maxGenotypeCount }
+		]
+		col_titles.forEach((c, i) => {
+			title_tr
+				.append('td')
+				.text(c.title)
+				.attr('colspan', c.colspan || 1)
+				.style('padding', '8px')
+		})
+		// delete button column
+		title_tr.append('td')
+
+		// SNPs
+		for (const snp of self.term.snps) {
+			const tr = splst_table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+
+			// col 1: rsid
+			tr.append('td').text(snp.rsid)
+
+			// col 2: valid
+			tr.append('td')
+				.style('text-align', 'center')
+				.style('color', snp.invalid ? 'red' : 'green')
+				.html(snp.invalid ? '&#10060;' : '&#10003;')
+
+			// col 3: sample count
+			const sample_count = Object.values(snp.gt2count).reduce((a, b) => a + b)
+			tr.append('td').text(sample_count)
+
+			// col 4: alleles (frequency)
+			for (const [allele, freq] of Object.entries(snp.allele2count)) {
+				tr.append('td')
+					.style('padding', '3px')
+					// .style('display','inline-block')
+					.style('border-radius', '3px')
+					.style('border', allele == snp.effectAllele ? '2px solid #bbb' : '')
+					.text(`${allele} (${freq})`)
+			}
+
+			// col 5: genetype (frequency)
+			for (const [gt, freq] of Object.entries(snp.gt2count)) {
+				tr.append('td')
+					.style('padding', '0 3px')
+					.text(`${gt} (${freq})`)
+			}
+
+			// col 6: delete button
+			tr.append('td')
+				.append('button')
+				.style('margin', '3px')
+				.text('Remove')
+				.on('click', () => {
+					self.term.snps = self.term.snps.filter(s => s.rsid !== snp.rsid)
+					makeSnpEditTable()
+				})
+		}
+	}
 }
 
 function getTermName(snps) {
