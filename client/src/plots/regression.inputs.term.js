@@ -194,6 +194,9 @@ export class InputTerm {
 			// note!
 			// will add attributes to tw which are not written to state
 			// but should be fine
+			// same query is performed in 'termsetting.snplst', 
+			// so return if all snps have data from query
+			if(tw.term.snps.every(snp => snp.allele2count)) return
 			for (const s of data.snps) {
 				// { snpid, allele2count{} }
 				const snp = tw.term.snps.find(i => i.snpid == s.snpid)
