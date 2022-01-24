@@ -577,7 +577,6 @@ function doImputation(snp2sample, tw, cachesampleheader, sampleinfilter) {
 				if (!o.samples.has(sampleid)) {
 					// this sample is missing gt call for this snp
 					o.samples.set(sampleid, notEffAle + ',' + notEffAle)
-					console.log('set 1')
 				}
 			}
 		}
@@ -593,7 +592,7 @@ function doImputation(snp2sample, tw, cachesampleheader, sampleinfilter) {
 		for (const { samples } of snp2sample.values()) {
 			for (const [i, sampleid] of cachesampleheader.entries()) {
 				if (!sampleinfilter[i]) continue
-				if (!o.samples.has(sampleid)) {
+				if (!samples.has(sampleid)) {
 					// this sample is missing gt
 					incompleteSamples.add(sampleid)
 				}
