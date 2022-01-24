@@ -222,27 +222,22 @@ function makeEditMenu(self, div) {
 
 	function renderSnpEditTable(snplst_table) {
 		// allow to delete or add to this list
-		let rowcount = 0,
-			maxAllelCount = 0,
-			maxGenotypeCount = 0
-		maxAllelCount = Math.max.apply(Math, self.term.snps.map(s => s.allele2count).map(o => Object.keys(o).length))
-		maxGenotypeCount = Math.max.apply(Math, self.term.snps.map(s => s.gt2count).map(o => Object.keys(o).length))
-
+		console.log(self.term.snps)
 		snplst_table.selectAll('*').remove()
 
 		const title_tr = snplst_table.append('tr').style('opacity', 0.4)
 		const col_titles = [
 			{ title: 'SNPs' },
-			{ title: 'Valid' },
 			{ title: '#samples' },
-			{ title: 'Alleles (frquency)', colspan: maxAllelCount },
-			{ title: 'Genotype (frequency)', colspan: maxGenotypeCount }
+			{ title: 'Alleles (frquency)' },
+			{ title: 'Genotype (frequency)' }
 		]
-		col_titles.forEach((c, i) => {
+		col_titles.forEach(c => {
 			title_tr
 				.append('td')
 				.text(c.title)
-				.attr('colspan', c.colspan || 1)
+				.style('font-size','.8em')
+				.style('text-align', 'center')
 				.style('padding', '8px')
 		})
 		// delete button column
@@ -250,63 +245,75 @@ function makeEditMenu(self, div) {
 
 		// SNPs
 		for (const [i, snp] of self.term.snps.entries()) {
-			const tr = snplst_table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+			const invalid_snp = snp.invalid || (!snp.allele2count && !snp.gt2count) ? true : false
+			const tr = snplst_table.append('tr').style('background', (i + 2) % 2 ? '#eee' : 'none')
 
 			// col 1: rsid
 			tr.append('td').text(snp.rsid)
 
-			// col 2: valid
+			// col 2: sample count
+			const sample_count = invalid_snp ? 'INVALID' : Object.values(snp.gt2count).reduce((a, b) => a + b)
 			tr.append('td')
 				.style('text-align', 'center')
-				.style('color', snp.invalid ? 'red' : 'green')
-				.html(snp.invalid ? '&#10060;' : '&#10003;')
+				.text(sample_count)
 
-			// col 3: sample count
-			const sample_count = Object.values(snp.gt2count).reduce((a, b) => a + b)
-			tr.append('td').text(sample_count)
+			// col 3: alleles (frequency)
+			const allele_td = tr.append('td')
 
-			// col 4: alleles (frequency)
-			for (const [allele, freq] of Object.entries(snp.allele2count)) {
-				const td = tr
-					.append('td')
-					.style('padding', '3px')
-					.style('border-radius', '3px')
-					.style('border', allele == snp.effectAllele ? '2px solid #bbb' : '')
-					.text(`${allele} (${freq})`)
-					.on('mouseover', () => {
-						if (allele == snp.effectAllele) return
-						else {
-							td.style('background-color', '#fff2cc').style('cursor', 'pointer')
-						}
-					})
-					.on('mouseout', () => {
-						if (allele == snp.effectAllele) return
-						else {
-							td.style('background', (i + 2) % 2 ? '#eee' : 'none')
-						}
-					})
-					.on('click', () => {
-						if (allele == snp.effectAllele) return
-						else {
-							snp.effectAllele = allele
-							tr.selectAll('td').style('border', '')
-							td.style('border', '2px solid #bbb').style('background', (i + 2) % 2 ? '#eee' : 'none')
-						}
-					})
+			if (!invalid_snp) {
+				for (const [allele, allele_ct] of Object.entries(snp.allele2count)) {
+					const allele_freq = Math.round(allele_ct*100/(sample_count*2))
+					const allele_div = allele_td.append('div')
+						.style('display','inline-block')
+						.style('margin','0px 3px')
+						.style('padding', '3px 7px')
+						.style('border-radius', '3px')
+						.style('border', allele == snp.effectAllele ? '2px solid #bbb' : '')
+						.text(`${allele} (${allele_freq}%)`)
+						.on('mouseover', () => {
+							if (allele == snp.effectAllele) return
+							else {
+								allele_div.style('background-color', '#fff2cc').style('cursor', 'pointer')
+							}
+						})
+						.on('mouseout', () => {
+							if (allele == snp.effectAllele) return
+							else {
+								allele_div.style('background', (i + 2) % 2 ? '#eee' : 'none')
+							}
+						})
+						.on('click', () => {
+							if (allele == snp.effectAllele) return
+							else {
+								snp.effectAllele = allele
+								td.selectAll('div').style('border', '')
+								allele_div.style('border', '2px solid #bbb').style('background', (i + 2) % 2 ? '#eee' : 'none')
+							}
+						})
+				}
 			}
 
-			// col 5: genetype (frequency)
-			for (const [gt, freq] of Object.entries(snp.gt2count)) {
-				tr.append('td')
-					.style('padding', '0 3px')
-					.text(`${gt} (${freq})`)
+			// col 4: genetype (frequency)
+			const gt_td = tr.append('td')
+			if (!invalid_snp) {
+				for (const [gt, freq] of Object.entries(snp.gt2count)) {
+					const gt_freq = Math.round(freq * 100 / sample_count)
+					gt_td.append('div')
+						.style('display','inline-block')
+						.style('padding', '3px 5px')
+						.text(`${gt} (${gt_freq}%)`)
+				}
 			}
 
 			// col 6: delete button
 			tr.append('td')
-				.append('button')
+				.style('background', '#fff')
+				.append('div')
 				.style('margin', '3px')
-				.text('Remove')
+				.style('opacity', 0.4)
+				.style('font-size','.8em')
+				.style('cursor', 'pointer')
+				.text('DELETE')
 				.on('click', () => {
 					self.term.snps = self.term.snps.filter(s => s.rsid !== snp.rsid)
 					renderSnpEditTable(snplst_table)
