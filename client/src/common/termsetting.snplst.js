@@ -75,23 +75,13 @@ function makeEditMenu(self, div) {
 	const table = div.append('table').style('margin', '15px')
 
 	// first row has 1 <td>, shows snp list
+	const snplst_td = table
+		.append('tr')
+		.append('td')
+		.attr('colspan', 2)
 	if (self.term && self.term.snps) {
-		// show list of snps as well as status for each: {invalid, }
-
-		const td = table
-			.append('tr')
-			.append('td')
-			.attr('colspan', 2)
-			.style('padding-bottom', '20px')
-		snplst_table = td.append('table')
-		renderSnpEditTable(snplst_table)
-
-		td.append('div')
-			.style('opacity', 0.4)
-			.style('font-size', '.7em')
-			.html(
-				'Note: Click on allele to make it effect allele.</br>#samples is the number of samples with at least one valid genotype'
-			)
+		// show list of snps as well as status for each: {invalid, allele2count{}, gt2count{} } }
+		initSnpEditTable()
 	}
 
 	// second row has 2 <td>
@@ -186,13 +176,19 @@ function makeEditMenu(self, div) {
 	}
 
 	// submit button
-	div
+	const submit_btn = div
 		.append('button')
 		.style('margin', '0px 15px 15px 15px')
-		.text('Submit')
+		.text(self.term && self.term.snps && self.term.snps.length ? 'Submit' : 'Validate')
 		.on('click', async () => {
 			// parse input text
 			const snps = parseSnpFromText(textarea)
+			if (!snps.length && self.term.snps.length) {
+				self.dom.tip.hide()
+				self.term.name = getTermName(self.term.snps)
+				self.runCallback()
+				return
+			}
 			if (self.term) {
 				if (!self.term.snps) self.term.snps = [] // possible if term of a different type was there before?
 				// already have term;
@@ -208,23 +204,38 @@ function makeEditMenu(self, div) {
 			// set term type in case the instance had a different term before
 			self.term.type = 'snplst'
 			self.term.name = getTermName(self.term.snps)
-			d3event.target.disabled = true
-			d3event.target.innerHTML = 'Validating SNPs...'
+			submit_btn.property('disabled', true)
+			submit_btn.text('Validating SNPs...')
 			await validateInput(self)
+			await getSnpData(self)
 			//q.cacheid is set
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
 			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
-			self.dom.tip.hide()
+			if ( snplst_table !== undefined ) renderSnpEditTable(snplst_table)
+			else initSnpEditTable()
+			textarea.property('value', '')
+			submit_btn.property('disabled', false)
+			submit_btn.text('Submit')
 			self.updateUI()
-			self.runCallback()
 		})
+
+	function initSnpEditTable(){
+		snplst_td.style('padding-bottom', '20px')
+		snplst_table = snplst_td.append('table')
+		renderSnpEditTable(snplst_table)
+
+		snplst_td.append('div')
+			.style('opacity', 0.4)
+			.style('font-size', '.7em')
+			.html(
+				'Note: Click on allele to make it effect allele.</br>#samples is the number of samples with at least one valid genotype'
+			)
+	}
 
 	function renderSnpEditTable(snplst_table) {
 		// allow to delete or add to this list
-		console.log(self.term.snps)
 		snplst_table.selectAll('*').remove()
-
 		const title_tr = snplst_table.append('tr').style('opacity', 0.4)
 		const col_titles = [
 			{ title: 'SNPs' },
@@ -286,7 +297,7 @@ function makeEditMenu(self, div) {
 							if (allele == snp.effectAllele) return
 							else {
 								snp.effectAllele = allele
-								td.selectAll('div').style('border', '')
+								allele_td.selectAll('div').style('border', '')
 								allele_div.style('border', '2px solid #bbb').style('background', (i + 2) % 2 ? '#eee' : 'none')
 							}
 						})
@@ -376,6 +387,21 @@ async function validateInput(self) {
 		s.snpid = s1.snpid
 		s.invalid = s1.invalid
 	}
+}
+
+async function getSnpData(self){
+	const qlst = [`cacheid=${self.q.cacheid}`]
+	const data = await self.vocabApi.getCategories(self.term, self.filter, qlst)
+	if (!data) throw `no data for term.id='${self.term.id}'`
+	if (data.error) throw data.error
+	for (const s of data.snps) {
+		// { snpid, allele2count{}, gt2count{} }
+		const snp = self.term.snps.find(i => i.snpid == s.snpid)
+		if (!snp) throw 'snp not found by id'
+		snp.allele2count = s.allele2count
+		snp.gt2count = s.gt2count
+	}
+	self.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
 }
 
 export async function fillTW(tw, vocabApi) {
