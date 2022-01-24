@@ -285,7 +285,7 @@ function setRenderers(self) {
 			} else if (t.term.type == 'snplst') {
 				const invalid_snps_count = t.term.snps.filter(s => s.invalid == true).length
 				dom.term_summmary_div.html(
-					`${q.numOfSampleWithAllValidGT} / ${q.numOfSampleWithAnyValidGT} samples with all / any valid genotypes.` +
+					`${q.numOfSampleWithAnyValidGT} samples with valid genotypes.` +
 						(invalid_snps_count > 0 ? ` ${invalid_snps_count} invalid SNP${invalid_snps_count > 1 ? `s` : ``}.` : '')
 				)
 			} else {
