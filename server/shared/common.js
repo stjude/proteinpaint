@@ -191,6 +191,8 @@ export function mclasstester(s) {
 			return mclassutr5
 		case "5'flank":
 			return mclassnoncoding
+		case 'blank':
+			return 'Blank'
 		default:
 			return null
 	}
