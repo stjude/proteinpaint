@@ -1554,21 +1554,24 @@ export function mclasscolor2table(table, snvonly) {
 		.text('LABEL, COLOR')
 	for (const k in common.mclass) {
 		const c = common.mclass[k]
-		if (snvonly) {
-			if (c.dt != common.dtsnvindel) {
-				continue
-			}
-		}
+		if (snvonly && c.dt != common.dtsnvindel) continue
+
+		// Blank class color is white
+
 		const tr = table.append('tr')
 		tr.append('td').text(k)
-		tr.append('td')
-			.append('span')
-			.attr('class', 'sja_mcdot')
-			.style('background-color', c.color)
-			.html('&nbsp;&nbsp;')
+		{
+			const dot = tr
+				.append('td')
+				.append('span')
+				.attr('class', 'sja_mcdot')
+				.style('background-color', c.color)
+				.html('&nbsp;&nbsp;')
+			if (k == 'Blank') dot.style('border', 'solid 1px #eee')
+		}
 		tr.append('td')
 			.text(c.label)
-			.style('color', c.color)
+			.style('color', k == 'Blank' ? '#ddd' : c.color)
 	}
 }
 
