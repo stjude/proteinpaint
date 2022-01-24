@@ -295,7 +295,6 @@ or update existing groups, in which groupidx will be provided
 3. change/cancel variant
 */
 
-	//console.log('tk.groups:', tk.groups)
 	if ('nochr' in data) tk.nochr = data.nochr // only set to tk when nochr is returned from server
 
 	if (data.pileup_data) {
@@ -632,6 +631,127 @@ function may_render_variant(data, tk, block) {
 				"<span>Fisher strand (FS) analysis score containing p-values in phred scale (-10*log(p-value)). If FS > <a href='https://gatk.broadinstitute.org/hc/en-us/articles/360035890471' target='_blank'>60</a>, the variant maybe a sequencing artifact and highlighted in red.</br></br>To compute the p-value, Fisher's exact test is used for variants with a sequencing depth <= 300. If depth > 300, chi-squared test is used.</span>"
 			)
 			.style('font-size', '12px')
+
+		const contigent_table = tk.tktip.d
+			.append('div')
+			.style('margin', '20px')
+			.append('table')
+			.style('font-family', 'Courier')
+			.style('font-size', '0.8em')
+			.style('color', '#303030')
+			.style('margin', '5px 5px 20px 5px')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
+			.style('text-align', 'center')
+			.style('empty-cells', 'show')
+		const label_tr = contigent_table
+			.append('tr')
+			.style('color', 'white')
+			.style('background-color', 'white')
+		label_tr.attr('id', 'LabelRow')
+		const blank_cell = label_tr
+			.append('td')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
+		const alternate_td = label_tr
+			.append('td')
+			.text('Alternate')
+			.style('text-align', 'right')
+			.style('font-weight', '550')
+			.style('margin', '5px 5px 10px 5px')
+			.style('color', 'black')
+			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
+		const reference_td = label_tr
+			.append('td')
+			.text('Reference')
+			.style('text-align', 'right')
+			.style('font-weight', '550')
+			.style('margin', '5px 5px 10px 5px')
+			.style('color', 'black')
+			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
+		const forward_tr = contigent_table
+			.append('tr')
+			.style('color', 'white')
+			.style('background-color', 'white')
+		forward_tr.attr('id', 'ForwardRow')
+		const forward_label_cell = forward_tr
+			.append('td')
+			.text('Forward')
+			.style('text-align', 'right')
+			.style('font-weight', '550')
+			.style('margin', '5px 5px 10px 5px')
+			.style('color', 'black')
+			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
+		const alternate_forward_td = forward_tr
+			.append('td')
+			.text(data.alternate_forward_count)
+			.style('text-align', 'right')
+			.style('margin', '5px 5px 10px 5px')
+			.style('color', 'black')
+			.style('background-color', 'white')
+		const reference_forward_td = forward_tr
+			.append('td')
+			.text(data.reference_forward_count)
+			.style('text-align', 'right')
+			.style('margin', '5px 5px 10px 5px')
+			.style('color', 'black')
+			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
+		const reverse_tr = contigent_table
+			.append('tr')
+			.style('color', 'white')
+			.style('background-color', 'white')
+		reverse_tr.attr('id', 'ReverseRow')
+		const reverse_label_cell = reverse_tr
+			.append('td')
+			.text('Reverse')
+			.style('text-align', 'right')
+			.style('font-weight', '550')
+			.style('margin', '5px 5px 10px 5px')
+			.style('color', 'black')
+			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
+		const alternate_reverse_td = reverse_tr
+			.append('td')
+			.text(data.alternate_reverse_count)
+			.style('text-align', 'right')
+			.style('margin', '5px 5px 10px 5px')
+			.style('color', 'black')
+			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
+		const reference_reverse_td = reverse_tr
+			.append('td')
+			.text(data.reference_reverse_count)
+			.style('text-align', 'right')
+			.style('margin', '5px 5px 10px 5px')
+			.style('color', 'black')
+			.style('background-color', 'white')
+			.style('border-spacing', 5)
+			.style('border', '1px solid black')
+			.style('border-collapse', 'collapse')
 	})
 
 	if (Number.isFinite(data.max_diff_score)) {
@@ -694,62 +814,85 @@ function setTkHeight(tk) {
 
 function updateExistingGroups(data, tk, block) {
 	// to update all existing groups and reset each group to fullstack
+	// Check if data.groups and tk.groups have the same length. Lengths can differ when toggled between different strictness values.
+
+	// Check which group is missing in data.groups and deleting it
+	for (let i = 0; i < tk.groups.length; i++) {
+		const group = data.groups.find(g => g.type == tk.groups[i].data.type)
+		if (!group) {
+			tk.groups[i].dom.message_rowg.remove()
+			tk.groups[i].dom.img_fullstack.remove()
+			tk.groups[i].dom.img_partstack.remove()
+			tk.groups[i].dom.diff_score_barplot_fullstack.remove()
+			tk.groups[i].dom.diff_score_barplot_partstack.remove()
+			tk.groups[i].dom.read_names_g.remove()
+			tk.groups[i].dom.leftg.remove()
+			tk.groups[i].dom.rightg.remove()
+			tk.groups.splice(i, 1) // Deleting the group
+		}
+	}
+
 	for (const gd of data.groups) {
 		const group = tk.groups.find(g => g.data.type == gd.type)
-		if (!group) continue // throw 'unknown group type: ' + gd.type
-		group.data = gd
-		update_boxes(group, tk, block)
+		if (!group) {
+			// Addition of extra group often take place when toggled to higher strictness. For e.g going from strictness 0 to 1 where the none category gets created
+			const g = makeGroup(gd, tk, block, data)
+			tk.groups.push(g)
+		} else {
+			group.data = gd
+			update_boxes(group, tk, block)
 
-		// in full stack
-		group.dom.img_fullstack
-			.attr('xlink:href', group.data.src)
-			.attr('width', group.data.width)
-			.attr('height', group.data.height)
-		if (tk.variants) {
-			group.ReadNameMaxwidth = 0
-			if (tk.show_readnames) {
-				if (group.data.templatebox) {
-					group.dom.read_names_g.selectAll('*').remove()
-					let read_count = 1
-					for (const read of group.data.templatebox) {
-						const read_name_bbox = group.dom.read_names_g
-							.append('text')
-							.attr('x', 0)
-							.attr('y', (group.data.height * read_count) / group.data.templatebox.length)
-							.attr('text-anchor', 'end')
-							.style('fill', 'black')
-							.attr('font-size', group.data.height / group.data.templatebox.length)
-							.text(read.qname)
-						group.ReadNameMaxwidth = Math.max(group.ReadNameMaxwidth, read_name_bbox.node().getBBox().width)
-						read_count += 1
-					}
-				}
-			} else {
-				group.dom.read_names_g.selectAll('*').remove()
+			// in full stack
+			group.dom.img_fullstack
+				.attr('xlink:href', group.data.src)
+				.attr('width', group.data.width)
+				.attr('height', group.data.height)
+			if (tk.variants) {
 				group.ReadNameMaxwidth = 0
-			}
-			update_left_margin(tk, block)
-			if (group.my_partstack) {
-				// Checks if the y-position of click is defined or not. Helpful when show_readnames button is clicked without having to click again to invoke partstack
-				if (group.data.allowpartstack) {
-					enter_partstack(group, tk, block, group.my_partstack, data)
+				if (tk.show_readnames) {
+					if (group.data.templatebox) {
+						group.dom.read_names_g.selectAll('*').remove()
+						let read_count = 1
+						for (const read of group.data.templatebox) {
+							const read_name_bbox = group.dom.read_names_g
+								.append('text')
+								.attr('x', 0)
+								.attr('y', (group.data.height * read_count) / group.data.templatebox.length)
+								.attr('text-anchor', 'end')
+								.style('fill', 'black')
+								.attr('font-size', group.data.height / group.data.templatebox.length)
+								.text(read.qname)
+							group.ReadNameMaxwidth = Math.max(group.ReadNameMaxwidth, read_name_bbox.node().getBBox().width)
+							read_count += 1
+						}
+					}
+				} else {
+					group.dom.read_names_g.selectAll('*').remove()
+					group.ReadNameMaxwidth = 0
 				}
-			} else {
-				group.dom.diff_score_barplot_fullstack
-					.attr('xlink:href', gd.diff_scores_img.src)
-					.attr('width', gd.diff_scores_img.width)
-					.attr('height', gd.diff_scores_img.height)
+				update_left_margin(tk, block)
+				if (group.my_partstack) {
+					// Checks if the y-position of click is defined or not. Helpful when show_readnames button is clicked without having to click again to invoke partstack
+					if (group.data.allowpartstack) {
+						enter_partstack(group, tk, block, group.my_partstack, data)
+					}
+				} else {
+					group.dom.diff_score_barplot_fullstack
+						.attr('xlink:href', gd.diff_scores_img.src)
+						.attr('width', gd.diff_scores_img.width)
+						.attr('height', gd.diff_scores_img.height)
+				}
 			}
-		}
 
-		group.dom.img_partstack.attr('width', 0).attr('height', 0)
-		if (tk.variants) {
-			group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
-		}
+			group.dom.img_partstack.attr('width', 0).attr('height', 0)
+			if (tk.variants) {
+				group.dom.diff_score_barplot_partstack.attr('width', 0).attr('height', 0)
+			}
 
-		//tk.config_handle.transition().attr('x', 0)
-		group.dom.rightg.vslider.g.transition().attr('transform', 'scale(0)')
-		group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
+			//tk.config_handle.transition().attr('x', 0)
+			group.dom.rightg.vslider.g.transition().attr('transform', 'scale(0)')
+			group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
+		}
 	}
 }
 
@@ -1428,7 +1571,9 @@ function configPanel(tk, block) {
 			}
 		})
 
-		if (!tk.variants[0].strictness) {
+		if (tk.variants[0].strictness == 0) {
+			// When stricness = 0, tk.variants[0].strictness is false. So need to handle this case separately
+		} else if (!tk.variants[0].strictness) {
 			// When using example.bam.indel.html the strictness value is not defined. In such cases using a default value of strictness = 1.
 			tk.variants[0].strictness = 1
 		}

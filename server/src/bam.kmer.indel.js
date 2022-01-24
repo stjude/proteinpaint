@@ -8,6 +8,7 @@ const readline = require('readline')
 const bamcommon = require('./bam.common')
 const fs = require('fs')
 const serverconfig = require('./serverconfig')
+const clustalo_read_alignment = serverconfig.clustalo
 
 export async function match_complexvariant_rust(q, templates_info, region_widths) {
 	//const segbplen = templates[0].segments[0].seq.length
@@ -107,6 +108,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const weight_indel = 10 // Weight when base is inside the indel
 	//const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
 	const fisher_test_threshold = 60 // Fisher exact-test strand analysis significance parameter. See details in this weblink https://gatk.broadinstitute.org/hc/en-us/articles/360035890471
+	const is_realignment_reads = 0 // Realign reads to obtain correct indel sequence (If 1 realignment of reads will be attempted, if 0 no realignment of reads will be performed )
 	//----------------------------------------------------------------------------
 
 	// Checking to see if reference allele is correct or not
@@ -131,35 +133,40 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		q.variant.strictness = 1
 	}
 
-	const input_data =
+	let input_data =
 		sequences +
-		':' +
+		'_' +
 		start_positions +
-		':' +
+		'_' +
 		cigar_sequences +
-		':' +
+		'_' +
 		sequence_flags +
-		':' +
+		'_' +
 		final_pos.toString() +
-		':' +
+		'_' +
 		segbplen.toString() +
-		':' +
+		'_' +
 		refallele +
-		':' +
+		'_' +
 		altallele +
-		':' +
+		'_' +
 		kmer_length.toString() +
-		':' +
+		'_' +
 		weight_no_indel.toString() +
-		':' +
+		'_' +
 		weight_indel.toString() +
-		':' +
+		'_' +
 		q.variant.strictness +
-		':' +
+		'_' +
 		leftflankseq +
-		':' +
+		'_' +
 		rightflankseq
 
+	if (is_realignment_reads == 1) {
+		// When realignment of reads is neccessary, quality scores and path to clustalo is passed for determining correct indel sequence (not functional, currently in development)
+		const quality_scores = templates_info.map(i => i.sam_info.split('\t')[10]).join('-')
+		input_data += clustalo_read_alignment + '_' + quality_scores + '_' + is_realignment_reads
+	}
 	//console.log({seqRef:refseq, seqMut:altseq, leftFlank:leftflankseq, rightFlank:rightflankseq, readlen: segbplen, variant: q.variant}) // uncomment this line to help creating tests at server/utils/test/rust_indel.spec.js
 
 	//fs.writeFile('test.txt', input_data, function (err) {
@@ -175,7 +182,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	let categories = []
 	let diff_scores = []
 	let strand_probability = 0 // Contains p_value of strand bias i.e forward/reverse vs alternate/reference
-
+	let alternate_forward_count, alternate_reverse_count, reference_forward_count, reference_reverse_count
 	for (let item of rust_output_list) {
 		if (item.includes('output_gID')) {
 			group_ids = item
@@ -202,6 +209,34 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			//.map(n => Number(n.replace(/\D/g, '')))
 		} else if (item.includes('Final kmer length (from Rust)')) {
 			console.log(item)
+		} else if (item.includes('alternate_forward_count:')) {
+			alternate_forward_count = Number(
+				item
+					.replace(/"/g, '')
+					.replace(/,/g, '')
+					.replace('alternate_forward_count:', '')
+			)
+		} else if (item.includes('alternate_reverse_count:')) {
+			alternate_reverse_count = Number(
+				item
+					.replace(/"/g, '')
+					.replace(/,/g, '')
+					.replace('alternate_reverse_count:', '')
+			)
+		} else if (item.includes('reference_forward_count:')) {
+			reference_forward_count = Number(
+				item
+					.replace(/"/g, '')
+					.replace(/,/g, '')
+					.replace('reference_forward_count:', '')
+			)
+		} else if (item.includes('reference_reverse_count:')) {
+			reference_reverse_count = Number(
+				item
+					.replace(/"/g, '')
+					.replace(/,/g, '')
+					.replace('reference_reverse_count:', '')
+			)
 		} else if (item.includes('strand_probability')) {
 			strand_probability = Number(
 				item
@@ -259,6 +294,21 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 				}
 				kmer_diff_scores_input.push(input_items)
 			}
+		} else if (categories[i] == 'amb') {
+			if (type2group[bamcommon.type_supportamb]) {
+				index = group_ids[i]
+				//console.log("index:",index)
+				//console.log("diff_scores[i]:",diff_scores[i])
+				//if (serverconfig.features.indel_kmer_scores) {
+				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
+				//}
+				type2group[bamcommon.type_supportamb].templates.push(templates_info[index])
+				const input_items = {
+					value: diff_scores[i],
+					groupID: 'amb'
+				}
+				kmer_diff_scores_input.push(input_items)
+			}
 		} else if (categories[i] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
 				index = group_ids[i]
@@ -288,17 +338,31 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	for (const k in type2group) {
 		const g = type2group[k]
 		if (g.templates.length == 0) continue // empty group, do not include
-		g.messages.push({
-			isheader: true,
-			t:
-				g.templates.length +
-				' reads supporting ' +
-				(k == bamcommon.type_supportref
-					? 'reference allele'
-					: k == bamcommon.type_supportalt
-					? 'mutant allele'
-					: 'neither reference or mutant alleles')
-		})
+		if (k == bamcommon.type_supportamb) {
+			if (g.templates.length == 1) {
+				g.messages.push({
+					isheader: true,
+					t: g.templates.length + ' ambiguous read'
+				})
+			} else {
+				g.messages.push({
+					isheader: true,
+					t: g.templates.length + ' ambiguous reads'
+				})
+			}
+		} else {
+			g.messages.push({
+				isheader: true,
+				t:
+					g.templates.length +
+					' reads supporting ' +
+					(k == bamcommon.type_supportref
+						? 'reference allele'
+						: k == bamcommon.type_supportalt
+						? 'alternate allele'
+						: 'neither reference or mutant alleles')
+			})
+		}
 		g.widths = region_widths
 		groups.push(g)
 	}
@@ -315,6 +379,10 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		refseq,
 		altseq,
 		leftflankseq,
-		rightflankseq
+		rightflankseq,
+		alternate_forward_count,
+		alternate_reverse_count,
+		reference_forward_count,
+		reference_reverse_count
 	}
 }
