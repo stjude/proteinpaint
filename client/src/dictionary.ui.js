@@ -136,12 +136,12 @@ function makeCopyPasteInput(div, doms) {
 //Parse tab delimited files only
 function parseTabDelimitedData(input, doms) {
 	const data = {
-		contents: [],
-		attributes: {}
+		samples: [], //Data not samples??
+		sample_attributes: {} //Data doesn't have sample attributes??
 	}
 
-	const required_headers = ['Level_1', 'variable_name', 'variable_note'] //Maybe arg to reuse for other data uploads (i.e sample anno matrix)
-	const lines = input.split(/\r?\n/)
+	const required_headers = ['Name', 'variable_name', 'variable_note'] //Maybe arg to reuse for other data uploads (i.e sample anno matrix)
+	let lines = input.split(/\r?\n/)
 	const headers = lines.shift().split('\t')
 
 	//Check for bare minimum data elements
@@ -156,39 +156,41 @@ function parseTabDelimitedData(input, doms) {
 	//Maybe arg to reuse for other data uploads (i.e sample anno matrix)
 	const colKey = 'variable_name'
 	const dataKeyIndex = searchHeaders.indexOf(colKey.toLocaleLowerCase())
-	data.key = headers[dataKeyIndex]
+	data.samplekey = headers[dataKeyIndex]
 
 	for (const line of lines) {
 		const values = line.split('\t')
-		const content = {}
+		const sample = {}
 		for (const [i, v] of values.entries()) {
-			content[headers[i]] = v
+			sample[headers[i]] = v
 		}
 
-		data.contents.push(content)
+		data.samples.push(sample)
 	}
 
 	for (const [i, key] of headers.entries()) {
 		if (i == dataKeyIndex) continue
-		data.attributes[key] = { label: key }
+		data.sample_attributes[key] = { label: key }
 	}
 
-	//reformat data
 	let contentMap = new Map()
-	for (const d in data.contents) {
-		if (data.key) {
-			d.content = d[data.key]
-			delete d[data.key]
+	//reformat data
+	for (const d of data.samples) {
+		if (data.samplekey) {
+			d.sample = d[data.samplekey]
+			delete d[data.samplekey]
 		}
-		if (data.attributes) {
+		if (data.sample_attributes) {
 			d.s = {}
-			for (const k in data.attributes) {
+			for (const k in data.sample_attributes) {
 				d.s[k] = d[k]
 				delete d[k]
 			}
 		}
+
 		contentMap.set(d.content, d)
 	}
+	doms.data = data
 }
 
 function submitButton(div, doms, holder) {
@@ -203,18 +205,13 @@ function submitButton(div, doms, holder) {
 }
 
 function validateInput(doms) {
-	if (!doms.contents && !doms.attributes) {
-		alert('Provide data')
-		return
-	}
-	// const data = {
-	//     samples: doms.content,
-	//     sample_attributes: doms.attributes
+	// if (!doms.contents && !doms.attributes) {
+	// 	alert('Provide data')
+	// 	return
 	// }
-	// console.log(data.samples)
 
-	const vocab = getVocabFromSamplesArray(data)
-	// console.log(vocab)
+	const vocab = getVocabFromSamplesArray(doms.data)
+	console.log(vocab)
 }
 
 function infoSection(div) {
