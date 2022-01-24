@@ -117,7 +117,8 @@ class TermSetting {
 
 	async main(data = {}) {
 		try {
-			this.dom.tip.hide()
+			if (!this.doNotHideTip) this.dom.tip.hide()
+			else delete this.doNotHideTip
 			this.hasError = false
 			delete this.error
 			this.validateMainData(data)
