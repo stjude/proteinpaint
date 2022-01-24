@@ -2005,14 +2005,6 @@ fn build_kmers_refalt(
     };
 
     refalt_output
-    //(
-    //    // Returning the following variables back to the main function
-    //    total_kmers_weight,
-    //    kmers_nodup,
-    //    indel_kmers,
-    //    surrounding_indel_kmers,
-    //    kmers_data,
-    //)
 }
 
 fn check_read_within_indel_region(
@@ -2074,7 +2066,9 @@ fn check_read_within_indel_region(
         //println!("correct_end_position:{}", correct_end_position);
         //println!("indel_start:{}", indel_start);
         //println!("indel_stop:{}", indel_stop);
-        if strictness >= 1 {
+
+        #[allow(unused_comparisons)] // In the future, may remove this "if strictness" condition
+        if strictness >= 0 {
             let percentage_indel_length: f64 = 0.2; // Minimum fraction of length of indel needed to decide the max distance a read can be from the start of an indel so as to decide if the read harbors variant region
             let indel_cutoff: i64 = (indel_length as f64 * percentage_indel_length).ceil() as i64; // Max distance from start of an indel a read can start so as to consider if read contains variant region
                                                                                                    //println!("indel_cutoff:{}", indel_cutoff);
