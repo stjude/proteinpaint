@@ -206,7 +206,7 @@ else
 	mv server/genome $APP/
 	mv server/dataset $APP/
 	mv server/utils $APP/
-	mv server/features.json $APP/
+	mv server/cards $APP/
 	mv server/src/serverconfig.js $APP/src
 	mv server/shared $APP/
 	if [[ "$SUBDOMAIN" == "ppr" ]]; then
