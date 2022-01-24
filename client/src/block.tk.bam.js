@@ -825,6 +825,7 @@ function updateExistingGroups(data, tk, block) {
 			tk.groups[i].dom.img_partstack.remove()
 			tk.groups[i].dom.diff_score_barplot_fullstack.remove()
 			tk.groups[i].dom.diff_score_barplot_partstack.remove()
+			tk.groups[i].dom.read_names_g.remove()
 			tk.groups[i].dom.leftg.remove()
 			tk.groups[i].dom.rightg.remove()
 			tk.groups.splice(i, 1) // Deleting the group
