@@ -219,7 +219,7 @@ async function queryBcf(q, snps, ds) {
 	//const sample2snpcount = new Map(samples.map(sample => [sample, 0])) // {k: sample, v: number of snps with valid gt}
 	await utils.get_lines_bigfile({
 		isbcf: true,
-		args: ['query', '-T', coordsfile, '-f', bcfformat, '-v', bcffiles],
+		args: ['query', '-R', coordsfile, '-f', bcfformat, '-v', bcffiles],
 		dir: tk.dir,
 		callback: line => {
 			// chr, pos, ref, alt, '0/0', '0/0', '0/1', '1/1', ...
