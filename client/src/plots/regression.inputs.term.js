@@ -194,6 +194,10 @@ export class InputTerm {
 			// note!
 			// will add attributes to tw which are not written to state
 			// but should be fine
+			for (const s of tw.term.snps) {
+				delete s.allele2count
+				delete s.gt2count
+			}
 			for (const s of data.snps) {
 				// { snpid, allele2count{} }
 				const snp = tw.term.snps.find(i => i.snpid == s.snpid)

@@ -415,6 +415,30 @@ makeURL([
 				},
 			]
 		})],
+		['EF ~ snplst (not in bcf)', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: { id: 'LV_Ejection_Fraction_3D' },
+					independent: [
+						{
+							term:{
+								type:'snplst',
+								snps:[{rsid:'rs1641548',effectAllele:'T'},{rsid:'rs1472752888',effectAllele:'T'}],
+							},
+							q:{
+								alleleType:0,
+								geneticModel:0,
+								missingGenotype:0
+							}
+						}
+					]
+				},
+			]
+		})],
 
 		'LOGISITC',
 

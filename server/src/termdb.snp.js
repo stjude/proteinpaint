@@ -241,11 +241,9 @@ async function queryBcf(q, snps, ds) {
 					return snp
 				}
 			})
-			if (!snp) {
-				const bcfSNP = chr + ':' + pos + '_' + ref + '_' + alts.join(',')
-				throw `bcf snp: '${bcfSNP}' does not match a query snp`
-			}
-			snp.bcfRef = ref // TODO change attribute name
+			if (!snp) return
+
+			snp.bcfRef = ref
 			snp.bcfAlts = alts
 
 			// determine sample genotypes
@@ -263,7 +261,8 @@ async function queryBcf(q, snps, ds) {
 	// write snp data to cache file
 	const lines = ['snpid\tchr\tpos\tref\talt\teff\t' + tk.samples.map(i => i.name).join('\t')]
 	for (const snp of snps) {
-		if (snp.invalid) continue
+		if (snp.invalid) continue // invalid snp
+		if (!snp.gtlst) continue // snp was not found in bcf
 		lines.push(
 			snp.snpid +
 				'\t' +
