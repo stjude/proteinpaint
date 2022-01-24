@@ -2,7 +2,6 @@ import * as uiutils from './dom/uiUtils'
 import { appear } from './dom/animation'
 import { init_tabs } from './dom/toggleButtons'
 import { event as d3event } from 'd3-selection'
-import { getVocabFromSamplesArray } from './termdb/vocabulary'
 
 /* 
 Launches MASS UI by uploading a custom data dictionary
@@ -135,62 +134,135 @@ function makeCopyPasteInput(div, doms) {
 
 //Parse tab delimited files only
 function parseTabDelimitedData(input, doms) {
-	const data = {
-		samples: [], //Data not samples??
-		sample_attributes: {} //Data doesn't have sample attributes??
-	}
-
-	const required_headers = ['Name', 'variable_name', 'variable_note'] //Maybe arg to reuse for other data uploads (i.e sample anno matrix)
-	let lines = input.split(/\r?\n/)
-	const headers = lines.shift().split('\t')
+	const key2terms = {}
+	//Maybe arg to reuse for other data uploads (i.e sample anno matrix)
+	// const required_headers = ['Name', 'variable_name', 'variable_note']
+	const lines = input.trim().split(/\r?\n/)
+	// const headers = lines.shift().split('\t')
 
 	//Check for bare minimum data elements
-	const searchHeaders = headers.map(e => {
-		return e.toLowerCase()
-	})
-	for (const i in required_headers) {
-		let headIndex = searchHeaders.indexOf(required_headers[i].toLowerCase())
-		if (headIndex == -1) throw 'Missing data column: ' + required_headers[i]
-	}
+	// const searchHeaders = headers.map(e => {
+	// 	return e.toLowerCase()
+	// })
+	// for (const i in required_headers) {
+	// 	let headIndex = searchHeaders.indexOf(required_headers[i].toLowerCase())
+	// 	if (headIndex == -1) throw 'Missing data column: ' + required_headers[i]
+	// }
+
 	//Key column allowed to be anywhere in the data - support hierarchy needs later.
 	//Maybe arg to reuse for other data uploads (i.e sample anno matrix)
-	const colKey = 'variable_name'
-	const dataKeyIndex = searchHeaders.indexOf(colKey.toLocaleLowerCase())
-	data.samplekey = headers[dataKeyIndex]
+	// const colKey = 'variable_name'
+	// const dataKeyIndex = searchHeaders.indexOf(colKey.toLocaleLowerCase())
+	// data.samplekey = headers[dataKeyIndex]
 
-	for (const line of lines) {
-		const values = line.split('\t')
-		const sample = {}
-		for (const [i, v] of values.entries()) {
-			sample[headers[i]] = v
+	//Parse phenotree
+	for (const i in lines) {
+		const [col1, col2, col3, col4, col5, key0, configstr0] = lines[i].split('\t') //Required format
+		try {
+			if (i > 0) {
+				//Skip header
+				if (!configstr0 || !configstr0.trim()) {
+					console.error('missing configuration string, line: ' + i + ', term: ' + key0)
+					continue
+				}
+				const L1 = col1.trim()
+				const L2 = col2.trim()
+				const L3 = col3.trim()
+				const L4 = col4.trim()
+				const L5 = col5.trim()
+				const configstr = configstr0.replace('"', '').trim()
+
+				const name = getName(L2, L3, L4, L5)
+
+				//if key0 missing, use name
+				let key = key0 ? key0.trim() : ''
+				if (!key) key = name
+
+				const term = parseConfig(configstr)
+				term.name = name
+				// console.log(term)
+				key2terms[key] = term
+			}
+		} catch (e) {
+			throw 'Line ' + (i + 1) + ' error: ' + e
 		}
-
-		data.samples.push(sample)
 	}
+	console.log(key2terms)
+	return key2terms
+}
 
-	for (const [i, key] of headers.entries()) {
-		if (i == dataKeyIndex) continue
-		data.sample_attributes[key] = { label: key }
-	}
+function getName(L2, L3, L4, L5) {
+	if (!L2) throw 'L2 missing'
+	if (!L3) throw 'L3 missing'
+	if (!L4) throw 'L4 missing'
+	if (!L5) throw 'L5 missing'
+	if (L5 != '-') return L5
+	if (L4 != '-') return L4
+	if (L3 != '-') return L3
+	if (L2 != '-') return L2
+	throw 'name missing'
+}
 
-	let contentMap = new Map()
-	//reformat data
-	for (const d of data.samples) {
-		if (data.samplekey) {
-			d.sample = d[data.samplekey]
-			delete d[data.samplekey]
-		}
-		if (data.sample_attributes) {
-			d.s = {}
-			for (const k in data.sample_attributes) {
-				d.s[k] = d[k]
-				delete d[k]
+function parseConfig(str) {
+	const uncomputable_categories = new Set(['-994', '-995', '-996', '-997', '-998', '-999'])
+	const term = {}
+
+	if (str == 'string') {
+		// is categorical term without predefined categories, need to collect from matrix, no further validation
+		term.type = 'categorical'
+		term.values = {}
+		// list of categories not provided in configstr so need to sum it up from matrix
+		term._set = new Set() // temp
+	} else {
+		const line = str.replace('"', '').split(';')
+		const config = line[0].trim() //1st field defines term.type
+		if (config == 'integer') {
+			term.type = 'integer'
+		} else if (config == 'float') {
+			term.type = 'float'
+		} else {
+			// must be categorical, f1 is either key=value or 'string'
+			term.type = 'categorical'
+			term.values = {}
+			term._values_newinmatrix = new Set()
+			if (config == 'string') {
+				//ignore
+			} else {
+				const [key, value] = config.split(/(?<!\>|\<)=/)
+				if (!value) throw 'first field is not integer/float/string, and not k=v: ' + config
+				term.values[key] = { label: value }
 			}
 		}
 
-		contentMap.set(d.content, d)
+		for (let i in line) {
+			const field = line[i].trim()
+			if (i > 0) {
+				if (field == '') continue
+				const [key, value] = field.split(/(?<!\>|\<)=/)
+				if (!value) throw 'field ' + (i + 1) + ' is not k=v: ' + field
+				if (!term.values) term.values = {}
+				term.values[key] = { label: value }
+			}
+		}
+
+		if (term.type == 'integer' || term.type == 'float') {
+			// for numeric term, all keys in values are not computable
+			for (const k in term.values) term.values[k].uncomputable = true
+		} else if (term.type == 'categorical') {
+			// select categories are uncomputable
+			for (const k in term.values) {
+				if (uncomputable_categories.has(k)) term.values[k].uncomputable = true
+			}
+		}
 	}
-	doms.data = data
+
+	// // for all above cases, will have these two
+	// term._values_foundinmatrix = new Map()
+
+	// if (term.type == 'categorical') {
+	// 	term.groupsetting = { inuse: false }
+	// }
+	return term
 }
 
 function submitButton(div, doms, holder) {
@@ -205,13 +277,10 @@ function submitButton(div, doms, holder) {
 }
 
 function validateInput(doms) {
-	// if (!doms.contents && !doms.attributes) {
-	// 	alert('Provide data')
-	// 	return
-	// }
-
-	const vocab = getVocabFromSamplesArray(doms.data)
-	console.log(vocab)
+	if (!doms.term) {
+		alert('Provide data')
+		return
+	}
 }
 
 function infoSection(div) {
