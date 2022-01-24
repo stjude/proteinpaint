@@ -182,13 +182,8 @@ function makeEditMenu(self, div) {
 		.text(self.term && self.term.snps && self.term.snps.length ? 'Submit' : 'Validate')
 		.on('click', async () => {
 			// parse input text
-			const snps = parseSnpFromText(textarea)
-			if (!snps.length && self.term.snps.length) {
-				self.dom.tip.hide()
-				self.term.name = getTermName(self.term.snps)
-				self.runCallback()
-				return
-			}
+			const snps = parseSnpFromText(self, textarea)
+			self.doNotHideTip = false
 			if (self.term) {
 				if (!self.term.snps) self.term.snps = [] // possible if term of a different type was there before?
 				// already have term;
@@ -200,6 +195,10 @@ function makeEditMenu(self, div) {
 				// have valid input; create new term
 				self.term = { snps } // term does not have id
 				self.q = {} // q does not have mode
+			}
+			if (snps.length) {
+				// don't hide tip only when textarea have values
+				self.doNotHideTip = true
 			}
 			// set term type in case the instance had a different term before
 			self.term.type = 'snplst'
@@ -217,6 +216,7 @@ function makeEditMenu(self, div) {
 			textarea.property('value', '')
 			submit_btn.property('disabled', false)
 			submit_btn.text('Submit')
+			self.runCallback()
 			self.updateUI()
 		})
 
@@ -342,13 +342,15 @@ function getTermName(snps) {
 	return snps.length + ' SNP' + (snps.length > 1 ? 's' : '')
 }
 
-function parseSnpFromText(ta) {
+function parseSnpFromText(self, ta) {
 	// may support chr:pos
 	const text = ta.property('value')
 	const snps = []
 	for (const tmp of text.trim().split('\n')) {
 		const [rsid, ale] = tmp.trim().split(/[\s\t]/)
 		if (rsid) {
+			// snp already in list, don't add again
+			if (self.term && self.term.snps && self.term.snps.find(i => i.rsid == rsid)) continue
 			if (snps.find(i => i.rsid == rsid)) continue // duplicate
 			const s = { rsid }
 			if (ale) s.effectAllele = ale
