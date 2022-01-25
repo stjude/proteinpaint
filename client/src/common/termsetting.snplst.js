@@ -54,7 +54,7 @@ export function getHandler(self) {
 
 function makeEditMenu(self, div) {
 	// the ui will create following controls, to be accessed upon clicking Submit button
-	let snplst_table, textarea, select_alleleType, select_geneticModel, select_missingGenotype
+	let snplst_table, textarea, select_alleleType, select_geneticModel, select_missingGenotype, tmp_snps
 
 	// table has two rows
 	const table = div.append('table').style('margin', '15px')
@@ -172,7 +172,9 @@ function makeEditMenu(self, div) {
 				if (!self.term.snps) self.term.snps = [] // possible if term of a different type was there before?
 				// already have term;
 				// any valid input in textarea are added to existing term
-				for (const s of snps) self.term.snps.push(s)
+				for (const s of snps) tmp_snps.push(s)
+				// update self.term.snps with edit menu snps if changed
+				updateSnps(self.term.snps, tmp_snps)
 			} else {
 				// no term; require valid submission in textarea
 				if (!snps.length) return window.alert('No valid SNPs')
@@ -200,7 +202,6 @@ function makeEditMenu(self, div) {
 			textarea.property('value', '')
 			submit_btn.property('disabled', false)
 			submit_btn.text('Submit')
-			// console.log(self.doNotHideTipInMain, self.term.snps.map(s => s.effectAllele))
 			self.runCallback()
 			self.updateUI()
 		})
@@ -220,6 +221,7 @@ function makeEditMenu(self, div) {
 	}
 
 	function renderSnpEditTable(snplst_table) {
+		tmp_snps = JSON.parse(JSON.stringify(self.term.snps))
 		// allow to delete or add to this list
 		snplst_table.selectAll('*').remove()
 		const title_tr = snplst_table.append('tr').style('opacity', 0.4)
@@ -241,7 +243,7 @@ function makeEditMenu(self, div) {
 		title_tr.append('td')
 
 		// SNPs
-		for (const [i, snp] of self.term.snps.entries()) {
+		for (const [i, snp] of tmp_snps.entries()) {
 			const invalid_snp = snp.invalid || (!snp.alleles && !snp.gt2count) ? true : false
 			const tr = snplst_table.append('tr').style('background', (i + 2) % 2 ? '#eee' : 'none')
 
@@ -272,24 +274,21 @@ function makeEditMenu(self, div) {
 						.style('background-color', '#d9ead3')
 						.style('border', al.allele == effectAllele ? '2px solid #bbb' : 'none')
 						.on('mouseover', () => {
-							if (al.allele == effectAllele) return
+							if (snp.effectAllele  && snp.effectAllele == al.allele) return
 							else {
 								allele_div.style('background-color', '#fff2cc').style('cursor', 'pointer')
 							}
 						})
 						.on('mouseout', () => {
-							if (al.allele == effectAllele) return
+							if (snp.effectAllele  && snp.effectAllele == al.allele) return
 							else {
 								allele_div.style('background', '#d9ead3')
 							}
 						})
 						.on('click', () => {
-							if (al.allele == effectAllele) return
-							else {
-								snp.effectAllele = al.allele
-								allele_td.selectAll('button').style('border', 'none')
-								allele_div.style('border', '2px solid #bbb').style('background', '#d9ead3')
-							}
+							snp.effectAllele = al.allele
+							allele_td.selectAll('button').style('border', 'none')
+							allele_div.style('border', '2px solid #bbb').style('background', '#d9ead3')
 						})
 
 					allele_div
@@ -354,6 +353,43 @@ function makeEditMenu(self, div) {
 				})
 		}
 	}
+}
+
+function updateSnps(snps, tmp_snps) {
+	// return if rsids and effect alleles are same for both copy of snps, 
+	// as rsid and effect allele are only editable property from edit menu
+	if (arrayEquals(snps.map(s=>s.effectAllele), tmp_snps.map(s=>s.effectAllele)) &&
+		arrayEquals(snps.map(s=>s.rsid), tmp_snps.map(s=>s.rsid)))
+		return
+	else {
+		// 'deleted' from edit menu
+		// check each tw.snps, if missing from tmp_snps, delete it
+		for (const [i, s] of snps.entries()) {
+			const s1 = tmp_snps.find(snp => snp.rsid == s.rsid)
+			// snp deleted from edit menu, remove from tw.snps
+			if (s1 === undefined) {
+				snps.splice(i, 1)
+			} else {
+				// effectAllele changed from edit menu 
+				if (s.effectAllele !== s1.effectAllele)
+				s.effectAllele = s1.effectAllele
+			}
+		}
+		// added from textarea
+		// check each tmp_snps, if missing from tw.snps, add it 
+		for (const [i, s] of tmp_snps.entries()) {
+			const s1 = snps.find(snp => snp.rsid == s.rsid)
+			// snp added from text area, add to tmp_snps
+			if (s1 === undefined) { snps.push(s) }
+		}
+	}
+}
+
+function arrayEquals(array1, array2) {
+	return Array.isArray(array1) &&
+    	Array.isArray(array2) &&
+    	array1.length === array2.length &&
+    	array1.every((v, i) => v === array2[i])
 }
 
 function getTermName(snps) {
