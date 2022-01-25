@@ -1,9 +1,10 @@
+/*
+if the "effect allele" is already set for a snp (by user), return it
+otherwise, compute it based on the alleleType setting (from snplst q{})
+
+snp: { effectAllele, alleles[ {allele, count, isRef} ] }
+*/
 export function get_effectAllele(alleleType, snp) {
-	/*
-	code is duplicated between 
-	q is self.q
-	snp: { effectAllele, alleles[ {allele, count, isRef} ] }
-	*/
 	if (snp.effectAllele) {
 		// already selected by user
 		return snp.effectAllele
