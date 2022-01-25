@@ -2100,7 +2100,10 @@ async function getMultiReadAligInfo(tk, group, block) {
 	//console.log('multi_read_alig_data.alignmentData:', multi_read_alig_data.alignmentData)
 	wait.remove()
 
-	if (multi_read_alig_data.alignmentData.final_read_align.length > 0) {
+	if (
+		multi_read_alig_data.alignmentData.final_read_align.length > 0 &&
+		(group.data.type == 'support_alt' || group.data.type == 'support_ref')
+	) {
 		// Gene models are displayed only if there is a reference/alternate sequence being displayed
 		let gene_button_div = tk.alignpane.body
 		const gene_button = gene_button_div
