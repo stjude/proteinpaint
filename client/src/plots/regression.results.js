@@ -83,10 +83,38 @@ export class RegressionResults {
 		const tw = this.config.independent.find(t => t.id == tid)
 		if (tw) return tw
 		// not found by tid; check for snps in snplst
-		for (const tw of this.config.independent) {
-			if (tw.term.snps) {
-				const snp = tw.term.snps.find(i => i.snpid == tid)
-				if (snp) return snp
+		for (const t of this.config.independent) {
+			if (t.term.snps) {
+				const snp = t.term.snps.find(i => i.snpid == tid)
+				if (snp) {
+					// this input is one of the snps from this snplst term
+					// {snpid, effectAllele, alleles[], .. }
+					// return something looking like a termwrapper and represents this snp
+					const tw = {
+						id: snp.snpid
+					}
+					if (snp.effectAllele) {
+						// user chosen
+						tw.effectAllele = snp.effectAllele
+					} else {
+						// figure out from setting
+						if (t.q.alleleType == 0) {
+							// find the allele with smallest count
+							tw.effectAllele = snp.alleles[0].allele
+							let c = snp.alleles[0].count
+							for (let i = 1; i < snp.alleles.length; i++) {
+								const a = snp.alleles[i]
+								if (a.count < c) {
+									tw.effectAllele = a.allele
+									c = a.count
+								}
+							}
+						} else {
+							tw.effectAllele = snp.alleles.find(i => i.isRef).allele
+						}
+					}
+					return tw
+				}
 			}
 		}
 		throw 'unknown independent term'
@@ -197,6 +225,7 @@ function setRenderers(self) {
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
 			const tw = self.getIndependentTerm(tid)
+			console.log(tw)
 			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 
 			// col 1: term name

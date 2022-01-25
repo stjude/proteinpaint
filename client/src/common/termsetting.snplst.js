@@ -281,8 +281,8 @@ function makeEditMenu(self, div) {
 						.style('margin', '0px 3px')
 						.style('padding', '3px 7px')
 						.style('border-radius', '3px')
-						.style('width','100px')
-						.style('background-color','#d9ead3')
+						.style('width', '100px')
+						.style('background-color', '#d9ead3')
 						.style('border', al.allele == snp.effectAllele ? '2px solid #bbb' : 'none')
 						.on('mouseover', () => {
 							if (al.allele == snp.effectAllele) return
@@ -301,24 +301,26 @@ function makeEditMenu(self, div) {
 							else {
 								snp.effectAllele = al.allele
 								allele_td.selectAll('button').style('border', 'none')
-								allele_div.style('border', '2px solid #bbb')
-									.style('background', '#d9ead3')
+								allele_div.style('border', '2px solid #bbb').style('background', '#d9ead3')
 							}
 						})
 
-						allele_div.append('div')
-							.style('display', 'inline-block')
-							.text(`${al.allele}  `)
+					allele_div
+						.append('div')
+						.style('display', 'inline-block')
+						.text(`${al.allele}  `)
 
-						allele_div.append('div')
-							.style('display', 'inline-block')
-							.style('margin', '0px 5px')
-							.style('font-size','.8em')
-							.text(`${allele_freq}%`)
+					allele_div
+						.append('div')
+						.style('display', 'inline-block')
+						.style('margin', '0px 5px')
+						.style('font-size', '.8em')
+						.text(`${allele_freq}%`)
 
-						// show reference allele tag
-						if(al.isRef) {
-						allele_div.append('div')
+					// show reference allele tag
+					if (al.isRef) {
+						allele_div
+							.append('div')
 							.style('display', 'inline-block')
 							.style('padding', '2px')
 							.style('border', '1px solid #bbb')
@@ -326,8 +328,8 @@ function makeEditMenu(self, div) {
 							.style('color', '#999')
 							.style('font-size', '.7em')
 							.text('REF')
-						}
 					}
+				}
 			}
 
 			// col 4: genetype (frequency)
@@ -419,6 +421,7 @@ async function validateInput(self) {
 		const s1 = data.snps[i]
 		s.snpid = s1.snpid
 		s.invalid = s1.invalid
+		s.referenceAllele = s1.referenceAllele
 	}
 }
 

@@ -283,7 +283,6 @@ function setRenderers(self) {
 					.style('font-size', '.7em')
 					.text('Click to set a row as reference.')
 			} else if (t.term.type == 'snplst') {
-				console.log(t)
 				const invalid_snps_count = t.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
 				dom.term_summmary_div.html(
 					`${q.numOfSampleWithAnyValidGT} samples with valid genotypes.` +
