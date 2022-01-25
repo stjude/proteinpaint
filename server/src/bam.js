@@ -1294,16 +1294,22 @@ should summarize into bins, each bin for a pixel with .coverage for each pixel, 
 */
 async function run_samtools_depth(q, r) {
 	const bplst = []
+	const args = [
+		'depth',
+		'-r',
+		(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
+		'-g',
+		'DUP',
+		q.file || q.url
+	]
+	// Show/Hide PCR optical duplicates
+	if (q.drop_pcrduplicates) {
+		args.push('-G')
+		args.push('0x400')
+	}
 	await utils.get_lines_bigfile({
 		isbam: true,
-		args: [
-			'depth',
-			'-r',
-			(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
-			'-g',
-			'DUP',
-			q.file || q.url
-		],
+		args: args,
 		dir: q.dir,
 		callback: line => {
 			const l = line.split('\t')
