@@ -100,7 +100,7 @@ function makeTextEntryFilePathInput(div, doms) {
 				fetch(data)
 					.then(req => req.text())
 					.then(txt => {
-						doms.data = parseTabDelimitedData(txt, doms)
+						doms.data = parseTabDelimitedData(txt)
 					})
 			} else {
 				//TODO: implement serverside filepaths(?)
@@ -115,7 +115,7 @@ function makeFileUpload(div, doms) {
 		const file = d3event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
-			doms.data = parseTabDelimitedData(event.target.result, doms)
+			doms.data = parseTabDelimitedData(event.target.result)
 		}
 		reader.readAsText(file, 'utf8')
 	})
@@ -128,12 +128,19 @@ function makeCopyPasteInput(div, doms) {
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.on('keyup', async () => {
-			doms.data = parseTabDelimitedData(paste.property('value').trim(), doms)
+			doms.data = parseTabDelimitedData(paste.property('value').trim())
 		})
 }
 
 //Parse tab delimited files only
-function parseTabDelimitedData(input, doms) {
+function parseTabDelimitedData(input) {
+	const lines = input.trim().split(/\r?\n/)
+
+	/* 
+    Parses phenotree:
+        - Parses tab delim data arranged in cols: Level1, Level2, Level3, Level4, Level5, Key(i.e. ID), Configuration
+        - Checks for identical keys
+    */
 	const terms = {
 		__root: {
 			id: 'root',
@@ -141,27 +148,7 @@ function parseTabDelimitedData(input, doms) {
 			__tree_isroot: true
 		}
 	}
-	//Maybe arg to reuse for other data uploads (i.e sample anno matrix)
-	// const required_headers = ['Name', 'variable_name', 'variable_note']
-	const lines = input.trim().split(/\r?\n/)
-	// const headers = lines.shift().split('\t')
-
-	//Check for bare minimum data elements
-	// const searchHeaders = headers.map(e => {
-	// 	return e.toLowerCase()
-	// })
-	// for (const i in required_headers) {
-	// 	let headIndex = searchHeaders.indexOf(required_headers[i].toLowerCase())
-	// 	if (headIndex == -1) throw 'Missing data column: ' + required_headers[i]
-	// }
-
-	//Key column allowed to be anywhere in the data - support hierarchy needs later.
-	//Maybe arg to reuse for other data uploads (i.e sample anno matrix)
-	// const colKey = 'variable_name'
-	// const dataKeyIndex = searchHeaders.indexOf(colKey.toLocaleLowerCase())
-	// data.samplekey = headers[dataKeyIndex]
-
-	//Parse phenotree
+	const keys = []
 	for (const i in lines) {
 		const [col1, col2, col3, col4, col5, key0, configstr0] = lines[i].split('\t') //Required format
 		try {
@@ -183,27 +170,26 @@ function parseTabDelimitedData(input, doms) {
 				//if key0 missing, use name
 				let key = key0 ? key0.trim() : ''
 				if (!key) key = name
+				keys.push(key)
 
+				//Parses col7 into type and values
 				const term = parseConfig(configstr)
+
 				terms[key] = {
 					id: key,
-					name: name,
+					name,
 					isleaf: true,
 					type: term.type,
-					values: term.values
+					values: term.values,
+					groupsetting: term.groupsetting
 				}
-				// console.log(term.values)
-				// term.name = name
-				// term.id = key
-				// term.isleaf = true
-
-				// terms.push(term)
-				// terms[key] = term
 			}
 		} catch (e) {
 			throw 'Line ' + (i + 1) + ' error: ' + e
 		}
 	}
+	check4DuplicateKeys(keys)
+
 	// console.log({terms: Object.values(terms)})
 	return { terms: Object.values(terms) }
 }
@@ -253,6 +239,7 @@ function parseConfig(str) {
 
 		for (let i in line) {
 			if (i > 0) {
+				//Skip type, defined above
 				const field = line[i].trim()
 				if (field == '') continue
 				const [key, value] = field.split(/(?<!\>|\<)=/)
@@ -273,13 +260,24 @@ function parseConfig(str) {
 		}
 	}
 
-	// // for all above cases, will have these two
-	// term._values_foundinmatrix = new Map()
-
-	// if (term.type == 'categorical') {
-	// 	term.groupsetting = { inuse: false }
-	// }
+	if (term.type == 'categorical') {
+		term.groupsetting = { inuse: false }
+	}
 	return term
+}
+
+function check4DuplicateKeys(keys) {
+	const duplicates = new Set()
+	for (const i in keys) {
+		if (keys.indexOf(keys[i]) !== keys.lastIndexOf(keys[i])) {
+			duplicates.add(keys[i])
+		}
+	}
+	if (duplicates.size > 0) {
+		const dup = Array.from(duplicates)
+		alert(`Error: ID(s) ` + dup + ` is/are not unique. Must IDs must be unique value`)
+	}
+	return true
 }
 
 function submitButton(div, doms, holder) {
@@ -294,19 +292,11 @@ function submitButton(div, doms, holder) {
 }
 
 function validateInput(doms) {
-	// if (!doms.term) {
-	// 	alert('Provide data')
-	// 	return
-	// }
-	// const terms = {
-	// 	__root: {
-	// 		id: 'root',
-	// 		name: 'root',
-	// 		__tree_isroot: true
-	// 	}
-	// }
-
-	console.log(310, doms.data)
+	if (!doms.data) {
+		alert('Provide data')
+		return
+	}
+	console.log(doms.data)
 }
 
 function infoSection(div) {
