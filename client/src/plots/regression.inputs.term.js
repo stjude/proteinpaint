@@ -194,7 +194,7 @@ export class InputTerm {
 
 			// delete existing sample summaries from snps, in case when a snp is no longer found in latest cohort due to filtering
 			for (const s of tw.term.snps) {
-				delete s.allele2count
+				delete s.alleles
 				delete s.gt2count
 			}
 
@@ -202,14 +202,13 @@ export class InputTerm {
 			// note!
 			// will add attributes to tw which are not written to state
 			// but should be fine
-			// same query is performed in 'termsetting.snplst', 
+			// same query is performed in 'termsetting.snplst',
 			// so return if all snps have data from query
-			if(tw.term.snps.every(snp => snp.allele2count)) return
 			for (const s of data.snps) {
-				// { snpid, allele2count{} }
+				// { snpid, alleles, gt2count }
 				const snp = tw.term.snps.find(i => i.snpid == s.snpid)
 				if (!snp) throw 'snp not found by id'
-				snp.allele2count = s.allele2count
+				snp.alleles = s.alleles
 				snp.gt2count = s.gt2count
 			}
 			tw.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
