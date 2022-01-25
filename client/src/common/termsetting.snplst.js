@@ -183,7 +183,6 @@ function makeEditMenu(self, div) {
 		.on('click', async () => {
 			// parse input text
 			const snps = parseSnpFromText(self, textarea)
-			self.doNotHideTip = false
 			if (self.term) {
 				if (!self.term.snps) self.term.snps = [] // possible if term of a different type was there before?
 				// already have term;
@@ -198,7 +197,7 @@ function makeEditMenu(self, div) {
 			}
 			if (snps.length) {
 				// don't hide tip only when textarea have values
-				self.doNotHideTip = true
+				self.doNotHideTipInMain = true
 			}
 			// set term type in case the instance had a different term before
 			self.term.type = 'snplst'
@@ -211,7 +210,7 @@ function makeEditMenu(self, div) {
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
 			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
-			if ( snplst_table !== undefined ) renderSnpEditTable(snplst_table)
+			if (snplst_table !== undefined) renderSnpEditTable(snplst_table)
 			else initSnpEditTable()
 			textarea.property('value', '')
 			submit_btn.property('disabled', false)
@@ -220,12 +219,13 @@ function makeEditMenu(self, div) {
 			self.updateUI()
 		})
 
-	function initSnpEditTable(){
+	function initSnpEditTable() {
 		snplst_td.style('padding-bottom', '20px')
 		snplst_table = snplst_td.append('table')
 		renderSnpEditTable(snplst_table)
 
-		snplst_td.append('div')
+		snplst_td
+			.append('div')
 			.style('opacity', 0.4)
 			.style('font-size', '.7em')
 			.html(
@@ -247,7 +247,7 @@ function makeEditMenu(self, div) {
 			title_tr
 				.append('td')
 				.text(c.title)
-				.style('font-size','.8em')
+				.style('font-size', '.8em')
 				.style('text-align', 'center')
 				.style('padding', '8px')
 		})
@@ -273,10 +273,11 @@ function makeEditMenu(self, div) {
 
 			if (!invalid_snp) {
 				for (const [allele, allele_ct] of Object.entries(snp.allele2count)) {
-					const allele_freq = Math.round(allele_ct*100/(sample_count*2))
-					const allele_div = allele_td.append('div')
-						.style('display','inline-block')
-						.style('margin','0px 3px')
+					const allele_freq = Math.round((allele_ct * 100) / (sample_count * 2))
+					const allele_div = allele_td
+						.append('div')
+						.style('display', 'inline-block')
+						.style('margin', '0px 3px')
 						.style('padding', '3px 7px')
 						.style('border-radius', '3px')
 						.style('border', allele == snp.effectAllele ? '2px solid #bbb' : '')
@@ -308,9 +309,10 @@ function makeEditMenu(self, div) {
 			const gt_td = tr.append('td')
 			if (!invalid_snp) {
 				for (const [gt, freq] of Object.entries(snp.gt2count)) {
-					const gt_freq = Math.round(freq * 100 / sample_count)
-					gt_td.append('div')
-						.style('display','inline-block')
+					const gt_freq = Math.round((freq * 100) / sample_count)
+					gt_td
+						.append('div')
+						.style('display', 'inline-block')
 						.style('padding', '3px 5px')
 						.text(`${gt} (${gt_freq}%)`)
 				}
@@ -322,7 +324,7 @@ function makeEditMenu(self, div) {
 				.append('div')
 				.style('margin', '3px')
 				.style('opacity', 0.4)
-				.style('font-size','.8em')
+				.style('font-size', '.8em')
 				.style('cursor', 'pointer')
 				.text('DELETE')
 				.on('click', () => {
@@ -391,7 +393,7 @@ async function validateInput(self) {
 	}
 }
 
-async function getSnpData(self){
+async function getSnpData(self) {
 	const qlst = [`cacheid=${self.q.cacheid}`]
 	const data = await self.vocabApi.getCategories(self.term, self.filter, qlst)
 	if (!data) throw `no data for term.id='${self.term.id}'`
