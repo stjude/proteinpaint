@@ -192,7 +192,8 @@
             "app": "Apps",
             "blurb": "Custom vocabulary",
             "image": "",
-            "new_expire": "2022-04-01",
+            "hidden": true, 
+            "isbeta": true,
             "sandboxjson": "dictionary",
             "searchterms": ["clinical", "dictionary"]
         }
