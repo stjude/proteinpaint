@@ -192,7 +192,7 @@ function makeEditMenu(self, div) {
 				// no term; require valid submission in textarea
 				if (!snps.length) return window.alert('No valid SNPs')
 				// have valid input; create new term
-				self.term = { snps } // term does not have id
+				self.term = { id: makeId(), snps } // term does not have id
 				self.q = {} // q does not have mode
 			}
 			if (snps.length) {
@@ -411,9 +411,22 @@ async function getSnpData(self) {
 export async function fillTW(tw, vocabApi) {
 	if (!tw.q) tw.q = {}
 	if (!tw.term.name) tw.term.name = getTermName(tw.term.snps)
+	if ('id' in tw) {
+		if (!('id' in tw.term)) {
+			tw.term.id = tw.id
+		}
+	} else {
+		if (!('id' in tw.term)) tw.term.id = makeId()
+		tw.id = tw.term.id
+	}
+
 	await validateInput({
 		term: tw.term,
 		q: tw.q,
 		vocabApi
 	})
+}
+
+function makeId() {
+	return 'snplst' + Math.random()
 }
