@@ -3,6 +3,7 @@ import { sayerror } from '../dom/error'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { axisstyle } from '../dom/axisstyle'
+import { get_effectAllele } from '../common/termsetting.snplst.effAle'
 
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
 const forestcolor = '#126e08'
@@ -91,27 +92,8 @@ export class RegressionResults {
 					// {snpid, effectAllele, alleles[], .. }
 					// return something looking like a termwrapper and represents this snp
 					const tw = {
-						id: snp.snpid
-					}
-					if (snp.effectAllele) {
-						// user chosen
-						tw.effectAllele = snp.effectAllele
-					} else {
-						// figure out from setting
-						if (t.q.alleleType == 0) {
-							// find the allele with smallest count
-							tw.effectAllele = snp.alleles[0].allele
-							let c = snp.alleles[0].count
-							for (let i = 1; i < snp.alleles.length; i++) {
-								const a = snp.alleles[i]
-								if (a.count < c) {
-									tw.effectAllele = a.allele
-									c = a.count
-								}
-							}
-						} else {
-							tw.effectAllele = snp.alleles.find(i => i.isRef).allele
-						}
+						id: snp.snpid,
+						effectAllele: get_effectAllele(t.q.alleleType, snp)
 					}
 					return tw
 				}
@@ -225,7 +207,6 @@ function setRenderers(self) {
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
 			const tw = self.getIndependentTerm(tid)
-			console.log(tw)
 			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 
 			// col 1: term name
@@ -245,6 +226,19 @@ function setRenderers(self) {
 					.html(
 						'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">REF</span> ' +
 							(tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp) +
+							'</span>'
+					)
+			}
+
+			if (tw.effectAllele) {
+				// only for snplst term
+				termNameTd
+					.append('div')
+					.style('font-size', '.8em')
+					.style('opacity', 0.6)
+					.html(
+						'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">EFFECT ALLELE</span> ' +
+							tw.effectAllele +
 							'</span>'
 					)
 			}

@@ -23,7 +23,7 @@ snps[ {} ]
 	.dbsnpRef: ref allele from dbSNP
 	.dbsnpAlts[]: alt alleles from dbSNP
 	.referenceAllele: ref allele from bcf file
-	.bcfAlts[]: alt alleles from bcf file
+	.altAlleles[]: alt alleles from bcf file
 	.gtlst[]: per-sample genotypes
 
 cache file has a header line, with one line per valid snp. columns: 
@@ -140,7 +140,7 @@ async function validateInputCreateCache(q, tdb, ds, genome) {
 	// rsid has been converted to chr/pos/dbsnpRef/dbsnpAlts
 
 	const cacheid = await queryBcf(q, snps, ds)
-	// snp.referenceAllele is added
+	// added: snp.referenceAllele, snp.altAlleles
 
 	return { snps, cacheid }
 }
@@ -273,7 +273,7 @@ async function queryBcf(q, snps, ds) {
 			if (!snp) return
 
 			snp.referenceAllele = ref
-			snp.bcfAlts = alts
+			snp.altAlleles = alts
 
 			// determine sample genotypes
 			snp.gtlst = [] // same order as tk.samples
@@ -301,7 +301,7 @@ async function queryBcf(q, snps, ds) {
 				'\t' +
 				snp.referenceAllele +
 				'\t' +
-				snp.bcfAlts.join(',') +
+				snp.altAlleles.join(',') +
 				'\t' +
 				(snp.effectAllele || '') +
 				'\t' +

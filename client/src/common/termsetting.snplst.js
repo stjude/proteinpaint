@@ -1,4 +1,5 @@
 import { event as d3event } from 'd3-selection'
+import { get_effectAllele } from './termsetting.snplst.effAle'
 
 /* 
 storing snps on self.term but not self so it can be written to state,
@@ -273,8 +274,11 @@ function makeEditMenu(self, div) {
 			const allele_td = tr.append('td')
 
 			if (!invalid_snp) {
+				const effectAllele = get_effectAllele(self.q.alleleType, snp)
+
 				for (const [j, al] of snp.alleles.entries()) {
 					const allele_freq = Math.round((al.count * 100) / (sample_count * 2))
+					// TODO when snp.effectAllele is not given should auto decide
 					const allele_div = allele_td
 						.append('button')
 						.style('display', 'inline-block')
@@ -283,21 +287,21 @@ function makeEditMenu(self, div) {
 						.style('border-radius', '3px')
 						.style('width', '100px')
 						.style('background-color', '#d9ead3')
-						.style('border', al.allele == snp.effectAllele ? '2px solid #bbb' : 'none')
+						.style('border', al.allele == effectAllele ? '2px solid #bbb' : 'none')
 						.on('mouseover', () => {
-							if (al.allele == snp.effectAllele) return
+							if (al.allele == effectAllele) return
 							else {
 								allele_div.style('background-color', '#fff2cc').style('cursor', 'pointer')
 							}
 						})
 						.on('mouseout', () => {
-							if (al.allele == snp.effectAllele) return
+							if (al.allele == effectAllele) return
 							else {
 								allele_div.style('background', '#d9ead3')
 							}
 						})
 						.on('click', () => {
-							if (al.allele == snp.effectAllele) return
+							if (al.allele == effectAllele) return
 							else {
 								snp.effectAllele = al.allele
 								allele_td.selectAll('button').style('border', 'none')
@@ -322,11 +326,11 @@ function makeEditMenu(self, div) {
 						allele_div
 							.append('div')
 							.style('display', 'inline-block')
-							.style('padding', '2px')
+							.style('padding', '1px 5px')
 							.style('border', '1px solid #bbb')
-							.style('border-radius', '7px')
+							.style('border-radius', '10px')
 							.style('color', '#999')
-							.style('font-size', '.7em')
+							.style('font-size', '.5em')
 							.text('REF')
 					}
 				}
@@ -337,15 +341,17 @@ function makeEditMenu(self, div) {
 			if (!invalid_snp) {
 				for (const [gt, freq] of Object.entries(snp.gt2count)) {
 					const gt_freq = Math.round((freq * 100) / sample_count)
-					gt_td.append('div')
+					gt_td
+						.append('div')
 						.style('display', 'inline-block')
 						.style('padding', '3px 5px')
 						.text(`${gt}`)
 
-					gt_td.append('div')
+					gt_td
+						.append('div')
 						.style('display', 'inline-block')
-						.style('padding','0px 6px 0px 2px')
-						.style('font-size','.8em')
+						.style('padding', '0px 6px 0px 2px')
+						.style('font-size', '.8em')
 						.text(`${gt_freq}%`)
 				}
 			}
