@@ -17,7 +17,7 @@ self.term{}
 		// following attributes are computed by validation
 		.snpid
 		.invalid
-		.allele2count
+		.alleles[ {allele, count, isRef} ]
 		.gt2count
 self.q{}
 	.alleleType: int
@@ -52,22 +52,6 @@ export function getHandler(self) {
 	}
 }
 
-/*
-scenario I
-when user accesses snplst option from noTermPromptOptions, this termsetting instance is "blank"
-clicking Submit button from this UI will create self.term and self.q
-it's important to note that, before clicking Submit, user can still hide the menu,
-and launch another option from noTermPromptOptions.
-thus, this UI must not alter self attributes (term and q) until Submit is created
-to avoid creating attributes on self that's irrelevant to the new term
-
-scenario II
-self.term is set, either recovered from state, or from user input in scenario I
-both .term and .q should be present
-run the same ui code but is populated with existing settings
-user can make changes to snp list, and other controls
-and must click Submit to save
-*/
 function makeEditMenu(self, div) {
 	// the ui will create following controls, to be accessed upon clicking Submit button
 	let snplst_table, textarea, select_alleleType, select_geneticModel, select_missingGenotype
@@ -81,7 +65,7 @@ function makeEditMenu(self, div) {
 		.append('td')
 		.attr('colspan', 2)
 	if (self.term && self.term.snps) {
-		// show list of snps as well as status for each: {invalid, allele2count{}, gt2count{} } }
+		// show list of snps as well as status for each
 		initSnpEditTable()
 	}
 
@@ -278,7 +262,6 @@ function makeEditMenu(self, div) {
 
 				for (const [j, al] of snp.alleles.entries()) {
 					const allele_freq = Math.round((al.count * 100) / (sample_count * 2))
-					// TODO when snp.effectAllele is not given should auto decide
 					const allele_div = allele_td
 						.append('button')
 						.style('display', 'inline-block')
