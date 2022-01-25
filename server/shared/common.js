@@ -91,7 +91,10 @@ export const mclass = {
 		dt: dtsnvindel,
 		desc: 'A variant near an exon edge that may affect splicing functionality.'
 	},
-	Intron: { label: 'INTRON', color: '#bbbbbb', dt: dtsnvindel, desc: 'An intronic variant.' }
+	Intron: { label: 'INTRON', color: '#bbbbbb', dt: dtsnvindel, desc: 'An intronic variant.' },
+
+	// quick fix!! for showing genes that are not tested in samples (e.g. gene panels) in the heatmap
+	Blank: { label: 'Not tested', color: '#fff', dt: dtsnvindel, desc: 'This gene is not tested.' }
 }
 export const mclassitd = 'ITD'
 mclass[mclassitd] = {
@@ -188,6 +191,8 @@ export function mclasstester(s) {
 			return mclassutr5
 		case "5'flank":
 			return mclassnoncoding
+		case 'blank':
+			return 'Blank'
 		default:
 			return null
 	}

@@ -219,7 +219,7 @@ async function queryBcf(q, snps, ds) {
 	//const sample2snpcount = new Map(samples.map(sample => [sample, 0])) // {k: sample, v: number of snps with valid gt}
 	await utils.get_lines_bigfile({
 		isbcf: true,
-		args: ['query', '-T', coordsfile, '-f', bcfformat, '-v', bcffiles],
+		args: ['query', '-R', coordsfile, '-f', bcfformat, '-v', bcffiles],
 		dir: tk.dir,
 		callback: line => {
 			// chr, pos, ref, alt, '0/0', '0/0', '0/1', '1/1', ...
@@ -241,11 +241,9 @@ async function queryBcf(q, snps, ds) {
 					return snp
 				}
 			})
-			if (!snp) {
-				const bcfSNP = chr + ':' + pos + '_' + ref + '_' + alts.join(',')
-				throw `bcf snp: '${bcfSNP}' does not match a query snp`
-			}
-			snp.bcfRef = ref // TODO change attribute name
+			if (!snp) return
+
+			snp.bcfRef = ref
 			snp.bcfAlts = alts
 
 			// determine sample genotypes
@@ -263,7 +261,8 @@ async function queryBcf(q, snps, ds) {
 	// write snp data to cache file
 	const lines = ['snpid\tchr\tpos\tref\talt\teff\t' + tk.samples.map(i => i.name).join('\t')]
 	for (const snp of snps) {
-		if (snp.invalid) continue
+		if (snp.invalid) continue // invalid snp
+		if (!snp.gtlst) continue // snp was not found in bcf
 		lines.push(
 			snp.snpid +
 				'\t' +

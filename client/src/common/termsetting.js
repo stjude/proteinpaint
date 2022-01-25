@@ -117,7 +117,12 @@ class TermSetting {
 
 	async main(data = {}) {
 		try {
-			this.dom.tip.hide()
+			if (this.doNotHideTipInMain) {
+				// single use: if true then delete
+				delete this.doNotHideTipInMain
+			} else {
+				this.dom.tip.hide()
+			}
 			this.hasError = false
 			delete this.error
 			this.validateMainData(data)
