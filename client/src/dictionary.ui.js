@@ -100,7 +100,7 @@ function makeTextEntryFilePathInput(div, doms) {
 				fetch(data)
 					.then(req => req.text())
 					.then(txt => {
-						parseTabDelimitedData(txt, doms)
+						doms.data = parseTabDelimitedData(txt, doms)
 					})
 			} else {
 				//TODO: implement serverside filepaths(?)
@@ -115,7 +115,7 @@ function makeFileUpload(div, doms) {
 		const file = d3event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
-			parseTabDelimitedData(event.target.result, doms)
+			doms.data = parseTabDelimitedData(event.target.result, doms)
 		}
 		reader.readAsText(file, 'utf8')
 	})
@@ -128,13 +128,19 @@ function makeCopyPasteInput(div, doms) {
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.on('keyup', async () => {
-			parseTabDelimitedData(paste.property('value').trim(), doms)
+			doms.data = parseTabDelimitedData(paste.property('value').trim(), doms)
 		})
 }
 
 //Parse tab delimited files only
 function parseTabDelimitedData(input, doms) {
-	const key2terms = {}
+	const terms = {
+		__root: {
+			id: 'root',
+			name: 'root',
+			__tree_isroot: true
+		}
+	}
 	//Maybe arg to reuse for other data uploads (i.e sample anno matrix)
 	// const required_headers = ['Name', 'variable_name', 'variable_note']
 	const lines = input.trim().split(/\r?\n/)
@@ -179,16 +185,27 @@ function parseTabDelimitedData(input, doms) {
 				if (!key) key = name
 
 				const term = parseConfig(configstr)
-				term.name = name
-				// console.log(term)
-				key2terms[key] = term
+				terms[key] = {
+					id: key,
+					name: name,
+					isleaf: true,
+					type: term.type,
+					values: term.values
+				}
+				// console.log(term.values)
+				// term.name = name
+				// term.id = key
+				// term.isleaf = true
+
+				// terms.push(term)
+				// terms[key] = term
 			}
 		} catch (e) {
 			throw 'Line ' + (i + 1) + ' error: ' + e
 		}
 	}
-	console.log(key2terms)
-	return key2terms
+	// console.log({terms: Object.values(terms)})
+	return { terms: Object.values(terms) }
 }
 
 function getName(L2, L3, L4, L5) {
@@ -208,10 +225,10 @@ function parseConfig(str) {
 	const term = {}
 
 	if (str == 'string') {
-		// is categorical term without predefined categories, need to collect from matrix, no further validation
+		// Not relevant yet: is categorical term without predefined categories, need to collect from matrix, no further validation
 		term.type = 'categorical'
 		term.values = {}
-		// list of categories not provided in configstr so need to sum it up from matrix
+		// Not relevant yet: list of categories not provided in configstr so need to sum it up from matrix
 		term._set = new Set() // temp
 	} else {
 		const line = str.replace('"', '').split(';')
@@ -221,10 +238,10 @@ function parseConfig(str) {
 		} else if (config == 'float') {
 			term.type = 'float'
 		} else {
-			// must be categorical, f1 is either key=value or 'string'
+			// must be categorical, config is either key=value or 'string'
 			term.type = 'categorical'
 			term.values = {}
-			term._values_newinmatrix = new Set()
+			// term._values_newinmatrix = new Set() //Not needed yet
 			if (config == 'string') {
 				//ignore
 			} else {
@@ -235,8 +252,8 @@ function parseConfig(str) {
 		}
 
 		for (let i in line) {
-			const field = line[i].trim()
 			if (i > 0) {
+				const field = line[i].trim()
 				if (field == '') continue
 				const [key, value] = field.split(/(?<!\>|\<)=/)
 				if (!value) throw 'field ' + (i + 1) + ' is not k=v: ' + field
@@ -277,10 +294,19 @@ function submitButton(div, doms, holder) {
 }
 
 function validateInput(doms) {
-	if (!doms.term) {
-		alert('Provide data')
-		return
-	}
+	// if (!doms.term) {
+	// 	alert('Provide data')
+	// 	return
+	// }
+	// const terms = {
+	// 	__root: {
+	// 		id: 'root',
+	// 		name: 'root',
+	// 		__tree_isroot: true
+	// 	}
+	// }
+
+	console.log(310, doms.data)
 }
 
 function infoSection(div) {
