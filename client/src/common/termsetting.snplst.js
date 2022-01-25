@@ -344,6 +344,7 @@ function makeEditMenu(self, div) {
 
 					gt_td.append('div')
 						.style('display', 'inline-block')
+						.style('padding','0px 6px 0px 2px')
 						.style('font-size','.8em')
 						.text(`${gt_freq}%`)
 				}
