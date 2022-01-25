@@ -481,7 +481,7 @@ class FrontendVocab {
 	}
 
 	getTermdbConfig() {
-		return { termdbConfig: { selectCohort: this.vocab.selectCohort } }
+		return { selectCohort: this.vocab.selectCohort, supportedChartTypes: [] }
 	}
 
 	getTermChildren(term, cohortValuelst) {

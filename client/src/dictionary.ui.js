@@ -2,6 +2,7 @@ import * as uiutils from './dom/uiUtils'
 import { appear } from './dom/animation'
 import { init_tabs } from './dom/toggleButtons'
 import { event as d3event } from 'd3-selection'
+import { appInit } from './mass/app'
 
 /* 
 Launches MASS UI by uploading a custom data dictionary
@@ -56,18 +57,20 @@ function makeDataEntryTabs(tabs_div, doms) {
 			callback: async div => {
 				if (!tabs[0].rendered) {
 					div.style('border', 'none').style('display', 'block')
+					div.append('div').html(`<p style="opacity:0.65;">Provide either a URL filepath or upload a file.</p>`)
 					const files_div = div
 						.append('div')
 						.style('border', 'none')
 						.style('display', 'grid')
-						.style('grid-template-columns', '200px auto')
+						.style('grid-template-columns', '100px auto')
 						.style('grid-template-rows', 'repeat(1, auto)')
 						.style('gap', '5px')
 						.style('place-items', 'center left')
+						.style('margin-left', '15px')
 					appear(div)
-					uiutils.makePrompt(files_div, 'Provide Filepath')
+					uiutils.makePrompt(files_div, 'Filepath')
 					makeTextEntryFilePathInput(files_div, doms)
-					uiutils.makePrompt(files_div, 'Upload File')
+					uiutils.makePrompt(files_div, 'Upload')
 					makeFileUpload(files_div, doms)
 					tabs[0].rendered = true
 				}
@@ -78,7 +81,9 @@ function makeDataEntryTabs(tabs_div, doms) {
 			callback: async div => {
 				if (!tabs[1].rendered) {
 					div.style('border', 'none').style('display', 'block')
-					div.append('div').html(`<p style="margin-left: 10px;">Paste Data</p>`)
+					div
+						.append('div')
+						.html(`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary in a tab delimited format.</p>`)
 					appear(div)
 					makeCopyPasteInput(div, doms)
 					tabs[1].rendered = true
@@ -115,7 +120,9 @@ function makeFileUpload(div, doms) {
 		const file = d3event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
+			console.log(120, 'preparse')
 			doms.data = parseTabDelimitedData(event.target.result)
+			// console.log(122, 'post parse', doms)
 		}
 		reader.readAsText(file, 'utf8')
 	})
@@ -138,8 +145,8 @@ function parseTabDelimitedData(input) {
 
 	/* 
     Parses phenotree:
-        - Parses tab delim data arranged in cols: Level1, Level2, Level3, Level4, Level5, Key(i.e. ID), Configuration
-        - Checks for identical keys
+        - Parses tab delim data arranged in cols: Level1, Level2, Level3, Level4, Level5, Key(i.e. ID), Configuration.
+        - Checks for identical keys.
     */
 	const terms = {
 		__root: {
@@ -148,14 +155,14 @@ function parseTabDelimitedData(input) {
 			__tree_isroot: true
 		}
 	}
-	const keys = []
+	const keys = [] //To check for duplicate values later
 	for (const i in lines) {
 		const [col1, col2, col3, col4, col5, key0, configstr0] = lines[i].split('\t') //Required format
 		try {
 			if (i > 0) {
 				//Skip header
 				if (!configstr0 || !configstr0.trim()) {
-					console.error('missing configuration string, line: ' + i + ', term: ' + key0)
+					console.error('Missing configuration string, line: ' + i + ', term: ' + key0)
 					continue
 				}
 				const L1 = col1.trim()
@@ -165,18 +172,20 @@ function parseTabDelimitedData(input) {
 				const L5 = col5.trim()
 				const configstr = configstr0.replace('"', '').trim()
 
-				const name = getName(L2, L3, L4, L5)
+				const name = getName(L2, L3, L4, L5).replace(/\"/g, '')
 
 				//if key0 missing, use name
 				let key = key0 ? key0.trim() : ''
 				if (!key) key = name
-				keys.push(key)
 
-				//Parses col7 into type and values
+				keys.push(key) //pushes user provided and derived values to check
+
+				//Parses col7 into term.type and term.values
 				const term = parseConfig(configstr)
-
+				// console.log(181)
 				terms[key] = {
 					id: key,
+					parent_id: null,
 					name,
 					isleaf: true,
 					type: term.type,
@@ -275,7 +284,7 @@ function check4DuplicateKeys(keys) {
 	}
 	if (duplicates.size > 0) {
 		const dup = Array.from(duplicates)
-		alert(`Error: ID(s) ` + dup + ` is/are not unique. Must IDs must be unique value`)
+		alert(`Error: Nonunique ID(s) found: ` + dup + `. IDs must be unique values.`)
 	}
 	return true
 }
@@ -287,16 +296,25 @@ function submitButton(div, doms, holder) {
 		.style('font-size', '16px')
 		.on('click', () => {
 			validateInput(doms)
-			// div.remove()
+			// console.log(296, doms)
+			div.remove()
+			appInit({
+				holder: holder,
+				state: {
+					vocab: {
+						terms: doms.data.terms
+					}
+				}
+			})
 		})
 }
 
 function validateInput(doms) {
+	//May not be needed?
 	if (!doms.data) {
 		alert('Provide data')
 		return
 	}
-	console.log(doms.data)
 }
 
 function infoSection(div) {
@@ -309,7 +327,7 @@ function infoSection(div) {
                     TODO: 1) Fill out documentation 2) example file 3) Example?
                 </li>
                 <li>
-                    Please see the<a href="https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit" target="_blank">documentation</a> for more information.
+                    Please see the <a href="https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit" target="_blank">documentation</a> for more information.
                 </li>
             </ul>`)
 }

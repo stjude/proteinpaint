@@ -91,6 +91,7 @@ export function makeFileUpload(div) {
 		.append('input')
 		.attr('type', 'file')
 		.property('position', 'relative')
+		.style('margin', '1px 20px 1px 10px')
 		.style('justify-content', 'left')
 
 	return upload
