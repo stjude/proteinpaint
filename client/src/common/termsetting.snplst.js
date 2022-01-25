@@ -320,9 +320,9 @@ function makeEditMenu(self, div) {
 						if(al.isRef) {
 						allele_div.append('div')
 							.style('display', 'inline-block')
-							.style('padding', '2px 5px')
+							.style('padding', '2px')
 							.style('border', '1px solid #bbb')
-							.style('border-radius', '10px')
+							.style('border-radius', '7px')
 							.style('color', '#999')
 							.style('font-size', '.7em')
 							.text('REF')
@@ -335,11 +335,15 @@ function makeEditMenu(self, div) {
 			if (!invalid_snp) {
 				for (const [gt, freq] of Object.entries(snp.gt2count)) {
 					const gt_freq = Math.round((freq * 100) / sample_count)
-					gt_td
-						.append('div')
+					gt_td.append('div')
 						.style('display', 'inline-block')
 						.style('padding', '3px 5px')
-						.text(`${gt} (${gt_freq}%)`)
+						.text(`${gt}`)
+
+					gt_td.append('div')
+						.style('display', 'inline-block')
+						.style('font-size','.8em')
+						.text(`${gt_freq}%`)
 				}
 			}
 
