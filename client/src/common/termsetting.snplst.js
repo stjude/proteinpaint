@@ -314,9 +314,20 @@ function makeEditMenu(self, div) {
 							.style('display', 'inline-block')
 							.style('margin', '0px 5px')
 							.style('font-size','.8em')
-							.text(`${allele_freq} %  ${al.isRef?'REF':''}`)
+							.text(`${allele_freq}%`)
 
-				}
+						// show reference allele tag
+						if(al.isRef) {
+						allele_div.append('div')
+							.style('display', 'inline-block')
+							.style('padding', '2px 5px')
+							.style('border', '1px solid #bbb')
+							.style('border-radius', '10px')
+							.style('color', '#999')
+							.style('font-size', '.7em')
+							.text('REF')
+						}
+					}
 			}
 
 			// col 4: genetype (frequency)
