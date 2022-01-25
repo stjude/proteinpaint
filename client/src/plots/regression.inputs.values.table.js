@@ -283,10 +283,18 @@ function setRenderers(self) {
 					.style('font-size', '.7em')
 					.text('Click to set a row as reference.')
 			} else if (t.term.type == 'snplst') {
-				const invalid_snps_count = t.term.snps.filter(s => s.invalid == true).length
+				const invalid_snps_count = t.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
 				dom.term_summmary_div.html(
 					`${q.numOfSampleWithAnyValidGT} samples with valid genotypes.` +
-						(invalid_snps_count > 0 ? ` ${invalid_snps_count} invalid SNP${invalid_snps_count > 1 ? `s` : ``}.` : '')
+						(invalid_snps_count > 0 ? ` ${invalid_snps_count} invalid SNP${invalid_snps_count > 1 ? 's' : ''}.` : '') +
+						'<br>Genetic mode: ' +
+						(t.q.geneticModel == 0
+							? 'Additive'
+							: t.q.geneticModel == 1
+							? 'Dominant'
+							: t.q.geneticModel == 2
+							? 'Recessive'
+							: 'By genotype')
 				)
 			} else {
 				throw 'unkonw term type'

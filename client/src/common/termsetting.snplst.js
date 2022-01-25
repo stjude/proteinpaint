@@ -1,4 +1,5 @@
 import { event as d3event } from 'd3-selection'
+import { get_effectAllele } from './termsetting.snplst.effAle'
 
 /* 
 storing snps on self.term but not self so it can be written to state,
@@ -16,7 +17,7 @@ self.term{}
 		// following attributes are computed by validation
 		.snpid
 		.invalid
-		.allele2count
+		.alleles[ {allele, count, isRef} ]
 		.gt2count
 self.q{}
 	.alleleType: int
@@ -51,25 +52,9 @@ export function getHandler(self) {
 	}
 }
 
-/*
-scenario I
-when user accesses snplst option from noTermPromptOptions, this termsetting instance is "blank"
-clicking Submit button from this UI will create self.term and self.q
-it's important to note that, before clicking Submit, user can still hide the menu,
-and launch another option from noTermPromptOptions.
-thus, this UI must not alter self attributes (term and q) until Submit is created
-to avoid creating attributes on self that's irrelevant to the new term
-
-scenario II
-self.term is set, either recovered from state, or from user input in scenario I
-both .term and .q should be present
-run the same ui code but is populated with existing settings
-user can make changes to snp list, and other controls
-and must click Submit to save
-*/
 function makeEditMenu(self, div) {
 	// the ui will create following controls, to be accessed upon clicking Submit button
-	let snplst_table, textarea, select_alleleType, select_geneticModel, select_missingGenotype
+	let snplst_table, textarea, select_alleleType, select_geneticModel, select_missingGenotype, tmp_snps
 
 	// table has two rows
 	const table = div.append('table').style('margin', '15px')
@@ -80,7 +65,7 @@ function makeEditMenu(self, div) {
 		.append('td')
 		.attr('colspan', 2)
 	if (self.term && self.term.snps) {
-		// show list of snps as well as status for each: {invalid, allele2count{}, gt2count{} } }
+		// show list of snps as well as status for each
 		initSnpEditTable()
 	}
 
@@ -187,7 +172,9 @@ function makeEditMenu(self, div) {
 				if (!self.term.snps) self.term.snps = [] // possible if term of a different type was there before?
 				// already have term;
 				// any valid input in textarea are added to existing term
-				for (const s of snps) self.term.snps.push(s)
+				for (const s of snps) tmp_snps.push(s)
+				// update self.term.snps with edit menu snps if changed
+				updateSnps(self.term.snps, tmp_snps)
 			} else {
 				// no term; require valid submission in textarea
 				if (!snps.length) return window.alert('No valid SNPs')
@@ -234,6 +221,7 @@ function makeEditMenu(self, div) {
 	}
 
 	function renderSnpEditTable(snplst_table) {
+		tmp_snps = JSON.parse(JSON.stringify(self.term.snps))
 		// allow to delete or add to this list
 		snplst_table.selectAll('*').remove()
 		const title_tr = snplst_table.append('tr').style('opacity', 0.4)
@@ -255,8 +243,8 @@ function makeEditMenu(self, div) {
 		title_tr.append('td')
 
 		// SNPs
-		for (const [i, snp] of self.term.snps.entries()) {
-			const invalid_snp = snp.invalid || (!snp.allele2count && !snp.gt2count) ? true : false
+		for (const [i, snp] of tmp_snps.entries()) {
+			const invalid_snp = snp.invalid || (!snp.alleles && !snp.gt2count) ? true : false
 			const tr = snplst_table.append('tr').style('background', (i + 2) % 2 ? '#eee' : 'none')
 
 			// col 1: rsid
@@ -272,36 +260,61 @@ function makeEditMenu(self, div) {
 			const allele_td = tr.append('td')
 
 			if (!invalid_snp) {
-				for (const [allele, allele_ct] of Object.entries(snp.allele2count)) {
-					const allele_freq = Math.round((allele_ct * 100) / (sample_count * 2))
+				const effectAllele = get_effectAllele(self.q.alleleType, snp)
+
+				for (const [j, al] of snp.alleles.entries()) {
+					const allele_freq = Math.round((al.count * 100) / (sample_count * 2))
 					const allele_div = allele_td
-						.append('div')
+						.append('button')
 						.style('display', 'inline-block')
 						.style('margin', '0px 3px')
 						.style('padding', '3px 7px')
 						.style('border-radius', '3px')
-						.style('border', allele == snp.effectAllele ? '2px solid #bbb' : '')
-						.text(`${allele} (${allele_freq}%)`)
+						.style('width', '100px')
+						.style('background-color', '#d9ead3')
+						.style('border', al.allele == effectAllele ? '2px solid #bbb' : 'none')
 						.on('mouseover', () => {
-							if (allele == snp.effectAllele) return
+							if (snp.effectAllele  && snp.effectAllele == al.allele) return
 							else {
 								allele_div.style('background-color', '#fff2cc').style('cursor', 'pointer')
 							}
 						})
 						.on('mouseout', () => {
-							if (allele == snp.effectAllele) return
+							if (snp.effectAllele  && snp.effectAllele == al.allele) return
 							else {
-								allele_div.style('background', (i + 2) % 2 ? '#eee' : 'none')
+								allele_div.style('background', '#d9ead3')
 							}
 						})
 						.on('click', () => {
-							if (allele == snp.effectAllele) return
-							else {
-								snp.effectAllele = allele
-								allele_td.selectAll('div').style('border', '')
-								allele_div.style('border', '2px solid #bbb').style('background', (i + 2) % 2 ? '#eee' : 'none')
-							}
+							snp.effectAllele = al.allele
+							allele_td.selectAll('button').style('border', 'none')
+							allele_div.style('border', '2px solid #bbb').style('background', '#d9ead3')
 						})
+
+					allele_div
+						.append('div')
+						.style('display', 'inline-block')
+						.text(`${al.allele}  `)
+
+					allele_div
+						.append('div')
+						.style('display', 'inline-block')
+						.style('margin', '0px 5px')
+						.style('font-size', '.8em')
+						.text(`${allele_freq}%`)
+
+					// show reference allele tag
+					if (al.isRef) {
+						allele_div
+							.append('div')
+							.style('display', 'inline-block')
+							.style('padding', '1px 5px')
+							.style('border', '1px solid #bbb')
+							.style('border-radius', '10px')
+							.style('color', '#999')
+							.style('font-size', '.5em')
+							.text('REF')
+					}
 				}
 			}
 
@@ -314,7 +327,14 @@ function makeEditMenu(self, div) {
 						.append('div')
 						.style('display', 'inline-block')
 						.style('padding', '3px 5px')
-						.text(`${gt} (${gt_freq}%)`)
+						.text(`${gt}`)
+
+					gt_td
+						.append('div')
+						.style('display', 'inline-block')
+						.style('padding', '0px 6px 0px 2px')
+						.style('font-size', '.8em')
+						.text(`${gt_freq}%`)
 				}
 			}
 
@@ -332,6 +352,28 @@ function makeEditMenu(self, div) {
 					renderSnpEditTable(snplst_table)
 				})
 		}
+	}
+}
+
+function updateSnps(snps, tmp_snps) {
+	// case 1: snp 'deleted' from edit menu or effectAllele changed
+	for (const [i, s] of snps.entries()) {
+		const s1 = tmp_snps.find(snp => snp.rsid == s.rsid)
+		if (s1 === undefined) {
+			// snp deleted from edit menu, remove from tw.snps
+			snps.splice(i, 1)
+		} else {
+			// effectAllele changed from edit menu 
+			if (s.effectAllele !== s1.effectAllele)
+			s.effectAllele = s1.effectAllele
+		}
+	}
+	// case 2: new SNPs added from textarea
+	// check each tmp_snps and add it to tw.snps if missing  
+	for (const [i, s] of tmp_snps.entries()) {
+		const s1 = snps.find(snp => snp.rsid == s.rsid)
+		// snp added from text area, add to tw.snps
+		if (s1 === undefined) { snps.push(s) }
 	}
 }
 
@@ -390,6 +432,7 @@ async function validateInput(self) {
 		const s1 = data.snps[i]
 		s.snpid = s1.snpid
 		s.invalid = s1.invalid
+		s.referenceAllele = s1.referenceAllele
 	}
 }
 
@@ -399,10 +442,10 @@ async function getSnpData(self) {
 	if (!data) throw `no data for term.id='${self.term.id}'`
 	if (data.error) throw data.error
 	for (const s of data.snps) {
-		// { snpid, allele2count{}, gt2count{} }
+		// { snpid, alleles{}, gt2count{} }
 		const snp = self.term.snps.find(i => i.snpid == s.snpid)
 		if (!snp) throw 'snp not found by id'
-		snp.allele2count = s.allele2count
+		snp.alleles = s.alleles
 		snp.gt2count = s.gt2count
 	}
 	self.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT

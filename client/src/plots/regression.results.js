@@ -3,6 +3,7 @@ import { sayerror } from '../dom/error'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { axisstyle } from '../dom/axisstyle'
+import { get_effectAllele } from '../common/termsetting.snplst.effAle'
 
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
 const forestcolor = '#126e08'
@@ -83,10 +84,19 @@ export class RegressionResults {
 		const tw = this.config.independent.find(t => t.id == tid)
 		if (tw) return tw
 		// not found by tid; check for snps in snplst
-		for (const tw of this.config.independent) {
-			if (tw.term.snps) {
-				const snp = tw.term.snps.find(i => i.snpid == tid)
-				if (snp) return snp
+		for (const t of this.config.independent) {
+			if (t.term.snps) {
+				const snp = t.term.snps.find(i => i.snpid == tid)
+				if (snp) {
+					// this input is one of the snps from this snplst term
+					// {snpid, effectAllele, alleles[], .. }
+					// return something looking like a termwrapper and represents this snp
+					const tw = {
+						id: snp.snpid,
+						effectAllele: get_effectAllele(t.q.alleleType, snp)
+					}
+					return tw
+				}
 			}
 		}
 		throw 'unknown independent term'
@@ -216,6 +226,19 @@ function setRenderers(self) {
 					.html(
 						'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">REF</span> ' +
 							(tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp) +
+							'</span>'
+					)
+			}
+
+			if (tw.effectAllele) {
+				// only for snplst term
+				termNameTd
+					.append('div')
+					.style('font-size', '.8em')
+					.style('opacity', 0.6)
+					.html(
+						'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">EFFECT ALLELE</span> ' +
+							tw.effectAllele +
 							'</span>'
 					)
 			}
