@@ -215,6 +215,7 @@ function makeEditMenu(self, div) {
 			textarea.property('value', '')
 			submit_btn.property('disabled', false)
 			submit_btn.text('Submit')
+			// console.log(self.doNotHideTipInMain, self.term.snps.map(s => s.effectAllele))
 			self.runCallback()
 			self.updateUI()
 		})
@@ -256,7 +257,7 @@ function makeEditMenu(self, div) {
 
 		// SNPs
 		for (const [i, snp] of self.term.snps.entries()) {
-			const invalid_snp = snp.invalid || (!snp.allele2count && !snp.gt2count) ? true : false
+			const invalid_snp = snp.invalid || (!snp.alleles && !snp.gt2count) ? true : false
 			const tr = snplst_table.append('tr').style('background', (i + 2) % 2 ? '#eee' : 'none')
 
 			// col 1: rsid
@@ -272,36 +273,49 @@ function makeEditMenu(self, div) {
 			const allele_td = tr.append('td')
 
 			if (!invalid_snp) {
-				for (const [allele, allele_ct] of Object.entries(snp.allele2count)) {
-					const allele_freq = Math.round((allele_ct * 100) / (sample_count * 2))
+				for (const [j, al] of snp.alleles.entries()) {
+					const allele_freq = Math.round((al.count * 100) / (sample_count * 2))
 					const allele_div = allele_td
-						.append('div')
+						.append('button')
 						.style('display', 'inline-block')
 						.style('margin', '0px 3px')
 						.style('padding', '3px 7px')
 						.style('border-radius', '3px')
-						.style('border', allele == snp.effectAllele ? '2px solid #bbb' : '')
-						.text(`${allele} (${allele_freq}%)`)
+						.style('width','100px')
+						.style('background-color','#d9ead3')
+						.style('border', al.allele == snp.effectAllele ? '2px solid #bbb' : 'none')
 						.on('mouseover', () => {
-							if (allele == snp.effectAllele) return
+							if (al.allele == snp.effectAllele) return
 							else {
 								allele_div.style('background-color', '#fff2cc').style('cursor', 'pointer')
 							}
 						})
 						.on('mouseout', () => {
-							if (allele == snp.effectAllele) return
+							if (al.allele == snp.effectAllele) return
 							else {
-								allele_div.style('background', (i + 2) % 2 ? '#eee' : 'none')
+								allele_div.style('background', '#d9ead3')
 							}
 						})
 						.on('click', () => {
-							if (allele == snp.effectAllele) return
+							if (al.allele == snp.effectAllele) return
 							else {
-								snp.effectAllele = allele
-								allele_td.selectAll('div').style('border', '')
-								allele_div.style('border', '2px solid #bbb').style('background', (i + 2) % 2 ? '#eee' : 'none')
+								snp.effectAllele = al.allele
+								allele_td.selectAll('button').style('border', 'none')
+								allele_div.style('border', '2px solid #bbb')
+									.style('background', '#d9ead3')
 							}
 						})
+
+						allele_div.append('div')
+							.style('display', 'inline-block')
+							.text(`${al.allele}  `)
+
+						allele_div.append('div')
+							.style('display', 'inline-block')
+							.style('margin', '0px 5px')
+							.style('font-size','.8em')
+							.text(`${allele_freq} %  ${al.isRef?'REF':''}`)
+
 				}
 			}
 
@@ -399,10 +413,10 @@ async function getSnpData(self) {
 	if (!data) throw `no data for term.id='${self.term.id}'`
 	if (data.error) throw data.error
 	for (const s of data.snps) {
-		// { snpid, allele2count{}, gt2count{} }
+		// { snpid, alleles{}, gt2count{} }
 		const snp = self.term.snps.find(i => i.snpid == s.snpid)
 		if (!snp) throw 'snp not found by id'
-		snp.allele2count = s.allele2count
+		snp.alleles = s.alleles
 		snp.gt2count = s.gt2count
 	}
 	self.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
