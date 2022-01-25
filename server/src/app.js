@@ -7525,7 +7525,7 @@ function log(req) {
 		url.parse(req.url).pathname,
 		new Date(),
 		req.header('x-forwarded-for') || req.connection.remoteAddress,
-		JSON.stringify(j)
+		JSON.stringify(j).replace(/\\"/g, '"')
 	)
 }
 
