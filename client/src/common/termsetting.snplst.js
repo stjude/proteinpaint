@@ -356,40 +356,25 @@ function makeEditMenu(self, div) {
 }
 
 function updateSnps(snps, tmp_snps) {
-	// return if rsids and effect alleles are same for both copy of snps, 
-	// as rsid and effect allele are only editable property from edit menu
-	if (arrayEquals(snps.map(s=>s.effectAllele), tmp_snps.map(s=>s.effectAllele)) &&
-		arrayEquals(snps.map(s=>s.rsid), tmp_snps.map(s=>s.rsid)))
-		return
-	else {
-		// 'deleted' from edit menu
-		// check each tw.snps, if missing from tmp_snps, delete it
-		for (const [i, s] of snps.entries()) {
-			const s1 = tmp_snps.find(snp => snp.rsid == s.rsid)
+	// case 1: snp 'deleted' from edit menu or effectAllele changed
+	for (const [i, s] of snps.entries()) {
+		const s1 = tmp_snps.find(snp => snp.rsid == s.rsid)
+		if (s1 === undefined) {
 			// snp deleted from edit menu, remove from tw.snps
-			if (s1 === undefined) {
-				snps.splice(i, 1)
-			} else {
-				// effectAllele changed from edit menu 
-				if (s.effectAllele !== s1.effectAllele)
-				s.effectAllele = s1.effectAllele
-			}
-		}
-		// added from textarea
-		// check each tmp_snps, if missing from tw.snps, add it 
-		for (const [i, s] of tmp_snps.entries()) {
-			const s1 = snps.find(snp => snp.rsid == s.rsid)
-			// snp added from text area, add to tmp_snps
-			if (s1 === undefined) { snps.push(s) }
+			snps.splice(i, 1)
+		} else {
+			// effectAllele changed from edit menu 
+			if (s.effectAllele !== s1.effectAllele)
+			s.effectAllele = s1.effectAllele
 		}
 	}
-}
-
-function arrayEquals(array1, array2) {
-	return Array.isArray(array1) &&
-    	Array.isArray(array2) &&
-    	array1.length === array2.length &&
-    	array1.every((v, i) => v === array2[i])
+	// case 2: new SNPs added from textarea
+	// check each tmp_snps and add it to tw.snps if missing  
+	for (const [i, s] of tmp_snps.entries()) {
+		const s1 = snps.find(snp => snp.rsid == s.rsid)
+		// snp added from text area, add to tw.snps
+		if (s1 === undefined) { snps.push(s) }
+	}
 }
 
 function getTermName(snps) {
