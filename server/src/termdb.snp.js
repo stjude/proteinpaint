@@ -7,12 +7,6 @@ const readline = require('readline')
 const serverconfig = require('./serverconfig')
 
 /*
-********************** EXPORTED
-validate()
-********************** INTERNAL
-*/
-
-/*
 q{}
 	.genome
 	.dslabel
@@ -31,6 +25,15 @@ snps[ {} ]
 	.bcfRef: ref allele from bcf file
 	.bcfAlts[]: alt alleles from bcf file
 	.gtlst[]: per-sample genotypes
+
+cache file has a header line, with one line per valid snp. columns: 
+1. snpid
+2. chr
+3. pos
+4. ref
+5. alt (comma-joined alternative alleles)
+6. effAllele (user-given allele, blank if not specified)
+7-rest: integer sample ids
 */
 
 const bcfformat = '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n'
@@ -38,8 +41,23 @@ const bcfformat = '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n'
 export async function validate(q, tdb, ds, genome) {
 	try {
 		if (q.sumSamples) {
+			/* returns:
+			.numOfSampleWithAnyValidGT: int
+			.snps[]
+				.snpid
+				.gt2count{ k: gt, v: count }
+				.alleles[]
+					{allele, isRef:true, count}
+			*/
 			return await summarizeSamplesFromCache(q, tdb, ds, genome)
 		}
+
+		/* returns:
+		.cacheid str
+		.snps[]
+			.snpid
+			.invalid:true
+		*/
 		return await validateInputCreateCache(q, tdb, ds, genome)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -75,6 +93,8 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 	for (let i = 1; i < lines.length; i++) {
 		const l = lines[i].split('\t')
 		const snpid = l[0]
+		const refAllele = l[3]
+
 		// count per allele count from this snp
 		const allele2count = {} // k: allele, v: number of appearances
 		const gt2count = {} // k: gt string, v: number of samples
@@ -89,7 +109,16 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 				allele2count[a] = 1 + (allele2count[a] || 0)
 			}
 		}
-		snps.push({ snpid, allele2count, gt2count })
+
+		const alleles = []
+		for (const k in allele2count) {
+			alleles.push({
+				allele: k,
+				count: allele2count[k],
+				isRef: k == refAllele
+			})
+		}
+		snps.push({ snpid, alleles, gt2count })
 	}
 
 	return {
