@@ -31,7 +31,12 @@ runproteinpaint({
 				settings: {
 					currViews: ['barchart'],
 					survival: {
-						symbol: 'vtick'
+						symbol: 'vtick',
+						timeUnit: 'years',
+						timeFactor: 1/365,
+						atRiskInterval: 1,
+						xTickInterval: 5,
+						atRiskLabelOffset: -20,
 					}
 				}
 			}],
