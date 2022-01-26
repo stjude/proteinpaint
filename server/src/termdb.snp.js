@@ -194,20 +194,22 @@ async function mapRsid2chr(snps, genome) {
 		}
 		if (snp.rsid) {
 			const hits = await utils.query_bigbed_by_name(genome.snp.bigbedfile, snp.rsid)
-			// remove hits on contigs
-			const majorhits = hits.filter(hit => {
-				const chr = hit.split('\t')[0]
-				if (genome.chrlookup[chr.toUpperCase()].major) return hit
-			})
+			const majorhits = []
+			for (const line of hits) {
+				// must guard against invalid chr as this is querying by name but not by range
+				// also only keep major and discard hits on minorchr
+				const l = line.split('\t')
+				const chr = genome.chrlookup[l[0].toUpperCase()]
+				if (chr && chr.major) majorhits.push(l)
+			}
 			if (majorhits.length == 0) {
 				snp.invalid = true
 				continue
 			}
-			if (majorhits.length > 1) throw `'${snp.rsid}' has multiple coordinates`
-			const hit = majorhits[0]
-			const l = hit.split('\t')
+			// allow multiple hits on majorchr for now
+			const l = majorhits[0]
 			snp.chr = l[0]
-			snp.pos = Number.parseInt(l[1])
+			snp.pos = Number.parseInt(l[1]) // 0-based
 			snp.dbsnpRef = l[4]
 			snp.dbsnpAlts = l[6].split(',').filter(Boolean)
 			continue
