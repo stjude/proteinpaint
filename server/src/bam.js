@@ -861,29 +861,38 @@ async function do_query(q) {
 					if (group.partstack) {
 						alignmentData = await align_multiple_reads(
 							templates,
-							q.altseq,
 							leftflankseq_length,
 							group.partstack.start,
-							group.partstack.stop
+							group.partstack.stop,
+							q.altseq
 						) // Aligning alt-classified reads to alternate allele
 					} else {
-						alignmentData = await align_multiple_reads(templates, q.altseq, leftflankseq_length) // Aligning alt-classified reads to alternate allele
+						alignmentData = await align_multiple_reads(templates, leftflankseq_length, 0, 0, q.altseq) // Aligning alt-classified reads to alternate allele
 					}
 				} else if (group.type == 'support_ref') {
 					if (group.partstack) {
 						alignmentData = await align_multiple_reads(
 							templates,
-							q.refseq,
 							leftflankseq_length,
 							group.partstack.start,
-							group.partstack.stop
+							group.partstack.stop,
+							q.refseq
 						) // Aligning ref-classified reads to reference allele
 					} else {
-						alignmentData = await align_multiple_reads(templates, q.refseq, leftflankseq_length) // Aligning ref-classified reads to reference allele
+						alignmentData = await align_multiple_reads(templates, leftflankseq_length, 0, 0, q.refseq) // Aligning ref-classified reads to reference allele
 					}
 				} else {
 					// when category type is none category
-					console.log('None category, no alignments')
+					if (group.partstack) {
+						alignmentData = await align_multiple_reads(
+							templates,
+							leftflankseq_length,
+							group.partstack.start,
+							group.partstack.stop
+						) // Aligning none/ambiguous classified reads
+					} else {
+						alignmentData = await align_multiple_reads(templates, leftflankseq_length) // Aligning ref-classified reads to reference allele
+					}
 				}
 			}
 			//console.log('alignmentData:', alignmentData)
@@ -954,17 +963,20 @@ async function do_query(q) {
 
 async function align_multiple_reads(
 	templates,
-	reference_sequence,
 	leftflankseq_length,
 	partstack_start,
-	partstack_stop
+	partstack_stop,
+	reference_sequence
 ) {
 	const sequence_reads = templates.map(i => i.segments[0].seq)
 	const qual_reads = templates.map(i => i.segments[0].qual)
 	let fasta_sequence = ''
 
 	let qual_sequence = ''
-	fasta_sequence += '>seq\n' + reference_sequence.replace('\n', '') + '\n'
+	if (reference_sequence) {
+		// Will be true only for reference and alternate group
+		fasta_sequence += '>seq\n' + reference_sequence.replace('\n', '') + '\n'
+	}
 	let i = 0
 	for (const read of sequence_reads) {
 		if (i < max_read_alignment) {
@@ -983,7 +995,8 @@ async function align_multiple_reads(
 		qual_sequence,
 		leftflankseq_length,
 		partstack_start,
-		partstack_stop
+		partstack_stop,
+		reference_sequence
 	) // If read alignment is blank , it may be because one of the reads have length > maxseqlen or number of reads > maxnumseq
 }
 
@@ -994,7 +1007,8 @@ function run_clustalo(
 	qual_sequence,
 	leftflankseq_length,
 	partstack_start,
-	partstack_stop
+	partstack_stop,
+	reference_sequence
 ) {
 	return new Promise((resolve, reject) => {
 		const ps = spawn(clustalo_read_alignment, [
@@ -1035,9 +1049,13 @@ function run_clustalo(
 					let global_nuc_count = 0 // This variable counts nucleotide positions w.r.t reference sequence
 
 					let read_quality = ''
-					if (read_count != 0) {
+					if (read_count != 0 && reference_sequence) {
+						// In case of reference and alternate group
 						// First sequence is reference sequence
 						read_quality = qual_sequence.split('\n')[read_count - 1].split(',')
+					} else if (!reference_sequence) {
+						// In case of none and ambiguous groups
+						read_quality = qual_sequence.split('\n')[read_count].split(',')
 					}
 					let qual_r = ''
 					let qual_g = ''
@@ -1047,11 +1065,12 @@ function run_clustalo(
 						if (nucl != '-') {
 							nuc_count += 1
 							aligned_read += nucl
-							if (read_count == 0) {
+							if (read_count == 0 && reference_sequence) {
+								// In case of reference and alternate group
 								// Looking at reference sequence
 								ref_nucleotides.push(nucl)
 							} else {
-								if (nucl == ref_nucleotides[global_nuc_count]) {
+								if ((nucl == ref_nucleotides[global_nuc_count] && reference_sequence) || !reference_sequence) {
 									const colors = qual2match(read_quality[nuc_count - 1] / maxqual)
 										.replace('rgb(', '')
 										.replace(')', '')
@@ -1059,7 +1078,7 @@ function run_clustalo(
 									qual_r += colors[0] + ','
 									qual_g += colors[1] + ','
 									qual_b += colors[2] + ','
-								} else if (nucl != ref_nucleotides[global_nuc_count]) {
+								} else if (nucl != ref_nucleotides[global_nuc_count] && reference_sequence) {
 									const colors = qual2mismatchbg(read_quality[nuc_count - 1] / maxqual)
 										.replace('rgb(', '')
 										.replace(')', '')
@@ -1102,12 +1121,18 @@ function run_clustalo(
 					}
 					read_count += 1
 					clustalo_output.gaps_before_variant = gaps_before_variant // This variable stores the number of gaps that have occured before the variant region. This helps in placing the variant bar in the correct position when there are gaps in ref sequence before variant region
-					clustalo_output.read_count = read_count - 1 // Total reads aligned, subtracted one so as to exclude reference sequence
+					if (reference_sequence) {
+						// In case of reference and alternate group
+						clustalo_output.read_count = read_count - 1 // Total reads aligned, subtracted one so as to exclude reference sequence
+					} else {
+						// In case of none and anbiguous group
+						clustalo_output.read_count = read_count
+					}
 					clustalo_output.qual_r.push(qual_r)
 					clustalo_output.qual_g.push(qual_g)
 					clustalo_output.qual_b.push(qual_b)
 					clustalo_output.final_read_align.push(aligned_read)
-					if (partstack_start) {
+					if (partstack_start != 0 && partstack_stop != 0) {
 						// In partstack mode
 						clustalo_output.partstack_start = partstack_start
 						clustalo_output.partstack_stop = partstack_stop
@@ -1269,16 +1294,22 @@ should summarize into bins, each bin for a pixel with .coverage for each pixel, 
 */
 async function run_samtools_depth(q, r) {
 	const bplst = []
+	const args = [
+		'depth',
+		'-r',
+		(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
+		'-g',
+		'DUP',
+		q.file || q.url
+	]
+	// Show/Hide PCR optical duplicates
+	if (q.drop_pcrduplicates) {
+		args.push('-G')
+		args.push('0x400')
+	}
 	await utils.get_lines_bigfile({
 		isbam: true,
-		args: [
-			'depth',
-			'-r',
-			(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
-			'-g',
-			'DUP',
-			q.file || q.url
-		],
+		args: args,
 		dir: q.dir,
 		callback: line => {
 			const l = line.split('\t')

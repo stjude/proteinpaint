@@ -1630,7 +1630,8 @@ box{}
 */
 
 function click_groupheader(tk, group, block) {
-	if (tk.variants && (group.data.type == 'support_alt' || group.data.type == 'support_ref')) {
+	if (tk.variants) {
+		// && (group.data.type == 'support_alt' || group.data.type == 'support_ref')
 		// when merge to master, add this condition
 		//if (urlmap().has('clustalo')) {
 		getMultiReadAligInfo(tk, group, block)
@@ -1687,6 +1688,11 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 		num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
 			.append('div')
 			.text('Number of reads aligned to reference allele = ' + multi_read_alig_data.alignmentData.read_count)
+			.style('text-align', 'center')
+	} else if (group.data.type == 'support_no' || group.data.type == 'support_amb') {
+		num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
+			.append('div')
+			.text('Number of reads aligned = ' + multi_read_alig_data.alignmentData.read_count)
 			.style('text-align', 'center')
 	}
 	if (multi_read_alig_data.alignmentData.partstack_start) {
@@ -1855,7 +1861,7 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 				.style('color', 'white')
 				.style('background-color', 'white')
 			// Setting attribute of row
-			if (read_count == 0) {
+			if (read_count == 0 && (group.data.type == 'support_ref' || group.data.type == 'support_alt')) {
 				read_tr.attr('id', 'RefAltSeq')
 			} else {
 				read_tr.attr('id', read_count.toString())
@@ -1866,7 +1872,7 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 			for (const nclt of read) {
 				nclt_count += 1
 				let nclt_td
-				if (read_count == 0) {
+				if (read_count == 0 && (group.data.type == 'support_ref' || group.data.type == 'support_alt')) {
 					nclt_td = read_tr
 						.append('td')
 						.text(nclt)
@@ -2094,7 +2100,10 @@ async function getMultiReadAligInfo(tk, group, block) {
 	//console.log('multi_read_alig_data.alignmentData:', multi_read_alig_data.alignmentData)
 	wait.remove()
 
-	if (multi_read_alig_data.alignmentData.final_read_align.length > 0) {
+	if (
+		multi_read_alig_data.alignmentData.final_read_align.length > 0 &&
+		(group.data.type == 'support_alt' || group.data.type == 'support_ref')
+	) {
 		// Gene models are displayed only if there is a reference/alternate sequence being displayed
 		let gene_button_div = tk.alignpane.body
 		const gene_button = gene_button_div
