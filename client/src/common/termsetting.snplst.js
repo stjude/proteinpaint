@@ -228,7 +228,8 @@ function makeEditMenu(self, div) {
 		const col_titles = [
 			{ title: 'SNPs' },
 			{ title: '#samples' },
-			{ title: 'Alleles (frquency)' },
+			{ title: 'Reference Alleles' },
+			{ title: 'Alternative Allele(s)' },
 			{ title: 'Genotype (frequency)' },
 			{ title: 'Delete' }
 		]
@@ -255,21 +256,33 @@ function makeEditMenu(self, div) {
 				.style('text-align', 'center')
 				.text(sample_count)
 
-			// col 3: alleles (frequency)
-			const allele_td = tr.append('td')
+			// col 3: Reference allele (frequency)
+			const ref_allele_td = tr.append('td')
+
+			// col 4: Alternative allele(s) (frequency)
+			const alt_allele_td = tr.append('td')
 
 			if (!invalid_snp) {
 				const effectAllele = get_effectAllele(self.q.alleleType, snp)
+				const refAllele = snp.alleles.find(s => s.isRef)
+				const altAlleles = snp.alleles.filter(s => !s.isRef)
 
-				for (const [j, al] of snp.alleles.entries()) {
+				// create referance allele button
+				createAlleleBtn(refAllele, ref_allele_td)
+				// create alternative allele buttons
+				for (const [j, al] of altAlleles.entries()) {
+					createAlleleBtn(al, alt_allele_td)
+				}
+
+				function createAlleleBtn(al, td) {
 					const allele_freq = Math.round((al.count * 100) / (sample_count * 2))
-					const allele_div = allele_td
+					const allele_div = td
+						.style('text-align', 'center')
 						.append('button')
 						.style('display', 'inline-block')
 						.style('margin', '0px 3px')
 						.style('padding', '3px 7px')
 						.style('border-radius', '3px')
-						.style('width', '100px')
 						.style('background-color', '#d9ead3')
 						.style('border', al.allele == effectAllele ? '2px solid #bbb' : 'none')
 						.on('mouseover', () => {
@@ -286,7 +299,7 @@ function makeEditMenu(self, div) {
 						})
 						.on('click', () => {
 							snp.effectAllele = al.allele
-							allele_td.selectAll('button').style('border', 'none')
+							tr.selectAll('button').style('border', 'none')
 							allele_div.style('border', '2px solid #bbb').style('background', '#d9ead3')
 						})
 
@@ -301,23 +314,10 @@ function makeEditMenu(self, div) {
 						.style('margin', '0px 5px')
 						.style('font-size', '.8em')
 						.text(`${allele_freq}%`)
-
-					// show reference allele tag
-					if (al.isRef) {
-						allele_div
-							.append('div')
-							.style('display', 'inline-block')
-							.style('padding', '1px 5px')
-							.style('border', '1px solid #bbb')
-							.style('border-radius', '10px')
-							.style('color', '#999')
-							.style('font-size', '.5em')
-							.text('REF')
-					}
 				}
 			}
 
-			// col 4: genetype (frequency)
+			// col 5: genetype (frequency)
 			const gt_td = tr.append('td')
 			if (!invalid_snp) {
 				for (const [gt, freq] of Object.entries(snp.gt2count)) {
@@ -337,7 +337,7 @@ function makeEditMenu(self, div) {
 				}
 			}
 
-			// col 6: delete button
+			// col 6: delete checkboxes
 			const snp_checkbox = tr
 				.append('td')
 				.style('text-align', 'center')
