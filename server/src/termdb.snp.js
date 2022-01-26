@@ -173,7 +173,6 @@ function parseSnpText(text) {
 }
 
 async function mapRsid2chr(snps, genome) {
-	// TODO process all rsid in one bigbed query
 	for (const snp of snps) {
 		if (snp.invalid) continue
 		if (snp.chr && typeof snp.chr == 'string') {
@@ -194,15 +193,23 @@ async function mapRsid2chr(snps, genome) {
 			continue
 		}
 		if (snp.rsid) {
-			const lst = await utils.query_bigbed_by_name(genome.snp.bigbedfile, snp.rsid)
-			const hit = lst[0]
-			if (!hit) {
+			const hits = await utils.query_bigbed_by_name(genome.snp.bigbedfile, snp.rsid)
+			const majorhits = []
+			for (const line of hits) {
+				// must guard against invalid chr as this is querying by name but not by range
+				// also only keep major and discard hits on minorchr
+				const l = line.split('\t')
+				const chr = genome.chrlookup[l[0].toUpperCase()]
+				if (chr && chr.major) majorhits.push(l)
+			}
+			if (majorhits.length == 0) {
 				snp.invalid = true
 				continue
 			}
-			const l = hit.split('\t')
+			// allow multiple hits on majorchr for now
+			const l = majorhits[0]
 			snp.chr = l[0]
-			snp.pos = Number.parseInt(l[1])
+			snp.pos = Number.parseInt(l[1]) // 0-based
 			snp.dbsnpRef = l[4]
 			snp.dbsnpAlts = l[6].split(',').filter(Boolean)
 			continue
