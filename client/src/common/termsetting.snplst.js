@@ -229,7 +229,8 @@ function makeEditMenu(self, div) {
 			{ title: 'SNPs' },
 			{ title: '#samples' },
 			{ title: 'Alleles (frquency)' },
-			{ title: 'Genotype (frequency)' }
+			{ title: 'Genotype (frequency)' },
+			{ title: 'Delete' }
 		]
 		col_titles.forEach(c => {
 			title_tr
@@ -239,8 +240,6 @@ function makeEditMenu(self, div) {
 				.style('text-align', 'center')
 				.style('padding', '8px')
 		})
-		// delete button column
-		title_tr.append('td')
 
 		// SNPs
 		for (const [i, snp] of tmp_snps.entries()) {
@@ -274,13 +273,13 @@ function makeEditMenu(self, div) {
 						.style('background-color', '#d9ead3')
 						.style('border', al.allele == effectAllele ? '2px solid #bbb' : 'none')
 						.on('mouseover', () => {
-							if (snp.effectAllele  && snp.effectAllele == al.allele) return
+							if (snp.effectAllele && snp.effectAllele == al.allele) return
 							else {
 								allele_div.style('background-color', '#fff2cc').style('cursor', 'pointer')
 							}
 						})
 						.on('mouseout', () => {
-							if (snp.effectAllele  && snp.effectAllele == al.allele) return
+							if (snp.effectAllele && snp.effectAllele == al.allele) return
 							else {
 								allele_div.style('background', '#d9ead3')
 							}
@@ -339,17 +338,13 @@ function makeEditMenu(self, div) {
 			}
 
 			// col 6: delete button
-			tr.append('td')
-				.style('background', '#fff')
-				.append('div')
-				.style('margin', '3px')
-				.style('opacity', 0.4)
-				.style('font-size', '.8em')
-				.style('cursor', 'pointer')
-				.text('DELETE')
-				.on('click', () => {
-					self.term.snps = self.term.snps.filter(s => s.rsid !== snp.rsid)
-					renderSnpEditTable(snplst_table)
+			const snp_checkbox = tr
+				.append('td')
+				.style('text-align', 'center')
+				.append('input')
+				.attr('type', 'checkbox')
+				.on('change', () => {
+					snp.tobe_deleted = snp_checkbox.node().checked
 				})
 		}
 	}
@@ -360,20 +355,23 @@ function updateSnps(snps, tmp_snps) {
 	for (const [i, s] of snps.entries()) {
 		const s1 = tmp_snps.find(snp => snp.rsid == s.rsid)
 		if (s1 === undefined) {
-			// snp deleted from edit menu, remove from tw.snps
+			throw 'snp not found in edit list'
+		} else if (s1.tobe_deleted) {
+			// snp selected for deletetion from edit menu, remove from tw.snps
 			snps.splice(i, 1)
 		} else {
-			// effectAllele changed from edit menu 
-			if (s.effectAllele !== s1.effectAllele)
-			s.effectAllele = s1.effectAllele
+			// effectAllele changed from edit menu
+			if (s.effectAllele !== s1.effectAllele) s.effectAllele = s1.effectAllele
 		}
 	}
 	// case 2: new SNPs added from textarea
-	// check each tmp_snps and add it to tw.snps if missing  
+	// check each tmp_snps and add it to tw.snps if missing
 	for (const [i, s] of tmp_snps.entries()) {
 		const s1 = snps.find(snp => snp.rsid == s.rsid)
 		// snp added from text area, add to tw.snps
-		if (s1 === undefined) { snps.push(s) }
+		if (s1 === undefined && !s.tobe_deleted) {
+			snps.push(s)
+		}
 	}
 }
 
