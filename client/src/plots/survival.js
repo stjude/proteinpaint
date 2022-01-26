@@ -491,24 +491,19 @@ function setRenderers(self) {
 	}
 
 	self.getSymbol = function(size) {
-		return (
-			'M ' +
-			-size / 2 +
-			' ' +
-			-size / 2 +
-			' l ' +
-			size +
-			' ' +
-			size +
-			' M ' +
-			size / 2 +
-			' ' +
-			-size / 2 +
-			' l -' +
-			size +
-			' ' +
-			size
-		)
+		const s = size,
+			h = s / 2
+
+		switch (self.settings.symbol) {
+			case 'x':
+				return `M -${h},-${h} l ${s},${s} M ${h},-${h} l -${s},${s}`
+
+			case 'vtick':
+				return `M 0,-${h} L 0,${h}`
+
+			default:
+				throw `Unrecognized survival plot symbol='${self.settings.symbol}'`
+		}
 	}
 }
 
@@ -595,6 +590,7 @@ export async function getPlotConfig(opts, app) {
 				ciVisible: false,
 				fill: '#fff',
 				stroke: '#000',
+				symbol: 'x', // 'x', 'vtick'
 				fillOpacity: 0,
 				chartMargin: 10,
 				svgw: 400,
