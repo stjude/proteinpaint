@@ -27,3 +27,21 @@ export function get_effectAllele(alleleType, snp) {
 	}
 	throw 'unknown alleleType value'
 }
+
+export function get_refGenotype(alleleType, geneticModel, snp) {
+	if (geneticModel !== 3) return
+	if (alleleType == 0) {
+		// major/minor
+		// find the allele with biggest count
+		const major_al = snp.alleles.reduce((a, b) => (a.count > b.count ? a : b)).allele
+		const ref_gt = major_al + ',' + major_al
+		return ref_gt
+	}
+	if (alleleType == 1) {
+		// ref/alt
+		// find the ref allele
+		const ref_al = snp.alleles.find(i => i.isRef).allele
+		const ref_gt = ref_al + ',' + ref_al
+		return ref_gt
+	}
+}

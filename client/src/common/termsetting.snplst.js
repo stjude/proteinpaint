@@ -1,5 +1,5 @@
 import { event as d3event } from 'd3-selection'
-import { get_effectAllele } from './termsetting.snplst.effAle'
+import { get_effectAllele, get_refGenotype } from './termsetting.snplst.effAle'
 
 /* 
 storing snps on self.term but not self so it can be written to state,
@@ -54,7 +54,14 @@ export function getHandler(self) {
 
 function makeEditMenu(self, div) {
 	// the ui will create following controls, to be accessed upon clicking Submit button
-	let snplst_table, textarea, select_alleleType, select_geneticModel, select_missingGenotype, tmp_snps
+	let snplst_table,
+		textarea,
+		select_alleleType,
+		select_geneticModel,
+		select_missingGenotype,
+		tmp_snps,
+		tmp_alleleType,
+		tmp_geneticModel
 
 	// table has two rows
 	const table = div.append('table').style('margin', '15px')
@@ -122,6 +129,11 @@ function makeEditMenu(self, div) {
 	select_geneticModel.append('option') // dominant
 	select_geneticModel.append('option') // recessive
 	select_geneticModel.append('option') // by genotype
+	select_geneticModel.on('change', () => {
+		tmp_geneticModel = select_geneticModel.property('selectedIndex')
+		tmp_alleleType = select_alleleType.property('selectedIndex')
+		if (snplst_table !== undefined) renderSnpEditTable(snplst_table)
+	})
 	// select - missing gt
 	tdright
 		.append('div')
@@ -158,6 +170,8 @@ function makeEditMenu(self, div) {
 		o[3].innerHTML = 'By genotype: ' + (is0 ? 'DD and Dd compared to dd' : 'AA and Ar compared to rr')
 		select_missingGenotype.node().options[0].innerHTML =
 			'Impute as homozygous ' + (is0 ? 'major' : 'reference') + ' allele'
+		tmp_alleleType = select_alleleType.property('selectedIndex')
+		if (snplst_table !== undefined && tmp_geneticModel == 3) renderSnpEditTable(snplst_table)
 	}
 
 	// submit button
@@ -320,15 +334,21 @@ function makeEditMenu(self, div) {
 			// col 5: genetype (frequency)
 			const gt_td = tr.append('td')
 			if (!invalid_snp) {
+				const refGT = get_refGenotype(tmp_alleleType, tmp_geneticModel, snp)
 				for (const [gt, freq] of Object.entries(snp.gt2count)) {
 					const gt_freq = Math.round((freq * 100) / sample_count)
-					gt_td
+					const gt_div = gt_td
+						.append('div')
+						.style('display', 'inline-block')
+						.style('border', gt == refGT ? '2px solid #bbb' : 'none')
+
+					gt_div
 						.append('div')
 						.style('display', 'inline-block')
 						.style('padding', '3px 5px')
 						.text(`${gt}`)
 
-					gt_td
+					gt_div
 						.append('div')
 						.style('display', 'inline-block')
 						.style('padding', '0px 6px 0px 2px')
