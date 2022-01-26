@@ -174,7 +174,7 @@ function makeEditMenu(self, div) {
 				// any valid input in textarea are added to existing term
 				for (const s of snps) tmp_snps.push(s)
 				// update self.term.snps with edit menu snps if changed
-				updateSnps(self.term.snps, tmp_snps)
+				self.term.snps = updateSnps(self.term.snps, tmp_snps)
 			} else {
 				// no term; require valid submission in textarea
 				if (!snps.length) return window.alert('No valid SNPs')
@@ -358,7 +358,7 @@ function updateSnps(snps, tmp_snps) {
 			throw 'snp not found in edit list'
 		} else if (s1.tobe_deleted) {
 			// snp selected for deletetion from edit menu, remove from tw.snps
-			snps.splice(i, 1)
+			snps = snps.filter(s => s.rsid !== s1.rsid)
 		} else {
 			// effectAllele changed from edit menu
 			if (s.effectAllele !== s1.effectAllele) s.effectAllele = s1.effectAllele
@@ -373,6 +373,7 @@ function updateSnps(snps, tmp_snps) {
 			snps.push(s)
 		}
 	}
+	return snps
 }
 
 function getTermName(snps) {
