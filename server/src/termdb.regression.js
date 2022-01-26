@@ -646,8 +646,8 @@ function get_effAle4snp(snp, tw) {
 		return lst[0][0] // lst[0] is the allele with smallest number of appearances
 	}
 	if (tw.q.alleleType == 1) {
-		// ref/alt
-		return snp.alleles[0]
+		// ref/alt, return alternative allele (what if there are multiple alt?)
+		return snp.altAles[0]
 	}
 	throw 'unknown alleleType value'
 }
