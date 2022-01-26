@@ -1,20 +1,40 @@
 /*
 
+Functions commonly used in UIs.
+
 -------EXPORTED-------
-isURL
-    - path: checks if str input is URL and returns boolean
+isURL()
+	Checks if str input is URL and returns boolean
+    - path: STR
 
-makeGenomeDropDown
-    - div: element to append select element
-    - genomes: genome must be an arg in the ui init() and passed to this fn
+makeGenomeDropDown()
+	Creates genomes dropdown from available genomes 
+    - div
+    - genomes: *genomes must be an arg in the ui init() and passed to this fn
 
-makeTextInput
-    - div: element to append input element
-    - placeholder (optional)
+makeTextInput()
+	Creates input box for text, filepaths, etc.
+    - div
+    - placeholder (optional): STR
 
-makeTextAreaInput
-    - div: element to append textarea element
-    - placeholder (optional)
+makeTextAreaInput()
+	Creates a text area, mainly for copying and pasting data
+    - div
+    - placeholder (optional): STR
+
+makeFileUpload()
+	Creates upload input for files
+    - div
+
+makeBtn()
+	Simplifed button and styling for UIs
+    - div
+	- text: STR  
+
+makePrompt()
+	Creates text prompts for inputs. Use to quickly create small chunks of text
+    - div
+	- text: STR 
 
 -------Internal-------
 
@@ -66,6 +86,17 @@ export function makeTextAreaInput(div, placeholder) {
 	return textarea
 }
 
+export function makeFileUpload(div) {
+	const upload = div
+		.append('input')
+		.attr('type', 'file')
+		.property('position', 'relative')
+		.style('margin', '1px 20px 1px 10px')
+		.style('justify-content', 'left')
+
+	return upload
+}
+
 export function makeBtn(div, text) {
 	const btn = div
 		.append('button')
@@ -77,4 +108,15 @@ export function makeBtn(div, text) {
 		.style('cursor', 'pointer')
 
 	return btn
+}
+
+export function makePrompt(div, text) {
+	const prompt = div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin', '15px')
+		.style('place-items', 'center left')
+		.html(text)
+
+	return prompt
 }

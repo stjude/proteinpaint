@@ -1,0 +1,13 @@
+{
+    "ppcalls":[
+        {
+            "is_ui": true,
+            "runargs": {
+                "noheader": true,
+                "nobox": 1, 
+                "parseurl": 1, 
+                "tkui": "dictionary"
+            }
+        }
+    ]
+}
