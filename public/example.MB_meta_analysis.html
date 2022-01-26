@@ -26,10 +26,18 @@ runproteinpaint({
 			plots: [{
 				chartType: 'survival',
 				term: {
-					id: 'Event-free survival'
+					id: 'Event-free Survival'
 				},
 				settings: {
-					currViews: ['barchart']
+					currViews: ['barchart'],
+					survival: {
+						symbol: 'vtick',
+						timeUnit: 'years',
+						timeFactor: 1/365,
+						atRiskInterval: 1,
+						xTickInterval: 5,
+						atRiskLabelOffset: -20,
+					}
 				}
 			}],
 		}

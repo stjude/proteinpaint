@@ -23,13 +23,17 @@ export async function get_survival(q, ds) {
 		}
 
 		// only term1 XOR term2 may be a survival term
-		const tNum = q.term1_q && q.term1_q.type == 'survival' ? 't1' : 't2' // survival CTE table name
-		const kNum = q.term1_q && q.term1_q.type == 'survival' ? 'key1' : 'key2' // seriesId = censored boolean
-		const vNum = q.term1_q && q.term1_q.type == 'survival' ? 'val1' : 'val2' // time to event value
+		const survTermIndex = q.term1_q && q.term1_q.type == 'survival' ? 1 : 2
+		const tNum = `t${survTermIndex}` // survival CTE table name
+		const kNum = `key${survTermIndex}` // seriesId = censored boolean
+		const vNum = `val${survTermIndex}` // time to event value
 		const sNum = tNum == 't1' ? 'key2' : 'key1'
+		const survq = tNum == 't1' ? q.term1_q : q.term2_q
+		const timeFactor = survq.timeFactor
 
 		const results = get_rows(q)
 		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
+
 		const byChartSeries = {}
 		const keys = { chart: new Set(), series: new Set() }
 		for (const d of results.lst) {
@@ -38,7 +42,7 @@ export async function get_survival(q, ds) {
 			// clearer alias for censored boolean
 			d.censored = d[kNum]
 			if (!(d.key0 in byChartSeries)) {
-				byChartSeries[d.key0] = ['cohort\ttime\tstatus']
+				byChartSeries[d.key0] = [['cohort', 'time', 'status']]
 				keys.chart.add(d.key0)
 			}
 			// R errors on an empty string cohort value,
@@ -47,7 +51,7 @@ export async function get_survival(q, ds) {
 			keys.series.add(sKey)
 			// negate the d.censored value (where 1 is censored) to transform to survfit() status value
 			// since status=TRUE or 2 means 'dead' or 'event' in R's survival.survfit()
-			byChartSeries[d.key0].push([sKey, d[vNum], d.censored == 0 ? 1 : 0].join('\t'))
+			byChartSeries[d.key0].push([sKey, timeFactor * d[vNum], d.censored == 0 ? 1 : 0])
 		}
 		const bins = q.term1_id && results.CTE1.bins ? results.CTE1.bins : []
 		const final_data = {
@@ -58,7 +62,12 @@ export async function get_survival(q, ds) {
 		}
 		const promises = []
 		for (const chartId in byChartSeries) {
-			const output = await lines2R(path.join(serverconfig.binpath, 'utils/survival.R'), byChartSeries[chartId])
+			console.log(byChartSeries[chartId].slice(0, 5))
+			//console.log(byChartSeries[chartId])
+			const output = await lines2R(
+				path.join(serverconfig.binpath, 'utils/survival.R'),
+				byChartSeries[chartId].map(d => d.join('\t'))
+			)
 			let header
 			output
 				.map(line => line.split('\t'))
@@ -81,9 +90,59 @@ export async function get_survival(q, ds) {
 			chart: [...keys.chart].sort(),
 			series: [...keys.series].sort()
 		}
+
+		// track at-risk summary trend
+		if (survq.atRiskInterval) {
+			final_data.atRiskByChart = getAtRiskTrend(survq, byChartSeries)
+		}
+
 		return final_data
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
 	}
+}
+
+function getAtRiskTrend(survq, byChartSeries) {
+	const atRiskByChart = {}
+
+	for (const chartId in byChartSeries) {
+		atRiskByChart[chartId] = { bySeries: {}, timepoints: [0] }
+		const timepoints = new Set() // for tracking computed at risk x-time values
+		const rows = byChartSeries[chartId].slice(1) // copy without header row
+
+		// track data by series in a chart
+		const bySeries = {}
+		for (const r of rows) {
+			if (!bySeries[r[0]]) bySeries[r[0]] = []
+			bySeries[r[0]].push(r)
+		}
+
+		for (const seriesId in bySeries) {
+			const series = bySeries[seriesId]
+			const n = series.length
+			const trend = []
+			trend.push([0, n])
+
+			let dropped = 0
+			let timeIndex = 1
+			let currTimepoint = survq.atRiskInterval
+
+			for (const d of series) {
+				if (d[1] <= currTimepoint) {
+					dropped++
+				} else {
+					trend.push([currTimepoint, n - dropped])
+					timepoints.add(currTimepoint)
+					currTimepoint += survq.atRiskInterval
+				}
+			}
+
+			atRiskByChart[chartId].bySeries[seriesId] = trend
+		}
+
+		atRiskByChart[chartId].timepoints.push(...timepoints)
+	}
+
+	return atRiskByChart
 }

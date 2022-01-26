@@ -104,6 +104,7 @@ class TdbSurvival {
 			Object.assign(this.settings, this.state.config.settings)
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			this.serverData = data
 			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.currData = this.processData(data)
 			this.refs = data.refs
@@ -111,7 +112,7 @@ class TdbSurvival {
 			this.setTerm2Color(this.pj.tree.charts)
 			this.symbol = this.getSymbol(7) // hardcode the symbol size for now
 			this.render()
-			this.legendRenderer(this.legendData)
+			if (!this.settings.atRiskInterval) this.legendRenderer(this.legendData)
 		} catch (e) {
 			throw e
 		}
@@ -127,6 +128,14 @@ class TdbSurvival {
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
+
+		const survTermIndex = c.term.term.type == 'survival' ? '' : 2
+		c[`term${survTermIndex}`].q = {
+			type: 'survival',
+			timeFactor: this.settings.timeFactor,
+			atRiskInterval: this.settings.atRiskInterval
+		}
+
 		if (this.state.ssid) opts.ssid = this.state.ssid
 		return opts
 	}
@@ -264,21 +273,27 @@ function setRenderers(self) {
 	}
 
 	function renderSVG(svg, chart, s, duration) {
+		const visibleSerieses = chart.serieses.filter(s => !self.settings.hidden.includes(s.seriesId))
+		const atRiskTrend = self.serverData.atRiskByChart
+			? self.serverData.atRiskByChart[chart.rawChartId]
+			: { bySeries: {}, timepoints: [] }
+		const extraHeight = Object.keys(atRiskTrend.bySeries).length * 20
+
 		svg
 			.transition()
 			.duration(duration)
 			.attr('width', s.svgw)
-			.attr('height', s.svgh)
+			.attr('height', s.svgh + extraHeight)
 			.style('overflow', 'visible')
 			.style('padding-left', '20px')
 
 		/* eslint-disable */
-		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg)
+		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG] = getSvgSubElems(svg)
 		/* eslint-enable */
 		//if (d.xVals) computeScales(d, s);
 
 		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
-		const visibleSerieses = chart.serieses.filter(s => !self.settings.hidden.includes(s.seriesId))
+
 		const serieses = mainG
 			.selectAll('.sjpp-survival-series')
 			.data(visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
@@ -295,11 +310,17 @@ function setRenderers(self) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
 
+		// add at risk data
+		if (s.xTickInterval) {
+			chart.xTickValues = atRiskTrend.timepoints.filter(t => t % s.xTickInterval === 0)
+		}
+
 		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
+		renderAtRiskG(atRiskG, atRiskTrend, s, chart)
 	}
 
 	function getSvgSubElems(svg) {
-		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
+		let mainG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG
 		if (!svg.select('.sjpp-survival-mainG').size()) {
 			mainG = svg.append('g').attr('class', 'sjpp-survival-mainG')
 			axisG = mainG.append('g').attr('class', 'sjpp-survival-axis')
@@ -307,6 +328,7 @@ function setRenderers(self) {
 			yAxis = axisG.append('g').attr('class', 'sjpp-survival-y-axis')
 			xTitle = axisG.append('g').attr('class', 'sjpp-survival-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpp-survival-y-title')
+			atRiskG = mainG.append('g').attr('class', 'sjpp-survival-atrisk')
 		} else {
 			mainG = svg.select('.sjpp-survival-mainG')
 			axisG = mainG.select('.sjpp-survival-axis')
@@ -314,8 +336,9 @@ function setRenderers(self) {
 			yAxis = axisG.select('.sjpp-survival-y-axis')
 			xTitle = axisG.select('.sjpp-survival-x-title')
 			yTitle = axisG.select('.sjpp-survival-y-title')
+			atRiskG = mainG.select('.sjpp-survival-atrisk')
 		}
-		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle]
+		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG]
 	}
 
 	function renderSeries(g, chart, series, i, s, duration) {
@@ -389,8 +412,8 @@ function setRenderers(self) {
 		// todo: allow update of exiting g's instead of replacing
 		g.selectAll('g').remove()
 		const lastDataIndex = data.length - 1
-		const lineData = data.filter((d, i) => !d.censored || i == lastDataIndex) //; console.log(lineData)
-		const censoredData = data.filter(d => d.censored) //; console.log(censoredData)
+		const lineData = data.filter((d, i) => !d.censored || i == lastDataIndex)
+		const censoredData = data.filter(d => d.censored)
 		const subg = g.append('g')
 		const circles = subg.selectAll('circle').data(lineData, b => b.x)
 		circles.exit().remove()
@@ -442,22 +465,24 @@ function setRenderers(self) {
 		//.style('opacity', 1)
 	}
 
-	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
+	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {
 		xAxis
 			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom) + ')')
-			.call(axisBottom(d.xScale).ticks(5))
+			.call(
+				chart.xTickValues ? axisBottom(chart.xScale).tickValues(chart.xTickValues) : axisBottom(chart.xScale).ticks(5)
+			)
 
 		yAxis.call(
 			axisLeft(
 				scaleLinear()
-					.domain(d.yScale.domain())
+					.domain(chart.yScale.domain())
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			).ticks(5)
 		)
 
 		xTitle.select('text, title').remove()
 		const termNum = self.state.config.term.term.type == 'survival' ? 'term' : 'term2'
-		const xUnit = self.state.config[termNum].term.unit
+		const xUnit = s.timeUnit ? s.timeUnit : self.state.config[termNum].term.unit
 		const xTitleLabel = `Time to Event (${xUnit})`
 		const xText = xTitle
 			.attr(
@@ -490,25 +515,71 @@ function setRenderers(self) {
 			.text(yTitleLabel)
 	}
 
+	function renderAtRiskG(g, trend, s, chart) {
+		const { bySeries, timepoints } = trend
+		const y = s.svgh - s.svgPadding.top - s.svgPadding.bottom + 60 // make y-offset option???
+		// fully rerender, later may reuse previously rendered elements
+		g.selectAll('*').remove()
+
+		const sg = g
+			.attr('transform', `translate(0,${y})`)
+			.selectAll(':scope > g')
+			.data(Object.keys(bySeries).sort(), seriesId => seriesId)
+
+		sg.enter()
+			.append('g')
+			.each(function(seriesId, i) {
+				const series = bySeries[seriesId]
+				const reversed = series.slice().reverse()
+				const y = (i + 1) * 20
+				const g = select(this)
+					.attr('transform', `translate(0,${y})`)
+					.attr('fill', self.term2toColor[seriesId])
+
+				const fontsize = `${s.axisTitleFontSize - 2}px`
+
+				if (seriesId && seriesId != '*') {
+					g.append('text')
+						.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
+						.attr('text-anchor', 'end')
+						.attr('font-size', fontsize)
+						.text(seriesId)
+				}
+
+				const data = chart.xTickValues.map(tickVal => {
+					if (tickVal === 0) return { tickVal, atRisk: series[0][1] }
+					const d = reversed.find(d => d[0] < tickVal)
+					return { tickVal, atRisk: d[1] }
+				})
+				const text = g
+					.append('g')
+					.selectAll('text')
+					.data(data)
+				text.exit().remove()
+				text
+					.enter()
+					.append('text')
+					.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
+					.attr('text-anchor', 'middle')
+					.attr('font-size', fontsize)
+					.text(d => d.atRisk)
+			})
+	}
+
 	self.getSymbol = function(size) {
-		return (
-			'M ' +
-			-size / 2 +
-			' ' +
-			-size / 2 +
-			' l ' +
-			size +
-			' ' +
-			size +
-			' M ' +
-			size / 2 +
-			' ' +
-			-size / 2 +
-			' l -' +
-			size +
-			' ' +
-			size
-		)
+		const s = size,
+			h = s / 2
+
+		switch (self.settings.symbol) {
+			case 'x':
+				return `M -${h},-${h} l ${s},${s} M ${h},-${h} l -${s},${s}`
+
+			case 'vtick':
+				return `M 0,-${h} L 0,${h}`
+
+			default:
+				throw `Unrecognized survival plot symbol='${self.settings.symbol}'`
+		}
 	}
 }
 
@@ -595,10 +666,15 @@ export async function getPlotConfig(opts, app) {
 				ciVisible: false,
 				fill: '#fff',
 				stroke: '#000',
+				symbol: 'x', // 'x', 'vtick'
 				fillOpacity: 0,
 				chartMargin: 10,
 				svgw: 400,
 				svgh: 300,
+				timeFactor: 1,
+				atRiskInterval: 0,
+				atRiskLabelOffset: -20,
+				xTickValues: 0,
 				svgPadding: {
 					top: 20,
 					left: 55,
@@ -628,6 +704,7 @@ function getPj(self) {
 			charts: [
 				{
 					chartId: '@key',
+					rawChartId: '$chartId',
 					xMin: '>$time',
 					xMax: '<$time',
 					'__:xScale': '=xScale()',
