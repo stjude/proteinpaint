@@ -242,7 +242,7 @@ function makeEditMenu(self, div) {
 		const col_titles = [
 			{ title: 'SNPs' },
 			{ title: '#samples' },
-			{ title: 'Reference Alleles' },
+			{ title: 'Reference Allele' },
 			{ title: 'Alternative Allele(s)' },
 			{ title: 'Genotype (frequency)' },
 			{ title: 'Delete' }
