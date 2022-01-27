@@ -1,6 +1,3 @@
-import { event as d3event } from 'd3-selection'
-import { get_effectAllele, get_refGenotype } from './termsetting.snplst.effAle'
-
 /* 
 storing snps on self.term but not self so it can be written to state,
 allow snps to be supplied from self.main(),
@@ -54,14 +51,7 @@ export function getHandler(self) {
 
 function makeEditMenu(self, div) {
 	// the ui will create following controls, to be accessed upon clicking Submit button
-	let snplst_table,
-		textarea,
-		select_alleleType,
-		select_geneticModel,
-		select_missingGenotype,
-		tmp_snps,
-		tmp_alleleType,
-		tmp_geneticModel
+	let snplst_table, textarea, select_alleleType, select_geneticModel, select_missingGenotype, tmp_snps
 
 	// table has two rows
 	const table = div.append('table').style('margin', '15px')
@@ -129,11 +119,6 @@ function makeEditMenu(self, div) {
 	select_geneticModel.append('option') // dominant
 	select_geneticModel.append('option') // recessive
 	select_geneticModel.append('option') // by genotype
-	select_geneticModel.on('change', () => {
-		tmp_geneticModel = select_geneticModel.property('selectedIndex')
-		tmp_alleleType = select_alleleType.property('selectedIndex')
-		if (snplst_table !== undefined) renderSnpEditTable(snplst_table)
-	})
 	// select - missing gt
 	tdright
 		.append('div')
@@ -170,8 +155,6 @@ function makeEditMenu(self, div) {
 		o[3].innerHTML = 'By genotype: ' + (is0 ? 'DD and Dd compared to dd' : 'AA and Ar compared to rr')
 		select_missingGenotype.node().options[0].innerHTML =
 			'Impute as homozygous ' + (is0 ? 'major' : 'reference') + ' allele'
-		tmp_alleleType = select_alleleType.property('selectedIndex')
-		if (snplst_table !== undefined && tmp_geneticModel == 3) renderSnpEditTable(snplst_table)
 	}
 
 	// submit button
@@ -220,6 +203,14 @@ function makeEditMenu(self, div) {
 			self.updateUI()
 		})
 
+	div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin', '5px')
+		.style('opacity', 0.4)
+		.style('font-size', '.7em')
+		.text('Must press Submit button to apply changes.')
+
 	function initSnpEditTable() {
 		snplst_td.style('padding-bottom', '20px')
 		snplst_table = snplst_td.append('table')
@@ -230,7 +221,7 @@ function makeEditMenu(self, div) {
 			.style('opacity', 0.4)
 			.style('font-size', '.7em')
 			.html(
-				'Note: Click on allele to make it effect allele.</br>#samples is the number of samples with at least one valid genotype'
+				'Note: Click on allele to make it effect allele.</br>#samples is the number of samples with at least one valid genotype.'
 			)
 	}
 
@@ -277,7 +268,7 @@ function makeEditMenu(self, div) {
 			const alt_allele_td = tr.append('td')
 
 			if (!invalid_snp) {
-				const effectAllele = get_effectAllele(self.q.alleleType, snp)
+				const effectAllele = self.q.snp2effAle ? self.q.snp2effAle[snp.rsid] : undefined
 				const refAllele = snp.alleles.find(s => s.isRef)
 				const altAlleles = snp.alleles.filter(s => !s.isRef)
 
@@ -334,7 +325,7 @@ function makeEditMenu(self, div) {
 			// col 5: genetype (frequency)
 			const gt_td = tr.append('td')
 			if (!invalid_snp) {
-				const refGT = get_refGenotype(tmp_alleleType, tmp_geneticModel, snp)
+				const refGT = self.q.snp2refGrp ? self.q.snp2refGrp[snp.rsid] : undefined
 				for (const [gt, freq] of Object.entries(snp.gt2count)) {
 					const gt_freq = Math.round((freq * 100) / sample_count)
 					const gt_div = gt_td
@@ -377,7 +368,7 @@ function updateSnps(snps, tmp_snps) {
 		if (s1 === undefined) {
 			throw 'snp not found in edit list'
 		} else if (s1.tobe_deleted) {
-			// snp selected for deletetion from edit menu, remove from tw.snps
+			// snp selected for deletetion from edit menu, remove from term.snps
 			snps = snps.filter(s => s.rsid !== s1.rsid)
 		} else {
 			// effectAllele changed from edit menu
@@ -385,10 +376,10 @@ function updateSnps(snps, tmp_snps) {
 		}
 	}
 	// case 2: new SNPs added from textarea
-	// check each tmp_snps and add it to tw.snps if missing
+	// check each tmp_snps and add it to term.snps if missing
 	for (const [i, s] of tmp_snps.entries()) {
 		const s1 = snps.find(snp => snp.rsid == s.rsid)
-		// snp added from text area, add to tw.snps
+		// snp added from text area, add to term.snps
 		if (s1 === undefined && !s.tobe_deleted) {
 			snps.push(s)
 		}
