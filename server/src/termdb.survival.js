@@ -57,12 +57,10 @@ export async function get_survival(q, ds) {
 		const final_data = {
 			keys: ['chartId', 'seriesId', 'time', 'survival', 'censored', 'lower', 'upper'],
 			case: [],
-			censored: [],
 			refs: { bins }
 		}
 		const promises = []
 		for (const chartId in byChartSeries) {
-			console.log(byChartSeries[chartId].slice(0, 5))
 			//console.log(byChartSeries[chartId])
 			const output = await lines2R(
 				path.join(serverconfig.binpath, 'utils/survival.R'),
@@ -107,15 +105,24 @@ function getAtRiskTrend(survq, byChartSeries) {
 	const atRiskByChart = {}
 
 	for (const chartId in byChartSeries) {
-		atRiskByChart[chartId] = { bySeries: {}, timepoints: [0] }
-		const timepoints = new Set() // for tracking computed at risk x-time values
+		atRiskByChart[chartId] = { bySeries: {}, timepoints: [] }
 		const rows = byChartSeries[chartId].slice(1) // copy without header row
 
 		// track data by series in a chart
 		const bySeries = {}
+		let maxTime = 0
 		for (const r of rows) {
 			if (!bySeries[r[0]]) bySeries[r[0]] = []
 			bySeries[r[0]].push(r)
+			if (r[1] > maxTime) maxTime = r[1]
+		}
+
+		let xTime = 0
+		// compute at-risk counts for each timepoint,
+		// even when there are NO events spanned between timepoints
+		while (xTime <= maxTime) {
+			atRiskByChart[chartId].timepoints.push(xTime)
+			xTime += survq.atRiskInterval
 		}
 
 		for (const seriesId in bySeries) {
@@ -123,25 +130,17 @@ function getAtRiskTrend(survq, byChartSeries) {
 			const n = series.length
 			const trend = []
 			trend.push([0, n])
-
 			let dropped = 0
-			let timeIndex = 1
-			let currTimepoint = survq.atRiskInterval
-
-			for (const d of series) {
-				if (d[1] <= currTimepoint) {
-					dropped++
-				} else {
-					trend.push([currTimepoint, n - dropped])
-					timepoints.add(currTimepoint)
-					currTimepoint += survq.atRiskInterval
+			for (const t of atRiskByChart[chartId].timepoints) {
+				while (dropped < n) {
+					if (series[dropped][1] > t) break
+					else dropped++
 				}
+				trend.push([t, n - dropped])
 			}
 
 			atRiskByChart[chartId].bySeries[seriesId] = trend
 		}
-
-		atRiskByChart[chartId].timepoints.push(...timepoints)
 	}
 
 	return atRiskByChart

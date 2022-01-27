@@ -222,6 +222,7 @@ function setRenderers(self) {
 			.style('top', 0)
 			.style('left', 0)
 			.style('text-align', 'left')
+			.style('vertical-align', 'top')
 		//.style('border', '1px solid #eee')
 		//.style('box-shadow', '0px 0px 1px 0px #ccc')
 
@@ -413,6 +414,17 @@ function setRenderers(self) {
 		g.selectAll('g').remove()
 		const lastDataIndex = data.length - 1
 		const lineData = data.filter((d, i) => !d.censored || i == lastDataIndex)
+		/*const lastData = data.slice(-1).pop()
+		const lastLineDataCopy = JSON.parse(JSON.stringify(lineData.slice(-1))).pop()
+		if (lastData.censored && lastData.x >= lastLineDataCopy.x) { console.log(418)
+			lastLineDataCopy.isDummyData = true
+			lastLineDataCopy.x = lastData.x 
+			lastLineDataCopy.scaledX = lastData.scaledX
+			lastLineDataCopy.y = lastData.y
+			lastLineDataCopy.scaledY = lastData.scaledY
+			lineData.push(lastLineDataCopy)
+		}*/
+
 		const censoredData = data.filter(d => d.censored)
 		const subg = g.append('g')
 		const circles = subg.selectAll('circle').data(lineData, b => b.x)
@@ -423,7 +435,7 @@ function setRenderers(self) {
 			.enter()
 			.append('circle')
 			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX[0])
+			.attr('cx', c => c.scaledX)
 			.attr('cy', c => c.scaledY)
 			.style('opacity', 0)
 			.style('fill', s.fill)
@@ -476,7 +488,7 @@ function setRenderers(self) {
 			axisLeft(
 				scaleLinear()
 					.domain(chart.yScale.domain())
-					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
+					.range(chart.yScale.range())
 			).ticks(5)
 		)
 
@@ -548,7 +560,7 @@ function setRenderers(self) {
 
 				const data = chart.xTickValues.map(tickVal => {
 					if (tickVal === 0) return { tickVal, atRisk: series[0][1] }
-					const d = reversed.find(d => d[0] < tickVal)
+					const d = reversed.find(d => d[0] <= tickVal)
 					return { tickVal, atRisk: d[1] }
 				})
 				const text = g
@@ -672,9 +684,10 @@ export async function getPlotConfig(opts, app) {
 				svgw: 400,
 				svgh: 300,
 				timeFactor: 1,
-				atRiskInterval: 0,
+				timeUnit: '',
+				xTickInterval: 0, // if zero, automatically determined by d3-axis
+				atRiskInterval: 0, // if zero, no at-risk trend table is displayed below the x-axis
 				atRiskLabelOffset: -20,
-				xTickValues: 0,
 				svgPadding: {
 					top: 20,
 					left: 55,
@@ -816,6 +829,8 @@ function getPj(self) {
 						scaledX: 0, //result.xScale(0),
 						scaledY: [result.yScale(1), result.yScale(1), result.yScale(1)]
 					})
+
+					series.data.sort((a, b) => (a.x < b.x ? -1 : 1))
 				}
 				if (self.refs.orderedKeys) {
 					const s = self.refs.orderedKeys.series
