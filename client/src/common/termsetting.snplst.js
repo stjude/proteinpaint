@@ -51,14 +51,7 @@ export function getHandler(self) {
 
 function makeEditMenu(self, div) {
 	// the ui will create following controls, to be accessed upon clicking Submit button
-	let snplst_table,
-		textarea,
-		select_alleleType,
-		select_geneticModel,
-		select_missingGenotype,
-		tmp_snps,
-		tmp_alleleType,
-		tmp_geneticModel
+	let snplst_table, textarea, select_alleleType, select_geneticModel, select_missingGenotype, tmp_snps
 
 	// table has two rows
 	const table = div.append('table').style('margin', '15px')
@@ -210,6 +203,14 @@ function makeEditMenu(self, div) {
 			self.updateUI()
 		})
 
+	div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin', '5px')
+		.style('opacity', 0.4)
+		.style('font-size', '.7em')
+		.text('Must press Submit button to apply changes.')
+
 	function initSnpEditTable() {
 		snplst_td.style('padding-bottom', '20px')
 		snplst_table = snplst_td.append('table')
@@ -220,7 +221,7 @@ function makeEditMenu(self, div) {
 			.style('opacity', 0.4)
 			.style('font-size', '.7em')
 			.html(
-				'Note: Click on allele to make it effect allele.</br>#samples is the number of samples with at least one valid genotype'
+				'Note: Click on allele to make it effect allele.</br>#samples is the number of samples with at least one valid genotype.'
 			)
 	}
 
