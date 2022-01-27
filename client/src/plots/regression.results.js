@@ -3,7 +3,6 @@ import { sayerror } from '../dom/error'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { axisstyle } from '../dom/axisstyle'
-import { get_effectAllele } from '../common/termsetting.snplst.effAle'
 
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
 const forestcolor = '#126e08'
@@ -71,6 +70,31 @@ export class RegressionResults {
 		return opts
 	}
 
+	getIndependentInput(tid) {
+		/* arg is independent term id
+		return input instance
+		*/
+		for (const i of this.parent.inputs.independent.inputs) {
+			if (!i.term) continue
+			if (i.term.id == tid) return i
+			if (i.term.term && i.term.term.snps) {
+				for (const s of i.term.term.snps) {
+					if (s.snpid == tid) {
+						/* tid matches with a snpid
+						FIXME returns blank object! 
+						the purpose has been to access orderedLabels
+						but this is only set on Input instance, but not on tw
+						may assign it to Input.term instead so
+						no need for getIndependentInput but just getIndependentTerm
+						and avoid returning this ridiculous blank object
+						*/
+						return {}
+					}
+				}
+			}
+		}
+		throw 'cannot find Input for a tid: ' + tid
+	}
 	getIndependentTerm(tid) {
 		/*
 		arg is independent term id; return term wrapper 
@@ -88,12 +112,21 @@ export class RegressionResults {
 			if (t.term.snps) {
 				const snp = t.term.snps.find(i => i.snpid == tid)
 				if (snp) {
+					// tid is a snpid
 					// this input is one of the snps from this snplst term
 					// {snpid, effectAllele, alleles[], .. }
 					// return something looking like a termwrapper and represents this snp
 					const tw = {
-						id: snp.snpid,
-						effectAllele: get_effectAllele(t.q.alleleType, snp)
+						id: tid,
+						q: {},
+						term: {
+							id: tid,
+							name: tid
+						},
+						effectAllele: t.q.snp2effAle[tid]
+					}
+					if (t.q.snp2refGrp) {
+						tw.refGrp = t.q.snp2refGrp[tid]
 					}
 					return tw
 				}
@@ -260,7 +293,7 @@ function setRenderers(self) {
 				// term has categories, one sub-row for each category
 
 				const orderedCategories = []
-				const input = self.parent.inputs.independent.inputs.find(i => i.term.id == tid)
+				const input = self.getIndependentInput(tid)
 				if (input.orderedLabels) {
 					// reorder rows by predefined order
 					for (const k of input.orderedLabels) {

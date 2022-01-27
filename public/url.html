@@ -390,7 +390,7 @@ makeURL([
 				},
 			]
 		})],
-		['EF ~ snplst', '?noheader=1&mass='+JSON.stringify({
+		['EF ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
 			plots: [
@@ -418,7 +418,8 @@ makeURL([
 								geneticModel:0,
 								missingGenotype:0
 							}
-						}
+						},
+						{ id: 'sex', refGrp:'2'}
 					]
 				},
 			]

@@ -7,6 +7,7 @@ otherwise, compute it based on the alleleType setting (from snplst q{})
 snp: { effectAllele, alleles[ {allele, count, isRef} ] }
 */
 export function get_effectAllele(alleleType, snp) {
+	// TODO do not export this function, as tw.q.snp2effAle{} is now available
 	if (snp.effectAllele) {
 		// already selected by user
 		return snp.effectAllele
@@ -53,6 +54,9 @@ tw: {term{ snps[] }, q{}}
 data: returned by vocab getCategories()
 	such data includes sample and allele summaries for snps based on current filter
 	copy these info to tw.snps
+
+this function will alter tw,
+the changes must be kept in sync between termsetting instance and app state
 */
 export function mayRunSnplstTask(tw, data) {
 	// TODO quick fix!!! run arbitrary logic specific to snplst
@@ -77,9 +81,7 @@ export function mayRunSnplstTask(tw, data) {
 		if (!snp) throw 'snp not found by id'
 		snp.alleles = s.alleles
 		snp.gt2count = s.gt2count
-		// to name it differently than snp.effectAllele, which is user-specified
-		snp.effAleUse = get_effectAllele(tw.q.alleleType, snp)
-		tw.q.snp2effAle[snp.snpid] = snp.effAleUse
+		tw.q.snp2effAle[snp.snpid] = get_effectAllele(tw.q.alleleType, snp)
 	}
 
 	tw.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
@@ -92,10 +94,11 @@ export function mayRunSnplstTask(tw, data) {
 			if (s.invalid || !s.gt2count) continue
 			// FIXME "invalid" flag is missing for things supposed to be invalid
 
+			const effectAllele = tw.q.snp2effAle[s.snpid]
 			// from gt2count, find the gt that does not contain effect allele as ref group
 			let refGT
 			for (const gt in s.gt2count) {
-				if (!gt.includes(s.effAleUse)) {
+				if (!gt.includes(effectAllele)) {
 					refGT = gt
 					break
 				}

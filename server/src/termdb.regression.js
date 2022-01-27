@@ -17,12 +17,15 @@ q {}
 	.type // type will be required later to support molecular datatypes
 	.term{} // rehydrated
 	.q{}
+		.computableValuesOnly:true // always added
 	.refGrp
 .independent[{}]
 	.id
 	.type
+	.term{} // rehydrated
 	.q{}
 		.scale
+		.computableValuesOnly:true // always added
 	.refGrp
 	.interactions[]
 	.snpidlst[] // list of snp ids, for type=snplst, added when parsing cache file
@@ -38,7 +41,6 @@ get_regression()
 		divideTerms
 		getSampleData_dictionaryTerms
 		getSampleData_snplst
-			get_effAle4snp
 			doImputation
 			applyGeneticModel
 	makeRinput
@@ -113,16 +115,25 @@ function parse_q(q, ds) {
 	if (!Array.isArray(q.independent) || q.independent.length == 0) throw 'q.independent is not non-empty array'
 	// tw = termWrapper
 	for (const tw of q.independent) {
+		if (!tw.q) throw `missing q for term.id='${tw.id}'`
+		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
 		if (tw.type == 'snplst') {
 			// !!!!!!!!!QUICK FIX!! detect non-dict term and do not query termdb
 			// snplst tw lacks tw.term{}; tw.snpidlst[] will be added when parsing cache file
+			if (!tw.q.cacheid) throw 'q.cacheid missing'
+			if (tw.q.cacheid.match(/[^\w]/)) throw 'invalid cacheid'
+			if (typeof tw.q.snp2effAle != 'object') throw 'q.snp2effAle{} is not object'
+			if (!Number.isInteger(tw.q.alleleType)) throw 'q.alleleType is not integer'
+			if (!Number.isInteger(tw.q.geneticModel)) throw 'q.geneticModel is not integer'
+			if (!Number.isInteger(tw.q.missingGenotype)) throw 'q.missingGenotype is not integer'
+			if (tw.q.geneticModel == 3) {
+				if (typeof tw.q.snp2refGrp != 'object') throw 'q.snp2refGrp{} is not object when geneticMode=3'
+			}
 		} else {
 			if (!tw.id) throw '.id missing for an independent term'
 			tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
 			if (!tw.term) throw `invalid independent term='${tw.id}'`
 		}
-		if (!tw.q) throw `missing q for term.id='${tw.id}'`
-		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
 	}
 	// interaction of independent
 	for (const i of q.independent) {
@@ -162,9 +173,16 @@ function makeRinput(q, sampledata) {
 				const independent = {
 					id: snpid,
 					name: snpid,
-					rtype: tw.q.geneticModel == 3 /*bygenotype*/ ? 'factor' : 'numeric',
 					values: [], // to collect sample values
 					interactions: []
+				}
+				if (tw.q.geneticModel == 3) {
+					// by genotype
+					independent.rtype = 'factor'
+					// assign ref grp
+					independent.refGrp = tw.q.snp2refGrp[snpid]
+				} else {
+					independent.rtype = 'numeric'
 				}
 				Rinput.independent.push(independent)
 			}
@@ -467,20 +485,20 @@ tw{}
 		alleleType: 0/1
 		geneticModel: 0/1/2/3
 		missingGenotype: 0/1/2
+		snp2effAle{}
+		snp2refGrp{}
 	snpidlst[]
 		// list of snpid; tricky!! added in this function
 samples {Map} // results are added into it
 */
 async function getSampleData_snplst(tw, samples, q) {
-	if (!tw.q.cacheid) throw 'q.cacheid missing'
-	if (tw.q.cacheid.match(/[^\w]/)) throw 'invalid cacheid'
-
 	tw.snpidlst = [] // snpid are added to this list while reading cache file
 
 	const lines = (await utils.read_file(path.join(serverconfig.cachedir, tw.q.cacheid))).split('\n')
 	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 
 	// array of sample ids from the cache file; note cache file contains all the samples from the dataset
+	// TODO export helper func to read header from termdb.snp.js
 	const cachesampleheader = lines[0]
 		.split('\t')
 		.slice(6) // from 7th column
@@ -513,7 +531,9 @@ async function getSampleData_snplst(tw, samples, q) {
 		tw.snpidlst.push(snpid)
 
 		snp2sample.set(snpid, {
-			effAle: l[5],
+			// get effect allele from q, but not from cache file
+			// column [5] is for user-assigned effect allele
+			effAle: tw.q.snp2effAle[snpid],
 			refAle: l[3],
 			altAles: l[4].split(','),
 			samples: new Map()
@@ -528,12 +548,6 @@ async function getSampleData_snplst(tw, samples, q) {
 				snp2sample.get(snpid).samples.set(sampleid, gt)
 			}
 		}
-	}
-
-	// define effect allele for each snp
-	for (const [snpid, o] of snp2sample) {
-		// okay to overwrite, identical value if is user-provided
-		o.effAle = get_effAle4snp(o, tw) // okay to override
 	}
 
 	// imputation
@@ -623,33 +637,10 @@ function applyGeneticModel(tw, effAle, a1, a2) {
 			return a1 == effAle && a2 == effAle ? 1 : 0
 		case 3:
 			// by genotype
-			return a1 + '/' + a2
+			return a1 + ',' + a2
 		default:
 			throw 'unknown geneticModel option'
 	}
-}
-
-function get_effAle4snp(snp, tw) {
-	// get effect allele for a snp
-	// snp: { effAle, alleles, samples: map { k: sample id, v: gt } }
-	if (snp.effAle) return snp.effAle // use user supplied allele
-	// compute based on q.alleleType choice
-	if (tw.q.alleleType == 0) {
-		// major/minor
-		const ale2count = new Map() // k: allele from gt, v: number of times it shows up in snp.samples
-		for (const gt of snp.samples.values()) {
-			for (const a of gt.split(',')) {
-				ale2count.set(a, 1 + (ale2count.get(a) || 0))
-			}
-		}
-		const lst = [...ale2count].sort((a, b) => a[1] - b[1]) // sort to ascending
-		return lst[0][0] // lst[0] is the allele with smallest number of appearances
-	}
-	if (tw.q.alleleType == 1) {
-		// ref/alt, return alternative allele (what if there are multiple alt?)
-		return snp.altAles[0]
-	}
-	throw 'unknown alleleType value'
 }
 
 function divideTerms(lst) {
