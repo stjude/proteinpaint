@@ -4,6 +4,7 @@ import { get_bin_label } from '../../shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
+import { mayRunSnplstTask } from '../common/termsetting.snplst.effAle'
 
 /*
 class instance is an input
@@ -187,32 +188,7 @@ export class InputTerm {
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 
-		// TODO quick fix!!! run arbitrary logic specific to snplst
-		if (tw.term.type == 'snplst') {
-			if (!Array.isArray(data.snps)) throw 'data.snps[] not array'
-			// note!! tw is modified here and is not written to state, but should be fine
-
-			// delete existing sample summaries from snps, in case when a snp is no longer found in latest cohort due to filtering
-			for (const s of tw.term.snps) {
-				delete s.alleles
-				delete s.gt2count
-			}
-
-			// copy latest sample summaries to tw.term.snps[]
-			// note!
-			// will add attributes to tw which are not written to state
-			// but should be fine
-			// same query is performed in 'termsetting.snplst',
-			// so return if all snps have data from query
-			for (const s of data.snps) {
-				// { snpid, alleles, gt2count }
-				const snp = tw.term.snps.find(i => i.snpid == s.snpid)
-				if (!snp) throw 'snp not found by id'
-				snp.alleles = s.alleles
-				snp.gt2count = s.gt2count
-			}
-			tw.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
-		}
+		mayRunSnplstTask(tw, data)
 
 		// condition check is quick fix!!!
 		if (data.lst) {
