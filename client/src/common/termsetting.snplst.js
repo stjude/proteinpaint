@@ -1,5 +1,3 @@
-import { get_effectAllele } from './termsetting.snplst.effAle'
-
 /* 
 storing snps on self.term but not self so it can be written to state,
 allow snps to be supplied from self.main(),
@@ -269,7 +267,7 @@ function makeEditMenu(self, div) {
 			const alt_allele_td = tr.append('td')
 
 			if (!invalid_snp) {
-				const effectAllele = get_effectAllele(self.q.alleleType, snp)
+				const effectAllele = self.q.snp2effAle ? self.q.snp2effAle[snp.rsid] : undefined
 				const refAllele = snp.alleles.find(s => s.isRef)
 				const altAlleles = snp.alleles.filter(s => !s.isRef)
 
@@ -369,7 +367,7 @@ function updateSnps(snps, tmp_snps) {
 		if (s1 === undefined) {
 			throw 'snp not found in edit list'
 		} else if (s1.tobe_deleted) {
-			// snp selected for deletetion from edit menu, remove from tw.snps
+			// snp selected for deletetion from edit menu, remove from term.snps
 			snps = snps.filter(s => s.rsid !== s1.rsid)
 		} else {
 			// effectAllele changed from edit menu
@@ -377,10 +375,10 @@ function updateSnps(snps, tmp_snps) {
 		}
 	}
 	// case 2: new SNPs added from textarea
-	// check each tmp_snps and add it to tw.snps if missing
+	// check each tmp_snps and add it to term.snps if missing
 	for (const [i, s] of tmp_snps.entries()) {
 		const s1 = snps.find(snp => snp.rsid == s.rsid)
-		// snp added from text area, add to tw.snps
+		// snp added from text area, add to term.snps
 		if (s1 === undefined && !s.tobe_deleted) {
 			snps.push(s)
 		}

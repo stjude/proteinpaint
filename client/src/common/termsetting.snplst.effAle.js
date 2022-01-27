@@ -6,8 +6,7 @@ otherwise, compute it based on the alleleType setting (from snplst q{})
 
 snp: { effectAllele, alleles[ {allele, count, isRef} ] }
 */
-export function get_effectAllele(alleleType, snp) {
-	// TODO do not export this function, as tw.q.snp2effAle{} is now available
+function get_effectAllele(alleleType, snp) {
 	if (snp.effectAllele) {
 		// already selected by user
 		return snp.effectAllele
