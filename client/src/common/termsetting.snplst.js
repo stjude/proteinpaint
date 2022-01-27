@@ -1,5 +1,4 @@
-import { event as d3event } from 'd3-selection'
-import { get_effectAllele, get_refGenotype } from './termsetting.snplst.effAle'
+import { get_effectAllele } from './termsetting.snplst.effAle'
 
 /* 
 storing snps on self.term but not self so it can be written to state,
@@ -129,11 +128,6 @@ function makeEditMenu(self, div) {
 	select_geneticModel.append('option') // dominant
 	select_geneticModel.append('option') // recessive
 	select_geneticModel.append('option') // by genotype
-	select_geneticModel.on('change', () => {
-		tmp_geneticModel = select_geneticModel.property('selectedIndex')
-		tmp_alleleType = select_alleleType.property('selectedIndex')
-		if (snplst_table !== undefined) renderSnpEditTable(snplst_table)
-	})
 	// select - missing gt
 	tdright
 		.append('div')
@@ -170,8 +164,6 @@ function makeEditMenu(self, div) {
 		o[3].innerHTML = 'By genotype: ' + (is0 ? 'DD and Dd compared to dd' : 'AA and Ar compared to rr')
 		select_missingGenotype.node().options[0].innerHTML =
 			'Impute as homozygous ' + (is0 ? 'major' : 'reference') + ' allele'
-		tmp_alleleType = select_alleleType.property('selectedIndex')
-		if (snplst_table !== undefined && tmp_geneticModel == 3) renderSnpEditTable(snplst_table)
 	}
 
 	// submit button
@@ -334,7 +326,7 @@ function makeEditMenu(self, div) {
 			// col 5: genetype (frequency)
 			const gt_td = tr.append('td')
 			if (!invalid_snp) {
-				const refGT = get_refGenotype(tmp_alleleType, tmp_geneticModel, snp)
+				const refGT = self.q.snp2refGrp ? self.q.snp2refGrp[snp.rsid] : undefined
 				for (const [gt, freq] of Object.entries(snp.gt2count)) {
 					const gt_freq = Math.round((freq * 100) / sample_count)
 					const gt_div = gt_td
