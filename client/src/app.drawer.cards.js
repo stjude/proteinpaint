@@ -60,10 +60,12 @@ export async function init_appDrawer(par) {
 	// const holddiv = make_top_fnDiv(gbrowser_col)
 	// const searchbar_div = app_col.append('div')
 
+	const useCaseCard = gbrowser_col.append('div')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const track_args = {
 		tracks: re.examples.filter(track => !track.hidden),
+		usecases: re.usecases,
 		browserList,
 		launchList
 	}
@@ -73,9 +75,11 @@ export async function init_appDrawer(par) {
 		allow_mdsform: re.allow_mdsform
 	}
 	// make_searchbar(track_args, page_args, searchbar_div)
+	make_useCasesCard(useCaseCard, track_args, page_args)
 	await loadTracks(track_args, page_args)
 }
 
+/*  ********* Main Page Layout Functions  ********* */
 function make_examples_page(holder) {
 	const wrapper_div = holder.append('div')
 	wrapper_div
@@ -170,6 +174,7 @@ function make_searchbar(track_args, page_args, div) {
 	return searchBar
 }
 
+/*  ********* Create Track/App Cards Functions ********* */
 async function loadTracks(args, page_args, filteredTracks) {
 	const BrowserTracks = (filteredTracks || args.tracks).filter(track => track.app == 'Genome Browser')
 	const LaunchApps = (filteredTracks || args.tracks).filter(track => track.app == 'Apps')
@@ -180,8 +185,6 @@ async function loadTracks(args, page_args, filteredTracks) {
 		console.error(err)
 	}
 }
-
-//For all display functions: If example is available, the entire tile is clickable. If url and/or doc links are provided, buttons appear and open a new tab
 
 function displayTracks(tracks, holder, page_args) {
 	holder.selectAll('*').remove()
@@ -253,24 +256,24 @@ function makeRibbon(e, text, color) {
 		.style('text-align', 'center')
 }
 
-/******* Create Sandbox Function ********* 
+/******* Track/App Sandbox Functions ********* 
  	Opens a sandbox with track example(s) or app ui with links and other information
 */
 
 async function openSandbox(track, holder) {
 	//queries relevant json file with sandbox args
-	const res = await dofetch3(`/cardsjson?file=${track.sandboxjson}`) //Fix for loading the sandbox json only once
+	const res = await dofetch3(`/cardsjson?jsonfile=${track.sandboxjson}`) //Fix for loading the sandbox json only once
 	if (res.error) {
 		sayerror(holder.append('div'), res.error)
 		return
 	}
 
 	const sandbox_args = {
-		intro: res.file.intro,
-		ppcalls: res.file.ppcalls,
-		buttons: res.file.buttons,
-		arrowButtons: res.file.arrowButtons,
-		update_message: res.file.update_message
+		intro: res.jsonfile.intro,
+		ppcalls: res.jsonfile.ppcalls,
+		buttons: res.jsonfile.buttons,
+		arrowButtons: res.jsonfile.arrowButtons,
+		update_message: res.jsonfile.update_message
 	}
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
@@ -761,5 +764,92 @@ function addArrowBtns(arg, ppcalls, bdiv, rdiv) {
 				delete btn.callback
 			}
 		})
+	}
+}
+
+/*
+ ********* 'Use Cases' Card and Functions  *********
+ */
+function make_useCasesCard(div, track_args, page_args) {
+	const usecases_div = div
+		.append('div')
+		.style('grid-area', 'gbrowser')
+		.style('width', '90%')
+		.style('margin', '20px 10px')
+		.style('padding', '5px')
+		.attr('class', 'sjpp-app-drawer-card')
+		.html(
+			`<p style="margin-left: 12px; font-size:14.5px;font-weight:500; display: block;">Use Cases</p>
+		<p style="display: block; font-size: 13px; font-weight: 300; margin-left: 20px; justify-content: center; font-style:oblique; color: #403f3f;">find workflows and processes for specific needs</p>`
+		)
+		.on('click', async () => {
+			page_args.apps_off()
+			openUseCasesSandbox(track_args.usecases, page_args.apps_sandbox_div)
+		})
+
+	return usecases_div
+}
+
+//Clicking on the 'use cases' card opens to a sandbox with another set of cards. Clicking on a use case card removes all other cards and opens static content of the selected card.
+function openUseCasesSandbox(usecases, holder) {
+	holder.selectAll('*').remove()
+	const sandbox_div = newSandboxDiv(holder)
+	sandbox_div.header_row
+	sandbox_div.header.text('Use Cases')
+	sandbox_div.body.style('justify-content', 'center').style('background-color', '#f2ebdc')
+
+	const uc_list = sandbox_div.body
+		.append('ul')
+		.style('list-style', 'none')
+		.style('display', 'grid')
+		.style('grid-template-columns', '40vw 40vw')
+		.style('grid-template-rows', 'repeat(1, auto)')
+		.style('gap', '5px')
+
+	const uc_content = sandbox_div.body.append('div').style('padding', '0vw 0vw 2vw 0vw')
+
+	function displayUseCases(usecases, list_div, content_div) {
+		usecases.forEach(usecase => {
+			const uc = list_div.append('li')
+			uc.attr('class', 'sjpp-app-drawer-card')
+				.style('padding', '10px')
+				.style('margin', '5px')
+				.html(
+					`<p style="margin-left: 12px; font-size:14.5px;font-weight:500; display: block;">${usecase.title}</p>
+				<p style="display: block; font-size: 13px; font-weight: 300; margin-left: 20px; justify-content: center; font-style:oblique; color: #403f3f;">${usecase.describe}</p>`
+				)
+				.on('click', () => {
+					list_div.selectAll('*').remove()
+					showUseCaseContent(usecase, content_div)
+				})
+			return JSON.stringify(uc)
+		})
+	}
+
+	displayUseCases(usecases, uc_list, uc_content)
+
+	async function showUseCaseContent(usecase, div) {
+		const res = await dofetch3(`/cardsjson?file=${usecase.file}`)
+		if (res.error) {
+			sayerror(holder.append('div'), res.error)
+			return
+		}
+
+		const content_div = div
+			.append('div')
+			.style('background-color', 'white')
+			.style('margin', '0vw 10vw')
+			.style('padding', '10px')
+
+		const backBtn = makeButton(content_div, '<').style('background-color', '#d0e3ff')
+		backBtn.style('font-size', '20px').on('click', () => {
+			div.selectAll('*').remove()
+			displayUseCases(usecases, uc_list, uc_content)
+		})
+
+		content_div
+			.append('div')
+			.style('margin', '0vw 5vw')
+			.html(res.file)
 	}
 }

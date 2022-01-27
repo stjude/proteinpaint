@@ -431,14 +431,17 @@ function handle_gene2canonicalisoform(req, res) {
 async function handle_cards(req, res) {
 	try {
 		// more flexibility by reading a file pointed by exports.features.examples
-		if (req.query.file) {
-			if (req.query.file.match(/[^\w]/)) throw 'Invalid file'
-			const jsontxt = await utils.read_file(path.join(serverconfig.cardsjsondir, req.query.file + '.json'))
-			res.send({ file: JSON.parse(jsontxt) })
+		if (req.query.jsonfile) {
+			if (req.query.jsonfile.match(/[^\w]/)) throw 'Invalid file'
+			const jsontxt = await utils.read_file(path.join(serverconfig.cardsjsondir, req.query.jsonfile + '.json'))
+			res.send({ jsonfile: JSON.parse(jsontxt) })
+		} else if (req.query.file) {
+			const txt = await utils.read_file(path.join(serverconfig.cardsjsondir, req.query.file + '.txt'))
+			res.send({ file: txt })
 		} else {
 			const cardsjson = await utils.read_file(serverconfig.cardsjson)
 			const json = JSON.parse(cardsjson)
-			res.send({ examples: json.examples, allow_mdsform: exports.features.mdsjsonform })
+			res.send({ examples: json.examples, usecases: json.usecases, allow_mdsform: exports.features.mdsjsonform })
 		}
 	} catch (e) {
 		res.send({ error: e.message || e })
