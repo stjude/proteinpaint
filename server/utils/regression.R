@@ -250,6 +250,7 @@ for (i in 2:ncol(dat)) {
 # build formula of regression model
 outcomeTerm <- "outcome"
 independentTerms <- vector(mode = "character")
+interactions <- vector(mode = "character")
 splineTerms <- list()
 for (i in 1:length(lst$independent)) {
   term <- lst$independent[[i]]
@@ -265,13 +266,13 @@ for (i in 1:length(lst$independent)) {
     # get unique set of interactions
     int1 <- paste(term$id, intTerm, sep = ":")
     int2 <- paste(intTerm, term$id, sep = ":")
-    if (!(int1 %in% independentTerms) & !(int2 %in% independentTerms)) {
-      independentTerms <- c(independentTerms, int1)
+    if (!(int1 %in% interactions) & !(int2 %in% interactions)) {
+      interactions <- c(interactions, int1)
     }
   }
 }
 
-mod <- as.formula(paste(outcomeTerm, paste(independentTerms, collapse = "+"), sep = "~"))
+mod <- as.formula(paste(outcomeTerm, paste(c(independentTerms, interactions), collapse = "+"), sep = "~"))
 
 
 ########## Regression analysis ###########
