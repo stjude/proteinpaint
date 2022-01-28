@@ -27,7 +27,7 @@ q {}
 		.scale
 		.computableValuesOnly:true // always added
 	.refGrp
-	.interactions[]
+	.interactions[] // always added; empty if no interaction
 	.snpidlst[] // list of snp ids, for type=snplst, added when parsing cache file
 
 input to R is an json object {type, outcome:{rtype}, independent:[ {rtype} ]}
@@ -139,6 +139,7 @@ function parse_q(q, ds) {
 	for (const i of q.independent) {
 		if (!i.interactions) i.interactions = []
 		for (const x of i.interactions) {
+			// TODO allow tw.interactions[] array to contain snpid instead of snplst term id
 			if (!q.independent.find(y => y.id == x)) throw 'interacting term id missing from independent[]: ' + x
 		}
 	}
@@ -170,7 +171,7 @@ function makeRinput(q, sampledata) {
 		if (tw.type == 'snplst') {
 			// create one independent variable for each snp
 			for (const snpid of tw.snpidlst) {
-				const independent = {
+				const thisSnp = {
 					id: snpid,
 					name: snpid,
 					values: [], // to collect sample values
@@ -178,31 +179,54 @@ function makeRinput(q, sampledata) {
 				}
 				if (tw.q.geneticModel == 3) {
 					// by genotype
-					independent.rtype = 'factor'
+					thisSnp.rtype = 'factor'
 					// assign ref grp
-					independent.refGrp = tw.q.snp2refGrp[snpid]
+					thisSnp.refGrp = tw.q.snp2refGrp[snpid]
 				} else {
-					independent.rtype = 'numeric'
+					// treat as numeric and do not assign refGrp
+					thisSnp.rtype = 'numeric'
 				}
-				Rinput.independent.push(independent)
+				// find out any other variable that's interacting with either this snp or this snplst term
+				// and fill into interactions array
+				// for now, do not support interactions between snps in the same snplst term
+				for (const tw2 of q.independent) {
+					if (tw2.interactions.includes(tw.id)) {
+						// another term (tw2) is interacting with this snplst term
+						// in R input establish tw2's interaction with this snp
+						thisSnp.interactions.push(tw2.id)
+					}
+				}
+				Rinput.independent.push(thisSnp)
 			}
 		} else {
-			const independent = {
+			// this is a dictionary term
+			const thisTerm = {
 				id: tw.id,
 				name: tw.term.name,
 				rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor',
 				values: [], // to collect raw sample values
-				interactions: tw.interactions
+				interactions: []
 			}
-			if (independent.rtype === 'factor') independent.refGrp = tw.refGrp
+			// map tw.interactions into thisTerm.interactions
+			for (const id of tw.interactions) {
+				const tw2 = q.independent.find(i => i.id == id)
+				if (tw2.type == 'snplst') {
+					// this term is interacting with a snplst term, fill in all snps from this list into thisTerm.interactions
+					for (const s of tw2.snpidlst) thisTerm.interactions.push(s)
+				} else {
+					// this term is interacting with another dictionary term
+					thisTerm.interactions.push(id)
+				}
+			}
+			if (thisTerm.rtype === 'factor') thisTerm.refGrp = tw.refGrp
 			if (tw.q.mode == 'spline') {
-				independent.spline = {
+				thisTerm.spline = {
 					knots: tw.q.knots.map(x => Number(x.value)),
 					plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
 				}
 			}
-			if (tw.q.scale) independent.scale = tw.q.scale
-			Rinput.independent.push(independent)
+			if (tw.q.scale) thisTerm.scale = tw.q.scale
+			Rinput.independent.push(thisTerm)
 		}
 	}
 
