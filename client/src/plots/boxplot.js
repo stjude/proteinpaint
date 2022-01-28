@@ -42,7 +42,8 @@ class TdbBoxplot {
 				controls: await controlsInit({
 					app: this.app,
 					id: this.id,
-					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls')
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls'),
+					inputs: ['term1', 'overlay', 'divideBy']
 				})
 			}
 

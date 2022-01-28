@@ -78,7 +78,8 @@ class TdbBarchart {
 				controls: await controlsInit({
 					app: this.app,
 					id: this.id,
-					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
+					inputs: ['term1', 'overlay', 'orientation', 'scale', 'divideBy']
 				})
 			}
 

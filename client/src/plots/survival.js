@@ -63,7 +63,8 @@ class TdbSurvival {
 				controls: await controlsInit({
 					app: this.app,
 					id: this.id,
-					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
+					inputs: ['overlay', 'ci', 'divideBy']
 				})
 			}
 
@@ -416,11 +417,11 @@ function setRenderers(self) {
 		const lineData = data.reduce((arr, d, i) => {
 			// always retain the first and last data point
 			if (i === 0 || i === data.length - 1) arr.push(d)
-			// retain data only when the probability has dropped,
+			// otherwise, retain data when the probability has dropped,
 			// which will look visually the same as multiple
 			// horizontal segments joined together at the same y;
 			// this will result in a simpler path d='...' attribute
-			if (d.y != arr[arr.length - 1].y) arr.push(d)
+			else if (d.y != arr[arr.length - 1].y) arr.push(d)
 			return arr
 		}, [])
 		const censoredData = data.filter(d => d.censored)

@@ -23,45 +23,32 @@ class TdbConfigUiInit {
 			const dispatch = this.app.dispatch
 			const table = this.setDom()
 			const debug = this.opts.debug
-			this.inputs = {
-				view: setViewOpts({
-					holder: this.dom.viewTr,
-					dispatch,
-					id: this.id,
-					debug,
-					instanceNum: this.instanceNum,
-					isleaf: this.opts.isleaf,
-					iscondition: this.opts.iscondition,
-					hasViewMode: this.app.type == 'termdb'
-				}),
-				orientation: setOrientationOpts({
-					holder: this.dom.orientationTr,
-					dispatch,
-					id: this.id,
-					debug,
-					instanceNum: this.instanceNum
-				}),
-				scale: setScaleOpts({ holder: this.dom.scaleTr, dispatch, id: this.id, debug }),
-				grade: setCumincGradeOpts({
-					holder: this.dom.cumincGradeTr,
-					dispatch,
-					id: this.id,
-					debug
-				}),
-				ci: setCIOpts({
-					holder: this.dom.ciTr,
-					dispatch,
-					id: this.id,
-					debug,
-					instanceNum: this.instanceNum
-				})
+			this.inputs = {} // non-rx notified
+			const componentPromises = {} // rx-notified
+
+			for (const key of this.opts.inputs) {
+				if (key in initByInput) {
+					this.inputs[key] = initByInput[key]({
+						holder: this.dom[`${key}Tr`],
+						dispatch,
+						id: this.id,
+						instanceNum: this.instanceNum,
+						debug: this.opts.debug,
+						parent: this
+					})
+				} else if (key in initByComponent) {
+					componentPromises[key] = initByComponent[key]({
+						app: this.app,
+						holder: this.dom[`${key}Tr`],
+						id: this.id,
+						debug: this.opts.debug
+					})
+				} else {
+					throw `unsupported opts.inputs[] entry of '${key}' for controlsInit()`
+				}
 			}
 
-			this.components = await multiInit({
-				term1: term1uiInit({ app: this.app, holder: this.dom.term1Tr, id: this.id, debug }),
-				overlay: overlayInit({ app: this.app, holder: this.dom.overlayTr, id: this.id, debug }),
-				divideBy: divideInit({ app: this.app, holder: this.dom.divideTr, id: this.id, debug })
-			})
+			this.components = await multiInit(componentPromises)
 		} catch (e) {
 			throw e
 		}
@@ -89,10 +76,10 @@ class TdbConfigUiInit {
 		this.dom.overlayTr = this.dom.table.append('tr')
 		this.dom.viewTr = this.dom.table.append('tr')
 		this.dom.orientationTr = this.dom.table.append('tr')
-		this.dom.cumincGradeTr = this.dom.table.append('tr') //.style('display', 'none')
+		this.dom.gradeTr = this.dom.table.append('tr') //.style('display', 'none')
 		this.dom.ciTr = this.dom.table.append('tr')
 		this.dom.scaleTr = this.dom.table.append('tr')
-		this.dom.divideTr = this.dom.table.append('tr')
+		this.dom.divideByTr = this.dom.table.append('tr')
 
 		return this.dom.table
 	}
@@ -177,10 +164,7 @@ function setOrientationOpts(opts) {
 
 	const api = {
 		main(plot, displayAsSurvival = false) {
-			self.dom.row.style(
-				'display',
-				!displayAsSurvival && plot.settings.currViews.includes('barchart') ? 'table-row' : 'none'
-			)
+			self.dom.row.style('table-row')
 			self.radio.main(plot.settings.barchart.orientation)
 		}
 	}
@@ -192,7 +176,7 @@ function setOrientationOpts(opts) {
 function setScaleOpts(opts) {
 	const self = {
 		dom: {
-			row: opts.holder,
+			row: opts.holder.style('display', 'table-row'),
 			labelTd: opts.holder
 				.append('td')
 				.html('Scale')
@@ -224,10 +208,6 @@ function setScaleOpts(opts) {
 
 	const api = {
 		main(plot, displayAsSurvival = false) {
-			self.dom.row.style(
-				'display',
-				!displayAsSurvival && plot.settings.currViews.includes('barchart') ? 'table-row' : 'none'
-			)
 			self.radio.main(plot.settings.barchart.unit)
 			self.radio.dom.divs.style('display', d => {
 				if (d.value == 'log') {
@@ -248,7 +228,7 @@ function setScaleOpts(opts) {
 function setCumincGradeOpts(opts) {
 	const self = {
 		dom: {
-			row: opts.holder,
+			row: opts.holder.style('display', 'table-row'),
 			labelTd: opts.holder
 				.append('td')
 				.html('Cutoff Grade')
@@ -282,86 +262,7 @@ function setCumincGradeOpts(opts) {
 
 	const api = {
 		main(plot, displayAsSurvival = false) {
-			self.dom.row.style('display', plot.settings.currViews.includes('cuminc') ? 'table-row' : 'none')
 			self.dom.select.property('value', plot.settings.cuminc.gradeCutoff)
-		}
-	}
-
-	if (opts.debug) api.Inner = self
-	return Object.freeze(api)
-}
-
-function setViewOpts(opts) {
-	const self = {
-		dom: {
-			row: opts.holder,
-			labelTd: opts.holder
-				.append('td')
-				.html('Display mode')
-				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
-		}
-	}
-
-	const options = [
-		{ label: 'Barchart', value: 'barchart' },
-		{ label: 'Table', value: 'table' },
-		{ label: 'Boxplot', value: 'boxplot' },
-		{ label: 'Scatter', value: 'scatter' }
-	]
-
-	if (opts.iscondition) {
-		options.push({ label: 'Cumulative Incidence', value: 'cuminc' })
-	}
-
-	self.radio = initRadioInputs({
-		name: 'pp-termdb-display-mode-' + opts.instanceNum, // elemName
-		holder: self.dom.inputTd,
-		options,
-		listeners: {
-			input(d) {
-				const currViews = d.value == 'barchart' ? ['barchart', 'stattable'] : [d.value]
-				opts.dispatch({
-					type: 'plot_edit',
-					id: opts.id,
-					config: {
-						settings: { currViews }
-					}
-				})
-			}
-		}
-	})
-
-	const api = {
-		main(plot, displayAsSurvival = false) {
-			self.dom.row.style('display', opts.hasViewMode && !displayAsSurvival && (plot.term2 || opts.iscondition) ? 'table-row' : 'none')
-			const currValue = plot.settings.currViews.includes('table')
-				? 'table'
-				: plot.settings.currViews.includes('boxplot')
-				? 'boxplot'
-				: plot.settings.currViews.includes('scatter')
-				? 'scatter'
-				: plot.settings.currViews.includes('cuminc')
-				? 'cuminc'
-				: 'barchart'
-
-			const numericTypes = ['integer', 'float']
-
-			self.radio.main(currValue)
-			self.radio.dom.divs.style('display', d =>
-				d.value == 'barchart' || d.value == 'cuminc'
-					? 'inline-block'
-					: d.value == 'table' && plot.term2
-					? 'inline-block'
-					: d.value == 'boxplot' && plot.term2 && numericTypes.includes(plot.term2.term.type)
-					? 'inline-block'
-					: d.value == 'scatter' &&
-					  numericTypes.includes(plot.term.term.type) &&
-					  plot.term2 &&
-					  numericTypes.includes(plot.term2.term.type)
-					? 'inline-block'
-					: 'none'
-			)
 		}
 	}
 
@@ -372,7 +273,7 @@ function setViewOpts(opts) {
 function setCIOpts(opts) {
 	const self = {
 		dom: {
-			row: opts.holder,
+			row: opts.holder.style('display', 'table-row'),
 			labelTdb: opts.holder
 				.append('td')
 				.html('95% CI')
@@ -407,11 +308,23 @@ function setCIOpts(opts) {
 
 	const api = {
 		main(plot, displayAsSurvival = false) {
-			self.dom.row.style('display', displayAsSurvival ? 'table-row' : 'none')
 			self.dom.input.property('checked', plot.settings.survival.ciVisible)
 		}
 	}
 
 	if (opts.debug) api.Inner = self
 	return Object.freeze(api)
+}
+
+const initByInput = {
+	orientation: setOrientationOpts,
+	scale: setScaleOpts,
+	grade: setCumincGradeOpts,
+	ci: setCIOpts
+}
+
+const initByComponent = {
+	term1: term1uiInit,
+	overlay: overlayInit,
+	divideBy: divideInit
 }

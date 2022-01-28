@@ -15,7 +15,8 @@ class TdbTable {
 			header: opts.header,
 			controls,
 			holder,
-			div: holder.style('margin', '10px 0px').style('display', 'none')
+			div: holder.style('margin', '10px 0px').style('display', 'none'),
+			inputs: ['term1', 'overlay']
 		}
 		if (this.dom.header) this.dom.header.html('Crosstab')
 		setInteractivity(this)
