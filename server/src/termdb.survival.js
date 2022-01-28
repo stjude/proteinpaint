@@ -68,6 +68,8 @@ export async function get_survival(q, ds) {
 			)
 			let header
 			output
+				// remove non-data artifacts from the stream, such as messages when a plot image file is saved in the R script
+				.filter(line => line.includes('\t'))
 				.map(line => line.split('\t'))
 				.forEach((row, i) => {
 					if (i === 0) header = row

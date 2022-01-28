@@ -412,19 +412,17 @@ function setRenderers(self) {
 	function renderSubseries(s, g, data) {
 		// todo: allow update of exiting g's instead of replacing
 		g.selectAll('g').remove()
-		const lastDataIndex = data.length - 1
-		const lineData = data.filter((d, i) => !d.censored || i == lastDataIndex)
-		/*const lastData = data.slice(-1).pop()
-		const lastLineDataCopy = JSON.parse(JSON.stringify(lineData.slice(-1))).pop()
-		if (lastData.censored && lastData.x >= lastLineDataCopy.x) { console.log(418)
-			lastLineDataCopy.isDummyData = true
-			lastLineDataCopy.x = lastData.x 
-			lastLineDataCopy.scaledX = lastData.scaledX
-			lastLineDataCopy.y = lastData.y
-			lastLineDataCopy.scaledY = lastData.scaledY
-			lineData.push(lastLineDataCopy)
-		}*/
-
+		// reduce the line data so that only one horizontal segment is created for each death event
+		const lineData = data.reduce((arr, d, i) => {
+			// always retain the first and last data point
+			if (i === 0 || i === data.length - 1) arr.push(d)
+			// retain data only when the probability has dropped,
+			// which will look visually the same as multiple
+			// horizontal segments joined together at the same y;
+			// this will result in a simpler path d='...' attribute
+			if (d.y != arr[arr.length - 1].y) arr.push(d)
+			return arr
+		}, [])
 		const censoredData = data.filter(d => d.censored)
 		const subg = g.append('g')
 		const circles = subg.selectAll('circle').data(lineData, b => b.x)
