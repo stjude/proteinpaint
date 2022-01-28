@@ -4,7 +4,7 @@ import { get_bin_label } from '../../shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
-import { mayRunSnplstTask } from '../common/termsetting.snplst.effAle'
+import { mayRunSnplstTask } from '../common/termsetting.snplst.sampleSum'
 
 /*
 class instance is an input

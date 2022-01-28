@@ -1,3 +1,5 @@
+import { mayRunSnplstTask } from './termsetting.snplst.sampleSum'
+
 /* 
 storing snps on self.term but not self so it can be written to state,
 allow snps to be supplied from self.main(),
@@ -189,11 +191,13 @@ function makeEditMenu(self, div) {
 			submit_btn.property('disabled', true)
 			submit_btn.text('Validating SNPs...')
 			await validateInput(self)
-			await getSnpData(self)
 			//q.cacheid is set
+
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
 			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
+			await getSnpData(self)
+
 			if (snplst_table !== undefined) renderSnpEditTable(snplst_table)
 			else initSnpEditTable()
 			textarea.property('value', '')
@@ -449,16 +453,7 @@ async function validateInput(self) {
 async function getSnpData(self) {
 	const qlst = [`cacheid=${self.q.cacheid}`]
 	const data = await self.vocabApi.getCategories(self.term, self.filter, qlst)
-	if (!data) throw `no data for term.id='${self.term.id}'`
-	if (data.error) throw data.error
-	for (const s of data.snps) {
-		// { snpid, alleles{}, gt2count{} }
-		const snp = self.term.snps.find(i => i.snpid == s.snpid)
-		if (!snp) throw 'snp not found by id'
-		snp.alleles = s.alleles
-		snp.gt2count = s.gt2count
-	}
-	self.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
+	mayRunSnplstTask({ term: self.term, q: self.q }, data)
 }
 
 export async function fillTW(tw, vocabApi) {
