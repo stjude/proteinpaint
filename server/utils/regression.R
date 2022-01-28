@@ -248,6 +248,7 @@ for (i in 2:ncol(dat)) {
 }
 
 # build formula of regression model
+# note: interactions must be added to the end of the formula to maintain consistency with the coefficients in the regression results
 outcomeTerm <- "outcome"
 independentTerms <- vector(mode = "character")
 interactions <- vector(mode = "character")
