@@ -551,8 +551,13 @@ function setRenderers(self) {
 			if (!lst) {
 				//////////////////////////////
 				// no data; render axis instead
+
+				// do not apply this format for linear regression,
+				// had encountered a bug that '.1r' will print "20" at the tick of "15"
+				const tickFormat = self.config.regressionType == 'logistic' ? '.1r' : undefined
+
 				const axis = axisBottom()
-					.ticks(4) // encountered a bug where '.1r' as 2nd arg will print "20" at the tick of "15"
+					.ticks(4, tickFormat)
 					.scale(scale)
 				axisstyle({
 					axis: g.call(axis),
