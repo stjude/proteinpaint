@@ -300,9 +300,7 @@ function setRenderers(self) {
 		const pillstat = self.handler.getPillStatus() || {}
 		// { text, bgcolor }
 
-		self.dom.pill_termname
-			//.html(self.handler.getPillName) // not needed?
-			.style('border-radius', pillstat.text ? '6px 0 0 6px' : '6px')
+		self.dom.pill_termname.style('border-radius', pillstat.text ? '6px 0 0 6px' : '6px')
 
 		const pill_settingSummary = one_term_div
 			.selectAll('.ts_summary_btn')
