@@ -27,9 +27,21 @@ class TdbConfigUiInit {
 			const componentPromises = {} // rx-notified
 
 			for (const key of this.opts.inputs) {
-				if (key in initByInput) {
+				if (typeof key == 'object') {
+					const obj = key // reassign to be less confusing
+					this.inputs[obj.type] = initByInput[obj.type](
+						Object.assign({}, obj, {
+							holder: this.dom.table.append('tr'),
+							dispatch,
+							id: this.id,
+							instanceNum: this.instanceNum,
+							debug: this.opts.debug,
+							parent: this
+						})
+					)
+				} else if (key in initByInput) {
 					this.inputs[key] = initByInput[key]({
-						holder: this.dom[`${key}Tr`],
+						holder: this.dom.table.append('tr'),
 						dispatch,
 						id: this.id,
 						instanceNum: this.instanceNum,
@@ -39,7 +51,7 @@ class TdbConfigUiInit {
 				} else if (key in initByComponent) {
 					componentPromises[key] = initByComponent[key]({
 						app: this.app,
-						holder: this.dom[`${key}Tr`],
+						holder: this.dom.table.append('tr'),
 						id: this.id,
 						debug: this.opts.debug
 					})
@@ -70,16 +82,6 @@ class TdbConfigUiInit {
 			.append('table')
 			.attr('cellpadding', 0)
 			.attr('cellspacing', 0)
-			.style('white-space', 'nowrap')
-		// specify input row order
-		this.dom.term1Tr = this.dom.table.append('tr')
-		this.dom.overlayTr = this.dom.table.append('tr')
-		this.dom.viewTr = this.dom.table.append('tr')
-		this.dom.orientationTr = this.dom.table.append('tr')
-		this.dom.gradeTr = this.dom.table.append('tr') //.style('display', 'none')
-		this.dom.ciTr = this.dom.table.append('tr')
-		this.dom.scaleTr = this.dom.table.append('tr')
-		this.dom.divideByTr = this.dom.table.append('tr')
 
 		return this.dom.table
 	}
@@ -316,11 +318,136 @@ function setCIOpts(opts) {
 	return Object.freeze(api)
 }
 
+function setNumericInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder.style('display', 'table-row'),
+			labelTd: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	self.dom.input = self.dom.inputTd
+		.append('input')
+		.attr('type', 'numeric')
+		.on('change', () => {
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[opts.settingsKey]: Number(self.dom.input.property('value'))
+						}
+					}
+				}
+			})
+		})
+
+	const api = {
+		main(plot) {
+			self.dom.input.property('value', plot.settings[opts.chartType][opts.settingsKey])
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
+function setTextInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder.style('display', 'table-row'),
+			labelTd: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	self.dom.input = self.dom.inputTd
+		.append('input')
+		.attr('type', 'text')
+		.on('change', () => {
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[opts.settingsKey]: self.dom.input.property('value')
+						}
+					}
+				}
+			})
+		})
+
+	const api = {
+		main(plot) {
+			self.dom.input.property('value', plot.settings[opts.chartType][opts.settingsKey])
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
+function setRadioInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder,
+			labelTdb: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	self.radio = initRadioInputs({
+		name: `pp-control-${opts.settingsKey}-${opts.instanceNum}`,
+		holder: self.dom.inputTd,
+		options: opts.options,
+		listeners: {
+			input(d) {
+				opts.dispatch({
+					type: 'plot_edit',
+					id: opts.id,
+					config: {
+						settings: {
+							[opts.chartType]: {
+								[opts.settingsKey]: d.value
+							}
+						}
+					}
+				})
+			}
+		}
+	})
+
+	const api = {
+		main(plot, displayAsSurvival = false) {
+			self.dom.row.style('table-row')
+			self.radio.main(plot.settings[opts.chartType][opts.settingsKey])
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
 const initByInput = {
 	orientation: setOrientationOpts,
 	scale: setScaleOpts,
 	grade: setCumincGradeOpts,
-	ci: setCIOpts
+	ci: setCIOpts,
+	numeric: setNumericInput,
+	text: setTextInput,
+	radio: setRadioInput
 }
 
 const initByComponent = {

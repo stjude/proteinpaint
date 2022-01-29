@@ -64,7 +64,22 @@ class TdbSurvival {
 					app: this.app,
 					id: this.id,
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
-					inputs: ['overlay', 'ci', 'divideBy']
+					inputs: [
+						'overlay',
+						'divideBy',
+						{ label: 'Time Factor', type: 'numeric', chartType: 'survival', settingsKey: 'timeFactor' },
+						{ label: 'Time Unit', type: 'text', chartType: 'survival', settingsKey: 'timeUnit' },
+						{
+							label: 'Censored Symbol',
+							type: 'radio',
+							chartType: 'survival',
+							settingsKey: 'symbol',
+							options: [{ label: 'X', value: 'x' }, { label: 'Tick', value: 'vtick' }]
+						},
+						{ label: 'At-risk interval', type: 'numeric', chartType: 'survival', settingsKey: 'atRiskInterval' },
+						{ label: 'X-axis tick interval', type: 'numeric', chartType: 'survival', settingsKey: 'xTickInterval' }
+						//{label: 'At-risk label offset', type: 'numeric', chartType: 'survival', settingsKey: 'atRiskLabelOffset'},
+					]
 				})
 			}
 
