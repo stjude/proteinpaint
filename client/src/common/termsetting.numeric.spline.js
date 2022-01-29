@@ -1,6 +1,7 @@
 import { select, event } from 'd3-selection'
 import { setDensityPlot } from './termsetting.density'
 import { keyupEnter } from '../client'
+import { getPillNameDefault } from './termsetting'
 
 /*
 ********************** EXPORTED
@@ -29,10 +30,7 @@ renderEditMenu()
 export function getHandler(self) {
 	return {
 		getPillName(d) {
-			if (!self.opts.abbrCutoff) return d.name
-			return d.name.length <= self.opts.abbrCutoff + 2
-				? d.name
-				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+			return getPillNameDefault(self, d)
 		},
 
 		getPillStatus() {

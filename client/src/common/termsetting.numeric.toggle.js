@@ -1,4 +1,5 @@
 import { init_tabs } from '../dom/toggleButtons'
+import { getPillNameDefault } from './termsetting'
 
 // self is the termsetting instance
 export async function getHandler(self) {
@@ -54,10 +55,7 @@ export async function getHandler(self) {
 
 	return {
 		getPillName(d) {
-			if (!self.opts.abbrCutoff) return d.name
-			return d.name.length <= self.opts.abbrCutoff + 2
-				? d.name
-				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+			return getPillNameDefault(self, d)
 		},
 
 		getPillStatus() {

@@ -1,5 +1,6 @@
 import { setCategoryConditionMethods } from './termsetting.categorical'
 import { setGroupsettingMethods } from './termsetting.groupsetting'
+import { getPillNameDefault } from './termsetting'
 
 /*
 Arguments
@@ -11,10 +12,7 @@ export function getHandler(self) {
 
 	return {
 		getPillName(d) {
-			if (!self.opts.abbrCutoff) return d.name
-			return d.name.length <= self.opts.abbrCutoff + 2
-				? d.name
-				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+			return getPillNameDefault(self, d)
 		},
 
 		getPillStatus() {

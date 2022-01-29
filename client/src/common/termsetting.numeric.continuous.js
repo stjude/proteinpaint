@@ -1,13 +1,11 @@
 import { event as d3event } from 'd3-selection'
+import { getPillNameDefault } from './termsetting'
 
 // self is the termsetting instance
 export function getHandler(self) {
 	return {
 		getPillName(d) {
-			if (!self.opts.abbrCutoff) return d.name
-			return d.name.length <= self.opts.abbrCutoff + 2
-				? d.name
-				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+			return getPillNameDefault(self, d)
 		},
 
 		getPillStatus() {

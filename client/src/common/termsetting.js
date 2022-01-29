@@ -294,19 +294,14 @@ function setRenderers(self) {
 	}
 
 	self.updatePill = async function() {
-		// only modify right half of the pill
+		// decide if to show/hide the right half based on term status, and modify pill
 		const one_term_div = select(this)
 
 		const pillstat = self.handler.getPillStatus() || {}
 		// { text, bgcolor }
 
-		// if using groupsetting or term type is condition, will show right half
-		// allow more than 1 flags for future expansion
-		//const grpsetting_flag = self.q.groupsetting && self.q.groupsetting.inuse
-		//const ts_summary_flag = self.term.type == 'condition' || status_msg
-
 		self.dom.pill_termname
-			.html(self.handler.getPillName) // not needed?
+			//.html(self.handler.getPillName) // not needed?
 			.style('border-radius', pillstat.text ? '6px 0 0 6px' : '6px')
 
 		const pill_settingSummary = one_term_div
