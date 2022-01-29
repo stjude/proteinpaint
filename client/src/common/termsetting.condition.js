@@ -10,28 +10,28 @@ export function getHandler(self) {
 	setCategoryConditionMethods(self)
 
 	return {
-		get_term_name(d) {
+		getPillName(d) {
 			if (!self.opts.abbrCutoff) return d.name
 			return d.name.length <= self.opts.abbrCutoff + 2
 				? d.name
 				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 		},
 
-		get_status_msg() {
+		getPillStatus() {
 			// get message text for the right half pill; may return null
 			const gserr = self.validateGroupsetting()
 			if (gserr) return gserr
 
 			if (self.q.bar_by_grade) {
-				if (self.q.value_by_max_grade) return 'Max. Grade'
-				if (self.q.value_by_most_recent) return 'Most Recent Grade'
-				if (self.q.value_by_computable_grade) return 'Any Grade'
-				return 'Error: unknown grade setting'
+				if (self.q.value_by_max_grade) return { text: 'Max. Grade' }
+				if (self.q.value_by_most_recent) return { text: 'Most Recent Grade' }
+				if (self.q.value_by_computable_grade) return { text: 'Any Grade' }
+				return { text: 'Error: unknown grade setting', bgcolor: 'red' }
 			}
 			if (self.q.bar_by_children) {
-				return 'Sub-condition'
+				return { text: 'Sub-condition' }
 			}
-			return 'Error: unknown setting for term.type == "condition"'
+			return { text: 'Error: unknown setting for term.type == "condition"', bgcolor: 'red' }
 		},
 
 		async showEditMenu(div) {

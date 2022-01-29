@@ -22,19 +22,6 @@ https://docs.google.com/document/d/18Qh52MOnwIRXrcqYR43hB9ezv203y_CtJIjRgDcI42I/
 -- upon init, termsetting constructor does not accept initial value of term/q
    term/q/disable_terms will only be set/updated through api.main()
 -- termsetting opts.callback() will send caller updated term/q via user fiddling
-
-
-************** explain behavior here:
-
-setHandler(self)
-- this will create a handler{} for each known term.type and "subtype" ('discrete', 'binary', etc)
-- a handler object will have the following methods
-	- get_term_name(term): will return the term label to use in the pill, including potential abbreviation
-	- get_status_msg(): either empty or error string, displayed on the right side of the pill
-	- showEditMenu(div): content/inputs to show for editing a term's binning or groupsetting
-
-NOTE: For numeric terms, there is an option to show a toggled edit menu, where continuous or binning
-	inputs are supported. By default, only the binning menu is shown (no toggle buttons). 
 */
 
 class TermSetting {
@@ -54,14 +41,16 @@ class TermSetting {
 		// discrete, continuous, and binary edit menus for the same term
 		this.numqByTermIdModeType = {}
 
-		// detect if the holder is contained within a floating client Menu instance;
+		// parent_menu is for detecting if the holder is contained within a floating client Menu instance;
 		// this will be useful in preventing premature closure of the menu in case
 		// a submenu is clicked and is still visible
 		// NOTE: the parent_menu value may be empty (undefined)
-		this.parent_menu = this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
 		this.dom = {
 			holder: opts.holder,
-			tip: new Menu({ padding: '0px', parent_menu: this.parent_menu })
+			tip: new Menu({
+				padding: '0px',
+				parent_menu: this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
+			})
 		}
 		setInteractivity(this)
 		setRenderers(this)
@@ -71,14 +60,6 @@ class TermSetting {
 		this.handlerByType = {
 			survival: defaultHandler,
 			default: defaultHandler
-		}
-
-		this.runCallback = () => {
-			this.opts.callback({
-				id: this.term.id,
-				term: this.term,
-				q: this.q
-			})
 		}
 
 		this.hasError = false
@@ -101,6 +82,14 @@ class TermSetting {
 				}
 			}
 		}
+	}
+
+	runCallback() {
+		this.opts.callback({
+			id: this.term.id,
+			term: this.term,
+			q: this.q
+		})
 	}
 
 	validateOpts(o) {
@@ -311,7 +300,7 @@ function setRenderers(self) {
 			.attr('class', 'term_name_btn  sja_filter_tag_btn')
 			.style('padding', '3px 6px 3px 6px')
 			.style('border-radius', '6px')
-			.html(self.handler.get_term_name)
+			.html(self.handler.getPillName)
 
 		self.updatePill.call(this)
 	}
@@ -320,25 +309,28 @@ function setRenderers(self) {
 		// only modify right half of the pill
 		const one_term_div = select(this)
 
+		const pillstat = self.handler.getPillStatus() || {}
+		// { text, bgcolor }
+
 		// if using groupsetting or term type is condition, will show right half
 		// allow more than 1 flags for future expansion
-		const grpsetting_flag = self.q.groupsetting && self.q.groupsetting.inuse
-		const status_msg = self.handler.get_status_msg()
-		const ts_summary_flag = self.term.type == 'condition' || status_msg
+		//const grpsetting_flag = self.q.groupsetting && self.q.groupsetting.inuse
+		//const ts_summary_flag = self.term.type == 'condition' || status_msg
 
 		self.dom.pill_termname
-			.style('border-radius', grpsetting_flag || ts_summary_flag ? '6px 0 0 6px' : '6px')
-			.html(self.handler.get_term_name)
+			.html(self.handler.getPillName) // not needed?
+			.style('border-radius', pillstat.text ? '6px 0 0 6px' : '6px')
 
 		const pill_settingSummary = one_term_div
 			.selectAll('.ts_summary_btn')
 			// bind d.txt to dom, is important in making sure the same text label won't trigger the dom update
-			.data(status_msg ? [{ txt: status_msg }] : [], d => d.txt)
+			.data(pillstat.text ? [{ txt: pillstat.text }] : [], d => d.txt)
 
-		// because of using d.txt of binding data, exitPill cannot be used here as two different labels will create the undesirable effect of two right halves
+		// because of using d.txt of binding data, exitPill cannot be used here
+		// as two different labels will create the undesirable effect of two right halves
 		pill_settingSummary.exit().remove()
 
-		pill_settingSummary
+		const righthalf = pill_settingSummary
 			.enter()
 			.append('div')
 			.attr('class', 'ts_summary_btn sja_filter_tag_btn')
@@ -351,6 +343,13 @@ function setRenderers(self) {
 			.transition()
 			.duration(200)
 			.style('opacity', 1)
+
+		if (pillstat.bgcolor) {
+			righthalf
+				.transition()
+				.duration(200)
+				.style('background-color', pillstat.bgcolor)
+		}
 	}
 
 	self.exitPill = function() {
@@ -592,8 +591,8 @@ function valid_binscheme(q) {
 function getDefaultHandler(self) {
 	return {
 		showEditMenu() {},
-		get_status_msg() {},
-		get_term_name(d) {
+		getPillStatus() {},
+		getPillName(d) {
 			if (!self.opts.abbrCutoff) return d.name
 			return d.name.length <= self.opts.abbrCutoff + 2
 				? d.name

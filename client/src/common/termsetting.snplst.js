@@ -30,12 +30,14 @@ self.q{}
 // self is the termsetting instance
 export function getHandler(self) {
 	return {
-		get_term_name(d) {
+		getPillName(d) {
 			return self.term.name
 		},
 
-		get_status_msg() {
-			return ''
+		getPillStatus() {
+			// FIXME not effective
+			const invalid = self.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
+			if (invalid) return { text: invalid + ' invalid' }
 		},
 
 		async showEditMenu(div) {

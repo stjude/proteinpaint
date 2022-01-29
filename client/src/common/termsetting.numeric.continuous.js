@@ -3,15 +3,15 @@ import { event as d3event } from 'd3-selection'
 // self is the termsetting instance
 export function getHandler(self) {
 	return {
-		get_term_name(d) {
+		getPillName(d) {
 			if (!self.opts.abbrCutoff) return d.name
 			return d.name.length <= self.opts.abbrCutoff + 2
 				? d.name
 				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 		},
 
-		get_status_msg() {
-			return ''
+		getPillStatus() {
+			return { text: 'continuous' } // FIXME not effective
 		},
 
 		async showEditMenu(div) {

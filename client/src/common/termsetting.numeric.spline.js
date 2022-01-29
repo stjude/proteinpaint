@@ -6,8 +6,6 @@ import { keyupEnter } from '../client'
 ********************** EXPORTED
 getHandler(self)
 	- self: a termsetting instance
-	get_term_name(term): will return the term label to use in the pill, including potential abbreviation
-	get_status_msg(): either empty or error string, displayed on the right side of the pill
 	showEditMenu(div): content/inputs to show for editing cubic spline knots
 	- sequence of function calls:
 		setqDefaults() // set self.q from self.numqByTermIdModeType or if not prsent create default self.q
@@ -30,15 +28,15 @@ renderEditMenu()
 
 export function getHandler(self) {
 	return {
-		get_term_name(d) {
+		getPillName(d) {
 			if (!self.opts.abbrCutoff) return d.name
 			return d.name.length <= self.opts.abbrCutoff + 2
 				? d.name
 				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 		},
 
-		get_status_msg() {
-			return ''
+		getPillStatus() {
+			return { text: 'cubic spline' }
 		},
 
 		async showEditMenu(div) {
