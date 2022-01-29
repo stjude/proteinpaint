@@ -187,8 +187,22 @@ export class InputTerm {
 		const data = await this.parent.app.vocabApi.getCategories(tw.term, this.parent.state.termfilter.filter, qlst)
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
-
 		mayRunSnplstTask(tw, data)
+		this.statusHtml = { topInfoStatus: undefined, bottomSummaryStatus: undefined }
+		if (tw.term.type == 'snplst' && tw.q.numOfSampleWithAnyValidGT) {
+			const invalid_snps_count = tw.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
+			this.statusHtml.bottomSummaryStatus =
+				`${tw.q.numOfSampleWithAnyValidGT} samples with valid genotypes.` +
+				(invalid_snps_count > 0 ? ` ${invalid_snps_count} invalid SNP${invalid_snps_count > 1 ? 's' : ''}.` : '') +
+				'<br>Genetic mode: ' +
+				(tw.q.geneticModel == 0
+					? 'Additive'
+					: tw.q.geneticModel == 1
+					? 'Dominant'
+					: tw.q.geneticModel == 2
+					? 'Recessive'
+					: 'By genotype')
+		}
 
 		// condition check is quick fix!!!
 		if (data.lst) {
@@ -212,6 +226,10 @@ export class InputTerm {
 			if (tw.term.type == 'condition' && totalCount.total) {
 				totalCount.excluded = totalCount.total - totalCount.included
 			}
+
+			this.statusHtml.bottomSummaryStatus =
+				`${totalCount.included} sample included.` +
+				(totalCount.excluded ? ` ${totalCount.excluded} samples excluded:` : '')
 
 			if (tw && tw.q.mode !== 'continuous' && this.sampleCounts.length < 2)
 				throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
