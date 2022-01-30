@@ -1,4 +1,5 @@
 import { init_tabs } from '../dom/toggleButtons'
+import { getPillNameDefault } from './termsetting'
 
 // self is the termsetting instance
 export async function getHandler(self) {
@@ -53,15 +54,22 @@ export async function getHandler(self) {
 	}
 
 	return {
-		get_term_name(d) {
-			if (!self.opts.abbrCutoff) return d.name
-			return d.name.length <= self.opts.abbrCutoff + 2
-				? d.name
-				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+		getPillName(d) {
+			return getPillNameDefault(self, d)
 		},
 
-		get_status_msg() {
-			return ''
+		getPillStatus() {
+			let text = self.q.mode
+			if (self.q.mode == 'spline') {
+				text = 'cubic spline'
+			} else if (self.q.mode == 'discrete') {
+				if (self.q.type == 'custom-bin') {
+					text = self.q.lst.length + ' bins'
+				} else {
+					text = 'bin size=' + self.q.bin_size
+				}
+			}
+			return { text }
 		},
 
 		async showEditMenu(div) {

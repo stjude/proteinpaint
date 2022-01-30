@@ -5,19 +5,18 @@ import { setDensityPlot } from './termsetting.density'
 import { get_bin_label } from '../../shared/termdb.bins'
 import { init_tabs } from '../dom/toggleButtons'
 import { make_radios } from '../dom/radiobutton'
+import { getPillNameDefault } from './termsetting'
 
 // self is the termsetting instance
 export function getHandler(self) {
 	return {
-		get_term_name(d) {
-			if (!self.opts.abbrCutoff) return d.name
-			return d.name.length <= self.opts.abbrCutoff + 2
-				? d.name
-				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+		getPillName(d) {
+			return getPillNameDefault(self, d)
 		},
 
-		get_status_msg() {
-			return ''
+		getPillStatus() {
+			if (self.q.type == 'regular-bin') return { text: 'bin size=' + self.q.bin_size }
+			return { text: self.q.lst.length + ' bins' }
 		},
 
 		async showEditMenu(div) {

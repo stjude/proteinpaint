@@ -1,5 +1,6 @@
 import { setGroupsettingMethods } from './termsetting.groupsetting'
 import { filterInit } from './filter'
+import { getPillNameDefault } from './termsetting'
 
 /*
 Arguments
@@ -15,14 +16,11 @@ export function getHandler(self) {
 			self.showGrpOpts(div)
 		},
 
-		get_term_name(d) {
-			if (!self.opts.abbrCutoff) return d.name
-			return d.name.length <= self.opts.abbrCutoff + 2
-				? d.name
-				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+		getPillName(d) {
+			return getPillNameDefault(self, d)
 		},
 
-		get_status_msg() {
+		getPillStatus() {
 			// get message text for the right half pill; may return null
 			return self.validateGroupsetting()
 		},
@@ -110,19 +108,23 @@ export function setCategoryConditionMethods(self) {
 	self.validateGroupsetting = function() {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
 		if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
-			if (!self.term.groupsetting) return 'term.groupsetting missing'
-			if (!self.term.groupsetting.lst) return 'term.groupsetting.lst[] missing'
+			if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
+			if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
 			const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-			if (!i) return 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing'
-			return i.name
+			if (!i)
+				return {
+					text: 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing',
+					bgcolor: 'red'
+				}
+			return { text: i.name }
 		}
 		if (self.q.groupsetting.customset) {
 			const n = self.q.groupsetting.customset.groups.length
-			if (self.q.bar_by_grade) return n + ' groups of grades'
-			if (self.q.bar_by_children) return n + ' groups of sub-conditions'
-			return 'Divided into ' + n + ' groups'
+			if (self.q.bar_by_grade) return { text: n + ' groups of grades' }
+			if (self.q.bar_by_children) return { text: n + ' groups of sub-conditions' }
+			return { text: 'Divided into ' + n + ' groups' }
 		}
-		return 'Unknown setting for groupsetting'
+		return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
 	}
 
 	/******************* Functions for Categorical terms *******************/
