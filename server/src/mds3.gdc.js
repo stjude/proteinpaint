@@ -1012,9 +1012,7 @@ function init_termdb_queries(termdb, ds) {
 		if (re.length > 1) re.pop() // remove the last element of array which is the query term itself
 		return re
 	}
-	q.getAncestorNames = id => {
-		return q.getAncestorIDs(id)
-	}
+	q.getAncestorNames = q.getAncestorIDs
 
 	q.getTermById = id => {
 		const terms = [...termdb.id2term.values()]
