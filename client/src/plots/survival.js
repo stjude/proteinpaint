@@ -67,8 +67,6 @@ class TdbSurvival {
 					inputs: [
 						'overlay',
 						'divideBy',
-						{ label: 'Time Factor', type: 'numeric', chartType: 'survival', settingsKey: 'timeFactor' },
-						{ label: 'Time Unit', type: 'text', chartType: 'survival', settingsKey: 'timeUnit' },
 						{
 							label: 'Censored Symbol',
 							type: 'radio',
@@ -76,8 +74,34 @@ class TdbSurvival {
 							settingsKey: 'symbol',
 							options: [{ label: 'X', value: 'x' }, { label: 'Tick', value: 'vtick' }]
 						},
-						{ label: 'At-risk interval', type: 'numeric', chartType: 'survival', settingsKey: 'atRiskInterval' },
-						{ label: 'X-axis tick interval', type: 'numeric', chartType: 'survival', settingsKey: 'xTickInterval' }
+						{
+							label: 'Time Factor',
+							type: 'math',
+							chartType: 'survival',
+							settingsKey: 'timeFactor',
+							title: 'Rescale the time scale by multiplying this factor. Enter a number or an expression like 1/365.'
+						},
+						{
+							label: 'Time Unit',
+							type: 'text',
+							chartType: 'survival',
+							settingsKey: 'timeUnit',
+							title: `The unit to display in the x-axis title, like 'years'`
+						},
+						{
+							label: 'At-risk interval',
+							type: 'number',
+							chartType: 'survival',
+							settingsKey: 'atRiskInterval',
+							title: 'Compute the at-risk trend using this time interval'
+						},
+						{
+							label: 'X-axis tick interval',
+							type: 'number',
+							chartType: 'survival',
+							settingsKey: 'xTickInterval',
+							title: 'Display x-axis ticks spaced at this time interval'
+						}
 						//{label: 'At-risk label offset', type: 'numeric', chartType: 'survival', settingsKey: 'atRiskLabelOffset'},
 					]
 				})
@@ -564,13 +588,11 @@ function setRenderers(self) {
 
 				const fontsize = `${s.axisTitleFontSize - 2}px`
 
-				if (seriesId && seriesId != '*') {
-					g.append('text')
-						.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
-						.attr('text-anchor', 'end')
-						.attr('font-size', fontsize)
-						.text(seriesId)
-				}
+				g.append('text')
+					.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
+					.attr('text-anchor', 'end')
+					.attr('font-size', fontsize)
+					.text(seriesId && seriesId != '*' ? seriesId : 'At-risk')
 
 				const data = chart.xTickValues.map(tickVal => {
 					if (tickVal === 0) return { tickVal, atRisk: series[0][1] }

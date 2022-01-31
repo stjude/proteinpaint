@@ -29,7 +29,7 @@ class TdbConfigUiInit {
 			for (const key of this.opts.inputs) {
 				if (typeof key == 'object') {
 					const obj = key // reassign to be less confusing
-					this.inputs[obj.type] = initByInput[obj.type](
+					this.inputs[obj.settingsKey] = initByInput[obj.type](
 						Object.assign({}, obj, {
 							holder: this.dom.table.append('tr'),
 							dispatch,
@@ -93,8 +93,7 @@ class TdbConfigUiInit {
 			dslabel: appState.dslabel,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			config,
-			displayAsSurvival: config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
+			config
 		}
 	}
 
@@ -104,7 +103,7 @@ class TdbConfigUiInit {
 		this.render(isOpen)
 		for (const name in this.inputs) {
 			const o = this.inputs[name]
-			o.main(o.usestate ? this.state : plot, this.state.displayAsSurvival)
+			o.main(o.usestate ? this.state : plot)
 		}
 	}
 
@@ -165,7 +164,7 @@ function setOrientationOpts(opts) {
 	})
 
 	const api = {
-		main(plot, displayAsSurvival = false) {
+		main(plot) {
 			self.dom.row.style('table-row')
 			self.radio.main(plot.settings.barchart.orientation)
 		}
@@ -209,7 +208,7 @@ function setScaleOpts(opts) {
 	})
 
 	const api = {
-		main(plot, displayAsSurvival = false) {
+		main(plot) {
 			self.radio.main(plot.settings.barchart.unit)
 			self.radio.dom.divs.style('display', d => {
 				if (d.value == 'log') {
@@ -263,7 +262,7 @@ function setCumincGradeOpts(opts) {
 		.html(d => '&nbsp;' + d + '&nbsp;')
 
 	const api = {
-		main(plot, displayAsSurvival = false) {
+		main(plot) {
 			self.dom.select.property('value', plot.settings.cuminc.gradeCutoff)
 		}
 	}
@@ -309,7 +308,7 @@ function setCIOpts(opts) {
 		.attr('type', 'checkbox')
 
 	const api = {
-		main(plot, displayAsSurvival = false) {
+		main(plot) {
 			self.dom.input.property('checked', plot.settings.survival.ciVisible)
 		}
 	}
@@ -318,21 +317,23 @@ function setCIOpts(opts) {
 	return Object.freeze(api)
 }
 
-function setNumericInput(opts) {
+function setNumberInput(opts) {
 	const self = {
 		dom: {
 			row: opts.holder.style('display', 'table-row'),
 			labelTd: opts.holder
 				.append('td')
 				.html(opts.label)
-				.attr('class', 'sja-termdb-config-row-label'),
+				.attr('class', 'sja-termdb-config-row-label')
+				.attr('title', opts.title),
 			inputTd: opts.holder.append('td')
 		}
 	}
 
 	self.dom.input = self.dom.inputTd
 		.append('input')
-		.attr('type', 'numeric')
+		.attr('type', 'number')
+		.style('width', (opts.width || 100) + 'px')
 		.on('change', () => {
 			opts.dispatch({
 				type: 'plot_edit',
@@ -357,6 +358,56 @@ function setNumericInput(opts) {
 	return Object.freeze(api)
 }
 
+function setMathExprInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder.style('display', 'table-row'),
+			labelTd: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label')
+				.attr('title', opts.title),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	const textByNumber = {}
+
+	self.dom.input = self.dom.inputTd
+		.append('input')
+		.attr('type', 'text')
+		.style('width', (opts.width || 100) + 'px')
+		.on('change', () => {
+			const value = self.dom.input.property('value')
+			const number = Number(eval(value))
+			if (!isNaN(value)) throw `non-numeric value for ${opts.settingsKey}='${value}'`
+			textByNumber[number] = value
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[opts.settingsKey]: number
+						}
+					}
+				}
+			})
+		})
+
+	const api = {
+		main(plot) {
+			const value = plot.settings[opts.chartType][opts.settingsKey]
+			const number = typeof value == 'number' ? value : Number(eval(value))
+			if (typeof value != 'number') textByNumber[number] = value
+			self.dom.input.property('value', value in textByNumber ? textByNumber[number] : value)
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
 function setTextInput(opts) {
 	const self = {
 		dom: {
@@ -364,7 +415,8 @@ function setTextInput(opts) {
 			labelTd: opts.holder
 				.append('td')
 				.html(opts.label)
-				.attr('class', 'sja-termdb-config-row-label'),
+				.attr('class', 'sja-termdb-config-row-label')
+				.attr('title', opts.title),
 			inputTd: opts.holder.append('td')
 		}
 	}
@@ -372,6 +424,7 @@ function setTextInput(opts) {
 	self.dom.input = self.dom.inputTd
 		.append('input')
 		.attr('type', 'text')
+		.style('width', (opts.width || 100) + 'px')
 		.on('change', () => {
 			opts.dispatch({
 				type: 'plot_edit',
@@ -430,7 +483,7 @@ function setRadioInput(opts) {
 	})
 
 	const api = {
-		main(plot, displayAsSurvival = false) {
+		main(plot) {
 			self.dom.row.style('table-row')
 			self.radio.main(plot.settings[opts.chartType][opts.settingsKey])
 		}
@@ -445,7 +498,8 @@ const initByInput = {
 	scale: setScaleOpts,
 	grade: setCumincGradeOpts,
 	ci: setCIOpts,
-	numeric: setNumericInput,
+	number: setNumberInput,
+	math: setMathExprInput,
 	text: setTextInput,
 	radio: setRadioInput
 }
