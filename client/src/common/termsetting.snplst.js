@@ -35,8 +35,9 @@ export function getHandler(self) {
 		},
 
 		getPillStatus() {
-			// FIXME not effective
-			const invalid = self.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
+			if (!self.term || !self.term.snps) return
+			// return number of invalid entries
+			const invalid = self.term.snps.reduce((i, j) => i + (j.invalid || !j.alleles ? 1 : 0), 0)
 			if (invalid) return { text: invalid + ' invalid' }
 		},
 
@@ -190,6 +191,14 @@ function makeEditMenu(self, div) {
 			// set term type in case the instance had a different term before
 			self.term.type = 'snplst'
 			self.term.name = getTermName(self.term.snps)
+			if (self.dom.pill_termname) {
+				/* pill ui has already been created
+				this is updating snps for an existing term
+				as termsetting.js will not call self.enterPill() for pills already there,
+				must do this for pill name to update to reflect current number of snps
+				*/
+				self.dom.pill_termname.text(self.term.name)
+			}
 			submit_btn.property('disabled', true)
 			submit_btn.text('Validating SNPs...')
 			await validateInput(self)
@@ -448,7 +457,6 @@ async function validateInput(self) {
 		const s1 = data.snps[i]
 		s.snpid = s1.snpid
 		s.invalid = s1.invalid
-		s.referenceAllele = s1.referenceAllele
 	}
 }
 
