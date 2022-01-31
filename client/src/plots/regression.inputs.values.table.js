@@ -17,7 +17,12 @@ export class InputValuesTable {
 			// not exactly two samplecount bars available for a binary outcome term
 
 			// update term summary and info (for termtype snplst)
-			if (this.input.statusHtml) {
+			if (term && term.term && term.term.type && term.term.type == 'snplst') {
+				this.dom.holder.style('display', 'block')
+				this.dom.top_info_div.style('display', 'none')
+				this.dom.values_div.style('display', 'block')
+				this.dom.values_table.style('display', 'none')
+				this.dom.term_summmary_div.style('display', 'block')
 				this.render()
 				return
 			} else if (!term || !this.input.sampleCounts) {
