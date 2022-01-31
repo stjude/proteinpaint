@@ -23,45 +23,44 @@ class TdbConfigUiInit {
 			const dispatch = this.app.dispatch
 			const table = this.setDom()
 			const debug = this.opts.debug
-			this.inputs = {
-				view: setViewOpts({
-					holder: this.dom.viewTr,
-					dispatch,
-					id: this.id,
-					debug,
-					instanceNum: this.instanceNum,
-					isleaf: this.opts.isleaf,
-					iscondition: this.opts.iscondition,
-					hasViewMode: this.app.type == 'termdb'
-				}),
-				orientation: setOrientationOpts({
-					holder: this.dom.orientationTr,
-					dispatch,
-					id: this.id,
-					debug,
-					instanceNum: this.instanceNum
-				}),
-				scale: setScaleOpts({ holder: this.dom.scaleTr, dispatch, id: this.id, debug }),
-				grade: setCumincGradeOpts({
-					holder: this.dom.cumincGradeTr,
-					dispatch,
-					id: this.id,
-					debug
-				}),
-				ci: setCIOpts({
-					holder: this.dom.ciTr,
-					dispatch,
-					id: this.id,
-					debug,
-					instanceNum: this.instanceNum
-				})
+			this.inputs = {} // non-rx notified
+			const componentPromises = {} // rx-notified
+
+			for (const key of this.opts.inputs) {
+				if (typeof key == 'object') {
+					const obj = key // reassign to be less confusing
+					this.inputs[obj.settingsKey] = initByInput[obj.type](
+						Object.assign({}, obj, {
+							holder: this.dom.table.append('tr'),
+							dispatch,
+							id: this.id,
+							instanceNum: this.instanceNum,
+							debug: this.opts.debug,
+							parent: this
+						})
+					)
+				} else if (key in initByInput) {
+					this.inputs[key] = initByInput[key]({
+						holder: this.dom.table.append('tr'),
+						dispatch,
+						id: this.id,
+						instanceNum: this.instanceNum,
+						debug: this.opts.debug,
+						parent: this
+					})
+				} else if (key in initByComponent) {
+					componentPromises[key] = initByComponent[key]({
+						app: this.app,
+						holder: this.dom.table.append('tr'),
+						id: this.id,
+						debug: this.opts.debug
+					})
+				} else {
+					throw `unsupported opts.inputs[] entry of '${key}' for controlsInit()`
+				}
 			}
 
-			this.components = await multiInit({
-				term1: term1uiInit({ app: this.app, holder: this.dom.term1Tr, id: this.id, debug }),
-				overlay: overlayInit({ app: this.app, holder: this.dom.overlayTr, id: this.id, debug }),
-				divideBy: divideInit({ app: this.app, holder: this.dom.divideTr, id: this.id, debug })
-			})
+			this.components = await multiInit(componentPromises)
 		} catch (e) {
 			throw e
 		}
@@ -83,16 +82,6 @@ class TdbConfigUiInit {
 			.append('table')
 			.attr('cellpadding', 0)
 			.attr('cellspacing', 0)
-			.style('white-space', 'nowrap')
-		// specify input row order
-		this.dom.term1Tr = this.dom.table.append('tr')
-		this.dom.overlayTr = this.dom.table.append('tr')
-		this.dom.viewTr = this.dom.table.append('tr')
-		this.dom.orientationTr = this.dom.table.append('tr')
-		this.dom.cumincGradeTr = this.dom.table.append('tr') //.style('display', 'none')
-		this.dom.ciTr = this.dom.table.append('tr')
-		this.dom.scaleTr = this.dom.table.append('tr')
-		this.dom.divideTr = this.dom.table.append('tr')
 
 		return this.dom.table
 	}
@@ -104,8 +93,7 @@ class TdbConfigUiInit {
 			dslabel: appState.dslabel,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			config,
-			displayAsSurvival: config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
+			config
 		}
 	}
 
@@ -115,7 +103,7 @@ class TdbConfigUiInit {
 		this.render(isOpen)
 		for (const name in this.inputs) {
 			const o = this.inputs[name]
-			o.main(o.usestate ? this.state : plot, this.state.displayAsSurvival)
+			o.main(o.usestate ? this.state : plot)
 		}
 	}
 
@@ -176,11 +164,8 @@ function setOrientationOpts(opts) {
 	})
 
 	const api = {
-		main(plot, displayAsSurvival = false) {
-			self.dom.row.style(
-				'display',
-				!displayAsSurvival && plot.settings.currViews.includes('barchart') ? 'table-row' : 'none'
-			)
+		main(plot) {
+			self.dom.row.style('table-row')
 			self.radio.main(plot.settings.barchart.orientation)
 		}
 	}
@@ -192,7 +177,7 @@ function setOrientationOpts(opts) {
 function setScaleOpts(opts) {
 	const self = {
 		dom: {
-			row: opts.holder,
+			row: opts.holder.style('display', 'table-row'),
 			labelTd: opts.holder
 				.append('td')
 				.html('Scale')
@@ -223,11 +208,7 @@ function setScaleOpts(opts) {
 	})
 
 	const api = {
-		main(plot, displayAsSurvival = false) {
-			self.dom.row.style(
-				'display',
-				!displayAsSurvival && plot.settings.currViews.includes('barchart') ? 'table-row' : 'none'
-			)
+		main(plot) {
 			self.radio.main(plot.settings.barchart.unit)
 			self.radio.dom.divs.style('display', d => {
 				if (d.value == 'log') {
@@ -248,7 +229,7 @@ function setScaleOpts(opts) {
 function setCumincGradeOpts(opts) {
 	const self = {
 		dom: {
-			row: opts.holder,
+			row: opts.holder.style('display', 'table-row'),
 			labelTd: opts.holder
 				.append('td')
 				.html('Cutoff Grade')
@@ -281,87 +262,8 @@ function setCumincGradeOpts(opts) {
 		.html(d => '&nbsp;' + d + '&nbsp;')
 
 	const api = {
-		main(plot, displayAsSurvival = false) {
-			self.dom.row.style('display', plot.settings.currViews.includes('cuminc') ? 'table-row' : 'none')
+		main(plot) {
 			self.dom.select.property('value', plot.settings.cuminc.gradeCutoff)
-		}
-	}
-
-	if (opts.debug) api.Inner = self
-	return Object.freeze(api)
-}
-
-function setViewOpts(opts) {
-	const self = {
-		dom: {
-			row: opts.holder,
-			labelTd: opts.holder
-				.append('td')
-				.html('Display mode')
-				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
-		}
-	}
-
-	const options = [
-		{ label: 'Barchart', value: 'barchart' },
-		{ label: 'Table', value: 'table' },
-		{ label: 'Boxplot', value: 'boxplot' },
-		{ label: 'Scatter', value: 'scatter' }
-	]
-
-	if (opts.iscondition) {
-		options.push({ label: 'Cumulative Incidence', value: 'cuminc' })
-	}
-
-	self.radio = initRadioInputs({
-		name: 'pp-termdb-display-mode-' + opts.instanceNum, // elemName
-		holder: self.dom.inputTd,
-		options,
-		listeners: {
-			input(d) {
-				const currViews = d.value == 'barchart' ? ['barchart', 'stattable'] : [d.value]
-				opts.dispatch({
-					type: 'plot_edit',
-					id: opts.id,
-					config: {
-						settings: { currViews }
-					}
-				})
-			}
-		}
-	})
-
-	const api = {
-		main(plot, displayAsSurvival = false) {
-			self.dom.row.style('display', opts.hasViewMode && !displayAsSurvival && (plot.term2 || opts.iscondition) ? 'table-row' : 'none')
-			const currValue = plot.settings.currViews.includes('table')
-				? 'table'
-				: plot.settings.currViews.includes('boxplot')
-				? 'boxplot'
-				: plot.settings.currViews.includes('scatter')
-				? 'scatter'
-				: plot.settings.currViews.includes('cuminc')
-				? 'cuminc'
-				: 'barchart'
-
-			const numericTypes = ['integer', 'float']
-
-			self.radio.main(currValue)
-			self.radio.dom.divs.style('display', d =>
-				d.value == 'barchart' || d.value == 'cuminc'
-					? 'inline-block'
-					: d.value == 'table' && plot.term2
-					? 'inline-block'
-					: d.value == 'boxplot' && plot.term2 && numericTypes.includes(plot.term2.term.type)
-					? 'inline-block'
-					: d.value == 'scatter' &&
-					  numericTypes.includes(plot.term.term.type) &&
-					  plot.term2 &&
-					  numericTypes.includes(plot.term2.term.type)
-					? 'inline-block'
-					: 'none'
-			)
 		}
 	}
 
@@ -372,7 +274,7 @@ function setViewOpts(opts) {
 function setCIOpts(opts) {
 	const self = {
 		dom: {
-			row: opts.holder,
+			row: opts.holder.style('display', 'table-row'),
 			labelTdb: opts.holder
 				.append('td')
 				.html('95% CI')
@@ -406,12 +308,204 @@ function setCIOpts(opts) {
 		.attr('type', 'checkbox')
 
 	const api = {
-		main(plot, displayAsSurvival = false) {
-			self.dom.row.style('display', displayAsSurvival ? 'table-row' : 'none')
+		main(plot) {
 			self.dom.input.property('checked', plot.settings.survival.ciVisible)
 		}
 	}
 
 	if (opts.debug) api.Inner = self
 	return Object.freeze(api)
+}
+
+function setNumberInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder.style('display', 'table-row'),
+			labelTd: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label')
+				.attr('title', opts.title),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	self.dom.input = self.dom.inputTd
+		.append('input')
+		.attr('type', 'number')
+		.style('width', (opts.width || 100) + 'px')
+		.on('change', () => {
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[opts.settingsKey]: Number(self.dom.input.property('value'))
+						}
+					}
+				}
+			})
+		})
+
+	const api = {
+		main(plot) {
+			self.dom.input.property('value', plot.settings[opts.chartType][opts.settingsKey])
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
+function setMathExprInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder.style('display', 'table-row'),
+			labelTd: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label')
+				.attr('title', opts.title),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	const textByNumber = {}
+
+	self.dom.input = self.dom.inputTd
+		.append('input')
+		.attr('type', 'text')
+		.style('width', (opts.width || 100) + 'px')
+		.on('change', () => {
+			const value = self.dom.input.property('value')
+			const number = Number(eval(value))
+			if (!isNaN(value)) throw `non-numeric value for ${opts.settingsKey}='${value}'`
+			textByNumber[number] = value
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[opts.settingsKey]: number
+						}
+					}
+				}
+			})
+		})
+
+	const api = {
+		main(plot) {
+			const value = plot.settings[opts.chartType][opts.settingsKey]
+			const number = typeof value == 'number' ? value : Number(eval(value))
+			if (typeof value != 'number') textByNumber[number] = value
+			self.dom.input.property('value', value in textByNumber ? textByNumber[number] : value)
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
+function setTextInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder.style('display', 'table-row'),
+			labelTd: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label')
+				.attr('title', opts.title),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	self.dom.input = self.dom.inputTd
+		.append('input')
+		.attr('type', 'text')
+		.style('width', (opts.width || 100) + 'px')
+		.on('change', () => {
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[opts.settingsKey]: self.dom.input.property('value')
+						}
+					}
+				}
+			})
+		})
+
+	const api = {
+		main(plot) {
+			self.dom.input.property('value', plot.settings[opts.chartType][opts.settingsKey])
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
+function setRadioInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder,
+			labelTdb: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	self.radio = initRadioInputs({
+		name: `pp-control-${opts.settingsKey}-${opts.instanceNum}`,
+		holder: self.dom.inputTd,
+		options: opts.options,
+		listeners: {
+			input(d) {
+				opts.dispatch({
+					type: 'plot_edit',
+					id: opts.id,
+					config: {
+						settings: {
+							[opts.chartType]: {
+								[opts.settingsKey]: d.value
+							}
+						}
+					}
+				})
+			}
+		}
+	})
+
+	const api = {
+		main(plot) {
+			self.dom.row.style('table-row')
+			self.radio.main(plot.settings[opts.chartType][opts.settingsKey])
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
+const initByInput = {
+	orientation: setOrientationOpts,
+	scale: setScaleOpts,
+	grade: setCumincGradeOpts,
+	ci: setCIOpts,
+	number: setNumberInput,
+	math: setMathExprInput,
+	text: setTextInput,
+	radio: setRadioInput
+}
+
+const initByComponent = {
+	term1: term1uiInit,
+	overlay: overlayInit,
+	divideBy: divideInit
 }

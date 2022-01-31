@@ -63,7 +63,47 @@ class TdbSurvival {
 				controls: await controlsInit({
 					app: this.app,
 					id: this.id,
-					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
+					inputs: [
+						'overlay',
+						'divideBy',
+						{
+							label: 'Censored Symbol',
+							type: 'radio',
+							chartType: 'survival',
+							settingsKey: 'symbol',
+							options: [{ label: 'X', value: 'x' }, { label: 'Tick', value: 'vtick' }]
+						},
+						{
+							label: 'Time Factor',
+							type: 'math',
+							chartType: 'survival',
+							settingsKey: 'timeFactor',
+							title: 'Rescale the time scale by multiplying this factor. Enter a number or an expression like 1/365.'
+						},
+						{
+							label: 'Time Unit',
+							type: 'text',
+							chartType: 'survival',
+							settingsKey: 'timeUnit',
+							title: `The unit to display in the x-axis title, like 'years'`
+						},
+						{
+							label: 'At-risk interval',
+							type: 'number',
+							chartType: 'survival',
+							settingsKey: 'atRiskInterval',
+							title: 'Compute the at-risk trend using this time interval'
+						},
+						{
+							label: 'X-axis tick interval',
+							type: 'number',
+							chartType: 'survival',
+							settingsKey: 'xTickInterval',
+							title: 'Display x-axis ticks spaced at this time interval'
+						}
+						//{label: 'At-risk label offset', type: 'numeric', chartType: 'survival', settingsKey: 'atRiskLabelOffset'},
+					]
 				})
 			}
 
@@ -416,11 +456,11 @@ function setRenderers(self) {
 		const lineData = data.reduce((arr, d, i) => {
 			// always retain the first and last data point
 			if (i === 0 || i === data.length - 1) arr.push(d)
-			// retain data only when the probability has dropped,
+			// otherwise, retain data when the probability has dropped,
 			// which will look visually the same as multiple
 			// horizontal segments joined together at the same y;
 			// this will result in a simpler path d='...' attribute
-			if (d.y != arr[arr.length - 1].y) arr.push(d)
+			else if (d.y != arr[arr.length - 1].y) arr.push(d)
 			return arr
 		}, [])
 		const censoredData = data.filter(d => d.censored)
@@ -548,13 +588,11 @@ function setRenderers(self) {
 
 				const fontsize = `${s.axisTitleFontSize - 2}px`
 
-				if (seriesId && seriesId != '*') {
-					g.append('text')
-						.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
-						.attr('text-anchor', 'end')
-						.attr('font-size', fontsize)
-						.text(seriesId)
-				}
+				g.append('text')
+					.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
+					.attr('text-anchor', 'end')
+					.attr('font-size', fontsize)
+					.text(seriesId && seriesId != '*' ? seriesId : 'At-risk')
 
 				const data = chart.xTickValues.map(tickVal => {
 					if (tickVal === 0) return { tickVal, atRisk: series[0][1] }
