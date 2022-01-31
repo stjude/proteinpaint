@@ -29,7 +29,6 @@ export function getHandler(self) {
 			const t = data.term
 			const endNote = `(${t.type}, mode='${data.q.mode}', type='${data.q.type}')`
 			// validate the configuration
-			if (!('type' in data.q)) data.q.type = 'values' // default
 			if (data.q.type == 'values') {
 				if (!t.values) self.error = `no term.values defined ${endNote}`
 				if (data.q.mode == 'binary') {

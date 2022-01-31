@@ -478,6 +478,7 @@ export function termsetting_fill_q(q, term, activeCohort) {
 	}
 	if (term.type == 'categorical' || term.type == 'condition') {
 		set_hiddenvalues(q, term)
+		if (!('type' in q)) q.type = 'values' // must fill default q.type if missing
 		if (!q.groupsetting) q.groupsetting = {}
 		if (!term.groupsetting) term.groupsetting = {}
 		if (term.groupsetting.disabled) {
