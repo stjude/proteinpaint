@@ -41,6 +41,10 @@ export function getHandler(self) {
 			if (invalid) return { text: invalid + ' invalid' }
 		},
 
+		validateQ(data) {
+			validateQ(self, data)
+		},
+
 		async showEditMenu(div) {
 			makeEditMenu(self, div)
 		},
@@ -464,6 +468,12 @@ async function getSnpData(self) {
 	const qlst = [`cacheid=${self.q.cacheid}`]
 	const data = await self.vocabApi.getCategories(self.term, self.filter, qlst)
 	mayRunSnplstTask({ term: self.term, q: self.q }, data)
+}
+
+function validateQ(self, data) {
+	if (![0, 1].includes(data.q.alleleType)) throw 'alleleType value is not one of 0/1'
+	if (![0, 1, 2, 3].includes(data.q.geneticModel)) throw 'geneticModel value is not one of 0/1'
+	if (![0, 1, 2].includes(data.q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
 }
 
 export async function fillTW(tw, vocabApi) {

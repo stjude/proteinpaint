@@ -113,7 +113,7 @@ class TermSetting {
 			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
 			await this.setHandler(this.term ? this.term.type : null)
 			this.updateUI()
-			if (data.term && this.term.handler && this.handler.validateQ) this.handler.validateQ(data)
+			if (data.term && this.handler && this.handler.validateQ) this.handler.validateQ(data)
 			if (this.handler.postMain) await this.handler.postMain()
 		} catch (e) {
 			this.hasError = true
