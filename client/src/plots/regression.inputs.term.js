@@ -227,10 +227,26 @@ export class InputTerm {
 				totalCount.excluded = totalCount.total - totalCount.included
 			}
 
+			// update topInfoStatus
+			if (tw.term.type == 'float' || tw.term.type == 'integer'){
+				this.statusHtml.topInfoStatus = `Use as ${tw.q.mode || 'continuous'} ` +
+					(tw.q.mode !== 'spline' ? 'variable.' : '') +
+					(tw.q.mode == 'continuous' && tw.q.scale && tw.q.scale != 1 ? ` Scale: Per ${tw.q.scale}` : '') +
+					(tw.q.mode == 'spline' ? ` with ${tw.q.knots.length} knots: ${tw.q.knots.map(v => v.value).join(', ')}` : '')
+			} else if (tw.term.type == 'categorical' || tw.term.type == 'condition') {
+				const gs = tw.q.groupsetting || {}
+				// self.values is already set by parent.setActiveValues() above
+				this.statusHtml.topInfoStatus = 'Use as ' + this.sampleCounts.length 
+					+ (gs.inuse ? ' groups.' : ' categories.')
+					+ ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
+			}
+			// update bottomSummaryStatus
 			this.statusHtml.bottomSummaryStatus =
 				`${totalCount.included} sample included.` +
 				(totalCount.excluded ? ` ${totalCount.excluded} samples excluded:` : '')
 
+			this.isContinuousTerm = (tw.q.mode == 'continuous' || tw.q.mode == 'spline') 
+				&& (tw.term.type == 'float' || tw.term.type == 'integer')
 			if (tw && tw.q.mode !== 'continuous' && this.sampleCounts.length < 2)
 				throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
 
