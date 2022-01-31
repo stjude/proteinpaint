@@ -189,6 +189,8 @@ export class InputTerm {
 		if (data.error) throw data.error
 		mayRunSnplstTask(tw, data)
 		this.statusHtml = { topInfoStatus: undefined, bottomSummaryStatus: undefined }
+		// update bottomSummaryStatus for termtype 'snplst'
+		// other term types will be updated if data.lst is present
 		if (tw.term.type == 'snplst' && tw.q.numOfSampleWithAnyValidGT) {
 			const invalid_snps_count = tw.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
 			this.statusHtml.bottomSummaryStatus =
