@@ -16,13 +16,8 @@ export class InputValuesTable {
 			// in case it helps clarify the error message such as having
 			// not exactly two samplecount bars available for a binary outcome term
 
-			// for term.type 'snplst' show summary_div with sample count and invalid snps count
-			if (term && term.term && term.term.type && term.term.type == 'snplst') {
-				this.dom.holder.style('display', 'block')
-				this.dom.top_info_div.style('display', 'none')
-				this.dom.values_div.style('display', 'block')
-				this.dom.values_table.style('display', 'none')
-				this.dom.term_summmary_div.style('display', 'block')
+			// update term summary and info (for termtype snplst)
+			if (this.input.statusHtml) {
 				this.render()
 				return
 			} else if (!term || !this.input.sampleCounts) {
@@ -66,7 +61,7 @@ function setRenderers(self) {
 			.style('text-align', 'left')
 			.style('color', '#999')
 
-		const top_info_div = holder.append('div')
+		const top_info_div = holder.append('div').style('display','none')
 		const values_div = holder.append('div')
 
 		self.dom = {
@@ -90,17 +85,27 @@ function setRenderers(self) {
 	self.render = () => {
 		const dom = self.dom
 		const input = self.input
-		const t = input.term
-		if (input.sampleCounts && input.sampleCounts.length) make_values_table(input.sampleCounts, 'values_table')
-		render_summary_div(input, self.dom)
+		if (input.sampleCounts && input.sampleCounts.length) make_values_table(input.sampleCounts, 'values_table', input.isContinuousTerm)
 		if (input.excludeCounts && input.excludeCounts.length) {
-			make_values_table(input.excludeCounts, 'excluded_table')
+			make_values_table(input.excludeCounts, 'excluded_table', input.isContinuousTerm)
 		} else {
 			dom.excluded_table.selectAll('*').remove()
 		}
+		// render summary and status for different type of terms
+		if (input.statusHtml) {
+			if (input.statusHtml.bottomSummaryStatus)
+				dom.term_summmary_div.html(input.statusHtml.bottomSummaryStatus)
+			if (input.section.configKey == 'independent' && input.statusHtml.topInfoStatus){
+				dom.top_info_div.style('display','inline-block')
+				// show term_info (term type, groupset, reference group help) for independent variable
+				dom.term_info_div
+					.style('display', 'inline-block')
+					.html(input.statusHtml.topInfoStatus)
+			}
+		}
 	}
 
-	function make_values_table(data, tableName = 'values_table') {
+	function make_values_table(data, tableName = 'values_table', isContinuousTerm) {
 		const l = self.input.orderedLabels
 		const sortFxn =
 			l && l.length ? (a, b) => l.indexOf(a.label) - l.indexOf(b.label) : (a, b) => b.samplecount - a.samplecount
@@ -111,9 +116,6 @@ function setRenderers(self) {
 			const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
 			tr_data.forEach(v => (v.bar_width_frac = Number((1 - (maxCount - v.samplecount) / maxCount).toFixed(4))))
 		}
-
-		const isContinuousTerm =
-			t && (t.q.mode == 'continuous' || t.q.mode == 'spline') && (t.term.type == 'float' || t.term.type == 'integer')
 
 		const trs = self.dom[tableName]
 			.style('margin', '10px 5px')
@@ -143,7 +145,7 @@ function setRenderers(self) {
 
 		tr.style('padding', '0 5px')
 			.style('text-align', 'left')
-			.style('cursor', t.term.type === 'integer' || t.term.type === 'float' ? 'default' : 'pointer')
+			.style('cursor', input.isContinuousTerm ? 'default' : 'pointer')
 
 		// sample count td
 		tr.append('td')
@@ -191,8 +193,7 @@ function setRenderers(self) {
 		if (!item.bar_width_frac) return
 
 		const t = input.term
-		const hover_flag =
-			(t.term.type !== 'integer' && t.term.type !== 'float') || t.q.mode == 'discrete' || t.q.mode == 'binary'
+		const hover_flag = !input.isContinuousTerm
 		let ref_text
 
 		if (rendered) {
@@ -242,65 +243,6 @@ function setRenderers(self) {
 			tr.on('mouseover', null)
 				.on('mouseout', null)
 				.on('click', null)
-		}
-	}
-
-	function render_summary_div(input, dom) {
-		const t = input.term
-		const q = (t && t.q) || {}
-		const tc = input.totalCount || {}
-
-		if (input.section.configKey == 'outcome') {
-			dom.term_summmary_div.text(
-				`${tc.included} sample included.` + (tc.excluded ? ` ${tc.excluded} samples excluded:` : '')
-			)
-			// QUICK FIX: hide top_info_div rightnow for linear regression,
-			// for logistic regression, it needs to be changed as required
-			dom.top_info_div.style('display', 'none')
-		} else if (input.section.configKey == 'independent') {
-			if (t.term.type == 'float' || t.term.type == 'integer') {
-				dom.term_info_div.text(
-					`Use as ${q.mode || 'continuous'} ` +
-						(q.mode !== 'spline' ? 'variable.' : '') +
-						(q.mode == 'continuous' && q.scale && q.scale != 1 ? ` Scale: Per ${q.scale}` : '') +
-						(q.mode == 'spline' ? ` with ${q.knots.length} knots: ${q.knots.map(v => v.value).join(', ')}` : '')
-				)
-				dom.term_summmary_div.html(
-					`${tc.included} sample included.` + (tc.excluded ? ` ${tc.excluded} samples excluded.` : '')
-				)
-			} else if (t.term.type == 'categorical' || t.term.type == 'condition') {
-				const gs = q.groupsetting || {}
-				// self.values is already set by parent.setActiveValues() above
-				const term_text = 'Use as ' + self.input.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
-				const summary_text =
-					` ${tc.included} sample included.` + (tc.excluded ? ` ${tc.excluded} samples excluded:` : '')
-				dom.term_info_div.html(term_text)
-				dom.term_summmary_div.text(summary_text)
-				dom.ref_click_prompt
-					.style('padding', '5px 10px')
-					.style('color', '#999')
-					.style('text-transform', 'uppercase')
-					.style('font-size', '.7em')
-					.text('Click to set a row as reference.')
-			} else if (t.term.type == 'snplst') {
-				const invalid_snps_count = t.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
-				dom.term_summmary_div.html(
-					`${q.numOfSampleWithAnyValidGT} samples with valid genotypes.` +
-						(invalid_snps_count > 0 ? ` ${invalid_snps_count} invalid SNP${invalid_snps_count > 1 ? 's' : ''}.` : '') +
-						'<br>Genetic mode: ' +
-						(t.q.geneticModel == 0
-							? 'Additive'
-							: t.q.geneticModel == 1
-							? 'Dominant'
-							: t.q.geneticModel == 2
-							? 'Recessive'
-							: 'By genotype')
-				)
-			} else {
-				throw 'unkonw term type'
-			}
-		} else {
-			throw `uknown input.section.configKey='${input.section.configKey}'`
 		}
 	}
 }
