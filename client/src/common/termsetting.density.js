@@ -108,7 +108,7 @@ function renderBinLines(self, data) {
 	const scaledMaxX = Math.round(o.xscale(o.density_data.maxvalue))
 	const lines = []
 
-	if (data.mode == 'discrete' && data.type == 'regular') {
+	if (data.mode == 'discrete' && data.type == 'regular-bin') {
 		// assume that boundary lines will be hidden if x > last_bin.start
 		// offset max value by first_bin.stop in case the first boundary is dragged
 		// to the left, will reveal additional non-draggable boundaries from the right
@@ -173,7 +173,7 @@ function renderBinLines(self, data) {
 		.style('cursor', d => (d.isDraggable ? 'ew-resize' : ''))
 		.style('display', d => (!d.isDraggable && d.scaledX > lastScaledX ? 'none' : ''))
 		.on('mouseover', function(d) {
-			if (self.q.type != 'regular' || d.isDraggable) select(this).style('stroke-width', 3)
+			if (self.q.type != 'regular-bin' || d.isDraggable) select(this).style('stroke-width', 3)
 		})
 		.on('mouseout', function(d) {
 			select(this).style('stroke-width', 1)
@@ -193,7 +193,7 @@ function renderBinLines(self, data) {
 		const draggedX = mouse(this)[0]
 		if (draggedX <= scaledMinX || draggedX >= scaledMaxX) return
 		const line =
-			self.q.type == 'regular'
+			self.q.type == 'regular-bin'
 				? select(this)
 				: b.index > 0 && draggedX <= lines[b.index - 1].scaledX
 				? select(this.previousSibling)
@@ -212,7 +212,7 @@ function renderBinLines(self, data) {
 		const inverted = +o.xscale.invert(d.draggedX)
 		const value = self.term.type == 'integer' ? Math.round(inverted) : inverted.toFixed(3)
 
-		if (self.q.type == 'regular') {
+		if (self.q.type == 'regular-bin') {
 			//d.scaledX = Math.round(o.xscale(value))
 			if (d.index === 0) {
 				self.dom.first_stop_input.property('value', value)
@@ -272,7 +272,7 @@ function renderBinLines(self, data) {
 	function dragend(b) {
 		const draggedX = mouse(this)[0]
 		const line =
-			self.q.type == 'regular'
+			self.q.type == 'regular-bin'
 				? select(this)
 				: b.index > 0 && draggedX <= lines[b.index - 1].scaledX
 				? select(this.previousSibling)
@@ -283,7 +283,7 @@ function renderBinLines(self, data) {
 
 		d.scaledX = d.draggedX
 		d.x = +o.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
-		if (self.q.type == 'regular') {
+		if (self.q.type == 'regular-bin') {
 			if (d.index === 0) {
 				self.q.first_bin.stop = d.x
 				middleLines.each(function(d, i) {

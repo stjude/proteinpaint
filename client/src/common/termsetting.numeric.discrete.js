@@ -47,7 +47,7 @@ export function getHandler(self) {
 }
 
 function applyEdits(self) {
-	if (self.q.type == 'regular') {
+	if (self.q.type == 'regular-bin') {
 		self.q.first_bin.startunbounded = true
 		self.q.first_bin.stop = +self.dom.first_stop_input.property('value')
 		self.q.startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
@@ -67,7 +67,7 @@ function applyEdits(self) {
 			self.q.last_bin.start = +self.dom.last_start_input.property('value')
 			self.q.last_bin.stopunbounded = true
 		}
-		self.numqByTermIdModeType[self.term.id].discrete.regular = JSON.parse(JSON.stringify(self.q))
+		self.numqByTermIdModeType[self.term.id].discrete['regular-bin'] = JSON.parse(JSON.stringify(self.q))
 	} else {
 		self.q.lst = processCustomBinInputs(self)
 		self.numqByTermIdModeType[self.term.id].discrete['custom-bin'] = JSON.parse(JSON.stringify(self.q))
@@ -129,8 +129,8 @@ function setqDefaults(self) {
 			dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2 : dd.maxvalue
 
 		cache[t.id].discrete = {
-			regular:
-				self.q && self.q.type == 'regular'
+			'regular-bin':
+				self.q && self.q.type == 'regular-bin'
 					? JSON.parse(JSON.stringify(self.q))
 					: self.opts.use_bins_less && t.bins.less
 					? JSON.parse(JSON.stringify(t.bins.less))
@@ -156,16 +156,15 @@ function setqDefaults(self) {
 							]
 					  }
 		}
-		if (!cache[t.id].discrete.regular.type) {
-			cache[t.id].discrete.regular.type = 'regular'
+		if (!cache[t.id].discrete['regular-bin'].type) {
+			cache[t.id].discrete['regular-bin'].type = 'regular-bin'
 		}
 	}
 
 	//if (self.q && self.q.type && Object.keys(self.q).length>1) return
 	if (self.q && !self.q.mode) self.q.mode = 'discrete'
 	if (!self.q || self.q.mode !== 'discrete') self.q = {}
-	if (!self.q.type) self.q.type = 'regular'
-	// if (!self.q.type) self.q.type = 'regular'
+	if (!self.q.type) self.q.type = 'regular-bin'
 	const cacheCopy = JSON.parse(JSON.stringify(cache[t.id].discrete[self.q.type]))
 	self.q = Object.assign(cacheCopy, self.q)
 	const bin_size = 'bin_size' in self.q && self.q.bin_size.toString()
@@ -200,7 +199,7 @@ export function renderBoundaryInclusionInput(self) {
 				self.q.mode == 'binary'
 					? self.numqByTermIdModeType[self.term.id].binary
 					: self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
-			if (c.type == 'regular') {
+			if (c.type == 'regular-bin') {
 				setBinsInclusion(c)
 			} else {
 				c.lst.forEach(bin => {
@@ -226,7 +225,7 @@ export function renderBoundaryInclusionInput(self) {
 		.append('option')
 		.property('value', d => d.value)
 		.property('selected', d => {
-			if (self.q.type == 'regular') return self.q[d.value] == true
+			if (self.q.type == 'regular-bin') return self.q[d.value] == true
 			else return self.q.lst[0][d.value] == true
 		})
 		.html(d => d.html)
@@ -238,10 +237,10 @@ function renderTypeInputs(self) {
 	const div = self.dom.bins_div.append('div').style('margin', '10px')
 	const tabs = [
 		{
-			active: self.q.type == 'regular' ? true : false,
+			active: self.q.type == 'regular-bin' ? true : false,
 			label: 'Same bin size',
 			callback: async div => {
-				self.q.type = 'regular'
+				self.q.type = 'regular-bin'
 				self.dom.bins_div = bins_div
 				setqDefaults(self)
 				setDensityPlot(self)

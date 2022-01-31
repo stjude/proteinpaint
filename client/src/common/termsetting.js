@@ -113,7 +113,7 @@ class TermSetting {
 			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
 			await this.setHandler(this.term ? this.term.type : null)
 			this.updateUI()
-			if (data.term && this.term.handler && this.handler.validateQ) this.handler.validateQ(data)
+			if (data.term && this.handler && this.handler.validateQ) this.handler.validateQ(data)
 			if (this.handler.postMain) await this.handler.postMain()
 		} catch (e) {
 			this.hasError = true
@@ -478,6 +478,7 @@ export function termsetting_fill_q(q, term, activeCohort) {
 	}
 	if (term.type == 'categorical' || term.type == 'condition') {
 		set_hiddenvalues(q, term)
+		if (!('type' in q)) q.type = 'values' // must fill default q.type if missing
 		if (!q.groupsetting) q.groupsetting = {}
 		if (!term.groupsetting) term.groupsetting = {}
 		if (term.groupsetting.disabled) {
