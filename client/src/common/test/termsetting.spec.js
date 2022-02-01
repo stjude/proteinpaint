@@ -3,7 +3,7 @@ const d3s = require('d3-selection')
 const vocabData = require('../../termdb/test/vocabData')
 const vocabInit = require('../../termdb/vocabulary').vocabInit
 const termjson = require('../../../test/testdata/termjson').termjson
-const termsettingInit = require('../termsetting').termsettingInit
+const { termsettingInit, termsetting_fill_q } = require('../termsetting')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -71,7 +71,8 @@ tape('editMenu', async test => {
 	const opts = await getOpts({
 		showFullMenu: true,
 		tsData: {
-			term: termjson['diaggrp']
+			term: termjson['diaggrp'],
+			q: { type: 'values' }
 		}
 	})
 
@@ -98,7 +99,8 @@ tape('use_bins_less', async test => {
 	const opts = await getOpts({
 		use_bins_less: true,
 		tsData: {
-			term: termjson['agedx']
+			term: termjson['agedx'],
+			q: termjson['agedx'].bins.default
 		}
 	})
 
@@ -111,7 +113,7 @@ tape('use_bins_less', async test => {
 	const tip = opts.pill.Inner.dom.tip.d.node()
 	const bin_size_input = tip.querySelectorAll('tr')[0].querySelectorAll('input')[0]
 
-	test.equal(bin_size_input.value, '5', 'has term.bins.less.bin_size as value')
+	test.equal(bin_size_input.value, '3', 'has term.bins.less.bin_size as value')
 
 	delete opts.pill.Inner.opts.use_bins_less
 	delete opts.pill.Inner.numqByTermIdModeType[opts.pill.Inner.term.id]
@@ -208,7 +210,8 @@ tape('Numerical term: range boundaries', async test => {
 
 	const opts = await getOpts({
 		tsData: {
-			term: termjson['agedx']
+			term: termjson['agedx'],
+			q: termjson['agedx'].bins.default
 		}
 	})
 
@@ -250,7 +253,7 @@ tape('Numerical term: range boundaries', async test => {
 	select1.value = option1.value
 	select1.dispatchEvent(new Event('change'))
 	await sleep(50)
-	const q1 = opts.pill.Inner.numqByTermIdModeType.agedx.discrete.regular
+	const q1 = opts.pill.Inner.numqByTermIdModeType.agedx.discrete['regular-bin']
 	test.equal(!q1.stopinclusive && q1.startinclusive, true, 'should set the range boundary to start inclusive')
 
 	const select0 = tip.d.node().querySelector('select')
@@ -258,7 +261,7 @@ tape('Numerical term: range boundaries', async test => {
 	select0.value = option0.value
 	select0.dispatchEvent(new Event('change'))
 	await sleep(50)
-	const q0 = opts.pill.Inner.numqByTermIdModeType.agedx.discrete.regular
+	const q0 = opts.pill.Inner.numqByTermIdModeType.agedx.discrete['regular-bin']
 	test.equal(q0.stopinclusive && !q0.startinclusive, true, 'should set the range boundary to stop inclusive')
 	tip.hide()
 })
@@ -269,7 +272,8 @@ tape('Numerical term: fixed bins', async test => {
 
 	const opts = await getOpts({
 		tsData: {
-			term: termjson['agedx']
+			term: termjson['agedx'],
+			q: termjson['agedx'].bins.default
 		}
 	})
 
@@ -838,9 +842,7 @@ tape('Conditional term', async test => {
 	// devide into 2 groups
 	pilldiv.click()
 	tip.d.selectAll('.group_btn')._groups[0][2].click()
-	tip.d.selectAll('input')
-		._groups[0][1]
-		.innerText = '1'
+	tip.d.selectAll('input')._groups[0][1].innerText = '1'
 	tip.d
 		.selectAll('.apply_btn')
 		.node()
@@ -881,7 +883,8 @@ tape('Custom vocabulary', async test => {
 			showFullMenu: true,
 			tsData: {
 				term: vocab.terms.find(d => d.id === 'c'),
-				disable_terms: ['c']
+				disable_terms: ['c'],
+				q: { type: 'values' } // assumes the test term 'c' is a categorical term
 			},
 			vocab
 		},
