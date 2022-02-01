@@ -1,26 +1,44 @@
 <div>
-    <h1>Generate a GenomePaint SV View</h1>
-    <p style="font-style:oblique; font-weight: 300; margin: 0vw 5vw; align-items: center; justify-content: center; color: #403f3f;">Create a GenomePaint SV view. Starting with a SV file and a file declaring the BigWig files, a Python script generates a JSON and zip file for proteinpaint. The script outputs URLs to run proteinpaint for both the right and left strands.
+    <h1>Review structural variations with sequencing coverage</h1>
+    <p style="font-style:oblique; font-weight: 300; margin: 0vw 5vw; align-items: center; justify-content: center; color: #403f3f;">Starting with a SV file from a set of samples and a file declaring the BigWig files for the same set of samples, a Python script generates a JSON and zip file for ProteinPaint. The script outputs URLs to run ProteinPaint for both the right and left strands.
     </p>
     <div margin: 2vw;">
         <h6 style="font-size: 1.2em;">Access a ProteinPaint Instance</h6>
-        <p style="margin-left: 2vw; line-height: 1.5;">A local ProteinPaint instance or access to St. Jude internal servers is required. For external users, please contact the <a href="https://www.stjude.org/research/why-st-jude/shared-resources/technology-licensing.html?vgo_ee=hLWJYBlzZntKof%2BseczFn7cjnEkk7LmxyEtgY0F64l8%3D" target="_blank">Office of Technology Licensing</a> for assistance. Internal users may run ProteinPaint from files stored in the 'tp' directory on the HPC. The full path to the tp directory is <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> /research/rgs01/resgen/legacy/gb_customTracks</span>. Please submit a ticket via <a href="http://service.stjude.org/" target="_blank">ServiceNow</a> for read/write access to this directory.</p>
+        <p style="margin-left: 2vw; line-height: 1.5;">A local ProteinPaint instance or access to St. Jude internal servers is required. For external users, please contact the <a href="https://www.stjude.org/research/why-st-jude/shared-resources/technology-licensing.html?vgo_ee=hLWJYBlzZntKof%2BseczFn7cjnEkk7LmxyEtgY0F64l8%3D" target="_blank">Office of Technology Licensing</a> for assistance. St. Jude internal users may run ProteinPaint from files stored in the 'tp' directory on the HPC. The full path to the <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;">tp</span> directory is <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> /research/rgs01/resgen/legacy/gb_customTracks/tp/</span>. Please submit a ticket via <a href="http://service.stjude.org/" target="_blank">ServiceNow</a> for read/write access to this directory.</p>
         
         <h6 style="font-size: 1.2em";">File Formats</h6>
         <p style="margin-left: 2vw; font-size: 1em; line-height: 1.5;">The script accepts two tab delimited files. The first is a SV variant table with the following columns: <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;">sample, chr_a, position_a, strand_a, chr_b, position_b, strand_b</span>. The example below demonstrates how the tab delimited SV table appears from the command line. </p>
-        <img style="width: 50vw; margin: 0vw 5vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svview_images/SV_table.png">
+
+        <pre style="margin: 0vw 3vw; font-size: 1em; opacity: 0.6; white-space:pre-wrap;">
+        sample  chr_a   position_a strand_a    chr_b   position_b  strand_b
+        SJALL011121_D1  chr10   81841249    +   chr10   81845838    +
+        </pre>
 
         <p style="margin-left: 2vw; font-size: 1em; line-height: 1.5;">The second file is a bigwig track table (<em>no header</em>) with the following three data points: sample, assay (WGS, WES, or RNA), and relative file path under the tp directory. In the screenshot below, see how the lines for four samples, their assays and respective bigwig file path are arranged.</p>
-        <img style="width: 50vw; margin: 0vw 5vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svview_images/bw_table.png">
-        
+
+        <pre style="margin: 0vw 3vw; font-size: 1em; opacity: 0.6; white-space:pre-wrap;">
+        SJALL011121_D1 WGS proteinpaint_demo/usecase/svview/SJALL011121_D1.bw
+        SJALL011121_G1 WGS proteinpaint_demo/usecase/svview/SJALL011121_G1.bw
+        SJALL011121_R1 WGS proteinpaint_demo/usecase/svview/SJALL011121_R1.bw
+        SJALL011121_D1 RNA proteinpaint_demo/usecase/svview/SJALL011121_D1_RNA.bw
+        </pre>
+
         <h6 style="font-size: 1.2em;">Run Script on the Command line</h6>
         <p style="margin-left: 2vw;font-size: 1em; line-height: 1.5;">Run the python script from the command line denoting the SV table (<span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --sv</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -v</span>), bigwig table (<span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --tracks</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -t</span>), directory for the output files (<span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --outDir</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -d</span>), and genome (<span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --genome</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -g</span>). The screenshots below demonstrate how to use the python arguments.</p>
-        <img style="width: 50vw; margin: 0vw 5vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svview_images/python_full_flags.png">
-        <img style="width: 50vw; margin: 0vw 5vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svview_images/python_short_flags.png">
+        
+        <pre style="margin: 0vw 3vw; font-size: 1em; opacity: 0.6; white-space:pre-wrap;">python3 sv_review.py --sv sv.example --track bx.example --outDir ~/tp/proteinpaint_demo/usecases/svview --genome hg19</pre><br>
+        <pre style="margin: 0vw 3vw; font-size: 1em; opacity: 0.6; white-space:pre-wrap;">python3 sv_review.py -v sv.example -t bx.example -d ~/tp/proteinpaint_demo/usecases/svview -g hg19</pre>
         
         <h6 style="font-size: 1.2em;">Output and Results</h6>
         <p style="margin-left: 2vw;font-size: 1em; line-height: 1.5;">The script will generate a <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> SV.gz</span> file and <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> SV.gz.tbi</span> index file with the SV data as well as a <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> mds.json</span> file, like the one below. All three will appear in the directory specified for output files (i.e. from the <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --outDir</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -d</span> argument).</p>
-        <img style="width: 30vw; margin: 0vw 5vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svview_images/mdsjson.png">
+
+        <pre style="margin: 0vw 3vw; font-size: 1em; opacity: 0.6; white-space:pre-wrap;">
+        {
+            "name": "SV review",
+            "svcnvfile": "proteinpaint_demo/usecases/svview/SV.gz",
+            "type": "mdssvcnv"
+        }
+        </pre>
         
         <p style="margin-left: 2vw;font-size: 1em; line-height: 1.5;">The results contain the SV table and URLs for the left and right positions (see screenshot below).</p>
         <img style="width: 63vw; margin: 0vw 2vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svview_images/output.png">
@@ -32,7 +50,7 @@
         <div style="place items: center center; padding: 10px;">
             <button type="button" onclick="window.open('https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svViewPyScript.tar.gz','_self', 'download')" style="background-color: #d0e3ff; padding: 8px; boarder-radius: 3px; border: none; display: inline-block;margin: 0px 10px;">Download Script</button>
             
-            <button type="button" onclick="window.open('https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svViewDemoFiles.tar.gz','_self', 'download')" style="background-color: #d0e3ff; padding: 8px; boarder-radius: 3px; border: none; display: inline-block;margin: 0px 10px;">Download Files</button>
+            <button type="button" onclick="window.open('https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svViewDemoFiles.tar.gz','_self', 'download')" style="background-color: #d0e3ff; padding: 8px; boarder-radius: 3px; border: none; display: inline-block;margin: 0px 10px;">Download Example Files</button>
         </div>
     </div>
 </div>
