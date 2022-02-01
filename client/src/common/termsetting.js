@@ -5,7 +5,6 @@ import { select } from 'd3-selection'
 /********************** EXPORTED
 nonDictionaryTermTypes
 termsettingInit()
-termsetting_fill_q()
 getPillNameDefault()
 fillTermWrapper()
 */
@@ -46,7 +45,6 @@ class TermSetting {
 
 		const defaultHandler = getDefaultHandler(this)
 		this.handlerByType = {
-			survival: defaultHandler,
 			default: defaultHandler
 		}
 
@@ -398,7 +396,7 @@ function setInteractivity(self) {
 			},
 			tree: {
 				disable_terms: self.disable_terms,
-				click_term: term => {
+				click_term: async term => {
 					self.dom.tip.hide()
 					const data = { id: term.id, term, q: {} }
 					let _term = term
@@ -408,7 +406,7 @@ function setInteractivity(self) {
 						_term = JSON.parse(JSON.stringify(term))
 						_term.bins.default = _term.bins.less
 					}
-					termsetting_fill_q(data.q, _term)
+					await call_fillTW(data, self.vocabApi)
 					self.opts.callback(data)
 				}
 			}
@@ -455,121 +453,6 @@ function setInteractivity(self) {
 	}
 }
 
-// TODO: may move this to the handler code file by term type
-export function termsetting_fill_q(q, term, activeCohort) {
-	if (term.type == 'integer' || term.type == 'float') {
-		if (!valid_binscheme(q)) {
-			/*
-			if q is already initiated, do not overwrite
-			to be tested if can work with partially declared state
-			always copies from .bins.default
-			*/
-
-			// rounding and label_offset may have to defined separately within bins.default or bins.less,
-			// for now assume that the same values will apply to both bins.default and .less
-			if (term.bins.rounding) term.bins.default.rounding = term.bins.rounding
-			if (term.bins.label_offset) term.bins.default.label_offset = term.bins.label_offset
-			copyMerge(q, term.bins.default)
-		}
-		set_hiddenvalues(q, term)
-		// binconfig.termtype may be used to improve bin labels
-		if (!q.termtype) q.termtype = term.type
-		return
-	}
-	if (term.type == 'categorical' || term.type == 'condition') {
-		set_hiddenvalues(q, term)
-		if (!('type' in q)) q.type = 'values' // must fill default q.type if missing
-		if (!q.groupsetting) q.groupsetting = {}
-		if (!term.groupsetting) term.groupsetting = {}
-		if (term.groupsetting.disabled) {
-			q.groupsetting.disabled = true
-			return
-		}
-		delete q.groupsetting.disabled
-		if (!('inuse' in q.groupsetting)) q.groupsetting.inuse = false // do not apply by default
-
-		if (term.type == 'condition') {
-			/*
-			for condition term, must set up bar/value flags before quiting for inuse:false
-			*/
-			if (q.value_by_max_grade || q.value_by_most_recent || q.value_by_computable_grade) {
-				// need any of the three to be set
-			} else {
-				// set a default one
-				q.value_by_max_grade = true
-			}
-			if (q.bar_by_grade || q.bar_by_children) {
-			} else {
-				q.bar_by_grade = true
-			}
-		}
-
-		if (!q.groupsetting.inuse) {
-			// inuse:false is either from automatic setup or predefined in state
-			// then no need for additional setup
-			return
-		} else {
-			// used for groupsetting if one of the group is filter rahter than values,
-			// Not in use rightnow, if used in future, uncomment following line
-			// q.groupsetting.activeCohort = activeCohort
-		}
-		// if to apply the groupsetting
-		if (term.groupsetting.lst && term.groupsetting.useIndex >= 0 && term.groupsetting.lst[term.groupsetting.useIndex]) {
-			q.groupsetting.predefined_groupset_idx = term.groupsetting.useIndex
-		}
-		return
-	}
-	if (term.type == 'survival') {
-		q.type = 'survival'
-		return
-	}
-	if (term.type == 'snplst') {
-		// may set q.type later?
-		return
-	}
-	throw `unknown term type='${term.type}'`
-}
-
-function set_hiddenvalues(q, term) {
-	if (!q.hiddenValues) {
-		q.hiddenValues = {}
-	}
-	if (term.values) {
-		for (const k in term.values) {
-			if (term.values[k].uncomputable) q.hiddenValues[k] = 1
-		}
-	}
-}
-
-function valid_binscheme(q) {
-	/*if (q.mode == 'continuous') { console.log(472, q)
-		// only expect a few keys for now "mode", "scale", "transform" keys for now
-		const supportedKeys = ['mode', 'scale', 'transform']
-		const unsupportedKeys = Object.keys(q).filter(key => supportedKeys.includes(key))
-		if (unsupportedKeys.length) return false 
-		// throw `${JSON.stringify(unsupportedKeys)} not supported for q.mode='continuous'`
-		return true
-	}*/
-	if (q.type == 'custom-bin') {
-		if (!Array.isArray(q.lst)) return false
-		if (!q.mode) q.mode = 'discrete'
-		return true
-	}
-	if (Number.isFinite(q.bin_size) && q.first_bin) {
-		if (!q.mode) q.mode = 'discrete'
-		if (q.first_bin.startunbounded) {
-			if (Number.isInteger(q.first_bin.stop_percentile) || Number.isFinite(q.first_bin.stop)) {
-				return true
-			}
-		} else {
-			if (Number.isInteger(q.first_bin.start_percentile) || Number.isFinite(q.first_bin.start)) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 function getDefaultHandler(self) {
 	return {
 		showEditMenu() {},
@@ -597,22 +480,20 @@ export async function fillTermWrapper(tw, vocabApi) {
 		tw.term = await vocabApi.getterm(tw.id)
 	}
 
-	if (nonDictionaryTermTypes.has(tw.term.type)) {
-		// is non-dict term, must run fillTW() and done
-		const _ = await import(`../common/termsetting.${tw.term.type}.js`)
-		// fill-in wrapper, term and q
-		await _.fillTW(tw, vocabApi)
-		return
-	}
-
-	// is dictionary term; now has tw.term{}, tw.id and tw.q{} can be missing
-
+	// tw.term{} is valid
 	if (!('id' in tw)) {
 		tw.id = tw.term.id
 	} else if (tw.id != tw.term.id) {
 		throw 'the given ids (tw.id and tw.term.id) are different'
 	}
-
 	if (!tw.q) tw.q = {}
-	termsetting_fill_q(tw.q, tw.term, vocabApi.state.activeCohort)
+	// call term-type specific logic to fill tw
+	await call_fillTW(tw, vocabApi)
+}
+
+async function call_fillTW(tw, vocabApi) {
+	const t = tw.term.type
+	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : t
+	const _ = await import(`../common/termsetting.${type}.js`)
+	await _.fillTW(tw, vocabApi)
 }

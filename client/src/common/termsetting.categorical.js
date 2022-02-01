@@ -308,3 +308,54 @@ export function setCategoryConditionMethods(self) {
 		return vals_with_grp
 	}
 }
+
+export function fillTW(tw, vocabApi) {
+	set_hiddenvalues(tw.q, tw.term)
+	if (!('type' in tw.q)) tw.q.type = 'values' // must fill default q.type if missing
+	if (!tw.q.groupsetting) tw.q.groupsetting = {}
+	if (!tw.term.groupsetting) tw.term.groupsetting = {}
+	if (tw.term.groupsetting.disabled) {
+		tw.q.groupsetting.disabled = true
+		return
+	}
+	delete tw.q.groupsetting.disabled
+	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false // do not apply by default
+
+	if (tw.term.type == 'condition') {
+		/*
+		for condition term, must set up bar/value flags before quiting for inuse:false
+		*/
+		if (tw.q.value_by_max_grade || tw.q.value_by_most_recent || tw.q.value_by_computable_grade) {
+			// need any of the three to be set
+		} else {
+			// set a default one
+			tw.q.value_by_max_grade = true
+		}
+		if (tw.q.bar_by_grade || tw.q.bar_by_children) {
+		} else {
+			tw.q.bar_by_grade = true
+		}
+	}
+
+	// inuse:false is either from automatic setup or predefined in state
+	if (tw.q.groupsetting.inuse) {
+		if (
+			tw.term.groupsetting.lst &&
+			tw.term.groupsetting.useIndex >= 0 &&
+			tw.term.groupsetting.lst[tw.term.groupsetting.useIndex]
+		) {
+			tw.q.groupsetting.predefined_groupset_idx = tw.term.groupsetting.useIndex
+		}
+	}
+}
+
+function set_hiddenvalues(q, term) {
+	if (!q.hiddenValues) {
+		q.hiddenValues = {}
+	}
+	if (term.values) {
+		for (const k in term.values) {
+			if (term.values[k].uncomputable) q.hiddenValues[k] = 1
+		}
+	}
+}

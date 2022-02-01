@@ -1,5 +1,6 @@
 import { init_tabs } from '../dom/toggleButtons'
 import { getPillNameDefault } from './termsetting'
+import { copyMerge } from '../common/rx.core'
 
 // self is the termsetting instance
 export async function getHandler(self) {
@@ -93,4 +94,63 @@ export async function getHandler(self) {
 			init_tabs({ holder: tabDiv, contentHolder: div.append('div'), tabs })
 		}
 	}
+}
+
+export function fillTW(tw, vocabApi) {
+	if (!valid_binscheme(tw.q)) {
+		/*
+		if q is already initiated, do not overwrite
+		to be tested if can work with partially declared state
+		always copies from .bins.default
+		*/
+
+		// rounding and label_offset may have to defined separately within bins.default or bins.less,
+		// for now assume that the same values will apply to both bins.default and .less
+		if (tw.term.bins.rounding) tw.term.bins.default.rounding = tw.term.bins.rounding
+		if (tw.term.bins.label_offset) tw.term.bins.default.label_offset = tw.term.bins.label_offset
+		copyMerge(tw.q, tw.term.bins.default)
+	}
+	set_hiddenvalues(tw.q, tw.term)
+	// binconfig.termtype may be used to improve bin labels
+	//if (!tw.q.termtype) tw.q.termtype = term.type
+}
+
+function set_hiddenvalues(q, term) {
+	if (!q.hiddenValues) {
+		q.hiddenValues = {}
+	}
+	if (term.values) {
+		for (const k in term.values) {
+			if (term.values[k].uncomputable) q.hiddenValues[k] = 1
+		}
+	}
+}
+
+function valid_binscheme(q) {
+	/*if (q.mode == 'continuous') { console.log(472, q)
+		// only expect a few keys for now "mode", "scale", "transform" keys for now
+		const supportedKeys = ['mode', 'scale', 'transform']
+		const unsupportedKeys = Object.keys(q).filter(key => supportedKeys.includes(key))
+		if (unsupportedKeys.length) return false 
+		// throw `${JSON.stringify(unsupportedKeys)} not supported for q.mode='continuous'`
+		return true
+	}*/
+	if (q.type == 'custom-bin') {
+		if (!Array.isArray(q.lst)) return false
+		if (!q.mode) q.mode = 'discrete'
+		return true
+	}
+	if (Number.isFinite(q.bin_size) && q.first_bin) {
+		if (!q.mode) q.mode = 'discrete'
+		if (q.first_bin.startunbounded) {
+			if (Number.isInteger(q.first_bin.stop_percentile) || Number.isFinite(q.first_bin.stop)) {
+				return true
+			}
+		} else {
+			if (Number.isInteger(q.first_bin.start_percentile) || Number.isFinite(q.first_bin.start)) {
+				return true
+			}
+		}
+	}
+	return false
 }
