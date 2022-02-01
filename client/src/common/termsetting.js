@@ -474,14 +474,16 @@ export function getPillNameDefault(self, d) {
 // vocabApi
 export async function fillTermWrapper(tw, vocabApi) {
 	if (!tw.term) {
-		if (!('id' in tw)) throw 'missing both .id and .term'
+		if (tw.id == undefined || tw.id == '') throw 'missing both .id and .term'
 		// has .id but no .term, must be a dictionary term
 		// as non-dict term must have tw.term{}
 		tw.term = await vocabApi.getterm(tw.id)
 	}
 
 	// tw.term{} is valid
-	if (!('id' in tw)) {
+	if (tw.id == undefined || tw.id == '') {
+		// for dictionary term, tw.term.id must be valid
+		// for non dict term, it can still be missing
 		tw.id = tw.term.id
 	} else if (tw.id != tw.term.id) {
 		throw 'the given ids (tw.id and tw.term.id) are different'

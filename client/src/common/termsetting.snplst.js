@@ -479,13 +479,17 @@ function validateQ(self, data) {
 export async function fillTW(tw, vocabApi) {
 	if (!tw.q) tw.q = {}
 	if (!tw.term.name) tw.term.name = getTermName(tw.term.snps)
-	if ('id' in tw) {
-		if (!('id' in tw.term)) {
+	if (tw.id == undefined || tw.id == '') {
+		// tw is missing id
+		if (tw.term.id == undefined || tw.term.id == '') {
+			// tw.term is also missing id
+			tw.term.id = makeId()
+		}
+		tw.id = tw.term.id
+	} else {
+		if (tw.term.id == undefined || tw.term.id == '') {
 			tw.term.id = tw.id
 		}
-	} else {
-		if (!('id' in tw.term)) tw.term.id = makeId()
-		tw.id = tw.term.id
 	}
 
 	await validateInput({
