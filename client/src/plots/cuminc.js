@@ -16,7 +16,7 @@ class TdbCumInc {
 		this.type = 'cuminc'
 	}
 
-	async init() {
+	async init(appState) {
 		const opts = this.opts
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
@@ -47,10 +47,11 @@ class TdbCumInc {
 				}
 			}
 		})
-		await this.setControls()
+		await this.setControls(appState)
 	}
 
-	async setControls() {
+	async setControls(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.boxplot', this.download)
 		} else {
@@ -59,6 +60,16 @@ class TdbCumInc {
 				.style('display', 'inline-block')
 				.style('min-width', '300px')
 				.style('margin-left', '50px')
+
+			const options = []
+			for (const grade in config.term.values) {
+				const v = config.term.values[grade]
+				if (v.uncomputable) continue
+				options.push({
+					label: v.label,
+					value: grade
+				})
+			}
 
 			this.components = {
 				controls: await controlsInit({
@@ -73,13 +84,7 @@ class TdbCumInc {
 							type: 'dropdown',
 							chartType: 'cuminc',
 							settingsKey: 'gradeCutoff',
-							options: [
-								{ label: '1', value: 1 },
-								{ label: '2', value: 2 },
-								{ label: '3', value: 3, selected: true },
-								{ label: '4', value: 4 },
-								{ label: '5', value: 5 }
-							]
+							options
 						},
 						'divideBy'
 					]

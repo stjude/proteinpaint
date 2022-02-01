@@ -72,8 +72,7 @@ class TdbSurvival {
 							boxLabel: 'Visible',
 							type: 'checkbox',
 							chartType: 'survival',
-							settingsKey: 'ciVisible',
-							options: [{ label: 'X', value: 'x' }, { label: 'Tick', value: 'vtick' }]
+							settingsKey: 'ciVisible'
 						},
 						{
 							label: 'Censored Symbol',
