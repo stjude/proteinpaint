@@ -68,6 +68,13 @@ class TdbSurvival {
 						'overlay',
 						'divideBy',
 						{
+							label: '95% CI',
+							boxLabel: 'Visible',
+							type: 'checkbox',
+							chartType: 'survival',
+							settingsKey: 'ciVisible'
+						},
+						{
 							label: 'Censored Symbol',
 							type: 'radio',
 							chartType: 'survival',

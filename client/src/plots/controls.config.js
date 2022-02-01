@@ -15,7 +15,7 @@ class TdbConfigUiInit {
 		this.app = opts.app
 		this.id = opts.id
 		this.instanceNum = instanceNum++
-		setInteractivity(this)
+		setRenderers(this)
 	}
 
 	async init() {
@@ -124,197 +124,10 @@ class TdbConfigUiInit {
 
 export const configUiInit = getCompInit(TdbConfigUiInit)
 
-function setInteractivity(self) {
+function setRenderers(self) {
 	self.rowIsVisible = function() {
 		return this.style.display != 'none'
 	}
-}
-
-function setOrientationOpts(opts) {
-	const self = {
-		dom: {
-			row: opts.holder,
-			labelTdb: opts.holder
-				.append('td')
-				.html('Orientation')
-				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
-		}
-	}
-
-	self.radio = initRadioInputs({
-		name: 'pp-termdb-condition-unit-' + opts.instanceNum,
-		holder: self.dom.inputTd,
-		options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }],
-		listeners: {
-			input(d) {
-				opts.dispatch({
-					type: 'plot_edit',
-					id: opts.id,
-					config: {
-						settings: {
-							barchart: {
-								orientation: d.value
-							}
-						}
-					}
-				})
-			}
-		}
-	})
-
-	const api = {
-		main(plot) {
-			self.dom.row.style('table-row')
-			self.radio.main(plot.settings.barchart.orientation)
-		}
-	}
-
-	if (opts.debug) api.Inner = self
-	return Object.freeze(api)
-}
-
-function setScaleOpts(opts) {
-	const self = {
-		dom: {
-			row: opts.holder.style('display', 'table-row'),
-			labelTd: opts.holder
-				.append('td')
-				.html('Scale')
-				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
-		}
-	}
-
-	self.radio = initRadioInputs({
-		name: 'pp-termdb-scale-unit-' + opts.instanceNum,
-		holder: self.dom.inputTd,
-		options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }, { label: 'Proportion', value: 'pct' }],
-		listeners: {
-			input(d) {
-				opts.dispatch({
-					type: 'plot_edit',
-					id: opts.id,
-					config: {
-						settings: {
-							barchart: {
-								unit: d.value
-							}
-						}
-					}
-				})
-			}
-		}
-	})
-
-	const api = {
-		main(plot) {
-			self.radio.main(plot.settings.barchart.unit)
-			self.radio.dom.divs.style('display', d => {
-				if (d.value == 'log') {
-					return plot.term2 ? 'none' : 'inline-block'
-				} else if (d.value == 'pct') {
-					return plot.term2 ? 'inline-block' : 'none'
-				} else {
-					return 'inline-block'
-				}
-			})
-		}
-	}
-
-	if (opts.debug) api.Inner = self
-	return Object.freeze(api)
-}
-
-function setCumincGradeOpts(opts) {
-	const self = {
-		dom: {
-			row: opts.holder.style('display', 'table-row'),
-			labelTd: opts.holder
-				.append('td')
-				.html('Cutoff Grade')
-				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
-		}
-	}
-
-	self.dom.select = self.dom.inputTd.append('select').on('change', () => {
-		opts.dispatch({
-			type: 'plot_edit',
-			id: opts.id,
-			config: {
-				settings: {
-					cuminc: {
-						gradeCutoff: self.dom.select.property('value')
-					}
-				}
-			}
-		})
-	})
-
-	self.dom.select
-		.selectAll('option')
-		.data([1, 2, 3, 4, 5])
-		.enter()
-		.append('option')
-		.attr('value', d => d)
-		.attr('selected', d => d === 3)
-		.html(d => '&nbsp;' + d + '&nbsp;')
-
-	const api = {
-		main(plot) {
-			self.dom.select.property('value', plot.settings.cuminc.gradeCutoff)
-		}
-	}
-
-	if (opts.debug) api.Inner = self
-	return Object.freeze(api)
-}
-
-function setCIOpts(opts) {
-	const self = {
-		dom: {
-			row: opts.holder.style('display', 'table-row'),
-			labelTdb: opts.holder
-				.append('td')
-				.html('95% CI')
-				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
-		}
-	}
-
-	const label = self.dom.inputTd.append('label')
-
-	self.dom.input = label
-		.append('input')
-		.attr('type', 'checkbox')
-		.on('change', () => {
-			opts.dispatch({
-				type: 'plot_edit',
-				id: opts.id,
-				config: {
-					settings: {
-						survival: {
-							ciVisible: self.dom.input.property('checked')
-						}
-					}
-				}
-			})
-		})
-
-	label
-		.append('span')
-		.html('&nbsp;Visible')
-		.attr('type', 'checkbox')
-
-	const api = {
-		main(plot) {
-			self.dom.input.property('checked', plot.settings.survival.ciVisible)
-		}
-	}
-
-	if (opts.debug) api.Inner = self
-	return Object.freeze(api)
 }
 
 function setNumberInput(opts) {
@@ -486,6 +299,98 @@ function setRadioInput(opts) {
 		main(plot) {
 			self.dom.row.style('table-row')
 			self.radio.main(plot.settings[opts.chartType][opts.settingsKey])
+			self.radio.dom.divs.style('display', d => (d.getDisplayStyle ? d.getDisplayStyle(plot) : 'inline-block'))
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
+function setDropdownInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder.style('display', 'table-row'),
+			labelTd: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	self.dom.select = self.dom.inputTd.append('select').on('change', () => {
+		opts.dispatch({
+			type: 'plot_edit',
+			id: opts.id,
+			config: {
+				settings: {
+					[opts.chartType]: {
+						[opts.settingsKey]: self.dom.select.property('value')
+					}
+				}
+			}
+		})
+	})
+
+	self.dom.select
+		.selectAll('option')
+		.data(opts.options)
+		.enter()
+		.append('option')
+		.attr('value', d => d.value)
+		.attr('selected', d => d.selected)
+		.html(d => '&nbsp;' + d.label + '&nbsp;')
+
+	const api = {
+		main(plot) {
+			self.dom.select.property('value', plot.settings[opts.chartType][opts.settingsKey])
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
+function setCheckboxInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder.style('display', 'table-row'),
+			labelTdb: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	const label = self.dom.inputTd.append('label')
+
+	self.dom.input = label
+		.append('input')
+		.attr('type', 'checkbox')
+		.on('change', () => {
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[opts.settingsKey]: self.dom.input.property('checked')
+						}
+					}
+				}
+			})
+		})
+
+	label
+		.append('span')
+		.html('&nbsp;' + opts.boxLabel)
+		.attr('type', 'checkbox')
+
+	const api = {
+		main(plot) {
+			self.dom.input.property('checked', plot.settings[opts.chartType][opts.settingsKey])
 		}
 	}
 
@@ -494,14 +399,12 @@ function setRadioInput(opts) {
 }
 
 const initByInput = {
-	orientation: setOrientationOpts,
-	scale: setScaleOpts,
-	grade: setCumincGradeOpts,
-	ci: setCIOpts,
 	number: setNumberInput,
 	math: setMathExprInput,
 	text: setTextInput,
-	radio: setRadioInput
+	radio: setRadioInput,
+	dropdown: setDropdownInput,
+	checkbox: setCheckboxInput
 }
 
 const initByComponent = {

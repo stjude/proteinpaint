@@ -16,7 +16,7 @@ class TdbCumInc {
 		this.type = 'cuminc'
 	}
 
-	async init() {
+	async init(appState) {
 		const opts = this.opts
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
@@ -47,10 +47,11 @@ class TdbCumInc {
 				}
 			}
 		})
-		await this.setControls()
+		await this.setControls(appState)
 	}
 
-	async setControls() {
+	async setControls(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.boxplot', this.download)
 		} else {
@@ -60,12 +61,33 @@ class TdbCumInc {
 				.style('min-width', '300px')
 				.style('margin-left', '50px')
 
+			const options = []
+			for (const grade in config.term.values) {
+				const v = config.term.values[grade]
+				if (v.uncomputable) continue
+				options.push({
+					label: v.label,
+					value: grade
+				})
+			}
+
 			this.components = {
 				controls: await controlsInit({
 					app: this.app,
 					id: this.id,
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
-					inputs: ['term1', 'overlay', 'grade', 'divideBy']
+					inputs: [
+						'term1',
+						'overlay',
+						{
+							label: 'Cutoff Grade',
+							type: 'dropdown',
+							chartType: 'cuminc',
+							settingsKey: 'gradeCutoff',
+							options
+						},
+						'divideBy'
+					]
 				})
 			}
 
