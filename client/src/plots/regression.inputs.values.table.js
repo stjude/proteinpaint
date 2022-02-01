@@ -90,9 +90,10 @@ function setRenderers(self) {
 	self.render = () => {
 		const dom = self.dom
 		const input = self.input
-		if (input.sampleCounts && input.sampleCounts.length) make_values_table(input.sampleCounts, 'values_table', input.isContinuousTerm)
+		const continuousTerm = input.statusHtml.isContinuousTerm
+		if (input.sampleCounts && input.sampleCounts.length) make_values_table(input.sampleCounts, 'values_table', continuousTerm)
 		if (input.excludeCounts && input.excludeCounts.length) {
-			make_values_table(input.excludeCounts, 'excluded_table', input.isContinuousTerm)
+			make_values_table(input.excludeCounts, 'excluded_table', continuousTerm)
 		} else {
 			dom.excluded_table.selectAll('*').remove()
 		}
@@ -150,7 +151,7 @@ function setRenderers(self) {
 
 		tr.style('padding', '0 5px')
 			.style('text-align', 'left')
-			.style('cursor', input.isContinuousTerm ? 'default' : 'pointer')
+			.style('cursor', input.statusHtml.isContinuousTerm ? 'default' : 'pointer')
 
 		// sample count td
 		tr.append('td')
@@ -198,7 +199,7 @@ function setRenderers(self) {
 		if (!item.bar_width_frac) return
 
 		const t = input.term
-		const hover_flag = !input.isContinuousTerm
+		const hover_flag = !input.statusHtml.isContinuousTerm
 		let ref_text
 
 		if (rendered) {
