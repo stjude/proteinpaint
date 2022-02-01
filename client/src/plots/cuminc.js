@@ -65,7 +65,24 @@ class TdbCumInc {
 					app: this.app,
 					id: this.id,
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
-					inputs: ['term1', 'overlay', 'grade', 'divideBy']
+					inputs: [
+						'term1',
+						'overlay',
+						{
+							label: 'Cutoff Grade',
+							type: 'dropdown',
+							chartType: 'cuminc',
+							settingsKey: 'gradeCutoff',
+							options: [
+								{ label: '1', value: 1 },
+								{ label: '2', value: 2 },
+								{ label: '3', value: 3, selected: true },
+								{ label: '4', value: 4 },
+								{ label: '5', value: 5 }
+							]
+						},
+						'divideBy'
+					]
 				})
 			}
 
