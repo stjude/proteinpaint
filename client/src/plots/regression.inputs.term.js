@@ -191,6 +191,7 @@ export class InputTerm {
 		this.statusHtml = { topInfoStatus: undefined, bottomSummaryStatus: undefined }
 		// update bottomSummaryStatus for termtype 'snplst'
 		// other term types will be updated if data.lst is present
+		if (tw.term.type == 'snplst') this.statusHtml.isSnplst = true
 		if (tw.term.type == 'snplst' && tw.q.numOfSampleWithAnyValidGT) {
 			const invalid_snps_count = tw.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
 			this.statusHtml.bottomSummaryStatus =
@@ -247,7 +248,7 @@ export class InputTerm {
 				`${totalCount.included} sample included.` +
 				(totalCount.excluded ? ` ${totalCount.excluded} samples excluded:` : '')
 
-			this.isContinuousTerm = (tw.q.mode == 'continuous' || tw.q.mode == 'spline') 
+			this.statusHtml.isContinuousTerm = (tw.q.mode == 'continuous' || tw.q.mode == 'spline') 
 				&& (tw.term.type == 'float' || tw.term.type == 'integer')
 			if (tw && tw.q.mode !== 'continuous' && this.sampleCounts.length < 2)
 				throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
