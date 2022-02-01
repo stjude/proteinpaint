@@ -8600,7 +8600,7 @@ async function mds_init(ds, genome, _servconfig) {
 				} else if (query.type == common.tkt.mdsvcf) {
 					// snvindel
 
-					const err = mds_init_mdsvcf(query, ds, genome)
+					const err = await mds_init_mdsvcf(query, ds, genome)
 					if (err) throw querykey + ' (vcf) error: ' + err
 				} else {
 					throw 'unknown track type for a query: ' + query.type + ' ' + querykey
@@ -9081,7 +9081,7 @@ function mds_init_genenumeric(query, ds, genome) {
 	}
 }
 
-function mds_init_mdsvcf(query, ds, genome) {
+async function mds_init_mdsvcf(query, ds, genome) {
 	/*
     mixture of snv/indel (vcf), ITD, and others
     that are not either cnv or sv
@@ -9107,9 +9107,9 @@ function mds_init_mdsvcf(query, ds, genome) {
 		if (tk.type == common.mdsvcftype.vcf) {
 			const arg = { cwd: tk.cwd, encoding: 'utf8' }
 
-			const tmp = child_process.execSync(tabix + ' -H ' + _file, arg).trim()
-			if (!tmp) return 'no meta/header lines for ' + _file
-			const [info, format, samples, errs] = vcf.vcfparsemeta(tmp.split('\n'))
+			const tmp = await utils.get_header_tabix(_file, tk.cwd)
+			if (tmp.length == 0) return 'no meta/header lines for ' + _file
+			const [info, format, samples, errs] = vcf.vcfparsemeta(tmp)
 			if (errs) return 'error parsing vcf meta for ' + _file + ': ' + errs.join('\n')
 
 			if (samples.length == 0) return 'vcf file has no sample: ' + _file
@@ -9150,9 +9150,16 @@ function mds_init_mdsvcf(query, ds, genome) {
 		}
 
 		{
-			const tmp = child_process.execSync(tabix + ' -l ' + _file, { encoding: 'utf8' }).trim()
-			if (tmp == '') return 'no chr from ' + _file
-			tk.nochr = common.contigNameNoChr(genome, tmp.split('\n'))
+			const tmp = []
+			await utils.get_lines_bigfile({
+				args: ['-l', _file],
+				dir: tk.cwd,
+				callback: line => {
+					tmp.push(line)
+				}
+			})
+			if (tmp.length == 0) return 'no chr from ' + _file
+			tk.nochr = common.contigNameNoChr(genome, tmp)
 		}
 
 		console.log(
