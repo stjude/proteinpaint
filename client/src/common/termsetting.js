@@ -1,4 +1,4 @@
-import { getInitFxn, copyMerge } from '../common/rx.core'
+import { getInitFxn, copyMerge } from './rx.core'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
 
@@ -494,6 +494,6 @@ export async function fillTermWrapper(tw, vocabApi) {
 async function call_fillTW(tw, vocabApi) {
 	const t = tw.term.type
 	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : t
-	const _ = await import(`../common/termsetting.${type}.js`)
+	const _ = await import(`./termsetting.${type}.js`)
 	await _.fillTW(tw, vocabApi)
 }

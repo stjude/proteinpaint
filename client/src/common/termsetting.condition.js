@@ -1,6 +1,7 @@
-import { setCategoryConditionMethods, fillTW as fillTW0 } from './termsetting.categorical'
+import { setCategoryConditionMethods } from './termsetting.categorical'
 import { setGroupsettingMethods } from './termsetting.groupsetting'
 import { getPillNameDefault } from './termsetting'
+export { fillTW } from './termsetting.categorical'
 
 /*
 Arguments
@@ -84,8 +85,4 @@ export function getHandler(self) {
 			self.showGrpOpts(div)
 		}
 	}
-}
-
-export function fillTW(tw, v) {
-	return fillTW0(tw, v)
 }
