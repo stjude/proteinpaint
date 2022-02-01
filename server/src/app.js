@@ -8600,7 +8600,7 @@ async function mds_init(ds, genome, _servconfig) {
 				} else if (query.type == common.tkt.mdsvcf) {
 					// snvindel
 
-					const err = mds_init_mdsvcf(query, ds, genome)
+					const err = await mds_init_mdsvcf(query, ds, genome)
 					if (err) throw querykey + ' (vcf) error: ' + err
 				} else {
 					throw 'unknown track type for a query: ' + query.type + ' ' + querykey
