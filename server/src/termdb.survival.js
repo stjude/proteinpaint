@@ -55,7 +55,7 @@ export async function get_survival(q, ds) {
 		}
 		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
 		const final_data = {
-			keys: ['chartId', 'seriesId', 'time', 'survival', 'censored', 'lower', 'upper'],
+			keys: ['chartId', 'seriesId', 'time', 'survival', 'lower', 'upper', 'nevent', 'ncensor', 'nrisk'],
 			case: [],
 			refs: { bins }
 		}
@@ -80,7 +80,17 @@ export async function get_survival(q, ds) {
 						})
 						// may reconvert a placeholder cohort value with an empty string
 						const cohort = obj.cohort == '*' ? '' : obj.cohort
-						final_data.case.push([chartId, cohort, obj.time, obj.surv, obj.ncensor, obj.lower, obj.upper])
+						final_data.case.push([
+							chartId,
+							cohort,
+							obj.time,
+							obj.surv,
+							obj.lower,
+							obj.upper,
+							obj.nevent,
+							obj.ncensor,
+							obj.nrisk
+						])
 					}
 				})
 		}
@@ -94,59 +104,9 @@ export async function get_survival(q, ds) {
 			)
 		}
 
-		// track at-risk summary trend
-		if (survq.xTickInterval) {
-			final_data.atRiskByChart = getAtRiskTrend(survq, byChartSeries, bins)
-		}
-
 		return final_data
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
 	}
-}
-
-function getAtRiskTrend(survq, byChartSeries) {
-	const atRiskByChart = {}
-
-	for (const chartId in byChartSeries) {
-		atRiskByChart[chartId] = { bySeries: {}, timepoints: [] }
-		const rows = byChartSeries[chartId].slice(1) // copy without header row
-
-		// track data by series in a chart
-		const bySeries = {}
-		let maxTime = 0
-		for (const r of rows) {
-			if (!bySeries[r[0]]) bySeries[r[0]] = []
-			bySeries[r[0]].push(r)
-			if (r[1] > maxTime) maxTime = r[1]
-		}
-
-		let xTime = 0
-		// compute at-risk counts for each timepoint,
-		// even when there are NO events spanned between timepoints
-		while (xTime <= maxTime) {
-			atRiskByChart[chartId].timepoints.push(xTime)
-			xTime += survq.xTickInterval
-		}
-
-		for (const seriesId in bySeries) {
-			const series = bySeries[seriesId]
-			const n = series.length
-			const trend = []
-			trend.push([0, n])
-			let dropped = 0
-			for (const t of atRiskByChart[chartId].timepoints) {
-				while (dropped < n) {
-					if (series[dropped][1] > t) break
-					else dropped++
-				}
-				trend.push([t, n - dropped])
-			}
-
-			atRiskByChart[chartId].bySeries[seriesId] = trend
-		}
-	}
-
-	return atRiskByChart
 }
