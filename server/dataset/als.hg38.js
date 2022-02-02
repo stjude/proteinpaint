@@ -80,6 +80,16 @@ module.exports = function(common) {
 					isnumeric: 1,
 					filter: 1
 				},
+				AF_only_HSP: {
+					label: 'Allele frequency (only HSP)',
+					isnumeric: 1,
+					filter: 1
+				},
+				AF_only_ALS: {
+					label: 'Allele frequency (only ALS)',
+					isnumeric: 1,
+					filter: 1
+				},
 				gnomad30_genome_AF: {
 					label: 'gnomAD v3 allele frequency',
 					isnumeric: 1,
@@ -170,7 +180,7 @@ module.exports = function(common) {
 				viewrangeupperlimit: 2000000,
 				tracks: [
 					{
-						file: 'hg38/als/mds/vcf/CReATe_gatk4.1.8.0_hg38_multianno.705_2021Oct22.vepanno.vcf.gz',
+						file: 'hg38/als/mds/vcf/CReATe_gatk4.1.8.0_hg38_multianno.705_2021Oct22.vepanno.with-ALS-HSP-AF.vcf.gz',
 						type: 'vcf'
 					}
 				]
