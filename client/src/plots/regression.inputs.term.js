@@ -191,7 +191,6 @@ export class InputTerm {
 		this.statusHtml = { topInfoStatus: undefined, bottomSummaryStatus: undefined }
 		// update bottomSummaryStatus for termtype 'snplst'
 		// other term types will be updated if data.lst is present
-		if (tw.term.type == 'snplst') this.statusHtml.isSnplst = true
 		if (tw.term.type == 'snplst' && tw.q.numOfSampleWithAnyValidGT) {
 			const invalid_snps_count = tw.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
 			this.statusHtml.bottomSummaryStatus =
@@ -231,25 +230,29 @@ export class InputTerm {
 			}
 
 			// update topInfoStatus
-			if (tw.term.type == 'float' || tw.term.type == 'integer'){
-				this.statusHtml.topInfoStatus = `Use as ${tw.q.mode || 'continuous'} ` +
+			if (tw.term.type == 'float' || tw.term.type == 'integer') {
+				this.statusHtml.topInfoStatus =
+					`Use as ${tw.q.mode || 'continuous'} ` +
 					(tw.q.mode !== 'spline' ? 'variable.' : '') +
 					(tw.q.mode == 'continuous' && tw.q.scale && tw.q.scale != 1 ? ` Scale: Per ${tw.q.scale}` : '') +
 					(tw.q.mode == 'spline' ? ` with ${tw.q.knots.length} knots: ${tw.q.knots.map(v => v.value).join(', ')}` : '')
 			} else if (tw.term.type == 'categorical' || tw.term.type == 'condition') {
 				const gs = tw.q.groupsetting || {}
 				// self.values is already set by parent.setActiveValues() above
-				this.statusHtml.topInfoStatus = 'Use as ' + this.sampleCounts.length 
-					+ (gs.inuse ? ' groups.' : ' categories.')
-					+ ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
+				this.statusHtml.topInfoStatus =
+					'Use as ' +
+					this.sampleCounts.length +
+					(gs.inuse ? ' groups.' : ' categories.') +
+					` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
 			}
 			// update bottomSummaryStatus
 			this.statusHtml.bottomSummaryStatus =
 				`${totalCount.included} sample included.` +
 				(totalCount.excluded ? ` ${totalCount.excluded} samples excluded:` : '')
-
-			this.statusHtml.noRefGrp = tw.q.mode == 'continuous' || tw.q.mode == 'spline'
-				&& (tw.term.type == 'float' || tw.term.type == 'integer')
+			this.statusHtml.allowToSelectRefGrp =
+				tw.q.mode !== 'continuous' && tw.q.mode !== 'spline'
+					? true
+					: false && (tw.term.type == 'float' || tw.term.type == 'integer')
 			if (tw && tw.q.mode !== 'continuous' && this.sampleCounts.length < 2)
 				throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
 

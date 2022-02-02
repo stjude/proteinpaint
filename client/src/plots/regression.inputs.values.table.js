@@ -16,25 +16,18 @@ export class InputValuesTable {
 			// in case it helps clarify the error message such as having
 			// not exactly two samplecount bars available for a binary outcome term
 
-			// update term summary and info (for termtype snplst)
-			if (this.input.statusHtml && this.input.statusHtml.isSnplst) {
-				this.dom.holder.style('display', 'block')
-				this.dom.top_info_div.style('display', 'none')
-				this.dom.values_div.style('display', 'block')
-				this.dom.values_table.style('display', 'none')
-				this.dom.term_summmary_div.style('display', 'block')
-				this.render()
-				return
-			} else if (!term || !this.input.sampleCounts) {
+			if (!term || !this.input.statusHtml) {
 				this.dom.holder.style('display', 'none')
 				this.dom.loading_div.style('display', 'none')
 				return
+			} else if (term) {
+				this.dom.holder.style('display', 'block')
+				this.dom.loading_div.style('display', 'block')
+				this.updateValueCount()
+				this.dom.loading_div.style('display', 'none')
+				this.render()
+				return
 			}
-			this.dom.holder.style('display', 'block')
-			this.dom.loading_div.style('display', 'block')
-			this.updateValueCount()
-			this.dom.loading_div.style('display', 'none')
-			this.render()
 		} catch (e) {
 			this.dom.loading_div.style('display', 'none')
 			throw e
@@ -66,7 +59,7 @@ function setRenderers(self) {
 			.style('text-align', 'left')
 			.style('color', '#999')
 
-		const top_info_div = holder.append('div').style('display','none')
+		const top_info_div = holder.append('div').style('display', 'none')
 		const values_div = holder.append('div')
 
 		self.dom = {
@@ -90,28 +83,26 @@ function setRenderers(self) {
 	self.render = () => {
 		const dom = self.dom
 		const input = self.input
-		const noRefGrp = input.statusHtml.noRefGrp
-		if (input.sampleCounts && input.sampleCounts.length) make_values_table(input.sampleCounts, 'values_table', noRefGrp)
+		const allowToSelectRefGrp = input.statusHtml.allowToSelectRefGrp
+		if (input.sampleCounts && input.sampleCounts.length)
+			make_values_table(input.sampleCounts, 'values_table', allowToSelectRefGrp)
 		if (input.excludeCounts && input.excludeCounts.length) {
-			make_values_table(input.excludeCounts, 'excluded_table', noRefGrp)
+			make_values_table(input.excludeCounts, 'excluded_table', allowToSelectRefGrp)
 		} else {
 			dom.excluded_table.selectAll('*').remove()
 		}
 		// render summary and status for different type of terms
 		if (input.statusHtml) {
-			if (input.statusHtml.bottomSummaryStatus)
-				dom.term_summmary_div.html(input.statusHtml.bottomSummaryStatus)
-			if (input.section.configKey == 'independent' && input.statusHtml.topInfoStatus){
-				dom.top_info_div.style('display','inline-block')
+			if (input.statusHtml.bottomSummaryStatus) dom.term_summmary_div.html(input.statusHtml.bottomSummaryStatus)
+			if (input.section.configKey == 'independent' && input.statusHtml.topInfoStatus) {
+				dom.top_info_div.style('display', 'inline-block')
 				// show term_info (term type, groupset, reference group help) for independent variable
-				dom.term_info_div
-					.style('display', 'inline-block')
-					.html(input.statusHtml.topInfoStatus)
+				dom.term_info_div.style('display', 'inline-block').html(input.statusHtml.topInfoStatus)
 			}
 		}
 	}
 
-	function make_values_table(data, tableName = 'values_table', noRefGrp) {
+	function make_values_table(data, tableName = 'values_table', allowToSelectRefGrp) {
 		const l = self.input.orderedLabels
 		const sortFxn =
 			l && l.length ? (a, b) => l.indexOf(a.label) - l.indexOf(b.label) : (a, b) => b.samplecount - a.samplecount
@@ -128,7 +119,7 @@ function setRenderers(self) {
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
 			.selectAll('tr')
-			.data(tr_data, noRefGrp ? (b, i) => i : b => b.key + b.label + b.bar_width_frac)
+			.data(tr_data, allowToSelectRefGrp ? b => b.key + b.label + b.bar_width_frac : (b, i) => i)
 
 		trs.exit().remove()
 		trs.each(trUpdate)
@@ -151,7 +142,7 @@ function setRenderers(self) {
 
 		tr.style('padding', '0 5px')
 			.style('text-align', 'left')
-			.style('cursor', input.statusHtml.noRefGrp ? 'default' : 'pointer')
+			.style('cursor', input.statusHtml.allowToSelectRefGrp ? 'pointer' : 'default')
 
 		// sample count td
 		tr.append('td')
@@ -199,7 +190,7 @@ function setRenderers(self) {
 		if (!item.bar_width_frac) return
 
 		const t = input.term
-		const hover_flag = !input.statusHtml.noRefGrp
+		const hover_flag = input.statusHtml.allowToSelectRefGrp
 		let ref_text
 
 		if (rendered) {
