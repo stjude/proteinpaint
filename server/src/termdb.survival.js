@@ -31,7 +31,7 @@ export async function get_survival(q, ds) {
 		const survq = tNum == 't1' ? q.term1_q : q.term2_q
 		const timeFactor = survq.timeFactor
 
-		const results = get_rows(q)
+		const results = get_rows(q, { withCTEs: true })
 		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
 
 		const byChartSeries = {}
@@ -53,9 +53,9 @@ export async function get_survival(q, ds) {
 			// since status=TRUE or 2 means 'dead' or 'event' in R's survival.survfit()
 			byChartSeries[d.key0].push([sKey, timeFactor * d[vNum], d.censored == 0 ? 1 : 0])
 		}
-		const bins = q.term1_id && results.CTE1.bins ? results.CTE1.bins : []
+		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
 		const final_data = {
-			keys: ['chartId', 'seriesId', 'time', 'survival', 'censored', 'lower', 'upper'],
+			keys: ['chartId', 'seriesId', 'time', 'survival', 'lower', 'upper', 'nevent', 'ncensor', 'nrisk'],
 			case: [],
 			refs: { bins }
 		}
@@ -80,20 +80,28 @@ export async function get_survival(q, ds) {
 						})
 						// may reconvert a placeholder cohort value with an empty string
 						const cohort = obj.cohort == '*' ? '' : obj.cohort
-						final_data.case.push([chartId, cohort, obj.time, obj.surv, obj.ncensor, obj.lower, obj.upper])
+						final_data.case.push([
+							chartId,
+							cohort,
+							obj.time,
+							obj.surv,
+							obj.lower,
+							obj.upper,
+							obj.nevent,
+							obj.ncensor,
+							obj.nrisk
+						])
 					}
 				})
 		}
 		// sort by d.x
 		final_data.case.sort((a, b) => a[2] - b[2])
+		const orderedLabels = bins ? bins.map(bin => (bin.name ? bin.name : bin.label)) : null
 		final_data.refs.orderedKeys = {
 			chart: [...keys.chart].sort(),
-			series: [...keys.series].sort()
-		}
-
-		// track at-risk summary trend
-		if (survq.atRiskInterval) {
-			final_data.atRiskByChart = getAtRiskTrend(survq, byChartSeries)
+			series: [...keys.series].sort(
+				!orderedLabels ? undefined : (a, b) => orderedLabels.indexOf(a) - orderedLabels.indexOf(b)
+			)
 		}
 
 		return final_data
@@ -101,49 +109,4 @@ export async function get_survival(q, ds) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
 	}
-}
-
-function getAtRiskTrend(survq, byChartSeries) {
-	const atRiskByChart = {}
-
-	for (const chartId in byChartSeries) {
-		atRiskByChart[chartId] = { bySeries: {}, timepoints: [] }
-		const rows = byChartSeries[chartId].slice(1) // copy without header row
-
-		// track data by series in a chart
-		const bySeries = {}
-		let maxTime = 0
-		for (const r of rows) {
-			if (!bySeries[r[0]]) bySeries[r[0]] = []
-			bySeries[r[0]].push(r)
-			if (r[1] > maxTime) maxTime = r[1]
-		}
-
-		let xTime = 0
-		// compute at-risk counts for each timepoint,
-		// even when there are NO events spanned between timepoints
-		while (xTime <= maxTime) {
-			atRiskByChart[chartId].timepoints.push(xTime)
-			xTime += survq.atRiskInterval
-		}
-
-		for (const seriesId in bySeries) {
-			const series = bySeries[seriesId]
-			const n = series.length
-			const trend = []
-			trend.push([0, n])
-			let dropped = 0
-			for (const t of atRiskByChart[chartId].timepoints) {
-				while (dropped < n) {
-					if (series[dropped][1] > t) break
-					else dropped++
-				}
-				trend.push([t, n - dropped])
-			}
-
-			atRiskByChart[chartId].bySeries[seriesId] = trend
-		}
-	}
-
-	return atRiskByChart
 }

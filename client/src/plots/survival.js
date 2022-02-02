@@ -96,18 +96,12 @@ class TdbSurvival {
 							title: `The unit to display in the x-axis title, like 'years'`
 						},
 						{
-							label: 'At-risk interval',
-							type: 'number',
+							label: 'At-risk trend',
+							boxLabel: 'Visible',
+							type: 'checkbox',
 							chartType: 'survival',
-							settingsKey: 'atRiskInterval',
+							settingsKey: 'atRiskVisible',
 							title: 'Compute the at-risk trend using this time interval'
-						},
-						{
-							label: 'X-axis tick interval',
-							type: 'number',
-							chartType: 'survival',
-							settingsKey: 'xTickInterval',
-							title: 'Display x-axis ticks spaced at this time interval'
 						}
 						//{label: 'At-risk label offset', type: 'numeric', chartType: 'survival', settingsKey: 'atRiskLabelOffset'},
 					]
@@ -159,7 +153,7 @@ class TdbSurvival {
 			this.setTerm2Color(this.pj.tree.charts)
 			this.symbol = this.getSymbol(7) // hardcode the symbol size for now
 			this.render()
-			if (!this.settings.atRiskInterval) this.legendRenderer(this.legendData)
+			this.legendRenderer(this.settings.atRiskVisible ? [] : this.legendData)
 		} catch (e) {
 			throw e
 		}
@@ -179,10 +173,8 @@ class TdbSurvival {
 		const survTermIndex = c.term.term.type == 'survival' ? '' : 2
 		c[`term${survTermIndex}`].q = {
 			type: 'survival',
-			timeFactor: this.settings.timeFactor,
-			atRiskInterval: this.settings.atRiskInterval
+			timeFactor: this.settings.timeFactor
 		}
-
 		if (this.state.ssid) opts.ssid = this.state.ssid
 		return opts
 	}
@@ -322,10 +314,8 @@ function setRenderers(self) {
 
 	function renderSVG(svg, chart, s, duration) {
 		const visibleSerieses = chart.serieses.filter(s => !self.settings.hidden.includes(s.seriesId))
-		const atRiskTrend = self.serverData.atRiskByChart
-			? self.serverData.atRiskByChart[chart.rawChartId]
-			: { bySeries: {}, timepoints: [] }
-		const extraHeight = Object.keys(atRiskTrend.bySeries).length * 20
+		chart.visibleSerieses = visibleSerieses
+		const extraHeight = s.atRiskVisible ? visibleSerieses.length * 20 : 0
 
 		svg
 			.transition()
@@ -358,13 +348,8 @@ function setRenderers(self) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
 
-		// add at risk data
-		if (s.xTickInterval) {
-			chart.xTickValues = atRiskTrend.timepoints.filter(t => t % s.xTickInterval === 0)
-		}
-
 		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
-		renderAtRiskG(atRiskG, atRiskTrend, s, chart)
+		renderAtRiskG(atRiskG, s, chart)
 	}
 
 	function getSvgSubElems(svg) {
@@ -418,7 +403,9 @@ function setRenderers(self) {
 					scaledY: d.scaledY[0],
 					seriesName: 'survival',
 					seriesLabel: series.seriesLabel,
-					censored: d.censored
+					nevent: d.nevent,
+					ncensor: d.ncensor,
+					nrisk: d.nrisk
 				}
 			})
 		)
@@ -434,7 +421,10 @@ function setRenderers(self) {
 					scaledX: d.scaledX,
 					scaledY: d.scaledY[1],
 					seriesName: 'lower',
-					seriesLabel: series.seriesLabel
+					seriesLabel: series.seriesLabel,
+					nevent: d.nevent,
+					ncensor: 0, // no censor marks for lower CI
+					nrisk: d.nrisk
 				}
 			})
 		)
@@ -449,8 +439,11 @@ function setRenderers(self) {
 					y: d.upper,
 					scaledX: d.scaledX,
 					scaledY: d.scaledY[2],
-					seriesName: 'upper',
-					seriesLabel: series.seriesLabel
+					seriesName: 'upper', // no censor marks for upper CI
+					seriesLabel: series.seriesLabel,
+					nevent: d.nevent,
+					ncensor: 0,
+					nrisk: d.nrisk
 				}
 			})
 		)
@@ -459,18 +452,9 @@ function setRenderers(self) {
 	function renderSubseries(s, g, data) {
 		// todo: allow update of exiting g's instead of replacing
 		g.selectAll('g').remove()
-		// reduce the line data so that only one horizontal segment is created for each death event
-		const lineData = data.reduce((arr, d, i) => {
-			// always retain the first and last data point
-			if (i === 0 || i === data.length - 1) arr.push(d)
-			// otherwise, retain data when the probability has dropped,
-			// which will look visually the same as multiple
-			// horizontal segments joined together at the same y;
-			// this will result in a simpler path d='...' attribute
-			else if (d.y != arr[arr.length - 1].y) arr.push(d)
-			return arr
-		}, [])
-		const censoredData = data.filter(d => d.censored)
+
+		const lineData = data.filter((d, i) => i === 0 || d.nevent || i === data.length - 1)
+		const censoredData = data.filter(d => d.ncensor)
 		const subg = g.append('g')
 		const circles = subg.selectAll('circle').data(lineData, b => b.x)
 		circles.exit().remove()
@@ -500,6 +484,7 @@ function setRenderers(self) {
 
 		const subg1 = g.append('g').attr('class', 'sjpp-survival-censored')
 		const censored = subg1.selectAll('.sjpp-survival-censored-x').data(censoredData, d => d.x)
+
 		censored.exit().remove()
 
 		censored
@@ -513,21 +498,22 @@ function setRenderers(self) {
 			.attr('class', 'sjpp-survival-censored-x')
 			.attr('transform', c => `translate(${c.scaledX},${c.scaledY})`)
 			.attr('d', self.symbol)
-			.style('fill', 'transparent') //data.fill ? data.fill : colors[i])
+			.style('fill', 'transparent')
 			.style('fill-opacity', s.fillOpacity)
-			.style('stroke', color.darker()) //data.fill ? data.fill : colors[i])
+			.style('stroke', color.darker())
 			.style('display', '')
-		//.transition()
-		//.duration(1000)
-		//.style('opacity', 1)
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {
-		xAxis
-			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom) + ')')
-			.call(
-				chart.xTickValues ? axisBottom(chart.xScale).tickValues(chart.xTickValues) : axisBottom(chart.xScale).ticks(5)
-			)
+		chart.xTickValues = []
+		const xTicks = axisBottom(chart.xScale)
+			.ticks(4)
+			.tickFormat(t => {
+				chart.xTickValues.push(t)
+				return t
+			})
+
+		xAxis.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom) + ')').call(xTicks)
 
 		yAxis.call(
 			axisLeft(
@@ -572,16 +558,41 @@ function setRenderers(self) {
 			.text(yTitleLabel)
 	}
 
-	function renderAtRiskG(g, trend, s, chart) {
-		const { bySeries, timepoints } = trend
+	function renderAtRiskG(g, s, chart) {
+		const bySeries = {}
+		for (const series of chart.visibleSerieses) {
+			const trend = []
+			let i = 0,
+				d = series.data[0],
+				prev = d
+			trend.push([0, d.nrisk])
+			for (const time of chart.xTickValues) {
+				while (d && d.x <= time) {
+					prev = d
+					i++
+					d = series.data[i]
+				}
+				// NOTE: prev.nrisk, which corresponds to the starting at-risk count
+				// at a given timepoint, does not include the exits after the prev timepoint
+				// and before the next timepoint, so adjust the at-risk counts here
+				trend.push([time, prev.nrisk - prev.nevent - prev.ncensor])
+			}
+			bySeries[series.seriesId] = trend
+		}
+
 		const y = s.svgh - s.svgPadding.top - s.svgPadding.bottom + 60 // make y-offset option???
 		// fully rerender, later may reuse previously rendered elements
 		g.selectAll('*').remove()
 
+		const seriesOrder = chart.serieses.map(s => s.seriesId)
+		const data = !s.atRiskVisible
+			? []
+			: Object.keys(bySeries).sort((a, b) => seriesOrder.indexOf(a) - seriesOrder.indexOf(b))
+
 		const sg = g
 			.attr('transform', `translate(0,${y})`)
 			.selectAll(':scope > g')
-			.data(Object.keys(bySeries).sort(), seriesId => seriesId)
+			.data(data, seriesId => seriesId)
 
 		sg.enter()
 			.append('g')
@@ -594,12 +605,13 @@ function setRenderers(self) {
 					.attr('fill', self.term2toColor[seriesId])
 
 				const fontsize = `${s.axisTitleFontSize - 2}px`
+				const sObj = chart.serieses.find(s => s.seriesId === seriesId)
 
 				g.append('text')
 					.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
 					.attr('text-anchor', 'end')
 					.attr('font-size', fontsize)
-					.text(seriesId && seriesId != '*' ? seriesId : 'At-risk')
+					.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : 'At-risk')
 
 				const data = chart.xTickValues.map(tickVal => {
 					if (tickVal === 0) return { tickVal, atRisk: series[0][1] }
@@ -658,7 +670,8 @@ function setInteractivity(self) {
 					d.seriesLabel ? d.seriesLabel : self.state.config.term.term.name
 				}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} ${xUnit}</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}%</td></tr>`
+				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}%</td></tr>`,
+				`<tr><td style='padding:3px; color:#aaa'>At-risk:</td><td style='padding:3px; text-align:center'>${d.nrisk}</td></tr>`
 			]
 			// may also indicate the confidence interval (lower%-upper%) in a new row
 			self.app.tip
@@ -728,8 +741,8 @@ export async function getPlotConfig(opts, app) {
 				svgh: 300,
 				timeFactor: 1,
 				timeUnit: '',
-				xTickInterval: 0, // if zero, automatically determined by d3-axis
-				atRiskInterval: 0, // if zero, no at-risk trend table is displayed below the x-axis
+				//xTickInterval: 0, // if zero, automatically determined by d3-axis
+				atRiskVisible: false,
 				atRiskLabelOffset: -20,
 				svgPadding: {
 					top: 20,
@@ -778,11 +791,13 @@ function getPj(self) {
 									//color: "$color",
 									x: '$time',
 									y: '$survival',
-									censored: '$censored',
 									lower: '$lower',
 									upper: '$upper',
 									'_1:scaledX': '=scaledX()',
-									'_1:scaledY': '=scaledY()'
+									'_1:scaledY': '=scaledY()',
+									nevent: '$nevent',
+									ncensor: '$ncensor',
+									nrisk: '$nrisk'
 								},
 								'=timeCensored()'
 							]
@@ -819,7 +834,7 @@ function getPj(self) {
 				return seriesId
 			},
 			timeCensored(row) {
-				return row.time + '-' + row.censored
+				return row.time + '-' + row.ncensor
 			},
 			y(row, context) {
 				const seriesId = context.context.parent.seriesId
@@ -866,7 +881,9 @@ function getPj(self) {
 						seriesId: d0.seriesId,
 						x: 0,
 						y: 1,
-						censored: 0,
+						nevent: 0,
+						ncensor: 0,
+						nrisk: series.data[0].nrisk,
 						lower: 1,
 						upper: 1,
 						scaledX: 0, //result.xScale(0),

@@ -5,7 +5,7 @@ input <- read.table(stream, sep="\t", header=T, quote="")
 
 input <- input[order(input$cohort),]
 results <- survfit(Surv(time, status) ~ cohort, data = input)
-table <- data.frame(cohort=(unique(input[order(input$cohort),1:2]))$cohort, time=results$time, surv=results$surv, ncensor=results$n.censor, lower = results$lower, upper = results$upper)
+table <- data.frame(cohort=(unique(input[order(input$cohort),1:2]))$cohort, time=results$time, surv=results$surv, lower = results$lower, upper = results$upper, nevent=results$n.event, ncensor=results$n.censor, nrisk=results$n.risk)
 write.table(table, file="", sep="\t", row.names=F, quote=F)
 
 close(stream)
