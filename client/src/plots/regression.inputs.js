@@ -34,6 +34,10 @@ const allNonDictionaryTerms = [
 		text: 'A list of SNPs'
 	},
 	{
+		termtype: 'snplocus',
+		text: 'SNPs from a genomic locus'
+	},
+	{
 		termtype: 'prs',
 		text: 'Polygenic risk score'
 	}

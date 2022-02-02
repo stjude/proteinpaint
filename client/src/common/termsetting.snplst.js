@@ -453,7 +453,7 @@ will write snp-by-sample gt matrix to a cache file, using all samples from bcf f
 do not apply sample filtering
 */
 async function validateInput(self) {
-	const data = await self.vocabApi.validateSnps(snp2text(self))
+	const data = await self.vocabApi.validateSnps({ text: snp2text(self) })
 	if (data.error) throw data.error
 	// copy result to instance
 	self.q.cacheid = data.cacheid
