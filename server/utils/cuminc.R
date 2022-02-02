@@ -50,6 +50,16 @@
 library(jsonlite)
 suppressPackageStartupMessages(library(cmprsk))
 
+# function to compute 95% confidence intervals
+compute_ci <- function(res) {
+  low <- res$est - (1.96 * sqrt(res$var))
+  low[low < 0] <- 0
+  up <- res$est + (1.96 * sqrt(res$var))
+  res["low"] <- low
+  res["up"] <- up
+  return(res)
+}
+
 # data preparation
 con <- file("stdin","r")
 dat <- stream_in(con, verbose = F)
@@ -57,19 +67,36 @@ dat$event <- as.factor(dat$event)
 dat$series <- as.factor(dat$series)
 
 # compute cumulative incidence
-out <- list()
-res <- cuminc(ftime = dat$time, fstatus = dat$event, group = dat$series, cencode = 0)
-out[["estimates"]] <- list()
-for (series in levels(dat$series)) {
-  seriesRes <- as.data.frame(res[[paste(series,1)]])
-  low <- seriesRes$est - (1.96 * sqrt(seriesRes$var))
-  low[low < 0] <- 0
-  up <- seriesRes$est + (1.96 * sqrt(seriesRes$var))
-  seriesRes["low"] <- low
-  seriesRes["up"] <- up
-  out[["estimates"]][[series]] <- seriesRes
+out <- list(estimates = list())
+if (length(levels(dat$series)) == 1) {
+  # single series
+  res <- cuminc(ftime = dat$time, fstatus = dat$event, cencode = 0)
+  seriesRes <- as.data.frame(res[[1]])
+  seriesRes <- compute_ci(seriesRes)
+  out$estimates[[""]] <- seriesRes
+} else {
+  # multiple series
+  # compute cumulative incidence for each pairwise combination of series
+  pairs <- combn(levels(dat$series), 2, simplify = F)
+  pvals <- vector(mode = "numeric")
+  for (i in 1:length(pairs)) {
+    pair <- pairs[[i]]
+    res <- cuminc(ftime = dat$time, fstatus = dat$event, group = dat$series, cencode = 0, subset = dat$series %in% pair)
+    # retrieve estimates for each series within the pair
+    for (series in pair) {
+      if (series %in% names(out$estimates)) next
+      seriesRes <- as.data.frame(res[[paste(series,1)]])
+      seriesRes <- compute_ci(seriesRes)
+      out$estimates[[series]] <- seriesRes
+    }
+    # retrieve p-value of the pair
+    pvals <- c(pvals, res$Tests[1,"pv"])
+  }
+  # store tests
+  tests <- data.frame("seriesIds" = 1:length(pairs), "pval" = pvals)
+  tests$seriesIds <- pairs # create a list column here (not in the data.frame call)
+  out[["tests"]] <- tests
 }
-if ("Tests" %in% names(res)) out[["tests"]] <- as.data.frame(res$Tests)
 
 # output results in json format
 cat(toJSON(out, digits = NA, na = "string"), file = "", sep = "")
