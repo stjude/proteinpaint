@@ -96,10 +96,11 @@ class TdbSurvival {
 							title: `The unit to display in the x-axis title, like 'years'`
 						},
 						{
-							label: 'At-risk interval',
-							type: 'number',
+							label: 'At-risk trend',
+							boxLabel: 'Visible',
+							type: 'checkbox',
 							chartType: 'survival',
-							settingsKey: 'atRiskInterval',
+							settingsKey: 'atRiskVisible',
 							title: 'Compute the at-risk trend using this time interval'
 						},
 						{
@@ -159,7 +160,7 @@ class TdbSurvival {
 			this.setTerm2Color(this.pj.tree.charts)
 			this.symbol = this.getSymbol(7) // hardcode the symbol size for now
 			this.render()
-			if (!this.settings.atRiskInterval) this.legendRenderer(this.legendData)
+			this.legendRenderer(this.settings.atRiskVisible ? [] : this.legendData)
 		} catch (e) {
 			throw e
 		}
@@ -180,9 +181,10 @@ class TdbSurvival {
 		c[`term${survTermIndex}`].q = {
 			type: 'survival',
 			timeFactor: this.settings.timeFactor,
-			atRiskInterval: this.settings.atRiskInterval
+			// may trigger at-risk trend to be returned even if atRiskVisible == false,
+			// in order to not have to send a separate server request when toggling just the visibility
+			xTickInterval: this.settings.xTickInterval
 		}
-
 		if (this.state.ssid) opts.ssid = this.state.ssid
 		return opts
 	}
@@ -322,9 +324,10 @@ function setRenderers(self) {
 
 	function renderSVG(svg, chart, s, duration) {
 		const visibleSerieses = chart.serieses.filter(s => !self.settings.hidden.includes(s.seriesId))
-		const atRiskTrend = self.serverData.atRiskByChart
-			? self.serverData.atRiskByChart[chart.rawChartId]
-			: { bySeries: {}, timepoints: [] }
+		const atRiskTrend =
+			s.atRiskVisible && self.serverData.atRiskByChart
+				? self.serverData.atRiskByChart[chart.rawChartId]
+				: { bySeries: {}, timepoints: [] }
 		const extraHeight = Object.keys(atRiskTrend.bySeries).length * 20
 
 		svg
@@ -359,7 +362,7 @@ function setRenderers(self) {
 			})
 
 		// add at risk data
-		if (s.xTickInterval) {
+		if (s.atRiskVisible) {
 			chart.xTickValues = atRiskTrend.timepoints.filter(t => t % s.xTickInterval === 0)
 		}
 
@@ -578,10 +581,13 @@ function setRenderers(self) {
 		// fully rerender, later may reuse previously rendered elements
 		g.selectAll('*').remove()
 
+		const seriesOrder = chart.serieses.map(s => s.seriesId)
+		const data = Object.keys(bySeries).sort((a, b) => seriesOrder.indexOf(a) - seriesOrder.indexOf(b))
+
 		const sg = g
 			.attr('transform', `translate(0,${y})`)
 			.selectAll(':scope > g')
-			.data(Object.keys(bySeries).sort(), seriesId => seriesId)
+			.data(data, seriesId => seriesId)
 
 		sg.enter()
 			.append('g')
@@ -594,12 +600,13 @@ function setRenderers(self) {
 					.attr('fill', self.term2toColor[seriesId])
 
 				const fontsize = `${s.axisTitleFontSize - 2}px`
+				const sObj = chart.serieses.find(s => s.seriesId === seriesId)
 
 				g.append('text')
 					.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
 					.attr('text-anchor', 'end')
 					.attr('font-size', fontsize)
-					.text(seriesId && seriesId != '*' ? seriesId : 'At-risk')
+					.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : 'At-risk')
 
 				const data = chart.xTickValues.map(tickVal => {
 					if (tickVal === 0) return { tickVal, atRisk: series[0][1] }
@@ -729,7 +736,7 @@ export async function getPlotConfig(opts, app) {
 				timeFactor: 1,
 				timeUnit: '',
 				xTickInterval: 0, // if zero, automatically determined by d3-axis
-				atRiskInterval: 0, // if zero, no at-risk trend table is displayed below the x-axis
+				atRiskVisible: false,
 				atRiskLabelOffset: -20,
 				svgPadding: {
 					top: 20,

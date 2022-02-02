@@ -31,7 +31,7 @@ export async function get_survival(q, ds) {
 		const survq = tNum == 't1' ? q.term1_q : q.term2_q
 		const timeFactor = survq.timeFactor
 
-		const results = get_rows(q)
+		const results = get_rows(q, { withCTEs: true })
 		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
 
 		const byChartSeries = {}
@@ -53,7 +53,7 @@ export async function get_survival(q, ds) {
 			// since status=TRUE or 2 means 'dead' or 'event' in R's survival.survfit()
 			byChartSeries[d.key0].push([sKey, timeFactor * d[vNum], d.censored == 0 ? 1 : 0])
 		}
-		const bins = q.term1_id && results.CTE1.bins ? results.CTE1.bins : []
+		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
 		const final_data = {
 			keys: ['chartId', 'seriesId', 'time', 'survival', 'censored', 'lower', 'upper'],
 			case: [],
@@ -86,14 +86,17 @@ export async function get_survival(q, ds) {
 		}
 		// sort by d.x
 		final_data.case.sort((a, b) => a[2] - b[2])
+		const orderedLabels = bins ? bins.map(bin => (bin.name ? bin.name : bin.label)) : null
 		final_data.refs.orderedKeys = {
 			chart: [...keys.chart].sort(),
-			series: [...keys.series].sort()
+			series: [...keys.series].sort(
+				!orderedLabels ? undefined : (a, b) => orderedLabels.indexOf(a) - orderedLabels.indexOf(b)
+			)
 		}
 
 		// track at-risk summary trend
-		if (survq.atRiskInterval) {
-			final_data.atRiskByChart = getAtRiskTrend(survq, byChartSeries)
+		if (survq.xTickInterval) {
+			final_data.atRiskByChart = getAtRiskTrend(survq, byChartSeries, bins)
 		}
 
 		return final_data
@@ -124,7 +127,7 @@ function getAtRiskTrend(survq, byChartSeries) {
 		// even when there are NO events spanned between timepoints
 		while (xTime <= maxTime) {
 			atRiskByChart[chartId].timepoints.push(xTime)
-			xTime += survq.atRiskInterval
+			xTime += survq.xTickInterval
 		}
 
 		for (const seriesId in bySeries) {
