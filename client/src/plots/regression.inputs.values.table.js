@@ -90,10 +90,10 @@ function setRenderers(self) {
 	self.render = () => {
 		const dom = self.dom
 		const input = self.input
-		const continuousTerm = input.statusHtml.isContinuousTerm
-		if (input.sampleCounts && input.sampleCounts.length) make_values_table(input.sampleCounts, 'values_table', continuousTerm)
+		const noRefGrp = input.statusHtml.noRefGrp
+		if (input.sampleCounts && input.sampleCounts.length) make_values_table(input.sampleCounts, 'values_table', noRefGrp)
 		if (input.excludeCounts && input.excludeCounts.length) {
-			make_values_table(input.excludeCounts, 'excluded_table', continuousTerm)
+			make_values_table(input.excludeCounts, 'excluded_table', noRefGrp)
 		} else {
 			dom.excluded_table.selectAll('*').remove()
 		}
@@ -111,7 +111,7 @@ function setRenderers(self) {
 		}
 	}
 
-	function make_values_table(data, tableName = 'values_table', isContinuousTerm) {
+	function make_values_table(data, tableName = 'values_table', noRefGrp) {
 		const l = self.input.orderedLabels
 		const sortFxn =
 			l && l.length ? (a, b) => l.indexOf(a.label) - l.indexOf(b.label) : (a, b) => b.samplecount - a.samplecount
@@ -128,7 +128,7 @@ function setRenderers(self) {
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
 			.selectAll('tr')
-			.data(tr_data, isContinuousTerm ? (b, i) => i : b => b.key + b.label + b.bar_width_frac)
+			.data(tr_data, noRefGrp ? (b, i) => i : b => b.key + b.label + b.bar_width_frac)
 
 		trs.exit().remove()
 		trs.each(trUpdate)
@@ -151,7 +151,7 @@ function setRenderers(self) {
 
 		tr.style('padding', '0 5px')
 			.style('text-align', 'left')
-			.style('cursor', input.statusHtml.isContinuousTerm ? 'default' : 'pointer')
+			.style('cursor', input.statusHtml.noRefGrp ? 'default' : 'pointer')
 
 		// sample count td
 		tr.append('td')
@@ -199,7 +199,7 @@ function setRenderers(self) {
 		if (!item.bar_width_frac) return
 
 		const t = input.term
-		const hover_flag = !input.statusHtml.isContinuousTerm
+		const hover_flag = !input.statusHtml.noRefGrp
 		let ref_text
 
 		if (rendered) {

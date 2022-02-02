@@ -248,7 +248,7 @@ export class InputTerm {
 				`${totalCount.included} sample included.` +
 				(totalCount.excluded ? ` ${totalCount.excluded} samples excluded:` : '')
 
-			this.statusHtml.isContinuousTerm = (tw.q.mode == 'continuous' || tw.q.mode == 'spline') 
+			this.statusHtml.noRefGrp = tw.q.mode == 'continuous' || tw.q.mode == 'spline'
 				&& (tw.term.type == 'float' || tw.term.type == 'integer')
 			if (tw && tw.q.mode !== 'continuous' && this.sampleCounts.length < 2)
 				throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
