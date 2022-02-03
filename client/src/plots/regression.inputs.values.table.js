@@ -1,5 +1,19 @@
 import { select } from 'd3-selection'
 
+/*
+	dom elements for values table
+	holder // main holder
+		loading_div // loading message while updating term info
+		topInfoStatus_holder // top info about term type and term mode + knots + promopt to select ref group
+		values_div // values, bottomSummary and excluded values
+			included_values_table // values with samplecount, selectable as ref group
+			bottomSummaryStatus_holder // total included and excluded samples
+			excluded_values_table // excluded values with samplecount
+
+	For detailed explanation of UI refer to this drawing:
+	https://docs.google.com/drawings/d/13Ri7sXM0LQ_oi0aGJnAIP7ArPxI5bl-nO1mA3mmTpFA/edit?pli=1
+*/
+
 export class InputValuesTable {
 	constructor(opts) {
 		// opts {holder, input, callback}
@@ -16,25 +30,18 @@ export class InputValuesTable {
 			// in case it helps clarify the error message such as having
 			// not exactly two samplecount bars available for a binary outcome term
 
-			// update term summary and info (for termtype snplst)
-			if (term && term.term && term.term.type && term.term.type == 'snplst') {
-				this.dom.holder.style('display', 'block')
-				this.dom.top_info_div.style('display', 'none')
-				this.dom.values_div.style('display', 'block')
-				this.dom.values_table.style('display', 'none')
-				this.dom.term_summmary_div.style('display', 'block')
-				this.render()
-				return
-			} else if (!term || !this.input.sampleCounts) {
+			if (!term || !this.input.termStatus) {
 				this.dom.holder.style('display', 'none')
 				this.dom.loading_div.style('display', 'none')
 				return
+			} else if (term) {
+				this.dom.holder.style('display', 'block')
+				this.dom.loading_div.style('display', 'block')
+				this.updateValueCount()
+				this.dom.loading_div.style('display', 'none')
+				this.render()
+				return
 			}
-			this.dom.holder.style('display', 'block')
-			this.dom.loading_div.style('display', 'block')
-			this.updateValueCount()
-			this.dom.loading_div.style('display', 'none')
-			this.render()
 		} catch (e) {
 			this.dom.loading_div.style('display', 'none')
 			throw e
@@ -49,7 +56,7 @@ export class InputValuesTable {
 				i.pill.validateQ({
 					term: i.term.term,
 					q: i.term.q,
-					sampleCounts: i.sampleCounts
+					sampleCounts: i.termStatus.sampleCounts
 				})
 			}
 		} catch (e) {
@@ -66,7 +73,7 @@ function setRenderers(self) {
 			.style('text-align', 'left')
 			.style('color', '#999')
 
-		const top_info_div = holder.append('div').style('display','none')
+		const topInfoStatus_holder = holder.append('div').style('display', 'none')
 		const values_div = holder.append('div')
 
 		self.dom = {
@@ -76,48 +83,51 @@ function setRenderers(self) {
 				.text('Loading..')
 				.style('display', 'none'),
 
-			top_info_div,
-			term_info_div: top_info_div.append('div').style('display', 'inline-block'),
-			ref_click_prompt: top_info_div.append('div').style('display', 'inline-block'),
+			topInfoStatus_holder,
 
 			values_div,
-			values_table: values_div.append('table'),
-			term_summmary_div: values_div.append('div'),
-			excluded_table: values_div.append('table')
+			included_values_table: values_div.append('table'),
+			bottomSummaryStatus_holder: values_div.append('div'),
+			excluded_values_table: values_div.append('table')
 		}
 	}
 
 	self.render = () => {
-		const dom = self.dom
 		const input = self.input
-		if (input.sampleCounts && input.sampleCounts.length) make_values_table(input.sampleCounts, 'values_table', input.isContinuousTerm)
-		if (input.excludeCounts && input.excludeCounts.length) {
-			make_values_table(input.excludeCounts, 'excluded_table', input.isContinuousTerm)
-		} else {
-			dom.excluded_table.selectAll('*').remove()
-		}
-		// render summary and status for different type of terms
-		if (input.statusHtml) {
-			if (input.statusHtml.bottomSummaryStatus)
-				dom.term_summmary_div.html(input.statusHtml.bottomSummaryStatus)
-			if (input.section.configKey == 'independent' && input.statusHtml.topInfoStatus){
-				dom.top_info_div.style('display','inline-block')
-				// show term_info (term type, groupset, reference group help) for independent variable
-				dom.term_info_div
-					.style('display', 'inline-block')
-					.html(input.statusHtml.topInfoStatus)
+		const allowToSelectRefGrp = input.termStatus.allowToSelectRefGrp
+		// render term status
+		renderTermStatus(input.termStatus)
+		// make included and excluded tables respectively
+		renderValuesTable(input.termStatus.sampleCounts, 'included_values_table', allowToSelectRefGrp)
+		renderValuesTable(input.termStatus.excludeCounts, 'excluded_values_table')
+	}
+
+	function renderTermStatus(termStatus) {
+		if (!termStatus || (termStatus.topInfoStatus == undefined && termStatus.bottomSummaryStatus == undefined)) return
+		else {
+			if (termStatus.topInfoStatus) {
+				self.dom.topInfoStatus_holder.style('display', 'inline-block').html(termStatus.topInfoStatus)
+			}
+			if (termStatus.bottomSummaryStatus) {
+				self.dom.bottomSummaryStatus_holder.html(termStatus.bottomSummaryStatus)
 			}
 		}
 	}
 
-	function make_values_table(data, tableName = 'values_table', isContinuousTerm) {
+	function renderValuesTable(data, tableName = 'included_values_table', allowToSelectRefGrp = false) {
+		if (!data || !data.length) {
+			if (tableName == 'excluded_values_table') {
+				self.dom.excluded_values_table.selectAll('*').remove()
+			}
+			return
+		}
 		const l = self.input.orderedLabels
 		const sortFxn =
 			l && l.length ? (a, b) => l.indexOf(a.label) - l.indexOf(b.label) : (a, b) => b.samplecount - a.samplecount
 		const tr_data = data.sort(sortFxn)
 
 		const t = self.input.term
-		if (tableName == 'values_table') {
+		if (tableName == 'included_values_table') {
 			const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
 			tr_data.forEach(v => (v.bar_width_frac = Number((1 - (maxCount - v.samplecount) / maxCount).toFixed(4))))
 		}
@@ -127,7 +137,7 @@ function setRenderers(self) {
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
 			.selectAll('tr')
-			.data(tr_data, isContinuousTerm ? (b, i) => i : b => b.key + b.label + b.bar_width_frac)
+			.data(tr_data, allowToSelectRefGrp ? b => b.key + b.label + b.bar_width_frac : (b, i) => i)
 
 		trs.exit().remove()
 		trs.each(trUpdate)
@@ -136,9 +146,9 @@ function setRenderers(self) {
 			.append('tr')
 			.each(trEnter)
 
-		// change color of excluded_table text
-		if (tableName == 'excluded_table') {
-			self.dom.excluded_table.selectAll('td').style('color', '#999')
+		// change color of excluded_values_table text
+		if (tableName == 'excluded_values_table') {
+			self.dom.excluded_values_table.selectAll('td').style('color', '#999')
 		}
 	}
 
@@ -150,7 +160,7 @@ function setRenderers(self) {
 
 		tr.style('padding', '0 5px')
 			.style('text-align', 'left')
-			.style('cursor', input.isContinuousTerm ? 'default' : 'pointer')
+			.style('cursor', input.termStatus.allowToSelectRefGrp ? 'pointer' : 'default')
 
 		// sample count td
 		tr.append('td')
@@ -198,7 +208,7 @@ function setRenderers(self) {
 		if (!item.bar_width_frac) return
 
 		const t = input.term
-		const hover_flag = !input.isContinuousTerm
+		const hover_flag = input.termStatus.allowToSelectRefGrp
 		let ref_text
 
 		if (rendered) {
