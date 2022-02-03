@@ -782,21 +782,25 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
 }
 
 .sjpp-track {
-    background-color: white;
-    border-radius: 5px;
-    padding: 0px;
     display: grid;
     grid-template-columns: 2fr 4fr 40px;
     grid-template-areas: 'image header' 'image blurb';
     gap: 5px;
+}
+
+.sjpp-app-drawer-card,
+.sjpp-track {
+    background-color: white;
+    border-radius: 5px;
+    padding: 0px;
     align-items: center;
     justify-items: left;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
     transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
-    /* overflow: hidden; */
 }
 
+.sjpp-app-drawer-card:after,
 .sjpp-track::after {
     content: "";
     border-radius: 8px;
@@ -811,12 +815,12 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     -webkit-transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
     transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
-
+.sjpp-app-drawer-card,:hover
 .sjpp-track:hover {
     -webkit-transform: scale(1, 1);
     transform: scale(1, 1);
 }
-
+.sjpp-app-drawer-card:hover::after,
 .sjpp-track:hover::after {
     opacity: 1;
 }
@@ -827,7 +831,6 @@ input[type="search"].tree_search::-webkit-search-cancel-button {
     height: 75px;
     align-self: start;
     justify-self: start;
-    /* overflow: hidden; */
 }
 
 .sjpp-track-image img {
