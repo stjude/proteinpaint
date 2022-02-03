@@ -436,6 +436,7 @@ async function handle_cards(req, res) {
 			const jsontxt = await utils.read_file(path.join(serverconfig.cardsjsondir, req.query.jsonfile + '.json'))
 			res.send({ jsonfile: JSON.parse(jsontxt) })
 		} else if (req.query.file) {
+			if (req.query.file.match(/[^\w]/)) throw 'Invalid file'
 			const txt = await utils.read_file(path.join(serverconfig.cardsjsondir, req.query.file + '.txt'))
 			res.send({ file: txt })
 		} else {
