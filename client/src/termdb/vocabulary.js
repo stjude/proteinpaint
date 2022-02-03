@@ -1,6 +1,6 @@
 import { dofetch3 } from '../client'
 import { getBarchartData, getCategoryData } from '../plots/barchart.data'
-import { termsetting_fill_q, nonDictionaryTermTypes } from '../common/termsetting'
+import { nonDictionaryTermTypes } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
@@ -521,22 +521,6 @@ class FrontendVocab {
 
 	// from termdb/plot
 	async getNestedChartSeriesData(opts) {
-		/*
-		TODO: 
-			- figure out why config may not be available
-			- delete this block if not needed
-			
-		let config = this.state.plots.find(p => p.id === plotId); console.log(382, plotId, Object.keys(config))
-		if (!config) {
-			const term = this.vocab.terms.find(t => t.id === plotId)
-			const q = {}
-			termsetting_fill_q(q, term)
-			config = {
-				term: { term, q }
-			}
-			this.state.plots.push(config)
-		}
-		*/
 		const q = {
 			term1: opts.term ? opts.term.term : {},
 			term1_q: opts.term ? opts.term.q : undefined,

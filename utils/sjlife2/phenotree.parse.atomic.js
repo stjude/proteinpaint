@@ -77,7 +77,7 @@ const bins = {
 	_max: null,
 
 	default: {
-		type: 'regular',
+		type: 'regular-bin',
 		bin_size: 5,
 		startinclusive: true,
 		first_bin: {

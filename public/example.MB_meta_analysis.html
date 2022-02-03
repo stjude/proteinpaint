@@ -14,6 +14,7 @@
 
 <script>
 runproteinpaint({
+	//host: 'https://ppr.stjude.org',
 	holder:document.getElementById('aaa'),
 	parseurl:true,
 	nobox:1,
@@ -23,7 +24,7 @@ runproteinpaint({
 		state: {
 			dslabel: 'MB_meta_analysis',
 			genome: 'hg38',
-			plots: [{
+			plots: [/*{
 				chartType: 'survival',
 				term: {
 					id: 'Event-free Survival'
@@ -34,8 +35,40 @@ runproteinpaint({
 						symbol: 'vtick',
 						timeUnit: 'years',
 						timeFactor: 1/365,
-						atRiskInterval: 1,
 						xTickInterval: 5,
+						atRiskVisible: true,
+						atRiskLabelOffset: -20,
+					}
+				}
+			},{
+				chartType: 'survival',
+				term: {
+					id: 'Overall Survival'
+				},
+				settings: {
+					currViews: ['barchart'],
+					survival: {
+						symbol: 'vtick',
+						timeUnit: 'years',
+						timeFactor: 1/365,
+						xTickInterval: 5,
+						atRiskVisible: true,
+						atRiskLabelOffset: -20,
+					}
+				}
+			},*/{
+				chartType: 'survival',
+				term: {
+					id: 'Progression-free Survival'
+				},
+				settings: {
+					currViews: ['barchart'],
+					survival: {
+						symbol: 'vtick',
+						timeUnit: 'years',
+						timeFactor: 1/365,
+						xTickInterval: 5,
+						atRiskVisible: true,
 						atRiskLabelOffset: -20,
 					}
 				}

@@ -26,12 +26,14 @@ tape('survival term as term1', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'survival',
-				term: {
-					id: 'efs'
+			plots: [
+				{
+					chartType: 'survival',
+					term: {
+						id: 'efs'
+					}
 				}
-			}]
+			]
 		},
 		survival: {
 			callbacks: {
@@ -46,8 +48,8 @@ tape('survival term as term1', function(test) {
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 1, 'should render 1 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
-			173,
-			'should render 173 survival series circles (hidden for hover)'
+			153,
+			'should render 153 survival series circles (hidden for hover)'
 		)
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
@@ -62,15 +64,17 @@ tape('survival term as term1, with overlay', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'survival',
-				term: {
-					id: 'efs'
-				},
-				term2: {
-					id: 'diaggrp'
+			plots: [
+				{
+					chartType: 'survival',
+					term: {
+						id: 'efs'
+					},
+					term2: {
+						id: 'diaggrp'
+					}
 				}
-			}]
+			]
 		},
 		survival: {
 			callbacks: {
@@ -85,8 +89,8 @@ tape('survival term as term1, with overlay', function(test) {
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 7, 'should render 7 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
-			191,
-			'should render 201 survival series circles (hidden for hover)'
+			171,
+			'should render 171 survival series circles (hidden for hover)'
 		)
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
@@ -101,15 +105,17 @@ tape('survival term as overlay', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'survival',
-				term: {
-					id: 'diaggrp'
-				},
-				term2: {
-					id: 'efs'
+			plots: [
+				{
+					chartType: 'survival',
+					term: {
+						id: 'diaggrp'
+					},
+					term2: {
+						id: 'efs'
+					}
 				}
-			}]
+			]
 		},
 		survival: {
 			callbacks: {
@@ -124,8 +130,8 @@ tape('survival term as overlay', function(test) {
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 7, 'should render 7 surv series g')
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
-			191,
-			'should render 201 survival series circles (hidden for hover)'
+			171,
+			'should render 171 survival series circles (hidden for hover)'
 		)
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),

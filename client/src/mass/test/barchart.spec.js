@@ -1178,7 +1178,7 @@ tape('max number of bins: exceeded', test => {
 					term: {
 						term: termjson['aaclassic_5'],
 						q: {
-							type: 'regular',
+							type: 'regular-bin',
 							bin_size: 1000,
 							stopinclusive: true,
 							first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
@@ -1222,7 +1222,7 @@ tape('max number of bins: exceeded', test => {
 					id: 'aaclassic_5',
 					term: barchart.Inner.config.term.term,
 					q: {
-						type: 'regular',
+						type: 'regular-bin',
 						bin_size: 100,
 						stopinclusive: true,
 						first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
@@ -1471,7 +1471,7 @@ tape.skip('unhidden chart and legend', test => {
 					term: {
 						term: termjson['aaclassic_5'],
 						q: {
-							type: 'regular',
+							type: 'regular-bin',
 							bin_size: 10000,
 							stopinclusive: true,
 							first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },
@@ -1577,7 +1577,7 @@ tape.skip('customized bins', test => {
 	}
 
 	const q1 = {
-		type: 'regular',
+		type: 'regular-bin',
 		bin_size: 10000,
 		stopinclusive: true,
 		first_bin: { startunbounded: true, stop: 1, stopinclusive: true, bin: 'first' },

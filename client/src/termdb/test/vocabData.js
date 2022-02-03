@@ -37,6 +37,7 @@ const terms = [
 		isleaf: true,
 		bins: {
 			default: {
+				type: 'regular-bin',
 				bin_size: 0.2,
 				stopinclusive: true,
 				first_bin: { startunbounded: true, stop: 0.2, stopinclusive: true }

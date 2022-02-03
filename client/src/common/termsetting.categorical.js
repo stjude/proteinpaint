@@ -1,5 +1,6 @@
 import { setGroupsettingMethods } from './termsetting.groupsetting'
 import { filterInit } from './filter'
+import { getPillNameDefault } from './termsetting'
 
 /*
 Arguments
@@ -15,14 +16,11 @@ export function getHandler(self) {
 			self.showGrpOpts(div)
 		},
 
-		get_term_name(d) {
-			if (!self.opts.abbrCutoff) return d.name
-			return d.name.length <= self.opts.abbrCutoff + 2
-				? d.name
-				: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
+		getPillName(d) {
+			return getPillNameDefault(self, d)
 		},
 
-		get_status_msg() {
+		getPillStatus() {
 			// get message text for the right half pill; may return null
 			return self.validateGroupsetting()
 		},
@@ -31,7 +29,6 @@ export function getHandler(self) {
 			const t = data.term
 			const endNote = `(${t.type}, mode='${data.q.mode}', type='${data.q.type}')`
 			// validate the configuration
-			if (!('type' in data.q)) data.q.type = 'values' // default
 			if (data.q.type == 'values') {
 				if (!t.values) self.error = `no term.values defined ${endNote}`
 				if (data.q.mode == 'binary') {
@@ -110,19 +107,23 @@ export function setCategoryConditionMethods(self) {
 	self.validateGroupsetting = function() {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
 		if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
-			if (!self.term.groupsetting) return 'term.groupsetting missing'
-			if (!self.term.groupsetting.lst) return 'term.groupsetting.lst[] missing'
+			if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
+			if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
 			const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-			if (!i) return 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing'
-			return i.name
+			if (!i)
+				return {
+					text: 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing',
+					bgcolor: 'red'
+				}
+			return { text: i.name }
 		}
 		if (self.q.groupsetting.customset) {
 			const n = self.q.groupsetting.customset.groups.length
-			if (self.q.bar_by_grade) return n + ' groups of grades'
-			if (self.q.bar_by_children) return n + ' groups of sub-conditions'
-			return 'Divided into ' + n + ' groups'
+			if (self.q.bar_by_grade) return { text: n + ' groups of grades' }
+			if (self.q.bar_by_children) return { text: n + ' groups of sub-conditions' }
+			return { text: 'Divided into ' + n + ' groups' }
 		}
-		return 'Unknown setting for groupsetting'
+		return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
 	}
 
 	/******************* Functions for Categorical terms *******************/
@@ -305,5 +306,56 @@ export function setCategoryConditionMethods(self) {
 		}
 
 		return vals_with_grp
+	}
+}
+
+export function fillTW(tw, vocabApi) {
+	set_hiddenvalues(tw.q, tw.term)
+	if (!('type' in tw.q)) tw.q.type = 'values' // must fill default q.type if missing
+	if (!tw.q.groupsetting) tw.q.groupsetting = {}
+	if (!tw.term.groupsetting) tw.term.groupsetting = {}
+	if (tw.term.groupsetting.disabled) {
+		tw.q.groupsetting.disabled = true
+		return
+	}
+	delete tw.q.groupsetting.disabled
+	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false // do not apply by default
+
+	if (tw.term.type == 'condition') {
+		/*
+		for condition term, must set up bar/value flags before quiting for inuse:false
+		*/
+		if (tw.q.value_by_max_grade || tw.q.value_by_most_recent || tw.q.value_by_computable_grade) {
+			// need any of the three to be set
+		} else {
+			// set a default one
+			tw.q.value_by_max_grade = true
+		}
+		if (tw.q.bar_by_grade || tw.q.bar_by_children) {
+		} else {
+			tw.q.bar_by_grade = true
+		}
+	}
+
+	// inuse:false is either from automatic setup or predefined in state
+	if (tw.q.groupsetting.inuse) {
+		if (
+			tw.term.groupsetting.lst &&
+			tw.term.groupsetting.useIndex >= 0 &&
+			tw.term.groupsetting.lst[tw.term.groupsetting.useIndex]
+		) {
+			tw.q.groupsetting.predefined_groupset_idx = tw.term.groupsetting.useIndex
+		}
+	}
+}
+
+function set_hiddenvalues(q, term) {
+	if (!q.hiddenValues) {
+		q.hiddenValues = {}
+	}
+	if (term.values) {
+		for (const k in term.values) {
+			if (term.values[k].uncomputable) q.hiddenValues[k] = 1
+		}
 	}
 }

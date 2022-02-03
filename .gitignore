@@ -24,7 +24,7 @@ public/data/*
 public/stage/*
 public/prod/*
 public/ppdev/*
-public/sjcharts/*
+public/sjcharts
 public/.htaccess
 public/dev.html
 public/svcnv.html

@@ -1,5 +1,4 @@
-import { event as d3event } from 'd3-selection'
-import { get_effectAllele, get_refGenotype } from './termsetting.snplst.effAle'
+import { mayRunSnplstTask } from './termsetting.snplst.sampleSum'
 
 /* 
 storing snps on self.term but not self so it can be written to state,
@@ -31,12 +30,19 @@ self.q{}
 // self is the termsetting instance
 export function getHandler(self) {
 	return {
-		get_term_name(d) {
+		getPillName(d) {
 			return self.term.name
 		},
 
-		get_status_msg() {
-			return ''
+		getPillStatus() {
+			if (!self.term || !self.term.snps) return
+			// return number of invalid entries
+			const invalid = self.term.snps.reduce((i, j) => i + (j.invalid || !j.alleles ? 1 : 0), 0)
+			if (invalid) return { text: invalid + ' invalid' }
+		},
+
+		validateQ(data) {
+			validateQ(self, data)
 		},
 
 		async showEditMenu(div) {
@@ -54,14 +60,7 @@ export function getHandler(self) {
 
 function makeEditMenu(self, div) {
 	// the ui will create following controls, to be accessed upon clicking Submit button
-	let snplst_table,
-		textarea,
-		select_alleleType,
-		select_geneticModel,
-		select_missingGenotype,
-		tmp_snps,
-		tmp_alleleType,
-		tmp_geneticModel
+	let snplst_table, textarea, select_alleleType, select_geneticModel, select_missingGenotype, tmp_snps
 
 	// table has two rows
 	const table = div.append('table').style('margin', '15px')
@@ -129,11 +128,6 @@ function makeEditMenu(self, div) {
 	select_geneticModel.append('option') // dominant
 	select_geneticModel.append('option') // recessive
 	select_geneticModel.append('option') // by genotype
-	select_geneticModel.on('change', () => {
-		tmp_geneticModel = select_geneticModel.property('selectedIndex')
-		tmp_alleleType = select_alleleType.property('selectedIndex')
-		if (snplst_table !== undefined) renderSnpEditTable(snplst_table)
-	})
 	// select - missing gt
 	tdright
 		.append('div')
@@ -170,8 +164,6 @@ function makeEditMenu(self, div) {
 		o[3].innerHTML = 'By genotype: ' + (is0 ? 'DD and Dd compared to dd' : 'AA and Ar compared to rr')
 		select_missingGenotype.node().options[0].innerHTML =
 			'Impute as homozygous ' + (is0 ? 'major' : 'reference') + ' allele'
-		tmp_alleleType = select_alleleType.property('selectedIndex')
-		if (snplst_table !== undefined && tmp_geneticModel == 3) renderSnpEditTable(snplst_table)
 	}
 
 	// submit button
@@ -203,14 +195,24 @@ function makeEditMenu(self, div) {
 			// set term type in case the instance had a different term before
 			self.term.type = 'snplst'
 			self.term.name = getTermName(self.term.snps)
+			if (self.dom.pill_termname) {
+				/* pill ui has already been created
+				this is updating snps for an existing term
+				as termsetting.js will not call self.enterPill() for pills already there,
+				must do this for pill name to update to reflect current number of snps
+				*/
+				self.dom.pill_termname.text(self.term.name)
+			}
 			submit_btn.property('disabled', true)
 			submit_btn.text('Validating SNPs...')
 			await validateInput(self)
-			await getSnpData(self)
 			//q.cacheid is set
+
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
 			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
+			await getSnpData(self)
+
 			if (snplst_table !== undefined) renderSnpEditTable(snplst_table)
 			else initSnpEditTable()
 			textarea.property('value', '')
@@ -219,6 +221,14 @@ function makeEditMenu(self, div) {
 			self.runCallback()
 			self.updateUI()
 		})
+
+	div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin', '5px')
+		.style('opacity', 0.4)
+		.style('font-size', '.7em')
+		.text('Must press Submit button to apply changes.')
 
 	function initSnpEditTable() {
 		snplst_td.style('padding-bottom', '20px')
@@ -230,7 +240,7 @@ function makeEditMenu(self, div) {
 			.style('opacity', 0.4)
 			.style('font-size', '.7em')
 			.html(
-				'Note: Click on allele to make it effect allele.</br>#samples is the number of samples with at least one valid genotype'
+				'Note: Click on allele to make it effect allele.</br>#samples is the number of samples with at least one valid genotype.'
 			)
 	}
 
@@ -277,7 +287,7 @@ function makeEditMenu(self, div) {
 			const alt_allele_td = tr.append('td')
 
 			if (!invalid_snp) {
-				const effectAllele = get_effectAllele(self.q.alleleType, snp)
+				const effectAllele = self.q.snp2effAle ? self.q.snp2effAle[snp.rsid] : undefined
 				const refAllele = snp.alleles.find(s => s.isRef)
 				const altAlleles = snp.alleles.filter(s => !s.isRef)
 
@@ -334,7 +344,7 @@ function makeEditMenu(self, div) {
 			// col 5: genetype (frequency)
 			const gt_td = tr.append('td')
 			if (!invalid_snp) {
-				const refGT = get_refGenotype(tmp_alleleType, tmp_geneticModel, snp)
+				const refGT = self.q.snp2refGrp ? self.q.snp2refGrp[snp.rsid] : undefined
 				for (const [gt, freq] of Object.entries(snp.gt2count)) {
 					const gt_freq = Math.round((freq * 100) / sample_count)
 					const gt_div = gt_td
@@ -377,7 +387,7 @@ function updateSnps(snps, tmp_snps) {
 		if (s1 === undefined) {
 			throw 'snp not found in edit list'
 		} else if (s1.tobe_deleted) {
-			// snp selected for deletetion from edit menu, remove from tw.snps
+			// snp selected for deletetion from edit menu, remove from term.snps
 			snps = snps.filter(s => s.rsid !== s1.rsid)
 		} else {
 			// effectAllele changed from edit menu
@@ -385,10 +395,10 @@ function updateSnps(snps, tmp_snps) {
 		}
 	}
 	// case 2: new SNPs added from textarea
-	// check each tmp_snps and add it to tw.snps if missing
+	// check each tmp_snps and add it to term.snps if missing
 	for (const [i, s] of tmp_snps.entries()) {
 		const s1 = snps.find(snp => snp.rsid == s.rsid)
-		// snp added from text area, add to tw.snps
+		// snp added from text area, add to term.snps
 		if (s1 === undefined && !s.tobe_deleted) {
 			snps.push(s)
 		}
@@ -451,35 +461,35 @@ async function validateInput(self) {
 		const s1 = data.snps[i]
 		s.snpid = s1.snpid
 		s.invalid = s1.invalid
-		s.referenceAllele = s1.referenceAllele
 	}
 }
 
 async function getSnpData(self) {
 	const qlst = [`cacheid=${self.q.cacheid}`]
 	const data = await self.vocabApi.getCategories(self.term, self.filter, qlst)
-	if (!data) throw `no data for term.id='${self.term.id}'`
-	if (data.error) throw data.error
-	for (const s of data.snps) {
-		// { snpid, alleles{}, gt2count{} }
-		const snp = self.term.snps.find(i => i.snpid == s.snpid)
-		if (!snp) throw 'snp not found by id'
-		snp.alleles = s.alleles
-		snp.gt2count = s.gt2count
-	}
-	self.q.numOfSampleWithAnyValidGT = data.numOfSampleWithAnyValidGT
+	mayRunSnplstTask({ term: self.term, q: self.q }, data)
+}
+
+function validateQ(self, data) {
+	if (![0, 1].includes(data.q.alleleType)) throw 'alleleType value is not one of 0/1'
+	if (![0, 1, 2, 3].includes(data.q.geneticModel)) throw 'geneticModel value is not one of 0/1'
+	if (![0, 1, 2].includes(data.q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
 }
 
 export async function fillTW(tw, vocabApi) {
 	if (!tw.q) tw.q = {}
 	if (!tw.term.name) tw.term.name = getTermName(tw.term.snps)
-	if ('id' in tw) {
-		if (!('id' in tw.term)) {
+	if (tw.id == undefined || tw.id == '') {
+		// tw is missing id
+		if (tw.term.id == undefined || tw.term.id == '') {
+			// tw.term is also missing id
+			tw.term.id = makeId()
+		}
+		tw.id = tw.term.id
+	} else {
+		if (tw.term.id == undefined || tw.term.id == '') {
 			tw.term.id = tw.id
 		}
-	} else {
-		if (!('id' in tw.term)) tw.term.id = makeId()
-		tw.id = tw.term.id
 	}
 
 	await validateInput({

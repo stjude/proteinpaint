@@ -197,9 +197,18 @@ makeURL([
 			plots: [
 				{
 					chartType:'barchart',
-					term: {
-						id: 'diaggrp'
-					}
+					term: { id: 'diaggrp' }
+				}
+			],
+		})],
+		['diaggrp-agedx','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'barchart',
+					term: { id: 'diaggrp' },
+					term2: { id: 'agedx' }
 				}
 			],
 		})],

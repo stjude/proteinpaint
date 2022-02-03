@@ -6,7 +6,7 @@ export function validate_bins(binconfig) {
 	const bc = binconfig
 	if (!bc || typeof bc !== 'object') throw 'bin schema must be an object'
 	// assign default type
-	if (!('type' in bc)) bc.type = 'regular'
+	if (!('type' in bc)) bc.type = 'regular-bin'
 
 	if (bc.type == 'custom-bin') {
 		if (!Array.isArray(bc.lst)) throw 'binconfig.lst must be an array'
@@ -55,7 +55,7 @@ export function validate_bins(binconfig) {
 				if (!isNumeric(bin.stop)) throw 'bin.stop must be numeric for a non-last bin'
 			}
 		}
-	} else if (bc.type == 'regular') {
+	} else if (bc.type == 'regular-bin') {
 		// required custom_bin parameter
 		if (!Number.isFinite(bc.bin_size)) throw 'non-numeric bin_size'
 		if (bc.bin_size <= 0) throw 'bin_size must be greater than 0'

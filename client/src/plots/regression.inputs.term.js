@@ -4,7 +4,7 @@ import { get_bin_label } from '../../shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
-import { mayRunSnplstTask } from '../common/termsetting.snplst.effAle'
+import { mayRunSnplstTask } from '../common/termsetting.snplst.sampleSum'
 
 /*
 class instance is an input
@@ -187,8 +187,24 @@ export class InputTerm {
 		const data = await this.parent.app.vocabApi.getCategories(tw.term, this.parent.state.termfilter.filter, qlst)
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
-
 		mayRunSnplstTask(tw, data)
+		this.statusHtml = { topInfoStatus: undefined, bottomSummaryStatus: undefined }
+		// update bottomSummaryStatus for termtype 'snplst'
+		// other term types will be updated if data.lst is present
+		if (tw.term.type == 'snplst' && tw.q.numOfSampleWithAnyValidGT) {
+			const invalid_snps_count = tw.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
+			this.statusHtml.bottomSummaryStatus =
+				`${tw.q.numOfSampleWithAnyValidGT} samples with valid genotypes.` +
+				(invalid_snps_count > 0 ? ` ${invalid_snps_count} invalid SNP${invalid_snps_count > 1 ? 's' : ''}.` : '') +
+				'<br>Genetic mode: ' +
+				(tw.q.geneticModel == 0
+					? 'Additive'
+					: tw.q.geneticModel == 1
+					? 'Dominant'
+					: tw.q.geneticModel == 2
+					? 'Recessive'
+					: 'By genotype')
+		}
 
 		// condition check is quick fix!!!
 		if (data.lst) {
@@ -213,6 +229,26 @@ export class InputTerm {
 				totalCount.excluded = totalCount.total - totalCount.included
 			}
 
+			// update topInfoStatus
+			if (tw.term.type == 'float' || tw.term.type == 'integer'){
+				this.statusHtml.topInfoStatus = `Use as ${tw.q.mode || 'continuous'} ` +
+					(tw.q.mode !== 'spline' ? 'variable.' : '') +
+					(tw.q.mode == 'continuous' && tw.q.scale && tw.q.scale != 1 ? ` Scale: Per ${tw.q.scale}` : '') +
+					(tw.q.mode == 'spline' ? ` with ${tw.q.knots.length} knots: ${tw.q.knots.map(v => v.value).join(', ')}` : '')
+			} else if (tw.term.type == 'categorical' || tw.term.type == 'condition') {
+				const gs = tw.q.groupsetting || {}
+				// self.values is already set by parent.setActiveValues() above
+				this.statusHtml.topInfoStatus = 'Use as ' + this.sampleCounts.length 
+					+ (gs.inuse ? ' groups.' : ' categories.')
+					+ ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
+			}
+			// update bottomSummaryStatus
+			this.statusHtml.bottomSummaryStatus =
+				`${totalCount.included} sample included.` +
+				(totalCount.excluded ? ` ${totalCount.excluded} samples excluded:` : '')
+
+			this.isContinuousTerm = (tw.q.mode == 'continuous' || tw.q.mode == 'spline') 
+				&& (tw.term.type == 'float' || tw.term.type == 'integer')
 			if (tw && tw.q.mode !== 'continuous' && this.sampleCounts.length < 2)
 				throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
 

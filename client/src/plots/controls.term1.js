@@ -36,8 +36,7 @@ class Term1ui {
 		const state = {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
-			plot,
-			isVisible: plot.term.term.type != 'survival'
+			plot
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
@@ -45,10 +44,6 @@ class Term1ui {
 		return state
 	}
 	main() {
-		if (!this.state.isVisible) {
-			this.dom.tr.style('display', 'none')
-			return
-		}
 		this.dom.tr.style('display', 'table-row')
 		this.render()
 	}

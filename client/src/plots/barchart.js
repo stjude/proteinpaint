@@ -78,7 +78,30 @@ class TdbBarchart {
 				controls: await controlsInit({
 					app: this.app,
 					id: this.id,
-					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
+					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
+					inputs: [
+						'term1',
+						'overlay',
+						{
+							label: 'Orientation',
+							type: 'radio',
+							chartType: 'barchart',
+							settingsKey: 'orientation',
+							options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
+						},
+						{
+							label: 'Scale',
+							type: 'radio',
+							chartType: 'barchart',
+							settingsKey: 'unit',
+							options: [
+								{ label: 'Linear', value: 'abs' },
+								{ label: 'Log', value: 'log', getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block') },
+								{ label: 'Proportion', value: 'pct', getDisplayStyle: plot => (plot.term2 ? 'inline-block' : 'none') }
+							]
+						},
+						'divideBy'
+					]
 				})
 			}
 

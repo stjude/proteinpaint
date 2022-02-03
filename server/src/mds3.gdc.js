@@ -20,6 +20,10 @@ validate_sampleSummaries2_number
 validate_sampleSummaries2_mclassdetail
 init_dictionary
 init_termdb_queries
+
+
+************** gdc adhoc termdb structure
+add description here or in termdb doc
 */
 
 export async function validate_ssm2canonicalisoform(api) {
@@ -1001,15 +1005,14 @@ function init_termdb_queries(termdb, ds) {
 	}
 
 	q.getAncestorIDs = id => {
-		let search_term
-		termdb.id2term.forEach((v, k) => {
-			if (v.id == id) search_term = v
-		})
+		const search_term = termdb.id2term.get(id)
+		if (!search_term) return
 		// ancestor terms are already defined in term.path seperated by '.'
-		let re = search_term.path ? search_term.path.split('.') : ['']
-		if (re.length > 1) re.pop()
+		const re = search_term.path ? search_term.path.split('.') : ['']
+		if (re.length > 1) re.pop() // remove the last element of array which is the query term itself
 		return re
 	}
+	q.getAncestorNames = q.getAncestorIDs
 
 	q.getTermById = id => {
 		const terms = [...termdb.id2term.values()]

@@ -24,7 +24,7 @@ module.exports = function initBinConfig(data, opts = {}) {
 	let [binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding] = roundBinVals(binSize, firstBinStop, max, min)
 	// generate the bin configuration
 	const binConfig = {
-		type: 'regular',
+		type: 'regular-bin',
 		startinclusive: true,
 		bin_size: binSize_rnd,
 		first_bin: { stop: firstBinStop_rnd }
