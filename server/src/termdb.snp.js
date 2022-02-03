@@ -358,9 +358,7 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 
 	const bcfargs = ['query', file, '-r', coord, '-f', bcfformat_snplocus]
 	if (q.info_fields) {
-		const info_fields = JSON.parse(q.info_fields)
-		console.log(info_fields)
-		// compose -e expression
+		add_bcf_info_filters(JSON.parse(q.info_fields), bcfargs)
 	}
 
 	const lines = []
@@ -371,8 +369,6 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 		callback: line => {
 			const l = line.split('\t')
 			const info = vcf.dissect_INFO(l[3])
-			// do not filter variants by info field
-			// store info in cache file as json
 			l[3] = JSON.stringify(info)
 			lines.push(l.join('\t'))
 		}
@@ -380,4 +376,32 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 	const cacheid = 'snpgt_' + q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
 	await utils.write_file(path.join(serverconfig.cachedir, cacheid), lines.join('\n'))
 	return { cacheid }
+}
+
+function add_bcf_info_filters(info_fields, bcfargs) {
+	// info fields to be replaced by filter json object
+	// on bcf expression https://samtools.github.io/bcftools/bcftools.html#expressions
+	const lst = []
+	for (const i of info_fields) {
+		if (i.hiddenvalues) {
+			// { key: 'QC_sjlife', iscategorical: true, hiddenvalues: { Bad: 1 } }
+			for (const k in i.hiddenvalues) {
+				lst.push(`INFO/${i.key}!="${k}"`)
+			}
+		} else if (i.range) {
+			// { key: 'CR', isnumerical: true, range: { start: 0.95, startinclusive: true, stopunbounded: true } }
+			if ('start' in i.range) {
+				lst.push(`INFO/${i.key} ${i.range.startinclusive ? '>=' : '>'} ${i.range.start}`)
+			}
+			if ('stop' in i.range) {
+				lst.push(`INFO/${i.key} ${i.range.stopinclusive ? '<=' : '<'} ${i.range.stop}`)
+			}
+		} else if (i.isflag) {
+			// { key: 'BadBLAT', isflag: true, remove_yes: true },
+			lst.push(`INFO/${i.key}${i.remove_yes ? '=0' : '=1'}`)
+		} else {
+			throw 'unknown info_field'
+		}
+	}
+	bcfargs.push('-i', lst.join('&&'))
 }
