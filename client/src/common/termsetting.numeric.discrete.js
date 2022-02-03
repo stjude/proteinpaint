@@ -7,6 +7,35 @@ import { init_tabs } from '../dom/toggleButtons'
 import { make_radios } from '../dom/radiobutton'
 import { getPillNameDefault } from './termsetting'
 
+/*
+********************** EXPORTED
+getHandler(self)
+	- self: a termsetting instance
+	getPillName()
+	getPillStatus()
+
+	showEditMenu(div): regular/custom bin config menu
+	- sequence of function calls:
+		setqDefaults() // set self.q from self.numqByTermIdModeType or if not prsent create default self.q
+		setDensityPlot() // create density plot and set bin lines
+		renderBoundaryInclusionInput() // start <= x < end OR start < x <= end
+		renderTypeInputs() // 'same bin size' and 'Varying bin sizes' tabs with edit UI
+		renderButtons() // apply and reset buttons
+
+********************** INTERNAL
+	applyEdits() // when apply button clicked
+	processCustomBinInputs()
+**** Functions for Numerical Fixed size bins ****
+	renderFixedBinsInputs()
+		renderBinSizeInput()
+		renderFirstBinInput()
+		renderLastBinInputs()
+**** Functions for Numerical Custom size bins ****
+	renderCustomBinInputs()
+		handleChange()
+		binsChanged()
+*/
+
 // self is the termsetting instance
 export function getHandler(self) {
 	return {
@@ -59,7 +88,8 @@ function applyEdits(self) {
 		} else {
 			self.q.rounding = '.0f'
 		}
-
+		// don't forward scaling factor from continuous termsetting
+		if (self.q.scale) delete self.q.scale
 		if (self.dom.last_radio_auto.property('checked')) {
 			delete self.q.last_bin
 		} else {
@@ -411,68 +441,6 @@ function renderLastBinInputs(self, tr) {
 	})
 
 	self.dom.last_radio_auto = select(inputs.nodes()[0])
-
-	// TODO: remove following code after revewing radiobutton implementation
-
-	// const label0 = radio_div
-	// 	.append('label')
-	// 	.style('padding-left', '10px')
-	// 	.style('padding-right', '10px')
-
-	// self.dom.last_radio_auto = label0
-	// 	.append('input')
-	// 	.attr('type', 'radio')
-	// 	.attr('name', 'last_bin_opt_' + id)
-	// 	.attr('value', 'auto')
-	// 	.style('margin-right', '3px')
-	// 	.style('color', self.q.last_bin && self.q.last_bin.start > self.num_obj.density_data.maxvalue ? 'red' : '')
-	// 	.property('checked', isAuto)
-	// 	.on('change', handleChange)
-	// 	.on('keyup', function() {
-	// 		if (!keyupEnter()) return
-	// 		handleChange.call(this)
-	// 	})
-
-	// label0
-	// 	.append('span')
-	// 	.style('color', 'rgb(136, 136, 136)')
-	// 	.html('Automatic<br>')
-
-	// const label1 = radio_div
-	// 	.append('label')
-	// 	.style('padding-left', '10px')
-	// 	.style('padding-right', '10px')
-
-	// label1
-	// 	.append('input')
-	// 	.attr('type', 'radio')
-	// 	.attr('name', 'last_bin_opt_' + id)
-	// 	.attr('value', 'fixed')
-	// 	.style('margin-right', '3px')
-	// 	.property('checked', !isAuto)
-	// 	.on('change', function() {
-	// 		if (!this.checked) {
-	// 			delete self.q.last_bin.start
-	// 			edit_div.style('display', 'none')
-	// 		} else {
-	// 			if (!self.q.last_bin) self.q.last_bin = {}
-	// 			if (!('start' in self.q.last_bin)) {
-	// 				// default to setting the last bin start to max value,
-	// 				// so that it will be dragged to the left by default
-	// 				self.q.last_bin.start = self.num_obj.density_data.maxvalue
-	// 			}
-	// 			self.dom.last_start_input.property('value', self.q.last_bin.start)
-	// 			const value = +self.dom.last_start_input.property('value')
-	// 			self.q.last_bin.start = value
-	// 			edit_div.style('display', 'inline-block')
-	// 		}
-	// 		setDensityPlot(self)
-	// 	})
-
-	// label1
-	// 	.append('span')
-	// 	.style('color', 'rgb(136, 136, 136)')
-	// 	.html('Fixed')
 
 	const edit_div = tr
 		.append('td')
