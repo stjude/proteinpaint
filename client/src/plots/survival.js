@@ -242,14 +242,16 @@ function setRenderers(self) {
 		self.dom.chartsDiv.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 	}
 
-	self.addCharts = function(d) {
+	self.addCharts = function(chart) {
 		const s = self.settings
+		setVisibleSerieses(chart, s)
+
 		const div = select(this)
 			.append('div')
 			.attr('class', 'pp-survival-chart')
-			.style('opacity', d.serieses ? 0 : 1) // if the data can be plotted, slowly reveal plot
+			.style('opacity', chart.serieses ? 0 : 1) // if the data can be plotted, slowly reveal plot
 			//.style("position", "absolute")
-			.style('width', s.svgw + 50 + 'px')
+			.style('width', `${s.svgw + 50 + chart.atRiskLabelWidth}px`)
 			.style('display', 'inline-block')
 			.style('margin', s.chartMargin + 'px')
 			.style('padding', '10px')
@@ -268,12 +270,12 @@ function setRenderers(self) {
 			.style('height', s.chartTitleDivHt + 'px')
 			.style('font-weight', '600')
 			.style('margin', '5px')
-			.datum(d.chartId)
-			.html(d.chartId)
+			.datum(chart.chartId)
+			.html(chart.chartId)
 
-		if (d.serieses) {
+		if (chart.serieses) {
 			const svg = div.append('svg').attr('class', 'pp-survival-svg')
-			renderSVG(svg, d, s, 0)
+			renderSVG(svg, chart, s, 0)
 
 			div
 				.transition()
@@ -282,40 +284,49 @@ function setRenderers(self) {
 		}
 	}
 
-	self.updateCharts = function(d) {
-		if (!d.serieses) return
-		const s = self.settings
-		const div = select(this)
+	function setVisibleSerieses(chart, s) {
+		chart.visibleSerieses = chart.serieses.filter(series => !s.hidden.includes(series.seriesId))
+		const maxSeriesLabelLen = chart.visibleSerieses.reduce(
+			(maxlen, a) => (a.seriesLabel && a.seriesLabel.length > maxlen ? a.seriesLabel.length : maxlen),
+			0
+		)
+		chart.atRiskLabelWidth = s.atRiskVisible
+			? maxSeriesLabelLen * (s.axisTitleFontSize - 2) * 0.4 + s.atRiskLabelOffset
+			: 0
+	}
 
+	self.updateCharts = function(chart) {
+		if (!chart.serieses) return
+		const s = self.settings
+		setVisibleSerieses(chart, s)
+
+		const div = select(this)
 		div
 			.transition()
 			.duration(s.duration)
-			.style('width', s.svgw + 50 + 'px')
-			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
+			.style('width', `${s.svgw + 50 + chart.atRiskLabelWidth}px`)
 
 		div
 			.select('.sjpp-survival-title')
 			.style('width', s.svgw + 50)
 			.style('height', s.chartTitleDivHt + 'px')
-			.datum(d.chartId)
-			.html(d.chartId)
+			.datum(chart.chartId)
+			.html(chart.chartId)
 
 		div.selectAll('.sjpp-lock-icon').style('display', s.scale == 'byChart' ? 'block' : 'none')
 
 		div.selectAll('.sjpp-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
 
-		renderSVG(div.select('svg'), d, s, s.duration)
+		renderSVG(div.select('svg'), chart, s, s.duration)
 	}
 
 	function renderSVG(svg, chart, s, duration) {
-		const visibleSerieses = chart.serieses.filter(s => !self.settings.hidden.includes(s.seriesId))
-		chart.visibleSerieses = visibleSerieses
-		const extraHeight = s.atRiskVisible ? visibleSerieses.length * 20 : 0
+		const extraHeight = s.atRiskVisible ? chart.visibleSerieses.length * 20 : 0
 
 		svg
 			.transition()
 			.duration(duration)
-			.attr('width', s.svgw)
+			.attr('width', s.svgw + chart.atRiskLabelWidth)
 			.attr('height', s.svgh + extraHeight)
 			.style('overflow', 'visible')
 			.style('padding-left', '20px')
@@ -323,13 +334,12 @@ function setRenderers(self) {
 		/* eslint-disable */
 		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG] = getSvgSubElems(svg)
 		/* eslint-enable */
-		//if (d.xVals) computeScales(d, s);
-
-		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
+		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left
+		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
 
 		const serieses = mainG
 			.selectAll('.sjpp-survival-series')
-			.data(visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
+			.data(chart.visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
 		serieses.each(function(series, i) {
