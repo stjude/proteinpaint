@@ -53,7 +53,7 @@ export async function validate(q, tdb, ds, genome) {
 		throw 'unknown how to validate'
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
-		return { error: 'error validating snps: ' + (e.message || e) }
+		return { error: e.message || e }
 	}
 }
 
@@ -355,10 +355,18 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 	const file = tk.chr2bcffile[q.chr]
 	if (!file) throw 'chr not in chr2bcffile'
 	const coord = (tk.nochr ? q.chr.replace('chr', '') : q.chr) + ':' + start + '-' + stop
+
+	const bcfargs = ['query', file, '-r', coord, '-f', bcfformat_snplocus]
+	if (q.info_fields) {
+		const info_fields = JSON.parse(q.info_fields)
+		console.log(info_fields)
+		// compose -e expression
+	}
+
 	const lines = []
 	await utils.get_lines_bigfile({
 		isbcf: true,
-		args: ['query', file, '-r', coord, '-f', bcfformat_snplocus],
+		args: bcfargs,
 		dir: tk.dir,
 		callback: line => {
 			const l = line.split('\t')
