@@ -169,12 +169,6 @@ class TdbSurvival {
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
-
-		const survTermIndex = c.term.term.type == 'survival' ? '' : 2
-		c[`term${survTermIndex}`].q = {
-			type: 'survival',
-			timeFactor: this.settings.timeFactor
-		}
 		if (this.state.ssid) opts.ssid = this.state.ssid
 		return opts
 	}
@@ -188,6 +182,7 @@ class TdbSurvival {
 			data.keys.forEach((k, i) => {
 				obj[k] = estKeys.includes(k) ? Number(d[i]) : d[i]
 			})
+			obj.time = obj.time * this.settings.timeFactor
 			rows.push(obj)
 			this.uniqueSeriesIds.add(obj.seriesId)
 		}
@@ -564,17 +559,22 @@ function setRenderers(self) {
 			const trend = []
 			let i = 0,
 				d = series.data[0],
-				prev = d
-			trend.push([0, d.nrisk])
+				prev = d // prev = "previous" data point
+
+			// for each x-axis timepoint, find and use the data that applies
 			for (const time of chart.xTickValues) {
-				while (d && d.x <= time) {
+				while (d && d.x < time) {
 					prev = d
 					i++
 					d = series.data[i]
 				}
-				// NOTE: prev.nrisk, which corresponds to the starting at-risk count
-				// at a given timepoint, does not include the exits after the prev timepoint
-				// and before the next timepoint, so adjust the at-risk counts here
+				// NOTE:
+				// must use the previous data point to compute the starting nrisk at the next timepoint,
+				// since there may not be events/censored exits between or corresponding to all timepoints,
+				// and a final curve drop to zero that happens before the max x-axis timepoint will not be
+				// followed by another data with nrisk counts;
+				// however, must also adjust the prev.nrisk for use in the next timepoint,
+				// since it is a starting count and does not include the exits in that timepoint
 				trend.push([time, prev.nrisk - prev.nevent - prev.ncensor])
 			}
 			bySeries[series.seriesId] = trend

@@ -15,6 +15,7 @@ export async function get_survival(q, ds) {
 			const termnum_id = termnum + '_id'
 			if (q[termnum_id]) {
 				q[termnum_id] = decodeURIComponent(q[termnum_id])
+				q[termnum] = q.ds.cohort.termdb.q.termjsonByOneid(q[termnum_id])
 			}
 			const termnum_q = termnum + '_q'
 			if (q[termnum_q]) {
@@ -22,14 +23,27 @@ export async function get_survival(q, ds) {
 			}
 		}
 
+		if (q.term2) {
+			if (q.term2.type == 'survival' && q.term1.type == 'survival') {
+				throw `term and overlay are both survival terms - only one could be a survival term`
+			}
+			if (q.term2.type != 'survival' && q.term1.type != 'survival') {
+				throw `no survival terms, either the main term OR the overlay term must be a survival term`
+			}
+		} else if (q.term1.type != 'survival') {
+			throw `non-survival term`
+		}
+		if (q.term0 && q.term0.type == 'survival') {
+			throw `term0 must not be a survival term`
+		}
+
 		// only term1 XOR term2 may be a survival term
-		const survTermIndex = q.term1_q && q.term1_q.type == 'survival' ? 1 : 2
+		const survTermIndex = q.term1 && q.term1.type == 'survival' ? 1 : 2
 		const tNum = `t${survTermIndex}` // survival CTE table name
 		const kNum = `key${survTermIndex}` // seriesId = censored boolean
 		const vNum = `val${survTermIndex}` // time to event value
 		const sNum = tNum == 't1' ? 'key2' : 'key1'
 		const survq = tNum == 't1' ? q.term1_q : q.term2_q
-		const timeFactor = survq.timeFactor
 
 		const results = get_rows(q, { withCTEs: true })
 		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
@@ -51,7 +65,7 @@ export async function get_survival(q, ds) {
 			keys.series.add(sKey)
 			// negate the d.censored value (where 1 is censored) to transform to survfit() status value
 			// since status=TRUE or 2 means 'dead' or 'event' in R's survival.survfit()
-			byChartSeries[d.key0].push([sKey, timeFactor * d[vNum], d.censored == 0 ? 1 : 0])
+			byChartSeries[d.key0].push([sKey, d[vNum], d.censored == 0 ? 1 : 0])
 		}
 		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
 		const final_data = {
