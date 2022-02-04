@@ -5,26 +5,9 @@ const termdbsql = require('./termdb.sql')
 const termdb = require('./termdb')
 const readline = require('readline')
 const serverconfig = require('./serverconfig')
+const vcf = require('../shared/vcf')
 
 /*
-q{}
-	.genome
-	.dslabel
-	.snptext: str, same as input
-
-snps[ {} ]
-	.rsid: raw str, to be validated in genome bb file
-	.effectAllele: optional
-	// following attr are assigned during validation and are returned to client
-	.invalid: true if this item is invalid for any reason
-	.snpid: consistent id, in regression analysis will be equivalent to "term id"
-	.chr: if not given, will query bb file to map to chr; if no match then missing
-	.pos: if not given, match from bb file. 0-based!
-	.dbsnpRef: ref allele from dbSNP
-	.dbsnpAlts[]: alt alleles from dbSNP
-	.referenceAllele: ref allele from bcf file
-	.altAlleles[]: alt alleles from bcf file
-	.gtlst[]: per-sample genotypes
 
 cache file has a header line, with one line per valid snp. columns: 
 1. snpid
@@ -36,7 +19,8 @@ cache file has a header line, with one line per valid snp. columns:
 7-rest: integer sample ids
 */
 
-const bcfformat = '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n'
+const bcfformat_snplst = '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n'
+const bcfformat_snplocus = '%POS\t%REF\t%ALT\t%INFO[\t%GT]\n'
 
 export async function validate(q, tdb, ds, genome) {
 	try {
@@ -51,17 +35,25 @@ export async function validate(q, tdb, ds, genome) {
 			*/
 			return await summarizeSamplesFromCache(q, tdb, ds, genome)
 		}
-
-		/* returns:
-		.cacheid str
-		.snps[]
-			.snpid
-			.invalid:true
-		*/
-		return await validateInputCreateCache(q, tdb, ds, genome)
+		if (q.snptext) {
+			/* returns:
+			.cacheid str
+			.snps[]
+				.snpid
+				.invalid:true
+			*/
+			return await validateInputCreateCache_by_snptext(q, ds, genome)
+		}
+		if (q.chr) {
+			/* returns:
+			.cacheid str
+			*/
+			return await validateInputCreateCache_by_coord(q, ds, genome)
+		}
+		throw 'unknown how to validate'
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
-		return { error: 'error validating snps: ' + (e.message || e) }
+		return { error: e.message || e }
 	}
 }
 
@@ -127,13 +119,28 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 	}
 }
 
-async function validateInputCreateCache(q, tdb, ds, genome) {
+async function validateInputCreateCache_by_snptext(q, ds, genome) {
 	if (!genome.snp) throw 'snp not supported by genome'
 	if (!q.snptext) throw '.snptext missing'
 
 	const snps = parseSnpText(q.snptext)
 	if (!snps.length) throw 'no snps'
 	// the unique id .snpid is assigned on each snp, no matter valid or not
+	/*
+	snps[ {} ]
+	.rsid: raw str, to be validated in genome bb file
+	.effectAllele: optional
+	// following attr are assigned during validation and are returned to client
+	.invalid: true if this item is invalid for any reason
+	.snpid: consistent id, in regression analysis will be equivalent to "term id"
+	.chr: if not given, will query bb file to map to chr; if no match then missing
+	.pos: if not given, match from bb file. 0-based!
+	.dbsnpRef: ref allele from dbSNP
+	.dbsnpAlts[]: alt alleles from dbSNP
+	.referenceAllele: ref allele from bcf file
+	.altAlleles[]: alt alleles from bcf file
+	.gtlst[]: per-sample genotypes
+	*/
 
 	await mapRsid2chr(snps, genome)
 	// snp.invalid is true for invalid ones
@@ -255,7 +262,7 @@ async function queryBcf(q, snps, ds) {
 	//const sample2snpcount = new Map(samples.map(sample => [sample, 0])) // {k: sample, v: number of snps with valid gt}
 	await utils.get_lines_bigfile({
 		isbcf: true,
-		args: ['query', '-R', coordsfile, '-f', bcfformat, '-v', bcffiles],
+		args: ['query', '-R', coordsfile, '-f', bcfformat_snplst, '-v', bcffiles],
 		dir: tk.dir,
 		callback: line => {
 			// chr, pos, ref, alt, '0/0', '0/0', '0/1', '1/1', ...
@@ -332,4 +339,69 @@ function parseGT(gt, alleles) {
 	const ale2 = alleles[gtidx[1]]
 	if (!ale1 || !ale2) throw `invalid genotype`
 	return ale1 + ',' + ale2
+}
+
+async function validateInputCreateCache_by_coord(q, ds, genome) {
+	// q { chr/start/stop }
+	const start = Number(q.start),
+		stop = Number(q.stop)
+	if (!Number.isInteger(start) || !Number.isInteger(stop)) throw 'start/stop are not integers'
+	if (start > stop || start < 0) throw 'invalid start/stop coordinate'
+
+	/////////////////
+	// using mds2 architecture
+	const tk = ds.track.vcf
+	if (!tk) throw 'ds.track.vcf missing'
+	const file = tk.chr2bcffile[q.chr]
+	if (!file) throw 'chr not in chr2bcffile'
+	const coord = (tk.nochr ? q.chr.replace('chr', '') : q.chr) + ':' + start + '-' + stop
+
+	const bcfargs = ['query', file, '-r', coord, '-f', bcfformat_snplocus]
+	if (q.info_fields) {
+		add_bcf_info_filters(JSON.parse(q.info_fields), bcfargs)
+	}
+
+	const lines = []
+	await utils.get_lines_bigfile({
+		isbcf: true,
+		args: bcfargs,
+		dir: tk.dir,
+		callback: line => {
+			const l = line.split('\t')
+			const info = vcf.dissect_INFO(l[3])
+			l[3] = JSON.stringify(info)
+			lines.push(l.join('\t'))
+		}
+	})
+	const cacheid = 'snpgt_' + q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
+	await utils.write_file(path.join(serverconfig.cachedir, cacheid), lines.join('\n'))
+	return { cacheid }
+}
+
+function add_bcf_info_filters(info_fields, bcfargs) {
+	// info fields to be replaced by filter json object
+	// on bcf expression https://samtools.github.io/bcftools/bcftools.html#expressions
+	const lst = []
+	for (const i of info_fields) {
+		if (i.hiddenvalues) {
+			// { key: 'QC_sjlife', iscategorical: true, hiddenvalues: { Bad: 1 } }
+			for (const k in i.hiddenvalues) {
+				lst.push(`INFO/${i.key}!="${k}"`)
+			}
+		} else if (i.range) {
+			// { key: 'CR', isnumerical: true, range: { start: 0.95, startinclusive: true, stopunbounded: true } }
+			if ('start' in i.range) {
+				lst.push(`INFO/${i.key} ${i.range.startinclusive ? '>=' : '>'} ${i.range.start}`)
+			}
+			if ('stop' in i.range) {
+				lst.push(`INFO/${i.key} ${i.range.stopinclusive ? '<=' : '<'} ${i.range.stop}`)
+			}
+		} else if (i.isflag) {
+			// { key: 'BadBLAT', isflag: true, remove_yes: true },
+			lst.push(`INFO/${i.key}${i.remove_yes ? '=0' : '=1'}`)
+		} else {
+			throw 'unknown info_field'
+		}
+	}
+	bcfargs.push('-i', lst.join('&&'))
 }

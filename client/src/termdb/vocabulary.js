@@ -454,19 +454,26 @@ class TermdbVocab {
 		}
 	}
 
-	async validateSnps(snptext) {
-		const args = [
-			'validateSnps=1',
-			'genome=' + this.state.vocab.genome,
-			'dslabel=' + this.state.vocab.dslabel,
-			'snptext=' + encodeURIComponent(snptext)
-		]
-		/*
-		const filter = _filter || this.state.termfilter.filter
-		if (filter) {
-			args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+	/* when arg.text is true, arg should only be {text} from a snplst term;
+	else, it should be the q{} of snplocus term: {chr,start,stop,info_fields}
+	to generate snp-sample gt matrix cache file and return file name
+	*/
+	async validateSnps(arg) {
+		const lst = ['validateSnps=1', 'genome=' + this.state.vocab.genome, 'dslabel=' + this.state.vocab.dslabel]
+		if (arg.text) {
+			lst.push('snptext=' + encodeURIComponent(arg.text))
+		} else if (arg.chr) {
+			lst.push('chr=' + arg.chr)
+			lst.push('start=' + arg.start)
+			lst.push('stop=' + arg.stop)
+			if (arg.info_fields) lst.push('info_fields=' + JSON.stringify(arg.info_fields))
 		}
-		*/
+		return await dofetch3('/termdb?' + lst.join('&'))
+	}
+
+	async get_infofields() {
+		// used for snplocus term type
+		const args = ['getinfofields=1', 'genome=' + this.state.vocab.genome, 'dslabel=' + this.state.vocab.dslabel]
 		return await dofetch3('/termdb?' + args.join('&'))
 	}
 }
