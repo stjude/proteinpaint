@@ -132,7 +132,9 @@ class TdbCumInc {
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.currData = this.processData(data)
+			console.log('data:', data)
 			this.refs = data.refs
+			this.tests = data.tests
 			this.pj.refresh({ data: this.currData })
 			this.setTerm2Color(this.pj.tree.charts)
 			this.render()
@@ -184,7 +186,7 @@ class TdbCumInc {
 				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
 					legendItems.push({
 						seriesId: series.seriesId,
-						text: series.seriesLabel,
+						text: series.seriesLabel + this.getPvalues(this.tests, series),
 						color: this.term2toColor[series.seriesId],
 						isHidden: this.settings.hidden.includes(series.seriesId)
 					})
@@ -201,6 +203,21 @@ class TdbCumInc {
 		} else {
 			this.legendData = []
 		}
+	}
+
+	getPvalues(tests, series) {
+		if (!tests) return
+		const chartId = series.chartId
+		const seriesId = series.seriesId
+		const n = series.data.length
+		const cTests = tests[chartId]
+		const sTests = cTests.filter(test => test.series1 == seriesId || test.series2 == seriesId)
+		const pvalues = []
+		for (const test of sTests) {
+			const otherSeries = test.series1 == seriesId ? test.series2 : test.series1
+			pvalues.push(otherSeries + ' = ' + test.pvalue)
+		}
+		return `<span> (n = ${n}), P-values: ${pvalues.join('; ')}</span>`
 	}
 }
 
@@ -276,7 +293,7 @@ function setRenderers(self) {
 			.style('width', s.svgw + 50)
 			.style('height', s.chartTitleDivHt + 'px')
 			.datum(d.chartId)
-			.html(d.chartId)
+			.html(d.chartTitle)
 
 		div.selectAll('.sjpcb-lock-icon').style('display', s.scale == 'byChart' ? 'block' : 'none')
 
@@ -612,6 +629,7 @@ function getPj(self) {
 			charts: [
 				{
 					chartId: '@key',
+					chartTitle: '=chartTitle()',
 					xMin: '>$time',
 					xMax: '<$time',
 					'__:xScale': '=xScale()',
@@ -641,7 +659,7 @@ function getPj(self) {
 					],
 					'@done()': '=sortSerieses()'
 				},
-				'=chartTitle()'
+				'$chartId'
 			]
 		},
 		'=': {

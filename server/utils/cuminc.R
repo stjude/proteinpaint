@@ -60,13 +60,20 @@ compute_ci <- function(res) {
   return(res)
 }
 
-# data preparation
+# read in data
 con <- file("stdin","r")
 dat <- stream_in(con, verbose = F)
-dat$event <- as.factor(dat$event)
-dat$series <- as.factor(dat$series)
+
+# discard series with no events
+toKeep <- vector(mode = "character")
+for (series in unique(dat$series)) {
+  if (any(dat[dat$series == series, "event"] == 1)) toKeep <- c(toKeep, series)
+}
+dat <- dat[dat$series %in% toKeep,]
 
 # compute cumulative incidence
+dat$event <- as.factor(dat$event)
+dat$series <- as.factor(dat$series)
 out <- list(estimates = list())
 if (length(levels(dat$series)) == 1) {
   # single series
@@ -77,10 +84,14 @@ if (length(levels(dat$series)) == 1) {
 } else {
   # multiple series
   # compute cumulative incidence for each pairwise combination of series
-  pairs <- combn(levels(dat$series), 2, simplify = F)
-  pvals <- vector(mode = "numeric")
-  for (i in 1:length(pairs)) {
-    pair <- pairs[[i]]
+  pairs <- combn(levels(dat$series), 2)
+  pvalues <- vector(mode = "numeric")
+  series1s <- vector(mode = "character")
+  series2s <- vector(mode = "character")
+  for (i in 1:ncol(pairs)) {
+    pair <- pairs[,i]
+    series1s <- c(series1s, pair[1])
+    series2s <- c(series2s, pair[2])
     res <- cuminc(ftime = dat$time, fstatus = dat$event, group = dat$series, cencode = 0, subset = dat$series %in% pair)
     # retrieve estimates for each series within the pair
     for (series in pair) {
@@ -90,12 +101,10 @@ if (length(levels(dat$series)) == 1) {
       out$estimates[[series]] <- seriesRes
     }
     # retrieve p-value of the pair
-    pvals <- c(pvals, res$Tests[1,"pv"])
+    pvalues <- c(pvalues, signif(res$Tests[1,"pv"], 2))
   }
   # store tests
-  tests <- data.frame("seriesIds" = 1:length(pairs), "pval" = pvals)
-  tests$seriesIds <- pairs # create a list column here (not in the data.frame call)
-  out[["tests"]] <- tests
+  out[["tests"]] <- data.frame("series1" = series1s, "series2" = series2s, "pvalue" = pvalues)
 }
 
 # output results in json format

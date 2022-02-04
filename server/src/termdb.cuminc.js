@@ -29,12 +29,10 @@ export async function get_incidence(q, ds) {
 		for (const chartId in byChartSeries) {
 			const data = byChartSeries[chartId]
 			if (!data.length) continue
-			// if there are no event=1, an error in the R script execution is issued (NAs in foreign function call (arg 3))
-			if (!data.filter(d => d.event === 1).length) continue
 			promises.push(
 				lines2R(path.join(serverconfig.binpath, 'utils/cuminc.R'), [JSON.stringify(data)]).then(Routput => {
 					const ci_data = JSON.parse(Routput[0])
-					// for single series, R will convert empty string to '1', so convert back to empty string
+					// for single series, R will convert an empty string key to '1', so convert back to empty string
 					if (Object.keys(ci_data.estimates).length == 1) {
 						ci_data.estimates[''] = ci_data.estimates['1']
 						delete ci_data.estimates['1']
@@ -54,7 +52,7 @@ export async function get_incidence(q, ds) {
 						}
 					}
 					if (ci_data.tests) {
-						final_data.tests = {}
+						if (!final_data.tests) final_data.tests = {}
 						final_data.tests[chartId] = ci_data.tests
 					}
 				})
