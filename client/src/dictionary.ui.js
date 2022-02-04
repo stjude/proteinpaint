@@ -120,9 +120,7 @@ function makeFileUpload(div, doms) {
 		const file = d3event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
-			console.log(120, 'preparse')
 			doms.data = parseTabDelimitedData(event.target.result)
-			// console.log(122, 'post parse', doms)
 		}
 		reader.readAsText(file, 'utf8')
 	})
@@ -156,33 +154,88 @@ function parseTabDelimitedData(input) {
 		}
 	}
 	const keys = [] //To check for duplicate values later
+	let keyIndex,
+		configIndex,
+		colsIndexes = []
 	for (const i in lines) {
-		const [col1, col2, col3, col4, col5, key0, configstr0] = lines[i].split('\t') //Required format
+		let line = lines[i].split('\t')
+		// console.log(159, line)
+		// const keyIndex = line.findIndex('Variable Name')
+		// console.log(keyIndex)
+		// const [col1, col2, col3, col4, col5, key0, configstr0] = lines[i].split('\t') //Required format
+		// console.log(163, col1, col2, col3, col4, col5, key0, configstr0) //returns array of strings
+		if (i == 0) {
+			//TODO - Ask Xin if 'Variable name' and 'Variable note' are common/standard names in phenotree
+			keyIndex = line.findIndex(l => l.match('Variable Name'))
+			if (!keyIndex == -1) throw `Missing required 'Variable Name' column`
+			configIndex = line.findIndex(l => l.match('Variable Note'))
+			if (configIndex == -1) throw `Missing required 'Variable Note' column`
+			for (let idx in line) {
+				if (!(idx == keyIndex || idx == configIndex)) colsIndexes.push(idx)
+			}
+		}
+		// console.log(keyIndex, configIndex, colsIndexes)
 		try {
 			if (i > 0) {
 				//Skip header
-				if (!configstr0 || !configstr0.trim()) {
-					console.error('Missing configuration string, line: ' + i + ', term: ' + key0)
+				if (!line[configIndex] || !line[configIndex].trim()) {
+					console.error('Missing configuration string, line: ' + i + ', term: ' + line[keyIndex])
 					continue
 				}
-				const L1 = col1.trim()
-				const L2 = col2.trim()
-				const L3 = col3.trim()
-				const L4 = col4.trim()
-				const L5 = col5.trim()
-				const configstr = configstr0.replace('"', '').trim()
+				let colNames = []
+				for (const c in colsIndexes) {
+					const col = str2level(line[c])
+					colNames.push(col)
+				}
+				// console.log(colNames)
+				let configstr = line[configIndex].replace('"', '').trim()
+				// let L1 = str2level(col1),
+				// 	L2 = str2level(col2),
+				// 	L3 = str2level(col3),
+				// 	L4 = str2level(col4),
+				// 	L5 = str2level(col5),
+				// 	configstr = configstr0.replace('"', '').trim()
+				// const levels = [L1, L2, L3, L4, L5]
 
-				const name = getName(L2, L3, L4, L5).replace(/\"/g, '')
+				// const name = getName(L2, L3, L4, L5).replace(/\"/g, '')
+				const name = getName(colNames)
+				// console.log(name)
 
-				//if key0 missing, use name
-				let key = key0 ? key0.trim() : ''
+				// if key missing, use name
+				let key = line[keyIndex] ? line[keyIndex].trim() : ''
 				if (!key) key = name
 
 				keys.push(key) //pushes user provided and derived values to check
 
-				//Parses col7 into term.type and term.values
+				// //Parses col7 into term.type and term.values
 				const term = parseConfig(configstr)
-				// console.log(181)
+
+				//Create hierarchy
+				// let leaflevel = 5
+
+				// for (const [i,] in levels) {
+				// 	if (!levels[1]){
+				// 		leaflevel = 1
+				// 	} else if (i > 0) {
+				// 		let addOne = i,
+				// 			minusOne = i
+				// 		const levela = addOne++, //changes addOne to i+1 and captures current i
+				// 			levelm = minusOne--
+				// 		console.log(196, levels[addOne], levels[minusOne], levels[levela], levels[levelm])
+				// 		// console.log(197, levels[addOne])
+				// 		if (!levels[addOne]) {
+				// 			// leaflevel = levela
+				// 			// console.log(199, leaflevel, levels[levela])
+				// 			// console.log(199, leaflevel, levels[levela])
+				// 			if (levels[levela] == levels[minusOne]) {
+				// 				// levels[minusOne] = null
+				// 				// leaflevel = 3
+				// 				// console.log(levels[minusOne])
+				// 			}
+				// 		}
+				// 	}
+				// }
+
 				terms[key] = {
 					id: key,
 					parent_id: null,
@@ -203,15 +256,18 @@ function parseTabDelimitedData(input) {
 	return { terms: Object.values(terms) }
 }
 
-function getName(L2, L3, L4, L5) {
-	if (!L2) throw 'L2 missing'
-	if (!L3) throw 'L3 missing'
-	if (!L4) throw 'L4 missing'
-	if (!L5) throw 'L5 missing'
-	if (L5 != '-') return L5
-	if (L4 != '-') return L4
-	if (L3 != '-') return L3
-	if (L2 != '-') return L2
+/*****Parsing Functions for Phenotree *****/
+function str2level(col) {
+	// parses columns and returns name
+	const tmp = col.trim()
+	if (!tmp || tmp == '-') return null
+	return tmp
+}
+
+function getName(colArray) {
+	//finds last name in the array and returns as name
+	const ca = colArray.filter(x => x !== null)
+	if (ca.length > 0) return colArray[ca.length - 1].replace(/"/g, '')
 	throw 'name missing'
 }
 
@@ -296,7 +352,7 @@ function submitButton(div, doms, holder) {
 		.style('font-size', '16px')
 		.on('click', () => {
 			validateInput(doms)
-			// console.log(296, doms)
+			// if (v == null) return //stop form from disappearing for now
 			div.remove()
 			appInit({
 				holder: holder,
@@ -312,8 +368,8 @@ function submitButton(div, doms, holder) {
 function validateInput(doms) {
 	//May not be needed?
 	if (!doms.data) {
-		alert('Provide data')
-		return
+		// alert('Provide data')
+		return null
 	}
 }
 
