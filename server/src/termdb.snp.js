@@ -8,7 +8,6 @@ const serverconfig = require('./serverconfig')
 const vcf = require('../shared/vcf')
 
 /*
-
 cache file has a header line, with one line per valid snp. columns: 
 1. snpid
 2. chr
@@ -16,7 +15,13 @@ cache file has a header line, with one line per valid snp. columns:
 4. ref
 5. alt (comma-joined alternative alleles)
 6. effAllele (user-given allele, blank if not specified)
-7-rest: integer sample ids
+7-rest: integer sample ids, with GT as values, use / as separators
+
+same cache file is used for both snplst and snplocus terms
+
+info fields:
+- snplst does not process info fields
+- snplocus uses info fields to filter variants. info fields of resulting variants are returned to client for showing in gb
 */
 
 const bcfformat_snplst = '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n'
@@ -47,6 +52,9 @@ export async function validate(q, tdb, ds, genome) {
 		if (q.chr) {
 			/* returns:
 			.cacheid str
+			.snps[]
+				.snpid
+				.info{ k: v }
 			*/
 			return await validateInputCreateCache_by_coord(q, ds, genome)
 		}
@@ -96,7 +104,7 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 			if (!sampleinfilter[j - 6]) continue //sample not in use
 			samplewithgt.add(tk.samples[j - 6].name) // this sample has valid gt
 			gt2count[gt] = 1 + (gt2count[gt] || 0)
-			const alleles = gt.split(',')
+			const alleles = gt.split('/')
 			for (const a of alleles) {
 				allele2count[a] = 1 + (allele2count[a] || 0)
 			}
@@ -241,10 +249,8 @@ async function queryBcf(q, snps, ds) {
 	// collect coordinates and bcf file paths that will be queried
 	const bcfs = new Set()
 	const coords = []
-	let validsnpcount = 0
 	for (const snp of snps) {
 		if (snp.invalid) continue
-		validsnpcount++
 		const bcffile = tk.chr2bcffile[snp.chr]
 		if (!bcffile) throw 'chr not in chr2bcffile'
 		bcfs.add(bcffile)
@@ -259,7 +265,6 @@ async function queryBcf(q, snps, ds) {
 	const bcffiles = path.join(serverconfig.cachedir, await utils.write_tmpfile([...bcfs].join('\n')))
 
 	// query bcf files for snp coordinates and sample genotypes
-	//const sample2snpcount = new Map(samples.map(sample => [sample, 0])) // {k: sample, v: number of snps with valid gt}
 	await utils.get_lines_bigfile({
 		isbcf: true,
 		args: ['query', '-R', coordsfile, '-f', bcfformat_snplst, '-v', bcffiles],
@@ -338,10 +343,11 @@ function parseGT(gt, alleles) {
 	const ale1 = alleles[gtidx[0]]
 	const ale2 = alleles[gtidx[1]]
 	if (!ale1 || !ale2) throw `invalid genotype`
-	return ale1 + ',' + ale2
+	return ale1 + '/' + ale2
 }
 
 async function validateInputCreateCache_by_coord(q, ds, genome) {
+	// for snplocus term
 	// q { chr/start/stop }
 	const start = Number(q.start),
 		stop = Number(q.stop)
@@ -361,21 +367,38 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 		add_bcf_info_filters(JSON.parse(q.info_fields), bcfargs)
 	}
 
-	const lines = []
+	const snps = [] // collect snps {snpid, info} and send to client to store at term.snps, just like snplst
+	const lines = ['snpid\tchr\tpos\tref\talt\teff\t' + tk.samples.map(i => i.name).join('\t')]
 	await utils.get_lines_bigfile({
 		isbcf: true,
 		args: bcfargs,
 		dir: tk.dir,
 		callback: line => {
 			const l = line.split('\t')
-			const info = vcf.dissect_INFO(l[3])
-			l[3] = JSON.stringify(info)
-			lines.push(l.join('\t'))
+			const alleles = [l[1], ...l[2].split(',')]
+			const snpid = l[0] + '.' + l[1] + '.' + l[2] // pos.ref.alt as snpid
+			snps.push({
+				snpid,
+				info: vcf.dissect_INFO(l[3])
+			})
+
+			const lst = [
+				snpid,
+				q.chr,
+				l[0], // pos
+				l[1], // ref
+				l[2], // alt
+				'' // snplocus file does not have eff ale
+			]
+			for (let i = 3; i < l.length; i++) {
+				lst.push(parseGT(l[i], alleles))
+			}
+			lines.push(lst.join('\t'))
 		}
 	})
 	const cacheid = 'snpgt_' + q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
 	await utils.write_file(path.join(serverconfig.cachedir, cacheid), lines.join('\n'))
-	return { cacheid }
+	return { cacheid, snps }
 }
 
 function add_bcf_info_filters(info_fields, bcfargs) {
@@ -403,5 +426,5 @@ function add_bcf_info_filters(info_fields, bcfargs) {
 			throw 'unknown info_field'
 		}
 	}
-	bcfargs.push('-i', lst.join('&&'))
+	bcfargs.push('-i', lst.join(' && '))
 }

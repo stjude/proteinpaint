@@ -183,8 +183,11 @@ export class InputTerm {
 
 		// the 3rd argument to getCategories() is different for snplst and dictionary term types
 		const qlst =
-			tw.term.type == 'snplst' ? [`cacheid=${tw.q.cacheid}`] : ['term1_q=' + encodeURIComponent(JSON.stringify(q))]
+			tw.term.type == 'snplst' || tw.term.type == 'snplocus'
+				? [`cacheid=${tw.q.cacheid}`]
+				: ['term1_q=' + encodeURIComponent(JSON.stringify(q))]
 		const data = await this.parent.app.vocabApi.getCategories(tw.term, this.parent.state.termfilter.filter, qlst)
+		//console.log(data)
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 		mayRunSnplstTask(tw, data)
@@ -195,9 +198,9 @@ export class InputTerm {
 			excludeCounts: undefined,
 			allowToSelectRefGrp: undefined
 		}
-		// update bottomSummaryStatus for termtype 'snplst'
+		// update bottomSummaryStatus for termtype snplst and snplocus
 		// other term types will be updated if data.lst is present
-		if (tw.term.type == 'snplst' && tw.q.numOfSampleWithAnyValidGT) {
+		if (tw.q.numOfSampleWithAnyValidGT) {
 			const invalid_snps_count = tw.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
 			this.termStatus.topInfoStatus =
 				`${tw.q.numOfSampleWithAnyValidGT} samples with valid genotypes.` +

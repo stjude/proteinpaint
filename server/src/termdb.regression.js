@@ -40,7 +40,7 @@ get_regression()
 	getSampleData
 		divideTerms
 		getSampleData_dictionaryTerms
-		getSampleData_snplst
+		getSampleData_snplstOrLocus
 			doImputation
 			applyGeneticModel
 	makeRinput
@@ -117,7 +117,7 @@ function parse_q(q, ds) {
 	for (const tw of q.independent) {
 		if (!tw.q) throw `missing q for term.id='${tw.id}'`
 		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
-		if (tw.type == 'snplst') {
+		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			// !!!!!!!!!QUICK FIX!! detect non-dict term and do not query termdb
 			// snplst tw lacks tw.term{}; tw.snpidlst[] will be added when parsing cache file
 			if (!tw.q.cacheid) throw 'q.cacheid missing'
@@ -168,7 +168,7 @@ function makeRinput(q, sampledata) {
 
 	// independent terms, tw = termWrapper
 	for (const tw of q.independent) {
-		if (tw.type == 'snplst') {
+		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			// create one independent variable for each snp
 			for (const snpid of tw.snpidlst) {
 				const thisSnp = {
@@ -210,7 +210,7 @@ function makeRinput(q, sampledata) {
 			// map tw.interactions into thisTerm.interactions
 			for (const id of tw.interactions) {
 				const tw2 = q.independent.find(i => i.id == id)
-				if (tw2.type == 'snplst') {
+				if (tw2.type == 'snplst' || tw2.type == 'snplocus') {
 					// this term is interacting with a snplst term, fill in all snps from this list into thisTerm.interactions
 					for (const s of tw2.snpidlst) thisTerm.interactions.push(s)
 				} else {
@@ -240,7 +240,7 @@ function makeRinput(q, sampledata) {
 		let skipsample = false
 		for (const tw of q.independent) {
 			// tw = termWrapper
-			if (tw.type == 'snplst') {
+			if (tw.type == 'snplst' || tw.type == 'snplocus') {
 				for (const snpid of tw.snpidlst) {
 					if (!id2value.get(snpid)) {
 						skipsample = true
@@ -449,10 +449,10 @@ async function getSampleData(q, terms) {
 	for (const tw of nonDictTerms) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
-		if (tw.type == 'snplst') {
+		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			// each snp is one indepedent variable
 			// record list of snps on term.snpidlst
-			await getSampleData_snplst(tw, samples, q)
+			await getSampleData_snplstOrLocus(tw, samples, q)
 		} else {
 			throw 'unknown type of independent non-dictionary term'
 		}
@@ -515,7 +515,7 @@ tw{}
 		// list of snpid; tricky!! added in this function
 samples {Map} // results are added into it
 */
-async function getSampleData_snplst(tw, samples, q) {
+async function getSampleData_snplstOrLocus(tw, samples, q) {
 	tw.snpidlst = [] // snpid are added to this list while reading cache file
 
 	const lines = (await utils.read_file(path.join(serverconfig.cachedir, tw.q.cacheid))).split('\n')
@@ -580,7 +580,7 @@ async function getSampleData_snplst(tw, samples, q) {
 	for (const [snpid, o] of snp2sample) {
 		for (const [sampleid, gt] of o.samples) {
 			// for this sample, convert gt to value
-			const [gtA1, gtA2] = gt.split(',') // assuming diploid
+			const [gtA1, gtA2] = gt.split('/') // assuming diploid
 			const v = applyGeneticModel(tw, o.effAle, gtA1, gtA2)
 
 			// register value of this sample in samples
@@ -674,7 +674,7 @@ function divideTerms(lst) {
 	const dict = [],
 		nonDict = []
 	for (const t of lst) {
-		if (t.type == 'snplst' || t.type == 'prs') {
+		if (t.type == 'snplst' || t.type == 'snplocus') {
 			nonDict.push(t)
 		} else {
 			dict.push(t)
