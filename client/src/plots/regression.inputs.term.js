@@ -187,7 +187,6 @@ export class InputTerm {
 				? [`cacheid=${tw.q.cacheid}`]
 				: ['term1_q=' + encodeURIComponent(JSON.stringify(q))]
 		const data = await this.parent.app.vocabApi.getCategories(tw.term, this.parent.state.termfilter.filter, qlst)
-		//console.log(data)
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 		mayRunSnplstTask(tw, data)
