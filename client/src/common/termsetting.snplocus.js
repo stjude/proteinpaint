@@ -6,7 +6,7 @@ instance attributes
 
 self.term{}
 	.id: str, not really used
-	.type: "snplst"
+	.type: "snplocus"
 self.q{}
 	.alleleType: int
 	.geneticModel: int
@@ -39,12 +39,6 @@ export function getHandler(self) {
 
 		async showEditMenu(div) {
 			await makeEditMenu(self, div)
-		},
-
-		async postMain() {
-			if (self.q.chr) {
-				await validateInput(self)
-			}
 		}
 	}
 }
@@ -54,8 +48,6 @@ async function makeEditMenu(self, div) {
 
 	const tmpinfoarg = await mayDisplayInfoFields(self, div)
 	// TODO tmpinfoarg to be replaced with filter api
-
-	// TODO following 3 dropdown controls are identical to snplst and should be shared
 
 	const [select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
 		div.append('div').style('margin', '10px'),
@@ -68,7 +60,7 @@ async function makeEditMenu(self, div) {
 		.style('margin', '0px 15px 15px 15px')
 		.text('Submit')
 		.on('click', async () => {
-			const [chr, start, stop] = get_coordinput()
+			const [chr, start, stop] = get_coordinput(searchgox)
 			event.target.disabled = true
 			event.target.innerHTML = 'Validating input...'
 			// parse input text
@@ -78,10 +70,10 @@ async function makeEditMenu(self, div) {
 				self.q = {}
 			}
 			self.term.type = 'snplocus' // in case self.term was something else..
-			self.term.name = `SNPs from ${chr}:${start}-${stop}`
 			self.q.chr = chr
 			self.q.start = start
 			self.q.stop = stop
+			self.term.name = getTermName(self.q)
 			self.q.info_fields = tmpinfoarg
 			await validateInput(self)
 			// q.cacheid is set
@@ -120,17 +112,54 @@ async function validateInput(self) {
 }
 
 function validateQ(self, data) {
-	if (![0, 1].includes(data.q.alleleType)) throw 'alleleType value is not one of 0/1'
-	if (![0, 1, 2, 3].includes(data.q.geneticModel)) throw 'geneticModel value is not one of 0/1'
-	if (![0, 1, 2].includes(data.q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
+	const q = data.q
+	if (![0, 1].includes(q.alleleType)) throw 'alleleType value is not one of 0/1'
+	if (![0, 1, 2, 3].includes(q.geneticModel)) throw 'geneticModel value is not one of 0/1'
+	if (![0, 1, 2].includes(q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
+	if (!q.chr) throw 'chr missing'
+	if (!Number.isInteger(q.start)) throw 'start coordinate is not integer'
+	if (!Number.isInteger(q.stop)) throw 'stop coordinate is not integer'
+	if (q.start < 0) throw 'start < 0'
+	if (q.stop <= q.start) throw 'stop <= start'
+	if (q.info_fields) {
+		if (!Array.isArray(q.info_fields)) throw 'info_fields[] is not array'
+	}
+}
+
+function getTermName(q) {
+	return `SNPs from ${q.chr}:${q.start}-${q.stop}`
 }
 
 export async function fillTW(tw, vocabApi) {
-	// not done yet!
+	try {
+		// to catch any error in q{} before running validateInput()
+		validateQ(null, tw)
+	} catch (e) {
+		throw 'snplocus validateQ(): ' + e
+	}
+	if (!tw.term.name) tw.term.name = getTermName(tw.q)
+	if (tw.id == undefined || tw.id == '') {
+		// tw is missing id
+		if (tw.term.id == undefined || tw.term.id == '') {
+			// tw.term is also missing id
+			tw.term.id = makeId()
+		}
+		tw.id = tw.term.id
+	} else {
+		if (tw.term.id == undefined || tw.term.id == '') {
+			tw.term.id = tw.id
+		}
+	}
+
+	await validateInput({
+		term: tw.term,
+		q: tw.q,
+		vocabApi
+	})
 }
 
 function makeId() {
-	return 'snplst' + Math.random()
+	return 'snplocus' + Math.random()
 }
 
 function add_genesearchbox(self, div) {
@@ -152,7 +181,8 @@ function add_genesearchbox(self, div) {
 	return searchbox
 }
 
-function get_coordinput() {
+function get_coordinput(searchbox) {
+	// TODO fix
 	return ['chr17', 7674304, 7676849]
 }
 

@@ -47,13 +47,6 @@ export function getHandler(self) {
 
 		async showEditMenu(div) {
 			makeEditMenu(self, div)
-		},
-
-		async postMain() {
-			// rerun server-side validation to generate new cache id, and recount samples to account for filter/subcohort change
-			if (self.term && self.term.snps) {
-				await validateInput(self)
-			}
 		}
 	}
 }
@@ -419,7 +412,13 @@ function validateQ(self, data) {
 }
 
 export async function fillTW(tw, vocabApi) {
-	if (!tw.q) tw.q = {}
+	try {
+		validateQ(null, tw)
+	} catch (e) {
+		throw 'snplst validateQ(): ' + e
+	}
+	if (!Array.isArray(tw.term.snps)) throw 'tw.term.snps[] is not an array'
+	if (tw.term.snps.length == 0) throw 'tw.term.snps[] array is 0 length'
 	if (!tw.term.name) tw.term.name = getTermName(tw.term.snps)
 	if (tw.id == undefined || tw.id == '') {
 		// tw is missing id
