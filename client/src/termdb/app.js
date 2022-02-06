@@ -35,6 +35,13 @@ class TdbApp {
 	}
 
 	validateOpts(o) {
+		if (o.vocabApi) {
+			// verify it is an object returned by vocabInit()
+		} else if (o.state && o.state.vocab) {
+			if (typeof o.state.vocab != 'object') throw 'opts.state.vocab{} is not an object'
+		} else {
+			throw 'neither state.vocab{} or opts.vocabApi provided'
+		}
 		if (o.tree) {
 			if (
 				o.tree.disable_terms &&
