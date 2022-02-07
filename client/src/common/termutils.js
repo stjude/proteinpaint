@@ -56,8 +56,9 @@ export function sample_match_termvaluesetting(row, filter) {
 
 			if (t.term.type == 'categorical') {
 				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
-				if (!t.valueset) t.valueset = new Set(t.values.map(i => i.key))
-				thistermmatch = t.valueset.has(samplevalue)
+				// t may be frozen, should not modify to attach valueset if missing
+				const valueset = t.valueset ? t.valueset : new Set(t.values.map(i => i.key))
+				thistermmatch = valueset.has(samplevalue)
 			} else if (t.term.type == 'integer' || t.term.type == 'float') {
 				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
 
