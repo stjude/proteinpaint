@@ -40,6 +40,15 @@ export function getHandler(self) {
 		async showEditMenu(div) {
 			await makeEditMenu(self, div)
 		}
+
+		/* postMain() may be added later
+		to respond to these changes and generate new cache file:
+		- genomic coord change by user interacting with genome browser
+		- info filter setting
+
+		the snplocus term has no need to respond to filter change
+		filter-dependent sample summary is carried out by vocab getCategories
+		*/
 	}
 }
 
@@ -60,7 +69,7 @@ async function makeEditMenu(self, div) {
 		.style('margin', '0px 15px 15px 15px')
 		.text('Submit')
 		.on('click', async () => {
-			const [chr, start, stop] = get_coordinput(searchgox)
+			const [chr, start, stop] = get_coordinput(searchbox)
 			event.target.disabled = true
 			event.target.innerHTML = 'Validating input...'
 			// parse input text
@@ -83,7 +92,6 @@ async function makeEditMenu(self, div) {
 			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
 
 			self.runCallback()
-			//self.updateUI()
 		})
 
 	div
