@@ -1,4 +1,4 @@
-import { dofetch3 } from '../client'
+import { dofetch3 } from '../common/dofetch'
 import { getBarchartData, getCategoryData } from '../plots/barchart.data'
 import { nonDictionaryTermTypes } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
@@ -6,7 +6,7 @@ import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
 import initBinConfig from '../../shared/termdb.initbinconfig'
 
-const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst'])
+const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst', 'snplocus'])
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
@@ -399,7 +399,7 @@ class TermdbVocab {
 		// optionally, caller can supply parameter "term1_q=stringifiedJSON" in lst[]
 		// as this function does not deal with q by default
 
-		if (term.type == 'snplst') {
+		if (term.type == 'snplst' || term.type == 'snplocus') {
 			const args = [
 				'validateSnps=1',
 				'sumSamples=1',

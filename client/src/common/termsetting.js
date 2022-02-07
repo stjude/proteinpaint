@@ -9,7 +9,7 @@ getPillNameDefault()
 fillTermWrapper()
 */
 
-export const nonDictionaryTermTypes = new Set(['snplst', 'prs'])
+export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus'])
 
 class TermSetting {
 	constructor(opts) {

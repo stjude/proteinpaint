@@ -47,20 +47,13 @@ export function getHandler(self) {
 
 		async showEditMenu(div) {
 			makeEditMenu(self, div)
-		},
-
-		async postMain() {
-			// rerun server-side validation to generate new cache id, and recount samples to account for filter/subcohort change
-			if (self.term && self.term.snps) {
-				await validateInput(self)
-			}
 		}
 	}
 }
 
 function makeEditMenu(self, div) {
 	// the ui will create following controls, to be accessed upon clicking Submit button
-	let snplst_table, textarea, select_alleleType, select_geneticModel, select_missingGenotype, tmp_snps
+	let snplst_table, textarea, tmp_snps
 
 	// table has two rows
 	const table = div.append('table').style('margin', '15px')
@@ -106,65 +99,7 @@ function makeEditMenu(self, div) {
 	// right column
 	const tdright = tr.append('td').style('vertical-align', 'top')
 
-	// select - allele type
-	tdright
-		.append('div')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
-		.text('ALLELE TYPE')
-	select_alleleType = tdright.append('select')
-	select_alleleType.append('option').text('Major (d) vs minor (D) from data')
-	select_alleleType.append('option').text('Reference (r) vs alternative (A)')
-	select_alleleType.on('change', updateOptionText)
-	// select - genetic model
-	tdright
-		.append('div')
-		.style('margin-top', '10px')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
-		.text('GENETIC MODEL')
-	select_geneticModel = tdright.append('select')
-	select_geneticModel.append('option') // additive
-	select_geneticModel.append('option') // dominant
-	select_geneticModel.append('option') // recessive
-	select_geneticModel.append('option') // by genotype
-	// select - missing gt
-	tdright
-		.append('div')
-		.style('margin-top', '10px')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
-		.text('MISSING GENOTYPE')
-	select_missingGenotype = tdright.append('select')
-	select_missingGenotype.append('option').property('selected', self.missingGenotype == 'homo')
-	select_missingGenotype
-		.append('option')
-		.text('Impute numerically as average value')
-		.property('selected', self.missingGenotype == 'average')
-	select_missingGenotype
-		.append('option')
-		.text('Drop sample')
-		.property('selected', self.missingGenotype == 'average')
-
-	if (self.term) {
-		// .term and .q is available on the instance; populate UI with values
-		select_alleleType.property('selectedIndex', self.q.alleleType)
-		select_geneticModel.property('selectedIndex', self.q.geneticModel)
-		select_missingGenotype.property('selectedIndex', self.q.missingGenotype)
-	}
-
-	updateOptionText()
-	function updateOptionText() {
-		// when allele type <select> is changed, update text of some other options
-		const is0 = select_alleleType.property('selectedIndex') == 0 // 0 is the choice of major/minor
-		const o = select_geneticModel.node().options
-		o[0].innerHTML = 'Additive: ' + (is0 ? 'DD=2, Dd=1, dd=0' : 'AA=2, Ar=1, rr=0')
-		o[1].innerHTML = 'Dominant: ' + (is0 ? 'DD=1, Dd=1, dd=0' : 'AA=1, Ar=1, rr=0')
-		o[2].innerHTML = 'Recessive: ' + (is0 ? 'DD=1, Dd=0, dd=0' : 'AA=1, Ar=0, rr=0')
-		o[3].innerHTML = 'By genotype: ' + (is0 ? 'DD and Dd compared to dd' : 'AA and Ar compared to rr')
-		select_missingGenotype.node().options[0].innerHTML =
-			'Impute as homozygous ' + (is0 ? 'major' : 'reference') + ' allele'
-	}
+	const [select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(tdright, self)
 
 	// submit button
 	const submit_btn = div
@@ -477,7 +412,13 @@ function validateQ(self, data) {
 }
 
 export async function fillTW(tw, vocabApi) {
-	if (!tw.q) tw.q = {}
+	try {
+		validateQ(null, tw)
+	} catch (e) {
+		throw 'snplst validateQ(): ' + e
+	}
+	if (!Array.isArray(tw.term.snps)) throw 'tw.term.snps[] is not an array'
+	if (tw.term.snps.length == 0) throw 'tw.term.snps[] array is 0 length'
 	if (!tw.term.name) tw.term.name = getTermName(tw.term.snps)
 	if (tw.id == undefined || tw.id == '') {
 		// tw is missing id
@@ -501,4 +442,63 @@ export async function fillTW(tw, vocabApi) {
 
 function makeId() {
 	return 'snplst' + Math.random()
+}
+
+export function makeSnpSelect(div, self) {
+	// select - allele type
+	div
+		.append('div')
+		.style('opacity', 0.4)
+		.style('font-size', '.7em')
+		.text('ALLELE TYPE')
+	const select_alleleType = div.append('select')
+	select_alleleType.append('option').text('Major (d) vs minor (D) from data')
+	select_alleleType.append('option').text('Reference (r) vs alternative (A)')
+	select_alleleType.on('change', updateOptionText)
+
+	// select - genetic model
+	div
+		.append('div')
+		.style('margin-top', '10px')
+		.style('opacity', 0.4)
+		.style('font-size', '.7em')
+		.text('GENETIC MODEL')
+	const select_geneticModel = div.append('select')
+	select_geneticModel.append('option') // additive
+	select_geneticModel.append('option') // dominant
+	select_geneticModel.append('option') // recessive
+	select_geneticModel.append('option') // by genotype
+
+	// select - missing gt
+	div
+		.append('div')
+		.style('margin-top', '10px')
+		.style('opacity', 0.4)
+		.style('font-size', '.7em')
+		.text('MISSING GENOTYPE')
+	const select_missingGenotype = div.append('select')
+	select_missingGenotype.append('option')
+	select_missingGenotype.append('option').text('Impute numerically as average value')
+	select_missingGenotype.append('option').text('Drop sample')
+
+	if (self.term) {
+		// .term and .q is available on the instance; populate UI with values
+		select_alleleType.property('selectedIndex', self.q.alleleType)
+		select_geneticModel.property('selectedIndex', self.q.geneticModel)
+		select_missingGenotype.property('selectedIndex', self.q.missingGenotype)
+	}
+
+	updateOptionText()
+	function updateOptionText() {
+		// when allele type <select> is changed, update text of some other options
+		const is0 = select_alleleType.property('selectedIndex') == 0 // 0 is the choice of major/minor
+		const o = select_geneticModel.node().options
+		o[0].innerHTML = 'Additive: ' + (is0 ? 'DD=2, Dd=1, dd=0' : 'AA=2, Ar=1, rr=0')
+		o[1].innerHTML = 'Dominant: ' + (is0 ? 'DD=1, Dd=1, dd=0' : 'AA=1, Ar=1, rr=0')
+		o[2].innerHTML = 'Recessive: ' + (is0 ? 'DD=1, Dd=0, dd=0' : 'AA=1, Ar=0, rr=0')
+		o[3].innerHTML = 'By genotype: ' + (is0 ? 'DD and Dd compared to dd' : 'AA and Ar compared to rr')
+		select_missingGenotype.node().options[0].innerHTML =
+			'Impute as homozygous ' + (is0 ? 'major' : 'reference') + ' allele'
+	}
+	return [select_alleleType, select_geneticModel, select_missingGenotype]
 }

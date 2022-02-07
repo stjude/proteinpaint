@@ -1,23 +1,12 @@
 import { event } from 'd3-selection'
+import { makeSnpSelect } from './termsetting.snplst'
 
 /* 
-storing snps on self.term but not self so it can be written to state,
-allow snps to be supplied from self.main(),
-and prevent snps from being included in regression request string
-
 instance attributes
 
 self.term{}
 	.id: str, not really used
-	.type: "snplst"
-	.snps[ {} ]
-		.rsid: str
-		.effectAllele: str
-		// following attributes are computed by validation
-		.snpid
-		.invalid
-		.alleles[ {allele, count, isRef} ]
-		.gt2count
+	.type: "snplocus"
 self.q{}
 	.alleleType: int
 	.geneticModel: int
@@ -40,10 +29,8 @@ export function getHandler(self) {
 		},
 
 		getPillStatus() {
-			if (!self.term || !self.term.snps) return
-			// return number of invalid entries
-			const invalid = self.term.snps.reduce((i, j) => i + (j.invalid || !j.alleles ? 1 : 0), 0)
-			if (invalid) return { text: invalid + ' invalid' }
+			if (!self.term) return
+			return { text: self.term.snps.length + ' SNP' + (self.term.snps.length > 1 ? 's' : '') }
 		},
 
 		validateQ(data) {
@@ -52,95 +39,37 @@ export function getHandler(self) {
 
 		async showEditMenu(div) {
 			await makeEditMenu(self, div)
-		},
-
-		async postMain() {
-			// rerun server-side validation to generate new cache id, and recount samples to account for filter/subcohort change
-			if (self.term && self.term.snps) {
-				await validateInput(self)
-			}
 		}
+
+		/* postMain() may be added later
+		to respond to these changes and generate new cache file:
+		- genomic coord change by user interacting with genome browser
+		- info filter setting
+
+		the snplocus term has no need to respond to filter change
+		filter-dependent sample summary is carried out by vocab getCategories
+		*/
 	}
 }
 
 async function makeEditMenu(self, div) {
-	// the ui will create following controls, to be accessed upon clicking Submit button
-	let searchbox, select_alleleType, select_geneticModel, select_missingGenotype
-
-	add_genesearchbox(self, div)
+	const searchbox = add_genesearchbox(self, div)
 
 	const tmpinfoarg = await mayDisplayInfoFields(self, div)
 	// TODO tmpinfoarg to be replaced with filter api
 
-	const ctrldiv = div.append('div').style('margin', '10px')
-
-	// select - allele type
-	ctrldiv
-		.append('div')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
-		.text('ALLELE TYPE')
-	select_alleleType = ctrldiv.append('select')
-	select_alleleType.append('option').text('Major (d) vs minor (D) from data')
-	select_alleleType.append('option').text('Reference (r) vs alternative (A)')
-	select_alleleType.on('change', updateOptionText)
-	// select - genetic model
-	ctrldiv
-		.append('div')
-		.style('margin-top', '10px')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
-		.text('GENETIC MODEL')
-	select_geneticModel = ctrldiv.append('select')
-	select_geneticModel.append('option') // additive
-	select_geneticModel.append('option') // dominant
-	select_geneticModel.append('option') // recessive
-	select_geneticModel.append('option') // by genotype
-	// select - missing gt
-	ctrldiv
-		.append('div')
-		.style('margin-top', '10px')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
-		.text('MISSING GENOTYPE')
-	select_missingGenotype = ctrldiv.append('select')
-	select_missingGenotype.append('option').property('selected', self.missingGenotype == 'homo')
-	select_missingGenotype
-		.append('option')
-		.text('Impute numerically as average value')
-		.property('selected', self.missingGenotype == 'average')
-	select_missingGenotype
-		.append('option')
-		.text('Drop sample')
-		.property('selected', self.missingGenotype == 'average')
-
-	if (self.term) {
-		// .term and .q is available on the instance; populate UI with values
-		select_alleleType.property('selectedIndex', self.q.alleleType)
-		select_geneticModel.property('selectedIndex', self.q.geneticModel)
-		select_missingGenotype.property('selectedIndex', self.q.missingGenotype)
-	}
-
-	updateOptionText()
-	function updateOptionText() {
-		// when allele type <select> is changed, update text of some other options
-		const is0 = select_alleleType.property('selectedIndex') == 0 // 0 is the choice of major/minor
-		const o = select_geneticModel.node().options
-		o[0].innerHTML = 'Additive: ' + (is0 ? 'DD=2, Dd=1, dd=0' : 'AA=2, Ar=1, rr=0')
-		o[1].innerHTML = 'Dominant: ' + (is0 ? 'DD=1, Dd=1, dd=0' : 'AA=1, Ar=1, rr=0')
-		o[2].innerHTML = 'Recessive: ' + (is0 ? 'DD=1, Dd=0, dd=0' : 'AA=1, Ar=0, rr=0')
-		o[3].innerHTML = 'By genotype: ' + (is0 ? 'DD and Dd compared to dd' : 'AA and Ar compared to rr')
-		select_missingGenotype.node().options[0].innerHTML =
-			'Impute as homozygous ' + (is0 ? 'major' : 'reference') + ' allele'
-	}
+	const [select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
+		div.append('div').style('margin', '10px'),
+		self
+	)
 
 	// submit button
 	div
 		.append('button')
 		.style('margin', '0px 15px 15px 15px')
-		.text(self.term && self.term.snps && self.term.snps.length ? 'Submit' : 'Validate')
+		.text('Submit')
 		.on('click', async () => {
-			const [chr, start, stop] = get_coordinput()
+			const [chr, start, stop] = get_coordinput(searchbox)
 			event.target.disabled = true
 			event.target.innerHTML = 'Validating input...'
 			// parse input text
@@ -149,9 +78,11 @@ async function makeEditMenu(self, div) {
 				self.term = { id: makeId() }
 				self.q = {}
 			}
+			self.term.type = 'snplocus' // in case self.term was something else..
 			self.q.chr = chr
 			self.q.start = start
 			self.q.stop = stop
+			self.term.name = getTermName(self.q)
 			self.q.info_fields = tmpinfoarg
 			await validateInput(self)
 			// q.cacheid is set
@@ -161,7 +92,6 @@ async function makeEditMenu(self, div) {
 			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
 
 			self.runCallback()
-			//self.updateUI()
 		})
 
 	div
@@ -185,22 +115,59 @@ do not apply sample filtering
 async function validateInput(self) {
 	const data = await self.vocabApi.validateSnps(self.q)
 	if (data.error) throw data.error
-	// copy result to instance
 	self.q.cacheid = data.cacheid
+	self.term.snps = data.snps
 }
 
 function validateQ(self, data) {
-	if (![0, 1].includes(data.q.alleleType)) throw 'alleleType value is not one of 0/1'
-	if (![0, 1, 2, 3].includes(data.q.geneticModel)) throw 'geneticModel value is not one of 0/1'
-	if (![0, 1, 2].includes(data.q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
+	const q = data.q
+	if (![0, 1].includes(q.alleleType)) throw 'alleleType value is not one of 0/1'
+	if (![0, 1, 2, 3].includes(q.geneticModel)) throw 'geneticModel value is not one of 0/1'
+	if (![0, 1, 2].includes(q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
+	if (!q.chr) throw 'chr missing'
+	if (!Number.isInteger(q.start)) throw 'start coordinate is not integer'
+	if (!Number.isInteger(q.stop)) throw 'stop coordinate is not integer'
+	if (q.start < 0) throw 'start < 0'
+	if (q.stop <= q.start) throw 'stop <= start'
+	if (q.info_fields) {
+		if (!Array.isArray(q.info_fields)) throw 'info_fields[] is not array'
+	}
+}
+
+function getTermName(q) {
+	return `SNPs from ${q.chr}:${q.start}-${q.stop}`
 }
 
 export async function fillTW(tw, vocabApi) {
-	// not done yet!
+	try {
+		// to catch any error in q{} before running validateInput()
+		validateQ(null, tw)
+	} catch (e) {
+		throw 'snplocus validateQ(): ' + e
+	}
+	if (!tw.term.name) tw.term.name = getTermName(tw.q)
+	if (tw.id == undefined || tw.id == '') {
+		// tw is missing id
+		if (tw.term.id == undefined || tw.term.id == '') {
+			// tw.term is also missing id
+			tw.term.id = makeId()
+		}
+		tw.id = tw.term.id
+	} else {
+		if (tw.term.id == undefined || tw.term.id == '') {
+			tw.term.id = tw.id
+		}
+	}
+
+	await validateInput({
+		term: tw.term,
+		q: tw.q,
+		vocabApi
+	})
 }
 
 function makeId() {
-	return 'snplst' + Math.random()
+	return 'snplocus' + Math.random()
 }
 
 function add_genesearchbox(self, div) {
@@ -219,10 +186,12 @@ function add_genesearchbox(self, div) {
 	if (self.q && self.q.chr) {
 		searchbox.property('value', self.q.chr + ':' + self.q.start + '-' + self.q.stop)
 	}
+	return searchbox
 }
 
-function get_coordinput() {
-	return ['chr17', 7675517, 7676372]
+function get_coordinput(searchbox) {
+	// TODO fix
+	return ['chr17', 7674304, 7676849]
 }
 
 async function mayDisplayInfoFields(self, holder) {
