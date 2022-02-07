@@ -503,7 +503,7 @@ class FrontendVocab {
 
 	main(vocab) {
 		if (vocab) Object.assign(this.vocab, vocab)
-		this.state = this.app.getState()
+		this.state = this.app ? this.app.getState() : {}
 	}
 
 	getTermdbConfig() {
