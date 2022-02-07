@@ -388,8 +388,7 @@ function setRenderers(self) {
 			menuOptions.splice(1, 0, {
 				action: 'replace',
 				html: ['', 'Replace', '&rsaquo;'],
-				handler: self.displayTreeMenu,
-				click_term2select_tvs: self.replaceTerm
+				handler: self.displayTreeMenu
 			})
 		}
 
@@ -983,9 +982,11 @@ function setInteractivity(self) {
 						: [],
 
 				click_term2select_tvs:
-					!filter.join ||
-					!filter.lst.length ||
-					(self.activeData.elem && self.activeData.elem.className.includes('join'))
+					d.action == 'replace'
+						? self.replaceTerm
+						: !filter.join ||
+						  !filter.lst.length ||
+						  (self.activeData.elem && self.activeData.elem.className.includes('join'))
 						? self.appendTerm
 						: self.subnestFilter
 			}
