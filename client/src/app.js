@@ -654,6 +654,15 @@ async function parseembedthenurl(arg, app) {
 		}
 	}
 
+	if (arg.mclassOverride) {
+		for (const k in arg.mclassOverride.classes) {
+			const c = common.mclass[k]
+			if (c) {
+				Object.assign(c, arg.mclassOverride.classes[k])
+			}
+		}
+	}
+
 	if (arg.singlecell) {
 		launch_singlecell(arg.singlecell, app)
 		return app
@@ -1029,7 +1038,8 @@ async function launchgeneview(arg, app) {
 		datasetqueries: arg.datasetqueries,
 		mset: arg.mset,
 		tklst: arg.tracks,
-		gmmode: arg.gmmode
+		gmmode: arg.gmmode,
+		mclassOverride: arg.mclassOverride
 	}
 	let ds = null
 	if (arg.dataset) {
