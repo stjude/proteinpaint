@@ -326,8 +326,10 @@ export class Block {
 				.style('border-spacing', '15px')
 				.style('border-collapse', 'separate')
 
-			const [tr1, td1] = Legend.legend_newrow(this, (arg.mclassOverride 
-				? (arg.mclassOverride.className ? arg.mclassOverride.className : 'CLASS') : 'CLASS')
+			const [tr1, td1] = Legend.legend_newrow(
+				this,
+				arg.mclassOverride ? (arg.mclassOverride.className ? arg.mclassOverride.className : 'CLASS') : 'CLASS'
+			)
 			this.legend.tr_mclass = tr1.style('display', 'none')
 			this.legend.td_mclass = td1
 			const [tr2, td2] = Legend.legend_newrow(this, 'ORIGIN')
