@@ -7,7 +7,6 @@ const serverconfig = require('./serverconfig')
 
 module.exports = genomes => {
 	return async (req, res) => {
-		app.log(req)
 		try {
 			res.send(await do_query(req))
 		} catch (e) {

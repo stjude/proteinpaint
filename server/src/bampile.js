@@ -4,7 +4,6 @@ const createCanvas = require('canvas').createCanvas
 const basecolor = require('../shared/common').basecolor
 
 module.exports = async (req, res) => {
-	app.log(req)
 	try {
 		const [e, tkfile, isurl] = app.fileurl(req)
 		if (e) throw e

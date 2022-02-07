@@ -240,7 +240,6 @@ const bases = new Set(['A', 'T', 'C', 'G'])
 
 module.exports = genomes => {
 	return async (req, res) => {
-		app.log(req)
 		try {
 			if (req.query.downloadgdc) {
 				const gdc_bam_filenames = await download_gdc_bam(req)

@@ -30,7 +30,6 @@ method good for somatic variants, in skewer and gp queries:
 
 module.exports = genomes => {
 	return async (req, res) => {
-		app.log(req)
 		try {
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]

@@ -23,8 +23,6 @@ export function handle_request_closure(genomes) {
 	 */
 
 	return async (req, res) => {
-		app.log(req)
-
 		const q = req.query
 
 		try {
