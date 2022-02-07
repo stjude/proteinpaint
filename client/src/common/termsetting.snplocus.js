@@ -39,16 +39,13 @@ export function getHandler(self) {
 
 		async showEditMenu(div) {
 			await makeEditMenu(self, div)
+		},
+
+		async postMain() {
+			if (self.q && self.q.chr) {
+				await validateInput(self)
+			}
 		}
-
-		/* postMain() may be added later
-		to respond to these changes and generate new cache file:
-		- genomic coord change by user interacting with genome browser
-		- info filter setting
-
-		the snplocus term has no need to respond to filter change
-		filter-dependent sample summary is carried out by vocab getCategories
-		*/
 	}
 }
 

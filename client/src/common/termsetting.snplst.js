@@ -47,6 +47,11 @@ export function getHandler(self) {
 
 		async showEditMenu(div) {
 			makeEditMenu(self, div)
+		},
+		async postMain() {
+			if (self.term && self.term.snps) {
+				await validateInput(self)
+			}
 		}
 	}
 }

@@ -55,6 +55,7 @@ export async function validate(q, tdb, ds, genome) {
 			.snps[]
 				.snpid
 				.info{ k: v }
+				.pos
 			*/
 			return await validateInputCreateCache_by_coord(q, ds, genome)
 		}
@@ -375,17 +376,19 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 		dir: tk.dir,
 		callback: line => {
 			const l = line.split('\t')
+			const pos = Number(l[0])
 			const alleles = [l[1], ...l[2].split(',')]
-			const snpid = l[0] + '.' + l[1] + '.' + l[2] // pos.ref.alt as snpid
+			const snpid = pos + '.' + l[1] + '.' + l[2] // pos.ref.alt as snpid
 			snps.push({
 				snpid,
-				info: vcf.dissect_INFO(l[3])
+				info: vcf.dissect_INFO(l[3]),
+				pos
 			})
 
 			const lst = [
 				snpid,
 				q.chr,
-				l[0], // pos
+				pos,
 				l[1], // ref
 				l[2], // alt
 				'' // snplocus file does not have eff ale
