@@ -90,7 +90,7 @@
         },
         {
             "label": "Custom Mutation Classes",
-            "message": "To customize classes, use class codes <a href='https://docs.google.com/document/d/1_eUrRsR9D-6AD5buNe30tmGICU-B3w67nz-XjpjnDyI/edit#heading=h.rwqbn0r1ei9t' target='_blank'>defined here</a> and the <span style='font-family:monospace; font-size:1.25em; opacity: 0.6;'> mclassOverride</span> method.",
+            "message": "To customize classes, use class codes <a href='https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit#heading=h.gj4rj4njhaz8' target='_blank'>defined here</a> and the <span style='font-family:monospace; font-size:1.25em; opacity: 0.6;'> mclassOverride</span> method.",
             "runargs": { 
                 "parseurl":true,
                 "noheader": true,
@@ -115,6 +115,12 @@
                     }
                 }
             },
+            "buttons":[
+                {
+                    "name": "Documentation",
+                    "link": "https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit#heading=h.q16z7ovymukw"
+                }
+            ],
             "testSpec": {
                 "expected": { "circle": 1 }
             }
