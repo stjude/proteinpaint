@@ -3,6 +3,7 @@ import { sayerror } from '../dom/error'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { axisstyle } from '../dom/axisstyle'
+import { get_one_genome, first_genetrack_tolist } from '../client'
 
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
 const forestcolor = '#126e08'
@@ -14,19 +15,22 @@ export class RegressionResults {
 		// reference to the parent component's mutable instance (not its API)
 		this.parent = opts.parent
 		this.type = 'regression'
+		this.snplocus = {} // {block,tk}
 		setInteractivity(this)
 		setRenderers(this)
+
 		const holder = this.opts.holder
+		holder
+			.append('div')
+			.style('margin-top', '30px')
+			.style('font-size', '1.2em')
+			.style('opacity', 0.3)
+			.html('Results')
+
 		this.dom = {
 			holder,
-			header: holder
-				.append('div')
-				.style('margin', '30px 0 10px 0px')
-				.style('font-size', '17px')
-				.style('padding', '3px 5px')
-				.style('color', '#bbb')
-				.html('Results'),
 			err_div: holder.append('div'),
+			genomebrowserdiv: holder.append('div'),
 			content: holder.append('div').style('margin', '10px')
 		}
 	}
@@ -38,16 +42,18 @@ export class RegressionResults {
 			this.config = this.parent.config
 			this.state = this.parent.state
 			if (!this.state.formIsComplete || this.parent.inputs.hasError || this.config.hasUnsubmittedEdits) {
+				// no result to show
 				this.dom.holder.style('display', 'none')
 				return
 			}
+			// submit server request to run analysis
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getRegressionData(reqOpts)
 			if (data.error) throw data.error
 			this.dom.err_div.style('display', 'none')
 			this.dom.content.selectAll('*').remove()
 			this.dom.holder.style('display', 'block')
-			this.displayResult(data)
+			await this.displayResult(data)
 		} catch (e) {
 			this.hasError = true
 			this.dom.holder.style('display', 'block')
@@ -139,12 +145,13 @@ export class RegressionResults {
 function setInteractivity(self) {}
 
 function setRenderers(self) {
-	self.displayResult = function(result) {
+	self.displayResult = async result => {
 		// this is work-in-progress and will be redeveloped later
 		// hardcoded logic and data structure
 		// benefit is that specific logic can be applied to rendering each different table
 		// no need for one reusable renderer to support different table types
 
+		await self.mayshow_genomebrowser_snplocus(result)
 		self.mayshow_err(result)
 		self.newDiv('Sample size: ' + result.sampleSize)
 		self.mayshow_splinePlots(result)
@@ -650,6 +657,32 @@ function setRenderers(self) {
 					.range([0, width])
 			}
 			throw 'unknown type'
+		}
+	}
+
+	self.mayshow_genomebrowser_snplocus = async result => {
+		// find if has a snplocus term
+		const input = self.config.independent.find(i => i.term.type == 'snplocus')
+		if (!input) {
+			self.dom.genomebrowserdiv.selectAll('*').remove()
+			return
+		}
+		// has snplocus term; create a block instance if it's not there yet
+		if (!self.snplocus.block) {
+			const arg = {
+				holder: self.dom.genomebrowserdiv,
+				genome: await get_one_genome(self.state.vocab.genome),
+				chr: input.q.chr,
+				start: input.q.start,
+				stop: input.q.stop,
+				nobox: true,
+				tklst: []
+			}
+			first_genetrack_tolist(arg.genome, arg.tklst)
+			const _ = await import('../block')
+			self.snplocus.block = new _.Block(arg)
+		}
+		if (!self.snplocus.tk) {
 		}
 	}
 }
