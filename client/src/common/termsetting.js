@@ -110,9 +110,9 @@ class TermSetting {
 			if ('activeCohort' in data) this.activeCohort = data.activeCohort
 			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
 			await this.setHandler(this.term ? this.term.type : null)
-			this.updateUI()
 			if (data.term && this.handler && this.handler.validateQ) this.handler.validateQ(data)
 			if (this.handler.postMain) await this.handler.postMain()
+			this.updateUI()
 		} catch (e) {
 			this.hasError = true
 			throw e
@@ -356,11 +356,10 @@ function setInteractivity(self) {
 		}
 		// create small menu, one option for each ele in noTermPromptOptions[]
 		for (const option of self.opts.noTermPromptOptions) {
-			// {isDictionary, termtype, text}
-			self.dom.tip.d
+			// {isDictionary, termtype, text, html}
+			const item = self.dom.tip.d
 				.append('div')
 				.attr('class', 'sja_menuoption')
-				.text(option.text)
 				.on('click', async () => {
 					self.dom.tip.clear()
 					if (option.isDictionary) {
@@ -372,6 +371,8 @@ function setInteractivity(self) {
 						throw 'termtype missing'
 					}
 				})
+			if (option.text) item.text(option.text)
+			else if (option.html) item.html(option.html)
 		}
 		// load the input ui for this term type
 	}

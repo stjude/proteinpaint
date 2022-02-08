@@ -21,6 +21,8 @@ self.q{}
 		!!NOTE!! id changes for every validation, e.g. for snp/cohort/filter update
 */
 
+const term_name = 'Variants in a locus'
+
 // self is the termsetting instance
 export function getHandler(self) {
 	return {
@@ -29,8 +31,8 @@ export function getHandler(self) {
 		},
 
 		getPillStatus() {
-			if (!self.term) return
-			return { text: self.term.snps.length + ' SNP' + (self.term.snps.length > 1 ? 's' : '') }
+			if (!self.term || !self.q) return
+			return { text: `${self.q.chr}:${self.q.start}-${self.q.stop} (n=${self.term.snps.length})` }
 		},
 
 		validateQ(data) {
@@ -79,7 +81,7 @@ async function makeEditMenu(self, div) {
 			self.q.chr = chr
 			self.q.start = start
 			self.q.stop = stop
-			self.term.name = getTermName(self.q)
+			self.term.name = term_name
 			self.q.info_fields = tmpinfoarg
 			await validateInput(self)
 			// q.cacheid is set
@@ -131,10 +133,6 @@ function validateQ(self, data) {
 	}
 }
 
-function getTermName(q) {
-	return `SNPs from ${q.chr}:${q.start}-${q.stop}`
-}
-
 export async function fillTW(tw, vocabApi) {
 	try {
 		// to catch any error in q{} before running validateInput()
@@ -142,7 +140,7 @@ export async function fillTW(tw, vocabApi) {
 	} catch (e) {
 		throw 'snplocus validateQ(): ' + e
 	}
-	if (!tw.term.name) tw.term.name = getTermName(tw.q)
+	if (!tw.term.name) tw.term.name = term_name
 	if (tw.id == undefined || tw.id == '') {
 		// tw is missing id
 		if (tw.term.id == undefined || tw.term.id == '') {

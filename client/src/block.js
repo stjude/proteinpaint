@@ -128,11 +128,13 @@ export class Block {
 		this.rotated = arg.rotated
 		this.showreverse = arg.showreverse // effect on pan
 
+		////////////////////////////////
 		// callbacks
 		this.onloadalltk = []
 		this.onloadalltk_always = arg.onloadalltk_always
 		this.onpanning = arg.onpanning
 		this.onsetheight = arg.onsetheight
+		this.onCoordinateChange = arg.onCoordinateChange // argument is the rglst[]
 
 		this.exonsf = 1 // # pixel per basepair
 
@@ -1630,6 +1632,9 @@ reverseorient() {
 				.attr('x', Math.max(0, startx))
 				.attr('width', Math.max(2, Math.min(this.width, stopx) - Math.max(0, startx)))
 				.attr('height', blockh)
+		}
+		if (this.onCoordinateChange) {
+			this.onCoordinateChange(this.rglst)
 		}
 	}
 

@@ -30,7 +30,7 @@ export class RegressionResults {
 		this.dom = {
 			holder,
 			err_div: holder.append('div'),
-			genomebrowserdiv: holder.append('div'),
+			genomebrowserdiv: holder.append('div').style('margin-left', '20px'),
 			content: holder.append('div').style('margin', '10px')
 		}
 	}
@@ -662,7 +662,7 @@ function setRenderers(self) {
 
 	self.mayshow_genomebrowser_snplocus = async result => {
 		// find if has a snplocus term
-		const input = self.config.independent.find(i => i.term.type == 'snplocus')
+		const input = self.parent.inputs.independent.inputs.find(i => i.term && i.term.term.type == 'snplocus')
 		if (!input) {
 			self.dom.genomebrowserdiv.selectAll('*').remove()
 			return
@@ -672,17 +672,43 @@ function setRenderers(self) {
 			const arg = {
 				holder: self.dom.genomebrowserdiv,
 				genome: await get_one_genome(self.state.vocab.genome),
-				chr: input.q.chr,
-				start: input.q.start,
-				stop: input.q.stop,
+				chr: input.term.q.chr,
+				start: input.term.q.start,
+				stop: input.term.q.stop,
 				nobox: true,
-				tklst: []
+				tklst: [],
+				onCoordinateChange: async rglst => {
+					const { chr, start, stop } = rglst[0]
+					const tw = {
+						term: {
+							id: input.term.term.id,
+							name: 'Variants in a locus',
+							type: 'snplocus'
+						},
+						q: JSON.parse(JSON.stringify(input.term.q))
+					}
+					tw.q.chr = chr
+					tw.q.start = start
+					tw.q.stop = stop
+					await input.pill.main(tw)
+
+					/*
+					const config = {independent: self.config.independent.map(i=>i.id==input.term.term.id ? tw : i)}
+					self.parent.app.dispatch({
+						type:'plot_edit',
+						id: self.parent.id,
+						chartType:'regression',
+						config
+					})
+					*/
+				}
 			}
 			first_genetrack_tolist(arg.genome, arg.tklst)
 			const _ = await import('../block')
 			self.snplocus.block = new _.Block(arg)
 		}
 		if (!self.snplocus.tk) {
+			// create mds3
 		}
 	}
 }
