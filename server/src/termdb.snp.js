@@ -382,6 +382,7 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 			snps.push({
 				snpid,
 				info: vcf.dissect_INFO(l[3]),
+				chr: q.chr,
 				pos
 			})
 

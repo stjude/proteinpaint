@@ -41,11 +41,16 @@ export class RegressionResults {
 			// share the writable config copy
 			this.config = this.parent.config
 			this.state = this.parent.state
-			if (!this.state.formIsComplete || this.parent.inputs.hasError || this.config.hasUnsubmittedEdits) {
+			if (
+				!this.state.formIsComplete ||
+				this.parent.inputs.hasError ||
+				(this.config.hasUnsubmittedEdits && !this.hasUnsubmittedEdits_continueRunAnalysis_singleuse)
+			) {
 				// no result to show
 				this.dom.holder.style('display', 'none')
 				return
 			}
+			delete this.hasUnsubmittedEdits_continueRunAnalysis_singleuse
 			// submit server request to run analysis
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getRegressionData(reqOpts)
@@ -146,12 +151,23 @@ function setInteractivity(self) {}
 
 function setRenderers(self) {
 	self.displayResult = async result => {
+		// find if snplocus is present
+		if (self.config.independent.find(i => i.term.type == 'snplocus')) {
+			// create genome browser to display snps
+			// clicking on a snp will call displayResult_oneset() to display its set of results
+			await self.show_genomebrowser_snplocus(result)
+		} else {
+			// no snplocus term;
+			// there is a single set of results from analyzing one model
+			self.displayResult_oneset(result)
+		}
+	}
+
+	self.displayResult_oneset = result => {
 		// this is work-in-progress and will be redeveloped later
 		// hardcoded logic and data structure
 		// benefit is that specific logic can be applied to rendering each different table
 		// no need for one reusable renderer to support different table types
-
-		await self.mayshow_genomebrowser_snplocus(result)
 		self.mayshow_err(result)
 		self.newDiv('Sample size: ' + result.sampleSize)
 		self.mayshow_splinePlots(result)
@@ -660,7 +676,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_genomebrowser_snplocus = async result => {
+	self.show_genomebrowser_snplocus = async result => {
 		// find if has a snplocus term
 		const input = self.parent.inputs.independent.inputs.find(i => i.term && i.term.term.type == 'snplocus')
 		if (!input) {
@@ -691,24 +707,31 @@ function setRenderers(self) {
 					tw.q.start = start
 					tw.q.stop = stop
 					await input.pill.main(tw)
-
-					/*
-					const config = {independent: self.config.independent.map(i=>i.id==input.term.term.id ? tw : i)}
-					self.parent.app.dispatch({
-						type:'plot_edit',
-						id: self.parent.id,
-						chartType:'regression',
-						config
-					})
-					*/
+					// runCallback will dispatch action with hasUnsubmittedEdits=true,
+					// but still want to continue to run
+					self.hasUnsubmittedEdits_continueRunAnalysis_singleuse = true
+					input.pill.runCallback()
 				}
 			}
+
+			// add mds3 tk
+			arg.tklst.push({
+				type: 'mds3', // tkt.mds3
+				name: 'Variants',
+				custom_variants: make_mds3_variants(input.term.term.snps)
+			})
+
 			first_genetrack_tolist(arg.genome, arg.tklst)
 			const _ = await import('../block')
 			self.snplocus.block = new _.Block(arg)
-		}
-		if (!self.snplocus.tk) {
-			// create mds3
+		} else {
+			// browser is already created, update variants
+			// TODO "result" is {"snp1":{result}, "snp2":{result}}
+			// assign result to each variant
+			const tk = self.snplocus.block.tklst.find(i => i.type == 'mds3')
+			tk.custom_variants = make_mds3_variants(input.term.term.snps)
+			// render
+			tk.load()
 		}
 	}
 }
@@ -719,4 +742,21 @@ function fillTdName(td, name) {
 	} else {
 		td.text(name.substring(0, 25) + ' ...').attr('title', name)
 	}
+}
+
+function make_mds3_variants(lst) {
+	const mlst = []
+	for (const a of lst) {
+		const b = {
+			dt: 1, // snvindel
+			snpid: a.snpid,
+			chr: a.chr,
+			pos: a.pos,
+			// must be supplied as when updating custom variants for existing mds3 tk
+			// it will not run makeTk() again
+			occurrence: 1
+		}
+		mlst.push(b)
+	}
+	return mlst
 }

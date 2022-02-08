@@ -55,6 +55,7 @@ class TermSetting {
 			// bind the 'this' context of api.main() to the Termsetting instance
 			// instead of to the this.api object
 			main: this.main.bind(this),
+			runCallback: this.runCallback.bind(this),
 			// do not change the this context of showTree, d3 sets it to the DOM element
 			showTree: this.showTree,
 			hasError: () => this.hasError,
