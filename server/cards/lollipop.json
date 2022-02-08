@@ -87,6 +87,37 @@
             "testSpec": {
                 "expected": { "circle": 1 }
             }
+        },
+        {
+            "label": "Custom Mutation Classes",
+            "message": "To customize classes, use class codes <a href='https://docs.google.com/document/d/1_eUrRsR9D-6AD5buNe30tmGICU-B3w67nz-XjpjnDyI/edit#heading=h.rwqbn0r1ei9t' target='_blank'>defined here</a> and the <span style='font-family:monospace; font-size:1.25em; opacity: 0.6;'> mclassOverride</span> method.",
+            "runargs": { 
+                "parseurl":true,
+                "noheader": true,
+                "nobox":1,
+                "genome": "hg19",
+                "gene": "MYC",
+                "mset":[{
+                    "name":"Custom Mutation Classes Plot Demo",
+                    "mlst":[
+                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750680,"mname":"T73I","class":"M","dt":1},
+                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750685,"mname":"A Custom Label","class":"I","dt":1},
+                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750911,"mname":"Custom Label & Class","class":"F","dt":1}
+                    ]
+                }],
+                "mclassOverride": {
+                    "className": "Custom Classes",
+                    "classes":{ 
+                        "F": {
+                            "label": "Custom Class Label",
+                            "color": "#00A86B"
+                        }
+                    }
+                }
+            },
+            "testSpec": {
+                "expected": { "circle": 1 }
+            }
         }
     ],
     "buttons": [

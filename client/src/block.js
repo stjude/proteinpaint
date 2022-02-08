@@ -328,7 +328,8 @@ export class Block {
 
 			const [tr1, td1] = Legend.legend_newrow(
 				this,
-				arg.mclassOverride ? (arg.mclassOverride.className ? arg.mclassOverride.className : 'CLASS') : 'CLASS'
+				//Allows user to set left-side group designation for classes
+				arg.mclassOverride && arg.mclassOverride.className ? arg.mclassOverride.className : 'CLASS'
 			)
 			this.legend.tr_mclass = tr1.style('display', 'none')
 			this.legend.td_mclass = td1
