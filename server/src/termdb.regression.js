@@ -57,15 +57,24 @@ export async function get_regression(q, ds) {
 	try {
 		parse_q(q, ds)
 
-		const startTime = +new Date()
 		const sampledata = await getSampleData(q, [q.outcome, ...q.independent])
 		/* each element is one sample with a key-val map for all its annotations:
 		{sample, id2value:Map( tid => {key,value}) }
 		*/
-		const queryTime = +new Date() - startTime
 
 		// build the input for R script
 		const Rinput = makeRinput(q, sampledata)
+		/* details described in server/utils/regression.R
+		Rinput {
+			type
+			outcome{}
+			independent[]
+			additionalIndependent[]
+			// new array stores variants from snplocus term, which are not in independent[]
+			// for each variant, join with independent[] to run one analysis
+		}
+		*/
+		console.log(Rinput.additionalIndependent)
 
 		const sampleSize = Rinput.outcome.values.length
 		validateRinput(q, Rinput, sampleSize)
@@ -80,9 +89,8 @@ export async function get_regression(q, ds) {
 		)
 
 		// parse the R output
-		const result = { queryTime, sampleSize }
+		const result = { sampleSize }
 		await parseRoutput(Rinput, Routput, id2originalId, result)
-		result.totalTime = +new Date() - startTime
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -147,12 +155,12 @@ function parse_q(q, ds) {
 
 function makeRinput(q, sampledata) {
 	// outcome term
-	// for linear regression, 'values' will be sample values
-	// for logisitc regression, 'values' will be 0/1 (0 = ref; 1 = non-ref)
-	// therefore, 'rtype' will always be 'numeric'
 	const outcome = {
 		id: q.outcome.id,
 		name: q.outcome.term.name,
+		// for linear regression, 'values' will be sample values
+		// for logisitc regression, 'values' will be 0/1 (0 = ref; 1 = non-ref)
+		// therefore, 'rtype' will always be 'numeric'
 		rtype: 'numeric',
 		values: []
 	}
@@ -273,6 +281,23 @@ function makeRinput(q, sampledata) {
 			t.values.push(t.rtype === 'numeric' ? v.value : v.key)
 		}
 	}
+
+	// create additionalIndependent if snplocus term is present
+	const tw = q.independent.find(i => i.type == 'snplocus')
+	if (tw) {
+		Rinput.additionalIndependent = []
+		let i = 0
+		while (i < Rinput.independent.length) {
+			const j = Rinput.independent[i]
+			if (tw.snpidlst.includes(j.id)) {
+				Rinput.independent.splice(i, 1)
+				Rinput.additionalIndependent.push(j)
+			} else {
+				i++
+			}
+		}
+	}
+
 	return Rinput
 }
 
@@ -302,6 +327,10 @@ function validateRinput(q, Rinput, sampleSize) {
 }
 
 async function parseRoutput(Rinput, Routput, id2originalId, result) {
+	// TODO the json object from R should become
+	// { "snp1": {"result obj for snp1"}, "snp2": {"snp2 result"}, ... }
+	// each sub-obj is equivalent to data on line 342
+
 	// handle errors/warnings from R
 	if (Routput.includes('R stderr:')) {
 		const erridx = Routput.findIndex(x => x == 'R stderr:')
