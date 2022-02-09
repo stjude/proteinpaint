@@ -14,7 +14,7 @@ init_dictionaryUI()
 ------ Internal ------ 
 TODO
 
-doms:{}
+d:{}
 
 
 Documentation: https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit
@@ -35,22 +35,22 @@ export function init_dictionaryUI(holder) {
 		.style('place-items', 'center left')
 		.style('overflow', 'hidden')
 
-	const doms = {}
+	const d = {}
 
 	//Data dictionary entry
 	uiutils.makePrompt(wrapper, 'Data Dictionary')
 	const tabs_div = wrapper.append('div')
-	makeDataEntryTabs(tabs_div, doms)
+	makeDataEntryTabs(tabs_div, d)
 
 	//Submit button and information section
-	submitButton(wrapper, doms, holder)
+	submitButton(wrapper, d, holder)
 	infoSection(wrapper)
 
 	//Remove after testing
-	window.doms = doms
+	window.doms = d
 }
 
-function makeDataEntryTabs(tabs_div, doms) {
+function makeDataEntryTabs(tabs_div, d) {
 	const tabs = [
 		{
 			label: 'File Path',
@@ -69,9 +69,9 @@ function makeDataEntryTabs(tabs_div, doms) {
 						.style('margin-left', '15px')
 					appear(div)
 					uiutils.makePrompt(files_div, 'Filepath')
-					makeTextEntryFilePathInput(files_div, doms)
+					makeTextEntryFilePathInput(files_div, d)
 					uiutils.makePrompt(files_div, 'Upload')
-					makeFileUpload(files_div, doms)
+					makeFileUpload(files_div, d)
 					tabs[0].rendered = true
 				}
 			}
@@ -85,7 +85,7 @@ function makeDataEntryTabs(tabs_div, doms) {
 						.append('div')
 						.html(`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary in a tab delimited format.</p>`)
 					appear(div)
-					makeCopyPasteInput(div, doms)
+					makeCopyPasteInput(div, d)
 					tabs[1].rendered = true
 				}
 			}
@@ -94,7 +94,7 @@ function makeDataEntryTabs(tabs_div, doms) {
 	init_tabs({ holder: tabs_div, tabs })
 }
 
-function makeTextEntryFilePathInput(div, doms) {
+function makeTextEntryFilePathInput(div, d) {
 	const filepath_div = div.append('div').style('display', 'inline-block')
 	const filepath = uiutils
 		.makeTextInput(filepath_div)
@@ -105,7 +105,7 @@ function makeTextEntryFilePathInput(div, doms) {
 				fetch(data)
 					.then(req => req.text())
 					.then(txt => {
-						doms.data = parseTabDelimitedData(txt)
+						d.data = parseTabDelimitedData(txt)
 					})
 			} else {
 				//TODO: implement serverside filepaths(?)
@@ -113,29 +113,33 @@ function makeTextEntryFilePathInput(div, doms) {
 		})
 }
 
-function makeFileUpload(div, doms) {
+function makeFileUpload(div, d) {
 	const upload_div = div.append('div').style('display', 'block')
 	const upload = uiutils.makeFileUpload(upload_div)
 	upload.on('change', () => {
 		const file = d3event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
-			doms.data = parseTabDelimitedData(event.target.result)
+			d.data = parseTabDelimitedData(event.target.result)
 		}
 		reader.readAsText(file, 'utf8')
 	})
 }
 
-function makeCopyPasteInput(div, doms) {
+function makeCopyPasteInput(div, d) {
 	const paste_div = div.append('div').style('display', 'block')
 	const paste = uiutils
 		.makeTextAreaInput(paste_div)
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.on('keyup', async () => {
-			doms.data = parseTabDelimitedData(paste.property('value').trim())
+			d.data = parseTabDelimitedData(paste.property('value').trim())
 		})
 }
+
+const name2id = new Map()
+const term2term = new Map()
+const allterms_byorder = new Set()
 
 //Parse tab delimited files only
 function parseTabDelimitedData(input) {
@@ -144,14 +148,16 @@ function parseTabDelimitedData(input) {
 	/* 
     Parses phenotree:
         - Parses tab delim data arranged in cols: levels(n), Key(i.e. Variable name), Configuration (i.e. Variable note).
+		- Only the key and configuration cols are required
         - Checks for identical keys.
 		- Assumptions:
-			1. Headers required. 'Variable name', 'Variable note' may appear anywhere. 'Level_XX' for hierarchy/level columns. 
+			1. Headers required. 'Variable name', 'Variable note' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
 			2. Levels are defined left to right and in order, no gaps.
-			3. No blanks or '-' between levels. No duplicate values for levels in the same line.
-			4. Uncomputable values are always: '-994', '-995', '-996', '-997', '-998', '-999'
+			3. No blanks or '-' between levels as well as no duplicate values in the same line.
+			4. Uncomputable values are always: '-994', '-995', '-996', '-997', '-998', '-999'. Change to argument?
     */
 	const terms = {
+		//Required root term for the eventual terms array
 		__root: {
 			id: 'root',
 			name: 'root',
@@ -159,26 +165,34 @@ function parseTabDelimitedData(input) {
 		}
 	}
 	const keys = [] //To check for duplicate values later
+
 	let keyIndex,
 		configIndex,
 		colsIndexes = []
+
 	for (const i in lines) {
 		let line = lines[i].split('\t')
 		if (i == 0) {
-			//TODO - Ask Xin if 'Variable name' and 'Variable note' are common/standard names in phenotree
+			//Find arrays for parsing logic from headers
 			keyIndex = line.findIndex(l => l.match('Variable Name'))
 			if (!keyIndex == -1) throw `Missing required 'Variable Name' column`
 			configIndex = line.findIndex(l => l.match('Variable Note'))
 			if (configIndex == -1) throw `Missing required 'Variable Note' column`
-			for (let idx in line) {
-				if (line[idx].match('Level_')) colsIndexes.push(idx)
+			//If no level col(s) provided, use key/Variable name col as single level. Will print id as name.
+			if (line.findIndex(l => l.match('Level_')) == -1) colsIndexes.push(keyIndex)
+			else {
+				//Push level index to array for parsing
+				for (let idx in line) {
+					if (line[idx].match('Level_')) colsIndexes.push(idx)
+				}
 			}
 		}
 		try {
 			if (i > 0) {
 				//Skip header
+				/******* Parse lines for term values *******/
 				if (!line[configIndex] || !line[configIndex].trim()) {
-					console.error('Missing configuration string, line: ' + i + ', term: ' + line[keyIndex])
+					console.error('Missing configuration string, line: ' + (Number(i) + 1) + ', term: ' + line[keyIndex])
 					continue
 				}
 				let colNames = [] //capture str value of all 'level' cols
@@ -186,9 +200,11 @@ function parseTabDelimitedData(input) {
 					const col = str2level(line[c])
 					colNames.push(col)
 				}
+				// console.log(colNames)
 
 				let configstr = line[configIndex].replace('"', '').trim()
-				const name = getName(colNames, i)
+				const lastNonNullIdx = check4MisplacedNulls(colNames, i)
+				const name = getName(colNames)
 
 				// if key missing, use name
 				let key = line[keyIndex] ? line[keyIndex].trim() : ''
@@ -200,10 +216,28 @@ function parseTabDelimitedData(input) {
 				//Parses col7 into term.type, term.values, and term.groupsetting
 				const term = parseConfig(configstr)
 
-				/*******Create hierarchy*******/
+				/******* Parse for hierarchy *******/
 				const filteredCols = filterCols(colNames)
-				let leaflevel = filteredCols.length
+				let leafIdx = lastNonNullIdx
+				for (const fc in filteredCols) {
+					let id
+					if (fc == leafIdx) {
+						id = key
+						name2id.set(filteredCols[fc], id)
+					} else {
+						id = filteredCols[fc]
+					}
+					const levelUpId = filteredCols[Number(fc) - 1]
+					if (fc != 0) term2term.get(levelUpId).add(id)
 
+					if (!term2term.has(id) && fc != leafIdx) {
+						term2term.set(id, new Set())
+					}
+
+					allterms_byorder.add(id)
+				}
+
+				/******* Create term *******/
 				terms[key] = {
 					id: key,
 					parent_id: null,
@@ -218,8 +252,9 @@ function parseTabDelimitedData(input) {
 			throw 'Line ' + (i + 1) + ' error: ' + e
 		}
 	}
-	check4DuplicateValues(keys)
-
+	check4DuplicateValues(keys) //Checks all duplicate term.ids/keys for duplicates
+	console.log(allterms_byorder)
+	// console.log(term2term)
 	return { terms: Object.values(terms) }
 }
 
@@ -228,12 +263,12 @@ function parseTabDelimitedData(input) {
  */
 function str2level(col) {
 	// parses columns and returns name
-	const tmp = col.trim()
+	const tmp = col.trim().replace(/"/g, '')
 	if (!tmp || tmp == '-') return null
 	return tmp
 }
 
-function getName(colArray, i) {
+function check4MisplacedNulls(colArray, i) {
 	// Check for blanks or '-' between levels
 	const nullIndex = colArray.indexOf(null) //find first index of null
 	function revArray(arr) {
@@ -242,14 +277,20 @@ function getName(colArray, i) {
 	}
 	//find last index of non-null level value
 	const lastLevelIndex = colArray.length - 1 - revArray(colArray).findIndex(e => e !== null)
-	if (lastLevelIndex > nullIndex && nullIndex >= 0) throw `Blank or '-' value detected between levels in line ` + i
+	//TODO: Print error to the screen
+	if (lastLevelIndex > nullIndex && nullIndex >= 0)
+		throw `Blank or '-' value detected between levels in line ` + (Number(i) + 1)
 
+	return lastLevelIndex //Use later for leaflevel
+}
+
+function getName(colArray) {
 	//finds last name in the array and returns as name
 	const ca = filterCols(colArray)
 
 	//checks for duplicates in the resulting array
 	check4DuplicateValues(ca)
-	if (ca.length > 0) return ca[ca.length - 1].replace(/"/g, '')
+	if (ca.length > 0) return ca[ca.length - 1]
 	throw 'name missing'
 }
 
@@ -328,7 +369,7 @@ function check4DuplicateValues(values) {
 	}
 	if (duplicates.size > 0) {
 		const dup = Array.from(duplicates)
-		alert(`Error: Nonunique values(s) found: ` + dup + `. Values must be unique.`) //TODO print to screen
+		throw `Error: Nonunique values(s) found: ` + dup + `. Values must be unique.` //TODO print to screen
 	}
 	return true
 }
@@ -337,29 +378,29 @@ function check4DuplicateValues(values) {
  **** Submission Functions ****
  */
 
-function submitButton(div, doms, holder) {
+function submitButton(div, d, holder) {
 	const submit = uiutils.makeBtn(div, 'Submit')
 	submit
 		.style('margin', '20px 20px 20px 130px')
 		.style('font-size', '16px')
 		.on('click', () => {
-			validateInput(doms)
+			validateInput(div, d)
 			// if (v == null) return //stop form from disappearing for now
 			div.remove()
 			appInit({
 				holder: holder,
 				state: {
 					vocab: {
-						terms: doms.data.terms
+						terms: d.data.terms
 					}
 				}
 			})
 		})
 }
 
-function validateInput(doms) {
+function validateInput(div, d) {
 	//May not be needed?
-	if (!doms.data) {
+	if (!d.data) {
 		// alert('Provide data')
 		return null
 	}
@@ -388,5 +429,3 @@ function makeErrorDiv(div) {
 		.style('grid-column', 'span 2')
 		.html(`<h3>Errors found</h3>`)
 }
-
-function showDataError(div, error) {}
