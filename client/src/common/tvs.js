@@ -13,19 +13,7 @@ class TVS {
 		this.categoryData = {}
 		this.handlerByType = {}
 		this.api = {
-			main: async (data = {}) => {
-				this.tvs = data.tvs
-				this.filter = data.filter
-				await this.setHandler()
-				this.updateUI()
-
-				// when there are filters to be removed, must account for the delayed
-				// removal after opacity transition, as btn count will decrease only
-				// after the transition and remove() is done
-				//
-				// !!! TODO: how to pass bus.emit('postRender') delay to rx.component.api.update()
-				// this.bus.emit('postRender', null, filters.exit().size() ? this.durations.exit + 100 : 0)
-			},
+			main: this.main.bind(this),
 			showMenu: this.showMenu
 		}
 	}
@@ -35,6 +23,20 @@ class TVS {
 		if (!o.vocabApi) throw '.vocabApi missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		return o
+	}
+
+	async main(data = {}) {
+		this.tvs = data.tvs
+		this.filter = data.filter
+		await this.setHandler()
+		this.updateUI()
+
+		// when there are filters to be removed, must account for the delayed
+		// removal after opacity transition, as btn count will decrease only
+		// after the transition and remove() is done
+		//
+		// !!! TODO: how to pass bus.emit('postRender') delay to rx.component.api.update()
+		// this.bus.emit('postRender', null, filters.exit().size() ? this.durations.exit + 100 : 0)
 	}
 
 	async setHandler() {
@@ -246,11 +248,12 @@ function setRenderers(self) {
 					}
 				})
 
+			const nlabel = d.samplecount ? ' (n=' + d.samplecount + ')' : ''
 			value_label
 				.append('span')
 				.style('padding', '2px 5px')
 				.style('font-size', '.8em')
-				.html(d.label + ' (n=' + d.samplecount + ')')
+				.html(d.label + nlabel)
 
 			const maxBarWidth = 100
 			const barWidth = maxBarWidth * d.bar_width_frac
