@@ -1,4 +1,14 @@
-import * as common from './common'
+import {
+	mclass,
+	vepinfo,
+	dtsnvindel,
+	mclassdeletion,
+	mclasssnv,
+	mclassmnv,
+	mclassinsertion,
+	mclassnonstandard
+} from './common'
+import { dissect_INFO } from './vcf.info'
 
 /*
 Only for parsing vcf files
@@ -11,8 +21,8 @@ shared between client-server
 const getallelename = new RegExp(/<(.+)>/)
 
 const mclasslabel2key = {}
-for (const k in common.mclass) {
-	mclasslabel2key[common.mclass[k].label.toUpperCase()] = k
+for (const k in mclass) {
+	mclasslabel2key[mclass[k].label.toUpperCase()] = k
 }
 
 export function vcfparsemeta(lines) {
@@ -262,20 +272,20 @@ export function vcfparseline(line, vcf) {
 				// both alleles length of 1
 				if (m2.alt == '.') {
 					// alt is missing
-					m2.type = common.mclassdeletion
+					m2.type = mclassdeletion
 				} else {
 					// snv
-					m2.type = common.mclasssnv
+					m2.type = mclasssnv
 				}
 			} else if (m2.ref.length == m2.alt.length) {
-				m2.type = common.mclassmnv
+				m2.type = mclassmnv
 			} else if (m2.ref.length < m2.alt.length) {
 				// FIXME only when empty length of one allele
-				m2.type = common.mclassinsertion
+				m2.type = mclassinsertion
 			} else if (m2.ref.length > m2.alt.length) {
-				m2.type = common.mclassdeletion
+				m2.type = mclassdeletion
 			} else {
-				m2.type = common.mclassnonstandard
+				m2.type = mclassnonstandard
 			}
 		}
 		mlst.push(m2)
@@ -705,14 +715,14 @@ function parse_CSQ(str, header, m) {
 
 		// class
 		if (o.Consequence) {
-			const [dt, cls, rank] = common.vepinfo(o.Consequence)
+			const [dt, cls, rank] = vepinfo(o.Consequence)
 			o._dt = dt
 			o._class = cls
 			o._csqrank = rank
 		} else {
 			// FIXME
-			o._dt = common.dtsnvindel
-			o._class = common.mclassnonstandard
+			o._dt = dtsnvindel
+			o._class = mclassnonstandard
 		}
 		// mname
 		if (o.HGVSp) {
@@ -769,14 +779,14 @@ function parse_ANN(str, header, m) {
 		}
 		// class
 		if (o.Annotation) {
-			const [dt, cls, rank] = common.vepinfo(o.Annotation)
+			const [dt, cls, rank] = vepinfo(o.Annotation)
 			o._dt = dt
 			o._class = cls
 			o._csqrank = rank
 		} else {
 			// FIXME
-			o._dt = common.dtsnvindel
-			o._class = common.mclassnonstandard
+			o._dt = dtsnvindel
+			o._class = mclassnonstandard
 		}
 		// mname
 		if (o['HGVS.p']) {
@@ -788,52 +798,4 @@ function parse_ANN(str, header, m) {
 		}
 	}
 	return true
-}
-
-export function dissect_INFO(str) {
-	// cannot simply slice by /[;=]/, but read char by char
-	// case  CLNVI=Breast_Cancer_Information_Core__(BRCA2):745-4&base_change=C_to_G;
-	// case  k1=v1;DB;k2=v2;
-
-	//let findequal=true
-	let findsemicolon = false
-	let findequalorsemicolon = true
-
-	let i = 0
-	let idx = 0
-
-	const k2v = {}
-	let lastkey
-
-	while (i < str.length) {
-		const c = str[i]
-		if (findequalorsemicolon) {
-			if (c == '=') {
-				findsemicolon = true
-				findequalorsemicolon = false
-				lastkey = str.substring(idx, i)
-				idx = i + 1
-			} else if (c == ';') {
-				// should be a flag
-				k2v[str.substring(idx, i)] = 1
-				idx = i + 1
-			}
-		} else if (findsemicolon && c == ';') {
-			findequalorsemicolon = true
-			findsemicolon = false
-			k2v[lastkey] = str.substring(idx, i)
-			lastkey = null
-			idx = i + 1
-		}
-		i++
-	}
-
-	const remainstr = str.substr(idx, i)
-	if (lastkey) {
-		k2v[lastkey] = remainstr
-	} else {
-		k2v[remainstr] = 1
-	}
-
-	return k2v
 }

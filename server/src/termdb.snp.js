@@ -5,7 +5,7 @@ const termdbsql = require('./termdb.sql')
 const termdb = require('./termdb')
 const readline = require('readline')
 const serverconfig = require('./serverconfig')
-const vcf = require('../shared/vcf')
+const { dissect_INFO } = require('../shared/vcf.info')
 
 /*
 cache file has a header line, with one line per valid snp. columns: 
@@ -381,7 +381,7 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 			const snpid = pos + '.' + l[1] + '.' + l[2] // pos.ref.alt as snpid
 			snps.push({
 				snpid,
-				info: vcf.dissect_INFO(l[3]),
+				info: dissect_INFO(l[3]),
 				chr: q.chr,
 				pos
 			})

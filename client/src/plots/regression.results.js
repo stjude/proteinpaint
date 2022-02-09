@@ -5,6 +5,16 @@ import { axisBottom } from 'd3-axis'
 import { axisstyle } from '../dom/axisstyle'
 import { get_one_genome, first_genetrack_tolist } from '../client'
 
+/*************
+can dynamically add following attributes
+
+- this.snplocusBlock:
+	for snplocus term
+	display in this.dom.snplocusBlockDiv
+- this.hasUnsubmittedEdits_nullify_singleuse:
+	to negate hasUnsubmittedEdits and keep running analysis
+*/
+
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
 const forestcolor = '#126e08'
 
@@ -15,7 +25,6 @@ export class RegressionResults {
 		// reference to the parent component's mutable instance (not its API)
 		this.parent = opts.parent
 		this.type = 'regression'
-		this.snplocus = {} // {block,tk}
 		setInteractivity(this)
 		setRenderers(this)
 
@@ -30,7 +39,7 @@ export class RegressionResults {
 		this.dom = {
 			holder,
 			err_div: holder.append('div'),
-			genomebrowserdiv: holder.append('div').style('margin-left', '20px'),
+			snplocusBlockDiv: holder.append('div').style('margin-left', '20px'),
 			content: holder.append('div').style('margin', '10px')
 		}
 	}
@@ -44,13 +53,13 @@ export class RegressionResults {
 			if (
 				!this.state.formIsComplete ||
 				this.parent.inputs.hasError ||
-				(this.config.hasUnsubmittedEdits && !this.hasUnsubmittedEdits_continueRunAnalysis_singleuse)
+				(this.config.hasUnsubmittedEdits && !this.hasUnsubmittedEdits_nullify_singleuse)
 			) {
 				// no result to show
 				this.dom.holder.style('display', 'none')
 				return
 			}
-			delete this.hasUnsubmittedEdits_continueRunAnalysis_singleuse
+			delete this.hasUnsubmittedEdits_nullify_singleuse // single-use, delete
 			// submit server request to run analysis
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getRegressionData(reqOpts)
@@ -151,16 +160,18 @@ function setInteractivity(self) {}
 
 function setRenderers(self) {
 	self.displayResult = async result => {
-		// find if snplocus is present
 		if (self.config.independent.find(i => i.term.type == 'snplocus')) {
-			// create genome browser to display snps
-			// clicking on a snp will call displayResult_oneset() to display its set of results
+			// has a snploucs term: create genome browser to display that locus
+			// each snp has a set of results
+			// clicking on a snp will call displayResult_oneset() to display its results
 			await self.show_genomebrowser_snplocus(result)
-		} else {
-			// no snplocus term;
-			// there is a single set of results from analyzing one model
-			self.displayResult_oneset(result)
+			return
 		}
+		// no snplocus, clear things if previous analysis had it
+		delete self.snplocusBlock
+		self.dom.snplocusBlockDiv.selectAll('*').remove()
+		// there is a single set of results from analyzing one model
+		self.displayResult_oneset(result)
 	}
 
 	self.displayResult_oneset = result => {
@@ -677,16 +688,12 @@ function setRenderers(self) {
 	}
 
 	self.show_genomebrowser_snplocus = async result => {
-		// find if has a snplocus term
+		// find the snplocus input
 		const input = self.parent.inputs.independent.inputs.find(i => i.term && i.term.term.type == 'snplocus')
-		if (!input) {
-			self.dom.genomebrowserdiv.selectAll('*').remove()
-			return
-		}
-		// has snplocus term; create a block instance if it's not there yet
-		if (!self.snplocus.block) {
+		if (!self.snplocusBlock) {
+			// doesn't have a block, create one
 			const arg = {
-				holder: self.dom.genomebrowserdiv,
+				holder: self.dom.snplocusBlockDiv,
 				genome: await get_one_genome(self.state.vocab.genome),
 				chr: input.term.q.chr,
 				start: input.term.q.start,
@@ -707,9 +714,20 @@ function setRenderers(self) {
 					tw.q.start = start
 					tw.q.stop = stop
 					await input.pill.main(tw)
-					// runCallback will dispatch action with hasUnsubmittedEdits=true,
-					// but still want to continue to run
-					self.hasUnsubmittedEdits_continueRunAnalysis_singleuse = true
+					/* 
+					pill.main() will wholy update following things in termsetting instance:
+					- q{ chr/start/stop }
+					- term{ snps } list of variants retrieved from updated locus
+					for q/term to be synced into regression state, must do runCallback
+					which will call editConfig() and dispatch action with hasUnsubmittedEdits=true,
+					set this single-use flag to nullify it
+					to be able to continue run analysis
+
+					reason of not directly calling self.parent.inputs.editConfig(input, tw)
+					is that we're having incomplete info in tw
+					tw.term.snps[] is missing, and that can only be made in pill main/postMain/validateSnps
+					*/
+					self.hasUnsubmittedEdits_nullify_singleuse = true
 					input.pill.runCallback()
 				}
 			}
@@ -723,12 +741,13 @@ function setRenderers(self) {
 
 			first_genetrack_tolist(arg.genome, arg.tklst)
 			const _ = await import('../block')
-			self.snplocus.block = new _.Block(arg)
+			self.snplocusBlock = new _.Block(arg)
 		} else {
-			// browser is already created, update variants
-			// TODO "result" is {"snp1":{result}, "snp2":{result}}
+			// browser is already created
+			// find the mds3 track
+			const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
 			// assign result to each variant
-			const tk = self.snplocus.block.tklst.find(i => i.type == 'mds3')
+			// TODO "result" is {"snp1":{result}, "snp2":{result}}
 			tk.custom_variants = make_mds3_variants(input.term.term.snps)
 			// render
 			tk.load()
