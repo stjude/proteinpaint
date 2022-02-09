@@ -82,7 +82,7 @@ export const searchInit = getCompInit(MassSearch)
 
 function setRenderers(self) {
 	self.initUI = () => {
-		self.dom.holder.style('display', self.search && self.search.isVisible == false ? 'none' : 'block')
+		self.dom.holder.style('display', self.search && self.search.isVisible == false ? 'none' : 'inline-block')
 		self.dom.input = self.dom.holder
 			.style('text-align', 'center')
 			.append('input')
