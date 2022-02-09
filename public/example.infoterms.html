@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+<div id=exp style="margin:10px"></div>
+
+<script>
+const terms = [
+	{id: 'root', name: 'root', __tree_isroot: true},
+	{
+		id: 'a',
+		name: 'AAA',
+		parent_id: null,
+		included_types: ['categorical', 'integer', 'float', 'condition', 'survival'],
+		child_types: ['categorical', 'integer', 'float', 'condition', 'survival']
+	},
+	{
+		id: 'b',
+		name: 'BBB',
+		parent_id: null,
+		included_types: ['categorical', 'integer', 'float', 'condition', 'survival'],
+		child_types: ['categorical', 'integer', 'float', 'condition', 'survival']
+	},
+	{
+		type: 'categorical',
+		id: 'c',
+		name: 'CCC',
+		parent_id: 'a',
+		isleaf: true,
+		groupsetting: {
+			disabled: true
+		},
+		values: {
+			1: { label: 'Yes' },
+			0: { label: 'No' }
+		},
+		included_types: ['categorical'],
+		child_types: []
+	},
+	{
+		type: 'float',
+		id: 'd',
+		name: 'DDD',
+		parent_id: 'a',
+		isleaf: true,
+		range: {
+			start: 0,
+			stop: 1
+		},
+		included_types: ['float'],
+		child_types: []
+	},
+	{
+		type: 'condition',
+		id: 'e',
+		name: 'EEE',
+		parent_id: 'a',
+		isleaf: true,
+		groupsetting: {
+			disabled: true
+		},
+		included_types: ['condition'],
+		child_types: []
+	},
+	{
+		type: 'categorical',
+		id: 'f',
+		name: 'FFF',
+		parent_id: 'b',
+		isleaf: true,
+		groupsetting: {
+			disabled: true
+		},
+		values: {
+			1: { label: 'Yes' },
+			0: { label: 'No' }
+		},
+		included_types: ['categorical'],
+		child_types: []
+	},
+	{
+		type: 'categorical',
+		id: 'g',
+		name: 'CCC',
+		parent_id: 'ab',
+		isleaf: true,
+		groupsetting: {
+			disabled: true
+		},
+		values: {
+			1: { label: 'Yes' },
+			0: { label: 'No' }
+		},
+		included_types: ['categorical'],
+		child_types: []
+	}
+]
+
+
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	parseurl:true,
+	nobox:1,
+	noheader:1,
+	debug: 1,
+	mass:{
+		//vocab: {terms},
+		state: {
+			vocab: {terms},
+			nav: {
+				activeTab: 1
+			},
+			termfilter: {
+				filter: {
+					type: 'tvslst', 
+					lst: [{
+						type: 'tvs', 
+						tvs: {
+							term: terms.find(t => t.id === 'c'),
+							values: [{key: '1'}]
+						}
+					}]
+				}
+			}
+		}
+	}
+})
+
+</script>
+
+</body>
+</html>

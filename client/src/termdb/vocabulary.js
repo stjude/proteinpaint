@@ -635,6 +635,16 @@ class FrontendVocab {
 	}
 
 	async getDensityPlotData(term_id, num_obj, filter) {
+		if (!this.datarows || !this.datarows.length) {
+			// support adhoc dictionary or vocab terms without sample annotations
+			const term = this.vocab.terms.find(t => t.id === term_id)
+			const minvalue = term.range && term.range
+			return {
+				minvalue: term.range && term.range.start,
+				maxvalue: term.range && term.range.stop
+			}
+		}
+
 		const values = []
 		const distinctValues = new Set()
 		let minvalue,
