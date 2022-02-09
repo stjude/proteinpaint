@@ -53,21 +53,24 @@ const terms = [
 		isleaf: true,
 		range: {
 			start: 0,
-			stop: 1
+			//startinclusive,
+			//startunbounded,
+			stop: 1,
+			//stopinclusive,
+			//stopunbounded
+			min: 0,
+			max: 1
 		},
 		included_types: ['float'],
 		child_types: []
 	},
 	{
-		type: 'condition',
+		type: 'integer',
 		id: 'e',
 		name: 'EEE',
 		parent_id: 'a',
 		isleaf: true,
-		groupsetting: {
-			disabled: true
-		},
-		included_types: ['condition'],
+		included_types: ['integer'],
 		child_types: []
 	},
 	{
@@ -85,6 +88,20 @@ const terms = [
 		},
 		included_types: ['categorical'],
 		child_types: []
+	},
+	{
+		type: 'integer',
+		id: 'h',
+		name: 'HHH',
+		parent_id: 'a',
+		isleaf: true,
+		included_types: ['integer'],
+		child_types: [],
+		range: {
+			start: 0,
+			stop: 1,
+			max: 100
+		},
 	},
 	{
 		type: 'categorical',
