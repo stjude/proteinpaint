@@ -767,14 +767,11 @@ function make_mds3_variants(lst) {
 	const mlst = []
 	for (const a of lst) {
 		const b = {
-			dt: 1, // snvindel
-			snpid: a.snpid,
-			chr: a.chr,
-			pos: a.pos,
 			// must be supplied as when updating custom variants for existing mds3 tk
 			// it will not run makeTk() again
 			occurrence: 1
 		}
+		Object.assign(b, a)
 		mlst.push(b)
 	}
 	return mlst

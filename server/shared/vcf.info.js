@@ -1,8 +1,11 @@
-export function dissect_INFO(str) {
-	// cannot simply slice by /[;=]/, but read char by char
-	// case  CLNVI=Breast_Cancer_Information_Core__(BRCA2):745-4&base_change=C_to_G;
-	// case  k1=v1;DB;k2=v2;
+/*
+to parse a variant line, not header
 
+cannot simply slice by /[;=]/, but read char by char
+case  CLNVI=Breast_Cancer_Information_Core__(BRCA2):745-4&base_change=C_to_G;
+case  k1=v1;DB;k2=v2;
+*/
+export function dissect_INFO(str) {
 	//let findequal=true
 	let findsemicolon = false
 	let findequalorsemicolon = true
