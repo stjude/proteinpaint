@@ -1,12 +1,10 @@
-import * as client from './client'
-import { termsettingInit } from './common/termsetting'
+import { dofetch3 } from './common/dofetch'
 
 /*
 ********************** EXPORTED
 make_ui
 ********************** INTERNAL
 do_plot
-show_legend
 clientside_plot
 
 
@@ -33,43 +31,6 @@ will include tk.vcf.plot_mafcov.overlay_term
 	}
 	if (tk.mds && tk.mds.sample2bam) {
 		obj.d.tempbbdiv = holder.append('div')
-	}
-
-	const legenddiv = holder
-		.append('div') // termdb handle and category color
-		.style('margin', '10px')
-		.style('border-top', 'solid 1px #ccc')
-		.style('padding-top', '10px')
-
-	if (tk.mds && tk.mds.termdb) {
-		// enable selecting term for overlaying
-		const row = legenddiv.append('div').style('margin-bottom', '5px')
-
-		row
-			.append('div')
-			.style('display', 'block')
-			.style('margin-bottom', '10px')
-			.html('Overlay term&nbsp;')
-
-		const api = termsettingInit({
-			$id: 'sja-pp-block-' + block.blockId + '-' + block.tklst.findIndex(t => t == tk) + '-mavcovplot',
-			holder: row.append('div'),
-			vocab: {
-				route: 'termdb',
-				genome: obj.block.genome.name,
-				dslabel: obj.tk.mds.label
-			},
-			callback: data => {
-				obj.overlay_term = data || {}
-				api.main(obj.overlay_term)
-				do_plot(obj)
-			}
-		})
-		if (obj.overlay_term.term) {
-			api.main(obj.overlay_term)
-		}
-
-		obj.d.term_legenddiv = row.append('div') // display categories after updating plot
 	}
 
 	await do_plot(obj)
@@ -108,7 +69,7 @@ when overlay term is changed
 	obj.d.wait.text('Loading...').style('display', 'block')
 
 	try {
-		const data = await client.dofetch('mds2', par)
+		const data = await dofetch3('mds2', { method: 'POST', body: JSON.stringify(par) })
 		if (data.error) throw data.error
 
 		// TODO if is server rendered image
@@ -117,44 +78,10 @@ when overlay term is changed
 			clientside_plot(obj, data.plotgroups)
 		}
 
-		show_legend(obj, data.categories)
-
 		obj.d.wait.style('display', 'none')
 	} catch (e) {
 		obj.d.wait.text('ERROR: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
-	}
-}
-
-function show_legend(obj, categories) {
-	// optional, only if has termdb
-	// categories[] is returned from xhr
-	obj.d.term_legenddiv.selectAll('*').remove()
-	if (!obj.tk.mds || !obj.tk.mds.termdb || !categories) return
-	let cats = categories
-
-	// for numerical term sort the categories, and attach unannotated at the end of cats[]
-	if (obj.overlay_term.type == 'integer' || obj.overlay_term.type == 'float') {
-		let unannoated_cats = []
-		for (const [i, cat] of categories.entries()) {
-			if (isNaN(cat.label.split(' ')[0])) {
-				unannoated_cats.push(categories.splice(i, 1)[0])
-			}
-		}
-		cats = categories.sort((a, b) => (parseFloat(a.label.split(' ')[0]) > parseFloat(b.label.split(' ')[0]) ? 1 : -1))
-		cats.push(...unannoated_cats)
-	}
-
-	for (const c of cats) {
-		const row = obj.d.term_legenddiv.append('div').style('margin', '4px 0px')
-		row
-			.append('span')
-			.style('background', c.color)
-			.html('&nbsp;&nbsp;')
-		row
-			.append('span')
-			.style('color', c.color)
-			.html('&nbsp;' + c.label + '&nbsp;(n=' + c.count + ')')
 	}
 }
 
