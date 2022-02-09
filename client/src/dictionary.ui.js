@@ -143,8 +143,13 @@ function parseTabDelimitedData(input) {
 
 	/* 
     Parses phenotree:
-        - Parses tab delim data arranged in cols: Level1, Level2, Level3, Level4, Level5, Key(i.e. ID), Configuration.
+        - Parses tab delim data arranged in cols: levels(n), Key(i.e. Variable name), Configuration (i.e. Variable note).
         - Checks for identical keys.
+		- Assumptions:
+			1. Headers required. 'Variable name', 'Variable note' may appear anywhere. 'Level_XX' for hierarchy/level columns. 
+			2. Levels are defined left to right and in order, no gaps.
+			3. No blanks or '-' between levels. No duplicate values for levels in the same line.
+			4. Uncomputable values are always: '-994', '-995', '-996', '-997', '-998', '-999'
     */
 	const terms = {
 		__root: {
@@ -159,11 +164,6 @@ function parseTabDelimitedData(input) {
 		colsIndexes = []
 	for (const i in lines) {
 		let line = lines[i].split('\t')
-		// console.log(159, line)
-		// const keyIndex = line.findIndex('Variable Name')
-		// console.log(keyIndex)
-		// const [col1, col2, col3, col4, col5, key0, configstr0] = lines[i].split('\t') //Required format
-		// console.log(163, col1, col2, col3, col4, col5, key0, configstr0) //returns array of strings
 		if (i == 0) {
 			//TODO - Ask Xin if 'Variable name' and 'Variable note' are common/standard names in phenotree
 			keyIndex = line.findIndex(l => l.match('Variable Name'))
@@ -171,10 +171,9 @@ function parseTabDelimitedData(input) {
 			configIndex = line.findIndex(l => l.match('Variable Note'))
 			if (configIndex == -1) throw `Missing required 'Variable Note' column`
 			for (let idx in line) {
-				if (!(idx == keyIndex || idx == configIndex)) colsIndexes.push(idx)
+				if (line[idx].match('Level_')) colsIndexes.push(idx)
 			}
 		}
-		// console.log(keyIndex, configIndex, colsIndexes)
 		try {
 			if (i > 0) {
 				//Skip header
@@ -182,59 +181,28 @@ function parseTabDelimitedData(input) {
 					console.error('Missing configuration string, line: ' + i + ', term: ' + line[keyIndex])
 					continue
 				}
-				let colNames = []
+				let colNames = [] //capture str value of all 'level' cols
 				for (const c in colsIndexes) {
 					const col = str2level(line[c])
 					colNames.push(col)
 				}
-				// console.log(colNames)
-				let configstr = line[configIndex].replace('"', '').trim()
-				// let L1 = str2level(col1),
-				// 	L2 = str2level(col2),
-				// 	L3 = str2level(col3),
-				// 	L4 = str2level(col4),
-				// 	L5 = str2level(col5),
-				// 	configstr = configstr0.replace('"', '').trim()
-				// const levels = [L1, L2, L3, L4, L5]
 
-				// const name = getName(L2, L3, L4, L5).replace(/\"/g, '')
-				const name = getName(colNames)
-				// console.log(name)
+				let configstr = line[configIndex].replace('"', '').trim()
+				const name = getName(colNames, i)
 
 				// if key missing, use name
 				let key = line[keyIndex] ? line[keyIndex].trim() : ''
 				if (!key) key = name
 
-				keys.push(key) //pushes user provided and derived values to check
+				//pushes user provided variable names and derived values to check
+				keys.push(key)
 
-				// //Parses col7 into term.type and term.values
+				//Parses col7 into term.type, term.values, and term.groupsetting
 				const term = parseConfig(configstr)
 
-				//Create hierarchy
-				// let leaflevel = 5
-
-				// for (const [i,] in levels) {
-				// 	if (!levels[1]){
-				// 		leaflevel = 1
-				// 	} else if (i > 0) {
-				// 		let addOne = i,
-				// 			minusOne = i
-				// 		const levela = addOne++, //changes addOne to i+1 and captures current i
-				// 			levelm = minusOne--
-				// 		console.log(196, levels[addOne], levels[minusOne], levels[levela], levels[levelm])
-				// 		// console.log(197, levels[addOne])
-				// 		if (!levels[addOne]) {
-				// 			// leaflevel = levela
-				// 			// console.log(199, leaflevel, levels[levela])
-				// 			// console.log(199, leaflevel, levels[levela])
-				// 			if (levels[levela] == levels[minusOne]) {
-				// 				// levels[minusOne] = null
-				// 				// leaflevel = 3
-				// 				// console.log(levels[minusOne])
-				// 			}
-				// 		}
-				// 	}
-				// }
+				/*******Create hierarchy*******/
+				const filteredCols = filterCols(colNames)
+				let leaflevel = filteredCols.length
 
 				terms[key] = {
 					id: key,
@@ -250,13 +218,14 @@ function parseTabDelimitedData(input) {
 			throw 'Line ' + (i + 1) + ' error: ' + e
 		}
 	}
-	check4DuplicateKeys(keys)
+	check4DuplicateValues(keys)
 
-	// console.log({terms: Object.values(terms)})
 	return { terms: Object.values(terms) }
 }
 
-/*****Parsing Functions for Phenotree *****/
+/*
+ **** Parsing Functions for Phenotree ****
+ */
 function str2level(col) {
 	// parses columns and returns name
 	const tmp = col.trim()
@@ -264,11 +233,30 @@ function str2level(col) {
 	return tmp
 }
 
-function getName(colArray) {
+function getName(colArray, i) {
+	// Check for blanks or '-' between levels
+	const nullIndex = colArray.indexOf(null) //find first index of null
+	function revArray(arr) {
+		let copy = [...arr]
+		return copy.reverse()
+	}
+	//find last index of non-null level value
+	const lastLevelIndex = colArray.length - 1 - revArray(colArray).findIndex(e => e !== null)
+	if (lastLevelIndex > nullIndex && nullIndex >= 0) throw `Blank or '-' value detected between levels in line ` + i
+
 	//finds last name in the array and returns as name
-	const ca = colArray.filter(x => x !== null)
-	if (ca.length > 0) return colArray[ca.length - 1].replace(/"/g, '')
+	const ca = filterCols(colArray)
+
+	//checks for duplicates in the resulting array
+	check4DuplicateValues(ca)
+	if (ca.length > 0) return ca[ca.length - 1].replace(/"/g, '')
 	throw 'name missing'
+}
+
+function filterCols(colArray) {
+	//filters null strings to return only string level inputs
+	const ca = colArray.filter(x => x !== null)
+	return ca
 }
 
 function parseConfig(str) {
@@ -331,19 +319,23 @@ function parseConfig(str) {
 	return term
 }
 
-function check4DuplicateKeys(keys) {
+function check4DuplicateValues(values) {
 	const duplicates = new Set()
-	for (const i in keys) {
-		if (keys.indexOf(keys[i]) !== keys.lastIndexOf(keys[i])) {
-			duplicates.add(keys[i])
+	for (const i in values) {
+		if (values.indexOf(values[i]) !== values.lastIndexOf(values[i])) {
+			duplicates.add(values[i])
 		}
 	}
 	if (duplicates.size > 0) {
 		const dup = Array.from(duplicates)
-		alert(`Error: Nonunique ID(s) found: ` + dup + `. IDs must be unique values.`)
+		alert(`Error: Nonunique values(s) found: ` + dup + `. Values must be unique.`) //TODO print to screen
 	}
 	return true
 }
+
+/*
+ **** Submission Functions ****
+ */
 
 function submitButton(div, doms, holder) {
 	const submit = uiutils.makeBtn(div, 'Submit')
@@ -387,3 +379,14 @@ function infoSection(div) {
                 </li>
             </ul>`)
 }
+//TODO print data submission errors to the viewport rather than alerts
+function makeErrorDiv(div) {
+	div
+		.append('div')
+		.style('margin', '10px')
+		.style('opacity', '0.65')
+		.style('grid-column', 'span 2')
+		.html(`<h3>Errors found</h3>`)
+}
+
+function showDataError(div, error) {}
