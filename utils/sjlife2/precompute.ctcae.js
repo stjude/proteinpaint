@@ -145,7 +145,10 @@ function getPj(terms, data) {
 							term_id: '@branch',
 							maxGrade: '<$grade',
 							':__mostRecentAge': '<$age',
+							children: ['=child()'],
 							computableGrades: ['$grade', 'set'],
+							'__:childrenAtMaxGrade': ['=childrenAtMaxGrade(]'],
+							'__:childrenAtMostRecent': ['=childrenAtMostRecent(]'],
 							'~gradesByAge': {
 								//'$age': ['$grade', 'set']
 								'=currMostRecentAge()': ['$grade', 'set']
@@ -157,6 +160,33 @@ function getPj(terms, data) {
 			}
 		},
 		'=': {
+			child(row, context) {
+				if (context.branch == row.term_id) return
+				const i = row.lineage.indexOf(context.branch)
+				return row.lineage[i - 1]
+			},
+			childrenAtMaxGrade(row, context) {
+				if (!Array.isArray(context.self.children)) return []
+				const byCondition = context.parent
+				const ids = new Set()
+				for (const id of context.self.children) {
+					if (byCondition[id].maxGrade == context.self.maxGrade) {
+						ids.add(id)
+					}
+				}
+				return [...ids]
+			},
+			childrenAtMostRecent(row, context) {
+				if (!Array.isArray(context.self.children)) return []
+				const byCondition = context.parent
+				const ids = new Set()
+				for (const id of context.self.children) {
+					if (byCondition[id].mostRecentAge == context.self.mostRecentAge) {
+						ids.add(id)
+					}
+				}
+				return [...ids]
+			},
 			mostRecentGrades(row, context) {
 				return context.self.gradesByAge[context.self.mostRecentAge]
 					? [...context.self.gradesByAge[context.self.mostRecentAge]]
@@ -195,6 +225,30 @@ function generate_tsv(bySample) {
 			for (const grade of subresult.computableGrades) {
 				if (grade !== subresult.maxGrade && !subresult.mostRecentGrades.includes(grade)) {
 					console.log([sample, termid, 'grade', grade, 1, 0, 0].join('\t'))
+					numRows++
+				}
+			}
+
+			if (!subresult.children) subresult.children = []
+			if (!subresult.childrenAtMaxGrade) subresult.childrenAtMaxGrade = []
+			if (!subresult.childrenAtMostRecent) subresult.childrenAtMostRecent = []
+
+			for (const child of subresult.children) {
+				if (!subresult.childrenAtMaxGrade.includes(child) && !subresult.childrenAtMostRecent.includes(child)) {
+					console.log([sample, termid, 'child', child, 1, 0, 0].join('\t'))
+					numRows++
+				}
+			}
+
+			for (const child of subresult.childrenAtMaxGrade) {
+				const isMostRecent = subresult.childrenAtMostRecent.includes(child) ? 1 : 0
+				console.log([sample, termid, 'child', child, 1, 1, isMostRecent].join('\t'))
+				numRows++
+			}
+
+			for (const child of subresult.childrenAtMostRecent) {
+				if (!subresult.childrenAtMaxGrade.includes(child)) {
+					console.log([sample, termid, 'child', child, 1, 0, 1].join('\t'))
 					numRows++
 				}
 			}
