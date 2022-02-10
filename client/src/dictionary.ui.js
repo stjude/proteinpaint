@@ -171,12 +171,12 @@ function parseTabDelimitedData(input) {
     Parses phenotree:
         - Parses tab delim data arranged in cols: levels(n), Key(i.e. Variable name), Configuration (i.e. Variable note).
 		- Only the key and configuration cols are required
-        - Checks for identical keys.
+		- Not using uncomputable values in this iteration
 		- Assumptions:
 			1. Headers required. 'Variable name', 'Variable note' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
 			2. Levels are defined left to right and in order, no gaps.
 			3. No blanks or '-' between levels as well as no duplicate values in the same line.
-			4. Uncomputable values are always: '-994', '-995', '-996', '-997', '-998', '-999'. Change to argument?
+			4. No identical term ids (keys)
     */
 	const terms = {
 		//Required root term for the eventual terms array
@@ -241,40 +241,7 @@ function parseTabDelimitedData(input) {
 				/******* Parse for hierarchy *******/
 				const filteredCols = filterCols(colNames)
 				let leafIdx = lastNonNullIdx
-				// let parent_id
-				for (const fc in filteredCols) {
-					let id
-					if (fc == leafIdx) {
-						id = key
-						name2id.set(filteredCols[fc], id)
-					} else {
-						id = filteredCols[fc]
-					}
-					//find id for parent immediate level
-					const levelUpId = filteredCols[Number(fc) - 1]
-
-					if (fc != 0) {
-						term2term.get(levelUpId).add(id)
-						if (!child2parents.has(id)) child2parents.set(id, new Map())
-						for (const y in filteredCols) {
-							if (y < fc) {
-								child2parents.get(id).set(filteredCols[y], y)
-							}
-						}
-						ch2immediateP.set(id, levelUpId)
-						if (!p2childorder.has(levelUpId)) p2childorder.set(levelUpId, []) //Why is this needed when there's term2term?
-						if (p2childorder.get(levelUpId).indexOf(id) == -1) p2childorder.get(levelUpId).push(id)
-					} else {
-						if (p2childorder.get(root_id).indexOf(id) == -1) p2childorder.get(root_id).push(id)
-					}
-
-					if (!term2term.has(id) && fc != leafIdx) {
-						term2term.set(id, new Set())
-					}
-					allterms_byorder.add(id)
-
-					// parent_id = levelUpId ? levelUpId : null
-				}
+				createHierarchy(leafIdx, filteredCols, key)
 
 				/******* Create term *******/
 				terms[key] = {
@@ -288,17 +255,17 @@ function parseTabDelimitedData(input) {
 				}
 			}
 		} catch (e) {
-			throw 'Line ' + (i + 1) + ' error: ' + e
+			throw 'Line ' + (Number(i) + 1) + ' error: ' + e
 		}
 	}
 	check4DuplicateValues(keys) //Checks all duplicate term.ids/keys for duplicates
-	// console.log(name2id)
-	// console.log(allterms_byorder)
-	// console.log(term2term)
-	// console.log(ch2immediateP)
-	// console.log(child2parents)
-	// console.log(p2childorder)
-	// console.log(allterms_byorder.size + ' terms in total')
+	console.log(name2id)
+	console.log(allterms_byorder)
+	console.log(term2term)
+	console.log(ch2immediateP)
+	console.log(child2parents)
+	console.log(p2childorder)
+	console.log(allterms_byorder.size + ' terms in total')
 	// console.log({ terms: Object.values(terms) })
 	return { terms: Object.values(terms) }
 }
@@ -346,7 +313,8 @@ function filterCols(colArray) {
 }
 
 function parseConfig(str) {
-	const uncomputable_categories = new Set(['-994', '-995', '-996', '-997', '-998', '-999'])
+	//NOT using uncomputable values in this iteration
+	// const uncomputable_categories = new Set(['-994', '-995', '-996', '-997', '-998', '-999'])
 	const term = {}
 
 	if (str == 'string') {
@@ -382,7 +350,7 @@ function parseConfig(str) {
 				const field = line[i].trim()
 				if (field == '') continue
 				const [key, value] = field.split(/(?<!\>|\<)=/)
-				if (!value) throw 'field ' + (i + 1) + ' is not k=v: ' + field
+				if (!value) throw 'field ' + (Number(i) + 1) + ' is not k=v: ' + field
 				if (!term.values) term.values = {}
 				term.values[key] = { label: value }
 			}
@@ -391,18 +359,52 @@ function parseConfig(str) {
 		if (term.type == 'integer' || term.type == 'float') {
 			// for numeric term, all keys in values are not computable
 			for (const k in term.values) term.values[k].uncomputable = true
-		} else if (term.type == 'categorical') {
-			// select categories are uncomputable
-			for (const k in term.values) {
-				if (uncomputable_categories.has(k)) term.values[k].uncomputable = true
-			}
-		}
+		} //else if (term.type == 'categorical') {
+		// 	// select categories are uncomputable
+		// 	for (const k in term.values) {
+		// 		if (uncomputable_categories.has(k)) term.values[k].uncomputable = true
+		// 	}
+		// }
 	}
 
 	if (term.type == 'categorical') {
 		term.groupsetting = { inuse: false }
 	}
 	return term
+}
+
+function createHierarchy(leafIdx, filteredCols, key) {
+	for (const fc in filteredCols) {
+		let id
+		if (fc == leafIdx) {
+			id = key
+			name2id.set(filteredCols[fc], id)
+		} else {
+			id = filteredCols[fc]
+		}
+		//find id for parent immediate level
+		const levelUpId = filteredCols[Number(fc) - 1]
+
+		if (fc != 0) {
+			term2term.get(levelUpId).add(id)
+			if (!child2parents.has(id)) child2parents.set(id, new Map())
+			for (const y in filteredCols) {
+				if (y < fc) {
+					child2parents.get(id).set(filteredCols[y], y)
+				}
+			}
+			ch2immediateP.set(id, levelUpId)
+			if (!p2childorder.has(levelUpId)) p2childorder.set(levelUpId, []) //Why is this needed when there's term2term?
+			if (p2childorder.get(levelUpId).indexOf(id) == -1) p2childorder.get(levelUpId).push(id)
+		} else {
+			if (p2childorder.get(root_id).indexOf(id) == -1) p2childorder.get(root_id).push(id)
+		}
+
+		if (!term2term.has(id) && fc != leafIdx) {
+			term2term.set(id, new Set())
+		}
+		allterms_byorder.add(id)
+	}
 }
 
 function check4DuplicateValues(values) {
