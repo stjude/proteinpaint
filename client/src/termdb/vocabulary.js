@@ -471,9 +471,9 @@ class TermdbVocab {
 		return await dofetch3('/termdb?' + lst.join('&'))
 	}
 
-	async get_infofields() {
+	async get_variantFilter() {
 		// used for snplocus term type
-		const args = ['getinfofields=1', 'genome=' + this.state.vocab.genome, 'dslabel=' + this.state.vocab.dslabel]
+		const args = ['getvariantfilter=1', 'genome=' + this.state.vocab.genome, 'dslabel=' + this.state.vocab.dslabel]
 		return await dofetch3('/termdb?' + args.join('&'))
 	}
 }

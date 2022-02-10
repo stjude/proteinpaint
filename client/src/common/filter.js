@@ -36,7 +36,10 @@ class Filter {
 		this.opts = this.validateOpts(opts)
 		this.dom = {
 			holder: opts.holder,
-			controlsTip: new Menu({ padding: '0px' }),
+			controlsTip: new Menu({
+				padding: '0px',
+				parent_menu: this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
+			}),
 			treeTip: new Menu({
 				padding: '5px',
 				offsetX: 20,

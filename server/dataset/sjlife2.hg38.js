@@ -291,6 +291,58 @@ const info_fields = [
 	}
 ]
 
+// reuse data from info_fields to create terms
+const terms = info_fields.map(f => {
+	const term = {
+		id: f.key,
+		name: f.label,
+		type: f.iscategorical || f.isflag ? 'categorical' : f.isfloat ? 'float' : f.isinteger ? 'integer' : 'categorical',
+		parent_id: null,
+		isleaf: true
+	}
+
+	if (f.range) term.range = f.range
+	else if (f.values)
+		term.values = f.values.reduce((obj, a) => {
+			obj[a.key] = a
+			return obj
+		}, {})
+	else if (f.isflag) term.values = { yes: { label: 'Yes' }, no: { label: 'No' } }
+
+	return term
+})
+const emptyFilter = false // for testing only
+const variant_filter = {
+	filter: {
+		type: 'tvslst',
+		join: emptyFilter ? '' : 'and',
+		in: true,
+		// reuse data from info_fields
+		lst: emptyFilter
+			? []
+			: info_fields
+					.filter(f => f.isactivefilter)
+					.map(f => {
+						const term = terms.find(t => t.id === f.key)
+						const item = {
+							type: 'tvs',
+							tvs: { term }
+						}
+						if ((term.type == 'float' || term.type == 'integer') && term.range) {
+							item.tvs.ranges = [term.range]
+						} else if (f.values) {
+							item.tvs.values = f.values
+						} else if ('remove_yes' in f) {
+							item.tvs.values = [term.values['yes']]
+							item.tvs.isnot = true
+						}
+
+						return item
+					})
+	},
+	terms
+}
+
 module.exports = {
 	isMds: true,
 
@@ -499,6 +551,7 @@ module.exports = {
 		name: 'Germline SNV',
 
 		info_fields,
+		variant_filter,
 
 		populations: [
 			{
