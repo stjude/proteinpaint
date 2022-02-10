@@ -171,7 +171,7 @@ function setRenderers(self) {
 		delete self.snplocusBlock
 		self.dom.snplocusBlockDiv.selectAll('*').remove()
 		// there is a single set of results from analyzing one model
-		self.displayResult_oneset(result)
+		self.displayResult_oneset(result[0].data)
 	}
 
 	self.displayResult_oneset = result => {
