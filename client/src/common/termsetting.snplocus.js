@@ -1,6 +1,6 @@
 import { event } from 'd3-selection'
 import { makeSnpSelect } from './termsetting.snplst'
-import { filterInit } from './filter'
+import { filterInit, getNormalRoot } from './filter'
 
 /* 
 instance attributes
@@ -84,7 +84,8 @@ async function makeEditMenu(self, div) {
 			self.q.stop = stop
 			self.term.name = term_name
 			/*** !!! USE self.variant_filter.active in somewhere here !!! ***/
-			self.q.info_fields = tmpinfoarg
+			self.q.variant_filter = getNormalRoot(self.variant_filter.active)
+			//self.q.info_fields = tmpinfoarg
 			await validateInput(self)
 			// q.cacheid is set
 
@@ -205,6 +206,7 @@ async function mayDisplayVariantFilter(self, holder) {
 	filterInit({
 		//btn: values_td.append('div'),
 		//btnLabel: 'Filter',
+		joinWith: self.variant_filter.opts.joinWith,
 		emptyLabel: '+Variant Filter',
 		holder: div,
 		vocab: { terms },

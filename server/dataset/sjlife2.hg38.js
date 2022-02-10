@@ -291,54 +291,386 @@ const info_fields = [
 	}
 ]
 
-// reuse data from info_fields to create terms
-const terms = info_fields.map(f => {
-	const term = {
-		id: f.key,
-		name: f.label,
-		type: f.iscategorical || f.isflag ? 'categorical' : f.isfloat ? 'float' : f.isinteger ? 'integer' : 'categorical',
+const terms = [
+	{
+		id: 'QC_sjlife',
+		name: 'SJLIFE classification',
 		parent_id: null,
-		isleaf: true
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			SuperGood: { label: 'SuperGood' },
+			Good: { label: 'Good' },
+			Ambiguous: { label: 'Ambiguous' },
+			Bad: { label: 'Bad' }
+		},
+		tvs: {
+			isnot: true,
+			values: ['Bad']
+		}
+	},
+	{
+		id: 'QC_ccss',
+		name: 'CCSS classification',
+		parent_id: null,
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			SuperGood: { label: 'SuperGood' },
+			Good: { label: 'Good' },
+			Ambiguous: { label: 'Ambiguous' },
+			Bad: { label: 'Bad' }
+		},
+		tvs: {
+			isnot: true,
+			values: ['Bad']
+		}
+	},
+	{
+		id: 'AF',
+		name: 'Allele frequency, SJLIFE+CCSS',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					startunbounded: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+	},
+	{
+		id: 'AF_sjlife',
+		name: 'SJLIFE allele frequency',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					startunbounded: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+	},
+	{
+		id: 'AF_ccss',
+		name: 'CCSS allele frequency',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					startunbounded: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+	},
+	{
+		id: 'SJcontrol_AF',
+		name: 'SJLIFE control allele frequency',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					startunbounded: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+	},
+	{
+		id: 'SJcontrol_CEU_AF',
+		name: 'SJLIFE control allele frequency, Caucasian',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					startunbounded: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+	},
+	{
+		id: 'SJcontrol_YRI_AF',
+		name: 'SJLIFE control allele frequency, African American',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					startunbounded: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+	},
+	{
+		id: 'SJcontrol_CR',
+		name: 'SJLIFE control call rate',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'CR',
+		name: 'Call rate, SJLIFE+CCSS',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'CR_sjlife',
+		name: 'SJLIFE call rate',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'CR_ccss',
+		name: 'CCSS call rate',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'gnomAD_CR',
+		name: 'gnmoAD call rate',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'gnomAD_AF',
+		name: 'gnomAD allele frequency',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		values: {
+			0: { label: 'missing value', uncomputable: true }
+		},
+		tvs: {
+			ranges: [
+				{
+					start: 0.1,
+					startinclusive: true,
+					stop: 1,
+					stopinclusive: true
+				},
+				{
+					value: 0,
+					isnot: true
+				}
+			]
+		}
+	},
+	{
+		id: 'gnomAD_AF_afr',
+		name: 'gnomAD allele frequency, African-American',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		values: {
+			0: { label: 'missing value', uncomputable: true }
+		},
+		tvs: {
+			ranges: [
+				{
+					start: 0.1,
+					startinclusive: true,
+					stop: 1,
+					stopinclusive: true
+				},
+				{
+					value: 0,
+					isnot: true
+				}
+			]
+		}
+	},
+	{
+		id: 'gnomAD_AF_eas',
+		name: 'gnomAD allele frequency, East Asian',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		values: {
+			0: { label: 'missing value', uncomputable: true }
+		},
+		tvs: {
+			ranges: [
+				{
+					start: 0.1,
+					startinclusive: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+	},
+	{
+		id: 'gnomAD_AF_nfe',
+		name: 'gnomAD allele frequency, non-Finnish European',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		values: {
+			0: { label: 'missing value', uncomputable: true }
+		},
+		tvs: {
+			ranges: [
+				{
+					start: 0.1,
+					startinclusive: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+	},
+	{
+		id: 'PG',
+		name: 'Committee classification',
+		parent_id: null,
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			P: { label: 'Pathogenic' },
+			LP: { label: 'Likely pathogenic' }
+		}
+	},
+	{
+		id: 'BadBLAT',
+		name: 'Paralog',
+		parent_id: null,
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			1: { label: 'yes' }
+		},
+		tvs: {
+			isnot: true,
+			values: [1]
+		}
+	},
+	{
+		id: 'Polymer_region',
+		name: 'Polymer region',
+		parent_id: null,
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			1: { label: 'yes' }
+		},
+		tvs: {
+			isnot: true,
+			values: [1]
+		}
 	}
+]
 
-	if (f.range) term.range = f.range
-	else if (f.values)
-		term.values = f.values.reduce((obj, a) => {
-			obj[a.key] = a
-			return obj
-		}, {})
-	else if (f.isflag) term.values = { yes: { label: 'Yes' }, no: { label: 'No' } }
-
-	return term
+terms.forEach(term => {
+	if (!term.values) return
+	for (const key in term.values) {
+		const obj = term.values[key]
+		if (!('key' in obj)) obj.key = key
+	}
 })
-const emptyFilter = false // for testing only
+
+const lst = terms
+	.filter(term => term.tvs)
+	.map(_term => {
+		const term = JSON.parse(JSON.stringify(_term))
+		const item = {
+			type: 'tvs',
+			tvs: term.tvs
+		}
+		delete term.tvs
+		item.tvs.term = term
+		if (item.tvs.values) {
+			const values = []
+			for (const v of item.tvs.values) {
+				if (typeof v == 'object') values.push(v)
+				// v === the key reference in term.values
+				else values.push(term.values[v])
+			}
+			item.tvs.values = values
+		}
+		return item
+	})
+
 const variant_filter = {
+	opts: {
+		joinWith: ['and']
+	},
 	filter: {
 		type: 'tvslst',
-		join: emptyFilter ? '' : 'and',
+		join: lst.length > 1 ? 'and' : '',
 		in: true,
 		// reuse data from info_fields
-		lst: emptyFilter
-			? []
-			: info_fields
-					.filter(f => f.isactivefilter)
-					.map(f => {
-						const term = terms.find(t => t.id === f.key)
-						const item = {
-							type: 'tvs',
-							tvs: { term }
-						}
-						if ((term.type == 'float' || term.type == 'integer') && term.range) {
-							item.tvs.ranges = [term.range]
-						} else if (f.values) {
-							item.tvs.values = f.values
-						} else if ('remove_yes' in f) {
-							item.tvs.values = [term.values['yes']]
-							item.tvs.isnot = true
-						}
-
-						return item
-					})
+		lst
 	},
 	terms
 }

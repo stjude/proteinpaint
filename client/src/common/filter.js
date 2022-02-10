@@ -7,6 +7,9 @@ import { vocabInit } from '../termdb/vocabulary'
 
 const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
 
+const defaults = {
+	joinWith: ['and', 'or']
+}
 /*
 	opts{}
 	.holder
@@ -66,7 +69,8 @@ class Filter {
 		}
 	}
 
-	validateOpts(o) {
+	validateOpts(opts) {
+		const o = Object.assign({}, defaults, opts)
 		if (!o.holder) throw '.holder missing'
 		if (!o.vocab) throw '.vocab missing'
 
@@ -361,7 +365,7 @@ function setRenderers(self) {
 
 		self.dom.holder
 			.selectAll('.sja_filter_add_transformer')
-			.data(['and', 'or'])
+			.data(self.opts.joinWith)
 			.enter()
 			.append('div')
 			.attr('class', 'sja_filter_add_transformer')
@@ -701,11 +705,15 @@ function setInteractivity(self) {
 		menuRows
 			.filter(d => /*d.action == 'negate' ||*/ d.action == 'remove')
 			.style('display', cls.includes('_join_') && filter.lst.find(d => d.tag == 'cohortFilter') ? 'none' : 'table-row')
+
 		menuRows
 			.filter(d => d.action == 'join')
 			.style(
 				'display',
-				(filter.$id == self.filter.$id && filter.lst.length == 1) || cls.includes('negate') || cls.includes('paren')
+				self.opts.joinWith.length < 2 ||
+					(filter.$id == self.filter.$id && filter.lst.length == 1) ||
+					cls.includes('negate') ||
+					cls.includes('paren')
 					? 'none'
 					: 'table-row'
 			)
