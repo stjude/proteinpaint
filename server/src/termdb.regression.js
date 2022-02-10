@@ -90,6 +90,7 @@ export async function get_regression(q, ds) {
 
 		// parse the R output
 		const result = await parseRoutput(Rinput, Routput, id2originalId, sampleSize)
+		console.log(result)
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -326,6 +327,7 @@ function validateRinput(q, Rinput, sampleSize) {
 }
 
 async function parseRoutput(Rinput, Routput, id2originalId, sampleSize) {
+	const result = { lst: [] } // lst[] has same structure as out[]
 	// handle errors/warnings from R
 	if (Routput.includes('R stderr:')) {
 		const erridx = Routput.findIndex(x => x == 'R stderr:')
@@ -343,8 +345,6 @@ async function parseRoutput(Rinput, Routput, id2originalId, sampleSize) {
 	  },
 	]
 	*/
-
-	const result = [] // same structure as out[]
 
 	for (const analysis of out) {
 		const analysisResults = {
@@ -446,7 +446,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, sampleSize) {
 				})
 			}
 		}
-		result.push(analysisResults)
+		result.lst.push(analysisResults)
 	}
 	return result
 }
