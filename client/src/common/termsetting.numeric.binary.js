@@ -6,7 +6,27 @@ import { keyupEnter } from '../client'
 import { make_one_checkbox } from '../dom/checkbox'
 import { getPillNameDefault } from './termsetting'
 
-// self is the termsetting instance
+/*
+********************** EXPORTED
+getHandler(self)
+	- self: a termsetting instance
+	showEditMenu(div) // binary edit menu
+		setqDefaults(self)
+		setDensityPlot(self)
+		renderBoundaryInclusionInput(self)
+		renderCuttoffInput(self)
+			handleChange()
+			updateUI(cutoff)
+			updateUI(cutoff)
+			handleCheckbox()
+		renderBoundaryInputDivs(self, self.q.lst)
+	getPillName() // Print term name in the pill
+	getPillStatus() // Returns {text, bgcolor} which determines whether to make right half of the pill visible and show some text. Optional bgcolor can be used to highlight an error.
+                    // Return null to hide the right half.
+********************** INTERNAL
+	processCustomBinInputs()
+*/
+
 export function getHandler(self) {
 	return {
 		getPillName(d) {

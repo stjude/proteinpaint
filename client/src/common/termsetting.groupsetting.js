@@ -11,8 +11,9 @@ regroupMenu()
 
 other internal functions:
 	addGroupHolder() //create holder for each group from groupset with group name input
-	initGroupDiv() // make draggable div to render drag-drop list of categories
-	addGroupItems() // make drag-drop list of categories
+	initGroupDiv() //make draggable div to render drag-drop list of categories
+	addGroupItems() //make drag-drop list of categories
+	addOnDrop() //move dom from one group holder to another group holder
 */
 
 export function setGroupsettingMethods(self) {
