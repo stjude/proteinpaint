@@ -412,10 +412,12 @@ dat <- as.data.frame(matrix(data = NA, nrow = length(lst$outcome$values), ncol =
 colnames(dat)[1] <- lst$outcome$id
 dat[,1] <- as.numeric(lst$outcome$values)
 # fill independent variable columns
-for (i in 1:length(lst$independent)) {
-  col <- i + 1
-  term <- lst$independent[[i]]
-  dat <- buildDat(term, dat, col)
+if (length(lst$independent) > 0) {
+  for (i in 1:length(lst$independent)) {
+    col <- i + 1
+    term <- lst$independent[[i]]
+    dat <- buildDat(term, dat, col)
+  }
 }
 # fill additional independent variable columns
 if ("additionalIndependent" %in% names(lst)) {
@@ -443,12 +445,14 @@ outcomeTerm <- "outcome"
 independentTerms <- vector(mode = "character")
 interactions <- vector(mode = "character")
 splineTerms <- list()
-for (i in 1:length(lst$independent)) {
-  term <- lst$independent[[i]]
-  out <- buildFormula(term, independentTerms, interactions, splineTerms)
-  independentTerms <- out$independentTerms
-  interactions <- out$interactions
-  splineTerms <- out$splineTerms
+if (length(lst$independent) > 0) {
+  for (i in 1:length(lst$independent)) {
+    term <- lst$independent[[i]]
+    out <- buildFormula(term, independentTerms, interactions, splineTerms)
+    independentTerms <- out$independentTerms
+    interactions <- out$interactions
+    splineTerms <- out$splineTerms
+  }
 }
 
 # prepare additional independent terms for building regression formula
