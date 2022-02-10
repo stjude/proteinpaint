@@ -3,8 +3,26 @@ import { filterInit } from './filter'
 import { getPillNameDefault } from './termsetting'
 
 /*
-Arguments
-self: a termsetting instance
+********************** EXPORTED
+getHandler(self)
+	- self: a termsetting instance
+	showEditMenu(div): // categorical edit menu
+		showGrpOpts // create first menu with basic options e.g. groupset, predefined groupset
+	getPillName() // Print term name in the pill
+	getPillStatus() // Returns {text, bgcolor} which determines whether to make right half of the pill visible and show some text. Optional bgcolor can be used to highlight an error.
+                    // Return null to hide the right half.
+	validateQ(data)
+	postMain() // update samplecount
+setCategoryConditionMethods()
+	validateGroupsetting()
+	showGrpOpts() // show menu for available groupset options
+	grpSet2valGrp()
+fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
+					// Must also guarantee tw.id and tw.term.id are set.
+					// Computation should be independent of state, especially filter, as that’s not provided.
+
+********************** INTERNAL
+set_hiddenvalues(q, term)
 */
 
 export function getHandler(self) {
