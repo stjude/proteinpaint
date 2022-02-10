@@ -136,9 +136,31 @@ function makeCopyPasteInput(div, d) {
 			d.data = parseTabDelimitedData(paste.property('value').trim())
 		})
 }
-
+//TODO: Better place for these?
 const name2id = new Map()
+/* 
+	key: term name
+	value: id
+*/
 const term2term = new Map()
+/* 
+	key: id
+	value(s): Set(['child id', 'child id', ...])
+*/
+const child2parents = new Map()
+/* ancestry
+	key: child
+	value(s): Map({ parent id, order }, { parent id, order }, ...)
+*/
+const ch2immediateP = new Map()
+/* 
+	key: child id
+	value: parent id
+*/
+const p2childorder = new Map()
+
+const root_id = '__root' //placeholder
+p2childorder.set(root_id, [])
 const allterms_byorder = new Set()
 
 //Parse tab delimited files only
@@ -219,6 +241,7 @@ function parseTabDelimitedData(input) {
 				/******* Parse for hierarchy *******/
 				const filteredCols = filterCols(colNames)
 				let leafIdx = lastNonNullIdx
+				// let parent_id
 				for (const fc in filteredCols) {
 					let id
 					if (fc == leafIdx) {
@@ -227,14 +250,30 @@ function parseTabDelimitedData(input) {
 					} else {
 						id = filteredCols[fc]
 					}
+					//find id for parent immediate level
 					const levelUpId = filteredCols[Number(fc) - 1]
-					if (fc != 0) term2term.get(levelUpId).add(id)
+
+					if (fc != 0) {
+						term2term.get(levelUpId).add(id)
+						if (!child2parents.has(id)) child2parents.set(id, new Map())
+						for (const y in filteredCols) {
+							if (y < fc) {
+								child2parents.get(id).set(filteredCols[y], y)
+							}
+						}
+						ch2immediateP.set(id, levelUpId)
+						if (!p2childorder.has(levelUpId)) p2childorder.set(levelUpId, []) //Why is this needed when there's term2term?
+						if (p2childorder.get(levelUpId).indexOf(id) == -1) p2childorder.get(levelUpId).push(id)
+					} else {
+						if (p2childorder.get(root_id).indexOf(id) == -1) p2childorder.get(root_id).push(id)
+					}
 
 					if (!term2term.has(id) && fc != leafIdx) {
 						term2term.set(id, new Set())
 					}
-
 					allterms_byorder.add(id)
+
+					// parent_id = levelUpId ? levelUpId : null
 				}
 
 				/******* Create term *******/
@@ -253,8 +292,14 @@ function parseTabDelimitedData(input) {
 		}
 	}
 	check4DuplicateValues(keys) //Checks all duplicate term.ids/keys for duplicates
-	console.log(allterms_byorder)
+	// console.log(name2id)
+	// console.log(allterms_byorder)
 	// console.log(term2term)
+	// console.log(ch2immediateP)
+	// console.log(child2parents)
+	// console.log(p2childorder)
+	// console.log(allterms_byorder.size + ' terms in total')
+	// console.log({ terms: Object.values(terms) })
 	return { terms: Object.values(terms) }
 }
 
