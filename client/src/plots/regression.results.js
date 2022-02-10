@@ -160,17 +160,26 @@ function setInteractivity(self) {}
 
 function setRenderers(self) {
 	self.displayResult = async result => {
+		/* result{
+			lst:[ 
+				{ data: { err, splinePlots, residuals, ... }, id:'snp1' },
+				{ data: { err, splinePlots, residuals, ... }, id:'snp2' },
+				...
+			]
+		}
+		*/
 		if (self.config.independent.find(i => i.term.type == 'snplocus')) {
 			// has a snploucs term: create genome browser to display that locus
-			// each snp has a set of results
-			// clicking on a snp will call displayResult_oneset() to display its results
+			// in result.lst[], there's one set of result for each variant, identified by id
+			// clicking on a dot in browser tk will call displayResult_oneset() to display its results
 			await self.show_genomebrowser_snplocus(result)
 			return
 		}
 		// no snplocus, clear things if previous analysis had it
 		delete self.snplocusBlock
 		self.dom.snplocusBlockDiv.selectAll('*').remove()
-		// there is a single set of results from analyzing one model
+		// result.lst[] has only one set of result, from analyzing one model
+		if (!result.lst[0] || !result.lst[0].data) throw 'result is not {lst:[ {data:{}} ]}'
 		// quick fix; backend should reassign result.err to a specific set
 		result.lst[0].data.err = result.err
 		self.displayResult_oneset(result.lst[0].data)
@@ -690,7 +699,7 @@ function setRenderers(self) {
 	}
 
 	self.show_genomebrowser_snplocus = async result => {
-		// find the snplocus input
+		// show genome browser when there's a snplocus term in independent
 		const input = self.parent.inputs.independent.inputs.find(i => i.term && i.term.term.type == 'snplocus')
 		if (!self.snplocusBlock) {
 			// doesn't have a block, create one
@@ -738,7 +747,7 @@ function setRenderers(self) {
 			arg.tklst.push({
 				type: 'mds3', // tkt.mds3
 				name: 'Variants',
-				custom_variants: make_mds3_variants(input.term.term.snps)
+				custom_variants: make_mds3_variants(input.term.term.snps, result)
 			})
 
 			first_genetrack_tolist(arg.genome, arg.tklst)
@@ -750,7 +759,7 @@ function setRenderers(self) {
 			const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
 			// assign result to each variant
 			// TODO "result" is {"snp1":{result}, "snp2":{result}}
-			tk.custom_variants = make_mds3_variants(input.term.term.snps)
+			tk.custom_variants = make_mds3_variants(input.term.term.snps, result)
 			// render
 			tk.load()
 		}
@@ -765,16 +774,26 @@ function fillTdName(td, name) {
 	}
 }
 
-function make_mds3_variants(lst) {
+function make_mds3_variants(snps, result) {
+	// snps is from input.term.term.snps
+	// result:{lst[{data,id},{data,id},...]}
 	const mlst = []
-	for (const a of lst) {
-		const b = {
+	for (const snp of snps) {
+		const m = {
 			// must be supplied as when updating custom variants for existing mds3 tk
 			// it will not run makeTk() again
 			occurrence: 1
 		}
-		Object.assign(b, a)
-		mlst.push(b)
+		Object.assign(m, snp)
+		const thisresult = result.lst.find(i => i.id == snp.snpid)
+		if (thisresult) {
+			m.regressionResult = thisresult.data
+			// can call displayResult_oneset on this
+			// todo: which p-value to use?
+		} else {
+			// should not happen; skip for now
+		}
+		mlst.push(m)
 	}
 	return mlst
 }
