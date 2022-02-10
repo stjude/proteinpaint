@@ -1,8 +1,10 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import { Menu, dofetch2 } from '../client'
+import { Menu } from '../dom/menu'
+import { dofetch3 } from '../common/dofetch'
 import { init as init_legend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '../common/urlmap'
+import { mclass } from '../../shared/common'
 
 /*
 ********************** EXPORTED
@@ -55,6 +57,7 @@ export async function makeTk(tk, block) {
 		tk.skewer = {
 			g: tk.glider.append('g')
 		}
+		// in numeric mode, will render elements into tk.skewer.g and create tk.skewer2
 	}
 
 	tk.leftLabelMaxwidth = tk.tklabel
@@ -84,6 +87,31 @@ export async function makeTk(tk, block) {
 	}
 	if (tk.hlssmid) {
 		tk.hlssmid = new Set(tk.hlssmid.split(','))
+	}
+
+	tk.color4disc = m => {
+		// figure out what color to use for a m point
+		if (tk.vcfinfofilter && tk.vcfinfofilter.setidx4mclass != undefined) {
+			const mcset = tk.vcfinfofilter.lst[tk.vcfinfofilter.setidx4mclass]
+
+			const [err, vlst] = getter_mcset_key(mcset, m)
+
+			if (err || vlst == undefined) return 'black'
+
+			for (const v of vlst) {
+				// no choice but simply use first value to ever have a valid color
+				if (mcset.categories[v]) {
+					return mcset.categories[v].color
+				} else {
+					return 'black'
+				}
+			}
+		}
+		// mclass
+		if (mclass[m.class]) {
+			return mclass[m.class].color
+		}
+		return 'black'
 	}
 
 	// parse url parameters applicable to this track
@@ -157,7 +185,7 @@ function mayaddGetter_m2csq(tk, block) {
 		}
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (tk.token) headers['X-Auth-Token'] = tk.token
-		return await dofetch2('mds3?' + lst.join('&'), { headers }, { serverData: tk.cache })
+		return await dofetch3('mds3?' + lst.join('&'), { headers }, { serverData: tk.cache })
 	}
 }
 
@@ -176,7 +204,7 @@ function mayaddGetter_sampleSummaries2(tk, block) {
 		if (tk.set_id) lst.push('set_id=' + tk.set_id)
 		if (tk.token) headers['X-Auth-Token'] = tk.token
 		if (tk.filter0) lst.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
-		return await dofetch2('mds3?' + lst.join('&'), { headers }, { serverData: tk.cache })
+		return await dofetch3('mds3?' + lst.join('&'), { headers }, { serverData: tk.cache })
 	}
 }
 
@@ -214,7 +242,7 @@ function mayaddGetter_variant2samples(tk, block) {
 		// pass all termidlst including new termid
 		if (arg.querytype != tk.mds.variant2samples.type_sunburst && tk.mds.variant2samples.termidlst)
 			par.push('termidlst=' + tk.mds.variant2samples.termidlst)
-		const data = await dofetch2('mds3?' + par.join('&'), { headers }, { serverData: tk.cache })
+		const data = await dofetch3('mds3?' + par.join('&'), { headers }, { serverData: tk.cache })
 		if (data.error) throw data.error
 		if (!data.variant2samples) throw 'result error'
 		return data.variant2samples
@@ -233,4 +261,60 @@ function _load(tk, block) {
 	return async () => {
 		return await loadTk(tk, block)
 	}
+}
+
+function getter_mcset_key(mcset, m) {
+	/*
+	get the key from an item (m) given a mcset
+
+	returns list!!!
+
+	*/
+	if (mcset.altalleleinfo) {
+		if (!m.altinfo) return ['no .altinfo']
+
+		const value = m.altinfo[mcset.altalleleinfo.key]
+		if (value == undefined) {
+			// no value
+
+			if (mcset.numericfilter) {
+				// for alleles without AF_ExAC e.g. not seem in that population, treat value as 0
+				// FIXME: only work for population frequency, assumption won't hold for negative values
+				return [null, [0]]
+			}
+
+			return [null, undefined]
+		}
+
+		let vlst = Array.isArray(value) ? value : [value]
+
+		if (mcset.altalleleinfo.separator) {
+			// hardcoded separator for string
+			vlst = vlst[0].split(mcset.altalleleinfo.separator)
+		}
+		return [null, vlst]
+	}
+
+	if (mcset.locusinfo) {
+		if (!m.info) return ['no .info']
+
+		const value = m.info[mcset.locusinfo.key]
+		if (value == undefined) {
+			// no value
+			if (mcset.numericfilter) {
+				// hard fix: for alleles without AF_ExAC e.g. not seem in that population, treat value as 0
+				return [null, [0]]
+			}
+			return [null, undefined]
+		}
+
+		let vlst = Array.isArray(value) ? value : [value]
+
+		if (mcset.locusinfo.separator) {
+			vlst = vlst[0].split(mcset.locusinfo.separator)
+		}
+		return [null, vlst]
+	}
+
+	return ['no trigger']
 }

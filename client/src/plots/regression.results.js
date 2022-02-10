@@ -747,18 +747,22 @@ function setRenderers(self) {
 			arg.tklst.push({
 				type: 'mds3', // tkt.mds3
 				name: 'Variants',
+				numericmode: {
+					inuse: true,
+					type: '__value'
+				},
 				custom_variants: make_mds3_variants(input.term.term.snps, result)
 			})
 
 			first_genetrack_tolist(arg.genome, arg.tklst)
 			const _ = await import('../block')
 			self.snplocusBlock = new _.Block(arg)
+			window.bb = self.snplocusBlock
 		} else {
 			// browser is already created
 			// find the mds3 track
 			const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
 			// assign result to each variant
-			// TODO "result" is {"snp1":{result}, "snp2":{result}}
 			tk.custom_variants = make_mds3_variants(input.term.term.snps, result)
 			// render
 			tk.load()
@@ -775,8 +779,10 @@ function fillTdName(td, name) {
 }
 
 function make_mds3_variants(snps, result) {
-	// snps is from input.term.term.snps
-	// result:{lst[{data,id},{data,id},...]}
+	/* assign result to snps
+	snps is from input.term.term.snps
+	result:{lst[{data,id},{data,id},...]}
+	*/
 	const mlst = []
 	for (const snp of snps) {
 		const m = {
@@ -785,13 +791,19 @@ function make_mds3_variants(snps, result) {
 			occurrence: 1
 		}
 		Object.assign(m, snp)
-		const thisresult = result.lst.find(i => i.id == snp.snpid)
+		const thisresult = result.lst.find(i => i.id == m.snpid)
 		if (thisresult) {
-			m.regressionResult = thisresult.data
-			// can call displayResult_oneset on this
-			// todo: which p-value to use?
+			// reg result is found for this snp; can call displayResult_oneset
+			const d = thisresult.data
+			if (!d) throw '.data{} missing'
+			m.regressionResult = d
+			// find p-value (last column of coeff table)
+			if (!d.coefficients || !d.coefficients.terms) throw '.data{coefficients:{terms}} missing'
+			if (!d.coefficients.terms[m.snpid]) throw m.snpid + ' missing in coefficients.terms{}'
+			const v = Number(d.coefficients.terms[m.snpid].fields[d.coefficients.terms[m.snpid].fields.length - 1])
+			m.__value = -Math.log10(v)
 		} else {
-			// should not happen; skip for now
+			console.log('no result for ' + m.snpid)
 		}
 		mlst.push(m)
 	}

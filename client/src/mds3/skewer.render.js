@@ -15,7 +15,6 @@ skewer_make
 settle_glyph
 unfold_glyph
 fold_glyph
-getter_mcset_key
 ********************** INTERNAL
 skewer_sety
 skewer_setstem
@@ -37,31 +36,6 @@ const minoccur4sunburst = 10 // minimum occurrence for showing skewer, maybe ds 
 sets tk.skewer.maxheight
 */
 export function skewer_make(tk, block) {
-	const color4disc = m => {
-		if (tk.vcfinfofilter && tk.vcfinfofilter.setidx4mclass != undefined) {
-			const mcset = tk.vcfinfofilter.lst[tk.vcfinfofilter.setidx4mclass]
-
-			const [err, vlst] = getter_mcset_key(mcset, m)
-
-			if (err || vlst == undefined) return 'black'
-
-			for (const v of vlst) {
-				// no choice but simply use first value to ever have a valid color
-				if (mcset.categories[v]) {
-					return mcset.categories[v].color
-				} else {
-					return 'black'
-				}
-			}
-		}
-
-		// mclass
-		if (common.mclass[m.class]) {
-			return common.mclass[m.class].color
-		}
-		return 'black'
-	}
-
 	const ss = tk.skewer
 
 	for (const d of ss.data) {
@@ -161,7 +135,7 @@ export function skewer_make(tk, block) {
 	// full filled
 	discdot
 		.filter(d => d.dt == common.dtsnvindel || d.dt == common.dtsv || d.dt == common.dtfusionrna)
-		.attr('fill', d => color4disc(d.mlst[0]))
+		.attr('fill', d => tk.color4disc(d.mlst[0]))
 		.attr('stroke', 'white')
 		.attr('r', d => d.radius - 0.5)
 	// masking half
@@ -197,7 +171,7 @@ export function skewer_make(tk, block) {
 	textslc.filter(d => d.dt == common.dtsnvindel).attr('fill', 'white')
 	textslc
 		.filter(d => d.dt == common.dtsv || d.dt == common.dtfusionrna)
-		.attr('stroke', d => color4disc(d.mlst[0]))
+		.attr('stroke', d => tk.color4disc(d.mlst[0]))
 		.attr('stroke-width', 0.8)
 		.attr('font-weight', 'bold')
 		.attr('fill', 'white')
@@ -220,7 +194,7 @@ export function skewer_make(tk, block) {
 				ss.maxheight = Math.max(ss.maxheight, (d.radius + d.rimwidth) * 2 + 2 + lw)
 			}
 		})
-		.attr('fill', d => color4disc(d.mlst[0]))
+		.attr('fill', d => tk.color4disc(d.mlst[0]))
 		.attr('x', d => d.radius + d.rimwidth + 1)
 		.attr('y', d => d._labfontsize * middlealignshift)
 		.attr('font-family', client.font)
@@ -270,7 +244,7 @@ export function skewer_make(tk, block) {
 	discg
 		.append('circle')
 		.attr('r', d => d.radius - 0.5)
-		.attr('stroke', d => color4disc(d.mlst[0]))
+		.attr('stroke', d => tk.color4disc(d.mlst[0]))
 		.attr('class', 'sja_aa_disckick')
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
@@ -304,7 +278,7 @@ export function skewer_make(tk, block) {
 	discg
 		.append('path')
 		.attr('d', rimfunc)
-		.attr('fill', d => color4disc(d.mlst[0]))
+		.attr('fill', d => tk.color4disc(d.mlst[0]))
 		.attr('class', 'sja_aa_discrim')
 		.attr('fill-opacity', 0)
 	const rimfunc2 = d3arc()
@@ -316,7 +290,7 @@ export function skewer_make(tk, block) {
 		.filter(d => d.rim2count > 0)
 		.append('path')
 		.attr('d', rimfunc2)
-		.attr('stroke', d => color4disc(d.mlst[0]))
+		.attr('stroke', d => tk.color4disc(d.mlst[0]))
 		.attr('fill', 'none')
 		.attr('class', 'sja_aa_discrim')
 		.attr('stroke-opacity', 0)
@@ -403,7 +377,7 @@ export function skewer_make(tk, block) {
 				.each(function(g) {
 					g.pica_mlabelwidth = this.getBBox().width
 				})
-				.attr('fill', d => color4disc(d.mlst[0]))
+				.attr('fill', d => tk.color4disc(d.mlst[0]))
 				.attr('dominant-baseline', abp ? 'hanging' : 'auto')
 			const firstlabw = d.groups[0].pica_mlabelwidth
 			tk.pica.x = d.x - hpad - firstlabw / 2
@@ -466,7 +440,7 @@ export function skewer_make(tk, block) {
 		.append('path')
 		.attr('class', 'sja_aa_stem')
 		.attr('d', d => skewer_setstem(d, tk))
-		.attr('stroke', d => color4disc(d.groups[0].mlst[0]))
+		.attr('stroke', d => tk.color4disc(d.groups[0].mlst[0]))
 		.attr('fill', 'none')
 	// ssk: only for skewers with >1 groups
 	const mgsk = ss.selection.filter(d => d.groups.length > 1)
@@ -476,7 +450,7 @@ export function skewer_make(tk, block) {
 		.attr('shape-rendering', 'crispEdges')
 		.attr('fill-opacity', 0)
 		.attr('height', ss.stem1)
-		.attr('fill', d => color4disc(d.groups[0].mlst[0]))
+		.attr('fill', d => tk.color4disc(d.groups[0].mlst[0]))
 		.attr('width', d => {
 			d.ssk_width = Math.max(d.occurrence.toString().length * 8 + 6, 2 * (d.maxradius + d.maxrimwidth))
 			return d.ssk_width
@@ -915,62 +889,6 @@ export function fold_glyph(lst, tk) {
 		.transition()
 		.duration(dur) // to prevent showing pica over busy skewer
 		.attr('transform', 'scale(1)')
-}
-
-export function getter_mcset_key(mcset, m) {
-	/*
-	get the key from an item (m) given a mcset
-
-	returns list!!!
-
-	*/
-	if (mcset.altalleleinfo) {
-		if (!m.altinfo) return ['no .altinfo']
-
-		const value = m.altinfo[mcset.altalleleinfo.key]
-		if (value == undefined) {
-			// no value
-
-			if (mcset.numericfilter) {
-				// for alleles without AF_ExAC e.g. not seem in that population, treat value as 0
-				// FIXME: only work for population frequency, assumption won't hold for negative values
-				return [null, [0]]
-			}
-
-			return [null, undefined]
-		}
-
-		let vlst = Array.isArray(value) ? value : [value]
-
-		if (mcset.altalleleinfo.separator) {
-			// hardcoded separator for string
-			vlst = vlst[0].split(mcset.altalleleinfo.separator)
-		}
-		return [null, vlst]
-	}
-
-	if (mcset.locusinfo) {
-		if (!m.info) return ['no .info']
-
-		const value = m.info[mcset.locusinfo.key]
-		if (value == undefined) {
-			// no value
-			if (mcset.numericfilter) {
-				// hard fix: for alleles without AF_ExAC e.g. not seem in that population, treat value as 0
-				return [null, [0]]
-			}
-			return [null, undefined]
-		}
-
-		let vlst = Array.isArray(value) ? value : [value]
-
-		if (mcset.locusinfo.separator) {
-			vlst = vlst[0].split(mcset.locusinfo.separator)
-		}
-		return [null, vlst]
-	}
-
-	return ['no trigger']
 }
 
 /*

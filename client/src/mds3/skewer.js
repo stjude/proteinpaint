@@ -3,6 +3,7 @@ import * as coord from '../coord'
 import * as client from '../client'
 import { skewer_make, settle_glyph, fold_glyph, unfold_glyph } from './skewer.render'
 import { make_datagroup } from './datagroup'
+import { render as nm_render } from './numericmode'
 
 /*
 at some point, data.skewer will return aggregated data,
@@ -62,6 +63,11 @@ export function may_render_skewer(data, tk, block) {
 		// created in makeTk when skewer datatype is available
 		return 0
 	}
+
+	if (tk.numericmode && tk.numericmode.inuse) {
+		return nm_render(data, tk, block)
+	}
+
 	tk.aboveprotein = true
 
 	if (data && !data.skewer && block.usegm && block.gmmode != client.gmmode.genomic && block.pannedpx != undefined) {
