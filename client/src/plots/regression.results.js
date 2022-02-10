@@ -5,6 +5,16 @@ import { axisBottom } from 'd3-axis'
 import { axisstyle } from '../dom/axisstyle'
 import { get_one_genome, first_genetrack_tolist } from '../client'
 
+/*************
+can dynamically add following attributes
+
+- this.snplocusBlock:
+	for snplocus term
+	display in this.dom.snplocusBlockDiv
+- this.hasUnsubmittedEdits_nullify_singleuse:
+	to negate hasUnsubmittedEdits and keep running analysis
+*/
+
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
 const forestcolor = '#126e08'
 
@@ -15,7 +25,6 @@ export class RegressionResults {
 		// reference to the parent component's mutable instance (not its API)
 		this.parent = opts.parent
 		this.type = 'regression'
-		this.snplocus = {} // {block,tk}
 		setInteractivity(this)
 		setRenderers(this)
 
@@ -30,7 +39,7 @@ export class RegressionResults {
 		this.dom = {
 			holder,
 			err_div: holder.append('div'),
-			genomebrowserdiv: holder.append('div').style('margin-left', '20px'),
+			snplocusBlockDiv: holder.append('div').style('margin-left', '20px'),
 			content: holder.append('div').style('margin', '10px')
 		}
 	}
@@ -41,11 +50,16 @@ export class RegressionResults {
 			// share the writable config copy
 			this.config = this.parent.config
 			this.state = this.parent.state
-			if (!this.state.formIsComplete || this.parent.inputs.hasError || this.config.hasUnsubmittedEdits) {
+			if (
+				!this.state.formIsComplete ||
+				this.parent.inputs.hasError ||
+				(this.config.hasUnsubmittedEdits && !this.hasUnsubmittedEdits_nullify_singleuse)
+			) {
 				// no result to show
 				this.dom.holder.style('display', 'none')
 				return
 			}
+			delete this.hasUnsubmittedEdits_nullify_singleuse // single-use, delete
 			// submit server request to run analysis
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getRegressionData(reqOpts)
@@ -146,12 +160,27 @@ function setInteractivity(self) {}
 
 function setRenderers(self) {
 	self.displayResult = async result => {
+		if (self.config.independent.find(i => i.term.type == 'snplocus')) {
+			// has a snploucs term: create genome browser to display that locus
+			// each snp has a set of results
+			// clicking on a snp will call displayResult_oneset() to display its results
+			await self.show_genomebrowser_snplocus(result)
+			return
+		}
+		// no snplocus, clear things if previous analysis had it
+		delete self.snplocusBlock
+		self.dom.snplocusBlockDiv.selectAll('*').remove()
+		// there is a single set of results from analyzing one model
+		// quick fix; backend should reassign result.err to a specific set
+		result.lst[0].data.err = result.err
+		self.displayResult_oneset(result.lst[0].data)
+	}
+
+	self.displayResult_oneset = result => {
 		// this is work-in-progress and will be redeveloped later
 		// hardcoded logic and data structure
 		// benefit is that specific logic can be applied to rendering each different table
 		// no need for one reusable renderer to support different table types
-
-		await self.mayshow_genomebrowser_snplocus(result)
 		self.mayshow_err(result)
 		self.newDiv('Sample size: ' + result.sampleSize)
 		self.mayshow_splinePlots(result)
@@ -660,17 +689,13 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_genomebrowser_snplocus = async result => {
-		// find if has a snplocus term
+	self.show_genomebrowser_snplocus = async result => {
+		// find the snplocus input
 		const input = self.parent.inputs.independent.inputs.find(i => i.term && i.term.term.type == 'snplocus')
-		if (!input) {
-			self.dom.genomebrowserdiv.selectAll('*').remove()
-			return
-		}
-		// has snplocus term; create a block instance if it's not there yet
-		if (!self.snplocus.block) {
+		if (!self.snplocusBlock) {
+			// doesn't have a block, create one
 			const arg = {
-				holder: self.dom.genomebrowserdiv,
+				holder: self.dom.snplocusBlockDiv,
 				genome: await get_one_genome(self.state.vocab.genome),
 				chr: input.term.q.chr,
 				start: input.term.q.start,
@@ -691,24 +716,43 @@ function setRenderers(self) {
 					tw.q.start = start
 					tw.q.stop = stop
 					await input.pill.main(tw)
+					/* 
+					pill.main() will wholy update following things in termsetting instance:
+					- q{ chr/start/stop }
+					- term{ snps } list of variants retrieved from updated locus
+					for q/term to be synced into regression state, must do runCallback
+					which will call editConfig() and dispatch action with hasUnsubmittedEdits=true,
+					set this single-use flag to nullify it
+					to be able to continue run analysis
 
-					/*
-					const config = {independent: self.config.independent.map(i=>i.id==input.term.term.id ? tw : i)}
-					self.parent.app.dispatch({
-						type:'plot_edit',
-						id: self.parent.id,
-						chartType:'regression',
-						config
-					})
+					reason of not directly calling self.parent.inputs.editConfig(input, tw)
+					is that we're having incomplete info in tw
+					tw.term.snps[] is missing, and that can only be made in pill main/postMain/validateSnps
 					*/
+					self.hasUnsubmittedEdits_nullify_singleuse = true
+					input.pill.runCallback()
 				}
 			}
+
+			// add mds3 tk
+			arg.tklst.push({
+				type: 'mds3', // tkt.mds3
+				name: 'Variants',
+				custom_variants: make_mds3_variants(input.term.term.snps)
+			})
+
 			first_genetrack_tolist(arg.genome, arg.tklst)
 			const _ = await import('../block')
-			self.snplocus.block = new _.Block(arg)
-		}
-		if (!self.snplocus.tk) {
-			// create mds3
+			self.snplocusBlock = new _.Block(arg)
+		} else {
+			// browser is already created
+			// find the mds3 track
+			const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
+			// assign result to each variant
+			// TODO "result" is {"snp1":{result}, "snp2":{result}}
+			tk.custom_variants = make_mds3_variants(input.term.term.snps)
+			// render
+			tk.load()
 		}
 	}
 }
@@ -719,4 +763,18 @@ function fillTdName(td, name) {
 	} else {
 		td.text(name.substring(0, 25) + ' ...').attr('title', name)
 	}
+}
+
+function make_mds3_variants(lst) {
+	const mlst = []
+	for (const a of lst) {
+		const b = {
+			// must be supplied as when updating custom variants for existing mds3 tk
+			// it will not run makeTk() again
+			occurrence: 1
+		}
+		Object.assign(b, a)
+		mlst.push(b)
+	}
+	return mlst
 }

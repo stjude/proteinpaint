@@ -58,7 +58,7 @@ export async function makeTk(tk, block) {
 	}
 
 	tk.leftLabelMaxwidth = tk.tklabel
-		.text(tk.mds.label)
+		.text(tk.mds.label || tk.name)
 		.node()
 		.getBBox().width
 
@@ -113,21 +113,27 @@ function init_mclass(tk) {
 function get_ds(tk, block) {
 	if (tk.dslabel) {
 		// official dataset
-
 		tk.mds = block.genome.datasets[tk.dslabel]
 		if (!tk.mds) throw 'dataset not found for ' + tk.dslabel
-
 		return
 	}
 	// custom
 	if (!tk.name) tk.name = 'Unnamed'
 	tk.mds = {}
-	// to fill in details to tk.mds
-	/*
+	// fill in details to tk.mds
 	if (tk.vcf) {
-		await getvcfheader_customtk(tk.vcf, block.genome)
+		tk.mds.has_skewer = true // enable skewer tk
+		console.log('to enable custom vcf')
+		//await getvcfheader_customtk(tk.vcf, block.genome)
+	} else if (tk.custom_variants) {
+		tk.mds.has_skewer = true // enable skewer tk
+		// validate custom data
+		for (const m of tk.custom_variants) {
+			if (!Number.isInteger(m.occurrence)) m.occurrence = 1
+		}
+	} else {
+		throw 'unknown data source for custom track'
 	}
-	*/
 	// if variant2samples is enabled for custom ds, it will also have the async get()
 }
 

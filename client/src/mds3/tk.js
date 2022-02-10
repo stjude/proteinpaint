@@ -1,8 +1,8 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import * as common from '../../shared/common'
-import * as client from '../client'
+import { gmmode } from '../client'
+import { dofetch3 } from '../common/dofetch'
 import { makeTk } from './makeTk'
 import { update as update_legend } from './legend'
 import { may_render_skewer } from './skewer'
@@ -33,8 +33,15 @@ export async function loadTk(tk, block) {
 			await makeTk(tk, block)
 		}
 
-		const [par, headers] = get_parameter(tk, block)
-		const data = await client.dofetch2('mds3?' + par, { headers })
+		let data
+		if (tk.custom_variants) {
+			data = {
+				skewer: tk.custom_variants
+			}
+		} else {
+			const [par, headers] = get_parameter(tk, block)
+			data = await dofetch3('mds3?' + par, { headers })
+		}
 		if (data.error) throw data.error
 
 		if (tk.uninitialized) {
@@ -89,12 +96,7 @@ function get_parameter(tk, block) {
 	// including skewer or non-skewer
 	par.push('forTrack=1')
 
-	if (
-		tk.uninitialized ||
-		!block.usegm ||
-		block.gmmode == client.gmmode.genomic ||
-		block.gmmodepast == client.gmmode.genomic
-	) {
+	if (tk.uninitialized || !block.usegm || block.gmmode == gmmode.genomic || block.gmmodepast == gmmode.genomic) {
 		// assumption is that api will return the same amount of variants for different mode (protein/exon/splicerna)
 		// so there's no need to re-request data in these modes (but not genomic mode)
 		if (tk.mds.has_skewer) {
@@ -165,7 +167,7 @@ export function rangequery_rglst(tk, block, par) {
 		}
 		rglst.push(r)
 		par.push('isoform=' + block.usegm.isoform)
-		if (block.gmmode == client.gmmode.genomic) {
+		if (block.gmmode == gmmode.genomic) {
 			// TODO if can delete the isoform parameter to simply make the query by genomic pos
 			par.push('atgenomic=1')
 		}

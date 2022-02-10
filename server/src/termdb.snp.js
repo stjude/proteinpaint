@@ -5,7 +5,9 @@ const termdbsql = require('./termdb.sql')
 const termdb = require('./termdb')
 const readline = require('readline')
 const serverconfig = require('./serverconfig')
-const vcf = require('../shared/vcf')
+const { dissect_INFO } = require('../shared/vcf.info')
+const { parse_CSQ } = require('../shared/vcf.csq')
+const { vcfcopymclass } = require('../shared/common')
 
 /*
 cache file has a header line, with one line per valid snp. columns: 
@@ -377,20 +379,24 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 		callback: line => {
 			const l = line.split('\t')
 			const pos = Number(l[0])
-			const alleles = [l[1], ...l[2].split(',')]
-			const snpid = pos + '.' + l[1] + '.' + l[2] // pos.ref.alt as snpid
-			snps.push({
+			const refAllele = l[1]
+			const altAlleles = l[2].split(',')
+			const alleles = [refAllele, ...altAlleles]
+			const snpid = pos + '.' + refAllele + '.' + altAlleles.join(',')
+			const variant = {
 				snpid,
-				info: vcf.dissect_INFO(l[3]),
+				chr: q.chr,
 				pos
-			})
+			}
+			compute_mclass(tk, altAlleles, variant, l[3])
+			snps.push(variant)
 
 			const lst = [
 				snpid,
 				q.chr,
 				pos,
-				l[1], // ref
-				l[2], // alt
+				refAllele,
+				altAlleles.join(','),
 				'' // snplocus file does not have eff ale
 			]
 			for (let i = 3; i < l.length; i++) {
@@ -402,6 +408,31 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 	const cacheid = 'snpgt_' + q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
 	await utils.write_file(path.join(serverconfig.cachedir, cacheid), lines.join('\n'))
 	return { cacheid, snps }
+}
+
+function compute_mclass(tk, altAlleles, variant, info_str) {
+	// quick fix to assign mclass to variant which is kept at term.snps[] on client
+	// for displaying in mds3 tk
+	// require csq annotation
+	const info = dissect_INFO(info_str)
+	if (!info.CSQ) {
+		// missing csq
+		return
+	}
+
+	const m = {
+		alleles: altAlleles.map(i => {
+			return { allele_original: i }
+		})
+	}
+
+	parse_CSQ(info.CSQ, tk.info.CSQ.csqheader, m)
+
+	// FIXME only deal with first alt allele
+	variant.csq = m.alleles[0].csq
+	vcfcopymclass(variant, {})
+	delete variant.csq
+	// gene/isoform/class/dt/mname are assigned on variant
 }
 
 function add_bcf_info_filters(info_fields, bcfargs) {

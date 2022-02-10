@@ -57,15 +57,24 @@ export async function get_regression(q, ds) {
 	try {
 		parse_q(q, ds)
 
-		const startTime = +new Date()
 		const sampledata = await getSampleData(q, [q.outcome, ...q.independent])
 		/* each element is one sample with a key-val map for all its annotations:
 		{sample, id2value:Map( tid => {key,value}) }
 		*/
-		const queryTime = +new Date() - startTime
 
 		// build the input for R script
 		const Rinput = makeRinput(q, sampledata)
+		/* details described in server/utils/regression.R
+		Rinput {
+			type
+			outcome{}
+			independent[]
+			additionalIndependent[]
+			// new array stores variants from snplocus term, which are not in independent[]
+			// for each variant, join with independent[] to run one analysis
+		}
+		*/
+		//console.log(Rinput.additionalIndependent)
 
 		const sampleSize = Rinput.outcome.values.length
 		validateRinput(q, Rinput, sampleSize)
@@ -80,9 +89,7 @@ export async function get_regression(q, ds) {
 		)
 
 		// parse the R output
-		const result = { queryTime, sampleSize }
-		await parseRoutput(Rinput, Routput, id2originalId, result)
-		result.totalTime = +new Date() - startTime
+		const result = await parseRoutput(Rinput, Routput, id2originalId, sampleSize)
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -147,12 +154,12 @@ function parse_q(q, ds) {
 
 function makeRinput(q, sampledata) {
 	// outcome term
-	// for linear regression, 'values' will be sample values
-	// for logisitc regression, 'values' will be 0/1 (0 = ref; 1 = non-ref)
-	// therefore, 'rtype' will always be 'numeric'
 	const outcome = {
 		id: q.outcome.id,
 		name: q.outcome.term.name,
+		// for linear regression, 'values' will be sample values
+		// for logisitc regression, 'values' will be 0/1 (0 = ref; 1 = non-ref)
+		// therefore, 'rtype' will always be 'numeric'
 		rtype: 'numeric',
 		values: []
 	}
@@ -273,6 +280,23 @@ function makeRinput(q, sampledata) {
 			t.values.push(t.rtype === 'numeric' ? v.value : v.key)
 		}
 	}
+
+	// create additionalIndependent if snplocus term is present
+	const tw = q.independent.find(i => i.type == 'snplocus')
+	if (tw) {
+		Rinput.additionalIndependent = []
+		let i = 0
+		while (i < Rinput.independent.length) {
+			const j = Rinput.independent[i]
+			if (tw.snpidlst.includes(j.id)) {
+				Rinput.independent.splice(i, 1)
+				Rinput.additionalIndependent.push(j)
+			} else {
+				i++
+			}
+		}
+	}
+
 	return Rinput
 }
 
@@ -301,108 +325,129 @@ function validateRinput(q, Rinput, sampleSize) {
 	}
 }
 
-async function parseRoutput(Rinput, Routput, id2originalId, result) {
+async function parseRoutput(Rinput, Routput, id2originalId, sampleSize) {
+	const result = { lst: [] } // lst[] has same structure as out[]
 	// handle errors/warnings from R
 	if (Routput.includes('R stderr:')) {
 		const erridx = Routput.findIndex(x => x == 'R stderr:')
 		result.err = [...new Set(Routput.splice(erridx).slice(1))]
 	}
 
-	// Routput is now only a JSON of results
+	// Routput is now a JSON of results
 	if (Routput.length !== 1) throw 'expected 1 json line in R output'
-	const data = JSON.parse(Routput[0])
+	const out = JSON.parse(Routput[0])
+	/*
+	[
+	  {
+		data: { residuals: {}, coefficients: {}, type3: {}, other: {} },
+		id: id of additional variable (empty if no additional variables)
+	  },
+	]
+	*/
 
-	// residuals
-	result.residuals = data.residuals
-	result.residuals.label = Rinput.type == 'linear' ? 'Residuals' : 'Deviance residuals'
+	for (const analysis of out) {
+		const analysisResults = {
+			data: { sampleSize } // TODO: need to compute different sample size for each regression analysis
+		}
+		if (analysis.id) analysisResults.id = id2originalId[analysis.id]
 
-	// coefficients
-	if (data.coefficients.rows.length < 2)
-		throw 'expect at least 2 rows in coefficients table but got ' + data.coefficients.rows.length
-	result.coefficients = {
-		header: data.coefficients.header,
-		intercept: data.coefficients.rows.shift(),
-		terms: {}, // individual independent terms, not interaction
-		interactions: [] // interactions
-	}
-	for (const row of data.coefficients.rows) {
-		if (row[0].indexOf(':') != -1) {
-			// is an interaction
-			const interaction = {}
-			const [id1, id2] = row.shift().split(':')
-			const [cat1, cat2] = row.shift().split(':')
-			// row is now only data fields
-			interaction.term1 = id2originalId[id1]
-			interaction.category1 = cat1
-			interaction.term2 = id2originalId[id2]
-			interaction.category2 = cat2
-			interaction.lst = row
-			result.coefficients.interactions.push(interaction)
-		} else {
-			// not interaction, individual variable
-			const id = row.shift()
-			const category = row.shift()
-			// row is now only data fields
-			const termid = id2originalId[id]
-			if (!result.coefficients.terms[termid]) result.coefficients.terms[termid] = {}
-			if (category) {
-				// has category
-				if (!result.coefficients.terms[termid].categories) result.coefficients.terms[termid].categories = {}
-				result.coefficients.terms[termid].categories[category] = row
+		const data = analysis.data
+
+		// residuals
+		analysisResults.data.residuals = data.residuals
+		analysisResults.data.residuals.label = Rinput.type == 'linear' ? 'Residuals' : 'Deviance residuals'
+
+		// coefficients
+		if (data.coefficients.rows.length < 2)
+			throw 'expect at least 2 rows in coefficients table but got ' + data.coefficients.rows.length
+		analysisResults.data.coefficients = {
+			header: data.coefficients.header,
+			intercept: data.coefficients.rows.shift(),
+			terms: {}, // individual independent terms, not interaction
+			interactions: [] // interactions
+		}
+		for (const row of data.coefficients.rows) {
+			if (row[0].indexOf(':') != -1) {
+				// is an interaction
+				const interaction = {}
+				const [id1, id2] = row.shift().split(':')
+				const [cat1, cat2] = row.shift().split(':')
+				// row is now only data fields
+				interaction.term1 = id2originalId[id1]
+				interaction.category1 = cat1
+				interaction.term2 = id2originalId[id2]
+				interaction.category2 = cat2
+				interaction.lst = row
+				analysisResults.data.coefficients.interactions.push(interaction)
 			} else {
-				// no category
-				result.coefficients.terms[termid].fields = row
+				// not interaction, individual variable
+				const id = row.shift()
+				const category = row.shift()
+				// row is now only data fields
+				const termid = id2originalId[id]
+				if (!analysisResults.data.coefficients.terms[termid]) analysisResults.data.coefficients.terms[termid] = {}
+				if (category) {
+					// has category
+					if (!analysisResults.data.coefficients.terms[termid].categories)
+						analysisResults.data.coefficients.terms[termid].categories = {}
+					analysisResults.data.coefficients.terms[termid].categories[category] = row
+				} else {
+					// no category
+					analysisResults.data.coefficients.terms[termid].fields = row
+				}
 			}
 		}
-	}
-	result.coefficients.label = 'Coefficients'
+		analysisResults.data.coefficients.label = 'Coefficients'
 
-	// type III statistics
-	result.type3 = {
-		header: data.type3.header,
-		intercept: data.type3.rows.shift(),
-		terms: {}, // individual independent terms, not interaction
-		interactions: [] // interactions
-	}
-	for (const row of data.type3.rows) {
-		if (row[0].indexOf(':') != -1) {
-			// is an interaction
-			const interaction = {}
-			const [id1, id2] = row.shift().split(':')
-			// row is now only data fields
-			interaction.term1 = id2originalId[id1]
-			interaction.term2 = id2originalId[id2]
-			interaction.lst = row
-			result.type3.interactions.push(interaction)
-		} else {
-			// not interaction, individual variable
-			const id = row.shift()
-			// row is now only data fields
-			const termid = id2originalId[id]
-			if (!result.type3.terms[termid]) result.type3.terms[termid] = row
+		// type III statistics
+		analysisResults.data.type3 = {
+			header: data.type3.header,
+			intercept: data.type3.rows.shift(),
+			terms: {}, // individual independent terms, not interaction
+			interactions: [] // interactions
 		}
-	}
-	result.type3.label = 'Type III statistics'
-
-	// other summary statistics
-	result.other = data.other
-	result.other.label = 'Other summary statistics'
-
-	// plots
-	for (const tw of Rinput.independent) {
-		if (tw.spline) {
-			if (!result.splinePlots) result.splinePlots = []
-			const file = tw.spline.plotfile
-			const plot = await fs.promises.readFile(file)
-			result.splinePlots.push({
-				src: 'data:image/png;base64,' + new Buffer.from(plot).toString('base64'),
-				size: imagesize(file)
-			})
-			fs.unlink(file, err => {
-				if (err) throw err
-			})
+		for (const row of data.type3.rows) {
+			if (row[0].indexOf(':') != -1) {
+				// is an interaction
+				const interaction = {}
+				const [id1, id2] = row.shift().split(':')
+				// row is now only data fields
+				interaction.term1 = id2originalId[id1]
+				interaction.term2 = id2originalId[id2]
+				interaction.lst = row
+				analysisResults.data.type3.interactions.push(interaction)
+			} else {
+				// not interaction, individual variable
+				const id = row.shift()
+				// row is now only data fields
+				const termid = id2originalId[id]
+				if (!analysisResults.data.type3.terms[termid]) analysisResults.data.type3.terms[termid] = row
+			}
 		}
+		analysisResults.data.type3.label = 'Type III statistics'
+
+		// other summary statistics
+		analysisResults.data.other = data.other
+		analysisResults.data.other.label = 'Other summary statistics'
+
+		// plots
+		for (const tw of Rinput.independent) {
+			if (tw.spline) {
+				if (!analysisResults.data.splinePlots) analysisResults.data.splinePlots = []
+				const file = tw.spline.plotfile
+				const plot = await fs.promises.readFile(file)
+				analysisResults.data.splinePlots.push({
+					src: 'data:image/png;base64,' + new Buffer.from(plot).toString('base64'),
+					size: imagesize(file)
+				})
+				fs.unlink(file, err => {
+					if (err) throw err
+				})
+			}
+		}
+		result.lst.push(analysisResults)
 	}
+	return result
 }
 
 /*
@@ -698,6 +743,19 @@ function replaceTermId(Rinput) {
 		Rinput.independent[i].id = originalId2id[t.id]
 		for (const [j, k] of Rinput.independent[i].interactions.entries()) {
 			Rinput.independent[i].interactions[j] = originalId2id[k]
+		}
+	}
+	// replace IDs of additional terms and interacting terms
+	if (Rinput.additionalIndependent) {
+		for (const [i, t] of Rinput.additionalIndependent.entries()) {
+			id2originalId['idAdd' + i] = t.id
+			originalId2id[t.id] = 'idAdd' + i
+		}
+		for (const [i, t] of Rinput.additionalIndependent.entries()) {
+			Rinput.additionalIndependent[i].id = originalId2id[t.id]
+			for (const [j, k] of Rinput.additionalIndependent[i].interactions.entries()) {
+				Rinput.additionalIndependent[i].interactions[j] = originalId2id[k]
+			}
 		}
 	}
 	return [id2originalId, originalId2id]
