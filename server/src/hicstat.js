@@ -92,6 +92,7 @@ export async function do_hicstat(file, isurl) {
 			return arrayBuffer
 		} catch (error) {
 			console.log(error.response)
+			throw 'error reading file, check file details'
 		}
 	}
 
