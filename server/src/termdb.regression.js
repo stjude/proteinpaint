@@ -90,7 +90,6 @@ export async function get_regression(q, ds) {
 
 		// parse the R output
 		const result = await parseRoutput(Rinput, Routput, id2originalId, sampleSize)
-		console.log(result)
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)

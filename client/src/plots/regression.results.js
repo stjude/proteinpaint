@@ -171,6 +171,8 @@ function setRenderers(self) {
 		delete self.snplocusBlock
 		self.dom.snplocusBlockDiv.selectAll('*').remove()
 		// there is a single set of results from analyzing one model
+		// quick fix; backend should reassign result.err to a specific set
+		result.lst[0].data.err = result.err
 		self.displayResult_oneset(result.lst[0].data)
 	}
 
