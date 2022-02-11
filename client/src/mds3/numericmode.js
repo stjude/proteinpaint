@@ -5,16 +5,10 @@ import { scaleLinear } from 'd3-scale'
 import { axisstyle } from '../dom/axisstyle'
 import { make_datagroup } from './datagroup'
 
-/*
-adapted from legacy code
+/* adapted from mds2, which is in turn from legacy ds code
 
 ********************** EXPORTED
 render
-may_setup_numerical_axis
-get_axis_label
-get_axis_label_AFtest
-may_get_param
-may_get_param_AFtest_termfilter
 ********************** INTERNAL
 numeric_make
 render_axis
@@ -23,7 +17,6 @@ adjustview
 verticallabplace
 m_mouseover
 m_mouseout
-may_printinfo_axistype
 
 
 
@@ -42,7 +35,10 @@ const middlealignshift = 0.3
 const labyspace = 5
 const clustercrowdlimit = 7 // at least 8 px per disc, otherwise won't show mname label
 // when using an info field, if the variant is not annotated and no missing_value is available from the info field, use this
+const maxclusterwidth = 100
 const hardcode_missing_value = 0
+const stemColor = '#ededed'
+const highlight_color = 'red'
 
 export function render(data, tk, block) {
 	/*
@@ -53,10 +49,15 @@ info field as sources of values
 value may be singular number, or boxplot
 
 */
-
 	const datagroup = make_datagroup(tk, data.skewer, block)
 
+	// TODO when switching to nm from skewer, allow to dynamically create nm
 	const nm = tk.numericmode
+	// initialize numeric mode
+	if (!nm.axisg) nm.axisg = tk.gleft.append('g')
+	if (!nm.axisheight) nm.axisheight = 150
+	tk.skewer.g.selectAll('*').remove()
+	if (tk.skewer2) tk.skewer2.selectAll('*').remove()
 
 	numeric_make(nm, tk.skewer.g, datagroup, tk, block)
 
@@ -72,7 +73,7 @@ value may be singular number, or boxplot
 	)
 }
 
-function numeric_make(nm, r, _g, data, tk, block) {
+function numeric_make(nm, _g, data, tk, block) {
 	/*
 	 */
 
@@ -112,16 +113,6 @@ function numeric_make(nm, r, _g, data, tk, block) {
 
 	const showstem = adjustview(data, nm, tk, block)
 
-	/*
-	nm.showsamplebar = showstem && tk.ds && tk.ds.samplebynumericvalue
-
-	if(!nm.showsamplebar) {
-		// do not show both at same time
-		nm.showgenotypebyvalue = showstem && tk.ds && tk.ds.genotypebynumericvalue
-	}
-	tk.genotype2color.legend.style('display', nm.showsamplebar || nm.showgenotypebyvalue ? 'block':'none')
-	*/
-
 	setup_axis_scale(data, nm, tk)
 
 	const numscale = scaleLinear()
@@ -131,7 +122,7 @@ function numeric_make(nm, r, _g, data, tk, block) {
 	// set m._y
 	for (const d of data) {
 		for (const m of d.mlst) {
-			m._y = numscale(m._v)
+			m._y = numscale(m.__value_use)
 		}
 	}
 
@@ -143,7 +134,6 @@ function numeric_make(nm, r, _g, data, tk, block) {
 	.data[].x
 	.data[].mlst[].xoff
 	.data[].mlst[].rotate
-
 	*/
 
 	if (showstem) {
@@ -233,31 +223,18 @@ function numeric_make(nm, r, _g, data, tk, block) {
 	}
 
 	render_axis(_g, tk, nm, block)
-	/*
-	if( nm.inuse_termdb2groupAF ) {
-		// show horizontal line at 0
-		_g
-			.append('line')
-			//.attr('y1', nm.toplabelheight+nm.maxradius+ numscale(0) )
-			.attr('y1',  numscale(0) )
-			.attr('y2', nm.toplabelheight+nm.maxradius+ numscale(0) )
-			.attr('x2', r.width )
-			.attr('stroke','black')
-			.attr('shape-rendering','crispEdges')
-	}
-	*/
 
 	_g.append('line')
 		.attr('y1', nm.toplabelheight + nm.maxradius)
 		.attr('y2', nm.toplabelheight + nm.maxradius)
-		.attr('x2', r.width)
-		.attr('stroke', '#ededed')
+		.attr('x2', block.width)
+		.attr('stroke', stemColor)
 		.attr('shape-rendering', 'crispEdges')
 	_g.append('line')
 		.attr('y1', nm.toplabelheight + nm.maxradius + nm.axisheight)
 		.attr('y2', nm.toplabelheight + nm.maxradius + nm.axisheight)
-		.attr('x2', r.width)
-		.attr('stroke', '#ededed')
+		.attr('x2', block.width)
+		.attr('stroke', stemColor)
 		.attr('shape-rendering', 'crispEdges')
 
 	tk.skewer2 = _g
@@ -288,7 +265,7 @@ function numeric_make(nm, r, _g, data, tk, block) {
 			.attr('class', 'sja_aa_stem')
 			.attr('d', d => skewer2_setstem(d, nm))
 			.attr('stroke', d => tk.color4disc(d.mlst[0]))
-			.attr('fill', d => (d.mlst.length == 1 ? 'none' : '#ededed'))
+			.attr('fill', d => (d.mlst.length == 1 ? 'none' : stemColor))
 	}
 
 	// 3: discs
@@ -319,7 +296,7 @@ function numeric_make(nm, r, _g, data, tk, block) {
 	// no text in disc
 
 	// disc kick
-	discg
+	const disckick = discg
 		.append('circle')
 		.attr('r', m => m.radius - 0.5)
 		.attr('stroke', m => tk.color4disc(m))
@@ -338,18 +315,23 @@ function numeric_make(nm, r, _g, data, tk, block) {
 			m_mouseout(m, tk)
 		})
 		.on('click', m => {
+			if (tk.click_snvindel) {
+				highlight_one_disk(d3event.target)
+				tk.click_snvindel(m)
+				return
+			}
 			// FIXME prevent triggering click after panning
-			const p = d3event.target.getBoundingClientRect()
-			vcf_clickvariant(m, p, tk, block)
+			//const p = d3event.target.getBoundingClientRect()
+			//vcf_clickvariant(m, p, tk, block)
 		})
 
 	// m label
-	// only make for those whose to appear on top or bottom
+	// only make for those to appear on top or bottom
 	const textlabels = discg
 		.filter(m => m.labattop || m.labatbottom)
 		.append('text')
 		.each(function(m) {
-			m.textlabel = this
+			m.__svg_textlabel = this
 		})
 		.text(m => mnamegetter(m.mname))
 		.attr('font-family', font)
@@ -373,11 +355,24 @@ function numeric_make(nm, r, _g, data, tk, block) {
 		.on('mouseover', m => m_mouseover(m, nm, tk))
 		.on('mouseout', m => m_mouseout(m, tk))
 		.on('click', m => {
-			vcf_clickvariant(m, { left: d3event.clientX, top: d3event.clientY }, tk, block)
-			if (block.debugmode) {
-				console.log(m)
+			if (tk.click_snvindel) {
+				highlight_one_disk(d3event.target.previousSibling) // kick cover is previous sibling
+				tk.click_snvindel(m)
+				return
 			}
+			//vcf_clickvariant(m, { left: d3event.clientX, top: d3event.clientY }, tk, block)
 		})
+
+	function highlight_one_disk(dot) {
+		// dot is the kick <circle>; apply highlight styling on it
+		disckick
+			.attr('r', m => m.radius - 0.5)
+			.attr('stroke', m => tk.color4disc(m))
+			.attr('stroke-opacity', 0)
+		dot.setAttribute('r', nm.dotwidth * 0.7)
+		dot.setAttribute('stroke', highlight_color)
+		dot.setAttribute('stroke-opacity', 1)
+	}
 }
 
 function adjustview(data, nm, tk, block) {
@@ -388,11 +383,7 @@ function adjustview(data, nm, tk, block) {
 		.width
 	for .data[0].mlst[], add:
 		.xoff
-	
-
 	*/
-
-	const maxclusterwidth = 100
 
 	let sumwidth = 0
 
@@ -417,8 +408,6 @@ function adjustview(data, nm, tk, block) {
 
 		sumwidth += d.width
 	}
-
-	let showstem = true
 
 	if (sumwidth <= block.width) {
 		// fits all
@@ -607,8 +596,8 @@ function skewer2_setstem(d, nm) {
 }
 
 function m_mouseover(m, nm, tk) {
-	if (m.textlabel) {
-		d3select(m.textlabel).attr('font-size', m._labfontsize * 1.1)
+	if (m.__svg_textlabel) {
+		d3select(m.__svg_textlabel).attr('font-size', m._labfontsize * 1.1)
 	}
 
 	// pica moves to center of m disc
@@ -624,17 +613,7 @@ function m_mouseover(m, nm, tk) {
 
 	const words = []
 
-	if (nm.inuse_AFtest) {
-		if (m.AFtest_group_values) {
-			for (const v of m.AFtest_group_values) words.push(v)
-		} else if (m.AFtest_pvalue != undefined) {
-			words.push(m.AFtest_pvalue)
-		}
-	} else if (nm.inuse_infokey) {
-		words.push(m._v)
-	} else {
-		throw 'unknown axis type'
-	}
+	words.push(nm.tooltipPrintValue ? nm.tooltipPrintValue(m) : m.__value_use)
 
 	if (!m.labattop && !m.labatbottom) {
 		words.push(m.mname)
@@ -719,8 +698,8 @@ function m_mouseover(m, nm, tk) {
 }
 
 function m_mouseout(m, tk) {
-	if (m.textlabel) {
-		d3select(m.textlabel).attr('font-size', m._labfontsize)
+	if (m.__svg_textlabel) {
+		d3select(m.__svg_textlabel).attr('font-size', m._labfontsize)
 	}
 	tk.pica.g.selectAll('*').remove()
 }
@@ -762,120 +741,11 @@ decide following things about the y axis:
 	}
 }
 
-export function may_setup_numerical_axis(tk) {
-	/*
-to validate the numerical axis settings
-and set the .isinteger and .label of nm
-by default the numerical axis may not specify what to use as test
-
-call this in makeTk()
-and switching numeric axis category
-*/
-
-	if (!tk.vcf) return
-
-	const nm = tk.vcf.numerical_axis
-	if (!nm.in_use) {
-		// not in use, do not set up
-		return
-	}
-
-	delete nm.isinteger
-
-	if (!nm.info_keys && !nm.AFtest) throw 'no options for numerical axis'
-
-	// decide which option to use
-	if (nm.inuse_infokey) {
-		if (!nm.info_keys) throw '.info_keys[] missing when inuse_infokey is true'
-	} else if (nm.inuse_AFtest) {
-		if (!nm.AFtest) throw '.AFtest{} missing when inuse_AFtest is true'
-	} else {
-		// no option in use, use one by default
-		if (nm.AFtest) {
-			nm.inuse_AFtest = true
-		} else {
-			nm.inuse_infokey = true
-		}
-	}
-
-	if (nm.info_keys) {
-		// info keys
-		if (!Array.isArray(nm.info_keys)) throw 'numerical_axis.info_keys[] is not an array'
-		if (nm.info_keys.length == 0) throw 'numerical_axis.info_keys[] array is empty'
-
-		let info_element = nm.info_keys.find(i => i.in_use) // which element from tk.vcf.numerical_axis.info_keys is in use
-		if (!info_element) {
-			info_element = nm.info_keys[0]
-			info_element.in_use = true
-		}
-
-		if (!tk.vcf.info) throw 'VCF file has no INFO fields'
-
-		if (nm.inuse_infokey) {
-			// to decide if it's integer or floating point
-			let notset = true
-			if (tk.info_fields) {
-				const a = tk.info_fields.find(i => i.key == info_element.key)
-				if (a) {
-					notset = false
-					if (a.isinteger) nm.isinteger = true
-				}
-			}
-			if (notset) {
-				// this info field is not found in tk.info_fields[], find it in vcf.info{}
-				const f = tk.vcf.info[info_element.key]
-				if (!f) throw 'unknown INFO field for numerical axis: ' + info_element.key
-				if (f.Type == 'Integer') nm.isinteger = true
-			}
-		}
-	}
-
-	if (nm.AFtest) {
-		if (!nm.AFtest.allowed_infofields) throw 'AFtest.allowed_infofields[] is required'
-		if (!Array.isArray(nm.AFtest.allowed_infofields)) throw 'AFtest.allowed_infofields[] is not array'
-		if (!nm.AFtest.groups) throw 'AFtest.groups[] missing'
-		if (!Array.isArray(nm.AFtest.groups)) throw 'AFtest.groups[] is not array'
-		if (nm.AFtest.groups.length < 2) throw 'AFtest.groups[] must have at least two elements'
-		for (const g of nm.AFtest.groups) {
-			if (g.is_termdb) {
-				if (!g.filter) throw '.filter{} missing from a is_termdb group'
-				// TODO validate filter
-			} else if (g.is_infofield) {
-				if (!g.key) throw 'key missing from a is_infofield group'
-				if (!nm.AFtest.allowed_infofields.find(i => i.key == g.key))
-					throw 'info key not found in allowed_infofields: ' + g.key
-			} else if (g.is_population) {
-				if (!g.key) throw 'key missing from a is_population group'
-				if (!tk.populations) throw 'tk.populations{} missing when using a population group'
-				if (!tk.populations.find(i => i.key == g.key)) throw 'unknown population by key: ' + g.key
-			} else {
-				throw 'unknown type of group from AFtest.groups[]'
-			}
-		}
-		if (nm.AFtest.testby_AFdiff) {
-			// validate AFdiff setting here
-		} else if (nm.AFtest.testby_fisher) {
-			// require at least one termdb group
-			if (nm.AFtest.groups.find(i => i.is_infofield)) throw 'fisher test will not work for an info field'
-		} else {
-			throw 'AFtest: do not know how to do test'
-		}
-	}
-
-	// axis label
-	if (nm.inuse_AFtest) {
-		if (nm.AFtest.testby_AFdiff) nm.label = 'Allele frequency difference'
-		else if (nm.AFtest.testby_fisher) nm.label = '-log10 P-value'
-	} else {
-		nm.label = get_axis_label(tk)
-	}
-}
-
 function render_axis(_g, tk, nm, block) {
 	/*
 render axis
 */
-	tk.leftaxis_vcfrow
+	nm.axisg
 		.attr('transform', 'translate(-' + nm.dotwidth / 2 + ',' + (nm.toplabelheight + nm.maxradius) + ')')
 		.selectAll('*')
 		.remove()
@@ -898,13 +768,13 @@ render axis
 		}
 	}
 	axisstyle({
-		axis: tk.leftaxis_vcfrow.call(thisaxis),
+		axis: nm.axisg.call(thisaxis),
 		showline: true,
 		fontsize: nm.dotwidth
 	})
 
 	if (nm.minvalue == nm.maxvalue) {
-		tk.leftaxis_vcfrow
+		nm.axisg
 			.append('text')
 			.attr('text-anchor', 'end')
 			.attr('font-size', nm.dotwidth)
@@ -918,7 +788,7 @@ render axis
 	// axis label, text must wrap
 	// read the max tick label width first
 	let maxw = 0
-	tk.leftaxis_vcfrow.selectAll('text').each(function() {
+	nm.axisg.selectAll('text').each(function() {
 		maxw = Math.max(maxw, this.getBBox().width)
 	})
 	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxw + 15)
@@ -928,7 +798,7 @@ render axis
 		const y = (nm.axisheight - lst.length * (nm.dotwidth + 1)) / 2
 		let maxlabelw = 0
 		lst.forEach((text, i) => {
-			tk.leftaxis_vcfrow
+			nm.axisg
 				.append('text')
 				.attr('fill', 'black')
 				.attr('font-size', nm.dotwidth)
@@ -942,136 +812,5 @@ render axis
 				})
 		})
 		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
-	}
-}
-
-/////////////////////// exported helper functions
-
-export function get_axis_label(tk) {
-	if (!tk.vcf) return
-	const nm = tk.vcf.numerical_axis
-	if (!nm) return
-	if (!nm.in_use) return 'Disabled'
-	if (nm.inuse_infokey) {
-		const key = nm.info_keys.find(i => i.in_use)
-		if (!key) return 'Error: no key in_use'
-		if (tk.info_fields) {
-			const a = tk.info_fields.find(i => i.key == key.key)
-			if (a && a.label) return a.label
-		}
-		return key.key
-	}
-	if (nm.inuse_AFtest) return get_axis_label_AFtest()
-	return 'Error: unknown type of axis'
-}
-
-export function get_axis_label_AFtest() {
-	return 'Compare two groups'
-}
-
-export function may_get_param(tk, par) {
-	/*
-append numeric axis parameter to object for loadTk
-*/
-	if (!tk.vcf) return
-	const nm = tk.vcf.numerical_axis
-	if (!nm) return
-	if (!nm.in_use) return
-	if (nm.inuse_infokey) {
-		// no parameter
-		return
-	}
-	if (nm.inuse_AFtest && nm.AFtest) {
-		par.AFtest = {
-			groups: [],
-			testby_AFdiff: nm.AFtest.testby_AFdiff,
-			testby_fisher: nm.AFtest.testby_fisher
-		}
-		for (const g of nm.AFtest.groups) {
-			if (g.is_termdb) {
-				par.AFtest.groups.push({
-					is_termdb: true,
-					filter: g.filterApi.getNormalRoot()
-				})
-				continue
-			}
-			if (g.is_infofield) {
-				const g2 = {
-					is_infofield: true,
-					key: g.key
-				}
-				if (tk.info_fields) {
-					// attempt to get missing value
-					const i = tk.info_fields.find(j => j.key == g.key)
-					if (i && i.missing_value != undefined) {
-						g2.missing_value = i.missing_value
-					}
-				}
-				par.AFtest.groups.push(g2)
-				continue
-			}
-			if (g.is_population) {
-				const g2 = {
-					is_population: true,
-					key: g.key
-				}
-				if (g.adjust_race) {
-					// only adjust race if there is a termdb group besides this population
-					if (nm.AFtest.groups.find(i => i.is_termdb)) {
-						g2.adjust_race = true
-					}
-				}
-				par.AFtest.groups.push(g2)
-				continue
-			}
-			throw 'unknown group type at xhr parameter'
-		}
-		const v = may_get_param_AFtest_termfilter(tk)
-		if (v) {
-			par.AFtest.termfilter = [v]
-		}
-		return
-	}
-	throw 'unknown type of numeric axis'
-}
-
-export function may_get_param_AFtest_termfilter(tk) {
-	if (!tk.vcf || !tk.vcf.numerical_axis) return
-	const af = tk.vcf.numerical_axis.AFtest
-	if (!af || !af.termfilter || !af.termfilter.inuse) return
-	if (af.termfilter.type != 'categorical') throw 'AFtest.termfilter.type is not categorical (hardcoded)'
-	if (!af.termfilter.values) throw 'termfilter.values missing'
-	// in nm, termfilter is not tvs
-	// in parameter, termfilter is tvs
-	const v = af.termfilter.values[af.termfilter.value_index]
-	if (!v) throw 'unknown value selection by value_index in AFtest.termfilter'
-	return {
-		term: {
-			id: af.termfilter.id,
-			name: af.termfilter.name,
-			type: 'categorical' // hardcoded
-		},
-		values: [{ key: v.key, label: v.label || v.key }]
-	}
-}
-
-function may_printinfo_axistype(data, nm) {
-	// data{} is returned by server
-	if (nm.inuse_termdb2groupAF) {
-		nm.termdb2groupAF.group1.div_numbersamples.text('n=' + data.group1numbersamples)
-		nm.termdb2groupAF.group2.div_numbersamples.text('n=' + data.group2numbersamples)
-		return
-	}
-	if (nm.inuse_ebgatest) {
-		nm.ebgatest.div_numbersamples.text('n=' + data.numbersamples)
-		nm.ebgatest.div_populationaverage.selectAll('*').remove()
-		data.populationaverage.forEach(i => {
-			nm.ebgatest.div_populationaverage
-				.append('div')
-				.style('display', 'inline-block')
-				.style('margin', '0px 10px')
-				.text(i.key + ': ' + i.v.toFixed(3))
-		})
-		return
 	}
 }

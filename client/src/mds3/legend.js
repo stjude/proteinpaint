@@ -67,19 +67,6 @@ data is returned by xhr
 	if (data.info_fields) {
 		update_info_fields(data.info_fields, tk)
 	}
-	if (data.AFtest_termdbgroup) {
-		let g = tk.vcf.numerical_axis.AFtest.groups[0]
-		if (g.is_termdb) {
-			g.dom.samplehandle.text('n=' + data.AFtest_termdbgroup[0].samplecount + ', view stats')
-			g.popsetaverage = data.AFtest_termdbgroup[0].popsetaverage // for displaying in tooltip
-		}
-
-		g = tk.vcf.numerical_axis.AFtest.groups[1]
-		if (g.is_termdb) {
-			g.dom.samplehandle.text('n=' + data.AFtest_termdbgroup[1].samplecount + ', view stats')
-			g.popsetaverage = data.AFtest_termdbgroup[1].popsetaverage // for displaying in tooltip
-		}
-	}
 }
 
 function update_mclass(mclass2count, tk) {

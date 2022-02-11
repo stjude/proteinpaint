@@ -31,6 +31,7 @@ const modeshow = 1
 const middlealignshift = 0.3
 const disclabelspacing = 1 // px spacing between disc and label
 const minoccur4sunburst = 10 // minimum occurrence for showing skewer, maybe ds specific
+const highlightBoxColor = 'red'
 
 /*
 sets tk.skewer.maxheight
@@ -224,7 +225,7 @@ export function skewer_make(tk, block) {
 			.attr('y', d => -d.radius)
 			.attr('width', d => d.radius * 2)
 			.attr('height', d => d.radius * 2)
-			.attr('stroke', 'red')
+			.attr('stroke', highlightBoxColor)
 			.attr('stroke-width', 1.5)
 			.attr('fill', 'none')
 	}

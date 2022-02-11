@@ -40,7 +40,8 @@ export class RegressionResults {
 			holder,
 			err_div: holder.append('div'),
 			snplocusBlockDiv: holder.append('div').style('margin-left', '20px'),
-			content: holder.append('div').style('margin', '10px')
+			// is where newDiv() and displayResult_oneset() writes to
+			oneSetResultDiv: holder.append('div').style('margin', '10px')
 		}
 	}
 
@@ -65,7 +66,7 @@ export class RegressionResults {
 			const data = await this.app.vocabApi.getRegressionData(reqOpts)
 			if (data.error) throw data.error
 			this.dom.err_div.style('display', 'none')
-			this.dom.content.selectAll('*').remove()
+			this.dom.oneSetResultDiv.selectAll('*').remove()
 			this.dom.holder.style('display', 'block')
 			await this.displayResult(data)
 		} catch (e) {
@@ -186,10 +187,7 @@ function setRenderers(self) {
 	}
 
 	self.displayResult_oneset = result => {
-		// this is work-in-progress and will be redeveloped later
-		// hardcoded logic and data structure
-		// benefit is that specific logic can be applied to rendering each different table
-		// no need for one reusable renderer to support different table types
+		self.dom.oneSetResultDiv.selectAll('*').remove()
 		self.mayshow_err(result)
 		self.newDiv('Sample size: ' + result.sampleSize)
 		self.mayshow_splinePlots(result)
@@ -201,7 +199,7 @@ function setRenderers(self) {
 
 	self.newDiv = label => {
 		// create div to show a section of the result
-		const div = self.dom.content.append('div').style('margin', '20px 0px 10px 0px')
+		const div = self.dom.oneSetResultDiv.append('div').style('margin', '20px 0px 10px 0px')
 		div
 			.append('div')
 			.style('text-decoration', 'underline')
@@ -726,19 +724,20 @@ function setRenderers(self) {
 					tw.q.stop = stop
 					await input.pill.main(tw)
 					/* 
-					pill.main() will wholy update following things in termsetting instance:
+					pill.main() will update following things in termsetting instance:
 					- q{ chr/start/stop }
 					- term{ snps } list of variants retrieved from updated locus
-					for q/term to be synced into regression state, must do runCallback
+					for q/term to be synced into regression state, must do runCallback()
 					which will call editConfig() and dispatch action with hasUnsubmittedEdits=true,
 					set this single-use flag to nullify it
 					to be able to continue run analysis
-
-					reason of not directly calling self.parent.inputs.editConfig(input, tw)
-					is that we're having incomplete info in tw
-					tw.term.snps[] is missing, and that can only be made in pill main/postMain/validateSnps
 					*/
 					self.hasUnsubmittedEdits_nullify_singleuse = true
+					/*
+					reason of not directly calling self.parent.inputs.editConfig(input, tw)
+					is that we're having incomplete info in tw
+					mostly tw.term.snps[] is missing, and that can only be made in pill main/postMain/validateSnps
+					*/
 					input.pill.runCallback()
 				}
 			}
@@ -749,9 +748,13 @@ function setRenderers(self) {
 				name: 'Variants',
 				numericmode: {
 					inuse: true,
-					type: '__value'
+					type: '__value',
+					tooltipPrintValue: m => 'p-value=' + m.regressionPvalue
 				},
-				custom_variants: make_mds3_variants(input.term.term.snps, result)
+				custom_variants: make_mds3_variants(input.term.term.snps, result),
+				click_snvindel: m => {
+					self.displayResult_oneset(m.regressionResult)
+				}
 			})
 
 			first_genetrack_tolist(arg.genome, arg.tklst)
@@ -785,11 +788,7 @@ function make_mds3_variants(snps, result) {
 	*/
 	const mlst = []
 	for (const snp of snps) {
-		const m = {
-			// must be supplied as when updating custom variants for existing mds3 tk
-			// it will not run makeTk() again
-			occurrence: 1
-		}
+		const m = {}
 		Object.assign(m, snp)
 		const thisresult = result.lst.find(i => i.id == m.snpid)
 		if (thisresult) {
@@ -801,6 +800,7 @@ function make_mds3_variants(snps, result) {
 			if (!d.coefficients || !d.coefficients.terms) throw '.data{coefficients:{terms}} missing'
 			if (!d.coefficients.terms[m.snpid]) throw m.snpid + ' missing in coefficients.terms{}'
 			const v = Number(d.coefficients.terms[m.snpid].fields[d.coefficients.terms[m.snpid].fields.length - 1])
+			m.regressionPvalue = v
 			m.__value = -Math.log10(v)
 		} else {
 			console.log('no result for ' + m.snpid)
