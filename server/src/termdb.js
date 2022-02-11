@@ -58,7 +58,7 @@ export function handle_request_closure(genomes) {
 			if (q.getsurvival) return await trigger_getsurvival(q, res, ds)
 			if (q.getregression) return await trigger_getregression(q, res, ds)
 			if (q.validateSnps) return res.send(await termdbsnp.validate(q, tdb, ds, genome))
-			if (q.getinfofields) return trigger_getinfofields(res, ds)
+			if (q.getvariantfilter) return trigger_getvariantfilter(res, ds)
 
 			throw "termdb: don't know what to do"
 		} catch (e) {
@@ -305,13 +305,7 @@ async function trigger_getpercentile(q, res, ds) {
 	res.send({ values: perc_values })
 }
 
-function trigger_getinfofields(res, ds) {
-	let info_fields
-	if (ds.track) {
-		// mds2
-		info_fields = ds.track.info_fields
-	} else {
-		throw 'unknown dataset version'
-	}
-	res.send({ info_fields })
+function trigger_getvariantfilter(res, ds) {
+	if (!ds.track) throw 'unknown dataset version'
+	res.send(ds.track.variant_filter)
 }

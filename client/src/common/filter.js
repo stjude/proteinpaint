@@ -7,6 +7,9 @@ import { vocabInit } from '../termdb/vocabulary'
 
 const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
 
+const defaults = {
+	joinWith: ['and', 'or']
+}
 /*
 	opts{}
 	.holder
@@ -36,7 +39,10 @@ class Filter {
 		this.opts = this.validateOpts(opts)
 		this.dom = {
 			holder: opts.holder,
-			controlsTip: new Menu({ padding: '0px' }),
+			controlsTip: new Menu({
+				padding: '0px',
+				parent_menu: this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
+			}),
 			treeTip: new Menu({
 				padding: '5px',
 				offsetX: 20,
@@ -63,7 +69,8 @@ class Filter {
 		}
 	}
 
-	validateOpts(o) {
+	validateOpts(opts) {
+		const o = Object.assign({}, defaults, opts)
 		if (!o.holder) throw '.holder missing'
 		if (!o.vocab) throw '.vocab missing'
 
@@ -358,7 +365,7 @@ function setRenderers(self) {
 
 		self.dom.holder
 			.selectAll('.sja_filter_add_transformer')
-			.data(['and', 'or'])
+			.data(self.opts.joinWith)
 			.enter()
 			.append('div')
 			.attr('class', 'sja_filter_add_transformer')
@@ -470,7 +477,10 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_filter_paren_open')
 			.html('(')
-			.style('display', filter.$id === self.filter.$id && filter.in ? 'none' : 'inline-block')
+			.style(
+				'display',
+				self.opts.joinWith.length < 2 || (filter.$id === self.filter.$id && filter.in) ? 'none' : 'inline-block'
+			)
 			.style('padding', '0 5px')
 			.style('font-weight', 500)
 			.style('font-size', '24px')
@@ -493,7 +503,10 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_paren_close')
 			.style('padding', '0 5px')
 			.html(')')
-			.style('display', filter.$id === self.filter.$id && filter.in ? 'none' : 'inline')
+			.style(
+				'display',
+				self.opts.joinWith.length < 2 || (filter.$id === self.filter.$id && filter.in) ? 'none' : 'inline'
+			)
 			.style('font-weight', 500)
 			.style('font-size', '24px')
 			.style('cursor', 'pointer')
@@ -510,7 +523,12 @@ function setRenderers(self) {
 		const data = item.type == 'tvslst' ? item.lst : [item]
 		select(this)
 			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
-			.style('display', (filter.$id !== self.filter.$id || !filter.in) && data.length > 1 ? 'inline-block' : 'none')
+			.style(
+				'display',
+				self.opts.joinWith.length > 1 && (filter.$id !== self.filter.$id || !filter.in) && data.length > 1
+					? 'inline-block'
+					: 'none'
+			)
 
 		const pills = select(this)
 			.selectAll(':scope > .sja_filter_item')
@@ -567,6 +585,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_pill_wrapper')
 			.style('display', 'inline-block')
+			.style('margin', self.opts.joinWith.length > 1 ? '' : '2px')
 			.on('click', item.renderAs === 'htmlSelect' ? null : self.displayControlsMenu)
 
 		self.addJoinLabel(this, filter, item)
@@ -622,7 +641,11 @@ function setRenderers(self) {
 		const filter = this.parentNode.__data__
 		select(this)
 			.select(':scope > .sja_filter_join_label')
-			.style('display', filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none')
+			.style(
+				'display',
+				self.opts.joinWith.length > 1 && filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none'
+			)
+			.style('margin', self.opts.joinWith.length > 1 ? '' : '2px')
 			.html(filter.join == 'and' ? 'AND' : 'OR')
 
 		if (item.type == 'tvslst') {
@@ -649,7 +672,12 @@ function setRenderers(self) {
 		select(elem)
 			.append('div')
 			.attr('class', 'sja_filter_join_label')
-			.style('display', filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none')
+			.style(
+				'display',
+				self.opts.joinWith.length > 1 && filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1
+					? 'inline-block'
+					: 'none'
+			)
 			.style('width', '50px')
 			.style('padding', '5px')
 			.style('border', 'none')
@@ -665,12 +693,16 @@ function setRenderers(self) {
 		const i = filter.lst.findIndex(d => d.$id === item.$id)
 		select(this).style(
 			'display',
-			filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none'
+			self.opts.joinWith.length > 1 && filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1
+				? 'inline-block'
+				: 'none'
 		)
 	}
 
 	self.getAddTransformerBtnDisplay = function(d) {
-		if (self.filter && self.filter.lst.find(f => f.tag === 'cohortFilter')) {
+		if (self.opts.joinWith.length === 1) {
+			return self.filter.lst.length && self.opts.joinWith[0] === d ? 'inline-block' : 'none'
+		} else if (self.filter && self.filter.lst.find(f => f.tag === 'cohortFilter')) {
 			// assume that a cohortFilter is always joined via intersection with other filters
 			return self.filter.lst.length == 1 && d == 'and' ? 'inline-block' : 'none'
 		} else {
@@ -698,11 +730,15 @@ function setInteractivity(self) {
 		menuRows
 			.filter(d => /*d.action == 'negate' ||*/ d.action == 'remove')
 			.style('display', cls.includes('_join_') && filter.lst.find(d => d.tag == 'cohortFilter') ? 'none' : 'table-row')
+
 		menuRows
 			.filter(d => d.action == 'join')
 			.style(
 				'display',
-				(filter.$id == self.filter.$id && filter.lst.length == 1) || cls.includes('negate') || cls.includes('paren')
+				self.opts.joinWith.length < 2 ||
+					(filter.$id == self.filter.$id && filter.lst.length == 1) ||
+					cls.includes('negate') ||
+					cls.includes('paren')
 					? 'none'
 					: 'table-row'
 			)
@@ -757,7 +793,7 @@ function setInteractivity(self) {
 			select(elem)
 				.insert('div', 'div')
 				.attr('class', 'sja_filter_paren_open')
-				.style('display', 'inline-block')
+				.style('display', self.opts.joinWith > 1 ? 'inline-block' : 'none')
 				.style('padding', '0 5px')
 				.style('font-weight', 500)
 				.style('font-size', '24px')
@@ -801,7 +837,7 @@ function setInteractivity(self) {
 			select(elem)
 				.append('div')
 				.attr('class', 'sja_filter_paren_close')
-				.style('display', 'inline-block')
+				.style('display', self.opts.joinWith > 1 ? 'inline-block' : 'none')
 				.style('padding', '0 5px')
 				.style('font-weight', 500)
 				.style('font-size', '24px')
@@ -814,7 +850,7 @@ function setInteractivity(self) {
 				.selectAll(
 					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
 				)
-				.style('display', self.filter.lst.length > 1 ? 'inline-block' : 'none')
+				.style('display', self.opts.joinWith.length > 1 && self.filter.lst.length > 1 ? 'inline-block' : 'none')
 		}
 	}
 

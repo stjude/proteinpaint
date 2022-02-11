@@ -1,5 +1,6 @@
 import { event } from 'd3-selection'
 import { makeSnpSelect } from './termsetting.snplst'
+import { filterInit, getNormalRoot } from './filter'
 
 /* 
 instance attributes
@@ -54,7 +55,7 @@ export function getHandler(self) {
 async function makeEditMenu(self, div) {
 	const searchbox = add_genesearchbox(self, div)
 
-	const tmpinfoarg = await mayDisplayInfoFields(self, div)
+	const tmpinfoarg = await mayDisplayVariantFilter(self, div)
 	// TODO tmpinfoarg to be replaced with filter api
 
 	const [select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
@@ -82,7 +83,9 @@ async function makeEditMenu(self, div) {
 			self.q.start = start
 			self.q.stop = stop
 			self.term.name = term_name
-			self.q.info_fields = tmpinfoarg
+			/*** !!! USE self.variant_filter.active in somewhere here !!! ***/
+			self.q.variant_filter = getNormalRoot(self.variant_filter.active)
+			//self.q.info_fields = tmpinfoarg
 			await validateInput(self)
 			// q.cacheid is set
 
@@ -189,40 +192,28 @@ function get_coordinput(searchbox) {
 	return ['chr17', 7674304, 7676849]
 }
 
-async function mayDisplayInfoFields(self, holder) {
-	const info_fields = (await self.vocabApi.get_infofields()).info_fields
-	// TODO info fields to be changed to term objects
-	if (!info_fields || info_fields.length == 0) return
-	const div = holder.append('div').style('margin', '10px')
-	// TODO show filter UI after info fields are converted to term objects
-	// return filter ui api
-
-	return tempFunction_getinfoarg(info_fields, div)
-}
-
-function tempFunction_getinfoarg(lst, div) {
-	// temporary function, to be deleted later
-	const tmpinfoarg = []
-	for (const i of lst) {
-		if (!i.isfilter || !i.isactivefilter) continue
-		div.append('div').text(i.label)
-		const j = { key: i.key }
-		if (i.iscategorical) {
-			j.iscategorical = true
-			j.hiddenvalues = {}
-			for (const k of i.values) {
-				if (k.ishidden) j.hiddenvalues[k.key] = 1
-			}
-		} else if (i.isfloat || i.isinteger) {
-			j.isnumerical = true
-			j.range = i.range
-		} else if (i.isflag) {
-			j.isflag = true
-			j.remove_yes = i.remove_yes
-		} else {
-			throw 'unknown filter ' + i
-		}
-		tmpinfoarg.push(j)
+async function mayDisplayVariantFilter(self, holder) {
+	if (!self.variant_filter) {
+		self.variant_filter = await self.vocabApi.get_variantFilter()
+		self.variant_filter.active = JSON.parse(JSON.stringify(self.variant_filter.filter))
 	}
-	return tmpinfoarg
+	const filter = self.variant_filter.active
+	const terms = self.variant_filter.terms
+	// TODO info fields to be changed to term objects
+	if (!filter || !terms || !terms.length) return
+	const div = holder.append('div').style('margin', '10px')
+
+	filterInit({
+		//btn: values_td.append('div'),
+		//btnLabel: 'Filter',
+		joinWith: self.variant_filter.opts.joinWith,
+		emptyLabel: '+Variant Filter',
+		holder: div,
+		vocab: { terms },
+		callback: filter => {
+			console.log(210, filter)
+			self.variant_filter.active = filter
+			//self.show
+		}
+	}).main(filter)
 }

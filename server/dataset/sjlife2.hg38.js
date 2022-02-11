@@ -291,6 +291,400 @@ const info_fields = [
 	}
 ]
 
+const terms = [
+	{
+		id: 'QC_sjlife',
+		name: 'SJLIFE classification',
+		parent_id: null,
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			SuperGood: { label: 'SuperGood' },
+			Good: { label: 'Good' },
+			Ambiguous: { label: 'Ambiguous' },
+			Bad: { label: 'Bad' }
+		},
+		tvs: {
+			isnot: true,
+			values: ['Bad']
+		}
+	},
+	{
+		id: 'QC_ccss',
+		name: 'CCSS classification',
+		parent_id: null,
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			SuperGood: { label: 'SuperGood' },
+			Good: { label: 'Good' },
+			Ambiguous: { label: 'Ambiguous' },
+			Bad: { label: 'Bad' }
+		},
+		tvs: {
+			isnot: true,
+			values: ['Bad']
+		}
+	},
+	{
+		id: 'AF',
+		name: 'Allele frequency, SJLIFE+CCSS',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					startunbounded: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+	},
+	{
+		id: 'AF_sjlife',
+		name: 'SJLIFE allele frequency',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					startunbounded: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+	},
+	{
+		id: 'AF_ccss',
+		name: 'CCSS allele frequency',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					startunbounded: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+	},
+	{
+		id: 'SJcontrol_AF',
+		name: 'SJLIFE control allele frequency',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					startunbounded: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+	},
+	{
+		id: 'SJcontrol_CEU_AF',
+		name: 'SJLIFE control allele frequency, Caucasian',
+		parent_id: null,
+		isleaf: true,
+		type: 'float'
+		/*
+		tvs: {
+			ranges: [
+				{
+					startunbounded: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+		*/
+	},
+	{
+		id: 'SJcontrol_YRI_AF',
+		name: 'SJLIFE control allele frequency, African American',
+		parent_id: null,
+		isleaf: true,
+		type: 'float'
+		/*
+		tvs: {
+			ranges: [
+				{
+					startunbounded: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+		*/
+	},
+	{
+		id: 'SJcontrol_CR',
+		name: 'SJLIFE control call rate',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'CR',
+		name: 'Call rate, SJLIFE+CCSS',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'CR_sjlife',
+		name: 'SJLIFE call rate',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'CR_ccss',
+		name: 'CCSS call rate',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'gnomAD_CR',
+		name: 'gnmoAD call rate',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'gnomAD_AF',
+		name: 'gnomAD allele frequency',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		values: {
+			0: { label: 'missing value', uncomputable: true }
+		},
+		tvs: {
+			ranges: [
+				{
+					start: 0.1,
+					startinclusive: true,
+					stop: 1,
+					stopinclusive: true
+				},
+				{
+					value: 0,
+					isnot: true
+				}
+			]
+		}
+	},
+	{
+		id: 'gnomAD_AF_afr',
+		name: 'gnomAD allele frequency, African-American',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		values: {
+			0: { label: 'missing value', uncomputable: true }
+		}
+		/*
+		tvs: {
+			ranges: [
+				{
+					start: 0.1,
+					startinclusive: true,
+					stop: 1,
+					stopinclusive: true
+				},
+				{
+					value: 0,
+					isnot: true
+				}
+			]
+		}
+		*/
+	},
+	{
+		id: 'gnomAD_AF_eas',
+		name: 'gnomAD allele frequency, East Asian',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		values: {
+			0: { label: 'missing value', uncomputable: true }
+		}
+		/*
+		tvs: {
+			ranges: [
+				{
+					start: 0.1,
+					startinclusive: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+		*/
+	},
+	{
+		id: 'gnomAD_AF_nfe',
+		name: 'gnomAD allele frequency, non-Finnish European',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		values: {
+			0: { label: 'missing value', uncomputable: true }
+		}
+		/*
+		tvs: {
+			ranges: [
+				{
+					start: 0.1,
+					startinclusive: true,
+					stop: 1,
+					stopinclusive: true
+				}
+			]
+		}
+		*/
+	},
+	{
+		id: 'PG',
+		name: 'Committee classification',
+		parent_id: null,
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			P: { label: 'Pathogenic' },
+			LP: { label: 'Likely pathogenic' }
+		}
+	},
+	{
+		id: 'BadBLAT',
+		name: 'Paralog',
+		parent_id: null,
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			1: { label: 'yes' }
+		},
+		tvs: {
+			isnot: true,
+			values: [1]
+		}
+	},
+	{
+		id: 'Polymer_region',
+		name: 'Polymer region',
+		parent_id: null,
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			1: { label: 'yes' }
+		},
+		tvs: {
+			isnot: true,
+			values: [1]
+		}
+	}
+]
+
+terms.forEach(term => {
+	if (!term.values) return
+	for (const key in term.values) {
+		const obj = term.values[key]
+		if (!('key' in obj)) obj.key = key
+	}
+})
+
+const lst = terms
+	.filter(term => term.tvs)
+	.map(_term => {
+		const term = JSON.parse(JSON.stringify(_term))
+		const item = {
+			type: 'tvs',
+			tvs: term.tvs
+		}
+		delete term.tvs
+		item.tvs.term = term
+		if (item.tvs.values) {
+			const values = []
+			for (const v of item.tvs.values) {
+				if (typeof v == 'object') values.push(v)
+				// v === the key reference in term.values
+				else values.push(term.values[v])
+			}
+			item.tvs.values = values
+		}
+		return item
+	})
+
+const variant_filter = {
+	opts: {
+		joinWith: ['and']
+	},
+	filter: {
+		type: 'tvslst',
+		join: lst.length > 1 ? 'and' : '',
+		in: true,
+		// reuse data from info_fields
+		lst
+	},
+	terms
+}
+
 module.exports = {
 	isMds: true,
 
@@ -499,6 +893,7 @@ module.exports = {
 		name: 'Germline SNV',
 
 		info_fields,
+		variant_filter,
 
 		populations: [
 			{
