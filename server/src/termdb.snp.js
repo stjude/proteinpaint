@@ -26,8 +26,9 @@ info fields:
 - snplocus uses info fields to filter variants. info fields of resulting variants are returned to client for showing in gb
 */
 
-const bcfformat_snplst = '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n'
-const bcfformat_snplocus = '%POS\t%REF\t%ALT\t%INFO[\t%GT]\n'
+const bcfformat_snplst = '%CHROM\t%POS\t%REF\t%ALT[\t%TGT]\n'
+const bcfformat_snplocus = '%POS\t%REF\t%ALT\t%INFO[\t%TGT]\n'
+const missing_gt = '.'
 
 export async function validate(q, tdb, ds, genome) {
 	try {
@@ -279,7 +280,6 @@ async function queryBcf(q, snps, ds) {
 			const pos = l[1]
 			const ref = l[2]
 			const alts = l[3].split(',')
-			const alleles = [ref, ...alts]
 
 			// find matching query snp
 			const snp = snps.find(snp => {
@@ -300,8 +300,7 @@ async function queryBcf(q, snps, ds) {
 			// determine sample genotypes
 			snp.gtlst = [] // same order as tk.samples
 			for (let i = 4; i < l.length; i++) {
-				const gt = parseGT(l[i], alleles)
-				snp.gtlst.push(gt)
+				snp.gtlst.push(l[i] == missing_gt ? '' : l[i])
 			}
 		}
 	})
@@ -339,16 +338,6 @@ async function queryBcf(q, snps, ds) {
 	return cacheid
 }
 
-function parseGT(gt, alleles) {
-	if (gt == '.' || gt == './.') return ''
-	const gtidx = gt.split('/').map(Number)
-	if (gtidx.length != 2) return '' // autosome only for the moment
-	const ale1 = alleles[gtidx[0]]
-	const ale2 = alleles[gtidx[1]]
-	if (!ale1 || !ale2) throw `invalid genotype`
-	return ale1 + '/' + ale2
-}
-
 async function validateInputCreateCache_by_coord(q, ds, genome) {
 	// for snplocus term
 	// q { chr/start/stop }
@@ -381,7 +370,6 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 			const pos = Number(l[0])
 			const refAllele = l[1]
 			const altAlleles = l[2].split(',')
-			const alleles = [refAllele, ...altAlleles]
 			const snpid = pos + '.' + refAllele + '.' + altAlleles.join(',')
 			const variant = {
 				snpid,
@@ -399,8 +387,8 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 				altAlleles.join(','),
 				'' // snplocus file does not have eff ale
 			]
-			for (let i = 3; i < l.length; i++) {
-				lst.push(parseGT(l[i], alleles))
+			for (let i = 4; i < l.length; i++) {
+				lst.push(l[i] == missing_gt ? '' : l[i])
 			}
 			lines.push(lst.join('\t'))
 		}
