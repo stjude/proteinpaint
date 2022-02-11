@@ -574,6 +574,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_pill_wrapper')
 			.style('display', 'inline-block')
+			.style('margin', self.opts.joinWith.length > 1 ? '' : '2px')
 			.on('click', item.renderAs === 'htmlSelect' ? null : self.displayControlsMenu)
 
 		self.addJoinLabel(this, filter, item)
@@ -630,6 +631,7 @@ function setRenderers(self) {
 		select(this)
 			.select(':scope > .sja_filter_join_label')
 			.style('display', filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none')
+			.style('margin', self.opts.joinWith.length > 1 ? '' : '2px')
 			.html(filter.join == 'and' ? 'AND' : 'OR')
 
 		if (item.type == 'tvslst') {
@@ -656,7 +658,12 @@ function setRenderers(self) {
 		select(elem)
 			.append('div')
 			.attr('class', 'sja_filter_join_label')
-			.style('display', filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none')
+			.style(
+				'display',
+				self.opts.joinWith.length > 1 && filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1
+					? 'inline-block'
+					: 'none'
+			)
 			.style('width', '50px')
 			.style('padding', '5px')
 			.style('border', 'none')
@@ -672,12 +679,16 @@ function setRenderers(self) {
 		const i = filter.lst.findIndex(d => d.$id === item.$id)
 		select(this).style(
 			'display',
-			filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none'
+			self.opts.joinWith.length > 1 && filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1
+				? 'inline-block'
+				: 'none'
 		)
 	}
 
 	self.getAddTransformerBtnDisplay = function(d) {
-		if (self.filter && self.filter.lst.find(f => f.tag === 'cohortFilter')) {
+		if (self.opts.joinWith.length === 1) {
+			return self.filter.lst.length && self.opts.joinWith[0] === d ? 'inline-block' : 'none'
+		} else if (self.filter && self.filter.lst.find(f => f.tag === 'cohortFilter')) {
 			// assume that a cohortFilter is always joined via intersection with other filters
 			return self.filter.lst.length == 1 && d == 'and' ? 'inline-block' : 'none'
 		} else {
