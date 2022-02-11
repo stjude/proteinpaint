@@ -142,7 +142,7 @@ export class RegressionResults {
 						q: {},
 						term: {
 							id: tid,
-							name: tid
+							name: snp.mname || tid
 						},
 						effectAllele: t.q.snp2effAle[tid]
 					}
@@ -288,10 +288,6 @@ function setRenderers(self) {
 			// col 1: term name
 			const termNameTd = tr.append('td').style('padding', '8px')
 			fillTdName(termNameTd, tw.term ? tw.term.name : tid) // can tw ever be missing??
-
-			// TODO
-			// add snp.q and snp.refGrp in tw.term.snps[] to mark out reference group for geneticModel=3
-			// so that refgrp can be displayed
 
 			if (tw.q && tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
 				// do not display ref for spline variable
@@ -749,6 +745,7 @@ function setRenderers(self) {
 				numericmode: {
 					inuse: true,
 					type: '__value',
+					label: '-log10 p-value',
 					tooltipPrintValue: m => 'p-value=' + m.regressionPvalue
 				},
 				custom_variants: make_mds3_variants(input.term.term.snps, result),
@@ -760,7 +757,7 @@ function setRenderers(self) {
 			first_genetrack_tolist(arg.genome, arg.tklst)
 			const _ = await import('../block')
 			self.snplocusBlock = new _.Block(arg)
-			window.bb = self.snplocusBlock
+			window.bb = self.snplocusBlock // testing, delete before prod release
 		} else {
 			// browser is already created
 			// find the mds3 track
