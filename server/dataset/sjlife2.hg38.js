@@ -315,6 +315,7 @@ module.exports = {
 			// expose to client via termdbConfig
 			allowedTermTypes: [
 				'snplst' // as independent variable in mass regression
+				// to add 'snplocus' later
 				//'prs' // as independent variable in mass regression
 			],
 

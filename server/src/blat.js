@@ -11,7 +11,6 @@ const gfServer = serverconfig.gfServer || 'gfServer'
 
 exports.request_closure = genomes => {
 	return async (req, res) => {
-		app.log(req)
 		try {
 			if (req.query.serverstat) {
 				const lst = []

@@ -108,6 +108,27 @@ async function fillMenu(self, div, tvs) {
 		.style('border-width', '2px')
 		.style('border-color', '#eee')
 
+	self.num_obj.plot_size = {
+		width: 500,
+		height: 100,
+		xpad: 10,
+		ypad: 20
+	}
+
+	try {
+		self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(tvs.term.id, self.num_obj, self.filter)
+	} catch (err) {
+		console.log(err)
+	}
+
+	if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
+
+	if (!self.num_obj.density_data.density || !self.num_obj.density_data.density.length) {
+		//if (!tvs.term.range) throw `unable to create an edit menu: missing both density data and term.range`
+		addRangeTableNoDensity(self, tvs)
+		return
+	}
+
 	// svg
 	self.num_obj.svg = self.num_obj.num_div.append('svg')
 
@@ -124,21 +145,6 @@ async function fillMenu(self, div, tvs) {
 			ranges.push(range)
 		}
 	}
-
-	self.num_obj.plot_size = {
-		width: 500,
-		height: 100,
-		xpad: 10,
-		ypad: 20
-	}
-
-	try {
-		self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(tvs.term.id, self.num_obj, self.filter)
-	} catch (err) {
-		console.log(err)
-	}
-
-	if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 
 	const density_plot_opts = {
 		svg: self.num_obj.svg,
@@ -164,6 +170,7 @@ async function fillMenu(self, div, tvs) {
 	self.num_obj.brushes = []
 	addBrushes(self)
 	addRangeTable(self)
+
 	if (!ranges.length) {
 		const callback = () => addRangeTable(self)
 		addNewBrush(self, 'center', callback)
@@ -174,6 +181,197 @@ async function fillMenu(self, div, tvs) {
 
 function setTvsDefaults(tvs) {
 	if (!tvs.ranges) tvs.ranges = []
+}
+
+function addRangeTableNoDensity(self, tvs) {
+	const termrange = tvs.term.range || {}
+	const range = tvs.ranges && tvs.ranges[0] ? tvs.ranges[0] : termrange
+	const num_div = self.num_obj.num_div
+	num_div.selectAll('*').remove()
+	num_div
+		.append('div')
+		.style('padding', '5px')
+		.style('font-weight', 600)
+		.html(tvs.term.name)
+
+	const brush = {}
+
+	const table = num_div.append('table')
+	//.style('display', 'inline-block')
+
+	const tr = table.append('tr')
+
+	tr.append('td').html('Range')
+
+	brush.equation_td = tr.append('td')
+
+	const minval = termrange && 'min' in termrange ? termrange.min : null
+	const maxval = termrange && 'max' in termrange ? termrange.max : null
+	const startval = range && 'start' in range ? range.start : null
+	brush.start_input = brush.equation_td
+		.append('input')
+		.attr('class', 'start_input')
+		.attr('type', 'number')
+		.attr('value', startval)
+		.attr('min', minval)
+		.attr('max', maxval)
+		.attr('title', 'leave blank for unbounded (-ꝏ)')
+		.attr('placeholder', '-ꝏ')
+		.style('width', '80px')
+		.style('height', '18px')
+		.style('margin', '3px 5px')
+		//.style('font-size', '20px')
+		.style('vertical-align', 'top')
+		.on('keyup', () => {
+			const textval = brush.start_input.property('value')
+			const val = textval === '' ? -Infinity : Number(textval)
+			brush.start_input.style(
+				'color',
+				(minval === null || minval <= val) && (maxval === null || maxval >= val) ? '' : '#f00'
+			)
+		})
+
+	// select realation for start value
+	brush.start_select = brush.equation_td
+		.append('select')
+		.attr('class', 'start_select')
+		//.style('height', '18px')
+		.style('margin', '4px 5px')
+		.style('vertical-align', 'top')
+
+	brush.start_select
+		.selectAll('option')
+		.data([
+			{
+				label: '&le;',
+				value: 'startinclusive'
+			},
+			{
+				label: '&lt;',
+				value: 'startexclusive'
+			}
+		])
+		.enter()
+		.append('option')
+		.attr('value', d => d.value)
+		.property('selected', d => range[d.value] || (d.value == 'startexclusive' && !range.startinclusive))
+		.html(d => d.label)
+
+	// 'x' and relation symbols
+	/*brush.start_relation_text = brush.equation_td
+		.append('div')
+		.attr('class', 'start_relation_text')
+		.style('display', 'inline-block')
+		.style('margin-left', '5px')
+		.style('text-align', 'center')
+		.html(range.startunbounded ? ' ' : range.startinclusive ? '&leq;&nbsp;' : '&lt;&nbsp;')*/
+
+	const x = '<span style="font-family:Times;font-style:italic;">x</span>'
+	brush.equation_td
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin', '3px 5px')
+		.style('text-align', 'center')
+		.style('vertical-align', 'top')
+		.style('font-size', '18px')
+		.html(x)
+
+	/*brush.stop_relation_text = brush.equation_td
+		.append('div')
+		.attr('class', 'stop_relation_text')
+		.style('display', 'inline-block')
+		.style('margin-left', '5px')
+		.style('text-align', 'center')
+		.html(range.stopunbounded ? ' ' : range.stopinclusive ? '&leq;&nbsp;' : '&lt;&nbsp;')*/
+
+	// select realation for stop value
+	brush.stop_select = brush.equation_td
+		.append('select')
+		.attr('class', 'stop_select')
+		//.style('height', '18px')
+		.style('margin', '4px 5px')
+		.style('vertical-align', 'top')
+
+	brush.stop_select
+		.selectAll('option')
+		.data([
+			{
+				label: '&le;',
+				value: 'stopinclusive'
+			},
+			{
+				label: '&lt;',
+				value: 'stopexclusive'
+			}
+		])
+		.enter()
+		.append('option')
+		.attr('value', d => d.value)
+		.property('selected', d => range[d.value] || (d.value == 'stopexclusive' && !range.stopinclusive))
+		.html(d => d.label)
+
+	const stopval = range && 'stop' in range ? range.stop : null
+	brush.stop_input = brush.equation_td
+		.append('input')
+		.attr('class', 'stop_input')
+		.attr('type', 'number')
+		.attr('value', stopval)
+		.attr('min', minval)
+		.attr('max', maxval)
+		.attr('title', 'leave blank for unbounded (+ꝏ)')
+		.attr('placeholder', '+ꝏ')
+		.style('width', '80px')
+		.style('height', '18px')
+		.style('margin', '3px 5px')
+		.style('vertical-align', 'top')
+		.on('keyup', () => {
+			const textval = brush.stop_input.property('value')
+			const val = textval === '' ? Infinity : Number(textval)
+			brush.stop_input.style(
+				'color',
+				(minval === null || minval <= val) && (maxval === null || maxval >= val) ? '' : '#f00'
+			)
+		})
+
+	brush.apply_btn = tr
+		.append('td')
+		.attr('class', 'sja_filter_tag_btn apply_btn')
+		//.style('display', 'inline-block')
+		.style('border-radius', '13px')
+		.style('margin', '5px')
+		.style('margin-left', '10px')
+		// .style('padding', '5px 12px')
+		.style('text-align', 'center')
+		.style('font-size', '.8em')
+		.style('text-transform', 'uppercase')
+		.text('apply')
+		.on('click', async () => {
+			self.dom.tip.hide()
+			const start = brush.start_input.property('value')
+			const stop = brush.stop_input.property('value')
+			const range = {
+				start,
+				startinclusive: brush.start_select.property('value') === 'startinclusive',
+				startunbounded: start === '',
+				stop,
+				stopinclusive: brush.stop_select.property('value') === 'stopinclusive',
+				stopunbounded: stop === ''
+			}
+
+			let errs = []
+			if (minval !== null && (range.startunbounded || minval > range.start)) {
+				errs.push('Invalid start value < minimum allowed')
+			}
+			if (maxval !== null && (range.stopunbounded || maxval < range.stop)) {
+				errs.push('Invalid stop value > maximum allowed')
+			}
+
+			if (errs.length) {
+				alert(errs.join('\n'))
+			} else {
+				self.opts.callback({ term: tvs.term, ranges: [range] })
+			}
+		})
 }
 
 function addRangeTable(self) {

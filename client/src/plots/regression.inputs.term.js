@@ -183,17 +183,25 @@ export class InputTerm {
 
 		// the 3rd argument to getCategories() is different for snplst and dictionary term types
 		const qlst =
-			tw.term.type == 'snplst' ? [`cacheid=${tw.q.cacheid}`] : ['term1_q=' + encodeURIComponent(JSON.stringify(q))]
+			tw.term.type == 'snplst' || tw.term.type == 'snplocus'
+				? [`cacheid=${tw.q.cacheid}`]
+				: ['term1_q=' + encodeURIComponent(JSON.stringify(q))]
 		const data = await this.parent.app.vocabApi.getCategories(tw.term, this.parent.state.termfilter.filter, qlst)
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 		mayRunSnplstTask(tw, data)
-		this.statusHtml = { topInfoStatus: undefined, bottomSummaryStatus: undefined }
-		// update bottomSummaryStatus for termtype 'snplst'
+		this.termStatus = {
+			topInfoStatus: undefined,
+			bottomSummaryStatus: undefined,
+			sampleCounts: undefined,
+			excludeCounts: undefined,
+			allowToSelectRefGrp: undefined
+		}
+		// update bottomSummaryStatus for termtype snplst and snplocus
 		// other term types will be updated if data.lst is present
-		if (tw.term.type == 'snplst' && tw.q.numOfSampleWithAnyValidGT) {
+		if (tw.q.numOfSampleWithAnyValidGT) {
 			const invalid_snps_count = tw.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
-			this.statusHtml.bottomSummaryStatus =
+			this.termStatus.topInfoStatus =
 				`${tw.q.numOfSampleWithAnyValidGT} samples with valid genotypes.` +
 				(invalid_snps_count > 0 ? ` ${invalid_snps_count} invalid SNP${invalid_snps_count > 1 ? 's' : ''}.` : '') +
 				'<br>Genetic mode: ' +
@@ -216,13 +224,14 @@ export class InputTerm {
 						.filter(v => v[1].uncomputable)
 						.map(v => v[1].label)
 				: []
-			this.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label))
-			this.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label))
+			const sampleCounts = (this.termStatus.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label)))
+			const excludeCounts = (this.termStatus.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label)))
+			this.termStatus.allowToSelectRefGrp = tw.q.mode !== 'continuous' && tw.q.mode !== 'spline' ? true : false
 
 			// get include, excluded and total sample count
 			const totalCount = (this.totalCount = { included: 0, excluded: 0, total: 0 })
-			this.sampleCounts.forEach(v => (totalCount.included += v.samplecount))
-			this.excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
+			sampleCounts.forEach(v => (totalCount.included += v.samplecount))
+			excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
 			totalCount.total = totalCount.included + totalCount.excluded
 			// for condition term, subtract included count from totalCount.total to get excluded
 			if (tw.term.type == 'condition' && totalCount.total) {
@@ -230,26 +239,31 @@ export class InputTerm {
 			}
 
 			// update topInfoStatus
-			if (tw.term.type == 'float' || tw.term.type == 'integer'){
-				this.statusHtml.topInfoStatus = `Use as ${tw.q.mode || 'continuous'} ` +
+			if (tw.term.type == 'float' || tw.term.type == 'integer') {
+				this.termStatus.topInfoStatus =
+					`Use as ${tw.q.mode || 'continuous'} ` +
 					(tw.q.mode !== 'spline' ? 'variable.' : '') +
 					(tw.q.mode == 'continuous' && tw.q.scale && tw.q.scale != 1 ? ` Scale: Per ${tw.q.scale}` : '') +
-					(tw.q.mode == 'spline' ? ` with ${tw.q.knots.length} knots: ${tw.q.knots.map(v => v.value).join(', ')}` : '')
+					(tw.q.mode == 'spline'
+						? ` with ${tw.q.knots.length} knots: ${tw.q.knots.map(v => v.value).join(', ')}`
+						: '') +
+					(this.termStatus.allowToSelectRefGrp
+						? ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
+						: '')
 			} else if (tw.term.type == 'categorical' || tw.term.type == 'condition') {
 				const gs = tw.q.groupsetting || {}
 				// self.values is already set by parent.setActiveValues() above
-				this.statusHtml.topInfoStatus = 'Use as ' + this.sampleCounts.length 
-					+ (gs.inuse ? ' groups.' : ' categories.')
-					+ ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
+				this.termStatus.topInfoStatus =
+					'Use as ' +
+					sampleCounts.length +
+					(gs.inuse ? ' groups.' : ' categories.') +
+					` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
 			}
 			// update bottomSummaryStatus
-			this.statusHtml.bottomSummaryStatus =
+			this.termStatus.bottomSummaryStatus =
 				`${totalCount.included} sample included.` +
 				(totalCount.excluded ? ` ${totalCount.excluded} samples excluded:` : '')
-
-			this.isContinuousTerm = (tw.q.mode == 'continuous' || tw.q.mode == 'spline') 
-				&& (tw.term.type == 'float' || tw.term.type == 'integer')
-			if (tw && tw.q.mode !== 'continuous' && this.sampleCounts.length < 2)
+			if (tw && tw.q.mode !== 'continuous' && sampleCounts.length < 2)
 				throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
 
 			if (!tw.q.mode) throw 'q.mode missing'
@@ -257,12 +271,12 @@ export class InputTerm {
 			// set term.refGrp
 			if (tw.q.mode == 'continuous') {
 				tw.refGrp = 'NA' // hardcoded in R
-			} else if (!('refGrp' in tw) || !this.sampleCounts.find(i => i.key == tw.refGrp)) {
+			} else if (!('refGrp' in tw) || !sampleCounts.find(i => i.key == tw.refGrp)) {
 				// refGrp not defined or no longer exists according to sampleCounts[]
 				const o = this.orderedLabels
-				if (o.length) this.sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
-				else this.sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
-				tw.refGrp = this.sampleCounts[0].key
+				if (o.length) sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
+				else sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
+				tw.refGrp = sampleCounts[0].key
 			}
 		}
 	}

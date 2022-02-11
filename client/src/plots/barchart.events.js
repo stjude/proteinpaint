@@ -89,10 +89,10 @@ export default function getHandlers(self) {
 		},
 		colLabel: {
 			text: d => {
-				return self.config.term.values && 'id' in d && d.id in self.config.term.values
-					? self.config.term.values[d.id].label
-					: 'label' in d
+				return 'label' in d
 					? d.label
+					: self.config.term.values && 'id' in d && d.id in self.config.term.values
+					? self.config.term.values[d.id].label
 					: d
 			},
 			click: barLabelClickHandler,
@@ -106,10 +106,10 @@ export default function getHandlers(self) {
 		},
 		rowLabel: {
 			text: d => {
-				return self.config.term.values && 'id' in d && d.id in self.config.term.values
-					? self.config.term.values[d.id].label
-					: 'label' in d
+				return d.label
 					? d.label
+					: self.config.term.values && 'id' in d && d.id in self.config.term.values
+					? self.config.term.values[d.id].label
 					: d
 			},
 			click: barLabelClickHandler,

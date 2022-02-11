@@ -162,10 +162,10 @@ function setRenderers(self) {
 		}
 
 		self.dom.subheader = Object.freeze({
-			search: self.dom.subheaderDiv.append('div'),
-			charts: self.dom.subheaderDiv.append('div'),
-			cohort: self.dom.subheaderDiv.append('div'),
-			filter: self.dom.subheaderDiv.append('div'),
+			search: self.dom.subheaderDiv.append('div').style('display', 'none'),
+			charts: self.dom.subheaderDiv.append('div').style('display', 'none'),
+			cohort: self.dom.subheaderDiv.append('div').style('display', 'none'),
+			filter: self.dom.subheaderDiv.append('div').style('display', 'none'),
 			cart: self.dom.subheaderDiv
 				.append('div')
 				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>')
@@ -250,7 +250,8 @@ function setRenderers(self) {
 					if (filter.lst.length === 0) {
 						return d.key === 'mid' ? 'NONE' : '&nbsp;'
 					} else {
-						return d.key === 'mid' ? filter.lst.length : 'n=' + self.samplecounts[self.filterJSON]
+						const n = self.samplecounts[self.filterJSON] != undefined ? 'n=' + self.samplecounts[self.filterJSON] : ''
+						return d.key === 'mid' ? filter.lst.length : n
 					}
 				} else {
 					return d.key === 'mid' ? this.innerHTML : '&nbsp;'

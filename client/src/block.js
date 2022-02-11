@@ -128,11 +128,13 @@ export class Block {
 		this.rotated = arg.rotated
 		this.showreverse = arg.showreverse // effect on pan
 
+		////////////////////////////////
 		// callbacks
 		this.onloadalltk = []
 		this.onloadalltk_always = arg.onloadalltk_always
 		this.onpanning = arg.onpanning
 		this.onsetheight = arg.onsetheight
+		this.onCoordinateChange = arg.onCoordinateChange // argument is the rglst[]
 
 		this.exonsf = 1 // # pixel per basepair
 
@@ -326,7 +328,11 @@ export class Block {
 				.style('border-spacing', '15px')
 				.style('border-collapse', 'separate')
 
-			const [tr1, td1] = Legend.legend_newrow(this, 'CLASS')
+			const [tr1, td1] = Legend.legend_newrow(
+				this,
+				//Allows user to set left-side group designation for classes
+				arg.mclassOverride && arg.mclassOverride.className ? arg.mclassOverride.className : 'CLASS'
+			)
 			this.legend.tr_mclass = tr1.style('display', 'none')
 			this.legend.td_mclass = td1
 			const [tr2, td2] = Legend.legend_newrow(this, 'ORIGIN')
@@ -1630,6 +1636,9 @@ reverseorient() {
 				.attr('x', Math.max(0, startx))
 				.attr('width', Math.max(2, Math.min(this.width, stopx) - Math.max(0, startx)))
 				.attr('height', blockh)
+		}
+		if (this.onCoordinateChange) {
+			this.onCoordinateChange(this.rglst)
 		}
 	}
 

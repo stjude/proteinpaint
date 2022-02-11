@@ -26,7 +26,6 @@ exports.handle_request_closure = genomes => {
 				q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
 			}
 		}
-		app.log(req)
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'

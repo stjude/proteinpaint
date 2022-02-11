@@ -1,6 +1,6 @@
 import { getStoreInit } from '../common/rx.core'
 import { root_ID } from '../termdb/tree'
-import { dofetch3 } from '../client'
+import { dofetch3 } from '../common/dofetch'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
 const idPrefix = '_STORE_AUTOID_' // to distinguish from user-assigned chart IDs
@@ -370,6 +370,7 @@ function validatePlotTerm(t, vocabApi) {
 				throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
 			break
 		case 'snplst':
+		case 'snplocus':
 			break
 		default:
 			if (t.term.isgenotype) {

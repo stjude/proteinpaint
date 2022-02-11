@@ -197,5 +197,12 @@
             "sandboxjson": "dictionary",
             "searchterms": ["clinical", "dictionary"]
         }
+    ],
+    "usecases": [
+        {
+            "title": "Generate GenomePaint SV View",
+            "describe": "Create a SV view with BigWig tracks using Python script",
+            "file": "svview"
+        }
     ]
 }

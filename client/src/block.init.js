@@ -40,6 +40,7 @@ export default function(arg) {
 	paint.debugmode = arg.debugmode
 	paint.tklst = arg.tklst || []
 	paint.datasetqueries = arg.datasetqueries
+	paint.mclassOverride = arg.mclassOverride
 	paint.error = m => client.sayerror(paint.holder, m)
 
 	if (!arg.genome) {
@@ -311,7 +312,8 @@ function step3(paint) {
 				datasetqueries: paint.datasetqueries,
 				samplecart: paint.samplecart,
 				debugmode: paint.debugmode,
-				tklst: paint.tklst
+				tklst: paint.tklst,
+				mclassOverride: paint.mclassOverride
 			})
 	)
 }

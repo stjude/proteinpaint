@@ -4,7 +4,6 @@ const fs = require('fs')
 const readline = require('readline')
 
 module.exports = async (req, res) => {
-	app.log(req)
 	try {
 		const [e, file, isurl] = app.fileurl(req)
 		if (e) throw e

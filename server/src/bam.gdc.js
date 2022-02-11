@@ -3,7 +3,6 @@ const got = require('got')
 
 module.exports = () => {
 	return async (req, res) => {
-		app.log(req)
 		try {
 			if (req.query.gdc_id) {
 				const gdc_data = await get_gdc_data(req.query.gdc_id)

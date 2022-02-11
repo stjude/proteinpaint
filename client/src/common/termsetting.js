@@ -9,7 +9,7 @@ getPillNameDefault()
 fillTermWrapper()
 */
 
-export const nonDictionaryTermTypes = new Set(['snplst', 'prs'])
+export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus'])
 
 class TermSetting {
 	constructor(opts) {
@@ -55,6 +55,7 @@ class TermSetting {
 			// bind the 'this' context of api.main() to the Termsetting instance
 			// instead of to the this.api object
 			main: this.main.bind(this),
+			runCallback: this.runCallback.bind(this),
 			// do not change the this context of showTree, d3 sets it to the DOM element
 			showTree: this.showTree,
 			hasError: () => this.hasError,
@@ -110,9 +111,9 @@ class TermSetting {
 			if ('activeCohort' in data) this.activeCohort = data.activeCohort
 			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
 			await this.setHandler(this.term ? this.term.type : null)
-			this.updateUI()
 			if (data.term && this.handler && this.handler.validateQ) this.handler.validateQ(data)
 			if (this.handler.postMain) await this.handler.postMain()
+			this.updateUI()
 		} catch (e) {
 			this.hasError = true
 			throw e
@@ -356,11 +357,10 @@ function setInteractivity(self) {
 		}
 		// create small menu, one option for each ele in noTermPromptOptions[]
 		for (const option of self.opts.noTermPromptOptions) {
-			// {isDictionary, termtype, text}
-			self.dom.tip.d
+			// {isDictionary, termtype, text, html}
+			const item = self.dom.tip.d
 				.append('div')
 				.attr('class', 'sja_menuoption')
-				.text(option.text)
 				.on('click', async () => {
 					self.dom.tip.clear()
 					if (option.isDictionary) {
@@ -372,6 +372,8 @@ function setInteractivity(self) {
 						throw 'termtype missing'
 					}
 				})
+			if (option.text) item.text(option.text)
+			else if (option.html) item.html(option.html)
 		}
 		// load the input ui for this term type
 	}
@@ -383,11 +385,8 @@ function setInteractivity(self) {
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
 			holder: self.dom.tip.d,
+			vocabApi: self.vocabApi,
 			state: {
-				// TODO: decide whether to avoid passing self.vocabApi here,
-				// in order not to share the app.state with the tree menu which is
-				// likely to have different filter, disable_terms, etc.
-				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,
 				tree: {
 					exclude_types: self.exclude_types,

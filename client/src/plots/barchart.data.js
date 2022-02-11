@@ -300,6 +300,15 @@ function boxplot_getvalue(lst) {
 }
 
 export function getCategoryData(q, data) {
+	if (!data || !data.length) {
+		// support custom vocab/adhoc dictionary with no sample annotations
+		return {
+			lst: Object.keys(q.term.values).map(k => {
+				return { key: k, label: q.term.values[k].label, value: k }
+			})
+		}
+	}
+	//
 	const pj = new Partjson({
 		data,
 		template: JSON.stringify({

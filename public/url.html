@@ -434,6 +434,33 @@ makeURL([
 			]
 		})],
 
+		['EF ~ snplocus sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: { id: 'LV_Ejection_Fraction_3D' },
+					independent: [
+						{
+							term:{
+								type:'snplocus',
+							},
+							q:{
+								chr:'chr17', start:7674304, stop:7676849,
+								alleleType:0,
+								geneticModel:0,
+								missingGenotype:0,
+								info_fields:[{"key":"QC_sjlife","iscategorical":true,"hiddenvalues":{"Bad":1}},{"key":"QC_ccss","iscategorical":true,"hiddenvalues":{"Bad":1}},{"key":"CR","isnumerical":true,"range":{"start":0.95,"startinclusive":true,"stopunbounded":true}},{"key":"CR_sjlife","isnumerical":true,"range":{"start":0.95,"startinclusive":true,"stopunbounded":true}},{"key":"CR_ccss","isnumerical":true,"range":{"start":0.95,"startinclusive":true,"stopunbounded":true}},{"key":"gnomAD_CR","isnumerical":true,"range":{"start":0.95,"startinclusive":true,"stopunbounded":true}},{"key":"gnomAD_AF","isnumerical":true,"range":{"start":0.1,"startinclusive":true,"stop":1,"stopinclusive":true}},{"key":"BadBLAT","isflag":true,"remove_yes":true},{"key":"Polymer_region","isflag":true,"remove_yes":true}]
+							}
+						},
+						{ id: 'sex', refGrp:'2'}
+					]
+				},
+			]
+		})],
+
 		'LOGISITC',
 
 		['EF', '?noheader=1&mass='+JSON.stringify({

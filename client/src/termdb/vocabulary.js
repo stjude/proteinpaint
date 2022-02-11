@@ -1,4 +1,4 @@
-import { dofetch3 } from '../client'
+import { dofetch3 } from '../common/dofetch'
 import { getBarchartData, getCategoryData } from '../plots/barchart.data'
 import { nonDictionaryTermTypes } from '../common/termsetting'
 import { getNormalRoot } from '../common/filter'
@@ -6,7 +6,7 @@ import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
 import initBinConfig from '../../shared/termdb.initbinconfig'
 
-const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst'])
+const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst', 'snplocus'])
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
@@ -399,7 +399,7 @@ class TermdbVocab {
 		// optionally, caller can supply parameter "term1_q=stringifiedJSON" in lst[]
 		// as this function does not deal with q by default
 
-		if (term.type == 'snplst') {
+		if (term.type == 'snplst' || term.type == 'snplocus') {
 			const args = [
 				'validateSnps=1',
 				'sumSamples=1',
@@ -454,19 +454,26 @@ class TermdbVocab {
 		}
 	}
 
-	async validateSnps(snptext) {
-		const args = [
-			'validateSnps=1',
-			'genome=' + this.state.vocab.genome,
-			'dslabel=' + this.state.vocab.dslabel,
-			'snptext=' + encodeURIComponent(snptext)
-		]
-		/*
-		const filter = _filter || this.state.termfilter.filter
-		if (filter) {
-			args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+	/* when arg.text is true, arg should only be {text} from a snplst term;
+	else, it should be the q{} of snplocus term: {chr,start,stop,info_fields}
+	to generate snp-sample gt matrix cache file and return file name
+	*/
+	async validateSnps(arg) {
+		const lst = ['validateSnps=1', 'genome=' + this.state.vocab.genome, 'dslabel=' + this.state.vocab.dslabel]
+		if (arg.text) {
+			lst.push('snptext=' + encodeURIComponent(arg.text))
+		} else if (arg.chr) {
+			lst.push('chr=' + arg.chr)
+			lst.push('start=' + arg.start)
+			lst.push('stop=' + arg.stop)
+			if (arg.info_fields) lst.push('info_fields=' + JSON.stringify(arg.info_fields))
 		}
-		*/
+		return await dofetch3('/termdb?' + lst.join('&'))
+	}
+
+	async get_infofields() {
+		// used for snplocus term type
+		const args = ['getinfofields=1', 'genome=' + this.state.vocab.genome, 'dslabel=' + this.state.vocab.dslabel]
 		return await dofetch3('/termdb?' + args.join('&'))
 	}
 }
@@ -496,7 +503,7 @@ class FrontendVocab {
 
 	main(vocab) {
 		if (vocab) Object.assign(this.vocab, vocab)
-		this.state = this.app.getState()
+		this.state = this.app ? this.app.getState() : {}
 	}
 
 	getTermdbConfig() {
@@ -628,6 +635,16 @@ class FrontendVocab {
 	}
 
 	async getDensityPlotData(term_id, num_obj, filter) {
+		if (!this.datarows || !this.datarows.length) {
+			// support adhoc dictionary or vocab terms without sample annotations
+			const term = this.vocab.terms.find(t => t.id === term_id)
+			const minvalue = term.range && term.range
+			return {
+				minvalue: term.range && term.range.start,
+				maxvalue: term.range && term.range.stop
+			}
+		}
+
 		const values = []
 		const distinctValues = new Set()
 		let minvalue,
