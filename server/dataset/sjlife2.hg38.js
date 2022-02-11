@@ -395,7 +395,8 @@ const terms = [
 		name: 'SJLIFE control allele frequency, Caucasian',
 		parent_id: null,
 		isleaf: true,
-		type: 'float',
+		type: 'float'
+		/*
 		tvs: {
 			ranges: [
 				{
@@ -405,13 +406,15 @@ const terms = [
 				}
 			]
 		}
+		*/
 	},
 	{
 		id: 'SJcontrol_YRI_AF',
 		name: 'SJLIFE control allele frequency, African American',
 		parent_id: null,
 		isleaf: true,
-		type: 'float',
+		type: 'float'
+		/*
 		tvs: {
 			ranges: [
 				{
@@ -421,6 +424,7 @@ const terms = [
 				}
 			]
 		}
+		*/
 	},
 	{
 		id: 'SJcontrol_CR',
@@ -534,7 +538,8 @@ const terms = [
 		type: 'float',
 		values: {
 			0: { label: 'missing value', uncomputable: true }
-		},
+		}
+		/*
 		tvs: {
 			ranges: [
 				{
@@ -549,6 +554,7 @@ const terms = [
 				}
 			]
 		}
+		*/
 	},
 	{
 		id: 'gnomAD_AF_eas',
@@ -558,7 +564,8 @@ const terms = [
 		type: 'float',
 		values: {
 			0: { label: 'missing value', uncomputable: true }
-		},
+		}
+		/*
 		tvs: {
 			ranges: [
 				{
@@ -569,6 +576,7 @@ const terms = [
 				}
 			]
 		}
+		*/
 	},
 	{
 		id: 'gnomAD_AF_nfe',
@@ -578,7 +586,8 @@ const terms = [
 		type: 'float',
 		values: {
 			0: { label: 'missing value', uncomputable: true }
-		},
+		}
+		/*
 		tvs: {
 			ranges: [
 				{
@@ -589,6 +598,7 @@ const terms = [
 				}
 			]
 		}
+		*/
 	},
 	{
 		id: 'PG',
