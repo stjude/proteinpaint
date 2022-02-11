@@ -477,7 +477,10 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_filter_paren_open')
 			.html('(')
-			.style('display', filter.$id === self.filter.$id && filter.in ? 'none' : 'inline-block')
+			.style(
+				'display',
+				self.opts.joinWith.length < 2 || (filter.$id === self.filter.$id && filter.in) ? 'none' : 'inline-block'
+			)
 			.style('padding', '0 5px')
 			.style('font-weight', 500)
 			.style('font-size', '24px')
@@ -500,7 +503,10 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_paren_close')
 			.style('padding', '0 5px')
 			.html(')')
-			.style('display', filter.$id === self.filter.$id && filter.in ? 'none' : 'inline')
+			.style(
+				'display',
+				self.opts.joinWith.length < 2 || (filter.$id === self.filter.$id && filter.in) ? 'none' : 'inline'
+			)
 			.style('font-weight', 500)
 			.style('font-size', '24px')
 			.style('cursor', 'pointer')
@@ -517,7 +523,12 @@ function setRenderers(self) {
 		const data = item.type == 'tvslst' ? item.lst : [item]
 		select(this)
 			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
-			.style('display', (filter.$id !== self.filter.$id || !filter.in) && data.length > 1 ? 'inline-block' : 'none')
+			.style(
+				'display',
+				self.opts.joinWith.length > 1 && (filter.$id !== self.filter.$id || !filter.in) && data.length > 1
+					? 'inline-block'
+					: 'none'
+			)
 
 		const pills = select(this)
 			.selectAll(':scope > .sja_filter_item')
@@ -630,7 +641,10 @@ function setRenderers(self) {
 		const filter = this.parentNode.__data__
 		select(this)
 			.select(':scope > .sja_filter_join_label')
-			.style('display', filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none')
+			.style(
+				'display',
+				self.opts.joinWith.length > 1 && filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none'
+			)
 			.style('margin', self.opts.joinWith.length > 1 ? '' : '2px')
 			.html(filter.join == 'and' ? 'AND' : 'OR')
 
@@ -779,7 +793,7 @@ function setInteractivity(self) {
 			select(elem)
 				.insert('div', 'div')
 				.attr('class', 'sja_filter_paren_open')
-				.style('display', 'inline-block')
+				.style('display', self.opts.joinWith > 1 ? 'inline-block' : 'none')
 				.style('padding', '0 5px')
 				.style('font-weight', 500)
 				.style('font-size', '24px')
@@ -823,7 +837,7 @@ function setInteractivity(self) {
 			select(elem)
 				.append('div')
 				.attr('class', 'sja_filter_paren_close')
-				.style('display', 'inline-block')
+				.style('display', self.opts.joinWith > 1 ? 'inline-block' : 'none')
 				.style('padding', '0 5px')
 				.style('font-weight', 500)
 				.style('font-size', '24px')
@@ -836,7 +850,7 @@ function setInteractivity(self) {
 				.selectAll(
 					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
 				)
-				.style('display', self.filter.lst.length > 1 ? 'inline-block' : 'none')
+				.style('display', self.opts.joinWith.length > 1 && self.filter.lst.length > 1 ? 'inline-block' : 'none')
 		}
 	}
 
