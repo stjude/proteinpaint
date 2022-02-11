@@ -3,7 +3,18 @@ import { scaleLinear, drag as d3drag } from 'd3'
 import { get_bin_label } from '../../shared/termdb.bins'
 import { makeDensityPlot } from './densityplot'
 
+/*
+********************** IMPORTED
+	makeDensityPlot(opts) // retrun svg densityplot for given density data
+********************** EXPORTED
+	setDensityPlot(self)
+********************** INTERNAL
+	handleNoDensity(self) // if maxvalue is same as minvalue
+	renderBinLines() // render binlines on top of densityplot based on term mode
+*/
+
 export async function setDensityPlot(self) {
+	console.log(self.num_obj.density_data)
 	if (self.num_obj.density_data.maxvalue == self.num_obj.density_data.minvalue) {
 		handleNoDensity(self)
 		self.num_obj.brushes.forEach(brush => {

@@ -20,20 +20,22 @@ getHandler(self)
 		setDensityPlot() // create density plot and set bin lines
 		renderBoundaryInclusionInput() // start <= x < end OR start < x <= end
 		renderTypeInputs() // 'same bin size' and 'Varying bin sizes' tabs with edit UI
-		renderButtons() // apply and reset buttons
+		renderButtons() // 'apply' and 'reset' buttons
+
+renderBoundaryInputDivs() //custom bin name inputs
 
 ********************** INTERNAL
 	applyEdits() // when apply button clicked
-	processCustomBinInputs()
 **** Functions for Numerical Fixed size bins ****
-	renderFixedBinsInputs()
-		renderBinSizeInput()
-		renderFirstBinInput()
-		renderLastBinInputs()
+	renderFixedBinsInputs() // render Fixed Bins Inputs
+		renderBinSizeInput() // render BinSize Input
+		renderFirstBinInput() // render First Bin Input
+		renderLastBinInputs() // render Last Bin Inputs
 **** Functions for Numerical Custom size bins ****
-	renderCustomBinInputs()
-		handleChange()
-		binsChanged()
+	renderCustomBinInputs() // render Custom Bin Inputs
+		handleChange() // update self.q if custom inputs changed
+		binsChanged() // check if bins changed from input or return
+		processCustomBinInputs() // create or update self.q from custom bins inputs
 */
 
 // self is the termsetting instance
@@ -300,6 +302,7 @@ function renderTypeInputs(self) {
 
 /******************* Functions for Numerical Fixed size bins *******************/
 function renderFixedBinsInputs(self, tablediv) {
+	console.log(self.q)
 	self.dom.bins_table = tablediv.append('table')
 	renderBinSizeInput(self, self.dom.bins_table.append('tr'))
 	renderFirstBinInput(self, self.dom.bins_table.append('tr'))
@@ -495,6 +498,7 @@ function renderLastBinInputs(self, tr) {
 
 /******************* Functions for Numerical Custom size bins *******************/
 function renderCustomBinInputs(self, tablediv) {
+	console.log(self.q)
 	self.dom.bins_table = tablediv.append('table')
 	const thead = self.dom.bins_table.append('thead').append('tr')
 	thead
