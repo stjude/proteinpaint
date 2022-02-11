@@ -35,9 +35,7 @@ export async function loadTk(tk, block) {
 
 		let data
 		if (tk.custom_variants) {
-			data = {
-				skewer: tk.custom_variants
-			}
+			data = filter_custom_variants(tk, block)
 		} else {
 			const [par, headers] = get_parameter(tk, block)
 			data = await dofetch3('mds3?' + par, { headers })
@@ -249,4 +247,16 @@ by info_fields[] and variantcase_fields[]
 			return lst
 		}, [])
 	}
+}
+
+function filter_custom_variants(tk, block) {
+	// must exclude out of range ones, otherwise numericmode rendering will break
+	const lst = []
+	const r = block.rglst[0]
+	for (const m of tk.custom_variants) {
+		if (m.chr != r.chr) continue
+		if (m.pos <= r.start || m.pos >= r.stop) continue
+		lst.push(m)
+	}
+	return { skewer: lst }
 }

@@ -36,8 +36,8 @@ export function make_datagroup(tk, rawmlst, block) {
 			datagroup.push({
 				chr: mlst[0].chr,
 				pos: mlst[0].pos,
-				mlst: mlst,
-				x: x
+				mlst,
+				x
 			})
 		}
 	} else {
@@ -96,7 +96,7 @@ export function make_datagroup(tk, rawmlst, block) {
 					datagroup.push({
 						chr: mlst[0].chr,
 						pos: m.pos,
-						mlst: mlst,
+						mlst,
 						x: mlst[0].__x
 					})
 				}
@@ -119,7 +119,7 @@ export function make_datagroup(tk, rawmlst, block) {
 				isbin: true,
 				chr: mlst[0].chr,
 				pos: mlst[0].pos,
-				mlst: mlst,
+				mlst,
 				x: xsum / mlst.length
 			})
 		}

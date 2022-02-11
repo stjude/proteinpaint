@@ -40,7 +40,8 @@ export class RegressionResults {
 			holder,
 			err_div: holder.append('div'),
 			snplocusBlockDiv: holder.append('div').style('margin-left', '20px'),
-			content: holder.append('div').style('margin', '10px')
+			// is where newDiv() and displayResult_oneset() writes to
+			oneSetResultDiv: holder.append('div').style('margin', '10px')
 		}
 	}
 
@@ -65,7 +66,7 @@ export class RegressionResults {
 			const data = await this.app.vocabApi.getRegressionData(reqOpts)
 			if (data.error) throw data.error
 			this.dom.err_div.style('display', 'none')
-			this.dom.content.selectAll('*').remove()
+			this.dom.oneSetResultDiv.selectAll('*').remove()
 			this.dom.holder.style('display', 'block')
 			await this.displayResult(data)
 		} catch (e) {
@@ -141,7 +142,7 @@ export class RegressionResults {
 						q: {},
 						term: {
 							id: tid,
-							name: tid
+							name: snp.mname || tid
 						},
 						effectAllele: t.q.snp2effAle[tid]
 					}
@@ -160,27 +161,33 @@ function setInteractivity(self) {}
 
 function setRenderers(self) {
 	self.displayResult = async result => {
+		/* result{
+			lst:[ 
+				{ data: { err, splinePlots, residuals, ... }, id:'snp1' },
+				{ data: { err, splinePlots, residuals, ... }, id:'snp2' },
+				...
+			]
+		}
+		*/
 		if (self.config.independent.find(i => i.term.type == 'snplocus')) {
 			// has a snploucs term: create genome browser to display that locus
-			// each snp has a set of results
-			// clicking on a snp will call displayResult_oneset() to display its results
+			// in result.lst[], there's one set of result for each variant, identified by id
+			// clicking on a dot in browser tk will call displayResult_oneset() to display its results
 			await self.show_genomebrowser_snplocus(result)
 			return
 		}
 		// no snplocus, clear things if previous analysis had it
 		delete self.snplocusBlock
 		self.dom.snplocusBlockDiv.selectAll('*').remove()
-		// there is a single set of results from analyzing one model
+		// result.lst[] has only one set of result, from analyzing one model
+		if (!result.lst[0] || !result.lst[0].data) throw 'result is not {lst:[ {data:{}} ]}'
 		// quick fix; backend should reassign result.err to a specific set
 		result.lst[0].data.err = result.err
 		self.displayResult_oneset(result.lst[0].data)
 	}
 
 	self.displayResult_oneset = result => {
-		// this is work-in-progress and will be redeveloped later
-		// hardcoded logic and data structure
-		// benefit is that specific logic can be applied to rendering each different table
-		// no need for one reusable renderer to support different table types
+		self.dom.oneSetResultDiv.selectAll('*').remove()
 		self.mayshow_err(result)
 		self.newDiv('Sample size: ' + result.sampleSize)
 		self.mayshow_splinePlots(result)
@@ -192,7 +199,7 @@ function setRenderers(self) {
 
 	self.newDiv = label => {
 		// create div to show a section of the result
-		const div = self.dom.content.append('div').style('margin', '20px 0px 10px 0px')
+		const div = self.dom.oneSetResultDiv.append('div').style('margin', '20px 0px 10px 0px')
 		div
 			.append('div')
 			.style('text-decoration', 'underline')
@@ -281,10 +288,6 @@ function setRenderers(self) {
 			// col 1: term name
 			const termNameTd = tr.append('td').style('padding', '8px')
 			fillTdName(termNameTd, tw.term ? tw.term.name : tid) // can tw ever be missing??
-
-			// TODO
-			// add snp.q and snp.refGrp in tw.term.snps[] to mark out reference group for geneticModel=3
-			// so that refgrp can be displayed
 
 			if (tw.q && tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
 				// do not display ref for spline variable
@@ -690,7 +693,7 @@ function setRenderers(self) {
 	}
 
 	self.show_genomebrowser_snplocus = async result => {
-		// find the snplocus input
+		// show genome browser when there's a snplocus term in independent
 		const input = self.parent.inputs.independent.inputs.find(i => i.term && i.term.term.type == 'snplocus')
 		if (!self.snplocusBlock) {
 			// doesn't have a block, create one
@@ -717,19 +720,20 @@ function setRenderers(self) {
 					tw.q.stop = stop
 					await input.pill.main(tw)
 					/* 
-					pill.main() will wholy update following things in termsetting instance:
+					pill.main() will update following things in termsetting instance:
 					- q{ chr/start/stop }
 					- term{ snps } list of variants retrieved from updated locus
-					for q/term to be synced into regression state, must do runCallback
+					for q/term to be synced into regression state, must do runCallback()
 					which will call editConfig() and dispatch action with hasUnsubmittedEdits=true,
 					set this single-use flag to nullify it
 					to be able to continue run analysis
-
-					reason of not directly calling self.parent.inputs.editConfig(input, tw)
-					is that we're having incomplete info in tw
-					tw.term.snps[] is missing, and that can only be made in pill main/postMain/validateSnps
 					*/
 					self.hasUnsubmittedEdits_nullify_singleuse = true
+					/*
+					reason of not directly calling self.parent.inputs.editConfig(input, tw)
+					is that we're having incomplete info in tw
+					mostly tw.term.snps[] is missing, and that can only be made in pill main/postMain/validateSnps
+					*/
 					input.pill.runCallback()
 				}
 			}
@@ -738,19 +742,28 @@ function setRenderers(self) {
 			arg.tklst.push({
 				type: 'mds3', // tkt.mds3
 				name: 'Variants',
-				custom_variants: make_mds3_variants(input.term.term.snps)
+				numericmode: {
+					inuse: true,
+					type: '__value',
+					label: '-log10 p-value',
+					tooltipPrintValue: m => 'p-value=' + m.regressionPvalue
+				},
+				custom_variants: make_mds3_variants(input.term.term.snps, result),
+				click_snvindel: m => {
+					self.displayResult_oneset(m.regressionResult)
+				}
 			})
 
 			first_genetrack_tolist(arg.genome, arg.tklst)
 			const _ = await import('../block')
 			self.snplocusBlock = new _.Block(arg)
+			window.bb = self.snplocusBlock // testing, delete before prod release
 		} else {
 			// browser is already created
 			// find the mds3 track
 			const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
 			// assign result to each variant
-			// TODO "result" is {"snp1":{result}, "snp2":{result}}
-			tk.custom_variants = make_mds3_variants(input.term.term.snps)
+			tk.custom_variants = make_mds3_variants(input.term.term.snps, result)
 			// render
 			tk.load()
 		}
@@ -765,16 +778,31 @@ function fillTdName(td, name) {
 	}
 }
 
-function make_mds3_variants(lst) {
+function make_mds3_variants(snps, result) {
+	/* assign result to snps
+	snps is from input.term.term.snps
+	result:{lst[{data,id},{data,id},...]}
+	*/
 	const mlst = []
-	for (const a of lst) {
-		const b = {
-			// must be supplied as when updating custom variants for existing mds3 tk
-			// it will not run makeTk() again
-			occurrence: 1
+	for (const snp of snps) {
+		const m = {}
+		Object.assign(m, snp)
+		const thisresult = result.lst.find(i => i.id == m.snpid)
+		if (thisresult) {
+			// reg result is found for this snp; can call displayResult_oneset
+			const d = thisresult.data
+			if (!d) throw '.data{} missing'
+			m.regressionResult = d
+			// find p-value (last column of coeff table)
+			if (!d.coefficients || !d.coefficients.terms) throw '.data{coefficients:{terms}} missing'
+			if (!d.coefficients.terms[m.snpid]) throw m.snpid + ' missing in coefficients.terms{}'
+			const v = Number(d.coefficients.terms[m.snpid].fields[d.coefficients.terms[m.snpid].fields.length - 1])
+			m.regressionPvalue = v
+			m.__value = -Math.log10(v)
+		} else {
+			console.log('no result for ' + m.snpid)
 		}
-		Object.assign(b, a)
-		mlst.push(b)
+		mlst.push(m)
 	}
 	return mlst
 }

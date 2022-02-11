@@ -31,7 +31,7 @@ export function make_leftlabels(data, tk, block) {
 
 	const labels = [] // for max width
 
-	{
+	if (tk.skewer && tk.skewer.data) {
 		// variant count may combine genecnv and skewer, and show sublabels under main
 		const lab = makelabel(tk, block, laby)
 		const variantcount = tk.skewer.data.reduce((i, j) => i + j.mlst.length, 0)
