@@ -89,6 +89,20 @@ export function dofetch2(path, init = {}, opts = {}) {
 		}
 	}
 
+	if (url.length > 2000 && (!init.method || init.method.toUpperCase() == 'GET')) {
+		// convert to a POST request
+		// !!! NOTE: the requested server route must support both GET and POST, for example, app.all('/route', handler)
+		init.method = 'POST'
+		const [hostpath, query] = path.split('?')
+		const params = {}
+		query.split('&').forEach(p => {
+			const [k, v] = p.split('=')
+			params[k] = v
+		})
+		init.body = JSON.stringify(params)
+		url = hostpath
+	}
+
 	if (!init.headers) {
 		init.headers = {}
 	}

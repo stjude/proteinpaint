@@ -168,7 +168,7 @@ function trigger_getcategories(q, res, tdb, ds) {
 		ds,
 		term1_id: q.tid
 	}
-	if (q.term1_q) arg.term1_q = JSON.parse(q.term1_q)
+	if (q.term1_q) arg.term1_q = JSON.parse(decodeURIComponent(q.term1_q))
 	switch (term.type) {
 		case 'categorical':
 			break
