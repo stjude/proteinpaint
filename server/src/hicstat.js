@@ -83,15 +83,15 @@ export async function do_hicstat(file, isurl) {
 
 	async function readHicUrlHeader(url, position, length) {
 		try {
-			const response = await got.get(url, {
-				headers: { Range: 'bytes=' + position + '-' + (length - 1) },
-				responseType: 'buffer'
-			})
-			const buf = response.body
-			const arrayBuffer = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength)
+			const response = await got(url, {
+				headers: { Range: 'bytes=' + position + '-' + (length - 1) }
+			}).buffer()
+			// convert buffer to arrayBuffer
+			const arrayBuffer = response.buffer.slice(position, position + length)
 			return arrayBuffer
 		} catch (error) {
 			console.log(error.response)
+			throw 'error reading file, check file details'
 		}
 	}
 
