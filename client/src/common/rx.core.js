@@ -146,7 +146,8 @@ function getInitPrepFxn(_Class_, prepFxn) {
 	may apply overrides to instance opts
 	if there is an instance.type key in app.opts
 */
-export function getOpts(opts, instance) {
+export function getOpts(_opts, instance) {
+	const opts = Object.assign({}, instance.opts || {}, _opts)
 	if (!instance.app) return opts
 	if (instance.type in instance.app.opts) {
 		/*
