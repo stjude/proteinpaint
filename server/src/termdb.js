@@ -18,6 +18,17 @@ copy_term
 trigger_*
 */
 
+const encodedParams = [
+	'filter',
+	'tvslst',
+	'term1_q',
+	'exclude_types',
+	'variant_filter',
+	'info_fields',
+	'outcome',
+	'independent'
+]
+
 export function handle_request_closure(genomes) {
 	/*
 	 */
@@ -33,6 +44,14 @@ export function handle_request_closure(genomes) {
 			if (!ds.cohort) throw 'ds.cohort missing'
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'no termdb for this dataset'
+
+			//
+			for (const param of encodedParams) {
+				if (typeof q[param] == 'string') {
+					const strvalue = q[param].startsWith('%') ? decodeURIComponent(q[param]) : q[param]
+					q[param] = JSON.parse(strvalue)
+				}
+			}
 
 			// process triggers
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
@@ -72,7 +91,7 @@ function trigger_getsamples(q, res, ds) {
 	// this may be potentially limited?
 	// ds may allow it as a whole
 	// individual term may allow getting from it
-	const lst = termdbsql.get_samples(JSON.parse(decodeURIComponent(q.filter)), ds)
+	const lst = termdbsql.get_samples(q.filter, ds)
 	let samples = lst
 	if (ds.sampleidmap) {
 		samples = lst.map(i => ds.sampleidmap.get(i))
@@ -142,7 +161,7 @@ async function trigger_findterm(q, res, termdb) {
 	// TODO also search categories
 	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
 	if (q.exclude_types) {
-		const exclude_types = JSON.parse(decodeURIComponent(q.exclude_types))
+		const exclude_types = q.exclude_types
 		q.exclude_types = exclude_types.map(t => t.toLowerCase())
 	}
 	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.exclude_types, q.treeFilter)
@@ -168,7 +187,7 @@ function trigger_getcategories(q, res, tdb, ds) {
 		ds,
 		term1_id: q.tid
 	}
-	if (q.term1_q) arg.term1_q = JSON.parse(decodeURIComponent(q.term1_q))
+	if (q.term1_q) arg.term1_q = q.term1_q
 	switch (term.type) {
 		case 'categorical':
 			break
@@ -189,7 +208,7 @@ function trigger_getcategories(q, res, tdb, ds) {
 		default:
 			throw 'unknown term type'
 	}
-	if (q.filter) arg.filter = JSON.parse(decodeURIComponent(q.filter))
+	if (q.filter) arg.filter = q.filter
 
 	const result = termdbsql.get_summary(arg)
 	const bins = result.CTE1.bins ? result.CTE1.bins : []
@@ -210,15 +229,13 @@ function trigger_getnumericcategories(q, res, tdb, ds) {
 		term_id: q.tid
 		//filter
 	}
-	if (q.filter) arg.filter = JSON.parse(decodeURIComponent(q.filter))
+	if (q.filter) arg.filter = q.filter
 	const lst = termdbsql.get_summary_numericcategories(arg)
 	res.send({ lst })
 }
 
 function trigger_scatter(q, res, tdb, ds) {
 	q.ds = ds
-	if (q.tvslst) q.tvslst = JSON.parse(decodeURIComponent(q.tvslst))
-	if (q.filter) q.filter = JSON.parse(decodeURIComponent(q.filter))
 	const startTime = +new Date()
 	const t1 = tdb.q.termjsonByOneid(q.term1_id)
 	if (!t1) throw `Invalid term1_id="${q.term1_id}"`
@@ -247,25 +264,16 @@ rightnow only few conditional terms have grade info
 async function trigger_getincidence(q, res, ds) {
 	if (!q.grade) throw 'missing grade'
 	q.grade = Number(q.grade)
-	if (typeof q.filter == 'string') {
-		q.filter = JSON.parse(decodeURIComponent(q.filter))
-	}
 	const data = await cuminc.get_incidence(q, ds)
 	res.send(data)
 }
 
 async function trigger_getsurvival(q, res, ds) {
-	if (typeof q.filter == 'string') {
-		q.filter = JSON.parse(decodeURIComponent(q.filter))
-	}
 	const data = await survival.get_survival(q, ds)
 	res.send(data)
 }
 
 async function trigger_getregression(q, res, ds) {
-	if (typeof q.filter == 'string') {
-		q.filter = JSON.parse(decodeURIComponent(q.filter))
-	}
 	const data = await regression.get_regression(q, ds)
 	res.send(data)
 }

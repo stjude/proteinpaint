@@ -79,7 +79,7 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 	// collect samples that will be summarized with optional filter
 	let samples
 	if (q.filter) {
-		samples = termdbsql.get_samples(JSON.parse(decodeURIComponent(q.filter)), ds)
+		samples = termdbsql.get_samples(q.filter, ds)
 		if (samples.length == 0) throw 'no samples from filter'
 	}
 	const sampleinfilter = [] // list of true/false, same length of tk.samples, to tell if a sample is in use
@@ -356,7 +356,11 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 
 	const bcfargs = ['query', file, '-r', coord, '-f', bcfformat_snplocus]
 	if (q.info_fields) {
-		add_bcf_info_filters(JSON.parse(q.info_fields), bcfargs)
+		console.log(358, q.info_fields)
+		add_bcf_info_filters(q.info_fields, bcfargs)
+	}
+	if (q.variant_filter) {
+		console.log(362, q.variant_filter)
 	}
 
 	const snps = [] // collect snps {snpid, info} and send to client to store at term.snps, just like snplst
