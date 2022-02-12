@@ -472,6 +472,41 @@ makeURL([
 				},
 			]
 		})],
+		['EF ~ snplocus RErr', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: { id: 'LV_Ejection_Fraction_3D' },
+					independent: [
+						{
+							term:{
+								type:'snplocus',
+							},
+							q:{
+								chr:'chr17', start:7674304, stop:7676849,
+								alleleType:0,
+								geneticModel:0,
+								missingGenotype:0,
+								variant_filter:
+								{"type":"tvslst","join":"and","in":true,"lst":[
+									{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC_sjlife","name":"SJLIFE classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"SuperGood":{"label":"SuperGood","key":"SuperGood"},"Good":{"label":"Good","key":"Good"},"Ambiguous":{"label":"Ambiguous","key":"Ambiguous"},"Bad":{"label":"Bad","key":"Bad"}}}}},
+									{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC_ccss","name":"CCSS classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"SuperGood":{"label":"SuperGood","key":"SuperGood"},"Good":{"label":"Good","key":"Good"},"Ambiguous":{"label":"Ambiguous","key":"Ambiguous"},"Bad":{"label":"Bad","key":"Bad"}}}}},
+									{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR","name":"Call rate, SJLIFE+CCSS","parent_id":null,"isleaf":true,"type":"float"}}},
+									{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_sjlife","name":"SJLIFE call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+									{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_ccss","name":"CCSS call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+									{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_CR","name":"gnmoAD call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+									{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"BadBLAT","name":"Paralog","parent_id":null,"isleaf":true,"type":"categorical"}}},
+									{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"Polymer_region","name":"Polymer region","parent_id":null,"isleaf":true,"type":"categorical"}}}
+								]}
+							}
+						}
+					]
+				},
+			]
+		})],
 
 		'LOGISITC',
 
