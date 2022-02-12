@@ -146,7 +146,7 @@ function renderBinLines(self, data) {
 			self.q.type == 'custom-bin' ||
 			self.q.mode == 'spline' ||
 			i === 0 ||
-			(self.q.last_bin && self.q.last_bin.start === d.x)
+			(self.q.last_bin && self.q.last_bin.start === d.x && d.index == lines.length - 1)
 	})
 
 	self.num_obj.binsize_g.selectAll('line').remove()
