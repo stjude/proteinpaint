@@ -357,8 +357,6 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 	const bcfargs = ['query', file, '-r', coord, '-f', bcfformat_snplocus]
 	if (q.variant_filter) {
 		add_bcf_variant_filter(q.variant_filter, bcfargs)
-	} else if (q.info_fields) {
-		add_bcf_info_filters(q.info_fields, bcfargs)
 	}
 
 	const snps = [] // collect snps {snpid, info} and send to client to store at term.snps, just like snplst
@@ -425,36 +423,7 @@ function compute_mclass(tk, altAlleles, variant, info_str) {
 	// gene/isoform/class/dt/mname are assigned on variant
 }
 
-function add_bcf_info_filters(info_fields, bcfargs) {
-	// info fields to be replaced by filter json object
-	// on bcf expression https://samtools.github.io/bcftools/bcftools.html#expressions
-	const lst = []
-	for (const i of info_fields) {
-		if (i.hiddenvalues) {
-			// { key: 'QC_sjlife', iscategorical: true, hiddenvalues: { Bad: 1 } }
-			for (const k in i.hiddenvalues) {
-				lst.push(`INFO/${i.key}!="${k}"`)
-			}
-		} else if (i.range) {
-			// { key: 'CR', isnumerical: true, range: { start: 0.95, startinclusive: true, stopunbounded: true } }
-			if ('start' in i.range) {
-				lst.push(`INFO/${i.key} ${i.range.startinclusive ? '>=' : '>'} ${i.range.start}`)
-			}
-			if ('stop' in i.range) {
-				lst.push(`INFO/${i.key} ${i.range.stopinclusive ? '<=' : '<'} ${i.range.stop}`)
-			}
-		} else if (i.isflag) {
-			// { key: 'BadBLAT', isflag: true, remove_yes: true },
-			lst.push(`INFO/${i.key}${i.remove_yes ? '=0' : '=1'}`)
-		} else {
-			throw 'unknown info_field'
-		}
-	}
-	bcfargs.push('-i', lst.join(' && '))
-}
-
 function add_bcf_variant_filter(variant_filter, bcfargs) {
-	console.log(458, 'add_bcf_variant_filter')
 	// on bcf expression https://samtools.github.io/bcftools/bcftools.html#expressions
 	const lst = []
 	// assumes variant_filter.type == 'tvslst'
@@ -478,6 +447,5 @@ function add_bcf_variant_filter(variant_filter, bcfargs) {
 			throw `unknown tvs spec for info_field: type=${i.type}, term.id=${i.tvs.term.id}`
 		}
 	}
-	console.log(480, lst)
 	bcfargs.push('-i', lst.join(' && '))
 }

@@ -333,17 +333,7 @@ const terms = [
 		isleaf: true,
 		type: 'float',
 		min: 0,
-		max: 1,
-		tvs: {
-			ranges: [
-				{
-					start: 0,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			]
-		}
+		max: 1
 	},
 	{
 		id: 'AF_sjlife',
@@ -352,17 +342,7 @@ const terms = [
 		isleaf: true,
 		type: 'float',
 		min: 0,
-		max: 1,
-		tvs: {
-			ranges: [
-				{
-					start: 0,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			]
-		}
+		max: 1
 	},
 	{
 		id: 'AF_ccss',
@@ -371,17 +351,7 @@ const terms = [
 		isleaf: true,
 		type: 'float',
 		min: 0,
-		max: 1,
-		tvs: {
-			ranges: [
-				{
-					start: 0,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			]
-		}
+		max: 1
 	},
 	{
 		id: 'SJcontrol_AF',
@@ -390,17 +360,7 @@ const terms = [
 		isleaf: true,
 		type: 'float',
 		min: 0,
-		max: 1,
-		tvs: {
-			ranges: [
-				{
-					start: 0,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			]
-		}
+		max: 1
 	},
 	{
 		id: 'SJcontrol_CEU_AF',
@@ -410,17 +370,6 @@ const terms = [
 		min: 0,
 		max: 1,
 		type: 'float'
-		/*
-		tvs: {
-			ranges: [
-				{
-					startunbounded: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			]
-		}
-		*/
 	},
 	{
 		id: 'SJcontrol_YRI_AF',
@@ -430,17 +379,6 @@ const terms = [
 		type: 'float',
 		min: 0,
 		max: 1
-		/*
-		tvs: {
-			ranges: [
-				{
-					startunbounded: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			]
-		}
-		*/
 	},
 	{
 		id: 'SJcontrol_CR',
@@ -538,12 +476,7 @@ const terms = [
 				{
 					start: 0.1,
 					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				},
-				{
-					value: 0,
-					isnot: true
+					stopunbounded: true
 				}
 			]
 		}
@@ -559,22 +492,6 @@ const terms = [
 		values: {
 			//0: { label: 'missing value', uncomputable: true }
 		}
-		/*
-		tvs: {
-			ranges: [
-				{
-					start: 0.1,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				},
-				{
-					value: 0,
-					isnot: true
-				}
-			]
-		}
-		*/
 	},
 	{
 		id: 'gnomAD_AF_eas',
@@ -587,18 +504,6 @@ const terms = [
 		values: {
 			//0: { label: 'missing value', uncomputable: true }
 		}
-		/*
-		tvs: {
-			ranges: [
-				{
-					start: 0.1,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			]
-		}
-		*/
 	},
 	{
 		id: 'gnomAD_AF_nfe',
@@ -611,18 +516,6 @@ const terms = [
 		values: {
 			//0: { label: 'missing value', uncomputable: true }
 		}
-		/*
-		tvs: {
-			ranges: [
-				{
-					start: 0.1,
-					startinclusive: true,
-					stop: 1,
-					stopinclusive: true
-				}
-			]
-		}
-		*/
 	},
 	{
 		id: 'PG',

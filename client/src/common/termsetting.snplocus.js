@@ -13,9 +13,7 @@ self.q{}
 	.geneticModel: int
 	.missingGenotype: int
 	.chr/start/stop: defines the locus
-	.info_fields[ {} ]
-		.key
-		.label
+	.variant_filter: optional filter root
 
 	.cacheid
 		the cache file name storing the snp-by-sample genotypes, for samples based on current filter
@@ -55,8 +53,7 @@ export function getHandler(self) {
 async function makeEditMenu(self, div) {
 	const searchbox = add_genesearchbox(self, div)
 
-	const tmpinfoarg = await mayDisplayVariantFilter(self, div)
-	// TODO tmpinfoarg to be replaced with filter api
+	await mayDisplayVariantFilter(self, div)
 
 	const [select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
 		div.append('div').style('margin', '10px'),
@@ -83,9 +80,7 @@ async function makeEditMenu(self, div) {
 			self.q.start = start
 			self.q.stop = stop
 			self.term.name = term_name
-			/*** !!! USE self.variant_filter.active in somewhere here !!! ***/
-			self.q.variant_filter = getNormalRoot(self.variant_filter.active)
-			//self.q.info_fields = tmpinfoarg
+			self.q.variant_filter = getNormalRoot(self.variantFilter.active)
 			await validateInput(self)
 			// q.cacheid is set
 
@@ -131,9 +126,6 @@ function validateQ(self, data) {
 	if (!Number.isInteger(q.stop)) throw 'stop coordinate is not integer'
 	if (q.start < 0) throw 'start < 0'
 	if (q.stop <= q.start) throw 'stop <= start'
-	if (q.info_fields) {
-		if (!Array.isArray(q.info_fields)) throw 'info_fields[] is not array'
-	}
 }
 
 export async function fillTW(tw, vocabApi) {
@@ -193,25 +185,34 @@ function get_coordinput(searchbox) {
 }
 
 async function mayDisplayVariantFilter(self, holder) {
-	if (!self.variant_filter) {
-		self.variant_filter = await self.vocabApi.get_variantFilter()
-		self.variant_filter.active = JSON.parse(JSON.stringify(self.variant_filter.filter))
+	if (!self.variantFilter) {
+		self.variantFilter = await self.vocabApi.get_variantFilter()
 	}
-	const filter = self.variant_filter.active
-	const terms = self.variant_filter.terms
-	// TODO info fields to be changed to term objects
+	if (self.q && self.q.variant_filter) {
+		// use existing filter
+		self.variantFilter.active = JSON.parse(JSON.stringify(self.q.variant_filter))
+	} else {
+		// use default filter from dataset
+		self.variantFilter.active = JSON.parse(JSON.stringify(self.variantFilter.filter))
+	}
+	const filter = self.variantFilter.active
+	const terms = self.variantFilter.terms
 	if (!filter || !terms || !terms.length) return
-	const div = holder.append('div').style('margin', '10px')
+	const div = holder.append('div').style('margin', '15px 15px 15px 10px')
+	div
+		.append('div')
+		.text('VARIANT FILTERS')
+		.style('font-size', '.7em')
+		.style('opacity', 0.4)
 
 	filterInit({
-		//btn: values_td.append('div'),
-		//btnLabel: 'Filter',
-		joinWith: self.variant_filter.opts.joinWith,
+		joinWith: self.variantFilter.opts.joinWith,
 		emptyLabel: '+Variant Filter',
-		holder: div,
+		holder: div.append('div'),
 		vocab: { terms },
 		callback: filter => {
-			self.variant_filter.active = filter
+			self.variantFilter.active = filter
+			// user must press submit button to attach current filter to self.q{}
 		}
 	}).main(filter)
 }
