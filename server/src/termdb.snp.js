@@ -355,12 +355,10 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 	const coord = (tk.nochr ? q.chr.replace('chr', '') : q.chr) + ':' + start + '-' + stop
 
 	const bcfargs = ['query', file, '-r', coord, '-f', bcfformat_snplocus]
-	if (q.info_fields) {
-		console.log(358, q.info_fields)
-		add_bcf_info_filters(q.info_fields, bcfargs)
-	}
 	if (q.variant_filter) {
-		console.log(362, q.variant_filter)
+		add_bcf_variant_filter(q.variant_filter, bcfargs)
+	} else if (q.info_fields) {
+		add_bcf_info_filters(q.info_fields, bcfargs)
 	}
 
 	const snps = [] // collect snps {snpid, info} and send to client to store at term.snps, just like snplst
@@ -452,5 +450,34 @@ function add_bcf_info_filters(info_fields, bcfargs) {
 			throw 'unknown info_field'
 		}
 	}
+	bcfargs.push('-i', lst.join(' && '))
+}
+
+function add_bcf_variant_filter(variant_filter, bcfargs) {
+	console.log(458, 'add_bcf_variant_filter')
+	// on bcf expression https://samtools.github.io/bcftools/bcftools.html#expressions
+	const lst = []
+	// assumes variant_filter.type == 'tvslst'
+	for (const i of variant_filter.lst) {
+		if (i.tvs.values) {
+			const operator = i.tvs.isnot ? '!=' : '='
+			for (const v of i.tvs.values) {
+				const value = isNaN(v.key) ? `"${v.key}"` : Number(v.key)
+				lst.push(`INFO/${i.tvs.term.id}${operator}${value}`)
+			}
+		} else if (i.tvs.ranges) {
+			for (const range of i.tvs.ranges) {
+				if ('start' in range) {
+					lst.push(`INFO/${i.tvs.term.id} ${range.startinclusive ? '>=' : '>'} ${range.start}`)
+				}
+				if ('stop' in range) {
+					lst.push(`INFO/${i.tvs.term.id} ${range.stopinclusive ? '<=' : '<'} ${range.stop}`)
+				}
+			}
+		} else {
+			throw `unknown tvs spec for info_field: type=${i.type}, term.id=${i.tvs.term.id}`
+		}
+	}
+	console.log(480, lst)
 	bcfargs.push('-i', lst.join(' && '))
 }

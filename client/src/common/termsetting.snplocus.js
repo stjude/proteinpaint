@@ -211,9 +211,7 @@ async function mayDisplayVariantFilter(self, holder) {
 		holder: div,
 		vocab: { terms },
 		callback: filter => {
-			console.log(210, filter)
 			self.variant_filter.active = filter
-			//self.show
 		}
 	}).main(filter)
 }
