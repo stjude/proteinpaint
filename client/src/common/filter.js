@@ -498,6 +498,23 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_item')
 			.each(self.addItem)
 
+		if (self.opts.joinWith.length == 1) {
+			self.dom.last_join_div = select(this)
+				.append('div')
+				.attr('class', 'sja_filter_last_join')
+				.style('display', 'inline')
+			self.dom.last_join_label = self.dom.last_join_div
+				.append('div')
+				.datum({ action: 'join', html: ['&#10010;', '', '&rsaquo;'], handler: self.displayTreeMenu })
+				.attr('class', 'sja_filter_last_join_label')
+				.style('padding', '0 5px')
+				.style('display', filter.lst.length ? 'inline' : 'none')
+				.style('font-weight', 500)
+				.style('cursor', 'pointer')
+				.html('+' + self.opts.joinWith[0].toUpperCase())
+				.on('click', self.showLastJoinBlank)
+		}
+
 		select(this)
 			.append('div')
 			.attr('class', 'sja_filter_paren_close')
@@ -545,6 +562,17 @@ function setRenderers(self) {
 		select(this)
 			.selectAll(':scope > .sja_filter_item')
 			.sort((a, b) => data.indexOf(a) - data.indexOf(b))
+
+		if (self.dom.last_join_label) {
+			self.dom.last_join_div.datum(filter)
+			this.insertBefore(
+				self.dom.last_join_div.node(),
+				select(this)
+					.select(':scope > .sja_filter_paren_close')
+					.node()
+			)
+			self.dom.last_join_label.style('display', 'inline')
+		}
 	}
 
 	self.removeGrp = function(item) {
@@ -700,8 +728,8 @@ function setRenderers(self) {
 	}
 
 	self.getAddTransformerBtnDisplay = function(d) {
-		if (self.opts.joinWith.length === 1) {
-			return self.filter.lst.length && self.opts.joinWith[0] === d ? 'inline-block' : 'none'
+		if (self.opts.joinWith.length < 2) {
+			return 'none'
 		} else if (self.filter && self.filter.lst.find(f => f.tag === 'cohortFilter')) {
 			// assume that a cohortFilter is always joined via intersection with other filters
 			return self.filter.lst.length == 1 && d == 'and' ? 'inline-block' : 'none'
@@ -770,20 +798,25 @@ function setInteractivity(self) {
 		self.removeBlankPill()
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		if (action != 'join') return
-		const elem = self.activeData.elem.className.includes('join_label')
+		const elem = self.dom.last_join_div
+			? self.dom.last_join_div.node()
+			: self.activeData.elem.className.includes('join_label')
 			? self.activeData.elem.parentNode.parentNode
 			: self.activeData.item.type == 'tvs' || self.activeData.filter === self.filter
 			? self.activeData.elem
 			: self.activeData.elem.parentNode.parentNode
-		const joiner = self.activeData.elem.className.includes('join_label')
-			? self.activeData.filter.join.toUpperCase()
-			: self.activeData.btn && typeof self.activeData.btn.__data__ === 'string'
-			? self.activeData.btn.__data__.toUpperCase()
-			: self.activeData.item.type == 'tvslst'
-			? self.activeData.filter.join.toUpperCase()
-			: self.activeData.filter.join == 'or'
-			? 'AND'
-			: 'OR'
+		const joiner =
+			self.opts.joinWith.length === 1
+				? self.opts.joinWith[0].toUpperCase()
+				: self.activeData.elem.className.includes('join_label')
+				? self.activeData.filter.join.toUpperCase()
+				: self.activeData.btn && typeof self.activeData.btn.__data__ === 'string'
+				? self.activeData.btn.__data__.toUpperCase()
+				: self.activeData.item.type == 'tvslst'
+				? self.activeData.filter.join.toUpperCase()
+				: self.activeData.filter.join == 'or'
+				? 'AND'
+				: 'OR'
 
 		if (
 			self.activeData.item.type == 'tvs' &&
@@ -910,7 +943,7 @@ function setInteractivity(self) {
 				disable_terms:
 					self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
 						? self.activeData.filter.lst
-								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
+								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'condition')
 								.map(d => d.tvs.term.id)
 						: [],
 
@@ -991,8 +1024,10 @@ function setInteractivity(self) {
 		if (blankPill) {
 			self.dom.controlsTip.hide()
 			self.dom.treeTip.clear().showunder(blankPill)
-		} else {
+		} else if (elem.lastChild instanceof HTMLElement) {
 			self.dom.treeTip.clear().showunderoffset(elem.lastChild)
+		} else {
+			self.dom.treeTip.clear().showunder(elem)
 		}
 		const filter = self.activeData.filter
 
@@ -1008,7 +1043,7 @@ function setInteractivity(self) {
 			tree: {
 				disable_terms:
 					filter && filter.lst && filter.join == 'and'
-						? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional').map(d => d.tvs.term.id)
+						? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'condition').map(d => d.tvs.term.id)
 						: !self.activeData.item
 						? []
 						: self.activeData.item.type == 'tvs'
@@ -1089,6 +1124,7 @@ function setInteractivity(self) {
 		// FIXME: will just push one tvs, once bar_click_override is unsupported
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
 			filterCopy.lst.push(...tvslst)
+			if (filterCopy.join == '' && self.opts.joinWith.length === 1) filterCopy.join = self.opts.joinWith[0]
 		} else {
 			filterCopy.lst.push({
 				// transform from tvs to tvslst
@@ -1166,6 +1202,16 @@ function setInteractivity(self) {
 		} else {
 			self.refresh(filterUiRoot)
 		}
+	}
+
+	self.showLastJoinBlank = function(d) {
+		event.stopPropagation()
+		const elem = self.dom.last_join_div.node()
+		self.dom.last_join_label.style('display', 'none')
+		const filter = this.parentNode.__data__
+		self.activeData = { item: filter, filter, elem }
+		self.resetBlankPill(d.action)
+		self.displayTreeMenu(elem, d)
 	}
 }
 
