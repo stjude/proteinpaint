@@ -97,7 +97,7 @@ export function dofetch2(path, init = {}, opts = {}) {
 		const params = {}
 		query.split('&').forEach(p => {
 			const [k, v] = p.split('=')
-			params[k] = v
+			params[k] = typeof v == 'string' && v.startsWith('%') ? JSON.parse(decodeURIComponent(v)) : v
 		})
 		init.body = JSON.stringify(params)
 		url = hostpath

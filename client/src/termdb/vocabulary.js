@@ -455,7 +455,7 @@ class TermdbVocab {
 	}
 
 	/* when arg.text is true, arg should only be {text} from a snplst term;
-	else, it should be the q{} of snplocus term: {chr,start,stop,info_fields}
+	else, it should be the q{} of snplocus term: {chr,start,stop,variant_filter}
 	to generate snp-sample gt matrix cache file and return file name
 	*/
 	async validateSnps(arg) {
@@ -466,7 +466,7 @@ class TermdbVocab {
 			lst.push('chr=' + arg.chr)
 			lst.push('start=' + arg.start)
 			lst.push('stop=' + arg.stop)
-			if (arg.info_fields) lst.push('info_fields=' + JSON.stringify(arg.info_fields))
+			if (arg.variant_filter) lst.push('variant_filter=' + encodeURIComponent(JSON.stringify(arg.variant_filter)))
 		}
 		return await dofetch3('/termdb?' + lst.join('&'))
 	}

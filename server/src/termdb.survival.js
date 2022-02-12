@@ -13,12 +13,12 @@ export async function get_survival(q, ds) {
 		for (const i of [0, 1, 2]) {
 			const termnum = 'term' + i
 			const termnum_id = termnum + '_id'
-			if (q[termnum_id]) {
+			if (typeof q[termnum_id] == 'string') {
 				q[termnum_id] = decodeURIComponent(q[termnum_id])
 				q[termnum] = q.ds.cohort.termdb.q.termjsonByOneid(q[termnum_id])
 			}
 			const termnum_q = termnum + '_q'
-			if (q[termnum_q]) {
+			if (typeof q[termnum_q] == 'string') {
 				q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
 			}
 		}

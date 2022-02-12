@@ -72,7 +72,6 @@ export function get_samplecount(q, ds) {
 must have q.filter[]
 return a sample count of sample names passing through the filter
  */
-	q.filter = JSON.parse(decodeURIComponent(q.filter))
 	if (!q.filter || !q.filter.lst.length) {
 		throw `missing q.filter`
 	} else {

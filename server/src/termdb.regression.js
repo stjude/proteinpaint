@@ -107,7 +107,6 @@ function parse_q(q, ds) {
 
 	// outcome
 	if (!q.outcome) throw `missing 'outcome' parameter`
-	q.outcome = JSON.parse(decodeURIComponent(q.outcome))
 	if (!q.outcome) throw `empty 'outcome' parameter`
 	if (!('id' in q.outcome)) throw 'outcome.id missing'
 	if (!q.outcome.q) throw 'outcome.q missing'
@@ -118,7 +117,6 @@ function parse_q(q, ds) {
 
 	// independent
 	if (!q.independent) throw 'independent[] missing'
-	q.independent = JSON.parse(decodeURIComponent(q.independent))
 	if (!Array.isArray(q.independent) || q.independent.length == 0) throw 'q.independent is not non-empty array'
 	// tw = termWrapper
 	for (const tw of q.independent) {
