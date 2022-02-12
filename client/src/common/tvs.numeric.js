@@ -205,8 +205,8 @@ function addRangeTableNoDensity(self, tvs) {
 
 	brush.equation_td = tr.append('td')
 
-	const minval = termrange && 'min' in termrange ? termrange.min : null
-	const maxval = termrange && 'max' in termrange ? termrange.max : null
+	const minval = 'min' in tvs.term ? tvs.term.min : null
+	const maxval = 'max' in tvs.term ? tvs.term.max : null
 	const startval = range && 'start' in range ? range.start : null
 	brush.start_input = brush.equation_td
 		.append('input')

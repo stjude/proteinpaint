@@ -332,10 +332,13 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		tvs: {
 			ranges: [
 				{
-					startunbounded: true,
+					start: 0,
+					startinclusive: true,
 					stop: 1,
 					stopinclusive: true
 				}
@@ -348,10 +351,13 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		tvs: {
 			ranges: [
 				{
-					startunbounded: true,
+					start: 0,
+					startinclusive: true,
 					stop: 1,
 					stopinclusive: true
 				}
@@ -364,10 +370,13 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		tvs: {
 			ranges: [
 				{
-					startunbounded: true,
+					start: 0,
+					startinclusive: true,
 					stop: 1,
 					stopinclusive: true
 				}
@@ -380,10 +389,13 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		tvs: {
 			ranges: [
 				{
-					startunbounded: true,
+					start: 0,
+					startinclusive: true,
 					stop: 1,
 					stopinclusive: true
 				}
@@ -395,6 +407,8 @@ const terms = [
 		name: 'SJLIFE control allele frequency, Caucasian',
 		parent_id: null,
 		isleaf: true,
+		min: 0,
+		max: 1,
 		type: 'float'
 		/*
 		tvs: {
@@ -413,7 +427,9 @@ const terms = [
 		name: 'SJLIFE control allele frequency, African American',
 		parent_id: null,
 		isleaf: true,
-		type: 'float'
+		type: 'float',
+		min: 0,
+		max: 1
 		/*
 		tvs: {
 			ranges: [
@@ -512,8 +528,10 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		values: {
-			0: { label: 'missing value', uncomputable: true }
+			//0: { label: 'missing value', uncomputable: true }
 		},
 		tvs: {
 			ranges: [
@@ -536,8 +554,10 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		values: {
-			0: { label: 'missing value', uncomputable: true }
+			//0: { label: 'missing value', uncomputable: true }
 		}
 		/*
 		tvs: {
@@ -562,8 +582,10 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		values: {
-			0: { label: 'missing value', uncomputable: true }
+			//0: { label: 'missing value', uncomputable: true }
 		}
 		/*
 		tvs: {
@@ -584,8 +606,10 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		values: {
-			0: { label: 'missing value', uncomputable: true }
+			//0: { label: 'missing value', uncomputable: true }
 		}
 		/*
 		tvs: {
