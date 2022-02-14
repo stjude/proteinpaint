@@ -1,12 +1,13 @@
 import { select, event } from 'd3-selection'
-import { brushX } from 'd3'
+import { brushX } from 'd3-brush'
 
 export function addBrushes(self, new_brush_location) {
 	// const ranges = self.num_obj.ranges
 	const brushes = self.num_obj.brushes
 	const maxvalue = self.num_obj.density_data.maxvalue
 	const minvalue = self.num_obj.density_data.minvalue
-	const ten_percent_range = Math.floor((maxvalue - minvalue) / 10)
+	const rawDecile = (maxvalue - minvalue) / 10
+	const decile = self.tvs.term.type == 'integer' ? Math.floor(rawDecile) : rawDecile
 
 	for (const [i, r] of self.num_obj.ranges.entries()) {
 		const _b = brushes.find(b => b.orig === r)
@@ -20,11 +21,11 @@ export function addBrushes(self, new_brush_location) {
 
 		// strict equality to not have false positive with start=0
 		if (r.start === '') {
-			if (new_brush_location == 'center') brush.range.start = minvalue + ten_percent_range * 4
-			else brush.range.start = minvalue + ten_percent_range * 8
+			if (new_brush_location == 'center') brush.range.start = minvalue + decile * 4
+			else brush.range.start = minvalue + decile * 8
 		}
 		if (r.stop === '') {
-			if (new_brush_location == 'center') brush.range.stop = minvalue + ten_percent_range * 6
+			if (new_brush_location == 'center') brush.range.stop = minvalue + decile * 6
 			else brush.range.stop = Math.floor(maxvalue)
 		}
 	}
