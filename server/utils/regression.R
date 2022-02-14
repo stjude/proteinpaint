@@ -142,8 +142,14 @@ run_regression <- function(formula, dat, lst, splineTerms) {
     # prepare other summary stats table
     other_table <- list(
       "header" = c("Residual standard error", "Residual degrees of freedom", "R-squared", "Adjusted R-squared", "F-statistic", "P-value"),
-      "rows" = c(round(res_summ$sigma, 2), round(res$df.residual, 0), round(res_summ$r.squared, 5), round(res_summ$adj.r.squared, 5), round(unname(res_summ$fstatistic[1]), 2), signif(unname(pf(res_summ$fstatistic[1], res_summ$fstatistic[2], res_summ$fstatistic[3], lower.tail = F)), 4))
+      "rows" = c(round(res_summ$sigma, 2), round(res$df.residual, 0), round(res_summ$r.squared, 5), round(res_summ$adj.r.squared, 5))
     )
+    # F-statistic is not computed if variables have no variability
+    if ("fstatistic" %in% names(res_summ)) {
+      other_table[["rows"]] <- c(other_table[["rows"]], round(unname(res_summ$fstatistic[1]), 2), signif(unname(pf(res_summ$fstatistic[1], res_summ$fstatistic[2], res_summ$fstatistic[3], lower.tail = F)), 4))
+    } else {
+      other_table[["rows"]] <- c(other_table[["rows"]], NA, NA)
+    }
   } else if (lst$type == "logistic"){
     # logistic regression
     if (length(unique(dat$outcome)) != 2){
