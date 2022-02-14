@@ -513,6 +513,10 @@ function setRenderers(self) {
 				.style('cursor', 'pointer')
 				.html('+' + self.opts.joinWith[0].toUpperCase())
 				.on('click', self.showLastJoinBlank)
+
+			select('body').on('mousedown.sja_filter_last_join', () => {
+				self.dom.last_join_label.style('display', 'inline')
+			})
 		}
 
 		select(this)
