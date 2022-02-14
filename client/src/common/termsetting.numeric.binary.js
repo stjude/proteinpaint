@@ -10,18 +10,17 @@ import { getPillNameDefault } from './termsetting'
 ********************** EXPORTED
 getHandler(self)
 	- self: a termsetting instance
+	getPillName() // Print term name in the pill
+	getPillStatus() // Returns righthalf pill text as 'binary'
 	showEditMenu(div) // binary edit menu
 		setqDefaults(self)
 		setDensityPlot(self)
 		renderBoundaryInclusionInput(self) // 'start < x <= end' OR 'start <= x < end'
-		renderCuttoffInput(self) // edit UI for cutoff values and bin labels
+		renderCuttoffInput(self) // render edit UI for cutoff values and bin labels
 			handleChange() // call when cutoff value is changed
 			updateUI(cutoff) // update density plot and inputs based on new value 
 			handleCheckbox() // checkbox for percentile
 		renderBoundaryInputDivs(self, self.q.lst) // bin labels
-	getPillName() // Print term name in the pill
-	getPillStatus() // Returns {text, bgcolor} which determines whether to make right half of the pill visible and show some text. Optional bgcolor can be used to highlight an error.
-                    // Return null to hide the right half.
 ********************** INTERNAL
 	processCustomBinInputs()
 */

@@ -14,7 +14,6 @@ import { makeDensityPlot } from './densityplot'
 */
 
 export async function setDensityPlot(self) {
-	console.log(self.num_obj.density_data)
 	if (self.num_obj.density_data.maxvalue == self.num_obj.density_data.minvalue) {
 		handleNoDensity(self)
 		self.num_obj.brushes.forEach(brush => {
