@@ -14,7 +14,7 @@ init_dictionaryUI()
 ------ Internal ------ 
 TODO
 
-doms:{}
+d:{}
 
 
 Documentation: https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit
@@ -35,22 +35,22 @@ export function init_dictionaryUI(holder) {
 		.style('place-items', 'center left')
 		.style('overflow', 'hidden')
 
-	const doms = {}
+	const d = {}
 
 	//Data dictionary entry
 	uiutils.makePrompt(wrapper, 'Data Dictionary')
 	const tabs_div = wrapper.append('div')
-	makeDataEntryTabs(tabs_div, doms)
+	makeDataEntryTabs(tabs_div, d)
 
 	//Submit button and information section
-	submitButton(wrapper, doms, holder)
+	submitButton(wrapper, d, holder)
 	infoSection(wrapper)
 
 	//Remove after testing
-	window.doms = doms
+	window.doms = d
 }
 
-function makeDataEntryTabs(tabs_div, doms) {
+function makeDataEntryTabs(tabs_div, d) {
 	const tabs = [
 		{
 			label: 'File Path',
@@ -69,9 +69,9 @@ function makeDataEntryTabs(tabs_div, doms) {
 						.style('margin-left', '15px')
 					appear(div)
 					uiutils.makePrompt(files_div, 'Filepath')
-					makeTextEntryFilePathInput(files_div, doms)
+					makeTextEntryFilePathInput(files_div, d)
 					uiutils.makePrompt(files_div, 'Upload')
-					makeFileUpload(files_div, doms)
+					makeFileUpload(files_div, d)
 					tabs[0].rendered = true
 				}
 			}
@@ -85,7 +85,7 @@ function makeDataEntryTabs(tabs_div, doms) {
 						.append('div')
 						.html(`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary in a tab delimited format.</p>`)
 					appear(div)
-					makeCopyPasteInput(div, doms)
+					makeCopyPasteInput(div, d)
 					tabs[1].rendered = true
 				}
 			}
@@ -94,7 +94,7 @@ function makeDataEntryTabs(tabs_div, doms) {
 	init_tabs({ holder: tabs_div, tabs })
 }
 
-function makeTextEntryFilePathInput(div, doms) {
+function makeTextEntryFilePathInput(div, d) {
 	const filepath_div = div.append('div').style('display', 'inline-block')
 	const filepath = uiutils
 		.makeTextInput(filepath_div)
@@ -105,7 +105,7 @@ function makeTextEntryFilePathInput(div, doms) {
 				fetch(data)
 					.then(req => req.text())
 					.then(txt => {
-						doms.data = parseTabDelimitedData(txt)
+						d.data = parseTabDelimitedData(txt)
 					})
 			} else {
 				//TODO: implement serverside filepaths(?)
@@ -113,31 +113,54 @@ function makeTextEntryFilePathInput(div, doms) {
 		})
 }
 
-function makeFileUpload(div, doms) {
+function makeFileUpload(div, d) {
 	const upload_div = div.append('div').style('display', 'block')
 	const upload = uiutils.makeFileUpload(upload_div)
 	upload.on('change', () => {
 		const file = d3event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
-			console.log(120, 'preparse')
-			doms.data = parseTabDelimitedData(event.target.result)
-			// console.log(122, 'post parse', doms)
+			d.data = parseTabDelimitedData(event.target.result)
 		}
 		reader.readAsText(file, 'utf8')
 	})
 }
 
-function makeCopyPasteInput(div, doms) {
+function makeCopyPasteInput(div, d) {
 	const paste_div = div.append('div').style('display', 'block')
 	const paste = uiutils
 		.makeTextAreaInput(paste_div)
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.on('keyup', async () => {
-			doms.data = parseTabDelimitedData(paste.property('value').trim())
+			d.data = parseTabDelimitedData(paste.property('value').trim())
 		})
 }
+//TODO: Better place for these?
+const name2id = new Map()
+/* 
+	key: term name
+	value: id
+*/
+const term2term = new Map()
+/* 
+	key: id
+	value(s): Set(['child id', 'child id', ...])
+*/
+const child2parents = new Map()
+/* ancestry
+	key: child
+	value(s): Map({ parent id, order }, { parent id, order }, ...)
+*/
+const root_id = '__root' //placeholder
+const ch2immediateP = new Map()
+/* 
+	key: child id
+	value: parent id
+*/
+const p2childorder = new Map()
+p2childorder.set(root_id, [])
+const allterms_byorder = new Set()
 
 //Parse tab delimited files only
 function parseTabDelimitedData(input) {
@@ -145,8 +168,15 @@ function parseTabDelimitedData(input) {
 
 	/* 
     Parses phenotree:
-        - Parses tab delim data arranged in cols: Level1, Level2, Level3, Level4, Level5, Key(i.e. ID), Configuration.
-        - Checks for identical keys.
+        - Parses tab delim data arranged in cols: levels(n), Key(i.e. Variable name), Configuration (i.e. Variable note).
+		- Only the key and configuration cols are required
+		- Not using uncomputable values in this iteration
+		- Assumptions:
+			1. Headers required. 'Variable name', 'Variable note' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
+			2. Levels are defined left to right and in order, no gaps.
+			3. No blanks or '-' between levels as well as no duplicate values in the same line.
+			4. No identical term ids (keys)
+			5. All non-leaf names/ids must be unique. 
     */
 	const terms = {
 		__root: {
@@ -156,67 +186,148 @@ function parseTabDelimitedData(input) {
 		}
 	}
 	const keys = [] //To check for duplicate values later
+
+	let keyIndex,
+		configIndex,
+		colsIndexes = []
+
 	for (const i in lines) {
-		const [col1, col2, col3, col4, col5, key0, configstr0] = lines[i].split('\t') //Required format
+		let line = lines[i].split('\t')
+		if (i == 0) {
+			//Find arrays for parsing logic from headers
+			keyIndex = line.findIndex(l => l.match('Variable Name'))
+			if (!keyIndex == -1) throw `Missing required 'Variable Name' column`
+			configIndex = line.findIndex(l => l.match('Variable Note'))
+			if (configIndex == -1) throw `Missing required 'Variable Note' column`
+			//If no level col(s) provided, use key/Variable name col as single level. Will print id as name.
+			if (line.findIndex(l => l.match('Level_')) == -1) colsIndexes.push(keyIndex)
+			else {
+				//Push level index to array for parsing
+				for (let idx in line) {
+					if (line[idx].match('Level_')) colsIndexes.push(idx)
+				}
+			}
+		}
 		try {
 			if (i > 0) {
 				//Skip header
-				if (!configstr0 || !configstr0.trim()) {
-					console.error('Missing configuration string, line: ' + i + ', term: ' + key0)
+				/******* Parse lines for term values *******/
+				if (!line[configIndex] || !line[configIndex].trim()) {
+					console.error('Missing configuration string, line: ' + (Number(i) + 1) + ', term: ' + line[keyIndex])
 					continue
 				}
-				const L1 = col1.trim()
-				const L2 = col2.trim()
-				const L3 = col3.trim()
-				const L4 = col4.trim()
-				const L5 = col5.trim()
-				const configstr = configstr0.replace('"', '').trim()
+				let colNames = [] //capture str value of all 'level' cols
+				for (const c in colsIndexes) {
+					const col = str2level(line[c])
+					colNames.push(col)
+				}
+				// console.log(colNames)
 
-				const name = getName(L2, L3, L4, L5).replace(/\"/g, '')
+				let configstr = line[configIndex].replace('"', '').trim()
+				const leafIdx = check4MisplacedNulls(colNames, i)
+				const name = getName(colNames)
 
-				//if key0 missing, use name
-				let key = key0 ? key0.trim() : ''
+				// if key missing, use name
+				let key = line[keyIndex] ? line[keyIndex].trim() : ''
 				if (!key) key = name
 
-				keys.push(key) //pushes user provided and derived values to check
+				//pushes user provided variable names and derived values to check
+				keys.push(key)
 
-				//Parses col7 into term.type and term.values
+				//Parses configuration col into term.type, term.values, and term.groupsetting
 				const term = parseConfig(configstr)
-				// console.log(181)
+
+				/******* Parse for hierarchy *******/
+				const filteredCols = filterCols(colNames)
+				createHierarchy(leafIdx, filteredCols, key)
+
+				/******* Create terms *******/
+				for (const [k, v] of p2childorder.entries()) {
+					if (k == '__root') continue
+					if (!terms[k]) {
+						terms[k] = {
+							id: k,
+							name: k,
+							isleaf: false,
+							parent_id: ch2immediateP.get(k) || null
+						}
+						keys.push(k)
+					}
+				}
+
 				terms[key] = {
 					id: key,
-					parent_id: null,
 					name,
-					isleaf: true,
+					parent_id: ch2immediateP.get(key),
+					isleaf: !term2term.has(key),
 					type: term.type,
 					values: term.values,
 					groupsetting: term.groupsetting
 				}
 			}
 		} catch (e) {
-			throw 'Line ' + (i + 1) + ' error: ' + e
+			throw 'Line ' + (Number(i) + 1) + ' error: ' + e
 		}
 	}
-	check4DuplicateKeys(keys)
 
-	// console.log({terms: Object.values(terms)})
+	check4DuplicateValues(keys) //Checks all duplicate term.ids/keys for duplicates
+
+	// console.log(name2id)
+	// console.log(allterms_byorder)
+	// console.log(264, term2term)
+	// console.log(265, ch2immediateP)
+	// console.log(266, child2parents)
+	// console.log(267, p2childorder)
+	// console.log(allterms_byorder.size + ' terms in total')
+	console.log({ terms: Object.values(terms) })
 	return { terms: Object.values(terms) }
 }
 
-function getName(L2, L3, L4, L5) {
-	if (!L2) throw 'L2 missing'
-	if (!L3) throw 'L3 missing'
-	if (!L4) throw 'L4 missing'
-	if (!L5) throw 'L5 missing'
-	if (L5 != '-') return L5
-	if (L4 != '-') return L4
-	if (L3 != '-') return L3
-	if (L2 != '-') return L2
+/*
+ **** Parsing Functions for Phenotree ****
+ */
+function str2level(col) {
+	// parses columns and returns name
+	const tmp = col.trim().replace(/"/g, '')
+	if (!tmp || tmp == '-') return null
+	return tmp
+}
+
+function check4MisplacedNulls(colArray, i) {
+	// Check for blanks or '-' between levels
+	const nullIndex = colArray.indexOf(null) //find first index of null
+	function revArray(arr) {
+		let copy = [...arr]
+		return copy.reverse()
+	}
+	//find last index of non-null level value
+	const lastLevelIndex = colArray.length - 1 - revArray(colArray).findIndex(e => e !== null)
+	//TODO: Print error to the screen
+	if (lastLevelIndex > nullIndex && nullIndex >= 0)
+		throw `Blank or '-' value detected between levels in line ` + (Number(i) + 1)
+
+	return lastLevelIndex //Use later for leaflevel
+}
+
+function getName(colArray) {
+	//finds last name in the array and returns as name
+	const ca = filterCols(colArray)
+
+	//checks for duplicates in the resulting array
+	check4DuplicateValues(ca)
+	if (ca.length > 0) return ca[ca.length - 1]
 	throw 'name missing'
 }
 
+function filterCols(colArray) {
+	//filters null strings to return only string level inputs
+	const ca = colArray.filter(x => x !== null)
+	return ca
+}
+
 function parseConfig(str) {
-	const uncomputable_categories = new Set(['-994', '-995', '-996', '-997', '-998', '-999'])
+	//NOT using uncomputable values in this iteration
+	// const uncomputable_categories = new Set(['-994', '-995', '-996', '-997', '-998', '-999'])
 	const term = {}
 
 	if (str == 'string') {
@@ -252,7 +363,7 @@ function parseConfig(str) {
 				const field = line[i].trim()
 				if (field == '') continue
 				const [key, value] = field.split(/(?<!\>|\<)=/)
-				if (!value) throw 'field ' + (i + 1) + ' is not k=v: ' + field
+				if (!value) throw 'field ' + (Number(i) + 1) + ' is not k=v: ' + field
 				if (!term.values) term.values = {}
 				term.values[key] = { label: value }
 			}
@@ -261,12 +372,12 @@ function parseConfig(str) {
 		if (term.type == 'integer' || term.type == 'float') {
 			// for numeric term, all keys in values are not computable
 			for (const k in term.values) term.values[k].uncomputable = true
-		} else if (term.type == 'categorical') {
-			// select categories are uncomputable
-			for (const k in term.values) {
-				if (uncomputable_categories.has(k)) term.values[k].uncomputable = true
-			}
-		}
+		} //else if (term.type == 'categorical') {
+		// 	// select categories are uncomputable
+		// 	for (const k in term.values) {
+		// 		if (uncomputable_categories.has(k)) term.values[k].uncomputable = true
+		// 	}
+		// }
 	}
 
 	if (term.type == 'categorical') {
@@ -275,45 +386,88 @@ function parseConfig(str) {
 	return term
 }
 
-function check4DuplicateKeys(keys) {
+function createHierarchy(leafIdx, filteredCols, key) {
+	for (const fc in filteredCols) {
+		let id
+		if (fc == leafIdx) {
+			id = key
+			name2id.set(filteredCols[fc], id)
+		} else {
+			id = filteredCols[fc]
+		}
+		//find id for parent immediate level
+		const levelUpId = filteredCols[Number(fc) - 1]
+
+		if (fc != 0) {
+			term2term.get(levelUpId).add(id)
+			if (!child2parents.has(id)) child2parents.set(id, new Map())
+			for (const y in filteredCols) {
+				if (y < fc) {
+					child2parents.get(id).set(filteredCols[y], y)
+				}
+			}
+			ch2immediateP.set(id, levelUpId)
+			if (!p2childorder.has(levelUpId)) p2childorder.set(levelUpId, []) //Why is this needed when there's term2term?
+			if (p2childorder.get(levelUpId).indexOf(id) == -1) p2childorder.get(levelUpId).push(id)
+		} else {
+			ch2immediateP.set(id, null)
+			if (p2childorder.get(root_id).indexOf(id) == -1) p2childorder.get(root_id).push(id)
+		}
+
+		if (!term2term.has(id) && fc != leafIdx) {
+			term2term.set(id, new Set())
+		}
+		allterms_byorder.add(id)
+	}
+}
+
+/*
+ **** Helpers ****
+ */
+
+function check4DuplicateValues(values) {
 	const duplicates = new Set()
-	for (const i in keys) {
-		if (keys.indexOf(keys[i]) !== keys.lastIndexOf(keys[i])) {
-			duplicates.add(keys[i])
+	for (const i in values) {
+		if (values.indexOf(values[i]) !== values.lastIndexOf(values[i])) {
+			duplicates.add(values[i])
 		}
 	}
 	if (duplicates.size > 0) {
 		const dup = Array.from(duplicates)
-		alert(`Error: Nonunique ID(s) found: ` + dup + `. IDs must be unique values.`)
+		throw `Error: Nonunique values(s) found: ` + dup + `. Values must be unique.` //TODO print to screen
 	}
 	return true
 }
 
-function submitButton(div, doms, holder) {
+/*
+ **** Submission Functions ****
+ */
+
+function submitButton(div, d, holder) {
 	const submit = uiutils.makeBtn(div, 'Submit')
 	submit
 		.style('margin', '20px 20px 20px 130px')
 		.style('font-size', '16px')
 		.on('click', () => {
-			validateInput(doms)
-			// console.log(296, doms)
+			validateInput(div, d)
 			div.remove()
+			console.log(449, d.data.terms)
 			appInit({
 				holder: holder,
 				state: {
 					vocab: {
-						terms: doms.data.terms
+						terms: d.data.terms
 					}
 				}
 			})
 		})
 }
 
-function validateInput(doms) {
+function validateInput(div, d) {
 	//May not be needed?
-	if (!doms.data) {
-		alert('Provide data')
-		return
+	if (!d.data) {
+		// alert('Provide data')
+		return null
 	}
 }
 
@@ -330,4 +484,13 @@ function infoSection(div) {
                     Please see the <a href="https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit" target="_blank">documentation</a> for more information.
                 </li>
             </ul>`)
+}
+//TODO print data submission errors to the viewport rather than alerts
+function makeErrorDiv(div) {
+	div
+		.append('div')
+		.style('margin', '10px')
+		.style('opacity', '0.65')
+		.style('grid-column', 'span 2')
+		.html(`<h3>Errors found</h3>`)
 }
