@@ -386,6 +386,8 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		tvs: {
 			ranges: [
 				{
@@ -402,6 +404,8 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		tvs: {
 			ranges: [
 				{
@@ -418,6 +422,8 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		tvs: {
 			ranges: [
 				{
@@ -434,6 +440,8 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		tvs: {
 			ranges: [
 				{
@@ -450,6 +458,8 @@ const terms = [
 		parent_id: null,
 		isleaf: true,
 		type: 'float',
+		min: 0,
+		max: 1,
 		tvs: {
 			ranges: [
 				{
