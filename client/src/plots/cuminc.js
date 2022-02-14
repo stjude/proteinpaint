@@ -132,7 +132,6 @@ class TdbCumInc {
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.currData = this.processData(data)
-			console.log('data:', data)
 			this.refs = data.refs
 			this.tests = data.tests
 			this.pj.refresh({ data: this.currData })
@@ -186,7 +185,7 @@ class TdbCumInc {
 				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
 					legendItems.push({
 						seriesId: series.seriesId,
-						text: series.seriesLabel + this.getPvalues(this.tests, series),
+						text: series.seriesLabel,
 						color: this.term2toColor[series.seriesId],
 						isHidden: this.settings.hidden.includes(series.seriesId)
 					})
@@ -203,21 +202,6 @@ class TdbCumInc {
 		} else {
 			this.legendData = []
 		}
-	}
-
-	getPvalues(tests, series) {
-		if (!tests) return
-		const chartId = series.chartId
-		const seriesId = series.seriesId
-		const n = series.data.length
-		const cTests = tests[chartId]
-		const sTests = cTests.filter(test => test.series1 == seriesId || test.series2 == seriesId)
-		const pvalues = []
-		for (const test of sTests) {
-			const otherSeries = test.series1 == seriesId ? test.series2 : test.series1
-			pvalues.push(otherSeries + ' = ' + test.pvalue)
-		}
-		return `<span> (n = ${n}), P-values: ${pvalues.join('; ')}</span>`
 	}
 }
 
@@ -237,14 +221,14 @@ function setRenderers(self) {
 		self.dom.chartsDiv.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 	}
 
-	self.addCharts = function(d) {
+	self.addCharts = function(chart) {
 		const s = self.settings
 		const div = select(this)
 			.append('div')
 			.attr('class', 'pp-cuminc-chart')
-			.style('opacity', d.serieses ? 0 : 1) // if the data can be plotted, slowly reveal plot
+			.style('opacity', chart.serieses ? 0 : 1) // if the data can be plotted, slowly reveal plot
 			//.style("position", "absolute")
-			.style('width', s.svgw + 50 + 'px')
+			//.style('width', s.svgw + 50 + 'px')
 			.style('display', 'inline-block')
 			.style('margin', s.chartMargin + 'px')
 			.style('padding', '10px')
@@ -253,7 +237,7 @@ function setRenderers(self) {
 			.style('text-align', 'left')
 			.style('border', '1px solid #eee')
 			.style('box-shadow', '0px 0px 1px 0px #ccc')
-			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
+			.style('background', 1 || s.orderChartsBy == 'organ-system' ? chart.color : '')
 
 		div
 			.append('div')
@@ -263,43 +247,62 @@ function setRenderers(self) {
 			.style('height', s.chartTitleDivHt + 'px')
 			.style('font-weight', '600')
 			.style('margin', '5px')
-			.datum(d.chartId)
-			.html(d.chartId)
+			.datum(chart.chartId)
+			.html(chart.chartTitle)
 
-		if (d.serieses) {
+		if (chart.serieses) {
 			const svg = div.append('svg').attr('class', 'pp-cuminc-svg')
-			renderSVG(svg, d, s, 0)
+			renderSVG(svg, chart, s, 0)
 
 			div
 				.transition()
 				.duration(s.duration)
 				.style('opacity', 1)
+
+			// p-value div
+			// will only display when self.tests is true
+			div
+				.append('div')
+				.attr('class', 'pp-cuminc-pval')
+				.style('display', 'none')
+				.style('vertical-align', 'top')
+				.style('margin', '10px')
+
+			if (self.tests) {
+				const pvaldiv = div.select('.pp-cuminc-pval').style('display', 'inline-block')
+				renderPvalues(pvaldiv, chart, self.tests, s)
+			}
 		}
 	}
 
-	self.updateCharts = function(d) {
-		if (!d.serieses) return
+	self.updateCharts = function(chart) {
+		if (!chart.serieses) return
 		const s = self.settings
 		const div = select(this)
 
 		div
 			.transition()
 			.duration(s.duration)
-			.style('width', s.svgw + 50 + 'px')
-			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
+			//.style('width', s.svgw + 50 + 'px')
+			.style('background', 1 || s.orderChartsBy == 'organ-system' ? chart.color : '')
 
 		div
 			.select('.sjpcb-cuminc-title')
 			.style('width', s.svgw + 50)
 			.style('height', s.chartTitleDivHt + 'px')
-			.datum(d.chartId)
-			.html(d.chartTitle)
+			.datum(chart.chartId)
+			.html(chart.chartTitle)
 
 		div.selectAll('.sjpcb-lock-icon').style('display', s.scale == 'byChart' ? 'block' : 'none')
 
 		div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
 
-		renderSVG(div.select('svg'), d, s, s.duration)
+		renderSVG(div.select('svg'), chart, s, s.duration)
+
+		if (self.tests) {
+			const pvaldiv = div.select('.pp-cuminc-pval').style('display', 'inline-block')
+			renderPvalues(pvaldiv, chart, self.tests, s)
+		}
 	}
 
 	function renderSVG(svg, chart, s, duration) {
@@ -335,6 +338,71 @@ function setRenderers(self) {
 			})
 
 		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
+	}
+
+	function renderPvalues(pvaldiv, chart, tests, s) {
+		const chartTests = tests[chart.chartId]
+		const fontSize = s.axisTitleFontSize - 2
+		const maxPvalsToShow = 10
+
+		pvaldiv.selectAll('*').remove()
+
+		// title div
+		pvaldiv
+			.append('div')
+			.style('padding-bottom', '5px')
+			.style('font-size', fontSize + 'px')
+			.style('font-weight', 'bold')
+			.style('text-align', 'center')
+			.text("Series comparisons (Gray's test)")
+
+		// table div
+		// need separate divs for title and table
+		// to support table scrolling
+		const tablediv = pvaldiv.append('div').style('border', '1px solid #ccc')
+		if (chartTests.length > maxPvalsToShow) {
+			tablediv.style('overflow', 'auto').style('height', '220px')
+		}
+
+		// table
+		const table = tablediv.append('table').style('width', '100%')
+
+		// table header
+		table
+			.append('thead')
+			.append('tr')
+			.selectAll('td')
+			.data(['Series 1', 'Series 2', 'P-value'])
+			.enter()
+			.append('td')
+			.style('padding', '1px 8px 1px 2px')
+			.style('color', '#858585')
+			.style('position', 'sticky')
+			.style('top', '0px')
+			.style('background', 'white')
+			.style('font-size', fontSize + 'px')
+			.text(column => column)
+
+		// table rows
+		const tbody = table.append('tbody')
+		const tr = tbody
+			.selectAll('tr')
+			.data(chartTests.sort((a, b) => a.pvalue - b.pvalue))
+			.enter()
+			.append('tr')
+
+		// table cells
+		tr.selectAll('td')
+			.data(d => [
+				chart.serieses.find(series => series.seriesId == d.series1).seriesLabel,
+				chart.serieses.find(series => series.seriesId == d.series2).seriesLabel,
+				d.pvalue
+			])
+			.enter()
+			.append('td')
+			.style('padding', '1px 8px 1px 2px')
+			.style('font-size', fontSize + 'px')
+			.text(d => d)
 	}
 
 	function getSvgSubElems(svg) {
@@ -709,7 +777,7 @@ function getPj(self) {
 				return context.context.context.context.parent.xScale(context.self.x)
 			},
 			scaledY(row, context) {
-				const yScale = context.context.context.context.parent.yScale
+				const yScale = context.context.context.context.parent.yScale.clamp(true)
 				const s = context.self
 				return [yScale(s.y), yScale(s.low), yScale(s.high)]
 			},

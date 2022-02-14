@@ -8,39 +8,37 @@
 
 # Usage: Rscript cuminc.R < jsonIn > jsonOut
 
-# Parameters:
-#   - jsonIn: [json string] input data streamed from standard input. Each element of array is time/event/series data for a given sample.
+# Input data is streamed as JSON from standard input and cumulative incidence results are streamed as JSON to standard output.
+
+# Input JSON specifications:
+# [
+#   {
+#     time: time to event
+#     event: event code (0 = censored, 1 = event)
+#     series: series ID
+#   }
+# ]
 #
-#     [
+# Output JSON specifications:
+# {
+#   "estimates": {
+#     <series>: [
 #       {
-#         time: [number] time to event
-#         event: [number] event code (0 = censored, 1 = event).
-#         series: [string] series ID. If empty string, then "series" in output json will be "1".
+#         "time": time when estimate is computed
+#         "est": estimated cumulative incidence value
+#         "var": variance of cumulative incidence value
+#         "low": 95% confidence interval - lower bound
+#         "up": 95% confidence intervals - upper bound
 #       }
 #     ]
-#
-#   - jsonOut: [json string] cumulative incidence results streamed to standard out.
-#
+#   "tests": [
 #     {
-#       "estimates": {
-#         <series>: [
-#           {
-#             "time": [array] times where estimates are computed
-#             "est": [array] estimated cumulative incidence values
-#             "var": [array] variances of cumulative incidence values
-#             "low": [array] 95% confidence intervals - lower bounds
-#             "up": [array] 95% confidence intervals - upper bounds
-#           }  
-#         ],
-#       "tests": [
-#          {
-#            "stat": [number] test statistic
-#            "pv": [number] p-value
-#            "df": [number] degrees of freedom
-#          }
-#        ]
-#       }
+#       "series1": first series of test,
+#       "series2": second series of test,
+#       "pvalue": p-value of test
 #     }
+#   ]
+# }
 
 
 ########

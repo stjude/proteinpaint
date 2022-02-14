@@ -37,7 +37,6 @@ export async function get_incidence(q, ds) {
 						ci_data.estimates[''] = ci_data.estimates['1']
 						delete ci_data.estimates['1']
 					}
-					//console.log('ci_data:', JSON.stringify(ci_data, null, 2))
 					// Cohort enrollment requires a minimum of 5 year survival after diagnosis,
 					// the sql uses `AND years_to_event >= 5`, so reset the first data timepoint
 					// to the actual queried minimum time. This first data point (case_est=0) is added
