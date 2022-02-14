@@ -152,14 +152,13 @@ const child2parents = new Map()
 	key: child
 	value(s): Map({ parent id, order }, { parent id, order }, ...)
 */
+const root_id = '__root' //placeholder
 const ch2immediateP = new Map()
 /* 
 	key: child id
 	value: parent id
 */
 const p2childorder = new Map()
-
-const root_id = '__root' //placeholder
 p2childorder.set(root_id, [])
 const allterms_byorder = new Set()
 
@@ -177,9 +176,9 @@ function parseTabDelimitedData(input) {
 			2. Levels are defined left to right and in order, no gaps.
 			3. No blanks or '-' between levels as well as no duplicate values in the same line.
 			4. No identical term ids (keys)
+			5. All non-leaf names/ids must be unique. 
     */
 	const terms = {
-		//Required root term for the eventual terms array
 		__root: {
 			id: 'root',
 			name: 'root',
@@ -225,7 +224,7 @@ function parseTabDelimitedData(input) {
 				// console.log(colNames)
 
 				let configstr = line[configIndex].replace('"', '').trim()
-				const lastNonNullIdx = check4MisplacedNulls(colNames, i)
+				const leafIdx = check4MisplacedNulls(colNames, i)
 				const name = getName(colNames)
 
 				// if key missing, use name
@@ -235,20 +234,32 @@ function parseTabDelimitedData(input) {
 				//pushes user provided variable names and derived values to check
 				keys.push(key)
 
-				//Parses col7 into term.type, term.values, and term.groupsetting
+				//Parses configuration col into term.type, term.values, and term.groupsetting
 				const term = parseConfig(configstr)
 
 				/******* Parse for hierarchy *******/
 				const filteredCols = filterCols(colNames)
-				let leafIdx = lastNonNullIdx
 				createHierarchy(leafIdx, filteredCols, key)
 
-				/******* Create term *******/
+				/******* Create terms *******/
+				for (const [k, v] of p2childorder.entries()) {
+					if (k == '__root') continue
+					if (!terms[k]) {
+						terms[k] = {
+							id: k,
+							name: k,
+							isleaf: false,
+							parent_id: ch2immediateP.get(k) || null
+						}
+						keys.push(k)
+					}
+				}
+
 				terms[key] = {
 					id: key,
-					parent_id: null,
 					name,
-					isleaf: true,
+					parent_id: ch2immediateP.get(key),
+					isleaf: !term2term.has(key),
 					type: term.type,
 					values: term.values,
 					groupsetting: term.groupsetting
@@ -258,15 +269,17 @@ function parseTabDelimitedData(input) {
 			throw 'Line ' + (Number(i) + 1) + ' error: ' + e
 		}
 	}
+
 	check4DuplicateValues(keys) //Checks all duplicate term.ids/keys for duplicates
-	console.log(name2id)
-	console.log(allterms_byorder)
-	console.log(term2term)
-	console.log(ch2immediateP)
-	console.log(child2parents)
-	console.log(p2childorder)
-	console.log(allterms_byorder.size + ' terms in total')
-	// console.log({ terms: Object.values(terms) })
+
+	// console.log(name2id)
+	// console.log(allterms_byorder)
+	// console.log(264, term2term)
+	// console.log(265, ch2immediateP)
+	// console.log(266, child2parents)
+	// console.log(267, p2childorder)
+	// console.log(allterms_byorder.size + ' terms in total')
+	console.log({ terms: Object.values(terms) })
 	return { terms: Object.values(terms) }
 }
 
@@ -397,6 +410,7 @@ function createHierarchy(leafIdx, filteredCols, key) {
 			if (!p2childorder.has(levelUpId)) p2childorder.set(levelUpId, []) //Why is this needed when there's term2term?
 			if (p2childorder.get(levelUpId).indexOf(id) == -1) p2childorder.get(levelUpId).push(id)
 		} else {
+			ch2immediateP.set(id, null)
 			if (p2childorder.get(root_id).indexOf(id) == -1) p2childorder.get(root_id).push(id)
 		}
 
@@ -406,6 +420,10 @@ function createHierarchy(leafIdx, filteredCols, key) {
 		allterms_byorder.add(id)
 	}
 }
+
+/*
+ **** Helpers ****
+ */
 
 function check4DuplicateValues(values) {
 	const duplicates = new Set()
@@ -432,8 +450,8 @@ function submitButton(div, d, holder) {
 		.style('font-size', '16px')
 		.on('click', () => {
 			validateInput(div, d)
-			// if (v == null) return //stop form from disappearing for now
 			div.remove()
+			console.log(449, d.data.terms)
 			appInit({
 				holder: holder,
 				state: {
