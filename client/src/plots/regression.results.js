@@ -796,9 +796,20 @@ function make_mds3_variants(snps, result) {
 			// find p-value (last column of coeff table)
 			if (!d.coefficients || !d.coefficients.terms) throw '.data{coefficients:{terms}} missing'
 			if (!d.coefficients.terms[m.snpid]) throw m.snpid + ' missing in coefficients.terms{}'
-			const v = Number(d.coefficients.terms[m.snpid].fields[d.coefficients.terms[m.snpid].fields.length - 1])
-			m.regressionPvalue = v
-			m.__value = -Math.log10(v)
+			if (!Array.isArray(d.coefficients.terms[m.snpid].fields))
+				throw `coefficients.terms[${m.snpid}].fields[] not array`
+			const str = d.coefficients.terms[m.snpid].fields[d.coefficients.terms[m.snpid].fields.length - 1]
+			// last value of .fields[] should be p-value
+			// could be NA
+			const v = Number(str)
+			if (Number.isNaN(v)) {
+				m.regressionPvalue = str
+				// setting -log10(p) to 0 allows the dot to show while being able to show pvalue=NA in tooltip
+				m.__value = 0
+			} else {
+				m.regressionPvalue = v
+				m.__value = -Math.log10(v)
+			}
 		} else {
 			console.log('no result for ' + m.snpid)
 		}

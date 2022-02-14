@@ -5,6 +5,8 @@ import { format as d3format } from 'd3-format'
 import { axisTop, axisLeft } from 'd3-axis'
 import { debounce } from 'debounce'
 import * as client from './client'
+import {Menu} from './dom/menu'
+import {dofetch3} from './common/dofetch'
 import * as common from '../shared/common'
 import * as coord from './coord'
 import vcf2dstk from './vcf.tkconvert'
@@ -1642,7 +1644,7 @@ reverseorient() {
 		}
 	}
 
-	jump_1basedcoordinate(s) {
+	async jump_1basedcoordinate(s) {
 		/*
 	if input is coord string, should be 1-based!!
 	also supports gene name and rsname
@@ -1715,95 +1717,87 @@ reverseorient() {
 			}
 		}
 		// try
-		this.block_jump_gene(s)
+		await this.block_jump_gene(s)
 	}
 
-	block_jump_gene(s) {
-		fetch(
-			new Request(this.hostURL + '/genelookup', {
-				method: 'POST',
-				body: JSON.stringify({ genome: this.genome.name, input: s, deep: 1, jwt: this.jwt })
-			})
-		)
-			.then(data => {
-				return data.json()
-			})
-			.then(data => {
-				if (data.error) throw { message: data.error }
-				if (!data.gmlst || data.gmlst.length == 0) {
-					// no gene match
-					if (this.genome.hasSNP) {
-						if (s.toLowerCase().startsWith('rs')) {
-							this.block_jump_snp(s)
-						} else {
-							this.inputerr('Not a gene or SNP: ' + s)
-						}
+	async block_jump_gene(s) {
+		try {
+			const data = await dofetch3(
+				'genelookup',
+				{ method: 'POST', body: JSON.stringify({ genome: this.genome.name, input: s, deep: 1 }) }
+			)
+			if(data.error) throw data.error
+			if (!data.gmlst || data.gmlst.length == 0) {
+				// no gene match
+				if (this.genome.hasSNP) {
+					if (s.toLowerCase().startsWith('rs')) {
+						// looks like a snp
+						this.block_jump_snp(s)
 					} else {
-						this.inputerr('Unknown gene name: ' + s)
+						this.inputerr('Not a gene or SNP: ' + s)
 					}
+				} else {
+					this.inputerr('Unknown gene name: ' + s)
+				}
+				return
+			}
+			// "s" matches with a gene name
+
+			// quick fix: update valid gene name to pgv
+			for (const t of this.tklst) {
+				if (t.type == client.tkt.pgv) {
+					t.genename = s
+				}
+			}
+
+			// aggregate loci for all isoforms from data.gmlst[]
+			const locs = client.gmlst2loci(data.gmlst)
+
+			if (locs.length == 1) {
+				// all isoforms are on the same locus
+				const r = locs[0]
+				const e = coord.invalidcoord(this.genome, r.chr, r.start, r.stop)
+				if (e) {
+					this.inputerr('this should not happen: gene error: ' + e)
 					return
 				}
+				this.rglst = [ {
+					chr: r.chr,
+					bstart: 0,
+					bstop: this.genome.chrlookup[r.chr.toUpperCase()].len,
+					start: r.start,
+					stop: r.stop,
+					reverse: this.showreverse
+				} ]
+				this.startidx = this.stopidx = 0
+				this.block_coord_updated()
+				return
+			}
 
-				// update valid gene name to pgv
-				for (const t of this.tklst) {
-					if (t.type == client.tkt.pgv) {
-						t.genename = s
-					}
-				}
-
-				const locs = client.gmlst2loci(data.gmlst)
-
-				if (locs.length == 1) {
-					const r = locs[0]
-					const e = coord.invalidcoord(this.genome, r.chr, r.start, r.stop)
-					if (e) {
-						this.inputerr('this should not happen: gene error: ' + e)
-						return
-					}
-					this.rglst = [
-						{
+			// isoforms are spread out on multiple locations
+			this.coord.inputtipshow()
+			for (const r of locs) {
+				this.coord.inputtip.d
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.text(r.name + ' ' + r.chr + ':' + r.start + '-' + r.stop)
+					.on('click', () => {
+						this.coord.inputtip.hide()
+						this.rglst = [ {
 							chr: r.chr,
 							bstart: 0,
 							bstop: this.genome.chrlookup[r.chr.toUpperCase()].len,
 							start: r.start,
 							stop: r.stop,
 							reverse: this.showreverse
-						}
-					]
-					this.startidx = this.stopidx = 0
-					this.block_coord_updated()
-					return
-				}
-
-				// multiple locations
-				this.coord.inputtipshow()
-
-				for (const r of locs) {
-					this.coord.inputtip.d
-						.append('div')
-						.attr('class', 'sja_menuoption')
-						.text(r.name + ' ' + r.chr + ':' + r.start + '-' + r.stop)
-						.on('click', () => {
-							this.coord.inputtip.hide()
-							this.rglst = [
-								{
-									chr: r.chr,
-									bstart: 0,
-									bstop: this.genome.chrlookup[r.chr.toUpperCase()].len,
-									start: r.start,
-									stop: r.stop,
-									reverse: this.showreverse
-								}
-							]
-							this.startidx = this.stopidx = 0
-							this.block_coord_updated()
-						})
-				}
-			})
-			.catch(err => {
-				this.inputerr(err.message)
-				if (err.stack) console.log(err.stack)
-			})
+						} ]
+						this.startidx = this.stopidx = 0
+						this.block_coord_updated()
+					})
+			}
+		} catch(e) {
+			this.inputerr(e.message || e)
+		}
 	}
 
 	block_jump_snp(s) {
@@ -4873,7 +4867,7 @@ function getrulerunit(span, ticks) {
 }
 
 function makecoordinput(bb, butrow) {
-	bb.coord.inputtip = new client.Menu({
+	bb.coord.inputtip = new Menu({
 		padding: '0px',
 		offsetX: 0,
 		offsetY: 0
@@ -4925,34 +4919,31 @@ function makecoordinput(bb, butrow) {
 			debouncer()
 		})
 
-	function genesearch() {
+	async function genesearch() {
 		// gene name lookup
 		const v = bb.coord.input.property('value')
 		if (!v) return
 		bb.coord.inputtipshow()
-		client
-			.dofetch('/genelookup', { genome: bb.genome.name, input: v })
-			.then(data => {
-				if (data.error) throw { message: data.error }
-				if (data.hits && data.hits.length) {
-					for (const s of data.hits) {
-						bb.coord.inputtip.d
-							.append('div')
-							.attr('class', 'sja_menuoption')
-							.text(s)
-							.on('click', () => {
-								bb.coord.inputtip.hide()
-								bb.block_jump_gene(s)
-							})
-					}
-				} else {
-					bb.coord.inputtip.hide()
-				}
-			})
-			.catch(err => {
-				bb.error(err.message)
-				if (err.stack) console.log(err.stack)
-			})
+		try {
+			const data = await dofetch3(
+				'genelookup',
+				{method:'POST',body: JSON.stringify({ genome: bb.genome.name, input: v })}
+			)
+			if(data.error) throw data.error
+			if (!data.hits || data.hits.length==0) return bb.coord.inputtip.hide()
+			for (const s of data.hits) {
+				bb.coord.inputtip.d
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.text(s)
+					.on('click', () => {
+						bb.coord.inputtip.hide()
+						bb.block_jump_gene(s)
+					})
+			}
+		} catch(e) {
+			bb.inputerr(e.message||e)
+		}
 	}
 
 	const debouncer = debounce(genesearch, 300)
