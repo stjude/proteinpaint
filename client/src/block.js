@@ -4942,11 +4942,7 @@ function makecoordinput(bb, butrow) {
 					})
 			}
 		} catch(e) {
-			bb.coord.inputtip.d.append('div')
-				.text(e.message||e)
-				.style('margin','10px')
-				.style('font-size','.7em')
-				.style('opacity',.5)
+			bb.inputerr(e.message||e)
 		}
 	}
 

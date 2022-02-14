@@ -1,6 +1,10 @@
 import { event } from 'd3-selection'
 import { makeSnpSelect } from './termsetting.snplst'
 import { filterInit, getNormalRoot } from './filter'
+import {keyupEnter, get_one_genome, gmlst2loci} from '../client'
+import { debounce } from 'debounce'
+import {dofetch3} from './dofetch'
+import {Menu} from '../dom/menu'
 
 /* 
 instance attributes
@@ -51,6 +55,7 @@ export function getHandler(self) {
 }
 
 async function makeEditMenu(self, div) {
+
 	const searchbox = add_genesearchbox(self, div)
 
 	await mayDisplayVariantFilter(self, div)
@@ -161,21 +166,117 @@ function makeId() {
 }
 
 function add_genesearchbox(self, div) {
+// some code duplication with block.js
+	const tip = new Menu({padding:'0px'})
 	const row = div.append('div').style('margin', '10px')
 	const searchbox = row
 		.append('input')
 		.attr('type', 'text')
 		.attr('placeholder', 'Type gene, position, or SNP')
 		.style('width', '200px')
-	// TODO design interactivities for searching gene and snp here
-	row
-		.append('span')
-		.text('Limit range to under 10 Kb')
-		.style('margin-left', '20px')
-		.style('opacity', 0.5)
+		.on('keyup',async ()=>{
+			const input = event.target
+			const v = input.value.trim()
+			if(v.length<=1) return tip.hide()
+			if(keyupEnter()) {
+				input.blur()
+				await search4coord()
+				return
+			}
+			if(event.code=='Escape') {
+				tip.hide()
+				if(self.q && self.q.chr) {
+					input.value = self.q.chr + ':' + self.q.start + '-' + self.q.stop
+				}
+				input.blur()
+				return
+			}
+			if(v.length>6) return
+			debouncer()
+		})
 	if (self.q && self.q.chr) {
 		searchbox.property('value', self.q.chr + ':' + self.q.start + '-' + self.q.stop)
 	}
+
+	async function geneNameMatch() {
+		const v = searchbox.property('value').trim()
+		if(!v) return
+		tip.showunder(searchbox.node())
+			.clear()
+		try {
+			const data = await dofetch3('genelookup',
+				{method:'POST',body:JSON.stringify({genome:self.vocabApi.getGenomeName(),input:v})}
+			)
+			if(data.error) throw data.error
+			if(!data.hits || data.hits.length==0) return tip.hide()
+			for(const s of data.hits) {
+				tip.d.append('div')
+					.text(s)
+					.attr('class','sja_menuoption')
+					.on('click',()=>{
+						tip.hide()
+						geneCoordSearch(s)
+					})
+			}
+		} catch(e) {
+			tip.d.append('div').text(e.message||e)
+		}
+	}
+	const debouncer = debounce(geneNameMatch,300)
+
+	async function geneCoordSearch(s) {
+		try {
+			const data = await dofetch3('genelookup',
+				{method:'POST',body:JSON.stringify({genome:self.vocabApi.getGenomeName(),input:s,deep:1})}
+			)
+			if(data.error) throw data.error
+			if(!data.gmlst || data.gmlst.length==0) {
+				// replace with self.genome
+				const g = await get_one_genome(self.vocabApi.getGenomeName())
+				if(g.hasSNP) {
+					if(s.toLowerCase().startsWith('rs')) {
+						await searchSNP(s)
+					} else {
+						showErr('Not a gene or SNP')
+					}
+				} else {
+					showErr('No match to gene name')
+				}
+				return
+			}
+			const loci = gmlst2loci(data.gmlst)
+			if(loci.length==1) {
+				const r = loci[0]
+				searchbox.property('value',r.chr+':'+r.start+'-'+r.stop)
+				return
+			}
+			tip.showunder(searchbox.node()).clear()
+			for(const r of loci) {
+				tip.d
+					.append('div')
+					.attr('class','sja_menuoption')
+					.text(r.name+' '+r.chr+':'+r.start+'-'+r.stop)
+					.on('click',()=>{
+						tip.hide()
+						searchbox.property('value',r.chr+':'+r.start+'-'+r.stop)
+					})
+			}
+		} catch(e) {
+			showErr(e.message||e)
+		}
+	}
+
+	async function searchSNP(s) {
+	}
+
+	function showErr(msg) {
+		tip.showunder(searchbox.node())
+			.clear()
+			.d
+			.append('div')
+			.text(msg)
+	}
+
 	return searchbox
 }
 
