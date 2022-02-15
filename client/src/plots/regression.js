@@ -4,6 +4,7 @@ import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { sayerror } from '../dom/error'
 import { fillTermWrapper } from '../common/termsetting'
+import { get_one_genome } from '../client'
 
 /*
 Code architecture:
@@ -21,6 +22,9 @@ class Regression {
 	}
 
 	async init(appState) {
+		// keep client-side genome obj, used for snplocus term business
+		this.genomeObj = await get_one_genome(appState.vocab.genome)
+
 		this.dom = {
 			header: this.opts.header, // header is optional
 			errordiv: this.opts.holder.append('div'),

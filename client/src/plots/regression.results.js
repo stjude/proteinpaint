@@ -3,7 +3,7 @@ import { sayerror } from '../dom/error'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { axisstyle } from '../dom/axisstyle'
-import { get_one_genome, first_genetrack_tolist } from '../client'
+import { first_genetrack_tolist } from '../client'
 
 /*************
 can dynamically add following attributes
@@ -699,7 +699,7 @@ function setRenderers(self) {
 			// doesn't have a block, create one
 			const arg = {
 				holder: self.dom.snplocusBlockDiv,
-				genome: await get_one_genome(self.state.vocab.genome),
+				genome: self.parent.genomeObj,
 				chr: input.term.q.chr,
 				start: input.term.q.start,
 				stop: input.term.q.stop,
@@ -754,11 +754,12 @@ function setRenderers(self) {
 				}
 			})
 
-			first_genetrack_tolist(arg.genome, arg.tklst)
+			first_genetrack_tolist(self.parent.genomeObj, arg.tklst)
 			const _ = await import('../block')
 			self.snplocusBlock = new _.Block(arg)
 			window.bb = self.snplocusBlock // testing, delete before prod release
 		} else {
+			// FIXME must shift block based on latest coord
 			// browser is already created
 			// find the mds3 track
 			const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')

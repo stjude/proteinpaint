@@ -58,6 +58,7 @@ export class InputTerm {
 				usecase: { target: 'regression', detail: this.section.configKey, regressionType: config.regressionType },
 				disable_terms,
 				abbrCutoff: 50,
+				genomeObj: this.parent.parent.genomeObj, // required for snplocus
 				callback: term => {
 					this.parent.editConfig(this, term)
 				}
