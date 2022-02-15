@@ -13,7 +13,7 @@ const { vcfcopymclass } = require('../shared/common')
 cache file has a header line, with one line per valid snp. columns: 
 1. snpid
 2. chr
-3. pos
+3. pos, 0-based
 4. ref
 5. alt (comma-joined alternative alleles)
 6. effAllele (user-given allele, blank if not specified)
@@ -29,11 +29,14 @@ info fields:
 const bcfformat_snplst = '%CHROM\t%POS\t%REF\t%ALT[\t%TGT]\n'
 const bcfformat_snplocus = '%POS\t%REF\t%ALT\t%INFO[\t%TGT]\n'
 const missing_gt = '.'
+const snplocusMaxVariantCount = 100
 
 export async function validate(q, tdb, ds, genome) {
 	try {
 		if (q.sumSamples) {
-			/* returns:
+			/* given a cache file, summarize number of samples for each variant
+			works for both snplst and snplocus term types
+			returns:
 			.numOfSampleWithAnyValidGT: int
 			.snps[]
 				.snpid
@@ -44,7 +47,10 @@ export async function validate(q, tdb, ds, genome) {
 			return await summarizeSamplesFromCache(q, tdb, ds, genome)
 		}
 		if (q.snptext) {
-			/* returns:
+			/* for snplst term:
+			given raw text entered from snplst editing UI
+			parse snps from the text, and create cache file
+			returns:
 			.cacheid str
 			.snps[]
 				.snpid
@@ -53,12 +59,14 @@ export async function validate(q, tdb, ds, genome) {
 			return await validateInputCreateCache_by_snptext(q, ds, genome)
 		}
 		if (q.chr) {
-			/* returns:
+			/* for snplocus term
+			given chr/start/stop, query variants from this range and create cache file
+			returns:
 			.cacheid str
 			.snps[]
 				.snpid
 				.info{ k: v }
-				.pos
+				.pos (0-based)
 			*/
 			return await validateInputCreateCache_by_coord(q, ds, genome)
 		}
@@ -365,16 +373,21 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 		isbcf: true,
 		args: bcfargs,
 		dir: tk.dir,
-		callback: line => {
+		callback: (line, ps) => {
+			if (snps.length > snplocusMaxVariantCount) {
+				ps.kill()
+				return
+			}
+
 			const l = line.split('\t')
-			const pos = Number(l[0])
+			const pos = Number(l[0]) - 1 // vcf pos is 1-based, change to 0-based for pp use
 			const refAllele = l[1]
 			const altAlleles = l[2].split(',')
 			const snpid = pos + '.' + refAllele + '.' + altAlleles.join(',')
 			const variant = {
 				snpid,
 				chr: q.chr,
-				pos
+				pos: pos
 			}
 			compute_mclass(tk, altAlleles, variant, l[3])
 			snps.push(variant)
