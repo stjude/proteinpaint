@@ -39,6 +39,12 @@ class TermSetting {
 				parent_menu: this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
 			})
 		}
+		// tip2 is for showing inside tip, e.g. in snplocus UI
+		this.dom.tip2 = new Menu({
+			padding: '0px',
+			parent_menu: this.dom.tip.d.node()
+		})
+
 		setInteractivity(this)
 		setRenderers(this)
 		this.initUI()

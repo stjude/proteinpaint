@@ -49,10 +49,6 @@ class TermdbVocab {
 		this.vocab = this.state.vocab
 	}
 
-	getGenomeName() {
-		return this.vocab.genome
-	}
-
 	// migrated from termdb/store
 	async getTermdbConfig() {
 		const data = await dofetch3(

@@ -1,10 +1,9 @@
 import { event } from 'd3-selection'
 import { makeSnpSelect } from './termsetting.snplst'
 import { filterInit, getNormalRoot } from './filter'
-import { keyupEnter, get_one_genome, gmlst2loci } from '../client'
+import { keyupEnter, gmlst2loci } from '../client'
 import { debounce } from 'debounce'
 import { dofetch3 } from './dofetch'
-import { Menu } from '../dom/menu'
 import { string2pos } from '../coord'
 
 /* 
@@ -56,7 +55,9 @@ export function getHandler(self) {
 }
 
 async function makeEditMenu(self, div) {
-	const searchbox = add_genesearchbox(self, div)
+	// lacks a way to validate constructor option based on type-specific logic
+	if (!self.opts.genomeObj) throw 'opts.genomeObj{} is required for snplocus termsetting UI'
+	const coordResult = add_genesearchbox(self, div)
 
 	await mayDisplayVariantFilter(self, div)
 
@@ -71,8 +72,7 @@ async function makeEditMenu(self, div) {
 		.style('margin', '0px 15px 15px 15px')
 		.text('Submit')
 		.on('click', async () => {
-			const tmp = get_coordinput(searchbox)
-			if (!tmp) return window.alert('Invalid coordinate')
+			if (!coordResult.chr) return window.alert('Invalid coordinate')
 			event.target.disabled = true
 			event.target.innerHTML = 'Validating input...'
 			// parse input text
@@ -82,9 +82,9 @@ async function makeEditMenu(self, div) {
 				self.q = {}
 			}
 			self.term.type = 'snplocus' // in case self.term was something else..
-			self.q.chr = tmp[0]
-			self.q.start = tmp[1]
-			self.q.stop = tmp[2]
+			self.q.chr = coordResult.chr
+			self.q.start = coordResult.start
+			self.q.stop = coordResult.stop
 			self.term.name = term_name
 			self.q.variant_filter = getNormalRoot(self.variantFilter.active)
 			await validateInput(self)
@@ -168,23 +168,43 @@ function makeId() {
 
 function add_genesearchbox(self, div) {
 	// some code duplication with block.js
-	const tip = new Menu({ padding: '0px' })
+	const tip = self.dom.tip2
+
 	const row = div.append('div').style('margin', '10px')
+
+	row
+		.append('div')
+		.text('Type gene, position, or SNP')
+		.style('font-size', '.7em')
+		.style('opacity', 0.4)
+
 	const searchbox = row
 		.append('input')
 		.attr('type', 'text')
-		.attr('placeholder', 'Type gene, position, or SNP')
+		.attr('placeholder', 'Search')
 		.style('width', '200px')
+		.on('focus', () => {
+			event.target.select()
+		})
 		.on('keyup', async () => {
 			const input = event.target
 			const v = input.value.trim()
 			if (v.length <= 1) return tip.hide()
 			if (keyupEnter()) {
 				input.blur()
-				await search4coord(v)
+				// pressed enter, try to parse input as coordinate string e.g. chr:pso
+				const pos = string2pos(v, self.opts.genomeObj)
+				if (pos) {
+					// input is coordinate
+					getResult(pos, 'Valid coordinate')
+					return
+				}
+				// input is not coord; see if matches with a gene and can be converted to coord
+				await geneCoordSearch(v)
 				return
 			}
 			if (event.code == 'Escape') {
+				// abandon changes to <input>
 				tip.hide()
 				if (self.q && self.q.chr) {
 					input.value = self.q.chr + ':' + self.q.start + '-' + self.q.stop
@@ -195,17 +215,15 @@ function add_genesearchbox(self, div) {
 			if (v.length > 6) return
 			debouncer()
 		})
-	if (self.q && self.q.chr) {
-		searchbox.property('value', self.q.chr + ':' + self.q.start + '-' + self.q.stop)
-	}
+	searchbox.node().focus()
 
-	async function search4coord(v) {
-		const pos = string2pos(v, await get_one_genome(self.vocabApi.getGenomeName()))
-		if (pos) {
-			hit(pos)
-			return
-		}
-		await geneCoordSearch(v)
+	const searchStat = {
+		mark: row.append('span').style('margin-left', '5px'),
+		word: row
+			.append('span')
+			.style('margin-left', '5px')
+			.style('font-size', '.8em')
+			.style('opacity', 0.6)
 	}
 
 	async function geneNameMatch() {
@@ -215,7 +233,7 @@ function add_genesearchbox(self, div) {
 		try {
 			const data = await dofetch3('genelookup', {
 				method: 'POST',
-				body: JSON.stringify({ genome: self.vocabApi.getGenomeName(), input: v })
+				body: JSON.stringify({ genome: self.opts.genomeObj.name, input: v })
 			})
 			if (data.error) throw data.error
 			if (!data.hits || data.hits.length == 0) return tip.hide()
@@ -239,28 +257,31 @@ function add_genesearchbox(self, div) {
 		try {
 			const data = await dofetch3('genelookup', {
 				method: 'POST',
-				body: JSON.stringify({ genome: self.vocabApi.getGenomeName(), input: s, deep: 1 })
+				body: JSON.stringify({ genome: self.opts.genomeObj.name, input: s, deep: 1 })
 			})
 			if (data.error) throw data.error
 			if (!data.gmlst || data.gmlst.length == 0) {
-				// replace with self.genome
-				const g = await get_one_genome(self.vocabApi.getGenomeName())
-				if (g.hasSNP) {
+				// no match to gene
+				if (self.opts.genomeObj.hasSNP) {
 					if (s.toLowerCase().startsWith('rs')) {
+						// genome has snp and input looks like a snp
 						await searchSNP(s)
 					} else {
-						showErr('Not a gene or SNP')
+						getResult(null, 'Not a gene or SNP')
 					}
 				} else {
-					showErr('No match to gene name')
+					getResult(null, 'No match to gene name')
 				}
 				return
 			}
+			// matches with some isoforms
 			const loci = gmlst2loci(data.gmlst)
 			if (loci.length == 1) {
-				hit(loci[0])
+				// all isoforms are at the same locus
+				getResult(loci[0], s)
 				return
 			}
+			// isoform are spread across multiple discontinuous loci
 			tip.showunder(searchbox.node()).clear()
 			for (const r of loci) {
 				tip.d
@@ -269,50 +290,51 @@ function add_genesearchbox(self, div) {
 					.text(r.name + ' ' + r.chr + ':' + r.start + '-' + r.stop)
 					.on('click', () => {
 						tip.hide()
-						hit(r)
+						getResult(r, r.name)
 					})
 			}
 		} catch (e) {
-			showErr(e.message || e)
+			getResult(null, e.message || e)
 		}
 	}
 
 	async function searchSNP(s) {
 		const data = await dofetch3('snp', {
 			method: 'POST',
-			body: JSON.stringify({ byName: true, genome: self.vocabApi.getGenomeName(), lst: [s] })
+			body: JSON.stringify({ byName: true, genome: self.opts.genomeObj.name, lst: [s] })
 		})
 		if (data.error) throw data.error
-		if (!data.results || data.results.length == 0) throw 'Not a SNP'
+		if (!data.results || data.results.length == 0) throw 'Not a gene or SNP'
 		const r = data.results[0]
-		hit({ chr: r.chrom, start: r.chromStart, stop: r.chromEnd })
+		getResult({ chr: r.chrom, start: r.chromStart, stop: r.chromEnd }, s)
 	}
 
-	function showErr(msg) {
-		tip
-			.showunder(searchbox.node())
-			.clear()
-			.d.append('div')
-			.text(msg)
+	const result = {}
+	if (self.q && self.q.chr) {
+		searchbox.property('value', self.q.chr + ':' + self.q.start + '-' + self.q.stop)
+		result.chr = self.q.chr
+		result.start = self.q.start
+		result.stop = self.q.stop
 	}
 
-	function hit(r) {
-		searchbox.property('value', r.chr + ':' + r.start + '-' + r.stop)
+	function getResult(r, fromWhat) {
+		// call to show a valid result, or error
+		// if result is valid, provide r: {chr,start,stop} to show coord in <input>, also show &check;
+		// if result is invalid, r is null, show &cross;
+		// fromWhat is optional gene or snp name to show in search stat
+		if (r) {
+			searchbox.property('value', r.chr + ':' + r.start + '-' + r.stop)
+			result.chr = r.chr
+			result.start = r.start
+			result.stop = r.stop
+			searchStat.mark.style('color', 'green').html('&check;')
+		} else {
+			searchStat.mark.style('color', 'red').html('&cross;')
+		}
+		searchStat.word.text(fromWhat)
 	}
 
-	return searchbox
-}
-
-function get_coordinput(searchbox) {
-	const v = searchbox.property('value').trim()
-	if (!v) return
-	const tmp = v.split(/[-:\s]+/)
-	if (tmp.length == 3) {
-		const start = Number(tmp[1]),
-			stop = Number(tmp[2])
-		if (Number.isInteger(start) && Number.isInteger(stop)) return [tmp[0], start, stop]
-	}
-	return null
+	return result //searchbox
 }
 
 async function mayDisplayVariantFilter(self, holder) {
