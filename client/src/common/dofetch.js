@@ -1,8 +1,11 @@
+const urlMaxLength = 2000 // if a GET url is longer than this, will be converted to POST of the same route
+
 /*
 	path: URL
 	arg: HTTP request body
 	opts: see dofetch2() opts argument
 */
+
 export function dofetch(path, arg, opts = null) {
 	if (opts && typeof opts == 'object') {
 		if (opts.serverData && typeof opts.serverData == 'object') {
@@ -89,11 +92,11 @@ export function dofetch2(path, init = {}, opts = {}) {
 		}
 	}
 
-	if (url.length > 2000 && (!init.method || init.method.toUpperCase() == 'GET')) {
+	if (url.length > urlMaxLength && (!init.method || init.method.toUpperCase() == 'GET')) {
 		// convert to a POST request
 		// !!! NOTE: the requested server route must support both GET and POST, for example, app.all('/route', handler)
 		init.method = 'POST'
-		const [hostpath, query] = path.split('?')
+		const [hostpath, query] = url.split('?') // must use url but not path
 		const params = {}
 		query.split('&').forEach(p => {
 			const [k, v] = p.split('=')
