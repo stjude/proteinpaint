@@ -183,8 +183,10 @@ function add_genesearchbox(self, div) {
 		.attr('type', 'text')
 		.attr('placeholder', 'Search')
 		.style('width', '200px')
+		.on('focus', () => {
+			event.target.select()
+		})
 		.on('keyup', async () => {
-			hitSays.selectAll('*').remove()
 			const input = event.target
 			const v = input.value.trim()
 			if (v.length <= 1) return tip.hide()
@@ -194,7 +196,7 @@ function add_genesearchbox(self, div) {
 				const pos = string2pos(v, self.opts.genomeObj)
 				if (pos) {
 					// input is coordinate
-					hit(pos)
+					getResult(pos, 'Valid coordinate')
 					return
 				}
 				// input is not coord; see if matches with a gene and can be converted to coord
@@ -213,8 +215,16 @@ function add_genesearchbox(self, div) {
 			if (v.length > 6) return
 			debouncer()
 		})
+	searchbox.node().focus()
 
-	const hitSays = row.append('span') // search status following <input>
+	const searchStat = {
+		mark: row.append('span').style('margin-left', '5px'),
+		word: row
+			.append('span')
+			.style('margin-left', '5px')
+			.style('font-size', '.8em')
+			.style('opacity', 0.6)
+	}
 
 	async function geneNameMatch() {
 		const v = searchbox.property('value').trim()
@@ -257,10 +267,10 @@ function add_genesearchbox(self, div) {
 						// genome has snp and input looks like a snp
 						await searchSNP(s)
 					} else {
-						showErr('Not a gene or SNP')
+						getResult(null, 'Not a gene or SNP')
 					}
 				} else {
-					showErr('No match to gene name')
+					getResult(null, 'No match to gene name')
 				}
 				return
 			}
@@ -268,7 +278,7 @@ function add_genesearchbox(self, div) {
 			const loci = gmlst2loci(data.gmlst)
 			if (loci.length == 1) {
 				// all isoforms are at the same locus
-				hit(loci[0], s)
+				getResult(loci[0], s)
 				return
 			}
 			// isoform are spread across multiple discontinuous loci
@@ -280,11 +290,11 @@ function add_genesearchbox(self, div) {
 					.text(r.name + ' ' + r.chr + ':' + r.start + '-' + r.stop)
 					.on('click', () => {
 						tip.hide()
-						hit(r, r.name)
+						getResult(r, r.name)
 					})
 			}
 		} catch (e) {
-			showErr(e.message || e)
+			getResult(null, e.message || e)
 		}
 	}
 
@@ -294,17 +304,9 @@ function add_genesearchbox(self, div) {
 			body: JSON.stringify({ byName: true, genome: self.opts.genomeObj.name, lst: [s] })
 		})
 		if (data.error) throw data.error
-		if (!data.results || data.results.length == 0) throw 'Not a SNP'
+		if (!data.results || data.results.length == 0) throw 'Not a gene or SNP'
 		const r = data.results[0]
-		hit({ chr: r.chrom, start: r.chromStart, stop: r.chromEnd }, s)
-	}
-
-	function showErr(msg) {
-		tip
-			.showunder(searchbox.node())
-			.clear()
-			.d.append('div')
-			.text(msg)
+		getResult({ chr: r.chrom, start: r.chromStart, stop: r.chromEnd }, s)
 	}
 
 	const result = {}
@@ -315,27 +317,21 @@ function add_genesearchbox(self, div) {
 		result.stop = self.q.stop
 	}
 
-	function hit(r, fromWhat) {
-		// call when <input> matches with a coord
-		// fromWhat is optional gene or snp name to show in hitSays
-		searchbox.property('value', r.chr + ':' + r.start + '-' + r.stop)
-		result.chr = r.chr
-		result.start = r.start
-		result.stop = r.stop
-		hitSays.selectAll('*').remove()
-		if (fromWhat) {
-			hitSays
-				.append('span')
-				.style('margin-left', '5px')
-				.style('color', 'green')
-				.html('&check;')
-			hitSays
-				.append('span')
-				.style('margin-left', '5px')
-				.style('font-size', '.8em')
-				.style('opacity', 0.6)
-				.text(fromWhat)
+	function getResult(r, fromWhat) {
+		// call to show a valid result, or error
+		// if result is valid, provide r: {chr,start,stop} to show coord in <input>, also show &check;
+		// if result is invalid, r is null, show &cross;
+		// fromWhat is optional gene or snp name to show in search stat
+		if (r) {
+			searchbox.property('value', r.chr + ':' + r.start + '-' + r.stop)
+			result.chr = r.chr
+			result.start = r.start
+			result.stop = r.stop
+			searchStat.mark.style('color', 'green').html('&check;')
+		} else {
+			searchStat.mark.style('color', 'red').html('&cross;')
 		}
+		searchStat.word.text(fromWhat)
 	}
 
 	return result //searchbox
