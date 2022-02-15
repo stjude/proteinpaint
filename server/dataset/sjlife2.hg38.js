@@ -203,7 +203,7 @@ const info_fields = [
 	},
 	{
 		key: 'gnomAD_CR',
-		label: 'gnmoAD call rate',
+		label: 'gnomAD call rate',
 		isfilter: true,
 		isactivefilter: true,
 		isfloat: 1,
@@ -454,7 +454,7 @@ const terms = [
 	},
 	{
 		id: 'gnomAD_CR',
-		name: 'gnmoAD call rate',
+		name: 'gnomAD call rate',
 		parent_id: null,
 		isleaf: true,
 		type: 'float',

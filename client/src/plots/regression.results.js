@@ -757,7 +757,6 @@ function setRenderers(self) {
 			first_genetrack_tolist(self.parent.genomeObj, arg.tklst)
 			const _ = await import('../block')
 			self.snplocusBlock = new _.Block(arg)
-			window.bb = self.snplocusBlock // testing, delete before prod release
 		} else {
 			// FIXME must shift block based on latest coord
 			// browser is already created
