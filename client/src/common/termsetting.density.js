@@ -212,7 +212,7 @@ function renderBinLines(self, data) {
 		const inverted = +o.xscale.invert(d.draggedX)
 		const value = self.term.type == 'integer' ? Math.round(inverted) : inverted.toFixed(3)
 
-		if (self.q.type == 'regular-bin') {
+		if (self.q.mode == 'discrete' && self.q.type == 'regular-bin') {
 			//d.scaledX = Math.round(o.xscale(value))
 			if (d.index === 0) {
 				self.dom.first_stop_input.property('value', value)
@@ -235,7 +235,7 @@ function renderBinLines(self, data) {
 				self.q.last_bin.start = value
 				middleLines.style('display', c => (c.scaledX >= d.draggedX ? 'none' : ''))
 			}
-		} else if (self.q.type == 'custom-bin') {
+		} else if (self.q.mode == 'discrete' && self.q.type == 'custom-bin') {
 			self.q.lst[d.index + 1].start = value
 			self.q.lst[d.index + 1].label = get_bin_label(self.q.lst[d.index + 1], self.q)
 			self.q.lst[d.index].stop = value
@@ -283,7 +283,7 @@ function renderBinLines(self, data) {
 
 		d.scaledX = d.draggedX
 		d.x = +o.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
-		if (self.q.type == 'regular-bin') {
+		if (self.q.mode == 'discrete' && self.q.type == 'regular-bin') {
 			if (d.index === 0) {
 				self.q.first_bin.stop = d.x
 				middleLines.each(function(d, i) {
@@ -297,7 +297,7 @@ function renderBinLines(self, data) {
 				.slice()
 				.reverse()
 				.find(d => d.scaledX < scaledMaxX).scaledX
-		} else if (self.q.type == 'custom-bin') {
+		} else if (self.q.mode == 'discrete' && self.q.type == 'custom-bin') {
 			self.q.lst[d.index + 1].start = d.x
 			self.q.lst[d.index].stop = d.x
 		} else if (self.q.mode == 'spline') {
