@@ -27,7 +27,7 @@ info fields:
 */
 
 const bcfformat_snplst = '%CHROM\t%POS\t%REF\t%ALT[\t%TGT]\n'
-const bcfformat_snplocus = '%POS\t%REF\t%ALT\t%INFO[\t%TGT]\n'
+const bcfformat_snplocus = '%POS\t%ID\t%REF\t%ALT\t%INFO[\t%TGT]\n'
 const missing_gt = '.'
 const snplocusMaxVariantCount = 100
 
@@ -375,21 +375,29 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 		dir: tk.dir,
 		callback: (line, ps) => {
 			if (snps.length > snplocusMaxVariantCount) {
+				// TODO notify client
 				ps.kill()
 				return
 			}
 
 			const l = line.split('\t')
 			const pos = Number(l[0]) - 1 // vcf pos is 1-based, change to 0-based for pp use
-			const refAllele = l[1]
-			const altAlleles = l[2].split(',')
+			const refAllele = l[2]
+			const altAlleles = l[3].split(',')
 			const snpid = pos + '.' + refAllele + '.' + altAlleles.join(',')
 			const variant = {
 				snpid,
 				chr: q.chr,
 				pos: pos
 			}
-			compute_mclass(tk, altAlleles, variant, l[3])
+			compute_mclass(
+				tk,
+				refAllele,
+				altAlleles,
+				variant,
+				l[4], // info field
+				l[1] // ID
+			)
 			snps.push(variant)
 
 			const lst = [
@@ -400,7 +408,7 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 				altAlleles.join(','),
 				'' // snplocus file does not have eff ale
 			]
-			for (let i = 4; i < l.length; i++) {
+			for (let i = 5; i < l.length; i++) {
 				lst.push(l[i] == missing_gt ? '' : l[i])
 			}
 			lines.push(lst.join('\t'))
@@ -411,7 +419,7 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 	return { cacheid, snps }
 }
 
-function compute_mclass(tk, altAlleles, variant, info_str) {
+function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID) {
 	// quick fix to assign mclass to variant which is kept at term.snps[] on client
 	// for displaying in mds3 tk
 	// require csq annotation
@@ -434,6 +442,14 @@ function compute_mclass(tk, altAlleles, variant, info_str) {
 	vcfcopymclass(variant, {})
 	delete variant.csq
 	// gene/isoform/class/dt/mname are assigned on variant
+	if (!variant.mname) {
+		if (ID != '.') {
+			// value should be rsID
+			variant.mname = ID
+		} else {
+			variant.mname = variant.pos + ':' + refAllele + '>' + altAlleles[0]
+		}
+	}
 }
 
 function add_bcf_variant_filter(variant_filter, bcfargs) {
