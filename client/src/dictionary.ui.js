@@ -3,6 +3,7 @@ import { appear } from './dom/animation'
 import { init_tabs } from './dom/toggleButtons'
 import { event as d3event } from 'd3-selection'
 import { appInit } from './mass/app'
+import { sayerror } from './dom/error'
 
 /* 
 Launches MASS UI by uploading a custom data dictionary
@@ -35,19 +36,19 @@ export function init_dictionaryUI(holder) {
 		.style('place-items', 'center left')
 		.style('overflow', 'hidden')
 
-	const d = {}
+	const obj = {}
 
 	//Data dictionary entry
 	uiutils.makePrompt(wrapper, 'Data Dictionary')
 	const tabs_div = wrapper.append('div')
-	makeDataEntryTabs(tabs_div, d)
+	makeDataEntryTabs(tabs_div, obj)
 
 	//Submit button and information section
-	submitButton(wrapper, d, holder)
+	submitButton(wrapper, obj, holder)
 	infoSection(wrapper)
 
 	//Remove after testing
-	window.doms = d
+	window.doms = obj
 }
 
 function makeDataEntryTabs(tabs_div, d) {
@@ -142,7 +143,7 @@ const name2id = new Map()
 	key: term name
 	value: id
 */
-const term2term = new Map()
+const parent2children = new Map()
 /* 
 	key: id
 	value(s): Set(['child id', 'child id', ...])
@@ -168,12 +169,12 @@ function parseTabDelimitedData(input) {
 
 	/* 
     Parses phenotree:
-        - Parses tab delim data arranged in cols: levels(n), Key(i.e. Variable name), Configuration (i.e. Variable note).
-		- Only the key and configuration cols are required
+        - Parses tab delim data arranged in cols: levels(n), ID (i.e. Variable name), Configuration (i.e. Variable note).
+		- Only the ID and configuration cols are required
 		- Not using uncomputable values in this iteration
 		- Assumptions:
 			1. Headers required. 'Variable name', 'Variable note' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
-			2. Levels are defined left to right and in order, no gaps.
+			2. Levels are defined left to right, highest to lowest, and in order, no gaps.
 			3. No blanks or '-' between levels as well as no duplicate values in the same line.
 			4. No identical term ids (keys)
 			5. All non-leaf names/ids must be unique. 
@@ -185,126 +186,137 @@ function parseTabDelimitedData(input) {
 			__tree_isroot: true
 		}
 	}
-	const keys = [] //To check for duplicate values later
+	const ids = [] //To check for duplicate values later
+	// levelColIndexes = new Map()
 
-	let keyIndex,
+	let varNameIndex,
 		configIndex,
-		colsIndexes = []
+		levelColIndexes = []
 
-	for (const i in lines) {
+	for (const [i, v] of lines.entries()) {
 		let line = lines[i].split('\t')
 		if (i == 0) {
-			//Find arrays for parsing logic from headers
-			keyIndex = line.findIndex(l => l.match('Variable Name'))
-			if (!keyIndex == -1) throw `Missing required 'Variable Name' column`
-			configIndex = line.findIndex(l => l.match('Variable Note'))
+			//Find "Variable Name" (i.e. level 1 id/ leaf id), "Variable Note" (i.e. configuration), and level columns
+			varNameIndex = line.findIndex(l => l.toLowerCase().includes('variable name'))
+			if (varNameIndex == -1) throw `Missing required 'Variable Name' column`
+			configIndex = line.findIndex(l => l.toLowerCase().includes('variable note'))
 			if (configIndex == -1) throw `Missing required 'Variable Note' column`
-			//If no level col(s) provided, use key/Variable name col as single level. Will print id as name.
-			if (line.findIndex(l => l.match('Level_')) == -1) colsIndexes.push(keyIndex)
-			else {
-				//Push level index to array for parsing
-				for (let idx in line) {
-					if (line[idx].match('Level_')) colsIndexes.push(idx)
-				}
+
+			for (const [idx, col] of line.entries()) {
+				//Capture the index(es) for level column(s) creating hierarchy later
+				if (col.toLowerCase().includes('level_')) levelColIndexes.push(idx)
 			}
+			//If no level cols provided, use key/Variable name col as single level. Will print the id as name
+			if (line.findIndex(l => l.toLowerCase().includes('level_')) == -1) levelColIndexes.push(varNameIndex)
+
+			// console.log("Variable Name Index: " + varNameIndex)
+			// console.log("Config Index: " +  configIndex)
+			// console.log(levelColIndexes)
+			continue
 		}
 		try {
-			if (i > 0) {
-				//Skip header
-				/******* Parse lines for term values *******/
-				if (!line[configIndex] || !line[configIndex].trim()) {
-					console.error('Missing configuration string, line: ' + (Number(i) + 1) + ', term: ' + line[keyIndex])
-					continue
-				}
-				let colNames = [] //capture str value of all 'level' cols
-				for (const c in colsIndexes) {
-					const col = str2level(line[c])
-					colNames.push(col)
-				}
-				// console.log(colNames)
-
-				let configstr = line[configIndex].replace('"', '').trim()
-				const leafIdx = check4MisplacedNulls(colNames, i)
-				const name = getName(colNames)
-
-				// if key missing, use name
-				let key = line[keyIndex] ? line[keyIndex].trim() : ''
-				if (!key) key = name
-
-				//pushes user provided variable names and derived values to check
-				keys.push(key)
-
-				//Parses configuration col into term.type, term.values, and term.groupsetting
-				const term = parseConfig(configstr)
-
-				/******* Parse for hierarchy *******/
-				const filteredCols = filterCols(colNames)
-				createHierarchy(leafIdx, filteredCols, key)
-
-				/******* Create terms *******/
-				for (const [k, v] of p2childorder.entries()) {
-					if (k == '__root') continue
-					if (!terms[k]) {
-						terms[k] = {
-							id: k,
-							name: k,
-							isleaf: false,
-							parent_id: ch2immediateP.get(k) || null
-						}
-						keys.push(k)
+			/******* Parse lines for term values *******/
+			if (!line[configIndex] || !line[configIndex].trim()) {
+				console.error('Missing configuration string, line: ' + (i + 1) + ', term: ' + line[varNameIndex])
+				continue
+			}
+			let levelStrings = [] //TODO, may not be needed
+			const levelIdxStrMap = new Map()
+			for (let idx = 0; idx < line.length; idx++) {
+				for (const colIdx of levelColIndexes) {
+					//capture str value of all 'level' cols
+					//Preserve the index value
+					if (idx == colIdx) {
+						const level = str2level(line[idx])
+						levelStrings.push(level)
+						levelIdxStrMap.set(idx, level)
+						// console.log(level)
 					}
 				}
+			}
+			// console.log(levelStrValues)
+			// console.log(levelStrings)
 
-				terms[key] = {
-					id: key,
-					name,
-					parent_id: ch2immediateP.get(key),
-					isleaf: !term2term.has(key),
-					type: term.type,
-					values: term.values,
-					groupsetting: term.groupsetting
+			//Checks for blanks || '-' values between levels and returns the leafindex
+			const leafIdx = check4MisplacedNulls(levelIdxStrMap, i)
+			const name = getName(levelIdxStrMap)
+
+			// if key missing, use name
+			let id = line[varNameIndex] ? line[varNameIndex].trim() : ''
+			if (!id) id = name
+			//pushes user provided variable names and derived values to check
+			ids.push(id)
+
+			//Parses configuration col into term.type, term.values, and term.groupsetting
+			let configstr = line[configIndex].replace('"', '').trim()
+			const term = parseConfig(configstr)
+
+			/******* Parse for hierarchy *******/
+			const filteredCols = filterCols(levelIdxStrMap)
+			createHierarchy(leafIdx, filteredCols, id)
+
+			/******* Create terms *******/
+			for (const [k, v] of p2childorder.entries()) {
+				if (k == '__root') continue
+				if (!terms[k]) {
+					terms[k] = {
+						id: k,
+						name: k,
+						isleaf: false,
+						parent_id: ch2immediateP.get(k) || null
+					}
+					ids.push(k)
 				}
 			}
+
+			terms[id] = {
+				id,
+				name,
+				parent_id: ch2immediateP.get(id),
+				isleaf: !parent2children.has(id),
+				type: term.type,
+				values: term.values,
+				groupsetting: term.groupsetting
+			}
 		} catch (e) {
-			throw 'Line ' + (Number(i) + 1) + ' error: ' + e
+			throw 'Line ' + (i + 1) + ' error: ' + e
 		}
 	}
-
-	check4DuplicateValues(keys) //Checks all duplicate term.ids/keys for duplicates
+	//Checks all duplicate term.ids for duplicates
+	check4DuplicateValues(ids)
 
 	// console.log(name2id)
 	// console.log(allterms_byorder)
-	// console.log(264, term2term)
+	// console.log(264, parent2children)
 	// console.log(265, ch2immediateP)
 	// console.log(266, child2parents)
 	// console.log(267, p2childorder)
 	// console.log(allterms_byorder.size + ' terms in total')
-	console.log({ terms: Object.values(terms) })
+	// console.log({ terms: Object.values(terms) })
 	return { terms: Object.values(terms) }
 }
 
 /*
  **** Parsing Functions for Phenotree ****
  */
-function str2level(col) {
-	// parses columns and returns name
-	const tmp = col.trim().replace(/"/g, '')
-	if (!tmp || tmp == '-') return null
-	return tmp
-}
 
-function check4MisplacedNulls(colArray, i) {
+function check4MisplacedNulls(levelIdxStrMap, i) {
 	// Check for blanks or '-' between levels
-	const nullIndex = colArray.indexOf(null) //find first index of null
+	// let nullIndex
+	// for(const [k,v] of levelIdxStrMap.entries()){
+
+	// }
+	console.log(levelIdxStrMap.values())
+	const nullIndex = levelColIndexes.indexOf(null) //find first index of null
 	function revArray(arr) {
 		let copy = [...arr]
 		return copy.reverse()
 	}
 	//find last index of non-null level value
-	const lastLevelIndex = colArray.length - 1 - revArray(colArray).findIndex(e => e !== null)
+	const lastLevelIndex = levelColIndexes.length - 1 - revArray(levelColIndexes).findIndex(e => e !== null)
 	//TODO: Print error to the screen
 	if (lastLevelIndex > nullIndex && nullIndex >= 0)
-		throw `Blank or '-' value detected between levels in line ` + (Number(i) + 1)
+		throw `Blank or '-' value detected between levels in line ` + (i + 1)
 
 	return lastLevelIndex //Use later for leaflevel
 }
@@ -395,27 +407,29 @@ function createHierarchy(leafIdx, filteredCols, key) {
 		} else {
 			id = filteredCols[fc]
 		}
-		//find id for parent immediate level
-		const levelUpId = filteredCols[Number(fc) - 1]
-
+		//Skip first column.
 		if (fc != 0) {
-			term2term.get(levelUpId).add(id)
+			//find id for the immediate parent level
+			const parentId = filteredCols[Number(fc) - 1]
+			parent2children.get(parentId).add(id)
 			if (!child2parents.has(id)) child2parents.set(id, new Map())
 			for (const y in filteredCols) {
 				if (y < fc) {
 					child2parents.get(id).set(filteredCols[y], y)
 				}
 			}
-			ch2immediateP.set(id, levelUpId)
-			if (!p2childorder.has(levelUpId)) p2childorder.set(levelUpId, []) //Why is this needed when there's term2term?
-			if (p2childorder.get(levelUpId).indexOf(id) == -1) p2childorder.get(levelUpId).push(id)
+			ch2immediateP.set(id, parentId)
+			if (!p2childorder.has(parentId)) p2childorder.set(parentId, [])
+			if (p2childorder.get(parentId).indexOf(id) == -1) p2childorder.get(parentId).push(id)
 		} else {
+			//The parent_id  = null for the first col
 			ch2immediateP.set(id, null)
+			//Connect to the id to the root
 			if (p2childorder.get(root_id).indexOf(id) == -1) p2childorder.get(root_id).push(id)
 		}
 
-		if (!term2term.has(id) && fc != leafIdx) {
-			term2term.set(id, new Set())
+		if (!parent2children.has(id) && fc != leafIdx) {
+			parent2children.set(id, new Set())
 		}
 		allterms_byorder.add(id)
 	}
@@ -424,6 +438,12 @@ function createHierarchy(leafIdx, filteredCols, key) {
 /*
  **** Helpers ****
  */
+function str2level(col) {
+	// parses columns and returns name
+	const tmp = col.trim().replace(/"/g, '')
+	if (!tmp || tmp == '-') return null
+	return tmp
+}
 
 function check4DuplicateValues(values) {
 	const duplicates = new Set()
@@ -451,7 +471,7 @@ function submitButton(div, d, holder) {
 		.on('click', () => {
 			validateInput(div, d)
 			div.remove()
-			console.log(449, d.data.terms)
+			// console.log(449, d.data.terms)
 			appInit({
 				holder: holder,
 				state: {
