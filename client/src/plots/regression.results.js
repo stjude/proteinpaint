@@ -61,6 +61,12 @@ export class RegressionResults {
 				return
 			}
 			delete this.hasUnsubmittedEdits_nullify_singleuse // single-use, delete
+
+			if (this.snplocusBlock) {
+				// if a block instance is already made, cloak it
+				this.snplocusBlock.cloakOn()
+			}
+
 			// submit server request to run analysis
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getRegressionData(reqOpts)
@@ -758,14 +764,23 @@ function setRenderers(self) {
 			const _ = await import('../block')
 			self.snplocusBlock = new _.Block(arg)
 		} else {
-			// FIXME must shift block based on latest coord
 			// browser is already created
 			// find the mds3 track
 			const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
-			// assign result to each variant
+			// apply new sets of variants and results to track and render
 			tk.custom_variants = make_mds3_variants(input.term.term.snps, result)
-			// render
-			tk.load()
+			// if user changes position using termsetting ui,
+			// input.term.q{} will hold different chr/start/stop than block
+			// and block will need to update coord
+			const r = self.snplocusBlock.rglst[0]
+			if (r.chr == input.term.q.chr && r.start == input.term.q.start && r.stop == input.term.q.stop) {
+				// coord is the same between input and block
+				// only need to rerender tk
+				tk.load()
+			} else {
+				await self.snplocusBlock.jump_1basedcoordinate(input.term.q)
+			}
+			self.snplocusBlock.cloakOff()
 		}
 	}
 }
@@ -792,18 +807,17 @@ function make_mds3_variants(snps, result) {
 			// reg result is found for this snp; can call displayResult_oneset
 			const d = thisresult.data
 			if (!d) throw '.data{} missing'
-			m.regressionResult = d
-			// find p-value (last column of coeff table)
-			if (!d.coefficients || !d.coefficients.terms) throw '.data{coefficients:{terms}} missing'
-			if (!d.coefficients.terms[m.snpid]) throw m.snpid + ' missing in coefficients.terms{}'
-			if (!Array.isArray(d.coefficients.terms[m.snpid].fields))
-				throw `coefficients.terms[${m.snpid}].fields[] not array`
-			const str = d.coefficients.terms[m.snpid].fields[d.coefficients.terms[m.snpid].fields.length - 1]
-			// last value of .fields[] should be p-value
-			// could be NA
+			m.regressionResult = d // for displaying via click_snvindel()
+
+			// find p-value (last column of type3 table)
+			if (!d.type3 || !d.type3.terms) throw '.data{type3:{terms}} missing'
+			if (!d.type3.terms[m.snpid]) throw m.snpid + ' missing in type3.terms{}'
+			if (!Array.isArray(d.type3.terms[m.snpid])) throw `type3.terms[${m.snpid}] not array`
+			const str = d.type3.terms[m.snpid][d.type3.terms[m.snpid].length - 1]
+			// last value of the array should be p-value string (can be 'NA')
 			const v = Number(str)
 			if (Number.isNaN(v)) {
-				m.regressionPvalue = str
+				m.regressionPvalue = str // for displaying via tooltipPrintValue()
 				// setting -log10(p) to 0 allows the dot to show while being able to show pvalue=NA in tooltip
 				m.__value = 0
 			} else {
@@ -812,6 +826,9 @@ function make_mds3_variants(snps, result) {
 			}
 		} else {
 			console.log('no result for ' + m.snpid)
+			// assign this so tk won't break
+			m.regressionPvalue = 'missing'
+			m.__value = 0
 		}
 		mlst.push(m)
 	}
