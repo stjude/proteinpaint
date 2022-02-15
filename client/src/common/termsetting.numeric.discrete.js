@@ -170,6 +170,7 @@ function setqDefaults(self) {
 					? self.q
 					: {
 							type: 'custom-bin',
+							mode: 'discrete',
 							lst: [
 								{
 									startunbounded: true,
