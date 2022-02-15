@@ -5,8 +5,8 @@ import { format as d3format } from 'd3-format'
 import { axisTop, axisLeft } from 'd3-axis'
 import { debounce } from 'debounce'
 import * as client from './client'
-import {Menu} from './dom/menu'
-import {dofetch3} from './common/dofetch'
+import { Menu } from './dom/menu'
+import { dofetch3 } from './common/dofetch'
 import * as common from '../shared/common'
 import * as coord from './coord'
 import vcf2dstk from './vcf.tkconvert'
@@ -50,10 +50,13 @@ import dsmaketk from './block.ds.maketk'
 
 // dummy
 
-/* JUMP __tk__
-        __gm__
-		__subpanel
-		__ruler
+/* 
+callbacks from constructor options
+- onloadalltk
+- onloadalltk_always
+- onCoordinateChange
+- onpanning
+- onsetheight
 
 **************** METHODS
 updateruler()
@@ -146,13 +149,13 @@ export class Block {
 		this.holder0 = arg.holder
 		this.errdiv = arg.holder.append('div')
 
-		this.blocktip = new client.Menu({ padding: '0px' })
+		this.blocktip = new Menu({ padding: '0px' })
 		/* used at:
 		old official ds handle, mouse over for "About" menu
 		mds handle, click to show list of contents
 		zoom buttons, mouse over for list of subpanels
 	*/
-		this.tip = new client.Menu({ padding: '0px' })
+		this.tip = new Menu({ padding: '0px' })
 
 		if (!this.genome) {
 			this.error('no genome')
@@ -530,6 +533,20 @@ export class Block {
 		}
 
 		this.gbase = this.svg.append('g').attr('transform', 'translate(0,0)')
+
+		// cloak that covers gbase with a rect to indicate loading and prevent user interaction
+		this.gCloak = this.svg.append('g').attr('transform', 'scale(0)')
+		this.gCloakRect = this.gCloak.append('rect').attr('fill', 'white')
+		this.gCloakWord = this.gCloak
+			.append('text')
+			.text('Loading ...')
+			.attr('fill', common.defaultcolor)
+			.attr('fill-opacity', 0)
+			.attr('font-weight', 'bold')
+			.attr('font-size', '18px')
+			.attr('text-anchor', 'middle')
+			.attr('dominant-baseline', 'middle')
+
 		this.pica = { g: this.svg.append('g') }
 
 		this.hlregion = {
@@ -1722,11 +1739,11 @@ reverseorient() {
 
 	async block_jump_gene(s) {
 		try {
-			const data = await dofetch3(
-				'genelookup',
-				{ method: 'POST', body: JSON.stringify({ genome: this.genome.name, input: s, deep: 1 }) }
-			)
-			if(data.error) throw data.error
+			const data = await dofetch3('genelookup', {
+				method: 'POST',
+				body: JSON.stringify({ genome: this.genome.name, input: s, deep: 1 })
+			})
+			if (data.error) throw data.error
 			if (!data.gmlst || data.gmlst.length == 0) {
 				// no gene match
 				if (this.genome.hasSNP) {
@@ -1761,14 +1778,16 @@ reverseorient() {
 					this.inputerr('this should not happen: gene error: ' + e)
 					return
 				}
-				this.rglst = [ {
-					chr: r.chr,
-					bstart: 0,
-					bstop: this.genome.chrlookup[r.chr.toUpperCase()].len,
-					start: r.start,
-					stop: r.stop,
-					reverse: this.showreverse
-				} ]
+				this.rglst = [
+					{
+						chr: r.chr,
+						bstart: 0,
+						bstop: this.genome.chrlookup[r.chr.toUpperCase()].len,
+						start: r.start,
+						stop: r.stop,
+						reverse: this.showreverse
+					}
+				]
 				this.startidx = this.stopidx = 0
 				this.block_coord_updated()
 				return
@@ -1783,19 +1802,21 @@ reverseorient() {
 					.text(r.name + ' ' + r.chr + ':' + r.start + '-' + r.stop)
 					.on('click', () => {
 						this.coord.inputtip.hide()
-						this.rglst = [ {
-							chr: r.chr,
-							bstart: 0,
-							bstop: this.genome.chrlookup[r.chr.toUpperCase()].len,
-							start: r.start,
-							stop: r.stop,
-							reverse: this.showreverse
-						} ]
+						this.rglst = [
+							{
+								chr: r.chr,
+								bstart: 0,
+								bstop: this.genome.chrlookup[r.chr.toUpperCase()].len,
+								start: r.start,
+								stop: r.stop,
+								reverse: this.showreverse
+							}
+						]
 						this.startidx = this.stopidx = 0
 						this.block_coord_updated()
 					})
 			}
-		} catch(e) {
+		} catch (e) {
 			this.inputerr(e.message || e)
 		}
 	}
@@ -2995,6 +3016,29 @@ seekrange(chr,start,stop) {
 			default:
 				this.error('tk_load: unknown tk type')
 		}
+	}
+
+	cloakOn() {
+		// will cloak the entire svg
+		// right now not called in block, but is called by external code on a block instance
+		const w = Number(this.svg.attr('width')),
+			h = Number(this.svg.attr('height'))
+		this.gCloak.attr('transform', 'scale(1)')
+		this.gCloakRect
+			.attr('width', w)
+			.attr('height', h)
+			.transition()
+			.duration(600)
+			.attr('fill-opacity', 0.5)
+		this.gCloakWord
+			.attr('x', w / 2)
+			.attr('y', h / 2)
+			.transition()
+			.duration(600)
+			.attr('fill-opacity', 1)
+	}
+	cloakOff() {
+		this.gCloak.attr('transform', 'scale(0)')
 	}
 
 	tkcloakon(tk) {
@@ -4925,12 +4969,12 @@ function makecoordinput(bb, butrow) {
 		if (!v) return
 		bb.coord.inputtipshow()
 		try {
-			const data = await dofetch3(
-				'genelookup',
-				{method:'POST',body: JSON.stringify({ genome: bb.genome.name, input: v })}
-			)
-			if(data.error) throw data.error
-			if (!data.hits || data.hits.length==0) return bb.coord.inputtip.hide()
+			const data = await dofetch3('genelookup', {
+				method: 'POST',
+				body: JSON.stringify({ genome: bb.genome.name, input: v })
+			})
+			if (data.error) throw data.error
+			if (!data.hits || data.hits.length == 0) return bb.coord.inputtip.hide()
 			for (const s of data.hits) {
 				bb.coord.inputtip.d
 					.append('div')
@@ -4941,8 +4985,8 @@ function makecoordinput(bb, butrow) {
 						bb.block_jump_gene(s)
 					})
 			}
-		} catch(e) {
-			bb.inputerr(e.message||e)
+		} catch (e) {
+			bb.inputerr(e.message || e)
 		}
 	}
 
