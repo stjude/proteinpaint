@@ -1,6 +1,16 @@
 import { select, event } from 'd3-selection'
 import { brushX } from 'd3-brush'
 
+/*
+********************** EXPORTED
+addBrushes()
+
+********************** INTERNAL
+applyBrush()
+addNewBrush()
+
+*/
+
 export function addBrushes(self, new_brush_location) {
 	// const ranges = self.num_obj.ranges
 	const brushes = self.num_obj.brushes

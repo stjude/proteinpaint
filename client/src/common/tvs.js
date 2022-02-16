@@ -2,6 +2,23 @@ import * as rx from './rx.core'
 import { select } from 'd3-selection'
 import { Menu } from '../dom/menu'
 
+/*
+********************** EXPORTED
+TVSInit()
+showTvsMenu()
+********************** INTERNAL
+setRenderers(self)
+	updateUI()
+	enterPill()
+	updatePill()
+	exitPill()
+	showMenu()
+	makeValueTable()
+	removeValueBtn()
+setInteractivity()
+addExcludeCheckbox()
+*/
+
 class TVS {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)

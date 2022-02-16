@@ -1,3 +1,18 @@
+/*
+********************** EXPORTED
+handler:
+	// internal functions as part of handler
+	term_name_gen()
+	get_pill_label()
+	getSelectRemovePos()
+	fillMenu()
+	setTvsDefaults()
+
+********************** INTERNAL
+validateCategoricalTvs()
+
+*/
+
 export const handler = {
 	term_name_gen,
 	get_pill_label,
