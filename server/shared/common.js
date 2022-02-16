@@ -227,16 +227,16 @@ mclass[mclasscnvloh] = { label: 'LOH', color: '#12EDFC', dt: dtcnv, desc: 'Loss 
 
 // for VCF
 export const mclasssnv = 'snv'
-mclass[mclasssnv] = { label: 'SNV', color: '#5781FF', dt: dtsnvindel, desc: 'Single nucleotide variation' }
+mclass[mclasssnv] = { label: 'SNV', color: '#92a2d4', dt: dtsnvindel, desc: 'Single nucleotide variation' }
 
 export const mclassmnv = 'mnv'
-mclass[mclassmnv] = { label: 'MNV', color: '#6378B8', dt: dtsnvindel, desc: 'Multiple nucleotide variation' }
+mclass[mclassmnv] = { label: 'MNV', color: '#92a2d4', dt: dtsnvindel, desc: 'Multiple nucleotide variation' }
 
 export const mclassinsertion = 'insertion'
-mclass[mclassinsertion] = { label: 'Sequence insertion', color: '#ED5C66', dt: dtsnvindel, desc: 'Sequence insertion' }
+mclass[mclassinsertion] = { label: 'Sequence insertion', color: '#bd8e91', dt: dtsnvindel, desc: 'Sequence insertion' }
 
 export const mclassdeletion = 'deletion'
-mclass[mclassdeletion] = { label: 'Sequence deletion', color: '#F0B11F', dt: dtsnvindel, desc: 'Sequence deletion' }
+mclass[mclassdeletion] = { label: 'Sequence deletion', color: '#b5a174', dt: dtsnvindel, desc: 'Sequence deletion' }
 // TODO complex indel
 
 export const vepinfo = function(s) {
@@ -886,7 +886,7 @@ export function vcfcopymclass(m, block) {
 		if (mclass[m.type]) {
 			m.class = m.type
 			m.dt = mclass[m.type].dt
-			m.mname = m.ref + '>' + m.alt
+			m.mname = m.id && m.id != '.' ? m.id : m.ref + '>' + m.alt
 			if (m.mname.length > 15) {
 				// avoid long indel
 				m.mname = m.type

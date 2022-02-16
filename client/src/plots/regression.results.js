@@ -148,12 +148,20 @@ export class RegressionResults {
 						q: {},
 						term: {
 							id: tid,
-							name: snp.mname || tid
+							name: tid
 						},
 						effectAllele: t.q.snp2effAle[tid]
 					}
 					if (t.q.snp2refGrp) {
 						tw.refGrp = t.q.snp2refGrp[tid]
+					}
+					if (snp.alt2csq) {
+						// try to update tw.term.name
+						if (snp.alt2csq[t.q.snp2effAle[tid]]) {
+							tw.term.name = snp.alt2csq[t.q.snp2effAle[tid]].mname
+						} else {
+							tw.term.name = snp.alt2csq[Object.keys(snp.alt2csq)[0]].mname
+						}
 					}
 					return tw
 				}
@@ -187,8 +195,10 @@ function setRenderers(self) {
 		self.dom.snplocusBlockDiv.selectAll('*').remove()
 		// result.lst[] has only one set of result, from analyzing one model
 		if (!result.lst[0] || !result.lst[0].data) throw 'result is not {lst:[ {data:{}} ]}'
-		// quick fix; backend should reassign result.err to a specific set
+
+		// quick fix; backend should reassign result.err to a specific set and delete this line
 		result.lst[0].data.err = result.err
+
 		self.displayResult_oneset(result.lst[0].data)
 	}
 
@@ -459,11 +469,11 @@ function setRenderers(self) {
 		let rowcount = 0
 		for (const tid in result.type3.terms) {
 			const termdata = result.type3.terms[tid]
-			const term = self.state.config.independent.find(t => t.id == tid)
+			const tw = self.getIndependentTerm(tid)
 			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 			// col 1: variable
 			const termNameTd = tr.append('td').style('padding', '8px')
-			fillTdName(termNameTd, term ? term.term.name : tid)
+			fillTdName(termNameTd, tw.term.name)
 			// rest of columns
 			for (const v of termdata) {
 				tr.append('td')
@@ -474,12 +484,12 @@ function setRenderers(self) {
 		// interactions
 		for (const row of result.type3.interactions) {
 			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
-			const term1 = self.state.config.independent.find(t => t.id == row.term1)
-			const term2 = self.state.config.independent.find(t => t.id == row.term2)
+			const t1 = self.getIndependentTerm(row.term1)
+			const t2 = self.getIndependentTerm(row.term2)
 			// col 1: variable
 			const td = tr.append('td').style('padding', '8px')
-			fillTdName(td.append('div'), term1 ? term1.term.name : row.term1)
-			fillTdName(td.append('div'), term2 ? term2.term.name : row.term2)
+			fillTdName(td.append('div'), t1.term.name)
+			fillTdName(td.append('div'), t2.term.name)
 			// rest of columns
 			for (const v of row.lst) {
 				tr.append('td')
@@ -754,7 +764,7 @@ function setRenderers(self) {
 					label: '-log10 p-value',
 					tooltipPrintValue: m => 'p-value=' + m.regressionPvalue
 				},
-				custom_variants: make_mds3_variants(input.term.term.snps, result),
+				custom_variants: make_mds3_variants(input.term, result),
 				click_snvindel: m => {
 					self.displayResult_oneset(m.regressionResult)
 				}
@@ -768,7 +778,7 @@ function setRenderers(self) {
 			// find the mds3 track
 			const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
 			// apply new sets of variants and results to track and render
-			tk.custom_variants = make_mds3_variants(input.term.term.snps, result)
+			tk.custom_variants = make_mds3_variants(input.term, result)
 			// if user changes position using termsetting ui,
 			// input.term.q{} will hold different chr/start/stop than block
 			// and block will need to update coord
@@ -793,44 +803,67 @@ function fillTdName(td, name) {
 	}
 }
 
-function make_mds3_variants(snps, result) {
-	/* assign result to snps
-	snps is from input.term.term.snps
+function make_mds3_variants(tw, result) {
+	/* return a list of variants good for tk display
+	tw:
+		term:
+			snps[ {} ]
+				snpid
+				alt2csq{}
+					k: allele
+					v: {class/dt/mname}
+		q{}
+			snp2effAle:{}
+
 	result:{lst[{data,id},{data,id},...]}
 	*/
 	const mlst = []
-	for (const snp of snps) {
-		const m = {}
-		Object.assign(m, snp)
-		const thisresult = result.lst.find(i => i.id == m.snpid)
-		if (thisresult) {
-			// reg result is found for this snp; can call displayResult_oneset
-			const d = thisresult.data
-			if (!d) throw '.data{} missing'
-			m.regressionResult = d // for displaying via click_snvindel()
-
-			// find p-value (last column of type3 table)
-			if (!d.type3 || !d.type3.terms) throw '.data{type3:{terms}} missing'
-			if (!d.type3.terms[m.snpid]) throw m.snpid + ' missing in type3.terms{}'
-			if (!Array.isArray(d.type3.terms[m.snpid])) throw `type3.terms[${m.snpid}] not array`
-			const str = d.type3.terms[m.snpid][d.type3.terms[m.snpid].length - 1]
-			// last value of the array should be p-value string (can be 'NA')
-			const v = Number(str)
-			if (Number.isNaN(v)) {
-				m.regressionPvalue = str // for displaying via tooltipPrintValue()
-				// setting -log10(p) to 0 allows the dot to show while being able to show pvalue=NA in tooltip
-				m.__value = 0
-			} else {
-				m.regressionPvalue = v
-				m.__value = -Math.log10(v)
-			}
+	for (const snp of tw.term.snps) {
+		const m = {
+			//snpid: snp.snpid,
+			chr: snp.chr,
+			pos: snp.pos
+		}
+		mlst.push(m)
+		// decide class/mname for this based on effect allele
+		const effAle = tw.q.snp2effAle[snp.snpid]
+		if (snp.alt2csq[effAle]) {
+			// eff ale is an alt allele, transfer its class to m
+			Object.assign(m, snp.alt2csq[effAle])
 		} else {
-			console.log('no result for ' + m.snpid)
+			// eff allele is not an alterative allele!
+			// just use the class of the first alt allele
+			Object.assign(m, snp.alt2csq[Object.keys(snp.alt2csq)[0]])
+		}
+
+		const thisresult = result.lst.find(i => i.id == snp.snpid)
+		if (!thisresult) {
+			console.log('no result for ' + snp.snpid)
 			// assign this so tk won't break
 			m.regressionPvalue = 'missing'
 			m.__value = 0
+			continue
 		}
-		mlst.push(m)
+		// reg result is found for this snp; can call displayResult_oneset
+		const d = thisresult.data
+		if (!d) throw '.data{} missing'
+		m.regressionResult = d // for displaying via click_snvindel()
+
+		// find p-value (last column of type3 table)
+		if (!d.type3 || !d.type3.terms) throw '.data{type3:{terms}} missing'
+		if (!d.type3.terms[snp.snpid]) throw snp.snpid + ' missing in type3.terms{}'
+		if (!Array.isArray(d.type3.terms[snp.snpid])) throw `type3.terms[${snp.snpid}] not array`
+		const str = d.type3.terms[snp.snpid][d.type3.terms[snp.snpid].length - 1]
+		// last value of the array should be p-value string (can be 'NA')
+		const v = Number(str)
+		if (Number.isNaN(v)) {
+			m.regressionPvalue = str // for displaying via tooltipPrintValue()
+			// setting -log10(p) to 0 allows the dot to show while being able to show pvalue=NA in tooltip
+			m.__value = 0
+		} else {
+			m.regressionPvalue = v
+			m.__value = -Math.log10(v)
+		}
 	}
 	return mlst
 }

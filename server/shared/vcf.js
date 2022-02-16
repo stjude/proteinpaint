@@ -1,7 +1,8 @@
-import { mclass, dtsnvindel, mclassdeletion, mclasssnv, mclassmnv, mclassinsertion, mclassnonstandard } from './common'
+import { mclass } from './common'
 import { dissect_INFO } from './vcf.info'
 import { parse_CSQ } from './vcf.csq'
 import { parse_ANN } from './vcf.ann'
+import { getVariantType } from './vcf.type'
 
 /*
 Only for parsing vcf files
@@ -252,6 +253,7 @@ export function vcfparseline(line, vcf) {
 			}
 		}
 		if (!m2.issymbolicallele && m2.alt != 'NON_REF') {
+			m2.type = getVariantType(m2.ref, m2.alt)
 			/*
 			// valid alt allele, apply Dr. J's cool method
 			const [p,ref,alt]=correctRefAlt(m2.pos, m2.ref, m2.alt)
@@ -259,27 +261,6 @@ export function vcfparseline(line, vcf) {
 			m2.ref=ref
 			m2.alt=alt
 			*/
-
-			// assign type
-			if (m2.ref.length == 1 && m2.alt.length == 1) {
-				// both alleles length of 1
-				if (m2.alt == '.') {
-					// alt is missing
-					m2.type = mclassdeletion
-				} else {
-					// snv
-					m2.type = mclasssnv
-				}
-			} else if (m2.ref.length == m2.alt.length) {
-				m2.type = mclassmnv
-			} else if (m2.ref.length < m2.alt.length) {
-				// FIXME only when empty length of one allele
-				m2.type = mclassinsertion
-			} else if (m2.ref.length > m2.alt.length) {
-				m2.type = mclassdeletion
-			} else {
-				m2.type = mclassnonstandard
-			}
 		}
 		mlst.push(m2)
 	}
