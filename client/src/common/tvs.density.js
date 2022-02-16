@@ -3,11 +3,14 @@ import { brushX } from 'd3-brush'
 
 /*
 ********************** EXPORTED
-addBrushes()
+addBrushes()// add brushed to densityplot from self.num_obj.brushes and 
+			// new brush at end or center of plot
+addNewBrush() // add new brush either at end (with existing ranges) or in center (no ranges)
 
 ********************** INTERNAL
-applyBrush()
-addNewBrush()
+applyBrush() // main function to define and init d3 brushes, 
+			 // it will handle events such as brush move, drag
+			 // and will update input elements attached to brush, e.g. brush.start_input
 
 */
 
