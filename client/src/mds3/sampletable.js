@@ -393,8 +393,10 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 			termdb.appInit({
 				holder: tip.d,
 				state: {
-					dslabel: arg.tk.dslabel,
-					genome: arg.block.genome.name,
+					vocab: {
+						dslabel: arg.tk.dslabel,
+						genome: arg.block.genome.name
+					},
 					treeFilter: {
 						tid2value: arg.tid2value,
 						ssm_id_lst: arg.mlst.map(i => i.ssm_id).join(',')
