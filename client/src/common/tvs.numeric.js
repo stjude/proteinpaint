@@ -16,12 +16,13 @@ handler:
 	setTvsDefaults()
 
 ********************** INTERNAL
-addRangeTable()
-enterRange()
-makeRangeButtons()
-mergeOverlapRanges()
-showCheckList_numeric()
-validateNumericTvs()
+addRangeTableNoDensity() // for terms without desnity table, show brushes but without density_plot on blank svg
+addRangeTable() // add table for existing ranges or start with empty_range with brush in center 
+enterRange() // add row for each range, for existing readonly and for new or edit, show inputs
+makeRangeButtons() // add buttons for EDIT / APPLY / RESET / DELETE 
+mergeOverlapRanges() // when APPLY is pressed, check if ranges are overlapping, if so, merge them
+showCheckList_numeric() // so checklist of uncomputable values
+validateNumericTvs() // validate tvs before sending it to callback
 
 */
 

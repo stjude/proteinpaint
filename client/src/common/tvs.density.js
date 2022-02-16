@@ -1,6 +1,19 @@
 import { select, event } from 'd3-selection'
 import { brushX } from 'd3-brush'
 
+/*
+********************** EXPORTED
+addBrushes()// add brushed to densityplot from self.num_obj.brushes and 
+            // new brush at end or center of plot
+addNewBrush() // add new brush either at end (with existing ranges) or in center (no ranges)
+
+********************** INTERNAL
+applyBrush() // main function to define and init d3 brushes, 
+             // it will handle events such as brush move, drag
+             // and will update input elements attached to brush, e.g. brush.start_input
+
+*/
+
 export function addBrushes(self, new_brush_location) {
 	// const ranges = self.num_obj.ranges
 	const brushes = self.num_obj.brushes
