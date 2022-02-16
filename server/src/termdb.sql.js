@@ -333,7 +333,8 @@ RETURNS
 */
 export function get_term_cte(q, values, index, filter, termWrapper = null) {
 	const termid = termWrapper ? termWrapper.id : q['term' + index + '_id']
-	const term_is_genotype = termWrapper ? termWrapper.term.is_genotype : q['term' + index + '_is_genotype']
+	const term_is_genotype =
+		termWrapper && termWrapper.term ? termWrapper.term.is_genotype : q['term' + index + '_is_genotype']
 	// legacy code support: index=1 is assumed to be barchart term
 	// when there is no termWrapper argument
 	if (!termWrapper && index == 1 && !term_is_genotype) {
@@ -351,8 +352,8 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 	}
 
 	// otherwise, must be a valid term
-	const term = termWrapper ? termWrapper.term : q.ds.cohort.termdb.q.termjsonByOneid(termid)
-	if (!term) throw 'no term found by id'
+	const term = termWrapper && termWrapper.term ? termWrapper.term : q.ds.cohort.termdb.q.termjsonByOneid(termid)
+	if (!term) throw `no term found by id='${termid}'`
 	let termq = (termWrapper && termWrapper.q) || q['term' + index + '_q'] || {}
 	if (typeof termq == 'string') {
 		termq = JSON.parse(decodeURIComponent(termq))

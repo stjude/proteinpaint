@@ -476,6 +476,24 @@ class TermdbVocab {
 		const args = ['getvariantfilter=1', 'genome=' + this.state.vocab.genome, 'dslabel=' + this.state.vocab.dslabel]
 		return await dofetch3('/termdb?' + args.join('&'))
 	}
+
+	async getMatrixData(opts) {
+		const init = {
+			body: {
+				for: 'matrix',
+				genome: this.vocab.genome,
+				dslabel: this.vocab.dslabel,
+				termgroups: opts.termgroups
+			}
+		}
+		const filterData = getNormalRoot(opts.filter)
+		if (filterData.lst.length) {
+			init.body.filter = JSON.stringify(filterData)
+		}
+		const data = await dofetch3('termdb', init, this.opts.fetchOpts)
+		if (data.error) throw data.error
+		return data
+	}
 }
 
 function q_to_param(q) {
