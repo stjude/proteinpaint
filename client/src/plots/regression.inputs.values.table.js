@@ -103,13 +103,16 @@ function setRenderers(self) {
 	}
 
 	function renderTermStatus(termStatus) {
-		if (!termStatus || (termStatus.topInfoStatus == undefined && termStatus.bottomSummaryStatus == undefined)) return
+		// hide holder first
+		self.dom.topInfoStatus_holder.style('display', 'none')
+		self.dom.bottomSummaryStatus_holder.style('display', 'none')
+		if (!termStatus || (termStatus.topInfoStatus.length == 0 && termStatus.bottomSummaryStatus == undefined)) return
 		else {
-			if (termStatus.topInfoStatus) {
-				self.dom.topInfoStatus_holder.style('display', 'inline-block').html(termStatus.topInfoStatus)
+			if (termStatus.topInfoStatus.length) {
+				self.dom.topInfoStatus_holder.style('display', 'block').html(termStatus.topInfoStatus.join('<br>'))
 			}
 			if (termStatus.bottomSummaryStatus) {
-				self.dom.bottomSummaryStatus_holder.html(termStatus.bottomSummaryStatus)
+				self.dom.bottomSummaryStatus_holder.style('display', 'block').html(termStatus.bottomSummaryStatus)
 			}
 		}
 	}

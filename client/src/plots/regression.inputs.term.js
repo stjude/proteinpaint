@@ -192,36 +192,39 @@ export class InputTerm {
 		if (data.error) throw data.error
 		mayRunSnplstTask(tw, data)
 		this.termStatus = {
-			topInfoStatus: undefined,
+			topInfoStatus: [],
 			bottomSummaryStatus: undefined,
 			sampleCounts: undefined,
 			excludeCounts: undefined,
 			allowToSelectRefGrp: undefined
 		}
-		// update bottomSummaryStatus for termtype snplst and snplocus
-		// other term types will be updated if data.lst is present
+
+		// update status based on special attr from snplst and snplocus terms
 		if (tw.q.numOfSampleWithAnyValidGT) {
 			const invalid_snps_count = tw.term.snps.reduce((i, j) => i + (j.invalid ? 1 : 0), 0)
-			this.termStatus.topInfoStatus =
+			this.termStatus.topInfoStatus.push(
 				`${tw.q.numOfSampleWithAnyValidGT} samples with valid genotypes.` +
-				(invalid_snps_count > 0 ? ` ${invalid_snps_count} invalid SNP${invalid_snps_count > 1 ? 's' : ''}.` : '') +
-				'<br>Genetic mode: ' +
-				(tw.q.geneticModel == 0
-					? 'Additive'
-					: tw.q.geneticModel == 1
-					? 'Dominant'
-					: tw.q.geneticModel == 2
-					? 'Recessive'
-					: 'By genotype') +
-				(tw.term.reachedVariantLimit
-					? '<br>&#9888; Analysis is restricted to first ' +
-					  tw.term.snps.length +
-					  ' variants of this region.' +
-					  ' Try zooming in.'
-					: '')
+					(invalid_snps_count > 0 ? ` ${invalid_snps_count} invalid SNP${invalid_snps_count > 1 ? 's' : ''}.` : '')
+			)
+		}
+		if ('geneticMode' in tw.q) {
+			this.termStatus.topInfoStatus.push(
+				'Genetic mode: ' +
+					(tw.q.geneticModel == 0
+						? 'Additive'
+						: tw.q.geneticModel == 1
+						? 'Dominant'
+						: tw.q.geneticModel == 2
+						? 'Recessive'
+						: 'By genotype')
+			)
+		}
+		if (tw.term.reachedVariantLimit) {
+			this.termStatus.topInfoStatus.push(
+				'&#9888; Analysis is restricted to first ' + tw.term.snps.length + ' variants of this region. Try zooming in.'
+			)
 		}
 
-		// condition check is quick fix!!!
 		if (data.lst) {
 			this.orderedLabels = data.orderedLabels
 
@@ -245,26 +248,27 @@ export class InputTerm {
 				totalCount.excluded = totalCount.total - totalCount.included
 			}
 
-			// update topInfoStatus
 			if (tw.term.type == 'float' || tw.term.type == 'integer') {
-				this.termStatus.topInfoStatus =
+				this.termStatus.topInfoStatus.push(
 					`Use as ${tw.q.mode || 'continuous'} ` +
-					(tw.q.mode !== 'spline' ? 'variable.' : '') +
-					(tw.q.mode == 'continuous' && tw.q.scale && tw.q.scale != 1 ? ` Scale: Per ${tw.q.scale}` : '') +
-					(tw.q.mode == 'spline'
-						? ` with ${tw.q.knots.length} knots: ${tw.q.knots.map(v => v.value).join(', ')}`
-						: '') +
-					(this.termStatus.allowToSelectRefGrp
-						? ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
-						: '')
+						(tw.q.mode !== 'spline' ? 'variable.' : '') +
+						(tw.q.mode == 'continuous' && tw.q.scale && tw.q.scale != 1 ? ` Scale: Per ${tw.q.scale}` : '') +
+						(tw.q.mode == 'spline'
+							? ` with ${tw.q.knots.length} knots: ${tw.q.knots.map(v => v.value).join(', ')}`
+							: '') +
+						(this.termStatus.allowToSelectRefGrp
+							? ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
+							: '')
+				)
 			} else if (tw.term.type == 'categorical' || tw.term.type == 'condition') {
 				const gs = tw.q.groupsetting || {}
 				// self.values is already set by parent.setActiveValues() above
-				this.termStatus.topInfoStatus =
+				this.termStatus.topInfoStatus.push(
 					'Use as ' +
-					sampleCounts.length +
-					(gs.inuse ? ' groups.' : ' categories.') +
-					` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
+						sampleCounts.length +
+						(gs.inuse ? ' groups.' : ' categories.') +
+						` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
+				)
 			}
 			// update bottomSummaryStatus
 			this.termStatus.bottomSummaryStatus =
