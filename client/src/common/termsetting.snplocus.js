@@ -35,7 +35,13 @@ export function getHandler(self) {
 
 		getPillStatus() {
 			if (!self.term || !self.q) return
-			return { text: `${self.q.chr}:${self.q.start}-${self.q.stop} (n=${self.term.snps.length})` }
+			let text = `${self.q.chr}:${self.q.start}-${self.q.stop}, ${self.term.snps.length} variant${
+				self.term.snps.length > 1 ? 's' : ''
+			}`
+			if (self.term.reachedVariantLimit) {
+				text += ' &#9888;'
+			}
+			return { text }
 		},
 
 		validateQ(data) {
@@ -118,8 +124,10 @@ do not apply sample filtering
 async function validateInput(self) {
 	const data = await self.vocabApi.validateSnps(self.q)
 	if (data.error) throw data.error
+	// copy result to instance
 	self.q.cacheid = data.cacheid
 	self.term.snps = data.snps
+	self.term.reachedVariantLimit = data.reachedVariantLimit
 }
 
 function validateQ(self, data) {
