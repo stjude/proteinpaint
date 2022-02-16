@@ -6,7 +6,25 @@ import { keyupEnter } from '../client'
 import { make_one_checkbox } from '../dom/checkbox'
 import { getPillNameDefault } from './termsetting'
 
-// self is the termsetting instance
+/*
+********************** EXPORTED
+getHandler(self)
+	- self: a termsetting instance
+	getPillName() // Print term name in the pill
+	getPillStatus() // Returns righthalf pill text as 'binary'
+	showEditMenu(div) // binary edit menu
+		setqDefaults(self)
+		setDensityPlot(self)
+		renderBoundaryInclusionInput(self) // 'start < x <= end' OR 'start <= x < end'
+		renderCuttoffInput(self) // render edit UI for cutoff values and bin labels
+			handleChange() // call when cutoff value is changed
+			updateUI(cutoff) // update density plot and inputs based on new value 
+			handleCheckbox() // checkbox for percentile
+		renderBoundaryInputDivs(self, self.q.lst) // bin labels
+********************** INTERNAL
+	processCustomBinInputs()
+*/
+
 export function getHandler(self) {
 	return {
 		getPillName(d) {

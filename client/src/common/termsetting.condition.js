@@ -4,9 +4,18 @@ import { getPillNameDefault } from './termsetting'
 export { fillTW } from './termsetting.categorical'
 
 /*
-Arguments
-self: a termsetting instance
+********************** EXPORTED
+getHandler(self)
+	- self: a termsetting instance
+	showEditMenu(div) // categorical edit menu
+		showGrpOpts // create first menu with basic options e.g. groupset, predefined groupset
+	getPillName() // Print term name in the pill
+	getPillStatus() // Returns {text, bgcolor} which determines whether to make right half of the pill visible and show some text. Optional bgcolor can be used to highlight an error.
+                    // Return null to hide the right half.
+********************** INTERNAL
+
 */
+
 export function getHandler(self) {
 	setGroupsettingMethods(self)
 	setCategoryConditionMethods(self)

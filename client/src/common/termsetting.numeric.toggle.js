@@ -2,6 +2,19 @@ import { init_tabs } from '../dom/toggleButtons'
 import { getPillNameDefault } from './termsetting'
 import { copyMerge } from '../common/rx.core'
 
+/*
+********************** EXPORTED
+getHandler(self)
+	- self: a termsetting instance
+	getPillName() // Print term name in the pill
+	getPillStatus() // Returns 'cubic spline' or bin-size or custom bin count
+	showEditMenu(div) // toogle tabs with continuous edit menu rendered as default 
+fillTW()
+********************** INTERNAL
+	set_hiddenvalues()
+	valid_binscheme()
+*/
+
 // self is the termsetting instance
 export async function getHandler(self) {
 	async function callback(div) {

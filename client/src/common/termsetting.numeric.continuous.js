@@ -1,7 +1,18 @@
 import { event as d3event } from 'd3-selection'
 import { getPillNameDefault } from './termsetting'
 
-// self is the termsetting instance
+/*
+********************** EXPORTED
+getHandler(self)
+	- self: a termsetting instance
+	getPillName()
+	getPillStatus()
+
+	showEditMenu(div): continuous edit menu
+	- sequence of function calls:
+		setqDefaults() // set self.q from self.numqByTermIdModeType
+*/
+
 export function getHandler(self) {
 	return {
 		getPillName(d) {
