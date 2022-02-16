@@ -33,7 +33,6 @@ function testByTermId(id, runTests) {
 					[id]: {
 						term: { id: id },
 						settings: {
-							currViews: ['barchart'],
 							controls: {
 								isOpen: true
 							}
@@ -94,7 +93,6 @@ tape('overlay input', function(test) {
 							q: { bar_by_grade: true, value_by_max_grade: true }
 						},
 						settings: {
-							currViews: ['barchart'],
 							controls: {
 								isOpen: true
 							}
@@ -194,8 +192,7 @@ tape('orientation input', function(test) {
 			type: 'plot_edit',
 			id: plotControls.id,
 			config: {
-				term2: { term: termjson['agedx'], q: termjson['agedx'].bins.default },
-				settings: { currViews: ['table'] }
+				term2: { term: termjson['agedx'], q: termjson['agedx'].bins.default }
 			}
 		})
 	}
@@ -238,8 +235,7 @@ tape('scale input', function(test) {
 			type: 'plot_edit',
 			id: plotControls.id,
 			config: {
-				term2: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.default },
-				settings: { currViews: ['table'] }
+				term2: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.default }
 			}
 		})
 	}
@@ -290,8 +286,7 @@ tape('divide by input', function(test) {
 			type: 'plot_edit',
 			id: plotControls.id,
 			config: {
-				term2: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.default },
-				settings: { currViews: ['table'] }
+				term2: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.default }
 			}
 		})
 	}
@@ -307,9 +302,7 @@ tape('divide by input', function(test) {
 		plotControls.Inner.app.dispatch({
 			type: 'plot_edit',
 			id: plotControls.id,
-			config: {
-				settings: { currViews: ['boxplot'] }
-			}
+			config: {}
 		})
 	}
 
@@ -325,7 +318,7 @@ tape('divide by input', function(test) {
 			type: 'plot_edit',
 			id: plotControls.id,
 			config: {
-				settings: { currViews: ['scatter'] }
+				settings: {}
 			}
 		})
 	}
@@ -351,7 +344,6 @@ tape('Term1 bins', function(test) {
 					agedx: {
 						term: { id: 'agedx' },
 						settings: {
-							currViews: [],
 							controls: {
 								isOpen: true
 							}
@@ -387,7 +379,6 @@ tape('Term1 bins', function(test) {
 					diaggrp: {
 						term: { id: 'diaggrp' },
 						settings: {
-							currViews: [],
 							controls: {
 								isOpen: true
 							}
@@ -431,7 +422,6 @@ tape('Term1 condition, categorical', function(test) {
 					Arrhythmias: {
 						term: { id: 'Arrhythmias' },
 						settings: {
-							currViews: ['barchart'],
 							controls: {
 								isOpen: true
 							}
@@ -463,7 +453,6 @@ tape('Term1 condition, categorical', function(test) {
 					sex: {
 						term: { id: 'sex' },
 						settings: {
-							currViews: ['barchart'],
 							controls: {
 								isOpen: true
 							}

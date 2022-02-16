@@ -39,7 +39,6 @@ tape('default behavior', function(test) {
 				visiblePlotIds: ['diaggrp'],
 				plots: {
 					diaggrp: {
-						settings: { currViews: [] },
 						term: { id: 'diaggrp' }
 					}
 				}
@@ -80,9 +79,7 @@ tape('default behavior', function(test) {
 					term: termjson['agedx'],
 					q: termjson['agedx'].bins.default
 				},
-				settings: {
-					currViews: ['table']
-				}
+				settings: {}
 			}
 		})
 	}
@@ -120,7 +117,7 @@ tape('default behavior', function(test) {
 	function testTerm2Removal(plot) {
 		test.equal(tableDiv.style('display'), 'none', 'should be hidden when term2 is removed')
 		test.deepEqual(
-			plot.Inner.config.settings.currViews,
+			null, //plot.Inner.config.settings,
 			['barchart'],
 			'should switch to barchart view when term2 is removed'
 		)
@@ -139,7 +136,6 @@ tape('column and row labels', function(test) {
 				visiblePlotIds: ['agedx'],
 				plots: {
 					agedx: {
-						settings: { currViews: ['table'] },
 						term: { id: 'agedx' },
 						term2: { id: 'sex' }
 					}

@@ -37,7 +37,7 @@ tape('numeric term + overlay', function(test) {
 				visiblePlotIds: ['aaclassic_5'],
 				plots: {
 					aaclassic_5: {
-						settings: { currViews: ['scatter'] },
+						settings: {},
 						term: { id: 'aaclassic_5' },
 						term2: { id: 'agedx' }
 					}
@@ -77,7 +77,7 @@ tape('integer overlay', function(test) {
 				visiblePlotIds: ['aaclassic_5'],
 				plots: {
 					aaclassic_5: {
-						settings: { currViews: ['scatter'] },
+						settings: {},
 						term: { id: 'aaclassic_5' },
 						term2: { id: 'agedx' }
 					}

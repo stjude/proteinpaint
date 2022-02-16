@@ -47,7 +47,6 @@ class TdbScatter {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			isVisible: config.settings.currViews.includes('scatter'),
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: {
@@ -65,10 +64,6 @@ class TdbScatter {
 	async main() {
 		try {
 			this.config = this.state.config
-			if (!this.state.isVisible) {
-				this.dom.div.style('display', 'none')
-				return
-			}
 			if (this.dom.header) this.dom.header.html(this.config.term.term.name + ' vs ' + this.config.term2.term.name)
 			copyMerge(this.settings, this.state.config.settings.scatter)
 			if (!this.pj) this.pj = getPj(this)

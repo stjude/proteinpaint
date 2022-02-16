@@ -31,7 +31,6 @@ tape('unsupported overlay types', function(test) {
 				visiblePlotIds: ['diaggrp'],
 				plots: {
 					diaggrp: {
-						settings: { currViews: ['boxplot'] },
 						term: { id: 'diaggrp', term: termjson['diaggrp'] }
 					}
 				}
@@ -64,7 +63,6 @@ tape('unsupported overlay types', function(test) {
 			type: 'plot_edit',
 			id: box.id,
 			config: {
-				settings: { currViews: ['boxplot'] },
 				term2: {
 					term: termjson['sex'],
 					q: {}
@@ -87,7 +85,6 @@ tape('supported numeric overlay', function(test) {
 				visiblePlotIds: ['diaggrp'],
 				plots: {
 					diaggrp: {
-						settings: { currViews: ['boxplot'] },
 						term: { id: 'diaggrp', term: termjson['diaggrp'] },
 						term2: { id: 'agedx', term: termjson['agedx'] }
 					}

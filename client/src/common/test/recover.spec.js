@@ -157,10 +157,7 @@ tape('stored state recovery', function(test) {
 					sex: {
 						id: 'sex',
 						term: { id: 'sex' },
-						term2: { id: 'diaggrp' },
-						settings: {
-							currViews: ['table']
-						}
+						term2: { id: 'diaggrp' }
 					}
 				}
 			}

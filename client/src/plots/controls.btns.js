@@ -100,14 +100,6 @@ function downloadBtnInit(opts) {
 	const api = {
 		main(isOpen, plot) {
 			self.dom.btn.style('display', isOpen ? 'inline-block' : 'block')
-
-			//show tip info for download button based on visible plot/table
-			const currviews = plot.settings.currViews
-			if (self.plotTypes.some(view => currviews.includes(view))) {
-				self.dom.btn.attr('title', 'Download plot image')
-			} else if (currviews.includes('table')) {
-				self.dom.btn.attr('title', 'Download table data')
-			}
 		}
 	}
 

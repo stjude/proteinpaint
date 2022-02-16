@@ -101,7 +101,6 @@ class TdbCumInc {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			isVisible: config.settings.currViews.includes('cuminc'),
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
 			activeCohort: appState.activeCohort,
@@ -117,10 +116,6 @@ class TdbCumInc {
 
 	async main() {
 		try {
-			if (!this.state.isVisible) {
-				this.dom.holder.style('display', 'none')
-				return
-			}
 			if (this.dom.header)
 				this.dom.header.html(
 					this.state.config.term.term.name +
@@ -645,7 +640,6 @@ export async function getPlotConfig(opts, app) {
 	const config = {
 		id: opts.term.term.id,
 		settings: {
-			currViews: ['cuminc'],
 			controls: {
 				isOpen: false, // control panel is hidden by default
 				term2: null, // the previous overlay value may be displayed as a convenience for toggling
@@ -675,13 +669,7 @@ export async function getPlotConfig(opts, app) {
 				},
 				axisTitleFontSize: 16,
 				hidden: []
-			},
-
-			/* LEGACY SUPPORT 
-				 DELETE once all chart code is removed from the termdb app
-			*/
-			barchart: {},
-			survival: {}
+			}
 		}
 	}
 

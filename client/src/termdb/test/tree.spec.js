@@ -240,18 +240,7 @@ tape('rehydrated from saved state', function(test) {
 		debugName: 'tdb',
 		state: {
 			tree: {
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis'],
-				visiblePlotIds: ['diaggrp'],
-				plots: {
-					diaggrp: {
-						id: 'diaggrp',
-						term: { id: 'diaggrp' },
-						settings: {
-							currViews: ['barchart'],
-							bar: { orientation: 'vertical' }
-						}
-					}
-				}
+				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis']
 			}
 		},
 		tree: {

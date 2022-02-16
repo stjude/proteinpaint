@@ -4,7 +4,6 @@ import { dofetch3 } from '../client'
 const defaultState = {
 	dslabel: 'SJLife',
 	genome: 'hg38',
-	currViews: ['test'],
 	terms: [],
 	controls: {
 		search: '',

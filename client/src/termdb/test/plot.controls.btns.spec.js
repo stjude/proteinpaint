@@ -28,7 +28,6 @@ function testByTermId(id, runTests) {
 					[id]: {
 						term: { id: id },
 						settings: {
-							currViews: ['barchart'],
 							controls: {
 								isOpen: true
 							},
@@ -57,7 +56,6 @@ tape('\n', function(test) {
 	test.end()
 })
 
-
 // TODO: test as part of the termInfo component
 tape.skip('info btn', function(test) {
 	test.timeoutAfter(3000)
@@ -83,7 +81,6 @@ tape.skip('info btn', function(test) {
 							//q: { bar_by_grade: true, value_by_max_grade: true }
 						},
 						settings: {
-							currViews: ['barchart'],
 							barchart: {
 								overlay: 'tree'
 							}

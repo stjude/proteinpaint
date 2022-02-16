@@ -52,7 +52,6 @@ class TdbTable {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			isVisible: config.settings.currViews.includes('table'),
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: {
@@ -69,10 +68,6 @@ class TdbTable {
 	async main() {
 		try {
 			this.config = this.state.config
-			if (!this.state.isVisible) {
-				this.dom.div.style('display', 'none')
-				return
-			}
 			if (!this.config.term2) {
 				this.dom.div.style('display', 'none')
 				throw 'term2 is required for table view'

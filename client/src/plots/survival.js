@@ -733,7 +733,6 @@ export async function getPlotConfig(opts, app) {
 	const config = {
 		id: opts.term.term.id,
 		settings: {
-			currViews: ['survival'],
 			controls: {
 				isOpen: false, // control panel is hidden by default
 				term2: null, // the previous overlay value may be displayed as a convenience for toggling
@@ -762,12 +761,7 @@ export async function getPlotConfig(opts, app) {
 				},
 				axisTitleFontSize: 16,
 				hidden: []
-			},
-			/* LEGACY SUPPORT 
-				 DELETE once all chart code is removed from the termdb app
-			*/
-			barchart: {},
-			cuminc: {}
+			}
 		}
 	}
 

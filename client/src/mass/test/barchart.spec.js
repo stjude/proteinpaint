@@ -41,9 +41,6 @@ tape('single barchart, categorical bars', function(test) {
 					chartType: 'barchart',
 					term: {
 						id: 'diaggrp'
-					},
-					settings: {
-						currViews: ['barchart']
 					}
 				}
 			]
@@ -92,7 +89,6 @@ tape('single chart, with overlay', function(test) {
 					term: { id: 'diaggrp' },
 					term2: { id: 'agedx' },
 					settings: {
-						currViews: ['barchart'],
 						controls: {
 							term2: { id: 'agedx', term: termjson['agedx'] }
 						},
@@ -205,7 +201,6 @@ tape('multiple charts', function(test) {
 					term: { id: 'diaggrp' },
 					term0: { id: 'agedx' },
 					settings: {
-						currViews: ['barchart'],
 						barchart: {
 							divideBy: 'tree'
 						},
@@ -248,8 +243,7 @@ tape('series visibility - q.hiddenValues', function(test) {
 						q: {
 							hiddenValues
 						}
-					},
-					settings: { currViews: ['barchart'] }
+					}
 				}
 			]
 		},
@@ -285,8 +279,7 @@ tape('series visibility - numeric', function(test) {
 			plots: [
 				{
 					chartType: 'barchart',
-					term: { id: 'aaclassic_5' },
-					settings: { currViews: ['barchart'] }
+					term: { id: 'aaclassic_5' }
 				}
 			]
 		},
@@ -384,8 +377,7 @@ tape('series visibility - condition', function(test) {
 						q: {
 							hiddenValues: conditionHiddenValues
 						}
-					},
-					settings: { currViews: ['barchart'] }
+					}
 				}
 			]
 		},
@@ -439,9 +431,6 @@ tape('single barchart, filtered', function(test) {
 					chartType: 'barchart',
 					term: {
 						id: 'sex'
-					},
-					settings: {
-						currViews: ['barchart']
 					}
 				}
 			]
@@ -492,8 +481,7 @@ tape('click non-group bar to add filter', function(test) {
 								'Unknown status': 1
 							}
 						}
-					},
-					settings: { currViews: ['barchart'] }
+					}
 				}
 			]
 		},
@@ -642,8 +630,7 @@ tape('click custom categorical group bar to add filter', function(test) {
 								customset
 							}
 						}
-					},
-					settings: { currViews: ['barchart'] }
+					}
 				}
 			]
 		},
@@ -780,8 +767,7 @@ tape.skip('click custom subcondition group bar to add filter', function(test) {
 							customset
 						}
 					}
-				},
-				settings: { currViews: ['barchart'] }
+				}
 			}]
 		},
 		barchart: {
@@ -860,8 +846,7 @@ tape.skip('single chart, genotype overlay', function(test) {
 				{
 					chartType: 'barchart',
 					term: { id: 'diaggrp', term: termjson['diaggrp'] },
-					term2: 'genotype',
-					settings: { currViews: ['barchart'] }
+					term2: 'genotype'
 				}
 			],
 			ssid: {
@@ -903,8 +888,7 @@ tape('numeric exclude range', function(test) {
 				{
 					chartType: 'barchart',
 					term: { id: 'aaclassic_5', term: termjson['aaclassic_5'] },
-					term2: { id: 'sex' },
-					settings: { currViews: ['barchart'] }
+					term2: { id: 'sex' }
 				}
 			],
 			termfilter: {
@@ -972,8 +956,7 @@ tape('numeric filter - only special value', function(test) {
 			plots: [
 				{
 					chartType: 'barchart',
-					term: { id: 'aaclassic_5' },
-					settings: { currViews: ['barchart'] }
+					term: { id: 'aaclassic_5' }
 				}
 			],
 			termfilter: {
@@ -1068,9 +1051,6 @@ tape.skip('custom vocab: categorical terms with numeric filter', test => {
 					chartType: 'barchart',
 					term: {
 						term: vocabData.terms.find(t => t.id == 'c')
-					},
-					settings: {
-						currViews: ['barchart']
 					}
 				}
 			]
@@ -1136,9 +1116,6 @@ tape.skip('custom vocab: numeric terms with categorical filter', test => {
 					term: {
 						term: dterm,
 						q: dterm.bins.default
-					},
-					settings: {
-						currViews: ['barchart']
 					}
 				}
 			]
@@ -1256,9 +1233,6 @@ tape('no visible series data, no overlay', function(test) {
 					chartType: 'barchart',
 					term: {
 						id: 'cisplateq_5'
-					},
-					settings: {
-						currViews: ['barchart']
 					}
 				}
 			]
@@ -1351,9 +1325,6 @@ tape('all hidden + with overlay, legend click', function(test) {
 					},
 					term2: {
 						id: 'sex'
-					},
-					settings: {
-						currViews: ['barchart']
 					}
 				}
 			]

@@ -119,10 +119,6 @@ class TdbBarchart {
 			config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
 
 		return {
-			isVisible:
-				!displayAsSurvival &&
-				config.settings.currViews.includes('barchart') &&
-				(config.chartType || appState.tree.visiblePlotIds.includes(this.id)),
 			genome: appState.vocab.genome,
 			dslabel: appState.vocab.dslabel,
 			nav: appState.nav,
@@ -148,7 +144,6 @@ class TdbBarchart {
 		try {
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 			this.config = this.state.config
-			if (!this.setVisibility()) return
 			if (this.dom.header)
 				this.dom.header.html(
 					this.config.term.term.name + ` <span style="opacity:.6;font-size:.7em;margin-left:10px;">BARCHART</span>`
@@ -172,14 +167,6 @@ class TdbBarchart {
 		} catch (e) {
 			throw e
 		}
-	}
-
-	setVisibility() {
-		const isVisible = this.state.isVisible
-		const display = isVisible ? 'block' : 'none'
-		this.dom.barDiv.style('display', display)
-		this.dom.legendDiv.style('display', display)
-		return isVisible
 	}
 
 	// creates an opts object for the vocabApi.getNestedChartsData()
@@ -656,7 +643,6 @@ export async function getPlotConfig(opts, app) {
 	const config = {
 		id: opts.term.term.id,
 		settings: {
-			currViews: ['barchart'],
 			controls: {
 				isOpen: false, // control panel is hidden by default
 				term2: null, // the previous overlay value may be displayed as a convenience for toggling
@@ -674,13 +660,7 @@ export async function getPlotConfig(opts, app) {
 				unit: 'abs',
 				overlay: 'none',
 				divideBy: 'none'
-			},
-
-			/* LEGACY SUPPORT 
-				 DELETE once all chart code is removed from the termdb app
-			*/
-			cuminc: {},
-			survival: {}
+			}
 		}
 	}
 

@@ -132,45 +132,6 @@ makeURL([
 	]
 },
 
-{name:'termdb',
-	links:[
-		['sjlife tree','?noheader=1&termdb='+JSON.stringify( {dslabel:'SJLife',genome:'hg38',header_mode:'with_cohortHtmlSelect'})],
-		['pnet','?noheader=1&termdb='+JSON.stringify({
-			dslabel: 'PNET',
-			genome: 'hg19',
-			header_mode: 'with_tabs',
-			tree: {
-				expandedTermIds: [
-					'root',
-					'Age',
-					'Gender'
-				],
-				visiblePlotIds: ['Age', 'Gender'],
-				plots: {
-					Age: {
-						term: {
-							id: 'Age'
-						},
-						term2: {
-							id: 'Event-free survival'
-						},
-						settings: {
-							currViews: ['barchart']
-						}
-					},
-					Gender: {
-						term: {
-							id: 'Gender'
-						},
-						settings: {
-							//currViews: ['survival']
-						}
-					}
-				}
-			}
-		})],
-	]
-},
 {name:'scatterplot',
 	links:[
 		['sjcloud', '?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json']
@@ -261,13 +222,21 @@ makeURL([
 					},
 					term2: {
 						id: 'efs'
-					},
-					settings: {
-						currViews: ['survival']
 					}
 				}
 			],
 		})],
+
+		['matrix','?noheader=1&mass='+JSON.stringify({
+			dslabel:'TermdbTest',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'matrix',
+				}
+			],
+		})],
+
 		['filter','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'SJLife',
 			genome:'hg38',

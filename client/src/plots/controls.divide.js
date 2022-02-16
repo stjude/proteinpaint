@@ -111,10 +111,6 @@ function setRenderers(self) {
 	}
 	self.updateUI = function() {
 		const plot = this.state.config
-		if (plot.settings.currViews.includes('table') || plot.settings.currViews.includes('boxplot')) {
-			self.dom.tr.style('display', 'none')
-			return
-		}
 		self.dom.tr.style('display', '')
 		// only show pill for (2), not at the other cases
 		if (!plot.term0) {

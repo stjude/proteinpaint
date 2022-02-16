@@ -18,10 +18,6 @@ class TdbStatTable {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			isVisible:
-				config.settings.currViews.includes('barchart') &&
-				(config.term.term.type == 'float' || config.term.term.type == 'integer') &&
-				!config.term.term.noStatTable,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: {

@@ -57,7 +57,6 @@ class TdbBoxplot {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			isVisible: config.settings.currViews.includes('boxplot'),
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config: {
@@ -74,10 +73,6 @@ class TdbBoxplot {
 	async main() {
 		try {
 			this.config = copyMerge('{}', this.state.config)
-			if (!this.state.isVisible) {
-				this.dom.div.style('display', 'none')
-				return
-			}
 			const t2 = this.config.term2
 			if (!t2 || !t2.termtype == 'float') {
 				this.dom.div.style('display', 'none')
