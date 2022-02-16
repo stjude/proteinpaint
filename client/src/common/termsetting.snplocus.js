@@ -39,7 +39,8 @@ export function getHandler(self) {
 				self.term.snps.length > 1 ? 's' : ''
 			}`
 			if (self.term.reachedVariantLimit) {
-				text += ' &#9888;'
+				text +=
+					'<span style=" margin-left: 6px; font-style: normal; border-radius: 100%; background-color: whitesmoke; padding: 0px 4px;"> &#9888;<span>'
 			}
 			return { text }
 		},
