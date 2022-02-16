@@ -212,7 +212,13 @@ export class InputTerm {
 					? 'Dominant'
 					: tw.q.geneticModel == 2
 					? 'Recessive'
-					: 'By genotype')
+					: 'By genotype') +
+				(tw.term.reachedVariantLimit
+					? '<br>&#9888; Analysis is restricted to first ' +
+					  tw.term.snps.length +
+					  ' variants of this region.' +
+					  ' Try zooming in.'
+					: '')
 		}
 
 		// condition check is quick fix!!!

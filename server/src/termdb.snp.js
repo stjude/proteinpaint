@@ -67,6 +67,7 @@ export async function validate(q, tdb, ds, genome) {
 				.snpid
 				.info{ k: v }
 				.pos (0-based)
+			.reachedVariantLimit
 			*/
 			return await validateInputCreateCache_by_coord(q, ds, genome)
 		}
@@ -367,16 +368,20 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 		add_bcf_variant_filter(q.variant_filter, bcfargs)
 	}
 
-	const snps = [] // collect snps {snpid, info} and send to client to store at term.snps, just like snplst
+	// result obj to return to client
+	const result = {
+		snps: [] // collect snps {snpid, info} and send to client to store at term.snps, just like snplst
+	}
+
 	const lines = ['snpid\tchr\tpos\tref\talt\teff\t' + tk.samples.map(i => i.name).join('\t')]
 	await utils.get_lines_bigfile({
 		isbcf: true,
 		args: bcfargs,
 		dir: tk.dir,
 		callback: (line, ps) => {
-			if (snps.length > snplocusMaxVariantCount) {
-				// TODO notify client
+			if (result.snps.length >= snplocusMaxVariantCount) {
 				ps.kill()
+				result.reachedVariantLimit = true
 				return
 			}
 
@@ -388,17 +393,17 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 			const variant = {
 				snpid,
 				chr: q.chr,
-				pos: pos
+				pos
 			}
 			compute_mclass(
 				tk,
 				refAllele,
 				altAlleles,
 				variant,
-				l[4], // info field
-				l[1] // ID
+				l[4], // vcf INFO column
+				l[1] // vcf ID column
 			)
-			snps.push(variant)
+			result.snps.push(variant)
 
 			const lst = [
 				snpid,
@@ -414,9 +419,9 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 			lines.push(lst.join('\t'))
 		}
 	})
-	const cacheid = 'snpgt_' + q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
-	await utils.write_file(path.join(serverconfig.cachedir, cacheid), lines.join('\n'))
-	return { cacheid, snps }
+	result.cacheid = 'snpgt_' + q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
+	await utils.write_file(path.join(serverconfig.cachedir, result.cacheid), lines.join('\n'))
+	return result
 }
 
 function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID) {
