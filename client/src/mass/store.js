@@ -282,6 +282,8 @@ function validatePlot(p, vocabApi) {
 	try {
 		if (p.chartType == 'regression') {
 			validateRegressionPlot(p, vocabApi)
+		} else if (p.chartType == 'matrix') {
+			// todo: validateMatrixPlot(p, vocabApi)
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}

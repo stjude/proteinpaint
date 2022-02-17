@@ -56,13 +56,8 @@ const minimumSample = 1
 export async function getData(q, ds) {
 	try {
 		parse_q(q, ds)
-
 		const sampledata = await getSampleData(q, q.termgroups)
-		/* each element is one sample with a key-val map for all its annotations:
-		{sample, id2value:Map( tid => {key,value}) }
-		*/
-
-		return sampledata
+		return { lst: sampledata }
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }

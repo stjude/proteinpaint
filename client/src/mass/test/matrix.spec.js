@@ -35,12 +35,22 @@ tape('matrix', function(test) {
 							name: 'Demographics',
 							lst: [
 								{
-									id: 'sex',
-									q: { mode: 'values' } // or 'groupsetting'
-								} /*{
-							id: 'agedx',
-							q: {mode: 'discrete'} // or 'continuous'
-						}*/
+									id: 'sex'
+									//q: { mode: 'values' } // or 'groupsetting'
+								},
+								{
+									id: 'agedx',
+									q: {
+										mode: 'discrete',
+										type: 'regular-bin',
+										bin_size: 5,
+										first_bin: {
+											startunbounded: true,
+											stop: 5,
+											stopinclusive: true
+										}
+									} // or 'continuous'
+								}
 							]
 						} /*{
 						name: 'Clinical',
