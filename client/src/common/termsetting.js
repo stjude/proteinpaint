@@ -94,6 +94,7 @@ class TermSetting {
 		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
 		if (!('abbrCutoff' in o)) o.abbrCutoff = 18 //set the default to 18
 		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = ['discrete']
+		this.mayValidate_noTermPromptOptions(o)
 		return o
 	}
 
@@ -141,6 +142,23 @@ class TermSetting {
 		if (d.disable_terms) {
 			if (!Array.isArray(d.disable_terms)) throw 'data.disable_terms[] is not array'
 		}
+		this.mayValidate_noTermPromptOptions(d)
+	}
+
+	mayValidate_noTermPromptOptions(o) {
+		if (!o.noTermPromptOptions) return
+		if (!Array.isArray(o.noTermPromptOptions)) throw 'noTermPromptOptions[] is not array'
+		// allow empty array
+		for (const t of o.noTermPromptOptions) {
+			if (t.isDictionary) {
+				// allowed
+			} else {
+				// otherwise, must be a non-dict term type
+				if (!t.termtype) throw 'element of noTermPromptOptions[] missing both isDictionary=true and .termtype'
+			}
+			if (!t.text && !t.html) throw 'element of noTermPromptOptions[] missing both .text and .html'
+		}
+		this.noTermPromptOptions = o.noTermPromptOptions
 	}
 
 	async setHandler(termtype) {
@@ -365,13 +383,13 @@ function setInteractivity(self) {
 	self.clickNoPillDiv = async () => {
 		// support various behaviors upon clicking nopilldiv
 		self.dom.tip.clear().showunder(self.dom.nopilldiv.node())
-		if (!self.opts.noTermPromptOptions || self.opts.noTermPromptOptions.length == 0) {
+		if (!self.noTermPromptOptions || self.noTermPromptOptions.length == 0) {
 			// show tree to select a dictionary term
 			await self.showTree()
 			return
 		}
 		// create small menu, one option for each ele in noTermPromptOptions[]
-		for (const option of self.opts.noTermPromptOptions) {
+		for (const option of self.noTermPromptOptions) {
 			// {isDictionary, termtype, text, html}
 			const item = self.dom.tip.d
 				.append('div')

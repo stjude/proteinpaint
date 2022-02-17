@@ -21,7 +21,9 @@ main
 	setDisableTerms
 	renderSection
 		syncInputsWithConfig
+			InputTerm
 			mayAddBlankInput
+				InputTerm
 		removeInput
 		addInput
 */
@@ -113,7 +115,7 @@ export class RegressionInputs {
 				await this.renderSection(section)
 				for (const input of section.inputs) {
 					input.dom.holder.style('border-left', input.term ? '1px solid #bbb' : '')
-					updates.push(input.update())
+					updates.push(input.main())
 				}
 			}
 			await Promise.all(updates)
@@ -143,6 +145,37 @@ export class RegressionInputs {
 	handleError() {
 		this.hasError = true
 		this.dom.submitBtn.property('disabled', true)
+	}
+
+	getNoTermPromptOptions(section) {
+		// only for independent section
+		if (section.configKey != 'independent') return
+		// return an array, each ele is an item in the mini menu at termsetting prompt
+		// okay for the array to be empty
+		// need to check if the dataset allows this
+		// if so, add to this array, to be shown as mini menu
+		const lst = []
+		for (const item of allNonDictionaryTerms) {
+			// TODO do this via vocab api
+			if (!this.state.allowedTermTypes.includes(item.termtype)) {
+				// not allowed by this dataset
+				continue
+			}
+			if (section.inputs.find(i => i.term && i.term.term.type == item.termtype)) {
+				// same term is already present in this section, do not add a second
+				continue
+			}
+			lst.push(item)
+		}
+		if (lst.length) {
+			// added at least one non-dict term type
+			// for the mini menu in termsetting prompt to show both dict- and non-dict-terms, add dict option
+			lst.unshift({
+				isDictionary: true,
+				text: 'Dictionary variable'
+			})
+		}
+		return lst
 	}
 }
 
@@ -395,39 +428,35 @@ function setInteractivity(self) {
 	}
 }
 
+/*
+section is one of this.sections[]
+decide if a blank input needs to be added to this section
+for outcome section, there can just be one input, it's either blank or filled
+for independent, there should always be one blank input, among other filled inputs
+*/
 function mayAddBlankInput(section, self) {
-	// for outcome section, there can just be one input, it's either blank or filled
-	// for independent, there should always be one blank input, among other filled inputs
-	// on this section, detect if a blank input needs to be created
 	if (section.inputs.length >= section.limit) {
 		// number of inputs in this section is beyond limit, do not create more
 		return
 	}
-	if (section.inputs.find(i => !i.term)) return // already have a blank input
-	// make parameter for this blank input
-	let noTermPromptOptions
-	if (section.configKey == 'independent') {
-		// only add this for independent, not for outcome section
-		noTermPromptOptions = [] // each ele will correspond to a menu option
-		for (const item of allNonDictionaryTerms) {
-			if (self.state.allowedTermTypes.includes(item.termtype)) {
-				noTermPromptOptions.push(item)
-			}
+	const blankInput = section.inputs.find(i => !i.term)
+	if (blankInput) {
+		// this section already have a blank input (without .term{})
+		// as a section is limited to have only one blank input, do not add a new one
+		const noTermPromptOptions = self.getNoTermPromptOptions(section)
+		if (noTermPromptOptions) {
+			// will need to update noTermPromptOptions on this input
+			// due to the fact that we don't want two snplst or snplocus terms in one model
+			blankInput.pill.main({ noTermPromptOptions })
 		}
-		if (noTermPromptOptions.length) {
-			// added at least one term type; to show mini menu in termsetting prompt, add dict option
-			noTermPromptOptions.unshift({
-				isDictionary: true,
-				text: 'Dictionary variable'
-			})
-		}
+		return
 	}
-	// create this blank input
+	// now add a blank input to this section
 	section.inputs.push(
 		new InputTerm({
 			section,
 			parent: self,
-			noTermPromptOptions // pass to termsetting
+			noTermPromptOptions: self.getNoTermPromptOptions(section)
 		})
 	)
 }

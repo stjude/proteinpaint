@@ -110,7 +110,7 @@ export class InputTerm {
 		console.error(errors)
 	}
 
-	async update() {
+	async main() {
 		/* called in inputs.main()
 		when the regression component is notified of a change
 		*/
@@ -154,7 +154,7 @@ export class InputTerm {
 
 	async updateTerm() {
 		/*
-		only used in handler.update() above
+		only used in this.main() above
 		to derive bins/groups based on q{} setting of this term
 		create following attributes:
 
