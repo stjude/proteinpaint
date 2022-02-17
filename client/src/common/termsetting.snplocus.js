@@ -40,7 +40,7 @@ export function getHandler(self) {
 			}`
 			if (self.term.reachedVariantLimit) {
 				text +=
-					'<span style=" margin-left: 6px; font-style: normal; border-radius: 100%; background-color: whitesmoke; padding: 0px 4px;"> &#9888;<span>'
+					'<span style="margin-left: 6px; background:#aaa; font-size:1em;font-style: normal; border-radius: 7px;color:white;padding:0px 5px;">&#9888;<span>'
 			}
 			return { text }
 		},
@@ -177,6 +177,7 @@ function makeId() {
 
 function add_genesearchbox(self, div) {
 	// some code duplication with block.js
+	// uses result{} to remember previous hit
 	const tip = self.dom.tip2
 
 	const row = div.append('div').style('margin', '10px')
@@ -199,17 +200,30 @@ function add_genesearchbox(self, div) {
 			const input = event.target
 			const v = input.value.trim()
 			if (v.length <= 1) return tip.hide()
+
+			// typed 2 or more chars, prompt user to press enter to search
+			searchStat.mark.html('')
+			searchStat.word.text('Press ENTER to search, ESC to cancel')
+
 			if (keyupEnter()) {
+				// pressed enter
 				input.blur()
-				// pressed enter, try to parse input as coordinate string e.g. chr:pso
+				// if input can be parsed as coord string (chr:pos or chr:start-stop), then no need to match with gene/snp
 				const pos = string2pos(v, self.opts.genomeObj)
 				if (pos) {
 					// input is coordinate
 					getResult(pos, 'Valid coordinate')
 					return
 				}
-				// input is not coord; see if matches with a gene and can be converted to coord
-				await geneCoordSearch(v)
+				// input is not coord; see if tip is showing gene matches
+				const hitgene = tip.d.select('.sja_menuoption')
+				if (hitgene.size() > 0 && hitgene.attr('isgene')) {
+					// matched with some gene names, query the first one
+					await geneCoordSearch(hitgene.text())
+				} else {
+					// directly search with input string for gene/snp match
+					await geneCoordSearch(v)
+				}
 				return
 			}
 			if (event.code == 'Escape') {
@@ -217,11 +231,12 @@ function add_genesearchbox(self, div) {
 				tip.hide()
 				if (self.q && self.q.chr) {
 					input.value = self.q.chr + ':' + self.q.start + '-' + self.q.stop
+				} else if (result.chr) {
+					getResult(result, result.fromWhat)
 				}
 				input.blur()
 				return
 			}
-			if (v.length > 6) return
 			debouncer()
 		})
 	searchbox.node().focus()
@@ -235,9 +250,21 @@ function add_genesearchbox(self, div) {
 			.style('opacity', 0.6)
 	}
 
-	async function geneNameMatch() {
+	async function inputIsCoordOrGenename() {
+		// doing quick check only, no snp query
+		// first check if input is coord; if so return and do not query for gene
+		// otherwise, query for gene name match
 		const v = searchbox.property('value').trim()
 		if (!v) return
+
+		// first, see if input is coord
+		const pos = string2pos(v, self.opts.genomeObj, true)
+		if (pos) {
+			// input is coordinate
+			getResult(pos, 'Valid coordinate')
+			return
+		}
+
 		tip.showunder(searchbox.node()).clear()
 		try {
 			const data = await dofetch3('genelookup', {
@@ -251,6 +278,7 @@ function add_genesearchbox(self, div) {
 					.append('div')
 					.text(s)
 					.attr('class', 'sja_menuoption')
+					.attr('isgene', 1)
 					.on('click', () => {
 						geneCoordSearch(s)
 					})
@@ -259,7 +287,7 @@ function add_genesearchbox(self, div) {
 			tip.d.append('div').text(e.message || e)
 		}
 	}
-	const debouncer = debounce(geneNameMatch, 300)
+	const debouncer = debounce(inputIsCoordOrGenename, 500)
 
 	async function geneCoordSearch(s) {
 		tip.hide()
@@ -299,7 +327,7 @@ function add_genesearchbox(self, div) {
 					.text(r.name + ' ' + r.chr + ':' + r.start + '-' + r.stop)
 					.on('click', () => {
 						tip.hide()
-						getResult(r, r.name)
+						getResult(r, s + ', ' + r.name)
 					})
 			}
 		} catch (e) {
@@ -319,6 +347,8 @@ function add_genesearchbox(self, div) {
 	}
 
 	const result = {}
+	// { chr, start, stop, fromWhat }
+
 	if (self.q && self.q.chr) {
 		searchbox.property('value', self.q.chr + ':' + self.q.start + '-' + self.q.stop)
 		result.chr = self.q.chr
@@ -336,17 +366,19 @@ function add_genesearchbox(self, div) {
 			result.chr = r.chr
 			result.start = r.start
 			result.stop = r.stop
+			result.fromWhat = fromWhat
 			searchStat.mark.style('color', 'green').html('&check;')
 		} else {
 			searchStat.mark.style('color', 'red').html('&cross;')
 		}
-		searchStat.word.text(fromWhat)
+		searchStat.word.text(fromWhat || '')
 	}
 
 	return result //searchbox
 }
 
 async function mayDisplayVariantFilter(self, holder) {
+	// this implies that variant filter is always given; should allow it to be abscent
 	if (!self.variantFilter) {
 		self.variantFilter = await self.vocabApi.get_variantFilter()
 	}

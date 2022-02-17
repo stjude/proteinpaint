@@ -88,11 +88,13 @@ class TermSetting {
 	validateOpts(o) {
 		if (!o.holder) throw '.holder missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
+		if (!o.vocabApi) throw '.vocabApi missing'
+		if (typeof o.vocabApi != 'object') '.vocabApi{} is not object'
 		if ('placeholder' in o && !o.placeholder && 'placeholderIcon' in o && !o.placeholderIcon)
 			throw 'must specify a non-empty opts.placeholder and/or .placeholderIcon'
 		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'
 		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
-		if (!('abbrCutoff' in o)) o.abbrCutoff = 18 //set the default to 18
+		if (!Number.isInteger(o.abbrCutoff)) o.abbrCutoff = 18 //set the default to 18
 		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = ['discrete']
 		this.mayValidate_noTermPromptOptions(o)
 		return o

@@ -49,7 +49,6 @@ export class InputTerm {
 				placeholderIcon: this.section.placeholderIcon,
 				holder: this.dom.pillDiv,
 				vocabApi: app.vocabApi,
-				vocab: state.vocab,
 				noTermPromptOptions: this.opts.noTermPromptOptions,
 				activeCohort: state.activeCohort,
 				debug: app.opts.debug,
@@ -221,7 +220,9 @@ export class InputTerm {
 		}
 		if (tw.term.reachedVariantLimit) {
 			this.termStatus.topInfoStatus.push(
-				'&#9888; Analysis is restricted to first ' + tw.term.snps.length + ' variants of this region. Try zooming in.'
+				`<span class=sja_mcdot style="background:#aaa;font-size:1em">
+				&nbsp;&#9888; Restricted to first ${tw.term.snps.length}
+				variants of this region.&nbsp;</span> Try zooming in.`
 			)
 		}
 

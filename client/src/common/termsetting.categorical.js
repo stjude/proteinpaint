@@ -202,7 +202,7 @@ export function setCategoryConditionMethods(self) {
 							btnLabel: 'Filter',
 							emptyLabel: '+New Filter',
 							holder: values_td.append('div').style('width', '300px'),
-							vocab: self.vocab,
+							vocabApi: self.vocabApi,
 							callback: () => {}
 						}).main(filter)
 					}
