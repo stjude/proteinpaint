@@ -2,7 +2,7 @@ import { keyupEnter } from '../client'
 import { select, event } from 'd3-selection'
 import { format } from 'd3-format'
 import { setDensityPlot } from './termsetting.density'
-import { get_bin_label } from '../../shared/termdb.bins'
+import { get_bin_label, get_bin_range_equation } from '../../shared/termdb.bins'
 import { init_tabs } from '../dom/toggleButtons'
 import { make_radios } from '../dom/radiobutton'
 import { getPillNameDefault } from './termsetting'
@@ -509,7 +509,12 @@ function renderCustomBinInputs(self, tablediv) {
 		.append('th')
 		.style('font-weight', 'normal')
 		.style('color', 'rgb(136, 136, 136)')
-		.html('Bin Labels')
+		.html('Range')
+	thead
+		.append('th')
+		.style('font-weight', 'normal')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Bin Label')
 	self.dom.customBintbody = self.dom.bins_table.append('tbody')
 	const tr = self.dom.customBintbody.append('tr')
 
@@ -558,18 +563,37 @@ function renderCustomBinInputs(self, tablediv) {
 		return false
 	}
 
-	self.dom.customBinLabelTd = tr.append('td')
+	self.dom.customBinRangeTd = tr.append('td').style('vertical-align', 'top')
+	self.dom.customBinLabelTd = tr.append('td').style('vertical-align', 'top')
 	renderBoundaryInputDivs(self, self.q.lst)
 }
 
 export function renderBoundaryInputDivs(self, data) {
-	self.dom.customBinLabelTd.selectAll('div').remove('*')
+	// bin range equations, read-only
+	const rangeDivs = self.dom.customBinRangeTd.selectAll('div').data(data)
+
+	rangeDivs.exit().remove()
+	rangeDivs.each(function(d, i) {
+		select(this)
+			.select('span')
+			.html(get_bin_range_equation(d, i, data.length))
+	})
+
+	rangeDivs
+		.enter()
+		.append('div')
+		.style('margin', '9px')
+		.each(function(d, i) {
+			select(this)
+				.append('span')
+				.style('color', 'rgb(136, 136, 136)')
+				.html(get_bin_range_equation(d, i, data.length))
+		})
+
+	// bin label inputs, start with label, use can edit labels and apply changes
 	const inputDivs = self.dom.customBinLabelTd.selectAll('div').data(data)
 	inputDivs.exit().remove()
 	inputDivs.each(function(d, i) {
-		select(this)
-			.select('span')
-			.html('Bin ' + (i + 1) + '&nbsp;')
 		select(this)
 			.select('input')
 			.property('value', d.label)
@@ -579,11 +603,8 @@ export function renderBoundaryInputDivs(self, data) {
 		.append('div')
 		.each(function(d, i) {
 			select(this)
-				.append('span')
-				.style('color', 'rgb(136, 136, 136)')
-				.html('Bin ' + (i + 1) + '&nbsp;')
-			select(this)
 				.append('input')
+				.style('margin', '2px')
 				.attr('type', 'text')
 				.property('value', d.label)
 				.on('change', function() {
