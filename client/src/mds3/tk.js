@@ -250,8 +250,13 @@ by info_fields[] and variantcase_fields[]
 }
 
 function filter_custom_variants(tk, block) {
-	// must exclude out of range ones, otherwise numericmode rendering will break
-	const lst = []
+	// return the same data{} object as server queries
+	const data = {
+		skewer: [],
+		mclass2count: {}
+	}
+
+	// must exclude out-of-range items, otherwise numericmode rendering will break
 	let bbstart = null,
 		bbstop
 	for (let i = block.startidx; i <= block.stopidx; i++) {
@@ -264,9 +269,15 @@ function filter_custom_variants(tk, block) {
 		}
 	}
 	for (const m of tk.custom_variants) {
-		if (m.chr != block.rglst[0].chr) continue
+		if (m.chr != block.rglst[0].chr) continue // may not work for subpanel
 		if (m.pos <= bbstart || m.pos >= bbstop) continue
-		lst.push(m)
+		if (!m.class) {
+			// should this be done?
+			m.class = 'X'
+		}
+		if (tk.legend.mclass.hiddenvalues.has(m.class)) continue
+		data.mclass2count[m.class] = 1 + (data.mclass2count[m.class] || 0)
+		data.skewer.push(m)
 	}
-	return { skewer: lst }
+	return data
 }

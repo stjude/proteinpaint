@@ -31,10 +31,10 @@ run only once, called by makeTk
 
 	tk.legend.table = table
 
-	create_mclass(tk)
+	create_mclass(tk, block)
 }
 
-function create_mclass(tk) {
+function create_mclass(tk, block) {
 	/*
 list all mutation classes
 attribute may have already been created with customization
@@ -52,7 +52,7 @@ legend.mclass{}
 		.append('td')
 		.style('text-align', 'right')
 		.style('opacity', 0.3)
-		.text('Mutation')
+		.text(block.mclassOverride ? block.mclassOverride.className || 'Mutation' : 'Mutation')
 
 	tk.legend.mclass.holder = tk.legend.mclass.row.append('td')
 }
@@ -91,7 +91,6 @@ function update_mclass(mclass2count, tk) {
 	k
 	count
 	*/
-
 		let label,
 			desc,
 			color = '#858585'

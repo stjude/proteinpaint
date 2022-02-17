@@ -4,6 +4,7 @@ import { axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { axisstyle } from '../dom/axisstyle'
 import { make_datagroup } from './datagroup'
+import { click_variant } from './clickVariant'
 
 /* adapted from mds2, which is in turn from legacy ds code
 
@@ -38,7 +39,6 @@ const clustercrowdlimit = 7 // at least 8 px per disc, otherwise won't show mnam
 const maxclusterwidth = 100
 const hardcode_missing_value = 0
 const stemColor = '#ededed'
-const highlight_color = 'red'
 
 export function render(data, tk, block) {
 	/*
@@ -296,7 +296,7 @@ function numeric_make(nm, _g, data, tk, block) {
 	// no text in disc
 
 	// disc kick
-	const disckick = discg
+	const discKick = discg
 		.append('circle')
 		.attr('r', m => m.radius - 0.5)
 		.attr('stroke', m => tk.color4disc(m))
@@ -315,14 +315,7 @@ function numeric_make(nm, _g, data, tk, block) {
 			m_mouseout(m, tk)
 		})
 		.on('click', m => {
-			if (tk.click_snvindel) {
-				highlight_one_disk(d3event.target)
-				tk.click_snvindel(m)
-				return
-			}
-			// FIXME prevent triggering click after panning
-			//const p = d3event.target.getBoundingClientRect()
-			//vcf_clickvariant(m, p, tk, block)
+			click_variant(m, tk, block, d3event.target.getBoundingClientRect(), discKick, d3event.target)
 		})
 
 	// m label
@@ -350,29 +343,12 @@ function numeric_make(nm, _g, data, tk, block) {
 		.attr('transform', m => 'rotate(' + (m.labattop ? '-' : '') + '90)')
 		.on('mousedown', () => {
 			d3event.preventDefault()
-			//d3event.stopPropagation()
 		})
 		.on('mouseover', m => m_mouseover(m, nm, tk))
 		.on('mouseout', m => m_mouseout(m, tk))
 		.on('click', m => {
-			if (tk.click_snvindel) {
-				highlight_one_disk(d3event.target.previousSibling) // kick cover is previous sibling
-				tk.click_snvindel(m)
-				return
-			}
-			//vcf_clickvariant(m, { left: d3event.clientX, top: d3event.clientY }, tk, block)
+			click_variant(m, tk, block, d3event.target.getBoundingClientRect(), discKick, d3event.target)
 		})
-
-	function highlight_one_disk(dot) {
-		// dot is the kick <circle>; apply highlight styling on it
-		disckick
-			.attr('r', m => m.radius - 0.5)
-			.attr('stroke', m => tk.color4disc(m))
-			.attr('stroke-opacity', 0)
-		dot.setAttribute('r', nm.dotwidth * 0.7)
-		dot.setAttribute('stroke', highlight_color)
-		dot.setAttribute('stroke-opacity', 1)
-	}
 }
 
 function adjustview(data, nm, tk, block) {
