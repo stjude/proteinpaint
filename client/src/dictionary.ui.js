@@ -260,38 +260,40 @@ function parseTabDelimitedData(input) {
 			/******* Parse for hierarchy *******/
 			const nonNullLevels = levelIdxStrs.filter(l => l.name !== null)
 			// console.log(nonNullLevels)
+
+			// Creates a series of maps for generating terms, ancestry table, and eventually connecting to other file types
 			createHierarchy(leafLevel.idx, nonNullLevels, leafId, termsMaps)
 
-			// /******* Create terms *******/
-			// for (const [k, v] of termsMaps.p2childorder.entries()) {
-			// 	//Create term objects for parents
-			// 	if (k == '__root') continue
-			// 	if (!terms[k]) {
-			// 		terms[k] = {
-			// 			id: k,
-			// 			name: k,
-			// 			isleaf: false,
-			// 			parent_id: termsMaps.ch2immediateP.get(k) || null
-			// 		}
-			// 		ids.push(k)
-			// 	}
-			// }
-			// //Create term objects for leaf/child
-			// terms[leafId] = {
-			// 	id: leafId,
-			// 	name: leafLevel.name,
-			// 	parent_id: termsMaps.ch2immediateP.get(id),
-			// 	isleaf: !termsMaps.parent2children.has(id),
-			// 	type: term.type,
-			// 	values: term.values,
-			// 	groupsetting: term.groupsetting
-			// }
+			/******* Create terms *******/
+			for (const [k, v] of termsMaps.p2childorder.entries()) {
+				//Create term objects for parents
+				if (k == '__root') continue
+				if (!terms[k]) {
+					terms[k] = {
+						id: k,
+						name: k,
+						isleaf: false,
+						parent_id: termsMaps.ch2immediateP.get(k) || null
+					}
+					ids.push(k)
+				}
+			}
+			//Create term objects for leaves
+			terms[leafId] = {
+				id: leafId,
+				name: leafLevel.name,
+				parent_id: termsMaps.ch2immediateP.get(leafId),
+				isleaf: !termsMaps.parent2children.has(leafId),
+				type: term.type,
+				values: term.values,
+				groupsetting: term.groupsetting
+			}
 		} catch (e) {
 			throw 'Line ' + (i + 1) + ' error: ' + e
 		}
 	}
-	//Checks all duplicate term.ids for duplicates
-	// check4DuplicateValues(ids)
+	// Checks all duplicate term.ids for duplicates
+	check4DuplicateValues(ids)
 
 	// console.log(ntermsMaps.ame2id)
 	// console.log(termsMaps.allterms_byorder)
@@ -300,7 +302,7 @@ function parseTabDelimitedData(input) {
 	// console.log(266, termsMaps.child2parents)
 	// console.log(267, termsMaps.p2childorder)
 	// console.log(termsMaps.allterms_byorder.size + ' terms in total')
-	// console.log({ terms: Object.values(terms) })
+	console.log({ terms: Object.values(terms) })
 	return { terms: Object.values(terms) }
 }
 
@@ -311,20 +313,20 @@ function parseTabDelimitedData(input) {
 function validateLevels(levelStrs, i) {
 	// Check for blanks or '-' between levels
 
-	//find first index of null
+	// Find first index of null
 	let firstNull = levelStrs.find(l => l.name == null)
 
-	//find last index of non-null level value
-	//Assumes user correctly placed levels in order
+	// Find last index of non-null level value
 	function revArray(arr) {
+		// Make a copy to avoid changing the original array upstream
 		let copy = [...arr]
 		return copy.reverse()
 	}
 	const lastNonNull = revArray(levelStrs).find(l => l.name !== null)
 	// console.log(lastNonNull)
 
-	//TODO: Print error to the screen
 	if (firstNull == undefined) firstNull = { idx: lastNonNull.idx + 1, name: 'noname' }
+	//TODO: Print error to the screen
 	if (lastNonNull.idx > firstNull.idx && firstNull.idx >= 0)
 		throw `Blank or '-' value detected between levels in line ` + (i + 1)
 
@@ -370,13 +372,13 @@ function parseConfig(str) {
 			}
 		}
 
-		for (let i in line) {
+		for (let i of line) {
 			if (i > 0) {
 				//Skip type, defined above
 				const field = line[i].trim()
 				if (field == '') continue
 				const [key, value] = field.split(/(?<!\>|\<)=/)
-				if (!value) throw 'field ' + (Number(i) + 1) + ' is not k=v: ' + field
+				if (!value) throw 'field ' + (i + 1) + ' is not k=v: ' + field
 				if (!term.values) term.values = {}
 				term.values[key] = { label: value }
 			}
@@ -403,10 +405,15 @@ function createHierarchy(leafIndex, levelNames, leafID, termsMaps) {
 	const root_id = '__root' //placeholder
 	//Maps the children in order; will use later to create the parent terms
 	termsMaps.p2childorder.set(root_id, [])
+
+	//Find the smallest level index before looping through levelNames
 	let idxArr = []
-	console.log(idxArr)
+	levelNames.filter(l => idxArr.push(l.idx))
+	// console.log(idxArr)
+	const idxMin = Math.min(...idxArr)
+	// console.log(idxMin)
+
 	for (const level of levelNames) {
-		idxArr.push(level.idx)
 		let id
 		if (level.idx === leafIndex) {
 			id = leafID
@@ -420,39 +427,43 @@ function createHierarchy(leafIndex, levelNames, leafID, termsMaps) {
 			}
 		}
 		// console.log(id)
-		console.log(idxArr)
-		// if (level.idx == 0) {
-		// 	// The parent_id  = null for the first level
-		// 	console.log(id)
-		// 	termsMaps.ch2immediateP.set(id, null)
 
-		// 	//Connect to the first col id to the root
-		// 	if (termsMaps.p2childorder.get(root_id).indexOf(id) == -1) termsMaps.p2childorder.get(root_id).push(id)
-		// } else {
-		// 	//find id for the immediate parent level
-		// 	const parentId = levelNames[level.idx - 1].name
+		if (level.idx == idxMin) {
+			//Minimal parsing for the first level
+			// The parent_id  = null for the first level
+			termsMaps.ch2immediateP.set(id, null)
 
-		// 	termsMaps.parent2children.get(parentId).add(id)
+			// Connect to the first col id to the root
+			if (termsMaps.p2childorder.get(root_id).indexOf(id) == -1) termsMaps.p2childorder.get(root_id).push(id)
+			continue
+		} else {
+			// Find id (i.e. name) for the immediate parent level
+			const parent = levelNames.find(l => {
+				const parentIdx = level.idx - 1
+				if (l.idx == parentIdx) return l
+			})
+			// console.log(parent)
 
-		// 	// Map children to all parents
-		// 	// Create a new map for every child id
-		// 	if (!termsMaps.child2parents.has(id)) termsMaps.child2parents.set(id, new Map())
+			termsMaps.parent2children.get(parent.name).add(id)
 
-		// 	for (const y of levelNames) {
-		// 		//Collect parent ids for children when the index is less than the child
-		// 		if (y.idx < level.idx) {
-		// 			termsMaps.child2parents.get(id).set(levelNames[y.idx].name, y.name)
-		// 		}
-		// 	}
-		// 	//Capture immediate parent for child term.parent_id
-		// 	termsMaps.ch2immediateP.set(id, parentId)
+			// Map children to all parents; create a new map for every child id
+			if (!termsMaps.child2parents.has(id)) termsMaps.child2parents.set(id, new Map())
 
-		// 	// Map parent to children in order for creating term objs for parents
-		// 	// Create a new array for parent in map
-		// 	if (!termsMaps.p2childorder.has(parentId)) termsMaps.p2childorder.set(parentId, [])
-		// 	// Add child id to parent array if child id not found
-		// 	if (termsMaps.p2childorder.get(parentId).indexOf(id) == -1) termsMaps.p2childorder.get(parentId).push(id)
-		// }
+			for (const y of levelNames) {
+				// Collect parent ids(y) for children(level) when the index(y.idx) is less than the child
+				if (y.idx < level.idx) {
+					termsMaps.child2parents.get(id).set(level.name, y.name)
+				}
+			}
+			//Capture immediate parent for child term.parent_id
+			termsMaps.ch2immediateP.set(id, parent.name)
+
+			// Map parent to children in order for creating term objs for parents
+			// Create a new array for parent in map
+			if (!termsMaps.p2childorder.has(parent.name)) termsMaps.p2childorder.set(parent.name, [])
+			// Add child id to parent array if child id not found
+			if (termsMaps.p2childorder.get(parent.name).indexOf(id) == -1) termsMaps.p2childorder.get(parent.name).push(id)
+		}
 
 		// Use later for sample annotation matrix and other file types
 		// termsMaps.allterms_byorder.add(id)
