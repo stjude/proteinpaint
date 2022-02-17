@@ -51,7 +51,7 @@ export function init_dictionaryUI(holder) {
 	window.doms = obj
 }
 
-function makeDataEntryTabs(tabs_div, d) {
+function makeDataEntryTabs(tabs_div, obj) {
 	const tabs = [
 		{
 			label: 'File Path',
@@ -70,9 +70,9 @@ function makeDataEntryTabs(tabs_div, d) {
 						.style('margin-left', '15px')
 					appear(div)
 					uiutils.makePrompt(files_div, 'Filepath')
-					makeTextEntryFilePathInput(files_div, d)
+					makeTextEntryFilePathInput(files_div, obj)
 					uiutils.makePrompt(files_div, 'Upload')
-					makeFileUpload(files_div, d)
+					makeFileUpload(files_div, obj)
 					tabs[0].rendered = true
 				}
 			}
@@ -86,7 +86,7 @@ function makeDataEntryTabs(tabs_div, d) {
 						.append('div')
 						.html(`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary in a tab delimited format.</p>`)
 					appear(div)
-					makeCopyPasteInput(div, d)
+					makeCopyPasteInput(div, obj)
 					tabs[1].rendered = true
 				}
 			}
@@ -95,7 +95,7 @@ function makeDataEntryTabs(tabs_div, d) {
 	init_tabs({ holder: tabs_div, tabs })
 }
 
-function makeTextEntryFilePathInput(div, d) {
+function makeTextEntryFilePathInput(div, obj) {
 	const filepath_div = div.append('div').style('display', 'inline-block')
 	const filepath = uiutils
 		.makeTextInput(filepath_div)
@@ -106,7 +106,7 @@ function makeTextEntryFilePathInput(div, d) {
 				fetch(data)
 					.then(req => req.text())
 					.then(txt => {
-						d.data = parseTabDelimitedData(txt)
+						obj.data = parseTabDelimitedData(txt)
 					})
 			} else {
 				//TODO: implement serverside filepaths(?)
@@ -114,54 +114,29 @@ function makeTextEntryFilePathInput(div, d) {
 		})
 }
 
-function makeFileUpload(div, d) {
+function makeFileUpload(div, obj) {
 	const upload_div = div.append('div').style('display', 'block')
 	const upload = uiutils.makeFileUpload(upload_div)
 	upload.on('change', () => {
 		const file = d3event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
-			d.data = parseTabDelimitedData(event.target.result)
+			obj.data = parseTabDelimitedData(event.target.result)
 		}
 		reader.readAsText(file, 'utf8')
 	})
 }
 
-function makeCopyPasteInput(div, d) {
+function makeCopyPasteInput(div, obj) {
 	const paste_div = div.append('div').style('display', 'block')
 	const paste = uiutils
 		.makeTextAreaInput(paste_div)
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.on('keyup', async () => {
-			d.data = parseTabDelimitedData(paste.property('value').trim())
+			obj.data = parseTabDelimitedData(paste.property('value').trim())
 		})
 }
-//TODO: Better place for these?
-const name2id = new Map()
-/* 
-	key: term name
-	value: id
-*/
-const parent2children = new Map()
-/* 
-	key: id
-	value(s): Set(['child id', 'child id', ...])
-*/
-const child2parents = new Map()
-/* ancestry
-	key: child
-	value(s): Map({ parent id, order }, { parent id, order }, ...)
-*/
-const root_id = '__root' //placeholder
-const ch2immediateP = new Map()
-/* 
-	key: child id
-	value: parent id
-*/
-const p2childorder = new Map()
-p2childorder.set(root_id, [])
-const allterms_byorder = new Set()
 
 //Parse tab delimited files only
 function parseTabDelimitedData(input) {
@@ -172,6 +147,7 @@ function parseTabDelimitedData(input) {
         - Parses tab delim data arranged in cols: levels(n), ID (i.e. Variable name), Configuration (i.e. Variable note).
 		- Only the ID and configuration cols are required
 		- Not using uncomputable values in this iteration
+		- Blank and '-' values for levels converted to null
 		- Assumptions:
 			1. Headers required. 'Variable name', 'Variable note' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
 			2. Levels are defined left to right, highest to lowest, and in order, no gaps.
@@ -179,6 +155,36 @@ function parseTabDelimitedData(input) {
 			4. No identical term ids (keys)
 			5. All non-leaf names/ids must be unique. 
     */
+	const termsMaps = {
+		// Use later for sample annotation matrix and other file types
+		// name2id: new Map(),
+		/* 
+		Connects all term names to their id
+			key: term name
+			value: id
+		*/
+		parent2children: new Map(),
+		/* 
+			key: id
+			value(s): Set(['child id', 'child id', ...])
+		*/
+		child2parents: new Map(),
+		/* Collect for ancestry later
+			key: child
+			value(s): Map({ parent id, order }, { parent id, order }, ...)
+		*/
+
+		ch2immediateP: new Map(),
+		/* 
+			key: child id
+			value: parent id
+		*/
+		p2childorder: new Map()
+
+		//Use later for sample annotation matrix and other files
+		// allterms_byorder: new Set(),
+	}
+
 	const terms = {
 		__root: {
 			id: 'root',
@@ -187,7 +193,6 @@ function parseTabDelimitedData(input) {
 		}
 	}
 	const ids = [] //To check for duplicate values later
-	// levelColIndexes = new Map()
 
 	let varNameIndex,
 		configIndex,
@@ -220,78 +225,81 @@ function parseTabDelimitedData(input) {
 				console.error('Missing configuration string, line: ' + (i + 1) + ', term: ' + line[varNameIndex])
 				continue
 			}
-			let levelStrings = [] //TODO, may not be needed
-			const levelIdxStrMap = new Map()
+			// console.log(line)
+			let levelIdxStrs = []
 			for (let idx = 0; idx < line.length; idx++) {
+				// console.log(idx)
 				for (const colIdx of levelColIndexes) {
 					//capture str value of all 'level' cols
 					//Preserve the index value
 					if (idx == colIdx) {
-						const level = str2level(line[idx])
-						levelStrings.push(level)
-						levelIdxStrMap.set(idx, level)
-						// console.log(level)
+						const levelName = str2level(line[idx])
+						levelIdxStrs.push({ idx, name: levelName })
+						// console.log(levelName)
 					}
 				}
 			}
-			// console.log(levelStrValues)
-			// console.log(levelStrings)
+			// console.log(levelIdxStrs)
 
-			//Checks for blanks || '-' values between levels and returns the leafindex
-			const leafIdx = check4MisplacedNulls(levelIdxStrMap, i)
-			const name = getName(levelIdxStrMap)
+			//Checks for blanks || '-' values between levels, checks for duplicate level entries, and returns the leafindex
+			const leafLevel = validateLevels(levelIdxStrs, i)
+			// console.log(leafLevel)
+			// console.log(levelIdxStrs)
 
-			// if key missing, use name
-			let id = line[varNameIndex] ? line[varNameIndex].trim() : ''
-			if (!id) id = name
-			//pushes user provided variable names and derived values to check
-			ids.push(id)
+			// if key missing, use leaf level str
+			let leafId = line[varNameIndex] ? line[varNameIndex].trim() : ''
+			if (!leafId) leafId = leafLevel.name
+			//ids array used to check for duplicate id values later
+			ids.push(leafId)
 
-			//Parses configuration col into term.type, term.values, and term.groupsetting
 			let configstr = line[configIndex].replace('"', '').trim()
+			//Parses configuration col into term.type, term.values, and term.groupsetting
 			const term = parseConfig(configstr)
+			// console.log(term)
 
 			/******* Parse for hierarchy *******/
-			const filteredCols = filterCols(levelIdxStrMap)
-			createHierarchy(leafIdx, filteredCols, id)
+			const nonNullLevels = levelIdxStrs.filter(l => l.name !== null)
+			// console.log(nonNullLevels)
+			createHierarchy(leafLevel.idx, nonNullLevels, leafId, termsMaps)
 
-			/******* Create terms *******/
-			for (const [k, v] of p2childorder.entries()) {
-				if (k == '__root') continue
-				if (!terms[k]) {
-					terms[k] = {
-						id: k,
-						name: k,
-						isleaf: false,
-						parent_id: ch2immediateP.get(k) || null
-					}
-					ids.push(k)
-				}
-			}
-
-			terms[id] = {
-				id,
-				name,
-				parent_id: ch2immediateP.get(id),
-				isleaf: !parent2children.has(id),
-				type: term.type,
-				values: term.values,
-				groupsetting: term.groupsetting
-			}
+			// /******* Create terms *******/
+			// for (const [k, v] of termsMaps.p2childorder.entries()) {
+			// 	//Create term objects for parents
+			// 	if (k == '__root') continue
+			// 	if (!terms[k]) {
+			// 		terms[k] = {
+			// 			id: k,
+			// 			name: k,
+			// 			isleaf: false,
+			// 			parent_id: termsMaps.ch2immediateP.get(k) || null
+			// 		}
+			// 		ids.push(k)
+			// 	}
+			// }
+			// //Create term objects for leaf/child
+			// terms[leafId] = {
+			// 	id: leafId,
+			// 	name: leafLevel.name,
+			// 	parent_id: termsMaps.ch2immediateP.get(id),
+			// 	isleaf: !termsMaps.parent2children.has(id),
+			// 	type: term.type,
+			// 	values: term.values,
+			// 	groupsetting: term.groupsetting
+			// }
 		} catch (e) {
 			throw 'Line ' + (i + 1) + ' error: ' + e
 		}
 	}
 	//Checks all duplicate term.ids for duplicates
-	check4DuplicateValues(ids)
+	// check4DuplicateValues(ids)
 
-	// console.log(name2id)
-	// console.log(allterms_byorder)
-	// console.log(264, parent2children)
-	// console.log(265, ch2immediateP)
-	// console.log(266, child2parents)
-	// console.log(267, p2childorder)
-	// console.log(allterms_byorder.size + ' terms in total')
+	// console.log(ntermsMaps.ame2id)
+	// console.log(termsMaps.allterms_byorder)
+	// console.log(264, termsMaps.parent2children)
+	// console.log(265, termsMaps.ch2immediateP)
+	// console.log(266, termsMaps.child2parents)
+	// console.log(267, termsMaps.p2childorder)
+	// console.log(termsMaps.allterms_byorder.size + ' terms in total')
 	// console.log({ terms: Object.values(terms) })
 	return { terms: Object.values(terms) }
 }
@@ -300,41 +308,34 @@ function parseTabDelimitedData(input) {
  **** Parsing Functions for Phenotree ****
  */
 
-function check4MisplacedNulls(levelIdxStrMap, i) {
+function validateLevels(levelStrs, i) {
 	// Check for blanks or '-' between levels
-	// let nullIndex
-	// for(const [k,v] of levelIdxStrMap.entries()){
 
-	// }
-	console.log(levelIdxStrMap.values())
-	const nullIndex = levelColIndexes.indexOf(null) //find first index of null
+	//find first index of null
+	let firstNull = levelStrs.find(l => l.name == null)
+
+	//find last index of non-null level value
+	//Assumes user correctly placed levels in order
 	function revArray(arr) {
 		let copy = [...arr]
 		return copy.reverse()
 	}
-	//find last index of non-null level value
-	const lastLevelIndex = levelColIndexes.length - 1 - revArray(levelColIndexes).findIndex(e => e !== null)
+	const lastNonNull = revArray(levelStrs).find(l => l.name !== null)
+	// console.log(lastNonNull)
+
 	//TODO: Print error to the screen
-	if (lastLevelIndex > nullIndex && nullIndex >= 0)
+	if (firstNull == undefined) firstNull = { idx: lastNonNull.idx + 1, name: 'noname' }
+	if (lastNonNull.idx > firstNull.idx && firstNull.idx >= 0)
 		throw `Blank or '-' value detected between levels in line ` + (i + 1)
 
-	return lastLevelIndex //Use later for leaflevel
-}
+	//Check for duplicate string values for levels in the same line
+	const nonNullLevelStrs = []
+	levelStrs.filter(l => {
+		if (l.name !== null) nonNullLevelStrs.push(l.name)
+	})
+	check4DuplicateValues(nonNullLevelStrs)
 
-function getName(colArray) {
-	//finds last name in the array and returns as name
-	const ca = filterCols(colArray)
-
-	//checks for duplicates in the resulting array
-	check4DuplicateValues(ca)
-	if (ca.length > 0) return ca[ca.length - 1]
-	throw 'name missing'
-}
-
-function filterCols(colArray) {
-	//filters null strings to return only string level inputs
-	const ca = colArray.filter(x => x !== null)
-	return ca
+	return lastNonNull
 }
 
 function parseConfig(str) {
@@ -398,49 +399,73 @@ function parseConfig(str) {
 	return term
 }
 
-function createHierarchy(leafIdx, filteredCols, key) {
-	for (const fc in filteredCols) {
+function createHierarchy(leafIndex, levelNames, leafID, termsMaps) {
+	const root_id = '__root' //placeholder
+	//Maps the children in order; will use later to create the parent terms
+	termsMaps.p2childorder.set(root_id, [])
+	let idxArr = []
+	console.log(idxArr)
+	for (const level of levelNames) {
+		idxArr.push(level.idx)
 		let id
-		if (fc == leafIdx) {
-			id = key
-			name2id.set(filteredCols[fc], id)
+		if (level.idx === leafIndex) {
+			id = leafID
+			// Use later for sample annotation and other file types
+			// termsMaps.name2id.set(levelNames[level.idx], id)
 		} else {
-			id = filteredCols[fc]
-		}
-		//Skip first column.
-		if (fc != 0) {
-			//find id for the immediate parent level
-			const parentId = filteredCols[Number(fc) - 1]
-			parent2children.get(parentId).add(id)
-			if (!child2parents.has(id)) child2parents.set(id, new Map())
-			for (const y in filteredCols) {
-				if (y < fc) {
-					child2parents.get(id).set(filteredCols[y], y)
-				}
+			id = level.name
+			// Create map for parents to all children for term.isleaf
+			if (!termsMaps.parent2children.has(id) && id) {
+				termsMaps.parent2children.set(id, new Set())
 			}
-			ch2immediateP.set(id, parentId)
-			if (!p2childorder.has(parentId)) p2childorder.set(parentId, [])
-			if (p2childorder.get(parentId).indexOf(id) == -1) p2childorder.get(parentId).push(id)
-		} else {
-			//The parent_id  = null for the first col
-			ch2immediateP.set(id, null)
-			//Connect to the id to the root
-			if (p2childorder.get(root_id).indexOf(id) == -1) p2childorder.get(root_id).push(id)
 		}
+		// console.log(id)
+		console.log(idxArr)
+		// if (level.idx == 0) {
+		// 	// The parent_id  = null for the first level
+		// 	console.log(id)
+		// 	termsMaps.ch2immediateP.set(id, null)
 
-		if (!parent2children.has(id) && fc != leafIdx) {
-			parent2children.set(id, new Set())
-		}
-		allterms_byorder.add(id)
+		// 	//Connect to the first col id to the root
+		// 	if (termsMaps.p2childorder.get(root_id).indexOf(id) == -1) termsMaps.p2childorder.get(root_id).push(id)
+		// } else {
+		// 	//find id for the immediate parent level
+		// 	const parentId = levelNames[level.idx - 1].name
+
+		// 	termsMaps.parent2children.get(parentId).add(id)
+
+		// 	// Map children to all parents
+		// 	// Create a new map for every child id
+		// 	if (!termsMaps.child2parents.has(id)) termsMaps.child2parents.set(id, new Map())
+
+		// 	for (const y of levelNames) {
+		// 		//Collect parent ids for children when the index is less than the child
+		// 		if (y.idx < level.idx) {
+		// 			termsMaps.child2parents.get(id).set(levelNames[y.idx].name, y.name)
+		// 		}
+		// 	}
+		// 	//Capture immediate parent for child term.parent_id
+		// 	termsMaps.ch2immediateP.set(id, parentId)
+
+		// 	// Map parent to children in order for creating term objs for parents
+		// 	// Create a new array for parent in map
+		// 	if (!termsMaps.p2childorder.has(parentId)) termsMaps.p2childorder.set(parentId, [])
+		// 	// Add child id to parent array if child id not found
+		// 	if (termsMaps.p2childorder.get(parentId).indexOf(id) == -1) termsMaps.p2childorder.get(parentId).push(id)
+		// }
+
+		// Use later for sample annotation matrix and other file types
+		// termsMaps.allterms_byorder.add(id)
 	}
 }
 
 /*
  **** Helpers ****
  */
-function str2level(col) {
+function str2level(str) {
 	// parses columns and returns name
-	const tmp = col.trim().replace(/"/g, '')
+	const tmp = str.trim().replace(/"/g, '')
+	// console.log(tmp)
 	if (!tmp || tmp == '-') return null
 	return tmp
 }
@@ -454,6 +479,7 @@ function check4DuplicateValues(values) {
 	}
 	if (duplicates.size > 0) {
 		const dup = Array.from(duplicates)
+		// console.log(453)
 		throw `Error: Nonunique values(s) found: ` + dup + `. Values must be unique.` //TODO print to screen
 	}
 	return true
@@ -463,32 +489,23 @@ function check4DuplicateValues(values) {
  **** Submission Functions ****
  */
 
-function submitButton(div, d, holder) {
+function submitButton(div, obj, holder) {
 	const submit = uiutils.makeBtn(div, 'Submit')
 	submit
 		.style('margin', '20px 20px 20px 130px')
 		.style('font-size', '16px')
 		.on('click', () => {
-			validateInput(div, d)
 			div.remove()
-			// console.log(449, d.data.terms)
+			console.log(449, obj.data.terms)
 			appInit({
 				holder: holder,
 				state: {
 					vocab: {
-						terms: d.data.terms
+						terms: obj.data.terms
 					}
 				}
 			})
 		})
-}
-
-function validateInput(div, d) {
-	//May not be needed?
-	if (!d.data) {
-		// alert('Provide data')
-		return null
-	}
 }
 
 function infoSection(div) {
