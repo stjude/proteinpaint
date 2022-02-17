@@ -252,10 +252,20 @@ by info_fields[] and variantcase_fields[]
 function filter_custom_variants(tk, block) {
 	// must exclude out of range ones, otherwise numericmode rendering will break
 	const lst = []
-	const r = block.rglst[0]
+	let bbstart = null,
+		bbstop
+	for (let i = block.startidx; i <= block.stopidx; i++) {
+		if (bbstart == null) {
+			bbstart = block.rglst[i].start
+			bbstop = block.rglst[i].stop
+		} else {
+			bbstart = Math.min(bbstart, block.rglst[i].start)
+			bbstop = Math.max(bbstop, block.rglst[i].stop)
+		}
+	}
 	for (const m of tk.custom_variants) {
-		if (m.chr != r.chr) continue
-		if (m.pos <= r.start || m.pos >= r.stop) continue
+		if (m.chr != block.rglst[0].chr) continue
+		if (m.pos <= bbstart || m.pos >= bbstop) continue
 		lst.push(m)
 	}
 	return { skewer: lst }
