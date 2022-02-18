@@ -26,7 +26,8 @@ const encodedParams = [
 	'variant_filter',
 	'info_fields',
 	'outcome',
-	'independent'
+	'independent',
+	'terms'
 ]
 
 export function handle_request_closure(genomes) {
@@ -78,6 +79,13 @@ export function handle_request_closure(genomes) {
 			if (q.getregression) return await trigger_getregression(q, res, ds)
 			if (q.validateSnps) return res.send(await termdbsnp.validate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return trigger_getvariantfilter(res, ds)
+
+			// generic data getter, instead of using flags
+			if (q.for) {
+				const data = await require(`./termdb.${q.for}.js`).getData(q, ds)
+				res.send(data)
+				return
+			}
 
 			throw "termdb: don't know what to do"
 		} catch (e) {

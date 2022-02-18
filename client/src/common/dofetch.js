@@ -1,11 +1,8 @@
-const urlMaxLength = 2000 // if a GET url is longer than this, will be converted to POST of the same route
-
 /*
 	path: URL
 	arg: HTTP request body
 	opts: see dofetch2() opts argument
 */
-
 export function dofetch(path, arg, opts = null) {
 	if (opts && typeof opts == 'object') {
 		if (opts.serverData && typeof opts.serverData == 'object') {
@@ -92,25 +89,14 @@ export function dofetch2(path, init = {}, opts = {}) {
 		}
 	}
 
-	if (url.length > urlMaxLength && (!init.method || init.method.toUpperCase() == 'GET')) {
-		// convert to a POST request
-		// !!! NOTE: the requested server route must support both GET and POST, for example, app.all('/route', handler)
-		init.method = 'POST'
-		const [hostpath, query] = url.split('?') // must use url but not path
-		const params = {}
-		query.split('&').forEach(p => {
-			const [k, v] = p.split('=')
-			params[k] = typeof v == 'string' && v.startsWith('%') ? JSON.parse(decodeURIComponent(v)) : v
-		})
-		init.body = JSON.stringify(params)
-		url = hostpath
-	}
+	// this
+	url = mayAdjustRequest(url, init)
 
 	if (!init.headers) {
 		init.headers = {}
 	}
 
-	if (!init.headers['content-type']) {
+	if (!init.headers['content-type'] && init.body) {
 		init.headers['content-type'] = 'application/json'
 	}
 
@@ -150,4 +136,73 @@ export function dofetch3(path, init = {}, opts = {}) {
 	*/
 	opts.serverData = defaultServerDataCache
 	return dofetch2(path, init, opts)
+}
+
+const urlMaxLength = 2000 // if a GET url is longer than this, will be converted to POST of the same route
+
+/*	
+	url: full request url with host/path
+
+	init {}
+		same as 
+		will be supplied as the second argument to
+		the native fetch api, so the method, headers, body
+		may be optionally supplied in the "init" argument
+		see https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
+*/
+function mayAdjustRequest(url, init) {
+	const method = (init.method && init.method.toUpperCase()) || 'GET'
+	if (method == 'POST') {
+		// assume a minimal URL path + parameters for a POST request
+		// since the payload will be in the request body
+		if (typeof init.body == 'object') init.body = JSON.stringify(init.body)
+		return url
+	}
+
+	if (method != 'GET') {
+		throw `unsupported request method='${method}': must be undefined or GET or POST`
+	}
+
+	if (init.body) {
+		// init.body should be an object, to be converted to either
+		// (a) GET URL search parameter strings, OR
+		// (b) POST body, JSON-encoded
+		const params = []
+		for (const key in init.body) {
+			const value = init.body[key]
+			if (typeof value == 'object') params.push(`${key}=${encodeURIComponent(JSON.stringify(value))}`)
+			else params.push(`${key}=${value}`)
+		}
+
+		if (!url.includes('?')) url += '?'
+		url += params.join('&')
+	}
+
+	if (url.length < urlMaxLength) {
+		// the request body has been encoded as URL parameters, so can delete it
+		if (init.body) delete init.body
+		return url
+	}
+
+	// convert to a POST request because the URL is too long
+	// !!! NOTE: the requested server route must support both GET and POST, for example, app.all('/route', handler)
+	init.method = 'POST'
+	const [hostpath, query] = url.split('?') // must use url but not path
+
+	if (init.body) {
+		// assumes that all or most of the url string length were from parameters in the init.body argument to dofetch2
+		init.body = JSON.stringify(init.body)
+	} else {
+		// the url parameters were provided directly in the path argument to dofetch2
+		const params = {}
+		// decode URL search parameters, if available
+		if (query)
+			query.split('&').forEach(p => {
+				const [k, v] = p.split('=')
+				params[k] = v.startsWith('%') ? JSON.parse(decodeURIComponent(v)) : v
+			})
+		init.body = JSON.stringify(params)
+	}
+
+	return hostpath
 }

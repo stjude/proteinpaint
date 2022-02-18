@@ -23,16 +23,45 @@ runproteinpaint({
 		state: {
 			dslabel: 'PNET',
 			genome: 'hg19',
-			plots: [{
-				chartType: 'survival',
-				term: {
-					id: 'Event-free survival'
-				},
-				term2: {
-					id: 'Age'
-				},
-				settings: {}
-			}],
+			plots: [
+				{
+					chartType: 'survival',
+					term: {
+						id: 'Event-free survival'
+					},
+					term2: {
+						id: 'Age'
+					},
+					settings: {}
+				}, 
+				{
+					chartType: 'matrix',
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{
+									id: 'sex',
+									//q: { mode: 'values' } // or 'groupsetting'
+								}, 
+								{
+									id: 'Age',
+									q: {
+										mode: 'discrete',
+										type: 'regular-bin',
+										bin_size: 5,
+										first_bin: {
+											startunbounded: true,
+											stop: 5,
+											stopinclusive: true
+										}
+									} // or 'continuous'
+								}
+							]
+						}
+					],
+				}
+			]
 		}
 	}
 })
