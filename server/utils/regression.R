@@ -12,43 +12,42 @@
 
 # Input JSON specifications:
 # {
-#   "type": [string] regression type (e.g. "linear" or "logistic")
-#   "outcome": [object] outcome variable
-#     "id": [string] variable id (e.g. "outcome")
-#     "name": [string] variable name (e.g. "Blood Pressure")
-#     "rtype": [string] R variable type (e.g. "numeric" or "factor")
-#     "values": [array] data values. For logistic regression, use 0/1 values (0 = ref; 1 = non-ref)
-#     "categories": [object] variable categories (only for logistic regression)
-#       "ref": [string] reference category
-#       "nonref": [string] non-reference category
-#   "independent": [array] independent variables
-#     {
-#       "id": [string] variable id (e.g. "id0", "id1")
-#       "name": [string] variable name (e.g. "Age")
-#       "rtype": [string] R variable type (e.g. "numeric" or "factor")
-#       "values": [array] data values
-#       "interactions": [array] ids of interacting variables
-#       "refGrp": [string] reference group (required for factor variables)
-#       "spline": [object] cubic spline settings (optional)
-#         "knots": [array] knot values
-#         "plotfile": [string] output png file of spline plot
-#       "scale": [number] scaling factor. All data values will be divided by this number (optional)
-#     },
-#     {...}
-#   "additionalIndependent": [array] similar structure as .independent[] for additional independent variables. These variables will be analyzed separately from each other, but together with variables in .independent[].
+#   "data": [{}] per-sample data values
+#   "metadata": {
+#     "type": regression type (linear/logistic)
+#     "variables": [
+#       {
+#         "id": variable id
+#         "name": variable name
+#         "type": variable type ("outcome", "snplocus", "spline", "independent")
+#         "rtype": R variable type ("numeric", "factor")
+#         "refGrp": reference group (required for factor variables)
+#         "interactions": [] ids of interacting variables
+#         "categories": { ref, nonref } (only for logistic outcome)
+#         "categories": {} (only for logistic outcome)
+#           "ref": reference category of outcome
+#           "nonref": non-reference category of outcome
+#         "spline": {} cubic spline settings (only for spline variable)
+#           "knots": [] knot values
+#           "plotfile": output png file of spline plot
+#         "scale": scaling factor. Data values of variable will be divided by this number (optional)
+#       }
+#     ]
+#   }
 # }
 #
 #
 # Output JSON specifications:
 # [
 #   {
-#     "result": {
+#     "id": id of snplocus term (empty when no snplocus terms are present)
+#     "data": {
+#       "sampleSize": sample size of analysis
 #       "residuals": { "header": [], "rows": [] },
 #       "coefficients": { "header": [], "rows": [] },
 #       "type3": { "header": [], "rows": [] },
 #       "other": { "header": [], "rows": [] }
 #     },
-#     "id": [string] id of additional independent term (only applicable when additional independent terms are present)
 #   }
 # ]
 
@@ -65,133 +64,93 @@ library(jsonlite)
 # FUNCTIONS #
 #############
 
-# function to build data table
-buildDat <- function(term, dat, col) {
-  colnames(dat)[col] <- term$id
-  if (term$rtype == "numeric") {
-    # numeric variable
-    if ("scale" %in% names(term)) {
-      dat[,col] <- as.numeric(term$values)/as.numeric(term$scale)
-    } else {
-      dat[,col] <- as.numeric(term$values)
+# function to run linear regression
+linearRegression <- function(formula, dat, outcome, splineVariables) {
+  res <- lm(formula, data = dat, na.action = na.omit)
+  sampleSize <- res$df.residual + length(res$coefficients)
+  if (nrow(splineVariables) > 0) {
+    # model contains spline variables(s)
+    # plot spline regression for each spline term
+    for (r in 1:nrow(splineVariables)) {
+      splineVariable <- splineVariables[r,]
+      plot_spline(splineVariable, dat, outcome, res, "linear")
     }
-  } else if (term$rtype == "factor") {
-    # factor variable
-    dat[,col] <- relevel(factor(term$values), ref = term$refGrp)
+  }
+  res_summ <- summary(res)
+  # prepare residuals table
+  residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$residuals),3)))
+  # prepare coefficients table
+  coefficients_table <- build_coef_table(res_summ)
+  colnames(coefficients_table)[1] <- "Beta"
+  # compute confidence intervals of beta values
+  ci <- suppressMessages(confint(res))
+  colnames(ci) <- c("95% CI (low)","95% CI (high)")
+  coefficients_table <- cbind(coefficients_table, ci)
+  coefficients_table <- coefficients_table[,c(1,5,6,2,3,4)]
+  # prepare type III statistics table
+  type3_table <- as.matrix(drop1(res, scope = ~., test = "F"))
+  type3_table[,c("Sum of Sq","RSS","AIC")] <- round(type3_table[,c("Sum of Sq","RSS","AIC")], 1)
+  type3_table[,"F value"] <- round(type3_table[,"F value"], 3)
+  type3_table[,"Pr(>F)"] <- signif(type3_table[,"Pr(>F)"], 4)
+  # prepare other summary stats table
+  other_table <- list(
+    "header" = c("Residual standard error", "Residual degrees of freedom", "R-squared", "Adjusted R-squared", "F-statistic", "P-value"),
+    "rows" = c(round(res_summ$sigma, 2), round(res$df.residual, 0), round(res_summ$r.squared, 5), round(res_summ$adj.r.squared, 5))
+  )
+  # check for F-statistic
+  # this statistic is not computed if variables have no variability
+  if ("fstatistic" %in% names(res_summ)) {
+    other_table[["rows"]] <- c(other_table[["rows"]], round(unname(res_summ$fstatistic[1]), 2), signif(unname(pf(res_summ$fstatistic[1], res_summ$fstatistic[2], res_summ$fstatistic[3], lower.tail = F)), 4))
   } else {
-    stop(paste0("term rtype '", term$rtype, "' is not recognized"))
+    other_table[["rows"]] <- c(other_table[["rows"]], NA, NA)
   }
-  return(dat)
-}
-
-# function to build regression formula
-buildFormula <- function(term, independentTerms, interactions, splineTerms) {
-  if ("spline" %in% names(term)) {
-    if (length(term$interactions) > 0) stop("interactions with spline terms are not supported")
-    splineTerms[[length(splineTerms) + 1]] <- term
-    splineCmd <- paste0("cubic_spline(", term$id, ", ", paste0("c(", paste(term$spline$knots,collapse = ","), ")"), ")")
-    independentTerms <- c(independentTerms, splineCmd)
-  }
-  else {
-    independentTerms <- c(independentTerms, term$id)
-  }
-  for (intTerm in term$interactions) {
-    # get unique set of interactions
-    int1 <- paste(term$id, intTerm, sep = ":")
-    int2 <- paste(intTerm, term$id, sep = ":")
-    if (!(int1 %in% interactions) & !(int2 %in% interactions)) {
-        interactions <- c(interactions, int1)
-    }
-  }
-  out <- list(independentTerms = independentTerms, interactions = interactions, splineTerms = splineTerms)
+  # export the results tables
+  out <- list("res" = res, "sampleSize" = unbox(sampleSize), "residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = type3_table, "other" = other_table)
   return(out)
 }
 
-# function to run regression analysis
-run_regression <- function(formula, dat, lst, splineTerms) {
-  if (lst$type == "linear"){
-    # linear regression
-    if (!is.numeric(dat$outcome)){
-      stop("linear regression requires a numeric outcome variable")
+# function to run logistic regression
+logisticRegression <- function(formula, dat, outcome, splineVariables) {
+  res <- glm(formula, family = binomial(link='logit'), data = dat, na.action = na.omit)
+  sampleSize <- res$df.residual + length(res$coefficients)
+  if (nrow(splineVariables) > 0) {
+    # model contains spline variables(s)
+    # plot spline regression for each spline term
+    for (r in 1:nrow(splineVariables)) {
+      splineVariable <- splineVariables[r,]
+      plot_spline(splineVariable, dat, outcome, res, "logistic")
     }
-    # fit linear model
-    res <- lm(formula, data = dat)
-    if (length(splineTerms) > 0) {
-      # model contains spline term(s)
-      # plot spline regression for each spline term
-      for (term in splineTerms) {
-        plot_spline(term, lst, dat, res)
-      }
-    }
-    res_summ <- summary(res)
-    # prepare residuals table
-    residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$residuals),3)))
-    # prepare coefficients table
-    coefficients_table <- build_coef_table(res_summ)
-    colnames(coefficients_table)[1] <- "Beta"
-    # compute confidence intervals of beta values
-    ci <- suppressMessages(confint(res))
-    colnames(ci) <- c("95% CI (low)","95% CI (high)")
-    coefficients_table <- cbind(coefficients_table, ci)
-    coefficients_table <- coefficients_table[,c(1,5,6,2,3,4)]
-    # prepare type III statistics table
-    typeIII_table <- as.matrix(drop1(res, scope = ~., test = "F"))
-    typeIII_table[,c("Sum of Sq","RSS","AIC")] <- round(typeIII_table[,c("Sum of Sq","RSS","AIC")], 1)
-    typeIII_table[,"F value"] <- round(typeIII_table[,"F value"], 3)
-    typeIII_table[,"Pr(>F)"] <- signif(typeIII_table[,"Pr(>F)"], 4)
-    # prepare other summary stats table
-    other_table <- list(
-      "header" = c("Residual standard error", "Residual degrees of freedom", "R-squared", "Adjusted R-squared", "F-statistic", "P-value"),
-      "rows" = c(round(res_summ$sigma, 2), round(res$df.residual, 0), round(res_summ$r.squared, 5), round(res_summ$adj.r.squared, 5))
-    )
-    # F-statistic is not computed if variables have no variability
-    if ("fstatistic" %in% names(res_summ)) {
-      other_table[["rows"]] <- c(other_table[["rows"]], round(unname(res_summ$fstatistic[1]), 2), signif(unname(pf(res_summ$fstatistic[1], res_summ$fstatistic[2], res_summ$fstatistic[3], lower.tail = F)), 4))
-    } else {
-      other_table[["rows"]] <- c(other_table[["rows"]], NA, NA)
-    }
-  } else if (lst$type == "logistic"){
-    # logistic regression
-    if (length(unique(dat$outcome)) != 2){
-      stop("outcome variable is not binary")
-    }
-    # fit logistic model
-    res <- glm(formula, family = binomial(link='logit'), data = dat)
-    if (length(splineTerms) > 0) {
-      # model contains spline term(s)
-      # plot spline regression for each spline term
-      for (term in splineTerms) {
-        plot_spline(term, lst, dat, res)
-      }
-    }
-    res_summ <- summary(res)
-    # prepare residuals table
-    residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$deviance.resid),3)))
-    # prepare coefficients table
-    coefficients_table <- build_coef_table(res_summ)
-    colnames(coefficients_table)[1] <- "Log odds"
-    # compute odds ratio
-    coefficients_table <- cbind("Odds ratio" = exp(coef(res)), coefficients_table)
-    # compute confidence intervals of odds ratios
-    ci <- exp(suppressMessages(confint(res)))
-    colnames(ci) <- c("95% CI (low)","95% CI (high)")
-    coefficients_table <- cbind(coefficients_table, ci)
-    coefficients_table <- coefficients_table[,c(1,6,7,2,3,4,5)]
-    # prepare type III statistics table
-    typeIII_table <- as.matrix(drop1(res, scope = ~., test = "LRT"))
-    typeIII_table[,c("Deviance","AIC")] <- round(typeIII_table[,c("Deviance","AIC")], 1)
-    typeIII_table[,"LRT"] <- round(typeIII_table[,"LRT"], 3)
-    typeIII_table[,"Pr(>Chi)"] <- signif(typeIII_table[,"Pr(>Chi)"], 4)
-    # prepare other summary stats table
-    other_table <- list(
-      "header" = c("Dispersion parameter", "Null deviance", "Null deviance degrees of freedom", "Residual deviance", "Residual deviance degrees of freedom", "AIC"),
-      "rows" = round(c(res_summ$dispersion, res_summ$null.deviance, res_summ$df.null, res_summ$deviance, res_summ$df.residual, res_summ$aic), 1)
-    )
-  } else{
-    stop("regression type is not recognized")
   }
-  
-  # reformat the coefficients table
+  res_summ <- summary(res)
+  # prepare residuals table
+  residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$deviance.resid),3)))
+  # prepare coefficients table
+  coefficients_table <- build_coef_table(res_summ)
+  colnames(coefficients_table)[1] <- "Log odds"
+  # compute odds ratio
+  coefficients_table <- cbind("Odds ratio" = exp(coef(res)), coefficients_table)
+  # compute confidence intervals of odds ratios
+  ci <- exp(suppressMessages(confint(res)))
+  colnames(ci) <- c("95% CI (low)","95% CI (high)")
+  coefficients_table <- cbind(coefficients_table, ci)
+  coefficients_table <- coefficients_table[,c(1,6,7,2,3,4,5)]
+  # prepare type III statistics table
+  type3_table <- as.matrix(drop1(res, scope = ~., test = "LRT"))
+  type3_table[,c("Deviance","AIC")] <- round(type3_table[,c("Deviance","AIC")], 1)
+  type3_table[,"LRT"] <- round(type3_table[,"LRT"], 3)
+  type3_table[,"Pr(>Chi)"] <- signif(type3_table[,"Pr(>Chi)"], 4)
+  # prepare other summary stats table
+  other_table <- list(
+    "header" = c("Dispersion parameter", "Null deviance", "Null deviance degrees of freedom", "Residual deviance", "Residual deviance degrees of freedom", "AIC"),
+    "rows" = round(c(res_summ$dispersion, res_summ$null.deviance, res_summ$df.null, res_summ$deviance, res_summ$df.residual, res_summ$aic), 1)
+  )
+  # export the results tables
+  out <- list("res" = res, "sampleSize" = unbox(sampleSize), "residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = type3_table, "other" = other_table)
+  return(out)
+}
+
+# function to reformat the coefficients table
+formatCoefficients <- function(coefficients_table, res) {
   # round all columns to 4 significant digits
   coefficients_table <- signif(coefficients_table, 4)
   # add variable and category columns
@@ -243,17 +202,15 @@ run_regression <- function(formula, dat, lst, splineTerms) {
   }
   coefficients_table <- cbind("Variable" = vCol, "Category" = cCol, coefficients_table)
   coefficients_table <- list("header" = colnames(coefficients_table), "rows" = coefficients_table)
-  
-  # reformat the type III statistics table
+  return(coefficients_table)
+}
+
+# function to reformat the type III statistics table
+formatType3 <- function(type3_table) {
   # add a variable column
-  typeIII_table <- cbind("Variable" = sub("cubic_spline\\(", "", sub(", c\\(.*", "", row.names(typeIII_table))), typeIII_table)
-  typeIII_table <- list("header" = colnames(typeIII_table), "rows" = typeIII_table)
-  
-  # combine the results tables into a list
-  out_reg <- list()
-  out_reg[["data"]] <- list("residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = typeIII_table, "other" = other_table)
-  
-  return(out_reg)
+  type3_table <- cbind("Variable" = sub("cubic_spline\\(", "", sub(", c\\(.*", "", row.names(type3_table))), type3_table)
+  type3_table <- list("header" = colnames(type3_table), "rows" = type3_table)
+  return(type3_table)
 }
 
 # function to build coefficients table
@@ -284,7 +241,7 @@ cubic_spline <- function(values, knots) {
 }
 
 # function to plot spline regression
-plot_spline <- function(splineTerm, lst, dat, res) {
+plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
   ## prepare test data
   sampleSize <- 1000
   # newdat: test data table for predicting model outcome values
@@ -296,7 +253,7 @@ plot_spline <- function(splineTerm, lst, dat, res) {
   newdat2 <- matrix(data = NA, nrow = 0, ncol = 2, dimnames = list(c(),c("prop", "effectSize")))
   # populate the test data tables
   for (term in colnames(newdat)) {
-    if (term == splineTerm$id) {
+    if (term == splineVariable$id) {
       newdat[,term] <- seq(from = min(dat[,term]), to = max(dat[,term]), length.out = sampleSize)
     } else if (is.factor(dat[,term])) {
       ref <- levels(dat[,term])[1]
@@ -322,54 +279,54 @@ plot_spline <- function(splineTerm, lst, dat, res) {
   preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod))
   
   ## plot data
-  if (lst$type == "linear") {
+  if (regtype == "linear") {
     pointtype <- 16
     pointsize <- 0.3
-    ylab <- lst$outcome$name
+    ylab <- outcome$name
   } else {
     # for logistic regression, plot predicted probabilities
     preddat_ci_adj <- 1/(1+exp(-preddat_ci_adj))
     pointtype <- 124
     pointsize <- 0.7
-    ylab <- paste0("Pr(", lst$outcome$name, " ", lst$outcome$categories$nonref, ")")
+    ylab <- paste0("Pr(", outcome$name, " ", outcome$categories$nonref, ")")
   }
-  plotfile <- splineTerm$spline$plotfile
+  plotfile <- splineVariable$spline$plotfile
   png(filename = plotfile, width = 950, height = 550, res = 200)
   par(mar = c(3, 2.5, 1, 5), mgp = c(1, 0.5, 0), xpd = T)
   # plot coordinate space
-  plot(dat[,splineTerm$id],
-       dat[,"outcome"],
+  plot(dat[,splineVariable$id],
+       dat[,outcome$id],
        cex.axis = 0.5,
        ann = F,
        type = "n"
   )
   # axis titles
-  title(xlab = splineTerm$name,
+  title(xlab = splineVariable$name,
         ylab = ylab,
         line = 1.5,
         cex.lab = 0.5
   )
   # knots
-  abline(v = splineTerm$spline$knots,
+  abline(v = splineVariable$spline$knots[[1]],
          col = "grey60",
          lty = 2,
          lwd = 0.8,
          xpd = F
   )
   # spline term vs. outcome term actual data
-  points(dat[,splineTerm$id],
-         dat[,"outcome"],
+  points(dat[,splineVariable$id],
+         dat[,outcome$id],
          pch = pointtype,
          cex = pointsize
   )
   # confidence intervals of regression line
-  polygon(x = c(newdat[,splineTerm$id], rev(newdat[,splineTerm$id])),
+  polygon(x = c(newdat[,splineVariable$id], rev(newdat[,splineVariable$id])),
           y = c(preddat_ci_adj[,"lwr"], rev(preddat_ci_adj[,"upr"])),
           col = adjustcolor("grey", alpha.f = 0.8),
           border = NA
   )
   # regression line
-  lines(newdat[,splineTerm$id],
+  lines(newdat[,splineVariable$id],
         preddat_ci_adj[,"fit"],
         col = "red",
         lwd = 2
@@ -406,32 +363,111 @@ if (length(args) != 0) stop("Usage: Rscript regression.R < jsonIn > jsonOut")
 
 # read in json input
 con <- file("stdin","r")
-lst <- stream_in(con, verbose = F, simplifyVector = T, simplifyDataFrame = F, simplifyMatrix = F)
-if (length(lst) != 1) stop("input json does not have 1 record")
-lst <- lst[[1]]
+input <- stream_in(con, verbose = F)
+dat <- input$data[[1]] # data table
+variables <- input$metadata$variables[[1]] # variable metadata
 
-# build data table
-# first column is outcome variable, rest of columns are independent variables
-# assign variable types, reference groups and scale values (if applicable)
-dat <- as.data.frame(matrix(data = NA, nrow = length(lst$outcome$values), ncol = length(lst$independent) + length(lst$additionalIndependent) + 1))
-# fill outcome variable column
-colnames(dat)[1] <- lst$outcome$id
-dat[,1] <- as.numeric(lst$outcome$values)
-# fill independent variable columns
-if (length(lst$independent) > 0) {
-  for (i in 1:length(lst$independent)) {
-    col <- i + 1
-    term <- lst$independent[[i]]
-    dat <- buildDat(term, dat, col)
+# format data table
+# set variable types, reference groups and scale values
+for (r in 1:nrow(variables)) {
+  variable <- variables[r,]
+  id <- variable$id
+  if (variable$type == "outcome") {
+    # outcome variable
+    if (input$metadata$type == "logistic") {
+      vals <- unique(dat[,id])
+      if (!(length(vals) == 2 & all(c(0,1) %in% vals))) stop("outcome variable is not 0/1 binary")
+    }
+  }
+  if (variable$rtype == "numeric") {
+    # numeric variable
+    if ("scale" %in% colnames(variable)) {
+      # scale variable values
+      if (!is.na(variable$scale)) dat[,id] <- dat[,id]/variable$scale
+    }
+  } else if (variable$rtype == "factor") {
+    # factor variable
+    dat[,id] <- factor(dat[,id])
+    if (length(levels(dat[,id])) < 2) stop(paste0("'",variable$id,"' has fewer than 2 categories"))
+    if (!(variable$refGrp %in% levels(dat[,id]))) stop(paste0("refGrp of '",variable$id,"' not found in data values"))
+    dat[,id] <- relevel(dat[,id], ref = variable$refGrp)
+  } else {
+    stop(paste0("variable rtype '",variable$rtype,"' is not recognized"))
   }
 }
-# fill additional independent variable columns
-if ("additionalIndependent" %in% names(lst)) {
-  for (i in 1:length(lst$additionalIndependent)) {
-    col <- i + 1 + length(lst$independent)
-    term <- lst$additionalIndependent[[i]]
-    dat <- buildDat(term, dat, col)
+
+# build regression formula(s)
+# first collect outcome id, independent ids, cubic spline ids, and interactions
+# set aside snplocus variables to be added separately
+outcomeId <- vector(mode = "character")
+independentIds <- vector(mode = "character")
+interactions <- vector(mode = "character")
+snplocusVariables <- variables[0,]
+splineVariables <- variables[0,]
+for (r in 1:nrow(variables)) {
+  variable <- variables[r,]
+  if (variable$type == "outcome") {
+    # outcome variable
+    outcomeId <- variable$id
+  } else if (variable$type == "spline") {
+    # cubic spline variable
+    # use call to cubic spline function in regression formula
+    splineCmd <- paste0("cubic_spline(", variable$id, ", ", paste0("c(", paste(variable$spline$knots[[1]],collapse = ","), ")"), ")")
+    independentIds <- c(independentIds, splineCmd)
+    splineVariables <- rbind(splineVariables, variable)
+  } else if (variable$type == "snplocus") {
+    # snplocus variable
+    # will build separate formula for each of these variables
+    snplocusVariables <- rbind(snplocusVariables, variable)
+  } else {
+    # other independent variable
+    independentIds <- c(independentIds, variable$id)
   }
+  if (length(variable$interactions[[1]]) > 0) {
+    # interactions
+    if (variable$type == "spline") stop("interactions not allowed with spline variable")
+    interactionIds <- variable$interactions[[1]]
+    for (intId in interactionIds) {
+      # get unique set of interactions
+      int1 <- paste(variable$id, intId, sep = ":")
+      int2 <- paste(intId, variable$id, sep = ":")
+      if (!(int1 %in% interactions) & !(int2 %in% interactions)) {
+        interactions <- c(interactions, int1)
+      }
+    }
+  }
+}
+
+# check for snplocus variables
+formulas <- list()
+if (nrow(snplocusVariables) > 0) {
+  # snplocus variables present
+  # build separate formula for each snplocus variable
+  tempIndependentIds <- vector(mode = "character")
+  tempInteractions <- vector(mode = "character")
+  for (r in 1:nrow(snplocusVariables)) {
+    variable <- snplocusVariables[r,]
+    tempIndependentIds <- c(independentIds, variable$id)
+    if (length(variable$interactions[[1]]) > 0) {
+      # interactions
+      interactionIds <- variable$interactions[[1]]
+      for (intId in interactionIds) {
+        # get unique set of interactions
+        int1 <- paste(variable$id, intId, sep = ":")
+        int2 <- paste(intId, variable$id, sep = ":")
+        if (!(int1 %in% interactions) & !(int2 %in% interactions)) {
+          tempInteractions <- c(interactions, int1)
+        }
+      }
+    }
+    formula <- as.formula(paste(outcomeId, paste(c(tempIndependentIds, tempInteractions), collapse = "+"), sep = "~"))
+    formulas[[length(formulas)+1]] <- list("id" = variable$id, "formula" = formula)
+  }
+} else {
+  # no snplocus variables
+  # use single formula for all variables
+  formula <- as.formula(paste(outcomeId, paste(c(independentIds, interactions), collapse = "+"), sep = "~"))
+  formulas[[length(formulas)+1]] <- list("id" = "", "formula" = formula)
 }
 
 
@@ -439,52 +475,30 @@ if ("additionalIndependent" %in% names(lst)) {
 # RUN REGRESSION #
 ##################
 
-# build regression formula(s) and run regression analysis(es)
-# if no additional independent terms present, build one formula for one regression analysis
-# if additional independent terms are present, build separate formulas for each additional term
-# each separate formula will contain the outcome term, all independent terms (and associated interactions), and a single additional term (and all associated interactions)
-# note: interactions must be added to the end of the formula
-# to maintain consistency with the coefficients in the regression results
-
-# prepare outcome term and independent terms for building regression formula
-outcomeTerm <- "outcome"
-independentTerms <- vector(mode = "character")
-interactions <- vector(mode = "character")
-splineTerms <- list()
-if (length(lst$independent) > 0) {
-  for (i in 1:length(lst$independent)) {
-    term <- lst$independent[[i]]
-    out <- buildFormula(term, independentTerms, interactions, splineTerms)
-    independentTerms <- out$independentTerms
-    interactions <- out$interactions
-    splineTerms <- out$splineTerms
+# Run a separate regression analysis for each formula
+out <- list()
+outcome <- variables[variables$type == "outcome",]
+for (i in 1:length(formulas)) {
+  id <- formulas[[i]]$id
+  formula <- formulas[[i]]$formula
+  if (input$metadata$type == "linear") {
+    results <- linearRegression(formula, dat, outcome, splineVariables)
+  } else if (input$metadata$type == "logistic") {
+    results <- logisticRegression(formula, dat, outcome, splineVariables)
+  } else {
+    stop("regression type must be either 'linear' or 'logistic'")
   }
+
+  results$coefficients <- formatCoefficients(results$coefficients, results$res)
+  results$type3 <- formatType3(results$type3)
+
+  out[[length(out)+1]] <- list(
+    "id" = unbox(id),
+    "data" = results[c("sampleSize","residuals","coefficients","type3","other")]
+    )
 }
 
-# prepare additional independent terms for building regression formula
-out_reg_lst <- list()
-if ("additionalIndependent" %in% names(lst)) {
-  # if additional terms are present then prepare a separate formula for each additional term
-  # each formula will be used to run a separate regression analysis
-  for (i in 1:length(lst$additionalIndependent)) {
-    term <- lst$additionalIndependent[[i]]
-    out <- buildFormula(term, independentTerms, interactions, splineTerms)
-    splineTerms <- out$splineTerms
-    formula <- as.formula(paste(outcomeTerm, paste(c(out$independentTerms, out$interactions), collapse = "+"), sep = "~"))
-    out_reg <- run_regression(formula, dat, lst, splineTerms)
-    out_reg[["id"]] <- unbox(term$id)
-    out_reg_lst[[length(out_reg_lst) + 1]] <- out_reg
-  }
-  out_json <- toJSON(out_reg_lst, digits = NA, na = "string")
-} else {
-  # if no additional terms are present, then prepare a single regression formula for a single regression analysis
-  formula <- as.formula(paste(outcomeTerm, paste(c(independentTerms, interactions), collapse = "+"), sep = "~"))
-  out_reg <- run_regression(formula, dat, lst, splineTerms)
-  out_reg_lst[[1]] <- out_reg
-  out_json <- toJSON(out_reg_lst, digits = NA, na = "string")
-}
-
-# output json to stdout
-cat(out_json, file = "", sep = "")
+# Export results as json to stdout
+cat(toJSON(out, digits = NA, na = "string"), file = "", sep = "")
 
 close(con)
