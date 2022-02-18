@@ -1,10 +1,25 @@
 import { drag as d3drag, event, mouse } from 'd3'
 
-export function make_lasso() {
+/*
+********************** EXPORTED
+make_lasso()
+********************** INTERNAL
+lasso() // Function to execute on call
+	dragstart()
+	dragmove()
+	dragend()
+	pointInPolygon() // check if point is inside selected lasso or not
+lasso.items() // Set or get list of items for lasso to select
+lasso.possibleItems() // Return possible items
+lasso.selectedItems() // Return selected items
+lasso.notPossibleItems() // Return not possible items
+lasso.notSelectedItems() // Return not selected items
+lasso.on() // Events
+lasso.targetArea() // Area where lasso can be triggered from
+*/
+
+export function d3lasso() {
 	let items = [],
-		closePathDistance = 75,
-		closePathSelect = true,
-		isPathClosed = false,
 		targetArea,
 		on = { start: function() {}, draw: function() {}, end: function() {} }
 
@@ -14,12 +29,9 @@ export function make_lasso() {
 		const g = _this.append('g').attr('class', 'lasso')
 
 		// add the drawn path for the lasso
-		const dyn_path = g.append('path').attr('class', 'drawn')
+		const drawn_path = g.append('path').attr('class', 'drawn')
 
-		// add a closed path
-		const close_path = g.append('path').attr('class', 'loop_close')
-
-		// add an origin node
+		// add an origin node (circle to indicate start of lasso)
 		const origin_node = g.append('circle').attr('class', 'origin')
 
 		let tpath, // The transformed lasso path for rendering
@@ -42,8 +54,7 @@ export function make_lasso() {
 
 			// Initialize paths
 			tpath = ''
-			dyn_path.attr('d', null)
-			close_path.attr('d', null)
+			drawn_path.attr('d', null)
 
 			// Set every item to have a false selection and reset their center point and counters
 			items.nodes().forEach(function(e) {
@@ -91,32 +102,15 @@ export function make_lasso() {
 
 			drawnCoords.push([x, y])
 
-			// Calculate the current distance from the lasso origin
-			const distance = Math.sqrt(Math.pow(x - origin[0], 2) + Math.pow(y - origin[1], 2))
-
-			// Set the closed path line
-			const close_draw_path = 'M ' + tx + ' ' + ty + ' L ' + torigin[0] + ' ' + torigin[1]
-
 			// Draw the lines
-			dyn_path.attr('d', tpath)
-
-			close_path.attr('d', close_draw_path)
-
-			// Check if the path is closed
-			isPathClosed = distance <= closePathDistance ? true : false
-
-			// If within the closed path distance parameter, show the closed path. otherwise, hide it
-			if (isPathClosed && closePathSelect) {
-				close_path.attr('display', null)
-			} else {
-				close_path.attr('display', 'none')
-			}
+			drawn_path.attr('d', tpath)
 
 			items.nodes().forEach(function(n) {
 				n.__lasso.loopSelect = pointInPolygon(n.__lasso.lassoPoint, drawnCoords)
 				n.__lasso.possible = n.__lasso.loopSelect
 			})
 
+			// Run user defined draw function
 			on.draw()
 		}
 
@@ -130,30 +124,30 @@ export function make_lasso() {
 			})
 
 			// Clear lasso
-			dyn_path.attr('d', null)
-			close_path.attr('d', null)
+			drawn_path.attr('d', null)
 			origin_node.attr('display', 'none')
 
 			// Run user defined end function
 			on.end()
 		}
 
-		function pointInPolygon(point, vs) {
+		// check if point is inside selected lasso or not
+		// point: [x, y], polygon: [[x1,y1], [x2,y2], [x3,y3]...]
+		function pointInPolygon(point, polygon) {
 			let xi,
 				xj,
 				yi,
 				yj,
-				i,
 				intersect,
 				x = point[0],
 				y = point[1],
 				inside = false
-			for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-				;(xi = vs[i][0]),
-					(yi = vs[i][1]),
-					(xj = vs[j][0]),
-					(yj = vs[j][1]),
-					(intersect = yi > y != yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi)
+			for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+				xi = polygon[i][0]
+				yi = polygon[i][1]
+				xj = polygon[j][0]
+				yj = polygon[j][1]
+				intersect = yi > y != yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi
 				if (intersect) inside = !inside
 			}
 			return inside
@@ -200,27 +194,6 @@ export function make_lasso() {
 		return items.filter(function() {
 			return !this.__lasso.selected
 		})
-	}
-
-	// Distance required before path auto closes loop
-	lasso.closePathDistance = function(_) {
-		if (!arguments.length) return closePathDistance
-		closePathDistance = _
-		return lasso
-	}
-
-	// Option to loop select or not
-	lasso.closePathSelect = function(_) {
-		if (!arguments.length) return closePathSelect
-		closePathSelect = _ === true ? true : false
-		return lasso
-	}
-
-	// Not sure what this is for
-	lasso.isPathClosed = function(_) {
-		if (!arguments.length) return isPathClosed
-		isPathClosed = _ === true ? true : false
-		return lasso
 	}
 
 	// Events

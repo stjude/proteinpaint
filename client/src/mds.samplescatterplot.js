@@ -2,7 +2,7 @@ import * as client from './client'
 import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
 import { select as d3select, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
-import { make_lasso as d3lasso } from './mds.samplescatterplot.lasso'
+import { d3lasso } from './common/lasso'
 import { zoom as d3zoom, zoomIdentity } from 'd3'
 import { filterInit } from './common/filter'
 import { getFilteredSamples } from '../shared/filter'
@@ -70,13 +70,30 @@ obj:
 ********************** EXPORTED
 init()
 ********************** INTERNAL
-get_data()
-finish_setup
-init_dotcolor_legend
-init_plot()
-assign_color4dots
-click_dot
-launch_singlesample
+get_data() // get data from server side official dataset or client side JSON or tabular file
+	update_dotcolor_legend() // update legend table by filter
+finish_setup() // setup for colorbyattributes and attr_levels
+init_dotcolor_legend() // create legend as flat list of colorbyattributes or by attr_levels (gene expression, todo) 
+	legend_attr_levels() // hardcoded 2 levels, level 1 not colored, level 2 colored
+	legend_flatlist() // flat legend by colorbyattributes
+init_plot() // create dot plot for samples
+	assign_color4dots()
+	click_dot() //clicking dot will launch browser view or disco plot
+		click_dot_disco()
+		click_dot_mdsview()
+	resize() // drag to resize
+	makeConfigPanel() // config pabel with pan/zoom and lasso
+		lasso_select() // allow to select dots using lasso
+			lasso_start()
+			lasso_draw()
+			lasso_end()
+			show_lasso_menu()
+printData() // get list of samples with meta data
+click_mutated_genes() // init menu pane with reccurently mulated genes
+	init_mutation_type_control() // recurrently mutated genes panel with config 
+	get_mutation_count_data() // get mutation count from 'mdsgenecount' query
+	make_sample_matrix() // make sample matrix from samplematrix.js
+launch_singlesample()
 */
 
 const radius = 3
@@ -1518,8 +1535,6 @@ function lasso_select(obj, dots) {
 
 	if (obj.lasso_active) {
 		lasso = d3lasso()
-			.closePathSelect(true)
-			.closePathDistance(100)
 			.items(dots.selectAll('circle'))
 			.targetArea(svg)
 
