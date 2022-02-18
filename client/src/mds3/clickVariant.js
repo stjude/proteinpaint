@@ -7,6 +7,7 @@ const minoccur4sunburst = 10 // minimum occurrence for showing skewer, maybe ds 
 const highlight_color = 'red'
 
 /*
+FIXME clean up args
 d: 
 	if d.aa{}, is a group of skewer.data[0].groups[], and is one or multiple variants sharing the same mname (kras Q61H)
 	else, is one of skewer.data[], variants may be of different data type
@@ -16,10 +17,10 @@ tippos: suggested itemtip position, if not sunburst
 */
 export async function click_variant(d, tk, block, tippos, discKick, eventTarget) {
 	try {
-		console.log(d)
 		if (tk.click_snvindel) {
-			highlight_one_disk(eventTarget, discKick)
-			tk.click_snvindel(m)
+			// custom handler
+			highlight_one_disk(d.mlst[0], eventTarget, discKick, tk)
+			tk.click_snvindel(d.mlst[0])
 			return
 		}
 		if ('occurrence' in d && d.occurrence >= minoccur4sunburst && tk.mds.variant2samples) {
@@ -133,13 +134,14 @@ async function variant_details(arg) {
 	await itemtable(arg)
 }
 
-function highlight_one_disk(dot, discKick, tk) {
+function highlight_one_disk(m, dot, discKick, tk) {
 	// dot is the kick <circle>; apply highlight styling on it
+	// FIXME improper use
 	discKick
 		.attr('r', m => m.radius - 0.5)
 		.attr('stroke', m => tk.color4disc(m))
 		.attr('stroke-opacity', 0)
-	dot.setAttribute('r', nm.dotwidth * 0.7)
+	dot.setAttribute('r', m.radius * 1.4)
 	dot.setAttribute('stroke', highlight_color)
 	dot.setAttribute('stroke-opacity', 1)
 }

@@ -156,9 +156,6 @@ function get_ds(tk, block) {
 	} else if (tk.custom_variants) {
 		tk.mds.has_skewer = true // enable skewer tk
 		// validate custom data
-		for (const m of tk.custom_variants) {
-			if (!Number.isInteger(m.occurrence)) m.occurrence = 1
-		}
 	} else {
 		throw 'unknown data source for custom track'
 	}

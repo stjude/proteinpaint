@@ -315,7 +315,7 @@ function numeric_make(nm, _g, data, tk, block) {
 			m_mouseout(m, tk)
 		})
 		.on('click', m => {
-			click_variant(m, tk, block, d3event.target.getBoundingClientRect(), discKick, d3event.target)
+			click_variant({ mlst: [m] }, tk, block, d3event.target.getBoundingClientRect(), discKick, d3event.target)
 		})
 
 	// m label
@@ -347,7 +347,7 @@ function numeric_make(nm, _g, data, tk, block) {
 		.on('mouseover', m => m_mouseover(m, nm, tk))
 		.on('mouseout', m => m_mouseout(m, tk))
 		.on('click', m => {
-			click_variant(m, tk, block, d3event.target.getBoundingClientRect(), discKick, d3event.target)
+			click_variant({ mlst: [m] }, tk, block, d3event.target.getBoundingClientRect(), discKick, d3event.target)
 		})
 }
 
@@ -589,7 +589,13 @@ function m_mouseover(m, nm, tk) {
 
 	const words = []
 
-	words.push(nm.tooltipPrintValue ? nm.tooltipPrintValue(m) : m.__value_use)
+	words.push(
+		nm.tooltipPrintValue
+			? nm.tooltipPrintValue(m).join('=')
+			: nm.valueName
+			? nm.valueName + '=' + m.__value_use
+			: 'value=' + m.__value_use
+	)
 
 	if (!m.labattop && !m.labatbottom) {
 		words.push(m.mname)

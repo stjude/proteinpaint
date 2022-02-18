@@ -80,10 +80,22 @@ function table_snvindel_onevariant({ m, tk, table }) {
 		td1.text('Mutation')
 		print_snv(td2, m, tk)
 	}
-	{
+	if ('occurrence' in m) {
 		const [td1, td2] = row_headervalue(table)
 		td1.text('Occurrence')
 		td2.text(m.occurrence)
+	}
+	const nm = tk.numericmode
+	if (nm && nm.inuse) {
+		const [td1, td2] = row_headervalue(table)
+		if (nm.tooltipPrintValue) {
+			const [a, b] = nm.tooltipPrintValue(m)
+			td1.text(a)
+			td2.text(b)
+		} else {
+			td1.text(nm.valueName || 'Value')
+			td2.text(m.__value_use)
+		}
 	}
 }
 
@@ -92,7 +104,7 @@ function add_csqButton(m, tk, td, table) {
 	// tk:
 	// td: the <td> to show current csq label
 	// table: 2-col
-	if (tk.mds.queries.snvindel.m2csq && m.csqcount > 1) {
+	if (tk.mds.queries && tk.mds.queries.snvindel.m2csq && m.csqcount > 1) {
 		const a = td.append('a')
 		a.html(m.mname + ' <span style="font-size:.8em">' + common.mclass[m.class].label.toUpperCase() + '</span> &#9660;')
 		// click link to query for csq list
@@ -149,20 +161,16 @@ function add_csqButton(m, tk, td, table) {
 
 function print_snv(holder, m, tk) {
 	let printto = holder
-	if (tk.mds.queries.snvindel.url && tk.mds.queries.snvindel.url.key in m) {
+	if (tk.mds.queries && tk.mds.queries.snvindel.url && tk.mds.queries.snvindel.url.key in m) {
 		const a = holder.append('a')
 		a.attr('href', tk.mds.queries.snvindel.url.base + m[tk.mds.queries.snvindel.url.key])
 		a.attr('target', '_blank')
 		printto = a
 	}
 	printto.html(
-		m.chr +
-			':' +
-			(m.pos + 1) +
-			' <span style="font-size:.7em;opacity:.5">REF</span> ' +
-			m.ref +
-			' <span style="font-size:.7em;opacity:.5">ALT</span> ' +
-			m.alt
+		`${m.chr}:${m.pos + 1}
+		${m.ref ? ' <span style="font-size:.7em;opacity:.5">REF</span> ' + m.ref : ''}
+		${m.alt ? ' <span style="font-size:.7em;opacity:.5">ALT</span> ' + m.alt : ''}`
 	)
 }
 
