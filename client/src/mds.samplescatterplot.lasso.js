@@ -1,10 +1,25 @@
 import { drag as d3drag, event, mouse } from 'd3'
 
+/*
+********************** EXPORTED
+make_lasso()
+********************** INTERNAL
+lasso() // Function to execute on call
+	dragstart()
+	dragmove()
+	dragend()
+	pointInPolygon() // check if point is inside selected lasso or not
+lasso.items() // Set or get list of items for lasso to select
+lasso.possibleItems() // Return possible items
+lasso.selectedItems() // Return selected items
+lasso.notPossibleItems() // Return not possible items
+lasso.notSelectedItems() // Return not selected items
+lasso.on() // Events
+lasso.targetArea() // Area where lasso can be triggered from
+*/
+
 export function make_lasso() {
 	let items = [],
-		closePathDistance = 75,
-		closePathSelect = true,
-		isPathClosed = false,
 		targetArea,
 		on = { start: function() {}, draw: function() {}, end: function() {} }
 
@@ -102,16 +117,6 @@ export function make_lasso() {
 
 			close_path.attr('d', close_draw_path)
 
-			// Check if the path is closed
-			isPathClosed = distance <= closePathDistance ? true : false
-
-			// If within the closed path distance parameter, show the closed path. otherwise, hide it
-			if (isPathClosed && closePathSelect) {
-				close_path.attr('display', null)
-			} else {
-				close_path.attr('display', 'none')
-			}
-
 			items.nodes().forEach(function(n) {
 				n.__lasso.loopSelect = pointInPolygon(n.__lasso.lassoPoint, drawnCoords)
 				n.__lasso.possible = n.__lasso.loopSelect
@@ -138,6 +143,7 @@ export function make_lasso() {
 			on.end()
 		}
 
+		// check if point is inside selected lasso or not
 		function pointInPolygon(point, vs) {
 			let xi,
 				xj,
@@ -200,27 +206,6 @@ export function make_lasso() {
 		return items.filter(function() {
 			return !this.__lasso.selected
 		})
-	}
-
-	// Distance required before path auto closes loop
-	lasso.closePathDistance = function(_) {
-		if (!arguments.length) return closePathDistance
-		closePathDistance = _
-		return lasso
-	}
-
-	// Option to loop select or not
-	lasso.closePathSelect = function(_) {
-		if (!arguments.length) return closePathSelect
-		closePathSelect = _ === true ? true : false
-		return lasso
-	}
-
-	// Not sure what this is for
-	lasso.isPathClosed = function(_) {
-		if (!arguments.length) return isPathClosed
-		isPathClosed = _ === true ? true : false
-		return lasso
 	}
 
 	// Events
