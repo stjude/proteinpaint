@@ -7,19 +7,26 @@ const minoccur4sunburst = 10 // minimum occurrence for showing skewer, maybe ds 
 const highlight_color = 'red'
 
 /*
-FIXME clean up args
-d: 
-	if d.aa{}, is a group of skewer.data[0].groups[], and is one or multiple variants sharing the same mname (kras Q61H)
-	else, is one of skewer.data[], variants may be of different data type
-	both case, use d.mlst[] for full list
-tk, block
-tippos: suggested itemtip position, if not sunburst
+d{} 
+	3 cases:
+	1. if d.aa{}, is a group of skewer.data[0].groups[], and is one or multiple variants sharing the same mname (kras Q61H)
+	2. is one of skewer.data[] (e.g clicking ssk box under a skewer),
+	   variants may be of different data type
+	   both case, use d.mlst[] for full list
+	3. from numeric mode. d.mlst[] should have just a single m
+tk
+block
+tippos{ left, top }
+	suggested itemtip position, if not sunburst
+eventTarget
+	svg <circle> element of the kick cover of the clicked disc
+	used by click_snvindel to highlight this disc
 */
-export async function click_variant(d, tk, block, tippos, discKick, eventTarget) {
+export async function click_variant(d, tk, block, tippos, eventTarget) {
 	try {
 		if (tk.click_snvindel) {
-			// custom handler
-			highlight_one_disk(d.mlst[0], eventTarget, discKick, tk)
+			// custom handler overrides default behavior
+			highlight_one_disk(d.mlst[0], eventTarget, tk)
 			tk.click_snvindel(d.mlst[0])
 			return
 		}
@@ -134,13 +141,13 @@ async function variant_details(arg) {
 	await itemtable(arg)
 }
 
-function highlight_one_disk(m, dot, discKick, tk) {
-	// dot is the kick <circle>; apply highlight styling on it
-	// FIXME improper use
-	discKick
+function highlight_one_disk(m, dot, tk) {
+	// remove highlight on all disc kick covers
+	tk.skewer.discKickSelection
 		.attr('r', m => m.radius - 0.5)
 		.attr('stroke', m => tk.color4disc(m))
 		.attr('stroke-opacity', 0)
+	// dot is the kick <circle>; apply highlight styling on it
 	dot.setAttribute('r', m.radius * 1.4)
 	dot.setAttribute('stroke', highlight_color)
 	dot.setAttribute('stroke-opacity', 1)

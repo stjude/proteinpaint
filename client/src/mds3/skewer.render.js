@@ -236,7 +236,7 @@ export function skewer_make(tk, block) {
 	}
 
 	// invisible kicking disc cover
-	const discKick = discg
+	tk.skewer.discKickSelection = discg
 		.append('circle')
 		.attr('r', d => d.radius - 0.5)
 		.attr('stroke', d => tk.color4disc(d.mlst[0]))
@@ -258,7 +258,7 @@ export function skewer_make(tk, block) {
 			}
 		})
 		.on('click', async d => {
-			click_variant(d, tk, block, d3event.target.getBoundingClientRect(), discKick, d3event.target)
+			click_variant(d, tk, block, d3event.target.getBoundingClientRect(), d3event.target)
 		})
 
 	// disc rims

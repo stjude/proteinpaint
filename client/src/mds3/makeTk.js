@@ -57,7 +57,8 @@ export async function makeTk(tk, block) {
 		tk.skewer = {
 			g: tk.glider.append('g')
 		}
-		// in numeric mode, will render elements into tk.skewer.g and create tk.skewer2
+		// both skewer and numeric mode will render elements into tk.skewer.g
+		// will also attach skewer.discKickSelection
 	}
 
 	tk.leftLabelMaxwidth = tk.tklabel
