@@ -5,6 +5,7 @@ import { get_list_cells, get_table_header, get_table_cell } from '../dom/griduti
 import { select as d3select, event } from 'd3-selection'
 
 /*
+FIXME replace Menu with tk.itemtip2
 ********************** EXPORTED
 init_sampletable
 ********************** INTERNAL

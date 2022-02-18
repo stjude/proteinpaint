@@ -81,6 +81,8 @@ export class Block {
 		// assign a blockId to help in targeted DOM selection, in testing and maybe live usage.
 		this.blockId = blockId++
 
+		this.mclassOverride = arg.mclassOverride // allow tracks to access it to render legend
+
 		// temp fix, to use in dofetch2( {serverData} )
 		this.cache = {}
 

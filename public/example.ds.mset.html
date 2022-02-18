@@ -13,6 +13,7 @@
 <div id=bb style="margin:10px"></div>
 
 <script>
+/*
 runproteinpaint({
 	holder:document.getElementById('aaa'),
 	parseurl:true,
@@ -35,6 +36,7 @@ runproteinpaint({
 		}
 	}
 })
+*/
 
 runproteinpaint({
 	holder:document.getElementById('bb'),
@@ -54,13 +56,14 @@ runproteinpaint({
 			inuse:true,
 			type:'__value',
 			label:'Numeric data',
+			valueName:'p-value'
 		}
 	}],
 	mclassOverride:{
 		className:'Phospho',
 		classes:{
-			M:{label:'AA'},
-			I:{label:'BB'}
+			M:{label:'AA',desc:'AA desc'},
+			I:{label:'BB',desc:'BB desc'}
 		}
 	}
 })

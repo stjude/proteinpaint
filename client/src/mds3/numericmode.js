@@ -4,6 +4,7 @@ import { axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { axisstyle } from '../dom/axisstyle'
 import { make_datagroup } from './datagroup'
+import { click_variant } from './clickVariant'
 
 /* adapted from mds2, which is in turn from legacy ds code
 
@@ -15,9 +16,9 @@ render_axis
 setup_axis_scale
 adjustview
 verticallabplace
+setStem
 m_mouseover
 m_mouseout
-
 
 
 based on zoom level, toggle between two views:
@@ -26,6 +27,10 @@ based on zoom level, toggle between two views:
    alternatively, allow to show graphs e.g. boxplot
    such kind of values should all be server-computed
 2. crowded view, no stem, no x-shift, only show label for top/bottom items
+
+when clicking variant:
+dots in numeric mode are individual variants
+compared to skewer, each dot is a mlst[]
 
 */
 
@@ -38,7 +43,6 @@ const clustercrowdlimit = 7 // at least 8 px per disc, otherwise won't show mnam
 const maxclusterwidth = 100
 const hardcode_missing_value = 0
 const stemColor = '#ededed'
-const highlight_color = 'red'
 
 export function render(data, tk, block) {
 	/*
@@ -56,8 +60,11 @@ value may be singular number, or boxplot
 	// initialize numeric mode
 	if (!nm.axisg) nm.axisg = tk.gleft.append('g')
 	if (!nm.axisheight) nm.axisheight = 150
+
+	// skewer.g <g> is always there. will create nm plot into it
+	// new d3 group selection is registered at skewer.nmg
 	tk.skewer.g.selectAll('*').remove()
-	if (tk.skewer2) tk.skewer2.selectAll('*').remove()
+	if (tk.skewer.nmg) tk.skewer.nmg.selectAll('*').remove()
 
 	numeric_make(nm, tk.skewer.g, datagroup, tk, block)
 
@@ -237,7 +244,7 @@ function numeric_make(nm, _g, data, tk, block) {
 		.attr('stroke', stemColor)
 		.attr('shape-rendering', 'crispEdges')
 
-	tk.skewer2 = _g
+	tk.skewer.nmg = _g
 		.selectAll()
 		.data(data)
 		.enter()
@@ -248,7 +255,7 @@ function numeric_make(nm, _g, data, tk, block) {
 			d.g = this
 		})
 
-	tk.skewer2.attr(
+	tk.skewer.nmg.attr(
 		'transform',
 		d =>
 			'translate(' +
@@ -260,17 +267,17 @@ function numeric_make(nm, _g, data, tk, block) {
 
 	// 2: stem
 	if (showstem) {
-		tk.skewer2
+		tk.skewer.nmg
 			.append('path')
 			.attr('class', 'sja_aa_stem')
-			.attr('d', d => skewer2_setstem(d, nm))
+			.attr('d', d => setStem(d, nm))
 			.attr('stroke', d => tk.color4disc(d.mlst[0]))
 			.attr('fill', d => (d.mlst.length == 1 ? 'none' : stemColor))
 	}
 
 	// 3: discs
 
-	const discg = tk.skewer2
+	const discg = tk.skewer.nmg
 		.selectAll()
 		.data(d => d.mlst)
 		.enter()
@@ -296,7 +303,7 @@ function numeric_make(nm, _g, data, tk, block) {
 	// no text in disc
 
 	// disc kick
-	const disckick = discg
+	tk.skewer.discKickSelection = discg
 		.append('circle')
 		.attr('r', m => m.radius - 0.5)
 		.attr('stroke', m => tk.color4disc(m))
@@ -306,7 +313,6 @@ function numeric_make(nm, _g, data, tk, block) {
 		.attr('stroke-opacity', 0)
 		.on('mousedown', () => {
 			d3event.preventDefault()
-			//d3event.stopPropagation()
 		})
 		.on('mouseover', m => {
 			m_mouseover(m, nm, tk)
@@ -315,14 +321,7 @@ function numeric_make(nm, _g, data, tk, block) {
 			m_mouseout(m, tk)
 		})
 		.on('click', m => {
-			if (tk.click_snvindel) {
-				highlight_one_disk(d3event.target)
-				tk.click_snvindel(m)
-				return
-			}
-			// FIXME prevent triggering click after panning
-			//const p = d3event.target.getBoundingClientRect()
-			//vcf_clickvariant(m, p, tk, block)
+			click_variant({ mlst: [m] }, tk, block, d3event.target.getBoundingClientRect(), d3event.target)
 		})
 
 	// m label
@@ -350,29 +349,12 @@ function numeric_make(nm, _g, data, tk, block) {
 		.attr('transform', m => 'rotate(' + (m.labattop ? '-' : '') + '90)')
 		.on('mousedown', () => {
 			d3event.preventDefault()
-			//d3event.stopPropagation()
 		})
 		.on('mouseover', m => m_mouseover(m, nm, tk))
 		.on('mouseout', m => m_mouseout(m, tk))
 		.on('click', m => {
-			if (tk.click_snvindel) {
-				highlight_one_disk(d3event.target.previousSibling) // kick cover is previous sibling
-				tk.click_snvindel(m)
-				return
-			}
-			//vcf_clickvariant(m, { left: d3event.clientX, top: d3event.clientY }, tk, block)
+			click_variant({ mlst: [m] }, tk, block, d3event.target.getBoundingClientRect(), d3event.target.previousSibling)
 		})
-
-	function highlight_one_disk(dot) {
-		// dot is the kick <circle>; apply highlight styling on it
-		disckick
-			.attr('r', m => m.radius - 0.5)
-			.attr('stroke', m => tk.color4disc(m))
-			.attr('stroke-opacity', 0)
-		dot.setAttribute('r', nm.dotwidth * 0.7)
-		dot.setAttribute('stroke', highlight_color)
-		dot.setAttribute('stroke-opacity', 1)
-	}
 }
 
 function adjustview(data, nm, tk, block) {
@@ -567,7 +549,7 @@ function verticallabplace(data) {
 	}
 }
 
-function skewer2_setstem(d, nm) {
+function setStem(d, nm) {
 	if (d.mlst.length == 1) {
 		return 'M0,0v' + nm.stem1 + 'l' + -d.xoffset + ',' + nm.stem2 + 'v' + nm.stem3
 	}
@@ -613,7 +595,13 @@ function m_mouseover(m, nm, tk) {
 
 	const words = []
 
-	words.push(nm.tooltipPrintValue ? nm.tooltipPrintValue(m) : m.__value_use)
+	words.push(
+		nm.tooltipPrintValue
+			? nm.tooltipPrintValue(m).join('=')
+			: nm.valueName
+			? nm.valueName + '=' + m.__value_use
+			: 'value=' + m.__value_use
+	)
 
 	if (!m.labattop && !m.labatbottom) {
 		words.push(m.mname)

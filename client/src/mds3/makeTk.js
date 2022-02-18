@@ -57,7 +57,8 @@ export async function makeTk(tk, block) {
 		tk.skewer = {
 			g: tk.glider.append('g')
 		}
-		// in numeric mode, will render elements into tk.skewer.g and create tk.skewer2
+		// both skewer and numeric mode will render elements into tk.skewer.g
+		// will also attach skewer.discKickSelection
 	}
 
 	tk.leftLabelMaxwidth = tk.tklabel
@@ -156,9 +157,6 @@ function get_ds(tk, block) {
 	} else if (tk.custom_variants) {
 		tk.mds.has_skewer = true // enable skewer tk
 		// validate custom data
-		for (const m of tk.custom_variants) {
-			if (!Number.isInteger(m.occurrence)) m.occurrence = 1
-		}
 	} else {
 		throw 'unknown data source for custom track'
 	}

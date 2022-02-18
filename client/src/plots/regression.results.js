@@ -762,7 +762,9 @@ function setRenderers(self) {
 					inuse: true,
 					type: '__value',
 					label: '-log10 p-value',
-					tooltipPrintValue: m => 'p-value=' + m.regressionPvalue
+					tooltipPrintValue: m => {
+						return ['p-value', m.regressionPvalue]
+					}
 				},
 				custom_variants: make_mds3_variants(input.term, result),
 				click_snvindel: m => {
