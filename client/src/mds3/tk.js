@@ -275,8 +275,11 @@ function filter_custom_variants(tk, block) {
 			// should this be done?
 			m.class = 'X'
 		}
-		if (tk.legend.mclass.hiddenvalues.has(m.class)) continue
+
+		// for hidden mclass, must count it so the legend will be able to show the hidden item
 		data.mclass2count[m.class] = 1 + (data.mclass2count[m.class] || 0)
+		if (tk.legend.mclass.hiddenvalues.has(m.class)) continue
+
 		data.skewer.push(m)
 	}
 	return data
