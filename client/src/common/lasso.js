@@ -18,7 +18,7 @@ lasso.on() // Events
 lasso.targetArea() // Area where lasso can be triggered from
 */
 
-export function make_lasso() {
+export function d3lasso() {
 	let items = [],
 		targetArea,
 		on = { start: function() {}, draw: function() {}, end: function() {} }
