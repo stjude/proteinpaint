@@ -3,6 +3,7 @@ import { overlayInit } from './controls.overlay'
 import { term1uiInit } from './controls.term1'
 import { divideInit } from './controls.divide'
 import { initRadioInputs } from '../dom/radio2'
+import { termsettingInit } from '../common/termsetting'
 
 // to be used for assigning unique
 // radio button names by object instance
@@ -29,7 +30,7 @@ class TdbConfigUiInit {
 			for (const key of this.opts.inputs) {
 				if (typeof key == 'object') {
 					const obj = key // reassign to be less confusing
-					this.inputs[obj.settingsKey] = initByInput[obj.type](
+					this.inputs[obj.settingsKey || obj.configKey] = initByInput[obj.type](
 						Object.assign({}, obj, {
 							holder: this.dom.table.append('tr'),
 							dispatch,
@@ -398,13 +399,65 @@ function setCheckboxInput(opts) {
 	return Object.freeze(api)
 }
 
+function setTermInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder.style('display', 'table-row'),
+			labelTd: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label')
+				.attr('title', opts.title),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	const pill = termsettingInit({
+		showFullMenu: true,
+		vocabApi: opts.vocabApi,
+		vocab: opts.state.vocab,
+		activeCohort: opts.state.activeCohort,
+		holder: self.dom.inputTd.append('div'),
+		debug: opts.debug,
+		callback: tw => {
+			// data is object with only one needed attribute: q, never is null
+			if (tw && !tw.q) throw 'data.q{} missing from pill callback'
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					[opts.configKey]: tw
+				}
+			})
+		}
+	})
+
+	const api = {
+		usestate: true,
+		main(plot) {
+			const { config, activeCohort, termfilter } = JSON.parse(JSON.stringify(plot))
+			const tw = config[opts.configKey] || {}
+			pill.main({
+				term: tw.term,
+				q: tw.q,
+				activeCohort,
+				filter: termfilter.filter
+			})
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
 const initByInput = {
 	number: setNumberInput,
 	math: setMathExprInput,
 	text: setTextInput,
 	radio: setRadioInput,
 	dropdown: setDropdownInput,
-	checkbox: setCheckboxInput
+	checkbox: setCheckboxInput,
+	term: setTermInput
 }
 
 const initByComponent = {

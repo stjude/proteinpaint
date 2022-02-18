@@ -53,6 +53,17 @@ class Matrix {
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 					inputs: [
 						{
+							label: 'Divide samples by',
+							type: 'term',
+							chartType: 'matrix',
+							configKey: 'divideBy',
+							vocabApi: this.app.vocabApi,
+							state: {
+								vocab: appState.vocab,
+								activeCohort: appState.activeCohort
+							}
+						},
+						{
 							label: 'Transpose',
 							boxLabel: '',
 							type: 'checkbox',
@@ -135,15 +146,43 @@ class Matrix {
 
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
-		return {
-			termgroups: this.state.config.termgroups,
-			filter: this.state.filter
+		this.rowTerms = []
+		for (const grp of this.config.termgroups) {
+			this.rowTerms.push(...grp.lst)
 		}
+		const terms = []
+		if (this.config.divideBy) terms.push(this.config.divideBy)
+		terms.push(...this.rowTerms)
+		return { terms, filter: this.state.filter }
 	}
 
 	processData(data) {
 		const s = this.settings.matrix
-		const samples = data.lst.map(r => r.sample).sort((a, b) => (a[s.sortSamplesBy] < b[s.sortSamplesBy] ? -1 : 1))
+		const sgtid = this.config.divideBy?.term?.id
+		if (!this.config.divideBy) {
+			this.sampleGroupKeys = [undefined]
+		} else {
+			const grps = new Set()
+			for (const row of data.lst) {
+				if (sgtid in row) grps.add(row[sgtid].key)
+			}
+			this.sampleGroupKeys = [...grps, undefined]
+		}
+
+		const samples = data.lst
+			.sort((a, b) => {
+				const i = this.sampleGroupKeys.indexOf(a[sgtid]?.key)
+				const j = this.sampleGroupKeys.indexOf(b[sgtid]?.key)
+				if (i < j) return -1
+				if (i > j) return 1
+				const k = a[s.sortSamplesBy]
+				const l = b[s.sortSamplesBy]
+				if (k < l) return -1
+				if (k > l) return 1
+				return 0
+			})
+			.map(r => r.sample)
+
 		const termWrappers = []
 		const terms = []
 		this.config.termgroups.forEach(g => {
@@ -156,18 +195,20 @@ class Matrix {
 		const dx = s.colw + s.colspace
 		const dy = s.rowh + s.rowspace
 		const keysByTermId = {}
-		for (let i = 0; i < data.lst.length; i++) {
-			const row = data.lst[i]
+		const rowTermsIds = this.rowTerms.map(tw => ('id' in tw ? tw.id : tw.term.id))
+
+		for (const row of data.lst) {
 			const sIndex = samples.indexOf(row.sample)
+			const sGrpIndex = this.config.divideBy ? this.sampleGroupKeys.indexOf(row[sgtid]?.key) : 0
 			const series = {
 				row,
 				cells: [],
-				x: !s.transpose ? sIndex * dx : 0,
-				y: !s.transpose ? 0 : sIndex * dy
+				x: !s.transpose ? sIndex * dx + sGrpIndex * s.colgspace : 0,
+				y: !s.transpose ? 0 : sIndex * dy + sGrpIndex * s.rowgspace
 			}
 
 			for (const key in row) {
-				if (key == 'sample') continue
+				if (key == 'sample' || !rowTermsIds.includes(key)) continue
 				const tIndex = terms.indexOf(key)
 				series.cells.push({
 					termid: key,
@@ -365,6 +406,7 @@ export async function getPlotConfig(opts, app) {
 		// data configuration
 		termgroups: [],
 		samplegroups: [],
+		divideBy: null,
 
 		// rendering options
 		settings: {
@@ -381,11 +423,18 @@ export async function getPlotConfig(opts, app) {
 				sortSamplesBy: 'sample',
 				colw: 14,
 				colspace: 1,
-				rowh: 14,
+				colgspace: 4,
+				collabelpos: 'top', // | 'bottom'
+				collabelvisible: true,
+				colglabelpos: true,
+				rowh: 18,
 				rowspace: 1,
+				rowgspace: 4,
+				rowlabelpos: 'left', // | 'right'
+				rowlabelvisible: true,
+				rowglabelpos: true,
 				transpose: false,
 				sampleLabelOffset: 120,
-				sampleLabelFontSize: 8,
 				termLabelOffset: 80,
 				duration: 250
 			}

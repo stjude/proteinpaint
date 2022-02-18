@@ -56,7 +56,7 @@ const minimumSample = 1
 export async function getData(q, ds) {
 	try {
 		parse_q(q, ds)
-		const sampledata = await getSampleData(q, q.termgroups)
+		const sampledata = await getSampleData(q, q.terms)
 		return { lst: sampledata }
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -67,7 +67,7 @@ export async function getData(q, ds) {
 function parse_q(q, ds) {
 	if (!ds.cohort) throw 'cohort missing from ds'
 	q.ds = ds
-	if (!q.termgroups) throw `missing 'termgroups' parameter`
+	if (!q.terms) throw `missing 'terms' parameter`
 }
 
 /*
@@ -142,17 +142,14 @@ function divideTerms(lst) {
 	return [dict, nonDict]
 }
 
-function getSampleData_dictionaryTerms(q, termgroups) {
+function getSampleData_dictionaryTerms(q, terms) {
 	const filter = getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
 	const values = filter ? filter.values.slice() : []
-	const CTEs = []
-	for (const grp of termgroups) {
-		CTEs.push(...grp.lst.map((t, i) => get_term_cte(q, values, i, filter, t)))
-		values.push(...grp.lst.map(d => d.id))
-	}
+	const CTEs = terms.map((t, i) => get_term_cte(q, values, i, filter, t))
+	values.push(...terms.map(d => d.id))
 
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}

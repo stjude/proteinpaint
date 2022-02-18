@@ -483,7 +483,7 @@ class TermdbVocab {
 				for: 'matrix',
 				genome: this.vocab.genome,
 				dslabel: this.vocab.dslabel,
-				termgroups: opts.termgroups
+				terms: opts.terms
 			}
 		}
 		const filterData = getNormalRoot(opts.filter)

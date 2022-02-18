@@ -27,7 +27,7 @@ const encodedParams = [
 	'info_fields',
 	'outcome',
 	'independent',
-	'termgroups'
+	'terms'
 ]
 
 export function handle_request_closure(genomes) {
@@ -82,7 +82,6 @@ export function handle_request_closure(genomes) {
 
 			// generic data getter, instead of using flags
 			if (q.for) {
-				console.log(require(`./termdb.${q.for}.js`))
 				const data = await require(`./termdb.${q.for}.js`).getData(q, ds)
 				res.send(data)
 				return
