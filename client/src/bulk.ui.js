@@ -636,6 +636,17 @@ export function bulkembed(arg) {
 						})
 					tasks.push(task)
 				}
+
+				if (mset.cnv_url) {
+					tasks.push(
+						client.dofetch('urltextfile', { url: mset.cnv_url }).then(data => {
+							if (data.error) throw { message: 'cannot get cnv file from url' }
+							const e = parse_cnv(data.text, flag)
+							if (e) throw { message: 'error with cnv file: ' + e }
+						})
+					)
+				}
+
 				if (mset.sv) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
@@ -652,6 +663,17 @@ export function bulkembed(arg) {
 						})
 					tasks.push(task)
 				}
+
+				if (mset.sv_url) {
+					tasks.push(
+						client.dofetch('urltextfile', { url: mset.sv_url }).then(data => {
+							if (data.error) throw { message: 'cannot get sv file from url' }
+							const e = parse_sv(data.text, flag)
+							if (e) throw { message: 'error with sv file: ' + e }
+						})
+					)
+				}
+
 				if (mset.fusion) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
@@ -700,6 +722,17 @@ export function bulkembed(arg) {
 						})
 					tasks.push(task)
 				}
+
+				if (mset.deletion_url) {
+					tasks.push(
+						client.dofetch('urltextfile', { url: mset.deletion_url }).then(data => {
+							if (data.error) throw { message: 'cannot get deletion file from url' }
+							const e = parse_del(data.text, flag)
+							if (e) throw { message: 'error with deletion file: ' + e }
+						})
+					)
+				}
+
 				if (mset.truncation) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
@@ -716,6 +749,17 @@ export function bulkembed(arg) {
 						})
 					tasks.push(task)
 				}
+
+				if (mset.truncation_url) {
+					tasks.push(
+						client.dofetch('urltextfile', { url: mset.truncation_url }).then(data => {
+							if (data.error) throw { message: 'cannot get truncation file from url' }
+							const e = parse_trunc(data.text, flag, false)
+							if (e) throw { message: 'error with truncation file: ' + e }
+						})
+					)
+				}
+
 				if (mset.itd) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
@@ -731,6 +775,16 @@ export function bulkembed(arg) {
 							if (e) throw { message: 'error with itd file: ' + e }
 						})
 					tasks.push(task)
+				}
+
+				if (mset.itd_url) {
+					tasks.push(
+						client.dofetch('urltextfile', { url: mset.itd_url }).then(data => {
+							if (data.error) throw { message: 'cannot get itd file from url' }
+							const e = parse_itd(data.text, flag, false)
+							if (e) throw { message: 'error with itd file: ' + e }
+						})
+					)
 				}
 
 				const task2 = Promise.all(tasks).then(data => {
