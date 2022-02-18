@@ -66,18 +66,16 @@ export async function get_regression(q, ds) {
 		const Rinput = makeRinput(q, sampledata)
 		/* details described in server/utils/regression.R
 		Rinput {
-			type
-			outcome{}
-			independent[]
-			additionalIndependent[]
-			// new array stores variants from snplocus term, which are not in independent[]
-			// for each variant, join with independent[] to run one analysis
+			data: [{}] per-sample data values
+			metadata: {
+						type: regression type (linear/logistic)
+						variables: [{}] variable metadata
+					  }
 		}
 		*/
-		//console.log(Rinput.additionalIndependent)
 
-		const sampleSize = Rinput.outcome.values.length
-		validateRinput(q, Rinput, sampleSize)
+		const sampleSize = Rinput.data.length
+		validateRinput(Rinput, sampleSize)
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
 
 		// run regression analysis in R
@@ -89,7 +87,7 @@ export async function get_regression(q, ds) {
 		)
 
 		// parse the R output
-		const result = await parseRoutput(Rinput, Routput, id2originalId, sampleSize)
+		const result = await parseRoutput(Rinput, Routput, id2originalId)
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -151,25 +149,24 @@ function parse_q(q, ds) {
 }
 
 function makeRinput(q, sampledata) {
-	// outcome term
+	// prepare variable metadata
+	const variables = []
+
+	// outcome variable
 	const outcome = {
 		id: q.outcome.id,
 		name: q.outcome.term.name,
-		// for linear regression, 'values' will be sample values
-		// for logisitc regression, 'values' will be 0/1 (0 = ref; 1 = non-ref)
-		// therefore, 'rtype' will always be 'numeric'
-		rtype: 'numeric',
-		values: []
+		type: 'outcome',
+		rtype: 'numeric' // always numeric because values are continuous for linear regression and values get converted to 0/1 for logistic regression
 	}
-	// specify ref and non-ref categories for plot labeling purposes in R
-	if (q.regressionType == 'logistic') outcome.categories = { ref: q.outcome.refGrp }
-
-	// input for R script will be in json format
-	const Rinput = {
-		type: q.regressionType,
-		outcome,
-		independent: []
+	if (q.regressionType == 'logistic') {
+		// need ref and nonref categories of outcome for labeling R plot
+		outcome.categories = {
+			ref: q.outcome.refGrp,
+			nonref: q.outcome.q.lst.find(x => x.label != q.outcome.refGrp).label
+		}
 	}
+	variables.push(outcome)
 
 	// independent terms, tw = termWrapper
 	for (const tw of q.independent) {
@@ -179,7 +176,7 @@ function makeRinput(q, sampledata) {
 				const thisSnp = {
 					id: snpid,
 					name: snpid,
-					values: [], // to collect sample values
+					type: 'independent',
 					interactions: []
 				}
 				if (tw.q.geneticModel == 3) {
@@ -201,15 +198,15 @@ function makeRinput(q, sampledata) {
 						thisSnp.interactions.push(tw2.id)
 					}
 				}
-				Rinput.independent.push(thisSnp)
+				variables.push(thisSnp)
 			}
 		} else {
 			// this is a dictionary term
 			const thisTerm = {
 				id: tw.id,
 				name: tw.term.name,
+				type: tw.q.mode == 'spline' ? 'spline' : 'independent',
 				rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor',
-				values: [], // to collect raw sample values
 				interactions: []
 			}
 			// map tw.interactions into thisTerm.interactions
@@ -231,13 +228,30 @@ function makeRinput(q, sampledata) {
 				}
 			}
 			if (tw.q.scale) thisTerm.scale = tw.q.scale
-			Rinput.independent.push(thisTerm)
+			variables.push(thisTerm)
 		}
 	}
 
+	// indicate snplocus variables
+	const tw = q.independent.find(i => i.type == 'snplocus')
+	if (tw) {
+		for (const t of variables) {
+			if (tw.snpidlst.includes(t.id)) {
+				t.type = 'snplocus'
+			}
+		}
+	}
+
+	// generate metadata object
+	const metadata = {
+		type: q.regressionType,
+		variables
+	}
+
+	// prepare per-sample data values
 	// for each sample, decide if it has value for all terms
 	// if so, the sample can be included for analysis
-	// and will fill in values into values[] of all terms, thus ensuring the order of samples are the same across values[] of all terms
+	const data = []
 	for (const { sample, id2value } of sampledata) {
 		if (!id2value.has(q.outcome.id)) continue
 		const out = id2value.get(q.outcome.id)
@@ -245,7 +259,14 @@ function makeRinput(q, sampledata) {
 		let skipsample = false
 		for (const tw of q.independent) {
 			// tw = termWrapper
-			if (tw.type == 'snplst' || tw.type == 'snplocus') {
+			if (tw.type == 'snplocus') {
+				// snplocus terms need to be analyzed separately and
+				// some samples may have values for one term, but not another
+				// therefore samples will be filtered separately for each term
+				// in R script
+				continue
+			}
+			if (tw.type == 'snplst') {
 				for (const snpid of tw.snpidlst) {
 					if (!id2value.get(snpid)) {
 						skipsample = true
@@ -262,68 +283,62 @@ function makeRinput(q, sampledata) {
 		}
 		if (skipsample) continue
 
-		// this sample has values for all terms and is eligible for regression analysis
-		// add its values to values[] of each term
-		// for categorical/condition outcome term, convert ref and non-ref values to 0 and 1, respectively
-		if (q.outcome.q.mode == 'continuous') {
-			Rinput.outcome.values.push(out.value)
-		} else if (out.key === q.outcome.refGrp) {
-			Rinput.outcome.values.push(0)
-		} else {
-			Rinput.outcome.values.push(1)
-			if (!('nonref' in Rinput.outcome.categories)) Rinput.outcome.categories.nonref = out.key
-		}
-		for (const t of Rinput.independent) {
-			const v = id2value.get(t.id)
-			t.values.push(t.rtype === 'numeric' ? v.value : v.key)
-		}
-	}
-
-	// create additionalIndependent if snplocus term is present
-	const tw = q.independent.find(i => i.type == 'snplocus')
-	if (tw) {
-		Rinput.additionalIndependent = []
-		let i = 0
-		while (i < Rinput.independent.length) {
-			const j = Rinput.independent[i]
-			if (tw.snpidlst.includes(j.id)) {
-				Rinput.independent.splice(i, 1)
-				Rinput.additionalIndependent.push(j)
+		// this sample has values for all variables and is eligible for regression analysis
+		const entry = {} // data of sample for each variable { variable1: value, variable2: value, variable3: value, ...}
+		for (const t of variables) {
+			if (t.type == 'outcome') {
+				// outcome variable
+				if (q.outcome.q.mode == 'continuous') {
+					// continous outcome, use value
+					entry[t.id] = out.value
+				} else {
+					// categorical/condition outcome, use key
+					// convert ref and non-ref values to 0 and 1, respectively
+					entry[t.id] = out.key === q.outcome.refGrp ? 0 : 1
+				}
 			} else {
-				i++
+				// independent variable
+				const v = id2value.get(t.id)
+				if (!v) {
+					entry[t.id] = 'NA'
+				} else {
+					entry[t.id] = t.rtype === 'numeric' ? v.value : v.key
+				}
 			}
 		}
+		data.push(entry)
+	}
+
+	const Rinput = {
+		data,
+		metadata
 	}
 
 	return Rinput
 }
 
-function validateRinput(q, Rinput, sampleSize) {
+function validateRinput(Rinput, sampleSize) {
 	// validate R input
+	// validation of data values will be done in R script
+
 	// validate sample size
 	if (sampleSize < minimumSample) throw 'too few samples to fit model'
-	if (Rinput.independent.find(x => x.values.length !== sampleSize)) throw 'variables have unequal sample sizes'
-	// validate outcome variable
-	if (q.regressionType == 'logistic') {
-		const values = new Set(Rinput.outcome.values) // get unique values
-		if (values.size !== 2) throw 'outcome is not binary'
-		if (!(values.has(0) && values.has(1))) throw 'outcome values are not 0/1'
-	}
+	// validate data table
+	const nvariables = Rinput.metadata.variables.length
+	if (Rinput.data.find(entry => Object.keys(entry).length != nvariables))
+		throw 'unequal number of variables in data entries'
 	// validate independent variables
-	for (const variable of Rinput.independent) {
-		if (variable.rtype === 'numeric') {
+	for (const variable of Rinput.metadata.variables) {
+		if (variable.type == 'outcome') continue
+		if (variable.rtype == 'numeric') {
 			if (variable.refGrp) throw `reference group given for '${variable.id}'`
 		} else {
 			if (!variable.refGrp) throw `reference group not given for '${variable.id}'`
-			const values = new Set(variable.values) // get unique values
-			if (!values.has(variable.refGrp)) throw `reference group not found in '${variable.id}' values`
-			// make sure there's at least 2 categories
-			if (values.size < 2) throw `'${variable.id}' has fewer than 2 categories`
 		}
 	}
 }
 
-async function parseRoutput(Rinput, Routput, id2originalId, sampleSize) {
+async function parseRoutput(Rinput, Routput, id2originalId) {
 	const result = { lst: [] } // lst[] has same structure as out[]
 	// handle errors/warnings from R
 	if (Routput.includes('R stderr:')) {
@@ -332,20 +347,20 @@ async function parseRoutput(Rinput, Routput, id2originalId, sampleSize) {
 	}
 
 	// Routput is now a JSON of results
-	if (Routput.length !== 1) throw 'expected 1 json line in R output'
+	if (Routput.length != 1) throw 'expected 1 json line in R output'
 	const out = JSON.parse(Routput[0])
-	/*
-	[
+
+	/* out: [
 	  {
-		data: { residuals: {}, coefficients: {}, type3: {}, other: {} },
-		id: id of additional variable (empty if no additional variables)
+		id: id of snplocus term (empty if no snplocus terms)
+		data: { sampleSize, residuals: {}, coefficients: {}, type3: {}, other: {} },
 	  },
 	]
 	*/
 
 	for (const analysis of out) {
 		const analysisResults = {
-			data: { sampleSize } // TODO: need to compute different sample size for each regression analysis
+			data: { sampleSize: analysis.data.sampleSize }
 		}
 		if (analysis.id) analysisResults.id = id2originalId[analysis.id]
 
@@ -353,7 +368,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, sampleSize) {
 
 		// residuals
 		analysisResults.data.residuals = data.residuals
-		analysisResults.data.residuals.label = Rinput.type == 'linear' ? 'Residuals' : 'Deviance residuals'
+		analysisResults.data.residuals.label = Rinput.metadata.type == 'linear' ? 'Residuals' : 'Deviance residuals'
 
 		// coefficients
 		if (data.coefficients.rows.length < 2)
@@ -429,7 +444,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, sampleSize) {
 		analysisResults.data.other.label = 'Other summary statistics'
 
 		// plots
-		for (const tw of Rinput.independent) {
+		for (const tw of Rinput.metadata.variables) {
 			if (tw.spline) {
 				if (!analysisResults.data.splinePlots) analysisResults.data.splinePlots = []
 				const file = tw.spline.plotfile
@@ -728,33 +743,31 @@ function divideTerms(lst) {
 
 function replaceTermId(Rinput) {
 	// replace term IDs with custom IDs (to avoid spaces/commas in R)
-	Rinput.outcome.id = 'outcome'
 	// make conversion table between IDs
 	const id2originalId = {} // k: new id, v: original term id
 	const originalId2id = {} // k: original term id, v: new id
-	for (const [i, t] of Rinput.independent.entries()) {
+	for (const [i, t] of Rinput.metadata.variables.entries()) {
 		id2originalId['id' + i] = t.id
 		originalId2id[t.id] = 'id' + i
 	}
-	// replace IDs of terms and interacting terms
-	for (const [i, t] of Rinput.independent.entries()) {
-		Rinput.independent[i].id = originalId2id[t.id]
-		for (const [j, k] of Rinput.independent[i].interactions.entries()) {
-			Rinput.independent[i].interactions[j] = originalId2id[k]
-		}
-	}
-	// replace IDs of additional terms and interacting terms
-	if (Rinput.additionalIndependent) {
-		for (const [i, t] of Rinput.additionalIndependent.entries()) {
-			id2originalId['idAdd' + i] = t.id
-			originalId2id[t.id] = 'idAdd' + i
-		}
-		for (const [i, t] of Rinput.additionalIndependent.entries()) {
-			Rinput.additionalIndependent[i].id = originalId2id[t.id]
-			for (const [j, k] of Rinput.additionalIndependent[i].interactions.entries()) {
-				Rinput.additionalIndependent[i].interactions[j] = originalId2id[k]
+
+	// replace IDs of terms and interacting terms in metadata
+	for (const t of Rinput.metadata.variables) {
+		t.id = originalId2id[t.id]
+		if (t.interactions && t.interactions.length > 0) {
+			for (const [i, it] of t.interactions.entries()) {
+				t.interactions[i] = originalId2id[it]
 			}
 		}
 	}
+
+	// replace IDs of terms in data
+	for (const entry of Rinput.data) {
+		for (const tid in entry) {
+			entry[originalId2id[tid]] = entry[tid]
+			delete entry[tid]
+		}
+	}
+
 	return [id2originalId, originalId2id]
 }
