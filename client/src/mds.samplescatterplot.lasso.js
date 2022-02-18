@@ -29,12 +29,9 @@ export function make_lasso() {
 		const g = _this.append('g').attr('class', 'lasso')
 
 		// add the drawn path for the lasso
-		const dyn_path = g.append('path').attr('class', 'drawn')
+		const drawn_path = g.append('path').attr('class', 'drawn')
 
-		// add a closed path
-		const close_path = g.append('path').attr('class', 'loop_close')
-
-		// add an origin node
+		// add an origin node (circle to indicate start of lasso)
 		const origin_node = g.append('circle').attr('class', 'origin')
 
 		let tpath, // The transformed lasso path for rendering
@@ -57,8 +54,7 @@ export function make_lasso() {
 
 			// Initialize paths
 			tpath = ''
-			dyn_path.attr('d', null)
-			close_path.attr('d', null)
+			drawn_path.attr('d', null)
 
 			// Set every item to have a false selection and reset their center point and counters
 			items.nodes().forEach(function(e) {
@@ -106,22 +102,15 @@ export function make_lasso() {
 
 			drawnCoords.push([x, y])
 
-			// Calculate the current distance from the lasso origin
-			const distance = Math.sqrt(Math.pow(x - origin[0], 2) + Math.pow(y - origin[1], 2))
-
-			// Set the closed path line
-			const close_draw_path = 'M ' + tx + ' ' + ty + ' L ' + torigin[0] + ' ' + torigin[1]
-
 			// Draw the lines
-			dyn_path.attr('d', tpath)
-
-			close_path.attr('d', close_draw_path)
+			drawn_path.attr('d', tpath)
 
 			items.nodes().forEach(function(n) {
 				n.__lasso.loopSelect = pointInPolygon(n.__lasso.lassoPoint, drawnCoords)
 				n.__lasso.possible = n.__lasso.loopSelect
 			})
 
+			// Run user defined draw function
 			on.draw()
 		}
 
@@ -135,8 +124,7 @@ export function make_lasso() {
 			})
 
 			// Clear lasso
-			dyn_path.attr('d', null)
-			close_path.attr('d', null)
+			drawn_path.attr('d', null)
 			origin_node.attr('display', 'none')
 
 			// Run user defined end function
@@ -144,22 +132,22 @@ export function make_lasso() {
 		}
 
 		// check if point is inside selected lasso or not
-		function pointInPolygon(point, vs) {
+		// point: [x, y], polygon: [[x1,y1], [x2,y2], [x3,y3]...]
+		function pointInPolygon(point, polygon) {
 			let xi,
 				xj,
 				yi,
 				yj,
-				i,
 				intersect,
 				x = point[0],
 				y = point[1],
 				inside = false
-			for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
-				;(xi = vs[i][0]),
-					(yi = vs[i][1]),
-					(xj = vs[j][0]),
-					(yj = vs[j][1]),
-					(intersect = yi > y != yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi)
+			for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+				xi = polygon[i][0]
+				yi = polygon[i][1]
+				xj = polygon[j][0]
+				yj = polygon[j][1]
+				intersect = yi > y != yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi
 				if (intersect) inside = !inside
 			}
 			return inside
