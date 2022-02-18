@@ -224,19 +224,20 @@ export const componentInit = matrixInit
 
 function setRenderers(self) {
 	self.render = function(data) {
-		//console.log(111, 'currData', data)
+		//console.log('currData', data, self.dom.svg.attr('width'))
 		const s = self.settings.matrix
 		const d = self.dimensions
+		const duration = self.dom.svg.attr('width') ? s.duration : 0
 
 		self.dom.svg
 			.transition()
-			.duration(s.transitionDuration)
+			.duration(duration)
 			.attr('width', d.svgw)
 			.attr('height', d.svgh)
 
 		self.dom.seriesesG
 			.transition()
-			.duration(s.transitionDuration)
+			.duration(duration)
 			.attr('transform', `translate(${d.xOffset},${d.yOffset})`)
 
 		const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(data.serieses, d => d.row.sample)
@@ -251,7 +252,7 @@ function setRenderers(self) {
 
 		self.dom.termLabelG
 			.transition()
-			.duration(s.transitionDuration)
+			.duration(duration)
 			.attr('transform', `translate(${d.xOffset},${d.yOffset})`)
 
 		const termLabels = self.dom.termLabelG
@@ -268,12 +269,11 @@ function setRenderers(self) {
 	self.renderSeries = function(series) {
 		//console.log(157, 'series', series)
 		const s = self.settings.matrix
-		//const x = (!s.transpose ? s.termLabelOffset + series.x : s.sampleLabelOffset + series.y)
-		//const y = (!s.transpose ? s.sampleLabelOffset + series.y : s.termLabelOffset + series.x)
-
 		const g = select(this)
+		const duration = g.attr('transform') ? s.duration : 0
+
 		g.transition()
-			.duration(s.transitionDuration)
+			.duration(duration)
 			.attr('transform', `translate(${series.x},${series.y})`)
 			.style('opacity', 1)
 
@@ -299,7 +299,7 @@ function setRenderers(self) {
 		const s = self.settings.matrix
 		const rect = select(this)
 			.transition()
-			.duration(s.transitionDuration)
+			.duration('x' in this ? s.duration : 0)
 			.attr('x', cell.x)
 			.attr('y', cell.y)
 			.attr('width', s.colw)
@@ -312,8 +312,10 @@ function setRenderers(self) {
 	self.renderSeriesLabel = function(series) {
 		const s = self.settings.matrix
 		const g = select(this)
+		const duration = g.attr('transform') ? s.duration : 0
+
 		g.transition()
-			.duration(s.transitionDuration)
+			.duration(duration)
 			.attr('transform', !s.transpose ? `translate(${s.colw / 3},-2)` : `translate(-5,${s.rowh - 2})`)
 
 		if (!g.select('text').size()) g.append('text')
@@ -323,7 +325,7 @@ function setRenderers(self) {
 			.attr('fill', '#000')
 			.attr('text-anchor', 'end')
 			.transition()
-			.duration(s.transitionDuration)
+			.duration(duration)
 			//.attr('opacity', fontsize < 6 ? 0 : )
 			.attr('font-size', fontSize)
 			.attr('transform', !s.transpose ? `rotate(90)` : '')
@@ -334,9 +336,11 @@ function setRenderers(self) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const g = select(this)
+		const duration = g.attr('transform') ? s.duration : 0
+
 		const tIndex = self.currData.termWrappers.findIndex(t => t.id === tw.id)
 		g.transition()
-			.duration(s.transitionDuration)
+			.duration(duration)
 			.attr(
 				'transform',
 				s.transpose ? `translate(${tIndex * d.dx + s.colw / 3},-2)` : `translate(-5,${tIndex * d.dy + 0.8 * s.rowh})`
@@ -348,7 +352,7 @@ function setRenderers(self) {
 			.attr('fill', '#000')
 			.attr('text-anchor', 'end')
 			.transition()
-			.duration(s.transitionDuration)
+			.duration(duration)
 			//.attr('opacity', fontsize < 6 ? 0 : )
 			.attr('font-size', fontSize)
 			.attr('transform', s.transpose ? `rotate(90)` : '')
@@ -379,11 +383,11 @@ export async function getPlotConfig(opts, app) {
 				colspace: 1,
 				rowh: 14,
 				rowspace: 1,
-				transitionDuration: 0,
 				transpose: false,
 				sampleLabelOffset: 120,
 				sampleLabelFontSize: 8,
-				termLabelOffset: 80
+				termLabelOffset: 80,
+				duration: 250
 			}
 		}
 	}
