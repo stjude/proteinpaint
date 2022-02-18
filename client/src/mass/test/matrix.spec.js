@@ -90,6 +90,7 @@ tape('matrix', function(test) {
 
 	function runTests(matrix) {
 		console.log(73, matrix.Inner)
+		matrix.on('postRender.test', null)
 		test.fail('should start writing tests')
 		test.end()
 	}
