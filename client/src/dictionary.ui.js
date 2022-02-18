@@ -13,15 +13,31 @@ init_dictionaryUI()
     - holder
 
 ------ Internal ------ 
-TODO
+UI elements:
+	1. makeDataEntryTabs()
+		a. makeTextEntryFilePathInput()
+		b. makeFileUpload()
+		c. makeCopyPasteInput()
+	2. submitButton()
+	3. infoSection()
+Data parsing:
+	1. parseTabDelimitedData()
+Phenotree parsing:
+	1. validateLevels()
+	2. parseConfig()
+	3. createHierarchy()
+	4. str2level()
+Helpers:
+	1. check4DuplicateValues()
 
-d:{}
+
+obj:{ data:[ {terms} ] }
 
 
 Documentation: https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit
 */
 
-export function init_dictionaryUI(holder) {
+export function init_dictionaryUI(holder, debugmode) {
 	const wrapper = holder
 		.append('div')
 		.style('display', 'grid')
@@ -41,17 +57,17 @@ export function init_dictionaryUI(holder) {
 	//Data dictionary entry
 	uiutils.makePrompt(wrapper, 'Data Dictionary')
 	const tabs_div = wrapper.append('div')
-	makeDataEntryTabs(tabs_div, obj)
+	makeDataEntryTabs(holder, tabs_div, obj)
 
 	//Submit button and information section
 	submitButton(wrapper, obj, holder)
 	infoSection(wrapper)
 
 	//Remove after testing
-	window.doms = obj
+	if (debugmode) window.doms = obj
 }
 
-function makeDataEntryTabs(tabs_div, obj) {
+function makeDataEntryTabs(holder, tabs_div, obj) {
 	const tabs = [
 		{
 			label: 'File Path',
@@ -70,9 +86,9 @@ function makeDataEntryTabs(tabs_div, obj) {
 						.style('margin-left', '15px')
 					appear(div)
 					uiutils.makePrompt(files_div, 'Filepath')
-					makeTextEntryFilePathInput(files_div, obj)
+					makeTextEntryFilePathInput(holder, files_div, obj)
 					uiutils.makePrompt(files_div, 'Upload')
-					makeFileUpload(files_div, obj)
+					makeFileUpload(holder, files_div, obj)
 					tabs[0].rendered = true
 				}
 			}
@@ -86,7 +102,7 @@ function makeDataEntryTabs(tabs_div, obj) {
 						.append('div')
 						.html(`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary in a tab delimited format.</p>`)
 					appear(div)
-					makeCopyPasteInput(div, obj)
+					makeCopyPasteInput(holder, div, obj)
 					tabs[1].rendered = true
 				}
 			}
@@ -95,7 +111,7 @@ function makeDataEntryTabs(tabs_div, obj) {
 	init_tabs({ holder: tabs_div, tabs })
 }
 
-function makeTextEntryFilePathInput(div, obj) {
+function makeTextEntryFilePathInput(holder, div, obj) {
 	const filepath_div = div.append('div').style('display', 'inline-block')
 	const filepath = uiutils
 		.makeTextInput(filepath_div)
@@ -106,7 +122,7 @@ function makeTextEntryFilePathInput(div, obj) {
 				fetch(data)
 					.then(req => req.text())
 					.then(txt => {
-						obj.data = parseTabDelimitedData(txt)
+						obj.data = parseTabDelimitedData(holder, txt)
 					})
 			} else {
 				//TODO: implement serverside filepaths(?)
@@ -114,32 +130,32 @@ function makeTextEntryFilePathInput(div, obj) {
 		})
 }
 
-function makeFileUpload(div, obj) {
+function makeFileUpload(holder, div, obj) {
 	const upload_div = div.append('div').style('display', 'block')
 	const upload = uiutils.makeFileUpload(upload_div)
 	upload.on('change', () => {
 		const file = d3event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
-			obj.data = parseTabDelimitedData(event.target.result)
+			obj.data = parseTabDelimitedData(holder, event.target.result)
 		}
 		reader.readAsText(file, 'utf8')
 	})
 }
 
-function makeCopyPasteInput(div, obj) {
+function makeCopyPasteInput(holder, div, obj) {
 	const paste_div = div.append('div').style('display', 'block')
 	const paste = uiutils
 		.makeTextAreaInput(paste_div)
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.on('keyup', async () => {
-			obj.data = parseTabDelimitedData(paste.property('value').trim())
+			obj.data = parseTabDelimitedData(holder, paste.property('value').trim())
 		})
 }
 
 //Parse tab delimited files only
-function parseTabDelimitedData(input) {
+function parseTabDelimitedData(holder, input) {
 	const lines = input.trim().split(/\r?\n/)
 
 	/* 
@@ -203,9 +219,9 @@ function parseTabDelimitedData(input) {
 		if (i == 0) {
 			//Find "Variable Name" (i.e. level 1 id/ leaf id), "Variable Note" (i.e. configuration), and level columns
 			varNameIndex = line.findIndex(l => l.toLowerCase().includes('variable name'))
-			if (varNameIndex == -1) throw `Missing required 'Variable Name' column`
+			if (varNameIndex == -1) sayerror(holder, `Missing required 'Variable Name' column`)
 			configIndex = line.findIndex(l => l.toLowerCase().includes('variable note'))
-			if (configIndex == -1) throw `Missing required 'Variable Note' column`
+			if (configIndex == -1) sayerror(holder, `Missing required 'Variable Note' column`)
 
 			for (const [idx, col] of line.entries()) {
 				//Capture the index(es) for level column(s) creating hierarchy later
@@ -242,7 +258,7 @@ function parseTabDelimitedData(input) {
 			// console.log(levelIdxStrs)
 
 			//Checks for blanks || '-' values between levels, checks for duplicate level entries, and returns the leafindex
-			const leafLevel = validateLevels(levelIdxStrs, i)
+			const leafLevel = validateLevels(holder, levelIdxStrs, i)
 			// console.log(leafLevel)
 			// console.log(levelIdxStrs)
 
@@ -254,7 +270,7 @@ function parseTabDelimitedData(input) {
 
 			let configstr = line[configIndex].replace('"', '').trim()
 			//Parses configuration col into term.type, term.values, and term.groupsetting
-			const term = parseConfig(configstr)
+			const term = parseConfig(holder, configstr)
 			// console.log(term)
 
 			/******* Parse for hierarchy *******/
@@ -293,7 +309,7 @@ function parseTabDelimitedData(input) {
 		}
 	}
 	// Checks all duplicate term.ids for duplicates
-	check4DuplicateValues(ids)
+	check4DuplicateValues(holder, ids)
 
 	// console.log(ntermsMaps.ame2id)
 	// console.log(termsMaps.allterms_byorder)
@@ -310,7 +326,7 @@ function parseTabDelimitedData(input) {
  **** Parsing Functions for Phenotree ****
  */
 
-function validateLevels(levelStrs, i) {
+function validateLevels(holder, levelStrs, i) {
 	// Check for blanks or '-' between levels
 
 	// Find first index of null
@@ -328,19 +344,19 @@ function validateLevels(levelStrs, i) {
 	if (firstNull == undefined) firstNull = { idx: lastNonNull.idx + 1, name: 'noname' }
 	//TODO: Print error to the screen
 	if (lastNonNull.idx > firstNull.idx && firstNull.idx >= 0)
-		throw `Blank or '-' value detected between levels in line ` + (i + 1)
+		sayerror(holder, `Blank or '-' value detected between levels in line ` + (i + 1))
 
 	//Check for duplicate string values for levels in the same line
 	const nonNullLevelStrs = []
 	levelStrs.filter(l => {
 		if (l.name !== null) nonNullLevelStrs.push(l.name)
 	})
-	check4DuplicateValues(nonNullLevelStrs)
+	check4DuplicateValues(holder, nonNullLevelStrs)
 
 	return lastNonNull
 }
 
-function parseConfig(str) {
+function parseConfig(holder, str) {
 	//NOT using uncomputable values in this iteration
 	// const uncomputable_categories = new Set(['-994', '-995', '-996', '-997', '-998', '-999'])
 	const term = {}
@@ -367,7 +383,7 @@ function parseConfig(str) {
 				//ignore
 			} else {
 				const [key, value] = config.split(/(?<!\>|\<)=/)
-				if (!value) throw 'first field is not integer/float/string, and not k=v: ' + config
+				if (!value) sayerror(holder, 'first field is not integer/float/string, and not k=v: ' + config)
 				term.values[key] = { label: value }
 			}
 		}
@@ -378,7 +394,7 @@ function parseConfig(str) {
 				const field = line[i].trim()
 				if (field == '') continue
 				const [key, value] = field.split(/(?<!\>|\<)=/)
-				if (!value) throw 'field ' + (i + 1) + ' is not k=v: ' + field
+				if (!value) sayerror(holder, 'field ' + (i + 1) + ' is not k=v: ' + field)
 				if (!term.values) term.values = {}
 				term.values[key] = { label: value }
 			}
@@ -470,18 +486,19 @@ function createHierarchy(leafIndex, levelNames, leafID, termsMaps) {
 	}
 }
 
-/*
- **** Helpers ****
- */
 function str2level(str) {
 	// parses columns and returns name
 	const tmp = str.trim().replace(/"/g, '')
-	// console.log(tmp)
 	if (!tmp || tmp == '-') return null
 	return tmp
 }
 
-function check4DuplicateValues(values) {
+/*
+ **** Helpers ****
+ */
+
+function check4DuplicateValues(holder, values) {
+	// Find duplicate values from an array and, if applicable, print duplicate values to the screen
 	const duplicates = new Set()
 	for (const i in values) {
 		if (values.indexOf(values[i]) !== values.lastIndexOf(values[i])) {
@@ -490,8 +507,7 @@ function check4DuplicateValues(values) {
 	}
 	if (duplicates.size > 0) {
 		const dup = Array.from(duplicates)
-		// console.log(453)
-		throw `Error: Nonunique values(s) found: ` + dup + `. Values must be unique.` //TODO print to screen
+		sayerror(holder, `Error: Nonunique values(s) found: ` + dup + `. Values must be unique.`)
 	}
 	return true
 }
@@ -532,13 +548,4 @@ function infoSection(div) {
                     Please see the <a href="https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit" target="_blank">documentation</a> for more information.
                 </li>
             </ul>`)
-}
-//TODO print data submission errors to the viewport rather than alerts
-function makeErrorDiv(div) {
-	div
-		.append('div')
-		.style('margin', '10px')
-		.style('opacity', '0.65')
-		.style('grid-column', 'span 2')
-		.html(`<h3>Errors found</h3>`)
 }

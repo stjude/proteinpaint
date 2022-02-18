@@ -1396,7 +1396,7 @@ async function launch_tkUIs(arg, app) {
 	}
 	if (arg.tkui == 'dictionary') {
 		const p = await import('./dictionary.ui')
-		p.init_dictionaryUI(app.holder)
+		p.init_dictionaryUI(app.holder, app.debugmode)
 	}
 }
 
