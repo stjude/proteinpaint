@@ -5,6 +5,7 @@ import { scaleLog, scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import { format as d3format } from 'd3-format'
 import blocklazyload from './block.lazyload'
+import { d3lasso } from './common/lasso'
 
 /*
 differential gene expression viewer
@@ -844,6 +845,44 @@ add:
 		select.append('option').text('Unadjusted P value')
 		select.append('option').text('Adjusted P value')
 	}
+
+	function lasso_draw() {
+		// Style the possible dots
+		lasso
+			.possibleItems()
+			// .attr('r', radius)
+			.attr('fill', hlcolor)
+			.style('fill-opacity', '1')
+			.classed('not_possible', false)
+			.classed('possible', true)
+	}
+
+	// add volcano_lasso here
+	const lasso = d3lasso()
+		.items(dotg.selectAll('circle'))
+		.targetArea(svg)
+
+	lasso
+		// 	.on('start', lasso_start)
+		.on('draw', lasso_draw)
+	// 	.on('end', lasso_end)
+
+	svg.call(lasso)
+
+	const las = svg.select('.lasso')
+
+	las
+		.select('path')
+		.style('stroke', '#505050')
+		.style('stroke-width', '2px')
+
+	las.select('.drawn').style('fill-opacity', '.05')
+
+	las
+		.select('.origin')
+		.style('fill', '#3399FF')
+		.style('fill-opacity', '.5')
+
 	return svg
 }
 

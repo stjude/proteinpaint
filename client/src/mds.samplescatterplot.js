@@ -1554,10 +1554,10 @@ function lasso_select(obj, dots) {
 
 		las.select('.drawn').style('fill-opacity', '.05')
 
-		las
-			.select('.loop_close')
-			.style('fill', 'none')
-			.style('stroke-dasharray', '4,4')
+		// las
+		// 	.select('.loop_close')
+		// 	.style('fill', 'none')
+		// 	.style('stroke-dasharray', '4,4')
 
 		las
 			.select('.origin')
