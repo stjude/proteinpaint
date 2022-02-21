@@ -190,7 +190,7 @@ function setRenderers(self) {
 			await self.show_genomebrowser_snplocus(result)
 			return
 		}
-		// no snplocus, clear things if previous analysis had it
+		// no snplocus, clear things if had it before
 		delete self.snplocusBlock
 		self.dom.snplocusBlockDiv.selectAll('*').remove()
 		// result.lst[] has only one set of result, from analyzing one model
@@ -290,10 +290,12 @@ function setRenderers(self) {
 		/* term rows:
 		for each independent terms, show 1 or multiple rows
 		these rows do not cover interactions, which are rendered afterwards
-		*/
 
-		// forest plot is shown for both interacting and non-interacting rows
-		// a plot is added to 3rd column of each row
+		* forest plot *
+		shown for both interacting and non-interacting rows
+		a plot is added to 3rd column of each row
+		plotter can be a blank function if there's no valid value for plotting
+		*/
 		const forestPlotter = self.getForestPlotter(result.coefficients.terms, result.coefficients.interactions)
 		let rowcount = 0
 		for (const tid in result.coefficients.terms) {
@@ -571,6 +573,13 @@ function setRenderers(self) {
 		for (const i of interactions) {
 			numbers2array(i.lst)
 		}
+
+		if (values.length == 0) {
+			// no valid estimates
+			// return blank function for inability to make plot
+			return () => {}
+		}
+
 		// all valid numbers are collected into values[]
 		values.sort((a, b) => a - b) // ascending
 
