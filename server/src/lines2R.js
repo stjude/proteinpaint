@@ -14,6 +14,9 @@ const path = require('path')
 const fs = require('fs')
 const spawn = require('child_process').spawn
 const Readable = require('stream').Readable
+const serverconfig = require('./serverconfig')
+
+if (!serverconfig.Rscript) serverconfig.Rscript = 'Rscript'
 
 module.exports = async function lines2R(Rscript, lines, args = [], appendStdErr = false) {
 	try {
@@ -25,7 +28,7 @@ module.exports = async function lines2R(Rscript, lines, args = [], appendStdErr 
 	const stdout = []
 	const stderr = []
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', [Rscript, ...args])
+		const sp = spawn(serverconfig.Rscript, [Rscript, ...args])
 		Readable.from(table)
 			.pipe(sp.stdin)
 			.on('error', () => {
