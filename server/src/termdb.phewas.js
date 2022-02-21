@@ -45,7 +45,6 @@ export async function trigger(q, res, ds) {
 	// optional filter on samples
 	let samplefilterset
 	if (q.filter) {
-		q.filter = JSON.parse(decodeURIComponent(q.filter))
 		samplefilterset = new Set(termdbsql.get_samples(q.filter, ds))
 	}
 
