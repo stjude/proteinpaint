@@ -96,12 +96,12 @@ class TdbSurvival {
 							title: `The unit to display in the x-axis title, like 'years'`
 						},
 						{
-							label: 'At-risk trend',
+							label: 'At-risk counts',
 							boxLabel: 'Visible',
 							type: 'checkbox',
 							chartType: 'survival',
 							settingsKey: 'atRiskVisible',
-							title: 'Compute the at-risk trend using this time interval'
+							title: 'Display the at-risk counts'
 						}
 						//{label: 'At-risk label offset', type: 'numeric', chartType: 'survival', settingsKey: 'atRiskLabelOffset'},
 					]
@@ -566,7 +566,7 @@ function setRenderers(self) {
 	function renderAtRiskG(g, s, chart) {
 		const bySeries = {}
 		for (const series of chart.visibleSerieses) {
-			const trend = []
+			const counts = []
 			let i = 0,
 				d = series.data[0],
 				prev = d // prev = "previous" data point
@@ -585,9 +585,9 @@ function setRenderers(self) {
 				// followed by another data with nrisk counts;
 				// however, must also adjust the prev.nrisk for use in the next timepoint,
 				// since it is a starting count and does not include the exits in that timepoint
-				trend.push([time, prev.nrisk - prev.nevent - prev.ncensor])
+				counts.push([time, prev.nrisk - prev.nevent - prev.ncensor])
 			}
-			bySeries[series.seriesId] = trend
+			bySeries[series.seriesId] = counts
 		}
 
 		const y = s.svgh - s.svgPadding.top - s.svgPadding.bottom + 60 // make y-offset option???
