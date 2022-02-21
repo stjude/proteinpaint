@@ -179,6 +179,7 @@ function makeRinput(q, sampledata) {
 					type: 'independent',
 					interactions: []
 				}
+				if (tw.type == 'snplocus') thisSnp.type = 'snplocus'
 				if (tw.q.geneticModel == 3) {
 					// by genotype
 					thisSnp.rtype = 'factor'
@@ -229,16 +230,6 @@ function makeRinput(q, sampledata) {
 			}
 			if (tw.q.scale) thisTerm.scale = tw.q.scale
 			variables.push(thisTerm)
-		}
-	}
-
-	// indicate snplocus variables
-	const tw = q.independent.find(i => i.type == 'snplocus')
-	if (tw) {
-		for (const t of variables) {
-			if (tw.snpidlst.includes(t.id)) {
-				t.type = 'snplocus'
-			}
 		}
 	}
 
@@ -300,7 +291,10 @@ function makeRinput(q, sampledata) {
 				// independent variable
 				const v = id2value.get(t.id)
 				if (!v) {
-					entry[t.id] = 'NA'
+					// sample has no value for this variable
+					// set value to 'null' because R script will
+					// convert 'null' to 'NA' during json import
+					entry[t.id] = null
 				} else {
 					entry[t.id] = t.rtype === 'numeric' ? v.value : v.key
 				}
@@ -672,7 +666,7 @@ function doImputation(snp2sample, tw, cachesampleheader, sampleinfilter) {
 				if (!sampleinfilter[i]) continue
 				if (!o.samples.has(sampleid)) {
 					// this sample is missing gt call for this snp
-					o.samples.set(sampleid, notEffAle + ',' + notEffAle)
+					o.samples.set(sampleid, notEffAle + '/' + notEffAle)
 				}
 			}
 		}
@@ -719,7 +713,7 @@ function applyGeneticModel(tw, effAle, a1, a2) {
 			return a1 == effAle && a2 == effAle ? 1 : 0
 		case 3:
 			// by genotype
-			return a1 + ',' + a2
+			return a1 + '/' + a2
 		default:
 			throw 'unknown geneticModel option'
 	}
