@@ -30,9 +30,14 @@ export function d3lasso() {
 
 		// add the drawn path for the lasso
 		const drawn_path = g.append('path').attr('class', 'drawn')
+			.style('stroke', '#505050')
+			.style('stroke-width', '2px')
+			.style('fill-opacity', '.05')
 
 		// add an origin node (circle to indicate start of lasso)
 		const origin_node = g.append('circle').attr('class', 'origin')
+			.style('fill', '#3399FF')
+			.style('fill-opacity', '.5')
 
 		let tpath, // The transformed lasso path for rendering
 			origin, // The lasso origin for calculations
