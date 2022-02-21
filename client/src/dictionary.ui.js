@@ -260,7 +260,6 @@ function parseTabDelimitedData(holder, input) {
 			//Checks for blanks || '-' values between levels, checks for duplicate level entries, and returns the leafindex
 			const leafLevel = validateLevels(holder, levelIdxStrs, i)
 			// console.log(leafLevel)
-			// console.log(levelIdxStrs)
 
 			// if key missing, use leaf level str
 			let leafId = line[varNameIndex] ? line[varNameIndex].trim() : ''
@@ -268,9 +267,8 @@ function parseTabDelimitedData(holder, input) {
 			//ids array used to check for duplicate id values later
 			ids.push(leafId)
 
-			let configstr = line[configIndex].replace('"', '').trim()
 			//Parses configuration col into term.type, term.values, and term.groupsetting
-			const term = parseConfig(holder, configstr)
+			const term = parseConfig(holder, line[configIndex])
 			// console.log(term)
 
 			/******* Parse for hierarchy *******/
@@ -280,20 +278,6 @@ function parseTabDelimitedData(holder, input) {
 			// Creates a series of maps for generating terms, ancestry table, and eventually connecting to other file types
 			createHierarchy(leafLevel.idx, nonNullLevels, leafId, termsMaps)
 
-			/******* Create terms *******/
-			for (const [k, v] of termsMaps.p2childorder.entries()) {
-				//Create term objects for parents
-				if (k == '__root') continue
-				if (!terms[k]) {
-					terms[k] = {
-						id: k,
-						name: k,
-						isleaf: false,
-						parent_id: termsMaps.ch2immediateP.get(k) || null
-					}
-					ids.push(k)
-				}
-			}
 			//Create term objects for leaves
 			terms[leafId] = {
 				id: leafId,
@@ -308,15 +292,28 @@ function parseTabDelimitedData(holder, input) {
 			throw 'Line ' + (i + 1) + ' error: ' + e
 		}
 	}
+	for (const [k, v] of termsMaps.p2childorder.entries()) {
+		//Create term objects for parents
+		if (k == '__root') continue
+		if (!terms[k]) {
+			terms[k] = {
+				id: k,
+				name: k,
+				isleaf: false,
+				parent_id: termsMaps.ch2immediateP.get(k) || null
+			}
+			ids.push(k)
+		}
+	}
 	// Checks all duplicate term.ids for duplicates
-	check4DuplicateValues(holder, ids)
+	check4DuplicateValues(holder, ids, 'ID')
 
-	// console.log(ntermsMaps.ame2id)
+	// console.log(termsMaps.ame2id)
 	// console.log(termsMaps.allterms_byorder)
-	// console.log(264, termsMaps.parent2children)
-	// console.log(265, termsMaps.ch2immediateP)
-	// console.log(266, termsMaps.child2parents)
-	// console.log(267, termsMaps.p2childorder)
+	// console.log(termsMaps.parent2children)
+	// console.log(termsMaps.ch2immediateP)
+	// console.log(termsMaps.child2parents)
+	// console.log(termsMaps.p2childorder)
 	// console.log(termsMaps.allterms_byorder.size + ' terms in total')
 	console.log({ terms: Object.values(terms) })
 	return { terms: Object.values(terms) }
@@ -342,7 +339,6 @@ function validateLevels(holder, levelStrs, i) {
 	// console.log(lastNonNull)
 
 	if (firstNull == undefined) firstNull = { idx: lastNonNull.idx + 1, name: 'noname' }
-	//TODO: Print error to the screen
 	if (lastNonNull.idx > firstNull.idx && firstNull.idx >= 0)
 		sayerror(holder, `Blank or '-' value detected between levels in line ` + (i + 1))
 
@@ -351,7 +347,8 @@ function validateLevels(holder, levelStrs, i) {
 	levelStrs.filter(l => {
 		if (l.name !== null) nonNullLevelStrs.push(l.name)
 	})
-	check4DuplicateValues(holder, nonNullLevelStrs)
+	// console.log(nonNullLevelStrs)
+	check4DuplicateValues(holder, nonNullLevelStrs, 'Level')
 
 	return lastNonNull
 }
@@ -359,16 +356,19 @@ function validateLevels(holder, levelStrs, i) {
 function parseConfig(holder, str) {
 	//NOT using uncomputable values in this iteration
 	// const uncomputable_categories = new Set(['-994', '-995', '-996', '-997', '-998', '-999'])
+
+	const configStr = str.replace('"', '').trim()
+
 	const term = {}
 
-	if (str == 'string') {
+	if (configStr == 'string') {
 		// Not relevant yet: is categorical term without predefined categories, need to collect from matrix, no further validation
 		term.type = 'categorical'
 		term.values = {}
 		// Not relevant yet: list of categories not provided in configstr so need to sum it up from matrix
 		term._set = new Set() // temp
 	} else {
-		const line = str.replace('"', '').split(';')
+		const line = configStr.replace('"', '').split(';')
 		const config = line[0].trim() //1st field defines term.type
 		if (config == 'integer') {
 			term.type = 'integer'
@@ -388,7 +388,7 @@ function parseConfig(holder, str) {
 			}
 		}
 
-		for (let i of line) {
+		for (let i = 0; i < line.length; i++) {
 			if (i > 0) {
 				//Skip type, defined above
 				const field = line[i].trim()
@@ -423,10 +423,7 @@ function createHierarchy(leafIndex, levelNames, leafID, termsMaps) {
 	termsMaps.p2childorder.set(root_id, [])
 
 	//Find the smallest level index before looping through levelNames
-	let idxArr = []
-	levelNames.filter(l => idxArr.push(l.idx))
-	// console.log(idxArr)
-	const idxMin = Math.min(...idxArr)
+	const idxMin = Math.min(...levelNames.map(l => l.idx))
 	// console.log(idxMin)
 
 	for (const level of levelNames) {
@@ -497,17 +494,16 @@ function str2level(str) {
  **** Helpers ****
  */
 
-function check4DuplicateValues(holder, values) {
+function check4DuplicateValues(holder, values, text) {
 	// Find duplicate values from an array and, if applicable, print duplicate values to the screen
 	const duplicates = new Set()
-	for (const i in values) {
-		if (values.indexOf(values[i]) !== values.lastIndexOf(values[i])) {
-			duplicates.add(values[i])
-		}
+
+	for (const [i, v] of values.entries()) {
+		if (i !== values.lastIndexOf(v)) duplicates.add(v)
 	}
 	if (duplicates.size > 0) {
 		const dup = Array.from(duplicates)
-		sayerror(holder, `Error: Nonunique values(s) found: ` + dup + `. Values must be unique.`)
+		sayerror(holder, `Error: Nonunique ${text}(s) found: ` + dup + `. ${text}s must be unique.`)
 	}
 	return true
 }
