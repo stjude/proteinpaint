@@ -291,6 +291,9 @@ function makeRinput(q, sampledata) {
 				// independent variable
 				const v = id2value.get(t.id)
 				if (!v) {
+					// sample has no value for this variable
+					// set value to 'null' because R script will
+					// convert 'null' to 'NA' during json import
 					entry[t.id] = null
 				} else {
 					entry[t.id] = t.rtype === 'numeric' ? v.value : v.key
