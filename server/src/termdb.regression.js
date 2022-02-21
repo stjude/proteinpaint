@@ -630,7 +630,7 @@ async function getSampleData_snplstOrLocus(tw, samples, q) {
 		for (const [sampleid, gt] of o.samples) {
 			// for this sample, convert gt to value
 			const [gtA1, gtA2] = gt.split('/') // assuming diploid
-			const v = applyGeneticModel(tw, o.effAle, gtA1, gtA2, sampleid)
+			const v = applyGeneticModel(tw, o.effAle, gtA1, gtA2)
 
 			// register value of this sample in samples
 			if (!samples.has(sampleid)) {
@@ -663,7 +663,7 @@ function doImputation(snp2sample, tw, cachesampleheader, sampleinfilter) {
 				if (!sampleinfilter[i]) continue
 				if (!o.samples.has(sampleid)) {
 					// this sample is missing gt call for this snp
-					o.samples.set(sampleid, notEffAle + ',' + notEffAle)
+					o.samples.set(sampleid, notEffAle + '/' + notEffAle)
 				}
 			}
 		}
@@ -696,7 +696,7 @@ function doImputation(snp2sample, tw, cachesampleheader, sampleinfilter) {
 	throw 'invalid missingGenotype value'
 }
 
-function applyGeneticModel(tw, effAle, a1, a2, sampleid) {
+function applyGeneticModel(tw, effAle, a1, a2) {
 	switch (tw.q.geneticModel) {
 		case 0:
 			// additive
@@ -710,11 +710,6 @@ function applyGeneticModel(tw, effAle, a1, a2, sampleid) {
 			return a1 == effAle && a2 == effAle ? 1 : 0
 		case 3:
 			// by genotype
-			if (a1.includes(',')) {
-				console.log('tw:', tw)
-				console.log('sampleid:', sampleid)
-				console.log('a1:', a1)
-			}
 			return a1 + '/' + a2
 		default:
 			throw 'unknown geneticModel option'
