@@ -16,8 +16,6 @@ const spawn = require('child_process').spawn
 const Readable = require('stream').Readable
 const serverconfig = require('./serverconfig')
 
-if (!serverconfig.Rscript) serverconfig.Rscript = 'Rscript'
-
 module.exports = async function lines2R(Rscript, lines, args = [], appendStdErr = false) {
 	try {
 		await fs.promises.stat(Rscript)

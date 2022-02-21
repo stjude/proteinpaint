@@ -44,6 +44,7 @@ if (!serverconfig.bigwigsummary) serverconfig.bigwigsummary = 'bigWigSummary'
 if (!serverconfig.bigBedToBed) serverconfig.bigBedToBed = 'bigBedToBed'
 if (!serverconfig.bigBedNamedItems) serverconfig.bigBedNamedItems = 'bigBedNamedItems'
 if (!serverconfig.clustalo) serverconfig.clustalo = 'clustalo'
+if (!serverconfig.Rscript) serverconfig.Rscript = 'Rscript'
 
 /******************
 	APPLY OVERRIDES 
