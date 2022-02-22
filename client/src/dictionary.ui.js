@@ -149,7 +149,7 @@ function makeCopyPasteInput(holder, div, obj) {
 }
 
 //Parse tab delimited files only
-function parseTabDelimitedData(holder, input) {
+export function parseTabDelimitedData(holder, input) {
 	/* 
     Parses phenotree:
         - Parses tab delim data arranged in cols: levels(n), ID (i.e. Variable name), Configuration (i.e. Variable note).
@@ -243,7 +243,7 @@ function parseTabDelimitedData(holder, input) {
 	trackMissingTerms(termNameToId, terms, parentTermNames)
 
 	for (const id in terms) {
-		const term = terms[id] //; console.log(term)
+		const term = terms[id]
 		term.isleaf = !parentTermNames.has(term.name)
 		term.parent_id = termNameToId[term.parent_name] || null
 		delete term.parent_name
@@ -252,7 +252,7 @@ function parseTabDelimitedData(holder, input) {
 		//delete term.ancestry
 	}
 
-	console.log(terms)
+	//console.log(terms)
 	return { terms: Object.values(terms) }
 }
 
