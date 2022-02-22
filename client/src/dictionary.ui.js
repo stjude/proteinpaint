@@ -343,10 +343,10 @@ function trackMissingTerms(termNameToId, terms, parentTermNames, holder) {
 				const ancestor = terms[id]
 				// if this ancestor has another level above it,
 				// check that it is the same parent_term as previousy processed
-				if (i - 1 > -1 && ancestor.parent_name != term.ancestry[i - 1]) {
+				if ((i - 1 < 0 && ancestor.parent_name) || ancestor.parent_name != term.ancestry[i - 1]) {
 					sayerror(
 						holder,
-						`Differents parent for term=${name}, '${term.ancestry[i - 1]}' and '${ancestor.parent_name}'`
+						`Different parents for term=${name}, '${term.ancestry[i - 1]}' and '${ancestor.parent_name}'`
 					)
 				}
 				continue
