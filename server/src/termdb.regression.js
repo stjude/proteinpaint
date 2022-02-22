@@ -667,7 +667,10 @@ async function getSampleData_snplstOrLocus(tw, samples, q) {
 	}
 
 	// imputation
-	doImputation(snp2sample, tw, cachesampleheader, sampleinfilter)
+	// do not impute for snplocus
+	if (tw.type != 'snplocus') {
+		doImputation(snp2sample, tw, cachesampleheader, sampleinfilter)
+	}
 
 	for (const [snpid, o] of snp2sample) {
 		for (const [sampleid, gt] of o.samples) {
