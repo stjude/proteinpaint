@@ -212,6 +212,7 @@ export function parseTabDelimitedData(holder, input) {
 
 			const id = cols[varNameIndex] || name
 			if (id in terms) {
+				console.log(215, id)
 				const orig = terms[id]
 				sayerror(holder, `Error: Multiple config rows for term.id='${id}': lines# ${orig.lineNum} and ${lineNum}`)
 				continue
@@ -266,7 +267,8 @@ function parseConfig(holder, lineNum, str, varName) {
 
 	const configStr = str.replace('"', '').trim()
 	if (!configStr) {
-		throw `Missing configuration string, line=${lineNum}, term='${varName}'`
+		sayerror(holder, `Missing Variable Note string, line=${lineNum}, term='${varName}'`)
+		return
 	}
 
 	const term = {}
@@ -293,7 +295,11 @@ function parseConfig(holder, lineNum, str, varName) {
 				//ignore
 			} else {
 				const [key, value] = config.split(/(?<!\>|\<)=/)
-				if (!value) sayerror(holder, 'first field is not integer/float/string, and not k=v: ' + config)
+				if (!value)
+					sayerror(
+						holder,
+						`Variable note is not an integer/float/string and not k=v. line=${lineNum} variable note='${config}'`
+					)
 				term.values[key] = { label: value }
 			}
 		}
