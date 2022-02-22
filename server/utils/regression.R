@@ -23,7 +23,6 @@
 #         "rtype": R variable type ("numeric", "factor")
 #         "refGrp": reference group (required for factor variables)
 #         "interactions": [] ids of interacting variables
-#         "categories": { ref, nonref } (only for logistic outcome)
 #         "categories": {} (only for logistic outcome)
 #           "ref": reference category of outcome
 #           "nonref": non-reference category of outcome
@@ -63,6 +62,46 @@ library(jsonlite)
 #############
 # FUNCTIONS #
 #############
+
+# function to prepare data table
+#   - set variable types and reference groups
+#   - scale values (if applicable)
+#   - validate data values
+prepareDataTable <- function(dat, variables, regtype) {
+  variables$toSkip <- vector(mode = "logical", length = nrow(variables))
+  for (r in 1:nrow(variables)) {
+    variable <- variables[r,]
+    id <- variable$id
+    if (variable$type == "outcome") {
+      # outcome variable
+      if (regtype == "logistic") {
+        vals <- unique(dat[,id])
+        if (!(length(vals) == 2 & all(c(0,1) %in% vals))) stop("outcome variable is not 0/1 binary")
+      }
+    }
+    if (variable$rtype == "numeric") {
+      # numeric variable
+      if ("scale" %in% colnames(variable)) {
+        # scale variable values
+        if (!is.na(variable$scale)) dat[,id] <- dat[,id]/variable$scale
+      }
+    } else if (variable$rtype == "factor") {
+      # factor variable
+      dat[,id] <- factor(dat[,id])
+      if (length(levels(dat[,id])) < 2) {
+        # factor variables with < 2 categories will
+        # be skipped when building formula
+        variables[r,"toSkip"] <- TRUE
+        next
+      }
+      if (!(variable$refGrp %in% levels(dat[,id]))) stop(paste0("refGrp of '",variable$id,"' not found in data values"))
+      dat[,id] <- relevel(dat[,id], ref = variable$refGrp)
+    } else {
+      stop(paste0("variable rtype '",variable$rtype,"' is not recognized"))
+    }
+  }
+  return(list(dat = dat, variables = variables))
+}
 
 # function to run linear regression
 linearRegression <- function(formula, dat, outcome, splineVariables) {
@@ -367,37 +406,18 @@ input <- stream_in(con, verbose = F)
 dat <- input$data[[1]] # data table
 variables <- input$metadata$variables[[1]] # variable metadata
 
-# format data table
-# set variable types, reference groups and scale values
-for (r in 1:nrow(variables)) {
-  variable <- variables[r,]
-  id <- variable$id
-  if (variable$type == "outcome") {
-    # outcome variable
-    if (input$metadata$type == "logistic") {
-      vals <- unique(dat[,id])
-      if (!(length(vals) == 2 & all(c(0,1) %in% vals))) stop("outcome variable is not 0/1 binary")
-    }
-  }
-  if (variable$rtype == "numeric") {
-    # numeric variable
-    if ("scale" %in% colnames(variable)) {
-      # scale variable values
-      if (!is.na(variable$scale)) dat[,id] <- dat[,id]/variable$scale
-    }
-  } else if (variable$rtype == "factor") {
-    # factor variable
-    dat[,id] <- factor(dat[,id])
-    if (length(levels(dat[,id])) < 2) stop(paste0("'",variable$id,"' has fewer than 2 categories"))
-    if (!(variable$refGrp %in% levels(dat[,id]))) stop(paste0("refGrp of '",variable$id,"' not found in data values"))
-    dat[,id] <- relevel(dat[,id], ref = variable$refGrp)
-  } else {
-    stop(paste0("variable rtype '",variable$rtype,"' is not recognized"))
-  }
-}
+# prepare data table
+lst <- prepareDataTable(dat, variables, input$metadata$type)
+dat <- lst$dat
+variables <- lst$variables
+
+
+##################
+# BUILD FORMULAS #
+##################
 
 # build regression formula(s)
-# first collect outcome id, independent ids, cubic spline ids, and interactions
+# collect outcome id, independent ids, cubic spline ids, and interactions
 # set aside snplocus variables to be added separately
 outcomeId <- vector(mode = "character")
 independentIds <- vector(mode = "character")
@@ -406,6 +426,9 @@ snplocusVariables <- variables[0,]
 splineVariables <- variables[0,]
 for (r in 1:nrow(variables)) {
   variable <- variables[r,]
+  if (variable$toSkip) {
+    next
+  }
   if (variable$type == "outcome") {
     # outcome variable
     outcomeId <- variable$id
