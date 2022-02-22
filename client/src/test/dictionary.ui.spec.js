@@ -44,7 +44,6 @@ tape('levels before name+note, no gaps', function(test) {
 			type: 'categorical',
 			values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 			groupsetting: { inuse: false },
-			ancestry: ['A', 'A.1'],
 			isleaf: true,
 			parent_id: 'A.1'
 		},
@@ -54,7 +53,6 @@ tape('levels before name+note, no gaps', function(test) {
 			type: 'categorical',
 			values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 			groupsetting: { inuse: false },
-			ancestry: ['A', 'A.1'],
 			isleaf: true,
 			parent_id: 'A.1'
 		},
@@ -64,7 +62,6 @@ tape('levels before name+note, no gaps', function(test) {
 			type: 'categorical',
 			values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 			groupsetting: { inuse: false },
-			ancestry: ['A', 'A.2'],
 			isleaf: true,
 			parent_id: 'A.2'
 		},
@@ -74,15 +71,14 @@ tape('levels before name+note, no gaps', function(test) {
 			type: 'categorical',
 			values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 			groupsetting: { inuse: false },
-			ancestry: ['B', 'B.1'],
 			isleaf: true,
 			parent_id: 'B.1'
 		},
-		{ id: 'A', name: 'A', isleaf: false, ancestry: [], parent_id: null },
-		{ id: 'A.1', name: 'A.1', isleaf: false, ancestry: ['A'], parent_id: 'A' },
-		{ id: 'A.2', name: 'A.2', isleaf: false, ancestry: ['A'], parent_id: 'A' },
-		{ id: 'B', name: 'B', isleaf: false, ancestry: [], parent_id: null },
-		{ id: 'B.1', name: 'B.1', isleaf: false, ancestry: ['B'], parent_id: 'B' }
+		{ id: 'A', name: 'A', isleaf: false, parent_id: null },
+		{ id: 'A.1', name: 'A.1', isleaf: false, parent_id: 'A' },
+		{ id: 'A.2', name: 'A.2', isleaf: false, parent_id: 'A' },
+		{ id: 'B', name: 'B', isleaf: false, parent_id: null },
+		{ id: 'B.1', name: 'B.1', isleaf: false, parent_id: 'B' }
 	]
 	test.deepEqual(results.terms, expected, 'should output the expected terms array')
 	test.end()
@@ -109,7 +105,6 @@ tape('levels after name+note, with gap', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 				groupsetting: { inuse: false },
-				ancestry: ['A', 'A.1', 'A.1.a'],
 				isleaf: true,
 				parent_id: 'A.1.a'
 			},
@@ -119,7 +114,6 @@ tape('levels after name+note, with gap', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 				groupsetting: { inuse: false },
-				ancestry: ['A', 'A.1'],
 				isleaf: true,
 				parent_id: 'A.1'
 			},
@@ -129,7 +123,6 @@ tape('levels after name+note, with gap', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 				groupsetting: { inuse: false },
-				ancestry: ['A', 'A.2'],
 				isleaf: true,
 				parent_id: 'A.2'
 			},
@@ -139,16 +132,15 @@ tape('levels after name+note, with gap', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 				groupsetting: { inuse: false },
-				ancestry: ['B', 'B.1'],
 				isleaf: true,
 				parent_id: 'B.1'
 			},
-			{ id: 'A', name: 'A', isleaf: false, ancestry: [], parent_id: null },
-			{ id: 'A.1', name: 'A.1', isleaf: false, ancestry: ['A'], parent_id: 'A' },
-			{ id: 'A.1.a', name: 'A.1.a', isleaf: false, ancestry: ['A', 'A.1'], parent_id: 'A.1' },
-			{ id: 'A.2', name: 'A.2', isleaf: false, ancestry: ['A'], parent_id: 'A' },
-			{ id: 'B', name: 'B', isleaf: false, ancestry: [], parent_id: null },
-			{ id: 'B.1', name: 'B.1', isleaf: false, ancestry: ['B'], parent_id: 'B' }
+			{ id: 'A', name: 'A', isleaf: false, parent_id: null },
+			{ id: 'A.1', name: 'A.1', isleaf: false, parent_id: 'A' },
+			{ id: 'A.1.a', name: 'A.1.a', isleaf: false, parent_id: 'A.1' },
+			{ id: 'A.2', name: 'A.2', isleaf: false, parent_id: 'A' },
+			{ id: 'B', name: 'B', isleaf: false, parent_id: null },
+			{ id: 'B.1', name: 'B.1', isleaf: false, parent_id: 'B' }
 		]
 		test.deepEqual(results.terms, expected, message)
 	} catch (e) {

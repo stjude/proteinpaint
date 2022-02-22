@@ -249,7 +249,7 @@ export function parseTabDelimitedData(holder, input) {
 		delete term.parent_name
 		delete term.lineNum
 		//term.ancestry = term.ancestry.map(name => termNameToId[name]).filter(d=>!!d)
-		//delete term.ancestry
+		delete term.ancestry
 	}
 
 	//console.log(terms)
