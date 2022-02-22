@@ -160,10 +160,10 @@ function makeRinput(q, sampledata) {
 		rtype: 'numeric' // always numeric because values are continuous for linear regression and values get converted to 0/1 for logistic regression
 	}
 	if (q.regressionType == 'logistic') {
-		// need ref and nonref categories of outcome for labeling R plot
+		// when doing spline plot, need ref and nonref categories of outcome for labeling R plot
 		outcome.categories = {
 			ref: q.outcome.refGrp,
-			nonref: q.outcome.q.lst.find(x => x.label != q.outcome.refGrp).label
+			nonref: getLogisticOutcomeNonref(q.outcome)
 		}
 	}
 	variables.push(outcome)
@@ -309,6 +309,46 @@ function makeRinput(q, sampledata) {
 	}
 
 	return Rinput
+}
+
+function getLogisticOutcomeNonref(outcome) {
+	// outcome is q.outcome{}, the term-wrapper {q{}, refGrp, term{}}
+	// depending on q.type, find the non-ref group and return its name, to be used in Y axis of spline plot
+	if (outcome.q.type == 'predefined-groupset') {
+		if (!outcome.q.groupsetting) throw 'outcome.q.groupsetting{} missing when type=predefined-groupset'
+		if (!Number.isInteger(outcome.q.groupsetting.predefined_groupset_idx))
+			throw 'outcome.q.predefined_groupset_idx not integer when q.type is "predefined-groupset"'
+		if (!outcome.term.groupsetting) throw 'outcome.term.groupsetting missing'
+		const grpset = outcome.term.groupsetting.lst[outcome.q.groupsetting.predefined_groupset_idx]
+		if (!grpset) throw 'groupset not found by outcome.q.predefined_groupset_idx'
+		const nonrefgrp = grpset.groups.find(i => i.name != outcome.refGrp)
+		if (!nonrefgrp) throw 'non-ref group not found for predefined-groupset'
+		return nonrefgrp.name
+	}
+	if (outcome.q.type == 'custom-groupset') {
+		if (!outcome.q.groupsetting) throw 'outcome.q.groupsetting{} missing when type=predefined-groupset'
+		if (!outcome.q.groupsetting.customset) throw 'outcome.q.customset missing'
+		const nonrefgrp = outcome.q.groupsetting.customset.groups.find(i => i.name != outcome.refGrp)
+		if (!nonrefgrp) throw 'non-ref group not found for custom-groupset'
+		return nonrefgrp.name
+	}
+	if (outcome.q.type == 'values') {
+		if (!outcome.term.values) throw 'outcome.term.values{} missing'
+		for (const k in outcome.term.values) {
+			const v = outcome.term.values[k]
+			if (v.label != outcome.refGrp) return v.label
+		}
+		throw 'unknown nonref group from outcome.term.values'
+	}
+	if (outcome.q.type == 'custom-bin') {
+		const nonrefbin = outcome.q.lst.find(i => i.label != outcome.refGrp)
+		if (!nonrefbin) throw 'non-ref bin is not found for custom-bin'
+		return nonrefbin.label
+	}
+	if (outcome.q.type == 'regular-bin') {
+		throw 'do not know a way to find computed bin list for type=regular-bin'
+	}
+	throw 'unknown outcome.q.type'
 }
 
 function validateRinput(Rinput, sampleSize) {
