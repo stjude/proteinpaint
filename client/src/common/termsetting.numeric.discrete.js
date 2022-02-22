@@ -518,8 +518,10 @@ function renderCustomBinInputs(self, tablediv) {
 	self.dom.customBintbody = self.dom.bins_table.append('tbody')
 	const tr = self.dom.customBintbody.append('tr')
 
-	self.dom.customBinBoundaryInput = tr
+	const binBoundaryTd = tr
 		.append('td')
+
+	self.dom.customBinBoundaryInput = binBoundaryTd
 		.append('textarea')
 		.style('height', '100px')
 		.style('width', '100px')
@@ -536,6 +538,14 @@ function renderCustomBinInputs(self, tablediv) {
 			if (!keyupEnter() && event.key != 8) return
 			handleChange.call(this)
 		})
+
+	// help note
+	binBoundaryTd
+		.append('div')
+		.style('font-size', '.6em')
+		.style('margin-left', '1px')
+		.style('color', '#858585')
+		.html('Enter numeric values </br>seperated by ENTER')
 
 	function handleChange() {
 		self.dom.customBinLabelTd.selectAll('input').property('value', '')
@@ -613,6 +623,12 @@ export function renderBoundaryInputDivs(self, data) {
 		})
 
 	self.dom.customBinLabelInput = self.dom.customBinLabelTd.selectAll('input')
+
+	self.dom.customBinLabelTd.append('div')
+		.style('font-size', '.6em')
+		.style('margin', '3px')
+		.style('color', '#858585')
+		.html('Enter optional label for each range')
 }
 
 function renderButtons(self) {
