@@ -241,7 +241,7 @@ export function parseTabDelimitedData(holder, input) {
 	}
 
 	// some parent term levels may not have entries
-	trackMissingTerms(termNameToId, terms, parentTermNames)
+	trackMissingTerms(termNameToId, terms, parentTermNames, holder)
 
 	for (const id in terms) {
 		const term = terms[id]
@@ -333,11 +333,25 @@ function parseConfig(holder, lineNum, str, varName) {
 	return term
 }
 
-function trackMissingTerms(termNameToId, terms, parentTermNames) {
+function trackMissingTerms(termNameToId, terms, parentTermNames, holder) {
 	for (const id in terms) {
 		const term = terms[id]
 		for (const [i, name] of term.ancestry.entries()) {
-			if (name in termNameToId) continue
+			if (name in termNameToId) {
+				// a tsv line was already processed for this term
+				const id = termNameToId[name]
+				const ancestor = terms[id]
+				// if this ancestor has another level above it,
+				// check that it is the same parent_term as previousy processed
+				if (i - 1 > -1 && ancestor.parent_name != term.ancestry[i - 1]) {
+					sayerror(
+						holder,
+						`Differents parent for term=${name}, '${term.ancestry[i - 1]}' and '${ancestor.parent_name}'`
+					)
+				}
+				continue
+			}
+
 			terms[name] = {
 				id: name,
 				name,

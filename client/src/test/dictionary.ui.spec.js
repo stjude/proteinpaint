@@ -81,6 +81,7 @@ tape('levels before name+note, no gaps', function(test) {
 		{ id: 'B.1', name: 'B.1', isleaf: false, parent_id: 'B' }
 	]
 	test.deepEqual(results.terms, expected, 'should output the expected terms array')
+	test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
 	test.end()
 })
 
@@ -143,6 +144,7 @@ tape('levels after name+note, with gap', function(test) {
 			{ id: 'B.1', name: 'B.1', isleaf: false, parent_id: 'B' }
 		]
 		test.deepEqual(results.terms, expected, message)
+		test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
 	} catch (e) {
 		test.fail(message + ': ' + e)
 	}
@@ -205,6 +207,7 @@ tape('empty variable name', function(test) {
 		{ id: 'B.1', name: 'B.1', isleaf: false, parent_id: 'B' }
 	]
 	test.deepEqual(results.terms, expected, 'should use the variable name as term.id')
+	test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
 	test.end()
 })
 
@@ -266,8 +269,9 @@ tape('extra, non essential column', function(test) {
 			{ id: 'B.1', name: 'B.1', isleaf: false, parent_id: 'B' }
 		]
 		test.deepEqual(results.terms, expected, message)
+		test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
 	} catch (e) {
-		test.equal(message + ': ' + e)
+		test.fail(message + ': ' + e)
 	}
 	test.end()
 })
@@ -357,24 +361,24 @@ tape('missing k=v in config', function(test) {
 	test.end()
 })
 
-// tape('repeated intermediate terms for diff branches, whole dataset', function(test) {
-// 	test.timeoutAfter(100)
-// 	const tsv = [
-// 		`level_1\tlevel_2\tlevel_3\tvariable name\tvariable note`,
-// 		`A\tA.1\tA.1a\tA1a\t1=Yes; 0=No`,
-// 		`A\tsameterm\tA.1.b\tA1b\t1=Yes; 0=No`,
-// 		`A2\tsameterm\tA.2.a\tA2a\t1=Treated; 0=Not treated`,
-// 		`B\tB.1\tB.1.a\tB1a\t1=Treated; 0=Not treated`
-// 	].join('\n')
+tape('repeated intermediate terms for diff branches, whole dataset', function(test) {
+	test.timeoutAfter(100)
+	const tsv = [
+		`level_1\tlevel_2\tlevel_3\tvariable name\tvariable note`,
+		`A\tA.1\tA.1a\tA1a\t1=Yes; 0=No`,
+		`A\tsameterm\tA.1.b\tA1b\t1=Yes; 0=No`,
+		`A2\tsameterm\tA.2.a\tA2a\t1=Treated; 0=Not treated`,
+		`B\tB.1\tB.1.a\tB1a\t1=Treated; 0=Not treated`
+	].join('\n')
 
-// 	const holder = getHolder()
-// 	const message = 'should display an error for identical intermediate level names'
-// 	try {
-// 		const holder = getHolder()
-// 		const results = parseTabDelimitedData(holder, tsv)
-// 		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
-// 	} catch (e) {
-// 		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
-// 	}
-// 	test.end()
-// })
+	const holder = getHolder()
+	const message = 'should display an error for identical intermediate level names'
+	try {
+		const holder = getHolder()
+		const results = parseTabDelimitedData(holder, tsv)
+		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
+	} catch (e) {
+		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
+	}
+	test.end()
+})
