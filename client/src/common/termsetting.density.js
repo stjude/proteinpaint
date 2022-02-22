@@ -1,6 +1,6 @@
 import { select, mouse } from 'd3-selection'
 import { scaleLinear, drag as d3drag } from 'd3'
-import { get_bin_label } from '../../shared/termdb.bins'
+import { get_bin_label, get_bin_range_equation } from '../../shared/termdb.bins'
 import { makeDensityPlot } from './densityplot'
 
 /*
@@ -248,8 +248,10 @@ function renderBinLines(self, data) {
 		} else if (self.q.mode == 'discrete' && self.q.type == 'custom-bin') {
 			self.q.lst[d.index + 1].start = value
 			self.q.lst[d.index + 1].label = get_bin_label(self.q.lst[d.index + 1], self.q)
+			self.q.lst[d.index + 1].range = get_bin_range_equation(self.q.lst[d.index + 1], self.q)
 			self.q.lst[d.index].stop = value
 			self.q.lst[d.index].label = get_bin_label(self.q.lst[d.index], self.q)
+			self.q.lst[d.index].range = get_bin_range_equation(self.q.lst[d.index], self.q)
 			if (self.dom.customBinBoundaryInput) {
 				// this is created by binary.js when mode=binary
 				// quick fix: while dragging, revert from percentile to normal, as it's hard to update percentile values
@@ -268,6 +270,9 @@ function renderBinLines(self, data) {
 
 			if (self.dom.customBinLabelInput) {
 				self.dom.customBinLabelInput.property('value', c => c.label)
+			}
+			if (self.dom.customBinRanges) {
+				self.dom.customBinRanges.html(c => c.range)
 			}
 		} else if (self.q.mode == 'spline') {
 			self.q.knots[d.index].value = value

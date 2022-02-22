@@ -117,7 +117,7 @@ function processCustomBinInputs(self) {
 	const data = self.dom.customBinBoundaryInput
 		.property('value')
 		.split('\n')
-		.filter(d => d != '')
+		.filter(d => (d != '' && !isNaN(d)))
 		.map(d => +d)
 		.sort((a, b) => a - b)
 		.map((d, i) => {
@@ -131,6 +131,7 @@ function processCustomBinInputs(self) {
 				prevBin.stop = bin.start
 				const label = inputDivs[i].querySelector('input').value
 				prevBin.label = label ? label : get_bin_label(prevBin, self.q)
+				prevBin.range = get_bin_range_equation(prevBin, self.q)
 			}
 			prevBin = bin
 			return bin
@@ -139,6 +140,7 @@ function processCustomBinInputs(self) {
 	prevBin.stopunbounded = true
 	const label = inputDivs[data.length] && inputDivs[data.length].querySelector('input').value
 	prevBin.label = label ? label : get_bin_label(prevBin, self.q)
+	prevBin.range = get_bin_range_equation(prevBin, self.q)
 
 	data.unshift({
 		startunbounded: true,
@@ -148,6 +150,7 @@ function processCustomBinInputs(self) {
 		label: inputDivs[0].querySelector('input').value
 	})
 	if (!data[0].label) data[0].label = get_bin_label(data[0], self.q)
+	if (!data[0].range) data[0].range = get_bin_range_equation(data[0], self.q)
 	return data
 }
 
@@ -206,8 +209,9 @@ function setqDefaults(self) {
 		self.q.rounding = '.' + binDecimals + 'f'
 	}
 	if (self.q.lst) {
-		self.q.lst.forEach(bin => {
+		self.q.lst.forEach((bin, i) => {
 			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
+			if (!('range' in bin)) bin.range = get_bin_range_equation(bin, self.q)
 		})
 	}
 	//*** validate self.q ***//
@@ -235,9 +239,10 @@ export function renderBoundaryInclusionInput(self) {
 			if (c.type == 'regular-bin') {
 				setBinsInclusion(c)
 			} else {
-				c.lst.forEach(bin => {
+				c.lst.forEach((bin, i) => {
 					setBinsInclusion(bin)
 					bin.label = get_bin_label(bin, self.q)
+					bin.range = get_bin_range_equation(bin, self.q)
 				})
 				renderBoundaryInputDivs(self, c.lst)
 			}
@@ -595,8 +600,7 @@ export function renderBoundaryInputDivs(self, data) {
 	rangeDivs.exit().remove()
 	rangeDivs.each(function(d, i) {
 		select(this)
-			.select('span')
-			.html(get_bin_range_equation(d, i, self.q))
+			.html(d.range)
 	})
 
 	rangeDivs
@@ -605,10 +609,11 @@ export function renderBoundaryInputDivs(self, data) {
 		.style('margin', '9px')
 		.each(function(d, i) {
 			select(this)
-				.append('span')
 				.style('color', 'rgb(136, 136, 136)')
-				.html(get_bin_range_equation(d, i, self.q))
+				.html(d.range)
 		})
+	
+	self.dom.customBinRanges = self.dom.customBinRangeTd.selectAll('div')
 
 	// bin label inputs, start with label, use can edit labels and apply changes
 	const inputDivs = self.dom.customBinLabelDiv.selectAll('div').data(data)

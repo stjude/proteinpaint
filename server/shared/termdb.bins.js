@@ -317,11 +317,11 @@ export function get_bin_label(bin, binconfig) {
 }
 
 // get bin range equation from bin label and bin properties
-export function get_bin_range_equation(bin, bin_i, binconfig) {
+export function get_bin_range_equation(bin, binconfig) {
 	const x = '<span style="font-family:Times;font-style:italic;">x</span>'
 	let range_eq
 	const bin_label = get_bin_label(bin, binconfig)
-	if (bin_i == 0 || bin_i == binconfig.lst.length - 1) {
+	if (bin.startunbounded || bin.stopunbounded) {
 		// first or last bins, e.g. x ≤ 14 and x > 16
 			range_eq = x + '&nbsp;' + bin_label
 	} else if (bin.startinclusive) {
