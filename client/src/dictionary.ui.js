@@ -23,13 +23,7 @@ UI elements:
 Data parsing:
 	1. parseTabDelimitedData()
 Phenotree parsing:
-	1. validateLevels()
-	2. parseConfig()
-	3. createHierarchy()
-	4. str2level()
-Helpers:
-	1. check4DuplicateValues()
-
+	1. parseConfig()
 
 obj:{ data:[ {terms} ] }
 
@@ -156,14 +150,12 @@ function makeCopyPasteInput(holder, div, obj) {
 
 //Parse tab delimited files only
 function parseTabDelimitedData(holder, input) {
-	const lines = input.trim().split(/\r?\n/)
-
 	/* 
     Parses phenotree:
         - Parses tab delim data arranged in cols: levels(n), ID (i.e. Variable name), Configuration (i.e. Variable note).
 		- Only the ID and configuration cols are required
 		- Not using uncomputable values in this iteration
-		- Blank and '-' values for levels converted to null
+		- Blank and '-' values for levels converted to null -- how to distinguish between no id vs no hierarchy??
 		- Assumptions:
 			1. Headers required. 'Variable name', 'Variable note' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
 			2. Levels are defined left to right, highest to lowest, and in order, no gaps.
@@ -171,151 +163,96 @@ function parseTabDelimitedData(holder, input) {
 			4. No identical term ids (keys)
 			5. All non-leaf names/ids must be unique. 
     */
-	const termsMaps = {
-		// Use later for sample annotation matrix and other file types
-		// name2id: new Map(),
-		/* 
-		Connects all term names to their id
-			key: term name
-			value: id
-		*/
-		parent2children: new Map(),
-		/* 
-			key: id
-			value(s): Set(['child id', 'child id', ...])
-		*/
-		child2parents: new Map(),
-		/* Collect for ancestry later
-			key: child
-			value(s): Map({ parent id, order }, { parent id, order }, ...)
-		*/
 
-		ch2immediateP: new Map(),
-		/* 
-			key: child id
-			value: parent id
-		*/
-		p2childorder: new Map()
+	const lines = input.trim().split(/\r?\n/)
 
-		//Use later for sample annotation matrix and other files
-		// allterms_byorder: new Set(),
-	}
+	// process the header line
+	// could have used lines.shift() here, but will want to track actual line numbers later for errors
+	const header = lines[0].split('\t')
+	const varNameIndex = header.findIndex(l => l.toLowerCase().includes('variable name'))
+	if (varNameIndex == -1) sayerror(holder, `Missing required 'Variable Name' column`)
 
+	const configIndex = header.findIndex(l => l.toLowerCase().includes('variable note'))
+	if (configIndex == -1) sayerror(holder, `Missing required 'Variable Note' column`)
+
+	const levelColIndexes = header.map((c, i) => (c.toLowerCase().includes('level_') ? i : -1)).filter(i => i != -1)
+	//If no level cols provided, use key/Variable name col as single level. Will print the id as name
+	if (!levelColIndexes.length) levelColIndexes.push(varNameIndex)
+
+	const leafIndex = levelColIndexes[levelColIndexes.length - 1]
 	const terms = {
-		__root: {
+		/*__root: {
 			id: 'root',
 			name: 'root',
-			__tree_isroot: true
-		}
+			__tree_isroot: true,
+			ancestry: []
+		}*/
 	}
-	const ids = [] //To check for duplicate values later
 
-	let varNameIndex,
-		configIndex,
-		levelColIndexes = []
+	const termNameToId = {}
+	const parentTermNames = new Set()
 
-	for (const [i, v] of lines.entries()) {
-		let line = lines[i].split('\t')
-		if (i == 0) {
-			//Find "Variable Name" (i.e. level 1 id/ leaf id), "Variable Note" (i.e. configuration), and level columns
-			varNameIndex = line.findIndex(l => l.toLowerCase().includes('variable name'))
-			if (varNameIndex == -1) sayerror(holder, `Missing required 'Variable Name' column`)
-			configIndex = line.findIndex(l => l.toLowerCase().includes('variable note'))
-			if (configIndex == -1) sayerror(holder, `Missing required 'Variable Note' column`)
+	for (const [i, line] of lines.entries()) {
+		if (i === 0) continue
+		const lineNum = i + 1
 
-			for (const [idx, col] of line.entries()) {
-				//Capture the index(es) for level column(s) creating hierarchy later
-				if (col.toLowerCase().includes('level_')) levelColIndexes.push(idx)
-			}
-			//If no level cols provided, use key/Variable name col as single level. Will print the id as name
-			if (line.findIndex(l => l.toLowerCase().includes('level_')) == -1) levelColIndexes.push(varNameIndex)
-
-			// console.log("Variable Name Index: " + varNameIndex)
-			// console.log("Config Index: " +  configIndex)
-			// console.log(levelColIndexes)
-			continue
-		}
 		try {
-			/******* Parse lines for term values *******/
-			if (!line[configIndex] || !line[configIndex].trim()) {
-				console.error('Missing configuration string, line: ' + (i + 1) + ', term: ' + line[varNameIndex])
+			const cols = line.split('\t')
+			const levelNames = levelColIndexes.map(i => cols[i].trim().replace(/"/g, '')).filter(c => c != '-')
+			if (levelNames.length != new Set(levelNames).size) {
+				sayerror(holder, `Non-unique levels in line ${lineNum}: ${JSON.stringify(levelNames)}`)
 				continue
 			}
-			// console.log(line)
-			let levelIdxStrs = []
-			for (let idx = 0; idx < line.length; idx++) {
-				// console.log(idx)
-				for (const colIdx of levelColIndexes) {
-					//capture str value of all 'level' cols
-					//Preserve the index value
-					if (idx == colIdx) {
-						const levelName = str2level(line[idx])
-						levelIdxStrs.push({ idx, name: levelName })
-						// console.log(levelName)
-					}
-				}
+
+			const name = levelNames.pop()
+			const firstDashIndex = cols.indexOf('-')
+			if (firstDashIndex != -1 && firstDashIndex < cols.indexOf(name)) {
+				sayerror(holder, `Blank or '-' value detected between levels in line ${lineNum}`)
+				continue
 			}
-			// console.log(levelIdxStrs)
 
-			//Checks for blanks || '-' values between levels, checks for duplicate level entries, and returns the leafindex
-			const leafLevel = validateLevels(holder, levelIdxStrs, i)
-			// console.log(leafLevel)
+			const term = parseConfig(holder, lineNum, cols[configIndex], name)
+			if (!Object.keys(term).length) continue // is it possible to have an empty term?
+			const id = cols[varNameIndex] || name
+			if (id in terms) {
+				sayerror(holder, `Error: Multiple config rows for term.id='${id}'.`)
+				continue
+			}
 
-			// if key missing, use leaf level str
-			let leafId = line[varNameIndex] ? line[varNameIndex].trim() : ''
-			if (!leafId) leafId = leafLevel.name
-			//ids array used to check for duplicate id values later
-			ids.push(leafId)
+			const ancestry = levelNames.slice() // create a copy, already without the term name itself
 
-			//Parses configuration col into term.type, term.values, and term.groupsetting
-			const term = parseConfig(holder, line[configIndex])
-			// console.log(term)
-
-			/******* Parse for hierarchy *******/
-			const nonNullLevels = levelIdxStrs.filter(l => l.name !== null)
-			// console.log(nonNullLevels)
-
-			// Creates a series of maps for generating terms, ancestry table, and eventually connecting to other file types
-			createHierarchy(leafLevel.idx, nonNullLevels, leafId, termsMaps)
-
-			//Create term objects for leaves
-			terms[leafId] = {
-				id: leafId,
-				name: leafLevel.name,
-				parent_id: termsMaps.ch2immediateP.get(leafId),
-				isleaf: !termsMaps.parent2children.has(leafId),
+			//Create term object
+			terms[id] = {
+				id,
+				name,
+				parent_name: levelNames.pop() || null, // will change this later to parent_id
+				isleaf: cols.indexOf(name) === leafIndex, // may be updated later to true if not a parent
 				type: term.type,
 				values: term.values,
-				groupsetting: term.groupsetting
+				groupsetting: term.groupsetting,
+				ancestry
 			}
-		} catch (e) {
-			throw 'Line ' + (i + 1) + ' error: ' + e
-		}
-	}
-	for (const [k, v] of termsMaps.p2childorder.entries()) {
-		//Create term objects for parents
-		if (k == '__root') continue
-		if (!terms[k]) {
-			terms[k] = {
-				id: k,
-				name: k,
-				isleaf: false,
-				parent_id: termsMaps.ch2immediateP.get(k) || null
-			}
-			ids.push(k)
-		}
-	}
-	// Checks all duplicate term.ids for duplicates
-	check4DuplicateValues(holder, ids, 'ID')
 
-	// console.log(termsMaps.ame2id)
-	// console.log(termsMaps.allterms_byorder)
-	// console.log(termsMaps.parent2children)
-	// console.log(termsMaps.ch2immediateP)
-	// console.log(termsMaps.child2parents)
-	// console.log(termsMaps.p2childorder)
-	// console.log(termsMaps.allterms_byorder.size + ' terms in total')
-	console.log({ terms: Object.values(terms) })
+			termNameToId[name] = id
+			parentTermNames.add(terms[id].parent_name)
+		} catch (e) {
+			throw `Line ${lineNum} error: ${e}`
+		}
+	}
+
+	// some parent term levels may not have entries
+	trackMissingTerms(termNameToId, terms, parentTermNames)
+
+	for (const id in terms) {
+		const term = terms[id] //; console.log(term)
+		term.isleaf = term.isleaf || !parentTermNames.has(term.name)
+		term.parent_id = termNameToId[term.parent_name] || null
+		delete term.parent_name
+		//term.ancestry = term.ancestry.map(name => termNameToId[name]).filter(d=>!!d)
+		//delete term.ancestry
+	}
+
+	console.log(terms)
 	return { terms: Object.values(terms) }
 }
 
@@ -323,41 +260,14 @@ function parseTabDelimitedData(holder, input) {
  **** Parsing Functions for Phenotree ****
  */
 
-function validateLevels(holder, levelStrs, i) {
-	// Check for blanks or '-' between levels
-
-	// Find first index of null
-	let firstNull = levelStrs.find(l => l.name == null)
-
-	// Find last index of non-null level value
-	function revArray(arr) {
-		// Make a copy to avoid changing the original array upstream
-		let copy = [...arr]
-		return copy.reverse()
-	}
-	const lastNonNull = revArray(levelStrs).find(l => l.name !== null)
-	// console.log(lastNonNull)
-
-	if (firstNull == undefined) firstNull = { idx: lastNonNull.idx + 1, name: 'noname' }
-	if (lastNonNull.idx > firstNull.idx && firstNull.idx >= 0)
-		sayerror(holder, `Blank or '-' value detected between levels in line ` + (i + 1))
-
-	//Check for duplicate string values for levels in the same line
-	const nonNullLevelStrs = []
-	levelStrs.filter(l => {
-		if (l.name !== null) nonNullLevelStrs.push(l.name)
-	})
-	// console.log(nonNullLevelStrs)
-	check4DuplicateValues(holder, nonNullLevelStrs, 'Level')
-
-	return lastNonNull
-}
-
-function parseConfig(holder, str) {
+function parseConfig(holder, lineNum, str, varName) {
 	//NOT using uncomputable values in this iteration
 	// const uncomputable_categories = new Set(['-994', '-995', '-996', '-997', '-998', '-999'])
 
 	const configStr = str.replace('"', '').trim()
+	if (!configStr) {
+		throw `Missing configuration string, line=${lineNum}, term='${varName}'`
+	}
 
 	const term = {}
 
@@ -417,95 +327,23 @@ function parseConfig(holder, str) {
 	return term
 }
 
-function createHierarchy(leafIndex, levelNames, leafID, termsMaps) {
-	const root_id = '__root' //placeholder
-	//Maps the children in order; will use later to create the parent terms
-	termsMaps.p2childorder.set(root_id, [])
-
-	//Find the smallest level index before looping through levelNames
-	const idxMin = Math.min(...levelNames.map(l => l.idx))
-	// console.log(idxMin)
-
-	for (const level of levelNames) {
-		let id
-		if (level.idx === leafIndex) {
-			id = leafID
-			// Use later for sample annotation and other file types
-			// termsMaps.name2id.set(levelNames[level.idx], id)
-		} else {
-			id = level.name
-			// Create map for parents to all children for term.isleaf
-			if (!termsMaps.parent2children.has(id) && id) {
-				termsMaps.parent2children.set(id, new Set())
+function trackMissingTerms(termNameToId, terms, parentTermNames) {
+	for (const id in terms) {
+		const term = terms[id]
+		for (const [i, name] of term.ancestry.entries()) {
+			if (name in termNameToId) continue
+			terms[name] = {
+				id: name,
+				name,
+				isleaf: false,
+				ancestry: term.ancestry.slice(0, i)
 			}
+
+			terms[name].parent_name = terms[name].ancestry.slice(-1)[0] || null
+			termNameToId[name] = name
+			parentTermNames.add(name)
 		}
-		// console.log(id)
-
-		if (level.idx == idxMin) {
-			//Minimal parsing for the first level
-			// The parent_id  = null for the first level
-			termsMaps.ch2immediateP.set(id, null)
-
-			// Connect to the first col id to the root
-			if (termsMaps.p2childorder.get(root_id).indexOf(id) == -1) termsMaps.p2childorder.get(root_id).push(id)
-			continue
-		} else {
-			// Find id (i.e. name) for the immediate parent level
-			const parent = levelNames.find(l => {
-				const parentIdx = level.idx - 1
-				if (l.idx == parentIdx) return l
-			})
-			// console.log(parent)
-
-			termsMaps.parent2children.get(parent.name).add(id)
-
-			// Map children to all parents; create a new map for every child id
-			if (!termsMaps.child2parents.has(id)) termsMaps.child2parents.set(id, new Map())
-
-			for (const y of levelNames) {
-				// Collect parent ids(y) for children(level) when the index(y.idx) is less than the child
-				if (y.idx < level.idx) {
-					termsMaps.child2parents.get(id).set(level.name, y.name)
-				}
-			}
-			//Capture immediate parent for child term.parent_id
-			termsMaps.ch2immediateP.set(id, parent.name)
-
-			// Map parent to children in order for creating term objs for parents
-			// Create a new array for parent in map
-			if (!termsMaps.p2childorder.has(parent.name)) termsMaps.p2childorder.set(parent.name, [])
-			// Add child id to parent array if child id not found
-			if (termsMaps.p2childorder.get(parent.name).indexOf(id) == -1) termsMaps.p2childorder.get(parent.name).push(id)
-		}
-
-		// Use later for sample annotation matrix and other file types
-		// termsMaps.allterms_byorder.add(id)
 	}
-}
-
-function str2level(str) {
-	// parses columns and returns name
-	const tmp = str.trim().replace(/"/g, '')
-	if (!tmp || tmp == '-') return null
-	return tmp
-}
-
-/*
- **** Helpers ****
- */
-
-function check4DuplicateValues(holder, values, text) {
-	// Find duplicate values from an array and, if applicable, print duplicate values to the screen
-	const duplicates = new Set()
-
-	for (const [i, v] of values.entries()) {
-		if (i !== values.lastIndexOf(v)) duplicates.add(v)
-	}
-	if (duplicates.size > 0) {
-		const dup = Array.from(duplicates)
-		sayerror(holder, `Error: Nonunique ${text}(s) found: ` + dup + `. ${text}s must be unique.`)
-	}
-	return true
 }
 
 /*
