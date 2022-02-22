@@ -179,16 +179,8 @@ function parseTabDelimitedData(holder, input) {
 	//If no level cols provided, use key/Variable name col as single level. Will print the id as name
 	if (!levelColIndexes.length) levelColIndexes.push(varNameIndex)
 
-	const leafIndex = levelColIndexes[levelColIndexes.length - 1]
-	const terms = {
-		/*__root: {
-			id: 'root',
-			name: 'root',
-			__tree_isroot: true,
-			ancestry: []
-		}*/
-	}
-
+	// caching and/or tracking variables
+	const terms = {}
 	const termNameToId = {}
 	const parentTermNames = new Set()
 
@@ -212,25 +204,32 @@ function parseTabDelimitedData(holder, input) {
 			}
 
 			const term = parseConfig(holder, lineNum, cols[configIndex], name)
-			if (!Object.keys(term).length) continue // is it possible to have an empty term?
-			const id = cols[varNameIndex] || name
-			if (id in terms) {
-				sayerror(holder, `Error: Multiple config rows for term.id='${id}'.`)
+			if (!Object.keys(term).length) {
+				// is it possible to have an empty term?
+				sayerror(holder, `Error: empty config column for term.id='${id}'.`)
 				continue
 			}
 
-			const ancestry = levelNames.slice() // create a copy, already without the term name itself
+			const id = cols[varNameIndex] || name
+			if (id in terms) {
+				const orig = terms[id]
+				sayerror(holder, `Error: Multiple config rows for term.id='${id}': lines# ${orig.lineNum} and ${lineNum}`)
+				continue
+			}
 
 			//Create term object
 			terms[id] = {
 				id,
 				name,
-				parent_name: levelNames.pop() || null, // will change this later to parent_id
-				isleaf: cols.indexOf(name) === leafIndex, // may be updated later to true if not a parent
 				type: term.type,
 				values: term.values,
 				groupsetting: term.groupsetting,
-				ancestry
+				//isleaf: to be assigned later
+
+				// *** temporary attributes to be deleted later ***
+				ancestry: levelNames.slice(), // to be deleted later, used to fill in missing terms
+				parent_name: levelNames.pop() || null, // will change this later to parent_id
+				lineNum // to be deleted later
 			}
 
 			termNameToId[name] = id
@@ -245,9 +244,10 @@ function parseTabDelimitedData(holder, input) {
 
 	for (const id in terms) {
 		const term = terms[id] //; console.log(term)
-		term.isleaf = term.isleaf || !parentTermNames.has(term.name)
+		term.isleaf = !parentTermNames.has(term.name)
 		term.parent_id = termNameToId[term.parent_name] || null
 		delete term.parent_name
+		delete term.lineNum
 		//term.ancestry = term.ancestry.map(name => termNameToId[name]).filter(d=>!!d)
 		//delete term.ancestry
 	}
