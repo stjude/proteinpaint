@@ -245,7 +245,7 @@ function renderBinLines(self, data) {
 				self.q.last_bin.start = value
 				middleLines.style('display', c => (c.scaledX >= d.draggedX ? 'none' : ''))
 			}
-		} else if (self.q.mode == 'discrete' && self.q.type == 'custom-bin') {
+		} else if ((self.q.mode == 'discrete' && self.q.type == 'custom-bin') || self.q.mode == 'binary') {
 			self.q.lst[d.index + 1].start = value
 			self.q.lst[d.index + 1].label = get_bin_label(self.q.lst[d.index + 1], self.q)
 			self.q.lst[d.index].stop = value
