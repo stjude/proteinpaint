@@ -2,7 +2,7 @@ import { keyupEnter } from '../client'
 import { select, event } from 'd3-selection'
 import { format } from 'd3-format'
 import { setDensityPlot } from './termsetting.density'
-import { get_bin_label } from '../../shared/termdb.bins'
+import { get_bin_label, get_bin_range_equation } from '../../shared/termdb.bins'
 import { init_tabs } from '../dom/toggleButtons'
 import { make_radios } from '../dom/radiobutton'
 import { getPillNameDefault } from './termsetting'
@@ -112,12 +112,12 @@ function applyEdits(self) {
 function processCustomBinInputs(self) {
 	const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
-	const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
+	const inputDivs = self.dom.customBinLabelDiv.node().querySelectorAll('div')
 	let prevBin
 	const data = self.dom.customBinBoundaryInput
 		.property('value')
 		.split('\n')
-		.filter(d => d != '')
+		.filter(d => (d != '' && !isNaN(d)))
 		.map(d => +d)
 		.sort((a, b) => a - b)
 		.map((d, i) => {
@@ -131,6 +131,7 @@ function processCustomBinInputs(self) {
 				prevBin.stop = bin.start
 				const label = inputDivs[i].querySelector('input').value
 				prevBin.label = label ? label : get_bin_label(prevBin, self.q)
+				prevBin.range = get_bin_range_equation(prevBin, self.q)
 			}
 			prevBin = bin
 			return bin
@@ -139,6 +140,7 @@ function processCustomBinInputs(self) {
 	prevBin.stopunbounded = true
 	const label = inputDivs[data.length] && inputDivs[data.length].querySelector('input').value
 	prevBin.label = label ? label : get_bin_label(prevBin, self.q)
+	prevBin.range = get_bin_range_equation(prevBin, self.q)
 
 	data.unshift({
 		startunbounded: true,
@@ -148,6 +150,7 @@ function processCustomBinInputs(self) {
 		label: inputDivs[0].querySelector('input').value
 	})
 	if (!data[0].label) data[0].label = get_bin_label(data[0], self.q)
+	if (!data[0].range) data[0].range = get_bin_range_equation(data[0], self.q)
 	return data
 }
 
@@ -206,8 +209,9 @@ function setqDefaults(self) {
 		self.q.rounding = '.' + binDecimals + 'f'
 	}
 	if (self.q.lst) {
-		self.q.lst.forEach(bin => {
+		self.q.lst.forEach((bin, i) => {
 			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
+			if (!('range' in bin)) bin.range = get_bin_range_equation(bin, self.q)
 		})
 	}
 	//*** validate self.q ***//
@@ -235,9 +239,10 @@ export function renderBoundaryInclusionInput(self) {
 			if (c.type == 'regular-bin') {
 				setBinsInclusion(c)
 			} else {
-				c.lst.forEach(bin => {
+				c.lst.forEach((bin, i) => {
 					setBinsInclusion(bin)
 					bin.label = get_bin_label(bin, self.q)
+					bin.range = get_bin_range_equation(bin, self.q)
 				})
 				renderBoundaryInputDivs(self, c.lst)
 			}
@@ -509,12 +514,19 @@ function renderCustomBinInputs(self, tablediv) {
 		.append('th')
 		.style('font-weight', 'normal')
 		.style('color', 'rgb(136, 136, 136)')
-		.html('Bin Labels')
+		.html('Range')
+	thead
+		.append('th')
+		.style('font-weight', 'normal')
+		.style('color', 'rgb(136, 136, 136)')
+		.html('Bin Label')
 	self.dom.customBintbody = self.dom.bins_table.append('tbody')
 	const tr = self.dom.customBintbody.append('tr')
 
-	self.dom.customBinBoundaryInput = tr
+	const binBoundaryTd = tr
 		.append('td')
+
+	self.dom.customBinBoundaryInput = binBoundaryTd
 		.append('textarea')
 		.style('height', '100px')
 		.style('width', '100px')
@@ -532,8 +544,16 @@ function renderCustomBinInputs(self, tablediv) {
 			handleChange.call(this)
 		})
 
+	// help note
+	binBoundaryTd
+		.append('div')
+		.style('font-size', '.6em')
+		.style('margin-left', '1px')
+		.style('color', '#858585')
+		.html('Enter numeric values </br>seperated by ENTER')
+
 	function handleChange() {
-		self.dom.customBinLabelTd.selectAll('input').property('value', '')
+		self.dom.customBinLabelDiv.selectAll('input').property('value', '')
 		const data = processCustomBinInputs(self)
 		// update self.q.lst and render bin lines only if bin boundry changed
 		const q = self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
@@ -558,18 +578,47 @@ function renderCustomBinInputs(self, tablediv) {
 		return false
 	}
 
-	self.dom.customBinLabelTd = tr.append('td')
+	self.dom.customBinRangeTd = tr.append('td').style('vertical-align', 'top')
+	const customBinLabelTd = tr.append('td').style('vertical-align', 'top')
+	self.dom.customBinLabelDiv = customBinLabelTd.append('div')
 	renderBoundaryInputDivs(self, self.q.lst)
+
+	// add help message for custom bin labels
+	customBinLabelTd.append('span')
+		.style('font-size', '.6em')
+		.style('margin', '3px')
+		.style('color', '#858585')
+		.html('Enter optional label for each range')
 }
 
 export function renderBoundaryInputDivs(self, data) {
-	self.dom.customBinLabelTd.selectAll('div').remove('*')
-	const inputDivs = self.dom.customBinLabelTd.selectAll('div').data(data)
+	// TODO: follwing code can be improved by using flex rather than table and td
+	// bin range equations, read-only
+	// get bin range equation using get_bin_range_equation()
+	const rangeDivs = self.dom.customBinRangeTd.selectAll('div').data(data)
+
+	rangeDivs.exit().remove()
+	rangeDivs.each(function(d, i) {
+		select(this)
+			.html(d.range)
+	})
+
+	rangeDivs
+		.enter()
+		.append('div')
+		.style('margin', '9px')
+		.each(function(d, i) {
+			select(this)
+				.style('color', 'rgb(136, 136, 136)')
+				.html(d.range)
+		})
+	
+	self.dom.customBinRanges = self.dom.customBinRangeTd.selectAll('div')
+
+	// bin label inputs, start with label, use can edit labels and apply changes
+	const inputDivs = self.dom.customBinLabelDiv.selectAll('div').data(data)
 	inputDivs.exit().remove()
 	inputDivs.each(function(d, i) {
-		select(this)
-			.select('span')
-			.html('Bin ' + (i + 1) + '&nbsp;')
 		select(this)
 			.select('input')
 			.property('value', d.label)
@@ -579,11 +628,8 @@ export function renderBoundaryInputDivs(self, data) {
 		.append('div')
 		.each(function(d, i) {
 			select(this)
-				.append('span')
-				.style('color', 'rgb(136, 136, 136)')
-				.html('Bin ' + (i + 1) + '&nbsp;')
-			select(this)
 				.append('input')
+				.style('margin', '2px')
 				.attr('type', 'text')
 				.property('value', d.label)
 				.on('change', function() {
@@ -591,7 +637,7 @@ export function renderBoundaryInputDivs(self, data) {
 				})
 		})
 
-	self.dom.customBinLabelInput = self.dom.customBinLabelTd.selectAll('input')
+	self.dom.customBinLabelInput = self.dom.customBinLabelDiv.selectAll('input')
 }
 
 function renderButtons(self) {
