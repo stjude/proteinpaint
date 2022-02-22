@@ -112,7 +112,7 @@ function applyEdits(self) {
 function processCustomBinInputs(self) {
 	const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
-	const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
+	const inputDivs = self.dom.customBinLabelDiv.node().querySelectorAll('div')
 	let prevBin
 	const data = self.dom.customBinBoundaryInput
 		.property('value')
@@ -548,7 +548,7 @@ function renderCustomBinInputs(self, tablediv) {
 		.html('Enter numeric values </br>seperated by ENTER')
 
 	function handleChange() {
-		self.dom.customBinLabelTd.selectAll('input').property('value', '')
+		self.dom.customBinLabelDiv.selectAll('input').property('value', '')
 		const data = processCustomBinInputs(self)
 		// update self.q.lst and render bin lines only if bin boundry changed
 		const q = self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
@@ -574,8 +574,16 @@ function renderCustomBinInputs(self, tablediv) {
 	}
 
 	self.dom.customBinRangeTd = tr.append('td').style('vertical-align', 'top')
-	self.dom.customBinLabelTd = tr.append('td').style('vertical-align', 'top')
+	const customBinLabelTd = tr.append('td').style('vertical-align', 'top')
+	self.dom.customBinLabelDiv = customBinLabelTd.append('div')
 	renderBoundaryInputDivs(self, self.q.lst)
+
+	// add help message for custom bin labels
+	customBinLabelTd.append('span')
+		.style('font-size', '.6em')
+		.style('margin', '3px')
+		.style('color', '#858585')
+		.html('Enter optional label for each range')
 }
 
 export function renderBoundaryInputDivs(self, data) {
@@ -603,7 +611,7 @@ export function renderBoundaryInputDivs(self, data) {
 		})
 
 	// bin label inputs, start with label, use can edit labels and apply changes
-	const inputDivs = self.dom.customBinLabelTd.selectAll('div').data(data)
+	const inputDivs = self.dom.customBinLabelDiv.selectAll('div').data(data)
 	inputDivs.exit().remove()
 	inputDivs.each(function(d, i) {
 		select(this)
@@ -624,13 +632,7 @@ export function renderBoundaryInputDivs(self, data) {
 				})
 		})
 
-	self.dom.customBinLabelInput = self.dom.customBinLabelTd.selectAll('input')
-
-	self.dom.customBinLabelTd.append('div')
-		.style('font-size', '.6em')
-		.style('margin', '3px')
-		.style('color', '#858585')
-		.html('Enter optional label for each range')
+	self.dom.customBinLabelInput = self.dom.customBinLabelDiv.selectAll('input')
 }
 
 function renderButtons(self) {
