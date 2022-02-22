@@ -596,7 +596,7 @@ export function renderBoundaryInputDivs(self, data) {
 	rangeDivs.each(function(d, i) {
 		select(this)
 			.select('span')
-			.html(get_bin_range_equation(d, i, data.length))
+			.html(get_bin_range_equation(d, i, self.q))
 	})
 
 	rangeDivs
@@ -607,7 +607,7 @@ export function renderBoundaryInputDivs(self, data) {
 			select(this)
 				.append('span')
 				.style('color', 'rgb(136, 136, 136)')
-				.html(get_bin_range_equation(d, i, data.length))
+				.html(get_bin_range_equation(d, i, self.q))
 		})
 
 	// bin label inputs, start with label, use can edit labels and apply changes

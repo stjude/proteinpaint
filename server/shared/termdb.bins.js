@@ -317,18 +317,19 @@ export function get_bin_label(bin, binconfig) {
 }
 
 // get bin range equation from bin label and bin properties
-export function get_bin_range_equation(bin, bin_i, bins_length) {
+export function get_bin_range_equation(bin, bin_i, binconfig) {
 	const x = '<span style="font-family:Times;font-style:italic;">x</span>'
 	let range_eq
-	if (bin_i == 0 || bin_i == bins_length - 1) {
+	const bin_label = get_bin_label(bin, binconfig)
+	if (bin_i == 0 || bin_i == binconfig.lst.length - 1) {
 		// first or last bins, e.g. x ≤ 14 and x > 16
-		range_eq = x + '&nbsp;' + bin.label
+			range_eq = x + '&nbsp;' + bin_label
 	} else if (bin.startinclusive) {
 		// bins with startinclusive, e.g. 14 ≤ x < 16
-		range_eq = bin.label.replace('to <', '≤ ' + x + ' <')
+		range_eq = bin_label.replace('to <', '≤ ' + x + ' <')
 	} else if (bin.stopinclusive) {
 		// bins with stopinclusive, e.g. 14 < x ≤ 16
-		range_eq = bin.label.replace('>', '').replace('to', '< ' + x + ' ≤')
+		range_eq = bin_label.replace('>', '').replace('to', '< ' + x + ' ≤')
 	}
 	return range_eq
 }
