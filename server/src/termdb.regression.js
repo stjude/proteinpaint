@@ -784,8 +784,10 @@ function replaceTermId(Rinput) {
 	const id2originalId = {} // k: new id, v: original term id
 	const originalId2id = {} // k: original term id, v: new id
 	for (const [i, t] of Rinput.metadata.variables.entries()) {
-		id2originalId['id' + i] = t.id
-		originalId2id[t.id] = 'id' + i
+		// custom IDs need a trailing '_' to serve as separator
+		// between ID and category in coefficents table in R
+		id2originalId['id' + i + '_'] = t.id
+		originalId2id[t.id] = 'id' + i + '_'
 	}
 
 	// replace IDs of terms and interacting terms in metadata
