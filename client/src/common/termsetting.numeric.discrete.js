@@ -579,7 +579,9 @@ function renderCustomBinInputs(self, tablediv) {
 }
 
 export function renderBoundaryInputDivs(self, data) {
+	// TODO: follwing code can be improved by using flex rather than table and td
 	// bin range equations, read-only
+	// get bin range equation using get_bin_range_equation()
 	const rangeDivs = self.dom.customBinRangeTd.selectAll('div').data(data)
 
 	rangeDivs.exit().remove()
