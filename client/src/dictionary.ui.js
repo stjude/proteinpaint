@@ -341,8 +341,10 @@ function trackMissingTerms(termNameToId, terms, parentTermNames, holder) {
 				// a tsv line was already processed for this term
 				const id = termNameToId[name]
 				const ancestor = terms[id]
-				// if this ancestor has another level above it,
-				// check that it is the same parent_term as previousy processed
+				/* if this term's ancestor has no level above it, previous processing of this ancestor
+				should also not have a term parent,
+				OR if this ancestor another level above it,
+				check that it is the same parent_term as previousy processed */
 				if ((i - 1 < 0 && ancestor.parent_name) || ancestor.parent_name != term.ancestry[i - 1]) {
 					sayerror(
 						holder,
