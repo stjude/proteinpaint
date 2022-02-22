@@ -13,6 +13,18 @@ can dynamically add following attributes
 	display in this.dom.snplocusBlockDiv
 - this.hasUnsubmittedEdits_nullify_singleuse:
 	to negate hasUnsubmittedEdits and keep running analysis
+
+** function cascade **
+main
+	displayResult
+		show_genomebrowser_snplocus
+		displayResult_oneset
+			mayshow_err
+			mayshow_splinePlots
+			mayshow_residuals
+			mayshow_coefficients
+			mayshow_type3
+			mayshow_other
 */
 
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
@@ -100,74 +112,48 @@ export class RegressionResults {
 	getIndependentInput(tid) {
 		/* arg is independent term id
 		return input instance
+		for accessing input.orderedLabels and input.term{refGrp, term{}, q{}} which is term-wrapper
+
+		in order to reliably access refGrp,
+		must use termwrapper from Input instance but not this.state.config
+		due to a specific condition when refGrp is set in self.config, but is missing from state
+		this happens when launching from a parameterized url that's missing refgrp for the term
+		and the refGrp is dynamically filled by input.updateTerm() but not propagated to state
 		*/
 		for (const i of this.parent.inputs.independent.inputs) {
 			if (!i.term) continue
 			if (i.term.id == tid) return i
 			if (i.term.term && i.term.term.snps) {
-				for (const s of i.term.term.snps) {
-					if (s.snpid == tid) {
-						/* tid matches with a snpid
-						FIXME returns blank object! 
-						the purpose has been to access orderedLabels
-						but this is only set on Input instance, but not on tw
-						may assign it to Input.term instead so
-						no need for getIndependentInput but just getIndependentTerm
-						and avoid returning this ridiculous blank object
-						*/
-						return {}
+				for (const snp of i.term.term.snps) {
+					if (snp.snpid == tid) {
+						// tid matches with a snpid
+						// make up an object looking like an Input instance
+						const tw = {
+							id: tid,
+							q: {},
+							term: {
+								id: tid,
+								name: tid
+							},
+							effectAllele: i.term.q.snp2effAle[tid]
+						}
+						if (i.term.q.snp2refGrp) {
+							tw.refGrp = i.term.q.snp2refGrp[tid]
+						}
+						if (snp.alt2csq) {
+							// try to update tw.term.name
+							if (snp.alt2csq[i.term.q.snp2effAle[tid]]) {
+								tw.term.name = snp.alt2csq[i.term.q.snp2effAle[tid]].mname
+							} else {
+								tw.term.name = snp.alt2csq[Object.keys(snp.alt2csq)[0]].mname
+							}
+						}
+						return { term: tw }
 					}
 				}
 			}
 		}
 		throw 'cannot find Input for a tid: ' + tid
-	}
-	getIndependentTerm(tid) {
-		/*
-		arg is independent term id; return term wrapper 
-
-		in order to reliably access tw.refGrp,
-		must use termwrapper from this.config but not this.state.config
-		due to a specific condition when refGrp is set in self.config, but is missing from state
-		when launching from a parameterized url that's missing refgrp for the term
-		and the refGrp is dynamically filled by input.updateTerm() but not propagated to state
-		*/
-		const tw = this.config.independent.find(t => t.id == tid)
-		if (tw) return tw
-		// not found by tid; check for snps in snplst
-		for (const t of this.config.independent) {
-			if (t.term.snps) {
-				const snp = t.term.snps.find(i => i.snpid == tid)
-				if (snp) {
-					// tid is a snpid
-					// this input is one of the snps from this snplst term
-					// {snpid, effectAllele, alleles[], .. }
-					// return something looking like a termwrapper and represents this snp
-					const tw = {
-						id: tid,
-						q: {},
-						term: {
-							id: tid,
-							name: tid
-						},
-						effectAllele: t.q.snp2effAle[tid]
-					}
-					if (t.q.snp2refGrp) {
-						tw.refGrp = t.q.snp2refGrp[tid]
-					}
-					if (snp.alt2csq) {
-						// try to update tw.term.name
-						if (snp.alt2csq[t.q.snp2effAle[tid]]) {
-							tw.term.name = snp.alt2csq[t.q.snp2effAle[tid]].mname
-						} else {
-							tw.term.name = snp.alt2csq[Object.keys(snp.alt2csq)[0]].mname
-						}
-					}
-					return tw
-				}
-			}
-		}
-		throw 'unknown independent term'
 	}
 }
 
@@ -205,7 +191,7 @@ function setRenderers(self) {
 	self.displayResult_oneset = result => {
 		self.dom.oneSetResultDiv.selectAll('*').remove()
 		self.mayshow_err(result)
-		self.newDiv('Sample size: ' + result.sampleSize)
+		if ('sampleSize' in result) self.newDiv('Sample size: ' + result.sampleSize)
 		self.mayshow_splinePlots(result)
 		self.mayshow_residuals(result)
 		self.mayshow_coefficients(result)
@@ -300,7 +286,7 @@ function setRenderers(self) {
 		let rowcount = 0
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
-			const tw = self.getIndependentTerm(tid)
+			const tw = self.getIndependentInput(tid).term
 			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 
 			// col 1: term name
@@ -471,7 +457,7 @@ function setRenderers(self) {
 		let rowcount = 0
 		for (const tid in result.type3.terms) {
 			const termdata = result.type3.terms[tid]
-			const tw = self.getIndependentTerm(tid)
+			const tw = self.getIndependentInput(tid).term
 			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 			// col 1: variable
 			const termNameTd = tr.append('td').style('padding', '8px')
@@ -486,8 +472,8 @@ function setRenderers(self) {
 		// interactions
 		for (const row of result.type3.interactions) {
 			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
-			const t1 = self.getIndependentTerm(row.term1)
-			const t2 = self.getIndependentTerm(row.term2)
+			const t1 = self.getIndependentInput(row.term1).term
+			const t2 = self.getIndependentInput(row.term2).term
 			// col 1: variable
 			const td = tr.append('td').style('padding', '8px')
 			fillTdName(td.append('div'), t1.term.name)
@@ -849,10 +835,10 @@ function make_mds3_variants(tw, result) {
 
 		const thisresult = result.lst.find(i => i.id == snp.snpid)
 		if (!thisresult) {
-			console.log('no result for ' + snp.snpid)
-			// assign this so tk won't break
+			// missing result for this variant, caused by variable-skipping in R
 			m.regressionPvalue = 'missing'
-			m.__value = 0
+			m.__value = 0 // display the dot at the bottom
+			m.regressionResult = { err: ['No result for this variant at ' + snp.snpid] }
 			continue
 		}
 		// reg result is found for this snp; can call displayResult_oneset
