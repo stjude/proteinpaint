@@ -170,10 +170,16 @@ export function parseTabDelimitedData(holder, input) {
 	// could have used lines.shift() here, but will want to track actual line numbers later for errors
 	const header = lines[0].split('\t')
 	const varNameIndex = header.findIndex(l => l.toLowerCase().includes('variable name'))
-	if (varNameIndex == -1) sayerror(holder, `Missing required 'Variable Name' column`)
+	if (varNameIndex == -1) {
+		sayerror(holder, `Missing required 'Variable Name' header`)
+		return
+	}
 
 	const configIndex = header.findIndex(l => l.toLowerCase().includes('variable note'))
-	if (configIndex == -1) sayerror(holder, `Missing required 'Variable Note' column`)
+	if (configIndex == -1) {
+		sayerror(holder, `Missing required 'Variable Note' header`)
+		return
+	}
 
 	const levelColIndexes = header.map((c, i) => (c.toLowerCase().includes('level_') ? i : -1)).filter(i => i != -1)
 	//If no level cols provided, use key/Variable name col as single level. Will print the id as name
