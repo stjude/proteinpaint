@@ -104,7 +104,7 @@ function makeEditMenu(self, div) {
 	// right column
 	const tdright = tr.append('td').style('vertical-align', 'top')
 
-	const [select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(tdright, self)
+	const [select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(tdright, self, 'snplst')
 
 	// submit button
 	const submit_btn = div
@@ -449,14 +449,17 @@ function makeId() {
 	return 'snplst' + Math.random()
 }
 
-export function makeSnpSelect(div, self) {
+export function makeSnpSelect(div, self, termtype) {
+	// create following 3 <select> and return in an array
+	// missingGenotype will not be created for snplocus
+	let select_alleleType, select_geneticModel, select_missingGenotype
 	// select - allele type
 	div
 		.append('div')
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
 		.text('ALLELE TYPE')
-	const select_alleleType = div.append('select')
+	select_alleleType = div.append('select')
 	select_alleleType.append('option').text('Major (d) vs minor (D) from data')
 	select_alleleType.append('option').text('Reference (r) vs alternative (A)')
 	select_alleleType.on('change', updateOptionText)
@@ -468,29 +471,36 @@ export function makeSnpSelect(div, self) {
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
 		.text('GENETIC MODEL')
-	const select_geneticModel = div.append('select')
+	select_geneticModel = div.append('select')
 	select_geneticModel.append('option') // additive
 	select_geneticModel.append('option') // dominant
 	select_geneticModel.append('option') // recessive
 	select_geneticModel.append('option') // by genotype
 
-	// select - missing gt
-	div
+	// select - missing genotype
+	const missingGenotypeLabel = div
 		.append('div')
 		.style('margin-top', '10px')
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
-		.text('MISSING GENOTYPE')
-	const select_missingGenotype = div.append('select')
-	select_missingGenotype.append('option')
-	select_missingGenotype.append('option').text('Impute numerically as average value')
-	select_missingGenotype.append('option').text('Drop sample')
+	if (termtype == 'snplocus') {
+		// do not create <select> for this option
+		missingGenotypeLabel.text('Samples missing genotype are dropped.')
+	} else {
+		missingGenotypeLabel.text('MISSING GENOTYPE')
+		select_missingGenotype = div.append('select')
+		select_missingGenotype.append('option')
+		select_missingGenotype.append('option').text('Impute numerically as average value')
+		select_missingGenotype.append('option').text('Drop sample')
+	}
 
 	if (self.term) {
 		// .term and .q is available on the instance; populate UI with values
 		select_alleleType.property('selectedIndex', self.q.alleleType)
 		select_geneticModel.property('selectedIndex', self.q.geneticModel)
-		select_missingGenotype.property('selectedIndex', self.q.missingGenotype)
+		if (select_missingGenotype) {
+			select_missingGenotype.property('selectedIndex', self.q.missingGenotype)
+		}
 	}
 
 	updateOptionText()
@@ -502,8 +512,10 @@ export function makeSnpSelect(div, self) {
 		o[1].innerHTML = 'Dominant: ' + (is0 ? 'DD=1, Dd=1, dd=0' : 'AA=1, Ar=1, rr=0')
 		o[2].innerHTML = 'Recessive: ' + (is0 ? 'DD=1, Dd=0, dd=0' : 'AA=1, Ar=0, rr=0')
 		o[3].innerHTML = 'By genotype: ' + (is0 ? 'DD and Dd compared to dd' : 'AA and Ar compared to rr')
-		select_missingGenotype.node().options[0].innerHTML =
-			'Impute as homozygous ' + (is0 ? 'major' : 'reference') + ' allele'
+		if (select_missingGenotype) {
+			select_missingGenotype.node().options[0].innerHTML =
+				'Impute as homozygous ' + (is0 ? 'major' : 'reference') + ' allele'
+		}
 	}
 	return [select_alleleType, select_geneticModel, select_missingGenotype]
 }

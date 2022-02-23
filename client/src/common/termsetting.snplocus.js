@@ -15,7 +15,6 @@ self.term{}
 self.q{}
 	.alleleType: int
 	.geneticModel: int
-	.missingGenotype: int
 	.chr/start/stop: defines the locus
 	.variant_filter: optional filter root
 
@@ -68,9 +67,10 @@ async function makeEditMenu(self, div) {
 
 	await mayDisplayVariantFilter(self, div)
 
-	const [select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
+	const [select_alleleType, select_geneticModel] = makeSnpSelect(
 		div.append('div').style('margin', '10px'),
-		self
+		self,
+		'snplocus'
 	)
 
 	// submit button
@@ -99,7 +99,6 @@ async function makeEditMenu(self, div) {
 
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
-			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
 
 			self.runCallback()
 		})
@@ -135,7 +134,6 @@ function validateQ(self, data) {
 	const q = data.q
 	if (![0, 1].includes(q.alleleType)) throw 'alleleType value is not one of 0/1'
 	if (![0, 1, 2, 3].includes(q.geneticModel)) throw 'geneticModel value is not one of 0/1'
-	if (![0, 1, 2].includes(q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
 	if (!q.chr) throw 'chr missing'
 	if (!Number.isInteger(q.start)) throw 'start coordinate is not integer'
 	if (!Number.isInteger(q.stop)) throw 'stop coordinate is not integer'
