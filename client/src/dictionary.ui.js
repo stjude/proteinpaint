@@ -172,13 +172,15 @@ export function parseTabDelimitedData(holder, input) {
 	const varNameIndex = header.findIndex(l => l.toLowerCase().includes('variable name'))
 	if (varNameIndex == -1) {
 		sayerror(holder, `Missing required 'Variable Name' header`)
-		return
 	}
 
 	const configIndex = header.findIndex(l => l.toLowerCase().includes('variable note'))
 	if (configIndex == -1) {
 		sayerror(holder, `Missing required 'Variable Note' header`)
-		return
+	}
+
+	if (configIndex == -1 || varNameIndex == -1) {
+		throw `invalid header` // informative error message is already displayed using sayerror
 	}
 
 	const levelColIndexes = header.map((c, i) => (c.toLowerCase().includes('level_') ? i : -1)).filter(i => i != -1)

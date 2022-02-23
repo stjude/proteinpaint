@@ -426,23 +426,31 @@ tape('missing variable name header', function(test) {
 	].join('\n')
 
 	const holder = getHolder()
+	const message = 'Should throw on missing variable name header'
 	try {
 		const results = parseTabDelimitedData(holder, tsv)
-		const errorbar = holder.selectAll('.sja_errorbar')
-		test.equal(errorbar.size(), 1, 'should display an error for missing variable name header, but not throw')
-		const expectedStr = 'variable name'
-		test.true(
-			errorbar
-				.text()
-				.toLowerCase()
-				.includes(expectedStr),
-			`should have '${expectedStr}' in the error message`
-		)
+		// test fails because the function did not throw
+		test.fail(message)
 	} catch (e) {
-		test.pass('Variable name header found')
+		// test passes because the function is expected to throw
+		test.pass(message)
 	}
+
+	// an error message should also be displayed for the user
+	const errorbar = holder.selectAll('.sja_errorbar')
+	test.equal(errorbar.size(), 1, 'should display an error for missing variable name header')
+	const expectedStr = 'variable name'
+	test.true(
+		errorbar
+			.text()
+			.toLowerCase()
+			.includes(expectedStr),
+		`should have '${expectedStr}' in the error message`
+	)
+
 	test.end()
 })
+
 tape('missing variable note header', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
@@ -454,6 +462,7 @@ tape('missing variable note header', function(test) {
 	].join('\n')
 
 	const holder = getHolder()
+	const message = 'Should throw on missing variable name header'
 	try {
 		const results = parseTabDelimitedData(holder, tsv)
 		const errorbar = holder.selectAll('.sja_errorbar')
