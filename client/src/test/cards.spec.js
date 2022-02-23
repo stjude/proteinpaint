@@ -1,5 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
+const dofetch3 = require( '../common/dofetch').dofetch3
 
 /***********************************
  reusable helper vars and functions
@@ -41,7 +42,7 @@ const eventCallbacks = {
 ***************/
 
 tape('\n', function(test) {
-	test.pass('-***- termdb/examples -***-')
+	test.pass('-***- server/src/cards -***-')
 	test.end()
 })
 
@@ -49,9 +50,9 @@ tape('\n', function(test) {
 	async test callbacks are not handled properly by tape,
 	it does not seem to `await callback(test)`
 */
-tape('examplejson', test => {
-	const dataMessage = 'should download and parse examplejson'
-	fetch('/examplejson')
+tape('cards', test => {
+	const dataMessage = "should download and parse each app drawer card's json"
+	fetch('/cardsjson')
 		.then(r => r.json())
 		.then(data => {
 			test.pass(dataMessage)
@@ -62,27 +63,29 @@ tape('examplejson', test => {
 		})
 })
 
-function runTests(data, test) {
+async function runTests(data, test) {
 	// 1. Plan the tests
 	// Track examples that are testable and how they should be tested
 	const testable = [],
 		notTested = { hidden: [] }
-	let numPlannedTests = 1 // including the examplejson download
+	let numPlannedTests = 1 // including the cardsjson download
 	for (const x of data.examples) {
-		if (!x.ppcalls || x.hidden) {
+		if (!x.sandboxjson || x.hidden) {
 			notTested.hidden.push(x.name)
 			continue
 		}
+		const cardJson = await dofetch3(`/cardsjson?jsonfile=${x.sandboxjson}`)
+		const ppcalls = cardJson.jsonfile.ppcalls
+
 		// to limit to a particular test, uncomment the line below
 		// if (!['RNA splice junction of one sample'].includes(x.name)) continue
-
-		if (!Array.isArray(x.ppcalls)) {
+		if (!Array.isArray(ppcalls)) {
 			test.fail('ppcalls should be an array for ' + x.name)
 		} else {
-			for (const call of x.ppcalls) {
+			for (const call of ppcalls) {
 				if (typeof call.runargs !== 'object') {
 					test.fail('runargs is not object for ' + call.label)
-				} else if (!x.sandbox.is_ui) {
+				} else if (!call.is_ui) {
 					const tracks = call.runargs.tracks || []
 					// for tracks, use callback tests only if there is one track
 					// otherwise, use timed tests
@@ -97,13 +100,13 @@ function runTests(data, test) {
 						testable.push({ x, call, useCallback })
 					} else {
 						if (!(x.name in notTested)) notTested[x.name] = []
-						notTested[x.name].push(call.label || 'call#' + x.ppcalls.indexOf(call) + ': no testSpec')
+						notTested[x.name].push(call.label || 'call#' + ppcalls.indexOf(call) + ': no testSpec')
 					}
 				}
 			}
 		}
 	}
-
+	
 	if (!testable.length) {
 		test.fail('no testable examples')
 		test.end()
