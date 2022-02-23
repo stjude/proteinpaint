@@ -14,6 +14,16 @@ can dynamically add following attributes
 - this.hasUnsubmittedEdits_nullify_singleuse:
 	to negate hasUnsubmittedEdits and keep running analysis
 
+** R result object
+result.data: {}
+	sampleSize: int
+	headerRow: { k:str, v:str }
+	residuals: { header[], rows[], label:str }
+	coefficients: { header[], intercept[], terms{}, interactions[], label }
+	type3: {header[], intercept[], terms{}, interactions[], label }
+	other: {header[], rows[], label}
+
+
 ** function cascade **
 main
 	displayResult
@@ -191,7 +201,8 @@ function setRenderers(self) {
 	self.displayResult_oneset = result => {
 		self.dom.oneSetResultDiv.selectAll('*').remove()
 		self.mayshow_err(result)
-		if ('sampleSize' in result) self.newDiv('Sample size: ' + result.sampleSize)
+		if ('sampleSize' in result) self.newDiv('Sample size:', result.sampleSize)
+		if (result.headerRow) self.newDiv(result.headerRow.k, result.headerRow.v)
 		self.mayshow_splinePlots(result)
 		self.mayshow_residuals(result)
 		self.mayshow_coefficients(result)
@@ -199,13 +210,21 @@ function setRenderers(self) {
 		self.mayshow_other(result)
 	}
 
-	self.newDiv = label => {
+	self.newDiv = (label, label2) => {
 		// create div to show a section of the result
+		// label is required, label2 is optional
 		const div = self.dom.oneSetResultDiv.append('div').style('margin', '20px 0px 10px 0px')
-		div
-			.append('div')
+		const row = div.append('div')
+		row
+			.append('span')
 			.style('text-decoration', 'underline')
 			.text(label)
+		if (label2) {
+			row
+				.append('span')
+				.text(label2)
+				.style('margin-left', '5px')
+		}
 		return div.append('div').style('margin-left', '20px')
 	}
 
@@ -844,6 +863,15 @@ function make_mds3_variants(tw, result) {
 		// reg result is found for this snp; can call displayResult_oneset
 		const d = thisresult.data
 		if (!d) throw '.data{} missing'
+		{
+			// TODO insert info fields this way for displaying in results
+			const lst = []
+			for (const k in snp.gt2count) lst.push(k + '=' + snp.gt2count[k])
+			d.headerRow = {
+				k: 'Genotypes:',
+				v: lst.join(', ')
+			}
+		}
 		m.regressionResult = d // for displaying via click_snvindel()
 
 		// find p-value (last column of type3 table)

@@ -50,13 +50,23 @@ export function getHandler(self) {
 
 		async showEditMenu(div) {
 			await makeEditMenu(self, div)
-		},
+		}
+
+		/* upon filter/cohort change in mass,
+		a plot e.g. regression will be notified with updated state
+		then calls vocab.getCategories() to produce sample summary on all variants
+		however, filter/cohort update only changes sample inclusion criteria
+		and DOES NOT change the locus region of this term
+		thus will not alter the variants in cache file
+		since cache file contains all samples,
+		so no need to run validateInput() in postMain() to regenerate cache file
 
 		async postMain() {
 			if (self.q && self.q.chr) {
 				await validateInput(self)
 			}
 		}
+		*/
 	}
 }
 

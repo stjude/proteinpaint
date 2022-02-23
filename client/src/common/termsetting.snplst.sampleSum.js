@@ -1,8 +1,6 @@
 /*
-TODO rename file to termsetting.snplst.shared.js
-
 if the "effect allele" is already set for a snp (by user), return it
-otherwise, compute it based on the alleleType setting (from snplst q{})
+otherwise, compute it based on the alleleType setting (from termwrapper.q{})
 
 snp: { effectAllele, alleles[ {allele, count, isRef} ] }
 */
@@ -40,7 +38,7 @@ this function will alter tw,
 the changes must be kept in sync between termsetting instance and app state
 */
 export function mayRunSnplstTask(tw, data) {
-	// TODO quick fix!!! run arbitrary logic specific to snplst
+	// TODO quick fix!!! run arbitrary logic specific to snplst/snplocus term type
 	if (tw.term.type != 'snplst' && tw.term.type != 'snplocus') return
 	if (!Array.isArray(data.snps)) throw 'data.snps[] not array'
 	// note!! tw is modified here and is not written to state, but should be fine
