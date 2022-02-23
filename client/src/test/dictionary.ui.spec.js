@@ -330,12 +330,23 @@ tape('empty configuration', function(test) {
 	].join('\n')
 
 	const holder = getHolder()
-	const message = 'should display error for missing configuration'
 	try {
 		const results = parseTabDelimitedData(holder, tsv)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 2, message)
+		// check for error display here if no errors are thrown, otherwise check within the catch block
+		const errorbar = holder.selectAll('.sja_errorbar')
+		test.equal(errorbar.size(), 1, `should display error for missing configuration and not throw`)
+		const expectedStr = 'missing variable note'
+		test.true(
+			errorbar
+				.text()
+				.toLowerCase()
+				.includes(expectedStr),
+			`should have '${expectedStr}' in the error message`
+		)
 	} catch (e) {
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
+		// there should be a test.equal(..) or test.pass(...) here if code execution is expected to stop
+		// otherwise, the test failed
+		test.fail('An error should only be displayed and NOT thrown for this validation step: ' + e)
 	}
 	test.end()
 })
@@ -351,12 +362,23 @@ tape('missing k=v in config', function(test) {
 	].join('\n')
 
 	const holder = getHolder()
-	const message = `should display an error for missing value for config key`
 	try {
 		const results = parseTabDelimitedData(holder, tsv)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
+		// check for error display here if no errors are thrown, otherwise check within the catch block
+		const errorbar = holder.selectAll('.sja_errorbar')
+		test.equal(errorbar.size(), 1, `should display an error for missing value for config key and not throw`)
+		const expectedStr = 'note is not'
+		test.true(
+			errorbar
+				.text()
+				.toLowerCase()
+				.includes(expectedStr),
+			`should have '${expectedStr}' in the error message`
+		)
 	} catch (e) {
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
+		// there should be a test.equal(..) or test.pass(...) here if code execution is expected to stop
+		// otherwise, the test failed
+		test.fail('An error should only be displayed and NOT thrown for this validation step: ' + e)
 	}
 	test.end()
 })
@@ -372,13 +394,23 @@ tape('repeated intermediate terms for diff branches, whole dataset', function(te
 	].join('\n')
 
 	const holder = getHolder()
-	const message = 'should display an error for identical intermediate level names'
 	try {
-		const holder = getHolder()
 		const results = parseTabDelimitedData(holder, tsv)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
+		// check for error display here if no errors are thrown, otherwise check within the catch block
+		const errorbar = holder.selectAll('.sja_errorbar')
+		test.equal(errorbar.size(), 1, 'should display an error for identical intermediate level names, but not throw')
+		const expectedStr = 'different parents'
+		test.true(
+			errorbar
+				.text()
+				.toLowerCase()
+				.includes(expectedStr),
+			`should have '${expectedStr}' in the error message`
+		)
 	} catch (e) {
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
+		// there should be a test.equal(..) or test.pass(...) here if code execution is expected to stop
+		// otherwise, the test failed
+		test.fail('An error should only be displayed and NOT thrown for this validation step: ' + e)
 	}
 	test.end()
 })

@@ -204,9 +204,11 @@ export function parseTabDelimitedData(holder, input) {
 			}
 
 			const term = parseConfig(holder, lineNum, cols[configIndex], name)
-			if (!Object.keys(term).length) {
+			if (!term) continue
+			// error handled in parseConfig()
+			else if (!Object.keys(term).length) {
 				// is it possible to have an empty term?
-				sayerror(holder, `Error: empty config column for term.id='${id}'.`)
+				sayerror(holder, `Error: empty config column for term.id='${name}'.`)
 				continue
 			}
 
