@@ -276,6 +276,66 @@ tape('extra, non essential column', function(test) {
 	test.end()
 })
 
+tape('no level columns', function(test) {
+	test.timeoutAfter(100)
+	const tsv = [
+		`variable name\tvariable note`,
+		`A1a\t1=Yes; 0=No`,
+		`A1b\t1=Yes; 0=No`,
+		`A2a\t1=Treated; 0=Not treated`,
+		`B1a\t1=Treated; 0=Not treated`
+	].join('\n')
+
+	const message = `should display dictionary with variable name (i.e. id) as name`
+	try {
+		const holder = getHolder()
+		const results = parseTabDelimitedData(holder, tsv)
+		const expected = [
+			{
+				id: 'A1a',
+				name: 'A1a',
+				type: 'categorical',
+				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
+				groupsetting: { inuse: false },
+				isleaf: true,
+				parent_id: null
+			},
+			{
+				id: 'A1b',
+				name: 'A1b',
+				type: 'categorical',
+				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
+				groupsetting: { inuse: false },
+				isleaf: true,
+				parent_id: null
+			},
+			{
+				id: 'A2a',
+				name: 'A2a',
+				type: 'categorical',
+				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
+				groupsetting: { inuse: false },
+				isleaf: true,
+				parent_id: null
+			},
+			{
+				id: 'B1a',
+				name: 'B1a',
+				type: 'categorical',
+				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
+				groupsetting: { inuse: false },
+				isleaf: true,
+				parent_id: null
+			}
+		]
+		test.deepEqual(results.terms, expected, message)
+		test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display dictionary, no errors')
+	} catch (e) {
+		test.fail(message + ': ' + e)
+	}
+	test.end()
+})
+
 tape('repeated level names, same line', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
@@ -462,21 +522,24 @@ tape('missing variable note header', function(test) {
 	].join('\n')
 
 	const holder = getHolder()
-	const message = 'Should throw on missing variable name header'
+	const message = 'Should throw on missing variable note header'
 	try {
 		const results = parseTabDelimitedData(holder, tsv)
-		const errorbar = holder.selectAll('.sja_errorbar')
-		test.equal(errorbar.size(), 1, 'should display an error for missing variable note header, but not throw')
-		const expectedStr = 'variable note'
-		test.true(
-			errorbar
-				.text()
-				.toLowerCase()
-				.includes(expectedStr),
-			`should have '${expectedStr}' in the error message`
-		)
+		test.fail(message)
 	} catch (e) {
-		test.pass('Variable note header found')
+		test.pass(message)
 	}
+
+	const errorbar = holder.selectAll('.sja_errorbar')
+	test.equal(errorbar.size(), 1, 'should display an error for missing variable note header, but not throw')
+	const expectedStr = 'variable note'
+	test.true(
+		errorbar
+			.text()
+			.toLowerCase()
+			.includes(expectedStr),
+		`should have '${expectedStr}' in the error message`
+	)
+
 	test.end()
 })
