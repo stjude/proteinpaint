@@ -349,11 +349,19 @@ tape('repeated level names, same line', function(test) {
 	const holder = getHolder()
 	const message = 'should display an error for repeated level names in the same line'
 	try {
-		const holder = getHolder()
 		const results = parseTabDelimitedData(holder, tsv)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
+		const errorbar = holder.selectAll('.sja_errorbar')
+		test.equal(errorbar.size(), 1, `should display error for identicial level names and not throw`)
+		const expectedStr = 'non-unique'
+		test.true(
+			errorbar
+				.text()
+				.toLowerCase()
+				.includes(expectedStr),
+			`should have '${expectedStr}' in the error message`
+		)
 	} catch (e) {
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
+		test.fail('An error should only be displayed and NOT thrown for this validation step: ' + e)
 	}
 	test.end()
 })
@@ -372,9 +380,18 @@ tape('dash between levels', function(test) {
 	const message = `should display an error for a '-' between level names`
 	try {
 		const results = parseTabDelimitedData(holder, tsv)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
+		const errorbar = holder.selectAll('.sja_errorbar')
+		test.equal(errorbar.size(), 1, `should display error for blank of '-' between level names and not throw`)
+		const expectedStr = '-'
+		test.true(
+			errorbar
+				.text()
+				.toLowerCase()
+				.includes(expectedStr),
+			`should have '${expectedStr}' in the error message`
+		)
 	} catch (e) {
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, message)
+		test.fail('An error should only be displayed and NOT thrown for this validation step: ' + e)
 	}
 	test.end()
 })
