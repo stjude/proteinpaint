@@ -122,15 +122,19 @@ function parse_q(q, ds) {
 		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
 		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			// !!!!!!!!!QUICK FIX!! detect non-dict term and do not query termdb
-			// snplst tw lacks tw.term{}; tw.snpidlst[] will be added when parsing cache file
+			// tw for these terms lacks tw.term{}
+			// tw.snpidlst[] will be added when parsing cache file
 			if (!tw.q.cacheid) throw 'q.cacheid missing'
 			if (tw.q.cacheid.match(/[^\w]/)) throw 'invalid cacheid'
 			if (typeof tw.q.snp2effAle != 'object') throw 'q.snp2effAle{} is not object'
 			if (!Number.isInteger(tw.q.alleleType)) throw 'q.alleleType is not integer'
 			if (!Number.isInteger(tw.q.geneticModel)) throw 'q.geneticModel is not integer'
-			if (!Number.isInteger(tw.q.missingGenotype)) throw 'q.missingGenotype is not integer'
 			if (tw.q.geneticModel == 3) {
 				if (typeof tw.q.snp2refGrp != 'object') throw 'q.snp2refGrp{} is not object when geneticMode=3'
+			}
+			if (tw.type == 'snplst') {
+				// missingGenotype is not needed for snplocus
+				if (!Number.isInteger(tw.q.missingGenotype)) throw 'q.missingGenotype is not integer for snplst'
 			}
 		} else {
 			if (!tw.id) throw '.id missing for an independent term'
