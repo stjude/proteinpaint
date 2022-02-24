@@ -12,6 +12,7 @@ instance attributes
 self.term{}
 	.id: str, not really used
 	.type: "snplocus"
+	.snps[]
 self.q{}
 	.alleleType: int
 	.geneticModel: int
@@ -50,23 +51,21 @@ export function getHandler(self) {
 
 		async showEditMenu(div) {
 			await makeEditMenu(self, div)
-		}
+		},
 
-		/* upon filter/cohort change in mass,
-		a plot e.g. regression will be notified with updated state
-		then calls vocab.getCategories() to produce sample summary on all variants
-		however, filter/cohort update only changes sample inclusion criteria
-		and DOES NOT change the locus region of this term
-		thus will not alter the variants in cache file
-		since cache file contains all samples,
-		so no need to run validateInput() in postMain() to regenerate cache file
-
+		/* cache file contains all samples,
+		variants in a cache file is only determined by locus range and info fields
+		although no need to regenerate cache file upon subcohort or filter change,
+		still need it for a specific case
+		when snplocus genome browser in regression result is panned/zoomed
+		it calls pill.main() to propagate the updated locus range to self.q.chr/start/stop
+		and must rely on postMain to trigger validateInput to regenerate cache to update variants
+		*/
 		async postMain() {
 			if (self.q && self.q.chr) {
 				await validateInput(self)
 			}
 		}
-		*/
 	}
 }
 
@@ -103,9 +102,17 @@ async function makeEditMenu(self, div) {
 			self.q.start = coordResult.start
 			self.q.stop = coordResult.stop
 			self.term.name = term_name
+
+			/* in case term.snps[] is present, must delete old list of snp
+			as by pressing Submit button it will query variants from updated region/info filter
+			and must reassign term.snps[]
+			must delete term.snps so validateInput will assign new snps to term
+			*/
+			delete self.term.snps
 			self.q.variant_filter = getNormalRoot(self.variantFilter.active)
 			await validateInput(self)
 			// q.cacheid is set
+			// self.term.snps[] is set
 
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
@@ -125,13 +132,22 @@ async function makeEditMenu(self, div) {
 /* 
 Argument
 self: may be a termsetting instance or any object
-
-snp validation will query bigbed to convert to pos, and bcf file
-very expensive step
-will write snp-by-sample gt matrix to a cache file, using all samples from bcf file of this dataset
+snp validation will write snp-by-sample gt matrix to a cache file, using all samples from bcf file of this dataset
 do not apply sample filtering
 */
 async function validateInput(self) {
+	if (self.term.snps) {
+		/* do not run when snps[] array is already present
+		e.g. in mass upon subcohort/filter change,
+		the snplocus term pill.main() is triggered and will call postMain
+		as the locus range is not changed so list of snps is the same as before
+		so no need to rebuild cache
+		also term.snps[] contains updated sample summaries in snps[] array
+		which will be missing from data returned by this function
+		so must not overwrite it
+		*/
+		return
+	}
 	const data = await self.vocabApi.validateSnps(self.q)
 	if (data.error) throw data.error
 	// copy result to instance
