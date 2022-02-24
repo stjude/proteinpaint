@@ -57,7 +57,7 @@ export async function get_regression(q, ds) {
 	try {
 		parse_q(q, ds)
 
-		const sampledata = await getSampleData(q, [q.outcome, ...q.independent])
+		const [sampledata, snpgt2count] = await getSampleData(q, [q.outcome, ...q.independent])
 		/* each element is one sample with a key-val map for all its annotations:
 		{sample, id2value:Map( tid => {key,value}) }
 		*/
@@ -87,8 +87,7 @@ export async function get_regression(q, ds) {
 		)
 
 		// parse the R output
-		const result = await parseRoutput(Rinput, Routput, id2originalId)
-		return result
+		return await parseRoutput(Rinput, Routput, id2originalId, snpgt2count)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
@@ -376,7 +375,7 @@ function validateRinput(Rinput, sampleSize) {
 	}
 }
 
-async function parseRoutput(Rinput, Routput, id2originalId) {
+async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 	if (Routput.length != 1) throw 'expected 1 json line in R output'
 	const out = JSON.parse(Routput[0])
 
@@ -392,10 +391,24 @@ async function parseRoutput(Rinput, Routput, id2originalId) {
 	const result = [] // same structure as out[]
 
 	for (const analysis of out) {
+		// to be pushed to result[]
 		const analysisResults = {
 			data: { sampleSize: analysis.data.sampleSize }
 		}
-		if (analysis.id) analysisResults.id = id2originalId[analysis.id]
+
+		if (analysis.id) {
+			// id must be snpid from snplocus
+			analysisResults.id = id2originalId[analysis.id]
+			const gt2count = snpgt2count.get(analysisResults.id)
+			if (gt2count) {
+				const lst = []
+				for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
+				analysisResults.data.headerRow = {
+					k: 'Genotypes:',
+					v: lst.join(', ')
+				}
+			}
+		}
 
 		const data = analysis.data
 
@@ -541,19 +554,24 @@ async function getSampleData(q, terms) {
 	const samples = getSampleData_dictionaryTerms(q, dictTerms)
 	// sample data from all terms are loaded into "samples"
 
+	const snpgt2count = new Map()
+	// k: snpid, v:{gt:INT}
+	// filled for snplst and snplocus terms
+	// to append genotype samplecount breakdown as result.headerRow
+
 	for (const tw of nonDictTerms) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			// each snp is one indepedent variable
 			// record list of snps on term.snpidlst
-			await getSampleData_snplstOrLocus(tw, samples, q)
+			await getSampleData_snplstOrLocus(tw, samples, snpgt2count)
 		} else {
 			throw 'unknown type of independent non-dictionary term'
 		}
 	}
 
-	return samples.values()
+	return [samples.values(), snpgt2count]
 }
 
 function getSampleData_dictionaryTerms(q, terms) {
@@ -593,6 +611,23 @@ function getSampleData_dictionaryTerms(q, terms) {
 		}
 		samples.get(sample).id2value.set(term_id, { key, value })
 	}
+
+	/* drop samples that are missing value for any term
+	as those are ineligible for analysis
+	*/
+	const deletesamples = new Set()
+	for (const o of samples.values()) {
+		for (const t of terms) {
+			if (!o.id2value.has(t.id)) {
+				deletesamples.add(o.sample)
+				break
+			}
+		}
+	}
+	for (const s of deletesamples) {
+		samples.delete(s)
+	}
+
 	return samples
 }
 
@@ -608,35 +643,28 @@ tw{}
 		snp2refGrp{}
 	snpidlst[]
 		// list of snpid; tricky!! added in this function
-samples {Map} // results are added into it
+samples {Map}
+	contains all samples that have valid data for all dict terms
+	only get genotype data for these samples,
+	but do not introduce new samples to this map
+	as those will miss value for dict terms and ineligible for analysis
 */
-async function getSampleData_snplstOrLocus(tw, samples, q) {
+async function getSampleData_snplstOrLocus(tw, samples, snpgt2count) {
 	tw.snpidlst = [] // snpid are added to this list while reading cache file
 
 	const lines = (await utils.read_file(path.join(serverconfig.cachedir, tw.q.cacheid))).split('\n')
 	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 
 	// array of sample ids from the cache file; note cache file contains all the samples from the dataset
-	// TODO export helper func to read header from termdb.snp.js
 	const cachesampleheader = lines[0]
 		.split('\t')
 		.slice(6) // from 7th column
 		.map(Number) // sample ids are integer
 
-	// apply optional filter to filter down samples in cache file
-	let fsample
-	if (q.filter) {
-		fsample = termdbsql.get_samples(q.filter, q.ds)
-		if (fsample.length == 0) throw 'no samples from filter'
-	}
-	const sampleinfilter = [] // list of true/false, same length of cachesampleheader, to tell if a sample is in use
-	for (const i of cachesampleheader) {
-		if (fsample) {
-			sampleinfilter.push(fsample.includes(i))
-		} else {
-			sampleinfilter.push(true)
-		}
-	}
+	// make a list of true/false, same length of cachesampleheader, to tell if a sample is in use
+	// do not apply q.filter here
+	// as samples{} is already computed with q.filter in getSampleData_dictionaryTerms
+	const sampleinfilter = cachesampleheader.map(i => samples.has(i))
 
 	const snp2sample = new Map()
 	// k: snpid
@@ -676,17 +704,20 @@ async function getSampleData_snplstOrLocus(tw, samples, q) {
 	}
 
 	for (const [snpid, o] of snp2sample) {
+		const gt2count = new Map()
+
 		for (const [sampleid, gt] of o.samples) {
+			// count gt for this snp
+			gt2count.set(gt, 1 + (gt2count.get(gt) || 0))
+
 			// for this sample, convert gt to value
 			const [gtA1, gtA2] = gt.split('/') // assuming diploid
 			const v = applyGeneticModel(tw, o.effAle, gtA1, gtA2)
 
-			// register value of this sample in samples
-			if (!samples.has(sampleid)) {
-				samples.set(sampleid, { sample: sampleid, id2value: new Map() })
-			}
-			samples.get(sampleid).id2value.set(snpid, { key: v, value: v }) // difference between key/value?
+			// sampleid must be present in samples{map}, no need to check
+			samples.get(sampleid).id2value.set(snpid, { key: v, value: v })
 		}
+		snpgt2count.set(snpid, gt2count)
 	}
 }
 

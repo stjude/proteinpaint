@@ -16,6 +16,7 @@ can dynamically add following attributes
 
 ** R result object
 result.data: {}
+	warnings
 	sampleSize: int
 	headerRow: { k:str, v:str }
 	residuals: { header[], rows[], label:str }
@@ -171,13 +172,11 @@ function setInteractivity(self) {}
 
 function setRenderers(self) {
 	self.displayResult = async result => {
-		/* result{
-			lst:[ 
-				{ data: { err, splinePlots, residuals, ... }, id:'snp1' },
-				{ data: { err, splinePlots, residuals, ... }, id:'snp2' },
-				...
-			]
-		}
+		/* result[
+			{ data: { err, splinePlots, residuals, ... }, id:'snp1' },
+			{ data: { err, splinePlots, residuals, ... }, id:'snp2' },
+			...
+		]
 		*/
 		if (self.config.independent.find(i => i.term.type == 'snplocus')) {
 			// has a snploucs term: create genome browser to display that locus
@@ -865,15 +864,6 @@ function make_mds3_variants(tw, result) {
 		// reg result is found for this snp; can call displayResult_oneset
 		const d = thisresult.data
 		if (!d) throw '.data{} missing'
-		{
-			// TODO insert info fields this way for displaying in results
-			const lst = []
-			for (const k in snp.gt2count) lst.push(k + '=' + snp.gt2count[k])
-			d.headerRow = {
-				k: 'Genotypes:',
-				v: lst.join(', ')
-			}
-		}
 		m.regressionResult = d // for displaying via click_snvindel()
 
 		// find p-value (last column of type3 table)
