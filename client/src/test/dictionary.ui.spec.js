@@ -382,7 +382,7 @@ tape('dash between levels', function(test) {
 		const results = parseTabDelimitedData(holder, tsv)
 		const errorbar = holder.selectAll('.sja_errorbar')
 		test.equal(errorbar.size(), 1, `should display error for blank of '-' between level names and not throw`)
-		const expectedStr = '-'
+		const expectedStr = `blank or '-'`
 		test.true(
 			errorbar
 				.text()
