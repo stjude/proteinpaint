@@ -62,8 +62,9 @@ class TdbCumInc {
 				.style('margin-left', '50px')
 
 			const options = []
-			for (const grade in config.term.values) {
-				const v = config.term.values[grade]
+			for (const grade in config.term.term.values) {
+				//Fix for dropdown not displaying options
+				const v = config.term.term.values[grade]
 				if (v.uncomputable) continue
 				options.push({
 					label: v.label,
@@ -672,7 +673,7 @@ export async function getPlotConfig(opts, app) {
 			}
 		}
 	}
-
+	// console.log(copyMerge(config, opts))
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
 }
