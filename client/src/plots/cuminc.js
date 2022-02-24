@@ -673,7 +673,6 @@ export async function getPlotConfig(opts, app) {
 			}
 		}
 	}
-	// console.log(copyMerge(config, opts))
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
 }
