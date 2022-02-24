@@ -88,9 +88,6 @@ export async function get_regression(q, ds) {
 
 		// parse the R output
 		const result = await parseRoutput(Rinput, Routput, id2originalId)
-		//console.log('result:', JSON.stringify(result, null, 2))
-		throw 'stop here'
-		// Next steps: modify 'regression.results.js' to handle the new structure of results[]
 		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
