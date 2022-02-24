@@ -373,24 +373,19 @@ function validateRinput(Rinput, sampleSize) {
 }
 
 async function parseRoutput(Rinput, Routput, id2originalId) {
-	const result = { lst: [] } // lst[] has same structure as out[]
-	// handle errors/warnings from R
-	if (Routput.includes('R stderr:')) {
-		const erridx = Routput.findIndex(x => x == 'R stderr:')
-		result.err = [...new Set(Routput.splice(erridx).slice(1))]
-	}
-
-	// Routput is now a JSON of results
 	if (Routput.length != 1) throw 'expected 1 json line in R output'
 	const out = JSON.parse(Routput[0])
 
-	/* out: [
+	/* 
+	out: [
 	  {
 		id: id of snplocus term (empty if no snplocus terms)
-		data: { sampleSize, residuals: {}, coefficients: {}, type3: {}, other: {} },
+		data: { sampleSize, residuals: {}, coefficients: {}, type3: {}, other: {}, warnings: [] },
 	  },
 	]
 	*/
+
+	const result = [] // same structure as out[]
 
 	for (const analysis of out) {
 		const analysisResults = {
@@ -492,7 +487,11 @@ async function parseRoutput(Rinput, Routput, id2originalId) {
 				})
 			}
 		}
-		result.lst.push(analysisResults)
+
+		// warnings
+		if (data.warnings) analysisResults.data.warnings = data.warnings
+
+		result.push(analysisResults)
 	}
 	return result
 }

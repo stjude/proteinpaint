@@ -29,7 +29,7 @@ main
 	displayResult
 		show_genomebrowser_snplocus
 		displayResult_oneset
-			mayshow_err
+			mayshow_warn
 			mayshow_splinePlots
 			mayshow_residuals
 			mayshow_coefficients
@@ -181,7 +181,7 @@ function setRenderers(self) {
 		*/
 		if (self.config.independent.find(i => i.term.type == 'snplocus')) {
 			// has a snploucs term: create genome browser to display that locus
-			// in result.lst[], there's one set of result for each variant, identified by id
+			// in result[], there's one set of result for each variant, identified by id
 			// clicking on a dot in browser tk will call displayResult_oneset() to display its results
 			await self.show_genomebrowser_snplocus(result)
 			return
@@ -189,18 +189,15 @@ function setRenderers(self) {
 		// no snplocus, clear things if had it before
 		delete self.snplocusBlock
 		self.dom.snplocusBlockDiv.selectAll('*').remove()
-		// result.lst[] has only one set of result, from analyzing one model
-		if (!result.lst[0] || !result.lst[0].data) throw 'result is not {lst:[ {data:{}} ]}'
+		// result[] has only one set of result, from analyzing one model
+		if (!result[0] || !result[0].data) throw 'result is not [ {data:{}} ]'
 
-		// quick fix; backend should reassign result.err to a specific set and delete this line
-		result.lst[0].data.err = result.err
-
-		self.displayResult_oneset(result.lst[0].data)
+		self.displayResult_oneset(result[0].data)
 	}
 
 	self.displayResult_oneset = result => {
 		self.dom.oneSetResultDiv.selectAll('*').remove()
-		self.mayshow_err(result)
+		self.mayshow_warn(result)
 		if ('sampleSize' in result) self.newDiv('Sample size:', result.sampleSize)
 		if (result.headerRow) self.newDiv(result.headerRow.k, result.headerRow.v)
 		self.mayshow_splinePlots(result)
@@ -228,10 +225,11 @@ function setRenderers(self) {
 		return div.append('div').style('margin-left', '20px')
 	}
 
-	self.mayshow_err = result => {
-		if (!result.err) return
-		const div = self.newDiv('Errors/warnings')
-		for (const line of result.err) {
+	self.mayshow_warn = result => {
+		if (!result.warnings) return
+		const div = self.newDiv('Warnings')
+		const warnings = new Set(result.warnings)
+		for (const line of warnings) {
 			div
 				.append('p')
 				.style('margin', '5px')
@@ -856,7 +854,7 @@ function make_mds3_variants(tw, result) {
 			Object.assign(m, snp.alt2csq[Object.keys(snp.alt2csq)[0]])
 		}
 
-		const thisresult = result.lst.find(i => i.id == snp.snpid)
+		const thisresult = result.find(i => i.id == snp.snpid)
 		if (!thisresult) {
 			// missing result for this variant, caused by variable-skipping in R
 			m.regressionPvalue = 'missing'

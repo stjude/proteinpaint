@@ -45,7 +45,8 @@
 #       "residuals": { "header": [], "rows": [] },
 #       "coefficients": { "header": [], "rows": [] },
 #       "type3": { "header": [], "rows": [] },
-#       "other": { "header": [], "rows": [] }
+#       "other": { "header": [], "rows": [] },
+#       "warnings": [] warning messages
 #     },
 #   }
 # ]
@@ -55,7 +56,6 @@
 # CODE
 ###########
 
-options(warn = 1)
 library(jsonlite)
 
 
@@ -101,6 +101,25 @@ prepareDataTable <- function(dat, variables, regtype) {
     }
   }
   return(list(dat = dat, variables = variables))
+}
+
+# function to run regression analysis
+runRegression <- function(type, formula, dat, outcome, splineVariables) {
+  warns <- vector(mode = "character")
+  handleWarns <- function(w) {
+    # handler for warning messages
+    warns <<- c(warns, conditionMessage(w))
+    invokeRestart("muffleWarning")
+  }
+  if (type == "linear") {
+    results <- withCallingHandlers(linearRegression(formula, dat, outcome, splineVariables), warning = handleWarns)
+  } else if (type == "logistic") {
+    results <- withCallingHandlers(logisticRegression(formula, dat, outcome, splineVariables), warning = handleWarns)
+  } else {
+    stop("regression type must be either 'linear' or 'logistic'")
+  }
+  if (length(warns) > 0) results[["warnings"]] <- warns
+  return(results)
 }
 
 # function to run linear regression
@@ -504,21 +523,10 @@ outcome <- variables[variables$type == "outcome",]
 for (i in 1:length(formulas)) {
   id <- formulas[[i]]$id
   formula <- formulas[[i]]$formula
-  if (input$metadata$type == "linear") {
-    results <- linearRegression(formula, dat, outcome, splineVariables)
-  } else if (input$metadata$type == "logistic") {
-    results <- logisticRegression(formula, dat, outcome, splineVariables)
-  } else {
-    stop("regression type must be either 'linear' or 'logistic'")
-  }
-
+  results <- runRegression(input$metadata$type, formula, dat, outcome, splineVariables)
   results$coefficients <- formatCoefficients(results$coefficients, results$res)
   results$type3 <- formatType3(results$type3)
-
-  out[[length(out)+1]] <- list(
-    "id" = unbox(id),
-    "data" = results[c("sampleSize","residuals","coefficients","type3","other")]
-    )
+  out[[length(out)+1]] <- list("id" = unbox(id), "data" = results[names(results) != "res"])
 }
 
 # Export results as json to stdout
