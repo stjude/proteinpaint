@@ -86,7 +86,7 @@
             },
             "testSpec": {
                 "timeout": 7000,
-                "expected": { "rect": 20, "line": 20 }
+                "expected": { "rect": 5, "line": 10 }
             }
         }
     ],
