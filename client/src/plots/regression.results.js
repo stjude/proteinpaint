@@ -750,19 +750,23 @@ function setRenderers(self) {
 					tw.q.stop = stop
 					await input.pill.main(tw)
 					/* 
-					pill.main() will update following things in termsetting instance:
-					- q{ chr/start/stop }
-					- term{ snps } list of variants retrieved from updated locus
-					for q/term to be synced into regression state, must do runCallback()
+					pill.main() will update q{chr/start/stop} in termsetting instance
+					then, will call postMain() to recompute cache id
+					and store updated variants in term.snps[]
+					note that term.snps[] is only in termsetting instance,
+					but NOT in Input.term.term{}
+					for the updated q{} and term{} to be synced into regression state,
+					call pill.runCallback()
 					which will call editConfig() and dispatch action with hasUnsubmittedEdits=true,
 					set this single-use flag to nullify it
 					to be able to continue run analysis
 					*/
 					self.hasUnsubmittedEdits_nullify_singleuse = true
 					/*
-					reason of not directly calling self.parent.inputs.editConfig(input, tw)
-					is that we're having incomplete info in tw
-					mostly tw.term.snps[] is missing, and that can only be made in pill main/postMain/validateSnps
+					in order to commit updated term info to state,
+					cannot directly call self.parent.inputs.editConfig(input, tw)
+					since updated q{} and term{} are only in termsetting instance
+					but not tw.term{ q, term }
 					*/
 					input.pill.runCallback()
 				}
