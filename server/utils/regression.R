@@ -125,7 +125,7 @@ runRegression <- function(type, formula, dat, outcome, splineVariables) {
 # function to run linear regression
 linearRegression <- function(formula, dat, outcome, splineVariables) {
   res <- lm(formula, data = dat, na.action = na.omit)
-  sampleSize <- res$df.residual + length(res$coefficients)
+  sampleSize <- res$df.residual + length(res$coefficients[!is.na(res$coefficients)])
   if (nrow(splineVariables) > 0) {
     # model contains spline variables(s)
     # plot spline regression for each spline term
