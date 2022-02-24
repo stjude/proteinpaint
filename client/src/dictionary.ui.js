@@ -3,6 +3,7 @@ import { appear } from './dom/animation'
 import { init_tabs } from './dom/toggleButtons'
 import { event as d3event } from 'd3-selection'
 import { appInit } from './mass/app'
+import { sayerror } from './dom/error'
 
 /* 
 Launches MASS UI by uploading a custom data dictionary
@@ -12,15 +13,25 @@ init_dictionaryUI()
     - holder
 
 ------ Internal ------ 
-TODO
+UI elements:
+	1. makeDataEntryTabs()
+		a. makeTextEntryFilePathInput()
+		b. makeFileUpload()
+		c. makeCopyPasteInput()
+	2. submitButton()
+	3. infoSection()
+Data parsing:
+	1. parseTabDelimitedData()
+Phenotree parsing:
+	1. parseConfig()
 
-d:{}
+obj:{ data:[ {terms} ] }
 
 
 Documentation: https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit
 */
 
-export function init_dictionaryUI(holder) {
+export function init_dictionaryUI(holder, debugmode) {
 	const wrapper = holder
 		.append('div')
 		.style('display', 'grid')
@@ -35,22 +46,22 @@ export function init_dictionaryUI(holder) {
 		.style('place-items', 'center left')
 		.style('overflow', 'hidden')
 
-	const d = {}
+	const obj = {}
 
 	//Data dictionary entry
 	uiutils.makePrompt(wrapper, 'Data Dictionary')
 	const tabs_div = wrapper.append('div')
-	makeDataEntryTabs(tabs_div, d)
+	makeDataEntryTabs(holder, tabs_div, obj)
 
 	//Submit button and information section
-	submitButton(wrapper, d, holder)
+	submitButton(wrapper, obj, holder)
 	infoSection(wrapper)
 
 	//Remove after testing
-	window.doms = d
+	if (debugmode) window.doms = obj
 }
 
-function makeDataEntryTabs(tabs_div, d) {
+function makeDataEntryTabs(holder, tabs_div, obj) {
 	const tabs = [
 		{
 			label: 'File Path',
@@ -69,9 +80,9 @@ function makeDataEntryTabs(tabs_div, d) {
 						.style('margin-left', '15px')
 					appear(div)
 					uiutils.makePrompt(files_div, 'Filepath')
-					makeTextEntryFilePathInput(files_div, d)
+					makeTextEntryFilePathInput(holder, files_div, obj)
 					uiutils.makePrompt(files_div, 'Upload')
-					makeFileUpload(files_div, d)
+					makeFileUpload(holder, files_div, obj)
 					tabs[0].rendered = true
 				}
 			}
@@ -85,7 +96,7 @@ function makeDataEntryTabs(tabs_div, d) {
 						.append('div')
 						.html(`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary in a tab delimited format.</p>`)
 					appear(div)
-					makeCopyPasteInput(div, d)
+					makeCopyPasteInput(holder, div, obj)
 					tabs[1].rendered = true
 				}
 			}
@@ -94,7 +105,7 @@ function makeDataEntryTabs(tabs_div, d) {
 	init_tabs({ holder: tabs_div, tabs })
 }
 
-function makeTextEntryFilePathInput(div, d) {
+function makeTextEntryFilePathInput(holder, div, obj) {
 	const filepath_div = div.append('div').style('display', 'inline-block')
 	const filepath = uiutils
 		.makeTextInput(filepath_div)
@@ -105,7 +116,7 @@ function makeTextEntryFilePathInput(div, d) {
 				fetch(data)
 					.then(req => req.text())
 					.then(txt => {
-						d.data = parseTabDelimitedData(txt)
+						obj.data = parseTabDelimitedData(holder, txt)
 					})
 			} else {
 				//TODO: implement serverside filepaths(?)
@@ -113,231 +124,173 @@ function makeTextEntryFilePathInput(div, d) {
 		})
 }
 
-function makeFileUpload(div, d) {
+function makeFileUpload(holder, div, obj) {
 	const upload_div = div.append('div').style('display', 'block')
 	const upload = uiutils.makeFileUpload(upload_div)
 	upload.on('change', () => {
 		const file = d3event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
-			d.data = parseTabDelimitedData(event.target.result)
+			obj.data = parseTabDelimitedData(holder, event.target.result)
 		}
 		reader.readAsText(file, 'utf8')
 	})
 }
 
-function makeCopyPasteInput(div, d) {
+function makeCopyPasteInput(holder, div, obj) {
 	const paste_div = div.append('div').style('display', 'block')
 	const paste = uiutils
 		.makeTextAreaInput(paste_div)
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.on('keyup', async () => {
-			d.data = parseTabDelimitedData(paste.property('value').trim())
+			obj.data = parseTabDelimitedData(holder, paste.property('value').trim())
 		})
 }
-//TODO: Better place for these?
-const name2id = new Map()
-/* 
-	key: term name
-	value: id
-*/
-const term2term = new Map()
-/* 
-	key: id
-	value(s): Set(['child id', 'child id', ...])
-*/
-const child2parents = new Map()
-/* ancestry
-	key: child
-	value(s): Map({ parent id, order }, { parent id, order }, ...)
-*/
-const root_id = '__root' //placeholder
-const ch2immediateP = new Map()
-/* 
-	key: child id
-	value: parent id
-*/
-const p2childorder = new Map()
-p2childorder.set(root_id, [])
-const allterms_byorder = new Set()
 
 //Parse tab delimited files only
-function parseTabDelimitedData(input) {
-	const lines = input.trim().split(/\r?\n/)
-
+export function parseTabDelimitedData(holder, input) {
 	/* 
     Parses phenotree:
-        - Parses tab delim data arranged in cols: levels(n), Key(i.e. Variable name), Configuration (i.e. Variable note).
-		- Only the key and configuration cols are required
+        - Parses tab delim data arranged in cols: levels(n), ID (i.e. Variable name), Configuration (i.e. Variable note).
+		- Only the ID and configuration cols are required
 		- Not using uncomputable values in this iteration
+		- Blank and '-' values for levels converted to null -- how to distinguish between no id vs no hierarchy??
 		- Assumptions:
 			1. Headers required. 'Variable name', 'Variable note' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
-			2. Levels are defined left to right and in order, no gaps.
+			2. Levels are defined left to right, highest to lowest, and in order, no gaps.
 			3. No blanks or '-' between levels as well as no duplicate values in the same line.
 			4. No identical term ids (keys)
 			5. All non-leaf names/ids must be unique. 
     */
-	const terms = {
-		__root: {
-			id: 'root',
-			name: 'root',
-			__tree_isroot: true
-		}
+
+	const lines = input.trim().split(/\r?\n/)
+
+	// process the header line
+	// could have used lines.shift() here, but will want to track actual line numbers later for errors
+	const header = lines[0].split('\t')
+	const varNameIndex = header.findIndex(l => l.toLowerCase().includes('variable name'))
+	if (varNameIndex == -1) {
+		sayerror(holder, `Missing required 'Variable Name' header`)
 	}
-	const keys = [] //To check for duplicate values later
 
-	let keyIndex,
-		configIndex,
-		colsIndexes = []
+	const configIndex = header.findIndex(l => l.toLowerCase().includes('variable note'))
+	if (configIndex == -1) {
+		sayerror(holder, `Missing required 'Variable Note' header`)
+	}
 
-	for (const i in lines) {
-		let line = lines[i].split('\t')
-		if (i == 0) {
-			//Find arrays for parsing logic from headers
-			keyIndex = line.findIndex(l => l.match('Variable Name'))
-			if (!keyIndex == -1) throw `Missing required 'Variable Name' column`
-			configIndex = line.findIndex(l => l.match('Variable Note'))
-			if (configIndex == -1) throw `Missing required 'Variable Note' column`
-			//If no level col(s) provided, use key/Variable name col as single level. Will print id as name.
-			if (line.findIndex(l => l.match('Level_')) == -1) colsIndexes.push(keyIndex)
-			else {
-				//Push level index to array for parsing
-				for (let idx in line) {
-					if (line[idx].match('Level_')) colsIndexes.push(idx)
-				}
-			}
-		}
+	if (configIndex == -1 || varNameIndex == -1) {
+		throw `invalid header` // informative error message is already displayed using sayerror
+	}
+
+	const levelColIndexes = header.map((c, i) => (c.toLowerCase().includes('level_') ? i : -1)).filter(i => i != -1)
+	//If no level cols provided, use key/Variable name col as single level. Will print the id as name
+	if (!levelColIndexes.length) levelColIndexes.push(varNameIndex)
+
+	// caching and/or tracking variables
+	const terms = {}
+	const termNameToId = {}
+	const parentTermNames = new Set()
+
+	for (const [i, line] of lines.entries()) {
+		if (i === 0) continue
+		const lineNum = i + 1
+
 		try {
-			if (i > 0) {
-				//Skip header
-				/******* Parse lines for term values *******/
-				if (!line[configIndex] || !line[configIndex].trim()) {
-					console.error('Missing configuration string, line: ' + (Number(i) + 1) + ', term: ' + line[keyIndex])
-					continue
-				}
-				let colNames = [] //capture str value of all 'level' cols
-				for (const c in colsIndexes) {
-					const col = str2level(line[c])
-					colNames.push(col)
-				}
-				// console.log(colNames)
-
-				let configstr = line[configIndex].replace('"', '').trim()
-				const leafIdx = check4MisplacedNulls(colNames, i)
-				const name = getName(colNames)
-
-				// if key missing, use name
-				let key = line[keyIndex] ? line[keyIndex].trim() : ''
-				if (!key) key = name
-
-				//pushes user provided variable names and derived values to check
-				keys.push(key)
-
-				//Parses configuration col into term.type, term.values, and term.groupsetting
-				const term = parseConfig(configstr)
-
-				/******* Parse for hierarchy *******/
-				const filteredCols = filterCols(colNames)
-				createHierarchy(leafIdx, filteredCols, key)
-
-				/******* Create terms *******/
-				for (const [k, v] of p2childorder.entries()) {
-					if (k == '__root') continue
-					if (!terms[k]) {
-						terms[k] = {
-							id: k,
-							name: k,
-							isleaf: false,
-							parent_id: ch2immediateP.get(k) || null
-						}
-						keys.push(k)
-					}
-				}
-
-				terms[key] = {
-					id: key,
-					name,
-					parent_id: ch2immediateP.get(key),
-					isleaf: !term2term.has(key),
-					type: term.type,
-					values: term.values,
-					groupsetting: term.groupsetting
-				}
+			const cols = line.split('\t')
+			const levelNames = levelColIndexes.map(i => cols[i].trim().replace(/"/g, '')).filter(c => c != '-')
+			if (levelNames.length != new Set(levelNames).size) {
+				sayerror(holder, `Non-unique levels in line ${lineNum}: ${JSON.stringify(levelNames)}`)
+				continue
 			}
+
+			const name = levelNames.pop()
+			const firstDashIndex = cols.indexOf('-')
+			if (firstDashIndex != -1 && firstDashIndex < cols.indexOf(name)) {
+				sayerror(holder, `Blank or '-' value detected between levels in line ${lineNum}`)
+				continue
+			}
+
+			const term = parseConfig(holder, lineNum, cols[configIndex], name)
+			if (!term) continue
+			// error handled in parseConfig()
+			else if (!Object.keys(term).length) {
+				// is it possible to have an empty term?
+				sayerror(holder, `Error: empty config column for term.id='${name}'.`)
+				continue
+			}
+
+			const id = cols[varNameIndex] || name
+			if (id in terms) {
+				console.log(215, id)
+				const orig = terms[id]
+				sayerror(holder, `Error: Multiple config rows for term.id='${id}': lines# ${orig.lineNum} and ${lineNum}`)
+				continue
+			}
+
+			//Create term object
+			terms[id] = {
+				id,
+				name,
+				type: term.type,
+				values: term.values,
+				groupsetting: term.groupsetting,
+				//isleaf: to be assigned later
+
+				// *** temporary attributes to be deleted later ***
+				ancestry: levelNames.slice(), // to be deleted later, used to fill in missing terms
+				parent_name: levelNames.pop() || null, // will change this later to parent_id
+				lineNum // to be deleted later
+			}
+
+			termNameToId[name] = id
+			parentTermNames.add(terms[id].parent_name)
 		} catch (e) {
-			throw 'Line ' + (Number(i) + 1) + ' error: ' + e
+			throw `Line ${lineNum} error: ${e}`
 		}
 	}
 
-	check4DuplicateValues(keys) //Checks all duplicate term.ids/keys for duplicates
+	// some parent term levels may not have entries
+	trackMissingTerms(termNameToId, terms, parentTermNames, holder)
 
-	// console.log(name2id)
-	// console.log(allterms_byorder)
-	// console.log(264, term2term)
-	// console.log(265, ch2immediateP)
-	// console.log(266, child2parents)
-	// console.log(267, p2childorder)
-	// console.log(allterms_byorder.size + ' terms in total')
-	console.log({ terms: Object.values(terms) })
+	for (const id in terms) {
+		const term = terms[id]
+		term.isleaf = !parentTermNames.has(term.name)
+		term.parent_id = termNameToId[term.parent_name] || null
+		delete term.parent_name
+		delete term.lineNum
+		//term.ancestry = term.ancestry.map(name => termNameToId[name]).filter(d=>!!d)
+		delete term.ancestry
+	}
+
+	//console.log(terms)
 	return { terms: Object.values(terms) }
 }
 
 /*
  **** Parsing Functions for Phenotree ****
  */
-function str2level(col) {
-	// parses columns and returns name
-	const tmp = col.trim().replace(/"/g, '')
-	if (!tmp || tmp == '-') return null
-	return tmp
-}
 
-function check4MisplacedNulls(colArray, i) {
-	// Check for blanks or '-' between levels
-	const nullIndex = colArray.indexOf(null) //find first index of null
-	function revArray(arr) {
-		let copy = [...arr]
-		return copy.reverse()
-	}
-	//find last index of non-null level value
-	const lastLevelIndex = colArray.length - 1 - revArray(colArray).findIndex(e => e !== null)
-	//TODO: Print error to the screen
-	if (lastLevelIndex > nullIndex && nullIndex >= 0)
-		throw `Blank or '-' value detected between levels in line ` + (Number(i) + 1)
-
-	return lastLevelIndex //Use later for leaflevel
-}
-
-function getName(colArray) {
-	//finds last name in the array and returns as name
-	const ca = filterCols(colArray)
-
-	//checks for duplicates in the resulting array
-	check4DuplicateValues(ca)
-	if (ca.length > 0) return ca[ca.length - 1]
-	throw 'name missing'
-}
-
-function filterCols(colArray) {
-	//filters null strings to return only string level inputs
-	const ca = colArray.filter(x => x !== null)
-	return ca
-}
-
-function parseConfig(str) {
+function parseConfig(holder, lineNum, str, varName) {
 	//NOT using uncomputable values in this iteration
 	// const uncomputable_categories = new Set(['-994', '-995', '-996', '-997', '-998', '-999'])
+
+	const configStr = str.replace('"', '').trim()
+	if (!configStr) {
+		sayerror(holder, `Missing Variable Note string, line=${lineNum}, term='${varName}'`)
+		return
+	}
+
 	const term = {}
 
-	if (str == 'string') {
+	if (configStr == 'string') {
 		// Not relevant yet: is categorical term without predefined categories, need to collect from matrix, no further validation
 		term.type = 'categorical'
 		term.values = {}
 		// Not relevant yet: list of categories not provided in configstr so need to sum it up from matrix
 		term._set = new Set() // temp
 	} else {
-		const line = str.replace('"', '').split(';')
+		const line = configStr.replace('"', '').split(';')
 		const config = line[0].trim() //1st field defines term.type
 		if (config == 'integer') {
 			term.type = 'integer'
@@ -352,18 +305,22 @@ function parseConfig(str) {
 				//ignore
 			} else {
 				const [key, value] = config.split(/(?<!\>|\<)=/)
-				if (!value) throw 'first field is not integer/float/string, and not k=v: ' + config
+				if (!value)
+					sayerror(
+						holder,
+						`Variable note is not an integer/float/string and not k=v. line=${lineNum} variable note='${config}'`
+					)
 				term.values[key] = { label: value }
 			}
 		}
 
-		for (let i in line) {
+		for (let i = 0; i < line.length; i++) {
 			if (i > 0) {
 				//Skip type, defined above
 				const field = line[i].trim()
 				if (field == '') continue
 				const [key, value] = field.split(/(?<!\>|\<)=/)
-				if (!value) throw 'field ' + (Number(i) + 1) + ' is not k=v: ' + field
+				if (!value) sayerror(holder, 'field ' + (i + 1) + ' is not k=v: ' + field)
 				if (!term.values) term.values = {}
 				term.values[key] = { label: value }
 			}
@@ -386,89 +343,62 @@ function parseConfig(str) {
 	return term
 }
 
-function createHierarchy(leafIdx, filteredCols, key) {
-	for (const fc in filteredCols) {
-		let id
-		if (fc == leafIdx) {
-			id = key
-			name2id.set(filteredCols[fc], id)
-		} else {
-			id = filteredCols[fc]
-		}
-		//find id for parent immediate level
-		const levelUpId = filteredCols[Number(fc) - 1]
-
-		if (fc != 0) {
-			term2term.get(levelUpId).add(id)
-			if (!child2parents.has(id)) child2parents.set(id, new Map())
-			for (const y in filteredCols) {
-				if (y < fc) {
-					child2parents.get(id).set(filteredCols[y], y)
+function trackMissingTerms(termNameToId, terms, parentTermNames, holder) {
+	for (const id in terms) {
+		const term = terms[id]
+		for (const [i, name] of term.ancestry.entries()) {
+			if (name in termNameToId) {
+				// a tsv line was already processed for this term
+				const id = termNameToId[name]
+				const ancestor = terms[id]
+				/* if this term's ancestor has no level above it, previous processing of this ancestor
+				should also not have a term parent,
+				OR if this ancestor another level above it,
+				check that it is the same parent_term as previousy processed */
+				if ((i - 1 < 0 && ancestor.parent_name) || ancestor.parent_name != term.ancestry[i - 1]) {
+					sayerror(
+						holder,
+						`Different parents for term=${name}, '${term.ancestry[i - 1]}' and '${ancestor.parent_name}'`
+					)
 				}
+				continue
 			}
-			ch2immediateP.set(id, levelUpId)
-			if (!p2childorder.has(levelUpId)) p2childorder.set(levelUpId, []) //Why is this needed when there's term2term?
-			if (p2childorder.get(levelUpId).indexOf(id) == -1) p2childorder.get(levelUpId).push(id)
-		} else {
-			ch2immediateP.set(id, null)
-			if (p2childorder.get(root_id).indexOf(id) == -1) p2childorder.get(root_id).push(id)
-		}
 
-		if (!term2term.has(id) && fc != leafIdx) {
-			term2term.set(id, new Set())
-		}
-		allterms_byorder.add(id)
-	}
-}
+			terms[name] = {
+				id: name,
+				name,
+				isleaf: false,
+				ancestry: term.ancestry.slice(0, i)
+			}
 
-/*
- **** Helpers ****
- */
-
-function check4DuplicateValues(values) {
-	const duplicates = new Set()
-	for (const i in values) {
-		if (values.indexOf(values[i]) !== values.lastIndexOf(values[i])) {
-			duplicates.add(values[i])
+			terms[name].parent_name = terms[name].ancestry.slice(-1)[0] || null
+			termNameToId[name] = name
+			parentTermNames.add(name)
 		}
 	}
-	if (duplicates.size > 0) {
-		const dup = Array.from(duplicates)
-		throw `Error: Nonunique values(s) found: ` + dup + `. Values must be unique.` //TODO print to screen
-	}
-	return true
 }
 
 /*
  **** Submission Functions ****
  */
 
-function submitButton(div, d, holder) {
+function submitButton(div, obj, holder) {
 	const submit = uiutils.makeBtn(div, 'Submit')
 	submit
 		.style('margin', '20px 20px 20px 130px')
 		.style('font-size', '16px')
 		.on('click', () => {
-			validateInput(div, d)
 			div.remove()
-			console.log(449, d.data.terms)
+			console.log(449, obj.data.terms)
 			appInit({
 				holder: holder,
 				state: {
 					vocab: {
-						terms: d.data.terms
+						terms: obj.data.terms
 					}
 				}
 			})
 		})
-}
-
-function validateInput(div, d) {
-	//May not be needed?
-	if (!d.data) {
-		// alert('Provide data')
-		return null
-	}
 }
 
 function infoSection(div) {
@@ -484,13 +414,4 @@ function infoSection(div) {
                     Please see the <a href="https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit" target="_blank">documentation</a> for more information.
                 </li>
             </ul>`)
-}
-//TODO print data submission errors to the viewport rather than alerts
-function makeErrorDiv(div) {
-	div
-		.append('div')
-		.style('margin', '10px')
-		.style('opacity', '0.65')
-		.style('grid-column', 'span 2')
-		.html(`<h3>Errors found</h3>`)
 }
