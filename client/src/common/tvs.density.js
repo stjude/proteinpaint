@@ -87,19 +87,19 @@ function applyBrush(self, elem, brush) {
 			brush.start_input
 				.style('color', a_range.start == range.start ? '#000' : '#23cba7')
 				.style('display', similarRanges ? 'none' : 'inline-block')
-			brush.start_input.node().value = range.start == minvalue.toFixed(1) ? '' : range.start
+			brush.start_input.node().value = range.startunbounded ? '' : range.start
 
 			brush.stop_input
 				.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
 				.style('display', similarRanges ? 'none' : 'inline-block')
-			brush.stop_input.node().value = range.stop == maxvalue.toFixed(1) ? '' : range.stop
+			brush.stop_input.node().value = range.stopunbounded ? '' : range.stop
 
 			brush.start_select
 				.style('display', similarRanges ? 'none' : 'inline-block')
-				.property('selectedIndex', range.start == minvalue.toFixed(1) ? 2 : range.startinclusive ? 0 : 1)
+				.property('selectedIndex', range.startunbounded ? 2 : range.startinclusive ? 0 : 1)
 			brush.stop_select
 				.style('display', similarRanges ? 'none' : 'inline-block')
-				.property('selectedIndex', range.stop == maxvalue.toFixed(1) ? 2 : range.stopinclusive ? 0 : 1)
+				.property('selectedIndex', range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1)
 
 			//update 'edit', 'apply' and 'reset' buttons based on brush change
 			brush.edit_btn.style(
