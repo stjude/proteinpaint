@@ -301,7 +301,7 @@ makeURL([
 							id: 'anthracyclines_jco_5',
 							q: {
 								mode:'discrete',
-								type:'custom',
+								type:'custom-bin',
 								lst:[
 									{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
 									// FIXME no need to define startinclusive
@@ -502,7 +502,7 @@ makeURL([
 					id: 'LV_Ejection_Fraction_3D',
 					q: {
 						"mode":"binary",
-						"type":"custom",
+						"type":"custom-bin",
 						"lst":[
 							{"startunbounded":true,"stopinclusive":true,"stop":57.8,"label":"≤57.8"},
 							{"stopunbounded":true,"startinclusive":false,"start":57.8,"label":">57.8"}
@@ -540,7 +540,7 @@ makeURL([
 						id:"chestrt_yn",
 						q: {
 							mode:'discrete',
-							type:'custom',
+							type:'custom-bin',
 							lst:[
 								{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
 								// FIXME no need to define startinclusive
@@ -585,7 +585,7 @@ makeURL([
 					{id:'agelastvisit'},
 					{id:'chestrt_yn',
 						q: {
-							"type": "custom",
+							"type": "custom-bin",
 							"lst": [
 								{
 									"startunbounded": true,
