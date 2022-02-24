@@ -1,7 +1,7 @@
 import { event as d3event } from 'd3-selection'
 import { setDensityPlot } from './termsetting.density'
 import { renderBoundaryInclusionInput, renderBoundaryInputDivs } from './termsetting.numeric.discrete'
-import { get_bin_label } from '../../shared/termdb.bins'
+import { get_bin_label, get_bin_range_equation } from '../../shared/termdb.bins'
 import { keyupEnter } from '../client'
 import { make_one_checkbox } from '../dom/checkbox'
 import { getPillNameDefault } from './termsetting'
@@ -61,17 +61,26 @@ export function getHandler(self) {
 			self.dom.cutoff_div = self.dom.bins_div.append('div').style('margin', '10px')
 			renderCuttoffInput(self)
 
-			// render bin labels
-			self.dom.bins_div
+			// render bin equations
+			const ranges_div = self.dom.bins_div.append('div').style('display', 'inline-block')
+			ranges_div
 				.append('div')
 				.style('padding', '5px')
-				.style('margin', '5px')
+				.style('padding-left', '15px')
+				.style('font-size', '.8em')
+				.style('color', 'rgb(136, 136, 136)')
+				.html('Range')
+			self.dom.customBinRangeTd = ranges_div.append('div').style('padding', '5px')
+
+			// render bin labels
+			const labels_div = self.dom.bins_div.append('div').style('display', 'inline-block')
+			labels_div
+				.append('div')
+				.style('padding', '5px 8px')
+				.style('font-size', '.8em')
 				.style('color', 'rgb(136, 136, 136)')
 				.html('Bin labels')
-			self.dom.customBinLabelTd = self.dom.bins_div
-				.append('div')
-				.style('padding', '5px')
-				.style('margin', '5px')
+			self.dom.customBinLabelDiv = labels_div.append('div').style('padding', '5px')
 			renderBoundaryInputDivs(self, self.q.lst)
 
 			const btndiv = div.append('div').style('padding', '3px 10px')
@@ -148,6 +157,7 @@ function setqDefaults(self) {
 	if (self.q.lst) {
 		self.q.lst.forEach(bin => {
 			if (!('label' in bin)) bin.label = get_bin_label(bin, self.q)
+			if (!('range' in bin)) bin.range = get_bin_range_equation(bin, self.q)
 		})
 	}
 	//*** validate self.q ***//
@@ -234,7 +244,7 @@ async function renderCuttoffInput(self) {
 function processCustomBinInputs(self) {
 	const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
-	const inputDivs = self.dom.customBinLabelTd.node().querySelectorAll('div')
+	const inputDivs = self.dom.customBinLabelDiv.node().querySelectorAll('div')
 	let prevBin
 	const val = self.q.lst[0].stop // should not get value from dom.customBinBoundaryInput as value can be percentile
 
