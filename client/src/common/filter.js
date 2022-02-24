@@ -119,7 +119,7 @@ class Filter {
 		// and associating updated data copy to
 		// the currently bound data
 		if (!('$id' in item)) item.$id = this.lastId++
-		else if (this.lastId < item.$id) this.lastId = item.$id + 1
+		else if (this.lastId <= item.$id) this.lastId = item.$id + 1
 
 		if (!('type' in item)) throw 'missing filter.type'
 		if (item.type != 'tvs' && item.type != 'tvslst') throw 'invalid filter.type'
@@ -477,10 +477,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_filter_paren_open')
 			.html('(')
-			.style(
-				'display',
-				self.opts.joinWith.length < 2 || (filter.$id === self.filter.$id && filter.in) ? 'none' : 'inline-block'
-			)
+			.style('display', 'none')
 			.style('padding', '0 5px')
 			.style('font-weight', 500)
 			.style('font-size', '24px')
@@ -524,14 +521,22 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_paren_close')
 			.style('padding', '0 5px')
 			.html(')')
-			.style(
-				'display',
-				self.opts.joinWith.length < 2 || (filter.$id === self.filter.$id && filter.in) ? 'none' : 'inline'
-			)
+			.style('display', 'none')
 			.style('font-weight', 500)
 			.style('font-size', '24px')
 			.style('cursor', 'pointer')
 			.on('click', self.displayControlsMenu)
+
+		select(this)
+			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
+			.style(
+				'display',
+				self.opts.joinWith.length < 2 || data.length < 2
+					? 'none'
+					: !filter.in || (data.length > 1 && filter.tag != 'filterUiRoot')
+					? 'inline-block'
+					: 'none'
+			)
 	}
 
 	self.updateGrp = function(item, i) {
@@ -542,11 +547,14 @@ function setRenderers(self) {
 			.style('display', filter.in ? 'none' : 'inline-block')
 
 		const data = item.type == 'tvslst' ? item.lst : [item]
+
 		select(this)
 			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
 			.style(
 				'display',
-				self.opts.joinWith.length > 1 && (filter.$id !== self.filter.$id || !filter.in) && data.length > 1
+				self.opts.joinWith.length < 2 || data.length < 2
+					? 'none'
+					: !filter.in || (data.length > 1 && filter.tag != 'filterUiRoot')
 					? 'inline-block'
 					: 'none'
 			)
