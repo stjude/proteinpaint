@@ -51,21 +51,18 @@ export function getHandler(self) {
 
 		async showEditMenu(div) {
 			await makeEditMenu(self, div)
-		},
+		}
 
-		/* cache file contains all samples,
+		/* no need for postMain()
+		cache file contains all samples,
 		variants in a cache file is only determined by locus range and info fields
-		although no need to regenerate cache file upon subcohort or filter change,
-		still need it for a specific case
-		when snplocus genome browser in regression result is panned/zoomed
-		it calls pill.main() to propagate the updated locus range to self.q.chr/start/stop
-		and must rely on postMain to trigger validateInput to regenerate cache to update variants
-		*/
+		thus no need to regenerate cache file upon subcohort or filter change via pill.main()
 		async postMain() {
 			if (self.q && self.q.chr) {
 				await validateInput(self)
 			}
 		}
+		*/
 	}
 }
 
