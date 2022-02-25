@@ -48,7 +48,7 @@ exports.termjson = {
 		type: 'float',
 		bins: {
 			default: {
-				type: 'regular',
+				type: 'regular-bin',
 				bin_size: 3,
 				stopinclusive: true,
 				first_bin: {
@@ -58,7 +58,7 @@ exports.termjson = {
 				}
 			},
 			less: {
-				type: 'regular',
+				type: 'regular-bin',
 				bin_size: 5,
 				stopinclusive: true,
 				first_bin: {
@@ -127,7 +127,7 @@ exports.termjson = {
 		type: 'float',
 		bins: {
 			default: {
-				type: 'regular',
+				type: 'regular-bin',
 				bin_size: 1000,
 				stopinclusive: true,
 				first_bin: {
@@ -141,7 +141,7 @@ exports.termjson = {
 				}
 			},
 			less: {
-				type: 'regular',
+				type: 'regular-bin',
 				bin_size: 2000,
 				stopinclusive: true,
 				first_bin: {

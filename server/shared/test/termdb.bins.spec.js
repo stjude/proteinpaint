@@ -40,7 +40,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('compute_bins() error handling, type=regular', function(test) {
+tape('compute_bins() error handling, type=regular-bin', function(test) {
 	tryBin(test, null, 'should throw on empty config', 'bin schema must be an object')
 
 	tryBin(test, {}, 'should throw on missing bin_size', 'non-numeric bin_size')
@@ -75,16 +75,16 @@ tape('compute_bins() error handling, type=regular', function(test) {
 	test.end()
 })
 
-tape('compute_bins() error handling, type=custom', function(test) {
+tape('compute_bins() error handling, type=custom-bin', function(test) {
 	tryBin(test, null, 'should throw on empty config', 'bin schema must be an object')
 
-	tryBin(test, { type: 'custom' }, 'should throw on missing lst', 'binconfig.lst must be an array')
+	tryBin(test, { type: 'custom-bin' }, 'should throw on missing lst', 'binconfig.lst must be an array')
 
-	tryBin(test, { type: 'custom', lst: [] }, 'should throw on empty lst', 'binconfig.lst must have entries')
+	tryBin(test, { type: 'custom-bin', lst: [] }, 'should throw on empty lst', 'binconfig.lst must have entries')
 
 	tryBin(
 		test,
-		{ type: 'custom', lst: [{}] },
+		{ type: 'custom-bin', lst: [{}] },
 		'should throw on missing *inclusive keys',
 		'custom bin.startinclusive and/or bin.stopinclusive must be defined'
 	)
@@ -92,28 +92,28 @@ tape('compute_bins() error handling, type=custom', function(test) {
 	// first bin
 	tryBin(
 		test,
-		{ type: 'custom', lst: [{ startinclusive: 1, startunbounded: false, stop: 3 }] },
+		{ type: 'custom-bin', lst: [{ startinclusive: 1, startunbounded: false, stop: 3 }] },
 		'should throw on a custom first bin having .startunbounded: false',
 		'a custom first bin must not set bin.startunbounded to false'
 	)
 
 	tryBin(
 		test,
-		{ type: 'custom', lst: [{ startinclusive: 1, start: 0, stop: 3 }] },
+		{ type: 'custom-bin', lst: [{ startinclusive: 1, start: 0, stop: 3 }] },
 		'should throw on a custom first bin having .start',
 		'a custom first bin must not set a bin.start value'
 	)
 
 	tryBin(
 		test,
-		{ type: 'custom', lst: [{ startinclusive: 1 }] },
+		{ type: 'custom-bin', lst: [{ startinclusive: 1 }] },
 		'should throw on a missing first bin.start value',
 		'a custom first bin must define a bin.stop value'
 	)
 
 	tryBin(
 		test,
-		{ type: 'custom', lst: [{ startinclusive: 1, stop: 'abc' }] },
+		{ type: 'custom-bin', lst: [{ startinclusive: 1, stop: 'abc' }] },
 		'should throw on non-numeric stop value for a first bin',
 		'a custom first bin.stop value should be numeric'
 	)
@@ -121,7 +121,7 @@ tape('compute_bins() error handling, type=custom', function(test) {
 	// last bin
 	tryBin(
 		test,
-		{ type: 'custom', lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1 }] },
+		{ type: 'custom-bin', lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1 }] },
 		'should throw on a missing last bin.start value',
 		'a custom last bin must define a bin.start value'
 	)
@@ -129,7 +129,7 @@ tape('compute_bins() error handling, type=custom', function(test) {
 	tryBin(
 		test,
 		{
-			type: 'custom',
+			type: 'custom-bin',
 			lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1, start: 'abc' }]
 		},
 		'should throw on non-numeric start for a bounded last bin',
@@ -139,7 +139,7 @@ tape('compute_bins() error handling, type=custom', function(test) {
 	tryBin(
 		test,
 		{
-			type: 'custom',
+			type: 'custom-bin',
 			lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1, start: 3, stop: 6 }]
 		},
 		'should throw on a custom last bin having a .stop value',
@@ -148,7 +148,10 @@ tape('compute_bins() error handling, type=custom', function(test) {
 
 	tryBin(
 		test,
-		{ type: 'custom', lst: [{ startinclusive: 1, stop: 3 }, { startinclusive: 1, start: 3, stopunbounded: false }] },
+		{
+			type: 'custom-bin',
+			lst: [{ startinclusive: 1, stop: 3 }, { startinclusive: 1, start: 3, stopunbounded: false }]
+		},
 		'should throw on a custom last bin having .stopunbounded: false',
 		'a custom last bin must not set bin.stopunbounded to false'
 	)
@@ -157,7 +160,7 @@ tape('compute_bins() error handling, type=custom', function(test) {
 	tryBin(
 		test,
 		{
-			type: 'custom',
+			type: 'custom-bin',
 			lst: [{ startinclusive: 1, stop: 2 }, { startinclusive: 1, stop: 6 }, { startinclusive: 1, start: 7 }]
 		},
 		'should throw on a non-numeric middle bin.start value',
@@ -167,7 +170,7 @@ tape('compute_bins() error handling, type=custom', function(test) {
 	tryBin(
 		test,
 		{
-			type: 'custom',
+			type: 'custom-bin',
 			lst: [
 				{ startinclusive: 1, stop: 2 },
 				{ startinclusive: 1, start: 2, stop: 'abc' },
@@ -395,7 +398,7 @@ tape('get_bin_label(), last bin start === stop', test => {
 	test.end()
 })
 
-tape('get_bin_label(), force label_offset == 1', function (test) {
+tape('get_bin_label(), force label_offset == 1', function(test) {
 	const binconfig = {
 		termtype: 'integer',
 		bin_size: 1,
@@ -409,9 +412,17 @@ tape('get_bin_label(), force label_offset == 1', function (test) {
 		}
 	}
 
-	test.equal(b.get_bin_label({ start: 1, stop: 2 }, binconfig), '1', 'should force label_offset=1 when type=="integer" && bin_size=1')
+	test.equal(
+		b.get_bin_label({ start: 1, stop: 2 }, binconfig),
+		'1',
+		'should force label_offset=1 when type=="integer" && bin_size=1'
+	)
 	binconfig.termtype = 'float'
-	test.equal(b.get_bin_label({ start: 1, stop: 2 }, binconfig), '1', 'should NOT force label_offset=1 when type=="float" && bin_size=1')
+	test.equal(
+		b.get_bin_label({ start: 1, stop: 2 }, binconfig),
+		'1',
+		'should NOT force label_offset=1 when type=="float" && bin_size=1'
+	)
 	test.end()
 })
 
@@ -631,7 +642,7 @@ tape('compute_bins() percentile', function(test) {
 tape('compute_bins() wgs_sample_age', function(test) {
 	const stop = 17.1834269032
 	const binconfig = {
-		type: 'regular',
+		type: 'regular-bin',
 		bin_size: 13,
 		label_offset: 1,
 		startinclusive: true,
@@ -653,7 +664,7 @@ tape('compute_bins() wgs_sample_age', function(test) {
 
 tape('compute_bins() custom', function(test) {
 	const binconfig = {
-		type: 'custom',
+		type: 'custom-bin',
 		lst: [
 			{
 				startunbounded: true,

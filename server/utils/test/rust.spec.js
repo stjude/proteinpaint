@@ -8,13 +8,13 @@ tape('indel', async test => {
 		const result = await utils.run_rust('indel', input)
 		const expected = `indel_length:2\noriginal_indel_length:1\nRight side is repeating\noptimized_variant_pos:16463\nref_allele:A\nalt_allele:AC\noptimized_ref_allele:ACCCT\noptimized_alt_allele:ACCCCT\nleft_offset:0\nright_offset:6\nref_alt_same_base_start:1\nFound duplicate kmers status (from Rust):1\nFinal kmer length (from Rust):21\nalt_kmers_weight:1847.999999999992\nref_kmers_weight:1538.9999999999955\nNumber of reads analyzed: 10\nstrand_probability:0.00\noutput_cat:"none:ref:none:ref:none:ref:ref:ref:ref:ref"\noutput_gID:"0:1:2:3:4:5:6:7:8:9"\noutput_diff_scores:"-0.14396440548640266:-0.550906505485699:-0.14689837641792725:-1.1781787567004194:-0.11007011598228095:-1.1781787567004194:-1.151344535099165:-0.3102504569389948:-0.6385227288206152:-0.812984004621357"\n`
 		test.equal(result, expected, message)
-		test.end()
 	} catch (e) {
 		test.fail(message + ': ' + e)
 	}
+	test.end()
 })
 
-tape('align', async test => {
+tape.skip('align', async test => {
 	const message = 'should match the expected align output'
 	try {
 		const input =
@@ -22,8 +22,8 @@ tape('align', async test => {
 		const result = await utils.run_rust('align', input)
 		const expected = `q_seq_ref:CTCCCAGTGGCTCCCCAGAGGGGCCAAGCTGAAGTTCGGGCTAAGGCCGGGCAGGCTCGAGTGAAACAG-------------------------------TGTGGCAGCCAGATGATGTGACGGAATCTCT\nalign_ref:|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||                               *||||||||||||||||||||||||||||||\nr_seq_ref:CTCCCAGTGGCTCCCCAGAGGGGCCAAGCTGAAGTTCGGGCTAAGGCCGGGCAGGCTCGAGTGAAACAGGAAAGCGTAGGGGTCTTTGCTTGCAAGAACAAGTGGCAGCCAGATGATGTGACGGAATCTCT\nq_seq_alt:CTCCCAGTGGCTCCCCAGAGGGGCCAAGCTGAAGTTCGGGCTAAGGCCGGGCAGGCTCGAGTGAAACAGTGTGGCAGCCAGATGATGTGACGGAATCTCT\nalign_alt:||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||\nr_seq_alt:CTCCCAGTGGCTCCCCAGAGGGGCCAAGCTGAAGTTCGGGCTAAGGCCGGGCAGGCTCGAGTGAAACAGTGTGGCAGCCAGATGATGTGACGGAATCTCT\n`
 		test.equal(result, expected, message)
-		test.end()
 	} catch (e) {
 		test.fail(message + ': ' + e)
 	}
+	test.end()
 })

@@ -15,7 +15,7 @@ tape('integers: round to nearest ones', function(test) {
 	test.deepEqual(
 		output,
 		{
-			type: 'regular',
+			type: 'regular-bin',
 			startinclusive: true,
 			bin_size: 5,
 			first_bin: { stop: 25 }
@@ -31,7 +31,7 @@ tape('integers: round to nearest tens', function(test) {
 	test.deepEqual(
 		output,
 		{
-			type: 'regular',
+			type: 'regular-bin',
 			startinclusive: true,
 			bin_size: 10,
 			first_bin: { stop: 50 }
@@ -47,7 +47,7 @@ tape('integers: round to nearest hundreds', function(test) {
 	test.deepEqual(
 		output,
 		{
-			type: 'regular',
+			type: 'regular-bin',
 			startinclusive: true,
 			bin_size: 100,
 			first_bin: { stop: 300 },
@@ -64,10 +64,10 @@ tape('fractions: round to nearest tenths', function(test) {
 	test.deepEqual(
 		output,
 		{
-			type: 'regular',
+			type: 'regular-bin',
 			startinclusive: true,
-			bin_size: 0.5,
-			first_bin: { stop: 0.5 },
+			bin_size: 0.3,
+			first_bin: { stop: 0.4 },
 			rounding: '.1f'
 		},
 		'should match expected output'
@@ -81,7 +81,7 @@ tape('fractions: round to nearest hundredths', function(test) {
 	test.deepEqual(
 		output,
 		{
-			type: 'regular',
+			type: 'regular-bin',
 			startinclusive: true,
 			bin_size: 0.1,
 			first_bin: { stop: 0.1 },
@@ -99,7 +99,7 @@ tape('floats greater than 1', function(test) {
 	test.deepEqual(
 		output,
 		{
-			type: 'regular',
+			type: 'regular-bin',
 			startinclusive: true,
 			bin_size: 10,
 			first_bin: { stop: 35 }
@@ -115,7 +115,7 @@ tape('negative integers', function(test) {
 	test.deepEqual(
 		output,
 		{
-			type: 'regular',
+			type: 'regular-bin',
 			startinclusive: true,
 			bin_size: 5,
 			first_bin: { stop: -10 }
@@ -131,10 +131,10 @@ tape('negative fractions', function(test) {
 	test.deepEqual(
 		output,
 		{
-			type: 'regular',
+			type: 'regular-bin',
 			startinclusive: true,
-			bin_size: 0.5,
-			first_bin: { stop: -0.5 },
+			bin_size: 0.3,
+			first_bin: { stop: -0.4 },
 			rounding: '.1f'
 		},
 		'should match expected output'
@@ -147,7 +147,7 @@ tape('JSON string output', function(test) {
 	const output = initBinConfig(input, { format: 'string' })
 	test.equal(
 		output,
-		'{"type":"regular","startinclusive":true,"bin_size":5,"first_bin":{"stop":25}}',
+		'{"type":"regular-bin","startinclusive":true,"bin_size":5,"first_bin":{"stop":25}}',
 		'should match expected output'
 	)
 	test.end()
@@ -171,7 +171,7 @@ tape('large test data: integers', function(test) {
 	test.deepEqual(
 		output,
 		{
-			type: 'regular',
+			type: 'regular-bin',
 			startinclusive: true,
 			bin_size: 5,
 			first_bin: { stop: 5 }
@@ -201,7 +201,7 @@ tape('large test data: floats', function(test) {
 	test.deepEqual(
 		output,
 		{
-			type: 'regular',
+			type: 'regular-bin',
 			startinclusive: true,
 			bin_size: 0.5,
 			first_bin: { stop: 0.5 },

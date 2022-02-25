@@ -71,7 +71,7 @@ tape('gene lookup validation', async test => {
 			})
 		}
 		const res = await fetch(`${host}/genelookup`, opts).then(r => r.json())
-		test.equal(res.error, 'invalid input gene character', message)
+		test.equal(res.error, 'invalid character in gene name', message)
 	} catch (e) {
 		test.fail(message + ': ' + e)
 	}
@@ -96,7 +96,7 @@ tape('repeated failed requests', async test => {
 		}
 
 		let error
-		for (i = 0; i < 20; i++) {
+		for (let i = 0; i < 20; i++) {
 			const res = await fetch(`${host}/genelookup`, opts).then(r => r.json())
 			error = res.error
 		}
