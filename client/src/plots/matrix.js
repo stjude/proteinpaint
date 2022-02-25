@@ -31,16 +31,15 @@ class Matrix {
 			termLabelG: mainG.append('g').attr('class', 'sjpp-matrix-term-label-g')
 			//legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
+		this.config = appState.plots.find(p => p.id === this.id)
+		this.settings = Object.assign({}, this.config.settings.matrix)
 		if (this.dom.header) this.dom.header.html('Sample Matrix')
-		// hardcode for now, but may be set as option later
-		this.settings = Object.assign({ h: {}, handlers: {} }, this.opts.settings)
 		await this.setControls(appState)
 
 		this.clusterRenderer = new MatrixCluster({ holder: this.dom.cluster, app: this.app })
 	}
 
 	async setControls(appState) {
-		const config = appState.plots.find(p => p.id === this.id)
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.boxplot', this.download)
 		} else {
@@ -87,6 +86,12 @@ class Matrix {
 							settingsKey: 'colspace'
 						},
 						{
+							label: 'Column label offset',
+							type: 'number',
+							chartType: 'matrix',
+							settingsKey: 'collabelgap'
+						},
+						{
 							label: 'Row height',
 							type: 'number',
 							chartType: 'matrix',
@@ -99,16 +104,10 @@ class Matrix {
 							settingsKey: 'rowspace'
 						},
 						{
-							label: 'Sample label offset',
+							label: 'Row label offset',
 							type: 'number',
 							chartType: 'matrix',
-							settingsKey: 'sampleLabelOffset'
-						},
-						{
-							label: 'Term label offset',
-							type: 'number',
-							chartType: 'matrix',
-							settingsKey: 'termLabelOffset'
+							settingsKey: 'rowlabelgap'
 						}
 					]
 				})
@@ -137,6 +136,7 @@ class Matrix {
 	async main() {
 		try {
 			this.config = this.state.config
+			const prevTranspose = this.settings.transpose
 			Object.assign(this.settings, this.config.settings)
 
 			// get the data
@@ -158,6 +158,8 @@ class Matrix {
 				yGrps: this.layout.rowgrps,
 				dimensions: this.dimensions
 			})
+
+			await this.updateSvgDimensions(prevTranspose)
 		} catch (e) {
 			throw e
 		}
@@ -278,8 +280,16 @@ class Matrix {
 			dy,
 			xOffset,
 			yOffset,
-			svgw: xOffset + nx * dx + this.layout.colgrps.length * s.colgspace + s.margin.right,
-			svgh: yOffset + ny * dy + this.layout.rowgrps.length * s.rowgspace + s.margin.bottom + 100
+			mainw: nx * dx + this.layout.colgrps.length * s.colgspace,
+			mainh: ny * dy + this.layout.rowgrps.length * s.rowgspace,
+			xLabelGap:
+				s.rowlabelpos == 'left'
+					? { row: -s.rowlabelgap, grp: s.rowlabelgap }
+					: { row: s.rowlabelgap, grp: -s.rowlabelgap },
+			yLabelGap:
+				s.collabelpos == 'top'
+					? { col: -s.collabelgap, grp: s.collabelgap }
+					: { col: s.collabelgap, grp: -s.collabelgap }
 		}
 	}
 
@@ -342,12 +352,6 @@ function setRenderers(self) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
-
-		self.dom.svg
-			.transition()
-			.duration(duration)
-			.attr('width', d.svgw)
-			.attr('height', d.svgh)
 
 		self.dom.seriesesG
 			.transition()
@@ -423,12 +427,16 @@ function setRenderers(self) {
 
 	self.renderSeriesLabel = function(series) {
 		const s = self.settings.matrix
+		const d = self.dimensions
 		const g = select(this)
 		const duration = g.attr('transform') ? s.duration : 0
 
 		g.transition()
 			.duration(duration)
-			.attr('transform', !s.transpose ? `translate(${0.7 * s.colw},-5)` : `translate(-5,${s.rowh - 2})`)
+			.attr(
+				'transform',
+				!s.transpose ? `translate(${0.7 * s.colw},${d.yLabelGap.col})` : `translate(${d.xLabelGap.row},${s.rowh - 2})`
+			)
 
 		if (!g.select('text').size()) g.append('text')
 		const text = g.select('text')
@@ -450,8 +458,8 @@ function setRenderers(self) {
 		const g = select(this)
 		const duration = g.attr('transform') ? s.duration : 0
 		const tIndex = t.tIndex + t.prevGrpCount
-		const x = !s.transpose ? -5 : t.grpIndex * s.colgspace + tIndex * d.dx + s.colw / 3
-		const y = !s.transpose ? t.grpIndex * s.rowgspace + tIndex * d.dy + 0.8 * s.rowh : -2
+		const x = !s.transpose ? d.xLabelGap.row : t.grpIndex * s.colgspace + tIndex * d.dx + s.colw / 3
+		const y = !s.transpose ? t.grpIndex * s.rowgspace + tIndex * d.dy + 0.8 * s.rowh : d.yLabelGap.col
 		g.transition()
 			.duration(duration)
 			.attr('transform', `translate(${x},${y})`)
@@ -467,6 +475,56 @@ function setRenderers(self) {
 			.attr('text-anchor', !s.transpose ? 'end' : 'start')
 			.attr('transform', !s.transpose ? '' : `rotate(-90)`)
 			.text(t.tw.term.name)
+	}
+
+	self.updateSvgDimensions = async function(prevTranspose) {
+		const s = self.settings.matrix
+		const d = self.dimensions
+		const duration = self.dom.svg.attr('width') ? s.duration : 0
+
+		// wait for labels to render; when transposing, must wait for
+		// the height and width to be measured after its done
+		await sleep(prevTranspose == s.transpose ? duration : s.duration)
+
+		const sLabelBox = { max: 0, key: !s.transpose ? 'height' : 'width' }
+		self.dom.mainG.selectAll('.sjpp-matrix-series-label-g').each(function() {
+			const bbox = this.getBBox()
+			const measurement = bbox[sLabelBox.key]
+			if (measurement > sLabelBox.max) sLabelBox.max = measurement
+		})
+		const termBox = self.dom.mainG
+			.select('.sjpp-matrix-term-label-g')
+			.node()
+			.getBBox()
+
+		const colGrpLabelBox = self.dom.mainG
+			.select('.sjpp-matrix-colgrplabels')
+			.node()
+			.getBBox()
+		const rowGrpLabelBox = self.dom.mainG
+			.select('.sjpp-matrix-rowgrplabels')
+			.node()
+			.getBBox()
+
+		const xw = !s.transpose ? termBox.width : sLabelBox.max
+		d.extraWidth = rowGrpLabelBox.width + xw + s.margin.left + s.margin.right + s.rowlabelgap * 2
+
+		const yh = !s.transpose ? sLabelBox.max : termBox.height
+		d.extraHeight = colGrpLabelBox.height + yh + s.margin.top + s.margin.bottom + s.collabelgap * 2
+
+		d.svgw = d.mainw + d.extraWidth // d.svgw + self.dom.row self.clusterRenderer  d.xOffset + nx * dx + this.layout.colgrps.length * s.colgspace + s.margin.right,
+		d.svgh = d.mainh + d.extraHeight // d.yOffset + ny * dy + this.layout.rowgrps.length * s.rowgspace + s.margin.bottom + 100
+
+		self.dom.svg
+			.transition()
+			.duration(duration)
+			.attr('width', d.svgw)
+			.attr('height', d.svgh)
+
+		self.dom.mainG
+			.transition()
+			.duration(duration)
+			.attr('transform', `translate(${xw - self.layout.rowOffset},${yh - self.layout.colOffset})`)
 	}
 }
 
@@ -496,12 +554,15 @@ export async function getPlotConfig(opts, app) {
 				collabelpos: 'top', // | 'bottom'
 				collabelvisible: true,
 				colglabelpos: true,
+				collabelgap: 5,
 				rowh: 18,
 				rowspace: 1,
 				rowgspace: 8,
 				rowlabelpos: 'left', // | 'right'
+				rowlabelgap: 5,
 				rowlabelvisible: true,
 				rowglabelpos: true,
+				rowlabelgap: 5,
 				transpose: false,
 				sampleLabelOffset: 120,
 				termLabelOffset: 80,
@@ -519,4 +580,8 @@ export async function getPlotConfig(opts, app) {
 	if (config.divideBy) promises.push(fillTermWrapper(config.divideBy, app.vocabApi))
 	await Promise.all(promises)
 	return config
+}
+
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
 }

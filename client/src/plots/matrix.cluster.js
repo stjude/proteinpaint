@@ -108,13 +108,13 @@ function setRenderers(self) {
 			return c[self.yGrpKey].name === yRef
 		})
 		//console.log(110, yRef, xClusters, clusters, self.currData)
-
-		const gy = d.yOffset + xClusters[0].y + xClusters[0].height + 5
+		const x = d.xOffset + d.xLabelGap.grp
+		const y = d.yOffset + xClusters[0].y + xClusters[0].height + d.yLabelGap.grp
 
 		self.dom.colgrplabels
 			.transition()
 			.duration(self.dom.colgrplabels.attr('transform') ? s.duration : 0)
-			.attr('transform', `translate(${d.xOffset},${gy})`)
+			.attr('transform', `translate(${x},${y})`)
 
 		const labels = self.dom.colgrplabels.selectAll('g').data(xClusters)
 		labels.exit().remove()
@@ -150,12 +150,13 @@ function setRenderers(self) {
 			return c[self.xGrpKey].name === xRef
 		})
 
-		const gx = d.xOffset + yClusters[0].x + yClusters[0].width + 5
+		const x = d.xOffset + yClusters[0].x + yClusters[0].width + d.xLabelGap.grp
+		const y = d.yOffset + d.yLabelGap.grp
 
 		self.dom.rowgrplabels
 			.transition()
 			.duration(self.dom.rowgrplabels.attr('transform') ? s.duration : 0)
-			.attr('transform', `translate(${gx},${d.yOffset})`)
+			.attr('transform', `translate(${x},${y})`)
 
 		const labels = self.dom.rowgrplabels.selectAll('g').data(yClusters)
 		labels.exit().remove()
