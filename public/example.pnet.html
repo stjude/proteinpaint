@@ -36,6 +36,14 @@ runproteinpaint({
 				}, 
 				{
 					chartType: 'matrix',
+					settings: {
+						matrix: {
+							termLabelOffset: 220
+						}
+					},
+					divideBy: {
+						id: 'PNET_subgroup'
+					},
 					termgroups: [
 						{
 							name: 'Demographics',
@@ -58,7 +66,35 @@ runproteinpaint({
 									} // or 'continuous'
 								}
 							]
-						}
+						},
+						{
+							name: 'Treatment',
+							lst: [
+								{
+									id: 'Primary Treatment category',
+								}, 
+								{
+									id: 'Primary Treatment category 2',
+								}
+							]
+						},
+						{
+							name: 'Relapse',
+							lst: [
+								{
+									id: 'Relapse 1 Tx',
+								}, 
+								{
+									id: 'Relapse 2 Tx',
+								},
+								{
+									id: 'Relapse 3 Tx',
+								},
+								{
+									id: 'Relapse 4 Tx',
+								},
+							]
+						},
 					],
 				}
 			]

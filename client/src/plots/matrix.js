@@ -3,6 +3,7 @@ import { controlsInit } from './controls'
 import { select } from 'd3-selection'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { fillTermWrapper } from '../common/termsetting'
+import { MatrixCluster } from './matrix.cluster'
 
 class Matrix {
 	constructor(opts) {
@@ -25,14 +26,17 @@ class Matrix {
 			holder,
 			svg,
 			mainG,
-			seriesesG: mainG.append('g').attr('class', 'sjpp-mass-serieses-g'),
-			termLabelG: mainG.append('g').attr('class', 'sjpp-mass-term-label-g')
+			cluster: mainG.append('g').attr('class', 'sjpp-matrix-cluster-g'),
+			seriesesG: mainG.append('g').attr('class', 'sjpp-matrix-serieses-g'),
+			termLabelG: mainG.append('g').attr('class', 'sjpp-matrix-term-label-g')
 			//legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Sample Matrix')
 		// hardcode for now, but may be set as option later
-		this.settings = Object.assign({}, this.opts.settings)
+		this.settings = Object.assign({ h: {}, handlers: {} }, this.opts.settings)
 		await this.setControls(appState)
+
+		this.clusterRenderer = new MatrixCluster({ holder: this.dom.cluster, app: this.app })
 	}
 
 	async setControls(appState) {
@@ -53,7 +57,7 @@ class Matrix {
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 					inputs: [
 						{
-							label: 'Divide samples by',
+							label: 'Group samples by',
 							type: 'term',
 							chartType: 'matrix',
 							configKey: 'divideBy',
@@ -139,6 +143,7 @@ class Matrix {
 			this.currData = this.processData(data)
 			this.dimensions = this.getDimensions(this.currData)
 			this.render(this.currData)
+			this.clusterRenderer.main(this.currData)
 		} catch (e) {
 			throw e
 		}
@@ -159,20 +164,42 @@ class Matrix {
 	processData(data) {
 		const s = this.settings.matrix
 		const sgtid = this.config.divideBy?.term?.id
-		if (!this.config.divideBy) {
-			this.sampleGroupKeys = [undefined]
-		} else {
-			const grps = new Set()
-			for (const row of data.lst) {
-				if (sgtid in row) grps.add(row[sgtid].key)
-			}
-			this.sampleGroupKeys = [...grps, undefined]
+		const notAnnotated = {
+			id: undefined,
+			name: 'Not annotated',
+			lst: []
 		}
 
+		const sampleGroups = new Map()
+		if (!this.config.divideBy) {
+			notAnnotated.lst = data.lst
+		} else {
+			for (const row of data.lst) {
+				if (sgtid in row) {
+					const key = row[sgtid].key
+					if (!sampleGroups.has(key)) {
+						sampleGroups.set(key, {
+							id: key,
+							name: key, // TODO: may change to a label
+							lst: []
+						})
+					}
+					sampleGroups.get(key).lst.push(row)
+				} else {
+					notAnnotated.lst.push(row)
+				}
+			}
+		}
+
+		if (notAnnotated.lst.length) {
+			sampleGroups.set(undefined, notAnnotated)
+		}
+
+		const sampleGroupKeys = [...sampleGroups.keys()]
 		const samples = data.lst
 			.sort((a, b) => {
-				const i = this.sampleGroupKeys.indexOf(a[sgtid]?.key)
-				const j = this.sampleGroupKeys.indexOf(b[sgtid]?.key)
+				const i = sampleGroupKeys.indexOf(a[sgtid]?.key)
+				const j = sampleGroupKeys.indexOf(b[sgtid]?.key)
 				if (i < j) return -1
 				if (i > j) return 1
 				const k = a[s.sortSamplesBy]
@@ -183,15 +210,18 @@ class Matrix {
 			})
 			.map(r => r.sample)
 
-		const termWrappers = []
-		const terms = []
-		this.config.termgroups.forEach(g => {
-			termWrappers.push(...g.lst)
-			terms.push(...g.lst.map(t => ('id' in t ? t.id : t.term.id)))
-		})
-		//console.log(71, s, samples, terms)
+		const termOrder = []
+		let total = 0
+		for (const [grpIndex, grp] of this.config.termgroups.entries()) {
+			for (const [tIndex, tw] of grp.lst.entries()) {
+				if (!('id' in tw)) tw.id = tw.term.id
+				termOrder.push({ grp, grpIndex, tw, tIndex, prevGrpCount: total })
+			}
+			total += grp.lst.length
+		}
 
-		const currData = { terms, serieses: [], termWrappers }
+		//console.log(233, s, samples, termOrder)
+		const serieses = []
 		const dx = s.colw + s.colspace
 		const dy = s.rowh + s.rowspace
 		const keysByTermId = {}
@@ -199,7 +229,7 @@ class Matrix {
 
 		for (const row of data.lst) {
 			const sIndex = samples.indexOf(row.sample)
-			const sGrpIndex = this.config.divideBy ? this.sampleGroupKeys.indexOf(row[sgtid]?.key) : 0
+			const sGrpIndex = sampleGroupKeys.indexOf(row[sgtid]?.key) //; console.log(229, sIndex, sGrpIndex)
 			const series = {
 				row,
 				cells: [],
@@ -207,9 +237,26 @@ class Matrix {
 				y: !s.transpose ? 0 : sIndex * dy + sGrpIndex * s.rowgspace
 			}
 
-			for (const key in row) {
+			for (const t of termOrder) {
+				if (!(t.tw.id in row)) continue
+				const key = t.tw.id
+				const tIndex = t.tIndex + t.prevGrpCount
+				series.cells.push({
+					termid: key,
+					key: row[key].key,
+					label: row[key].label,
+					x: !s.transpose ? 0 : tIndex * dx + t.grpIndex * s.colgspace,
+					y: !s.transpose ? tIndex * dy + t.grpIndex * s.rowgspace : 0
+				})
+
+				if (!keysByTermId[key]) keysByTermId[key] = new Set()
+				keysByTermId[key].add(row[key].key)
+			}
+
+			/*for (const key in row) {
 				if (key == 'sample' || !rowTermsIds.includes(key)) continue
-				const tIndex = terms.indexOf(key)
+				
+				const tGrpIndex = termGroupKeys.indexOf(key)
 				series.cells.push({
 					termid: key,
 					key: row[key].key,
@@ -217,11 +264,9 @@ class Matrix {
 					x: !s.transpose ? 0 : tIndex * dx,
 					y: !s.transpose ? tIndex * dy : 0
 				})
-				if (!keysByTermId[key]) keysByTermId[key] = new Set()
-				keysByTermId[key].add(row[key].key)
-			}
+			}*/
 
-			currData.serieses.push(series)
+			serieses.push(series)
 		}
 
 		this.colorScaleByTermId = {}
@@ -230,16 +275,23 @@ class Matrix {
 				keysByTermId[termid].size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		}
 
-		return currData
+		return {
+			termOrder,
+			serieses,
+			sampleGroupKeys,
+			sampleGroups: [...sampleGroups.values()],
+			termGroups: this.config.termgroups,
+			config: this.config
+		}
 	}
 
 	getDimensions(data) {
 		const s = this.settings.matrix
 		const dx = s.colw + s.colspace
-		const Nx = data[!s.transpose ? 'serieses' : 'terms'].length
+		const Nx = data[!s.transpose ? 'serieses' : 'termOrder'].length
 		const xOffset = (!s.transpose ? s.termLabelOffset : s.sampleLabelOffset) + s.margin.left
 		const dy = s.rowh + s.rowspace
-		const Ny = data[!s.transpose ? 'terms' : 'serieses'].length
+		const Ny = data[!s.transpose ? 'termOrder' : 'serieses'].length
 		const yOffset = (!s.transpose ? s.sampleLabelOffset : s.termLabelOffset) + s.margin.top
 
 		return {
@@ -248,7 +300,7 @@ class Matrix {
 			xOffset,
 			yOffset,
 			svgw: Nx * dx + xOffset + s.margin.right,
-			svgh: Ny * dy + yOffset + s.margin.bottom
+			svgh: Ny * dy + yOffset + s.margin.bottom + 100
 		}
 	}
 
@@ -296,9 +348,7 @@ function setRenderers(self) {
 			.duration(duration)
 			.attr('transform', `translate(${d.xOffset},${d.yOffset})`)
 
-		const termLabels = self.dom.termLabelG
-			.selectAll('g')
-			.data(data.termWrappers, tw => ('id' in tw ? tw.id : tw.term.id))
+		const termLabels = self.dom.termLabelG.selectAll('g').data(data.termOrder, t => t.grp.id + ';;' + t.tw.id)
 		termLabels.exit().remove()
 		termLabels.each(self.renderTermLabels)
 		termLabels
@@ -357,47 +407,45 @@ function setRenderers(self) {
 
 		g.transition()
 			.duration(duration)
-			.attr('transform', !s.transpose ? `translate(${s.colw / 3},-2)` : `translate(-5,${s.rowh - 2})`)
+			.attr('transform', !s.transpose ? `translate(${0.7 * s.colw},-5)` : `translate(-5,${s.rowh - 2})`)
 
 		if (!g.select('text').size()) g.append('text')
 		const text = g.select('text')
 		const fontSize = !s.transpose ? s.colw + s.colspace - 4 : s.rowh + s.rowspace - 4
 		text
 			.attr('fill', '#000')
-			.attr('text-anchor', 'end')
 			.transition()
 			.duration(duration)
 			//.attr('opacity', fontsize < 6 ? 0 : )
 			.attr('font-size', fontSize)
-			.attr('transform', !s.transpose ? `rotate(90)` : '')
+			.attr('text-anchor', !s.transpose ? 'start' : 'end')
+			.attr('transform', !s.transpose ? `rotate(-90)` : '')
 			.text(series.row.sample)
 	}
 
-	self.renderTermLabels = function(tw) {
+	self.renderTermLabels = function(t) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const g = select(this)
 		const duration = g.attr('transform') ? s.duration : 0
-
-		const tIndex = self.currData.termWrappers.findIndex(t => t.id === tw.id)
+		const tIndex = t.tIndex + t.prevGrpCount
+		const x = !s.transpose ? -5 : t.grpIndex * s.colgspace + tIndex * d.dx + s.colw / 3
+		const y = !s.transpose ? t.grpIndex * s.rowgspace + tIndex * d.dy + 0.8 * s.rowh : -2
 		g.transition()
 			.duration(duration)
-			.attr(
-				'transform',
-				s.transpose ? `translate(${tIndex * d.dx + s.colw / 3},-2)` : `translate(-5,${tIndex * d.dy + 0.8 * s.rowh})`
-			)
+			.attr('transform', `translate(${x},${y})`)
 
 		const fontSize = s.transpose ? s.colw + s.colspace - 4 : s.rowh + s.rowspace - 4
 		if (!g.select('text').size()) g.append('text')
 		g.select('text')
 			.attr('fill', '#000')
-			.attr('text-anchor', 'end')
 			.transition()
 			.duration(duration)
 			//.attr('opacity', fontsize < 6 ? 0 : )
 			.attr('font-size', fontSize)
-			.attr('transform', s.transpose ? `rotate(90)` : '')
-			.text(tw.term.name)
+			.attr('text-anchor', !s.transpose ? 'end' : 'start')
+			.attr('transform', !s.transpose ? '' : `rotate(-90)`)
+			.text(t.tw.term.name)
 	}
 }
 
@@ -423,13 +471,13 @@ export async function getPlotConfig(opts, app) {
 				sortSamplesBy: 'sample',
 				colw: 14,
 				colspace: 1,
-				colgspace: 4,
+				colgspace: 8,
 				collabelpos: 'top', // | 'bottom'
 				collabelvisible: true,
 				colglabelpos: true,
 				rowh: 18,
 				rowspace: 1,
-				rowgspace: 4,
+				rowgspace: 8,
 				rowlabelpos: 'left', // | 'right'
 				rowlabelvisible: true,
 				rowglabelpos: true,
