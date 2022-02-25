@@ -140,10 +140,20 @@ class Matrix {
 			Object.assign(this.settings, this.config.settings)
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getMatrixData(reqOpts)
-			this.currData = this.processData(data)
-			this.dimensions = this.getDimensions(this.currData)
-			this.render(this.currData)
-			this.clusterRenderer.main(this.currData)
+			// process the data
+			this.setSampleGroupsOrder(data)
+			this.setTermOrder(data)
+			this.layout = this.getLayout()
+			this.dimensions = this.getDimensions()
+			this.serieses = this.getSerieses()
+			/*this.currData = { 
+				config: this.config,
+				serieses: this.getSerieses(),
+				termOrder: this.termOrder
+			}*/
+			// render the data
+			this.render()
+			//this.clusterRenderer.main(this.currData)
 		} catch (e) {
 			throw e
 		}
@@ -161,19 +171,17 @@ class Matrix {
 		return { terms, filter: this.state.filter }
 	}
 
-	processData(data) {
+	setSampleGroupsOrder(data) {
 		const s = this.settings.matrix
 		const sgtid = this.config.divideBy?.term?.id
-		const notAnnotated = {
-			id: undefined,
-			name: 'Not annotated',
-			lst: []
-		}
+		const defaultSampleGrp = { id: undefined, lst: [] }
 
 		const sampleGroups = new Map()
 		if (!this.config.divideBy) {
-			notAnnotated.lst = data.lst
+			defaultSampleGrp.lst = data.lst
+			defaultSampleGrp.name = ''
 		} else {
+			defaultSampleGrp.name = 'Not annotated'
 			for (const row of data.lst) {
 				if (sgtid in row) {
 					const key = row[sgtid].key
@@ -186,61 +194,113 @@ class Matrix {
 					}
 					sampleGroups.get(key).lst.push(row)
 				} else {
-					notAnnotated.lst.push(row)
+					defaultSampleGrp.lst.push(row)
 				}
 			}
 		}
 
-		if (notAnnotated.lst.length) {
-			sampleGroups.set(undefined, notAnnotated)
+		if (defaultSampleGrp.lst.length) {
+			sampleGroups.set(undefined, defaultSampleGrp)
 		}
 
-		const sampleGroupKeys = [...sampleGroups.keys()]
-		const samples = data.lst
-			.sort((a, b) => {
-				const i = sampleGroupKeys.indexOf(a[sgtid]?.key)
-				const j = sampleGroupKeys.indexOf(b[sgtid]?.key)
-				if (i < j) return -1
-				if (i > j) return 1
-				const k = a[s.sortSamplesBy]
-				const l = b[s.sortSamplesBy]
-				if (k < l) return -1
-				if (k > l) return 1
-				return 0
-			})
-			.map(r => r.sample)
+		// TODO: sort sample groups, maybe by sample count, value order, etc
+		this.sampleGroups = [...sampleGroups.values()]
+		//this.sampleGroupKeys = [...sampleGroups.keys()] -- not needed?
+		this.sampleOrder = []
+		const sampleSorter = (a, b) => {
+			const k = a[s.sortSamplesBy] // TODO: support many types of sorting
+			const l = b[s.sortSamplesBy]
+			if (k < l) return -1
+			if (k > l) return 1
+			return 0
+		}
 
-		const termOrder = []
+		let total = 0
+		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
+			grp.lst.sort(sampleSorter)
+			for (const [sIndex, row] of grp.lst.entries()) {
+				this.sampleOrder.push({ grp, grpIndex, row, sIndex, prevGrpCount: total, index: total + sIndex })
+			}
+			total += grp.lst.length
+		}
+	}
+
+	setTermOrder(data) {
+		this.termOrder = []
 		let total = 0
 		for (const [grpIndex, grp] of this.config.termgroups.entries()) {
 			for (const [tIndex, tw] of grp.lst.entries()) {
 				if (!('id' in tw)) tw.id = tw.term.id
-				termOrder.push({ grp, grpIndex, tw, tIndex, prevGrpCount: total })
+				this.termOrder.push({ grp, grpIndex, tw, tIndex, prevGrpCount: total, index: total + tIndex })
 			}
 			total += grp.lst.length
 		}
+	}
 
+	getLayout() {
+		const s = this.settings.matrix
+		if (!s.transpose) {
+			// sample as columns
+			return {
+				colgrps: this.sampleGroups,
+				colorder: this.sampleOrder,
+				colOffset: s.sampleLabelOffset,
+				rowgrps: this.config.termgroups,
+				roworder: this.termOrder,
+				rowOffset: s.termLabelOffset
+			}
+		} else {
+			// sample as rows
+			return {
+				colgrps: this.config.termgroups,
+				colorder: this.termOrder,
+				colOffset: s.termLabelOffset,
+				rowgrps: this.sampleGroups,
+				roworder: this.sampleOrder,
+				rowOffset: s.sampleLabelOffset
+			}
+		}
+	}
+
+	getDimensions() {
+		const s = this.settings.matrix
+		const dx = s.colw + s.colspace
+		const nx = this.layout.colorder.length
+		const xOffset = this.layout.rowOffset + s.margin.left
+		const dy = s.rowh + s.rowspace
+		const ny = this.layout.roworder.length
+		const yOffset = this.layout.colOffset + s.margin.top
+
+		return {
+			dx,
+			dy,
+			xOffset,
+			yOffset,
+			svgw: xOffset + nx * dx + this.layout.colgrps.length * s.colgspace + s.margin.right,
+			svgh: yOffset + ny * dy + this.layout.rowgrps.length * s.rowgspace + s.margin.bottom + 100
+		}
+	}
+
+	getSerieses() {
+		const s = this.settings.matrix
 		//console.log(233, s, samples, termOrder)
 		const serieses = []
 		const dx = s.colw + s.colspace
 		const dy = s.rowh + s.rowspace
 		const keysByTermId = {}
-		const rowTermsIds = this.rowTerms.map(tw => ('id' in tw ? tw.id : tw.term.id))
 
-		for (const row of data.lst) {
-			const sIndex = samples.indexOf(row.sample)
-			const sGrpIndex = sampleGroupKeys.indexOf(row[sgtid]?.key) //; console.log(229, sIndex, sGrpIndex)
+		for (const { index, grpIndex, row } of this.sampleOrder) {
 			const series = {
 				row,
 				cells: [],
-				x: !s.transpose ? sIndex * dx + sGrpIndex * s.colgspace : 0,
-				y: !s.transpose ? 0 : sIndex * dy + sGrpIndex * s.rowgspace
+				x: !s.transpose ? index * dx + grpIndex * s.colgspace : 0,
+				y: !s.transpose ? 0 : index * dy + grpIndex * s.rowgspace
 			}
 
-			for (const t of termOrder) {
+			for (const t of this.termOrder) {
 				if (!(t.tw.id in row)) continue
 				const key = t.tw.id
-				const tIndex = t.tIndex + t.prevGrpCount
+				const tIndex = t.index
 				series.cells.push({
 					termid: key,
 					key: row[key].key,
@@ -252,20 +312,6 @@ class Matrix {
 				if (!keysByTermId[key]) keysByTermId[key] = new Set()
 				keysByTermId[key].add(row[key].key)
 			}
-
-			/*for (const key in row) {
-				if (key == 'sample' || !rowTermsIds.includes(key)) continue
-				
-				const tGrpIndex = termGroupKeys.indexOf(key)
-				series.cells.push({
-					termid: key,
-					key: row[key].key,
-					label: row[key].label,
-					x: !s.transpose ? 0 : tIndex * dx,
-					y: !s.transpose ? tIndex * dy : 0
-				})
-			}*/
-
 			serieses.push(series)
 		}
 
@@ -274,34 +320,7 @@ class Matrix {
 			this.colorScaleByTermId[termid] =
 				keysByTermId[termid].size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		}
-
-		return {
-			termOrder,
-			serieses,
-			sampleGroupKeys,
-			sampleGroups: [...sampleGroups.values()],
-			termGroups: this.config.termgroups,
-			config: this.config
-		}
-	}
-
-	getDimensions(data) {
-		const s = this.settings.matrix
-		const dx = s.colw + s.colspace
-		const Nx = data[!s.transpose ? 'serieses' : 'termOrder'].length
-		const xOffset = (!s.transpose ? s.termLabelOffset : s.sampleLabelOffset) + s.margin.left
-		const dy = s.rowh + s.rowspace
-		const Ny = data[!s.transpose ? 'termOrder' : 'serieses'].length
-		const yOffset = (!s.transpose ? s.sampleLabelOffset : s.termLabelOffset) + s.margin.top
-
-		return {
-			dx,
-			dy,
-			xOffset,
-			yOffset,
-			svgw: Nx * dx + xOffset + s.margin.right,
-			svgh: Ny * dy + yOffset + s.margin.bottom + 100
-		}
+		return serieses
 	}
 
 	setSorters() {
@@ -316,7 +335,7 @@ export const matrixInit = getCompInit(Matrix)
 export const componentInit = matrixInit
 
 function setRenderers(self) {
-	self.render = function(data) {
+	self.render = function() {
 		//console.log('currData', data, self.dom.svg.attr('width'))
 		const s = self.settings.matrix
 		const d = self.dimensions
@@ -333,7 +352,7 @@ function setRenderers(self) {
 			.duration(duration)
 			.attr('transform', `translate(${d.xOffset},${d.yOffset})`)
 
-		const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(data.serieses, d => d.row.sample)
+		const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, d => d.row.sample)
 
 		sg.exit().remove()
 		sg.each(self.renderSeries)
@@ -348,7 +367,7 @@ function setRenderers(self) {
 			.duration(duration)
 			.attr('transform', `translate(${d.xOffset},${d.yOffset})`)
 
-		const termLabels = self.dom.termLabelG.selectAll('g').data(data.termOrder, t => t.grp.id + ';;' + t.tw.id)
+		const termLabels = self.dom.termLabelG.selectAll('g').data(this.termOrder, t => t.grp.id + ';;' + t.tw.id)
 		termLabels.exit().remove()
 		termLabels.each(self.renderTermLabels)
 		termLabels
@@ -495,6 +514,7 @@ export async function getPlotConfig(opts, app) {
 	for (const grp of config.termgroups) {
 		for (const tw of grp.lst) promises.push(fillTermWrapper(tw, app.vocabApi))
 	}
+	if (config.divideBy) promises.push(fillTermWrapper(config.divideBy, app.vocabApi))
 	await Promise.all(promises)
 	return config
 }
