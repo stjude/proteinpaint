@@ -6,6 +6,8 @@ parseDictionary()
     - input: STR
 
 ------ Internal ------ 
+Traditional data dictionary parsing: 
+	1. parseDataDictionary
 
 Phenotree parsing:
 	1. parseConfig()
@@ -13,8 +15,7 @@ Phenotree parsing:
 */
 
 export function parseDictionary(div, input) {
-	//autodetect file formats
-
+	// Returns terms array for appInit({state.vocab.terms})
 	const terms = {}
 
 	const lines = input.trim().split(/\r?\n/)
@@ -37,8 +38,7 @@ export function parseDictionary(div, input) {
             - Assumptions:
                 1. Headers required
                 2. No blank values in the term_id or parent_id columns. Top grandparents must include 'root' for the parent_id
-                3. type?????
-                4. No identical term ids 
+                3. No identical term ids 
         */
 		const parIdIndex = header.findIndex(l => l.toLowerCase().includes('parent_id'))
 		if (parIdIndex == -1) {
@@ -56,6 +56,11 @@ export function parseDictionary(div, input) {
 		if (valuesIndex == -1) {
 			sayerror(div, `Missing required 'Values' header`)
 		}
+		if (parIdIndex == -1 || nameIndex == -1 || typeIndex == -1 || valuesIndex == -1) {
+			throw `Missing required header(s)`
+		}
+
+		const parentIds = new Set()
 
 		for (const [i, line] of lines.entries()) {
 			if (i === 0) continue
@@ -63,6 +68,19 @@ export function parseDictionary(div, input) {
 
 			try {
 				const cols = line.split('\t')
+
+				//validate column entries, no blank or '-' values
+				for (const [i, c] of cols.entries()) {
+					const colNum = i + 1
+					let foundProblem
+					if (i == valuesIndex) continue //values can be blank
+					if (c == '' || c == '-') {
+						foundProblem = true
+						sayerror(`Blank or '-' entered for line ${lineNum}, column ${colNum}`)
+					}
+					if (foundProblem == true) throw `Invalid entry for line ${lineNum}, column ${colNum}`
+				}
+
 				const termId = cols[term_idIndex]
 				const type = cols[typeIndex]
 
@@ -70,9 +88,10 @@ export function parseDictionary(div, input) {
 					id: termId,
 					name: cols[nameIndex].trim().replace(/"/g, ''),
 					parent_id: cols[parIdIndex] != 'root' ? cols[parIdIndex] : null,
-					isleaf: cols[typeIndex] != 'non graphable' ? true : false,
 					type: cols[typeIndex] != 'non graphable' ? cols[typeIndex] : null
 				}
+
+				parentIds.add(terms[termId].parent_id)
 
 				if (type == 'categorical') {
 					terms[termId].values = {}
@@ -101,6 +120,9 @@ export function parseDictionary(div, input) {
 				throw `Line ${lineNum} error: ${e}`
 			}
 		}
+		for (const t in terms) terms[t].isleaf = !parentIds.has(terms[t].id)
+		console.log('dictionary parsing')
+
 		return { terms: Object.values(terms) }
 	}
 
@@ -168,7 +190,6 @@ export function parseDictionary(div, input) {
 
 				const id = cols[varNameIndex] || name
 				if (id in terms) {
-					console.log(215, id)
 					const orig = terms[id]
 					sayerror(div, `Error: Multiple config rows for term.id='${id}': lines# ${orig.lineNum} and ${lineNum}`)
 					continue
@@ -195,7 +216,6 @@ export function parseDictionary(div, input) {
 				throw `Line ${lineNum} error: ${e}`
 			}
 		}
-
 		// some parent term levels may not have entries
 		trackMissingTerms(termNameToId, terms, parentTermNames, div)
 
@@ -209,6 +229,7 @@ export function parseDictionary(div, input) {
 			delete term.ancestry
 		}
 	}
+	console.log('phenotree parsing')
 	return { terms: Object.values(terms) }
 }
 
