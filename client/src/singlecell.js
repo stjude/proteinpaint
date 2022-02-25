@@ -1584,7 +1584,7 @@ async function make_legend(arg, obj) {
 	}
 	let shown = !arg.foldlegend
 
-	div
+	img_div
 		.append('div')
 		.text('LEGEND')
 		.attr('class', 'sja_clb')
