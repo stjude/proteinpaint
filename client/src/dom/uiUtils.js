@@ -16,11 +16,14 @@ makeTextInput()
 	Creates input box for text, filepaths, etc.
     - div
     - placeholder (optional): STR
+	- size (optional): INT
 
 makeTextAreaInput()
 	Creates a text area, mainly for copying and pasting data
     - div
     - placeholder (optional): STR
+	- rows (optional): INT, number of rows to display
+	- cols (optional): INT, number of columns to display
 
 makeFileUpload()
 	Creates upload input for files
@@ -29,12 +32,20 @@ makeFileUpload()
 makeBtn()
 	Simplifed button and styling for UIs
     - div
-	- text: STR  
+	- text: STR
+	- color (optional): STR, text color
+	- backgroundColor (optional): STR, background color
+	- border (optional): STR, value for 'border' style
 
 makePrompt()
 	Creates text prompts for inputs. Use to quickly create small chunks of text
     - div
 	- text: STR 
+
+
+detectDelimiter()
+	Returns the delimiter based on the file name
+	-fileName: STR
 
 -------Internal-------
 
@@ -59,10 +70,11 @@ export function makeGenomeDropDown(div, genomes) {
 	return select
 }
 
-export function makeTextInput(div, placeholder) {
+export function makeTextInput(div, placeholder, size) {
 	const text = div
 		.append('input')
 		.attr('type', 'text')
+		.attr('size', size ? size : 50)
 		.style('border-radius', '5px')
 		.style('padding', '5px 20px')
 		.style('margin', '1px 20px 1px 10px')
@@ -73,11 +85,11 @@ export function makeTextInput(div, placeholder) {
 	return text
 }
 
-export function makeTextAreaInput(div, placeholder) {
+export function makeTextAreaInput(div, placeholder, rows, cols) {
 	const textarea = div
 		.append('textarea')
-		.attr('rows', '5')
-		.attr('cols', '70')
+		.attr('rows', rows ? rows : '5')
+		.attr('cols', cols ? cols : '70')
 		.style('border-radius', '5px')
 	if (placeholder) {
 		textarea.attr('placeholder', placeholder)
@@ -97,13 +109,13 @@ export function makeFileUpload(div) {
 	return upload
 }
 
-export function makeBtn(div, text) {
+export function makeBtn(div, text, color, backgroundColor, border) {
 	const btn = div
 		.append('button')
 		.text(text)
-		.style('color', 'black')
-		.style('background-color', '#F2F2F2')
-		.style('border', '2px solid #999')
+		.style('color', color ? color : 'black')
+		.style('background-color', backgroundColor ? backgroundColor : '#F2F2F2')
+		.style('border', border ? border : '2px solid #999')
 		.style('padding', '5px 10px')
 		.style('cursor', 'pointer')
 
@@ -119,4 +131,37 @@ export function makePrompt(div, text) {
 		.html(text)
 
 	return prompt
+}
+
+export function detectDelimiter(fileName) {
+	const f = fileName.match(/.*(\.\w{3})$/)
+	let delimiter
+	switch (f[1]) {
+		case '.csv':
+			delimiter = ','
+			break
+		case '.tsv':
+			delimiter = '\t'
+			break
+		case '.txt':
+			delimiter = '\t'
+			break
+		default:
+			delimiter = '\t'
+	}
+	return delimiter
+}
+
+//TODO
+export function infoToolTip(div, helpText) {
+	const icon = div
+		.append('div')
+		.html('ⓘ')
+		.on('mouseenter', () => {
+			//display tooltip
+		})
+		.on('mouseout', () => {
+			//rm tooltip
+		})
+	return icon
 }

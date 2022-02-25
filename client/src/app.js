@@ -1395,7 +1395,7 @@ async function launch_tkUIs(arg, app) {
 		p.bigwigUI(app.genomes, app.holder)
 	}
 	if (arg.tkui == 'dictionary') {
-		const p = await import('./dictionary.ui')
+		const p = await import('./databrowser/dictionary.ui')
 		p.init_dictionaryUI(app.holder, app.debugmode)
 	}
 }
