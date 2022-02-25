@@ -91,9 +91,7 @@ export function makeTextAreaInput(div, placeholder, rows, cols) {
 		.attr('rows', rows ? rows : '5')
 		.attr('cols', cols ? cols : '70')
 		.style('border-radius', '5px')
-	if (placeholder) {
-		textarea.attr('placeholder', placeholder)
-	}
+		.attr('placeholder', placeholder ? placeholder : '')
 
 	return textarea
 }
