@@ -336,7 +336,7 @@ export class InputTerm {
 		{
 			// require minimum of 2 independent terms eligible for interaction
 			let count = 0
-			for (const input of this.section.inputs) {
+			for (const input of this.section.inputLst) {
 				if (input.term && input.term.q.mode != 'spline') {
 					// spline term cannot be used for interaction
 					count++

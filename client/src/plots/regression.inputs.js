@@ -4,7 +4,7 @@ import { InputTerm } from './regression.inputs.term'
 
 /*
 outcome and independent are two sections sharing same structure
-"inputs[]" collect one or multiple variables for each section
+"inputLst[]" collect one or multiple variables for each section
 "input" tracks attributes from a variable
 blank input: a blank input is a termsetting instance. once a term is created for it, the term is filled to the same instance, and a new blank input may need to be created (for independent section)
 
@@ -76,7 +76,7 @@ export class RegressionInputs {
 			exclude_types: this.opts.regressionType == 'linear' ? ['condition', 'categorical', 'survival'] : ['survival'],
 
 			/*** dynamic configuration ***/
-			inputs: [],
+			inputLst: [],
 
 			/*** tracker for this section's DOM elements ***/
 			dom: {}
@@ -93,7 +93,7 @@ export class RegressionInputs {
 			exclude_types: ['condition', 'survival'],
 
 			/*** dynamic configuration ***/
-			inputs: [],
+			inputLst: [],
 
 			/*** tracker for this section's DOM elements ***/
 			dom: {}
@@ -113,14 +113,14 @@ export class RegressionInputs {
 			const updates = []
 			for (const section of this.sections) {
 				await this.renderSection(section)
-				for (const input of section.inputs) {
+				for (const input of section.inputLst) {
 					input.dom.holder.style('border-left', input.term ? '1px solid #bbb' : '')
 					updates.push(input.main())
 				}
 			}
 			await Promise.all(updates)
 			for (const section of this.sections) {
-				for (const input of section.inputs) {
+				for (const input of section.inputLst) {
 					if ((input.term && input.term.error) || input.hasError) {
 						this.hasError = true
 					}
@@ -161,7 +161,7 @@ export class RegressionInputs {
 				// not allowed by this dataset
 				continue
 			}
-			if (section.inputs.find(i => i.term && i.term.term.type == item.termtype)) {
+			if (section.inputLst.find(i => i.term && i.term.term.type == item.termtype)) {
 				// same term is already present in this section, do not add a second
 				continue
 			}
@@ -244,12 +244,12 @@ function setRenderers(self) {
 		section.dom.holder.style('display', section.configKey == 'outcome' || self.config.outcome ? 'block' : 'none')
 
 		syncInputsWithConfig(section)
-		// section.inputs[] is now synced with plot config
+		// section.inputLst[] is now synced with plot config
 
 		const inputs = section.dom.inputsDiv
 			.selectAll(':scope > div')
 			// key function (2nd arg) uses a function to determine how datum and element are joined by variable id
-			.data(section.inputs, input => input.term && input.term.id)
+			.data(section.inputLst, input => input.term && input.term.id)
 
 		inputs.exit().each(removeInput)
 
@@ -279,9 +279,9 @@ function setRenderers(self) {
 				}
 			}
 
-			const input = section.inputs.find(input => input.term && input.term.id == variable.id)
+			const input = section.inputLst.find(input => input.term && input.term.id == variable.id)
 			if (!input) {
-				section.inputs.push(
+				section.inputLst.push(
 					new InputTerm({
 						section,
 						term: variable,
@@ -308,7 +308,7 @@ function setRenderers(self) {
 	}
 
 	function removeInput(input) {
-		/* NOTE: editConfig deletes this input from the section.inputs array */
+		/* NOTE: editConfig deletes this input from the section.inputLst array */
 		input.remove()
 		for (const key in input.dom) {
 			//input.dom[key].remove()
@@ -338,14 +338,14 @@ function setInteractivity(self) {
 	self.editConfig = async (input, variable) => {
 		if (!variable) {
 			// the variable has been deleted from this input; will delete this input from section
-			const i = input.section.inputs.findIndex(d => d === input)
+			const i = input.section.inputLst.findIndex(d => d === input)
 			if (i == -1) throw `deleting an unknown input`
 			// delete this input
-			input.section.inputs.splice(i, 1)
+			input.section.inputLst.splice(i, 1)
 			if (input.term) {
 				// if the input.term has interaction pairs, then
 				// delete this term.id from those other input term.interactions
-				for (const other of input.section.inputs) {
+				for (const other of input.section.inputLst) {
 					if (!other.term || !other.term.interactions) continue
 					const i = other.term.interactions.indexOf(input.term.id)
 					if (i != -1) other.term.interactions.splice(i, 1)
@@ -377,7 +377,7 @@ function setInteractivity(self) {
 
 			if (variable.q.mode == 'spline' && variable.interactions) {
 				// this is a spline term, delete existing interactions with this term
-				for (const other of input.section.inputs) {
+				for (const other of input.section.inputLst) {
 					if (!other.term || !other.term.interactions) continue
 					const i = other.term.interactions.indexOf(input.term.id)
 					if (i != -1) other.term.interactions.splice(i, 1)
@@ -387,7 +387,7 @@ function setInteractivity(self) {
 		}
 
 		const selected = []
-		for (const i of input.section.inputs) {
+		for (const i of input.section.inputLst) {
 			if (i.term) selected.push(i.term)
 		}
 		const key = input.section.configKey
@@ -435,11 +435,11 @@ for outcome section, there can just be one input, it's either blank or filled
 for independent, there should always be one blank input, among other filled inputs
 */
 function mayAddBlankInput(section, self) {
-	if (section.inputs.length >= section.limit) {
+	if (section.inputLst.length >= section.limit) {
 		// number of inputs in this section is beyond limit, do not create more
 		return
 	}
-	const blankInput = section.inputs.find(i => !i.term)
+	const blankInput = section.inputLst.find(i => !i.term)
 	if (blankInput) {
 		// this section already have a blank input (without .term{})
 		// as a section is limited to have only one blank input, do not add a new one
@@ -452,7 +452,7 @@ function mayAddBlankInput(section, self) {
 		return
 	}
 	// now add a blank input to this section
-	section.inputs.push(
+	section.inputLst.push(
 		new InputTerm({
 			section,
 			parent: self,

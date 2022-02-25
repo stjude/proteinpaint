@@ -131,17 +131,20 @@ export class RegressionResults {
 		this happens when launching from a parameterized url that's missing refgrp for the term
 		and the refGrp is dynamically filled by input.updateTerm() but not propagated to state
 		*/
-		for (const i of this.parent.inputs.independent.inputs) {
+		for (const i of this.parent.inputs.independent.inputLst) {
 			if (!i.term) continue
 			if (i.term.id == tid) return i
 			if (i.term.term && i.term.term.snps) {
+				// is a snplst or snplocus term with .snps[]
 				for (const snp of i.term.term.snps) {
 					if (snp.snpid == tid) {
 						// tid matches with a snpid
-						// make up an object looking like an Input instance
+						// make up an object looking like an Input instance for this snp/variant
 						const tw = {
 							id: tid,
-							q: {},
+							q: {
+								geneticModel: i.term.q.geneticModel
+							},
 							term: {
 								id: tid,
 								name: tid
@@ -307,39 +310,21 @@ function setRenderers(self) {
 
 			// col 1: term name
 			const termNameTd = tr.append('td').style('padding', '8px')
-			fillTdName(termNameTd, tw.term ? tw.term.name : tid) // can tw ever be missing??
-
-			if (tw.q && tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
-				// do not display ref for spline variable
-				termNameTd
-					.append('div')
-					.style('font-size', '.8em')
-					.style('opacity', 0.6)
-					.html(
-						'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">REF</span> ' +
-							(tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp) +
-							'</span>'
-					)
-			}
-
-			if (tw.effectAllele) {
-				// only for snplst term
-				termNameTd
-					.append('div')
-					.style('font-size', '.8em')
-					.style('opacity', 0.6)
-					.html(
-						'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">EFFECT ALLELE</span> ' +
-							tw.effectAllele +
-							'</span>'
-					)
-			}
+			fillCoefficientTermname(tw, termNameTd)
 
 			if (termdata.fields) {
 				// only 1 row for this term, no categories
 
 				// col 2: no category
-				tr.append('td')
+				{
+					const td = tr.append('td')
+					// may indicate geneticModel
+					if ('geneticModel' in tw.q) {
+						const v = tw.q.geneticModel
+						td.text(v == 0 ? '(additive)' : v == 1 ? '(dominant)' : '(recessive)').style('opacity', 0.3)
+					}
+				}
+
 				// col 3
 				forestPlotter(tr.append('td'), termdata.fields)
 				// rest of columns
@@ -721,7 +706,7 @@ function setRenderers(self) {
 
 	self.show_genomebrowser_snplocus = async result => {
 		// show genome browser when there's a snplocus term in independent
-		const input = self.parent.inputs.independent.inputs.find(i => i.term && i.term.term.type == 'snplocus')
+		const input = self.parent.inputs.independent.inputLst.find(i => i.term && i.term.term.type == 'snplocus')
 		if (!self.snplocusBlock) {
 			// doesn't have a block, create one
 			const arg = {
@@ -819,6 +804,34 @@ function fillTdName(td, name) {
 		td.text(name)
 	} else {
 		td.text(name.substring(0, 25) + ' ...').attr('title', name)
+	}
+}
+function fillCoefficientTermname(tw, td) {
+	// fill column 1 <td> using term name, may also show refGrp and reference allele
+	fillTdName(td, tw.term.name || tid)
+
+	if (tw.q.mode != 'spline' && 'refGrp' in tw && tw.refGrp != refGrp_NA) {
+		// do not display ref for spline variable
+		td.append('div')
+			.style('font-size', '.8em')
+			.style('opacity', 0.6)
+			.html(
+				'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">REF</span> ' +
+					(tw.term.values && tw.term.values[tw.refGrp] ? tw.term.values[tw.refGrp].label : tw.refGrp) +
+					'</span>'
+			)
+	}
+
+	if (tw.effectAllele) {
+		// only for snplst term
+		td.append('div')
+			.style('font-size', '.8em')
+			.style('opacity', 0.6)
+			.html(
+				'<span style="padding:1px 5px;border:1px solid #aaa;border-radius:10px;font-size:.7em">EFFECT ALLELE</span> ' +
+					tw.effectAllele +
+					'</span>'
+			)
 	}
 }
 
