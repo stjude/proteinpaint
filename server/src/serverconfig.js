@@ -8,14 +8,32 @@ const path = require('path')
 
 // do not assume that serverconfig.json is in the same dir as server.js
 // for example, when using proteinpaint as an npm module or binary
-const serverconfigfile = (process.cwd() || __dirname) + '/serverconfig.json'
+// or when calling a pp utility script from a tp data directory
+const workdirconfig = process.cwd() ? process.cwd() + '/serverconfig.json' : ''
+const serverdirconfig = path.join(__dirname, '../serverconfig.json')
+const pprootdirconfig = path.join(__dirname, '../../serverconfig.json')
+// check which config file exists in order of usage priority
+const serverconfigfile =
+	workdirconfig && fs.existsSync(workdirconfig)
+		? workdirconfig // prioritize a config file as found wherever a pp script is called from
+		: fs.existsSync(serverdirconfig)
+		? serverdirconfig // or next, use a config file in the pp/server/ dir
+		: fs.existsSync(pprootdirconfig)
+		? pprootdirconfig // or next, use a config file from the pp root
+		: ''
 
 /*******************
  GET SERVERCONFIG
 ********************/
-
 let serverconfig
-if (fs.existsSync(serverconfigfile)) {
+if (!serverconfigfile) {
+	// automatically generate serverconfig, hardcoded by customer
+	if (process.env.PP_CUSTOMER == 'gdc') {
+		serverconfig = getGDCconfig()
+	} else {
+		throw 'missing serverconfig.json'
+	}
+} else {
 	try {
 		// manually parse instead of require() to minimize
 		// bundling warnings or errors between test/prod builds
@@ -23,13 +41,6 @@ if (fs.existsSync(serverconfigfile)) {
 		serverconfig = JSON.parse(configstr)
 	} catch (e) {
 		throw `Error reading or parsing ${serverconfigfile}:` + e
-	}
-} else {
-	// automatically generate serverconfig, hardcoded by customer
-	if (process.env.PP_CUSTOMER == 'gdc') {
-		serverconfig = getGDCconfig()
-	} else {
-		throw 'missing serverconfig.json'
 	}
 }
 
