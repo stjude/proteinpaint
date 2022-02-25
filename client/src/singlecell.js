@@ -211,7 +211,6 @@ async function init_view(obj) {
 	await add_scriptTag('/static/js/loaders/PCDLoader.js')
 	await add_scriptTag('/static/js/controls/TrackballControls.js')
 	await add_scriptTag('/static/js/WebGL.js')
-	await add_scriptTag('/static/js/libs/stats.min.js')
 
 	if (WEBGL.isWebGLAvailable() === false) {
 		obj.holder.node().appendChild(WEBGL.getWebGLErrorMessage())
