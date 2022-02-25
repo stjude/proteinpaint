@@ -206,9 +206,9 @@ export class InputTerm {
 					(invalid_snps_count > 0 ? ` ${invalid_snps_count} invalid SNP${invalid_snps_count > 1 ? 's' : ''}.` : '')
 			)
 		}
-		if ('geneticMode' in tw.q) {
+		if ('geneticModel' in tw.q) {
 			this.termStatus.topInfoStatus.push(
-				'Genetic mode: ' +
+				'Genetic model: ' +
 					(tw.q.geneticModel == 0
 						? 'Additive'
 						: tw.q.geneticModel == 1
