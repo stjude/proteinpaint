@@ -138,22 +138,26 @@ class Matrix {
 		try {
 			this.config = this.state.config
 			Object.assign(this.settings, this.config.settings)
+
+			// get the data
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getMatrixData(reqOpts)
+
 			// process the data
 			this.setSampleGroupsOrder(data)
 			this.setTermOrder(data)
-			this.layout = this.getLayout()
 			this.dimensions = this.getDimensions()
 			this.serieses = this.getSerieses()
-			/*this.currData = { 
-				config: this.config,
-				serieses: this.getSerieses(),
-				termOrder: this.termOrder
-			}*/
+
 			// render the data
 			this.render()
-			//this.clusterRenderer.main(this.currData)
+
+			this.clusterRenderer.main({
+				settings: this.settings.matrix,
+				xGrps: this.layout.colgrps,
+				yGrps: this.layout.rowgrps,
+				dimensions: this.dimensions
+			})
 		} catch (e) {
 			throw e
 		}
@@ -237,11 +241,12 @@ class Matrix {
 		}
 	}
 
-	getLayout() {
+	getDimensions() {
 		const s = this.settings.matrix
+
 		if (!s.transpose) {
 			// sample as columns
-			return {
+			this.layout = {
 				colgrps: this.sampleGroups,
 				colorder: this.sampleOrder,
 				colOffset: s.sampleLabelOffset,
@@ -251,7 +256,7 @@ class Matrix {
 			}
 		} else {
 			// sample as rows
-			return {
+			this.layout = {
 				colgrps: this.config.termgroups,
 				colorder: this.termOrder,
 				colOffset: s.termLabelOffset,
@@ -260,10 +265,7 @@ class Matrix {
 				rowOffset: s.sampleLabelOffset
 			}
 		}
-	}
 
-	getDimensions() {
-		const s = this.settings.matrix
 		const dx = s.colw + s.colspace
 		const nx = this.layout.colorder.length
 		const xOffset = this.layout.rowOffset + s.margin.left

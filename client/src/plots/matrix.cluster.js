@@ -18,7 +18,11 @@ export class MatrixCluster {
 
 	main(data) {
 		this.currData = data
-		this.settings = this.currData.config.settings.matrix
+		this.settings = data.settings
+		this.xGrps = data.xGrps
+		this.xGrpKey = !this.settings.transpose ? 'samplegrp' : 'termgrp'
+		this.yGrps = data.yGrps
+		this.yGrpKey = !this.settings.transpose ? 'termgrp' : 'samplegrp'
 		this.clusters = this.processData()
 		//console.log(24, this.clusters)
 		this.render(this.clusters)
@@ -26,21 +30,18 @@ export class MatrixCluster {
 
 	processData() {
 		const s = this.settings
-		this.dimensions = this.getDimensions(s)
-		const d = this.dimensions
+		const d = this.currData.dimensions
 
 		const clusters = []
-		let xOffset = 0 //, yOffset = 0
-		const xGrps = !s.transpose ? this.currData.sampleGroups : this.currData.termGroups
-		const yGrps = !s.transpose ? this.currData.termGroups : this.currData.sampleGroups
+		let xOffset = 0
 
-		for (const [xIndex, xgrp] of xGrps.entries()) {
+		for (const [xIndex, xgrp] of this.xGrps.entries()) {
 			const x = xOffset + s.colgspace * xIndex //- s.colspace
 			const width = d.dx * xgrp.lst.length //+ s.colspace
 			let yOffset = 0
 
-			for (const [yIndex, ygrp] of yGrps.entries()) {
-				const y = yOffset + (yIndex == 0 ? 0 : s.rowgspace) //* yIndex
+			for (const [yIndex, ygrp] of this.yGrps.entries()) {
+				const y = yOffset + (yIndex === 0 ? 0 : s.rowgspace) //* yIndex
 				const height = d.dy * ygrp.lst.length //+ s.rowspace
 
 				clusters.push({
@@ -61,21 +62,12 @@ export class MatrixCluster {
 
 		return clusters
 	}
-
-	getDimensions(s) {
-		return {
-			dx: s.colw + s.colspace,
-			dy: s.rowh + s.rowspace,
-			xOffset: s.margin.left + (!s.transpose ? s.termLabelOffset : s.sampleLabelOffset),
-			yOffset: s.margin.top + (!s.transpose ? s.sampleLabelOffset : s.termLabelOffset)
-		}
-	}
 }
 
 function setRenderers(self) {
 	self.render = function(clusters) {
 		const s = self.settings
-		const d = self.dimensions
+		const d = self.currData.dimensions
 		renderOutlines(clusters, s, d)
 		renderColGrpLabels(clusters, s, d)
 		renderRowGrpLabels(clusters, s, d)
@@ -110,15 +102,12 @@ function setRenderers(self) {
 	}
 
 	function renderColGrpLabels(clusters, s, d) {
-		const yGrps = !s.transpose ? self.currData.termGroups : self.currData.sampleGroups
 		// find the reference row group for placement
-		const yRef = yGrps[s.collabelpos == 'top' ? yGrps.length - 1 : 0].name
-		const xGrps = !s.transpose ? self.currData.sampleGroups : self.currData.termGroups
-		const clusterKey = !s.transpose ? 'termgrp' : 'samplegrp'
+		const yRef = self.yGrps[s.collabelpos == 'top' ? self.yGrps.length - 1 : 0].name
 		const xClusters = clusters.filter(c => {
-			return c[clusterKey].name === yRef
+			return c[self.yGrpKey].name === yRef
 		})
-		//console.log(123, yGrps, yRef, xGrps, clusterKey, xClusters, clusters)
+		//console.log(110, yRef, xClusters, clusters, self.currData)
 
 		const gy = d.yOffset + xClusters[0].y + xClusters[0].height + 5
 
@@ -151,19 +140,15 @@ function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('transform', 'rotate(-90)')
-			.text(cluster[!s.transpose ? 'samplegrp' : 'termgrp'].name)
+			.text(cluster[self.xGrpKey].name)
 	}
 
 	function renderRowGrpLabels(clusters, s, d) {
-		const xGrps = s.transpose ? self.currData.termGroups : self.currData.sampleGroups
 		// find the reference column group for placement
-		const xRef = xGrps[s.collabelpos == 'left' ? 0 : xGrps.length - 1].name
-		const yGrps = s.transpose ? self.currData.sampleGroups : self.currData.termGroups
-		const clusterKey = s.transpose ? 'termgrp' : 'samplegrp'
+		const xRef = self.xGrps[s.collabelpos == 'left' ? 0 : self.xGrps.length - 1].name
 		const yClusters = clusters.filter(c => {
-			return c[clusterKey].name === xRef
+			return c[self.xGrpKey].name === xRef
 		})
-		//console.log(yGrps, yRef, xGrps, clusterKey, xClusters, clusters)
 
 		const gx = d.xOffset + yClusters[0].x + yClusters[0].width + 5
 
@@ -196,6 +181,6 @@ function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			//.attr('transform', 'rotate(-90)')
-			.text(cluster[s.transpose ? 'samplegrp' : 'termgrp'].name)
+			.text(cluster[self.yGrpKey].name)
 	}
 }
