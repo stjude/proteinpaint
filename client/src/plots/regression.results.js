@@ -734,38 +734,40 @@ function setRenderers(self) {
 				tklst: [],
 				onCoordinateChange: async rglst => {
 					const { chr, start, stop } = rglst[0]
-					const tw = {
+					// temporary tw as override for pill.runCallback()
+					const overrideTw = {
 						term: {
 							id: input.term.term.id,
-							name: 'Variants in a locus',
 							type: 'snplocus'
 						},
 						q: JSON.parse(JSON.stringify(input.term.q))
 					}
-					tw.q.chr = chr
-					tw.q.start = start
-					tw.q.stop = stop
-					await input.pill.main(tw)
-					/* 
-					pill.main() will update q{chr/start/stop} in termsetting instance
-					then, will call postMain() to recompute cache id
-					and store updated variants in term.snps[]
-					note that term.snps[] is only in termsetting instance,
-					but NOT in Input.term.term{}
-					for the updated q{} and term{} to be synced into regression state,
-					call pill.runCallback()
-					which will call editConfig() and dispatch action with hasUnsubmittedEdits=true,
-					set this single-use flag to nullify it
-					to be able to continue run analysis
+					overrideTw.q.chr = chr
+					overrideTw.q.start = start
+					overrideTw.q.stop = stop
+					// call fillTW of snplocus.js to recompute tw.term.snps[] and cache file
+					const _ = await import('../common/termsetting.snplocus')
+					await _.fillTW(overrideTw, self.app.vocabApi)
+					/*
+					updated term info (term.snps[] and q.cacheid etc) are now in overrideTw
+					call pill.runCallback() with this override
+					which in turn calls editConfig() and
+					dispatch action and write the updated tw into state;
+					state change will trigger pill.main()
+					to propagate updated data to termsetting instance
+
+					*
+					Note: it is incorrect to call pill.main() or inputs.editConfig() here
+					*
+
+					action dispatch will contain hasUnsubmittedEdits=true,
+					effect of which is to hide result UI and require user to click submit button to rerun analysis
+					set a single-use flag to nullify it so results.js can automatically run analysis
+					so user can continuously look at genome browser
+					without break/interruption to user experience
 					*/
 					self.hasUnsubmittedEdits_nullify_singleuse = true
-					/*
-					in order to commit updated term info to state,
-					cannot directly call self.parent.inputs.editConfig(input, tw)
-					since updated q{} and term{} are only in termsetting instance
-					but not tw.term{ q, term }
-					*/
-					input.pill.runCallback()
+					input.pill.runCallback(overrideTw)
 				}
 			}
 

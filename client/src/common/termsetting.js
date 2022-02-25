@@ -77,12 +77,13 @@ class TermSetting {
 		}
 	}
 
-	runCallback() {
-		this.opts.callback({
-			id: this.term.id,
-			term: this.term,
-			q: this.q
-		})
+	runCallback(overrideTw) {
+		/* optional termwrapper (tw) to override attributes of this.term{} and this.q{}
+		the override tw serves the "atypical" termsetting usage
+		as used in snplocus block pan/zoom update in regression.results.js
+		*/
+		const arg = { id: this.term.id, term: this.term, q: this.q }
+		this.opts.callback(overrideTw ? copyMerge({}, arg, overrideTw) : arg)
 	}
 
 	validateOpts(o) {
