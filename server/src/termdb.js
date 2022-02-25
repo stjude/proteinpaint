@@ -323,5 +323,6 @@ async function trigger_getpercentile(q, res, ds) {
 
 function trigger_getvariantfilter(res, ds) {
 	if (!ds.track) throw 'unknown dataset version'
+	// variant_filter is always an object, can be empty
 	res.send(ds.track.variant_filter)
 }

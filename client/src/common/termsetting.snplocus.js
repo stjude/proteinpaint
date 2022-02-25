@@ -229,6 +229,7 @@ function add_genesearchbox(self, div) {
 			if (keyupEnter()) {
 				// pressed enter
 				input.blur()
+				tip.hide()
 				// if input can be parsed as coord string (chr:pos or chr:start-stop), then no need to match with gene/snp
 				const pos = string2pos(v, self.opts.genomeObj)
 				if (pos) {
@@ -237,6 +238,7 @@ function add_genesearchbox(self, div) {
 					return
 				}
 				// input is not coord; see if tip is showing gene matches
+				input.disabled = true
 				const hitgene = tip.d.select('.sja_menuoption')
 				if (hitgene.size() > 0 && hitgene.attr('isgene')) {
 					// matched with some gene names, query the first one
@@ -245,6 +247,7 @@ function add_genesearchbox(self, div) {
 					// directly search with input string for gene/snp match
 					await geneCoordSearch(v)
 				}
+				input.disabled = false
 				return
 			}
 			if (event.code == 'Escape') {
@@ -399,10 +402,20 @@ function add_genesearchbox(self, div) {
 }
 
 async function mayDisplayVariantFilter(self, holder) {
-	// this implies that variant filter is always given; should allow it to be abscent
 	if (!self.variantFilter) {
 		self.variantFilter = await self.vocabApi.get_variantFilter()
+		// variantFilter should be {opts{}, filter{}, terms[]}
+		// can be empty object if this dataset does not have info filter
 	}
+	if (!self.variantFilter.terms) {
+		// this dataset does not have info filter
+		return
+	}
+	if (!self.variantFilter.opts) throw 'variantFilter.opts{} missing'
+	if (!self.variantFilter.filter) throw '.filter missing from variantFilter{}'
+	if (!Array.isArray(self.variantFilter.terms) || self.variantFilter.terms.length == 0)
+		throw 'variantFilter.terms[] is not non-empty array'
+
 	if (self.q && self.q.variant_filter) {
 		// use existing filter
 		self.variantFilter.active = JSON.parse(JSON.stringify(self.q.variant_filter))
@@ -410,9 +423,6 @@ async function mayDisplayVariantFilter(self, holder) {
 		// use default filter from dataset
 		self.variantFilter.active = JSON.parse(JSON.stringify(self.variantFilter.filter))
 	}
-	const filter = self.variantFilter.active
-	const terms = self.variantFilter.terms
-	if (!filter || !terms || !terms.length) return
 	const div = holder.append('div').style('margin', '15px 15px 15px 10px')
 	div
 		.append('div')
@@ -424,10 +434,11 @@ async function mayDisplayVariantFilter(self, holder) {
 		joinWith: self.variantFilter.opts.joinWith,
 		emptyLabel: '+Variant Filter',
 		holder: div.append('div'),
-		vocab: { terms },
+		vocab: { terms: self.variantFilter.terms },
 		callback: filter => {
-			self.variantFilter.active = filter
+			// once the filter is updated from UI, it's only updated here
 			// user must press submit button to attach current filter to self.q{}
+			self.variantFilter.active = filter
 		}
-	}).main(filter)
+	}).main(self.variantFilter.active)
 }

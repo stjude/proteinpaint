@@ -602,13 +602,14 @@ const variant_filter = {
 	opts: {
 		joinWith: ['and']
 	},
+	// default active filter
 	filter: {
 		type: 'tvslst',
 		join: lst.length > 1 ? 'and' : '',
 		in: true,
-		// reuse data from info_fields
 		lst
 	},
+	// all info fields available to add to active filter
 	terms
 }
 
@@ -820,7 +821,7 @@ module.exports = {
 		name: 'Germline SNV',
 
 		info_fields,
-		variant_filter,
+		variant_filter, // optional, if not available use {}
 
 		populations: [
 			{
