@@ -226,7 +226,7 @@ async function init_view(obj) {
 	}
 
 	const default_zoom = obj.default_zoom ? 100 - obj.default_zoom : 45
-
+	// camera parameters explaination: https://observablehq.com/@grantcuster/understanding-scale-and-the-three-js-perspective-camera
 	obj.camera = new THREE.PerspectiveCamera(default_zoom, obj.width / obj.height, 0.1, 1000)
 
 	obj.camera.position.x = obj.canvas_2d ? 0 : 20

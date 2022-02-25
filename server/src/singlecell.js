@@ -51,8 +51,9 @@ exports.handle_singlecell_closure = genomes => {
 
 async function get_pcd(q, res) {
 	/* hardcoded to 3d
-TODO 2d, svg
-*/
+		TODO 2d, svg
+		PCD file format guide: https://pcl.readthedocs.io/projects/tutorials/en/latest/pcd_file_format.html
+	*/
 
 	const result = {}
 
