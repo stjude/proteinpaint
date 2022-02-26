@@ -56,8 +56,7 @@ const minimumSample = 1
 export async function getData(q, ds) {
 	try {
 		parse_q(q, ds)
-		const sampledata = await getSampleData(q, q.terms)
-		return { lst: sampledata }
+		return await getSampleData(q, q.terms)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
@@ -108,7 +107,7 @@ async function getSampleData(q, terms) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
 
-	const samples = getSampleData_dictionaryTerms(q, dictTerms)
+	const results = getSampleData_dictionaryTerms(q, dictTerms)
 	// sample data from all terms are loaded into "samples"
 
 	/*for (const tw of nonDictTerms) {
@@ -123,7 +122,7 @@ async function getSampleData(q, terms) {
 		}
 	}*/
 
-	return samples
+	return results
 }
 
 function divideTerms(lst) {
@@ -148,7 +147,14 @@ function getSampleData_dictionaryTerms(q, terms) {
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
 	const values = filter ? filter.values.slice() : []
-	const CTEs = terms.map((t, i) => get_term_cte(q, values, i, filter, t))
+	const refs = { byTermId: {} }
+	const CTEs = terms.map((t, i) => {
+		const CTE = get_term_cte(q, values, i, filter, t)
+		if (CTE.bins) {
+			refs.byTermId[t.term.id] = { bins: CTE.bins }
+		}
+		return CTE
+	})
 	values.push(...terms.map(d => d.id))
 
 	const sql = `WITH
@@ -168,5 +174,6 @@ function getSampleData_dictionaryTerms(q, terms) {
 		if (!samples[sample]) samples[sample] = { sample }
 		samples[sample][term_id] = { key, value }
 	}
-	return Object.values(samples)
+
+	return { lst: Object.values(samples), refs }
 }

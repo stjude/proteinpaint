@@ -168,6 +168,7 @@ function setRenderers(self) {
 			filter: self.dom.subheaderDiv.append('div').style('display', 'none'),
 			cart: self.dom.subheaderDiv
 				.append('div')
+				.style('display', 'none')
 				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>')
 		})
 

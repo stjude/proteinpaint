@@ -159,7 +159,7 @@ class Matrix {
 			this.setSampleGroupsOrder(data)
 			this.setTermOrder(data)
 			this.dimensions = this.getDimensions()
-			this.serieses = this.getSerieses()
+			this.serieses = this.getSerieses(data)
 			// render the data
 			this.render()
 
@@ -191,7 +191,6 @@ class Matrix {
 
 	setSampleGroupsOrder(data) {
 		const s = this.settings.matrix
-		const sgtid = this.config.divideBy?.term?.id
 		const defaultSampleGrp = { id: undefined, lst: [] }
 
 		const sampleGroups = new Map()
@@ -200,14 +199,20 @@ class Matrix {
 			defaultSampleGrp.name = ''
 		} else {
 			defaultSampleGrp.name = 'Not annotated'
+			const term = this.config.divideBy.term
+			const values = term.values || {}
+			const sgtid = term.id
+			const ref = data.refs.byTermId[sgtid] || {}
+
 			for (const row of data.lst) {
 				if (sgtid in row) {
 					const key = row[sgtid].key
 					if (!sampleGroups.has(key)) {
 						sampleGroups.set(key, {
 							id: key,
-							name: key, // TODO: may change to a label
-							lst: []
+							name: key in values && values[key].label ? values[key].label : key,
+							lst: [],
+							order: ref.bins ? ref.bins.findIndex(bin => bin.name == key) : 0
 						})
 					}
 					sampleGroups.get(key).lst.push(row)
@@ -222,7 +227,7 @@ class Matrix {
 		}
 
 		// TODO: sort sample groups, maybe by sample count, value order, etc
-		this.sampleGroups = [...sampleGroups.values()]
+		this.sampleGroups = [...sampleGroups.values()].sort((a, b) => a.order - b.order)
 		//this.sampleGroupKeys = [...sampleGroups.keys()] -- not needed?
 		this.sampleOrder = []
 		const sampleSorter = (a, b) => {
@@ -249,7 +254,8 @@ class Matrix {
 		for (const [grpIndex, grp] of this.config.termgroups.entries()) {
 			for (const [tIndex, tw] of grp.lst.entries()) {
 				if (!('id' in tw)) tw.id = tw.term.id
-				this.termOrder.push({ grp, grpIndex, tw, tIndex, prevGrpCount: total, index: total + tIndex })
+				const ref = data.refs.byTermId[tw.id] || {}
+				this.termOrder.push({ grp, grpIndex, tw, tIndex, prevGrpCount: total, index: total + tIndex, ref })
 			}
 			total += grp.lst.length
 		}
@@ -305,7 +311,7 @@ class Matrix {
 		}
 	}
 
-	getSerieses() {
+	getSerieses(data) {
 		const s = this.settings.matrix
 		//console.log(233, s, samples, termOrder)
 		const serieses = []
@@ -323,25 +329,30 @@ class Matrix {
 
 			for (const t of this.termOrder) {
 				if (!(t.tw.id in row)) continue
-				const key = t.tw.id
+				const termid = t.tw.id
 				const tIndex = t.index
+				const values = t.tw.term.values || {}
+				const key = row[termid].key
+				const label =
+					'label' in row[termid] ? row[termid].label : key in values && values[key].label ? values[key].label : key
 				series.cells.push({
-					termid: key,
-					key: row[key].key,
-					label: row[key].label,
+					termid,
+					key,
+					label,
 					x: !s.transpose ? 0 : tIndex * dx + t.grpIndex * s.colgspace,
-					y: !s.transpose ? tIndex * dy + t.grpIndex * s.rowgspace : 0
+					y: !s.transpose ? tIndex * dy + t.grpIndex * s.rowgspace : 0,
+					order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
 				})
 
 				if (t.tw.q.mode != 'continuous') {
-					if (!keysByTermId[key]) keysByTermId[key] = new Set()
-					keysByTermId[key].add(row[key].key)
+					if (!keysByTermId[termid]) keysByTermId[termid] = {}
+					if (!keysByTermId[termid][key]) keysByTermId[termid][key] = { key, label }
 				}
 			}
 			serieses.push(series)
 		}
 
-		this.setLegendData(keysByTermId)
+		this.setLegendData(keysByTermId, data.refs)
 
 		return serieses
 	}
@@ -352,22 +363,29 @@ class Matrix {
 		}
 	}
 
-	setLegendData(keysByTermId) {
+	setLegendData(keysByTermId, refs) {
 		this.colorScaleByTermId = {}
 		const legendData = new Map()
 		for (const termid in keysByTermId) {
-			this.colorScaleByTermId[termid] =
-				keysByTermId[termid].size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
-
 			const term = this.termOrder.find(t => t.tw.id == termid).tw.term
+			const keys = Object.keys(keysByTermId[termid])
+			const ref = refs.byTermId[term.id] || {}
+			if (ref.bins)
+				keys.sort((a, b) => ref.bins.findIndex(bin => bin.name === a) - ref.bins.findIndex(bin => bin.name === b))
+
+			this.colorScaleByTermId[termid] =
+				keys.length < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
+
 			legendData.set(termid, {
 				name: term.name,
-				items: [...keysByTermId[termid]].map(key => {
+				items: keys.map((key, i) => {
+					const item = keysByTermId[termid][key]
 					return {
 						termid,
 						key,
-						text: key,
-						color: this.colorScaleByTermId[termid](key)
+						text: item.label,
+						color: this.colorScaleByTermId[termid](key),
+						order: i
 					}
 				})
 			})
@@ -383,7 +401,6 @@ export const componentInit = matrixInit
 
 function setRenderers(self) {
 	self.render = function() {
-		//console.log('currData', data, self.dom.svg.attr('width'))
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
