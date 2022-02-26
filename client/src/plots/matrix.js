@@ -9,6 +9,7 @@ import htmlLegend from '../html.legend'
 class Matrix {
 	constructor(opts) {
 		this.type = 'matrix'
+		setInteractivity(this)
 		setRenderers(this)
 	}
 
@@ -20,7 +21,10 @@ class Matrix {
 			.append('svg')
 			.style('margin', '20px 10px')
 			.style('overflow', 'visible')
-		const mainG = svg.append('g')
+		const mainG = svg
+			.append('g')
+			.on('mouseover', this.showCellInfo)
+			.on('mouseout', this.mouseout) //console.log(self.showCellInfo)
 		this.dom = {
 			header: opts.header,
 			controls,
@@ -336,6 +340,8 @@ class Matrix {
 				const label =
 					'label' in row[termid] ? row[termid].label : key in values && values[key].label ? values[key].label : key
 				series.cells.push({
+					sample: row.sample,
+					term: t.tw.term,
 					termid,
 					key,
 					label,
@@ -584,6 +590,26 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
+	self.showCellInfo = function() {
+		const d = event.target.__data__
+		if (!d || !d.term || !d.sample) return
+		if (event.target.tagName == 'rect') {
+			const rows = [
+				`<tr><td style='text-align: center'>Sample: ${d.sample}</td></tr>`,
+				`<tr><td style='text-align: center'>${d.term.name}</td></tr>`,
+				`<tr><td style='text-align: center'>${d.label}</td></tr>`
+			]
+
+			self.app.tip
+				.show(event.clientX, event.clientY)
+				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+		}
+	}
+
+	self.mouseout = function() {
+		self.app.tip.hide()
+	}
+
 	self.legendClick = function() {}
 }
 
