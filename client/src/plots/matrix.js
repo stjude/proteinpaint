@@ -4,6 +4,7 @@ import { select } from 'd3-selection'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { fillTermWrapper } from '../common/termsetting'
 import { MatrixCluster } from './matrix.cluster'
+import htmlLegend from '../html.legend'
 
 class Matrix {
 	constructor(opts) {
@@ -28,8 +29,8 @@ class Matrix {
 			mainG,
 			cluster: mainG.append('g').attr('class', 'sjpp-matrix-cluster-g'),
 			seriesesG: mainG.append('g').attr('class', 'sjpp-matrix-serieses-g'),
-			termLabelG: mainG.append('g').attr('class', 'sjpp-matrix-term-label-g')
-			//legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
+			termLabelG: mainG.append('g').attr('class', 'sjpp-matrix-term-label-g'),
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.settings = Object.assign({}, this.config.settings.matrix)
@@ -37,6 +38,17 @@ class Matrix {
 		await this.setControls(appState)
 
 		this.clusterRenderer = new MatrixCluster({ holder: this.dom.cluster, app: this.app })
+		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+			settings: {
+				legendOrientation: 'grid',
+				legendTextAlign: 'left'
+			},
+			handlers: {
+				legend: {
+					click: this.legendClick
+				}
+			}
+		})
 	}
 
 	async setControls(appState) {
@@ -148,7 +160,6 @@ class Matrix {
 			this.setTermOrder(data)
 			this.dimensions = this.getDimensions()
 			this.serieses = this.getSerieses()
-
 			// render the data
 			this.render()
 
@@ -160,6 +171,7 @@ class Matrix {
 			})
 
 			await this.updateSvgDimensions(prevTranspose)
+			this.legendRenderer(this.legendData)
 		} catch (e) {
 			throw e
 		}
@@ -321,17 +333,16 @@ class Matrix {
 					y: !s.transpose ? tIndex * dy + t.grpIndex * s.rowgspace : 0
 				})
 
-				if (!keysByTermId[key]) keysByTermId[key] = new Set()
-				keysByTermId[key].add(row[key].key)
+				if (t.tw.q.mode != 'continuous') {
+					if (!keysByTermId[key]) keysByTermId[key] = new Set()
+					keysByTermId[key].add(row[key].key)
+				}
 			}
 			serieses.push(series)
 		}
 
-		this.colorScaleByTermId = {}
-		for (const termid in keysByTermId) {
-			this.colorScaleByTermId[termid] =
-				keysByTermId[termid].size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
-		}
+		this.setLegendData(keysByTermId)
+
 		return serieses
 	}
 
@@ -339,6 +350,30 @@ class Matrix {
 		this.sorters = {
 			name: (a, b) => (a.sample < b.sample ? -1 : 1)
 		}
+	}
+
+	setLegendData(keysByTermId) {
+		this.colorScaleByTermId = {}
+		const legendData = new Map()
+		for (const termid in keysByTermId) {
+			this.colorScaleByTermId[termid] =
+				keysByTermId[termid].size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
+
+			const term = this.termOrder.find(t => t.tw.id == termid).tw.term
+			legendData.set(termid, {
+				name: term.name,
+				items: [...keysByTermId[termid]].map(key => {
+					return {
+						termid,
+						key,
+						text: key,
+						color: this.colorScaleByTermId[termid](key)
+					}
+				})
+			})
+		}
+
+		this.legendData = [...legendData.values()]
 	}
 }
 
@@ -412,6 +447,8 @@ function setRenderers(self) {
 	}
 
 	self.renderRect = function(cell) {
+		if (typeof self.colorScaleByTermId[cell.termid] != 'function')
+			console.log(448, cell.termid, cell.key, self.colorScaleByTermId)
 		const s = self.settings.matrix
 		const rect = select(this)
 			.transition()
@@ -483,7 +520,7 @@ function setRenderers(self) {
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
 
 		// wait for labels to render; when transposing, must wait for
-		// the height and width to be measured after its done
+		// the label rotation to end before measuring the label height and width
 		await sleep(prevTranspose == s.transpose ? duration : s.duration)
 
 		const sLabelBox = { max: 0, key: !s.transpose ? 'height' : 'width' }
@@ -492,6 +529,7 @@ function setRenderers(self) {
 			const measurement = bbox[sLabelBox.key]
 			if (measurement > sLabelBox.max) sLabelBox.max = measurement
 		})
+
 		const termBox = self.dom.mainG
 			.select('.sjpp-matrix-term-label-g')
 			.node()
@@ -512,8 +550,8 @@ function setRenderers(self) {
 		const yh = !s.transpose ? sLabelBox.max : termBox.height
 		d.extraHeight = colGrpLabelBox.height + yh + s.margin.top + s.margin.bottom + s.collabelgap * 2
 
-		d.svgw = d.mainw + d.extraWidth // d.svgw + self.dom.row self.clusterRenderer  d.xOffset + nx * dx + this.layout.colgrps.length * s.colgspace + s.margin.right,
-		d.svgh = d.mainh + d.extraHeight // d.yOffset + ny * dy + this.layout.rowgrps.length * s.rowgspace + s.margin.bottom + 100
+		d.svgw = d.mainw + d.extraWidth
+		d.svgh = d.mainh + d.extraHeight
 
 		self.dom.svg
 			.transition()
@@ -526,6 +564,10 @@ function setRenderers(self) {
 			.duration(duration)
 			.attr('transform', `translate(${xw - self.layout.rowOffset},${yh - self.layout.colOffset})`)
 	}
+}
+
+function setInteractivity(self) {
+	self.legendClick = function() {}
 }
 
 export async function getPlotConfig(opts, app) {
