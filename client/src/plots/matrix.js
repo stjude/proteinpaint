@@ -5,6 +5,7 @@ import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { fillTermWrapper } from '../common/termsetting'
 import { MatrixCluster } from './matrix.cluster'
 import htmlLegend from '../html.legend'
+import { mclass } from '../../shared/common'
 
 class Matrix {
 	constructor(opts) {
@@ -257,7 +258,7 @@ class Matrix {
 		let total = 0
 		for (const [grpIndex, grp] of this.config.termgroups.entries()) {
 			for (const [tIndex, tw] of grp.lst.entries()) {
-				if (!('id' in tw)) tw.id = tw.term.id
+				//if (!('id' in tw)) tw.id = tw.term.id
 				const ref = data.refs.byTermId[tw.id] || {}
 				this.termOrder.push({ grp, grpIndex, tw, tIndex, prevGrpCount: total, index: total + tIndex, ref })
 			}
@@ -332,25 +333,32 @@ class Matrix {
 			}
 
 			for (const t of this.termOrder) {
-				if (!(t.tw.id in row)) continue
 				const termid = t.tw.id
+				// TODO: generalize the alternative ID handling
+				const altId = t.tw.term.type == 'geneVariant' ? t.tw.term.name : ''
+				const anno = row[altId || termid]
+				if (!anno) continue
 				const tIndex = t.index
 				const values = t.tw.term.values || {}
-				const key = row[termid].key
-				const label =
-					'label' in row[termid] ? row[termid].label : key in values && values[key].label ? values[key].label : key
+				const key = anno.key
+				const label = 'label' in anno ? anno.label : key in values && values[key].label ? values[key].label : key
+
+				//if (altid=='TP53' /*&& row[termid].values*/) console.log(343, row[termid].values)
 				series.cells.push({
 					sample: row.sample,
 					term: t.tw.term,
 					termid,
 					key,
 					label,
+					// some term types like geneVariant can have multiple values for the same term
+					values: anno.values,
 					x: !s.transpose ? 0 : tIndex * dx + t.grpIndex * s.colgspace,
 					y: !s.transpose ? tIndex * dy + t.grpIndex * s.rowgspace : 0,
 					order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
 				})
 
-				if (t.tw.q.mode != 'continuous') {
+				// TODO: improve logic for excluding data from legend
+				if (t.tw.q.mode != 'continuous' && t.tw.term.type != 'geneVariant') {
 					if (!keysByTermId[termid]) keysByTermId[termid] = {}
 					if (!keysByTermId[termid][key]) keysByTermId[termid][key] = { key, label }
 				}
@@ -470,8 +478,8 @@ function setRenderers(self) {
 	}
 
 	self.renderRect = function(cell) {
-		if (typeof self.colorScaleByTermId[cell.termid] != 'function')
-			console.log(448, cell.termid, cell.key, self.colorScaleByTermId)
+		const fill =
+			cell.termid in self.colorScaleByTermId ? self.colorScaleByTermId[cell.termid](cell.key) : getRectFill(cell)
 		const s = self.settings.matrix
 		const rect = select(this)
 			.transition()
@@ -480,9 +488,9 @@ function setRenderers(self) {
 			.attr('y', cell.y)
 			.attr('width', s.colw)
 			.attr('height', s.rowh)
-			.attr('stroke', '#eee')
-			.attr('stroke-width', 1)
-			.attr('fill', self.colorScaleByTermId[cell.termid](cell.key))
+			//.attr('stroke', '#eee')
+			//.attr('stroke-width', 1)
+			.attr('fill', fill)
 	}
 
 	self.renderSeriesLabel = function(series) {
@@ -611,6 +619,13 @@ function setInteractivity(self) {
 	}
 
 	self.legendClick = function() {}
+}
+
+function getRectFill(d) {
+	if (d.fill) return d.fill
+	/*** TODO: class should be for every values entry, as applicable ***/
+	const cls = d.class || (Array.isArray(d.values) && d.values[0].class)
+	return cls ? mclass[cls].color : '#555'
 }
 
 export async function getPlotConfig(opts, app) {

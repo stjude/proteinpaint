@@ -5,11 +5,19 @@
 
 module.exports = function() {
 	// not using the usual 'common' argument, just want a fresh dataset object
-	// to allow sharing the jsfile without having to share the same ds bootstrap object
+	// to allow sharing this jsfile for overrides
+	// and without having to share the same ds bootstrap object instance
 	return {
 		isMds: true,
 
 		cohort: {
+			mutationset: [
+				{
+					snvindel: 'sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv',
+					cnv: 'sdhanda/mb_portal/BT_database/CNV_data_pnet.tsv',
+					fusion: 'sdhanda/mb_portal/BT_database/fusion_pnet.tsv'
+				}
+			],
 			db: {
 				file: 'files/hg19/pnet/clinical/db'
 			},

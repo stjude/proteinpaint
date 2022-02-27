@@ -24,7 +24,7 @@ runproteinpaint({
 			dslabel: 'PNET',
 			genome: 'hg19',
 			plots: [
-				{
+				/*{
 					chartType: 'survival',
 					term: {
 						id: 'Event-free survival'
@@ -33,7 +33,7 @@ runproteinpaint({
 						id: 'Age'
 					},
 					settings: {}
-				},
+				},*/
 				{
 					chartType: 'matrix',
 					settings: {
@@ -95,6 +95,43 @@ runproteinpaint({
 								},
 							]
 						},
+						{
+							name: 'Variants',
+							lst: [
+								{
+									term: {
+										type: 'geneVariant',
+										name: 'C19MC'
+									}
+								},
+								{
+									term: {
+										type: 'geneVariant',
+										name: 'TP53'
+									}
+								},{
+									term: {
+										type: 'geneVariant',
+										name: 'NRAS'
+									}
+								},{
+									term: {
+										type: 'geneVariant',
+										name: 'KRAS'
+									}
+								},{
+									term: {
+										type: 'geneVariant',
+										name: 'FLT3'
+									}
+								},{
+									term: {
+										type: 'geneVariant',
+										name: 'MYC'
+									}
+								}
+							]
+						}
 					],
 				}
 			]

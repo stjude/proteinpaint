@@ -7,6 +7,7 @@ const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
+const get_flagset = require('./bulk.mset').get_flagset
 
 /*
 q {}
@@ -83,46 +84,31 @@ q{}
 terms[]
 	array of {id, term, q}
 
-Returns two data structures
-1.
-	[
-		{
-	  	sample: STRING,
-
-			// one or more entries by term id
-			id2value: Map[
-				term.id,
-				{
-					// depending on term type and desired 
-					key: either (a) bin or groupsetting label, or (b) precomputed or annotated value if no bin/groupset is used, 
-					value: precomputed or annotated value
-				}
-			]
-		},
-		...
-	]
-2.
+Returns 
+	{
+		lst: [
+			{sample, termid1: {key, value(s)}, }
+		]
+	}
 */
 async function getSampleData(q, terms) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
 
-	const results = getSampleData_dictionaryTerms(q, dictTerms)
-	// sample data from all terms are loaded into "samples"
+	const { samples, refs } = getSampleData_dictionaryTerms(q, dictTerms)
 
-	/*for (const tw of nonDictTerms) {
+	// sample data from all terms are loaded into "samples"
+	for (const tw of nonDictTerms) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
-		if (tw.type == 'snplst' || tw.type == 'snplocus') {
-			// each snp is one indepedent variable
-			// record list of snps on term.snpidlst
-			await getSampleData_snplstOrLocus(tw, samples, q)
+		if (tw.term.type == 'geneVariant') {
+			await add_geneMutation2SampleData(tw, samples, q)
 		} else {
 			throw 'unknown type of independent non-dictionary term'
 		}
-	}*/
+	}
 
-	return results
+	return { lst: Object.values(samples), refs }
 }
 
 function divideTerms(lst) {
@@ -131,11 +117,12 @@ function divideTerms(lst) {
 	// shared between server and client
 	const dict = [],
 		nonDict = []
-	for (const t of lst) {
-		if (t.type == 'snplst' || t.type == 'snplocus') {
-			nonDict.push(t)
+	for (const tw of lst) {
+		const type = tw.term.type
+		if (type == 'snplst' || type == 'snplocus' || type == 'geneVariant') {
+			nonDict.push(tw)
 		} else {
-			dict.push(t)
+			dict.push(tw)
 		}
 	}
 	return [dict, nonDict]
@@ -175,5 +162,26 @@ function getSampleData_dictionaryTerms(q, terms) {
 		samples[sample][term_id] = { key, value }
 	}
 
-	return { lst: Object.values(samples), refs }
+	return { samples, refs }
+}
+
+async function add_geneMutation2SampleData(tw, samples, q) {
+	const tname = tw.term.name
+	const flagset = await get_flagset(q.ds.cohort, q.genome)
+	const sampleData = {}
+	for (const flagname in flagset) {
+		const flag = flagset[flagname]
+		if (!(tname in flag.data)) continue
+		for (const d of flag.data[tname]) {
+			// TODO: fix the sample names in the PNET mutation text files
+			const sname = d.sample
+				.split(';')
+				.pop()
+				.trim()
+			const row = samples[d.sample]
+			if (!row) continue
+			if (!row[tname]) row[tname] = { key: tname, values: [], label: tname }
+			row[tname].values.push(d)
+		}
+	}
 }
