@@ -67,8 +67,8 @@ export function getHandler(self) {
 }
 
 async function makeEditMenu(self, div) {
-	// lacks a way to validate constructor option based on type-specific logic
-	if (!self.opts.genomeObj) throw 'opts.genomeObj{} is required for snplocus termsetting UI'
+	const select_ancestry = await mayRestrictAncestry(self, div)
+
 	const coordResult = add_genesearchbox(self, div)
 
 	await mayDisplayVariantFilter(self, div)
@@ -113,6 +113,7 @@ async function makeEditMenu(self, div) {
 
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
+			self.q.restrictAncestry = select_ancestry.property('selectedIndex')
 
 			self.runCallback()
 		})
@@ -199,6 +200,10 @@ function makeId() {
 function add_genesearchbox(self, div) {
 	// some code duplication with block.js
 	// uses result{} to remember previous hit
+
+	// lacks a way to validate constructor option based on type-specific logic
+	if (!self.opts.genomeObj) throw 'opts.genomeObj{} is required for snplocus termsetting UI'
+
 	const tip = self.dom.tip2
 
 	const row = div.append('div').style('margin', '10px')
@@ -441,4 +446,25 @@ async function mayDisplayVariantFilter(self, holder) {
 			self.variantFilter.active = filter
 		}
 	}).main(self.variantFilter.active)
+}
+
+async function mayRestrictAncestry(self, holder) {
+	const tdbcfg = await self.vocabApi.getTermdbConfig()
+	if (!tdbcfg.restrictAncestries) return
+	const row = holder.append('div').style('margin', '10px')
+	row
+		.append('span')
+		.text('Restrict analysis to')
+		.style('margin-right', '5px')
+	const select = row.append('select')
+	for (const ancestry of tdbcfg.restrictAncestries) {
+		// ancestry: string
+		select.append('option').text(ancestry)
+	}
+	if (self.q && 'restrictAncestry' in self.q) {
+		if (self.q.restrictAncestry < 0 || self.q.restrictAncestry > tdbcfg.restrictAncestries.length)
+			throw 'q.restrictAncestry is not valid array idx'
+		select.property('selectedIndex', self.q.restrictAncestry)
+	}
+	return select
 }

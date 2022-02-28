@@ -60,6 +60,37 @@ const cohorthtmltable = `<table>
 </tbody>
 </table>`
 
+/* when using snplocus term in regression analysis, restrict to an ancestry
+each correspond to a tvs to be added for filtering samples
+and the set of pc values to be used as co-variates
+*/
+const restrictAncestries = [
+	{
+		name: 'European ancestry',
+		tvs: {
+			term: {
+				id: 'genetic_race',
+				type: 'categorical',
+				name: 'Genetically defined race'
+			},
+			values: [{ key: 'European Ancestry', label: 'European Ancestry' }]
+		}
+		// tempfix, add a text file for pcs
+	},
+	{
+		name: 'African ancestry',
+		tvs: {
+			term: {
+				id: 'genetic_race',
+				type: 'categorical',
+				name: 'Genetically defined race'
+			},
+			values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+		}
+		// tempfix, add a text file for pcs
+	}
+]
+
 // the vcf file
 const info_fields = [
 	{
@@ -637,9 +668,10 @@ module.exports = {
 			// expose to client via termdbConfig
 			allowedTermTypes: [
 				'snplst' // as independent variable in mass regression
-				// to add 'snplocus' later
-				//'prs' // as independent variable in mass regression
+				// to add 'snplocus' 'prs' later
 			],
+
+			restrictAncestries,
 
 			//// this attribute is optional
 			phewas: {

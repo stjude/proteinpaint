@@ -115,7 +115,8 @@ function trigger_gettermdbconfig(res, tdb) {
 			cumincplot4condition: tdb.cumincplot4condition, // optional
 			survivalplot: tdb.survivalplot, // optional
 			supportedChartTypes: tdb.q.getSupportedChartTypes(),
-			allowedTermTypes: tdb.allowedTermTypes || []
+			allowedTermTypes: tdb.allowedTermTypes || [],
+			restrictAncestries: tdb.restrictAncestries ? tdb.restrictAncestries.map(i => i.name) : null
 		}
 	})
 }
