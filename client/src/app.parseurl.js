@@ -490,12 +490,14 @@ export async function get_tklst(urlp, genomeobj) {
 		// name,enzyme,file/url
 		const isfile = urlp.has('hictkfile')
 		const lst = urlp.get(isfile ? 'hictkfile' : 'hictkurl').split(',')
+		const norm = urlp.has('hictknorm') ? urlp.get('hictknorm').split(',') : null
 		for (let i = 0; i < lst.length; i += 3) {
 			if (lst[i] && lst[i + 1] && lst[i + 2]) {
 				const t = {
 					type: client.tkt.hicstraw,
 					name: lst[i],
-					enzyme: lst[i + 1]
+					enzyme: lst[i + 1],
+					normalizationmethod: norm ? norm[i / 3] : null
 				}
 				if (isfile) {
 					t.file = lst[i + 2]
