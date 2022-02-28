@@ -1,5 +1,4 @@
 import { select, selectAll, mouse, event } from 'd3-selection'
-//import {labelAdjuster} from '../dom/labeladjuster'
 
 export class MatrixCluster {
 	constructor(opts) {

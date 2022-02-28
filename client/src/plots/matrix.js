@@ -1,9 +1,9 @@
 import { getCompInit, copyMerge } from '../common/rx.core'
-import { controlsInit } from './controls'
 import { select } from 'd3-selection'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { fillTermWrapper } from '../common/termsetting'
 import { MatrixCluster } from './matrix.cluster'
+import { MatrixControls } from './matrix.controls'
 import htmlLegend from '../html.legend'
 import { mclass } from '../../shared/common'
 
@@ -40,8 +40,8 @@ class Matrix {
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.settings = Object.assign({}, this.config.settings.matrix)
 		if (this.dom.header) this.dom.header.html('Sample Matrix')
-		await this.setControls(appState)
 
+		this.setControls(appState)
 		this.clusterRenderer = new MatrixCluster({ holder: this.dom.cluster, app: this.app })
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
 			settings: {
@@ -56,80 +56,17 @@ class Matrix {
 		})
 	}
 
-	async setControls(appState) {
-		if (this.opts.controls) {
-			this.opts.controls.on('downloadClick.boxplot', this.download)
-		} else {
-			this.dom.holder
-				.attr('class', 'pp-termdb-plot-viz')
-				.style('display', 'inline-block')
-				.style('min-width', '300px')
-				.style('margin-left', '50px')
-
-			this.components = {
-				controls: await controlsInit({
-					app: this.app,
-					id: this.id,
-					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
-					inputs: [
-						{
-							label: 'Group samples by',
-							type: 'term',
-							chartType: 'matrix',
-							configKey: 'divideBy',
-							vocabApi: this.app.vocabApi,
-							state: {
-								vocab: appState.vocab,
-								activeCohort: appState.activeCohort
-							}
-						},
-						{
-							label: 'Transpose',
-							boxLabel: '',
-							type: 'checkbox',
-							chartType: 'matrix',
-							settingsKey: 'transpose'
-						},
-						{
-							label: 'Column width',
-							type: 'number',
-							chartType: 'matrix',
-							settingsKey: 'colw'
-						},
-						{
-							label: 'Column gap',
-							type: 'number',
-							chartType: 'matrix',
-							settingsKey: 'colspace'
-						},
-						{
-							label: 'Column label offset',
-							type: 'number',
-							chartType: 'matrix',
-							settingsKey: 'collabelgap'
-						},
-						{
-							label: 'Row height',
-							type: 'number',
-							chartType: 'matrix',
-							settingsKey: 'rowh'
-						},
-						{
-							label: 'Row gap',
-							type: 'number',
-							chartType: 'matrix',
-							settingsKey: 'rowspace'
-						},
-						{
-							label: 'Row label offset',
-							type: 'number',
-							chartType: 'matrix',
-							settingsKey: 'rowlabelgap'
-						}
-					]
-				})
-			}
-		}
+	setControls(appState) {
+		if (this.opts.controls) return
+		this.controlsRenderer = new MatrixControls(
+			{
+				app: this.app,
+				id: this.id,
+				parent: this,
+				holder: this.dom.controls
+			},
+			appState
+		)
 	}
 
 	/*reactsTo(action) {
