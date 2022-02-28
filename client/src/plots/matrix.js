@@ -339,23 +339,45 @@ class Matrix {
 				const anno = row[altId || termid]
 				if (!anno) continue
 				const tIndex = t.index
-				const values = t.tw.term.values || {}
 				const key = anno.key
+				const values = t.tw.term.values || {}
 				const label = 'label' in anno ? anno.label : key in values && values[key].label ? values[key].label : key
 
-				//if (altid=='TP53' /*&& row[termid].values*/) console.log(343, row[termid].values)
-				series.cells.push({
-					sample: row.sample,
-					term: t.tw.term,
-					termid,
-					key,
-					label,
-					// some term types like geneVariant can have multiple values for the same term
-					values: anno.values,
-					x: !s.transpose ? 0 : tIndex * dx + t.grpIndex * s.colgspace,
-					y: !s.transpose ? tIndex * dy + t.grpIndex * s.rowgspace : 0,
-					order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
-				})
+				if (!anno.values) {
+					// only one rect for this sample annotation
+					series.cells.push({
+						sample: row.sample,
+						term: t.tw.term,
+						termid,
+						key,
+						label,
+						x: !s.transpose ? 0 : tIndex * dx + t.grpIndex * s.colgspace,
+						y: !s.transpose ? tIndex * dy + t.grpIndex * s.rowgspace : 0,
+						order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
+					})
+				} else {
+					// some term types like geneVariant can have multiple values for the same term,
+					// which will be renderd as multiple smaller, non-overlapping rects within the same cell
+					const height = !s.transpose ? s.rowh / anno.values.length : 0
+					const width = !s.transpose ? 0 : s.colw / anno.values.length
+					for (const [i, value] of anno.values.entries()) {
+						series.cells.push({
+							sample: row.sample,
+							term: t.tw.term,
+							termid: termid + ';;' + i,
+							key,
+							label: value.class ? mclass[value.class].label : '',
+							value,
+							x: !s.transpose ? 0 : tIndex * dx + t.grpIndex * s.colgspace + width * i,
+							y: !s.transpose ? tIndex * dy + t.grpIndex * s.rowgspace + height * i : 0,
+							height,
+							width,
+							fill: mclass[value.class].color,
+							class: value.class,
+							order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
+						})
+					}
+				}
 
 				// TODO: improve logic for excluding data from legend
 				if (t.tw.q.mode != 'continuous' && t.tw.term.type != 'geneVariant') {
@@ -478,19 +500,20 @@ function setRenderers(self) {
 	}
 
 	self.renderRect = function(cell) {
-		const fill =
-			cell.termid in self.colorScaleByTermId ? self.colorScaleByTermId[cell.termid](cell.key) : getRectFill(cell)
+		if (!cell.fill)
+			cell.fill =
+				cell.termid in self.colorScaleByTermId ? self.colorScaleByTermId[cell.termid](cell.key) : getRectFill(cell)
 		const s = self.settings.matrix
 		const rect = select(this)
 			.transition()
 			.duration('x' in this ? s.duration : 0)
 			.attr('x', cell.x)
 			.attr('y', cell.y)
-			.attr('width', s.colw)
-			.attr('height', s.rowh)
+			.attr('width', cell.width ? cell.width : s.colw)
+			.attr('height', cell.height ? cell.height : s.rowh)
 			//.attr('stroke', '#eee')
 			//.attr('stroke-width', 1)
-			.attr('fill', fill)
+			.attr('fill', cell.fill)
 	}
 
 	self.renderSeriesLabel = function(series) {
@@ -605,8 +628,17 @@ function setInteractivity(self) {
 			const rows = [
 				`<tr><td style='text-align: center'>Sample: ${d.sample}</td></tr>`,
 				`<tr><td style='text-align: center'>${d.term.name}</td></tr>`,
-				`<tr><td style='text-align: center'>${d.label}</td></tr>`
+				`<tr><td style='text-align: center; color: ${d.fill}'>${d.label}</td></tr>`
 			]
+
+			if (d.term.type == 'geneVariant') {
+				rows.push()
+				if (d.value.alt)
+					rows.push(`<tr><td style='text-align: center'>ref=${d.value.ref}, alt=${d.value.alt}</td></tr>`)
+				if (d.value.isoform) rows.push(`<tr><td style='text-align: center'>Isoform: ${d.value.isoform}</td></tr>`)
+				if (d.value.mname) rows.push(`<tr><td style='text-align: center'>${d.value.mname}</td></tr>`)
+				if (d.value.chr) rows.push(`<tr><td style='text-align: center'>${d.value.chr}:${d.value.pos}</td></tr>`)
+			}
 
 			self.app.tip
 				.show(event.clientX, event.clientY)

@@ -6,8 +6,9 @@ const bulk = require('../shared/bulk'),
 	bulksv = require('../shared/bulk.sv'),
 	bulksvjson = require('../shared/bulk.svjson'),
 	bulktrunc = require('../shared/bulk.trunc'),
-	path = require('path')
-;(fs = require('fs')), (serverconfig = require('./serverconfig'))
+	path = require('path'),
+	fs = require('fs'),
+	serverconfig = require('./serverconfig')
 
 const handlers = {
 	snvindel: bulksnv,
