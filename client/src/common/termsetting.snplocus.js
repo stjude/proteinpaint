@@ -113,7 +113,11 @@ async function makeEditMenu(self, div) {
 
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
-			self.q.restrictAncestry = select_ancestry.property('selectedIndex')
+			{
+				const o = select_ancestry.node().options
+				// value is text
+				self.q.restrictAncestry = o[select_ancestry.property('selectedIndex')].innerHTML
+			}
 
 			self.runCallback()
 		})
@@ -461,10 +465,11 @@ async function mayRestrictAncestry(self, holder) {
 		// ancestry: string
 		select.append('option').text(ancestry)
 	}
-	if (self.q && 'restrictAncestry' in self.q) {
-		if (self.q.restrictAncestry < 0 || self.q.restrictAncestry > tdbcfg.restrictAncestries.length)
-			throw 'q.restrictAncestry is not valid array idx'
-		select.property('selectedIndex', self.q.restrictAncestry)
+	if (self.q && self.q.restrictAncestry) {
+		// value is text
+		const i = tdbcfg.restrictAncestries.indexOf(self.q.restrictAncestry)
+		if (i == -1) throw 'unknown restrictAncestry: ' + self.q.restrictAncestry
+		select.property('selectedIndex', i)
 	}
 	return select
 }

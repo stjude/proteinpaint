@@ -37,6 +37,7 @@ so that R script will not need to interpret term type
 ***  function cascade  ***
 get_regression()
 	parse_q
+		alterFilterByAncestryRestriction
 	getSampleData
 		divideTerms
 		getSampleData_dictionaryTerms
@@ -118,7 +119,6 @@ function parse_q(q, ds) {
 	// tw = termWrapper
 	for (const tw of q.independent) {
 		if (!tw.q) throw `missing q for term.id='${tw.id}'`
-		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
 		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			// !!!!!!!!!QUICK FIX!! detect non-dict term and do not query termdb
 			// tw for these terms lacks tw.term{}
@@ -135,11 +135,16 @@ function parse_q(q, ds) {
 				// missingGenotype is not needed for snplocus
 				if (!Number.isInteger(tw.q.missingGenotype)) throw 'q.missingGenotype is not integer for snplst'
 			}
-		} else {
-			if (!tw.id) throw '.id missing for an independent term'
-			tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
-			if (!tw.term) throw `invalid independent term='${tw.id}'`
+			if (tw.q.restrictAncestry) {
+				alterFilterByAncestryRestriction(tw.q.restrictAncestry, q, ds)
+			}
+			continue
 		}
+		// tw is dictionary term
+		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
+		if (!tw.id) throw '.id missing for an independent term'
+		tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
+		if (!tw.term) throw `invalid independent term='${tw.id}'`
 	}
 	// interaction of independent
 	for (const i of q.independent) {
@@ -147,6 +152,24 @@ function parse_q(q, ds) {
 		for (const x of i.interactions) {
 			// TODO allow tw.interactions[] array to contain snpid instead of snplst term id
 			if (!q.independent.find(y => y.id == x)) throw 'interacting term id missing from independent[]: ' + x
+		}
+	}
+}
+
+function alterFilterByAncestryRestriction(ancestryName, q, ds) {
+	if (!ds.cohort.termdb.restrictAncestries) throw 'ds.restrictAncestries missing'
+	const ancestry = ds.cohort.termdb.restrictAncestries.find(i => i.name == ancestryName)
+	if (!ancestry) throw 'unknown ancestry: ' + ancestryName
+	if (q.filter) {
+		// ancestry.tvs to be added to filter
+		// what if filter already contain this tvs? if it's nested?
+	} else {
+		// create new filter with this tvs
+		q.filter = {
+			type: 'tvslst',
+			join: '',
+			in: true,
+			lst: [{ type: 'tvs', tvs: JSON.parse(JSON.stringify(ancestry.tvs)) }]
 		}
 	}
 }
