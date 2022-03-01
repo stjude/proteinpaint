@@ -149,13 +149,14 @@ function setNumberInput(opts) {
 		.attr('type', 'number')
 		.style('width', (opts.width || 100) + 'px')
 		.on('change', () => {
+			const value = Number(self.dom.input.property('value'))
 			opts.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
 					settings: {
 						[opts.chartType]: {
-							[opts.settingsKey]: Number(self.dom.input.property('value'))
+							[opts.settingsKey]: opts.processInput ? opts.processInput(value) : value
 						}
 					}
 				}
@@ -371,13 +372,14 @@ function setCheckboxInput(opts) {
 		.append('input')
 		.attr('type', 'checkbox')
 		.on('change', () => {
+			const value = self.dom.input.property('checked')
 			opts.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
 					settings: {
 						[opts.chartType]: {
-							[opts.settingsKey]: self.dom.input.property('checked')
+							[opts.settingsKey]: opts.processInput ? opts.processInput(value) : value
 						}
 					}
 				}
@@ -391,7 +393,8 @@ function setCheckboxInput(opts) {
 
 	const api = {
 		main(plot) {
-			self.dom.input.property('checked', plot.settings[opts.chartType][opts.settingsKey])
+			const value = plot.settings[opts.chartType][opts.settingsKey]
+			self.dom.input.property('checked', opts.processInput ? opts.processInput(value) : value)
 		}
 	}
 
@@ -422,6 +425,7 @@ function setTermInput(opts) {
 		callback: tw => {
 			// data is object with only one needed attribute: q, never is null
 			if (tw && !tw.q) throw 'data.q{} missing from pill callback'
+			pill.main(tw)
 			opts.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
@@ -436,12 +440,12 @@ function setTermInput(opts) {
 		usestate: true,
 		main(plot) {
 			const { config, activeCohort, termfilter } = JSON.parse(JSON.stringify(plot))
-			const tw = config[opts.configKey] || {}
+			const tw = plot[opts.configKey] || (config && config[opts.configKey]) || {}
 			pill.main({
 				term: tw.term,
 				q: tw.q,
 				activeCohort,
-				filter: termfilter.filter
+				filter: termfilter && termfilter.filter
 			})
 		}
 	}
@@ -450,7 +454,7 @@ function setTermInput(opts) {
 	return Object.freeze(api)
 }
 
-const initByInput = {
+export const initByInput = {
 	number: setNumberInput,
 	math: setMathExprInput,
 	text: setTextInput,

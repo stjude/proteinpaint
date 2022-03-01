@@ -1,6 +1,5 @@
 import { getCompInit, multiInit } from '../common/rx.core'
 import { select as d3select, event as d3event } from 'd3-selection'
-import * as client from '../client'
 import { topBarInit } from './controls.btns'
 import { configUiInit } from './controls.config'
 

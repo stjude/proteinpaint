@@ -9,8 +9,12 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 		legendDiv
 			.style(
 				'text-align',
-				data.legendTextAlign ? data.legendTextAlign : s.legendOrientation == 'vertical' ? 'left' : 'center'
+				data.legendTextAlign || s.legendTextAlign || (s.legendOrientation == 'vertical' ? 'left' : 'center')
 			)
+			.style('display', s.legendOrientation == 'grid' ? 'grid' : '')
+			//.style('grid-template-cols', s.legendOrientation == 'grid' ? 'auto auto' : '')
+			.style('grid-template-rows', s.legendOrientation == 'grid' ? 'auto auto' : '')
+			.style('gap', s.legendOrientation == 'grid' ? '10px' : '')
 			.selectAll('div')
 			.data(data)
 			.enter()
@@ -36,7 +40,10 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 
 	function addLegendRow(d) {
 		const s = viz.settings
-		const div = select(this).style('display', s.legendOrientation == 'vertical' ? 'block' : 'inline-block')
+		const div = select(this).style(
+			'display',
+			s.legendOrientation == 'vertical' || s.legendOrientation == 'grid' ? 'block' : 'inline-block'
+		)
 
 		if (d.name) {
 			if (s.legendChartSide == 'right') {
@@ -62,7 +69,10 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 
 				div
 					.append('div')
-					.style('display', s.legendOrientation == 'vertical' ? 'block' : 'inline-block')
+					.style(
+						'display',
+						s.legendOrientation == 'grid' || s.legendOrientation == 'vertical' ? 'block' : 'inline-block'
+					)
 					.style('width', d.rowLabelHangLeft ? d.rowLabelHangLeft + 'px' : null)
 					.style('margin-left', s.legendOrientation == 'vertical' ? '15px' : null)
 					.style('text-align', d.rowLabelHangLeft ? 'right' : null)
@@ -72,7 +82,10 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 
 				div
 					.append('div')
-					.style('display', s.legendOrientation == 'vertical' ? 'block' : 'inline-block')
+					.style(
+						'display',
+						s.legendOrientation == 'grid' || s.legendOrientation == 'vertical' ? 'block' : 'inline-block'
+					)
 					.style('max-width', 1.2 * d.rowLabelHangLeft + 'px')
 					.style('white-space', 'normal')
 					.style('vertical-align', 'top')

@@ -5,7 +5,8 @@
 
 module.exports = function() {
 	// not using the usual 'common' argument, just want a fresh dataset object
-	// to allow sharing the jsfile without having to share the same ds bootstrap object
+	// to allow sharing this jsfile for overrides
+	// and without having to share the same ds bootstrap object instance
 	return {
 		isMds: true,
 
