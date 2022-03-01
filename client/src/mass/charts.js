@@ -366,26 +366,13 @@ function setRenderers(self) {
 	}
 
 	self.showTextAreaInput = opt => {
-		self.dom.submenu = self.dom.tip.d.append('div')
-		self.dom.submenu.append('div').html(opt.label)
-		const ta = self.dom.submenu
-			.append('div')
-			.append('textarea')
-			.attr('placeholder', opt.placeholder)
-			.on('keydown', () => {
-				const keyCode = event.keyCode || event.which
-				// handle tab key press, otherwise it will cause the focus to move to another input
-				if (keyCode == 9) {
-					event.preventDefault()
-					const t = event.target
-					const s = t.selectionStart
-					t.value = t.value.substring(0, t.selectionStart) + '\t' + t.value.substring(t.selectionEnd)
-					t.selectionEnd = s + 1
-				}
-			})
+		self.dom.submenu = self.dom.tip.d.append('div').style('text-align', 'center')
+
+		self.dom.submenu.append('span').html(opt.label)
 
 		self.dom.submenu
 			.append('button')
+			.style('margin', '0 5px')
 			.html('Submit')
 			.on('click', async () => {
 				const data = await opt.processInput(ta.property('value'))
@@ -401,6 +388,27 @@ function setRenderers(self) {
 					}
 				}
 				self.app.dispatch(action)
+			})
+
+		const ta = self.dom.submenu
+			.append('div')
+			.style('text-align', 'left')
+			.append('textarea')
+			.attr('placeholder', opt.placeholder)
+			.style('width', '300px')
+			.style('height', '300px')
+			.style('margin', '5px')
+			.style('padding', '5px')
+			.on('keydown', () => {
+				const keyCode = event.keyCode || event.which
+				// handle tab key press, otherwise it will cause the focus to move to another input
+				if (keyCode == 9) {
+					event.preventDefault()
+					const t = event.target
+					const s = t.selectionStart
+					t.value = t.value.substring(0, t.selectionStart) + '\t' + t.value.substring(t.selectionEnd)
+					t.selectionEnd = s + 1
+				}
 			})
 	}
 

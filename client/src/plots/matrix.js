@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
-import { fillTermWrapper } from '../common/termsetting'
+import { fillTermWrapper, termsettingInit } from '../common/termsetting'
 import { MatrixCluster } from './matrix.cluster'
 import { MatrixControls } from './matrix.controls'
 import htmlLegend from '../html.legend'
@@ -34,7 +34,10 @@ class Matrix {
 			mainG,
 			cluster: mainG.append('g').attr('class', 'sjpp-matrix-cluster-g'),
 			seriesesG: mainG.append('g').attr('class', 'sjpp-matrix-serieses-g'),
-			termLabelG: mainG.append('g').attr('class', 'sjpp-matrix-term-label-g'),
+			termLabelG: mainG
+				.append('g')
+				.attr('class', 'sjpp-matrix-term-label-g')
+				.on('click', this.showTermEditMenu),
 			legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px')
 		}
 		this.config = appState.plots.find(p => p.id === this.id)
@@ -51,6 +54,63 @@ class Matrix {
 			handlers: {
 				legend: {
 					click: this.legendClick
+				}
+			}
+		})
+		// will use the same pill to show term edit menu
+		this.pill = termsettingInit({
+			showFullMenu: true,
+			vocabApi: this.app.vocabApi,
+			vocab: appState.vocab,
+			activeCohort: appState.activeCohort,
+			//holder: {}, //self.dom.inputTd.append('div'),
+			//debug: opts.debug,
+			renderAs: 'none',
+			callback: tw => {
+				// data is object with only one needed attribute: q, never is null
+				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
+				const t = this.termBeingEdited
+				//const termgroups = JSON.parse(this.config.termgroups
+				if (tw) {
+					this.pill.main(tw)
+					this.app.dispatch({
+						type: 'plot_nestedEdits',
+						id: opts.id,
+						edits: [
+							{
+								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.tIndex],
+								value: tw
+							}
+						]
+					})
+				} else {
+					// reset the pill data
+					this.pill.main({ term: null, q: null })
+
+					const termgroups = JSON.parse(JSON.stringify(this.config.termgroups))
+					const grp = termgroups[t.grpIndex]
+					// remove this element
+					grp.lst.splice(t.tIndex, 1)
+					if (grp.lst.length) {
+						this.app.dispatch({
+							type: 'plot_nestedEdits',
+							id: opts.id,
+							edits: [
+								{
+									nestedKeys: ['termgroups', t.grpIndex, 'lst'],
+									value: grp.lst
+								}
+							]
+						})
+					} else {
+						// remove this now empty group
+						termgroups.splice(t.grpIndex, 1)
+						this.app.dispatch({
+							type: 'plot_edit',
+							id: opts.id,
+							config: { termgroups }
+						})
+					}
 				}
 			}
 		})
@@ -514,7 +574,7 @@ function setRenderers(self) {
 			.attr('transform', `translate(${x},${y})`)
 
 		const fontSize = s.transpose ? s.colw + s.colspace - 4 : s.rowh + s.rowspace - 4
-		if (!g.select('text').size()) g.append('text')
+		if (!g.select('text').size()) g.append('text').style('cursor', 'pointer')
 		g.select('text')
 			.attr('fill', '#000')
 			.transition()
@@ -623,6 +683,14 @@ function setInteractivity(self) {
 
 	self.mouseout = function() {
 		self.app.tip.hide()
+	}
+
+	self.showTermEditMenu = function() {
+		const d = event.target.__data__
+		if (!d || !d.tw) return
+		self.termBeingEdited = d
+		self.pill.main(d.tw)
+		self.pill.showMenu(event.target)
 	}
 
 	self.legendClick = function() {}
