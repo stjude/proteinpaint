@@ -108,7 +108,8 @@ function setRenderers(self) {
 		})
 		//console.log(110, yRef, xClusters, clusters, self.currData)
 		const x = d.xOffset + d.xLabelGap.grp
-		const y = d.yOffset + xClusters[0].y + xClusters[0].height + d.yLabelGap.grp
+		const y =
+			d.yOffset + (s.collabelpos == 'top' ? xClusters[0].y + xClusters[0].height + d.yLabelGap.grp : d.yLabelGap.grp)
 
 		self.dom.colgrplabels
 			.transition()
@@ -135,9 +136,9 @@ function setRenderers(self) {
 
 		if (!this.firstChild) g.append('text')
 		g.select('text')
-			.attr('text-anchor', 'end')
 			.transition()
 			.duration(duration)
+			.attr('text-anchor', s.collabelpos == 'top' ? 'end' : 'start')
 			.attr('transform', 'rotate(-90)')
 			.text(cluster[self.xGrpKey].name)
 	}
@@ -149,7 +150,10 @@ function setRenderers(self) {
 			return c[self.xGrpKey].name === xRef
 		})
 
-		const x = d.xOffset + yClusters[0].x + yClusters[0].width + d.xLabelGap.grp
+		const x =
+			s.rowlabelpos == 'left'
+				? d.xOffset + yClusters[0].x + yClusters[0].width + d.xLabelGap.grp
+				: d.xOffset + d.xLabelGap.grp
 		const y = d.yOffset + d.yLabelGap.grp
 
 		self.dom.rowgrplabels
@@ -177,10 +181,10 @@ function setRenderers(self) {
 
 		if (!this.firstChild) g.append('text')
 		g.select('text')
-			.attr('text-anchor', 'start')
 			.transition()
 			.duration(duration)
 			//.attr('transform', 'rotate(-90)')
+			.attr('text-anchor', s.rowlabelpos == 'left' ? 'start' : 'end')
 			.text(cluster[self.yGrpKey].name)
 	}
 }
