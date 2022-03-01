@@ -508,7 +508,7 @@ function setRenderers(self) {
 	self.updateSvgDimensions = async function(prevTranspose) {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const duration = self.dom.svg.attr('width') ? s.duration : 0
+		const duration = self.dom.svg.attr('width') ? s.duration : 10
 
 		// wait for labels to render; when transposing, must wait for
 		// the label rotation to end before measuring the label height and width

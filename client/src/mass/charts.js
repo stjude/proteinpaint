@@ -169,18 +169,46 @@ function getChartTypeList(self) {
 		{
 			label: 'Sample Matrix',
 			chartType: 'matrix',
-			clickTo: self.showTree_selectlst,
-			usecase: { target: 'matrix', detail: 'termgroups' },
-			processSelection: lst => {
-				return [
-					{
-						name: '',
-						lst: lst.map(term => {
-							return { term }
-						})
+			clickTo: self.showMenu,
+			withBackBtn: true,
+			menuOptions: [
+				{
+					label: 'Dictionary term',
+					clickTo: self.showTree_selectlst,
+					chartType: 'matrix',
+					usecase: { target: 'matrix', detail: 'termgroups' },
+					processSelection: lst => {
+						return [
+							{
+								name: '',
+								lst: lst.map(term => {
+									return { term }
+								})
+							}
+						]
 					}
-				]
-			}
+				},
+				{
+					label: 'Text input',
+					chartType: 'matrix',
+					clickTo: self.showTextAreaInput,
+					usecase: { target: 'matrix', detail: 'termgroups' },
+					placeholder: 'term\tgroup',
+					processInput: async text => {
+						const lines = text.split('\n').map(line => line.split('\t'))
+						const ids = lines.map(cols => cols[0]).filter(t => !!t)
+						const terms = await self.app.vocabApi.getTermTypes(ids)
+						console.log(terms)
+						const groups = {}
+						for (const [id, name] of lines) {
+							if (!(id in terms)) continue
+							if (!(name in groups)) groups[name] = { name, lst: [] }
+							groups[name].lst.push({ term: terms[id] })
+						}
+						return Object.values(groups)
+					}
+				}
+			]
 		},
 		{
 			label: 'Dictionary',
@@ -220,13 +248,37 @@ function setRenderers(self) {
 	*/
 	self.showMenu = function(chart) {
 		if (!Array.isArray(chart.menuOptions)) throw 'menuOptions is not array'
+		//const holder = chart.withBackBtn ? self.dom.tip.d.append('div') : self.dom.tip.d
+
+		let backBtn
+		if (chart.withBackBtn) {
+			backBtn = self.dom.tip.d
+				.append('button')
+				.style('display', 'none')
+				.style('margin', '5px')
+				.style('padding', '2px')
+				.html('&lt;&lt;Back')
+				.on('click', () => {
+					backBtn.style('display', 'none')
+					self.dom.submenu.remove()
+					delete self.dom.submenu // delete reference
+					menuDiv.style('display', 'block')
+				})
+		}
+
+		const menuDiv = self.dom.tip.d.append('div')
 		for (const opt of chart.menuOptions) {
-			self.dom.tip.d
+			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption')
 				.text(opt.label)
 				.on('click', () => {
-					self.dom.tip.hide()
+					if (backBtn) {
+						menuDiv.style('display', 'none')
+						backBtn.style('display', 'block')
+					} else {
+						self.dom.tip.hide()
+					}
 					opt.clickTo(opt)
 				})
 		}
@@ -291,8 +343,9 @@ function setRenderers(self) {
 		}
 
 		const termdb = await import('../termdb/app')
+		self.dom.submenu = self.dom.tip.d.append('div')
 		termdb.appInit({
-			holder: self.dom.tip.d.append('div'),
+			holder: self.dom.submenu,
 			state: {
 				vocab: self.state.vocab,
 				activeCohort: self.state.activeCohort,
@@ -310,6 +363,45 @@ function setRenderers(self) {
 				}
 			}
 		})
+	}
+
+	self.showTextAreaInput = opt => {
+		self.dom.submenu = self.dom.tip.d.append('div')
+		self.dom.submenu.append('div').html(opt.label)
+		const ta = self.dom.submenu
+			.append('div')
+			.append('textarea')
+			.attr('placeholder', opt.placeholder)
+			.on('keydown', () => {
+				const keyCode = event.keyCode || event.which
+				// handle tab key press, otherwise it will cause the focus to move to another input
+				if (keyCode == 9) {
+					event.preventDefault()
+					const t = event.target
+					const s = t.selectionStart
+					t.value = t.value.substring(0, t.selectionStart) + '\t' + t.value.substring(t.selectionEnd)
+					t.selectionEnd = s + 1
+				}
+			})
+
+		self.dom.submenu
+			.append('button')
+			.html('Submit')
+			.on('click', async () => {
+				const data = await opt.processInput(ta.property('value'))
+				console.log(data)
+
+				self.dom.tip.hide()
+				const action = {
+					type: 'plot_create',
+					id: idPrefix + id++,
+					config: {
+						chartType: opt.usecase.target,
+						[opt.usecase.detail]: data
+					}
+				}
+				self.app.dispatch(action)
+			})
 	}
 
 	/*

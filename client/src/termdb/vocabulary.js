@@ -495,6 +495,21 @@ class TermdbVocab {
 		return data
 	}
 
+	// ids: [str], where str are string term IDS or names
+	async getTermTypes(ids) {
+		const init = {
+			body: {
+				for: 'termTypes',
+				genome: this.vocab.genome,
+				dslabel: this.vocab.dslabel,
+				ids: JSON.stringify(ids)
+			}
+		}
+		const data = await dofetch3('termdb', init, this.opts.fetchOpts)
+		if (data.error) throw data.error
+		return data
+}
+
 	async getLDdata(tkname, m) {
 		const args = [
 			'getLDdata=1',
