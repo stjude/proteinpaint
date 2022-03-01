@@ -134,18 +134,6 @@ snp validation will write snp-by-sample gt matrix to a cache file, using all sam
 do not apply sample filtering
 */
 async function validateInput(self) {
-	if (self.term.snps) {
-		/* do not run when snps[] array is already present
-		e.g. in mass upon subcohort/filter change,
-		the snplocus term pill.main() is triggered and will call postMain
-		as the locus range is not changed so list of snps is the same as before
-		so no need to rebuild cache
-		also term.snps[] contains updated sample summaries in snps[] array
-		which will be missing from data returned by this function
-		so must not overwrite it
-		*/
-		return
-	}
 	const data = await self.vocabApi.validateSnps(self.q)
 	if (data.error) throw data.error
 	// copy result to instance
