@@ -121,7 +121,7 @@ function parse_q(q, ds) {
 	for (const tw of q.independent) {
 		if (!tw.q) throw `missing q for term.id='${tw.id}'`
 
-		mayAlterFilterByAncestryRestriction(tw, q, ds)
+		checkTwAncestryRestriction(tw, q, ds)
 
 		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			// !!!!!!!!!QUICK FIX!! detect non-dict term and do not query termdb
@@ -157,27 +157,16 @@ function parse_q(q, ds) {
 	}
 }
 
-function mayAlterFilterByAncestryRestriction(tw, q, ds) {
+function checkTwAncestryRestriction(tw, q, ds) {
 	if (!tw.q.restrictAncestry) {
 		// should only be present for snplocus
 		return
 	}
 	if (!ds.cohort.termdb.restrictAncestries) throw 'ds.restrictAncestries missing'
 	// attach ancestry obj {tvs,pcs} for access later
-	q.__ancestry = ds.cohort.termdb.restrictAncestries.find(i => i.name == tw.q.restrictAncestry)
-	if (!q.__ancestry) throw 'unknown ancestry: ' + tw.q.restrictAncestry
-	if (q.filter) {
-		// filter exists, add q.__ancestry.tvs but should not cause duplication
-		// what if filter already contain this tvs? if it's nested?
-	} else {
-		// create new filter with this tvs
-		q.filter = {
-			type: 'tvslst',
-			join: '',
-			in: true,
-			lst: [{ type: 'tvs', tvs: JSON.parse(JSON.stringify(q.__ancestry.tvs)) }]
-		}
-	}
+	const a = ds.cohort.termdb.restrictAncestries.find(i => i.name == tw.q.restrictAncestry.name)
+	if (!a) throw 'unknown ancestry: ' + tw.q.restrictAncestry.name
+	tw.q.restrictAncestry.pcs = a.pcs
 }
 
 function makeRinput(q, sampledata) {
@@ -350,9 +339,9 @@ function makeRvariable_snps(tw, variables, q) {
 		}
 		variables.push(thisSnp)
 	}
-	if (tw.q.__ancestry) {
+	if (tw.q.restrictAncestry) {
 		/* add PCs as variables
-		for(const pcid of tw.q.__ancestry.pcs) {
+		for(const pcid of tw.q.restrictAncestry.pcs) {
 			variables.push({
 				id: pcid,
 				name: pcid,
@@ -629,9 +618,9 @@ async function getSampleData(q, terms, ds) {
 }
 
 function mayAddAncestryPCs(tw, samples, ds) {
-	if (!tw.q.__ancestry) return
-	/* add sample pc values from tw.q.__ancestry to samples
-	for(const [pcid, s] of tw.q.__ancestry.pcs) {
+	if (!tw.q.restrictAncestry) return
+	/* add sample pc values from tw.q.restrictAncestry.pcs to samples
+	for(const [pcid, s] of tw.q.restrictAncestry.pcs) {
 		for(const [sampleid, v] of s) {
 			if(!samples.has(sampleid)) continue
 			samples.get(sampleid).id2value.set( pcid, {key:v, value:v})

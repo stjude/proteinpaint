@@ -219,7 +219,7 @@ export class InputTerm {
 			)
 		}
 		if (tw.q.restrictAncestry) {
-			this.termStatus.topInfoStatus.push('Analyzing ' + tw.q.restrictAncestry)
+			this.termStatus.topInfoStatus.push('Analyzing ' + tw.q.restrictAncestry.name)
 		}
 		if (tw.term.reachedVariantLimit) {
 			this.termStatus.topInfoStatus.push(

@@ -91,8 +91,7 @@ export class RegressionResults {
 			}
 
 			// submit server request to run analysis
-			const reqOpts = this.getDataRequestOpts()
-			const data = await this.app.vocabApi.getRegressionData(reqOpts)
+			const data = await this.app.vocabApi.getRegressionData(this.getDataRequestOpts())
 			if (data.error) throw data.error
 			this.dom.err_div.style('display', 'none')
 			this.dom.oneSetResultDiv.selectAll('*').remove()
@@ -116,6 +115,15 @@ export class RegressionResults {
 			outcome: c.outcome,
 			independent: c.independent,
 			filter: this.state.termfilter.filter
+		}
+		// look for input term with restrictAncestry
+		for (const input of this.parent.inputs.independent.inputLst) {
+			if (input.term && input.term.q.restrictAncestry) {
+				// this input term has restrictAncestry
+				const tvs = input.term.q.restrictAncestry.tvs
+				// append tvs to opts.filter as AND
+				console.log('use this', tvs)
+			}
 		}
 		return opts
 	}

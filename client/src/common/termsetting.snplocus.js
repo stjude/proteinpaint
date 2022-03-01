@@ -113,11 +113,7 @@ async function makeEditMenu(self, div) {
 
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
-			{
-				const o = select_ancestry.node().options
-				// value is text
-				self.q.restrictAncestry = o[select_ancestry.property('selectedIndex')].innerHTML
-			}
+			self.q.restrictAncestry = select_ancestry.node().options[select_ancestry.property('selectedIndex')].__ancestry_obj
 
 			self.runCallback()
 		})
@@ -460,15 +456,16 @@ async function mayRestrictAncestry(self, holder) {
 		.append('span')
 		.text('Restrict analysis to')
 		.style('margin-right', '5px')
+		.style('opacity', 0.5)
 	const select = row.append('select')
 	for (const ancestry of tdbcfg.restrictAncestries) {
-		// ancestry: string
-		select.append('option').text(ancestry)
+		// ancestry: {name, tvs}
+		const opt = select.append('option').text(ancestry.name)
+		opt.node().__ancestry_obj = ancestry
 	}
 	if (self.q && self.q.restrictAncestry) {
-		// value is text
-		const i = tdbcfg.restrictAncestries.indexOf(self.q.restrictAncestry)
-		if (i == -1) throw 'unknown restrictAncestry: ' + self.q.restrictAncestry
+		const i = tdbcfg.restrictAncestries.findIndex(i => i.name == self.q.restrictAncestry.name)
+		if (i == -1) throw 'unknown restrictAncestry: ' + self.q.restrictAncestry.name
 		select.property('selectedIndex', i)
 	}
 	return select
