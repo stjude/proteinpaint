@@ -75,7 +75,7 @@ const restrictAncestries = [
 			},
 			values: [{ key: 'European Ancestry', label: 'European Ancestry' }]
 		}
-		// tempfix, add a text file for pcs
+		// file
 	},
 	{
 		name: 'African ancestry',
@@ -87,7 +87,7 @@ const restrictAncestries = [
 			},
 			values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
 		}
-		// tempfix, add a text file for pcs
+		// file
 	}
 ]
 

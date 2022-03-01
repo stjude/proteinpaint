@@ -5,6 +5,7 @@ const spawn = require('child_process').spawn
 const utils = require('./utils')
 const server_init_db_queries = require('./termdb.sql').server_init_db_queries
 const validate_single_numericrange = require('../shared/mds.termdb.termvaluesetting').validate_single_numericrange
+const serverconfig = require('./serverconfig')
 
 /*
 ********************** EXPORTED
@@ -21,8 +22,6 @@ may_init_ld
 may_init_svcnv
 may_sum_samples
 */
-
-const serverconfig = require('./serverconfig')
 
 export async function init_db(ds, app = null, basepath = null) {
 	/* db should be required
@@ -126,6 +125,31 @@ function validate_termdbconfig(tdb) {
 			if (!v.keys) throw 'keys[] missing from one of selectCohort.values[]'
 			if (!Array.isArray(v.keys)) throw 'keys[] is not array from one of selectCohort.values[]'
 			if (v.keys.length == 0) throw 'keys[] is empty from one of selectCohort.values[]'
+		}
+	}
+	if (tdb.restrictAncestries) {
+		if (!Array.isArray(tdb.restrictAncestries) || tdb.restrictAncestries.length == 0)
+			throw 'termdb.restrictAncestries[] is not non-empty array'
+		for (const a of tdb.restrictAncestries) {
+			if (!a.name) throw 'name missing from one of restrictAncestries'
+			if (typeof a.tvs != 'object') throw '.tvs{} missing from one of restrictAncestries'
+			/*
+			if(!a.file) throw '.file missing from one of restrictAncestries'
+			// file path is from tp/; parse file, store pc values to pcs
+			a.pcs = new Map() // k: pc ID, v: Map(sampleId:value)
+			for(const line of await utils.read_file(path.join(serverconfig.tpmasterdir, a.file)).trim().split('\n')) {
+				// each line: sample \t pcid \t value
+				const l = line.split('\t')
+				if(l.length!=3) throw 'restrictAncestry pc file has an invalid line'
+				const sampleid = Number(l[0])
+				if(!Number.isInteger(sampleid)) throw 'non-integer sample id from a line of restrictAncestries pc file'
+				const pcid = l[1]
+				const value = Number(l[2])
+				if(Number.isNaN(value)) throw 'non-numeric PC value from restrictAncestries file'
+				if(!a.pcs.has(pcid)) a.pcs.set(pcid, new Map())
+				a.pcs.get(pcid).set( sampleid, value )
+			}
+			*/
 		}
 	}
 }

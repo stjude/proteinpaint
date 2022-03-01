@@ -108,17 +108,21 @@ function trigger_getsamples(q, res, ds) {
 }
 
 function trigger_gettermdbconfig(res, tdb) {
-	res.send({
-		termdbConfig: {
-			// add attributes here to reveal to client
-			selectCohort: tdb.selectCohort, // optional
-			cumincplot4condition: tdb.cumincplot4condition, // optional
-			survivalplot: tdb.survivalplot, // optional
-			supportedChartTypes: tdb.q.getSupportedChartTypes(),
-			allowedTermTypes: tdb.allowedTermTypes || [],
-			restrictAncestries: tdb.restrictAncestries ? tdb.restrictAncestries.map(i => i.name) : null
+	// add attributes to this object for revealing to client
+	const c = {
+		selectCohort: tdb.selectCohort, // optional
+		cumincplot4condition: tdb.cumincplot4condition, // optional
+		survivalplot: tdb.survivalplot, // optional
+		supportedChartTypes: tdb.q.getSupportedChartTypes(),
+		allowedTermTypes: tdb.allowedTermTypes || []
+	}
+	if (tdb.restrictAncestries) {
+		c.restrictAncestries = []
+		for (const i of tdb.restrictAncestries) {
+			c.restrictAncestries.push({ name: i.name, tvs: i.tvs })
 		}
-	})
+	}
+	res.send({ termdbConfig: c })
 }
 
 function trigger_gettermbyid(q, res, tdb) {

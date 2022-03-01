@@ -218,6 +218,9 @@ export class InputTerm {
 						: 'By genotype')
 			)
 		}
+		if (tw.q.restrictAncestry) {
+			this.termStatus.topInfoStatus.push('Analyzing ' + tw.q.restrictAncestry.name)
+		}
 		if (tw.term.reachedVariantLimit) {
 			this.termStatus.topInfoStatus.push(
 				`<span class=sja_mcdot style="background:#aaa;font-size:1em">

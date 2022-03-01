@@ -1,4 +1,3 @@
-import { getNormalRoot } from '../common/filter'
 import { sayerror } from '../dom/error'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
@@ -91,8 +90,7 @@ export class RegressionResults {
 			}
 
 			// submit server request to run analysis
-			const reqOpts = this.getDataRequestOpts()
-			const data = await this.app.vocabApi.getRegressionData(reqOpts)
+			const data = await this.app.vocabApi.getRegressionData(this.getDataRequestOpts())
 			if (data.error) throw data.error
 			this.dom.err_div.style('display', 'none')
 			this.dom.oneSetResultDiv.selectAll('*').remove()
@@ -114,9 +112,19 @@ export class RegressionResults {
 		const opts = {
 			regressionType: c.regressionType,
 			outcome: c.outcome,
-			independent: c.independent,
-			filter: this.state.termfilter.filter
+			independent: c.independent
 		}
+		// look for input term with restrictAncestry
+		const extraFilters = []
+		for (const input of this.parent.inputs.independent.inputLst) {
+			if (input.term && input.term.q.restrictAncestry) {
+				// this input term has restrictAncestry
+				const tvs = input.term.q.restrictAncestry.tvs
+				extraFilters.push({ type: 'tvs', tvs })
+			}
+		}
+		// vocabApi will use getNormalFilter() to remove any empty filters and convert a single entry tvslst into a tvs
+		opts.filter = { type: 'tvslst', join: 'and', lst: [...extraFilters, this.state.termfilter.filter] }
 		return opts
 	}
 

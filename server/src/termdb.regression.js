@@ -30,16 +30,18 @@ q {}
 	.interactions[] // always added; empty if no interaction
 	.snpidlst[] // list of snp ids, for type=snplst, added when parsing cache file
 
-input to R is an json object {type, outcome:{rtype}, independent:[ {rtype} ]}
+input to R is an json object, with an array of variables (first being outcome)
 rtype with values numeric/factor is used instead of actual term type
 so that R script will not need to interpret term type
 
 ***  function cascade  ***
 get_regression()
 	parse_q
+		mayAlterFilterByAncestryRestriction
 	getSampleData
 		divideTerms
 		getSampleData_dictionaryTerms
+		mayAddAncestryPCs
 		getSampleData_snplstOrLocus
 			doImputation
 			applyGeneticModel
@@ -57,7 +59,7 @@ export async function get_regression(q, ds) {
 	try {
 		parse_q(q, ds)
 
-		const [sampledata, snpgt2count] = await getSampleData(q, [q.outcome, ...q.independent])
+		const [sampledata, snpgt2count] = await getSampleData(q, [q.outcome, ...q.independent], ds)
 		/* each element is one sample with a key-val map for all its annotations:
 		{sample, id2value:Map( tid => {key,value}) }
 		*/
@@ -68,10 +70,13 @@ export async function get_regression(q, ds) {
 		Rinput {
 			data: [{}] per-sample data values
 			metadata: {
-						type: regression type (linear/logistic)
-						variables: [{}] variable metadata
-					  }
+				type: regression type (linear/logistic)
+				variables: [{}] variable metadata
+			}
 		}
+
+		- snps from snplst and snplocus terms are added as elements into variables[] array
+		- PCs from q.restrictAncestry.pcs are added as elements into variables[] array
 		*/
 
 		const sampleSize = Rinput.data.length
@@ -118,7 +123,9 @@ function parse_q(q, ds) {
 	// tw = termWrapper
 	for (const tw of q.independent) {
 		if (!tw.q) throw `missing q for term.id='${tw.id}'`
-		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
+
+		checkTwAncestryRestriction(tw, q, ds)
+
 		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			// !!!!!!!!!QUICK FIX!! detect non-dict term and do not query termdb
 			// tw for these terms lacks tw.term{}
@@ -135,11 +142,13 @@ function parse_q(q, ds) {
 				// missingGenotype is not needed for snplocus
 				if (!Number.isInteger(tw.q.missingGenotype)) throw 'q.missingGenotype is not integer for snplst'
 			}
-		} else {
-			if (!tw.id) throw '.id missing for an independent term'
-			tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
-			if (!tw.term) throw `invalid independent term='${tw.id}'`
+			continue
 		}
+		// tw is dictionary term
+		tw.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
+		if (!tw.id) throw '.id missing for an independent term'
+		tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
+		if (!tw.term) throw `invalid independent term='${tw.id}'`
 	}
 	// interaction of independent
 	for (const i of q.independent) {
@@ -149,6 +158,18 @@ function parse_q(q, ds) {
 			if (!q.independent.find(y => y.id == x)) throw 'interacting term id missing from independent[]: ' + x
 		}
 	}
+}
+
+function checkTwAncestryRestriction(tw, q, ds) {
+	if (!tw.q.restrictAncestry) {
+		// should only be present for snplocus
+		return
+	}
+	if (!ds.cohort.termdb.restrictAncestries) throw 'ds.restrictAncestries missing'
+	// attach ancestry obj {tvs,pcs} for access later
+	const a = ds.cohort.termdb.restrictAncestries.find(i => i.name == tw.q.restrictAncestry.name)
+	if (!a) throw 'unknown ancestry: ' + tw.q.restrictAncestry.name
+	tw.q.restrictAncestry.pcs = a.pcs
 }
 
 function makeRinput(q, sampledata) {
@@ -174,65 +195,9 @@ function makeRinput(q, sampledata) {
 	// independent terms, tw = termWrapper
 	for (const tw of q.independent) {
 		if (tw.type == 'snplst' || tw.type == 'snplocus') {
-			// create one independent variable for each snp
-			for (const snpid of tw.snpidlst) {
-				const thisSnp = {
-					id: snpid,
-					name: snpid,
-					type: 'independent',
-					interactions: []
-				}
-				if (tw.type == 'snplocus') thisSnp.type = 'snplocus'
-				if (tw.q.geneticModel == 3) {
-					// by genotype
-					thisSnp.rtype = 'factor'
-					// assign ref grp
-					thisSnp.refGrp = tw.q.snp2refGrp[snpid]
-				} else {
-					// treat as numeric and do not assign refGrp
-					thisSnp.rtype = 'numeric'
-				}
-				// find out any other variable that's interacting with either this snp or this snplst term
-				// and fill into interactions array
-				// for now, do not support interactions between snps in the same snplst term
-				for (const tw2 of q.independent) {
-					if (tw2.interactions.includes(tw.id)) {
-						// another term (tw2) is interacting with this snplst term
-						// in R input establish tw2's interaction with this snp
-						thisSnp.interactions.push(tw2.id)
-					}
-				}
-				variables.push(thisSnp)
-			}
+			makeRvariable_snps(tw, variables, q)
 		} else {
-			// this is a dictionary term
-			const thisTerm = {
-				id: tw.id,
-				name: tw.term.name,
-				type: tw.q.mode == 'spline' ? 'spline' : 'independent',
-				rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor',
-				interactions: []
-			}
-			// map tw.interactions into thisTerm.interactions
-			for (const id of tw.interactions) {
-				const tw2 = q.independent.find(i => i.id == id)
-				if (tw2.type == 'snplst' || tw2.type == 'snplocus') {
-					// this term is interacting with a snplst term, fill in all snps from this list into thisTerm.interactions
-					for (const s of tw2.snpidlst) thisTerm.interactions.push(s)
-				} else {
-					// this term is interacting with another dictionary term
-					thisTerm.interactions.push(id)
-				}
-			}
-			if (thisTerm.rtype === 'factor') thisTerm.refGrp = tw.refGrp
-			if (tw.q.mode == 'spline') {
-				thisTerm.spline = {
-					knots: tw.q.knots.map(x => Number(x.value)),
-					plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
-				}
-			}
-			if (tw.q.scale) thisTerm.scale = tw.q.scale
-			variables.push(thisTerm)
+			makeRvariable_dictionaryTerm(tw, variables, q)
 		}
 	}
 
@@ -312,6 +277,88 @@ function makeRinput(q, sampledata) {
 	}
 
 	return Rinput
+}
+
+function makeRvariable_dictionaryTerm(tw, variables, q) {
+	// tw is a dictionary term
+	const thisTerm = {
+		id: tw.id,
+		name: tw.term.name,
+		type: tw.q.mode == 'spline' ? 'spline' : 'independent',
+		rtype: tw.q.mode == 'continuous' || tw.q.mode == 'spline' ? 'numeric' : 'factor',
+		interactions: []
+	}
+	// map tw.interactions into thisTerm.interactions
+	for (const id of tw.interactions) {
+		const tw2 = q.independent.find(i => i.id == id)
+		if (tw2.type == 'snplst' || tw2.type == 'snplocus') {
+			// this term is interacting with a snplst term, fill in all snps from this list into thisTerm.interactions
+			for (const s of tw2.snpidlst) thisTerm.interactions.push(s)
+		} else {
+			// this term is interacting with another dictionary term
+			thisTerm.interactions.push(id)
+		}
+	}
+	if (thisTerm.rtype === 'factor') thisTerm.refGrp = tw.refGrp
+	if (tw.q.mode == 'spline') {
+		thisTerm.spline = {
+			knots: tw.q.knots.map(x => Number(x.value)),
+			plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
+		}
+	}
+	if (tw.q.scale) thisTerm.scale = tw.q.scale
+	variables.push(thisTerm)
+}
+
+function makeRvariable_snps(tw, variables, q) {
+	// tw is either snplst or snplocus
+	// create one independent variable for each snp
+	for (const snpid of tw.snpidlst) {
+		const thisSnp = {
+			id: snpid,
+			name: snpid,
+			type: 'independent',
+			interactions: []
+		}
+		if (tw.type == 'snplocus') {
+			// setting "snplocus" to .type allows R to make special treatment to these
+			// to do model-fitting separately for each variant from a snplocus term
+			thisSnp.type = 'snplocus'
+		}
+		if (tw.q.geneticModel == 3) {
+			// by genotype
+			thisSnp.rtype = 'factor'
+			// assign ref grp
+			thisSnp.refGrp = tw.q.snp2refGrp[snpid]
+		} else {
+			// treat as numeric and do not assign refGrp
+			thisSnp.rtype = 'numeric'
+		}
+		// find out any other variable that's interacting with either this snp or this snplst term
+		// and fill into interactions array
+		// for now, do not support interactions between snps in the same snplst term
+		for (const tw2 of q.independent) {
+			if (tw2.interactions.includes(tw.id)) {
+				// another term (tw2) is interacting with this snplst term
+				// in R input establish tw2's interaction with this snp
+				thisSnp.interactions.push(tw2.id)
+			}
+		}
+		variables.push(thisSnp)
+	}
+	if (tw.q.restrictAncestry) {
+		/* add PCs as variables
+		for(const pcid of tw.q.restrictAncestry.pcs) {
+			variables.push({
+				id: pcid,
+				name: pcid,
+				type:'independent',
+				rtype:'numeric',
+				interactions:[]
+			})
+		}
+		*/
+	}
 }
 
 function getLogisticOutcomeNonref(outcome) {
@@ -547,7 +594,7 @@ Returns two data structures
 	]
 2.
 */
-async function getSampleData(q, terms) {
+async function getSampleData(q, terms, ds) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
 
@@ -562,6 +609,9 @@ async function getSampleData(q, terms) {
 	for (const tw of nonDictTerms) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
+
+		mayAddAncestryPCs(tw, samples, ds)
+
 		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			// each snp is one indepedent variable
 			// record list of snps on term.snpidlst
@@ -572,6 +622,18 @@ async function getSampleData(q, terms) {
 	}
 
 	return [samples.values(), snpgt2count]
+}
+
+function mayAddAncestryPCs(tw, samples, ds) {
+	if (!tw.q.restrictAncestry) return
+	/* add sample pc values from tw.q.restrictAncestry.pcs to samples
+	for(const [pcid, s] of tw.q.restrictAncestry.pcs) {
+		for(const [sampleid, v] of s) {
+			if(!samples.has(sampleid)) continue
+			samples.get(sampleid).id2value.set( pcid, {key:v, value:v})
+		}
+	}
+	*/
 }
 
 function getSampleData_dictionaryTerms(q, terms) {
