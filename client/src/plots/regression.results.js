@@ -113,18 +113,22 @@ export class RegressionResults {
 		const opts = {
 			regressionType: c.regressionType,
 			outcome: c.outcome,
-			independent: c.independent,
-			filter: this.state.termfilter.filter
+			independent: c.independent
 		}
 		// look for input term with restrictAncestry
+		const extraFilters = []
 		for (const input of this.parent.inputs.independent.inputLst) {
 			if (input.term && input.term.q.restrictAncestry) {
 				// this input term has restrictAncestry
 				const tvs = input.term.q.restrictAncestry.tvs
 				// append tvs to opts.filter as AND
 				console.log('use this', tvs)
+				extraFilters.push({ type: 'tvs', tvs })
 			}
 		}
+		// getNormalFilter will remove any empty filters and convert a single entry tvslst into a tvs
+		opts.filter = getNormalRoot({ type: 'tvslst', join: 'and', lst: [...extraFilters, this.state.termfilter.filter] })
+		console.log(opts.filter)
 		return opts
 	}
 
