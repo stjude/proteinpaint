@@ -420,6 +420,17 @@ makeURL([
 								chr:'chr17', start:7674304, stop:7676849,
 								alleleType:0,
 								geneticModel:0,
+								restrictAncestry:{
+									name:'African ancestry',
+									tvs: {
+										term: {
+											id: 'genetic_race',
+											type: 'categorical',
+											name: 'Genetically defined race'
+										},
+										values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+									}
+								},
 								variant_filter:
 								{"type":"tvslst","join":"and","in":true,"lst":[
 									{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC_sjlife","name":"SJLIFE classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"SuperGood":{"label":"SuperGood","key":"SuperGood"},"Good":{"label":"Good","key":"Good"},"Ambiguous":{"label":"Ambiguous","key":"Ambiguous"},"Bad":{"label":"Bad","key":"Bad"}}}}},

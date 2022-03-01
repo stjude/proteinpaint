@@ -30,7 +30,7 @@ q {}
 	.interactions[] // always added; empty if no interaction
 	.snpidlst[] // list of snp ids, for type=snplst, added when parsing cache file
 
-input to R is an json object {type, outcome:{rtype}, independent:[ {rtype} ]}
+input to R is an json object, with an array of variables (first being outcome)
 rtype with values numeric/factor is used instead of actual term type
 so that R script will not need to interpret term type
 
@@ -70,10 +70,13 @@ export async function get_regression(q, ds) {
 		Rinput {
 			data: [{}] per-sample data values
 			metadata: {
-						type: regression type (linear/logistic)
-						variables: [{}] variable metadata
-					  }
+				type: regression type (linear/logistic)
+				variables: [{}] variable metadata
+			}
 		}
+
+		- snps from snplst and snplocus terms are added as elements into variables[] array
+		- PCs from q.restrictAncestry.pcs are added as elements into variables[] array
 		*/
 
 		const sampleSize = Rinput.data.length
@@ -317,7 +320,11 @@ function makeRvariable_snps(tw, variables, q) {
 			type: 'independent',
 			interactions: []
 		}
-		if (tw.type == 'snplocus') thisSnp.type = 'snplocus'
+		if (tw.type == 'snplocus') {
+			// setting "snplocus" to .type allows R to make special treatment to these
+			// to do model-fitting separately for each variant from a snplocus term
+			thisSnp.type = 'snplocus'
+		}
 		if (tw.q.geneticModel == 3) {
 			// by genotype
 			thisSnp.rtype = 'factor'
