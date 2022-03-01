@@ -55,10 +55,6 @@ class TdbTree {
 	constructor(opts) {
 		this.type = 'tree'
 
-		this.dom = {
-			holder: opts.holder
-		}
-
 		// attach instance-specific methods via closure
 		setInteractivity(this)
 		setRenderers(this)
@@ -66,8 +62,26 @@ class TdbTree {
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
 		this.termsByCohort = {}
-
 		//getCompInit(TdbTree) will set this.id, .app, .opts, .api
+	}
+
+	init() {
+		this.dom = {}
+		if (!this.opts.submit_lst) {
+			this.dom.holder = this.opts.holder.append('div')
+		} else {
+			this.noSelectionPrompt = 'Select 1 or more terms'
+			this.dom.submitBtn = this.opts.holder
+				.append('div')
+				.style('text-align', 'center')
+				.style('margin', '10px 5px')
+				.append('button')
+				.property('disabled', true)
+				.text(this.noSelectionPrompt)
+				.on('click', () => this.opts.submit_lst([...this.selectedTerms]))
+			this.dom.holder = this.opts.holder.append('div')
+			this.selectedTerms = new Set()
+		}
 	}
 
 	reactsTo(action) {
@@ -354,6 +368,20 @@ function setRenderers(self) {
 							self.app.dispatch({ type: 'submenu_set', submenu: { term, type: 'tvs' } })
 						} else if (self.opts.click_term) {
 							self.opts.click_term(term)
+						} else if (self.opts.submit_lst) {
+							if (self.selectedTerms.has(term)) {
+								self.selectedTerms.delete(term)
+								labeldiv.style('background-color', '#cfe2f3')
+								selected_checkbox.style('display', 'none')
+							} else {
+								self.selectedTerms.add(term)
+								labeldiv.style('background-color', 'rgba(255, 194, 10,0.5)')
+								selected_checkbox.style('display', 'inline-block')
+							}
+							const n = self.selectedTerms.size
+							self.dom.submitBtn
+								.property('disabled', !n)
+								.text(!n ? self.noSelectionPrompt : `Submit ${n} term${n > 1 ? 's' : ''}`)
 						} else {
 							throw 'missing term click callback'
 						}
@@ -380,6 +408,15 @@ function setRenderers(self) {
 				id: term.id,
 				state: { term }
 			})
+		}
+
+		let selected_checkbox
+		if (self.opts.submit_lst) {
+			selected_checkbox = div
+				.append('div')
+				.style('display', 'none')
+				.style('color', '#008000')
+				.html('&check;')
 		}
 
 		if (!term.isleaf) {

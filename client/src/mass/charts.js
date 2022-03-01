@@ -167,6 +167,22 @@ function getChartTypeList(self) {
 			]
 		},
 		{
+			label: 'Sample Matrix',
+			chartType: 'matrix',
+			clickTo: self.showTree_selectlst,
+			usecase: { target: 'matrix', detail: 'termgroups' },
+			processSelection: lst => {
+				return [
+					{
+						name: '',
+						lst: lst.map(term => {
+							return { term }
+						})
+					}
+				]
+			}
+		},
+		{
 			label: 'Dictionary',
 			clickTo: self.prepPlot,
 			chartType: 'dictionary',
@@ -251,6 +267,44 @@ function setRenderers(self) {
 			tree: {
 				click_term: term => {
 					action.config[chart.usecase.detail] = term
+					self.dom.tip.hide()
+					self.app.dispatch(action)
+				}
+			}
+		})
+	}
+
+	self.showTree_selectlst = async chart => {
+		if (chart.usecase.label) {
+			self.dom.tip.d
+				.append('div')
+				.style('margin', '3px 5px')
+				.style('padding', '3px 5px')
+				.style('font-weight', 600)
+				.html(chart.usecase.label)
+		}
+
+		const action = {
+			type: 'plot_create',
+			id: idPrefix + id++,
+			config: { chartType: chart.chartType }
+		}
+
+		const termdb = await import('../termdb/app')
+		termdb.appInit({
+			holder: self.dom.tip.d.append('div'),
+			state: {
+				vocab: self.state.vocab,
+				activeCohort: self.state.activeCohort,
+				nav: {
+					header_mode: 'search_only'
+				},
+				tree: { usecase: chart.usecase }
+			},
+			tree: {
+				submit_lst: termlst => {
+					const data = chart.processSelection ? chart.processSelection(termlst) : termlst
+					action.config[chart.usecase.detail] = data
 					self.dom.tip.hide()
 					self.app.dispatch(action)
 				}
