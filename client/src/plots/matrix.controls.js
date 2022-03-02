@@ -73,10 +73,23 @@ export class MatrixControls {
 					settingsKey: 'colspace'
 				},
 				{
+					label: 'Group gap',
+					type: 'number',
+					chartType: 'matrix',
+					settingsKey: 'colgspace'
+				},
+				{
 					label: 'Column label offset',
 					type: 'number',
 					chartType: 'matrix',
 					settingsKey: 'collabelgap'
+				},
+				{
+					label: 'Top labels',
+					type: 'radio',
+					chartType: 'matrix',
+					settingsKey: 'collabelpos',
+					options: [{ label: 'Columns', value: 'top' }, { label: 'Groups', value: 'bottom' }]
 				}
 			],
 
@@ -98,6 +111,19 @@ export class MatrixControls {
 					type: 'number',
 					chartType: 'matrix',
 					settingsKey: 'rowlabelgap'
+				},
+				{
+					label: 'Group gap',
+					type: 'number',
+					chartType: 'matrix',
+					settingsKey: 'rowgspace'
+				},
+				{
+					label: 'Left labels',
+					type: 'radio',
+					chartType: 'matrix',
+					settingsKey: 'rowlabelpos',
+					options: [{ label: 'Rows', value: 'left' }, { label: 'Groups', value: 'right' }]
 				}
 			]
 		}

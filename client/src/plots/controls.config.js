@@ -425,7 +425,7 @@ function setTermInput(opts) {
 		callback: tw => {
 			// data is object with only one needed attribute: q, never is null
 			if (tw && !tw.q) throw 'data.q{} missing from pill callback'
-			pill.main(tw)
+			pill.main(tw ? tw : { term: null, q: null })
 			opts.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
@@ -441,12 +441,14 @@ function setTermInput(opts) {
 		main(plot) {
 			const { config, activeCohort, termfilter } = JSON.parse(JSON.stringify(plot))
 			const tw = plot[opts.configKey] || (config && config[opts.configKey]) || {}
-			pill.main({
-				term: tw.term,
+			const arg = {
+				term: tw.term || null,
 				q: tw.q,
 				activeCohort,
 				filter: termfilter && termfilter.filter
-			})
+			}
+			if ('$id' in tw) arg.$id = tw.$id
+			pill.main(arg)
 		}
 	}
 

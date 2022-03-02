@@ -235,21 +235,31 @@ TdbStore.prototype.actions = {
 
 	plot_edit(action) {
 		const plot = this.state.plots.find(p => p.id === action.id)
-		if (plot) {
-			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
-			validatePlot(plot, this.app.vocabApi)
+		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit()`
+		this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
+		validatePlot(plot, this.app.vocabApi)
 
-			if ('cutoff' in action.config) {
-				plot.cutoff = action.config.cutoff
-			} else {
-				delete plot.cutoff
-			}
+		if ('cutoff' in action.config) {
+			plot.cutoff = action.config.cutoff
+		} else {
+			delete plot.cutoff
 		}
 	},
 
 	plot_delete(action) {
 		const i = this.state.plots.findIndex(p => p.id === action.id)
 		if (i !== -1) this.state.plots.splice(i, 1)
+	},
+
+	plot_nestedEdits(action) {
+		const plot = this.state.plots.find(p => p.id === action.id)
+		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit_nested`
+		for (const edit of action.edits) {
+			const lastKey = edit.nestedKeys.pop()
+			const obj = edit.nestedKeys.reduce((obj, key) => obj[key], plot)
+			obj[lastKey] = edit.value
+		}
+		validatePlot(plot, this.app.vocabApi)
 	},
 
 	filter_replace(action) {
@@ -381,22 +391,5 @@ function validatePlotTerm(t, vocabApi) {
 				break
 			}
 			throw 'unknown term type'
-	}
-}
-
-function getTermSelectionSequence(chartType) {
-	if (chartType == 'regression') {
-		return [
-			{
-				label: 'Outcome variable',
-				prompt: 'Select outcome variable',
-				detail: 'term',
-				limit: 1,
-				cutoffTermTypes: ['condition', 'integer', 'float']
-			},
-			{ label: 'Independent variable(s)', prompt: 'Add independent variable', detail: 'independent', limit: 10 }
-		]
-	} else {
-		return [{ label: '', detail: 'term', limit: 1 }]
 	}
 }

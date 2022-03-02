@@ -9,7 +9,7 @@ getPillNameDefault()
 fillTermWrapper()
 */
 
-export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus'])
+export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant'])
 
 class TermSetting {
 	constructor(opts) {
@@ -36,7 +36,7 @@ class TermSetting {
 			holder: opts.holder,
 			tip: new Menu({
 				padding: '0px',
-				parent_menu: this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
+				parent_menu: this.opts.holder && this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
 			})
 		}
 		// tip2 is for showing inside tip, e.g. in snplocus UI
@@ -64,6 +64,7 @@ class TermSetting {
 			runCallback: this.runCallback.bind(this),
 			// do not change the this context of showTree, d3 sets it to the DOM element
 			showTree: this.showTree,
+			showMenu: this.showMenu.bind(this),
 			hasError: () => this.hasError,
 			validateQ: d => {
 				if (!this.handler || !this.handler.validateQ) return
@@ -83,11 +84,12 @@ class TermSetting {
 		as used in snplocus block pan/zoom update in regression.results.js
 		*/
 		const arg = { id: this.term.id, term: this.term, q: this.q }
+		if ('$id' in this) arg.$id = this.$id
 		this.opts.callback(overrideTw ? copyMerge({}, arg, overrideTw) : arg)
 	}
 
 	validateOpts(o) {
-		if (!o.holder) throw '.holder missing'
+		if (!o.holder && o.renderAs != 'none') throw '.holder missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		if (!o.vocabApi) throw '.vocabApi missing'
 		if (typeof o.vocabApi != 'object') '.vocabApi{} is not object'
@@ -115,6 +117,7 @@ class TermSetting {
 			// term is read-only if it comes from state, let it remain read-only
 			this.term = data.term
 			this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
+			if ('$id' in data) this.$id = data.$id
 			if ('disable_terms' in data) this.disable_terms = data.disable_terms
 			if ('exclude_types' in data) this.exclude_types = data.exclude_types
 			if ('filter' in data) this.filter = data.filter
@@ -123,7 +126,7 @@ class TermSetting {
 			await this.setHandler(this.term ? this.term.type : null)
 			if (data.term && this.handler && this.handler.validateQ) this.handler.validateQ(data)
 			if (this.handler.postMain) await this.handler.postMain()
-			this.updateUI()
+			if (this.opts.renderAs != 'none') this.updateUI()
 		} catch (e) {
 			this.hasError = true
 			throw e
@@ -193,6 +196,8 @@ function setRenderers(self) {
 		if (self.opts.$id) {
 			self.dom.tip.d.attr('id', self.opts.$id + '-ts-tip')
 		}
+
+		if (!self.dom.holder) return
 
 		// toggle the display of pilldiv and nopilldiv with availability of this.term
 		self.dom.nopilldiv = self.dom.holder
@@ -415,9 +420,12 @@ function setInteractivity(self) {
 	}
 
 	self.showTree = async function(holder) {
-		self.dom.tip
-			.clear()
-			.showunder(holder instanceof Element ? holder : this instanceof Element ? this : self.dom.holder.node())
+		if (holder)
+			self.dom.tip
+				.clear()
+				.showunder(holder instanceof Element ? holder : this instanceof Element ? this : self.dom.holder.node())
+		else self.dom.tip.show(event.clientX, event.clientY)
+
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
 			holder: self.dom.tip.d,
@@ -448,8 +456,13 @@ function setInteractivity(self) {
 		})
 	}
 
-	self.showMenu = () => {
-		self.dom.tip.clear().showunder(self.dom.holder.node())
+	self.showMenu = _elem => {
+		self.dom.tip.clear()
+		if (self.opts.renderAs == 'none' && _elem) self.dom.holder = select(_elem)
+		const elem = self.dom.holder.node()
+		if (elem) self.dom.tip.showunder(elem)
+		else self.dom.tip.show(event.clientX, event.clientY)
+
 		if (self.opts.showFullMenu) {
 			self.showEditReplaceRemoveMenu(self.dom.tip.d)
 		} else {
@@ -505,18 +518,29 @@ export function getPillNameDefault(self, d) {
 		: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 }
 
+// append the common ID substring,
+// so that the first characters of $id is more indexable
+const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
+let $id = 0
+
 // tw: termWrapper = {id, term{}, q{}}
 // vocabApi
 export async function fillTermWrapper(tw, vocabApi) {
+	// For some plots that can have multiple terms of the same ID,
+	// but with different q{}, we can assign and use $id to
+	// disambiguate which tw data to update and associate with
+	// a rendered element such as a pill or a matrix row
+	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
+
 	if (!tw.term) {
-		if (tw.id == undefined || tw.id == '') throw 'missing both .id and .term'
+		if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'
 		// has .id but no .term, must be a dictionary term
 		// as non-dict term must have tw.term{}
 		tw.term = await vocabApi.getterm(tw.id)
 	}
 
 	// tw.term{} is valid
-	if (tw.id == undefined || tw.id == '') {
+	if (tw.id == undefined || tw.id === '') {
 		// for dictionary term, tw.term.id must be valid
 		// for non dict term, it can still be missing
 		tw.id = tw.term.id

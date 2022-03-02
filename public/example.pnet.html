@@ -24,7 +24,7 @@ runproteinpaint({
 			dslabel: 'PNET',
 			genome: 'hg19',
 			plots: [
-				{
+				/*{
 					chartType: 'survival',
 					term: {
 						id: 'Event-free survival'
@@ -33,7 +33,7 @@ runproteinpaint({
 						id: 'Age'
 					},
 					settings: {}
-				},
+				},*/
 				{
 					chartType: 'matrix',
 					settings: {
@@ -42,7 +42,17 @@ runproteinpaint({
 						}
 					},
 					divideBy: {
-						id: 'PNET_subgroup'
+						id: 'Age',
+						q: {
+							mode: 'discrete',
+							type: 'regular-bin',
+							bin_size: 6,
+							first_bin: {
+								startunbounded: true,
+								stop: 2, 
+								stopinclusive: true
+							}
+						}
 					},
 					termgroups: [
 						{
@@ -57,10 +67,10 @@ runproteinpaint({
 									q: {
 										mode: 'discrete',
 										type: 'regular-bin',
-										bin_size: 5,
+										bin_size: 2,
 										first_bin: {
 											startunbounded: true,
-											stop: 5,
+											stop: 2,
 											stopinclusive: true
 										}
 									} // or 'continuous'

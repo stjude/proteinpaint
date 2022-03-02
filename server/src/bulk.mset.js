@@ -43,7 +43,6 @@ async function process_mset(index, mset, genome) {
 	const flag = bulk.init_bulk_flag(genome)
 	if (!flag) throw 'init_bulk_flag() failed'
 	flag.tpsetname = mset.name ? mset.name : 'set' + index
-	console.log(flag.tpsetname)
 	for (const key in mset) {
 		if (!(key in handlers)) throw `unknown mutationset: ${key}`
 		const file = path.join(serverconfig.tpmasterdir, mset[key])
