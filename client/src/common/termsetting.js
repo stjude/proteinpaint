@@ -518,7 +518,9 @@ export function getPillNameDefault(self, d) {
 		: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 }
 
-const idPrefix = `_ts_${(+new Date()).toString().slice(-8)}_`
+// append the common ID substring,
+// so that the first characters of $id is more indexable
+const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
 let $id = 0
 
 // tw: termWrapper = {id, term{}, q{}}
@@ -528,7 +530,7 @@ export async function fillTermWrapper(tw, vocabApi) {
 	// but with different q{}, we can assign and use $id to
 	// disambiguate which tw data to update and associate with
 	// a rendered element such as a pill or a matrix row
-	if (!tw.$id) tw.$id = `${idPrefix}${$id++}`
+	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
 
 	if (!tw.term) {
 		if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'

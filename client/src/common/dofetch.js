@@ -89,7 +89,8 @@ export function dofetch2(path, init = {}, opts = {}) {
 		}
 	}
 
-	// this
+	// this may convert a GET into a POST method, and
+	// encode the payload either in the URL or request body
 	url = mayAdjustRequest(url, init)
 
 	if (!init.headers) {
@@ -144,7 +145,7 @@ const urlMaxLength = 2000 // if a GET url is longer than this, will be converted
 	url: full request url with host/path
 
 	init {}
-		same as 
+		same as the init argument for dofetch2
 		will be supplied as the second argument to
 		the native fetch api, so the method, headers, body
 		may be optionally supplied in the "init" argument
@@ -160,7 +161,7 @@ function mayAdjustRequest(url, init) {
 	}
 
 	if (method != 'GET') {
-		throw `unsupported request method='${method}': must be undefined or GET or POST`
+		throw `unsupported init.method='${method}': must be undefined or GET or POST`
 	}
 
 	if (init.body) {
@@ -193,7 +194,7 @@ function mayAdjustRequest(url, init) {
 		// assumes that all or most of the url string length were from parameters in the init.body argument to dofetch2
 		init.body = JSON.stringify(init.body)
 	} else {
-		// the url parameters were provided directly in the path argument to dofetch2
+		// the url parameters were provided directly in the path argument to dofetch2()
 		const params = {}
 		// decode URL search parameters, if available
 		if (query)

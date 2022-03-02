@@ -108,7 +108,7 @@ async function getSampleData(q, terms) {
 		}
 	}
 
-	return { lst: Object.values(samples), refs }
+	return { samples, refs }
 }
 
 function divideTerms(lst) {
@@ -129,21 +129,24 @@ function divideTerms(lst) {
 }
 
 function getSampleData_dictionaryTerms(q, termWrappers) {
+	const samples = {}
+	const refs = { byTermId: {} }
+	if (!termWrappers.length) return { samples, refs }
+
 	const filter = getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
 	const values = filter ? filter.values.slice() : []
-	const refs = { byTermId: {} }
+
 	const CTEs = termWrappers.map((tw, i) => {
-		tw.t$id = tw.term.id + ('$id' in tw ? `;;${tw.$id}` : '')
 		const CTE = get_term_cte(q, values, i, filter, tw)
 		if (CTE.bins) {
-			refs.byTermId[tw.t$id] = { bins: CTE.bins }
+			refs.byTermId[tw.term.id] = { bins: CTE.bins }
 		}
 		return CTE
 	})
-	values.push(...termWrappers.map(tw => tw.t$id))
+	values.push(...termWrappers.map(tw => tw.term.id))
 
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
@@ -157,7 +160,6 @@ function getSampleData_dictionaryTerms(q, termWrappers) {
 		).join(`UNION ALL`)}`
 
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
-	const samples = {}
 	for (const { sample, term_id, key, value } of rows) {
 		if (!samples[sample]) samples[sample] = { sample }
 		samples[sample][term_id] = { key, value }

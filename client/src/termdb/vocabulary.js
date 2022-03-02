@@ -5,6 +5,7 @@ import { getNormalRoot } from '../common/filter'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
 import initBinConfig from '../../shared/termdb.initbinconfig'
+import { deepEqual } from '../common/rx.core'
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst', 'snplocus'])
 
@@ -477,22 +478,119 @@ class TermdbVocab {
 		return await dofetch3('/termdb?' + args.join('&'))
 	}
 
-	async getMatrixData(opts) {
+	/*
+		
+	Arguments:
+
+	opts{}
+	.filter        a filter object
+	.terms[tw{}]   an array of termWrapper objects
+		tw.$id       id to disambugate when multiple terms
+		             with the same ID are in terms[],
+								 such as in matrix plot
+		
+	Returns 
+	{}
+	.samples{}
+		.sampleId{}
+			.sample: the sample ID
+			.$id: {key, value || values[]}	
+		}
+	
+	.refs{}
+		.byTermId{}
+			.$id: {bins, etc}   metadata for processed terms, useful
+													for specifying value order, colors, etc.
+	*/
+	async setAnnotatedSampleData(opts, currData) {
 		const init = {
 			body: {
 				for: 'matrix',
 				genome: this.vocab.genome,
-				dslabel: this.vocab.dslabel,
-				terms: opts.terms
+				dslabel: this.vocab.dslabel
 			}
 		}
-		const filterData = getNormalRoot(opts.filter)
-		if (filterData.lst.length) {
-			init.body.filter = JSON.stringify(filterData)
+
+		const filterRoot = getNormalRoot(opts.filter)
+		const filter = filterRoot.lst.length && JSON.stringify(filterRoot)
+		const isNewFilter = !deepEqual(currData.lastFilter, filter)
+		const termsToUpdate = isNewFilter
+			? [...opts.terms]
+			: opts.terms.filter(tw => {
+					const lastTw = currData.lastTerms.find(lt => lt.$id === tw.$id)
+					return !lastTw || !deepEqual(lastTw, tw)
+			  })
+
+		if (!termsToUpdate.length) return
+
+		const promises = []
+		let i = 0
+		while (termsToUpdate.length) {
+			const copies = this.getCopiesToUpdate(termsToUpdate)
+			const init = {
+				body: {
+					for: 'matrix',
+					genome: this.vocab.genome,
+					dslabel: this.vocab.dslabel,
+					terms: copies.map(c => c.copy),
+					filter
+				}
+			}
+
+			promises.push(
+				dofetch3('termdb', init, this.opts.fetchOpts).then(data => {
+					if (data.error) throw data.error
+					for (const sampleId in data.samples) {
+						const sample = data.samples[sampleId]
+						if (!(sampleId in currData.samples)) {
+							currData.samples[sampleId] = { sample: sampleId }
+						}
+						const row = currData.samples[sampleId]
+						for (const tw of copies) {
+							if (tw.idn in sample) {
+								row[tw.$id] = sample[tw.idn]
+							}
+						}
+					}
+
+					for (const tw of copies) {
+						if (tw.idn in data.refs.byTermId) {
+							currData.refs.byTermId[tw.$id] = data.refs.byTermId[tw.idn]
+						}
+					}
+				})
+			)
+			// prevent infinite loop
+			if (i++ > 10) break
 		}
-		const data = await dofetch3('termdb', init, this.opts.fetchOpts)
-		if (data.error) throw data.error
-		return data
+
+		await Promise.all(promises)
+		currData.lastFilter = filter
+		currData.lastTerms = opts.terms
+	}
+
+	getCopiesToUpdate(terms) {
+		const usedIdsOrNames = new Set()
+		const copies = []
+		const next = []
+		while (terms.length) {
+			const tw = terms.shift()
+			const idn = 'id' in tw.term ? tw.term.id : tw.term.name
+			// force only 1 tw copy at a time to benchmark
+			if (usedIdsOrNames.has(idn)) next.push(tw)
+			else {
+				usedIdsOrNames.add(idn)
+				const copy = { term: {}, q: tw.q }
+				if ('id' in tw) copy.term.id = tw.term.id
+				else {
+					copy.term.name = tw.term.name
+					copy.term.type = tw.term.type
+				}
+				copies.push({ copy, idn, $id: tw.$id, tw })
+			}
+		}
+		terms.push(...next)
+		return copies
 	}
 
 	// ids: [str], where str are string term IDS or names
