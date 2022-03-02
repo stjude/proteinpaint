@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/exprank/exprankDemoData.tar.gz",
+			"label":"Show expression rank",
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -13,8 +13,31 @@
                 "tracks": [{
                     "type": "mdsexpressionrank",
                     "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",
-                    "name": "TCGA FPKM demo expression rank",
+                    "name": "TCGA-GS-A9TQ expression rank",
                     "sample": "TCGA-GS-A9TQ"
+                }]
+            },
+            "testSpec": {
+                "expected": {"rect": 5 }
+            }
+        },
+        {
+			"label":"Show FPKM in a sample",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "position": "chr8:127340055-128243343",
+                "nativetracks": "RefGene",
+                "tracks": [{
+                    "type": "mdsexpressionrank",
+                    "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",
+                    "name": "TCGA-GS-A9TQ gene FPKM",
+                    "sample": "TCGA-GS-A9TQ",
+					"showrank":false,
+					"gecfg":{"datatype":"FPKM"}
                 }]
             },
             "testSpec": {
@@ -26,6 +49,10 @@
         {
             "name": "Documentation",
             "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.q9ccqxkrh30s"
+        },
+        {
+            "name": "Download Track File",
+            "link": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/exprank/exprankDemoData.tar.gz"
         }
     ]
 }
