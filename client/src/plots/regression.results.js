@@ -3,6 +3,7 @@ import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { axisstyle } from '../dom/axisstyle'
 import { first_genetrack_tolist } from '../client'
+import { interpolateRgb } from 'd3-interpolate'
 
 /*************
 can dynamically add following attributes
@@ -27,6 +28,8 @@ result.data: {}
 ** function cascade **
 main
 	displayResult
+		createGenomebrowser
+		updateMds3Tk
 		show_genomebrowser_snplocus
 		displayResult_oneset
 			mayshow_warn
@@ -189,13 +192,23 @@ function setRenderers(self) {
 			...
 		]
 		*/
-		if (self.config.independent.find(i => i.term.type == 'snplocus')) {
-			// has a snploucs term: create genome browser to display that locus
-			// in result[], there's one set of result for each variant, identified by id
-			// clicking on a dot in browser tk will call displayResult_oneset() to display its results
-			await self.show_genomebrowser_snplocus(result)
+
+		// if there is a snplocus Input
+		const snplocusInput = self.parent.inputs.independent.inputLst.find(i => i.term && i.term.term.type == 'snplocus')
+		if (snplocusInput) {
+			/* has a snploucs term
+			in result[], there's one set of result for each variant, identified by id
+			show a genome browser and a mds3 tk to show dots for the variants from snplocus term
+			clicking on a dot in browser tk will call displayResult_oneset() to display its results
+			*/
+			if (!self.snplocusBlock) {
+				self.snplocusBlock = await createGenomebrowser(self, snplocusInput, result)
+			} else {
+				await updateMds3Tk(self, snplocusInput, result)
+			}
 			return
 		}
+
 		// no snplocus, clear things if had it before
 		delete self.snplocusBlock
 		self.dom.snplocusBlockDiv.selectAll('*').remove()
@@ -711,100 +724,6 @@ function setRenderers(self) {
 			throw 'unknown type'
 		}
 	}
-
-	self.show_genomebrowser_snplocus = async result => {
-		// show genome browser when there's a snplocus term in independent
-		const input = self.parent.inputs.independent.inputLst.find(i => i.term && i.term.term.type == 'snplocus')
-		if (!self.snplocusBlock) {
-			// doesn't have a block, create one
-			const arg = {
-				holder: self.dom.snplocusBlockDiv,
-				genome: self.parent.genomeObj,
-				chr: input.term.q.chr,
-				start: input.term.q.start,
-				stop: input.term.q.stop,
-				nobox: true,
-				tklst: [],
-				onCoordinateChange: async rglst => {
-					const { chr, start, stop } = rglst[0]
-					// temporary tw as override for pill.runCallback()
-					const overrideTw = {
-						term: {
-							id: input.term.term.id,
-							type: 'snplocus'
-						},
-						q: JSON.parse(JSON.stringify(input.term.q))
-					}
-					overrideTw.q.chr = chr
-					overrideTw.q.start = start
-					overrideTw.q.stop = stop
-					// call fillTW of snplocus.js to recompute tw.term.snps[] and cache file
-					const _ = await import('../common/termsetting.snplocus')
-					await _.fillTW(overrideTw, self.app.vocabApi)
-					/*
-					updated term info (term.snps[] and q.cacheid etc) are now in overrideTw
-					call pill.runCallback() with this override
-					which in turn calls editConfig() and
-					dispatch action and write the updated tw into state;
-					state change will trigger pill.main()
-					to propagate updated data to termsetting instance
-
-					*
-					Note: it is incorrect to call pill.main() or inputs.editConfig() here
-					*
-
-					action dispatch will contain hasUnsubmittedEdits=true,
-					effect of which is to hide result UI and require user to click submit button to rerun analysis
-					set a single-use flag to nullify it so results.js can automatically run analysis
-					so user can continuously look at genome browser
-					without break/interruption to user experience
-					*/
-					self.hasUnsubmittedEdits_nullify_singleuse = true
-					input.pill.runCallback(overrideTw)
-				}
-			}
-
-			// add mds3 tk
-			arg.tklst.push({
-				type: 'mds3', // tkt.mds3
-				name: 'Variants',
-				numericmode: {
-					inuse: true,
-					type: '__value',
-					label: '-log10 p-value',
-					tooltipPrintValue: m => {
-						return ['p-value', m.regressionPvalue]
-					}
-				},
-				custom_variants: make_mds3_variants(input.term, result),
-				click_snvindel: m => {
-					self.displayResult_oneset(m.regressionResult)
-				}
-			})
-
-			first_genetrack_tolist(self.parent.genomeObj, arg.tklst)
-			const _ = await import('../block')
-			self.snplocusBlock = new _.Block(arg)
-		} else {
-			// browser is already created
-			// find the mds3 track
-			const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
-			// apply new sets of variants and results to track and render
-			tk.custom_variants = make_mds3_variants(input.term, result)
-			// if user changes position using termsetting ui,
-			// input.term.q{} will hold different chr/start/stop than block
-			// and block will need to update coord
-			const r = self.snplocusBlock.rglst[0]
-			if (r.chr == input.term.q.chr && r.start == input.term.q.start && r.stop == input.term.q.stop) {
-				// coord is the same between input and block
-				// only need to rerender tk
-				tk.load()
-			} else {
-				await self.snplocusBlock.jump_1basedcoordinate(input.term.q)
-			}
-			self.snplocusBlock.cloakOff()
-		}
-	}
 }
 
 function fillTdName(td, name) {
@@ -906,4 +825,133 @@ function make_mds3_variants(tw, result) {
 		}
 	}
 	return mlst
+}
+
+async function createGenomebrowser(self, input, result) {
+	// create block instance that harbors the mds3 track for showing variants from the snplocus term
+	// input is the snplocus Input instance
+	const arg = {
+		debugmode: true,
+		holder: self.dom.snplocusBlockDiv,
+		genome: self.parent.genomeObj,
+		chr: input.term.q.chr,
+		start: input.term.q.start,
+		stop: input.term.q.stop,
+		nobox: true,
+		tklst: [],
+		onCoordinateChange: async rglst => {
+			const { chr, start, stop } = rglst[0]
+			// temporary tw as override for pill.runCallback()
+			const overrideTw = {
+				term: {
+					id: input.term.term.id,
+					type: 'snplocus'
+				},
+				q: JSON.parse(JSON.stringify(input.term.q))
+			}
+			overrideTw.q.chr = chr
+			overrideTw.q.start = start
+			overrideTw.q.stop = stop
+			// call fillTW of snplocus.js to recompute tw.term.snps[] and cache file
+			const _ = await import('../common/termsetting.snplocus')
+			await _.fillTW(overrideTw, self.app.vocabApi)
+			/*
+			updated term info (term.snps[] and q.cacheid etc) are now in overrideTw
+			call pill.runCallback() with this override
+			which in turn calls editConfig() and
+			dispatch action and write the updated tw into state;
+			state change will trigger pill.main()
+			to propagate updated data to termsetting instance
+
+			* Note *
+			it is incorrect to call pill.main() or inputs.editConfig() here
+
+			action dispatch will contain hasUnsubmittedEdits=true,
+			effect of which is to hide result UI and require user to click submit button to rerun analysis
+			set a single-use flag to nullify it so results.js can automatically run analysis
+			so user can continuously look at genome browser
+			without break/interruption to user experience
+			*/
+			self.hasUnsubmittedEdits_nullify_singleuse = true
+			input.pill.runCallback(overrideTw)
+		}
+	}
+
+	// add mds3 tk
+	arg.tklst.push({
+		type: 'mds3', // tkt.mds3
+		name: 'Variants',
+		numericmode: {
+			inuse: true,
+			type: '__value',
+			label: '-log10 p-value',
+			tooltipPrintValue: m => {
+				return ['p-value', m.regressionPvalue]
+			}
+		},
+		custom_variants: make_mds3_variants(input.term, result),
+		click_snvindel: async m => {
+			self.displayResult_oneset(m.regressionResult)
+			await mayCheckLD(m, input, self)
+		}
+	})
+
+	first_genetrack_tolist(self.parent.genomeObj, arg.tklst)
+	const _ = await import('../block')
+	return new _.Block(arg)
+}
+
+async function updateMds3Tk(self, input, result) {
+	// browser is already created
+	// find the mds3 track
+	const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
+	// apply new sets of variants and results to track and render
+	tk.custom_variants = make_mds3_variants(input.term, result)
+	// if user changes position using termsetting ui,
+	// input.term.q{} will hold different chr/start/stop than block
+	// and block will need to update coord
+	const r = self.snplocusBlock.rglst[0]
+	if (r.chr == input.term.q.chr && r.start == input.term.q.start && r.stop == input.term.q.stop) {
+		// coord is the same between input and block
+		// only need to rerender tk
+		tk.load()
+	} else {
+		await self.snplocusBlock.jump_1basedcoordinate(input.term.q)
+	}
+	self.snplocusBlock.cloakOff()
+}
+
+const LDcolorScale = interpolateRgb('#2E6594', '#ff0000')
+
+async function mayCheckLD(m, input, self) {
+	/*
+	m: the mutation data object for the clicked dot in mds3 tk
+		{chr, pos, ref, alt}
+	input: the snplocus Input instance
+	self: result instance
+	*/
+	if (!input.term.q.restrictAncestry) {
+		// requires restrictAncestry
+		// may also support ld overlay without specifying an ancestry
+		return
+	}
+	const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
+	if (!tk || !tk.skewer || !tk.skewer.nmg) return
+	const data = await self.app.vocabApi.getLDdata(input.term.q.restrictAncestry.name, m)
+	if (data.error) throw data.error
+	if (data.nodata || !data.lst || data.lst.length == 0) {
+		// either dataset does not have ld tracks, or no ld track found by name
+		// or no ld data retrieved using given variant
+		return
+	}
+	tk.skewer.nmg.selectAll('.sja_aa_disk_fill').attr('fill', m2 => {
+		if (m2.pos == m.pos && m2.ref == m.ref && m2.alt == m.alt) {
+			// same as m
+			return 'red'
+		}
+		for (const i of data.lst) {
+			if (i.pos == m2.pos && i.alleles == m2.ref + '.' + m2.alt) return LDcolorScale(i.r2)
+		}
+		return LDcolorScale(0)
+	})
 }

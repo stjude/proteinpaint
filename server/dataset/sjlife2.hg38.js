@@ -1118,12 +1118,12 @@ module.exports = {
 		ld: {
 			tracks: [
 				{
-					name: 'SJLIFE European sub-cohort',
+					name: 'European ancestry',
 					file: 'files/hg38/sjlife/ld/CEU.gz',
 					shown: false,
 					viewrangelimit: 200000
 				},
-				{ name: 'SJLIFE African sub-cohort', file: 'files/hg38/sjlife/ld/YRI.gz', shown: false, viewrangelimit: 200000 }
+				{ name: 'African ancestry', file: 'files/hg38/sjlife/ld/YRI.gz', shown: false, viewrangelimit: 200000 }
 			],
 			overlay: {
 				color_1: 'red',

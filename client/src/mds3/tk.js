@@ -35,8 +35,10 @@ export async function loadTk(tk, block) {
 
 		let data
 		if (tk.custom_variants) {
+			// has custom data on client side, no need to request from server
 			data = filter_custom_variants(tk, block)
 		} else {
+			// request data from server, either official or custom sources
 			const [par, headers] = get_parameter(tk, block)
 			data = await dofetch3('mds3?' + par, { headers })
 		}

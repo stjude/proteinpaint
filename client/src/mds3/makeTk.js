@@ -21,10 +21,7 @@ configPanel
 _load
 */
 
-/*
-TODO how to tell if tk.mds is a custom track
-
-common structure of tk.mds between official and custom
+/* common structure of tk.mds between official and custom
 
 tk.skewer{}
 	create if skewer data type is available for this mds
@@ -92,6 +89,12 @@ export async function makeTk(tk, block) {
 
 	tk.color4disc = m => {
 		// figure out what color to use for a m point
+		if (tk.mutationColorBy) {
+			if (tk.mutationColorBy == 'hardcode') {
+				if (m.color) return m.color
+			}
+			// support other choices, including vcfinfofilter
+		}
 		if (tk.vcfinfofilter && tk.vcfinfofilter.setidx4mclass != undefined) {
 			const mcset = tk.vcfinfofilter.lst[tk.vcfinfofilter.setidx4mclass]
 

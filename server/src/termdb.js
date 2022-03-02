@@ -9,6 +9,7 @@ const cuminc = require('./termdb.cuminc')
 const survival = require('./termdb.survival')
 const regression = require('./termdb.regression')
 const termdbsnp = require('./termdb.snp')
+const LDoverlay = require('./mds2.load.ld').overlay
 
 /*
 ********************** EXPORTED
@@ -79,6 +80,7 @@ export function handle_request_closure(genomes) {
 			if (q.getregression) return await trigger_getregression(q, res, ds)
 			if (q.validateSnps) return res.send(await termdbsnp.validate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return trigger_getvariantfilter(res, ds)
+			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
 
 			// generic data getter, instead of using flags
 			if (q.for) {
@@ -330,4 +332,10 @@ function trigger_getvariantfilter(res, ds) {
 	if (!ds.track) throw 'unknown dataset version'
 	// variant_filter is always an object, can be empty
 	res.send(ds.track.variant_filter)
+}
+
+async function trigger_getLDdata(q, res, ds) {
+	q.m = JSON.parse(q.m)
+	if (ds.track && ds.track.ld && ds.track.ld.tracks.find(i => i.name == q.ldtkname)) return await LDoverlay(q, ds, res)
+	res.send({ nodata: 1 })
 }

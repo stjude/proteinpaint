@@ -494,6 +494,17 @@ class TermdbVocab {
 		if (data.error) throw data.error
 		return data
 	}
+
+	async getLDdata(tkname, m) {
+		const args = [
+			'getLDdata=1',
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel,
+			'ldtkname=' + tkname,
+			'm=' + JSON.stringify({ chr: m.chr, pos: m.pos, ref: m.ref, alt: m.alt })
+		]
+		return await dofetch3('termdb?' + args.join('&'))
+	}
 }
 
 function q_to_param(q) {

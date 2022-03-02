@@ -15,7 +15,6 @@ availability of ssm_id decides if variant2samples query is allowed
 
 legacy code to clean up:
 hlaachange_addnewtrack
-getter_mcset_key
 
 ********************** EXPORTED
 may_render_skewer

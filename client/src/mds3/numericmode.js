@@ -294,7 +294,7 @@ function numeric_make(nm, _g, data, tk, block) {
 	// actual disc
 	const discdot = discg.append('circle')
 	// full filled
-	discdot
+	tk.skewer.discDotSelection = discdot
 		.attr('fill', m => tk.color4disc(m))
 		.attr('stroke', 'white')
 		.attr('r', m => m.radius - 0.5)
