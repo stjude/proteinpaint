@@ -479,7 +479,19 @@ class TermdbVocab {
 	}
 
 	/*
-		
+	This will fill-in currData{} with annotations by sample ID.
+	It will only request annotations for terms that have changed,
+	or when the filter has changed, using rx.deepEqual(). 
+
+	The server data sample annotations and refs are both indexed 
+	by term id, but will be remapped to be annotated instead with 
+	tw.$id. This will prevent conflicts when the same term.id is used
+	multiple times in the terms[] argument, such as for the matrix plot.
+
+	Other tracking data are attached to currData{}, to be able to
+	compare the previous version of term wrappers against future
+	server requests.
+
 	Arguments:
 
 	opts{}
@@ -490,6 +502,9 @@ class TermdbVocab {
 								 such as in matrix plot
 		
 	Returns 
+	undefined
+	
+	Expected server-data response
 	{}
 	.samples{}
 		.sampleId{}
@@ -606,7 +621,7 @@ class TermdbVocab {
 		const data = await dofetch3('termdb', init, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
-}
+	}
 
 	async getLDdata(tkname, m) {
 		const args = [
