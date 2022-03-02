@@ -1,6 +1,8 @@
 import { event as d3event } from 'd3-selection'
 import { debounce } from 'debounce'
-import { first_genetrack_tolist, tkt, dofetch2, sayerror } from './client'
+import { dofetch3 } from './common/dofetch'
+import { sayerror } from './dom/error'
+import { first_genetrack_tolist } from './common/1stGenetk'
 import { contigNameNoChr2 } from '../shared/common'
 import urlmap from './common/urlmap'
 
@@ -132,7 +134,7 @@ export function bamsliceui(genomes, holder) {
 			gdcid_input.attr('disabled', 1)
 			gdc_loading.style('display', 'inline-block')
 		}
-		const bam_info = await dofetch2('gdcbam?gdc_id=' + gdc_id)
+		const bam_info = await dofetch3('gdcbam?gdc_id=' + gdc_id)
 		// enable input field and hide 'Loading...'
 		gdcid_input.attr('disabled', null)
 		gdc_loading.style('display', 'none')
@@ -440,6 +442,7 @@ function validateInputs(obj, genome) {
 function renderBamSlice(args, genome, holder) {
 	// create arg for block init
 	const par = {
+		debugmode: true,
 		nobox: 1,
 		genome,
 		holder
@@ -457,12 +460,11 @@ function renderBamSlice(args, genome, holder) {
 	par.tklst = []
 	for (const file of args.bam_files) {
 		const tk = {
-			type: tkt.bam,
+			type: 'bam',
 			name: file.track_name || 'sample bam slice',
-			gdc: args.gdc_token,
+			gdcToken: args.gdc_token,
 			gdc_file: file.file_id,
-			downloadgdc: 1,
-			file: 'dummy_str'
+			downloadgdc: 1
 		}
 		if (args.variant) {
 			tk.variants = [args.variant]

@@ -835,7 +835,6 @@ async function createGenomebrowser(self, input, result) {
 	// create block instance that harbors the mds3 track for showing variants from the snplocus term
 	// input is the snplocus Input instance
 	const arg = {
-		debugmode: true,
 		holder: self.dom.snplocusBlockDiv,
 		genome: self.parent.genomeObj,
 		chr: input.term.q.chr,

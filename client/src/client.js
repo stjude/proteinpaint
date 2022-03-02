@@ -17,6 +17,9 @@ import { dofetch, dofetch2, dofetch3 } from './common/dofetch'
 // TODO: update affected code to import dofetch* directly from common/dofetch.js
 export { dofetch, dofetch2, dofetch3 }
 
+import { first_genetrack_tolist } from './common/1stGenetk'
+export { first_genetrack_tolist }
+
 export const font = 'Arial'
 export const unspecified = 'Unspecified'
 export const colorinframe = 'green'
@@ -1589,16 +1592,6 @@ export const bwSetting = {
 	usedotplot: 10,
 	usedividefactor: 11,
 	nodividefactor: 12
-}
-
-export function first_genetrack_tolist(genome, lst) {
-	if (!genome.tracks) return
-	for (const t of genome.tracks) {
-		if (t.__isgene) {
-			lst.push(t)
-			return
-		}
-	}
 }
 
 export function tkexists(t, tklst) {

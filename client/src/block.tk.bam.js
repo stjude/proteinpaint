@@ -22,13 +22,12 @@ tk can predefine if bam file has chr or not
 see makeTk for order of rows; following boolean flags indicate visibility of rows
 tk.pileup_shown
 tk.toomanyreads
-tk.gdc{} // if defined. delete later!
 tk.dom.variantg // if defined.
 
 ******* attributes ********
 
 tk.downloadgdc // Downloads bam file from gdc
-tk.gdc // Renders gdc bam file
+tk.gdcToken // gdc token string
 tk.variants[ {} ]
 	.chr/pos/ref/alt
         .altseq  // Contains leftflankseq + alt_allele + rightflankseq
@@ -204,14 +203,40 @@ export async function loadTk(tk, block) {
 }
 
 async function getData(tk, block, additional = []) {
-	let headers
-	let lst = [
+	const lst = [
 		'genome=' + block.genome.name,
 		'regions=' + JSON.stringify(tk.regions),
 		'nucleotide_length=' + block.exonsf,
 		'pileupheight=' + tk.pileupheight,
 		...additional
 	]
+	let headers
+	if (tk.gdcToken) {
+		headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+		headers['X-Auth-Token'] = tk.gdcToken
+	}
+	if (tk.gdc_file) {
+		lst.push('gdc_file=' + tk.gdc_file)
+	}
+
+	let orig_regions = [] //FIXME delete orig_regions
+	if (tk.downloadgdc) {
+		tk.cloaktext.text('Downloading BAM slice ...')
+		lst.push('downloadgdc=' + tk.downloadgdc)
+		const gdc_bam_files = await dofetch3('tkbam?' + lst.join('&'), { headers })
+		tk.cloaktext.text('Loading ...')
+		lst.pop()
+
+		if (gdc_bam_files.error) throw gdc_bam_files.error
+		delete tk.downloadgdc
+
+		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
+		for (const r of tk.regions) {
+			orig_regions.push(r)
+		}
+		tk.orig_regions = orig_regions
+	}
+
 	if (tk.variants) {
 		lst.push(
 			'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
@@ -241,33 +266,7 @@ async function getData(tk, block, additional = []) {
 		lst.push('nochr=' + tk.nochr)
 	}
 
-	if (tk.gdc) {
-		headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-		headers['X-Auth-Token'] = tk.gdc
-	}
-	if (tk.gdc_file) {
-		lst.push('gdc_file=' + tk.gdc_file)
-	}
-
-	// FIXME clean up
-	//delete orig_regions
-	let gdc_bam_files
-	let orig_regions = []
-	if (tk.downloadgdc) {
-		lst.push('downloadgdc=' + tk.downloadgdc)
-		gdc_bam_files = await dofetch3('tkbam?' + lst.join('&'), { headers })
-		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
-		if (gdc_bam_files.error) throw gdc_bam_files.error
-		delete tk.downloadgdc
-		lst = lst.filter(a => a != 'downloadgdc=1') //remove this key after file download
-		for (const r of tk.regions) {
-			orig_regions.push(r)
-		}
-		tk.orig_regions = orig_regions
-	}
-
 	if (tk.file) lst.push('file=' + tk.file)
-
 	if (tk.url) lst.push('url=' + tk.url)
 	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
 
@@ -1071,8 +1070,8 @@ function may_add_urlparameter(tk) {
 		if (str.indexOf(',') == -1) {
 			console.log('Both gdc token and gdc case id must be present')
 		} else {
-			tk.gdc = str
-			tk.downloadgdc = 'TRUE'
+			tk.gdcToken = str
+			tk.downloadgdc = true
 		}
 	}
 }
@@ -2493,8 +2492,8 @@ async function getReadInfo(tk, block, box, ridx) {
 		if (tk.file) lst.push('file=' + tk.file)
 		if (tk.url) lst.push('url=' + tk.url)
 		if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
-		if (tk.gdc) {
-			headers['X-Auth-Token'] = tk.gdc
+		if (tk.gdcToken) {
+			headers['X-Auth-Token'] = tk.gdcToken
 		}
 		if (tk.asPaired) {
 			lst.push('getpair=1')
