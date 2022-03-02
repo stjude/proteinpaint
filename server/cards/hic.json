@@ -18,7 +18,8 @@
                     "percentile_max": 95,
                     "mincutoff": 1,
                     "pyramidup": 1,
-                    "enzyme": "MboI"
+                    "enzyme": "MboI",
+					"normalizationmethod":"VC"
                 }]
             },
             "testSpec": {
