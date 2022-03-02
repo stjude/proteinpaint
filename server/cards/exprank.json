@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-			"label":"Show expression rank",
+            "message": "<p style='line-height: 1.5em;'>In this example, <em>two</em> expression rank tracks with the same data are shown: rank and FPKM. The first track displays the expression rank on a scale of 0 - 100%. The second displays the FPKM values from 0 - 9,775 (i.e. zero to the highest rounded value). Hover over the grey bars to see the annotation for each gene.<br><br>To change between expression rank and FPKM: <ul><li>Click on <a style='color:gray; text-decoration: none;'>CONFIG</a> on the right-hand side of the track</li><li>Change the radio button to either 'FPKM' or 'Rank of a group of samples.'</li></ul></p>",
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -10,35 +10,25 @@
                 "genome": "hg38",
                 "position": "chr8:127340055-128243343",
                 "nativetracks": "RefGene",
-                "tracks": [{
-                    "type": "mdsexpressionrank",
-                    "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",
-                    "name": "TCGA-GS-A9TQ expression rank",
-                    "sample": "TCGA-GS-A9TQ"
-                }]
-            },
-            "testSpec": {
-                "expected": {"rect": 5 }
-            }
-        },
-        {
-			"label":"Show FPKM in a sample",
-            "runargs": {
-                "parseurl": true,
-                "block": true,
-                "nobox": 1,
-                "noheader": 1,
-                "genome": "hg38",
-                "position": "chr8:127340055-128243343",
-                "nativetracks": "RefGene",
-                "tracks": [{
-                    "type": "mdsexpressionrank",
-                    "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",
-                    "name": "TCGA-GS-A9TQ gene FPKM",
-                    "sample": "TCGA-GS-A9TQ",
-					"showrank":false,
-					"gecfg":{"datatype":"FPKM"}
-                }]
+                "tracks": [
+                    {
+                        "type": "mdsexpressionrank",
+                        "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",
+                        "name": "TCGA-GS-A9TQ expression rank",
+                        "sample": "TCGA-GS-A9TQ",
+                        "barheight": 100
+                    },
+                    {
+                        "type": "mdsexpressionrank",
+                        "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",
+                        "name": "TCGA-GS-A9TQ gene FPKM",
+                        "sample": "TCGA-GS-A9TQ",
+                        "barheight": 100,
+                        "toppad": 20,
+                        "showrank": false,
+                        "gecfg": {"datatype":"FPKM"}
+                    }
+                ]
             },
             "testSpec": {
                 "expected": {"rect": 5 }

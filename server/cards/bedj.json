@@ -109,7 +109,7 @@
         {
             "label": "Hide item names",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
-            "message": "In this example, the gene name is removed. To add the gene name, navigate to the farthest left-hand side of the track, and click on <a style='color:gray; text-decoration: none;'>CONFIG</a>. Uncheck 'Hide item names' and the gene symbol will reappear.", 
+            "message": "In this example, the gene name is removed. To add the gene name, navigate to the right-hand side of the track, and click on <a style='color:gray; text-decoration: none;'>CONFIG</a>. Uncheck 'Hide item names' and the gene symbol will reappear.", 
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -139,7 +139,7 @@
         },
         {
             "label": "Show item by name",
-            "message": "To single out genes of interest, click <a style='color:gray; text-decoration: none;'>CONFIG</a> on the farthest left-hand side of the track. Enter the isoform name(s) under 'Show items by names' and click <button>Submit</button>.<br><br>In this example, only MYC and PVT1 are shown. Delete one of the names and uncheck 'Show items by names' to see the differences in the track display.",
+            "message": "To single out genes of interest, click <a style='color:gray; text-decoration: none;'>CONFIG</a> on the right-hand side of the track. Enter the isoform name(s) under 'Show items by names' and click <button>Submit</button>.<br><br>In this example, only MYC and PVT1 are shown. Delete one of the names and uncheck 'Show items by names' to see the differences in the track display.",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
             "runargs": {
                 "parseurl": true,
