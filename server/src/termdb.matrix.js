@@ -128,21 +128,22 @@ function divideTerms(lst) {
 	return [dict, nonDict]
 }
 
-function getSampleData_dictionaryTerms(q, terms) {
+function getSampleData_dictionaryTerms(q, termWrappers) {
 	const filter = getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
 	// have to independently extend its copy of filter values
 	const values = filter ? filter.values.slice() : []
 	const refs = { byTermId: {} }
-	const CTEs = terms.map((t, i) => {
-		const CTE = get_term_cte(q, values, i, filter, t)
+	const CTEs = termWrappers.map((tw, i) => {
+		tw.t$id = tw.term.id + ('$id' in tw ? `;;${tw.$id}` : '')
+		const CTE = get_term_cte(q, values, i, filter, tw)
 		if (CTE.bins) {
-			refs.byTermId[t.term.id] = { bins: CTE.bins }
+			refs.byTermId[tw.t$id] = { bins: CTE.bins }
 		}
 		return CTE
 	})
-	values.push(...terms.map(d => d.id))
+	values.push(...termWrappers.map(tw => tw.t$id))
 
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}

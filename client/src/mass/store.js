@@ -249,7 +249,6 @@ TdbStore.prototype.actions = {
 	plot_delete(action) {
 		const i = this.state.plots.findIndex(p => p.id === action.id)
 		if (i !== -1) this.state.plots.splice(i, 1)
-		validatePlot(plot, this.app.vocabApi)
 	},
 
 	plot_nestedEdits(action) {

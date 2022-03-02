@@ -84,6 +84,7 @@ class TermSetting {
 		as used in snplocus block pan/zoom update in regression.results.js
 		*/
 		const arg = { id: this.term.id, term: this.term, q: this.q }
+		if ('$id' in this) arg.$id = this.$id
 		this.opts.callback(overrideTw ? copyMerge({}, arg, overrideTw) : arg)
 	}
 
@@ -116,6 +117,7 @@ class TermSetting {
 			// term is read-only if it comes from state, let it remain read-only
 			this.term = data.term
 			this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
+			if ('$id' in data) this.$id = data.$id
 			if ('disable_terms' in data) this.disable_terms = data.disable_terms
 			if ('exclude_types' in data) this.exclude_types = data.exclude_types
 			if ('filter' in data) this.filter = data.filter
@@ -516,18 +518,27 @@ export function getPillNameDefault(self, d) {
 		: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 }
 
+const idPrefix = `_ts_${(+new Date()).toString().slice(-8)}_`
+let $id = 0
+
 // tw: termWrapper = {id, term{}, q{}}
 // vocabApi
 export async function fillTermWrapper(tw, vocabApi) {
+	// For some plots that can have multiple terms of the same ID,
+	// but with different q{}, we can assign and use $id to
+	// disambiguate which tw data to update and associate with
+	// a rendered element such as a pill or a matrix row
+	if (!tw.$id) tw.$id = `${idPrefix}${$id++}`
+
 	if (!tw.term) {
-		if (tw.id == undefined || tw.id == '') throw 'missing both .id and .term'
+		if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'
 		// has .id but no .term, must be a dictionary term
 		// as non-dict term must have tw.term{}
 		tw.term = await vocabApi.getterm(tw.id)
 	}
 
 	// tw.term{} is valid
-	if (tw.id == undefined || tw.id == '') {
+	if (tw.id == undefined || tw.id === '') {
 		// for dictionary term, tw.term.id must be valid
 		// for non dict term, it can still be missing
 		tw.id = tw.term.id
