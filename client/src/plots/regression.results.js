@@ -1,6 +1,6 @@
 import { sayerror } from '../dom/error'
 import { scaleLinear, scaleLog } from 'd3-scale'
-import { axisBottom } from 'd3-axis'
+import { axisBottom, axisTop } from 'd3-axis'
 import { axisstyle } from '../dom/axisstyle'
 import { first_genetrack_tolist } from '../client'
 import { interpolateRgb } from 'd3-interpolate'
@@ -220,6 +220,10 @@ function setRenderers(self) {
 
 	self.displayResult_oneset = result => {
 		self.dom.oneSetResultDiv.selectAll('*').remove()
+
+		// may be used when clicking snplocus dot
+		self.dom.LDresultDiv = self.dom.oneSetResultDiv.append('div')
+
 		self.mayshow_warn(result)
 		if ('sampleSize' in result) self.newDiv('Sample size:', result.sampleSize)
 		if (result.headerRow) self.newDiv(result.headerRow.k, result.headerRow.v)
@@ -921,7 +925,9 @@ async function updateMds3Tk(self, input, result) {
 	self.snplocusBlock.cloakOff()
 }
 
-const LDcolorScale = interpolateRgb('#2E6594', '#ff0000')
+const LDcolor0 = '#2E6594',
+	LDcolor1 = '#ff0000',
+	LDcolorScale = interpolateRgb(LDcolor0, LDcolor1)
 
 async function mayCheckLD(m, input, self) {
 	/*
@@ -937,21 +943,84 @@ async function mayCheckLD(m, input, self) {
 	}
 	const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
 	if (!tk || !tk.skewer || !tk.skewer.nmg) return
-	const data = await self.app.vocabApi.getLDdata(input.term.q.restrictAncestry.name, m)
-	if (data.error) throw data.error
-	if (data.nodata || !data.lst || data.lst.length == 0) {
-		// either dataset does not have ld tracks, or no ld track found by name
-		// or no ld data retrieved using given variant
-		return
+
+	const wait = self.dom.LDresultDiv.append('span').text('Loading LD data...')
+
+	try {
+		const data = await self.app.vocabApi.getLDdata(input.term.q.restrictAncestry.name, m)
+		if (data.error) throw data.error
+
+		if (data.nodata || !data.lst || data.lst.length == 0) {
+			// either dataset does not have ld tracks, or no ld track found by name
+			// or no ld data retrieved using given variant
+			// restore color in case dots have been colored by ld in a prior click
+			wait.text('No LD data')
+			tk.skewer.nmg.selectAll('.sja_aa_disk_fill').attr('fill', m => tk.color4disc(m))
+			return
+		}
+		tk.skewer.nmg.selectAll('.sja_aa_disk_fill').attr('fill', m2 => {
+			if (m2.pos == m.pos && m2.ref == m.ref && m2.alt == m.alt) {
+				// same as m
+				return LDcolor1
+			}
+			for (const i of data.lst) {
+				if (i.pos == m2.pos && i.alleles == m2.ref + '.' + m2.alt) return LDcolorScale(i.r2)
+			}
+			return LDcolorScale(0)
+		})
+
+		wait.html(input.term.q.restrictAncestry.name + ' LD r<sup>2</sup>')
+		showLDlegend(self.dom.LDresultDiv)
+	} catch (e) {
+		wait.text('Error: ' + (e.message || e))
 	}
-	tk.skewer.nmg.selectAll('.sja_aa_disk_fill').attr('fill', m2 => {
-		if (m2.pos == m.pos && m2.ref == m.ref && m2.alt == m.alt) {
-			// same as m
-			return 'red'
-		}
-		for (const i of data.lst) {
-			if (i.pos == m2.pos && i.alleles == m2.ref + '.' + m2.alt) return LDcolorScale(i.r2)
-		}
-		return LDcolorScale(0)
+}
+
+function showLDlegend(div) {
+	const colorbardiv = div.append('span').style('margin-left', '10px')
+	const colorlst = []
+	for (let i = 0; i <= 1; i += 0.1) {
+		colorlst.push(LDcolorScale(i))
+	}
+	const svg = colorbardiv.append('svg')
+	const axisheight = 20
+	const barheight = 15
+	const xpad = 10
+	const axiswidth = 150
+	axisstyle({
+		axis: svg
+			.append('g')
+			.attr('transform', 'translate(' + xpad + ',' + axisheight + ')')
+			.call(
+				axisTop()
+					.scale(
+						scaleLinear()
+							.domain([0, 1])
+							.range([0, axiswidth])
+					)
+					.ticks(4)
+			),
+		fontsize: 12
 	})
+	const grad = svg
+		.append('defs')
+		.append('linearGradient')
+		.attr('id', 'grad')
+	grad
+		.append('stop')
+		.attr('offset', '0%')
+		.attr('stop-color', LDcolor0)
+	grad
+		.append('stop')
+		.attr('offset', '100%')
+		.attr('stop-color', LDcolor1)
+	svg
+		.append('rect')
+		.attr('x', xpad)
+		.attr('y', axisheight)
+		.attr('width', axiswidth)
+		.attr('height', barheight)
+		.attr('fill', 'url(#grad)')
+
+	svg.attr('width', xpad * 2 + axiswidth).attr('height', axisheight + barheight)
 }
