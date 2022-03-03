@@ -27,7 +27,7 @@ import urlmap from './common/urlmap'
 const gdc_genome = 'hg38'
 const variantFlankingSize = 60 // bp
 const baminfo_rows = [
-	{ title: 'Entity ID', key: 'entity_id' },
+	{ title: 'Entity ID', key: 'entity_id', url: 'https://portal.gdc.cancer.gov/files/' },
 	{ title: 'Entity Type', key: 'entity_type' },
 	{ title: 'Experimental Strategy', key: 'experimental_strategy' },
 	{ title: 'Sample Type', key: 'sample_type' },
@@ -152,13 +152,13 @@ export function bamsliceui(genomes, holder) {
 			gdcid_input.attr('disabled', null)
 			gdc_loading.style('display', 'none')
 			gdc_args.bam_files = [] //empty bam_files array after each gdc api call
-			if (data.error) throw data.error
-			if (!Array.isArray(data.file_metadata) || data.file_metadata.length == 0) throw 'file_metadata[] missing or empty'
+			if (data.error) throw 'Error: ' + data.error
+			if (!Array.isArray(data.file_metadata)) throw 'Error: .file_metadata[] missing'
+			if (data.file_metadata.length == 0) throw 'No viewable BAM files found'
 			if (data.is_file_uuid || data.is_file_id) {
 				// matches with one bam file
 				// update file id to be suppliled to gdc bam query
-				gdc_args.bam_files.push({ file_id: data.is_file_uuid ? gdc_id : data.file_metadata[0].file_uuid })
-				update_singlefile_table(data.file_metadata[0])
+				update_singlefile_table(data, gdc_id)
 				show_input_check(gdcid_error_div)
 			} else if (data.is_case_uuid || data.is_case_id) {
 				// matches with multiple bam files from a case
@@ -166,7 +166,7 @@ export function bamsliceui(genomes, holder) {
 				show_input_check(gdcid_error_div)
 			}
 		} catch (e) {
-			show_input_check(gdcid_error_div, 'Error: ' + (e.message || e))
+			show_input_check(gdcid_error_div, e.message || e)
 			baminfo_div.style('display', 'none')
 		}
 	}
@@ -275,27 +275,36 @@ export function bamsliceui(genomes, holder) {
 		return inputs
 	}
 
-	function update_singlefile_table(onebam) {
+	function update_singlefile_table(data, gdc_id) {
+		// will update table display, and also insert element into gdc_args.bam_files[]
+		const onebam = data.file_metadata[0]
+		const file = {
+			file_id: data.is_file_uuid ? gdc_id : onebam.file_uuid,
+			track_name: onebam.entity_id, // assign track name as entity_id
+			about: []
+		}
 		baminfo_div.style('display', 'block')
 		baminfo_table
 			.style('display', 'grid')
 			.selectAll('*')
 			.remove()
 		bamselection_table.style('display', 'none')
-		// assign track name as entity_id
-		gdc_args.bam_files[0].track_name = onebam.entity_id
-		gdc_args.bam_files[0].about = []
+
+		gdc_args.bam_files.push(file)
+
 		for (const row of baminfo_rows) {
 			baminfo_table
 				.append('div')
 				.style('padding', '3px 10px')
 				.text(row.title)
 				.style('opacity', 0.5)
-			baminfo_table
-				.append('div')
-				.style('padding', '3px 10px')
-				.text(onebam[row.key])
-			gdc_args.bam_files[0].about.push({ k: row.title, v: onebam[row.key] })
+			const d = baminfo_table.append('div').style('padding', '3px 10px')
+			if (row.url) {
+				d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
+			} else {
+				d.text(onebam[row.key])
+			}
+			file.about.push({ k: row.title, v: onebam[row.key] })
 		}
 		baminfo_table
 			.style('height', '0')
@@ -349,10 +358,12 @@ export function bamsliceui(genomes, holder) {
 					}
 				})
 			for (const row of baminfo_rows) {
-				bamselection_table
-					.append('div')
-					.style('padding', '3px 10px')
-					.text(onebam[row.key])
+				const d = bamselection_table.append('div').style('padding', '3px 10px')
+				if (row.url) {
+					d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
+				} else {
+					d.text(onebam[row.key])
+				}
 			}
 		}
 
@@ -400,8 +411,8 @@ function show_input_check(holder, error_msg) {
 
 function validateInputs(obj, genome) {
 	if (!obj) throw 'no parameters passing to validate'
-	if (!obj.gdc_token) throw 'gdc token missing'
-	if (typeof obj.gdc_token !== 'string') throw 'gdc token is not string'
+	if (!obj.gdc_token) throw 'GDC token missing'
+	if (typeof obj.gdc_token !== 'string') throw 'GDC token is not string'
 	if (!obj.bam_files.length) throw 'no bam file supplied'
 	for (const file of obj.bam_files) {
 		if (!file.file_id) throw ' file uuid is missing'

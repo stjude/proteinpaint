@@ -1,6 +1,40 @@
 const app = require('./app')
 const got = require('got')
 
+const skip_workflow_type = 'STAR 2-Pass Transcriptome'
+
+// type of gdc_ids
+const filter_types = [
+	{ is_file_uuid: 1, field: 'file_id' },
+	{ is_file_id: 1, field: 'file_name' },
+	{ is_case_uuid: 1, field: 'cases.case_id' },
+	{ is_case_id: 1, field: 'cases.submitter_id' }
+]
+
+// type of gdc_apis
+const gdc_apis = {
+	gdc_files: {
+		end_point: 'https://api.gdc.cancer.gov/files/',
+		fields: [
+			'id',
+			'file_size',
+			'experimental_strategy',
+			'associated_entities.entity_submitter_id',
+			'associated_entities.entity_type',
+			'associated_entities.case_id',
+			'cases.samples.sample_type',
+			'analysis.workflow_type'
+		],
+		size: 100
+	},
+	gdc_cases: {
+		end_point: 'https://api.gdc.cancer.gov/cases/',
+		fields: ['case_id']
+	}
+}
+
+const sequencing_read_filter = { op: '=', content: { field: 'data_category', value: 'Sequencing Reads' } }
+
 module.exports = () => {
 	return async (req, res) => {
 		try {
@@ -17,40 +51,32 @@ module.exports = () => {
 }
 
 async function get_gdc_data(gdc_id) {
-	// type of gdc_ids
-	const filter_types = [
-		{ is_file_uuid: 1, field: 'file_id' },
-		{ is_file_id: 1, field: 'file_name' },
-		{ is_case_uuid: 1, field: 'cases.case_id' },
-		{ is_case_id: 1, field: 'cases.submitter_id' }
-	]
-
-	// type of gdc_apis
-	const gdc_apis = {
-		gdc_files: {
-			end_point: 'https://api.gdc.cancer.gov/files/',
-			fields: [
-				'id',
-				'file_size',
-				'experimental_strategy',
-				'associated_entities.entity_submitter_id',
-				'associated_entities.entity_type',
-				'associated_entities.case_id',
-				'cases.samples.sample_type'
-			],
-			size: 100
-		},
-		gdc_cases: {
-			end_point: 'https://api.gdc.cancer.gov/cases/',
-			fields: ['case_id']
-		}
-	}
-
 	// data to returned
 	const bamdata = {
 		file_metadata: []
 	}
 
+	const [re, valid_case_uuid, valid_case_id] = await try_query(gdc_id, bamdata)
+
+	// if submitted id is valid case_id, then respond that bam files are not available for this case_id
+	if (!re.data.hits.length && (valid_case_uuid || valid_case_id)) throw 'No bam files available for this case'
+	else if (!re.data.hits.length) throw 'Invalid GDC ID'
+	for (const s of re.data.hits) {
+		if (s.analysis.workflow_type == skip_workflow_type) continue // skip
+		const file = {}
+		file.file_uuid = s.id
+		file.file_size = (parseFloat(s.file_size) / 10e8).toFixed(2) + ' GB'
+		file.experimental_strategy = s.experimental_strategy
+		file.entity_id = s.associated_entities[0].entity_submitter_id
+		file.entity_type = s.associated_entities[0].entity_type
+		file.sample_type = s.cases[0].samples[0].sample_type
+
+		bamdata.file_metadata.push(file)
+	}
+	return bamdata
+}
+
+async function try_query(gdc_id, bamdata) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -63,8 +89,6 @@ async function get_gdc_data(gdc_id) {
 			}
 		]
 	}
-
-	const sequencing_read_filter = { op: '=', content: { field: 'data_category', value: 'Sequencing Reads' } }
 	let re,
 		valid_case_id = true,
 		valid_case_uuid = true
@@ -87,20 +111,7 @@ async function get_gdc_data(gdc_id) {
 			break
 		}
 	}
-	// if submitted id is valid case_id, then respond that bam files are not available for this case_id
-	if (!re.data.hits.length && (valid_case_uuid || valid_case_id)) throw 'No bam files available for this case'
-	else if (!re.data.hits.length) throw 'GDC ID is not valid'
-	for (const s of re.data.hits) {
-		const file = {}
-		file.file_uuid = s.id
-		file.file_size = (parseFloat(s.file_size) / 10e8).toFixed(2) + ' GB'
-		file.experimental_strategy = s.experimental_strategy
-		file.entity_id = s.associated_entities[0].entity_submitter_id
-		file.entity_type = s.associated_entities[0].entity_type
-		file.sample_type = s.cases[0].samples[0].sample_type
-		bamdata.file_metadata.push(file)
-	}
-	return bamdata
+	return [re, valid_case_uuid, valid_case_id]
 }
 
 async function query_gdc_api(query_filter, gdc_api) {
