@@ -26,7 +26,7 @@ tk.dom.variantg // if defined.
 
 ******* attributes ********
 
-tk.downloadgdc // Downloads bam file from gdc
+tk.downloadgdc:true // Downloads bam file from gdc, single-use flag
 tk.gdcToken // gdc token string
 tk.variants[ {} ]
 	.chr/pos/ref/alt
@@ -219,22 +219,19 @@ async function getData(tk, block, additional = []) {
 		lst.push('gdc_file=' + tk.gdc_file)
 	}
 
-	let orig_regions = [] //FIXME delete orig_regions
 	if (tk.downloadgdc) {
+		// here will download gdc slice; downloadgdc is a single-use flag
+		delete tk.downloadgdc
 		tk.cloaktext.text('Downloading BAM slice ...')
-		lst.push('downloadgdc=' + tk.downloadgdc)
-		const gdc_bam_files = await dofetch3('tkbam?' + lst.join('&'), { headers })
-		tk.cloaktext.text('Loading ...')
-		lst.pop()
+		const gdc_bam_files = await dofetch3('tkbam?downloadgdc=1&' + lst.join('&'), { headers })
+		tk.cloaktext.text('BAM slice downloaded. Loading track ...')
 
 		if (gdc_bam_files.error) throw gdc_bam_files.error
-		delete tk.downloadgdc
+		if (!Array.isArray(gdc_bam_files) || gdc_bam_files.length == 0) throw 'invalid returned data'
 
+		// bam slice is downloaded
 		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
-		for (const r of tk.regions) {
-			orig_regions.push(r)
-		}
-		tk.orig_regions = orig_regions
+		block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
 	}
 
 	if (tk.variants) {
@@ -429,58 +426,6 @@ function update_left_margin(tk, block) {
 		}
 	}
 	block.setllabel() // calculate left margin based on max left width
-}
-
-function may_render_gdc(data, tk, block) {
-	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
-	// in tk.dom.gdc, indicate location and status of the variant
-	// TODO show variant info alongside box, when box is wide enough, show
-	tk.dom.gdc_g.selectAll('*').remove()
-	let x1, x2 // on screen pixel start/stop of the variant box
-	{
-		// Currently this supports only single-region. In the future, multiregion support will be added.
-		const hits = block.seekcoord(tk.orig_regions[0].chr, tk.orig_regions[0].start)
-		if (hits.length == 0) return
-		if (hits) {
-			x1 = hits[0].x - block.exonsf / 2
-		}
-	}
-	{
-		const hits = block.seekcoord(tk.orig_regions[0].chr, tk.orig_regions[0].stop)
-		if (hits.length == 0) return
-		if (hits) {
-			x2 = hits[0].x - block.exonsf / 2
-		}
-	}
-	if (x1 >= block.width || x2 <= 0) {
-		// gdc viewrange is out of range, do not show
-		return
-	}
-
-	// will render gdc region box in a row
-	//tk.dom.gdc_g
-	//	.append('rect')
-	//	.attr('x', x1)
-	//	.attr('width', x2 - x1)
-	//	.attr('height', tk.dom.gdcrowheight - 2)
-	//
-	//const gdc_string = 'Query region'
-	//// Determining where to place the text. Before, inside or after the box
-	//let gdc_start_text_pos = 0
-	//const space_param = 10
-	//const pad_param = 15
-	//if (gdc_string.length * space_param < x1) {
-	//	gdc_start_text_pos = 0
-	//} else {
-	//	gdc_start_text_pos = x2 + pad_param
-	//}
-	//
-	//tk.dom.gdc_g
-	//	.append('text')
-	//	.attr('x', gdc_start_text_pos)
-	//	.attr('y', tk.dom.gdcrowheight)
-	//	.attr('font-size', tk.dom.gdcrowheight)
-	//	.text(gdc_string)
 }
 
 function may_render_variant(data, tk, block) {
@@ -1067,10 +1012,10 @@ function may_add_urlparameter(tk) {
 	// Checking to see if need to query GDC for bam file
 	if (u2p.has('gdc')) {
 		const str = u2p.get('gdc')
-		if (str.indexOf(',') == -1) {
-			console.log('Both gdc token and gdc case id must be present')
-		} else {
-			tk.gdcToken = str
+		const [file, token] = str.split(',')
+		if (file && token) {
+			tk.gdcToken = token
+			tk.gdc_file = file
 			tk.downloadgdc = true
 		}
 	}

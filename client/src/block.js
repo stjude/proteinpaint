@@ -369,7 +369,7 @@ export class Block {
 				.style('color', 'white')
 		}
 		if (this.usegm) {
-			this.usegmtip = new client.Menu({ padding: 'none' })
+			this.usegmtip = new Menu({ padding: 'none' })
 			// name button
 			this.ctrl.namebutt = butrow
 				.append('span')
@@ -502,7 +502,7 @@ export class Block {
 				.append('button')
 				.text('Tracks')
 				.style('margin-left', '10px')
-			const tip = new client.Menu({ padding: 'none' })
+			const tip = new Menu({ padding: 'none' })
 			button.on('click', () => {
 				// remove past state for refreshing tk data
 				this.pannedpx = undefined
@@ -520,7 +520,7 @@ export class Block {
 		}
 
 		{
-			const tip = new client.Menu()
+			const tip = new Menu()
 			butrow
 				.append('button')
 				.style('margin-left', '10px')
@@ -533,6 +533,17 @@ export class Block {
 					tip.show(p.left - 50, p.top + p.height - 15)
 				})
 		}
+
+		this.gdcBamSliceDownloadBtn = butrow
+			.append('button')
+			.style('margin-left', '10px')
+			.style('display', 'none')
+			.text('Download GDC BAM slice')
+			.on('click', async () => {
+				const tk = this.tklst.find(i => i.type == 'bam' && i.gdc_file)
+				if (!tk) return
+				// TODO request file at tk.file and download it
+			})
 
 		this.gbase = this.svg.append('g').attr('transform', 'translate(0,0)')
 
@@ -2496,8 +2507,8 @@ seekrange(chr,start,stop) {
 	block_maketk(tk) {
 		// keep separate from addtk()
 		// call each time to show a tk in .tklst
-		tk.tktip = new client.Menu({ padding: '15px' })
-		tk.tkconfigtip = new client.Menu({ padding: '15px' })
+		tk.tktip = new Menu({ padding: '15px' })
+		tk.tkconfigtip = new Menu({ padding: '15px' })
 
 		tk.g = this.gbase.append('g').attr('transform', 'translate(0,0)')
 		/*
