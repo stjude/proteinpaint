@@ -545,17 +545,18 @@ export class Block {
 				const requestUrl = `tkbam?genome=${this.genome.name}&clientdownloadgdcslice=${tk.file}`
 				//const data = await dofetch3(requestUrl)
 				// TODO rework this
-				const xhr = new XMLHttpRequest()
-				xhr.open('GET', requestUrl)
-				xhr.responseType = 'blob'
-				xhr.onload = function() {
-					if (this.status === 200) {
-						const blob = new Blob([xhr.response], { type: 'application/octet-stream' })
-						const objectUrl = URL.createObjectURL(blob)
-						window.open(objectUrl, '_self', 'download')
-					}
-				}
-				xhr.send()
+				// const xhr = new XMLHttpRequest()
+				// xhr.open('GET', requestUrl)
+				// xhr.responseType = 'blob'
+				// xhr.onload = function() {
+				// 	if (this.status === 200) {
+				// 		const blob = new Blob([xhr.response], { type: 'application/octet-stream' })
+				// 		const objectUrl = URL.createObjectURL(blob)
+				// 		window.open(objectUrl, '_self', 'download')
+				// 	}
+				// }
+				// xhr.send()
+				window.open(requestUrl, '_self', 'download')
 			})
 
 		this.gbase = this.svg.append('g').attr('transform', 'translate(0,0)')
