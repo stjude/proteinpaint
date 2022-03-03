@@ -252,7 +252,7 @@ module.exports = genomes => {
 				const data = await fs.promises.readFile(file)
 				res.writeHead(200, {
 					'Content-Type': 'application/octet-stream',
-					'Content-disposition': 'attachment;filename=gdc.bam',
+					'Content-Disposition': 'attachment; filename=gdc.bam',
 					'Content-Length': data.length
 				})
 				res.end(Buffer.from(data, 'binary'))

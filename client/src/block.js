@@ -545,14 +545,14 @@ export class Block {
 				const requestUrl = `tkbam?genome=${this.genome.name}&clientdownloadgdcslice=${tk.file}`
 				//const data = await dofetch3(requestUrl)
 				// TODO rework this
-				var xhr = new XMLHttpRequest()
+				const xhr = new XMLHttpRequest()
 				xhr.open('GET', requestUrl)
 				xhr.responseType = 'blob'
 				xhr.onload = function() {
 					if (this.status === 200) {
-						var blob = new Blob([xhr.response], { type: 'application/octet-stream' })
-						var objectUrl = URL.createObjectURL(blob)
-						window.open(objectUrl)
+						const blob = new Blob([xhr.response], { type: 'application/octet-stream' })
+						const objectUrl = URL.createObjectURL(blob)
+						window.open(objectUrl, '_self', 'download')
 					}
 				}
 				xhr.send()
