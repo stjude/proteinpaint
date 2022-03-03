@@ -5,6 +5,7 @@ import { string2pos } from './coord'
 import path from 'path'
 import * as mdsjson from './app.mdsjson'
 import urlmap from './common/urlmap'
+import { first_genetrack_tolist } from './common/1stGenetk'
 
 /*
 ********************** EXPORTED
@@ -270,7 +271,7 @@ upon error, throw err message as a string
 
 		par.tklst = await get_tklst(urlp, genomeobj)
 
-		client.first_genetrack_tolist(arg.genomes[genomename], par.tklst)
+		first_genetrack_tolist(arg.genomes[genomename], par.tklst)
 		const b = await import('./block')
 		new b.Block(par)
 		return

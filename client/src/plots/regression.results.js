@@ -2,7 +2,7 @@ import { sayerror } from '../dom/error'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
 import { axisstyle } from '../dom/axisstyle'
-import { first_genetrack_tolist } from '../client'
+import { first_genetrack_tolist } from '../common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
 
 /*************

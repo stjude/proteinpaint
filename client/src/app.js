@@ -16,6 +16,7 @@ import { drawer_init } from './app.drawer'
 import urlmap from './common/urlmap'
 import { renderSandboxFormDiv, newSandboxDiv } from './dom/sandbox'
 import * as wrappers from './wrappers/PpReact'
+import { first_genetrack_tolist } from './common/1stGenetk'
 
 /*
 
@@ -446,7 +447,7 @@ function make_genome_browser_btn(app, headbox, jwt) {
 				tklst: [],
 				debugmode: app.debugmode
 			}
-			client.first_genetrack_tolist(g, par.tklst)
+			first_genetrack_tolist(g, par.tklst)
 
 			import('./block').then(b => new b.Block(par))
 			app.drawer.apps_off()
@@ -538,7 +539,7 @@ async function findgene2paint(app, str, genomename, jwt) {
 			tklst,
 			debugmode: app.debugmode
 		}
-		client.first_genetrack_tolist(g, par.tklst)
+		first_genetrack_tolist(g, par.tklst)
 
 		import('./block')
 			.then(b => new b.Block(par))
@@ -1242,7 +1243,7 @@ async function launchblock(arg, app) {
 	}
 
 	// apply url parameter
-	const h = client.may_get_locationsearch()
+	const h = urlmap()
 	if (h) {
 		if (h.has('position')) {
 			const pos = string2pos(h.get('position'), genomeobj)
