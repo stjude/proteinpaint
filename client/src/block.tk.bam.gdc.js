@@ -17,6 +17,7 @@ import urlmap from './common/urlmap'
             {
                 file_id: file uuid from gdc <string>,
                 track_name: used for naming of track <string> //optional
+				about:[] // with keys corresponding to baminfo_rows[]
             }, 
             {} ..
         ]
@@ -24,11 +25,23 @@ import urlmap from './common/urlmap'
 */
 
 const gdc_genome = 'hg38'
+const variantFlankingSize = 60 // bp
+const baminfo_rows = [
+	{ title: 'Entity ID', key: 'entity_id' },
+	{ title: 'Entity Type', key: 'entity_type' },
+	{ title: 'Experimental Strategy', key: 'experimental_strategy' },
+	{ title: 'Sample Type', key: 'sample_type' },
+	{ title: 'Size', key: 'file_size' }
+]
+
+// TODO use one single field for position/variant/gene/snp
+const input_fields = [
+	{ title: 'Position', key: 'position', placeholder: 'chr:start-stop' },
+	{ title: 'Variant', key: 'variant', placeholder: 'chr.pos.refAllele.altAllele' }
+]
 
 export function bamsliceui(genomes, holder) {
-	let gdc_args = {
-		bam_files: []
-	}
+	const gdc_args = { bam_files: [] }
 
 	const saydiv = holder.append('div').style('margin', '10px 20px')
 	const visualdiv = holder.append('div').style('margin', '20px')
@@ -123,33 +136,38 @@ export function bamsliceui(genomes, holder) {
 		.style('padding', '2px 5px')
 
 	async function gdc_search() {
-		const gdc_id = gdcid_input.property('value').trim()
-		if (!gdc_id.length) {
-			baminfo_div.style('display', 'none')
-			saydiv.style('display', 'none')
-			gdcid_error_div.style('display', 'none')
-			return
-		} else {
+		try {
+			const gdc_id = gdcid_input.property('value').trim()
+			if (!gdc_id.length) {
+				baminfo_div.style('display', 'none')
+				saydiv.style('display', 'none')
+				gdcid_error_div.style('display', 'none')
+				return
+			}
 			// disable input field and show 'loading...' until response returned from gdc api
 			gdcid_input.attr('disabled', 1)
 			gdc_loading.style('display', 'inline-block')
-		}
-		const bam_info = await dofetch3('gdcbam?gdc_id=' + gdc_id)
-		// enable input field and hide 'Loading...'
-		gdcid_input.attr('disabled', null)
-		gdc_loading.style('display', 'none')
-		gdc_args.bam_files = [] //empty bam_files array after each gdc api call
-		if (bam_info.error) {
-			show_input_check(gdcid_error_div, bam_info.error)
+			const data = await dofetch3('gdcbam?gdc_id=' + gdc_id)
+			// enable input field and hide 'Loading...'
+			gdcid_input.attr('disabled', null)
+			gdc_loading.style('display', 'none')
+			gdc_args.bam_files = [] //empty bam_files array after each gdc api call
+			if (data.error) throw data.error
+			if (!Array.isArray(data.file_metadata) || data.file_metadata.length == 0) throw 'file_metadata[] missing or empty'
+			if (data.is_file_uuid || data.is_file_id) {
+				// matches with one bam file
+				// update file id to be suppliled to gdc bam query
+				gdc_args.bam_files.push({ file_id: data.is_file_uuid ? gdc_id : data.file_metadata[0].file_uuid })
+				update_singlefile_table(data.file_metadata[0])
+				show_input_check(gdcid_error_div)
+			} else if (data.is_case_uuid || data.is_case_id) {
+				// matches with multiple bam files from a case
+				update_multifile_table(data.file_metadata)
+				show_input_check(gdcid_error_div)
+			}
+		} catch (e) {
+			show_input_check(gdcid_error_div, 'Error: ' + (e.message || e))
 			baminfo_div.style('display', 'none')
-		} else if (bam_info.is_file_uuid || bam_info.is_file_id) {
-			// update file id to be suppliled to gdc bam query
-			gdc_args.bam_files.push({ file_id: bam_info.is_file_uuid ? gdc_id : bam_info.file_metadata[0].file_uuid })
-			update_singlefile_table(bam_info.file_metadata)
-			show_input_check(gdcid_error_div)
-		} else if (bam_info.is_case_uuid || bam_info.is_case_id) {
-			update_multifile_table(bam_info.file_metadata)
-			show_input_check(gdcid_error_div)
 		}
 	}
 
@@ -157,43 +175,24 @@ export function bamsliceui(genomes, holder) {
 		.append('div')
 		.style('grid-column', 'span 2')
 		.style('display', 'none')
+		.style('border-left', '1px solid #ccc')
+		.style('margin', '20px 20px 20px 40px')
 
+	// either baminfo_table or bamselection_table is displayed
+	// baminfo_table is a static table showing details about one bam file
+	// bamselection_table lists multiple bam files available from a sample, allowing user to select some forslicing
 	const baminfo_table = baminfo_div
 		.append('div')
-		.style('display', 'grid')
-		.style('position', 'relative')
-		.style('margin-left', '10px')
-		.style('border-left', '1px solid #eee')
-		.style('grid-template-columns', '150px 300px')
+		.style('grid-template-columns', 'auto auto')
 		.style('grid-template-rows', 'repeat(15, 20px)')
 		.style('align-items', 'center')
 		.style('justify-items', 'left')
-		.style('font-size', '.8em')
 
 	const bamselection_table = baminfo_div
 		.append('div')
-		.style('display', 'grid')
-		.style('position', 'relative')
-		.style('margin-left', '10px')
-		.style('padding', '10px')
-		.style('border-left', '1px solid #eee')
-		.style('grid-template-columns', '70px auto 100px 150px auto 100px')
+		.style('grid-template-columns', 'auto auto auto auto auto auto')
 		.style('align-items', 'center')
 		.style('justify-items', 'left')
-		.style('font-size', '.8em')
-
-	const baminfo_rows = [
-		{ title: 'Entity ID', key: 'entity_id' },
-		{ title: 'Entity Type', key: 'entity_type' },
-		{ title: 'Experimental Strategy', key: 'experimental_strategy' },
-		{ title: 'Sample Type', key: 'sample_type' },
-		{ title: 'Size', key: 'file_size' }
-	]
-
-	const input_fields = [
-		{ title: 'Position', key: 'position', placeholder: 'chr:start-stop' },
-		{ title: 'Variant', key: 'variant', placeholder: 'chr.pos.refAllele.altAllele' }
-	]
 
 	const [position_input, variant_input] = makeFormInput(input_fields)
 
@@ -276,45 +275,45 @@ export function bamsliceui(genomes, holder) {
 		return inputs
 	}
 
-	function update_singlefile_table(bam_metadata) {
-		baminfo_table.selectAll('*').remove()
+	function update_singlefile_table(onebam) {
 		baminfo_div.style('display', 'block')
-		bamselection_table.style('display', 'none')
-
-		for (const bam_info of bam_metadata) {
-			// assign track name as entity_id
-			gdc_args.bam_files[0].track_name = bam_info.entity_id
-			for (const row of baminfo_rows) {
-				baminfo_table
-					.style('display', 'grid')
-					.append('div')
-					.style('padding', '3px 10px')
-					.style('font-weight', 'bold')
-					.text(row.title)
-
-				baminfo_table
-					.append('div')
-					.style('padding', '3px 10px')
-					.text(bam_info[row.key])
-			}
-		}
-
 		baminfo_table
-			.style('padding', '10px')
+			.style('display', 'grid')
+			.selectAll('*')
+			.remove()
+		bamselection_table.style('display', 'none')
+		// assign track name as entity_id
+		gdc_args.bam_files[0].track_name = onebam.entity_id
+		gdc_args.bam_files[0].about = []
+		for (const row of baminfo_rows) {
+			baminfo_table
+				.append('div')
+				.style('padding', '3px 10px')
+				.text(row.title)
+				.style('opacity', 0.5)
+			baminfo_table
+				.append('div')
+				.style('padding', '3px 10px')
+				.text(onebam[row.key])
+			gdc_args.bam_files[0].about.push({ k: row.title, v: onebam[row.key] })
+		}
+		baminfo_table
 			.style('height', '0')
 			.transition()
 			.duration(500)
-			.style('height', '100px')
+			.style('height', '100px') // FIXME do not use hardcoded height
 	}
 
-	function update_multifile_table(bam_files) {
-		bamselection_table.selectAll('*').remove()
+	function update_multifile_table(files) {
 		baminfo_div.style('display', 'block')
+		bamselection_table
+			.style('display', 'grid')
+			.selectAll('*')
+			.remove()
 		baminfo_table.style('display', 'none')
 
 		bamselection_table
-			.style('display', 'grid')
-			.style('grid-template-rows', 'repeat(' + bam_files.length + ', 20px)')
+			.style('grid-template-rows', 'repeat(' + files.length + ', 20px)')
 			.append('div')
 			.style('padding', '3px 10px')
 			.style('font-weight', 'bold')
@@ -328,7 +327,7 @@ export function bamsliceui(genomes, holder) {
 				.text(row.title)
 		}
 
-		for (const bam_info of bam_files) {
+		for (const onebam of files) {
 			const file_checkbox = bamselection_table
 				.append('div')
 				.append('input')
@@ -338,28 +337,30 @@ export function bamsliceui(genomes, holder) {
 				.on('change', () => {
 					if (file_checkbox.node().checked) {
 						gdc_args.bam_files.push({
-							file_id: bam_info.file_uuid,
-							track_name: bam_info.sample_type + ', ' + bam_info.experimental_strategy + ', ' + bam_info.entity_id
+							file_id: onebam.file_uuid,
+							track_name: onebam.sample_type + ', ' + onebam.experimental_strategy + ', ' + onebam.entity_id,
+							about: baminfo_rows.map(i => {
+								return { k: i.title, v: onebam[i.key] }
+							})
 						})
 					} else {
 						// remove from array if checkbox unchecked
-						gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != bam_info.file_uuid)
+						gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != onebam.file_uuid)
 					}
 				})
 			for (const row of baminfo_rows) {
 				bamselection_table
 					.append('div')
 					.style('padding', '3px 10px')
-					.text(bam_info[row.key])
+					.text(onebam[row.key])
 			}
 		}
 
 		bamselection_table
-			.style('padding', '10px')
 			.style('height', '0')
 			.transition()
 			.duration(500)
-			.style('height', bam_files.length * 22 + 'px')
+			.style('height', files.length * 24 + 'px')
 	}
 
 	// autofill input fields if supplied from url
@@ -442,7 +443,6 @@ function validateInputs(obj, genome) {
 function renderBamSlice(args, genome, holder) {
 	// create arg for block init
 	const par = {
-		debugmode: true,
 		nobox: 1,
 		genome,
 		holder
@@ -453,8 +453,8 @@ function renderBamSlice(args, genome, holder) {
 		par.stop = args.position.stop
 	} else if (args.variant) {
 		par.chr = args.variant.chr
-		par.start = args.variant.pos - 60
-		par.stop = args.variant.pos + 60
+		par.start = args.variant.pos - variantFlankingSize
+		par.stop = args.variant.pos + variantFlankingSize
 	}
 
 	par.tklst = []
@@ -464,7 +464,8 @@ function renderBamSlice(args, genome, holder) {
 			name: file.track_name || 'sample bam slice',
 			gdcToken: args.gdc_token,
 			gdc_file: file.file_id,
-			downloadgdc: 1
+			downloadgdc: 1,
+			aboutThisFile: file.about
 		}
 		if (args.variant) {
 			tk.variants = [args.variant]

@@ -8,6 +8,7 @@ import { sayerror } from './dom/sayerror'
 import { appear } from './dom/animation'
 import { dofetch3 } from './common/dofetch'
 import { make_radios } from './dom/radiobutton'
+import { make_table_2col } from './dom/table2col'
 import { make_one_checkbox } from './dom/checkbox'
 import urlmap from './common/urlmap'
 
@@ -397,17 +398,17 @@ or update existing groups, in which groupidx will be provided
 			countt += g.data.count.t
 		}
 	}
-	tk.label_count
+	tk.leftlabel_count
 		.text((countr ? countr + ' reads' : '') + (countt ? ', ' + countt + ' templates' : ''))
 		.each(function() {
 			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 		})
 	if (data.count.skipped) {
-		tk.label_skip.text(data.count.skipped + ' reads skipped').each(function() {
+		tk.leftlabel_skip.text(data.count.skipped + ' reads skipped').each(function() {
 			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
 		})
 	} else {
-		tk.label_skip.text('')
+		tk.leftlabel_skip.text('')
 	}
 	block.setllabel() // calculate left margin based on max left width
 	if (!tk.show_readnames) {
@@ -956,9 +957,22 @@ function makeTk(tk, block) {
 	tk.asPaired = false
 
 	let laby = block.labelfontsize + 5
-	tk.label_count = block.maketklefthandle(tk, laby)
+	tk.leftlabel_count = block.maketklefthandle(tk, laby)
 	laby += block.labelfontsize
-	tk.label_skip = block.maketklefthandle(tk, laby).text('')
+	tk.leftlabel_skip = block.maketklefthandle(tk, laby).text('')
+	if (tk.aboutThisFile) {
+		laby += block.labelfontsize
+		tk.leftlabel_about = block
+			.maketklefthandle(tk, laby)
+			.text('About the BAM file')
+			.on('mouseover', () => {
+				tk.tktip.showunder(d3event.target).clear()
+				make_table_2col(tk.tktip.d, tk.aboutThisFile)
+			})
+			.on('mouseout', () => {
+				tk.tktip.hide()
+			})
+	}
 }
 
 // may add additional parameters from url that specifically apply to the bam track

@@ -542,20 +542,8 @@ export class Block {
 			.on('click', async () => {
 				const tk = this.tklst.find(i => i.type == 'bam' && i.gdc_file)
 				if (!tk) return
+				// TODO if there're multiple files, show a menu with one option for each. click an option to download that one
 				const requestUrl = `tkbam?genome=${this.genome.name}&clientdownloadgdcslice=${tk.file}`
-				//const data = await dofetch3(requestUrl)
-				// TODO rework this
-				// const xhr = new XMLHttpRequest()
-				// xhr.open('GET', requestUrl)
-				// xhr.responseType = 'blob'
-				// xhr.onload = function() {
-				// 	if (this.status === 200) {
-				// 		const blob = new Blob([xhr.response], { type: 'application/octet-stream' })
-				// 		const objectUrl = URL.createObjectURL(blob)
-				// 		window.open(objectUrl, '_self', 'download')
-				// 	}
-				// }
-				// xhr.send()
 				window.open(requestUrl, '_self', 'download')
 			})
 
