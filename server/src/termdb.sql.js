@@ -1057,7 +1057,8 @@ thus less things to worry about...
 			if (!(r.cohort in supportedChartTypes)) {
 				supportedChartTypes[r.cohort] = ['barchart', 'table', 'regression']
 				numericTypeCount[r.cohort] = 0
-				if (app.features.draftChartTypes) {
+				// why is app.features missing?
+				if (app.features && app.features.draftChartTypes) {
 					// TODO: move draft charts out of flag once stable
 					supportedChartTypes[r.cohort].push(...app.features.draftChartTypes)
 				}
