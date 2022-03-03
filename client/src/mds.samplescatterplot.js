@@ -1451,10 +1451,7 @@ function lasso_select(obj, dots) {
 	}
 
 	function scatterplot_lasso_end() {
-		if (!obj.lasso_active) return
-
-		const unselected_dots = svg.selectAll('.possible').size()
-
+		// show menu if at least 1 sample selected
 		const selected_samples = svg
 			.selectAll('.possible')
 			.data()
@@ -1462,22 +1459,22 @@ function lasso_select(obj, dots) {
 		if (selected_samples.length) show_lasso_menu(selected_samples)
 		else obj.menu.hide()
 
-		// Reset the color of all dots
+		// Reset classes of all items (.possible and .not_possible are useful
+		// only while drawing lasso. At end of drawing, only selectedItems()
+		// should be used)
 		lasso
 			.items()
 			.classed('not_possible', false)
 			.classed('possible', false)
 
 		// Style the selected dots
-		lasso
-			.selectedItems()
-			.attr('r', radius)
-			.style('fill-opacity', '0.8')
+		lasso.selectedItems().attr('r', radius)
 
-		// Reset the style of the not selected dots
+		// if none of the items are selected, reset radius of all dots or
+		// keep them as unselected with tiny radius
 		lasso
 			.notSelectedItems()
-			.attr('r', unselected_dots == 0 ? radius : radius_tiny)
+			.attr('r', selected_samples.length == 0 ? radius : radius_tiny)
 			.style('fill-opacity', '1')
 	}
 
@@ -1544,7 +1541,6 @@ function lasso_select(obj, dots) {
 			.on('end', scatterplot_lasso_end)
 
 		svg.call(lasso)
-
 	} else {
 		svg.selectAll('.lasso').remove()
 		svg.on('mousedown.drag', null)

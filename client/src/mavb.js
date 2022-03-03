@@ -858,16 +858,22 @@ add:
 
 // example of lasso function and usage
 function add_lasso(selectable_items, svg, other_svg_item_key) {
-	function volcano_lasso_start() {
+	const lasso = d3lasso()
+		.items(selectable_items)
+		.targetArea(svg)
+
+	function mavb_lasso_start() {
 		// set all dots to initial state when lasso starts
-		svg.selectAll('.possible')
+		svg
+			.selectAll('.possible')
 			.style('fill-opacity', 0)
 			.classed('not_possible', true)
 			.classed('selected', false)
-			.each((d) =>{
+			.each(d => {
 				d3select(d[other_svg_item_key]).attr('fill-opacity', 0)
 			})
 
+		// TODO: remove following commented code after review
 		// here, there are many circles, so rather than applying style to add circles,
 		// only previously selected circles are reverted back to normal
 		// can use like following as well, for detail example see mds.scatterplot.js
@@ -880,31 +886,27 @@ function add_lasso(selectable_items, svg, other_svg_item_key) {
 		// 	})
 	}
 
-	function volcano_lasso_draw() {
+	function mavb_lasso_draw() {
 		// Style the possible dots, when selected using lasso
 		lasso
 			.possibleItems()
 			.style('fill-opacity', 0.9)
 			.classed('not_possible', false)
 			.classed('possible', true)
-			.each( (d) =>{
+			.each(d => {
 				d3select(d[other_svg_item_key]).attr('fill-opacity', 0.9)
 			})
 	}
 
-	function volcano_lasso_end(){
+	function mavb_lasso_end() {
 		// do something, like show menu or open info panel for selected samples
 	}
 
-	const lasso = d3lasso()
-		.items(selectable_items)
-		.targetArea(svg)
-
 	// perform following custom drag events after original lasso drag events finish in lasso.js
 	lasso
-		.on('start', volcano_lasso_start)
-		.on('draw', volcano_lasso_draw)
-		.on('end', volcano_lasso_end)
+		.on('start', mavb_lasso_start)
+		.on('draw', mavb_lasso_draw)
+		.on('end', mavb_lasso_end)
 
 	svg.call(lasso)
 }
