@@ -1421,7 +1421,23 @@ function lasso_select(obj, dots) {
 	const svg = obj.scattersvg
 	let lasso
 
-	// Lasso functions
+	if (obj.lasso_active) {
+		lasso = d3lasso()
+			.items(dots.selectAll('circle'))
+			.targetArea(svg)
+
+		lasso
+			.on('start', scatterplot_lasso_start)
+			.on('draw', scatterplot_lasso_draw)
+			.on('end', scatterplot_lasso_end)
+
+		svg.call(lasso)
+	} else {
+		svg.selectAll('.lasso').remove()
+		svg.on('mousedown.drag', null)
+	}
+
+	// Lasso custom functions
 	function scatterplot_lasso_start() {
 		if (!obj.lasso_active) return
 		lasso
@@ -1451,6 +1467,8 @@ function lasso_select(obj, dots) {
 	}
 
 	function scatterplot_lasso_end() {
+		if (!obj.lasso_active) return
+
 		// show menu if at least 1 sample selected
 		const selected_samples = svg
 			.selectAll('.possible')
@@ -1528,22 +1546,6 @@ function lasso_select(obj, dots) {
 			.style('font-size', '.8em')
 			.style('width', '150px')
 			.text(samples.length + ' samples selected')
-	}
-
-	if (obj.lasso_active) {
-		lasso = d3lasso()
-			.items(dots.selectAll('circle'))
-			.targetArea(svg)
-
-		lasso
-			.on('start', scatterplot_lasso_start)
-			.on('draw', scatterplot_lasso_draw)
-			.on('end', scatterplot_lasso_end)
-
-		svg.call(lasso)
-	} else {
-		svg.selectAll('.lasso').remove()
-		svg.on('mousedown.drag', null)
 	}
 }
 
