@@ -246,6 +246,18 @@ module.exports = genomes => {
 				res.send(gdc_bam_filenames)
 				return
 			}
+			if (req.query.clientdownloadgdcslice) {
+				if (app.illegalpath(req.query.clientdownloadgdcslice)) throw 'illegal file path'
+				const file = path.join(serverconfig.cachedir, req.query.clientdownloadgdcslice)
+				const data = await fs.promises.readFile(file)
+				res.writeHead(200, {
+					'Content-Type': 'application/octet-stream',
+					'Content-disposition': 'attachment;filename=gdc.bam',
+					'Content-Length': data.length
+				})
+				res.end(Buffer.from(data, 'binary'))
+				return
+			}
 
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]

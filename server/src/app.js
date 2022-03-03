@@ -7488,7 +7488,7 @@ function parse_variantgene(line, header) {
 	return [null, m]
 }
 
-function illegalpath(s) {
+export function illegalpath(s) {
 	if (s[0] == '/') return true // must not be relative to mount root
 	if (s.includes('"') || s.includes("'")) return true // must not include quotes, apostrophe
 	if (s.includes('|') || s.includes('&')) return true // must not include operator characters
@@ -7497,7 +7497,7 @@ function illegalpath(s) {
 	return false
 }
 
-function fileurl(req) {
+export function fileurl(req) {
 	// must use it to scrutinize every requested file path
 	let file = null,
 		isurl = false
@@ -7517,7 +7517,6 @@ function fileurl(req) {
 	if (!file) return ['file unspecified']
 	return [null, file, isurl]
 }
-exports.fileurl = fileurl
 
 function log(req) {
 	const j = {}

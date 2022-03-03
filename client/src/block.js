@@ -542,7 +542,20 @@ export class Block {
 			.on('click', async () => {
 				const tk = this.tklst.find(i => i.type == 'bam' && i.gdc_file)
 				if (!tk) return
-				// TODO request file at tk.file and download it
+				const requestUrl = `tkbam?genome=${this.genome.name}&clientdownloadgdcslice=${tk.file}`
+				//const data = await dofetch3(requestUrl)
+				// TODO rework this
+				var xhr = new XMLHttpRequest()
+				xhr.open('GET', requestUrl)
+				xhr.responseType = 'blob'
+				xhr.onload = function() {
+					if (this.status === 200) {
+						var blob = new Blob([xhr.response], { type: 'application/octet-stream' })
+						var objectUrl = URL.createObjectURL(blob)
+						window.open(objectUrl)
+					}
+				}
+				xhr.send()
 			})
 
 		this.gbase = this.svg.append('g').attr('transform', 'translate(0,0)')
