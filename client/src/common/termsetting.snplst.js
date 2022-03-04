@@ -419,7 +419,12 @@ async function validateInput(self) {
 
 async function getSnpData(self) {
 	const qlst = [`cacheid=${self.q.cacheid}`]
-	const data = await self.vocabApi.getCategories(self.term, self.filter, qlst)
+	// combine termfilter.filter with restrictAncestry.tvs
+	const extraFilters = []
+	if (self.q.restrictAncestry) extraFilters.push({ type: 'tvs', tvs: self.q.restrictAncestry.tvs })
+	const filter = { type: 'tvslst', join: 'and', lst: [...extraFilters] }
+	if (self.filter) filter.lst.push(self.filter)
+	const data = await self.vocabApi.getCategories(self.term, filter, qlst)
 	mayRunSnplstTask({ term: self.term, q: self.q }, data)
 }
 
@@ -456,6 +461,13 @@ export async function fillTW(tw, vocabApi) {
 		q: tw.q,
 		vocabApi
 	})
+	/* check if to do it or not
+	await getSnpData({
+		term: tw.term,
+		q: tw.q,
+		vocabApi
+	})
+	*/
 }
 
 function makeId() {

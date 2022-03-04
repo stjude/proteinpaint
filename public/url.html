@@ -424,7 +424,18 @@ makeURL([
 							q:{
 								alleleType:0,
 								geneticModel:0,
-								missingGenotype:0
+								missingGenotype:0,
+								restrictAncestry:{
+									name:'African ancestry',
+									tvs: {
+										term: {
+											id: 'genetic_race',
+											type: 'categorical',
+											name: 'Genetically defined race'
+										},
+										values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+									}
+								},
 							}
 						},
 						{ id: 'sex', refGrp:'2'}
