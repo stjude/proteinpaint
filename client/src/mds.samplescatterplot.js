@@ -84,9 +84,9 @@ init_plot() // create dot plot for samples
 	resize() // drag to resize
 	makeConfigPanel() // config pabel with pan/zoom and lasso
 		lasso_select() // allow to select dots using lasso
-			lasso_start()
-			lasso_draw()
-			lasso_end()
+			scatterplot_lasso_start()
+			scatterplot_lasso_draw()
+			scatterplot_lasso_end()
 			show_lasso_menu()
 printData() // get list of samples with meta data
 click_mutated_genes() // init menu pane with reccurently mulated genes
@@ -1421,8 +1421,24 @@ function lasso_select(obj, dots) {
 	const svg = obj.scattersvg
 	let lasso
 
-	// Lasso functions
-	function lasso_start() {
+	if (obj.lasso_active) {
+		lasso = d3lasso()
+			.items(dots.selectAll('circle'))
+			.targetArea(svg)
+
+		lasso
+			.on('start', scatterplot_lasso_start)
+			.on('draw', scatterplot_lasso_draw)
+			.on('end', scatterplot_lasso_end)
+
+		svg.call(lasso)
+	} else {
+		svg.selectAll('.lasso').remove()
+		svg.on('mousedown.drag', null)
+	}
+
+	// Lasso custom functions
+	function scatterplot_lasso_start() {
 		if (!obj.lasso_active) return
 		lasso
 			.items()
@@ -1432,7 +1448,7 @@ function lasso_select(obj, dots) {
 			.classed('selected', false)
 	}
 
-	function lasso_draw() {
+	function scatterplot_lasso_draw() {
 		if (!obj.lasso_active) return
 		// Style the possible dots
 		lasso
@@ -1450,11 +1466,10 @@ function lasso_select(obj, dots) {
 		// 	.classed('possible',false)
 	}
 
-	function lasso_end() {
+	function scatterplot_lasso_end() {
 		if (!obj.lasso_active) return
 
-		const unselected_dots = svg.selectAll('.possible').size()
-
+		// show menu if at least 1 sample selected
 		const selected_samples = svg
 			.selectAll('.possible')
 			.data()
@@ -1462,22 +1477,22 @@ function lasso_select(obj, dots) {
 		if (selected_samples.length) show_lasso_menu(selected_samples)
 		else obj.menu.hide()
 
-		// Reset the color of all dots
+		// Reset classes of all items (.possible and .not_possible are useful
+		// only while drawing lasso. At end of drawing, only selectedItems()
+		// should be used)
 		lasso
 			.items()
 			.classed('not_possible', false)
 			.classed('possible', false)
 
 		// Style the selected dots
-		lasso
-			.selectedItems()
-			.attr('r', radius)
-			.style('fill-opacity', '0.8')
+		lasso.selectedItems().attr('r', radius)
 
-		// Reset the style of the not selected dots
+		// if none of the items are selected, reset radius of all dots or
+		// keep them as unselected with tiny radius
 		lasso
 			.notSelectedItems()
-			.attr('r', unselected_dots == 0 ? radius : radius_tiny)
+			.attr('r', selected_samples.length == 0 ? radius : radius_tiny)
 			.style('fill-opacity', '1')
 	}
 
@@ -1531,41 +1546,6 @@ function lasso_select(obj, dots) {
 			.style('font-size', '.8em')
 			.style('width', '150px')
 			.text(samples.length + ' samples selected')
-	}
-
-	if (obj.lasso_active) {
-		lasso = d3lasso()
-			.items(dots.selectAll('circle'))
-			.targetArea(svg)
-
-		lasso
-			.on('start', lasso_start)
-			.on('draw', lasso_draw)
-			.on('end', lasso_end)
-
-		svg.call(lasso)
-
-		const las = svg.select('.lasso')
-
-		las
-			.select('path')
-			.style('stroke', '#505050')
-			.style('stroke-width', '2px')
-
-		las.select('.drawn').style('fill-opacity', '.05')
-
-		las
-			.select('.loop_close')
-			.style('fill', 'none')
-			.style('stroke-dasharray', '4,4')
-
-		las
-			.select('.origin')
-			.style('fill', '#3399FF')
-			.style('fill-opacity', '.5')
-	} else {
-		svg.selectAll('.lasso').remove()
-		svg.on('mousedown.drag', null)
 	}
 }
 
