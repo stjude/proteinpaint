@@ -52,13 +52,6 @@ export function getHandler(self) {
 		async showEditMenu(div) {
 			await makeEditMenu(self, div)
 		}
-		/*
-		async postMain() {
-			if (self.term && self.term.snps) {
-				await validateInput(self)
-			}
-		}
-		*/
 	}
 }
 
@@ -164,7 +157,7 @@ async function makeEditMenu(self, div) {
 				].__ancestry_obj
 			}
 
-			await getSnpData(self)
+			await makeSampleSummary(self)
 
 			if (snplst_table !== undefined) renderSnpEditTable(snplst_table)
 			else initSnpEditTable()
@@ -417,9 +410,17 @@ async function validateInput(self) {
 	}
 }
 
-async function getSnpData(self) {
+/* 
+as identical logic will run in regression.input.term updateTerm()
+and updated sample summary will be copied back to termsetting instance via pill.main()
+only need it to instantly update snp table in menu
+thus this function is not needed
+if there's a way to automatically update menu then can delete it TODO
+*/
+async function makeSampleSummary(self) {
 	const qlst = [`cacheid=${self.q.cacheid}`]
-	// combine termfilter.filter with restrictAncestry.tvs
+
+	// ** duplicated_and_flawed ** logic of handling tw.q.restrictAncestry
 	const extraFilters = []
 	if (self.q.restrictAncestry) extraFilters.push({ type: 'tvs', tvs: self.q.restrictAncestry.tvs })
 	const filter = { type: 'tvslst', join: 'and', lst: [...extraFilters] }
@@ -461,13 +462,6 @@ export async function fillTW(tw, vocabApi) {
 		q: tw.q,
 		vocabApi
 	})
-	/* check if to do it or not
-	await getSnpData({
-		term: tw.term,
-		q: tw.q,
-		vocabApi
-	})
-	*/
 }
 
 function makeId() {

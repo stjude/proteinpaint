@@ -186,7 +186,16 @@ export class InputTerm {
 			tw.term.type == 'snplst' || tw.term.type == 'snplocus'
 				? [`cacheid=${tw.q.cacheid}`]
 				: ['term1_q=' + encodeURIComponent(JSON.stringify(q))]
-		const data = await this.parent.app.vocabApi.getCategories(tw.term, this.parent.state.termfilter.filter, qlst)
+
+		// tw.q.restrictAncestry is not included in state filter
+		// must account for it to get accurate sample count
+		// ** duplicated_and_flawed ** logic of handling tw.q.restrictAncestry
+		const extraFilters = []
+		if (tw.q.restrictAncestry) extraFilters.push({ type: 'tvs', tvs: tw.q.restrictAncestry.tvs })
+		const filter = { type: 'tvslst', join: 'and', lst: [...extraFilters] }
+		if (this.parent.state.termfilter.filter) filter.lst.push(this.parent.state.termfilter.filter)
+
+		const data = await this.parent.app.vocabApi.getCategories(tw.term, filter, qlst)
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 		mayRunSnplstTask(tw, data)

@@ -57,6 +57,7 @@ const minimumSample = 1
 
 export async function get_regression(q, ds) {
 	try {
+		console.log(JSON.stringify(q.filter, null, 2))
 		parse_q(q, ds)
 
 		const [sampledata, snpgt2count] = await getSampleData(q, [q.outcome, ...q.independent], ds)
