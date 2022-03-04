@@ -3,6 +3,9 @@ import * as client from './client'
 import { scaleLog, scaleLinear } from 'd3-scale'
 import { axisLeft } from 'd3-axis'
 import { format as d3format } from 'd3-format'
+import { Menu } from './dom/menu'
+
+const tip = new Menu()
 
 export default function spectrumui(genomes) {
 	const [pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
@@ -880,10 +883,10 @@ function spectrum_init(p, holder) {
 		.attr('transform', 'rotate(-90)')
 		.classed('sja_svgtext2', true)
 		.on('mouseover', d => {
-			const pos = d3event.target.getBoundingClientRect()
-			const div = client
-				.menushow(pos.left + 30, pos.top)
-				.append('div')
+			const div = tip
+				.clear()
+				.showunder(d3event.target)
+				.d.append('div')
 				.style('border', 'solid 1px black')
 				.style('padding', '10px')
 			for (const ss of d.set) {

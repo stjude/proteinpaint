@@ -5,9 +5,11 @@ import { bplen as bplength } from '../shared/common'
 import * as unload from './svmr.unload'
 import { scaleLinear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
+import { Menu } from './dom/menu'
 
 const genomelimit = 10000 // bp distance
 const knownprod_c = '#A702C4'
+const tip = new Menu()
 
 export default class {
 	constructor(genome, atlst, items, filename, holder, hostURL, jwt) {
@@ -139,12 +141,10 @@ export default class {
 						}
 					}
 				}
-				const p = d3event.target.getBoundingClientRect()
-				const menu = client.menushow(p.left, p.top + p.height)
-				const d0 = menu
-					.append('div')
-					.style('padding', '10px')
-					.style('border', 'solid 1px #ccc')
+				const d0 = tip
+					.clear()
+					.showunder(d3event.target)
+					.d.append('div')
 				const table = d0
 					.append('table')
 					.style('border-spacing', '10px')
@@ -1234,13 +1234,10 @@ for(const i of atlst) {
 							.style('left', '0px')
 							.on('mouseover', () => {
 								const p = d3event.target.getBoundingClientRect()
-								const menu = client.menushow(p.left + p.width - 2, p.top - 30)
+								tip.clear().show(p.left + p.width - 2, p.top - 30)
 								this.showsvpairs({
 									prodlst: [prod],
-									holder: menu
-										.append('div')
-										.style('padding', '10px')
-										.style('border', 'solid 1px black'),
+									holder: tip.d.append('div'),
 									nodetail: true,
 									sample: sample,
 									eglst: null,
@@ -2175,17 +2172,15 @@ for(const i of atlst) {
 					.attr('height', rowh + 2)
 					.on('mouseover', () => {
 						logobg.attr('stroke-width', '2')
-						const p = logobg.node().getBoundingClientRect()
-						const menu = client.menushow(p.left, p.top + p.height + 2)
-						const d = menu
-							.append('div')
-							.style('padding', '10px')
-							.style('border', 'solid 1px #ccc')
+						const d = tip
+							.clear()
+							.showunder(logobg.node())
+							.d.append('div')
 						this.prodstat(prod, d)
 					})
 					.on('mouseout', () => {
 						logobg.attr('stroke-width', '1')
-						d3select('.sja_menu').remove()
+						tip.hide()
 					})
 				if (prodlst.length > 1) {
 					const logobg2 = g_row
@@ -2218,13 +2213,10 @@ for(const i of atlst) {
 						.attr('height', rowh - 4)
 						.on('mouseover', () => {
 							logobg2.attr('stroke-width', '2')
-							const p = logobg2.node().getBoundingClientRect()
-							const menu = client.menushow(p.left, p.top + p.height + 2)
-							const table = menu
-								.append('div')
-								.style('padding', '10px')
-								.style('border', 'solid 1px #ccc')
-								.append('table')
+							const table = tip
+								.clear()
+								.showunder(d3event.target)
+								.d.append('table')
 								.style('border-spacing', '10px')
 								.style('border-collapse', 'separate')
 							const tr1 = table.append('tr')
@@ -2236,7 +2228,7 @@ for(const i of atlst) {
 						})
 						.on('mouseout', () => {
 							logobg2.attr('stroke-width', '1')
-							d3select('.sja_menu').remove()
+							tip.hide()
 						})
 				}
 				// recurrence
@@ -2271,12 +2263,9 @@ for(const i of atlst) {
 						.attr('class', 'sja_svgtext2')
 						.on('mouseover', () => {
 							const p = d3event.target.getBoundingClientRect()
-							const menu = client.menushow(p.left + p.width + 10, p.top - 15)
+							tip.clear().show(p.left + p.width + 10, p.top - 15)
 							const slst = this.elab2sample[evt.label]
-							const dd = menu
-								.append('div')
-								.style('padding', '10px')
-								.style('border', 'solid 1px #ccc')
+							const dd = tip.d
 							dd.append('div')
 								.style('margin', '10px')
 								.style('color', '#aaa')
@@ -2298,7 +2287,7 @@ for(const i of atlst) {
 								this.eventlogo(s.events[evt.label], tr.append('td'))
 							}
 						})
-						.on('mouseout', () => d3select('.sja_menu').remove())
+						.on('mouseout', () => tip.hide())
 				}
 				// row kick
 				g_row
@@ -2311,6 +2300,7 @@ for(const i of atlst) {
 					.on('mouseover', () => {
 						boxa.attr('stroke-width', 2)
 						boxb.attr('stroke-width', 2)
+						/* old behavior to remember the one under highlight and not to re-show tip on it
 						if (evt.inview) return
 						for (const eg2 of eglst) {
 							for (const e2 of eg2.lst) {
@@ -2319,14 +2309,12 @@ for(const i of atlst) {
 						}
 						evt.inview = true
 						d3select(document.body).on('mousedown', () => (evt.inview = false))
+						*/
 						const p = d3event.target.getBoundingClientRect()
-						const menu = client.menushow(p.left + p.width + s7 / 2, p.top - 30)
+						tip.clear().show(p.left + p.width + s7 / 2, p.top - 30)
 						this.showsvpairs({
 							prodlst: evt.lst,
-							holder: menu
-								.append('div')
-								.style('padding', '10px')
-								.style('border', 'solid 1px black'),
+							holder: tip.d,
 							nodetail: true,
 							sample: sample,
 							eglst: eglst,
@@ -2334,6 +2322,7 @@ for(const i of atlst) {
 						})
 					})
 					.on('mouseout', () => {
+						tip.hide()
 						boxa.attr('stroke-width', 1)
 						boxb.attr('stroke-width', 1)
 					})
@@ -2382,7 +2371,7 @@ for(const i of atlst) {
 						.on('mouseover', () => this.extevt_mover(extevt.a, d3event.target, sample))
 						.on('mouseout', () => {
 							this.extevt_mo(extevt.a)
-							d3select('.sja_menu').remove()
+							tip.hide()
 						})
 						.on('click', () => {
 							this.extevt_c(extevt.a, d3event.target, sample)
@@ -2399,7 +2388,7 @@ for(const i of atlst) {
 						.on('mouseover', () => this.extevt_mover(extevt.b, d3event.target, sample))
 						.on('mouseout', () => {
 							this.extevt_mo(extevt.b)
-							d3select('.sja_menu').remove()
+							tip.hide()
 						})
 						.on('click', () => this.extevt_c(extevt.b, d3event.target, sample))
 				}
@@ -2416,17 +2405,13 @@ for(const i of atlst) {
 		if (ext.text) {
 			ext.text.attr('fill', 'white')
 		}
-		const p = dom.getBoundingClientRect()
-		const menu = client.menushow(p.left, p.top + p.height + 2)
-		const d = menu
+		tip.clear().showunder(dom)
+		tip.d
 			.append('div')
-			.style('padding', '10px')
-			.style('border', 'solid 1px #ccc')
-		d.append('div')
 			.style('margin', '10px')
 			.style('color', '#aaa')
 			.text('Associated fusions from this sample:')
-		this.extevt_table(ext.lst, d, sample)
+		this.extevt_table(ext.lst, tip.d, sample)
 	}
 	extevt_mo(ext) {
 		ext.circle.attr('fill', 'white')
@@ -2711,7 +2696,7 @@ for(const i of atlst) {
 								// remake entire sample
 								this.showsample(arg.sample)
 								// done
-								d3select('.sja_menu').remove()
+								tip.hide()
 							})
 					})
 				// <select>

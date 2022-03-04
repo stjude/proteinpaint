@@ -266,63 +266,6 @@ export function disappear(d, remove) {
 export const tip = new Menu({ padding: '' })
 tip.d.style('z-index', 1000)
 
-export function menushow(x, y, opts = {}) {
-	/********************* deprecated **********************/
-	console.log('client.menushow is deprecated')
-
-	d3selectAll('.sja_menu').remove()
-	d3selectAll('.sja_menu_persist').style('display', 'none')
-	let left = x + document.body.scrollLeft,
-		right = '',
-		top0 = y + document.body.scrollTop,
-		bottom = ''
-	x = document.body.clientWidth + document.body.scrollLeft - left
-	if (x < 200) {
-		left = ''
-	} else {
-		left = left + 'px'
-	}
-	y = document.body.clientHeight + document.body.scrollTop - top0
-	if (y < 200) {
-		top0 = ''
-		bottom = y - document.body.scrollTop + 40 + 'px'
-	} else {
-		top0 = top0 + 'px'
-	}
-	const body = d3select(document.body)
-	const menu = body
-		.append('div')
-		.attr('class', opts.persist ? 'sja_menu_persist' : 'sja_menu')
-		.on('mouseover', () => body.on('mousedown', null))
-		.on('mouseout', () => body.on('mousedown', menuhide))
-	menu
-		.style('left', left)
-		.style('top', top0)
-		.style('right', right)
-		.style('bottom', bottom)
-		.style('display', 'block')
-	body.on('mousedown', menuhide)
-	function menuhide() {
-		if (opts.persist) {
-			menu.style('display', 'none')
-		} else {
-			menu.remove()
-			body.on('mousedown', null)
-		}
-	}
-	menu.show = function() {
-		d3selectAll('.sja_menu').remove()
-		d3selectAll('.sja_menu_persist').style('display', 'none')
-		if (menu) menu.style('display', 'block')
-	}
-	return menu
-}
-
-export function menuunderdom(d, opts = {}) {
-	const p = d.getBoundingClientRect()
-	return menushow(p.left, p.top + p.height + 3, opts)
-}
-
 export function sayerror(holder, msg) {
 	const div = holder.append('div').attr('class', 'sja_errorbar')
 	// msg can contain injected XSS, so never do .html(msg)

@@ -514,11 +514,10 @@ function table_snvindel(mlst, holder, tk, block) {
 				.classed('sja_variantpagesnv', true)
 				.text('Variant Page')
 				.on('click', () => {
-					const div = client
-						.menuunderdom(d3event.target)
-						.style('border', 'solid 1px black')
-						.style('padding', '20px')
-					const table = div.append('table')
+					const table = tk.tktip
+						.clear()
+						.showunder(d3event.target)
+						.d.append('table')
 					for (const variant of vlst) {
 						const tr = table.append('tr')
 						// aa change

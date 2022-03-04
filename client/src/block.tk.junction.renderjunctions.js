@@ -499,91 +499,6 @@ jug2.filter(function(d){return d.rimwidth>0})
 		//return .3+.7 * (d.data ? d.data.length : d.v) / maxsamplecount
 	}
 
-	/*
-not in use
-// legend and controls
-tk.gright.selectAll('*').remove()
-const rowh=14
-let y=tk.toppad+5
-if(tk.rimwhat) {
-	var r=5
-	var g=tk.gright.append('g').attr('transform','translate(0,'+(y+r*2)+')')
-	var g2=g.append('g').attr('transform','translate('+(rowh/2)+',0)')
-	g2.append('circle').attr({
-		r:r,
-		fill:'#aaa'
-		})
-	g2.append('path').attr({
-		d: d3.svg.arc().innerRadius(r+1).outerRadius(r+3).startAngle(0).endAngle(Math.PI/2),
-		fill:'#858585'
-		})
-	g2.append('text').text(tk.rimwhat).attr({
-		x:r*3,
-		'dominant-baseline':'central',
-		'font-size':rowh-2,
-		'font-family':sja.font,
-		fill:'black'
-		})
-	y+=rowh+1
-}
-y+=10
-// metadata from cohort
-if(block.cohort && cohort.patientannotation) {
-	y+=9
-	tk.gright.append('text')
-		.text(tk.metadata ? tk.metadata.m.label : 'Metadata')
-		.attr('x',3)
-		.attr('y',y+rowh/2)
-		.attr('dominant-baseline','central')
-		.attr('font-size',rowh)
-		.attr('font-family',client.font)
-		.classed('sja_svgtext2', true)
-		.on('click',()=>{
-			const div=client.menuunderdom(d3event.target).append('div')
-			for(const m of block.cohort.patientannotation.metadata) {
-				div.append('div').text(m.label)
-				.classed('sja_menuoption',true)
-				.on('click',()=>{
-					d3select('.sja_menu').remove()
-					// apply metadata
-					tk.metadata={
-						m:m,
-						anno:{}
-					}
-					for(const pn in block.cohort.patientannotation.annotation) {
-						const v=block.cohort.patientannotation.annotation[pn][m.key]
-						tk.metadata.anno[pn]={
-							value:v,
-							color:m.values[v]
-						}
-					}
-					block.pannedpx=undefined
-					block.zoomedin=false
-					rendertk(tk.data, tk,block)
-				})
-			}
-		})
-	y+=rowh+1
-	if(tk.metadata) {
-		for(const k in tk.metadata.m.values) {
-			const g=tk.gright.append('g').attr('transform','translate(0,'+(y+rowh/2)+')')
-			g.append('circle')
-				.attr('cx',rowh/2)
-				.attr('r',rowh/2-1)
-				.attr('fill',tk.metadata.m.values[k])
-			g.append('text').text(k)
-				.attr('x',rowh+3)
-				.attr('dominant-baseline','central')
-				.attr('font-size',rowh-2)
-				.attr('font-family',client.font)
-				.attr('fill','black')
-				.text(k)
-			y+=rowh+1
-		}
-	}
-}
-*/
-
 	block.onloadalltk.push(() => {
 		spliceeventanalyze(tk, block)
 	})
@@ -591,12 +506,6 @@ if(block.cohort && cohort.patientannotation) {
 	// done
 	block.tkcloakoff(tk, {})
 	block.block_setheight()
-
-	/*
-if(tk.onrender) {
-	tk.onrender(tk)
-}
-*/
 }
 
 export function horiplace(lst, width, tk) {

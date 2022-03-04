@@ -91,7 +91,6 @@ export function runproteinpaint(arg) {
 
 	if (arg.clear) {
 		// for use by pecan
-		d3selectAll('.sja_menu').remove()
 		d3selectAll('.sja_pane').remove()
 		return
 	}

@@ -2305,11 +2305,10 @@ seekrange(chr,start,stop) {
 					.classed('sja_opaque8', true)
 					.text(1)
 					.on('click', () => {
-						const p = d3event.target.getBoundingClientRect()
-						const div = client
-							.menushow(p.left - 100, p.top + p.height + 5)
-							.append('div')
-							.style('border', 'solid 1px black')
+						const div = this.tip
+							.clear()
+							.showunder(d3event.target)
+							.d.append('div')
 							.style('padding', '20px')
 						div
 							.append('div')
