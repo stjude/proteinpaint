@@ -25,6 +25,10 @@ self.q{}
 	.cacheid
 		the cache file name storing the snp-by-sample genotypes, for samples based on current filter
 		!!NOTE!! id changes for every validation, e.g. for snp/cohort/filter update
+
+Exports following functions shared with snplocus term
+1. makeSnpSelect
+2. mayRestrictAncestry
 */
 
 // self is the termsetting instance
@@ -46,7 +50,7 @@ export function getHandler(self) {
 		},
 
 		async showEditMenu(div) {
-			makeEditMenu(self, div)
+			await makeEditMenu(self, div)
 		}
 		/*
 		async postMain() {
@@ -58,8 +62,9 @@ export function getHandler(self) {
 	}
 }
 
-function makeEditMenu(self, div) {
-	// the ui will create following controls, to be accessed upon clicking Submit button
+async function makeEditMenu(self, div) {
+	const select_ancestry = await mayRestrictAncestry(self, div)
+
 	let snplst_table, textarea, tmp_snps
 
 	// table has two rows
@@ -153,6 +158,12 @@ function makeEditMenu(self, div) {
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
 			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
+			if (select_ancestry) {
+				self.q.restrictAncestry = select_ancestry.node().options[
+					select_ancestry.property('selectedIndex')
+				].__ancestry_obj
+			}
+
 			await getSnpData(self)
 
 			if (snplst_table !== undefined) renderSnpEditTable(snplst_table)
@@ -520,4 +531,27 @@ export function makeSnpSelect(div, self, termtype) {
 		}
 	}
 	return [select_alleleType, select_geneticModel, select_missingGenotype]
+}
+
+export async function mayRestrictAncestry(self, holder) {
+	const tdbcfg = await self.vocabApi.getTermdbConfig()
+	if (!tdbcfg.restrictAncestries) return
+	const row = holder.append('div').style('margin', '15px')
+	row
+		.append('span')
+		.text('Restrict analysis to')
+		.style('margin-right', '5px')
+		.style('opacity', 0.5)
+	const select = row.append('select')
+	for (const ancestry of tdbcfg.restrictAncestries) {
+		// ancestry: {name, tvs}
+		const opt = select.append('option').text(ancestry.name)
+		opt.node().__ancestry_obj = ancestry
+	}
+	if (self.q && self.q.restrictAncestry) {
+		const i = tdbcfg.restrictAncestries.findIndex(i => i.name == self.q.restrictAncestry.name)
+		if (i == -1) throw 'unknown restrictAncestry: ' + self.q.restrictAncestry.name
+		select.property('selectedIndex', i)
+	}
+	return select
 }

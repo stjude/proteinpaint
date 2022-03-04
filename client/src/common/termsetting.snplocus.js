@@ -1,5 +1,5 @@
 import { event } from 'd3-selection'
-import { makeSnpSelect } from './termsetting.snplst'
+import { makeSnpSelect, mayRestrictAncestry } from './termsetting.snplst'
 import { filterInit, getNormalRoot } from './filter'
 import { keyupEnter, gmlst2loci } from '../client'
 import { debounce } from 'debounce'
@@ -113,7 +113,12 @@ async function makeEditMenu(self, div) {
 
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
-			self.q.restrictAncestry = select_ancestry.node().options[select_ancestry.property('selectedIndex')].__ancestry_obj
+			if (select_ancestry) {
+				// ancestry restriction is optional
+				self.q.restrictAncestry = select_ancestry.node().options[
+					select_ancestry.property('selectedIndex')
+				].__ancestry_obj
+			}
 
 			self.runCallback()
 		})
@@ -434,27 +439,4 @@ async function mayDisplayVariantFilter(self, holder) {
 			self.variantFilter.active = filter
 		}
 	}).main(self.variantFilter.active)
-}
-
-async function mayRestrictAncestry(self, holder) {
-	const tdbcfg = await self.vocabApi.getTermdbConfig()
-	if (!tdbcfg.restrictAncestries) return
-	const row = holder.append('div').style('margin', '10px')
-	row
-		.append('span')
-		.text('Restrict analysis to')
-		.style('margin-right', '5px')
-		.style('opacity', 0.5)
-	const select = row.append('select')
-	for (const ancestry of tdbcfg.restrictAncestries) {
-		// ancestry: {name, tvs}
-		const opt = select.append('option').text(ancestry.name)
-		opt.node().__ancestry_obj = ancestry
-	}
-	if (self.q && self.q.restrictAncestry) {
-		const i = tdbcfg.restrictAncestries.findIndex(i => i.name == self.q.restrictAncestry.name)
-		if (i == -1) throw 'unknown restrictAncestry: ' + self.q.restrictAncestry.name
-		select.property('selectedIndex', i)
-	}
-	return select
 }
