@@ -529,7 +529,7 @@ fn main() {
                     if sequence_flags_list[i as usize - 2].parse::<i64>().unwrap() & 16 == 16 {
                         sequence_strand = "R".to_string();
                     }
-                    let read_ambiguous = check_if_read_ambiguous(
+                    let mut read_ambiguous = check_if_read_ambiguous(
                         // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                         correct_start_position,
                         correct_end_position,
@@ -613,6 +613,10 @@ fn main() {
                         diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
                     }
 
+                    if (diff_score.abs() * 10000.0).round() == 0.0 / 10000.0 {
+                        // Rounding off to 4 places of decimal
+                        read_ambiguous = 2;
+                    }
                     let item = read_diff_scores {
                         value: f64::from(diff_score),
                         abs_value: f64::from(diff_score.abs()), // Absolute value of diff_score
@@ -723,7 +727,7 @@ fn main() {
                             if sequence_flags_list[iter].parse::<i64>().unwrap() & 16 == 16 {
                                 sequence_strand = "R".to_string();
                             }
-                            let read_ambiguous = check_if_read_ambiguous(
+                            let mut read_ambiguous = check_if_read_ambiguous(
                                 // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
                                 correct_start_position,
                                 correct_end_position,
@@ -794,6 +798,12 @@ fn main() {
                             if read_ambiguous < 2 {
                                 diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
                             }
+
+                            if (diff_score.abs() * 10000.0).round() == 0.0 / 10000.0 {
+                                // Rounding off to 4 places of decimal
+                                read_ambiguous = 2;
+                            }
+
                             let item = read_diff_scores {
                                 value: f64::from(diff_score),
                                 abs_value: f64::from(diff_score.abs()),
@@ -1579,16 +1589,17 @@ fn check_if_read_ambiguous(
     read_ambiguous
 }
 
+// This function preprocesses the flanking region, ref and alt allele to search if the indel is a tandem repeat (or a polymer consisting of small indels). It also looks if there is possibility of ambiguous reads if part of the flanking sequence is repeated inside the indel itself
 fn preprocess_input(
-    ref_nucleotides: &Vec<char>,
-    alt_nucleotides: &Vec<char>,
-    ref_allele: &String,
-    alt_allele: &String,
-    variant_pos: i64,
-    indel_length: i64,
-    leftflankseq: String,
-    rightflankseq: String,
-    mut surrounding_region_length: i64,
+    ref_nucleotides: &Vec<char>, // Vector containing reference nucleotides
+    alt_nucleotides: &Vec<char>, // Vector containing alternate nucleotides
+    ref_allele: &String,         // Sequence of reference allele
+    alt_allele: &String,         // Sequence of alternate allele
+    variant_pos: i64,            // Start position of indel
+    indel_length: i64,           // Length of indel
+    leftflankseq: String,        // Left flanking sequence
+    rightflankseq: String,       // Right flanking sequence
+    mut surrounding_region_length: i64, // Maximum limit upto which repetition of sequence will be searched to on either side of the indel
 ) -> (String, String, usize, usize, usize, usize) {
     let mut optimized_ref_allele = ref_allele.clone();
     let mut optimized_alt_allele = alt_allele.clone();
@@ -2030,7 +2041,8 @@ fn check_read_within_indel_region(
         let (alphabets, numbers) = cigar::parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
         let cigar_length: usize = alphabets.len();
         // Check to see if the first item in cigar is a soft clip
-        if &alphabets[0].to_string().as_str() == &"S" {
+        if &alphabets[0].to_string().as_str() == &"S" || &alphabets[0].to_string().as_str() == &"I"
+        {
             correct_start_position =
                 correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
             // Correcting for incorrect left position (when read starts with a softclip) by subtracting length of softclip from original left most position of read
@@ -2356,7 +2368,18 @@ fn check_polyclonal(
         //    indel_start + indel_length as i64
         //);
 
-        if &alphabets[0].to_string().as_str() == &"S"
+        if (&alphabets[0].to_string().as_str() == &"S"
+            && &alphabets[alphabets.len() - 1].to_string().as_str() == &"S")
+            && splice_freq == 0
+        // When read starts and ends with a softclip
+        {
+            if (indel_start - correct_start_position).abs()
+                <= (indel_start - correct_end_position).abs()
+            // When start position is closer to indel start, read is right aligned
+            {
+                alignment_side = "right".to_string();
+            }
+        } else if &alphabets[0].to_string().as_str() == &"S"
             && splice_freq == 0
             && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
         {
