@@ -409,7 +409,7 @@ function setInteractivity(self) {
 				.on('click', async () => {
 					self.dom.tip.clear()
 					if (option.isDictionary) {
-						await self.showTree()
+						await self.showTree(self.dom.tip.d.node())
 					} else if (option.termtype) {
 						await self.setHandler(option.termtype)
 						self.handler.showEditMenu(self.dom.tip.d)
@@ -491,8 +491,7 @@ function setInteractivity(self) {
 			.style('display', 'block')
 			.text('Replace')
 			.on('click', () => {
-				self.dom.tip.clear()
-				self.showTree()
+				self.showTree(self.dom.tip.d.node())
 			})
 		div
 			.append('div')
