@@ -64,6 +64,7 @@ async function get_gdc_data(gdc_id) {
 	if (!re.data.hits.length && (valid_case_uuid || valid_case_id)) throw 'No bam files available for this case'
 	// scenario 2: submitted id is not valid (no hits)
 	else if (!re.data.hits.length) throw 'Invalid GDC ID'
+	// scenario 3: 1 or multiple files are available for submitted gdc id
 	for (const s of re.data.hits) {
 		if (s.analysis.workflow_type == skip_workflow_type) continue // skip
 		const file = {}
