@@ -12,8 +12,11 @@ const filter_types = [
 ]
 
 // type of gdc_apis
-// TODO: no need for '/cases/' endpoint query, same can be achieved using '/files/' endpoint
-// refer to this document: https://docs.google.com/document/d/1WzrrCUrY2A4u7PGDQeDZN8U3oLJAd-4wxuXPaQTIr_s/edit?usp=sharing
+// NOTE: it's need to use '/cases/' and '/files/' endpoints,
+// because if case_id/case_uuid supplied, it must be checked with '/cases/' endpoint
+// throw error if it's invalid and if it's valid, check if files are available for that
+// refer to example rest queries at this document:
+// https://docs.google.com/document/d/1WzrrCUrY2A4u7PGDQeDZN8U3oLJAd-4wxuXPaQTIr_s/edit?usp=sharing
 const gdc_apis = {
 	gdc_files: {
 		end_point: 'https://api.gdc.cancer.gov/files/',
@@ -60,11 +63,11 @@ async function get_gdc_data(gdc_id) {
 
 	const [re, valid_case_uuid, valid_case_id] = await try_query(gdc_id, bamdata)
 
-	// scenario 1: if submitted id is valid case_id, then respond that bam files are not available for this case_id
+	// scenario 1: no hits/files, but valid case_id/case_uuid, then respond that bam files are not available for this case_id
 	if (!re.data.hits.length && (valid_case_uuid || valid_case_id)) throw 'No bam files available for this case'
-	// scenario 2: submitted id is not valid (no hits)
+	// scenario 2: no hits/files, submitted id is not valid
 	else if (!re.data.hits.length) throw 'Invalid GDC ID'
-	// scenario 3: 1 or multiple files are available for submitted gdc id
+	// scenario 3: 1 or multiple hits/files are available for submitted gdc id
 	for (const s of re.data.hits) {
 		if (s.analysis.workflow_type == skip_workflow_type) continue // skip
 		const file = {}
@@ -102,9 +105,9 @@ async function try_query(gdc_id, bamdata) {
 	for (const f of filter_types) {
 		filter.content[0].content.field = f.field
 		// scenario 1: entered id is case_uuid or case_id
-		// process: query gdc_cases endpoint and see if any files returned (hits)
+		// process: query gdc_cases endpoint and see if any hits/case returned
 		// outcome 1: valid case_uuid or case_id, add seq_read_filter
-		// outcome 2: invalid case_uuid or case_uuid (no hits)
+		// outcome 2: invalid case_uuid or case_uuid (no hits/case)
 		if (f.is_case_uuid || f.is_case_id) {
 			// check if submitted id is valid case id or not
 			const case_check = await query_gdc_api(filter, gdc_apis.gdc_cases)
@@ -116,7 +119,7 @@ async function try_query(gdc_id, bamdata) {
 			filter.content.push(sequencing_read_filter)
 		}
 		// scenario 2: entered id is file_id or file_uuid
-		// process: query gdc_files endpoint and see if any files returnd (hits)
+		// process: query gdc_files endpoint and see if any hits/files returned
 		// outcome: add is_file_id or is_file_uuid = true in bamdata
 		re = await query_gdc_api(filter, gdc_apis.gdc_files)
 		if (re.data.hits.length) {
