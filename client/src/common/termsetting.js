@@ -2,11 +2,15 @@ import { getInitFxn, copyMerge } from './rx.core'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
 
-/********************** EXPORTED
+/*
+********************* EXPORTED
 nonDictionaryTermTypes
 termsettingInit()
 getPillNameDefault()
 fillTermWrapper()
+********************* Instance methods
+clickNoPillDiv
+showTree
 */
 
 export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant'])
@@ -260,7 +264,7 @@ function setRenderers(self) {
 				.html(d => d.toUpperCase())
 				.on('click', d => {
 					if (d == 'delete') self.removeTerm()
-					else if (d == 'replace') self.showTree()
+					else if (d == 'replace') self.showTree(event.target)
 				})
 
 			// render info button only if term has html details
@@ -390,12 +394,12 @@ function setInteractivity(self) {
 
 	self.clickNoPillDiv = async () => {
 		// support various behaviors upon clicking nopilldiv
-		self.dom.tip.clear().showunder(self.dom.nopilldiv.node())
 		if (!self.noTermPromptOptions || self.noTermPromptOptions.length == 0) {
 			// show tree to select a dictionary term
-			await self.showTree()
+			await self.showTree(self.dom.nopilldiv.node())
 			return
 		}
+		self.dom.tip.clear().showunder(self.dom.nopilldiv.node())
 		// create small menu, one option for each ele in noTermPromptOptions[]
 		for (const option of self.noTermPromptOptions) {
 			// {isDictionary, termtype, text, html}
@@ -420,10 +424,11 @@ function setInteractivity(self) {
 	}
 
 	self.showTree = async function(holder) {
+		self.dom.tip.clear()
 		if (holder)
-			self.dom.tip
-				.clear()
-				.showunder(holder instanceof Element ? holder : this instanceof Element ? this : self.dom.holder.node())
+			self.dom.tip.showunder(
+				holder instanceof Element ? holder : this instanceof Element ? this : self.dom.holder.node()
+			)
 		else self.dom.tip.show(event.clientX, event.clientY)
 
 		const termdb = await import('../termdb/app')

@@ -7488,7 +7488,7 @@ function parse_variantgene(line, header) {
 	return [null, m]
 }
 
-export function illegalpath(s) {
+function illegalpath(s) {
 	if (s[0] == '/') return true // must not be relative to mount root
 	if (s.includes('"') || s.includes("'")) return true // must not include quotes, apostrophe
 	if (s.includes('|') || s.includes('&')) return true // must not include operator characters
@@ -7496,8 +7496,9 @@ export function illegalpath(s) {
 	if (s.match(/(\<script|script\>)/i)) return true // avoid the potential for parsing injected code in client side error message
 	return false
 }
+exports.illegalpath = illegalpath
 
-export function fileurl(req) {
+function fileurl(req) {
 	// must use it to scrutinize every requested file path
 	let file = null,
 		isurl = false
@@ -7517,6 +7518,7 @@ export function fileurl(req) {
 	if (!file) return ['file unspecified']
 	return [null, file, isurl]
 }
+exports.fileurl = fileurl
 
 function log(req) {
 	const j = {}
