@@ -714,7 +714,7 @@ samples {Map}
 async function getSampleData_snplstOrLocus(tw, samples, snpgt2count) {
 	tw.snpidlst = [] // snpid are added to this list while reading cache file
 
-	const lines = (await utils.read_file(path.join(serverconfig.cachedir, tw.q.cacheid))).split('\n')
+	const lines = (await utils.read_file(path.join(serverconfig.cachedir_snpgt, tw.q.cacheid))).split('\n')
 	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 
 	// array of sample ids from the cache file; note cache file contains all the samples from the dataset

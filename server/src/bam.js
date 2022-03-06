@@ -248,7 +248,7 @@ module.exports = genomes => {
 			}
 			if (req.query.clientdownloadgdcslice) {
 				if (app.illegalpath(req.query.clientdownloadgdcslice)) throw 'illegal file path'
-				const file = path.join(serverconfig.cachedir, req.query.clientdownloadgdcslice)
+				const file = path.join(serverconfig.cachedir_bam, req.query.clientdownloadgdcslice)
 				const data = await fs.promises.readFile(file)
 				res.writeHead(200, {
 					'Content-Type': 'application/octet-stream',
@@ -306,25 +306,8 @@ async function download_gdc_bam(req) {
 	for (const r of JSON.parse(req.query.regions)) {
 		const gdc_token = req.get('x-auth-token')
 		const gdc_file_id = req.query.gdc_file
-		const md5Hasher = crypto.createHmac('md5', serverconfig.gdcbamsecret)
-		const gdc_token_hash = md5Hasher.update(gdc_token).digest('hex')
-		const dir = serverconfig.cachedir + '/' + gdc_token_hash
-		try {
-			await fs.promises.stat(dir)
-		} catch (e) {
-			if (e.code == 'ENOENT') {
-				// make dir
-				try {
-					await fs.promises.mkdir(dir, { recursive: true })
-				} catch (e) {
-					throw 'url dir: cannot mkdir'
-				}
-			} else {
-				throw 'stating gz url dir: ' + e.code
-			}
-		}
-		const gdc_bam_filename = path.join(gdc_token_hash, 'temp.' + Math.random().toString() + '.bam')
-		// Need to make directory for each user using token
+		const md5Hasher = crypto.createHmac('md5', Math.random().toString())
+		const gdc_bam_filename = md5Hasher.update(gdc_token).digest('hex') + '.bam'
 		await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, gdc_file_id, gdc_bam_filename)
 		gdc_bam_filenames.push(gdc_bam_filename)
 	}
@@ -662,7 +645,7 @@ async function get_q(genome, req) {
 	if (req.get('x-auth-token')) {
 		q = {
 			genome,
-			file: path.join(serverconfig.cachedir, req.query.file), // will need to change this to a loop when viewing multiple regions in the same gdc sample
+			file: path.join(serverconfig.cachedir_bam, req.query.file), // will need to change this to a loop when viewing multiple regions in the same gdc sample
 			asPaired: req.query.asPaired,
 			getcolorscale: req.query.getcolorscale,
 			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
@@ -670,7 +653,6 @@ async function get_q(genome, req) {
 		}
 		//q.gdc_token = req.get('x-auth-token').split(',')[0]
 		q.gdc_file = req.query.gdc_file
-		//q.file = path.join(serverconfig.cachedir, 'temp.' + Math.random().toString() + '.bam')
 	} else {
 		const [e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
@@ -1234,11 +1216,11 @@ async function determine_downsampling(q, regions) {
 	q.read_limit_reached = totalreads // notify client
 }
 
-async function get_gdc_bam(chr, start, stop, token, case_id, cache_dir) {
+async function get_gdc_bam(chr, start, stop, token, case_id, bamfilename) {
 	// The chr variable must contain "chr"
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	headers['X-Auth-Token'] = token
-	const file = path.join(serverconfig.cachedir, cache_dir)
+	const file = path.join(serverconfig.cachedir_bam, bamfilename)
 	// Inserted "chr" in url. Need to check if it works with other gdc bam files
 	const url = 'https://api.gdc.cancer.gov/slicing/view/' + case_id + '?region=' + chr + ':' + start + '-' + stop
 	try {
@@ -2697,7 +2679,7 @@ async function query_oneread(req, r) {
 
 	let args
 	if (gdc_query) {
-		args = ['view', path.join(serverconfig.cachedir, req.query.file)]
+		args = ['view', path.join(serverconfig.cachedir_bam, req.query.file)]
 	} else {
 		args = [
 			'view',

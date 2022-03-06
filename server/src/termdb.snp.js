@@ -101,7 +101,7 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 		}
 	}
 
-	const lines = (await utils.read_file(path.join(serverconfig.cachedir, q.cacheid))).split('\n')
+	const lines = (await utils.read_file(path.join(serverconfig.cachedir_snpgt, q.cacheid))).split('\n')
 	const samplewithgt = new Set() // collect samples with valid gt for any snp
 	const snps = []
 	for (let i = 1; i < lines.length; i++) {
@@ -343,8 +343,8 @@ async function queryBcf(q, snps, ds) {
 
 	// cache id is a file name and its characters are covered by \w
 	// will apply /[^\w]/ to check against attack
-	const cacheid = 'snpgt_' + q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
-	await utils.write_file(path.join(serverconfig.cachedir, cacheid), lines.join('\n'))
+	const cacheid = q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
+	await utils.write_file(path.join(serverconfig.cachedir_snpgt, cacheid), lines.join('\n'))
 	return cacheid
 }
 
@@ -420,8 +420,8 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 			lines.push(lst.join('\t'))
 		}
 	})
-	result.cacheid = 'snpgt_' + q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
-	await utils.write_file(path.join(serverconfig.cachedir, result.cacheid), lines.join('\n'))
+	result.cacheid = q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
+	await utils.write_file(path.join(serverconfig.cachedir_snpgt, result.cacheid), lines.join('\n'))
 	return result
 }
 

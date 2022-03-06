@@ -7598,7 +7598,7 @@ async function pp_init() {
 			return
 		}
 	}
-	serverconfig.gdcbamsecret = Math.random().toString()
+
 	codedate = get_codedate()
 	launchdate = Date(Date.now())
 		.toString()
@@ -7616,6 +7616,10 @@ async function pp_init() {
 	}
 	if (!serverconfig.tpmasterdir) throw '.tpmasterdir missing'
 	if (!serverconfig.cachedir) throw '.cachedir missing'
+	// create sub directories under cachedir, and register path in serverconfig
+	// to ensure temp files saved in previous server session are accessible in current session
+	// must use consistent dir name but not random dir name that changes from last server boot
+	pp_init_cacheSubDirectories()
 
 	if (!serverconfig.genomes) throw '.genomes[] missing'
 	if (!Array.isArray(serverconfig.genomes)) throw '.genomes[] not array'
@@ -8021,6 +8025,30 @@ async function pp_init() {
 		}
 
 		delete g.rawdslst
+	}
+}
+
+async function pp_init_cacheSubDirectories() {
+	serverconfig.cachedir_massSession = path.join(serverconfig.cachedir, 'massSession')
+	await mayCreateDir(serverconfig.cachedir_massSession)
+	serverconfig.cachedir_snpgt = path.join(serverconfig.cachedir, 'snpgt')
+	await mayCreateDir(serverconfig.cachedir_snpgt)
+	serverconfig.cachedir_bam = path.join(serverconfig.cachedir, 'bam')
+	await mayCreateDir(serverconfig.cachedir_bam)
+}
+async function mayCreateDir(d) {
+	try {
+		await fs.promises.stat(d)
+	} catch (e) {
+		if (e.code == 'ENOENT') {
+			try {
+				await fs.promises.mkdir(d)
+			} catch (e) {
+				throw 'cannot make dir'
+			}
+		} else {
+			throw 'error stating dir'
+		}
 	}
 }
 

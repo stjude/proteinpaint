@@ -1,38 +1,17 @@
-const app = require('./app'),
-	serverconfig = require('./serverconfig'),
+const serverconfig = require('./serverconfig'),
 	path = require('path'),
 	fs = require('fs'),
 	utils = require('./utils')
 
-// where temp session files are saved
-const sessionDir = path.join(serverconfig.cachedir, 'massSession')
-
 export async function save(req, res) {
 	// POST
-
 	try {
-		try {
-			await fs.promises.stat(sessionDir)
-		} catch (e) {
-			if (e.code == 'ENOENT') {
-				try {
-					await fs.promises.mkdir(sessionDir)
-				} catch (e) {
-					throw 'cannot make dir'
-				}
-			} else {
-				throw 'stating session dir: ' + e.code
-			}
-		}
-
-		// dir is valid
-
 		const sessionID = makeID()
 		// not checking duplicating id
 
 		// req.body is some string data, save it to file named by the session id
 		const content = JSON.stringify(req.body)
-		await utils.write_file(path.join(sessionDir, sessionID), content)
+		await utils.write_file(path.join(serverconfig.cachedir_massSession, sessionID), content)
 
 		res.send({ id: sessionID })
 	} catch (e) {
@@ -45,7 +24,7 @@ export async function get(req, res) {
 
 	try {
 		if (!req.query.id) throw 'session id missing'
-		const file = path.join(sessionDir, req.query.id)
+		const file = path.join(serverconfig.cachedir_massSession, req.query.id)
 		try {
 			await fs.promises.stat(file)
 		} catch (e) {
