@@ -1838,7 +1838,7 @@ reverseorient() {
 
 	block_jump_snp(s) {
 		coord
-			.string2snp(this.genome.name, s, this.hostURL, this.jwt)
+			.string2snp(this.genome, s, this.hostURL, this.jwt)
 			.then(r => {
 				const span = Math.ceil(this.width / ntpxwidth)
 				this.rglst = [

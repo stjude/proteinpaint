@@ -78,7 +78,7 @@ function step1_findgm(paint, querystr) {
 			if (!data.gmlst || data.gmlst.length == 0) {
 				// not a gene
 				if (paint.genome.hasSNP) {
-					string2snp(paint.genome.name, querystr, hostURL, paint.jwt)
+					string2snp(paint.genome, querystr, hostURL, paint.jwt)
 						.then(r => {
 							says.remove()
 							// TODO automatically add SNP track
