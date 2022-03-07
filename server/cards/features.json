@@ -39,7 +39,7 @@
             }
         },
         {
-            "label": "Create a Tooltip over the Track Name",
+            "label": "Show Additional Track Information",
             "message": "To create a tooltip over the track name, include the <span style='font-family: Courier; opacity: 0.6;'>list_description</span> array within the track object. Hover over the track name on the lefthand side to see the tooltip. <br><br> For more information about this track type and example, please see the <b>Splice Junction</b> single sample example (i.e. top example on the left).",
             "runargs": {
                 "parseurl": true,
