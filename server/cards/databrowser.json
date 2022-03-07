@@ -1,5 +1,5 @@
 {
-  "intro": "<b>We're excited to announce our newest app!</b>. By uploading a dictionary in the Data Browser, one can explore the structure of their custom cohort. Options to upload sample annotation and other data types are in development.", 
+  "intro": "<b>We're excited to announce our newest app!</b>. By uploading a dictionary in the Data Browser, one can explore the structure of their custom cohort. <br><br>Options to upload sample annotation and other data types are in development.", 
   "ppcalls":[
     {
         "is_ui": true,
@@ -12,436 +12,439 @@
     },
     {
       "runargs": {
-          "noheader": true,
+        "noheader": true,
+        "nobox":true,
+        "mass":{
           "state": {
-          "vocab": {
-            "terms": [
-              {
-                "id": "gps",
-                "name": "Genomic Profiling Status",
-                "parent_id": null,
-                "type": null,
-                "isleaf": false
-              },
-              {
-                "id": "wgs_sequenced",
-                "name": "Whole Genome Sequencing",
-                "parent_id": "gps",
-                "type": "categorical",
-                "values": {
-                  "1": {
-                    "label": "Yes"
-                  }
+            "vocab": {
+              "terms": [
+                {
+                  "id": "gps",
+                  "name": "Genomic Profiling Status",
+                  "parent_id": null,
+                  "type": null,
+                  "isleaf": false
                 },
-                "groupsetting": {
-                  "inuse": false
+                {
+                  "id": "wgs_sequenced",
+                  "name": "Whole Genome Sequencing",
+                  "parent_id": "gps",
+                  "type": "categorical",
+                  "values": {
+                    "1": {
+                      "label": "Yes"
+                    }
+                  },
+                  "groupsetting": {
+                    "inuse": false
+                  },
+                  "isleaf": true
                 },
-                "isleaf": true
-              },
-              {
-                "id": "snp6_genotyped",
-                "name": "Affymetrix Genome-Wide Human SNP Array 6.0",
-                "parent_id": "gps",
-                "type": "categorical",
-                "values": {
-                  "0": {
-                    "label": "No"
+                {
+                  "id": "snp6_genotyped",
+                  "name": "Affymetrix Genome-Wide Human SNP Array 6.0",
+                  "parent_id": "gps",
+                  "type": "categorical",
+                  "values": {
+                    "0": {
+                      "label": "No"
+                    },
+                    "1": {
+                      "label": "Yes"
+                    },
+                    "-994": {
+                      "label": "N/A: CCSS"
+                    }
                   },
-                  "1": {
-                    "label": "Yes"
+                  "groupsetting": {
+                    "inuse": false
                   },
-                  "-994": {
-                    "label": "N/A: CCSS"
-                  }
+                  "isleaf": true
                 },
-                "groupsetting": {
-                  "inuse": false
+                {
+                  "id": "crv",
+                  "name": "Cancer-related Variables",
+                  "parent_id": null,
+                  "type": null,
+                  "isleaf": false
                 },
-                "isleaf": true
-              },
-              {
-                "id": "crv",
-                "name": "Cancer-related Variables",
-                "parent_id": null,
-                "type": null,
-                "isleaf": false
-              },
-              {
-                "id": "dx",
-                "name": "Diagnosis",
-                "parent_id": "crv",
-                "type": null,
-                "isleaf": false
-              },
-              {
-                "id": "diaggrp",
-                "name": "Diagnosis Group",
-                "parent_id": "dx",
-                "type": "categorical",
-                "values": {},
-                "groupsetting": {
-                  "inuse": false
+                {
+                  "id": "dx",
+                  "name": "Diagnosis",
+                  "parent_id": "crv",
+                  "type": null,
+                  "isleaf": false
                 },
-                "isleaf": true
-              },
-              {
-                "id": "dxcode",
-                "name": "Diagnosis Code",
-                "parent_id": "dx",
-                "type": "integer",
-                "values": {
-                  "-9999": {
-                    "label": "Pending",
-                    "uncomputable": true
-                  }
+                {
+                  "id": "diaggrp",
+                  "name": "Diagnosis Group",
+                  "parent_id": "dx",
+                  "type": "categorical",
+                  "values": {},
+                  "groupsetting": {
+                    "inuse": false
+                  },
+                  "isleaf": true
                 },
-                "isleaf": true
-              },
-              {
-                "id": "tx",
-                "name": "Treatment",
-                "parent_id": "crv",
-                "type": null,
-                "isleaf": false
-              },
-              {
-                "id": "chemo_life",
-                "name": "Chemotherapy, Lifetime",
-                "parent_id": "tx",
-                "type": null,
-                "isleaf": false
-              },
-              {
-                "id": "alk_ag_any",
-                "name": "Alkylating Agents, mg/m2",
-                "parent_id": "chemo_life",
-                "type": null,
-                "isleaf": false
-              },
-              {
-                "id": "cyclophosphamide_any",
-                "name": "Cyclophosphamide",
-                "parent_id": "alk_ag_any",
-                "type": "float",
-                "values": {
-                  "0": {
-                    "label": "not exposed",
-                    "uncomputable": true
+                {
+                  "id": "dxcode",
+                  "name": "Diagnosis Code",
+                  "parent_id": "dx",
+                  "type": "integer",
+                  "values": {
+                    "-9999": {
+                      "label": "Pending",
+                      "uncomputable": true
+                    }
                   },
-                  "-8888": {
-                    "label": "exposed, dose unknown",
-                    "uncomputable": true
-                  },
-                  "-9999": {
-                    "label": "unknown exposure",
-                    "uncomputable": true
-                  }
+                  "isleaf": true
                 },
-                "isleaf": true
-              },
-              {
-                "id": "aaclassic_any",
-                "name": "Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)",
-                "parent_id": "alk_ag_any",
-                "type": "float",
-                "values": {
-                  "0": {
-                    "label": "not exposed",
-                    "uncomputable": true
-                  },
-                  "-8888": {
-                    "label": "exposed, dose unknown",
-                    "uncomputable": true
-                  },
-                  "-9999": {
-                    "label": "unknown exposure",
-                    "uncomputable": true
-                  }
+                {
+                  "id": "tx",
+                  "name": "Treatment",
+                  "parent_id": "crv",
+                  "type": null,
+                  "isleaf": false
                 },
-                "isleaf": true
-              },
-              {
-                "id": "anthra_any",
-                "name": "Anthracyclines, mg/m2",
-                "parent_id": "chemo_life",
-                "type": null,
-                "isleaf": false
-              },
-              {
-                "id": "doxorubicin_any",
-                "name": "Doxorubicin (IV)",
-                "parent_id": "anthra_any",
-                "type": "float",
-                "values": {
-                  "-8888": {
-                    "label": "exposed, dose unknown",
-                    "uncomputable": true
-                  },
-                  "-9999": {
-                    "label": "unknown exposure",
-                    "uncomputable": true
-                  }
+                {
+                  "id": "chemo_life",
+                  "name": "Chemotherapy, Lifetime",
+                  "parent_id": "tx",
+                  "type": null,
+                  "isleaf": false
                 },
-                "isleaf": true
-              },
-              {
-                "id": "idarubicin_any",
-                "name": "Idarubicin (IV)",
-                "parent_id": "anthra_any",
-                "type": "float",
-                "values": {
-                  "-8888": {
-                    "label": "exposed, dose unknown",
-                    "uncomputable": true
-                  },
-                  "-9999": {
-                    "label": "unknown exposure",
-                    "uncomputable": true
-                  }
+                {
+                  "id": "alk_ag_any",
+                  "name": "Alkylating Agents, mg/m2",
+                  "parent_id": "chemo_life",
+                  "type": null,
+                  "isleaf": false
                 },
-                "isleaf": true
-              },
-              {
-                "id": "surgery_trt",
-                "name": "Any Treatment-Directed Surgery (3mo pre -> 5yrs post primary cancer diagnosis)",
-                "parent_id": "tx",
-                "type": "categorical",
-                "values": {
-                  "0": {
-                    "label": "No"
+                {
+                  "id": "cyclophosphamide_any",
+                  "name": "Cyclophosphamide",
+                  "parent_id": "alk_ag_any",
+                  "type": "float",
+                  "values": {
+                    "0": {
+                      "label": "not exposed",
+                      "uncomputable": true
+                    },
+                    "-8888": {
+                      "label": "exposed, dose unknown",
+                      "uncomputable": true
+                    },
+                    "-9999": {
+                      "label": "unknown exposure",
+                      "uncomputable": true
+                    }
                   },
-                  "1": {
-                    "label": "Yes"
-                  },
-                  "-9999": {
-                    "label": "Unknown"
-                  }
+                  "isleaf": true
                 },
-                "groupsetting": {
-                  "inuse": false
+                {
+                  "id": "aaclassic_any",
+                  "name": "Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)",
+                  "parent_id": "alk_ag_any",
+                  "type": "float",
+                  "values": {
+                    "0": {
+                      "label": "not exposed",
+                      "uncomputable": true
+                    },
+                    "-8888": {
+                      "label": "exposed, dose unknown",
+                      "uncomputable": true
+                    },
+                    "-9999": {
+                      "label": "unknown exposure",
+                      "uncomputable": true
+                    }
+                  },
+                  "isleaf": true
                 },
-                "isleaf": true
-              },
-              {
-                "id": "invasive_trt",
-                "name": "Treatment-Directed Invasive Surgery (3mo pre -> 5yrs post primary cancer diagnosis)",
-                "parent_id": "tx",
-                "type": "categorical",
-                "values": {
-                  "0": {
-                    "label": "No"
-                  },
-                  "1": {
-                    "label": "Yes"
-                  },
-                  "-9999": {
-                    "label": "Unknown"
-                  }
+                {
+                  "id": "anthra_any",
+                  "name": "Anthracyclines, mg/m2",
+                  "parent_id": "chemo_life",
+                  "type": null,
+                  "isleaf": false
                 },
-                "groupsetting": {
-                  "inuse": false
+                {
+                  "id": "doxorubicin_any",
+                  "name": "Doxorubicin (IV)",
+                  "parent_id": "anthra_any",
+                  "type": "float",
+                  "values": {
+                    "-8888": {
+                      "label": "exposed, dose unknown",
+                      "uncomputable": true
+                    },
+                    "-9999": {
+                      "label": "unknown exposure",
+                      "uncomputable": true
+                    }
+                  },
+                  "isleaf": true
                 },
-                "isleaf": true
-              },
-              {
-                "id": "demo",
-                "name": "Demographic Variables",
-                "parent_id": null,
-                "type": null,
-                "isleaf": false
-              },
-              {
-                "id": "demo_survive",
-                "name": "Survival",
-                "parent_id": "demo",
-                "type": null,
-                "isleaf": false
-              },
-              {
-                "id": "survival",
-                "name": "Survival Status",
-                "parent_id": "demo_survive",
-                "type": "categorical",
-                "values": {
-                  "1": {
-                    "label": "Alive"
+                {
+                  "id": "idarubicin_any",
+                  "name": "Idarubicin (IV)",
+                  "parent_id": "anthra_any",
+                  "type": "float",
+                  "values": {
+                    "-8888": {
+                      "label": "exposed, dose unknown",
+                      "uncomputable": true
+                    },
+                    "-9999": {
+                      "label": "unknown exposure",
+                      "uncomputable": true
+                    }
                   },
-                  "2": {
-                    "label": "Deceased"
-                  },
-                  "-9999": {
-                    "label": "Unknown"
-                  }
+                  "isleaf": true
                 },
-                "groupsetting": {
-                  "inuse": false
+                {
+                  "id": "surgery_trt",
+                  "name": "Any Treatment-Directed Surgery (3mo pre -> 5yrs post primary cancer diagnosis)",
+                  "parent_id": "tx",
+                  "type": "categorical",
+                  "values": {
+                    "0": {
+                      "label": "No"
+                    },
+                    "1": {
+                      "label": "Yes"
+                    },
+                    "-9999": {
+                      "label": "Unknown"
+                    }
+                  },
+                  "groupsetting": {
+                    "inuse": false
+                  },
+                  "isleaf": true
                 },
-                "isleaf": true
-              },
-              {
-                "id": "sex",
-                "name": "Sex",
-                "parent_id": "demo",
-                "type": "categorical",
-                "values": {
-                  "1": {
-                    "label": "Male"
+                {
+                  "id": "invasive_trt",
+                  "name": "Treatment-Directed Invasive Surgery (3mo pre -> 5yrs post primary cancer diagnosis)",
+                  "parent_id": "tx",
+                  "type": "categorical",
+                  "values": {
+                    "0": {
+                      "label": "No"
+                    },
+                    "1": {
+                      "label": "Yes"
+                    },
+                    "-9999": {
+                      "label": "Unknown"
+                    }
                   },
-                  "2": {
-                    "label": "Female"
-                  }
+                  "groupsetting": {
+                    "inuse": false
+                  },
+                  "isleaf": true
                 },
-                "groupsetting": {
-                  "inuse": false
+                {
+                  "id": "demo",
+                  "name": "Demographic Variables",
+                  "parent_id": null,
+                  "type": null,
+                  "isleaf": false
                 },
-                "isleaf": true
-              },
-              {
-                "id": "self_behave_outcome",
-                "name": "Self-reported Behavior and Outcome Variables",
-                "parent_id": null,
-                "type": null,
-                "isleaf": false
-              },
-              {
-                "id": "alt_tx",
-                "name": "Alternative/Complimentary Therapy",
-                "parent_id": "self_behave_outcome",
-                "type": null,
-                "isleaf": false
-              },
-              {
-                "id": "amaccp",
-                "name": "Alternative therapy: acupuncture",
-                "parent_id": "alt_tx",
-                "type": "categorical",
-                "values": {
-                  "1": {
-                    "label": "Yes"
-                  },
-                  "2": {
-                    "label": "No"
-                  },
-                  "3": {
-                    "label": "Not sure"
-                  },
-                  "-997": {
-                    "label": "No response"
-                  },
-                  "-994": {
-                    "label": "N/A: no campus visit"
-                  },
-                  "-999": {
-                    "label": "N/A: campus visit, no survey"
-                  }
+                {
+                  "id": "demo_survive",
+                  "name": "Survival",
+                  "parent_id": "demo",
+                  "type": null,
+                  "isleaf": false
                 },
-                "groupsetting": {
-                  "inuse": false
+                {
+                  "id": "survival",
+                  "name": "Survival Status",
+                  "parent_id": "demo_survive",
+                  "type": "categorical",
+                  "values": {
+                    "1": {
+                      "label": "Alive"
+                    },
+                    "2": {
+                      "label": "Deceased"
+                    },
+                    "-9999": {
+                      "label": "Unknown"
+                    }
+                  },
+                  "groupsetting": {
+                    "inuse": false
+                  },
+                  "isleaf": true
                 },
-                "isleaf": true
-              },
-              {
-                "id": "ambio",
-                "name": "Alternative therapy: biofeedback",
-                "parent_id": "alt_tx",
-                "type": "categorical",
-                "values": {
-                  "1": {
-                    "label": "Yes"
+                {
+                  "id": "sex",
+                  "name": "Sex",
+                  "parent_id": "demo",
+                  "type": "categorical",
+                  "values": {
+                    "1": {
+                      "label": "Male"
+                    },
+                    "2": {
+                      "label": "Female"
+                    }
                   },
-                  "2": {
-                    "label": "No"
+                  "groupsetting": {
+                    "inuse": false
                   },
-                  "3": {
-                    "label": "Not sure"
-                  },
-                  "-997": {
-                    "label": "No response"
-                  },
-                  "-994": {
-                    "label": "N/A: no campus visit"
-                  },
-                  "-999": {
-                    "label": "N/A: campus visit, no survey"
-                  }
+                  "isleaf": true
                 },
-                "groupsetting": {
-                  "inuse": false
+                {
+                  "id": "self_behave_outcome",
+                  "name": "Self-reported Behavior and Outcome Variables",
+                  "parent_id": null,
+                  "type": null,
+                  "isleaf": false
                 },
-                "isleaf": true
-              },
-              {
-                "id": "ffq",
-                "name": "Food Frequency Questionnaire",
-                "parent_id": "self_behave_outcome",
-                "type": "categorical",
-                "values": {
-                  "0": {
-                    "label": "No"
-                  },
-                  "1": {
-                    "label": "Yes"
-                  },
-                  "-994": {
-                    "label": "N/A: no campus visit"
-                  }
+                {
+                  "id": "alt_tx",
+                  "name": "Alternative/Complimentary Therapy",
+                  "parent_id": "self_behave_outcome",
+                  "type": null,
+                  "isleaf": false
                 },
-                "groupsetting": {
-                  "inuse": false
+                {
+                  "id": "amaccp",
+                  "name": "Alternative therapy: acupuncture",
+                  "parent_id": "alt_tx",
+                  "type": "categorical",
+                  "values": {
+                    "1": {
+                      "label": "Yes"
+                    },
+                    "2": {
+                      "label": "No"
+                    },
+                    "3": {
+                      "label": "Not sure"
+                    },
+                    "-997": {
+                      "label": "No response"
+                    },
+                    "-994": {
+                      "label": "N/A: no campus visit"
+                    },
+                    "-999": {
+                      "label": "N/A: campus visit, no survey"
+                    }
+                  },
+                  "groupsetting": {
+                    "inuse": false
+                  },
+                  "isleaf": true
                 },
-                "isleaf": false
-              },
-              {
-                "id": "AHEI_ALCDRKS",
-                "name": "AHEI-2010 Alcoholic drinks score",
-                "parent_id": "ffq",
-                "type": "float",
-                "values": {
-                  "-997": {
-                    "label": "Not calculable",
-                    "uncomputable": true
+                {
+                  "id": "ambio",
+                  "name": "Alternative therapy: biofeedback",
+                  "parent_id": "alt_tx",
+                  "type": "categorical",
+                  "values": {
+                    "1": {
+                      "label": "Yes"
+                    },
+                    "2": {
+                      "label": "No"
+                    },
+                    "3": {
+                      "label": "Not sure"
+                    },
+                    "-997": {
+                      "label": "No response"
+                    },
+                    "-994": {
+                      "label": "N/A: no campus visit"
+                    },
+                    "-999": {
+                      "label": "N/A: campus visit, no survey"
+                    }
                   },
-                  "-994": {
-                    "label": "N/A: no campus visit",
-                    "uncomputable": true
+                  "groupsetting": {
+                    "inuse": false
                   },
-                  "-995": {
-                    "label": "N/A: pediatric patient",
-                    "uncomputable": true
-                  },
-                  "-999": {
-                    "label": "N/A: campus visit, no survey",
-                    "uncomputable": true
-                  }
+                  "isleaf": true
                 },
-                "isleaf": true
-              },
-              {
-                "id": "DT_CYSTI",
-                "name": "Cystine (S-containing), mg",
-                "parent_id": "ffq",
-                "type": "float",
-                "values": {
-                  "-997": {
-                    "label": "Not calculable",
-                    "uncomputable": true
+                {
+                  "id": "ffq",
+                  "name": "Food Frequency Questionnaire",
+                  "parent_id": "self_behave_outcome",
+                  "type": "categorical",
+                  "values": {
+                    "0": {
+                      "label": "No"
+                    },
+                    "1": {
+                      "label": "Yes"
+                    },
+                    "-994": {
+                      "label": "N/A: no campus visit"
+                    }
                   },
-                  "-994": {
-                    "label": "N/A: no campus visit",
-                    "uncomputable": true
+                  "groupsetting": {
+                    "inuse": false
                   },
-                  "-995": {
-                    "label": "N/A: pediatric patient",
-                    "uncomputable": true
-                  },
-                  "-999": {
-                    "label": "N/A: campus visit, no survey",
-                    "uncomputable": true
-                  }
+                  "isleaf": false
                 },
-                "isleaf": true
-              }
-            ]
+                {
+                  "id": "AHEI_ALCDRKS",
+                  "name": "AHEI-2010 Alcoholic drinks score",
+                  "parent_id": "ffq",
+                  "type": "float",
+                  "values": {
+                    "-997": {
+                      "label": "Not calculable",
+                      "uncomputable": true
+                    },
+                    "-994": {
+                      "label": "N/A: no campus visit",
+                      "uncomputable": true
+                    },
+                    "-995": {
+                      "label": "N/A: pediatric patient",
+                      "uncomputable": true
+                    },
+                    "-999": {
+                      "label": "N/A: campus visit, no survey",
+                      "uncomputable": true
+                    }
+                  },
+                  "isleaf": true
+                },
+                {
+                  "id": "DT_CYSTI",
+                  "name": "Cystine (S-containing), mg",
+                  "parent_id": "ffq",
+                  "type": "float",
+                  "values": {
+                    "-997": {
+                      "label": "Not calculable",
+                      "uncomputable": true
+                    },
+                    "-994": {
+                      "label": "N/A: no campus visit",
+                      "uncomputable": true
+                    },
+                    "-995": {
+                      "label": "N/A: pediatric patient",
+                      "uncomputable": true
+                    },
+                    "-999": {
+                      "label": "N/A: campus visit, no survey",
+                      "uncomputable": true
+                    }
+                  },
+                  "isleaf": true
+                }
+              ]
+            }
           }
         }
       }
