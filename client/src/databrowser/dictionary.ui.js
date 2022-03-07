@@ -14,16 +14,12 @@ init_dictionaryUI()
 
 ------ Internal ------ 
 UI elements:
-	1. makeDataEntryTabs()
+	- infoSection()
+	- makeDataDictionaryTabs()
 		a. makeTextEntryFilePathInput()
 		b. makeFileUpload()
 		c. makeCopyPasteInput()
-	2. submitButton()
-	3. infoSection()
-Data parsing:
-	1. parseTabDelimitedData()
-Phenotree parsing:
-	1. parseConfig()
+	- submitButton()
 
 obj:{ data:[ {terms} ] }
 
@@ -48,14 +44,15 @@ export function init_dictionaryUI(holder, debugmode) {
 
 	const obj = {}
 
+	//Information section for user with documentation and example
 	infoSection(wrapper)
 
 	//Data dictionary section
 	makeSectionHeader(wrapper, 'Data Dictionary')
 	const tabs_div = wrapper.append('div').style('margin-left', '2vw')
-	makeDataEntryTabs(holder, tabs_div, obj)
+	makeDataDictionaryTabs(holder, tabs_div, obj)
 
-	//Submit button and information section
+	//Submit button
 	submitButton(wrapper, obj, holder)
 
 	//Remove after testing
@@ -71,25 +68,23 @@ export function init_dictionaryUI(holder, debugmode) {
 // 		.on('click', () => {
 // 			Object.keys(obj).forEach(key => delete obj[key])
 // 	})
-
 // }
 
 function infoSection(div) {
-	// .style('grid-column', 'span 2')
 	div
 		.append('div')
 		.style('margin', '10px')
-		.style('opacity', '0.65').html(`<p>Information Section</p>
-				<ul>
-                <li>
-                    TODO: 1) Fill out documentation 2) example file 3) Example?
-                </li>
+		.style('opacity', '0.65').html(`
+			<ul>
                 <li>
                     Please see the <a href="https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit" target="_blank">documentation</a> for more information.
                 </li>
+				<li>
+					Download an example data dictionary and phenotree <a href="https://pecan.stjude.cloud/static/proteinpaint_demo/databrowser/dictionaryDemoData.tar.gz" target="_self" "download>here</a>.
+				</li>
             </ul>`)
 }
-
+//Use function more as UI exapands
 function makeSectionHeader(div, text) {
 	const header = uiutils.makePrompt(div, text)
 	header
@@ -103,47 +98,18 @@ function makeSectionHeader(div, text) {
 		.style('opacity', '0.4')
 }
 
-function makeDataEntryTabs(holder, tabs_div, obj) {
+function makeDataDictionaryTabs(holder, tabs_div, obj) {
+	// Creates the horizontal top tabs and callbacks for the data dictionary section
+	// Rendering code and callback to the same parseDictionary().
+	// All data parsed in client and returned to obj.data
 	const tabs = [
 		{
-			label: 'File Path',
-			callback: async div => {
-				if (!tabs[0].rendered) {
-					div.style('border', 'none').style('display', 'block')
-					uiutils.makePrompt(div, 'URL')
-					makeTextEntryFilePathInput(holder, div, obj)
-					// div.append('div').html(`<p style="opacity:0.65;">Provide either a URL filepath or upload a file.</p>`)
-					// const files_div = div
-					// 	.append('div')
-					// 	.style('border', 'none')
-					// 	.style('display', 'grid')
-					// 	.style('grid-template-columns', '100px auto')
-					// 	.style('grid-template-rows', 'repeat(1, auto)')
-					// 	.style('gap', '5px')
-					// 	.style('place-items', 'center left')
-					// 	.style('margin-left', '15px')
-					// appear(div)
-					// uiutils.makePrompt(files_div, 'URL')
-					// makeTextEntryFilePathInput(holder, files_div, obj)
-					// files_div.append('div')
-					// 	.style('margin', '5px 0px 5px 35px')
-					// 	.style('opacity', '0.65')
-					// 	.style('grid-column', 'span 2')
-					// 	.style('font-style', 'oblique')
-					// 	.text('or')
-					// uiutils.makePrompt(files_div, 'Upload')
-					// makeFileUpload(holder, files_div, obj)
-					tabs[0].rendered = true
-				}
-			}
-		},
-		{
-			label: 'Upload File',
+			label: 'Select File',
 			callback: async div => {
 				if (!tabs[1].rendered) {
 					div.style('border', 'none').style('display', 'block')
 					appear(div)
-					// uiutils.makePrompt(div, 'Upload')
+					div.append('div').html(`<p style="margin-left: 10px; opacity: 0.65;">Select a file from your computer.</p>`)
 					makeFileUpload(holder, div, obj)
 					tabs[1].rendered = true
 				}
@@ -154,12 +120,27 @@ function makeDataEntryTabs(holder, tabs_div, obj) {
 			callback: async div => {
 				if (!tabs[2].rendered) {
 					div.style('border', 'none').style('display', 'block')
+					appear(div)
 					div
 						.append('div')
-						.html(`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary in a tab delimited format.</p>`)
-					appear(div)
+						.html(
+							`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary or phenotree in a tab delimited format.</p>`
+						)
 					makeCopyPasteInput(holder, div, obj)
 					tabs[2].rendered = true
+				}
+			}
+		},
+		{
+			label: 'File Path',
+			callback: async div => {
+				if (!tabs[0].rendered) {
+					div.style('border', 'none').style('display', 'block')
+					appear(div)
+					div.append('div').html(`<p style="margin-left: 10px; opacity: 0.65;">Provide a URL file path.</p>`)
+					uiutils.makePrompt(div, 'URL')
+					makeTextEntryFilePathInput(holder, div, obj)
+					tabs[0].rendered = true
 				}
 			}
 		}
@@ -168,6 +149,7 @@ function makeDataEntryTabs(holder, tabs_div, obj) {
 }
 
 function makeTextEntryFilePathInput(holder, div, obj) {
+	// Renders the file path input div and callback.
 	const filepath_div = div.append('div').style('display', 'inline-block')
 	const filepath = uiutils
 		.makeTextInput(filepath_div)
@@ -187,6 +169,7 @@ function makeTextEntryFilePathInput(holder, div, obj) {
 }
 
 function makeFileUpload(holder, div, obj) {
+	// Renders the select file div and callback.
 	const upload_div = div.append('div').style('display', 'inline-block')
 	const upload = uiutils.makeFileUpload(upload_div)
 	upload.on('change', () => {
@@ -200,6 +183,7 @@ function makeFileUpload(holder, div, obj) {
 }
 
 function makeCopyPasteInput(holder, div, obj) {
+	// Renders the copy/paste div and callback.
 	const paste_div = div.append('div').style('display', 'block')
 	const paste = uiutils
 		.makeTextAreaInput(paste_div, '', 10, 70)
