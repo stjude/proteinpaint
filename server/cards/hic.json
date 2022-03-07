@@ -2,6 +2,7 @@
     "ppcalls": [
         {
             "label": "Hi-C",
+            "message": "New <span style='font-family: Courier; opacity: 0.65;'>normalizationmethod</span> to show normalization by VC, VC_SQRT, or KR by default.",
             "urlparam": "?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic&&hictknorm=VC",
             "runargs": {
                 "parseurl": true,
