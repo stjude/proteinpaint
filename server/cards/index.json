@@ -131,9 +131,9 @@
             "searchterms": []
         },
         {
-            "name": "Track Independent Arguments",
+            "name": "Additional Track Features",
             "app": "Genome Browser",
-            "blurb": "ProteinPaint arguments available for any track",
+            "blurb": "ProteinPaint arguments applicable to any track",
             "new_expire": "2022-04-07",
             "image": "https://pecan.stjude.cloud/static/examples/images/code-square.png",
             "sandboxjson": "independent",

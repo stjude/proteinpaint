@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-            "message": "<p style='line-height: 1.5em;'>In this example, <em>two</em> expression rank tracks with the same data are shown: rank and FPKM. The first track displays the expression rank on a scale of 0 - 100%. The second displays the FPKM values from 0 - 9,775 (i.e. zero to the highest rounded value). Hover over the grey bars to see the annotation for each gene.<br><br>To change between expression rank and FPKM: <ul><li>Click on <a style='color:gray; text-decoration: none;'>CONFIG</a> on the right-hand side of the track</li><li>Change the radio button to either 'FPKM' or 'Rank of a group of samples.'</li></ul></p>",
+            "message": "<p style='line-height: 1.5em;'>In this example, <em>three</em> expression rank tracks are shown: rank, FPKM, and TPM. The first track displays the expression rank on a scale of 0 - 100%. The second FPKM track and third TPM track display values on a scale from zero to the highest rounded value, 0 - 9,775 and 0 - 3.9, respectively. Hover over the grey bars to see the annotation for each gene.<br><br>To change between expression rank and FPKM/TPM: <ul><li>Click on <a style='color:gray; text-decoration: none;'>CONFIG</a> on the right-hand side of the track</li><li>Change the radio button to either 'FPKM'/'TPM' or 'Rank of a group of samples.'</li></ul></p>",
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -23,10 +23,20 @@
                         "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",
                         "name": "TCGA-GS-A9TQ gene FPKM",
                         "sample": "TCGA-GS-A9TQ",
-                        "barheight": 100,
-                        "toppad": 20,
                         "showrank": false,
-                        "gecfg": {"datatype":"FPKM"}
+                        "gecfg": {"datatype":"FPKM"},
+                        "barheight": 100,
+                        "toppad": 20
+                    },
+                    {
+                        "type": "mdsexpressionrank",
+                        "file": "proteinpaint_demo/hg38/exprank/cardiomyocyte.fpkm.tpm.gz",
+                        "name": "Cardiomyocyte RNAseq TPM",
+                        "sample": "cardiomyocyte-avg",
+                        "showrank": false,
+                        "gecfg": {"datatype": "TPM"},
+                        "barheight": 100,
+                        "toppad": 20
                     }
                 ]
             },
@@ -35,7 +45,7 @@
             }
         }
     ],
-    "update_message": "Please see the additional track in the example for how to display the expression rank or FPKM scale by default.",
+    "update_message": "Please see the additional track in the example for how to display the expression rank, FPKM, or TPM scale by default.",
     "buttons": [
         {
             "name": "Documentation",

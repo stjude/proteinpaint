@@ -4,7 +4,6 @@
             "label": "A sample splice junction",
             "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionDemoData.tar.gz",
             "urlparam": "?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz",
-            "message": "In this example, splice junctions for one sample are shown. <br><br> Please note the <span style='font-family: Courier; opacity: 0.65;'>list_description</span> argument is available for all tracks. Please see the <b>Track Independent Arguments</b> card for more information.",
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -15,10 +14,7 @@
                 "tracks": [{
                     "type": "junction",
                     "file": "proteinpaint_demo/hg19/junction/file.gz",
-                    "name": "RNA splice junction demo",
-                    "list_description":[
-                        {"k":"Custom Label 1","v":"Information about this track"}, 
-                        {"k":"Custom Label 2","v":"Information about this track"}]
+                    "name": "RNA splice junction demo"
                 }]
             },
             "testSpec": {
