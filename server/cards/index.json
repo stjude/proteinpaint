@@ -190,7 +190,7 @@
         {
             "name": "Data Browser",
             "app": "Apps",
-            "blurb": "Custom vocabulary",
+            "blurb": "Browse data from a custom cohort",
             "image": "https://pecan.stjude.cloud/static/examples/images/databrowser-square.png",
             "isbeta": true,
             "sandboxjson": "databrowser",
