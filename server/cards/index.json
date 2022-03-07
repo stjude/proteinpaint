@@ -47,6 +47,7 @@
             "blurb": "Against all samples from a cohort",
             "image": "https://pecan.stjude.cloud/static/examples/images/exprank-square.png",
             "sandboxjson": "exprank",
+            "update_expire": "2022-04-05",
             "searchterms": []
         },
         {
@@ -54,6 +55,7 @@
             "app": "Genome Browser",
             "blurb": "Chromatin interaction at a locus",
             "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
+            "update_expire": "2022-04-05",
             "sandboxjson": "hic",
             "searchterms": ["hic", "hicstraw", "chromatin interaction", "conformation"]
         },
@@ -126,6 +128,15 @@
             "blurb": "Deep sequencing",
             "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
             "sandboxjson": "bampile",
+            "searchterms": []
+        },
+        {
+            "name": "Additional Track Features",
+            "app": "Genome Browser",
+            "blurb": "ProteinPaint arguments applicable to any track",
+            "new_expire": "2022-04-07",
+            "image": "https://pecan.stjude.cloud/static/examples/images/code-square.png",
+            "sandboxjson": "features",
             "searchterms": []
         },
         {

@@ -14,8 +14,7 @@
                 "tracks": [{
                     "type": "junction",
                     "file": "proteinpaint_demo/hg19/junction/file.gz",
-                    "name": "RNA splice junction demo",
-                    "list_description":[{"k":"Test 1","v":"Description 1"}, {"k":"Test 2","v":"Description 2"}]
+                    "name": "RNA splice junction demo"
                 }]
             },
             "testSpec": {
