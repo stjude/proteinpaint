@@ -188,13 +188,12 @@
             "searchterms": ["tsne", "gene expression", "multi-gene heatmap", "violin plot", "box plot"]
         },
         {
-            "name": "Cohort Dictionary",
+            "name": "Data Browser",
             "app": "Apps",
             "blurb": "Custom vocabulary",
-            "image": "",
-            "hidden": true, 
+            "image": "https://pecan.stjude.cloud/static/examples/images/databrowser-square.png",
             "isbeta": true,
-            "sandboxjson": "dictionary",
+            "sandboxjson": "databrowser",
             "searchterms": ["clinical", "dictionary"]
         }
     ],
