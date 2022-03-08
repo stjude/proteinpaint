@@ -61,76 +61,57 @@
             }
         },
         {
-            "label": "Custom mutations",
-            "runargs": { 
-                "parseurl":true,
-                "noheader": true,
-                "nobox":1,
-                "genome": "hg19",
-                "gene": "MYC",
-                "mset":[{
-                    "name":"Custom Mutation Plot Demo",
-                    "mlst":[
-                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750685,"mname":"P75S","class":"M","dt":1},
-                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750680,"mname":"T73I","class":"M","dt":1},
-                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1},
-                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750911,"mname":"A Custom Label","class":"F","dt":1}
-                    ]
-                }]
-            },
-            "buttons":[
-                {
-                    "name": "Documentation",
-                    "link": "https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit#heading=h.gj4rj4njhaz8"
-                }
-            ],
-            "testSpec": {
-                "expected": { "circle": 1 }
-            }
-        },
-        {
-            "label": "Custom Mutation Classes",
-            "message": "To customize classes, use class codes <a href='https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit#heading=h.gj4rj4njhaz8' target='_blank'>defined here</a> and the <span style='font-family:monospace; font-size:1.25em; opacity: 0.6;'> mclassOverride</span> method.",
-            "runargs": { 
-                "parseurl":true,
-                "noheader": true,
-                "nobox":1,
-                "genome": "hg19",
-                "gene": "MYC",
-                "mset":[{
-                    "name":"Custom Mutation Classes Plot Demo",
-                    "mlst":[
-                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750680,"mname":"Demo Class A","class":"M","dt":1},
-                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750685,"mname":"Demo Class B","class":"I","dt":1},
-                        {"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750911,"mname":"Demo Class C","class":"F","dt":1}
-                    ]
-                }],
+            "label": "Custom Data",
+            "message": "Create custom datasets with the mds3 track. In this example, custom data points with a specified value and custom mutatiion classes are shown.",
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "gene": "NM_001203252",
+                "tracks":[
+                    {
+                        "type": "mds3",
+                        "name":"mds3 Demo",
+                        "custom_variants": [
+                            {"gene":"MAPT","isoform":"NM_001203252","chr":"chr17","pos":45962452,"mname":"Data Point 1","class":"M","dt":1, "__value": 1.32},
+                            {"gene":"MAPT","isoform":"NM_001203252","chr":"chr17","pos":45971861,"mname":"Data Point 2","class":"I","dt":1, "__value": -0.06},
+                            {"gene":"MAPT","isoform":"NM_001203252","chr":"chr17","pos":45981900,"mname":"Data Point 3","class":"F","dt":1, "__value": 1.43},
+                            {"gene":"MAPT","isoform":"NM_001203252","chr":"chr17","pos":45995000,"mname":"Data Point 4","class":"I","dt":1, "__value": 2.02},
+                            {"gene":"MAPT","isoform":"NM_001203252","chr":"chr17","pos":46004043,"mname":"Data Point 5","class":"I","dt":1, "__value": 0.08},
+                            {"gene":"MAPT","isoform":"NM_001203252","chr":"chr17","pos":46024052,"mname":"Data Point 6","class":"M","dt":1, "__value": 1.72}
+
+                        ],
+                        "numericmode":{
+                            "inuse":true,
+                            "type":"__value",
+                            "label":"Custom Label",
+                            "valueName":"My measurement"
+                        }
+                    }
+                ],
                 "mclassOverride": {
                     "className": "Custom Classes",
                     "classes":{
                         "M": {
                             "label": "Custom Class A",
-                            "color": "#2874A6"
+                            "color": "#2874A6",
+                            "desc": "description for Custom Class A"
                         },
                         "I": {
                             "label": "Custom Class B",
-                            "color": "#E74C3C"
+                            "color": "#E74C3C",
+                            "desc": "description for Custom Class B"
                         }, 
                         "F": {
                             "label": "Custom Class C",
-                            "color": "#00A86B"
+                            "color": "#00A86B",
+                            "desc": "description for Custom Class C"
                         }
                     }
                 }
             },
-            "buttons":[
-                {
-                    "name": "Documentation",
-                    "link": "https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit#heading=h.q16z7ovymukw"
-                }
-            ],
             "testSpec": {
-                "expected": { "circle": 1 }
+                "expected": { "circle": 10 }
             }
         }
     ],
