@@ -33,8 +33,11 @@ class Matrix {
 			holder,
 			svg,
 			mainG,
+			sampleGrpLabelG: mainG.append('g').attr('class', 'sjpp-matrix-series-group-label-g'),
+			termGrpLabelG: mainG.append('g').attr('class', 'sjpp-matrix-term-group-label-g'),
 			cluster: mainG.append('g').attr('class', 'sjpp-matrix-cluster-g'),
 			seriesesG: mainG.append('g').attr('class', 'sjpp-matrix-serieses-g'),
+			sampleLabelG: mainG.append('g').attr('class', 'sjpp-matrix-series-label-g'),
 			termLabelG: mainG
 				.append('g')
 				.attr('class', 'sjpp-matrix-term-label-g')
@@ -46,7 +49,7 @@ class Matrix {
 		if (this.dom.header) this.dom.header.html('Sample Matrix')
 
 		this.setControls(appState)
-		this.clusterRenderer = new MatrixCluster({ holder: this.dom.cluster, app: this.app })
+		this.clusterRenderer = new MatrixCluster({ holder: this.dom.cluster, app: this.app, parent: this })
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
 			settings: {
 				legendOrientation: 'grid',
@@ -79,7 +82,7 @@ class Matrix {
 						id: opts.id,
 						edits: [
 							{
-								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.tIndex],
+								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.index],
 								value: tw
 							}
 						]
@@ -91,7 +94,7 @@ class Matrix {
 					const termgroups = JSON.parse(JSON.stringify(this.config.termgroups))
 					const grp = termgroups[t.grpIndex]
 					// remove this element
-					grp.lst.splice(t.tIndex, 1)
+					grp.lst.splice(t.index, 1)
 					if (grp.lst.length) {
 						this.app.dispatch({
 							type: 'plot_nestedEdits',
@@ -163,19 +166,20 @@ class Matrix {
 			// process the data
 			this.setSampleGroupsOrder(this.currData)
 			this.setTermOrder(this.currData)
-			this.dimensions = this.getDimensions()
+			this.setLayout()
 			this.serieses = this.getSerieses(this.currData)
 			// render the data
 			this.render()
 
+			const [xGrps, yGrps] = !this.settings.matrix.transpose ? ['sampleGrps', 'termGrps'] : ['termGrps', 'sampleGrps']
 			this.clusterRenderer.main({
 				settings: this.settings.matrix,
-				xGrps: this.layout.colgrps,
-				yGrps: this.layout.rowgrps,
+				xGrps: this[xGrps],
+				yGrps: this[yGrps],
 				dimensions: this.dimensions
 			})
 
-			await this.updateSvgDimensions(prevTranspose)
+			await this.adjustSvgDimensions(prevTranspose)
 			this.legendRenderer(this.legendData)
 		} catch (e) {
 			throw e
@@ -246,72 +250,110 @@ class Matrix {
 		let total = 0
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
 			grp.lst.sort(sampleSorter)
-			for (const [sIndex, row] of grp.lst.entries()) {
-				this.sampleOrder.push({ grp, grpIndex, row, sIndex, prevGrpCount: total, index: total + sIndex })
+			for (const [index, row] of grp.lst.entries()) {
+				this.sampleOrder.push({ grp, grpIndex, row, index, prevGrpTotalIndex: total, totalIndex: total + index })
 			}
 			total += grp.lst.length
 		}
 	}
 
 	setTermOrder(data) {
+		this.termGrp = this.config.termgroups
 		this.termOrder = []
 		let total = 0
 		for (const [grpIndex, grp] of this.config.termgroups.entries()) {
-			for (const [tIndex, tw] of grp.lst.entries()) {
+			for (const [index, tw] of grp.lst.entries()) {
 				const ref = data.refs.byTermId[tw.$id] || {}
-				this.termOrder.push({ grp, grpIndex, tw, tIndex, prevGrpCount: total, index: total + tIndex, ref })
+				this.termOrder.push({ grp, grpIndex, tw, index, prevGrpTotalIndex: total, totalIndex: total + index, ref })
 			}
 			total += grp.lst.length
 		}
 	}
 
-	getDimensions() {
+	setLayout() {
 		const s = this.settings.matrix
+		const [col, row] = !s.transpose ? ['sample', 'term'] : ['term', 'sample']
+		const [_t_, _b_] = s.collabelpos == 'top' ? ['', 'Grp'] : ['Grp', '']
+		const [_l_, _r_] = s.rowlabelpos == 'left' ? ['', 'Grp'] : ['Grp', '']
+		const top = col + _t_
+		const btm = col + _b_
+		const left = row + _l_
+		const right = row + _r_
 
-		if (!s.transpose) {
-			// sample as columns
-			this.layout = {
-				colgrps: this.sampleGroups,
-				colorder: this.sampleOrder,
-				colOffset: s.sampleLabelOffset,
-				rowgrps: this.config.termgroups,
-				roworder: this.termOrder,
-				rowOffset: s.termLabelOffset
-			}
-		} else {
-			// sample as rows
-			this.layout = {
-				colgrps: this.config.termgroups,
-				colorder: this.termOrder,
-				colOffset: s.termLabelOffset,
-				rowgrps: this.sampleGroups,
-				roworder: this.sampleOrder,
-				rowOffset: s.sampleLabelOffset
+		// TODO: should not need aliases, rename class properties to simplify
+		this.samples = this.sampleOrder
+		this.sampleGrps = this.sampleOrder.filter(s => s.index === 0)
+		this.terms = this.termOrder
+		this.termGrps = this.termOrder.filter(t => t.index === 0)
+
+		const layout = {}
+		const sides = { top, btm, left, right }
+		for (const direction in sides) {
+			const d = sides[direction]
+			const Direction = direction[0].toUpperCase() + direction.slice(1)
+			layout[direction] = {
+				data: this[`${d}s`],
+				offset: s[`${d}LabelOffset`],
+				box: this.dom[`${d}LabelG`],
+				key: this[`${d}Key`],
+				label: this[`${d}Label`],
+				render: this[`render${Direction}Label`]
 			}
 		}
 
+		const yOffset = layout.top.offset + s.margin.top
+		const xOffset = layout.left.offset + s.margin.left
 		const dx = s.colw + s.colspace
-		const nx = this.layout.colorder.length
-		const xOffset = (s.rowlabelpos == 'left' ? this.layout.rowOffset : 0) + s.margin.left
+		const nx = this[`${col}s`].length
 		const dy = s.rowh + s.rowspace
-		const ny = this.layout.roworder.length
-		const yOffset = (s.collabelpos == 'top' ? this.layout.colOffset : 0) + s.margin.top
+		const ny = this[`${row}s`].length
+		const mainw = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
+		const mainh = ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace
 
-		return {
+		layout.top.attr = {
+			boxTransform: `translate(${xOffset}, ${yOffset - s.collabelgap})`,
+			labelTransform: 'rotate(-90)',
+			labelAnchor: 'start',
+			labelGY: 0,
+			labelGTransform: this[`col${_t_}LabelGTransform`],
+			fontSize: s.colw + s.colspace - (_t_ == 'Grp' ? 0 : 4)
+		}
+
+		layout.btm.attr = {
+			boxTransform: `translate(${xOffset}, ${yOffset + mainh + s.collabelgap})`,
+			labelTransform: 'rotate(-90)',
+			labelAnchor: 'end',
+			labelGY: 0,
+			labelGTransform: this[`col${_b_}LabelGTransform`],
+			fontSize: s.colw + s.colspace - (_b_ == 'Grp' ? 0 : 4)
+		}
+
+		layout.left.attr = {
+			boxTransform: `translate(${xOffset - s.rowlabelgap}, ${yOffset})`,
+			labelTransform: '',
+			labelAnchor: 'end',
+			labelGX: 0,
+			labelGTransform: this[`row${_l_}LabelGTransform`],
+			fontSize: s.rowh + s.rowspace - (_l_ == 'Grp' ? 2 : 4)
+		}
+
+		layout.right.attr = {
+			boxTransform: `translate(${xOffset + mainw + s.rowlabelgap}, ${yOffset})`,
+			labelTransform: '',
+			labelAnchor: 'start',
+			labelGX: 0,
+			labelGTransform: this[`row${_r_}LabelGTransform`],
+			fontSize: s.rowh + s.rowspace - (_r_ == 'Grp' ? 2 : 4)
+		}
+
+		this.layout = layout
+		this.dimensions = {
 			dx,
 			dy,
 			xOffset,
 			yOffset,
-			mainw: nx * dx + this.layout.colgrps.length * s.colgspace,
-			mainh: ny * dy + this.layout.rowgrps.length * s.rowgspace,
-			xLabelGap:
-				s.rowlabelpos == 'left'
-					? { row: -s.rowlabelgap, grp: s.rowlabelgap }
-					: { row: s.rowlabelgap, grp: -s.rowlabelgap },
-			yLabelGap:
-				s.collabelpos == 'top'
-					? { col: -s.collabelgap, grp: s.collabelgap }
-					: { col: s.collabelgap, grp: -s.collabelgap }
+			mainw,
+			mainh
 		}
 	}
 
@@ -323,12 +365,12 @@ class Matrix {
 		const dy = s.rowh + s.rowspace
 		const keysByTermId = {}
 
-		for (const { index, grpIndex, row } of this.sampleOrder) {
+		for (const { totalIndex, grpIndex, row } of this.sampleOrder) {
 			const series = {
 				row,
 				cells: [],
-				x: !s.transpose ? index * dx + grpIndex * s.colgspace : 0,
-				y: !s.transpose ? 0 : index * dy + grpIndex * s.rowgspace
+				x: !s.transpose ? totalIndex * dx + grpIndex * s.colgspace : 0,
+				y: !s.transpose ? 0 : totalIndex * dy + grpIndex * s.rowgspace
 			}
 
 			for (const t of this.termOrder) {
@@ -337,7 +379,6 @@ class Matrix {
 				const anno = row[$id]
 				if (!anno) continue
 				const termid = 'id' in t.tw.term ? t.tw.term : t.tw.term.name
-				const tIndex = t.index
 				const key = anno.key
 				const values = t.tw.term.values || {}
 				const label = 'label' in anno ? anno.label : key in values && values[key].label ? values[key].label : key
@@ -352,8 +393,8 @@ class Matrix {
 						$id,
 						key,
 						label,
-						x: !s.transpose ? 0 : tIndex * dx + t.grpIndex * s.colgspace,
-						y: !s.transpose ? tIndex * dy + t.grpIndex * s.rowgspace : 0,
+						x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace,
+						y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace : 0,
 						order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
 					})
 				} else {
@@ -371,8 +412,8 @@ class Matrix {
 							key,
 							label: value.class ? mclass[value.class].label : '',
 							value,
-							x: !s.transpose ? 0 : tIndex * dx + t.grpIndex * s.colgspace + width * i,
-							y: !s.transpose ? tIndex * dy + t.grpIndex * s.rowgspace + height * i : 0,
+							x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + width * i,
+							y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + height * i : 0,
 							height,
 							width,
 							fill: mclass[value.class].color,
@@ -396,10 +437,36 @@ class Matrix {
 		return serieses
 	}
 
-	setSorters() {
-		this.sorters = {
-			name: (a, b) => (a.sample < b.sample ? -1 : 1)
-		}
+	sampleKey(series) {
+		return series.row.sample
+	}
+
+	sampleLabel(series) {
+		return series.row.sample
+	}
+
+	sampleGrpKey(s) {
+		return s.grp.name
+	}
+
+	sampleGrpLabel(s) {
+		return s.grp.name
+	}
+
+	termKey(term) {
+		return term.$id
+	}
+
+	termLabel(t) {
+		return t.tw.term.name
+	}
+
+	termGrpKey(t) {
+		return t.grp.name
+	}
+
+	termGrpLabel(t) {
+		return t.grp.name
 	}
 
 	setLegendData(keysByTermId, refs) {
@@ -441,15 +508,20 @@ export const componentInit = matrixInit
 function setRenderers(self) {
 	self.render = function() {
 		const s = self.settings.matrix
+		const l = self.layout
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
+		self.renderSerieses(s, l, d, duration)
+		self.renderLabels(s, l, d, duration)
+	}
 
+	self.renderSerieses = function(s, l, d, duration) {
 		self.dom.seriesesG
 			.transition()
 			.duration(duration)
 			.attr('transform', `translate(${d.xOffset},${d.yOffset})`)
 
-		const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, d => d.row.sample)
+		const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, series => series.row.sample)
 
 		sg.exit().remove()
 		sg.each(self.renderSeries)
@@ -458,34 +530,6 @@ function setRenderers(self) {
 			.attr('class', 'sjpp-mass-series-g')
 			.style('opacity', 0.001)
 			.each(self.renderSeries)
-
-		if (!s.transpose) {
-			self.dom.termLabelG
-				.transition()
-				.duration(duration)
-				.attr(
-					'transform',
-					s.rowlabelpos == 'left' ? `translate(${d.xOffset},${d.yOffset})` : `translate(${d.mainw},${d.yOffset})`
-				)
-		} else {
-			self.dom.termLabelG
-				.transition()
-				.duration(duration)
-				.attr(
-					'transform',
-					s.collabelpos == 'top'
-						? `translate(${d.xOffset},${d.yOffset})`
-						: `translate(${d.xOffset - d.xLabelGap.row},${d.mainh})`
-				)
-		}
-
-		const termLabels = self.dom.termLabelG.selectAll('g').data(this.termOrder, t => t.grp.id + ';;' + t.tw.$id)
-		termLabels.exit().remove()
-		termLabels.each(self.renderTermLabels)
-		termLabels
-			.enter()
-			.append('g')
-			.each(self.renderTermLabels)
 	}
 
 	self.renderSeries = function(series) {
@@ -499,25 +543,16 @@ function setRenderers(self) {
 			.attr('transform', `translate(${series.x},${series.y})`)
 			.style('opacity', 1)
 
-		const texts = g.selectAll('.sjpp-matrix-series-label-g').data([series], series => series.row.sample)
-		texts.exit().remove()
-		texts.each(self.renderSeriesLabel)
-		texts
-			.enter()
-			.append('g')
-			.attr('class', 'sjpp-matrix-series-label-g')
-			.each(self.renderSeriesLabel)
-
-		const rects = g.selectAll('rect').data(series.cells, (cell, i) => cell.tw.$id)
+		const rects = g.selectAll('rect').data(series.cells, (cell, i) => cell.sample + ';;' + cell.tw.$id)
 		rects.exit().remove()
-		rects.each(self.renderRect)
+		rects.each(self.renderCell)
 		rects
 			.enter()
 			.append('rect')
-			.each(self.renderRect)
+			.each(self.renderCell)
 	}
 
-	self.renderRect = function(cell) {
+	self.renderCell = function(cell) {
 		if (!cell.fill)
 			cell.fill = cell.$id in self.colorScaleByTermId ? self.colorScaleByTermId[cell.$id](cell.key) : getRectFill(cell)
 		const s = self.settings.matrix
@@ -533,68 +568,71 @@ function setRenderers(self) {
 			.attr('fill', cell.fill)
 	}
 
-	self.renderSeriesLabel = function(series) {
-		const s = self.settings.matrix
-		const d = self.dimensions
-		const g = select(this)
-		const duration = g.attr('transform') ? s.duration : 0
-		const xOffset = s.rowlabelpos == 'left' ? d.xLabelGap.row : d.mainw
-		const yOffset = s.collabelpos == 'top' ? d.yLabelGap.col : d.mainh
+	self.renderLabels = function(s, l, d, duration) {
+		for (const direction of ['top', 'btm', 'left', 'right']) {
+			const side = l[direction]
+			side.box
+				.transition()
+				.duration(duration)
+				.attr('transform', side.attr.boxTransform)
 
-		g.transition()
-			.duration(duration)
-			.attr('transform', !s.transpose ? `translate(${0.7 * s.colw},${yOffset})` : `translate(${xOffset},${s.rowh - 2})`)
+			const labels = side.box.selectAll('g').data(side.data, side.key)
+			labels.exit().remove()
+			labels.each(renderLabel)
+			labels
+				.enter()
+				.append('g')
+				.each(renderLabel)
 
-		if (!g.select('text').size()) g.append('text')
-		const text = g.select('text')
-		const fontSize = !s.transpose ? s.colw + s.colspace - 4 : s.rowh + s.rowspace - 4
-		const textAnchor = !s.transpose
-			? s.collabelpos == 'top'
-				? 'start'
-				: 'end'
-			: s.rowlabelpos == 'left'
-			? 'end'
-			: 'start'
-		text
-			.attr('fill', '#000')
-			.transition()
-			.duration(duration)
-			//.attr('opacity', fontsize < 6 ? 0 : )
-			.attr('font-size', fontSize)
-			.attr('text-anchor', textAnchor)
-			.attr('transform', !s.transpose ? `rotate(-90)` : '')
-			.text(series.row.sample)
+			function renderLabel(lab) {
+				const g = select(this)
+				g.transition()
+					.duration(duration)
+					.attr('transform', side.attr.labelGTransform)
+
+				if (!g.select('text').size()) g.append('text')
+				g.select('text')
+					.attr('fill', '#000')
+					.transition()
+					.duration(duration)
+					.attr('opacity', side.attr.fontSize < 6 ? 0 : 1)
+					.attr('font-size', side.attr.fontSize)
+					.attr('text-anchor', side.attr.labelAnchor)
+					.attr('transform', side.attr.labelTransform)
+					.text(side.label)
+			}
+		}
 	}
 
-	self.renderTermLabels = function(t) {
+	self.colLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const g = select(this)
-		const duration = g.attr('transform') ? s.duration : 0
-		const tIndex = t.tIndex + t.prevGrpCount
-		const x = !s.transpose ? d.xLabelGap.row : t.grpIndex * s.colgspace + tIndex * d.dx + s.colw / 3
-		const y = !s.transpose ? t.grpIndex * s.rowgspace + tIndex * d.dy + 0.8 * s.rowh : d.yLabelGap.col
-		g.transition()
-			.duration(duration)
-			.attr('transform', `translate(${x},${y})`)
-
-		const fontSize = s.transpose ? s.colw + s.colspace - 4 : s.rowh + s.rowspace - 4
-		if (!g.select('text').size()) g.append('text').style('cursor', 'pointer')
-		g.select('text')
-			.attr('fill', '#000')
-			.transition()
-			.duration(duration)
-			//.attr('opacity', fontsize < 6 ? 0 : )
-			.attr('font-size', fontSize)
-			.attr(
-				'text-anchor',
-				(!s.transpose && s.rowlabelpos == 'left') || (s.transpose && s.collabelpos == 'bottom') ? 'end' : 'start'
-			)
-			.attr('transform', !s.transpose ? '' : `rotate(-90)`)
-			.text(t.tw.term.name)
+		const x = lab.grpIndex * s.colgspace + lab.totalIndex * d.dx + 0.8 * s.colw
+		return `translate(${x},0)`
 	}
 
-	self.updateSvgDimensions = async function(prevTranspose) {
+	self.colGrpLabelGTransform = (lab, grpIndex) => {
+		const s = self.settings.matrix
+		const d = self.dimensions
+		const x = lab.grpIndex * s.colgspace + lab.prevGrpTotalIndex * d.dx + (lab.grp.lst.length * d.dx) / 2 + 3
+		return `translate(${x},0)`
+	}
+
+	self.rowLabelGTransform = (lab, grpIndex) => {
+		const s = self.settings.matrix
+		const d = self.dimensions
+		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + 0.7 * s.rowh
+		return `translate(0,${y})`
+	}
+
+	self.rowGrpLabelGTransform = (lab, grpIndex) => {
+		const s = self.settings.matrix
+		const d = self.dimensions
+		const y = lab.grpIndex * s.rowgspace + lab.prevGrpTotalIndex * d.dy + (lab.grp.lst.length * d.dy) / 2 + 3
+		return `translate(0,${y})`
+	}
+
+	self.adjustSvgDimensions = async function(prevTranspose) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 10
@@ -603,46 +641,13 @@ function setRenderers(self) {
 		// the label rotation to end before measuring the label height and width
 		await sleep(prevTranspose == s.transpose ? duration : s.duration)
 
-		const sLabelBox = { max: 0, key: !s.transpose ? 'height' : 'width' }
-		self.dom.mainG.selectAll('.sjpp-matrix-series-label-g').each(function() {
-			const bbox = this.getBBox()
-			const measurement = bbox[sLabelBox.key]
-			if (measurement > sLabelBox.max) sLabelBox.max = measurement
-		})
+		const topBox = self.layout.top.box.node().getBBox()
+		const btmBox = self.layout.btm.box.node().getBBox()
+		const leftBox = self.layout.left.box.node().getBBox()
+		const rtBox = self.layout.right.box.node().getBBox()
 
-		const termBox = self.dom.mainG
-			.select('.sjpp-matrix-term-label-g')
-			.node()
-			.getBBox()
-
-		const colGrpLabelBox = self.dom.mainG
-			.select('.sjpp-matrix-colgrplabels')
-			.node()
-			.getBBox()
-
-		const rowGrpLabelBox = self.dom.mainG
-			.select('.sjpp-matrix-rowgrplabels')
-			.node()
-			.getBBox()
-
-		const rowLabelWidth = !s.transpose ? termBox.width : sLabelBox.max
-		const xw = s.rowlabelpos == 'left' ? rowLabelWidth : rowGrpLabelBox.width
-		d.extraWidth =
-			(s.rowlabelpos == 'left' ? rowGrpLabelBox.width : rowLabelWidth) +
-			xw +
-			s.margin.left +
-			s.margin.right +
-			s.rowlabelgap * 2
-
-		const colLabelHeight = !s.transpose ? sLabelBox.max : termBox.height
-		const yh = s.collabelpos == 'top' ? colLabelHeight : colGrpLabelBox.height // : sLabelBox.height)
-		d.extraHeight =
-			(s.collabelpos == 'top' ? colGrpLabelBox.height : colLabelHeight) +
-			yh +
-			s.margin.top +
-			s.margin.bottom +
-			s.collabelgap * 2
-
+		d.extraWidth = leftBox.width + rtBox.width + s.margin.left + s.margin.right + s.rowlabelgap * 2
+		d.extraHeight = topBox.height + btmBox.height + s.margin.top + s.margin.bottom + s.collabelgap * 2
 		d.svgw = d.mainw + d.extraWidth
 		d.svgh = d.mainh + d.extraHeight
 		self.dom.svg
@@ -651,8 +656,8 @@ function setRenderers(self) {
 			.attr('width', d.svgw)
 			.attr('height', d.svgh)
 
-		const x = xw - (s.rowlabelpos == 'left' ? self.layout.rowOffset : 0)
-		const y = yh - (s.collabelpos == 'top' ? self.layout.colOffset : 0)
+		const x = leftBox.width - self.layout.left.offset
+		const y = topBox.height - self.layout.top.offset
 		self.dom.mainG
 			.transition()
 			.duration(duration)
@@ -745,7 +750,9 @@ export async function getPlotConfig(opts, app) {
 				rowlabelgap: 5,
 				transpose: false,
 				sampleLabelOffset: 120,
+				sampleGrpLabelOffset: 120,
 				termLabelOffset: 80,
+				termGrpLabelOffset: 80,
 				duration: 250
 			}
 		}
