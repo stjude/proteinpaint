@@ -16,8 +16,8 @@ export class MatrixControls {
 			.data([
 				{ value: 'samples', label: 'Samples' },
 				{ value: 'anno', label: 'Annotations' },
-				{ value: 'cols', label: 'Column dimensions' },
-				{ value: 'rows', label: 'Row dimensions' }
+				{ value: 'cols', label: 'Column layout' },
+				{ value: 'rows', label: 'Row layout' }
 			])
 			.enter()
 			.append('button')
