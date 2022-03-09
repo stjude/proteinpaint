@@ -27,7 +27,7 @@ import urlmap from './common/urlmap'
 const gdc_genome = 'hg38'
 const variantFlankingSize = 60 // bp
 const baminfo_rows = [
-	{ title: 'Entity ID', key: 'entity_id', url: 'https://portal.gdc.cancer.gov/files/' },
+	{ title: 'Entity ID', key: 'entity_id' /*url: 'https://portal.gdc.cancer.gov/files/'*/ },
 	{ title: 'Entity Type', key: 'entity_type' },
 	{ title: 'Experimental Strategy', key: 'experimental_strategy' },
 	{ title: 'Sample Type', key: 'sample_type' },
@@ -277,12 +277,6 @@ export function bamsliceui(genomes, holder) {
 
 	function update_singlefile_table(data, gdc_id) {
 		// will update table display, and also insert element into gdc_args.bam_files[]
-		const onebam = data.file_metadata[0]
-		const file = {
-			file_id: data.is_file_uuid ? gdc_id : onebam.file_uuid,
-			track_name: onebam.entity_id, // assign track name as entity_id
-			about: []
-		}
 		baminfo_div.style('display', 'block')
 		baminfo_table
 			.style('display', 'grid')
@@ -290,6 +284,12 @@ export function bamsliceui(genomes, holder) {
 			.remove()
 		bamselection_table.style('display', 'none')
 
+		const onebam = data.file_metadata[0]
+		const file = {
+			file_id: data.is_file_uuid ? gdc_id : onebam.file_uuid,
+			track_name: onebam.entity_id, // assign track name as entity_id
+			about: []
+		}
 		gdc_args.bam_files.push(file)
 
 		for (const row of baminfo_rows) {
@@ -325,15 +325,15 @@ export function bamsliceui(genomes, holder) {
 			.style('grid-template-rows', 'repeat(' + files.length + ', 20px)')
 			.append('div')
 			.style('padding', '3px 10px')
-			.style('font-weight', 'bold')
-			.text('Bam file')
+			.text('Select')
+			.style('opacity', 0.5)
 
 		for (const row of baminfo_rows) {
 			bamselection_table
 				.append('div')
 				.style('padding', '3px 10px')
-				.style('font-weight', 'bold')
 				.text(row.title)
+				.style('opacity', 0.5)
 		}
 
 		for (const onebam of files) {
