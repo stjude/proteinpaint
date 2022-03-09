@@ -67,7 +67,7 @@
                 "nobox": 1,
                 "noheader": 1,
                 "genome": "hg38",
-                "gene": "MAPT",
+                "gene": "NM_001203252",
                 "tracks": [
                     {
                         "type": "mds3",
