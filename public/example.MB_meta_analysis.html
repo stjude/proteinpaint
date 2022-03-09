@@ -24,7 +24,7 @@ runproteinpaint({
 		state: {
 			dslabel: 'MB_meta_analysis',
 			genome: 'hg38',
-			plots: [/*{
+			plots: [{
 				chartType: 'survival',
 				term: {
 					id: 'Event-free Survival'
@@ -33,7 +33,6 @@ runproteinpaint({
 					survival: {
 						symbol: 'vtick',
 						timeUnit: 'years',
-						timeFactor: 1/365,
 						xTickInterval: 5,
 						atRiskVisible: true,
 						atRiskLabelOffset: -20,
@@ -48,13 +47,12 @@ runproteinpaint({
 					survival: {
 						symbol: 'vtick',
 						timeUnit: 'years',
-						timeFactor: 1/365,
 						xTickInterval: 5,
 						atRiskVisible: true,
 						atRiskLabelOffset: -20,
 					}
 				}
-			},*/{
+			},{
 				chartType: 'survival',
 				term: {
 					id: 'Progression-free Survival'
@@ -63,7 +61,6 @@ runproteinpaint({
 					survival: {
 						symbol: 'vtick',
 						timeUnit: 'years',
-						timeFactor: 1/365,
 						xTickInterval: 5,
 						atRiskVisible: true,
 						atRiskLabelOffset: -20,

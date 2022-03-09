@@ -195,7 +195,7 @@ function setMathExprInput(opts) {
 		.on('change', () => {
 			const value = self.dom.input.property('value')
 			const number = Number(eval(value))
-			if (!isNaN(value)) throw `non-numeric value for ${opts.settingsKey}='${value}'`
+			if (isNaN(number)) throw `non-numeric value for ${opts.settingsKey}='${value}'`
 			textByNumber[number] = value
 			opts.dispatch({
 				type: 'plot_edit',
