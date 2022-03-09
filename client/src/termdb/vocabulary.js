@@ -539,6 +539,7 @@ class TermdbVocab {
 		if (!termsToUpdate.length) return
 
 		const promises = []
+		const filteredSampleIds = []
 		let i = 0
 		while (termsToUpdate.length) {
 			const copies = this.getCopiesToUpdate(termsToUpdate)
@@ -556,6 +557,7 @@ class TermdbVocab {
 				dofetch3('termdb', init, this.opts.fetchOpts).then(data => {
 					if (data.error) throw data.error
 					for (const sampleId in data.samples) {
+						filteredSampleIds.push(sampleId)
 						const sample = data.samples[sampleId]
 						if (!(sampleId in currData.samples)) {
 							currData.samples[sampleId] = { sample: sampleId }
@@ -580,6 +582,7 @@ class TermdbVocab {
 		}
 
 		await Promise.all(promises)
+		currData.lst = Object.values(currData.samples).filter(s => filteredSampleIds.includes(s.sample))
 		currData.lastFilter = filter
 		currData.lastTerms = opts.terms
 	}

@@ -161,7 +161,6 @@ class Matrix {
 			const reqOpts = this.getDataRequestOpts()
 			// this will write annotation data to this.currData
 			await this.app.vocabApi.setAnnotatedSampleData(reqOpts, this.currData)
-			this.currData.lst = Object.values(this.currData.samples)
 
 			// process the data
 			this.setSampleGroupsOrder(this.currData)
