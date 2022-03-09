@@ -26,7 +26,7 @@ class Matrix {
 		const mainG = svg
 			.append('g')
 			.on('mouseover', this.showCellInfo)
-			.on('mouseout', this.mouseout) //console.log(self.showCellInfo)
+			.on('mouseout', this.mouseout)
 		this.dom = {
 			header: opts.header,
 			controls,
@@ -359,7 +359,6 @@ class Matrix {
 
 	getSerieses(data) {
 		const s = this.settings.matrix
-		//console.log(233, s, samples, termOrder)
 		const serieses = []
 		const dx = s.colw + s.colspace
 		const dy = s.rowh + s.rowspace
@@ -453,8 +452,8 @@ class Matrix {
 		return s.grp.name
 	}
 
-	termKey(term) {
-		return term.$id
+	termKey(t) {
+		return t.tw.$id
 	}
 
 	termLabel(t) {
@@ -533,7 +532,6 @@ function setRenderers(self) {
 	}
 
 	self.renderSeries = function(series) {
-		//console.log(157, 'series', series)
 		const s = self.settings.matrix
 		const g = select(this)
 		const duration = g.attr('transform') ? s.duration : 0
