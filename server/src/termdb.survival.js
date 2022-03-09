@@ -63,9 +63,9 @@ export async function get_survival(q, ds) {
 			// so use '*' as a placeholder for now and will reconvert later
 			const sKey = d[sNum] === '' ? '*' : d[sNum]
 			keys.series.add(sKey)
-			// negate the d.censored value (where 1 is censored) to transform to survfit() status value
-			// since status=TRUE or 2 means 'dead' or 'event' in R's survival.survfit()
-			byChartSeries[d.key0].push([sKey, d[vNum], d.censored == 0 ? 1 : 0])
+			// do NOT negate the d.censored value, it must already match the expected exit code
+			// where status=TRUE or 2 means 'dead' or 'event' in R's survival.survfit()
+			byChartSeries[d.key0].push([sKey, d[vNum], d.censored])
 		}
 		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
 		const final_data = {
