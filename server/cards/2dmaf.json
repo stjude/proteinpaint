@@ -6,6 +6,7 @@
                 "genome": "hg19",
                 "nobox": 1,
                 "noheader": 1,
+                "parseurl": false,
                 "twodmaf": { "uionly": true }
             }
         },

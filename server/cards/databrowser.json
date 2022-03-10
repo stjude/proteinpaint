@@ -1,12 +1,12 @@
 {
-  "intro": "<b>We're excited to announce our newest app!</b>. By uploading a dictionary in the Data Browser, one can explore the structure of their custom cohort. <br><br>Options to upload sample annotation and other data types are in development.", 
+  "intro": "<b>We're excited to announce our newest app!</b> By uploading a dictionary in the Data Browser, one can explore the structure of their custom cohort. <br><br>Options to upload sample annotation and other data types are in development.", 
   "ppcalls":[
     {
         "is_ui": true,
         "runargs": {
             "noheader": true,
             "nobox": 1, 
-            "parseurl": 1, 
+            "parseurl": false,
             "tkui": "dictionary"
         }
     },
