@@ -2560,18 +2560,16 @@ seekrange(chr,start,stop) {
 			}
 			if (labeltruncated || tk.list_description) {
 				// will show tooltip to display both info if available
-				tk.tklabel
-					.on('mouseover', () => {
-						tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
-						if (labeltruncated) {
-							const d = tk.tktip.d.append('div').text(tk.name)
-							if (tk.list_description) d.style('margin-bottom', '5px')
-						}
-						if (tk.list_description) {
-							client.make_table_2col(tk.tktip.d.append('div'), tk.list_description).style('margin', '0px')
-						}
-					})
-					.on('mouseout', () => tk.tktip.hide())
+				tk.tklabel.on('click', () => {
+					tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
+					if (labeltruncated) {
+						const d = tk.tktip.d.append('div').text(tk.name)
+						if (tk.list_description) d.style('margin-bottom', '5px')
+					}
+					if (tk.list_description) {
+						client.make_table_2col(tk.tktip.d.append('div'), tk.list_description).style('margin', '0px')
+					}
+				})
 			}
 			// tklabel content is set. initiate leftLabelMaxwidth with <text> width
 			// this width may be overwritten (only by larger width) in individual tk maker scripts (adding sublabels or change tk.name ...)
