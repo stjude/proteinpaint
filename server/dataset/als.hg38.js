@@ -1,3 +1,12 @@
+const clinvar = require('./clinvar')
+
+// convert .label to .name within clinical significance categories
+for (const category in clinvar.clinsig) {
+	const properties = clinvar.clinsig[category]
+	properties.name = properties.label
+	delete properties.label
+}
+
 const samplenamekey = 'sample_name'
 
 module.exports = function(common) {
@@ -6,9 +15,9 @@ module.exports = function(common) {
 
 		about: [],
 
-		/*sampleAssayTrack: {
-			file: 'hg38/als/mds/assaytracks/__table'
-		},*/
+		sampleAssayTrack: {
+			file: 'hg38/als/mds/assaytracks/track.table'
+		},
 
 		cohort: {
 			files: [{ file: 'hg38/als/mds/sample.table' }],
@@ -25,43 +34,37 @@ module.exports = function(common) {
 			},
 			sampleAttribute: {
 				attributes: {
-					Batch: {
-						label: 'Batch',
-						filter: 1,
-						hidden: 1
-					},
 					ClinDx_WGS: {
-						label: 'ClinDx_WGS',
+						label: 'Clinical diagnosis',
 						filter: 1
 					},
 					Sex_c: {
-						label: 'Sex_c',
+						label: 'Sex',
 						filter: 1
 					},
 					OsAge: {
-						label: 'OsAge',
-						filter: 1,
-						hidden: 1
+						label: 'Age at onset (in years)',
+						isinteger: 1,
+						filter: 0
 					},
 					SurvOs_mo: {
-						label: 'SurvOs_mo',
-						filter: 1,
-						hidden: 1
+						label: 'Survival from onset (in months)',
+						isfloat: 1,
+						filter: 0
 					}
 				}
 			}
 		},
 
-		/*locusAttribute: {
-			// FIXME
+		locusAttribute: {
 			attributes: {
 				CLNSIG: {
 					label: 'Clinical significance',
 					filter: 1,
-					values: {}
+					values: clinvar.clinsig
 				}
 			}
-		},*/
+		},
 
 		alleleAttribute: {
 			attributes: {
@@ -76,17 +79,17 @@ module.exports = function(common) {
 					filter: 1
 				},
 				AF: {
-					label: 'Allele frequency',
+					label: 'Cohort allele frequency',
 					isnumeric: 1,
 					filter: 1
 				},
 				AF_only_HSP: {
-					label: 'Allele frequency (only HSP)',
+					label: 'Cohort allele frequency (only HSP)',
 					isnumeric: 1,
 					filter: 1
 				},
 				AF_only_ALS: {
-					label: 'Allele frequency (only ALS)',
+					label: 'Cohort allele frequency (only ALS)',
 					isnumeric: 1,
 					filter: 1
 				},
@@ -159,7 +162,7 @@ module.exports = function(common) {
 
 				istrack: true,
 				type: common.tkt.mdssvcnv,
-				file: 'hg38/als/mds/svcnv.gz',
+				file: 'hg38/als/mds/vcf/GenomePaint_CNV_705_samples_CReATe_ALS_2022Mar7.sorted.txt.gz',
 
 				// cnv
 				valueCutoff: 0.2,
@@ -168,9 +171,9 @@ module.exports = function(common) {
 				vcf_querykey: 'snvindel',
 
 				multihidelabel_vcf: false,
-				multihidelabel_sv: true,
+				multihidelabel_sv: true
 
-				no_loh: true
+				//no_loh: true
 			},
 
 			snvindel: {
