@@ -17,9 +17,14 @@ arg{}
 .row
 	d3 element in which <input> is created
 .defaultCoord{}
+	read-only; this script should not try to modify it
+	if allowVariant is false, value can only be {chr, start, stop}
+	if allowVariant is true, value can also be {chr, pos, ref, alt, isVariant:true}
 	set to {chr, start, stop} to fill default position into <input>
 	when missing, just show placeholder
 .allowVariant: true
+	if true, allow to enter chr.pos.ref.alt
+	otherwise, only allow chr:start-stop
 */
 export function addGeneSearchbox(arg) {
 	const tip = arg.tip,
@@ -80,10 +85,11 @@ export function addGeneSearchbox(arg) {
 			if (event.code == 'Escape') {
 				// abandon changes to <input>
 				tip.hide()
-				if (arg.defaultCoord) {
-					input.value = arg.defaultCoord.chr + ':' + arg.defaultCoord.start + '-' + arg.defaultCoord.stop
-				} else if (result.chr) {
+				if (result.chr) {
 					getResult(result, result.fromWhat)
+				} else if (arg.defaultCoord) {
+					const d = arg.defaultCoord
+					input.value = d.chr + (d.isVariant ? '.' + d.pos + '.' + d.ref + '.' + d.alt : ':' + d.start + '-' + d.stop)
 				}
 				input.blur()
 				return
@@ -217,14 +223,22 @@ export function addGeneSearchbox(arg) {
 		getResult({ chr: r.chrom, start: r.chromStart, stop: r.chromEnd }, s)
 	}
 
-	let result = {}
-	// { chr, start, stop, fromWhat }
+	const result = {}
+	// { chr, start, stop, pos, ref, alt, fromWhat }
 
 	if (arg.defaultCoord) {
-		searchbox.property('value', arg.defaultCoord.chr + ':' + arg.defaultCoord.start + '-' + arg.defaultCoord.stop)
-		result.chr = arg.defaultCoord.chr
-		result.start = arg.defaultCoord.start
-		result.stop = arg.defaultCoord.stop
+		const d = arg.defaultCoord
+		if (d.isVariant) {
+			searchbox.property('value', d.chr + '.' + d.pos + '.' + d.ref + '.' + d.alt)
+			result.pos = d.pos
+			result.ref = d.ref
+			result.alt = d.alt
+		} else {
+			searchbox.property('value', d.chr + ':' + d.start + '-' + d.stop)
+			result.start = d.start
+			result.stop = d.stop
+		}
+		result.chr = d.chr
 	}
 
 	function getResult(r, fromWhat) {
@@ -234,7 +248,7 @@ export function addGeneSearchbox(arg) {
 		// fromWhat is optional gene or snp name to show in search stat
 		if (r) {
 			// got hit (coord or variant), clear result{}
-			result = {}
+			for (const k in result) delete result[k]
 			if (r.isVariant) {
 				// do not update searchbox
 				result.chr = r.chr
