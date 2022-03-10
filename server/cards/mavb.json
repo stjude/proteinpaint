@@ -5,6 +5,7 @@
             "runargs": {
                 "genome": "hg19",
                 "noheader": 1,
+                "parseurl": false,
                 "mavolcanoplot": {
                 "uionly": true
                 }

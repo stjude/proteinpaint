@@ -6,6 +6,7 @@
             "runargs": {
                 "nobox": 1,
                 "noheader": 1,
+                "parseurl": false,
                 "gdcbamslice": { "uionly": true }
             },
             "testSpec": {
