@@ -2768,6 +2768,24 @@ async function handle_mdssvcnv(req, res) {
 				filteralleleattr[key] = v
 			} else {
 				// categorical
+				filteralleleattr[key] = v
+			}
+		}
+	}
+	/*
+    multi: vcf info field locus-level
+    */
+	let filterlocusattr
+	if (req.query.filterlocusattr) {
+		filterlocusattr = {}
+		for (const key in req.query.filterlocusattr) {
+			const v = req.query.filterlocusattr[key]
+			if (v.cutoffvalue != undefined) {
+				// numeric
+				filterlocusattr[key] = v
+			} else {
+				// categorical
+				filterlocusattr[key] = v
 			}
 		}
 	}
@@ -2834,6 +2852,7 @@ async function handle_mdssvcnv(req, res) {
 		dsquery,
 		req,
 		filteralleleattr,
+		filterlocusattr,
 		hiddendt,
 		hiddenmattr,
 		hiddensampleattr,
@@ -3578,6 +3597,7 @@ async function handle_mdssvcnv_vcf(
 	dsquery,
 	req,
 	filteralleleattr,
+	filterlocusattr,
 	hiddendt,
 	hiddenmattr,
 	hiddensampleattr,
@@ -3737,6 +3757,12 @@ async function handle_mdssvcnv_vcf(
 														break
 													}
 												}
+											} else {
+												// categorical
+												if (attr.includes(value)) {
+													todrop = true
+													break
+												}
 											}
 										}
 										if (todrop) {
@@ -3744,8 +3770,62 @@ async function handle_mdssvcnv_vcf(
 											continue
 										}
 									}
+									if (filterlocusattr) {
+										// filter using allele INFO
 
-									// TODO filter with locus INFO
+										let todrop = false
+
+										for (const key in filterlocusattr) {
+											const _value = m.info[key]
+											if (_value == undefined) {
+												// no value
+												todrop = true
+												break
+											}
+											let value = _value
+											if (Array.isArray(_value)) {
+												value = _value[0]
+												if (value == '.') {
+													// no value
+													todrop = true
+													break
+												}
+											}
+
+											const attr = filterlocusattr[key]
+											if (attr.cutoffvalue != undefined) {
+												// is a numeric cutoff
+
+												if (!Number.isFinite(value)) {
+													// value of this mutation is not a number
+													todrop = true
+													break
+												}
+
+												if (attr.keeplowerthan) {
+													if (value > attr.cutoffvalue) {
+														todrop = true
+														break
+													}
+												} else {
+													if (value < attr.cutoffvalue) {
+														todrop = true
+														break
+													}
+												}
+											} else {
+												// categorical
+												if (attr.includes(value)) {
+													todrop = true
+													break
+												}
+											}
+										}
+										if (todrop) {
+											// drop this variant
+											continue
+										}
+									}
 
 									{
 										// for germline track:

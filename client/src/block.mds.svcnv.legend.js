@@ -59,7 +59,8 @@ export function makeTk_legend(block, tk) {
 
 	create_mutationAttribute(tk)
 
-	create_alleleAttribute(tk, block)
+	if (tk.alleleAttribute) create_vcfAttribute(tk.alleleAttribute, tk, block)
+	if (tk.locusAttribute) create_vcfAttribute(tk.locusAttribute, tk, block)
 
 	tk.legend_more_row = table.append('tr')
 	tk.legend_more_label = tk.legend_more_row
@@ -503,15 +504,15 @@ function create_mutationAttribute(tk) {
 	}
 }
 
-function create_alleleAttribute(tk, block) {
-	if (!tk.alleleAttribute) return
+function create_vcfAttribute(attrSet, tk, block) {
+	// for both alleleAttribute and locusAttribute
 	/*
 	official only
-	alleleAttribute is copied over from mds.queries
+	alleleAttribute/locusAttribute is copied over from mds.queries
 	initiate attributes used for filtering & legend display
 	*/
-	for (const key in tk.alleleAttribute.attributes) {
-		const attr = tk.alleleAttribute.attributes[key]
+	for (const key in attrSet.attributes) {
+		const attr = attrSet.attributes[key]
 		if (!attr.filter) {
 			// not a filter
 			continue
@@ -589,6 +590,22 @@ function create_alleleAttribute(tk, block) {
 			// k: key in mutationAttribute.attributes{}
 
 			attr.value2count = new Map()
+			/*
+			k: key
+			v: {
+				totalitems: INT
+				dt2count: Map( dt => count )
+			}
+			*/
+
+			attr.legendrow = tk.legend_table.append('tr')
+			attr.legendcell = attr.legendrow
+				.append('td')
+				.style('text-align', 'right')
+				.style('opacity', 0.5)
+				.text(attr.label)
+
+			attr.legendholder = attr.legendrow.append('td')
 		}
 	}
 }
@@ -876,7 +893,7 @@ function may_legend_attribute(tk, block) {
 	official-only, multi-sample
 	filtering by mutation attribute is done on server
 	*/
-	for (const attrGrp of ['sampleAttribute', 'mutationAttribute']) {
+	for (const attrGrp of ['sampleAttribute', 'mutationAttribute', 'locusAttribute']) {
 		if (!tk[attrGrp]) continue
 
 		// clear
@@ -907,10 +924,15 @@ function may_legend_attribute(tk, block) {
 			if (tk.data_vcf) {
 				for (const m of tk.data_vcf) {
 					if (m.dt == common.dtsnvindel) {
-						if (!m.sampledata) continue
-						for (const s of m.sampledata) {
-							count_mutationAttribute(s, tk, m.dt)
+						if (m.sampledata) {
+							for (const s of m.sampledata) {
+								count_mutationAttribute(s, tk, m.dt)
+							}
 						}
+						if (m.info) {
+							count_locusAttribute(tk, m)
+						}
+						// TODO altinfo may be supported in the same way?
 					} else {
 						console.error('unknown dt: ' + m.dt)
 					}
@@ -958,7 +980,7 @@ function may_legend_attribute(tk, block) {
 			attr.legendholder.selectAll('*').remove()
 
 			const lst = [...attr.value2count]
-			lst.sort((i, j) => j[1] - i[1])
+			lst.sort((i, j) => j[1].totalitems - i[1].totalitems)
 
 			for (const [valuestr, _o] of lst) {
 				const printstr = attr.values[valuestr] ? attr.values[valuestr].name : valuestr
@@ -1198,6 +1220,7 @@ function count_mutationAttribute(mattr, tk, itemdt) {
 		// the item does not have mattr, do not count
 		return
 	}
+	if (!tk.mutationAttribute) return
 
 	for (const key in tk.mutationAttribute.attributes) {
 		const attr = tk.mutationAttribute.attributes[key]
@@ -1232,5 +1255,44 @@ function count_mutationAttribute(mattr, tk, itemdt) {
 		}
 
 		attr.value2count.get(value).dt2count.set(itemdt, attr.value2count.get(value).dt2count.get(itemdt) + 1)
+	}
+}
+
+function count_locusAttribute(tk, m) {
+	if (!tk.locusAttribute) return
+
+	for (const key in tk.locusAttribute.attributes) {
+		const attr = tk.locusAttribute.attributes[key]
+		if (!attr.filter) continue
+
+		const _value = m.info[key]
+
+		if (_value == undefined) continue // not annotated, do not count
+
+		// quick fix! should refer to info field definition
+		let value
+		if (Array.isArray(_value)) {
+			value = _value[0]
+			if (value == '.') continue
+		} else {
+			value = _value
+		}
+
+		if (attr.hiddenvalues.has(value)) continue
+
+		// even if this value is not cataloged in attr.values{}, still record it for displaying
+		if (!attr.value2count.has(value)) {
+			attr.value2count.set(value, {
+				totalitems: 0,
+				dt2count: new Map()
+			})
+		}
+		attr.value2count.get(value).totalitems++
+
+		if (!attr.value2count.get(value).dt2count.has(m.dt)) {
+			attr.value2count.get(value).dt2count.set(m.dt, 0)
+		}
+
+		attr.value2count.get(value).dt2count.set(m.dt, attr.value2count.get(value).dt2count.get(m.dt) + 1)
 	}
 }
