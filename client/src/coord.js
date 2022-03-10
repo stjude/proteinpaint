@@ -87,9 +87,9 @@ export function string2pos(s, genome, donotextend) {
 		return {
 			chr: chr.name,
 			chrlen: chr.len,
-			start: start,
-			stop: stop,
-			actualposition: actualposition
+			start,
+			stop,
+			actualposition
 		}
 	}
 	return null

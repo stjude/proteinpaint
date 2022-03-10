@@ -1,19 +1,25 @@
 import { keyupEnter, gmlst2loci } from '../client'
 import { debounce } from 'debounce'
 import { dofetch3 } from '../common/dofetch'
-import { string2pos } from '../coord'
+import { invalidcoord, string2pos } from '../coord'
 
 /*
 some code duplication with block.js
 uses result{} to remember previous hit
 
+TODO
+* allow only searching by gene name to replace gene_searchbox()
+* allow optional callback, call in getResult()?
+
 arg{}
 .tip
 .genome{}
 .row
+	d3 element in which <input> is created
 .defaultCoord{}
 	set to {chr, start, stop} to fill default position into <input>
 	when missing, just show placeholder
+.allowVariant: true
 */
 export function addGeneSearchbox(arg) {
 	const tip = arg.tip,
@@ -40,7 +46,18 @@ export function addGeneSearchbox(arg) {
 				// pressed enter
 				input.blur()
 				tip.hide()
-				// if input can be parsed as coord string (chr:pos or chr:start-stop), then no need to match with gene/snp
+
+				// if input can be parsed as either variant or coord
+				// then no need to match with gene/snp
+
+				if (arg.allowVariant) {
+					const variant = string2variant(v, arg.genome)
+					if (variant) {
+						getResult(variant, 'Valid variant')
+						return
+					}
+				}
+
 				const pos = string2pos(v, arg.genome)
 				if (pos) {
 					// input is coordinate
@@ -91,13 +108,33 @@ export function addGeneSearchbox(arg) {
 		const v = searchbox.property('value').trim()
 		if (!v) return
 
-		// first, see if input is coord
+		if (arg.allowVariant) {
+			const variant = string2variant(v, arg.genome)
+			if (variant) {
+				// is valid variant
+				// do not write to result
+				//getResult(variant, 'Valid variant')
+				return
+			}
+		}
+
+		// see if input is coord
 		const pos = string2pos(v, arg.genome, true)
 		if (pos) {
 			// input is coordinate
-			getResult(pos, 'Valid coordinate')
+			/*
+			const r = { chr: pos.chr, start: pos.start, stop: pos.stop }
+			if(pos.actualposition) {
+				r.start = pos.actualposition.position
+				r.stop = pos.actualposition.position+pos.actualposition.len
+			}
+			getResult(r, 'Valid coordinate')
+			*/
 			return
 		}
+
+		// input is neither variant or coord
+		// query for gene
 
 		tip.showunder(searchbox.node()).clear()
 		try {
@@ -180,7 +217,7 @@ export function addGeneSearchbox(arg) {
 		getResult({ chr: r.chrom, start: r.chromStart, stop: r.chromEnd }, s)
 	}
 
-	const result = {}
+	let result = {}
 	// { chr, start, stop, fromWhat }
 
 	if (arg.defaultCoord) {
@@ -196,11 +233,21 @@ export function addGeneSearchbox(arg) {
 		// if result is invalid, r is null, show &cross;
 		// fromWhat is optional gene or snp name to show in search stat
 		if (r) {
-			searchbox.property('value', r.chr + ':' + r.start + '-' + r.stop)
-			result.chr = r.chr
-			result.start = r.start
-			result.stop = r.stop
-			result.fromWhat = fromWhat
+			// got hit (coord or variant), clear result{}
+			result = {}
+			if (r.isVariant) {
+				// do not update searchbox
+				result.chr = r.chr
+				result.pos = r.pos
+				result.ref = r.ref
+				result.alt = r.alt
+			} else {
+				// is coord, maybe from gene
+				searchbox.property('value', r.chr + ':' + r.start + '-' + r.stop)
+				result.chr = r.chr
+				result.start = r.start
+				result.stop = r.stop
+			}
 			searchStat.mark.style('color', 'green').html('&check;')
 		} else {
 			searchStat.mark.style('color', 'red').html('&cross;')
@@ -209,4 +256,20 @@ export function addGeneSearchbox(arg) {
 	}
 
 	return result //searchbox
+}
+
+function string2variant(v, genome) {
+	const tmp = v.split('.')
+	if (tmp.length != 4) return
+	const chr = tmp[0]
+	const pos = Number(tmp[1])
+	const e = invalidcoord(genome, chr, pos, pos)
+	if (e) return
+	return {
+		isVariant: true,
+		chr,
+		pos,
+		ref: tmp[2],
+		alt: tmp[3]
+	}
 }
