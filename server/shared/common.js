@@ -524,13 +524,14 @@ export function nt2aa(gm) {
 	return pep.join('')
 }
 
-export function bplen(len) {
+export function bplen(len, isfile) {
+	// if "isfile" is true, to measure file size instead of basepair len
 	if (len >= 1000000000) return (len / 1000000000).toFixed(1) + ' Gb'
 	if (len >= 10000000) return Math.ceil(len / 1000000) + ' Mb'
 	if (len >= 1000000) return (len / 1000000).toFixed(1) + ' Mb'
 	if (len >= 10000) return Math.ceil(len / 1000) + ' Kb'
 	if (len >= 1000) return (len / 1000).toFixed(1) + ' Kb'
-	return len + ' bp'
+	return len + (isfile ? 'bytes' : ' bp')
 }
 
 export const basecolor = {

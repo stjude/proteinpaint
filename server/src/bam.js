@@ -14,7 +14,7 @@ const readline = require('readline')
 const interpolateRgb = require('d3-interpolate').interpolateRgb
 const rust_match_complexvariant = require('./bam.kmer.indel').match_complexvariant_rust
 const bamcommon = require('./bam.common')
-const basecolor = require('../shared/common').basecolor
+const { basecolor, bplen } = require('../shared/common')
 const serverconfig = require('./serverconfig')
 const clustalo_read_alignment = serverconfig.clustalo
 
@@ -242,8 +242,7 @@ module.exports = genomes => {
 	return async (req, res) => {
 		try {
 			if (req.query.downloadgdc) {
-				const gdc_bam_filenames = await download_gdc_bam(req)
-				res.send(gdc_bam_filenames)
+				res.send(await download_gdc_bam(req))
 				return
 			}
 			if (req.query.clientdownloadgdcslice) {
@@ -285,33 +284,6 @@ module.exports = genomes => {
 			if (e.stack) console.log(e.stack)
 		}
 	}
-}
-
-/*
-at r.ntwidth>=1:
-	get depth at each bp and plot one bar for each bp;
-	bplst[] is constructed directly according to the "samtools depth" output
-	non-covered basepairs will not show up in bplst
-	thus the genomic positions in the array may be *discontinuous*
-	and must use coordinate direct match to find in bplst but not "bp seek"
-at r.ntwidth<1:
-	bin the basepairs under a pixel and plot mean value, one bar for each pixel
-	bplst[] is constructed by "bp seek"
-	will introduce undefined elements for uncovered regions!!
-	must test if bplst[?] is valid before using
-*/
-
-async function download_gdc_bam(req) {
-	const gdc_bam_filenames = [] // Can be multiple bam files for multiple regions in the same sample
-	for (const r of JSON.parse(req.query.regions)) {
-		const gdc_token = req.get('x-auth-token')
-		const gdc_file_id = req.query.gdc_file
-		const md5Hasher = crypto.createHmac('md5', Math.random().toString())
-		const gdc_bam_filename = md5Hasher.update(gdc_token).digest('hex') + '.bam'
-		await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, gdc_file_id, gdc_bam_filename)
-		gdc_bam_filenames.push(gdc_bam_filename)
-	}
-	return gdc_bam_filenames
 }
 
 async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_score) {
@@ -1216,32 +1188,6 @@ async function determine_downsampling(q, regions) {
 	q.read_limit_reached = totalreads // notify client
 }
 
-async function get_gdc_bam(chr, start, stop, token, case_id, bamfilename) {
-	// The chr variable must contain "chr"
-	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	headers['X-Auth-Token'] = token
-	const file = path.join(serverconfig.cachedir_bam, bamfilename)
-	// Inserted "chr" in url. Need to check if it works with other gdc bam files
-	const url = 'https://api.gdc.cancer.gov/slicing/view/' + case_id + '?region=' + chr + ':' + start + '-' + stop
-	try {
-		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(file))
-		await index_bam(file)
-	} catch (error) {
-		console.log(error)
-		console.log('Cannot retrieve bam file')
-		throw 'Cannot retrieve bam file: ' + error
-	}
-}
-
-async function index_bam(file) {
-	// only work for gdc bam slices, file is absolute path in cache dir
-	await utils.get_lines_bigfile({
-		isbam: true,
-		args: ['index', file],
-		callback: () => {}
-	})
-}
-
 /*
 for each region, query its data
 if too many reads, kill the process and insert a message
@@ -1279,11 +1225,24 @@ async function query_region(r, q) {
 }
 
 /*
+
 'samtools depth' returns single base depth
 results are collected in bplst[]
 when region resolution is high (>=1 pixels for each bp), bplst[] has one element per basepair;
 when region resolution is low with #bp per pixel is above a cutoff e.g. 3,
 should summarize into bins, each bin for a pixel with .coverage for each pixel, with one element for each bin in bplst[]
+
+at r.ntwidth>=1:
+	get depth at each bp and plot one bar for each bp;
+	bplst[] is constructed directly according to the "samtools depth" output
+	non-covered basepairs will not show up in bplst
+	thus the genomic positions in the array may be *discontinuous*
+	and must use coordinate direct match to find in bplst but not "bp seek"
+at r.ntwidth<1:
+	bin the basepairs under a pixel and plot mean value, one bar for each pixel
+	bplst[] is constructed by "bp seek"
+	will introduce undefined elements for uncovered regions!!
+	must test if bplst[?] is valid before using
 */
 async function run_samtools_depth(q, r) {
 	const bplst = []
@@ -3027,4 +2986,47 @@ async function convertread2html(seg, genome, query) {
 		seq_data.unmapped_mate = true
 	}
 	return seq_data
+}
+
+/////////////////////// gdc slicing ///////////////////////
+
+async function download_gdc_bam(req) {
+	// query gdc bam slicing api using the uuid of one bam file
+	// download one bam slice for each region
+	const gdc_bam_filenames = []
+	for (const r of JSON.parse(req.query.regions)) {
+		const gdc_token = req.get('x-auth-token')
+		const gdc_file_id = req.query.gdc_file
+		const md5Hasher = crypto.createHmac('md5', Math.random().toString())
+		// filename is not full path; full path is not revealed to client
+		const filename = md5Hasher.update(gdc_token).digest('hex') + '.bam'
+		const filesize = await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, gdc_file_id, filename)
+		gdc_bam_filenames.push({ filename, filesize })
+	}
+	return gdc_bam_filenames
+}
+async function get_gdc_bam(chr, start, stop, token, case_id, bamfilename) {
+	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	headers['X-Auth-Token'] = token
+	const fullpath = path.join(serverconfig.cachedir_bam, bamfilename)
+	const url = 'https://api.gdc.cancer.gov/slicing/view/' + case_id + '?region=' + chr + ':' + start + '-' + stop
+	try {
+		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(fullpath))
+		await index_bam(fullpath)
+		const s = await fs.promises.stat(fullpath)
+		return bplen(s.size, true)
+	} catch (error) {
+		console.log(error)
+		console.log('Cannot retrieve bam file')
+		throw 'Cannot retrieve bam file: ' + error
+	}
+}
+
+async function index_bam(file) {
+	// only work for gdc bam slices, file is absolute path in cache dir
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args: ['index', file],
+		callback: () => {}
+	})
 }

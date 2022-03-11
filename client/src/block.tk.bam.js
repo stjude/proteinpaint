@@ -225,14 +225,17 @@ async function getData(tk, block, additional = []) {
 		delete tk.downloadgdc
 		tk.cloaktext.text('Downloading BAM slice ...')
 		const gdc_bam_files = await dofetch3('tkbam?downloadgdc=1&' + lst.join('&'), { headers })
-		tk.cloaktext.text('BAM slice downloaded. Loading track ...')
 
 		if (gdc_bam_files.error) throw gdc_bam_files.error
 		if (!Array.isArray(gdc_bam_files) || gdc_bam_files.length == 0) throw 'invalid returned data'
-
-		// bam slice is downloaded
-		tk.file = gdc_bam_files[0] // This will need to be changed to a loop when viewing multiple regions in the same sample
+		// This will need to be changed to a loop when viewing multiple regions in the same sample
+		const { filename, filesize } = gdc_bam_files[0]
+		tk.cloaktext.text('BAM slice downloaded. File size: ' + filesize)
+		tk.file = filename
 		block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
+		if (tk.aboutThisFile) {
+			tk.aboutThisFile.push({ k: 'Slice file size', v: filesize })
+		}
 	}
 
 	if (tk.variants) {
