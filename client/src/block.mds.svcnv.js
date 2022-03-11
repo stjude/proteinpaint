@@ -503,9 +503,8 @@ function addLoadParameter(par, tk) {
 		let hashidden = false
 		for (const key in tk.alleleAttribute.attributes) {
 			const attr = tk.alleleAttribute.attributes[key]
+			if (attr.disable) continue
 			if (attr.isnumeric) {
-				if (attr.disable) continue
-
 				if (Number.isFinite(attr.cutoffvalue)) {
 					key2value[key] = {
 						cutoffvalue: attr.cutoffvalue,
@@ -515,10 +514,41 @@ function addLoadParameter(par, tk) {
 				}
 			} else {
 				// categorical
+				if (attr.hiddenvalues && attr.hiddenvalues.size) {
+					key2value[key] = [...attr.hiddenvalues]
+					hashidden = true
+				}
 			}
 		}
 		if (hashidden) {
 			par.filteralleleattr = key2value
+		}
+	}
+	if (tk.locusAttribute) {
+		// mutation attribute applicable to all data types
+		const key2value = {}
+		let hashidden = false
+		for (const key in tk.locusAttribute.attributes) {
+			const attr = tk.locusAttribute.attributes[key]
+			if (attr.disable) continue
+			if (attr.isnumeric) {
+				if (Number.isFinite(attr.cutoffvalue)) {
+					key2value[key] = {
+						cutoffvalue: attr.cutoffvalue,
+						keeplowerthan: attr.keeplowerthan
+					}
+					hashidden = true
+				}
+			} else {
+				// categorical
+				if (attr.hiddenvalues && attr.hiddenvalues.size) {
+					key2value[key] = [...attr.hiddenvalues]
+					hashidden = true
+				}
+			}
+		}
+		if (hashidden) {
+			par.filterlocusattr = key2value
 		}
 	}
 
