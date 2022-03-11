@@ -102,7 +102,7 @@ async function getSampleData(q, terms) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
-			await add_geneMutation2SampleData(tw, samples, q)
+			await add_geneMutation2SampleData(tw, samples, q, dictTerms.length)
 		} else {
 			throw 'unknown type of independent non-dictionary term'
 		}
@@ -168,7 +168,9 @@ function getSampleData_dictionaryTerms(q, termWrappers) {
 	return { samples, refs }
 }
 
-async function add_geneMutation2SampleData(tw, samples, q) {
+async function add_geneMutation2SampleData(tw, samples, q, dictTermsLength = 0) {
+	// return early if all samples are filtered out by not having matching dictionary term values
+	if (dictTermsLength && !Object.keys(samples).length) return
 	const tname = tw.term.name
 	const flagset = await get_flagset(q.ds.cohort, q.genome)
 	const sampleData = {}
@@ -181,6 +183,8 @@ async function add_geneMutation2SampleData(tw, samples, q) {
 				.split(';')
 				.pop()
 				.trim()
+			// only create a sample entry/row when it is not already filtered out by not having any dictionary term values
+			if (!dictTermsLength && !(d.sample in samples)) samples[d.sample] = { sample: d.sample }
 			const row = samples[d.sample]
 			if (!row) continue
 			if (!row[tname]) row[tname] = { key: tname, values: [], label: tname }
