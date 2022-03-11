@@ -5,26 +5,43 @@ import { invalidcoord, string2pos } from '../coord'
 
 /*
 some code duplication with block.js
-uses result{} to remember previous hit
 
 TODO
 * allow only searching by gene name to replace gene_searchbox()
-* allow optional callback, call in getResult()?
 
-arg{}
+***********************************
+* function argument object {}
+
 .tip
+	required. menu instance to show list of matching genes
+
 .genome{}
+	required. client-side genome obj
+
 .row
-	d3 element in which <input> is created
+	required. d3 element in which <input> is created
+
 .defaultCoord{}
+	optional
 	read-only; this script should not try to modify it
 	if allowVariant is false, value can only be {chr, start, stop}
 	if allowVariant is true, value can also be {chr, pos, ref, alt, isVariant:true}
 	set to {chr, start, stop} to fill default position into <input>
 	when missing, just show placeholder
+
 .allowVariant: true
+	optional
 	if true, allow to enter chr.pos.ref.alt
 	otherwise, only allow chr:start-stop
+
+.callback()
+	optional
+	triggered when a valid hit is found, and has been written to returned result{} object
+
+***********************************
+* result object returned by the function
+
+{ chr, start, stop, pos, ref, alt, geneSymbol }
 */
 export function addGeneSearchbox(arg) {
 	const tip = arg.tip,
@@ -192,7 +209,9 @@ export function addGeneSearchbox(arg) {
 			const loci = gmlst2loci(data.gmlst)
 			if (loci.length == 1) {
 				// all isoforms are at the same locus
-				getResult(loci[0], s)
+				// in case searched by isoform, check gmlst[0].name as gene name instead
+				const geneSymbol = data.gmlst[0].name || s
+				getResult(loci[0], s, geneSymbol)
 				return
 			}
 			// isoform are spread across multiple discontinuous loci
@@ -204,7 +223,7 @@ export function addGeneSearchbox(arg) {
 					.text(r.name + ' ' + r.chr + ':' + r.start + '-' + r.stop)
 					.on('click', () => {
 						tip.hide()
-						getResult(r, s + ', ' + r.name)
+						getResult(r, s + ', ' + r.name, r.name)
 					})
 			}
 		} catch (e) {
@@ -224,7 +243,6 @@ export function addGeneSearchbox(arg) {
 	}
 
 	const result = {}
-	// { chr, start, stop, pos, ref, alt, fromWhat }
 
 	if (arg.defaultCoord) {
 		const d = arg.defaultCoord
@@ -241,11 +259,12 @@ export function addGeneSearchbox(arg) {
 		result.chr = d.chr
 	}
 
-	function getResult(r, fromWhat) {
-		// call to show a valid result, or error
-		// if result is valid, provide r: {chr,start,stop} to show coord in <input>, also show &check;
-		// if result is invalid, r is null, show &cross;
-		// fromWhat is optional gene or snp name to show in search stat
+	/* call to show a valid result, or error
+	if result is valid, provide r: {chr,start,stop} to show coord in <input>, also show &check;
+	if result is invalid, r is null, show &cross;
+	fromWhat is optional gene or snp name to show in search stat
+	*/
+	async function getResult(r, fromWhat, geneSymbol) {
 		if (r) {
 			// got hit (coord or variant), clear result{}
 			for (const k in result) delete result[k]
@@ -263,7 +282,15 @@ export function addGeneSearchbox(arg) {
 				result.stop = r.stop
 			}
 			searchStat.mark.style('color', 'green').html('&check;')
+
+			if (geneSymbol) {
+				// tell caller they found a gene
+				result.geneSymbol = geneSymbol
+			}
+
+			if (arg.callback) await arg.callback()
 		} else {
+			// no hit
 			searchStat.mark.style('color', 'red').html('&cross;')
 		}
 		searchStat.word.text(fromWhat || '')

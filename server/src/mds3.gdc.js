@@ -1,6 +1,7 @@
 const common = require('../shared/common')
 const got = require('got')
 const { get_crosstabCombinations } = require('./mds3.init')
+const serverconfig = require('./serverconfig')
 
 /*
 GDC graphql API
@@ -1077,5 +1078,64 @@ function init_termdb_queries(termdb, ds) {
 				}
 			}
 		}
+	}
+}
+
+/************************************************
+for gdc bam slicing UI
+it shares some logic with mds3, but does not require a mds3 dataset to function
+*/
+const ssms_fields = [
+	'ssm_id',
+	'chromosome',
+	'start_position',
+	'reference_allele',
+	'tumor_allele',
+	'consequence.transcript.transcript_id',
+	'consequence.transcript.aa_change',
+	'consequence.transcript.consequence_type',
+	'consequence.transcript.gene.symbol'
+]
+
+export async function handle_gdc_ssms(req, res) {
+	try {
+		if (!req.query.case_id) throw '.case_id missing'
+		if (!req.query.isoform) throw '.isoform missing'
+		// make query to genome genedb to get canonical isoform of the gene
+		const filters = {
+			op: 'and',
+			content: [
+				{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [req.query.isoform] } },
+				{ op: 'in', content: { field: 'cases.case_id', value: [req.query.case_id] } }
+			]
+		}
+		// TODO allow alternative apihost from serverconfig
+		const apihost = 'https://api.gdc.cancer.gov/ssms'
+		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+		const response = await got(
+			apihost +
+				'?size=1000&fields=' +
+				ssms_fields.join(',') +
+				'&filters=' +
+				encodeURIComponent(JSON.stringify(filters)),
+			{ method: 'GET', headers }
+		)
+		const re = JSON.parse(response.body)
+		const mlst = []
+		for (const hit of re.data.hits) {
+			const consequence = hit.consequence.find(i => i.transcript.transcript_id == req.query.isoform)
+			const aa = consequence.transcript.aa_change || consequence.transcript.consequence_type // no aa change for utr variants
+			mlst.push({
+				mname: aa,
+				consequence: consequence.transcript.consequence_type,
+				chr: hit.chromosome,
+				pos: hit.start_position,
+				ref: hit.reference_allele,
+				alt: hit.tumor_allele
+			})
+		}
+		res.send({ mlst })
+	} catch (e) {
+		res.send({ error: e.message || e })
 	}
 }

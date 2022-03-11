@@ -5,6 +5,8 @@ for (let i = 2; i < process.argv.length; i++) {
 	const [k, v] = process.argv[i].split('=')
 	p[k] = v
 }
+
+
 if (!p.isoform) p.isoform = 'ENST00000407796' // AKT1
 
 const fields = [
@@ -23,6 +25,7 @@ const filters = {
 	content: [{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [p.isoform] } }]
 }
 if (p.set_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.set_id] } })
+if (p.case_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } })
 ;(async () => {
 	try {
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }

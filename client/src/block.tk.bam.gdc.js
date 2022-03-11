@@ -9,9 +9,7 @@ import { addGeneSearchbox } from './dom/genesearch'
 import { Menu } from './dom/menu'
 
 /*
-changes to UI <input> are stored on the object named "gdc_args"
-and is validated in validateInputs{}
-
+*********** gdc_args{}
 gdc_args {}
 	gdc_token: <string>,
 	coordInput:{}
@@ -22,6 +20,10 @@ gdc_args {}
 		file_id: file uuid from gdc <string>,
 		track_name: used for naming of track <string> //optional
 		about:[] // with keys corresponding to baminfo_rows[]
+	case_id: <string>
+
+changes to UI <input> are stored on this object
+and is validated in validateInputs{}
 */
 
 const gdc_genome = 'hg38'
@@ -41,13 +43,13 @@ export function bamsliceui(genomes, holder) {
 	// central obj, see comments on top
 	const gdc_args = { bam_files: [] }
 	const tip = new Menu({ padding: '' })
-	// autofill input fields if supplied from url
-	// format: ?gdc_id=<id>&gdc_pos=<coord>&gdc_var=<variant>
-	// example: ?gdc_id=TCGA-44-6147&gdc_pos=chr9:5064699-5065299
+
+	// fill from url for quick testing: ?gdc_id=TCGA-44-6147&gdc_pos=chr9:5064699-5065299
 	// unable to autoload toke file this way
 	const urlp = urlmap()
 
-	////////////////////// there are 2 ui holders: formdiv and blockHolder
+	/////////////////////////////////////////////////////
+	// there are 2 ui holders: formdiv and blockHolder
 	// formdiv collects multiple rows
 	// each row is for a ui input
 	// formdiv will be cleared upon submission
@@ -64,7 +66,8 @@ export function bamsliceui(genomes, holder) {
 	// show block & bam tk
 	const blockHolder = holder.append('div').style('margin', '20px')
 
-	////////////////////// create UI components in formdiv
+	/////////////////////////////////////////////////////
+	// create UI components in formdiv
 
 	// for showing err
 	const saydiv = formdiv.append('div').style('grid-column', 'span 2')
@@ -75,7 +78,7 @@ export function bamsliceui(genomes, holder) {
 	// <input> to enter gdc id, and doms for display case/file info
 	makeGdcIDinput()
 
-	makeGeneSearch()
+	const ssms_div = makeGeneSearch()
 
 	makeInstruction()
 
@@ -158,13 +161,15 @@ export function bamsliceui(genomes, holder) {
 	}
 
 	function makeGdcIDinput() {
-		// row 1, col 1
+		//////////////////////////
+		// row 1, for <input>
+		// col 1
 		formdiv
 			.append('div')
 			.style('padding', '3px 10px')
 			.text('GDC ID')
 
-		// row 1, col 2
+		// col 2
 		const gdcid_inputdiv = formdiv.append('div')
 
 		const gdcid_input = gdcid_inputdiv
@@ -192,7 +197,8 @@ export function bamsliceui(genomes, holder) {
 			.style('display', 'none')
 			.style('padding', '2px 5px')
 
-		// row 2, contains visibility-toggling components
+		//////////////////////////
+		// row 2, to display details of case/file
 		const baminfo_div = formdiv
 			.append('div')
 			.style('grid-column', 'span 2')
@@ -235,6 +241,25 @@ export function bamsliceui(genomes, holder) {
 				if (data.error) throw 'Error: ' + data.error
 				if (!Array.isArray(data.file_metadata)) throw 'Error: .file_metadata[] missing'
 				if (data.file_metadata.length == 0) throw 'No viewable BAM files found'
+				/*
+				in file_metadata[], each element is a bam file:
+				{
+					case_id: "9a2a226e-9605-4214-9320-469305e664e6"
+					entity_id: "TCGA-49-AARQ-11A-21D-A413-08"
+					entity_type: "aliquot"
+					experimental_strategy: "WXS"
+					file_size: "10.43 GB"
+					file_uuid: "f383b776-b162-4c61-909b-3b92d1853511"
+					sample_type: "Solid Tissue Normal"
+				}
+				*/
+
+				/* record case_id for the found file
+				if the array has multiple files, all are from the same case
+				so the case_id should be the same for all files
+				*/
+				gdc_args.case_id = data.file_metadata[0].case_id
+
 				if (data.is_file_uuid || data.is_file_id) {
 					// matches with one bam file
 					// update file id to be suppliled to gdc bam query
@@ -351,18 +376,31 @@ export function bamsliceui(genomes, holder) {
 	}
 
 	function makeGeneSearch() {
-		// row 1, col 1
+		///////////////////////////
+		// row 1, <input>
+		// col 1
 		formdiv
 			.append('div')
 			.style('padding', '3px 10px')
 			.text('Gene, position')
-		// row 1, col 2
+		// col 2
 		const cell = formdiv.append('div')
+		///////////////////////////
+		// row 2, holder to show ssms for a given gene
+		const ssms_div = formdiv
+			.append('div')
+			.style('grid-column', 'span 2')
+			.style('display', 'none')
+			.style('border-left', '1px solid #ccc')
+			.style('margin', '20px 20px 20px 40px')
+
+		// argument for making search box
 		const opt = {
 			genome,
 			tip,
 			row: cell,
-			allowVariant: true
+			allowVariant: true,
+			callback: maySearchSSM
 		}
 		if (urlp.has('gdc_pos')) {
 			const t = urlp.get('gdc_pos').split(/[:\-]/)
@@ -386,6 +424,7 @@ export function bamsliceui(genomes, holder) {
 			}
 		}
 		gdc_args.coordInput = addGeneSearchbox(opt)
+		return ssms_div
 	}
 
 	function makeInstruction() {
@@ -398,6 +437,68 @@ export function bamsliceui(genomes, holder) {
 				<li>The BAM file will be sliced at the provided postion or variant and visualized.
 				To visualize reads from a new region, enter again from this form.</li>
 			</ul>`)
+	}
+
+	async function maySearchSSM() {
+		// disable this for now, needs to be reworked
+		return
+
+		ssms_div.style('display', 'none')
+		if (!gdc_args.case_id || !gdc_args.coordInput.geneSymbol) return
+		// convert gene to canonical isoform
+		const d0 = await dofetch3('gene2canonicalisoform?genome=' + gdc_genome + '&gene=' + gdc_args.coordInput.geneSymbol)
+		if (d0.error) throw 'cannot find canonical isoform'
+		const isoform = d0.isoform
+		const lst = ['case_id=' + gdc_args.case_id, 'isoform=' + isoform]
+		const data = await dofetch3('gdc_ssms?' + lst.join('&'))
+		if (data.error) throw data.error
+		if (data.mlst.length == 0) return
+		// found ssms, display
+		ssms_div
+			.style('display', 'grid')
+			.selectAll('*')
+			.remove()
+		ssms_div.append('div') // col1
+		const div = ssms_div
+			.append('div') // col2
+			.style('margin', '0px 10px')
+		const rname = 'gdcradio' + Math.random().toString()
+		{
+			const lab = div.append('label')
+			lab
+				.append('input')
+				.attr('type', 'radio')
+				.style('margin-right', '10px')
+				.attr('name', rname)
+				.attr('value', -1)
+				.property('checked', true)
+				.on('change', () => {})
+			lab.append('span').text('View gene region')
+		}
+		div.append('div').text('Or, select a gene variant from this case:')
+		for (const m of data.mlst) {
+			const lab = div.append('div').append('label')
+			lab
+				.append('input')
+				.attr('type', 'radio')
+				.style('margin-right', '10px')
+				.attr('name', rname)
+				.attr('value', 0)
+				.on('change', () => {})
+			const span = lab.append('span')
+			span.append('span').text(m.mname)
+			span
+				.append('span')
+				.style('margin-left', '5px')
+				.style('font-size', '.8em')
+				.text(m.consequence)
+			span
+				.append('span')
+				.style('margin-left', '5px')
+				.style('font-size', '.8em')
+				.style('opacity', 0.5)
+				.text(m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt)
+		}
 	}
 }
 

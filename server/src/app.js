@@ -63,6 +63,7 @@ const express = require('express'),
 	bam_request_closure = require('./bam'),
 	mdsjunction_request_closure = require('./mds.junction'),
 	gdc_bam_request = require('./bam.gdc'),
+	handle_gdc_ssms = require('./mds3.gdc').handle_gdc_ssms,
 	aicheck_request_closure = require('./aicheck'),
 	bampile_request = require('./bampile'),
 	junction_request = require('./junction'),
@@ -207,6 +208,7 @@ app.post(basepath + '/tkbedj', bedj_request_closure(genomes))
 app.post(basepath + '/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 app.get(basepath + '/tkbam', bam_request_closure(genomes))
 app.get(basepath + '/gdcbam', gdc_bam_request())
+app.get(basepath + '/gdc_ssms', handle_gdc_ssms)
 app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
 app.get(basepath + '/blat', blat_request_closure(genomes))
 app.get(basepath + '/mds3', mds3_request_closure(genomes))
