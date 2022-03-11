@@ -193,7 +193,7 @@ export class Menu {
 				return
 		}
 		this.d.style('display', 'none').style('opacity', 0)
-		// if (this.onHide) this.onHide()
+		if (this.onHide) this.onHide()
 		return this
 	}
 
