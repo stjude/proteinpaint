@@ -2562,19 +2562,15 @@ seekrange(chr,start,stop) {
 			}
 			if (labeltruncated || tk.list_description) {
 				// will show tooltip to display both info if available
+
+				// detects if tooltip is in use or not
 				let tktip_active = false
-				let click_active = false
 				tk.tktip.onHide = () => {
 					tktip_active = false
 				}
 				tk.tklabel.on('mouseover', () => {
 					// Only fires if menu not active from click event
 					if (tktip_active == true) return
-					// Fix to allow user to click on anywhere (i.e. tk label or white space) & preserve the click behavior.
-					// When user clicks on whitespace (i.e. not triggering another click event), remove flag for click event
-					if ((tktip_active == false) & (click_active == true)) {
-						click_active = false
-					}
 					showTkLabelTooltip(tk, labeltruncated)
 					tktip_active = false
 				})
@@ -2585,7 +2581,6 @@ seekrange(chr,start,stop) {
 				tk.tklabel.on('click', () => {
 					tktip_active = !tktip_active
 					if (tktip_active == true) {
-						click_active = true
 						showTkLabelTooltip(tk, labeltruncated)
 					}
 				})
