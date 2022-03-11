@@ -2549,7 +2549,9 @@ seekrange(chr,start,stop) {
 		if (tk.name) {
 			// two conditions to show tooltip on hovering the label
 			// 1. label truncated, hover to show full label
-			// 2. list_description[{k,v}] provided, hover to show table of details
+			// 2. list_description[{k,v}] provided:
+			// a.hover to show table of details
+			// b. click label to show and leave table of details
 			const labeltruncated = tk.name.length >= 25
 			if (labeltruncated) {
 				// to truncate name and also apply tooltip
@@ -2560,14 +2562,32 @@ seekrange(chr,start,stop) {
 			}
 			if (labeltruncated || tk.list_description) {
 				// will show tooltip to display both info if available
-				tk.tklabel.on('click', () => {
-					tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
-					if (labeltruncated) {
-						const d = tk.tktip.d.append('div').text(tk.name)
-						if (tk.list_description) d.style('margin-bottom', '5px')
+				tk.tklabel.classed('sjpp-list-tktip-active', false)
+				tk.tktip.d.classed('sjpp-tktip-list-desc', true)
+				tk.tklabel.on('mouseover', () => {
+					// Fix to allow user to click on anywhere (i.e. tk label or white space) & preserve the click behavior.
+					// When user clicks on whitespace (i.e. not triggering another click event), remove class
+					// flag for click event
+					if (
+						d3select('.sjpp-tktip-list-desc').style('display') == 'none' &&
+						tk.tklabel.classed('sjpp-list-tktip-active') == true
+					) {
+						tk.tklabel.classed('sjpp-list-tktip-active', false)
 					}
-					if (tk.list_description) {
-						client.make_table_2col(tk.tktip.d.append('div'), tk.list_description).style('margin', '0px')
+					// Only fires if menu not active from click event
+					if (tk.tklabel.classed('sjpp-list-tktip-active') == false) {
+						showTkLabelTooltip(tk, labeltruncated)
+						console.log('mouseover show tooltip', tk.name)
+					}
+				})
+				tk.tklabel.on('mouseout', () => {
+					if (tk.tklabel.classed('sjpp-list-tktip-active') == false) tk.tktip.hide()
+				})
+				tk.tklabel.on('click', () => {
+					tk.tklabel.classed('sjpp-list-tktip-active', !tk.tklabel.classed('sjpp-list-tktip-active'))
+					if (tk.tklabel.classed('sjpp-list-tktip-active') == true) {
+						showTkLabelTooltip(tk, labeltruncated)
+						console.log('show tooltip', tk.name)
 					}
 				})
 			}
@@ -2579,6 +2599,16 @@ seekrange(chr,start,stop) {
 			// tk.name is not provided, e.g. mds2
 			// its maketk will be responsible for filling the tklabel and setting tk.leftLabelMaxwidth
 			// fault is that the tooltip cannot be provided in this case
+		}
+		function showTkLabelTooltip(tk, labeltruncated) {
+			tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
+			if (labeltruncated) {
+				const d = tk.tktip.d.append('div').text(tk.name)
+				if (tk.list_description) d.style('margin-bottom', '5px')
+			}
+			if (tk.list_description) {
+				client.make_table_2col(tk.tktip.d.append('div'), tk.list_description).style('margin', '0px')
+			}
 		}
 
 		tk.pica = {
