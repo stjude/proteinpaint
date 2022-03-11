@@ -111,6 +111,20 @@ export async function init(obj, holder, debugmode) {
 	if (debugmode) {
 		window.obj = obj
 	}
+	// default lasso options
+	if (!obj.lasso)
+		obj.lasso = {
+			postSelectMenuOptions: [
+				/*{
+         label: 'Do something', 
+         callback({samples, sample_attributes, sample2dot}) {....}
+      },*/
+				{
+					label: 'List samples',
+					callback: 'listSamples' // will indicate to use the default callback of listing the samples
+				}
+			]
+		}
 
 	obj.menu = new client.Menu({ padding: '2px' })
 	obj.menu2 = new client.Menu({ padding: '10px' })
@@ -1510,7 +1524,24 @@ function lasso_select(obj, dots) {
 				})
 		}
 
-		obj.menu.d
+		for (const opt of obj.lasso.postSelectMenuOptions) {
+			obj.menu.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text(opt.label) //'List samples')
+				.on('click', async () => {
+					obj.menu.hide()
+					const arg = {
+						samples,
+						sample_attributes: obj.sample_attributes,
+						sample2dot: obj.sample2dot
+					}
+					if (opt.callback == 'listSamples') printData(arg)
+					else opt.callback(arg)
+				})
+		}
+
+		/*obj.menu.d
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.text('List samples')
@@ -1522,7 +1553,7 @@ function lasso_select(obj, dots) {
 					sample2dot: obj.sample2dot
 				}
 				printData(arg)
-			})
+			})*/
 
 		obj.menu.d
 			.append('div')
