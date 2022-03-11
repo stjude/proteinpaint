@@ -2562,32 +2562,31 @@ seekrange(chr,start,stop) {
 			}
 			if (labeltruncated || tk.list_description) {
 				// will show tooltip to display both info if available
-				tk.tklabel.classed('sjpp-list-tktip-active', false)
-				tk.tktip.d.classed('sjpp-tktip-list-desc', true)
+				let tktip_active = false
+				let click_active = false
+				tk.tktip.onHide = () => {
+					tktip_active = false
+				}
 				tk.tklabel.on('mouseover', () => {
-					// Fix to allow user to click on anywhere (i.e. tk label or white space) & preserve the click behavior.
-					// When user clicks on whitespace (i.e. not triggering another click event), remove class
-					// flag for click event
-					if (
-						d3select('.sjpp-tktip-list-desc').style('display') == 'none' &&
-						tk.tklabel.classed('sjpp-list-tktip-active') == true
-					) {
-						tk.tklabel.classed('sjpp-list-tktip-active', false)
-					}
 					// Only fires if menu not active from click event
-					if (tk.tklabel.classed('sjpp-list-tktip-active') == false) {
-						showTkLabelTooltip(tk, labeltruncated)
-						console.log('mouseover show tooltip', tk.name)
+					if (tktip_active == true) return
+					// Fix to allow user to click on anywhere (i.e. tk label or white space) & preserve the click behavior.
+					// When user clicks on whitespace (i.e. not triggering another click event), remove flag for click event
+					if ((tktip_active == false) & (click_active == true)) {
+						click_active = false
 					}
+					showTkLabelTooltip(tk, labeltruncated)
+					tktip_active = false
 				})
 				tk.tklabel.on('mouseout', () => {
-					if (tk.tklabel.classed('sjpp-list-tktip-active') == false) tk.tktip.hide()
+					if (tktip_active == true) return
+					tk.tktip.hide()
 				})
 				tk.tklabel.on('click', () => {
-					tk.tklabel.classed('sjpp-list-tktip-active', !tk.tklabel.classed('sjpp-list-tktip-active'))
-					if (tk.tklabel.classed('sjpp-list-tktip-active') == true) {
+					tktip_active = !tktip_active
+					if (tktip_active == true) {
+						click_active = true
 						showTkLabelTooltip(tk, labeltruncated)
-						console.log('show tooltip', tk.name)
 					}
 				})
 			}
