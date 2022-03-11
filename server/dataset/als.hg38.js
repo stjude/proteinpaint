@@ -1,10 +1,11 @@
 const clinvar = require('./clinvar')
 
-// convert .label to .name within clinical significance categories
+// update format of clinical significance categories
 for (const category in clinvar.clinsig) {
 	const properties = clinvar.clinsig[category]
 	properties.name = properties.label
 	delete properties.label
+	if (properties.textcolor) delete properties.textcolor
 }
 
 const samplenamekey = 'sample_name'
