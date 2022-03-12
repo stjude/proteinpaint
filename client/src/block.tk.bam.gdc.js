@@ -7,6 +7,7 @@ import { contigNameNoChr2 } from '../shared/common'
 import urlmap from './common/urlmap'
 import { addGeneSearchbox } from './dom/genesearch'
 import { Menu } from './dom/menu'
+import { init_tabs } from './dom/toggleButtons'
 
 /*
 *********** gdc_args{}
@@ -36,7 +37,7 @@ const baminfo_rows = [
 	{ title: 'Size', key: 'file_size' }
 ]
 
-export function bamsliceui(genomes, holder) {
+export async function bamsliceui(genomes, holder) {
 	const genome = genomes[gdc_genome]
 	if (!genome) throw 'missing genome for ' + gdc_genome
 
@@ -78,7 +79,9 @@ export function bamsliceui(genomes, holder) {
 	// <input> to enter gdc id, and doms for display case/file info
 	makeGdcIDinput()
 
-	const ssms_div = makeGeneSearch()
+	// make ssm/gene tab
+	// returned div are used by searchSSM()
+	const [ssmTab, ssmDiv] = await makeGeneSearch()
 
 	makeInstruction()
 
@@ -259,6 +262,7 @@ export function bamsliceui(genomes, holder) {
 				so the case_id should be the same for all files
 				*/
 				gdc_args.case_id = data.file_metadata[0].case_id
+				await searchSSM(gdc_args.case_id)
 
 				if (data.is_file_uuid || data.is_file_id) {
 					// matches with one bam file
@@ -375,32 +379,33 @@ export function bamsliceui(genomes, holder) {
 		}
 	}
 
-	function makeGeneSearch() {
-		///////////////////////////
-		// row 1, <input>
-		// col 1
-		formdiv
-			.append('div')
-			.style('padding', '3px 10px')
-			.text('Gene, position')
-		// col 2
-		const cell = formdiv.append('div')
-		///////////////////////////
-		// row 2, holder to show ssms for a given gene
-		const ssms_div = formdiv
+	async function makeGeneSearch() {
+		const holder = formdiv
 			.append('div')
 			.style('grid-column', 'span 2')
-			.style('display', 'none')
-			.style('border-left', '1px solid #ccc')
-			.style('margin', '20px 20px 20px 40px')
+			.style('padding', '3px 10px')
+
+		const tabOptions = {
+			holder,
+			tabs: [
+				{
+					width: 130,
+					label: 'Select SSM'
+				},
+				{
+					label: 'Gene'
+				}
+			]
+		}
+
+		await init_tabs(tabOptions)
 
 		// argument for making search box
 		const opt = {
 			genome,
 			tip,
-			row: cell,
-			allowVariant: true,
-			callback: maySearchSSM
+			row: tabOptions.tabs[1].holder,
+			allowVariant: true
 		}
 		if (urlp.has('gdc_pos')) {
 			const t = urlp.get('gdc_pos').split(/[:\-]/)
@@ -424,7 +429,10 @@ export function bamsliceui(genomes, holder) {
 			}
 		}
 		gdc_args.coordInput = addGeneSearchbox(opt)
-		return ssms_div
+
+		const ssmTab = tabOptions.tabs[0].tab
+		const ssmDiv = tabOptions.tabs[0].holder
+		return [ssmTab, ssmDiv]
 	}
 
 	function makeInstruction() {
@@ -439,65 +447,73 @@ export function bamsliceui(genomes, holder) {
 			</ul>`)
 	}
 
-	async function maySearchSSM() {
-		// disable this for now, needs to be reworked
-		return
-
-		ssms_div.style('display', 'none')
-		if (!gdc_args.case_id || !gdc_args.coordInput.geneSymbol) return
+	async function searchSSM(case_id) {
 		// convert gene to canonical isoform
-		const d0 = await dofetch3('gene2canonicalisoform?genome=' + gdc_genome + '&gene=' + gdc_args.coordInput.geneSymbol)
-		if (d0.error) throw 'cannot find canonical isoform'
-		const isoform = d0.isoform
-		const lst = ['case_id=' + gdc_args.case_id, 'isoform=' + isoform]
-		const data = await dofetch3('gdc_ssms?' + lst.join('&'))
+		ssmDiv.selectAll('*').remove()
+		ssmTab.text('Loading')
+		const data = await dofetch3(`gdc_ssms?case_id=${case_id}&genome=${gdc_genome}`)
 		if (data.error) throw data.error
-		if (data.mlst.length == 0) return
-		// found ssms, display
-		ssms_div
-			.style('display', 'grid')
-			.selectAll('*')
-			.remove()
-		ssms_div.append('div') // col1
-		const div = ssms_div
-			.append('div') // col2
-			.style('margin', '0px 10px')
-		const rname = 'gdcradio' + Math.random().toString()
-		{
-			const lab = div.append('label')
-			lab
-				.append('input')
-				.attr('type', 'radio')
-				.style('margin-right', '10px')
-				.attr('name', rname)
-				.attr('value', -1)
-				.property('checked', true)
-				.on('change', () => {})
-			lab.append('span').text('View gene region')
+		if (data.mlst.length == 0) {
+			// clear holder
+			ssmTab.text('No mutation')
+			return
 		}
-		div.append('div').text('Or, select a gene variant from this case:')
+		// found ssms, display
+		ssmTab.text(`${data.mlst.length} mutation${data.mlst.length > 1 ? 's' : ''}`)
+		const scrolldiv = ssmDiv
+			.append('div')
+			.style('display', 'grid')
+			.style('grid-template-columns', 'repeat(5,auto)')
+			.style('gap', '5px')
+			.style('padding', '10px')
+			.style('align-items', 'center')
+			.style('justify-items', 'left')
+
+		if (data.mlst.length > 10) {
+			scrolldiv
+				.style('overflow-y', 'scroll')
+				.style('height', '300px')
+				.style('resize', 'vertical')
+		}
+
+		// group by gene
+		const gene2mlst = new Map()
 		for (const m of data.mlst) {
-			const lab = div.append('div').append('label')
-			lab
-				.append('input')
-				.attr('type', 'radio')
-				.style('margin-right', '10px')
-				.attr('name', rname)
-				.attr('value', 0)
-				.on('change', () => {})
-			const span = lab.append('span')
-			span.append('span').text(m.mname)
-			span
-				.append('span')
-				.style('margin-left', '5px')
-				.style('font-size', '.8em')
-				.text(m.consequence)
-			span
-				.append('span')
-				.style('margin-left', '5px')
-				.style('font-size', '.8em')
-				.style('opacity', 0.5)
-				.text(m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt)
+			if (!gene2mlst.has(m.gene)) gene2mlst.set(m.gene, [])
+			gene2mlst.get(m.gene).push(m)
+		}
+
+		let i = 1
+		for (const [gene, mlst] of gene2mlst) {
+			let first = true
+			for (const m of mlst) {
+				/* hover over a row to highlight
+			click a row to select and store in gdc_args{}
+				const row = scrolldiv.append('div')
+					.style('display','grid')
+					.style('grid-column','span 4')
+					*/
+				scrolldiv
+					.append('div')
+					.text(i++)
+					.style('font-size', '.7em')
+					.style('opacity', 0.4)
+				scrolldiv
+					.append('div')
+					.text(first ? gene : '')
+					.style('font-style', 'italic')
+				scrolldiv.append('div').text(m.mname)
+				scrolldiv
+					.append('div')
+					.text(m.consequence)
+					.style('font-size', '.8em')
+				scrolldiv
+					.append('div')
+					.style('font-size', '.8em')
+					.style('opacity', 0.5)
+					.text(m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt)
+				first = false
+			}
 		}
 	}
 }

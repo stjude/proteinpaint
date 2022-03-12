@@ -1097,45 +1097,92 @@ const ssms_fields = [
 	'consequence.transcript.gene.symbol'
 ]
 
-export async function handle_gdc_ssms(req, res) {
-	try {
-		if (!req.query.case_id) throw '.case_id missing'
-		if (!req.query.isoform) throw '.isoform missing'
-		// make query to genome genedb to get canonical isoform of the gene
-		const filters = {
-			op: 'and',
-			content: [
-				{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [req.query.isoform] } },
-				{ op: 'in', content: { field: 'cases.case_id', value: [req.query.case_id] } }
-			]
+export function handle_gdc_ssms(genomes) {
+	return async (req, res) => {
+		/* query{}
+		.genome: required
+		.case_id: required
+		.isoform: optional
+		.gene: can add later
+		*/
+		try {
+			const genome = genomes[req.query.genome]
+			if (!genome) throw 'invalid genome'
+			if (!req.query.case_id) throw '.case_id missing'
+			// make query to genome genedb to get canonical isoform of the gene
+			const filters = {
+				op: 'and',
+				content: [
+					{
+						op: 'in',
+						content: { field: 'cases.case_id', value: [req.query.case_id] }
+					}
+				]
+			}
+			if (req.query.isoform) {
+				filters.content.push({
+					op: '=',
+					content: { field: 'consequence.transcript.transcript_id', value: [req.query.isoform] }
+				})
+			}
+
+			// allow alternative api host (as gdc docker)
+			const apihost = (process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov') + '/ssms'
+
+			const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+			const response = await got(
+				apihost +
+					'?size=1000&fields=' +
+					ssms_fields.join(',') +
+					'&filters=' +
+					encodeURIComponent(JSON.stringify(filters)),
+				{ method: 'GET', headers }
+			)
+			const re = JSON.parse(response.body)
+			const mlst = []
+			for (const hit of re.data.hits) {
+				// for each hit, create an element
+				// from list of consequences, find one based on isoform info
+				let isoform = req.query.isoform
+				if (!isoform) {
+					// no isoform given, use the canonical isoform of the gene
+					// collect gene into a set over all consequences
+					const genes = new Set()
+					for (const c of hit.consequence) {
+						if (c.transcript && c.transcript.gene && c.transcript.gene.symbol) {
+							genes.add(c.transcript.gene.symbol)
+						}
+					}
+					if (genes.size == 0) {
+						// no gene?
+						continue
+					}
+					// has gene. the case of having multiple genes is not dealt with
+					const gene = [...genes][0]
+					const data = genome.genedb.get_gene2canonicalisoform.get(gene)
+					if (data && data.isoform) isoform = data.isoform
+				}
+				let c = hit.consequence.find(i => i.transcript.transcript_id == isoform)
+				if (!c) {
+					// no consequence match with given isoform, just use the first one
+					c = hit.consequence[0]
+				}
+				// no aa change for utr variants
+				const aa = c.transcript.aa_change || c.transcript.consequence_type
+				mlst.push({
+					mname: aa,
+					consequence: c.transcript.consequence_type,
+					gene: c.transcript.gene.symbol,
+					chr: hit.chromosome,
+					pos: hit.start_position,
+					ref: hit.reference_allele,
+					alt: hit.tumor_allele
+				})
+			}
+			res.send({ mlst })
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			res.send({ error: e.message || e })
 		}
-		// TODO allow alternative apihost from serverconfig
-		const apihost = 'https://api.gdc.cancer.gov/ssms'
-		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-		const response = await got(
-			apihost +
-				'?size=1000&fields=' +
-				ssms_fields.join(',') +
-				'&filters=' +
-				encodeURIComponent(JSON.stringify(filters)),
-			{ method: 'GET', headers }
-		)
-		const re = JSON.parse(response.body)
-		const mlst = []
-		for (const hit of re.data.hits) {
-			const consequence = hit.consequence.find(i => i.transcript.transcript_id == req.query.isoform)
-			const aa = consequence.transcript.aa_change || consequence.transcript.consequence_type // no aa change for utr variants
-			mlst.push({
-				mname: aa,
-				consequence: consequence.transcript.consequence_type,
-				chr: hit.chromosome,
-				pos: hit.start_position,
-				ref: hit.reference_allele,
-				alt: hit.tumor_allele
-			})
-		}
-		res.send({ mlst })
-	} catch (e) {
-		res.send({ error: e.message || e })
 	}
 }

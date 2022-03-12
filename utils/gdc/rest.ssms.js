@@ -10,18 +10,19 @@ for (let i = 2; i < process.argv.length; i++) {
 	const [k, v] = process.argv[i].split('=')
 	p[k] = v
 }
+/*
 if (!p.gene && !p.isoform) {
 	// if missing gene/isoform, use AKT1
 	p.isoform = 'ENST00000407796'
 }
+*/
 const filters = {
 	op: 'and',
 	content: []
 }
 if (p.isoform)
-	filters.content.push({ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [p.isoform] } })
-if (p.gene)
-	filters.content.push({ op: '=', content: { field: 'ssms.consequence.transcript.gene.symbol', value: [p.gene] } })
+	filters.content.push({ op: '=', content: { field: 'consequence.transcript.transcript_id', value: [p.isoform] } })
+if (p.gene) filters.content.push({ op: '=', content: { field: 'consequence.transcript.gene.symbol', value: [p.gene] } })
 if (p.set_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.set_id] } })
 if (p.case_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } })
 
@@ -58,11 +59,25 @@ const fields = [
 			if (p.isoform) {
 				const consequence = hit.consequence.find(i => i.transcript.transcript_id == p.isoform)
 				const aa = consequence.transcript.aa_change || consequence.transcript.consequence_type // no aa change for utr variants
-				console.log(aa, hit.chromosome, hit.start_position, hit.reference_allele, hit.tumor_allele)
+				console.log(
+					aa,
+					consequence.transcript.gene.symbol,
+					hit.chromosome,
+					hit.start_position,
+					hit.reference_allele,
+					hit.tumor_allele
+				)
 			} else {
 				for (const consequence of hit.consequence) {
 					const aa = consequence.transcript.aa_change || consequence.transcript.consequence_type // no aa change for utr variants
-					console.log(aa, hit.chromosome, hit.start_position, hit.reference_allele, hit.tumor_allele)
+					console.log(
+						aa,
+						consequence.transcript.gene.symbol,
+						hit.chromosome,
+						hit.start_position,
+						hit.reference_allele,
+						hit.tumor_allele
+					)
 				}
 			}
 		}
