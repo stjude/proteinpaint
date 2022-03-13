@@ -15,16 +15,27 @@ gdc_args {}
 	gdc_token: <string>,
 	coordInput:{}
 		output obj from genesearch
-	position: {chr,start,stop}
-	variant: {chr,pos,ref,alt}
 	bam_files: [ {} ]
 		file_id: file uuid from gdc <string>,
 		track_name: used for naming of track <string> //optional
 		about:[] // with keys corresponding to baminfo_rows[]
 	case_id: <string>
+# after validation, create following
+	position: {chr,start,stop}
+	variant: {chr,pos,ref,alt}
 
 changes to UI <input> are stored on this object
 and is validated in validateInputs{}
+
+************ functions
+makeTokenInput
+makeGdcIDinput
+	gdc_search
+		searchSSM
+	update_singlefile_table
+	update_multifile_table
+makeGeneSearch
+	makeInstruction
 */
 
 const gdc_genome = 'hg38'
@@ -81,9 +92,7 @@ export async function bamsliceui(genomes, holder) {
 
 	// make ssm/gene tab
 	// returned div are used by searchSSM()
-	const [ssmTab, ssmDiv] = await makeGeneSearch()
-
-	makeInstruction()
+	const [ssmGeneHolder, ssmTab, ssmDiv] = await makeGeneSearch()
 
 	// submit button
 	formdiv
@@ -231,6 +240,7 @@ export async function bamsliceui(genomes, holder) {
 					baminfo_div.style('display', 'none')
 					saydiv.style('display', 'none')
 					gdcid_error_div.style('display', 'none')
+					ssmGeneHolder.style('display', 'none')
 					return
 				}
 				// disable input field and show 'loading...' until response returned from gdc api
@@ -255,9 +265,8 @@ export async function bamsliceui(genomes, holder) {
 					file_uuid: "f383b776-b162-4c61-909b-3b92d1853511"
 					sample_type: "Solid Tissue Normal"
 				}
-				*/
 
-				/* record case_id for the found file
+				record case_id for the found file
 				if the array has multiple files, all are from the same case
 				so the case_id should be the same for all files
 				*/
@@ -266,7 +275,7 @@ export async function bamsliceui(genomes, holder) {
 
 				if (data.is_file_uuid || data.is_file_id) {
 					// matches with one bam file
-					// update file id to be suppliled to gdc bam query
+					// update file id to be supplied to gdc bam query
 					update_singlefile_table(data, gdc_id)
 					show_input_check(gdcid_error_div)
 				} else if (data.is_case_uuid || data.is_case_id) {
@@ -384,6 +393,7 @@ export async function bamsliceui(genomes, holder) {
 			.append('div')
 			.style('grid-column', 'span 2')
 			.style('padding', '3px 10px')
+			.style('display', 'none')
 
 		const tabOptions = {
 			holder,
@@ -401,10 +411,12 @@ export async function bamsliceui(genomes, holder) {
 		await init_tabs(tabOptions)
 
 		// argument for making search box
+		// gene searchbox is created in 2nd tab holder
+		const geneHolder = tabOptions.tabs[1].holder.style('padding', '10px')
 		const opt = {
 			genome,
 			tip,
-			row: tabOptions.tabs[1].holder,
+			row: geneHolder,
 			allowVariant: true
 		}
 		if (urlp.has('gdc_pos')) {
@@ -429,26 +441,22 @@ export async function bamsliceui(genomes, holder) {
 			}
 		}
 		gdc_args.coordInput = addGeneSearchbox(opt)
+		makeInstruction(geneHolder)
 
 		const ssmTab = tabOptions.tabs[0].tab
 		const ssmDiv = tabOptions.tabs[0].holder
-		return [ssmTab, ssmDiv]
-	}
-
-	function makeInstruction() {
-		formdiv
-			.append('div')
-			.style('grid-column', 'span 2')
-			.style('opacity', 0.6).html(`<ul>
-				<li>All positions are on hg38 and 1-based.</li>
-				<li>Either position or variant is required.</li>
-				<li>The BAM file will be sliced at the provided postion or variant and visualized.
-				To visualize reads from a new region, enter again from this form.</li>
-			</ul>`)
+			.style('display', 'grid')
+			.style('grid-template-columns', 'repeat(5,auto)')
+			.style('gap', '5px')
+			.style('padding', '10px')
+			.style('align-items', 'center')
+			.style('justify-items', 'left')
+		return [holder, ssmTab, ssmDiv]
 	}
 
 	async function searchSSM(case_id) {
-		// convert gene to canonical isoform
+		// got case, turn on div and search for ssm
+		ssmGeneHolder.style('display', 'block')
 		ssmDiv.selectAll('*').remove()
 		ssmTab.text('Loading')
 		const data = await dofetch3(`gdc_ssms?case_id=${case_id}&genome=${gdc_genome}`)
@@ -460,6 +468,14 @@ export async function bamsliceui(genomes, holder) {
 		}
 		// found ssms, display
 		ssmTab.text(`${data.mlst.length} mutation${data.mlst.length > 1 ? 's' : ''}`)
+		// header
+		/*
+		ssmDiv.append('div')
+		ssmDiv.append('div').text('Gene').style('font-size','.7em').style('opacity',.5)
+		ssmDiv.append('div').text('AAchange').style('font-size','.7em').style('opacity',.5)
+		ssmDiv.append('div').text('Consequence').style('font-size','.7em').style('opacity',.5)
+		ssmDiv.append('div').text('Position').style('font-size','.7em').style('opacity',.5)
+		*/
 		const scrolldiv = ssmDiv
 			.append('div')
 			.style('display', 'grid')
@@ -487,7 +503,7 @@ export async function bamsliceui(genomes, holder) {
 		for (const [gene, mlst] of gene2mlst) {
 			let first = true
 			for (const m of mlst) {
-				/* hover over a row to highlight
+				/* FIXME hover over a row to highlight
 			click a row to select and store in gdc_args{}
 				const row = scrolldiv.append('div')
 					.style('display','grid')
@@ -516,6 +532,14 @@ export async function bamsliceui(genomes, holder) {
 			}
 		}
 	}
+}
+
+function makeInstruction(d) {
+	d.append('div').style('opacity', 0.6).html(`<ul>
+			<li>All positions are on hg38 and 1-based.</li>
+			<li>The BAM file will be sliced at the provided postion or variant and visualized.
+			To visualize reads from a new region, enter again from this form.</li>
+		</ul>`)
 }
 
 function show_input_check(holder, error_msg) {
