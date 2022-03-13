@@ -13,14 +13,19 @@ import { init_tabs } from './dom/toggleButtons'
 *********** gdc_args{}
 gdc_args {}
 	gdc_token: <string>,
-	coordInput:{}
-		output obj from genesearch
 	bam_files: [ {} ]
 		file_id: file uuid from gdc <string>,
 		track_name: used for naming of track <string> //optional
 		about:[] // with keys corresponding to baminfo_rows[]
 	case_id: <string>
-# after validation, create following
+	useSsmOrGene: 'ssm' or 'gene'
+		identifies the choice of the SSM/Gene toggle button
+		if value is ssm, will use ssmInput; otherwise check coordInput
+	ssmInput:{}
+		chr, pos, ref, alt
+	coordInput:{}
+		output obj from genesearch
+# after validation, create position or variant used for launching tk
 	position: {chr,start,stop}
 	variant: {chr,pos,ref,alt}
 
@@ -36,12 +41,15 @@ makeGdcIDinput
 	update_multifile_table
 makeGeneSearch
 	makeInstruction
+makeSubmit
+	validateInputs
+	renderBamSlice
 */
 
 const gdc_genome = 'hg38'
 const variantFlankingSize = 60 // bp
 const baminfo_rows = [
-	{ title: 'Entity ID', key: 'entity_id' /*url: 'https://portal.gdc.cancer.gov/files/'*/ },
+	{ title: 'Entity ID', key: 'entity_id' },
 	{ title: 'Entity Type', key: 'entity_type' },
 	{ title: 'Experimental Strategy', key: 'experimental_strategy' },
 	{ title: 'Sample Type', key: 'sample_type' },
@@ -95,26 +103,7 @@ export async function bamsliceui(genomes, holder) {
 	const [ssmGeneHolder, ssmTab, ssmDiv] = await makeGeneSearch()
 
 	// submit button
-	formdiv
-		.append('div')
-		.style('grid-column', 'span 2')
-		.append('button')
-		.style('margin', '20px 20px 20px 100px')
-		.style('padding', '5px 15px')
-		.style('border-radius', '15px')
-		.text('Submit')
-		.on('click', () => {
-			try {
-				validateInputs(gdc_args, genome)
-			} catch (e) {
-				sayerror(saydiv, e.message || e)
-				if (e.stack) console.log(e.stack)
-				return
-			}
-			// success
-			formdiv.remove()
-			renderBamSlice(gdc_args, genome, blockHolder)
-		})
+	makeSubmit()
 
 	//////////////////////// helper functions
 
@@ -400,10 +389,16 @@ export async function bamsliceui(genomes, holder) {
 			tabs: [
 				{
 					width: 130,
-					label: 'Select SSM'
+					label: 'Select SSM',
+					callback: () => {
+						gdc_args.useSsmOrGene = 'ssm'
+					}
 				},
 				{
-					label: 'Gene'
+					label: 'Gene',
+					callback: () => {
+						gdc_args.useSsmOrGene = 'gene'
+					}
 				}
 			]
 		}
@@ -456,6 +451,7 @@ export async function bamsliceui(genomes, holder) {
 
 	async function searchSSM(case_id) {
 		// got case, turn on div and search for ssm
+		delete gdc_args.ssmInput
 		ssmGeneHolder.style('display', 'block')
 		ssmDiv.selectAll('*').remove()
 		ssmTab.text('Loading')
@@ -504,7 +500,7 @@ export async function bamsliceui(genomes, holder) {
 			let first = true
 			for (const m of mlst) {
 				/* FIXME hover over a row to highlight
-			click a row to select and store in gdc_args{}
+				click a row to select and store in gdc_args.ssmInput{}
 				const row = scrolldiv.append('div')
 					.style('display','grid')
 					.style('grid-column','span 4')
@@ -532,6 +528,28 @@ export async function bamsliceui(genomes, holder) {
 			}
 		}
 	}
+	function makeSubmit() {
+		formdiv
+			.append('div')
+			.style('grid-column', 'span 2')
+			.append('button')
+			.style('margin', '20px 20px 20px 100px')
+			.style('padding', '5px 15px')
+			.style('border-radius', '15px')
+			.text('Submit')
+			.on('click', () => {
+				try {
+					validateInputs(gdc_args, genome)
+				} catch (e) {
+					sayerror(saydiv, e.message || e)
+					if (e.stack) console.log(e.stack)
+					return
+				}
+				// success
+				formdiv.remove()
+				renderBamSlice(gdc_args, genome, blockHolder)
+			})
+	}
 }
 
 function makeInstruction(d) {
@@ -552,7 +570,6 @@ function show_input_check(holder, error_msg) {
 }
 
 function validateInputs(args, genome) {
-	if (!args) throw 'no parameters passing to validate'
 	if (!args.gdc_token) throw 'GDC token missing'
 	if (typeof args.gdc_token !== 'string') throw 'GDC token is not string'
 	if (!args.bam_files.length) throw 'no bam file supplied'
@@ -561,6 +578,17 @@ function validateInputs(args, genome) {
 		if (typeof file.file_id !== 'string') throw 'file uuid is not string'
 	}
 
+	if (args.useSsmOrGene == 'ssm') {
+		const s = args.ssmInput
+		if (!s) throw 'No mutation selected'
+		if (!s.chr) throw 'ssmInput.chr missing'
+		if (!Number.isInteger(s.pos)) throw 'ssmInput.pos not integer'
+		if (!s.ref) throw 'ssmInput.ref missing'
+		if (!s.alt) throw 'ssmInput.alt missing'
+		args.variant = s
+		return
+	}
+	// using coordInput
 	const ci = args.coordInput
 	if (!ci.chr) throw 'No valid position or variant was entered'
 	const [nocount, hascount] = contigNameNoChr2(genome, [ci.chr])
