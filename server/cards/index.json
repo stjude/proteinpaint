@@ -64,7 +64,7 @@
             "app": "Genome Browser",
             "blurb": "Coding mutations and gene fusions",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
-            "update_expire": "2022-02-07",
+            "update_expire": "2022-05-11",
             "sandboxjson": "lollipop",
             "searchterms": []
         },
@@ -136,7 +136,7 @@
             "blurb": "ProteinPaint arguments applicable to any track",
             "new_expire": "2022-04-07",
             "image": "https://pecan.stjude.cloud/static/examples/images/code-square.png",
-            "sandboxjson": "features",
+            "sandboxjson": "tkFeatures",
             "searchterms": []
         },
         {

@@ -80,7 +80,7 @@ function infoSection(div) {
                     Please see the <a href="https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit" target="_blank">documentation</a> for more information.
                 </li>
 				<li>
-					Download an example data dictionary and phenotree <a href="https://pecan.stjude.cloud/static/proteinpaint_demo/databrowser/dictionaryDemoData.tar.gz" target="_self" "download>here</a>.
+					Download an example data dictionary <a href="https://pecan.stjude.cloud/static/proteinpaint_demo/databrowser/dictionaryDemoData.tar.gz" target="_self" "download>here</a>.
 				</li>
             </ul>`)
 }
