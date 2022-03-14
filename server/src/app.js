@@ -1635,6 +1635,8 @@ function handle_dbdata(req, res) {
 			res.send({ rows: rows })
 		})
 	}
+
+	/*
 	// req.query.db db file path
 	if (ch_dbtable.has(req.query.db)) {
 		query()
@@ -1654,6 +1656,7 @@ function handle_dbdata(req, res) {
 			query()
 		})
 	}
+	*/
 }
 
 function handle_svmr(req, res) {
