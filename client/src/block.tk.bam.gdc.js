@@ -492,6 +492,7 @@ export async function bamsliceui(genomes, holder) {
 			.style('display', 'grid')
 			.style('grid-template-columns', 'repeat(auto-fit, 1fr)')
 			.style('padding', '0px')
+			.style('margin', '0px')
 			.style('list-style-type', 'none')
 
 		function makeCaseResultRow(div) {
