@@ -6,11 +6,12 @@
         "runargs": {
             "noheader": true,
             "nobox": 1, 
-            "parseurl": false,
+            "parseurl": false, 
             "tkui": "dictionary"
         }
     },
     {
+      "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/databrowser/dictionaryDemoData.tar.gz",
       "runargs": {
         "noheader": true,
         "nobox":true,

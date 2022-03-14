@@ -1,8 +1,9 @@
 {
+    "intro": "<b>The examples below demonstrate optional track arguments with a bigwig track. Apply these arguments to <em>any</em> track.</b>",
     "ppcalls": [
         {
             "label": "Add a Legend Image",
-            "message": "Include the <span style='font-family: Courier; opacity: 0.6;'>legendimg</span> argument to show an image in the legend under the track. <span style='font-family: Courier; opacity: 0.6;'>legendimg</span> may appear in the track object to annotate individual tracks or outside of <span style='font-family: Courier; opacity: 0.6;'>tracks</span> for images descripting the entire visualization. Clicking on the image expands and contracts the size.<br><br> For more information about this track type and example, please see the <b>Profile Gene Value</b> track.",
+            "message": "<div style='line-height:1.5em;'>Include the <span style='font-family: Courier; opacity: 0.6;'>legendimg</span> argument to show an image in the legend under the track. <span style='font-family: Courier; opacity: 0.6;'>legendimg</span> may appear in the track object to annotate individual tracks or outside of <span style='font-family: Courier; opacity: 0.6;'>tracks</span> for images descripting the entire visualization. Clicking on the image expands and contracts the size.</div>",
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -10,29 +11,20 @@
                 "noheader": 1,
                 "genome": "hg19",
                 "nativetracks": "RefGene",
-                "position": "chr14:24549316-24584223",
-                "tracks": [{
-                    "legendimg": {
-                        "file": "proteinpaint_demo/hg19/pgv/HMM.png",
-                        "width": 400,
-                        "height": 400
-                    },
-                    "type": "profilegenevalue",
-                    "genevaluetrack": {
-                        "file": "proteinpaint_demo/hg19/pgv/pgvdemo.fpkm.gz"
-                    },
-                    "genevaluetype": "FPKM",
-                    "name": "Demo chromHMM",
-                    "genevaluematchname": "sampleID",
-                    "tracks": [
-                        { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample1.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 1", "sampleID": "101" },
-                        { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample2.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 2", "sampleID": "102" },
-                        { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample3.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 3", "sampleID": "103" },
-                        { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample4.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 4", "sampleID": "104" },
-                        { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample5.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 5", "sampleID": "105" },
-                        { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample6.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 6", "sampleID": "106" }
-                    ]
-                }]
+                "legendimg": {
+                    "name": "GenomePaint",
+                    "file": "proteinpaint_demo/gpPaper.jpg",
+                    "width": 800,
+                    "height": 800
+                },
+                "tracks": [
+                    {
+                        "type": "bigwig",
+                        "file": "proteinpaint_demo/hg19/bigwig/file.bw",
+                        "name": "BigWig Demo",
+                        "height": 100
+                    }
+                ]
             },
             "testSpec": {
                 "expected": {"image": 2 }
@@ -40,7 +32,7 @@
         },
         {
             "label": "Show Additional Track Information",
-            "message": "To create a tooltip over the track name, include the <span style='font-family: Courier; opacity: 0.6;'>list_description</span> array within the track object. Hover over the track name on the lefthand side to see the tooltip. <br><br> For more information about this track type and example, please see the <b>Splice Junction</b> single sample example (i.e. top example on the left).",
+            "message": "<div style='line-height:1.5em;'>To create a tooltip over the track name, include the <span style='font-family: Courier; opacity: 0.6;'>list_description</span> array within the track object. Hover over the track name on the lefthand side to see the tooltip. Clicking on the track name prevents the tooltip from disappearing.</div>",
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -50,9 +42,10 @@
                 "nativetracks":"refgene",
                 "tracks": [
                     {
-                        "type": "junction",
-                        "file": "proteinpaint_demo/hg19/junction/file.gz",
-                        "name": "RNA splice junction demo",
+                        "type": "bigwig",
+                        "file": "proteinpaint_demo/hg19/bigwig/file.bw",
+                        "name": "BigWig Demo",
+                        "height": 100,
                         "list_description":[
                             {
                                 "k":"Custom Label 1",
