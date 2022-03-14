@@ -463,30 +463,8 @@ export async function bamsliceui(genomes, holder) {
 		}
 		// found ssms, display
 		ssmTab.text(`${data.mlst.length} mutation${data.mlst.length > 1 ? 's' : ''}`)
-		// header
+
 		/*
-		ssmDiv.append('div')
-		ssmDiv.append('div').text('Gene').style('font-size','.7em').style('opacity',.5)
-		ssmDiv.append('div').text('AAchange').style('font-size','.7em').style('opacity',.5)
-		ssmDiv.append('div').text('Consequence').style('font-size','.7em').style('opacity',.5)
-		ssmDiv.append('div').text('Position').style('font-size','.7em').style('opacity',.5)
-		*/
-		// const scrolldiv = ssmDiv
-		// 	.append('div')
-		// 	.style('display', 'grid')
-		// 	.style('grid-template-columns', 'repeat(5,auto)')
-		// 	.style('gap', '5px')
-		// 	.style('padding', '10px')
-		// 	.style('align-items', 'center')
-		// 	.style('justify-items', 'left')
-
-		// if (data.mlst.length > 10) {
-		// 	scrolldiv
-		// 		.style('overflow-y', 'scroll')
-		// 		.style('height', '300px')
-		// 		.style('resize', 'vertical')
-		// }
-
 		const resultsList = ssmDiv
 			.append('ul')
 			.style('display', 'grid')
@@ -494,39 +472,38 @@ export async function bamsliceui(genomes, holder) {
 			.style('padding', '0px')
 			.style('margin', '0px')
 			.style('list-style-type', 'none')
+			*/
 
-		function makeCaseResultRow(div) {
+		function addRow() {
 			// Creates the rows in list items with the positions 'fixed' (see TODO)
 			// Use the li for event listeners
-			const row = div
-				.append('li')
+			const row = ssmDiv
+				.append('div')
 				.style('display', 'grid')
 				// TODO fix overlap on resizing when viewport is too small (i.e. minmax)
 				.style('grid-template-columns', '2vw 8vw 20vw 20vw 15vw')
 				.style('gap', '5px')
-				.style('padding', '0.75em')
+				.style('padding', '0.3em')
 				.style('align-items', 'center')
 				.style('justify-content', 'left')
-			// .style('overflow', 'hidden')
 			return row
 		}
 
-		function makeResultsHeaders(headers) {
-			const header_row = makeCaseResultRow(resultsList)
-			header_row
+		// header
+		{
+			const row = addRow()
+			row
 				.style('position', 'sticky')
-				.style('background-color', '#f5f5dc')
+				.style('background-color', 'white')
 				.style('top', '0')
-			for (const header of headers) {
-				header_row
+			for (const h of ['', 'Gene', 'AAChange', 'Consequence', 'Position']) {
+				row
 					.append('div')
 					.style('top', '0')
-					.style('padding', '10px')
-					.text(header)
+					.style('opacity', 0.3)
+					.text(h)
 			}
 		}
-		const headers = ['', 'Gene', 'AAChange', 'Consequence', 'Position']
-		makeResultsHeaders(headers)
 
 		// group by gene
 		const gene2mlst = new Map()
@@ -539,45 +516,47 @@ export async function bamsliceui(genomes, holder) {
 		for (const [gene, mlst] of gene2mlst) {
 			let first = true
 			for (const m of mlst) {
-				/* FIXME hover over a row to highlight
-				click a row to select and store in gdc_args.ssmInput{} -> Copy here
-				const row = scrolldiv.append('div')
-					.style('display','grid')
-					.style('grid-column','span 4')
-					*/
-				const caseResult = makeCaseResultRow(resultsList)
-				caseResult
+				m.row = addRow()
+				m.row
 					.append('div')
 					.text(i++)
 					.style('font-size', '.7em')
-					// .style('opacity', 0.4)
 					.style('color', '#b0aeae') //Fix for numbers appearing over sticky header
-				caseResult
+				m.row
 					.append('div')
 					.text(first ? gene : '')
 					.style('font-style', 'italic')
-				caseResult.append('div').text(m.mname)
-				caseResult
+				m.row.append('div').text(m.mname)
+				m.row
 					.append('div')
 					.text(m.consequence)
 					.style('font-size', '.8em')
-				caseResult
+				m.row
 					.append('div')
 					.style('font-size', '.8em')
-					// .style('opacity', 0.5)
 					.style('color', '#b0aeae') //Fix for numbers appearing over sticky header
 					.text(m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt)
 				first = false
 
-				caseResult.on('mouseover', () => {
-					caseResult.style('background-color', 'rgb(138, 177, 212)')
+				m.row.on('mouseover', () => {
+					if (!m.isClicked) m.row.style('background-color', '#fffce3')
 				})
-				caseResult.on('mouseout', () => {
-					caseResult.style('background-color', 'white')
+				m.row.on('mouseout', () => {
+					if (!m.isClicked) m.row.style('background-color', '')
 				})
-				caseResult.on('click', () => {
-					caseResult.style('background-color', '#ffffe5')
-					console.log(m)
+				m.row.on('click', () => {
+					for (const m2 of data.mlst) {
+						m2.isClicked = false
+						m2.row.style('background-color', '')
+					}
+					m.isClicked = true
+					m.row.style('background-color', '#ffe3e4')
+					gdc_args.ssmInput = {
+						chr: m.chr,
+						pos: m.pos - 1, // convert 1-based to 0-based
+						ref: m.ref,
+						alt: m.alt
+					}
 				})
 			}
 		}
