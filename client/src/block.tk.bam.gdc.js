@@ -440,12 +440,11 @@ export async function bamsliceui(genomes, holder) {
 
 		const ssmTab = tabOptions.tabs[0].tab
 		const ssmDiv = tabOptions.tabs[0].holder
+			.append('div')
 			.style('display', 'grid')
-			.style('grid-template-columns', 'repeat(5,auto)')
-			.style('gap', '5px')
-			.style('padding', '10px')
-			.style('align-items', 'center')
-			.style('justify-items', 'left')
+			.style('grid-template-columns', 'repeat(auto-fit, 1fr)')
+			.style('overflow-y', 'auto')
+			.style('max-height', '30vw')
 		return [holder, ssmTab, ssmDiv]
 	}
 
@@ -472,21 +471,61 @@ export async function bamsliceui(genomes, holder) {
 		ssmDiv.append('div').text('Consequence').style('font-size','.7em').style('opacity',.5)
 		ssmDiv.append('div').text('Position').style('font-size','.7em').style('opacity',.5)
 		*/
-		const scrolldiv = ssmDiv
-			.append('div')
-			.style('display', 'grid')
-			.style('grid-template-columns', 'repeat(5,auto)')
-			.style('gap', '5px')
-			.style('padding', '10px')
-			.style('align-items', 'center')
-			.style('justify-items', 'left')
+		// const scrolldiv = ssmDiv
+		// 	.append('div')
+		// 	.style('display', 'grid')
+		// 	.style('grid-template-columns', 'repeat(5,auto)')
+		// 	.style('gap', '5px')
+		// 	.style('padding', '10px')
+		// 	.style('align-items', 'center')
+		// 	.style('justify-items', 'left')
 
-		if (data.mlst.length > 10) {
-			scrolldiv
-				.style('overflow-y', 'scroll')
-				.style('height', '300px')
-				.style('resize', 'vertical')
+		// if (data.mlst.length > 10) {
+		// 	scrolldiv
+		// 		.style('overflow-y', 'scroll')
+		// 		.style('height', '300px')
+		// 		.style('resize', 'vertical')
+		// }
+
+		const resultsList = ssmDiv
+			.append('ul')
+			.style('display', 'grid')
+			.style('grid-template-columns', 'repeat(auto-fit, 1fr)')
+			.style('padding', '0px')
+			.style('list-style-type', 'none')
+
+		function makeCaseResultRow(div) {
+			// Creates the rows in list items with the positions 'fixed' (see TODO)
+			// Use the li for event listeners
+			const row = div
+				.append('li')
+				.style('display', 'grid')
+				// TODO fix overlap on resizing when viewport is too small (i.e. minmax)
+				.style('grid-template-columns', '2vw 8vw 20vw 20vw 15vw')
+				.style('gap', '5px')
+				.style('padding', '0.75em')
+				.style('align-items', 'center')
+				.style('justify-content', 'left')
+			// .style('overflow', 'hidden')
+			return row
 		}
+
+		function makeResultsHeaders(headers) {
+			const header_row = makeCaseResultRow(resultsList)
+			header_row
+				.style('position', 'sticky')
+				.style('background-color', '#f5f5dc')
+				.style('top', '0')
+			for (const header of headers) {
+				header_row
+					.append('div')
+					.style('top', '0')
+					.style('padding', '10px')
+					.text(header)
+			}
+		}
+		const headers = ['', 'Gene', 'AAChange', 'Consequence', 'Position']
+		makeResultsHeaders(headers)
 
 		// group by gene
 		const gene2mlst = new Map()
@@ -500,31 +539,45 @@ export async function bamsliceui(genomes, holder) {
 			let first = true
 			for (const m of mlst) {
 				/* FIXME hover over a row to highlight
-				click a row to select and store in gdc_args.ssmInput{}
+				click a row to select and store in gdc_args.ssmInput{} -> Copy here
 				const row = scrolldiv.append('div')
 					.style('display','grid')
 					.style('grid-column','span 4')
 					*/
-				scrolldiv
+				const caseResult = makeCaseResultRow(resultsList)
+				caseResult
 					.append('div')
 					.text(i++)
 					.style('font-size', '.7em')
-					.style('opacity', 0.4)
-				scrolldiv
+					// .style('opacity', 0.4)
+					.style('color', '#b0aeae') //Fix for numbers appearing over sticky header
+				caseResult
 					.append('div')
 					.text(first ? gene : '')
 					.style('font-style', 'italic')
-				scrolldiv.append('div').text(m.mname)
-				scrolldiv
+				caseResult.append('div').text(m.mname)
+				caseResult
 					.append('div')
 					.text(m.consequence)
 					.style('font-size', '.8em')
-				scrolldiv
+				caseResult
 					.append('div')
 					.style('font-size', '.8em')
-					.style('opacity', 0.5)
+					// .style('opacity', 0.5)
+					.style('color', '#b0aeae') //Fix for numbers appearing over sticky header
 					.text(m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt)
 				first = false
+
+				caseResult.on('mouseover', () => {
+					caseResult.style('background-color', 'rgb(138, 177, 212)')
+				})
+				caseResult.on('mouseout', () => {
+					caseResult.style('background-color', 'white')
+				})
+				caseResult.on('click', () => {
+					caseResult.style('background-color', '#ffffe5')
+					console.log(m)
+				})
 			}
 		}
 	}
