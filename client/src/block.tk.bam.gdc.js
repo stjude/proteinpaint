@@ -212,13 +212,14 @@ export async function bamsliceui(genomes, holder) {
 		const baminfo_table = baminfo_div
 			.append('div')
 			.style('grid-template-columns', 'auto auto')
-			.style('grid-template-rows', 'repeat(15, 20px)')
+			// Fix for autosizing table height. No need to repeat rows
+			// .style('grid-template-rows', 'repeat(15, 20px)')
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
 
 		const bamselection_table = baminfo_div
 			.append('div')
-			.style('grid-template-columns', 'auto auto auto auto auto auto')
+			.style('grid-template-columns', 'repeat(6, auto)')
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
 
@@ -265,6 +266,7 @@ export async function bamsliceui(genomes, holder) {
 				if (data.is_file_uuid || data.is_file_id) {
 					// matches with one bam file
 					// update file id to be supplied to gdc bam query
+					console.log(data)
 					update_singlefile_table(data, gdc_id)
 					show_input_check(gdcid_error_div)
 				} else if (data.is_case_uuid || data.is_case_id) {
@@ -300,15 +302,7 @@ export async function bamsliceui(genomes, holder) {
 					.style('padding', '3px 10px')
 					.text(row.title)
 					.style('opacity', 0.5)
-					.style('white-space', 'nowrap') //Fix for value overlapping position on small screen
-					.style('overflow', 'hidden')
-					.style('text-overflow', 'ellipsis')
-				const d = baminfo_table
-					.append('div')
-					.style('padding', '3px 10px')
-					.style('white-space', 'nowrap') //Fix for value overlapping consequence on small screen
-					.style('overflow', 'hidden')
-					.style('text-overflow', 'ellipsis')
+				const d = baminfo_table.append('div').style('padding', '3px 10px')
 				if (row.url) {
 					d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
 				} else {
@@ -320,7 +314,8 @@ export async function bamsliceui(genomes, holder) {
 				.style('height', '0')
 				.transition()
 				.duration(500)
-				.style('height', '10vw')
+				// .style('height', '100px')
+				.style('height', 'auto')
 		}
 
 		function update_multifile_table(files) {
@@ -344,6 +339,7 @@ export async function bamsliceui(genomes, holder) {
 					.style('padding', '3px 10px')
 					.text(row.title)
 					.style('opacity', 0.5)
+					.style('white-space', 'nowrap') //Fix for values overlapping on window resize
 			}
 
 			for (const onebam of files) {
@@ -368,7 +364,10 @@ export async function bamsliceui(genomes, holder) {
 						}
 					})
 				for (const row of baminfo_rows) {
-					const d = bamselection_table.append('div').style('padding', '3px 10px')
+					const d = bamselection_table
+						.append('div')
+						.style('padding', '3px 10px')
+						.style('white-space', 'nowrap') //Fix for values overlapping on window resize
 					if (row.url) {
 						d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
 					} else {
@@ -473,7 +472,7 @@ export async function bamsliceui(genomes, holder) {
 		ssmTab.text(`${data.mlst.length} mutation${data.mlst.length > 1 ? 's' : ''}`)
 
 		function addRow() {
-			// Creates the rows with the positions 'fixed' (see TODO)
+			// Creates the rows with the positions 'fixed'
 			// Use rows for event listeners
 			const row = ssmDiv
 				.append('div')
