@@ -1575,6 +1575,8 @@ function configPanel(tk, block) {
 	  <li><b>Deletions</b> are gaps joined by red horizontal lines.</li>
 	  <li><b>Split reads</b> and splice junctions are indicated by solid gray lines.</li>
 	  <li><b>Read pairs</b> are joined by dashed gray lines.</li>
+          <li><b>Discordant reads</b> Discordant reads are colored based on their respective features as described below:<ul> <li> Green - Read pairs with wrong insert size </li> <li> Brown - Mate is unmapped </li> <li> Pink - Wrong orientation </li> <li> Orange - Mate mapped to different chromosome </li>
+          </li>  
 	</ul>`)
 	d.append('div')
 		.style('margin-top', '10px')
