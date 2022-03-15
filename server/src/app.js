@@ -107,6 +107,16 @@ if (serverconfig.users) {
 	app.use(basicAuth({ users: serverconfig.users, challenge: true }))
 }
 
+/* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
+app.use(express.static(__dirname+'/public'))
+*/
+const basepath = serverconfig.basepath || ''
+const staticDir = express.static(path.join(process.cwd(), './public'))
+if (!serverconfig.backend_only) {
+	app.use(staticDir)
+}
+app.use(compression())
+
 app.use((req, res, next) => {
 	if (req.method.toUpperCase() == 'POST') {
 		// assume all post requests have json-encoded content
@@ -130,8 +140,9 @@ app.use((req, res, next) => {
 		// TODO: in the future, may have to combine req.query + req.params + req.body
 		// if using req.params based on expressjs server route /:paramName interpolation
 		Object.assign(req.query, req.body)
-		log(req)
 	}
+	log(req)
+
 	res.header('Access-Control-Allow-Origin', '*')
 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
 	if (req.method == 'GET' && !req.path.includes('.')) {
@@ -146,6 +157,7 @@ app.use((req, res, next) => {
 app.use(validator.middleware)
 
 // NOTE: The error handling middleware should be used after all other app.use() middlewares
+// error handling middleware has four arguments
 app.use((error, req, res, next) => {
 	log(req)
 	if (error) {
@@ -157,16 +169,6 @@ app.use((error, req, res, next) => {
 		return
 	}
 })
-
-/* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
-app.use(express.static(__dirname+'/public'))
-*/
-const basepath = serverconfig.basepath || ''
-const staticDir = express.static(path.join(process.cwd(), './public'))
-if (!serverconfig.backend_only) {
-	app.use(staticDir)
-}
-app.use(compression())
 
 if (serverconfig.jwt) {
 	console.log('JWT is activated')
@@ -337,6 +339,22 @@ pp_init()
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
+
+function log(req) {
+	const j = {}
+	for (const k in req.query) {
+		if (k != 'jwt') j[k] = req.query[k]
+	}
+	console.log(
+		'%s\t%s\t%s\t%s',
+		url.parse(req.url).pathname,
+		new Date(),
+		req.header('x-forwarded-for') || req.connection.remoteAddress,
+		JSON.stringify(j).replace(/\\"/g, '"')
+	)
+}
+
+exports.log = log
 
 async function startServer() {
 	try {
@@ -7604,22 +7622,6 @@ function fileurl(req) {
 	return [null, file, isurl]
 }
 exports.fileurl = fileurl
-
-function log(req) {
-	const j = {}
-	for (const k in req.query) {
-		if (k != 'jwt') j[k] = req.query[k]
-	}
-	console.log(
-		'%s\t%s\t%s\t%s',
-		url.parse(req.url).pathname,
-		new Date(),
-		req.header('x-forwarded-for') || req.connection.remoteAddress,
-		JSON.stringify(j).replace(/\\"/g, '"')
-	)
-}
-
-exports.log = log
 
 function downloadFile(url, tofile, cb) {
 	const f = fs.createWriteStream(tofile)
