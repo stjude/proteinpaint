@@ -35,7 +35,7 @@ class Divide {
 			holder: this.dom.pilldiv,
 			use_bins_less: true,
 			debug: this.opts.debug,
-			showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
+			menuOptions: 'all', // to show edit/replace/remove menu upon clicking pill
 			callback: term0 => {
 				// term0 is {term,q} and can be null
 				if (term0) {

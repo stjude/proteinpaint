@@ -15,6 +15,11 @@ showTree
 
 export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant'])
 
+const defaultOpts = {
+	menuOptions: 'edit',
+	menuLayout: 'vertical'
+}
+
 class TermSetting {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
@@ -38,10 +43,12 @@ class TermSetting {
 		// NOTE: the parent_menu value may be empty (undefined)
 		this.dom = {
 			holder: opts.holder,
-			tip: new Menu({
-				padding: '0px',
-				parent_menu: this.opts.holder && this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
-			})
+			tip:
+				opts.tip ||
+				new Menu({
+					padding: '0px',
+					parent_menu: this.opts.holder && this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
+				})
 		}
 		// tip2 is for showing inside tip, e.g. in snplocus UI
 		this.dom.tip2 = new Menu({
@@ -92,7 +99,8 @@ class TermSetting {
 		this.opts.callback(overrideTw ? copyMerge({}, arg, overrideTw) : arg)
 	}
 
-	validateOpts(o) {
+	validateOpts(_opts) {
+		const o = Object.assign({}, defaultOpts, _opts)
 		if (!o.holder && o.renderAs != 'none') throw '.holder missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		if (!o.vocabApi) throw '.vocabApi missing'
@@ -112,7 +120,7 @@ class TermSetting {
 			if (this.doNotHideTipInMain) {
 				// single use: if true then delete
 				delete this.doNotHideTipInMain
-			} else {
+			} else if (!data.doNotHideTipInMain) {
 				this.dom.tip.hide()
 			}
 			this.hasError = false
@@ -461,17 +469,25 @@ function setInteractivity(self) {
 		})
 	}
 
-	self.showMenu = _elem => {
-		self.dom.tip.clear()
-		if (self.opts.renderAs == 'none' && _elem) self.dom.holder = select(_elem)
-		const elem = self.dom.holder.node()
-		if (elem) self.dom.tip.showunder(elem)
-		else self.dom.tip.show(event.clientX, event.clientY)
+	self.showMenu = (clickedElem = null) => {
+		const tip = self.dom.tip
 
-		if (self.opts.showFullMenu) {
-			self.showEditReplaceRemoveMenu(self.dom.tip.d)
+		if (self.opts.menudiv) self.opts.menudiv.selectAll('*').remove()
+		else tip.clear()
+
+		if (self.opts.renderAs == 'none' && clickedElem) self.dom.holder = select(clickedElem)
+		if (self.dom.holder) {
+			const elem = self.dom.holder.node()
+			if (elem) tip.showunder(elem)
+			else tip.show(event.clientX, event.clientY)
+		}
+
+		if (self.opts.menuOptions == 'all') {
+			self.showEditReplaceRemoveMenu(self.opts.menudiv || tip.d)
+		} else if (self.opts.menuOptions == 'edit') {
+			self.handler.showEditMenu(self.opts.menudiv || tip.d)
 		} else {
-			self.handler.showEditMenu(self.dom.tip.d)
+			throw `Unsupported termsettingInit.opts.menuOptions='${self.opts.menuOptions}'`
 		}
 	}
 
@@ -479,7 +495,7 @@ function setInteractivity(self) {
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.style('display', 'block')
+			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
 			.text('Edit')
 			.on('click', () => {
 				self.dom.tip.clear()
@@ -488,7 +504,7 @@ function setInteractivity(self) {
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.style('display', 'block')
+			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
 			.text('Replace')
 			.on('click', () => {
 				self.showTree(self.dom.tip.d.node())
@@ -496,7 +512,7 @@ function setInteractivity(self) {
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.style('display', 'block')
+			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
 			.text('Remove')
 			.on('click', () => {
 				self.dom.tip.hide()

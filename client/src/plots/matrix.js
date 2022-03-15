@@ -6,6 +6,7 @@ import { MatrixCluster } from './matrix.cluster'
 import { MatrixControls } from './matrix.controls'
 import htmlLegend from '../html.legend'
 import { mclass } from '../../shared/common'
+import { Menu } from '../dom/menu'
 
 class Matrix {
 	constructor(opts) {
@@ -27,6 +28,8 @@ class Matrix {
 			.append('g')
 			.on('mouseover', this.showCellInfo)
 			.on('mouseout', this.mouseout)
+
+		const tip = new Menu({ padding: '5px' })
 		this.dom = {
 			header: opts.header,
 			controls,
@@ -41,8 +44,15 @@ class Matrix {
 			termLabelG: mainG
 				.append('g')
 				.attr('class', 'sjpp-matrix-term-label-g')
-				.on('click', this.showTermEditMenu),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px')
+				.on('click', this.showTermMenu),
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px'),
+			tip,
+			menutop: tip.d.append('div'),
+			menubody: tip.d.append('div')
+		}
+
+		this.dom.tip.onHide = () => {
+			delete this.termBeingEdited
 		}
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.settings = Object.assign({}, this.config.settings.matrix)
@@ -61,12 +71,16 @@ class Matrix {
 				}
 			}
 		})
+
 		// will use the same pill to show term edit menu
 		this.pill = termsettingInit({
-			showFullMenu: true,
+			tip: this.dom.tip,
+			menudiv: this.dom.menubody,
+			menuOptions: 'edit',
 			vocabApi: this.app.vocabApi,
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
+			numericEditMenuVersion: ['discrete', 'continuous'],
 			//holder: {}, //self.dom.inputTd.append('div'),
 			//debug: opts.debug,
 			renderAs: 'none',
@@ -74,8 +88,11 @@ class Matrix {
 				// data is object with only one needed attribute: q, never is null
 				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
 				const t = this.termBeingEdited
+				console.log(77, t, tw)
+				//delete this.termBeingEdited
 				//const termgroups = JSON.parse(this.config.termgroups
 				if (tw) {
+					if (t && t.tw) tw.$id = t.tw.$id
 					this.pill.main(tw)
 					this.app.dispatch({
 						type: 'plot_nestedEdits',
@@ -89,33 +106,9 @@ class Matrix {
 					})
 				} else {
 					// reset the pill data
-					this.pill.main({ term: null, q: null })
-
-					const termgroups = JSON.parse(JSON.stringify(this.config.termgroups))
-					const grp = termgroups[t.grpIndex]
-					// remove this element
-					grp.lst.splice(t.index, 1)
-					if (grp.lst.length) {
-						this.app.dispatch({
-							type: 'plot_nestedEdits',
-							id: opts.id,
-							edits: [
-								{
-									nestedKeys: ['termgroups', t.grpIndex, 'lst'],
-									value: grp.lst
-								}
-							]
-						})
-					} else {
-						// remove this now-empty group
-						termgroups.splice(t.grpIndex, 1)
-						this.app.dispatch({
-							type: 'plot_edit',
-							id: opts.id,
-							config: { termgroups }
-						})
-					}
+					console.log('no tw')
 				}
+				this.dom.tip.hide()
 			}
 		})
 	}
@@ -423,6 +416,7 @@ class Matrix {
 
 				// TODO: improve logic for excluding data from legend
 				if (t.tw.q.mode != 'continuous' && t.tw.term.type != 'geneVariant') {
+					if (!t.tw.$id) console.log(427, t.tw.$id, t.tw.term?.id)
 					if (!keysByTermId[t.tw.$id]) keysByTermId[t.tw.$id] = { ref: t.ref, values: {} }
 					if (!keysByTermId[t.tw.$id].values[key]) keysByTermId[t.tw.$id].values[key] = { key, label }
 				}
@@ -583,19 +577,21 @@ function setRenderers(self) {
 
 			function renderLabel(lab) {
 				const g = select(this)
+				const textduration = g.attr('transform') ? duration : 0
 				g.transition()
-					.duration(duration)
+					.duration(textduration)
 					.attr('transform', side.attr.labelGTransform)
 
 				if (!g.select('text').size()) g.append('text')
 				g.select('text')
 					.attr('fill', '#000')
 					.transition()
-					.duration(duration)
+					.duration(textduration)
 					.attr('opacity', side.attr.fontSize < 6 ? 0 : 1)
 					.attr('font-size', side.attr.fontSize)
 					.attr('text-anchor', side.attr.labelAnchor)
 					.attr('transform', side.attr.labelTransform)
+					.attr('cursor', 'pointer')
 					.text(side.label)
 			}
 		}
@@ -664,6 +660,7 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.showCellInfo = function() {
+		if (self.termBeingEdited) return
 		const d = event.target.__data__
 		if (!d || !d.term || !d.sample) return
 		if (event.target.tagName == 'rect') {
@@ -682,22 +679,309 @@ function setInteractivity(self) {
 				if (d.value.chr) rows.push(`<tr><td style='text-align: center'>${d.value.chr}:${d.value.pos}</td></tr>`)
 			}
 
-			self.app.tip
-				.show(event.clientX, event.clientY)
-				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+			self.dom.menutop.selectAll('*').remove()
+			self.dom.menubody.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+			self.dom.tip.show(event.clientX, event.clientY)
 		}
 	}
 
 	self.mouseout = function() {
-		self.app.tip.hide()
+		if (!self.termBeingEdited) self.dom.tip.hide()
 	}
 
-	self.showTermEditMenu = function() {
+	self.showTermMenu = async function() {
+		event.stopPropagation()
+		// event.target should be remembered before any await
+		self.eventTarget = event.target
 		const d = event.target.__data__
 		if (!d || !d.tw) return
 		self.termBeingEdited = d
-		self.pill.main(d.tw)
-		self.pill.showMenu(event.target)
+		self.dom.menutop.selectAll('*').remove()
+		self.dom.menubody
+			.style('padding', 0)
+			.selectAll('*')
+			.remove()
+
+		//self.dom.tip.d.on('click.sjpp_matrix_menuclick', () => event.stopPropagation())
+
+		self.dom.menutop
+			.append('div')
+			.selectAll(':scope>.sja_menuoption')
+			.data([
+				{ label: 'Edit', callback: self.showTermEditMenu },
+				{ label: 'Insert', callback: self.showTermInsertMenu },
+				{ label: 'Remove', callback: self.removeTerm }
+			])
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', 'inline-block')
+			.html(d => d.label)
+			.on('click', d => {
+				event.stopPropagation()
+				d.callback(d)
+			})
+
+		self.dom.tip.showunder(event.target)
+	}
+
+	self.showTermEditMenu = async () => {
+		event.stopPropagation()
+		const d = self.eventTarget.__data__
+		await self.pill.main(Object.assign({ doNotHideTipInMain: true }, d.tw))
+		self.dom.menubody.selectAll('*').remove()
+		self.pill.showMenu(self.eventTarget)
+	}
+
+	self.showTermInsertMenu = () => {
+		//self.dom.tip.clear()
+		//self.dom.menutop = self.dom.tip.d.append('div')
+		self.dom.menubody.selectAll('*').remove()
+
+		self.dom.editbtns = self.dom.menubody.append('div')
+		self.dom.editbody = self.dom.menubody.append('div')
+
+		const grpNameDiv = self.dom.editbtns.append('div').style('margin', '10px 5px')
+		grpNameDiv.append('label').html('Insert terms in ')
+		self.dom.grpNameSelect = grpNameDiv.append('select').on('change', () => {
+			const value = self.dom.grpNameSelect.property('value')
+			self.dom.grpNameTextInput
+				.property('disabled', value == 'current')
+				.property('value', value == 'current' ? self.termBeingEdited.grp.name : newGrpName)
+		})
+		self.dom.grpNameSelect
+			.selectAll('option')
+			.data([{ label: 'current', value: 'current', selected: true }, { label: 'new', value: 'new' }])
+			.enter()
+			.append('option')
+			.attr('selected', d => d.selected)
+			.html(d => d.label)
+
+		grpNameDiv.append('span').html('&nbsp;group: &nbsp;')
+
+		let newGrpName = ''
+		self.dom.grpNameTextInput = grpNameDiv
+			.append('input')
+			.attr('type', 'text')
+			.property('disabled', true)
+			.property('value', self.termBeingEdited.grp.name)
+			.on('change', () => {
+				const name = self.dom.grpNameTextInput.property('value')
+				if (name == self.termBeingEdited.grp.name) {
+				} else {
+					newGrpName = self.dom.grpNameTextInput.property('value')
+				}
+			})
+
+		const insertPosInput = self.dom.editbtns
+			.append('div') /*.style('display', 'inline-block')*/
+			.style('margin', '10px 5px')
+		insertPosInput
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding-right', '10px')
+			.html('Insert&nbsp')
+		const insertRadiosDiv = insertPosInput.append('div').style('display', 'inline-block')
+
+		self.insertRadioId = `sjpp-matrix-${self.id}-insert-pos`
+		const aboveLabel = insertRadiosDiv.append('label')
+		aboveLabel
+			.append('input')
+			.attr('type', 'radio')
+			.attr('value', 'above')
+			.property('checked', true)
+			.attr('name', self.insertRadioId)
+		aboveLabel.append('span').html('above')
+
+		insertRadiosDiv.append('span').html('&nbsp;&nbsp')
+
+		const belowLabel = insertRadiosDiv.append('label')
+		belowLabel
+			.append('input')
+			.attr('type', 'radio')
+			.attr('value', 'below')
+			.attr('name', self.insertRadioId)
+		belowLabel.append('span').html('&nbsp;below')
+
+		const termSrcDiv = self.dom.editbtns.append('div')
+		termSrcDiv.append('span').html('Source&nbsp;')
+
+		self.dom.dictTermBtn = termSrcDiv
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', 'inline-block')
+			//.style('font-size', '0.8em')
+			.html('Dictionary term')
+			.on('click', self.showDictTermSelection)
+
+		self.dom.textTermBtn = termSrcDiv
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', 'inline-block')
+			//.style('font-size', '0.8em')
+			.html('Text input')
+			.on('click', self.showTermTextInput)
+
+		self.dom.dictTermBtn.on('click')()
+	}
+
+	self.showDictTermSelection = async () => {
+		event.stopPropagation()
+		self.dom.dictTermBtn.style('text-decoration', 'underline')
+		self.dom.textTermBtn.style('text-decoration', '')
+
+		const termdb = await import('../termdb/app')
+		self.dom.editbody.selectAll('*').remove()
+		termdb.appInit({
+			holder: self.dom.editbody.append('div'),
+			vocabApi: self.app.vocabApi,
+			state: {
+				vocab: self.state.vocab,
+				activeCohort: self.activeCohort,
+				nav: {
+					header_mode: 'search_only'
+				},
+				tree: {
+					usecase: { target: 'matrix', detail: 'termgroups' }
+				}
+			},
+			tree: {
+				submit_lst: async termlst => {
+					const newterms = await Promise.all(
+						termlst.map(async term => {
+							const tw = { id: term.id, term }
+							await fillTermWrapper(tw)
+							return tw
+						})
+					)
+					const pos = select(`input[name='${self.insertRadioId}']:checked`).property('value')
+					const t = self.termBeingEdited
+					const termgroups = JSON.parse(JSON.stringify(self.config.termgroups))
+					if (self.dom.grpNameSelect.property('value') == 'current') {
+						const grp = termgroups[t.grpIndex]
+						const i = pos == 'above' ? t.index : t.index + 1
+						// remove this element
+						grp.lst.splice(i, 0, ...newterms)
+						self.app.dispatch({
+							type: 'plot_nestedEdits',
+							id: self.opts.id,
+							edits: [
+								{
+									nestedKeys: ['termgroups', t.grpIndex, 'lst'],
+									value: grp.lst
+								}
+							]
+						})
+					} else {
+						const i = pos == 'above' ? t.grpIndex : t.grpIndex + 1
+						termgroups.splice(i, 0, {
+							name: self.dom.grpNameTextInput.property('value'),
+							lst: newterms
+						})
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.opts.id,
+							config: { termgroups }
+						})
+					}
+					self.dom.tip.hide()
+					delete self.termBeingEdited
+				}
+			}
+		})
+	}
+
+	self.showTermTextInput = opt => {
+		event.stopPropagation()
+		self.dom.dictTermBtn.style('text-decoration', '')
+		self.dom.textTermBtn.style('text-decoration', 'underline')
+
+		self.dom.editbody.selectAll('*').remove()
+		self.dom.editbody
+			.append('button')
+			.style('margin', '0 5px')
+			.html('Submit')
+			.on('click', async () => {
+				event.stopPropagation()
+				const text = ta.property('value')
+				const lines = text.split('\n').map(line => line.trim())
+				const ids = lines.filter(id => !!id)
+				const terms = await self.app.vocabApi.getTermTypes(ids)
+				console.log(terms)
+				const termgroups = JSON.parse(JSON.stringify(self.config.termgroups))
+				const name = self.dom.grpNameTextInput.property('value')
+				console.log(name)
+				let grp = termgroups.find(g => g.name === name)
+				if (!grp) {
+					grp = { name, lst: [] }
+					termgroups.push(grp)
+				}
+				for (const id of lines) {
+					if (!(id in terms)) continue
+					const tw = { term: terms[id] }
+					await fillTermWrapper(tw)
+					grp.lst.push(tw)
+				}
+
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.opts.id,
+					config: { termgroups }
+				})
+				self.dom.tip.hide()
+				delete self.termBeingEdited
+			})
+
+		const ta = self.dom.editbody
+			.append('div')
+			.style('text-align', 'left')
+			.append('textarea')
+			.attr('placeholder', 'term')
+			.style('width', '300px')
+			.style('height', '300px')
+			.style('margin', '5px')
+			.style('padding', '5px')
+			.on('keydown', () => {
+				const keyCode = event.keyCode || event.which
+				// handle tab key press, otherwise it will cause the focus to move to another input
+				if (keyCode == 9) {
+					event.preventDefault()
+					const t = event.target
+					const s = t.selectionStart
+					t.value = t.value.substring(0, t.selectionStart) + '\t' + t.value.substring(t.selectionEnd)
+					t.selectionEnd = s + 1
+				}
+			})
+	}
+
+	self.removeTerm = () => {
+		const t = self.termBeingEdited
+		const termgroups = JSON.parse(JSON.stringify(self.config.termgroups))
+		const grp = termgroups[t.grpIndex]
+		// remove this element
+		grp.lst.splice(t.index, 1)
+		if (grp.lst.length) {
+			self.app.dispatch({
+				type: 'plot_nestedEdits',
+				id: self.opts.id,
+				edits: [
+					{
+						nestedKeys: ['termgroups', t.grpIndex, 'lst'],
+						value: grp.lst
+					}
+				]
+			})
+		} else {
+			// remove this now-empty group
+			termgroups.splice(t.grpIndex, 1)
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.opts.id,
+				config: { termgroups }
+			})
+		}
+		delete self.termBeingEdited
+		self.dom.tip.hide()
 	}
 
 	self.legendClick = function() {}

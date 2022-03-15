@@ -416,7 +416,7 @@ function setTermInput(opts) {
 	}
 
 	const pill = termsettingInit({
-		showFullMenu: true,
+		menuOptions: 'all',
 		vocabApi: opts.vocabApi,
 		vocab: opts.state.vocab,
 		activeCohort: opts.state.activeCohort,

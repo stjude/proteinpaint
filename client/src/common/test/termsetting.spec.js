@@ -22,11 +22,12 @@ async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 		.select('body')
 		.append('div')
 		.style('position', 'relative')
+		.style('width', 'fit-content')
 		.style('margin', '20px')
 		.style('padding', '5px')
 		.style('border', '1px solid #000')
 
-	const opts = Object.assign({ holder }, _opts)
+	const opts = Object.assign({ holder, menuOptions: 'edit' }, _opts)
 	const vocab = opts.vocab ? opts.vocab : { route: 'termdb', genome, dslabel }
 	const state = { vocab, termfilter: {} }
 	const app = {
@@ -41,7 +42,7 @@ async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 		vocab,
 		vocabApi: vocabInit({ state }),
 		use_bins_less: opts.use_bins_less,
-		showFullMenu: opts.showFullMenu,
+		menuOptions: opts.menuOptions,
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,
 		numericEditMenuVersion: opts.numericEditMenuVersion,
 		debug: true,
@@ -69,7 +70,7 @@ tape('\n', test => {
 
 tape('editMenu', async test => {
 	const opts = await getOpts({
-		showFullMenu: true,
+		menuOptions: 'all',
 		tsData: {
 			term: termjson['diaggrp'],
 			q: { type: 'values' }
@@ -87,7 +88,7 @@ tape('editMenu', async test => {
 
 	// delete the flag and click pill again to see if hiding menu for replace/remove buttons in tip
 	// if pill.opts is frozen in future, just create a new pill
-	delete opts.pill.Inner.opts.showFullMenu
+	opts.pill.Inner.opts.menuOptions = 'edit'
 	pilldiv.click()
 	test.equal(tipd.selectAll('.sja_menuoption').size(), 2, 'should hide edit menu')
 
@@ -881,7 +882,7 @@ tape('Conditional term', async test => {
 		'Sub-condition',
 		'Should have bluepill summary btn changed to "Sub-condition"'
 	)
-	
+
 	tip.hide()
 	test.end()
 })
@@ -892,7 +893,7 @@ tape('Custom vocabulary', async test => {
 	const vocab = vocabData.getExample()
 	const opts = await getOpts(
 		{
-			showFullMenu: true,
+			menuOptions: 'all',
 			tsData: {
 				term: vocab.terms.find(d => d.id === 'c'),
 				disable_terms: ['c'],
