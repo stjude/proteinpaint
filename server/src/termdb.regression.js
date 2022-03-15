@@ -84,14 +84,12 @@ export async function get_regression(q, ds) {
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
 
 		// run regression analysis in R
-		const Routput = await lines2R(
-			path.join(serverconfig.binpath, 'utils/regression.R'),
-			[JSON.stringify(Rinput)],
-			[],
-			true
-		)
+		const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+		await utils.write_file(Rinputfile, JSON.stringify(Rinput))
+		const Routput = await lines2R(path.join(serverconfig.binpath, 'utils/regression.R'), [], [Rinputfile])
 
 		// parse the R output
+		fs.unlink(Rinputfile, () => {})
 		return await parseRoutput(Rinput, Routput, id2originalId, snpgt2count)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -423,8 +421,12 @@ function validateRinput(Rinput, sampleSize) {
 }
 
 async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
-	if (Routput.length != 1) throw 'expected 1 json line in R output'
-	const out = JSON.parse(Routput[0])
+	//if (Routput.length != 1) throw 'expected 1 json line in R output'
+	//const out = JSON.parse(Routput[0])
+
+	console.log('Routput:', Routput)
+
+	throw 'stop here'
 
 	/* 
 	out: [
