@@ -289,9 +289,13 @@ function makeRvariable_dictionaryTerm(tw, variables, q) {
 	// map tw.interactions into thisTerm.interactions
 	for (const id of tw.interactions) {
 		const tw2 = q.independent.find(i => i.id == id)
-		if (tw2.type == 'snplst' || tw2.type == 'snplocus') {
+		if (tw2.type == 'snplst') {
 			// this term is interacting with a snplst term, fill in all snps from this list into thisTerm.interactions
 			for (const s of tw2.snpidlst) thisTerm.interactions.push(s)
+		} else if (tw2.type == 'snplocus') {
+			// snplocus interactions should not be handled here because each snp needs to be analyzed separately
+			// snplocus interactions will be specified separately for each snp in makeRvariable_snps()
+			continue
 		} else {
 			// this term is interacting with another dictionary term
 			thisTerm.interactions.push(id)
