@@ -437,11 +437,11 @@ variables <- lst$variables
 ##################
 
 # collect outcome id, independent ids, cubic spline ids, and interactions
-# set aside snplocus variables to be added separately
+# set aside snplocus snps to be handled separately
 outcomeId <- vector(mode = "character")
 independentIds <- vector(mode = "character")
 interactions <- vector(mode = "character")
-snplocusVariables <- variables[0,]
+snpLocusSnps <- variables[0,]
 splineVariables <- variables[0,]
 for (r in 1:nrow(variables)) {
   variable <- variables[r,]
@@ -451,6 +451,7 @@ for (r in 1:nrow(variables)) {
   if (variable$type == "outcome") {
     # outcome variable
     outcomeId <- variable$id
+    next
   } else if (variable$type == "spline") {
     # cubic spline variable
     # use call to cubic spline function in regression formula
@@ -458,9 +459,9 @@ for (r in 1:nrow(variables)) {
     independentIds <- c(independentIds, splineCmd)
     splineVariables <- rbind(splineVariables, variable)
   } else if (variable$type == "snplocus") {
-    # snplocus variable
-    # will build separate formula for each of these variables
-    snplocusVariables <- rbind(snplocusVariables, variable)
+    # snplocus snp
+    # set aside so that separate formulas can be made for each snplocus snp
+    snpLocusSnps <- rbind(snpLocusSnps, variable)
     next
   } else {
     # other independent variable
@@ -482,33 +483,33 @@ for (r in 1:nrow(variables)) {
 }
 
 # build formula(s)
-# prepare separate formula for each snplocus variable
+# prepare separate formula for each snplocus snp
 formulas <- list()
-if (nrow(snplocusVariables) > 0) {
-  # snplocus variables present
-  # build separate formula for each snplocus variable
+if (nrow(snpLocusSnps) > 0) {
+  # snplocus snps present
+  # build separate formula for each snplocus snp
   tempIndependentIds <- vector(mode = "character")
   tempInteractions <- vector(mode = "character")
-  for (r in 1:nrow(snplocusVariables)) {
-    variable <- snplocusVariables[r,]
-    tempIndependentIds <- c(independentIds, variable$id)
-    if (length(variable$interactions[[1]]) > 0) {
+  for (r in 1:nrow(snpLocusSnps)) {
+    snp <- snpLocusSnps[r,]
+    tempIndependentIds <- c(independentIds, snp$id)
+    if (length(snp$interactions[[1]]) > 0) {
       # interactions
-      interactionIds <- variable$interactions[[1]]
+      interactionIds <- snp$interactions[[1]]
       for (intId in interactionIds) {
         # get unique set of interactions
-        int1 <- paste(variable$id, intId, sep = ":")
-        int2 <- paste(intId, variable$id, sep = ":")
+        int1 <- paste(snp$id, intId, sep = ":")
+        int2 <- paste(intId, snp$id, sep = ":")
         if (!(int1 %in% interactions) & !(int2 %in% interactions)) {
           tempInteractions <- c(interactions, int1)
         }
       }
     }
     formula <- as.formula(paste(outcomeId, paste(c(tempIndependentIds, tempInteractions), collapse = "+"), sep = "~"))
-    formulas[[length(formulas)+1]] <- list("id" = variable$id, "formula" = formula)
+    formulas[[length(formulas)+1]] <- list("id" = snp$id, "formula" = formula)
   }
 } else {
-  # no snplocus variables
+  # no snplocus snps
   # use single formula for all variables
   formula <- as.formula(paste(outcomeId, paste(c(independentIds, interactions), collapse = "+"), sep = "~"))
   formulas[[length(formulas)+1]] <- list("id" = "", "formula" = formula)
