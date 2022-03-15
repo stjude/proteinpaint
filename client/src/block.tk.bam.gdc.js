@@ -300,7 +300,15 @@ export async function bamsliceui(genomes, holder) {
 					.style('padding', '3px 10px')
 					.text(row.title)
 					.style('opacity', 0.5)
-				const d = baminfo_table.append('div').style('padding', '3px 10px')
+					.style('white-space', 'nowrap') //Fix for value overlapping position on small screen
+					.style('overflow', 'hidden')
+					.style('text-overflow', 'ellipsis')
+				const d = baminfo_table
+					.append('div')
+					.style('padding', '3px 10px')
+					.style('white-space', 'nowrap') //Fix for value overlapping consequence on small screen
+					.style('overflow', 'hidden')
+					.style('text-overflow', 'ellipsis')
 				if (row.url) {
 					d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
 				} else {
@@ -312,7 +320,7 @@ export async function bamsliceui(genomes, holder) {
 				.style('height', '0')
 				.transition()
 				.duration(500)
-				.style('height', '100px') // FIXME do not use hardcoded height
+				.style('height', '10vw')
 		}
 
 		function update_multifile_table(files) {
@@ -464,24 +472,13 @@ export async function bamsliceui(genomes, holder) {
 		// found ssms, display
 		ssmTab.text(`${data.mlst.length} mutation${data.mlst.length > 1 ? 's' : ''}`)
 
-		/*
-		const resultsList = ssmDiv
-			.append('ul')
-			.style('display', 'grid')
-			.style('grid-template-columns', 'repeat(auto-fit, 1fr)')
-			.style('padding', '0px')
-			.style('margin', '0px')
-			.style('list-style-type', 'none')
-			*/
-
 		function addRow() {
-			// Creates the rows in list items with the positions 'fixed' (see TODO)
-			// Use the li for event listeners
+			// Creates the rows with the positions 'fixed' (see TODO)
+			// Use rows for event listeners
 			const row = ssmDiv
 				.append('div')
 				.style('display', 'grid')
-				// TODO fix overlap on resizing when viewport is too small (i.e. minmax)
-				.style('grid-template-columns', '2vw 8vw 20vw 20vw 15vw')
+				.style('grid-template-columns', '2vw minmax(8vw,10vw) minmax(10vw,15vw) minmax(10vw,15vw) minmax(10vw,15vw)')
 				.style('gap', '5px')
 				.style('padding', '0.3em')
 				.style('align-items', 'center')
@@ -526,11 +523,22 @@ export async function bamsliceui(genomes, holder) {
 					.append('div')
 					.text(first ? gene : '')
 					.style('font-style', 'italic')
-				m.row.append('div').text(m.mname)
+					.style('white-space', 'nowrap') //Fix for value overlapping position on small screen
+					.style('overflow', 'hidden')
+					.style('text-overflow', 'ellipsis')
+				m.row
+					.append('div')
+					.style('white-space', 'nowrap') //Fix for value overlapping consequence on small screen
+					.style('overflow', 'hidden')
+					.style('text-overflow', 'ellipsis')
+					.text(m.mname)
 				m.row
 					.append('div')
 					.text(m.consequence)
 					.style('font-size', '.8em')
+					.style('white-space', 'nowrap') //Fix for value overlapping position on small screen
+					.style('overflow', 'hidden')
+					.style('text-overflow', 'ellipsis')
 				m.row
 					.append('div')
 					.style('font-size', '.8em')
