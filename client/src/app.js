@@ -1423,6 +1423,9 @@ async function launchtermdb(opts, app) {
 
 async function launchmass(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
+	if (opts.state && opts.state.genome) {
+		opts.genome = app.genomes[opts.state.genome]
+	}
 	import('./mass/app').then(_ => {
 		_.appInit(opts)
 	})

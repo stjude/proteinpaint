@@ -60,6 +60,9 @@ upon error, throw err message as a string
 			holder: arg.holder,
 			state
 		}
+		if (state.genome) {
+			opts.genome = arg.genomes[state.genome]
+		}
 		const _ = await import('./mass/app')
 		_.appInit(opts)
 		return
@@ -71,7 +74,8 @@ upon error, throw err message as a string
 		if (res.error) throw res.error
 		const opts = {
 			holder: arg.holder,
-			state: res.state
+			state: res.state,
+			genome: arg.genomes[res.state.vocab.genome]
 		}
 		const _ = await import('./mass/app')
 		_.appInit(opts)

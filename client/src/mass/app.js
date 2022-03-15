@@ -10,6 +10,9 @@ import { newSandboxDiv } from '../dom/sandbox'
 
 /*
 opts{}
+.genome{}
+	client-side genome object
+	should be required
 .state{}
 	required, will fill-in or override store.defaultState
  	.genome
