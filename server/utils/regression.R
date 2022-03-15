@@ -436,7 +436,6 @@ variables <- lst$variables
 # BUILD FORMULAS #
 ##################
 
-# build regression formula(s)
 # collect outcome id, independent ids, cubic spline ids, and interactions
 # set aside snplocus variables to be added separately
 outcomeId <- vector(mode = "character")
@@ -462,6 +461,7 @@ for (r in 1:nrow(variables)) {
     # snplocus variable
     # will build separate formula for each of these variables
     snplocusVariables <- rbind(snplocusVariables, variable)
+    next
   } else {
     # other independent variable
     independentIds <- c(independentIds, variable$id)
@@ -481,7 +481,8 @@ for (r in 1:nrow(variables)) {
   }
 }
 
-# check for snplocus variables
+# build formula(s)
+# prepare separate formula for each snplocus variable
 formulas <- list()
 if (nrow(snplocusVariables) > 0) {
   # snplocus variables present
