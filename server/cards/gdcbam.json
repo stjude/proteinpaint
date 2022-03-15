@@ -13,5 +13,11 @@
                 "expected": {"image": 1 }
             }
         }
+    ],
+    "buttons": [
+        {
+            "name": "Launch App from Link",
+            "link": "https://proteinpaint.stjude.org/?gdcbamslice=1"
+        }
     ]
 }
