@@ -8,7 +8,7 @@
 
 # Usage: Rscript regression.R in.json > results
 
-# Input data is is read from in.json file.
+# Input data is in JSON format and is read in from <in.json> file.
 # Regression results are written in JSON format to stdout.
 
 # Input JSON specifications:
@@ -417,8 +417,6 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
 # DATA PREPARATION #
 ####################
 
-startTime <- Sys.time()
-
 args <- commandArgs(trailingOnly = T)
 if (length(args) != 1) stop("Usage: Rscript regression.R in.json > results")
 infile <- args[1]
@@ -427,10 +425,6 @@ infile <- args[1]
 input <- fromJSON(infile)
 dat <- input$data # data table
 variables <- input$metadata$variables # variable metadata
-
-endTime <- Sys.time()
-cat("Read in json input: ")
-endTime - startTime
 
 # prepare data table
 lst <- prepareDataTable(dat, variables, input$metadata$type)

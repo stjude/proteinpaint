@@ -421,12 +421,8 @@ function validateRinput(Rinput, sampleSize) {
 }
 
 async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
-	//if (Routput.length != 1) throw 'expected 1 json line in R output'
-	//const out = JSON.parse(Routput[0])
-
-	console.log('Routput:', Routput)
-
-	throw 'stop here'
+	if (Routput.length != 1) throw 'expected 1 json line in R output'
+	const out = JSON.parse(Routput[0])
 
 	/* 
 	out: [
