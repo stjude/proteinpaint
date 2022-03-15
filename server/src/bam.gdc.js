@@ -1,4 +1,3 @@
-const app = require('./app')
 const got = require('got')
 
 // type of gdc_ids
@@ -40,18 +39,16 @@ const skip_workflow_type = 'STAR 2-Pass Transcriptome'
 
 const sequencing_read_filter = { op: '=', content: { field: 'data_category', value: 'Sequencing Reads' } }
 
-module.exports = () => {
-	return async (req, res) => {
-		try {
-			if (req.query.gdc_id) {
-				const gdc_data = await get_gdc_data(req.query.gdc_id)
-				res.send(gdc_data)
-				return
-			}
-		} catch (e) {
-			res.send({ error: e.message || e })
-			if (e.stack) console.log(e.stack)
+export async function gdc_bam_request(req, res) {
+	try {
+		if (req.query.gdc_id) {
+			const gdc_data = await get_gdc_data(req.query.gdc_id)
+			res.send(gdc_data)
+			return
 		}
+	} catch (e) {
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
 	}
 }
 
