@@ -406,8 +406,8 @@ function setRenderers(self) {
 		for (const row of result.coefficients.interactions) {
 			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 
-			const term1 = self.state.config.independent.find(t => t.id == row.term1)
-			const term2 = self.state.config.independent.find(t => t.id == row.term2)
+			const term1 = self.getIndependentInput(row.term1).term
+			const term2 = self.getIndependentInput(row.term2).term
 
 			// col 1: variable
 			{
