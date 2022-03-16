@@ -115,6 +115,8 @@ function parse_q(q, ds) {
 	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
 	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
 
+	getGradeCutoff(q.outcome)
+
 	// independent
 	if (!q.independent) throw 'independent[] missing'
 	if (!Array.isArray(q.independent) || q.independent.length == 0) throw 'q.independent is not non-empty array'
@@ -156,6 +158,18 @@ function parse_q(q, ds) {
 			if (!q.independent.find(y => y.id == x)) throw 'interacting term id missing from independent[]: ' + x
 		}
 	}
+}
+
+function getGradeCutoff(tw) {
+	// quick fix for condition outcome in cox regression
+	if (!tw.q.groupsetting || !('predefined_groupset_idx' in tw.q.groupsetting)) return
+	const groupset = tw.term.groupsetting.lst[tw.q.groupsetting.predefined_groupset_idx]
+	let minGrade = groupset.groups[1].values[0].key
+	for (const v of groupset.groups[1].values) {
+		minGrade = Math.min(minGrade, v.key)
+	}
+	tw.q.grade = minGrade // grade cutoff
+	console.log('grade cutoff:', minGrade)
 }
 
 function checkTwAncestryRestriction(tw, q, ds) {
