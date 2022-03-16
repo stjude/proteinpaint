@@ -646,6 +646,9 @@ function getSampleData_dictionaryTerms(q, terms) {
 	const samples = new Map()
 	// k: sample name, v: {sample, id2value:Map( tid => {key,value}) }
 
+	if (q.regressionType == 'cox') {
+		// get cutoff grade from q.outcome.q.groupsetting (terms[0])
+	}
 	const filter = getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
