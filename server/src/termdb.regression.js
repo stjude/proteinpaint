@@ -304,8 +304,11 @@ function makeRvariable_dictionaryTerm(tw, variables, q) {
 	if (thisTerm.rtype === 'factor') thisTerm.refGrp = tw.refGrp
 	if (tw.q.mode == 'spline') {
 		thisTerm.spline = {
-			knots: tw.q.knots.map(x => Number(x.value)),
-			plotfile: path.join(serverconfig.cachedir, Math.random().toString() + '.png')
+			knots: tw.q.knots.map(x => Number(x.value))
+		}
+		if (!q.independent.find(i => i.type == 'snplocus')) {
+			// when there isn't the snplocus variable, can make spline plot
+			thisTerm.spline.plotfile = path.join(serverconfig.cachedir, Math.random().toString() + '.png')
 		}
 	}
 	if (tw.q.scale) thisTerm.scale = tw.q.scale
@@ -540,7 +543,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 
 		// plots
 		for (const tw of Rinput.metadata.variables) {
-			if (tw.spline) {
+			if (tw.spline && tw.spline.plotfile) {
 				if (!analysisResults.data.splinePlots) analysisResults.data.splinePlots = []
 				const file = tw.spline.plotfile
 				const plot = await fs.promises.readFile(file)

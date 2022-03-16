@@ -12,6 +12,40 @@
 
 
 <script>
+const snplocusQ = {
+	chr:'chr17', start:7674304, stop:7676849,
+	alleleType:0,
+	geneticModel:0,
+	restrictAncestry:{
+		name:'African ancestry',
+		tvs: {
+			term: {
+				id: 'genetic_race',
+				type: 'categorical',
+				name: 'Genetically defined race'
+			},
+			values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+		}
+	},
+	variant_filter: {
+		"type":"tvslst",
+		"join":"and",
+		"in":true,
+		"lst":[
+			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC_sjlife","name":"SJLIFE classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"SuperGood":{"label":"SuperGood","key":"SuperGood"},"Good":{"label":"Good","key":"Good"},"Ambiguous":{"label":"Ambiguous","key":"Ambiguous"},"Bad":{"label":"Bad","key":"Bad"}}}}},
+			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC_ccss","name":"CCSS classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"SuperGood":{"label":"SuperGood","key":"SuperGood"},"Good":{"label":"Good","key":"Good"},"Ambiguous":{"label":"Ambiguous","key":"Ambiguous"},"Bad":{"label":"Bad","key":"Bad"}}}}},
+			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"SJcontrol_CR","name":"SJLIFE control call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR","name":"Call rate, SJLIFE+CCSS","parent_id":null,"isleaf":true,"type":"float"}}},
+			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_sjlife","name":"SJLIFE call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_ccss","name":"CCSS call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_CR","name":"gnmoAD call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+			{"type":"tvs","tvs":{"ranges":[{"start":0.1,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_AF","name":"gnomAD allele frequency","parent_id":null,"isleaf":true,"type":"float","min":0,"max":1,"values":{}}}},
+			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"BadBLAT","name":"Paralog","parent_id":null,"isleaf":true,"type":"categorical"}}},
+			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"Polymer_region","name":"Polymer region","parent_id":null,"isleaf":true,"type":"categorical"}}}
+		]
+	}
+}
+
 /*
 call the makeURL() to make URLs
 argument is an array; each element defines a set of example URLs showing in a row
@@ -334,9 +368,8 @@ makeURL([
 								type:'custom-bin',
 								lst:[
 									{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
-									// FIXME no need to define startinclusive
-									{startinclusive:false,stopinclusive:true,start:0,stop:100,label:'>0 to 100'},
-									{startinclusive:false,stopinclusive:true,start:100,stop:250,label:'>100 to 250'},
+									{stopinclusive:true,start:0,stop:100,label:'>0 to 100'},
+									{stopinclusive:true,start:100,stop:250,label:'>100 to 250'},
 									{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
 								]
 							},
@@ -401,96 +434,97 @@ makeURL([
 		['EF ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
-			plots: [
-				{
-					chartType: 'regression',
-					regressionType: 'linear',
-					outcome: { id: 'LV_Ejection_Fraction_3D' },
-					independent: [
-						{
-							term:{
-								type:'snplst',
-								snps:[
-									{rsid:'rs1641548',effectAllele:'T'},
-									{rsid:'rs858528',effectAllele:'T'},
-									{rsid:'rs1642793',effectAllele:'C'},
-									{rsid:'rs1042522'},
-									{rsid:'rs1642782'},
-									{rsid:'rs6503048'},
-									// following snps are not in bcf file
-									{rsid:'rs1472752888',effectAllele:'T'}
-								],
-							},
-							q:{
-								alleleType:0,
-								geneticModel:0,
-								missingGenotype:0,
-								restrictAncestry:{
-									name:'African ancestry',
-									tvs: {
-										term: {
-											id: 'genetic_race',
-											type: 'categorical',
-											name: 'Genetically defined race'
-										},
-										values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
-									}
-								},
-							}
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'linear',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{
+						term:{
+							type:'snplst',
+							snps:[
+								{rsid:'rs1641548',effectAllele:'T'},
+								{rsid:'rs858528',effectAllele:'T'},
+								{rsid:'rs1642793',effectAllele:'C'},
+								{rsid:'rs1042522'},
+								{rsid:'rs1642782'},
+								{rsid:'rs6503048'},
+								// following snps are not in bcf file
+								{rsid:'rs1472752888',effectAllele:'T'}
+							],
 						},
-						{ id: 'sex', refGrp:'2'}
-					]
-				},
-			]
+						q:{
+							alleleType:0,
+							geneticModel:0,
+							missingGenotype:0,
+							restrictAncestry:{
+								name:'African ancestry',
+								tvs: {
+									term: {
+										id: 'genetic_race',
+										type: 'categorical',
+										name: 'Genetically defined race'
+									},
+									values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+								}
+							},
+						}
+					},
+					{ id: 'sex', refGrp:'2'}
+				]
+			} ]
 		})],
 
-		['EF ~ snplocus sex', '?noheader=1&mass='+JSON.stringify({
+		['EF ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
-			plots: [
-				{
-					chartType: 'regression',
-					regressionType: 'linear',
-					outcome: { id: 'LV_Ejection_Fraction_3D' },
-					independent: [
-						{
-							term:{
-								type:'snplocus',
-							},
-							q:{
-								chr:'chr17', start:7674304, stop:7676849,
-								alleleType:0,
-								geneticModel:0,
-								restrictAncestry:{
-									name:'African ancestry',
-									tvs: {
-										term: {
-											id: 'genetic_race',
-											type: 'categorical',
-											name: 'Genetically defined race'
-										},
-										values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
-									}
-								},
-								variant_filter:
-								{"type":"tvslst","join":"and","in":true,"lst":[
-									{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC_sjlife","name":"SJLIFE classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"SuperGood":{"label":"SuperGood","key":"SuperGood"},"Good":{"label":"Good","key":"Good"},"Ambiguous":{"label":"Ambiguous","key":"Ambiguous"},"Bad":{"label":"Bad","key":"Bad"}}}}},
-									{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC_ccss","name":"CCSS classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"SuperGood":{"label":"SuperGood","key":"SuperGood"},"Good":{"label":"Good","key":"Good"},"Ambiguous":{"label":"Ambiguous","key":"Ambiguous"},"Bad":{"label":"Bad","key":"Bad"}}}}},
-									{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"SJcontrol_CR","name":"SJLIFE control call rate","parent_id":null,"isleaf":true,"type":"float"}}},
-									{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR","name":"Call rate, SJLIFE+CCSS","parent_id":null,"isleaf":true,"type":"float"}}},
-									{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_sjlife","name":"SJLIFE call rate","parent_id":null,"isleaf":true,"type":"float"}}},
-									{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_ccss","name":"CCSS call rate","parent_id":null,"isleaf":true,"type":"float"}}},
-									{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_CR","name":"gnmoAD call rate","parent_id":null,"isleaf":true,"type":"float"}}},
-									{"type":"tvs","tvs":{"ranges":[{"start":0.1,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_AF","name":"gnomAD allele frequency","parent_id":null,"isleaf":true,"type":"float","min":0,"max":1,"values":{}}}},
-									{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"BadBLAT","name":"Paralog","parent_id":null,"isleaf":true,"type":"categorical"}}},
-									{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"Polymer_region","name":"Polymer region","parent_id":null,"isleaf":true,"type":"categorical"}}}
-								]}
-							}
-						},
-						{ id: 'sex', refGrp:'2'}
-					]
-				},
-			]
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'linear',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{ id: 'sex', refGrp:'2'},
+					{
+						term:{ type:'snplocus', },
+						q:snplocusQ
+					}
+				]
+			} ]
+		})],
+
+		['EF ~ snplocus*sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'linear',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{
+						term:{ type:'snplocus', id:'temp112233' },
+						interactions:['sex'],
+						q:snplocusQ
+					},
+					{ id: 'sex', refGrp:'2', interactions:['temp112233']}
+				]
+			} ]
+		})],
+
+		['EF ~ snplocus agedxSpline', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'linear',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{
+						term:{ type:'snplocus' },
+						q:snplocusQ
+					},
+					{ id: "agedx", q:{mode:'spline',knots:[{value:1},{value:4.5},{value:8.64},{value:17}]}}
+				]
+			} ]
 		})],
 
 		'LOGISITC',
@@ -577,6 +611,41 @@ makeURL([
 			}]
 		})],
 
+		['EF ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{ id: 'sex', refGrp:'2'},
+					{
+						term:{ type:'snplocus', },
+						q:snplocusQ
+					}
+				]
+			} ]
+		})],
+
+		['EF ~ snplocus*sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{
+						term:{ type:'snplocus', id:'temp112233' },
+						interactions:['sex'],
+						q:snplocusQ
+					},
+					{ id: 'sex', refGrp:'2', interactions:['temp112233']}
+				]
+			} ]
+		})],
+
 		['Arrhythmias ~ chestrt', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
@@ -585,6 +654,7 @@ makeURL([
 				regressionType: 'logistic',
 				outcome: {
 					id: 'Arrhythmias',
+					refGrp:'No condition / not tested'
 				},
 				independent: [
 					{
@@ -604,6 +674,7 @@ makeURL([
 				]
 			}]
 		})],
+
 		['BreastSN ~ PGS + age + chestRT', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
@@ -667,6 +738,48 @@ makeURL([
 				]
 			}]
 		})],
+
+		['Arrhythmias ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: {
+					id: 'Arrhythmias',
+					refGrp:'No condition / not tested'
+				},
+				independent: [
+					{ id: 'sex', refGrp:'2'},
+					{
+						term:{ type:'snplocus', },
+						q: snplocusQ
+					}
+				]
+			} ]
+		})],
+
+		['Arrhythmias ~ snplocus*sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: {
+					id: 'Arrhythmias',
+					refGrp:'No condition / not tested'
+				},
+				independent: [
+					{
+						term:{ type:'snplocus', id:'temp112233' },
+						interactions:['sex'],
+						q:snplocusQ
+					},
+					{ id: 'sex', refGrp:'2', interactions:['temp112233']}
+				]
+			} ]
+		})],
+
 		// paper: https://pubmed.ncbi.nlm.nih.gov/31462438/
 		['Stroke ~ snplocus','?mass-session-id=stroke&noheader=1'],
 	]
