@@ -130,9 +130,13 @@ linearRegression <- function(formula, dat, outcome, splineVariables) {
   if (nrow(splineVariables) > 0) {
     # model contains spline variables(s)
     # plot spline regression for each spline term
+    # do not plot if term is missing plot file (to hide plot
+    # when snplocus terms are present)
     for (r in 1:nrow(splineVariables)) {
       splineVariable <- splineVariables[r,]
-      plot_spline(splineVariable, dat, outcome, res, "linear")
+      if ("plotfile" %in% names(splineVariable$spline)) {
+        plot_spline(splineVariable, dat, outcome, res, "linear")
+      }
     }
   }
   res_summ <- summary(res)
@@ -175,9 +179,13 @@ logisticRegression <- function(formula, dat, outcome, splineVariables) {
   if (nrow(splineVariables) > 0) {
     # model contains spline variables(s)
     # plot spline regression for each spline term
+    # do not plot if term is missing plot file (to hide plot
+    # when snplocus terms are present)
     for (r in 1:nrow(splineVariables)) {
       splineVariable <- splineVariables[r,]
-      plot_spline(splineVariable, dat, outcome, res, "logistic")
+      if ("plotfile" %in% names(splineVariable$spline)) {
+        plot_spline(splineVariable, dat, outcome, res, "logistic")
+      }
     }
   }
   res_summ <- summary(res)
