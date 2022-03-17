@@ -37,7 +37,7 @@ exports.default = (obj, str) => {
 	if (frame != '0') {
 		if (frame == '1' || frame == '2') {
 			obj.startCodonFrame = Number.parseInt(frame)
-			console.error(obj.isoform, obj.name, frame, obj.strand) // for review
+			//console.error(obj.isoform, obj.name, frame, obj.strand) // for review
 		} else {
 			throw 'start codon frame not 0/1/2: ' + frame + ' ' + obj.isoform
 		}
