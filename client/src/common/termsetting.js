@@ -471,10 +471,7 @@ function setInteractivity(self) {
 
 	self.showMenu = (clickedElem = null) => {
 		const tip = self.dom.tip
-
-		if (self.opts.menudiv) self.opts.menudiv.selectAll('*').remove()
-		else tip.clear()
-
+		tip.clear()
 		if (self.opts.renderAs == 'none' && clickedElem) self.dom.holder = select(clickedElem)
 		if (self.dom.holder) {
 			const elem = self.dom.holder.node()
@@ -483,9 +480,9 @@ function setInteractivity(self) {
 		}
 
 		if (self.opts.menuOptions == 'all') {
-			self.showEditReplaceRemoveMenu(self.opts.menudiv || tip.d)
+			self.showEditReplaceRemoveMenu(tip.d)
 		} else if (self.opts.menuOptions == 'edit') {
-			self.handler.showEditMenu(self.opts.menudiv || tip.d)
+			self.handler.showEditMenu(tip.d)
 		} else {
 			throw `Unsupported termsettingInit.opts.menuOptions='${self.opts.menuOptions}'`
 		}

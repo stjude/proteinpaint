@@ -52,8 +52,10 @@ class Matrix {
 		}
 
 		this.dom.tip.onHide = () => {
+			this.lastTermEdited = this.termBeingEdited
 			delete this.termBeingEdited
 		}
+
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.settings = Object.assign({}, this.config.settings.matrix)
 		if (this.dom.header) this.dom.header.html('Sample Matrix')
@@ -72,10 +74,17 @@ class Matrix {
 			}
 		})
 
-		// will use the same pill to show term edit menu
+		const customTipApi = tip.getCustomApi({
+			d: this.dom.menubody,
+			clear: () => {
+				this.dom.menubody.selectAll('*').remove()
+				return customTipApi
+			}
+		})
+
+		// will reuse a pill instance to show term edit menu
 		this.pill = termsettingInit({
-			tip: this.dom.tip,
-			menudiv: this.dom.menubody,
+			tip: customTipApi,
 			menuOptions: 'edit',
 			vocabApi: this.app.vocabApi,
 			vocab: appState.vocab,
@@ -87,7 +96,7 @@ class Matrix {
 			callback: tw => {
 				// data is object with only one needed attribute: q, never is null
 				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
-				const t = this.termBeingEdited
+				const t = this.termBeingEdited || this.lastTermEdited
 				console.log(77, t, tw)
 				//delete this.termBeingEdited
 				//const termgroups = JSON.parse(this.config.termgroups
@@ -885,7 +894,6 @@ function setInteractivity(self) {
 						})
 					}
 					self.dom.tip.hide()
-					delete self.termBeingEdited
 				}
 			}
 		})
@@ -910,7 +918,6 @@ function setInteractivity(self) {
 				console.log(terms)
 				const termgroups = JSON.parse(JSON.stringify(self.config.termgroups))
 				const name = self.dom.grpNameTextInput.property('value')
-				console.log(name)
 				let grp = termgroups.find(g => g.name === name)
 				if (!grp) {
 					grp = { name, lst: [] }
@@ -929,7 +936,6 @@ function setInteractivity(self) {
 					config: { termgroups }
 				})
 				self.dom.tip.hide()
-				delete self.termBeingEdited
 			})
 
 		const ta = self.dom.editbody
@@ -980,7 +986,6 @@ function setInteractivity(self) {
 				config: { termgroups }
 			})
 		}
-		delete self.termBeingEdited
 		self.dom.tip.hide()
 	}
 
