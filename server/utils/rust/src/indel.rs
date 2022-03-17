@@ -2450,7 +2450,7 @@ fn check_polyclonal(
         //        - correct_start_position_without_splicing) as usize;
         //    println!("case3");
         //}
-        else if alignment_side == "right" && ref_length > alt_length {
+        else if alignment_side == "right" && ref_length >= alt_length {
             read_indel_start = sequence.len() - correct_end_position as usize
                 + indel_start as usize
                 + indel_length;
