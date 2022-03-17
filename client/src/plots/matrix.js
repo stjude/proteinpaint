@@ -719,7 +719,7 @@ function setInteractivity(self) {
 			.data([
 				{ label: 'Edit', callback: self.showTermEditMenu },
 				{ label: 'Insert', callback: self.showTermInsertMenu },
-				{ label: 'Remove', callback: self.removeTerm }
+				{ label: 'Remove', callback: self.showRemoveMenu }
 			])
 			.enter()
 			.append('div')
@@ -960,6 +960,26 @@ function setInteractivity(self) {
 			})
 	}
 
+	self.showRemoveMenu = () => {
+		const t = self.termBeingEdited
+		self.dom.menubody.selectAll('*').remove()
+		const subdiv = self.dom.menubody.append('div').style('margin-top', '10px')
+		subdiv
+			.append('div')
+			.style('text-align', 'center')
+			.html('Click to remove')
+		subdiv
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.html('Term: ' + t.tw.term.name)
+			.on('click', self.removeTerm)
+		subdiv
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.html('Group: ' + t.grp.name)
+			.on('click', self.removeTermGroup)
+	}
+
 	self.removeTerm = () => {
 		const t = self.termBeingEdited
 		const termgroups = JSON.parse(JSON.stringify(self.config.termgroups))
@@ -986,6 +1006,18 @@ function setInteractivity(self) {
 				config: { termgroups }
 			})
 		}
+		self.dom.tip.hide()
+	}
+
+	self.removeTermGroup = () => {
+		const t = self.termBeingEdited
+		const termgroups = JSON.parse(JSON.stringify(self.config.termgroups))
+		termgroups.splice(t.grpIndex, 1)
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.opts.id,
+			config: { termgroups }
+		})
 		self.dom.tip.hide()
 	}
 

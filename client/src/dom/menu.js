@@ -234,6 +234,17 @@ export class Menu {
 		components/code, such as a chart edit menu with an embedded termsetting
 		edit menu, where the tip.hide() can be shared but tip.clear() will be
 		applied only to a specific div in the overall menu div
+		
+		Example usage: 
+		const tip = new Menu()
+		const subsection = tip.d.append('div')
+		const customTipApi = tip.getCustomApi({
+			d: subsection, // expose only a subsection of the whole tip.d
+			clear: () => {
+				subsection.selectAll('*').remove() // clear only the subsection
+				return customTipApi
+			}
+		})
 	*/
 	getCustomApi(overrides = {}) {
 		// the current instance will be used as the api's prototype via Object.create(),
