@@ -163,6 +163,13 @@ function step1_findgm(paint, querystr) {
 						continue
 					}
 					paint.model = m
+					/* in human, canonical isoforms are marked out in both refseq and gencode
+					as in the "genes" table, refseq is loaded before gencode
+					this loop will encounter refseq canonical isoform first
+					break here so that it won't override it with gencode
+					and maintain the old behavior of showing refseq by searching a gene symbol
+					*/
+					break
 				}
 				if (!paint.model) {
 					paint.model = defaultisoforms[0]
