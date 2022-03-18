@@ -1,9 +1,10 @@
 import { scaleOrdinal } from 'd3-scale'
-import { json as d3json } from 'd3-request'
 import * as client from './client'
 import { nt2aa, codon_stop, bplen } from '../shared/common'
 import { string2snp } from './coord'
 import { select } from 'd3-selection'
+import { dofetch3 } from './common/dofetch'
+import { first_genetrack_tolist } from './common/1stGenetk'
 
 /*
 for processing requests from entry point (app.js ui, embedding)
@@ -64,123 +65,136 @@ function step1_findgm(paint, querystr) {
 		.style('color', '#858585')
 		.text('Searching for ' + querystr + ' ...')
 
-	d3json(hostURL + '/genelookup').post(
-		JSON.stringify({ deep: 1, input: querystr, genome: paint.genome.name, jwt: paint.jwt }),
-		data => {
-			if (!data) {
-				paint.error('querying genes: server error')
-				return
-			}
-			if (data.error) {
-				paint.error('querying genes: ' + data.error)
-				return
-			}
-			if (!data.gmlst || data.gmlst.length == 0) {
-				// not a gene
-				if (paint.genome.hasSNP) {
-					string2snp(paint.genome, querystr, hostURL, paint.jwt)
-						.then(r => {
-							says.remove()
-							// TODO automatically add SNP track
-							const par = {
-								jwt: paint.jwt,
-								hostURL: hostURL,
-								genome: paint.genome,
-								holder: paint.holder,
-								dogtag: paint.genome.name,
-								chr: r.chr,
-								start: Math.max(0, r.start - 300),
-								stop: r.start + 300,
-								nobox: true,
-								allowpopup: paint.nopopup ? false : true,
-								tklst: paint.tklst,
-								debugmode: paint.debugmode
-							}
-							client.first_genetrack_tolist(paint.genome, par.tklst)
-							return import('./block').then(b => {
-								const block = new b.Block(par)
-								block.addhlregion(r.chr, r.start, r.stop - 1)
-							})
-						})
-						.catch(err => {
-							says.text(err.message)
-							if (err.stack) console.log(err.stack)
-						})
-					return
-				}
-				says.text('No hits found for ' + querystr)
-				return
-			}
-			says.remove()
-			paint.allmodels = data.gmlst
-
-			const defaultisoforms = []
-
-			for (const m of paint.allmodels) {
-				if (!m.isoform) {
-					paint.error('isoform missing from one gene model: ' + JSON.stringify(m))
-					return
-				}
-				// cache
-				const n = m.isoform.toUpperCase()
-				if (paint.genome.isoformcache.has(n)) {
-					let nothas = true
-					for (const m2 of paint.genome.isoformcache.get(n)) {
-						if (m2.chr == m.chr && m2.start == m.start && m2.stop == m.stop && m2.strand == m.strand) {
-							nothas = false
-							break
+	dofetch3('genelookup', {
+		method: 'POST',
+		body: JSON.stringify({ deep: 1, input: querystr, genome: paint.genome.name })
+	}).then(data => {
+		if (!data) {
+			paint.error('querying genes: server error')
+			return
+		}
+		if (data.error) {
+			paint.error('querying genes: ' + data.error)
+			return
+		}
+		if (!data.gmlst || data.gmlst.length == 0) {
+			// not a gene
+			if (paint.genome.hasSNP) {
+				string2snp(paint.genome, querystr, hostURL, paint.jwt)
+					.then(r => {
+						says.remove()
+						// TODO automatically add SNP track
+						const par = {
+							jwt: paint.jwt,
+							hostURL: hostURL,
+							genome: paint.genome,
+							holder: paint.holder,
+							dogtag: paint.genome.name,
+							chr: r.chr,
+							start: Math.max(0, r.start - 300),
+							stop: r.start + 300,
+							nobox: true,
+							allowpopup: paint.nopopup ? false : true,
+							tklst: paint.tklst,
+							debugmode: paint.debugmode
 						}
-					}
-					if (nothas) {
-						paint.genome.isoformcache.get(n).push(m)
-					}
-				} else {
-					paint.genome.isoformcache.set(n, [m])
-				}
-				if (m.isoform.toUpperCase() == querystr.toUpperCase()) {
-					defaultisoforms.push(m)
-					break
-				}
-				if (m.isdefault) {
-					defaultisoforms.push(m)
-				}
+						first_genetrack_tolist(paint.genome, par.tklst)
+						return import('./block').then(b => {
+							const block = new b.Block(par)
+							block.addhlregion(r.chr, r.start, r.stop - 1)
+						})
+					})
+					.catch(err => {
+						says.text(err.message)
+						if (err.stack) console.log(err.stack)
+					})
+			} else {
+				says.text('No hits found for ' + querystr)
 			}
+			return
+		}
+		says.remove()
+		paint.allmodels = data.gmlst
 
-			if (defaultisoforms.length == 1) {
-				paint.model = defaultisoforms[0]
-			} else if (defaultisoforms.length > 1) {
-				for (const m of defaultisoforms) {
-					if (m.chr == 'chrY') {
-						// hardcoded to avoid for CRLF2
-						continue
+		// if query string matches with an isoform
+		for (const m of paint.allmodels) {
+			if (m.isoform.toUpperCase() == querystr.toUpperCase()) {
+				// query string is an isoform
+				paint.model = m
+				step2_getseq(paint)
+				return
+			}
+		}
+
+		// query string is not an isoform
+		// from the list of returned isoforms, find a canonical one and use as paint.model
+
+		const defaultisoforms = []
+
+		for (const m of paint.allmodels) {
+			if (!m.isoform) {
+				paint.error('isoform missing from one gene model: ' + JSON.stringify(m))
+				return
+			}
+			// cache
+			const n = m.isoform.toUpperCase()
+			if (paint.genome.isoformcache.has(n)) {
+				let nothas = true
+				for (const m2 of paint.genome.isoformcache.get(n)) {
+					if (m2.chr == m.chr && m2.start == m.start && m2.stop == m.stop && m2.strand == m.strand) {
+						nothas = false
+						break
 					}
-					const chr = paint.genome.chrlookup[m.chr.toUpperCase()]
-					if (!chr) {
-						// unknown chr
-						continue
-					}
-					if (!chr.major) {
-						continue
-					}
-					paint.model = m
-					/* in human, canonical isoforms are marked out in both refseq and gencode
+				}
+				if (nothas) {
+					paint.genome.isoformcache.get(n).push(m)
+				}
+			} else {
+				paint.genome.isoformcache.set(n, [m])
+			}
+			if (m.isoform.toUpperCase() == querystr.toUpperCase()) {
+				defaultisoforms.push(m)
+				break
+			}
+			if (m.isdefault) {
+				defaultisoforms.push(m)
+			}
+		}
+
+		if (defaultisoforms.length == 1) {
+			paint.model = defaultisoforms[0]
+		} else if (defaultisoforms.length > 1) {
+			for (const m of defaultisoforms) {
+				if (m.chr == 'chrY') {
+					// hardcoded to avoid for CRLF2
+					continue
+				}
+				const chr = paint.genome.chrlookup[m.chr.toUpperCase()]
+				if (!chr) {
+					// unknown chr
+					continue
+				}
+				if (!chr.major) {
+					continue
+				}
+				paint.model = m
+				/* in human, canonical isoforms are marked out in both refseq and gencode
 					as in the "genes" table, refseq is loaded before gencode
 					this loop will encounter refseq canonical isoform first
 					break here so that it won't override it with gencode
 					and maintain the old behavior of showing refseq by searching a gene symbol
 					*/
-					break
-				}
-				if (!paint.model) {
-					paint.model = defaultisoforms[0]
-				}
+				break
 			}
 			if (!paint.model) {
-				paint.model = paint.allmodels[0]
+				paint.model = defaultisoforms[0]
 			}
-			step2_getseq(paint)
 		}
-	)
+		if (!paint.model) {
+			paint.model = paint.allmodels[0]
+		}
+		step2_getseq(paint)
+	})
 }
 
 function step2_getseq(paint) {
@@ -189,31 +203,28 @@ function step2_getseq(paint) {
 		step2_getpdomain(paint)
 		return
 	}
-	d3json(hostURL + '/ntseq').post(
-		JSON.stringify({
-			genome: paint.genome.name,
-			coord: paint.model.chr + ':' + (paint.model.start + 1) + '-' + paint.model.stop,
-			jwt: paint.jwt
-		}),
-		data => {
-			if (!data) {
-				paint.error('getting sequence: server error')
-				return
-			}
-			if (data.error) {
-				paint.error('getting sequence: ' + data.error)
-				return
-			}
-			if (!data.seq) {
-				paint.error('no nt seq???')
-				return
-			}
-			paint.model.genomicseq = data.seq.toUpperCase()
-			paint.model.aaseq = nt2aa(paint.model)
-			checker()
-			step2_getpdomain(paint)
+	const arg = {
+		genome: paint.genome.name,
+		coord: paint.model.chr + ':' + (paint.model.start + 1) + '-' + paint.model.stop
+	}
+	dofetch3('ntseq', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
+		if (!data) {
+			paint.error('getting sequence: server error')
+			return
 		}
-	)
+		if (data.error) {
+			paint.error('getting sequence: ' + data.error)
+			return
+		}
+		if (!data.seq) {
+			paint.error('no nt seq???')
+			return
+		}
+		paint.model.genomicseq = data.seq.toUpperCase()
+		paint.model.aaseq = nt2aa(paint.model)
+		checker()
+		step2_getpdomain(paint)
+	})
 	function checker() {
 		//if (paint.model.cdseq && paint.model.cdseq.length % 3 != 0)  paint.error('Dubious CDS of ' + paint.model.isoform + ': AA count ' + paint.model.aacount)
 		if (paint.model.aaseq) {
@@ -253,14 +264,10 @@ function step2_getpdomain(paint) {
 		return
 	}
 
-	const re = new Request(hostURL + '/pdomain', {
+	dofetch3('pdomain', {
 		method: 'POST',
-		body: JSON.stringify({ genome: paint.genome.name, isoforms: [...isoform2gm.keys()], jwt: paint.jwt })
+		body: JSON.stringify({ genome: paint.genome.name, isoforms: [...isoform2gm.keys()] })
 	})
-	fetch(re)
-		.then(data => {
-			return data.json()
-		})
 		.then(data => {
 			if (data.error) throw { message: 'error getting protein domain: ' + data.error }
 			if (data.lst) {
