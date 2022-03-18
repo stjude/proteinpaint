@@ -120,7 +120,7 @@ class TermSetting {
 			if (this.doNotHideTipInMain) {
 				// single use: if true then delete
 				delete this.doNotHideTipInMain
-			} else if (!data.doNotHideTipInMain) {
+			} else {
 				this.dom.tip.hide()
 			}
 			this.hasError = false

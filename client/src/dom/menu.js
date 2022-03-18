@@ -110,9 +110,6 @@ export class Menu {
 	}
 
 	show(x, y) {
-		// NOTE: getCustomApi() may have a different d property value than the original this.d
-		// in that case, no need to adjust position
-		if (this.dnode !== this.d.node()) return
 		this.prevX = x
 		this.prevY = y
 
@@ -154,9 +151,6 @@ export class Menu {
 	}
 
 	showunder(dom, yspace) {
-		// NOTE: getCustomApi() may have a different d property value than the original this.d
-		// in that case, no need to adjust position
-		if (this.dnode !== this.d.node()) return
 		// route to .show()
 		const p = dom.getBoundingClientRect()
 		return this.show(p.left - this.offsetX, p.top + p.height + (yspace || 5) - this.offsetY)
@@ -174,9 +168,6 @@ export class Menu {
 	}
 
 	showunderoffset(dom, yspace) {
-		// NOTE: getCustomApi() may have a different d property value than the original this.d
-		// in that case, no need to adjust position
-		if (this.dnode !== this.d.node()) return
 		// route to .show()
 		const p = dom.getBoundingClientRect()
 		return this.show(p.left, p.top + p.height + (yspace || 5))
@@ -239,7 +230,13 @@ export class Menu {
 		const tip = new Menu()
 		const subsection = tip.d.append('div')
 		const customTipApi = tip.getCustomApi({
-			d: subsection, // expose only a subsection of the whole tip.d
+			d: subsection, // expose only a subsection of the whole tip.d,
+			show: () => {
+				subsection.style('display', 'block')
+			},
+			hide: () => {
+				subsection.style('display', 'none')
+			},
 			clear: () => {
 				subsection.selectAll('*').remove() // clear only the subsection
 				return customTipApi
