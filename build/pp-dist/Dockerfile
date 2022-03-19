@@ -18,12 +18,8 @@ FROM pprust AS ppcargo
 WORKDIR /home/root/pp/app
 RUN export RUSTC_WRAPPER=$(which sccache)
 
-COPY --from=pppkg /home/root/pp/app/node_modules/@stjude/proteinpaint/server/utils/rust_indel_cargo /home/root/rust_indel_cargo
-WORKDIR /home/root/rust_indel_cargo
-RUN cargo build --release
-
-COPY --from=pppkg /home/root/pp/app/node_modules/@stjude/proteinpaint/server/utils/read_alignment /home/root/read_alignment
-WORKDIR /home/root/read_alignment
+COPY --from=pppkg /home/root/pp/app/node_modules/@stjude/proteinpaint/server/utils/rust /home/root/rust
+WORKDIR /home/root/rust
 RUN cargo build --release
 
 #

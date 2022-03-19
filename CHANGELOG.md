@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.1.0
+
+- new regresssion options in MASS UI
+- BAM track improvements
+- started the MASS matrix prototype
+
 ## 2.0.0
 
 ### Breaking Changes
