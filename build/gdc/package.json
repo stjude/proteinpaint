@@ -8,8 +8,13 @@
     "type": "git",
     "url": "https://github.com/stjude/pp-dist"
   },
+  "scripts": {
+    "postinstall": "./build/compile-rust.sh",
+    "postupdate": "./build/compile-rust.sh"
+  },
   "//": "dependencies will be copied from proteinpaint/[server, client]/package.json",
   "files": [
+    "build/compile-rust.sh",
     "client/dist",
     "public/index.html",
     "public/bin",

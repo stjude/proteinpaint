@@ -32,7 +32,7 @@ set +e
 docker stop pp && docker rm pp
 set -e
 
-EXPOSED_PORT=3456
+EXPOSED_PORT=3000
 
 if [[ "$IMAGE_NAME" == *dev ]]; then 
 	echo "running the dev container ..."

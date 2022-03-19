@@ -35,7 +35,7 @@ set +e
 docker stop $CONTAINER_ID && docker rm $CONTAINER_ID
 set -e
 
-EXPOSED_PORT=3456
+EXPOSED_PORT=3000
 echo "[$SRCDIR] [$HOSTPORT] [$IMAGE_NAME] [$APPDIR] [$CONTAINER_ID]"
 docker run -d \
 	--name $CONTAINER_ID \

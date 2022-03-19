@@ -11,7 +11,7 @@
     "browser": "node ./test/import-specs.js",
     "examples": "node ./test/import-specs.js name=_x_.examples",
     "gdc": "node ./test/import-specs.js name=_x_.gdc.views && npm run test",
-    "gdc-nodev": "node ./test/import-specs.js name=_x_.gdc.views && webpack --env.NODE_ENV=development && npm run test -- --no-sandbox",
+    "gdc-unwatched": "node ./test/import-specs.js name=_x_.gdc.views && webpack --env.NODE_ENV=development && npm run test -- --no-sandbox",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w"
   },
   "author": "",

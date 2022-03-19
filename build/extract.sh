@@ -71,6 +71,7 @@ tar -C tmppack/ -xf $FILE client
 tar -C tmppack/ -xf $FILE package.json
 tar -C tmppack/ -xvf $FILE $TARGETDIR
 tar -C tmppack/ -xvf $FILE build/Dockerfile
+tar -C tmppack/ -xvf $FILE build/compile-rust.sh
 tar -C tmppack/ -xvf $FILE .dockerignore
 tar -C tmppack/ -xvf $FILE LICENSE
 echo $REV > tmppack/rev.txt

@@ -139,7 +139,7 @@ if (serverconfig.allow_env_overrides) {
 	if (process.env.PP_MODE && process.env.PP_MODE.startsWith('container')) {
 		// within the container, the Dockerfile uses a pre-determined port and filepaths
 		Object.assign(serverconfig, {
-			port: 3456,
+			port: 3000,
 			tpmasterdir: '/home/root/pp/tp',
 			cachedir: '/home/root/pp/cache',
 			hicstraw: '/home/root/pp/tools/straw',
