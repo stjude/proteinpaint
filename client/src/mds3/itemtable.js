@@ -1,4 +1,4 @@
-import * as common from '../../shared/common'
+import { mclass, dtsnvindel, dtfusionrna, dtsv } from '../../shared/common'
 import { init_sampletable } from './sampletable'
 import { event as d3event } from 'd3-selection'
 
@@ -39,11 +39,11 @@ arg{}
 const cutoff_tableview = 10
 
 export async function itemtable(arg) {
-	if (arg.mlst[0].dt == common.dtsnvindel) {
+	if (arg.mlst[0].dt == dtsnvindel) {
 		await table_snvindel(arg)
 		return
 	}
-	if (arg.mlst[0].dt == common.dtfusionrna || arg.mlst[0].dt == common.dtsv) {
+	if (arg.mlst[0].dt == dtfusionrna || arg.mlst[0].dt == dtsv) {
 		await table_fusionsv(arg)
 		return
 	}
@@ -69,15 +69,16 @@ async function table_snvindel(arg) {
 	}
 }
 
-function table_snvindel_onevariant({ m, tk, table }) {
+function table_snvindel_onevariant({ m, tk, table, block }) {
 	{
 		const [td1, td2] = row_headervalue(table)
-		td1.text('Consequence')
+		td1.text(block.mclassOverride ? block.mclassOverride.className : 'Consequence')
 		add_csqButton(m, tk, td2, table)
 	}
 	{
 		const [td1, td2] = row_headervalue(table)
-		td1.text('Mutation')
+		// do not pretend m is mutation if ref/alt is missing
+		td1.text(m.ref && m.alt ? 'Mutation' : 'Position')
 		print_snv(td2, m, tk)
 	}
 	if ('occurrence' in m) {
@@ -106,7 +107,7 @@ function add_csqButton(m, tk, td, table) {
 	// table: 2-col
 	if (tk.mds.queries && tk.mds.queries.snvindel.m2csq && m.csqcount > 1) {
 		const a = td.append('a')
-		a.html(m.mname + ' <span style="font-size:.8em">' + common.mclass[m.class].label.toUpperCase() + '</span> &#9660;')
+		a.html(m.mname + ' <span style="font-size:.8em">' + mclass[m.class].label.toUpperCase() + '</span> &#9660;')
 		// click link to query for csq list
 		const tr = table.append('tr').style('display', 'none')
 		const td2 = tr.append('td').attr('colspan', 2) // to show result of additional csq
@@ -114,14 +115,10 @@ function add_csqButton(m, tk, td, table) {
 		a.on('click', async () => {
 			if (tr.style('display') == 'none') {
 				tr.style('display', 'table-row')
-				a.html(
-					m.mname + ' <span style="font-size:.8em">' + common.mclass[m.class].label.toUpperCase() + '</span> &#9650;'
-				)
+				a.html(m.mname + ' <span style="font-size:.8em">' + mclass[m.class].label.toUpperCase() + '</span> &#9650;')
 			} else {
 				tr.style('display', 'none')
-				a.html(
-					m.mname + ' <span style="font-size:.8em">' + common.mclass[m.class].label.toUpperCase() + '</span> &#9660;'
-				)
+				a.html(m.mname + ' <span style="font-size:.8em">' + mclass[m.class].label.toUpperCase() + '</span> &#9660;')
 			}
 			if (!first) return
 			first = false
@@ -153,9 +150,9 @@ function add_csqButton(m, tk, td, table) {
 		td.append('span').text(m.mname)
 		td.append('span')
 			.style('margin-left', '10px')
-			.style('color', common.mclass[m.class].color)
+			.style('color', mclass[m.class].color)
 			.style('font-size', '.8em')
-			.text(common.mclass[m.class].label.toUpperCase())
+			.text(mclass[m.class].label.toUpperCase())
 	}
 }
 
