@@ -13,7 +13,7 @@ The following will test and build a Docker image of the Proteinpaint server.
 
 Note that you'd need to a serverconfig.json at the proteinpaint/ project root
 folder, and the expected data files in there including
-[gencode.v22](https://pecan.stjude.cloud/static/hg38/gdc/gencode.v22.hg38.gz).
+[gencode.v36](https://pecan.stjude.cloud/static/hg38/gdc/gencode.hg38.gz).
 
 You may use a helper script to install these support files:
 

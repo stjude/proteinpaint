@@ -212,7 +212,8 @@ function getGDCconfig() {
 				]
 			}
 		],
-		backend_only: true
+		backend_only: true,
+		ignoreTermdbTest: true
 		/**** 
 			ASSUMES THAT THE GDC-PP WILL RUN INSIDE A DOCKER CONTAINER,
 			see above where the serverconfig.port, tpmasterdir, etc 
