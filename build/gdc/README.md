@@ -15,31 +15,8 @@ Note that you'd need the expected data files in there including proteinpaint pro
 folder [gencode.v36](https://pecan.stjude.cloud/static/hg38/gdc/gencode.hg38.gz). 
 NOTE: Other gencode versions may work for limited testing purposes, but not production release.
 
-You may use a helper script to install these support files:
-
-```bash
-# run the following command to show help messages from the script.
-node utils/install.pp.js 
-
-# Do the following command to list all available files for download, 
-# as well as the file sizes. This can verify that your server is able 
-# to access these files over the Internet.
-node utils/install.pp.js -v
-```
-Follow the instructions to prepare a config file. Example file may look like below.
-Note that the two columns should be separated by a single tab.
-```text
-URL        https://pp.mycompany.com
-TP         /home/user/data/tp/
-CACHE      /home/user/data/cache/
-BINPATH    /home/user/data/tools/
-PYTHON3    python
-GENOMES    hg19
-```
-Run the script with the config file and perform the installation:
-```bash
-node utils/install.pp.js -c <configFile>
-```
+See the [GDC Proteinpaint instructions](https://docs.google.com/document/d/1wMw2GKvEZSnYjqETJ2HfH3-g5-QfSIP1wlo8Q0p4CJ0/edit#)
+to download the required data files:
 
 ### Build script
 
@@ -50,6 +27,10 @@ The following script will:
 - if the test passes, use the same Dockefile to build the ppserver target
 
 ```bash
+# create a full image with test spec files and devDependencies
+./build/full/build.sh
+
+# extract a subset of build artifacts from the full image
 ./build/gdc/build.sh -r HEAD -t my/tp/master/dir
 
 # loof for the latest matching ppgdc:$HASH image tag 

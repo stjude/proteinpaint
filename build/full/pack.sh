@@ -15,7 +15,7 @@ npx rollup -c ./rollup.config.js
 cd ..
 
 mv package.json package.json.bak
-./build/pp-dist/editpkgjson.js > package.json
+./build/full/editpkgjson.js > package.json
 npm pack 
 rm package.json
 mv package.json.bak package.json
