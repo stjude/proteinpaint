@@ -70,7 +70,7 @@ export async function get_regression(q, ds) {
 		Rinput {
 			data: [{}] per-sample data values
 			metadata: {
-				type: regression type (linear/logistic)
+				type: regression type (linear/logistic/cox)
 				variables: [{}] variable metadata
 			}
 		}
@@ -86,7 +86,8 @@ export async function get_regression(q, ds) {
 		// run regression analysis in R
 		const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 		await utils.write_file(Rinputfile, JSON.stringify(Rinput))
-		const Routput = await lines2R(path.join(serverconfig.binpath, 'utils/regression.R'), [], [Rinputfile])
+		const Rscript = path.join(serverconfig.binpath, 'utils', q.regressionType + '.regression.R')
+		const Routput = await lines2R(Rscript, [], [Rinputfile])
 
 		// parse the R output
 		fs.unlink(Rinputfile, () => {})
@@ -103,7 +104,7 @@ function parse_q(q, ds) {
 
 	// client to always specify regressionType
 	if (!q.regressionType) throw 'regressionType missing'
-	if (!['linear', 'logistic'].includes(q.regressionType)) throw 'unknown regressionType'
+	if (!['linear', 'logistic', 'cox'].includes(q.regressionType)) throw 'unknown regressionType'
 
 	// outcome
 	if (!q.outcome) throw `missing 'outcome' parameter`
@@ -169,7 +170,6 @@ function getGradeCutoff(tw) {
 		minGrade = Math.min(minGrade, v.key)
 	}
 	tw.q.grade = minGrade // grade cutoff
-	console.log('grade cutoff:', minGrade)
 }
 
 function checkTwAncestryRestriction(tw, q, ds) {
@@ -185,21 +185,29 @@ function checkTwAncestryRestriction(tw, q, ds) {
 }
 
 function makeRinput(q, sampledata) {
-	// prepare variable metadata
-	const variables = []
+	// build R metadata
+	const metadata = { type: q.regressionType }
+	const variables = [] // [ {outcome}, {ind1}, {ind2}, ...]
 
 	// outcome variable
 	const outcome = {
 		id: q.outcome.id,
 		name: q.outcome.term.name,
 		type: 'outcome',
-		rtype: 'numeric' // always numeric because values are continuous for linear regression and values get converted to 0/1 for logistic regression
+		rtype: 'numeric' // always numeric because (1) linear regression: values are continuous, (2) logistic regression: values get converted to 0/1, (3) cox regression: time-to-event is continuous and event is 0/1
 	}
 	if (q.regressionType == 'logistic') {
-		// when doing spline plot, need ref and nonref categories of outcome for labeling R plot
+		// for logistic regression, if spline terms are present, the spline plot needs to have label for nonref category of outcome
 		outcome.categories = {
 			ref: q.outcome.refGrp,
 			nonref: getLogisticOutcomeNonref(q.outcome)
+		}
+	}
+	if (q.regressionType == 'cox') {
+		// for cox regression, outcome needs to be time-to-event data
+		outcome.timeToEvent = {
+			timeId: q.outcome.id + '_time',
+			eventId: q.outcome.id + '_event'
 		}
 	}
 	variables.push(outcome)
@@ -212,15 +220,11 @@ function makeRinput(q, sampledata) {
 			makeRvariable_dictionaryTerm(tw, variables, q)
 		}
 	}
+	metadata.variables = variables
 
-	// generate metadata object
-	const metadata = {
-		type: q.regressionType,
-		variables
-	}
-
-	// prepare per-sample data values
-	// for each sample, decide if it has value for all terms
+	// build R dataset
+	// per-sample data values
+	// for each sample, determine if it has value for all terms
 	// if so, the sample can be included for analysis
 	const data = []
 	for (const { sample, id2value } of sampledata) {
@@ -231,10 +235,9 @@ function makeRinput(q, sampledata) {
 		for (const tw of q.independent) {
 			// tw = termWrapper
 			if (tw.type == 'snplocus') {
-				// snplocus terms need to be analyzed separately and
-				// some samples may have values for one term, but not another
-				// therefore samples will be filtered separately for each term
-				// in R script
+				// snplocus snps are analyzed separately from each other
+				// therefore samples need to be filtered separately for each snplocus snp
+				// this filtering will be done in the R script
 				continue
 			}
 			if (tw.type == 'snplst') {
@@ -255,17 +258,27 @@ function makeRinput(q, sampledata) {
 		if (skipsample) continue
 
 		// this sample has values for all variables and is eligible for regression analysis
-		const entry = {} // data of sample for each variable { variable1: value, variable2: value, variable3: value, ...}
+		// fill entry with data of sample for each variable
+		const entry = {} // { variable1: value, variable2: value, variable3: value, ...}
 		for (const t of variables) {
 			if (t.type == 'outcome') {
 				// outcome variable
-				if (q.outcome.q.mode == 'continuous') {
-					// continous outcome, use value
+				if (q.regressionType == 'linear') {
+					// linear regression, therefore continuous outcome
+					// use value
 					entry[t.id] = out.value
-				} else {
-					// categorical/condition outcome, use key
-					// convert ref and non-ref values to 0 and 1, respectively
+				}
+				if (q.regressionType == 'logistic') {
+					// logistic regression, therefore categorical outcome
+					// use key
+					// convert ref/non-ref to 0/1
 					entry[t.id] = out.key === q.outcome.refGrp ? 0 : 1
+				}
+				if (q.regressionType == 'cox') {
+					// cox regression, therefore time-to-event outcome
+					// use both key and value
+					entry[t.timeToEvent.timeId] = out.value
+					entry[t.timeToEvent.eventId] = out.key
 				}
 			} else {
 				// independent variable
@@ -422,14 +435,24 @@ function getLogisticOutcomeNonref(outcome) {
 
 function validateRinput(Rinput, sampleSize) {
 	// validate R input
-	// validation of data values will be done in R script
+	// Data values will be validated in R script
 
 	// validate sample size
 	if (sampleSize < minimumSample) throw 'too few samples to fit model'
+
 	// validate data table
+	const regressionType = Rinput.metadata.type
 	const nvariables = Rinput.metadata.variables.length
-	if (Rinput.data.find(entry => Object.keys(entry).length != nvariables))
-		throw 'unequal number of variables in data entries'
+	if (regressionType == 'cox') {
+		if (Rinput.data.find(entry => Object.keys(entry).length != nvariables + 1)) {
+			throw 'unequal number of variables in data entries'
+		}
+	} else {
+		if (Rinput.data.find(entry => Object.keys(entry).length != nvariables)) {
+			throw 'unequal number of variables in data entries'
+		}
+	}
+
 	// validate independent variables
 	for (const variable of Rinput.metadata.variables) {
 		if (variable.type == 'outcome') continue
@@ -445,12 +468,21 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 	if (Routput.length != 1) throw 'expected 1 json line in R output'
 	const out = JSON.parse(Routput[0])
 
-	/* 
-	out: [
+	/*
+	out: for linear/logistic regression 
+	[
 	  {
 		id: id of snplocus term (empty if no snplocus terms)
-		data: { sampleSize, residuals: {}, coefficients: {}, type3: {}, other: {}, warnings: [] },
-	  },
+		data: { sampleSize, residuals: {}, coefficients: {}, type3: {}, other: {}, warnings: [] }
+	  }
+	]
+
+	out: for cox regression 
+	[
+	  {
+		id: id of snplocus term (empty if no snplocus terms)
+		data: { sampleSize, eventCnt, coefficients: {}, type3: {}, tests: {}, other: {}, warnings: [] }
+	  }
 	]
 	*/
 
@@ -459,7 +491,10 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 	for (const analysis of out) {
 		// to be pushed to result[]
 		const analysisResults = {
-			data: { sampleSize: analysis.data.sampleSize }
+			data: {
+				sampleSize: analysis.data.sampleSize,
+				eventCnt: analysis.data.eventCnt ? analysis.data.eventCnt : null
+			}
 		}
 
 		if (analysis.id) {
@@ -479,15 +514,17 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 		const data = analysis.data
 
 		// residuals
-		analysisResults.data.residuals = data.residuals
-		analysisResults.data.residuals.label = Rinput.metadata.type == 'linear' ? 'Residuals' : 'Deviance residuals'
+		if (data.residuals) {
+			analysisResults.data.residuals = data.residuals
+			analysisResults.data.residuals.label = Rinput.metadata.type == 'linear' ? 'Residuals' : 'Deviance residuals'
+		}
 
 		// coefficients
 		if (data.coefficients.rows.length < 2)
 			throw 'expect at least 2 rows in coefficients table but got ' + data.coefficients.rows.length
 		analysisResults.data.coefficients = {
 			header: data.coefficients.header,
-			intercept: data.coefficients.rows.shift(),
+			intercept: Rinput.metadata.type == 'cox' ? null : data.coefficients.rows.shift(),
 			terms: {}, // individual independent terms, not interaction
 			interactions: [] // interactions
 		}
@@ -550,6 +587,12 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 			}
 		}
 		analysisResults.data.type3.label = 'Type III statistics'
+
+		// statistical tests
+		if (data.tests) {
+			analysisResults.data.tests = data.tests
+			analysisResults.data.tests.label = 'Statistical tests'
+		}
 
 		// other summary statistics
 		analysisResults.data.other = data.other
@@ -659,10 +702,6 @@ function getSampleData_dictionaryTerms(q, terms) {
 	// outcome can only be dictionary term so terms array must have at least 1 term
 	const samples = new Map()
 	// k: sample name, v: {sample, id2value:Map( tid => {key,value}) }
-
-	if (q.regressionType == 'cox') {
-		// get cutoff grade from q.outcome.q.groupsetting (terms[0])
-	}
 	const filter = getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
@@ -906,12 +945,25 @@ function replaceTermId(Rinput) {
 		// between ID and category in coefficents table in R
 		id2originalId['id' + i + '_'] = t.id
 		originalId2id[t.id] = 'id' + i + '_'
+		if (t.timeToEvent) {
+			// time-to-event variable
+			id2originalId['id' + i + '_time' + '_'] = t.timeToEvent.timeId
+			id2originalId['id' + i + '_event' + '_'] = t.timeToEvent.eventId
+			originalId2id[t.timeToEvent.timeId] = 'id' + i + '_time' + '_'
+			originalId2id[t.timeToEvent.eventId] = 'id' + i + '_event' + '_'
+		}
 	}
 
 	// replace IDs of terms and interacting terms in metadata
 	for (const t of Rinput.metadata.variables) {
 		t.id = originalId2id[t.id]
+		if (t.timeToEvent) {
+			// time-to-event variable
+			t.timeToEvent.timeId = originalId2id[t.timeToEvent.timeId]
+			t.timeToEvent.eventId = originalId2id[t.timeToEvent.eventId]
+		}
 		if (t.interactions && t.interactions.length > 0) {
+			// assuming no interactions with time-to-event variables
 			for (const [i, it] of t.interactions.entries()) {
 				t.interactions[i] = originalId2id[it]
 			}

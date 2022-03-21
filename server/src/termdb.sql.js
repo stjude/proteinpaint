@@ -387,12 +387,17 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 		const mode = termq.mode == 'spline' ? 'cubicSpline' : termq.mode || 'discrete'
 		CTE = numericSql[mode].getCTE(tablename, term, q.ds, termq, values, index, filter)
 	} else if (term.type == 'condition') {
-		// index position is dependant on server route
+		// index position is dependent on server route
 		// TODO: termq.mode == 'time-to-event' so that we don't need
 		// to check index or other flags
-		if ((index == 1 && q.getcuminc) || (q.getregression && index === 0 && q.regressionType == 'cox')) {
-			return conditionSql.cuminc.getCTE(tablename, term, termq, values, filter)
+		if (index == 1 && q.getcuminc) {
+			// CTE for cumulative incidence term
+			return conditionSql.cuminc.getCTE(tablename, term, q, values, filter)
+		} else if (q.getregression && q.regressionType == 'cox' && index === 0) {
+			// CTE for cox regression outcome term
+			return conditionSql.cuminc.getCTE(tablename, term, termWrapper.q, values, filter)
 		} else {
+			// CTE for all other conditional terms
 			const groupset = get_active_groupset(term, termq)
 			CTE = conditionSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, index, groupset)
 		}

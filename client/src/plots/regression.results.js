@@ -226,11 +226,13 @@ function setRenderers(self) {
 
 		self.mayshow_warn(result)
 		if ('sampleSize' in result) self.newDiv('Sample size:', result.sampleSize)
+		if ('eventCnt' in result) self.newDiv('Number of events:', result.eventCnt)
 		if (result.headerRow) self.newDiv(result.headerRow.k, result.headerRow.v)
 		self.mayshow_splinePlots(result)
 		self.mayshow_residuals(result)
 		self.mayshow_coefficients(result)
 		self.mayshow_type3(result)
+		self.mayshow_tests(result)
 		self.mayshow_other(result)
 	}
 
@@ -307,7 +309,7 @@ function setRenderers(self) {
 		}
 
 		// intercept row
-		{
+		if (self.config.regressionType != 'cox') {
 			const tr = table.append('tr').style('background', '#eee')
 			result.coefficients.intercept.forEach((v, i) => {
 				tr.append('td')
@@ -513,6 +515,22 @@ function setRenderers(self) {
 		}
 	}
 
+	self.mayshow_tests = result => {
+		if (!result.tests) return
+		const div = self.newDiv(result.tests.label)
+		const table = div.append('table').style('border-spacing', '8px')
+		const header = table.append('tr').style('opacity', 0.4)
+		for (const cell of result.tests.header) {
+			header.append('td').text(cell)
+		}
+		for (const row of result.tests.rows) {
+			const tr = table.append('tr')
+			for (const cell of row) {
+				tr.append('td').text(cell)
+			}
+		}
+	}
+
 	self.mayshow_other = result => {
 		if (!result.other) return
 		const div = self.newDiv(result.other.label)
@@ -563,6 +581,14 @@ function setRenderers(self) {
 			CIlow = 1
 			CIhigh = 2
 			axislab = 'Odds ratio'
+			baselineValue = 1
+			capMin = 0.1
+			capMax = 10
+		} else if (self.config.regressionType == 'cox') {
+			midIdx = 0
+			CIlow = 1
+			CIhigh = 2
+			axislab = 'Hazard ratio'
 			baselineValue = 1
 			capMin = 0.1
 			capMax = 10
@@ -720,7 +746,7 @@ function setRenderers(self) {
 					.range([0, width])
 					.nice()
 			}
-			if (self.config.regressionType == 'linear') {
+			if (self.config.regressionType == 'linear' || self.config.regressionType == 'cox') {
 				return scaleLinear()
 					.domain([Math.max(values[0], capMin), Math.min(values[values.length - 1], capMax)])
 					.range([0, width])
