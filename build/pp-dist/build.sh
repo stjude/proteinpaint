@@ -32,40 +32,9 @@ done
 ./build/extract.sh -r $REV -t pp-dist
 REV=$(cat tmppack/rev.txt)
 
-#######
-# PACK
-#######
-
-cd tmppack
-npm run reset
-
-cd server
-echo -e "\nCreating the server bundle\n"
-npx webpack --config=webpack.config.js
-
-cd ../client
-echo -e "\nBundling the client browser bin ...\n"
-rm -rf ../public/bin
-npx webpack --config=webpack.config.js --env.url="__PP_URL__"
-echo -e "\nPacking the client module main ...\n"
-rm -rf dist
-npx rollup -c ./rollup.config.js
-
-cd ..
-
-##########
-# PACK
-##########
-
-mv package.json package.json.bak
-./build/pp-dist/editpkgjson.js > package.json
-npm pack 
-rm package.json
-mv package.json.bak package.json
-
-#####################
-# Build Docker Image
-#####################
+#########################
+# Pack with Docker build
+#########################
 
 # get the current tag
 TAG="$(node -p "require('./package.json').version")"

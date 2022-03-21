@@ -36,6 +36,6 @@ cd client
 # test before bundling the client code
 echo "Running GDC-PP React Wrapper tests ..."
 Xvfb -ac -screen scrn 1280x2000x24 :9.0 -nolisten unix & export DISPLAY=:9.0
-npm run gdc -- --no-sandbox
+npm run gdc-unwatched
 pkill -f "$SCRIPT" &> /dev/null
 

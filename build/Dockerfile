@@ -28,7 +28,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/ \ 
     && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
-ARG htsversion=1.11
+RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
+
+ARG htsversion=1.14
 
 RUN curl -L https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \
     (cd htslib-${htsversion} && ./configure --enable-plugins --with-plugin-path='$(libexecdir)/htslib:/usr/libexec/htslib' && make install) && \
@@ -49,7 +51,8 @@ RUN apt-get update && apt-get install -y r-base \
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
 
 RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ && \
-    wget http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-x86_64 -P /usr/local/bin && \
+    wget -O /usr/local/bin/clustalo http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-x86_64 && \
+    chmod 755 /usr/local/bin/clustalo && \
     wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigSummary -P /home/root/pp/tools/ && \
     wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigBedToBed -P /home/root/pp/tools/ && \
     wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigBedNamedItems -P /home/root/pp/tools/

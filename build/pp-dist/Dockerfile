@@ -1,46 +1,41 @@
 ARG IMGVER=latest
-FROM ppbase:$IMGVER AS pppkg
+
+#################
+# Package build
+#################
+
+# target for the full (backend + frontend) SJ package with compiled rust binaries
+FROM pprust:$IMGVER AS pppkg
 
 WORKDIR /home/root/pp
 
 ARG PKGVER=0.0.0
 ENV PKGTGZ=./stjude-proteinpaint-${PKGVER}.tgz
-COPY $PKGTGZ .
 
-WORKDIR /home/root/pp/app
-RUN npm install ../$PKGTGZ
-COPY ./build/pp-dist/setup.sh .
+ADD tmppack ./tmppack
+WORKDIR /home/root/pp/tmppack
+RUN ./build/pp-dist/pack.sh
 
-# 
-# Rust code builder
-# 
-FROM pprust AS ppcargo
 WORKDIR /home/root/pp/app
 RUN export RUSTC_WRAPPER=$(which sccache)
+RUN npm install ../tmppack/$PKGTGZ
 
-COPY --from=pppkg /home/root/pp/app/node_modules/@stjude/proteinpaint/server/utils/rust_indel_cargo /home/root/rust_indel_cargo
-WORKDIR /home/root/rust_indel_cargo
-RUN cargo build --release
+COPY ./build/pp-dist/setup.sh .
 
-COPY --from=pppkg /home/root/pp/app/node_modules/@stjude/proteinpaint/server/utils/read_alignment /home/root/read_alignment
-WORKDIR /home/root/read_alignment
-RUN cargo build --release
+CMD ["sleep", "3600"]
+
+
+#################
+# Testable build
+#################
 
 #
-# final app image
+# final app image, with the Rust-compiled binaries and without the Rust toolchain
 # 
-FROM pppkg AS ppapp
-
-# copy compiled rust code
-WORKDIR /home/root/pp/app/node_modules/@stjude/proteinpaint/server/utils/rust_indel_cargo
-RUN rm -rf src Cargo.*
-COPY --from=ppcargo /home/root/rust_indel_cargo/target ./target
-RUN rm -rf target/release/deps target/release/build
-WORKDIR /home/root/pp/app/node_modules/@stjude/proteinpaint/server/utils/read_alignment
-RUN rm -rf src Cargo.*
-COPY --from=ppcargo /home/root/read_alignment/target ./target
-RUN rm -rf target/release/deps target/release/build
+FROM ppbase:$IMGVER AS ppapp
 
 WORKDIR /home/root/pp/app
-EXPOSE 3456
+COPY --from=pppkg /home/root/pp/app /home/root/pp/app
+
+EXPOSE 3000
 CMD [ "sh", "-c", "./setup.sh && PP_MODE=container-prod npx proteinpaint"]

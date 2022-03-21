@@ -32,7 +32,7 @@ set +e
 docker stop pp && docker rm pp
 set -e
 
-EXPOSED_PORT=3456
+EXPOSED_PORT=3000
 
 docker run -d \
 	--name $CONTAINER_ID \
