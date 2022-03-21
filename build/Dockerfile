@@ -28,6 +28,8 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/ \ 
     && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
+RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
+
 ARG htsversion=1.14
 
 RUN curl -L https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \

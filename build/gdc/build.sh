@@ -47,8 +47,8 @@ done
 # EXTRACT REQUIRED FILES
 #########################
 
-./build/extract.sh -r $REV -t gdc
-REV=$(cat tmppack/rev.txt)
+#./build/extract.sh -r $REV -t gdc
+#REV=$(cat tmppack/rev.txt)
 
 #####################
 # Build the image
@@ -58,26 +58,6 @@ cd tmppack
 # get the current tag
 # GIT_TAG is set when the script is kicked off by GDC Jenkins
 TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
-echo "building ppbase:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile --tag ppbase:$REV --build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 .
-
-# build an image for GDC-related tests
-# 
-# TODO: 
-# will do this test as QC for building the server image once 
-# minimal test-only data files are available
-#
-docker build \
-	--file ./build/gdc/Dockerfile \
-	--target ppgdctest \
-	--tag ppgdctest:$REV \
-	--build-arg IMGVER=$REV \
-	--build-arg PKGVER=$TAG \
-        --build-arg http_proxy=http://cloud-proxy:3128 \
-        --build-arg https_proxy=http://cloud-proxy:3128 \
-	--build-arg electron_get_use_proxy=true \
-	--build-arg global_agent_https_proxy=http://cloud-proxy:3128 \
-	.
 
 # delete this test step once the gdc wrapper tests are 
 # triggered as part of the image building process
@@ -91,9 +71,7 @@ docker build \
 docker build \
 	--file ./build/gdc/Dockerfile \
 	--target ppserver \
-	--tag $DOCKER_TAG \
+	--tag ppgdc:$REV \
 	--build-arg IMGVER=$REV \
 	--build-arg PKGVER=$TAG \
-        --build-arg http_proxy=http://cloud-proxy:3128 \
-        --build-arg https_proxy=http://cloud-proxy:3128 \
 	.

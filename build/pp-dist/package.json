@@ -18,7 +18,7 @@
     "public/index.html",
     "public/bin",
     "server/bin.js",
-    "server/dataset/clinvar*.js",
+    "server/dataset",
     "server/genome",
     "server/src/serverconfig.js",
     "server/server.js*",
