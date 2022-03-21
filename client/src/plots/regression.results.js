@@ -333,7 +333,10 @@ function setRenderers(self) {
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
 			const tw = self.getIndependentInput(tid).term
-			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+			let tr =
+				self.config.regressionType == 'cox'
+					? table.append('tr').style('background', rowcount++ % 2 ? 'none' : '#eee')
+					: table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 
 			// col 1: term name
 			const termNameTd = tr.append('td').style('padding', '8px')
@@ -518,15 +521,21 @@ function setRenderers(self) {
 	self.mayshow_tests = result => {
 		if (!result.tests) return
 		const div = self.newDiv(result.tests.label)
-		const table = div.append('table').style('border-spacing', '8px')
+		const table = div.append('table').style('border-spacing', '0px')
 		const header = table.append('tr').style('opacity', 0.4)
 		for (const cell of result.tests.header) {
-			header.append('td').text(cell)
+			header
+				.append('td')
+				.text(cell)
+				.style('padding', '8px')
 		}
+		let rowcount = 0
 		for (const row of result.tests.rows) {
-			const tr = table.append('tr')
+			const tr = table.append('tr').style('background', rowcount++ % 2 ? 'none' : '#eee')
 			for (const cell of row) {
-				tr.append('td').text(cell)
+				tr.append('td')
+					.text(cell)
+					.style('padding', '8px')
 			}
 		}
 	}

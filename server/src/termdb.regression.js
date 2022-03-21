@@ -86,8 +86,7 @@ export async function get_regression(q, ds) {
 		// run regression analysis in R
 		const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 		await utils.write_file(Rinputfile, JSON.stringify(Rinput))
-		const Rscript = path.join(serverconfig.binpath, 'utils', q.regressionType + '.regression.R')
-		const Routput = await lines2R(Rscript, [], [Rinputfile])
+		const Routput = await lines2R(path.join(serverconfig.binpath, 'utils', 'regression.R'), [], [Rinputfile])
 
 		// parse the R output
 		fs.unlink(Rinputfile, () => {})
@@ -469,7 +468,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 	const out = JSON.parse(Routput[0])
 
 	/*
-	out: for linear/logistic regression 
+	out (linear/logistic) 
 	[
 	  {
 		id: id of snplocus term (empty if no snplocus terms)
@@ -477,7 +476,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 	  }
 	]
 
-	out: for cox regression 
+	out (cox) 
 	[
 	  {
 		id: id of snplocus term (empty if no snplocus terms)
