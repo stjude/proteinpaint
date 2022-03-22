@@ -45,13 +45,7 @@ Bundles were also tested to run in Node v10.15.3 in a SJ host machine.
 # one-time setup
 nvm use 12 # use Node v12+
 npm install -g npm@7 # if you have not upgraded yet
-npm run reset # will run emptyws, install, and linkws
-
-# *** troubleshooting only ****
-# if the reset installation results in errors, you can try running these individually
-npm run emptyws # remove node_modules and lock files in workspaces
-npm install # installs workspaces
-npm run linkws # create node_modules symlinks in workspaces 
+npm run reset # alias for `npm install --workspaces`
 
 # develop both server and client code
 npm run dev # rebundles backend and frontend code
