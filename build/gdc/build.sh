@@ -43,12 +43,18 @@ done
 #	exit 1
 #fi
 
+##################################
+# Create a full, testable build
+##################################
+
+# ./build/full/build.sh -r $REV
+
 #########################
 # EXTRACT REQUIRED FILES
 #########################
 
-#./build/extract.sh -r $REV -t gdc
-#REV=$(cat tmppack/rev.txt)
+./build/extract.sh -r $REV -t gdc
+REV=$(cat tmppack/rev.txt)
 
 #####################
 # Build the image
@@ -67,7 +73,9 @@ TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 #	exit 1
 #fi
 
-# this image may publish the @stjude-proteinpaint client package
+# this image
+# - will extract a subset of files from the full Docker image
+# - may publish the @stjude-proteinpaint client package
 docker build \
 	--file ./build/gdc/Dockerfile \
 	--target ppserver \

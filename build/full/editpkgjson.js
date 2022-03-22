@@ -16,7 +16,7 @@ for (const name in clientpkg.dependencies) {
 console.log(JSON.stringify(pkg, null, '    '))
 
 // for testing only, to detect potential newly added packaged server or client file
-// that may also be needed for the pp-dist package
+// that may also be needed for the full package
 if (0) {
 	const missingFiles = []
 	for (const f of clientpkg.files) {
@@ -25,5 +25,5 @@ if (0) {
 	for (const f of serverpkg.files) {
 		if (!pkg.files.includes(`server/${f}`)) missingFiles.push(`server/${f}`)
 	}
-	if (missingFiles.length) console.warn(`pp-dist files may be missing: ${JSON.stringify(missingFiles)}`)
+	if (missingFiles.length) console.warn(`full files may be missing: ${JSON.stringify(missingFiles)}`)
 }
