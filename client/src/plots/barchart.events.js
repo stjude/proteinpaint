@@ -281,10 +281,14 @@ function handle_click(self) {
 
 	// list samples for a category
 	// this option is always added
+	/*
+	after discussing with yutaka this is disabled for now
+
 	options.push({
 		label: 'List samples',
 		callback: menuoption_listsamples
 	})
+	*/
 
 	if (self.opts.bar_click_opts.includes('select_to_gp')) {
 		options.push({
