@@ -225,8 +225,8 @@ function setRenderers(self) {
 		self.dom.LDresultDiv = self.dom.oneSetResultDiv.append('div')
 
 		self.mayshow_warn(result)
-		if ('sampleSize' in result) self.newDiv('Sample size:', result.sampleSize)
-		if ('eventCnt' in result) self.newDiv('Number of events:', result.eventCnt)
+		if (result.sampleSize) self.newDiv('Sample size:', result.sampleSize)
+		if (result.eventCnt) self.newDiv('Number of events:', result.eventCnt)
 		if (result.headerRow) self.newDiv(result.headerRow.k, result.headerRow.v)
 		self.mayshow_splinePlots(result)
 		self.mayshow_residuals(result)
