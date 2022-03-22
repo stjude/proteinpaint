@@ -29,7 +29,7 @@ done
 # EXTRACT REQUIRED FILES
 #########################
 
-./build/extract.sh -r $REV
+./build/extract.sh -r $REV -t full
 REV=$(cat tmppack/rev.txt)
 
 #########################

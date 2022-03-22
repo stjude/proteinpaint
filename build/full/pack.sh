@@ -1,5 +1,3 @@
-npm run reset
-
 echo -e "\nCreating the server bundle\n"
 npx webpack --config=server/webpack.config.js
 
@@ -15,3 +13,4 @@ mv package.json package.json.bak
 npm pack 
 rm package.json
 mv package.json.bak package.json
+mv stjude-proteinpaint-*.tgz stjude-proteinpaint.tgz
