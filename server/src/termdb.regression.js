@@ -519,8 +519,11 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 		}
 
 		// coefficients
-		if (data.coefficients.rows.length < 2)
-			throw 'expect at least 2 rows in coefficients table but got ' + data.coefficients.rows.length
+		if (Rinput.metadata.type == 'cox') {
+			if (data.coefficients.rows.length < 1) throw 'fewer than 1 row in coefficients table'
+		} else {
+			if (data.coefficients.rows.length < 2) throw 'fewer than 2 rows in coefficients table'
+		}
 		analysisResults.data.coefficients = {
 			header: data.coefficients.header,
 			intercept: Rinput.metadata.type == 'cox' ? null : data.coefficients.rows.shift(),

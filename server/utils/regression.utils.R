@@ -308,14 +308,14 @@ coxRegression <- function(formula, dat, outcome, splineVariables) {
   coefficients_table <- res_summ$coefficients
   # add in confidence intervals
   confint_table <- res_summ$conf.int
-  coefficients_table <- cbind(coefficients_table, confint_table[,c("lower .95", "upper .95")])
+  coefficients_table <- cbind(coefficients_table, confint_table[, c("lower .95", "upper .95"), drop = F])
   # rename and reorder columns
   colnames(coefficients_table)[colnames(coefficients_table) == "coef"] <- "Beta"
   colnames(coefficients_table)[colnames(coefficients_table) == "exp(coef)"] <- "HR"
   colnames(coefficients_table)[colnames(coefficients_table) == "se(coef)"] <- "Std. Error"
   colnames(coefficients_table)[colnames(coefficients_table) == "lower .95"] <- "95% CI (low)"
   colnames(coefficients_table)[colnames(coefficients_table) == "upper .95"] <- "95% CI (high)"
-  coefficients_table <- coefficients_table[,c(2,6,7,1,3,4,5)]
+  coefficients_table <- coefficients_table[, c(2,6,7,1,3,4,5), drop = F]
   
   # type III statistics table
   type3_table <- as.matrix(drop1(res, scope = ~., test = "Chisq"))
