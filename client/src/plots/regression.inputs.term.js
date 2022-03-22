@@ -86,6 +86,7 @@ export class InputTerm {
 			// outcome
 			if (config.regressionType == 'logistic') return ['binary']
 			if (config.regressionType == 'linear') return ['continuous']
+			if (config.regressionType == 'cox') return
 			throw 'unknown regressionType'
 		}
 		if (this.section.configKey == 'independent') {

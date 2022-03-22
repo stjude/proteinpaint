@@ -73,7 +73,12 @@ export class RegressionInputs {
 			placeholderIcon: '',
 			configKey: 'outcome',
 			limit: 1,
-			exclude_types: this.opts.regressionType == 'linear' ? ['condition', 'categorical', 'survival'] : ['survival'],
+			exclude_types:
+				this.opts.regressionType == 'cox'
+					? ['integer', 'float', 'categorical', 'survival']
+					: this.opts.regressionType == 'linear'
+					? ['condition', 'categorical', 'survival']
+					: ['survival'],
 
 			/*** dynamic configuration ***/
 			inputLst: [],
