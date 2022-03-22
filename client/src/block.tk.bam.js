@@ -216,26 +216,33 @@ async function getData(tk, block, additional = []) {
 		headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		headers['X-Auth-Token'] = tk.gdcToken
 	}
-	if (tk.gdc_file) {
-		lst.push('gdc_file=' + tk.gdc_file)
-	}
 
-	if (tk.downloadgdc) {
-		// here will download gdc slice; downloadgdc is a single-use flag
-		delete tk.downloadgdc
+	if (tk.gdcFileUUID) {
+		/* ask backend to call gdc slicing api with this uuid
+		to slice the bam file
+		once sliced, the temp file name is stored at tk.file
+		*/
+		lst.push('gdcFileUUID=' + tk.gdcFileUUID)
+		delete tk.gdcFileUUID
+		tk.isFileSlice = true
 		tk.cloaktext.text('Downloading BAM slice ...')
 		const gdc_bam_files = await dofetch3('tkbam?downloadgdc=1&' + lst.join('&'), { headers })
 
 		if (gdc_bam_files.error) throw gdc_bam_files.error
 		if (!Array.isArray(gdc_bam_files) || gdc_bam_files.length == 0) throw 'invalid returned data'
 		// This will need to be changed to a loop when viewing multiple regions in the same sample
-		const { filename, filesize } = gdc_bam_files[0]
+		const { slicefilename, filesize } = gdc_bam_files[0]
 		tk.cloaktext.text('BAM slice downloaded. File size: ' + filesize)
-		tk.file = filename
+		tk.file = slicefilename
 		block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
 		if (tk.aboutThisFile) {
 			tk.aboutThisFile.push({ k: 'Slice file size', v: filesize })
 		}
+	}
+
+	if (tk.isFileSlice) {
+		// tell backend this tk runs on a bam slice, it should look for the file in cache
+		lst.push('isFileSlice=1')
 	}
 
 	if (tk.variants) {
@@ -1032,8 +1039,7 @@ function may_add_urlparameter(tk) {
 		const [file, token] = str.split(',')
 		if (file && token) {
 			tk.gdcToken = token
-			tk.gdc_file = file
-			tk.downloadgdc = true
+			tk.gdcFileUUID = file // single use attribute, will trigger slice download
 		}
 	}
 }
@@ -1453,6 +1459,7 @@ async function align_reads_to_allele(tk, group, block) {
 	alig_lst.push('genome=' + block.genome.name)
 	alig_lst.push('regions=' + JSON.stringify(tk.regions))
 	if (tk.file) alig_lst.push('file=' + tk.file)
+	if (tk.isFileSlice) alig_lst.push('isFileSlice=1')
 	alig_lst.push(
 		'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
 	)
@@ -2452,13 +2459,11 @@ async function getReadInfo(tk, block, box, ridx) {
 			'start=' + r.start,
 			'stop=' + r.stop
 		]
+		if (tk.isFileSlice) lst.push('isFileSlice=1')
 		if (tk.nochr) lst.push('nochr=1')
 		if (tk.file) lst.push('file=' + tk.file)
 		if (tk.url) lst.push('url=' + tk.url)
 		if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
-		if (tk.gdcToken) {
-			headers['X-Auth-Token'] = tk.gdcToken
-		}
 		if (tk.asPaired) {
 			lst.push('getpair=1')
 		} else {
