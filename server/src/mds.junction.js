@@ -49,7 +49,6 @@ const infoFilter_unannotated = 'Unannotated'
 
 module.exports = genomes => {
 	return async (req, res) => {
-		if (app.reqbodyisinvalidjson(req, res)) return
 		try {
 			const [q, ds, dsquery] = await get_q(req, genomes)
 			const data = await do_query(q, ds, dsquery)
@@ -148,190 +147,194 @@ async function do_query(q, ds, dsquery) {
 	const allsampleidxset = new Set()
 
 	for (const r of q.rglst) {
-		await utils.get_lines_tabix([getfile(dsquery), r.chr + ':' + r.start + '-' + r.stop], dsquery.dir, line => {
-			const l = line.split('\t')
-			const start = Number.parseInt(l[1])
-			const stop = Number.parseInt(l[2])
+		await utils.get_lines_bigfile({
+			args: [getfile(dsquery), r.chr + ':' + r.start + '-' + r.stop],
+			dir: dsquery.dir,
+			callback: line => {
+				const l = line.split('\t')
+				const start = Number.parseInt(l[1])
+				const stop = Number.parseInt(l[2])
 
-			if (dsquery.file2) {
-				// matrix file made from rnapeg
-				const strand = l[3]
-				const thistype = l[4]
-				// convert rnapeg "known/novel" to hardcoded types of this track
-				let type
-				if (thistype == 'known') {
-					type = 'canonical'
-				} else if (thistype == 'novel') {
-					type = infoFilter_unannotated
-				} else {
-					throw 'unknown rnapeg type: ' + thistype
-				}
-				if (q.infoFilter && q.infoFilter.type) {
-					// to filter by type
-					if (q.infoFilter.type[type]) {
-						// drop this junction
-						return
+				if (dsquery.file2) {
+					// matrix file made from rnapeg
+					const strand = l[3]
+					const thistype = l[4]
+					// convert rnapeg "known/novel" to hardcoded types of this track
+					let type
+					if (thistype == 'known') {
+						type = 'canonical'
+					} else if (thistype == 'novel') {
+						type = infoFilter_unannotated
+					} else {
+						throw 'unknown rnapeg type: ' + thistype
 					}
-				}
-				const j = {
-					chr: r.chr,
-					start,
-					stop,
-					info: {
-						type: {
-							// "type" is hardcoded
-							lst: [{ attrValue: type }]
-						}
-					}
-				}
-
-				const samplecountlst = []
-				for (let i = 5; i < l.length; i++) {
-					const str = l[i]
-					if (!str) continue
-					const v = Number.parseInt(str)
-					if (Number.isNaN(v)) continue
-					if (v <= 0) continue
-					// if needed, use i to match with sample from header
-					samplecountlst.push({ readcount: v })
-					maxreadcount = Math.max(maxreadcount, v)
-				}
-				if (samplecountlst.length == 0) {
-					// no sample, don't include junction
-					return
-				}
-				junctiontotalnumber++
-				j.sampleCount = samplecountlst.length
-				if (j.sampleCount == 1) {
-					j.medianReadCount = samplecountlst[0].readcount
-				} else {
-					const p = get_percentile_readcount(samplecountlst, 0.05, 0.25, 0.5, 0.75, 0.95)
-					j.medianReadCount = p[2]
-					j.readcountBoxplot = {
-						percentile: p
-					}
-				}
-				junctions.push(j)
-			} else {
-				// json format
-				const strand = l[3]
-				const thistype = l[4] // not used!!
-
-				// only use those with either start/stop in region
-				if (!(start >= r.start && start <= r.stop) && !(stop >= r.start && stop <= r.stop)) {
-					// both ends not in view range, only use those with either start/stop in view
-					return
-				}
-
-				junctiontotalnumber++
-
-				/*
-					info.type is hardcoded
-					*/
-				const j = {
-					chr: r.chr,
-					start: start,
-					stop: stop,
-					info: {
-						type: {
-							// "type" is hardcoded
-							lst: []
-						}
-					}
-				}
-
-				const jd = JSON.parse(l[5])
-
-				if (jd.sv) {
-					// is sv, copy over business end
-					j.sv = jd.sv
-					const key = j.chr + '.' + j.start + '.' + j.sv.mate.chr + '.' + j.sv.mate.start
-					if (svSet.has(key)) {
-						// a sv with exact same coord has been loaded
-						return
-					}
-					// register this sv
-					svSet.add(key)
-					svSet.add(j.sv.mate.chr + '.' + j.sv.mate.start + '.' + j.chr + '.' + j.start)
-				}
-
-				if (jd.canonical) {
-					// label of canonical is hardcoded
-					j.info.type.lst.push({ attrValue: 'canonical' })
-				}
-
-				if (jd.events) {
-					// this junction has events
-					for (const ek in jd.events) {
-						const e = jd.events[ek]
-						e.__ek = ek
-						j.info.type.lst.push(e)
-					}
-				} else if (!jd.canonical) {
-					// no splice events, and not canonical, then it's unannotated
-					j.info.type.lst.push({ attrValue: infoFilter_unannotated })
-				}
-
-				// info.type is ready for this junction
-				if (q.infoFilter && q.infoFilter.type) {
-					// some types will be dropped
-					for (const t of j.info.type.lst) {
-						if (q.infoFilter.type[t.attrValue]) {
-							// drop this event
+					if (q.infoFilter && q.infoFilter.type) {
+						// to filter by type
+						if (q.infoFilter.type[type]) {
+							// drop this junction
 							return
 						}
 					}
-				}
-
-				const passfiltersamples = filtersamples4onejunction(jd, q, ds, dsquery)
-
-				if (passfiltersamples.length == 0) {
-					// this junction has no sample passing filter
-					return
-				}
-
-				// this junction is acceptable
-
-				if (
-					jd.exonleft ||
-					jd.exonright ||
-					jd.exonleftin ||
-					jd.exonrightin ||
-					jd.intronleft ||
-					jd.intronright ||
-					jd.leftout ||
-					jd.rightout
-				) {
-					j.ongene = {}
-					if (jd.exonleft) j.ongene.exonleft = jd.exonleft
-					if (jd.exonright) j.ongene.exonright = jd.exonright
-					if (jd.exonleftin) j.ongene.exonleftin = jd.exonleftin
-					if (jd.exonrightin) j.ongene.exonrightin = jd.exonrightin
-					if (jd.intronleft) j.ongene.intronleft = jd.intronleft
-					if (jd.intronright) j.ongene.intronright = jd.intronright
-					if (jd.leftout) j.ongene.leftout = jd.leftout
-					if (jd.rightout) j.ongene.rightout = jd.rightout
-				}
-
-				passfiltersamples.forEach(sample => {
-					allsampleidxset.add(sample.i)
-					maxreadcount = Math.max(maxreadcount, sample.readcount)
-				})
-
-				// for all samples passing filter
-				j.sampleCount = passfiltersamples.length
-				if (j.sampleCount == 1) {
-					j.medianReadCount = passfiltersamples[0].readcount
-				} else {
-					const p = get_percentile_readcount(passfiltersamples, 0.05, 0.25, 0.5, 0.75, 0.95)
-					j.medianReadCount = p[2]
-					j.readcountBoxplot = {
-						// for making mouseover boxplot
-						percentile: p
+					const j = {
+						chr: r.chr,
+						start,
+						stop,
+						info: {
+							type: {
+								// "type" is hardcoded
+								lst: [{ attrValue: type }]
+							}
+						}
 					}
-				}
 
-				junctions.push(j)
+					const samplecountlst = []
+					for (let i = 5; i < l.length; i++) {
+						const str = l[i]
+						if (!str) continue
+						const v = Number.parseInt(str)
+						if (Number.isNaN(v)) continue
+						if (v <= 0) continue
+						// if needed, use i to match with sample from header
+						samplecountlst.push({ readcount: v })
+						maxreadcount = Math.max(maxreadcount, v)
+					}
+					if (samplecountlst.length == 0) {
+						// no sample, don't include junction
+						return
+					}
+					junctiontotalnumber++
+					j.sampleCount = samplecountlst.length
+					if (j.sampleCount == 1) {
+						j.medianReadCount = samplecountlst[0].readcount
+					} else {
+						const p = get_percentile_readcount(samplecountlst, 0.05, 0.25, 0.5, 0.75, 0.95)
+						j.medianReadCount = p[2]
+						j.readcountBoxplot = {
+							percentile: p
+						}
+					}
+					junctions.push(j)
+				} else {
+					// json format
+					const strand = l[3]
+					const thistype = l[4] // not used!!
+
+					// only use those with either start/stop in region
+					if (!(start >= r.start && start <= r.stop) && !(stop >= r.start && stop <= r.stop)) {
+						// both ends not in view range, only use those with either start/stop in view
+						return
+					}
+
+					junctiontotalnumber++
+
+					/*
+						info.type is hardcoded
+						*/
+					const j = {
+						chr: r.chr,
+						start: start,
+						stop: stop,
+						info: {
+							type: {
+								// "type" is hardcoded
+								lst: []
+							}
+						}
+					}
+
+					const jd = JSON.parse(l[5])
+
+					if (jd.sv) {
+						// is sv, copy over business end
+						j.sv = jd.sv
+						const key = j.chr + '.' + j.start + '.' + j.sv.mate.chr + '.' + j.sv.mate.start
+						if (svSet.has(key)) {
+							// a sv with exact same coord has been loaded
+							return
+						}
+						// register this sv
+						svSet.add(key)
+						svSet.add(j.sv.mate.chr + '.' + j.sv.mate.start + '.' + j.chr + '.' + j.start)
+					}
+
+					if (jd.canonical) {
+						// label of canonical is hardcoded
+						j.info.type.lst.push({ attrValue: 'canonical' })
+					}
+
+					if (jd.events) {
+						// this junction has events
+						for (const ek in jd.events) {
+							const e = jd.events[ek]
+							e.__ek = ek
+							j.info.type.lst.push(e)
+						}
+					} else if (!jd.canonical) {
+						// no splice events, and not canonical, then it's unannotated
+						j.info.type.lst.push({ attrValue: infoFilter_unannotated })
+					}
+
+					// info.type is ready for this junction
+					if (q.infoFilter && q.infoFilter.type) {
+						// some types will be dropped
+						for (const t of j.info.type.lst) {
+							if (q.infoFilter.type[t.attrValue]) {
+								// drop this event
+								return
+							}
+						}
+					}
+
+					const passfiltersamples = filtersamples4onejunction(jd, q, ds, dsquery)
+
+					if (passfiltersamples.length == 0) {
+						// this junction has no sample passing filter
+						return
+					}
+
+					// this junction is acceptable
+
+					if (
+						jd.exonleft ||
+						jd.exonright ||
+						jd.exonleftin ||
+						jd.exonrightin ||
+						jd.intronleft ||
+						jd.intronright ||
+						jd.leftout ||
+						jd.rightout
+					) {
+						j.ongene = {}
+						if (jd.exonleft) j.ongene.exonleft = jd.exonleft
+						if (jd.exonright) j.ongene.exonright = jd.exonright
+						if (jd.exonleftin) j.ongene.exonleftin = jd.exonleftin
+						if (jd.exonrightin) j.ongene.exonrightin = jd.exonrightin
+						if (jd.intronleft) j.ongene.intronleft = jd.intronleft
+						if (jd.intronright) j.ongene.intronright = jd.intronright
+						if (jd.leftout) j.ongene.leftout = jd.leftout
+						if (jd.rightout) j.ongene.rightout = jd.rightout
+					}
+
+					passfiltersamples.forEach(sample => {
+						allsampleidxset.add(sample.i)
+						maxreadcount = Math.max(maxreadcount, sample.readcount)
+					})
+
+					// for all samples passing filter
+					j.sampleCount = passfiltersamples.length
+					if (j.sampleCount == 1) {
+						j.medianReadCount = passfiltersamples[0].readcount
+					} else {
+						const p = get_percentile_readcount(passfiltersamples, 0.05, 0.25, 0.5, 0.75, 0.95)
+						j.medianReadCount = p[2]
+						j.readcountBoxplot = {
+							// for making mouseover boxplot
+							percentile: p
+						}
+					}
+
+					junctions.push(j)
+				}
 			}
 		})
 	}
@@ -391,28 +394,32 @@ async function get_singlejunction(q, ds, dsquery) {
 
 	let samples // list of samples with this junction
 
-	await utils.get_lines_tabix([getfile(dsquery), j.chr + ':' + j.start + '-' + j.stop], dsquery.dir, line => {
-		const l = line.split('\t')
-		const start = Number.parseInt(l[1])
-		const stop = Number.parseInt(l[2])
-		if (start != j.start || stop != j.stop) return
-		// found the junction, parse samples
-		if (dsquery.file2) {
-			samples = []
-			for (let i = 5; i < l.length; i++) {
-				const str = l[i]
-				if (!str) continue
-				const v = Number.parseInt(str)
-				if (Number.isNaN(v)) continue
-				if (v <= 0) continue
-				samples.push({
-					i: i - 5, // sample.i follows the same json key structure as {i, readcount, events, anno}
-					readcount: v
-				})
+	await utils.get_lines_bigfile({
+		args: [getfile(dsquery), j.chr + ':' + j.start + '-' + j.stop],
+		dir: dsquery.dir,
+		callback: line => {
+			const l = line.split('\t')
+			const start = Number.parseInt(l[1])
+			const stop = Number.parseInt(l[2])
+			if (start != j.start || stop != j.stop) return
+			// found the junction, parse samples
+			if (dsquery.file2) {
+				samples = []
+				for (let i = 5; i < l.length; i++) {
+					const str = l[i]
+					if (!str) continue
+					const v = Number.parseInt(str)
+					if (Number.isNaN(v)) continue
+					if (v <= 0) continue
+					samples.push({
+						i: i - 5, // sample.i follows the same json key structure as {i, readcount, events, anno}
+						readcount: v
+					})
+				}
+			} else {
+				const jd = JSON.parse(l[5])
+				samples = filtersamples4onejunction(jd, q, ds, dsquery)
 			}
-		} else {
-			const jd = JSON.parse(l[5])
-			samples = filtersamples4onejunction(jd, q, ds, dsquery)
 		}
 	})
 
@@ -507,10 +514,10 @@ async function get_readcountByjBsamples(q, ds, dsquery) {
 
 	let jB // data of junctionB
 	let jAlst = []
-	await utils.get_lines_tabix(
-		[dsquery.file || dsquery.url, q.junctionB.chr + ':' + start + '-' + stop],
-		dsquery.dir,
-		line => {
+	await utils.get_lines_bigfile({
+		args: [dsquery.file || dsquery.url, q.junctionB.chr + ':' + start + '-' + stop],
+		dir: dsquery.dir,
+		callback: line => {
 			const l = line.split('\t')
 			const start = Number.parseInt(l[1])
 			const stop = Number.parseInt(l[2])
@@ -528,7 +535,7 @@ async function get_readcountByjBsamples(q, ds, dsquery) {
 				}
 			}
 		}
-	)
+	})
 	if (!jB) throw 'jB not found'
 	if (jAlst.length == 0) throw 'none of jA is found'
 

@@ -6,10 +6,7 @@ const path = require('path')
 const arg = new Map()
 for (let i = 2; i < process.argv.length; i++) {
 	const c = process.argv[i]
-	if (c == '-t') {
-		// test mode
-		arg.set('t', 1)
-	} else if (c == '-c') {
+	if (c == '-c') {
 		const file = process.argv[++i]
 		if (!file) abort('config file missing')
 		arg.set('c', file)
@@ -32,9 +29,8 @@ $ node utils/install.pp.js [options]
 
          MAC     - add this key if your system is mac
                    do not add if your system is linux
-         TP      - full path of the TP directory (for files accessed by PP backend)
+         TP      - full path of the TP directory, to store genome support files
          CACHE   - full path of the cache directory
-         BINPATH - full path to a directory for storing dependent binary files and programs
          GENOMES - prebuilt genomes to be installed on your system, join multiple by comma
                    hg19, hg38, mm9, mm10, rn6, dm3, dm6, danRer10
          
@@ -47,9 +43,10 @@ $ node utils/install.pp.js [options]
                    default: 3000
          USER    - secure your server with specified logins
                    join pairs of user name & password by comma, e.g. user1,pass1,user2,pass2
+         BINPATH - full path to a directory for storing dependent binary files and programs
+                   Docker image user should not use this option, as the binaries are already available via the image
 
 -v       Validate all the file URLs
--t       Test mode; do not use
 
 The script automates some installation procedures, including:
 - dependencies, without compilation
@@ -61,6 +58,8 @@ Certain reference files are large and may take a while to download.
 Use "-v" to see the size of each file (in #bytes) from each genome.
 My apologies that I do not know how to print download progress, as wget does.
 If the downloading process is interrupted, you can always rerun the script to resume the downloading.
+
+This script is available from https://proteinpaint.stjude.org/utils/install.pp.js
 `)
 	process.exit()
 }
@@ -68,17 +67,7 @@ If the downloading process is interrupted, you can always rerun the script to re
 // user config
 let UC = {}
 
-if (arg.has('t')) {
-	// only xzhou can use this
-	UC = {
-		MAC: 1,
-		TP: '/Users/xzhou1/data/tp/',
-		CACHE: '/Users/xzhou1/data/cache/',
-		BINPATH: '/Users/xzhou1/data/tools/',
-		PYTHON3: 'python',
-		GENOMES: 'hg19'
-	}
-} else if (arg.has('c')) {
+if (arg.has('c')) {
 	// load config file
 	for (const line of fs
 		.readFileSync(arg.get('c'), { encoding: 'utf8' })
@@ -113,8 +102,7 @@ if (validateurlmode) {
 	// create folder CACHE/ssid/
 	mkdir(path.join(UC.CACHE, 'ssid'))
 
-	if (!UC.BINPATH) abort('BINPATH directory is undefined')
-	mkdir(UC.BINPATH)
+	if (UC.BINPATH) mkdir(UC.BINPATH)
 	if (!UC.PYTHON3) abort('PYTHON3 command is undefined')
 	if (!UC.GENOMES) abort('GENOMES is undefined')
 	UC.GENOMES = new Set(UC.GENOMES.replace(/ /g, '').split(','))
@@ -151,32 +139,98 @@ if (UC.URL) {
 	}
 }
 
-// bin/
-{
-	const a = path.join(UC.BINPATH, 'bigWigSummary')
-	trydownload(
-		a,
-		UC.MAC
-			? 'http://hgdownload.soe.ucsc.edu/admin/exe/macOSX.x86_64/bigWigSummary'
-			: 'http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64.v369/bigWigSummary'
-	)
-	//'http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigSummary'
-	if (!validateurlmode) {
-		exec('chmod +x ' + a)
-		SC.bigwigsummary = a
+// if binpath is provided, will download binaries
+if (UC.BINPATH) {
+	{
+		const a = path.join(UC.BINPATH, 'bigWigSummary')
+		trydownload(
+			a,
+			UC.MAC
+				? 'http://hgdownload.soe.ucsc.edu/admin/exe/macOSX.x86_64/bigWigSummary'
+				: 'http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigSummary'
+		)
+		if (!validateurlmode) {
+			exec('chmod +x ' + a)
+			SC.bigwigsummary = a
+		}
 	}
-}
-{
-	const a = path.join(UC.BINPATH, 'straw')
-	trydownload(
-		a,
-		UC.MAC
-			? 'https://pecan.stjude.cloud/static/pp-support/mac/straw'
-			: 'https://pecan.stjude.cloud/static/pp-support/linux/straw'
-	)
-	if (!validateurlmode) {
-		exec('chmod +x ' + a)
-		SC.hicstraw = a
+	{
+		const a = path.join(UC.BINPATH, 'bigBedNamedItems')
+		trydownload(
+			a,
+			UC.MAC
+				? 'http://hgdownload.soe.ucsc.edu/admin/exe/macOSX.x86_64/bigBedNamedItems'
+				: 'http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigBedNamedItems'
+		)
+		if (!validateurlmode) {
+			exec('chmod +x ' + a)
+			SC.bigBedNamedItems = a
+		}
+	}
+	{
+		const a = path.join(UC.BINPATH, 'bigBedToBed')
+		trydownload(
+			a,
+			UC.MAC
+				? 'http://hgdownload.soe.ucsc.edu/admin/exe/macOSX.x86_64/bigBedToBed'
+				: 'http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigBedToBed'
+		)
+		if (!validateurlmode) {
+			exec('chmod +x ' + a)
+			SC.bigBedToBed = a
+		}
+	}
+	{
+		const a = path.join(UC.BINPATH, 'gfClient')
+		trydownload(
+			a,
+			UC.MAC
+				? 'http://hgdownload.soe.ucsc.edu/admin/exe/macOSX.x86_64/blat/gfClient'
+				: 'http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/gfClient'
+		)
+		if (!validateurlmode) {
+			exec('chmod +x ' + a)
+			SC.gfClient = a
+		}
+	}
+	{
+		const a = path.join(UC.BINPATH, 'gfServer')
+		trydownload(
+			a,
+			UC.MAC
+				? 'http://hgdownload.soe.ucsc.edu/admin/exe/macOSX.x86_64/blat/gfServer'
+				: 'http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/gfServer'
+		)
+		if (!validateurlmode) {
+			exec('chmod +x ' + a)
+			SC.gfServer = a
+		}
+	}
+	{
+		const a = path.join(UC.BINPATH, 'clustalo')
+		trydownload(
+			a,
+			UC.MAC
+				? 'https://pecan.stjude.cloud/static/pp-support/mac/clustalo'
+				: 'https://pecan.stjude.cloud/static/pp-support/linux/clustalo'
+		)
+		if (!validateurlmode) {
+			exec('chmod +x ' + a)
+			SC.clustalo = a
+		}
+	}
+	{
+		const a = path.join(UC.BINPATH, 'straw')
+		trydownload(
+			a,
+			UC.MAC
+				? 'https://pecan.stjude.cloud/static/pp-support/mac/straw'
+				: 'https://pecan.stjude.cloud/static/pp-support/linux/straw'
+		)
+		if (!validateurlmode) {
+			exec('chmod +x ' + a)
+			SC.hicstraw = a
+		}
 	}
 }
 
@@ -310,7 +364,6 @@ function add_mm9() {
 	trydownload(path.join(path_tpanno, 'rmsk.mm9.gz'), 'https://pecan.stjude.cloud/static/mm9/rmsk.mm9.gz')
 	trydownload(path.join(path_tpanno, 'rmsk.mm9.gz.tbi'), 'https://pecan.stjude.cloud/static/mm9/rmsk.mm9.gz.tbi')
 	trydownload(path.join(path_tpanno, 'genes.mm9.db'), 'https://pecan.stjude.cloud/static/mm9/genes.mm9.db')
-	trydownload(path.join(path_tpannodb, 'snp128.mm9.db'), 'https://pecan.stjude.cloud/static/mm9/snp128.mm9.db')
 	{
 		const a = path.join(path_tpanno, 'hicFragment')
 		mkdir(a)
@@ -344,7 +397,6 @@ function add_mm10() {
 	trydownload(path.join(path_tpanno, 'rmsk.mm10.gz'), 'https://pecan.stjude.cloud/static/mm10/rmsk.mm10.gz')
 	trydownload(path.join(path_tpanno, 'rmsk.mm10.gz.tbi'), 'https://pecan.stjude.cloud/static/mm10/rmsk.mm10.gz.tbi')
 	trydownload(path.join(path_tpanno, 'genes.mm10.db'), 'https://pecan.stjude.cloud/static/mm10/genes.mm10.db')
-	trydownload(path.join(path_tpannodb, 'snp142.mm10.db'), 'https://pecan.stjude.cloud/static/mm10/snp142.mm10.db')
 	{
 		const a = path.join(path_tpanno, 'hicFragment')
 		mkdir(a)
@@ -379,18 +431,18 @@ function add_hg38() {
 		'https://pecan.stjude.cloud/static/hg38/refGene.hg38.gz.tbi'
 	)
 	trydownload(
-		path.join(path_tpanno, 'gencode.v34.hg38.gz'),
-		'https://pecan.stjude.cloud/static/hg38/gencode.v34.hg38.gz'
+		path.join(path_tpanno, 'gencode.v38.hg38.gz'),
+		'https://pecan.stjude.cloud/static/hg38/gencode.v38.hg38.gz'
 	)
 	trydownload(
-		path.join(path_tpanno, 'gencode.v34.hg38.gz.tbi'),
-		'https://pecan.stjude.cloud/static/hg38/gencode.v34.hg38.gz.tbi'
+		path.join(path_tpanno, 'gencode.v38.hg38.gz.tbi'),
+		'https://pecan.stjude.cloud/static/hg38/gencode.v38.hg38.gz.tbi'
 	)
 	trydownload(path.join(path_tpanno, 'rmsk.hg38.gz'), 'https://pecan.stjude.cloud/static/hg38/rmsk.hg38.gz')
 	trydownload(path.join(path_tpanno, 'rmsk.hg38.gz.tbi'), 'https://pecan.stjude.cloud/static/hg38/rmsk.hg38.gz.tbi')
 	trydownload(path.join(path_tpanno, 'genes.hg38.db'), 'https://pecan.stjude.cloud/static/hg38/genes.hg38.db')
 	trydownload(path.join(path_tpannodb, 'proteindomain.db'), 'https://pecan.stjude.cloud/static/hg19/proteindomain.db')
-	trydownload(path.join(path_tpannodb, 'snp146.hg38.db'), 'https://pecan.stjude.cloud/static/hg38/snp146.hg38.db')
+	trydownload(path.join(path_tpannodb, 'dbsnp.hg38.bb'), 'https://hgdownload.soe.ucsc.edu/gbdb/hg38/snp/dbSnp153.bb')
 
 	{
 		const a = path.join(path_tpanno, 'hicFragment')
@@ -452,18 +504,18 @@ function add_hg19() {
 		'https://pecan.stjude.cloud/static/hg19/refGene.hg19.gz.tbi'
 	)
 	trydownload(
-		path.join(path_tpanno, 'gencode.v34.hg19.gz'),
-		'https://pecan.stjude.cloud/static/hg19/gencode.v34.hg19.gz'
+		path.join(path_tpanno, 'gencode.v38.hg19.gz'),
+		'https://pecan.stjude.cloud/static/hg19/gencode.v38.hg19.gz'
 	)
 	trydownload(
-		path.join(path_tpanno, 'gencode.v34.hg19.gz.tbi'),
-		'https://pecan.stjude.cloud/static/hg19/gencode.v34.hg19.gz.tbi'
+		path.join(path_tpanno, 'gencode.v38.hg19.gz.tbi'),
+		'https://pecan.stjude.cloud/static/hg19/gencode.v38.hg19.gz.tbi'
 	)
 	trydownload(path.join(path_tpanno, 'rmsk.hg19.gz'), 'https://pecan.stjude.cloud/static/hg19/rmsk.hg19.gz')
 	trydownload(path.join(path_tpanno, 'rmsk.hg19.gz.tbi'), 'https://pecan.stjude.cloud/static/hg19/rmsk.hg19.gz.tbi')
 	trydownload(path.join(path_tpanno, 'genes.hg19.db'), 'https://pecan.stjude.cloud/static/hg19/genes.hg19.db')
 	trydownload(path.join(path_tpannodb, 'proteindomain.db'), 'https://pecan.stjude.cloud/static/hg19/proteindomain.db')
-	trydownload(path.join(path_tpannodb, 'snp146.hg19.db'), 'https://pecan.stjude.cloud/static/hg19/snp146.hg19.db')
+	trydownload(path.join(path_tpannodb, 'dbsnp.hg19.bb'), 'https://hgdownload.soe.ucsc.edu/gbdb/hg19/snp/dbSnp153.bb')
 
 	{
 		const a = path.join(path_tpanno, 'hicFragment')

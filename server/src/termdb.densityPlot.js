@@ -70,7 +70,7 @@ module.exports = (q, res, ds) => {
 		term.type == 'integer' && maxvalue - minvalue < default_ticks_n
 			? maxvalue - minvalue
 			: term.type == 'float' && distinctValues.size < default_ticks_n
-			? distinctValues
+			? distinctValues.size
 			: default_ticks_n
 	// kernal density replaced with histogram
 	// const density = kernelDensityEstimator(kernelEpanechnikov(7), xscale.ticks(40))(values)

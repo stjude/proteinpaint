@@ -18,15 +18,14 @@ exports.handle_request_closure = genomes => {
 		for (const i of [0, 1, 2]) {
 			const termnum = 'term' + i
 			const termnum_id = termnum + '_id'
-			if (q[termnum_id]) {
+			if (typeof q[termnum_id] == 'string') {
 				q[termnum_id] = decodeURIComponent(q[termnum_id])
 			}
 			const termnum_q = termnum + '_q'
-			if (q[termnum_q]) {
+			if (typeof q[termnum_q] == 'string') {
 				q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
 			}
 		}
-		app.log(req)
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'

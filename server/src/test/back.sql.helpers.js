@@ -1,4 +1,4 @@
-const serverconfig = require('../../serverconfig')
+const serverconfig = require('../serverconfig')
 const got = require('got')
 const tape = require('tape')
 const dodiff = require('deep-object-diff')

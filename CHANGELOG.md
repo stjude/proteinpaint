@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.0.0
+
+### Breaking Changes
+
+- Now uses bigbed dbsnp files
+- Requires additional columns for termdb database tables: terms.[type, isleaf], subcohort_terms.[child_types, includes_types]
+
+### Non-breaking features
+- MASS UI: supersedes the dictionary tree-based UI as the default termdb portal app
+
+
 ## 1.10
 
 - move targets/ contents under the build/ directory

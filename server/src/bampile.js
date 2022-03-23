@@ -4,7 +4,6 @@ const createCanvas = require('canvas').createCanvas
 const basecolor = require('../shared/common').basecolor
 
 module.exports = async (req, res) => {
-	app.log(req)
 	try {
 		const [e, tkfile, isurl] = app.fileurl(req)
 		if (e) throw e
@@ -42,17 +41,21 @@ module.exports = async (req, res) => {
 		for (const r of rglst) {
 			r.items = []
 			let errlinecount = 0
-			await utils.get_lines_tabix([tkfile, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
-				const l = line.split('\t')
-				let j
-				try {
-					j = JSON.parse(l[2])
-				} catch (e) {
-					errlinecount++
-					return
+			await utils.get_lines_bigfile({
+				args: [tkfile, r.chr + ':' + r.start + '-' + r.stop],
+				dir,
+				callback: line => {
+					const l = line.split('\t')
+					let j
+					try {
+						j = JSON.parse(l[2])
+					} catch (e) {
+						errlinecount++
+						return
+					}
+					const pos = Number.parseInt(l[1])
+					r.items.push({ pos: pos, data: j })
 				}
-				const pos = Number.parseInt(l[1])
-				r.items.push({ pos: pos, data: j })
 			})
 		}
 

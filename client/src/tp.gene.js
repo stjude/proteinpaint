@@ -4,6 +4,9 @@ import * as client from './client'
 import * as common from '../shared/common'
 import blockinit from './block.init'
 import tp_getgeneexpression from './tp.gene.geneexpression'
+import { Menu } from './dom/menu'
+
+const tip = new Menu()
 
 export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 	if (!ds2clst) return null
@@ -80,14 +83,14 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 		.on('keyup', () => {
 			let n = d3event.target.value
 			if (n == '') {
-				d3select('.sja_menu').remove()
+				tip.hide()
 				return
 			}
 			if (cohort.geneToUpper) {
 				n = n.toUpperCase()
 			}
 			if (d3event.code == 'Enter') {
-				d3select('.sja_menu').remove()
+				tip.hide()
 				d3event.target.value = ''
 				if (n in union) {
 					paintgene(n)
@@ -101,19 +104,14 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 				}
 			}
 			if (hit.length == 0) {
-				d3select('.sja_menu').remove()
+				tip.hide()
 				return
 			}
 			hit.sort((a, b) => b.count - a.count)
-			const menu = client.menuunderdom(d3event.target)
-			const d = menu
-				.append('div')
-				.style('width', '300px')
-				.style('border', 'solid 1px black')
-				.style('padding', '10px')
+			tip.clear().showunder(d3event.target)
 			for (let i = 0; i < Math.min(30, hit.length); i++) {
 				const n = hit[i].name
-				const row = d
+				const row = tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption_y')
 					.on('click', () => {
@@ -926,7 +924,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 	dotable()
 	function paintgene(gene) {
 		if (!(gene in union)) return
-		d3select('.sja_menu').remove()
+		tip.hide()
 		const dslst = []
 		for (const k in cohort.dsset) {
 			dslst.push(k)
@@ -962,6 +960,6 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 }
 
 async function barplot(bars, color, label, pos) {
-	const barplot = await import('./plot.barplot')
+	const barplot = await import('./old/plot.barplot')
 	return barplot.default(bars, color, label, pos)
 }

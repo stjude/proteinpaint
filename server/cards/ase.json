@@ -1,0 +1,99 @@
+{
+    "ppcalls": [
+        {
+            "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/ase/aseDemoData.tar.gz",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "position": "chr5:1252462-1297568",
+                "nativetracks": "RefGene",
+                "tracks": [{
+                    "type": "mdssvcnv",
+                    "name": "ASE Demo",
+                    "checkvcf": {
+                        "file": "proteinpaint_demo/hg38/ase/vcf.gz"
+                    },
+                    "checkrnabam": {
+                        "hetsnp_minbaf": 0.2,
+                        "hetsnp_maxbaf": 0.8,
+                        "samples": {
+                            "sample1": {
+                                "file": "proteinpaint_demo/hg38/ase/sample1.bam",
+                                "totalreads": 172048689,
+                                "pairedend": true
+                            },
+                            "sample2": {
+                                "file": "proteinpaint_demo/hg38/ase/sample2.bam",
+                                "totalreads": 151710239,
+                                "pairedend": true
+                            },
+                            "sample3": {
+                                "file": "proteinpaint_demo/hg38/ase/sample3.bam",
+                                "totalreads": 167864903,
+                                "pairedend": true
+                            },
+                            "sample4": {
+                                "file": "proteinpaint_demo/hg38/ase/sample4.bam",
+                                "totalreads": 153196442,
+                                "pairedend": true
+                            },
+                            "sample12": {
+                                "file": "proteinpaint_demo/hg38/ase/sample12.bam",
+                                "totalreads": 155650314,
+                                "pairedend": true
+                            },
+                            "sample5": {
+                                "file": "proteinpaint_demo/hg38/ase/sample5.bam",
+                                "totalreads": 144649042,
+                                "pairedend": true
+                            },
+                            "sample6": {
+                                "file": "proteinpaint_demo/hg38/ase/sample6.bam",
+                                "totalreads": 170516947,
+                                "pairedend": true
+                            },
+                            "sample7": {
+                                "file": "proteinpaint_demo/hg38/ase/sample7.bam",
+                                "totalreads": 167971047,
+                                "pairedend": true
+                            },
+                            "sample8": {
+                                "file": "proteinpaint_demo/hg38/ase/sample8.bam",
+                                "totalreads": 137990338,
+                                "pairedend": true
+                            },
+                            "sample9": {
+                                "file": "proteinpaint_demo/hg38/ase/sample9.bam",
+                                "totalreads": 150401722,
+                                "pairedend": true
+                            },
+                            "sample10": {
+                                "file": "proteinpaint_demo/hg38/ase/sample10.bam",
+                                "totalreads": 131681552,
+                                "pairedend": true
+                            },
+                            "sample11": {
+                                "file": "proteinpaint_demo/hg38/ase/sample11.bam",
+                                "totalreads": 150240544,
+                                "pairedend": true
+                            }
+                        }
+                    }
+                }]
+            },
+            "testSpec": {
+                "timeout": 7000,
+                "expected": { "rect": 5, "line": 10 }
+            }
+        }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.ly3x0hngycmz"
+        }
+    ]
+}

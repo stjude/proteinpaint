@@ -2,6 +2,7 @@ import * as client from './client'
 import { event as d3event } from 'd3-selection'
 import { scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { rgb as d3rgb } from 'd3-color'
+import { Menu } from './dom/menu'
 
 /*
 generate the menu by click "Track" button on block
@@ -1114,7 +1115,7 @@ flet{}
   if undefined, will generate table using tkset.tklst[]
 */
 function facetmake(block, tkset, flet) {
-	const tip = new client.Menu()
+	const tip = new Menu()
 
 	const facetpane = (flet || tkset).facetpane
 
@@ -1740,6 +1741,10 @@ function deletecustom(block, tk, tr) {
 			break
 		}
 	}
+	if (!block.tklst.find(i => i.type == 'bam' && i.gdc_file)) {
+		// some tk has been deleted and no more gdc bam slicing tk, hide this button
+		block.gdcBamSliceDownloadBtn.style('display', 'none')
+	}
 }
 
 function tkhtmllabel(tk, block) {
@@ -1778,11 +1783,15 @@ function tkhtmllabel(tk, block) {
 		basename = tk.name
 	} else {
 		// no name, go figure
-		const lst = []
-		if (tk.patient) lst.push(tk.patient)
-		if (tk.sampletype) lst.push(tk.sampletype)
-		if (tk.assayname) lst.push(tk.assayname)
-		basename = lst.join(' ')
+		if (tk.dslabel) {
+			basename = tk.dslabel
+		} else {
+			const lst = []
+			if (tk.patient) lst.push(tk.patient)
+			if (tk.sampletype) lst.push(tk.sampletype)
+			if (tk.assayname) lst.push(tk.assayname)
+			basename = lst.join(' ')
+		}
 	}
 
 	if (tk.type == client.tkt.junction) {

@@ -6,10 +6,9 @@ module.exports = {
 	genedb: {
 		dbfile: 'anno/genes.hg38.db',
 		hasalias: true,
-		// requires the "gene2canonicalisoform" table in genes.db, for converting ENSG to canonical ENST
-		// in debugmode, keep this table for the convenience of browser testing when working on gdc features,
-		// so no need of switching to "hg38.gdc.js" and back
-		gene2canonicalisoform: serverconfig.debugmode,
+		gene2canonicalisoform: true,
+		// enable mapping for refseq and ensembl
+		refseq2ensembl: true,
 		// TO BE DELETED once gene2coord table is added to all genomes
 		gene2coord: true
 	},
@@ -18,9 +17,7 @@ module.exports = {
 		statement: 'select data from domain where isoform=? collate nocase'
 	},
 	snp: {
-		dbfile: 'anno/db/snp146.hg38.db',
-		statement_getbyname: 'select * from snp146 where name=?',
-		statement_getbycoord: 'select * from snp146 where chrom=? and bin=? and chromStart>=? and chromEnd<=?'
+		bigbedfile: 'anno/dbsnp.hg38.bb'
 	},
 	fimo_motif: {
 		db: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme',
@@ -45,6 +42,7 @@ module.exports = {
 		},
 		{
 			__isgene: true,
+			file: 'anno/gencode.v39.hg38.gz',
 			translatecoding: true,
 			categories: {
 				coding: { color: '#004D99', label: 'Coding gene' },
@@ -52,9 +50,8 @@ module.exports = {
 				problem: { color: '#FF3300', label: 'Problem' },
 				pseudo: { color: '#FF00CC', label: 'Pseudogene' }
 			},
-			file: 'anno/gencode.v34.hg38.gz',
 			type: 'bedj',
-			name: 'GENCODE v34',
+			name: 'GENCODE v39',
 			stackheight: 16,
 			stackspace: 1,
 			vpad: 4

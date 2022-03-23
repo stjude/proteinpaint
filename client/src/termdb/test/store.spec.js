@@ -29,10 +29,8 @@ tape('init errors', function(test) {
 	test.timeoutAfter(1300)
 	test.plan(3)
 	runpp({
-		app: {
-			callbacks: {
-				'postInit.test': testMissingState
-			}
+		callbacks: {
+			'postInit.test': testMissingState
 		}
 	})
 	function testMissingState(app) {
@@ -48,10 +46,8 @@ tape('init errors', function(test) {
 				route: 'termdb'
 			}
 		},
-		app: {
-			callbacks: {
-				'postInit.test': testMissingGenome
-			}
+		callbacks: {
+			'postInit.test': testMissingGenome
 		}
 	})
 	function testMissingGenome(app) {
@@ -68,10 +64,8 @@ tape('init errors', function(test) {
 				genome: 'hg38'
 			}
 		},
-		app: {
-			callbacks: {
-				'postInit.test': testMissingDslabel
-			}
+		callbacks: {
+			'postInit.test': testMissingDslabel
 		}
 	})
 	function testMissingDslabel(app) {
@@ -90,10 +84,8 @@ tape('state: no cohort.termdb.selectCohort', function(test) {
 			genome: 'hg38',
 			dslabel: 'NoCohortSJLife'
 		},
-		app: {
-			callbacks: {
-				'postRender.test': runTests
-			}
+		callbacks: {
+			'postRender.test': runTests
 		}
 	})
 
@@ -111,10 +103,8 @@ tape('state rehydrate: default cohort', function(test) {
 			genome: 'hg38',
 			dslabel: 'TermdbTest'
 		},
-		app: {
-			callbacks: {
-				'postRender.test': runTests
-			}
+		callbacks: {
+			'postRender.test': runTests
 		}
 	})
 
@@ -162,10 +152,8 @@ tape('state rehydrate: activeCohort=1', function(test) {
 			dslabel: 'TermdbTest',
 			activeCohort: 1
 		},
-		app: {
-			callbacks: {
-				'postRender.test': runTests
-			}
+		callbacks: {
+			'postRender.test': runTests
 		}
 	})
 
@@ -212,6 +200,7 @@ tape('state rehydrate: by cohortFilter', function(test) {
 		state: {
 			genome: 'hg38',
 			dslabel: 'TermdbTest',
+			header_mode: 'with_cohortHtmlSelect',
 			termfilter: {
 				filter: {
 					type: 'tvslst',
@@ -238,15 +227,10 @@ tape('state rehydrate: by cohortFilter', function(test) {
 						}
 					]
 				}
-			},
-			nav: {
-				header_mode: 'with_tabs'
 			}
 		},
-		app: {
-			callbacks: {
-				'postRender.test': runTests
-			}
+		callbacks: {
+			'postRender.test': runTests
 		}
 	})
 

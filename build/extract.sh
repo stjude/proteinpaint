@@ -7,16 +7,14 @@ set -x
 # ARGUMENTS
 ###############
 
-usage() {
-	echo "Usage:
+USAGE="Usage:
 
 	./build/extract.sh [-r] [-t] [-h]
 
 	-r REV: git revision to checkout, if empty will use the current code state
 	-t TARGETDIR: 
 	-h help manual
-	"
-}
+"
 
 REV=latest
 TARGETDIR="build"
@@ -29,7 +27,7 @@ while getopts "t:r:h:" opt; do
 		REV=$OPTARG
 		;;
 	h)
-		usage
+		echo $USAGE
 		exit 1
 		;;
 	esac

@@ -6,7 +6,8 @@ const fs = require('fs'),
 	utils = require('./utils'),
 	common = require('../shared/common'),
 	serverconfig = require('./serverconfig'),
-	vcf = require('../shared/vcf')
+	vcf = require('../shared/vcf'),
+	lines2R = require('./lines2R')
 
 /*
 function cascade
@@ -26,10 +27,8 @@ pvalue_may4expquartile
 do_plot
 */
 
-module.exports = genomes => {
+exports.handle_mdssurvivalplot = genomes => {
 	return async (req, res) => {
-		// module.exports = async (req, res) => {
-		if (app.reqbodyisinvalidjson(req, res)) return
 		try {
 			const q = req.query
 			const gn = genomes[q.genome]
@@ -101,7 +100,7 @@ async function get_pvalue(samplesets) {
 			lines.push(v.serialtime + '\t' + v.censored + '\t' + i)
 		}
 	}
-	const p = await utils.lines2R('km.R', lines)
+	const p = await lines2R(path.join(serverconfig.binpath, '/utils/km.R'), lines)
 	return Number(p.join(''))
 }
 
@@ -332,13 +331,13 @@ tk is from ds.queries{}
 	const loss = new Set()
 	const mutsamples = new Set() // use if has other types in addition to cnv
 
-	await utils.get_lines_tabix(
-		[
+	await utils.get_lines_bigfile({
+		args: [
 			tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
 			(tk.nochr ? st.chr.replace('chr', '') : st.chr) + ':' + st.start + '-' + (st.stop + 1)
 		],
 		dir,
-		line => {
+		callback: line => {
 			const l = line.split('\t')
 			const start = Number.parseInt(l[1])
 			const stop = Number.parseInt(l[2])
@@ -401,7 +400,7 @@ tk is from ds.queries{}
 				return
 			}
 		}
-	)
+	})
 	if (cnvonly) return [gain, loss]
 	return mutsamples
 }
@@ -416,13 +415,13 @@ only return the set of mutated sample names
 
 	const dir = tk.url ? await utils.cache_index(tk.url, tk.indexURL) : null
 
-	await utils.get_lines_tabix(
-		[
+	await utils.get_lines_bigfile({
+		args: [
 			tk.file ? path.join(serverconfig.tpmasterdir, tk.file) : tk.url,
 			(tk.nochr ? st.chr.replace('chr', '') : st.chr) + ':' + st.start + '-' + (st.stop + 1)
 		],
 		dir,
-		line => {
+		callback: line => {
 			if (tk.type == common.mdsvcftype.vcf) {
 				// vcf
 				const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, {
@@ -463,7 +462,7 @@ only return the set of mutated sample names
 				// support another snvindel file type?
 			}
 		}
-	)
+	})
 }
 
 async function dividesamples_genevaluequartile(samples, q, ds, plottype) {
@@ -566,18 +565,18 @@ async function get_genevalue(samples, q, ds) {
 	const st = q.samplerule.set
 
 	const sample2genevalue = new Map()
-	await utils.get_lines_tabix(
-		[
+	await utils.get_lines_bigfile({
+		args: [
 			genenumquery.file ? path.join(serverconfig.tpmasterdir, genenumquery.file) : genenumquery.url,
 			st.chr + ':' + st.start + '-' + st.stop
 		],
 		dir,
-		line => {
+		callback: line => {
 			const j = JSON.parse(line.split('\t')[3])
 			if (!j.sample || !Number.isFinite(j.value) || j.gene != st.gene) return
 			sample2genevalue.set(j.sample, j.value)
 		}
-	)
+	})
 
 	const samplewithvalue = []
 	for (const s of samples) {
@@ -631,6 +630,8 @@ function do_plot(s) {
 		})
 	}
 }
+
+exports.do_plot = do_plot
 
 function get_samples(q, ds, plottype) {
 	if (!q.samplerule) throw '.samplerule missing'

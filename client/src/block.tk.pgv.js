@@ -6,6 +6,10 @@ import { event as d3event, select as d3select } from 'd3-selection'
 import { color as d3color } from 'd3-color'
 import { bigwigconfigpanel } from './block.tk.bigwig'
 import { format as d3format } from 'd3-format'
+import { bigwigfromtemplate } from './block.tk.bigwig'
+import { dofetch3 } from './common/dofetch'
+import { Menu } from './dom/menu'
+import { make_table_2col } from './dom/table2col'
 
 /*
 
@@ -54,6 +58,96 @@ function makeTk(tk, block) {
 	/*
 	create dom components
 	*/
+	const template = tk._template
+	delete tk._template
+	if (!template.tracks) throw '.tracks[] missing from ' + tk.name + ' track'
+	if (template.tracks.length == 0) throw '.tracks[] length 0 from ' + tk.name + ' track'
+	tk.tracks = []
+	const nameset = new Set()
+	for (const t0 of template.tracks) {
+		const t = {}
+		for (const k in t0) {
+			t[k] = t0[k]
+		}
+		if (!t.name) throw 'no name for member track of ' + tk.name + ': ' + JSON.stringify(t)
+		if (nameset.has(t.name)) throw 'duplicating member track name: ' + t.name
+		nameset.add(t.name)
+
+		if (!t.type) throw 'no type for member track of ' + tk.name + ': ' + JSON.stringify(t)
+		if (!t.file && !t.url) throw 'neither file or url given for member "' + t.name + '" of ' + tk.name
+
+		if (t.type == 'bedj') {
+			// pass
+		} else if (t.type == 'bigwig') {
+			bigwigfromtemplate(t, t0)
+		} else {
+			throw 'invalid type of member track of ' + tk.name + ': ' + t.type
+		}
+		t.toppad = t.toppad == undefined ? 4 : t.toppad
+		t.bottompad = t.bottompad == undefined ? 4 : t.bottompad
+		t.y = 0
+		tk.tracks.push(t)
+	}
+
+	tk.geneset = new Set()
+	// all genes in current view
+
+	if (template.genevaluetrack) {
+		// single genevalue track setting is legacy, will be unified to .genevaluetklst[] in makeTk
+		if (!template.genevaluetrack.file && template.genevaluetrack.url) throw 'no .file or .url for genevaluetrack'
+		tk.genevaluetrack = {
+			file: template.genevaluetrack.file,
+			url: template.genevaluetrack.url
+		}
+	}
+
+	if (template.genevaluetklst) {
+		if (!Array.isArray(template.genevaluetklst)) throw '.genevaluetklst should be an array'
+		if (template.genevaluetklst.length == 0) throw 'zero length of .genevaluetklst'
+		tk.genevaluetklst = []
+		for (const gvtk of template.genevaluetklst) {
+			if (!gvtk.name) throw 'name missing for one genevalue track'
+			if (!gvtk.file && !gvtk.url) throw 'no file or url for genevalue track ' + gvtk.name
+			const t = {}
+			for (const k in gvtk) t[k] = gvtk[k]
+			tk.genevaluetklst.push(t)
+		}
+	}
+
+	if (template.bigwigsetting) {
+		// common settings for bigwig member tracks
+		tk.bigwigsetting = {}
+		if (template.bigwigsetting.scale) {
+			if (template.bigwigsetting.scale.max) {
+				if (!Number.isFinite(template.bigwigsetting.scale.max)) throw 'invalid max value in bigwigsetting.scale'
+				if (!Number.isFinite(template.bigwigsetting.scale.min))
+					throw 'invalid or missing min value in bigwigsetting.scale'
+				if (template.bigwigsetting.scale.max <= template.bigwigsetting.scale.min)
+					throw 'max <= min in bigwigsetting.scale'
+				tk.bigwigsetting.scale = { min: template.bigwigsetting.scale.min, max: template.bigwigsetting.scale.max }
+			}
+		}
+		// default settings applied to member bigwig tracks
+		for (const t of tk.tracks) {
+			if (t.type != 'bigwig') continue
+			if (tk.bigwigsetting.scale) {
+				if (tk.bigwigsetting.scale.max != undefined) {
+					delete t.scale.auto
+					t.scale = {
+						min: tk.bigwigsetting.scale.min,
+						max: tk.bigwigsetting.scale.max
+					}
+				} else if (tk.bigwigsetting.scale.percentile) {
+					delete t.scale.auto
+					t.scale.percentile = tk.bigwigsetting.scale.percentile
+				}
+			}
+			if (tk.bigwigsetting.pcolor) t.pcolor = tk.bigwigsetting.pcolor
+			if (tk.bigwigsetting.ncolor) t.ncolor = tk.bigwigsetting.ncolor
+			if (tk.bigwigsetting.pcolor2) t.pcolor = tk.bigwigsetting.pcolor2
+			if (tk.bigwigsetting.ncolor2) t.ncolor = tk.bigwigsetting.ncolor2
+		}
+	}
 
 	if (tk.genevaluetrack) {
 		// old notion of single gene-value track, convert to tklst
@@ -116,7 +210,7 @@ function makeTk(tk, block) {
 
 		tk.sample2gvtk2gene = new Map()
 
-		tk.genelsttip = new client.Menu({ padding: '5px' })
+		tk.genelsttip = new Menu({ padding: '5px' })
 
 		setrightwidth(tk, block)
 
@@ -186,7 +280,7 @@ function makeTk(tk, block) {
 			const [tr, td] = legend_newrow(block, tk.name)
 			tk.tr_legend = tr
 			tk.td_legend = td
-			tk.legendtip = new client.Menu({ padding: '' })
+			tk.legendtip = new Menu({ padding: '' })
 		}
 
 		// if has image, show image, else, may show categories
@@ -255,6 +349,15 @@ function makeTk(tk, block) {
 				movetrack(t, tk, d3event.clientY)
 			})
 
+		if (t.list_description) {
+			t.tklabel
+				.on('mouseover', () => {
+					t.tktip.clear().show(d3event.clientX, d3event.clientY)
+					make_table_2col(t.tktip.d, t.list_description).style('margin', '')
+				})
+				.on('mouseout', () => t.tktip.hide())
+		}
+
 		collectleftlabw.push(t.tklabel.node().getBBox().width)
 
 		if (tk.genevaluetklst) {
@@ -310,7 +413,7 @@ export function loadTk(tk, block) {
 			if (tk.categories) {
 				arg.categories = tk.categories
 			}
-			const task = client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
+			const task = dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
 				if (data.error) {
 					throw data.error
 				}
@@ -327,49 +430,44 @@ export function loadTk(tk, block) {
 			tasks.push(task)
 		} else if (t.type == client.tkt.bigwig) {
 			const arg = block.tkarg_q(t)
-			const req = new Request(block.hostURL + '/tkbigwig', {
+			const task = dofetch3('tkbigwig', {
 				method: 'POST',
 				body: JSON.stringify(arg)
+			}).then(data => {
+				if (data.error) {
+					throw data.error
+				}
+				t.height = t.toppad + t.barheight + t.bottompad
+				t.img
+					.attr('width', block.width)
+					.attr('height', t.barheight)
+					.attr('xlink:href', data.src)
+				if (block.pannedpx != undefined) {
+					t.img.attr('x', block.pannedpx * -1)
+				}
+				if (data.minv != undefined) {
+					t.scale.min = data.minv
+				}
+				if (data.maxv != undefined) {
+					t.scale.max = data.maxv
+				}
+				t.leftaxis.selectAll('*').remove()
+				if (data.nodata) {
+				} else {
+					const scale = scaleLinear()
+						.domain([t.scale.min, t.scale.max])
+						.range([t.barheight, 0])
+					client.axisstyle({
+						axis: t.leftaxis.call(
+							axisLeft()
+								.scale(scale)
+								.tickValues([t.scale.min, t.scale.max])
+						),
+						color: 'black',
+						showline: true
+					})
+				}
 			})
-			const task = fetch(req)
-				.then(data => {
-					return data.json()
-				})
-				.then(data => {
-					if (data.error) {
-						throw data.error
-					}
-					t.height = t.toppad + t.barheight + t.bottompad
-					t.img
-						.attr('width', block.width)
-						.attr('height', t.barheight)
-						.attr('xlink:href', data.src)
-					if (block.pannedpx != undefined) {
-						t.img.attr('x', block.pannedpx * -1)
-					}
-					if (data.minv != undefined) {
-						t.scale.min = data.minv
-					}
-					if (data.maxv != undefined) {
-						t.scale.max = data.maxv
-					}
-					t.leftaxis.selectAll('*').remove()
-					if (data.nodata) {
-					} else {
-						const scale = scaleLinear()
-							.domain([t.scale.min, t.scale.max])
-							.range([t.barheight, 0])
-						client.axisstyle({
-							axis: t.leftaxis.call(
-								axisLeft()
-									.scale(scale)
-									.tickValues([t.scale.min, t.scale.max])
-							),
-							color: 'black',
-							showline: true
-						})
-					}
-				})
 			tasks.push(task)
 		}
 	}
@@ -381,7 +479,7 @@ export function loadTk(tk, block) {
 		for (const gvtk of tk.genevaluetklst) {
 			const arg = block.tkarg_bedj(gvtk)
 			arg.getdata = 1
-			const task = client.dofetch2('tkbedj', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
+			const task = dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
 				if (data.error) throw data.error
 				if (data.items && data.items.length > 0) {
 					for (const i of data.items) {
@@ -618,7 +716,7 @@ function showgeneplot(tk, block, gene) {
 							const p = d3event.target.getBoundingClientRect()
 							tk.tktip.clear().show(p.left, p.top)
 							const lst = [{ k: 'sample', v: t.name }, { k: gvtk.multivaluekey, v: d.name }, { k: 'value', v: d.value }]
-							client.make_table_2col(tk.tktip.d, lst)
+							setTimeout(make_table_2col(tk.tktip.d, lst), 500)
 						})
 						.on('mouseout', d => {
 							const valuekeyname = d.name

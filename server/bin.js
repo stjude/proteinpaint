@@ -40,7 +40,7 @@ if (serverconfig.backend_only) {
 	execSync(`rm -rf ./public/bin`)
 	execSync(`cp -Rn ${pkgpublic}/bin ./public`)
 
-	const publicPath = serverconfig.URL ? serverconfig.URL : ''
+	const publicPath = serverconfig.URL || ''
 	console.log(`Setting the dynamic bundle path to '${publicPath}'`)
 	execSync(`mv ./public/bin/proteinpaint.js ./public/bin/proteinpaint-bk.js`)
 	execSync(`sed 's%__PP_URL__/bin/%${publicPath}/bin/%' < ./public/bin/proteinpaint-bk.js > public/bin/proteinpaint.js`)

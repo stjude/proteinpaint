@@ -1,17 +1,29 @@
 const WebpackNotifierPlugin = require('webpack-notifier')
 const path = require('path')
+const fs = require('fs')
+const SpecHelpersWpPlugin = require('./test/specHelpers.js').SpecHelpersWpPlugin
+
+let babelrc
+try {
+	babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
+	babelrc = JSON.parse(babelrc)
+} catch (e) {
+	throw e
+}
+
+const internalsFile = path.join(__dirname, './test/internals.js')
+if (!fs.existsSync(internalsFile)) {
+	fs.writeFileSync(internalsFile)
+}
 
 module.exports = function(env = {}) {
-	const publicPath = (env.url || '') + '/bin/'
-	const outputPath = path.join(__dirname, '../public/bin')
-
 	const config = {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'web',
 		entry: path.join(__dirname, './src/app.js'),
 		output: {
-			path: outputPath,
-			publicPath,
+			path: path.join(__dirname, '../public/bin'),
+			publicPath: (env.url || '') + '/bin/',
 			filename: 'proteinpaint.js',
 			jsonpFunction: 'ppJsonp',
 			// the library name exposed by this bundle
@@ -27,33 +39,31 @@ module.exports = function(env = {}) {
 			react: 'React',
 			'react-dom': 'ReactDOM'
 		},
+		node: {
+			fs: 'empty'
+		},
 		module: {
+			strictExportPresence: true,
 			rules: [
-				/*
-			{
-				test:/\.js$/,
-				exclude:/node_modules/,
-				loader:'babel-loader',
-			},
-			*/
 				{
 					test: /\.css$/,
-					use: [
-						{
-							loader: 'style-loader'
-						},
-						{
-							loader: 'css-loader'
-						}
-					]
+					use: ['style-loader', 'css-loader']
 				},
-
+				{
+					// by default, this rule will empty out internals.js,
+					// so that no spec files are imported into it
+					// and thus not bundled -- UNLESS this rule is
+					// removed in mode=development
+					test: path.join(__dirname, './test/internals.js'),
+					use: [path.join(__dirname, './test/empty-wp-loader.js')]
+				},
 				{
 					test: /\.js$/,
+					exclude: /\.spec\.js$/,
 					use: [
 						{
 							loader: 'babel-loader',
-							options: { presets: [['es2015', { modules: false }]], plugins: ['syntax-dynamic-import'] }
+							options: babelrc
 						}
 					]
 				}
@@ -62,8 +72,15 @@ module.exports = function(env = {}) {
 		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : ''
 	}
 
+	/*** OVERRIDES ***/
 	if (config.mode == 'development') {
-		config.plugins = [new WebpackNotifierPlugin()]
+		config.plugins = [new WebpackNotifierPlugin(), new SpecHelpersWpPlugin()]
+		// allow react to be bundled
+		delete config.externals
+		// delete the rule that empties the ./test/internals.js code,
+		// so that the app.testInternals() function will be functional
+		config.module.rules.splice(1, 1)
+		delete config.module.rules[1].exclude
 	}
 	if (config.mode != 'production') {
 		// do not minify

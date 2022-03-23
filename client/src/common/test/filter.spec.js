@@ -25,9 +25,7 @@ function getOpts(_opts = {}) {
 	const opts = Object.assign(
 		{
 			holder,
-			nav: {
-				activeCohort: 0
-			},
+			activeCohort: 0,
 			callback(filter) {
 				opts.filterData = filter
 				opts.filterUiRoot = getFilterItemByTag(filter, 'filterUiRoot')
@@ -45,7 +43,7 @@ function getOpts(_opts = {}) {
 		btnLabel: 'Filter',
 		holder: holder.append('div'),
 		vocab,
-		nav: opts.nav,
+		header_mode: opts.header_mode,
 		termdbConfig: opts.termdbConfig,
 		debug: true,
 		callback: opts.callback
@@ -60,19 +58,20 @@ function sleep(ms) {
 
 async function addDemographicSexFilter(opts, btn) {
 	btn.click()
+	const tipd = opts.filter.Inner.dom.treeTip.d.node()
 	await sleep(300)
-	const termdiv1 = [...opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.termdiv')].find(
-		elem => elem.__data__.id === 'Demographic Variables'
-	)
+	const termdiv1 = [...tipd.querySelectorAll('.termdiv')].find(elem => elem.__data__.id === 'Demographic Variables')
 	termdiv1.querySelectorAll('.termbtn')[0].click()
 	await sleep(200)
 
 	const termdivSex = [...termdiv1.querySelectorAll('.termdiv')].find(elem => elem.__data__.id === 'sex')
-	termdivSex.querySelectorAll('.termview')[0].click()
+	termdivSex.querySelectorAll('.termlabel')[0].click()
 	await sleep(800)
 
-	termdivSex.querySelector('.bars-cell > rect').dispatchEvent(new Event('click', { bubbles: true }))
-	await sleep(100)
+	tipd.querySelector('.value_checkbox').click()
+	await sleep(150)
+	tipd.querySelector('.apply_btn').click()
+	await sleep(300)
 }
 
 function normalizeActiveData(opts) {
@@ -147,7 +146,7 @@ function gettvs(id, val = '', overrides = {}) {
 				},
 				values: [
 					{
-						key: val ? val : i++,
+						key: val ? val : (i++).toString(),
 						label: val ? val : i.toString()
 					}
 				]
@@ -396,7 +395,7 @@ tape('+NEW button interaction', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-
+	await sleep(100)
 	opts.holder
 		.node()
 		.querySelector('.sja_new_filter_btn')
@@ -624,41 +623,50 @@ tape('pill menu-append interaction', async test => {
 	const pillWrapper = opts.holder.select('.sja_pill_wrapper').node()
 	pillWrapper.click()
 	await sleep(50)
+	{
+		const tipd = opts.filter.Inner.dom.controlsTip.d
+		const menuRows = tipd.selectAll('tr')
+		const joinOpt = menuRows.filter(d => d.action == 'join')
+		joinOpt.node().click()
+		test.equal(
+			opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+			1,
+			'should create exactly one blank pill when clicking a pill-menu append option'
+		)
+		test.equal(
+			pillWrapper.querySelectorAll('.sja_filter_paren_open, .sja_filter_paren_close').length,
+			2,
+			'should show parentheses to indicate that a newly selected term-value will be placed in a subnested pill group'
+		)
 
-	const tipd = opts.filter.Inner.dom.controlsTip.d
-	const menuRows = tipd.selectAll('tr')
-	const joinOpt = menuRows.filter(d => d.action == 'join')
-	joinOpt.node().click()
-	test.equal(
-		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
-		1,
-		'should create exactly one blank pill when clicking a pill-menu append option'
-	)
-	test.equal(
-		pillWrapper.querySelectorAll('.sja_filter_paren_open, .sja_filter_paren_close').length,
-		2,
-		'should show parentheses to indicate that a newly selected term-value will be placed in a subnested pill group'
-	)
+		menuRows
+			.filter(d => d.action == 'replace')
+			.node()
+			.click()
+		test.equal(
+			opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+			0,
+			'should remove the blank pill when clicking away from a pill menu-append option'
+		)
+	}
 
-	menuRows
-		.filter(d => d.action == 'replace')
-		.node()
-		.click()
-	test.equal(
-		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
-		0,
-		'should remove the blank pill when clicking away from a pill menu-append option'
-	)
-
-	const origLstLength = opts.filterData.lst.length
-	await addDemographicSexFilter(opts, joinOpt.node())
-	const lst = opts.filter.Inner.filter.lst
-	test.equal(lst[0].type, 'tvslst', 'should create a subnested filter')
-	test.equal(
-		lst[0].join,
-		opts.filter.Inner.filter.join == 'or' ? 'and' : 'or',
-		'should set the correct join value for the subnested filter'
-	)
+	pillWrapper.click()
+	await sleep(50)
+	{
+		const tipd = opts.filter.Inner.dom.controlsTip.d
+		const menuRows = tipd.selectAll('tr')
+		const joinOpt = menuRows.filter(d => d.action == 'join')
+		const origLstLength = opts.filterData.lst.length
+		await addDemographicSexFilter(opts, joinOpt.node())
+		await sleep(200)
+		const lst = opts.filter.Inner.filter.lst
+		test.equal(lst[0].type, 'tvslst', 'should create a subnested filter')
+		test.equal(
+			lst[0].join,
+			opts.filter.Inner.filter.join == 'or' ? 'and' : 'or',
+			'should set the correct join value for the subnested filter'
+		)
+	}
 
 	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
 	test.end()
@@ -1456,7 +1464,7 @@ tape('getNormalRoot()', async test => {
 	test.end()
 })
 
-tape('filterJoin()', async test => {
+tape('filterJoin()', test => {
 	test.timeoutAfter(3000)
 	test.plan(7)
 

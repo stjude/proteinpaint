@@ -22,13 +22,22 @@ runproteinpaint({
 	tracks:[
 		{
 			type:'bedj',
+			name:'numeric value',
+			file:'proteinpaint_demo/hg19/bedj/value.gz',
+			usevalue:{
+				key:'value',
+				dropBelowCutoff:1000,
+			}
+		},
+		{
+			type:'bedj',
 			name:'bedj',
 			file:'anno/refGene.hg19.gz'
 		},
 		{
 			type:'bedj',
 			name:'3-column bed',
-			file:'proteinpaint_demo/hg19/misc/rmsk.bed3.gz'
+			file:'proteinpaint_demo/hg19/bedj/bed3.gz'
 		},
 		{
 			type:'bedj',

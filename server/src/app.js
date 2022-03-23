@@ -62,7 +62,8 @@ const express = require('express'),
 	bedgraphdot_request_closure = require('./bedgraphdot'),
 	bam_request_closure = require('./bam'),
 	mdsjunction_request_closure = require('./mds.junction'),
-	gdc_bam_request = require('./bam.gdc'),
+	gdc_bam_request = require('./bam.gdc').gdc_bam_request,
+	handle_gdc_ssms = require('./mds3.gdc').handle_gdc_ssms,
 	aicheck_request_closure = require('./aicheck'),
 	bampile_request = require('./bampile'),
 	junction_request = require('./junction'),
@@ -72,23 +73,25 @@ const express = require('express'),
 	mds2_init = require('./mds2.init'),
 	mds3_init = require('./mds3.init'),
 	mds2_load = require('./mds2.load'),
+	massSession = require('./massSession'),
 	singlecell = require('./singlecell'),
 	fimo = require('./fimo'),
 	draw_partition = require('./partitionmatrix').draw_partition,
 	do_hicstat = require('./hicstat').do_hicstat,
 	mdsgeneboxplot_closure = require('./mds.geneboxplot').default,
 	phewas = require('./termdb.phewas'),
-	handle_mdssurvivalplot = require('./km')
+	handle_mdssurvivalplot = require('./km').handle_mdssurvivalplot,
+	validator = require('./validator')
 
 /*
 valuable globals
 */
 const genomes = {}
-const tabix = serverconfig.tabix || 'tabix'
-const samtools = serverconfig.samtools || 'samtools'
-const bcftools = serverconfig.bcftools || 'bcftools'
-const bigwigsummary = serverconfig.bigwigsummary || 'bigWigSummary'
-const hicstraw = serverconfig.hicstraw || 'straw'
+const tabix = serverconfig.tabix
+const samtools = serverconfig.samtools
+const bcftools = serverconfig.bcftools
+const bigwigsummary = serverconfig.bigwigsummary
+const hicstraw = serverconfig.hicstraw
 let codedate, // date for code files last updated
 	launchdate // server launch date
 /*
@@ -104,11 +107,42 @@ if (serverconfig.users) {
 	app.use(basicAuth({ users: serverconfig.users, challenge: true }))
 }
 
-app.use(bodyParser.json({}))
+/* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
+app.use(express.static(__dirname+'/public'))
+*/
+const basepath = serverconfig.basepath || ''
+const staticDir = express.static(path.join(process.cwd(), './public'))
+if (!serverconfig.backend_only) {
+	app.use(staticDir)
+}
+app.use(compression())
+
+app.use((req, res, next) => {
+	if (req.method.toUpperCase() == 'POST') {
+		// assume all post requests have json-encoded content
+		// TODO: change all client-side fetch(new Request(...)) to use dofetch*() to preset the content-type
+		req.headers['content-type'] = 'application/json'
+	}
+	next()
+})
+
+app.use(bodyParser.json({ limit: '1mb' }))
 app.use(bodyParser.text({ limit: '1mb' }))
 app.use(bodyParser.urlencoded({ extended: true }))
 
 app.use((req, res, next) => {
+	if (req.method.toUpperCase() == 'POST' && req.body && req.headers['content-type'] != 'application/json') {
+		res.send({ error: `invalid HTTP request.header['content-type'], must be 'application/json'` })
+		return
+	}
+	if (req.headers['content-type'] == 'application/json') {
+		if (!req.query) req.query = {}
+		// TODO: in the future, may have to combine req.query + req.params + req.body
+		// if using req.params based on expressjs server route /:paramName interpolation
+		Object.assign(req.query, req.body)
+	}
+	log(req)
+
 	res.header('Access-Control-Allow-Origin', '*')
 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
 	if (req.method == 'GET' && !req.path.includes('.')) {
@@ -120,31 +154,29 @@ app.use((req, res, next) => {
 	next()
 })
 
-/* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
-app.use(express.static(__dirname+'/public'))
-*/
-const basepath = serverconfig.basepath || ''
-const staticDir = express.static(path.join(process.cwd(), './public'))
-if (!serverconfig.backend_only) {
-	app.use(staticDir)
-}
-app.use(compression())
+app.use(validator.middleware)
+
+// NOTE: The error handling middleware should be used after all other app.use() middlewares
+// error handling middleware has four arguments
+app.use((error, req, res, next) => {
+	log(req)
+	if (error) {
+		if (error && error.type == 'entity.parse.failed') {
+			res.send({ error: 'invalid request body, must be a valid JSON-encoded object' })
+		} else {
+			res.send({ error })
+		}
+		return
+	}
+})
 
 if (serverconfig.jwt) {
 	console.log('JWT is activated')
 	app.use((req, res, next) => {
 		let j = {}
 		if (req.body && req.method == 'POST') {
-			if (typeof req.body == 'object') {
-				j = req.body
-			} else {
-				try {
-					j = JSON.parse(req.body)
-				} catch (err) {
-					res.send({ error: 'Invalid JSON for request body' })
-					return
-				}
-			}
+			// a preceding middleware assumes all POST contents are json-encoded and processed by bodyParser()
+			j = req.body
 		}
 		const jwt = j.jwt
 			? j.jwt
@@ -168,7 +200,7 @@ if (serverconfig.jwt) {
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
 app.get(basepath + '/healthcheck', handle_healthcheck)
-app.get(basepath + '/examplejson', handle_examples)
+app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
 app.post(basepath + '/genelookup', handle_genelookup)
@@ -177,18 +209,18 @@ app.post(basepath + '/pdomain', handle_pdomain)
 app.post(basepath + '/tkbedj', bedj_request_closure(genomes))
 app.post(basepath + '/tkbedgraphdot', bedgraphdot_request_closure(genomes))
 app.get(basepath + '/tkbam', bam_request_closure(genomes))
-app.get(basepath + '/gdcbam', gdc_bam_request())
+app.get(basepath + '/gdcbam', gdc_bam_request)
+app.get(basepath + '/gdc_ssms', handle_gdc_ssms(genomes))
 app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
 app.get(basepath + '/blat', blat_request_closure(genomes))
 app.get(basepath + '/mds3', mds3_request_closure(genomes))
 app.get(basepath + '/tkbampile', bampile_request)
-app.post(basepath + '/snpbyname', handle_snpbyname)
 app.post(basepath + '/dsdata', handle_dsdata) // old official ds, replace by mds
 
 app.post(basepath + '/tkbigwig', handle_tkbigwig)
 
 app.get(basepath + '/tabixheader', handle_tabixheader)
-app.post(basepath + '/snp', handle_snpbycoord)
+app.post(basepath + '/snp', handle_snp)
 app.get(basepath + '/clinvarVCF', handle_clinvarVCF)
 app.post(basepath + '/isoformlst', handle_isoformlst)
 app.post(basepath + '/dbdata', handle_dbdata)
@@ -220,16 +252,18 @@ app.get(basepath + '/mdssamplescatterplot', handle_mdssamplescatterplot)
 app.post(basepath + '/mdssamplesignature', handle_mdssamplesignature)
 app.post(basepath + '/mdssurvivalplot', handle_mdssurvivalplot(genomes))
 app.post(basepath + '/fimo', fimo.handle_closure(genomes))
-app.get(basepath + '/termdb', termdb.handle_request_closure(genomes))
-app.get(basepath + '/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
+app.all(basepath + '/termdb', termdb.handle_request_closure(genomes))
+app.all(basepath + '/termdb-barsql', termdbbarsql.handle_request_closure(genomes))
 app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
+app.post(basepath + '/massSession', massSession.save)
+app.get(basepath + '/massSession', massSession.get)
 app.post(basepath + '/isoformbycoord', handle_isoformbycoord)
 app.post(basepath + '/ase', handle_ase)
 app.post(basepath + '/bamnochr', handle_bamnochr)
 app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 /****
 	- validate and start the server
-	This enables the coorect monitoring by the forever module. 
+	This enables the correct monitoring by the forever module. 
 	Whereas before 'forever' will endlessly restart the server
 	even if it cannot be initialized in a full working state,
 	the usage in a bash script should now be: 
@@ -237,14 +271,26 @@ app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
 	set -e
 	node server validate 
 	# only proceed to using forever on successful validation
-	npx forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
+	forever -a --minUptime 1000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
+	
+	# - OR -
+	# use the serverconfig.preListenScript option to stop the previous process
+	# after all configurations, genomes, and datasets have been loaded in the current process, 
+	# so that the validation happens from within the same monitored process (see startServer())
 	```
 ***/
+
 pp_init()
-	.then(() => {
+	.then(async () => {
 		// no error from server initiation
+		console.log(`\n${new Date()} ${serverconfig.commitHash || ''}`)
+		// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
+		// a serverconfig.preListenScript may rely on detecting this exact pre-listen() message
+		console.log(`\nValidation succeeded.\n`)
+
+		// exit early if only doing a validation of configuration + data + startup code
 		if (process.argv[2] == 'validate') {
-			console.log('\nValidation succeeded. You may now run the server.\n')
+			console.log(`You may now run the server.`)
 			return
 		}
 
@@ -260,31 +306,90 @@ pp_init()
 			return
 		}
 
-		const port = serverconfig.port || 3000
+		await startServer()
+	})
+	.catch(err => {
+		let exitCode = 1
+		if (!fs.existsSync(serverconfig.tpmasterdir)) {
+			const m = serverconfig.maintenance || {}
+			// may override with a non-empty maintenance message
+			if ('start' in m && 'stop' in m && 'tpErrorCode' in m) {
+				// use unix timestamps to simplify comparison
+				const start = +new Date(m.start)
+				const stop = +new Date(m.stop)
+				const currTime = +new Date()
+				if (start <= currTime && currTime <= stop) {
+					exitCode = m.tpErrorCode
+				}
+			}
+		}
+
+		if (err.stack) console.log(err.stack)
+		if (exitCode) console.error('\n!!!\n' + err + '\n\n')
+		else console.log('\n!!!\n' + err + '\n\n')
+		/* 
+		when the app server is monitored by another process via the command line,
+		process.exit(1) is required to stop execution flow with `set -e`
+		and thereby avoid unnecessary endless restarts of an invalid server
+		init with bad config, data, and/or code
+		*/
+		process.exit(exitCode)
+	})
+
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function log(req) {
+	const j = {}
+	for (const k in req.query) {
+		if (k != 'jwt') j[k] = req.query[k]
+	}
+	console.log(
+		'%s\t%s\t%s\t%s',
+		url.parse(req.url).pathname,
+		new Date(),
+		req.header('x-forwarded-for') || req.connection.remoteAddress,
+		JSON.stringify(j).replace(/\\"/g, '"')
+	)
+}
+
+exports.log = log
+
+async function startServer() {
+	try {
+		if (serverconfig.preListenScript) {
+			const { cmd, args } = serverconfig.preListenScript
+			const ps = child_process.spawnSync(cmd, args, { encoding: 'utf-8' })
+			if (ps.stderr.trim()) throw ps.stderr.trim()
+			console.log(ps.stdout)
+		}
+
+		const port = serverconfig.port
+		// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
+		// a serverconfig.preListenScript may rely on detecting this exact post-listen() message
+		const message = `STANDBY AT PORT ${port}`
 		if (serverconfig.ssl) {
 			const options = {
 				key: fs.readFileSync(serverconfig.ssl.key),
 				cert: fs.readFileSync(serverconfig.ssl.cert)
 			}
-			const server = https.createServer(options, app)
+			const server = await https.createServer(options, app)
 			server.listen(port, () => {
-				console.log('HTTPS STANDBY AT PORT ' + port)
+				console.log(`HTTPS ${message}`)
 			})
+			return server
 		} else {
-			const server = app.listen(port)
-			console.log('STANDBY AT PORT ' + port)
+			const server = await http.createServer(app)
+			server.listen(port, () => {
+				console.log(message)
+			})
+			return server
 		}
-	})
-	.catch(err => {
-		/* when the app server is monitored by another process via the command line,
-		process.exit(1) is required to stop executiion flow with `set -e`
-		and thereby avoid unnecessary endless restarts of an invalid server
-		init with bad config, data, and/or code
-		*/
-		if (err.stack) console.log(err.stack)
-		console.error('\n!!!\n' + err + '\n\n')
-		process.exit(1)
-	})
+	} catch (e) {
+		throw e
+	}
+}
 
 function setOptionalRoutes() {
 	// routeSetters is an array of "filepath/name.js"
@@ -300,7 +405,7 @@ function setOptionalRoutes() {
 async function handle_healthcheck(req, res) {
 	try {
 		const health = { status: 'ok' }
-		const keys = serverconfig.features.healthcheck_keys || []
+		const keys = exports.features.healthcheck_keys || []
 
 		if (keys.includes('w')) {
 			health.w = child_process
@@ -321,14 +426,7 @@ async function handle_healthcheck(req, res) {
 					.split('\n').length - 1
 		}
 
-		if (fs.existsSync('./public/rev.txt')) {
-			health.version = child_process
-				.execSync(`cat ./public/rev.txt`)
-				.toString()
-				.trim()
-				.split(' ')[1]
-		}
-
+		if (serverconfig.commitHash) health.version = serverconfig.commitHash
 		res.send(health)
 	} catch (e) {
 		throw { error: e }
@@ -350,21 +448,28 @@ function handle_gene2canonicalisoform(req, res) {
 	}
 }
 
-async function handle_examples(req, res) {
-	log(req)
+async function handle_cards(req, res) {
 	try {
-		if (!exports.features.examples) throw 'This feature is not enabled on this server.'
 		// more flexibility by reading a file pointed by exports.features.examples
-		const txt = await utils.read_file(serverconfig.examplejson)
-		const json = JSON.parse(txt)
-		res.send({ examples: json.examples, allow_mdsform: exports.features.mdsjsonform })
+		if (req.query.jsonfile) {
+			if (req.query.jsonfile.match(/[^\w]/)) throw 'Invalid file'
+			const jsontxt = await utils.read_file(path.join(serverconfig.cardsjsondir, req.query.jsonfile + '.json'))
+			res.send({ jsonfile: JSON.parse(jsontxt) })
+		} else if (req.query.file) {
+			if (req.query.file.match(/[^\w]/)) throw 'Invalid file'
+			const txt = await utils.read_file(path.join(serverconfig.cardsjsondir, req.query.file + '.txt'))
+			res.send({ file: txt })
+		} else {
+			const cardsjson = await utils.read_file(serverconfig.cardsjson)
+			const json = JSON.parse(cardsjson)
+			res.send({ examples: json.examples, usecases: json.usecases, allow_mdsform: exports.features.mdsjsonform })
+		}
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}
 }
 
 async function handle_mdsjsonform(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	if (!exports.features.mdsjsonform) return res.send({ error: 'This feature is not enabled on this server.' })
 	if (req.query.deposit) {
 		const id = Math.random().toString()
@@ -436,7 +541,20 @@ async function handle_genomes(req, res) {
 		/* dir is inaccessible
 		return error message as the service is out
 		*/
-		res.send({ error: 'Error with TP directory (' + e.code + ')' })
+		// default error message
+		let message = 'Error with TP directory (' + e.code + ')'
+		const m = serverconfig.maintenance || {}
+		// may override with a non-empty maintenance message
+		if ('start' in m && 'stop' in m && m.tpMessage) {
+			// use unix timestamps to simplify comparison
+			const start = +new Date(m.start)
+			const stop = +new Date(m.stop)
+			const currTime = +new Date()
+			if (start <= currTime && currTime <= stop) {
+				message = m.tpMessage
+			}
+		}
+		res.send({ error: message })
 		return
 	}
 
@@ -765,10 +883,11 @@ function mds_clientcopy(ds) {
 }
 
 function handle_genelookup(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	const g = genomes[req.query.genome]
 	if (!g) return res.send({ error: 'invalid genome name' })
-	if (!req.query.input) return res.send({ error: 'no input' })
+
+	if (g.genomicNameRegexp.test(req.query.input)) return res.send({ error: 'invalid character in gene name' })
+
 	if (req.query.deep) {
 		///////////// deep
 
@@ -836,45 +955,26 @@ async function handle_img(req, res) {
 	}
 }
 
-function handle_ntseq(req, res) {
+async function handle_ntseq(req, res) {
 	try {
-		req.query = JSON.parse(req.body)
+		if (!req.query.coord) throw 'coord missing'
+		const g = genomes[req.query.genome]
+		if (!g) throw 'invalid genome'
+		if (!g.genomefile) throw 'no sequence file available'
+		const seq = await utils.get_fasta(g, req.query.coord)
+		res.send({
+			seq: seq
+				.split('\n')
+				.slice(1)
+				.join('')
+		})
 	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
 	}
-	log(req)
-	var n = req.query.genome
-	if (!n) return res.send({ error: 'no genome' })
-	var g = genomes[n]
-	if (!g) return res.send({ error: 'invalid genome' })
-	if (!g.genomefile) return res.send({ error: 'no sequence file available' })
-	var ps = spawn(samtools, ['faidx', g.genomefile, req.query.coord])
-	var out = [],
-		out2 = []
-	ps.stdout.on('data', function(data) {
-		out.push(data)
-	})
-	ps.stderr.on('data', function(data) {
-		out2.push(data)
-	})
-	ps.on('close', function(code) {
-		var err = out2.join('').trim()
-		if (err.length) {
-			res.send({ error: 'Error getting sequence!' })
-			console.error(err)
-			return
-		}
-		var lst = out
-			.join('')
-			.trim()
-			.split('\n')
-		res.send({ seq: lst.slice(1).join('') })
-	})
 }
 
 function handle_pdomain(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		const gn = req.query.genome
 		if (!gn) throw 'no genome'
@@ -884,10 +984,10 @@ function handle_pdomain(req, res) {
 			// no error
 			return res.send({ lst: [] })
 		}
-		if (!req.query.isoforms) throw 'isoforms missing'
-
+		if (!Array.isArray(req.query.isoforms)) throw 'isoforms[] missing'
 		const lst = []
 		for (const isoform of req.query.isoforms) {
+			if (g.genomicNameRegexp.test(isoform)) continue
 			const tmp = g.proteindomain.getbyisoform.all(isoform)
 			// FIXME returned {data} is text not json
 			lst.push({
@@ -968,8 +1068,6 @@ if file/url ends with .gz, it is bedgraph
 	- not to be used in production!!!
 	- bedgraph should render bars while reading data, with predefined y axis; no storing data
 */
-	if (reqbodyisinvalidjson(req, res)) return
-
 	let fixminv,
 		fixmaxv,
 		percentile,
@@ -1212,40 +1310,102 @@ if file/url ends with .gz, it is bedgraph
 		})
 }
 
-function handle_snpbyname(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
-	const n = req.query.genome
-	if (!n) return res.send({ error: 'no genome' })
-	const g = genomes[n]
-	if (!g) return res.send({ error: 'invalid genome' })
-	if (!g.snp) return res.send({ error: 'snp is not configured for this genome' })
-	const hits = []
-	for (const n of req.query.lst) {
-		const lst = g.snp.getbyname.all(n)
-		for (const i of lst) {
-			hits.push(i)
+async function handle_snp(req, res) {
+	/*
+.byCoord
+	if true, query bigbed file by coordinate
+.byName
+	if true, query bigbed file by rs id
+.genome
+	name of genome
+.chr
+	used for byCoord
+.ranges[ {start, stop} ]
+	used for byCoord
+.alleleLst[ str ]
+	used for byCoord, if provided will only return snps with matching alleles
+.lst[ str ]
+	used for byName
+*/
+	try {
+		const n = req.query.genome
+		if (!n) throw 'no genome'
+		const g = genomes[n]
+		if (!g) throw 'invalid genome'
+		if (!g.snp) throw 'snp is not configured for this genome'
+		const hits = []
+		if (req.query.byCoord) {
+			// query dbSNP bigbed file by coordinate
+			// input query coordinates need to be 0-based
+			// output snp coordinates are 0-based
+			if (g.genomicNameRegexp.test(req.query.chr)) throw 'invalid chr name'
+			if (!Array.isArray(req.query.ranges)) throw 'ranges not an array'
+			for (const r of req.query.ranges) {
+				// require start/stop of a range to be non-neg integers, as a measure against attack
+				if (!Number.isInteger(r.start) || !Number.isInteger(r.stop) || r.start < 0 || r.stop < r.start)
+					throw 'invalid start/stop'
+				if (r.stop - r.start >= 100) {
+					// quick fix!
+					// as this function only works as spot checking snps
+					// guard against big range and avoid retrieving snps from whole chromosome that will overwhelm server
+					throw 'range too big'
+				}
+				const snps = await utils.query_bigbed_by_coord(g.snp.bigbedfile, req.query.chr, r.start, r.stop)
+				for (const snp of snps) {
+					const hit = snp2hit(snp)
+					if (req.query.alleleLst) {
+						// given alleles must be found in a snp for it to be returned
+						let missing = false
+						for (const i of req.query.alleleLst) {
+							// only test on non-empty strings
+							if (i && !hit.alleles.includes(i)) {
+								missing = true
+								break
+							}
+						}
+						if (missing) continue
+					}
+					hits.push(hit)
+				}
+			}
+		} else if (req.query.byName) {
+			if (!Array.isArray(req.query.lst)) throw '.lst[] missing'
+			for (const n of req.query.lst) {
+				// query dbSNP bigbed file by rsID
+				// see above for description of output snp fields
+				if (g.genomicNameRegexp.test(n)) continue
+				const snps = await utils.query_bigbed_by_name(g.snp.bigbedfile, n)
+				for (const snp of snps) {
+					const hit = snp2hit(snp)
+					hits.push(hit)
+				}
+			}
+		} else {
+			throw 'unknown query method'
 		}
+		res.send({ results: hits })
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		return res.send({ error: e.message || e })
 	}
-	res.send({ lst: hits })
 }
 
-function handle_snpbycoord(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
-	const n = req.query.genome
-	if (!n) return res.send({ error: 'no genome' })
-	const g = genomes[n]
-	if (!g) return res.send({ error: 'invalid genome' })
-	if (!g.snp) return res.send({ error: 'snp is not configured for this genome' })
-	const hits = []
-	for (const r of req.query.ranges) {
-		const bin = getbin(r.start, r.stop)
-		if (bin == null) continue
-		const lst = g.snp.getbycoord.all(req.query.chr, bin, r.start, r.stop)
-		for (const i of lst) {
-			hits.push(i)
-		}
+function snp2hit(snp) {
+	// snp must be non-empty string
+	// output snp fields: [0]chrom, [1]chromStart, [2]chromEnd, [3]name, [4]ref, altCount, [6]alts, shiftBases, freqSourceCount, minorAlleleFreq, majorAllele, minorAllele, maxFuncImpact, class, ucscNotes, _dataOffset, _dataLen
+	const fields = snp.split('\t')
+	const ref = fields[4]
+	const alts = fields[6].split(',').filter(Boolean)
+	const observed = ref + '/' + alts.join('/')
+	const hit = {
+		chrom: fields[0],
+		chromStart: Number(fields[1]),
+		chromEnd: Number(fields[2]),
+		name: fields[3],
+		observed: observed,
+		alleles: [ref, ...alts]
 	}
-	res.send({ results: hits })
+	return hit
 }
 
 async function handle_clinvarVCF(req, res) {
@@ -1264,13 +1424,12 @@ async function handle_clinvarVCF(req, res) {
 			if (pos > c.len) throw 'pos out of bound'
 		}
 		let m
-		await utils.get_lines_tabix(
-			[
+		await utils.get_lines_bigfile({
+			args: [
 				g.clinvarVCF.file,
 				(g.clinvarVCF.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + pos + '-' + (pos + 1)
 			],
-			null,
-			line => {
+			callback: line => {
 				const [badinfok, mlst, altinvalid] = vcf.vcfparseline(line, g.clinvarVCF)
 				for (const m0 of mlst) {
 					if (m0.pos == pos && m0.ref == req.query.ref && m0.alt == req.query.alt) {
@@ -1279,7 +1438,7 @@ async function handle_clinvarVCF(req, res) {
 					}
 				}
 			}
-		)
+		})
 		if (!m) return res.send({})
 		const k = m.info[g.clinvarVCF.infokey]
 		const v = g.clinvarVCF.categories[k]
@@ -1303,8 +1462,6 @@ async function handle_dsdata(req, res) {
 
     to be totally replaced by mds, which can identify queries in a mds by querykeys
     */
-
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		if (!genomes[req.query.genome]) throw 'invalid genome'
 		if (!req.query.dsname) throw '.dsname missing'
@@ -1358,6 +1515,12 @@ async function handle_dsdata(req, res) {
 
 function handle_dsdata_makequery(ds, query, req) {
 	// query from ds.newconn
+
+	if (req.query.isoform) {
+		// quick fix!! deflect attacks from isoform parameter to avoid db query
+		if (genomes[req.query.genome].genomicNameRegexp.test(req.query.isoform)) return
+	}
+
 	const [sqlstr, values] = query.makequery(req.query)
 	if (!sqlstr) {
 		// when not using gm, will not query tables such as expression
@@ -1427,13 +1590,13 @@ function handle_dsdata_vcf(query, req) {
 }
 
 function handle_isoformlst(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		const g = genomes[req.query.genome]
 		if (!g) throw 'invalid genome'
-		if (!req.query.lst) return res.send({ lst: [] })
+		if (!Array.isArray(req.query.lst)) throw '.lst missing'
 		const lst = []
 		for (const isoform of req.query.lst) {
+			if (g.genomicNameRegexp.test(isoform)) continue
 			const tmp = g.genedb.getjsonbyisoform.all(isoform)
 			lst.push(
 				tmp.map(i => {
@@ -1451,13 +1614,6 @@ function handle_isoformlst(req, res) {
 }
 
 function handle_dbdata(req, res) {
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
-	log(req)
 	const query = () => {
 		const config = ch_dbtable.get(req.query.db)
 		let sql
@@ -1497,6 +1653,8 @@ function handle_dbdata(req, res) {
 			res.send({ rows: rows })
 		})
 	}
+
+	/*
 	// req.query.db db file path
 	if (ch_dbtable.has(req.query.db)) {
 		query()
@@ -1516,15 +1674,10 @@ function handle_dbdata(req, res) {
 			query()
 		})
 	}
+	*/
 }
 
 function handle_svmr(req, res) {
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
 	if (req.query.file) {
 		const [e, file, isurl] = fileurl(req)
 		if (e) {
@@ -1561,14 +1714,6 @@ async function handle_hicstat(req, res) {
 }
 
 function handle_hicdata(req, res) {
-	// juicebox straw
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
-	log(req)
 	const [e, file, isurl] = fileurl(req)
 	if (e) {
 		res.send({ error: 'illegal file name' })
@@ -1638,13 +1783,6 @@ function handle_putfile(req,res) {
 */
 
 function handle_dsgenestat(req, res) {
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
-	}
-	log(req)
 	const gn = req.query.genome
 	if (!gn) return res.send({ error: 'genome unspecified' })
 	const g = genomes[gn]
@@ -1757,7 +1895,6 @@ function handle_dsgenestat(req, res) {
 }
 
 function handle_study(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	if (illegalpath(req.query.file)) {
 		res.send({ error: 'Illegal file path' })
 		return
@@ -2086,7 +2223,6 @@ function handle_textfile(req, res) {
     .to
     	optional, if present, will get range [from to] 1-based, else will get the entire file
     */
-	if (reqbodyisinvalidjson(req, res)) return
 	if (!req.query.file) return res.send({ error: 'no file' })
 	if (illegalpath(req.query.file)) return res.send({ error: 'invalid file name' })
 
@@ -2127,7 +2263,6 @@ function handle_textfile(req, res) {
 }
 
 async function handle_urltextfile(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	const url = req.query.url
 	try {
 		const response = await got(url)
@@ -2177,9 +2312,6 @@ function handle_mdscnv(req, res) {
     ******* routes
 
     */
-
-	if (reqbodyisinvalidjson(req, res)) return
-
 	const [err, gn, ds, dsquery] = mds_query_arg_check(req.query)
 	if (err) return res.send({ error: err })
 
@@ -2473,7 +2605,6 @@ function handle_mdscnv(req, res) {
 }
 
 async function handle_mdsgenecount(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	log(req)
 	try {
 		const genome = genomes[req.query.genome]
@@ -2538,9 +2669,6 @@ async function handle_mdssvcnv(req, res) {
     .showonlycnvwithsv
 
     */
-
-	if (reqbodyisinvalidjson(req, res)) return
-
 	let gn, ds, dsquery
 
 	if (req.query.iscustom) {
@@ -2663,6 +2791,24 @@ async function handle_mdssvcnv(req, res) {
 				filteralleleattr[key] = v
 			} else {
 				// categorical
+				filteralleleattr[key] = v
+			}
+		}
+	}
+	/*
+    multi: vcf info field locus-level
+    */
+	let filterlocusattr
+	if (req.query.filterlocusattr) {
+		filterlocusattr = {}
+		for (const key in req.query.filterlocusattr) {
+			const v = req.query.filterlocusattr[key]
+			if (v.cutoffvalue != undefined) {
+				// numeric
+				filterlocusattr[key] = v
+			} else {
+				// categorical
+				filterlocusattr[key] = v
 			}
 		}
 	}
@@ -2729,6 +2875,7 @@ async function handle_mdssvcnv(req, res) {
 		dsquery,
 		req,
 		filteralleleattr,
+		filterlocusattr,
 		hiddendt,
 		hiddenmattr,
 		hiddensampleattr,
@@ -2989,26 +3136,24 @@ async function handle_mdssvcnv_rnabam_do(genes, chr, start, stop, dsquery, resul
 	}
 }
 
-function handle_mdssvcnv_rnabam_genereadcount(bam, chr, gene) {
+async function handle_mdssvcnv_rnabam_genereadcount(bam, chr, gene) {
 	/* get # of reads for single-end sequencing over exons
     .exonunion[
     	[ start, stop ], e2, ...
     ]
     */
-	return new Promise((resolve, reject) => {
-		const args = ['view', '-c', '-M', bam.url || bam.file]
-		for (const e of gene.exonunion) {
-			args.push((bam.nochr ? chr.replace('chr', '') : chr) + ':' + (e[0] + 1) + '-' + (e[1] + 1))
-		}
-		const sp = spawn(samtools, args, { cwd: bam.dir })
-		const out = [],
-			out2 = []
-		sp.stdout.on('data', i => out.push(i))
-		sp.stderr.on('data', i => out2.push(i))
-		sp.on('close', () => {
-			resolve(Number.parseInt(out.join('')))
-		})
+	const args = ['view', '-c', '-M', bam.url || bam.file]
+	for (const e of gene.exonunion) {
+		args.push((bam.nochr ? chr.replace('chr', '') : chr) + ':' + (e[0] + 1) + '-' + (e[1] + 1))
+	}
+	let line
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args,
+		dir: bam.dir,
+		callback: ln => (line = ln)
 	})
+	return Number.parseInt(line)
 }
 
 function handle_mdssvcnv_rnabam_genefragcount(bam, chr, gene) {
@@ -3058,7 +3203,10 @@ function handle_mdssvcnv_rnabam_binom_result(pfile, samples) {
 	return new Promise((resolve, reject) => {
 		fs.readFile(pfile, 'utf8', (err, data) => {
 			if (err) reject('cannot read binom pvalue')
-			if (!data) resolve()
+			if (!data) {
+				resolve()
+				return
+			}
 			for (const line of data.trim().split('\n')) {
 				const l = line.split('\t')
 				const tmp = l[0].split('.')
@@ -3472,6 +3620,7 @@ async function handle_mdssvcnv_vcf(
 	dsquery,
 	req,
 	filteralleleattr,
+	filterlocusattr,
 	hiddendt,
 	hiddenmattr,
 	hiddensampleattr,
@@ -3509,7 +3658,7 @@ async function handle_mdssvcnv_vcf(
 			thisvcf.info = info
 			thisvcf.format = format
 			thisvcf.samples = samples
-			thisvcf.nochr = await tabix_ifnochr(thisvcf.file, genome)
+			thisvcf.nochr = await utils.tabix_is_nochr(thisvcf.file, null, genome)
 			return handle_mdssvcnv_vcf_singlesample(
 				req,
 				ds,
@@ -3528,8 +3677,14 @@ async function handle_mdssvcnv_vcf(
 
 	let viewrangeupperlimit = vcfquery.viewrangeupperlimit
 	if (!viewrangeupperlimit && dsquery.iscustom) {
-		// no limit set for custom track, set a hard limit
-		viewrangeupperlimit = 2000000
+		// no limit set for custom track
+		if (exports.features.customMdsSingleSampleVcfNoRangeLimit) {
+			// this server has no range limit
+			viewrangeupperlimit = 0
+		} else {
+			// set a hard limit
+			viewrangeupperlimit = 2000000
+		}
 	}
 
 	if (req.query.singlesample) {
@@ -3625,6 +3780,12 @@ async function handle_mdssvcnv_vcf(
 														break
 													}
 												}
+											} else {
+												// categorical
+												if (attr.includes(value)) {
+													todrop = true
+													break
+												}
 											}
 										}
 										if (todrop) {
@@ -3632,8 +3793,62 @@ async function handle_mdssvcnv_vcf(
 											continue
 										}
 									}
+									if (filterlocusattr) {
+										// filter using allele INFO
 
-									// TODO filter with locus INFO
+										let todrop = false
+
+										for (const key in filterlocusattr) {
+											const _value = m.info[key]
+											if (_value == undefined) {
+												// no value
+												todrop = true
+												break
+											}
+											let value = _value
+											if (Array.isArray(_value)) {
+												value = _value[0]
+												if (value == '.') {
+													// no value
+													todrop = true
+													break
+												}
+											}
+
+											const attr = filterlocusattr[key]
+											if (attr.cutoffvalue != undefined) {
+												// is a numeric cutoff
+
+												if (!Number.isFinite(value)) {
+													// value of this mutation is not a number
+													todrop = true
+													break
+												}
+
+												if (attr.keeplowerthan) {
+													if (value > attr.cutoffvalue) {
+														todrop = true
+														break
+													}
+												} else {
+													if (value < attr.cutoffvalue) {
+														todrop = true
+														break
+													}
+												}
+											} else {
+												// categorical
+												if (attr.includes(value)) {
+													todrop = true
+													break
+												}
+											}
+										}
+										if (todrop) {
+											// drop this variant
+											continue
+										}
+									}
 
 									{
 										// for germline track:
@@ -4585,7 +4800,6 @@ function ase_testarg(q) {
 }
 
 async function handle_ase(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	const q = req.query
 
 	const fpkmrangelimit = 3000000
@@ -4741,12 +4955,15 @@ function handle_ase_binom_result(snps, pfile) {
 function handle_ase_binom_test(snpfile) {
 	const pfile = snpfile + '.pvalue'
 	return new Promise((resolve, reject) => {
-		const sp = spawn('Rscript', ['utils/binom.R', snpfile, pfile])
+		const sp = spawn('Rscript', [path.join(serverconfig.binpath, 'utils/binom.R'), snpfile, pfile])
 		sp.on('close', () => {
 			resolve(pfile)
 		})
 		sp.on('error', e => {
-			reject('cannot do binom test')
+			reject(`cannot do binom test: ${e}`)
+		})
+		sp.stderr.on('data', e => {
+			reject(`cannot do binom test: ${e}`)
 		})
 	})
 }
@@ -4831,39 +5048,34 @@ function handle_ase_generesult(snps, genes, q) {
 	return out
 }
 
-function handle_ase_bamcoverage1stpass(q, start, stop) {
+async function handle_ase_bamcoverage1stpass(q, start, stop) {
 	/*
     1st pass: get max
     */
 	let m = 0
-	return new Promise((resolve, reject) => {
-		const sp = spawn(
-			samtools,
-			[
-				'depth',
-				'-r',
-				(q.rnabam_nochr ? q.chr.replace('chr', '') : q.chr) + ':' + (start + 1) + '-' + (stop + 1),
-				q.rnabamurl || q.rnabamfile
-			],
-			{ cwd: q.rnabamurl_dir }
-		)
-
-		const rl = readline.createInterface({ input: sp.stdout })
-		rl.on('line', line => {
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args: [
+			'depth',
+			'-r',
+			(q.rnabam_nochr ? q.chr.replace('chr', '') : q.chr) + ':' + (start + 1) + '-' + (stop + 1),
+			'-g',
+			'DUP',
+			q.rnabamurl || q.rnabamfile
+		],
+		dir: q.rnabamurl_dir,
+		callback: line => {
 			const l = line.split('\t')
 			if (l.length != 3) return
 			const v = Number.parseInt(l[2])
 			if (!Number.isInteger(v)) return
 			m = Math.max(m, v)
-		})
-
-		sp.on('close', () => {
-			resolve(m)
-		})
+		}
 	})
+	return m
 }
 
-function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
+async function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
 	/*
     2nd pass: plot coverage bar at each covered bp
     */
@@ -4907,20 +5119,18 @@ function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
 		// line width is 1 by default
 	}
 
-	return new Promise((resolve, reject) => {
-		const sp = spawn(
-			samtools,
-			[
-				'depth',
-				'-r',
-				(q.rnabam_nochr ? q.chr.replace('chr', '') : q.chr) + ':' + (start + 1) + '-' + (stop + 1),
-				q.rnabamurl || q.rnabamfile
-			],
-			{ cwd: q.rnabamurl_dir }
-		)
-
-		const rl = readline.createInterface({ input: sp.stdout })
-		rl.on('line', line => {
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args: [
+			'depth',
+			'-r',
+			(q.rnabam_nochr ? q.chr.replace('chr', '') : q.chr) + ':' + (start + 1) + '-' + (stop + 1),
+			'-g',
+			'DUP',
+			q.rnabamurl || q.rnabamfile
+		],
+		dir: q.rnabamurl_dir,
+		callback: line => {
 			const l = line.split('\t')
 			if (l.length != 3) return
 
@@ -4950,18 +5160,15 @@ function handle_ase_bamcoverage2ndpass(q, start, stop, snps, rnamax) {
 				// matching a snp, record bar h
 				m.rnacount.h = h
 			}
-		})
-
-		sp.on('close', () => {
-			resolve({
-				canvas: canvas,
-				ctx: ctx,
-				isbp: isbp,
-				binpxw: binpxw,
-				binbpsize: binbpsize
-			})
-		})
+		}
 	})
+	return {
+		canvas,
+		ctx,
+		isbp,
+		binpxw,
+		binbpsize
+	}
 }
 
 function handle_ase_pileup_plotsnp(q, snps, searchstart, searchstop, renderstart, renderstop, plotter, rnamax) {
@@ -5140,7 +5347,6 @@ function mpileup_parsevcf_dp_ad(line) {
 }
 
 async function handle_bamnochr(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	const q = req.query
 	try {
 		const genome = genomes[q.genome]
@@ -5152,7 +5358,7 @@ async function handle_bamnochr(req, res) {
 			q.url_dir = await utils.cache_index(q.url, q.indexURL || q.url + '.bai')
 		}
 
-		const nochr = await bam_ifnochr(q.file || q.url, genome, q.url_dir)
+		const nochr = await utils.bam_ifnochr(q.file || q.url, genome, q.url_dir)
 		res.send({ nochr: nochr })
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -5168,7 +5374,7 @@ async function handle_ase_prepfiles(q, genome) {
 		q.rnabamurl_dir = await utils.cache_index(q.rnabamurl, q.rnabamindexURL || q.rnabamurl + '.bai')
 	}
 
-	q.rnabam_nochr = await bam_ifnochr(q.rnabamfile || q.rnabamurl, genome, q.rnabamurl_dir)
+	q.rnabam_nochr = await utils.bam_ifnochr(q.rnabamfile || q.rnabamurl, genome, q.rnabamurl_dir)
 
 	if (q.vcffile) {
 		q.vcffile = path.join(serverconfig.tpmasterdir, q.vcffile)
@@ -5176,7 +5382,7 @@ async function handle_ase_prepfiles(q, genome) {
 		if (!q.vcfurl) throw 'no file or url for vcf'
 		q.vcfurl_dir = await utils.cache_index(q.vcfurl, q.vcfindexURL)
 	}
-	q.vcf_nochr = await tabix_ifnochr(q.vcffile || q.vcfurl, genome, q.vcfurl_dir)
+	q.vcf_nochr = await utils.tabix_is_nochr(q.vcffile || q.vcfurl, q.vcfurl_dir, genome)
 }
 
 async function handle_ase_getsnps(q, genome, genes, searchstart, searchstop) {
@@ -5366,52 +5572,6 @@ function tabix_getvcfmeta(file, dir) {
 	})
 }
 
-function tabix_ifnochr(file, genome, dir) {
-	return new Promise((resolve, reject) => {
-		const sp = spawn(tabix, ['-l', file], { cwd: dir })
-		const out = [],
-			out2 = []
-		sp.stdout.on('data', i => out.push(i))
-		sp.stderr.on('data', i => out2.push(i))
-		sp.on('close', () => {
-			const err = out2.join('')
-			if (err) reject(err)
-			const str = out.join('').trim()
-			if (!str) reject('cannot list chr names')
-			resolve(common.contigNameNoChr(genome, str.split('\n')))
-		})
-	})
-}
-
-function bam_ifnochr(file, genome, dir) {
-	return new Promise((resolve, reject) => {
-		const sp = spawn(samtools, ['view', '-H', file], { cwd: dir })
-		const out = [],
-			out2 = []
-		sp.stdout.on('data', i => out.push(i))
-		sp.stderr.on('data', i => out2.push(i))
-		sp.on('close', () => {
-			const err = out2.join('')
-			if (err) reject(err)
-			const str = out.join('').trim()
-			if (!str) reject('cannot list bam header lines')
-			const chrlst = []
-			for (const line of str.split('\n')) {
-				if (!line.startsWith('@SQ')) continue
-				const tmp = line.split('\t')[1]
-				if (!tmp) reject('2nd field missing from @SQ line')
-				const l = tmp.split(':')
-				if (l[0] != 'SN') reject('@SQ line 2nd field is not "SN" but ' + l[0])
-				if (!l[1]) reject('@SQ line no value for SN')
-				chrlst.push(l[1])
-			}
-
-			resolve(common.contigNameNoChr(genome, chrlst))
-		})
-	})
-}
-exports.bam_ifnochr = bam_ifnochr
-
 function get_rank_from_sortedarray(v, lst) {
 	// [ { value: v } ]
 	// lst must be sorted ascending
@@ -5435,8 +5595,6 @@ function handle_mdsexpressionrank(req, res) {
     cohort: for official, defined by req.query.attributes
             for custom, will use all available samples other than this one
     */
-	if (reqbodyisinvalidjson(req, res)) return
-
 	let gn,
 		ds,
 		dsquery,
@@ -5725,10 +5883,10 @@ async function mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery) {
 		const dir = _c.file ? null : await utils.cache_index(_c.url, _c.indexURL)
 
 		const values = []
-		await utils.get_lines_tabix(
-			[_c.file ? path.join(serverconfig.tpmasterdir, _c.file) : _c.url, q.chr + ':' + q.start + '-' + q.stop],
+		await utils.get_lines_bigfile({
+			args: [_c.file ? path.join(serverconfig.tpmasterdir, _c.file) : _c.url, q.chr + ':' + q.start + '-' + q.stop],
 			dir,
-			line => {
+			callback: line => {
 				const l = line.split('\t')
 				let j
 				try {
@@ -5744,7 +5902,7 @@ async function mdssvcnv_exit_getexpression4gene(req, res, gn, ds, dsquery) {
 					values.push(j)
 				}
 			}
-		)
+		})
 
 		// convert to rank
 		const sample2rank = mdssvcnv_exit_getexpression4gene_rank(ds, dsquery, values)
@@ -5944,8 +6102,6 @@ async function handle_mdsgenevalueonesample(req, res) {
 .url
 .sample
 */
-
-	if (reqbodyisinvalidjson(req, res)) return
 	const q = req.query
 
 	try {
@@ -5977,13 +6133,13 @@ async function handle_mdsgenevalueonesample(req, res) {
 		let nodata = true
 		for (const gene of q.genes) {
 			let v
-			await utils.get_lines_tabix(
-				[
+			await utils.get_lines_bigfile({
+				args: [
 					dsquery.file ? path.join(serverconfig.tpmasterdir, dsquery.file) : dsquery.url,
 					gene.chr + ':' + gene.start + '-' + gene.stop
 				],
 				dir,
-				line => {
+				callback: line => {
 					const l = line.split('\t')
 					if (!l[3]) return
 					const j = JSON.parse(l[3])
@@ -5991,7 +6147,7 @@ async function handle_mdsgenevalueonesample(req, res) {
 						v = j.value
 					}
 				}
-			)
+			})
 			if (Number.isFinite(v)) {
 				gene2value[gene.gene] = v
 				nodata = false
@@ -6274,7 +6430,6 @@ async function handle_mdssamplescatterplot(req, res) {
 }
 
 function handle_mdssamplesignature(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		const q = req.query
 		if (!q.sample) throw '.sample missing'
@@ -6360,7 +6515,6 @@ async function mds_genenumeric_querygene(query, dir, chr, start, stop, gene) {
 }
 
 async function handle_isoformbycoord(req, res) {
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		const genome = genomes[req.query.genome]
 		if (!genome) throw 'invalid genome'
@@ -6417,8 +6571,6 @@ function handle_samplematrix(req, res) {
     for singular feature, the datatype & file format is implied
     for feature spanning multiple data types, will need to query multiple data tracks, each track must be identified with "type" e.g. common.tkt.mdsvcf
     */
-
-	if (reqbodyisinvalidjson(req, res)) return
 
 	Promise.resolve()
 		.then(() => {
@@ -7234,7 +7386,6 @@ async function handle_vcfheader(req, res) {
 
 async function handle_vcf(req, res) {
 	// single vcf
-	if (reqbodyisinvalidjson(req, res)) return
 	try {
 		const [e, file, isurl] = fileurl(req)
 		if (e) throw e
@@ -7242,8 +7393,10 @@ async function handle_vcf(req, res) {
 		if (!req.query.rglst) throw 'rglst missing'
 		const lines = []
 		for (const r of req.query.rglst) {
-			await utils.get_lines_tabix([file, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
-				lines.push(line)
+			await utils.get_lines_bigfile({
+				args: [file, r.chr + ':' + r.start + '-' + r.stop],
+				dir,
+				callback: line => lines.push(line)
 			})
 		}
 		res.send({ linestr: lines.join('\n') })
@@ -7253,48 +7406,24 @@ async function handle_vcf(req, res) {
 	}
 }
 
-function handle_translategm(req, res) {
+async function handle_translategm(req, res) {
 	try {
-		req.query = JSON.parse(req.body)
+		const g = genomes[req.query.genome]
+		if (!g) throw 'invalid genome'
+		const gm = req.query.gm
+		if (!gm) throw 'missing gm{}'
+		if (!gm.chr) throw 'gm.chr missing'
+		if (!gm.start) throw 'gm.start missing'
+		if (!Number.isInteger(gm.start)) throw 'gm.start not integer'
+		if (!gm.stop) throw 'gm.stop missing'
+		if (!Number.isInteger(gm.stop)) throw 'gm.stop not integer'
+		const seq = await utils.get_fasta(g, gm.chr + ':' + (gm.start + 1) + '-' + gm.stop)
+		const frame = common.fasta2gmframecheck(gm, seq)
+		res.send({ frame })
 	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return
+		res.send({ error: e.message || e })
+		if (e.stack) console.log(e.stack)
 	}
-	log(req)
-	if (!genomes[req.query.genome]) return res.send({ error: 'invalid genome' })
-	if (!req.query.gm) return res.send({ error: 'missing gm object' })
-	if (!req.query.gm.chr) return res.send({ error: 'gm.chr missing' })
-	if (!req.query.gm.start) return res.send({ error: 'gm.start missing' })
-	if (!Number.isInteger(req.query.gm.start)) return res.send({ error: 'gm.start not integer' })
-	if (!req.query.gm.stop) return res.send({ error: 'gm.stop missing' })
-	if (!Number.isInteger(req.query.gm.stop)) return res.send({ error: 'gm.stop not integer' })
-
-	const genomefile = genomes[req.query.genome].genomefile
-	const rawout = []
-	const rawerr = []
-	const ps = spawn(samtools, [
-		'faidx',
-		genomefile,
-		req.query.gm.chr + ':' + (req.query.gm.start + 1) + '-' + req.query.gm.stop
-	])
-	ps.stdout.on('data', i => rawout.push(i))
-	ps.stderr.on('data', i => rawerr.push(i))
-	ps.on('close', code => {
-		const err = rawerr.join('')
-		if (err) {
-			res.send({ error: 'error getting sequence' })
-			return
-		}
-		const fasta = rawout.join('').trim()
-		if (fasta == '') {
-			res.send({ error: 'no seqeuence retrieved' })
-			return
-		}
-
-		const thisframe = common.fasta2gmframecheck(req.query.gm, fasta)
-
-		res.send({ frame: thisframe })
-	})
 }
 
 /****************************************************************************************************/
@@ -7319,21 +7448,6 @@ function validate_tabixfile(file) {
 }
 
 var binOffsets = [512 + 64 + 8 + 1, 64 + 8 + 1, 8 + 1, 1, 0]
-
-function getbin(start, stop) {
-	var startbin = start >> 17,
-		stopbin = stop >> 17,
-		bin = null
-	for (var i = 0; i < binOffsets.length; i++) {
-		if (startbin == stopbin) {
-			bin = binOffsets[i] + startbin
-			break
-		}
-		startbin >>= 3
-		stopbin >>= 3
-	}
-	return bin
-}
 
 function local_init_bulk_flag() {
 	var flag = common.init_bulk_flag()
@@ -7485,6 +7599,7 @@ function illegalpath(s) {
 	if (s.match(/(\<script|script\>)/i)) return true // avoid the potential for parsing injected code in client side error message
 	return false
 }
+exports.illegalpath = illegalpath
 
 function fileurl(req) {
 	// must use it to scrutinize every requested file path
@@ -7507,34 +7622,6 @@ function fileurl(req) {
 	return [null, file, isurl]
 }
 exports.fileurl = fileurl
-
-function reqbodyisinvalidjson(req, res) {
-	try {
-		req.query = JSON.parse(req.body)
-	} catch (e) {
-		res.send({ error: 'invalid request body' })
-		return true
-	}
-	log(req)
-	return false
-}
-exports.reqbodyisinvalidjson = reqbodyisinvalidjson
-
-function log(req) {
-	const j = {}
-	for (const k in req.query) {
-		if (k != 'jwt') j[k] = req.query[k]
-	}
-	console.log(
-		'%s\t%s\t%s\t%s',
-		url.parse(req.url).pathname,
-		new Date(),
-		req.header('x-forwarded-for') || req.connection.remoteAddress,
-		JSON.stringify(j)
-	)
-}
-
-exports.log = log
 
 function downloadFile(url, tofile, cb) {
 	const f = fs.createWriteStream(tofile)
@@ -7588,13 +7675,17 @@ async function pp_init() {
 	try {
 		await fs.promises.stat(serverconfig.tpmasterdir)
 	} catch (e) {
-		/* dir is inaccessible for some reason
-		do not validate any genome/dataset, allow the server process to boot
-		*/
-		console.log('Error with ' + serverconfig.tpmasterdir + ': ' + e.code)
-		return
+		/* dir is inaccessible for some reason */
+		const message = 'Error with ' + serverconfig.tpmasterdir + ': ' + e.code
+		if (process.argv[2] == 'validate') {
+			throw message
+		} else {
+			// allow the server process to boot
+			console.log('\n!!! ' + message + '\n')
+			return
+		}
 	}
-	serverconfig.gdcbamsecret = Math.random().toString()
+
 	codedate = get_codedate()
 	launchdate = Date(Date.now())
 		.toString()
@@ -7613,6 +7704,14 @@ async function pp_init() {
 	if (!serverconfig.tpmasterdir) throw '.tpmasterdir missing'
 	if (!serverconfig.cachedir) throw '.cachedir missing'
 
+	// create sub directories under cachedir, and register path in serverconfig
+	// to ensure temp files saved in previous server session are accessible in current session
+	// must use consistent dir name but not random dir name that changes from last server boot
+	serverconfig.cachedir_massSession = await mayCreateSubdirInCache('massSession')
+	serverconfig.cachedir_snpgt = await mayCreateSubdirInCache('snpgt')
+	serverconfig.cachedir_bam = await mayCreateSubdirInCache('bam')
+	serverconfig.cachedir_genome = await mayCreateSubdirInCache('genome')
+
 	if (!serverconfig.genomes) throw '.genomes[] missing'
 	if (!Array.isArray(serverconfig.genomes)) throw '.genomes[] not array'
 
@@ -7620,13 +7719,30 @@ async function pp_init() {
 		if (!g.name) throw '.name missing from a genome: ' + JSON.stringify(g)
 		if (!g.file) throw '.file missing from genome ' + g.name
 
+		/*
+			When using a Docker container, the mounted app directory
+			may have an optional genome directory, which if present
+			will be symlinked to the app directory and potentially override any
+			similarly named genome js file that are part of the standard
+			Proteinpaint packaged files[] 
+		*/
 		const overrideFile = path.join(process.cwd(), g.file)
+
+		/* g is the object from serverconfig.json, for instance-specific customizations of this genome
+		g2 is the standard-issue obj loaded from the js file
+		settings in g will modify g2
+		g2 is registered in the global "genomes"
+		*/
 		const g2 = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : g.file)
+		genomes[g.name] = g2
 
 		if (!g2.genomefile) throw '.genomefile missing from .js file of genome ' + g.name
 		g2.genomefile = path.join(serverconfig.tpmasterdir, g2.genomefile)
 
-		genomes[g.name] = g2
+		// for testing if gene/isoform/chr/snp names have only allowed characters
+		// test to true if name has extra characters which could be attack strings
+		// allow for genome-specific pattern setting, otherwise default is used
+		if (!g2.genomicNameRegexp) g2.genomicNameRegexp = /[^a-zA-Z0-9.:_-]/
 
 		if (!g2.tracks) {
 			g2.tracks = [] // must always have .tracks even if empty
@@ -7679,19 +7795,9 @@ async function pp_init() {
 		const g = genomes[genomename]
 		if (!g.majorchr) throw genomename + ': majorchr missing'
 		if (!g.defaultcoord) throw genomename + ': defaultcoord missing'
-		// test samtools and genomefile
-		const cmd =
-			samtools +
-			' faidx ' +
-			g.genomefile +
-			' ' +
-			g.defaultcoord.chr +
-			':' +
-			g.defaultcoord.start +
-			'-' +
-			(g.defaultcoord.start + 1)
 
-		child_process.execSync(cmd)
+		// test samtools and genomefile
+		await utils.get_fasta(g, g.defaultcoord.chr + ':' + g.defaultcoord.start + '-' + (g.defaultcoord.start + 1))
 
 		if (!g.tracks) {
 			g.tracks = []
@@ -7780,18 +7886,9 @@ async function pp_init() {
 		}
 
 		if (g.snp) {
-			if (!g.snp.dbfile) throw genomename + '.snp: missing sqlite dbfile'
-			if (!g.snp.statement_getbyname) throw genomename + '.snp: missing statement_getbyname'
-			if (!g.snp.statement_getbycoord) throw genomename + '.snp: missing statement_getbycoord'
-
-			let db
-			try {
-				db = utils.connect_db(g.snp.dbfile)
-			} catch (e) {
-				throw 'Error with ' + g.snp.dbfile + ': ' + e
-			}
-			g.snp.getbyname = db.prepare(g.snp.statement_getbyname)
-			g.snp.getbycoord = db.prepare(g.snp.statement_getbycoord)
+			if (!g.snp.bigbedfile) throw genomename + '.snp: missing bigBed file'
+			g.snp.bigbedfile = path.join(serverconfig.tpmasterdir, g.snp.bigbedfile)
+			await utils.file_is_readable(g.snp.bigbedfile)
 		}
 
 		if (g.clinvarVCF) {
@@ -7888,7 +7985,13 @@ async function pp_init() {
 			if (g.datasets[d.name]) throw genomename + ' has duplicating dataset name: ' + d.name
 			if (!d.jsfile) throw 'jsfile not available for dataset ' + d.name + ' of ' + genomename
 
-			// FIXME document the purpose of being able to use override file
+			/*
+				When using a Docker container, the mounted app directory
+				may have an optional dataset directory, which if present
+				will be symlinked to the app directory and potentially override any
+				similarly named dataset js file that are part of the standard
+				Proteinpaint packaged files[] 
+			*/
 			const overrideFile = path.join(process.cwd(), d.jsfile)
 			const _ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
 			const ds = typeof _ds == 'function' ? _ds(common) : _ds
@@ -8014,6 +8117,24 @@ async function pp_init() {
 
 		delete g.rawdslst
 	}
+}
+
+async function mayCreateSubdirInCache(subdir) {
+	const dir = path.join(serverconfig.cachedir, subdir)
+	try {
+		await fs.promises.stat(dir)
+	} catch (e) {
+		if (e.code == 'ENOENT') {
+			try {
+				await fs.promises.mkdir(dir)
+			} catch (e) {
+				throw 'cannot make dir'
+			}
+		} else {
+			throw 'error stating dir'
+		}
+	}
+	return dir
 }
 
 function get_codedate() {
@@ -8208,7 +8329,7 @@ async function mds_init(ds, genome, _servconfig) {
 	}
 
 	if (ds.cohort && ds.cohort.db && ds.cohort.termdb) {
-		await mds2_init.init_db(ds, genome)
+		await mds2_init.init_db(ds, app, basepath)
 	}
 
 	if (ds.cohort && ds.cohort.files) {
@@ -8597,7 +8718,7 @@ async function mds_init(ds, genome, _servconfig) {
 				} else if (query.type == common.tkt.mdsvcf) {
 					// snvindel
 
-					const err = mds_init_mdsvcf(query, ds, genome)
+					const err = await mds_init_mdsvcf(query, ds, genome)
 					if (err) throw querykey + ' (vcf) error: ' + err
 				} else {
 					throw 'unknown track type for a query: ' + query.type + ' ' + querykey
@@ -9078,7 +9199,7 @@ function mds_init_genenumeric(query, ds, genome) {
 	}
 }
 
-function mds_init_mdsvcf(query, ds, genome) {
+async function mds_init_mdsvcf(query, ds, genome) {
 	/*
     mixture of snv/indel (vcf), ITD, and others
     that are not either cnv or sv
@@ -9104,9 +9225,9 @@ function mds_init_mdsvcf(query, ds, genome) {
 		if (tk.type == common.mdsvcftype.vcf) {
 			const arg = { cwd: tk.cwd, encoding: 'utf8' }
 
-			const tmp = child_process.execSync(tabix + ' -H ' + _file, arg).trim()
-			if (!tmp) return 'no meta/header lines for ' + _file
-			const [info, format, samples, errs] = vcf.vcfparsemeta(tmp.split('\n'))
+			const tmp = await utils.get_header_tabix(_file, tk.cwd)
+			if (tmp.length == 0) return 'no meta/header lines for ' + _file
+			const [info, format, samples, errs] = vcf.vcfparsemeta(tmp)
 			if (errs) return 'error parsing vcf meta for ' + _file + ': ' + errs.join('\n')
 
 			if (samples.length == 0) return 'vcf file has no sample: ' + _file
@@ -9147,9 +9268,16 @@ function mds_init_mdsvcf(query, ds, genome) {
 		}
 
 		{
-			const tmp = child_process.execSync(tabix + ' -l ' + _file, { encoding: 'utf8' }).trim()
-			if (tmp == '') return 'no chr from ' + _file
-			tk.nochr = common.contigNameNoChr(genome, tmp.split('\n'))
+			const tmp = []
+			await utils.get_lines_bigfile({
+				args: ['-l', _file],
+				dir: tk.cwd,
+				callback: line => {
+					tmp.push(line)
+				}
+			})
+			if (tmp.length == 0) return 'no chr from ' + _file
+			tk.nochr = common.contigNameNoChr(genome, tmp)
 		}
 
 		console.log(

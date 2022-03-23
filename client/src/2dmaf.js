@@ -15,6 +15,7 @@ import {
 } from 'd3-shape'
 import * as common from '../shared/common'
 import Anchors from './2dmaf.anchors'
+import { renderSandboxFormDiv } from './dom/sandbox'
 
 /*
 input file/data is 2dmaf format of 1 pair or multiple pairs
@@ -48,8 +49,7 @@ const sharedFilters = {
 
 export function d2mafui(genomes, holder) {
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined)
-		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
 		pane.header.text('2DMAF: mutant allele fraction plot between a pair of samples')
@@ -64,9 +64,7 @@ export function d2mafui(genomes, holder) {
 				'<li>To define samples differently than "Diagnosis/Relapse", <a href=https://plus.google.com/+XinZhou_s/posts/WqBVvmd3wYR target=_blank>see how</a>.</li>' +
 				'</ul>'
 		)
-	inputdiv
-		.append('p')
-		.html('<a href=https://www.dropbox.com/s/9mc35sz9obkvaz5/2dmaf.txt?dl=0 target=_blank>Example file</a>')
+	inputdiv.append('p').html('<a href=https://pecan.stjude.cloud/static/hg19/2dmaf.txt target=_blank>Example file</a>')
 	function cmt(t, red) {
 		saydiv.style('color', red ? 'red' : 'black').html(t)
 	}

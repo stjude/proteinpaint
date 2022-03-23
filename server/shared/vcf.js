@@ -1,4 +1,8 @@
-import * as common from './common'
+import { mclass } from './common'
+import { dissect_INFO } from './vcf.info'
+import { parse_CSQ } from './vcf.csq'
+import { parse_ANN } from './vcf.ann'
+import { getVariantType } from './vcf.type'
 
 /*
 Only for parsing vcf files
@@ -11,8 +15,8 @@ shared between client-server
 const getallelename = new RegExp(/<(.+)>/)
 
 const mclasslabel2key = {}
-for (const k in common.mclass) {
-	mclasslabel2key[common.mclass[k].label.toUpperCase()] = k
+for (const k in mclass) {
+	mclasslabel2key[mclass[k].label.toUpperCase()] = k
 }
 
 export function vcfparsemeta(lines) {
@@ -249,6 +253,7 @@ export function vcfparseline(line, vcf) {
 			}
 		}
 		if (!m2.issymbolicallele && m2.alt != 'NON_REF') {
+			m2.type = getVariantType(m2.ref, m2.alt)
 			/*
 			// valid alt allele, apply Dr. J's cool method
 			const [p,ref,alt]=correctRefAlt(m2.pos, m2.ref, m2.alt)
@@ -256,27 +261,6 @@ export function vcfparseline(line, vcf) {
 			m2.ref=ref
 			m2.alt=alt
 			*/
-
-			// assign type
-			if (m2.ref.length == 1 && m2.alt.length == 1) {
-				// both alleles length of 1
-				if (m2.alt == '.') {
-					// alt is missing
-					m2.type = common.mclassdeletion
-				} else {
-					// snv
-					m2.type = common.mclasssnv
-				}
-			} else if (m2.ref.length == m2.alt.length) {
-				m2.type = common.mclassmnv
-			} else if (m2.ref.length < m2.alt.length) {
-				// FIXME only when empty length of one allele
-				m2.type = common.mclassinsertion
-			} else if (m2.ref.length > m2.alt.length) {
-				m2.type = common.mclassdeletion
-			} else {
-				m2.type = common.mclassnonstandard
-			}
 		}
 		mlst.push(m2)
 	}
@@ -642,198 +626,4 @@ function parse_INFO(tmp, m, vcf) {
 		}
 	}
 	return badinfokeys
-}
-
-function parse_CSQ(str, header, m) {
-	if (!header) {
-		return null
-	}
-	for (const thisannotation of str.split(',')) {
-		const lst = thisannotation.replace(/&/g, ',').split('|')
-
-		const o = {}
-
-		for (let i = 0; i < header.length; i++) {
-			if (lst[i]) {
-				o[header[i].name] = lst[i]
-			}
-		}
-		if (!o.Allele) {
-			continue
-		}
-		let allele = null
-		for (const a of m.alleles) {
-			if (a.allele_original == o.Allele) {
-				allele = a
-				break
-			}
-		}
-		if (!allele) {
-			if (o.Allele == '-') {
-				// deletion
-				if (m.alleles.length == 1) {
-					allele = m.alleles[0]
-				}
-			} else {
-				for (const a of m.alleles) {
-					if (a.allele_original.substr(1) == o.Allele) {
-						// insertion, without first padding base
-						allele = a
-						break
-					}
-				}
-			}
-			if (!allele) {
-				// cannot match to allele!!!
-				continue
-			}
-		}
-		if (!allele.csq) {
-			allele.csq = []
-		}
-		allele.csq.push(o)
-
-		// gene
-		o._gene = o.SYMBOL || o.Gene
-
-		// isoform
-		if (o.Feature_type && o.Feature_type == 'Transcript') {
-			o._isoform = o.Feature.split('.')[0] // remove version
-		} else {
-			o._isoform = o._gene
-		}
-
-		// class
-		if (o.Consequence) {
-			const [dt, cls, rank] = common.vepinfo(o.Consequence)
-			o._dt = dt
-			o._class = cls
-			o._csqrank = rank
-		} else {
-			// FIXME
-			o._dt = common.dtsnvindel
-			o._class = common.mclassnonstandard
-		}
-		// mname
-		if (o.HGVSp) {
-			o._mname = decodeURIComponent(o.HGVSp.substr(o.HGVSp.indexOf(':') + 1))
-		} else if (o.Protein_position && o.Amino_acids) {
-			o._mname = decodeURIComponent(o.Protein_position + o.Amino_acids)
-		} else if (o.HGVSc) {
-			o._mname = o.HGVSc.substr(o.HGVSc.indexOf(':') + 1)
-		} else if (o.Existing_variation) {
-			o._name = o.Existing_variation
-		} else {
-		}
-	}
-	return true
-}
-
-function parse_ANN(str, header, m) {
-	// snpEff
-	if (!header) {
-		return null
-	}
-	for (const thisannotation of str.split(',')) {
-		const lst = thisannotation.replace(/&/g, ',').split('|')
-
-		const o = {}
-
-		for (let i = 0; i < header.length; i++) {
-			if (lst[i]) {
-				o[header[i].name] = lst[i]
-			}
-		}
-		if (!o.Allele) {
-			continue
-		}
-		let allele = null
-		for (const a of m.alleles) {
-			if (a.allele == o.Allele) {
-				allele = a
-				break
-			}
-		}
-		if (!allele) {
-			// cannot match to allele!!!
-			continue
-		}
-		if (!allele.ann) {
-			allele.ann = []
-		}
-		allele.ann.push(o)
-		o._gene = o.Gene_Name
-		// isoform
-		if (o.Feature_Type && o.Feature_Type == 'transcript' && o.Feature_ID) {
-			o._isoform = o.Feature_ID.split('.')[0]
-		}
-		// class
-		if (o.Annotation) {
-			const [dt, cls, rank] = common.vepinfo(o.Annotation)
-			o._dt = dt
-			o._class = cls
-			o._csqrank = rank
-		} else {
-			// FIXME
-			o._dt = common.dtsnvindel
-			o._class = common.mclassnonstandard
-		}
-		// mname
-		if (o['HGVS.p']) {
-			//o._mname=decodeURIComponent(o.HGVSp.substr(o.HGVSp.indexOf(':')+1))
-			o._mname = o['HGVS.p']
-		} else if (o['HGVS.c']) {
-			o._mname = o['HGVS.c']
-		} else {
-		}
-	}
-	return true
-}
-
-function dissect_INFO(str) {
-	// cannot simply slice by /[;=]/, but read char by char
-	// case  CLNVI=Breast_Cancer_Information_Core__(BRCA2):745-4&base_change=C_to_G;
-	// case  k1=v1;DB;k2=v2;
-
-	//let findequal=true
-	let findsemicolon = false
-	let findequalorsemicolon = true
-
-	let i = 0
-	let idx = 0
-
-	const k2v = {}
-	let lastkey
-
-	while (i < str.length) {
-		const c = str[i]
-		if (findequalorsemicolon) {
-			if (c == '=') {
-				findsemicolon = true
-				findequalorsemicolon = false
-				lastkey = str.substring(idx, i)
-				idx = i + 1
-			} else if (c == ';') {
-				// should be a flag
-				k2v[str.substring(idx, i)] = 1
-				idx = i + 1
-			}
-		} else if (findsemicolon && c == ';') {
-			findequalorsemicolon = true
-			findsemicolon = false
-			k2v[lastkey] = str.substring(idx, i)
-			lastkey = null
-			idx = i + 1
-		}
-		i++
-	}
-
-	const remainstr = str.substr(idx, i)
-	if (lastkey) {
-		k2v[lastkey] = remainstr
-	} else {
-		k2v[remainstr] = 1
-	}
-
-	return k2v
 }

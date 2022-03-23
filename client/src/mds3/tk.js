@@ -1,8 +1,8 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import * as common from '../../shared/common'
-import * as client from '../client'
+import { gmmode } from '../client'
+import { dofetch3 } from '../common/dofetch'
 import { makeTk } from './makeTk'
 import { update as update_legend } from './legend'
 import { may_render_skewer } from './skewer'
@@ -33,8 +33,15 @@ export async function loadTk(tk, block) {
 			await makeTk(tk, block)
 		}
 
-		const par = get_parameter(tk, block)
-		const data = await client.dofetch2('mds3?' + par)
+		let data
+		if (tk.custom_variants) {
+			// has custom data on client side, no need to request from server
+			data = filter_custom_variants(tk, block)
+		} else {
+			// request data from server, either official or custom sources
+			const [par, headers] = get_parameter(tk, block)
+			data = await dofetch3('mds3?' + par, { headers })
+		}
 		if (data.error) throw data.error
 
 		if (tk.uninitialized) {
@@ -84,16 +91,12 @@ function get_parameter(tk, block) {
 	// to get data for current view range
 
 	const par = ['genome=' + block.genome.name]
+	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	// instructs server to return data types associated with tracks
 	// including skewer or non-skewer
 	par.push('forTrack=1')
 
-	if (
-		tk.uninitialized ||
-		!block.usegm ||
-		block.gmmode == client.gmmode.genomic ||
-		block.gmmodepast == client.gmmode.genomic
-	) {
+	if (tk.uninitialized || !block.usegm || block.gmmode == gmmode.genomic || block.gmmodepast == gmmode.genomic) {
 		// assumption is that api will return the same amount of variants for different mode (protein/exon/splicerna)
 		// so there's no need to re-request data in these modes (but not genomic mode)
 		if (tk.mds.has_skewer) {
@@ -118,10 +121,7 @@ function get_parameter(tk, block) {
 			// XXX any other possibilities from gdc portal
 			par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
 		}
-		if (tk.token) {
-			// quick fix!!!
-			par.push('token=' + tk.token)
-		}
+		if (tk.token) headers['X-Auth-Token'] = tk.token
 	} else {
 		// in gmmode and not first time loading the track,
 		// do not request skewer data as all skewer data has already been loaded for current isoform
@@ -143,7 +143,7 @@ function get_parameter(tk, block) {
 		par.push('hiddenmclasslst=' + [...tk.hiddenmclass].join(','))
 	}
 	//par.push('samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp))
-	return par.join('&')
+	return [par.join('&'), headers]
 }
 
 export function rangequery_rglst(tk, block, par) {
@@ -167,7 +167,7 @@ export function rangequery_rglst(tk, block, par) {
 		}
 		rglst.push(r)
 		par.push('isoform=' + block.usegm.isoform)
-		if (block.gmmode == client.gmmode.genomic) {
+		if (block.gmmode == gmmode.genomic) {
 			// TODO if can delete the isoform parameter to simply make the query by genomic pos
 			par.push('atgenomic=1')
 		}
@@ -249,4 +249,40 @@ by info_fields[] and variantcase_fields[]
 			return lst
 		}, [])
 	}
+}
+
+function filter_custom_variants(tk, block) {
+	// return the same data{} object as server queries
+	const data = {
+		skewer: [],
+		mclass2count: {}
+	}
+
+	// must exclude out-of-range items, otherwise numericmode rendering will break
+	let bbstart = null,
+		bbstop
+	for (let i = block.startidx; i <= block.stopidx; i++) {
+		if (bbstart == null) {
+			bbstart = block.rglst[i].start
+			bbstop = block.rglst[i].stop
+		} else {
+			bbstart = Math.min(bbstart, block.rglst[i].start)
+			bbstop = Math.max(bbstop, block.rglst[i].stop)
+		}
+	}
+	for (const m of tk.custom_variants) {
+		if (m.chr != block.rglst[0].chr) continue // may not work for subpanel
+		if (m.pos <= bbstart || m.pos >= bbstop) continue
+		if (!m.class) {
+			// should this be done?
+			m.class = 'X'
+		}
+
+		// for hidden mclass, must count it so the legend will be able to show the hidden item
+		data.mclass2count[m.class] = 1 + (data.mclass2count[m.class] || 0)
+		if (tk.legend.mclass.hiddenvalues.has(m.class)) continue
+
+		data.skewer.push(m)
+	}
+	return data
 }

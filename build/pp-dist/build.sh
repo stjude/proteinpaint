@@ -6,14 +6,11 @@ set -e
 # ARGUMENTS
 ###############
 
-usage() {
-	echo "Usage:
-
+USAGE="Usage:
 	./build/pp-dist/build.sh [-r]
 
 	-r REV: git revision to checkout, if empty will use the current code state
-	"
-}
+"
 
 REV=latest
 while getopts "r:h:" opt; do
@@ -22,7 +19,7 @@ while getopts "r:h:" opt; do
 		REV=${OPTARG}
 		;;
 	h)
-		usage
+		echo $USAGE
 		exit 1
 		;;
 	esac
@@ -73,5 +70,8 @@ mv package.json.bak package.json
 # get the current tag
 TAG="$(node -p "require('./package.json').version")"
 echo "building ppbase:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile --tag ppbase:$REV .
+docker build --file ./build/Dockerfile --target ppbase --tag ppbase:$REV .
+echo "building pprust:$REV image, package version=$TAG"
+docker build --file ./build/Dockerfile --target pprust --tag pprust:$REV .
+echo "building ppdist:$REV image, package version=$TAG"
 docker build --file ./build/pp-dist/Dockerfile --tag ppdist:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .

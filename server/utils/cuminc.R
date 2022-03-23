@@ -1,20 +1,111 @@
-# Rscript cuminc.R 0.3_0.4_0.1_0.2 1_1_0_0
+#################################
+# Cumulative incidence analysis #
+#################################
 
-#library(survival) #for survfit function
-suppressPackageStartupMessages(library(cmprsk)) #for cuminc function
-args <- commandArgs(TRUE)
+#########
+# Usage #
+#########
 
-year_to_events <- as.numeric(unlist(strsplit(args[1], split = "_")))
-events <- as.integer(unlist(strsplit(args[2], split = "_")))
+# Usage: Rscript cuminc.R < jsonIn > jsonOut
 
-ci_output <- cuminc(ftime=year_to_events, fstatus=events, cencode = 0)
+# Input data is streamed as JSON from standard input and cumulative incidence results are streamed as JSON to standard output.
 
-print (paste("case_time:",toString(ci_output[[1]]$time)))
-print (paste("case_est:", toString(ci_output[[1]]$est)))
+# Input JSON specifications:
+# [
+#   {
+#     time: time to event
+#     event: event code (0 = censored, 1 = event)
+#     series: series ID
+#   }
+# ]
+#
+# Output JSON specifications:
+# {
+#   "estimates": {
+#     <series>: [
+#       {
+#         "time": time when estimate is computed
+#         "est": estimated cumulative incidence value
+#         "var": variance of cumulative incidence value
+#         "low": 95% confidence interval - lower bound
+#         "up": 95% confidence intervals - upper bound
+#       }
+#     ]
+#   "tests": [
+#     {
+#       "series1": first series of test,
+#       "series2": second series of test,
+#       "pvalue": p-value of test
+#     }
+#   ]
+# }
 
-low_case <- ci_output[[1]]$est-1.96*sqrt(ci_output[[1]]$var)
-low_case [low_case < 0]  <- 0
-print (paste("low_case:", toString(low_case)))
-up_case  <- ci_output[[1]]$est+1.96*sqrt(ci_output[[1]]$var)
-up_case [up_case < 0]  <- 0
-print (paste("up_case:", toString(up_case)))
+
+########
+# Code #
+########
+
+library(jsonlite)
+suppressPackageStartupMessages(library(cmprsk))
+
+# function to compute 95% confidence intervals
+compute_ci <- function(res) {
+  low <- res$est - (1.96 * sqrt(res$var))
+  low[low < 0] <- 0
+  up <- res$est + (1.96 * sqrt(res$var))
+  res["low"] <- low
+  res["up"] <- up
+  return(res)
+}
+
+# read in data
+con <- file("stdin","r")
+dat <- stream_in(con, verbose = F)
+
+# discard series with no events
+toKeep <- vector(mode = "character")
+for (series in unique(dat$series)) {
+  if (any(dat[dat$series == series, "event"] == 1)) toKeep <- c(toKeep, series)
+}
+dat <- dat[dat$series %in% toKeep,]
+
+# compute cumulative incidence
+dat$event <- as.factor(dat$event)
+dat$series <- as.factor(dat$series)
+out <- list(estimates = list())
+if (length(levels(dat$series)) == 1) {
+  # single series
+  res <- cuminc(ftime = dat$time, fstatus = dat$event, cencode = 0)
+  seriesRes <- as.data.frame(res[[1]])
+  seriesRes <- compute_ci(seriesRes)
+  out$estimates[[""]] <- seriesRes
+} else {
+  # multiple series
+  # compute cumulative incidence for each pairwise combination of series
+  pairs <- combn(levels(dat$series), 2)
+  pvalues <- vector(mode = "numeric")
+  series1s <- vector(mode = "character")
+  series2s <- vector(mode = "character")
+  for (i in 1:ncol(pairs)) {
+    pair <- pairs[,i]
+    series1s <- c(series1s, pair[1])
+    series2s <- c(series2s, pair[2])
+    res <- cuminc(ftime = dat$time, fstatus = dat$event, group = dat$series, cencode = 0, subset = dat$series %in% pair)
+    # retrieve estimates for each series within the pair
+    for (series in pair) {
+      if (series %in% names(out$estimates)) next
+      seriesRes <- as.data.frame(res[[paste(series,1)]])
+      seriesRes <- compute_ci(seriesRes)
+      out$estimates[[series]] <- seriesRes
+    }
+    # retrieve p-value of the pair
+    pvalues <- c(pvalues, signif(res$Tests[1,"pv"], 2))
+  }
+  # store tests
+  out[["tests"]] <- data.frame("series1" = series1s, "series2" = series2s, "pvalue" = pvalues)
+}
+
+# output results in json format
+cat(toJSON(out, digits = NA, na = "string"), file = "", sep = "")
+
+close(con)

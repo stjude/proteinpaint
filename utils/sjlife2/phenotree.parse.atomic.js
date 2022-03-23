@@ -2,7 +2,7 @@ if (process.argv.length < 4) {
 	console.log(
 		'<phenotree> <matrix> <keep/termconfig, optional> <subcohort column idx in matrix> output two files: keep/termjson, diagnostic_messages.txt'
 	)
-	process.exit()
+	process.exit(1)
 }
 
 /*
@@ -16,11 +16,12 @@ input files:
 4. subcohort column idx in "matrix" file
    if this is given, will summarize term values by sub-cohorts
    otherwise, will summarize by the entire cohort
+   (to be implemented later; only summarize the whole cohort now)
 
 
 output:
-1. json object for all atomic terms
-2. diagnostic messages
+1. diagnostic_messages.txt
+2. keep/termjson
 
 step 1:
 	go over phenotree to initialize json backbone of categorical and numeric terms
@@ -54,6 +55,10 @@ const file_matrix = process.argv[3]
 const file_termconfig = process.argv[4]
 const subcohort_columnidx_str = process.argv[5]
 
+// output files
+const outfile_diagnostic = 'diagnostic_messages.txt'
+const outfile_termjson = 'keep/termjson'
+
 let subcohort_columnidx
 if (subcohort_columnidx_str) {
 	subcohort_columnidx = Number(subcohort_columnidx_str)
@@ -63,6 +68,7 @@ if (subcohort_columnidx_str) {
 const fs = require('fs')
 const readline = require('readline')
 const path = require('path')
+const initBinConfig = require('../../server/shared/termdb.initbinconfig')
 
 const bins = {
 	// temporary values; to be deleted after parsing matrix file
@@ -71,7 +77,7 @@ const bins = {
 	_max: null,
 
 	default: {
-		type: 'regular',
+		type: 'regular-bin',
 		bin_size: 5,
 		startinclusive: true,
 		first_bin: {
@@ -102,7 +108,7 @@ async function main() {
 		step4_applyconfig(key2terms)
 	}
 
-	fs.writeFileSync('keep/termjson', JSON.stringify(key2terms, null, 2))
+	fs.writeFileSync(outfile_termjson, JSON.stringify(key2terms, null, 2))
 }
 
 ///////////////////// helpers
@@ -154,6 +160,19 @@ function step1_parsephenotree() {
 			const term = parseconfig(configstr)
 			term.name = name
 			key2terms[key] = term
+
+			/*
+			!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			         quick fix
+			do not apply this step for another dataest
+			!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+			this is to exclude 0 values from treatment variables when computing percentiles,
+			to address issue in auto-computing knots
+			*/
+			if (t2 == 'Treatment' && (term.type == 'integer' || term.type == 'float')) {
+				term.skip0forPercentile = true
+			}
 		} catch (e) {
 			throw 'Line ' + (i + 1) + ' error: ' + e
 		}
@@ -314,7 +333,13 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 	// finalize terms and print diagnostic messages to stderr
 
 	// diagnostic message is a tabular table and has a header
-	const lines = ['Type\tVariable_ID\tMin/message\tMax\tHidden_categories\tVisible_categories']
+	const lines = [
+		'Type\tVariable_ID\tStat/Message\tHidden_categories\tVisible_categories', // column header
+		'#Explanation',
+		'#lines starting with ! will contain an alert message at the 3rd column',
+		'#lines starting with ERR will contain an error message at the 3rd column',
+		'#FLOAT in the 3rd column indicates the variable is labeled as "integer" type but contains non-integer values from matrix'
+	]
 
 	for (const termID in key2terms) {
 		const term = key2terms[termID]
@@ -333,12 +358,12 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 				// has predefined categories in .values
 				for (const k in term.values) {
 					if (!term._values_foundinmatrix.has(k)) {
-						lines.push('!CATEGORICAL\t' + termID + '\tcategory not found in matrix: ' + k)
+						lines.push('!' + term.type + '\t' + termID + '\tcategory not found in matrix: ' + k)
 					}
 				}
 				if (term._values_newinmatrix.size) {
 					for (const k of term._values_newinmatrix) {
-						lines.push('!CATEGORICAL\t' + termID + '\tcategory not declared in phenotree: ' + k)
+						lines.push('!' + term.type + '\t' + termID + '\tcategory not declared in phenotree: ' + k)
 						term.values[k] = { label: k }
 					}
 				}
@@ -358,7 +383,7 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 				if (term.values[k].uncomputable) uncomputable.push(k + '=' + (term._values_foundinmatrix.get(k) || 0))
 				else computable.push(k + '=' + (term._values_foundinmatrix.get(k) || 0))
 			}
-			lines.push('CATEGORICAL\t' + termID + '\t\t\t' + uncomputable.join(',') + '\t' + computable.join(','))
+			lines.push(term.type + '\t' + termID + '\t\t' + uncomputable.join(',') + '\t' + computable.join(','))
 			delete term._values_foundinmatrix
 			continue
 		}
@@ -370,7 +395,7 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 				// has special categories, do the same validation
 				for (const k in term.values) {
 					if (!term._values_foundinmatrix.has(k)) {
-						lines.push('!NUMERICAL\t' + termID + '\tcategory not found in matrix: ' + k)
+						lines.push('!' + term.type + '\t' + termID + '\tcategory not found in matrix: ' + k)
 					}
 				}
 			}
@@ -379,12 +404,23 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 				lines.push('ERR\t' + termID + '\tno numeric data in matrix')
 				continue
 			}
+
+			let integerButFloat = false // set to true if integer term actually has float values
+			if (term.type == 'integer') {
+				for (const v of term.bins._values) {
+					if (!Number.isInteger(v)) {
+						integerButFloat = true
+						break
+					}
+				}
+			}
 			lines.push(
-				'NUMERICAL\t' +
-					termID +
-					'\tn=' +
-					term.bins._values.length +
-					',min=' +
+				term.type + // col 1
+				'\t' +
+				termID + // col 2
+				'\t' +
+				(integerButFloat ? 'FLOAT,' : '') +
+				'min=' + // col 3
 					term.bins._min +
 					',max=' +
 					term.bins._max +
@@ -392,27 +428,27 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 					getMean(term.bins._values) +
 					',median=' +
 					getMedian(term.bins._values) +
+					',n=' +
+					term.bins._values.length +
 					',' +
 					getValuelst(term.bins._values) +
 					'\t' +
+					// col 4
 					(term.values
-						? '\t' +
-						  Object.keys(term.values)
+						? Object.keys(term.values)
 								.map(i => i + '=' + (term._values_foundinmatrix.get(i) || 0))
 								.join(',')
 						: '')
 			)
 			// find bin size
-			const range = term.bins._max - term.bins._min
-			{
-				const bs = range / 5
-				if (bs > 1) {
-					term.bins.default.bin_size = Math.ceil(bs)
-				} else {
-					term.bins.default.bin_size = bs
-				}
+			try {
+				term.bins.default = initBinConfig(term.bins._values)
+			} catch (e) {
+				console.log(e)
+				console.log('data for initBinConfig():')
+				console.log(JSON.stringify(term.bins._values))
+				process.exit(1)
 			}
-			term.bins.default.first_bin.stop = term.bins._min + term.bins.default.bin_size
 			delete term.bins._min
 			delete term.bins._max
 			delete term.bins._values
@@ -420,7 +456,7 @@ function step3_finalizeterms_diagnosticmsg(key2terms) {
 			continue
 		}
 	}
-	fs.writeFileSync('diagnostic_messages.txt', lines.join('\n') + '\n')
+	fs.writeFileSync(outfile_diagnostic, lines.join('\n') + '\n')
 }
 
 function step4_applyconfig(key2terms) {

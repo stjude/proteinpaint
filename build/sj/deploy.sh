@@ -153,9 +153,12 @@ RECENT=$(./help.sh $USERatREMOTE recent)
 if [[ $(echo -e "$RECENT" | grep -l $REV) != "" ]]; then
 	echo -e "\n"
 	echo -e "Build version $REV is already deployed in $REMOTEHOST:$REMOTEDIR/available/."
-	echo -e "You can activate it using './help.sh activate $REV' from $REMOTEHOST:$REMOTEDIR."
-	echo -e "\n"
-	exit 1
+	echo -e "Re-activating this build in the remote server ..."
+	ssh -t $USERatREMOTE "
+	cd $REMOTEDIR
+	./helpers/activate.sh $REV
+	"
+	exit 0
 fi
 
 #################################
@@ -176,16 +179,21 @@ else
 
 	# save some time by reusing parent folder's node_modules
 	# but making sure to update to committed package.json
-	ln -s ../../../node_modules node_modules
+	ln -s ../../../node_modules .
 	# npm update
 
 	# create webpack bundle
-	wp="./node_modules/.bin/webpack"
 	echo "Packing frontend bundles ..."
-	$wp --config=client/webpack.config.js --env.url=https://$HOSTNAME --env.devtool=$WPCLIENTDEVTOOL
+	npx webpack --config=client/webpack.config.js --env.url=https://$HOSTNAME --env.devtool=$WPCLIENTDEVTOOL
 
 	echo "Packing backend bundle ..."
-	$wp --config=server/webpack.config.js --env.NODE_ENV=$WPSERVERMODE --env.devtool=$WPSERVERDEVTOOL
+	npx webpack --config=server/webpack.config.js --env.NODE_ENV=$WPSERVERMODE --env.devtool=$WPSERVERDEVTOOL
+
+	if [[ "$SUBDOMAIN" == "ppr" ]]; then
+		# may need to support cohort.db.refresh,
+		# as set via serverconfig dataset updateAttr
+		npx webpack --config=utils/pnet/webpack.config.js
+	fi
 
 	# create dirs to put extracted files
 	rm -rf $APP
@@ -198,9 +206,15 @@ else
 	mv server/genome $APP/
 	mv server/dataset $APP/
 	mv server/utils $APP/
-	mv server/features.json $APP/
+	mv server/cards $APP/
 	mv server/src/serverconfig.js $APP/src
 	mv server/shared $APP/
+	if [[ "$SUBDOMAIN" == "ppr" ]]; then
+		# may need to support cohort.db.refresh,
+		# as set via serverconfig dataset updateAttr
+		mv utils/termdb $APP/utils/
+		mv utils/pnet  $APP/utils/
+	fi
 	mv public/bin $APP/public/bin
 	echo "$ENV $REV $(date)" > $APP/public/rev.txt
 
@@ -230,11 +244,15 @@ ssh -t $USERatREMOTE "
 	cp -Rn active/public/ available/$APP-$REV/
 	cp -Rn active/dataset/ available/$APP-$REV/
 
-	cd available/$APP-$REV/utils/rust_indel_cargo && cargo build --release
-	rm -rf available/$APP-$REV/utils/rust_indel_cargo/src
-	cd $REMOTEDIR 
 	chmod -R 755 available/$APP-$REV
+	
+	cd available/$APP-$REV/utils/rust
+	# copy previous builds to allow reuse if validated by sccache and cargo
+	[[ -d $REMOTEDIR/active/utils/rust/target ]] && cp -rf $REMOTEDIR/active/utils/rust/target ./
+	cargo build --release
+	#rm -rf src
 
+	cd $REMOTEDIR
 	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$REV/public/sjcharts
 	ln -sfn ./bin available/$APP-$REV/public/no-babel-polyfill
 	ln -sfn available/$APP-$REV active

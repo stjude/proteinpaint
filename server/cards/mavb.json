@@ -1,0 +1,47 @@
+{
+    "ppcalls": [
+        {
+            "is_ui": true,
+            "runargs": {
+                "genome": "hg19",
+                "noheader": 1,
+                "parseurl": false,
+                "mavolcanoplot": {
+                "uionly": true
+                }
+            }
+        },
+        {
+            "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/mavb/mavbDemoData.tar.gz",
+            "runargs": {
+                "genome": "hg19",
+                "noheader": 1,
+                "mavolcanoplot": {
+                    "genome": "hg19",
+                    "noheader": 1,
+                    "url": "https://pecan.stjude.cloud/static/pp-support/example.files/DIPG_H33K27MvsWT_noACVR_adj.txt",
+                    "tracks": [{
+                        "name": "Demo RNA-seq coverage",
+                        "strand1": { 
+                            "file": "proteinpaint_demo/hg19/mavb/mavb_demo_sense.bw" 
+                        },
+                        "strand2": { 
+                            "file": "proteinpaint_demo/hg19/mavb/mavb_demo_antisense.bw", 
+                            "normalize": { "dividefactor": -1 } 
+                        },
+                        "type": "bigwigstranded"
+                    }]
+                }
+            },
+            "testSpec": {
+                "expected": { "rect": 2, "circle": 10 }
+            }
+        }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1gEhywyMzMQRM10NFvsObw1yDSWxVY7pxYjsQ2-nd6x4/edit"
+        }
+    ]
+}

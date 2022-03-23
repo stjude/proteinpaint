@@ -1,6 +1,6 @@
 import { event as d3event } from 'd3-selection'
 import * as client from './client'
-import * as dom from './dom'
+import { make_select_btn_pair } from './dom/buttonPair'
 import { filterInit, filterJoin, getFilterItemByTag } from './common/filter'
 import { may_setup_numerical_axis, may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
 import { appInit } from './termdb/app'
@@ -296,10 +296,13 @@ groupindex:
 					state: {
 						genome: block.genome.name,
 						dslabel: tk.mds.label,
-						activeCohort,
-						nav: {
-							header_mode: 'with_cohortHtmlSelect'
-						}
+						activeCohort
+						/*
+					 	TODO: may need to handle a cohort filter option in an optional termdb app filter component 
+					  termfilter: {
+							filter: [{type: 'tvs', renderAs: 'htmlSelect', tvs: {...}}]
+					  },
+						***/
 					},
 					barchart: {
 						bar_click_override: tvslst => {
@@ -331,7 +334,7 @@ groupindex:
 				}
 				const filters = filterJoin(get_hidden_filters(tk))
 				if (filters) obj.state.termfilter = { filter: filters }
-				appInit(null, obj)
+				appInit(obj)
 			}
 		})
 	}
@@ -501,6 +504,7 @@ function show_group_termdb(group, tk, block) {
 	}
 	group.filterApi.main(combine_groupfilter_with_hidden(group.filter, tk)) // async
 	if (!group.dom.samplehandle) {
+		console.log(501)
 		// "n=?, view stats" handle and for porting to term tree filter
 		group.dom.samplehandle = group.dom.td3
 			.append('span')
@@ -511,7 +515,7 @@ function show_group_termdb(group, tk, block) {
 			.on('click', () => {
 				// click label to embed tree
 				tk.legend.tip.clear().showunder(group.dom.samplehandle.node())
-				appInit(null, {
+				appInit({
 					holder: tk.legend.tip.d.append('div').style('margin', '5px'),
 					state: {
 						genome: block.genome.name,
@@ -533,7 +537,7 @@ function show_group_infofield(group, tk) {
 
 	const holder = group.dom.td3.append('span')
 
-	const [select, btn] = dom.make_select_btn_pair(holder)
+	const [select, btn] = make_select_btn_pair(holder)
 
 	select.on('change', async () => {
 		const value = select.node().value
@@ -574,7 +578,7 @@ also <select> for changing group
 	const p = tk.populations.find(i => i.key == group.key)
 	const af = tk.vcf.numerical_axis.AFtest
 
-	const [select, btn] = dom.make_select_btn_pair(holder)
+	const [select, btn] = make_select_btn_pair(holder)
 
 	select.on('change', async () => {
 		const value = select.node().value

@@ -8,6 +8,7 @@ const helpers = require('../../../test/front.helpers.js')
 const runpp = helpers.getRunPp('toy', {
 	dslabel: 'TermdbTest',
 	genome: 'hg38',
+	cohortStr: 'SJLIFE',
 	debug: 1,
 	fetchOpts: {
 		serverData: helpers.serverData
@@ -71,8 +72,8 @@ tape('text input', function(test) {
 
 	function triggerExactTermMenu(search) {
 		// simulate text input
-		search.Inner.input.property('value', 'sex')
-		search.Inner.input.on('keyup')()
+		search.Inner.dom.input.property('value', 'sex')
+		search.Inner.dom.input.on('keyup')()
 	}
 
 	function testExactSuggestedTerm(search) {
@@ -85,8 +86,8 @@ tape('text input', function(test) {
 
 	function triggerLooseTermMenu(search) {
 		// simulate text input
-		search.Inner.input.property('value', 'cardio')
-		search.Inner.input.on('keyup')()
+		search.Inner.dom.input.property('value', 'cardio')
+		search.Inner.dom.input.on('keyup')()
 	}
 
 	function testLooseSuggestedTerm(search) {

@@ -1,52 +1,147 @@
-import * as client from '../client'
+import { setGroupsettingMethods } from './termsetting.groupsetting'
+import { filterInit } from './filter'
+import { getPillNameDefault } from './termsetting'
 
 /*
-Arguments
-self: a termsetting instance
+********************** EXPORTED
+getHandler(self)
+	- self: a termsetting instance
+	showEditMenu(div): // categorical edit menu
+		showGrpOpts // create first menu with basic options e.g. groupset, predefined groupset
+	getPillName() // Print term name in the pill
+	getPillStatus() // Returns {text, bgcolor} which determines whether to make right half of the pill visible and show some text. Optional bgcolor can be used to highlight an error.
+                    // Return null to hide the right half.
+	validateQ(data)
+	postMain() // update samplecount
+setCategoryConditionMethods()
+	validateGroupsetting()
+	showGrpOpts() // show menu for available groupset options
+	grpSet2valGrp()
+fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
+					// Must also guarantee tw.id and tw.term.id are set.
+					// Computation should be independent of state, especially filter, as that’s not provided.
+
+********************** INTERNAL
+set_hiddenvalues(q, term)
 */
 
-export function setCategoricalMethods(self) {
-	self.showEditMenu = function(div) {
-		self.showGrpOpts(div)
-	}
+export function getHandler(self) {
+	setGroupsettingMethods(self)
+	setCategoryConditionMethods(self)
 
-	self.term_name_gen = function(d) {
-		return d.name.length <= 20
-			? d.name
-			: '<label title="' + d.name + '">' + d.name.substring(0, 18) + '...' + '</label>'
-	}
+	return {
+		showEditMenu(div) {
+			self.showGrpOpts(div)
+		},
 
-	self.get_status_msg = function() {
-		// get message text for the right half pill; may return null
-		if (self.q.groupsetting && self.q.groupsetting.inuse) {
-			if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
-				if (!self.term.groupsetting) return 'term.groupsetting missing'
-				if (!self.term.groupsetting.lst) return 'term.groupsetting.lst[] missing'
-				const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-				if (!i) return 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing'
-				return i.name
+		getPillName(d) {
+			return getPillNameDefault(self, d)
+		},
+
+		getPillStatus() {
+			// get message text for the right half pill; may return null
+			return self.validateGroupsetting()
+		},
+
+		validateQ(data) {
+			const t = data.term
+			const endNote = `(${t.type}, mode='${data.q.mode}', type='${data.q.type}')`
+			// validate the configuration
+			if (data.q.type == 'values') {
+				if (!t.values) self.error = `no term.values defined ${endNote}`
+				if (data.q.mode == 'binary') {
+					if (Object.keys(t.values).length != 2) self.error = `term.values must have exactly two keys ${endNote}`
+
+					if (data.sampleCounts) {
+						for (const key in t.values) {
+							if (!data.sampleCounts.find(d => d.key === key))
+								self.error = `there are no samples for the required binary value=${key} ${endNote}`
+						}
+					}
+				}
+				return
 			}
-			if (self.q.groupsetting.customset) {
-				const n = self.q.groupsetting.customset.groups.length
-				if (self.q.bar_by_grade) return n + ' groups of grades'
-				if (self.q.bar_by_children) return n + ' groups of sub-conditions'
-				return 'Divided into ' + n + ' groups'
+
+			if (data.q.type == 'predefined-groupset' || data.q.type == 'custom-groupset') {
+				const tgs = t.groupsetting
+				if (!tgs) throw `no term.groupsetting ${endNote}`
+
+				let groupset
+				if (data.q.type == 'predefined-groupset') {
+					const idx = data.q.groupsetting.predefined_groupset_idx
+					if (!tgs.lst[idx]) throw `no groupsetting[predefined_groupset_idx=${idx}] ${endNote}`
+					groupset = tgs.lst[idx]
+				} else {
+					if (!data.q.groupsetting.customset) throw `no q.groupsetting.customset defined ${endNote}`
+					groupset = data.q.groupsetting.customset
+				}
+
+				if (!groupset.groups.every(g => g.name !== undefined))
+					throw `every group in groupset must have 'name' defined ${endNote}`
+
+				if (data.q.mode == 'binary') {
+					if (groupset.groups.length != 2) throw `there must be exactly two groups ${endNote}`
+
+					if (data.sampleCounts) {
+						for (const grp of groupset.groups) {
+							if (!data.sampleCounts.find(d => d.label === grp.name))
+								throw `there are no samples for the required binary value=${grp.name} ${endNote}`
+						}
+					}
+				}
+				return
 			}
-			return 'Unknown setting for groupsetting'
+
+			throw `unknown q.type='${data.q.type}' for categorical q.mode='${data.q.mode}'`
+		},
+
+		async postMain() {
+			const lst = []
+			if (self.term.type == 'condition') {
+				// bar_by_grade / bar_by_children
+				lst.push(self.q.bar_by_grade ? 'bar_by_grade=1' : self.q.bar_by_children ? 'bar_by_children=1' : null)
+				// value_by_max_grade / value_by_most_recent / value_by_computable_grade
+				lst.push(
+					self.q.value_by_max_grade
+						? 'value_by_max_grade=1'
+						: self.q.value_by_most_recent
+						? 'value_by_most_recent=1'
+						: self.q.value_by_computable_grade
+						? 'value_by_computable_grade=1'
+						: null
+				)
+			}
+			const data = await self.vocabApi.getCategories(self.term, self.filter, lst)
+			self.category2samplecount = []
+			for (const i of data.lst) {
+				self.category2samplecount.push({ key: i.key, count: i.samplecount })
+			}
 		}
-		if (self.term.type == 'condition') {
-			if (self.q.bar_by_grade) {
-				if (self.q.value_by_max_grade) return 'Max. Grade'
-				if (self.q.value_by_most_recent) return 'Most Recent Grade'
-				if (self.q.value_by_computable_grade) return 'Any Grade'
-				return 'Error: unknown grade setting'
-			}
-			if (self.q.bar_by_children) {
-				return 'Sub-condition'
-			}
-			return 'Error: unknown setting for term.type == "condition"'
+	}
+}
+
+// same method used to set methods for categorical and condition terms
+export function setCategoryConditionMethods(self) {
+	self.validateGroupsetting = function() {
+		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
+		if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
+			if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
+			if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
+			const i = self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
+			if (!i)
+				return {
+					text: 'term.groupsetting.lst[' + self.q.groupsetting.predefined_groupset_idx + '] missing',
+					bgcolor: 'red'
+				}
+			return { text: i.name }
 		}
-		return null // for no label
+		if (self.q.groupsetting.customset) {
+			const n = self.q.groupsetting.customset.groups.length
+			if (self.q.bar_by_grade) return { text: n + ' groups of grades' }
+			if (self.q.bar_by_children) return { text: n + ' groups of sub-conditions' }
+			return { text: 'Divided into ' + n + ' groups' }
+		}
+		return { text: 'Unknown setting for groupsetting', bgcolor: 'red' }
 	}
 
 	/******************* Functions for Categorical terms *******************/
@@ -60,7 +155,6 @@ export function setCategoricalMethods(self) {
 				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
 				: ''
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
-
 		const active_group_info_div = div.append('div').style('margin', '10px')
 
 		// if using predfined groupset, display name
@@ -93,9 +187,25 @@ export function setCategoricalMethods(self) {
 					.html(g.name != undefined ? g.name + ':' : 'Group ' + (i + 1) + ':')
 
 				const values_td = group_tr.append('td')
+				if (!g.type || g.type == 'values') {
+					for (const v of g.values) {
+						values_td.append('div').html(values[v.key].label)
+					}
+				} else if (g.type == 'filter') {
+					if (!g.filter && self.term.groupsetting.lst[0].groups[i].filter4activeCohort) {
+						const filter_ = self.term.groupsetting.lst[0].groups[i].filter4activeCohort[self.activeCohort]
+						const filter = JSON.parse(JSON.stringify(filter_))
 
-				for (const v of g.values) {
-					values_td.append('div').html(values[v.key].label)
+						// show filter for predefined tvslst for activeCohort
+						filterInit({
+							btn: values_td.append('div'),
+							btnLabel: 'Filter',
+							emptyLabel: '+New Filter',
+							holder: values_td.append('div').style('width', '300px'),
+							vocabApi: self.vocabApi,
+							callback: () => {}
+						}).main(filter)
+					}
 				}
 			}
 
@@ -125,7 +235,7 @@ export function setCategoricalMethods(self) {
 		div
 			.append('div')
 			.attr('class', 'group_btn sja_menuoption')
-			.style('display', 'block')
+			.style('display', self.q.mode == 'binary' ? 'none' : 'block')
 			// .style('padding', '7px 6px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
@@ -138,11 +248,9 @@ export function setCategoricalMethods(self) {
 			.on('click', () => {
 				self.q.groupsetting.inuse = false
 				delete self.q.groupsetting.predefined_groupset_idx
+				// self.q.type = 'values' ????
 				self.dom.tip.hide()
-				self.opts.callback({
-					term: self.term,
-					q: self.q
-				})
+				self.runCallback()
 			})
 
 		//show button/s for default groups
@@ -167,11 +275,12 @@ export function setCategoricalMethods(self) {
 						.on('click', () => {
 							self.q.groupsetting.inuse = true
 							self.q.groupsetting.predefined_groupset_idx = i
+							// used for groupsetting if one of the group is filter rahter than values,
+							// Not in use rightnow, if used in future, uncomment following line
+							// self.q.groupsetting.activeCohort = self.activeCohort
+							self.q.type = 'predefined-groupset'
 							self.dom.tip.hide()
-							self.opts.callback({
-								term: self.term,
-								q: self.q
-							})
+							self.runCallback()
 						})
 			}
 		}
@@ -199,327 +308,14 @@ export function setCategoricalMethods(self) {
 			})
 	}
 
-	self.regroupMenu = function(grp_count, temp_cat_grps) {
-		//start with default 2 groups, extra groups can be added by user
-		const default_grp_count = grp_count || 2
-		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
-		const cat_grps = temp_cat_grps || JSON.parse(JSON.stringify(values))
-
-		//initiate empty customset
-		let customset = { groups: [] }
-		let group_names = []
-		if (self.q.bar_by_grade) customset.is_grade = true
-		else if (self.q.bar_by_children) customset.is_subcondition = true
-
-		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
-		const groupset =
-			grpsetting_flag && self.q.groupsetting.predefined_groupset_idx != undefined
-				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-				: self.q.groupsetting && self.q.groupsetting.customset
-				? self.q.groupsetting.customset
-				: undefined
-
-		for (let i = 0; i < default_grp_count; i++) {
-			let group_name =
-				groupset && groupset.groups && groupset.groups[i] && groupset.groups[i].name
-					? groupset.groups[i].name
-					: undefined
-
-			if (self.q.bar_by_grade && groupset && groupset.is_subcondition) group_name = undefined
-			if (self.q.bar_by_children && groupset && groupset.is_grade) group_name = undefined
-
-			group_names.push(group_name)
-
-			customset.groups.push({
-				values: [],
-				name: group_name
-			})
-		}
-
-		self.dom.tip.clear().showunder(self.dom.holder.node())
-
-		const regroup_div = self.dom.tip.d.append('div').style('margin', '10px')
-
-		const button_div = regroup_div
-			.append('div')
-			.style('text-align', 'center')
-			.style('margin', '5px')
-
-		const group_edit_div = regroup_div.append('div').style('margin', '5px')
-		const group_ct_div = group_edit_div.append('div').attr('class', 'group_edit_div')
-		group_ct_div
-			.append('label')
-			.attr('for', 'grp_ct')
-			.style('display', 'inline-block')
-			.html('#groups')
-
-		const group_ct_select = group_ct_div
-			.append('select')
-			.style('margin-left', '15px')
-			.style('margin-bottom', '7px')
-			.on('change', () => {
-				if (group_ct_select.node().value < default_grp_count) {
-					const grp_diff = default_grp_count - group_ct_select.node().value
-					for (const [key, val] of Object.entries(cat_grps)) {
-						if (cat_grps[key].group > group_ct_select.node().value) cat_grps[key].group = 1
-					}
-					self.regroupMenu(default_grp_count - grp_diff, cat_grps)
-				} else if (group_ct_select.node().value > default_grp_count) {
-					const grp_diff = group_ct_select.node().value - default_grp_count
-					self.regroupMenu(default_grp_count + grp_diff, cat_grps)
-				}
-			})
-
-		for (let i = 0; i < default_grp_count + 2; i++)
-			group_ct_select
-				.append('option')
-				.attr('value', i + 1)
-				.html(i + 1)
-
-		group_ct_select.node().value = default_grp_count
-
-		const group_rename_div = group_edit_div
-			.append('div')
-			.attr('class', 'group_edit_div')
-			.style('display', 'inline-block')
-
-		group_rename_div
-			.append('label')
-			.attr('for', 'grp_ct')
-			.style('display', 'inline-block')
-			.style('margin-right', '15px')
-			.html('Names')
-
-		for (let i = 0; i < default_grp_count; i++) {
-			const group_name_input = group_rename_div
-				.append('input')
-				.attr('size', 12)
-				.attr('value', group_names[i] || i + 1)
-				.style('margin', '2px 5px')
-				.style('display', 'inline-block')
-				.style('font-size', '.8em')
-				.style('width', '80px')
-				.on('keyup', () => {
-					if (!client.keyupEnter()) return
-
-					//update customset and add to self.q
-					for (const [key, val] of Object.entries(cat_grps)) {
-						for (let j = 0; j < default_grp_count; j++) {
-							if (cat_grps[key].group == j + 1) customset.groups[j].values.push({ key: key })
-						}
-					}
-
-					customset.groups[i].name = group_name_input.node().value
-					self.q.groupsetting.predefined_groupset_idx = undefined
-
-					self.q.groupsetting = {
-						inuse: true,
-						customset: customset
-					}
-
-					self.regroupMenu(default_grp_count, cat_grps)
-				})
-		}
-
-		group_edit_div
-			.append('div')
-			.style('font-size', '.6em')
-			.style('margin-left', '10px')
-			.style('color', '#858585')
-			.text('Note: Press ENTER to update group names.')
-
-		const group_select_div = regroup_div.append('div').style('margin', '5px')
-
-		const group_table = group_select_div.append('table').style('border-collapse', 'collapse')
-
-		// this row will have group names/number
-		const group_name_tr = group_table.append('tr').style('height', '50px')
-
-		group_name_tr
-			.append('th')
-			.style('padding', '2px 5px')
-			.style('font-size', '.8em')
-			.style('transform', 'rotate(315deg)')
-			.html('Exclude')
-
-		for (let i = 0; i < default_grp_count; i++) {
-			group_name_tr
-				.append('th')
-				.style('padding', '2px 5px')
-				.style('font-size', '.8em')
-				.style('transform', 'rotate(315deg)')
-				.html(group_names[i] || i + 1)
-		}
-
-		// for each cateogry add new row with radio button for each group and category name
-		for (const [key, val] of Object.entries(values)) {
-			const cat_tr = group_table
-				.append('tr')
-				.on('mouseover', () => {
-					cat_tr.style('background-color', '#eee')
-				})
-				.on('mouseout', () => {
-					cat_tr.style('background-color', '#fff')
-				})
-
-			//checkbox for exclude group
-			cat_tr
-				.append('td')
-				.attr('align', 'center')
-				.style('padding', '2px 5px')
-				.append('input')
-				.attr('type', 'radio')
-				.attr('name', key)
-				.attr('value', 0)
-				.property('checked', () => {
-					if (cat_grps[key].group === 0) {
-						// cat_grps[key].group = 0
-						return true
-					}
-				})
-				.on('click', () => {
-					cat_grps[key].group = 0
-				})
-
-			// checkbox for each group
-			for (let i = 0; i < default_grp_count; i++) {
-				cat_tr
-					.append('td')
-					.attr('align', 'center')
-					.style('padding', '2px 5px')
-					.append('input')
-					.attr('type', 'radio')
-					.attr('name', key)
-					.attr('value', i)
-					.property('checked', () => {
-						if (!cat_grps[key].group && cat_grps[key].group !== 0) {
-							cat_grps[key].group = 1
-							return true
-						} else {
-							return cat_grps[key].group == i + 1 ? true : false
-						}
-					})
-					.on('click', () => {
-						cat_grps[key].group = i + 1
-					})
-			}
-
-			// extra empty column for '+' button
-			cat_tr.append('td')
-
-			// categories
-			cat_tr
-				.append('td')
-				.style('display', 'inline-block')
-				.style('margin', '2px')
-				.style('cursor', 'default')
-				.html(val.label)
-		}
-
-		// 'Apply' button
-		button_div
-			.append('div')
-			.attr('class', 'apply_btn sja_filter_tag_btn')
-			.style('display', 'inline-block')
-			.style('border-radius', '13px')
-			// .style('padding', '7px 6px')
-			.style('margin', '5px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.text('Apply')
-			.on('click', () => {
-				const name_inputs = group_rename_div.node().querySelectorAll('input')
-				//update customset and add to self.q
-				for (const key in cat_grps) {
-					const i = cat_grps[key].group - 1
-					const group = customset.groups[i]
-					if (group) {
-						group.name = name_inputs[i].value
-						group.values.push({ key })
-					}
-				}
-				self.q.groupsetting = {
-					inuse: true,
-					customset: customset
-				}
-				self.dom.tip.hide()
-				self.opts.callback({
-					term: self.term,
-					q: self.q
-				})
-			})
-	}
-
-	/******************* Functions for to Conditional terms *******************/
-
-	self.showConditionOpts = async function(div) {
-		// grade/subcondtion value type
-		const value_type_select = div
-			.append('select')
-			.style('margin', '5px 10px')
-			.on('change', () => {
-				// if changed from grade to sub or vice versa, set inuse = false
-				if (
-					(value_type_select.node().value == 'sub' && self.q.bar_by_grade) ||
-					(value_type_select.node().value != 'sub' && self.q.bar_by_children)
-				) {
-					self.q.groupsetting.predefined_groupset_idx = undefined
-					self.q.groupsetting.inuse = false
-				}
-
-				self.q.bar_by_grade = value_type_select.node().value == 'sub' ? false : true
-				self.q.bar_by_children = value_type_select.node().value == 'sub' ? true : false
-				self.q.value_by_max_grade = value_type_select.node().value == 'max' ? true : false
-				self.q.value_by_most_recent = value_type_select.node().value == 'recent' ? true : false
-				self.q.value_by_computable_grade =
-					value_type_select.node().value == 'computable' || value_type_select.node().value == 'sub' ? true : false
-
-				self.dom.tip.hide()
-				self.opts.callback({
-					term: self.term,
-					q: self.q
-				})
-			})
-
-		value_type_select
-			.append('option')
-			.attr('value', 'max')
-			.text('Max grade per patient')
-
-		value_type_select
-			.append('option')
-			.attr('value', 'recent')
-			.text('Most recent grade per patient')
-
-		value_type_select
-			.append('option')
-			.attr('value', 'computable')
-			.text('Any grade per patient')
-
-		value_type_select
-			.append('option')
-			.attr('value', 'sub')
-			.text('Sub-conditions')
-
-		value_type_select.node().selectedIndex = self.q.bar_by_children
-			? 3
-			: self.q.value_by_computable_grade
-			? 2
-			: self.q.value_by_most_recent
-			? 1
-			: 0
-
-		//options for grouping grades/subconditions
-		self.showGrpOpts(div)
-	}
-
 	self.grpSet2valGrp = function(groupset) {
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 		const vals_with_grp = JSON.parse(JSON.stringify(values))
 		for (const [i, g] of groupset.groups.entries()) {
-			for (const v of g.values) {
-				vals_with_grp[v.key].group = i + 1
+			if (!g.type || g.type == 'values') {
+				for (const v of g.values) {
+					vals_with_grp[v.key].group = i + 1
+				}
 			}
 		}
 
@@ -528,5 +324,56 @@ export function setCategoricalMethods(self) {
 		}
 
 		return vals_with_grp
+	}
+}
+
+export function fillTW(tw, vocabApi) {
+	set_hiddenvalues(tw.q, tw.term)
+	if (!('type' in tw.q)) tw.q.type = 'values' // must fill default q.type if missing
+	if (!tw.q.groupsetting) tw.q.groupsetting = {}
+	if (!tw.term.groupsetting) tw.term.groupsetting = {}
+	if (tw.term.groupsetting.disabled) {
+		tw.q.groupsetting.disabled = true
+		return
+	}
+	delete tw.q.groupsetting.disabled
+	if (!('inuse' in tw.q.groupsetting)) tw.q.groupsetting.inuse = false // do not apply by default
+
+	if (tw.term.type == 'condition') {
+		/*
+		for condition term, must set up bar/value flags before quiting for inuse:false
+		*/
+		if (tw.q.value_by_max_grade || tw.q.value_by_most_recent || tw.q.value_by_computable_grade) {
+			// need any of the three to be set
+		} else {
+			// set a default one
+			tw.q.value_by_max_grade = true
+		}
+		if (tw.q.bar_by_grade || tw.q.bar_by_children) {
+		} else {
+			tw.q.bar_by_grade = true
+		}
+	}
+
+	// inuse:false is either from automatic setup or predefined in state
+	if (tw.q.groupsetting.inuse) {
+		if (
+			tw.term.groupsetting.lst &&
+			tw.term.groupsetting.useIndex >= 0 &&
+			tw.term.groupsetting.lst[tw.term.groupsetting.useIndex]
+		) {
+			tw.q.groupsetting.predefined_groupset_idx = tw.term.groupsetting.useIndex
+		}
+	}
+}
+
+function set_hiddenvalues(q, term) {
+	if (!q.hiddenValues) {
+		q.hiddenValues = {}
+	}
+	if (term.values) {
+		for (const k in term.values) {
+			if (term.values[k].uncomputable) q.hiddenValues[k] = 1
+		}
 	}
 }

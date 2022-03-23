@@ -2,12 +2,16 @@ const terms = [
 	{
 		id: 'a',
 		name: 'AAA',
-		parent_id: null
+		parent_id: null,
+		included_types: ['categorical', 'integer', 'float', 'condition', 'survival'],
+		child_types: ['categorical', 'integer', 'float', 'condition', 'survival']
 	},
 	{
 		id: 'b',
 		name: 'BBB',
-		parent_id: null
+		parent_id: null,
+		included_types: ['categorical', 'integer', 'float', 'condition', 'survival'],
+		child_types: ['categorical', 'integer', 'float', 'condition', 'survival']
 	},
 	{
 		type: 'categorical',
@@ -21,7 +25,9 @@ const terms = [
 		values: {
 			1: { label: 'Yes' },
 			0: { label: 'No' }
-		}
+		},
+		included_types: ['categorical'],
+		child_types: []
 	},
 	{
 		type: 'float',
@@ -31,11 +37,14 @@ const terms = [
 		isleaf: true,
 		bins: {
 			default: {
+				type: 'regular-bin',
 				bin_size: 0.2,
 				stopinclusive: true,
 				first_bin: { startunbounded: true, stop: 0.2, stopinclusive: true }
 			}
-		}
+		},
+		included_types: ['float'],
+		child_types: []
 	},
 	{
 		type: 'condition',
@@ -45,7 +54,9 @@ const terms = [
 		isleaf: true,
 		groupsetting: {
 			disabled: true
-		}
+		},
+		included_types: ['condition'],
+		child_types: []
 	},
 	{
 		type: 'categorical',
@@ -59,7 +70,9 @@ const terms = [
 		values: {
 			1: { label: 'Yes' },
 			0: { label: 'No' }
-		}
+		},
+		included_types: ['categorical'],
+		child_types: []
 	},
 	{
 		type: 'categorical',
@@ -73,7 +86,9 @@ const terms = [
 		values: {
 			1: { label: 'Yes' },
 			0: { label: 'No' }
-		}
+		},
+		included_types: ['categorical'],
+		child_types: []
 	}
 ]
 

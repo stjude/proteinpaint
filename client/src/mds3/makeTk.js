@@ -1,8 +1,10 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import { Menu, dofetch2 } from '../client'
+import { Menu } from '../dom/menu'
+import { dofetch3 } from '../common/dofetch'
 import { init as init_legend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
-import url2map from '../url2map'
+import urlmap from '../common/urlmap'
+import { mclass } from '../../shared/common'
 
 /*
 ********************** EXPORTED
@@ -19,10 +21,7 @@ configPanel
 _load
 */
 
-/*
-TODO how to tell if tk.mds is a custom track
-
-common structure of tk.mds between official and custom
+/* common structure of tk.mds between official and custom
 
 tk.skewer{}
 	create if skewer data type is available for this mds
@@ -32,6 +31,7 @@ stratify labels will account for all tracks, e.g. skewer, cnv
 */
 
 export async function makeTk(tk, block) {
+	tk.cache = {}
 	tk.itemtip = new Menu()
 	tk.samplefiltertemp = {}
 	// switch to .samplefilter with a filter.js object
@@ -54,10 +54,12 @@ export async function makeTk(tk, block) {
 		tk.skewer = {
 			g: tk.glider.append('g')
 		}
+		// both skewer and numeric mode will render elements into tk.skewer.g
+		// will also attach skewer.discKickSelection
 	}
 
 	tk.leftLabelMaxwidth = tk.tklabel
-		.text(tk.mds.label)
+		.text(tk.mds.label || tk.name)
 		.node()
 		.getBBox().width
 
@@ -85,10 +87,41 @@ export async function makeTk(tk, block) {
 		tk.hlssmid = new Set(tk.hlssmid.split(','))
 	}
 
+	tk.color4disc = m => {
+		// figure out what color to use for a m point
+		if (tk.mutationColorBy) {
+			if (tk.mutationColorBy == 'hardcode') {
+				if (m.color) return m.color
+			}
+			// support other choices, including vcfinfofilter
+		}
+		if (tk.vcfinfofilter && tk.vcfinfofilter.setidx4mclass != undefined) {
+			const mcset = tk.vcfinfofilter.lst[tk.vcfinfofilter.setidx4mclass]
+
+			const [err, vlst] = getter_mcset_key(mcset, m)
+
+			if (err || vlst == undefined) return 'black'
+
+			for (const v of vlst) {
+				// no choice but simply use first value to ever have a valid color
+				if (mcset.categories[v]) {
+					return mcset.categories[v].color
+				} else {
+					return 'black'
+				}
+			}
+		}
+		// mclass
+		if (mclass[m.class]) {
+			return mclass[m.class].color
+		}
+		return 'black'
+	}
+
 	// parse url parameters applicable to this track
 	// may inhibit this through some settings
 	{
-		const urlp = url2map()
+		const urlp = urlmap()
 		if (urlp.has('hlaachange')) {
 			tk.hlaachange = new Set(urlp.get('hlaachange').split(','))
 		}
@@ -112,21 +145,24 @@ function init_mclass(tk) {
 function get_ds(tk, block) {
 	if (tk.dslabel) {
 		// official dataset
-
 		tk.mds = block.genome.datasets[tk.dslabel]
 		if (!tk.mds) throw 'dataset not found for ' + tk.dslabel
-
 		return
 	}
 	// custom
 	if (!tk.name) tk.name = 'Unnamed'
 	tk.mds = {}
-	// to fill in details to tk.mds
-	/*
+	// fill in details to tk.mds
 	if (tk.vcf) {
-		await getvcfheader_customtk(tk.vcf, block.genome)
+		tk.mds.has_skewer = true // enable skewer tk
+		console.log('to enable custom vcf')
+		//await getvcfheader_customtk(tk.vcf, block.genome)
+	} else if (tk.custom_variants) {
+		tk.mds.has_skewer = true // enable skewer tk
+		// validate custom data
+	} else {
+		throw 'unknown data source for custom track'
 	}
-	*/
 	// if variant2samples is enabled for custom ds, it will also have the async get()
 }
 
@@ -148,7 +184,9 @@ function mayaddGetter_m2csq(tk, block) {
 		} else {
 			return { error: 'unknown query method' }
 		}
-		return await dofetch2('mds3?' + lst.join('&'))
+		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+		if (tk.token) headers['X-Auth-Token'] = tk.token
+		return await dofetch3('mds3?' + lst.join('&'), { headers }, { serverData: tk.cache })
 	}
 }
 
@@ -163,7 +201,11 @@ function mayaddGetter_sampleSummaries2(tk, block) {
 			'samplesummary2_mclassdetail=' + encodeURIComponent(JSON.stringify(level))
 		]
 		rangequery_rglst(tk, block, lst)
-		return await dofetch2('mds3?' + lst.join('&'))
+		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+		if (tk.set_id) lst.push('set_id=' + tk.set_id)
+		if (tk.token) headers['X-Auth-Token'] = tk.token
+		if (tk.filter0) lst.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
+		return await dofetch3('mds3?' + lst.join('&'), { headers }, { serverData: tk.cache })
 	}
 }
 
@@ -193,11 +235,15 @@ function mayaddGetter_variant2samples(tk, block) {
 		} else {
 			throw 'unknown variantkey for variant2samples'
 		}
+		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (tk.set_id) par.push('set_id=' + tk.set_id)
-		if (tk.token) par.push('token=' + tk.token)
+		if (tk.token) headers['X-Auth-Token'] = tk.token
 		if (tk.filter0) par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
 		if (arg.tid2value) par.push('tid2value=' + encodeURIComponent(JSON.stringify(arg.tid2value)))
-		const data = await dofetch2('mds3?' + par.join('&'))
+		// pass all termidlst including new termid
+		if (arg.querytype != tk.mds.variant2samples.type_sunburst && tk.mds.variant2samples.termidlst)
+			par.push('termidlst=' + tk.mds.variant2samples.termidlst)
+		const data = await dofetch3('mds3?' + par.join('&'), { headers }, { serverData: tk.cache })
 		if (data.error) throw data.error
 		if (!data.variant2samples) throw 'result error'
 		return data.variant2samples
@@ -216,4 +262,60 @@ function _load(tk, block) {
 	return async () => {
 		return await loadTk(tk, block)
 	}
+}
+
+function getter_mcset_key(mcset, m) {
+	/*
+	get the key from an item (m) given a mcset
+
+	returns list!!!
+
+	*/
+	if (mcset.altalleleinfo) {
+		if (!m.altinfo) return ['no .altinfo']
+
+		const value = m.altinfo[mcset.altalleleinfo.key]
+		if (value == undefined) {
+			// no value
+
+			if (mcset.numericfilter) {
+				// for alleles without AF_ExAC e.g. not seem in that population, treat value as 0
+				// FIXME: only work for population frequency, assumption won't hold for negative values
+				return [null, [0]]
+			}
+
+			return [null, undefined]
+		}
+
+		let vlst = Array.isArray(value) ? value : [value]
+
+		if (mcset.altalleleinfo.separator) {
+			// hardcoded separator for string
+			vlst = vlst[0].split(mcset.altalleleinfo.separator)
+		}
+		return [null, vlst]
+	}
+
+	if (mcset.locusinfo) {
+		if (!m.info) return ['no .info']
+
+		const value = m.info[mcset.locusinfo.key]
+		if (value == undefined) {
+			// no value
+			if (mcset.numericfilter) {
+				// hard fix: for alleles without AF_ExAC e.g. not seem in that population, treat value as 0
+				return [null, [0]]
+			}
+			return [null, undefined]
+		}
+
+		let vlst = Array.isArray(value) ? value : [value]
+
+		if (mcset.locusinfo.separator) {
+			vlst = vlst[0].split(mcset.locusinfo.separator)
+		}
+		return [null, vlst]
+	}
+
+	return ['no trigger']
 }

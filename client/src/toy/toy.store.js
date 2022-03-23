@@ -1,10 +1,9 @@
-import * as rx from '../common/rx.core'
+import { getStoreInit } from '../common/rx.core'
 import { dofetch3 } from '../client'
 
 const defaultState = {
 	dslabel: 'SJLife',
 	genome: 'hg38',
-	currViews: ['test'],
 	terms: [],
 	controls: {
 		search: '',
@@ -13,16 +12,9 @@ const defaultState = {
 }
 
 class ToyStore {
-	constructor(app) {
-		this.api = rx.getStoreApi(this)
-		this.copyMerge = rx.copyMerge
-		this.deepFreeze = rx.deepFreeze
-		// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
-		this.fromJson = rx.fromJson // used in store.api.state()
-		this.toJson = rx.toJson // used in store.api.state()
-
-		this.app = app
-		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
+	constructor(opts) {
+		this.type = 'store'
+		this.defaultState = defaultState
 	}
 }
 
@@ -90,4 +82,4 @@ ToyStore.prototype.actions = {
 	}
 }
 
-export const storeInit = rx.getInitFxn(ToyStore)
+export const storeInit = getStoreInit(ToyStore)

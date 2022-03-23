@@ -472,6 +472,7 @@ official track only
 			.style('margin-right', '5px')
 			.text(name)
 	}
+
 	const opt = {
 		state: {
 			vocab: {
@@ -479,9 +480,12 @@ official track only
 				dslabel: tk.mds.label,
 				genome: block.genome.name
 			},
-			nav: {
-				header_mode: 'with_cohortHtmlSelect'
-			},
+			/*
+		 	TODO: may need to handle a cohort filter option in an optional termdb app filter component 
+		  termfilter: {
+				filter: [{type: 'tvs', renderAs: 'htmlSelect', tvs: {...}}]
+		  },
+			***/
 			ssid: {
 				chr: m.chr, // chr and pos needed for computing AF with respect to sex & par
 				pos: m.pos,
@@ -501,5 +505,5 @@ official track only
 			filter: JSON.parse(JSON.stringify(tk.sample_termfilter))
 		}
 	}
-	appInit(null, opt)
+	appInit(opt)
 }

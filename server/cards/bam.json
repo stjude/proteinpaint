@@ -1,0 +1,66 @@
+{
+    "ppcalls": [
+        {
+            "label": "BAM",
+            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/bamDemoData.westkit.tar.gz",
+            "urlparam": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test%20WES%20BAM,proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "position": "chr4:55589707-55589907",
+                "nativetracks": "RefGene",
+                "tracks": [{
+                    "type": "bam",
+                    "file": "proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
+                    "name": "WES KIT exon mutation demo"
+                }]
+            },
+            "testSpec": {
+                "expected": {"image": 2 }
+            }
+        },
+        {
+            "label": "SNV/indel typing",
+            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/bamDemoData.exon8del.tar.gz",
+            "urlparam": "?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "position": "chr4:55589707-55589907",
+                "nativetracks": "RefGene",
+                "tracks": [{
+                    "type": "bam",
+                    "file": "proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
+                    "name": "WES KIT exon mutation with variant demo",
+                    "variants":[
+                        {
+                            "chr": "chr4",
+                            "pos": 55589770,
+                            "ref": "ACGA",
+                            "alt": "A"
+                        }
+                    ]
+                }]
+            },
+            "testSpec": {
+                "expected": {"image": 2 }
+            }
+        }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/presentation/d/1oGI72Vooc25oAKir4DmarNDjDmUcigQk65FU8niSE_k/edit#slide=id.g8398dfdab9_0_0"
+        },
+        {
+            "name": "Download BAM Slicing Script",
+            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/scripts/slice_bam4pp.py.gz"
+        }
+    ]
+}

@@ -5,18 +5,35 @@
 
 const fs = require('fs')
 const path = require('path')
-const execSync = require('child_process').execSync
 
 // do not assume that serverconfig.json is in the same dir as server.js
 // for example, when using proteinpaint as an npm module or binary
-const serverconfigfile = (process.cwd() || __dirname) + '/serverconfig.json'
+// or when calling a pp utility script from a tp data directory
+const workdirconfig = process.cwd() ? process.cwd() + '/serverconfig.json' : ''
+const serverdirconfig = path.join(__dirname, '../serverconfig.json')
+const pprootdirconfig = path.join(__dirname, '../../serverconfig.json')
+// check which config file exists in order of usage priority
+const serverconfigfile =
+	workdirconfig && fs.existsSync(workdirconfig)
+		? workdirconfig // prioritize a config file as found wherever a pp script is called from
+		: fs.existsSync(serverdirconfig)
+		? serverdirconfig // or next, use a config file in the pp/server/ dir
+		: fs.existsSync(pprootdirconfig)
+		? pprootdirconfig // or next, use a config file from the pp root
+		: ''
 
 /*******************
  GET SERVERCONFIG
 ********************/
-
 let serverconfig
-if (fs.existsSync(serverconfigfile)) {
+if (!serverconfigfile) {
+	// automatically generate serverconfig, hardcoded by customer
+	if (process.env.PP_CUSTOMER == 'gdc') {
+		serverconfig = getGDCconfig()
+	} else {
+		throw 'missing serverconfig.json'
+	}
+} else {
 	try {
 		// manually parse instead of require() to minimize
 		// bundling warnings or errors between test/prod builds
@@ -25,14 +42,20 @@ if (fs.existsSync(serverconfigfile)) {
 	} catch (e) {
 		throw `Error reading or parsing ${serverconfigfile}:` + e
 	}
-} else {
-	// automatically generate serverconfig, hardcoded by customer
-	if (process.env.PP_CUSTOMER == 'gdc') {
-		serverconfig = getGDCconfig()
-	} else {
-		throw 'missing serverconfig.json'
-	}
 }
+
+// this default port may be overwritten when using a Docker container
+if (!serverconfig.port) serverconfig.port = process.env.PP_PORT || 3000
+// default binary cmd paths
+if (!serverconfig.tabix) serverconfig.tabix = 'tabix'
+if (!serverconfig.samtools) serverconfig.samtools = 'samtools'
+if (!serverconfig.bcftools) serverconfig.bcftools = 'bcftools'
+if (!serverconfig.hicstraw) serverconfig.hicstraw = 'straw'
+if (!serverconfig.bigwigsummary) serverconfig.bigwigsummary = 'bigWigSummary'
+if (!serverconfig.bigBedToBed) serverconfig.bigBedToBed = 'bigBedToBed'
+if (!serverconfig.bigBedNamedItems) serverconfig.bigBedNamedItems = 'bigBedNamedItems'
+if (!serverconfig.clustalo) serverconfig.clustalo = 'clustalo'
+if (!serverconfig.Rscript) serverconfig.Rscript = 'Rscript'
 
 /******************
 	APPLY OVERRIDES 
@@ -74,21 +97,28 @@ if (!serverconfig.binpath) {
 if (serverconfig.debugmode) {
 	// only apply optional routeSetters in debugmode
 	const routeSetters = []
+	const defaultDir = path.join(serverconfig.binpath, 'src/test/routes')
+	// will add testing routes as needed and if found, such as in dev environment
+	const testRouteSetters = ['gdc.js', 'specs.js']
 
 	if (serverconfig.routeSetters) {
 		for (const f of serverconfig.routeSetters) {
-			if (fs.existsSync(f)) routeSetters.push(f)
-			else {
+			if (testRouteSetters.includes(f)) continue // will set in the next for-of block, to avoid duplicate entry
+			if (fs.existsSync(f)) {
+				routeSetters.push(f)
+			} else if (fs.existsSync(`${defaultDir}/${f}`)) {
+				routeSetters.push(`${defaultDir}/${f}`)
+			} else {
 				const absf = path.join(serverconfig.binpath, f)
 				if (fs.existsSync(absf)) routeSetters.push(absf)
 			}
 		}
 	}
 
-	// also add testing routes if found
-	const files = [path.join(serverconfig.binpath, './src/test/routes/gdc.js')]
-	for (const f of files) {
-		if (fs.existsSync(f)) routeSetters.push(f)
+	for (const f of testRouteSetters) {
+		const absf = `${defaultDir}/${f}`
+		// avoid duplicate entries; these test route setters should only exist in dev environment and not deployed to prod
+		if (!routeSetters.includes(absf) && fs.existsSync(absf)) routeSetters.push(absf)
 	}
 
 	// may replace the original routeSetters value,
@@ -112,8 +142,10 @@ if (serverconfig.allow_env_overrides) {
 			port: 3456,
 			tpmasterdir: '/home/root/pp/tp',
 			cachedir: '/home/root/pp/cache',
+			hicstraw: '/home/root/pp/tools/straw',
 			bigwigsummary: '/home/root/pp/tools/bigWigSummary',
-			hicstraw: '/home/root/pp/tools/straw'
+			bigBedToBed: '/home/root/pp/tools/bigBedToBed',
+			bigBedNamedItems: '/home/root/pp/tools/bigBedNamedItems'
 			// note that tabix, samtools, and similar binaries are
 			// saved in the usual */bin/ paths so locating them
 			// is not needed when calling via Node child_process.spawn() or exec()
@@ -141,10 +173,18 @@ if (!serverconfig.features) {
 	serverconfig.features = {}
 }
 
-if (serverconfig.features.examples) {
-	if (!serverconfig.examplejson) {
-		serverconfig.examplejson = path.join(serverconfig.binpath, 'features.json')
-	}
+if (!serverconfig.cardsjson) {
+	serverconfig.cardsjson = path.join(serverconfig.binpath, 'cards/index.json')
+}
+
+if (!serverconfig.cardsjsondir) {
+	serverconfig.cardsjsondir = path.join(serverconfig.binpath, 'cards')
+}
+
+if (fs.existsSync('./public/rev.txt')) {
+	const revtxt = fs.readFileSync('./public/rev.txt', { encoding: 'utf8' })
+	const commitHash = revtxt.trim().split(' ')[1]
+	if (commitHash) serverconfig.commitHash = commitHash
 }
 
 //Object.freeze(serverconfig)

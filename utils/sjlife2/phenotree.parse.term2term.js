@@ -47,6 +47,149 @@ outputs these files:
 console.log('\nRUNNING phenotree.parse.term2term.js ...')
 
 const level2_ctcaegraded = 'Graded Adverse Events'
+const groupsetting = {
+	useIndex: -1,
+	lst: [
+		{
+			name: 'Any condition vs normal',
+			is_grade: true,
+			groups: [
+				{
+					name: 'No condition / not tested',
+					// CAREFUL!! grades are integers, not strings. so that max grade computing can happen
+					values: [{ key: 0, label: 'No condition' }, { key: -1, label: 'Not tested' }]
+				},
+				{
+					name: 'Has condition',
+					values: [
+						{ key: 1, label: '1: Mild' },
+						{ key: 2, label: '2: Moderate' },
+						{ key: 3, label: '3: Severe' },
+						{ key: 4, label: '4: Life-threatening' },
+						{ key: 5, label: '5: Death' }
+					]
+				}
+			]
+		}
+	]
+}
+/*
+const tvs_ctcaeGraded = () => {
+	return {
+		type: 'tvs',
+		tvs: {
+			term: {
+				id: 'ctcae_graded',
+				name: 'graded adverse events',
+				type: 'categorical'
+			},
+			values: [{ key: '1', label: 'Yes' }]
+		}
+	}
+}
+const tvs_grade1_9 = t => {
+	return {
+		type: 'tvs',
+		tvs: {
+			term: {
+				id: t.id,
+				name: t.name,
+				type: 'condition'
+			},
+			isnot: true,
+			value_by_max_grade: true,
+			bar_by_grade: true,
+			values: [
+				{ key: 1, label: '1: Mild' },
+				{ key: 2, label: '2: Moderate' },
+				{ key: 3, label: '3: Severe' },
+				{ key: 4, label: '4: Life-threatening' },
+				{ key: 5, label: '5: Death' },
+				{ key: 9, label: '9: Unknown' }
+			]
+		}
+	}
+}
+const tvs_subcohort = cohort => {
+	return {
+		type: 'tvs',
+		tvs: {
+			term: {
+				id: 'subcohort',
+				type: 'categorical'
+			},
+			values: [{ key: cohort, label: cohort }]
+		}
+	}
+}
+
+const make_groupsetting = t => {
+	// new def
+	return {
+		useIndex: -1,
+		lst: [
+			{
+				name: 'Any condition vs normal',
+				is_grade: true,
+				groups: [
+					{
+						name: 'No condition / not tested',
+						type: 'filter',
+						filter4activeCohort: [
+							// shares array index with termdb.selectCohort.values[]
+							// 0 - sjlife
+							{
+								type: 'tvslst',
+								in: true,
+								join: 'and',
+								lst: [tvs_ctcaeGraded(), tvs_grade1_9(t)]
+							},
+							// 1 - ccss
+							{
+								type: 'tvslst',
+								in: true,
+								join: '',
+								lst: [tvs_grade1_9(t)]
+							},
+							// 2 - sjlife+ccss
+							{
+								type: 'tvslst',
+								in: true,
+								join: 'or',
+								lst: [
+									{
+										type: 'tvslst',
+										in: true,
+										join: 'and',
+										lst: [tvs_subcohort('SJLIFE'), tvs_ctcaeGraded(), tvs_grade1_9(t)]
+									},
+									{
+										type: 'tvslst',
+										in: true,
+										join: 'and',
+										lst: [tvs_subcohort('CCSS'), tvs_grade1_9(t)]
+									}
+								]
+							}
+						]
+					},
+					{
+						name: 'Has condition',
+						type: 'values',
+						values: [
+							{ key: 1, label: '1: Mild' },
+							{ key: 2, label: '2: Moderate' },
+							{ key: 3, label: '3: Severe' },
+							{ key: 4, label: '4: Life-threatening' },
+							{ key: 5, label: '5: Death' }
+						]
+					}
+				]
+			}
+		]
+	}
+}
+*/
 
 const abort = m => {
 	console.error('ERROR: ' + m)
@@ -424,7 +567,11 @@ each word is a term
 				'\t' +
 				JSON.stringify(j) +
 				'\t' +
-				p2childorder.get(c2immediatep.get(id) || root_id).indexOf(id)
+				p2childorder.get(c2immediatep.get(id) || root_id).indexOf(id) +
+				'\t' +
+				(j.type || '') +
+				'\t' +
+				(j.isleaf ? 1 : 0)
 		)
 	}
 	return map.size + ' terms, ' + leafcount + ' leaf terms'
@@ -442,7 +589,8 @@ function addattributes_conditionterm(t) {
 		'3': { label: '3: Severe' },
 		'4': { label: '4: Life-threatening' },
 		'5': { label: '5: Death' },
-		'9': { label: 'Unknown status', uncomputable: true }
+		'9': { label: 'Unknown status', uncomputable: true },
+		'-1': { label: 'Not tested', uncomputable: true }
 	}
 
 	if (!t.isleaf) {
@@ -456,31 +604,7 @@ function addattributes_conditionterm(t) {
 		}
 	}
 
-	t.groupsetting = {
-		useIndex: -1,
-		lst: [
-			{
-				name: 'Any condition vs normal',
-				is_grade: true,
-				groups: [
-					{
-						name: 'No condition',
-						values: [{ key: '0', label: 'No condition' }]
-					},
-					{
-						name: 'Has condition',
-						values: [
-							{ key: '1', label: '1: Mild' },
-							{ key: '2', label: '2: Moderate' },
-							{ key: '3', label: '3: Severe' },
-							{ key: '4', label: '4: Life-threatening' },
-							{ key: '5', label: '5: Death' }
-						]
-					}
-				]
-			}
-		]
-	}
+	t.groupsetting = JSON.parse(JSON.stringify(groupsetting))
 }
 
 function output_termdb() {
@@ -502,27 +626,27 @@ manual inspection:
 
 	{
 		const str = termjson_outputoneset(map1, lines)
-		console.log('ROOT: ' + str)
+		//console.log('ROOT: ' + str)
 	}
 
 	{
 		const str = termjson_outputoneset(map2, lines)
-		console.log('Level 1: ' + str)
+		//console.log('Level 1: ' + str)
 	}
 
 	{
 		const str = termjson_outputoneset(map3, lines)
-		console.log('Level 2: ' + str)
+		//console.log('Level 2: ' + str)
 	}
 
 	{
 		const str = termjson_outputoneset(map4, lines)
-		console.log('Level 3: ' + str)
+		//console.log('Level 3: ' + str)
 	}
 
 	{
 		const str = termjson_outputoneset(map5, lines)
-		console.log('Level 4: ' + str)
+		//console.log('Level 4: ' + str)
 	}
 
 	fs.writeFileSync('termdb', lines.join('\n') + '\n')

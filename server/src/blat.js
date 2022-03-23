@@ -11,7 +11,6 @@ const gfServer = serverconfig.gfServer || 'gfServer'
 
 exports.request_closure = genomes => {
 	return async (req, res) => {
-		app.log(req)
 		try {
 			if (req.query.serverstat) {
 				const lst = []
@@ -186,20 +185,17 @@ async function do_blat2(genome, seq, soft_starts, soft_stops) {
 				h.ref_alignment = l[6]
 				h.ref_stoppos = (parseInt(l[2]) + parseInt(l[3] - 1)).toString()
 				if (genome.repeatmasker) {
-					await utils.get_lines_tabix(
-						[
+					await utils.get_lines_bigfile({
+						args: [
 							path.join(serverconfig.tpmasterdir, genome.repeatmasker.dbfile),
 							h.ref_chr + ':' + h.ref_startpos + '-' + h.ref_stoppos
 						],
-						null,
-						line => {
-							//console.log(h.ref_chr + ':' + h.ref_startpos + '-' + h.ref_stoppos)														 //console.log("line2:",line)
-
+						callback: line => {
 							const columns = line.split('\t')
 							const json_object = JSON.parse(columns[3])
 							h.ref_in_repeat = json_object.category
 						}
-					)
+					})
 					if (h.ref_in_repeat == undefined) {
 						h.ref_in_repeat = '-'
 					}

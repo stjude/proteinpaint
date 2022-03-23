@@ -5,11 +5,14 @@ import { format as d3format } from 'd3-format'
 import { axisTop, axisLeft } from 'd3-axis'
 import { debounce } from 'debounce'
 import * as client from './client'
+import { Menu } from './dom/menu'
+import { dofetch3 } from './common/dofetch'
 import * as common from '../shared/common'
 import * as coord from './coord'
 import vcf2dstk from './vcf.tkconvert'
 import blockinit from './block.init'
 import * as Legend from './block.legend'
+import { newSandboxDiv } from './dom/sandbox'
 
 // track types
 import { bamfromtemplate, bammaketk, bamload } from './block.tk.bam.adaptor'
@@ -47,10 +50,13 @@ import dsmaketk from './block.ds.maketk'
 
 // dummy
 
-/* JUMP __tk__
-        __gm__
-		__subpanel
-		__ruler
+/* 
+callbacks from constructor options
+- onloadalltk
+- onloadalltk_always
+- onCoordinateChange
+- onpanning
+- onsetheight
 
 **************** METHODS
 updateruler()
@@ -75,6 +81,8 @@ export class Block {
 		// assign a blockId to help in targeted DOM selection, in testing and maybe live usage.
 		this.blockId = blockId++
 
+		this.mclassOverride = arg.mclassOverride // allow tracks to access it to render legend
+
 		// temp fix, to use in dofetch2( {serverData} )
 		this.cache = {}
 
@@ -83,8 +91,8 @@ export class Block {
 			this.debugmode = true
 		}
 
-		this.hostURL = arg.hostURL
-		this.jwt = arg.jwt
+		this.hostURL = sessionStorage.getItem('hostURL') // NO NEED for these after replacing fetch() with dofetch2()
+		this.jwt = sessionStorage.getItem('jwt')
 
 		if (!arg.style) {
 			arg.style = {}
@@ -127,11 +135,13 @@ export class Block {
 		this.rotated = arg.rotated
 		this.showreverse = arg.showreverse // effect on pan
 
+		////////////////////////////////
 		// callbacks
 		this.onloadalltk = []
 		this.onloadalltk_always = arg.onloadalltk_always
 		this.onpanning = arg.onpanning
 		this.onsetheight = arg.onsetheight
+		this.onCoordinateChange = arg.onCoordinateChange // argument is the rglst[]
 
 		this.exonsf = 1 // # pixel per basepair
 
@@ -141,13 +151,13 @@ export class Block {
 		this.holder0 = arg.holder
 		this.errdiv = arg.holder.append('div')
 
-		this.blocktip = new client.Menu({ padding: '0px' })
+		this.blocktip = new Menu({ padding: '0px' })
 		/* used at:
 		old official ds handle, mouse over for "About" menu
 		mds handle, click to show list of contents
 		zoom buttons, mouse over for list of subpanels
 	*/
-		this.tip = new client.Menu({ padding: '0px' })
+		this.tip = new Menu({ padding: '0px' })
 
 		if (!this.genome) {
 			this.error('no genome')
@@ -325,7 +335,11 @@ export class Block {
 				.style('border-spacing', '15px')
 				.style('border-collapse', 'separate')
 
-			const [tr1, td1] = Legend.legend_newrow(this, 'CLASS')
+			const [tr1, td1] = Legend.legend_newrow(
+				this,
+				//Allows user to set left-side group designation for classes
+				arg.mclassOverride && arg.mclassOverride.className ? arg.mclassOverride.className : 'CLASS'
+			)
 			this.legend.tr_mclass = tr1.style('display', 'none')
 			this.legend.td_mclass = td1
 			const [tr2, td2] = Legend.legend_newrow(this, 'ORIGIN')
@@ -355,7 +369,7 @@ export class Block {
 				.style('color', 'white')
 		}
 		if (this.usegm) {
-			this.usegmtip = new client.Menu({ padding: 'none' })
+			this.usegmtip = new Menu({ padding: 'none' })
 			// name button
 			this.ctrl.namebutt = butrow
 				.append('span')
@@ -488,7 +502,7 @@ export class Block {
 				.append('button')
 				.text('Tracks')
 				.style('margin-left', '10px')
-			const tip = new client.Menu({ padding: 'none' })
+			const tip = new Menu({ padding: 'none' })
 			button.on('click', () => {
 				// remove past state for refreshing tk data
 				this.pannedpx = undefined
@@ -506,7 +520,7 @@ export class Block {
 		}
 
 		{
-			const tip = new client.Menu()
+			const tip = new Menu()
 			butrow
 				.append('button')
 				.style('margin-left', '10px')
@@ -520,7 +534,34 @@ export class Block {
 				})
 		}
 
+		this.gdcBamSliceDownloadBtn = butrow
+			.append('button')
+			.style('margin-left', '10px')
+			.style('display', 'none')
+			.text('Download GDC BAM slice')
+			.on('click', async () => {
+				const tk = this.tklst.find(i => i.type == 'bam' && i.gdc_file)
+				if (!tk) return
+				// TODO if there're multiple files, show a menu with one option for each. click an option to download that one
+				const requestUrl = `tkbam?genome=${this.genome.name}&clientdownloadgdcslice=${tk.file}`
+				window.open(requestUrl, '_self', 'download')
+			})
+
 		this.gbase = this.svg.append('g').attr('transform', 'translate(0,0)')
+
+		// cloak that covers gbase with a rect to indicate loading and prevent user interaction
+		this.gCloak = this.svg.append('g').attr('transform', 'scale(0)')
+		this.gCloakRect = this.gCloak.append('rect').attr('fill', 'white')
+		this.gCloakWord = this.gCloak
+			.append('text')
+			.text('Loading ...')
+			.attr('fill', common.defaultcolor)
+			.attr('fill-opacity', 0)
+			.attr('font-weight', 'bold')
+			.attr('font-size', '18px')
+			.attr('text-anchor', 'middle')
+			.attr('dominant-baseline', 'middle')
+
 		this.pica = { g: this.svg.append('g') }
 
 		this.hlregion = {
@@ -723,6 +764,21 @@ export class Block {
 				if (!client.tkexists(t, this.tklst)) {
 					this.block_addtk_template(t)
 				}
+			}
+		}
+
+		/* quick fix: 
+		when there are bam tracks, these tracks usually are taller than a screen
+		making it hard to compare to gene tracks lying on the bottom
+		move the native gene track to the top
+		usually that is the only bedj track in the list
+		*/
+		if (this.tklst.find(i => i.type == client.tkt.bam)) {
+			const bedtkidx = this.tklst.findIndex(i => i.type == client.tkt.bedj)
+			if (bedtkidx != -1) {
+				const t = this.tklst[bedtkidx]
+				this.tklst.splice(bedtkidx, 1)
+				this.tklst.unshift(t)
 			}
 		}
 
@@ -1615,9 +1671,12 @@ reverseorient() {
 				.attr('width', Math.max(2, Math.min(this.width, stopx) - Math.max(0, startx)))
 				.attr('height', blockh)
 		}
+		if (this.onCoordinateChange) {
+			this.onCoordinateChange(this.rglst)
+		}
 	}
 
-	jump_1basedcoordinate(s) {
+	async jump_1basedcoordinate(s) {
 		/*
 	if input is coord string, should be 1-based!!
 	also supports gene name and rsname
@@ -1690,100 +1749,96 @@ reverseorient() {
 			}
 		}
 		// try
-		this.block_jump_gene(s)
+		await this.block_jump_gene(s)
 	}
 
-	block_jump_gene(s) {
-		fetch(
-			new Request(this.hostURL + '/genelookup', {
+	async block_jump_gene(s) {
+		try {
+			const data = await dofetch3('genelookup', {
 				method: 'POST',
-				body: JSON.stringify({ genome: this.genome.name, input: s, deep: 1, jwt: this.jwt })
+				body: JSON.stringify({ genome: this.genome.name, input: s, deep: 1 })
 			})
-		)
-			.then(data => {
-				return data.json()
-			})
-			.then(data => {
-				if (data.error) throw { message: data.error }
-				if (!data.gmlst || data.gmlst.length == 0) {
-					// no gene match
-					if (this.genome.hasSNP) {
-						if (s.toLowerCase().startsWith('rs')) {
-							this.block_jump_snp(s)
-						} else {
-							this.inputerr('Not a gene or SNP: ' + s)
-						}
+			if (data.error) throw data.error
+			if (!data.gmlst || data.gmlst.length == 0) {
+				// no gene match
+				if (this.genome.hasSNP) {
+					if (s.toLowerCase().startsWith('rs')) {
+						// looks like a snp
+						this.block_jump_snp(s)
 					} else {
-						input.inputerr('Unknown gene name: ' + s)
+						this.inputerr('Not a gene or SNP: ' + s)
 					}
+				} else {
+					this.inputerr('Unknown gene name: ' + s)
+				}
+				return
+			}
+			// "s" matches with a gene name
+
+			// quick fix: update valid gene name to pgv
+			for (const t of this.tklst) {
+				if (t.type == client.tkt.pgv) {
+					t.genename = s
+				}
+			}
+
+			// aggregate loci for all isoforms from data.gmlst[]
+			const locs = client.gmlst2loci(data.gmlst)
+
+			if (locs.length == 1) {
+				// all isoforms are on the same locus
+				const r = locs[0]
+				const e = coord.invalidcoord(this.genome, r.chr, r.start, r.stop)
+				if (e) {
+					this.inputerr('this should not happen: gene error: ' + e)
 					return
 				}
-
-				// update valid gene name to pgv
-				for (const t of this.tklst) {
-					if (t.type == client.tkt.pgv) {
-						t.genename = s
+				this.rglst = [
+					{
+						chr: r.chr,
+						bstart: 0,
+						bstop: this.genome.chrlookup[r.chr.toUpperCase()].len,
+						start: r.start,
+						stop: r.stop,
+						reverse: this.showreverse
 					}
-				}
+				]
+				this.startidx = this.stopidx = 0
+				this.block_coord_updated()
+				return
+			}
 
-				const locs = client.gmlst2loci(data.gmlst)
-
-				if (locs.length == 1) {
-					const r = locs[0]
-					const e = coord.invalidcoord(this.genome, r.chr, r.start, r.stop)
-					if (e) {
-						this.inputerr('this should not happen: gene error: ' + e)
-						return
-					}
-					this.rglst = [
-						{
-							chr: r.chr,
-							bstart: 0,
-							bstop: this.genome.chrlookup[r.chr.toUpperCase()].len,
-							start: r.start,
-							stop: r.stop,
-							reverse: this.showreverse
-						}
-					]
-					this.startidx = this.stopidx = 0
-					this.block_coord_updated()
-					return
-				}
-
-				// multiple locations
-				this.coord.inputtipshow()
-
-				for (const r of locs) {
-					this.coord.inputtip.d
-						.append('div')
-						.attr('class', 'sja_menuoption')
-						.text(r.name + ' ' + r.chr + ':' + r.start + '-' + r.stop)
-						.on('click', () => {
-							this.coord.inputtip.hide()
-							this.rglst = [
-								{
-									chr: r.chr,
-									bstart: 0,
-									bstop: this.genome.chrlookup[r.chr.toUpperCase()].len,
-									start: r.start,
-									stop: r.stop,
-									reverse: this.showreverse
-								}
-							]
-							this.startidx = this.stopidx = 0
-							this.block_coord_updated()
-						})
-				}
-			})
-			.catch(err => {
-				this.inputerr(err.message)
-				if (err.stack) console.log(err.stack)
-			})
+			// isoforms are spread out on multiple locations
+			this.coord.inputtipshow()
+			for (const r of locs) {
+				this.coord.inputtip.d
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.text(r.name + ' ' + r.chr + ':' + r.start + '-' + r.stop)
+					.on('click', () => {
+						this.coord.inputtip.hide()
+						this.rglst = [
+							{
+								chr: r.chr,
+								bstart: 0,
+								bstop: this.genome.chrlookup[r.chr.toUpperCase()].len,
+								start: r.start,
+								stop: r.stop,
+								reverse: this.showreverse
+							}
+						]
+						this.startidx = this.stopidx = 0
+						this.block_coord_updated()
+					})
+			}
+		} catch (e) {
+			this.inputerr(e.message || e)
+		}
 	}
 
 	block_jump_snp(s) {
 		coord
-			.string2snp(this.genome.name, s, this.hostURL, this.jwt)
+			.string2snp(this.genome, s, this.hostURL, this.jwt)
 			.then(r => {
 				const span = Math.ceil(this.width / ntpxwidth)
 				this.rglst = [
@@ -2250,11 +2305,10 @@ seekrange(chr,start,stop) {
 					.classed('sja_opaque8', true)
 					.text(1)
 					.on('click', () => {
-						const p = d3event.target.getBoundingClientRect()
-						const div = client
-							.menushow(p.left - 100, p.top + p.height + 5)
-							.append('div')
-							.style('border', 'solid 1px black')
+						const div = this.tip
+							.clear()
+							.showunder(d3event.target)
+							.d.append('div')
 							.style('padding', '20px')
 						div
 							.append('div')
@@ -2454,8 +2508,8 @@ seekrange(chr,start,stop) {
 	block_maketk(tk) {
 		// keep separate from addtk()
 		// call each time to show a tk in .tklst
-		tk.tktip = new client.Menu({ padding: '15px' })
-		tk.tkconfigtip = new client.Menu({ padding: '15px' })
+		tk.tktip = new Menu({ padding: '15px' })
+		tk.tkconfigtip = new Menu({ padding: '15px' })
 
 		tk.g = this.gbase.append('g').attr('transform', 'translate(0,0)')
 		/*
@@ -2495,7 +2549,9 @@ seekrange(chr,start,stop) {
 		if (tk.name) {
 			// two conditions to show tooltip on hovering the label
 			// 1. label truncated, hover to show full label
-			// 2. list_description[{k,v}] provided, hover to show table of details
+			// 2. list_description[{k,v}] provided:
+			// a.hover to show table of details
+			// b. click label to show and leave table of details
 			const labeltruncated = tk.name.length >= 25
 			if (labeltruncated) {
 				// to truncate name and also apply tooltip
@@ -2506,18 +2562,28 @@ seekrange(chr,start,stop) {
 			}
 			if (labeltruncated || tk.list_description) {
 				// will show tooltip to display both info if available
-				tk.tklabel
-					.on('mouseover', () => {
-						tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
-						if (labeltruncated) {
-							const d = tk.tktip.d.append('div').text(tk.name)
-							if (tk.list_description) d.style('margin-bottom', '5px')
-						}
-						if (tk.list_description) {
-							client.make_table_2col(tk.tktip.d.append('div'), tk.list_description).style('margin', '0px')
-						}
-					})
-					.on('mouseout', () => tk.tktip.hide())
+
+				// detects if tooltip is in use or not
+				let tktip_active = false
+				tk.tktip.onHide = () => {
+					tktip_active = false
+				}
+				tk.tklabel.on('mouseover', () => {
+					// Only fires if menu not active from click event
+					if (tktip_active == true) return
+					showTkLabelTooltip(tk, labeltruncated)
+					tktip_active = false
+				})
+				tk.tklabel.on('mouseout', () => {
+					if (tktip_active == true) return
+					tk.tktip.hide()
+				})
+				tk.tklabel.on('click', () => {
+					tktip_active = !tktip_active
+					if (tktip_active == true) {
+						showTkLabelTooltip(tk, labeltruncated)
+					}
+				})
 			}
 			// tklabel content is set. initiate leftLabelMaxwidth with <text> width
 			// this width may be overwritten (only by larger width) in individual tk maker scripts (adding sublabels or change tk.name ...)
@@ -2527,6 +2593,16 @@ seekrange(chr,start,stop) {
 			// tk.name is not provided, e.g. mds2
 			// its maketk will be responsible for filling the tklabel and setting tk.leftLabelMaxwidth
 			// fault is that the tooltip cannot be provided in this case
+		}
+		function showTkLabelTooltip(tk, labeltruncated) {
+			tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
+			if (labeltruncated) {
+				const d = tk.tktip.d.append('div').text(tk.name)
+				if (tk.list_description) d.style('margin-bottom', '5px')
+			}
+			if (tk.list_description) {
+				client.make_table_2col(tk.tktip.d.append('div'), tk.list_description).style('margin', '0px')
+			}
 		}
 
 		tk.pica = {
@@ -2978,6 +3054,29 @@ seekrange(chr,start,stop) {
 		}
 	}
 
+	cloakOn() {
+		// will cloak the entire svg
+		// right now not called in block, but is called by external code on a block instance
+		const w = Number(this.svg.attr('width')),
+			h = Number(this.svg.attr('height'))
+		this.gCloak.attr('transform', 'scale(1)')
+		this.gCloakRect
+			.attr('width', w)
+			.attr('height', h)
+			.transition()
+			.duration(600)
+			.attr('fill-opacity', 0.5)
+		this.gCloakWord
+			.attr('x', w / 2)
+			.attr('y', h / 2)
+			.transition()
+			.duration(600)
+			.attr('fill-opacity', 1)
+	}
+	cloakOff() {
+		this.gCloak.attr('transform', 'scale(0)')
+	}
+
 	tkcloakon(tk) {
 		tk.busy = true
 		this.busy = true
@@ -3007,7 +3106,7 @@ seekrange(chr,start,stop) {
 		tk.busy = false
 		this.ifbusy()
 		tk.cloak.attr('transform', 'scale(0)')
-		tk.cloakbox.attr('fill-opacity', 0)
+		tk.cloakbox.attr('fill-opacity', 0).attr('height', 0) //This is a fix for issue #259. Set to 0. Otherwise Safari will not detect event.listeners for the first few track rows.
 		tk.cloaktext.attr('fill-opacity', 0)
 		tk.cloakline.attr('x2', 0)
 		tk.glider.attr('transform', 'translate(0,0)')
@@ -3123,9 +3222,7 @@ seekrange(chr,start,stop) {
 	}
 
 	tkarg_bedj(tk) {
-		// TODO may append regulatory regions as rgleft[] rgright[]
 		const par = {
-			jwt: this.jwt,
 			name: tk.name,
 			genome: this.genome.name,
 			rglst: this.tkarg_rglst(),
@@ -3147,6 +3244,8 @@ seekrange(chr,start,stop) {
 		if (tk.onerow) par.onerow = 1
 		if (tk.usevalue) par.usevalue = tk.usevalue
 		if (tk.bplengthUpperLimit) par.bplengthUpperLimit = tk.bplengthUpperLimit
+		if (tk.hideItemNames) par.hideItemNames = tk.hideItemNames
+		if (tk.filterByName) par.filterByName = tk.filterByName
 		if (this.usegm && this.gmmode != client.gmmode.genomic) {
 			// important, will render a gene in a single row across rglst
 			par.gmregion = this.tkarg_maygm(tk)[0]
@@ -3315,7 +3414,7 @@ seekrange(chr,start,stop) {
 		else {
 			// case 1 & 2
 			const sandbox_div = d3select(root_divs[2])
-			pane = client.newSandboxDiv(sandbox_div)
+			pane = newSandboxDiv(sandbox_div)
 		}
 		pane.header.text(isoform)
 		const arg = {
@@ -4848,7 +4947,7 @@ function getrulerunit(span, ticks) {
 }
 
 function makecoordinput(bb, butrow) {
-	bb.coord.inputtip = new client.Menu({
+	bb.coord.inputtip = new Menu({
 		padding: '0px',
 		offsetX: 0,
 		offsetY: 0
@@ -4900,34 +4999,31 @@ function makecoordinput(bb, butrow) {
 			debouncer()
 		})
 
-	function genesearch() {
+	async function genesearch() {
 		// gene name lookup
 		const v = bb.coord.input.property('value')
 		if (!v) return
 		bb.coord.inputtipshow()
-		client
-			.dofetch('/genelookup', { genome: bb.genome.name, input: v })
-			.then(data => {
-				if (data.error) throw { message: data.error }
-				if (data.hits && data.hits.length) {
-					for (const s of data.hits) {
-						bb.coord.inputtip.d
-							.append('div')
-							.attr('class', 'sja_menuoption')
-							.text(s)
-							.on('click', () => {
-								bb.coord.inputtip.hide()
-								bb.block_jump_gene(s)
-							})
-					}
-				} else {
-					bb.coord.inputtip.hide()
-				}
+		try {
+			const data = await dofetch3('genelookup', {
+				method: 'POST',
+				body: JSON.stringify({ genome: bb.genome.name, input: v })
 			})
-			.catch(err => {
-				bb.error(err.message)
-				if (err.stack) console.log(err.stack)
-			})
+			if (data.error) throw data.error
+			if (!data.hits || data.hits.length == 0) return bb.coord.inputtip.hide()
+			for (const s of data.hits) {
+				bb.coord.inputtip.d
+					.append('div')
+					.attr('class', 'sja_menuoption')
+					.text(s)
+					.on('click', () => {
+						bb.coord.inputtip.hide()
+						bb.block_jump_gene(s)
+					})
+			}
+		} catch (e) {
+			bb.inputerr(e.message || e)
+		}
 	}
 
 	const debouncer = debounce(genesearch, 300)

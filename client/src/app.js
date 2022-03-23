@@ -12,8 +12,11 @@ import { getsjcharts } from './getsjcharts'
 import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
-
+import { drawer_init } from './app.drawer'
+import urlmap from './common/urlmap'
+import { renderSandboxFormDiv, newSandboxDiv } from './dom/sandbox'
 import * as wrappers from './wrappers/PpReact'
+import { first_genetrack_tolist } from './common/1stGenetk'
 
 /*
 
@@ -50,8 +53,6 @@ launch_fimo
 launch_singlecell
 */
 
-const ppsrc = (document && document.currentScript && document.currentScript.src) || ''
-
 const headtip = new client.Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
 headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
@@ -65,11 +66,6 @@ export function runproteinpaint(arg) {
 			client.sayerror(app.holder0, m)
 		},
 
-		// default data host, may be overriden later by arg.host
-		// will allow different hostURLs for each holder
-		// when calling runproteinpaint() multiple times in the same page
-		hostURL: ppsrc.includes('://') ? ppsrc.split('://')[0] + '://' + ppsrc.split('://')[1].split('/')[0] : '',
-
 		/*
 		server emitted state, if true, will trigger globals e.g. window.bb
 		it needs to be set before launching any apps
@@ -82,6 +78,8 @@ export function runproteinpaint(arg) {
 		instanceTracker: arg.instanceTracker || { sjcharts: {} }
 	}
 
+	setHostUrl(arg, app)
+
 	// subnest an sjcharts object to track its app instances by rendererType,
 	// to avoid namespace conflicts with PP renderer instances
 	if (!app.instanceTracker.sjcharts) {
@@ -93,7 +91,6 @@ export function runproteinpaint(arg) {
 
 	if (arg.clear) {
 		// for use by pecan
-		d3selectAll('.sja_menu').remove()
 		d3selectAll('.sja_pane').remove()
 		return
 	}
@@ -105,25 +102,6 @@ export function runproteinpaint(arg) {
 		.style('color', 'black')
 	app.sandbox_header = arg.sandbox_header || undefined
 
-	if (arg.host) {
-		app.hostURL = arg.host
-	} else if (window.location.hostname == 'localhost') {
-		// easily switch server host for testing in developer machine,
-		// for example the rendered data from a docker container vs host machine
-		const urlp = parseurl.url2map()
-		if (urlp.has('hosturl')) app.hostURL = urlp.get('hosturl')
-		else {
-			const hostname = urlp.get('hostname')
-			const hostport = urlp.get('hostport')
-			const prot = window.location.protocol + '//'
-			if (hostname && hostport) app.hostURL = prot + hostname + ':' + hostport
-			else if (hostname) app.hostURL = prot + hostname
-			else if (hostport) app.hostURL = prot + window.location.hostname + ':' + hostport
-		}
-	}
-
-	// store fetch parameters
-	sessionStorage.setItem('hostURL', app.hostURL)
 	if (arg.jwt) {
 		sessionStorage.setItem('jwt', arg.jwt)
 	}
@@ -157,7 +135,7 @@ export function runproteinpaint(arg) {
 	const response = client.dofetch2('genomes', {}, { serverData })
 
 	return response
-		.then(data => {
+		.then(async data => {
 			if (data.error) throw { message: 'Cannot get genomes: ' + data.error }
 			if (!data.genomes) throw { message: 'no genome data!?' }
 
@@ -179,13 +157,13 @@ export function runproteinpaint(arg) {
 				}
 			}
 
-			if (!arg.noheader) {
+			if (!arg.noheader && !window.location.search.includes('noheader')) {
 				makeheader(app, data, arg.jwt)
 			}
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')
 
-			const subapp = parseembedthenurl(arg, app)
+			const subapp = await parseembedthenurl(arg, app)
 			return subapp ? subapp : app
 		})
 		.catch(err => {
@@ -195,6 +173,48 @@ export function runproteinpaint(arg) {
 }
 
 runproteinpaint.wrappers = wrappers
+
+// KEEP THIS ppsrc DECLARATION AT THE TOP SCOPE !!!
+// need to know the script src when pp is first loaded
+// the source context may be lost after the pp script is loaded
+// and a different script gets loaded in the page
+const ppsrc = (document && document.currentScript && document.currentScript.src) || ''
+
+function setHostUrl(arg, app) {
+	// attaching hostURL to app will allow different hostURLs for each holder
+	// when calling runproteinpaint() multiple times in the same page
+
+	if (arg.host) {
+		app.hostURL = arg.host
+	} else if (window.location.hostname == 'localhost') {
+		// easily switch server host for testing in developer machine,
+		// for example the rendered data from a docker container vs host machine
+		const urlp = urlmap()
+		if (urlp.has('hosturl')) app.hostURL = urlp.get('hosturl')
+		else if (window.testHost) {
+			app.hostURL = window.testHost
+		} else {
+			const hostname = urlp.get('hostname')
+			const hostport = urlp.get('hostport')
+			const prot = window.location.protocol + '//'
+			if (hostname && hostport) app.hostURL = prot + hostname + ':' + hostport
+			else if (hostname) app.hostURL = prot + hostname
+			else if (hostport) app.hostURL = prot + window.location.hostname + ':' + hostport
+		}
+	}
+
+	if (!app.hostURL) {
+		if (ppsrc.includes('://')) {
+			// use the script source as the host URL
+			app.hostURL = ppsrc.split('://')[0] + '://' + ppsrc.split('://')[1].split('/')[0]
+		} else {
+			app.hostURL = ''
+		}
+	}
+
+	// store fetch parameters
+	sessionStorage.setItem('hostURL', app.hostURL)
+}
 
 function makeheader(app, obj, jwt) {
 	/*
@@ -216,13 +236,6 @@ function makeheader(app, obj, jwt) {
 			true || doc_width > 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
 
-	const apps_drawer_row = app.holder
-		.append('div')
-		.style('position', 'relative')
-		.style('overflow-x', 'visible')
-		.style('overflow-y', 'hidden')
-
-	app.holder.apps_sandbox_div = app.holder.append('div').style('margin-top', '15px')
 	const headbox = row
 		.append('div')
 		.style('margin', '10px')
@@ -233,6 +246,7 @@ function makeheader(app, obj, jwt) {
 			'border-bottom',
 			0 && doc_width < 1600 ? 'solid 1px rgba(' + color.r + ',' + color.g + ',' + color.b + ',.3)' : ''
 		)
+
 	// .style('border-radius', '5px')
 	// .style('background-color', 'rgba(' + color.r + ',' + color.g + ',' + color.b + ',.1)')
 	const headinfo = row
@@ -291,8 +305,7 @@ function makeheader(app, obj, jwt) {
 	const tip = new client.Menu({ border: '', padding: '0px' })
 
 	function entersearch() {
-		app_btn_active = false
-		apps_off()
+		app.drawer.apps_off()
 		// by pressing enter, if not gene will search snp
 		d3selectAll('.sja_ep_pane').remove() // poor fix to remove existing epaint windows
 		let str = input.property('value').trim()
@@ -309,7 +322,7 @@ function makeheader(app, obj, jwt) {
 	function genesearch() {
 		// any other key typing
 		tip.clear().showunder(input.node())
-		findgenelst(app, input.property('value'), app.selectgenome.property('value'), tip, jwt, app_btn_active, apps_off)
+		findgenelst(app, input.property('value'), app.selectgenome.property('value'), tip, jwt)
 	}
 	const debouncer = debounce(genesearch, 300)
 	const input = headbox
@@ -354,189 +367,10 @@ function makeheader(app, obj, jwt) {
 			.text(app.genomes[n].species + ' ' + n)
 			.property('value', n)
 	}
-	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt, apps_off)
+	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt)
 
-	const duration = 500, // for apps drawer animation
-		hint_pos = {
-			open: { btm: -40, left: 13 },
-			closed: { btm: 3, rt: 5 }
-		},
-		hint_width = { open: '0px', closed: '18px' },
-		arrow_size = { open: 40, closed: 20 },
-		arrow_color = { open: 'rgb(242,242,242)', closed: 'rgb(85,85,85)' }
-
-	let app_holder_full_height, apps_drawer_hint, apps_drawer_arrow, apps_drawer_arrow_open
-	let app_btn_wrapper, app_btn, app_btn_active, app_holder
-
-	//Hides app_div and toggles app_btn off
-	function apps_off() {
-		app_btn_active = false
-		if (app_holder !== undefined) {
-			slide_drawer()
-		}
-	}
-
-	// launchApps()
-
-	if (!obj.features.examples) {
-		app_btn = headbox
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('display', 'inline-block')
-			.style('padding', padw_sm)
-			.style('margin', '0px 5px')
-			.style('border-radius', '5px')
-			.text('Apps')
-			.on('click', () => {
-				appmenu(app, headbox, jwt)
-			})
-	} else {
-		// show 'apps' div only when url is barbone without any paramerters or example page
-		app_btn_active = window.location.pathname == '/' && !window.location.search.length ? true : false
-		let apps_rendered = false
-
-		app_holder = apps_drawer_row
-			.append('div')
-			.style('position', 'relative')
-			.style('margin', '0 20px')
-			.style('padding', `0 ${padw_sm}`)
-			.style('display', app_btn_active ? 'inline-block' : 'none')
-			.style('overflow', 'hidden')
-			.style('background-color', '#f5f5f5')
-			.style('border-radius', '0px 0px 5px 5px')
-			.style('width', '93vw')
-
-		async function load_app_div() {
-			if (apps_rendered) return
-			apps_rendered = true
-			const _ = await import('./examples')
-
-			await _.init_examples({
-				holder: app_holder,
-				apps_sandbox_div: app.holder.apps_sandbox_div,
-				apps_off
-			})
-			app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
-		}
-
-		if (app_btn_active) load_app_div()
-
-		app_btn_wrapper = headbox
-			.append('div')
-			.style('position', 'relative')
-			.style('display', 'inline-block')
-			.style('margin-left', '5px')
-			.style('margin-right', '5px')
-			.style('border-radius', '5px')
-			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
-			.style('color', app_btn_active ? '#fff' : '#000')
-			.on('click', () => {
-				d3event.stopPropagation()
-				// toggle button color and hide/show apps div
-				app_btn_active = !app_btn_active
-				load_app_div()
-				slide_drawer()
-				if (app_btn_active) {
-					setTimeout(() => {
-						app_holder_full_height = app_holder.node().getBoundingClientRect().height + 5
-					}, duration + 5)
-				}
-			})
-			.on('mouseover', () => {
-				app_btn_wrapper.style('background-color', app_btn_active ? '#a2a2a2' : '#e6e6e6')
-			})
-			.on('mouseout', () => {
-				app_btn_wrapper.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
-			})
-
-		app_btn = app_btn_wrapper
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('display', 'inline-block')
-			.style('background-color', 'transparent')
-			.style('color', app_btn_active ? '#fff' : '#000')
-			.style('padding', padw_sm)
-			.style('margin', '0px 5px')
-			.style('cursor', 'pointer')
-			.text('Apps')
-
-		// an empty spacer div, needed since the arrows are absolutely positioned
-		apps_drawer_hint = app_btn_wrapper
-			.append('div')
-			.style('position', 'relative')
-			.style('display', 'inline-block') //app_btn_active ? '' : 'inline-block')
-			.style('height', arrow_size.closed + 'px')
-			.style('width', app_btn_active ? hint_width.open : hint_width.closed)
-			.style('background-color', 'transparent')
-			.style('text-align', 'center')
-			.style('cursor', 'pointer')
-
-		apps_drawer_arrow = app_btn_wrapper
-			.append('div')
-			.style('position', 'absolute')
-			.style('font-size', arrow_size.closed + 'px')
-			.style('right', hint_pos.closed.rt + 'px')
-			.style('bottom', hint_pos.closed.btm + 'px')
-			.style('background-color', 'transparent')
-			.style('color', arrow_color.closed)
-			.style('opacity', app_btn_active ? 0 : 1)
-			.style('cursor', 'pointer')
-			.html('&#9660;')
-
-		apps_drawer_arrow_open = app_btn_wrapper
-			.append('div')
-			.style('position', 'absolute')
-			.style('font-size', arrow_size.open + 'px')
-			.style('left', hint_pos.open.left + 'px')
-			.style('bottom', hint_pos.open.btm + 'px')
-			.style('transform', 'rotate(180deg)')
-			.style('background-color', 'transparent')
-			.style('color', arrow_color.open)
-			.style('opacity', app_btn_active ? 1 : 0)
-			.style('cursor', 'pointer')
-			.style('pointer-events', app_btn_active ? 'auto' : 'none')
-			.html('&#9660;')
-	}
-
-	function slide_drawer() {
-		app_btn_wrapper
-			.transition()
-			.duration(500)
-			.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
-			.style('color', app_btn_active ? '#fff' : '#000')
-
-		app_btn
-			.transition()
-			.duration(500)
-			.style('color', app_btn_active ? '#fff' : '#000')
-
-		app_holder
-			.style('display', 'inline-block')
-			.transition()
-			.duration(duration)
-			.style('top', app_btn_active ? '0px' : '-' + app_holder_full_height + 'px')
-
-		apps_drawer_row
-			.transition()
-			.duration(duration)
-			.style('height', app_btn_active ? app_holder_full_height + 'px' : '0px')
-
-		apps_drawer_hint
-			.transition()
-			.duration(duration)
-			.style('width', app_btn_active ? hint_width.open : hint_width.closed)
-
-		apps_drawer_arrow
-			.transition()
-			.duration(duration)
-			.style('opacity', app_btn_active ? 0 : 1)
-
-		apps_drawer_arrow_open
-			.style('pointer-events', app_btn_active ? 'auto' : 'none')
-			.transition()
-			.duration(duration)
-			.style('opacity', app_btn_active ? 1 : 0)
-	}
+	app.drawer = drawer_init(app, obj.features)
+	app.drawer.addBtn(headbox, 'Apps', padw_sm, jwt)
 
 	headbox
 		.append('span')
@@ -577,7 +411,7 @@ function makeheader(app, obj, jwt) {
 		})
 }
 
-function make_genome_browser_btn(app, headbox, jwt, apps_off) {
+function make_genome_browser_btn(app, headbox, jwt) {
 	const padw = '8px'
 	const genome_btn_div = headbox.append('span')
 	const genomename = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
@@ -590,7 +424,7 @@ function make_genome_browser_btn(app, headbox, jwt, apps_off) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', genomename => {
-			let sandbox_div = client.newSandboxDiv(app.holder.apps_sandbox_div)
+			let sandbox_div = newSandboxDiv(app.drawer.apps_sandbox_div)
 
 			const g = app.genomes[genomename]
 			if (!g) {
@@ -602,7 +436,7 @@ function make_genome_browser_btn(app, headbox, jwt, apps_off) {
 
 			const par = {
 				hostURL: app.hostURL,
-				jwt: jwt,
+				jwt,
 				holder: sandbox_div.body,
 				genome: g,
 				chr: g.defaultcoord.chr,
@@ -612,10 +446,10 @@ function make_genome_browser_btn(app, headbox, jwt, apps_off) {
 				tklst: [],
 				debugmode: app.debugmode
 			}
-			client.first_genetrack_tolist(g, par.tklst)
+			first_genetrack_tolist(g, par.tklst)
 
 			import('./block').then(b => new b.Block(par))
-			apps_off()
+			app.drawer.apps_off()
 		})
 	return g_browser_btn
 }
@@ -625,159 +459,7 @@ function update_genome_browser_btn(app) {
 	app.genome_browser_btn.datum(app.selectgenome.node().value)
 }
 
-function appmenu(app, headbox, jwt) {
-	/*
-	app: { selectgenome }
-	headbox
-	*/
-
-	const p = d3event.target.getBoundingClientRect()
-	headtip.clear().show(p.left - 50, p.top + p.height + 5)
-	{
-		const ss = app.selectgenome.node()
-		const genomename = ss.options[ss.selectedIndex].value
-		const g = app.genomes[genomename]
-		if (!g) {
-			alert('Invalid genome name: ' + genomename)
-			return
-		}
-		headtip.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.text(genomename + ' genome browser')
-			.style('padding', '20px')
-			.on('click', () => {
-				// showing default-looking browser
-				headtip.hide()
-				const p = headbox.node().getBoundingClientRect()
-				const pane = client.newpane({ x: p.left, y: p.top + p.height + 10 })
-				pane.header.text(genomename + ' genome browser')
-
-				const par = {
-					hostURL: app.hostURL,
-					jwt: jwt,
-					holder: pane.body,
-					genome: g,
-					chr: g.defaultcoord.chr,
-					start: g.defaultcoord.start,
-					stop: g.defaultcoord.stop,
-					nobox: true,
-					tklst: [],
-					debugmode: app.debugmode
-				}
-				client.first_genetrack_tolist(g, par.tklst)
-
-				import('./block').then(b => new b.Block(par))
-			})
-	}
-	headtip.d
-		.append('div')
-		.attr('class', 'sja_menuoption')
-		.text('Load mutations from text files')
-		.style('padding', '20px')
-		.on('click', () => {
-			headtip.hide()
-			bulkui(p.left - 100, p.top + p.height + 5, app.genomes, app.hostURL, jwt)
-		})
-	headtip.d
-		.append('div')
-		.attr('class', 'sja_menuoption')
-		.text('View a study')
-		.style('padding', '20px')
-		.on('click', () => {
-			headtip.hide()
-			studyui(app, p.left - 100, p.top + p.height + 5, app.genomes, app.hostURL, jwt)
-		})
-	headtip.d
-		.append('div')
-		.attr('class', 'sja_menuoption')
-		.text('Fusion editor')
-		.style('padding-left', '20px')
-		.on('click', () => {
-			headtip.hide()
-			const lst = client.newpane3(100, 100, app.genomes)
-			// [0] is pane{}
-			lst[0].header.text('Fusion Editor')
-			lst[0].body.style('margin', '10px')
-			const wait = lst[0].body
-				.append('div')
-				.text('Loading...')
-				.style('margin', '10px')
-			import('./svmr').then(p => {
-				wait.remove()
-				p.svmrui(lst, app.genomes, app.hostURL, jwt)
-			})
-		})
-	headtip.d
-		.append('div')
-		.attr('class', 'sja_menuoption')
-		.text('Junction-by-sample matrix display')
-		.style('padding-left', '20px')
-		.on('click', () => {
-			headtip.hide()
-			import('./block.tk.junction.textmatrixui').then(p => {
-				p.default(app.genomes, app.hostURL, jwt)
-			})
-		})
-	headtip.d
-		.append('div')
-		.attr('class', 'sja_menuoption')
-		.text('Differential gene expression viewer')
-		.style('padding-left', '20px')
-		.on('click', () => {
-			headtip.hide()
-			import('./mavb').then(p => {
-				p.mavbui(app.genomes, app.hostURL, jwt)
-				return
-			})
-		})
-	headtip.d
-		.append('div')
-		.attr('class', 'sja_menuoption')
-		.text('MAF timeline plot')
-		.style('padding-left', '20px')
-		.on('click', () => {
-			headtip.hide()
-			import('./maftimeline').then(p => {
-				p.default(app.genomes)
-			})
-		})
-	headtip.d
-		.append('div')
-		.attr('class', 'sja_menuoption')
-		.text('2DMAF plot')
-		.style('padding-left', '20px')
-		.on('click', () => {
-			headtip.hide()
-			import('./2dmaf').then(p => {
-				p.d2mafui(app.genomes)
-			})
-		})
-	headtip.d
-		.append('div')
-		.attr('class', 'sja_menuoption')
-		.text('Mutation burden & spectrum')
-		.style('padding-left', '20px')
-		.on('click', () => {
-			headtip.hide()
-			import('./spectrum').then(p => {
-				p.default(app.genomes)
-			})
-		})
-	headtip.d
-		.append('div')
-		.attr('class', 'sja_menuoption')
-		.text('Expression to PCA map')
-		.style('padding-left', '20px')
-		.on('click', () => {
-			headtip.hide()
-			import('./e2pca').then(p => {
-				p.e2pca_inputui(app.hostURL, jwt)
-			})
-		})
-}
-
-function findgenelst(app, str, genome, tip, jwt, app_btn_active, apps_off) {
+function findgenelst(app, str, genome, tip, jwt) {
 	if (str.length <= 1) {
 		tip.d.selectAll('*').remove()
 		return
@@ -804,8 +486,7 @@ function findgenelst(app, str, genome, tip, jwt, app_btn_active, apps_off) {
 					.attr('isgene', '1')
 					.text(name)
 					.on('click', () => {
-						app_btn_active = false
-						apps_off()
+						app.drawer.apps_off()
 						tip.hide()
 						findgene2paint(app, name, genome, jwt)
 					})
@@ -821,15 +502,23 @@ function findgenelst(app, str, genome, tip, jwt, app_btn_active, apps_off) {
 }
 
 async function findgene2paint(app, str, genomename, jwt) {
+	let sandbox_div = newSandboxDiv(app.drawer.apps_sandbox_div)
+
 	const g = app.genomes[genomename]
 	if (!g) {
 		console.error('unknown genome ' + genomename)
 		return
 	}
-	app.holder0.selectAll('*').remove()
 
+	sandbox_div.header.html(
+		'<div style="display:inline-block;">' +
+			str +
+			'</div><div style="border-radius:4px; color:white; background-color: #969696; padding: 1px 5px; display:inline-block; font-size:0.8em; margin-left:4px;">' +
+			genomename +
+			'</div>'
+	)
 	// may yield tklst from url parameters
-	const urlp = parseurl.url2map()
+	const urlp = urlmap()
 	const tklst = await parseurl.get_tklst(urlp, g)
 
 	const pos = string2pos(str, g)
@@ -838,8 +527,9 @@ async function findgene2paint(app, str, genomename, jwt) {
 		const par = {
 			hostURL: app.hostURL,
 			jwt,
-			holder: app.holder0,
+			holder: sandbox_div.body,
 			genome: g,
+			nobox: true,
 			chr: pos.chr,
 			start: pos.start,
 			stop: pos.stop,
@@ -848,7 +538,7 @@ async function findgene2paint(app, str, genomename, jwt) {
 			tklst,
 			debugmode: app.debugmode
 		}
-		client.first_genetrack_tolist(g, par.tklst)
+		first_genetrack_tolist(g, par.tklst)
 
 		import('./block')
 			.then(b => new b.Block(par))
@@ -860,13 +550,12 @@ async function findgene2paint(app, str, genomename, jwt) {
 	}
 
 	// input string is not coordinate, find gene match
-
 	const par = {
 		hostURL: app.hostURL,
 		jwt,
 		query: str,
 		genome: g,
-		holder: app.holder0,
+		holder: sandbox_div.body,
 		variantPageCall_snv: app.variantPageCall_snv,
 		samplecart: app.samplecart,
 		tklst,
@@ -964,10 +653,14 @@ async function parseembedthenurl(arg, app) {
 			}
 		}
 	}
-	if (arg.xintest) {
-		// a shortcut to xin's experiments and not to be used in prod
-		launchxintest(arg.xintest, app)
-		return app
+
+	if (arg.mclassOverride) {
+		for (const k in arg.mclassOverride.classes) {
+			const c = common.mclass[k]
+			if (c) {
+				Object.assign(c, arg.mclassOverride.classes[k])
+			}
+		}
 	}
 
 	if (arg.singlecell) {
@@ -1071,18 +764,21 @@ async function parseembedthenurl(arg, app) {
 		since jwt token is only passed from arg of runpp()
 		so no way of sending it via url parameter, thus url parameter won't work when jwt is activated
 		*/
-		const err = await parseurl.parse({
-			genomes: app.genomes,
-			hostURL: app.hostURL,
-			variantPageCall_snv: app.variantPageCall_snv,
-			samplecart: app.samplecart,
-			holder: app.holder,
-			selectgenome: app.selectgenome,
-			genome_browser_btn: app.genome_browser_btn,
-			debugmode: app.debugmode
-		})
-		if (err) {
-			app.error0(err)
+		try {
+			await parseurl.parse({
+				app,
+				genomes: app.genomes,
+				hostURL: app.hostURL,
+				variantPageCall_snv: app.variantPageCall_snv,
+				samplecart: app.samplecart,
+				holder: app.holder,
+				selectgenome: app.selectgenome,
+				genome_browser_btn: app.genome_browser_btn,
+				debugmode: app.debugmode
+			})
+		} catch (e) {
+			app.error0(e.message || e)
+			if (e.stack) console.log(e.stack)
 		}
 	}
 
@@ -1093,10 +789,10 @@ async function parseembedthenurl(arg, app) {
 	}
 
 	if (arg.toy) {
-		launchtoy(arg.toy, app)
+		await launchtoy(arg.toy, app)
 	}
 	if (arg.termdb) {
-		launchtermdb(arg.termdb, app)
+		await launchtermdb(arg.termdb, app)
 	}
 	if (arg.maftimeline) {
 		launchmaftimeline(arg, app)
@@ -1104,6 +800,15 @@ async function parseembedthenurl(arg, app) {
 
 	if (arg.gdcbamslice) {
 		launchgdcbamslice(arg, app)
+	}
+	if (arg.mass) {
+		await launchmass(arg.mass, app)
+	}
+	if (arg.testInternals && app.debugmode) {
+		await import('../test/internals.js')
+	}
+	if (arg.tkui) {
+		launch_tkUIs(arg, app)
 	}
 }
 
@@ -1333,7 +1038,8 @@ async function launchgeneview(arg, app) {
 		datasetqueries: arg.datasetqueries,
 		mset: arg.mset,
 		tklst: arg.tracks,
-		gmmode: arg.gmmode
+		gmmode: arg.gmmode,
+		mclassOverride: arg.mclassOverride
 	}
 	let ds = null
 	if (arg.dataset) {
@@ -1536,7 +1242,7 @@ async function launchblock(arg, app) {
 	}
 
 	// apply url parameter
-	const h = client.may_get_locationsearch()
+	const h = urlmap()
 	if (h) {
 		if (h.has('position')) {
 			const pos = string2pos(h.get('position'), genomeobj)
@@ -1583,7 +1289,7 @@ async function launchblock(arg, app) {
 function launchfusioneditor(arg, app) {
 	if (arg.fusioneditor.uionly) {
 		// created seperate function in clinet for same page block div
-		const [inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(app.holder0, app.genomes)
+		const [inputdiv, gselect, filediv, saydiv, visualdiv] = renderSandboxFormDiv(app.holder0, app.genomes)
 		import('./svmr').then(p => {
 			p.svmrui([null, inputdiv, gselect, filediv, saydiv, visualdiv], app.genomes, app.hostURL, arg.jwt)
 		})
@@ -1663,38 +1369,17 @@ function launchJunctionbyMatrix(arg, app) {
 function launchgdcbamslice(arg, app) {
 	if (arg.gdcbamslice.uionly) {
 		import('./block.tk.bam.gdc').then(p => {
-			p.bamsliceui(app.genomes, app.holder0, app.hostURL)
+			p.bamsliceui(app.genomes, app.holder0)
 		})
 		return
 	}
 }
-
-/*
-function launchjdv(arg, app) {
-	const genomeobj = app.genomes[arg.genome]
-	if(!genomeobj) {
-		app.error0('Invalid genome: '+arg.genome)
-		return
-	}
-	arg.hostURL = app.hostURL
-	arg.genome = genomeobj
-	import('./jdv').then(jdv=>{
-		jdv.jdvparseinput(arg, app.holder0)
-	})
-}
-*/
 
 async function launch_singlecell(arg, app) {
 	try {
 		const genome = app.genomes[arg.genome]
 		if (!genome) throw 'Invalid genome: ' + arg.genome
 		arg.genome = genome
-
-		await client.add_scriptTag('/static/js/three.js')
-		await client.add_scriptTag('/static/js/loaders/PCDLoader.js')
-		await client.add_scriptTag('/static/js/controls/TrackballControls.js')
-		await client.add_scriptTag('/static/js/WebGL.js')
-		await client.add_scriptTag('/static/js/libs/stats.min.js')
 
 		const _ = await import('./singlecell')
 		await _.init(arg, app.holder0)
@@ -1704,26 +1389,44 @@ async function launch_singlecell(arg, app) {
 	}
 }
 
+async function launch_tkUIs(arg, app) {
+	if (arg.tkui == 'bigwig') {
+		const p = await import('./block.tk.bigwig.ui')
+		p.bigwigUI(app.genomes, app.holder)
+	}
+	if (arg.tkui == 'dictionary') {
+		const p = await import('./databrowser/dictionary.ui')
+		p.init_dictionaryUI(app.holder, app.debugmode)
+	}
+}
+
 /* 
 opts
 .state may be a partial or full instance of src/toy/toy.store defaultState
 */
-function launchtoy(opts, app) {
+async function launchtoy(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
-	import('./toy/toy.app').then(_ => {
-		_.appInit(null, opts)
-	})
+	try {
+		const _ = await import('./toy/toy.app')
+		await _.appInit(opts)
+	} catch (e) {
+		console.error(e)
+	}
 }
 
-function launchtermdb(opts, app) {
+async function launchtermdb(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
-	if (!opts.callbacks) opts.callbacks = {}
 	import('./termdb/app').then(_ => {
-		_.appInit(null, opts)
+		_.appInit(opts)
 	})
 }
 
-function launchxintest(opts, app) {
-	opts.holder = app.holder0
-	import('./xin/app').then(_ => _.appInit(null, opts))
+async function launchmass(opts, app) {
+	if (!opts.holder) opts.holder = app.holder0
+	if (opts.state && opts.state.genome) {
+		opts.genome = app.genomes[opts.state.genome]
+	}
+	import('./mass/app').then(_ => {
+		_.appInit(opts)
+	})
 }

@@ -1,19 +1,21 @@
-import * as rx from '../common/rx.core'
+import { getCompInit, multiInit } from '../common/rx.core'
 import { searchInit } from './toy.search'
 import { filterInit } from './toy.filter'
 
 class ToyControls {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'controls'
-		this.api = rx.getComponentApi(this)
-		this.notifyComponents = rx.notifyComponents
-		this.getComponents = rx.getComponents
-		this.app = app
-		this.opts = opts.holder
-		this.dom = { holder: opts.holder }
-		this.components = {
-			search: searchInit(app, { holder: opts.holder.append('div') }, app.opts.search),
-			filter: filterInit(app, { holder: opts.holder.append('div') }, app.opts.filter)
+	}
+
+	async init() {
+		try {
+			this.dom = { holder: this.opts.holder }
+			this.components = await multiInit({
+				search: searchInit({ app: this.app, holder: this.opts.holder.append('div') }),
+				filter: filterInit({ app: this.app, holder: this.opts.holder.append('div') })
+			})
+		} catch (e) {
+			throw e
 		}
 	}
 
@@ -22,4 +24,4 @@ class ToyControls {
 	}
 }
 
-export const controlsInit = rx.getInitFxn(ToyControls)
+export const controlsInit = getCompInit(ToyControls)

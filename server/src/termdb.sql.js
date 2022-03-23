@@ -1,8 +1,10 @@
 const app = require('./app')
 const binsmodule = require('../shared/termdb.bins')
 const getFilterCTEs = require('./termdb.filter').getFilterCTEs
+const numericSql = require('./termdb.sql.numeric')
+const categoricalSql = require('./termdb.sql.categorical')
+const conditionSql = require('./termdb.sql.condition')
 const connect_db = require('./utils').connect_db
-
 /*
 
 ********************** EXPORTED
@@ -16,10 +18,22 @@ server_init_db_queries
 ********************** INTERNAL
 get_term_cte
 	makesql_oneterm
-		makesql_oneterm_categorical
 			makesql_groupset
-		makesql_oneterm_condition
-		makesql_numericBinCTE
+
+	!!!
+	NOTE: all constructed sql to get sample-value, regardless of term.type, must return 
+	{
+		sample,
+		key: may be a bin or groupset label, or if none is used, the actual column value
+		value: the actual column value in the table
+	}
+
+	For example, returning both the bin label and actual value for a numeric term
+	would allow the calling app to create compute boxplot inputs, which is not
+	possible if only the bin labels are returned. Similar use cases may be supported
+	later.  
+	!!!
+	
 uncomputablegrades_clause
 grade_age_select_clause
 get_label4key
@@ -58,7 +72,6 @@ export function get_samplecount(q, ds) {
 must have q.filter[]
 return a sample count of sample names passing through the filter
  */
-	q.filter = JSON.parse(decodeURIComponent(q.filter))
 	if (!q.filter || !q.filter.lst.length) {
 		throw `missing q.filter`
 	} else {
@@ -255,7 +268,7 @@ opts{} options to tweak the query, see const default_opts = below
 	const CTE1 = get_term_cte(q, values, 1, filter)
 	const CTE2 = get_term_cte(q, values, 2, filter)
 
-	const statement = `WITH
+	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTE0.sql},
 		${CTE1.sql},
@@ -273,22 +286,28 @@ opts{} options to tweak the query, see const default_opts = below
 		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
 		${filter ? 'WHERE t1.sample IN ' + filter.CTEname : ''}
 		${opts.endclause}`
-	// console.log(statement, values)
-	const lst = q.ds.cohort.db.connection.prepare(statement).all(values)
-
-	return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
+	//console.log(interpolateSqlValues(sql, values))
+	try {
+		const lst = q.ds.cohort.db.connection.prepare(sql).all(values)
+		return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
+	} catch (e) {
+		console.log('error in sql:\n', interpolateSqlValues(sql, values))
+		throw e
+	}
 }
 
 /*
 Generates one or more CTEs by a term
 
+ARGUMENTS
 q{}
 	.filter
 	.ds
-	.term[0,1,2]_id
-	.term[0,1,2]_q
+	*** the following may be empty if a 'termWrapper{}' argument is supplied ***
+	.term[0,1,2]_id 			// supported parameters for barchart data  
+	.term[0,1,2]_q 				// supported parameters for barchart data
 		the _q{} is managed by termsetting UI
-	.term?_is_genotype
+	.term?_is_genotype 		// supported parameters for barchart data
 		TODO may improve??
 
 values[]
@@ -303,11 +322,22 @@ filter
 	{} or null
 	returned by getFilterCTEs
 	required when making numeric bins and need to compute percentile for first/last bin
+
+termWrapper{}
+	.id term.id
+	.term
+	.q
+
+RETURNS 
+{ sql, tablename }
 */
-function get_term_cte(q, values, index, filter) {
-	const termid = q['term' + index + '_id']
-	const term_is_genotype = q['term' + index + '_is_genotype']
-	if (index == 1 && !term_is_genotype) {
+export function get_term_cte(q, values, index, filter, termWrapper = null) {
+	const twterm = termWrapper && termWrapper.term
+	const termid = twterm ? twterm.id : q['term' + index + '_id']
+	const term_is_genotype = twterm ? termWrapper.term.is_genotype : q['term' + index + '_is_genotype']
+	// legacy code support: index=1 is assumed to be barchart term
+	// when there is no termWrapper argument
+	if (!termWrapper && index == 1 && !term_is_genotype) {
 		// only term1 is required
 		if (!termid) throw 'missing term id'
 	} else if (!termid || term_is_genotype) {
@@ -322,20 +352,53 @@ function get_term_cte(q, values, index, filter) {
 	}
 
 	// otherwise, must be a valid term
-	const term = q.ds.cohort.termdb.q.termjsonByOneid(termid)
-	if (!term) throw 'no term found by id'
-	let termq = q['term' + index + '_q'] || {}
+	const term = twterm && twterm.type ? twterm : q.ds.cohort.termdb.q.termjsonByOneid(termid)
+	if (!term) throw `no term found by id='${termid}'`
+	let termq = (termWrapper && termWrapper.q) || q['term' + index + '_q'] || {}
 	if (typeof termq == 'string') {
 		termq = JSON.parse(decodeURIComponent(termq))
 	}
-	if (index == 1 && q.getcuminc) {
-		termq.getcuminc = q.getcuminc
-		termq.grade = q.grade
+	if (index == 1) {
+		if (q.getcuminc) {
+			termq.getcuminc = q.getcuminc
+			termq.grade = q.grade
+		}
 	}
-	const CTE = makesql_oneterm(term, q.ds, termq, values, index, filter)
-	if (index != 1) {
-		CTE.join_on_clause = `ON t${index}.sample = t1.sample`
+
+	const tablename = 'samplekey_' + index
+	/*
+		NOTE: all constructed sql/CTE, regardless of term.type, must return 
+		{
+			sample,
+			key: may be a bin or groupset label, or if none is used, the actual column value
+			value: the actual column value in the table
+		}
+
+		For example, returning both the bin label and actual value for a numeric term
+		would allow the calling app to create compute boxplot inputs, which is not
+		possible if only the bin labels are returned. Similar use cases may be supported
+		later.  
+	*/
+	let CTE
+	if (term.type == 'categorical') {
+		const groupset = get_active_groupset(term, termq)
+		CTE = categoricalSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, index, groupset)
+	} else if (term.type == 'integer' || term.type == 'float') {
+		const mode = termq.mode == 'spline' ? 'cubicSpline' : termq.mode || 'discrete'
+		CTE = numericSql[mode].getCTE(tablename, term, q.ds, termq, values, index, filter)
+	} else if (term.type == 'condition') {
+		if (index == 1 && q.getcuminc) {
+			return conditionSql.cuminc.getCTE(tablename, term, q, values, filter)
+		} else {
+			const groupset = get_active_groupset(term, termq)
+			CTE = conditionSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, index, groupset)
+		}
+	} else if (term.type == 'survival') {
+		CTE = makesql_survival(tablename, term, q, values, filter)
+	} else {
+		throw 'unknown term type'
 	}
+	if (index != 1) CTE.join_on_clause = `ON t${index}.sample = t1.sample`
 	return CTE
 }
 
@@ -363,7 +426,7 @@ q{}
 			labeler[n](row)
 		}
 	}
-	return result.lst
+	return result
 }
 
 function getlabeler(q, i, result) {
@@ -429,10 +492,11 @@ function get_label4key(key, term, q, ds) {
 		return term.values && key in term.values ? term.values[key].label : key
 	}
 	if (term.type == 'condition') {
-		if (!term.values) throw 'missing term.values for condition term'
-		if (q.bar_by_grade) {
-			if (!(key in term.values)) throw `unknown grade='${key}'`
-			return term.values[key].label
+		const values = term.grades || term.values
+		if (!values) throw 'missing term.grades or term.values for condition term'
+		if ((!q.groupsetting || (q.groupsetting && !q.groupsetting.inuse)) && q.bar_by_grade) {
+			if (!(key in values)) throw `unknown grade='${key}'`
+			return values[key].label
 		} else {
 			return key
 		}
@@ -444,210 +508,59 @@ function get_label4key(key, term, q, ds) {
 	throw 'unknown term type'
 }
 
-/*
-form the query for one of the table in term0-term1-term2 overlaying
-CTE for each term resolves to a table of {sample,key}
-
-term{}
-q{}
-	managed by termsetting UI on client
-	see doc for spec
-values[]
-	collector of bind parameters
-
-index
-
-filter
-
-returns { sql, tablename }
-*/
-function makesql_oneterm(term, ds, q, values, index, filter) {
-	const tablename = 'samplekey_' + index
-	if (term.type == 'categorical') {
-		return makesql_oneterm_categorical(tablename, term, q, values)
+export function getUncomputableClause(term, q, tableAlias = '') {
+	if (!term.values || !q.computableValuesOnly) return { values: [], clause: '' }
+	const values = Object.keys(term.values).filter(k => term.values[k].uncomputable)
+	const aliasValue = tableAlias ? `${tableAlias}.value` : 'value'
+	return {
+		values,
+		clause: values.length ? `AND ${aliasValue} NOT IN (${values.map(() => '?').join(',')})` : ''
 	}
-	if (term.type == 'float' || term.type == 'integer') {
-		const bins = makesql_numericBinCTE(term, q, ds, index, filter, values)
-		return {
-			sql: `${bins.sql},
-			${tablename} AS (
-				SELECT bname as key, sample, v as value
-				FROM ${bins.tablename}
-			)`,
-			tablename,
-			name2bin: bins.name2bin,
-			bins: bins.bins
-		}
-	}
-	if (term.type == 'condition') {
-		if (index == 1 && q.getcuminc) {
-			return makesql_time2event(tablename, term, q, values, filter)
-		} else {
-			return makesql_oneterm_condition(tablename, term, q, values)
-		}
-	}
-	throw 'unknown term type'
 }
 
-function makesql_oneterm_categorical(tablename, term, q, values) {
+function makesql_survival(tablename, term, q, values, filter) {
 	values.push(term.id)
-	if (!q.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) {
-		// groupsetting not applied
-		return {
-			sql: `${tablename} AS (
-				SELECT sample,value as key, value as value
-				FROM annotations
-				WHERE term_id=?
-			)`,
-			tablename
-		}
-	}
-	// use groupset
-	const table2 = tablename + '_groupset'
 	return {
-		sql: `${table2} AS (
-			${makesql_groupset(term, q)}
-		),
-		${tablename} AS (
-			SELECT
-				sample,
-				${table2}.name AS key,
-				${table2}.name AS value
-			FROM annotations a
-			JOIN
-				${table2} ON a.value = ${table2}.value
-			WHERE
-				term_id=?
-		) `,
-		tablename
-	}
-}
-
-function makesql_oneterm_condition(tablename, term, q, values) {
-	/*
-	return {sql, tablename}
-*/
-	const value_for = q.bar_by_children ? 'child' : q.bar_by_grade ? 'grade' : ''
-	if (!value_for) throw 'must set the bar_by_grade or bar_by_children query parameter'
-
-	const restriction = q.value_by_max_grade
-		? 'max_grade'
-		: q.value_by_most_recent
-		? 'most_recent'
-		: q.value_by_computable_grade
-		? 'computable_grade'
-		: ''
-	if (!restriction) throw 'must set a valid value_by_*'
-	values.push(term.id, value_for)
-
-	if (!q.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) {
-		return {
-			sql: `${tablename} AS (
-				SELECT
-					sample,
-					${value_for == 'grade' ? 'CAST(value AS integer) as key' : 'value as key'},
-					${value_for == 'grade' ? 'CAST(value AS integer) as value' : 'value'}
-				FROM
-					precomputed
-				WHERE
-					term_id = ?
-					AND value_for = ?
-					AND ${restriction} = 1
-			)`,
-			tablename
-		}
-	}
-	// use groupset
-	const table2 = tablename + '_groupset'
-	return {
-		sql: `${table2} AS (
-			${makesql_groupset(term, q)}
-		),
-		${tablename} AS (
-			SELECT
-				sample,
-				${table2}.name AS key,
-				${table2}.name AS value
-			FROM precomputed a
-			JOIN ${table2} ON ${table2}.value=${q.bar_by_grade ? 'CAST(a.value AS integer)' : 'a.value'}
-			WHERE
-				term_id=?
-				AND value_for=?
-				AND ${restriction}=1
+		sql: `${tablename} AS (
+			SELECT sample, exit_code as key, tte AS value
+			FROM survival s
+			WHERE s.term_id=?
+			${filter ? 'AND s.sample IN ' + filter.CTEname : ''}
 		)`,
 		tablename
 	}
 }
 
-function makesql_time2event(tablename, term, q, values, filter) {
-	if (!term.isleaf) {
-		values.push(...[term.id, q.grade])
-	} else {
-		values.push(...[q.grade, term.id])
-	}
-
-	const termsCTE = term.isleaf
-		? ''
-		: `parentTerms AS (
-SELECT distinct(ancestor_id) 
-FROM ancestry
-),
-eventTerms AS (
-SELECT a.term_id 
-FROM ancestry a
-JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
-WHERE a.ancestor_id = ?
-),`
-
-	const termsClause = term.isleaf ? `term_id = ?` : 'term_id IN eventTerms'
-
-	return {
-		sql: `${termsCTE}
-		event1 AS (
-			SELECT sample, 1 as key, MIN(years_to_event) as value
-			FROM chronicevents
-			WHERE grade >= ?
-			  AND grade <= 5
-			  AND ${termsClause}
-			  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
-			GROUP BY sample
-		),
-		event1samples AS (
-			SELECT sample
-			FROM event1
-		),
-		event0 AS (
-			SELECT sample, 0 as key, MAX(years_to_event) as value
-			FROM chronicevents
-			WHERE grade <= 5 
-				AND sample NOT IN event1samples
-			  ${filter ? 'AND sample IN ' + filter.CTEname : ''}
-			GROUP BY sample
-		),
-		${tablename} AS (
-			SELECT * FROM event1
-			UNION ALL
-			SELECT * FROM event0
-		)`,
-		tablename
-	}
-}
-
-function makesql_groupset(term, q) {
-	let s
+function get_active_groupset(term, q) {
+	if (!q.groupsetting || q.groupsetting.disabled || !q.groupsetting.inuse) return
 	if (Number.isInteger(q.groupsetting.predefined_groupset_idx)) {
 		if (q.groupsetting.predefined_groupset_idx < 0) throw 'q.predefined_groupset_idx out of bound'
 		if (!term.groupsetting) throw 'term.groupsetting missing when q.predefined_groupset_idx in use'
 		if (!term.groupsetting.lst) throw 'term.groupsetting.lst missing when q.predefined_groupset_idx in use'
-		s = term.groupsetting.lst[q.groupsetting.predefined_groupset_idx]
+		const s = term.groupsetting.lst[q.groupsetting.predefined_groupset_idx]
 		if (!s) throw 'q.predefined_groupset_idx out of bound'
+		return s
 	} else if (q.groupsetting.customset) {
-		s = q.groupsetting.customset
+		return q.groupsetting.customset
 	} else {
 		throw 'do not know how to get groupset'
 	}
+}
+
+/*
+	Arguments
+	- term{}
+	- q{}: must have a groupset
+	
+	Return
+	- a series of "SELECT name, value" statements that are joined by UNION ALL
+	- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
+*/
+function makesql_values_groupset(term, q) {
+	const s = get_active_groupset(term, q)
 	if (!s.groups) throw '.groups[] missing from a group-set'
 	const categories = []
+	let filter
 	for (const [i, g] of s.groups.entries()) {
 		const groupname = g.name || 'Group ' + (i + 1)
 		if (!Array.isArray(g.values)) throw 'groupset.groups[' + i + '].values[] is not array'
@@ -655,114 +568,7 @@ function makesql_groupset(term, q) {
 			categories.push(`SELECT '${groupname}' AS name, '${v.key}' AS value`)
 		}
 	}
-	return categories.join(' UNION ALL ')
-}
-
-/*
-decide bins and produce CTE
-
-q{}
-	managed by termsetting
-
-index
-
-filter
-	{} or null
-
-returns { sql, tablename, name2bin, bins }
-*/
-function makesql_numericBinCTE(term, q, ds, index = '', filter, values) {
-	values.push(term.id)
-	const bins = get_bins(q, term, ds, index, filter)
-	//console.log('last2', bins[bins.length - 2], 'last1', bins[bins.length - 1])
-	const bin_def_lst = []
-	const name2bin = new Map() // k: name str, v: bin{}
-	const bin_size = q.bin_size
-	let has_percentiles = false
-	let binid = 0
-	for (const b of bins) {
-		if (!('name' in b) && b.label) b.name = b.label
-		name2bin.set(b.name, b)
-		bin_def_lst.push(
-			`SELECT '${b.name}' AS name,
-			${b.start == undefined ? 0 : b.start} AS start,
-			${b.stop == undefined ? 0 : b.stop} AS stop,
-			0 AS unannotated,
-			${b.startunbounded ? 1 : 0} AS startunbounded,
-			${b.stopunbounded ? 1 : 0} AS stopunbounded,
-			${b.startinclusive ? 1 : 0} AS startinclusive,
-			${b.stopinclusive ? 1 : 0} AS stopinclusive,
-			${binid++} AS binorder`
-		)
-	}
-	const excludevalues = []
-	if (term.values) {
-		for (const key in term.values) {
-			if (!term.values[key].uncomputable) continue
-			excludevalues.push(key)
-			const v = term.values[key]
-			bin_def_lst.push(
-				`SELECT '${v.label}' AS name,
-        ${key} AS start,
-        0 AS stop,
-        1 AS unannotated,
-        0 AS startunbounded,
-        0 AS stopunbounded,
-        0 AS startinclusive,
-        0 AS stopinclusive,
-        ${binid++} AS binorder`
-			)
-			name2bin.set(v.label, {
-				is_unannotated: true,
-				value: key,
-				label: v.label
-			})
-		}
-	}
-
-	const bin_def_table = 'bin_defs_' + index
-	const bin_sample_table = 'bin_sample_' + index
-
-	const sql = `${bin_def_table} AS (
-			${bin_def_lst.join(' UNION ALL ')}
-		),
-		${bin_sample_table} AS (
-			SELECT
-				sample,
-				CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS v,
-				CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value,
-				b.name AS bname,
-				b.binorder AS binorder
-			FROM
-				annotations a
-			JOIN ${bin_def_table} b ON
-				( b.unannotated=1 AND v=b.start )
-				OR
-				(
-					b.unannotated=0 AND
-					${excludevalues.length ? 'v NOT IN (' + excludevalues.join(',') + ') AND' : ''}
-					(
-						b.startunbounded=1
-						OR v>b.start
-						OR (b.startinclusive=1 AND v=b.start)
-					)
-					AND
-					(
-						b.stopunbounded
-						OR v<b.stop
-						OR (b.stopinclusive=1 AND v=b.stop)
-					)
-				)
-			WHERE
-			term_id=?
-		)`
-
-	return {
-		sql,
-		tablename: bin_sample_table,
-		name2bin,
-		bins
-	}
+	return categories.join('\nUNION ALL\n')
 }
 
 /*
@@ -775,6 +581,7 @@ filter
 returns bins{}
 */
 export function get_bins(q, term, ds, index, filter) {
+	if (q.mode == 'continuous' || q.mode == 'spline') return
 	return binsmodule.compute_bins(q, percentiles => get_numericMinMaxPct(ds, term, filter, percentiles))
 }
 
@@ -1034,10 +841,10 @@ thus less things to worry about...
 	}
 
 	{
-		const getStatement = initCohortJoinFxn(
-			`SELECT id,jsondata 
+		const sql = cn.prepare(
+			`SELECT id, jsondata, s.included_types, s.child_types
 			FROM terms t
-			JOINCLAUSE 
+			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE parent_id is null
 			GROUP BY id
 			ORDER BY child_order ASC`
@@ -1046,10 +853,12 @@ thus less things to worry about...
 		q.getRootTerms = (cohortStr = '') => {
 			const cacheId = cohortStr
 			if (cache.has(cacheId)) return cache.get(cacheId)
-			const tmp = cohortStr ? getStatement(cohortStr).all(cohortStr) : getStatement(cohortStr).all()
+			const tmp = sql.all(cohortStr)
 			const re = tmp.map(i => {
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
+				t.included_types = i.included_types ? i.included_types.split(',') : ['TO-DO-PLACEHOLDER']
+				t.child_types = i.child_types ? i.child_types.split(',') : []
 				return t
 			})
 			cache.set(cacheId, re)
@@ -1100,25 +909,27 @@ thus less things to worry about...
 		- sql statement with a JOINCLAUSE substring to be replaced with cohort value, if applicable, or removed otherwise
 	*/
 	{
-		const getStatement = initCohortJoinFxn(`SELECT id,jsondata 
+		const sql = cn.prepare(
+			`SELECT id, type, jsondata, s.included_types, s.child_types 
 			FROM terms t
-			JOINCLAUSE 
+			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=? 
 			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
 			GROUP BY id
-			ORDER BY child_order ASC`)
+			ORDER BY child_order ASC`
+		)
 
 		const cache = new Map()
 		q.getTermChildren = (id, cohortStr = '') => {
 			const cacheId = id + ';;' + cohortStr
 			if (cache.has(cacheId)) return cache.get(cacheId)
-			//const values = cohortStr ? [...cohortStr.split(','), id] : id
-			const values = cohortStr ? [cohortStr, id] : id
-			const tmp = getStatement(cohortStr).all(values)
+			const tmp = sql.all([cohortStr, id])
 			let re = undefined
 			if (tmp) {
 				re = tmp.map(i => {
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
+					j.included_types = i.included_types ? i.included_types.split(',') : []
+					j.child_types = i.child_types ? i.child_types.split(',') : []
 					return j
 				})
 			}
@@ -1129,25 +940,26 @@ thus less things to worry about...
 	{
 		// may not cache result of this one as query string may be indefinite
 		// instead, will cache prepared statement by cohort
-		const s = {
-			'': cn.prepare('SELECT id,jsondata FROM terms WHERE name LIKE ?')
-		}
-		q.findTermByName = (n, limit, cohortStr = '') => {
-			if (!(cohortStr in s)) {
-				s[cohortStr] = cn.prepare(
-					`SELECT t.id,jsondata FROM terms t JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=? WHERE t.name LIKE ?`
-				)
-			}
+		const sql = cn.prepare(
+			`SELECT id, jsondata, s.included_types 
+			FROM terms t
+			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
+			WHERE name LIKE ?`
+		)
+		const trueFilter = () => true
+		q.findTermByName = (n, limit, cohortStr = '', exclude_types = []) => {
 			const vals = []
-			if (cohortStr !== '') vals.push(cohortStr)
-			vals.push('%' + n + '%')
-			const tmp = s[cohortStr].all(vals)
+			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
 				const lst = []
+				const typeFilter = exclude_types.length ? a => !exclude_types.includes(a) : trueFilter
 				for (const i of tmp) {
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
-					lst.push(j)
+					const included_types = i.included_types || ''
+					if (!exclude_types.includes(j.type) && included_types.split(',').filter(typeFilter).length) {
+						lst.push(j)
+					}
 					if (lst.length == 10) break
 				}
 				return lst
@@ -1180,6 +992,16 @@ thus less things to worry about...
 		}
 	}
 	{
+		const s = cn.prepare('SELECT t.name FROM ancestry as a, terms as t WHERE a.term_id=? AND t.id=a.ancestor_id')
+		const cache = new Map()
+		q.getAncestorNames = id => {
+			if (cache.has(id)) return cache.get(id)
+			const tmp = s.all(id).map(i => i.name)
+			cache.set(id, tmp)
+			return tmp
+		}
+	}
+	{
 		// select sample and category, only for categorical term
 		// right now only for category-overlay on maf-cov plot
 		const s = cn.prepare('SELECT sample,value FROM annotations WHERE term_id=?')
@@ -1205,19 +1027,54 @@ thus less things to worry about...
 		}
 	}
 
-	function initCohortJoinFxn(template) {
-		// will hold prepared statements, with object key = one or more comma-separated '?'
-		const s_cohort = {
-			'': cn.prepare(template.replace('JOINCLAUSE', ''))
-		}
-		return function getStatement(cohortStr) {
-			const questionmarks = cohortStr ? '?' : ''
-			if (!(questionmarks in s_cohort)) {
-				const statement = template.replace('JOINCLAUSE', `JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?`)
-				s_cohort[questionmarks] = cn.prepare(statement)
+	/* returns list of chart types based on term types from each subcohort combination
+	FIXME for a termdb without subcohort, r.cohort will be undefined
+	returned object will have "undefined" as key. make sure an object like {undefined:"xx"} can work in client side
+	*/
+	q.getSupportedChartTypes = () => {
+		const rows = cn
+			.prepare(
+				`WITH c AS (
+				SELECT cohort, term_id
+				FROM subcohort_terms s
+				GROUP BY cohort, term_id
+			) 
+			SELECT cohort, type, count(*) as samplecount
+			FROM terms t
+			JOIN c ON c.term_id = t.id
+			GROUP BY cohort, type`
+			)
+			.all()
+
+		const supportedChartTypes = {}
+		const numericTypeCount = {}
+		// key: subcohort combinations, comma-joined, as in the subcohort_terms table
+		// value: array of chart types allowed by term types
+
+		for (const r of rows) {
+			if (!r.type) continue
+			// !!! r.cohort is undefined for dataset without subcohort
+			if (!(r.cohort in supportedChartTypes)) {
+				supportedChartTypes[r.cohort] = ['barchart', 'table', 'regression']
+				numericTypeCount[r.cohort] = 0
+				// why is app.features missing?
+				if (app.features && app.features.draftChartTypes) {
+					// TODO: move draft charts out of flag once stable
+					supportedChartTypes[r.cohort].push(...app.features.draftChartTypes)
+				}
 			}
-			return s_cohort[questionmarks]
+			if (r.type == 'survival' && !supportedChartTypes[r.cohort].includes('survival'))
+				supportedChartTypes[r.cohort].push('survival')
+			if (r.type == 'condition' && !supportedChartTypes[r.cohort].includes('cuminc'))
+				supportedChartTypes[r.cohort].push('cuminc')
+			if (r.type == 'float' || r.type == 'integer') numericTypeCount[r.cohort] += r.samplecount
 		}
+		for (const cohort in numericTypeCount) {
+			if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].push('boxplot')
+			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].push('scatterplot')
+		}
+
+		return supportedChartTypes
 	}
 }
 
@@ -1235,4 +1092,28 @@ function test_tables(cn) {
 		subcohort_terms: s.get('subcohort_terms'),
 		sampleidmap: s.get('sampleidmap')
 	}
+}
+
+// helper function to display or log the filled-in, constructed sql statement
+// use for debugging only, do not feed directly into better-sqlite3
+function interpolateSqlValues(sql, values) {
+	const vals = values.slice() // use a copy
+	let prevChar
+	return sql
+		.split('')
+		.map(char => {
+			if (char == '?') {
+				prevChar = char
+				const v = vals.shift()
+				return typeof v == 'string' ? `'${v}'` : v
+			} else if (char == '\t') {
+				// ignore tabs and do not track in case it's in between newlines or spaces
+				return ''
+			} else if (char == '\n' || char == ' ') {
+				if (prevChar === char) return ''
+			}
+			prevChar = char
+			return char
+		})
+		.join('')
 }

@@ -1,36 +1,37 @@
 const app = require('./app')
 const fs = require('fs')
 const readline = require('readline')
-const path = require('path')
 const d3scale = require('d3-scale')
 const d3color = require('d3-color')
 const d3interpolate = require('d3-interpolate')
 const utils = require('./utils')
-//const common = require('../shared/common')
 
 /*
 ********************** EXPORTED
-handle_singlecell_closure
+handle_singlecell_closure()
 ********************** INTERNAL
-get_pcd
-slice_file_add_color
-get_geneboxplot
-
+get_pcd() // reformat UMAP data into PCD 
+slice_file_add_color() // add color (decimal) to each dot by auto, custom categorical color or expression
+getCustomCatColor() // get custom color if defined in json
+getCustomCatOrder() // if legend order is defined in the json
+rgbToHex() // convert rgb to hex
+get_geneboxplot() // also get kernel density for violin plot
+get_histogram()
+get_heatmap() // get heatmap data for group of genes
+cellfile_get_barcode2category() // k: barcode, v: {category, expvalue}
 
 TODO need to test the existence of the json file
 */
 
 exports.handle_singlecell_closure = genomes => {
 	return async (req, res) => {
-		if (app.reqbodyisinvalidjson(req, res)) return
-
 		try {
 			const q = req.query
 			const gn = genomes[q.genome]
 			if (!gn) throw 'invalid genome'
 
 			if (q.getpcd) {
-				await get_pcd(q, gn, res)
+				await get_pcd(q, res)
 				return
 			}
 			if (q.getgeneboxplot) {
@@ -48,21 +49,22 @@ exports.handle_singlecell_closure = genomes => {
 	}
 }
 
-async function get_pcd(q, gn, res) {
+async function get_pcd(q, res) {
 	/* hardcoded to 3d
-TODO 2d, svg
-*/
+		TODO 2d, svg
+		PCD file format guide: https://pcl.readthedocs.io/projects/tutorials/en/latest/pcd_file_format.html
+	*/
 
 	const result = {}
 
-	const lines = await slice_file_add_color(q, gn, result)
+	const lines = await slice_file_add_color(q, result)
 
 	const header = `# .PCD v.7 - Point Cloud Data file format
 VERSION .7
 FIELDS x y z rgb
 SIZE 4 4 4 4
 TYPE F F F F
-COUNT 20 20 20 20
+COUNT 1 1 1 1
 WIDTH 1200
 HEIGHT 800
 VIEWPOINT 0 0 0 1 0 0 0
@@ -74,7 +76,7 @@ DATA ascii
 	res.send(result)
 }
 
-async function slice_file_add_color(q, gn, result) {
+async function slice_file_add_color(q, result) {
 	/*
 to slice the csv/tab file of all cells
 for each cell, assign color based on desired method
@@ -148,18 +150,21 @@ may attach coloring scheme to result{} for returning to client
 		result.numbercellwithgeneexp = 0
 		result.numbercelltotal = 0
 
-		await utils.get_lines_tabix([ge.file, coord], null, line => {
-			const j = JSON.parse(line.split('\t')[3])
-			if (j.gene != ge.genename) return
-			if (!Number.isFinite(j.value)) return
-			result.numbercellwithgeneexp++
+		await utils.get_lines_bigfile({
+			args: [ge.file, coord],
+			callback: line => {
+				const j = JSON.parse(line.split('\t')[3])
+				if (j.gene != ge.genename) return
+				if (!Number.isFinite(j.value)) return
+				result.numbercellwithgeneexp++
 
-			if (ge.autoscale) {
-				minexpvalue = Math.min(minexpvalue, j.value)
-				maxexpvalue = Math.max(maxexpvalue, j.value)
+				if (ge.autoscale) {
+					minexpvalue = Math.min(minexpvalue, j.value)
+					maxexpvalue = Math.max(maxexpvalue, j.value)
+				}
+
+				cell2value.set(j.sample, j.value)
 			}
-
-			cell2value.set(j.sample, j.value)
 		})
 
 		// record scaling to return to client
@@ -344,18 +349,21 @@ async function get_geneboxplot(q, gn, res) {
 	let minexpvalue = 0,
 		maxexpvalue = 0
 
-	await utils.get_lines_tabix([ge.expfile, coord], null, line => {
-		const j = JSON.parse(line.split('\t')[3])
-		if (j.gene != ge.genename) return
-		if (!j.sample) return
-		if (!Number.isFinite(j.value)) return
+	await utils.get_lines_bigfile({
+		args: [ge.expfile, coord],
+		callback: line => {
+			const j = JSON.parse(line.split('\t')[3])
+			if (j.gene != ge.genename) return
+			if (!j.sample) return
+			if (!Number.isFinite(j.value)) return
 
-		const c = barcode2catvalue.get(j.sample)
-		if (!c) return
-		c.expvalue = j.value
+			const c = barcode2catvalue.get(j.sample)
+			if (!c) return
+			c.expvalue = j.value
 
-		minexpvalue = Math.min(minexpvalue, j.value)
-		maxexpvalue = Math.max(maxexpvalue, j.value)
+			minexpvalue = Math.min(minexpvalue, j.value)
+			maxexpvalue = Math.max(maxexpvalue, j.value)
+		}
 	})
 
 	const category2values = new Map()
@@ -479,18 +487,21 @@ async function get_heatmap(q, gn, res) {
 
 		const genename = gene.gene
 
-		await utils.get_lines_tabix([ge.expfile, coord], null, line => {
-			const j = JSON.parse(line.split('\t')[3])
-			if (j.gene.toUpperCase() !== gene.gene.toUpperCase()) return
-			if (!j.sample) return
-			if (!Number.isFinite(j.value)) return
+		await utils.get_lines_bigfile({
+			args: [ge.expfile, coord],
+			callback: line => {
+				const j = JSON.parse(line.split('\t')[3])
+				if (j.gene.toUpperCase() !== gene.gene.toUpperCase()) return
+				if (!j.sample) return
+				if (!Number.isFinite(j.value)) return
 
-			const c = barcode2catvalue.get(j.sample)
-			if (!c) return
-			c.expvalue = j.value
+				const c = barcode2catvalue.get(j.sample)
+				if (!c) return
+				c.expvalue = j.value
 
-			minexpvalue = Math.min(minexpvalue, j.value)
-			maxexpvalue = Math.max(maxexpvalue, j.value)
+				minexpvalue = Math.min(minexpvalue, j.value)
+				maxexpvalue = Math.max(maxexpvalue, j.value)
+			}
 		})
 
 		const category2values = new Map()

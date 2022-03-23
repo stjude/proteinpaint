@@ -10,7 +10,7 @@ const tape = require('tape')
 const fs = require('fs')
 const path = require('path')
 const compareResponseData = require('./back.sql.helpers').compareResponseData
-const serverconfig = require('../../serverconfig')
+const serverconfig = require('../serverconfig')
 const termjson = require('./termjson').termjson
 
 const ssid = 'genotype-test.txt'
@@ -498,7 +498,7 @@ tape('numerical term1', function(test) {
 		{
 			term1: 'agedx',
 			term1_q: {
-				type: 'regular',
+				type: 'regular-bin',
 				bin_size: 5,
 				stopinclusive: true,
 				first_bin: {
@@ -572,7 +572,7 @@ tape('numerical term1', function(test) {
 		{
 			term1: 'agedx',
 			term1_q: {
-				type: 'regular',
+				type: 'regular-bin',
 				bin_size: 5,
 				first_bin: {
 					startunbounded: true,

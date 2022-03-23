@@ -1,0 +1,37 @@
+{
+    "ppcalls": [
+        {
+            "label": "Hi-C",
+            "urlparam": "?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic&&hictknorm=VC",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "position": "chr7:13749862-20841903",
+                "nativetracks": "RefGene",
+                "tracks": [{
+                    "type": "hicstraw",
+                    "file": "proteinpaint_demo/hg19/hic/hic_demo.hic",
+                    "name": "Hi-C Demo",
+                    "percentile_max": 95,
+                    "mincutoff": 1,
+                    "pyramidup": 1,
+                    "enzyme": "MboI",
+					"normalizationmethod":"VC"
+                }]
+            },
+            "testSpec": {
+                "expected": {"image": 1 }
+            }
+        }
+    ],
+    "update_message": "New <span style='font-family: Courier; opacity: 0.65;'>normalizationmethod</span> to show normalization by VC, VC_SQRT, or KR by default.",
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit"
+        }
+    ]
+}

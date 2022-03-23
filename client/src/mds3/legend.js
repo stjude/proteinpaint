@@ -31,10 +31,10 @@ run only once, called by makeTk
 
 	tk.legend.table = table
 
-	create_mclass(tk)
+	create_mclass(tk, block)
 }
 
-function create_mclass(tk) {
+function create_mclass(tk, block) {
 	/*
 list all mutation classes
 attribute may have already been created with customization
@@ -52,7 +52,7 @@ legend.mclass{}
 		.append('td')
 		.style('text-align', 'right')
 		.style('opacity', 0.3)
-		.text('Mutation')
+		.text(block.mclassOverride ? block.mclassOverride.className || 'Mutation' : 'Mutation')
 
 	tk.legend.mclass.holder = tk.legend.mclass.row.append('td')
 }
@@ -66,19 +66,6 @@ data is returned by xhr
 	}
 	if (data.info_fields) {
 		update_info_fields(data.info_fields, tk)
-	}
-	if (data.AFtest_termdbgroup) {
-		let g = tk.vcf.numerical_axis.AFtest.groups[0]
-		if (g.is_termdb) {
-			g.dom.samplehandle.text('n=' + data.AFtest_termdbgroup[0].samplecount + ', view stats')
-			g.popsetaverage = data.AFtest_termdbgroup[0].popsetaverage // for displaying in tooltip
-		}
-
-		g = tk.vcf.numerical_axis.AFtest.groups[1]
-		if (g.is_termdb) {
-			g.dom.samplehandle.text('n=' + data.AFtest_termdbgroup[1].samplecount + ', view stats')
-			g.popsetaverage = data.AFtest_termdbgroup[1].popsetaverage // for displaying in tooltip
-		}
 	}
 }
 
@@ -104,7 +91,6 @@ function update_mclass(mclass2count, tk) {
 	k
 	count
 	*/
-
 		let label,
 			desc,
 			color = '#858585'

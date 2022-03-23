@@ -1,25 +1,26 @@
 import * as rx from '../common/rx.core'
 import { root_ID } from './tree'
-import { plotConfig } from './plot'
 import { dofetch3 } from '../client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
+import { graphable } from '../common/termutils'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
 const defaultState = {
-	nav: {
-		header_mode: 'search_only',
-		activeTab: 0
-	},
+	header_mode: 'search_only',
 	// will be ignored if there is no dataset termdb.selectCohort
 	// or value will be set to match a filter node that has been tagged
 	// as 'cohortfilter' in state.termfilter.filter
 	activeCohort: 0,
 	tree: {
-		expandedTermIds: [],
-		visiblePlotIds: [],
-		plots: {}
+		exclude_types: [],
+		expandedTermIds: []
 	},
+	submenu: {
+		// type: 'tvs', may add other types later
+		// term: {} or undefined
+	},
+	search: { isVisible: true },
 	termfilter: {
 		filter: {
 			type: 'tvslst',
@@ -27,41 +28,42 @@ const defaultState = {
 			join: '',
 			lst: []
 		}
-	},
-	autoSave: true
+	}
 }
 
 // one store for the whole tdb app
 class TdbStore {
-	constructor(app) {
-		this.api = rx.getStoreApi(this)
-		this.copyMerge = rx.copyMerge
-		this.deepFreeze = rx.deepFreeze
-		// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
-		//this.fromJson = rx.fromJson // used in store.api.state()
-		this.toJson = rx.toJson // used in store.api.state()
-		this.prevGeneratedId = 0 // use for assigning unique IDs where needed
-
-		this.app = app
-		if (!app.opts.state) throw '.state{} missing'
-		this.state = this.copyMerge(this.toJson(defaultState), app.opts.state)
-		this.validateOpts()
-
+	constructor(opts) {
+		this.type = 'store'
+		this.defaultState = defaultState
+		// set this.app, .opts, .api, expected store methods,
+		// and the initial non-rehydrated state with overrides
+		rx.prepStore(this, opts)
+		// use for assigning unique IDs where needed
+		// may be used later to simplify getting component state by type and id
+		this.prevGeneratedId = 0
 		// when using rx.copyMerge, replace the object values
 		// for these keys instead of extending them
 		this.replaceKeyVals = ['term', 'term2', 'term0', 'q']
 	}
 
-	validateOpts() {
-		const s = this.state
-		// assume that any vocabulary with a route
-		// will require genome + dslabel
-		if (s.vocab.route) {
-			if (!s.vocab.genome) throw '.state[.vocab].genome missing'
-			if (!s.vocab.dslabel) throw '.state[.vocab].dslabel missing'
-		} else {
-			if (!Array.isArray(s.vocab.terms)) throw 'vocab.terms must be an array of objects'
+	validateOpts(opts) {
+		if (!opts.state) throw '.state{} missing'
+		const s = opts.state
+		if (s.vocab) {
+			// assume that any vocabulary with a route
+			// will require genome + dslabel
+			if (s.vocab.route) {
+				if (!s.vocab.genome) throw '.state[.vocab].genome missing'
+				if (!s.vocab.dslabel) throw '.state[.vocab].dslabel missing'
+			} else {
+				if (!Array.isArray(s.vocab.terms)) throw 'vocab.terms must be an array of objects'
+			}
 		}
+	}
+
+	validateState() {
+		const s = this.state
 		if (s.tree.expandedTermIds.length == 0) {
 			s.tree.expandedTermIds.push(root_ID)
 		} else {
@@ -71,31 +73,16 @@ class TdbStore {
 		}
 	}
 
-	async rehydrate() {
-		// maybe no need to provide term filter at this query
-		for (const plotId in this.state.tree.plots) {
-			const savedPlot = this.state.tree.plots[plotId]
-			// .term{} is required, if missing, add with plotId
-			if (!savedPlot.term) savedPlot.term = {}
-			if (!savedPlot.term.id) savedPlot.term.id = plotId
-			// .term2 and term0 are optional, but .id is required as that's a different term than plotId
-			if (savedPlot.term2 && !savedPlot.term2.id) delete savedPlot.term2
-			if (savedPlot.term0 && !savedPlot.term0.id) delete savedPlot.term0
-			for (const t of ['term', 'term2', 'term0']) {
-				if (!savedPlot[t]) continue
-				savedPlot[t].term = await this.app.vocabApi.getterm(savedPlot[t].id)
-			}
-			this.state.tree.plots[plotId] = plotConfig(savedPlot)
-			this.adjustPlotCurrViews(this.state.tree.plots[plotId])
-		}
+	async init() {
+		this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
 
+		// maybe no need to provide term filter at this query
 		let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
 		if (!filterUiRoot) {
 			this.state.termfilter.filter.tag = 'filterUiRoot'
 			filterUiRoot = this.state.termfilter.filter
 		}
 
-		this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
 		if (this.state.termdbConfig.selectCohort) {
 			let cohortFilter = getFilterItemByTag(this.state.termfilter.filter, 'cohortFilter')
 			if (!cohortFilter) {
@@ -135,11 +122,9 @@ class TdbStore {
 			}
 		} else {
 			this.state.activeCohort = -1
-			// since the cohort tab will be hidden, default to making the filter tab active
-			if (this.state.activeTab === 0) this.state.activeTab = 1
-			if (this.state.nav.header_mode === 'with_cohortHtmlSelect') {
-				console.warn(`no termdbConfig.selectCohort to use for nav.header_mode = 'with_cohortHtmlSelect'`)
-				this.state.nav.header_mode = 'search_only'
+			if (this.state.header_mode === 'with_cohortHtmlSelect') {
+				console.warn(`no termdbConfig.selectCohort to use for state.header_mode = 'with_cohortHtmlSelect'`)
+				this.state.header_mode = 'search_only'
 			}
 		}
 	}
@@ -155,20 +140,6 @@ class TdbStore {
 			for (const subitem of item.$lst) {
 				this.setId(subitem)
 			}
-		}
-	}
-
-	adjustPlotCurrViews(plotConfig) {
-		if (!plotConfig) return
-		const currViews = plotConfig.settings.currViews
-		if (currViews.includes('table') && !plotConfig.term2) {
-			plotConfig.settings.currViews = ['barchart']
-		}
-		if (
-			currViews.includes('boxplot') &&
-			(!plotConfig.term2 || (plotConfig.term2.term.type !== 'integer' && plotConfig.term2.term.type !== 'float'))
-		) {
-			plotConfig.settings.currViews = ['barchart']
 		}
 	}
 }
@@ -188,12 +159,6 @@ TdbStore.prototype.actions = {
 		// initial render is not meant to be modified yet
 		//
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
-		for (const plotId in this.state.plots) {
-			this.adjustPlotCurrViews(this.state.plots[plotId])
-		}
-	},
-	tab_set(action) {
-		this.state.nav.activeTab = action.activeTab
 	},
 	cohort_set(action) {
 		this.state.activeCohort = action.activeCohort
@@ -215,31 +180,6 @@ TdbStore.prototype.actions = {
 		this.state.tree.expandedTermIds.splice(i, 1)
 	},
 
-	plot_show(action) {
-		if (!this.state.tree.plots[action.id]) {
-			this.state.tree.plots[action.term.id] = plotConfig({ id: action.id, term: { term: action.term } })
-		}
-		if (!this.state.tree.visiblePlotIds.includes(action.id)) {
-			this.state.tree.visiblePlotIds.push(action.id)
-		}
-	},
-
-	plot_hide(action) {
-		const i = this.state.tree.visiblePlotIds.indexOf(action.id)
-		if (i != -1) {
-			this.state.tree.visiblePlotIds.splice(i, 1)
-		}
-	},
-
-	plot_edit(action) {
-		const plot = this.state.tree.plots[action.id]
-		if (plot) {
-			this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
-			validatePlot(plot, this.app.vocabApi)
-		}
-		this.adjustPlotCurrViews(plot)
-	},
-
 	filter_replace(action) {
 		const replacementFilter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
 		if (!action.filter.tag) {
@@ -255,85 +195,30 @@ TdbStore.prototype.actions = {
 				parent.lst[i] = replacementFilter
 			}
 		}
+	},
+
+	submenu_set(action) {
+		const term = action.submenu && action.submenu.term
+		if (!term) {
+			this.state.submenu = {}
+			this.state.tree.expandedTermIds = [root_ID]
+		} else {
+			const expandedTermIds = [root_ID]
+			if (term.__ancestors) {
+				expandedTermIds.push(...term.__ancestors)
+			}
+
+			if (graphable(term)) {
+				Object.assign(this.state.submenu, action.submenu)
+			} else {
+				expandedTermIds.push(term.id)
+				delete this.state.submenu.term
+			}
+
+			this.state.tree.expandedTermIds = expandedTermIds
+		}
 	}
 }
 
+// must use the await keyword when using this storeInit()
 export const storeInit = rx.getInitFxn(TdbStore)
-
-function validatePlot(p, vocabApi) {
-	/*
-	only work for hydrated plot object already in the state
-	not for the saved state
-	*/
-	if (!p.id) throw 'plot error: plot.id missing'
-	if (!p.term) throw 'plot error: plot.term{} not an object'
-	try {
-		validatePlotTerm(p.term, vocabApi)
-	} catch (e) {
-		throw 'plot.term error: ' + e
-	}
-	if (p.term2) {
-		try {
-			validatePlotTerm(p.term2, vocabApi)
-		} catch (e) {
-			throw 'plot.term2 error: ' + e
-		}
-		if (p.term.term.type == 'condition' && p.term.id == p.term2.id) {
-			// term and term2 are the same CHC, potentially allows grade-subcondition overlay
-			if (p.term.q.bar_by_grade && p.term2.q.bar_by_grade)
-				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_grade'
-			if (p.term.q.bar_by_children && p.term2.q.bar_by_children)
-				throw 'plot error: term2 is the same CHC, but both cannot be using bar_by_children'
-		}
-	}
-	if (p.term0) {
-		try {
-			validatePlotTerm(p.term0, vocabApi)
-		} catch (e) {
-			throw 'plot.term0 error: ' + e
-		}
-	}
-}
-
-function validatePlotTerm(t, vocabApi) {
-	/*
-	for p.term, p.term2, p.term0
-	{ id, term, q }
-	*/
-
-	// somehow plots are missing this
-	if (!t.term) throw '.term{} missing'
-	if (!vocabApi.graphable(t.term)) throw '.term is not graphable (not a valid type)'
-	if (!t.term.name) throw '.term.name missing'
-	t.id = t.term.id
-
-	if (!t.q) throw '.q{} missing'
-	// term-type specific validation of q
-	switch (t.term.type) {
-		case 'integer':
-		case 'float':
-			// t.q is binning scheme, it is validated on server
-			break
-		case 'categorical':
-			if (t.q.groupsetting && !t.q.groupsetting.disabled) {
-				// groupsetting allowed on this term
-				if (!t.term.values) throw '.values{} missing when groupsetting is allowed'
-				// groupsetting is validated on server
-			}
-			// term may not have .values{} when groupsetting is disabled
-			break
-		case 'condition':
-			if (!t.term.values) throw '.values{} missing'
-			if (!t.q.bar_by_grade && !t.q.bar_by_children) throw 'neither q.bar_by_grade or q.bar_by_children is set to true'
-			if (!t.q.value_by_max_grade && !t.q.value_by_most_recent && !t.q.value_by_computable_grade)
-				throw 'neither q.value_by_max_grade or q.value_by_most_recent or q.value_by_computable_grade is true'
-			break
-		default:
-			if (t.term.isgenotype) {
-				// don't do anything for now
-				console.log('to add in type:"genotype"')
-				break
-			}
-			throw 'unknown term type'
-	}
-}

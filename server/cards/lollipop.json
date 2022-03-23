@@ -1,0 +1,174 @@
+{
+    "ppcalls": [
+        {
+            "label": "Official dataset",
+            "urlparam": "?genome=hg19&gene=JAK2&dataset=Pediatric",
+            "runargs": {
+                "gene":"jak2",
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "dataset":"Pediatric"
+            },
+            "buttons":[
+                {
+                    "name":"Build an Official Dataset",
+                    "link": "https://docs.google.com/document/d/1iY7x9PzAzLKzdABam_Tfg8h-kQ0oh2UyyKC0cP-9YWA/edit"
+                }
+            ],
+            "testSpec": {
+                "expected": { "circle": 10 }
+            }
+        },
+        {
+            "label": "GDC API (GENCODE)",
+            "message": "To view a different gene from the GDC dataset: <ul><li>Scroll to the top of the page. Select 'human hg38' from the dropdown menu in the header.</li><li>Start typing the gene into the search bar. A vertical menu of gene options will appear. Click the appropriate option or hit enter.</li><li>The protein view of the gene will appear. Click on <div class='sja_opaque8' style='display: inline-block; color: black; padding: 1px 2px; border: solid 1px #545454; font-size: .9em;'>GDC</div> in the toolbar.</li></ul>",
+            "urlparam": "?genome=hg38&gene=ENST00000407796&mds3=GDC",
+            "runargs": {
+                "gene":"ENST00000407796",
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "tracks":[
+                    {
+                        "type": "mds3",
+                        "dslabel":"GDC"
+                    }
+                ]
+            },
+            "testSpec": {
+                "expected": { "circle": 10 }
+            }
+        },
+        {
+            "label": "GDC API (RefSeq)",
+            "message": "To view a different gene from the GDC dataset: <ul><li>Scroll to the top of the page. Select 'human hg38' from the dropdown menu in the header.</li><li>Start typing the gene into the search bar. A vertical menu of gene options will appear. Click the appropriate option or hit enter.</li><li>The protein view of the gene will appear. Click on <div class='sja_opaque8' style='display: inline-block; color: black; padding: 1px 2px; border: solid 1px #545454; font-size: .9em;'>GDC</div> in the toolbar.</li></ul>",
+            "urlparam": "?genome=hg38&gene=NM_005163&mds3=GDC",
+            "runargs": {
+                "gene":"NM_005163",
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "tracks":[
+                    {
+                        "type": "mds3",
+                        "dslabel":"GDC"
+                    }
+                ]
+            },
+            "testSpec": {
+                "expected": { "circle": 10 }
+            }
+        },
+        {
+            "label": "Custom Data (Differential Phosphorylation)",
+            "message": "Create custom datasets with the <span style='font-family: Courier; opacity: 0.6;'>mds3</span> track. In this example, custom data points with a specified value and custom mutatiion classes are shown.",
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg38",
+                "gene": "NM_001203252",
+                "tracks": [
+                    {
+                        "type": "mds3",
+                        "name":"Tau Phosphosites",
+                        "custom_variants":[
+                            {"chr":"chr17","pos":45962452,"mname":"T39","class":"M","dt":1, "__value": 1.32},
+                            {"chr":"chr17","pos":45971861,"mname":"S46","class":"I","dt":1, "__value": -0.06},
+                            {"chr":"chr17","pos":45971873,"mname":"T50","class":"M","dt":1, "__value": -0.21},
+                            {"chr":"chr17","pos":45971879,"mname":"T52","class":"M","dt":1, "__value": -0.14},
+                            {"chr":"chr17","pos":45971891,"mname":"S56","class":"I","dt":1, "__value": 0.16},
+                            {"chr":"chr17","pos":45971906,"mname":"S61","class":"I","dt":1, "__value": -0.03},
+                            {"chr":"chr17","pos":45971912,"mname":"T63","class":"M","dt":1, "__value": -0.05},
+                            {"chr":"chr17","pos":45971915,"mname":"S64","class":"I","dt":1, "__value": -0.02},
+                            {"chr":"chr17","pos":45971927,"mname":"S68","class":"I","dt":1, "__value": -0.03},
+                            {"chr":"chr17","pos":45971930,"mname":"T69","class":"M","dt":1, "__value": -0.07},
+                            {"chr":"chr17","pos":45971936,"mname":"T71","class":"M","dt":1, "__value": 0.08},
+                            {"chr":"chr17","pos":45974390,"mname":"T76","class":"M","dt":1, "__value": -0.12},
+                            {"chr":"chr17","pos":45978398,"mname":"T111","class":"M","dt":1, "__value": 0.65},
+                            {"chr":"chr17","pos":45978404,"mname":"S113","class":"I","dt":1, "__value": 0.56},
+                            {"chr":"chr17","pos":45991553,"mname":"T175","class":"M","dt":1, "__value": 1.74},
+                            {"chr":"chr17","pos":45991571,"mname":"T181","class":"M","dt":1, "__value": 0.82},
+                            {"chr":"chr17","pos":45991580,"mname":"S184","class":"I","dt":1, "__value": 1.44},
+                            {"chr":"chr17","pos":45991583,"mname":"S185","class":"I","dt":1, "__value": 0.49},
+                            {"chr":"chr17","pos":45996413,"mname":"S191","class":"I","dt":1, "__value": 0.73},
+                            {"chr":"chr17","pos":45996425,"mname":"S195","class":"I","dt":1, "__value": -0.21},
+                            {"chr":"chr17","pos":45996431,"mname":"Y197","class":"F","dt":1, "__value": 0.44},
+                            {"chr":"chr17","pos":45996434,"mname":"S198","class":"I","dt":1, "__value": 1.01},
+                            {"chr":"chr17","pos":45996437,"mname":"S199","class":"I","dt":1, "__value": 1.59},
+                            {"chr":"chr17","pos":45996446,"mname":"S202","class":"I","dt":1, "__value": 1.69},
+                            {"chr":"chr17","pos":45996455,"mname":"T205","class":"M","dt":1, "__value": 1.53},
+                            {"chr":"chr17","pos":45996464,"mname":"S208","class":"I","dt":1, "__value": -0.14},
+                            {"chr":"chr17","pos":45996470,"mname":"S210","class":"I","dt":1, "__value": 0.04},
+                            {"chr":"chr17","pos":45996476,"mname":"S212","class":"I","dt":1, "__value": 1.94},
+                            {"chr":"chr17","pos":45996482,"mname":"S214","class":"I","dt":1, "__value": 0.01},
+                            {"chr":"chr17","pos":45996492,"mname":"T217","class":"M","dt":1, "__value": 2.35},
+                            {"chr":"chr17","pos":45996502,"mname":"T220","class":"M","dt":1, "__value": 1.82},
+                            {"chr":"chr17","pos":45996533,"mname":"T231","class":"M","dt":1, "__value": 4.07},
+                            {"chr":"chr17","pos":45996545,"mname":"S235","class":"I","dt":1, "__value": 4.31},
+                            {"chr":"chr17","pos":45996551,"mname":"S237","class":"I","dt":1, "__value": 2.77},
+                            {"chr":"chr17","pos":45996554,"mname":"S238","class":"I","dt":1, "__value": 4.36},
+                            {"chr":"chr17","pos":45996563,"mname":"S241","class":"I","dt":1, "__value": 1.52},
+                            {"chr":"chr17","pos":45996626,"mname":"S262","class":"I","dt":1, "__value": 2.43},
+                            {"chr":"chr17","pos":45996629,"mname":"T263","class":"M","dt":1, "__value": 2.43},
+                            {"chr":"chr17","pos":46010340,"mname":"S285","class":"I","dt":1, "__value": 3.22},
+                            {"chr":"chr17","pos":46010352,"mname":"S289","class":"I","dt":1, "__value": 2.83},
+                            {"chr":"chr17","pos":46010400,"mname":"S305","class":"I","dt":1, "__value": 5.07},
+                            {"chr":"chr17","pos":46014297,"mname":"S324","class":"I","dt":1, "__value": 2.20},
+                            {"chr":"chr17","pos":46018686,"mname":"S356","class":"I","dt":1, "__value": 0.65},
+                            {"chr":"chr17","pos":46018701,"mname":"T361","class":"M","dt":1, "__value": 0.85},
+                            {"chr":"chr17","pos":46024001,"mname":"T386","class":"M","dt":1, "__value": 1.76},
+                            {"chr":"chr17","pos":46024025,"mname":"Y394","class":"F","dt":1, "__value": 1.43},
+                            {"chr":"chr17","pos":46024031,"mname":"S396","class":"I","dt":1, "__value": 2.02},
+                            {"chr":"chr17","pos":46024043,"mname":"S400","class":"I","dt":1, "__value": 2.06},
+                            {"chr":"chr17","pos":46024052,"mname":"T403","class":"M","dt":1, "__value": 1.72},
+                            {"chr":"chr17","pos":46024055,"mname":"S404","class":"I","dt":1, "__value": 0.61},
+                            {"chr":"chr17","pos":46024070,"mname":"S409","class":"I","dt":1, "__value": 0.95},
+                            {"chr":"chr17","pos":46024085,"mname":"T414","class":"M","dt":1, "__value": -0.21},
+                            {"chr":"chr17","pos":46024091,"mname":"S416","class":"I","dt":1, "__value": 0.14},
+                            {"chr":"chr17","pos":46024109,"mname":"S422","class":"I","dt":1, "__value": 0.53},
+                            {"chr":"chr17","pos":46024143,"mname":"S433","class":"I","dt":1, "__value": 0.32},
+                            {"chr":"chr17","pos":46024149,"mname":"S435","class":"I","dt":1, "__value": 0.51}
+
+                        ],
+                        "numericmode":{
+                            "inuse":true,
+                            "type":"__value",
+                            "label":"Log2FC AD vs Control",
+                            "valueName":"Log2FC"
+                        }
+                    }
+                ],
+                "mclassOverride": {
+                    "className": "Amino Acid Phosphosite",
+                    "classes":{
+                        "M": {
+                            "label": "Threonine",
+                            "color": "#2874A6",
+                            "desc": "phosphorylated amino acid"
+                        },
+                        "I": {
+                            "label": "Serine",
+                            "color": "#E74C3C",
+                            "desc": "phosphorylated amino acid"
+                        }, 
+                        "F": {
+                            "label": "Tyrosine",
+                            "color": "#00A86B",
+                            "desc": "phosphorylated amino acid"
+                        }
+                    }
+                }
+            },
+            "testSpec": {
+                "expected": { "circle": 10 }
+            }
+        }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
+        }
+    ]
+} 

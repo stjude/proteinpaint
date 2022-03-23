@@ -248,6 +248,7 @@ function table_snvindel(mlst, holder, tk, block) {
 	}
 	if (mlst.length == 1) {
 		const m = mlst[0]
+		snpfind.alleleLst = [m.ref, m.alt]
 		if (block.variantPageCall_snv) {
 			if (m.chr != undefined && m.pos != undefined && m.ref != undefined && m.alt != undefined) {
 				variantpage.set.set(m.chr + separatorvp + m.pos + separatorvp + m.ref + separatorvp + m.alt, {
@@ -467,7 +468,7 @@ function table_snvindel(mlst, holder, tk, block) {
 
 	if (hasSNP && snpfind.bprange.length) {
 		client
-			.may_findmatchingsnp(snpfind.chr, snpfind.bprange, block.genome)
+			.may_findmatchingsnp(snpfind.chr, snpfind.bprange, block.genome, snpfind.alleleLst)
 			.then(hits => {
 				if (!hits || hits.length == 0) throw { message: 'no SNP' }
 				snpfind.says.text('')
@@ -513,11 +514,10 @@ function table_snvindel(mlst, holder, tk, block) {
 				.classed('sja_variantpagesnv', true)
 				.text('Variant Page')
 				.on('click', () => {
-					const div = client
-						.menuunderdom(d3event.target)
-						.style('border', 'solid 1px black')
-						.style('padding', '20px')
-					const table = div.append('table')
+					const table = tk.tktip
+						.clear()
+						.showunder(d3event.target)
+						.d.append('table')
 					for (const variant of vlst) {
 						const tr = table.append('tr')
 						// aa change
@@ -2347,7 +2347,7 @@ function mayshowcovmafplot(m, tk, holder) {
 
 	const row = holder.append('div').style('margin-bottom', '10px')
 
-	import('./plot.vaf2cov').then(plotter => {
+	import('./old/plot.vaf2cov').then(plotter => {
 		/*
 		import plotter, then plot all groups
 		each plot will return data point -> svg cross,
@@ -2623,7 +2623,7 @@ function mayshowgermline2dvaf(m, tk, holder) {
 	}
 	if (data.length) {
 		const div = holder.append('div').style('display', 'inline-block')
-		import('./plot.2dvaf').then(p => {
+		import('./old/plot.2dvaf').then(p => {
 			p.default(data, cfg, div)
 		})
 		return true
@@ -2667,7 +2667,7 @@ function mayshowgenotype2boxplot(m, tk, holder) {
 			})
 		}
 		const div = holder.append('div').style('display', 'inline-block')
-		import('./plot.boxplot').then(p => {
+		import('./old/plot.boxplot').then(p => {
 			const err = p.default({
 				holder: div,
 				axislabel: cfg.axislabel,
@@ -2716,7 +2716,7 @@ function mayshowgenotype2boxplot(m, tk, holder) {
 		})
 	}
 	const div = holder.append('div').style('display', 'inline-block')
-	import('./plot.boxplot').then(p => {
+	import('./old/plot.boxplot').then(p => {
 		const err = p.default({
 			holder: div,
 			axislabel: cfg.axislabel,

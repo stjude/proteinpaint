@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+
+<!-- rows of URLs are added to this table -->
+<table id='table' style="border-spacing:10px;border-collapse:separate"></table>
+
+
+
+<script>
+const snplocusQ = {
+	chr:'chr17', start:7674304, stop:7676849,
+	alleleType:0,
+	geneticModel:0,
+	restrictAncestry:{
+		name:'African ancestry',
+		tvs: {
+			term: {
+				id: 'genetic_race',
+				type: 'categorical',
+				name: 'Genetically defined race'
+			},
+			values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+		}
+	},
+	variant_filter: {
+		"type":"tvslst",
+		"join":"and",
+		"in":true,
+		"lst":[
+			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC_sjlife","name":"SJLIFE classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"SuperGood":{"label":"SuperGood","key":"SuperGood"},"Good":{"label":"Good","key":"Good"},"Ambiguous":{"label":"Ambiguous","key":"Ambiguous"},"Bad":{"label":"Bad","key":"Bad"}}}}},
+			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC_ccss","name":"CCSS classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"SuperGood":{"label":"SuperGood","key":"SuperGood"},"Good":{"label":"Good","key":"Good"},"Ambiguous":{"label":"Ambiguous","key":"Ambiguous"},"Bad":{"label":"Bad","key":"Bad"}}}}},
+			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"SJcontrol_CR","name":"SJLIFE control call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR","name":"Call rate, SJLIFE+CCSS","parent_id":null,"isleaf":true,"type":"float"}}},
+			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_sjlife","name":"SJLIFE call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_ccss","name":"CCSS call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_CR","name":"gnmoAD call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+			{"type":"tvs","tvs":{"ranges":[{"start":0.1,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_AF","name":"gnomAD allele frequency","parent_id":null,"isleaf":true,"type":"float","min":0,"max":1,"values":{}}}},
+			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"BadBLAT","name":"Paralog","parent_id":null,"isleaf":true,"type":"categorical"}}},
+			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"Polymer_region","name":"Polymer region","parent_id":null,"isleaf":true,"type":"categorical"}}}
+		]
+	}
+}
+
+/*
+call the makeURL() to make URLs
+argument is an array; each element defines a set of example URLs showing in a row
+.name: string
+.links: []
+   each element is a text or array of length 2
+   text: create <span> to display text, no url
+   array: [0]: URL label
+          [1]: URL path name
+*/
+makeURL([
+{ name: 'BAM',
+	links: [
+		[ 'TP53 18bp del', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/tp53.18bpdel.bam' ],
+		[ 'k-mer', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/tp53.18bpdel.bam&variant=chr17.7578383.AGCAGCGCTCATGGTGGGG.A' ],
+
+		['GATA3 complex mutation','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/gata3.complex.bam&position=chr10:8100668-8100707'],
+		['k-mer','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/gata3.complex.bam&position=chr10:8100668-8100707&variant=chr10.8100686.CAC.CCCTGCCTGTTGTGAGCTGCTCTACGTGCCCTACGTGCT'],
+
+		['chr7 3mer expansion','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/chr7.3mer.insert.bam&position=chr7:35473-35473&hlregion=chr7:35472-35472'],
+		['k-mer','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/chr7.3mer.insert.bam&position=chr7:35473-35473&hlregion=chr7:35472-35472&variant=chr7.35473.T.TGCTGCTGCTGCC'],
+
+		['EXOC4 2mer deletion','?genome=hg38&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/intron.2mer.del.bam&position=chr7:133787365-133787395&hlregion=chr7:133787361-133787361'],
+		['k-mer','?genome=hg38&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/intron.2mer.del.bam&position=chr7:133787365-133787395&hlregion=chr7:133787361-133787361&variant=chr7.133787370.TGTGTGTGTGTGTGTGTGTGAGAT.TGAT'],
+
+		['SETD2 splice site insertion','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/ZEDH37MVSK.bam&position=chr3:47155334-47155420'],
+		['kmer','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/ZEDH37MVSK.bam&position=chr3:47155334-47155420&variant=chr3.47155366.G.GGGGCT'],
+
+		[ 'KIT 3bp del', '?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam' ],
+		[ 'k-mer','?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A'],
+
+		[ 'RNA 8bp insert','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851'],
+		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG'],
+
+		['KIT complex mutation','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/kit.complex.bam&position=chr4:55589768-55589770'],
+		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/kit.complex.bam&position=chr4:55589768-55589770&variant=chr4.55589768.CTTACGA.AGGG'],
+
+		['BCORL1 complex mutation', '?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/bcorl1.complex.bam&position=chrX:129150009-129150071'],
+		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/bcorl1.complex.bam&position=chrX:129150009-129150071&variant=chrX.129150027.GGAAAGCGTAGGGGTCTTTGCTTGCAAGAACAA.GT'],
+
+		['exon deletion','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/crebbp.bam&position=chr16:3800245-3803429'],
+		['ETV6 SV', '?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/etv6runx1.bam&position=chr12:12023245-12023802'],
+		['CBFB inversion','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/CBFB-MYH11.bam&position=chr16:67115815-67117415'],
+		['FLAG 0/16','?genome=hg19&block=1&position=chr12:25380685-25381606&bamfile=flag,proteinpaint_demo/hg19/bam/flagproblem.bam'],
+		'ERR:',
+		['missing','?genome=hg19&block=1&bamfile=flag,path/to/missing.bam'],
+		['text','?genome=hg19&block=1&bamfile=flag,proteinpaint_demo/hg19/junction/rnapeg'],
+		['gz','?genome=hg19&block=1&bamfile=flag,proteinpaint_demo/hg19/junction/file.gz'],
+		['no index','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/noIndex.bam'],
+		['wrong index','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/wrongIndex.bam'],
+	]
+},
+{ name:'GDC BAM slicing UI',
+	links:[
+		['GBM EGFR by case id','?gdcbamslice=1&gdc_id=TCGA-06-0211&gdc_pos=chr7:55153818-55156225'],
+		['KRAS G12V by case uuid','?gdcbamslice=1&gdc_id=9a2a226e-9605-4214-9320-469305e664e6&gdc_var=chr12.25245350.C.A'],
+		['IDH1 R132H by file id','?gdcbamslice=1&gdc_id=C494.TCGA-S9-A6WE-01A-12D-A33T-08.1_gdc_realn.bam&gdc_var=chr2.208248388.C.T'],
+		['AKT1 E17K file uuid','?gdcbamslice=1&gdc_id=83da8958-a18d-4843-a451-edbdee4e8c30&gdc_var=chr14.104780214.C.T'],
+		['bam link','?genome=hg38&block=1&position=chr14:104780136-104780318&bamfile=xx,yy&gdc=83da8958-a18d-4843-a451-edbdee4e8c30,<yourTokenHere>'],
+		['KRAS G12D','?gdcbamslice=1&gdc_id=17284ec9-c3cb-4c80-96a7-312e35e7c1d9&gdc_var=chr12.25245350.C.T'],
+		['NPM1 exon12 insertion','?gdcbamslice=1&gdc_id=411153fd-414c-46a7-ae2b-c6f579ad63e6&gdc_var=chr5.171410539.C.CTCTG'],
+		['MYC 3bp del','?gdcbamslice=1&gdc_id=d15a8749-e497-495d-a0a5-d21e79f4e172&gdc_var=chr8.127740426.ATGT.A'],
+		['ACVR2A K329fs','?gdcbamslice=1&gdc_id=ad5639d2-f715-4da9-9b02-700f0d1b3fca&gdc_var=chr2.147926116.TA.T'],
+		['Skipped by workflow','?gdcbamslice=1&gdc_id=f55076c2-0223-42a2-ab77-ae3ee89c9238&gdc_pos=chr7:55153818-55156225'],
+	]
+},
+{name:'GDC lollipop',
+	links:[
+		['AKT1','?genome=hg38&gene=ENST00000407796&mds3=GDC'],
+		['NM_005163','?genome=hg38&gene=NM_005163&mds3=GDC'],
+		['TP53','?genome=hg38&gene=ENST00000269305&mds3=GDC'],
+		['KRAS','?genome=hg38&gene=ENST00000256078&mds3=GDC'],
+		['IDH1','?genome=hg38&gene=ENST00000345146&mds3=GDC'],
+		['KRAS G12V','example.gdc.byssm.html'],
+	]
+},
+{name:'RNA splicing',
+	links:[
+		['single','?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz'],
+		['rnapeg','?genome=hg19&block=1&junctionrnapeg=RNApeg,proteinpaint_demo/hg19/junction/rnapeg'],
+		['official mds','?genome=hg19&block=1&mds=Pediatric2,junction'],
+		['custom mds json','?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz'],
+		['custom matrix','?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz']
+	]
+},
+{name:'interaction',
+	links:[
+		['hic genome','?genome=hg19&hicfile=proteinpaint_demo/hg19/hic/hic_demo.hic&enzyme=MboI'],
+		['hic tk','?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic'],
+		['bed arc','?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc%20Track,proteinpaint_demo/hg19/arc/mango.gz'],
+	]
+},
+{name:'bedj',
+	links:[
+		['bedj','?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz'],
+		['bed3','?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz'],
+		'ERR:',
+		['missing','?block=on&genome=hg19&bedjfile=JSON-BED,path/to/missing.gz'],
+		['text file','?genome=hg19&block=1&bedjfile=flag,proteinpaint_demo/hg19/junction/rnapeg'],
+		['bam','?genome=hg19&block=1&position=chr12:25380685-25381606&bedjfile=flag,proteinpaint_demo/hg19/bam/flagproblem.bam'],
+		['no index','?genome=hg19&block=1&bedjfile=no%20index,proteinpaint_demo/hg19/bedj/noIndex.gz'],
+		['wrong index','?genome=hg19&block=1&bedjfile=wrong%20index,proteinpaint_demo/hg19/bedj/wrongIndex.gz'],
+	]
+},
+{name:'bampile',
+	links:[
+		['example','?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=Test,proteinpaint_demo/hg19/bampile/tk.gz'],
+	]
+},
+
+{name:'study',
+	links:[
+		['ERG','?study=proteinpaint_demo/hg19/heatmap/heatmapDemo.json'],
+	]
+},
+{name:'mds',
+	links:[
+		['pediatric','?genome=hg19&block=1&mds=Pediatric2,svcnv'],
+		['tcga-dlbc','?genome=hg38&block=1&position=chr22:22569655-23013766&svcnvfpkmfile=TCGA_DLBC,svcnv,proteinpaint_demo/hg38/GP/TCGA_DLBC.CNV.gz,vcf,proteinpaint_demo/hg38/GP/TCGA_DLBC.vcf.gz,fpkm,proteinpaint_demo/hg38/GP/TCGA_DLBC.fpkm.gz'],
+		['mdsjson','?genome=hg38&block=1&position=chr22:22569655-23013766&mdsjson=proteinpaint_demo/hg38/GP/mdsjson/mdsjsondemo.json']
+	]
+},
+
+{name:'scatterplot',
+	links:[
+		['sjcloud', '?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json']
+	]
+},
+{name:'single cell',
+	links:[
+		['2D','?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json']
+	]
+},
+{name:'MASS UI',
+	links:[
+		['TermdbTest', '?noheader=1&mass={"genome":"hg38","dslabel": "TermdbTest"}'],
+		['SJLife', '?noheader=1&mass={"genome":"hg38","dslabel": "SJLife"}'],
+		['CCSS','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			activeCohort:1
+		})],
+
+		['categorical','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'barchart',
+					term: { id: 'diaggrp' }
+				}
+			],
+		})],
+		['diaggrp-agedx','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'barchart',
+					term: { id: 'diaggrp' },
+					term2: { id: 'agedx' }
+				}
+			],
+		})],
+		['numerical','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'barchart',
+					term: {
+						id: 'hrtavg'
+					}
+				}
+			],
+		})],
+		['condition','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'barchart',
+					term: {
+						id: 'Arrhythmias'
+					}
+				}
+			],
+		})],
+
+		['cuminc','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'cuminc',
+					term: {
+						id: 'Cardiomyopathy'
+					}
+				}
+			],
+		})],
+
+		['survival','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'TermdbTest',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'survival',
+					term: {
+						id: 'diaggrp'
+					},
+					term2: {
+						id: 'efs'
+					}
+				}
+			],
+		})],
+
+		['matrix','?noheader=1&mass='+JSON.stringify({
+			dslabel:'SJLife',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'matrix',
+					termgroups: [{
+						name: 'Demographics',
+						lst: [{
+							id: 'sex'
+						},{
+							id: 'agedx'
+						},{
+							id: 'genetic_race'
+						}]
+					},{
+						name: 'Treatment',
+						lst: [{
+							id: 'hrtavg'
+						}]
+					},{
+						name: 'Chronic Conditions',
+						lst: [{
+							id: 'Arrhythmias'
+						},{
+							id: 'Renal System'
+						},{
+							id: 'Musculoskeletal System'
+						}]
+					}]
+				}
+			],
+			termfilter: {
+				filter: {"type":"tvslst","in":true,"join":"and","lst":[{"tag":"cohortFilter","type":"tvs","tvs":{"term":{"id":"subcohort","type":"categorical"},"values":[{"key":"SJLIFE","label":"SJLIFE"}]}},{"type":"tvslst","in":true,"join":"","lst":[{"type":"tvs","tvs":{"term":{"type":"categorical","values":{"Non-Hodgkin lymphoma":{"label":"Non-Hodgkin lymphoma"},"Hodgkin lymphoma":{"label":"Hodgkin lymphoma"},"Central nervous system (CNS)":{"label":"Central nervous system (CNS)"},"Acute myeloid leukemia":{"label":"Acute myeloid leukemia"},"Wilms tumor":{"label":"Wilms tumor"},"Acute lymphoblastic leukemia":{"label":"Acute lymphoblastic leukemia"},"Ewing sarcoma family of tumors":{"label":"Ewing sarcoma family of tumors"},"Neuroblastoma":{"label":"Neuroblastoma"},"Rhabdomyosarcoma":{"label":"Rhabdomyosarcoma"},"Osteosarcoma":{"label":"Osteosarcoma"},"Other leukemia":{"label":"Other leukemia"},"MDS/Acute myeloid leukemia":{"label":"MDS/Acute myeloid leukemia"},"Germ cell tumor":{"label":"Germ cell tumor"},"Soft tissue sarcoma":{"label":"Soft tissue sarcoma"},"Other malignancy":{"label":"Other malignancy"},"Chronic myeloid leukemia":{"label":"Chronic myeloid leukemia"},"Retinoblastoma":{"label":"Retinoblastoma"},"Melanoma":{"label":"Melanoma"},"Liver malignancies":{"label":"Liver malignancies"},"Nasopharyngeal carcinoma":{"label":"Nasopharyngeal carcinoma"},"Other carcinoma":{"label":"Other carcinoma"},"Non-malignancy":{"label":"Non-malignancy"},"Histiocytosis":{"label":"Histiocytosis"},"Colon carcinoma":{"label":"Colon carcinoma"}},"groupsetting":{"inuse":false},"name":"Diagnosis Group","id":"diaggrp","isleaf":true,"included_types":["categorical"],"child_types":[]},"values":[{"samplecount":95,"label":"Germ cell tumor","key":"Germ cell tumor","bar_width_frac":0.0729}]},"$id":6}],"tag":"filterUiRoot","$id":2}]}
+			}
+		})],
+
+		['filter','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			nav: { activeTab:2, },
+			termfilter: {
+				filter:{
+					type:'tvslst',
+					join:'',
+					in:true,
+					lst:[
+						{type:'tvs',tvs: {
+							term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float',
+								"values":{
+									"0": { "label":"Not exposed", "uncomputable":true },
+									"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+									"-9999": { "label":"Unknown treatment record", "uncomputable":true }
+								}
+							},
+							ranges: [
+								{ value: '0', label: "Not exposed"},
+								{startunbounded:true,stop:2000,stopinclusive:true}
+							]
+						}}
+					]
+				}
+			},
+		})],
+	]
+},
+{name:'Regression',
+	links:[
+
+		'LINEAR',
+
+		['EF', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: {
+						id: 'LV_Ejection_Fraction_3D'
+					},
+				},
+			]
+		})],
+
+		['EF ~ anthracycline', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: {
+						id: 'LV_Ejection_Fraction_3D',
+					},
+					independent: [
+						{
+							// adding varclass to independent term will break at termsetting.js line 417. why??
+							id: 'anthracyclines_jco_5',
+							q: {
+								mode:'discrete',
+								type:'custom-bin',
+								lst:[
+									{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
+									{stopinclusive:true,start:0,stop:100,label:'>0 to 100'},
+									{stopinclusive:true,start:100,stop:250,label:'>100 to 250'},
+									{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
+								]
+							},
+							refGrp:'Not exposed'
+						},
+					]
+				},
+			]
+		})],
+
+		['EF ~ agedx diaggrp', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: {
+						id: 'LV_Ejection_Fraction_3D',
+					},
+					independent: [
+						{ id: "agedx"},
+						{ id: "diaggrp"}
+					]
+				},
+			]
+		})],
+
+		['EF ~ agedxSpline diaggrp', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: {
+						id: 'LV_Ejection_Fraction_3D',
+					},
+					independent: [
+						{ id: "agedx", q:{mode:'spline',knots:[{value:1},{value:4.5},{value:8.64},{value:17}]}},
+						{ id: "diaggrp"}
+					]
+				},
+			]
+		})],
+
+		['EF ~ agedx*sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: { id: 'LV_Ejection_Fraction_3D' },
+					independent: [
+						{ id: 'agedx', interactions:['sex']},
+						{ id: 'sex', interactions:['agedx'], refGrp:'2'}
+					]
+				},
+			]
+		})],
+		['EF ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'linear',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{
+						term:{
+							type:'snplst',
+							snps:[
+								{rsid:'rs1641548',effectAllele:'T'},
+								{rsid:'rs858528',effectAllele:'T'},
+								{rsid:'rs1642793',effectAllele:'C'},
+								{rsid:'rs1042522'},
+								{rsid:'rs1642782'},
+								{rsid:'rs6503048'},
+								// following snps are not in bcf file
+								{rsid:'rs1472752888',effectAllele:'T'}
+							],
+						},
+						q:{
+							alleleType:0,
+							geneticModel:0,
+							missingGenotype:0,
+							restrictAncestry:{
+								name:'African ancestry',
+								tvs: {
+									term: {
+										id: 'genetic_race',
+										type: 'categorical',
+										name: 'Genetically defined race'
+									},
+									values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+								}
+							},
+						}
+					},
+					{ id: 'sex', refGrp:'2'}
+				]
+			} ]
+		})],
+
+		['EF ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'linear',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{ id: 'sex', refGrp:'2'},
+					{
+						term:{ type:'snplocus', },
+						q:snplocusQ
+					}
+				]
+			} ]
+		})],
+
+		['EF ~ snplocus*sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'linear',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{
+						term:{ type:'snplocus', id:'temp112233' },
+						interactions:['sex'],
+						q:snplocusQ
+					},
+					{ id: 'sex', refGrp:'2', interactions:['temp112233']}
+				]
+			} ]
+		})],
+
+		['EF ~ snplocus agedxSpline', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'linear',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{
+						term:{ type:'snplocus' },
+						q:snplocusQ
+					},
+					{ id: "agedx", q:{mode:'spline',knots:[{value:1},{value:4.5},{value:8.64},{value:17}]}}
+				]
+			} ]
+		})],
+
+		'LOGISITC',
+
+		['EF', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [{
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: {
+					id: 'LV_Ejection_Fraction_3D',
+				}
+			}]
+		})],
+
+		['EF ~ agedx diaggrp', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'logistic',
+					outcome: {
+						id: 'LV_Ejection_Fraction_3D',
+					},
+					independent: [
+						{ id: "agedx"},
+						{ id: "diaggrp"}
+					]
+				},
+			]
+		})],
+
+		['EF ~ agedxSpline diaggrp', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'logistic',
+					outcome: {
+						id: 'LV_Ejection_Fraction_3D',
+					},
+					independent: [
+						{ id: "agedx", q:{mode:'spline',knots:[{value:1},{value:4.5},{value:8.64},{value:17}]}},
+						{ id: "diaggrp"}
+					]
+				},
+			]
+		})],
+
+		['EF ~ diaggrp hrtavg', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [{
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: {
+					id: 'LV_Ejection_Fraction_3D',
+					q: {
+						"mode":"binary",
+						"type":"custom-bin",
+						"lst":[
+							{"startunbounded":true,"stopinclusive":true,"stop":57.8,"label":"≤57.8"},
+							{"stopunbounded":true,"startinclusive":false,"start":57.8,"label":">57.8"}
+						]
+					},
+					"refGrp":"≤57.8"
+				},
+				independent: [
+					{ id: "diaggrp"},
+					{id:"hrtavg"},
+					{
+						"id":"genetic_race",
+						"q":{
+							"hiddenValues":{},
+							"groupsetting":{"inuse":false}
+						},
+						"refGrp":"European Ancestry",
+						"type":"categorical"
+					}
+				]
+			}]
+		})],
+
+		['EF ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{ id: 'sex', refGrp:'2'},
+					{
+						term:{ type:'snplocus', },
+						q:snplocusQ
+					}
+				]
+			} ]
+		})],
+
+		['EF ~ snplocus*sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{
+						term:{ type:'snplocus', id:'temp112233' },
+						interactions:['sex'],
+						q:snplocusQ
+					},
+					{ id: 'sex', refGrp:'2', interactions:['temp112233']}
+				]
+			} ]
+		})],
+
+		['Arrhythmias ~ chestrt', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [{
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: {
+					id: 'Arrhythmias',
+					refGrp:'No condition / not tested'
+				},
+				independent: [
+					{
+						id:"chestrt_yn",
+						q: {
+							mode:'discrete',
+							type:'custom-bin',
+							lst:[
+								{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
+								// FIXME no need to define startinclusive
+								{startinclusive:false,stopinclusive:true,start:0,stop:100,label:'>0 to 100'},
+								{startinclusive:false,stopunbounded:true,start:100,label:'>100'}
+							]
+						},
+						refGrp:'Not exposed'
+					},
+				]
+			}]
+		})],
+
+		['BreastSN ~ PGS + age + chestRT', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [{
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: {
+					id:'Breast',
+					refGrp:'No condition / not tested'
+				},
+				independent:[
+					{
+						id:'prs_PGS000332',
+						q:{
+							"mode": "discrete",
+							"scale": 1,
+							"type": "regular-bin",
+							"startinclusive": true,
+							"bin_size": 0.4,
+							"first_bin": {
+								"stop": -1,
+								"bin": "first",
+								"startunbounded": true
+							},
+							"rounding": ".1f",
+							"termtype": "float",
+						},
+						refGrp:'-0.2 to <0.2'
+					},
+					{id:'agelastvisit'},
+					{id:'chestrt_yn',
+						q: {
+							"type": "custom-bin",
+							"lst": [
+								{
+									"startunbounded": true,
+									"stop": 0,
+									"startinclusive": false,
+									"stopinclusive": true,
+									"label": "Not exposed"
+								},
+								{
+									"start": 0,
+									"startinclusive": false,
+									"stopinclusive": true,
+									"stop": 1000,
+									"label": ">0 to 1000"
+								},
+								{
+									"start": 1000,
+									"startinclusive": false,
+									"stopinclusive": true,
+									"stopunbounded": true,
+									"label": ">1000"
+								}
+							],
+							"mode": "discrete"
+						},
+						refGrp:'Not exposed'
+					}
+				]
+			}]
+		})],
+
+		['Arrhythmias ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: {
+					id: 'Arrhythmias',
+					refGrp:'No condition / not tested'
+				},
+				independent: [
+					{ id: 'sex', refGrp:'2'},
+					{
+						term:{ type:'snplocus', },
+						q: snplocusQ
+					}
+				]
+			} ]
+		})],
+
+		['Arrhythmias ~ snplocus*sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: {
+					id: 'Arrhythmias',
+					refGrp:'No condition / not tested'
+				},
+				independent: [
+					{
+						term:{ type:'snplocus', id:'temp112233' },
+						interactions:['sex'],
+						q:snplocusQ
+					},
+					{ id: 'sex', refGrp:'2', interactions:['temp112233']}
+				]
+			} ]
+		})],
+
+		// paper: https://pubmed.ncbi.nlm.nih.gov/31462438/
+		['Stroke ~ snplocus','?mass-session-id=stroke&noheader=1'],
+	]
+},
+]
+)
+
+function makeURL(rows) {
+	const table = document.getElementById('table')
+	for(const row of rows) {
+		const tr = document.createElement('tr')
+		table.appendChild(tr)
+
+		// 1st column, header
+		const td = document.createElement('td')
+		td.style.whiteSpace = 'nowrap'
+		tr.appendChild(td)
+		td.innerHTML = row.name || '.name missing'
+
+		// 2nd column, links
+		const td_links = document.createElement('td')
+		tr.appendChild(td_links)
+
+		if(!Array.isArray(row.links)) {
+			td_links.innerHTML = '.links[] missing'
+			continue
+		}
+		if(row.links.length==0) {
+			td_links.innerHTML = '.links[] empty array'
+			continue
+		}
+
+		for(const i of row.links) {
+			if(typeof i == 'string') {
+				const s = document.createElement('span')
+				s.style.marginRight = '8px'
+				s.style.opacity = '.5'
+				td_links.appendChild(s)
+				s.innerHTML = i
+				continue
+			} else if(Array.isArray(i)) {
+				const a = document.createElement('a')
+				td_links.appendChild(a)
+				a.innerHTML = i[0]
+				a.setAttribute('href',window.location.origin+'/'+i[1])
+				a.setAttribute('target','_blank')
+				a.style.paddingRight = '8px'
+			} else {
+				window.alert('invalid element: '+i)
+			}
+		}
+	}
+}
+
+</script>
+
+<div style="margin-top:30px;color:#858585">
+<p>Above links use files from "tp/proteinpaint_demo/" folder on your system, and share files with App Drawer and <code>server/cards/index.json</code>.</p>
+<p>These test files should be publicly sharable (with patient identifier removed etc), and should be kept in sync between your computer, hpc, and prp1.</p>
+<p>A tarball of the entire proteinpaint_demo/ folder is available at https://pecan.stjude.cloud/static/pp-support/pp.demo.tgz</p>
+
+</div>
+
+</body>
+</html>

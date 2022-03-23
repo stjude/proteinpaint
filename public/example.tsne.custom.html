@@ -25,6 +25,18 @@ runproteinpaint({
 	genome:'hg38',
 	mdssamplescatterplot:{
 		features_on_rows: true,
+		lasso: {
+			postSelectMenuOptions: [
+				{
+           label: 'Do something', 
+           callback: console.log //({samples, sample_attributes, sample2dot}) {....}
+        },
+        {
+           label: 'List samples', 
+           callback: 'listSamples' // will indicate to use the default callback of listing the samples  
+        },
+			]
+		},
 		mds:{
 			// using the same genome build as obj.genome
 			dslabel:'Pediatric',

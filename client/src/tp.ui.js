@@ -220,6 +220,7 @@ if(cohort.render) {
 		const [hmbtn, hmdiv] = makefolder(cohort)
 		hmbtn.text('HEATMAP').style('font-size', '.8em')
 		const sjcharts = await getsjcharts()
+		const appname = (cohort.name ? cohort.name + '.' : '') + 'hm'
 		sjcharts.heatmap({
 			cohort,
 			hassamplelst,
@@ -235,7 +236,8 @@ if(cohort.render) {
 			show_heatmap: cohort.show_heatmap,
 			// use a subnested sjcharts object to namespace its instances
 			instanceTracker: app.instanceTracker && app.instanceTracker.sjcharts,
-			callbacks: app.callbacks && app.callbacks.sjcharts && app.callbacks.sjcharts.hm
+			callbacks:
+				app.callbacks && app.callbacks.sjcharts && (app.callbacks.sjcharts[appname] || app.callbacks.sjcharts.hm)
 		})
 	}
 

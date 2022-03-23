@@ -1,5 +1,5 @@
 export function bamfromtemplate(tk, template) {
-	if (!template.file && !template.url) return 'neither file or url given'
+	if (!template.file && !template.url && !template.gdc_file) return 'neither file or url given'
 	return null
 }
 

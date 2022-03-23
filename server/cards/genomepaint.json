@@ -1,0 +1,121 @@
+{
+    "ppcalls":[
+        {
+            "label":"Launch a Custom Dataset",
+            "urlparam":"?genome=hg38&block=1&position=chr22:22569655-23013766&svcnvfpkmfile=TCGA_DLBC,svcnv,proteinpaint_demo/hg38/GP/TCGA_DLBC.CNV.gz,vcf,proteinpaint_demo/hg38/GP/TCGA_DLBC.vcf.gz,fpkm,proteinpaint_demo/hg38/GP/TCGA_DLBC.fpkm.gz",
+            "runargs":{
+                "parseurl": true,
+                "nobox": 1,
+                "noheader": 1,
+                "block": true,
+                "genome": "hg38",
+                "position": "chr22:22569655-23013766",
+                "nativetracks": "RefGene",
+                "tracks":[
+                    {
+                        "type": "mdssvcnv",
+                        "name": "TCGA_DLBC",
+                        "file": "proteinpaint_demo/hg38/GP/TCGA_DLBC.CNV.gz",
+                        "checkvcf": {
+                            "file": "proteinpaint_demo/hg38/GP/TCGA_DLBC.vcf.gz"
+                        },
+                        "checkexpressionrank": {
+                            "file": "proteinpaint_demo/hg38/GP/TCGA_DLBC.fpkm.gz"
+                        }
+                    }
+                ]
+            },
+            "buttons": [
+                {
+                    "name": "Custom Dataset Documentation",
+                    "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.2sz0rhdexazf"
+                }
+            ],
+            "testSpec": {
+                "expected": {"rect": 20 }
+            }
+        },
+        {
+            "label":"Launch an Official Dataset",
+            "message": "This is an example of how to launch one of the official datasets available in ProteinPaint.",
+            "urlparam": "?genome=hg19&block=1&mds=Pediatric2,svcnv",
+            "runargs": {
+                "parseurl": true,
+                "nobox": 1,
+                "noheader": 1,
+                "block": true,
+                "genome": "hg19",
+                "position": "chr8:128688997-128888997",
+                "datasetqueries": [
+                    {
+                        "dataset":"Pediatric2",
+                        "querykey": "svcnv"
+                    }
+                ]
+            },
+            "buttons": [
+                {
+                    "name": "Official Dataset Documentation",
+                    "link": "https://docs.google.com/document/d/1KNx4pVCKd4wgoHI4pjknBRTLrzYp6AL_D-j6MjcQSvQ/edit#heading=h.jibbdhrfuw7f"
+                }
+            ],
+            "testSpec": {
+                "expected": {"rect": 20 }
+            }
+        },
+        {
+            "label":"Customize with a Mds JSON",
+            "message": "<div>This example of a mdsjson demostrates how to separate samples into subgroups. The json file may available from the server and accessed via the <span style='font-family: courier; display: inline-block; color:gray;font-size:16px;'>mdsjsonfile</span> key or available from a URL and accessed via the <span style='font-family: courier; display: inline-block; color:gray; font-size:16px;'>mdsjsonurl</span> key.",
+            "urlparam": "?genome=hg38&block=1&position=chr22:22569655-23013766&mdsjson=proteinpaint_demo/hg38/GP/mdsjson/mdsjsondemo.json",
+            "jsonpath":"proteinpaint_demo/hg38/GP/mdsjson/mdsjsonDemo.json",
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "block": true,
+                "genome": "hg38",
+                "position": "chr22:22569655-23013766",
+                "nativetracks": "RefGene",
+                "tracks": [
+                    {
+                        "mdsjsonfile":"proteinpaint_demo/hg38/GP/mdsjson/mdsjsonDemo.json"
+                    }
+                ]
+            },
+            "buttons": [
+                {
+                    "name": "Mds JSON Documentation",
+                    "link": "https://docs.google.com/document/d/1_eUrRsR9D-6AD5buNe30tmGICU-B3w67nz-XjpjnDyI/edit#heading=h.pmuzrkapwipq"
+                }
+            ],
+            "testSpec": {
+                "expected": {"rect": 20 }
+            }
+        }
+    ],
+    "buttons": [
+        {
+            "name": "Launch GenomePaint",
+            "link": "https://genomepaint.stjude.cloud/"
+        },
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit?usp=sharing"
+        }
+    ],
+    "arrowButtons": [
+        {
+            "name": "Data Processing",
+            "message": "<p>Download the data and data processing scripts from the Download Data & Processing Pipeline link. Please use the Data Processing Docs for instructions</p>",
+            "links": [
+                {
+                    "name": "Download Data & Processing Pipeline",
+                    "download": "https://pecan.stjude.cloud/static/genomepaint-support/script/GDC.variation.datafile.processing.zip"
+                },
+                {
+                    "name": "Data Processing Docs",
+                    "link": "https://docs.google.com/document/d/1TC6pcAByqugzMWQ0C7mhHIHIkIxkqqDt1ATBBt_ehes/edit"
+                }
+            ]
+        }
+    ]
+}

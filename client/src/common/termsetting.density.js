@@ -1,6 +1,17 @@
 import { select, mouse } from 'd3-selection'
-import { scaleLinear, axisBottom, line as d3line, curveMonotoneX, drag as d3drag, format } from 'd3'
-import { get_bin_label } from '../../shared/termdb.bins'
+import { scaleLinear, drag as d3drag } from 'd3'
+import { get_bin_label, get_bin_range_equation } from '../../shared/termdb.bins'
+import { makeDensityPlot } from './densityplot'
+
+/*
+********************** IMPORTED
+	makeDensityPlot(opts) // retrun svg densityplot for given density data
+********************** EXPORTED
+	setDensityPlot(self)
+********************** INTERNAL
+	handleNoDensity(self) // if maxvalue is same as minvalue
+	renderBinLines() // render binlines on top of densityplot based on term mode
+*/
 
 export async function setDensityPlot(self) {
 	if (self.num_obj.density_data.maxvalue == self.num_obj.density_data.minvalue) {
@@ -10,10 +21,22 @@ export async function setDensityPlot(self) {
 		})
 	} else {
 		// svg for range plot
-		const div = self.dom.bins_div
+		const div = self.q.mode == 'spline' ? self.dom.knots_div : self.dom.bins_div
 		self.num_obj.svg = div.select('svg').size() ? div.select('svg') : div.append('svg')
 		self.num_obj.svg.selectAll('*').remove()
-		makeDensityPlot(self)
+		const density_plot_opts = {
+			svg: self.num_obj.svg,
+			data: self.num_obj.density_data,
+			term: self.term,
+			plot_size: self.num_obj.plot_size
+		}
+		makeDensityPlot(density_plot_opts)
+
+		// add binsize_g for termsetting lines
+		self.num_obj.binsize_g = self.num_obj.svg
+			.append('g')
+			.attr('transform', `translate(${self.num_obj.plot_size.xpad}, ${self.num_obj.plot_size.ypad})`)
+			.attr('class', 'binsize_g')
 
 		const maxvalue = self.num_obj.density_data.maxvalue
 		const minvalue = self.num_obj.density_data.minvalue
@@ -89,89 +112,13 @@ function handleNoDensity(self) {
 	}
 }
 
-function makeDensityPlot(self) {
-	const svg = self.num_obj.svg
-	const data = self.num_obj.density_data
-
-	const width = 500,
-		height = 100,
-		xpad = 10,
-		ypad = 20,
-		xaxis_height = 20
-
-	svg.attr('width', width + xpad * 2).attr('height', height + ypad * 2 + xaxis_height)
-
-	//density data, add first and last values to array
-	const density_data = data.density
-	density_data.unshift([data.minvalue, 0])
-	density_data.push([data.maxvalue, 0])
-
-	// x-axis
-	const xscale = scaleLinear()
-		.domain([data.minvalue, data.maxvalue])
-		.range([xpad, width - xpad])
-
-	const x_axis = axisBottom().scale(xscale)
-	if (self.term.type == 'integer') x_axis.tickFormat(format('')) //'.4r'))
-
-	// y-scale
-	const yscale = scaleLinear()
-		.domain([0, data.densitymax])
-		.range([height + ypad, ypad])
-
-	const g = svg.append('g').attr('transform', `translate(${xpad}, 0)`)
-
-	// SVG line generator
-	const line = d3line()
-		.x(function(d) {
-			return xscale(d[0])
-		})
-		.y(function(d) {
-			return yscale(d[1])
-		})
-		.curve(curveMonotoneX)
-
-	// plot the data as a line
-	g.append('path')
-		.datum(density_data)
-		.attr('class', 'line')
-		.attr('d', line)
-		.style('fill', '#eee')
-		.style('stroke', '#000')
-
-	g.append('g')
-		.attr('transform', `translate(0, ${ypad + height})`)
-		.call(x_axis)
-
-	g.append('text')
-		.attr('transform', `translate( ${width / 2} ,  ${ypad + height + 32})`)
-		.attr('font-size', '13px')
-		.text(self.term.unit)
-
-	self.num_obj.brush_g = svg
-		.append('g')
-		.attr('class', 'brush_g')
-		.attr('transform', `translate(${xpad}, ${ypad})`)
-
-	self.num_obj.binsize_g = svg
-		.append('g')
-		.attr('class', 'binsize_g')
-		.attr('transform', `translate(${xpad}, ${ypad})`)
-
-	self.num_obj.custombins_g = svg
-		.append('g')
-		.attr('class', 'custombins_g')
-		.attr('transform', `translate(${xpad}, ${ypad})`)
-		.style('display', 'none')
-}
-
 function renderBinLines(self, data) {
 	const o = self.num_obj
 	const scaledMinX = Math.round(o.xscale(o.density_data.minvalue))
 	const scaledMaxX = Math.round(o.xscale(o.density_data.maxvalue))
 	const lines = []
 
-	if (data.type == 'regular') {
+	if (data.mode == 'discrete' && data.type == 'regular-bin') {
 		// assume that boundary lines will be hidden if x > last_bin.start
 		// offset max value by first_bin.stop in case the first boundary is dragged
 		// to the left, will reveal additional non-draggable boundaries from the right
@@ -187,19 +134,29 @@ function renderBinLines(self, data) {
 			.reverse()
 			.find(d => d.scaledX <= scaledMaxX)
 
-		if (data.last_bin && data.last_bin.start !== lastVisibleLine.x) {
+		if (data.last_bin && data.last_bin.start && data.last_bin.start !== lastVisibleLine.x) {
 			lines.push({ x: data.last_bin.start, index, scaledX: Math.round(o.xscale(data.last_bin.start)) })
 		}
-	} else {
+	} else if ((data.mode == 'discrete' && data.type == 'custom-bin') || data.mode == 'binary') {
 		lines.push(
 			...data.lst.slice(1).map((d, index) => {
 				return { x: d.start, index, scaledX: Math.round(o.xscale(d.start)) }
 			})
 		)
+	} else if (data.mode == 'spline') {
+		lines.push(
+			...data.knots.map((d, index) => {
+				return { x: d.value, index, scaledX: Math.round(o.xscale(d.value)) }
+			})
+		)
 	}
 
 	lines.forEach((d, i) => {
-		d.isDraggable = self.q.type == 'custom' || i === 0 || (self.q.last_bin && self.q.last_bin.start === d.x)
+		d.isDraggable =
+			self.q.type == 'custom-bin' ||
+			self.q.mode == 'spline' ||
+			i === 0 ||
+			(self.q.last_bin && self.q.last_bin.start === d.x && d.index == lines.length - 1)
 	})
 
 	self.num_obj.binsize_g.selectAll('line').remove()
@@ -226,7 +183,7 @@ function renderBinLines(self, data) {
 		.style('cursor', d => (d.isDraggable ? 'ew-resize' : ''))
 		.style('display', d => (!d.isDraggable && d.scaledX > lastScaledX ? 'none' : ''))
 		.on('mouseover', function(d) {
-			if (self.q.type != 'regular' || d.isDraggable) select(this).style('stroke-width', 3)
+			if (self.q.type != 'regular-bin' || d.isDraggable) select(this).style('stroke-width', 3)
 		})
 		.on('mouseout', function(d) {
 			select(this).style('stroke-width', 1)
@@ -246,7 +203,7 @@ function renderBinLines(self, data) {
 		const draggedX = mouse(this)[0]
 		if (draggedX <= scaledMinX || draggedX >= scaledMaxX) return
 		const line =
-			self.q.type == 'regular'
+			self.q.type == 'regular-bin'
 				? select(this)
 				: b.index > 0 && draggedX <= lines[b.index - 1].scaledX
 				? select(this.previousSibling)
@@ -265,7 +222,7 @@ function renderBinLines(self, data) {
 		const inverted = +o.xscale.invert(d.draggedX)
 		const value = self.term.type == 'integer' ? Math.round(inverted) : inverted.toFixed(3)
 
-		if (self.q.type == 'regular') {
+		if (self.q.mode == 'discrete' && self.q.type == 'regular-bin') {
 			//d.scaledX = Math.round(o.xscale(value))
 			if (d.index === 0) {
 				self.dom.first_stop_input.property('value', value)
@@ -288,26 +245,49 @@ function renderBinLines(self, data) {
 				self.q.last_bin.start = value
 				middleLines.style('display', c => (c.scaledX >= d.draggedX ? 'none' : ''))
 			}
-		} else {
+		} else if ((self.q.mode == 'discrete' && self.q.type == 'custom-bin') || self.q.mode == 'binary') {
 			self.q.lst[d.index + 1].start = value
 			self.q.lst[d.index + 1].label = get_bin_label(self.q.lst[d.index + 1], self.q)
+			self.q.lst[d.index + 1].range = get_bin_range_equation(self.q.lst[d.index + 1], self.q)
 			self.q.lst[d.index].stop = value
 			self.q.lst[d.index].label = get_bin_label(self.q.lst[d.index], self.q)
-			self.dom.customBinBoundaryInput.property(
-				'value',
-				self.q.lst
-					.slice(1)
-					.map(d => d.start)
-					.join('\n')
-			)
-			self.dom.customBinLabelInput.property('value', c => c.label)
+			self.q.lst[d.index].range = get_bin_range_equation(self.q.lst[d.index], self.q)
+			if (self.dom.customBinBoundaryInput) {
+				// this is created by binary.js when mode=binary
+				// quick fix: while dragging, revert from percentile to normal, as it's hard to update percentile values
+				self.q.modeBinaryCutoffType = 'normal'
+				if (self.dom.customBinBoundaryPercentileCheckbox) {
+					self.dom.customBinBoundaryPercentileCheckbox.property('checked', false)
+				}
+				self.dom.customBinBoundaryInput.property(
+					'value',
+					self.q.lst
+						.slice(1)
+						.map(d => d.start)
+						.join('\n')
+				)
+			}
+
+			if (self.dom.customBinLabelInput) {
+				self.dom.customBinLabelInput.property('value', c => c.label)
+			}
+			if (self.dom.customBinRanges) {
+				self.dom.customBinRanges.html(c => c.range)
+			}
+		} else if (self.q.mode == 'spline') {
+			self.q.knots[d.index].value = value
+			if (self.dom.customKnotsInput) {
+				self.dom.customKnotsInput.property('value', self.q.knots.map(d => d.value).join('\n'))
+			}
+		} else {
+			throw 'Dragging not allowed for this term type'
 		}
 	}
 
 	function dragend(b) {
 		const draggedX = mouse(this)[0]
 		const line =
-			self.q.type == 'regular'
+			self.q.type == 'regular-bin'
 				? select(this)
 				: b.index > 0 && draggedX <= lines[b.index - 1].scaledX
 				? select(this.previousSibling)
@@ -318,7 +298,7 @@ function renderBinLines(self, data) {
 
 		d.scaledX = d.draggedX
 		d.x = +o.xscale.invert(d.draggedX).toFixed(self.term.type == 'integer' ? 0 : 3)
-		if (self.q.type == 'regular') {
+		if (self.q.mode == 'discrete' && self.q.type == 'regular-bin') {
 			if (d.index === 0) {
 				self.q.first_bin.stop = d.x
 				middleLines.each(function(d, i) {
@@ -332,9 +312,11 @@ function renderBinLines(self, data) {
 				.slice()
 				.reverse()
 				.find(d => d.scaledX < scaledMaxX).scaledX
-		} else {
+		} else if (self.q.mode == 'discrete' && self.q.type == 'custom-bin') {
 			self.q.lst[d.index + 1].start = d.x
 			self.q.lst[d.index].stop = d.x
+		} else if (self.q.mode == 'spline') {
+			self.q.knots[d.index].value = d.x
 		}
 	}
 }

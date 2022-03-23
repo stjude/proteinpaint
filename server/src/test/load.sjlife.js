@@ -1,4 +1,4 @@
-const serverconfig = require('../../serverconfig.json')
+const serverconfig = require('../serverconfig')
 const path = require('path')
 const bettersqlite = require('better-sqlite3')
 

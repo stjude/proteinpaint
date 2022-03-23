@@ -1,0 +1,34 @@
+{
+    "ppcalls": [
+        {
+            "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/arc/arcDemoData.tar.gz",
+            "urlparam": "?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc Track,proteinpaint_demo/hg19/arc/mango.gz",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "position": "chr11:7839893-9165172",
+                "nativetracks": "RefGene",
+                "tracks": [{
+                    "type": "hicstraw",
+                    "bedfile": "proteinpaint_demo/hg19/arc/mango.gz",
+                    "name": "Arc Track Demo",
+                    "percentile_max":99,
+                    "mode_arc": true,
+                    "mode_hm": false
+                }]
+            },
+            "testSpec": {
+                "expected": {"image": 2 }
+            }
+        }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1MQ0Z_AD5moDmaSx2tcn7DyVKGp49TS63pO0cceGL_Ns/edit#heading=h.8zct8j3cscak"
+        }
+    ]
+}

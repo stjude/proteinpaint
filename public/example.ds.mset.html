@@ -10,8 +10,10 @@
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 
 <div id=aaa style="margin:10px"></div>
+<div id=bb style="margin:10px"></div>
 
 <script>
+/*
 runproteinpaint({
 	holder:document.getElementById('aaa'),
 	parseurl:true,
@@ -25,7 +27,45 @@ runproteinpaint({
 			{"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750680,"mname":"T73I","class":"M","dt":1},
 			{"gene":"MYC","isoform":"NM_002467","chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1}
 		]
-	}]
+	}],
+	mclassOverride:{
+		className:'Phospho',
+		classes:{
+			M:{label:'AA'},
+			I:{label:'BB'}
+		}
+	}
+})
+*/
+
+runproteinpaint({
+	holder:document.getElementById('bb'),
+	parseurl:true,
+	nobox:1,
+	genome:'hg19',
+	gene:'NM_002467',
+	tracks:[{
+		type:'mds3',
+		name:'AA sites with numbers',
+		custom_variants:[
+			{"chr":"chr8","pos":128750685,"mname":"P75","class":"M","dt":1,__value:1},
+			{"chr":"chr8","pos":128750680,"mname":"T73","class":"M","dt":1,__value:2},
+			{"chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1,__value:3}
+		],
+		numericmode:{
+			inuse:true,
+			type:'__value',
+			label:'Numeric data',
+			valueName:'p-value'
+		}
+	}],
+	mclassOverride:{
+		className:'Phospho',
+		classes:{
+			M:{label:'AA',desc:'AA desc'},
+			I:{label:'BB',desc:'BB desc'}
+		}
+	}
 })
 </script>
 

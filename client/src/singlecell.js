@@ -1,10 +1,36 @@
 import * as client from './client'
-import * as common from '../shared/common'
 import * as d3 from 'd3'
-import { axisTop, axisRight, axisBottom } from 'd3-axis'
+import { axisTop, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { event as d3event } from 'd3-selection'
 import { gene_searchbox, findgenemodel_bysymbol } from './gene'
+import { legend_newrow } from './block.legend'
+
+/*
+********************** EXPORTED
+init()
+********************** INTERNAL
+sequence of calls by init()
+	load_json()
+	validate_obj()
+	init_view() // init three.js scene, camera and renderer
+		add_scriptTag() // add three.js scripts
+	init_controlpanel()
+	pcd_pipeline() // query data from csv file and create pcd file to be rendered
+		load_cell_pcd() // query data for category with color as auto/custom or gene expression
+		render_cloud() // remove old points and create point cloud using PCDLoader() 
+		render_controlpanel() // render control panel for category or gene expression
+	make_legend() // make legend if predefined in json file as image file
+
+make_zoom_panel() // change camera.fov when zoom in / out 
+make_menu() // menu when clicked on category or gene button at top of config
+make_settings() //settings panel to change background, pointsize, reset, screenshot and zoom
+heatmap_menu() // menu to enter multiple genes and select category
+	make_heatmap() // make heatmap for multiple genes and category
+make_plot() // for single gene
+	make_violin_plot() // make violin plot for single gene expression vs category
+	make_box_plot() // make box plot for single gene expression vs category
+*/
 
 export async function init(arg, holder) {
 	try {
@@ -13,11 +39,10 @@ export async function init(arg, holder) {
 
 		obj.genome = arg.genome
 		obj.holder = holder.style('position', 'relative')
-
-		init_view(obj)
+		await init_view(obj)
 		init_controlpanel(obj)
-
 		await pcd_pipeline(obj)
+		make_legend(arg, obj)
 	} catch (e) {
 		client.sayerror(holder, e.message || e)
 	}
@@ -76,7 +101,7 @@ async function pcd_pipeline(obj) {
 	const enc = new TextEncoder()
 	const pcd_buffer = enc.encode(data.pcddata).buffer
 	render_cloud(obj, pcd_buffer)
-	update_controlpanel(obj, data)
+	render_controlpanel(obj, data)
 
 	animate()
 
@@ -180,7 +205,13 @@ or selected a gene for overlaying
 	})
 }
 
-function init_view(obj) {
+async function init_view(obj) {
+	// TODO only load below if to do 3d
+	await add_scriptTag('/static/js/three.js')
+	await add_scriptTag('/static/js/loaders/PCDLoader.js')
+	await add_scriptTag('/static/js/controls/TrackballControls.js')
+	await add_scriptTag('/static/js/WebGL.js')
+
 	if (WEBGL.isWebGLAvailable() === false) {
 		obj.holder.node().appendChild(WEBGL.getWebGLErrorMessage())
 		return
@@ -194,7 +225,7 @@ function init_view(obj) {
 	}
 
 	const default_zoom = obj.default_zoom ? 100 - obj.default_zoom : 45
-
+	// camera parameters explaination: https://observablehq.com/@grantcuster/understanding-scale-and-the-three-js-perspective-camera
 	obj.camera = new THREE.PerspectiveCamera(default_zoom, obj.width / obj.height, 0.1, 1000)
 
 	obj.camera.position.x = obj.canvas_2d ? 0 : 20
@@ -233,9 +264,6 @@ function init_view(obj) {
 		.appendChild(obj.renderer.domElement)
 
 	obj.renderer.render(obj.scene, obj.camera)
-
-	// window.addEventListener( 'resize', onWindowResize(obj), false )
-	// window.addEventListener( 'keypress', keyboard )
 }
 
 function render_cloud(obj, pcd_buffer) {
@@ -251,7 +279,6 @@ function render_cloud(obj, pcd_buffer) {
 	// add new points using loader
 	const loader = new THREE.PCDLoader()
 	const points = loader.parse(pcd_buffer, '')
-	// loader.load( pcdfilename, function ( points ) {
 
 	if (obj.point_size) {
 		points.material.size = obj.point_size
@@ -263,39 +290,6 @@ function render_cloud(obj, pcd_buffer) {
 	obj.center = points.geometry.boundingSphere.center
 	obj.controls.target.set(obj.center.x, obj.center.y, obj.center.z)
 	obj.controls.update()
-
-	// } )
-}
-
-function onWindowResize(obj) {
-	return () => {
-		const brect = obj.holder.node().getBoundingClientRect()
-		obj.camera.aspect = (brect.width - 40) / (brect.height - 40)
-		obj.camera.updateProjectionMatrix()
-		obj.renderer.setSize(brect.width - 40, brect.height - 40)
-		obj.controls.handleResize()
-	}
-}
-
-function keyboard(ev) {
-	var points = scene.getObjectByName('scRNA.pcd')
-
-	switch (ev.key || String.fromCharCode(ev.keyCode || ev.charCode)) {
-		case '+':
-			points.material.size *= 1.2
-			points.material.needsUpdate = true
-			break
-
-		case '-':
-			points.material.size /= 1.2
-			points.material.needsUpdate = true
-			break
-
-		case 'c':
-			points.material.color.setHex(Math.random() * 0xffffff)
-			points.material.needsUpdate = true
-			break
-	}
 }
 
 function init_controlpanel(obj) {
@@ -374,7 +368,7 @@ function init_controlpanel(obj) {
 	obj.show_zoom = true //flag to show zoom div under legend div
 }
 
-function update_controlpanel(obj, data) {
+function render_controlpanel(obj, data) {
 	obj.menu_output.selectAll('*').remove()
 
 	if (data.category2color) {
@@ -845,7 +839,6 @@ function make_settings(obj) {
 		obj.scene.background = new THREE.Color(isblack ? 0xffffff : 0x000000)
 		obj.use_background_color = isblack ? 0 : 1
 		obj.background_color = isblack ? 'white' : 'black'
-		pcd_pipeline(obj)
 	}
 	// point size change
 	const point_size_div = obj.settings.d
@@ -1568,4 +1561,76 @@ function get_max_labelwidth(items, svg) {
 			.remove()
 	}
 	return textwidth + 4
+}
+
+function add_scriptTag(path) {
+	// path like /static/js/three.js, must begin with /
+	return new Promise((resolve, reject) => {
+		const script = document.createElement('script')
+		script.setAttribute('src', sessionStorage.getItem('hostURL') + path)
+		document.head.appendChild(script)
+		script.onload = resolve
+	})
+}
+
+async function make_legend(arg, obj) {
+	if (!arg.legendimg) return
+
+	const img_div = obj.holder.append('div').style('margin-top', '5px')
+	obj.legendimg = arg.legendimg
+	obj.legend = {
+		holder: img_div,
+		legendcolor: '#7D6836'
+	}
+	let shown = !arg.foldlegend
+
+	img_div
+		.append('div')
+		.text('LEGEND')
+		.attr('class', 'sja_clb')
+		.style('display', 'inline-block')
+		.style('font-size', '.7em')
+		.style('color', obj.legend.legendcolor)
+		.style('font-family', client.font)
+		.on('click', () => {
+			if (shown) {
+				shown = false
+				client.disappear(div2)
+			} else {
+				shown = true
+				client.appear(div2)
+			}
+		})
+
+	const div2 = obj.holder
+		.append('div')
+		.style('border-top', 'solid 1px ' + obj.legend.legendcolor)
+		.style('background-color', '#FCFBF7')
+
+	obj.legend.holder = div2
+		.append('table')
+		.style('border-spacing', '15px')
+		.style('border-collapse', 'separate')
+
+	const [tr, td] = legend_newrow(obj, obj.legendimg.name || '')
+	const data = await client.dofetch2('img?file=' + obj.legendimg.file)
+	if (data.error) {
+		td.text(data.error)
+		return
+	}
+	let fold = true
+	const img = td
+		.append('img')
+		.attr('class', 'sja_clbb')
+		.attr('src', data.src)
+		.style('height', '80px')
+	img.on('click', () => {
+		if (fold) {
+			fold = false
+			img.transition().style('height', obj.legendimg.height ? obj.legendimg.height + 'px' : 'auto')
+		} else {
+			fold = true
+			img.transition().style('height', '80px')
+		}
+	})
 }

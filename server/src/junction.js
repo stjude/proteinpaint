@@ -4,7 +4,6 @@ const fs = require('fs')
 const readline = require('readline')
 
 module.exports = async (req, res) => {
-	app.log(req)
 	try {
 		const [e, file, isurl] = app.fileurl(req)
 		if (e) throw e
@@ -35,23 +34,27 @@ module.exports = async (req, res) => {
 async function get_tabix(q, file, dir) {
 	const items = []
 	for (const r of q.rglst) {
-		await utils.get_lines_tabix([file, r.chr + ':' + r.start + '-' + r.stop], dir, line => {
-			const l = line.split('\t')
-			const start = Number.parseInt(l[1]),
-				stop = Number.parseInt(l[2])
-			if ((start >= r.start && start <= r.stop) || (stop >= r.start && stop <= r.stop)) {
-				// only use those with either start/stop in region
-				const j = {
-					chr: r.chr,
-					start,
-					stop,
-					type: l[4],
-					rawdata: []
+		await utils.get_lines_bigfile({
+			args: [file, r.chr + ':' + r.start + '-' + r.stop],
+			dir,
+			callback: line => {
+				const l = line.split('\t')
+				const start = Number.parseInt(l[1]),
+					stop = Number.parseInt(l[2])
+				if ((start >= r.start && start <= r.stop) || (stop >= r.start && stop <= r.stop)) {
+					// only use those with either start/stop in region
+					const j = {
+						chr: r.chr,
+						start,
+						stop,
+						type: l[4],
+						rawdata: []
+					}
+					for (let i = 5; i < l.length; i++) {
+						j.rawdata.push(Number.parseInt(l[i]))
+					}
+					items.push(j)
 				}
-				for (let i = 5; i < l.length; i++) {
-					j.rawdata.push(Number.parseInt(l[i]))
-				}
-				items.push(j)
 			}
 		})
 	}
@@ -59,6 +62,13 @@ async function get_tabix(q, file, dir) {
 }
 
 async function get_rnapeg(q, file) {
+	try {
+		await fs.promises.stat(file)
+	} catch (e) {
+		if (e.code == 'EACCES') throw 'permission denied for rnapeg file'
+		if (e.code == 'ENOENT') throw 'rnapeg file not found'
+		throw 'cannot access rnapeg file (' + e.code + ')'
+	}
 	const items = []
 	for (const r of q.rglst) {
 		const lines = await get_lines_rnapeg({ file, chr: r.chr, start: r.start, stop: r.stop })

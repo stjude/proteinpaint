@@ -1,10 +1,10 @@
-import * as rx from '../common/rx.core'
-import { select } from 'd3-selection'
-import { vocabInit } from './vocabulary'
-import { navInit } from './nav'
-import { treeInit } from './tree'
+import { getAppInit, multiInit } from '../common/rx.core'
 import { storeInit } from './store'
-import { recoverInit } from '../common/recover'
+import { vocabInit } from './vocabulary'
+import { treeInit } from './tree'
+import { submenuInit } from './submenu'
+import { searchInit } from './search'
+import { select } from 'd3-selection'
 import { sayerror, Menu } from '../client'
 
 /*
@@ -14,75 +14,112 @@ opts{}
 .app{} .tree{} etc
 see doc for full spec
 https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit
-
+git branch 
 */
 
 class TdbApp {
-	constructor(coordApp, opts) {
-		if (coordApp) throw `TODO: termdb app does not currently support a parent coordinating app (coordApp)`
+	constructor(opts) {
 		this.type = 'app'
-		this.opts = this.initOpts(opts)
-		this.tip = new Menu({ padding: '5px' })
-		// the TdbApp may be the root app or a component within another app
-		this.api = coordApp ? rx.getComponentApi(this) : rx.getAppApi(this)
-		this.app = coordApp ? coordApp : this.api
-		this.api.vocabApi = vocabInit(this.api, this.app.opts)
-
+		if (!opts.holder) select('body').append('div')
+		// do this in the constructor to have an dom.errdiv
+		// available at any point during initialization
+		const topbar = opts.holder.append('div')
 		this.dom = {
-			holder: opts.holder, // do not modify holder style
-			topbar: opts.holder.append('div'),
-			errdiv: opts.holder.append('div')
+			holder: opts.holder,
+			topbar,
+			searchDiv: topbar.append('div').style('display', 'inline-block'),
+			filterDiv: topbar.append('div').style('display', 'none'),
+			errdiv: opts.holder.append('div'),
+			tip: new Menu({ padding: '5px' })
 		}
+	}
 
-		this.eventTypes = ['postInit', 'postRender']
-
-		if (!coordApp) {
-			// catch initialization error
-			try {
-				this.store = storeInit(this.api)
-				this.store
-					.copyState({ rehydrate: true })
-					.then(state => {
-						this.state = state
-						this.setComponents()
-					})
-					.then(() => this.api.dispatch())
-					.catch(e => this.printError(e))
-			} catch (e) {
-				this.printError(e)
-			}
+	validateOpts(o) {
+		if (o.vocabApi) {
+			// verify it is an object returned by vocabInit()
+		} else if (o.state && o.state.vocab) {
+			if (typeof o.state.vocab != 'object') throw 'opts.state.vocab{} is not an object'
 		} else {
-			try {
-				this.setComponents()
-			} catch (e) {
-				this.printError(e)
+			throw 'neither state.vocab{} or opts.vocabApi provided'
+		}
+		if (o.tree) {
+			if (
+				o.tree.disable_terms &&
+				!o.tree.click_term &&
+				!o.tree.click_term2select_tvs &&
+				(!o.barchart || !o.barchart.bar_click_override)
+			) {
+				throw `opts.tree.disable_terms is used only when opts.tree.click_term, opts.tree.click_term2select_tvs, or opts.barchart.bar_click_override is set`
 			}
+			if (!o.search) o.search = {}
+			if (o.tree.click_term) o.search.click_term = o.tree.click_term
+			else if (o.tree.click_term2select_tvs) {
+				o.search.click_term = term =>
+					this.api.dispatch({
+						type: 'submenu_set',
+						submenu: { term, type: 'tvs' }
+					})
+			}
+
+			if (o.tree.disable_terms) o.search.disable_terms = o.tree.disable_terms
+		}
+		return o
+	}
+
+	async preApiFreeze(api) {
+		api.vocabApi = this.opts.vocabApi
+			? this.opts.vocabApi
+			: await vocabInit({ app: this.api, state: this.opts.state, fetchOpts: this.opts.fetchOpts })
+		api.tip = this.dom.tip
+		api.appInit = appInit
+	}
+
+	async init() {
+		try {
+			this.store = await storeInit({ app: this.api, state: this.opts.state })
+			this.state = await this.store.copyState()
+			await this.setComponents()
+			await this.api.dispatch()
+		} catch (e) {
+			this.printError(e)
+		}
+	}
+
+	async setComponents() {
+		try {
+			const compPromises = {
+				/*
+			 	TODO: may need to handle a cohort filter option as an OPTIONAL component 
+			  filter: filterInit({
+					app: this.api,
+					holder: this.dom.filterDiv
+			  }),
+				***/
+				search: searchInit({
+					app: this.api,
+					holder: this.dom.searchDiv
+				}),
+				tree: treeInit({
+					app: this.api,
+					holder: this.dom.holder.append('div').style('display', 'block')
+				})
+			}
+
+			if (this.opts.tree && this.opts.tree.click_term2select_tvs) {
+				compPromises.submenu = submenuInit({
+					app: this.api,
+					holder: this.dom.holder.append('div').style('display', 'none')
+				})
+			}
+
+			this.components = await multiInit(compPromises)
+		} catch (e) {
+			throw e
 		}
 	}
 
 	async main() {
-		//console.log(this.state.tree.expandedTermIds)
 		this.api.vocabApi.main()
-	}
-
-	initOpts(o) {
-		if (!('app' in o)) o.app = {}
-		return o
-	}
-
-	setComponents() {
-		this.components = {
-			nav: navInit(
-				this.app,
-				{
-					holder: this.dom.topbar,
-					header_mode: this.state && this.state.nav && this.state.nav.header_mode
-				},
-				this.opts.nav
-			),
-			recover: recoverInit(this.app, { holder: this.dom.holder, appType: 'termdb' }, this.opts.recover),
-			tree: treeInit(this.app, { holder: this.dom.holder.append('div') }, this.opts.tree)
-		}
 	}
 
 	printError(e) {
@@ -91,20 +128,9 @@ class TdbApp {
 	}
 }
 
-export const appInit = rx.getInitFxn(TdbApp)
+// must use the await keyword when using this appInit()
+export const appInit = getAppInit(TdbApp)
 
 function setInteractivity(self) {
-	self.downloadView = id => {
-		const components = app.getComponents('tree.plots.' + opts.id)
-		for (const name in self.components) {
-			// the download function in each component will be called,
-			// but should first check inside that function
-			// whether the component view is active before reacting
-			if (typeof self.components[name].download == 'function') {
-				components[name].download()
-			}
-		}
-	}
-
-	self.showTermSrc = showTermSrc
+	// set optional event handlers
 }

@@ -585,9 +585,9 @@ module.exports = function(common) {
 						label: 'MAF',
 						get: function(m) {
 							switch (m.dt) {
-								case common.dtsnvindel:
+								case 1: //common.dtsnvindel:
 									return m.maf_rna
-								case common.dtfusionrna:
+								case 2: //common.dtfusionrna:
 									if (m.pairlst[0] && m.pairlst[0].a && typeof m.pairlst[0].a.ratio == 'number') {
 										const lst = m.pairlst.map(function(i) {
 											return (
@@ -603,8 +603,8 @@ module.exports = function(common) {
 										return lst.join(' ')
 									}
 									return ''
-								case common.dtcloss:
-								case common.dtnloss:
+								case 9: //common.dtcloss:
+								case 8: //common.dtnloss:
 									if (m.ratio != undefined) {
 										return (
 											m.ratio +
@@ -612,7 +612,7 @@ module.exports = function(common) {
 										)
 									}
 									return ''
-								case common.dtitd:
+								case 6: //common.dtitd:
 									if (m.a && m.b && m.a.ratio && m.b.ratio) {
 										return (
 											m.a.ratio +

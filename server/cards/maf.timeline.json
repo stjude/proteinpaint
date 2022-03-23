@@ -1,0 +1,19 @@
+{
+    "ppcalls": [
+        {
+            "is_ui": true,
+            "runargs": {
+                "nobox": 1,
+                "noheader": 1,
+                "parseurl": false,
+                "maftimeline": { "uionly": true }
+            }
+        }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1WXlCVHLq_P2jGiRGJ55uzXCC6p-6Jqn7h406RUID_xo/edit"
+        }
+    ]
+}

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+<div id=bbb style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	holder:document.getElementById('bbb'),
+	genome:'hg19',
+	noheader:1,
+	nobox:1,
+	block:1,
+	position:'chr12:12023550-12023560',
+	nativetracks:'refgene',
+	width:600,
+	subpanels:[{chr:'chr21',start:36315404,stop:36315804,width:600,leftborder:'rgba(200,0,0,.1)'}],
+	tracks:[
+		{
+			type:'bam',
+			name:'SV',
+			file:'proteinpaint_demo/hg19/bam/etv6runx1.bam'
+		}
+    ]
+})
+</script>
+
+</body>
+</html>

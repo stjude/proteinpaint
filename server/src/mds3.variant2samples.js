@@ -1,6 +1,7 @@
 const { stratinput } = require('../shared/tree')
 const { getSamples_gdcapi } = require('./mds3.gdc')
 const samplefilter = require('./mds3.samplefilter')
+const { get_densityplot } = require('./mds3.densityPlot')
 
 /*
 from one or more variants, get list of samples harboring any of the variants
@@ -28,18 +29,30 @@ get types:
 
 module.exports = async (q, ds) => {
 	// each sample obj has keys from .terms[].id
-	const samples = await get_samples(q, ds)
+	const [samples, total] = await get_samples(q, ds)
 
-	if (q.get == ds.variant2samples.type_samples) return samples
+	if (q.get == ds.variant2samples.type_samples) return [samples, total]
 	if (q.get == ds.variant2samples.type_sunburst) return make_sunburst(samples, ds, q)
-	if (q.get == ds.variant2samples.type_summary) return make_summary(samples, ds)
+	if (q.get == ds.variant2samples.type_summary) return make_summary(samples, ds, q)
 	throw 'unknown get type'
 }
 
 async function get_samples(q, ds) {
 	let samples
 	if (ds.variant2samples.gdcapi) {
-		samples = await getSamples_gdcapi(q, ds)
+		const termidlst = q.termidlst ? q.termidlst.split(',') : ds.variant2samples.termidlst
+		// fields[] generated dynamically using gdc_dictionary
+		const api = ds.variant2samples.gdcapi
+		const fields =
+			q.get == ds.variant2samples.type_sunburst
+				? get_termid2fields(api.fields_sunburst, ds)
+				: q.get == ds.variant2samples.type_summary
+				? get_termid2fields(termidlst, ds)
+				: q.get == ds.variant2samples.type_samples
+				? // fields_samples[] have few extra fields for table view than fields_summary[]
+				  [...api.fields_samples, ...get_termid2fields(termidlst, ds)]
+				: null
+		samples = await getSamples_gdcapi(q, termidlst, fields, ds)
 	} else {
 		throw 'unknown query method for variant2samples'
 	}
@@ -47,6 +60,15 @@ async function get_samples(q, ds) {
 		return samplefilter.run(samples, q.samplefiltertemp)
 	}
 	return samples
+}
+
+function get_termid2fields(termidlst, ds) {
+	const fields = []
+	for (const termid of termidlst) {
+		const term = ds.cohort.termdb.q.getTermById(termid)
+		fields.push(term.path)
+	}
+	return fields
 }
 
 async function make_sunburst(samples, ds, q) {
@@ -69,10 +91,21 @@ async function make_sunburst(samples, ds, q) {
 	return nodes
 }
 
-function make_summary(samples, ds) {
+async function make_summary(samples, ds, q) {
 	const entries = []
-	for (const termid of ds.variant2samples.termidlst) {
-		const term = ds.termdb.getTermById(termid)
+	const termidlst = q.termidlst ? q.termidlst.split(',') : ds.variant2samples.termidlst
+	for (const termid of termidlst) {
+		let term = ds.termdb.getTermById(termid)
+		// if term is not in serverside termdb, query gdc dictionary
+		if (!term) {
+			const term_ = ds.cohort.termdb.q.getTermById(termid)
+			term = {
+				name: term_.name,
+				id: term_.id,
+				type: term_.type,
+				fields: term_.fields
+			}
+		}
 		if (!term) continue
 		// may skip a term
 		if (term.type == 'categorical') {
@@ -87,9 +120,18 @@ function make_summary(samples, ds) {
 				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1])
 			})
 		} else if (term.type == 'integer' || term.type == 'float') {
+			// add numeric term summary here
+			const density_data = await get_densityplot(term, samples)
+			entries.push({
+				name: term.name,
+				density_data
+			})
 		} else {
 			throw 'unknown term type'
 		}
+	}
+	if (ds.termdb.termid2totalsize2) {
+		await ds.termdb.termid2totalsize2.get(termidlst, entries, q)
 	}
 	return entries
 }

@@ -3,6 +3,7 @@ export const type_all = 'all'
 export const type_supportref = 'support_ref'
 export const type_supportalt = 'support_alt'
 export const type_supportno = 'support_no'
+export const type_supportamb = 'support_amb'
 export const type_supportsv = 'support_sv'
 
 export function make_type2group(q) {
@@ -17,6 +18,7 @@ export function make_type2group(q) {
 			type2group[type_supportalt] = {}
 			type2group[type_supportref] = {}
 			type2group[type_supportno] = {}
+			type2group[type_supportamb] = {}
 		}
 	} else if (q.sv) {
 		if (q.grouptype) {
@@ -35,7 +37,7 @@ export function make_type2group(q) {
 		g.type = k
 		g.templates = []
 		g.regions = duplicateRegions(q.regions)
-		g.messagerows = []
+		g.messages = []
 	}
 	return type2group
 }

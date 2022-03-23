@@ -30,7 +30,6 @@ method good for somatic variants, in skewer and gp queries:
 
 module.exports = genomes => {
 	return async (req, res) => {
-		app.log(req)
 		try {
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]
@@ -38,8 +37,8 @@ module.exports = genomes => {
 			const q = init_q(req.query, genome)
 
 			// user token may be provided from request header, the logic could be specific to gdc or another dataset
-			if (req.headers['X-Auth-Token']) {
-				q.token = req.headers['X-Auth-Token']
+			if (req.get('x-auth-token')) {
+				q.token = req.get('x-auth-token')
 			}
 
 			const ds = await get_ds(q, genome)

@@ -1,56 +1,209 @@
+/*
+*********** Exported ***********
+getInitFxn()
+getStoreApi()
+getAppApi()
+getComponentApi()
+Bus (class)
+notifyComponents()
+getComponents()
+copyMerge()
+fromJson()
+toJson()
+deepFreeze()
+deepEqual()
+*********** Internal ***********
+
+Instances, APIs, and callback arguments are documented at:
+https://docs.google.com/document/d/1G3LqbtsCEkGw4ABA_VognhjVnUHnsVYAGdXyhYG374M/edit#
+
+*/
+
 /************
  Init Factory
 *************/
 
+/* 
+	getInitFxn()
+	- returns a _Class_ initiator function that
+		- creates a _Class_ instance
+		- optionally attaches an api.Inner reference to the instance for debugging
+		- optionally creates an instance.bus property if there is an instance.eventTypes property
+		- freezes and returns an immutable instance API
+
+	Design goal: 
+	- to protect _Class_ instance properties from being changed arbitrarily 
+	  by any code that has a reference to it
+	- Flexibility to use the generated instance outside of the rx framework/notification flow,
+		with or without an coordinating "app"
+*/
 export function getInitFxn(_Class_) {
 	/*
-		arg: 
-		= opts{} for an App constructor
-		= App instance for all other classes
-
-		returns a function that 
-		- creates a _Class_ instance
-		- optionally attaches a self reference to the api
-		- freezes and returns the instance api
+		opts
+		- the argument to the _Class_ constructor
 	*/
-	return (arg, instanceOpts = {}, overrides) => {
-		if (overrides) copyMerge(instanceOpts, overrides)
+	return opts => {
+		// create a _Class_ instance with mutable private properties and methods
+		const self = new _Class_(opts)
 
-		// instantiate mutable private properties and methods
-		const self = new _Class_(arg, instanceOpts)
+		if (!self.api && self.type) {
+			if (self.type == 'app') prepApp(self, opts)
+			else if (self.type == 'store') prepStore(self, opts)
+			else prepComponent(self, opts)
+		}
 
-		// get the instance's api that hides its
-		// mutable props and methods
-		const api = self.api
-			? // if there is already an instance api as constructed, use it
-			  self.api
-			: // if not, check if there is an api generator function
-			self.getApi
-			? // if yes, generate the api
-			  self.getApi()
-			: // if not, expose the mutable instance as its public api
-			  self
-
-		const opts = (self.app && self.app.opts) || (self.api && self.api.opts) || self.opts || {}
-		// expose the hidden instance to debugging and testing code
-		if (opts.debug) api.Inner = self
-
+		// get the instance's api that may hide its mutable props and methods
+		// - if there is already an instance api as constructed, use it
+		// - if not, expose the mutable instance as its public api
+		const api = self.api || self
+		// optionally expose the hidden instance to debugging and testing code
+		if (self.debug || (self.opts && self.opts.debug)) api.Inner = self
+		// an instance may want to add or modify api properties before it is frozen
+		if (typeof self.preApiFreeze == 'function') self.preApiFreeze(api)
 		// freeze the api's properties and methods before exposing
 		Object.freeze(api)
 
-		if (self.eventTypes) {
-			// set up an optional event bus
-			const callbacks = self.type in instanceOpts ? instanceOpts[self.type].callbacks : instanceOpts.callbacks
-			self.bus = new Bus(self.api, self.eventTypes, callbacks)
+		// instance.init() is expected to be an async function
+		// which is not compatible within a constructor() function,
+		// so call it here if it is available as an instance method
+		if (self.init) {
+			// return a Promise thar resolves to the instance API;
+			// the parent component must use the await keyword
+			// when using this initializer to get the instance's API
+			return self
+				.init()
+				.then(() => {
+					if (self.bus) self.bus.emit('postInit')
+					return api
+				})
+				.catch(e => {
+					if (self.printError) self.printError(e)
+					else throw e
+				})
+		} else {
+			if (self.bus) self.bus.emit('postInit')
+			// return the instance API; the parent component that uses this initializer
+			// does NOT have to use the await keyword
+			return api
 		}
-		if (self.bus) self.bus.emit('postInit')
-		return api
+	}
+}
+
+export function getAppInit(_Class_) {
+	return getInitPrepFxn(_Class_, prepApp)
+}
+
+export function getStoreInit(_Class_) {
+	return getInitPrepFxn(_Class_, prepStore)
+}
+
+export function getCompInit(_Class_) {
+	return getInitPrepFxn(_Class_, prepComponent)
+}
+
+function getInitPrepFxn(_Class_, prepFxn) {
+	if (typeof prepFxn != 'function') throw 'prepFxn must be a function'
+
+	/*
+		opts
+		- the argument to the _Class_ constructor
+	*/
+	return async opts => {
+		let self
+		try {
+			// create a _Class_ instance with mutable private properties and methods
+			self = new _Class_(opts)
+			prepFxn(self, opts)
+
+			// get the instance's api that may hide its mutable props and methods
+			// - if there is already an instance api as constructed, use it
+			// - if not, expose the instance as its public api
+			const api = self.api || self
+			// optionally expose the hidden instance to debugging and testing code
+			if (self.debug || (self.opts && self.opts.debug)) api.Inner = self
+			// an instance may want to add or modify api properties before it is frozen
+			if (self.preApiFreeze) await self.preApiFreeze(api)
+			// freeze the api's properties and methods before exposing
+			Object.freeze(api)
+
+			// instance.init() can be an async function
+			// which is not compatible within a constructor() function,
+			// so call it here if it is available as an instance method
+			if (self.init) {
+				if (self.app && self.app != self) await self.init(self.app.getState())
+				else await self.init()
+			}
+			if (self.bus) self.bus.emit('postInit')
+			return api
+		} catch (e) {
+			if (self && self.printError) self.printError(e)
+			else throw e
+		}
+	}
+}
+
+/*
+	may apply overrides to instance opts
+	if there is an instance.type key in app.opts
+*/
+export function getOpts(_opts, instance) {
+	const opts = Object.assign({}, instance.opts || {}, _opts)
+	if (!instance.app) return opts
+	if (instance.type in instance.app.opts) {
+		/*
+			Always override opts with any app.opts that is available
+			for the instance's component type, supplied as an appInit() argument.
+
+			TODO: May want the ability to NOT override an existing key-value
+			in opts, only apply app.opts[instance.type] override for key-values
+			that are not in opts. Need to see an actual use case before working on this.
+		*/
+		const overrides = instance.app.opts[instance.type]
+		if (instance.validateOpts) instance.validateOpts(overrides)
+		copyMerge(opts, overrides)
+	}
+	if ('debug' in instance.app) opts.debug = instance.app.debug
+	else if (instance.app.opts && 'debug' in instance.app.opts) opts.debug = instance.app.opts.debug
+	return opts
+}
+
+/*
+	Parallelize the potentially async initialization of multiple components
+
+	initPromises{}
+	- keys: component names
+	- values: Promise
+*/
+export async function multiInit(initPromises) {
+	const components = {}
+	try {
+		await Promise.all(Object.values(initPromises))
+		for (const name in initPromises) {
+			components[name] = await initPromises[name]
+		}
+		return components
+	} catch (e) {
+		throw e
 	}
 }
 
 /****************
   API Generators
 *****************/
+
+export function prepStore(self, opts) {
+	if (self.validateOpts) self.validateOpts(opts)
+	self.app = opts.app
+	self.opts = getOpts(opts, self)
+	self.api = getStoreApi(self)
+	self.copyMerge = copyMerge
+	self.deepFreeze = deepFreeze
+	// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
+	if (!self.fromJson) self.fromJson = fromJson // used in store.api.copyState()
+	if (!self.toJson) self.toJson = toJson // used in store.api.copyState()
+	self.state = copyMerge(self.toJson(self.defaultState), opts.state)
+	if (self.validateState) self.validateState()
+}
 
 export function getStoreApi(self) {
 	const api = {
@@ -69,8 +222,7 @@ export function getStoreApi(self) {
 			await actions[action.type].call(self, action)
 			return await api.copyState()
 		},
-		async copyState(opts = {}) {
-			if (opts.rehydrate) await self.rehydrate()
+		async copyState() {
 			const stateCopy = self.fromJson(self.toJson(self.state))
 			self.deepFreeze(stateCopy)
 			return stateCopy
@@ -79,13 +231,15 @@ export function getStoreApi(self) {
 	return api
 }
 
+export function prepApp(self, opts) {
+	if (self.validateOpts) self.validateOpts(opts)
+	if ('id' in opts) self.id = opts[self.type].id
+	self.opts = opts
+	self.api = getAppApi(self)
+}
+
 export function getAppApi(self) {
-	if (!('type' in self)) {
-		throw `The component's this.type must be set before calling this.getAppApi(this).`
-	}
-
 	const middlewares = []
-
 	const api = {
 		type: self.type,
 		opts: self.opts,
@@ -94,7 +248,7 @@ export function getAppApi(self) {
 			???
 			to-do:
  			track dispatched actions and
- 			if there is a pending action,
+ 			if there is a pending action (e.g. waiting on server response)
  			debounce dispatch requests
 			until the pending action is done?
 	 	  ???
@@ -115,10 +269,9 @@ export function getAppApi(self) {
 				// replace app.state
 				if (action) self.state = await self.store.write(action)
 				// else an empty action should force components to update
-
-				const data = self.main ? self.main() : null
+				if (self.main) await self.main()
 				const current = { action, appState: self.state }
-				await notifyComponents(self.components, current, data)
+				await notifyComponents(self.components, current)
 			} catch (e) {
 				if (self.printError) self.printError(e)
 				else console.log(e)
@@ -163,6 +316,8 @@ export function getAppApi(self) {
 			return getComponents(self.components, dotSepNames)
 		},
 		destroy() {
+			// delete references to other objects to make it easier
+			// for automatic garbage collection to find unreferenced objects
 			for (const key in self.components) {
 				const component = self.components[key]
 				if (typeof component.destroy == 'function') {
@@ -173,21 +328,41 @@ export function getAppApi(self) {
 				delete self.components[key]
 			}
 			if (typeof self.destroy == 'function') self.destroy()
-			self.dom.holder.selectAll('*').remove()
-			for (const key in self.dom) {
-				delete self.dom[key]
+			if (self.dom) {
+				if (self.dom.holder) self.dom.holder.selectAll('*').remove()
+				for (const key in self.dom) {
+					delete self.dom[key]
+				}
 			}
+			if (self.bus) self.bus.destroy()
 			delete self.store
+			if (self.api) delete self.api
 		}
 	}
 
 	// expose tooltip if set, expected to be shared in common
 	// by all components within an app; should use the HOPI
 	// pattern to hide the mutable parts, not checked here
-	if (self.tip) api.tip = self.tip
 	if (self.opts.debugName) window[self.opts.debugName] = api
-	if (self.appInit) api.appInit = self.appInit
+	if (!self.bus) {
+		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender']
+		if (self.customEvents) self.eventTypes.push(...self.customEvents)
+		// set up a required event bus
+		const callbacks = self.opts.callbacks || (self.type == 'app' && self.opts.app && self.opts.app.callbacks) || {}
+		self.bus = new Bus(api, self.eventTypes, callbacks)
+	}
 	return api
+}
+
+export function prepComponent(self, opts) {
+	if (!opts.app) throw `missing self.opts.app in prepComponent(${self.type})`
+	self.app = opts.app
+	self.opts = getOpts(opts, self)
+	if (self.validateOpts) self.validateOpts(opts)
+	// the component type + id may be used later to
+	// simplify getting its state from the store
+	if ('id' in opts) self.id = self.opts.id
+	self.api = getComponentApi(self)
 }
 
 export function getComponentApi(self) {
@@ -198,29 +373,27 @@ export function getComponentApi(self) {
 	const api = {
 		type: self.type,
 		id: self.id,
-		async update(current, data) {
+		async update(current) {
 			if (current.action && self.reactsTo && !self.reactsTo(current.action)) return
 			const componentState = self.getState ? self.getState(current.appState) : current.appState
 			// no new state computed for this component
 			if (!componentState) return
-			let componentData = null
 			// force update if there is no action, or
 			// if the current and pending state is not equal
 			if (!current.action || !deepEqual(componentState, self.state)) {
-				self.state = componentState
-				// in some cases, a component may only be a wrapper to child
-				// components, in which case it will not have a
-				componentData = self.main ? await self.main(data) : null
+				if (self.mainArg == 'state') {
+					// some components may require passing state to its .main() method,
+					// for example when extending a simple object class into an rx-component
+					await self.main(componentState)
+				} else {
+					self.state = componentState
+					if (self.main) await self.main()
+				}
 			}
 			// notify children
-			await notifyComponents(self.components, current, componentData)
+			await notifyComponents(self.components, current)
 			if (self.bus) self.bus.emit('postRender')
 			return api
-		},
-		async setInnerAttr(data) {
-			if (typeof self.setAttr == 'function') {
-				await self.setAttr(data)
-			}
 		},
 		// must not expose self.bus directly since that
 		// will also expose bus.emit() which should only
@@ -234,6 +407,8 @@ export function getComponentApi(self) {
 			return getComponents(self.components, dotSepNames)
 		},
 		destroy() {
+			// delete references to other objects to make it easier
+			// for automatic garbage collection to find unreferenced objects
 			for (const key in self.components) {
 				const component = self.components[key]
 				if (typeof component.destroy == 'function') {
@@ -244,12 +419,24 @@ export function getComponentApi(self) {
 				delete self.components[key]
 			}
 			if (typeof self.destroy == 'function') self.destroy()
-			self.dom.holder.selectAll('*').remove()
-			for (const key in self.dom) {
-				delete self.dom[key]
+			if (self.dom) {
+				if (self.dom.holder) self.dom.holder.selectAll('*').remove()
+				for (const key in self.dom) {
+					delete self.dom[key]
+				}
 			}
+			if (self.bus) self.bus.destroy()
+			if (self.api) delete self.api
 		}
 	}
+
+	if (!self.bus) {
+		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender']
+		if (self.customEvents) self.eventTypes.push(...self.customEvents)
+		// set up a required event bus
+		self.bus = new Bus(api, self.eventTypes, (self.opts && self.opts.callbacks) || {})
+	}
+
 	// must not freeze returned api, as getInitFxn() will add api.Inner
 	return api
 }
@@ -273,11 +460,13 @@ export class Bus {
 			
 			eventTypes[] 
 			- the events that this component wants to emit
-			- ['postInit', 'postRender', 'postClick']
+			- e.g. ['postInit', 'postRender', 'postClick']
+			- must not be namespaced
+			- later, api.on() can use namespaced eventTypes
 
-			callbacks{} any event listeners to set-up for this component 
-			.postInit: ()=>{}
-			.postRender() {}, etc.
+			callbacks{}
+			- any event listeners to set-up for this component 
+			- key: eventType, value: callback
 
 		*/
 		this.name = api.type + (api.id === undefined || api.id === null ? '' : '#' + api.id)
@@ -293,6 +482,8 @@ export class Bus {
 
 	on(eventType, callback, opts = {}) {
 		/*
+		assign or delete a callback for an event
+
 		eventType
 		- must match one of the eventTypes supplied to the Bus constructor
 		- maybe be namespaced or not, example: "postRender.test" or "postRender"
@@ -301,12 +492,12 @@ export class Bus {
 		  as a DOM event listener namespacing and replacement
 
 		callback
-		- function
+		- function. if missing will delete the eventType from bus
 
 		opts{}
 		- optional callback configuration, such as
 		.wait // to delay callback  
-	*/
+		*/
 		const [type, name] = eventType.split('.')
 		if (!this.eventTypes.includes(type)) {
 			throw `Unknown bus event '${type}' for component ${this.name}`
@@ -379,19 +570,21 @@ export class Bus {
 // Component Helpers
 // -----------------
 
-export async function notifyComponents(components, current, data = null) {
+export async function notifyComponents(components, current) {
 	if (!components) return // allow component-less app
 	const called = []
+
 	for (const name in components) {
+		// when components is array, name will be index
 		const component = components[name]
 		if (Array.isArray(component)) {
-			for (const c of component) called.push(c.update(current, data))
+			for (const c of component) called.push(c.update(current))
 		} else if (component.hasOwnProperty('update')) {
-			called.push(component.update(current, data))
+			called.push(component.update(current))
 		} else if (component && typeof component == 'object' && !component.main) {
 			for (const name in component) {
 				if (component.hasOwnProperty(name) && typeof component[name].update == 'function') {
-					called.push(component[name].update(current, data))
+					called.push(component[name].update(current))
 				}
 			}
 		}
@@ -454,10 +647,10 @@ export function copyMerge(base, ...args) {
 	if (Array.isArray(args[args.length - 1])) {
 		replaceKeyVals.push(...args.pop())
 	}
-	const target = typeof base == 'string' ? this.fromJson(base) : base
+	const target = typeof base == 'string' ? fromJson(base) : base
 	for (const arg of args) {
 		if (arg) {
-			const source = typeof base == 'string' ? this.fromJson(this.toJson(arg)) : arg
+			const source = typeof base == 'string' ? fromJson(toJson(arg)) : arg
 			for (const key in source) {
 				if (
 					!target[key] ||
@@ -466,7 +659,7 @@ export function copyMerge(base, ...args) {
 					replaceKeyVals.includes(key)
 				)
 					target[key] = source[key]
-				else this.copyMerge(target[key], source[key], replaceKeyVals)
+				else copyMerge(target[key], source[key], replaceKeyVals)
 			}
 		}
 	}
@@ -503,28 +696,6 @@ export function deepFreeze(obj) {
 
 // Match Helpers
 // -----------
-
-export function matchAction(action, against, sub) {
-	//console.log(action, against)
-	// if string matches are specified, start with
-	// matched == false, otherwise start as true
-	let matched = !(against.prefix || against.type)
-	if (against.prefix) {
-		for (const p of against.prefix) {
-			matched = action.type.startsWith(p)
-			if (matched) break
-		}
-	}
-	if (against.type) {
-		// okay to match prefix, type, or both
-		matched = matched || against.type.includes(action.type)
-	}
-	if (against.fxn) {
-		// fine-tuned action matching with a function
-		matched = matched && against.fxn.call(self, action, sub)
-	}
-	return matched
-}
 
 export function deepEqual(x, y) {
 	if (x === y) {

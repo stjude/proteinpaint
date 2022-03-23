@@ -1,5 +1,4 @@
 {
-  "version": "1.8.3",
   "name": "@stjude/proteinpaint",
   "bin": "server/bin.js",
   "main": "client/dist/app.js",
@@ -14,13 +13,13 @@
     "public/index.html",
     "public/bin",
     "server/bin.js",
-    "server/dataset/clinvar.*.js",
-    "server/dataset/gdc*.js",
+    "server/dataset/clinvar*.js",
     "server/genome",
     "server/src/serverconfig.js",
-    "server/server.js",
+    "server/server.js*",
     "server/utils",
-    "server/shared"
+    "server/shared",
+    "server/cards"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"

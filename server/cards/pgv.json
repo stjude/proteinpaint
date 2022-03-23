@@ -1,0 +1,47 @@
+{
+    "ppcalls": [
+        {
+            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/pgv/pgvDemoData.tar.gz",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "nativetracks": "RefGene",
+                "position": "chr14:24549316-24584223",
+                "tracks": [{
+                    "type": "profilegenevalue",
+                    "genevaluetrack": {
+                        "file": "proteinpaint_demo/hg19/pgv/pgvdemo.fpkm.gz"
+                    },
+                    "genevaluetype": "FPKM",
+                    "legendimg": {
+                        "file": "proteinpaint_demo/hg19/pgv/HMM.png",
+                        "width": 400,
+                        "height": 400
+                    },
+                    "name": "Demo chromHMM",
+                    "genevaluematchname": "sampleID",
+                    "tracks": [
+                        { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample1.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 1", "sampleID": "101" },
+                        { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample2.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 2", "sampleID": "102" },
+                        { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample3.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 3", "sampleID": "103" },
+                        { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample4.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 4", "sampleID": "104" },
+                        { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample5.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 5", "sampleID": "105" },
+                        { "type": "bedj", "file": "proteinpaint_demo/hg19/pgv/sample6.gz", "stackheight": 18, "stackspace": 1, "toppad": 1, "bottompad": 1, "onerow": 1, "name": "Sample 6", "sampleID": "106" }
+                    ]
+                }]
+            },
+            "testSpec": {
+                "expected": {"image": 2 }
+            }
+        }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1yrRpDUZWSRGuCa0snGwRuo721WRHgdYTX7GWIsZ_fSY/edit"
+        }
+    ]
+}

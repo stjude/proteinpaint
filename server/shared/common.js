@@ -91,7 +91,10 @@ export const mclass = {
 		dt: dtsnvindel,
 		desc: 'A variant near an exon edge that may affect splicing functionality.'
 	},
-	Intron: { label: 'INTRON', color: '#bbbbbb', dt: dtsnvindel, desc: 'An intronic variant.' }
+	Intron: { label: 'INTRON', color: '#bbbbbb', dt: dtsnvindel, desc: 'An intronic variant.' },
+
+	// quick fix!! for showing genes that are not tested in samples (e.g. gene panels) in the heatmap
+	Blank: { label: 'Not tested', color: '#fff', dt: dtsnvindel, desc: 'This gene is not tested.' }
 }
 export const mclassitd = 'ITD'
 mclass[mclassitd] = {
@@ -188,6 +191,8 @@ export function mclasstester(s) {
 			return mclassutr5
 		case "5'flank":
 			return mclassnoncoding
+		case 'blank':
+			return 'Blank'
 		default:
 			return null
 	}
@@ -222,16 +227,16 @@ mclass[mclasscnvloh] = { label: 'LOH', color: '#12EDFC', dt: dtcnv, desc: 'Loss 
 
 // for VCF
 export const mclasssnv = 'snv'
-mclass[mclasssnv] = { label: 'SNV', color: '#5781FF', dt: dtsnvindel, desc: 'Single nucleotide variation' }
+mclass[mclasssnv] = { label: 'SNV', color: '#92a2d4', dt: dtsnvindel, desc: 'Single nucleotide variation' }
 
 export const mclassmnv = 'mnv'
-mclass[mclassmnv] = { label: 'MNV', color: '#6378B8', dt: dtsnvindel, desc: 'Multiple nucleotide variation' }
+mclass[mclassmnv] = { label: 'MNV', color: '#92a2d4', dt: dtsnvindel, desc: 'Multiple nucleotide variation' }
 
 export const mclassinsertion = 'insertion'
-mclass[mclassinsertion] = { label: 'Sequence insertion', color: '#ED5C66', dt: dtsnvindel, desc: 'Sequence insertion' }
+mclass[mclassinsertion] = { label: 'Sequence insertion', color: '#bd8e91', dt: dtsnvindel, desc: 'Sequence insertion' }
 
 export const mclassdeletion = 'deletion'
-mclass[mclassdeletion] = { label: 'Sequence deletion', color: '#F0B11F', dt: dtsnvindel, desc: 'Sequence deletion' }
+mclass[mclassdeletion] = { label: 'Sequence deletion', color: '#b5a174', dt: dtsnvindel, desc: 'Sequence deletion' }
 // TODO complex indel
 
 export const vepinfo = function(s) {
@@ -493,7 +498,7 @@ export function nt2aa(gm) {
 	if (!gm.genomicseq) return undefined
 	const enlst = []
 	if (gm.coding) {
-		for (const e of gm.coding) {
+		for (const [i, e] of gm.coding.entries()) {
 			const s = gm.genomicseq.substr(e[0] - gm.start, e[1] - e[0])
 			if (gm.strand == '-') {
 				enlst.push(reversecompliment(s))
@@ -504,21 +509,29 @@ export function nt2aa(gm) {
 	}
 	const nt = enlst.join('')
 	const pep = []
-	for (let i = 0; i < nt.length; i += 3) {
+
+	/*
+	if startCodonFrame is set, will not begin translation from first nt, but will skip 1 or 2 nt at the beginning
+	in case of IGKC, frame=1 means it will borrow 1 nt from the previous IGKJ exons
+	so the first two nucleotides from the current exon will have to be skipped when translating IGKC alone
+	*/
+	const startntidx = gm.startCodonFrame ? 3 - gm.startCodonFrame : 0
+	for (let i = startntidx; i < nt.length; i += 3) {
 		const a = codon[nt.substr(i, 3)]
-		pep.push(a ? a : codon_stop)
+		pep.push(a || codon_stop)
 	}
 	gm.cdseq = nt
 	return pep.join('')
 }
 
-export function bplen(len) {
+export function bplen(len, isfile) {
+	// if "isfile" is true, to measure file size instead of basepair len
 	if (len >= 1000000000) return (len / 1000000000).toFixed(1) + ' Gb'
 	if (len >= 10000000) return Math.ceil(len / 1000000) + ' Mb'
 	if (len >= 1000000) return (len / 1000000).toFixed(1) + ' Mb'
 	if (len >= 10000) return Math.ceil(len / 1000) + ' Kb'
 	if (len >= 1000) return (len / 1000).toFixed(1) + ' Kb'
-	return len + ' bp'
+	return len + (isfile ? 'bytes' : ' bp')
 }
 
 export const basecolor = {
@@ -874,7 +887,7 @@ export function vcfcopymclass(m, block) {
 		if (mclass[m.type]) {
 			m.class = m.type
 			m.dt = mclass[m.type].dt
-			m.mname = m.ref + '>' + m.alt
+			m.mname = m.id && m.id != '.' ? m.id : m.ref + '>' + m.alt
 			if (m.mname.length > 15) {
 				// avoid long indel
 				m.mname = m.type

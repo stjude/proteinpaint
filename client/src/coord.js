@@ -87,19 +87,20 @@ export function string2pos(s, genome, donotextend) {
 		return {
 			chr: chr.name,
 			chrlen: chr.len,
-			start: start,
-			stop: stop,
-			actualposition: actualposition
+			start,
+			stop,
+			actualposition
 		}
 	}
 	return null
 }
 
 export function string2snp(genome, str, hostURL, jwt) {
+	// TODO isolate out to client/src/common/ to be able to use dofetch3
 	return fetch(
-		new Request(hostURL + '/snpbyname', {
+		new Request(hostURL + '/snp', {
 			method: 'POST',
-			body: JSON.stringify({ genome: genome, lst: [str], jwt: jwt })
+			body: JSON.stringify({ byName: true, genome: genome.name, lst: [str], jwt: jwt })
 		})
 	)
 		.then(data => {
@@ -107,11 +108,21 @@ export function string2snp(genome, str, hostURL, jwt) {
 		})
 		.then(data => {
 			if (data.error) throw { message: data.error }
-			if (!data.lst || data.lst.length == 0) throw { message: str + ': not a SNP' }
-			/*
-		start/stop are ucsc bed format, include start, not stop
-		*/
-			const r = data.lst[0]
+			if (!data.results || data.results.length == 0) throw { message: str + ': not a SNP' }
+			// start/stop are ucsc bed format, include start, not stop
+			// return hit on major if any
+			for (const i of data.results) {
+				const chr = genome.chrlookup[i.chrom.toUpperCase()]
+				if (chr && chr.major) {
+					return {
+						chr: i.chrom,
+						start: i.chromStart,
+						stop: i.chromEnd
+					}
+				}
+			}
+			// no hit on major chr, just return the first one
+			const r = data.results[0]
 			return {
 				chr: r.chrom,
 				start: r.chromStart,
@@ -126,7 +137,7 @@ export function genomic2gm(pos, gm, tempoff = 0) {
 	tempoff is a quick fix in order to move the imprecise 'intronic' breakpoints of cicero into exon
 	should not be used in any other case
 	*/
-	if (tempoff) console.log(pos, gm)
+	//if (tempoff) console.log(pos, gm)
 	const rev = gm.strand == '-'
 	const cd = {}
 	if (pos < gm.start) {

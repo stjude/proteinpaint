@@ -47,6 +47,7 @@ exports.termjson = {
 		bins: {
 			label_offset: 1,
 			default: {
+				type: 'regular-bin',
 				label_offset: 1,
 				bin_size: 3,
 				startinclusive: true,
@@ -56,6 +57,7 @@ exports.termjson = {
 				}
 			},
 			less: {
+				type: 'regular-bin',
 				label_offset: 1,
 				bin_size: 5,
 				startinclusive: true,
@@ -123,6 +125,7 @@ exports.termjson = {
 		bins: {
 			label_offset: 1,
 			default: {
+				type: 'regular-bin',
 				bin_size: 1000,
 				startinclusive: true,
 				first_bin: {
@@ -154,7 +157,7 @@ exports.termjson = {
 		type: 'float',
 		bins: {
 			default: {
-				type: 'regular',
+				type: 'regular-bin',
 				bin_size: 10,
 				stopinclusive: true,
 				first_bin: {

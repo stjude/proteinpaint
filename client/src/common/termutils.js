@@ -28,7 +28,7 @@ export async function getterm(termid, dslabel = null, genome = null) {
 	return data.term
 }
 
-const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition'])
+const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival'])
 
 // shared in client, server, and tape test
 export function graphable(term) {
@@ -39,7 +39,7 @@ export function graphable(term) {
 
 export function sample_match_termvaluesetting(row, filter) {
 	// console.log(row, filter)
-	const lst = filter.type == 'tvslst' ? filter.lst : [filter]
+	const lst = !filter ? [] : filter.type == 'tvslst' ? filter.lst : [filter]
 	let numberofmatchedterms = 0
 
 	/* for AND, require all terms to match */
@@ -56,8 +56,9 @@ export function sample_match_termvaluesetting(row, filter) {
 
 			if (t.term.type == 'categorical') {
 				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
-				if (!t.valueset) t.valueset = new Set(t.values.map(i => i.key))
-				thistermmatch = t.valueset.has(samplevalue)
+				// t may be frozen, should not modify to attach valueset if missing
+				const valueset = t.valueset ? t.valueset : new Set(t.values.map(i => i.key))
+				thistermmatch = valueset.has(samplevalue)
 			} else if (t.term.type == 'integer' || t.term.type == 'float') {
 				if (samplevalue === undefined) continue // this sample has no anno for this term, do not count
 
@@ -104,6 +105,8 @@ export function sample_match_termvaluesetting(row, filter) {
 						? t.values.find(d => anno.includes(d.key))
 						: t.values.find(d => d.key == anno)
 				}
+			} else if (t.term.type == 'survival') {
+				// don't do anything?
 			} else {
 				throw 'unknown term type'
 			}

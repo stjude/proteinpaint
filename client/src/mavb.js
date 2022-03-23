@@ -1,9 +1,11 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import * as client from './client'
+import { renderSandboxFormDiv } from './dom/sandbox'
 import { scaleLog, scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import { format as d3format } from 'd3-format'
 import blocklazyload from './block.lazyload'
+import { d3lasso } from './common/lasso'
 
 /*
 differential gene expression viewer
@@ -121,8 +123,7 @@ export function mavbui(genomes, hostURL, jwt, holder, sandbox_header) {
 	create GUI to collect user input
 	*/
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined)
-		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(100, 100, genomes)
 		pane.header.text('Differential gene expression viewer')
@@ -296,7 +297,9 @@ function parseRaw(mavb, lines) {
 		mavb.holder = pane.body
 	} else {
 		mavb.holder.selectAll('*').remove()
-		if (mavb.sandbox_header !== undefined) mavb.sandbox_header.text(mavb.filename)
+		//Fix for rendering data correctly now that the mavb UI is in a div rather than consuming the entire sandbox and therefore not able to access the header
+		if (mavb.sandbox_header !== undefined)
+			mavb.holder.append('div').html('<span style="opacity:.5;font-size:.7em">FILE: </span> ' + mavb.filename)
 	}
 	mavb.data = data
 
@@ -666,6 +669,10 @@ add:
 		})
 	}
 	resize(400, 400)
+
+	// add lasso for ma plot
+	// TODO: remove follow line after testing
+	add_lasso(dotg.selectAll('circle'), svg, 'vo_circle')
 	return svg
 }
 
@@ -842,7 +849,66 @@ add:
 		select.append('option').text('Unadjusted P value')
 		select.append('option').text('Adjusted P value')
 	}
+
+	// add lasso for volcano plot
+	// TODO: remove follow line after testing
+	add_lasso(dotg.selectAll('circle'), svg, 'ma_circle')
 	return svg
+}
+
+// example of lasso function and usage
+function add_lasso(selectable_items, svg, other_svg_item_key) {
+	const lasso = d3lasso()
+		.items(selectable_items)
+		.targetArea(svg)
+
+	function mavb_lasso_start() {
+		// set all dots to initial state when lasso starts
+		svg
+			.selectAll('.possible')
+			.style('fill-opacity', 0)
+			.classed('not_possible', true)
+			.classed('selected', false)
+			.each(d => {
+				d3select(d[other_svg_item_key]).attr('fill-opacity', 0)
+			})
+
+		// TODO: remove following commented code after review
+		// here, there are many circles, so rather than applying style to add circles,
+		// only previously selected circles are reverted back to normal
+		// can use like following as well, for detail example see mds.scatterplot.js
+		// lasso.items()
+		// 	.style('fill-opacity', 0)
+		// 	.classed('not_possible', true)
+		// 	.classed('selected', false)
+		// 	.each((d) =>{
+		// 		d3select(d[other_svg_item_key]).attr('fill-opacity', 0)
+		// 	})
+	}
+
+	function mavb_lasso_draw() {
+		// Style the possible dots, when selected using lasso
+		lasso
+			.possibleItems()
+			.style('fill-opacity', 0.9)
+			.classed('not_possible', false)
+			.classed('possible', true)
+			.each(d => {
+				d3select(d[other_svg_item_key]).attr('fill-opacity', 0.9)
+			})
+	}
+
+	function mavb_lasso_end() {
+		// do something, like show menu or open info panel for selected samples
+	}
+
+	// perform following custom drag events after original lasso drag events finish in lasso.js
+	lasso
+		.on('start', mavb_lasso_start)
+		.on('draw', mavb_lasso_draw)
+		.on('end', mavb_lasso_end)
+
+	svg.call(lasso)
 }
 
 function circlemouseover(d) {

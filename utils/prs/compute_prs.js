@@ -32,37 +32,40 @@ The samples file needs to contain one SJLIFE/CCSS sample ID per line. For exampl
 
 1) To limit memory usage, the input SNP file is split into chunks of 10,000 SNPs and PRS is computed separately for each chunk and then summed across chunks.
 
-2) The minor allele frequency (MAF) cutoff is optional and can be turned off using the flag "--no-maf-cutoff".
+2) The 1% minor allele frequency (MAF) cutoff is optional and can be activated/disabled using the MAF filter argument.
 */
 
-let snpfile
-let samplesfile
-let mafFilter
-
-if (process.argv.length === 4 && process.argv[2] !== '--no-maf-cutoff') {
-	snpfile = process.argv[2]
-	samplesfile = process.argv[3]
-	mafFilter = 'on'
-} else if (process.argv.length === 5 && process.argv[2] === '--no-maf-cutoff') {
-	snpfile = process.argv[3]
-	samplesfile = process.argv[4]
-	mafFilter = 'off'
-} else {
-	console.error('Usage: [--no-maf-cutoff] <snps.txt> <samples.txt> output to stdout')
+if (process.argv.length !== 6) {
+	console.error('Usage: node compute_prs.js <snps.txt> <samples.txt> <maf/noMaf> <prs.scores.profile> stats to stdout')
+	console.error(
+		'\t<snps.txt>: snps file\n\t<samples.txt>: samples file\n\t<maf/noMaf>: activate/disable MAF filter\n\t<prs.scores.profile>: output file of PRS scores'
+	)
 	process.exit(1)
 }
+
+const snpfile = process.argv[2]
+const samplesfile = process.argv[3]
+let mafFilter
+if (process.argv[4] === 'maf') {
+	mafFilter = 'on'
+} else if (process.argv[4] === 'noMaf') {
+	mafFilter = 'off'
+} else {
+	console.error('MAF filter setting not recognized')
+	process.exit(1)
+}
+const outfile = process.argv[5]
 
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
 const spawn = require('child_process').spawn
 const readline = require('readline')
-const lines2R = require('../../utils/lines2R')
+const lines2R = require('../../server/src/lines2R')
 
 const missinggt = '.' // hardcoded string for missing GT, either '.' or './.'
 
 // Keep track of the numbers of SNPs dropped and retained
-const totalSnps = get_totalSnpCnt()
 let callrateDropped = 0
 let mafDropped = 0
 let hweDropped = 0
@@ -99,15 +102,17 @@ split.on('close', async code => {
 		}
 	}
 	// Output the total PRS data as a tab-delimited table
-	console.log('sampleID\tsampleName\teffcount\tscore')
+	const output = []
+	output.push('sampleID\tsampleName\teffcount\tscore\n')
 	for (const sample in totalPRS) {
 		const sampleName = id2name.get(sample)
-		console.log(sample + '\t' + sampleName + '\t' + totalPRS[sample]['effcount'] + '\t' + totalPRS[sample]['score'])
+		output.push(
+			sample + '\t' + sampleName + '\t' + totalPRS[sample]['effcount'] + '\t' + totalPRS[sample]['score'] + '\n'
+		)
 	}
-	console.error(
-		'SNP statistics:\nTotal SNPs: ' +
-			totalSnps +
-			'\nDropped SNPs:\n\tMissing call rate > 10%: ' +
+	fs.writeFileSync(outfile, output.join(''))
+	console.log(
+		'Dropped SNPs:\n\tMissing call rate > 10%: ' +
 			callrateDropped +
 			'\n\tMinor allele frequency < 1%: ' +
 			mafDropped +
@@ -133,19 +138,6 @@ function get_id2name() {
 	return id2name
 }
 
-// Determine the total number of input SNPs
-function get_totalSnpCnt() {
-	const cat = spawn('cat', [snpfile])
-	const wc = spawn('wc', ['-l'])
-	cat.stdout.pipe(wc.stdin)
-	const stdout = []
-	wc.stdout.on('data', data => stdout.push(data))
-	wc.on('close', code => {
-		if (code !== 0) throw 'Total SNP count failed'
-		return stdout.join('')
-	})
-}
-
 // Compute PRS using a given SNP chunk
 async function compute_chunk_prs(snpChunk) {
 	// Further split SNPs by chr and write to temp files
@@ -160,10 +152,8 @@ async function compute_chunk_prs(snpChunk) {
 	await Promise.all(promises)
 
 	// Compute HWE p-value for each SNP
-	let tempOut
-	let hwepvalues
-	tempOut = await lines2R(snparray.map(i => i.hweline), path.join(__dirname, 'hwe.R'))
-	hwepvalues = tempOut.map(Number)
+	const out = await lines2R(path.join(os.homedir(), 'tp/utils/hwe.R'), snparray.map(i => i.hweline))
+	const hwepvalues = out.map(Number)
 
 	// Compute PRS score for each sample
 	const prs = samples.map(i => {

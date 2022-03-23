@@ -1,5 +1,5 @@
 {
-  "version": "1.10.0",
+  "version": "2.0.0",
   "name": "@stjude/proteinpaint",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server/main.js",
@@ -13,7 +13,8 @@
     "reset": "npm run emptyws && npm install && npm run linkws",
     "emptyws": "rm -rf node_modules && rm -rf client/node_modules && rm -rf server/node_modules && rm -f package-lock.json && rm -f yarn.lock && rm -f */package-lock.json",
     "linkws": "mkdir client/node_modules && ln -s ../../node_modules/.bin ./client/node_modules/ && ln -s ../node_modules ./server",
-    "dev": "rm -rf public/bin;webpack --config=./webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
+    "predev": "node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js",
+    "dev": "webpack --config=./webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
     "start": "nodemon server/bin.js --watch serverconfig.json --watch ./server/server*.js* --watch server/genome --watch server/dataset",
     "server": "npm start",
     "ppr": "./build/deploy.sh ppr",

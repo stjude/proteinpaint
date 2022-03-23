@@ -12,6 +12,16 @@ import { stratinput } from '../shared/tree'
 import { stratify } from 'd3-hierarchy'
 import { scaleOrdinal, schemeCategory20 } from 'd3-scale'
 import * as common from '../shared/common'
+import { dofetch, dofetch2, dofetch3 } from './common/dofetch'
+// support client code that import dofetch* from client.js
+// TODO: update affected code to import dofetch* directly from common/dofetch.js
+export { dofetch, dofetch2, dofetch3 }
+import { Menu } from './dom/menu'
+export { Menu }
+import { first_genetrack_tolist } from './common/1stGenetk'
+export { first_genetrack_tolist }
+import { make_table_2col } from './dom/table2col'
+export { make_table_2col }
 
 export const font = 'Arial'
 export const unspecified = 'Unspecified'
@@ -41,13 +51,6 @@ export const domaincolorlst = [
 	'#e5c494',
 	'#b3b3b3'
 ]
-
-// track fetch urls to restrict
-// simultaneous reporting for the same issue
-const fetchTimers = {}
-const fetchReported = {}
-const maxAcceptableFetchResponseTime = 15000 // disable with 0, or default to 15000 milliseconds
-const maxNumReportsPerSession = 2
 
 export async function get_one_genome(name) {
 	const data = await dofetch2(`genomes?genome=${name}`)
@@ -240,187 +243,6 @@ function validate_oldds(ds) {
 	// no population freq filter
 }
 
-/*
-	path: URL
-	arg: HTTP request body
-	opts: see dofetch2() opts argument
-*/
-export function dofetch(path, arg, opts = null) {
-	if (opts && typeof opts == 'object') {
-		if (opts.serverData && typeof opts.serverData == 'object') {
-			if (!dofetch.serverData) {
-				dofetch.serverData = opts.serverData
-			} else if (!opts.serverData) {
-				opts.serverData = dofetch.serverData
-			}
-		}
-		return dofetch2(path, { method: 'POST', body: JSON.stringify(arg) }, opts)
-	} else {
-		// path should be "path" but not "/path"
-		if (path[0] == '/') {
-			path = path.slice(1)
-		}
-
-		const jwt = sessionStorage.getItem('jwt')
-		if (jwt) {
-			arg.jwt = jwt
-		}
-
-		let url = path
-		const host = sessionStorage.getItem('hostURL') || window.testHost || ''
-		if (host) {
-			// hostURL can end with / or not, must use 'host/path'
-			if (host.endsWith('/')) {
-				url = host + path
-			} else {
-				url = host + '/' + path
-			}
-		}
-
-		trackfetch(url, arg)
-
-		return fetch(new Request(url, { method: 'POST', body: JSON.stringify(arg) })).then(data => {
-			if (fetchTimers[url]) {
-				clearTimeout(fetchTimers[url])
-			}
-			return data.json()
-		})
-	}
-}
-
-const cachedServerDataKeys = []
-const maxNumOfServerDataKeys = 20
-
-export function dofetch2(path, init = {}, opts = {}) {
-	/*
-	path "" string URL path
-
-	init {}
-		will be supplied as the second argument to
-		the native fetch api, so the method, headers, body
-		may be optionally supplied in the "init" argument
-		see https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch
-
-	opts {}
-		.serverData{}              an object for caching fetch Promise 
-	*/
-	// path should be "path" but not "/path"
-	if (path[0] == '/') {
-		path = path.slice(1)
-	}
-
-	const jwt = sessionStorage.getItem('jwt')
-	if (jwt) {
-		if (!init.headers) {
-			init.headers = {}
-		}
-		init.headers.authorization = 'Bearer ' + jwt
-	}
-
-	let url = path
-	const host = sessionStorage.getItem('hostURL') || window.testHost || ''
-	if (host) {
-		// hostURL can end with / or not, must use 'host/path'
-		if (host.endsWith('/')) {
-			url = host + path
-		} else {
-			url = host + '/' + path
-		}
-	}
-
-	const dataName = url + ' | ' + init.method + ' | ' + init.body
-
-	if (opts.serverData) {
-		if (!(dataName in opts.serverData)) {
-			trackfetch(url, init)
-			opts.serverData[dataName] = fetch(url, init).then(data => {
-				if (fetchTimers[url]) {
-					clearTimeout(fetchTimers[url])
-				}
-				// stringify to not share parsed response object
-				// to-do: support opt.freeze to enforce Object.freeze(data.json())
-				const prom = data.text()
-				return prom
-			})
-		}
-
-		// manage the number of stored keys in serverData
-		const i = cachedServerDataKeys.indexOf(dataName)
-		if (i !== -1) cachedServerDataKeys.splice(i, 1)
-		cachedServerDataKeys.unshift(dataName)
-		if (cachedServerDataKeys.length > maxNumOfServerDataKeys) {
-			const oldestDataname = cachedServerDataKeys.pop()
-			delete opts.serverData[oldestDataname]
-		}
-
-		return opts.serverData[dataName].then(str => JSON.parse(str))
-	} else {
-		trackfetch(url, init)
-		return fetch(url, init).then(data => {
-			if (fetchTimers[url]) {
-				clearTimeout(fetchTimers[url])
-			}
-			return data.json()
-		})
-	}
-}
-
-const defaultServerDataCache = {}
-export function dofetch3(path, init = {}, opts = {}) {
-	/*
-		This is a convenience function that sets a default serverData object
-	*/
-	opts.serverData = defaultServerDataCache
-	return dofetch2(path, init, opts)
-}
-
-function trackfetch(url, arg) {
-	if (maxAcceptableFetchResponseTime < 1) return
-
-	// report slowness if the fetch does not respond
-	// within the acceptableResponseTime;
-	// if the server does respond in time,
-	// this timer will just be cleared by the
-	// fetch promise handler
-	if (
-		!fetchTimers[url] &&
-		!fetchReported[url] &&
-		Object.keys(fetchReported).length <= maxNumReportsPerSession &&
-		(window.location.hostname == 'proteinpaint.stjude.org' || sessionStorage.hostURL == 'proteinpaint.stjude.org')
-	) {
-		fetchTimers[url] = setTimeout(() => {
-			// do not send multiple reports for the same page
-			fetchReported[url] = 1
-
-			const opts = {
-				method: 'POST',
-				headers: {
-					'content-type': 'application/json'
-				},
-				body: JSON.stringify({
-					issue: 'slow response',
-					url, // server route
-					arg, // request body
-					page: window.location.href
-				})
-			}
-
-			fetch('https://pecan.stjude.cloud/api/issue-tracker', opts)
-		}, maxAcceptableFetchResponseTime)
-	}
-}
-
-export function may_get_locationsearch() {
-	if (!location.search) return
-	const h = new Map()
-	for (const tmp of decodeURIComponent(location.search.substr(1)).split('&')) {
-		const l = tmp.split('=')
-		const key = l[0].toLowerCase()
-		h.set(key, l[1] || 1)
-	}
-	return h
-}
-
 export function appear(d, display) {
 	d.style('opacity', 0)
 		.style('display', display || 'block')
@@ -441,276 +263,8 @@ export function disappear(d, remove) {
 		})
 }
 
-export class Menu {
-	constructor(arg = {}) {
-		this.typename = Math.random().toString()
-
-		const body = d3select(document.body)
-		this.d = body
-			.append('div')
-			.attr('class', 'sja_menu_div')
-			.style('display', 'none')
-			.style('position', 'absolute')
-			.style('background-color', 'white')
-			.style('font-family', font)
-			.on('mousedown.menu' + this.typename, () => {
-				/* 
-					When clicking on non-interactive elements within a menu, 
-					it should trigger other menus to be hidden. For example,
-					clicking on an empty spot in a parent menu should close 
-					any submenu that are open, which is done by allowing the 
-					mousedown event to propagate to the body (default behavior).
-				*/
-				const t = d3select(d3event.target)
-				if (
-					/*** 
-						NOTE on interactive menu elements: 
-						Any menu element (input, button, etc) that has event listeners
-					  is expected to handle that event, including possibly closing any
-					  associated menus, and thus no need to propagate the mousedown event 
-						to the document body
-					***/
-					t.on('mousedown') ||
-					t.on('click') ||
-					// also assume that the following elements have event listeners by default,
-					// so same logic of not wanting to propagate the event to the body
-					['INPUT', 'SELECT', 'TEXTAREA'].includes(d3event.target.tagName.toUpperCase())
-				) {
-					d3event.stopPropagation()
-				} /* else {
-					 // allow the bubbling of the mouse event to the document body
-				}*/
-			})
-
-		// detect if this menu is launched from within another menu
-		// (aka, the 'parent_menu'); this value may be empty (undefined, null)
-		// check if this.d isn't empty before assigning parent_menu
-		if (Object.values(this.d._groups[0]).length) this.d.node().parent_menu = arg.parent_menu
-
-		body.on('mousedown.menu' + this.typename, () => {
-			/*** 
-				Problem: A parent menu can close unexpectedly when clicking on a 
-				non-interactive submenu element, leaving its submenu still visible
-				but "floating" without context since its parent menu disappeared on 'body' click.
-
-				Solution: Do not hide a menu if it happens to be a parent of a clicked menu
-			***/
-			// when pressing the mouse cursor on the menu itself or any of its submenu, it should stay open
-			if (this.d.node().contains(d3event.target)) return
-			// this assumes that the mousedown occured on the menu holder itself (not any of its child elements)
-			if (d3event.target.parent_menu === this.d.node()) return
-			// detect in case the mousedown occurred on a menu's child element,
-			// in which case the menu's parent should still be not hidden
-			const menu = d3event.target.closest('.sja_menu_div')
-			if (menu && menu.parent_menu === this.d.node()) return
-			// close a menu for all other mousedown events outside of its own div or submenu
-			this.hide()
-		})
-
-		if (base_zindex) {
-			this.d.style('z-index', base_zindex + 1)
-		}
-
-		this.d.style('padding', 'padding' in arg ? arg.padding : '20px')
-		if (arg.border) {
-			this.d.style('border', arg.border)
-		} else {
-			this.d.style('box-shadow', '0px 2px 4px 1px #999')
-		}
-		this.offsetX = Number.isInteger(arg.offsetX) ? arg.offsetX : 20
-		this.offsetY = Number.isInteger(arg.offsetY) ? arg.offsetY : 20
-		// The hideXmute and hideYmute options would cancel tip hiding if the
-		// cursor's X,Y movement is less than the corresponding hide*mute value.
-		// This helps avoid flickering when the tooltip div blocks a stationary cursor,
-		// which trigers an unwanted mouseout of the element that triggered a mouseover.
-		// Also useful for decreasing the sensitivity of the mouseout behavior in general.
-		this.hideXmute = Number.isInteger(arg.hideXmute) ? arg.hideXmute : 0
-		this.hideYmute = Number.isInteger(arg.hideYmute) ? arg.hideYmute : 0
-		this.prevX = -1
-		this.prevY = -1
-		// string selector option to limit clear()/removal of elements
-		// so that other elements may persist within tip.d
-		this.clearSelector = arg.clearSelector
-	}
-
-	clear() {
-		if (this.clearSelector)
-			this.d
-				.select(this.clearSelector)
-				.selectAll('*')
-				.remove()
-		else this.d.selectAll('*').remove()
-		return this
-	}
-
-	show(x, y) {
-		this.prevX = x
-		this.prevY = y
-
-		// show around a given point
-		document.body.appendChild(this.d.node())
-
-		this.d.style('display', 'block')
-		const leftx = x + this.offsetX
-		const topy = y + this.offsetY
-		const p = this.d.node().getBoundingClientRect()
-
-		// x adjust
-		if (leftx + p.width > window.innerWidth) {
-			//if(window.innerWidth-x > p.width)
-			if (x > p.width) {
-				this.d.style('left', null).style('right', window.innerWidth - x - window.scrollX + this.offsetX + 'px')
-			} else {
-				// still apply 'left', shift to left instead
-				this.d.style('left', Math.max(0, window.innerWidth - p.width) + window.scrollX + 'px').style('right', null)
-			}
-		} else {
-			this.d.style('left', leftx + window.scrollX + 'px').style('right', null)
-		}
-
-		if (topy + p.height > window.innerHeight) {
-			//if(window.innerHeight-y > p.height)
-			if (y > p.height) {
-				this.d.style('top', null).style('bottom', window.innerHeight - y - window.scrollY + this.offsetY + 'px')
-			} else {
-				// still apply 'top', shift to top instead
-				this.d.style('top', Math.max(0, window.innerHeight - p.height) + window.scrollY + 'px').style('bottom', null)
-			}
-		} else {
-			this.d.style('top', topy + window.scrollY + 'px').style('bottom', null)
-		}
-
-		this.d.transition().style('opacity', 1)
-		return this
-	}
-
-	showunder(dom, yspace) {
-		// route to .show()
-		const p = dom.getBoundingClientRect()
-		return this.show(p.left - this.offsetX, p.top + p.height + (yspace || 5) - this.offsetY)
-
-		/*
-		this.d
-			.style('display','block')
-			.style('right',null)
-			.style('bottom',null)
-			.style('left', (p.left+window.scrollX)+'px')
-			.style('top',  (p.top + p.height + window.scrollY + (yspace || 5) )+'px' )
-			.transition().style('opacity',1)
-		return this
-		*/
-	}
-
-	showunderoffset(dom, yspace) {
-		// route to .show()
-		const p = dom.getBoundingClientRect()
-		return this.show(p.left, p.top + p.height + (yspace || 5))
-
-		/*
-		this.d
-			.style('display','block')
-			.style('right',null)
-			.style('bottom',null)
-			.style('left', (p.left+window.scrollX)+'px')
-			.style('top',  (p.top + p.height + window.scrollY + (yspace || 5) )+'px' )
-			.transition().style('opacity',1)
-		return this
-		*/
-	}
-
-	hide() {
-		if (d3event) {
-			// d3event can be undefined
-			// prevent flickering, decrease sensitivity of tooltip to movement on mouseout
-			if (
-				Math.abs(this.prevX - d3event.clientX) < this.hideXmute &&
-				Math.abs(this.prevY - d3event.clientY) < this.hideYmute
-			)
-				return
-		}
-		this.d.style('display', 'none').style('opacity', 0)
-		return this
-	}
-
-	fadeout() {
-		this.d
-			.transition()
-			.style('opacity', 0)
-			.on('end', () => this.d.style('display', 'none'))
-		return this
-	}
-
-	toggle() {
-		if (!this.hidden) {
-			this.hide()
-			this.hidden = true
-		} else {
-			this.d.style('opacity', 1).style('display', 'block')
-			this.hidden = false
-		}
-		return this
-	}
-}
-
 export const tip = new Menu({ padding: '' })
 tip.d.style('z-index', 1000)
-
-export function menushow(x, y, opts = {}) {
-	/********************* deprecated **********************/
-	console.log('client.menushow is deprecated')
-
-	d3selectAll('.sja_menu').remove()
-	d3selectAll('.sja_menu_persist').style('display', 'none')
-	let left = x + document.body.scrollLeft,
-		right = '',
-		top0 = y + document.body.scrollTop,
-		bottom = ''
-	x = document.body.clientWidth + document.body.scrollLeft - left
-	if (x < 200) {
-		left = ''
-	} else {
-		left = left + 'px'
-	}
-	y = document.body.clientHeight + document.body.scrollTop - top0
-	if (y < 200) {
-		top0 = ''
-		bottom = y - document.body.scrollTop + 40 + 'px'
-	} else {
-		top0 = top0 + 'px'
-	}
-	const body = d3select(document.body)
-	const menu = body
-		.append('div')
-		.attr('class', opts.persist ? 'sja_menu_persist' : 'sja_menu')
-		.on('mouseover', () => body.on('mousedown', null))
-		.on('mouseout', () => body.on('mousedown', menuhide))
-	menu
-		.style('left', left)
-		.style('top', top0)
-		.style('right', right)
-		.style('bottom', bottom)
-		.style('display', 'block')
-	body.on('mousedown', menuhide)
-	function menuhide() {
-		if (opts.persist) {
-			menu.style('display', 'none')
-		} else {
-			menu.remove()
-			body.on('mousedown', null)
-		}
-	}
-	menu.show = function() {
-		d3selectAll('.sja_menu').remove()
-		d3selectAll('.sja_menu_persist').style('display', 'none')
-		if (menu) menu.style('display', 'block')
-	}
-	return menu
-}
-
-export function menuunderdom(d, opts = {}) {
-	const p = d.getBoundingClientRect()
-	return menushow(p.left, p.top + p.height + 3, opts)
-}
 
 export function sayerror(holder, msg) {
 	const div = holder.append('div').attr('class', 'sja_errorbar')
@@ -1273,63 +827,6 @@ export function sketchProtein(holder, gm, pxwidth) {
 		)
 }
 
-export function make_table_2col(holder, data, overlen) {
-	const color = '#9e9e9e'
-	const table = holder
-		.append('table')
-		.style('margin', '5px 8px')
-		.style('font-size', 'inherit')
-		.attr('class', 'sja_simpletable')
-	for (const i of data) {
-		const tr = table.append('tr')
-		if (i.kvlst) {
-			tr.append('td')
-				.attr('rowspan', i.kvlst.length)
-				.style('padding', '3px')
-				.style('color', color)
-				.html(i.k)
-			tr.append('td')
-				.style('padding', '3px')
-				.style('color', color)
-				.html(i.kvlst[0].k)
-			tr.append('td')
-				.style('padding', '3px')
-				.html(i.kvlst[0].v)
-			for (let j = 1; j < i.kvlst.length; j++) {
-				const tr2 = table.append('tr')
-				tr2
-					.append('td')
-					.style('padding', '3px')
-					.style('color', color)
-					.html(i.kvlst[j].k)
-				tr2
-					.append('td')
-					.style('padding', '3px')
-					.html(i.kvlst[j].v)
-			}
-		} else {
-			tr.append('td')
-				.attr('colspan', 2)
-				.style('padding', '3px')
-				.style('color', color)
-				.html(i.k)
-			const td = tr.append('td').style('padding', '3px')
-			if (overlen && i.v.length > overlen) {
-				td.html(i.v.substr(0, overlen - 3) + ' ...&raquo;')
-					.attr('class', 'sja_clbtext')
-					.on('click', () => {
-						td.html(i.v)
-							.classed('sja_clbtext', false)
-							.on('click', null)
-					})
-			} else {
-				td.html(i.v)
-			}
-		}
-	}
-	return table
-}
-
 export function newpane3(x, y, genomes) {
 	const pane = newpane({ x: x, y: y })
 	const inputdiv = pane.body.append('div').style('margin', '40px 20px 20px 20px')
@@ -1343,73 +840,6 @@ export function newpane3(x, y, genomes) {
 	const saydiv = pane.body.append('div').style('margin', '10px 20px')
 	const visualdiv = pane.body.append('div').style('margin', '20px')
 	return [pane, inputdiv, gselect.node(), filediv, saydiv, visualdiv]
-}
-
-export function renderSandboxFormDiv(holder, genomes) {
-	const inputdiv = holder.append('div').style('margin', '40px 20px 20px 20px')
-	const p = inputdiv.append('p')
-	p.append('span').html('Genome&nbsp;')
-	const gselect = p.append('select')
-	for (const n in genomes) {
-		gselect.append('option').text(n)
-	}
-	const filediv = inputdiv.append('div').style('margin', '20px 0px')
-	const saydiv = holder.append('div').style('margin', '10px 20px')
-	const visualdiv = holder.append('div').style('margin', '20px')
-	return [inputdiv, gselect.node(), filediv, saydiv, visualdiv]
-}
-
-export function newSandboxDiv(sandbox_holder) {
-	// const sandbox_holder = d3select('#pp_sandbox')
-	const app_div = sandbox_holder.insert('div', ':first-child')
-	const header_row = app_div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin', '5px 10px')
-		.style('padding-right', '8px')
-		.style('margin-bottom', '0px')
-		.style('box-shadow', '2px 0px 2px #f2f2f2')
-		.style('border-radius', '5px 5px 0 0')
-		.style('background-color', '#f2f2f2')
-		.style('width', '95vw')
-
-	// close_btn
-	header_row
-		.append('div')
-		.style('display', 'inline-block')
-		.attr('class', 'sja_menuoption')
-		.style('cursor', 'default')
-		.style('padding', '4px 10px')
-		.style('margin', '0px')
-		.style('border-right', 'solid 2px white')
-		.style('border-radius', '5px 0 0 0')
-		.style('font-size', '1.5em')
-		.html('&times;')
-		.on('mousedown', () => {
-			document.body.dispatchEvent(new Event('mousedown'))
-			d3event.stopPropagation()
-		})
-		.on('click', () => {
-			app_div.selectAll('*').remove()
-		})
-
-	const header = header_row
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding', '5px 10px')
-
-	const body = app_div
-		.append('div')
-		.style('margin', '5px 10px')
-		.style('margin-top', '0px')
-		.style('padding-right', '8px')
-		.style('display', 'inline-block')
-		.style('box-shadow', '2px 2px 10px #f2f2f2')
-		.style('border-top', 'solid 1px white')
-		.style('border-radius', '0  0 5px 5px')
-		.style('width', '95vw')
-
-	return { header, body }
 }
 
 export function to_svg(svg, name, opts = {}) {
@@ -1576,6 +1006,9 @@ export function category2legend(categories, holder) {
 }
 
 export function bulk_badline(header, lines) {
+	// surpress warnings on selected sites
+	if (window.location.hostname == 'viz.stjude.cloud') return
+
 	const np = newpane({ x: 400, y: 60 })
 	np.body.style('margin', '20px 10px 10px 10px')
 	np.header.text(lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' rejected, click to check')
@@ -1791,21 +1224,24 @@ export function mclasscolor2table(table, snvonly) {
 		.text('LABEL, COLOR')
 	for (const k in common.mclass) {
 		const c = common.mclass[k]
-		if (snvonly) {
-			if (c.dt != common.dtsnvindel) {
-				continue
-			}
-		}
+		if (snvonly && c.dt != common.dtsnvindel) continue
+
+		// Blank class color is white
+
 		const tr = table.append('tr')
 		tr.append('td').text(k)
-		tr.append('td')
-			.append('span')
-			.attr('class', 'sja_mcdot')
-			.style('background-color', c.color)
-			.html('&nbsp;&nbsp;')
+		{
+			const dot = tr
+				.append('td')
+				.append('span')
+				.attr('class', 'sja_mcdot')
+				.style('background-color', c.color)
+				.html('&nbsp;&nbsp;')
+			if (k == 'Blank') dot.style('border', 'solid 1px #eee')
+		}
 		tr.append('td')
 			.text(c.label)
-			.style('color', c.color)
+			.style('color', k == 'Blank' ? '#ddd' : c.color)
 	}
 }
 
@@ -1823,16 +1259,6 @@ export const bwSetting = {
 	usedotplot: 10,
 	usedividefactor: 11,
 	nodividefactor: 12
-}
-
-export function first_genetrack_tolist(genome, lst) {
-	if (!genome.tracks) return
-	for (const t of genome.tracks) {
-		if (t.__isgene) {
-			lst.push(t)
-			return
-		}
-	}
 }
 
 export function tkexists(t, tklst) {
@@ -1892,23 +1318,27 @@ export function keyupEnter() {
 	return d3event.code == 'Enter' || d3event.code == 'NumpadEnter'
 }
 
-export function may_findmatchingsnp(chr, poslst, genome) {
+export function may_findmatchingsnp(chr, poslst, genome, alleleLst) {
 	/*
-chr: string
+chr: string, required
 poslst[]
 	int, or {start, stop}
-genome{ name }
+	required
+genome{ name }, required
+alleleLst[], optional
 */
 	if (!genome || !genome.hasSNP) return
 	const p = {
+		byCoord: true,
 		genome: genome.name,
 		chr: chr,
-		ranges: []
+		ranges: [],
+		alleleLst
 	}
 	for (const i of poslst) {
 		if (Number.isFinite(i)) {
 			p.ranges.push({ start: i, stop: i + 1 })
-		} else if (i.start & i.stop) {
+		} else if (i.start && i.stop) {
 			p.ranges.push(i)
 		}
 	}
@@ -1922,19 +1352,12 @@ export function snp_printhtml(m, d) {
 	/*
 m{}
 	.name
-	.class
 	.observed
 */
 	d.append('a')
 		.text(m.name)
 		.attr('href', 'https://www.ncbi.nlm.nih.gov/snp/' + m.name)
 		.attr('target', '_blank')
-	d.append('div')
-		.attr('class', 'sja_tinylogo_body')
-		.text(m.class)
-	d.append('div')
-		.attr('class', 'sja_tinylogo_head')
-		.text('CLASS')
 	d.append('div')
 		.attr('class', 'sja_tinylogo_body')
 		.text(m.observed)
@@ -2006,7 +1429,7 @@ export function gmlst2loci(gmlst) {
 	return locs
 }
 
-export function tab2box(holder, tabs, runall) {
+export function tab2box(holder, tabs, runall, tabheader) {
 	/*
 tabs[ tab{} ]
 	.label:
@@ -2031,6 +1454,17 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 		.style('vertical-align', 'top')
 		.style('border-left', 'solid 1px #aaa')
 		.style('padding', '10px')
+	const has_acitve_tab = tabs.findIndex(t => t.active) == -1 ? false : true
+
+	if (tabheader) {
+		const tHeader = tdleft
+			.append('div')
+			.style('padding', '5px 10px')
+			.style('margin', '5px 5px 10px 5px')
+			.style('font-weight', '550')
+			.text(tabheader)
+	}
+
 	for (let i = 0; i < tabs.length; i++) {
 		const tab = tabs[i]
 
@@ -2039,18 +1473,19 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 			.style('padding', '5px 10px')
 			.style('margin', '0px')
 			.style('border-top', 'solid 1px #ddd')
-			.classed('sja_menuoption', i != 0)
+			.classed('sja_menuoption', !has_acitve_tab && i != 0)
 			.html(tab.label)
 
 		tab.box = tdright
 			.append('div')
 			.style('padding', '3px')
-			.style('display', i == 0 ? 'block' : 'none')
+			.style('display', (!has_acitve_tab && i == 0) || tab.active ? 'block' : 'none')
 
-		if ((runall && tab.callback) || (i == 0 && tab.callback)) {
+		if ((runall && tab.callback) || (!has_acitve_tab && i == 0 && tab.callback) || tab.active) {
 			tab.callback(tab.box)
 			delete tab.callback
 		}
+		if (has_acitve_tab) tab.tab.classed('sja_menuoption', !tab.active)
 
 		tab.tab.on('click', () => {
 			if (tab.box.style('display') != 'none') {
@@ -2079,14 +1514,4 @@ export function tab_wait(d) {
 		.append('div')
 		.style('margin', '30px')
 		.text('Loading...')
-}
-
-export function add_scriptTag(path) {
-	// path like /static/js/three.js, must begin with /
-	return new Promise((resolve, reject) => {
-		const script = document.createElement('script')
-		script.setAttribute('src', sessionStorage.getItem('hostURL') + path)
-		document.head.appendChild(script)
-		script.onload = resolve
-	})
 }

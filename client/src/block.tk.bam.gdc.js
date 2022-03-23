@@ -1,39 +1,81 @@
 import { event as d3event } from 'd3-selection'
 import { debounce } from 'debounce'
-import * as client from './client'
+import { dofetch3 } from './common/dofetch'
+import { sayerror } from './dom/error'
+import { first_genetrack_tolist } from './common/1stGenetk'
 import { contigNameNoChr2 } from '../shared/common'
-import { url2map } from './app.parseurl'
+import urlmap from './common/urlmap'
+import { addGeneSearchbox } from './dom/genesearch'
+import { Menu } from './dom/menu'
+import { init_tabs } from './dom/toggleButtons'
 
-/* args required to generate bam track
-    gdc_args = 
-    {
-        gdc_token: <string>,
-        // either postion or variant is required
-        position: chr:start-stop <string>,
-        variant: chr.pos.ref.mut <string>, 
-        bam_files: [
-            {
-                file_id: file uuid from gdc <string>,
-                track_name: used for naming of track <string> //optional
-            }, 
-            {} ..
-        ]
-    }
+/*
+*********** gdc_args{}
+gdc_args {}
+	gdc_token: <string>,
+	bam_files: [ {} ]
+		file_id: file uuid from gdc <string>,
+		track_name: used for naming of track <string> //optional
+		about:[] // with keys corresponding to baminfo_rows[]
+	case_id: <string>
+	useSsmOrGene: 'ssm' or 'gene'
+		identifies the choice of the SSM/Gene toggle button
+		if value is ssm, will use ssmInput; otherwise check coordInput
+	ssmInput:{}
+		chr, pos, ref, alt
+	coordInput:{}
+		output obj from genesearch
+# after validation, create position or variant used for launching tk
+	position: {chr,start,stop}
+	variant: {chr,pos,ref,alt}
+
+changes to UI <input> are stored on this object
+and is validated in validateInputs{}
+
+************ functions
+makeTokenInput
+makeGdcIDinput
+	gdc_search
+		searchSSM
+	update_singlefile_table
+	update_multifile_table
+makeGeneSearch
+	makeInstruction
+makeSubmit
+	validateInputs
+	renderBamSlice
 */
 
-export function bamsliceui(genomes, holder, hosturl) {
-	let gdc_args = {
-		bam_files: []
-	}
-	const default_genome = 'hg38'
+const gdc_genome = 'hg38'
+const variantFlankingSize = 60 // bp
+const baminfo_rows = [
+	{ title: 'Entity ID', key: 'entity_id' },
+	{ title: 'Entity Type', key: 'entity_type' },
+	{ title: 'Experimental Strategy', key: 'experimental_strategy' },
+	{ title: 'Sample Type', key: 'sample_type' },
+	{ title: 'Size', key: 'file_size' }
+]
 
-	const saydiv = holder.append('div').style('margin', '10px 20px')
-	const visualdiv = holder.append('div').style('margin', '20px')
+export async function bamsliceui(genomes, holder) {
+	const genome = genomes[gdc_genome]
+	if (!genome) throw 'missing genome for ' + gdc_genome
 
+	// central obj, see comments on top
+	const gdc_args = { bam_files: [] }
+	const tip = new Menu({ padding: '' })
+
+	// fill from url for quick testing: ?gdc_id=TCGA-44-6147&gdc_pos=chr9:5064699-5065299
+	// unable to autoload toke file this way
+	const urlp = urlmap()
+
+	/////////////////////////////////////////////////////
+	// there are 2 ui holders: formdiv and blockHolder
+	// formdiv collects multiple rows
+	// each row is for a ui input
+	// formdiv will be cleared upon submission
 	const formdiv = holder
 		.append('div')
 		.style('margin', '40px 20px 20px 20px')
-		.style('font-size', '.9em')
 		.style('display', 'grid')
 		.style('grid-template-columns', '150px auto')
 		.style('grid-template-rows', 'repeat(6, auto)')
@@ -41,355 +83,521 @@ export function bamsliceui(genomes, holder, hosturl) {
 		.style('align-items', 'center')
 		.style('justify-items', 'left')
 
-	function cmt(t, red) {
-		saydiv
-			.style('display', 'block')
-			.style('color', red ? 'red' : 'black')
-			.html(t)
-	}
+	// show block & bam tk
+	const blockHolder = holder.append('div').style('margin', '20px')
 
-	// token file upload
-	formdiv
-		.append('div')
-		.style('padding', '3px 10px')
-		.text('GDC Token file')
+	/////////////////////////////////////////////////////
+	// create UI components in formdiv
 
-	const upload_holder = formdiv.append('div')
-	const upload_div = upload_holder.append('div').style('display', 'inline-block')
+	// for showing err
+	const saydiv = formdiv.append('div').style('grid-column', 'span 2')
 
-	const fileui = () => {
-		upload_div.selectAll('*').remove()
+	// upload toke file
+	makeTokenInput()
 
-		const file_input = upload_div
+	// <input> to enter gdc id, and doms for display case/file info
+	makeGdcIDinput()
+
+	// make ssm/gene tab
+	// returned div are used by searchSSM()
+	const [ssmGeneHolder, ssmTab, ssmDiv] = await makeGeneSearch()
+
+	// submit button
+	makeSubmit()
+
+	//////////////////////// helper functions
+
+	function makeTokenInput() {
+		// col 1
+		formdiv
+			.append('div')
+			.style('padding', '3px 10px')
+			.text('GDC Token file')
+		// col 2
+		const upload_holder = formdiv.append('div')
+		const upload_div = upload_holder.append('div').style('display', 'inline-block')
+		const file_error_div = upload_holder
+			.append('div')
+			.style('display', 'none')
+			.style('padding', '2px 5px')
+		const input = upload_div
 			.append('input')
 			.attr('type', 'file')
 			.on('change', () => {
 				const file = d3event.target.files[0]
 				if (!file) {
-					fileui()
+					input.property('value', '')
 					return
 				}
 				if (!file.size) {
-					show_input_check(file_error_div, 'Invalid file ' + file.name)
-					fileui()
+					input.property('value', '')
+					show_input_check(file_error_div, 'Blank file ' + file.name)
 					return
 				}
 				const reader = new FileReader()
 				reader.onload = event => {
-					gdc_args['gdc_token'] = event.target.result.trim().split(/\r?\n/)[0]
+					const text = event.target.result.trim()
+					if (text.length < 100) {
+						input.property('value', '')
+						show_input_check(file_error_div, 'Does not look like a toke file (content too short)')
+						return
+					}
+					if (text.length > 1000) {
+						input.property('value', '')
+						show_input_check(file_error_div, 'Does not look like a toke file (content too long)')
+						return
+					}
+					gdc_args.gdc_token = text
 				}
 				reader.onerror = function() {
+					input.property('value', '')
 					show_input_check(file_error_div, 'Error reading file ' + file.name)
-					fileui()
 					return
 				}
 				show_input_check(file_error_div)
 				reader.readAsText(file, 'utf8')
 			})
 
-		setTimeout(() => file_input.node().focus(), 1100)
+		setTimeout(() => input.node().focus(), 1100)
 	}
 
-	fileui()
-
-	const file_error_div = upload_holder
-		.append('div')
-		.style('display', 'none')
-		.style('padding', '2px 5px')
-		.style('font-size', '90%')
-
-	formdiv
-		.append('div')
-		.style('padding', '3px 10px')
-		.text('GDC ID')
-
-	const gdcid_inputdiv = formdiv.append('div')
-
-	const gdcid_input = gdcid_inputdiv
-		.append('input')
-		.attr('size', 40)
-		.style('padding', '3px 10px')
-		.property('placeholder', 'File name / File UUID / Case ID / Case UUID')
-		.on('keyup', debounce(gdc_search, 100))
-
-	const gdc_loading = gdcid_inputdiv
-		.append('span')
-		.style('font-size', '90%')
-		.style('padding-left', '10px')
-		.style('color', '#999')
-		.style('display', 'none')
-		.html('loading...')
-
-	const gdcid_error_div = gdcid_inputdiv
-		.append('span')
-		.style('font-size', '90%')
-		.style('display', 'none')
-		.style('padding', '2px 5px')
-
-	async function gdc_search() {
-		const gdc_id = gdcid_input.property('value').trim()
-		if (!gdc_id.length) {
-			baminfo_div.style('display', 'none')
-			saydiv.style('display', 'none')
-			gdcid_error_div.style('display', 'none')
-			return
-		} else {
-			// disable input field and show 'loading...' until response returned from gdc api
-			gdcid_input.attr('disabled', 1)
-			gdc_loading.style('display', 'inline-block')
-		}
-		const bam_info = await client.dofetch2('gdcbam?gdc_id=' + gdc_id)
-		// enable input field and hide 'Loading...'
-		gdcid_input.attr('disabled', null)
-		gdc_loading.style('display', 'none')
-		gdc_args.bam_files = [] //empty bam_files array after each gdc api call
-		if (bam_info.error) {
-			show_input_check(gdcid_error_div, bam_info.error)
-			baminfo_div.style('display', 'none')
-		} else if (bam_info.is_file_uuid || bam_info.is_file_id) {
-			// update file id to be suppliled to gdc bam query
-			gdc_args.bam_files.push({ file_id: bam_info.is_file_uuid ? gdc_id : bam_info.file_metadata[0].file_uuid })
-			update_singlefile_table(bam_info.file_metadata)
-			show_input_check(gdcid_error_div)
-		} else if (bam_info.is_case_uuid || bam_info.is_case_id) {
-			update_multifile_table(bam_info.file_metadata)
-			show_input_check(gdcid_error_div)
-		}
-	}
-
-	const baminfo_div = formdiv
-		.append('div')
-		.style('grid-column', 'span 2')
-		.style('display', 'none')
-
-	const baminfo_table = baminfo_div
-		.append('div')
-		.style('display', 'grid')
-		.style('position', 'relative')
-		.style('margin-left', '10px')
-		.style('border-left', '1px solid #eee')
-		.style('grid-template-columns', '150px 300px')
-		.style('grid-template-rows', 'repeat(15, 20px)')
-		.style('align-items', 'center')
-		.style('justify-items', 'left')
-		.style('font-size', '.8em')
-
-	const bamselection_table = baminfo_div
-		.append('div')
-		.style('display', 'grid')
-		.style('position', 'relative')
-		.style('margin-left', '10px')
-		.style('padding', '10px')
-		.style('border-left', '1px solid #eee')
-		.style('grid-template-columns', '70px auto 100px 150px auto 100px')
-		.style('align-items', 'center')
-		.style('justify-items', 'left')
-		.style('font-size', '.8em')
-
-	const baminfo_rows = [
-		{ title: 'Entity ID', key: 'entity_id' },
-		{ title: 'Entity Type', key: 'entity_type' },
-		{ title: 'Experimental Strategy', key: 'experimental_strategy' },
-		{ title: 'Sample Type', key: 'sample_type' },
-		{ title: 'Size', key: 'file_size' }
-	]
-
-	const input_fields = [
-		{ title: 'Position', key: 'position', placeholder: 'chr:start-stop' },
-		{ title: 'Variant', key: 'variant', placeholder: 'chr.pos.refAllele.altAllele' }
-	]
-
-	const [position_input, variant_input] = makeFormInput(input_fields)
-
-	formdiv
-		.append('div')
-		.style('grid-column', 'span 2')
-		.style('opacity', 0.6).html(`<ul>
-			<li>All positions are hg38-based.</li>
-			<li>Either position or variant is required.</li>
-			<li>The BAM file will be sliced at the provided postion or variant and visualized.
-			To visualize reads from a new region, enter again from this form.</li>
-		</ul>`)
-
-	//submit button
-	const submit_btn_div = holder.append('div')
-
-	submit_btn_div
-		.append('button')
-		.style('font-size', '1.1em')
-		.style('margin', '20px')
-		.style('margin-left', '130px')
-		.text('submit')
-		.on('click', () => {
-			try {
-				validateInputs(gdc_args, genomes[default_genome])
-			} catch (e) {
-				cmt(e, 1)
-				return
-			}
-			// success
-			formdiv.remove()
-			saydiv.remove()
-			submit_btn_div.remove()
-			renderBamSlice(gdc_args, genomes[default_genome], visualdiv, hosturl)
-		})
-
-	function makeFormInput(fields) {
-		const inputs = []
-		for (const field of fields) {
-			formdiv
-				.append('div')
-				.style('padding', '3px 10px')
-				.text(field.title)
-
-			const input_div = formdiv.append('div').style('display', 'inline-block')
-
-			const input = input_div
-				.append('input')
-				.attr('size', field.size || 20)
-				.style('padding', '3px 10px')
-				.property('placeholder', field.placeholder || '')
-				.on('change', () => {
-					let input_str = input.property('value').trim()
-					const chr = input_str.split(/[:.>]/)[0]
-					if (!input_str.length) {
-						saydiv.style('display', 'none')
-						err_div.style('display', 'none')
-						return
-					}
-					const [nocount, hascount] = contigNameNoChr2(genomes[default_genome], [chr])
-					if (nocount + hascount == 0) {
-						const err_msg = 'chromosome is not valid: ' + chr
-						show_input_check(err_div, err_msg)
-					} else {
-						if (nocount) input_str = 'chr' + input_str
-						show_input_check(err_div)
-					}
-					gdc_args[field.key] = input_str
-				})
-			inputs.push(input)
-
-			const err_div = input_div
-				.append('div')
-				.style('display', 'none')
-				.style('padding', '2px 5px')
-				.style('font-size', '90%')
-		}
-		return inputs
-	}
-
-	function update_singlefile_table(bam_metadata) {
-		baminfo_table.selectAll('*').remove()
-		baminfo_div.style('display', 'block')
-		bamselection_table.style('display', 'none')
-
-		for (const bam_info of bam_metadata) {
-			// assign track name as entity_id
-			gdc_args.bam_files[0].track_name = bam_info.entity_id
-			for (const row of baminfo_rows) {
-				baminfo_table
-					.style('display', 'grid')
-					.append('div')
-					.style('padding', '3px 10px')
-					.style('font-weight', 'bold')
-					.text(row.title)
-
-				baminfo_table
-					.append('div')
-					.style('padding', '3px 10px')
-					.text(bam_info[row.key])
-			}
-		}
-
-		baminfo_table
-			.style('padding', '10px')
-			.style('height', '0')
-			.transition()
-			.duration(500)
-			.style('height', '100px')
-	}
-
-	function update_multifile_table(bam_files) {
-		bamselection_table.selectAll('*').remove()
-		baminfo_div.style('display', 'block')
-		baminfo_table.style('display', 'none')
-
-		bamselection_table
-			.style('display', 'grid')
-			.style('grid-template-rows', 'repeat(' + bam_files.length + ', 20px)')
+	function makeGdcIDinput() {
+		//////////////////////////
+		// row 1, for <input>
+		// col 1
+		formdiv
 			.append('div')
 			.style('padding', '3px 10px')
-			.style('font-weight', 'bold')
-			.text('Bam file')
+			.text('GDC ID')
 
-		for (const row of baminfo_rows) {
-			bamselection_table
-				.append('div')
-				.style('padding', '3px 10px')
-				.style('font-weight', 'bold')
-				.text(row.title)
-		}
+		// col 2
+		const gdcid_inputdiv = formdiv.append('div')
 
-		for (const bam_info of bam_files) {
-			const file_checkbox = bamselection_table
-				.append('div')
-				.append('input')
-				.style('padding', '3px 10px')
-				.style('margin-left', '25px')
-				.attr('type', 'checkbox')
-				.on('change', () => {
-					if (file_checkbox.node().checked) {
-						gdc_args.bam_files.push({
-							file_id: bam_info.file_uuid,
-							track_name: bam_info.sample_type + ', ' + bam_info.experimental_strategy + ', ' + bam_info.entity_id
-						})
-					} else {
-						// remove from array if checkbox unchecked
-						gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != bam_info.file_uuid)
-					}
-				})
-			for (const row of baminfo_rows) {
-				bamselection_table
-					.append('div')
-					.style('padding', '3px 10px')
-					.text(bam_info[row.key])
-			}
-		}
-
-		bamselection_table
-			.style('padding', '10px')
-			.style('height', '0')
-			.transition()
-			.duration(500)
-			.style('height', bam_files.length * 22 + 'px')
-	}
-
-	autofill_url()
-
-	function autofill_url() {
-		// autofill input fields if supplied from url
-		// format: ?gdc_id=<id>&gdc_pos=<coord>&gdc_var=<variant>
-		// example: ?gdc_id=TCGA-44-6147&gdc_pos=chr9:5064699-5065299
-		// Note: can't auto upload file for gdc_token provided from url,
-		// it's not possible because of security reason
-		const urlp = url2map()
-		if (urlp.has('gdc_id'))
+		const gdcid_input = gdcid_inputdiv
+			.append('input')
+			.attr('size', 40)
+			.style('padding', '3px 10px')
+			.property('placeholder', 'File name / File UUID / Case ID / Case UUID')
+			.on('keyup', debounce(gdc_search, 100))
+		if (urlp.has('gdc_id')) {
 			gdcid_input
 				.property('value', urlp.get('gdc_id'))
 				.node()
 				.dispatchEvent(new Event('keyup'))
+		}
 
-		if (urlp.has('gdc_pos'))
-			position_input
-				.property('value', urlp.get('gdc_pos'))
-				.node()
-				.dispatchEvent(new Event('change'))
-		else if (urlp.has('gdc_var'))
-			variant_input
-				.property('value', urlp.get('gdc_var'))
-				.node()
-				.dispatchEvent(new Event('change'))
+		const gdc_loading = gdcid_inputdiv
+			.append('span')
+			.style('padding-left', '10px')
+			.style('color', '#999')
+			.style('display', 'none')
+			.html('loading...')
+
+		const gdcid_error_div = gdcid_inputdiv
+			.append('span')
+			.style('display', 'none')
+			.style('padding', '2px 5px')
+
+		//////////////////////////
+		// row 2, to display details of case/file
+		const baminfo_div = formdiv
+			.append('div')
+			.style('grid-column', 'span 2')
+			.style('display', 'none')
+			.style('border-left', '1px solid #ccc')
+			.style('margin', '20px 20px 20px 40px')
+		// either baminfo_table or bamselection_table is displayed
+		// baminfo_table is a static table showing details about one bam file
+		// bamselection_table lists multiple bam files available from a sample, allowing user to select some forslicing
+		const baminfo_table = baminfo_div
+			.append('div')
+			.style('grid-template-columns', 'auto auto')
+			// Fix for autosizing table height. No need to repeat rows
+			// .style('grid-template-rows', 'repeat(15, 20px)')
+			.style('align-items', 'center')
+			.style('justify-items', 'left')
+
+		const bamselection_table = baminfo_div
+			.append('div')
+			.style('grid-template-columns', 'repeat(6, auto)')
+			.style('align-items', 'center')
+			.style('justify-items', 'left')
+
+		async function gdc_search() {
+			try {
+				const gdc_id = gdcid_input.property('value').trim()
+				if (!gdc_id.length) {
+					baminfo_div.style('display', 'none')
+					saydiv.style('display', 'none')
+					gdcid_error_div.style('display', 'none')
+					ssmGeneHolder.style('display', 'none')
+					return
+				}
+				// disable input field and show 'loading...' until response returned from gdc api
+				gdcid_input.attr('disabled', 1)
+				gdc_loading.style('display', 'inline-block')
+				const data = await dofetch3('gdcbam?gdc_id=' + gdc_id)
+				// enable input field and hide 'Loading...'
+				gdcid_input.attr('disabled', null)
+				gdc_loading.style('display', 'none')
+				gdc_args.bam_files = [] //empty bam_files array after each gdc api call
+				if (data.error) throw 'Error: ' + data.error
+				if (!Array.isArray(data.file_metadata)) throw 'Error: .file_metadata[] missing'
+				if (data.file_metadata.length == 0) throw 'No viewable BAM files found'
+				/*
+				in file_metadata[], each element is a bam file:
+				{
+					case_id: "9a2a226e-9605-4214-9320-469305e664e6"
+					entity_id: "TCGA-49-AARQ-11A-21D-A413-08"
+					entity_type: "aliquot"
+					experimental_strategy: "WXS"
+					file_size: "10.43 GB"
+					file_uuid: "f383b776-b162-4c61-909b-3b92d1853511"
+					sample_type: "Solid Tissue Normal"
+				}
+
+				record case_id for the found file
+				if the array has multiple files, all are from the same case
+				so the case_id should be the same for all files
+				*/
+				gdc_args.case_id = data.file_metadata[0].case_id
+				await searchSSM(gdc_args.case_id)
+
+				if (data.is_file_uuid || data.is_file_id) {
+					// matches with one bam file
+					// update file id to be supplied to gdc bam query
+					console.log(data)
+					update_singlefile_table(data, gdc_id)
+					show_input_check(gdcid_error_div)
+				} else if (data.is_case_uuid || data.is_case_id) {
+					// matches with multiple bam files from a case
+					update_multifile_table(data.file_metadata)
+					show_input_check(gdcid_error_div)
+				}
+			} catch (e) {
+				show_input_check(gdcid_error_div, e.message || e)
+				baminfo_div.style('display', 'none')
+			}
+		}
+		function update_singlefile_table(data, gdc_id) {
+			// will update table display, and also insert element into gdc_args.bam_files[]
+			baminfo_div.style('display', 'block')
+			baminfo_table
+				.style('display', 'grid')
+				.selectAll('*')
+				.remove()
+			bamselection_table.style('display', 'none')
+
+			const onebam = data.file_metadata[0]
+			const file = {
+				file_id: data.is_file_uuid ? gdc_id : onebam.file_uuid,
+				track_name: onebam.entity_id, // assign track name as entity_id
+				about: []
+			}
+			gdc_args.bam_files.push(file)
+
+			for (const row of baminfo_rows) {
+				baminfo_table
+					.append('div')
+					.style('padding', '3px 10px')
+					.text(row.title)
+					.style('opacity', 0.5)
+				const d = baminfo_table.append('div').style('padding', '3px 10px')
+				if (row.url) {
+					d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
+				} else {
+					d.text(onebam[row.key])
+				}
+				file.about.push({ k: row.title, v: onebam[row.key] })
+			}
+			baminfo_table
+				.style('height', '0')
+				.transition()
+				.duration(500)
+				// .style('height', '100px')
+				.style('height', 'auto')
+		}
+
+		function update_multifile_table(files) {
+			baminfo_div.style('display', 'block')
+			bamselection_table
+				.style('display', 'grid')
+				.selectAll('*')
+				.remove()
+			baminfo_table.style('display', 'none')
+
+			bamselection_table
+				.style('grid-template-rows', 'repeat(' + files.length + ', 20px)')
+				.append('div')
+				.style('padding', '3px 10px')
+				.text('Select')
+				.style('opacity', 0.5)
+
+			for (const row of baminfo_rows) {
+				bamselection_table
+					.append('div')
+					.style('padding', '3px 10px')
+					.text(row.title)
+					.style('opacity', 0.5)
+					.style('white-space', 'nowrap') //Fix for values overlapping on window resize
+			}
+
+			for (const onebam of files) {
+				const file_checkbox = bamselection_table
+					.append('div')
+					.append('input')
+					.style('padding', '3px 10px')
+					.style('margin-left', '25px')
+					.attr('type', 'checkbox')
+					.on('change', () => {
+						if (file_checkbox.node().checked) {
+							gdc_args.bam_files.push({
+								file_id: onebam.file_uuid,
+								track_name: onebam.sample_type + ', ' + onebam.experimental_strategy + ', ' + onebam.entity_id,
+								about: baminfo_rows.map(i => {
+									return { k: i.title, v: onebam[i.key] }
+								})
+							})
+						} else {
+							// remove from array if checkbox unchecked
+							gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != onebam.file_uuid)
+						}
+					})
+				for (const row of baminfo_rows) {
+					const d = bamselection_table
+						.append('div')
+						.style('padding', '3px 10px')
+						.style('white-space', 'nowrap') //Fix for values overlapping on window resize
+					if (row.url) {
+						d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
+					} else {
+						d.text(onebam[row.key])
+					}
+				}
+			}
+
+			bamselection_table
+				.style('height', '0')
+				.transition()
+				.duration(500)
+				.style('height', files.length * 24 + 'px')
+		}
 	}
+
+	async function makeGeneSearch() {
+		const holder = formdiv
+			.append('div')
+			.style('grid-column', 'span 2')
+			.style('padding', '3px 10px')
+			.style('display', 'none')
+
+		const tabOptions = {
+			holder,
+			tabs: [
+				{
+					width: 130,
+					label: 'Select SSM',
+					callback: () => {
+						gdc_args.useSsmOrGene = 'ssm'
+					}
+				},
+				{
+					label: 'Gene',
+					callback: () => {
+						gdc_args.useSsmOrGene = 'gene'
+					}
+				}
+			]
+		}
+
+		await init_tabs(tabOptions)
+
+		// argument for making search box
+		// gene searchbox is created in 2nd tab holder
+		const geneHolder = tabOptions.tabs[1].holder.style('padding', '10px')
+		const opt = {
+			genome,
+			tip,
+			row: geneHolder,
+			allowVariant: true
+		}
+		if (urlp.has('gdc_pos')) {
+			const t = urlp.get('gdc_pos').split(/[:\-]/)
+			if (t.length == 3) {
+				opt.defaultCoord = {
+					chr: t[0],
+					start: Number(t[1]),
+					stop: Number(t[2])
+				}
+			}
+		} else if (urlp.has('gdc_var')) {
+			const t = urlp.get('gdc_var').split('.')
+			if (t.length == 4) {
+				opt.defaultCoord = {
+					isVariant: true,
+					chr: t[0],
+					pos: Number(t[1]),
+					ref: t[2],
+					alt: t[3]
+				}
+			}
+		}
+		gdc_args.coordInput = addGeneSearchbox(opt)
+		makeInstruction(geneHolder)
+
+		const ssmTab = tabOptions.tabs[0].tab
+		const ssmDiv = tabOptions.tabs[0].holder
+			.append('div')
+			.style('display', 'grid')
+			.style('grid-template-columns', 'repeat(auto-fit, 1fr)')
+			.style('overflow-y', 'auto')
+			.style('max-height', '30vw')
+		return [holder, ssmTab, ssmDiv]
+	}
+
+	async function searchSSM(case_id) {
+		// got case, turn on div and search for ssm
+		delete gdc_args.ssmInput
+		ssmGeneHolder.style('display', 'block')
+		ssmDiv.selectAll('*').remove()
+		ssmTab.text('Loading')
+		const data = await dofetch3(`gdc_ssms?case_id=${case_id}&genome=${gdc_genome}`)
+		if (data.error) throw data.error
+		if (data.mlst.length == 0) {
+			// clear holder
+			ssmTab.text('No mutation')
+			return
+		}
+		// found ssms, display
+		ssmTab.text(`${data.mlst.length} mutation${data.mlst.length > 1 ? 's' : ''}`)
+
+		function addRow() {
+			// Creates the rows with the positions 'fixed'
+			// Use rows for event listeners
+			const row = ssmDiv
+				.append('div')
+				.style('display', 'grid')
+				.style('grid-template-columns', '2vw minmax(8vw,10vw) minmax(10vw,15vw) minmax(10vw,15vw) minmax(10vw,15vw)')
+				.style('gap', '5px')
+				.style('padding', '0.3em')
+				.style('align-items', 'center')
+				.style('justify-content', 'left')
+			return row
+		}
+
+		// header
+		{
+			const row = addRow()
+			row
+				.style('position', 'sticky')
+				.style('background-color', 'white')
+				.style('top', '0')
+			for (const h of ['', 'Gene', 'AAChange', 'Consequence', 'Position']) {
+				row
+					.append('div')
+					.style('top', '0')
+					.style('opacity', 0.3)
+					.text(h)
+			}
+		}
+
+		// group by gene
+		const gene2mlst = new Map()
+		for (const m of data.mlst) {
+			if (!gene2mlst.has(m.gene)) gene2mlst.set(m.gene, [])
+			gene2mlst.get(m.gene).push(m)
+		}
+
+		let i = 1
+		for (const [gene, mlst] of gene2mlst) {
+			let first = true
+			for (const m of mlst) {
+				m.row = addRow()
+				m.row
+					.append('div')
+					.text(i++)
+					.style('font-size', '.7em')
+					.style('color', '#b0aeae') //Fix for numbers appearing over sticky header
+				m.row
+					.append('div')
+					.text(first ? gene : '')
+					.style('font-style', 'italic')
+					.style('white-space', 'nowrap') //Fix for value overlapping position on small screen
+					.style('overflow', 'hidden')
+					.style('text-overflow', 'ellipsis')
+				m.row
+					.append('div')
+					.style('white-space', 'nowrap') //Fix for value overlapping consequence on small screen
+					.style('overflow', 'hidden')
+					.style('text-overflow', 'ellipsis')
+					.text(m.mname)
+				m.row
+					.append('div')
+					.text(m.consequence)
+					.style('font-size', '.8em')
+					.style('white-space', 'nowrap') //Fix for value overlapping position on small screen
+					.style('overflow', 'hidden')
+					.style('text-overflow', 'ellipsis')
+				m.row
+					.append('div')
+					.style('font-size', '.8em')
+					.style('color', '#b0aeae') //Fix for numbers appearing over sticky header
+					.text(m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt)
+				first = false
+
+				m.row.on('mouseover', () => {
+					if (!m.isClicked) m.row.style('background-color', '#fffce3')
+				})
+				m.row.on('mouseout', () => {
+					if (!m.isClicked) m.row.style('background-color', '')
+				})
+				m.row.on('click', () => {
+					for (const m2 of data.mlst) {
+						m2.isClicked = false
+						m2.row.style('background-color', '')
+					}
+					m.isClicked = true
+					m.row.style('background-color', '#ffe3e4')
+					gdc_args.ssmInput = {
+						chr: m.chr,
+						pos: m.pos - 1, // convert 1-based to 0-based
+						ref: m.ref,
+						alt: m.alt
+					}
+				})
+			}
+		}
+	}
+	function makeSubmit() {
+		formdiv
+			.append('div')
+			.style('grid-column', 'span 2')
+			.append('button')
+			.style('margin', '20px 20px 20px 100px')
+			.style('padding', '5px 15px')
+			.style('border-radius', '15px')
+			.text('Submit')
+			.on('click', () => {
+				try {
+					validateInputs(gdc_args, genome)
+				} catch (e) {
+					sayerror(saydiv, e.message || e)
+					if (e.stack) console.log(e.stack)
+					return
+				}
+				// success
+				formdiv.remove()
+				renderBamSlice(gdc_args, genome, blockHolder)
+			})
+	}
+}
+
+function makeInstruction(d) {
+	d.append('div').style('opacity', 0.6).html(`<ul>
+			<li>All positions are on hg38 and 1-based.</li>
+			<li>The BAM file will be sliced at the provided postion or variant and visualized.
+			To visualize reads from a new region, enter again from this form.</li>
+		</ul>`)
 }
 
 function show_input_check(holder, error_msg) {
@@ -401,75 +609,85 @@ function show_input_check(holder, error_msg) {
 		.html(error_msg ? '&#10060; ' + error_msg : '&#10003;')
 }
 
-function validateInputs(obj, genome) {
-	if (!obj) throw 'no parameters passing to validate'
-	if (!obj.gdc_token) throw 'gdc token missing'
-	if (typeof obj.gdc_token !== 'string') throw 'gdc token is not string'
-	if (!obj.bam_files.length) throw 'no bam file supplied'
-	for (const file of obj.bam_files) {
+function validateInputs(args, genome) {
+	if (!args.gdc_token) throw 'GDC token missing'
+	if (typeof args.gdc_token !== 'string') throw 'GDC token is not string'
+	if (!args.bam_files.length) throw 'no bam file supplied'
+	for (const file of args.bam_files) {
 		if (!file.file_id) throw ' file uuid is missing'
 		if (typeof file.file_id !== 'string') throw 'file uuid is not string'
 	}
-	if (!obj.position && !obj.variant) throw ' position or variant is required'
-	if (obj.position && typeof obj.position !== 'string') throw 'position is not string'
-	if (obj.variant && typeof obj.variant !== 'string') throw 'Varitent is not string'
 
-	const chr = (obj.position || obj.variant).split(/[:.>]/)[0]
-	const [nocount, hascount] = contigNameNoChr2(genome, [chr])
-	if (nocount + hascount == 0) throw 'chromosome is not valid in position/variant input: ' + chr
-	else if (nocount) {
-		// add chr to non-standard position or variant
-		if (obj.position) obj.position = 'chr' + obj.position
-		if (obj.variant) obj.variant = 'chr' + obj.variant
+	if (args.useSsmOrGene == 'ssm') {
+		const s = args.ssmInput
+		if (!s) throw 'No mutation selected'
+		if (!s.chr) throw 'ssmInput.chr missing'
+		if (!Number.isInteger(s.pos)) throw 'ssmInput.pos not integer'
+		if (!s.ref) throw 'ssmInput.ref missing'
+		if (!s.alt) throw 'ssmInput.alt missing'
+		args.variant = s
+		return
+	}
+	// using coordInput
+	const ci = args.coordInput
+	if (!ci.chr) throw 'No valid position or variant was entered'
+	const [nocount, hascount] = contigNameNoChr2(genome, [ci.chr])
+	if (nocount + hascount == 0) throw 'Invalid chromosome name: ' + ci.chr
+	const chr = nocount ? 'chr' + ci.chr : ci.chr
+	if (Number.isInteger(ci.pos)) {
+		// is variant
+		if (!ci.ref) throw 'Reference allele missing from variant string'
+		if (!ci.alt) throw 'Alternative allele missing from variant string'
+		args.variant = {
+			chr,
+			pos: ci.pos - 1, // convert 1-based to 0-based
+			ref: ci.ref,
+			alt: ci.alt
+		}
+	} else {
+		// is range
+		if (!Number.isInteger(ci.start) || !Number.isInteger(ci.stop)) throw 'non-integer start/stop'
+		args.position = {
+			chr,
+			start: ci.start,
+			stop: ci.stop
+		}
 	}
 }
 
-function renderBamSlice(args, genome, holder, hostURL) {
+function renderBamSlice(args, genome, holder) {
 	// create arg for block init
 	const par = {
-		hostURL,
 		nobox: 1,
 		genome,
 		holder
 	}
-	let variant
 	if (args.position) {
-		const pos_str = args.position.split(/[:-]/)
-		par.chr = pos_str[0]
-		par.start = Number.parseInt(pos_str[1])
-		par.stop = Number.parseInt(pos_str[2])
+		par.chr = args.position.chr
+		par.start = args.position.start
+		par.stop = args.position.stop
 	} else if (args.variant) {
-		// TODO: identify and support GDC variant format e.g. chr19:g.7612022C>T
-		// solution: arg.variant.split(/[:.>]|del|dup|ins|inv|con|ext/)
-		const variant_str = args.variant.split(/[:.>]/)
-		variant = {
-			chr: variant_str[0],
-			pos: Number.parseInt(variant_str[1]),
-			ref: variant_str[2],
-			alt: variant_str[3]
-		}
-		par.chr = variant.chr
-		par.start = variant.pos - 500
-		par.stop = variant.pos + 500
+		par.chr = args.variant.chr
+		par.start = args.variant.pos - variantFlankingSize
+		par.stop = args.variant.pos + variantFlankingSize
 	}
 
 	par.tklst = []
 	for (const file of args.bam_files) {
 		const tk = {
-			type: client.tkt.bam,
+			type: 'bam',
 			name: file.track_name || 'sample bam slice',
-			gdc: args.gdc_token,
+			gdcToken: args.gdc_token,
 			gdc_file: file.file_id,
 			downloadgdc: 1,
-			file: 'dummy_str'
+			aboutThisFile: file.about
 		}
 		if (args.variant) {
-			tk.variants = []
-			tk.variants.push(variant)
+			tk.variants = [args.variant]
 		}
 		par.tklst.push(tk)
 	}
-	client.first_genetrack_tolist(genome, par.tklst)
+	first_genetrack_tolist(genome, par.tklst)
 	import('./block').then(b => {
 		new b.Block(par)
 	})

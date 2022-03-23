@@ -3,7 +3,6 @@ import { select, selectAll, event } from 'd3-selection'
 import { dofetch3, sayerror } from '../client'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
-import { plotConfig } from './plot'
 import { graphable } from '../common/termutils'
 
 /*
@@ -25,25 +24,30 @@ allow to search categories, e.g. hodgkin lymphoma from diaggrp, how to act upon 
  */
 
 class TermSearch {
-	constructor(app, opts) {
+	constructor(opts) {
 		this.type = 'search'
-		this.opts = opts
-		this.api = rx.getComponentApi(this)
-		this.app = app
+		// currently postSearch is only used for testing
+		this.customEvents = ['postSearch']
+		// set this.id, .app, .opts, .api
+		rx.prepComponent(this, opts)
 		setRenderers(this)
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }
 		this.initUI()
-		this.eventTypes = ['postInit', 'postRender', 'postSearch']
-		// currently postSearch is only used for testing
+	}
+
+	async init() {
+		this.state = this.getState(this.app.getState())
 	}
 
 	reactsTo(action) {
-		return action.type.startsWith('search') || action.type.startsWith('cohort')
+		const prefix = action.type.split('_')[0]
+		return ['search', 'cohort', 'submenu'].includes(prefix)
 	}
 
 	getState(appState) {
 		return {
+			isVisible: !appState.submenu.term,
 			cohortStr:
 				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
 					? ''
@@ -52,8 +56,14 @@ class TermSearch {
 							.sort()
 							.join(','),
 			expandedTermIds: appState.tree.expandedTermIds,
-			plots: appState.tree.plots
+			exclude_types: appState.tree.exclude_types || [],
+			search: appState.search
 		}
+	}
+
+	async main() {
+		// show/hide search input from the tree
+		this.dom.holder.style('display', this.state.isVisible ? 'block' : 'none')
 	}
 
 	async doSearch(str) {
@@ -62,8 +72,7 @@ class TermSearch {
 			this.bus.emit('postSearch', [])
 			return
 		}
-
-		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr)
+		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr, this.state.exclude_types)
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()
 		} else {
@@ -78,13 +87,15 @@ export const searchInit = rx.getInitFxn(TermSearch)
 
 function setRenderers(self) {
 	self.initUI = () => {
+		self.dom.holder.style('display', self.search && self.search.isVisible == false ? 'none' : 'block')
 		self.dom.input = self.dom.holder
-			.style('text-align', 'center')
+			.style('text-align', 'left')
 			.append('input')
 			.attr('type', 'search')
 			.attr('class', 'tree_search')
 			.attr('placeholder', 'Search')
 			.style('width', '180px')
+			.style('margin', '10px')
 			.style('display', 'block')
 			.on('input', debounce(self.onInput, 300))
 
@@ -103,6 +114,11 @@ function setRenderers(self) {
 			.style('opacity', 0.5)
 	}
 	self.showTerms = data => {
+		// add disabled terms to opts.disable_terms
+		if (self.opts.disable_terms)
+			data.lst.forEach(t => {
+				if (t.disabled) self.opts.disable_terms.push(t.id)
+			})
 		self.clear()
 		self.dom.resultDiv
 			.append('table')
@@ -143,6 +159,16 @@ function setRenderers(self) {
 						self.dom.input.property('value', '')
 					})
 			}
+			//show sample count for a term
+			if (term.samplecount !== undefined) {
+				tr.append('td')
+					.append('div')
+					.style('font-size', '.8em')
+					.style('display', 'inline-block')
+					.style('margin-left', '5px')
+					.style('color', term.samplecount ? '#777' : '#ddd')
+					.text('n=' + term.samplecount)
+			}
 		} else {
 			// as regular button, click to expand tree
 			button.attr('class', 'sja_menuoption').on('click', () => {
@@ -152,33 +178,18 @@ function setRenderers(self) {
 				if (term.__ancestors) {
 					expandedTermIds.push(...term.__ancestors)
 				}
-				const plots = self.app.getState().tree.plots
-				if (graphable(term)) {
-					self.app.dispatch({
-						type: 'app_refresh',
-						state: {
-							tree: {
-								expandedTermIds,
-								visiblePlotIds: [term.id],
-								plots: {
-									[term.id]:
-										term.id in plots ? JSON.parse(JSON.stringify(plots[term.id])) : plotConfig({ term: { term } })
-								}
-							}
-						}
-					})
-				} else {
-					self.app.dispatch({
-						type: 'app_refresh',
-						state: {
-							tree: { expandedTermIds }
-						}
-					})
-				}
+				// pre-expand non-selectable parent term
+				if (!graphable(term)) expandedTermIds.push(term.id)
+				self.app.dispatch({
+					type: 'app_refresh',
+					state: {
+						tree: { expandedTermIds }
+					}
+				})
 			})
 		}
 		tr.append('td')
-			.text((term.__ancestors || []).join(' > '))
+			.text((term.__ancestorNames || []).join(' > '))
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
 	}

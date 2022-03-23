@@ -1,6 +1,15 @@
 const nodeExternals = require('webpack-node-externals')
 const webpack = require('webpack')
 const path = require('path')
+const fs = require('fs')
+
+let babelrc
+try {
+	babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
+	babelrc = JSON.parse(babelrc)
+} catch (e) {
+	throw e
+}
 
 module.exports = function(env = {}) {
 	// the env object is passed to webpack cli call by
@@ -15,22 +24,25 @@ module.exports = function(env = {}) {
 		//
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'node',
-		externals: [nodeExternals({ 
-			allowlist: [/\/src\//]
-		})],
+		externals: [
+			nodeExternals({
+				allowlist: [/\/src\//]
+			})
+		],
 		entry: path.join(__dirname, './src/app.js'),
 		output: {
 			path: path.join(__dirname, './'),
 			filename: 'server.js'
 		},
 		module: {
+			strictExportPresence: true,
 			rules: [
 				{
 					test: /\.js$/,
 					use: [
 						{
 							loader: 'babel-loader',
-							options: { presets: [['es2015', { modules: false }]] }
+							options: babelrc
 						}
 					]
 				}

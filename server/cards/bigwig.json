@@ -1,0 +1,70 @@
+{
+    "ppcalls":[
+        {
+            "is_ui": true, 
+            "runargs": {
+                "noheader": true,
+                "nobox": 1, 
+                "parseurl": false, 
+                "tkui": "bigwig"
+            }
+        },
+        {
+            "label": "BigWig",
+            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bigwig/file.bw",
+            "urlparam": "?block=on&genome=hg19&bigwigfile=BigWig_Demo,proteinpaint_demo/hg19/bigwig/file.bw",
+            "runargs":{
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "nativetracks": "RefGene",
+                "tracks": [{
+                    "type": "bigwig",
+                    "file": "proteinpaint_demo/hg19/bigwig/file.bw",
+                    "name": "BigWig Demo",
+                    "height": 100
+                }]
+            },
+            "buttons": [
+                {
+                    "name": "Documentation",
+                    "link": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.6spyog171fm9"
+                }
+            ],
+            "testSpec": {
+                "expected": {"image": 2 }
+            }
+        },
+        {
+            "label": "Stranded BigWig",
+            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/strandedbigwig/strandedbigwigDemoData.tar.gz",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "position": "chr8:128597079-130293343",
+                "nativetracks": "RefGene",
+                "tracks": [{
+                    "name": "Stranded RNA-seq Demo",
+                    "strand1": { "file": "proteinpaint_demo/hg19/strandedbigwig/sense.bw" },
+                    "strand2": { "file": "proteinpaint_demo/hg19/strandedbigwig/antisense.bw", "normalize": { "dividefactor": -1 } },
+                    "type": "bigwigstranded"
+                }]
+            },
+            "buttons": [
+                {
+                    "name": "Documentation",
+                    "link": "https://docs.google.com/document/d/1ZnPZKSSajWyNISSLELMozKxrZHQbdxQkkkQFnxw6zTs/edit#heading=h.5m3g10g8lvol"
+                }
+            ],
+            "testSpec": {
+                "expected": {"image": 2 }
+            }
+        }
+    ],
+    "update_message": "<p style='display: inline-block;'>Create your own bigwig track! Use the new form on the <span style='color:#1575ad; font-weight:600;'>Add Your Data</span> tab to create your own bigwig track. Additional configuration options coming soon.</p>"
+}

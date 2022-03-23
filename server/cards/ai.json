@@ -1,0 +1,31 @@
+{
+    "ppcalls": [
+        {
+            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/aicheck/aicheckDemoData.tar.gz",
+            "urlparam": "?block=on&genome=hg19&position=chr9:36816442-37058548&aicheckfile=Demo%20sample%20tumor%20allelic%20imbalance,proteinpaint_demo/hg19/aicheck/file.gz",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "position": "chr9:36816442-37058548",
+                "nativetracks": "RefGene",
+                "tracks": [{
+                    "type": "aicheck",
+                    "file": "proteinpaint_demo/hg19/aicheck/file.gz",
+                    "name": "Demo sample tumor allelic imbalance"
+                }]
+            },
+            "testSpec": {
+                "expected": {"image": 2 }
+            }
+        }
+    ],
+    "buttons": [
+        {
+            "name": "Documentation",
+            "link": "https://docs.google.com/document/d/1dZIOoLLbQE-kmZ31Ia_5cud30d9UeRodP4hRCSw3HII"
+        }
+    ]
+}

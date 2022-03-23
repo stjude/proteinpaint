@@ -23,9 +23,14 @@ exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}) {
 		// supply argument key-values that are 
 		// specific to a test section or assertion
 		runpp({
-			app: {
+			// app-level options, such as callbacks
+			callbacks: {
+				'postInit.test': testWrongGenome
+			},
+			// child component options, such as callbacks
+			tree: {
 				callbacks: {
-					'postRender.test': testWrongGenome
+					'postRender.test': (instance) => { test something ... } 
 				}
 			}
 		})

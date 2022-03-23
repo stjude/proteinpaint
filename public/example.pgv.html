@@ -15,6 +15,7 @@ runproteinpaint({
         position:"chr14:24549316-24584223",
 	tracks:[
                 {
+					list_description:[{k:'111',v:'222'}],
                     "type":"profilegenevalue",
                     "genevaluetrack":{
                         "file":"retina/hg19/fpkm.gz"
@@ -28,8 +29,10 @@ runproteinpaint({
                     "name":"Human retina chromHMM",
 				    "genevaluematchname":"sampleID",
                     "tracks":[
-                    {"type":"bedj","file":"retina/hg19/FW13_14.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Retina Wk 13-14","sampleID":"FW13_14"},
-                    {"type":"bedj","file":"retina/hg19/FW15_16.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Retina Wk 15-16","sampleID":"FW15_16"},
+					// just to test that bw works
+					{type:'bigwig',file:'proteinpaint_demo/hg19/bigwig/file.bw',name:'xx',sampleID:'FW13_14', list_description:[{k:'111',v:'222'}]},
+                    //{"type":"bedj","file":"retina/hg19/FW13_14.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Retina Wk 13-14","sampleID":"FW13_14"},
+                    {"type":"bedj","file":"retina/hg19/FW15_16.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Retina Wk 15-16","sampleID":"FW15_16",list_description:[{k:'111',v:'222'}]},
                     {"type":"bedj","file":"retina/hg19/FW18_20.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Retina Wk 18-20","sampleID":"FW18_20"},
                     {"type":"bedj","file":"retina/hg19/FW23_24.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"Retina Wk 23-24","sampleID":"FW23_24"},
                     {"type":"bedj","file":"retina/hg19/RB_D.gz","stackheight":18,"stackspace":1,"toppad":1,"bottompad":1,"onerow":1,"name":"RB-patient","sampleID":"RB_D"},

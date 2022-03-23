@@ -1,13 +1,15 @@
-import * as rx from './rx.core'
+import { getInitFxn, getCompInit } from './rx.core'
 import { select, event } from 'd3-selection'
 import { Menu } from '../client'
-import * as dom from '../dom'
 import { TVSInit } from './tvs'
 import * as client from '../client'
 import { vocabInit } from '../termdb/vocabulary'
 
 const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
 
+const defaults = {
+	joinWith: ['and', 'or']
+}
 /*
 	opts{}
 	.holder
@@ -37,7 +39,10 @@ class Filter {
 		this.opts = this.validateOpts(opts)
 		this.dom = {
 			holder: opts.holder,
-			controlsTip: new Menu({ padding: '0px' }),
+			controlsTip: new Menu({
+				padding: '0px',
+				parent_menu: this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
+			}),
 			treeTip: new Menu({
 				padding: '5px',
 				offsetX: 20,
@@ -62,55 +67,10 @@ class Filter {
 			in: true,
 			lst: []
 		}
-
-		this.api = {
-			main: async (rawFilter, opts = {}) => {
-				this.dom.controlsTip.hide()
-				this.dom.treeTip.hide()
-				/*
-				rawFilter{}
-				  the raw filter data structure
-				*/
-
-				const tempOpts = Object.assign({}, this.opts, opts)
-				// to-do: should use deepEquals as part of rx.core
-				const rawCopy = JSON.stringify(rawFilter)
-				if (this.rawCopy == rawCopy && JSON.stringify(this.activeCohort) == JSON.stringify(tempOpts.activeCohort))
-					return
-				this.opts = tempOpts
-				this.activeCohort = tempOpts.activeCohort
-				this.rawCopy = rawCopy
-				this.rawFilter = JSON.parse(this.rawCopy)
-				this.validateFilter(this.rawFilter)
-				this.filter = getFilterItemByTag(this.rawFilter, 'filterUiRoot')
-				if (!this.filter) {
-					this.filter = this.rawFilter
-					this.filter.tag = 'filterUiRoot'
-				}
-				this.resetActiveData(this.filter)
-
-				// reset interaction-related styling
-				this.removeBlankPill()
-				this.dom.newBtn.style('display', this.opts.newBtn ? '' : this.filter.lst.length == 0 ? 'inline-block' : 'none')
-				this.dom.holder.selectAll('.sja_filter_add_transformer').style('display', this.getAddTransformerBtnDisplay)
-				//this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
-				this.setVocabApi()
-				this.updateUI(this.dom.filterContainer, this.filter)
-			},
-			/*
-				WARNING!!!
-				When using this filter.api.getNormalRoot(),
-				make sure this instance has been updated before the caller,
-				otherwise the normalized root will be stale
-
-				or for reliability, import getNormalRoot() directly 
-				from the common/filter.js component and supply the 
-				caller's known raw filter state
-			*/
-			getNormalRoot: () => getNormalRoot(this.rawFilter)
-		}
 	}
-	validateOpts(o) {
+
+	validateOpts(opts) {
+		const o = Object.assign({}, defaults, opts)
 		if (!o.holder) throw '.holder missing'
 		if (!o.vocab) throw '.vocab missing'
 
@@ -126,12 +86,40 @@ class Filter {
 		if (!o.emptyLabel) o.emptyLabel = '+NEW'
 		return o
 	}
+
+	/*
+		rawCopy'' JSON-stringified rawFilter object
+		opts{}
+		.activeCohort
+	*/
+	async main(rawCopy, opts = {}) {
+		this.opts = Object.assign({}, this.opts, opts)
+		this.activeCohort = this.opts.activeCohort
+		this.rawCopy = rawCopy
+		this.rawFilter = JSON.parse(this.rawCopy)
+		this.validateFilter(this.rawFilter)
+		this.filter = getFilterItemByTag(this.rawFilter, 'filterUiRoot')
+		if (!this.filter) {
+			this.filter = this.rawFilter
+			this.filter.tag = 'filterUiRoot'
+		}
+		this.resetActiveData(this.filter)
+
+		// reset interaction-related styling
+		this.removeBlankPill()
+		this.dom.newBtn.style('display', this.opts.newBtn ? '' : this.filter.lst.length == 0 ? 'inline-block' : 'none')
+		this.dom.holder.selectAll('.sja_filter_add_transformer').style('display', this.getAddTransformerBtnDisplay)
+		//this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
+		this.setVocabApi()
+		this.updateUI(this.dom.filterContainer, this.filter)
+	}
+
 	validateFilter(item) {
 		// for reliably binding data to DOM elements
 		// and associating updated data copy to
 		// the currently bound data
 		if (!('$id' in item)) item.$id = this.lastId++
-		else if (this.lastId < item.$id) this.lastId = item.$id + 1
+		else if (this.lastId <= item.$id) this.lastId = item.$id + 1
 
 		if (!('type' in item)) throw 'missing filter.type'
 		if (item.type != 'tvs' && item.type != 'tvslst') throw 'invalid filter.type'
@@ -154,7 +142,6 @@ class Filter {
 		// clear menu click
 		if (this.dom.controlsTip.d.style('display') == 'none') {
 			this.activeData = { item: {}, filter: {} }
-			this.dom.isNotInput.property('checked', false)
 		} else {
 			this.activeData = {
 				item: findItem(filter, this.activeData.item.$id),
@@ -245,7 +232,8 @@ class Filter {
 				}
 			}
 
-			this.vocabApi = vocabInit(app, {
+			this.vocabApi = vocabInit({
+				app,
 				state: app.getState()
 			})
 		}
@@ -254,7 +242,100 @@ class Filter {
 	}
 }
 
-export const filterInit = rx.getInitFxn(Filter)
+class FilterStateless extends Filter {
+	constructor(opts) {
+		super(opts)
+		this.api = {
+			// make sure to bind the 'this' context to the filter instance
+			// instead of to the this.api object
+			main: this.main.bind(this),
+			/*
+				WARNING!!!
+				When using this filter.api.getNormalRoot(),
+				make sure this instance has been updated before the caller,
+				otherwise the normalized root will be stale
+
+				or for reliability, import getNormalRoot() directly 
+				from the common/filter.js component and supply the 
+				caller's known raw filter state
+			*/
+			getNormalRoot: () => getNormalRoot(this.rawFilter)
+		}
+	}
+
+	async main(rawFilter, opts = {}) {
+		this.dom.controlsTip.hide()
+		this.dom.treeTip.hide()
+		const activeCohort = 'activeCohort' in opts ? opts.activeCohort : this.activeCohort
+		const rawCopy = JSON.stringify(rawFilter)
+		// if the filter data and active cohort has not changed, do not trigger a re-render
+		if (this.rawCopy == rawCopy && JSON.stringify(this.activeCohort) == JSON.stringify(activeCohort)) return
+		super.main(rawCopy, opts)
+	}
+}
+
+export const filterInit = getInitFxn(FilterStateless)
+
+class FilterRxComp extends Filter {
+	constructor(opts) {
+		super(opts)
+		this.type = 'filter'
+		this.initHolder()
+		// rx.getCompInit() will create this.opts, this.api
+	}
+
+	async preApiFreeze(api) {
+		api.main = this.main.bind(this)
+		api.getNormalRoot = () => getNormalRoot(this.rawFilter)
+	}
+
+	getState(appState) {
+		return {
+			termfilter: appState.termfilter,
+			activeCohort: appState.activeCohort
+		}
+	}
+
+	async main(rawFilter = null) {
+		this.dom.controlsTip.hide()
+		this.dom.treeTip.hide()
+		const f = this.state && this.state.termfilter
+		if (!f) {
+			this.dom.holder.style('display', 'none')
+			return
+		}
+		this.dom.holder.style('display', 'inline-block')
+		const rawCopy = JSON.stringify(rawFilter || f.filter)
+		super.main(rawCopy, { activeCohort: this.state.activeCohort })
+	}
+
+	initHolder() {
+		const div = this.dom.holder
+			.attr('class', 'filter_div')
+			.style('position', 'relative')
+			.style('width', 'fit-content')
+			.style('margin', '10px')
+			.style('margin-top', '5px')
+			.style('display', 'table')
+			.style('border', this.opts.hideLabel ? 'none' : 'solid 1px #ddd')
+
+		if (this.opts.hideLabel) {
+			this.dom.filterDiv = div.style('display', 'inline-block').style('padding', '5px 10px')
+		} else {
+			div
+				.append('span')
+				.text('Filter')
+				.style('padding', '0 10px')
+
+			this.dom.filterDiv = div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('padding', '5px 10px')
+		}
+	}
+}
+
+export const filterRxCompInit = getCompInit(FilterRxComp)
 
 // will assign an incremented index to each filter UI instance
 // to help namespace the body.on('click') event handler;
@@ -284,7 +365,7 @@ function setRenderers(self) {
 
 		self.dom.holder
 			.selectAll('.sja_filter_add_transformer')
-			.data(['and', 'or'])
+			.data(self.opts.joinWith)
 			.enter()
 			.append('div')
 			.attr('class', 'sja_filter_add_transformer')
@@ -314,8 +395,7 @@ function setRenderers(self) {
 			menuOptions.splice(1, 0, {
 				action: 'replace',
 				html: ['', 'Replace', '&rsaquo;'],
-				handler: self.displayTreeMenu,
-				bar_click_override: self.replaceTerm
+				handler: self.displayTreeMenu
 			})
 		}
 
@@ -343,25 +423,6 @@ function setRenderers(self) {
 		self.dom.termSrcDiv = self.dom.treeTip.d.append('div').attr('class', 'sja_term_src_body')
 
 		self.dom.treeHeadTitle = self.dom.treeHead.append('div')
-		const isNotLabels = self.dom.treeHead
-			.selectAll('label')
-			.data([{ label: 'Exclude', value: 'false', checked: false }])
-			.enter()
-			.append('label')
-			.style('margin', '0 5px')
-		self.dom.isNotInput = isNotLabels
-			.append('input')
-			.attr('type', 'checkbox')
-			.attr('name', 'sja_filter_isnot_input')
-			.attr('value', d => d.value)
-			.property('checked', d => d.checked)
-			.style('vertical-align', 'top')
-			.style('margin-right', '3px')
-		isNotLabels
-			.append('span')
-			.style('margin-right', '5px')
-			.style('vertical-align', 'top')
-			.html(d => d.label)
 
 		select('body').on('mousedown.sja_filter_' + filterIndex++, () => {
 			if (
@@ -416,7 +477,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_filter_paren_open')
 			.html('(')
-			.style('display', filter.$id === self.filter.$id && filter.in ? 'none' : 'inline-block')
+			.style('display', 'none')
 			.style('padding', '0 5px')
 			.style('font-weight', 500)
 			.style('font-size', '24px')
@@ -434,16 +495,48 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_item')
 			.each(self.addItem)
 
+		if (self.opts.joinWith.length == 1) {
+			self.dom.last_join_div = select(this)
+				.append('div')
+				.attr('class', 'sja_filter_last_join')
+				.style('display', 'inline')
+			self.dom.last_join_label = self.dom.last_join_div
+				.append('div')
+				.datum({ action: 'join', html: ['&#10010;', '', '&rsaquo;'], handler: self.displayTreeMenu })
+				.attr('class', 'sja_filter_last_join_label')
+				.style('padding', '0 5px')
+				.style('display', filter.lst.length ? 'inline' : 'none')
+				.style('font-weight', 500)
+				.style('cursor', 'pointer')
+				.html('+' + self.opts.joinWith[0].toUpperCase())
+				.on('click', self.showLastJoinBlank)
+
+			select('body').on('mousedown.sja_filter_last_join', () => {
+				self.dom.last_join_label.style('display', 'inline')
+			})
+		}
+
 		select(this)
 			.append('div')
 			.attr('class', 'sja_filter_paren_close')
 			.style('padding', '0 5px')
 			.html(')')
-			.style('display', filter.$id === self.filter.$id && filter.in ? 'none' : 'inline')
+			.style('display', 'none')
 			.style('font-weight', 500)
 			.style('font-size', '24px')
 			.style('cursor', 'pointer')
 			.on('click', self.displayControlsMenu)
+
+		select(this)
+			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
+			.style(
+				'display',
+				self.opts.joinWith.length < 2 || data.length < 2
+					? 'none'
+					: !filter.in || (data.length > 1 && filter.tag != 'filterUiRoot')
+					? 'inline-block'
+					: 'none'
+			)
 	}
 
 	self.updateGrp = function(item, i) {
@@ -454,9 +547,17 @@ function setRenderers(self) {
 			.style('display', filter.in ? 'none' : 'inline-block')
 
 		const data = item.type == 'tvslst' ? item.lst : [item]
+
 		select(this)
 			.selectAll(':scope > .sja_filter_paren_open, :scope > .sja_filter_paren_close')
-			.style('display', (filter.$id !== self.filter.$id || !filter.in) && data.length > 1 ? 'inline-block' : 'none')
+			.style(
+				'display',
+				self.opts.joinWith.length < 2 || data.length < 2
+					? 'none'
+					: !filter.in || (data.length > 1 && filter.tag != 'filterUiRoot')
+					? 'inline-block'
+					: 'none'
+			)
 
 		const pills = select(this)
 			.selectAll(':scope > .sja_filter_item')
@@ -473,6 +574,17 @@ function setRenderers(self) {
 		select(this)
 			.selectAll(':scope > .sja_filter_item')
 			.sort((a, b) => data.indexOf(a) - data.indexOf(b))
+
+		if (self.dom.last_join_label) {
+			self.dom.last_join_div.datum(filter)
+			this.insertBefore(
+				self.dom.last_join_div.node(),
+				select(this)
+					.select(':scope > .sja_filter_paren_close')
+					.node()
+			)
+			self.dom.last_join_label.style('display', 'inline')
+		}
 	}
 
 	self.removeGrp = function(item) {
@@ -513,6 +625,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_pill_wrapper')
 			.style('display', 'inline-block')
+			.style('margin', self.opts.joinWith.length > 1 ? '' : '2px')
 			.on('click', item.renderAs === 'htmlSelect' ? null : self.displayControlsMenu)
 
 		self.addJoinLabel(this, filter, item)
@@ -552,7 +665,6 @@ function setRenderers(self) {
 					const filterCopy = findItem(filterUiRoot, filter.$id)
 					const i = filter.lst.indexOf(item)
 					if (i == -1) return
-					tvs.isnot = self.dom.isNotInput.property('checked')
 					// if tvs already present in the filterCopy just replace it rather than adding new one
 					const item_i = filterCopy.lst.findIndex(t => t.$id == item.$id)
 					if (item_i == -1) filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
@@ -569,7 +681,11 @@ function setRenderers(self) {
 		const filter = this.parentNode.__data__
 		select(this)
 			.select(':scope > .sja_filter_join_label')
-			.style('display', filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none')
+			.style(
+				'display',
+				self.opts.joinWith.length > 1 && filter.lst.indexOf(item) < filter.lst.length - 1 ? 'inline-block' : 'none'
+			)
+			.style('margin', self.opts.joinWith.length > 1 ? '' : '2px')
 			.html(filter.join == 'and' ? 'AND' : 'OR')
 
 		if (item.type == 'tvslst') {
@@ -596,7 +712,12 @@ function setRenderers(self) {
 		select(elem)
 			.append('div')
 			.attr('class', 'sja_filter_join_label')
-			.style('display', filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none')
+			.style(
+				'display',
+				self.opts.joinWith.length > 1 && filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1
+					? 'inline-block'
+					: 'none'
+			)
 			.style('width', '50px')
 			.style('padding', '5px')
 			.style('border', 'none')
@@ -612,12 +733,16 @@ function setRenderers(self) {
 		const i = filter.lst.findIndex(d => d.$id === item.$id)
 		select(this).style(
 			'display',
-			filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1 ? 'inline-block' : 'none'
+			self.opts.joinWith.length > 1 && filter.lst.length > 1 && item && i != -1 && i < filter.lst.length - 1
+				? 'inline-block'
+				: 'none'
 		)
 	}
 
 	self.getAddTransformerBtnDisplay = function(d) {
-		if (self.filter && self.filter.lst.find(f => f.tag === 'cohortFilter')) {
+		if (self.opts.joinWith.length < 2) {
+			return 'none'
+		} else if (self.filter && self.filter.lst.find(f => f.tag === 'cohortFilter')) {
 			// assume that a cohortFilter is always joined via intersection with other filters
 			return self.filter.lst.length == 1 && d == 'and' ? 'inline-block' : 'none'
 		} else {
@@ -645,11 +770,15 @@ function setInteractivity(self) {
 		menuRows
 			.filter(d => /*d.action == 'negate' ||*/ d.action == 'remove')
 			.style('display', cls.includes('_join_') && filter.lst.find(d => d.tag == 'cohortFilter') ? 'none' : 'table-row')
+
 		menuRows
 			.filter(d => d.action == 'join')
 			.style(
 				'display',
-				(filter.$id == self.filter.$id && filter.lst.length == 1) || cls.includes('negate') || cls.includes('paren')
+				self.opts.joinWith.length < 2 ||
+					(filter.$id == self.filter.$id && filter.lst.length == 1) ||
+					cls.includes('negate') ||
+					cls.includes('paren')
 					? 'none'
 					: 'table-row'
 			)
@@ -681,20 +810,25 @@ function setInteractivity(self) {
 		self.removeBlankPill()
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		if (action != 'join') return
-		const elem = self.activeData.elem.className.includes('join_label')
+		const elem = self.dom.last_join_div
+			? self.dom.last_join_div.node()
+			: self.activeData.elem.className.includes('join_label')
 			? self.activeData.elem.parentNode.parentNode
 			: self.activeData.item.type == 'tvs' || self.activeData.filter === self.filter
 			? self.activeData.elem
 			: self.activeData.elem.parentNode.parentNode
-		const joiner = self.activeData.elem.className.includes('join_label')
-			? self.activeData.filter.join.toUpperCase()
-			: self.activeData.btn && typeof self.activeData.btn.__data__ === 'string'
-			? self.activeData.btn.__data__.toUpperCase()
-			: self.activeData.item.type == 'tvslst'
-			? self.activeData.filter.join.toUpperCase()
-			: self.activeData.filter.join == 'or'
-			? 'AND'
-			: 'OR'
+		const joiner =
+			self.opts.joinWith.length === 1
+				? self.opts.joinWith[0].toUpperCase()
+				: self.activeData.elem.className.includes('join_label')
+				? self.activeData.filter.join.toUpperCase()
+				: self.activeData.btn && typeof self.activeData.btn.__data__ === 'string'
+				? self.activeData.btn.__data__.toUpperCase()
+				: self.activeData.item.type == 'tvslst'
+				? self.activeData.filter.join.toUpperCase()
+				: self.activeData.filter.join == 'or'
+				? 'AND'
+				: 'OR'
 
 		if (
 			self.activeData.item.type == 'tvs' &&
@@ -704,7 +838,7 @@ function setInteractivity(self) {
 			select(elem)
 				.insert('div', 'div')
 				.attr('class', 'sja_filter_paren_open')
-				.style('display', 'inline-block')
+				.style('display', self.opts.joinWith.length > 1 ? 'inline-block' : 'none')
 				.style('padding', '0 5px')
 				.style('font-weight', 500)
 				.style('font-size', '24px')
@@ -748,7 +882,7 @@ function setInteractivity(self) {
 			select(elem)
 				.append('div')
 				.attr('class', 'sja_filter_paren_close')
-				.style('display', 'inline-block')
+				.style('display', self.opts.joinWith.length > 1 ? 'inline-block' : 'none')
 				.style('padding', '0 5px')
 				.style('font-weight', 500)
 				.style('font-size', '24px')
@@ -761,7 +895,7 @@ function setInteractivity(self) {
 				.selectAll(
 					':scope > .sja_filter_grp > .sja_filter_paren_open, :scope > .sja_filter_grp > .sja_filter_paren_close'
 				)
-				.style('display', self.filter.lst.length > 1 ? 'inline-block' : 'none')
+				.style('display', self.opts.joinWith.length > 1 && self.filter.lst.length > 1 ? 'inline-block' : 'none')
 		}
 	}
 
@@ -788,7 +922,6 @@ function setInteractivity(self) {
 	self.displayTreeNew = async function(d) {
 		if (self.opts.newBtn && this.className !== 'sja_filter_add_transformer' && self.filter.lst.length) return
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
-		self.dom.isNotInput.property('checked', !self.filter.in)
 		if (self.filter.lst.length > 0) {
 			self.activeData = {
 				item: self.filter,
@@ -811,80 +944,86 @@ function setInteractivity(self) {
 			: JSON.parse(self.rawCopy)
 
 		const termdb = await import('../termdb/app')
-		termdb.appInit(null, {
+		termdb.appInit({
 			holder: self.dom.termSrcDiv,
 			state: {
 				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,
-				nav: {
-					header_mode: 'search_only'
-				},
 				termfilter: { filter: rootFilterCopy }
 			},
 			tree: {
 				disable_terms:
 					self.activeData && self.activeData.filter && self.activeData.filter.lst && d == 'and'
 						? self.activeData.filter.lst
-								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional')
+								.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'condition')
 								.map(d => d.tvs.term.id)
-						: []
-			},
-			barchart: {
-				bar_click_override: tvslst => {
-					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+						: [],
 
-					if (!filterUiRoot.lst.length) {
-						if (tvslst.length > 1) filterUiRoot.join = 'and'
-						filterUiRoot.lst.push(...tvslst)
-						self.refresh(filterUiRoot)
-					} else if (d != 'or' && d != 'and') {
-						throw 'unhandled new term(s): invalid appender join value'
-					} else {
-						if (!filterUiRoot.join) filterUiRoot.join = d // 'and' || 'or'
-
-						if (filterUiRoot.join == d) {
-							if (tvslst.length < 2 || filterUiRoot.join == 'and') {
-								filterUiRoot.lst.push(...tvslst)
-							} else {
-								filterUiRoot.push({
-									type: 'tvslst',
-									in: true,
-									join: 'and',
-									lst: tvslst
-								})
-							}
-							self.refresh(filterUiRoot)
-						} else if (d == 'and' || tvslst.length < 2) {
-							delete filterUiRoot.tag
-							self.refresh({
-								tag: 'filterUiRoot',
-								type: 'tvslst',
-								in: true,
-								join: d,
-								lst: [filterUiRoot, ...tvslst]
-							})
-						} else {
-							delete filterUiRoot.tag
-							self.refresh({
-								tag: 'filterUiRoot',
-								type: 'tvslst',
-								in: true,
-								join: 'or',
-								lst: [
-									filterUiRoot,
-									{
-										type: 'tvslst',
-										in: true,
-										join: 'and',
-										lst: tvslst
-									}
-								]
-							})
-						}
-					}
+				click_term2select_tvs(tvs) {
+					self.editFilterRoot(d, [{ type: 'tvs', tvs }])
 				}
 			}
 		})
+	}
+
+	/*
+		Arguments: 
+		d: the data bound to a button element like +New, AND, OR
+		tvslst
+	*/
+	self.editFilterRoot = (d, tvslst) => {
+		// NOTE: default to 'tvs' argument once bar_click_override is unsupported
+		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+
+		if (!filterUiRoot.lst.length) {
+			if (tvslst.length > 1) filterUiRoot.join = 'and'
+			filterUiRoot.lst.push(...tvslst)
+			self.refresh(filterUiRoot)
+		} else if (d != 'or' && d != 'and') {
+			throw 'unhandled new term(s): invalid appender join value'
+		} else {
+			if (!filterUiRoot.join) filterUiRoot.join = d // 'and' || 'or'
+
+			if (filterUiRoot.join == d) {
+				if (tvslst.length < 2 || filterUiRoot.join == 'and') {
+					filterUiRoot.lst.push(...tvslst)
+				} else {
+					filterUiRoot.push({
+						type: 'tvslst',
+						in: true,
+						join: 'and',
+						lst: tvslst
+					})
+				}
+				self.refresh(filterUiRoot)
+			} else if (d == 'and' || tvslst.length < 2) {
+				delete filterUiRoot.tag
+				self.refresh({
+					tag: 'filterUiRoot',
+					type: 'tvslst',
+					in: true,
+					join: d,
+					lst: [filterUiRoot, ...tvslst]
+				})
+			} else {
+				delete filterUiRoot.tag
+				self.refresh({
+					tag: 'filterUiRoot',
+					type: 'tvslst',
+					in: true,
+					join: 'or',
+					lst: [
+						filterUiRoot,
+						{
+							type: 'tvslst',
+							in: true,
+							join: 'and',
+							lst: tvslst
+						}
+					]
+				})
+			}
+		}
 	}
 
 	// menu to replace a term or add a subnested filter
@@ -897,36 +1036,42 @@ function setInteractivity(self) {
 		if (blankPill) {
 			self.dom.controlsTip.hide()
 			self.dom.treeTip.clear().showunder(blankPill)
-		} else {
+		} else if (elem.lastChild instanceof HTMLElement) {
 			self.dom.treeTip.clear().showunderoffset(elem.lastChild)
+		} else {
+			self.dom.treeTip.clear().showunder(elem)
 		}
 		const filter = self.activeData.filter
 
 		const termdb = await import('../termdb/app')
-		termdb.appInit(null, {
+		termdb.appInit({
 			holder: self.dom.termSrcDiv,
 			state: {
 				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,
-				nav: {
-					header_mode: 'search_only'
-				},
+				header_mode: 'search_only',
 				termfilter: { filter: self.getAdjustedRoot(filter.$id, filter.join) }
 			},
 			tree: {
 				disable_terms:
 					filter && filter.lst && filter.join == 'and'
-						? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'conditional').map(d => d.tvs.term.id)
-						: [self.activeData.item.tvs.term.id]
-			},
-			barchart: {
-				bar_click_override: d.bar_click_override
-					? d.bar_click_override
-					: !filter.join ||
-					  !filter.lst.length ||
-					  (self.activeData.elem && self.activeData.elem.className.includes('join'))
-					? self.appendTerm
-					: self.subnestFilter
+						? filter.lst.filter(d => d.type === 'tvs' && d.tvs.term.type !== 'condition').map(d => d.tvs.term.id)
+						: !self.activeData.item
+						? []
+						: self.activeData.item.type == 'tvs'
+						? [self.activeData.item.tvs.term.id]
+						: self.activeData.item.lst
+						? self.activeData.item.lst.filter(f => f.type == 'tvs').map(f => f.tvs.term.id)
+						: [],
+
+				click_term2select_tvs:
+					d.action == 'replace'
+						? self.replaceTerm
+						: !filter.join ||
+						  !filter.lst.length ||
+						  (self.activeData.elem && self.activeData.elem.className.includes('join'))
+						? self.appendTerm
+						: self.subnestFilter
 			}
 		})
 	}
@@ -937,7 +1082,6 @@ function setInteractivity(self) {
 			.style('background-color', self.highlightEditRow)
 		const holder = self.dom.termSrcDiv
 		const item = self.activeData.item
-		self.dom.isNotInput.property('checked', item.tvs.isnot)
 		self.dom.treeTip.clear()
 		self.pills[item.$id].showMenu(holder)
 		self.dom.treeTip.showunderoffset(elem.lastChild)
@@ -963,18 +1107,19 @@ function setInteractivity(self) {
 		self.refresh(filterUiRoot)
 	}
 
-	self.replaceTerm = tvslst => {
-		const item = self.activeData.item
-		const filter = self.activeData.filter
+	self.replaceTerm = _tvs_ => {
+		// NOTE: default to type: 'tvs' argument once bar_click_override is unsupported
+		const tvslst = Array.isArray(_tvs_) ? _tvs_ : [{ type: 'tvs', tvs: _tvs_ }]
 		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = findItem(filterUiRoot, filter.$id)
-		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
+		const filterCopy = findItem(filterUiRoot, self.activeData.filter.$id)
+		const i = filterCopy.lst.findIndex(t => t.$id === self.activeData.item.$id)
+		// FIXME: will replace with just one tvs, once bar_click_override is unsupported
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
 			filterCopy.lst.splice(i, 1, ...tvslst)
 		} else {
 			filterCopy.lst[i] = {
 				// transform from tvs to tvslst
-				in: !self.dom.isNotInput.property('checked'),
+				in: !_tvs_.isnot,
 				type: 'tvslst',
 				join: 'and',
 				lst: tvslst
@@ -983,17 +1128,19 @@ function setInteractivity(self) {
 		self.refresh(filterUiRoot)
 	}
 
-	self.appendTerm = tvslst => {
-		const item = self.activeData.item
-		const filter = self.activeData.filter
+	self.appendTerm = _tvs_ => {
+		// FIXME: default to type: 'tvs' argument once bar_click_override is unsupported
+		const tvslst = Array.isArray(_tvs_) ? _tvs_ : [{ type: 'tvs', tvs: _tvs_ }]
 		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = findItem(filterUiRoot, filter.$id)
+		const filterCopy = findItem(filterUiRoot, self.activeData.filter.$id)
+		// FIXME: will just push one tvs, once bar_click_override is unsupported
 		if (tvslst.length < 2 || filterCopy.join == 'and') {
 			filterCopy.lst.push(...tvslst)
+			if (filterCopy.join == '' && self.opts.joinWith.length === 1) filterCopy.join = self.opts.joinWith[0]
 		} else {
 			filterCopy.lst.push({
 				// transform from tvs to tvslst
-				in: !self.dom.isNotInput.property('checked'),
+				in: true,
 				type: 'tvslst',
 				join: 'and',
 				lst: tvslst
@@ -1002,7 +1149,14 @@ function setInteractivity(self) {
 		self.refresh(filterUiRoot)
 	}
 
-	self.subnestFilter = tvslst => {
+	self.subnestFilter = t => {
+		let tvslst
+		if (Array.isArray(t)) {
+			tvslst = t
+		} else {
+			tvslst = [{ type: 'tvs', tvs: t }]
+		}
+
 		const item = self.activeData.item
 		const filter = self.activeData.filter
 		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
@@ -1010,32 +1164,12 @@ function setInteractivity(self) {
 		const i = filterCopy.lst.findIndex(t => t.$id === item.$id)
 		// transform from tvs to tvslst
 		filterCopy.lst[i] = {
-			in: !self.dom.isNotInput.property('checked'),
+			in: true,
 			type: 'tvslst',
 			join: filter.join == 'or' ? 'and' : 'or',
 			lst: [item, ...tvslst]
 		}
 		self.refresh(filterUiRoot)
-	}
-
-	self.editFilter = tvslst => {
-		const item = self.activeData.item
-		const filter = self.activeData.filter
-		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
-		const filterCopy = findParent(filterUiRoot, filter.$id)
-		if (filterCopy == filterUiRoot) {
-			delete filterCopy.tag
-			self.refresh({
-				tag: 'filterUiRoot',
-				type: 'tvslst',
-				in: !self.dom.isNotInput.property('checked'),
-				join: filter.join == 'or' ? 'and' : 'or',
-				lst: [filterCopy, ...tvslst]
-			})
-		} else {
-			filterCopy.lst.push(...tvslst)
-			self.refresh(filterUiRoot)
-		}
 	}
 
 	self.removeTransform = function() {
@@ -1080,6 +1214,16 @@ function setInteractivity(self) {
 		} else {
 			self.refresh(filterUiRoot)
 		}
+	}
+
+	self.showLastJoinBlank = function(d) {
+		event.stopPropagation()
+		const elem = self.dom.last_join_div.node()
+		self.dom.last_join_label.style('display', 'none')
+		const filter = this.parentNode.__data__
+		self.activeData = { item: filter, filter, elem }
+		self.resetBlankPill(d.action)
+		self.displayTreeMenu(elem, d)
 	}
 }
 

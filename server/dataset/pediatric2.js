@@ -16,8 +16,8 @@ module.exports = {
 	genome: 'hg19',
 	isMds: true,
 	version: {
-		label: 'Release v2',
-		link: 'https://genomepaint.stjude.cloud/release/v2/'
+		label: 'Release v3',
+		link: 'https://genomepaint.stjude.cloud/release/v3/'
 	},
 
 	sampleAssayTrack: {

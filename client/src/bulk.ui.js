@@ -11,6 +11,7 @@ import * as bulktrunc from '../shared/bulk.trunc'
 import { ProjectHandler } from './bulk.project'
 import * as common from '../shared/common'
 import { tpinit } from './tp.init'
+import { renderSandboxFormDiv } from './dom/sandbox'
 
 /*
 
@@ -31,8 +32,7 @@ bulkembed()
 
 export function bulkui(x, y, genomes, hostURL, holder, header) {
 	let pane, inputdiv, gselect, filediv, saydiv, visualdiv
-	if (holder !== undefined)
-		[inputdiv, gselect, filediv, saydiv, visualdiv] = client.renderSandboxFormDiv(holder, genomes)
+	if (holder !== undefined) [inputdiv, gselect, filediv, saydiv, visualdiv] = renderSandboxFormDiv(holder, genomes)
 	else {
 		;[pane, inputdiv, gselect, filediv, saydiv, visualdiv] = client.newpane3(x, y, genomes)
 		pane.header.text('Load mutation from text files')
@@ -194,10 +194,9 @@ export function bulkui(x, y, genomes, hostURL, holder, header) {
 			pane2.header.html('<span style="opacity:.5">FILE</span> ' + file.name)
 			visual_holder = pane2.body
 		}
-		// update sandbox panel header for landing page
+		// update sandbox panel for app drawer
 		if (holder !== undefined) {
-			header.html('<span style="opacity:.5">FILE</span> ' + file.name)
-			visual_holder = visualdiv
+			visual_holder = visualdiv.append('div').html('<span style="opacity:.5">FILE</span> ' + file.name) //Fix for ui in a div within sandbox, rather than consuming the entire sandbox
 		}
 
 		inputdiv.selectAll('*').remove()
@@ -308,8 +307,6 @@ export function bulkin(p, callback = null) {
 		cohort.variantgene = flag.variantgene
 	}
 
-	/*
-	temporary fix for vizcom: suppress alert
 	if (flag.snv.badlines.length > 0) {
 		client.bulk_badline(flag.snv.header, flag.snv.badlines)
 	}
@@ -331,7 +328,6 @@ export function bulkin(p, callback = null) {
 	if (flag.truncation.badlines.length > 0) {
 		client.bulk_badline(flag.truncation.header, flag.truncation.badlines)
 	}
-	*/
 
 	// newdt
 	if (flag.good == 0) {
@@ -640,6 +636,17 @@ export function bulkembed(arg) {
 						})
 					tasks.push(task)
 				}
+
+				if (mset.cnv_url) {
+					tasks.push(
+						client.dofetch('urltextfile', { url: mset.cnv_url }).then(data => {
+							if (data.error) throw { message: 'cannot get cnv file from url' }
+							const e = parse_cnv(data.text, flag)
+							if (e) throw { message: 'error with cnv file: ' + e }
+						})
+					)
+				}
+
 				if (mset.sv) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
@@ -656,6 +663,17 @@ export function bulkembed(arg) {
 						})
 					tasks.push(task)
 				}
+
+				if (mset.sv_url) {
+					tasks.push(
+						client.dofetch('urltextfile', { url: mset.sv_url }).then(data => {
+							if (data.error) throw { message: 'cannot get sv file from url' }
+							const e = parse_sv(data.text, flag)
+							if (e) throw { message: 'error with sv file: ' + e }
+						})
+					)
+				}
+
 				if (mset.fusion) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
@@ -704,6 +722,17 @@ export function bulkembed(arg) {
 						})
 					tasks.push(task)
 				}
+
+				if (mset.deletion_url) {
+					tasks.push(
+						client.dofetch('urltextfile', { url: mset.deletion_url }).then(data => {
+							if (data.error) throw { message: 'cannot get deletion file from url' }
+							const e = parse_del(data.text, flag)
+							if (e) throw { message: 'error with deletion file: ' + e }
+						})
+					)
+				}
+
 				if (mset.truncation) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
@@ -720,6 +749,17 @@ export function bulkembed(arg) {
 						})
 					tasks.push(task)
 				}
+
+				if (mset.truncation_url) {
+					tasks.push(
+						client.dofetch('urltextfile', { url: mset.truncation_url }).then(data => {
+							if (data.error) throw { message: 'cannot get truncation file from url' }
+							const e = parse_trunc(data.text, flag, false)
+							if (e) throw { message: 'error with truncation file: ' + e }
+						})
+					)
+				}
+
 				if (mset.itd) {
 					const req = new Request(arg.hostURL + '/textfile', {
 						method: 'POST',
@@ -735,6 +775,16 @@ export function bulkembed(arg) {
 							if (e) throw { message: 'error with itd file: ' + e }
 						})
 					tasks.push(task)
+				}
+
+				if (mset.itd_url) {
+					tasks.push(
+						client.dofetch('urltextfile', { url: mset.itd_url }).then(data => {
+							if (data.error) throw { message: 'cannot get itd file from url' }
+							const e = parse_itd(data.text, flag, false)
+							if (e) throw { message: 'error with itd file: ' + e }
+						})
+					)
 				}
 
 				const task2 = Promise.all(tasks).then(data => {

@@ -1,9 +1,11 @@
 const app = require('./app')
 const path = require('path')
 const fs = require('fs')
+const spawn = require('child_process').spawn
 const utils = require('./utils')
 const server_init_db_queries = require('./termdb.sql').server_init_db_queries
 const validate_single_numericrange = require('../shared/mds.termdb.termvaluesetting').validate_single_numericrange
+const serverconfig = require('./serverconfig')
 
 /*
 ********************** EXPORTED
@@ -21,9 +23,7 @@ may_init_svcnv
 may_sum_samples
 */
 
-const serverconfig = require('./serverconfig')
-
-export async function init_db(ds, genome) {
+export async function init_db(ds, app = null, basepath = null) {
 	/* db should be required
 	must initiate db first, then process other things
 	as db may be needed (e.g. getting json of a term)
@@ -31,6 +31,9 @@ export async function init_db(ds, genome) {
 	if (!ds.cohort.termdb) throw 'cohort.termdb missing when cohort.db is used'
 	validate_termdbconfig(ds.cohort.termdb)
 	server_init_db_queries(ds)
+	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
+	// for a genome dataset, using "updateAttr: [[...]]
+	if (ds.cohort.db.refresh && app) setDbRefreshRoute(ds, app, basepath)
 }
 export async function init_track(ds, genome) {
 	/* initiate the mds2 track upon launching server
@@ -124,6 +127,31 @@ function validate_termdbconfig(tdb) {
 			if (v.keys.length == 0) throw 'keys[] is empty from one of selectCohort.values[]'
 		}
 	}
+	if (tdb.restrictAncestries) {
+		if (!Array.isArray(tdb.restrictAncestries) || tdb.restrictAncestries.length == 0)
+			throw 'termdb.restrictAncestries[] is not non-empty array'
+		for (const a of tdb.restrictAncestries) {
+			if (!a.name) throw 'name missing from one of restrictAncestries'
+			if (typeof a.tvs != 'object') throw '.tvs{} missing from one of restrictAncestries'
+			/*
+			if(!a.file) throw '.file missing from one of restrictAncestries'
+			// file path is from tp/; parse file, store pc values to pcs
+			a.pcs = new Map() // k: pc ID, v: Map(sampleId:value)
+			for(const line of await utils.read_file(path.join(serverconfig.tpmasterdir, a.file)).trim().split('\n')) {
+				// each line: sample \t pcid \t value
+				const l = line.split('\t')
+				if(l.length!=3) throw 'restrictAncestry pc file has an invalid line'
+				const sampleid = Number(l[0])
+				if(!Number.isInteger(sampleid)) throw 'non-integer sample id from a line of restrictAncestries pc file'
+				const pcid = l[1]
+				const value = Number(l[2])
+				if(Number.isNaN(value)) throw 'non-numeric PC value from restrictAncestries file'
+				if(!a.pcs.has(pcid)) a.pcs.set(pcid, new Map())
+				a.pcs.get(pcid).set( sampleid, value )
+			}
+			*/
+		}
+	}
 }
 
 function may_validate_info_fields(tk) {
@@ -192,23 +220,61 @@ async function may_init_ld(ld, genome, ds) {
 async function may_init_vcf(vcftk, genome, ds) {
 	if (!vcftk) return
 
-	if (vcftk.file) {
-		await utils.init_one_vcf(vcftk, genome)
+	if (vcftk.chr2bcffile) {
+		// one bcf file per chr
+		if (typeof vcftk.chr2bcffile != 'object') throw 'chr2bcffile not an object'
+		// conver to full path
+		for (const c in vcftk.chr2bcffile) {
+			vcftk.chr2bcffile[c] = path.join(serverconfig.tpmasterdir, vcftk.chr2bcffile[c])
+		}
+		// FIXME for now only parse header of the bcf file of default chr
+		// TODO validate all files
+		const tmptk = { file: vcftk.chr2bcffile[genome.defaultcoord.chr] }
+		if (!tmptk.file) throw 'default chr missing from chr2bcffile'
+		await utils.init_one_vcf(tmptk, genome, true)
+		vcftk.info = tmptk.info
+		vcftk.format = tmptk.format
+		vcftk.samples = tmptk.samples
+		vcftk.nochr = tmptk.nochr
+	} else {
+		throw 'vcftk.chr2bcffile is missing'
+	}
+
+	if (vcftk.AD && vcftk.AD.chr2bcffile) {
+		// optional setting
+		if (typeof vcftk.AD.chr2bcffile != 'object') throw 'AD.chr2bcffile not an object'
+		// conver to full path
+		for (const c in vcftk.AD.chr2bcffile) {
+			vcftk.AD.chr2bcffile[c] = path.join(serverconfig.tpmasterdir, vcftk.AD.chr2bcffile[c])
+		}
+		// FIXME for now only parse header of the bcf file of default chr
+		// TODO validate all files
+		const tmptk = { file: vcftk.AD.chr2bcffile[genome.defaultcoord.chr] }
+		if (!tmptk.file) throw 'default chr missing from AD.chr2bcffile'
+		await utils.init_one_vcf(tmptk, genome, true)
+		vcftk.AD.info = tmptk.info
+		vcftk.AD.format = tmptk.format
+		vcftk.AD.samples = tmptk.samples
+		vcftk.AD.nochr = tmptk.nochr
+		console.log(ds.label + ' vcf: AD: ' + vcftk.AD.samples.length + ' samples')
+		// convert string names to integer, per termdb design spec
+		for (const n of vcftk.AD.samples) {
+			const i = Number(n.name)
+			if (!Number.isInteger(i)) throw 'non-integer vcf sample: ' + n.name
+			n.name = i
+		}
+	}
+
+	if (vcftk.samples) {
 		// convert vcf string names to integer, per termdb design spec
 		for (const n of vcftk.samples) {
 			const i = Number(n.name)
 			if (!Number.isInteger(i)) throw 'non-integer vcf sample: ' + n.name
 			n.name = i
 		}
-		console.log(
-			vcftk.file +
-				': ' +
-				(vcftk.samples ? vcftk.samples.length + ' samples, ' : '') +
-				(vcftk.nochr ? 'no chr' : 'has chr')
-		)
-	} else if (vcftk.chr2file) {
+		console.log(ds.label + ' vcf: ' + vcftk.samples.length + ' samples')
 	} else {
-		throw 'vcf has no file or chr2file'
+		console.log(ds.label + ' vcf: no samples')
 	}
 
 	if (vcftk.numerical_axis) {
@@ -227,11 +293,12 @@ async function may_init_vcf(vcftk, genome, ds) {
 	}
 
 	if (vcftk.plot_mafcov) {
-		if (!vcftk.samples) throw '.plot_mafcov enabled but no samples from vcf'
-		if (!vcftk.format) throw '.plot_mafcov enabled but no FORMAT fields from vcf'
-		if (!vcftk.format.AD) throw '.plot_mafcov enabled but the AD FORMAT field is missing'
-		if (vcftk.format.AD.Number != 'R') throw 'AD FORMAT field Number=R is not true'
-		if (vcftk.format.AD.Type != 'Integer') throw 'AD FORMAT field Type=Integer is not true'
+		if (!vcftk.AD) throw '.plot_mafcov enabled but .AD{} missing from vcf'
+		if (!vcftk.AD.samples) throw '.plot_mafcov enabled but no samples from vcf'
+		if (!vcftk.AD.format) throw '.plot_mafcov enabled but no FORMAT fields from vcf'
+		if (!vcftk.AD.format.AD) throw '.plot_mafcov enabled but the AD FORMAT field is missing'
+		if (vcftk.AD.format.AD.Number != 'R') throw 'AD FORMAT field Number=R is not true'
+		if (vcftk.AD.format.AD.Type != 'Integer') throw 'AD FORMAT field Type=Integer is not true'
 		if (vcftk.plot_mafcov.overlay_term) {
 			if (!ds.cohort) throw 'ds.cohort missing when plot_mafcov.overlay_term defined'
 			if (!ds.cohort.termdb) throw 'ds.cohort.termdb missing when plot_mafcov.overlay_term defined'
@@ -293,22 +360,110 @@ function may_sum_samples(tk) {
 	}
 }
 
-export function server_updateAttr(db, sdb) {
+/* TODO: may move this function elsewhere so that it
+	can be used for mds3 or other datasets besides mds2 */
+export function server_updateAttr(ds, sds) {
 	/*
-sdb:
-	bootstrap objects, that are elements of the "datasets" array from serverconfig, may contain .updateAttr[]
-*/
-	if (!sdb.updateAttr) return
-	for (const row of sdb.updateAttr) {
-		let pointer = db
+	ds: 
+		an entry in genomes[{datasets:[ ... ]}]
+
+	sds:
+		bootstrap objects, that are elements of the "datasets" array from serverconfig, may contain .updateAttr[]
+	*/
+	if (!sds.updateAttr) return
+	for (const row of sds.updateAttr) {
+		let pointer = ds
 		for (const field of row) {
 			if (typeof field == 'object') {
+				// apply the key-value overrides to the object that is pointed to
 				for (const k in field) {
 					pointer[k] = field[k]
 				}
 			} else {
+				// reset the reference to a subnested object
 				pointer = pointer[field]
 			}
 		}
 	}
+}
+
+/* 
+	Set server routes to trigger the refresh the ds database from the web browser,
+	without having to restart the server.
+	
+	Requires the following entry in the serverconfig.json under a genome.dataset:
+	dataset = {"updateAttr": ["cohort", 'db', {"refresh": {route, files, cmd}}]}
+	where
+		.route STRING
+			- the server route that exposes the db refresh feature
+			- should contain a random substring for weak security,
+			  for example 'pnet-refresh-r4Nd0m-5tr1n8', which will then be used as
+			  http://sub.domain.ext:port/termdb-refresh.html?route=pnet-refresh-r4Nd0m-5tr1n8
+		
+		.files{}
+			- key: a short string alias to a data file that may be updated,
+					such as 'annotations', 'survival', etc 
+			- value: the absolute path to the data file that will be updated 
+		
+		.cmd STRING
+			- the command to run after updates are written to the data files
+			- for example, "cmd": "/abs/path/to/tp/files/hg19/pnet/clinical/update.sh",
+			  where the update file can have commands like this:
+				
+				// content of update.sh 
+			  #!/bin/bash
+				cd "/abs/path/to/tp/files/hg19/pnet/clinical"
+				/abs/path/to/proteinpaint/utils/pnet/do.sh
+*/
+
+function setDbRefreshRoute(ds, app, basepath) {
+	const r = ds.cohort.db.refresh
+	// delete the optional 'refresh' attribute
+	// so that the routes below will not be reset again
+	// when mds2_init.init_db() is called after a
+	// data file has been updated
+	delete ds.cohort.db.refresh
+
+	// return the file aliases that may be updated
+	// no need to expose the target absolute paths on this server
+	app.get(`${basepath}/${r.route}`, async (req, res) => {
+		res.send({ label: ds.label, files: Object.keys(r.files) })
+	})
+
+	/*
+		req.body{}
+		- has one or more key-values, where
+		- key: short string alias of the data file to update
+		- value: tab-delimited string data to write to the data file
+	*/
+	app.post(`${basepath}/${r.route}`, async (req, res) => {
+		try {
+			// save file to text
+			const q = req.body
+			for (const name in q) {
+				console.log(`Updating ${r.files[name]}`)
+				fs.writeFileSync(r.files[name], q[name], { encoding: 'utf8' })
+			}
+			if (r.cmd) {
+				const ps = spawn(...r.cmd)
+				const stderr = []
+				ps.stdout.on('data', data => {
+					console.log(`stdout: ${data}`)
+				})
+				ps.stderr.on('data', data => {
+					stderr.push(data)
+				})
+				ps.on('close', code => {
+					if (code !== 0) throw `child process exited with code ${code}`
+				})
+
+				if (stderr.length) throw stderr.join('')
+			}
+			await init_db(ds)
+			res.send({ status: 'ok' })
+		} catch (e) {
+			console.log(e)
+			res.send({ error: e.error || e })
+		}
+	})
 }

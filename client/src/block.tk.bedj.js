@@ -2,6 +2,7 @@ import * as client from './client'
 import { bplen } from '../shared/common'
 import { event as d3event } from 'd3-selection'
 import { legend_newrow } from './block.legend'
+import { make_one_checkbox } from './dom/checkbox'
 
 /*
 bedj can only be loaded from POST but not GET
@@ -210,8 +211,9 @@ function configpanel(tk, block) {
 		row.append('span').html('Item height&nbsp;')
 		row
 			.append('input')
+			.attr('type', 'number')
 			.property('value', tk.stackheight)
-			.attr('size', 5)
+			.style('width', '50px')
 			.on('keyup', () => {
 				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
 				const s = d3event.target.value
@@ -227,7 +229,7 @@ function configpanel(tk, block) {
 	}
 	if (!tk.categories) {
 		// color
-		const row = holder.append('div')
+		const row = holder.append('div').style('margin-bottom', '10px')
 		row.append('span').html('Color&nbsp;')
 		row
 			.append('input')
@@ -235,6 +237,56 @@ function configpanel(tk, block) {
 			.attr('type', 'color')
 			.on('change', () => {
 				tk.color = d3event.target.value
+				bedjload(tk, block)
+			})
+	}
+	{
+		// hide names
+		const row = holder.append('div').style('margin-bottom', '10px')
+		make_one_checkbox({
+			holder: row,
+			labeltext: 'Hide item names',
+			checked: tk.hideItemNames,
+			callback: () => {
+				tk.hideItemNames = !tk.hideItemNames
+				bedjload(tk, block)
+			}
+		})
+	}
+	{
+		// filter items
+		const row = holder.append('div').style('margin-bottom', '10px')
+		make_one_checkbox({
+			holder: row,
+			labeltext: 'Show items by names',
+			checked: tk.filterByName ? true : false,
+			callback: () => {
+				if (div.style('display') == 'none') {
+					// show ui
+					div.style('display', 'block')
+				} else {
+					// hide ui, also disable filtering
+					div.style('display', 'none')
+					delete tk.filterByName
+					bedjload(tk, block)
+				}
+			}
+		})
+		const div = holder
+			.append('div')
+			.style('margin', '0px 0px 10px 25px')
+			.style('display', tk.filterByName ? 'block' : 'none')
+		const ta = div.append('textarea').property('rows', 4)
+		if (tk.filterByName) ta.property('value', tk.filterByName)
+		ta.property('placeholder', 'One name per row. Case sensitive. Use isoform names for gene track.')
+		div
+			.append('button')
+			.style('display', 'block')
+			.text('Submit')
+			.on('click', () => {
+				const v = ta.property('value').trim()
+				if (!v) return
+				tk.filterByName = v
 				bedjload(tk, block)
 			})
 	}

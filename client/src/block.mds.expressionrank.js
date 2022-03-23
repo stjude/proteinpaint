@@ -297,7 +297,37 @@ function set_height(tk, block) {
 }
 
 function makeTk(tk, block) {
-	tk.showrank = true
+	if (!tk.sample) throw 'sample name missing'
+
+	if (tk.dslabel) {
+		/*
+		this one is official tk,
+		unfortunately if it is added from embedding, it will be flagged as custom
+		*/
+		delete tk.iscustom
+	}
+
+	if (tk.iscustom) {
+		if (!tk.file && !tk.url) throw 'file or url missing for custom tk'
+		if (!tk.gecfg) tk.gecfg = {}
+	} else {
+		// must set gecfg here to validate
+		if (!tk.dslabel) throw 'dslabel missing for native track'
+		if (!tk.querykey) throw 'querykey missing for native track'
+		tk.mds = block.genome.datasets[tk.dslabel]
+		if (!tk.mds) throw 'dataset not found: invalid value for dslabel'
+		delete tk.dslabel
+		tk.gecfg = tk.mds.queries[tk.querykey]
+		if (!tk.gecfg) throw 'expression query not found: invalid value for querykey'
+	}
+
+	if (tk.datatype) {
+		tk.gecfg.datatype = tk.datatype
+		delete tk.datatype
+	}
+
+	if (!tk.barheight) tk.barheight = 60
+	if (!('showrank' in tk)) tk.showrank = true
 
 	if (!tk.gecfg.itemcolor) {
 		tk.gecfg.itemcolor = 'green'

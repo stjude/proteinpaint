@@ -1,11 +1,9 @@
 import * as client from './client'
-import * as common from '../shared/common'
-import { axisLeft, axisBottom } from 'd3-axis'
-import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
+import { select as d3select, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
-import { make_lasso as d3lasso } from './mds.samplescatterplot.lasso'
-import { zoom as d3zoom, zoomIdentity, zoomTransform, transform as d3transform } from 'd3'
+import { d3lasso } from './common/lasso'
+import { zoom as d3zoom, zoomIdentity } from 'd3'
 import { filterInit } from './common/filter'
 import { getFilteredSamples } from '../shared/filter'
 import { getVocabFromSamplesArray } from './termdb/vocabulary'
@@ -24,6 +22,7 @@ obj:
 		.x/y/sample_name
 	.colorby
 	.key2color{}
+	.tabular_data
 
 // available for official datasets
 .mds{}
@@ -71,13 +70,30 @@ obj:
 ********************** EXPORTED
 init()
 ********************** INTERNAL
-get_data()
-finish_setup
-init_dotcolor_legend
-init_plot()
-assign_color4dots
-click_dot
-launch_singlesample
+get_data() // get data from server side official dataset or client side JSON or tabular file
+	update_dotcolor_legend() // update legend table by filter
+finish_setup() // setup for colorbyattributes and attr_levels
+init_dotcolor_legend() // create legend as flat list of colorbyattributes or by attr_levels (gene expression, todo) 
+	legend_attr_levels() // hardcoded 2 levels, level 1 not colored, level 2 colored
+	legend_flatlist() // flat legend by colorbyattributes
+init_plot() // create dot plot for samples
+	assign_color4dots()
+	click_dot() //clicking dot will launch browser view or disco plot
+		click_dot_disco()
+		click_dot_mdsview()
+	resize() // drag to resize
+	makeConfigPanel() // config pabel with pan/zoom and lasso
+		lasso_select() // allow to select dots using lasso
+			scatterplot_lasso_start()
+			scatterplot_lasso_draw()
+			scatterplot_lasso_end()
+			show_lasso_menu()
+printData() // get list of samples with meta data
+click_mutated_genes() // init menu pane with reccurently mulated genes
+	init_mutation_type_control() // recurrently mutated genes panel with config 
+	get_mutation_count_data() // get mutation count from 'mdsgenecount' query
+	make_sample_matrix() // make sample matrix from samplematrix.js
+launch_singlesample()
 */
 
 const radius = 3
@@ -95,6 +111,20 @@ export async function init(obj, holder, debugmode) {
 	if (debugmode) {
 		window.obj = obj
 	}
+	// default lasso options
+	if (!obj.lasso)
+		obj.lasso = {
+			postSelectMenuOptions: [
+				/*{
+         label: 'Do something', 
+         callback({samples, sample_attributes, sample2dot}) {....}
+      },*/
+				{
+					label: 'List samples',
+					callback: 'listSamples' // will indicate to use the default callback of listing the samples
+				}
+			]
+		}
 
 	obj.menu = new client.Menu({ padding: '2px' })
 	obj.menu2 = new client.Menu({ padding: '10px' })
@@ -243,7 +273,49 @@ async function get_data(obj) {
 		// list
 		if (!Array.isArray(ad.samples)) throw '.analysisdata.samples is not array'
 		obj.dots = ad.samples
-		// may load from tabular data
+	} else if (ad.tabular_data) {
+		// load from tabular data
+		// tabular data foramting instructions:
+		// - tabular_data must have at least 3 columns, representing X, Y and sample_name
+		// - headers for X and Y are case insensitive. (e.g. 'x' or 'X')
+		// - header for 3rd column can be anything, it will be used as sample_name by default
+		// - Metadata can be added as columns to tabular_data
+		// - if tabular_data has metadata, 4th column is used to create legend and for coloring dots
+		let lines = ad.tabular_data.split('\n')
+		if (lines.length < 2) throw 'at least 2 rows, header row + at least 1 sample data must be supplied'
+		ad.samples = []
+		const headers = lines.shift().split('\t')
+		if (headers.length < 3) throw 'at least 3 columns are required with X, Y and sample name'
+		// assign 3rd column header as 'samplekey'
+		ad.samplekey = headers[2]
+		let xi = headers.indexOf('x')
+		if (xi == -1) xi = headers.indexOf('X')
+		if (xi == -1) throw '"X" or "x" column missing from tabular data'
+		let yi = headers.indexOf('y')
+		if (yi == -1) yi = headers.indexOf('Y')
+		if (yi == -1) throw '"Y" or "y" column missing from tabular data'
+		for (const line of lines) {
+			const values = line.split('\t')
+			const sample = {}
+			for (const [i, v] of values.entries()) {
+				if (i == xi) sample.x = Number.parseFloat(v)
+				else if (i == yi) sample.y = Number.parseFloat(v)
+				else sample[headers[i]] = v
+			}
+			ad.samples.push(sample)
+		}
+		obj.dots = ad.samples
+		// create sample_attributes if not defined
+		if (ad.sample_attributes == undefined) {
+			ad.sample_attributes = {}
+			for (const [i, key] of headers.entries()) {
+				if (i <= 2) continue
+				ad.sample_attributes[key] = { label: key }
+			}
+		}
+		// For tabular data, first 3 columns should be X, Y and sample_name
+		// 4th column will be used for color dots and legend by default
+		if (!ad.colorbyattributes && headers.length > 3) ad.colorbyattributes = [{ key: headers[3] }]
 	} else {
 		throw 'unknown data encoding in .analysisdata{}'
 	}
@@ -373,9 +445,16 @@ function finish_setup(obj) {
 					a.values[v] = {}
 				}
 			}
-			const cf = scaleOrdinal(schemeCategory10)
+			const cf = scaleOrdinal(schemeCategory20)
 			for (const k in a.values) {
 				if (!a.values[k].color) a.values[k].color = cf(k)
+			}
+
+			if (obj.analysisdata) {
+				// add color to obj.analysisdata.sample_attributes[key].values
+				// for tabular data where colors are not defined for each category
+				const ad = obj.analysisdata.sample_attributes
+				if (ad[a.key].values == undefined) ad[a.key].values = a.values
 			}
 		}
 	}
@@ -395,7 +474,7 @@ function finish_setup(obj) {
 					if (v == undefined || v == null || register.values[v]) continue
 					register.values[v] = {}
 				}
-				const cf = scaleOrdinal(schemeCategory10)
+				const cf = scaleOrdinal(schemeCategory20)
 				for (const k in register.values) {
 					if (!register.values[k].color) register.values[k].color = cf(k)
 				}
@@ -1356,8 +1435,24 @@ function lasso_select(obj, dots) {
 	const svg = obj.scattersvg
 	let lasso
 
-	// Lasso functions
-	function lasso_start() {
+	if (obj.lasso_active) {
+		lasso = d3lasso()
+			.items(dots.selectAll('circle'))
+			.targetArea(svg)
+
+		lasso
+			.on('start', scatterplot_lasso_start)
+			.on('draw', scatterplot_lasso_draw)
+			.on('end', scatterplot_lasso_end)
+
+		svg.call(lasso)
+	} else {
+		svg.selectAll('.lasso').remove()
+		svg.on('mousedown.drag', null)
+	}
+
+	// Lasso custom functions
+	function scatterplot_lasso_start() {
 		if (!obj.lasso_active) return
 		lasso
 			.items()
@@ -1367,7 +1462,7 @@ function lasso_select(obj, dots) {
 			.classed('selected', false)
 	}
 
-	function lasso_draw() {
+	function scatterplot_lasso_draw() {
 		if (!obj.lasso_active) return
 		// Style the possible dots
 		lasso
@@ -1385,11 +1480,10 @@ function lasso_select(obj, dots) {
 		// 	.classed('possible',false)
 	}
 
-	function lasso_end() {
+	function scatterplot_lasso_end() {
 		if (!obj.lasso_active) return
 
-		const unselected_dots = svg.selectAll('.possible').size()
-
+		// show menu if at least 1 sample selected
 		const selected_samples = svg
 			.selectAll('.possible')
 			.data()
@@ -1397,22 +1491,22 @@ function lasso_select(obj, dots) {
 		if (selected_samples.length) show_lasso_menu(selected_samples)
 		else obj.menu.hide()
 
-		// Reset the color of all dots
+		// Reset classes of all items (.possible and .not_possible are useful
+		// only while drawing lasso. At end of drawing, only selectedItems()
+		// should be used)
 		lasso
 			.items()
 			.classed('not_possible', false)
 			.classed('possible', false)
 
 		// Style the selected dots
-		lasso
-			.selectedItems()
-			.attr('r', radius)
-			.style('fill-opacity', '0.8')
+		lasso.selectedItems().attr('r', radius)
 
-		// Reset the style of the not selected dots
+		// if none of the items are selected, reset radius of all dots or
+		// keep them as unselected with tiny radius
 		lasso
 			.notSelectedItems()
-			.attr('r', unselected_dots == 0 ? radius : radius_tiny)
+			.attr('r', selected_samples.length == 0 ? radius : radius_tiny)
 			.style('fill-opacity', '1')
 	}
 
@@ -1430,7 +1524,24 @@ function lasso_select(obj, dots) {
 				})
 		}
 
-		obj.menu.d
+		for (const opt of obj.lasso.postSelectMenuOptions) {
+			obj.menu.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text(opt.label) //'List samples')
+				.on('click', async () => {
+					obj.menu.hide()
+					const arg = {
+						samples,
+						sample_attributes: obj.sample_attributes,
+						sample2dot: obj.sample2dot
+					}
+					if (opt.callback == 'listSamples') printData(arg)
+					else opt.callback(arg)
+				})
+		}
+
+		/*obj.menu.d
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.text('List samples')
@@ -1442,7 +1553,7 @@ function lasso_select(obj, dots) {
 					sample2dot: obj.sample2dot
 				}
 				printData(arg)
-			})
+			})*/
 
 		obj.menu.d
 			.append('div')
@@ -1466,43 +1577,6 @@ function lasso_select(obj, dots) {
 			.style('font-size', '.8em')
 			.style('width', '150px')
 			.text(samples.length + ' samples selected')
-	}
-
-	if (obj.lasso_active) {
-		lasso = d3lasso()
-			.closePathSelect(true)
-			.closePathDistance(100)
-			.items(dots.selectAll('circle'))
-			.targetArea(svg)
-
-		lasso
-			.on('start', lasso_start)
-			.on('draw', lasso_draw)
-			.on('end', lasso_end)
-
-		svg.call(lasso)
-
-		const las = svg.select('.lasso')
-
-		las
-			.select('path')
-			.style('stroke', '#505050')
-			.style('stroke-width', '2px')
-
-		las.select('.drawn').style('fill-opacity', '.05')
-
-		las
-			.select('.loop_close')
-			.style('fill', 'none')
-			.style('stroke-dasharray', '4,4')
-
-		las
-			.select('.origin')
-			.style('fill', '#3399FF')
-			.style('fill-opacity', '.5')
-	} else {
-		svg.selectAll('.lasso').remove()
-		svg.on('mousedown.drag', null)
 	}
 }
 

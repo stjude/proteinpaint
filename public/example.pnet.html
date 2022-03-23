@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+<div id=exp style="margin:10px"></div>
+
+<script>
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	parseurl:true,
+	nobox:1,
+	noheader:1,
+	debug: 1,
+	mass:{
+		state: {
+			dslabel: 'PNET',
+			genome: 'hg19',
+			plots: [
+				/*{
+					chartType: 'survival',
+					term: {
+						id: 'Event-free survival'
+					},
+					term2: {
+						id: 'Age'
+					},
+					settings: {}
+				},*/
+				{
+					chartType: 'matrix',
+					settings: {
+						matrix: {
+							termLabelOffset: 220
+						}
+					},
+					divideBy: {
+						id: 'Age',
+						q: {
+							mode: 'discrete',
+							type: 'regular-bin',
+							bin_size: 6,
+							first_bin: {
+								startunbounded: true,
+								stop: 2, 
+								stopinclusive: true
+							}
+						}
+					},
+					termgroups: [
+						{
+							name: 'Demographics',
+							lst: [
+								{
+									id: 'sex',
+									//q: { mode: 'values' } // or 'groupsetting'
+								}, 
+								{
+									id: 'Age',
+									q: {
+										mode: 'discrete',
+										type: 'regular-bin',
+										bin_size: 2,
+										first_bin: {
+											startunbounded: true,
+											stop: 2,
+											stopinclusive: true
+										}
+									} // or 'continuous'
+								}
+							]
+						},
+						{
+							name: 'Treatment',
+							lst: [
+								{
+									id: 'Primary Treatment category',
+								}, 
+								{
+									id: 'Primary Treatment category 2',
+								}
+							]
+						},
+						{
+							name: 'Relapse',
+							lst: [
+								{
+									id: 'Relapse 1 Tx',
+								}, 
+								{
+									id: 'Relapse 2 Tx',
+								},
+								{
+									id: 'Relapse 3 Tx',
+								},
+								{
+									id: 'Relapse 4 Tx',
+								},
+							]
+						},
+						{
+							name: 'Variants',
+							lst: [
+								{
+									term: {
+										type: 'geneVariant',
+										name: 'C19MC'
+									}
+								},
+								{
+									term: {
+										type: 'geneVariant',
+										name: 'TP53'
+									}
+								},{
+									term: {
+										type: 'geneVariant',
+										name: 'NRAS'
+									}
+								},{
+									term: {
+										type: 'geneVariant',
+										name: 'KRAS'
+									}
+								},{
+									term: {
+										type: 'geneVariant',
+										name: 'FLT3'
+									}
+								},{
+									term: {
+										type: 'geneVariant',
+										name: 'MYC'
+									}
+								}
+							]
+						}
+					],
+				}
+			]
+		}
+	}
+})
+
+</script>
+
+</body>
+</html>

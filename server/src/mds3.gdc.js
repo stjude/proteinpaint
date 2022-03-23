@@ -1,6 +1,7 @@
 const common = require('../shared/common')
 const got = require('got')
 const { get_crosstabCombinations } = require('./mds3.init')
+const serverconfig = require('./serverconfig')
 
 /*
 GDC graphql API
@@ -18,6 +19,12 @@ validate_ssm2canonicalisoform
 getheaders
 validate_sampleSummaries2_number
 validate_sampleSummaries2_mclassdetail
+init_dictionary
+init_termdb_queries
+
+
+************** gdc adhoc termdb structure
+add description here or in termdb doc
 */
 
 export async function validate_ssm2canonicalisoform(api) {
@@ -154,6 +161,28 @@ export function validate_query_snvindel_byisoform_2(ds) {
 	if (!api.filters) throw '.filters missing for byisoform.gdcapi'
 	if (typeof api.filters != 'function') throw 'byisoform.gdcapi.filters() is not function'
 	ds.queries.snvindel.byisoform.get = async opts => {
+		/*
+		hardcoded logic!!
+
+		as gdc ssm is based on gencode
+		to allow them to also show up on a refseq pp view
+		will detect if querying isoform is refseq
+		steps:
+		1. convert refseq to ensembl
+		2. set ensembl to opts.isoform to run query
+		3. set refseq to "refseq" holder variable
+		4. in resulting ssm, set isoform to refseq so skewer can show
+		*/
+		let refseq
+		if (opts.isoform[0] == 'N' && ds.refseq2ensembl_query) {
+			const x = ds.refseq2ensembl_query.get(opts.isoform)
+			if (x) {
+				// converted given refseq to an ensembl
+				refseq = opts.isoform
+				opts.isoform = x.ensembl
+			}
+		}
+
 		const headers = getheaders(opts)
 		const response = await got.post(api.apihost, {
 			headers,
@@ -186,6 +215,13 @@ export function validate_query_snvindel_byisoform_2(ds) {
 			snvindel_addclass(m, b.consequence.find(i => i.transcript.transcript_id == opts.isoform))
 			mlst.push(m)
 		}
+
+		if (refseq) {
+			// replace ensembl back to refseq
+			opts.isoform = refseq
+			for (const m of mlst) m.isoform = refseq
+		}
+
 		return mlst
 	}
 }
@@ -263,7 +299,7 @@ function snvindel_addclass(m, consequence) {
 function getheaders(q) {
 	// q is req.query{}
 	const h = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	if (q.token) h['X-Auth-Token'] = q.token
+	if (q && q.token) h['X-Auth-Token'] = q.token
 	return h
 }
 
@@ -387,45 +423,39 @@ export function validate_query_genecnv(ds) {
 }
 
 // for variant2samples query
-export async function getSamples_gdcapi(q, ds) {
+export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
 	const api = ds.variant2samples.gdcapi
-	const fields =
-		q.get == ds.variant2samples.type_sunburst
-			? api.fields_sunburst
-			: q.get == ds.variant2samples.type_summary
-			? api.fields_summary
-			: q.get == ds.variant2samples.type_samples
-			? api.fields_samples
-			: null
 	if (!fields) throw 'invalid get type of q.get'
+	if (q.tid2value && Object.keys(q.tid2value).length) {
+		q.termlst = []
+		for (const t of Object.keys(q.tid2value)) {
+			let term = ds.termdb.terms.find(i => i.id == t)
+			if (!term) term = ds.cohort.termdb.q.getTermById(t)
+			if (term) q.termlst.push(term)
+		}
+	}
 
+	const query =
+		api.endpoint + '?size=' + (q.size || api.size) + '&from=' + (q.from || 0) + '&fields=' + fields.join(',')
+	const filter = JSON.stringify(api.filters(q))
 	const headers = getheaders(q) // will be reused below
 
-	const response = await got(
-		api.endpoint +
-			'?size=' +
-			(q.size || api.size) +
-			'&from=' +
-			(q.from || 0) +
-			'&fields=' +
-			fields.join(',') +
-			'&filters=' +
-			encodeURIComponent(JSON.stringify(api.filters(q))),
-		{ method: 'GET', headers }
-	)
+	const response = await got(query + '&filters=' + encodeURIComponent(filter), { method: 'GET', headers })
 	let re
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
-		throw 'invalid JSON from GDC for variant2samples'
+		throw 'invalid JSON from GDC for variant2samples for query :' + query + ' and filter: ' + filter
 	}
-	if (!re.data || !re.data.hits) throw 'data structure not data.hits[]'
-	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array'
-
+	if (!re.data || !re.data.hits) throw 'data structure not data.hits[] for query :' + query + ' and filter: ' + filter
+	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array for query :' + query + ' and filter: ' + filter
+	// total to display on sample list page
+	// for numerical terms, total is not possible before making GDC query
+	const total = re.data.pagination.total
 	const samples = []
 	for (const s of re.data.hits) {
-		if (!s.case) throw '.case{} missing from a hit'
+		if (!s.case) throw '.case{} missing from a hit for query :' + query + ' and filter: ' + filter
 		const sample = {}
 
 		// get printable sample id
@@ -444,12 +474,22 @@ export async function getSamples_gdcapi(q, ds) {
 		*/
 		sample.case_uuid = s.case.case_id
 
-		for (const id of ds.variant2samples.termidlst) {
-			const t = ds.termdb.getTermById(id)
+		for (const id of termidlst) {
+			let t = ds.termdb.getTermById(id)
+			// if term is not in serverside termdb, query gdc_dictionary for new term
+			if (!t) t = ds.cohort.termdb.q.getTermById(id)
 			if (t) {
 				sample[id] = s.case[t.fields[0]]
 				for (let j = 1; j < t.fields.length; j++) {
-					if (sample[id]) sample[id] = sample[id][t.fields[j]]
+					if (sample[id] && Array.isArray(sample[id])) {
+						if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
+							sample[id] = (sample[id][0][t.fields[j]] * t.unit_conversion).toFixed(2)
+						else sample[id] = sample[id][0][t.fields[j]]
+					} else if (sample[id]) {
+						if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
+							sample[id] = (sample[id][t.fields[j]] * t.unit_conversion).toFixed(2)
+						else sample[id] = sample[id][t.fields[j]]
+					}
 				}
 			}
 		}
@@ -459,7 +499,7 @@ export async function getSamples_gdcapi(q, ds) {
 		///////////////////
 		samples.push(sample)
 	}
-	return samples
+	return [samples, total]
 }
 
 function may_add_readdepth(acase, sample) {
@@ -511,6 +551,58 @@ export async function get_cohortTotal(api, ds, q) {
 		v2count.set(t.key, t.doc_count)
 	}
 	return { v2count, combination: q._combination }
+}
+
+export async function get_termlst2size(args) {
+	const { api, ds, termlst, q, treeFilter } = args
+	const query = api.query(termlst)
+	const filter = api.filters(treeFilter)
+	const response = await got.post(ds.apihost, {
+		headers: getheaders(q),
+		body: JSON.stringify({ query, variables: filter })
+	})
+	let re
+	try {
+		re = JSON.parse(response.body)
+	} catch (e) {
+		throw 'invalid JSON from GDC for cohortTotal for query :' + query + ' and filter: ' + filter
+	}
+	let h = re[api.keys[0]]
+	for (let i = 1; i < api.keys.length; i++) {
+		h = h[api.keys[i]]
+		if (!h)
+			throw '.' +
+				api.keys[i] +
+				' missing from data structure of termid2totalsize for query :' +
+				query +
+				' and filter: ' +
+				filter
+	}
+	for (const term of termlst) {
+		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets']))
+			throw api.keys.join('.') + ' not array for query :' + query + ' and filter: ' + filter
+		if ((term.type == 'integer' || term.type == 'float') && typeof h[term.path]['stats'] != 'object') {
+			throw api.keys.join('.') + ' not object for query :' + query + ' and filter: ' + filter
+		}
+	}
+	// return total size here attached to entires
+	const tv2counts = new Map()
+	for (const term of termlst) {
+		if (term.type == 'categorical') {
+			const buckets = h[term.path]['buckets']
+			let values = []
+			for (const bucket of buckets) {
+				values.push([bucket.key.replace('.', '__'), bucket.doc_count])
+			}
+			const term_id = term.path.split('__').length > 1 ? term.path.split('__').pop() : term.path
+			tv2counts.set(term_id, values)
+		} else if (term.type == 'integer' || term.type == 'float') {
+			const count = h[term.path]['stats']['count']
+			const term_id = term.path.split('__').length > 1 ? term.path.split('__').pop() : term.path
+			tv2counts.set(term_id, { total: count })
+		}
+	}
+	return tv2counts
 }
 
 export async function addCrosstabCount_tonodes(nodes, combinations) {
@@ -605,7 +697,7 @@ export function validate_sampleSummaries2_number(api) {
 			site_set.add(h.case.primary_site)
 		}
 		// hardcoded and are from sampleSummaries2.lst[{label1}]
-		return [{ label1: 'project', count: project_set.size }, { label1: 'primary_site', count: site_set.size }]
+		return [{ label1: 'project_id', count: project_set.size }, { label1: 'primary_site', count: site_set.size }]
 	}
 }
 export function validate_sampleSummaries2_mclassdetail(api, ds) {
@@ -777,4 +869,320 @@ function sort_mclass(set) {
 	}
 	lst.sort((i, j) => j[1] - i[1])
 	return lst
+}
+
+export async function init_dictionary(ds) {
+	ds.cohort.termdb = {}
+	const id2term = (ds.cohort.termdb.id2term = new Map())
+	const dictionary = ds.termdb.dictionary
+	if (!dictionary.gdcapi.endpoint) throw '.endpoint missing for termdb.dictionary_api'
+	const response = await got(dictionary.gdcapi.endpoint, {
+		method: 'GET',
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
+	})
+	let re
+	try {
+		re = JSON.parse(response.body)
+	} catch (e) {
+		throw 'invalid JSON from GDC for variant2samples'
+	}
+	if (!re._mapping) throw 'returned data does not have ._mapping'
+	if (!re.fields) throw 'returned data does not have .fields'
+	if (!Array.isArray(re.fields)) throw '.fields not array'
+	if (!re.expand) throw 'returned data does not have .expand'
+	if (!Array.isArray(re.expand)) throw '.expand not array'
+	// store gdc dictionary in memory
+	// step 1: add leaf terms
+	for (const i in re.fields) {
+		const term_path_str = re.fields[i]
+		// skip term if it's present in duplicate_term_skip []
+		if (dictionary.gdcapi.duplicate_term_skip.includes(term_path_str)) continue
+		const term_paths = term_path_str.split('.')
+		const term_id = term_paths[term_paths.length - 1]
+		const term_obj = {
+			id: term_id,
+			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
+			path: term_path_str,
+			isleaf: true,
+			parent_id: term_paths[term_paths.length - 2],
+			fields: term_path_str.split('.').slice(1)
+			//child_types: [] // TODO: may set in the future to support hiding childless parent terms in the tree menu
+		}
+		// step 2: add type of leaf terms from _mapping:{}
+		const t_map = re._mapping[dictionary.gdcapi.mapping_prefix + '.' + term_path_str]
+		if (t_map)
+			term_obj.type = t_map.type == 'keyword' ? 'categorical' : 'long' ? 'integer' : 'double' ? 'float' : 'unknown'
+		else if (t_map == undefined) term_obj.type = 'unknown'
+		id2term.set(term_id, term_obj)
+	}
+	// step 3: add parent  and root terms
+	for (const i in re.expand) {
+		const term_str = re.expand[i]
+		const term_levels = term_str.split('.')
+		const term_id = term_levels.length == 1 ? term_str : term_levels[term_levels.length - 1]
+		const term_obj = {
+			id: term_id,
+			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
+			path: term_str,
+			fields: term_str.split('.').slice(1)
+			// included_types: [] // TODO update term.included_types usage to this method
+			// child_types: [] // TODO: may set in the future to support hiding childless parent terms in the tree menu
+		}
+		if (term_levels.length > 1) term_obj['parent_id'] = term_levels[term_levels.length - 2]
+		id2term.set(term_id, term_obj)
+	}
+
+	//step 4: prune the tree
+	// Quick fix: added 'program' to prune_terms
+	// because gdc query is giving error while querying child terms for this term
+	const prune_terms = [
+		'ssm_occurrence_autocomplete',
+		'ssm_occurrence_id',
+		'ssm',
+		'observation',
+		'available_variation_data'
+	]
+	for (const term_id of prune_terms) {
+		if (id2term.has(term_id)) {
+			const children = [...id2term.values()].filter(t => t.path.includes(term_id))
+			if (children.length) {
+				for (const child_t of children) {
+					id2term.delete(child_t.id)
+				}
+			}
+			id2term.delete(term_id)
+		}
+	}
+
+	//setp 5: remove 'case' term and modify children
+	id2term.delete('case')
+	const children = [...id2term.values()].filter(t => t.parent_id == 'case')
+	if (children.length) children.forEach(t => (t.parent_id = undefined))
+	console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
+
+	// freeze gdc dictionary as it's readonly and must not be changed by treeFilter or other features
+	Object.freeze(ds.cohort.termdb.id2term)
+	init_termdb_queries(ds.cohort.termdb, ds)
+}
+
+function init_termdb_queries(termdb, ds) {
+	const q = (termdb.q = {})
+
+	q.getRootTerms = async (vocab, treeFilter = null) => {
+		// find terms without term.parent_id
+		const terms = []
+		termdb.id2term.forEach((v, k) => {
+			if (v.parent_id == undefined) terms.push(v)
+		})
+		const re = JSON.parse(JSON.stringify(terms))
+		if (treeFilter) await add_terms_samplecount(re, treeFilter)
+		return re
+	}
+
+	q.getTermChildren = async (id, vocab, treeFilter = null) => {
+		// find terms which have term.parent_id as clicked term
+		const terms = []
+		termdb.id2term.forEach((v, k) => {
+			if (v.parent_id == id) terms.push(v)
+		})
+		const re = JSON.parse(JSON.stringify(terms))
+		if (treeFilter) await add_terms_samplecount(re, treeFilter)
+		return re
+	}
+
+	q.findTermByName = async (searchStr, limit = null, vocab, exclude_types = [], treeFilter = null) => {
+		searchStr = searchStr.toLowerCase() // convert to lowercase
+		// replace space with _ to match with id of terms
+		if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
+		// find terms that have term.id containing search string
+		const terms = []
+		termdb.id2term.forEach((v, k) => {
+			if (v.id.includes(searchStr)) terms.push(v)
+		})
+		const re = JSON.parse(JSON.stringify(terms))
+		// find terms that have term.id containing search string
+		if (treeFilter) await add_terms_samplecount(re, treeFilter)
+		return re
+	}
+
+	q.getAncestorIDs = id => {
+		const search_term = termdb.id2term.get(id)
+		if (!search_term) return
+		// ancestor terms are already defined in term.path seperated by '.'
+		const re = search_term.path ? search_term.path.split('.') : ['']
+		if (re.length > 1) re.pop() // remove the last element of array which is the query term itself
+		return re
+	}
+	q.getAncestorNames = q.getAncestorIDs
+
+	q.getTermById = id => {
+		const terms = [...termdb.id2term.values()]
+		return terms.find(i => i.id == id)
+	}
+
+	q.getSupportedChartTypes = () => {
+		// this function is required for server-provided termdbConfig
+		const supportedChartTypes = {}
+		const numericTypeCount = {}
+		// key: subcohort combinations, comma-joined, as in the subcohort_terms table
+		// value: array of chart types allowed by term types
+
+		for (const r of termdb.id2term.values()) {
+			if (!r.type) continue
+			// !!! r.cohort is undefined here as gdc data dictionary has no subcohort
+			if (!(r.cohort in supportedChartTypes)) {
+				supportedChartTypes[r.cohort] = ['barchart', 'table', 'regression']
+				numericTypeCount[r.cohort] = 0
+			}
+			if (r.type == 'survival' && !supportedChartTypes[r.cohort].includes('survival'))
+				supportedChartTypes[r.cohort].push('survival')
+			if (r.type == 'condition' && !supportedChartTypes[r.cohort].includes('cuminc'))
+				supportedChartTypes[r.cohort].push('cuminc')
+			if (r.type == 'float' || r.type == 'integer') numericTypeCount[r.cohort] += r.samplecount
+		}
+		for (const cohort in numericTypeCount) {
+			if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].push('boxplot')
+			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].push('scatterplot')
+		}
+
+		return supportedChartTypes
+	}
+
+	async function add_terms_samplecount(terms, treeFilter) {
+		let termlst = []
+		for (const term of terms) {
+			if (term)
+				termlst.push({
+					path: term.path.replace('case.', '').replace(/\./g, '__'),
+					type: term.type
+				})
+		}
+		const tv2counts = await get_termlst2size({
+			api: ds.termdb.termid2totalsize2.gdcapi,
+			ds,
+			termlst,
+			treeFilter: JSON.parse(treeFilter)
+		})
+		// add term.disabled if samplesize if zero
+		for (const term of terms) {
+			if (term) {
+				const tv2count = tv2counts.get(term.id)
+				if (term.type == 'categorical' && tv2count) {
+					if (!tv2count.length) {
+						term.disabled = true
+						term.samplecount = 0
+					} else term.samplecount = tv2count.map(c => c[1]).reduce((a, b) => a + b)
+				} else if (term.type == 'integer' || term.type == 'float') {
+					term.samplecount = tv2count['total']
+					if (tv2count['total'] == 0) term.disabled = true
+				}
+			}
+		}
+	}
+}
+
+/************************************************
+for gdc bam slicing UI
+it shares some logic with mds3, but does not require a mds3 dataset to function
+*/
+const ssms_fields = [
+	'ssm_id',
+	'chromosome',
+	'start_position',
+	'reference_allele',
+	'tumor_allele',
+	'consequence.transcript.transcript_id',
+	'consequence.transcript.aa_change',
+	'consequence.transcript.consequence_type',
+	'consequence.transcript.gene.symbol'
+]
+
+export function handle_gdc_ssms(genomes) {
+	return async (req, res) => {
+		/* query{}
+		.genome: required
+		.case_id: required
+		.isoform: optional
+		.gene: can add later
+		*/
+		try {
+			const genome = genomes[req.query.genome]
+			if (!genome) throw 'invalid genome'
+			if (!req.query.case_id) throw '.case_id missing'
+			// make query to genome genedb to get canonical isoform of the gene
+			const filters = {
+				op: 'and',
+				content: [
+					{
+						op: 'in',
+						content: { field: 'cases.case_id', value: [req.query.case_id] }
+					}
+				]
+			}
+			if (req.query.isoform) {
+				filters.content.push({
+					op: '=',
+					content: { field: 'consequence.transcript.transcript_id', value: [req.query.isoform] }
+				})
+			}
+
+			// allow alternative api host (as gdc docker)
+			const apihost = (process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov') + '/ssms'
+
+			const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+			const response = await got(
+				apihost +
+					'?size=1000&fields=' +
+					ssms_fields.join(',') +
+					'&filters=' +
+					encodeURIComponent(JSON.stringify(filters)),
+				{ method: 'GET', headers }
+			)
+			const re = JSON.parse(response.body)
+			const mlst = []
+			for (const hit of re.data.hits) {
+				// for each hit, create an element
+				// from list of consequences, find one based on isoform info
+				let isoform = req.query.isoform
+				if (!isoform) {
+					// no isoform given, use the canonical isoform of the gene
+					// collect gene into a set over all consequences
+					const genes = new Set()
+					for (const c of hit.consequence) {
+						if (c.transcript && c.transcript.gene && c.transcript.gene.symbol) {
+							genes.add(c.transcript.gene.symbol)
+						}
+					}
+					if (genes.size == 0) {
+						// no gene?
+						continue
+					}
+					// has gene. the case of having multiple genes is not dealt with
+					const gene = [...genes][0]
+					const data = genome.genedb.get_gene2canonicalisoform.get(gene)
+					if (data && data.isoform) isoform = data.isoform
+				}
+				let c = hit.consequence.find(i => i.transcript.transcript_id == isoform)
+				if (!c) {
+					// no consequence match with given isoform, just use the first one
+					c = hit.consequence[0]
+				}
+				// no aa change for utr variants
+				const aa = c.transcript.aa_change || c.transcript.consequence_type
+				mlst.push({
+					mname: aa,
+					consequence: c.transcript.consequence_type,
+					gene: c.transcript.gene.symbol,
+					chr: hit.chromosome,
+					pos: hit.start_position,
+					ref: hit.reference_allele,
+					alt: hit.tumor_allele
+				})
+			}
+			res.send({ mlst })
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			res.send({ error: e.message || e })
+		}
+	}
 }

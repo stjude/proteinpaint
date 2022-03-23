@@ -6,9 +6,9 @@ export function validate_bins(binconfig) {
 	const bc = binconfig
 	if (!bc || typeof bc !== 'object') throw 'bin schema must be an object'
 	// assign default type
-	if (!('type' in bc)) bc.type = 'regular'
+	if (!('type' in bc)) bc.type = 'regular-bin'
 
-	if (bc.type == 'custom') {
+	if (bc.type == 'custom-bin') {
 		if (!Array.isArray(bc.lst)) throw 'binconfig.lst must be an array'
 		if (!bc.lst.length) throw 'binconfig.lst must have entries'
 		const first_bin = bc.lst[0]
@@ -55,7 +55,7 @@ export function validate_bins(binconfig) {
 				if (!isNumeric(bin.stop)) throw 'bin.stop must be numeric for a non-last bin'
 			}
 		}
-	} else if (bc.type == 'regular') {
+	} else if (bc.type == 'regular-bin') {
 		// required custom_bin parameter
 		if (!Number.isFinite(bc.bin_size)) throw 'non-numeric bin_size'
 		if (bc.bin_size <= 0) throw 'bin_size must be greater than 0'
@@ -123,7 +123,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 */
 	const bc = binconfig
 	validate_bins(bc)
-	if (bc.type == 'custom') return JSON.parse(JSON.stringify(bc.lst))
+	if (bc.type == 'custom-bin') return JSON.parse(JSON.stringify(bc.lst))
 	if (typeof summaryfxn != 'function') throw 'summaryfxn required for modules/termdb.bins.js compute_bins()'
 	const percentiles = target_percentiles(bc)
 	const summary = summaryfxn(percentiles)
@@ -202,7 +202,9 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 		// force a computed last bin to have stopunbounded true
 		if (currBin.stop >= max) {
 			currBin.stopunbounded = true
-			delete currBin.stop
+			if (bins.length > 1) {
+				delete currBin.stop
+			}
 		}
 		currBin.label = get_bin_label(currBin, bc)
 		if (currBin.stopunbounded) break
@@ -240,7 +242,9 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 		}
 	}
 	delete bc.binLabelFormatter
-	delete bins[bins.length - 1].stop
+	if (bins.length > 1) {
+		delete bins[bins.length - 1].stop
+	}
 	return bins
 }
 
@@ -260,51 +264,39 @@ export function get_bin_label(bin, binconfig) {
 		else if (bc.stopinclusive) bin.stopinclusive = true
 	}
 
-	bc.label_offset_ignored = 'bin_size' in bc && bc.bin_size < bc.label_offset
-	const label_offset = 'label_offset' in bc && !bc.label_offset_ignored ? bc.label_offset : 0
-	/*
-	  NOTE: The first_bin and last_bin are assigned in compute_bins,
-	  so these min and max values are not needed for generating
-	  labels. Will keep this code here for now for reference.
+	const start = bc.use_as == 'bins' || !('scale' in bc) ? bin.start : bin.start / bc.scale
+	const stop = bc.use_as == 'bins' || !('scale' in bc) ? bin.stop : bin.stop / bc.scale
 
-	const min = !bc.first_bin
-		? bc.results.summary.min
-		: 'start' in bc.first_bin
-		? bc.first_bin.start
-		: 'start_percentile' in bc.first_bin
-		? bc.results.summary['p' + bc.first_bin.start_percentile]
-		: bc.results.summary.min
-	const max = !bc.last_bin
-		? bc.results.summary.max
-		: 'stop' in bc.last_bin
-		? bc.last_bin.stop
-		: 'stop_percentile' in bc.last_bin
-		? bc.results.summary['p' + bc.last_bin.stop_percentile]
-		: bc.results.summary.max
-	*/
+	let label_offset = 0
+	if ('label_offset' in bc) {
+		bc.label_offset_ignored = 'bin_size' in bc && bc.bin_size < bc.label_offset
+		if (!bc.label_offset_ignored) label_offset = bc.label_offset
+	} else if (bc.bin_size === 1 && bc.termtype == 'integer') {
+		label_offset = 1
+	}
 
 	// one side-unbounded bins
 	// label will be ">v" or "<v"
 	if (bin.startunbounded) {
 		const oper = bin.stopinclusive ? '≤' : '<' // \u2264
-		const v1 = bc.binLabelFormatter(bin.stop) //bin.startinclusive && label_offset ? bin.stop - label_offset : bin.stop)
+		const v1 = bc.binLabelFormatter(stop) //bin.startinclusive && label_offset ? stop - label_offset : stop)
 		return oper + v1
 	}
 	// a data value may coincide with the last bin's start
-	if (bin.stopunbounded || bin.start === bin.stop) {
+	if (bin.stopunbounded || start === stop) {
 		const oper = bin.startinclusive /*|| label_offset*/ ? '≥' : '>' // \u2265
-		const v0 = bc.binLabelFormatter(bin.start) //bin.startinclusive || bin.start == min ? bin.start : bin.start + label_offset)
+		const v0 = bc.binLabelFormatter(start) //bin.startinclusive || start == min ? start : start + label_offset)
 		return oper + v0
 	}
 
 	// two-sided bins
 	if (label_offset && bin.startinclusive && !bin.stopinclusive) {
-		if (Number.isInteger(bc.bin_size) && Math.abs(bin.start - bin.stop) === label_offset) {
+		if (Number.isInteger(bc.bin_size) && Math.abs(start - stop) === label_offset) {
 			// make a simpler label when the range simply spans the bin_size
-			return '' + bc.binLabelFormatter(bin.start)
+			return '' + bc.binLabelFormatter(start)
 		} else {
-			const v0 = bc.binLabelFormatter(bin.start)
-			const v1 = bc.binLabelFormatter(bin.stop - label_offset)
+			const v0 = bc.binLabelFormatter(start)
+			const v1 = bc.binLabelFormatter(stop - label_offset)
 			// ensure that last two bin labels make sense (the last is stopunbounded)
 			return +v0 >= +v1 ? v0.toString() : v0 + ' to ' + v1
 		}
@@ -312,8 +304,8 @@ export function get_bin_label(bin, binconfig) {
 		// stop_inclusive || label_offset == 0
 		const oper0 = bin.startinclusive ? '' : '>'
 		const oper1 = bin.stopinclusive ? '' : '<'
-		const v0 = Number.isInteger(bin.start) ? bin.start : bc.binLabelFormatter(bin.start)
-		const v1 = Number.isInteger(bin.stop) ? bin.stop : bc.binLabelFormatter(bin.stop)
+		const v0 = Number.isInteger(start) ? start : bc.binLabelFormatter(start)
+		const v1 = Number.isInteger(stop) ? stop : bc.binLabelFormatter(stop)
 		// after rounding the bin labels, the bin start may equal the last bin stop as derived from actual data
 		if (+v0 >= +v1) {
 			const oper = bin.startinclusive ? '≥' : '>' // \u2265
@@ -322,6 +314,24 @@ export function get_bin_label(bin, binconfig) {
 			return oper0 + v0 + ' to ' + oper1 + v1
 		}
 	}
+}
+
+// get bin range equation from bin label and bin properties
+export function get_bin_range_equation(bin, binconfig) {
+	const x = '<span style="font-family:Times;font-style:italic;">x</span>'
+	let range_eq
+	const bin_label = get_bin_label(bin, binconfig)
+	if (bin.startunbounded || bin.stopunbounded) {
+		// first or last bins, e.g. x ≤ 14 and x > 16
+			range_eq = x + '&nbsp;' + bin_label
+	} else if (bin.startinclusive) {
+		// bins with startinclusive, e.g. 14 ≤ x < 16
+		range_eq = bin_label.replace('to <', '≤ ' + x + ' <')
+	} else if (bin.stopinclusive) {
+		// bins with stopinclusive, e.g. 14 < x ≤ 16
+		range_eq = bin_label.replace('>', '').replace('to', '< ' + x + ' ≤')
+	}
+	return range_eq
 }
 
 export function target_percentiles(binconfig) {

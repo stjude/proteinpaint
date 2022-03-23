@@ -4,53 +4,16 @@ module.exports = {
 	genedb: {
 		dbfile: 'anno/genes.hg38.db',
 		hasalias: true,
-		gene2canonicalisoform: true // see ./app.js
+		gene2canonicalisoform: true, // see ./app.js
+		// enable mapping for refseq and ensembl
+		refseq2ensembl: true
 	},
 	proteindomain: {
 		dbfile: 'anno/db/proteindomain.db',
 		statement: 'select data from domain where isoform=? collate nocase'
 	},
 	snp: {
-		dbfile: 'anno/db/snp146.hg38.db',
-		statement_getbyname: 'select * from snp146 where name=?',
-		statement_getbycoord: 'select * from snp146 where chrom=? and bin=? and chromStart>=? and chromEnd<=?'
-	},
-	fimo_motif: {
-		db: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme',
-		annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
-	},
-	clinvarVCF: {
-		file: 'hg38/clinvar.hg38.vcf.gz',
-		infokey: 'CLNSIG',
-		categories: {
-			Uncertain_significance: { color: '#aaa', label: 'Uncertain significance', textcolor: 'white' },
-			not_provided: { color: '#ccc', label: 'Not provided' },
-			_not_provided: { color: '#ccc', label: 'Not provided' },
-			Benign: { color: '#43ac6a', label: 'Benign', textcolor: 'white' },
-			'Benign/Likely_benign': { color: '#43ac6a', label: 'Benign/Likely benign', textcolor: 'white' },
-			Likely_benign: { color: '#5bc0de', label: 'Likely benign', textcolor: 'white' },
-			Likely_pathogenic: { color: '#e99002', label: 'Likely pathogenic', textcolor: 'white' },
-			Pathogenic: { color: '#f04124', label: 'Pathogenic', textcolor: 'white' },
-			'Pathogenic/Likely_pathogenic': { color: '#f04124', label: 'Pathogenic/Likely pathogenic', textcolor: 'white' },
-			drug_response: { color: 'gold', label: 'Drug response', textcolor: 'white' },
-			_drug_response: { color: 'gold', label: 'Drug response', textcolor: 'white' },
-			Conflicting_interpretations_of_pathogenicity: {
-				color: '#90C3D4',
-				label: 'Conflicting interpretations of pathogenicity'
-			},
-			other: { color: '#ccc', label: 'Other' },
-			_other: { color: '#ccc', label: 'Other' },
-			not_provided: { color: '#ccc', label: 'Not provided' },
-			_not_provided: { color: '#ccc', label: 'Not provided' },
-			risk_factor: { color: '#ccc', label: 'Risk factor' },
-			_risk_factor: { color: '#ccc', label: 'Risk factor' },
-			association: { color: '#ccc', label: 'Association' },
-			_association: { color: '#ccc', label: 'Association' },
-			Affects: { color: '#ccc', label: 'Affects' },
-			_Affects: { color: '#ccc', label: 'Affects' },
-			protective: { color: '#ccc', label: 'Protective' },
-			_protective: { color: '#ccc', label: 'Protective' }
-		}
+		bigbedfile: 'anno/dbsnp.hg38.bb'
 	},
 	tracks: [
 		{
@@ -62,9 +25,10 @@ module.exports = {
 				problem: { color: '#FF3300', label: 'Problem' },
 				pseudo: { color: '#FF00CC', label: 'Pseudogene' }
 			},
-			file: 'anno/gencode.v22.hg38.gz',
+			// gencode version is removed from file name to make it easier for version change
+			file: 'anno/gencode.hg38.gz',
 			type: 'bedj',
-			name: 'GENCODE v22',
+			name: 'GENCODE',
 			stackheight: 16,
 			stackspace: 1,
 			vpad: 4
