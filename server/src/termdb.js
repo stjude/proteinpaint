@@ -112,8 +112,6 @@ function trigger_gettermdbconfig(res, tdb) {
 	// add attributes to this object for revealing to client
 	const c = {
 		selectCohort: tdb.selectCohort, // optional
-		cumincplot4condition: tdb.cumincplot4condition, // optional
-		survivalplot: tdb.survivalplot, // optional
 		supportedChartTypes: tdb.q.getSupportedChartTypes(),
 		allowedTermTypes: tdb.allowedTermTypes || []
 	}
