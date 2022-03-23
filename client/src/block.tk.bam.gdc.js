@@ -678,8 +678,7 @@ function renderBamSlice(args, genome, holder) {
 			type: 'bam',
 			name: file.track_name || 'sample bam slice',
 			gdcToken: args.gdc_token,
-			gdc_file: file.file_id,
-			downloadgdc: 1,
+			gdcFileUUID: file.file_id,
 			aboutThisFile: file.about
 		}
 		if (args.variant) {
