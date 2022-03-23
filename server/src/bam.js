@@ -613,8 +613,7 @@ function softclip_mismatch_pileup2(ridx, r, templates, bplst) {
 
 async function get_q(genome, req) {
 	let q
-	// if gdc_token and case_id present, it will be moved to x-auth-token
-	if (req.get('x-auth-token')) {
+	if (req.query.isFileSlice) {
 		q = {
 			genome,
 			file: path.join(serverconfig.cachedir_bam, req.query.file), // will need to change this to a loop when viewing multiple regions in the same gdc sample
@@ -623,8 +622,6 @@ async function get_q(genome, req) {
 			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
-		//q.gdc_token = req.get('x-auth-token').split(',')[0]
-		q.gdc_file = req.query.gdc_file
 	} else {
 		const [e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
@@ -2609,19 +2606,10 @@ async function route_getread(genome, req) {
 }
 
 async function query_oneread(req, r) {
-	let firstseg,
-		lastseg,
-		dir,
-		e,
-		_file,
-		isurl,
-		readstart,
-		readstop,
-		gdc_query = false,
-		lst // array of reads to be returned
+	let firstseg, lastseg, dir, e, _file, isurl, readstart, readstop, lst // array of reads to be returned
 
-	if (req.get('x-auth-token')) {
-		gdc_query = true
+	if (req.query.isFileSlice) {
+		_file = path.join(serverconfig.cachedir_bam, req.query.file)
 	} else {
 		;[e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
@@ -2636,20 +2624,13 @@ async function query_oneread(req, r) {
 			throw 'readstart/stop not provided for read with unknown order'
 	}
 
-	let args
-	if (gdc_query) {
-		args = ['view', path.join(serverconfig.cachedir_bam, req.query.file)]
-	} else {
-		args = [
+	await utils.get_lines_bigfile({
+		isbam: true,
+		args: [
 			'view',
 			_file,
 			(req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop
-		]
-	}
-
-	await utils.get_lines_bigfile({
-		isbam: true,
-		args,
+		],
 		dir,
 		callback: (line, ps) => {
 			if (line.split('\t')[0] != req.query.qname) return
@@ -2996,20 +2977,19 @@ async function download_gdc_bam(req) {
 	const gdc_bam_filenames = []
 	for (const r of JSON.parse(req.query.regions)) {
 		const gdc_token = req.get('x-auth-token')
-		const gdc_file_id = req.query.gdc_file
 		const md5Hasher = crypto.createHmac('md5', Math.random().toString())
-		// filename is not full path; full path is not revealed to client
-		const filename = md5Hasher.update(gdc_token).digest('hex') + '.bam'
-		const filesize = await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, gdc_file_id, filename)
-		gdc_bam_filenames.push({ filename, filesize })
+		// slicefilename is not full path; full path is not revealed to client
+		const slicefilename = md5Hasher.update(gdc_token).digest('hex') + '.bam'
+		const filesize = await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, req.query.gdcFileUUID, slicefilename)
+		gdc_bam_filenames.push({ slicefilename, filesize })
 	}
 	return gdc_bam_filenames
 }
-async function get_gdc_bam(chr, start, stop, token, case_id, bamfilename) {
+async function get_gdc_bam(chr, start, stop, token, gdcFileUUID, bamfilename) {
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	headers['X-Auth-Token'] = token
 	const fullpath = path.join(serverconfig.cachedir_bam, bamfilename)
-	const url = 'https://api.gdc.cancer.gov/slicing/view/' + case_id + '?region=' + chr + ':' + start + '-' + stop
+	const url = 'https://api.gdc.cancer.gov/slicing/view/' + gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop
 	try {
 		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(fullpath))
 		await index_bam(fullpath)

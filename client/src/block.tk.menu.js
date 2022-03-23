@@ -1741,7 +1741,7 @@ function deletecustom(block, tk, tr) {
 			break
 		}
 	}
-	if (!block.tklst.find(i => i.type == 'bam' && i.gdc_file)) {
+	if (!block.tklst.find(i => i.type == 'bam' && i.isFileSlice)) {
 		// some tk has been deleted and no more gdc bam slicing tk, hide this button
 		block.gdcBamSliceDownloadBtn.style('display', 'none')
 	}
