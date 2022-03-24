@@ -1,26 +1,6 @@
 {
     "ppcalls": [
         {
-            "label": "Official dataset",
-            "urlparam": "?genome=hg19&gene=JAK2&dataset=Pediatric",
-            "runargs": {
-                "gene":"jak2",
-                "nobox": 1,
-                "noheader": 1,
-                "genome": "hg19",
-                "dataset":"Pediatric"
-            },
-            "buttons":[
-                {
-                    "name":"Build an Official Dataset",
-                    "link": "https://docs.google.com/document/d/1iY7x9PzAzLKzdABam_Tfg8h-kQ0oh2UyyKC0cP-9YWA/edit"
-                }
-            ],
-            "testSpec": {
-                "expected": { "circle": 10 }
-            }
-        },
-        {
             "label": "GDC API (GENCODE)",
             "message": "To view a different gene from the GDC dataset: <ul><li>Scroll to the top of the page. Select 'human hg38' from the dropdown menu in the header.</li><li>Start typing the gene into the search bar. A vertical menu of gene options will appear. Click the appropriate option or hit enter.</li><li>The protein view of the gene will appear. Click on <div class='sja_opaque8' style='display: inline-block; color: black; padding: 1px 2px; border: solid 1px #545454; font-size: .9em;'>GDC</div> in the toolbar.</li></ul>",
             "urlparam": "?genome=hg38&gene=ENST00000407796&mds3=GDC",
@@ -160,6 +140,26 @@
                     }
                 }
             },
+            "testSpec": {
+                "expected": { "circle": 10 }
+            }
+        },
+        {
+            "label": "Official dataset",
+            "urlparam": "?genome=hg19&gene=JAK2&dataset=Pediatric",
+            "runargs": {
+                "gene":"jak2",
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "dataset":"Pediatric"
+            },
+            "buttons":[
+                {
+                    "name":"Build an Official Dataset",
+                    "link": "https://docs.google.com/document/d/1iY7x9PzAzLKzdABam_Tfg8h-kQ0oh2UyyKC0cP-9YWA/edit"
+                }
+            ],
             "testSpec": {
                 "expected": { "circle": 10 }
             }
