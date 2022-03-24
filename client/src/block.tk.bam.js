@@ -725,7 +725,7 @@ function may_render_variant(data, tk, block) {
 				.append('div')
 				.style('width', '300px')
 				.html(
-					'<span>Diff score is the difference between jaccard similarities of the alternate and reference alleles. </span>'
+					"<span>Diff score is the difference between jaccard similarities of the alternate and reference alleles for each read. For reference and alternate groups, higher magnitude indicates greater confidence in the classification of the read into reference/alternate group.  For further details, please click on this <a href='proteinpaint.stjude.org/bam' target='_blank'>link</a>.</span>"
 				)
 				.style('font-size', '12px')
 		})
