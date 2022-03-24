@@ -9,21 +9,12 @@
     <title>ProteinPaint</title>
 	<script src='https://platform.dnanexus.com/javascript/file-viewer-1.2.min.js'></script>
 	<script src='https://proteinpaint.stjude.org/bin/proteinpaint.js'></script>
-
-
   </head>
-
-
-
 
 
   <body>
 
-
-
-    <div class="container-fluid" id="proteinpaintdiv"></div>
-    <div class="container-fluid" id="refselect" style="margin:30px;padding:20px;border:solid 1px #bbb;display:inline-block"></div>
-    <div class="container-fluid" id="errdiv" style="margin-top:20px"></div>
+    <div id="proteinpaintdiv"></div>
 
     <script type="text/javascript">
       getOptions(function(options) {
@@ -176,42 +167,12 @@
 			tracks=lst
 		}
 
-		const runpp = (refgenome)=>{
-			div.parentNode.removeChild(div)
-			runproteinpaint({
-				host:'https://proteinpaint.stjude.org',
-				holder:document.getElementById('proteinpaintdiv'),
-				block:true,
-				genome: refgenome,
-				nobox:true,
-				noheader:true,
-				nativetracks:'refgene',
-				tracks
-			})
-		}
-
-		const genomes = [
-			{name:'Human hg19', key:'hg19'},
-			{name:'Human hg38', key:'hg38'},
-			{name:'Mouse mm9', key:'mm9'},
-			{name:'Mouse mm10', key:'mm10'},
-			{name:'Fruitfly dm3', key:'dm3'},
-			{name:'Fruitfly dm6', key:'dm6'},
-			{name:'Zebrafish danRer10', key:'danRer10'}
-		]
-
-		const div = document.getElementById('refselect')
-		const h = document.createElement('h2')
-		h.innerHTML = 'Select a reference genome'
-		div.appendChild(h)
-
-		for(const g of genomes) {
-			const b = document.createElement('button')
-			b.innerHTML = g.name
-			b.style.margin = '10px'
-			b.onclick = ()=> runpp( g.key )
-			div.appendChild(b)
-		}
+		runproteinpaint({
+			host:'https://proteinpaint.stjude.org',
+			holder:document.getElementById('proteinpaintdiv'),
+			noheader:true,
+			selectGenomeWithTklst: tracks
+		})
 	});
     </script>
   </body>

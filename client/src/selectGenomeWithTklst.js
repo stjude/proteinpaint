@@ -18,6 +18,10 @@ export async function init(arg, holder, genomes) {
 	holder.style('margin', '40px 20px 20px 20px')
 
 	const formdiv = holder.append('div')
+	formdiv
+		.append('p')
+		.text('To launch view, press ENTER at gene search.')
+		.style('opacity', 0.3)
 
 	const blockholder = holder.append('div')
 
@@ -28,16 +32,17 @@ export async function init(arg, holder, genomes) {
 
 	const geneInputSpan = formdiv.append('span').style('margin-left', '10px')
 
-	makeGeneSearch()
-
-	formdiv
+	const submitBtn = formdiv
 		.append('button')
-		.style('display', 'block')
+		.style('display', 'none')
 		.style('margin-top', '20px')
 		.style('padding', '10px 15px')
 		.style('border-radius', '30px')
 		.text('Launch ProteinPaint')
 		.on('click', submit)
+
+	// create gene <input> for default genome
+	makeGeneSearch()
 
 	/////////////////// helpers
 
@@ -51,7 +56,13 @@ export async function init(arg, holder, genomes) {
 			genome,
 			tip,
 			row: geneInputSpan,
-			allowVariant: true
+			allowVariant: true,
+			/* only show submit button if valid coord is found
+			this is deal with a defect with genesearch.js
+			that pasting coordinate in <input> without hitting enter
+			will not trigger coord parsing
+			*/
+			callback: () => submitBtn.style('display', 'block')
 		}
 		coordInput = addGeneSearchbox(opt)
 	}
