@@ -27,9 +27,11 @@ export function parseDictionary(div, input) {
 	const varNameIndex = header.findIndex(l => l.toLowerCase().includes('variable name'))
 	if (term_idIndex != -1) parseDataDictionary(div, lines, header)
 	if (varNameIndex != -1) parsePhenotree(div, lines, header)
-	if (varNameIndex != -1 && term_idIndex != -1) {
+	if (varNameIndex == -1 && term_idIndex == -1) {
 		sayerror(div, `Unrecognized file format. Please check the header names.`)
+		throw 'Unrecognized file format'
 	}
+	// if (varNameIndex != -1 && term_idIndex != -1) throw 'Unrecognized file format'
 
 	function parseDataDictionary(div, lines, header) {
 		/*
@@ -37,7 +39,7 @@ export function parseDictionary(div, input) {
             - Parses tab delim data arranged in required cols: term_id, parent_id, name, type, values
             - Assumptions:
                 1. Headers required
-                2. No blank values in the term_id or parent_id columns. Top grandparents must include 'root' for the parent_id
+                2. No blank or '-' values in the term_id, parent_id, name, or type columns. Top grandparents must include 'root' for the parent_id
                 3. No identical term ids 
         */
 		const parIdIndex = header.findIndex(l => l.toLowerCase().includes('parent_id'))
@@ -76,7 +78,7 @@ export function parseDictionary(div, input) {
 					if (i == valuesIndex) continue //values can be blank
 					if (c == '' || c == '-') {
 						foundProblem = true
-						sayerror(`Blank or '-' entered for line ${lineNum}, column ${colNum}`)
+						sayerror(div, `Blank or '-' entered for line ${lineNum}, column ${colNum}`)
 					}
 					if (foundProblem == true) throw `Invalid entry for line ${lineNum}, column ${colNum}`
 				}
@@ -108,7 +110,7 @@ export function parseDictionary(div, input) {
 					const segments = v.split('=')
 					const key = segments.shift()
 					const label = segments.join('=')
-					if (!label) sayerror(div, `${v} is not in a key = value format.`)
+					if (!label) sayerror(div, `Values="${v}" in line ${lineNum} not in a key = value format.`)
 					if (!terms[termId].values) terms[termId].values = {}
 					terms[termId].values[key] = { label: label }
 				}
