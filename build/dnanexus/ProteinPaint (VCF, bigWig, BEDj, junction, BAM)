@@ -7,80 +7,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>ProteinPaint</title>
-	<script src='https://platform.dnanexus.com/javascript/file-viewer-1.1.min.js'></script>
+	<script src='https://platform.dnanexus.com/javascript/file-viewer-1.2.min.js'></script>
 	<script src='https://proteinpaint.stjude.org/bin/proteinpaint.js'></script>
-    <style type="text/css">
-  
-	body {
-		margin: 0;
-		padding: 0;
-	}
-	
-	.omnibar {
-		  width: 100%;
-		  background: #1381B3;
-		  min-height: 64px;
-		  font-family: 'Open Sans', "Helvetica Neue", Helvetica, Arial, sans-serif
-	}
-  
-
-	.logo {
-		display: block;
-		float: left;
-		margin: 0 auto;
-		width: 50px;
-		height: 50px;
-		color: #fff;
-		text-decoration: none;
-		padding: 8px 10px;
-	}
-	
-	.logo img {
-		border: none;
-		margin: 0;
-		padding: 0;
-		width: 100%;
-	}
-	
-	.site-title {
-		font-weight: 300;
-		font-size: 22px;
-		padding: 0;
-		margin: 0;
-		color: #A1CDE1;
-		padding: 14px;
-	}
-	
-	.site-title a {
-		color: #fff;
-		text-decoration: none;
-		font-weight: 600;
-	}
-	
-	
-	.nav {
-		float: right;
-		margin: 0;
-		padding: 20px 30px 20px 0;
-	}
-	
-	.nav li {
-		display: inline;
-		margin: 0;
-		padding: 0;
-		margin-left: 40px;
-		font-weight: 600;
-		font-size: 14px;
-	}
-	
-	.nav li a {
-		text-decoration: none;
-		color: #fff;
-		text-transform: uppercase;
-	}
-	
-  
-  </style>
 
 
   </head>
@@ -92,16 +20,6 @@
   <body>
 
 
-    <div class="omnibar">
-        <ul class="nav">
-			<li><a href="https://platform.stjude.cloud/requests/data_by_disease">Data</a></li>
-			<li><a href="https://platform.stjude.cloud/tools">Tools</a></li>
-			<li><a href="https://platform.stjude.cloud/visualizations/cohort">Visualizations</a></li>
-        </ul>
-        <a href="index.html" class="logo"><img src="https://pecan.stjude.org/static/stjude-logo-child.png" alt="St. Jude Cloud" title="St. Jude Cloud" /></a>
-        <h1 class="site-title"><a href="index.html">St. Jude Cloud</a> ProteinPaint</h1>   
-    </div>
-
 
     <div class="container-fluid" id="proteinpaintdiv"></div>
     <div class="container-fluid" id="refselect" style="margin:30px;padding:20px;border:solid 1px #bbb;display:inline-block"></div>
@@ -109,7 +27,8 @@
 
     <script type="text/javascript">
       getOptions(function(options) {
-	  console.log(options)
+
+	  //console.log(options)
 
         function getPath(file) {
           return file.folder + "/" + file.name;

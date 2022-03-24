@@ -21,15 +21,19 @@ runproteinpaint({
 	genome:'hg19',
 	nativetracks:'refgene',
 	tracks:[
+	/*
 		{
 			type:'bam',
 			name:'test local',
 			file:'proteinpaint_demo/hg19/bam/kit.exon8.del.bam'
 		},
+		*/
 		{
 			type:'bam',
 			name:'pecan kit wes',
-			url:'https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/wes.kit.e21.bam'
+			url:'https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/wes.kit.e21.bam',
+			indexURL:'https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/wes.kit.e21.bam.newname.bai',
+
 		},
 	],
 })
