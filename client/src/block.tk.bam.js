@@ -725,10 +725,11 @@ function may_render_variant(data, tk, block) {
 			tk.tktip.d
 				.append('div')
 				.style('width', '300px')
-				.html(
-					"Diff score is the difference between jaccard similarities of the alternate and reference alleles for each read. For reference and alternate groups, higher magnitude indicates greater confidence in the classification of the read into reference/alternate group.  For further details, please click on this <a href='proteinpaint.stjude.org/bam' target='_blank'>link</a>."
-				)
 				.style('font-size', '12px')
+				.html(
+					'Diff score is the difference between jaccard similarities of the alternate and reference alleles for each read. For reference and alternate groups, higher magnitude indicates greater confidence of the classification.' +
+						"<br><a href='https://proteinpaint.stjude.org/bam' target='_blank'>Click here to view details of this method</a>."
+				)
 		})
 	}
 }
@@ -1472,6 +1473,8 @@ async function align_reads_to_allele(tk, group, block) {
 	alig_lst.push('genome=' + block.genome.name)
 	alig_lst.push('regions=' + JSON.stringify(tk.regions))
 	if (tk.file) alig_lst.push('file=' + tk.file)
+	if (tk.url) alig_lst.push('url=' + tk.url)
+	if (tk.indexURL) alig_lst.push('indexURL=' + tk.indexURL)
 	if (tk.isFileSlice) alig_lst.push('isFileSlice=1')
 	alig_lst.push(
 		'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
