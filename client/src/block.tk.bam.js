@@ -716,6 +716,7 @@ function may_render_variant(data, tk, block) {
 			.attr('x', data.pileup_data.width + 5)
 			.attr('y', -20 + tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
+			.attr('class', 'sja_clbtext2')
 			.text('Diff Score')
 
 		//Show information about diff score in tooltip on click
@@ -725,7 +726,7 @@ function may_render_variant(data, tk, block) {
 				.append('div')
 				.style('width', '300px')
 				.html(
-					"<span>Diff score is the difference between jaccard similarities of the alternate and reference alleles for each read. For reference and alternate groups, higher magnitude indicates greater confidence in the classification of the read into reference/alternate group.  For further details, please click on this <a href='proteinpaint.stjude.org/bam' target='_blank'>link</a>.</span>"
+					"Diff score is the difference between jaccard similarities of the alternate and reference alleles for each read. For reference and alternate groups, higher magnitude indicates greater confidence in the classification of the read into reference/alternate group.  For further details, please click on this <a href='proteinpaint.stjude.org/bam' target='_blank'>link</a>."
 				)
 				.style('font-size', '12px')
 		})
