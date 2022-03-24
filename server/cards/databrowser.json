@@ -7,7 +7,7 @@
             "noheader": true,
             "nobox": 1, 
             "parseurl": false, 
-            "tkui": "dictionary"
+            "tkui": "databrowser"
         }
     },
     {
