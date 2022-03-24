@@ -711,12 +711,24 @@ function may_render_variant(data, tk, block) {
 
 	if (Number.isFinite(data.max_diff_score)) {
 		// Should always be true if variant field was given by user, but may change in the future
-		tk.dom.variantg
+		const diff_score_string = tk.dom.variantg
 			.append('text')
 			.attr('x', data.pileup_data.width + 5)
 			.attr('y', -20 + tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
 			.text('Diff Score')
+
+		//Show information about diff score in tooltip on click
+		diff_score_string.on('click', () => {
+			tk.tktip.clear().showunder(d3event.target)
+			tk.tktip.d
+				.append('div')
+				.style('width', '300px')
+				.html(
+					'<span>Diff score is the difference between jaccard similarities of the alternate and reference alleles. </span>'
+				)
+				.style('font-size', '12px')
+		})
 	}
 }
 
