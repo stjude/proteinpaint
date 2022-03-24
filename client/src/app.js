@@ -1,5 +1,8 @@
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import * as client from './client'
+import { dofetch3 } from './common/dofetch'
+import { stratinput } from '../shared/tree'
+import { stratify } from 'd3-hierarchy'
 import { findgenemodel_bysymbol } from './gene'
 import './style.css'
 import * as common from '../shared/common'
@@ -7,8 +10,8 @@ import { bulkui, bulkembed } from './bulk.ui'
 import { string2pos, invalidcoord } from './coord'
 import { loadstudycohort } from './tp.init'
 import { rgb as d3rgb } from 'd3-color'
+import { scaleOrdinal, schemeCategory20 } from 'd3-scale'
 import blockinit from './block.init'
-import { getsjcharts } from './getsjcharts'
 import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
@@ -38,7 +41,7 @@ internal "app{}"
 
 findgene2paint
 
-********** loaders from parseembedthenurl()
+********** loaders from parseEmbedThenUrl()
 
 launchblock()
 launchgeneview()
@@ -58,9 +61,12 @@ headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
 
 export function runproteinpaint(arg) {
-	// the main Proteinpaint instance, unique for each runproteinpaint() call
-	// NOTE: this app instance may be returned or not depending on the
-	// results of parseembedthenurl(), TODO: make the return value more determinate
+	/*
+	the "app" object is the main Proteinpaint instance, unique for each runproteinpaint() call
+	NOTE: this app instance may be returned or not depending on the
+	results of parseEmbedThenUrl()
+	TODO: standardize runpp() return value to better work with external portal
+	*/
 	const app = {
 		error0(m) {
 			client.sayerror(app.holder0, m)
@@ -132,7 +138,7 @@ export function runproteinpaint(arg) {
 		(arg.toy && arg.toy.serverData)
 	// load genomes
 
-	const response = client.dofetch2('genomes', {}, { serverData })
+	const response = dofetch3('genomes', {}, { serverData })
 
 	return response
 		.then(async data => {
@@ -151,7 +157,7 @@ export function runproteinpaint(arg) {
 
 			// genome data init
 			for (const genomename in app.genomes) {
-				const err = client.initgenome(app.genomes[genomename])
+				const err = initgenome(app.genomes[genomename])
 				if (err) {
 					throw { message: 'Error with ' + genomename + ' genome: ' + err }
 				}
@@ -163,8 +169,8 @@ export function runproteinpaint(arg) {
 
 			app.holder0 = app.holder.append('div').style('margin', '20px')
 
-			const subapp = await parseembedthenurl(arg, app)
-			return subapp ? subapp : app
+			const subapp = await parseEmbedThenUrl(arg, app)
+			return subapp || app
 		})
 		.catch(err => {
 			app.holder.text(err.message || err)
@@ -633,7 +639,7 @@ function studyui(app, x, y) {
 	}
 }
 
-async function parseembedthenurl(arg, app) {
+async function parseEmbedThenUrl(arg, app) {
 	/*
 	first, try to parse any embedding parameters
 	quit in case of any blocking things
@@ -757,6 +763,11 @@ async function parseembedthenurl(arg, app) {
 
 	if (arg.mdsjsonform) {
 		await launchmdsjsonform(arg, app)
+		return
+	}
+
+	if (arg.selectGenomeWithTklst) {
+		await launchSelectGenomeWithTklst(arg, app)
 		return
 	}
 
@@ -989,21 +1000,9 @@ function launchsamplematrix(cfg, app) {
 	cfg.hostURL = app.hostURL
 	cfg.holder = app.holder0
 	cfg.debugmode = app.debugmode
-	// dynamic import works with static values, not expressions
-	if (window.location.search.includes('smx=3')) {
-		cfg.client = client
-		cfg.common = common
-		cfg.string2pos = string2pos
-		cfg.invalidcoord = invalidcoord
-		cfg.block = import('./block.js')
-		getsjcharts(sjcharts => {
-			sjcharts.dthm(cfg)
-		})
-	} else {
-		import('./samplematrix').then(_ => {
-			new _.Samplematrix(cfg)
-		})
-	}
+	import('./samplematrix').then(_ => {
+		new _.Samplematrix(cfg)
+	})
 }
 
 async function launchgeneview(arg, app) {
@@ -1313,6 +1312,11 @@ async function launchmdsjsonform(arg, app) {
 	}
 }
 
+async function launchSelectGenomeWithTklst(arg, app) {
+	const _ = await import('./selectGenomeWithTklst')
+	await _.init(arg, app.holder0, app.genomes)
+}
+
 function launchmavb(arg, app) {
 	if (arg.mavolcanoplot.uionly) {
 		import('./mavb').then(p => {
@@ -1430,4 +1434,186 @@ async function launchmass(opts, app) {
 	import('./mass/app').then(_ => {
 		_.appInit(opts)
 	})
+}
+
+function initgenome(g) {
+	g.tkset = []
+	g.isoformcache = new Map()
+	// k: upper isoform
+	// v: [gm]
+	g.junctionframecache = new Map()
+	/*
+	k: junction chr-start-stop
+	v: Map
+	   k: isoform
+	   v: true/false for in-frame
+	*/
+	g.isoformmatch = (n2, chr, pos) => {
+		if (!n2) return null
+		const n = n2.toUpperCase()
+		if (!g.isoformcache.has(n)) return null
+		const lst = g.isoformcache.get(n)
+		if (lst.length == 1) return lst[0]
+		// multiple available
+		if (!chr) {
+			console.log('no chr provided for matching with ' + n)
+			return lst[0]
+		}
+		let gm = null
+		for (const m of lst) {
+			if (m.chr.toUpperCase() == chr.toUpperCase() && m.start <= pos && m.stop >= pos) {
+				gm = m
+			}
+		}
+		if (gm) return gm
+		for (const m of lst) {
+			if (m.chr.toUpperCase() == chr.toUpperCase()) return m
+		}
+		return null
+	}
+	g.chrlookup = {}
+	for (const nn in g.majorchr) {
+		g.chrlookup[nn.toUpperCase()] = { name: nn, len: g.majorchr[nn], major: true }
+	}
+	if (g.minorchr) {
+		for (const nn in g.minorchr) {
+			g.chrlookup[nn.toUpperCase()] = { name: nn, len: g.minorchr[nn] }
+		}
+	}
+
+	if (!g.tracks) {
+		g.tracks = []
+	}
+
+	for (const t of g.tracks) {
+		/*
+		essential for telling if genome.tracks[] item is same as block.tklst[]
+		*/
+		t.tkid = Math.random().toString()
+	}
+	// validate ds info
+	for (const dsname in g.datasets) {
+		const ds = g.datasets[dsname]
+
+		if (ds.isMds) {
+			// nothing to validate for the moment
+		} else {
+			const e = validate_oldds(ds)
+			if (e) {
+				return '(old) official dataset error: ' + e
+			}
+		}
+	}
+	return null
+}
+
+function validate_oldds(ds) {
+	// old official ds
+	if (ds.geneexpression) {
+		if (ds.geneexpression.maf) {
+			try {
+				ds.geneexpression.maf.get = eval('(' + ds.geneexpression.maf.get + ')')
+			} catch (e) {
+				return 'invalid Javascript for get() of expression.maf of ' + ds.label
+			}
+		}
+	}
+	if (ds.cohort) {
+		if (ds.cohort.raw && ds.cohort.tosampleannotation) {
+			/*
+			tosampleannotation triggers converting ds.cohort.raw to ds.cohort.annotation
+			*/
+			if (!ds.cohort.key4annotation) {
+				return 'cohort.tosampleannotation in use by .key4annotation missing of ' + ds.label
+			}
+			if (!ds.cohort.annotation) {
+				ds.cohort.annotation = {}
+			}
+			let nosample = 0
+			for (const a of ds.cohort.raw) {
+				const sample = a[ds.cohort.tosampleannotation.samplekey]
+				if (sample) {
+					const b = {}
+					for (const k in a) {
+						b[k] = a[k]
+					}
+					ds.cohort.annotation[sample] = b
+				} else {
+					nosample++
+				}
+			}
+			if (nosample) return nosample + ' rows has no sample name from sample annotation of ' + ds.label
+			delete ds.cohort.tosampleannotation
+		}
+		if (ds.cohort.levels) {
+			if (ds.cohort.raw) {
+				// to stratify
+				// cosmic has only level but no cohort info, buried in snvindel
+				const nodes = stratinput(ds.cohort.raw, ds.cohort.levels)
+				ds.cohort.root = stratify()(nodes)
+				ds.cohort.root.sum(i => i.value)
+			}
+		}
+		if (ds.cohort.raw) {
+			delete ds.cohort.raw
+		}
+		ds.cohort.suncolor = scaleOrdinal(schemeCategory20)
+	}
+	if (ds.snvindel_attributes) {
+		for (const at of ds.snvindel_attributes) {
+			if (at.get) {
+				try {
+					at.get = eval('(' + at.get + ')')
+				} catch (e) {
+					return 'invalid Javascript for getter of ' + JSON.stringify(at)
+				}
+			} else if (at.lst) {
+				for (const at2 of at.lst) {
+					if (at2.get) {
+						try {
+							at2.get = eval('(' + at2.get + ')')
+						} catch (e) {
+							return 'invalid Javascript for getter of ' + JSON.stringify(at2)
+						}
+					}
+				}
+			}
+		}
+	}
+	if (ds.stratify) {
+		if (!Array.isArray(ds.stratify)) {
+			return 'stratify is not an array in ' + ds.label
+		}
+		for (const strat of ds.stratify) {
+			if (!strat.label) {
+				return 'stratify method lacks label in ' + ds.label
+			}
+			if (strat.bycohort) {
+				if (!ds.cohort) {
+					return 'stratify method ' + strat.label + ' using cohort but no cohort in ' + ds.label
+				}
+			} else {
+				if (!strat.attr1) {
+					return 'stratify method ' + strat.label + ' not using cohort but no attr1 in ' + ds.label
+				}
+				if (!strat.attr1.label) {
+					return '.attr1.label missing in ' + strat.label + ' in ' + ds.label
+				}
+				if (!strat.attr1.k) {
+					return '.attr1.k missing in ' + strat.label + ' in ' + ds.label
+				}
+			}
+		}
+	}
+
+	if (ds.url4variant) {
+		// quick fix for clinvar
+		for (const u of ds.url4variant) {
+			u.makelabel = eval('(' + u.makelabel + ')')
+			u.makeurl = eval('(' + u.makeurl + ')')
+		}
+	}
+
+	// no checking vcfinfofilter
+	// no population freq filter
 }

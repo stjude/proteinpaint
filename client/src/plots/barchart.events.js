@@ -1,5 +1,7 @@
 import { event } from 'd3-selection'
-import { Menu, newpane, get_one_genome, dofetch3, export_data } from '../client'
+import { Menu } from '../dom/menu'
+import { dofetch3 } from '../common/dofetch'
+import { newpane, export_data } from '../client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '../common/filter'
 
 export default function getHandlers(self) {
@@ -401,7 +403,7 @@ function menuoption_select_to_gp(self, tvslst) {
 
 	import('../block').then(async _ => {
 		const obj = {
-			genome: await get_one_genome(self.state.genome),
+			genome: self.app.opts.genome,
 			dslabel: self.state.dslabel
 		}
 		const pane = newpane({ x: 100, y: 100 })
