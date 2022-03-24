@@ -18,27 +18,30 @@ init_appDrawer
 
 -------Internal-------
 make_examples_page
-make_main_track_grid
-make_col
-make_subheader_contents
-make_searchbar (disabled until further notice)
-loadTracks
-displayTracks
-makeRibbon
+ - make_main_track_grid
+	- make_col
+ - make_subheader_contents
+ - make_searchbar (disabled until further notice)
+ - loadTracks
+ - displayTracks
+ - makeRibbon
 openSandbox
-renderContent
-makeSandboxTabs
-sandboxTabMenu
-makeLeftsideTabMenu
-getTabData
-addMessage
-addUpdateMessage
-makeButton
-addButtons
-showURLLaunch
-makeDataDownload
-makeArrowButtons
-addArrowBtns
+ - renderContent
+	- showURLLaunch
+ 	- makeDataDownload
+ - sandboxTabMenu
+	- makeSandboxTabs
+ 	- makeLeftsideTabMenu
+		- getTabData
+ - addMessage
+ - addUpdateMessage
+ - makeButton
+ - addButtons
+ - addArrowBtns
+ 	- showCode
+ 	- makeArrowButtons
+ 	- showCitation
+ 
 
 Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl0xIJqDRbyhahA4/edit#heading=h.jwyqi1mhacps
 */
@@ -273,7 +276,8 @@ async function openSandbox(track, holder) {
 		ppcalls: res.jsonfile.ppcalls,
 		buttons: res.jsonfile.buttons,
 		arrowButtons: res.jsonfile.arrowButtons,
-		update_message: res.jsonfile.update_message
+		update_message: res.jsonfile.update_message,
+		citation: res.jsonfile.citation_id
 	}
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
@@ -286,10 +290,14 @@ async function openSandbox(track, holder) {
 
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_args.update_message, sandbox_div.body)
+
+	const mainBtn_div = sandbox_div.body.append('div')
+	const reuse_div = sandbox_div.body.append('div')
+
 	// buttons for links and/or downloads for the entire track/app
-	addButtons(sandbox_args.buttons, sandbox_div.body)
+	addButtons(sandbox_args.buttons, mainBtn_div)
 	// arrow buttons for the entire track/app that open a new div underneath
-	addArrowBtns(sandbox_args.arrowButtons, '', sandbox_div.body, sandbox_div.body)
+	addArrowBtns(sandbox_args, 'main', mainBtn_div, reuse_div)
 
 	//Disables top, horizontal tabs for api queries or other special circumstances
 	if (track.disable_topTabs == true) {
@@ -320,7 +328,8 @@ function renderContent(ppcalls, div, app) {
 	addButtons(ppcalls.buttons, buttons_div)
 	makeDataDownload(ppcalls.download, buttons_div, app)
 	showURLLaunch(ppcalls.urlparam, buttons_div, app)
-	addArrowBtns(ppcalls.arrowButtons, ppcalls, buttons_div, reuse_div)
+	// addArrowBtns(ppcalls.arrowButtons, ppcalls, buttons_div, reuse_div)
+	addArrowBtns(ppcalls, 'calls', buttons_div, reuse_div)
 
 	if (!ppcalls.nodashedline) {
 		div
@@ -715,21 +724,96 @@ function makeArrowButtons(arrows, btns) {
 	}
 }
 
-function addArrowBtns(arg, ppcalls, bdiv, rdiv) {
+function showCitation(btns, pub) {
+	btns.push({
+		name: 'Citation',
+		callback: async rdiv => {
+			try {
+				// const cite_grid = rdiv.append('div')
+				// 	.style('display', 'grid')
+				// 	//layout: dropdown on the left, citation on the right
+				// 	.style('grid-template-columns', 'auto auto')
+				// 	.style('gap', '5px')
+				// 	.style('align-items', 'center')
+				// 	.style('justify-content', 'left')
+				// const cite_div = cite_grid.append('div')
+				// 	.style('display', 'inline-block')
+				// 	.style('padding', '0px 10px 0px 10px')
+				// const dropdown_div = cite_grid.append('div').style('display', 'inline-block')
+				const cite_div = rdiv
+					.append('div')
+					.style('display', 'block')
+					.style('padding', '10px')
+					.style('width', 'max(70vw)')
+					.style('border', '1px dashed rgb(227, 227, 230)')
+					.style('margin', '10px')
+					.style('line-height', '1.25em')
+				const dropdown_div = rdiv
+					.append('div')
+					.style('display', 'block')
+					.style('padding', '0px 10px 0px 10px')
+					.style('width', 'max(70vw)')
+				const dropdown = dropdown_div
+					.append('select')
+					.style('border-radius', '5px')
+					.style('padding', '5px 10px')
+					.style('font-size', '0.9em')
+				for (const [i, style] of pub.citation_styles.entries()) {
+					const opt = dropdown
+						.append('option')
+						.text(style.style)
+						.property('value', i)
+					if (style.isDefault == true) {
+						// including .isDefault sets select to that citation and displays the citation as default
+						opt.property('selected', 1)
+						cite_div.append('div').html(style.citation)
+					}
+				}
+				if (!cite_div.html().length) {
+					//displays the first citation in the citation_styles array if .isDefault not provided
+					cite_div.append('div').html(pub.citation_styles[0].citation)
+				}
+				dropdown.on('change', () => {
+					cite_div.select('*').remove()
+					appear(cite_div)
+					const d = dropdown.node().value
+					cite_div.append('div').html(pub.citation_styles[d].citation)
+				})
+			} catch (e) {
+				alert('Error: ' + e)
+			}
+		}
+	})
+}
+
+async function addArrowBtns(args, type, bdiv, rdiv) {
 	let btns = []
-	if (ppcalls) {
-		showCode(ppcalls, btns)
+	if (type == 'calls') showCode(args, btns)
+	makeArrowButtons(args.arrowButtons, btns)
+	if (type == 'main' && args.citation) {
+		const res = await dofetch3('/cardsjson?jsonfile=citations')
+		if (res.error) {
+			console.log(`Error: ${res.error}`)
+			return
+		}
+		const pubs = res.jsonfile.publications
+		for (const pub of pubs) {
+			if (args.citation == pub.id) showCitation(btns, pub)
+		}
 	}
-	makeArrowButtons(arg, btns)
 
 	const active_btn = btns.findIndex(b => b.active) == -1 ? false : true
 
 	for (let i = 0; i < btns.length; i++) {
 		const btn = btns[i]
+		// console.log(btn, btns)
 
 		btn.btn = makeButton(bdiv, btn.name + ' ▼')
 
-		btn.c = rdiv.append('div').style('display', (active_btn && i == 0) || btn.active ? 'block' : 'none')
+		btn.c = rdiv
+			.append('div')
+			.style('margin', '20px 0px 10px 20px')
+			.style('display', (active_btn && i == 0) || btn.active ? 'block' : 'none')
 
 		if ((active_btn && i == 0 && btn.callback) || btn.active) {
 			btn.callback(btn.c)

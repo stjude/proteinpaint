@@ -12,13 +12,16 @@
                     "citation": "Zhou X, Edmonson MN, Wilkinson MR, et al. Exploring genomic alteration in pediatric cancer using ProteinPaint. <em>Nat Genet.</em> 2016;48(1):4-6. doi:10.1038/ng.3466"
                 },
                 {
+                    "style": "APA",
+                    "citation": "Zhou, X., Edmonson, M. N., Wilkinson, M. R., Patel, A., Wu, G., Liu, Y., Li, Y., Zhang, Z., Rusch, M. C., Parker, M., Becksfort, J., Downing, J. R., & Zhang, J. (2016). Exploring genomic alteration in pediatric cancer using ProteinPaint. <em>Nature genetics</em>, 48(1), 4-6. https://doi.org/10.1038/ng.3466"
                 },
                 {
                     "style": "MLA",
-                    "nlm": "Zhou, Xin et al. “Exploring genomic alteration in pediatric cancer using ProteinPaint.” <em> Nature genetics</em> vol. 48,1 (2016): 4-6. doi:10.1038/ng.3466"
+                    "citation": "Zhou, Xin et al. “Exploring genomic alteration in pediatric cancer using ProteinPaint.” <em> Nature genetics</em> vol. 48,1 (2016): 4-6. doi:10.1038/ng.3466"
                 },
                 {
                     "style": "NLM",
+                    "isDefault": true,
                     "citation": "Zhou X, Edmonson MN, Wilkinson MR, Patel A, Wu G, Liu Y, Li Y, Zhang Z, Rusch MC, Parker M, Becksfort J, Downing JR, Zhang J. Exploring genomic alteration in pediatric cancer using ProteinPaint. Nat Genet. 2016 Jan;48(1):4-6. doi: 10.1038/ng.3466. PMID: 26711108; PMCID: PMC4892362."
                 }
             ]
@@ -41,10 +44,11 @@
                 },
                 {
                     "style": "MLA",
-                    "nlm": "Zhou, Xin et al. “Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint.” <em>Cancer cell</em> vol. 39,1 (2021): 83-95.e4. doi:10.1016/j.ccell.2020.12.011"
+                    "citation": "Zhou, Xin et al. “Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint.” <em>Cancer cell</em> vol. 39,1 (2021): 83-95.e4. doi:10.1016/j.ccell.2020.12.011"
                 },
                 {
                     "style": "NLM",
+                    "isDefault": true,
                     "citation": "Zhou X, Wang J, Patel J, Valentine M, Shao Y, Newman S, Sioson E, Tian L, Liu Y, Brady SW, Flasch D, Ma X, Liu Y, Paul R, Edmonson MN, Rusch MC, Li C, Baker SJ, Easton J, Zhang J. Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint. Cancer Cell. 2021 Jan 11;39(1):83-95.e4. doi: 10.1016/j.ccell.2020.12.011. PMID: 33434514; PMCID: PMC7884056."
                 }
             ]
@@ -66,7 +70,7 @@
                     },
                     {
                         "style": "MLA",
-                        "nlm": "Tian, Liqing et al. “CICERO: a versatile method for detecting complex and diverse driver fusions using cancer RNA sequencing data.” <em>Genome biology</em> vol. 21,1 126. 28 May. 2020, doi:10.1186/s13059-020-02043-x"
+                        "citation": "Tian, Liqing et al. “CICERO: a versatile method for detecting complex and diverse driver fusions using cancer RNA sequencing data.” <em>Genome biology</em> vol. 21,1 126. 28 May. 2020, doi:10.1186/s13059-020-02043-x"
                     },
                     {
                         "style": "NLM",
