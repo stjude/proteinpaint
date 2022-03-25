@@ -9,6 +9,7 @@ import javascript from 'highlight.js/lib/languages/javascript'
 hljs.registerLanguage('javascript', javascript)
 import json from 'highlight.js/lib/languages/json'
 hljs.registerLanguage('json', json)
+import copyButton from './dom/copyButton'
 
 /*
 
@@ -748,11 +749,14 @@ function showCitation(btns, pub) {
 					.style('border', '1px dashed rgb(227, 227, 230)')
 					.style('margin', '10px')
 					.style('line-height', '1.25em')
+					.style('word-wrap', 'break-word')
+					.style('white-space', 'normal')
 				const dropdown_div = rdiv
 					.append('div')
 					.style('display', 'block')
 					.style('padding', '0px 10px 0px 10px')
 					.style('width', 'max(70vw)')
+				const copy = copyButton(cite_div, '.sjpp-copy-citation').style('font-size', '1.5em')
 				const dropdown = dropdown_div
 					.append('select')
 					.style('border-radius', '5px')
@@ -766,18 +770,27 @@ function showCitation(btns, pub) {
 					if (style.isDefault == true) {
 						// including .isDefault sets select to that citation and displays the citation as default
 						opt.property('selected', 1)
-						cite_div.append('div').html(style.citation)
+						cite_div
+							.append('p')
+							.classed('sjpp-copy-citation', true)
+							.html(style.citation)
 					}
 				}
 				if (!cite_div.html().length) {
 					//displays the first citation in the citation_styles array if .isDefault not provided
-					cite_div.append('div').html(pub.citation_styles[0].citation)
+					cite_div
+						.append('p')
+						.classed('sjpp-copy-citation', true)
+						.html(pub.citation_styles[0].citation)
 				}
 				dropdown.on('change', () => {
-					cite_div.select('*').remove()
+					cite_div.selectAll('p').remove()
 					appear(cite_div)
 					const d = dropdown.node().value
-					cite_div.append('div').html(pub.citation_styles[d].citation)
+					cite_div
+						.append('p')
+						.classed('sjpp-copy-citation', true)
+						.html(pub.citation_styles[d].citation)
 				})
 			} catch (e) {
 				alert('Error: ' + e)
@@ -806,7 +819,6 @@ async function addArrowBtns(args, type, bdiv, rdiv) {
 
 	for (let i = 0; i < btns.length; i++) {
 		const btn = btns[i]
-		// console.log(btn, btns)
 
 		btn.btn = makeButton(bdiv, btn.name + ' ▼')
 
