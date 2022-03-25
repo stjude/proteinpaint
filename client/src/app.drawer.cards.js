@@ -807,7 +807,6 @@ async function getFileData(data, previewFiles) {
 		const x = await dofetch('textfile', { file: file.file })
 		const colNum = file.headers.length
 		previewFiles.push({
-			filename,
 			text: x.text,
 			colNum,
 			headers: file.headers
