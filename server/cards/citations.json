@@ -4,6 +4,7 @@
             "id": 1001,
             "title": "Exploring genomic alteration in pediatric cancer using ProteinPaint",
             "pmid": "26711108",
+            "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/26711108/",
             "pmcid": "PMC4892362",
             "doi": "https://doi.org/10.1038/ng.3466",
             "citation": "Zhou X, Edmonson MN, Wilkinson MR, Patel A, Wu G, Liu Y, Li Y, Zhang Z, Rusch MC, Parker M, Becksfort J, Downing JR, Zhang J. Exploring genomic alteration in pediatric cancer using ProteinPaint. Nat Genet. 2016 Jan;48(1):4-6. doi: 10.1038/ng.3466. PMID: 26711108; PMCID: PMC4892362."
@@ -12,8 +13,9 @@
             "id": 1002,
             "title": "Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint",
             "pmid": "33434514",
+            "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/33434514/",
             "pmcid": "PMC7884056",
-            "doi": "0.1016/j.ccell.2020.12.011",
+            "doi": "https://doi.org/10.1016/j.ccell.2020.12.011",
             "citation": "Zhou X, Wang J, Patel J, Valentine M, Shao Y, Newman S, Sioson E, Tian L, Liu Y, Brady SW, Flasch D, Ma X, Liu Y, Paul R, Edmonson MN, Rusch MC, Li C, Baker SJ, Easton J, Zhang J. Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint. Cancer Cell. 2021 Jan 11;39(1):83-95.e4. doi: 10.1016/j.ccell.2020.12.011. PMID: 33434514; PMCID: PMC7884056."
 
         },
@@ -21,6 +23,7 @@
             "id": 1003,
             "title": "CICERO: a versatile method for detecting complex and diverse driver fusions using cancer RNA sequencing data",
             "pmid": "32466770",
+            "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/32466770/",
             "pmcid": "PMC7325161",
             "doi": "10.1186/s13059-020-02043-x",
             "citation": "Tian L, Li Y, Edmonson MN, Zhou X, Newman S, McLeod C, Thrasher A, Liu Y, Tang B, Rusch MC, Easton J, Ma J, Davis E, Trull A, Michael JR, Szlachta K, Mullighan C, Baker SJ, Downing JR, Ellison DW, Zhang J. CICERO: a versatile method for detecting complex and diverse driver fusions using cancer RNA sequencing data. Genome Biol. 2020 May 28;21(1):126. doi: 10.1186/s13059-020-02043-x. PMID: 32466770; PMCID: PMC7325161."

@@ -628,7 +628,7 @@ async function showCode(ppcalls, btns) {
 		{ language: 'javascript' }
 	).value
 
-	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 30px; overflow-x: auto; overflow-y:auto; max-height:400px; ${
+	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 30px; overflow:auto; max-height:400px; ${
 		ppcalls.jsonpath ? `min-height:400px;` : `min-height: auto;`
 	}">
 	<code style="font-size:14px; display:block;">${runpp_code}</code></pre>`
@@ -682,7 +682,7 @@ async function showJsonCode(ppcalls) {
 			<p style="margin: 20px 5px 20px 25px; display: inline-block;">JSON code </p>
 			<p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p>
 		</div> 
-		<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 10px; max-height:400px; min-height:400px; overflow-x: auto; overflow-y:auto;">
+		<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 10px; max-height:400px; min-height:400px; overflow:auto;">
 			<code class="sjpp-json-code" style="font-size:14px; display:block;">${
 				slicedjson == true
 					? `${code} ...<br><p style='margin:20px 25px; justify-content:center;'>Showing first 100 lines. To see the entire JSON, download ${filename} from the button above.</p>`
@@ -741,7 +741,7 @@ function showCitation(btns, pub) {
 						`<p style="display: inline-block;"><em>${pub.title}</em>. </p>
 						${
 							pub.pmid
-								? `<p style="display: inline-block;">PMID: <a href="${pub.doi}" target="_blank">${pub.pmid}</a></p>`
+								? `<p style="display: inline-block;">PMID: <a href="${pub.pmidURL}" target="_blank">${pub.pmid}</a></p>`
 								: `<p>doi: <a href="${pub.doi}" target="_blank style="display: inline-block;">${pub.doi}</a></p>`
 						}`
 					)
@@ -803,15 +803,22 @@ function showCitation(btns, pub) {
 	})
 }
 
-async function showDataPreview(ppcalls, btns) {
-	const data = await dofetch('textfile', { file: ppcalls.datapreview })
-	// console.log(data)
-
+async function showDataPreview(btns, data) {
 	btns.push({
-		name: 'Data Example',
+		name: 'View Data',
 		callback: async rdiv => {
 			try {
-				rdiv.append('div').html(data)
+				rdiv
+					.append('div')
+					.style('margin', '0px 10px 5px 10px')
+					.style('padding', '5px')
+					.style('max-height', '400px')
+					.style('border', '1px solid #d7d7d9')
+					.style('white-space', 'pre')
+					.style('word-wrap', 'break-word')
+					.style('overflow', 'scroll')
+					.style('opacity', 0.7)
+					.html(data.text)
 			} catch (e) {
 				alert('Error: ' + e)
 			}
@@ -822,7 +829,10 @@ async function showDataPreview(ppcalls, btns) {
 async function addArrowBtns(args, type, bdiv, rdiv) {
 	let btns = []
 	if (type == 'calls') showCode(args, btns)
-	if (args.datapreview) showDataPreview(args, btns)
+	if (args.datapreview) {
+		const data = await dofetch('textfile', { file: args.datapreview })
+		showDataPreview(btns, data)
+	}
 	if (type == 'main' && args.citation) {
 		const res = await dofetch3('/cardsjson?jsonfile=citations')
 		if (res.error) {
