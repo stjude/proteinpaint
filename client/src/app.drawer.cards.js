@@ -802,23 +802,65 @@ function showCitation(btns, pub) {
 		}
 	})
 }
+async function getFileData(data, previewFiles) {
+	for (const file of data) {
+		const x = await dofetch('textfile', { file: file.file })
+		const colNum = file.headers.length
+		previewFiles.push({
+			filename,
+			text: x.text,
+			colNum,
+			headers: file.headers
+		})
+	}
+}
 
-async function showDataPreview(btns, data) {
+function makePreviewDataGrid(div, d) {
+	div.style('max-width', 'fit-content')
+	const grid = div
+		.append('div')
+		.style('margin', '0px 10px 5px 10px')
+		.style('padding', '5px')
+		.style('max-height', '400px')
+		.style('border', '1px solid #d7d7d9')
+		.style('white-space', 'nowrap')
+		.style('overflow', 'scroll')
+		.style('display', 'grid')
+		.style('grid-template-columns', `repeat(${d.colNum}, auto)`)
+		.style('gap', '5px 20px')
+	d.headers.forEach(header =>
+		grid
+			.append('div')
+			.style('font-weight', '800')
+			.html(header)
+	)
+	const lines = d.text.split('\n')
+	for (const line of lines) {
+		const cols = line.split('\t')
+		cols.forEach(col =>
+			grid
+				.append('div')
+				.style('opacity', 0.7)
+				.html(col)
+		)
+	}
+}
+
+async function showViewData(btns, data) {
+	let previewFiles = []
+	getFileData(data, previewFiles)
 	btns.push({
 		name: 'View Data',
 		callback: async rdiv => {
 			try {
-				rdiv
-					.append('div')
-					.style('margin', '0px 10px 5px 10px')
-					.style('padding', '5px')
-					.style('max-height', '400px')
-					.style('border', '1px solid #d7d7d9')
-					.style('white-space', 'pre')
-					.style('word-wrap', 'break-word')
-					.style('overflow', 'scroll')
-					.style('opacity', 0.7)
-					.html(data.text)
+				if (previewFiles.length == 1) {
+					makePreviewDataGrid(rdiv, previewFiles[0])
+				} else {
+					//TODO create radio buttons/tabs for mutiple files if needed in the future
+					for (const d of previewFiles) {
+						makePreviewDataGrid(rdiv, d)
+					}
+				}
 			} catch (e) {
 				alert('Error: ' + e)
 			}
@@ -830,8 +872,7 @@ async function addArrowBtns(args, type, bdiv, rdiv) {
 	let btns = []
 	if (type == 'calls') showCode(args, btns)
 	if (args.datapreview) {
-		const data = await dofetch('textfile', { file: args.datapreview })
-		showDataPreview(btns, data)
+		showViewData(btns, args.datapreview)
 	}
 	if (type == 'main' && args.citation) {
 		const res = await dofetch3('/cardsjson?jsonfile=citations')

@@ -4,7 +4,12 @@
             "label": "JSON BED",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
             "urlparam": "?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz",
-            "datapreview": "proteinpaint_demo/hg19/bedj/gencode.txt",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/gencode.txt",
+                    "headers": ["Chrom", "Start", "Stop", "JSON object"]
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -30,7 +35,12 @@
             "message": "The bare minimum for the JSON BED track is a three column tab-delimited file with the chromosome, start position, and stop position. Below is example of the barebone rendering of the data.",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedj3DemoData.tar.gz",
             "urlparam": "?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz",
-            "datapreview": "proteinpaint_demo/hg19/bedj/bed3.txt",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/bed3.txt",
+                    "headers": ["Chrom", "Start", "Stop"]
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -53,7 +63,12 @@
         {
             "label": "Numeric Filter",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/numericDenomData.tar.gz",
-            "datapreview": "proteinpaint_demo/hg19/bedj/value.txt",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/value.txt",
+                    "headers": ["Chrom", "Start", "Stop", "JSON object"]
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -81,7 +96,12 @@
             "label": "URL Linkout",
             "message": "Click on a SNP item to see details on the dbSNP website.",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjLinkoutDemoData.tar.gz",
-            "datapreview": "proteinpaint_demo/hg19/bedj/snp.txt",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/snp.txt",
+                    "headers": ["Chrom", "Start", "Stop", "JSON object"]
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -114,7 +134,12 @@
             "label": "Hide item names",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
             "message": "In this example, the gene name is removed. To add the gene name, navigate to the right-hand side of the track, and click on <a style='color:gray; text-decoration: none;'>CONFIG</a>. Uncheck 'Hide item names' and the gene symbol will reappear.", 
-            "datapreview": "proteinpaint_demo/hg19/bedj/gencode.txt",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/gencode.txt",
+                    "headers": ["Chrom", "Start", "Stop", "JSON object"]
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -146,7 +171,12 @@
             "label": "Show item by name",
             "message": "To single out genes of interest, click <a style='color:gray; text-decoration: none;'>CONFIG</a> on the right-hand side of the track. Enter the isoform name(s) under 'Show items by names' and click <button>Submit</button>.<br><br>In this example, only MYC and PVT1 are shown. Delete one of the names and uncheck 'Show items by names' to see the differences in the track display.",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
-            "datapreview": "proteinpaint_demo/hg19/bedj/gencode.txt",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/gencode.txt",
+                    "headers": ["Chrom", "Start", "Stop", "JSON object"]
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -180,7 +210,12 @@
             "message": "<p style='margin:5px'>In the bedj file JSON object, create an \"exon2color\" array with {\"color\": \"XX\", \"start\": ##, \"stop\": ##} objects. For instance, this array defines the exon colors for this example.</p><pre style='color:#656566'><code>\"exon2color\": [{\"color\": \"red\", \"start\": 129146958, \"stop\": 129147048},...]</code></pre></p>",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/bedj/bedjExonColorDemoData.tar.gz",
             "urlparam": "?genome=hg38&block=1&position=chr6:128566421-129833285&bedjfile=Exon2Color_Example,proteinpaint_demo/hg38/bedj/bedjExonColorDemo.gz",
-            "datapreview": "proteinpaint_demo/hg38/bedj/bedjExonColorDemo.txt",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg38/bedj/bedjExonColorDemo.txt",
+                    "headers": ["Chrom", "Start", "Stop", "JSON object"]
+                }
+            ],
             "runargs": {
                 "block": true,
                 "nobox": 1,
