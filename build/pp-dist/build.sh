@@ -25,12 +25,12 @@ while getopts "r:h:" opt; do
 	esac
 done
 
-#########################
-# EXTRACT REQUIRED FILES
-#########################
+################################
+# BUILD THE FULL TESTABLE IMAGE
+################################
 
-./build/extract.sh -r $REV -t pp-dist
-REV=$(cat tmppack/rev.txt)
+./build/full/build.sh -r $REV
+tar -C tmppack/ -xvf archive.tar build/pp-dist
 
 #########################
 # Pack with Docker build
@@ -39,4 +39,4 @@ REV=$(cat tmppack/rev.txt)
 # get the current tag
 TAG="$(node -p "require('./package.json').version")"
 echo "building ppdist:$REV image, package version=$TAG"
-docker build --file ./build/pp-dist/Dockerfile --tag ppdist:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
+docker build --file ./tmppack/build/pp-dist/Dockerfile --tag ppdist:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
