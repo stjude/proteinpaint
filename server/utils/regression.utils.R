@@ -84,15 +84,10 @@ cubic_spline <- function(values, knots) {
 }
 
 # build formulas
-buildFormulas <- function(variables, regtype) {
-  # collect outcome id(s), independent ids, cubic spline ids, and interactions
+buildFormulas <- function(variables) {
+  # first collect outcome, independent, spline, and interacting
+  # variables and format them for formula construction
   # set aside snplocus snps to be handled separately
-  if (regtype == "cox") {
-    outcomeTimeId <- vector(mode = "character")
-    outcomeEventId <- vector(mode = "character")
-  } else {
-    outcomeId <- vector(mode = "character")
-  }
   independentIds <- vector(mode = "character")
   interactions <- vector(mode = "character")
   snpLocusSnps <- variables[0,]
@@ -104,11 +99,22 @@ buildFormulas <- function(variables, regtype) {
     }
     if (variable$type == "outcome") {
       # outcome variable
-      if (regtype == "cox") {
-        outcomeTimeId <- variable$timeToEvent$timeId
+      if ("timeToEvent" %in% names(variable)) {
+        # cox outcome variable
+        # time-to-event data
         outcomeEventId <- variable$timeToEvent$eventId
+        if (variable$timeToEvent$timeScale == "year") {
+          outcomeTimeId <- variable$timeToEvent$timeId
+          outcome <- paste0("Surv(",outcomeTimeId,", ",outcomeEventId,")")
+        } else if (variable$timeToEvent$timeScale == "age") {
+          outcomeAgeStartId <- variable$timeToEvent$agestartId
+          outcomeAgeEndId <- variable$timeToEvent$ageendId
+          outcome <- paste0("Surv(",outcomeAgeStartId,", ",outcomeAgeEndId,", ",outcomeEventId,")")
+        } else {
+          stop ("unknown cox regression time scale")
+        }
       } else {
-        outcomeId <- variable$id
+        outcome <- variable$id
       }
       next
     } else if (variable$type == "spline") {
@@ -141,8 +147,9 @@ buildFormulas <- function(variables, regtype) {
     }
   }
   
-  # build formula(s)
-  # prepare separate formula for each snplocus snp
+  # combine variables into formula(s)
+  # if snplocus snps are present, then prepare a
+  # separate formula for each snplocus snp
   formulas <- list()
   if (nrow(snpLocusSnps) > 0) {
     # snplocus snps present
@@ -164,22 +171,12 @@ buildFormulas <- function(variables, regtype) {
           }
         }
       }
-      if (regtype == "cox") {
-        outcome <- paste0("Surv(",outcomeTimeId,", ",outcomeEventId,")")
-      } else {
-        outcome <- outcomeId
-      }
       formula <- as.formula(paste(outcome, paste(c(tempIndependentIds, tempInteractions), collapse = "+"), sep = "~"))
       formulas[[length(formulas)+1]] <- list("id" = snp$id, "formula" = formula)
     }
   } else {
     # no snplocus snps
     # use single formula for all variables
-    if (regtype == "cox") {
-      outcome <- paste0("Surv(",outcomeTimeId,", ",outcomeEventId,")")
-    } else {
-      outcome <- outcomeId
-    }
     formula <- as.formula(paste(outcome, paste(c(independentIds, interactions), collapse = "+"), sep = "~"))
     formulas[[length(formulas)+1]] <- list("id" = "", "formula" = formula)
   }

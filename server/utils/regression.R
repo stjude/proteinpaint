@@ -23,7 +23,10 @@
 #         "type": variable type ("outcome", "snplocus", "spline", "independent")
 #         "rtype": R variable type ("numeric", "factor")
 #         "timeToEvent": {} (only for cox outcome)
-#           timeId: id of time variable,
+#           timeScale: year/age
+#           timeId: id of time variable (for 'year' time scale)
+#           agestartId: id of age start variable (for 'age' time scale)
+#           ageendId: id of age end variable (for 'age' time scale)
 #           eventId: if of event variable
 #         "refGrp": reference group (required for factor variables)
 #         "interactions": [] ids of interacting variables
@@ -91,7 +94,7 @@ variables <- lst$variables
 # BUILD FORMULAS #
 ##################
 
-lst <- buildFormulas(variables, regtype)
+lst <- buildFormulas(variables)
 formulas <- lst$formulas
 splineVariables <- lst$splineVariables
 

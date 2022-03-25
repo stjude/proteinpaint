@@ -204,9 +204,23 @@ function makeRinput(q, sampledata) {
 	}
 	if (q.regressionType == 'cox') {
 		// for cox regression, outcome needs to be time-to-event data
-		outcome.timeToEvent = {
-			timeId: q.outcome.id + '_time',
-			eventId: q.outcome.id + '_event'
+		if (q.outcome.q.timeScale == 'year') {
+			// calendar year time scale
+			outcome.timeToEvent = {
+				timeId: q.outcome.id + '_time',
+				eventId: q.outcome.id + '_event',
+				timeScale: q.outcome.q.timeScale
+			}
+		} else if (q.outcome.q.timeScale == 'age') {
+			// age time scale
+			outcome.timeToEvent = {
+				agestartId: q.outcome.id + '_agestart',
+				ageendId: q.outcome.id + '_ageend',
+				eventId: q.outcome.id + '_event',
+				timeScale: q.outcome.q.timeScale
+			}
+		} else {
+			throw 'unknown cox regression time scale'
 		}
 	}
 	variables.push(outcome)
@@ -276,8 +290,19 @@ function makeRinput(q, sampledata) {
 				if (q.regressionType == 'cox') {
 					// cox regression, therefore time-to-event outcome
 					// use both key and value
-					entry[t.timeToEvent.timeId] = out.value
-					entry[t.timeToEvent.eventId] = out.key
+					if (q.outcome.q.timeScale == 'year') {
+						// calendar year time scale
+						entry[t.timeToEvent.timeId] = out.value
+						entry[t.timeToEvent.eventId] = out.key
+					} else if (q.outcome.q.timeScale == 'age') {
+						// age time scale
+						const ages = JSON.parse(out.value)
+						entry[t.timeToEvent.agestartId] = ages.age_start
+						entry[t.timeToEvent.ageendId] = ages.age_end
+						entry[t.timeToEvent.eventId] = out.key
+					} else {
+						throw 'unknown cox regression time scale'
+					}
 				}
 			} else {
 				// independent variable
@@ -441,15 +466,19 @@ function validateRinput(Rinput, sampleSize) {
 
 	// validate data table
 	const regressionType = Rinput.metadata.type
-	const nvariables = Rinput.metadata.variables.length
+	const outcome = Rinput.metadata.variables.find(variable => variable.type == 'outcome')
+	let nvariables = Rinput.metadata.variables.length
 	if (regressionType == 'cox') {
-		if (Rinput.data.find(entry => Object.keys(entry).length != nvariables + 1)) {
-			throw 'unequal number of variables in data entries'
+		if (outcome.timeToEvent.timeScale == 'year') {
+			nvariables = nvariables + 1
+		} else if (outcome.timeToEvent.timeScale == 'age') {
+			nvariables = nvariables + 2
+		} else {
+			throw 'unknown cox regression time scale'
 		}
-	} else {
-		if (Rinput.data.find(entry => Object.keys(entry).length != nvariables)) {
-			throw 'unequal number of variables in data entries'
-		}
+	}
+	if (Rinput.data.find(entry => Object.keys(entry).length != nvariables)) {
+		throw 'unequal number of variables in data entries'
 	}
 
 	// validate independent variables
@@ -949,10 +978,19 @@ function replaceTermId(Rinput) {
 		originalId2id[t.id] = 'id' + i + '_'
 		if (t.timeToEvent) {
 			// time-to-event variable
-			id2originalId['id' + i + '_time' + '_'] = t.timeToEvent.timeId
 			id2originalId['id' + i + '_event' + '_'] = t.timeToEvent.eventId
-			originalId2id[t.timeToEvent.timeId] = 'id' + i + '_time' + '_'
 			originalId2id[t.timeToEvent.eventId] = 'id' + i + '_event' + '_'
+			if (t.timeToEvent.timeScale == 'year') {
+				id2originalId['id' + i + '_time' + '_'] = t.timeToEvent.timeId
+				originalId2id[t.timeToEvent.timeId] = 'id' + i + '_time' + '_'
+			} else if (t.timeToEvent.timeScale == 'age') {
+				id2originalId['id' + i + '_agestart' + '_'] = t.timeToEvent.agestartId
+				id2originalId['id' + i + '_ageend' + '_'] = t.timeToEvent.ageendId
+				originalId2id[t.timeToEvent.agestartId] = 'id' + i + '_agestart' + '_'
+				originalId2id[t.timeToEvent.ageendId] = 'id' + i + '_ageend' + '_'
+			} else {
+				throw 'unknown cox regression time scale'
+			}
 		}
 	}
 
@@ -961,8 +999,15 @@ function replaceTermId(Rinput) {
 		t.id = originalId2id[t.id]
 		if (t.timeToEvent) {
 			// time-to-event variable
-			t.timeToEvent.timeId = originalId2id[t.timeToEvent.timeId]
 			t.timeToEvent.eventId = originalId2id[t.timeToEvent.eventId]
+			if (t.timeToEvent.timeScale == 'year') {
+				t.timeToEvent.timeId = originalId2id[t.timeToEvent.timeId]
+			} else if (t.timeToEvent.timeScale == 'age') {
+				t.timeToEvent.agestartId = originalId2id[t.timeToEvent.agestartId]
+				t.timeToEvent.ageendId = originalId2id[t.timeToEvent.ageendId]
+			} else {
+				throw 'unknown cox regression scale'
+			}
 		}
 		if (t.interactions && t.interactions.length > 0) {
 			// assuming no interactions with time-to-event variables
