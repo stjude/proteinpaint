@@ -711,12 +711,26 @@ function may_render_variant(data, tk, block) {
 
 	if (Number.isFinite(data.max_diff_score)) {
 		// Should always be true if variant field was given by user, but may change in the future
-		tk.dom.variantg
+		const diff_score_string = tk.dom.variantg
 			.append('text')
 			.attr('x', data.pileup_data.width + 5)
 			.attr('y', -20 + tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
+			.attr('class', 'sja_clbtext2')
 			.text('Diff Score')
+
+		//Show information about diff score in tooltip on click
+		diff_score_string.on('click', () => {
+			tk.tktip.clear().showunder(d3event.target)
+			tk.tktip.d
+				.append('div')
+				.style('width', '300px')
+				.style('font-size', '12px')
+				.html(
+					'Diff score is the difference between jaccard similarities of the alternate and reference alleles for each read. For reference and alternate groups, higher magnitude indicates greater confidence of the classification.' +
+						"<br><a href='https://proteinpaint.stjude.org/bam' target='_blank'>Click here to view details of this method</a>."
+				)
+		})
 	}
 }
 
@@ -1459,6 +1473,8 @@ async function align_reads_to_allele(tk, group, block) {
 	alig_lst.push('genome=' + block.genome.name)
 	alig_lst.push('regions=' + JSON.stringify(tk.regions))
 	if (tk.file) alig_lst.push('file=' + tk.file)
+	if (tk.url) alig_lst.push('url=' + tk.url)
+	if (tk.indexURL) alig_lst.push('indexURL=' + tk.indexURL)
 	if (tk.isFileSlice) alig_lst.push('isFileSlice=1')
 	alig_lst.push(
 		'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
