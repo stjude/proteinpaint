@@ -43,43 +43,22 @@ done
 #	exit 1
 #fi
 
-##################################
-# Create a full, testable build
-##################################
+################################
+# BUILD THE FULL TESTABLE IMAGE
+################################
 
-# ./build/full/build.sh -r $REV
-
-#########################
-# EXTRACT REQUIRED FILES
-#########################
-
-./build/extract.sh -r $REV -t gdc
-REV=$(cat tmppack/rev.txt)
+./build/full/build.sh -r $REV
+tar -C tmppack/ -xvf archive.tar build/gdc
 
 #####################
 # Build the image
 #####################
 
-cd tmppack
 # get the current tag
 # GIT_TAG is set when the script is kicked off by GDC Jenkins
 TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 
-# delete this test step once the gdc wrapper tests are 
-# triggered as part of the image building process
-#./build/gdc/dockrun.sh $TPMASTERDIR 3456 ppgdctest:$REV
-#if [[ "$?" != "0" ]]; then
-#	echo "Error when running the GDC test image (exit code=$?)"
-#	exit 1
-#fi
-
-# this image
-# - will extract a subset of files from the full Docker image
-# - may publish the @stjude-proteinpaint client package
-docker build \
-	--file ./build/gdc/Dockerfile \
-	--target ppserver \
-	--tag ppgdc:$REV \
-	--build-arg IMGVER=$REV \
-	--build-arg PKGVER=$TAG \
-	.
+# get the current tag
+TAG="$(node -p "require('./package.json').version")"
+echo "building ppgdc:$REV image, package version=$TAG"
+docker build --file ./tmppack/build/gdc/Dockerfile --tag ppgdc:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .

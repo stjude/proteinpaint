@@ -12,6 +12,9 @@ FROM ppbase:$IMGVER as ppserver
 COPY --from=ppimg /home/root/pp/app /home/root/pp/app
 
 WORKDIR /home/root/pp/app
+RUN npm prune
 COPY ./LICENSE ./
 ENV PP_MODE container-prod
-CMD ["npx", "proteinpaint"]
+ENV PP_CUSTOMER gdc
+# CMD [ "sleep", "3600"]
+CMD [ "sh", "-c", "PP_MODE=container-prod npx proteinpaint"]
