@@ -1,5 +1,7 @@
 ARG IMGVER=latest
 
+FROM ppminpkg:$IMGVER AS ppminpkg
+
 #################
 # Package build
 #################
@@ -9,7 +11,7 @@ FROM pprust:$IMGVER AS pppkg
 
 # install from minimal package.json to help with layer caching
 WORKDIR /home/root/pp
-ADD ./minpkgjsons ./tmppack
+COPY --from=ppminpkg /home/root/pp/tmppack /home/root/pp/tmppack
 WORKDIR /home/root/pp/tmppack
 RUN npm install --workspaces
 
@@ -20,6 +22,7 @@ RUN export RUSTC_WRAPPER=$(which sccache)
 ARG PKGVER=0.0.0
 
 # todo: may rename package with version number to publish
+RUN cp -r ../tmppack/node_modules . 
 ENV PKGTGZ=stjude-proteinpaint.tgz
 RUN npm install ../tmppack/$PKGTGZ
 

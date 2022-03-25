@@ -61,7 +61,6 @@ RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/
 # need npm v7 to support workspaces
 RUN npm install --global npm@7
 
-
 # Separate rust build so that the compiled code may be copied later
 # in isolation, without including all the rust toolchain in the image
 FROM ppbase AS pprust
@@ -78,4 +77,15 @@ RUN set -eux; \
     cargo install sccache \
     ## clean up
     && apt-get clean \ 
-    && rm -rf /var/lib/apt/lists/ \ 
+    && rm -rf /var/lib/apt/lists/
+
+
+FROM ppbase AS ppminpkg
+WORKDIR /home/root/pp
+ADD . ./tmppack
+WORKDIR /home/root/pp/tmppack
+
+RUN mkdir -p minpkgjsons/server && mkdir minpkgjsons/client && \
+    ./build/minpkgjson.js package.json > minpkgjsons/package.json && \
+    ./build/minpkgjson.js server/package.json > minpkgjsons/server/package.json && \
+    ./build/minpkgjson.js client/package.json > minpkgjsons/client/package.json

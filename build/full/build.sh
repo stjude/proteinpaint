@@ -44,5 +44,8 @@ echo "building ppbase:$REV image, package version=$TAG"
 docker build --file ./build/Dockerfile --target ppbase --tag ppbase:$REV .
 echo "building pprust:$REV image, package version=$TAG"
 docker build --file ./build/Dockerfile --target pprust --tag pprust:$REV .
+echo "generating a build with minimal package jsons"
+docker build --file ./build/Dockerfile --target ppminpkg --tag ppminpkg:$REV .
+
 echo "building ppfull:$REV image, package version=$TAG"
 docker build --file ./build/full/Dockerfile --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
