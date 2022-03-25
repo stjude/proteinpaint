@@ -18,30 +18,34 @@ init_appDrawer
 	- creates the app drawer
 
 -------Internal-------
+*** App Drawer ***
 make_examples_page
  - make_main_track_grid
-	- make_col
+ - make_col
  - make_subheader_contents
  - make_searchbar (disabled until further notice)
  - loadTracks
- - displayTracks
- - makeRibbon
+	- displayTracks
+		- makeRibbon
+		- openSandbox
+
+*** Sandbox ***
 openSandbox
- - renderContent
-	- showURLLaunch
- 	- makeDataDownload
- - sandboxTabMenu
-	- makeSandboxTabs
- 	- makeLeftsideTabMenu
-		- getTabData
- - addMessage
- - addUpdateMessage
- - makeButton
- - addButtons
- - addArrowBtns
- 	- showCode
- 	- makeArrowButtons
- 	- showCitation
+	- renderContent
+		- showURLLaunch
+		- makeDataDownload
+	- sandboxTabMenu
+		- makeSandboxTabs
+		- makeLeftsideTabMenu
+			- getTabData
+	- addMessage
+	- addUpdateMessage
+	- makeButton
+	- addButtons
+	- addArrowBtns
+		- showCode
+		- makeArrowButtons
+		- showCitation
  
 
 Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl0xIJqDRbyhahA4/edit#heading=h.jwyqi1mhacps
@@ -730,57 +734,84 @@ function showCitation(btns, pub) {
 		name: 'Citation',
 		callback: async rdiv => {
 			try {
-				const cite_div = rdiv
+				rdiv
 					.append('div')
-					.style('display', 'block')
-					.style('padding', '10px')
-					.style('width', 'max(70vw)')
-					.style('border', '1px dashed rgb(227, 227, 230)')
-					.style('margin', '10px')
-					.style('line-height', '1.25em')
-					.style('word-wrap', 'break-word')
-					.style('white-space', 'normal')
-				const dropdown_div = rdiv
-					.append('div')
-					.style('display', 'block')
-					.style('padding', '0px 10px 0px 10px')
-					.style('width', 'max(70vw)')
-				const copy = copyButton(cite_div, '.sjpp-copy-citation').style('font-size', '1.5em')
-				const dropdown = dropdown_div
-					.append('select')
-					.style('border-radius', '5px')
-					.style('padding', '5px 10px')
-					.style('font-size', '0.9em')
-				for (const [i, style] of pub.citation_styles.entries()) {
-					const opt = dropdown
-						.append('option')
-						.text(style.style)
-						.property('value', i)
-					if (style.isDefault == true) {
-						// including .isDefault sets select to that citation and displays the citation as default
-						opt.property('selected', 1)
-						cite_div
-							.append('p')
-							.classed('sjpp-copy-citation', true)
-							.html(style.citation)
-					}
-				}
-				if (!cite_div.html().length) {
-					//displays the first citation in the citation_styles array if .isDefault not provided
-					cite_div
-						.append('p')
-						.classed('sjpp-copy-citation', true)
-						.html(pub.citation_styles[0].citation)
-				}
-				dropdown.on('change', () => {
-					cite_div.selectAll('p').remove()
-					appear(cite_div)
-					const d = dropdown.node().value
-					cite_div
-						.append('p')
-						.classed('sjpp-copy-citation', true)
-						.html(pub.citation_styles[d].citation)
-				})
+					.style('margin-left', '5w')
+					.html(
+						`<p style="display: inline-block;"><em>${pub.title}</em>. </p>
+						${
+							pub.pmid
+								? `<p style="display: inline-block;">PMID: <a href="${pub.doi}" target="_blank">${pub.pmid}</a></p>`
+								: `<p>doi: <a href="${pub.doi}" target="_blank style="display: inline-block;">${pub.doi}</a></p>`
+						}`
+					)
+				// const cite_div = rdiv
+				// 	.append('div')
+				// 	.style('display', 'block')
+				// 	.style('padding', '10px')
+				// 	.style('width', 'max(70vw)')
+				// 	.style('border', '1px dashed rgb(227, 227, 230)')
+				// 	.style('margin', '10px')
+				// 	.style('line-height', '1.25em')
+				// 	.style('word-wrap', 'break-word')
+				// 	.style('white-space', 'normal')
+				// const dropdown_div = rdiv
+				// 	.append('div')
+				// 	.style('display', 'block')
+				// 	.style('padding', '0px 10px 0px 10px')
+				// 	.style('width', 'max(70vw)')
+				// const copy = copyButton(cite_div, '.sjpp-copy-citation').style('font-size', '1.5em')
+				// const dropdown = dropdown_div
+				// 	.append('select')
+				// 	.style('border-radius', '5px')
+				// 	.style('padding', '5px 10px')
+				// 	.style('font-size', '0.9em')
+				// for (const [i, style] of pub.citation_styles.entries()) {
+				// 	const opt = dropdown
+				// 		.append('option')
+				// 		.text(style.style)
+				// 		.property('value', i)
+				// 	if (style.isDefault == true) {
+				// 		// including .isDefault sets select to that citation and displays the citation as default
+				// 		opt.property('selected', 1)
+				// 		cite_div
+				// 			.append('p')
+				// 			.classed('sjpp-copy-citation', true)
+				// 			.html(style.citation)
+				// 	}
+				// }
+				// if (!cite_div.html().length) {
+				// 	//displays the first citation in the citation_styles array if .isDefault not provided
+				// 	cite_div
+				// 		.append('p')
+				// 		.classed('sjpp-copy-citation', true)
+				// 		.html(pub.citation_styles[0].citation)
+				// }
+				// dropdown.on('change', () => {
+				// 	cite_div.selectAll('p').remove()
+				// 	appear(cite_div)
+				// 	const d = dropdown.node().value
+				// 	cite_div
+				// 		.append('p')
+				// 		.classed('sjpp-copy-citation', true)
+				// 		.html(pub.citation_styles[d].citation)
+				// })
+			} catch (e) {
+				alert('Error: ' + e)
+			}
+		}
+	})
+}
+
+async function showDataPreview(ppcalls, btns) {
+	const data = await dofetch('textfile', { file: ppcalls.datapreview })
+	// console.log(data)
+
+	btns.push({
+		name: 'Data Example',
+		callback: async rdiv => {
+			try {
+				rdiv.append('div').html(data)
 			} catch (e) {
 				alert('Error: ' + e)
 			}
@@ -791,7 +822,7 @@ function showCitation(btns, pub) {
 async function addArrowBtns(args, type, bdiv, rdiv) {
 	let btns = []
 	if (type == 'calls') showCode(args, btns)
-	makeArrowButtons(args.arrowButtons, btns)
+	if (args.datapreview) showDataPreview(args, btns)
 	if (type == 'main' && args.citation) {
 		const res = await dofetch3('/cardsjson?jsonfile=citations')
 		if (res.error) {
@@ -803,6 +834,7 @@ async function addArrowBtns(args, type, bdiv, rdiv) {
 			if (args.citation == pub.id) showCitation(btns, pub)
 		}
 	}
+	makeArrowButtons(args.arrowButtons, btns)
 
 	const active_btn = btns.findIndex(b => b.active) == -1 ? false : true
 

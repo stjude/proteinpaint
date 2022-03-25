@@ -5,53 +5,17 @@
             "title": "Exploring genomic alteration in pediatric cancer using ProteinPaint",
             "pmid": "26711108",
             "pmcid": "PMC4892362",
-            "doi": "10.1038/ng.3466",
-            "citation_styles": [
-                {
-                    "style": "AMA",
-                    "citation": "Zhou X, Edmonson MN, Wilkinson MR, et al. Exploring genomic alteration in pediatric cancer using ProteinPaint. <em>Nat Genet.</em> 2016;48(1):4-6. doi:10.1038/ng.3466"
-                },
-                {
-                    "style": "APA",
-                    "citation": "Zhou, X., Edmonson, M. N., Wilkinson, M. R., Patel, A., Wu, G., Liu, Y., Li, Y., Zhang, Z., Rusch, M. C., Parker, M., Becksfort, J., Downing, J. R., & Zhang, J. (2016). Exploring genomic alteration in pediatric cancer using ProteinPaint. <em>Nature genetics</em>, 48(1), 4-6. https://doi.org/10.1038/ng.3466"
-                },
-                {
-                    "style": "MLA",
-                    "citation": "Zhou, Xin et al. “Exploring genomic alteration in pediatric cancer using ProteinPaint.” <em> Nature genetics</em> vol. 48,1 (2016): 4-6. doi:10.1038/ng.3466"
-                },
-                {
-                    "style": "NLM",
-                    "isDefault": true,
-                    "citation": "Zhou X, Edmonson MN, Wilkinson MR, Patel A, Wu G, Liu Y, Li Y, Zhang Z, Rusch MC, Parker M, Becksfort J, Downing JR, Zhang J. Exploring genomic alteration in pediatric cancer using ProteinPaint. Nat Genet. 2016 Jan;48(1):4-6. doi: 10.1038/ng.3466. PMID: 26711108; PMCID: PMC4892362."
-                }
-            ]
+            "doi": "https://doi.org/10.1038/ng.3466",
+            "citation": "Zhou X, Edmonson MN, Wilkinson MR, Patel A, Wu G, Liu Y, Li Y, Zhang Z, Rusch MC, Parker M, Becksfort J, Downing JR, Zhang J. Exploring genomic alteration in pediatric cancer using ProteinPaint. Nat Genet. 2016 Jan;48(1):4-6. doi: 10.1038/ng.3466. PMID: 26711108; PMCID: PMC4892362."
         },
         {
             "id": 1002,
             "title": "Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint",
-            "message": "Hello World",
             "pmid": "33434514",
             "pmcid": "PMC7884056",
             "doi": "0.1016/j.ccell.2020.12.011",
-            "citation_styles": [
-                {
-                    "style": "AMA",
-                    "citation": "Zhou X, Wang J, Patel J, et al. Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint. <em>Cancer Cell</em>. 2021;39(1):83-95.e4. doi:10.1016/j.ccell.2020.12.011"
-                },
-                {
-                    "style": "APA",
-                    "citation": "Zhou, X., Wang, J., Patel, J., Valentine, M., Shao, Y., Newman, S., Sioson, E., Tian, L., Liu, Y., Brady, S. W., Flasch, D., Ma, X., Liu, Y., Paul, R., Edmonson, M. N., Rusch, M. C., Li, C., Baker, S. J., Easton, J., & Zhang, J. (2021). Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint. <em>Cancer cell</em>, 39(1), 83-95.e4. https://doi.org/10.1016/j.ccell.2020.12.011"
-                },
-                {
-                    "style": "MLA",
-                    "citation": "Zhou, Xin et al. “Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint.” <em>Cancer cell</em> vol. 39,1 (2021): 83-95.e4. doi:10.1016/j.ccell.2020.12.011"
-                },
-                {
-                    "style": "NLM",
-                    "isDefault": true,
-                    "citation": "Zhou X, Wang J, Patel J, Valentine M, Shao Y, Newman S, Sioson E, Tian L, Liu Y, Brady SW, Flasch D, Ma X, Liu Y, Paul R, Edmonson MN, Rusch MC, Li C, Baker SJ, Easton J, Zhang J. Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint. Cancer Cell. 2021 Jan 11;39(1):83-95.e4. doi: 10.1016/j.ccell.2020.12.011. PMID: 33434514; PMCID: PMC7884056."
-                }
-            ]
+            "citation": "Zhou X, Wang J, Patel J, Valentine M, Shao Y, Newman S, Sioson E, Tian L, Liu Y, Brady SW, Flasch D, Ma X, Liu Y, Paul R, Edmonson MN, Rusch MC, Li C, Baker SJ, Easton J, Zhang J. Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint. Cancer Cell. 2021 Jan 11;39(1):83-95.e4. doi: 10.1016/j.ccell.2020.12.011. PMID: 33434514; PMCID: PMC7884056."
+
         },
         {
             "id": 1003,
@@ -59,24 +23,7 @@
             "pmid": "32466770",
             "pmcid": "PMC7325161",
             "doi": "10.1186/s13059-020-02043-x",
-            "citation_styles": [
-                    {
-                        "style": "AMA",
-                        "citation": "Tian L, Li Y, Edmonson MN, et al. CICERO: a versatile method for detecting complex and diverse driver fusions using cancer RNA sequencing data. <em>Genome Biol.</em> 2020;21(1):126. Published 2020 May 28. doi:10.1186/s13059-020-02043-x"
-                    },
-                    {
-                        "style": "APA",
-                        "citation": "Tian, L., Li, Y., Edmonson, M. N., Zhou, X., Newman, S., McLeod, C., Thrasher, A., Liu, Y., Tang, B., Rusch, M. C., Easton, J., Ma, J., Davis, E., Trull, A., Michael, J. R., Szlachta, K., Mullighan, C., Baker, S. J., Downing, J. R., Ellison, D. W., … Zhang, J. (2020). CICERO: a versatile method for detecting complex and diverse driver fusions using cancer RNA sequencing data. <em>Genome biology</em>, 21(1), 126. https://doi.org/10.1186/s13059-020-02043-x"
-                    },
-                    {
-                        "style": "MLA",
-                        "citation": "Tian, Liqing et al. “CICERO: a versatile method for detecting complex and diverse driver fusions using cancer RNA sequencing data.” <em>Genome biology</em> vol. 21,1 126. 28 May. 2020, doi:10.1186/s13059-020-02043-x"
-                    },
-                    {
-                        "style": "NLM",
-                        "citation": "Tian L, Li Y, Edmonson MN, Zhou X, Newman S, McLeod C, Thrasher A, Liu Y, Tang B, Rusch MC, Easton J, Ma J, Davis E, Trull A, Michael JR, Szlachta K, Mullighan C, Baker SJ, Downing JR, Ellison DW, Zhang J. CICERO: a versatile method for detecting complex and diverse driver fusions using cancer RNA sequencing data. Genome Biol. 2020 May 28;21(1):126. doi: 10.1186/s13059-020-02043-x. PMID: 32466770; PMCID: PMC7325161."
-                    }
-            ]
+            "citation": "Tian L, Li Y, Edmonson MN, Zhou X, Newman S, McLeod C, Thrasher A, Liu Y, Tang B, Rusch MC, Easton J, Ma J, Davis E, Trull A, Michael JR, Szlachta K, Mullighan C, Baker SJ, Downing JR, Ellison DW, Zhang J. CICERO: a versatile method for detecting complex and diverse driver fusions using cancer RNA sequencing data. Genome Biol. 2020 May 28;21(1):126. doi: 10.1186/s13059-020-02043-x. PMID: 32466770; PMCID: PMC7325161."
 
         }
     ]
