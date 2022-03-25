@@ -730,17 +730,6 @@ function showCitation(btns, pub) {
 		name: 'Citation',
 		callback: async rdiv => {
 			try {
-				// const cite_grid = rdiv.append('div')
-				// 	.style('display', 'grid')
-				// 	//layout: dropdown on the left, citation on the right
-				// 	.style('grid-template-columns', 'auto auto')
-				// 	.style('gap', '5px')
-				// 	.style('align-items', 'center')
-				// 	.style('justify-content', 'left')
-				// const cite_div = cite_grid.append('div')
-				// 	.style('display', 'inline-block')
-				// 	.style('padding', '0px 10px 0px 10px')
-				// const dropdown_div = cite_grid.append('div').style('display', 'inline-block')
 				const cite_div = rdiv
 					.append('div')
 					.style('display', 'block')
