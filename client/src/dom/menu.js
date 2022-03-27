@@ -46,10 +46,12 @@ export class Menu {
 				}*/
 			})
 
+		this.dnode = this.d.node()
+
 		// detect if this menu is launched from within another menu
 		// (aka, the 'parent_menu'); this value may be empty (undefined, null)
 		// check if this.d isn't empty before assigning parent_menu
-		if (Object.values(this.d._groups[0]).length) this.d.node().parent_menu = arg.parent_menu
+		if (Object.values(this.d._groups[0]).length) this.dnode.parent_menu = arg.parent_menu
 
 		body.on('mousedown.menu' + this.typename, () => {
 			/*** 
@@ -60,13 +62,13 @@ export class Menu {
 				Solution: Do not hide a menu if it happens to be a parent of a clicked menu
 			***/
 			// when pressing the mouse cursor on the menu itself or any of its submenu, it should stay open
-			if (this.d.node().contains(d3event.target)) return
+			if (this.dnode.contains(d3event.target)) return
 			// this assumes that the mousedown occured on the menu holder itself (not any of its child elements)
-			if (d3event.target.parent_menu === this.d.node()) return
+			if (d3event.target.parent_menu === this.dnode) return
 			// detect in case the mousedown occurred on a menu's child element,
 			// in which case the menu's parent should still be not hidden
 			const menu = d3event.target.closest('.sja_menu_div')
-			if (menu && menu.parent_menu === this.d.node()) return
+			if (menu && menu.parent_menu === this.dnode) return
 			// close a menu for all other mousedown events outside of its own div or submenu
 			this.hide()
 		})
@@ -112,12 +114,12 @@ export class Menu {
 		this.prevY = y
 
 		// show around a given point
-		document.body.appendChild(this.d.node())
+		document.body.appendChild(this.dnode)
 
 		this.d.style('display', 'block')
 		const leftx = x + this.offsetX
 		const topy = y + this.offsetY
-		const p = this.d.node().getBoundingClientRect()
+		const p = this.dnode.getBoundingClientRect()
 
 		// x adjust
 		if (leftx + p.width > window.innerWidth) {
@@ -182,6 +184,7 @@ export class Menu {
 		*/
 	}
 
+	// this hide() method may be overriden with a custom method by getCustomApi(overrides)
 	hide() {
 		if (d3event) {
 			// d3event can be undefined
@@ -214,5 +217,38 @@ export class Menu {
 			this.hidden = false
 		}
 		return this
+	}
+
+	/*
+		Create a custom instance API with method and/or property overrides;
+		this will simplify sharing of the same tip instance among different
+		components/code, such as a chart edit menu with an embedded termsetting
+		edit menu, where the tip.hide() can be shared but tip.clear() will be
+		applied only to a specific div in the overall menu div
+		
+		Example usage: 
+		const tip = new Menu()
+		const subsection = tip.d.append('div')
+		const customTipApi = tip.getCustomApi({
+			d: subsection, // expose only a subsection of the whole tip.d,
+			show: () => {
+				subsection.style('display', 'block')
+			},
+			hide: () => {
+				subsection.style('display', 'none')
+			},
+			clear: () => {
+				subsection.selectAll('*').remove() // clear only the subsection
+				return customTipApi
+			}
+		})
+	*/
+	getCustomApi(overrides = {}) {
+		// the current instance will be used as the api's prototype via Object.create(),
+		// so that any property or method that is not overriden will
+		// refer to this instance's original property or method
+		const api = Object.create(this)
+		Object.assign(api, overrides)
+		return api
 	}
 }

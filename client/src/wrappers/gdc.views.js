@@ -51,3 +51,22 @@ export function getLolliplotTrack() {
 
 	return arg
 }
+
+/*
+export function getBamTrack() {
+	// host in gdc is just a relative url path,
+	// using the same domain as the GDC portal where PP is embedded
+	const host = 'basepath' in this.props ? this.props.basepath : basepath
+
+	const arg = {
+		host,
+		genome: 'hg38', // hardcoded for gdc
+		//gene: data.gene,
+		gdcbamslice:{
+			uionly:true
+		}
+	}
+
+	// 
+}
+*/
