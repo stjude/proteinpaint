@@ -738,7 +738,7 @@ function showCitation(btns, pub) {
 					.append('div')
 					.style('margin-left', '5w')
 					.html(
-						`<p style="display: inline-block;"><em>${pub.title}</em>. </p>
+						`<p style="display: inline-block;">${pub.title}. <em>${pub.journal}</em>, ${pub.year}. </p>
 						${
 							pub.pmid
 								? `<p style="display: inline-block;">PMID: <a href="${pub.pmidURL}" target="_blank">${pub.pmid}</a></p>`
