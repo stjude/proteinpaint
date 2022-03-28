@@ -39,7 +39,8 @@ REV=$(cat tmppack/rev.txt)
 cd tmppack
 
 # get the current tag
-TAG="$(node -p "require('./package.json').version")"
+#TAG="$(node -p "require('./package.json').version")"
+TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 echo "building ppbase:$REV image, package version=$TAG"
 docker build --file ./build/Dockerfile --target ppbase --tag ppbase:$REV .
 echo "building pprust:$REV image, package version=$TAG"
