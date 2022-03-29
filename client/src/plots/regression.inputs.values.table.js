@@ -220,7 +220,7 @@ function setRenderers(self) {
 				.select('div')
 				.style('display', item.key === t.refGrp && hover_flag ? 'inline-block' : 'none')
 				.style('border', item.key === t.refGrp && hover_flag ? '1px solid #bbb' : '')
-		} else {
+		} else if (input.term.q.mode != 'cutoff') {
 			const reference_td = tr
 				.append('td')
 				.style('padding', '1px 5px')
@@ -235,32 +235,32 @@ function setRenderers(self) {
 				.style('color', '#999')
 				.style('font-size', '.7em')
 				.text('REFERENCE')
-		}
 
-		if (hover_flag) {
-			tr.on('mouseover', () => {
-				if (t.refGrp !== item.key) {
-					tr.style('background', '#fff6dc')
-					ref_text
-						.style('display', 'inline-block')
-						.style('border', '')
-						.text('Set as reference')
-				} else tr.style('background', 'white')
-			})
-				.on('mouseout', () => {
-					tr.style('background', 'white')
-					if (t.refGrp !== item.key) ref_text.style('display', 'none')
+			if (hover_flag) {
+				tr.on('mouseover', () => {
+					if (t.refGrp !== item.key) {
+						tr.style('background', '#fff6dc')
+						ref_text
+							.style('display', 'inline-block')
+							.style('border', '')
+							.text('Set as reference')
+					} else tr.style('background', 'white')
 				})
-				.on('click', () => {
-					t.refGrp = item.key
-					ref_text.style('border', '1px solid #bbb').text('REFERENCE')
-					// below will save to state, ui code should react to it
-					self.opts.callback(t)
-				})
-		} else {
-			tr.on('mouseover', null)
-				.on('mouseout', null)
-				.on('click', null)
+					.on('mouseout', () => {
+						tr.style('background', 'white')
+						if (t.refGrp !== item.key) ref_text.style('display', 'none')
+					})
+					.on('click', () => {
+						t.refGrp = item.key
+						ref_text.style('border', '1px solid #bbb').text('REFERENCE')
+						// below will save to state, ui code should react to it
+						self.opts.callback(t)
+					})
+			} else {
+				tr.on('mouseover', null)
+					.on('mouseout', null)
+					.on('click', null)
+			}
 		}
 	}
 }

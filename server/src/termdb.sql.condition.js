@@ -173,3 +173,154 @@ export const cuminc = {
 		}
 	}
 }
+
+export const cox = {
+	getCTE(tablename, term, q, values, filter) {
+		const minYearsToEvent = 'minYearsToEvent' in q ? q.minYearsToEvent : 5
+		// NOTE: may be user configurable later via client-side UI
+		if (q.timeScale == 'year') {
+			// 'value' column will contain follow-up time from 5 years post cancer diagnosis
+			// event 1: follow up time is for first event to occur
+			// event 0: follow-up time is until last assessment
+			let event1CTE
+			if (term.isleaf) {
+				event1CTE = `event1 AS (
+					SELECT sample, 1 as key, MIN(years_to_event) as value
+					FROM chronicevents
+					WHERE term_id = ?
+						AND grade >= ?
+					AND grade <= 5
+					AND years_to_event >= ?
+					${filter ? 'AND sample IN ' + filter.CTEname : ''}
+					GROUP BY sample
+				)`
+				values.push(term.id, q.cutoff, minYearsToEvent)
+			} else {
+				event1CTE = `parentTerms AS (
+					SELECT distinct(ancestor_id) 
+					FROM ancestry
+				),
+				eventTerms AS (
+					SELECT a.term_id 
+					FROM ancestry a
+					JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
+					WHERE a.ancestor_id = ?
+				),
+				event1 AS (
+					SELECT sample, 1 as key, MIN(years_to_event) as value
+					FROM chronicevents
+					WHERE term_id in eventTerms
+						AND grade >= ?
+					AND grade <= 5
+					AND years_to_event >= ?
+					${filter ? 'AND sample IN ' + filter.CTEname : ''}
+					GROUP BY sample
+				)`
+				values.push(term.id, q.cutoff, minYearsToEvent)
+			}
+
+			// TODO: for event 0, CTE may need to be adjusted for groupsetting usage
+			const event0CTE = `event0 AS (
+				SELECT sample, 0 as key, MAX(years_to_event) as value
+				FROM chronicevents
+				WHERE grade <= 5 
+					AND sample NOT IN event1samples
+					AND years_to_event >= ?
+				${filter ? 'AND sample IN ' + filter.CTEname : ''}
+				GROUP BY sample
+			)`
+			values.push(minYearsToEvent)
+
+			return {
+				sql: `${event1CTE},
+				event1samples AS (
+					SELECT sample
+					FROM event1
+				),
+				${event0CTE},
+				${tablename} AS (
+					SELECT * FROM event1
+					UNION ALL
+					SELECT * FROM event0
+				)`,
+				tablename
+			}
+		} else if (q.timeScale == 'age') {
+			// FIXME: do not hardcode '5', '0.00274', and 'agedx'. Should retrieve from dataset.
+			// 'value' column will be json of start and end ages
+			// age_start is age at 5 years post cancer diagnosis
+			// age_end is either age at first event (event 1) or age at last assessment (event 0)
+			// one day (i.e. 1/365 or 0.00274) is added to age_end so that age_end does not equal age_start (otherwise model fit will fail in R)
+			let event1CTE
+			if (term.isleaf) {
+				event1CTE = `event1 AS (
+					SELECT c.sample, 1 as key, json_object('age_start', (a.value + 5), 'age_end', (MIN(c.age_graded) + 0.00274)) as value
+					FROM chronicevents c
+					INNER JOIN anno_float a ON c.sample = a.sample
+					WHERE a.term_id = 'agedx'
+					AND c.term_id = ?
+					AND c.grade >= ?
+					AND c.grade <= 5
+					AND c.years_to_event >= ?
+					${filter ? 'AND c.sample IN ' + filter.CTEname : ''}
+					GROUP BY c.sample
+				)`
+				values.push(term.id, q.cutoff, minYearsToEvent)
+			} else {
+				event1CTE = `parentTerms AS (
+					SELECT distinct(ancestor_id) 
+					FROM ancestry
+				),
+				eventTerms AS (
+					SELECT a.term_id 
+					FROM ancestry a
+					JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
+					WHERE a.ancestor_id = ?
+				),
+				event1 AS (
+					SELECT c.sample, 1 as key, json_object('age_start', (a.value + 5), 'age_end', (MIN(c.age_graded) + 0.00274)) as value
+					FROM chronicevents c
+					INNER JOIN anno_float a ON c.sample = a.sample
+					WHERE a.term_id = 'agedx'
+					AND c.term_id in eventTerms
+					AND c.grade >= ?
+					AND c.grade <= 5
+					AND c.years_to_event >= ?
+					${filter ? 'AND c.sample IN ' + filter.CTEname : ''}
+					GROUP BY c.sample
+				)`
+				values.push(term.id, q.cutoff, minYearsToEvent)
+			}
+
+			const event0CTE = `event0 AS (
+				SELECT c.sample, 0 as key, json_object('age_start', (a.value + 5), 'age_end', (MAX(c.age_graded) + 0.00274)) as value
+				FROM chronicevents c
+				INNER JOIN anno_float a ON c.sample = a.sample
+				WHERE a.term_id = 'agedx'
+				AND c.grade <= 5 
+				AND c.sample NOT IN event1samples
+				AND c.years_to_event >= ?
+				${filter ? 'AND c.sample IN ' + filter.CTEname : ''}
+				GROUP BY c.sample
+			)`
+			values.push(minYearsToEvent)
+
+			return {
+				sql: `${event1CTE},
+				event1samples AS (
+					SELECT sample
+					FROM event1
+				),
+				${event0CTE},
+				${tablename} AS (
+					SELECT * FROM event1
+					UNION ALL
+					SELECT * FROM event0
+				)`,
+				tablename
+			}
+		} else {
+			throw 'unknown time scale'
+		}
+	}
+}
