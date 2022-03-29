@@ -58,7 +58,7 @@ function __barchart(t1,t2) {
 	if(t2) p.plots[0].term2 = t2
 	return '?noheader=1&mass='+JSON.stringify(p)
 }
-function __cuminc({t1,t2,grade,hidden}) {
+function __cuminc({t1,t2,t0,grade,hidden}) {
 	const p = {
 		dslabel:'SJLife',
 		genome:'hg38',
@@ -74,8 +74,9 @@ function __cuminc({t1,t2,grade,hidden}) {
 	}
 	p.plots[0].term = t1
 	if(t2) p.plots[0].term2 = t2
+	if(t0) p.plots[0].term0 = t0
 	if(grade) p.plots[0].settings.cuminc.gradeCutoff = grade
-	if(hidden) p.plots[0].settings.cuminc.hidden.push(hidden)
+	if(hidden) p.plots[0].settings.cuminc.hidden=hidden
 	return '?noheader=1&mass='+JSON.stringify(p)
 }
 
@@ -239,15 +240,15 @@ makeURL([
 		['Neurology',__barchart( { id: 'Neurology System' })],
 		['Neurology/diaggrp',__barchart( { id: 'Neurology System' }, { id: 'diaggrp' })],
 		['Neurology/hrtavg',__barchart( { id: 'Neurology System' }, { id: 'hrtavg' })],
-		['Neurology/Cardiomyopathy',__barchart( { id: 'Neurology System' }, { id: 'Cardiomyopathy' })],
+		['Neurology/Cardio',__barchart( { id: 'Neurology System' }, { id: 'Cardiovascular System' })],
 
 		'cuminc',
 
-		['Cardiomyopathy-1', __cuminc({t1:{id: 'Cardiomyopathy'},grade:1})],
-		['Cardiomyopathy-3', __cuminc({t1:{id: 'Cardiomyopathy'},grade:3})],
-		['Cardiomyopathy/sex', __cuminc({t1:{id: 'Cardiomyopathy'},t2:{id:'sex'}})],
-		['Cardiomyopathy/hrtavg', __cuminc({
-			t1:{id: 'Cardiomyopathy'},
+		['Cardio-1', __cuminc({t1:{id: 'Cardiovascular System'},grade:1})],
+		['Cardio-3', __cuminc({t1:{id: 'Cardiovascular System'},grade:3})],
+		['Cardio/sex', __cuminc({t1:{id: 'Cardiovascular System'},t2:{id:'sex'}})],
+		['Cardio/hrtavg', __cuminc({
+			t1:{id: 'Cardiovascular System'},
 			t2:{id:'hrtavg', q: {
 				type: "custom-bin",
 				mode: "discrete",
@@ -263,7 +264,27 @@ makeURL([
 					label: "≥100",
 				}]
 			} },
-			hidden:'unknown exposure'
+			hidden:['exposed, dose unknown','unknown exposure']
+		})],
+		['Cardio/hrtavg/race', __cuminc({
+			t0:{id:'racegrp'},
+			t1:{id: 'Cardiovascular System'},
+			t2:{id:'hrtavg', q: {
+				type: "custom-bin",
+				mode: "discrete",
+				lst: [{
+					startunbounded: true,
+					stop: 100,
+					stopinclusive: false,
+					"label": "<100",
+				}, {
+					start: 100,
+					startinclusive: true,
+					stopunbounded: true,
+					label: "≥100",
+				}]
+			} },
+			hidden:['exposed, dose unknown','unknown exposure']
 		})],
 
 		'others',
