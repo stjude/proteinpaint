@@ -948,7 +948,7 @@ tape('numeric exclude range', function(test) {
 	}
 })
 
-tape('numeric filter - only special value', function(test) {
+tape.skip('numeric filter - only special value', function(test) {
 	test.timeoutAfter(5000)
 
 	runpp({
@@ -1220,7 +1220,7 @@ tape('max number of bins: exceeded', test => {
 	}
 })
 
-tape('no visible series data, no overlay', function(test) {
+tape.skip('no visible series data, no overlay', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -1309,7 +1309,7 @@ tape('no visible series data, no overlay', function(test) {
 	}
 })
 
-tape('all hidden + with overlay, legend click', function(test) {
+tape.skip('all hidden + with overlay, legend click', function(test) {
 	test.timeoutAfter(9000)
 
 	runpp({
