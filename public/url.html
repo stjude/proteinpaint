@@ -7,8 +7,7 @@
 
 
 <!-- rows of URLs are added to this grid -->
-<div id='div' style='margin:10px;display:grid;grid-template-columns:150px 80vw;gap:5px;'></div>
-<!-- <div id='div' style='margin:10px;display:grid;grid-template-columns:150px 80vw;gap:5px;word-break:break-word;'></div> -->
+<div id='div' style='margin:10px;display:grid;grid-template-columns:150px 80vw;gap:5px;word-break:break-word'></div>
 
 
 
@@ -140,8 +139,8 @@ makeURL([
 	links:[
 		['GBM EGFR by case id','?gdcbamslice=1&gdc_id=TCGA-06-0211&gdc_pos=chr7:55153818-55156225'],
 		['KRAS G12V by case uuid','?gdcbamslice=1&gdc_id=9a2a226e-9605-4214-9320-469305e664e6&gdc_var=chr12.25245350.C.A'],
-		['IDH1 R132H by file id','?gdcbamslice=1&gdc_id=C494.TCGA-S9-A6WE-01A-12D-A33T-08.1_gdc_realn.bam&gdc_var=chr2.208248388.C.T'],
-		['AKT1 E17K file uuid','?gdcbamslice=1&gdc_id=83da8958-a18d-4843-a451-edbdee4e8c30&gdc_var=chr14.104780214.C.T'],
+		['IDH1 R132H by file id','?gdcbamslice=1&gdc_id=00493087-9d9d-40ca-86d5-936f1b951c93_wxs_gdc_realn.bam&gdc_var=chr2.208248388.C.T'],
+		['AKT1 E17K file uuid','?gdcbamslice=1&gdc_id=35918f42-c424-48ef-8c95-2d87b48fdf41&gdc_var=chr14.104780214.C.T'],
 		['bam link','?genome=hg38&block=1&position=chr14:104780136-104780318&variant=chr14.104780214.C.T&bamfile=xx,yy&gdc=83da8958-a18d-4843-a451-edbdee4e8c30,<yourTokenHere>'],
 		['KRAS G12D','?gdcbamslice=1&gdc_id=17284ec9-c3cb-4c80-96a7-312e35e7c1d9&gdc_var=chr12.25245350.C.T'],
 		['NPM1 exon12 insertion','?gdcbamslice=1&gdc_id=411153fd-414c-46a7-ae2b-c6f579ad63e6&gdc_var=chr5.171410539.C.CTCTG'],
@@ -230,19 +229,19 @@ makeURL([
 		'barchart',
 
 		['diaggrp', __barchart({ id: 'diaggrp' })],
-		['diaggrp/ race', __barchart( { id: 'diaggrp' }, { id: 'racegrp' })],
-		['diaggrp/ hrtavg', __barchart( { id: 'diaggrp' }, { id: 'hrtavg' })],
-		['diaggrp/ Neurology', __barchart( { id: 'diaggrp' },  { id: 'Neurology System' })],
+		['diaggrp/race', __barchart( { id: 'diaggrp' }, { id: 'racegrp' })],
+		['diaggrp/hrtavg', __barchart( { id: 'diaggrp' }, { id: 'hrtavg' })],
+		['diaggrp/Neurology', __barchart( { id: 'diaggrp' },  { id: 'Neurology System' })],
 
 		['hrtavg', __barchart( { id: 'hrtavg' })],
-		['hrtavg/ diaggrp', __barchart( { id: 'hrtavg' }, { id: 'diaggrp' })],
-		['hrtavg/ agedx', __barchart( { id: 'hrtavg' }, { id: 'agedx' })],
-		['hrtavg/ Neurology', __barchart( { id: 'hrtavg' }, { id: 'Neurology System' })],
+		['hrtavg/diaggrp', __barchart( { id: 'hrtavg' }, { id: 'diaggrp' })],
+		['hrtavg/agedx', __barchart( { id: 'hrtavg' }, { id: 'agedx' })],
+		['hrtavg/Neurology', __barchart( { id: 'hrtavg' }, { id: 'Neurology System' })],
 
 		['Neurology', __barchart( { id: 'Neurology System' })],
-		['Neurology/ diaggrp', __barchart( { id: 'Neurology System' }, { id: 'diaggrp' })],
-		['Neurology/ hrtavg', __barchart( { id: 'Neurology System' }, { id: 'hrtavg' })],
-		['Neurology/ Cardio', __barchart( { id: 'Neurology System' }, { id: 'Cardiovascular System' })],
+		['Neurology/diaggrp', __barchart( { id: 'Neurology System' }, { id: 'diaggrp' })],
+		['Neurology/hrtavg', __barchart( { id: 'Neurology System' }, { id: 'hrtavg' })],
+		['Neurology/Cardio', __barchart( { id: 'Neurology System' }, { id: 'Cardiovascular System' })],
 
 		'cuminc',
 
