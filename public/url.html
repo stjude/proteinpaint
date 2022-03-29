@@ -12,6 +12,8 @@
 
 
 <script>
+
+///////////// helpers ////////////////////
 const snplocusQ = {
 	chr:'chr17', start:7674304, stop:7676849,
 	alleleType:0,
@@ -45,6 +47,19 @@ const snplocusQ = {
 		]
 	}
 }
+
+function __barchart(t1,t2) {
+	const p = {
+		dslabel:'SJLife',
+		genome:'hg38',
+		plots: [ { chartType:'barchart' } ]
+	}
+	p.plots[0].term = t1
+	if(t2) p.plots[0].term2 = t2
+	return '?noheader=1&mass='+JSON.stringify(p)
+}
+
+///////////// main ////////////////////
 
 /*
 call the makeURL() to make URLs
@@ -188,80 +203,45 @@ makeURL([
 			genome:'hg38',
 			activeCohort:1
 		})],
+		
+		'barchart',
 
-		['categorical','?noheader=1&mass='+JSON.stringify( {
-			dslabel:'SJLife',
-			genome:'hg38',
-			plots: [
-				{
-					chartType:'barchart',
-					term: { id: 'diaggrp' }
-				}
-			],
-		})],
-		['diaggrp-agedx','?noheader=1&mass='+JSON.stringify( {
-			dslabel:'SJLife',
-			genome:'hg38',
-			plots: [
-				{
-					chartType:'barchart',
-					term: { id: 'diaggrp' },
-					term2: { id: 'agedx' }
-				}
-			],
-		})],
-		['numerical','?noheader=1&mass='+JSON.stringify( {
-			dslabel:'SJLife',
-			genome:'hg38',
-			plots: [
-				{
-					chartType:'barchart',
-					term: {
-						id: 'hrtavg'
-					}
-				}
-			],
-		})],
-		['condition','?noheader=1&mass='+JSON.stringify( {
-			dslabel:'SJLife',
-			genome:'hg38',
-			plots: [
-				{
-					chartType:'barchart',
-					term: {
-						id: 'Arrhythmias'
-					}
-				}
-			],
-		})],
+		['diaggrp',__barchart({ id: 'diaggrp' })],
+		['diaggrp-race',__barchart( { id: 'diaggrp' }, { id: 'racegrp' })],
+		['diaggrp-hrtavg',__barchart( { id: 'diaggrp' }, { id: 'hrtavg' })],
+		['diaggrp-Neurology',__barchart( { id: 'diaggrp' },  { id: 'Neurology System' })],
+
+		['hrtavg',__barchart( { id: 'hrtavg' })],
+		['hrtavg-diaggrp',__barchart( { id: 'hrtavg' }, { id: 'diaggrp' })],
+		['hrtavg-agedx',__barchart( { id: 'hrtavg' }, { id: 'agedx' })],
+		['hrtavg-Neurology',__barchart( { id: 'hrtavg' }, { id: 'Neurology System' })],
+
+		['Neurology',__barchart( { id: 'Neurology System' })],
+		['Neurology-diaggrp',__barchart( { id: 'Neurology System' }, { id: 'diaggrp' })],
+		['Neurology-hrtavg',__barchart( { id: 'Neurology System' }, { id: 'hrtavg' })],
+		['Neurology-Cardiomyopathy',__barchart( { id: 'Neurology System' }, { id: 'Cardiomyopathy' })],
+
+		'others',
 
 		['cuminc','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'SJLife',
 			genome:'hg38',
-			plots: [
-				{
-					chartType:'cuminc',
-					term: {
-						id: 'Cardiomyopathy'
-					}
+			plots: [ {
+				chartType:'cuminc',
+				term: {
+					id: 'Cardiomyopathy'
 				}
-			],
+			} ],
 		})],
 
 		['survival','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'TermdbTest',
 			genome:'hg38',
-			plots: [
-				{
-					chartType:'survival',
-					term: {
-						id: 'diaggrp'
-					},
-					term2: {
-						id: 'efs'
-					}
-				}
-			],
+			plots: [ {
+				chartType:'survival',
+				term: { id: 'diaggrp' },
+				term2: { id: 'efs' }
+			} ],
 		})],
 
 		['matrix','?noheader=1&mass='+JSON.stringify({
@@ -301,7 +281,7 @@ makeURL([
 			}
 		})],
 
-		['filter','?noheader=1&mass='+JSON.stringify( {
+		['num filter','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'SJLife',
 			genome:'hg38',
 			nav: { activeTab:2, },
@@ -323,6 +303,34 @@ makeURL([
 								{ value: '0', label: "Not exposed"},
 								{startunbounded:true,stop:2000,stopinclusive:true}
 							]
+						}}
+					]
+				}
+			},
+		})],
+
+		['!num filter','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			nav: { activeTab:2, },
+			termfilter: {
+				filter:{
+					type:'tvslst',
+					join:'',
+					in:true,
+					lst:[
+						{type:'tvs',tvs: {
+							term: {id: "aaclassic_5", name: "Cumulative Alkylating Agent (Cyclophosphamide Equivalent Dose)", type:'float',
+								"values":{
+									"0": { "label":"Not exposed", "uncomputable":true },
+									"-8888": { "label":"Exposed but dose unknown", "uncomputable":true },
+									"-9999": { "label":"Unknown treatment record", "uncomputable":true }
+								}
+							},
+							ranges: [
+								{start:0, startinclusive:true,stopunbounded:true}
+							],
+							isnot:true
 						}}
 					]
 				}
