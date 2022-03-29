@@ -44,59 +44,63 @@ export function getHandler(self) {
 
 		async showEditMenu(div) {
 			// grade/subcondtion value type
-			const value_type_select = div
-				.append('select')
-				.style('margin', '5px 10px')
-				.property('disabled', self.q.mode == 'binary' ? true : false)
-				.on('change', () => {
-					// if changed from grade to sub or vice versa, set inuse = false
-					if (
-						(value_type_select.node().value == 'sub' && self.q.bar_by_grade) ||
-						(value_type_select.node().value != 'sub' && self.q.bar_by_children)
-					) {
-						self.q.groupsetting.predefined_groupset_idx = undefined
-						self.q.groupsetting.inuse = false
-					}
+			self.q.mode = 'cutoff'
+			if (self.q.mode == 'cutoff') {
+			} else {
+				// TODO: separate into a function
+				const value_type_select = div
+					.append('select')
+					.style('margin', '5px 10px')
+					.property('disabled', self.q.mode == 'binary' ? true : false)
+					.on('change', () => {
+						// if changed from grade to sub or vice versa, set inuse = false
+						if (
+							(value_type_select.node().value == 'sub' && self.q.bar_by_grade) ||
+							(value_type_select.node().value != 'sub' && self.q.bar_by_children)
+						) {
+							self.q.groupsetting.predefined_groupset_idx = undefined
+							self.q.groupsetting.inuse = false
+						}
 
-					self.q.bar_by_grade = value_type_select.node().value == 'sub' ? false : true
-					self.q.bar_by_children = value_type_select.node().value == 'sub' ? true : false
-					self.q.value_by_max_grade = value_type_select.node().value == 'max' ? true : false
-					self.q.value_by_most_recent = value_type_select.node().value == 'recent' ? true : false
-					self.q.value_by_computable_grade =
-						value_type_select.node().value == 'computable' || value_type_select.node().value == 'sub' ? true : false
+						self.q.bar_by_grade = value_type_select.node().value == 'sub' ? false : true
+						self.q.bar_by_children = value_type_select.node().value == 'sub' ? true : false
+						self.q.value_by_max_grade = value_type_select.node().value == 'max' ? true : false
+						self.q.value_by_most_recent = value_type_select.node().value == 'recent' ? true : false
+						self.q.value_by_computable_grade =
+							value_type_select.node().value == 'computable' || value_type_select.node().value == 'sub' ? true : false
 
-					self.dom.tip.hide()
-					self.runCallback()
-				})
+						self.dom.tip.hide()
+						self.runCallback()
+					})
 
-			value_type_select
-				.append('option')
-				.attr('value', 'max')
-				.text('Max grade per patient')
+				value_type_select
+					.append('option')
+					.attr('value', 'max')
+					.text('Max grade per patient')
 
-			value_type_select
-				.append('option')
-				.attr('value', 'recent')
-				.text('Most recent grade per patient')
+				value_type_select
+					.append('option')
+					.attr('value', 'recent')
+					.text('Most recent grade per patient')
 
-			value_type_select
-				.append('option')
-				.attr('value', 'computable')
-				.text('Any grade per patient')
+				value_type_select
+					.append('option')
+					.attr('value', 'computable')
+					.text('Any grade per patient')
 
-			value_type_select
-				.append('option')
-				.attr('value', 'sub')
-				.text('Sub-conditions')
+				value_type_select
+					.append('option')
+					.attr('value', 'sub')
+					.text('Sub-conditions')
 
-			value_type_select.node().selectedIndex = self.q.bar_by_children
-				? 3
-				: self.q.value_by_computable_grade
-				? 2
-				: self.q.value_by_most_recent
-				? 1
-				: 0
-
+				value_type_select.node().selectedIndex = self.q.bar_by_children
+					? 3
+					: self.q.value_by_computable_grade
+					? 2
+					: self.q.value_by_most_recent
+					? 1
+					: 0
+			}
 			//options for grouping grades/subconditions
 			self.showGrpOpts(div)
 		}

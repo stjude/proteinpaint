@@ -395,7 +395,6 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 			return conditionSql.cuminc.getCTE(tablename, term, q, values, filter)
 		} else if (q.getregression && q.regressionType == 'cox' && index === 0) {
 			// CTE for cox regression outcome term
-			termWrapper.q.timeScale = 'age'
 			return conditionSql.cox.getCTE(tablename, term, termWrapper.q, values, filter)
 		} else {
 			// CTE for all other conditional terms

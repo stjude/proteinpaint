@@ -281,7 +281,7 @@ export class InputTerm {
 					'Use as ' +
 						sampleCounts.length +
 						(gs.inuse ? ' groups.' : ' categories.') +
-						` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
+						(tw.q.mode == 'cutoff' ? '' : ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`)
 				)
 			}
 			// update bottomSummaryStatus
@@ -481,9 +481,12 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 			const gs = q.groupsetting.customset
 			if (gs.groups.length == 2) return
 		}
+	} else if (q.mode == 'cutoff') {
+		//TODO: adjust groupsetting to group1(<cutoffGrade) and group2(>=cutoffGrade)
 	} else {
-		q.mode = 'binary'
+		q.mode = state.config.regressionType == 'cox' ? 'cutoff' : 'binary'
 	}
+	if (q.mode == 'cutoff') q.type = 'custom-groupset'
 
 	// category and condition terms share some logic
 

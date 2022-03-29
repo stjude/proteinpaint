@@ -179,7 +179,7 @@ export const cox = {
 		const minYearsToEvent = 'minYearsToEvent' in q ? q.minYearsToEvent : 5
 		// NOTE: may be user configurable later via client-side UI
 		if (q.timeScale == 'year') {
-			// 'value' column will contain follow-up time of each sample
+			// 'value' column will contain follow-up time from 5 years post cancer diagnosis
 			// event 1: follow up time is for first event to occur
 			// event 0: follow-up time is until last assessment
 			let event1CTE
@@ -194,7 +194,7 @@ export const cox = {
 					${filter ? 'AND sample IN ' + filter.CTEname : ''}
 					GROUP BY sample
 				)`
-				values.push(term.id, q.grade, minYearsToEvent)
+				values.push(term.id, q.cutoff, minYearsToEvent)
 			} else {
 				event1CTE = `parentTerms AS (
 					SELECT distinct(ancestor_id) 
@@ -216,9 +216,10 @@ export const cox = {
 					${filter ? 'AND sample IN ' + filter.CTEname : ''}
 					GROUP BY sample
 				)`
-				values.push(term.id, q.grade, minYearsToEvent)
+				values.push(term.id, q.cutoff, minYearsToEvent)
 			}
 
+			// TODO: for event 0, CTE may need to be adjusted for groupsetting usage
 			const event0CTE = `event0 AS (
 				SELECT sample, 0 as key, MAX(years_to_event) as value
 				FROM chronicevents
@@ -264,7 +265,7 @@ export const cox = {
 					${filter ? 'AND c.sample IN ' + filter.CTEname : ''}
 					GROUP BY c.sample
 				)`
-				values.push(term.id, q.grade, minYearsToEvent)
+				values.push(term.id, q.cutoff, minYearsToEvent)
 			} else {
 				event1CTE = `parentTerms AS (
 					SELECT distinct(ancestor_id) 
@@ -288,7 +289,7 @@ export const cox = {
 					${filter ? 'AND c.sample IN ' + filter.CTEname : ''}
 					GROUP BY c.sample
 				)`
-				values.push(term.id, q.grade, minYearsToEvent)
+				values.push(term.id, q.cutoff, minYearsToEvent)
 			}
 
 			const event0CTE = `event0 AS (
