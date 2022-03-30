@@ -23,7 +23,7 @@
             }
         },
         {
-            "label": "TP53 Exonic 18-bd Deletion",
+            "label": "TP53 Exonic 18-bp Deletion",
             "message": "For specific variants, use the <span style='font-family: courier; display: inline-block; opacity: 0.7;font-size:16px;'>variants</span> key. Enter a number that is <em>zero based</em> for the position (i.e. <span style='font-family: courier; display: inline-block; opacity: 0.7; font-size:16px;'>pos</span> value).",
             "urlparam": "?genome=hg19&block=1&bamfile=TP53_del,proteinpaint_demo/hg19/bam/TP53_del.bam&position=chr17:7578191-7578591&variant=chr17.7578383.AGCAGCGCTCATGGTGGGG.A",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bam/bamTP53ExonDelDemo.tar.gz",
