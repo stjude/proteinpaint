@@ -398,6 +398,7 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 			return conditionSql.cox.getCTE(tablename, term, termWrapper.q, values, filter)
 		} else {
 			// CTE for all other conditional terms
+			// TODO condition no long uses groupset, should generate CTE based on breaks[]; no need to consider timeScale
 			const groupset = get_active_groupset(term, termq)
 			CTE = conditionSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, index, groupset)
 		}

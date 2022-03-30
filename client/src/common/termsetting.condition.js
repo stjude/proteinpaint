@@ -98,6 +98,9 @@ export function getHandler(self) {
 					self.q.groupNames = ['Grade <1', 'Grade >=1']
 				}
 			}
+			if (self.opts.showTimeScale) {
+				if (!self.q.timeScale) self.q.timeScale = 'year' // TODO change to time2event
+			}
 		}
 	}
 }

@@ -208,7 +208,7 @@ function trigger_getcategories(q, res, tdb, ds) {
 			if (q.term1_q == undefined) arg.term1_q = term.bins.default
 			break
 		case 'condition':
-			if (q.term1_q == undefined)
+			if (q.term1_q == undefined) {
 				arg.term1_q = {
 					mode: q.mode,
 					breaks: q.breaks,
@@ -218,6 +218,7 @@ function trigger_getcategories(q, res, tdb, ds) {
 					value_by_most_recent: q.value_by_most_recent,
 					value_by_computable_grade: q.value_by_computable_grade
 				}
+			}
 			break
 		default:
 			throw 'unknown term type'
