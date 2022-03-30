@@ -176,7 +176,7 @@ function showMenu_binary(self, div) {
 
 	select2groupname()
 	if (self.q.groupNames && self.q.groupNames[0]) g1n.property('value', self.q.groupNames[0])
-	if (self.q.groupNames && self.q.groupNames[1]) g1n.property('value', self.q.groupNames[1])
+	if (self.q.groupNames && self.q.groupNames[1]) g2n.property('value', self.q.groupNames[1])
 
 	function select2groupname() {
 		const grade = select.property('selectedIndex') + 1
