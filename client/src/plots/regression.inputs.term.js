@@ -66,7 +66,7 @@ export class InputTerm {
 
 			if (this.section.configKey == 'outcome') {
 				// special treatment for terms selected for outcome
-				this.setQ = getQSetter(config.regressionType)
+				this.setQ = getQSetter4outcome(config.regressionType)
 			}
 
 			this.valuesTable = new InputValuesTable({
@@ -97,6 +97,7 @@ export class InputTerm {
 			}
 			if (type == 'cox') {
 				arg.conditionMode = 'binary'
+				arg.showTimeScale = true
 				return
 			}
 			throw 'unknown regressionType'
@@ -438,12 +439,13 @@ export class InputTerm {
 	}
 }
 
-function getQSetter(regressionType) {
+function getQSetter4outcome(regressionType) {
+	// only for outcome term
 	return {
 		integer: regressionType == 'logistic' ? maySetTwoBins : setContMode,
 		float: regressionType == 'logistic' ? maySetTwoBins : setContMode,
 		categorical: maySetTwoGroups,
-		condition: maySetTwoGroups
+		condition: setQ4conditionOutcome
 	}
 }
 
@@ -484,18 +486,38 @@ async function maySetTwoBins(tw, vocabApi, filter, state) {
 	tw.refGrp = tw.q.lst[0].label
 }
 
+function setQ4conditionOutcome(tw, vocabApi, filter, state) {
+	/* tw is a condition term as outcome for logistic/cox (but not other regression types, for now)
+	will always break grades into two groups
+	this requires q.breaks[] to have a single grade value
+	for logistic: set q.refGrp
+	for cox: set q.timeScale
+	*/
+	const { term, q } = tw
+	if (!q.breaks) q.breaks = []
+	if (q.breaks.length != 1) {
+		q.breaks = [2] // hardcode for now
+	}
+	if (![1, 2, 3, 4, 5].includes(q.breaks[0])) {
+		q.breaks[0] = 2
+	}
+	const grade = q.breaks[0]
+	if (!q.groupNames) q.groupNames = []
+	if (!q.groupNames[0]) q.groupNames[0] = 'Grade <' + grade
+	if (!q.groupNames[1]) q.groupNames[1] = 'Grade >=' + grade
+	if (state.config.regressionType == 'logistic') {
+		q.refGrp = q.groupNames[0]
+	} else {
+		// cox
+		if (q.timeScale != 'age' && q.timeScale != 'year') q.timeScale = 'year' // change year to time2event
+	}
+}
+
 async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	// if the bins are already binary, do not reset
 	const { term, q } = tw
 
-	if (term.type == 'condition') {
-		if (q.breaks.length != 1) {
-			// HARDCODED for now
-			q.breaks = [1]
-			q.groupNames = ['Grade <1', 'Grade >=1']
-		}
-		return
-	}
+	// TODO clean up logic?
 
 	// not condition, currently can only be categorical
 	if (q.mode == 'binary') {
