@@ -9,6 +9,7 @@ import { mclass } from '../../shared/common'
 import { Menu } from '../dom/menu'
 import { setInteractivity } from './matrix.interactivity'
 import { setRenderers } from './matrix.renderers'
+import { getSampleSorter } from './matrix.sort'
 
 class Matrix {
 	constructor(opts) {
@@ -157,6 +158,7 @@ class Matrix {
 	setSampleGroupsOrder(data) {
 		const s = this.settings.matrix
 		const defaultSampleGrp = { id: undefined, lst: [] }
+		this.sampleSorter = getSampleSorter(this, s, data.lst)
 
 		const sampleGroups = new Map()
 		if (!this.config.divideBy) {
@@ -197,17 +199,10 @@ class Matrix {
 		this.sampleGroups = [...sampleGroups.values()].sort((a, b) => a.order - b.order)
 		//this.sampleGroupKeys = [...sampleGroups.keys()] -- not needed?
 		this.sampleOrder = []
-		const sampleSorter = (a, b) => {
-			const k = a[s.sortSamplesBy] // TODO: support many types of sorting
-			const l = b[s.sortSamplesBy]
-			if (k < l) return -1
-			if (k > l) return 1
-			return 0
-		}
 
 		let total = 0
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
-			grp.lst.sort(sampleSorter)
+			grp.lst.sort(this.sampleSorter)
 			for (const [index, row] of grp.lst.entries()) {
 				this.sampleOrder.push({ grp, grpIndex, row, index, prevGrpTotalIndex: total, totalIndex: total + index })
 			}
@@ -482,7 +477,7 @@ export async function getPlotConfig(opts, app) {
 					bottom: 20,
 					left: 50
 				},
-				sortSamplesBy: 'sample',
+				sortSamplesBy: [{ $id: 'sample' /*split: {char: '', index: 0}*/ }],
 				colw: 14,
 				colspace: 1,
 				colgspace: 8,

@@ -102,6 +102,7 @@ export function setInteractivity(self) {
 				{ label: 'Edit', callback: self.showTermEditMenu },
 				//{ label: 'Move', callback: self.showMoveMenu },
 				{ label: 'Insert', callback: self.showTermInsertMenu },
+				{ label: 'Sort', callback: self.showSortMenu },
 				{ label: 'Delete', callback: self.showRemoveMenu }
 			])
 			.enter()
@@ -304,7 +305,6 @@ export function setInteractivity(self) {
 				const lines = text.split('\n').map(line => line.trim())
 				const ids = lines.filter(id => !!id)
 				const terms = await self.app.vocabApi.getTermTypes(ids)
-				console.log(terms)
 				const termgroups = JSON.parse(JSON.stringify(self.config.termgroups))
 				const name = self.dom.grpNameTextInput.property('value')
 				let grp = termgroups.find(g => g.name === name)
@@ -347,6 +347,191 @@ export function setInteractivity(self) {
 					t.selectionEnd = s + 1
 				}
 			})
+	}
+
+	self.showSortMenu = () => {
+		//console.log(self.termOrder)
+		/* 
+			sort rows and samples by:
+			- #hits 
+
+			sort samples by #hits against
+			- draggable divs of term names
+
+
+			-- OR --
+
+			[ ] move this row [above || below] [all rows || term names]
+
+			[ ] sort samples against this term: 
+					// by: *hits _values _mutation class
+					// priority: *first _last _order# [ ]
+			
+			Apply
+		*/
+
+		const t = self.activeTerm
+		self.dom.menubody.selectAll('*').remove()
+
+		self.dom.menubody
+			.append('div')
+			.style('text-align', 'center')
+			.html(t.tw.term.name)
+
+		let moveInput
+		if (t.grp.lst.length > 1) {
+			const moveDiv = self.dom.menubody.append('div').style('margin-top', '10px')
+
+			const moveLabel = moveDiv.append('label')
+			moveInput = moveLabel
+				.append('input')
+				.attr('type', 'checkbox')
+				.style('text-align', 'center')
+
+			moveLabel.append('span').html('&nbsp;move this term&nbsp;')
+
+			const movePos = moveDiv.append('select')
+			movePos
+				.selectAll('option')
+				.data([{ label: 'before', value: 0 }, { label: 'after', value: 1 }])
+				.enter()
+				.append('option')
+				.attr('value', d => d.value)
+				.html(d => d.label)
+
+			moveDiv.append('span').html('&nbsp;')
+
+			const otherTermsInGrp = t.grp.lst
+				.filter(tw => tw.$id != t.tw.$id)
+				.map(tw => {
+					return { label: tw.term.name, value: tw.$id }
+				})
+			const moveTarget = moveDiv.append('select')
+			moveTarget
+				.selectAll('option')
+				.data([{ label: 'all', value: '*' }, ...otherTermsInGrp])
+				.enter()
+				.append('option')
+				.attr('value', d => d.value)
+				.html(d => d.label)
+		}
+
+		const sortColDiv = self.dom.menubody.append('div').style('margin-top', '10px')
+
+		const sortColLabel = sortColDiv.append('label')
+		const sortColInput = sortColLabel
+			.append('input')
+			.attr('type', 'checkbox')
+			.property('checked', true)
+			.style('text-align', 'center')
+
+		sortColLabel.append('span').html(`&nbsp;sort samples against (in order of priority):`)
+
+		const sorterTerms = self.showSorterTerms(sortColDiv, t)
+
+		self.dom.menubody
+			.append('button')
+			.html('Apply')
+			.on('click', () => {
+				const matrix = JSON.parse(JSON.stringify(self.config.settings.matrix)) || {}
+				if (moveInput.property('checked')) {
+				}
+
+				if (sortColInput.property('checked')) {
+					sorterTerms.forEach(st => {
+						delete st.div
+						delete st.up
+						delete st.down
+						delete st.delete
+					})
+					matrix.sortSamplesBy = sorterTerms
+				}
+
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.opts.id,
+					config: {
+						settings: { matrix }
+					}
+				})
+
+				self.dom.tip.hide()
+			})
+	}
+
+	self.showSorterTerms = (sortColDiv, t) => {
+		const sorterTerms = self.config.settings.matrix.sortSamplesBy.map(st => JSON.parse(JSON.stringify(st)))
+		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
+		if (i == -1) sorterTerms.unshift({ $id: t.tw.$id, by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' })
+
+		sortColDiv
+			.append('div')
+			.style('margin', '5px')
+			.style('padding', '5px 10px')
+			.selectAll('div')
+			.data(sorterTerms, s => s.$id)
+			.enter()
+			.append('div')
+			.style('width', 'fit-content')
+			.style('margin', '3px')
+			.style('cursor', 'default')
+			.style('padding', '3px 10px')
+			.style('border-radius', '5px')
+			.style('color', 'black')
+			.style('background-color', 'rgb(238, 238, 238)')
+			.each(function(st, i) {
+				st.div = select(this)
+				st.index = i
+				const label = st.$id == 'sample' ? 'Sample name' : self.termOrder.find(t => st.$id === t.tw.$id).tw.term.name
+				st.div
+					.append('span')
+					.style('margin-right', '10px')
+					.html(label)
+				st.up = st.div
+					.append('span')
+					.html(' &#9650; ')
+					.style('display', i === 0 ? 'none' : 'inline')
+					.style('color', '#555')
+					.on('click', () => {
+						this.parentNode.insertBefore(this, this.previousSibling)
+						sorterTerms.splice(st.index, 1)
+						sorterTerms.splice(st.index - 1, 0, st)
+						updateSorterDivStyles()
+					})
+
+				st.down = st.div
+					.append('span')
+					.html(' &#9660; ')
+					.style('display', i < sorterTerms.length - 1 ? 'inline' : 'none')
+					.style('color', '#555')
+					.on('click', () => {
+						this.parentNode.insertBefore(this, this.nextSibling.nextSibling)
+						sorterTerms.splice(st.index, 1)
+						sorterTerms.splice(st.index + 1, 0, st)
+						updateSorterDivStyles()
+					})
+
+				st.delete = st.div
+					.append('span')
+					.html(' &#10005; ')
+					.style('display', 'inline')
+					.style('color', 'rgb(255, 100, 100)')
+					.on('click', () => {
+						st.div.remove()
+						sorterTerms.splice(st.index, 1)
+						updateSorterDivStyles()
+					})
+			})
+
+		function updateSorterDivStyles() {
+			for (const [i, st] of sorterTerms.entries()) {
+				st.index = i
+				st.up.style('display', st.index > 0 ? 'inline' : 'none')
+				st.down.style('display', st.index < sorterTerms.length - 1 ? 'inline' : 'none')
+			}
+		}
+
+		return sorterTerms
 	}
 
 	self.showRemoveMenu = () => {
