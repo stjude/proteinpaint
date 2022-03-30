@@ -42,12 +42,12 @@ done
 #	usage
 #	exit 1
 #fi
-
 ################################
 # BUILD THE FULL TESTABLE IMAGE
 ################################
 
 ./build/full/build.sh -r $REV
+REV=$(cat tmppack/rev.txt)
 tar -C tmppack/ -xvf archive.tar build/gdc
 
 #####################
