@@ -846,6 +846,29 @@ makeURL([
 
 		// paper: https://pubmed.ncbi.nlm.nih.gov/31462438/
 		['Stroke ~ snplocus','?mass-session-id=stroke&noheader=1'],
+
+		'Cox',
+
+		['Arrhythmias ~ sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'cox',
+				outcome: {
+					id:'Arrhythmias',
+					q: {
+						mode:'binary',
+						cutoff:2, // delete later
+						breaks:[2],
+						timeScale:'year', // 'time2event'
+					}
+				},
+				independent:[
+					{ id: 'sex', refGrp:'2'}
+				]
+			}]
+		})]
 	]
 },
 ]

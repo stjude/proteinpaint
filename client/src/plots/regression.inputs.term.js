@@ -44,7 +44,7 @@ export class InputTerm {
 		try {
 			const { app, config, state, disable_terms } = this.parent
 
-			this.pill = termsettingInit({
+			const arg = {
 				placeholder: this.section.selectPrompt,
 				placeholderIcon: this.section.placeholderIcon,
 				holder: this.dom.pillDiv,
@@ -53,7 +53,6 @@ export class InputTerm {
 				activeCohort: state.activeCohort,
 				debug: app.opts.debug,
 				buttons: this.section.configKey == 'outcome' ? ['replace'] : ['delete'],
-				numericEditMenuVersion: this.getMenuVersion(config),
 				usecase: { target: 'regression', detail: this.section.configKey, regressionType: config.regressionType },
 				disable_terms,
 				abbrCutoff: 50,
@@ -61,7 +60,9 @@ export class InputTerm {
 				callback: term => {
 					this.parent.editConfig(this, term)
 				}
-			})
+			}
+			this.furbishTsConstructorArg(arg)
+			this.pill = termsettingInit(arg)
 
 			if (this.section.configKey == 'outcome') {
 				// special treatment for terms selected for outcome
@@ -80,18 +81,31 @@ export class InputTerm {
 		}
 	}
 
-	getMenuVersion(config) {
-		// for the numericEditMenuVersion of termsetting constructor option
+	furbishTsConstructorArg(arg) {
+		// furbish termsetting constructor argument, based on regression type and if term is outcome/input
+		const type = this.parent.config.regressionType
 		if (this.section.configKey == 'outcome') {
-			// outcome
-			if (config.regressionType == 'logistic') return ['binary']
-			if (config.regressionType == 'linear') return ['continuous']
-			if (config.regressionType == 'cox') return
+			// this term is outcome
+			if (type == 'logistic') {
+				arg.numericEditMenuVersion = ['binary']
+				arg.conditionMode = 'binary'
+				return
+			}
+			if (type == 'linear') {
+				arg.numericEditMenuVersion = ['continuous']
+				return
+			}
+			if (type == 'cox') {
+				arg.conditionMode = 'binary'
+				return
+			}
 			throw 'unknown regressionType'
 		}
 		if (this.section.configKey == 'independent') {
-			// independent
-			return ['continuous', 'discrete', 'spline']
+			// this temr is independent
+			// do not allow condition term
+			arg.numericEditMenuVersion = ['continuous', 'discrete', 'spline']
+			return
 		}
 		throw 'unknown section.configKey: ' + this.section.configKey
 	}
