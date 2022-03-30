@@ -500,14 +500,12 @@ function get_label4key(key, term, q, ds) {
 		return term.values && key in term.values ? term.values[key].label : key
 	}
 	if (term.type == 'condition') {
-		const values = term.grades || term.values
-		if (!values) throw 'missing term.grades or term.values for condition term'
-		if ((!q.groupsetting || (q.groupsetting && !q.groupsetting.inuse)) && q.bar_by_grade) {
-			if (!(key in values)) throw `unknown grade='${key}'`
-			return values[key].label
-		} else {
-			return key
+		if (q.breaks.length == 0) {
+			if (!(key in term.values)) throw `unknown grade='${key}'`
+			return term.values[key].label
 		}
+		// breaks[] has values, chart is by group and key should be group name
+		return key
 	}
 	if (term.values) {
 		return key in term.values ? term.values[key].label : key

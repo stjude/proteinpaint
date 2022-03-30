@@ -1,52 +1,32 @@
-import { setCategoryConditionMethods } from './termsetting.categorical'
-import { setGroupsettingMethods } from './termsetting.groupsetting'
-import { getPillNameDefault } from './termsetting'
-export { fillTW } from './termsetting.categorical'
-
-/*
-********************** EXPORTED
-getHandler(self)
-	- self: a termsetting instance
-	showEditMenu(div) // categorical edit menu
-		showGrpOpts // create first menu with basic options e.g. groupset, predefined groupset
-	getPillName() // Print term name in the pill
-	getPillStatus() // Returns {text, bgcolor} which determines whether to make right half of the pill visible and show some text. Optional bgcolor can be used to highlight an error.
-                    // Return null to hide the right half.
-********************** INTERNAL
-
-*/
+import { getPillNameDefault, set_hiddenvalues } from './termsetting'
 
 export function getHandler(self) {
-	setGroupsettingMethods(self)
-	setCategoryConditionMethods(self)
-
 	return {
 		getPillName(d) {
 			return getPillNameDefault(self, d)
 		},
 
 		getPillStatus() {
-			// get message text for the right half pill; may return null
-			const gserr = self.validateGroupsetting()
-			if (gserr) return gserr
-
-			if (self.q.bar_by_grade) {
-				if (self.q.value_by_max_grade) return { text: 'Max. Grade' }
-				if (self.q.value_by_most_recent) return { text: 'Most Recent Grade' }
-				if (self.q.value_by_computable_grade) return { text: 'Any Grade' }
-				return { text: 'Error: unknown grade setting', bgcolor: 'red' }
+			if (self.q.mode == 'discrete') {
+				if (self.q.breaks.length == 0) {
+					if (self.q.bar_by_grade) {
+						if (self.q.value_by_max_grade) return { text: 'Max. Grade' }
+						if (self.q.value_by_most_recent) return { text: 'Most Recent Grade' }
+						if (self.q.value_by_computable_grade) return { text: 'Any Grade' }
+						return { text: 'Error: unknown grade setting', bgcolor: 'red' }
+					}
+					if (self.q.bar_by_children) return { text: 'Sub-condition' }
+				} else {
+					return { text: self.q.breaks.length + 1 + ' groups' }
+				}
 			}
-			if (self.q.bar_by_children) {
-				return { text: 'Sub-condition' }
-			}
-			return { text: 'Error: unknown setting for term.type == "condition"', bgcolor: 'red' }
+			if (self.q.mode == 'binary') return { text: 'Grades ' + self.q.breaks[0] + '-5' }
+			return { text: 'Error: unknown q.mode', bgcolor: 'red' }
 		},
 
 		async showEditMenu(div) {
 			// grade/subcondtion value type
-			self.q.mode = 'cutoff'
-			if (self.q.mode == 'cutoff') {
-			} else {
+			if (self.q.mode == 'discrete') {
 				// TODO: separate into a function
 				const value_type_select = div
 					.append('select')
@@ -100,9 +80,39 @@ export function getHandler(self) {
 					: self.q.value_by_most_recent
 					? 1
 					: 0
+			} else {
+				div.append('span').text('show binary ui')
 			}
-			//options for grouping grades/subconditions
-			self.showGrpOpts(div)
+		},
+
+		validateQ(data) {
+			// upon getting a new condition term,
+			// take the chance to set conditionMode from constructor option to q{}
+			// so it's ready to be used in edit UI and server request
+			self.q.mode = self.opts.conditionMode
+			if (!self.q.breaks) self.q.breaks = []
+			if (!self.q.groupNames) self.q.groupNames = []
+			if (self.q.mode == 'binary') {
+				if (self.q.breaks.length != 1) {
+					self.q.breaks = [1] // HARDCODED
+					self.q.groupNames = ['Grade <1', 'Grade >=1']
+				}
+			}
 		}
+	}
+}
+
+export function fillTW(tw, vocabApi) {
+	set_hiddenvalues(tw.q, tw.term)
+	// must set up bar/value flags before quiting for inuse:false
+	if (tw.q.value_by_max_grade || tw.q.value_by_most_recent || tw.q.value_by_computable_grade) {
+		// need any of the three to be set
+	} else {
+		// set a default one
+		tw.q.value_by_max_grade = true
+	}
+	if (tw.q.bar_by_grade || tw.q.bar_by_children) {
+	} else {
+		tw.q.bar_by_grade = true
 	}
 }

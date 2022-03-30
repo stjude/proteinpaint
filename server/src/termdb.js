@@ -192,7 +192,7 @@ async function trigger_findterm(q, res, termdb) {
 
 function trigger_getcategories(q, res, tdb, ds) {
 	// thin wrapper of get_summary
-	// works for all types of terms, not just categorical
+	// works for all types of terms
 	if (!q.tid) throw '.tid missing'
 	const term = tdb.q.termjsonByOneid(q.tid)
 	const arg = {
@@ -210,6 +210,8 @@ function trigger_getcategories(q, res, tdb, ds) {
 		case 'condition':
 			if (q.term1_q == undefined)
 				arg.term1_q = {
+					mode: q.mode,
+					breaks: q.breaks,
 					bar_by_grade: q.bar_by_grade,
 					bar_by_children: q.bar_by_children,
 					value_by_max_grade: q.value_by_max_grade,
@@ -225,10 +227,8 @@ function trigger_getcategories(q, res, tdb, ds) {
 	const result = termdbsql.get_summary(arg)
 	const bins = result.CTE1.bins ? result.CTE1.bins : []
 	const orderedLabels =
-		term.type == 'condition' && term.grades
-			? term.grades.map(grade => term.values[grade].label)
-			: term.type == 'condition'
-			? [0, 1, 2, 3, 4, 5, 9].map(grade => term.values[grade].label) // hardcoded default order
+		term.type == 'condition'
+			? [-1, 0, 1, 2, 3, 4, 5, 9].map(grade => term.values[grade].label) // hardcoded default order
 			: bins.map(bin => (bin.name ? bin.name : bin.label))
 
 	res.send({ lst: result.lst, orderedLabels })

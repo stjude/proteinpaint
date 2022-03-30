@@ -8,6 +8,7 @@ nonDictionaryTermTypes
 termsettingInit()
 getPillNameDefault()
 fillTermWrapper()
+set_hiddenvalues()
 ********************* Instance methods
 clickNoPillDiv
 showTree
@@ -574,4 +575,15 @@ async function call_fillTW(tw, vocabApi) {
 	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : t
 	const _ = await import(`./termsetting.${type}.js`)
 	await _.fillTW(tw, vocabApi)
+}
+
+export function set_hiddenvalues(q, term) {
+	if (!q.hiddenValues) {
+		q.hiddenValues = {}
+	}
+	if (term.values) {
+		for (const k in term.values) {
+			if (term.values[k].uncomputable) q.hiddenValues[k] = 1
+		}
+	}
 }

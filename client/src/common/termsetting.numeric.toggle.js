@@ -1,5 +1,5 @@
 import { init_tabs } from '../dom/toggleButtons'
-import { getPillNameDefault } from './termsetting'
+import { getPillNameDefault, set_hiddenvalues } from './termsetting'
 import { copyMerge } from '../common/rx.core'
 
 /*
@@ -126,17 +126,6 @@ export function fillTW(tw, vocabApi) {
 	set_hiddenvalues(tw.q, tw.term)
 	// binconfig.termtype may be used to improve bin labels
 	//if (!tw.q.termtype) tw.q.termtype = term.type
-}
-
-function set_hiddenvalues(q, term) {
-	if (!q.hiddenValues) {
-		q.hiddenValues = {}
-	}
-	if (term.values) {
-		for (const k in term.values) {
-			if (term.values[k].uncomputable) q.hiddenValues[k] = 1
-		}
-	}
 }
 
 function valid_binscheme(q) {

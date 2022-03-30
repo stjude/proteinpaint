@@ -288,16 +288,19 @@ export class InputTerm {
 							? ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
 							: '')
 				)
-			} else if (tw.term.type == 'categorical' || tw.term.type == 'condition') {
+			} else if (tw.term.type == 'categorical') {
 				const gs = tw.q.groupsetting || {}
 				// self.values is already set by parent.setActiveValues() above
 				this.termStatus.topInfoStatus.push(
 					'Use as ' +
 						sampleCounts.length +
 						(gs.inuse ? ' groups.' : ' categories.') +
-						(tw.q.mode == 'cutoff' ? '' : ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`)
+						' <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>'
 				)
+			} else if (tw.term.type == 'condition') {
+				this.termStatus.topInfoStatus.push('TODO condition status')
 			}
+
 			// update bottomSummaryStatus
 			this.termStatus.bottomSummaryStatus =
 				`${totalCount.included} sample included.` +
@@ -484,6 +487,17 @@ async function maySetTwoBins(tw, vocabApi, filter, state) {
 async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	// if the bins are already binary, do not reset
 	const { term, q } = tw
+
+	if (term.type == 'condition') {
+		if (q.breaks.length != 1) {
+			// HARDCODED for now
+			q.breaks = [1]
+			q.groupNames = ['Grade <1', 'Grade >=1']
+		}
+		return
+	}
+
+	// not condition, currently can only be categorical
 	if (q.mode == 'binary') {
 		if (q.type == 'values' && Object.keys(term.values).length == 2) return
 		if (q.type == 'predefined-groupset') {
@@ -495,14 +509,7 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 			const gs = q.groupsetting.customset
 			if (gs.groups.length == 2) return
 		}
-	} else if (q.mode == 'cutoff') {
-		//TODO: adjust groupsetting to group1(<cutoffGrade) and group2(>=cutoffGrade)
-	} else {
-		q.mode = state.config.regressionType == 'cox' ? 'cutoff' : 'binary'
 	}
-	if (q.mode == 'cutoff') q.type = 'custom-groupset'
-
-	// category and condition terms share some logic
 
 	// step 1: check if term has only two computable categories/grades with >0 samples
 	// if so, use the two categories as outcome and do not apply groupsetting
