@@ -39,7 +39,10 @@ class Matrix {
 			holder,
 			svg,
 			mainG,
-			sampleGrpLabelG: mainG.append('g').attr('class', 'sjpp-matrix-series-group-label-g'),
+			sampleGrpLabelG: mainG
+				.append('g')
+				.attr('class', 'sjpp-matrix-series-group-label-g')
+				.on('click', this.showSampleGroupMenu),
 			termGrpLabelG: mainG.append('g').attr('class', 'sjpp-matrix-term-group-label-g'),
 			cluster: mainG.append('g').attr('class', 'sjpp-matrix-cluster-g'),
 			seriesesG: mainG.append('g').attr('class', 'sjpp-matrix-serieses-g'),
@@ -77,7 +80,22 @@ class Matrix {
 			}
 		})
 
-		this.setPill(appState, tip)
+		// enable embedding of termsetting and tree menu inside self.dom.menu
+		this.customTipApi = this.dom.tip.getCustomApi({
+			d: this.dom.menubody,
+			clear: () => {
+				this.dom.menubody.selectAll('*').remove()
+				return this.customTipApi
+			},
+			show: () => {
+				this.dom.menubody.style('display', 'block')
+			},
+			hide: () => {
+				//this.dom.menubody.style('display', 'none')
+			}
+		})
+
+		this.setPill(appState)
 	}
 
 	setControls(appState) {
@@ -168,13 +186,14 @@ class Matrix {
 			defaultSampleGrp.name = 'Not annotated'
 			const term = this.config.divideBy.term
 			const $id = this.config.divideBy.$id
+			const exclude = this.config.divideBy.exclude || []
 			const values = term.values || {}
 			const ref = data.refs.byTermId[$id] || {}
 
 			for (const row of data.lst) {
-				const anno = row[$id]
 				if ($id in row) {
-					const key = anno.key
+					if (exclude.includes(row[$id].key)) continue
+					const key = row[$id].key
 					if (!sampleGroups.has(key)) {
 						sampleGroups.set(key, {
 							id: key,

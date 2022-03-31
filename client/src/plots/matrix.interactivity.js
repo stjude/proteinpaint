@@ -2,24 +2,46 @@ import { select } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '../common/termsetting'
 
 export function setInteractivity(self) {
-	self.setPill = function(appState, tip) {
-		const customTipApi = tip.getCustomApi({
-			d: self.dom.menubody,
-			clear: () => {
-				self.dom.menubody.selectAll('*').remove()
-				return customTipApi
-			},
-			show: () => {
-				self.dom.menubody.style('display', 'block')
-			},
-			hide: () => {
-				//this.dom.menubody.style('display', 'none')
-			}
-		})
+	self.showCellInfo = function() {
+		if (self.activeTerm) return
+		const d = event.target.__data__
+		if (!d || !d.term || !d.sample) return
+		if (event.target.tagName == 'rect') {
+			const rows = [
+				`<tr><td style='text-align: center'>Sample: ${d.sample}</td></tr>`,
+				`<tr><td style='text-align: center'>${d.term.name}</td></tr>`,
+				`<tr><td style='text-align: center; color: ${d.fill}'>${d.label}</td></tr>`
+			]
 
+			if (d.term.type == 'geneVariant') {
+				rows.push()
+				if (d.value.alt)
+					rows.push(`<tr><td style='text-align: center'>ref=${d.value.ref}, alt=${d.value.alt}</td></tr>`)
+				if (d.value.isoform) rows.push(`<tr><td style='text-align: center'>Isoform: ${d.value.isoform}</td></tr>`)
+				if (d.value.mname) rows.push(`<tr><td style='text-align: center'>${d.value.mname}</td></tr>`)
+				if (d.value.chr) rows.push(`<tr><td style='text-align: center'>${d.value.chr}:${d.value.pos}</td></tr>`)
+			}
+
+			self.dom.menutop.selectAll('*').remove()
+			self.dom.menubody.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+			self.dom.tip.show(event.clientX, event.clientY)
+		}
+	}
+
+	self.mouseout = function() {
+		if (!self.activeTerm && !self.activeSampleGroup) self.dom.tip.hide()
+	}
+
+	self.legendClick = function() {}
+	setTermActions(self)
+	setSampleGroupActions(self)
+}
+
+function setTermActions(self) {
+	self.setPill = function(appState) {
 		// will reuse a pill instance to show term edit menu
 		self.pill = termsettingInit({
-			tip: customTipApi,
+			tip: self.customTipApi,
 			menuOptions: 'edit',
 			vocabApi: self.app.vocabApi,
 			vocab: appState.vocab,
@@ -51,36 +73,6 @@ export function setInteractivity(self) {
 				self.dom.tip.hide()
 			}
 		})
-	}
-
-	self.showCellInfo = function() {
-		if (self.activeTerm) return
-		const d = event.target.__data__
-		if (!d || !d.term || !d.sample) return
-		if (event.target.tagName == 'rect') {
-			const rows = [
-				`<tr><td style='text-align: center'>Sample: ${d.sample}</td></tr>`,
-				`<tr><td style='text-align: center'>${d.term.name}</td></tr>`,
-				`<tr><td style='text-align: center; color: ${d.fill}'>${d.label}</td></tr>`
-			]
-
-			if (d.term.type == 'geneVariant') {
-				rows.push()
-				if (d.value.alt)
-					rows.push(`<tr><td style='text-align: center'>ref=${d.value.ref}, alt=${d.value.alt}</td></tr>`)
-				if (d.value.isoform) rows.push(`<tr><td style='text-align: center'>Isoform: ${d.value.isoform}</td></tr>`)
-				if (d.value.mname) rows.push(`<tr><td style='text-align: center'>${d.value.mname}</td></tr>`)
-				if (d.value.chr) rows.push(`<tr><td style='text-align: center'>${d.value.chr}:${d.value.pos}</td></tr>`)
-			}
-
-			self.dom.menutop.selectAll('*').remove()
-			self.dom.menubody.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
-			self.dom.tip.show(event.clientX, event.clientY)
-		}
-	}
-
-	self.mouseout = function() {
-		if (!self.activeTerm) self.dom.tip.hide()
 	}
 
 	self.showTermMenu = async function() {
@@ -604,6 +596,89 @@ export function setInteractivity(self) {
 		})
 		self.dom.tip.hide()
 	}
+}
 
-	self.legendClick = function() {}
+function setSampleGroupActions(self) {
+	self.showSampleGroupMenu = function() {
+		const d = event.target.__data__
+		if (!d) return
+		self.activeSampleGroup = d
+		self.dom.menutop.selectAll('*').remove()
+		self.dom.menubody
+			.style('padding', 0)
+			.selectAll('*')
+			.remove()
+
+		self.dom.menutop
+			.append('div')
+			.selectAll(':scope>.sja_menuoption')
+			.data([
+				{ label: 'Survival plot', callback: self.launchSurvivalPlot },
+				{ label: 'Delete', callback: self.removeSampleGroup }
+			])
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', 'inline-block')
+			.html(d => d.label)
+			.on('click', d => {
+				event.stopPropagation()
+				d.callback(d)
+			})
+
+		self.dom.tip.showunder(event.target)
+	}
+
+	self.showNewChartMenu = () => {
+		self.dom.menubody.selectAll('*').remove()
+	}
+
+	self.launchSurvivalPlot = async () => {
+		self.dom.menubody.selectAll('*').remove()
+		self.dom.menubody
+			.append('div')
+			.style('padding', '10px')
+			.html(`Use "<b>${self.config.divideBy.term.name}</b>" as overlay on the selected survival term below:`)
+		const termdb = await import('../termdb/app')
+		termdb.appInit({
+			holder: self.dom.menubody.append('div'),
+			vocabApi: self.app.vocabApi,
+			state: {
+				vocab: self.state.vocab,
+				activeCohort: self.state.activeCohort,
+				nav: {
+					header_mode: 'search_only'
+				},
+				tree: { usecase: { target: 'survival', detail: 'term' } }
+			},
+			tree: {
+				click_term: term => {
+					self.dom.tip.hide()
+					self.dom.menubody.selectAll('*').remove()
+					self.app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'survival',
+							term,
+							term2: JSON.parse(JSON.stringify(self.config.divideBy))
+						}
+					})
+				}
+			}
+		})
+	}
+
+	self.removeSampleGroup = () => {
+		const divideBy = JSON.parse(JSON.stringify(self.config.divideBy))
+		if (!divideBy.exclude) divideBy.exclude = []
+		divideBy.exclude.push(self.activeSampleGroup.grp.id)
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				divideBy
+			}
+		})
+		self.dom.tip.hide()
+	}
 }
