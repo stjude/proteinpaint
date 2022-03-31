@@ -40,7 +40,6 @@ export const other = {
 		if (q.breaks && q.breaks.length > 0) {
 			// breaks present
 			const breaks = q.breaks
-			breaks.sort((a, b) => a - b)
 
 			// split grades into groups based on breaks
 			const grades = [-1, 0, 1, 2, 3, 4, 5] // hardcoded list of possible grades
@@ -74,6 +73,13 @@ export const other = {
 			// add last group of groups[]
 			group.name = 'Grade >= ' + b
 			groups.push(group)
+
+			// use group names in q.groupNames, if present
+			if (q.groupNames && q.groupNames.length > 0) {
+				for (const [i, name] of q.groupNames.entries()) {
+					groups[i].name = name
+				}
+			}
 
 			// build CTE
 			const [value_for, restriction] = validateQ(q)
