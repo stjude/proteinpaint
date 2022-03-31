@@ -89,7 +89,6 @@ export class InputTerm {
 			// this term is outcome
 			if (type == 'logistic') {
 				arg.numericEditMenuVersion = ['binary']
-				arg.conditionMode = 'binary'
 				return
 			}
 			if (type == 'linear') {
@@ -97,7 +96,6 @@ export class InputTerm {
 				return
 			}
 			if (type == 'cox') {
-				arg.conditionMode = 'binary'
 				arg.showTimeScale = true
 				return
 			}
@@ -312,16 +310,26 @@ export class InputTerm {
 
 			if (!tw.q.mode) throw 'q.mode missing'
 
-			// set term.refGrp
-			if (tw.q.mode == 'continuous') {
-				tw.refGrp = 'NA' // hardcoded in R
-			} else if (!('refGrp' in tw) || !sampleCounts.find(i => i.key == tw.refGrp)) {
-				// refGrp not defined or no longer exists according to sampleCounts[]
-				const o = this.orderedLabels
-				if (o.length) sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
-				else sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
-				tw.refGrp = sampleCounts[0].key
-			}
+			this.maySet_refGrp(tw, sampleCounts)
+		}
+	}
+
+	maySet_refGrp(tw, sampleCounts) {
+		if (this.section.configKey == 'outcome' && this.parent.config.regressionType == 'cox') {
+			// no need to set refgrp
+			return
+		}
+		if (tw.q.mode == 'continuous') {
+			// numeric term in continuous mode, refgrp NA is hardcoded in R
+			tw.refGrp = 'NA'
+			return
+		}
+		if (!('refGrp' in tw) || !sampleCounts.find(i => i.key == tw.refGrp)) {
+			// refGrp not defined or no longer exists according to sampleCounts[]
+			const o = this.orderedLabels
+			if (o.length) sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
+			else sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
+			tw.refGrp = sampleCounts[0].key
 		}
 	}
 

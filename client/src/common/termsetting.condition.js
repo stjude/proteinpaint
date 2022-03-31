@@ -1,4 +1,6 @@
 import { getPillNameDefault, set_hiddenvalues } from './termsetting'
+import { make_radios } from '../dom/radiobutton'
+import { keyupEnter } from '../client'
 
 export function getHandler(self) {
 	return {
@@ -80,41 +82,61 @@ function showMenu_discrete(self, div) {
 
 	// TODO may hide holder if q is not max/recent grade
 
+	div
+		.append('div')
+		.text('To divide to groups, type grade values and press ENTER')
+		.style('margin', '20px 10px 10px 10px')
+		.style('width', '300px')
+		.style('opacity', 0.5)
+
 	const holder = div
 		.append('div')
 		.style('margin', '10px')
 		.style('display', 'grid')
-		.style('grid-template-columns', 'auto auto auto')
+		.style('grid-template-columns', 'auto auto')
 		.style('gap', '10px')
 	const textarea = holder
 		.append('div')
 		.append('textarea')
 		.style('width', '100px')
 		.style('height', '100px')
-		.on('keyup', () => {})
-	const rangeDiv = holder.append('div')
-	const nameDiv = holder.append('div')
+		.property('placeholder', 'Enter grade values')
+		.on('keyup', () => {
+			if (!keyupEnter()) return
+			textarea2gradeUI()
+		})
+
+	const rangeNameDiv = holder
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', 'auto auto')
+		.style('gap', '10px')
+	const rangeDiv = rangeNameDiv.append('div')
+	const nameDiv = rangeNameDiv.append('div')
 	if (self.q.breaks.length) {
 		textarea.property('value', self.q.breaks.join('\n'))
 	}
 	textarea2gradeUI()
 	function textarea2gradeUI() {
-		rangeDiv.selectAll('*')
-		nameDiv.selectAll('*')
+		rangeDiv.selectAll('*').remove()
+		nameDiv.selectAll('*').remove()
 		const breaks = textarea2breaks()
 		if (breaks.length == 0) return
 		for (const [i, b1] of breaks.entries()) {
 			// each break creates a group
-			const rangeCell = rangeDiv.append('div').style('opacity', 0.4)
+			const rangeCell = rangeDiv
+				.append('div')
+				.style('opacity', 0.4)
+				.style('margin', '5px')
 			const nameCell = nameDiv.append('input').style('display', 'block')
 			if (i == 0) {
 				rangeCell.text('<' + b1)
 				nameCell.property('value', 'Grade <' + b1)
 			} else {
 				const b0 = breaks[i - 1]
-				const str = b1 - b0 == 1 ? b1 : b0 + '-' + b1
+				const str = b1 - b0 == 1 ? b0 : b0 + '-' + (b1 - 1)
 				rangeCell.text(str)
-				nameCell.text('Grade ' + str)
+				nameCell.property('value', 'Grade ' + str)
 			}
 		}
 		// last group
@@ -123,7 +145,7 @@ function showMenu_discrete(self, div) {
 		const nameCell = nameDiv.append('input').style('display', 'block')
 		const str = b1 == 5 ? b1 : b1 + '-5'
 		rangeCell.text(str)
-		nameCell.text('Grade ' + str)
+		nameCell.property('value', 'Grade ' + str)
 	}
 
 	function textarea2breaks() {
@@ -148,41 +170,40 @@ function showMenu_discrete(self, div) {
 		.on('click', () => {
 			self.q.breaks = textarea2breaks()
 			self.q.groupNames = []
-			nameDiv.selectAll('input') // collect input values into array
+			for (const i of nameDiv.selectAll('input').nodes()) {
+				self.q.groupNames.push(i.value)
+			}
+			event.target.disabled = true
+			event.target.innerHTML = 'Loading...'
 			self.runCallback()
 		})
 }
 
 function showMenu_binary(self, div) {
-	div
-		.append('div')
-		.text('Using maximum grade for each patient.')
-		.style('opacity', 0.4)
-		.style('margin', '10px')
-		.style('font-size', '.7em')
-
 	const holder = div
 		.append('div')
 		.style('margin', '10px')
 		.style('display', 'grid')
-		.style('grid-template-columns', '140px 150px')
-		.style('gap', '7px')
+		.style('grid-template-columns', 'auto auto')
+		.style('gap', '10px')
 
 	// row 1
 	holder
 		.append('div')
-		.text('Cutoff')
+		.text('Cutoff grade')
 		.style('opacity', 0.4)
-	const select = holder
-		.append('div')
-		.append('select')
-		.on('change', select2groupname)
+	const sd = holder.append('div')
+	const gradeSelect = sd.append('select').on('change', changeGradeSelect)
 	// hardcode grades;/ if needed, can define from termdbConfig
 	for (const i of [1, 2, 3, 4, 5]) {
-		select.append('option').text(self.term.values[i].label)
+		gradeSelect.append('option').text(self.term.values[i].label)
 	}
 	// breaks[0] must have already been set
-	select.property('selectedIndex', self.q.breaks[0] - 1)
+	gradeSelect.property('selectedIndex', self.q.breaks[0] - 1)
+	sd.append('div')
+		.text('Using maximum grade for each patient.')
+		.style('opacity', 0.4)
+		.style('font-size', '.7em')
 
 	// row 2
 	holder
@@ -204,14 +225,48 @@ function showMenu_binary(self, div) {
 		.append('input')
 		.style('width', '130px')
 
-	select2groupname()
+	changeGradeSelect()
+
 	if (self.q.groupNames && self.q.groupNames[0]) g1n.property('value', self.q.groupNames[0])
 	if (self.q.groupNames && self.q.groupNames[1]) g2n.property('value', self.q.groupNames[1])
 
-	function select2groupname() {
-		const grade = select.property('selectedIndex') + 1
+	function changeGradeSelect() {
+		const grade = gradeSelect.property('selectedIndex') + 1
 		g1n.property('value', 'Grade <' + grade)
 		g2n.property('value', 'Grade >=' + grade)
+	}
+
+	let timeScaleChoice
+
+	if (self.opts.showTimeScale) {
+		// row 4: time scale toggle
+		holder
+			.append('div')
+			.text('Time scale')
+			.style('opacity', 0.4)
+		const options = [
+			{ label: 'Age', value: 'age' },
+			{
+				label: 'Time from study enrollment', // may define from ds
+				value: 'year' // replace by 'time2event'
+			}
+		]
+		if (self.q.timeScale) {
+			if (self.q.timeScale == 'age') {
+				options[0].checked = true
+			} else {
+				options[1].checked = true
+			}
+		} else {
+			options[1].checked = true
+			timeScaleChoice = options[1].value
+		}
+		make_radios({
+			holder: holder.append('div'),
+			options,
+			styles: { margin: '' },
+			callback: v => (timeScaleChoice = v)
+		})
 	}
 
 	div
@@ -219,10 +274,13 @@ function showMenu_binary(self, div) {
 		.text('Submit')
 		.style('margin', '10px')
 		.on('click', () => {
-			self.q.breaks[0] = select.property('selectedIndex') + 1
+			self.q.breaks[0] = gradeSelect.property('selectedIndex') + 1
 			if (!self.q.groupNames) self.q.groupNames = []
 			self.q.groupNames[0] = g1n.property('value')
 			self.q.groupNames[1] = g2n.property('value')
+			if (self.opts.showTimeScale) self.q.timeScale = timeScaleChoice
+			event.target.disabled = true
+			event.target.innerHTML = 'Loading...'
 			self.runCallback()
 		})
 }

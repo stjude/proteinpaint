@@ -718,6 +718,7 @@ makeURL([
 				regressionType: 'logistic',
 				outcome: {
 					id: 'Arrhythmias',
+					q:{ breaks:[2],groupNames:['No condition / not tested','Has condition']},
 					refGrp:'No condition / not tested'
 				},
 				independent: [
@@ -747,6 +748,7 @@ makeURL([
 				regressionType: 'logistic',
 				outcome: {
 					id:'Breast',
+					q:{ breaks:[2],groupNames:['No condition / not tested','Has condition']},
 					refGrp:'No condition / not tested'
 				},
 				independent:[
@@ -811,6 +813,7 @@ makeURL([
 				regressionType: 'logistic',
 				outcome: {
 					id: 'Arrhythmias',
+					q:{ breaks:[2],groupNames:['No condition / not tested','Has condition']},
 					refGrp:'No condition / not tested'
 				},
 				independent: [
@@ -831,6 +834,7 @@ makeURL([
 				regressionType: 'logistic',
 				outcome: {
 					id: 'Arrhythmias',
+					q:{ breaks:[2],groupNames:['No condition / not tested','Has condition']},
 					refGrp:'No condition / not tested'
 				},
 				independent: [
@@ -847,25 +851,42 @@ makeURL([
 		// paper: https://pubmed.ncbi.nlm.nih.gov/31462438/
 		['Stroke ~ snplocus','?mass-session-id=stroke&noheader=1'],
 
-		'Cox',
+		'COX',
 
-		['Arrhythmias ~ sex', '?noheader=1&mass='+JSON.stringify({
+		['Neuro ~ sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'cox',
-				outcome: {
-					id:'Arrhythmias',
-					q: {
-						mode:'binary',
-						cutoff:2, // delete later
-						breaks:[2],
-						timeScale:'year', // 'time2event'
-					}
-				},
+				outcome: { id:'Neurology System' },
 				independent:[
 					{ id: 'sex', refGrp:'2'}
+				]
+			}]
+		})],
+
+		['Cardio ~ chestrt', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'cox',
+				outcome: { id:'Cardiovascular System', q:{breaks:[3]} },
+				independent:[
+					{
+						id:"chestrt_yn",
+						q: {
+							mode:'discrete',
+							type:'custom-bin',
+							lst:[
+								{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
+								{startinclusive:false,stopinclusive:true,start:0,stop:100,label:'>0 to 100'},
+								{startinclusive:false,stopunbounded:true,start:100,label:'>100'}
+							]
+						},
+						refGrp:'Not exposed'
+					},
 				]
 			}]
 		})]
@@ -891,24 +912,29 @@ function makeURL(rows) {
 			continue
 		}
 
-		for(const i of row.links) {
-			if(typeof i == 'string') {
+		for(const [i,ele] of row.links.entries()) {
+			if(typeof ele == 'string') {
+				if(i!=0) {
+					// only create <br> if the string is not the first in array
+					d2.append(document.createElement('br'))
+				}
 				const s = document.createElement('span')
 				s.style.marginRight = '8px'
 				s.style.opacity = '.5'
-				s.innerHTML = i
+				s.innerHTML = ele
 				d2.appendChild(s)
 				continue
 			}
-			if(Array.isArray(i)) {
+			if(Array.isArray(ele)) {
+				// ele is [ name, link ]
 				const a = document.createElement('a')
-				a.innerHTML = i[0]
-				a.setAttribute('href',window.location.origin+'/'+i[1])
+				a.innerHTML = ele[0]
+				a.setAttribute('href',window.location.origin+'/'+ele[1])
 				a.setAttribute('target','_blank')
 				a.style.paddingRight = '8px'
 				d2.appendChild(a)
 			} else {
-				window.alert('invalid element: '+i)
+				window.alert('invalid element: '+ele)
 			}
 		}
 	}
