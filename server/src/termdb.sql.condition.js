@@ -54,16 +54,16 @@ export const other = {
 					// modify name of previously iterated group
 					if (groups.length === 0) {
 						// first group of groups[]
-						group.name = '<' + b
+						group.name = 'Grade < ' + b
 					} else {
 						// interior group of groups[]
-						group.name = group.name + '<' + b
+						group.name = group.name + ' < ' + b
 					}
 					// add previously iterated group to groups[]
 					groups.push(group)
 					// create new group of grades based on new break
 					group = {
-						name: b + ' to ',
+						name: b + ' =< Grade',
 						values: [g]
 					}
 				} else {
@@ -72,7 +72,7 @@ export const other = {
 				}
 			}
 			// add last group of groups[]
-			group.name = '>=' + b
+			group.name = 'Grade >= ' + b
 			groups.push(group)
 
 			// build CTE
