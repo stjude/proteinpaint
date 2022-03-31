@@ -111,7 +111,22 @@ export async function getPlotConfig(opts, app) {
 	if (!opts.outcome) {
 		opts.outcome = {}
 	}
-	await fillTermWrapper(opts.outcome, app.vocabApi)
+
+	{
+		/* 3rd argument is the context for initiating tw.q{}
+		for a condition term as outcome, it will have q.mode='binary', rather than default "discrete"
+		as required by logistic/cox regression
+		thus must use this context to declare that
+		*/
+		const context = { conditionMode: 'binary' }
+		// find out the regression type
+		// don't see regression type is directly defined on app
+		const plot = app.opts.state.plots.find(i => i.chartType == 'regression')
+		if (plot && plot.regressionType == 'cox') {
+			context.showTimeScale = true
+		}
+		await fillTermWrapper(opts.outcome, app.vocabApi, context)
+	}
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
 	const config = { id }
@@ -120,6 +135,8 @@ export async function getPlotConfig(opts, app) {
 	if (opts.independent) {
 		if (!Array.isArray(opts.independent)) throw '.independent[] is not array'
 		for (const t of opts.independent) {
+			// condition term cannot be used as independent terms
+			// thus no need to specify context
 			await fillTermWrapper(t, app.vocabApi)
 		}
 		config.independent = opts.independent

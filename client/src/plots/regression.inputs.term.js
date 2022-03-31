@@ -44,6 +44,7 @@ export class InputTerm {
 		try {
 			const { app, config, state, disable_terms } = this.parent
 
+			// termsetting constructor option
 			const arg = {
 				placeholder: this.section.selectPrompt,
 				placeholderIcon: this.section.placeholderIcon,
@@ -490,7 +491,7 @@ function setQ4conditionOutcome(tw, vocabApi, filter, state) {
 	/* tw is a condition term as outcome for logistic/cox (but not other regression types, for now)
 	will always break grades into two groups
 	this requires q.breaks[] to have a single grade value
-	for logistic: set q.refGrp
+	for logistic: set tw.refGrp
 	for cox: set q.timeScale
 	*/
 	const { term, q } = tw
@@ -506,7 +507,7 @@ function setQ4conditionOutcome(tw, vocabApi, filter, state) {
 	if (!q.groupNames[0]) q.groupNames[0] = 'Grade <' + grade
 	if (!q.groupNames[1]) q.groupNames[1] = 'Grade >=' + grade
 	if (state.config.regressionType == 'logistic') {
-		q.refGrp = q.groupNames[0]
+		tw.refGrp = q.groupNames[0]
 	} else {
 		// cox
 		if (q.timeScale != 'age' && q.timeScale != 'year') q.timeScale = 'year' // change year to time2event
