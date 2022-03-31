@@ -427,7 +427,7 @@ export function setInteractivity(self) {
 
 		sortColLabel.append('span').html(`&nbsp;sort samples against (in order of priority):`)
 
-		const sorterTerms = self.showSorterTerms(sortColDiv, t)
+		const tcopy = self.showSorterTerms(sortColDiv, t)
 
 		self.dom.menubody
 			.append('button')
@@ -438,31 +438,41 @@ export function setInteractivity(self) {
 				}
 
 				if (sortColInput.property('checked')) {
-					sorterTerms.forEach(st => {
-						delete st.div
-						delete st.up
-						delete st.down
-						delete st.delete
-					})
-					matrix.sortSamplesBy = sorterTerms
-				}
+					delete tcopy.div
+					delete tcopy.up
+					delete tcopy.down
+					delete tcopy.delete
 
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.opts.id,
-					config: {
-						settings: { matrix }
-					}
-				})
+					self.app.dispatch({
+						type: 'plot_nestedEdits',
+						id: self.opts.id,
+						edits: [
+							{
+								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.index],
+								value: tcopy
+							}
+						]
+					})
+				}
 
 				self.dom.tip.hide()
 			})
 	}
 
 	self.showSorterTerms = (sortColDiv, t) => {
-		const sorterTerms = self.config.settings.matrix.sortSamplesBy.map(st => JSON.parse(JSON.stringify(st)))
+		const sorterTerms = [
+			...self.termOrder
+				.filter(t => t.tw.sortSamples)
+				.map(t => JSON.parse(JSON.stringify(t.tw)))
+				.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority),
+			...self.config.settings.matrix.sortSamplesBy.map(st => JSON.parse(JSON.stringify(st)))
+		]
 		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
-		if (i == -1) sorterTerms.unshift({ $id: t.tw.$id, by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' })
+		const tcopy = JSON.parse(JSON.stringify(t.tw))
+		if (i == -1) {
+			tcopy.sortSamples = { by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' }
+			sorterTerms.unshift(tcopy)
+		}
 
 		sortColDiv
 			.append('div')
@@ -480,9 +490,9 @@ export function setInteractivity(self) {
 			.style('color', 'black')
 			.style('background-color', 'rgb(238, 238, 238)')
 			.each(function(st, i) {
+				st.sortSamples.priority = i
 				st.div = select(this)
-				st.index = i
-				const label = st.$id == 'sample' ? 'Sample name' : self.termOrder.find(t => st.$id === t.tw.$id).tw.term.name
+				const label = st.$id == 'sample' ? 'Sample name' : st.term.name
 				st.div
 					.append('span')
 					.style('margin-right', '10px')
@@ -494,8 +504,8 @@ export function setInteractivity(self) {
 					.style('color', '#555')
 					.on('click', () => {
 						this.parentNode.insertBefore(this, this.previousSibling)
-						sorterTerms.splice(st.index, 1)
-						sorterTerms.splice(st.index - 1, 0, st)
+						sorterTerms.splice(st.priority, 1)
+						sorterTerms.splice(st.priority - 1, 0, st)
 						updateSorterDivStyles()
 					})
 
@@ -506,8 +516,8 @@ export function setInteractivity(self) {
 					.style('color', '#555')
 					.on('click', () => {
 						this.parentNode.insertBefore(this, this.nextSibling.nextSibling)
-						sorterTerms.splice(st.index, 1)
-						sorterTerms.splice(st.index + 1, 0, st)
+						sorterTerms.splice(st.priority, 1)
+						sorterTerms.splice(st.priority + 1, 0, st)
 						updateSorterDivStyles()
 					})
 
@@ -518,20 +528,20 @@ export function setInteractivity(self) {
 					.style('color', 'rgb(255, 100, 100)')
 					.on('click', () => {
 						st.div.remove()
-						sorterTerms.splice(st.index, 1)
+						sorterTerms.splice(st.priority, 1)
 						updateSorterDivStyles()
 					})
 			})
 
 		function updateSorterDivStyles() {
 			for (const [i, st] of sorterTerms.entries()) {
-				st.index = i
-				st.up.style('display', st.index > 0 ? 'inline' : 'none')
-				st.down.style('display', st.index < sorterTerms.length - 1 ? 'inline' : 'none')
+				st.priority = i
+				st.up.style('display', st.priority > 0 ? 'inline' : 'none')
+				st.down.style('display', st.priority < sorterTerms.length - 1 ? 'inline' : 'none')
 			}
 		}
 
-		return sorterTerms
+		return tcopy
 	}
 
 	self.showRemoveMenu = () => {

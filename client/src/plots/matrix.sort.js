@@ -3,12 +3,19 @@
 */
 
 export function getSampleSorter(self, s, rows) {
+	const sorterTerms = [
+		...self.termOrder
+			.filter(t => t.tw.sortSamples)
+			.map(t => t.tw)
+			.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority),
+		...self.config.settings.matrix.sortSamplesBy.map(st => st)
+	]
 	self.sampleSorters = []
-	for (const st of s.sortSamplesBy) {
+	for (const st of sorterTerms) {
 		if (st.$id == 'sample') self.sampleSorters.push(sortSamplesByName)
-		else if (st.by == 'hits') self.sampleSorters.push(getSortSamplesByHits(st.$id, self, rows))
-		else if (st.by == 'values') self.sampleSorters.push(getSortSamplesByValues(st.$id, self, rows))
-		else throw `unsupported sortSamplesBy entry by='${st.by}'`
+		else if (st.sortSamples.by == 'hits') self.sampleSorters.push(getSortSamplesByHits(st.$id, self, rows))
+		else if (st.sortSamples.by == 'values') self.sampleSorters.push(getSortSamplesByValues(st.$id, self, rows))
+		else throw `unsupported sortSamplesBy entry by='${st.sortSamples.by}'`
 	}
 
 	// default to always use sortSamplesByName as a tie-breaker

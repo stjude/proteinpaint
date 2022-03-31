@@ -123,8 +123,8 @@ class Matrix {
 			await this.app.vocabApi.setAnnotatedSampleData(reqOpts, this.currData)
 
 			// process the data
-			this.setSampleGroupsOrder(this.currData)
 			this.setTermOrder(this.currData)
+			this.setSampleGroupsOrder(this.currData)
 			this.setLayout()
 			this.serieses = this.getSerieses(this.currData)
 			// render the data
@@ -477,7 +477,7 @@ export async function getPlotConfig(opts, app) {
 					bottom: 20,
 					left: 50
 				},
-				sortSamplesBy: [{ $id: 'sample' /*split: {char: '', index: 0}*/ }],
+				sortSamplesBy: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				colw: 14,
 				colspace: 1,
 				colgspace: 8,
