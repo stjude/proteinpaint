@@ -16,6 +16,11 @@ showTree
 
 export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant'])
 
+// append the common ID substring,
+// so that the first characters of $id is more indexable
+const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
+let $id = 0
+
 const defaultOpts = {
 	menuOptions: 'edit',
 	menuLayout: 'vertical'
@@ -536,18 +541,21 @@ export function getPillNameDefault(self, d) {
 		: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 }
 
-// append the common ID substring,
-// so that the first characters of $id is more indexable
-const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
-let $id = 0
+/* For some plots that can have multiple terms of the same ID,
+but with different q{}, we can assign and use $id to
+disambiguate which tw data to update and associate with
+a rendered element such as a pill or a matrix row
 
-// tw: termWrapper = {id, term{}, q{}}
-// vocabApi
-export async function fillTermWrapper(tw, vocabApi) {
-	// For some plots that can have multiple terms of the same ID,
-	// but with different q{}, we can assign and use $id to
-	// disambiguate which tw data to update and associate with
-	// a rendered element such as a pill or a matrix row
+tw: termWrapper = {id, term{}, q{}}
+vocabApi
+context{}
+	supply the optional context to define tw.q{}
+	for condition term, fillTW() will fill mode='discrete' by default
+	however, as log/cox outcome, mode must be "binary" instead,
+	this context-dependent requirment is coded in context{}
+	and is handled by fillTW() of condition term
+*/
+export async function fillTermWrapper(tw, vocabApi, context) {
 	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
 
 	if (!tw.term) {
@@ -567,14 +575,14 @@ export async function fillTermWrapper(tw, vocabApi) {
 	}
 	if (!tw.q) tw.q = {}
 	// call term-type specific logic to fill tw
-	await call_fillTW(tw, vocabApi)
+	await call_fillTW(tw, vocabApi, context)
 }
 
-async function call_fillTW(tw, vocabApi) {
+async function call_fillTW(tw, vocabApi, context) {
 	const t = tw.term.type
 	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : t
 	const _ = await import(`./termsetting.${type}.js`)
-	await _.fillTW(tw, vocabApi)
+	await _.fillTW(tw, vocabApi, context)
 }
 
 export function set_hiddenvalues(q, term) {

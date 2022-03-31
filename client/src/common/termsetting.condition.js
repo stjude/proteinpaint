@@ -28,40 +28,7 @@ export function getHandler(self) {
 			if (self.q.mode == 'discrete') return showMenu_discrete(self, div)
 			if (self.q.mode == 'binary') return showMenu_binary(self, div)
 			throw 'q.mode is not discrete/binary'
-		},
-
-		validateQ(data) {
-			// upon getting a new condition term,
-			// take the chance to set conditionMode from constructor option to q{}
-			// so it's ready to be used in edit UI and server request
-			self.q.mode = self.opts.conditionMode
-			if (!self.q.breaks) self.q.breaks = []
-			if (!self.q.groupNames) self.q.groupNames = []
-			if (self.q.mode == 'binary') {
-				if (self.q.breaks.length != 1) {
-					self.q.breaks = [1] // HARDCODED
-					self.q.groupNames = ['Grade <1', 'Grade >=1']
-				}
-			}
-			if (self.opts.showTimeScale) {
-				if (!self.q.timeScale) self.q.timeScale = 'year' // TODO change to time2event
-			}
 		}
-	}
-}
-
-export function fillTW(tw, vocabApi) {
-	set_hiddenvalues(tw.q, tw.term)
-	// must set up bar/value flags before quiting for inuse:false
-	if (tw.q.value_by_max_grade || tw.q.value_by_most_recent || tw.q.value_by_computable_grade) {
-		// need any of the three to be set
-	} else {
-		// set a default one
-		tw.q.value_by_max_grade = true
-	}
-	if (tw.q.bar_by_grade || tw.q.bar_by_children) {
-	} else {
-		tw.q.bar_by_grade = true
 	}
 }
 
@@ -258,4 +225,38 @@ function showMenu_binary(self, div) {
 			self.q.groupNames[1] = g2n.property('value')
 			self.runCallback()
 		})
+}
+
+export function fillTW(tw, vocabApi, context = {}) {
+	set_hiddenvalues(tw.q, tw.term)
+	if (!tw.q.mode) tw.q.mode = 'discrete' // assign default value
+	if (context.conditionMode) {
+		// overwrite by context!
+		tw.q.mode = context.conditionMode
+	}
+	// must set up bar/value flags before quiting for inuse:false
+	if (tw.q.value_by_max_grade || tw.q.value_by_most_recent || tw.q.value_by_computable_grade) {
+		// need any of the three to be set
+	} else {
+		// set a default one
+		tw.q.value_by_max_grade = true
+	}
+	if (tw.q.bar_by_grade || tw.q.bar_by_children) {
+	} else {
+		tw.q.bar_by_grade = true
+	}
+
+	if (!tw.q.breaks) tw.q.breaks = []
+	if (!tw.q.groupNames) tw.q.groupNames = []
+	if (tw.q.mode == 'binary') {
+		if (tw.q.breaks.length != 1) {
+			tw.q.breaks = [1] // HARDCODED
+			tw.q.groupNames = ['Grade <1', 'Grade >=1']
+		}
+	}
+
+	if (context.showTimeScale) {
+		// TODO change year to time2event
+		if (!['age', 'year'].includes(tw.q.timeScale)) tw.q.timeScale = 'year'
+	}
 }

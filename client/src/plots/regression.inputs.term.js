@@ -44,6 +44,7 @@ export class InputTerm {
 		try {
 			const { app, config, state, disable_terms } = this.parent
 
+			// termsetting constructor option
 			const arg = {
 				placeholder: this.section.selectPrompt,
 				placeholderIcon: this.section.placeholderIcon,
