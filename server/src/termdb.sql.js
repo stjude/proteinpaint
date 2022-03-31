@@ -395,12 +395,10 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 			return conditionSql.cuminc.getCTE(tablename, term, q, values, filter)
 		} else if (q.getregression && q.regressionType == 'cox' && index === 0) {
 			// CTE for cox regression outcome term
-			return conditionSql.cox.getCTE(tablename, term, termWrapper.q, values, filter)
+			return conditionSql.cox.getCTE(tablename, term, termq, values, filter)
 		} else {
 			// CTE for all other conditional terms
-			// TODO condition no long uses groupset, should generate CTE based on breaks[]; no need to consider timeScale
-			const groupset = get_active_groupset(term, termq)
-			CTE = conditionSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, index, groupset)
+			CTE = conditionSql.other.getCTE(tablename, term, q.ds, termq, values, index)
 		}
 	} else if (term.type == 'survival') {
 		CTE = makesql_survival(tablename, term, q, values, filter)
