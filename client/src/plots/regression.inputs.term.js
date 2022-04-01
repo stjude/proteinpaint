@@ -97,7 +97,7 @@ export class InputTerm {
 				return
 			}
 			if (type == 'cox') {
-				arg.showTimeScale = true
+				//arg.showTimeScale = true
 				return
 			}
 			throw 'unknown regressionType'

@@ -18,7 +18,10 @@ export function getHandler(self) {
 
 		showEditMenu(div) {
 			if (self.q.mode == 'discrete') return showMenu_discrete(self, div)
-			if (self.q.mode == 'binary') return showMenu_binary(self, div)
+			if (self.q.mode == 'binary') {
+				if (self.q.type == 'time2event') return showMenu_time2event(self, div)
+				return showMenu_binary(self, div)
+			}
 			throw 'q.mode is not discrete/binary'
 		}
 	}
@@ -252,9 +255,81 @@ function showMenu_binary(self, div) {
 		g2n.property('value', 'Grade >=' + grade)
 	}
 
+	div
+		.append('button')
+		.text('Submit')
+		.style('margin', '10px')
+		.on('click', () => {
+			self.q.breaks[0] = gradeSelect.property('selectedIndex') + 1
+			if (!self.q.groupNames) self.q.groupNames = []
+			self.q.groupNames[0] = g1n.property('value')
+			self.q.groupNames[1] = g2n.property('value')
+			event.target.disabled = true
+			event.target.innerHTML = 'Loading...'
+			self.runCallback()
+		})
+}
+
+function showMenu_time2event(self, div) {
+	const holder = div
+		.append('div')
+		.style('margin', '10px')
+		.style('display', 'grid')
+		.style('grid-template-columns', '120px auto')
+		.style('gap', '10px')
+
+	// row 1
+	holder
+		.append('div')
+		.text('Minimum grade to have event')
+		.style('opacity', 0.4)
+	const sd = holder.append('div')
+	const gradeSelect = sd.append('select').on('change', changeGradeSelect)
+	for (const i of cutoffGrades) {
+		gradeSelect.append('option').text(self.term.values[i].label)
+	}
+	// breaks[0] must have already been set
+	gradeSelect.property('selectedIndex', self.q.breaks[0] - 1)
+	sd.append('div')
+		.text('Using maximum grade for each patient.')
+		.style('opacity', 0.4)
+		.style('font-size', '.7em')
+
+	// row 2
+	holder
+		.append('div')
+		.text('No event')
+		.style('opacity', 0.4)
+	const g1n = holder.append('div').style('opacity', 0.4)
+
+	// row 3
+	holder
+		.append('div')
+		.text('Has event')
+		.style('opacity', 0.4)
+	const g2n = holder.append('div').style('opacity', 0.4)
+
+	changeGradeSelect()
+
+	function changeGradeSelect() {
+		const grade = gradeSelect.property('selectedIndex') + 1
+		g1n.selectAll('*').remove()
+		g2n.selectAll('*').remove()
+		const grades = Object.keys(self.term.values)
+			.map(Number)
+			.sort((a, b) => a - b)
+		for (const i of grades) {
+			if (i < grade) {
+				g1n.append('div').text(self.term.values[i].label)
+			} else {
+				g2n.append('div').text(self.term.values[i].label)
+			}
+		}
+	}
+
 	let timeScaleChoice
 
-	if (self.opts.showTimeScale) {
+	if (self.q.timeScale) {
 		// row 4: time scale toggle
 		holder
 			.append('div')
@@ -267,15 +342,10 @@ function showMenu_binary(self, div) {
 				value: 'year' // replace by 'time2event'
 			}
 		]
-		if (self.q.timeScale) {
-			if (self.q.timeScale == 'age') {
-				options[0].checked = true
-			} else {
-				options[1].checked = true
-			}
+		if (self.q.timeScale == 'age') {
+			options[0].checked = true
 		} else {
 			options[1].checked = true
-			timeScaleChoice = options[1].value
 		}
 		make_radios({
 			holder: holder.append('div'),
@@ -294,7 +364,7 @@ function showMenu_binary(self, div) {
 			if (!self.q.groupNames) self.q.groupNames = []
 			self.q.groupNames[0] = g1n.property('value')
 			self.q.groupNames[1] = g2n.property('value')
-			if (self.opts.showTimeScale) self.q.timeScale = timeScaleChoice
+			if (self.q.timeScale) self.q.timeScale = timeScaleChoice
 			event.target.disabled = true
 			event.target.innerHTML = 'Loading...'
 			self.runCallback()

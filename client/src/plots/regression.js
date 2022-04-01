@@ -147,6 +147,7 @@ export function get_defaultQ4fillTW(regressionType, isOutcome) {
 	const q = { mode: 'binary' }
 	if (regressionType == 'cox') {
 		q.timeScale = 'year'
+		q.type = 'time2event'
 	}
 	return { condition: q }
 }
