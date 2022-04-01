@@ -12,7 +12,7 @@ class instance is an input
 
 export class InputTerm {
 	constructor(opts) {
-		// opts { section, term, parent }
+		// opts { section, term, parent, defaultQ4fillTW }
 		this.opts = opts
 		this.section = opts.section
 		this.term = opts.term // term wrapper {id, term, q}; will be missing for a blank input
@@ -58,6 +58,7 @@ export class InputTerm {
 				disable_terms,
 				abbrCutoff: 50,
 				genomeObj: this.parent.parent.genomeObj, // required for snplocus
+				defaultQ4fillTW: this.opts.defaultQ4fillTW,
 				callback: term => {
 					this.parent.editConfig(this, term)
 				}

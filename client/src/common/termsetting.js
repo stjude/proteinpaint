@@ -468,7 +468,7 @@ function setInteractivity(self) {
 						_term = JSON.parse(JSON.stringify(term))
 						_term.bins.default = _term.bins.less
 					}
-					await call_fillTW(data, self.vocabApi)
+					await call_fillTW(data, self.vocabApi, self.opts.defaultQ4fillTW)
 					self.opts.callback(data)
 				}
 			}

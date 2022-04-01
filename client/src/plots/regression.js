@@ -113,15 +113,12 @@ export async function getPlotConfig(opts, app) {
 	}
 
 	{
-		/* for a condition term as outcome, it will have q.mode='binary', rather than default "discrete"
+		/* for condition term as outcome, it will have q.mode='binary', rather than default "discrete"
 		as required by logistic/cox regression
 		*/
-		const q = { mode: 'binary' }
 		const plot = app.opts.state.plots.find(i => i.chartType == 'regression')
-		if (plot && plot.regressionType == 'cox') {
-			q.timeScale = 'year' // may change?
-		}
-		await fillTermWrapper(opts.outcome, app.vocabApi, { condition: q })
+		if (!plot) throw 'regression plot missing in state'
+		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(plot.regressionType, true))
 	}
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
@@ -142,4 +139,14 @@ export async function getPlotConfig(opts, app) {
 	}
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
+}
+
+export function get_defaultQ4fillTW(regressionType, isOutcome) {
+	if (!isOutcome) return
+	// need default q{} for condition term
+	const q = { mode: 'binary' }
+	if (regressionType == 'cox') {
+		q.timeScale = 'year'
+	}
+	return { condition: q }
 }

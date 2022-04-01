@@ -1,6 +1,7 @@
 import { deepEqual } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { InputTerm } from './regression.inputs.term'
+import { get_defaultQ4fillTW } from './regression'
 
 /*
 outcome and independent are two sections sharing same structure
@@ -461,7 +462,8 @@ function mayAddBlankInput(section, self) {
 		new InputTerm({
 			section,
 			parent: self,
-			noTermPromptOptions: self.getNoTermPromptOptions(section)
+			noTermPromptOptions: self.getNoTermPromptOptions(section),
+			defaultQ4fillTW: get_defaultQ4fillTW(self.config.regressionType, section.configKey == 'outcome')
 		})
 	)
 }
