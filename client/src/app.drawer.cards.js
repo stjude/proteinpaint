@@ -745,120 +745,58 @@ function showCitation(btns, pub) {
 								: `<p>doi: <a href="${pub.doi}" target="_blank style="display: inline-block;">${pub.doi}</a></p>`
 						}`
 					)
-				// const cite_div = rdiv
-				// 	.append('div')
-				// 	.style('display', 'block')
-				// 	.style('padding', '10px')
-				// 	.style('width', 'max(70vw)')
-				// 	.style('border', '1px dashed rgb(227, 227, 230)')
-				// 	.style('margin', '10px')
-				// 	.style('line-height', '1.25em')
-				// 	.style('word-wrap', 'break-word')
-				// 	.style('white-space', 'normal')
-				// const dropdown_div = rdiv
-				// 	.append('div')
-				// 	.style('display', 'block')
-				// 	.style('padding', '0px 10px 0px 10px')
-				// 	.style('width', 'max(70vw)')
-				// const copy = copyButton(cite_div, '.sjpp-copy-citation').style('font-size', '1.5em')
-				// const dropdown = dropdown_div
-				// 	.append('select')
-				// 	.style('border-radius', '5px')
-				// 	.style('padding', '5px 10px')
-				// 	.style('font-size', '0.9em')
-				// for (const [i, style] of pub.citation_styles.entries()) {
-				// 	const opt = dropdown
-				// 		.append('option')
-				// 		.text(style.style)
-				// 		.property('value', i)
-				// 	if (style.isDefault == true) {
-				// 		// including .isDefault sets select to that citation and displays the citation as default
-				// 		opt.property('selected', 1)
-				// 		cite_div
-				// 			.append('p')
-				// 			.classed('sjpp-copy-citation', true)
-				// 			.html(style.citation)
-				// 	}
-				// }
-				// if (!cite_div.html().length) {
-				// 	//displays the first citation in the citation_styles array if .isDefault not provided
-				// 	cite_div
-				// 		.append('p')
-				// 		.classed('sjpp-copy-citation', true)
-				// 		.html(pub.citation_styles[0].citation)
-				// }
-				// dropdown.on('change', () => {
-				// 	cite_div.selectAll('p').remove()
-				// 	appear(cite_div)
-				// 	const d = dropdown.node().value
-				// 	cite_div
-				// 		.append('p')
-				// 		.classed('sjpp-copy-citation', true)
-				// 		.html(pub.citation_styles[d].citation)
-				// })
 			} catch (e) {
 				alert('Error: ' + e)
 			}
 		}
 	})
 }
-async function getFileData(data, previewFiles) {
-	for (const file of data) {
-		const x = await dofetch('textfile', { file: file.file })
-		const colNum = file.headers.length
-		previewFiles.push({
-			text: x.text,
-			colNum,
-			headers: file.headers
-		})
-	}
-}
 
-function makePreviewDataGrid(div, d) {
-	div.style('max-width', 'fit-content')
-	const grid = div
+function makeDataPreviewDiv(content, contLength, div, filename, message) {
+	div.append('div').html(`
+		${message ? `<p style="display:block;">${message}<p>` : ''}
+		<p style="display: inline-block;">Data preview <span style="color: #696969; font-style:oblique;"> 
+		${contLength > 10 ? `(first ${content.length} rows of ${filename})</span></p>` : `(content of ${filename})</span></p>`} 
+	`)
+	const bedjContent_div = div
 		.append('div')
-		.style('margin', '0px 10px 5px 10px')
-		.style('padding', '5px')
-		.style('max-height', '400px')
-		.style('border', '1px solid #d7d7d9')
-		.style('white-space', 'nowrap')
-		.style('overflow', 'scroll')
 		.style('display', 'grid')
-		.style('grid-template-columns', `repeat(${d.colNum}, auto)`)
-		.style('gap', '5px 20px')
-	d.headers.forEach(header =>
-		grid
-			.append('div')
-			.style('font-weight', '800')
-			.html(header)
-	)
-	const lines = d.text.split('\n')
-	for (const line of lines) {
-		const cols = line.split('\t')
-		cols.forEach(col =>
-			grid
-				.append('div')
-				.style('opacity', 0.7)
-				.html(col)
-		)
-	}
+		.style('grid-template-columns', '1fr')
+		.style('overflow', 'hidden')
+		.style('max-width', '80%')
+		.style('margin-left', '10px')
+		.style('border', '1px solid rgb(227, 227, 230)')
+		// .style('word-break', 'break-word')
+		.style('white-space', 'pre')
+		.style('overflow', 'scroll')
+		.style('opacity', '0.65')
+		.style('padding', '1vw')
+	content.forEach(c => {
+		bedjContent_div.append('code').html(c)
+	})
 }
 
 async function showViewData(btns, data) {
-	let previewFiles = []
-	getFileData(data, previewFiles)
 	btns.push({
 		name: 'View Data',
 		callback: async rdiv => {
 			try {
-				if (previewFiles.length == 1) {
-					makePreviewDataGrid(rdiv, previewFiles[0])
-				} else {
-					//TODO create radio buttons/tabs for mutiple files if needed in the future
-					for (const d of previewFiles) {
-						makePreviewDataGrid(rdiv, d)
+				for (const file of data) {
+					const res = await dofetch3(`/cardsjson?datafile=${file.file}&tabixCoord=${file.tabixQueryCoord}`)
+					if (res.error) {
+						console.log(`Error: ${res.error}`)
+						return
 					}
+					const returnedContent = res.file
+					const contLength = returnedContent.length
+					//Limit to only the first 10 rows
+					const content = returnedContent.slice(0, 10)
+
+					//Parse file path for file name to show above content
+					const splitpath = file.file.split('/')
+					const filename = splitpath[splitpath.length - 1]
+
+					makeDataPreviewDiv(content, contLength, rdiv, filename, file.message)
 				}
 			} catch (e) {
 				alert('Error: ' + e)
