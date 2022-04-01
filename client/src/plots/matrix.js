@@ -9,6 +9,7 @@ import { mclass } from '../../shared/common'
 import { Menu } from '../dom/menu'
 import { setInteractivity } from './matrix.interactivity'
 import { setRenderers } from './matrix.renderers'
+import { getSampleSorter } from './matrix.sort'
 
 class Matrix {
 	constructor(opts) {
@@ -38,7 +39,10 @@ class Matrix {
 			holder,
 			svg,
 			mainG,
-			sampleGrpLabelG: mainG.append('g').attr('class', 'sjpp-matrix-series-group-label-g'),
+			sampleGrpLabelG: mainG
+				.append('g')
+				.attr('class', 'sjpp-matrix-series-group-label-g')
+				.on('click', this.showSampleGroupMenu),
 			termGrpLabelG: mainG.append('g').attr('class', 'sjpp-matrix-term-group-label-g'),
 			cluster: mainG.append('g').attr('class', 'sjpp-matrix-cluster-g'),
 			seriesesG: mainG.append('g').attr('class', 'sjpp-matrix-serieses-g'),
@@ -76,7 +80,22 @@ class Matrix {
 			}
 		})
 
-		this.setPill(appState, tip)
+		// enable embedding of termsetting and tree menu inside self.dom.menu
+		this.customTipApi = this.dom.tip.getCustomApi({
+			d: this.dom.menubody,
+			clear: () => {
+				this.dom.menubody.selectAll('*').remove()
+				return this.customTipApi
+			},
+			show: () => {
+				this.dom.menubody.style('display', 'block')
+			},
+			hide: () => {
+				//this.dom.menubody.style('display', 'none')
+			}
+		})
+
+		this.setPill(appState)
 	}
 
 	setControls(appState) {
@@ -122,8 +141,8 @@ class Matrix {
 			await this.app.vocabApi.setAnnotatedSampleData(reqOpts, this.currData)
 
 			// process the data
-			this.setSampleGroupsOrder(this.currData)
 			this.setTermOrder(this.currData)
+			this.setSampleGroupsOrder(this.currData)
 			this.setLayout()
 			this.serieses = this.getSerieses(this.currData)
 			// render the data
@@ -157,6 +176,7 @@ class Matrix {
 	setSampleGroupsOrder(data) {
 		const s = this.settings.matrix
 		const defaultSampleGrp = { id: undefined, lst: [] }
+		this.sampleSorter = getSampleSorter(this, s, data.lst)
 
 		const sampleGroups = new Map()
 		if (!this.config.divideBy) {
@@ -166,13 +186,14 @@ class Matrix {
 			defaultSampleGrp.name = 'Not annotated'
 			const term = this.config.divideBy.term
 			const $id = this.config.divideBy.$id
+			const exclude = this.config.divideBy.exclude || []
 			const values = term.values || {}
 			const ref = data.refs.byTermId[$id] || {}
 
 			for (const row of data.lst) {
-				const anno = row[$id]
 				if ($id in row) {
-					const key = anno.key
+					if (exclude.includes(row[$id].key)) continue
+					const key = row[$id].key
 					if (!sampleGroups.has(key)) {
 						sampleGroups.set(key, {
 							id: key,
@@ -197,17 +218,10 @@ class Matrix {
 		this.sampleGroups = [...sampleGroups.values()].sort((a, b) => a.order - b.order)
 		//this.sampleGroupKeys = [...sampleGroups.keys()] -- not needed?
 		this.sampleOrder = []
-		const sampleSorter = (a, b) => {
-			const k = a[s.sortSamplesBy] // TODO: support many types of sorting
-			const l = b[s.sortSamplesBy]
-			if (k < l) return -1
-			if (k > l) return 1
-			return 0
-		}
 
 		let total = 0
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
-			grp.lst.sort(sampleSorter)
+			grp.lst.sort(this.sampleSorter)
 			for (const [index, row] of grp.lst.entries()) {
 				this.sampleOrder.push({ grp, grpIndex, row, index, prevGrpTotalIndex: total, totalIndex: total + index })
 			}
@@ -482,7 +496,7 @@ export async function getPlotConfig(opts, app) {
 					bottom: 20,
 					left: 50
 				},
-				sortSamplesBy: 'sample',
+				sortSamplesBy: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				colw: 14,
 				colspace: 1,
 				colgspace: 8,

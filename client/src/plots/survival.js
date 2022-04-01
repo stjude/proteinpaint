@@ -743,7 +743,7 @@ export async function getPlotConfig(opts, app) {
 				ciVisible: false,
 				fill: '#fff',
 				stroke: '#000',
-				symbol: 'x', // 'x', 'vtick'
+				symbol: 'vtick', // 'x', 'vtick'
 				fillOpacity: 0,
 				chartMargin: 10,
 				svgw: 400,
@@ -751,7 +751,7 @@ export async function getPlotConfig(opts, app) {
 				timeFactor: 1,
 				timeUnit: '',
 				//xTickInterval: 0, // if zero, automatically determined by d3-axis
-				atRiskVisible: false,
+				atRiskVisible: true,
 				atRiskLabelOffset: -20,
 				svgPadding: {
 					top: 20,

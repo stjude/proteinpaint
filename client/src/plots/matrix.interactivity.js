@@ -2,24 +2,46 @@ import { select } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '../common/termsetting'
 
 export function setInteractivity(self) {
-	self.setPill = function(appState, tip) {
-		const customTipApi = tip.getCustomApi({
-			d: self.dom.menubody,
-			clear: () => {
-				self.dom.menubody.selectAll('*').remove()
-				return customTipApi
-			},
-			show: () => {
-				self.dom.menubody.style('display', 'block')
-			},
-			hide: () => {
-				//this.dom.menubody.style('display', 'none')
-			}
-		})
+	self.showCellInfo = function() {
+		if (self.activeTerm) return
+		const d = event.target.__data__
+		if (!d || !d.term || !d.sample) return
+		if (event.target.tagName == 'rect') {
+			const rows = [
+				`<tr><td style='text-align: center'>Sample: ${d.sample}</td></tr>`,
+				`<tr><td style='text-align: center'>${d.term.name}</td></tr>`,
+				`<tr><td style='text-align: center; color: ${d.fill}'>${d.label}</td></tr>`
+			]
 
+			if (d.term.type == 'geneVariant') {
+				rows.push()
+				if (d.value.alt)
+					rows.push(`<tr><td style='text-align: center'>ref=${d.value.ref}, alt=${d.value.alt}</td></tr>`)
+				if (d.value.isoform) rows.push(`<tr><td style='text-align: center'>Isoform: ${d.value.isoform}</td></tr>`)
+				if (d.value.mname) rows.push(`<tr><td style='text-align: center'>${d.value.mname}</td></tr>`)
+				if (d.value.chr) rows.push(`<tr><td style='text-align: center'>${d.value.chr}:${d.value.pos}</td></tr>`)
+			}
+
+			self.dom.menutop.selectAll('*').remove()
+			self.dom.menubody.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+			self.dom.tip.show(event.clientX, event.clientY)
+		}
+	}
+
+	self.mouseout = function() {
+		if (!self.activeTerm && !self.activeSampleGroup) self.dom.tip.hide()
+	}
+
+	self.legendClick = function() {}
+	setTermActions(self)
+	setSampleGroupActions(self)
+}
+
+function setTermActions(self) {
+	self.setPill = function(appState) {
 		// will reuse a pill instance to show term edit menu
 		self.pill = termsettingInit({
-			tip: customTipApi,
+			tip: self.customTipApi,
 			menuOptions: 'edit',
 			vocabApi: self.app.vocabApi,
 			vocab: appState.vocab,
@@ -53,36 +75,6 @@ export function setInteractivity(self) {
 		})
 	}
 
-	self.showCellInfo = function() {
-		if (self.activeTerm) return
-		const d = event.target.__data__
-		if (!d || !d.term || !d.sample) return
-		if (event.target.tagName == 'rect') {
-			const rows = [
-				`<tr><td style='text-align: center'>Sample: ${d.sample}</td></tr>`,
-				`<tr><td style='text-align: center'>${d.term.name}</td></tr>`,
-				`<tr><td style='text-align: center; color: ${d.fill}'>${d.label}</td></tr>`
-			]
-
-			if (d.term.type == 'geneVariant') {
-				rows.push()
-				if (d.value.alt)
-					rows.push(`<tr><td style='text-align: center'>ref=${d.value.ref}, alt=${d.value.alt}</td></tr>`)
-				if (d.value.isoform) rows.push(`<tr><td style='text-align: center'>Isoform: ${d.value.isoform}</td></tr>`)
-				if (d.value.mname) rows.push(`<tr><td style='text-align: center'>${d.value.mname}</td></tr>`)
-				if (d.value.chr) rows.push(`<tr><td style='text-align: center'>${d.value.chr}:${d.value.pos}</td></tr>`)
-			}
-
-			self.dom.menutop.selectAll('*').remove()
-			self.dom.menubody.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
-			self.dom.tip.show(event.clientX, event.clientY)
-		}
-	}
-
-	self.mouseout = function() {
-		if (!self.activeTerm) self.dom.tip.hide()
-	}
-
 	self.showTermMenu = async function() {
 		const d = event.target.__data__
 		if (!d || !d.tw) return
@@ -102,6 +94,7 @@ export function setInteractivity(self) {
 				{ label: 'Edit', callback: self.showTermEditMenu },
 				//{ label: 'Move', callback: self.showMoveMenu },
 				{ label: 'Insert', callback: self.showTermInsertMenu },
+				{ label: 'Sort', callback: self.showSortMenu },
 				{ label: 'Delete', callback: self.showRemoveMenu }
 			])
 			.enter()
@@ -304,7 +297,6 @@ export function setInteractivity(self) {
 				const lines = text.split('\n').map(line => line.trim())
 				const ids = lines.filter(id => !!id)
 				const terms = await self.app.vocabApi.getTermTypes(ids)
-				console.log(terms)
 				const termgroups = JSON.parse(JSON.stringify(self.config.termgroups))
 				const name = self.dom.grpNameTextInput.property('value')
 				let grp = termgroups.find(g => g.name === name)
@@ -347,6 +339,201 @@ export function setInteractivity(self) {
 					t.selectionEnd = s + 1
 				}
 			})
+	}
+
+	self.showSortMenu = () => {
+		//console.log(self.termOrder)
+		/* 
+			sort rows and samples by:
+			- #hits 
+
+			sort samples by #hits against
+			- draggable divs of term names
+
+
+			-- OR --
+
+			[ ] move this row [above || below] [all rows || term names]
+
+			[ ] sort samples against this term: 
+					// by: *hits _values _mutation class
+					// priority: *first _last _order# [ ]
+			
+			Apply
+		*/
+
+		const t = self.activeTerm
+		self.dom.menubody.selectAll('*').remove()
+
+		self.dom.menubody
+			.append('div')
+			.style('text-align', 'center')
+			.html(t.tw.term.name)
+
+		let moveInput
+		if (t.grp.lst.length > 1) {
+			const moveDiv = self.dom.menubody.append('div').style('margin-top', '10px')
+
+			const moveLabel = moveDiv.append('label')
+			moveInput = moveLabel
+				.append('input')
+				.attr('type', 'checkbox')
+				.style('text-align', 'center')
+
+			moveLabel.append('span').html('&nbsp;move this term&nbsp;')
+
+			const movePos = moveDiv.append('select')
+			movePos
+				.selectAll('option')
+				.data([{ label: 'before', value: 0 }, { label: 'after', value: 1 }])
+				.enter()
+				.append('option')
+				.attr('value', d => d.value)
+				.html(d => d.label)
+
+			moveDiv.append('span').html('&nbsp;')
+
+			const otherTermsInGrp = t.grp.lst
+				.filter(tw => tw.$id != t.tw.$id)
+				.map(tw => {
+					return { label: tw.term.name, value: tw.$id }
+				})
+			const moveTarget = moveDiv.append('select')
+			moveTarget
+				.selectAll('option')
+				.data([{ label: 'all', value: '*' }, ...otherTermsInGrp])
+				.enter()
+				.append('option')
+				.attr('value', d => d.value)
+				.html(d => d.label)
+		}
+
+		const sortColDiv = self.dom.menubody.append('div').style('margin-top', '10px')
+
+		const sortColLabel = sortColDiv.append('label')
+		const sortColInput = sortColLabel
+			.append('input')
+			.attr('type', 'checkbox')
+			.property('checked', true)
+			.style('text-align', 'center')
+
+		sortColLabel.append('span').html(`&nbsp;sort samples against (in order of priority):`)
+
+		const tcopy = self.showSorterTerms(sortColDiv, t)
+
+		self.dom.menubody
+			.append('button')
+			.html('Apply')
+			.on('click', () => {
+				const matrix = JSON.parse(JSON.stringify(self.config.settings.matrix)) || {}
+				if (moveInput.property('checked')) {
+				}
+
+				if (sortColInput.property('checked')) {
+					delete tcopy.div
+					delete tcopy.up
+					delete tcopy.down
+					delete tcopy.delete
+
+					self.app.dispatch({
+						type: 'plot_nestedEdits',
+						id: self.opts.id,
+						edits: [
+							{
+								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.index],
+								value: tcopy
+							}
+						]
+					})
+				}
+
+				self.dom.tip.hide()
+			})
+	}
+
+	self.showSorterTerms = (sortColDiv, t) => {
+		const sorterTerms = [
+			...self.termOrder
+				.filter(t => t.tw.sortSamples)
+				.map(t => JSON.parse(JSON.stringify(t.tw)))
+				.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority),
+			...self.config.settings.matrix.sortSamplesBy.map(st => JSON.parse(JSON.stringify(st)))
+		]
+		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
+		const tcopy = JSON.parse(JSON.stringify(t.tw))
+		if (i == -1) {
+			tcopy.sortSamples = { by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' }
+			sorterTerms.unshift(tcopy)
+		}
+
+		sortColDiv
+			.append('div')
+			.style('margin', '5px')
+			.style('padding', '5px 10px')
+			.selectAll('div')
+			.data(sorterTerms, s => s.$id)
+			.enter()
+			.append('div')
+			.style('width', 'fit-content')
+			.style('margin', '3px')
+			.style('cursor', 'default')
+			.style('padding', '3px 10px')
+			.style('border-radius', '5px')
+			.style('color', 'black')
+			.style('background-color', 'rgb(238, 238, 238)')
+			.each(function(st, i) {
+				st.sortSamples.priority = i
+				st.div = select(this)
+				const label = st.$id == 'sample' ? 'Sample name' : st.term.name
+				st.div
+					.append('span')
+					.style('margin-right', '10px')
+					.html(label)
+				st.up = st.div
+					.append('span')
+					.html(' &#9650; ')
+					.style('display', i === 0 ? 'none' : 'inline')
+					.style('color', '#555')
+					.on('click', () => {
+						this.parentNode.insertBefore(this, this.previousSibling)
+						sorterTerms.splice(st.priority, 1)
+						sorterTerms.splice(st.priority - 1, 0, st)
+						updateSorterDivStyles()
+					})
+
+				st.down = st.div
+					.append('span')
+					.html(' &#9660; ')
+					.style('display', i < sorterTerms.length - 1 ? 'inline' : 'none')
+					.style('color', '#555')
+					.on('click', () => {
+						this.parentNode.insertBefore(this, this.nextSibling.nextSibling)
+						sorterTerms.splice(st.priority, 1)
+						sorterTerms.splice(st.priority + 1, 0, st)
+						updateSorterDivStyles()
+					})
+
+				st.delete = st.div
+					.append('span')
+					.html(' &#10005; ')
+					.style('display', 'inline')
+					.style('color', 'rgb(255, 100, 100)')
+					.on('click', () => {
+						st.div.remove()
+						sorterTerms.splice(st.priority, 1)
+						updateSorterDivStyles()
+					})
+			})
+
+		function updateSorterDivStyles() {
+			for (const [i, st] of sorterTerms.entries()) {
+				st.priority = i
+				st.up.style('display', st.priority > 0 ? 'inline' : 'none')
+				st.down.style('display', st.priority < sorterTerms.length - 1 ? 'inline' : 'none')
+			}
+		}
+
+		return tcopy
 	}
 
 	self.showRemoveMenu = () => {
@@ -409,6 +596,89 @@ export function setInteractivity(self) {
 		})
 		self.dom.tip.hide()
 	}
+}
 
-	self.legendClick = function() {}
+function setSampleGroupActions(self) {
+	self.showSampleGroupMenu = function() {
+		const d = event.target.__data__
+		if (!d) return
+		self.activeSampleGroup = d
+		self.dom.menutop.selectAll('*').remove()
+		self.dom.menubody
+			.style('padding', 0)
+			.selectAll('*')
+			.remove()
+
+		self.dom.menutop
+			.append('div')
+			.selectAll(':scope>.sja_menuoption')
+			.data([
+				{ label: 'Survival plot', callback: self.launchSurvivalPlot },
+				{ label: 'Delete', callback: self.removeSampleGroup }
+			])
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', 'inline-block')
+			.html(d => d.label)
+			.on('click', d => {
+				event.stopPropagation()
+				d.callback(d)
+			})
+
+		self.dom.tip.showunder(event.target)
+	}
+
+	self.showNewChartMenu = () => {
+		self.dom.menubody.selectAll('*').remove()
+	}
+
+	self.launchSurvivalPlot = async () => {
+		self.dom.menubody.selectAll('*').remove()
+		self.dom.menubody
+			.append('div')
+			.style('padding', '10px')
+			.html(`Use "<b>${self.config.divideBy.term.name}</b>" as overlay on the selected survival term below:`)
+		const termdb = await import('../termdb/app')
+		termdb.appInit({
+			holder: self.dom.menubody.append('div'),
+			vocabApi: self.app.vocabApi,
+			state: {
+				vocab: self.state.vocab,
+				activeCohort: self.state.activeCohort,
+				nav: {
+					header_mode: 'search_only'
+				},
+				tree: { usecase: { target: 'survival', detail: 'term' } }
+			},
+			tree: {
+				click_term: term => {
+					self.dom.tip.hide()
+					self.dom.menubody.selectAll('*').remove()
+					self.app.dispatch({
+						type: 'plot_create',
+						config: {
+							chartType: 'survival',
+							term,
+							term2: JSON.parse(JSON.stringify(self.config.divideBy))
+						}
+					})
+				}
+			}
+		})
+	}
+
+	self.removeSampleGroup = () => {
+		const divideBy = JSON.parse(JSON.stringify(self.config.divideBy))
+		if (!divideBy.exclude) divideBy.exclude = []
+		divideBy.exclude.push(self.activeSampleGroup.grp.id)
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				divideBy
+			}
+		})
+		self.dom.tip.hide()
+	}
 }
