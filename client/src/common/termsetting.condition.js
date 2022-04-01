@@ -2,6 +2,9 @@ import { getPillNameDefault, set_hiddenvalues } from './termsetting'
 import { make_radios } from '../dom/radiobutton'
 import { keyupEnter } from '../client'
 
+// hardcode grades that can be used for q.breaks; if needed, can define from termdbConfig
+const cutoffGrades = [1, 2, 3, 4, 5]
+
 export function getHandler(self) {
 	return {
 		getPillName(d) {
@@ -102,8 +105,8 @@ function showMenu_discrete(self, div) {
 	const textarea = holder
 		.append('div')
 		.append('textarea')
-		.style('width', '100px')
-		.style('height', '100px')
+		.style('width', '80px')
+		.style('height', '80px')
 		.property('placeholder', 'Enter grade values')
 		.on('keyup', () => {
 			if (!keyupEnter()) return
@@ -150,6 +153,15 @@ function showMenu_discrete(self, div) {
 		const str = b1 == 5 ? b1 : b1 + '-5'
 		rangeCell.text(str)
 		nameCell.property('value', 'Grade ' + str)
+
+		// name <input> for all groups are created under nameDiv
+		// if q.groupNames are there, override
+		if (self.q.groupNames) {
+			const lst = nameDiv.selectAll('input').nodes()
+			for (const [i, name] of self.q.groupNames.entries()) {
+				if (lst[i]) lst[i].value = name
+			}
+		}
 	}
 
 	function textarea2breaks() {
@@ -198,8 +210,7 @@ function showMenu_binary(self, div) {
 		.style('opacity', 0.4)
 	const sd = holder.append('div')
 	const gradeSelect = sd.append('select').on('change', changeGradeSelect)
-	// hardcode grades;/ if needed, can define from termdbConfig
-	for (const i of [1, 2, 3, 4, 5]) {
+	for (const i of cutoffGrades) {
 		gradeSelect.append('option').text(self.term.values[i].label)
 	}
 	// breaks[0] must have already been set
@@ -295,10 +306,11 @@ context provides expectations on how its q{} should be initiated
 
 .conditionMode: str
 	value is "binary" for cuminc term1, and cox outcome
-	may delete later for use of context.condition_time2event=true
+
+TODO delete conditionMode and use .condition_time2event=true instead
 	that can set q.mode=binary and q.type=time2event
 .showTimeScale: true
-.condition_break3: true
+.conditionBreaks: []
 */
 export function fillTW(tw, vocabApi, context = {}) {
 	set_hiddenvalues(tw.q, tw.term)
@@ -320,13 +332,24 @@ export function fillTW(tw, vocabApi, context = {}) {
 	}
 
 	if (!tw.q.breaks) tw.q.breaks = []
+	if (context.conditionBreaks) {
+		if (!Array.isArray(context.conditionBreaks)) throw 'conditionBreaks is not array'
+		const set = new Set(context.conditionBreaks)
+		for (const i of set) {
+			if (!cutoffGrades.includes(i)) throw 'invalid grade from conditionBreaks[]'
+		}
+		tw.q.breaks = [...set]
+	}
+
 	if (!tw.q.groupNames) tw.q.groupNames = []
 	if (tw.q.mode == 'binary') {
 		if (tw.q.breaks.length != 1) {
-			tw.q.breaks = [context.condition_break3 ? 3 : 1] // HARDCODED
+			tw.q.breaks = [1] // HARDCODED
 			tw.q.groupNames = ['Grade <1', 'Grade >=1']
 		}
 	}
+
+	if (tw.q.breaks.length >= cutoffGrades.length) throw 'too many values from tw.q.breaks[]'
 
 	if (context.showTimeScale) {
 		// TODO change year to time2event

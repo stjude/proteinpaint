@@ -50,35 +50,26 @@ const snplocusQ = {
 }
 
 function __barchart(t1,t2) {
-	const p = {
-		dslabel:'SJLife',
-		genome:'hg38',
-		plots: [ { chartType:'barchart' } ]
-	}
-	p.plots[0].term = t1
-	if(t2) p.plots[0].term2 = t2
-	return '?noheader=1&mass='+JSON.stringify(p)
+	const chart = { chartType:'barchart', term:t1 }
+	if(t2) chart.term2 = t2
+	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ] })
 }
 function __cuminc({t1,t2,t0,grade,hidden}) {
-	const p = {
+	const chart = {
+		chartType:'cuminc',
+		settings:{ cuminc:{ } },
+		term: t1
+	}
+	if(!chart.term.q) chart.term.q = {}
+	if(t2) chart.term2 = t2
+	if(t0) chart.term0 = t0
+	if(grade) chart.term.q.breaks = [grade]
+	if(hidden) chart.settings.cuminc.hidden=hidden
+	return '?noheader=1&mass='+JSON.stringify( {
 		dslabel:'SJLife',
 		genome:'hg38',
-		plots: [ {
-			chartType:'cuminc',
-			settings:{
-				cuminc:{
-					gradeCutoff:3,
-					hidden:[]
-				}
-			}
-		} ]
-	}
-	p.plots[0].term = t1
-	if(t2) p.plots[0].term2 = t2
-	if(t0) p.plots[0].term0 = t0
-	if(grade) p.plots[0].settings.cuminc.gradeCutoff = grade
-	if(hidden) p.plots[0].settings.cuminc.hidden=hidden
-	return '?noheader=1&mass='+JSON.stringify(p)
+		plots: [ chart ]
+	})
 }
 
 ///////////// main ////////////////////
@@ -232,11 +223,17 @@ makeURL([
 		['diaggrp/race', __barchart( { id: 'diaggrp' }, { id: 'racegrp' })],
 		['diaggrp/hrtavg', __barchart( { id: 'diaggrp' }, { id: 'hrtavg' })],
 		['diaggrp/Neurology', __barchart( { id: 'diaggrp' },  { id: 'Neurology System' })],
+		['diaggrp/Neurology break2', __barchart( { id: 'diaggrp' },
+			{ id: 'Neurology System', q:{breaks:[2], groupNames:['No condition/not tested','Has condition']} })
+		],
 
 		['hrtavg', __barchart( { id: 'hrtavg' })],
 		['hrtavg/diaggrp', __barchart( { id: 'hrtavg' }, { id: 'diaggrp' })],
 		['hrtavg/agedx', __barchart( { id: 'hrtavg' }, { id: 'agedx' })],
 		['hrtavg/Neurology', __barchart( { id: 'hrtavg' }, { id: 'Neurology System' })],
+		['hrtavg/Neurology break2', __barchart( { id: 'hrtavg' },
+			{ id: 'Neurology System', q:{breaks:[2], groupNames:['No condition/not tested','Has condition']} })
+		],
 
 		['Neurology', __barchart( { id: 'Neurology System' })],
 		['Neurology/diaggrp', __barchart( { id: 'Neurology System' }, { id: 'diaggrp' })],
