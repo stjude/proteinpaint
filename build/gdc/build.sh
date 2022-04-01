@@ -19,6 +19,7 @@ usage() {
 
 REV=latest
 TPDIR=''
+DOCKER_TAG=$REV
 while getopts "t:r:h:d:" opt; do
 	case "${opt}" in
 	t) 
@@ -48,6 +49,7 @@ done
 ################################
 
 ./build/full/build.sh -r $REV
+REV=$(cat tmppack/rev.txt)
 tar -C tmppack/ -xvf archive.tar build/gdc
 
 #####################
@@ -61,4 +63,4 @@ TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 # get the current tag
 #TAG="$(node -p "require('./package.json').version")"
 echo "building ppgdc:$REV image, package version=$TAG"
-docker build --file ./tmppack/build/gdc/Dockerfile --tag ppgdc:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
+docker build --file ./tmppack/build/gdc/Dockerfile --tag $DOCKER_TAG --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
