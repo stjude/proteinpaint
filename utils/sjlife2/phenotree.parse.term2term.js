@@ -46,7 +46,19 @@ outputs these files:
 
 console.log('\nRUNNING phenotree.parse.term2term.js ...')
 
-const level2_ctcaegraded = 'Graded Adverse Events'
+const level2_ctcaegraded = 'graded adverse events'
+const listOfGrades = {
+	'0': { label: '0: No condition' },
+	'1': { label: '1: Mild' },
+	'2': { label: '2: Moderate' },
+	'3': { label: '3: Severe' },
+	'4': { label: '4: Life-threatening' },
+	'5': { label: '5: Death' },
+	//'9': { label: 'Unknown status', uncomputable: true },
+	'-1': { label: 'Not tested', uncomputable: true }
+}
+
+/*
 const groupsetting = {
 	useIndex: -1,
 	lst: [
@@ -73,7 +85,6 @@ const groupsetting = {
 		}
 	]
 }
-/*
 const tvs_ctcaeGraded = () => {
 	return {
 		type: 'tvs',
@@ -426,7 +437,7 @@ function parse_phenotree() {
 			so must do case insensitive match here
 			the flag will be used by later terms
 			*/
-			level2isctcae = level2.toLowerCase() == level2_ctcaegraded.toLowerCase()
+			level2isctcae = level2.toLowerCase() == level2_ctcaegraded
 
 			if (!p2childorder.has(id1)) p2childorder.set(id1, [])
 			if (p2childorder.get(id1).indexOf(id2) == -1) p2childorder.get(id1).push(id2)
@@ -582,16 +593,7 @@ function addattributes_conditionterm(t) {
    options a bit different for leaf and non-leaf terms
 */
 
-	t.values = {
-		'0': { label: '0: No condition' },
-		'1': { label: '1: Mild' },
-		'2': { label: '2: Moderate' },
-		'3': { label: '3: Severe' },
-		'4': { label: '4: Life-threatening' },
-		'5': { label: '5: Death' },
-		'9': { label: 'Unknown status', uncomputable: true },
-		'-1': { label: 'Not tested', uncomputable: true }
-	}
+	t.values = listOfGrades
 
 	if (!t.isleaf) {
 		// a non-leaf CHC term
@@ -604,7 +606,7 @@ function addattributes_conditionterm(t) {
 		}
 	}
 
-	t.groupsetting = JSON.parse(JSON.stringify(groupsetting))
+	//t.groupsetting = JSON.parse(JSON.stringify(groupsetting))
 }
 
 function output_termdb() {

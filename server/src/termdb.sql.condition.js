@@ -42,7 +42,10 @@ export const other = {
 			const breaks = q.breaks
 
 			// split grades into groups based on breaks
-			const grades = [-1, 0, 1, 2, 3, 4, 5] // hardcoded list of possible grades
+			const grades = Object.keys(term.values)
+				.map(Number)
+				.sort((a, b) => a - b)
+
 			const groups = [] // [ {name, values}, {name, values} ]
 			let group = { values: [] }
 			let b

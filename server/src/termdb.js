@@ -9,6 +9,7 @@ const survival = require('./termdb.survival')
 const regression = require('./termdb.regression')
 const termdbsnp = require('./termdb.snp')
 const LDoverlay = require('./mds2.load.ld').overlay
+const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 
 /*
 ********************** EXPORTED
@@ -227,12 +228,11 @@ function trigger_getcategories(q, res, tdb, ds) {
 
 	const result = termdbsql.get_summary(arg)
 	const bins = result.CTE1.bins ? result.CTE1.bins : []
-	const orderedLabels =
-		term.type == 'condition'
-			? [-1, 0, 1, 2, 3, 4, 5, 9].map(grade => term.values[grade].label) // hardcoded default order
-			: bins.map(bin => (bin.name ? bin.name : bin.label))
 
-	res.send({ lst: result.lst, orderedLabels })
+	res.send({
+		lst: result.lst,
+		orderedLabels: getOrderedLabels(term, bins)
+	})
 }
 function trigger_getnumericcategories(q, res, tdb, ds) {
 	if (!q.tid) throw '.tid missing'
