@@ -13,8 +13,6 @@ FROM pprust:$IMGVER AS pppkg
 WORKDIR /home/root/pp
 COPY --from=ppminpkg /home/root/pp/tmppack /home/root/pp/tmppack
 WORKDIR /home/root/pp/tmppack
-ARG http_proxy=""
-ARG https_proxy=""
 ARG CROSSENV=""
 RUN $CROSSENV npm -D install --workspaces
 
