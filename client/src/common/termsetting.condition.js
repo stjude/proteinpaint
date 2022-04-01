@@ -1,6 +1,7 @@
 import { getPillNameDefault, set_hiddenvalues } from './termsetting'
 import { make_radios } from '../dom/radiobutton'
 import { keyupEnter } from '../client'
+import { copyMerge } from '../common/rx.core'
 
 // hardcode grades that can be used for q.breaks; if needed, can define from termdbConfig
 const cutoffGrades = [1, 2, 3, 4, 5]
@@ -312,13 +313,17 @@ TODO delete conditionMode and use .condition_time2event=true instead
 .showTimeScale: true
 .conditionBreaks: []
 */
-export function fillTW(tw, vocabApi, context = {}) {
+export function fillTW(tw, vocabApi, defaultQ) {
 	set_hiddenvalues(tw.q, tw.term)
-	if (!tw.q.mode) tw.q.mode = 'discrete' // assign default value
-	if (context.conditionMode) {
-		// overwrite by context!
-		tw.q.mode = context.conditionMode
+
+	if (defaultQ) {
+		// apply predefined settings
+		copyMerge(tw.q, defaultQ)
 	}
+
+	// assign default if missing
+	if (!tw.q.mode) tw.q.mode = 'discrete'
+
 	// must set up bar/value flags before quiting for inuse:false
 	if (tw.q.value_by_max_grade || tw.q.value_by_most_recent || tw.q.value_by_computable_grade) {
 		// need any of the three to be set
@@ -332,15 +337,6 @@ export function fillTW(tw, vocabApi, context = {}) {
 	}
 
 	if (!tw.q.breaks) tw.q.breaks = []
-	if (context.conditionBreaks) {
-		if (!Array.isArray(context.conditionBreaks)) throw 'conditionBreaks is not array'
-		const set = new Set(context.conditionBreaks)
-		for (const i of set) {
-			if (!cutoffGrades.includes(i)) throw 'invalid grade from conditionBreaks[]'
-		}
-		tw.q.breaks = [...set]
-	}
-
 	if (!tw.q.groupNames) tw.q.groupNames = []
 	if (tw.q.mode == 'binary') {
 		if (tw.q.breaks.length != 1) {
@@ -351,8 +347,8 @@ export function fillTW(tw, vocabApi, context = {}) {
 
 	if (tw.q.breaks.length >= cutoffGrades.length) throw 'too many values from tw.q.breaks[]'
 
-	if (context.showTimeScale) {
+	if (tw.q.timeScale) {
 		// TODO change year to time2event
-		if (!['age', 'year'].includes(tw.q.timeScale)) tw.q.timeScale = 'year'
+		if (!['age', 'year'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
 	}
 }

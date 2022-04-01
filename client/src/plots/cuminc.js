@@ -620,7 +620,7 @@ function setInteractivity(self) {
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'cuminc: opts.term{} missing'
 	try {
-		await fillTermWrapper(opts.term, app.vocabApi, { conditionMode: 'binary', conditionBreaks: [3] })
+		await fillTermWrapper(opts.term, app.vocabApi, { condition: { mode: 'binary', breaks: [3] } })
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 	} catch (e) {

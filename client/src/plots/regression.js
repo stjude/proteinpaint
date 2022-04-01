@@ -113,19 +113,15 @@ export async function getPlotConfig(opts, app) {
 	}
 
 	{
-		/* 3rd argument is the context for initiating tw.q{}
-		for a condition term as outcome, it will have q.mode='binary', rather than default "discrete"
+		/* for a condition term as outcome, it will have q.mode='binary', rather than default "discrete"
 		as required by logistic/cox regression
-		thus must use this context to declare that
 		*/
-		const context = { conditionMode: 'binary' }
-		// find out the regression type
-		// don't see regression type is directly defined on app
+		const q = { mode: 'binary' }
 		const plot = app.opts.state.plots.find(i => i.chartType == 'regression')
 		if (plot && plot.regressionType == 'cox') {
-			context.showTimeScale = true
+			q.timeScale = 'year' // may change?
 		}
-		await fillTermWrapper(opts.outcome, app.vocabApi, context)
+		await fillTermWrapper(opts.outcome, app.vocabApi, { condition: q })
 	}
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`

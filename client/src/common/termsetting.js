@@ -548,14 +548,12 @@ a rendered element such as a pill or a matrix row
 
 tw: termWrapper = {id, term{}, q{}}
 vocabApi
-context{}
-	supply the optional context to define tw.q{}
-	for condition term, fillTW() will fill mode='discrete' by default
-	however, as log/cox outcome, mode must be "binary" instead,
-	this context-dependent requirment is coded in context{}
-	and is handled by fillTW() of condition term
+defaultQ{}
+	supply the optional default q{}
+	value is { condition: {mode:'binary'}, ... }
+	with term types as keys
 */
-export async function fillTermWrapper(tw, vocabApi, context) {
+export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
 
 	if (!tw.term) {
@@ -575,14 +573,14 @@ export async function fillTermWrapper(tw, vocabApi, context) {
 	}
 	if (!tw.q) tw.q = {}
 	// call term-type specific logic to fill tw
-	await call_fillTW(tw, vocabApi, context)
+	await call_fillTW(tw, vocabApi, defaultQ)
 }
 
-async function call_fillTW(tw, vocabApi, context) {
+async function call_fillTW(tw, vocabApi, defaultQ) {
 	const t = tw.term.type
 	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : t
 	const _ = await import(`./termsetting.${type}.js`)
-	await _.fillTW(tw, vocabApi, context)
+	await _.fillTW(tw, vocabApi, defaultQ ? defaultQ[type] : null)
 }
 
 export function set_hiddenvalues(q, term) {
