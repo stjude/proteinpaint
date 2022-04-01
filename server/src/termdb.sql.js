@@ -395,11 +395,10 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 			return conditionSql.cuminc.getCTE(tablename, term, q, values, filter)
 		} else if (q.getregression && q.regressionType == 'cox' && index === 0) {
 			// CTE for cox regression outcome term
-			return conditionSql.cox.getCTE(tablename, term, termWrapper.q, values, filter)
+			return conditionSql.cox.getCTE(tablename, term, termq, values, filter)
 		} else {
 			// CTE for all other conditional terms
-			const groupset = get_active_groupset(term, termq)
-			CTE = conditionSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, index, groupset)
+			CTE = conditionSql.other.getCTE(tablename, term, q.ds, termq, values, index)
 		}
 	} else if (term.type == 'survival') {
 		CTE = makesql_survival(tablename, term, q, values, filter)
@@ -500,14 +499,12 @@ function get_label4key(key, term, q, ds) {
 		return term.values && key in term.values ? term.values[key].label : key
 	}
 	if (term.type == 'condition') {
-		const values = term.grades || term.values
-		if (!values) throw 'missing term.grades or term.values for condition term'
-		if ((!q.groupsetting || (q.groupsetting && !q.groupsetting.inuse)) && q.bar_by_grade) {
-			if (!(key in values)) throw `unknown grade='${key}'`
-			return values[key].label
-		} else {
-			return key
+		if (q.breaks.length == 0) {
+			if (!(key in term.values)) throw `unknown grade='${key}'`
+			return term.values[key].label
 		}
+		// breaks[] has values, chart is by group and key should be group name
+		return key
 	}
 	if (term.values) {
 		return key in term.values ? term.values[key].label : key

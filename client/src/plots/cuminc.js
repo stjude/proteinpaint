@@ -77,18 +77,7 @@ class TdbCumInc {
 					app: this.app,
 					id: this.id,
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
-					inputs: [
-						'term1',
-						'overlay',
-						{
-							label: 'Cutoff Grade',
-							type: 'dropdown',
-							chartType: 'cuminc',
-							settingsKey: 'gradeCutoff',
-							options
-						},
-						'divideBy'
-					]
+					inputs: ['term1', 'overlay', 'divideBy']
 				})
 			}
 
@@ -144,7 +133,7 @@ class TdbCumInc {
 		const c = this.state.config
 		const opts = {
 			chartType: 'cuminc',
-			grade: this.settings.gradeCutoff,
+			grade: c.term.q.breaks[0],
 			term: c.term,
 			filter: this.state.termfilter.filter
 			//minYearsToEvent: 5 // may have user input for this later
@@ -631,7 +620,7 @@ function setInteractivity(self) {
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'cuminc: opts.term{} missing'
 	try {
-		await fillTermWrapper(opts.term, app.vocabApi)
+		await fillTermWrapper(opts.term, app.vocabApi, { conditionMode: 'binary', conditionBreaks: [3] })
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 	} catch (e) {
@@ -654,7 +643,6 @@ export async function getPlotConfig(opts, app) {
 				barspace: 2 // space between two bars
 			},
 			cuminc: {
-				gradeCutoff: 3,
 				radius: 5,
 				fill: '#fff',
 				stroke: '#000',
@@ -721,8 +709,9 @@ function getPj(self) {
 		'=': {
 			chartTitle(row) {
 				const s = self.settings
+				const cutoff = self.state.config.term.q.breaks[0]
 				if (!row.chartId || row.chartId == '-') {
-					return s.gradeCutoff == 5 ? 'CTCAE grade 5' : `CTCAE grade ${s.gradeCutoff}-5`
+					return cutoff == 5 ? 'CTCAE grade 5' : `CTCAE grade ${cutoff}-5`
 				}
 				const t0 = self.state.config.term0
 				if (!t0 || !t0.term.values) return row.chartId

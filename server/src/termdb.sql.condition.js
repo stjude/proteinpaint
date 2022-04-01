@@ -15,40 +15,17 @@ function validateQ(q) {
 	return [value_for, restriction]
 }
 
-export const values = {
-	getCTE(tablename, term, ds, q, values, index) {
-		const [value_for, restriction] = validateQ(q)
-		values.push(term.id, value_for)
-		const uncomputable = getUncomputableClause(term, q)
-		values.push(...uncomputable.values)
-		return {
-			sql: `${tablename} AS (
-				SELECT
-					sample,
-					${value_for == 'grade' ? `CAST(value AS integer) as key` : 'value as key'},
-					${value_for == 'grade' ? `CAST(value AS integer) as value` : 'value'}
-				FROM
-					precomputed
-				WHERE
-					term_id = ?
-					AND value_for = ?
-					AND ${restriction} = 1
-					${uncomputable.clause}
-			)`,
-			tablename
-		}
-	}
-}
-
-// used to assign a unique CTE name to extra filters (xf) for groupsets
-let xfIndex = 0
-
-export const groupset = {
+export const other = {
 	/*
-		Arguments
+	Get CTE for condition term that is not cuminc or cox outcome.
+
+	If q.breaks is present, then grades will be split into groups based on breakpoints. Separete CTEs will then be generated for each group of grades.
+
+	If q.breaks is not present, then a single CTE will be generated for all grades.
+	
+	Arguments
 		- tablename: string name for this CTE
 		- term{}
-		- groupset: the active groupset, such as returned by get_active_groupset()
 		- values: the array of values to fill-in the '?' in the prepared sql statement, may append to this array
 		- ds: dataset with db connection
 		- value_for: required for condition terms, "grade" or "child"
@@ -57,16 +34,57 @@ export const groupset = {
 		Return
 		- a series of "SELECT name, value" statements that are joined by UNION ALL
 		- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
+
 	*/
-	getCTE(tablename, term, ds, q, values, index, groupset) {
-		const [value_for, restriction] = validateQ(q)
+	getCTE(tablename, term, ds, q, values, index) {
+		if (q.breaks && q.breaks.length > 0) {
+			// breaks present
+			const breaks = q.breaks
 
-		if (!groupset.groups) throw `.groups[] missing from a group-set, term.id='${term.id}'`
+			// split grades into groups based on breaks
+			const grades = [-1, 0, 1, 2, 3, 4, 5] // hardcoded list of possible grades
+			const groups = [] // [ {name, values}, {name, values} ]
+			let group = { values: [] }
+			let b
+			for (const g of grades) {
+				if (breaks.includes(g)) {
+					b = g
+					// new break in grades
+					// modify name of previously iterated group
+					if (groups.length === 0) {
+						// first group of groups[]
+						group.name = 'Grade < ' + b
+					} else {
+						// interior group of groups[]
+						group.name = group.name + ' < ' + b
+					}
+					// add previously iterated group to groups[]
+					groups.push(group)
+					// create new group of grades based on new break
+					group = {
+						name: b + ' =< Grade',
+						values: [g]
+					}
+				} else {
+					// add grade to group of grades
+					group.values.push(g)
+				}
+			}
+			// add last group of groups[]
+			group.name = 'Grade >= ' + b
+			groups.push(group)
 
-		const categories = []
-		const filters = []
-		for (const g of groupset.groups) {
-			if (!g.type || g.type == 'values') {
+			// use group names in q.groupNames, if present
+			if (q.groupNames && q.groupNames.length > 0) {
+				for (const [i, name] of q.groupNames.entries()) {
+					groups[i].name = name
+				}
+			}
+
+			// build CTE
+			const [value_for, restriction] = validateQ(q)
+			const categories = []
+			for (const g of groups) {
 				categories.push(`SELECT sample, ? as key, value
 					FROM precomputed a
 					WHERE
@@ -75,35 +93,37 @@ export const groupset = {
 						AND ${restriction}=1
 						AND value IN (${g.values.map(v => '?').join(',')})
 				`)
-				values.push(g.name, term.id, value_for, ...g.values.map(v => v.key.toString()))
-			} else if (g.type == 'filter') {
-				// TODO: create filter sql for group.type == 'filter'
-				if ('activeCohort' in q.groupsetting && g.filter4activeCohort) {
-					const tvs_filter = g.filter4activeCohort[q.groupsetting.activeCohort]
-
-					const filter = getFilterCTEs(tvs_filter, ds, 'xf' + xfIndex++)
-					if (!filter) throw `unable to construct a group='${g.name}' filter for term.id='${term.id}'`
-					filters.push(filter.filters)
-					values.push(...filter.values.slice(), g.name, g.name)
-
-					categories.push(
-						`SELECT sample, ? AS key, ? AS value
-						FROM ${filter.CTEname}`
-					)
-				} else {
-					throw `activeCohort error: cannot construct filter statement for group name='${g.name}', term.id=${term.id}`
-				}
-			} else {
-				throw `unsupported groupset type='${g.type}'`
+				values.push(g.name, term.id, value_for, ...g.values.map(v => v.toString()))
 			}
-		}
 
-		return {
-			sql: `${filters.length ? filters.join('\n,') + ',' : ''}
-			${tablename} AS (
-				${categories.join('\nUNION ALL\n')}
-			)`,
-			tablename
+			return {
+				sql: `${tablename} AS (
+					${categories.join('\nUNION ALL\n')}
+				)`,
+				tablename
+			}
+		} else {
+			// no breaks, so all grades in one group
+			const [value_for, restriction] = validateQ(q)
+			values.push(term.id, value_for)
+			const uncomputable = getUncomputableClause(term, q)
+			values.push(...uncomputable.values)
+			return {
+				sql: `${tablename} AS (
+					SELECT
+						sample,
+						${value_for == 'grade' ? `CAST(value AS integer) as key` : 'value as key'},
+						${value_for == 'grade' ? `CAST(value AS integer) as value` : 'value'}
+					FROM
+						precomputed
+					WHERE
+						term_id = ?
+						AND value_for = ?
+						AND ${restriction} = 1
+						${uncomputable.clause}
+				)`,
+				tablename
+			}
 		}
 	}
 }
@@ -176,8 +196,9 @@ export const cuminc = {
 
 export const cox = {
 	getCTE(tablename, term, q, values, filter) {
-		const minYearsToEvent = 'minYearsToEvent' in q ? q.minYearsToEvent : 5
-		// NOTE: may be user configurable later via client-side UI
+		const minYearsToEvent = 'minYearsToEvent' in q ? q.minYearsToEvent : 5 // NOTE: may be user configurable later via client-side UI
+		if (!q.breaks) throw 'cox outcome requires breaks'
+		if (q.breaks.length != 1) throw 'cox outcome requires one break'
 		if (q.timeScale == 'year') {
 			// 'value' column will contain follow-up time from 5 years post cancer diagnosis
 			// event 1: follow up time is for first event to occur
@@ -194,7 +215,7 @@ export const cox = {
 					${filter ? 'AND sample IN ' + filter.CTEname : ''}
 					GROUP BY sample
 				)`
-				values.push(term.id, q.cutoff, minYearsToEvent)
+				values.push(term.id, q.breaks[0], minYearsToEvent)
 			} else {
 				event1CTE = `parentTerms AS (
 					SELECT distinct(ancestor_id) 
@@ -216,7 +237,7 @@ export const cox = {
 					${filter ? 'AND sample IN ' + filter.CTEname : ''}
 					GROUP BY sample
 				)`
-				values.push(term.id, q.cutoff, minYearsToEvent)
+				values.push(term.id, q.breaks[0], minYearsToEvent)
 			}
 
 			// TODO: for event 0, CTE may need to be adjusted for groupsetting usage
@@ -265,7 +286,7 @@ export const cox = {
 					${filter ? 'AND c.sample IN ' + filter.CTEname : ''}
 					GROUP BY c.sample
 				)`
-				values.push(term.id, q.cutoff, minYearsToEvent)
+				values.push(term.id, q.breaks[0], minYearsToEvent)
 			} else {
 				event1CTE = `parentTerms AS (
 					SELECT distinct(ancestor_id) 
@@ -289,7 +310,7 @@ export const cox = {
 					${filter ? 'AND c.sample IN ' + filter.CTEname : ''}
 					GROUP BY c.sample
 				)`
-				values.push(term.id, q.cutoff, minYearsToEvent)
+				values.push(term.id, q.breaks[0], minYearsToEvent)
 			}
 
 			const event0CTE = `event0 AS (

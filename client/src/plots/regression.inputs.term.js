@@ -44,7 +44,8 @@ export class InputTerm {
 		try {
 			const { app, config, state, disable_terms } = this.parent
 
-			this.pill = termsettingInit({
+			// termsetting constructor option
+			const arg = {
 				placeholder: this.section.selectPrompt,
 				placeholderIcon: this.section.placeholderIcon,
 				holder: this.dom.pillDiv,
@@ -53,7 +54,6 @@ export class InputTerm {
 				activeCohort: state.activeCohort,
 				debug: app.opts.debug,
 				buttons: this.section.configKey == 'outcome' ? ['replace'] : ['delete'],
-				numericEditMenuVersion: this.getMenuVersion(config),
 				usecase: { target: 'regression', detail: this.section.configKey, regressionType: config.regressionType },
 				disable_terms,
 				abbrCutoff: 50,
@@ -61,11 +61,13 @@ export class InputTerm {
 				callback: term => {
 					this.parent.editConfig(this, term)
 				}
-			})
+			}
+			this.furbishTsConstructorArg(arg)
+			this.pill = termsettingInit(arg)
 
 			if (this.section.configKey == 'outcome') {
 				// special treatment for terms selected for outcome
-				this.setQ = getQSetter(config.regressionType)
+				this.setQ = getQSetter4outcome(config.regressionType)
 			}
 
 			this.valuesTable = new InputValuesTable({
@@ -80,18 +82,30 @@ export class InputTerm {
 		}
 	}
 
-	getMenuVersion(config) {
-		// for the numericEditMenuVersion of termsetting constructor option
+	furbishTsConstructorArg(arg) {
+		// furbish termsetting constructor argument, based on regression type and if term is outcome/input
+		const type = this.parent.config.regressionType
 		if (this.section.configKey == 'outcome') {
-			// outcome
-			if (config.regressionType == 'logistic') return ['binary']
-			if (config.regressionType == 'linear') return ['continuous']
-			if (config.regressionType == 'cox') return
+			// this term is outcome
+			if (type == 'logistic') {
+				arg.numericEditMenuVersion = ['binary']
+				return
+			}
+			if (type == 'linear') {
+				arg.numericEditMenuVersion = ['continuous']
+				return
+			}
+			if (type == 'cox') {
+				arg.showTimeScale = true
+				return
+			}
 			throw 'unknown regressionType'
 		}
 		if (this.section.configKey == 'independent') {
-			// independent
-			return ['continuous', 'discrete', 'spline']
+			// this temr is independent
+			// do not allow condition term
+			arg.numericEditMenuVersion = ['continuous', 'discrete', 'spline']
+			return
 		}
 		throw 'unknown section.configKey: ' + this.section.configKey
 	}
@@ -274,16 +288,19 @@ export class InputTerm {
 							? ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
 							: '')
 				)
-			} else if (tw.term.type == 'categorical' || tw.term.type == 'condition') {
+			} else if (tw.term.type == 'categorical') {
 				const gs = tw.q.groupsetting || {}
 				// self.values is already set by parent.setActiveValues() above
 				this.termStatus.topInfoStatus.push(
 					'Use as ' +
 						sampleCounts.length +
 						(gs.inuse ? ' groups.' : ' categories.') +
-						(tw.q.mode == 'cutoff' ? '' : ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`)
+						' <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>'
 				)
+			} else if (tw.term.type == 'condition') {
+				this.termStatus.topInfoStatus.push('TODO condition status')
 			}
+
 			// update bottomSummaryStatus
 			this.termStatus.bottomSummaryStatus =
 				`${totalCount.included} sample included.` +
@@ -293,16 +310,26 @@ export class InputTerm {
 
 			if (!tw.q.mode) throw 'q.mode missing'
 
-			// set term.refGrp
-			if (tw.q.mode == 'continuous') {
-				tw.refGrp = 'NA' // hardcoded in R
-			} else if (!('refGrp' in tw) || !sampleCounts.find(i => i.key == tw.refGrp)) {
-				// refGrp not defined or no longer exists according to sampleCounts[]
-				const o = this.orderedLabels
-				if (o.length) sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
-				else sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
-				tw.refGrp = sampleCounts[0].key
-			}
+			this.maySet_refGrp(tw, sampleCounts)
+		}
+	}
+
+	maySet_refGrp(tw, sampleCounts) {
+		if (this.section.configKey == 'outcome' && this.parent.config.regressionType == 'cox') {
+			// no need to set refgrp
+			return
+		}
+		if (tw.q.mode == 'continuous') {
+			// numeric term in continuous mode, refgrp NA is hardcoded in R
+			tw.refGrp = 'NA'
+			return
+		}
+		if (!('refGrp' in tw) || !sampleCounts.find(i => i.key == tw.refGrp)) {
+			// refGrp not defined or no longer exists according to sampleCounts[]
+			const o = this.orderedLabels
+			if (o.length) sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
+			else sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
+			tw.refGrp = sampleCounts[0].key
 		}
 	}
 
@@ -421,12 +448,13 @@ export class InputTerm {
 	}
 }
 
-function getQSetter(regressionType) {
+function getQSetter4outcome(regressionType) {
+	// only for outcome term
 	return {
 		integer: regressionType == 'logistic' ? maySetTwoBins : setContMode,
 		float: regressionType == 'logistic' ? maySetTwoBins : setContMode,
 		categorical: maySetTwoGroups,
-		condition: maySetTwoGroups
+		condition: setQ4conditionOutcome
 	}
 }
 
@@ -467,9 +495,40 @@ async function maySetTwoBins(tw, vocabApi, filter, state) {
 	tw.refGrp = tw.q.lst[0].label
 }
 
+function setQ4conditionOutcome(tw, vocabApi, filter, state) {
+	/* tw is a condition term as outcome for logistic/cox (but not other regression types, for now)
+	will always break grades into two groups
+	this requires q.breaks[] to have a single grade value
+	for logistic: set tw.refGrp
+	for cox: set q.timeScale
+	*/
+	const { term, q } = tw
+	if (!q.breaks) q.breaks = []
+	if (q.breaks.length != 1) {
+		q.breaks = [2] // hardcode for now
+	}
+	if (![1, 2, 3, 4, 5].includes(q.breaks[0])) {
+		q.breaks[0] = 2
+	}
+	const grade = q.breaks[0]
+	if (!q.groupNames) q.groupNames = []
+	if (!q.groupNames[0]) q.groupNames[0] = 'Grade <' + grade
+	if (!q.groupNames[1]) q.groupNames[1] = 'Grade >=' + grade
+	if (state.config.regressionType == 'logistic') {
+		tw.refGrp = q.groupNames[0]
+	} else {
+		// cox
+		if (q.timeScale != 'age' && q.timeScale != 'year') q.timeScale = 'year' // change year to time2event
+	}
+}
+
 async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	// if the bins are already binary, do not reset
 	const { term, q } = tw
+
+	// TODO clean up logic?
+
+	// not condition, currently can only be categorical
 	if (q.mode == 'binary') {
 		if (q.type == 'values' && Object.keys(term.values).length == 2) return
 		if (q.type == 'predefined-groupset') {
@@ -481,14 +540,7 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 			const gs = q.groupsetting.customset
 			if (gs.groups.length == 2) return
 		}
-	} else if (q.mode == 'cutoff') {
-		//TODO: adjust groupsetting to group1(<cutoffGrade) and group2(>=cutoffGrade)
-	} else {
-		q.mode = state.config.regressionType == 'cox' ? 'cutoff' : 'binary'
 	}
-	if (q.mode == 'cutoff') q.type = 'custom-groupset'
-
-	// category and condition terms share some logic
 
 	// step 1: check if term has only two computable categories/grades with >0 samples
 	// if so, use the two categories as outcome and do not apply groupsetting

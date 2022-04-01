@@ -406,6 +406,15 @@ function makeRvariable_snps(tw, variables, q) {
 
 function getLogisticOutcomeNonref(outcome) {
 	// outcome is q.outcome{}, the term-wrapper {q{}, refGrp, term{}}
+	if (outcome.term.type == 'condition') {
+		// condition term does not use q.type
+		// from q.groupNames[], return the str name that's not refgrp
+		for (const i of outcome.q.groupNames) {
+			if (i != outcome.q.refGrp) return i
+		}
+		throw 'nonref group not found for logistic outcome'
+	}
+	// not condition term;
 	// depending on q.type, find the non-ref group and return its name, to be used in Y axis of spline plot
 	if (outcome.q.type == 'predefined-groupset') {
 		if (!outcome.q.groupsetting) throw 'outcome.q.groupsetting{} missing when type=predefined-groupset'

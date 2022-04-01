@@ -1,6 +1,6 @@
 import { setGroupsettingMethods } from './termsetting.groupsetting'
 import { filterInit } from './filter'
-import { getPillNameDefault } from './termsetting'
+import { getPillNameDefault, set_hiddenvalues } from './termsetting'
 
 /*
 ********************** EXPORTED
@@ -22,7 +22,6 @@ fillTW(tw, vocabApi)// Can handle initiation logic specific to this term type.
 					// Computation should be independent of state, especially filter, as that’s not provided.
 
 ********************** INTERNAL
-set_hiddenvalues(q, term)
 */
 
 export function getHandler(self) {
@@ -363,17 +362,6 @@ export function fillTW(tw, vocabApi) {
 			tw.term.groupsetting.lst[tw.term.groupsetting.useIndex]
 		) {
 			tw.q.groupsetting.predefined_groupset_idx = tw.term.groupsetting.useIndex
-		}
-	}
-}
-
-function set_hiddenvalues(q, term) {
-	if (!q.hiddenValues) {
-		q.hiddenValues = {}
-	}
-	if (term.values) {
-		for (const k in term.values) {
-			if (term.values[k].uncomputable) q.hiddenValues[k] = 1
 		}
 	}
 }

@@ -43,9 +43,9 @@ class Term1ui {
 		}
 		return state
 	}
-	main() {
+	async main() {
 		this.dom.tr.style('display', 'table-row')
-		this.render()
+		await this.render()
 	}
 	setPill() {
 		// can only call after getting this.state
@@ -90,7 +90,7 @@ function setRenderers(self) {
 		// <td> right
 		self.dom.td2 = self.dom.tr.append('td')
 	}
-	self.render = function() {
+	self.render = async function() {
 		/* state and plot are frozen from app.state
 		 */
 		const plot = this.state.plot
@@ -125,7 +125,7 @@ function setRenderers(self) {
 				throw 'unknown term type'
 		}
 		if (!self.pill) self.setPill()
-		self.pill.main({
+		await self.pill.main({
 			term: plot.term.term,
 			q: plot.term.q,
 			activeCohort: this.state.activeCohort,
