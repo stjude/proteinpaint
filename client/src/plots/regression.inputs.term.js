@@ -175,9 +175,7 @@ export class InputTerm {
 		create following attributes:
 
 		input.orderedLabels
-		input.totalCount
-		input.sampleCounts
-		input.excludeCounts
+		input.termStatus{ sampleCounts, excludeCounts }
 		input.term.refGrp
 		*/
 		const tw = this.term
@@ -216,6 +214,7 @@ export class InputTerm {
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 		mayRunSnplstTask(tw, data)
+
 		this.termStatus = {
 			topInfoStatus: [],
 			bottomSummaryStatus: undefined,
@@ -258,27 +257,13 @@ export class InputTerm {
 		this.orderedLabels = data.orderedLabels
 
 		if (data.lst) {
-			// sepeate include and exclude categories based on term.values.uncomputable
-			const excluded_values = tw.term.values
-				? Object.entries(tw.term.values)
-						.filter(v => v[1].uncomputable)
-						.map(v => v[1].label)
-				: []
-			const sampleCounts = (this.termStatus.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label)))
-			const excludeCounts = (this.termStatus.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label)))
-			this.termStatus.allowToSelectRefGrp = tw.q.mode !== 'continuous' && tw.q.mode !== 'spline' ? true : false
-
-			// get include, excluded and total sample count
-			const totalCount = (this.totalCount = { included: 0, excluded: 0, total: 0 })
-			sampleCounts.forEach(v => (totalCount.included += v.samplecount))
-			excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
-			totalCount.total = totalCount.included + totalCount.excluded
-			// for condition term, subtract included count from totalCount.total to get excluded
-			if (tw.term.type == 'condition' && totalCount.total) {
-				totalCount.excluded = totalCount.total - totalCount.included
-			}
+			this.summarizeSample(tw, data.lst)
 
 			if (tw.term.type == 'float' || tw.term.type == 'integer') {
+				if (tw.q.mode != 'continuous' && tw.q.mode != 'spline') {
+					this.termStatus.allowToSelectRefGrp = true
+				}
+
 				this.termStatus.topInfoStatus.push(
 					`Use as ${tw.q.mode || 'continuous'} ` +
 						(tw.q.mode !== 'spline' ? 'variable.' : '') +
@@ -291,11 +276,13 @@ export class InputTerm {
 							: '')
 				)
 			} else if (tw.term.type == 'categorical') {
+				this.termStatus.allowToSelectRefGrp = true
+
 				const gs = tw.q.groupsetting || {}
 				// self.values is already set by parent.setActiveValues() above
 				this.termStatus.topInfoStatus.push(
 					'Use as ' +
-						sampleCounts.length +
+						this.termStatus.sampleCounts.length +
 						(gs.inuse ? ' groups.' : ' categories.') +
 						' <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>'
 				)
@@ -303,20 +290,39 @@ export class InputTerm {
 				this.termStatus.topInfoStatus.push('Minimum grade to have event: ' + tw.term.values[tw.q.breaks[0]].label)
 			}
 
-			// update bottomSummaryStatus
-			this.termStatus.bottomSummaryStatus =
-				`${totalCount.included} sample included.` +
-				(totalCount.excluded ? ` ${totalCount.excluded} samples excluded:` : '')
-			if (tw && tw.q.mode !== 'continuous' && sampleCounts.length < 2)
-				throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
-
-			if (!tw.q.mode) throw 'q.mode missing'
-
-			this.maySet_refGrp(tw, sampleCounts)
+			this.maySet_refGrp(tw)
 		}
 	}
 
-	maySet_refGrp(tw, sampleCounts) {
+	summarizeSample(tw, datalst) {
+		// sepeate include and exclude categories based on term.values.uncomputable
+		const excluded_values = new Set()
+		if (tw.term.values) {
+			for (const i in tw.term.values) {
+				if (tw.term.values[i].uncomputable) excluded_values.add(tw.term.values[i].label)
+			}
+		}
+		const sampleCounts = (this.termStatus.sampleCounts = datalst.filter(v => !excluded_values.has(v.label)))
+		const excludeCounts = (this.termStatus.excludeCounts = datalst.filter(v => excluded_values.has(v.label)))
+
+		// get include, excluded and total sample count
+		const totalCount = { included: 0, excluded: 0, total: 0 }
+		sampleCounts.forEach(v => (totalCount.included += v.samplecount))
+		excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
+		totalCount.total = totalCount.included + totalCount.excluded
+		// for condition term, subtract included count from totalCount.total to get excluded
+		if (tw.term.type == 'condition' && totalCount.total) {
+			totalCount.excluded = totalCount.total - totalCount.included
+		}
+		// update bottomSummaryStatus
+		this.termStatus.bottomSummaryStatus =
+			`${totalCount.included} sample included.` +
+			(totalCount.excluded ? ` ${totalCount.excluded} samples excluded:` : '')
+		if (tw && tw.q.mode !== 'continuous' && sampleCounts.length < 2)
+			throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
+	}
+
+	maySet_refGrp(tw) {
 		if (this.section.configKey == 'outcome' && this.parent.config.regressionType == 'cox') {
 			// no need to set refgrp
 			return
@@ -326,12 +332,13 @@ export class InputTerm {
 			tw.refGrp = 'NA'
 			return
 		}
-		if (!('refGrp' in tw) || !sampleCounts.find(i => i.key == tw.refGrp)) {
+		const sc = this.termStatus.sampleCounts
+		if (!('refGrp' in tw) || !sc.find(i => i.key == tw.refGrp)) {
 			// refGrp not defined or no longer exists according to sampleCounts[]
 			const o = this.orderedLabels
-			if (o.length) sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
-			else sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
-			tw.refGrp = sampleCounts[0].key
+			if (o && o.length) sc.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
+			else sc.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
+			tw.refGrp = sc[0].key
 		}
 	}
 
