@@ -257,6 +257,8 @@ export class InputTerm {
 		this.orderedLabels = data.orderedLabels
 
 		if (data.lst) {
+			// got sample counts for dictionary terms
+
 			this.summarizeSample(tw, data.lst)
 
 			if (tw.term.type == 'float' || tw.term.type == 'integer') {
@@ -288,6 +290,16 @@ export class InputTerm {
 				)
 			} else if (tw.term.type == 'condition') {
 				this.termStatus.topInfoStatus.push('Minimum grade to have event: ' + tw.term.values[tw.q.breaks[0]].label)
+				if (tw.q.timeScale) {
+					this.termStatus.topInfoStatus.push(
+						'Time axis: ' +
+							(tw.q.timeScale == 'age'
+								? 'Age'
+								: tw.q.timeScale == 'year'
+								? 'From study enrollment' // can be from termdbConfig
+								: 'ERR unknown value')
+					)
+				}
 			}
 
 			this.maySet_refGrp(tw)

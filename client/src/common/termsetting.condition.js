@@ -195,7 +195,7 @@ function showMenu_discrete(self, div) {
 
 	div
 		.append('button')
-		.text('Submit')
+		.text('Apply')
 		.style('margin', '10px')
 		.on('click', () => {
 			self.q.breaks = textarea2breaks()
@@ -256,22 +256,19 @@ function showMenu_binary(self, div) {
 
 	changeGradeSelect()
 
-	if (self.q.groupNames && self.q.groupNames[0]) g1n.property('value', self.q.groupNames[0])
-	if (self.q.groupNames && self.q.groupNames[1]) g2n.property('value', self.q.groupNames[1])
-
 	function changeGradeSelect() {
 		const grade = gradeSelect.property('selectedIndex') + 1
-		g1n.property('value', 'Grade <' + grade)
-		g2n.property('value', 'Grade >=' + grade)
+		if (!self.q.groupNames) self.q.groupNames = []
+		g1n.property('value', self.q.groupNames[0] || 'Grade <' + grade)
+		g2n.property('value', self.q.groupNames[1] || 'Grade >=' + grade)
 	}
 
 	div
 		.append('button')
-		.text('Submit')
+		.text('Apply')
 		.style('margin', '10px')
 		.on('click', () => {
 			self.q.breaks[0] = gradeSelect.property('selectedIndex') + 1
-			if (!self.q.groupNames) self.q.groupNames = []
 			self.q.groupNames[0] = g1n.property('value')
 			self.q.groupNames[1] = g2n.property('value')
 			event.target.disabled = true
@@ -367,13 +364,10 @@ function showMenu_time2event(self, div) {
 
 	div
 		.append('button')
-		.text('Submit')
+		.text('Apply')
 		.style('margin', '10px')
 		.on('click', () => {
 			self.q.breaks[0] = gradeSelect.property('selectedIndex') + 1
-			if (!self.q.groupNames) self.q.groupNames = []
-			self.q.groupNames[0] = g1n.property('value')
-			self.q.groupNames[1] = g2n.property('value')
 			if (self.q.timeScale) self.q.timeScale = timeScaleChoice
 			event.target.disabled = true
 			event.target.innerHTML = 'Loading...'
@@ -409,6 +403,8 @@ export function fillTW(tw, vocabApi, defaultQ) {
 	if (tw.q.mode == 'binary') {
 		if (tw.q.breaks.length != 1) {
 			tw.q.breaks = [1] // HARDCODED
+		}
+		if (tw.q.groupNames.length != 2) {
 			tw.q.groupNames = ['No event' + (tw.term.values[not_tested_grade] ? ' / not tested' : ''), 'Has event']
 		}
 	}

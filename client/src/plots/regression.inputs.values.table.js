@@ -9,9 +9,6 @@ import { select } from 'd3-selection'
 			included_values_table // values with samplecount, selectable as ref group
 			bottomSummaryStatus_holder // total included and excluded samples
 			excluded_values_table // excluded values with samplecount
-
-	For detailed explanation of UI refer to this drawing:
-	https://docs.google.com/drawings/d/13Ri7sXM0LQ_oi0aGJnAIP7ArPxI5bl-nO1mA3mmTpFA/edit?pli=1
 */
 
 export class InputValuesTable {
@@ -140,7 +137,7 @@ function setRenderers(self) {
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
 			.selectAll('tr')
-			.data(tr_data, allowToSelectRefGrp ? b => b.key + b.label + b.bar_width_frac : (b, i) => i)
+			.data(tr_data, b => b.key + b.label + b.bar_width_frac)
 
 		trs.exit().remove()
 		trs.each(trUpdate)
