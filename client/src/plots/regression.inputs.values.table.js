@@ -11,6 +11,8 @@ import { select } from 'd3-selection'
 			excluded_values_table // excluded values with samplecount
 */
 
+const row_hover_bgcolor = '#fff6dc'
+
 export class InputValuesTable {
 	constructor(opts) {
 		// opts {holder, input, callback}
@@ -83,6 +85,12 @@ function setRenderers(self) {
 			topInfoStatus_holder,
 
 			values_div,
+			selectRefgrpPrompt: values_div
+				.append('div')
+				.text('CLICK A ROW TO SET AS REFERENCE')
+				.style('margin', '10px 0px 0px 10px')
+				.style('font-size', '.7em')
+				.style('display', 'none'),
 			included_values_table: values_div.append('table'),
 			bottomSummaryStatus_holder: values_div.append('div'),
 			excluded_values_table: values_div.append('table')
@@ -91,11 +99,14 @@ function setRenderers(self) {
 
 	self.render = () => {
 		const input = self.input
-		const allowToSelectRefGrp = input.termStatus.allowToSelectRefGrp
+		self.dom.selectRefgrpPrompt.style('display', input.termStatus.allowToSelectRefGrp ? 'block' : 'none')
 		// render term status
 		renderTermStatus(input.termStatus)
 		// make included and excluded tables respectively
-		renderValuesTable(input.termStatus.sampleCounts, 'included_values_table', allowToSelectRefGrp)
+
+		self.dom.included_values_table.selectAll('*').remove()
+
+		renderValuesTable(input.termStatus.sampleCounts, 'included_values_table', input.termStatus.allowToSelectRefGrp)
 		renderValuesTable(input.termStatus.excludeCounts, 'excluded_values_table')
 	}
 
@@ -114,7 +125,7 @@ function setRenderers(self) {
 		}
 	}
 
-	function renderValuesTable(data, tableName = 'included_values_table', allowToSelectRefGrp = false) {
+	function renderValuesTable(data, tableName = 'included_values_table', allowToSelectRefGrp) {
 		if (!data || !data.length) {
 			if (tableName == 'excluded_values_table') {
 				self.dom.excluded_values_table.selectAll('*').remove()
@@ -137,7 +148,12 @@ function setRenderers(self) {
 			.style('border-spacing', '3px')
 			.style('border-collapse', 'collapse')
 			.selectAll('tr')
-			.data(tr_data, b => b.key + b.label + b.bar_width_frac)
+			.data(tr_data, b => b.key + b.label + b.bar_width_frac + (allowToSelectRefGrp ? '1' : '0'))
+		/* FIXME upon changing binned numeric term to continuous
+		this table won't rerender to disable row selection
+		adding allowToSelectRefGrp at the end of data name won't help
+		thus having to remove all rows at line 106
+		*/
 
 		trs.exit().remove()
 		trs.each(trUpdate)
@@ -236,7 +252,7 @@ function setRenderers(self) {
 			if (hover_flag) {
 				tr.on('mouseover', () => {
 					if (t.refGrp !== item.key) {
-						tr.style('background', '#fff6dc')
+						tr.style('background', row_hover_bgcolor)
 						ref_text
 							.style('display', 'inline-block')
 							.style('border', '')
@@ -253,10 +269,6 @@ function setRenderers(self) {
 						// below will save to state, ui code should react to it
 						self.opts.callback(t)
 					})
-			} else {
-				tr.on('mouseover', null)
-					.on('mouseout', null)
-					.on('click', null)
 			}
 		}
 	}

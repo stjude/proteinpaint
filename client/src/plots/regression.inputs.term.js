@@ -220,7 +220,7 @@ export class InputTerm {
 			bottomSummaryStatus: undefined,
 			sampleCounts: undefined,
 			excludeCounts: undefined,
-			allowToSelectRefGrp: undefined
+			allowToSelectRefGrp: false
 		}
 
 		// update status based on special attr from snplst and snplocus terms
@@ -272,9 +272,6 @@ export class InputTerm {
 						(tw.q.mode == 'continuous' && tw.q.scale && tw.q.scale != 1 ? ` Scale: Per ${tw.q.scale}` : '') +
 						(tw.q.mode == 'spline'
 							? ` with ${tw.q.knots.length} knots: ${tw.q.knots.map(v => v.value).join(', ')}`
-							: '') +
-						(this.termStatus.allowToSelectRefGrp
-							? ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
 							: '')
 				)
 			} else if (tw.term.type == 'categorical') {
@@ -283,12 +280,14 @@ export class InputTerm {
 				const gs = tw.q.groupsetting || {}
 				// self.values is already set by parent.setActiveValues() above
 				this.termStatus.topInfoStatus.push(
-					'Use as ' +
-						this.termStatus.sampleCounts.length +
-						(gs.inuse ? ' groups.' : ' categories.') +
-						' <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>'
+					'Use as ' + this.termStatus.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
 				)
 			} else if (tw.term.type == 'condition') {
+				if (this.section.configKey == 'outcome' && this.parent.opts.regressionType == 'logistic') {
+					// allow selecting refgrp
+					this.termStatus.allowToSelectRefGrp = true
+				}
+
 				this.termStatus.topInfoStatus.push('Minimum grade to have event: ' + tw.term.values[tw.q.breaks[0]].label)
 				if (tw.q.timeScale) {
 					this.termStatus.topInfoStatus.push(
