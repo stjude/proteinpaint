@@ -9,6 +9,7 @@ import javascript from 'highlight.js/lib/languages/javascript'
 hljs.registerLanguage('javascript', javascript)
 import json from 'highlight.js/lib/languages/json'
 hljs.registerLanguage('json', json)
+import copyButton from './dom/copyButton'
 
 /*
 
@@ -17,28 +18,35 @@ init_appDrawer
 	- creates the app drawer
 
 -------Internal-------
+*** App Drawer ***
 make_examples_page
-make_main_track_grid
-make_col
-make_subheader_contents
-make_searchbar (disabled until further notice)
-loadTracks
-displayTracks
-makeRibbon
+ - make_main_track_grid
+ - make_col
+ - make_subheader_contents
+ - make_searchbar (disabled until further notice)
+ - loadTracks
+	- displayTracks
+		- makeRibbon
+		- openSandbox
+
+*** Sandbox ***
 openSandbox
-renderContent
-makeSandboxTabs
-sandboxTabMenu
-makeLeftsideTabMenu
-getTabData
-addMessage
-addUpdateMessage
-makeButton
-addButtons
-showURLLaunch
-makeDataDownload
-makeArrowButtons
-addArrowBtns
+	- renderContent
+		- showURLLaunch
+		- makeDataDownload
+	- sandboxTabMenu
+		- makeSandboxTabs
+		- makeLeftsideTabMenu
+			- getTabData
+	- addMessage
+	- addUpdateMessage
+	- makeButton
+	- addButtons
+	- addArrowBtns
+		- showCode
+		- makeArrowButtons
+		- showCitation
+ 
 
 Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl0xIJqDRbyhahA4/edit#heading=h.jwyqi1mhacps
 */
@@ -273,7 +281,8 @@ async function openSandbox(track, holder) {
 		ppcalls: res.jsonfile.ppcalls,
 		buttons: res.jsonfile.buttons,
 		arrowButtons: res.jsonfile.arrowButtons,
-		update_message: res.jsonfile.update_message
+		update_message: res.jsonfile.update_message,
+		citation: res.jsonfile.citation_id
 	}
 	// create unique id for each app div
 	const sandbox_div = newSandboxDiv(holder)
@@ -286,10 +295,14 @@ async function openSandbox(track, holder) {
 
 	// message explaining the update ribbon
 	addUpdateMessage(track, sandbox_args.update_message, sandbox_div.body)
+
+	const mainBtn_div = sandbox_div.body.append('div')
+	const reuse_div = sandbox_div.body.append('div')
+
 	// buttons for links and/or downloads for the entire track/app
-	addButtons(sandbox_args.buttons, sandbox_div.body)
+	addButtons(sandbox_args.buttons, mainBtn_div)
 	// arrow buttons for the entire track/app that open a new div underneath
-	addArrowBtns(sandbox_args.arrowButtons, '', sandbox_div.body, sandbox_div.body)
+	addArrowBtns(sandbox_args, 'main', mainBtn_div, reuse_div)
 
 	//Disables top, horizontal tabs for api queries or other special circumstances
 	if (track.disable_topTabs == true) {
@@ -320,7 +333,8 @@ function renderContent(ppcalls, div, app) {
 	addButtons(ppcalls.buttons, buttons_div)
 	makeDataDownload(ppcalls.download, buttons_div, app)
 	showURLLaunch(ppcalls.urlparam, buttons_div, app)
-	addArrowBtns(ppcalls.arrowButtons, ppcalls, buttons_div, reuse_div)
+	// addArrowBtns(ppcalls.arrowButtons, ppcalls, buttons_div, reuse_div)
+	addArrowBtns(ppcalls, 'calls', buttons_div, reuse_div)
 
 	if (!ppcalls.nodashedline) {
 		div
@@ -614,7 +628,7 @@ async function showCode(ppcalls, btns) {
 		{ language: 'javascript' }
 	).value
 
-	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 30px; overflow-x: auto; overflow-y:auto; max-height:400px; ${
+	const runpp_contents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 30px; overflow:auto; max-height:400px; ${
 		ppcalls.jsonpath ? `min-height:400px;` : `min-height: auto;`
 	}">
 	<code style="font-size:14px; display:block;">${runpp_code}</code></pre>`
@@ -668,7 +682,7 @@ async function showJsonCode(ppcalls) {
 			<p style="margin: 20px 5px 20px 25px; display: inline-block;">JSON code </p>
 			<p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p>
 		</div> 
-		<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 10px; max-height:400px; min-height:400px; overflow-x: auto; overflow-y:auto;">
+		<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 10px; max-height:400px; min-height:400px; overflow:auto;">
 			<code class="sjpp-json-code" style="font-size:14px; display:block;">${
 				slicedjson == true
 					? `${code} ...<br><p style='margin:20px 25px; justify-content:center;'>Showing first 100 lines. To see the entire JSON, download ${filename} from the button above.</p>`
@@ -715,12 +729,100 @@ function makeArrowButtons(arrows, btns) {
 	}
 }
 
-function addArrowBtns(arg, ppcalls, bdiv, rdiv) {
+function showCitation(btns, pub) {
+	btns.push({
+		name: 'Citation',
+		callback: async rdiv => {
+			try {
+				rdiv
+					.append('div')
+					.style('margin-left', '5w')
+					.html(
+						`<p style="display: inline-block;">${pub.title}. <em>${pub.journal}</em>, ${pub.year}. </p>
+						${
+							pub.pmid
+								? `<p style="display: inline-block;">PMID: <a href="${pub.pmidURL}" target="_blank">${pub.pmid}</a></p>`
+								: `<p>doi: <a href="${pub.doi}" target="_blank style="display: inline-block;">${pub.doi}</a></p>`
+						}`
+					)
+			} catch (e) {
+				alert('Error: ' + e)
+			}
+		}
+	})
+}
+
+function makeDataPreviewDiv(content, contLength, div, filename, message) {
+	div.append('div').html(`
+		${message ? `<p style="display:block;">${message}<p>` : ''}
+		<p style="display: inline-block;">Data preview <span style="color: #696969; font-style:oblique;"> 
+		${contLength > 10 ? `(first ${content.length} rows of ${filename})</span></p>` : `(content of ${filename})</span></p>`} 
+	`)
+	const bedjContent_div = div
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', '1fr')
+		.style('overflow', 'hidden')
+		.style('max-width', '80%')
+		.style('margin-left', '10px')
+		.style('border', '1px solid rgb(227, 227, 230)')
+		// .style('word-break', 'break-word')
+		.style('white-space', 'pre')
+		.style('overflow', 'scroll')
+		.style('opacity', '0.65')
+		.style('padding', '1vw')
+	content.forEach(c => {
+		bedjContent_div.append('code').html(c)
+	})
+}
+
+async function showViewData(btns, data) {
+	btns.push({
+		name: 'View Data',
+		callback: async rdiv => {
+			try {
+				for (const file of data) {
+					const res = await dofetch3(`/cardsjson?datafile=${file.file}&tabixCoord=${file.tabixQueryCoord}`)
+					if (res.error) {
+						console.log(`Error: ${res.error}`)
+						return
+					}
+					const returnedContent = res.file
+					const contLength = returnedContent.length
+					//Limit to only the first 10 rows
+					const content = returnedContent.slice(0, 10)
+
+					//Parse file path for file name to show above content
+					const splitpath = file.file.split('/')
+					const filename = splitpath[splitpath.length - 1]
+
+					makeDataPreviewDiv(content, contLength, rdiv, filename, file.message)
+				}
+			} catch (e) {
+				alert('Error: ' + e)
+			}
+		}
+	})
+}
+
+async function addArrowBtns(args, type, bdiv, rdiv) {
 	let btns = []
-	if (ppcalls) {
-		showCode(ppcalls, btns)
+	if (type == 'calls') showCode(args, btns)
+	if (args.datapreview) {
+		showViewData(btns, args.datapreview)
 	}
-	makeArrowButtons(arg, btns)
+	if (type == 'main' && args.citation) {
+		const res = await dofetch3('/cardsjson?jsonfile=citations')
+		if (res.error) {
+			console.log(`Error: ${res.error}`)
+			return
+		}
+		const pubs = res.jsonfile.publications
+		for (const pub of pubs) {
+			if (args.citation == pub.id) showCitation(btns, pub)
+		}
+	}
+	makeArrowButtons(args.arrowButtons, btns)
 
 	const active_btn = btns.findIndex(b => b.active) == -1 ? false : true
 
@@ -729,7 +831,10 @@ function addArrowBtns(arg, ppcalls, bdiv, rdiv) {
 
 		btn.btn = makeButton(bdiv, btn.name + ' ▼')
 
-		btn.c = rdiv.append('div').style('display', (active_btn && i == 0) || btn.active ? 'block' : 'none')
+		btn.c = rdiv
+			.append('div')
+			.style('margin', '20px 0px 10px 20px')
+			.style('display', (active_btn && i == 0) || btn.active ? 'block' : 'none')
 
 		if ((active_btn && i == 0 && btn.callback) || btn.active) {
 			btn.callback(btn.c)

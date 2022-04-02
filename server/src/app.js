@@ -459,6 +459,25 @@ async function handle_cards(req, res) {
 			if (req.query.file.match(/[^\w]/)) throw 'Invalid file'
 			const txt = await utils.read_file(path.join(serverconfig.cardsjsondir, req.query.file + '.txt'))
 			res.send({ file: txt })
+		} else if (req.query.datafile && req.query.tabixCoord) {
+			return new Promise((resolve, reject) => {
+				const sp = spawn(tabix, [path.join(serverconfig.tpmasterdir, req.query.datafile), req.query.tabixCoord])
+				const output = [],
+					errOut = []
+				sp.stdout.on('data', i => output.push(i))
+				sp.stderr.on('data', i => errOut.push(i))
+				sp.on('close', code => {
+					const e = errOut.join('').trim()
+					if (e != '') reject('error querying bedj file')
+					const tmp = output.join('').trim()
+					resolve(res.send({ file: tmp.split('\n') }))
+				})
+			}).catch(err => {
+				if (err.stack) {
+					// debug
+					console.error(err.stack)
+				}
+			})
 		} else {
 			const cardsjson = await utils.read_file(serverconfig.cardsjson)
 			const json = JSON.parse(cardsjson)
