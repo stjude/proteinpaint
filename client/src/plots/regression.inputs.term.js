@@ -5,6 +5,7 @@ import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
 import { mayRunSnplstTask } from '../common/termsetting.snplst.sampleSum'
+import { get_defaultQ4fillTW } from './regression'
 
 /*
 class instance is an input
@@ -12,7 +13,7 @@ class instance is an input
 
 export class InputTerm {
 	constructor(opts) {
-		// opts { section, term, parent, defaultQ4fillTW }
+		// opts { section, term, parent }
 		this.opts = opts
 		this.section = opts.section
 		this.term = opts.term // term wrapper {id, term, q}; will be missing for a blank input
@@ -58,7 +59,7 @@ export class InputTerm {
 				disable_terms,
 				abbrCutoff: 50,
 				genomeObj: this.parent.parent.genomeObj, // required for snplocus
-				defaultQ4fillTW: this.opts.defaultQ4fillTW,
+				defaultQ4fillTW: get_defaultQ4fillTW(config.regressionType, this.section.configKey == 'outcome'),
 				callback: term => {
 					this.parent.editConfig(this, term)
 				}

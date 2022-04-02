@@ -279,6 +279,7 @@ function setRenderers(self) {
 				.on('click', d => {
 					if (d == 'delete') self.removeTerm()
 					else if (d == 'replace') self.showTree(event.target)
+					else throw 'unknown button'
 				})
 
 			// render info button only if term has html details
