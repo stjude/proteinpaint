@@ -276,6 +276,9 @@ upon error, throw err message as a string
 		par.tklst = await get_tklst(urlp, genomeobj)
 
 		first_genetrack_tolist(arg.genomes[genomename], par.tklst)
+
+		mayAddBedjfilterbyname(urlp, par.tklst)
+
 		const b = await import('./block')
 		new b.Block(par)
 		return
@@ -327,6 +330,8 @@ upon error, throw err message as a string
 		}
 
 		par.tklst = await get_tklst(urlp, par.genome)
+
+		mayAddBedjfilterbyname(urlp, par.tklst)
 
 		par.datasetqueries = may_get_officialmds(urlp)
 		blockinit(par)
@@ -756,4 +761,17 @@ export async function get_tklst(urlp, genomeobj) {
 			})
 	}
 	return tklst
+}
+
+function mayAddBedjfilterbyname(urlp, tklst) {
+	/* !! a quick fix !!
+	the filter string will be applied to all bedj tracks,
+	rather than specific for a track
+	may mess up with other bedj tracks shown at the same time
+	*/
+	if (urlp.has('bedjfilterbyname')) {
+		for (const t of tklst) {
+			if (t.type == 'bedj') t.filterByName = urlp.get('bedjfilterbyname')
+		}
+	}
 }
