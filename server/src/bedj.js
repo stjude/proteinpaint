@@ -187,7 +187,7 @@ async function do_query(req, genomes) {
 
 	let filterByName
 	if (req.query.filterByName) {
-		filterByName = new Set(req.query.filterByName.split(/\n/))
+		filterByName = new Set(req.query.filterByName.split(/[\s\n]/).map(i => i.trim()))
 	}
 
 	const items = []
