@@ -535,10 +535,18 @@ function setQ4conditionOutcome(tw, vocabApi, filter, state) {
 	if (!q.groupNames[0]) q.groupNames[0] = 'Grade <' + grade
 	if (!q.groupNames[1]) q.groupNames[1] = 'Grade >=' + grade
 	if (state.config.regressionType == 'logistic') {
-		tw.refGrp = q.groupNames[0]
+		if (tw.refGrp) {
+			if (!q.groupNames.includes(tw.refGrp)) {
+				// not found!
+				tw.refGrp = q.groupNames[0]
+			}
+		} else {
+			// missing, set to be first group, guaranteed to be "No event"
+			tw.refGrp = q.groupNames[0]
+		}
 	} else {
 		// cox
-		if (q.timeScale != 'age' && q.timeScale != 'year') q.timeScale = 'year' // change year to time2event
+		if (!['age', 'year'].includes(q.timeScale)) q.timeScale = 'year' // change year to time2event
 	}
 }
 

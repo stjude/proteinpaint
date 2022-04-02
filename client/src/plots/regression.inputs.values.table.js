@@ -218,8 +218,7 @@ function setRenderers(self) {
 		addTrBehavior({ input, item, tr: select(this), rendered })
 	}
 
-	function addTrBehavior(args) {
-		const { input, item, tr, rendered } = args
+	function addTrBehavior({ input, item, tr, rendered }) {
 		// don't add tr effects for excluded values
 		if (!item.bar_width_frac) return
 
