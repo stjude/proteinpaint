@@ -3,8 +3,10 @@ import { make_radios } from '../dom/radiobutton'
 import { keyupEnter } from '../client'
 import { copyMerge } from '../common/rx.core'
 
-// hardcode grades that can be used for q.breaks; if needed, can define from termdbConfig
+// grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
+// if needed, can define from termdbConfig
 const cutoffGrades = [1, 2, 3, 4, 5]
+const not_tested_grade = -1
 
 export function getHandler(self) {
 	return {
@@ -17,12 +19,20 @@ export function getHandler(self) {
 		},
 
 		showEditMenu(div) {
-			if (self.q.mode == 'discrete') return showMenu_discrete(self, div)
+			if (self.q.mode == 'discrete') {
+				// barchart, cuminc term0/2
+				return showMenu_discrete(self, div)
+			}
 			if (self.q.mode == 'binary') {
-				if (self.q.type == 'time2event') return showMenu_time2event(self, div)
+				if (self.q.type == 'time2event') {
+					// cuminc term1, cox outcome
+					return showMenu_time2event(self, div)
+				}
+				// logistic outcome
 				return showMenu_binary(self, div)
 			}
-			throw 'q.mode is not discrete/binary'
+			console.error('invalid q.mode:', self.q.mode)
+			throw 'invalid q.mode'
 		}
 	}
 }
@@ -399,7 +409,7 @@ export function fillTW(tw, vocabApi, defaultQ) {
 	if (tw.q.mode == 'binary') {
 		if (tw.q.breaks.length != 1) {
 			tw.q.breaks = [1] // HARDCODED
-			tw.q.groupNames = ['Grade <1', 'Grade >=1']
+			tw.q.groupNames = ['No event' + (tw.term.values[not_tested_grade] ? ' / not tested' : ''), 'Has event']
 		}
 	}
 

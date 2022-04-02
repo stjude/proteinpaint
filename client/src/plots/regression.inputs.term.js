@@ -254,9 +254,9 @@ export class InputTerm {
 			)
 		}
 
-		if (data.lst) {
-			this.orderedLabels = data.orderedLabels
+		this.orderedLabels = data.orderedLabels
 
+		if (data.lst) {
 			// sepeate include and exclude categories based on term.values.uncomputable
 			const excluded_values = tw.term.values
 				? Object.entries(tw.term.values)
@@ -299,7 +299,7 @@ export class InputTerm {
 						' <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>'
 				)
 			} else if (tw.term.type == 'condition') {
-				this.termStatus.topInfoStatus.push('TODO condition status')
+				this.termStatus.topInfoStatus.push('Minimum grade to have event: ' + tw.term.values[tw.q.breaks[0]].label)
 			}
 
 			// update bottomSummaryStatus
