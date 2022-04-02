@@ -15,6 +15,38 @@
 <script>
 
 ///////////// helpers ////////////////////
+const snplstTerm = {
+	term:{
+		type:'snplst',
+		snps:[
+			{rsid:'rs1641548',effectAllele:'T'},
+			{rsid:'rs858528',effectAllele:'T'},
+			{rsid:'rs1642793',effectAllele:'C'},
+			{rsid:'rs1042522'},
+			{rsid:'rs1642782'},
+			{rsid:'rs6503048'},
+			// following snps are not in bcf file
+			{rsid:'rs1472752888',effectAllele:'T'}
+		],
+	},
+	q:{
+		alleleType:0,
+		geneticModel:0,
+		missingGenotype:0,
+		restrictAncestry:{
+			name:'African ancestry',
+			tvs: {
+				term: {
+					id: 'genetic_race',
+					type: 'categorical',
+					name: 'Genetically defined race'
+				},
+				values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+			}
+		},
+	}
+}
+
 const snplocusQ = {
 	chr:'chr17', start:7674304, stop:7676849,
 	alleleType:0,
@@ -499,40 +531,7 @@ makeURL([
 				chartType: 'regression',
 				regressionType: 'linear',
 				outcome: { id: 'LV_Ejection_Fraction_3D' },
-				independent: [
-					{
-						term:{
-							type:'snplst',
-							snps:[
-								{rsid:'rs1641548',effectAllele:'T'},
-								{rsid:'rs858528',effectAllele:'T'},
-								{rsid:'rs1642793',effectAllele:'C'},
-								{rsid:'rs1042522'},
-								{rsid:'rs1642782'},
-								{rsid:'rs6503048'},
-								// following snps are not in bcf file
-								{rsid:'rs1472752888',effectAllele:'T'}
-							],
-						},
-						q:{
-							alleleType:0,
-							geneticModel:0,
-							missingGenotype:0,
-							restrictAncestry:{
-								name:'African ancestry',
-								tvs: {
-									term: {
-										id: 'genetic_race',
-										type: 'categorical',
-										name: 'Genetically defined race'
-									},
-									values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
-								}
-							},
-						}
-					},
-					{ id: 'sex', refGrp:'2'}
-				]
+				independent: [ snplstTerm, { id: 'sex', refGrp:'2'} ]
 			} ]
 		})],
 
@@ -609,9 +608,7 @@ makeURL([
 				{
 					chartType: 'regression',
 					regressionType: 'logistic',
-					outcome: {
-						id: 'LV_Ejection_Fraction_3D',
-					},
+					outcome: { id: 'LV_Ejection_Fraction_3D', },
 					independent: [
 						{ id: "agedx"},
 						{ id: "diaggrp"}
@@ -670,6 +667,17 @@ makeURL([
 					}
 				]
 			}]
+		})],
+
+		['EF ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [ snplstTerm, { id: 'sex', refGrp:'2'} ]
+			} ]
 		})],
 
 		['EF ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
@@ -812,6 +820,17 @@ makeURL([
 			}]
 		})],
 
+		['Arrhythmias ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [{
+				chartType: 'regression',
+				regressionType: 'logistic',
+				outcome: { id: 'Arrhythmias' },
+				independent: [ snplstTerm, { id: 'sex', refGrp:'2'} ]
+			} ]
+		})],
+
 		['Arrhythmias ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
@@ -896,7 +915,53 @@ makeURL([
 					},
 				]
 			}]
-		})]
+		})],
+
+		['Cardio ~ sex*agedx', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'cox',
+				outcome: { id:'Cardiovascular System' },
+				independent:[
+					{ id:"sex", interactions:['agedx']},
+					{ id:"agedx", interactions:['sex']},
+				]
+			}]
+		})],
+
+		['Neuro ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [{
+				chartType: 'regression',
+				regressionType: 'cox',
+				outcome: { id: 'Neurology System' },
+				independent: [ snplstTerm, { id: 'sex', refGrp:'2'} ]
+			} ]
+		})],
+
+		['Neuro ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
+			genome: 'hg38',
+			dslabel: 'SJLife',
+			plots: [ {
+				chartType: 'regression',
+				regressionType: 'cox',
+				outcome: {
+					id: 'Neurology System',
+					q:{ breaks:[2],groupNames:['No condition / not tested','Has condition']},
+					refGrp:'No condition / not tested'
+				},
+				independent: [
+					{ id: 'sex', refGrp:'2'},
+					{
+						term:{ type:'snplocus', },
+						q: snplocusQ
+					}
+				]
+			} ]
+		})],
 	]
 },
 ]
