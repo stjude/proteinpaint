@@ -42,12 +42,12 @@ done
 #	usage
 #	exit 1
 #fi
-
 ################################
 # BUILD THE FULL TESTABLE IMAGE
 ################################
 
 ./build/full/build.sh -r $REV
+REV=$(cat tmppack/rev.txt)
 tar -C tmppack/ -xvf archive.tar build/gdc
 
 #####################
@@ -59,6 +59,6 @@ tar -C tmppack/ -xvf archive.tar build/gdc
 TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 
 # get the current tag
-TAG="$(node -p "require('./package.json').version")"
+#TAG="$(node -p "require('./package.json').version")"
 echo "building ppgdc:$REV image, package version=$TAG"
 docker build --file ./tmppack/build/gdc/Dockerfile --tag ppgdc:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .

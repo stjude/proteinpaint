@@ -39,13 +39,14 @@ REV=$(cat tmppack/rev.txt)
 cd tmppack
 
 # get the current tag
-TAG="$(node -p "require('./package.json').version")"
+#TAG="$(node -p "require('./package.json').version")"
+TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 echo "building ppbase:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile --target ppbase --tag ppbase:$REV .
+docker build --file ./build/Dockerfile --build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --target ppbase --tag ppbase:$REV .
 echo "building pprust:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile --target pprust --tag pprust:$REV .
+docker build --file ./build/Dockerfile --build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --target pprust --tag pprust:$REV .
 echo "generating a build with minimal package jsons"
-docker build --file ./build/Dockerfile --target ppminpkg --tag ppminpkg:$REV .
+docker build --file ./build/Dockerfile --build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --target ppminpkg --tag ppminpkg:$REV .
 
 echo "building ppfull:$REV image, package version=$TAG"
-docker build --file ./build/full/Dockerfile --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
+docker build --file ./build/full/Dockerfile --build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .

@@ -30,6 +30,7 @@ done
 ################################
 
 ./build/full/build.sh -r $REV
+REV=$(cat tmppack/rev.txt)
 tar -C tmppack/ -xvf archive.tar build/pp-dist
 
 #########################
