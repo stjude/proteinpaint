@@ -10,13 +10,23 @@ USAGE="Usage:
 	./build/full/build.sh [-r]
 
 	-r REV: git revision to checkout, if empty will use the current code state
+	-b BUILDARGS: build variables to pass to the Dockerfile that are not persisted to the built image
+	-c CROSSENV: cross-env options that used prior to npm install
 "
 
 REV=latest
-while getopts "r:h:" opt; do
+BUILDARGS=""
+CROSSENV=""
+while getopts "r:b:c:h:" opt; do
 	case "${opt}" in
 	r)
 		REV=${OPTARG}
+		;;
+	b)
+		BUILDARGS=${OPTARG}
+		;;
+	c)
+		CROSSENV=${OPTARG}	
 		;;
 	h)
 		echo $USAGE
@@ -42,11 +52,11 @@ cd tmppack
 #TAG="$(node -p "require('./package.json').version")"
 TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 echo "building ppbase:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile --build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --target ppbase --tag ppbase:$REV .
+docker build --file ./build/Dockerfile $BUILDARGS --target ppbase --tag ppbase:$REV .
 echo "building pprust:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile --build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --target pprust --tag pprust:$REV .
+docker build --file ./build/Dockerfile $BUILDARGS --target pprust --tag pprust:$REV .
 echo "generating a build with minimal package jsons"
-docker build --file ./build/Dockerfile --build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --target ppminpkg --tag ppminpkg:$REV .
+docker build --file ./build/Dockerfile $BUILDARGS --target ppminpkg --tag ppminpkg:$REV .
 
 echo "building ppfull:$REV image, package version=$TAG"
-docker build --file ./build/full/Dockerfile --build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
+docker build --file ./build/full/Dockerfile $BUILDARGS --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" .
