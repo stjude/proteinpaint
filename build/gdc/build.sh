@@ -43,10 +43,10 @@ done
 #	usage
 #	exit 1
 #fi
-
 ################################
 # BUILD THE FULL TESTABLE IMAGE
 ################################
+
 
 ./build/full/build.sh -r $REV \
 	-b "--build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128" \
