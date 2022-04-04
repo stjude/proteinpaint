@@ -49,8 +49,7 @@ done
 
 
 ./build/full/build.sh -r $REV \
-	-b "--build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128" \
-	-c "npx cross-env ELECTRON_GET_USE_PROXY=true GLOBAL_AGENT_HTTPS_PROXY=http://cloud-proxy:3128"
+	-b "--build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --build-arg ELECTRON_GET_USE_PROXY=true --build-arg GLOBAL_AGENT_HTTPS_PROXY=http://cloud-proxy:3128"
 
 tar -C tmppack/ -xvf archive.tar build/gdc
 

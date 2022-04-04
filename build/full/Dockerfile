@@ -13,8 +13,9 @@ FROM pprust:$IMGVER AS pppkg
 WORKDIR /home/root/pp
 COPY --from=ppminpkg /home/root/pp/tmppack /home/root/pp/tmppack
 WORKDIR /home/root/pp/tmppack
-ARG CROSSENV=""
-RUN $CROSSENV npm -D install --workspaces
+ARG ELECTRON_GET_USE_PROXY=false
+ARG GLOBAL_AGENT_HTTPS_PROXY=""
+RUN npm -D install --workspaces
 
 ADD . .
 RUN ./build/full/pack.sh
