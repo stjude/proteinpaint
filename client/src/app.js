@@ -411,9 +411,7 @@ function makeheader(app, obj, jwt) {
 				.html(
 					'<a href=https://docs.google.com/document/d/1JWKq3ScW62GISFGuJvAajXchcRenZ3HAvpaxILeGaw0/edit?usp=sharing target=_blank>All tutorials</a>'
 				)
-			div
-				.append('p')
-				.html('<a href=https://groups.google.com/forum/#!forum/genomepaint target=_blank>User community</a>')
+			div.append('p').html('<a href=https://groups.google.com/g/proteinpaint target=_blank>User community</a>')
 		})
 }
 
