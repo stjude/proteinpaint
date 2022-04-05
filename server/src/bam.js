@@ -2437,6 +2437,7 @@ if b.qual is available, set text color based on it
 				}
 			}
 		}
+		/*
 		// plot a black v line under each position
 		ctx.strokeStyle = insertion_vlinecolor
 		for (const x of xpos) {
@@ -2445,6 +2446,7 @@ if b.qual is available, set text color based on it
 			ctx.lineTo(x, group.canvasheight)
 			ctx.stroke()
 		}
+		*/
 	}
 
 	for (const template of templates) {
