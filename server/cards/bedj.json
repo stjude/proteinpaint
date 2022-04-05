@@ -207,6 +207,26 @@
                     "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.eqwpaqaeo973"
                 }
             ],
+            "arrowButtons": [
+                {
+                    "name": "Run track from URL",
+                    "message": "<p>Genes of interest may be filtered in either the JSON BED, RefGene, or both. Use ensembl IDs separated by a space to filter a JSON BED track. For RefGene, use NCBI ids. See the examples below of how to use the <span style='font-family: courier; display: inline-block; color:gray;font-size:16px;'>bedjfilterbyname</span> URL parameter in each case.</p>",
+                    "links": [
+                        {
+                            "name": "JSON BED only",
+                            "link": "https://proteinpaint.stjude.org/?genome=hg19&block=1&position=chr8:128538507-129301994&bedjfilterbyname=ENST00000377970%20ENST00000667305&bedjfile=demo,proteinpaint_demo/hg19/bedj/gencode.gz"
+                        },
+                        {
+                            "name": "RefGene only",
+                            "link": "https://proteinpaint.stjude.org/?genome=hg19&block=1&position=chr8:128538507-129301994&bedjfilterbyname=NM_001354870%20NR_003367"
+                        },
+                        {
+                            "name": "JSON BED & RefGene",
+                            "link": "https://proteinpaint.stjude.org/?genome=hg19&block=1&position=chr8:128538507-129301994&bedjfilterbyname=ENST00000377970%20ENST00000667305%20NM_001354870%20NR_003367&bedjfile=demo,proteinpaint_demo/hg19/bedj/gencode.gz"
+                        }
+                    ]
+                }
+            ],
             "testSpec": {
                 "expected": {"image": 1 }
             }

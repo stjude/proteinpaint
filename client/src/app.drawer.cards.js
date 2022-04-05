@@ -698,7 +698,7 @@ function makeArrowButtons(arrows, btns) {
 	if (arrows) {
 		arrows.forEach(arrow => {
 			const contents = `<div style="margin:10px;" class="sjpp-arrow-content">
-				${arrow.message ? `<div>${arrow.message}</div>` : ''}
+				${arrow.message ? `<div style="margin: 1vw;">${arrow.message}</div>` : ''}
 				${
 					arrow.links
 						? arrow.links
