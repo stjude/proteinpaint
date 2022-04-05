@@ -118,6 +118,8 @@ class TdbCumInc {
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			if (data.error) throw data.error
+			this.dom.chartsDiv.style('display', 'block')
+			this.dom.legendDiv.style('display', 'block')
 			this.dom.errDiv.style('display', 'none')
 			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.currData = this.processData(data)
@@ -261,7 +263,7 @@ function setRenderers(self) {
 				.style('margin', '10px')
 				.style('display', 'none')
 
-			// div for p-values
+			// p-values legend
 			if (self.tests) {
 				const pvaldiv = div
 					.select('.pp-cuminc-chartLegends')
@@ -271,7 +273,7 @@ function setRenderers(self) {
 				renderPvalues(pvaldiv, chart, self.tests, s)
 			}
 
-			// div for skipped series
+			// skipped series legend
 			if (self.skippedSeries) {
 				const skipdiv = div
 					.select('.pp-cuminc-chartLegends')
@@ -307,7 +309,13 @@ function setRenderers(self) {
 
 		renderSVG(div.select('svg'), chart, s, s.duration)
 
-		// div for p-values
+		// div for chart-specific legends
+		div
+			.select('.pp-cuminc-chartLegends')
+			.selectAll('*')
+			.remove()
+
+		// p-values legend
 		if (self.tests) {
 			const pvaldiv = div
 				.select('.pp-cuminc-chartLegends')
@@ -317,7 +325,7 @@ function setRenderers(self) {
 			renderPvalues(pvaldiv, chart, self.tests, s)
 		}
 
-		// div for skipped series
+		// skipped series legend
 		if (self.skippedSeries) {
 			const skipdiv = div
 				.select('.pp-cuminc-chartLegends')
