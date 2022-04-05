@@ -2524,10 +2524,19 @@ async function get_gene_models_refalt(block, tk, segstart, segstop, local_alignm
 		__isgene: true,
 		noNameHover: true
 	}
-	//console.log('args:', JSON.stringify(args))
+
+	{
+		// if the same gene tk is currently showing, apply its gene model filtering
+		const tk = block.tklst.find(i => i.name == args.name && i.type == 'bedj')
+		if (tk && tk.filterByName) {
+			args.filterByName = tk.filterByName
+		}
+	}
+
 	return await dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(args) })
 }
 
+// FIXME may combine with get_gene_models_refalt?
 async function get_gene_models_reads(block, ridx, segstart, segstop, local_alignment_width) {
 	const genetk = block.genome.tracks.find(i => i.__isgene)
 	const args = {
@@ -2552,7 +2561,13 @@ async function get_gene_models_reads(block, ridx, segstart, segstop, local_align
 		__isgene: true,
 		noNameHover: true
 	}
-	//console.log('args:', JSON.stringify(args))
+	{
+		// if the same gene tk is currently showing, apply its gene model filtering
+		const tk = block.tklst.find(i => i.name == args.name && i.type == 'bedj')
+		if (tk && tk.filterByName) {
+			args.filterByName = tk.filterByName
+		}
+	}
 	return await dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(args) })
 }
 
