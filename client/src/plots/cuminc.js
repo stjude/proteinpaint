@@ -10,6 +10,7 @@ import { rgb } from 'd3-color'
 import htmlLegend from '../html.legend'
 import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
+import { sayerror } from '../dom/error'
 
 class TdbCumInc {
 	constructor(opts) {
@@ -24,6 +25,7 @@ class TdbCumInc {
 			header: opts.header,
 			controls,
 			holder,
+			errDiv: holder.append('div').style('margin', '10px'),
 			chartsDiv: holder.append('div').style('margin', '10px'),
 			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
@@ -115,16 +117,23 @@ class TdbCumInc {
 
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			if (data.error) throw data.error
+			this.dom.errDiv.style('display', 'none')
 			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.currData = this.processData(data)
 			this.refs = data.refs
 			this.tests = data.tests
+			this.skippedSeries = data.skippedSeries
 			this.pj.refresh({ data: this.currData })
 			this.setTerm2Color(this.pj.tree.charts)
 			this.render()
 			this.legendRenderer(this.legendData)
 		} catch (e) {
-			throw e
+			this.dom.chartsDiv.style('display', 'none')
+			this.dom.legendDiv.style('display', 'none')
+			this.dom.errDiv.style('display', 'inline-block')
+			sayerror(this.dom.errDiv, 'Error: ' + (e.error || e))
+			console.error(e)
 		}
 	}
 
@@ -244,18 +253,32 @@ function setRenderers(self) {
 				.duration(s.duration)
 				.style('opacity', 1)
 
-			// p-value div
-			// will only display when self.tests is true
+			// div for chart-specific legends
 			div
 				.append('div')
-				.attr('class', 'pp-cuminc-pval')
-				.style('display', 'none')
+				.attr('class', 'pp-cuminc-chartLegends')
 				.style('vertical-align', 'top')
 				.style('margin', '10px')
+				.style('display', 'none')
 
+			// div for p-values
 			if (self.tests) {
-				const pvaldiv = div.select('.pp-cuminc-pval').style('display', 'inline-block')
+				const pvaldiv = div
+					.select('.pp-cuminc-chartLegends')
+					.style('display', 'inline-block')
+					.append('div')
+					.style('margin', '10px')
 				renderPvalues(pvaldiv, chart, self.tests, s)
+			}
+
+			// div for skipped series
+			if (self.skippedSeries) {
+				const skipdiv = div
+					.select('.pp-cuminc-chartLegends')
+					.style('display', 'inline-block')
+					.append('div')
+					.style('margin', '30px 10px')
+				renderSkippedSeries(skipdiv, chart, self.skippedSeries, s)
 			}
 		}
 	}
@@ -284,9 +307,24 @@ function setRenderers(self) {
 
 		renderSVG(div.select('svg'), chart, s, s.duration)
 
+		// div for p-values
 		if (self.tests) {
-			const pvaldiv = div.select('.pp-cuminc-pval').style('display', 'inline-block')
+			const pvaldiv = div
+				.select('.pp-cuminc-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+				.style('margin', '10px')
 			renderPvalues(pvaldiv, chart, self.tests, s)
+		}
+
+		// div for skipped series
+		if (self.skippedSeries) {
+			const skipdiv = div
+				.select('.pp-cuminc-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+				.style('margin', '30px 10px')
+			renderSkippedSeries(skipdiv, chart, self.skippedSeries, s)
 		}
 	}
 
@@ -338,7 +376,6 @@ function setRenderers(self) {
 			.style('padding-bottom', '5px')
 			.style('font-size', fontSize + 'px')
 			.style('font-weight', 'bold')
-			.style('text-align', 'center')
 			.text("Series comparisons (Gray's test)")
 
 		// table div
@@ -387,6 +424,34 @@ function setRenderers(self) {
 			.append('td')
 			.style('padding', '1px 8px 1px 2px')
 			.style('font-size', fontSize + 'px')
+			.text(d => d)
+	}
+
+	function renderSkippedSeries(skipdiv, chart, skippedSeries, s) {
+		const chartSkippedSeries = skippedSeries[chart.chartId]
+		const fontSize = s.axisTitleFontSize - 2
+
+		skipdiv.selectAll('*').remove()
+
+		// title div
+		skipdiv
+			.append('div')
+			.style('padding-bottom', '5px')
+			.style('font-size', fontSize + 'px')
+			.style('font-weight', 'bold')
+			.text('Skipped series (no events)')
+
+		// serieses div
+		const seriesesDiv = skipdiv
+			.append('div')
+			.style('padding-bottom', '5px')
+			.style('font-size', fontSize + 'px')
+
+		seriesesDiv
+			.selectAll('div')
+			.data(chartSkippedSeries)
+			.enter()
+			.append('div')
 			.text(d => d)
 	}
 

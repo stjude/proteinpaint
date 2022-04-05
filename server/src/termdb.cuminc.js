@@ -32,6 +32,15 @@ export async function get_incidence(q, ds) {
 			promises.push(
 				lines2R(path.join(serverconfig.binpath, 'utils/cuminc.R'), [JSON.stringify(data)]).then(Routput => {
 					const ci_data = JSON.parse(Routput[0])
+
+					if (!ci_data.estimates) {
+						// no cuminc estimates because
+						// all data serieses were skipped due to
+						// absence of any events
+						final_data.error = 'No events in data'
+						return
+					}
+
 					// for single series, R will convert an empty string key to '1', so convert back to empty string
 					if (Object.keys(ci_data.estimates).length == 1) {
 						ci_data.estimates[''] = ci_data.estimates['1']
@@ -53,6 +62,10 @@ export async function get_incidence(q, ds) {
 					if (ci_data.tests) {
 						if (!final_data.tests) final_data.tests = {}
 						final_data.tests[chartId] = ci_data.tests
+					}
+					if (ci_data.skippedSeries) {
+						if (!final_data.skippedSeries) final_data.skippedSeries = {}
+						final_data.skippedSeries[chartId] = ci_data.skippedSeries
 					}
 				})
 			)
