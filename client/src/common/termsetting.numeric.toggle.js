@@ -87,13 +87,7 @@ export async function getHandler(self) {
 		},
 
 		async showEditMenu(div) {
-			div.style('padding', '5px 10px')
-
-			const topBar = div.append('div').style('margin-left', '20px')
-			topBar
-				.append('div')
-				.style('display', 'inline-block')
-				.html('Use as')
+			div.style('padding', '10px')
 
 			for (const t of tabs) {
 				// reset the tracked state of each tab data on each call of showEditMenu();
@@ -103,8 +97,14 @@ export async function getHandler(self) {
 				t.active = self.q.mode == t.subType || (t.subType == 'continuous' && !self.q.mode)
 			}
 
-			const tabDiv = topBar.append('div').style('display', 'inline-block')
-			init_tabs({ holder: tabDiv, contentHolder: div.append('div'), tabs })
+			const topBar = div.append('div')
+			topBar.append('span').html('Use as&nbsp;')
+
+			init_tabs({
+				holder: topBar.append('div').style('display', 'inline-block'),
+				contentHolder: div.append('div'),
+				tabs
+			})
 		}
 	}
 }

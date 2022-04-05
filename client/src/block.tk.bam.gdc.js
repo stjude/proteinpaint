@@ -100,7 +100,30 @@ export async function bamsliceui(genomes, holder) {
 
 	// make ssm/gene tab
 	// returned div are used by searchSSM()
-	const [ssmGeneHolder, ssmTab, ssmDiv] = await makeGeneSearch()
+
+	const ssmGeneArg = {
+		holder: formdiv
+			.append('div')
+			.style('grid-column', 'span 2')
+			.style('padding', '3px 10px')
+			.style('display', 'none'),
+		tabs: [
+			{
+				width: 130,
+				label: 'Select SSM',
+				callback: () => {
+					gdc_args.useSsmOrGene = 'ssm'
+				}
+			},
+			{
+				label: 'Gene',
+				callback: () => {
+					gdc_args.useSsmOrGene = 'gene'
+				}
+			}
+		]
+	}
+	await makeGeneSearch()
 
 	// submit button
 	makeSubmit()
@@ -230,7 +253,7 @@ export async function bamsliceui(genomes, holder) {
 					baminfo_div.style('display', 'none')
 					saydiv.style('display', 'none')
 					gdcid_error_div.style('display', 'none')
-					ssmGeneHolder.style('display', 'none')
+					ssmGeneArg.holder.style('display', 'none')
 					return
 				}
 				// disable input field and show 'loading...' until response returned from gdc api
@@ -277,6 +300,7 @@ export async function bamsliceui(genomes, holder) {
 			} catch (e) {
 				show_input_check(gdcid_error_div, e.message || e)
 				baminfo_div.style('display', 'none')
+				ssmGeneArg.holder.style('display', 'none')
 			}
 		}
 		function update_singlefile_table(data, gdc_id) {
@@ -385,36 +409,17 @@ export async function bamsliceui(genomes, holder) {
 	}
 
 	async function makeGeneSearch() {
-		const holder = formdiv
-			.append('div')
-			.style('grid-column', 'span 2')
-			.style('padding', '3px 10px')
-			.style('display', 'none')
-
-		const tabOptions = {
-			holder,
-			tabs: [
-				{
-					width: 130,
-					label: 'Select SSM',
-					callback: () => {
-						gdc_args.useSsmOrGene = 'ssm'
-					}
-				},
-				{
-					label: 'Gene',
-					callback: () => {
-						gdc_args.useSsmOrGene = 'gene'
-					}
-				}
-			]
-		}
-
-		await init_tabs(tabOptions)
+		await init_tabs(ssmGeneArg)
 
 		// argument for making search box
 		// gene searchbox is created in 2nd tab holder
-		const geneHolder = tabOptions.tabs[1].holder.style('padding', '10px')
+		const geneHolder = ssmGeneArg.tabs[1].holder //.style('padding', '10px')
+		ssmGeneArg.noSsmMessageInGeneHolder = geneHolder
+			.append('div')
+			.text('No mutation found for this case.')
+			.style('margin-bottom', '10px')
+			.style('opacity', 0.4)
+			.style('display', 'none')
 		const opt = {
 			genome,
 			tip,
@@ -445,36 +450,39 @@ export async function bamsliceui(genomes, holder) {
 		gdc_args.coordInput = addGeneSearchbox(opt)
 		makeInstruction(geneHolder)
 
-		const ssmTab = tabOptions.tabs[0].tab
-		const ssmDiv = tabOptions.tabs[0].holder
+		ssmGeneArg.tabs[0].holder
 			.append('div')
 			.style('display', 'grid')
 			.style('grid-template-columns', 'repeat(auto-fit, 1fr)')
 			.style('overflow-y', 'auto')
 			.style('max-height', '30vw')
-		return [holder, ssmTab, ssmDiv]
 	}
 
 	async function searchSSM(case_id) {
 		// got case, turn on div and search for ssm
 		delete gdc_args.ssmInput
-		ssmGeneHolder.style('display', 'block')
-		ssmDiv.selectAll('*').remove()
-		ssmTab.text('Loading')
+		ssmGeneArg.holder.style('display', 'block')
+		ssmGeneArg.tabs[0].holder.selectAll('*').remove()
+		ssmGeneArg.tabs[0].tab.text('Loading')
 		const data = await dofetch3(`gdc_ssms?case_id=${case_id}&genome=${gdc_genome}`)
 		if (data.error) throw data.error
 		if (data.mlst.length == 0) {
 			// clear holder
-			ssmTab.text('No mutation')
+			ssmGeneArg.tabs[0].tab.text('No mutation')
+			ssmGeneArg.tabs[1].tab.node().click()
+			ssmGeneArg.tabHolder.style('display', 'none')
+			ssmGeneArg.noSsmMessageInGeneHolder.style('display', 'block')
 			return
 		}
 		// found ssms, display
-		ssmTab.text(`${data.mlst.length} mutation${data.mlst.length > 1 ? 's' : ''}`)
+		ssmGeneArg.tabHolder.style('display', 'block')
+		ssmGeneArg.noSsmMessageInGeneHolder.style('display', 'none')
+		ssmGeneArg.tabs[0].tab.text(`${data.mlst.length} mutation${data.mlst.length > 1 ? 's' : ''}`)
 
 		function addRow() {
 			// Creates the rows with the positions 'fixed'
 			// Use rows for event listeners
-			const row = ssmDiv
+			const row = ssmGeneArg.tabs[0].holder
 				.append('div')
 				.style('display', 'grid')
 				.style('grid-template-columns', '2vw minmax(8vw,10vw) minmax(10vw,15vw) minmax(10vw,15vw) minmax(10vw,15vw)')
@@ -594,9 +602,9 @@ export async function bamsliceui(genomes, holder) {
 
 function makeInstruction(d) {
 	d.append('div').style('opacity', 0.6).html(`<ul>
+		<li>Enter gene, position, SNP, or variant.</li>
 			<li>All positions are on hg38 and 1-based.</li>
-			<li>The BAM file will be sliced at the provided postion or variant and visualized.
-			To visualize reads from a new region, enter again from this form.</li>
+			<li>The BAM file will be sliced at the provided postion or variant and visualized.</li>
 		</ul>`)
 }
 

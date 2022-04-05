@@ -1,28 +1,32 @@
 /*
 ********************** EXPORTED
-init_tabs
-update_tabs
+init_tabs(opts)
+update_tabs(tabs)
 
 opts: {
 	holder,
-	contentHolder, (optional)
-	tabs
+	tabHolder,
+		d3 DOM created by this script
+	contentHolder,
+		optional; if not provided, create new under opts.holder
+	tabs[ tab{} ]
+		.label:
+			required
+		.callback()
+			optional
+		.width
+			optional tab width
+			TODO do not hardcode width, use auto width e.g. grid-template-columns='auto auto'
+		.tab, .holder
+			d3 DOM elements created by this script
 }
 
 Note: 
-- if everthing should be randered in single holder, supply just `holder`
+- newly created dom elements are attached to opts{} and tabs for exnternal code to access
+- if everthing should be rendered in single holder, supply just `holder`
 - if top tabs and div containing tab specific ui should be in different tabs, 
 	define them sepeartely as holder and contentholder
 
-tabs[ tab{} ]
-	.label:
-		required
-	.callback()
-		optional
-	.width
-		optional tab width
-	.tab, .holder
-		d3 DOM elements created by this script
 */
 
 const defaultTabWidth = 90
@@ -32,16 +36,18 @@ export async function init_tabs(opts) {
 	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
 
 	const tabs = opts.tabs
-	tabs.holder = opts.holder.append('div').style('padding', '10px')
+	opts.tabHolder = opts.holder.append('div') //.style('padding', '10px')
 
-	tabs.contentHolder = opts.contentHolder ? opts.contentHolder : opts.holder.append('div')
+	if (!opts.contentHolder) {
+		opts.contentHolder = opts.holder.append('div')
+	}
 
 	const has_active_tab = tabs.some(i => i.active)
 	if (!has_active_tab) tabs[0].active = true
 
 	for (const [i, tab] of tabs.entries()) {
 		const toggle_btn_class = i == 0 ? ' sj-left-toggle' : i < tabs.length - 1 ? ' sj-center-toggle' : ' sj-right-toggle'
-		tab.tab = tabs.holder
+		tab.tab = opts.tabHolder
 			.append('div')
 			.attr('class', 'sj-toggle-button' + toggle_btn_class)
 			.classed('active', tab.active ? true : false)
@@ -70,12 +76,11 @@ export async function init_tabs(opts) {
 			if (tab.callback) await tab.callback(tab.holder)
 		})
 
-		tab.holder = tabs.contentHolder
+		tab.holder = opts.contentHolder
 			.append('div')
 			.style('padding-top', '10px')
 			.style('margin-top', '10px')
 			.style('display', tab.active ? 'block' : 'none')
-			.style('border', '1px solid #eee')
 
 		if (tab.active) {
 			if (tab.callback) await tab.callback(tab.holder)
