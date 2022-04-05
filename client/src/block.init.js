@@ -118,7 +118,7 @@ function step1_findgm(paint, querystr) {
 
 		// if query string matches with an isoform
 		for (const m of paint.allmodels) {
-			if (m.isoform.toUpperCase() == querystr.toUpperCase()) {
+			if (m.isoform.toUpperCase() == (data.found_isoform ? data.found_isoform.toUpperCase() : querystr.toUpperCase())) {
 				// query string is an isoform
 				paint.model = m
 				step2_getseq(paint)
