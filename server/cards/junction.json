@@ -4,6 +4,12 @@
             "label": "A sample splice junction",
             "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionDemoData.tar.gz",
             "urlparam": "?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/junction/file.gz",
+                    "tabixQueryCoord": "chr17:7568451-7591984"
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -26,6 +32,12 @@
             "message": "",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionJsonDemoData.tar.gz",
             "urlparam": "?genome=hg19&block=1&mdsjunctionfile=Demo,proteinpaint_demo/hg19/junction/json.gz",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/junction/json.gz",
+                    "tabixQueryCoord": "chr17:7568451-7591984"
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "nobox": 1,
@@ -47,6 +59,12 @@
             "label":"Cohort from a JSON Matrix File",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/junction/junctionMatrixDemoData.tar.gz",
             "urlparam": "?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/junction/matrix.gz",
+                    "tabixQueryCoord": "chr17:7568451-7591984"
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "nobox": 1,

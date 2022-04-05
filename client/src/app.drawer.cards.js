@@ -698,7 +698,7 @@ function makeArrowButtons(arrows, btns) {
 	if (arrows) {
 		arrows.forEach(arrow => {
 			const contents = `<div style="margin:10px;" class="sjpp-arrow-content">
-				${arrow.message ? `<div>${arrow.message}</div>` : ''}
+				${arrow.message ? `<div style="margin: 1vw;">${arrow.message}</div>` : ''}
 				${
 					arrow.links
 						? arrow.links
@@ -762,13 +762,11 @@ function makeDataPreviewDiv(content, contLength, div, filename, message) {
 		.append('div')
 		.style('display', 'grid')
 		.style('grid-template-columns', '1fr')
-		.style('overflow', 'hidden')
 		.style('max-width', '80%')
 		.style('margin-left', '10px')
 		.style('border', '1px solid rgb(227, 227, 230)')
-		// .style('word-break', 'break-word')
 		.style('white-space', 'pre')
-		.style('overflow', 'scroll')
+		.style('overflow-x', 'scroll')
 		.style('opacity', '0.65')
 		.style('padding', '1vw')
 	content.forEach(c => {
