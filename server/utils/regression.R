@@ -67,7 +67,6 @@
 
 library(jsonlite)
 library(survival)
-source("server/utils/regression.utils.R")
 
 
 ################
@@ -80,6 +79,7 @@ infile <- args[1]
 
 # read in json input
 input <- fromJSON(infile)
+source(paste(input$metadata$binpath, "utils/regression.utils.R", sep = "/")) # regression utilities
 regtype <- input$metadata$type # regression type
 dat <- input$data # data table
 variables <- input$metadata$variables # variable metadata
