@@ -27,6 +27,8 @@ init_termdb_queries
 add description here or in termdb doc
 */
 
+const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
+
 export async function validate_ssm2canonicalisoform(api) {
 	if (!api.endpoint) throw '.endpoint missing from ssm2canonicalisoform'
 	if (!api.fields) throw '.fields[] missing from ssm2canonicalisoform'
@@ -1126,12 +1128,10 @@ export function handle_gdc_ssms(genomes) {
 				})
 			}
 
-			// allow alternative api host (as gdc docker)
-			const apihost = (process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov') + '/ssms'
-
 			const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 			const response = await got(
 				apihost +
+					'/ssms' +
 					'?size=1000&fields=' +
 					ssms_fields.join(',') +
 					'&filters=' +

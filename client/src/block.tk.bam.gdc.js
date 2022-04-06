@@ -289,7 +289,6 @@ export async function bamsliceui(genomes, holder) {
 				if (data.is_file_uuid || data.is_file_id) {
 					// matches with one bam file
 					// update file id to be supplied to gdc bam query
-					console.log(data)
 					update_singlefile_table(data, gdc_id)
 					show_input_check(gdcid_error_div)
 				} else if (data.is_case_uuid || data.is_case_id) {
@@ -686,7 +685,11 @@ function renderBamSlice(args, genome, holder) {
 			type: 'bam',
 			name: file.track_name || 'sample bam slice',
 			gdcToken: args.gdc_token,
-			gdcFileUUID: file.file_id,
+			gdcFile: {
+				uuid: file.file_id,
+				position: par.chr + '.' + par.start + '.' + par.stop
+			},
+			downloadgdc: true,
 			aboutThisFile: file.about
 		}
 		if (args.variant) {

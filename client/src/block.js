@@ -540,9 +540,10 @@ export class Block {
 			.style('display', 'none')
 			.text('Download GDC BAM slice')
 			.on('click', async () => {
-				const tk = this.tklst.find(i => i.type == 'bam' && i.isFileSlice)
+				const tk = this.tklst.find(i => i.type == 'bam' && i.gdcFile)
 				if (!tk) return
-				// TODO if there're multiple files, show a menu with one option for each. click an option to download that one
+				// TODO show menu options for multiple files
+				// FIXME how to pass token as http header?
 				const requestUrl = `tkbam?genome=${this.genome.name}&clientdownloadgdcslice=${tk.file}`
 				window.open(requestUrl, '_self', 'download')
 			})

@@ -28,6 +28,7 @@ tk.dom.variantg // if defined.
 ******* attributes ********
 
 tk.downloadgdc:true // Downloads bam file from gdc, single-use flag
+tk.gdcFileUUID: str // uuid of a bam file in gdc
 tk.gdcToken // gdc token string
 tk.variants[ {} ]
 	.chr/pos/ref/alt
@@ -217,32 +218,27 @@ async function getData(tk, block, additional = []) {
 		headers['X-Auth-Token'] = tk.gdcToken
 	}
 
-	if (tk.gdcFileUUID) {
-		/* ask backend to call gdc slicing api with this uuid
-		to slice the bam file
-		once sliced, the temp file name is stored at tk.file
-		*/
-		lst.push('gdcFileUUID=' + tk.gdcFileUUID)
-		delete tk.gdcFileUUID
-		tk.isFileSlice = true
+	if (tk.gdcFile) {
+		lst.push('gdcFileUUID=' + tk.gdcFile.uuid)
+		lst.push('gdcFilePosition=' + tk.gdcFile.position)
+	}
+
+	if (tk.downloadgdc) {
+		if (!tk.gdcFile) throw '.gdcFile{} missing'
+		// ask backend to call gdc slicing api to slice the uuid on this tk
+		delete tk.downloadgdc
 		tk.cloaktext.text('Downloading BAM slice ...')
 		const gdc_bam_files = await dofetch3('tkbam?downloadgdc=1&' + lst.join('&'), { headers })
 
 		if (gdc_bam_files.error) throw gdc_bam_files.error
 		if (!Array.isArray(gdc_bam_files) || gdc_bam_files.length == 0) throw 'invalid returned data'
 		// This will need to be changed to a loop when viewing multiple regions in the same sample
-		const { slicefilename, filesize } = gdc_bam_files[0]
+		const { filesize } = gdc_bam_files[0]
 		tk.cloaktext.text('BAM slice downloaded. File size: ' + filesize)
-		tk.file = slicefilename
 		block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
 		if (tk.aboutThisFile) {
 			tk.aboutThisFile.push({ k: 'Slice file size', v: filesize })
 		}
-	}
-
-	if (tk.isFileSlice) {
-		// tell backend this tk runs on a bam slice, it should look for the file in cache
-		lst.push('isFileSlice=1')
 	}
 
 	if (tk.variants) {
@@ -281,7 +277,12 @@ async function getData(tk, block, additional = []) {
 	if (tk.drop_pcrduplicates) lst.push('drop_pcrduplicates=1')
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
+
 	const data = await dofetch3('tkbam?' + lst.join('&'), { headers })
+
+	// reset text
+	tk.cloaktext.text('Loading ...')
+
 	if (tk.variants && !tk.alleleAlreadyUpdated) {
 		tk.variants[0].refseq = data.refseq
 		tk.variants[0].altseq = data.altseq
@@ -899,7 +900,7 @@ function update_box_stay(group, tk, block) {
 }
 
 function makeTk(tk, block) {
-	may_add_urlparameter(tk)
+	may_add_urlparameter(tk, block)
 
 	// if to hide PCR or optical duplicates
 	if (tk.drop_pcrduplicates == undefined) {
@@ -1000,7 +1001,7 @@ function makeTk(tk, block) {
 }
 
 // may add additional parameters from url that specifically apply to the bam track
-function may_add_urlparameter(tk) {
+function may_add_urlparameter(tk, block) {
 	const u2p = urlmap()
 
 	if (u2p.has('variant')) {
@@ -1053,7 +1054,12 @@ function may_add_urlparameter(tk) {
 		const [file, token] = str.split(',')
 		if (file && token) {
 			tk.gdcToken = token
-			tk.gdcFileUUID = file // single use attribute, will trigger slice download
+			const r = block.rglst[0]
+			tk.gdcFile = {
+				uuid: file,
+				position: r.chr + '.' + r.start + '.' + r.stop
+			}
+			tk.downloadgdc = true // single use
 		}
 	}
 }
@@ -1475,7 +1481,10 @@ async function align_reads_to_allele(tk, group, block) {
 	if (tk.file) alig_lst.push('file=' + tk.file)
 	if (tk.url) alig_lst.push('url=' + tk.url)
 	if (tk.indexURL) alig_lst.push('indexURL=' + tk.indexURL)
-	if (tk.isFileSlice) alig_lst.push('isFileSlice=1')
+	if (tk.gdcFile) {
+		alig_lst.push('gdcFileUUID=' + tk.gdcFile.uuid)
+		alig_lst.push('gdcFilePosition=' + tk.gdcFile.position)
+	}
 	alig_lst.push(
 		'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
 	)
@@ -1504,6 +1513,7 @@ async function align_reads_to_allele(tk, group, block) {
 		alig_lst.push('grouptype=' + group.data.type)
 	}
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	if (tk.gdcToken) headers['X-Auth-Token'] = tk.gdcToken
 	return await dofetch3('tkbam?' + alig_lst.join('&'), { headers })
 }
 
@@ -2467,6 +2477,7 @@ async function getReadInfo(tk, block, box, ridx) {
 		// reusable helper
 		const r = block.rglst[ridx]
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+		if (tk.gdcToken) headers['X-Auth-Token'] = tk.gdcToken
 		const lst = [
 			'getread=1',
 			'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
@@ -2475,7 +2486,10 @@ async function getReadInfo(tk, block, box, ridx) {
 			'start=' + r.start,
 			'stop=' + r.stop
 		]
-		if (tk.isFileSlice) lst.push('isFileSlice=1')
+		if (tk.gdcFile) {
+			lst.push('gdcFileUUID=' + tk.gdcFile.uuid)
+			lst.push('gdcFilePosition=' + tk.gdcFile.position)
+		}
 		if (tk.nochr) lst.push('nochr=1')
 		if (tk.file) lst.push('file=' + tk.file)
 		if (tk.url) lst.push('url=' + tk.url)

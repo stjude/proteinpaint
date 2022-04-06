@@ -238,14 +238,28 @@ const readpanel_DN_maxlength = 20 // Variable to define whether a deletion is re
 
 const bases = new Set(['A', 'T', 'C', 'G'])
 
+const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
+const gdcHashSecret = Math.random.toString()
+
 module.exports = genomes => {
 	return async (req, res) => {
 		try {
+			delete req.query.isFileSlice
+
+			if (req.query.gdcFileUUID) {
+				await gdcCheckPermission(req.query.gdcFileUUID, req.get('x-auth-token'))
+				// authorized
+				req.query.file = getGDCcacheFileName(req)
+				req.query.isFileSlice = true
+			}
+
 			if (req.query.downloadgdc) {
 				res.send(await download_gdc_bam(req))
 				return
 			}
+
 			if (req.query.clientdownloadgdcslice) {
+				// TODO prevent unathorized download
 				if (app.illegalpath(req.query.clientdownloadgdcslice)) throw 'illegal file path'
 				const file = path.join(serverconfig.cachedir_bam, req.query.clientdownloadgdcslice)
 				const data = await fs.promises.readFile(file)
@@ -2973,34 +2987,56 @@ async function convertread2html(seg, genome, query) {
 
 /////////////////////// gdc slicing ///////////////////////
 
+function getGDCcacheFileName(req) {
+	const md5Hasher = crypto.createHmac('md5', gdcHashSecret)
+	return (
+		md5Hasher.update(req.get('x-auth-token') + req.query.gdcFileUUID + req.query.gdcFilePosition).digest('hex') + '.bam'
+	)
+}
+
 async function download_gdc_bam(req) {
 	// query gdc bam slicing api using the uuid of one bam file
 	// download one bam slice for each region
 	const gdc_bam_filenames = []
 	for (const r of JSON.parse(req.query.regions)) {
-		const gdc_token = req.get('x-auth-token')
-		const md5Hasher = crypto.createHmac('md5', Math.random().toString())
-		// slicefilename is not full path; full path is not revealed to client
-		const slicefilename = md5Hasher.update(gdc_token).digest('hex') + '.bam'
-		const filesize = await get_gdc_bam(r.chr, r.start, r.stop, gdc_token, req.query.gdcFileUUID, slicefilename)
-		gdc_bam_filenames.push({ slicefilename, filesize })
+		const filesize = await get_gdc_bam(
+			r.chr,
+			r.start,
+			r.stop,
+			req.get('x-auth-token'),
+			req.query.gdcFileUUID,
+			getGDCcacheFileName(req)
+		)
+		gdc_bam_filenames.push({ filesize })
 	}
 	return gdc_bam_filenames
 }
+
+async function gdcCheckPermission(gdcFileUUID, token) {
+	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	headers['X-Auth-Token'] = token
+	// later replace with a new route dedicated for permission check
+	const url = apihost + '/slicing/view/' + gdcFileUUID + '?region=chr1:1-2'
+	try {
+		await got(url, { method: 'GET', headers })
+	} catch (e) {
+		// TODO be able to detect error code 401, 403 etc
+		throw 'Permission denied'
+	}
+}
+
 async function get_gdc_bam(chr, start, stop, token, gdcFileUUID, bamfilename) {
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	headers['X-Auth-Token'] = token
 	const fullpath = path.join(serverconfig.cachedir_bam, bamfilename)
-	const url = 'https://api.gdc.cancer.gov/slicing/view/' + gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop
+	const url = apihost + '/slicing/view/' + gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop
 	try {
 		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(fullpath))
 		await index_bam(fullpath)
 		const s = await fs.promises.stat(fullpath)
 		return bplen(s.size, true)
 	} catch (error) {
-		console.log(error)
-		console.log('Cannot retrieve bam file')
-		throw 'Cannot retrieve bam file: ' + error
+		throw 'Permission denied'
 	}
 }
 
