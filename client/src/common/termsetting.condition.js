@@ -411,8 +411,9 @@ export function fillTW(tw, vocabApi, defaultQ) {
 
 	if (tw.q.breaks.length >= cutoffGrades.length) throw 'too many values from tw.q.breaks[]'
 
-	if (tw.q.timeScale) {
-		// TODO change year to time2event
+	if (tw.q.type == 'time2event') {
+		if (!tw.q.timeScale) tw.q.timeScale = 'year'
 		if (!['age', 'year'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
+		// TODO change year to time2event
 	}
 }

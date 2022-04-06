@@ -950,9 +950,7 @@ makeURL([
 				chartType: 'regression',
 				regressionType: 'cox',
 				outcome: {
-					id: 'Neurology System',
-					q:{ breaks:[2],groupNames:['No condition / not tested','Has condition']},
-					refGrp:'No condition / not tested'
+					id: 'Neurology System', q:{ breaks:[2]},
 				},
 				independent: [
 					{ id: 'sex', refGrp:'2'},
@@ -970,7 +968,10 @@ makeURL([
 			plots:[{
 				chartType: 'regression',
 				regressionType: 'cox',
-				outcome: { id: 'Cardiomyopathy' },
+				outcome: {
+					id: 'Cardiomyopathy',
+					q:{timeScale:'age'}
+				},
 				independent: [
 					{id:'anthracyclines_cog_5',q:{
 						mode:'discrete',type:'custom-bin',lst:[
