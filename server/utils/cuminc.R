@@ -6,9 +6,10 @@
 # Usage #
 #########
 
-# Usage: Rscript cuminc.R < jsonIn > jsonOut
+# Usage: Rscript cuminc.R in.json > results
 
-# Input data is streamed as JSON from standard input and cumulative incidence results are streamed as JSON to standard output.
+# Input data is in JSON format and is read in from <in.json> file.
+# Cuminc results are written in JSON format to stdout.
 
 # Input JSON specifications:
 # [
@@ -61,11 +62,12 @@ compute_ci <- function(res) {
 }
 
 # read in data
-con <- file("stdin","r")
-dat <- stream_in(con, verbose = F)
+args <- commandArgs(trailingOnly = T)
+if (length(args) != 1) stop("Usage: Rscript cuminc.R in.json > results")
+infile <- args[1]
+dat <- fromJSON(infile)
 
-# discard any series that have no events
-# keep track of which series are discarded
+# skip any series that has no events
 toKeep <- vector(mode = "character")
 toSkip <- vector(mode = "character")
 for (series in unique(dat$series)) {
@@ -77,14 +79,14 @@ for (series in unique(dat$series)) {
 }
 dat <- dat[dat$series %in% toKeep,]
 
+# record in results which series are skipped
 out <- list()
 if (length(toSkip) > 0) out[["skippedSeries"]] <- toSkip
 if (nrow(dat) == 0) {
   # if all series are skipped, then
   # output the set of skipped series and
-  # quit the R session
+  # end the analysis
   cat(toJSON(out, digits = NA, na = "string"), file = "", sep = "")
-  close(con)
   quit(save = "no")
 }
 
@@ -97,7 +99,7 @@ if (length(levels(dat$series)) == 1) {
   res <- cuminc(ftime = dat$time, fstatus = dat$event, cencode = 0)
   seriesRes <- as.data.frame(res[[1]])
   seriesRes <- compute_ci(seriesRes)
-  out$estimates[[""]] <- seriesRes
+  out$estimates[[levels(dat$series)[1]]] <- seriesRes
 } else {
   # multiple series
   # compute cumulative incidence for each pairwise combination of series
@@ -126,5 +128,3 @@ if (length(levels(dat$series)) == 1) {
 
 # output results in json format
 cat(toJSON(out, digits = NA, na = "string"), file = "", sep = "")
-
-close(con)

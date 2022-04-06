@@ -27,7 +27,8 @@ class TdbCumInc {
 			holder,
 			errDiv: holder.append('div').style('margin', '10px'),
 			chartsDiv: holder.append('div').style('margin', '10px'),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
+			skippedChartsDiv: holder.append('div').style('margin', '5px 5px 25px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Cumulative Incidence Plot')
 		// hardcode for now, but may be set as option later
@@ -117,7 +118,11 @@ class TdbCumInc {
 
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
-			if (data.error) throw data.error
+			if (data.case.length === 0) {
+				// the case data is empty here if every data series in
+				// every chart was skipped due to absence of events
+				throw 'no events found in the dataset'
+			}
 			this.dom.chartsDiv.style('display', 'block')
 			this.dom.legendDiv.style('display', 'block')
 			this.dom.errDiv.style('display', 'none')
@@ -126,15 +131,21 @@ class TdbCumInc {
 			this.refs = data.refs
 			this.tests = data.tests
 			this.skippedSeries = data.skippedSeries
+			this.skippedCharts = data.skippedCharts
 			this.pj.refresh({ data: this.currData })
 			this.setTerm2Color(this.pj.tree.charts)
 			this.render()
 			this.legendRenderer(this.legendData)
+			if (this.skippedCharts && this.skippedCharts.length > 0) {
+				this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
+			} else {
+				this.dom.skippedChartsDiv.style('display', 'none')
+			}
 		} catch (e) {
 			this.dom.chartsDiv.style('display', 'none')
 			this.dom.legendDiv.style('display', 'none')
 			this.dom.errDiv.style('display', 'inline-block')
-			sayerror(this.dom.errDiv, 'Error: ' + (e.error || e))
+			sayerror(this.dom.errDiv, 'Error: ' + e)
 			console.error(e)
 		}
 	}
@@ -264,23 +275,23 @@ function setRenderers(self) {
 				.style('display', 'none')
 
 			// p-values legend
-			if (self.tests) {
+			if (self.tests && chart.chartId in self.tests) {
 				const pvaldiv = div
 					.select('.pp-cuminc-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
 					.style('margin', '10px')
-				renderPvalues(pvaldiv, chart, self.tests, s)
+				renderPvalues(pvaldiv, chart, self.tests[chart.chartId], s)
 			}
 
 			// skipped series legend
-			if (self.skippedSeries) {
+			if (self.skippedSeries && chart.chartId in self.skippedSeries) {
 				const skipdiv = div
 					.select('.pp-cuminc-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
 					.style('margin', '30px 10px')
-				renderSkippedSeries(skipdiv, chart, self.skippedSeries, s)
+				renderSkippedSeries(skipdiv, self.skippedSeries[chart.chartId], s)
 			}
 		}
 	}
@@ -316,24 +327,46 @@ function setRenderers(self) {
 			.remove()
 
 		// p-values legend
-		if (self.tests) {
+		if (self.tests && chart.chartId in self.tests) {
 			const pvaldiv = div
 				.select('.pp-cuminc-chartLegends')
 				.style('display', 'inline-block')
 				.append('div')
 				.style('margin', '10px')
-			renderPvalues(pvaldiv, chart, self.tests, s)
+			renderPvalues(pvaldiv, chart, self.tests[chart.chartId], s)
 		}
 
 		// skipped series legend
-		if (self.skippedSeries) {
+		if (self.skippedSeries && chart.chartId in self.skippedSeries) {
 			const skipdiv = div
 				.select('.pp-cuminc-chartLegends')
 				.style('display', 'inline-block')
 				.append('div')
 				.style('margin', '30px 10px')
-			renderSkippedSeries(skipdiv, chart, self.skippedSeries, s)
+			renderSkippedSeries(skipdiv, self.skippedSeries[chart.chartId], s)
 		}
+	}
+
+	self.renderSkippedCharts = function(div, skippedCharts) {
+		div.selectAll('*').remove()
+
+		// title div
+		div
+			.append('div')
+			.style('font-weight', 'bold')
+			.style('margin-left', '15px')
+			.style('padding-bottom', '2px')
+			.text('Skipped charts (no events)')
+
+		// charts div
+		const chartsDiv = div.append('div').style('margin-left', '15px')
+
+		chartsDiv
+			.selectAll('div')
+			.data(skippedCharts)
+			.enter()
+			.append('div')
+			.text(d => d)
 	}
 
 	function renderSVG(svg, chart, s, duration) {
@@ -372,7 +405,6 @@ function setRenderers(self) {
 	}
 
 	function renderPvalues(pvaldiv, chart, tests, s) {
-		const chartTests = tests[chart.chartId]
 		const fontSize = s.axisTitleFontSize - 2
 		const maxPvalsToShow = 10
 
@@ -390,7 +422,7 @@ function setRenderers(self) {
 		// need separate divs for title and table
 		// to support table scrolling
 		const tablediv = pvaldiv.append('div').style('border', '1px solid #ccc')
-		if (chartTests.length > maxPvalsToShow) {
+		if (tests.length > maxPvalsToShow) {
 			tablediv.style('overflow', 'auto').style('height', '220px')
 		}
 
@@ -417,7 +449,7 @@ function setRenderers(self) {
 		const tbody = table.append('tbody')
 		const tr = tbody
 			.selectAll('tr')
-			.data(chartTests.sort((a, b) => a.pvalue - b.pvalue))
+			.data(tests.sort((a, b) => a.pvalue - b.pvalue))
 			.enter()
 			.append('tr')
 
@@ -435,8 +467,7 @@ function setRenderers(self) {
 			.text(d => d)
 	}
 
-	function renderSkippedSeries(skipdiv, chart, skippedSeries, s) {
-		const chartSkippedSeries = skippedSeries[chart.chartId]
+	function renderSkippedSeries(skipdiv, skippedSeries, s) {
 		const fontSize = s.axisTitleFontSize - 2
 
 		skipdiv.selectAll('*').remove()
@@ -457,7 +488,7 @@ function setRenderers(self) {
 
 		seriesesDiv
 			.selectAll('div')
-			.data(chartSkippedSeries)
+			.data(skippedSeries)
 			.enter()
 			.append('div')
 			.text(d => d)
