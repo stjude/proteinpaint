@@ -172,7 +172,7 @@ function checkTwAncestryRestriction(tw, q, ds) {
 
 function makeRinput(q, sampledata) {
 	// build R metadata
-	const metadata = { type: q.regressionType }
+	const metadata = { type: q.regressionType, binpath: serverconfig.binpath }
 	const variables = [] // [ {outcome}, {ind1}, {ind2}, ...]
 
 	// outcome variable
