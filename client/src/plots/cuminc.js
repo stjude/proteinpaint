@@ -730,7 +730,7 @@ export async function getPlotConfig(opts, app) {
 	} catch (e) {
 		throw `${e} [cuminc getPlotConfig()]`
 	}
-
+	const h = opts.term2?.q.hiddenValues || {}
 	const config = {
 		id: opts.term.term.id,
 		settings: {
@@ -761,7 +761,11 @@ export async function getPlotConfig(opts, app) {
 					bottom: 50
 				},
 				axisTitleFontSize: 16,
-				hidden: []
+				// assumes that hidden values are only from the overlay term
+				// TODO: what about term0? may need to use term[0,2].q.hiddenValues directly
+				hidden: Object.keys(h)
+					.filter(k => !h[k])
+					.map(k => opts.term2.term.values[k].label)
 			}
 		}
 	}
