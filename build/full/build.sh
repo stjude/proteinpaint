@@ -59,4 +59,4 @@ echo "generating a build with minimal package jsons"
 docker build --file ./build/Dockerfile $BUILDARGS --target ppminpkg --tag ppminpkg:$REV .
 
 echo "building ppfull:$REV image, package version=$TAG"
-docker build --file ./build/full/Dockerfile $BUILDARGS --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" .
+docker build --file ./build/full/Dockerfile $BUILDARGS --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" .

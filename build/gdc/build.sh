@@ -64,5 +64,5 @@ TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 # get the current tag
 #TAG="$(node -p "require('./package.json').version")"
 REV=$(cat tmppack/rev.txt)
-echo "building ppgdc:$REV image, package version=$TAG, docker tag=$DOCKER_TAG"
-docker build --file ./tmppack/build/gdc/Dockerfile --tag $DOCKER_TAG --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
+echo "building ppgdc:$DOCKER_TAG image, package version=$TAG, REV=$REV"
+docker build --file ./tmppack/build/gdc/Dockerfile --tag ppgdc:$DOCKER_TAG --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
