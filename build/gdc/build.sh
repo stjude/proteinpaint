@@ -19,6 +19,7 @@ usage() {
 
 REV=latest
 TPDIR=''
+DOCKER_TAG=$REV
 while getopts "t:r:h:d:" opt; do
 	case "${opt}" in
 	t) 
@@ -46,8 +47,10 @@ done
 # BUILD THE FULL TESTABLE IMAGE
 ################################
 
-./build/full/build.sh -r $REV
-REV=$(cat tmppack/rev.txt)
+
+./build/full/build.sh -r $REV \
+	-b "--build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --build-arg ELECTRON_GET_USE_PROXY=true --build-arg GLOBAL_AGENT_HTTPS_PROXY=http://cloud-proxy:3128"
+
 tar -C tmppack/ -xvf archive.tar build/gdc
 
 #####################
@@ -60,5 +63,6 @@ TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 
 # get the current tag
 #TAG="$(node -p "require('./package.json').version")"
-echo "building ppgdc:$REV image, package version=$TAG"
-docker build --file ./tmppack/build/gdc/Dockerfile --tag ppgdc:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
+REV=$(cat tmppack/rev.txt)
+echo "building ppgdc:$REV image, package version=$TAG, docker tag=$DOCKER_TAG"
+docker build --file ./tmppack/build/gdc/Dockerfile --tag $DOCKER_TAG --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
