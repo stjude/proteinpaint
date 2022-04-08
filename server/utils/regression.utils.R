@@ -88,8 +88,11 @@ buildFormulas <- function(variables) {
   # first collect outcome, independent, spline, and interacting
   # variables and format them for formula construction
   # set aside snplocus snps to be handled separately
-  independentIds <- vector(mode = "character")
-  interactions <- vector(mode = "character")
+  outcomeIds <- vector(mode = "character") # ids of outcome variables
+  outcome <- vector(mode = "character") # ids of outcome variables formatted for formula
+  independentIds <- vector(mode = "character") # ids of independent variables
+  independents <- vector(mode = "character") # ids of independent variables formatted for formula
+  interactions <- vector(mode = "character") # ids of interacting variables formatted for formula
   snpLocusSnps <- variables[0,]
   splineVariables <- variables[0,]
   for (r in 1:nrow(variables)) {
@@ -106,22 +109,26 @@ buildFormulas <- function(variables) {
         if (variable$timeToEvent$timeScale == "year") {
           outcomeTimeId <- variable$timeToEvent$timeId
           outcome <- paste0("Surv(",outcomeTimeId,", ",outcomeEventId,")")
+          outcomeIds <- c(outcomeIds, outcomeTimeId, outcomeEventId)
         } else if (variable$timeToEvent$timeScale == "age") {
           outcomeAgeStartId <- variable$timeToEvent$agestartId
           outcomeAgeEndId <- variable$timeToEvent$ageendId
           outcome <- paste0("Surv(",outcomeAgeStartId,", ",outcomeAgeEndId,", ",outcomeEventId,")")
+          outcomeIds <- c(outcomeIds, outcomeAgeStartId, outcomeAgeEndId, outcomeEventId)
         } else {
           stop ("unknown cox regression time scale")
         }
       } else {
         outcome <- variable$id
+        outcomeIds <- c(outcomeIds, variable$id)
       }
       next
     } else if (variable$type == "spline") {
       # cubic spline variable
       # use call to cubic spline function in regression formula
+      independentIds <- c(independentIds, variable$id)
       splineCmd <- paste0("cubic_spline(", variable$id, ", ", paste0("c(", paste(variable$spline$knots[[1]],collapse = ","), ")"), ")")
-      independentIds <- c(independentIds, splineCmd)
+      independents <- c(independents, splineCmd)
       splineVariables <- rbind(splineVariables, variable)
     } else if (variable$type == "snplocus") {
       # snplocus snp
@@ -131,6 +138,7 @@ buildFormulas <- function(variables) {
     } else {
       # other independent variable
       independentIds <- c(independentIds, variable$id)
+      independents <- c(independents, variable$id)
     }
     if (length(variable$interactions[[1]]) > 0) {
       # interactions
@@ -155,10 +163,12 @@ buildFormulas <- function(variables) {
     # snplocus snps present
     # build separate formula for each snplocus snp
     tempIndependentIds <- vector(mode = "character")
+    tempIndependents <- vector(mode = "character")
     tempInteractions <- vector(mode = "character")
     for (r in 1:nrow(snpLocusSnps)) {
       snp <- snpLocusSnps[r,]
       tempIndependentIds <- c(independentIds, snp$id)
+      tempIndependents <- c(independents, snp$id)
       if (length(snp$interactions[[1]]) > 0) {
         # interactions
         interactionIds <- snp$interactions[[1]]
@@ -171,23 +181,30 @@ buildFormulas <- function(variables) {
           }
         }
       }
-      formula <- as.formula(paste(outcome, paste(c(tempIndependentIds, tempInteractions), collapse = "+"), sep = "~"))
-      formulas[[length(formulas)+1]] <- list("id" = snp$id, "formula" = formula)
+      formula <- as.formula(paste(outcome, paste(c(tempIndependents, tempInteractions), collapse = "+"), sep = "~"))
+      entry <- length(formulas) + 1
+      formulas[[entry]] <- list("id" = snp$id, "formula" = formula, "outcomeIds" = outcomeIds, "independentIds" = tempIndependentIds)
+      if (nrow(splineVariables) > 0) {
+        formulas[[entry]][["splineVariables"]] = splineVariables
+      }
     }
   } else {
     # no snplocus snps
     # use single formula for all variables
-    formula <- as.formula(paste(outcome, paste(c(independentIds, interactions), collapse = "+"), sep = "~"))
-    formulas[[length(formulas)+1]] <- list("id" = "", "formula" = formula)
+    formula <- as.formula(paste(outcome, paste(c(independents, interactions), collapse = "+"), sep = "~"))
+    formulas[[1]] <- list("id" = "", "formula" = formula, "outcomeIds" = outcomeIds, "independentIds" = independentIds)
+    if (nrow(splineVariables) > 0) {
+      formulas[[1]][["splineVariables"]] = splineVariables
+    }
   }
-  return(list("formulas" = formulas, "splineVariables" = splineVariables))
+  return(formulas)
 }
 
 # linear regression
-linearRegression <- function(formula, dat, outcome, splineVariables) {
-  res <- lm(formula, data = dat, na.action = na.omit)
+linearRegression <- function(formula, fdat, outcome, splineVariables) {
+  res <- lm(formula, data = fdat, na.action = na.omit)
   sampleSize <- res$df.residual + length(res$coefficients[!is.na(res$coefficients)])
-  if (nrow(splineVariables) > 0) {
+  if (!is.null(splineVariables)) {
     # model contains spline variables(s)
     # plot spline regression for each spline term
     # do not plot if term is missing plot file (to hide plot
@@ -195,7 +212,7 @@ linearRegression <- function(formula, dat, outcome, splineVariables) {
     for (r in 1:nrow(splineVariables)) {
       splineVariable <- splineVariables[r,]
       if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, dat, outcome, res, "linear")
+        plot_spline(splineVariable, fdat, outcome, res, "linear")
       }
     }
   }
@@ -233,10 +250,10 @@ linearRegression <- function(formula, dat, outcome, splineVariables) {
 }
 
 # logistic regression
-logisticRegression <- function(formula, dat, outcome, splineVariables) {
-  res <- glm(formula, family = binomial(link='logit'), data = dat, na.action = na.omit)
+logisticRegression <- function(formula, fdat, outcome, splineVariables) {
+  res <- glm(formula, family = binomial(link='logit'), data = fdat, na.action = na.omit)
   sampleSize <- res$df.residual + length(res$coefficients[!is.na(res$coefficients)])
-  if (nrow(splineVariables) > 0) {
+  if (!is.null(splineVariables)) {
     # model contains spline variables(s)
     # plot spline regression for each spline term
     # do not plot if term is missing plot file (to hide plot
@@ -244,7 +261,7 @@ logisticRegression <- function(formula, dat, outcome, splineVariables) {
     for (r in 1:nrow(splineVariables)) {
       splineVariable <- splineVariables[r,]
       if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, dat, outcome, res, "logistic")
+        plot_spline(splineVariable, fdat, outcome, res, "logistic")
       }
     }
   }
@@ -277,11 +294,11 @@ logisticRegression <- function(formula, dat, outcome, splineVariables) {
 }
 
 # cox regression
-coxRegression <- function(formula, dat, outcome, splineVariables) {
-  res <- coxph(formula, data = dat)
+coxRegression <- function(formula, fdat, outcome, splineVariables) {  
+  res <- coxph(formula, data = fdat, na.action = na.omit)
   
   # check for spline variables
-  if (nrow(splineVariables) > 0) {
+  if (!is.null(splineVariables)) {
     # model contains spline variables(s)
     # plot spline regression for each spline term
     # do not plot if term is missing plot file (to hide plot
@@ -289,7 +306,7 @@ coxRegression <- function(formula, dat, outcome, splineVariables) {
     for (r in 1:nrow(splineVariables)) {
       splineVariable <- splineVariables[r,]
       if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, dat, outcome, res, "logistic")
+        plot_spline(splineVariable, fdat, outcome, res, "logistic")
       }
     }
   }
@@ -341,7 +358,7 @@ coxRegression <- function(formula, dat, outcome, splineVariables) {
 }
 
 # run regression analysis
-runRegression <- function(regtype, formula, dat, outcome, splineVariables) {
+runRegression <- function(regtype, formula, fdat, outcome, splineVariables = NULL) {
   warns <- vector(mode = "character")
   handleWarns <- function(w) {
     # handler for warning messages
@@ -349,11 +366,11 @@ runRegression <- function(regtype, formula, dat, outcome, splineVariables) {
     invokeRestart("muffleWarning")
   }
   if (regtype == "linear") {
-    results <- withCallingHandlers(linearRegression(formula, dat, outcome, splineVariables), warning = handleWarns)
+    results <- withCallingHandlers(linearRegression(formula, fdat, outcome, splineVariables), warning = handleWarns)
   } else if (regtype == "logistic") {
-    results <- withCallingHandlers(logisticRegression(formula, dat, outcome, splineVariables), warning = handleWarns)
+    results <- withCallingHandlers(logisticRegression(formula, fdat, outcome, splineVariables), warning = handleWarns)
   } else if (regtype == "cox") {
-    results <- withCallingHandlers(coxRegression(formula, dat, outcome, splineVariables), warning = handleWarns)
+    results <- withCallingHandlers(coxRegression(formula, fdat, outcome, splineVariables), warning = handleWarns)
   } else {
     stop("unknown regression type")
   }
@@ -362,29 +379,29 @@ runRegression <- function(regtype, formula, dat, outcome, splineVariables) {
 }
 
 # generate cubic spline plot spline
-plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
+plot_spline <- function(splineVariable, fdat, outcome, res, regtype) {
   ## prepare test data
   sampleSize <- 1000
   # newdat: test data table for predicting model outcome values
   # columns are all independent variables
   # for spline variables, use regularly spaced data; for continuous variables, use data median; for categorical variables, use reference category
-  newdat <- dat[1:sampleSize, -1, drop = F]
+  newdat <- fdat[1:sampleSize, -1, drop = F]
   # newdat2: test data table for adjusting model outcome values
   # columns are the proportions and effect sizes of non-reference categorical coefficients 
   newdat2 <- matrix(data = NA, nrow = 0, ncol = 2, dimnames = list(c(),c("prop", "effectSize")))
   # populate the test data tables
   for (term in colnames(newdat)) {
     if (term == splineVariable$id) {
-      newdat[,term] <- seq(from = min(dat[,term]), to = max(dat[,term]), length.out = sampleSize)
-    } else if (is.factor(dat[,term])) {
-      ref <- levels(dat[,term])[1]
+      newdat[,term] <- seq(from = min(fdat[,term]), to = max(fdat[,term]), length.out = sampleSize)
+    } else if (is.factor(fdat[,term])) {
+      ref <- levels(fdat[,term])[1]
       newdat[,term] <- ref
-      props <- table(dat[,term], exclude = ref)/length(dat[,term])
+      props <- table(fdat[,term], exclude = ref)/length(fdat[,term])
       for (category in names(props)) {
         newdat2 <- rbind(newdat2, c(props[category], res$coefficients[paste0(term,category)]))
       }
     } else {
-      newdat[,term] <- median(dat[,term])
+      newdat[,term] <- median(fdat[,term])
     }
   }
   
@@ -415,8 +432,8 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
   png(filename = plotfile, width = 950, height = 550, res = 200)
   par(mar = c(3, 2.5, 1, 5), mgp = c(1, 0.5, 0), xpd = T)
   # plot coordinate space
-  plot(dat[,splineVariable$id],
-       dat[,outcome$id],
+  plot(fdat[,splineVariable$id],
+       fdat[,outcome$id],
        cex.axis = 0.5,
        ann = F,
        type = "n"
@@ -435,8 +452,8 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
          xpd = F
   )
   # spline term vs. outcome term actual data
-  points(dat[,splineVariable$id],
-         dat[,outcome$id],
+  points(fdat[,splineVariable$id],
+         fdat[,outcome$id],
          pch = pointtype,
          cex = pointsize
   )
