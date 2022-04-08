@@ -2,6 +2,26 @@ const tape = require('tape')
 const helpers = require('../../../test/front.helpers.js')
 
 /*************************
+dimensions to recombine:
+
+categorical term
+  - by category (default, mode=discrete, type=values)
+  - groupsetting (mode=discrete, type=custom-groupset)
+numeric term
+  - continuous (mode=continuous)
+  - regular bin (mode=discrete, type=regular-bin)
+  - custom bin (mode=discrete, type=custom-bin)
+  - binary (mode=binary, type=custom-bin)
+  - spline (mode=spline)
+condition term
+  - by grade (default)
+  - by groups
+snplst
+snplocus
+
+**************************/
+
+/*************************
  reusable helper functions
 **************************/
 
@@ -12,6 +32,66 @@ const runpp = helpers.getRunPp('mass', {
 	},
 	debug: 1
 })
+const raceGroupsetting = {
+	id: 'genetic_race',
+	q: {
+		type: 'custom-groupset',
+		groupsetting: {
+			inuse: true,
+			customset: {
+				groups: [
+					{
+						name: 'group 123',
+						type: 'values',
+						values: [{ key: 'European Ancestry' }, { key: 'Multi-Ancestry-Admixed' }]
+					},
+					{ name: 'group 456', type: 'values', values: [{ key: 'African Ancestry' }, { key: 'Asian Ancestry' }] }
+				]
+			}
+		}
+	}
+}
+
+const pgsRegularbin = {
+	id: 'prs_PGS000332',
+	q: {
+		type: 'regular-bin',
+		startinclusive: true,
+		bin_size: 0.4,
+		first_bin: {
+			stop: -1,
+			startunbounded: true
+		},
+		rounding: '.1f'
+	},
+	refGrp: '-0.2 to <0.2'
+}
+const pgsCustombin = {
+	id: 'prs_PGS000332',
+	q: {
+		type: 'custom-bin',
+		lst: [
+			{
+				startunbounded: true,
+				stop: -0.5,
+				stopinclusive: false,
+				label: '<0.5'
+			},
+			{
+				start: -0.5,
+				stop: 0,
+				stopinclusive: false,
+				label: '-0.5 to 0'
+			},
+			{
+				start: 0,
+				startinclusive: true,
+				stopunbounded: true,
+				label: '≥0'
+			}
+		]
+	}
+}
 
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
@@ -25,42 +105,127 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('linear, outcome type=float', function(test) {
+tape('(LINEAR) EF ~ sex race hrtavg', function(test) {
 	test.timeoutAfter(10000)
-
 	runpp({
 		state: {
 			plots: [
 				{
 					chartType: 'regression',
 					regressionType: 'linear',
-					//cutoff: 57.8,
-					outcome: {
-						varClass: 'term',
-						id: 'LV_Cardiac_Output_3D',
-						q: {
-							mode: 'continuous'
-						}
-					},
+					outcome: { id: 'LV_Ejection_Fraction_3D' },
+					independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, { id: 'hrtavg' }]
+				}
+			]
+		},
+		regression: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(app) {
+		app.on('postRender.test', null)
+		test.equal(findResultHeadings(app), 5, 'result has 5 headings')
+		test.end()
+		// can delete the dom of this app if test passes
+		//app.Inner.app.Inner.dom.holder.remove()
+	}
+})
+
+tape('(LINEAR) EF ~ sex raceGroupsetting hrtavg', function(test) {
+	test.timeoutAfter(10000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: { id: 'LV_Ejection_Fraction_3D' },
+					independent: [{ id: 'sex', refGrp: '1' }, raceGroupsetting, { id: 'hrtavg' }]
+				}
+			]
+		},
+		regression: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(app) {
+		app.on('postRender.test', null)
+		test.equal(findResultHeadings(app), 5, 'result has 5 headings')
+		test.end()
+		// can delete the dom of this app if test passes
+		//app.Inner.app.Inner.dom.holder.remove()
+	}
+})
+
+tape('(LINEAR) EF ~ sex race pgsRegularbin', function(test) {
+	test.timeoutAfter(10000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: { id: 'LV_Ejection_Fraction_3D' },
+					independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, pgsRegularbin]
+				}
+			]
+		},
+		regression: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(app) {
+		app.on('postRender.test', null)
+		test.equal(findResultHeadings(app), 5, 'result has 5 headings')
+		test.end()
+	}
+})
+
+tape('(LINEAR) EF ~ sex race pgsCustombin', function(test) {
+	test.timeoutAfter(10000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: { id: 'LV_Ejection_Fraction_3D' },
+					independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, pgsCustombin]
+				}
+			]
+		},
+		regression: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(app) {
+		app.on('postRender.test', null)
+		test.equal(findResultHeadings(app), 5, 'result has 5 headings')
+		test.end()
+	}
+})
+
+tape('(LINEAR) EF ~ sex*race hrtavg', function(test) {
+	test.timeoutAfter(10000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: { id: 'LV_Ejection_Fraction_3D' },
 					independent: [
-						{
-							varClass: 'term',
-							id: 'sex',
-							q: {
-								groupsetting: { disabled: true }
-							},
-							refGrp: '1',
-							type: 'categorical'
-						},
-						{
-							varClass: 'term',
-							id: 'genetic_race'
-						},
-						{
-							varClass: 'term',
-							id: 'hrtavg',
-							q: { mode: 'continuous' }
-						}
+						{ id: 'sex', refGrp: '1', interactions: ['genetic_race'] },
+						{ id: 'genetic_race', interactions: ['sex'] },
+						{ id: 'hrtavg' }
 					]
 				}
 			]
@@ -71,70 +236,53 @@ tape('linear, outcome type=float', function(test) {
 			}
 		}
 	})
-
-	function runTests(regres) {
-		regres.on('postRender.test', null)
-		testSectionCounts(regres)
-		//testAxisDimension(plot)
-		//if (test._ok) plot.Inner.app.destroy()
+	function runTests(app) {
+		app.on('postRender.test', null)
+		test.equal(findResultHeadings(app), 5, 'result has 5 headings')
 		test.end()
-	}
-
-	function testSectionCounts(regres) {
-		const resultsDiv = regres.Inner.results.dom.holder
-		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 20
-		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
-
-		const actualNumRows = resultsDiv.selectAll('tr').size()
-		const expectedNumRows = 21
-		test.equal(actualNumRows, expectedNumRows, `should have ${expectedNumRows} rows`)
 	}
 })
 
-tape('logistic outcome type=float', function(test) {
-	test.timeoutAfter(5000)
+tape('(LINEAR) EF ~ sex race hrtavgSpline', function(test) {
+	test.timeoutAfter(10000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'regression',
+					regressionType: 'linear',
+					outcome: { id: 'LV_Ejection_Fraction_3D' },
+					independent: [
+						{ id: 'sex', refGrp: '1' },
+						{ id: 'genetic_race' },
+						{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
+					]
+				}
+			]
+		},
+		regression: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	function runTests(app) {
+		app.on('postRender.test', null)
+		test.equal(findResultHeadings(app), 6, 'result has 6 headings')
+		test.end()
+	}
+})
 
+tape('(LOGISTIC) EF ~ sex race hrtavg', function(test) {
+	test.timeoutAfter(5000)
 	runpp({
 		state: {
 			plots: [
 				{
 					chartType: 'regression',
 					regressionType: 'logistic',
-					//cutoff: 57.8,
-					outcome: {
-						varClass: 'term',
-						id: 'LV_Cardiac_Output_3D',
-						q: {
-							mode: 'binary',
-							type: 'custom',
-							lst: [
-								{ startunbounded: true, stopinclusive: true, stop: '4.72', label: '≤4.72' },
-								{ stopunbounded: true, startinclusive: false, start: '4.72', label: '>4.72' }
-							]
-						},
-						refGrp: '≤4.72'
-					},
-					independent: [
-						{
-							varClass: 'term',
-							id: 'sex',
-							q: {
-								groupsetting: { disabled: true }
-							},
-							refGrp: '1',
-							type: 'categorical'
-						},
-						{
-							varClass: 'term',
-							id: 'genetic_race'
-						},
-						{
-							varClass: 'term',
-							id: 'hrtavg',
-							q: { mode: 'continuous' }
-						}
-					]
+					outcome: { id: 'LV_Ejection_Fraction_3D' },
+					independent: [{ id: 'sex' }, { id: 'genetic_race' }, { id: 'hrtavg' }]
 				}
 			]
 		},
@@ -145,62 +293,23 @@ tape('logistic outcome type=float', function(test) {
 		}
 	})
 
-	function runTests(regres) {
-		regres.on('postRender.test', null)
-		testSectionCounts(regres)
-		//testAxisDimension(plot)
-		//if (test._ok) plot.Inner.app.destroy()
+	function runTests(app) {
+		app.on('postRender.test', null)
+		test.equal(findResultHeadings(app), 5, 'result has 5 headings')
 		test.end()
-	}
-
-	function testSectionCounts(regres) {
-		const resultsDiv = regres.Inner.results.dom.holder
-		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 23
-		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
-
-		const actualNumRows = resultsDiv.selectAll('tr').size()
-		const expectedNumRows = 21
-		test.equal(actualNumRows, expectedNumRows, `should have ${expectedNumRows} rows`)
 	}
 })
 
-tape('logistic outcome type=condition', function(test) {
+tape('(LOGISTIC) Arrhythmias ~ sex', function(test) {
 	test.timeoutAfter(5000)
-
 	runpp({
 		state: {
 			plots: [
 				{
 					chartType: 'regression',
 					regressionType: 'logistic',
-					//cutoff: 57.8,
-					outcome: {
-						varClass: 'term',
-						id: 'Arrhythmias',
-						q: {
-							mode: 'binary',
-							groupsetting: {
-								inuse: true,
-								predefined_groupset_idx: 0
-							},
-							value_by_max_grade: true,
-							bar_by_grade: true,
-							type: 'predefined-groupset'
-						},
-						refGrp: 'Has condition'
-					},
-					independent: [
-						{
-							varClass: 'term',
-							id: 'sex',
-							q: {
-								groupsetting: { disabled: true }
-							},
-							refGrp: '1',
-							type: 'categorical'
-						}
-					]
+					outcome: { id: 'Arrhythmias' },
+					independent: [{ id: 'sex' }]
 				}
 			]
 		},
@@ -210,109 +319,31 @@ tape('logistic outcome type=condition', function(test) {
 			}
 		}
 	})
-
-	function runTests(regres) {
-		regres.on('postRender.test', null)
-		testSectionCounts(regres)
-		//testAxisDimension(plot)
-		//if (test._ok) plot.Inner.app.destroy()
-		test.end()
-	}
-
-	function testSectionCounts(regres) {
-		const resultsDiv = regres.Inner.results.dom.holder
-		const actualNumDivs = resultsDiv.selectAll('div').size()
-		const expectedNumDivs = 19
-		test.equal(actualNumDivs, expectedNumDivs, `should have ${expectedNumDivs} divs`)
-
-		const actualNumRows = resultsDiv.selectAll('tr').size()
-		const expectedNumRows = 15
-		test.equal(actualNumRows, expectedNumRows, `should have ${expectedNumRows} rows`)
-	}
-})
-
-/* 
-	Testing for a reference group error from the server may be hard to trigger
-	from the client side, since the regression.inputs.term.js code may 
-	automatically replace a refGrp based on sampleCounts from the server
-
-	skip for now until more reliable server error can be triggered
-*/
-tape.skip('logistic outcome: missing reference category', function(test) {
-	test.timeoutAfter(5000)
-
-	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'regression',
-					regressionType: 'logistic',
-					//cutoff: 57.8,
-					outcome: {
-						varClass: 'term',
-						id: 'vincristine_5',
-						q: {
-							mode: 'binary',
-							type: 'custom',
-							lst: [
-								{ startunbounded: true, stopinclusive: true, stop: 22.05, label: '≤22.05' },
-								{ stopunbounded: true, startinclusive: false, start: 22.05, label: '>22.05' }
-							]
-						},
-						refGrp: '≤22.05'
-					},
-					independent: [
-						{
-							varClass: 'term',
-							id: 'agedx',
-							q: { mode: 'continuous' }
-						},
-						{
-							varClass: 'term',
-							id: 'idarubicin_5',
-							q: {
-								mode: 'discrete',
-								type: 'regular',
-								startinclusive: true,
-								bin_size: 10,
-								first_bin: { stop: 10, bin: 'first', startunbounded: true },
-								last_bin: { start: 70, bin: 'last', stopunbounded: true },
-								hiddenValues: { '0': 1, '-8888': 1, '-9999': 1 },
-								termtype: 'float',
-								stopinclusive: false,
-								rounding: '.0f'
-							},
-							refGrp: '<10'
-						}
-					]
-				}
-			]
-		},
-		regression: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	function runTests(regres) {
-		regres.on('postRender.test', null)
-		const actualErrMsg = regres.Inner.results.dom.err_div.text()
-		const expectedErrMsg = `Error: the reference category '≤22.05' is not found in the variable 'outcome'✕`
-		test.equal(
-			actualErrMsg,
-			expectedErrMsg,
-			`should error out prior to R script if reference category of variable is missing in data matrix`
-		)
-		const results = regres.Inner.results.dom.holder
-		const actualResultDivCnt = results
-			.selectAll('div')
-			.filter(function() {
-				return this.style.display !== 'none'
-			})
-			.size()
-		const expectedResultDivCnt = 6 // may include empty divs, not rendered divs for results
-		test.equal(actualResultDivCnt, expectedResultDivCnt, `should not have results divs`)
+	function runTests(app) {
+		app.on('postRender.test', null)
+		test.equal(findResultHeadings(app), 5, 'result has 5 headings')
 		test.end()
 	}
 })
+
+function findResultHeadings(app) {
+	// headings are created as <span>name</span>
+	const spans = app.Inner.results.dom.oneSetResultDiv.selectAll('span').nodes()
+	let foundNumber = 0
+
+	foundNumber += spans.find(i => i.innerText == 'Warnings') ? 1 : 0
+	foundNumber += spans.find(i => i.innerText == 'Sample size:') ? 1 : 0
+
+	// linear
+	foundNumber += spans.find(i => i.innerText == 'Residuals') ? 1 : 0
+	// logistic
+	foundNumber += spans.find(i => i.innerText == 'Deviance residuals') ? 1 : 0
+
+	foundNumber += spans.find(i => i.innerText == 'Cubic spline plots') ? 1 : 0
+
+	foundNumber += spans.find(i => i.innerText == 'Coefficients') ? 1 : 0
+	foundNumber += spans.find(i => i.innerText == 'Type III statistics') ? 1 : 0
+	foundNumber += spans.find(i => i.innerText == 'Other summary statistics') ? 1 : 0
+
+	return foundNumber
+}
