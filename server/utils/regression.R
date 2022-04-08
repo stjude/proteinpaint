@@ -94,9 +94,7 @@ variables <- lst$variables
 # BUILD FORMULAS #
 ##################
 
-lst <- buildFormulas(variables)
-formulas <- lst$formulas
-splineVariables <- lst$splineVariables
+formulas <- buildFormulas(variables)
 
 
 ##################
@@ -107,9 +105,17 @@ splineVariables <- lst$splineVariables
 out <- list()
 outcome <- variables[variables$type == "outcome",]
 for (i in 1:length(formulas)) {
-  id <- formulas[[i]]$id
-  formula <- formulas[[i]]$formula
-  results <- runRegression(regtype, formula, dat, outcome, splineVariables)
+  formula <- formulas[[i]]
+  id <- formula$id
+  # extract columns from data table that will be used in the analysis
+  subdat <- dat[,c(formula$outcomeIds, formula$independentIds)]
+  # discard samples that have missing values for any variable
+  # NOTE: while regression functions (i.e. lm, glm, coxph) perform
+  # this step by default, computation of cox type III statistics will
+  # break if this step is not done prior to regression analysis.
+  fdat <- subdat[complete.cases(subdat),]
+  # run regression
+  results <- runRegression(regtype, formula$formula, fdat, outcome, formula$splineVariables)
   results$coefficients <- formatCoefficients(results$coefficients, results$res, regtype)
   results$type3 <- formatType3(results$type3)
   out[[length(out)+1]] <- list("id" = unbox(id), "data" = results[names(results) != "res"])
