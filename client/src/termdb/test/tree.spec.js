@@ -8,8 +8,11 @@ const graphable = require('../../common/termutils').graphable
 
 const runpp = helpers.getRunPp('termdb', {
 	state: {
-		dslabel: 'TermdbTest',
-		genome: 'hg38'
+		vocab: {
+			route: 'termdb',
+			dslabel: 'TermdbTest',
+			genome: 'hg38'
+		}
 	},
 	debug: 1
 })
@@ -136,9 +139,9 @@ tape('click_term', test => {
 	function runTests(tree) {
 		helpers
 			.rideInit({ arg: tree, bus: tree, eventType: 'postRender.test' })
-			.use(expandTerm1)
-			.to(expandTerm1_child1)
-			.to(testExpand_child1)
+			.run(expandTerm1)
+			.use(expandTerm1_child1, { wait: 100 })
+			.to(testExpand_child1, { wait: 100 })
 			.done(test)
 	}
 	let childdiv_term1
@@ -155,7 +158,9 @@ tape('click_term', test => {
 		childdiv_child1 = child1.querySelector('.termchilddiv')
 	}
 	function testExpand_child1(tree) {
-		const disabledlabels = childdiv_child1.getElementsByClassName('sja_tree_click_term_disabled termlabel')
+		const disabledlabels = [...childdiv_child1.querySelectorAll('.termlabel')].filter(function(elem) {
+			return elem.style.opacity == '0.4'
+		})
 		test.ok(disabledlabels.length > 0, 'should have one or more disabled terms')
 		const buttons = childdiv_child1.getElementsByClassName('sja_filter_tag_btn sja_tree_click_term termlabel')
 		test.ok(buttons.length > 0, 'should have one or more child terms showing as buttons')

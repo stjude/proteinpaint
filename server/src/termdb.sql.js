@@ -5,6 +5,7 @@ const numericSql = require('./termdb.sql.numeric')
 const categoricalSql = require('./termdb.sql.categorical')
 const conditionSql = require('./termdb.sql.condition')
 const connect_db = require('./utils').connect_db
+const isUsableTerm = require('../shared/termdb.usecase').isUsableTerm
 /*
 
 ********************** EXPORTED
@@ -952,7 +953,7 @@ thus less things to worry about...
 			WHERE name LIKE ?`
 		)
 		const trueFilter = () => true
-		q.findTermByName = (n, limit, cohortStr = '', exclude_types = []) => {
+		q.findTermByName = (n, limit, cohortStr = '', exclude_types = [], treeFilter = null, usecase = null) => {
 			const vals = []
 			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
@@ -961,8 +962,9 @@ thus less things to worry about...
 				for (const i of tmp) {
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
-					const included_types = i.included_types || ''
-					if (!exclude_types.includes(j.type) && included_types.split(',').filter(typeFilter).length) {
+					j.included_types = i.included_types ? i.included_types.split(',') : []
+					if (usecase && isUsableTerm(j, usecase) != 'plot') continue
+					if (!exclude_types.includes(j.type) && j.included_types.filter(typeFilter).length) {
 						lst.push(j)
 					}
 					if (lst.length == 10) break
