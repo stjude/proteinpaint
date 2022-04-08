@@ -175,23 +175,23 @@ class TdbCumInc {
 		this.skippedCharts = data.skippedCharts
 
 		// hide tests of hidden series
-		if (data.tests) {
-			const tests = {}
-			for (const chart in data.tests) {
-				tests[chart] = data.tests[chart].filter(
+		this.tests = data.tests
+		if (this.tests) {
+			for (const chart in this.tests) {
+				// remove hidden series from this.tests
+				this.tests[chart] = this.tests[chart].filter(
 					test => !this.settings.hidden.includes(test.series1) && !this.settings.hidden.includes(test.series2)
 				)
 			}
-			this.tests = tests
 		}
 
 		// hide skipped series of hidden series
-		if (data.skippedSeries) {
-			const skippedSeries = {}
-			for (const chart in data.skippedSeries) {
-				skippedSeries[chart] = data.skippedSeries[chart].filter(series => !this.settings.hidden.includes(series))
+		this.skippedSeries = data.skippedSeries
+		if (this.skippedSeries) {
+			for (const chart in this.skippedSeries) {
+				// remove hidden series from this.skippedTests
+				this.skippedSeries[chart] = this.skippedSeries[chart].filter(series => !this.settings.hidden.includes(series))
 			}
-			this.skippedSeries = skippedSeries
 		}
 	}
 
@@ -471,6 +471,7 @@ function setRenderers(self) {
 			.data(tests.sort((a, b) => a.pvalue - b.pvalue))
 			.enter()
 			.append('tr')
+			.attr('class', 'pp-cuminc-chartLegends-pvalue')
 
 		// table cells
 		tr.selectAll('td')
@@ -510,6 +511,7 @@ function setRenderers(self) {
 			.data(skippedSeries)
 			.enter()
 			.append('div')
+			.attr('class', 'pp-cuminc-chartLegends-skipped')
 			.text(d => d)
 	}
 

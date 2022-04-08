@@ -22,18 +22,20 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('basic cuminc cuminc', function(test) {
+tape('basic cuminc', function(test) {
 	test.timeoutAfter(2000)
 	runpp({
 		state: {
-			plots: [{
-				chartType: 'cuminc',
-				term: {
-					id: 'Cardiac dysrhythmia',
-					term: termjson['Cardiac dysrhythmia'],
-					q: { bar_by_grade: true, value_by_max_grade: true }
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: {
+						id: 'Cardiac dysrhythmia',
+						term: termjson['Cardiac dysrhythmia'],
+						q: { bar_by_grade: true, value_by_max_grade: true }
+					}
 				}
-			}]
+			]
 		},
 		cuminc: {
 			callbacks: {
@@ -56,6 +58,42 @@ tape('basic cuminc cuminc', function(test) {
 			9,
 			'should render 9 cuminc series circles'
 		)
+		test.end()
+	}
+})
+
+tape.only('skipped series', function(test) {
+	test.timeoutAfter(2000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: {
+						id: 'Cardiovascular System',
+						//term: termjson['Cardiac dysrhythmia'],
+						q: { bar_by_grade: true, value_by_max_grade: true }
+					},
+					term2: {
+						id: 'genetic_race'
+						//term: termjson['Cardiac dysrhythmia'],
+						//q: { bar_by_grade: true, value_by_max_grade: true }
+					}
+				}
+			]
+		},
+		cuminc: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(cuminc) {
+		const skippedDivs = cuminc.Inner.dom.chartsDiv
+			.select('.pp-cuminc-chartLegends')
+			.selectAll('.pp-cuminc-chartLegends-skipped')
+		test.equal(skippedDivs && skippedDivs.size(), 2, 'should render 2 skipped series')
 		test.end()
 	}
 })
