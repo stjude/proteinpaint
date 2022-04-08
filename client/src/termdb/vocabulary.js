@@ -269,7 +269,7 @@ class TermdbVocab {
 	}
 
 	// from termdb/search
-	async findTerm(str, cohortStr, exclude_types = []) {
+	async findTerm(str, cohortStr, exclude_types = [], usecase = null) {
 		const lst = [
 			'genome=' + this.vocab.genome,
 			'dslabel=' + this.vocab.dslabel,
@@ -278,6 +278,9 @@ class TermdbVocab {
 		]
 		if (exclude_types.length) {
 			lst.push('exclude_types=' + encodeURIComponent(JSON.stringify(exclude_types)))
+		}
+		if (usecase) {
+			lst.push('usecase=' + encodeURIComponent(JSON.stringify(usecase)))
 		}
 		if (this.state.treeFilter) {
 			lst.push('treeFilter=' + encodeURIComponent(JSON.stringify(this.state.treeFilter)))

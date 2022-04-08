@@ -24,6 +24,7 @@ const encodedParams = [
 	'tvslst',
 	'term1_q',
 	'exclude_types',
+	'usecase',
 	'variant_filter',
 	'info_fields',
 	'outcome',
@@ -177,7 +178,7 @@ async function trigger_findterm(q, res, termdb) {
 		const exclude_types = q.exclude_types
 		q.exclude_types = exclude_types.map(t => t.toLowerCase())
 	}
-	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.exclude_types, q.treeFilter)
+	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.exclude_types, q.treeFilter, q.usecase)
 	const terms = terms_.map(copy_term)
 	const id2ancestors = {}
 	terms.forEach(term => {
