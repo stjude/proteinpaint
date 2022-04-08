@@ -3179,7 +3179,7 @@ fn classify_to_four_categories(
     strictness: usize,                            // Strictness of the pipeline
 ) -> Vec<read_category> {
     let mut indices = Vec::<read_category>::new(); // Vector of type struct read_category containing category classified, original group ID, diff_score and ref_insertion flag. This vecor will be finally returned to the main function
-    let absolute_threshold_cutoff: f64 = 0.005; // Absolute threshold cutoff. If the absolute diff_score is less than this value, the read will automatically be classified as "none"
+    let absolute_threshold_cutoff: f64 = 0.0; // Absolute threshold cutoff. If the absolute diff_score is less than this value, the read will automatically be classified as "none"
     for i in 0..kmer_diff_scores.len() {
         if kmer_diff_scores[i].polyclonal >= 2 as i64 {
             // If polyclonal is 2, it is automatically classified as 'none' since the allele neither matches ref allele or alt allele of interest
