@@ -785,7 +785,7 @@ export async function getPlotConfig(opts, app) {
 				// assumes that hidden values are only from the overlay term
 				// TODO: what about term0? may need to use term[0,2].q.hiddenValues directly
 				hidden: Object.keys(h)
-					.filter(k => !h[k])
+					.filter(k => h[k])
 					.map(k => opts.term2.term.values[k].label)
 			}
 		}

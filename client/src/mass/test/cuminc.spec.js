@@ -62,7 +62,7 @@ tape('basic cuminc', function(test) {
 	}
 })
 
-tape.only('skipped series', function(test) {
+tape('skipped series', function(test) {
 	test.timeoutAfter(2000)
 	runpp({
 		state: {
