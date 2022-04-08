@@ -60,62 +60,62 @@ function showMenu_discrete(self, div) {
 		.append('select')
 		.style('margin', '10px')
 		.style('display', 'block')
-		.property('disabled', self.q.mode == 'binary' ? true : false)
 		.on('change', () => {
-			self.q.bar_by_grade = value_type_select.node().value == 'sub' ? false : true
-			self.q.bar_by_children = value_type_select.node().value == 'sub' ? true : false
-			self.q.value_by_max_grade = value_type_select.node().value == 'max' ? true : false
-			self.q.value_by_most_recent = value_type_select.node().value == 'recent' ? true : false
-			self.q.value_by_computable_grade =
-				value_type_select.node().value == 'computable' || value_type_select.node().value == 'sub' ? true : false
-
+			const i = value_type_select.property('selectedIndex')
+			self.q.bar_by_grade = i != 3
+			self.q.bar_by_children = i == 3
+			self.q.value_by_max_grade = i == 0
+			self.q.value_by_most_recent = i == 1
+			self.q.value_by_computable_grade = i == 2 || i == 3
 			self.dom.tip.hide()
 			self.runCallback()
 		})
+	// 0
+	value_type_select.append('option').text('Max grade per patient')
+	// 1
+	value_type_select.append('option').text('Most recent grade per patient')
+	// 2
+	value_type_select.append('option').text('Any grade per patient')
+	// 3
+	if (self.term.subconditions) {
+		// only show 4th option when subconditions are available
+		value_type_select.append('option').text('Sub-conditions')
+	}
+	value_type_select.property(
+		'selectedIndex',
+		self.q.bar_by_children ? 3 : self.q.value_by_computable_grade ? 2 : self.q.value_by_most_recent ? 1 : 0
+	)
 
-	value_type_select
-		.append('option')
-		.attr('value', 'max')
-		.text('Max grade per patient')
+	if (self.q.bar_by_children) {
+		// do not show grade cutoff input
+		return
+	}
 
-	value_type_select
-		.append('option')
-		.attr('value', 'recent')
-		.text('Most recent grade per patient')
+	addBreaksSelector(
+		self,
+		div
+			.append('div')
+			.style('margin', '15px 10px 10px 15px')
+			.style('padding-left', '10px')
+			.style('border-left', 'solid 1px #ededed')
+	)
+}
 
-	value_type_select
-		.append('option')
-		.attr('value', 'computable')
-		.text('Any grade per patient')
-
-	value_type_select
-		.append('option')
-		.attr('value', 'sub')
-		.text('Sub-conditions')
-
-	value_type_select.node().selectedIndex = self.q.bar_by_children
-		? 3
-		: self.q.value_by_computable_grade
-		? 2
-		: self.q.value_by_most_recent
-		? 1
-		: 0
-
-	// TODO may hide holder if q is not max/recent grade
-
+function addBreaksSelector(self, div) {
 	div
 		.append('div')
-		.text('To divide to groups, type grade values and press ENTER')
-		.style('margin', '20px 10px 10px 10px')
+		.text('Optionally, select cutoff grades to divide grades to groups:')
 		.style('width', '300px')
 		.style('opacity', 0.5)
 
 	const holder = div
 		.append('div')
-		.style('margin', '10px')
+		.style('margin-top', '10px')
 		.style('display', 'grid')
 		.style('grid-template-columns', 'auto auto')
 		.style('gap', '10px')
+
+	// TODO replace <textarea> with progressive cutoff selector, may keep using ui components for rangeNameDiv
 	const textarea = holder
 		.append('div')
 		.append('textarea')
