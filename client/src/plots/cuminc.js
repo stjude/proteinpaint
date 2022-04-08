@@ -25,10 +25,13 @@ class TdbCumInc {
 			header: opts.header,
 			controls,
 			holder,
-			errDiv: holder.append('div').style('margin', '10px'),
+			errDiv: holder
+				.append('div')
+				.style('display', 'none')
+				.style('margin', '10px'),
 			chartsDiv: holder.append('div').style('margin', '10px'),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
-			skippedChartsDiv: holder.append('div').style('margin', '5px 5px 25px 5px')
+			legendDiv: holder.append('div').style('margin', '5px'),
+			skippedChartsDiv: holder.append('div').style('margin', '25px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Cumulative Incidence Plot')
 		// hardcode for now, but may be set as option later
@@ -123,24 +126,13 @@ class TdbCumInc {
 				// every chart was skipped due to absence of events
 				throw 'no events found in the dataset'
 			}
-			this.dom.chartsDiv.style('display', 'block')
-			this.dom.legendDiv.style('display', 'block')
-			this.dom.errDiv.style('display', 'none')
 			this.app.vocabApi.syncTermData(this.state.config, data)
-			this.currData = this.processData(data)
-			this.refs = data.refs
-			this.tests = data.tests
-			this.skippedSeries = data.skippedSeries
-			this.skippedCharts = data.skippedCharts
+			this.processData(data)
 			this.pj.refresh({ data: this.currData })
 			this.setTerm2Color(this.pj.tree.charts)
 			this.render()
 			this.legendRenderer(this.legendData)
-			if (this.skippedCharts && this.skippedCharts.length > 0) {
-				this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
-			} else {
-				this.dom.skippedChartsDiv.style('display', 'none')
-			}
+			this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
 		} catch (e) {
 			this.dom.chartsDiv.style('display', 'none')
 			this.dom.legendDiv.style('display', 'none')
@@ -168,17 +160,39 @@ class TdbCumInc {
 
 	processData(data) {
 		this.uniqueSeriesIds = new Set()
-		const rows = []
+		this.currData = []
 		const estKeys = ['cuminc', 'low', 'high']
 		for (const d of data.case) {
 			const obj = {}
 			data.keys.forEach((k, i) => {
 				obj[k] = estKeys.includes(k) ? 100 * d[i] : d[i]
 			})
-			rows.push(obj)
+			this.currData.push(obj)
 			this.uniqueSeriesIds.add(obj.seriesId)
 		}
-		return rows
+
+		this.refs = data.refs
+		this.skippedCharts = data.skippedCharts
+
+		// hide tests of hidden series
+		if (data.tests) {
+			const tests = {}
+			for (const chart in data.tests) {
+				tests[chart] = data.tests[chart].filter(
+					test => !this.settings.hidden.includes(test.series1) && !this.settings.hidden.includes(test.series2)
+				)
+			}
+			this.tests = tests
+		}
+
+		// hide skipped series of hidden series
+		if (data.skippedSeries) {
+			const skippedSeries = {}
+			for (const chart in data.skippedSeries) {
+				skippedSeries[chart] = data.skippedSeries[chart].filter(series => !this.settings.hidden.includes(series))
+			}
+			this.skippedSeries = skippedSeries
+		}
 	}
 
 	setTerm2Color(charts) {
@@ -348,6 +362,11 @@ function setRenderers(self) {
 	}
 
 	self.renderSkippedCharts = function(div, skippedCharts) {
+		if (!skippedCharts || skippedCharts.length === 0) {
+			div.style('display', 'none')
+			return
+		}
+
 		div.selectAll('*').remove()
 
 		// title div
