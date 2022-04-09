@@ -10,12 +10,10 @@ categorical term
 numeric term
   - continuous (mode=continuous)
   - regular bin (mode=discrete, type=regular-bin)
-  - custom bin (mode=discrete, type=custom-bin)
-  - binary (mode=binary, type=custom-bin)
+  - custom bin (mode=discrete, type=custom-bin) (binary is not tested as input variable)
   - spline (mode=spline)
 condition term
-  - by grade (default)
-  - by groups
+  - by breaks only, as outcome
 snplst
 snplocus
 
@@ -154,18 +152,179 @@ const agedxCustomBin = {
 	}
 }
 
-tape('\n', function(test) {
-	test.pass('-***- mass/regression -***-')
-	test.end()
-})
+const snplst = {
+	term: {
+		type: 'snplst',
+		id: 'snplstTermId',
+		snps: [
+			{ rsid: 'rs1641548', effectAllele: 'T' },
+			{ rsid: 'rs858528', effectAllele: 'T' },
+			{ rsid: 'rs1642793', effectAllele: 'C' },
+			{ rsid: 'rs1042522' },
+			{ rsid: 'rs1642782' },
+			{ rsid: 'rs6503048' }
+		]
+	},
+	q: {
+		alleleType: 0,
+		geneticModel: 0,
+		missingGenotype: 0,
+		restrictAncestry: {
+			name: 'African ancestry',
+			tvs: {
+				term: {
+					id: 'genetic_race',
+					type: 'categorical',
+					name: 'Genetically defined race'
+				},
+				values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+			}
+		}
+	}
+}
 
-/**********************************
-               linear
-***********************************/
+const snplocus = {
+	term: {
+		type: 'snplocus',
+		id: 'snplocusTermId'
+	},
+	q: {
+		chr: 'chr17',
+		start: 7674304,
+		stop: 7676849,
+		alleleType: 0,
+		geneticModel: 0,
+		restrictAncestry: {
+			name: 'African ancestry',
+			tvs: {
+				term: {
+					id: 'genetic_race',
+					type: 'categorical',
+					name: 'Genetically defined race'
+				},
+				values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+			}
+		},
+		variant_filter: {
+			type: 'tvslst',
+			join: 'and',
+			in: true,
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						isnot: true,
+						values: [{ label: 'Bad', key: 'Bad' }],
+						term: {
+							id: 'QC_sjlife',
+							name: 'SJLIFE classification',
+							parent_id: null,
+							isleaf: true,
+							type: 'categorical',
+							values: {
+								SuperGood: { label: 'SuperGood', key: 'SuperGood' },
+								Good: { label: 'Good', key: 'Good' },
+								Ambiguous: { label: 'Ambiguous', key: 'Ambiguous' },
+								Bad: { label: 'Bad', key: 'Bad' }
+							}
+						}
+					}
+				},
+				{
+					type: 'tvs',
+					tvs: {
+						isnot: true,
+						values: [{ label: 'Bad', key: 'Bad' }],
+						term: {
+							id: 'QC_ccss',
+							name: 'CCSS classification',
+							parent_id: null,
+							isleaf: true,
+							type: 'categorical',
+							values: {
+								SuperGood: { label: 'SuperGood', key: 'SuperGood' },
+								Good: { label: 'Good', key: 'Good' },
+								Ambiguous: { label: 'Ambiguous', key: 'Ambiguous' },
+								Bad: { label: 'Bad', key: 'Bad' }
+							}
+						}
+					}
+				},
+				{
+					type: 'tvs',
+					tvs: {
+						ranges: [{ start: 0.95, startinclusive: true, stopunbounded: true }],
+						term: { id: 'SJcontrol_CR', name: 'SJLIFE control call rate', parent_id: null, isleaf: true, type: 'float' }
+					}
+				},
+				{
+					type: 'tvs',
+					tvs: {
+						ranges: [{ start: 0.95, startinclusive: true, stopunbounded: true }],
+						term: { id: 'CR', name: 'Call rate, SJLIFE+CCSS', parent_id: null, isleaf: true, type: 'float' }
+					}
+				},
+				{
+					type: 'tvs',
+					tvs: {
+						ranges: [{ start: 0.95, startinclusive: true, stopunbounded: true }],
+						term: { id: 'CR_sjlife', name: 'SJLIFE call rate', parent_id: null, isleaf: true, type: 'float' }
+					}
+				},
+				{
+					type: 'tvs',
+					tvs: {
+						ranges: [{ start: 0.95, startinclusive: true, stopunbounded: true }],
+						term: { id: 'CR_ccss', name: 'CCSS call rate', parent_id: null, isleaf: true, type: 'float' }
+					}
+				},
+				{
+					type: 'tvs',
+					tvs: {
+						ranges: [{ start: 0.95, startinclusive: true, stopunbounded: true }],
+						term: { id: 'gnomAD_CR', name: 'gnmoAD call rate', parent_id: null, isleaf: true, type: 'float' }
+					}
+				},
+				{
+					type: 'tvs',
+					tvs: {
+						ranges: [{ start: 0.1, startinclusive: true, stopunbounded: true }],
+						term: {
+							id: 'gnomAD_AF',
+							name: 'gnomAD allele frequency',
+							parent_id: null,
+							isleaf: true,
+							type: 'float',
+							min: 0,
+							max: 1,
+							values: {}
+						}
+					}
+				},
+				{
+					type: 'tvs',
+					tvs: {
+						isnot: true,
+						values: [{ label: 'yes', key: '1' }],
+						term: { id: 'BadBLAT', name: 'Paralog', parent_id: null, isleaf: true, type: 'categorical' }
+					}
+				},
+				{
+					type: 'tvs',
+					tvs: {
+						isnot: true,
+						values: [{ label: 'yes', key: '1' }],
+						term: { id: 'Polymer_region', name: 'Polymer region', parent_id: null, isleaf: true, type: 'categorical' }
+					}
+				}
+			]
+		}
+	}
+}
 
 const testList = [
 	{
-		name: 'sex race hrtavg',
+		name: 'sex race hrtavg', // hrtavg is continuous
 		headingCount: 5,
 		independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, { id: 'hrtavg' }]
 	},
@@ -197,7 +356,7 @@ const testList = [
 		]
 	},
 	{
-		name: 'sex raceGroupsetting hrtavg',
+		name: 'sex raceGroupsetting hrtavg', // groupsetting, continuous
 		headingCount: 5,
 		independent: [{ id: 'sex', refGrp: '1' }, raceGroupsetting, { id: 'hrtavg' }]
 	},
@@ -206,11 +365,7 @@ const testList = [
 		headingCount: 5,
 		independent: [
 			{ id: 'sex', refGrp: '1', interactions: ['genetic_race'] },
-			(() => {
-				const a = JSON.parse(JSON.stringify(raceGroupsetting))
-				a.interactions = ['sex']
-				return a
-			})(),
+			addInteraction(raceGroupsetting, 'sex'),
 			{ id: 'hrtavg' }
 		]
 	},
@@ -219,29 +374,14 @@ const testList = [
 		headingCount: 5,
 		independent: [
 			{ id: 'sex', refGrp: '1' },
-			(() => {
-				const a = JSON.parse(JSON.stringify(raceGroupsetting))
-				a.interactions = ['hrtavg']
-				return a
-			})(),
+			addInteraction(raceGroupsetting, 'hrtavg'),
 			{ id: 'hrtavg', interactions: ['genetic_race'] }
 		]
 	},
 	{
 		name: 'raceGroupsetting*diaggrpGroupsetting',
 		headingCount: 5,
-		independent: [
-			(() => {
-				const a = JSON.parse(JSON.stringify(raceGroupsetting))
-				a.interactions = ['diaggrp']
-				return a
-			})(),
-			(() => {
-				const a = JSON.parse(JSON.stringify(diaggrpGroupsetting))
-				a.interactions = ['genetic_race']
-				return a
-			})()
-		]
+		independent: [addInteraction(raceGroupsetting, 'diaggrp'), addInteraction(diaggrpGroupsetting, 'genetic_race')]
 	},
 	{
 		name: 'sex race pgsRegularBin',
@@ -254,15 +394,11 @@ const testList = [
 		independent: [
 			{ id: 'sex', refGrp: '1' },
 			{ id: 'genetic_race', interactions: ['prs_PGS000332'] },
-			(() => {
-				const a = JSON.parse(JSON.stringify(pgsRegularBin))
-				a.interactions = ['genetic_race']
-				return a
-			})()
+			addInteraction(pgsRegularBin, 'genetic_race')
 		]
 	},
 	{
-		test: 'sex race pgsCustomBin',
+		name: 'sex race pgsCustomBin',
 		headingCount: 5,
 		independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, pgsCustomBin]
 	},
@@ -272,29 +408,25 @@ const testList = [
 		independent: [
 			{ id: 'sex', refGrp: '1' },
 			{ id: 'genetic_race', interactions: ['prs_PGS000332'] },
-			(() => {
-				const a = JSON.parse(JSON.stringify(pgsCustomBin))
-				a.interactions = ['genetic_race']
-				return a
-			})()
+			addInteraction(pgsCustomBin, 'genetic_race')
 		]
 	},
 	{
 		name: 'pgsRegularBin*agedxCustomBin',
 		headingCount: 5,
-		independent: [
-			(() => {
-				const a = JSON.parse(JSON.stringify(pgsRegularBin))
-				a.interactions = ['agedx']
-				return a
-			})(),
-			(() => {
-				const a = JSON.parse(JSON.stringify(agedxCustomBin))
-				a.interactions = ['prs_PGS000332']
-				return a
-			})()
-		]
+		independent: [addInteraction(pgsRegularBin, 'agedx'), addInteraction(agedxCustomBin, 'prs_PGS000332')]
 	},
+	{
+		name: 'raceGroupsetting*pgsRegularBin',
+		headingCount: 5,
+		independent: [addInteraction(raceGroupsetting, 'prs_PGS000332'), addInteraction(pgsRegularBin, 'genetic_race')]
+	},
+	{
+		name: 'raceGroupsetting*pgsCustomBin',
+		headingCount: 5,
+		independent: [addInteraction(pgsCustomBin, 'genetic_race'), addInteraction(raceGroupsetting, 'prs_PGS000332')]
+	},
+
 	{
 		name: 'sex hrtavgSpline',
 		headingCount: 6,
@@ -303,6 +435,7 @@ const testList = [
 			{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
 		]
 	},
+
 	{
 		name: 'sex hrtavgSpline ageSpline',
 		headingCount: 6,
@@ -312,21 +445,138 @@ const testList = [
 			{ id: 'agedx', q: { mode: 'spline', knots: [{ value: 0.5 }, { value: 3.5 }, { value: 10.5 }] } }
 		]
 	},
+
 	{
-		name: 'sex race*agedxCustomBin hrtavgSpline',
+		name: 'sex race agedx hrtavgSpline snplst',
 		headingCount: 6,
 		independent: [
 			{ id: 'sex', refGrp: '1' },
-			{ id: 'genetic_race', interactions: ['agedx'] },
-			(() => {
-				const a = JSON.parse(JSON.stringify(agedxCustomBin))
-				a.interactions = ['genetic_race']
-				return a
-			})(),
+			{ id: 'genetic_race' },
+			{ id: 'agedx' },
+			snplst,
 			{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
+		]
+	},
+
+	{
+		name: 'sex race*snplst',
+		headingCount: 5,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			{ id: 'genetic_race', interactions: ['snplstTermId'] },
+			addInteraction(snplst, 'genetic_race')
+		]
+	},
+
+	{
+		name: 'sex hrtavg*snplst',
+		headingCount: 5,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			{ id: 'hrtavg', interactions: ['snplstTermId'] },
+			addInteraction(snplst, 'hrtavg')
+		]
+	},
+	{
+		name: 'sex pgsRegularBin*snplst',
+		headingCount: 5,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			addInteraction(pgsRegularBin, 'snplstTermId'),
+			addInteraction(snplst, 'prs_PGS000332')
+		]
+	},
+	{
+		name: 'sex pgsCustomBin*snplst',
+		headingCount: 5,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			addInteraction(pgsCustomBin, 'snplstTermId'),
+			addInteraction(snplst, 'prs_PGS000332')
+		]
+	},
+	{
+		name: 'sex raceGroupsetting*snplst',
+		headingCount: 5,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			addInteraction(raceGroupsetting, 'snplstTermId'),
+			addInteraction(snplst, 'genetic_race')
+		]
+	},
+
+	{
+		name: 'sex race agedx hrtavgSpline snplocus',
+		headingCount: 0,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			{ id: 'genetic_race' },
+			{ id: 'agedx' },
+			snplocus,
+			{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
+		]
+	},
+
+	{
+		name: 'sex race*snplocus',
+		headingCount: 0,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			{ id: 'genetic_race', interactions: ['snplocusTermId'] },
+			addInteraction(snplocus, 'genetic_race')
+		]
+	},
+
+	{
+		name: 'sex hrtavg*snplocus',
+		headingCount: 0,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			{ id: 'hrtavg', interactions: ['snplocusTermId'] },
+			addInteraction(snplocus, 'hrtavg')
+		]
+	},
+	{
+		name: 'sex pgsRegularBin*snplst',
+		headingCount: 0,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			addInteraction(pgsRegularBin, 'snplocusTermId'),
+			addInteraction(snplocus, 'prs_PGS000332')
+		]
+	},
+	{
+		name: 'sex pgsCustomBin*snplocus',
+		headingCount: 0,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			addInteraction(pgsCustomBin, 'snplocusTermId'),
+			addInteraction(snplocus, 'prs_PGS000332')
+		]
+	},
+	{
+		name: 'sex diaggrpGroupsetting*snplocus',
+		headingCount: 0,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			addInteraction(diaggrpGroupsetting, 'snplocusTermId'),
+			addInteraction(snplocus, 'diaggrp')
 		]
 	}
 ]
+
+////////////////////////// tests start
+
+tape('\n', function(test) {
+	test.pass('-***- mass/regression -***-')
+	test.end()
+})
+
+/* each item from the list contains a set of independent variables
+append them to an outcome to make a model and run analysis
+the test will check the number of headings in result 
+the test will pass if there's no runtime error (client, server, R)
+*/
 
 for (const item of testList) {
 	tape('(LINEAR) EF ~ ' + item.name, function(test) {
@@ -412,6 +662,11 @@ function runpp(plot, runtest) {
 }
 
 function findResultHeadings(app) {
+	if (app.Inner.results.dom.err_div.style('display') == 'block') {
+		// error is shown; return -1 as heading count so the test will always fail
+		return -1
+	}
+
 	// headings are created as <span>name</span>
 	const spans = app.Inner.results.dom.oneSetResultDiv.selectAll('span').nodes()
 	let foundNumber = 0
@@ -434,4 +689,10 @@ function findResultHeadings(app) {
 	foundNumber += spans.find(i => i.innerText == 'Other summary statistics') ? 1 : 0
 
 	return foundNumber
+}
+
+function addInteraction(tw, interId) {
+	const a = JSON.parse(JSON.stringify(tw))
+	a.interactions = [interId]
+	return a
 }
