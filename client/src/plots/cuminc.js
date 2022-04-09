@@ -25,10 +25,13 @@ class TdbCumInc {
 			header: opts.header,
 			controls,
 			holder,
-			errDiv: holder.append('div').style('margin', '10px'),
+			errDiv: holder
+				.append('div')
+				.style('display', 'none')
+				.style('margin', '10px'),
 			chartsDiv: holder.append('div').style('margin', '10px'),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
-			skippedChartsDiv: holder.append('div').style('margin', '5px 5px 25px 5px')
+			legendDiv: holder.append('div').style('margin', '5px'),
+			skippedChartsDiv: holder.append('div').style('margin', '25px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Cumulative Incidence Plot')
 		// hardcode for now, but may be set as option later
@@ -93,6 +96,7 @@ class TdbCumInc {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+
 		return {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
@@ -123,24 +127,14 @@ class TdbCumInc {
 				// every chart was skipped due to absence of events
 				throw 'no events found in the dataset'
 			}
-			this.dom.chartsDiv.style('display', 'block')
-			this.dom.legendDiv.style('display', 'block')
-			this.dom.errDiv.style('display', 'none')
 			this.app.vocabApi.syncTermData(this.state.config, data)
-			this.currData = this.processData(data)
-			this.refs = data.refs
-			this.tests = data.tests
-			this.skippedSeries = data.skippedSeries
-			this.skippedCharts = data.skippedCharts
+			this.hiddenOverlays = this.getHiddenOverlays()
+			this.processData(data)
 			this.pj.refresh({ data: this.currData })
 			this.setTerm2Color(this.pj.tree.charts)
 			this.render()
 			this.legendRenderer(this.legendData)
-			if (this.skippedCharts && this.skippedCharts.length > 0) {
-				this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
-			} else {
-				this.dom.skippedChartsDiv.style('display', 'none')
-			}
+			this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
 		} catch (e) {
 			this.dom.chartsDiv.style('display', 'none')
 			this.dom.legendDiv.style('display', 'none')
@@ -166,19 +160,50 @@ class TdbCumInc {
 		return opts
 	}
 
+	getHiddenOverlays() {
+		const tw = this.state.config.term2
+		if (!tw) return []
+		const h = tw.q.hiddenValues
+		return Object.keys(h)
+			.filter(k => h[k])
+			.map(k => tw.term.values[k].label)
+	}
+
 	processData(data) {
 		this.uniqueSeriesIds = new Set()
-		const rows = []
+		this.currData = []
 		const estKeys = ['cuminc', 'low', 'high']
 		for (const d of data.case) {
 			const obj = {}
 			data.keys.forEach((k, i) => {
 				obj[k] = estKeys.includes(k) ? 100 * d[i] : d[i]
 			})
-			rows.push(obj)
+			this.currData.push(obj)
 			this.uniqueSeriesIds.add(obj.seriesId)
 		}
-		return rows
+
+		this.refs = data.refs
+		this.skippedCharts = data.skippedCharts
+
+		// hide tests of hidden series
+		this.tests = data.tests
+		if (this.tests) {
+			for (const chart in this.tests) {
+				// remove hidden series from this.tests
+				this.tests[chart] = this.tests[chart].filter(
+					test => !this.hiddenOverlays.includes(test.series1) && !this.hiddenOverlays.includes(test.series2)
+				)
+			}
+		}
+
+		// hide skipped series of hidden series
+		this.skippedSeries = data.skippedSeries
+		if (this.skippedSeries) {
+			for (const chart in this.skippedSeries) {
+				// remove hidden series from this.skippedTests
+				this.skippedSeries[chart] = this.skippedSeries[chart].filter(series => !this.hiddenOverlays.includes(series))
+			}
+		}
 	}
 
 	setTerm2Color(charts) {
@@ -194,7 +219,7 @@ class TdbCumInc {
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
 						color: this.term2toColor[series.seriesId],
-						isHidden: this.settings.hidden.includes(series.seriesId)
+						isHidden: this.hiddenOverlays.includes(series.seriesId)
 					})
 				}
 			}
@@ -348,6 +373,11 @@ function setRenderers(self) {
 	}
 
 	self.renderSkippedCharts = function(div, skippedCharts) {
+		if (!skippedCharts || skippedCharts.length === 0) {
+			div.style('display', 'none')
+			return
+		}
+
 		div.selectAll('*').remove()
 
 		// title div
@@ -384,7 +414,7 @@ function setRenderers(self) {
 		//if (d.xVals) computeScales(d, s);
 
 		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
-		const visibleSerieses = chart.serieses.filter(s => !self.settings.hidden.includes(s.seriesId))
+		const visibleSerieses = chart.serieses.filter(s => !self.hiddenOverlays.includes(s.seriesId))
 		const serieses = mainG
 			.selectAll('.sjpcb-cuminc-series')
 			.data(visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
@@ -452,6 +482,7 @@ function setRenderers(self) {
 			.data(tests.sort((a, b) => a.pvalue - b.pvalue))
 			.enter()
 			.append('tr')
+			.attr('class', 'pp-cuminc-chartLegends-pvalue')
 
 		// table cells
 		tr.selectAll('td')
@@ -491,6 +522,7 @@ function setRenderers(self) {
 			.data(skippedSeries)
 			.enter()
 			.append('div')
+			.attr('class', 'pp-cuminc-chartLegends-skipped')
 			.text(d => d)
 	}
 
@@ -703,20 +735,25 @@ function setInteractivity(self) {
 		event.stopPropagation()
 		const d = event.target.__data__
 		if (d === undefined) return
-		const hidden = self.settings.hidden.slice()
+		const hidden = self.hiddenOverlays.slice()
 		const i = hidden.indexOf(d.seriesId)
 		if (i == -1) hidden.push(d.seriesId)
 		else hidden.splice(i, 1)
+
+		const hiddenValues = {}
+		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
+		for (const v of hidden) {
+			for (const k in term2.values) {
+				const value = term2.values[k]
+				if (hidden.includes(value.label)) hiddenValues[k] = 1
+			}
+		}
+		term2.q.hiddenValues = hiddenValues
+
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
-			config: {
-				settings: {
-					cuminc: {
-						hidden
-					}
-				}
-			}
+			config: { term2 }
 		})
 	}
 }
@@ -730,7 +767,7 @@ export async function getPlotConfig(opts, app) {
 	} catch (e) {
 		throw `${e} [cuminc getPlotConfig()]`
 	}
-
+	const h = opts.term2?.q.hiddenValues || {}
 	const config = {
 		id: opts.term.term.id,
 		settings: {
@@ -760,8 +797,7 @@ export async function getPlotConfig(opts, app) {
 					right: 20,
 					bottom: 50
 				},
-				axisTitleFontSize: 16,
-				hidden: []
+				axisTitleFontSize: 16
 			}
 		}
 	}

@@ -49,7 +49,7 @@ export async function get_incidence(q, ds) {
 
 					// for chart with a single series, R will convert the series ID from '' to '1', so convert back to empty string
 					const serieses = new Set(data.map(x => x.series))
-					if (serieses.size == 1) {
+					if (serieses.size == 1 && serieses.has('')) {
 						ci_data.estimates[''] = ci_data.estimates['1']
 						delete ci_data.estimates['1']
 					}

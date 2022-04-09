@@ -587,10 +587,11 @@ async function call_fillTW(tw, vocabApi, defaultQ) {
 export function set_hiddenvalues(q, term) {
 	if (!q.hiddenValues) {
 		q.hiddenValues = {}
-	}
-	if (term.values) {
-		for (const k in term.values) {
-			if (term.values[k].uncomputable) q.hiddenValues[k] = 1
+		// by default, fill-in with uncomputable values
+		if (term.values) {
+			for (const k in term.values) {
+				if (term.values[k].uncomputable) q.hiddenValues[k] = 1
+			}
 		}
 	}
 }
