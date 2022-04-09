@@ -163,1030 +163,233 @@ tape('\n', function(test) {
                linear
 ***********************************/
 
-tape('(LINEAR) EF ~ sex race hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, { id: 'hrtavg' }]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-			// can delete the dom of this app if test passes
-			//app.Inner.app.Inner.dom.holder.remove()
-		}
-	)
-})
+const testList = [
+	{
+		name: 'sex race hrtavg',
+		headingCount: 5,
+		independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, { id: 'hrtavg' }]
+	},
+	{
+		name: 'sex*race hrtavg',
+		headingCount: 5,
+		independent: [
+			{ id: 'sex', refGrp: '1', interactions: ['genetic_race'] },
+			{ id: 'genetic_race', interactions: ['sex'] },
+			{ id: 'hrtavg' }
+		]
+	},
+	{
+		name: 'sex race*hrtavg',
+		headingCount: 5,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			{ id: 'genetic_race', interactions: ['hrtavg'] },
+			{ id: 'hrtavg', interactions: ['genetic_race'] }
+		]
+	},
+	{
+		name: 'sex hrtavg*agedx',
+		headingCount: 5,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			{ id: 'hrtavg', interactions: ['agedx'] },
+			{ id: 'agedx', interactions: ['hrtavg'] }
+		]
+	},
+	{
+		name: 'sex raceGroupsetting hrtavg',
+		headingCount: 5,
+		independent: [{ id: 'sex', refGrp: '1' }, raceGroupsetting, { id: 'hrtavg' }]
+	},
+	{
+		name: 'sex*raceGroupsetting hrtavg',
+		headingCount: 5,
+		independent: [
+			{ id: 'sex', refGrp: '1', interactions: ['genetic_race'] },
+			(() => {
+				const a = JSON.parse(JSON.stringify(raceGroupsetting))
+				a.interactions = ['sex']
+				return a
+			})(),
+			{ id: 'hrtavg' }
+		]
+	},
+	{
+		name: 'sex raceGroupsetting*hrtavg',
+		headingCount: 5,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			(() => {
+				const a = JSON.parse(JSON.stringify(raceGroupsetting))
+				a.interactions = ['hrtavg']
+				return a
+			})(),
+			{ id: 'hrtavg', interactions: ['genetic_race'] }
+		]
+	},
+	{
+		name: 'raceGroupsetting*diaggrpGroupsetting',
+		headingCount: 5,
+		independent: [
+			(() => {
+				const a = JSON.parse(JSON.stringify(raceGroupsetting))
+				a.interactions = ['diaggrp']
+				return a
+			})(),
+			(() => {
+				const a = JSON.parse(JSON.stringify(diaggrpGroupsetting))
+				a.interactions = ['genetic_race']
+				return a
+			})()
+		]
+	},
+	{
+		name: 'sex race pgsRegularBin',
+		headingCount: 5,
+		independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, pgsRegularBin]
+	},
+	{
+		name: 'sex race*pgsRegularBin',
+		headingCount: 5,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			{ id: 'genetic_race', interactions: ['prs_PGS000332'] },
+			(() => {
+				const a = JSON.parse(JSON.stringify(pgsRegularBin))
+				a.interactions = ['genetic_race']
+				return a
+			})()
+		]
+	},
+	{
+		test: 'sex race pgsCustomBin',
+		headingCount: 5,
+		independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, pgsCustomBin]
+	},
+	{
+		name: 'sex race*pgsCustomBin',
+		headingCount: 5,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			{ id: 'genetic_race', interactions: ['prs_PGS000332'] },
+			(() => {
+				const a = JSON.parse(JSON.stringify(pgsCustomBin))
+				a.interactions = ['genetic_race']
+				return a
+			})()
+		]
+	},
+	{
+		name: 'pgsRegularBin*agedxCustomBin',
+		headingCount: 5,
+		independent: [
+			(() => {
+				const a = JSON.parse(JSON.stringify(pgsRegularBin))
+				a.interactions = ['agedx']
+				return a
+			})(),
+			(() => {
+				const a = JSON.parse(JSON.stringify(agedxCustomBin))
+				a.interactions = ['prs_PGS000332']
+				return a
+			})()
+		]
+	},
+	{
+		name: 'sex hrtavgSpline',
+		headingCount: 6,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
+		]
+	},
+	{
+		name: 'sex hrtavgSpline ageSpline',
+		headingCount: 6,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } },
+			{ id: 'agedx', q: { mode: 'spline', knots: [{ value: 0.5 }, { value: 3.5 }, { value: 10.5 }] } }
+		]
+	},
+	{
+		name: 'sex race*agedxCustomBin hrtavgSpline',
+		headingCount: 6,
+		independent: [
+			{ id: 'sex', refGrp: '1' },
+			{ id: 'genetic_race', interactions: ['agedx'] },
+			(() => {
+				const a = JSON.parse(JSON.stringify(agedxCustomBin))
+				a.interactions = ['genetic_race']
+				return a
+			})(),
+			{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
+		]
+	}
+]
 
-tape('(LINEAR) EF ~ sex*race hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1', interactions: ['genetic_race'] },
-				{ id: 'genetic_race', interactions: ['sex'] },
-				{ id: 'hrtavg' }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ sex race*hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'genetic_race', interactions: ['hrtavg'] },
-				{ id: 'hrtavg', interactions: ['genetic_race'] }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ sex hrtavg*agedx', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'hrtavg', interactions: ['agedx'] },
-				{ id: 'agedx', interactions: ['hrtavg'] }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ sex raceGroupsetting hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [{ id: 'sex', refGrp: '1' }, raceGroupsetting, { id: 'hrtavg' }]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ sex*raceGroupsetting hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1', interactions: ['genetic_race'] },
-				(() => {
-					const a = JSON.parse(JSON.stringify(raceGroupsetting))
-					a.interactions = ['sex']
-					return a
-				})(),
-				{ id: 'hrtavg' }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ sex raceGroupsetting*hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				(() => {
-					const a = JSON.parse(JSON.stringify(raceGroupsetting))
-					a.interactions = ['hrtavg']
-					return a
-				})(),
-				{ id: 'hrtavg', interactions: ['genetic_race'] }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ raceGroupsetting*diaggrpGroupsetting', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				(() => {
-					const a = JSON.parse(JSON.stringify(raceGroupsetting))
-					a.interactions = ['diaggrp']
-					return a
-				})(),
-				(() => {
-					const a = JSON.parse(JSON.stringify(diaggrpGroupsetting))
-					a.interactions = ['genetic_race']
-					return a
-				})()
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ sex race pgsRegularBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, pgsRegularBin]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-tape('(LINEAR) EF ~ sex race*pgsRegularBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'genetic_race', interactions: ['prs_PGS000332'] },
-				(() => {
-					const a = JSON.parse(JSON.stringify(pgsRegularBin))
-					a.interactions = ['genetic_race']
-					return a
-				})()
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ sex race pgsCustomBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, pgsCustomBin]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ sex race*pgsCustomBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'genetic_race', interactions: ['prs_PGS000332'] },
-				(() => {
-					const a = JSON.parse(JSON.stringify(pgsCustomBin))
-					a.interactions = ['genetic_race']
-					return a
-				})()
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ pgsRegularBin*agedxCustomBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				(() => {
-					const a = JSON.parse(JSON.stringify(pgsRegularBin))
-					a.interactions = ['agedx']
-					return a
-				})(),
-				(() => {
-					const a = JSON.parse(JSON.stringify(agedxCustomBin))
-					a.interactions = ['prs_PGS000332']
-					return a
-				})()
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ sex hrtavgSpline', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 6 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ sex hrtavgSpline ageSpline', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } },
-				{ id: 'agedx', q: { mode: 'spline', knots: [{ value: 0.5 }, { value: 3.5 }, { value: 10.5 }] } }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 6 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LINEAR) EF ~ sex race*agedxCustomBin hrtavgSpline', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'linear',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'genetic_race', interactions: ['agedx'] },
-				(() => {
-					const a = JSON.parse(JSON.stringify(agedxCustomBin))
-					a.interactions = ['genetic_race']
-					return a
-				})(),
-				{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 7, 'result has 7 headings')
-			test.end()
-		}
-	)
-})
-
-/****************************************************
-                      logistic - EF
-*****************************************************/
-
-tape('(LOGISTIC) EF ~ sex race hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, { id: 'hrtavg' }]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-			// can delete the dom of this app if test passes
-			//app.Inner.app.Inner.dom.holder.remove()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ sex*race hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1', interactions: ['genetic_race'] },
-				{ id: 'genetic_race', interactions: ['sex'] },
-				{ id: 'hrtavg' }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ sex race*hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'genetic_race', interactions: ['hrtavg'] },
-				{ id: 'hrtavg', interactions: ['genetic_race'] }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 6 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ sex hrtavg*agedx', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'hrtavg', interactions: ['agedx'] },
-				{ id: 'agedx', interactions: ['hrtavg'] }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ sex raceGroupsetting hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [{ id: 'sex', refGrp: '1' }, raceGroupsetting, { id: 'hrtavg' }]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ sex*raceGroupsetting hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1', interactions: ['genetic_race'] },
-				(() => {
-					const a = JSON.parse(JSON.stringify(raceGroupsetting))
-					a.interactions = ['sex']
-					return a
-				})(),
-				{ id: 'hrtavg' }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ sex raceGroupsetting*hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				(() => {
-					const a = JSON.parse(JSON.stringify(raceGroupsetting))
-					a.interactions = ['hrtavg']
-					return a
-				})(),
-				{ id: 'hrtavg', interactions: ['genetic_race'] }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ raceGroupsetting*diaggrpGroupsetting', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				(() => {
-					const a = JSON.parse(JSON.stringify(raceGroupsetting))
-					a.interactions = ['diaggrp']
-					return a
-				})(),
-				(() => {
-					const a = JSON.parse(JSON.stringify(diaggrpGroupsetting))
-					a.interactions = ['genetic_race']
-					return a
-				})()
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ sex race pgsRegularBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, pgsRegularBin]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-tape('(LOGISTIC) EF ~ sex race*pgsRegularBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'genetic_race', interactions: ['prs_PGS000332'] },
-				(() => {
-					const a = JSON.parse(JSON.stringify(pgsRegularBin))
-					a.interactions = ['genetic_race']
-					return a
-				})()
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 6 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ sex race pgsCustomBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, pgsCustomBin]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ sex race*pgsCustomBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'genetic_race', interactions: ['prs_PGS000332'] },
-				(() => {
-					const a = JSON.parse(JSON.stringify(pgsCustomBin))
-					a.interactions = ['genetic_race']
-					return a
-				})()
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 6 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ pgsRegularBin*agedxCustomBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				(() => {
-					const a = JSON.parse(JSON.stringify(pgsRegularBin))
-					a.interactions = ['agedx']
-					return a
-				})(),
-				(() => {
-					const a = JSON.parse(JSON.stringify(agedxCustomBin))
-					a.interactions = ['prs_PGS000332']
-					return a
-				})()
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ sex hrtavgSpline', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 6 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ sex hrtavgSpline ageSpline', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } },
-				{ id: 'agedx', q: { mode: 'spline', knots: [{ value: 0.5 }, { value: 3.5 }, { value: 10.5 }] } }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 6 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) EF ~ sex race*agedxCustomBin hrtavgSpline', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'LV_Ejection_Fraction_3D' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'genetic_race', interactions: ['agedx'] },
-				(() => {
-					const a = JSON.parse(JSON.stringify(agedxCustomBin))
-					a.interactions = ['genetic_race']
-					return a
-				})(),
-				{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 7, 'result has 7 headings')
-			test.end()
-		}
-	)
-})
-
-/****************************************************
-             logistic - Arrhythmias
-*****************************************************/
-
-tape('(LOGISTIC) Arrhythmias ~ sex race hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, { id: 'hrtavg' }]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-			// can delete the dom of this app if test passes
-			//app.Inner.app.Inner.dom.holder.remove()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ sex*race hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [
-				{ id: 'sex', refGrp: '1', interactions: ['genetic_race'] },
-				{ id: 'genetic_race', interactions: ['sex'] },
-				{ id: 'hrtavg' }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ sex race*hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'genetic_race', interactions: ['hrtavg'] },
-				{ id: 'hrtavg', interactions: ['genetic_race'] }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 6 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ sex hrtavg*agedx', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'hrtavg', interactions: ['agedx'] },
-				{ id: 'agedx', interactions: ['hrtavg'] }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ sex raceGroupsetting hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [{ id: 'sex', refGrp: '1' }, raceGroupsetting, { id: 'hrtavg' }]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ sex*raceGroupsetting hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [
-				{ id: 'sex', refGrp: '1', interactions: ['genetic_race'] },
-				(() => {
-					const a = JSON.parse(JSON.stringify(raceGroupsetting))
-					a.interactions = ['sex']
-					return a
-				})(),
-				{ id: 'hrtavg' }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ sex raceGroupsetting*hrtavg', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				(() => {
-					const a = JSON.parse(JSON.stringify(raceGroupsetting))
-					a.interactions = ['hrtavg']
-					return a
-				})(),
-				{ id: 'hrtavg', interactions: ['genetic_race'] }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ raceGroupsetting*diaggrpGroupsetting', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [
-				(() => {
-					const a = JSON.parse(JSON.stringify(raceGroupsetting))
-					a.interactions = ['diaggrp']
-					return a
-				})(),
-				(() => {
-					const a = JSON.parse(JSON.stringify(diaggrpGroupsetting))
-					a.interactions = ['genetic_race']
-					return a
-				})()
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ sex race pgsRegularBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, pgsRegularBin]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-tape.only('(LOGISTIC) Arrhythmias ~ sex race*pgsRegularBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'genetic_race', interactions: ['prs_PGS000332'] },
-				(() => {
-					const a = JSON.parse(JSON.stringify(pgsRegularBin))
-					a.interactions = ['genetic_race']
-					return a
-				})()
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 6 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ sex race pgsCustomBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [{ id: 'sex', refGrp: '1' }, { id: 'genetic_race' }, pgsCustomBin]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ sex race*pgsCustomBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'genetic_race', interactions: ['prs_PGS000332'] },
-				(() => {
-					const a = JSON.parse(JSON.stringify(pgsCustomBin))
-					a.interactions = ['genetic_race']
-					return a
-				})()
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 5, 'result has 5 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ pgsRegularBin*agedxCustomBin', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [
-				(() => {
-					const a = JSON.parse(JSON.stringify(pgsRegularBin))
-					a.interactions = ['agedx']
-					return a
-				})(),
-				(() => {
-					const a = JSON.parse(JSON.stringify(agedxCustomBin))
-					a.interactions = ['prs_PGS000332']
-					return a
-				})()
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 6 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ sex hrtavgSpline', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 6 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ sex hrtavgSpline ageSpline', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } },
-				{ id: 'agedx', q: { mode: 'spline', knots: [{ value: 0.5 }, { value: 3.5 }, { value: 10.5 }] } }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 6, 'result has 6 headings')
-			test.end()
-		}
-	)
-})
-
-tape('(LOGISTIC) Arrhythmias ~ sex race*agedxCustomBin hrtavgSpline', function(test) {
-	test.timeoutAfter(10000)
-	runpp(
-		{
-			regressionType: 'logistic',
-			outcome: { id: 'Arrhythmias' },
-			independent: [
-				{ id: 'sex', refGrp: '1' },
-				{ id: 'genetic_race', interactions: ['agedx'] },
-				(() => {
-					const a = JSON.parse(JSON.stringify(agedxCustomBin))
-					a.interactions = ['genetic_race']
-					return a
-				})(),
-				{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
-			]
-		},
-		app => {
-			app.on('postRender.test', null)
-			test.equal(findResultHeadings(app), 7, 'result has 7 headings')
-			test.end()
-		}
-	)
-})
+for (const item of testList) {
+	tape('(LINEAR) EF ~ ' + item.name, function(test) {
+		test.timeoutAfter(10000)
+		runpp(
+			{
+				regressionType: 'linear',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: item.independent
+			},
+			app => {
+				app.on('postRender.test', null)
+				test.equal(findResultHeadings(app), item.headingCount, 'result has ' + item.headingCount + ' headings')
+				test.end()
+			}
+		)
+	})
+	tape('(LOGISTIC) EF ~ ' + item.name, function(test) {
+		test.timeoutAfter(10000)
+		runpp(
+			{
+				regressionType: 'logistic',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: item.independent
+			},
+			app => {
+				app.on('postRender.test', null)
+				test.equal(findResultHeadings(app), item.headingCount, 'result has ' + item.headingCount + ' headings')
+				test.end()
+			}
+		)
+	})
+	tape('(LOGISTIC) Arrhythmias ~ ' + item.name, function(test) {
+		test.timeoutAfter(10000)
+		runpp(
+			{
+				regressionType: 'logistic',
+				outcome: { id: 'Arrhythmias' },
+				independent: item.independent
+			},
+			app => {
+				app.on('postRender.test', null)
+				test.equal(findResultHeadings(app), item.headingCount, 'result has ' + item.headingCount + ' headings')
+				test.end()
+			}
+		)
+	})
+	tape('(COX) Arrhythmias ~ ' + item.name, function(test) {
+		test.timeoutAfter(10000)
+		runpp(
+			{
+				regressionType: 'cox',
+				outcome: { id: 'Arrhythmias' },
+				independent: item.independent
+			},
+			app => {
+				app.on('postRender.test', null)
+				test.equal(findResultHeadings(app), item.headingCount, 'result has ' + item.headingCount + ' headings')
+				test.end()
+			}
+		)
+	})
+}
 
 ///////////////////////// helper
 
@@ -1213,7 +416,9 @@ function findResultHeadings(app) {
 	const spans = app.Inner.results.dom.oneSetResultDiv.selectAll('span').nodes()
 	let foundNumber = 0
 
-	foundNumber += spans.find(i => i.innerText == 'Warnings') ? 1 : 0
+	// skip warnings to keep the count stable
+	//foundNumber += spans.find(i => i.innerText == 'Warnings') ? 1 : 0
+
 	foundNumber += spans.find(i => i.innerText == 'Sample size:') ? 1 : 0
 
 	// linear
@@ -1225,6 +430,7 @@ function findResultHeadings(app) {
 
 	foundNumber += spans.find(i => i.innerText == 'Coefficients') ? 1 : 0
 	foundNumber += spans.find(i => i.innerText == 'Type III statistics') ? 1 : 0
+	foundNumber += spans.find(i => i.innerText == 'Statistical tests') ? 1 : 0
 	foundNumber += spans.find(i => i.innerText == 'Other summary statistics') ? 1 : 0
 
 	return foundNumber
