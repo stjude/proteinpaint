@@ -55,8 +55,48 @@ tape('basic cuminc', function(test) {
 		)
 		test.equal(
 			cumincDiv && cumincDiv.selectAll('.sjpcb-cuminc-series circle').size(),
-			9,
-			'should render 9 cuminc series circles'
+			18,
+			'should render 18 cuminc series circles'
+		)
+		test.end()
+	}
+})
+
+tape('hidden uncomputable', function(test) {
+	test.timeoutAfter(2000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: {
+						id: 'Cardiac dysrhythmia'
+					},
+					term2: {
+						id: 'hrtavg'
+					}
+				}
+			]
+		},
+		cuminc: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(cuminc) {
+		const legendDiv = cuminc.Inner.dom.legendDiv
+		test.equal(
+			legendDiv &&
+				legendDiv
+					.selectAll('.legend-row')
+					.filter(function() {
+						return Number(this.style.opacity) < 1
+					})
+					.size(),
+			2,
+			'should hide 1 series'
 		)
 		test.end()
 	}
@@ -93,7 +133,7 @@ tape('skipped series', function(test) {
 		const skippedDivs = cuminc.Inner.dom.chartsDiv
 			.select('.pp-cuminc-chartLegends')
 			.selectAll('.pp-cuminc-chartLegends-skipped')
-		test.equal(skippedDivs && skippedDivs.size(), 2, 'should render 2 skipped series')
+		test.equal(skippedDivs && skippedDivs.size(), 1, 'should render 1 skipped series')
 		test.end()
 	}
 })

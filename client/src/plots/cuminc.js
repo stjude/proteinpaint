@@ -96,6 +96,7 @@ class TdbCumInc {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+
 		return {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
@@ -127,6 +128,7 @@ class TdbCumInc {
 				throw 'no events found in the dataset'
 			}
 			this.app.vocabApi.syncTermData(this.state.config, data)
+			this.hiddenOverlays = this.getHiddenOverlays()
 			this.processData(data)
 			this.pj.refresh({ data: this.currData })
 			this.setTerm2Color(this.pj.tree.charts)
@@ -158,6 +160,15 @@ class TdbCumInc {
 		return opts
 	}
 
+	getHiddenOverlays() {
+		const tw = this.state.config.term2
+		if (!tw) return []
+		const h = tw.q.hiddenValues
+		return Object.keys(h)
+			.filter(k => h[k])
+			.map(k => tw.term.values[k].label)
+	}
+
 	processData(data) {
 		this.uniqueSeriesIds = new Set()
 		this.currData = []
@@ -180,7 +191,7 @@ class TdbCumInc {
 			for (const chart in this.tests) {
 				// remove hidden series from this.tests
 				this.tests[chart] = this.tests[chart].filter(
-					test => !this.settings.hidden.includes(test.series1) && !this.settings.hidden.includes(test.series2)
+					test => !this.hiddenOverlays.includes(test.series1) && !this.hiddenOverlays.includes(test.series2)
 				)
 			}
 		}
@@ -190,7 +201,7 @@ class TdbCumInc {
 		if (this.skippedSeries) {
 			for (const chart in this.skippedSeries) {
 				// remove hidden series from this.skippedTests
-				this.skippedSeries[chart] = this.skippedSeries[chart].filter(series => !this.settings.hidden.includes(series))
+				this.skippedSeries[chart] = this.skippedSeries[chart].filter(series => !this.hiddenOverlays.includes(series))
 			}
 		}
 	}
@@ -208,7 +219,7 @@ class TdbCumInc {
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
 						color: this.term2toColor[series.seriesId],
-						isHidden: this.settings.hidden.includes(series.seriesId)
+						isHidden: this.hiddenOverlays.includes(series.seriesId)
 					})
 				}
 			}
@@ -403,7 +414,7 @@ function setRenderers(self) {
 		//if (d.xVals) computeScales(d, s);
 
 		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
-		const visibleSerieses = chart.serieses.filter(s => !self.settings.hidden.includes(s.seriesId))
+		const visibleSerieses = chart.serieses.filter(s => !self.hiddenOverlays.includes(s.seriesId))
 		const serieses = mainG
 			.selectAll('.sjpcb-cuminc-series')
 			.data(visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
@@ -724,20 +735,25 @@ function setInteractivity(self) {
 		event.stopPropagation()
 		const d = event.target.__data__
 		if (d === undefined) return
-		const hidden = self.settings.hidden.slice()
+		const hidden = self.hiddenOverlays.slice()
 		const i = hidden.indexOf(d.seriesId)
 		if (i == -1) hidden.push(d.seriesId)
 		else hidden.splice(i, 1)
+
+		const hiddenValues = {}
+		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
+		for (const v of hidden) {
+			for (const k in term2.values) {
+				const value = term2.values[k]
+				if (hidden.includes(value.label)) hiddenValues[k] = 1
+			}
+		}
+		term2.q.hiddenValues = hiddenValues
+
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
-			config: {
-				settings: {
-					cuminc: {
-						hidden
-					}
-				}
-			}
+			config: { term2 }
 		})
 	}
 }
@@ -781,12 +797,7 @@ export async function getPlotConfig(opts, app) {
 					right: 20,
 					bottom: 50
 				},
-				axisTitleFontSize: 16,
-				// assumes that hidden values are only from the overlay term
-				// TODO: what about term0? may need to use term[0,2].q.hiddenValues directly
-				hidden: Object.keys(h)
-					.filter(k => h[k])
-					.map(k => opts.term2.term.values[k].label)
+				axisTitleFontSize: 16
 			}
 		}
 	}
