@@ -68,6 +68,7 @@ class MassApp {
 			await this.api.dispatch()
 		} catch (e) {
 			this.printError(e)
+			throw e
 		}
 	}
 

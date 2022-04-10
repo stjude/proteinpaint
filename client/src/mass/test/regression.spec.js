@@ -578,8 +578,10 @@ the test will check the number of headings in result
 the test will pass if there's no runtime error (client, server, R)
 */
 
-for (const item of testList) {
-	tape('(LINEAR) EF ~ ' + item.name, function(test) {
+const activeTests = testList //.filter(t => t.name == 'sex race*snplocus')
+
+for (const item of activeTests.slice(0, 1)) {
+	tape('(LINEAR) EF ~ ' + item.name, test => {
 		test.timeoutAfter(10000)
 		runpp(
 			{
@@ -587,14 +589,16 @@ for (const item of testList) {
 				outcome: { id: 'LV_Ejection_Fraction_3D' },
 				independent: item.independent
 			},
-			app => {
-				app.on('postRender.test', null)
-				test.equal(findResultHeadings(app), item.headingCount, 'result has ' + item.headingCount + ' headings')
+			async reg => {
+				reg.on('postRender.test', null)
+				test.equal(findResultHeadings(reg), item.headingCount, 'result has ' + item.headingCount + ' headings')
+				mayDestroyDom(test, reg)
 				test.end()
-			}
+			},
+			test
 		)
 	})
-	tape('(LOGISTIC) EF ~ ' + item.name, function(test) {
+	tape('(LOGISTIC) EF ~ ' + item.name, test => {
 		test.timeoutAfter(10000)
 		runpp(
 			{
@@ -602,14 +606,16 @@ for (const item of testList) {
 				outcome: { id: 'LV_Ejection_Fraction_3D' },
 				independent: item.independent
 			},
-			app => {
-				app.on('postRender.test', null)
-				test.equal(findResultHeadings(app), item.headingCount, 'result has ' + item.headingCount + ' headings')
+			async reg => {
+				reg.on('postRender.test', null)
+				test.equal(findResultHeadings(reg), item.headingCount, 'result has ' + item.headingCount + ' headings')
+				mayDestroyDom(test, reg)
 				test.end()
-			}
+			},
+			test
 		)
 	})
-	tape('(LOGISTIC) Arrhythmias ~ ' + item.name, function(test) {
+	tape('(LOGISTIC) Arrhythmias ~ ' + item.name, test => {
 		test.timeoutAfter(10000)
 		runpp(
 			{
@@ -617,14 +623,16 @@ for (const item of testList) {
 				outcome: { id: 'Arrhythmias' },
 				independent: item.independent
 			},
-			app => {
-				app.on('postRender.test', null)
-				test.equal(findResultHeadings(app), item.headingCount, 'result has ' + item.headingCount + ' headings')
+			async reg => {
+				reg.on('postRender.test', null)
+				test.equal(findResultHeadings(reg), item.headingCount, 'result has ' + item.headingCount + ' headings')
+				mayDestroyDom(test, reg)
 				test.end()
-			}
+			},
+			test
 		)
 	})
-	tape('(COX) Arrhythmias ~ ' + item.name, function(test) {
+	tape('(COX) Arrhythmias ~ ' + item.name, test => {
 		test.timeoutAfter(10000)
 		runpp(
 			{
@@ -632,18 +640,20 @@ for (const item of testList) {
 				outcome: { id: 'Arrhythmias' },
 				independent: item.independent
 			},
-			app => {
-				app.on('postRender.test', null)
-				test.equal(findResultHeadings(app), item.headingCount, 'result has ' + item.headingCount + ' headings')
+			async reg => {
+				reg.on('postRender.test', null)
+				test.equal(findResultHeadings(reg), item.headingCount, 'result has ' + item.headingCount + ' headings')
+				mayDestroyDom(test, reg)
 				test.end()
-			}
+			},
+			test
 		)
 	})
 }
 
 ///////////////////////// helper
 
-function runpp(plot, runtest) {
+function runpp(plot, runtest, test) {
 	plot.chartType = 'regression'
 	helpers.getRunPp('mass', {
 		state: {
@@ -653,6 +663,15 @@ function runpp(plot, runtest) {
 		debug: 1
 	})({
 		state: { plots: [plot] },
+		app: {
+			callbacks: {
+				'postInit.test': (app, error = null) => {
+					if (!error) return
+					test.fail('app.init() error: ' + JSON.stringify(error))
+					test.end()
+				}
+			}
+		},
 		regression: {
 			callbacks: {
 				'postRender.test': runtest
@@ -661,14 +680,14 @@ function runpp(plot, runtest) {
 	})
 }
 
-function findResultHeadings(app) {
-	if (app.Inner.results.dom.err_div.style('display') == 'block') {
+function findResultHeadings(reg) {
+	if (reg.Inner.results.dom.err_div.style('display') == 'block') {
 		// error is shown; return -1 as heading count so the test will always fail
 		return -1
 	}
 
 	// headings are created as <span>name</span>
-	const spans = app.Inner.results.dom.oneSetResultDiv.selectAll('span').nodes()
+	const spans = reg.Inner.results.dom.oneSetResultDiv.selectAll('span').nodes()
 	let foundNumber = 0
 
 	// skip warnings to keep the count stable
@@ -695,4 +714,10 @@ function addInteraction(tw, interId) {
 	const a = JSON.parse(JSON.stringify(tw))
 	a.interactions = [interId]
 	return a
+}
+
+function mayDestroyDom(test, component) {
+	if (!test._ok) return
+	if (component.Inner.app) component.Inner.app.destroy()
+	else component.destroy()
 }

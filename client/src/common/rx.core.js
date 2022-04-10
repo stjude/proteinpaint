@@ -78,6 +78,7 @@ export function getInitFxn(_Class_) {
 				})
 				.catch(e => {
 					if (self.printError) self.printError(e)
+					if (self.bus) self.bus.emit('postInit', null, 0, e)
 					else throw e
 				})
 		} else {
@@ -135,9 +136,9 @@ function getInitPrepFxn(_Class_, prepFxn) {
 			}
 			if (self.bus) self.bus.emit('postInit')
 			return api
-		} catch (e) {
-			if (self && self.printError) self.printError(e)
-			else throw e
+		} catch (error) {
+			if (self.bus) self.bus.emit('postInit', null, 0, error)
+			if (!self || !self.printError) throw error
 		}
 	}
 }
@@ -348,7 +349,7 @@ export function getAppApi(self) {
 		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender']
 		if (self.customEvents) self.eventTypes.push(...self.customEvents)
 		// set up a required event bus
-		const callbacks = self.opts.callbacks || (self.type == 'app' && self.opts.app && self.opts.app.callbacks) || {}
+		const callbacks = (self.opts.app && self.opts.app.callbacks) || self.opts.callbacks || {}
 		self.bus = new Bus(api, self.eventTypes, callbacks)
 	}
 	return api
@@ -422,6 +423,7 @@ export function getComponentApi(self) {
 			if (self.dom) {
 				if (self.dom.holder) self.dom.holder.selectAll('*').remove()
 				for (const key in self.dom) {
+					if (typeof self.dom[key].remove == 'function') self.dom[key].remove()
 					delete self.dom[key]
 				}
 			}
@@ -431,7 +433,7 @@ export function getComponentApi(self) {
 	}
 
 	if (!self.bus) {
-		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender']
+		if (!self.eventTypes) self.eventTypes = ['postInit', 'postRender', 'postPrintError']
 		if (self.customEvents) self.eventTypes.push(...self.customEvents)
 		// set up a required event bus
 		self.bus = new Bus(api, self.eventTypes, (self.opts && self.opts.callbacks) || {})
@@ -514,7 +516,7 @@ export class Bus {
 		return this
 	}
 
-	emit(eventType, arg = null, wait = 0) {
+	emit(eventType, arg = null, wait = 0, error = null) {
 		/*
 		eventType
 		- must be one of the eventTypes supplied to the Bus constructor
@@ -530,7 +532,7 @@ export class Bus {
 		setTimeout(() => {
 			for (const type in this.events) {
 				if (type == eventType || type.startsWith(eventType + '.')) {
-					this.events[type](arg || this.defaultArg)
+					this.events[type](arg || this.defaultArg, error)
 					if (eventType == 'postInit') delete this.events[type]
 				}
 			}
