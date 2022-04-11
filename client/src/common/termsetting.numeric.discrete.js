@@ -117,7 +117,7 @@ function processCustomBinInputs(self) {
 	const data = self.dom.customBinBoundaryInput
 		.property('value')
 		.split('\n')
-		.filter(d => (d != '' && !isNaN(d)))
+		.filter(d => d != '' && !isNaN(d))
 		.map(d => +d)
 		.sort((a, b) => a - b)
 		.map((d, i) => {
@@ -523,8 +523,7 @@ function renderCustomBinInputs(self, tablediv) {
 	self.dom.customBintbody = self.dom.bins_table.append('tbody')
 	const tr = self.dom.customBintbody.append('tr')
 
-	const binBoundaryTd = tr
-		.append('td')
+	const binBoundaryTd = tr.append('td')
 
 	self.dom.customBinBoundaryInput = binBoundaryTd
 		.append('textarea')
@@ -557,6 +556,7 @@ function renderCustomBinInputs(self, tablediv) {
 		const data = processCustomBinInputs(self)
 		// update self.q.lst and render bin lines only if bin boundry changed
 		const q = self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
+		if (self.q.hiddenValues) q.hiddenValues = self.q.hiddenValues
 		if (binsChanged(data, q.lst)) {
 			q.lst = data
 			self.renderBinLines(self, q)
@@ -584,7 +584,8 @@ function renderCustomBinInputs(self, tablediv) {
 	renderBoundaryInputDivs(self, self.q.lst)
 
 	// add help message for custom bin labels
-	customBinLabelTd.append('span')
+	customBinLabelTd
+		.append('span')
 		.style('font-size', '.6em')
 		.style('margin', '3px')
 		.style('color', '#858585')
@@ -599,8 +600,7 @@ export function renderBoundaryInputDivs(self, data) {
 
 	rangeDivs.exit().remove()
 	rangeDivs.each(function(d, i) {
-		select(this)
-			.html(d.range)
+		select(this).html(d.range)
 	})
 
 	rangeDivs
@@ -612,7 +612,7 @@ export function renderBoundaryInputDivs(self, data) {
 				.style('color', 'rgb(136, 136, 136)')
 				.html(d.range)
 		})
-	
+
 	self.dom.customBinRanges = self.dom.customBinRangeTd.selectAll('div')
 
 	// bin label inputs, start with label, use can edit labels and apply changes
