@@ -1,5 +1,5 @@
 import tape from 'tape'
-import * as rx from '../rx.core'
+import * as rx from '../index'
 
 /*************************
  reusable helper functions
