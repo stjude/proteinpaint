@@ -603,7 +603,7 @@ function makeInstruction(d) {
 	d.append('div').style('opacity', 0.6).html(`<ul>
 		<li>Enter gene, position, SNP, or variant.</li>
 			<li>All positions are on hg38 and 1-based.</li>
-			<li>The BAM file will be sliced at the provided postion or variant and visualized.</li>
+			<li>The BAM file will be sliced at the provided position or variant and visualized.</li>
 		</ul>`)
 }
 
