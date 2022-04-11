@@ -144,7 +144,8 @@ fn align_single_reads(query_seq: &String, ref_seq: String) -> (String, String, S
             println!("Alignment operation not found:{}{:?}", i, alignment_seq[i]);
         }
     }
-    (q_seq, align, r_seq)
+    // Need to check if the first and last nucleotide has been incorrectly aligned or not
+    check_first_last_nucleotide_correctly_aligned(&q_seq, &align, &r_seq)
 }
 
 fn align_multi_reads(query_seq: &String, ref_seq: &String) -> (String, String, String) {
@@ -228,4 +229,128 @@ fn align_multi_reads(query_seq: &String, ref_seq: &String) -> (String, String, S
     subst += ":";
     //println!("subst:{}", subst);
     (q_seq, r_seq, subst)
+}
+
+fn check_first_last_nucleotide_correctly_aligned(
+    q_seq: &String,
+    align: &String,
+    r_seq: &String,
+) -> (String, String, String) {
+    //println!("q_seq:{}", q_seq);
+    //println!("align:{}", align);
+    //println!("r_seq:{}", r_seq);
+
+    // Check if last nucleotide is correctly aligned
+
+    // First parsing out the last set of matched nucleotides and first set of unmatched sequence
+    let q_seq_chars: Vec<_> = q_seq.chars().collect();
+    let align_chars: Vec<_> = align.chars().collect();
+    let r_seq_chars: Vec<_> = r_seq.chars().collect();
+    //println!("r_seq_chars:{:?}", r_seq_chars);
+    let mut first_matched_nucleotides = String::new();
+    let mut first_unmatched_sequence = String::new();
+    let mut first = 0;
+    for i in 0..align_chars.len() {
+        let j = align_chars.len() - i - 1;
+        if &align_chars[j].to_string() == &"|" && first == 0 {
+            first_matched_nucleotides.push(r_seq_chars[j]);
+        } else if first == 1 && &align_chars[j].to_string() != &"|" {
+            first_unmatched_sequence.push(r_seq_chars[j]);
+        } else if first == 0 && &align_chars[j].to_string() != &"|" {
+            first += 1;
+            first_unmatched_sequence.push(r_seq_chars[j]);
+        } else {
+            break;
+        }
+    }
+    first_unmatched_sequence = reverse_string(&first_unmatched_sequence);
+    first_matched_nucleotides = reverse_string(&first_matched_nucleotides);
+    //println!("first_matched_nucleotides:{}", first_matched_nucleotides);
+    //println!("first_unmatched_sequence:{}", first_unmatched_sequence);
+
+    let first_matched_nucleotides_vector: Vec<_> = first_matched_nucleotides.chars().collect();
+    let first_unmatched_sequence_vector: Vec<_> = first_unmatched_sequence.chars().collect();
+    // Check if the first nucleotide(s) between first matched nucleotides is the same as the first nucleotides in the first set of unmatched sequences
+
+    let mut alignment_wrong = true; // Flag to store if the last matched nucleotide is correctly aligned or not
+    if first_matched_nucleotides.len() <= first_unmatched_sequence.len() {
+        for i in 0..first_matched_nucleotides.len() {
+            if first_matched_nucleotides_vector[i] != first_unmatched_sequence_vector[i] {
+                // Checking if all nucleotides between the first set of matched nucleotides and the nucleotides from unmatched sequence is same or not
+                alignment_wrong = false;
+                break;
+            }
+        }
+    } else {
+        alignment_wrong = false;
+    }
+    //println!("alignment_wrong:{}", alignment_wrong);
+
+    let mut q_seq_correct = String::new();
+    let mut r_seq_correct = String::new();
+    let mut align_correct = String::new();
+    if alignment_wrong == true {
+        // This will work only if the nucleotide at the end of the sequence is wrong (not beginning)
+        let correct_alignment_length =
+            r_seq.len() - first_unmatched_sequence.len() - first_matched_nucleotides.len();
+        for i in 0..correct_alignment_length {
+            //Adding those nucleotides that are correctly aligned
+            q_seq_correct.push(q_seq_chars[i]);
+            align_correct.push(align_chars[i]);
+            r_seq_correct.push(r_seq_chars[i]);
+        }
+
+        // Check if there are any substitutions or insertions in first_unmatched_sequence
+        let mut last_print_position = 0;
+        for i in 0..first_unmatched_sequence.len() {
+            if align_chars[correct_alignment_length + i] == '*' {
+                // Check if there are any substitutions in first unmatched sequence
+                for j in
+                    last_print_position + correct_alignment_length..correct_alignment_length + i + 1
+                {
+                    // Printing all nucleotides upto the substitution
+                    q_seq_correct.push(q_seq_chars[j]);
+                    align_correct.push(align_chars[j]);
+                    r_seq_correct.push(r_seq_chars[j]);
+                }
+                last_print_position = i;
+            } else if q_seq_chars[correct_alignment_length + i] == 'A'
+                || q_seq_chars[correct_alignment_length + i] == 'T'
+                || q_seq_chars[correct_alignment_length + i] == 'C'
+                || q_seq_chars[correct_alignment_length + i] == 'G'
+            // Check if there are any insertions in first unmatched sequence
+            {
+                for j in
+                    last_print_position + correct_alignment_length..correct_alignment_length + i + 1
+                {
+                    // Printing all nucleotides upto the insertion
+                    q_seq_correct.push(q_seq_chars[j]);
+                    align_correct.push(align_chars[j]);
+                    r_seq_correct.push(r_seq_chars[j]);
+                }
+                last_print_position = i;
+            }
+        }
+
+        for i in 0..first_matched_nucleotides.len() {
+            // Adding nucleotide(s) that were incorrectly aligned
+            q_seq_correct.push(first_matched_nucleotides_vector[i]);
+            r_seq_correct.push(first_matched_nucleotides_vector[i]);
+            align_correct.push('|');
+        }
+    } else {
+        q_seq_correct = q_seq.to_owned();
+        r_seq_correct = r_seq.to_owned();
+        align_correct = align.to_owned();
+    }
+    (q_seq_correct, align_correct, r_seq_correct)
+}
+
+// Reversing a string
+fn reverse_string(input: &str) -> String {
+    let mut result = String::new();
+    for c in input.chars().rev() {
+        result.push(c)
+    }
+    result
 }
