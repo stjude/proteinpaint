@@ -580,7 +580,7 @@ the test will pass if there's no runtime error (client, server, R)
 
 const activeTests = testList //.filter(t => t.name == 'sex race*snplocus')
 
-for (const item of activeTests.slice(0, 1)) {
+for (const item of activeTests) {
 	tape('(LINEAR) EF ~ ' + item.name, test => {
 		test.timeoutAfter(10000)
 		runpp(

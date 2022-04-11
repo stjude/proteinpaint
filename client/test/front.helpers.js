@@ -1,5 +1,5 @@
 const serverconfig = require('../../serverconfig')
-const host = 'http://localhost:' + serverconfig.port
+const host = 'http://localhost:' + (serverconfig.port || 3000)
 const serverData = Object.create(null)
 
 exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}) {
