@@ -1,5 +1,5 @@
 import tape from 'tape'
-import * as rx from '../index'
+import * as rx from '../index.js'
 
 /*************************
  reusable helper functions
@@ -191,7 +191,7 @@ tape('getComponentApi', function(test) {
 		getApi: rx.getComponentApi
 	}
 	const part0 = partInit(opts)
-	test.equal('type' in part0, true, 'should have an api.type property, even if undefine)')
+	test.equal('type' in part0, true, 'should have an api.type property, even if undefined)')
 	test.equal('id' in part0, true, 'should set an api.id property, even if undefined')
 	test.equal(typeof part0.update, 'function', 'should provide an update() method')
 	test.equal(typeof part0.on, 'function', 'should provide an on() method')

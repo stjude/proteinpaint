@@ -50,6 +50,7 @@ server/utils/rust/target/*
 test/copies/*
 client/test/internals.js
 client/test/wpCompileTime.js
+client/rx/toy/*
 
 cairo-*/*
 canvas/*

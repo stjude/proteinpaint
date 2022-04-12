@@ -134,8 +134,7 @@ export function runproteinpaint(arg) {
 		arg.serverData ||
 		// allow server data caching by app,
 		// may generalize later
-		(arg.termdb && arg.termdb.serverData) ||
-		(arg.toy && arg.toy.serverData)
+		(arg.termdb && arg.termdb.serverData)
 	// load genomes
 
 	const response = dofetch3('genomes', {}, { serverData })
@@ -798,9 +797,6 @@ async function parseEmbedThenUrl(arg, app) {
 		bulkui(0, 0, app.genomes, app.hostURL, holder, app.sandbox_header)
 	}
 
-	if (arg.toy) {
-		await launchtoy(arg.toy, app)
-	}
 	if (arg.termdb) {
 		await launchtermdb(arg.termdb, app)
 	}

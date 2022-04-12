@@ -137,7 +137,7 @@ function getInitPrepFxn(_Class_, prepFxn) {
 			if (self.bus) self.bus.emit('postInit')
 			return api
 		} catch (error) {
-			if (self.bus) self.bus.emit('postInit', null, 0, error)
+			if (self && self.bus) self.bus.emit('postInit', null, 0, error)
 			if (!self || !self.printError) throw error
 		}
 	}
