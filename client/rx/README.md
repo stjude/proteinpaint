@@ -21,18 +21,11 @@ An application benefits from using rx by having:
 - more stability and reliability (from Goal #3): less bugs and regressions from code changes
 - well-known interaction patterns (from Goal #4): easier to discover features and customize visualizations, since configuration mistakes are easily undone and unfinished work can be recovered in later user sessions 
 
-## Developer
+## Develop
 
 ### Usage
 
-```bash
-npm install github/siosonel/rx --save
-node server.js [port=8080]
-```
-
-See the code examples in `public/js/app.js`, which is loaded by http://localhost:8080/. 
-
-### Contributing
+### Get started
 
 ```bash
 git clone git@github.com:siosonel/rx.git
@@ -43,6 +36,13 @@ npm test
 npm test
 # open a Github PR
 ```
+
+To see examples, open http://localhost:8080/ after launching a server:
+
+```bash
+node server.js 8080
+```
+
 
 ## API
 
