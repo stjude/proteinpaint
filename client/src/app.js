@@ -1399,20 +1399,6 @@ async function launch_tkUIs(arg, app) {
 	}
 }
 
-/* 
-opts
-.state may be a partial or full instance of src/toy/toy.store defaultState
-*/
-async function launchtoy(opts, app) {
-	if (!opts.holder) opts.holder = app.holder0
-	try {
-		const _ = await import('./toy/toy.app')
-		await _.appInit(opts)
-	} catch (e) {
-		console.error(e)
-	}
-}
-
 async function launchtermdb(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
 	import('./termdb/app').then(_ => {
