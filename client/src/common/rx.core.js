@@ -1,1 +1,1 @@
-export * from '../../rx/index.js'
+../../rx/index.js
