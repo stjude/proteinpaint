@@ -48,6 +48,8 @@ npm test
 
 ### Basic Overview
 
+See a [highly simplified diagram](https://docs.google.com/drawings/d/14k2vuY0isgJzBY1BrEqiJfsl-9O6ewu3IsG-xEi4oCw/edit?usp=sharing) of the unidirectional data flow.
+
 (TODO: fill-in this section)
 
 
