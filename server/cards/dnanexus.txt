@@ -27,7 +27,7 @@
                     Create a token from the <a href="https://platform.dnanexus.com/" target="_self">DNAnexus platform</a>. See this link on how to generate an authentication <a href="https://documentation.dnanexus.com/user/login-and-logout#authentication-tokens" target="_blank">token</a>. Be sure to save the token!
                 </li>
                 <li>
-                    Create a new project in DNAnexus with Azure (will not work with AWS funded projects). See the DNAnexus documentation <a href="https://documentation.dnanexus.com/getting-started/ui-quickstart#step-1-make-your-first-project target="_blank">See the DNAnexus documentation</a> for instructions on how to set up a new project.
+                    Create a new project in DNAnexus with Azure (will not work with AWS funded projects). See the DNAnexus documentation <a href="https://documentation.dnanexus.com/getting-started/ui-quickstart#step-1-make-your-first-project" target="_blank">See the DNAnexus documentation</a> for instructions on how to set up a new project.
                 </li>
                 <li>
                     Download the ProteinPaint FileViewer from the blue button above. 
@@ -104,7 +104,7 @@
         </pre>
         </p>
         <p style="margin-left: 2vw;">
-            Upload all files to the project with the <a href="https://documentation.dnanexus.com/user/helpstrings-of-sdk-command-line-utilities#upload" targe="_blank">dx upload</a> command.
+            Upload all files to the project with the <a href="https://documentation.dnanexus.com/user/helpstrings-of-sdk-command-line-utilities#upload" target="_blank">dx upload</a> command.
 
             Upload the FileViewer to the project with this command:
         <pre style="margin: 0vw 1vw; font-size: 0.9em; opacity: 0.6; white-space:pre-wrap;">
