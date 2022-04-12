@@ -3,31 +3,30 @@ import { getCompInit } from './rx.js'
 class MyButton {
 	constructor(opts) {
 		this.type = 'button'
-		const button = opts.holder.append('button')
+		const leftLabel = opts.holder.append('span').style('margin-right', '10px')
+		const button = opts.holder.append('button').on('click', () => {
+			this.app.dispatch({
+				type: 'add_btnclicks',
+				id: this.id,
+				increment: 1
+			})
+		})
+
 		this.dom = {
 			holder: opts.holder,
+			leftLabel,
 			button,
-			label: button.append('span').html('Number of clicks: '),
+			btnlabel: button.append('span').html('Number of clicks: '),
 			count: button.append('span')
 		}
 	}
 
-	init(appState) {
-		this.dom.count.html(appState.btn.numClicks)
-		this.dom.button.on('click', () => {
-			console.log('test')
-			this.app.dispatch({
-				type: 'add_btnclicks',
-				increment: 1
-			})
-		})
-	}
-
 	getState(appState) {
-		return appState.btn
+		return appState.buttons[this.id]
 	}
 
 	main() {
+		this.dom.leftLabel.html(this.state.name)
 		this.dom.count.html(this.state.numClicks)
 	}
 }

@@ -30,7 +30,7 @@ npm install github/siosonel/rx --save
 node server.js [port=8080]
 ```
 
-See the code examples in `public/js/app.js`, which is loaded by http://localhost:[port]/. 
+See the code examples in `public/js/app.js`, which is loaded by http://localhost:8080/. 
 
 ### Contributing
 
@@ -44,12 +44,13 @@ npm test
 # open a Github PR
 ```
 
-## Basic API
+## API
 
-### rx.getAppInit()
+### Basic Overview
+
+(TODO: fill-in this section)
 
 
-
-## Detailed API
+### Detailed API
 
 Please refer to the [detailed API documentation](https://docs.google.com/document/d/1G3LqbtsCEkGw4ABA_VognhjVnUHnsVYAGdXyhYG374M/edit?usp=sharing).

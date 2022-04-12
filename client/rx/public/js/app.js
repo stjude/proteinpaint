@@ -1,7 +1,8 @@
-import { getAppInit } from './rx.js'
+import { getAppInit, multiInit } from './rx.js'
 import { storeInit } from './store.js'
 import { portalBannerInit } from './banner.js'
 import { myButtonInit } from './button.js'
+import { counterInit } from './counter.js'
 
 class MyApp {
 	constructor(opts) {
@@ -18,8 +19,14 @@ class MyApp {
 				.style('background-color', 'rgba(100,0,0,0.3)')
 				.on('click', () => this.dom.errdiv.style('display', 'none')),
 
-			button: holder.append('div')
+			buttons: holder.append('div'),
+			counter: holder.append('div')
 		}
+	}
+
+	validateOpts(o = {}) {
+		if (!o.holder) throw `missing opts.holder in the MassApp constructor argument`
+		return o
 	}
 
 	async init() {
@@ -28,10 +35,15 @@ class MyApp {
 			// may rehydrate using server data
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
-			this.components = {
-				banner: await portalBannerInit({ app: this.api, holder: this.dom.banner }),
-				button: await myButtonInit({ app: this.api, holder: this.dom.button })
-			}
+			this.components = await multiInit({
+				banner: portalBannerInit({ app: this.api, holder: this.dom.banner }),
+				buttons: Promise.all(
+					this.state.buttons.map((btnState, index) => {
+						return myButtonInit({ app: this.api, holder: this.dom.buttons.append('div'), id: index })
+					})
+				),
+				counter: counterInit({ app: this.api, holder: this.dom.counter })
+			})
 			// launch the app
 			await this.api.dispatch()
 		} catch (e) {

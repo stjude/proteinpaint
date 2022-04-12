@@ -4,7 +4,7 @@ class PortalBanner {
 	constructor(opts) {
 		this.type = 'banner'
 		this.dom = {
-			holder: opts.holder
+			holder: opts.holder.style('font-size', '2em').style('font-weight', 600)
 		}
 	}
 

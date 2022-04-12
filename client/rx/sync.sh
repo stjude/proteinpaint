@@ -8,7 +8,7 @@ fi
 # synchronize the code in the rx directory 
 # with the isolated rx git repo (local copy)
 RXCOPY=../../../rx
-rsync -av ./ $RXCOPY --delete
+rsync -av ./ $RXCOPY
 if [[ "$1" != "" ]]; then
 	cd $RXCOPY
 	git add -A

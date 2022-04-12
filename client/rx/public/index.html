@@ -2,36 +2,23 @@
 <html lang="en" style="margin:0px;width:100%;height:100%">
 <head>
 	<meta charset="utf-8">
-	<title>rx example</title>
+	<title>Button Example</title>
 	<style> 
 		body {
+    	padding: 25px;
 			font-family: Menlo, Monospace, Consolas, Arial, sans-serif;
-    	font-size: 14px;	
+    	font-size: 14px;
 		}
 		div {
 			margin: 5px;
 			padding: 5px;
 		}
 	</style>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-	<script src="./js/app.js" type='module' charset="utf-8"></script>
 </head>
-<body style="margin:0px;width:100%;height:100%">
-<script type='module'>
-
-/*************
-  COMPONENTS
-**************/
-
-import { appInit } from './js/app.js'
-
-appInit({
-	holder: document.querySelector('body'),
-	state: {
-		banner: 'Test App'
-	}
-})
-
-</script>
+<body>
+<h1>Example Usage</h1>
+<ul>
+	<li><a href='./buttons.html'>Buttons</a></li>
+</ul>
 </body>
 </html>
