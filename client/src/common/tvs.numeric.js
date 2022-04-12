@@ -207,7 +207,9 @@ function addRangeTableNoDensity(self, tvs) {
 	brush.equation_td = tr.append('td')
 
 	const minval = 'min' in tvs.term ? tvs.term.min : null
+	const minsymbol = 'min' in tvs.term ? tvs.term.min : '-ꝏ'
 	const maxval = 'max' in tvs.term ? tvs.term.max : null
+	const maxsymbol = 'max' in tvs.term ? tvs.term.max : 'ꝏ'
 	const startval = range && 'start' in range ? range.start : null
 	brush.start_input = brush.equation_td
 		.append('input')
@@ -216,8 +218,8 @@ function addRangeTableNoDensity(self, tvs) {
 		.attr('value', startval)
 		.attr('min', minval)
 		.attr('max', maxval)
-		.attr('title', 'leave blank for unbounded (-ꝏ)')
-		.attr('placeholder', '-ꝏ')
+		.attr('title', `leave blank for the allowed minimum value`)
+		.attr('placeholder', minsymbol)
 		.style('width', '80px')
 		.style('height', '18px')
 		.style('margin', '3px 5px')
@@ -319,8 +321,8 @@ function addRangeTableNoDensity(self, tvs) {
 		.attr('value', stopval)
 		.attr('min', minval)
 		.attr('max', maxval)
-		.attr('title', 'leave blank for unbounded (+ꝏ)')
-		.attr('placeholder', '+ꝏ')
+		.attr('title', 'leave blank for the allowed maximum value')
+		.attr('placeholder', maxsymbol)
 		.style('width', '80px')
 		.style('height', '18px')
 		.style('margin', '3px 5px')
@@ -350,13 +352,14 @@ function addRangeTableNoDensity(self, tvs) {
 			self.dom.tip.hide()
 			const start = brush.start_input.property('value')
 			const stop = brush.stop_input.property('value')
+			console.log([stop])
 			const range = {
-				start,
+				start: start === '' ? minval : start,
 				startinclusive: brush.start_select.property('value') === 'startinclusive',
-				startunbounded: start === '',
-				stop,
+				startunbounded: start === '' && minval === null,
+				stop: stop === '' ? maxval : stop,
 				stopinclusive: brush.stop_select.property('value') === 'stopinclusive',
-				stopunbounded: stop === ''
+				stopunbounded: stop === '' && maxval === null
 			}
 
 			let errs = []
