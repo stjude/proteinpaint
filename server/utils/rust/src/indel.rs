@@ -55,6 +55,8 @@
 //              fishers_exact_test
 
 //use num_traits::Float;
+use bio::alignment::pairwise::*;
+use bio::alignment::AlignmentOperation;
 use fishers_exact::fishers_exact;
 use statrs::distribution::{ChiSquared, ContinuousCDF};
 use std::cmp;
@@ -303,7 +305,7 @@ fn main() {
     let start_positions_list: Vec<&str> = start_positions.split("-").collect(); // Vector containing start positions
     let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect(); // Vector containing cigar sequences
     let sequence_flags_list: Vec<&str> = sequence_flags.split("-").collect(); // Vector containing sam flag of read sequences
-    let single_thread_limit: usize = 2000; // If total number of reads is lower than this value the reads will be parsed sequentially in a single thread, if greaterreads will be parsed in parallel
+    let single_thread_limit: usize = 1000; // If total number of reads is lower than this value the reads will be parsed sequentially in a single thread, if greaterreads will be parsed in parallel
     let max_threads: usize = 3; // Max number of threads in case the parallel processing of reads is invoked
     let left_most_pos = variant_pos - segbplen; // Determining left most position, this is the position from where kmers will be generated. Useful in determining if a nucleotide is within indel region or not.
     let ref_length: i64 = refallele.len() as i64; // Determining length of ref allele
@@ -415,6 +417,8 @@ fn main() {
     //println!("alt_nucleotides_all_right:{:?}", alt_nucleotides_all_right);
     //println!("alt_nucleotides_all_left:{:?}", alt_nucleotides_all_left);
     drop(rightflank_nucleotides);
+    let reference_sequence = lines[0].to_string();
+    let alternate_sequence = lines[1].to_string();
 
     #[allow(unused_variables)]
     let (
@@ -431,8 +435,8 @@ fn main() {
         found_duplicate_kmers, // Variable for storing duplicate kmers
         kmer_length_iter, //Final kmer length
     ) = assign_kmer_weights(
-        lines[0].to_string(),
-        lines[1].to_string(),
+        reference_sequence.clone(),
+        alternate_sequence.clone(),
         min_kmer_length,
         left_most_pos,
         variant_pos,
@@ -517,12 +521,12 @@ fn main() {
                     strictness,
                     read.len(),
                 );
-                //println!("correct_start_position:{}", correct_start_position);
-                //println!("correct_end_position:{}", correct_end_position);
-                //println!(
-                //    "cigar_sequence:{}",
-                //    &cigar_sequences_list[i as usize - 2].to_string()
-                //);
+                println!("correct_start_position:{}", correct_start_position);
+                println!("correct_end_position:{}", correct_end_position);
+                println!(
+                    "cigar_sequence:{}",
+                    &cigar_sequences_list[i as usize - 2].to_string()
+                );
                 if within_indel == 1 {
                     // Checking if the read is in forward or reverse strand
                     let mut sequence_strand: String = "F".to_string(); // Initializing sequence strand to forward
@@ -583,37 +587,41 @@ fn main() {
                     //println!("spliced_sequence:{}", &spliced_sequence);
                     //println!("splice_start_pos:{}", splice_start_pos);
                     //println!("splice_stop_pos:{}", splice_stop_pos);
-                    let kmers = build_kmers_reads(spliced_sequence, kmer_length_iter); // Generates kmers for the given read
-                                                                                       //println!("Reference:");
-                    let ref_comparison = jaccard_similarity_weights(
-                        // Computes jaccard similarity w.r.t ref sequence
-                        &kmers,
-                        &ref_kmers_nodups,
-                        &ref_kmers_data,
-                        correct_start_position,
-                        correct_end_position,
-                        kmer_length_iter,
-                        &alignment_side,
-                    );
-                    //println!("Alternate:");
-                    let alt_comparison = jaccard_similarity_weights(
-                        // Computes jaccard similarity w.r.t alt sequence
-                        &kmers,
-                        &alt_kmers_nodups,
-                        &alt_kmers_data,
-                        correct_start_position,
-                        correct_end_position,
-                        kmer_length_iter,
-                        &alignment_side,
-                    );
-                    //println!("ref_comparison:{}", ref_comparison);
-                    //println!("alt_comparison:{}", alt_comparison);
+                    //let kmers = build_kmers_reads(spliced_sequence, kmer_length_iter); // Generates kmers for the given read
+                    //                                                                   //println!("Reference:");
+                    //let ref_comparison = jaccard_similarity_weights(
+                    //    // Computes jaccard similarity w.r.t ref sequence
+                    //    &kmers,
+                    //    &ref_kmers_nodups,
+                    //    &ref_kmers_data,
+                    //    correct_start_position,
+                    //    correct_end_position,
+                    //    kmer_length_iter,
+                    //    &alignment_side,
+                    //);
+                    ////println!("Alternate:");
+                    //let alt_comparison = jaccard_similarity_weights(
+                    //    // Computes jaccard similarity w.r.t alt sequence
+                    //    &kmers,
+                    //    &alt_kmers_nodups,
+                    //    &alt_kmers_data,
+                    //    correct_start_position,
+                    //    correct_end_position,
+                    //    kmer_length_iter,
+                    //    &alignment_side,
+                    //);
+                    let ref_comparison =
+                        align_single_reads(&spliced_sequence, reference_sequence.clone());
+                    let alt_comparison =
+                        align_single_reads(&spliced_sequence, alternate_sequence.clone());
+                    println!("ref_comparison:{}", ref_comparison);
+                    println!("alt_comparison:{}", alt_comparison);
                     let mut diff_score: f64 = 0.0;
                     if read_ambiguous < 2 {
                         diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
                     }
 
-                    if (diff_score.abs() * 10000.0).round() == 0.0 / 10000.0 {
+                    if (diff_score.abs() * 100000000.0).round() == 0.0 / 100000000.0 {
                         // Rounding off to 4 places of decimal
                         read_ambiguous = 2;
                     }
@@ -653,6 +661,8 @@ fn main() {
         let ref_kmers_nodups = Arc::new(ref_kmers_nodups);
         let ref_kmers_data = Arc::new(ref_kmers_data);
         let alt_kmers_nodups = Arc::new(alt_kmers_nodups);
+        let reference_sequence = Arc::new(reference_sequence);
+        let alternate_sequence = Arc::new(alternate_sequence);
         let alt_kmers_data = Arc::new(alt_kmers_data);
         let ref_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new())); // This variable will store read_diff_scores struct of reads classifed as ref, but can be written into by all threads. When Mutex is not define (as in the variables above) they are read-only.
         let alt_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new())); // This variable will store read_diff_scores struct of reads classifed as alt, but can be written into by all threads. When Mutex is not define (as in the variables above) they are read-only.
@@ -667,6 +677,8 @@ fn main() {
             let sequences = Arc::clone(&sequences);
             let start_positions = Arc::clone(&start_positions);
             let cigar_sequences = Arc::clone(&cigar_sequences);
+            let reference_sequence = Arc::clone(&reference_sequence);
+            let alternate_sequence = Arc::clone(&alternate_sequence);
             let sequence_flags = Arc::clone(&sequence_flags);
             let ref_kmers_nodups = Arc::clone(&ref_kmers_nodups);
             let ref_kmers_data = Arc::clone(&ref_kmers_data);
@@ -773,33 +785,41 @@ fn main() {
                             );
                             //let kmers = build_kmers(lines[iter + 2].to_string(), kmer_length_iter); // Generate kmers for a given read sequence
 
-                            let kmers = build_kmers_reads(spliced_sequence, kmer_length_iter); // Generates kmers for the given read
-                            let ref_comparison = jaccard_similarity_weights(
-                                // Computer jaccard similarity w.r.t ref
-                                &kmers,
-                                &ref_kmers_nodups,
-                                &ref_kmers_data,
-                                correct_start_position,
-                                correct_end_position,
-                                kmer_length_iter,
-                                &alignment_side,
+                            //let kmers = build_kmers_reads(spliced_sequence, kmer_length_iter); // Generates kmers for the given read
+                            //let ref_comparison = jaccard_similarity_weights(
+                            //    // Computer jaccard similarity w.r.t ref
+                            //    &kmers,
+                            //    &ref_kmers_nodups,
+                            //    &ref_kmers_data,
+                            //    correct_start_position,
+                            //    correct_end_position,
+                            //    kmer_length_iter,
+                            //    &alignment_side,
+                            //);
+                            //let alt_comparison = jaccard_similarity_weights(
+                            //    // Computer jaccard similarity w.r.t alt
+                            //    &kmers,
+                            //    &alt_kmers_nodups,
+                            //    &alt_kmers_data,
+                            //    correct_start_position,
+                            //    correct_end_position,
+                            //    kmer_length_iter,
+                            //    &alignment_side,
+                            //);
+                            let ref_comparison = align_single_reads(
+                                &spliced_sequence,
+                                reference_sequence.to_string(),
                             );
-                            let alt_comparison = jaccard_similarity_weights(
-                                // Computer jaccard similarity w.r.t alt
-                                &kmers,
-                                &alt_kmers_nodups,
-                                &alt_kmers_data,
-                                correct_start_position,
-                                correct_end_position,
-                                kmer_length_iter,
-                                &alignment_side,
+                            let alt_comparison = align_single_reads(
+                                &spliced_sequence,
+                                alternate_sequence.to_string(),
                             );
                             let mut diff_score: f64 = 0.0;
                             if read_ambiguous < 2 {
                                 diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
                             }
 
-                            if (diff_score.abs() * 10000.0).round() == 0.0 / 10000.0 {
+                            if (diff_score.abs() * 100000000.0).round() == 0.0 / 100000000.0 {
                                 // Rounding off to 4 places of decimal
                                 read_ambiguous = 2;
                             }
@@ -2246,6 +2266,7 @@ fn check_read_within_indel_region(
 }
 
 #[allow(unused_variables)] // This is added to silence warnings because ref_alt_same_base_start and splice_stop_cigar variable is currently not being used. Maybe deprecated in the future
+
 fn check_polyclonal(
     mut sequence: String,                  // Read sequence
     correct_start_position: i64,           // Left most pos
@@ -3231,4 +3252,348 @@ fn classify_to_four_categories(
         }
     }
     indices // Indices vector being returned to main function
+}
+
+fn align_single_reads(query_seq: &String, ref_seq: String) -> f64 {
+    let query_vector: Vec<_> = query_seq.chars().collect();
+    let ref_vector: Vec<_> = ref_seq.chars().collect();
+
+    let score = |a: u8, b: u8| if a == b { 1i32 } else { -1i32 };
+    // gap open score: -5, gap extension score: -1
+
+    let mut aligner = Aligner::with_capacity(
+        query_seq.as_bytes().len(),
+        ref_seq.as_bytes().len(),
+        -5, // gap open penalty
+        -1, // gap extension penalty
+        &score,
+    );
+
+    let alignment = aligner.global(query_seq.as_bytes(), ref_seq.as_bytes());
+    //let alignment = aligner.semiglobal(query_seq.as_bytes(), ref_seq.as_bytes());
+    //let alignment = aligner.local(query_seq.as_bytes(), ref_seq.as_bytes());
+
+    //let scoring = Scoring::from_scores(-5, -1, 1, -1) // Gap open, extend, match, mismatch score
+    //    .xclip(MIN_SCORE) // Clipping penalty for x set to 'negative infinity', hence global in x
+    //    .yclip(MIN_SCORE); // Clipping penalty for y set to 'negative infinity', hence global in y
+    //
+    //let mut aligner = Aligner::with_scoring(scoring);
+    //let alignment = aligner.custom(query_seq.as_bytes(), ref_seq.as_bytes());
+
+    let alignment_seq = alignment.operations;
+    let mut q_seq: String = String::new();
+    let mut align: String = String::new();
+    let mut r_seq: String = String::new();
+    let mut j: usize = 0;
+    let mut k: usize = 0;
+    let mut num_matches: f64 = 0.0;
+    for i in 0..alignment_seq.len() {
+        if AlignmentOperation::Match == alignment_seq[i] {
+            if j < query_vector.len() {
+                q_seq += &query_vector[j].to_string();
+                j += 1;
+            }
+            if k < ref_vector.len() {
+                r_seq += &ref_vector[k].to_string();
+                k += 1;
+            }
+            align += &"|".to_string(); // Add "|" when there is a match
+        } else if AlignmentOperation::Subst == alignment_seq[i] {
+            if j < query_vector.len() {
+                q_seq += &query_vector[j].to_string();
+                j += 1;
+            }
+            if k < ref_vector.len() {
+                r_seq += &ref_vector[k].to_string();
+                k += 1;
+            }
+            align += &"*".to_string(); // Add "*" when there is a substitution
+        } else if AlignmentOperation::Del == alignment_seq[i] {
+            if j > 0 && j < query_vector.len() {
+                // This condition is added so as to suppress part of the reference sequence that do not lie within the read region
+                q_seq += &"-".to_string();
+            }
+            if k < ref_vector.len() {
+                if j > 0 && j < query_vector.len() {
+                    // This condition is added so as to suppress part of the reference sequence that do not lie within the read region
+                    r_seq += &ref_vector[k].to_string();
+                }
+                k += 1;
+            }
+            if j > 0 && j < query_vector.len() {
+                // This condition is added so as to suppress part of the reference sequence that do not lie within the read region
+                align += &" ".to_string(); // Add empty space when there is a deletion
+            }
+        } else if AlignmentOperation::Ins == alignment_seq[i] {
+            if j < query_vector.len() {
+                q_seq += &query_vector[j].to_string();
+                j += 1;
+            }
+            r_seq += &"-".to_string();
+            align += &" ".to_string(); // Add empty space when there is an insertion
+        } else {
+            // Should not happen, added to help debug if it ever happens
+            println!("Alignment operation not found:{}{:?}", i, alignment_seq[i]);
+        }
+    }
+
+    // Need to check if the first and last nucleotide has been incorrectly aligned or not
+    let (q_seq_correct, align_correct, r_seq_correct) =
+        check_first_last_nucleotide_correctly_aligned(&q_seq, &align, &r_seq);
+    num_matches = align_correct.matches("|").count() as f64;
+    num_matches / align_correct.len() as f64
+}
+
+fn check_first_last_nucleotide_correctly_aligned(
+    q_seq: &String,
+    align: &String,
+    r_seq: &String,
+) -> (String, String, String) {
+    println!("q_seq:{}", q_seq);
+    println!("align:{}", align);
+    println!("r_seq:{}", r_seq);
+
+    // Check if last nucleotide(s) is correctly aligned and if substituted remove the unnecessary gap
+
+    // First parsing out the last set of matched nucleotides and first set of unmatched sequence
+    let q_seq_chars: Vec<_> = q_seq.chars().collect();
+    let align_chars: Vec<_> = align.chars().collect();
+    let r_seq_chars: Vec<_> = r_seq.chars().collect();
+    //println!("r_seq_chars:{:?}", r_seq_chars);
+    let mut first_matched_nucleotides = String::new();
+    let mut first_substituted_nucleotides = String::new();
+    let mut first_unmatched_sequence = String::new();
+    let mut first = 0;
+    let mut wrong_substitution = true; // Flag to check if last nucleotide has a substitution that should have been placed earlier
+    for i in 0..align_chars.len() {
+        let j = align_chars.len() - i - 1;
+        if &align_chars[j].to_string() == &"|" && first == 0 {
+            first_matched_nucleotides.push(r_seq_chars[j]);
+            wrong_substitution = false;
+        } else if &align_chars[j].to_string() == &"*" && first == 0 {
+            first_substituted_nucleotides.push(q_seq_chars[j]);
+        } else if first == 1 && &align_chars[j].to_string() != &"|" {
+            // Addition of nucleotides to first unmatched sequence
+            first_unmatched_sequence.push(r_seq_chars[j]);
+        } else if first == 0 && &align_chars[j].to_string() != &"|" {
+            // End of first matched nucleotide and start of first unmatched sequence
+            first += 1;
+            first_unmatched_sequence.push(r_seq_chars[j]);
+        } else {
+            break;
+        }
+    }
+    first_unmatched_sequence = reverse_string(&first_unmatched_sequence);
+    first_matched_nucleotides = reverse_string(&first_matched_nucleotides);
+    first_substituted_nucleotides = reverse_string(&first_substituted_nucleotides);
+    println!("first_matched_nucleotides:{}", first_matched_nucleotides);
+    println!(
+        "first_substituted_nucleotides:{}",
+        first_substituted_nucleotides
+    );
+    println!("first_unmatched_sequence:{}", first_unmatched_sequence);
+
+    let first_matched_nucleotides_vector: Vec<_> = first_matched_nucleotides.chars().collect();
+    let first_unmatched_sequence_vector: Vec<_> = first_unmatched_sequence.chars().collect();
+    // Check if the first nucleotide(s) between first matched nucleotides is the same as the first nucleotides in the first set of unmatched sequences
+
+    let mut alignment_wrong = true; // Flag to store if the last matched nucleotide is correctly aligned or not
+    if first_matched_nucleotides.len() == 0 {
+        alignment_wrong = false;
+    } else if first_matched_nucleotides.len() <= first_unmatched_sequence.len() {
+        for i in 0..first_matched_nucleotides.len() {
+            if first_matched_nucleotides_vector[i] != first_unmatched_sequence_vector[i] {
+                // Checking if all nucleotides between the first set of matched nucleotides and the nucleotides from unmatched sequence is same or not
+                alignment_wrong = false;
+                break;
+            }
+        }
+    } else {
+        alignment_wrong = false;
+    }
+    println!("alignment_wrong:{}", alignment_wrong);
+    println!("wrong_substitution:{}", wrong_substitution);
+
+    let mut q_seq_correct = String::new();
+    let mut r_seq_correct = String::new();
+    let mut align_correct = String::new();
+    if alignment_wrong == true {
+        // This will work only if the nucleotide at the end of the sequence is wrong (not beginning)
+        let correct_alignment_length =
+            r_seq.len() - first_unmatched_sequence.len() - first_matched_nucleotides.len();
+        for i in 0..correct_alignment_length {
+            //Adding those nucleotides that are correctly aligned
+            q_seq_correct.push(q_seq_chars[i]);
+            align_correct.push(align_chars[i]);
+            r_seq_correct.push(r_seq_chars[i]);
+        }
+
+        // Check if there are any substitutions or insertions in first_unmatched_sequence
+        let mut last_print_position = 0; // Variable that stores the last position where here was a substituted/inserted sequence in first_unmatched_sequence
+        for i in 0..first_unmatched_sequence.len() {
+            if align_chars[correct_alignment_length + i] == '*' {
+                // Check if there are any substitutions in first unmatched sequence
+                for j in
+                    last_print_position + correct_alignment_length..correct_alignment_length + i + 1
+                {
+                    // Printing all nucleotides upto the substitution
+                    q_seq_correct.push(q_seq_chars[j]);
+                    align_correct.push(align_chars[j]);
+                    r_seq_correct.push(r_seq_chars[j]);
+                }
+                last_print_position = i;
+            } else if q_seq_chars[correct_alignment_length + i] == 'A'
+                || q_seq_chars[correct_alignment_length + i] == 'T'
+                || q_seq_chars[correct_alignment_length + i] == 'C'
+                || q_seq_chars[correct_alignment_length + i] == 'G'
+            // Check if there are any insertions in first unmatched sequence
+            {
+                for j in
+                    last_print_position + correct_alignment_length..correct_alignment_length + i + 1
+                {
+                    // Printing all nucleotides upto the insertion
+                    q_seq_correct.push(q_seq_chars[j]);
+                    align_correct.push(align_chars[j]);
+                    r_seq_correct.push(r_seq_chars[j]);
+                }
+                last_print_position = i;
+            }
+        }
+
+        for i in 0..first_matched_nucleotides.len() {
+            // Adding nucleotide(s) that were incorrectly aligned
+            q_seq_correct.push(first_matched_nucleotides_vector[i]);
+            r_seq_correct.push(first_matched_nucleotides_vector[i]);
+            align_correct.push('|');
+        }
+    } else if wrong_substitution == true {
+        let correct_alignment_length =
+            r_seq.len() - first_unmatched_sequence.len() - first_substituted_nucleotides.len();
+        let first_substituted_nucleotides_vector: Vec<_> =
+            first_substituted_nucleotides.chars().collect();
+        for i in 0..correct_alignment_length {
+            //Adding those nucleotides that are correctly aligned
+            q_seq_correct.push(q_seq_chars[i]);
+            align_correct.push(align_chars[i]);
+            r_seq_correct.push(r_seq_chars[i]);
+        }
+
+        // Check if there are any substitutions or insertions in first_unmatched_sequence
+        let mut last_print_position = 0; // Variable that stores the last position where here was a substituted/inserted sequence in first_unmatched_sequence
+        for i in 0..first_unmatched_sequence.len() {
+            if align_chars[correct_alignment_length + i] == '*' {
+                // Check if there are any substitutions in first unmatched sequence
+                for j in
+                    last_print_position + correct_alignment_length..correct_alignment_length + i + 1
+                {
+                    // Printing all nucleotides upto the substitution
+                    q_seq_correct.push(q_seq_chars[j]);
+                    align_correct.push(align_chars[j]);
+                    r_seq_correct.push(r_seq_chars[j]);
+                }
+                last_print_position = i;
+            } else if q_seq_chars[correct_alignment_length + i] == 'A'
+                || q_seq_chars[correct_alignment_length + i] == 'T'
+                || q_seq_chars[correct_alignment_length + i] == 'C'
+                || q_seq_chars[correct_alignment_length + i] == 'G'
+            // Check if there are any insertions in first unmatched sequence
+            {
+                for j in
+                    last_print_position + correct_alignment_length..correct_alignment_length + i + 1
+                {
+                    // Printing all nucleotides upto the insertion
+                    q_seq_correct.push(q_seq_chars[j]);
+                    align_correct.push(align_chars[j]);
+                    r_seq_correct.push(r_seq_chars[j]);
+                }
+                last_print_position = i;
+            }
+        }
+
+        // Adding unmatched nucleotide(s) to first nucleotide after last_print_position
+        for i in 0..first_substituted_nucleotides.len() {
+            if first_substituted_nucleotides_vector[i]
+                == r_seq_chars[last_print_position + correct_alignment_length + i]
+            {
+                align_correct.push('|');
+            } else {
+                align_correct.push('*');
+            }
+            q_seq_correct.push(first_substituted_nucleotides_vector[i]);
+            r_seq_correct.push(r_seq_chars[last_print_position + correct_alignment_length + i])
+        }
+    }
+    //else if first_matched_nucleotides.len() > 0
+    //    && first_unmatched_sequence.len() > 0
+    //    && first_unmatched_sequence.len() > first_matched_nucleotides.len()
+    //{
+    //    // Check if there is better alignment for last matched sequence
+    //
+    //    let correct_alignment_length =
+    //        r_seq.len() - first_unmatched_sequence.len() - first_matched_nucleotides.len();
+    //    for i in 0..correct_alignment_length {
+    //        //Adding those nucleotides that are correctly aligned
+    //        q_seq_correct.push(q_seq_chars[i]);
+    //        align_correct.push(align_chars[i]);
+    //        r_seq_correct.push(r_seq_chars[i]);
+    //    }
+    //    for i in 0..first_unmatched_sequence.len() {
+    //        for j in 0..first_matched_nucleotides.len() {
+    //            // Check if all nucleotides are matching or not
+    //            let mut all_matched_nucleotides = true;
+    //            let mut last_print_position = 0;
+    //            if i + j < first_unmatched_sequence.len() {
+    //                // Prevent iterator to go beyond length of first_unmatched_sequence_vector
+    //                if first_matched_nucleotides_vector[i] != first_unmatched_sequence_vector[i + j]
+    //                {
+    //                    all_matched_nucleotides = false;
+    //                }
+    //                last_print_position = i;
+    //            }
+    //            if all_matched_nucleotides == false {
+    //                for i in 0..first_unmatched_sequence.len() {
+    //                    q_seq_correct.push(q_seq_chars[i]);
+    //                    align_correct.push(align_chars[i]);
+    //                    r_seq_correct.push(r_seq_chars[i]);
+    //                }
+    //
+    //                for i in 0..first_matched_nucleotides.len() {
+    //                    q_seq_correct.push(q_seq_chars[i]);
+    //                    align_correct.push(align_chars[i]);
+    //                    r_seq_correct.push(r_seq_chars[i]);
+    //                }
+    //            } else {
+    //                for i in 0..correct_alignment_length + last_print_position {
+    //                    q_seq_correct.push(q_seq_chars[correct_alignment_length + i]);
+    //                    align_correct.push(align_chars[correct_alignment_length + i]);
+    //                    r_seq_correct.push(r_seq_chars[correct_alignment_length + i]);
+    //                }
+    //
+    //                for j in 0..correct_alignment_length + last_print_position {
+    //                    q_seq_correct.push(
+    //                        q_seq_chars
+    //                            [correct_alignment_length + first_unmatched_sequence.len() + j],
+    //                    );
+    //                    align_correct.push(
+    //                        align_chars
+    //                            [correct_alignment_length + first_unmatched_sequence.len() + j],
+    //                    );
+    //                    r_seq_correct.push(
+    //                        r_seq_chars
+    //                            [correct_alignment_length + first_unmatched_sequence.len() + j],
+    //                    );
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
+    else {
+        q_seq_correct = q_seq.to_owned();
+        r_seq_correct = r_seq.to_owned();
+        align_correct = align.to_owned();
+    }
+    println!("q_seq_correct:{}", q_seq_correct);
+    println!("align_correct:{}", align_correct);
+    println!("r_seq_correct:{}", r_seq_correct);
+    (q_seq_correct, align_correct, r_seq_correct)
 }
