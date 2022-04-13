@@ -47,6 +47,15 @@ openSandbox
 		- makeArrowButtons
 		- showCitation
  
+*** Use Cases ***
+make_useCasesCard
+	- openUseCasesSandbox
+		- displayUseCases
+		- showUseCaseContent
+
+*** DNAnexus ***
+makeDNAnexusFileViewerCard
+	- openDNAnexusSandbox
 
 Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl0xIJqDRbyhahA4/edit#heading=h.jwyqi1mhacps
 */
@@ -68,7 +77,11 @@ export async function init_appDrawer(par) {
 	// const holddiv = make_top_fnDiv(gbrowser_col)
 	// const searchbar_div = app_col.append('div')
 
-	const useCaseCard = gbrowser_col.append('div')
+	const topCards_div = gbrowser_col
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', '1fr 1fr')
+		.style('gap', '5px')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const track_args = {
@@ -83,7 +96,8 @@ export async function init_appDrawer(par) {
 		allow_mdsform: re.allow_mdsform
 	}
 	// make_searchbar(track_args, page_args, searchbar_div)
-	make_useCasesCard(useCaseCard, track_args, page_args)
+	make_useCasesCard(topCards_div, track_args, page_args)
+	makeDNAnexusFileViewerCard(topCards_div, page_args)
 	await loadTracks(track_args, page_args)
 }
 
@@ -610,6 +624,7 @@ function makeDataDownload(download, div, app) {
 }
 
 async function showCode(ppcalls, btns) {
+	//Push 'Code' and div callback to `btns`. Create button in addArrowButtons
 	if (ppcalls.is_ui == true) return
 
 	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
@@ -694,6 +709,83 @@ async function showJsonCode(ppcalls) {
 	return json_contents
 }
 
+function showCitation(btns, pub) {
+	//Push 'Citation' and div callback to `btns`. Create button in addArrowButtons
+	btns.push({
+		name: 'Citation',
+		callback: async rdiv => {
+			try {
+				rdiv
+					.append('div')
+					.style('margin-left', '5w')
+					.html(
+						`<p style="display: inline-block;">${pub.title}. <em>${pub.journal}</em>, ${pub.year}. </p>
+						${
+							pub.pmid
+								? `<p style="display: inline-block;">PMID: <a href="${pub.pmidURL}" target="_blank">${pub.pmid}</a></p>`
+								: `<p>doi: <a href="${pub.doi}" target="_blank style="display: inline-block;">${pub.doi}</a></p>`
+						}`
+					)
+			} catch (e) {
+				alert('Error: ' + e)
+			}
+		}
+	})
+}
+
+function makeDataPreviewDiv(content, contLength, div, filename, message) {
+	//Create collapsible div displaying, if available, HTML message, file name, and 10 lines of data
+	div.append('div').html(`
+		${message ? `<p style="display:block;">${message}<p>` : ''}
+		<p style="display: inline-block;">Data preview <span style="color: #696969; font-style:oblique;"> 
+		${contLength > 10 ? `(first ${content.length} rows of ${filename})</span></p>` : `(content of ${filename})</span></p>`} 
+	`)
+	const bedjContent_div = div
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', '1fr')
+		.style('max-width', '80%')
+		.style('margin-left', '10px')
+		.style('border', '1px solid rgb(227, 227, 230)')
+		.style('white-space', 'pre')
+		.style('overflow-x', 'scroll')
+		.style('opacity', '0.65')
+		.style('padding', '1vw')
+	content.forEach(c => {
+		bedjContent_div.append('code').html(c)
+	})
+}
+
+async function showViewData(btns, data) {
+	//Push 'View Data' and div callback to `btns`. Create button in addArrowButtons
+	btns.push({
+		name: 'View Data',
+		callback: async rdiv => {
+			try {
+				for (const file of data) {
+					const res = await dofetch3(`/cardsjson?datafile=${file.file}&tabixCoord=${file.tabixQueryCoord}`)
+					if (res.error) {
+						console.log(`Error: ${res.error}`)
+						return
+					}
+					const returnedContent = res.file
+					const contLength = returnedContent.length
+					//Limit to only the first 10 rows
+					const content = returnedContent.slice(0, 10)
+
+					//Parse file path for file name to show above content
+					const splitpath = file.file.split('/')
+					const filename = splitpath[splitpath.length - 1]
+
+					makeDataPreviewDiv(content, contLength, rdiv, filename, file.message)
+				}
+			} catch (e) {
+				alert('Error: ' + e)
+			}
+		}
+	})
+}
+
 function makeArrowButtons(arrows, btns) {
 	if (arrows) {
 		arrows.forEach(arrow => {
@@ -729,87 +821,15 @@ function makeArrowButtons(arrows, btns) {
 	}
 }
 
-function showCitation(btns, pub) {
-	btns.push({
-		name: 'Citation',
-		callback: async rdiv => {
-			try {
-				rdiv
-					.append('div')
-					.style('margin-left', '5w')
-					.html(
-						`<p style="display: inline-block;">${pub.title}. <em>${pub.journal}</em>, ${pub.year}. </p>
-						${
-							pub.pmid
-								? `<p style="display: inline-block;">PMID: <a href="${pub.pmidURL}" target="_blank">${pub.pmid}</a></p>`
-								: `<p>doi: <a href="${pub.doi}" target="_blank style="display: inline-block;">${pub.doi}</a></p>`
-						}`
-					)
-			} catch (e) {
-				alert('Error: ' + e)
-			}
-		}
-	})
-}
-
-function makeDataPreviewDiv(content, contLength, div, filename, message) {
-	div.append('div').html(`
-		${message ? `<p style="display:block;">${message}<p>` : ''}
-		<p style="display: inline-block;">Data preview <span style="color: #696969; font-style:oblique;"> 
-		${contLength > 10 ? `(first ${content.length} rows of ${filename})</span></p>` : `(content of ${filename})</span></p>`} 
-	`)
-	const bedjContent_div = div
-		.append('div')
-		.style('display', 'grid')
-		.style('grid-template-columns', '1fr')
-		.style('max-width', '80%')
-		.style('margin-left', '10px')
-		.style('border', '1px solid rgb(227, 227, 230)')
-		.style('white-space', 'pre')
-		.style('overflow-x', 'scroll')
-		.style('opacity', '0.65')
-		.style('padding', '1vw')
-	content.forEach(c => {
-		bedjContent_div.append('code').html(c)
-	})
-}
-
-async function showViewData(btns, data) {
-	btns.push({
-		name: 'View Data',
-		callback: async rdiv => {
-			try {
-				for (const file of data) {
-					const res = await dofetch3(`/cardsjson?datafile=${file.file}&tabixCoord=${file.tabixQueryCoord}`)
-					if (res.error) {
-						console.log(`Error: ${res.error}`)
-						return
-					}
-					const returnedContent = res.file
-					const contLength = returnedContent.length
-					//Limit to only the first 10 rows
-					const content = returnedContent.slice(0, 10)
-
-					//Parse file path for file name to show above content
-					const splitpath = file.file.split('/')
-					const filename = splitpath[splitpath.length - 1]
-
-					makeDataPreviewDiv(content, contLength, rdiv, filename, file.message)
-				}
-			} catch (e) {
-				alert('Error: ' + e)
-			}
-		}
-	})
-}
-
 async function addArrowBtns(args, type, bdiv, rdiv) {
+	//Creates arrow buttons from every .arrowButtons object as well as `Code`, `View Data`, and `Citation`.
 	let btns = []
-	if (type == 'calls') showCode(args, btns)
+	if (type == 'calls') showCode(args, btns) //Only show Code for examples, not in top div
 	if (args.datapreview) {
 		showViewData(btns, args.datapreview)
 	}
 	if (type == 'main' && args.citation) {
+		//Only show citation in top div
 		const res = await dofetch3('/cardsjson?jsonfile=citations')
 		if (res.error) {
 			console.log(`Error: ${res.error}`)
@@ -870,13 +890,11 @@ async function addArrowBtns(args, type, bdiv, rdiv) {
 	}
 }
 
-/*
- ********* 'Use Cases' Card and Functions  *********
- */
+/********** 'Use Cases' Card and Functions  **********/
 function make_useCasesCard(div, track_args, page_args) {
 	const usecases_div = div
 		.append('div')
-		.style('grid-area', 'gbrowser')
+		// .style('grid-area', 'gbrowser')
 		.style('width', '90%')
 		.style('margin', '20px 10px')
 		.style('padding', '5px')
@@ -912,6 +930,7 @@ function openUseCasesSandbox(usecases, holder) {
 	const uc_content = sandbox_div.body.append('div').style('padding', '0vw 0vw 2vw 0vw')
 
 	function displayUseCases(usecases, list_div, content_div) {
+		//joins together all the use cases objects from index.json and displays them as cards in a newly created sandbox.
 		usecases.forEach(usecase => {
 			const uc = list_div.append('li')
 			uc.attr('class', 'sjpp-app-drawer-card')
@@ -932,6 +951,7 @@ function openUseCasesSandbox(usecases, holder) {
 	displayUseCases(usecases, uc_list, uc_content)
 
 	async function showUseCaseContent(usecase, div) {
+		//Fetches html from use case .txt file, applies a 'back' button at the top, and renders to client
 		const res = await dofetch3(`/cardsjson?file=${usecase.file}`)
 		if (res.error) {
 			sayerror(holder.append('div'), res.error)
@@ -955,4 +975,46 @@ function openUseCasesSandbox(usecases, holder) {
 			.style('margin', '0vw 5vw')
 			.html(res.file)
 	}
+}
+
+/********** DNAnexus Card and Functions  **********/
+function makeDNAnexusFileViewerCard(div, page_args) {
+	//Clicking on DNAnexus File Viewer card reveals instructions on how to launch a track from the file viewer
+	const dnanexus_div = div
+		.append('div')
+		.style('width', '90%')
+		.style('margin', '20px 10px')
+		.style('padding', '5px')
+		.attr('class', 'sjpp-app-drawer-card')
+		.html(
+			`<p style="margin-left: 12px; font-size:14.5px;font-weight:500; display: block;">DNAnexus File Viewer</p>
+		<p style="display: block; font-size: 13px; font-weight: 300; margin-left: 20px; justify-content: center; font-style:oblique; color: #403f3f;">Instructions on launching ProteinPaint from DNAnexus</p>`
+		)
+		.on('click', async () => {
+			page_args.apps_off()
+			openDNAnexusSandbox(page_args.apps_sandbox_div)
+		})
+
+	return dnanexus_div
+}
+
+async function openDNAnexusSandbox(holder) {
+	// fetches HTML from dnanexus.txt and creates sandbox
+	const res = await dofetch3(`/cardsjson?file=dnanexus`)
+	if (res.error) {
+		sayerror(holder.append('div'), res.error)
+		return
+	}
+	const sandbox_div = newSandboxDiv(holder)
+	sandbox_div.header.text('DNAnexus FileViewer')
+	sandbox_div.body.style('justify-content', 'center').style('background-color', '#f2ebdc')
+
+	sandbox_div.body
+		.append('div')
+		.style('padding', '2vw 0vw')
+		.append('div')
+		.style('background-color', 'white')
+		.style('margin', '0vw 10vw')
+		.style('padding', '10px')
+		.html(res.file)
 }

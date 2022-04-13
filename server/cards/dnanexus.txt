@@ -1,0 +1,157 @@
+<div style="line-height: 1.5em; padding: 2vw; font-family: 'Lucida Grande', sans-serif;">
+    <h1 style="margin: 5% 0% 2% 2%;">
+       Launch ProteinPaint with the DNAnexus FileViewer
+    </h1>
+    <br>
+    <p style="font-style:oblique; font-weight: 300; margin: 0vw 5vw; text-align:center; color: #403f3f;">
+       DNAnexus provides a secure way to view unpublished/sensitive files as custom ProteinPaint tracks. The ProteinPaint FileViewer launches VCF, BigWig, JSON BED, Splice Junction, and BAM tracks. 
+    </p>
+    <br>
+    <div style="margin:0vw 2vw; display: flex; justify-content: center; padding: 10px;">
+        <button type="button" onclick="window.open('https://pecan.stjude.cloud/static/fileviewers/ProteinPaint%20(VCF,%20bigWig,%20BEDj,%20junction,%20BAM).gz','_self', 'download')" style="background-color: #d0e3ff; padding: 8px; border-radius: 3px; border: none; display: inline-block;margin: 0px 10px; font-size: 1.1em;">Download ProteinPaint FileViewer</button>
+    </div>
+    <div style="margin: 3vw;">
+         <p style="margin-left: 2vw;">
+            This tutorial is specific to ProteinPaint. For more detailed information about DNAnexus, please see the <a href="https://documentation.dnanexus.com/" target="_blank"> documentation</a>.
+        </p>
+        <br>
+        <h2 style="font-size: 1.2em;">
+            Getting Started
+        </h2>
+        <p style="margin-left: 2vw;">
+            <ul style="margin-left: 2vw;">
+                <li>
+                    Create an account with DNAnexus. <a href="https://university.stjude.cloud/docs/genomics-platform/accounts-and-billing/" target="_blank">Follow the instructions from St. Jude Cloud</a>. Please direct questions regarding account set up to the St. Jude Cloud team (<a href="mailto:support@stjude.cloud?subject=Help Setting Up a DNAnexus Account">support@stjude.cloud</a>).
+                </li>
+                <li>
+                    Create a token from the <a href="https://platform.dnanexus.com/" target="_self">DNAnexus platform</a>. See this link on how to generate an authentication <a href="https://documentation.dnanexus.com/user/login-and-logout#authentication-tokens" target="_blank">token</a>. Be sure to save the token!
+                </li>
+                <li>
+                    Create a new project in DNAnexus with Azure (will not work with AWS funded projects). See the DNAnexus documentation <a href="https://documentation.dnanexus.com/getting-started/ui-quickstart#step-1-make-your-first-project" target="_blank">See the DNAnexus documentation</a> for instructions on how to set up a new project.
+                </li>
+                <li>
+                    Download the ProteinPaint FileViewer from the blue button above. 
+                </li>
+                <li>
+                    Install <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> dx-toolkit</span> by following the <a href="https://documentation.dnanexus.com/downloads" target="_blank">DNAnexus documentation</a>.
+                </li>
+            </ul>
+        </p>
+        <p style="margin-left: 2vw;">
+        <strong>Tip</strong>: Uploading files from the command line is faster than from the web browser. Instructions for both methods are provided.
+        </p>
+        <h2 style="font-size: 1.2em;">
+            Prepare Files
+        </h2>
+        <p style="margin-left: 2vw;">
+            Ensure all files end with one of the following extensions: 
+            <ul style="margin-left: 2vw;">
+                <li>
+                    <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;">.vcf.gz</span>
+                </li>
+                <li>
+                    <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;">.bw</span>
+                </li>                
+                <li>
+                    <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;">.bedj.gz</span>
+                </li>
+                <li>
+                    <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;">.bam</span>
+                </li>
+            </ul>
+        </p>
+        <p style="margin-left: 2vw;">
+            Index files for VCF, bedj, and BAM are <strong>required</strong>.
+            <br><br>
+            Create the index file for the VCF, bedj and BAM files with the following commands. These commands require samtools, bcftools, and htslib packages. Download these packages <a href="http://www.htslib.org/download/" target="_blank">here</a>.
+            <br><br>
+        </p>
+        <div style="margin-left: 2vw;">
+            <p style="margin-left: 2vw;">
+                Index a VCF or bedj file with these commands:
+        <pre style="margin: 0vw 1vw; font-size: 0.9em; opacity: 0.6; white-space:pre-wrap;">
+        $ sort -k1,1 -k2,2n FILE > FILE.sorted
+        $ bgzip FILE.sorted
+        $ tabix -p bed FILE.sorted.gz
+        </pre>
+            </p>
+            <p style="margin-left: 2vw;">
+                Index a BAM file with the following command:
+        <pre style="margin: 0vw 1vw; font-size: 0.9em; opacity: 0.6; white-space:pre-wrap;"> 
+        $ samtools index bamFile.bam 
+        </pre>
+        </div>
+        <p style="margin-left: 2vw;">
+        </p>
+        <h2 style="font-size: 1.2em;">
+            Upload: Command Line
+        </h2>
+        <p style="margin-left: 2vw;">
+            All DNAnexus <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> dx-toolkit</span> commands begin with <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> dx</span>. A full list of commands to navigate through folders, copy files, etc. is available <a href="https://documentation.dnanexus.com/user/helpstrings-of-sdk-command-line-utilities" target="_blank">here</a>.
+            <br>
+            Login into DNAnexus with your authentication token:
+        <pre style="margin: 0vw 1vw; font-size: 0.9em; opacity: 0.6; white-space:pre-wrap;">
+        $ dx login --token MyAuthenicationToken
+        </pre>
+        </p>
+        <p style="margin-left: 2vw;">
+            A list of available projects will appear. Select the appropriate project from the number appearing in brackets:
+        <pre style="margin: 0vw 1vw; font-size: 0.9em; opacity: 0.6; white-space:pre-wrap;">
+        Available projects (CONTRIBUTE or higher):
+        [0]My_ProteinPaint_Project
+
+        Pick a numbered choice: 0
+        </pre>
+        </p>
+        <p style="margin-left: 2vw;">
+            Upload all files to the project with the <a href="https://documentation.dnanexus.com/user/helpstrings-of-sdk-command-line-utilities#upload" target="_blank">dx upload</a> command.
+
+            Unzip the FileViewer and upload it to the project with this command:
+        <pre style="margin: 0vw 1vw; font-size: 0.9em; opacity: 0.6; white-space:pre-wrap;">
+        $ dx upload --type FileViewer 'ProteinPaint (VCF, bigWig, BEDj, junction, BAM)' 
+        </pre>
+        </p>
+        <h2 style="font-size: 1.2em;">
+            Upload: DNAnexus Website
+        </h2>
+        <p style="margin-left: 2vw;">
+            Uploading files through the DNAnexus website is easy but takes more time and processing power.
+            <ul style="margin-left: 2vw;">
+                <li>
+                    Select the appropriate project
+                </li>
+                <li>
+                    Click the Upload button. Upload all files and the FileViewer. 
+                </li>
+            </ul>
+        </p>
+        <h2 style="font-size: 1.2em;">
+            Launch FileViewer
+        </h2>
+        <p style="margin-left: 2vw;">
+            Open the DNAnexus website and navigate to the project.
+             <ul style="margin-left: 2vw;">
+                <li>
+                    Click on the <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;">ProteinPaint (VCF, bigWig, BEDj, junction, BAM)</span> FileViewer.
+                </li>
+                <li>
+                    Select which files to visualize in ProteinPaint. Ensure to include index files.
+                    <img style="width: 50vw; margin: 1vw 2vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/fileviewers/select_files.png">
+                </li>
+                <li>
+                    Click Launch Viewer in the bottom right of the window.
+                </li>
+                <li>
+                    The following interface will appear in the browser: 
+
+                    <img style="width: 20vw; margin: 1vw 4vw; display: block;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/fileviewers/interface.png">
+                    Select the reference genome. Then, enter a genomic position or search for a gene to launch the visualization. ProteinPaint will launch in a new tab, like the example below.
+                    <img style="width: 50vw; margin: 1vw 1vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/fileviewers/final.png">
+                </li>
+            </ul>
+        </p>
+        <p style="margin-left: 2vw;">
+            <strong>Tip</strong>: The URL created from the FileViewer is only available while the tab is open. Once the tab is closed, repeat the steps in this section to launch the FileViewer again.
+        </p>
+    </div>
+</div>
