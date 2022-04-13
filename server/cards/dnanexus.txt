@@ -21,7 +21,7 @@
         <p style="margin-left: 2vw;">
             <ul style="margin-left: 2vw;">
                 <li>
-                    Create an account with DNAnexus. <a href="https://university.stjude.cloud/docs/genomics-platform/accounts-and-billing/" target="_blank">Follow the instructions from St. Jude Cloud</a>. Please direct questions regarding account set up to the St. Jude Cloud team <a href="mailto:support@stjude.cloud?subject=Help Setting Up a DNAnexus Account">support@stjude.cloud</a>).
+                    Create an account with DNAnexus. <a href="https://university.stjude.cloud/docs/genomics-platform/accounts-and-billing/" target="_blank">Follow the instructions from St. Jude Cloud</a>. Please direct questions regarding account set up to the St. Jude Cloud team (<a href="mailto:support@stjude.cloud?subject=Help Setting Up a DNAnexus Account">support@stjude.cloud</a>).
                 </li>
                 <li>
                     Create a token from the <a href="https://platform.dnanexus.com/" target="_self">DNAnexus platform</a>. See this link on how to generate an authentication <a href="https://documentation.dnanexus.com/user/login-and-logout#authentication-tokens" target="_blank">token</a>. Be sure to save the token!
@@ -106,7 +106,7 @@
         <p style="margin-left: 2vw;">
             Upload all files to the project with the <a href="https://documentation.dnanexus.com/user/helpstrings-of-sdk-command-line-utilities#upload" target="_blank">dx upload</a> command.
 
-            Upload the FileViewer to the project with this command:
+            Unzip the FileViewer and upload it to the project with this command:
         <pre style="margin: 0vw 1vw; font-size: 0.9em; opacity: 0.6; white-space:pre-wrap;">
         $ dx upload --type FileViewer 'ProteinPaint (VCF, bigWig, BEDj, junction, BAM)' 
         </pre>
