@@ -6,7 +6,7 @@ if (process.argv.length != 3) {
 const got = require('got')
 const fs = require('fs')
 
-const host = 'https://ppr.stjude.org/termdb'
+const host = 'https://proteinpaint.stjude.org/termdb'
 
 main()
 
@@ -759,9 +759,13 @@ async function doRegression(p, cacheid, snp2effAle) {
 	const snps = []
 	for (const s of j) {
 		const snpid = s.id
-		const pvalue = Number(s.data.type3.terms[snpid][3])
-		if (Number.isNaN(pvalue)) continue
-		snps.push([snpid, pvalue])
+		if (!snpid) continue
+		if (s.data && s.data.type3 && s.data.type3.terms && s.data.type3.terms[snpid]) {
+			const pvalue = Number(s.data.type3.terms[snpid][3])
+			if (Number.isNaN(pvalue)) continue
+			if (pvalue >= 0.01) continue
+			snps.push([snpid, -Math.log10(pvalue)])
+		}
 	}
 	return snps
 }
