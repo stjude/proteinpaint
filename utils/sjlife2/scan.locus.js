@@ -21,11 +21,25 @@ async function main() {
 		const stop = Number(l[2])
 		if (Number.isNaN(start) || Number.isNaN(stop)) continue
 		const w = stop - start
-		await runQuery({
-			chr,
-			start: start - w,
-			stop: stop + w
-		})
+		if (w * 3 > 6000) {
+			// one query every 5kb
+			let cumlen = 0
+			while (cumlen < w * 3) {
+				const thisstart = start - w + cumlen
+				await runQuery({
+					chr,
+					start: thisstart,
+					stop: Math.min(stop + w, thisstart + 5000)
+				})
+				cumlen += 5000
+			}
+		} else {
+			await runQuery({
+				chr,
+				start: start - w,
+				stop: stop + w
+			})
+		}
 	}
 }
 
@@ -356,6 +370,9 @@ async function doRegression(p, cacheid, snp2effAle) {
 			}
 		},
 		independent: [
+			{ id: 'sex', q: { mode: 'discrete' }, refGrp: '1' },
+			{ id: 'agedx', q: { mode: 'continuous' } },
+			{ id: 'agelastvisit', q: { mode: 'continuous' } },
 			{
 				id: 'anthracyclines_cog_5',
 				q: {
@@ -750,8 +767,14 @@ async function doRegression(p, cacheid, snp2effAle) {
 			]
 		},
 		genome: 'hg38',
-		dslabel: 'SJLife'
+		dslabel: 'SJLife',
+		type3columnid: 3
 	}
+
+	json.regressionType = 'linear'
+	json.outcome = { id: 'LV_Ejection_Fraction_3D', q: { mode: 'continuous' } }
+	json.type3columnid = 5
+
 	const data = await got.post(host, { json })
 	if (!data.body) throw 'no response'
 	const j = JSON.parse(data.body)
@@ -761,7 +784,7 @@ async function doRegression(p, cacheid, snp2effAle) {
 		const snpid = s.id
 		if (!snpid) continue
 		if (s.data && s.data.type3 && s.data.type3.terms && s.data.type3.terms[snpid]) {
-			const pvalue = Number(s.data.type3.terms[snpid][3])
+			const pvalue = Number(s.data.type3.terms[snpid][json.type3columnid])
 			if (Number.isNaN(pvalue)) continue
 			if (pvalue >= 0.01) continue
 			snps.push([snpid, -Math.log10(pvalue)])
