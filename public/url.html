@@ -590,6 +590,39 @@ makeURL([
 			} ]
 		})],
 
+		['Yadav Cardiomyopathy 2021','?noheader=1&mass='+JSON.stringify({
+			genome:'hg38',
+			dslabel:'SJLife',
+			plots:[{
+				chartType: 'regression',
+				regressionType: 'linear',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: [
+					{id:'sex'},
+					{id:'agedx'},
+					{id:'agelastvisit'},
+					{id:'anthracyclines_cog_5',q:{
+						mode:'discrete',type:'custom-bin',lst:[
+							{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
+							{stopinclusive:true,start:0,stop:250,label:'>0 to 250'},
+							{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
+						]
+					}},
+					{id:'hrtavg',q:{
+						mode:'discrete',type:'custom-bin',lst:[
+							{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
+							{stopinclusive:true,start:0,stop:250,label:'>0 to 250'},
+							{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
+						]
+					}},
+					{
+						term:{ type:'snplocus', },
+						q: (()=>{const a = JSON.parse(JSON.stringify(snplocusQ));a.chr='chr1';a.start=113558796;a.stop=113559396;return a})()
+					}
+				]
+			}]
+		})],
+
 		'LOGISITC',
 
 		['EF', '?noheader=1&mass='+JSON.stringify({
@@ -964,7 +997,7 @@ makeURL([
 			} ]
 		})],
 		// https://pubmed.ncbi.nlm.nih.gov/33288658/
-		['Yadav Cancer Research 2021','?noheader=1&mass='+JSON.stringify({
+		['Yadav Cardiomyopathy 2021','?noheader=1&mass='+JSON.stringify({
 			genome:'hg38',
 			dslabel:'SJLife',
 			plots:[{
@@ -975,6 +1008,9 @@ makeURL([
 					q:{timeScale:'age'}
 				},
 				independent: [
+					{id:'sex'},
+					{id:'agedx'},
+					{id:'agelastvisit'},
 					{id:'anthracyclines_cog_5',q:{
 						mode:'discrete',type:'custom-bin',lst:[
 							{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
@@ -989,7 +1025,8 @@ makeURL([
 							{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
 						]
 					}},
-					// change to chr1:113558796-113559396 for rs6689879
+					// chr1:113558796-113559396 for rs6689879
+					// chr15:87090755-87090824 for rs9788776
 					{
 						term:{ type:'snplocus', },
 						q: (()=>{const a = JSON.parse(JSON.stringify(snplocusQ));a.chr='chr1';a.start=113558796;a.stop=113559396;return a})()
