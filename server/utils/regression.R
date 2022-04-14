@@ -115,7 +115,7 @@ for (i in 1:length(formulas)) {
   # break if this step is not done prior to regression analysis.
   fdat <- subdat[complete.cases(subdat),]
   # run regression
-  results <- runRegression(regtype, formula$formula, fdat, outcome, formula$splineVariables)
+  results <- runRegression(regtype, formula, fdat, outcome)
   results$coefficients <- formatCoefficients(results$coefficients, results$res, regtype)
   results$type3 <- formatType3(results$type3)
   out[[length(out)+1]] <- list("id" = unbox(id), "data" = results[names(results) != "res"])

@@ -201,21 +201,9 @@ buildFormulas <- function(variables) {
 }
 
 # linear regression
-linearRegression <- function(formula, fdat, outcome, splineVariables) {
-  res <- lm(formula, data = fdat, na.action = na.omit)
+linearRegression <- function(formula, fdat) {
+  res <- lm(formula$formula, data = fdat)
   sampleSize <- res$df.residual + length(res$coefficients[!is.na(res$coefficients)])
-  if (!is.null(splineVariables)) {
-    # model contains spline variables(s)
-    # plot spline regression for each spline term
-    # do not plot if term is missing plot file (to hide plot
-    # when snplocus terms are present)
-    for (r in 1:nrow(splineVariables)) {
-      splineVariable <- splineVariables[r,]
-      if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, fdat, outcome, res, "linear")
-      }
-    }
-  }
   res_summ <- summary(res)
   # prepare residuals table
   residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$residuals),3)))
@@ -250,21 +238,9 @@ linearRegression <- function(formula, fdat, outcome, splineVariables) {
 }
 
 # logistic regression
-logisticRegression <- function(formula, fdat, outcome, splineVariables) {
-  res <- glm(formula, family = binomial(link='logit'), data = fdat, na.action = na.omit)
+logisticRegression <- function(formula, fdat) {
+  res <- glm(formula$formula, family = binomial(link='logit'), data = fdat)
   sampleSize <- res$df.residual + length(res$coefficients[!is.na(res$coefficients)])
-  if (!is.null(splineVariables)) {
-    # model contains spline variables(s)
-    # plot spline regression for each spline term
-    # do not plot if term is missing plot file (to hide plot
-    # when snplocus terms are present)
-    for (r in 1:nrow(splineVariables)) {
-      splineVariable <- splineVariables[r,]
-      if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, fdat, outcome, res, "logistic")
-      }
-    }
-  }
   res_summ <- summary(res)
   # prepare residuals table
   residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$deviance.resid),3)))
@@ -274,7 +250,17 @@ logisticRegression <- function(formula, fdat, outcome, splineVariables) {
   # compute odds ratio
   coefficients_table <- cbind("Odds ratio" = exp(coef(res)), coefficients_table)
   # compute confidence intervals of odds ratios
-  ci <- exp(suppressMessages(confint(res)))
+  ci <- try(exp(suppressMessages(confint(res))), silent = T)
+  if (identical(class(ci), "try-error")) {
+    # confidence interval computation failed
+    # likely because of small sample sizes of coefficients.
+    # use custom confidence interval computation instead
+    low <- coefficients_table[,"Log odds"] - (1.96 * coefficients_table[,"Std. Error"])
+    up <- coefficients_table[,"Log odds"] + (1.96 * coefficients_table[,"Std. Error"])
+    ci <- cbind(low,up)
+    row.names(ci) <- row.names(coefficients_table)
+    ci <- exp(ci)
+  }
   colnames(ci) <- c("95% CI (low)","95% CI (high)")
   coefficients_table <- cbind(coefficients_table, ci)
   coefficients_table <- coefficients_table[,c(1,6,7,2,3,4,5)]
@@ -294,22 +280,8 @@ logisticRegression <- function(formula, fdat, outcome, splineVariables) {
 }
 
 # cox regression
-coxRegression <- function(formula, fdat, outcome, splineVariables) {  
-  res <- coxph(formula, data = fdat, na.action = na.omit)
-  
-  # check for spline variables
-  if (!is.null(splineVariables)) {
-    # model contains spline variables(s)
-    # plot spline regression for each spline term
-    # do not plot if term is missing plot file (to hide plot
-    # when snplocus terms are present)
-    for (r in 1:nrow(splineVariables)) {
-      splineVariable <- splineVariables[r,]
-      if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, fdat, outcome, res, "logistic")
-      }
-    }
-  }
+coxRegression <- function(formula, fdat) {  
+  res <- coxph(formula$formula, data = fdat)
   
   # extract summary object
   res_summ <- summary(res)
@@ -358,7 +330,7 @@ coxRegression <- function(formula, fdat, outcome, splineVariables) {
 }
 
 # run regression analysis
-runRegression <- function(regtype, formula, fdat, outcome, splineVariables = NULL) {
+runRegression <- function(regtype, formula, fdat, outcome) {
   warns <- vector(mode = "character")
   handleWarns <- function(w) {
     # handler for warning messages
@@ -366,13 +338,26 @@ runRegression <- function(regtype, formula, fdat, outcome, splineVariables = NUL
     invokeRestart("muffleWarning")
   }
   if (regtype == "linear") {
-    results <- withCallingHandlers(linearRegression(formula, fdat, outcome, splineVariables), warning = handleWarns)
+    results <- withCallingHandlers(linearRegression(formula, fdat), warning = handleWarns)
   } else if (regtype == "logistic") {
-    results <- withCallingHandlers(logisticRegression(formula, fdat, outcome, splineVariables), warning = handleWarns)
+    results <- withCallingHandlers(logisticRegression(formula, fdat), warning = handleWarns)
   } else if (regtype == "cox") {
-    results <- withCallingHandlers(coxRegression(formula, fdat, outcome, splineVariables), warning = handleWarns)
+    results <- withCallingHandlers(coxRegression(formula, fdat), warning = handleWarns)
   } else {
     stop("unknown regression type")
+  }
+  if ("splineVariables" %in% names(formula)) {
+    # spline variables present
+    # plot cubic spline for each spline variable
+    # do not plot if variable is missing plot file (to hide plot
+    # when snplocus terms are present)
+    splineVariables <- formula$splineVariables
+    for (r in 1:nrow(splineVariables)) {
+      splineVariable <- splineVariables[r,]
+      if ("plotfile" %in% names(splineVariable$spline)) {
+        plot_spline(splineVariable, fdat, outcome, results$res, regtype)
+      }
+    }
   }
   if (length(warns) > 0) results[["warnings"]] <- warns
   return(results)
