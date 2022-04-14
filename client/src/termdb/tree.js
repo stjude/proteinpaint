@@ -346,7 +346,7 @@ function setRenderers(self) {
 		if (term.hashtmldetail) {
 			infoIcon_div = div.append('div').style('display', 'inline-block')
 		}
-		if (graphable(term) && (!self.state.usecase || isUsableTerm(term, self.state.usecase) == 'plot')) {
+		if (graphable(term) && (!self.state.usecase || isUsableTerm(term, self.state.usecase))) {
 			if (termIsDisabled) {
 				labeldiv
 					.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)

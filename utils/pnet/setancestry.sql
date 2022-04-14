@@ -1,3 +1,3 @@
 insert into ancestry
-select term_id, 'Survival outcome'
+select distinct(term_id), 'Survival outcome'
 from survival;
