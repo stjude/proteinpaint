@@ -18,6 +18,7 @@ export class MatrixControls {
 				{ value: 'anno', label: 'Annotations' },
 				{ value: 'cols', label: 'Column layout' },
 				{ value: 'rows', label: 'Row layout' }
+				//{ value: 'sort', label: 'Sort' }
 			])
 			.enter()
 			.append('button')

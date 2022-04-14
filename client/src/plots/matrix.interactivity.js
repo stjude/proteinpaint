@@ -1,5 +1,6 @@
 import { select } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '../common/termsetting'
+import { icons } from '../dom/control.icons'
 
 export function setInteractivity(self) {
 	self.showCellInfo = function() {
@@ -85,7 +86,8 @@ function setTermActions(self) {
 			.selectAll('*')
 			.remove()
 
-		//self.dom.tip.d.on('click.sjpp_matrix_menuclick', () => event.stopPropagation())
+		self.dom.menutop.append('div').html(d.tw.term.name)
+		self.showShortcuts(d, self.dom.menutop)
 
 		self.dom.menutop
 			.append('div')
@@ -108,6 +110,79 @@ function setTermActions(self) {
 			})
 
 		self.dom.tip.showunder(event.target)
+	}
+
+	self.showShortcuts = (t, div) => {
+		div.style('text-align', 'center')
+		div.append('span').html('Shortcuts: ')
+		div
+			.append('span')
+			.selectAll('div')
+			.data(
+				[
+					{
+						icon: 'corner',
+						title: `Sort samples against this gene positioned at the top left corner`,
+						disabled: t.grp.lst.length < 1 || (t.index === 0 && t.tw.sortSamples?.priority === 0),
+						handler() {
+							event.stopPropagation()
+							const termgroups = JSON.parse(JSON.stringify(self.state.config.termgroups))
+							const grp = termgroups[t.grpIndex]
+							const [tcopy] = self.getSorterTerms(t)
+							grp.lst.splice(t.index, 1)
+							grp.lst.unshift(tcopy)
+
+							for (const g of termgroups) {
+								for (const tw of g.lst) {
+									if (!tw.sortSamples) continue
+									if (tw.$id === t.tw.$id) tw.sortSamples.priority = 0
+									else tw.sortSamples.priority += 1
+								}
+							}
+
+							self.app.dispatch({
+								type: 'plot_edit',
+								id: self.opts.id,
+								config: { termgroups }
+							})
+							self.dom.tip.hide()
+						}
+					},
+					{
+						icon: 'left',
+						title: `Sort samples against this gene`,
+						disabled: t.tw.sortSamples?.priority === 0,
+						handler() {
+							event.stopPropagation()
+							const [tcopy] = self.getSorterTerms(t)
+							const termgroups = JSON.parse(JSON.stringify(self.state.config.termgroups))
+							termgroups[t.grpIndex].lst[t.index] = tcopy
+							for (const g of termgroups) {
+								for (const tw of g.lst) {
+									if (!tw.sortSamples) continue
+									if (tw.$id === t.tw.$id) tw.sortSamples.priority = 0
+									else tw.sortSamples.priority += 1
+								}
+							}
+
+							self.app.dispatch({
+								type: 'plot_edit',
+								id: self.opts.id,
+								config: { termgroups }
+							})
+							self.dom.tip.hide()
+						}
+					}
+				],
+				d => d.icon
+			)
+			.enter()
+			.append('div')
+			.style('display', 'inline-block')
+			.each(function(d) {
+				const elem = select(this)
+				icons[d.icon](elem.append('span'), d)
+			})
 	}
 
 	self.showTermEditMenu = async () => {
@@ -367,49 +442,54 @@ function setTermActions(self) {
 
 		self.dom.menubody
 			.append('div')
+			.style('margin-top', '10px')
 			.style('text-align', 'center')
 			.html(t.tw.term.name)
 
-		let moveInput
-		if (t.grp.lst.length > 1) {
-			const moveDiv = self.dom.menubody.append('div').style('margin-top', '10px')
+		self.moveInput = undefined
+		//if (t.grp.lst.length > 1) self.showTermMoveOptions(t)
+		self.showSortOptions(t)
+	}
 
-			const moveLabel = moveDiv.append('label')
-			moveInput = moveLabel
-				.append('input')
-				.attr('type', 'checkbox')
-				.style('text-align', 'center')
+	self.showTermMoveOptions = t => {
+		const moveDiv = self.dom.menubody.append('div').style('margin-top', '10px')
 
-			moveLabel.append('span').html('&nbsp;move this term&nbsp;')
+		const moveLabel = moveDiv.append('label')
+		self.moveInput = moveLabel
+			.append('input')
+			.attr('type', 'checkbox')
+			.style('text-align', 'center')
 
-			const movePos = moveDiv.append('select')
-			movePos
-				.selectAll('option')
-				.data([{ label: 'before', value: 0 }, { label: 'after', value: 1 }])
-				.enter()
-				.append('option')
-				.attr('value', d => d.value)
-				.html(d => d.label)
+		moveLabel.append('span').html('&nbsp;move this term&nbsp;')
 
-			moveDiv.append('span').html('&nbsp;')
+		const movePos = moveDiv.append('select')
+		movePos
+			.selectAll('option')
+			.data([{ label: 'before', value: 0 }, { label: 'after', value: 1 }])
+			.enter()
+			.append('option')
+			.attr('value', d => d.value)
+			.html(d => d.label)
 
-			const otherTermsInGrp = t.grp.lst
-				.filter(tw => tw.$id != t.tw.$id)
-				.map(tw => {
-					return { label: tw.term.name, value: tw.$id }
-				})
-			const moveTarget = moveDiv.append('select')
-			moveTarget
-				.selectAll('option')
-				.data([{ label: 'all', value: '*' }, ...otherTermsInGrp])
-				.enter()
-				.append('option')
-				.attr('value', d => d.value)
-				.html(d => d.label)
-		}
+		moveDiv.append('span').html('&nbsp;')
 
+		const otherTermsInGrp = t.grp.lst
+			.filter(tw => tw.$id != t.tw.$id)
+			.map(tw => {
+				return { label: tw.term.name, value: tw.$id }
+			})
+		const moveTarget = moveDiv.append('select')
+		moveTarget
+			.selectAll('option')
+			.data([{ label: 'all', value: '*' }, ...otherTermsInGrp])
+			.enter()
+			.append('option')
+			.attr('value', d => d.value)
+			.html(d => d.label)
+	}
+
+	self.showSortOptions = t => {
 		const sortColDiv = self.dom.menubody.append('div').style('margin-top', '10px')
-
 		const sortColLabel = sortColDiv.append('label')
 		const sortColInput = sortColLabel
 			.append('input')
@@ -426,15 +506,14 @@ function setTermActions(self) {
 			.html('Apply')
 			.on('click', () => {
 				const matrix = JSON.parse(JSON.stringify(self.config.settings.matrix)) || {}
-				if (moveInput.property('checked')) {
-				}
+				delete tcopy.div
+				delete tcopy.up
+				delete tcopy.down
+				delete tcopy.delete
 
-				if (sortColInput.property('checked')) {
-					delete tcopy.div
-					delete tcopy.up
-					delete tcopy.down
-					delete tcopy.delete
+				//if (self.moveInput.property('checked')) {}
 
+				if (sortColInput.property('checked') || self.moveInput.property('checked')) {
 					self.app.dispatch({
 						type: 'plot_nestedEdits',
 						id: self.opts.id,
@@ -452,20 +531,7 @@ function setTermActions(self) {
 	}
 
 	self.showSorterTerms = (sortColDiv, t) => {
-		const sorterTerms = [
-			...self.termOrder
-				.filter(t => t.tw.sortSamples)
-				.map(t => JSON.parse(JSON.stringify(t.tw)))
-				.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority),
-			...self.config.settings.matrix.sortSamplesBy.map(st => JSON.parse(JSON.stringify(st)))
-		]
-		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
-		const tcopy = JSON.parse(JSON.stringify(t.tw))
-		if (i == -1) {
-			tcopy.sortSamples = { by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' }
-			sorterTerms.unshift(tcopy)
-		}
-
+		const [tcopy, sorterTerms] = self.getSorterTerms(t)
 		sortColDiv
 			.append('div')
 			.style('margin', '5px')
@@ -534,6 +600,24 @@ function setTermActions(self) {
 		}
 
 		return tcopy
+	}
+
+	self.getSorterTerms = t => {
+		const sorterTerms = [
+			...self.termOrder
+				.filter(t => t.tw.sortSamples)
+				.map(t => JSON.parse(JSON.stringify(t.tw)))
+				.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority),
+			...self.config.settings.matrix.sortSamplesBy.map(st => JSON.parse(JSON.stringify(st)))
+		]
+		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
+		const tcopy = JSON.parse(JSON.stringify(t.tw))
+		if (i == -1) {
+			tcopy.sortSamples = { by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' }
+			sorterTerms.unshift(tcopy)
+		}
+
+		return [tcopy, sorterTerms]
 	}
 
 	self.showRemoveMenu = () => {
