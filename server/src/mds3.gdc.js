@@ -973,23 +973,21 @@ function init_termdb_queries(termdb, ds) {
 	q.getRootTerms = async (vocab, treeFilter = null) => {
 		// find terms without term.parent_id
 		const terms = []
-		termdb.id2term.forEach((v, k) => {
-			if (v.parent_id == undefined) terms.push(v)
-		})
-		const re = JSON.parse(JSON.stringify(terms))
-		if (treeFilter) await add_terms_samplecount(re, treeFilter)
-		return re
+		for (const term of termdb.id2term.values()) {
+			if (term.parent_id == undefined) terms.push(JSON.parse(JSON.stringify(term)))
+		}
+		await mayAddSamplecount4treeFilter(terms, treeFilter)
+		return terms
 	}
 
 	q.getTermChildren = async (id, vocab, treeFilter = null) => {
 		// find terms which have term.parent_id as clicked term
 		const terms = []
-		termdb.id2term.forEach((v, k) => {
-			if (v.parent_id == id) terms.push(v)
-		})
-		const re = JSON.parse(JSON.stringify(terms))
-		if (treeFilter) await add_terms_samplecount(re, treeFilter)
-		return re
+		for (const term of termdb.id2term.values()) {
+			if (term.parent_id == id) terms.push(JSON.parse(JSON.stringify(term)))
+		}
+		await mayAddSamplecount4treeFilter(terms, treeFilter)
+		return terms
 	}
 
 	q.findTermByName = async (searchStr, limit = null, vocab, exclude_types = [], treeFilter = null) => {
@@ -998,13 +996,11 @@ function init_termdb_queries(termdb, ds) {
 		if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
 		// find terms that have term.id containing search string
 		const terms = []
-		termdb.id2term.forEach((v, k) => {
-			if (v.id.includes(searchStr)) terms.push(v)
-		})
-		const re = JSON.parse(JSON.stringify(terms))
-		// find terms that have term.id containing search string
-		if (treeFilter) await add_terms_samplecount(re, treeFilter)
-		return re
+		for (const term of termdb.id2term.values()) {
+			if (term.id.includes(searchStr)) terms.push(JSON.parse(JSON.stringify(term)))
+		}
+		await mayAddSamplecount4treeFilter(terms, treeFilter)
+		return terms
 	}
 
 	q.getAncestorIDs = id => {
@@ -1050,7 +1046,9 @@ function init_termdb_queries(termdb, ds) {
 		return supportedChartTypes
 	}
 
-	async function add_terms_samplecount(terms, treeFilter) {
+	async function mayAddSamplecount4treeFilter(terms, treeFilter) {
+		// if tree filter is given, add sample count for each term
+		if (terms.length == 0 || !treeFilter) return
 		let termlst = []
 		for (const term of terms) {
 			if (term)
