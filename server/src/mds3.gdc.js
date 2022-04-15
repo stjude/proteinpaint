@@ -993,7 +993,7 @@ export async function init_dictionary(ds) {
 	function maySkipLine(line) {
 		if (
 			line.startsWith('ssm') ||
-			line.startsWith('case.observation.') ||
+			line.startsWith('case.observation') ||
 			line.startsWith('case.available_variation_data')
 		)
 			return true
