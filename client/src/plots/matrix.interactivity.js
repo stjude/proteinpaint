@@ -115,6 +115,8 @@ function setTermActions(self) {
 	self.showShortcuts = (t, div) => {
 		div.style('text-align', 'center')
 		div.append('span').html('Shortcuts: ')
+
+		// sorting icons
 		div
 			.append('span')
 			.selectAll('div')
@@ -124,54 +126,35 @@ function setTermActions(self) {
 						icon: 'corner',
 						title: `Sort samples against this gene positioned at the top left corner`,
 						disabled: t.grp.lst.length < 1 || (t.index === 0 && t.tw.sortSamples?.priority === 0),
-						handler() {
-							event.stopPropagation()
-							const termgroups = JSON.parse(JSON.stringify(self.state.config.termgroups))
-							const grp = termgroups[t.grpIndex]
-							const [tcopy] = self.getSorterTerms(t)
-							grp.lst.splice(t.index, 1)
-							grp.lst.unshift(tcopy)
-
-							for (const g of termgroups) {
-								for (const tw of g.lst) {
-									if (!tw.sortSamples) continue
-									if (tw.$id === t.tw.$id) tw.sortSamples.priority = 0
-									else tw.sortSamples.priority += 1
-								}
-							}
-
-							self.app.dispatch({
-								type: 'plot_edit',
-								id: self.opts.id,
-								config: { termgroups }
-							})
-							self.dom.tip.hide()
-						}
+						handler: self.sortSamplesAgainstCornerTerm
 					},
 					{
 						icon: 'left',
 						title: `Sort samples against this gene`,
 						disabled: t.tw.sortSamples?.priority === 0,
-						handler() {
-							event.stopPropagation()
-							const [tcopy] = self.getSorterTerms(t)
-							const termgroups = JSON.parse(JSON.stringify(self.state.config.termgroups))
-							termgroups[t.grpIndex].lst[t.index] = tcopy
-							for (const g of termgroups) {
-								for (const tw of g.lst) {
-									if (!tw.sortSamples) continue
-									if (tw.$id === t.tw.$id) tw.sortSamples.priority = 0
-									else tw.sortSamples.priority += 1
-								}
-							}
+						handler: self.sortSamplesAgainstTerm
+					},
+					{
+						html: '&nbsp;|&nbsp;'
+					},
+					{
+						icon: 'up',
+						title: `Move this term up`,
+						disabled: t.index === 0,
+						handler: self.moveTermUp
+					},
 
-							self.app.dispatch({
-								type: 'plot_edit',
-								id: self.opts.id,
-								config: { termgroups }
-							})
-							self.dom.tip.hide()
-						}
+					{
+						icon: 'down',
+						title: `Move this term down`,
+						disabled: t.index === t.grp.lst.length - 1,
+						handler: self.moveTermDown
+					},
+
+					{
+						icon: 'x',
+						title: 'Delete gene row',
+						handler: self.removeTerm
 					}
 				],
 				d => d.icon
@@ -181,8 +164,96 @@ function setTermActions(self) {
 			.style('display', 'inline-block')
 			.each(function(d) {
 				const elem = select(this)
-				icons[d.icon](elem.append('span'), d)
+				if (d.icon) icons[d.icon](elem, d)
+				else elem.html(d.html)
 			})
+	}
+
+	self.sortSamplesAgainstCornerTerm = () => {
+		event.stopPropagation()
+		const t = self.activeTerm
+		const termgroups = JSON.parse(JSON.stringify(self.state.config.termgroups))
+		const grp = termgroups[t.grpIndex]
+		const [tcopy] = self.getSorterTerms(t)
+		grp.lst.splice(t.index, 1)
+		grp.lst.unshift(tcopy)
+
+		for (const g of termgroups) {
+			for (const tw of g.lst) {
+				if (!tw.sortSamples) continue
+				if (tw.$id === t.tw.$id) tw.sortSamples.priority = 0
+				else tw.sortSamples.priority += 1
+			}
+		}
+
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.opts.id,
+			config: { termgroups }
+		})
+		self.dom.tip.hide()
+	}
+
+	self.sortSamplesAgainstTerm = () => {
+		event.stopPropagation()
+		const t = self.activeTerm
+		const [tcopy] = self.getSorterTerms(t)
+		const termgroups = JSON.parse(JSON.stringify(self.state.config.termgroups))
+		termgroups[t.grpIndex].lst[t.index] = tcopy
+		for (const g of termgroups) {
+			for (const tw of g.lst) {
+				if (!tw.sortSamples) continue
+				if (tw.$id === t.tw.$id) tw.sortSamples.priority = 0
+				else tw.sortSamples.priority += 1
+			}
+		}
+
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.opts.id,
+			config: { termgroups }
+		})
+		self.dom.tip.hide()
+	}
+
+	self.moveTermUp = () => {
+		event.stopPropagation()
+		const t = self.activeTerm
+		const grp = JSON.parse(JSON.stringify(self.state.config.termgroups[t.grpIndex]))
+		grp.lst.splice(t.index, 1)
+		grp.lst.splice(t.index - 1, 0, t.tw)
+
+		self.app.dispatch({
+			type: 'plot_nestedEdits',
+			id: self.opts.id,
+			edits: [
+				{
+					nestedKeys: ['termgroups', t.grpIndex],
+					value: grp
+				}
+			]
+		})
+		self.dom.tip.hide()
+	}
+
+	self.moveTermDown = () => {
+		event.stopPropagation()
+		const t = self.activeTerm
+		const grp = JSON.parse(JSON.stringify(self.state.config.termgroups[t.grpIndex]))
+		grp.lst.splice(t.index, 1)
+		grp.lst.splice(t.index + 1, 0, t.tw)
+
+		self.app.dispatch({
+			type: 'plot_nestedEdits',
+			id: self.opts.id,
+			edits: [
+				{
+					nestedKeys: ['termgroups', t.grpIndex],
+					value: grp
+				}
+			]
+		})
+		self.dom.tip.hide()
 	}
 
 	self.showTermEditMenu = async () => {

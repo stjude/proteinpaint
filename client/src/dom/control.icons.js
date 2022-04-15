@@ -7,11 +7,13 @@ export const icons = {
 		return (
 			elem
 				.attr('title', o.title)
+				.style('padding', '0 3px')
 				.style('color', 'rgb(255,100,100)')
 				.style('opacity', 0.9)
 				.style('font-weight', 700)
 				.style('font-size', '18px')
 				.style('transform', 'rotate(-45deg)')
+				.style('cursor', 'pointer')
 				//.html('&otimes;')
 				.html('&oplus;')
 				.on('click', o.handler)
@@ -20,6 +22,7 @@ export const icons = {
 	plus: (elem, o) => {
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('opacity', 0.9)
 			.style('font-size', '18px')
 			.html('&oplus;')
@@ -28,18 +31,22 @@ export const icons = {
 	combine: (elem, o) => {
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('opacity', 0.9)
 			.style('font-size', '12px')
 			.style('color', 'rgb(100,100,255)')
+			.style('cursor', 'pointer')
 			.html('[]+[]')
 			.on('click', o.handler)
 	},
 	divide: (elem, o) => {
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('opacity', 0.9)
 			.style('font-size', '12px')
 			.style('color', 'rgb(100,100,255)')
+			.style('cursor', 'pointer')
 			.html('[&divide;]')
 			.on('click', o.handler)
 	},
@@ -47,6 +54,7 @@ export const icons = {
 		return (
 			elem
 				.attr('title', o.title)
+				.style('padding', '0 3px')
 				.style('height', '16px')
 				.style('color', 'rgb(100,100,255)')
 				.style('opacity', 0.9)
@@ -54,6 +62,7 @@ export const icons = {
 				.style('padding', '0 2px')
 				.style('margin', '0 2px 2px 1px')
 				.style('display', 'display' in o ? o.display : 'inline-block')
+				.style('cursor', 'pointer')
 				//.style('border','1px solid #aaa')
 				//.style('background-color','#ccc')
 				.html(
@@ -73,6 +82,7 @@ export const icons = {
 		return (
 			elem
 				.attr('title', o.title)
+				.style('padding', '0 3px')
 				.style('height', '16px')
 				.style('color', 'rgb(100,100,255)')
 				.style('opacity', 0.9)
@@ -80,6 +90,7 @@ export const icons = {
 				.style('padding', '0 2px')
 				.style('margin', '0 1px 2px 1px')
 				.style('display', 'display' in o ? o.display : 'inline-block')
+				.style('cursor', 'pointer')
 				//.style('border','1px solid #aaa')
 				//.style('background-color','#ccc')
 				.html(
@@ -98,10 +109,11 @@ export const icons = {
 	corner: (elem, o) => {
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('color', o.disabled ? disabled.color : 'rgb(100,100,255)')
 			.style('opacity', 0.9)
 			.style('font-size', '16px')
-			.style('cursor', 'default')
+			.style('cursor', 'pointer')
 			.html('&#8689;')
 			.on('click', o.handler)
 	},
@@ -109,10 +121,12 @@ export const icons = {
 		const fill = o.disabled ? disabled.color : 'rgb(100,100,255)'
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('color', o.disabled ? disabled.color : 'rgb(100,100,255)')
 			.style('opacity', 0.9)
 			.style('font-size', '16px')
 			.style('padding', '3px')
+			.style('cursor', 'pointer')
 			.html(
 				`<svg width='12' height='12'>
 				<g transform='translate(0,1)'>
@@ -125,10 +139,12 @@ export const icons = {
 	right: (elem, o) => {
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('color', 'rgb(100,100,255)')
 			.style('opacity', 0.9)
 			.style('font-size', '16px')
 			.style('padding-top', '3px')
+			.style('cursor', 'pointer')
 			.html(
 				`<svg width='12' height='12'>
 				<g transform='translate(0,0)'>
@@ -139,32 +155,37 @@ export const icons = {
 			.on('click', o.handler)
 	},
 	up: (elem, o) => {
+		const fill = o.disabled ? disabled.color : 'rgb(100,100,255)'
 		return (
 			elem
 				.attr('title', o.title)
-				.attr('title', o.title)
+				.style('padding', '0 3px')
 				//.style('color', 'rgb(100,100,255)')
 				.style('opacity', 0.9)
 				.style('font-size', '16px')
+				.style('cursor', 'pointer')
 				.html(
 					`<svg width='12' height='12'>
-				<path d='M6,0L12,12L0,12Z' style='fill:rgb(100,100,255)'></path>
+				<path d='M6,0L12,12L0,12Z' style='fill:${fill}'></path>
 			</svg>`
 				)
 				.on('click', o.handler)
 		)
 	},
 	down: (elem, o) => {
+		const fill = o.disabled ? disabled.color : 'rgb(100,100,255)'
 		return (
 			elem
 				.attr('title', o.title)
+				.style('padding', '0 3px')
 				//.style('color', 'rgb(100,100,255)')
 				.style('opacity', 0.9)
 				.style('font-size', '16px')
+				.style('cursor', 'pointer')
 				.html(
 					`<svg width='12' height='12'>
 				<g transform='translate(0,1)'>
-					<path d='M0,0L12,0L6,12Z' style='fill:rgb(100,100,255)'></path>
+					<path d='M0,0L12,0L6,12Z' style='fill:${fill}'></path>
 				</g>
 			</svg>`
 				)
@@ -174,31 +195,37 @@ export const icons = {
 	updown: (elem, o) => {
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('color', 'rgb(100,100,255)')
 			.style('opacity', 0.9)
 			.style('font-size', '18px')
 			.style('font-weight', 800)
 			.style('text-decoration', 'underline')
+			.style('cursor', 'pointer')
 			.html('&#8693;')
 			.on('click', o.handler)
 	},
 	seHookArrow: (elem, o) => {
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('color', 'rgb(100,100,255)')
 			.style('opacity', 0.9)
 			.style('font-size', '18px')
 			.style('font-weight', 800)
+			.style('cursor', 'pointer')
 			.html('&#10533;')
 			.on('click', o.handler)
 	},
 	swHookArrow: (elem, o) => {
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('color', 'rgb(100,100,255)')
 			.style('opacity', 0.9)
 			.style('font-size', '18px')
 			.style('font-weight', 800)
+			.style('cursor', 'pointer')
 			.html('&#10534;')
 			.on('click', o.handler)
 	},
@@ -206,6 +233,7 @@ export const icons = {
 		return (
 			elem
 				.attr('title', o.title)
+				.style('padding', '0 3px')
 				//.style('color', 'rgb(100,100,255)')
 				.style('opacity', 0.9)
 				//.style('font-size', '18px')
@@ -223,10 +251,12 @@ export const icons = {
 	leftBorder: (elem, o) => {
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('color', 'rgb(100,100,255)')
 			.style('opacity', 0.9)
 			.style('font-size', '16px')
 			.style('padding', '3px')
+			.style('cursor', 'pointer')
 			.html(
 				`<svg width='12' height='12'>
 				<g transform='translate(0,1)'>
@@ -239,10 +269,12 @@ export const icons = {
 	leftCrossedOut: (elem, o) => {
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('color', 'rgb(100,100,255)')
 			.style('opacity', 0.9)
 			.style('font-size', '16px')
 			.style('padding', '3px')
+			.style('cursor', 'pointer')
 			.html(
 				`<svg width='12' height='12'>
 				<g transform='translate(0,1)'>
@@ -256,10 +288,12 @@ export const icons = {
 	filter: (elem, o) => {
 		elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('color', 'rgb(100,100,255)')
 			.style('opacity', 0.9)
 			.style('font-size', '16px')
 			.style('padding', '3px')
+			.style('cursor', 'pointer')
 			.on('click', o.handler)
 
 		elem.iconPath = elem
@@ -278,6 +312,7 @@ export const icons = {
 		return (
 			elem
 				.attr('title', o.title)
+				.style('padding', '0 3px')
 				.style('color', 'rgb(100,100,255)')
 				.style('opacity', 0.9)
 				//.style('font-size', '8px')
@@ -305,10 +340,12 @@ export const icons = {
 	bar: (elem, o) => {
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('color', 'rgb(100,100,255)')
 			.style('opacity', 0.9)
 			.style('font-size', '16px')
 			.style('padding', '3px')
+			.style('cursor', 'pointer')
 			.html(
 				`<svg width='12' height='12'>
 				<g transform='translate(0,1)'>
@@ -323,6 +360,7 @@ export const icons = {
 	rect: (elem, o) => {
 		return elem
 			.attr('title', o.title)
+			.style('padding', '0 3px')
 			.style('stroke', 'rgb(100,100,255)')
 			.style('fill', 'fill' in o ? o.fill : 'none')
 			.style('opacity', 0.9)
@@ -348,6 +386,7 @@ export const icons = {
 			.style('height', '21px')
 			.style('padding', 0)
 			.style('background-color', '#fff')
+			.style('cursor', 'pointer')
 			.on('change', o.handler)
 			.on('click.tphm2', () => event.stopPropagation())
 
