@@ -230,7 +230,8 @@ class Matrix {
 	}
 
 	setTermOrder(data) {
-		this.termSorter = getTermSorter(this, this.settings.matrix, data.lst)
+		const s = this.settings.matrix
+		this.termSorter = getTermSorter(this, s, data.lst)
 		this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
 		this.termOrder = []
 		let total = 0
@@ -260,7 +261,9 @@ class Matrix {
 					prevGrpTotalIndex: total,
 					totalIndex: total + index,
 					ref,
-					counts
+					counts,
+					label:
+						t.tw.term.name + (s.samplecount4gene && t.tw.term.type.startsWith('gene') ? ` (${counts.samples})` : '')
 				})
 			}
 
@@ -456,7 +459,7 @@ class Matrix {
 	}
 
 	termLabel(t) {
-		return t.tw.term.name
+		return t.label
 	}
 
 	termGrpKey(t) {
@@ -525,6 +528,7 @@ export async function getPlotConfig(opts, app) {
 				sortSamplesBy: 'selectedTerms',
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				sortTermsBy: 'asListed', // or sampleCount
+				samplecount4gene: true,
 				colw: 14,
 				colspace: 1,
 				colgspace: 8,
