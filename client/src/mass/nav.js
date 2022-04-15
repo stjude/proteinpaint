@@ -388,7 +388,8 @@ function setInteractivity(self) {
 			method: 'POST',
 			body: JSON.stringify(self.app.getState())
 		})
-		const url = `${window.location.protocol}//${window.location.host}/?mass-session-id=${res.id}&noheader=1`
+		const host = sessionStorage.getItem('hostURL') || `${window.location.protocol}//${window.location.host}`
+		const url = `${host}/?mass-session-id=${res.id}&noheader=1`
 		self.dom.tip.clear().showunder(self.dom.saveBtn.node())
 		self.dom.tip.d
 			.append('div')
