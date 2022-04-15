@@ -943,7 +943,13 @@ export async function init_dictionary(ds) {
 	*/
 
 	// step 1: add leaf terms
+	let skipLineCount = 0
 	for (const term_path_str of re.fields) {
+		if (maySkipLine(term_path_str)) {
+			skipLineCount++
+			continue
+		}
+
 		// skip term if it's present in duplicate_term_skip []
 		if (dictionary.gdcapi.duplicate_term_skip.includes(term_path_str)) continue
 		const term_paths = term_path_str.split('.')
@@ -964,8 +970,12 @@ export async function init_dictionary(ds) {
 		else if (t_map == undefined) term_obj.type = 'unknown'
 		id2term.set(term_id, term_obj)
 	}
+
 	// step 3: add parent  and root terms
 	for (const term_str of re.expand) {
+		if (maySkipLine(term_str)) {
+			continue
+		}
 		const term_levels = term_str.split('.')
 		const term_id = term_levels.length == 1 ? term_str : term_levels[term_levels.length - 1]
 		const term_obj = {
@@ -976,51 +986,40 @@ export async function init_dictionary(ds) {
 			// included_types: [] // TODO update term.included_types usage to this method
 			// child_types: [] // TODO: may set in the future to support hiding childless parent terms in the tree menu
 		}
-		if (term_levels.length > 1) term_obj['parent_id'] = term_levels[term_levels.length - 2]
+		if (term_levels.length > 1) term_obj.parent_id = term_levels[term_levels.length - 2]
 		id2term.set(term_id, term_obj)
 	}
 
-	//step 4: prune the tree
-	// Quick fix: added 'program' to prune_terms
-	// because gdc query is giving error while querying child terms for this term
-	const prune_terms = [
-		'ssm_occurrence_autocomplete',
-		'ssm_occurrence_id',
-		'ssm',
-		'observation',
-		'available_variation_data'
-	]
-	for (const term_id of prune_terms) {
-		if (id2term.has(term_id)) {
-			const children = [...id2term.values()].filter(t => t.path.includes(term_id))
-			if (children.length) {
-				for (const child_t of children) {
-					id2term.delete(child_t.id)
-				}
-			}
-			id2term.delete(term_id)
-		}
+	function maySkipLine(line) {
+		if (
+			line.startsWith('ssm') ||
+			line.startsWith('case.observation.') ||
+			line.startsWith('case.available_variation_data')
+		)
+			return true
+		return false
 	}
 
 	//step 5: remove 'case' term, remove "case" as the first level
 	id2term.delete('case')
 	for (const term of id2term.values()) {
 		if (term.parent_id == 'case') {
-			// this term is a direct child of "case". move it to "Misc"
-			term.parent_id = undefined // 'Miscellaneous'
+			// this term is a direct child of "case"
+			delete term.parent_id
+
+			// hope later able to move it to "Misc" branch
+			//term.parent_id = 'Miscellaneous'
 		}
 	}
 
-	/*
+	/* adding Misc branch does not work, as term.path is required
 	id2term.set('Miscellaneous', {
 		id: 'Miscellaneous',
 		name:'Miscellaneous',
 	})
 	*/
 
-	//const children = [...id2term.values()].filter(t => t.parent_id == 'case')
-	//if (children.length) children.forEach(t => (t.parent_id = undefined))
-	console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
+	console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary,', skipLineCount, 'lines skipped')
 
 	// freeze gdc dictionary as it's readonly and must not be changed by treeFilter or other features
 	Object.freeze(ds.cohort.termdb.id2term)
@@ -1111,12 +1110,15 @@ function init_termdb_queries(termdb, ds) {
 		if (terms.length == 0 || !treeFilter) return
 		let termlst = []
 		for (const term of terms) {
-			if (term)
+			if (term.path)
 				termlst.push({
 					path: term.path.replace('case.', '').replace(/\./g, '__'),
 					type: term.type
 				})
 		}
+
+		if (termlst.length == 0) return
+
 		const tv2counts = await get_termlst2size({
 			api: ds.termdb.termid2totalsize2.gdcapi,
 			ds,
