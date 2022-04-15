@@ -5,6 +5,11 @@ export class MatrixControls {
 	constructor(opts, appState) {
 		this.type = 'matrixControls'
 		this.opts = opts
+		/* 
+			for now, use the recoverInit at the global,
+			may use subapp state/recovery later
+		 */
+		//this.recover = new Recover({app: opts.app})
 		this.setButtons()
 		this.setInputGroups()
 	}
@@ -18,12 +23,14 @@ export class MatrixControls {
 				{ value: 'anno', label: 'Terms' },
 				{ value: 'cols', label: 'Column layout' },
 				{ value: 'rows', label: 'Row layout' }
+				//{ label: 'Undo', callback: ()=>this.recover.goto(-1) },
+				//{ label: 'Redo', callback: ()=>this.recover.goto(1) },
 			])
 			.enter()
 			.append('button')
 			.style('margin', '2px 0')
 			.text(d => d.label)
-			.on('click', d => this.main(d))
+			.on('click', d => (d.callback ? d.callback() : this.callback(d)))
 	}
 
 	setInputGroups() {
@@ -37,7 +44,7 @@ export class MatrixControls {
 					settingsKey: 'transpose'
 				},
 				{
-					label: 'Sort',
+					label: 'Sort samples',
 					type: 'radio',
 					chartType: 'matrix',
 					settingsKey: 'sortSamplesBy',
@@ -65,7 +72,14 @@ export class MatrixControls {
 					settingsKey: 'transpose'
 				},
 				{
-					label: 'Sort',
+					label: 'Display sample counts for gene',
+					boxLabel: '',
+					type: 'checkbox',
+					chartType: 'matrix',
+					settingsKey: 'samplecount4gene'
+				},
+				{
+					label: 'Sort terms',
 					type: 'radio',
 					chartType: 'matrix',
 					settingsKey: 'sortTermsBy',
@@ -143,7 +157,11 @@ export class MatrixControls {
 		}
 	}
 
-	async main(d) {
+	main() {
+		//this.recover.track()
+	}
+
+	async callback(d) {
 		const { clientX, clientY } = event
 		const app = this.opts.app
 		const parent = this.opts.parent
@@ -169,5 +187,51 @@ export class MatrixControls {
 		}
 
 		app.tip.showunder(event.target)
+	}
+}
+
+const defaultRecoverOpts = {
+	maxHistoryLen: 5
+}
+
+class Recover {
+	constructor(opts = {}) {
+		this.type = 'recover'
+		this.app = opts.app
+		this.opts = Object.assign({}, defaultRecoverOpts, opts)
+		this.currIndex = -1
+		this.history = []
+		// turn off during testing of other components for lighter memory usage
+		this.isActive = !isNaN(this.opts.maxHistoryLen) && +this.opts.maxHistoryLen > 0
+	}
+
+	async track() {
+		this.state = this.app.getState()
+		if (this.isRecovering) {
+			this.isRecovering = false
+			return
+		}
+		this.isRecovering = false
+		if (this.currIndex < this.history.length - 1) {
+			this.history.splice(this.currIndex, this.history.length - (this.currIndex + 1))
+		}
+		this.history.push(this.state)
+		this.currIndex += 1
+
+		if (this.history.length > this.opts.maxHistoryLen) {
+			this.history.shift()
+			this.currIndex += -1
+		}
+	}
+
+	goto(i) {
+		console.log()
+		if (i < 0 && this.currIndex + i > -1) this.currIndex += i
+		else if (i > 0 && this.currIndex + i < this.history.length) this.currIndex += i
+		else return
+		this.isRecovering = true
+		const state = this.history[this.currIndex]
+		console.log(227, i, this.currIndex, state)
+		this.app.dispatch({ type: 'app_refresh', state })
 	}
 }

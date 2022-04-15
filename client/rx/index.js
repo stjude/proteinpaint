@@ -207,6 +207,8 @@ export function prepStore(self, opts) {
 }
 
 export function getStoreApi(self) {
+	self.history = []
+	self.currIndex = -1
 	const api = {
 		async write(action) {
 			// avoid calls to inherited methods

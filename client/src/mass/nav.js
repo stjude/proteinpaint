@@ -2,6 +2,7 @@ import { getCompInit, multiInit } from '../common/rx.core'
 import { searchInit } from './search'
 import { filterRxCompInit } from '../common/filter'
 import { chartsInit } from './charts'
+import { recoverInit } from '../../rx/src/recover'
 import { select } from 'd3-selection'
 import { dofetch3 } from '../common/dofetch'
 import { Menu } from '../dom/menu'
@@ -52,6 +53,11 @@ class TdbNav {
 					app: this.app,
 					holder: this.dom.subheader.charts,
 					vocab: this.opts.vocab
+				}),
+				recover: recoverInit({
+					app: this.app,
+					holder: this.dom.recoverDiv,
+					maxHistoryLen: 5
 				})
 			})
 		} catch (e) {
@@ -127,6 +133,10 @@ function setRenderers(self) {
 				.style('margin', '10px')
 				.style('vertical-align', 'top'),
 			sessionDiv: header
+				.append('div')
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top'),
+			recoverDiv: header
 				.append('div')
 				.style('display', 'inline-block')
 				.style('vertical-align', 'top'),

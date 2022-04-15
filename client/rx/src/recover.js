@@ -1,24 +1,22 @@
-import * as rx from './rx.core'
-import { Menu } from '../client'
+import { getCompInit, toJson } from '../index'
+import { Menu } from '../../src/dom/menu'
 
 class Recover {
-	constructor(opts) {
+	constructor(opts={}) {
 		this.type = 'recover'
-		this.app = opts.app
-		this.opts = rx.getOpts(opts, this)
-		this.api = rx.getComponentApi(this)
-
 		this.dom = {
 			holder: opts.holder
 				.append('div')
 				.style('position', 'sticky')
 				.style('top', '12px')
 				.style('right', '20px')
-				.style('margin', '5px')
+				.style('margin', '10px')
 				.style('text-align', 'right')
 		}
 		this.menu = new Menu({ padding: '5px' })
+	}
 
+	init() { console.log(19)
 		this.currIndex = -1
 		this.history = []
 		// turn off during testing of other components for lighter memory usage
@@ -73,21 +71,23 @@ class Recover {
 	}
 }
 
+export const recoverInit = getCompInit(Recover)
+
 function setRenderers(self) {
 	self.initUi = function() {
 		self.dom.undoBtn = self.dom.holder
 			.append('button')
 			.html('undo')
-			.style('margin', '2px 0')
+			//.style('margin', '2px 0')
 			.on('click', () => self.goto(-1))
 
 		self.dom.redoBtn = self.dom.holder
 			.append('button')
 			.html('redo')
-			.style('margin', '2px 0')
+			//.style('margin', '2px 0')
 			.on('click', () => self.goto(1))
 
-		self.dom.projectBtn = self.dom.holder
+		/*self.dom.projectBtn = self.dom.holder
 			.append('button')
 			.html('Project ...')
 			.style('margin', '2px 0')
@@ -130,7 +130,7 @@ function setRenderers(self) {
 			.append('button')
 			.style('width', '45%')
 			.html('Save')
-			.on('click', () => alert('feature under development'))
+			.on('click', () => alert('feature under development'))*/
 	}
 
 	self.render = function() {
@@ -171,7 +171,7 @@ function setInteractivity(self) {
 		const projectName = self.dom.projectInput.property('value')
 		if (!projectName) return
 		self.projectName = 'tdbApp-' + projectName
-		window.localStorage.setItem(self.projectName, rx.toJson(self.state))
+		window.localStorage.setItem(self.projectName, toJson(self.state))
 		const nameStr = window.localStorage.getItem('tdbProjectNames')
 		const names = nameStr ? JSON.parse(nameStr) : []
 		if (!names.includes(projectName)) {
@@ -180,5 +180,3 @@ function setInteractivity(self) {
 		}
 	}
 }
-
-export const recoverInit = rx.getInitFxn(Recover)
