@@ -874,6 +874,9 @@ function sort_mclass(set) {
 }
 
 export async function init_dictionary(ds) {
+	/* store gdc dictionary in memory
+	 */
+
 	ds.cohort.termdb = {}
 	const id2term = (ds.cohort.termdb.id2term = new Map())
 	const dictionary = ds.termdb.dictionary
@@ -886,17 +889,61 @@ export async function init_dictionary(ds) {
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
-		throw 'invalid JSON from GDC for variant2samples'
+		throw 'invalid JSON from GDC dictionary'
 	}
 	if (!re._mapping) throw 'returned data does not have ._mapping'
 	if (!re.fields) throw 'returned data does not have .fields'
 	if (!Array.isArray(re.fields)) throw '.fields not array'
 	if (!re.expand) throw 'returned data does not have .expand'
 	if (!Array.isArray(re.expand)) throw '.expand not array'
-	// store gdc dictionary in memory
+	/*
+	re._mapping: {}
+		'ssm_occurrence_centrics.case.available_variation_data': {
+			description: '',
+			doc_type: 'ssm_occurrence_centrics',
+			field: 'case.available_variation_data',
+			full: 'ssm_occurrence_centrics.case.available_variation_data',
+			type: 'keyword'
+		},
+		'ssm_occurrence_centrics.case.case_id': {
+			description: '',
+			doc_type: 'ssm_occurrence_centrics',
+			field: 'case.case_id',
+			full: 'ssm_occurrence_centrics.case.case_id',
+			type: 'keyword'
+		},
+
+	re.fields: []
+		'case.available_variation_data',
+		'case.case_id',
+		'case.consent_type',
+		'case.days_to_consent',
+		'case.days_to_index',
+		'case.demographic.age_at_index',
+		'case.demographic.age_is_obfuscated',
+		'case.demographic.cause_of_death',
+		'case.demographic.days_to_birth',
+		'case.demographic.days_to_death',
+		'case.demographic.demographic_id',
+		...
+
+	re.expand: []
+		'case',
+		'case.demographic',
+		'case.diagnoses',
+		'case.diagnoses.pathology_details',
+		'case.diagnoses.treatments',
+		'case.exposures',
+		'case.family_histories',
+		'case.observation',
+		'case.observation.input_bam_file',
+		'case.observation.normal_genotype',
+		'case.observation.read_depth',
+		'case.observation.sample',
+	*/
+
 	// step 1: add leaf terms
-	for (const i in re.fields) {
-		const term_path_str = re.fields[i]
+	for (const term_path_str of re.fields) {
 		// skip term if it's present in duplicate_term_skip []
 		if (dictionary.gdcapi.duplicate_term_skip.includes(term_path_str)) continue
 		const term_paths = term_path_str.split('.')
@@ -918,8 +965,7 @@ export async function init_dictionary(ds) {
 		id2term.set(term_id, term_obj)
 	}
 	// step 3: add parent  and root terms
-	for (const i in re.expand) {
-		const term_str = re.expand[i]
+	for (const term_str of re.expand) {
 		const term_levels = term_str.split('.')
 		const term_id = term_levels.length == 1 ? term_str : term_levels[term_levels.length - 1]
 		const term_obj = {
@@ -956,10 +1002,24 @@ export async function init_dictionary(ds) {
 		}
 	}
 
-	//setp 5: remove 'case' term and modify children
+	//step 5: remove 'case' term, remove "case" as the first level
 	id2term.delete('case')
-	const children = [...id2term.values()].filter(t => t.parent_id == 'case')
-	if (children.length) children.forEach(t => (t.parent_id = undefined))
+	for (const term of id2term.values()) {
+		if (term.parent_id == 'case') {
+			// this term is a direct child of "case". move it to "Misc"
+			term.parent_id = undefined // 'Miscellaneous'
+		}
+	}
+
+	/*
+	id2term.set('Miscellaneous', {
+		id: 'Miscellaneous',
+		name:'Miscellaneous',
+	})
+	*/
+
+	//const children = [...id2term.values()].filter(t => t.parent_id == 'case')
+	//if (children.length) children.forEach(t => (t.parent_id = undefined))
 	console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
 
 	// freeze gdc dictionary as it's readonly and must not be changed by treeFilter or other features
