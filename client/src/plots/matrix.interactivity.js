@@ -172,17 +172,16 @@ function setTermActions(self) {
 	self.sortSamplesAgainstCornerTerm = () => {
 		event.stopPropagation()
 		const t = self.activeTerm
-		const termgroups = JSON.parse(JSON.stringify(self.state.config.termgroups))
+		const termgroups = self.termGroups
 		const grp = termgroups[t.grpIndex]
-		const [tcopy] = self.getSorterTerms(t)
-		grp.lst.splice(t.index, 1)
+		const [tcopy, sorterTerms] = self.getSorterTerms(t)
+		const removed = grp.lst.splice(t.index, 1)
 		grp.lst.unshift(tcopy)
 
 		for (const g of termgroups) {
 			for (const tw of g.lst) {
 				if (!tw.sortSamples) continue
-				if (tw.$id === t.tw.$id) tw.sortSamples.priority = 0
-				else tw.sortSamples.priority += 1
+				tw.sortSamples.priority = sorterTerms.findIndex(t => t.tw?.$id === tw.$id)
 			}
 		}
 
@@ -193,6 +192,7 @@ function setTermActions(self) {
 				termgroups,
 				settings: {
 					matrix: {
+						sortTermsBy: 'asListed',
 						sortSamplesBy: 'selectedTerms'
 					}
 				}
@@ -205,7 +205,7 @@ function setTermActions(self) {
 		event.stopPropagation()
 		const t = self.activeTerm
 		const [tcopy] = self.getSorterTerms(t)
-		const termgroups = JSON.parse(JSON.stringify(self.state.config.termgroups))
+		const termgroups = self.termGroups
 		termgroups[t.grpIndex].lst[t.index] = tcopy
 		for (const g of termgroups) {
 			for (const tw of g.lst) {
@@ -233,7 +233,7 @@ function setTermActions(self) {
 	self.moveTermUp = () => {
 		event.stopPropagation()
 		const t = self.activeTerm
-		const grp = JSON.parse(JSON.stringify(self.state.config.termgroups[t.grpIndex]))
+		const grp = self.termGroups[t.grpIndex]
 		grp.lst.splice(t.index, 1)
 		grp.lst.splice(t.index - 1, 0, t.tw)
 
@@ -257,7 +257,7 @@ function setTermActions(self) {
 	self.moveTermDown = () => {
 		event.stopPropagation()
 		const t = self.activeTerm
-		const grp = JSON.parse(JSON.stringify(self.state.config.termgroups[t.grpIndex]))
+		const grp = self.termGroups[t.grpIndex]
 		grp.lst.splice(t.index, 1)
 		grp.lst.splice(t.index + 1, 0, t.tw)
 
@@ -417,7 +417,7 @@ function setTermActions(self) {
 					)
 					const pos = select(`input[name='${self.insertRadioId}']:checked`).property('value')
 					const t = self.activeTerm
-					const termgroups = JSON.parse(JSON.stringify(self.config.termgroups))
+					const termgroups = self.termGroups
 					if (self.dom.grpNameSelect.property('value') == 'current') {
 						const grp = termgroups[t.grpIndex]
 						const i = pos == 'above' ? t.index : t.index + 1
@@ -465,7 +465,7 @@ function setTermActions(self) {
 				const lines = text.split('\n').map(line => line.trim())
 				const ids = lines.filter(id => !!id)
 				const terms = await self.app.vocabApi.getTermTypes(ids)
-				const termgroups = JSON.parse(JSON.stringify(self.config.termgroups))
+				const termgroups = self.termGroups
 				const name = self.dom.grpNameTextInput.property('value')
 				let grp = termgroups.find(g => g.name === name)
 				if (!grp) {
@@ -739,7 +739,7 @@ function setTermActions(self) {
 
 	self.removeTerm = () => {
 		const t = self.activeTerm
-		const termgroups = JSON.parse(JSON.stringify(self.config.termgroups))
+		const termgroups = self.termGroups
 		const grp = termgroups[t.grpIndex]
 		// remove this element
 		grp.lst.splice(t.index, 1)
@@ -768,7 +768,7 @@ function setTermActions(self) {
 
 	self.removeTermGroup = () => {
 		const t = self.activeTerm
-		const termgroups = JSON.parse(JSON.stringify(self.config.termgroups))
+		const termgroups = self.termGroups
 		termgroups.splice(t.grpIndex, 1)
 		self.app.dispatch({
 			type: 'plot_edit',

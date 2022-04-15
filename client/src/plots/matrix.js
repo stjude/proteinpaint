@@ -231,10 +231,10 @@ class Matrix {
 
 	setTermOrder(data) {
 		this.termSorter = getTermSorter(this, this.settings.matrix, data.lst)
-		this.termGrp = this.config.termgroups
+		this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
 		this.termOrder = []
 		let total = 0
-		for (const [grpIndex, grp] of this.config.termgroups.entries()) {
+		for (const [grpIndex, grp] of this.termGroups.entries()) {
 			const lst = [] // will derive a mutable copy of grp.lst
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
@@ -248,7 +248,7 @@ class Matrix {
 				lst.push({ tw, counts, index })
 			}
 
-			lst.sort(this.termSorter)
+			grp.lst = lst.sort(this.termSorter).map(t => t.tw)
 			for (const [index, t] of lst.entries()) {
 				const { tw, counts } = t
 				const ref = data.refs.byTermId[t.tw.$id] || {}
@@ -256,7 +256,7 @@ class Matrix {
 					grp,
 					grpIndex,
 					tw,
-					index,
+					index, // rendered index
 					prevGrpTotalIndex: total,
 					totalIndex: total + index,
 					ref,
