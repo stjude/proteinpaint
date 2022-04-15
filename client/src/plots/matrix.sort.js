@@ -3,12 +3,27 @@
 */
 
 export function getSampleSorter(self, s, rows) {
+	if (s.sortSamplesBy == 'asListed') {
+		//no additional logic required
+		return (a, b) => {
+			for (const s of self.sampleOrder) {
+				if (s.row.sample === a.sample) return -1
+				if (s.row.sample === b.sample) return 1
+				return 0
+			}
+		}
+	}
+
+	if (s.sortSamplesBy != 'selectedTerms') {
+		throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
+	}
+
 	const sorterTerms = [
 		...self.termOrder
 			.filter(t => t.tw.sortSamples)
 			.map(t => t.tw)
 			.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority),
-		...self.config.settings.matrix.sortSamplesBy.map(st => st)
+		...self.config.settings.matrix.sortSamplesTieBreakers.map(st => st)
 	]
 	self.sampleSorters = []
 	for (const st of sorterTerms) {
@@ -72,5 +87,22 @@ function getSortSamplesByValues($id, self, rows) {
 		if (!a[$id]) return 1
 		if (!b[$id]) return -1
 		return values.indexOf(a[$id].key) - values.indexOf(b[$id].key)
+	}
+}
+
+export function getTermSorter(self, s) {
+	if (s.sortTermsBy == 'asListed') {
+		//no additional logic required
+		return (a, b) => a.index - b.index
+	}
+
+	if (s.sortTermsBy != 'sampleCount') {
+		throw `unsupported s.sortTermsBy='${s.sortTermsBy}'`
+	}
+
+	return (a, b) => {
+		if (a.counts.samples === b.counts.samples) return b.counts.hits - a.counts.hits
+		if (a.counts.samples === b.counts.samples) return a.index - b.index
+		return b.counts.samples - a.counts.samples
 	}
 }

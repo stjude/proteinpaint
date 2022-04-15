@@ -9,7 +9,7 @@ import { mclass } from '../../shared/common'
 import { Menu } from '../dom/menu'
 import { setInteractivity } from './matrix.interactivity'
 import { setRenderers } from './matrix.renderers'
-import { getSampleSorter } from './matrix.sort'
+import { getSampleSorter, getTermSorter } from './matrix.sort'
 
 class Matrix {
 	constructor(opts) {
@@ -230,14 +230,40 @@ class Matrix {
 	}
 
 	setTermOrder(data) {
+		this.termSorter = getTermSorter(this, this.settings.matrix, data.lst)
 		this.termGrp = this.config.termgroups
 		this.termOrder = []
 		let total = 0
 		for (const [grpIndex, grp] of this.config.termgroups.entries()) {
+			const lst = [] // will derive a mutable copy of grp.lst
 			for (const [index, tw] of grp.lst.entries()) {
-				const ref = data.refs.byTermId[tw.$id] || {}
-				this.termOrder.push({ grp, grpIndex, tw, index, prevGrpTotalIndex: total, totalIndex: total + index, ref })
+				const counts = { samples: 0, hits: 0 }
+				for (const sn in data.samples) {
+					const row = data.samples[sn]
+					if (tw.$id in row) {
+						counts.samples += 1
+						counts.hits += Array.isArray(row[tw.$id].values) ? row[tw.$id].values.length : 1
+					}
+				}
+				lst.push({ tw, counts, index })
 			}
+
+			lst.sort(this.termSorter)
+			for (const [index, t] of lst.entries()) {
+				const { tw, counts } = t
+				const ref = data.refs.byTermId[t.tw.$id] || {}
+				this.termOrder.push({
+					grp,
+					grpIndex,
+					tw,
+					index,
+					prevGrpTotalIndex: total,
+					totalIndex: total + index,
+					ref,
+					counts
+				})
+			}
+
 			total += grp.lst.length
 		}
 	}
@@ -496,7 +522,9 @@ export async function getPlotConfig(opts, app) {
 					bottom: 20,
 					left: 50
 				},
-				sortSamplesBy: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
+				sortSamplesBy: 'selectedTerms',
+				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
+				sortTermsBy: 'asListed', // or sampleCount
 				colw: 14,
 				colspace: 1,
 				colgspace: 8,

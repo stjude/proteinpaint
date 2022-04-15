@@ -189,7 +189,14 @@ function setTermActions(self) {
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.opts.id,
-			config: { termgroups }
+			config: {
+				termgroups,
+				settings: {
+					matrix: {
+						sortSamplesBy: 'selectedTerms'
+					}
+				}
+			}
 		})
 		self.dom.tip.hide()
 	}
@@ -211,7 +218,14 @@ function setTermActions(self) {
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.opts.id,
-			config: { termgroups }
+			config: {
+				termgroups,
+				settings: {
+					matrix: {
+						sortSamplesBy: 'selectedTerms'
+					}
+				}
+			}
 		})
 		self.dom.tip.hide()
 	}
@@ -230,6 +244,10 @@ function setTermActions(self) {
 				{
 					nestedKeys: ['termgroups', t.grpIndex],
 					value: grp
+				},
+				{
+					nestedKeys: ['settings', 'matrix', 'sortTermsBy'],
+					value: 'asListed'
 				}
 			]
 		})
@@ -250,6 +268,10 @@ function setTermActions(self) {
 				{
 					nestedKeys: ['termgroups', t.grpIndex],
 					value: grp
+				},
+				{
+					nestedKeys: ['settings', 'matrix', 'sortTermsBy'],
+					value: 'asListed'
 				}
 			]
 		})
@@ -592,6 +614,10 @@ function setTermActions(self) {
 							{
 								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.index],
 								value: tcopy
+							},
+							{
+								nestedKeys: ['settings', 'matrix', 'sortSamplesBy'],
+								value: 'selectedTerms'
 							}
 						]
 					})
@@ -679,7 +705,7 @@ function setTermActions(self) {
 				.filter(t => t.tw.sortSamples)
 				.map(t => JSON.parse(JSON.stringify(t.tw)))
 				.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority),
-			...self.config.settings.matrix.sortSamplesBy.map(st => JSON.parse(JSON.stringify(st)))
+			...self.config.settings.matrix.sortSamplesTieBreakers.map(st => JSON.parse(JSON.stringify(st)))
 		]
 		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
 		const tcopy = JSON.parse(JSON.stringify(t.tw))

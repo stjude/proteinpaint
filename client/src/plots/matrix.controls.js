@@ -15,10 +15,9 @@ export class MatrixControls {
 			.selectAll('button')
 			.data([
 				{ value: 'samples', label: 'Samples' },
-				{ value: 'anno', label: 'Annotations' },
+				{ value: 'anno', label: 'Terms' },
 				{ value: 'cols', label: 'Column layout' },
 				{ value: 'rows', label: 'Row layout' }
-				//{ value: 'sort', label: 'Sort' }
 			])
 			.enter()
 			.append('button')
@@ -38,6 +37,13 @@ export class MatrixControls {
 					settingsKey: 'transpose'
 				},
 				{
+					label: 'Sort',
+					type: 'radio',
+					chartType: 'matrix',
+					settingsKey: 'sortSamplesBy',
+					options: [{ label: 'as-listed', value: 'asListed' }, { label: 'selected terms', value: 'selectedTerms' }]
+				},
+				{
 					label: 'Group samples by',
 					type: 'term',
 					chartType: 'matrix',
@@ -52,11 +58,18 @@ export class MatrixControls {
 
 			anno: [
 				{
-					label: 'Annotations as columns',
+					label: 'Terms as columns',
 					boxLabel: '',
 					type: 'checkbox',
 					chartType: 'matrix',
 					settingsKey: 'transpose'
+				},
+				{
+					label: 'Sort',
+					type: 'radio',
+					chartType: 'matrix',
+					settingsKey: 'sortTermsBy',
+					options: [{ label: 'as-listed', value: 'asListed' }, { label: 'by sample count', value: 'sampleCount' }]
 				}
 			],
 
