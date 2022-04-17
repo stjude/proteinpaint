@@ -135,6 +135,8 @@ do_query
 				duplicateRegions
 		match_complexvariant
 		match_sv
+	do_alignOneGroup
+		get_templates
 	(for each group...)
 		get_templates
 			parse_one_segment
@@ -151,6 +153,7 @@ do_query
 				getrowheight_template_overlapread
 		plot_template
 			plot_segment
+				mayClipArrowhead
 		plot_insertions
 	plot_pileup
 		run_samtools_depth
@@ -247,8 +250,13 @@ module.exports = genomes => {
 			delete req.query.isFileSlice
 
 			if (req.query.gdcFileUUID) {
+				/* for every request with a gdc file uuid (slice bam, view a bam, view a read etc)
+				always make an api query to verify access to prevent unauthorized access
+				*/
 				await gdcCheckPermission(req.query.gdcFileUUID, req.get('x-auth-token'))
-				// authorized
+				/* authorized. compute persistent cache file name using uuid etc
+				cache file name is never revealed to client
+				*/
 				req.query.file = getGDCcacheFileName(req)
 				req.query.isFileSlice = true
 			}
@@ -275,12 +283,6 @@ module.exports = genomes => {
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
-
-			if (req.query.alignOneGroup) {
-				const q = await get_q(genome, req)
-				res.send(await do_query(q))
-				return
-			}
 
 			if (req.query.getread) {
 				res.send(await route_getread(genome, req))
@@ -683,6 +685,7 @@ async function get_q(genome, req) {
 			strictness: t[4]
 		}
 		if (req.query.alignOneGroup) {
+			// value is group name to be realigned
 			q.alignOneGroup = req.query.alignOneGroup
 		}
 		if (Number.isNaN(q.variant.pos)) throw 'variant pos not integer'
@@ -804,77 +807,29 @@ async function do_query(q) {
 		//q.groups[0].messages.push({ t: 'No reads in view range.' })
 	}
 
+	if (q.alignOneGroup) {
+		// find the group to be realigned
+		const group = q.groups.find(i => i.type == q.alignOneGroup)
+		if (!group) throw 'cannot find group for realignment'
+		let templates = get_templates(q, group)
+		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
+		return await do_alignOneGroup(group, q, templates)
+	}
+
+	// render read alignment for all groups
+
 	// XXX TODO not to collect all reads into array
 	let templates_total = []
 	for (const group of q.groups) {
 		// do stacking for each group separately
 		// attach temp attributes directly to "group", rendering result push to results.groups[]
 
-		if (q.alignOneGroup && q.alignOneGroup != group.type) {
-			// When its a q.alignOneGroup request and the group type does not match the one requested, no need to process this iteration
-			continue
-		}
-
 		// parse reads and cigar
 		let templates = get_templates(q, group)
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
-		if (q.alignOneGroup && q.alignOneGroup == group.type) {
-			// do alignment
-			// call a function from a new script
-			// get alignment data (text)
-			let alignmentData
-			if (q.variant) {
-				let leftflankseq_length
-				if (q.leftflankseq) {
-					leftflankseq_length = q.leftflankseq.length
-				} else if (result.leftflankseq) {
-					leftflankseq_length = result.leftflankseq.length
-				} else {
-					// Should not happen
-					console.log('Cannot find leftflankseq length')
-				}
-				if (group.type == 'support_alt') {
-					if (group.partstack) {
-						alignmentData = await align_multiple_reads(
-							templates,
-							leftflankseq_length,
-							group.partstack.start,
-							group.partstack.stop,
-							q.altseq
-						) // Aligning alt-classified reads to alternate allele
-					} else {
-						alignmentData = await align_multiple_reads(templates, leftflankseq_length, 0, 0, q.altseq) // Aligning alt-classified reads to alternate allele
-					}
-				} else if (group.type == 'support_ref') {
-					if (group.partstack) {
-						alignmentData = await align_multiple_reads(
-							templates,
-							leftflankseq_length,
-							group.partstack.start,
-							group.partstack.stop,
-							q.refseq
-						) // Aligning ref-classified reads to reference allele
-					} else {
-						alignmentData = await align_multiple_reads(templates, leftflankseq_length, 0, 0, q.refseq) // Aligning ref-classified reads to reference allele
-					}
-				} else {
-					// when category type is none category
-					if (group.partstack) {
-						alignmentData = await align_multiple_reads(
-							templates,
-							leftflankseq_length,
-							group.partstack.start,
-							group.partstack.stop
-						) // Aligning none/ambiguous classified reads
-					} else {
-						alignmentData = await align_multiple_reads(templates, leftflankseq_length) // Aligning ref-classified reads to reference allele
-					}
-				}
-			}
-			//console.log('alignmentData:', alignmentData)
-			return { alignmentData }
-		}
+
 		await poststack_adjustq(group, q, templates)
+
 		// read quality is not parsed yet
 		await may_checkrefseq4mismatch(templates, q)
 		finalize_templates(group, templates, q) // set .canvasheight
@@ -888,7 +843,7 @@ async function do_query(q) {
 			stackcount: group.stacks.length,
 			allowpartstack: group.allowpartstack,
 			templatebox: group.returntemplatebox,
-			count: { r: templates.reduce((i, j) => i + j.segments.length, 0) } // group.templates
+			count: { r: templates.reduce((i, j) => i + j.segments.length, 0) }
 		}
 
 		const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
@@ -935,6 +890,62 @@ async function do_query(q) {
 	}
 
 	return result
+}
+
+async function do_alignOneGroup(group, q, templates) {
+	// do alignment
+	// call a function from a new script
+	// get alignment data (text)
+	let alignmentData
+	if (q.variant) {
+		let leftflankseq_length
+		if (q.leftflankseq) {
+			leftflankseq_length = q.leftflankseq.length
+		} else if (result.leftflankseq) {
+			leftflankseq_length = result.leftflankseq.length
+		} else {
+			// Should not happen
+			console.log('Cannot find leftflankseq length')
+		}
+		if (group.type == 'support_alt') {
+			if (group.partstack) {
+				alignmentData = await align_multiple_reads(
+					templates,
+					leftflankseq_length,
+					group.partstack.start,
+					group.partstack.stop,
+					q.altseq
+				) // Aligning alt-classified reads to alternate allele
+			} else {
+				alignmentData = await align_multiple_reads(templates, leftflankseq_length, 0, 0, q.altseq) // Aligning alt-classified reads to alternate allele
+			}
+		} else if (group.type == 'support_ref') {
+			if (group.partstack) {
+				alignmentData = await align_multiple_reads(
+					templates,
+					leftflankseq_length,
+					group.partstack.start,
+					group.partstack.stop,
+					q.refseq
+				) // Aligning ref-classified reads to reference allele
+			} else {
+				alignmentData = await align_multiple_reads(templates, leftflankseq_length, 0, 0, q.refseq) // Aligning ref-classified reads to reference allele
+			}
+		} else {
+			// when category type is none category
+			if (group.partstack) {
+				alignmentData = await align_multiple_reads(
+					templates,
+					leftflankseq_length,
+					group.partstack.start,
+					group.partstack.stop
+				) // Aligning none/ambiguous classified reads
+			} else {
+				alignmentData = await align_multiple_reads(templates, leftflankseq_length) // Aligning ref-classified reads to reference allele
+			}
+		}
+	}
+	return { alignmentData }
 }
 
 async function align_multiple_reads(
@@ -1311,7 +1322,6 @@ async function run_samtools_depth(q, r) {
 async function may_checkrefseq4mismatch(templates, q) {
 	// requires ntwidth
 	// read quality is not parsed yet, so need to set cidx for mismatch box so its quality can be added later
-	// FIXME call this after poststack_adjustq(), as then the to_printnt flags will be set and will know if to attach b.s
 	for (const r of q.regions) {
 		if (r.lines.length > 0 && r.ntwidth >= minntwidth_findmismatch) {
 			r.to_checkmismatch = true
@@ -1827,6 +1837,22 @@ async function poststack_adjustq(group, q, templates) {
 			}
 		}
 	}
+
+	// decide if to indicate read strand (clip arrowhead) uniformly for all reads in the group
+	if (group.stackheight >= minstackheight2strandarrow) {
+		// not too many stacks, can indicate strand
+		// NOTE: if bam file contains reads of different length, this method will NOT work
+		// must based on length of each read to determine if to clip, but not uniformly the whole group
+		let maxwidth = 0
+		for (const t of templates) {
+			for (const s of t.segments) {
+				maxwidth = Math.max(maxwidth, s.x2 - s.x1)
+			}
+		}
+		if (maxwidth > group.stackheight * 0.7) {
+			group.canClipArrowhead = true
+		}
+	}
 }
 
 function getstacksizebystacks(numofstacks, q) {
@@ -2234,7 +2260,6 @@ function plot_segment(ctx, segment, y, group, q) {
 					if (segment.discord_unmapped2) {
 						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
 					}
-					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
 					ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
 					xoff += r.ntwidth
 				})
@@ -2243,7 +2268,6 @@ function plot_segment(ctx, segment, y, group, q) {
 				if (segment.discord_unmapped2) {
 					ctx.fillStyle = discord_unmapped_hq
 				}
-				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
 				ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
 			}
 
@@ -2307,7 +2331,6 @@ function plot_segment(ctx, segment, y, group, q) {
 					} else {
 						ctx.fillStyle = qual2match(v / maxqual)
 					}
-					//ctx.fillStyle = (segment.rnext ? qual2ctxpair : qual2match)(v / maxqual)
 					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x <= xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
 					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x <= xoff) {
@@ -2330,7 +2353,6 @@ function plot_segment(ctx, segment, y, group, q) {
 				} else {
 					ctx.fillStyle = match_hq
 				}
-				//ctx.fillStyle = segment.rnext ? ctxpair_hq : match_hq
 
 				if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && x < r.width && r.x < x + ntboxwidthincrement) {
 					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
@@ -2354,51 +2376,12 @@ function plot_segment(ctx, segment, y, group, q) {
 		throw 'unknown opr at rendering: ' + b.opr
 	}
 
-	if (group.stackheight >= minstackheight2strandarrow) {
-		if (segment.forward) {
-			const x = Math.ceil(segment.x2 + ntboxwidthincrement)
-			if (x <= r.width + group.stackheight / 2) {
-				ctx.fillStyle = 'white'
-				ctx.beginPath()
-				ctx.moveTo(x - group.stackheight / 2, y)
-				ctx.lineTo(x, y)
-				ctx.lineTo(x, y + group.stackheight / 2)
-				ctx.lineTo(x - group.stackheight / 2, y)
-				ctx.closePath()
-				ctx.fill()
-				ctx.beginPath()
-				ctx.moveTo(x - group.stackheight / 2, y + group.stackheight)
-				ctx.lineTo(x, y + group.stackheight)
-				ctx.lineTo(x, y + group.stackheight / 2)
-				ctx.lineTo(x - group.stackheight / 2, y + group.stackheight)
-				ctx.closePath()
-				ctx.fill()
-			}
-		} else {
-			const x = segment.x1
-			if (x >= 0) {
-				ctx.fillStyle = 'white'
-				ctx.beginPath()
-				ctx.moveTo(x + group.stackheight / 2, y)
-				ctx.lineTo(x, y)
-				ctx.lineTo(x, y + group.stackheight / 2)
-				ctx.lineTo(x + group.stackheight / 2, y)
-				ctx.closePath()
-				ctx.fill()
-				ctx.beginPath()
-				ctx.moveTo(x + group.stackheight / 2, y + group.stackheight)
-				ctx.lineTo(x, y + group.stackheight)
-				ctx.lineTo(x, y + group.stackheight / 2)
-				ctx.lineTo(x + group.stackheight / 2, y + group.stackheight)
-				ctx.closePath()
-				ctx.fill()
-			}
-		}
-	}
+	mayClipArrowhead(ctx, segment, group, r, y)
 
 	if (segment.rnext) {
+		// mate is in different chr
 		if (!r.to_qual) {
-			// no quality and just a solid box, may print name
+			// no quality and just a solid box, may print mate chr name
 			if (segment.x2 - segment.x1 >= 20 && group.stackheight >= 7) {
 				ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, group.stackheight - 4)) + 'pt Arial'
 				ctx.fillStyle = 'white'
@@ -2411,21 +2394,65 @@ function plot_segment(ctx, segment, y, group, q) {
 			}
 		}
 	}
-	//else if (segment.discord_wrong_insertsize) {
-	//	if (!r.to_qual) {
-	//		// no quality and just a solid box, may print name
-	//		if (segment.x2 - segment.x1 >= 20 && group.stackheight >= 7) {
-	//			ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, group.stackheight - 4)) + 'pt Arial'
-	//			ctx.fillStyle = 'white'
-	//			ctx.fillText(
-	//			    (q.nochr ? 'chr' : '')+q.regions[0].chr.replace('chr',''),
-	//				(segment.x1 + segment.x2) / 2,
-	//				y + group.stackheight / 2,
-	//				segment.x2 - segment.x1
-	//			)
-	//		}
-	//	}
-	//}
+}
+
+function mayClipArrowhead(ctx, segment, group, r, y) {
+	/* render white triangles on one end of segment for the effect of "arrowhead" to indicate strand
+	decide if to clip based on on-screen width of each segment
+
+	current method uniformly determines if to clip for all reads in the group
+	assumption is reads are of same length
+
+	but for bam with different read lengths, it has to decide based on width of each read
+	thus leaving for current method
+	*/
+
+	if (!group.canClipArrowhead) return
+
+	if (segment.x2 - segment.x1 < 5) {
+		// in case the read is only half-shown in the region
+		return
+	}
+
+	if (segment.forward) {
+		const x = Math.ceil(segment.x2 + ntboxwidthincrement)
+		if (x <= r.width + group.stackheight / 2) {
+			ctx.fillStyle = 'white'
+			ctx.beginPath()
+			ctx.moveTo(x - group.stackheight / 2, y)
+			ctx.lineTo(x, y)
+			ctx.lineTo(x, y + group.stackheight / 2)
+			ctx.lineTo(x - group.stackheight / 2, y)
+			ctx.closePath()
+			ctx.fill()
+			ctx.beginPath()
+			ctx.moveTo(x - group.stackheight / 2, y + group.stackheight)
+			ctx.lineTo(x, y + group.stackheight)
+			ctx.lineTo(x, y + group.stackheight / 2)
+			ctx.lineTo(x - group.stackheight / 2, y + group.stackheight)
+			ctx.closePath()
+			ctx.fill()
+		}
+	} else {
+		const x = segment.x1
+		if (x >= 0) {
+			ctx.fillStyle = 'white'
+			ctx.beginPath()
+			ctx.moveTo(x + group.stackheight / 2, y)
+			ctx.lineTo(x, y)
+			ctx.lineTo(x, y + group.stackheight / 2)
+			ctx.lineTo(x + group.stackheight / 2, y)
+			ctx.closePath()
+			ctx.fill()
+			ctx.beginPath()
+			ctx.moveTo(x + group.stackheight / 2, y + group.stackheight)
+			ctx.lineTo(x, y + group.stackheight)
+			ctx.lineTo(x, y + group.stackheight / 2)
+			ctx.lineTo(x + group.stackheight / 2, y + group.stackheight)
+			ctx.closePath()
+			ctx.fill()
+		}
+	}
 }
 
 function plot_insertions(ctx, group, q, templates) {
