@@ -24,26 +24,10 @@
 #######
 
 # prepare data table
-#   - set variable types and reference groups
-#   - scale values (if applicable)
-#   - validate data values
-prepareDataTable <- function(dat, variables, regtype) {
-  variables$toSkip <- vector(mode = "logical", length = nrow(variables))
-  for (r in 1:nrow(variables)) {
-    variable <- variables[r,]
+prepareDataTable <- function(dat, independent) {
+  for (r in 1:nrow(independent)) {
+    variable <- independent[r,]
     id <- variable$id
-    if (variable$type == "outcome") {
-      # outcome variable
-      if (regtype == "logistic") {
-        vals <- unique(dat[,id])
-        if (!(length(vals) == 2 & all(c(0,1) %in% vals))) stop("outcome variable is not 0/1 binary")
-      }
-      if (regtype == "cox") {
-        eventId <- variable$timeToEvent$eventId
-        vals <- unique(dat[,eventId])
-        if (!(length(vals) == 2 & all(c(0,1) %in% vals))) stop("outcome event variable is not 0/1 binary")
-      }
-    }
     if (variable$rtype == "numeric") {
       # numeric variable
       if ("scale" %in% colnames(variable)) {
@@ -52,20 +36,14 @@ prepareDataTable <- function(dat, variables, regtype) {
       }
     } else if (variable$rtype == "factor") {
       # factor variable
+      # assign reference group
       dat[,id] <- factor(dat[,id])
-      if (length(levels(dat[,id])) < 2) {
-        # factor variables with < 2 categories will
-        # be skipped when building formula
-        variables[r,"toSkip"] <- TRUE
-        next
-      }
-      if (!(variable$refGrp %in% levels(dat[,id]))) stop(paste0("refGrp of '",variable$id,"' not found in data values"))
       dat[,id] <- relevel(dat[,id], ref = variable$refGrp)
     } else {
-      stop(paste0("variable rtype '",variable$rtype,"' is not recognized"))
+      stop(paste0("rtype='",variable$rtype,"' is not recognized"))
     }
   }
-  return(list(dat = dat, variables = variables))
+  return(dat)
 }
 
 # compute cubic spline
@@ -84,51 +62,50 @@ cubic_spline <- function(values, knots) {
 }
 
 # build formulas
-buildFormulas <- function(variables) {
-  # first collect outcome, independent, spline, and interacting
-  # variables and format them for formula construction
-  # set aside snplocus snps to be handled separately
+buildFormulas <- function(outcome, independent) {
+  # first, format variables for building formulas
+  
+  # declare new objects
   outcomeIds <- vector(mode = "character") # ids of outcome variables
-  outcome <- vector(mode = "character") # ids of outcome variables formatted for formula
+  formula_outcome <- vector(mode = "character") # outcome variables formatted for formula
   independentIds <- vector(mode = "character") # ids of independent variables
-  independents <- vector(mode = "character") # ids of independent variables formatted for formula
-  interactions <- vector(mode = "character") # ids of interacting variables formatted for formula
-  snpLocusSnps <- variables[0,]
-  splineVariables <- variables[0,]
-  for (r in 1:nrow(variables)) {
-    variable <- variables[r,]
-    if (variable$toSkip) {
-      next
+  formula_independent <- vector(mode = "character") # independent variables formatted for formula
+  formula_interaction <- vector(mode = "character") # interacting variables formatted for formula
+  snpLocusSnps <- independent[0,] # snplocus snps
+  splineVariables <- independent[0,] # spline variables
+  
+  # outcome variable
+  if ("timeToEvent" %in% names(outcome)) {
+    # cox outcome variable
+    # time-to-event data
+    outcomeEventId <- outcome$timeToEvent$eventId
+    if (outcome$timeToEvent$timeScale == "year") {
+      outcomeTimeId <- outcome$timeToEvent$timeId
+      formula_outcome <- paste0("Surv(",outcomeTimeId,", ",outcomeEventId,")")
+      outcomeIds <- c(outcomeIds, outcomeTimeId, outcomeEventId)
+    } else if (outcome$timeToEvent$timeScale == "age") {
+      outcomeAgeStartId <- outcome$timeToEvent$agestartId
+      outcomeAgeEndId <- outcome$timeToEvent$ageendId
+      formula_outcome <- paste0("Surv(",outcomeAgeStartId,", ",outcomeAgeEndId,", ",outcomeEventId,")")
+      outcomeIds <- c(outcomeIds, outcomeAgeStartId, outcomeAgeEndId, outcomeEventId)
+    } else {
+      stop ("unknown cox regression time scale")
     }
-    if (variable$type == "outcome") {
-      # outcome variable
-      if ("timeToEvent" %in% names(variable)) {
-        # cox outcome variable
-        # time-to-event data
-        outcomeEventId <- variable$timeToEvent$eventId
-        if (variable$timeToEvent$timeScale == "year") {
-          outcomeTimeId <- variable$timeToEvent$timeId
-          outcome <- paste0("Surv(",outcomeTimeId,", ",outcomeEventId,")")
-          outcomeIds <- c(outcomeIds, outcomeTimeId, outcomeEventId)
-        } else if (variable$timeToEvent$timeScale == "age") {
-          outcomeAgeStartId <- variable$timeToEvent$agestartId
-          outcomeAgeEndId <- variable$timeToEvent$ageendId
-          outcome <- paste0("Surv(",outcomeAgeStartId,", ",outcomeAgeEndId,", ",outcomeEventId,")")
-          outcomeIds <- c(outcomeIds, outcomeAgeStartId, outcomeAgeEndId, outcomeEventId)
-        } else {
-          stop ("unknown cox regression time scale")
-        }
-      } else {
-        outcome <- variable$id
-        outcomeIds <- c(outcomeIds, variable$id)
-      }
-      next
-    } else if (variable$type == "spline") {
+  } else {
+    # other outcome variable
+    formula_outcome <- outcome$id
+    outcomeIds <- c(outcomeIds, outcome$id)
+  }
+  
+  # independent variables
+  for (r in 1:nrow(independent)) {
+    variable <- independent[r,]
+    if (variable$type == "spline") {
       # cubic spline variable
       # use call to cubic spline function in regression formula
       independentIds <- c(independentIds, variable$id)
       splineCmd <- paste0("cubic_spline(", variable$id, ", ", paste0("c(", paste(variable$spline$knots[[1]],collapse = ","), ")"), ")")
-      independents <- c(independents, splineCmd)
+      formula_independent <- c(formula_independent, splineCmd)
       splineVariables <- rbind(splineVariables, variable)
     } else if (variable$type == "snplocus") {
       # snplocus snp
@@ -137,10 +114,10 @@ buildFormulas <- function(variables) {
       next
     } else {
       # other independent variable
+      formula_independent <- c(formula_independent, variable$id)
       independentIds <- c(independentIds, variable$id)
-      independents <- c(independents, variable$id)
     }
-    if (length(variable$interactions[[1]]) > 0) {
+    if ("interactions" %in% names(variable) & length(variable$interactions[[1]]) > 0) {
       # interactions
       if (variable$type == "spline") stop("interactions not allowed with spline variable")
       interactionIds <- variable$interactions[[1]]
@@ -148,8 +125,8 @@ buildFormulas <- function(variables) {
         # get unique set of interactions
         int1 <- paste(variable$id, intId, sep = ":")
         int2 <- paste(intId, variable$id, sep = ":")
-        if (!(int1 %in% interactions) & !(int2 %in% interactions)) {
-          interactions <- c(interactions, int1)
+        if (!(int1 %in% formula_interaction) & !(int2 %in% formula_interaction)) {
+          formula_interaction <- c(formula_interaction, int1)
         }
       }
     }
@@ -163,25 +140,25 @@ buildFormulas <- function(variables) {
     # snplocus snps present
     # build separate formula for each snplocus snp
     tempIndependentIds <- vector(mode = "character")
-    tempIndependents <- vector(mode = "character")
-    tempInteractions <- vector(mode = "character")
+    temp_formula_independent <- vector(mode = "character")
+    temp_formula_interaction <- vector(mode = "character")
     for (r in 1:nrow(snpLocusSnps)) {
       snp <- snpLocusSnps[r,]
       tempIndependentIds <- c(independentIds, snp$id)
-      tempIndependents <- c(independents, snp$id)
-      if (length(snp$interactions[[1]]) > 0) {
+      temp_formula_independent <- c(formula_independent, snp$id)
+      if ("interactions" %in% names(snp) & length(snp$interactions[[1]]) > 0) {
         # interactions
         interactionIds <- snp$interactions[[1]]
         for (intId in interactionIds) {
           # get unique set of interactions
           int1 <- paste(snp$id, intId, sep = ":")
           int2 <- paste(intId, snp$id, sep = ":")
-          if (!(int1 %in% interactions) & !(int2 %in% interactions)) {
-            tempInteractions <- c(interactions, int1)
+          if (!(int1 %in% formula_interaction) & !(int2 %in% formula_interaction)) {
+            temp_formula_interaction <- c(formula_interaction, int1)
           }
         }
       }
-      formula <- as.formula(paste(outcome, paste(c(tempIndependents, tempInteractions), collapse = "+"), sep = "~"))
+      formula <- as.formula(paste(formula_outcome, paste(c(temp_formula_independent, temp_formula_interaction), collapse = "+"), sep = "~"))
       entry <- length(formulas) + 1
       formulas[[entry]] <- list("id" = snp$id, "formula" = formula, "outcomeIds" = outcomeIds, "independentIds" = tempIndependentIds)
       if (nrow(splineVariables) > 0) {
@@ -191,7 +168,7 @@ buildFormulas <- function(variables) {
   } else {
     # no snplocus snps
     # use single formula for all variables
-    formula <- as.formula(paste(outcome, paste(c(independents, interactions), collapse = "+"), sep = "~"))
+    formula <- as.formula(paste(formula_outcome, paste(c(formula_independent, formula_interaction), collapse = "+"), sep = "~"))
     formulas[[1]] <- list("id" = "", "formula" = formula, "outcomeIds" = outcomeIds, "independentIds" = independentIds)
     if (nrow(splineVariables) > 0) {
       formulas[[1]][["splineVariables"]] = splineVariables

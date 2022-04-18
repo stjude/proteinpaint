@@ -13,33 +13,37 @@
 
 # Input JSON specifications:
 # {
+#   "regressionType": regression type (linear/logistic/cox)
+#   "binpath": server bin path
 #   "data": [{}] per-sample data values
-#   "metadata": {
-#     "type": regression type (linear/logistic/cox)
-#     "variables": [
-#       {
-#         "id": variable id
-#         "name": variable name
-#         "type": variable type ("outcome", "snplocus", "spline", "independent")
-#         "rtype": R variable type ("numeric", "factor")
-#         "timeToEvent": {} (only for cox outcome)
-#           timeScale: year/age
-#           timeId: id of time variable (for 'year' time scale)
-#           agestartId: id of age start variable (for 'age' time scale)
-#           ageendId: id of age end variable (for 'age' time scale)
-#           eventId: if of event variable
-#         "refGrp": reference group (required for factor variables)
-#         "interactions": [] ids of interacting variables
-#         "categories": {} (only for logistic outcome)
-#           "ref": reference category of outcome
-#           "nonref": non-reference category of outcome
-#         "spline": {} cubic spline settings (only for spline variable)
-#           "knots": [] knot values
-#           "plotfile": output png file of spline plot
-#         "scale": scaling factor. Data values of variable will be divided by this number (optional)
-#       }
-#     ]
+#   "outcome": {
+#     "id": variable id
+#     "name": variable name
+#     "rtype": type of R variable ("numeric", "factor")
+#     "timeToEvent": {} (only for cox outcome)
+#       "timeScale": year/age
+#       "timeId": id of time variable (for 'year' time scale)
+#       "agestartId": id of age start variable (for 'age' time scale)
+#       "ageendId": id of age end variable (for 'age' time scale)
+#       "eventId": id of event variable
+#     "categories": {} (only for logistic outcome)
+#       "ref": reference category of outcome
+#       "nonref": non-reference category of outcome
 #   }
+#   "independent": [
+#     {
+#       "id": variable id
+#       "name": variable name
+#       "type": type of independent variable ("snplst", "snplocus", "spline", "other")
+#       "rtype": type of R variable ("numeric", "factor")
+#       "refGrp": reference group
+#       "interactions": [] ids of interacting variables (optional)
+#       "spline": {} cubic spline settings (only for spline variable)
+#         "knots": [] knot values
+#         "plotfile": output png file of spline plot
+#       "scale": scaling factor. Data values of variable will be divided by this number (optional)
+#     }
+#   ]
 # }
 #
 #
@@ -68,33 +72,30 @@
 library(jsonlite)
 library(survival)
 
+args <- commandArgs(trailingOnly = T)
+if (length(args) != 1) stop("Usage: Rscript regression.R in.json > results")
+infile <- args[1]
+
 
 ################
 # PREPARE DATA #
 ################
 
-args <- commandArgs(trailingOnly = T)
-if (length(args) != 1) stop("Usage: Rscript linear.regression.R in.json > results")
-infile <- args[1]
-
 # read in json input
 input <- fromJSON(infile)
-source(paste(input$metadata$binpath, "utils/regression.utils.R", sep = "/")) # regression utilities
-regtype <- input$metadata$type # regression type
-dat <- input$data # data table
-variables <- input$metadata$variables # variable metadata
+
+# import regression utilities
+source(paste0(input$binpath, "/utils/regression.utils.R"))
 
 # prepare data table
-lst <- prepareDataTable(dat, variables, regtype)
-dat <- lst$dat
-variables <- lst$variables
+dat <- prepareDataTable(input$data, input$independent)
 
 
 ##################
 # BUILD FORMULAS #
 ##################
 
-formulas <- buildFormulas(variables)
+formulas <- buildFormulas(input$outcome, input$independent)
 
 
 ##################
@@ -103,7 +104,6 @@ formulas <- buildFormulas(variables)
 
 # Run a separate regression analysis for each formula
 out <- list()
-outcome <- variables[variables$type == "outcome",]
 for (i in 1:length(formulas)) {
   formula <- formulas[[i]]
   id <- formula$id
@@ -115,8 +115,8 @@ for (i in 1:length(formulas)) {
   # break if this step is not done prior to regression analysis.
   fdat <- subdat[complete.cases(subdat),]
   # run regression
-  results <- runRegression(regtype, formula, fdat, outcome)
-  results$coefficients <- formatCoefficients(results$coefficients, results$res, regtype)
+  results <- runRegression(input$regressionType, formula, fdat, input$outcome)
+  results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType)
   results$type3 <- formatType3(results$type3)
   out[[length(out)+1]] <- list("id" = unbox(id), "data" = results[names(results) != "res"])
 }
