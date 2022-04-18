@@ -193,6 +193,7 @@ class TdbCumInc {
 				this.tests[chart] = this.tests[chart].filter(
 					test => !this.hiddenOverlays.includes(test.series1) && !this.hiddenOverlays.includes(test.series2)
 				)
+				if (this.tests[chart].length == 0) delete this.tests[chart]
 			}
 		}
 
@@ -202,6 +203,7 @@ class TdbCumInc {
 			for (const chart in this.skippedSeries) {
 				// remove hidden series from this.skippedTests
 				this.skippedSeries[chart] = this.skippedSeries[chart].filter(series => !this.hiddenOverlays.includes(series))
+				if (this.skippedSeries[chart].length == 0) delete this.skippedSeries[chart]
 			}
 		}
 	}
