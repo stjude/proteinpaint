@@ -427,6 +427,7 @@ fn check_first_last_nucleotide_correctly_aligned(
         let mut last_print_position = 0;
         for i in 0..first_unmatched_sequence.len() {
             all_matched_nucleotides = true;
+            let mut num_iterations = 1; // Need to check if the entire length of first_unmatched_sequence has been parsed or not
             for j in 0..first_matched_nucleotides.len() {
                 // Check if all nucleotides are matching or not
                 if i + j < first_unmatched_sequence.len() {
@@ -438,6 +439,11 @@ fn check_first_last_nucleotide_correctly_aligned(
                     }
                     last_print_position = i;
                 }
+            }
+            if num_iterations != first_matched_nucleotides.len() && all_matched_nucleotides == true
+            {
+                // If all the nucleotides in first_matched_nucleotides have not been parsed set all_matched_nucleotides = false
+                all_matched_nucleotides = false;
             }
             if all_matched_nucleotides == true {
                 break;
