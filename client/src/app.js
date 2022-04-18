@@ -1366,12 +1366,16 @@ function launchJunctionbyMatrix(arg, app) {
 }
 
 function launchgdcbamslice(arg, app) {
-	if (arg.gdcbamslice.uionly) {
-		import('./block.tk.bam.gdc').then(p => {
-			p.bamsliceui(app.genomes, app.holder0)
+	import('./block.tk.bam.gdc').then(p => {
+		p.bamsliceui({
+			genomes: app.genomes,
+			holder: app.holder0,
+			// set to true for gdc phase9, delete afterwards
+			disableSSM: arg.gdcbamslice.disableSSM,
+			// set to true in gdc react wrapper
+			hideTokenInput: arg.gdcbamslice.hideTokenInput
 		})
-		return
-	}
+	})
 }
 
 async function launch_singlecell(arg, app) {

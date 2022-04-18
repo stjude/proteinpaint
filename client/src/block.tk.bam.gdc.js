@@ -56,7 +56,14 @@ const baminfo_rows = [
 	{ title: 'Size', key: 'file_size' }
 ]
 
-export async function bamsliceui(genomes, holder) {
+/*
+arguments:
+disableSSM=true/false
+	temporary fix; to disable ssm query and selection for gdc phase9
+hideTokenInput=true/false
+	set to true in gdc react wrapper
+*/
+export async function bamsliceui({ genomes, holder, disableSSM = false, hideTokenInput = false }) {
 	const genome = genomes[gdc_genome]
 	if (!genome) throw 'missing genome for ' + gdc_genome
 
@@ -77,7 +84,7 @@ export async function bamsliceui(genomes, holder) {
 		.append('div')
 		.style('margin', '40px 20px 20px 20px')
 		.style('display', 'grid')
-		.style('grid-template-columns', '150px auto')
+		.style('grid-template-columns', '300px auto')
 		.style('grid-template-rows', 'repeat(6, auto)')
 		.style('gap', '5px')
 		.style('align-items', 'center')
@@ -191,7 +198,7 @@ export async function bamsliceui(genomes, holder) {
 		formdiv
 			.append('div')
 			.style('padding', '3px 10px')
-			.text('GDC ID')
+			.text('Enter file name, file UUID, case ID, or case UUID')
 
 		// col 2
 		const gdcid_inputdiv = formdiv.append('div')
@@ -201,7 +208,7 @@ export async function bamsliceui(genomes, holder) {
 			.attr('size', 40)
 			.style('padding', '3px 10px')
 			.property('placeholder', 'File name / File UUID / Case ID / Case UUID')
-			.on('keyup', debounce(gdc_search, 100))
+			.on('keyup', debounce(gdc_search, 500))
 		if (urlp.has('gdc_id')) {
 			gdcid_input
 				.property('value', urlp.get('gdc_id'))

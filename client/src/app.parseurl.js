@@ -30,7 +30,11 @@ upon error, throw err message as a string
 
 	if (urlp.has('gdcbamslice')) {
 		const _ = await import('./block.tk.bam.gdc')
-		_.bamsliceui(arg.genomes, arg.holder)
+		_.bamsliceui({
+			genomes: arg.genomes,
+			holder: arg.holder,
+			disableSSM: urlp.has('disablessm')
+		})
 		return
 	}
 

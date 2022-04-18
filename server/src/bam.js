@@ -247,13 +247,16 @@ const gdcHashSecret = Math.random.toString()
 module.exports = genomes => {
 	return async (req, res) => {
 		try {
+			// isFileSlice:true can only be set after verifying access on a gdc file
 			delete req.query.isFileSlice
 
 			if (req.query.gdcFileUUID) {
 				/* for every request with a gdc file uuid (slice bam, view a bam, view a read etc)
 				always make an api query to verify access to prevent unauthorized access
 				*/
-				await gdcCheckPermission(req.query.gdcFileUUID, req.get('x-auth-token'))
+				const token = req.get('x-auth-token')
+				if (!token) throw 'GDC token missing'
+				await gdcCheckPermission(req.query.gdcFileUUID, token)
 				/* authorized. compute persistent cache file name using uuid etc
 				cache file name is never revealed to client
 				*/
