@@ -39,7 +39,7 @@ makeGdcIDinput
 		searchSSM
 	update_singlefile_table
 	update_multifile_table
-makeGeneSearch
+makeSsmGeneSearch
 	makeInstruction
 makeSubmit
 	validateInputs
@@ -58,10 +58,15 @@ const baminfo_rows = [
 
 /*
 arguments:
-disableSSM=true/false
+
+genomes{}
+holder
+disableSSM=true
 	temporary fix; to disable ssm query and selection for gdc phase9
+	to reenable, simply delete all uses of this flag
 hideTokenInput=true/false
 	set to true in gdc react wrapper
+
 */
 export async function bamsliceui({ genomes, holder, disableSSM = false, hideTokenInput = false }) {
 	const genome = genomes[gdc_genome]
@@ -121,16 +126,20 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				callback: () => {
 					gdc_args.useSsmOrGene = 'ssm'
 				}
+				// .tab is automatically added
 			},
 			{
-				label: 'Gene',
+				width: 130,
+				label: 'Gene or position',
 				callback: () => {
 					gdc_args.useSsmOrGene = 'gene'
 				}
+				// .tab is automatically added
 			}
 		]
+		// .tabHolder is automatically added
 	}
-	await makeGeneSearch()
+	await makeSsmGeneSearch()
 
 	// submit button
 	makeSubmit()
@@ -414,22 +423,30 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 		}
 	}
 
-	async function makeGeneSearch() {
+	async function makeSsmGeneSearch() {
 		await init_tabs(ssmGeneArg)
 
 		// argument for making search box
 		// gene searchbox is created in 2nd tab holder
-		const geneHolder = ssmGeneArg.tabs[1].holder //.style('padding', '10px')
+		const geneHolder = ssmGeneArg.tabs[1].holder
 		ssmGeneArg.noSsmMessageInGeneHolder = geneHolder
 			.append('div')
 			.text('No mutation found for this case.')
 			.style('margin-bottom', '10px')
 			.style('opacity', 0.4)
 			.style('display', 'none')
+
+		const geneSearchRow = geneHolder
+			.append('div')
+			.style('display', 'grid')
+			.style('grid-template-columns', '300px auto')
+		geneSearchRow.append('div').text('Enter gene, position, SNP, or mutation')
+
+		// create gene search box
 		const opt = {
 			genome,
 			tip,
-			row: geneHolder,
+			row: geneSearchRow.append('div'),
 			allowVariant: true
 		}
 		if (urlp.has('gdc_pos')) {
@@ -454,6 +471,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 			}
 		}
 		gdc_args.coordInput = addGeneSearchbox(opt)
+
 		makeInstruction(geneHolder)
 
 		ssmGeneArg.tabs[0].holder
@@ -466,15 +484,24 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 
 	async function searchSSM(case_id) {
 		// got case, turn on div and search for ssm
+
+		// delete previous search result
 		delete gdc_args.ssmInput
+		// turn holder visible
 		ssmGeneArg.holder.style('display', 'block')
+
+		if (disableSSM) {
+			ssmGeneArg.tabs[1].tab.node().click()
+			ssmGeneArg.tabHolder.style('display', 'none')
+			return
+		}
+
 		ssmGeneArg.tabs[0].holder.selectAll('*').remove()
 		ssmGeneArg.tabs[0].tab.text('Loading')
 		const data = await dofetch3(`gdc_ssms?case_id=${case_id}&genome=${gdc_genome}`)
 		if (data.error) throw data.error
 		if (data.mlst.length == 0) {
 			// clear holder
-			ssmGeneArg.tabs[0].tab.text('No mutation')
 			ssmGeneArg.tabs[1].tab.node().click()
 			ssmGeneArg.tabHolder.style('display', 'none')
 			ssmGeneArg.noSsmMessageInGeneHolder.style('display', 'block')
