@@ -439,6 +439,7 @@ fn check_first_last_nucleotide_correctly_aligned(
                     }
                     last_print_position = i;
                 }
+                num_iterations += 1;
             }
             if num_iterations != first_matched_nucleotides.len() && all_matched_nucleotides == true
             {
