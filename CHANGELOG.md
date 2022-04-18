@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.1.1
+
+- bug-fix for trailing comma in gencode bigbed
+- BAM: determine by read width whether to clip arrowhead; clean up re-align logic
+
+GDC-related
+- alert if token is missing when doing GDC BAM slicing
+
 ## 2.1.0
 
 - new regresssion options in MASS UI
