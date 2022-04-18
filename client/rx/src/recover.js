@@ -2,7 +2,7 @@ import { getCompInit, toJson } from '../index'
 import { Menu } from '../../src/dom/menu'
 
 class Recover {
-	constructor(opts={}) {
+	constructor(opts = {}) {
 		this.type = 'recover'
 		this.dom = {
 			holder: opts.holder
@@ -16,7 +16,7 @@ class Recover {
 		this.menu = new Menu({ padding: '5px' })
 	}
 
-	init() { console.log(19)
+	init() {
 		this.currIndex = -1
 		this.history = []
 		// turn off during testing of other components for lighter memory usage
