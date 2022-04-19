@@ -163,15 +163,11 @@ fn main() {
     let cigar_sequences: String = args[2].parse::<String>().unwrap(); // Variable contains cigar sequences separated by "-" character
     let sequence_flags: String = args[3].parse::<String>().unwrap(); // Variable contains sam flags of reads separated by "-" character
     let variant_pos: i64 = args[4].parse::<i64>().unwrap(); // Variant position
-    let segbplen: i64 = args[5].parse::<i64>().unwrap(); // read sequence length
-    let refallele: String = args[6].parse::<String>().unwrap(); // Reference allele
-    let altallele: String = args[7].parse::<String>().unwrap(); // Alternate allele
-    let min_kmer_length: i64 = args[8].parse::<i64>().unwrap(); // Initializing kmer length
-    let weight_no_indel: f64 = args[9].parse::<f64>().unwrap(); // Weight of base pair if outside indel region
-    let weight_indel: f64 = args[10].parse::<f64>().unwrap(); // Weight of base pair if inside indel region
-    let strictness: usize = args[11].parse::<usize>().unwrap(); // strictness of the pipeline
-    let leftflankseq: String = args[12].parse::<String>().unwrap(); //Left flanking sequence
-    let rightflankseq: String = args[13].parse::<String>().unwrap(); //Right flanking sequence.
+    let refallele: String = args[5].parse::<String>().unwrap(); // Reference allele
+    let altallele: String = args[6].parse::<String>().unwrap(); // Alternate allele
+    let strictness: usize = args[7].parse::<usize>().unwrap(); // strictness of the pipeline
+    let leftflankseq: String = args[8].parse::<String>().unwrap(); //Left flanking sequence
+    let rightflankseq: String = args[9].parse::<String>().unwrap(); //Right flanking sequence.
 
     //let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
     let mut leftflank_nucleotides: Vec<char> = leftflankseq.chars().collect(); // Vector containing left flanking nucleotides
@@ -192,7 +188,6 @@ fn main() {
     let ref_length: i64 = refallele.len() as i64; // Determining length of ref allele
     let alt_length: i64 = altallele.len() as i64; // Determining length of alt allele
     let mut indel_length: i64 = alt_length; // Determining indel length, in case of an insertion it will be alt_length. In case of a deletion, it will be ref_length
-    let indel_length_sign: i64 = altallele.len() as i64 - refallele.len() as i64; // Length of indel. Will be positive for insertion and negative for deletion.
     if ref_length > alt_length {
         indel_length = ref_length;
     }
@@ -389,7 +384,6 @@ fn main() {
                         ref_polyclonal_read_status,
                         alt_polyclonal_read_status,
                         ref_insertion,
-                        alignment_side,
                         spliced_sequence, // This variable contains only the spliced part which contains the indel. If no splicing has occured, it will retain the entire original read sequence
                     ) = check_polyclonal(
                         // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
@@ -586,7 +580,6 @@ fn main() {
                                 ref_polyclonal_read_status,
                                 alt_polyclonal_read_status,
                                 ref_insertion,
-                                alignment_side,
                                 spliced_sequence, // This variable contains only the spliced part which contains the indel. If no splicing has occured, it will retain the entire original read sequence
                             ) = check_polyclonal(
                                 // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
@@ -1629,7 +1622,7 @@ fn check_polyclonal(
     splice_freq: usize,             // Number of splice junctions in read
     splice_start_cigar: usize, // First cigar entry in the spliced fragment containing the variant to see if its a softclip
     splice_stop_cigar: usize, // Last cigar entry in the spliced fragment containing the variant to see if its a softclip
-) -> (i64, i64, i64, String, String) {
+) -> (i64, i64, i64, String) {
     let mut sequence_vector: Vec<_> = sequence.chars().collect(); // Vector containing each sequence nucleotides as separate elements in the vector
     let mut ref_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches ref allele (Will be used later to determine if the read harbors a polyclonal variant)
     let mut alt_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches alt allele (Will be used later to determine if the read harbors a polyclonal variant)
@@ -2378,7 +2371,6 @@ fn check_polyclonal(
         ref_polyclonal_status,
         alt_polyclonal_status,
         ref_insertion,
-        alignment_side,
         sequence, // This variable is being passed back because in case of splicing only the part which contains the indel will be retained
     )
 }
@@ -2474,7 +2466,7 @@ fn align_single_reads(query_seq: &String, ref_seq: String) -> f64 {
     let mut r_seq: String = String::new();
     let mut j: usize = 0;
     let mut k: usize = 0;
-    let mut num_matches: f64 = 0.0;
+    let num_matches;
     for i in 0..alignment_seq.len() {
         if AlignmentOperation::Match == alignment_seq[i] {
             if j < query_vector.len() {
@@ -2526,7 +2518,7 @@ fn align_single_reads(query_seq: &String, ref_seq: String) -> f64 {
     }
 
     // Need to check if the first and last nucleotide has been incorrectly aligned or not
-    let (q_seq_correct, align_correct, r_seq_correct) =
+    let (_q_seq_correct, align_correct, _r_seq_correct) =
         check_first_last_nucleotide_correctly_aligned(&q_seq, &align, &r_seq);
     num_matches = align_correct.matches("|").count() as f64;
     num_matches / align_correct.len() as f64

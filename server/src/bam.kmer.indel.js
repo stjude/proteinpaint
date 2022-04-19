@@ -144,17 +144,9 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		'_' +
 		final_pos.toString() +
 		'_' +
-		segbplen.toString() +
-		'_' +
 		refallele +
 		'_' +
 		altallele +
-		'_' +
-		kmer_length.toString() +
-		'_' +
-		weight_no_indel.toString() +
-		'_' +
-		weight_indel.toString() +
 		'_' +
 		q.variant.strictness +
 		'_' +
