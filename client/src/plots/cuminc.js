@@ -745,8 +745,8 @@ function setInteractivity(self) {
 		const hiddenValues = {}
 		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
 		for (const v of hidden) {
-			for (const k in term2.values) {
-				const value = term2.values[k]
+			for (const k in term2.term.values) {
+				const value = term2.term.values[k]
 				if (hidden.includes(value.label)) hiddenValues[k] = 1
 			}
 		}
