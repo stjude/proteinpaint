@@ -200,7 +200,12 @@ function mayAdjustRequest(url, init) {
 		if (query)
 			query.split('&').forEach(p => {
 				const [k, v] = p.split('=')
-				params[k] = v.startsWith('%') ? JSON.parse(decodeURIComponent(v)) : v
+				const decodedVal = decodeURIComponent(v)
+				try {
+					params[k] = JSON.parse(decodedVal)
+				} catch {
+					params[k] = decodedVal
+				}
 			})
 		init.body = JSON.stringify(params)
 	}
