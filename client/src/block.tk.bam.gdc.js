@@ -40,7 +40,7 @@ makeGdcIDinput
 	update_singlefile_table
 	update_multifile_table
 makeSsmGeneSearch
-	makeInstruction
+	geneSearchInstruction
 makeSubmit
 	validateInputs
 	renderBamSlice
@@ -431,7 +431,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 		const geneHolder = ssmGeneArg.tabs[1].holder
 		ssmGeneArg.noSsmMessageInGeneHolder = geneHolder
 			.append('div')
-			.text('No mutation found for this case.')
+			.text('No variant found for this case.')
 			.style('margin-bottom', '10px')
 			.style('opacity', 0.4)
 			.style('display', 'none')
@@ -440,7 +440,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 			.append('div')
 			.style('display', 'grid')
 			.style('grid-template-columns', '300px auto')
-		geneSearchRow.append('div').text('Enter gene, position, SNP, or mutation')
+		geneSearchRow.append('div').text('Enter gene, position, SNP, or variant')
 
 		// create gene search box
 		const opt = {
@@ -472,7 +472,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 		}
 		gdc_args.coordInput = addGeneSearchbox(opt)
 
-		makeInstruction(geneHolder)
+		geneSearchInstruction(geneHolder)
 
 		ssmGeneArg.tabs[0].holder
 			.append('div')
@@ -510,7 +510,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 		// found ssms, display
 		ssmGeneArg.tabHolder.style('display', 'block')
 		ssmGeneArg.noSsmMessageInGeneHolder.style('display', 'none')
-		ssmGeneArg.tabs[0].tab.text(`${data.mlst.length} mutation${data.mlst.length > 1 ? 's' : ''}`)
+		ssmGeneArg.tabs[0].tab.text(`${data.mlst.length} variant${data.mlst.length > 1 ? 's' : ''}`)
 
 		function addRow() {
 			// Creates the rows with the positions 'fixed'
@@ -633,11 +633,13 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 	}
 }
 
-function makeInstruction(d) {
+function geneSearchInstruction(d) {
 	d.append('div').style('opacity', 0.6).html(`<ul>
-		<li>Enter gene, position, SNP, or variant.</li>
-			<li>All positions are on hg38 and 1-based.</li>
-			<li>The BAM file will be sliced at the provided position or variant and visualized.</li>
+		<li>Enter gene, position, SNP, or variant.
+		The BAM file will be sliced at the provided position and visualized.</li>
+		<li>Position example: chr17:7676339-7676767. Coordinates are hg38 and 1-based.</li>
+		<li>SNP example: rs1641548</li>
+		<li>Variant example: chr2.208248388.C.T. Coordinate is hg38 and 1-based. Reference and mutant aleles should be on forward strand.</li>
 		</ul>`)
 }
 
@@ -661,7 +663,7 @@ function validateInputs(args, genome) {
 
 	if (args.useSsmOrGene == 'ssm') {
 		const s = args.ssmInput
-		if (!s) throw 'No mutation selected'
+		if (!s) throw 'No variant selected'
 		if (!s.chr) throw 'ssmInput.chr missing'
 		if (!Number.isInteger(s.pos)) throw 'ssmInput.pos not integer'
 		if (!s.ref) throw 'ssmInput.ref missing'
