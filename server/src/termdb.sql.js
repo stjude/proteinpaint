@@ -500,7 +500,7 @@ function get_label4key(key, term, q, ds) {
 		return term.values && key in term.values ? term.values[key].label : key
 	}
 	if (term.type == 'condition') {
-		if (q.breaks.length == 0) {
+		if (q.breaks?.length == 0) {
 			if (!(key in term.values)) throw `unknown grade='${key}'`
 			return term.values[key].label
 		}
