@@ -126,7 +126,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				callback: () => {
 					gdc_args.useSsmOrGene = 'ssm'
 				}
-				// .tab is automatically added
+				// .tab and .holder are automatically added
 			},
 			{
 				width: 130,
@@ -134,7 +134,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				callback: () => {
 					gdc_args.useSsmOrGene = 'gene'
 				}
-				// .tab is automatically added
+				// .tab and .holder are automatically added
 			}
 		]
 		// .tabHolder is automatically added

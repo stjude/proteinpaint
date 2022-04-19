@@ -3043,14 +3043,24 @@ async function download_gdc_bam(req) {
 }
 
 async function gdcCheckPermission(gdcFileUUID, token) {
-	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	// suggested by Phil on 4/19/2022
+	// use the download endpoint and specify a zero byte range
+	const headers = {
+		'Content-Type': 'application/json',
+		Accept: 'application/json',
+		Range: 'bytes=0-0'
+	}
 	headers['X-Auth-Token'] = token
-	// later replace with a new route dedicated for permission check
-	const url = apihost + '/slicing/view/' + gdcFileUUID + '?region=chr1:1-2'
+	const url = apihost + '/data/' + gdcFileUUID
 	try {
-		await got(url, { method: 'GET', headers })
+		const response = await got(url, { method: 'GET', headers })
+		if (response.statusCode >= 200 && response.statusCode < 400) {
+			// permission okay
+		} else {
+			throw 'Invalid status code: ' + response.statusCode
+		}
 	} catch (e) {
-		// TODO be able to detect error code 401, 403 etc
+		// TODO refer to e.code
 		throw 'Permission denied'
 	}
 }
