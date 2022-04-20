@@ -2707,6 +2707,7 @@ fn check_first_last_nucleotide_correctly_aligned(
         && first_unmatched_sequence.len() > first_matched_nucleotides.len()
     {
         // Check if there is better alignment for last matched sequence
+        println!("Hello");
         let correct_alignment_length =
             r_seq.len() - first_unmatched_sequence.len() - first_matched_nucleotides.len();
         for i in 0..correct_alignment_length {
@@ -2720,7 +2721,7 @@ fn check_first_last_nucleotide_correctly_aligned(
         let mut last_print_position = 0;
         for i in 0..first_unmatched_sequence.len() {
             all_matched_nucleotides = true;
-            let mut num_iterations = 1; // Need to check if the entire length of first_unmatched_sequence has been parsed or not
+            let mut num_iterations = 0; // Need to check if the entire length of first_unmatched_sequence has been parsed or not
             for j in 0..first_matched_nucleotides.len() {
                 // Check if all nucleotides are matching or not
                 if i + j < first_unmatched_sequence.len() {
