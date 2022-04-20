@@ -3,6 +3,7 @@ import { controlsInit } from './controls'
 import { select, event } from 'd3-selection'
 import { scaleLinear, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
+import { timeYear } from 'd3-time'
 import { line, area, curveStepAfter } from 'd3-shape'
 import { rgb } from 'd3-color'
 import htmlLegend from '../html.legend'
@@ -510,13 +511,19 @@ function setRenderers(self) {
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {
-		chart.xTickValues = []
-		const xTicks = axisBottom(chart.xScale)
-			.ticks(4)
-			.tickFormat(t => {
-				chart.xTickValues.push(t)
-				return t
-			})
+		let xTicks
+		if (s.xTickValues) {
+			chart.xTickValues = s.xTickValues.filter(v => v >= chart.xMin && v <= chart.xMax)
+			xTicks = axisBottom(chart.xScale).tickValues(chart.xTickValues)
+		} else {
+			chart.xTickValues = []
+			xTicks = axisBottom(chart.xScale)
+				.ticks(4)
+				.tickFormat(t => {
+					chart.xTickValues.push(t)
+					return t
+				})
+		}
 
 		xAxis.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom) + ')').call(xTicks)
 
