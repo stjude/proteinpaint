@@ -37,9 +37,34 @@ function argument object {}
 	if true, allow to enter chr.pos.ref.alt
 	otherwise, only allow chr:start-stop
 	support hgvs notations for substitution/insertion/deletion
-		chr14:g.104780214C>T
-		chr5:g.171410539_171410540insTCTG
-		chr17:g.7673802delCGCACCTCAAAGCTGTTC
+		only supports "g." for linear genomic reference https://varnomen.hgvs.org/bg-material/refseq/
+		others o. m. c. n. are not supported
+
+		entered positions are 1-based, parse to 0-based
+
+		snv
+			given chr14:g.104780214C>T
+			parse to chr14.104780214.C.T
+
+		mnv
+			given chr2:g.119955155_119955159delinsTTTTT
+			parse to chr2.119955155.AGCTG.TTTTT
+
+		deletion
+			chr17:g.7673802delCGCACCTCAAAGCTGTTC
+			parse to chr17.7673802.CGCACCTCAAAGCTGTTC.-
+
+			chr?:g.33344591del
+			parse to chr?.33344591.A.-
+
+			if allele is present after "del", will use the allele
+			otherwise decide by position/range
+			https://varnomen.hgvs.org/recommendations/DNA/variant/deletion/
+
+		insertion
+			chr5:g.171410539_171410540insTCTG
+			parse to chr5.171410539.-.TCTG
+
 
 .callback()
 	optional
