@@ -277,7 +277,13 @@ rightnow only few conditional terms have grade info
 
 async function trigger_getincidence(q, res, ds) {
 	if (!q.grade) throw 'missing grade'
+	if (!q.minSampleSize) throw 'missing minSampleSize'
+	if (!q.minEventCnt) throw 'missing minEventCnt'
+	if (!q.minYearsToEvent) throw 'missing minYearsToEvent'
 	q.grade = Number(q.grade)
+	q.minSampleSize = Number(q.minSampleSize)
+	q.minEventCnt = Number(q.minEventCnt)
+	q.minYearsToEvent = Number(q.minYearsToEvent)
 	const data = await cuminc.get_incidence(q, ds)
 	res.send(data)
 }

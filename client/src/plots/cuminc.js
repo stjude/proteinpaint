@@ -83,7 +83,33 @@ class TdbCumInc {
 					app: this.app,
 					id: this.id,
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
-					inputs: ['term1', 'overlay', 'divideBy']
+					inputs: [
+						'term1',
+						'overlay',
+						'divideBy',
+						{
+							label: 'Minimum years to event',
+							type: 'number',
+							chartType: 'cuminc',
+							settingsKey: 'minYearsToEvent',
+							title:
+								'Minimum number of years for sample to experience an event. Cannot be less than 5, which is the minimum for SJLIFE samples.'
+						},
+						{
+							label: 'Minimum sample size',
+							type: 'number',
+							chartType: 'cuminc',
+							settingsKey: 'minSampleSize',
+							title: 'Minimum number of samples in series'
+						},
+						{
+							label: 'Minimum number of events',
+							type: 'number',
+							chartType: 'cuminc',
+							settingsKey: 'minEventCnt',
+							title: 'Minimum number of events in series'
+						}
+					]
 				})
 			}
 
@@ -147,12 +173,15 @@ class TdbCumInc {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
 		const c = this.state.config
+		if (c.settings.minYearsToEvent < 5) throw 'minimum years to event must be at least 5 years'
 		const opts = {
 			chartType: 'cuminc',
 			grade: c.term.q.breaks[0],
 			term: c.term,
-			filter: this.state.termfilter.filter
-			//minYearsToEvent: 5 // may have user input for this later
+			filter: this.state.termfilter.filter,
+			minSampleSize: c.settings.minSampleSize,
+			minEventCnt: c.settings.minEventCnt,
+			minYearsToEvent: c.settings.minYearsToEvent
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
@@ -511,7 +540,7 @@ function setRenderers(self) {
 			.style('padding-bottom', '5px')
 			.style('font-size', fontSize + 'px')
 			.style('font-weight', 'bold')
-			.text('Skipped series (no events)')
+			.text('Skipped series (too few samples/events)')
 
 		// serieses div
 		const seriesesDiv = skipdiv
@@ -786,6 +815,9 @@ export async function getPlotConfig(opts, app) {
 				barspace: 2 // space between two bars
 			},
 			cuminc: {
+				minSampleSize: 5,
+				minEventCnt: 5,
+				minYearsToEvent: 5,
 				radius: 5,
 				fill: '#fff',
 				stroke: '#000',

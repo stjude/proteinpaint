@@ -39,8 +39,7 @@
 #       "series2": second series of test,
 #       "pvalue": p-value of test
 #     }
-#   ],
-#   "skippedSeries": [] series skipped due to absence of events
+#   ]
 # }
 
 
@@ -67,32 +66,10 @@ if (length(args) != 1) stop("Usage: Rscript cuminc.R in.json > results")
 infile <- args[1]
 dat <- fromJSON(infile)
 
-# skip any series that has no events
-toKeep <- vector(mode = "character")
-toSkip <- vector(mode = "character")
-for (series in unique(dat$series)) {
-  if (1 %in% dat[dat$series == series, "event"]) {
-    toKeep <- c(toKeep, series)
-  } else {
-    toSkip <- c(toSkip, series)
-  }
-}
-dat <- dat[dat$series %in% toKeep,]
-
-# record in results which series are skipped
-out <- list()
-if (length(toSkip) > 0) out[["skippedSeries"]] <- toSkip
-if (nrow(dat) == 0) {
-  # if all series are skipped, then
-  # output the set of skipped series and
-  # end the analysis
-  cat(toJSON(out, digits = NA, na = "string"), file = "", sep = "")
-  quit(save = "no")
-}
-
 # compute cumulative incidence
 dat$event <- as.factor(dat$event)
 dat$series <- as.factor(dat$series)
+out <- list()
 out[["estimates"]] <- list()
 if (length(levels(dat$series)) == 1) {
   # single series
