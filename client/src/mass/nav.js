@@ -188,8 +188,8 @@ function setRenderers(self) {
 		const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
 		const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
 		self.tabs = appState.termdbConfig.selectCohort
-			? [chartTab, cohortTab, filterTab, cartTab]
-			: [chartTab, filterTab, cartTab]
+			? [chartTab, cohortTab, filterTab /*, cartTab*/]
+			: [chartTab, filterTab /*, cartTab*/]
 
 		// using a table layout for tabs, iterate through each tab
 		// once for each of [top, mid, btm] row
