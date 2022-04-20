@@ -1,5 +1,4 @@
 import { getStoreInit } from '../common/rx.core'
-import { root_ID } from '../termdb/tree'
 import { dofetch3 } from '../common/dofetch'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
@@ -38,13 +37,7 @@ const defaultState = {
 			lst: []
 		}
 	},
-	autoSave: true,
-	// legacy support, can take out after tree is fully migrated
-	tree: {
-		exclude_types: [],
-		expandedTermIds: [],
-		visiblePlotIds: []
-	}
+	autoSave: true
 }
 
 // one store for the whole MASS app
@@ -85,21 +78,6 @@ class TdbStore {
 			this.app.vocabApi.main({
 				termfilter: JSON.parse(JSON.stringify(this.state.termfilter))
 			})
-
-			// support any legacy examples and tests that use the deprecated state.tree.plots object,
-			// by converting to a state.plots array
-			if (this.state.tree && this.state.tree.plots) {
-				for (const plotId in this.state.tree.plots) {
-					const plot = this.state.tree.plots[plotId]
-					const plotCopy = this.state.plots.find(p => p.id === plotId)
-					if (plotCopy && plotCopy != plot) {
-						throw `Plot ID conflict in deprecated state.tree.plots`
-					}
-					plot.id = plotId
-					this.state.plots.push(plot)
-				}
-				delete this.state.tree.plots
-			}
 
 			for (const [i, savedPlot] of this.state.plots.entries()) {
 				const _ = await import(`../plots/${savedPlot.chartType}.js`)
@@ -204,16 +182,6 @@ TdbStore.prototype.actions = {
 		cohortFilter.tvs.values = cohort.keys.map(key => {
 			return { key, label: key }
 		})
-	},
-	tree_expand(action) {
-		if (this.state.tree.expandedTermIds.includes(action.termId)) return
-		this.state.tree.expandedTermIds.push(action.termId)
-	},
-
-	tree_collapse(action) {
-		const i = this.state.tree.expandedTermIds.indexOf(action.termId)
-		if (i == -1) return
-		this.state.tree.expandedTermIds.splice(i, 1)
 	},
 
 	async plot_prep(action) {
