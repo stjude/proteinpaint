@@ -37,7 +37,13 @@ const defaultState = {
 			lst: []
 		}
 	},
-	autoSave: true
+	autoSave: true,
+	// NOTE: this tree-state related defaults are needed to be passed from
+	// termsetting or tvs-based controls, to launch tree-based menu,
+	// until the exclude_types option is completely replaced with usecase
+	tree: {
+		exclude_types: []
+	}
 }
 
 // one store for the whole MASS app
