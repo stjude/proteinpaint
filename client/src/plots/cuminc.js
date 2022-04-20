@@ -269,8 +269,8 @@ function setRenderers(self) {
 			.style('top', 0)
 			.style('left', 0)
 			.style('text-align', 'left')
-			.style('border', '1px solid #eee')
-			.style('box-shadow', '0px 0px 1px 0px #ccc')
+			//.style('border', '1px solid #eee')
+			//.style('box-shadow', '0px 0px 1px 0px #ccc')
 			.style('background', 1 || s.orderChartsBy == 'organ-system' ? chart.color : '')
 
 		div
