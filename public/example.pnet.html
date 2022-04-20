@@ -39,30 +39,17 @@ runproteinpaint({
 					chartType: 'matrix',
 					settings: {
 						matrix: {
-							termLabelOffset: 220
+							termLabelOffset: 220,
+							sortTermsBy: 'sampleCount'
 						}
 					},
 					divideBy: {
-						id: 'Age',
-						q: {
-							mode: 'discrete',
-							type: 'regular-bin',
-							bin_size: 6,
-							first_bin: {
-								startunbounded: true,
-								stop: 2, 
-								stopinclusive: true
-							}
-						}
+						id: 'TSNE Category'
 					},
 					termgroups: [
 						{
-							name: 'Demographics',
+							name: '',
 							lst: [
-								{
-									id: 'sex',
-									//q: { mode: 'values' } // or 'groupsetting'
-								}, 
 								{
 									id: 'Age',
 									q: {
@@ -75,39 +62,91 @@ runproteinpaint({
 											stopinclusive: true
 										}
 									} // or 'continuous'
-								}
+								},
+								{
+									id: 'Age Group',
+									/*q: {
+										mode: 'discrete',
+										type: 'regular-bin',
+										bin_size: 2,
+										first_bin: {
+											startunbounded: true,
+											stop: 2,
+											stopinclusive: true
+										}
+									} // or 'continuous'*/
+								},
+								{
+									id: 'sex',
+									//q: { mode: 'values' } // or 'groupsetting'
+								},
+								{
+									id: 'Met'
+								},
+								{
+									id: 'Death'
+								},
+								{
+									id: 'PD'
+								},
+								{
+									id: 'M stage'
+								},
+								{
+									id: 'Primary Treatment category'
+								},
+								{
+									id: 'Primary Treatment category 2'
+								},
+								{
+									id: 'Surgery Prior to Therapy'
+								},
+								{
+									id: 'study'
+								},
+								{
+									id: 'Histologic group at diagnosis'
+								},
+								{
+									id: 'TSNE Category'
+								},
+								{
+									id: 'TSNE closest cluster'
+								},
+								{
+									id: 'Primary Treatment category 2'
+								},
+								{
+									id: 'DKFZ 12.5 Prediction Simplified'
+								},
+								{
+									id: 'Mutational Burden'
+								},
+								{
+									id: 'Germline'
+								},
+								{
+									id: 'WES'
+								},
+								{
+									id: 'RNAseq'
+								},
+								{
+									id: 'chr1p'
+								},
+								{
+									id: 'chr1q',
+								},
+								{
+									id: 'chr2p'
+								},
+								{
+									id: 'chr2q',
+								},
 							]
 						},
 						{
-							name: 'Treatment',
-							lst: [
-								{
-									id: 'Primary Treatment category',
-								}, 
-								{
-									id: 'Primary Treatment category 2',
-								}
-							]
-						},
-						{
-							name: 'Relapse',
-							lst: [
-								{
-									id: 'Relapse 1 Tx',
-								}, 
-								{
-									id: 'Relapse 2 Tx',
-								},
-								{
-									id: 'Relapse 3 Tx',
-								},
-								{
-									id: 'Relapse 4 Tx',
-								},
-							]
-						},
-						{
-							name: 'Variants',
+							name: 'Somatic',
 							lst: [
 								{
 									term: {
@@ -123,22 +162,22 @@ runproteinpaint({
 								},{
 									term: {
 										type: 'geneVariant',
-										name: 'NRAS'
+										name: 'ATRX'
 									}
 								},{
 									term: {
 										type: 'geneVariant',
-										name: 'KRAS'
+										name: 'EP300'
 									}
 								},{
 									term: {
 										type: 'geneVariant',
-										name: 'FLT3'
+										name: 'GF11B'
 									}
 								},{
 									term: {
 										type: 'geneVariant',
-										name: 'MYC'
+										name: 'PDGFRA'
 									}
 								}
 							]

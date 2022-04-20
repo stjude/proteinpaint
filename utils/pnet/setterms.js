@@ -80,7 +80,7 @@ for (const term of survTerms) {
 		type,
 		name: term.id,
 		isleaf: true,
-		unit: 'days'
+		unit: 'years'
 	})
 	cn.prepare(`UPDATE terms SET jsondata=?, type=?, isleaf=? WHERE id=?`).run([jsondata, type, 1, term.id])
 }
