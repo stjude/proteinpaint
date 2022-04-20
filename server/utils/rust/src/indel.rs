@@ -2707,7 +2707,7 @@ fn check_first_last_nucleotide_correctly_aligned(
         && first_unmatched_sequence.len() > first_matched_nucleotides.len()
     {
         // Check if there is better alignment for last matched sequence
-        println!("Hello");
+        //println!("Hello");
         let correct_alignment_length =
             r_seq.len() - first_unmatched_sequence.len() - first_matched_nucleotides.len();
         for i in 0..correct_alignment_length {
@@ -2742,9 +2742,16 @@ fn check_first_last_nucleotide_correctly_aligned(
                         break;
                     }
                     last_print_position = i;
+                    num_iterations += 1;
                 }
-                num_iterations += 1;
             }
+            //if all_matched_nucleotides == true {
+            //    println!("num_iterations:{}", num_iterations);
+            //    println!(
+            //        "first_matched_nucleotides.len():{}",
+            //        first_matched_nucleotides.len()
+            //    );
+            //}
             if num_iterations != first_matched_nucleotides.len() && all_matched_nucleotides == true
             {
                 // If all the nucleotides in first_matched_nucleotides have not been parsed set all_matched_nucleotides = false
