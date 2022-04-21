@@ -511,10 +511,17 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 		ssmGeneArg.noSsmMessageInGeneHolder.style('display', 'none')
 		ssmGeneArg.tabs[0].tab.text(`${data.mlst.length} variant${data.mlst.length > 1 ? 's' : ''}`)
 
+		const variantsResults_div = ssmGeneArg.tabs[0].holder
+			.append('div')
+			// Creates the wrapper for the variant result rows
+			// Maintains the height and scroll bars
+			.style('overflow', 'scroll')
+			.style('max-height', '30vw')
+
 		function addRow() {
 			// Creates the rows with the positions 'fixed'
 			// Use rows for event listeners
-			const row = ssmGeneArg.tabs[0].holder
+			const row = variantsResults_div
 				.append('div')
 				.style('display', 'grid')
 				.style('grid-template-columns', '2vw minmax(8vw,10vw) minmax(10vw,15vw) minmax(10vw,15vw) minmax(10vw,15vw)')
