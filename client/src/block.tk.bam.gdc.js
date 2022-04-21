@@ -5,7 +5,7 @@ import { sayerror } from './dom/error'
 import { first_genetrack_tolist } from './common/1stGenetk'
 import { contigNameNoChr2 } from '../shared/common'
 import urlmap from './common/urlmap'
-import { addGeneSearchbox } from './dom/genesearch'
+import { addGeneSearchbox, string2variant } from './dom/genesearch'
 import { Menu } from './dom/menu'
 import { init_tabs } from './dom/toggleButtons'
 
@@ -40,6 +40,7 @@ makeGdcIDinput
 	update_singlefile_table
 	update_multifile_table
 makeSsmGeneSearch
+	makeArg_geneSearchbox
 	geneSearchInstruction
 makeSubmit
 	validateInputs
@@ -443,10 +444,23 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 		geneSearchRow.append('div').text('Enter gene, position, SNP, or variant')
 
 		// create gene search box
+		gdc_args.coordInput = addGeneSearchbox(await makeArg_geneSearchbox(geneSearchRow))
+
+		geneSearchInstruction(geneHolder)
+
+		ssmGeneArg.tabs[0].holder
+			.append('div')
+			.style('display', 'grid')
+			.style('grid-template-columns', 'repeat(auto-fit, 1fr)')
+			.style('overflow-y', 'auto')
+			.style('max-height', '30vw')
+	}
+
+	async function makeArg_geneSearchbox(div) {
 		const opt = {
 			genome,
 			tip,
-			row: geneSearchRow.append('div'),
+			row: div.append('div'),
 			allowVariant: true
 		}
 		if (urlp.has('gdc_pos')) {
@@ -459,27 +473,12 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				}
 			}
 		} else if (urlp.has('gdc_var')) {
-			const t = urlp.get('gdc_var').split('.')
-			if (t.length == 4) {
-				opt.defaultCoord = {
-					isVariant: true,
-					chr: t[0],
-					pos: Number(t[1]),
-					ref: t[2],
-					alt: t[3]
-				}
+			const variant = await string2variant(urlp.get('gdc_var'), genome)
+			if (variant) {
+				opt.defaultCoord = variant
 			}
 		}
-		gdc_args.coordInput = addGeneSearchbox(opt)
-
-		geneSearchInstruction(geneHolder)
-
-		ssmGeneArg.tabs[0].holder
-			.append('div')
-			.style('display', 'grid')
-			.style('grid-template-columns', 'repeat(auto-fit, 1fr)')
-			.style('overflow-y', 'auto')
-			.style('max-height', '30vw')
+		return opt
 	}
 
 	async function searchSSM(case_id) {
@@ -636,10 +635,24 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 function geneSearchInstruction(d) {
 	d.append('div').style('opacity', 0.6).html(`<ul>
 		<li>Enter gene, position, SNP, or variant.
-		The BAM file will be sliced at the provided position and visualized.</li>
-		<li>Position example: chr17:7676339-7676767. Coordinates are hg38 and 1-based.</li>
+		The BAM file will be sliced at the given position and visualized.</li>
+		<li>Position</li>
+		<ul><li>Example: chr17:7676339-7676767</li>
+		    <li>Coordinates are hg38 and 1-based.</li>
+		</ul>
 		<li>SNP example: rs1641548</li>
-		<li>Variant example: chr2.208248388.C.T. Coordinate is hg38 and 1-based. Reference and mutant aleles should be on forward strand.</li>
+		<li>Variant:</li>
+		<ul>
+		  <li>Example: chr2.208248388.C.T</li>
+		  <li>Fields are separated by periods. Coordinate is hg38 and 1-based. Reference and alternate aleles are on forward strand.</li>
+		</ul>
+		<li>Supported HGVS formats for variants:</li>
+		<ul>
+		  <li>SNV: chr2:g.208248388C>T</li>
+		  <li>MNV: chr2:g.119955155_119955159delinsTTTTT</li>
+		  <li>Insertion: chr5:g.171410539_171410540insTCTG</li>
+		  <li>Deletion: chr10:g.8073734delTTTAGA</li>
+		</ul>
 		</ul>`)
 }
 

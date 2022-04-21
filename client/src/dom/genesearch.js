@@ -4,6 +4,10 @@ import { dofetch3 } from '../common/dofetch'
 import { invalidcoord, string2pos } from '../coord'
 
 /*
+*********************************** EXPORT
+addGeneSearchbox()
+string2variant()
+
 
 TODO
 -- allow only searching by gene name, disable coord/variant/snp parsing
@@ -95,11 +99,22 @@ export function addGeneSearchbox(arg) {
 	const tip = arg.tip,
 		row = arg.row
 
+	let placeholder = 'Gene, position',
+		width = 150
+	if (arg.genome.hasSNP) {
+		placeholder += ', SNP'
+		width += 40
+	}
+	if (arg.allowVariant) {
+		placeholder += ', variant'
+		width += 40
+	}
+
 	const searchbox = row
 		.append('input')
 		.attr('type', 'text')
-		.attr('placeholder', 'Gene, position' + (arg.genome.hasSNP ? ', SNP' : ''))
-		.style('width', '200px')
+		.attr('placeholder', placeholder)
+		.style('width', width + 'px')
 		.on('focus', () => {
 			event.target.select()
 		})
@@ -347,7 +362,7 @@ export function addGeneSearchbox(arg) {
 	return result //searchbox
 }
 
-async function string2variant(v, genome) {
+export async function string2variant(v, genome) {
 	// try to parse as simple variant
 	const variant = string2simpleVariant(v, genome)
 	if (variant) {
@@ -359,7 +374,7 @@ async function string2variant(v, genome) {
 }
 
 function string2simpleVariant(v, genome) {
-	// try to parse as chr.pos.ref.alt first
+	// format: chr.pos.ref.alt
 	// this format has conflict with hgvs e.g. NG_012232.1(NM_004006.2):c.93+1G>T
 	// which is in fact not currently supported by this code
 	// if it fails, return false and parse as hgvs next
@@ -380,25 +395,49 @@ function string2simpleVariant(v, genome) {
 
 async function string2hgvs(v, genome) {
 	const tmp = v.split(':g.')
-	if (tmp.length != 2) return
+	if (tmp.length != 2) {
+		// only supports "g." linear genomic reference. other ref types are not supported for now
+		return
+	}
 	const chr = tmp[0]
-	// test with 'delins', 'del', 'ins'
+
+	// if 'delins' is present, it can only be parsed as mnv (substitution)
 	if (tmp[1].includes('delins')) {
 		return await hgvs_delins(chr, tmp[1], genome)
 	}
+	// if 'delins' is absent but 'del' is found, can only be parsed as deletion
 	if (tmp[1].includes('del')) {
 		return await hgvs_del(chr, tmp[1], genome)
 	}
+	// if 'delins, del' are absent and 'ins' is found, can only be parsed as insertion
 	if (tmp[1].includes('ins')) {
 		return hgvs_ins(chr, tmp[1])
 	}
+	// 'delins, del, ins' are all absent. can only be parsed as snv
 	return hgvs_snv(chr, tmp[1])
 }
 
-function hgvs_snv(chr, v) {}
+function hgvs_snv(chr, v) {
+	// v: 104780214C>T
+	const tmp = v.match(/(\d+)([ATCG])>([ATCG])$/)
+	if (!tmp || tmp.length != 4) {
+		// not matching the required snv pattern
+		return
+	}
+	// tmp: ['104780214C>T', '104780214', 'C', 'T']
+	const pos = Number(tmp[1])
+	if (!Number.isInteger(pos)) return
+	return {
+		isVariant: true,
+		chr,
+		pos,
+		ref: tmp[2],
+		alt: tmp[3]
+	}
+}
 
 function hgvs_ins(chr, v) {
-	//  chr5:g.171410539_171410540insTCTG
+	// chr5:g.171410539_171410540insTCTG
 	const [tmppos, altAllele] = v.split('ins')
 	if (!altAllele) return
 	const pos = Number(tmppos.split('_')[0])
@@ -406,7 +445,8 @@ function hgvs_ins(chr, v) {
 	return {
 		isVariant: true,
 		chr,
-		pos,
+		pos: pos + 1, // "pos1_pos2" from hgvs string means insertion between the two nucleotides
+		// should use pos2 when ref allele is missing
 		ref: '-',
 		alt: altAllele
 	}
@@ -428,11 +468,12 @@ async function hgvs_del(chr, v, genome) {
 		}
 	}
 	// deleted ref nt is not given. this info is coded in tmppos, either "333" or "333_334"
+	// TODO to be tested!!!
 	const [t1, t2] = tmppos.split('_')
 	const start = Number(t1)
-	const stop = t2 ? Number(t2) : start
+	const stop = t2 ? Number(t2) : start + 1
 	if (!Number.isInteger(start) || !Number.isInteger(stop)) return
-	const refAllele2 = await getRefAllele(start - 1, stop, genome)
+	const refAllele2 = await getRefAllele(chr, start, stop, genome)
 	return {
 		isVariant: true,
 		chr,
@@ -447,17 +488,26 @@ async function hgvs_delins(chr, v, genome) {
 	const [tmppos, altAllele] = v.split('delins')
 	// must contain altAllele
 	if (!altAllele) return
-	const pos = Number(tmppos.split('_')[0])
-	if (!Number.isInteger(pos)) return
-	// request ref allele
-	const refAllele = await getRefAllele(start, stop, genome)
+	const [t1, t2] = tmppos.split('_')
+	if (!t2) return
+	const p1 = Number(t1),
+		p2 = Number(t2)
+	if (!Number.isInteger(p1) || !Number.isInteger(p2)) return
+	const refAllele = await getRefAllele(chr, p1, p2, genome)
 	return {
 		isVariant: true,
 		chr,
-		pos,
+		pos: p1,
 		ref: refAllele,
 		alt: altAllele
 	}
 }
 
-async function getRefAllele(start, stop, genome) {}
+async function getRefAllele(chr, start, stop, genome) {
+	const arg = {
+		coord: chr + ':' + start + '-' + stop,
+		genome: genome.name
+	}
+	const d = await dofetch3('ntseq', { method: 'POST', body: JSON.stringify(arg) })
+	return d.seq
+}
