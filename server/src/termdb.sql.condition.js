@@ -133,8 +133,8 @@ export const other = {
 
 export const cuminc = {
 	getCTE(tablename, term, q, values, filter) {
-		// NOTE: may be user configurable later via client-side UI
-		const minYearsToEvent = 'minYearsToEvent' in q ? q.minYearsToEvent : 5
+		if (!q.minYearsToEvent) throw 'minYearsToEvent is missing'
+		const minYearsToEvent = q.minYearsToEvent
 		let event1CTE
 		if (term.isleaf) {
 			event1CTE = `event1 AS (
