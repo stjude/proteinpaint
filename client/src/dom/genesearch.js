@@ -419,7 +419,7 @@ async function string2hgvs(v, genome) {
 
 function hgvs_snv(chr, v) {
 	// v: 104780214C>T
-	const tmp = v.match(/(\d+)([ATCG])>([ATCG])$/)
+	const tmp = v.match(/^(\d+)([ATCG])>([ATCG])$/)
 	if (!tmp || tmp.length != 4) {
 		// not matching the required snv pattern
 		return
@@ -485,13 +485,14 @@ async function hgvs_del(chr, v, genome) {
 
 async function hgvs_delins(chr, v, genome) {
 	// chr2:g.119955155_119955159delinsTTTTT
-	const [tmppos, altAllele] = v.split('delins')
-	// must contain altAllele
-	if (!altAllele) return
-	const [t1, t2] = tmppos.split('_')
-	if (!t2) return
-	const p1 = Number(t1),
-		p2 = Number(t2)
+	const tmp = v.match(/^(\d+)_(\d+)delins([ATCG]+)$/)
+	if (!tmp || tmp.length != 4) {
+		// does not match with expected format
+		return
+	}
+	const p1 = Number(tmp[1]),
+		p2 = Number(tmp[2]),
+		altAllele = tmp[3]
 	if (!Number.isInteger(p1) || !Number.isInteger(p2)) return
 	const refAllele = await getRefAllele(chr, p1, p2, genome)
 	return {
