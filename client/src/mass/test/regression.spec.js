@@ -1,24 +1,6 @@
 const tape = require('tape')
 const helpers = require('../../../test/front.helpers.js')
 
-/*************************
-dimensions to recombine:
-
-categorical term
-  - by category (default, mode=discrete, type=values)
-  - groupsetting (mode=discrete, type=custom-groupset)
-numeric term
-  - continuous (mode=continuous)
-  - regular bin (mode=discrete, type=regular-bin)
-  - custom bin (mode=discrete, type=custom-bin) (binary is not tested as input variable)
-  - spline (mode=spline)
-condition term
-  - by breaks only, as outcome
-snplst
-snplocus
-
-**************************/
-
 const raceGroupsetting = {
 	id: 'genetic_race',
 	q: {
@@ -322,6 +304,25 @@ const snplocus = {
 	}
 }
 
+/*************************
+each element of testList[] is one combination of these.
+set "runthis:true" on one element to just test that one
+
+categorical term
+  - by category (default, mode=discrete, type=values)
+  - groupsetting (mode=discrete, type=custom-groupset)
+numeric term
+  - continuous (mode=continuous)
+  - regular bin (mode=discrete, type=regular-bin)
+  - custom bin (mode=discrete, type=custom-bin) (binary is not tested as input variable)
+  - spline (mode=spline)
+condition term
+  - by breaks only, as outcome
+snplst
+snplocus
+
+**************************/
+
 const testList = [
 	{
 		name: 'sex race hrtavg', // hrtavg is continuous
@@ -447,11 +448,11 @@ const testList = [
 	},
 
 	{
-		name: 'sex race agedx hrtavgSpline snplst',
+		name: 'sex diaggrp agedx hrtavgSpline snplst',
 		headingCount: 6,
 		independent: [
 			{ id: 'sex', refGrp: '1' },
-			{ id: 'genetic_race' },
+			{ id: 'diaggrp' },
 			{ id: 'agedx' },
 			snplst,
 			{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
@@ -459,12 +460,12 @@ const testList = [
 	},
 
 	{
-		name: 'sex race*snplst',
+		name: 'sex diaggrp*snplst',
 		headingCount: 5,
 		independent: [
 			{ id: 'sex', refGrp: '1' },
-			{ id: 'genetic_race', interactions: ['snplstTermId'] },
-			addInteraction(snplst, 'genetic_race')
+			{ id: 'diaggrp', interactions: ['snplstTermId'] },
+			addInteraction(snplst, 'diaggrp')
 		]
 	},
 
@@ -496,21 +497,21 @@ const testList = [
 		]
 	},
 	{
-		name: 'sex raceGroupsetting*snplst',
+		name: 'sex diaggrpGroupsetting*snplst',
 		headingCount: 5,
 		independent: [
 			{ id: 'sex', refGrp: '1' },
-			addInteraction(raceGroupsetting, 'snplstTermId'),
-			addInteraction(snplst, 'genetic_race')
+			addInteraction(diaggrpGroupsetting, 'snplstTermId'),
+			addInteraction(snplst, 'diaggrp')
 		]
 	},
 
 	{
-		name: 'sex race agedx hrtavgSpline snplocus',
+		name: 'sex diaggrp agedx hrtavgSpline snplocus',
 		headingCount: 0,
 		independent: [
 			{ id: 'sex', refGrp: '1' },
-			{ id: 'genetic_race' },
+			{ id: 'diaggrp' },
 			{ id: 'agedx' },
 			snplocus,
 			{ id: 'hrtavg', q: { mode: 'spline', knots: [{ value: 4 }, { value: 18 }, { value: 200 }] } }
@@ -518,12 +519,12 @@ const testList = [
 	},
 
 	{
-		name: 'sex race*snplocus',
+		name: 'sex diagrp*snplocus',
 		headingCount: 0,
 		independent: [
 			{ id: 'sex', refGrp: '1' },
-			{ id: 'genetic_race', interactions: ['snplocusTermId'] },
-			addInteraction(snplocus, 'genetic_race')
+			{ id: 'diaggrp', interactions: ['snplocusTermId'] },
+			addInteraction(snplocus, 'diaggrp')
 		]
 	},
 
@@ -578,9 +579,9 @@ the test will check the number of headings in result
 the test will pass if there's no runtime error (client, server, R)
 */
 
-const activeTests = testList //.filter(t => t.name == 'sex race*snplocus')
+const activeTests = testList.filter(t => t.runthis)
 
-for (const item of activeTests) {
+for (const item of activeTests.length ? activeTests : testList) {
 	tape('(LINEAR) EF ~ ' + item.name, test => {
 		test.timeoutAfter(10000)
 		runpp(
@@ -616,7 +617,7 @@ for (const item of activeTests) {
 		)
 	})
 	tape('(LOGISTIC) Arrhythmias ~ ' + item.name, test => {
-		test.timeoutAfter(10000)
+		test.timeoutAfter(20000)
 		runpp(
 			{
 				regressionType: 'logistic',

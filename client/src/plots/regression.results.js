@@ -308,7 +308,7 @@ function setRenderers(self) {
 			})
 		}
 
-		// intercept row
+		// intercept row (only for linear/logistic)
 		if (self.config.regressionType != 'cox') {
 			const tr = table.append('tr').style('background', '#eee')
 			result.coefficients.intercept.forEach((v, i) => {
@@ -329,14 +329,11 @@ function setRenderers(self) {
 		plotter can be a blank function if there's no valid value for plotting
 		*/
 		const forestPlotter = self.getForestPlotter(result.coefficients.terms, result.coefficients.interactions)
-		let rowcount = 0
+		let rowcount = self.config.regressionType == 'cox' ? 1 : 0
 		for (const tid in result.coefficients.terms) {
 			const termdata = result.coefficients.terms[tid]
 			const tw = self.getIndependentInput(tid).term
-			let tr =
-				self.config.regressionType == 'cox'
-					? table.append('tr').style('background', rowcount++ % 2 ? 'none' : '#eee')
-					: table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 
 			// col 1: term name
 			const termNameTd = tr.append('td').style('padding', '8px')

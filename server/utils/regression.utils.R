@@ -258,7 +258,7 @@ logisticRegression <- function(formula, fdat) {
 
 # cox regression
 coxRegression <- function(formula, fdat) {  
-  res <- coxph(formula$formula, data = fdat)
+  res <- coxph(formula$formula, data = fdat, model = T)
   
   # extract summary object
   res_summ <- summary(res)
@@ -332,7 +332,7 @@ runRegression <- function(regtype, formula, fdat, outcome) {
     for (r in 1:nrow(splineVariables)) {
       splineVariable <- splineVariables[r,]
       if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, fdat, outcome, results$res, regtype)
+        plot_spline(splineVariable, fdat, outcome, formula$independentIds, results$res, regtype)
       }
     }
   }
@@ -341,13 +341,13 @@ runRegression <- function(regtype, formula, fdat, outcome) {
 }
 
 # generate cubic spline plot spline
-plot_spline <- function(splineVariable, fdat, outcome, res, regtype) {
+plot_spline <- function(splineVariable, fdat, outcome, independentIds, res, regtype) {
   ## prepare test data
   sampleSize <- 1000
   # newdat: test data table for predicting model outcome values
   # columns are all independent variables
-  # for spline variables, use regularly spaced data; for continuous variables, use data median; for categorical variables, use reference category
-  newdat <- fdat[1:sampleSize, -1, drop = F]
+  # for the spline variable, use regularly spaced data; for continuous variables, use data median; for categorical variables, use reference category
+  newdat <- fdat[1:sampleSize, independentIds, drop = F]
   # newdat2: test data table for adjusting model outcome values
   # columns are the proportions and effect sizes of non-reference categorical coefficients 
   newdat2 <- matrix(data = NA, nrow = 0, ncol = 2, dimnames = list(c(),c("prop", "effectSize")))
@@ -379,33 +379,61 @@ plot_spline <- function(splineVariable, fdat, outcome, res, regtype) {
   preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod))
   
   ## plot data
-  if (regtype == "linear") {
-    pointtype <- 16
-    pointsize <- 0.3
-    ylab <- outcome$name
-  } else {
-    # for logistic regression, plot predicted probabilities
-    preddat_ci_adj <- 1/(1+exp(-preddat_ci_adj))
-    pointtype <- 124
-    pointsize <- 0.7
-    ylab <- paste0("Pr(", outcome$name, " ", outcome$categories$nonref, ")")
-  }
   plotfile <- splineVariable$spline$plotfile
   png(filename = plotfile, width = 950, height = 550, res = 200)
   par(mar = c(3, 2.5, 1, 5), mgp = c(1, 0.5, 0), xpd = T)
-  # plot coordinate space
-  plot(fdat[,splineVariable$id],
-       fdat[,outcome$id],
-       cex.axis = 0.5,
-       ann = F,
-       type = "n"
-  )
+  if (regtype == "linear" | regtype == "logistic") {
+    if (regtype == "linear") {
+      # for linear, plot predicted values
+      pointtype <- 16
+      pointsize <- 0.3
+      ylab <- outcome$name
+    } else {
+      # for logistic, plot predicted probabilities
+      preddat_ci_adj <- 1/(1+exp(-preddat_ci_adj))
+      pointtype <- 124
+      pointsize <- 0.7
+      ylab <- paste0("Pr(", outcome$name, " ", outcome$categories$nonref, ")")
+    }
+    # first plot actual (not predicted) data
+    # predicted data will be overlayed later
+    plot(fdat[,splineVariable$id],
+         fdat[,outcome$id],
+         cex.axis = 0.5,
+         ann = F,
+         type = "n"
+    )
+    points(fdat[,splineVariable$id],
+           fdat[,outcome$id],
+           pch = pointtype,
+           cex = pointsize
+    )
+  } else if (regtype == "cox") {
+    # for cox, plot hazard ratios
+    preddat_ci_adj <- exp(preddat_ci_adj)
+    pointtype <- 16
+    pointsize <- 0.3
+    ylab <- "Hazard Ratio"
+    # plot only predicted data
+    # do not also plot actual data (like for linear/logistic) because cox outcome data is time-to-event and will not be comparable to the predicted hazard ratios
+    plot(newdat[,splineVariable$id],
+         preddat_ci_adj[,"fit"],
+         ylim = c(min(preddat_ci_adj[,"lwr"]), max(preddat_ci_adj[,"upr"])),
+         cex.axis = 0.5,
+         ann = F,
+         type = "n"
+    )
+  } else {
+    stop("unrecognized regression type")
+  }
+  
   # axis titles
   title(xlab = splineVariable$name,
         ylab = ylab,
         line = 1.5,
         cex.lab = 0.5
   )
+  
   # knots
   abline(v = splineVariable$spline$knots[[1]],
          col = "grey60",
@@ -413,24 +441,21 @@ plot_spline <- function(splineVariable, fdat, outcome, res, regtype) {
          lwd = 0.8,
          xpd = F
   )
-  # spline term vs. outcome term actual data
-  points(fdat[,splineVariable$id],
-         fdat[,outcome$id],
-         pch = pointtype,
-         cex = pointsize
-  )
+  
   # confidence intervals of regression line
   polygon(x = c(newdat[,splineVariable$id], rev(newdat[,splineVariable$id])),
           y = c(preddat_ci_adj[,"lwr"], rev(preddat_ci_adj[,"upr"])),
           col = adjustcolor("grey", alpha.f = 0.8),
           border = NA
   )
+  
   # regression line
   lines(newdat[,splineVariable$id],
         preddat_ci_adj[,"fit"],
         col = "red",
         lwd = 2
   )
+  
   # legend for lines
   legend("topright",
          cex = 0.5,
@@ -440,6 +465,7 @@ plot_spline <- function(splineVariable, fdat, outcome, res, regtype) {
          lty = c(2, 1, NA),
          col = c("grey60", "red", NA)
   )
+  
   # legend for ci
   legend("topright",
          cex = 0.5,
