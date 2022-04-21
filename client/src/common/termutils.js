@@ -28,15 +28,6 @@ export async function getterm(termid, dslabel = null, genome = null) {
 	return data.term
 }
 
-const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival'])
-
-// shared in client, server, and tape test
-export function graphable(term) {
-	if (!term) throw 'graphable: term is missing'
-	// term.isgenotype??
-	return graphableTypes.has(term.type)
-}
-
 export function sample_match_termvaluesetting(row, filter) {
 	// console.log(row, filter)
 	const lst = !filter ? [] : filter.type == 'tvslst' ? filter.lst : [filter]

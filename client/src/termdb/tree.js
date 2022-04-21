@@ -1,6 +1,5 @@
 import { getCompInit } from '../common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { graphable } from '../common/termutils'
 import { getNormalRoot } from '../common/filter'
 import { isUsableTerm } from '../../shared/termdb.usecase'
 import { termInfoInit } from './termInfo'
@@ -100,8 +99,6 @@ class TdbTree {
 			activeCohort: appState.activeCohort,
 			expandedTermIds: appState.tree.expandedTermIds,
 			termfilter: { filter },
-			// TODO: deprecate "exclude_types" in favor of "usecase"
-			exclude_types: appState.tree.exclude_types,
 			usecase: appState.tree.usecase
 		}
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
@@ -232,23 +229,11 @@ function setRenderers(self) {
 		if (self.state.usecase) {
 			for (const t of term.terms) {
 				if (isUsableTerm(t, self.state.usecase)) {
-					if (
-						!self.state.exclude_types ||
-						t.included_types.filter(type => !self.state.exclude_types.includes(type)).length
-					) {
-						self.included_terms.push(t)
-					}
-				}
-			}
-		} else if (!self.state.exclude_types.length) {
-			// TODO: deprecate exclude_types in favor or tree.usecase
-			self.included_terms.push(...term.terms)
-		} else {
-			for (const t of term.terms) {
-				if (t.included_types.filter(type => !self.state.exclude_types.includes(type)).length) {
 					self.included_terms.push(t)
 				}
 			}
+		} else {
+			self.included_terms.push(...term.terms)
 		}
 
 		if (!(term.id in self.termsById) || !self.included_terms.length) {
@@ -319,10 +304,7 @@ function setRenderers(self) {
 			.style('margin', term.isleaf ? '' : '2px')
 			.style('padding', '0px 5px')
 
-		if (
-			!term.isleaf &&
-			(!term.child_types || term.child_types.filter(type => !self.state.exclude_types.includes(type)).length)
-		) {
+		if (isUsableTerm(term, usecase).includes('branch')) {
 			div
 				.append('div')
 				.attr('class', 'sja_menuoption ' + cls_termbtn)
@@ -346,14 +328,14 @@ function setRenderers(self) {
 		if (term.hashtmldetail) {
 			infoIcon_div = div.append('div').style('display', 'inline-block')
 		}
-		if (graphable(term) && (!self.state.usecase || isUsableTerm(term, self.state.usecase))) {
+		if (isUsableTerm(term, self.state.usecase).length) {
 			if (termIsDisabled) {
 				labeldiv
 					.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
 					.style('padding', '5px 8px')
 					.style('margin', '1px 0px')
 					.style('opacity', 0.4)
-			} else if (!self.state.exclude_types.includes(term.type)) {
+			} else {
 				labeldiv
 					// need better css class
 					.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)

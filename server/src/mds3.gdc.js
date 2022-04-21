@@ -2,6 +2,7 @@ const common = require('../shared/common')
 const got = require('got')
 const { get_crosstabCombinations } = require('./mds3.init')
 const serverconfig = require('./serverconfig')
+const isUsableTerm = require('../shared/termdb.usecase')
 
 /*
 GDC graphql API
@@ -1049,13 +1050,14 @@ function init_termdb_queries(termdb, ds) {
 		return terms
 	}
 
-	q.findTermByName = async (searchStr, limit = null, vocab, exclude_types = [], treeFilter = null) => {
+	q.findTermByName = async (searchStr, limit = null, vocab, treeFilter = null, usecase = null) => {
 		searchStr = searchStr.toLowerCase() // convert to lowercase
 		// replace space with _ to match with id of terms
 		if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
 		// find terms that have term.id containing search string
 		const terms = []
 		for (const term of termdb.id2term.values()) {
+			if (usecase && !isUsableTerm(term, usecase)) continue
 			if (term.id.includes(searchStr)) terms.push(JSON.parse(JSON.stringify(term)))
 		}
 		await mayAddSamplecount4treeFilter(terms, treeFilter)

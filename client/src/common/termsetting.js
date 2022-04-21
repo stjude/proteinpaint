@@ -137,7 +137,6 @@ class TermSetting {
 			this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
 			if ('$id' in data) this.$id = data.$id
 			if ('disable_terms' in data) this.disable_terms = data.disable_terms
-			if ('exclude_types' in data) this.exclude_types = data.exclude_types
 			if ('filter' in data) this.filter = data.filter
 			if ('activeCohort' in data) this.activeCohort = data.activeCohort
 			if ('sampleCounts' in data) this.sampleCounts = data.sampleCounts
@@ -453,7 +452,6 @@ function setInteractivity(self) {
 			state: {
 				activeCohort: self.activeCohort,
 				tree: {
-					exclude_types: self.exclude_types,
 					usecase: self.usecase
 				}
 			},

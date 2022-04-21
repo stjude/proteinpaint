@@ -953,20 +953,17 @@ thus less things to worry about...
 			WHERE name LIKE ?`
 		)
 		const trueFilter = () => true
-		q.findTermByName = (n, limit, cohortStr = '', exclude_types = [], treeFilter = null, usecase = null) => {
+		q.findTermByName = (n, limit, cohortStr = '', treeFilter = null, usecase = null) => {
 			const vals = []
 			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
 				const lst = []
-				const typeFilter = exclude_types.length ? a => !exclude_types.includes(a) : trueFilter
 				for (const i of tmp) {
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
 					j.included_types = i.included_types ? i.included_types.split(',') : []
-					if (usecase && isUsableTerm(j, usecase) != 'plot') continue
-					if (!exclude_types.includes(j.type) && j.included_types.filter(typeFilter).length) {
-						lst.push(j)
-					}
+					console.log(964, usecase, usecase && isUsableTerm(j, usecase))
+					if (!usecase || isUsableTerm(j, usecase).has('plot')) lst.push(j)
 					if (lst.length == 10) break
 				}
 				return lst

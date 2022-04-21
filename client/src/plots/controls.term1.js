@@ -52,6 +52,7 @@ class Term1ui {
 		this.pill = termsettingInit({
 			vocabApi: this.app.vocabApi,
 			vocab: this.state.vocab,
+			usecase: this.opts.usecase,
 			activeCohort: this.state.activeCohort,
 			holder: this.dom.td2.append('div').style('display', 'inline-block'),
 			debug: this.opts.debug,

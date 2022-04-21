@@ -34,6 +34,7 @@ class Overlay {
 		this.pill = termsettingInit({
 			vocabApi: this.app.vocabApi,
 			vocab: this.state.vocab,
+			usecase: this.opts.usecase,
 			activeCohort: this.state.activeCohort,
 			holder: this.dom.pilldiv,
 			use_bins_less: true,
@@ -61,8 +62,7 @@ class Overlay {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			config,
-			ssid: appState.ssid,
-			exclude_types: [...appState.tree.exclude_types]
+			ssid: appState.ssid
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
@@ -87,8 +87,7 @@ class Overlay {
 		const a = {
 			activeCohort: this.state.activeCohort,
 			filter: this.state.filter,
-			disable_terms: [plot.term.id],
-			exclude_types: this.state.exclude_types
+			disable_terms: [plot.term.id]
 		}
 		{
 			// if cohort selection is enabled
@@ -99,7 +98,7 @@ class Overlay {
 		}
 
 		if (plot.term.term.type == 'survival') {
-			a.exclude_types.push('survival')
+			a.s.push('survival')
 		}
 		if (plot.term2) {
 			a.term = plot.term2.term

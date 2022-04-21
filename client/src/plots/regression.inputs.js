@@ -73,12 +73,7 @@ export class RegressionInputs {
 			placeholderIcon: '',
 			configKey: 'outcome',
 			limit: 1,
-			exclude_types:
-				this.opts.regressionType == 'cox'
-					? ['integer', 'float', 'categorical', 'survival']
-					: this.opts.regressionType == 'linear'
-					? ['condition', 'categorical', 'survival']
-					: ['survival'],
+			usecase: { target: 'regression', regressionType: this.opts.regressionType, detail: 'outcome' },
 
 			/*** dynamic configuration ***/
 			inputLst: [],
@@ -95,7 +90,7 @@ export class RegressionInputs {
 			placeholderIcon: '',
 			configKey: 'independent',
 			limit: 10,
-			exclude_types: ['condition', 'survival'],
+			exclude_types: { target: 'regression', regressionType: this.opts.regressionType, detail: 'independent' },
 
 			/*** dynamic configuration ***/
 			inputLst: [],

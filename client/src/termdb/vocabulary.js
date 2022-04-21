@@ -6,6 +6,7 @@ import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
 import initBinConfig from '../../shared/termdb.initbinconfig'
 import { deepEqual } from '../common/rx.core'
+import { isUsableTerm } from '../../shared/termdb.usecase'
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst', 'snplocus'])
 
@@ -269,16 +270,13 @@ class TermdbVocab {
 	}
 
 	// from termdb/search
-	async findTerm(str, cohortStr, exclude_types = [], usecase = null) {
+	async findTerm(str, cohortStr, usecase = null) {
 		const lst = [
 			'genome=' + this.vocab.genome,
 			'dslabel=' + this.vocab.dslabel,
 			'findterm=' + encodeURIComponent(str),
 			'cohortStr=' + cohortStr
 		]
-		if (exclude_types.length) {
-			lst.push('exclude_types=' + encodeURIComponent(JSON.stringify(exclude_types)))
-		}
 		if (usecase) {
 			lst.push('usecase=' + encodeURIComponent(JSON.stringify(usecase)))
 		}
@@ -391,8 +389,7 @@ class TermdbVocab {
 
 	graphable(term) {
 		if (!term) throw 'graphable: term is missing'
-		// term.isgenotype??
-		return graphableTypes.has(term.type)
+		return isUsableTerm(term).has('plot')
 	}
 
 	async getCategories(term, filter, lst = []) {
@@ -771,7 +768,7 @@ class FrontendVocab {
 	}
 
 	// from termdb/search
-	async findTerm(str, cohortStr) {
+	async findTerm(str, cohortStr, usecase = null) {
 		return {
 			lst: this.vocab.terms.filter(
 				t => t.name.includes(str) && (!cohortStr || cohortStr === t.cohortValues.slice().sort.join(','))
@@ -891,8 +888,7 @@ class FrontendVocab {
 
 	graphable(term) {
 		if (!term) throw 'graphable: term is missing'
-		// term.isgenotype??
-		return graphableTypes.has(term.type)
+		return isUsableTerm(term).has('plot')
 	}
 
 	q_to_param(q) {

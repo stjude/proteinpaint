@@ -31,6 +31,7 @@ class Divide {
 		this.pill = termsettingInit({
 			vocabApi: this.app.vocabApi,
 			vocab: this.state.vocab,
+			usecase: this.opts.usecase,
 			activeCohort: this.state.activeCohort,
 			holder: this.dom.pilldiv,
 			use_bins_less: true,
@@ -54,8 +55,7 @@ class Divide {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			config: appState.plots.find(p => p.id === this.id),
-			exclude_types: [...appState.tree.exclude_types]
+			config: appState.plots.find(p => p.id === this.id)
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
@@ -79,8 +79,7 @@ class Divide {
 		const a = {
 			activeCohort: this.state.activeCohort,
 			filter: this.state.filter,
-			disable_terms: [plot.term.id],
-			exclude_types: ['survival', ...this.state.exclude_types]
+			disable_terms: [plot.term.id]
 		}
 		if (plot.term0) {
 			a.term = plot.term0.term
