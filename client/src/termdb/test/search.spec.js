@@ -28,12 +28,15 @@ tape('\n', function(test) {
 
 tape('term search, default behavior', function(test) {
 	test.timeoutAfter(5000)
-
+	const 
 	runpp({
 		state: {
 			tree: {
-				exclude_types: ['survival']
+				
 			}
+		},
+		app: {
+			usecase: {target: 'survival', detail: 'term'}
 		},
 		search: {
 			callbacks: {

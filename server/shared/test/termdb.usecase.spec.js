@@ -10,86 +10,87 @@ tape('\n', function(test) {
 })
 
 tape('cuminc term', test => {
-	test.equal(
+	test.deepEqual(
 		isUsableTerm({ type: 'condition' }, { target: 'cuminc', detail: 'term' }),
-		'plot',
-		`should return 'plot' for term.type='condition'`
+		new Set(['plot']),
+		`should return Set{'plot'} for term.type='condition'`
 	)
 
-	test.equal(
-		isUsableTerm({ type: '', included_types: ['condition'] }, { target: 'cuminc', detail: 'term' }),
-		'tree',
-		`should return 'tree' for term.type != 'condition' and term.included_types=['condition',...]`
+	test.deepEqual(
+		isUsableTerm({ type: '', child_types: ['condition'] }, { target: 'cuminc', detail: 'term' }),
+		new Set(['branch']),
+		`should return Set{'branch'} for term.type != 'condition' and term.child_types=['condition',...]`
 	)
 
-	test.equal(
-		isUsableTerm({ type: '', included_types: [] }, { target: 'cuminc', detail: 'term' }),
-		false,
-		`should return false for term.type != 'condition' and !term.included_types.includes('condition')`
+	test.deepEqual(
+		isUsableTerm({ type: '', child_types: [] }, { target: 'cuminc', detail: 'term' }),
+		new Set([]),
+		`should return an empty set for term.type != 'condition' and !term.child_types.includes('condition')`
 	)
+
 	test.end()
 })
 
 tape('cuminc overlay', test => {
-	test.equal(
+	test.deepEqual(
 		isUsableTerm({ isleaf: true }, { target: 'cuminc', detail: 'term2' }),
-		'plot',
-		`should return 'plot' for any term.isleaf`
+		new Set(['plot']),
+		`should return Set{'plot'} for any term.isleaf`
 	)
 
-	test.equal(
-		isUsableTerm({ type: '', included_types: ['categorical'] }, { target: 'cuminc', detail: 'term2' }),
-		'tree',
-		`should return 'tree' for !term.isleaf and !term.type, but with acceptable term.included_types`
+	test.deepEqual(
+		isUsableTerm({ type: '', child_types: ['categorical'] }, { target: 'cuminc', detail: 'term2' }),
+		new Set(['plot', 'branch']),
+		`should return Set{'plot', 'branch'} for !term.isleaf and !term.type, but with acceptable term.child_types`
 	)
 
-	test.equal(
-		isUsableTerm({ type: '', included_types: ['survival'] }, { target: 'cuminc', detail: 'term2' }),
-		false,
-		`should return false for !term.isleaf and !term.type and term.included_types=['survival']`
+	test.deepEqual(
+		isUsableTerm({ type: 'survival', child_types: [] }, { target: 'cuminc', detail: 'term2' }),
+		new Set([]),
+		`should return an empty set for term.type='survival' and term.child_types=[]`
 	)
 
 	test.end()
 })
 
 tape('survival term', test => {
-	test.equal(
+	test.deepEqual(
 		isUsableTerm({ type: 'survival' }, { target: 'survival', detail: 'term' }),
-		'plot',
-		`should return 'plot' for term.type='survival'`
+		new Set(['plot']),
+		`should return Set{'plot'} for term.type='survival'`
 	)
 
-	test.equal(
-		isUsableTerm({ type: '', included_types: ['survival'] }, { target: 'survival', detail: 'term' }),
-		'tree',
-		`should return 'tree' for term.type != 'survival' and term.included_types=['survival',...]`
+	test.deepEqual(
+		isUsableTerm({ type: '', child_types: ['survival'] }, { target: 'survival', detail: 'term' }),
+		new Set(['branch']),
+		`should return Set{'branch'} for term.type != 'survival' and term.child_types=['survival',...]`
 	)
 
-	test.equal(
-		isUsableTerm({ type: '', included_types: [] }, { target: 'survival', detail: 'term' }),
-		false,
-		`should return false for term.type != 'survival and !term.included_types.includes('survival')`
+	test.deepEqual(
+		isUsableTerm({ type: '', child_types: [] }, { target: 'survival', detail: 'term' }),
+		new Set([]),
+		`should return an empty set for term.type != 'survival and !term.child_types.includes('survival')`
 	)
 	test.end()
 })
 
 tape('survival overlay', test => {
-	test.equal(
+	test.deepEqual(
 		isUsableTerm({ isleaf: true }, { target: 'survival', detail: 'term2' }),
-		'plot',
-		`should return 'survival' for any term.isleaf`
+		new Set(['plot']),
+		`should return Set{'plot'} for any term.isleaf`
 	)
 
-	test.equal(
-		isUsableTerm({ type: '', included_types: ['categorical'] }, { target: 'survival', detail: 'term2' }),
-		'tree',
-		`should return 'tree' for !term.isleaf and !term.type, but with acceptable term.included_types`
+	test.deepEqual(
+		isUsableTerm({ type: '', child_types: ['categorical'] }, { target: 'survival', detail: 'term2' }),
+		new Set(['branch']),
+		`should return Set{'branch'} for !term.isleaf and !term.type, but with acceptable term.child_types`
 	)
 
-	test.equal(
-		isUsableTerm({ type: '', included_types: ['survival'] }, { target: 'survival', detail: 'term2' }),
-		false,
-		`should return false for !term.isleaf and !term.type and term.included_types=['survival']`
+	test.deepEqual(
+		isUsableTerm({ type: '', child_types: ['survival'] }, { target: 'survival', detail: 'term2' }),
+		new Set([]),
+		`should return an empty set for !term.isleaf and !term.type and term.child_types=['survival']`
 	)
 
 	test.end()

@@ -66,8 +66,14 @@ class TdbSurvival {
 					id: this.id,
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 					inputs: [
-						'overlay',
-						'divideBy',
+						{
+							type: 'overlay',
+							usecase: { target: 'survival', detail: 'term2' }
+						},
+						{
+							type: 'divide',
+							usecase: { target: 'survival', detail: 'term0' }
+						},
 						{
 							label: '95% CI',
 							boxLabel: 'Visible',

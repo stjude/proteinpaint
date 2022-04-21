@@ -228,7 +228,7 @@ function setRenderers(self) {
 		self.included_terms = []
 		if (self.state.usecase) {
 			for (const t of term.terms) {
-				if (isUsableTerm(t, self.state.usecase)) {
+				if (isUsableTerm(t, self.state.usecase).size) {
 					self.included_terms.push(t)
 				}
 			}
@@ -298,13 +298,14 @@ function setRenderers(self) {
 
 	self.addTerm = async function(term) {
 		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
+		const uses = isUsableTerm(term, self.state.usecase)
 
 		const div = select(this)
 			.attr('class', cls_termdiv)
 			.style('margin', term.isleaf ? '' : '2px')
 			.style('padding', '0px 5px')
 
-		if (isUsableTerm(term, usecase).includes('branch')) {
+		if (uses.has('branch')) {
 			div
 				.append('div')
 				.attr('class', 'sja_menuoption ' + cls_termbtn)
@@ -328,14 +329,14 @@ function setRenderers(self) {
 		if (term.hashtmldetail) {
 			infoIcon_div = div.append('div').style('display', 'inline-block')
 		}
-		if (isUsableTerm(term, self.state.usecase).length) {
+		if (uses.size > 0) {
 			if (termIsDisabled) {
 				labeldiv
 					.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)
 					.style('padding', '5px 8px')
 					.style('margin', '1px 0px')
 					.style('opacity', 0.4)
-			} else {
+			} else if (uses.has('plot')) {
 				labeldiv
 					// need better css class
 					.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term ' + cls_termlabel)

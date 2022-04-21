@@ -124,7 +124,7 @@ export function isUsableTerm(term, _usecase, ds) {
 			}
 
 		default:
-			if (graphableTypes.has(term.type)) uses.push('plot')
+			if (graphableTypes.has(term.type)) uses.add('plot')
 			if (!term.isleaf) uses.add('branch')
 			return uses
 	}

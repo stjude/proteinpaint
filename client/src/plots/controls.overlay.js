@@ -97,9 +97,6 @@ class Overlay {
 			}
 		}
 
-		if (plot.term.term.type == 'survival') {
-			a.s.push('survival')
-		}
 		if (plot.term2) {
 			a.term = plot.term2.term
 			a.q = plot.term2.q

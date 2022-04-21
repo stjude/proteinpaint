@@ -300,9 +300,11 @@ tape('exclude_types', function(test) {
 	runpp({
 		state: {
 			tree: {
-				exclude_types: ['integer', 'survival'],
 				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis']
 			}
+		},
+		app: {
+			usecase: { target: 'dictionary' }
 		},
 		tree: {
 			callbacks: {
