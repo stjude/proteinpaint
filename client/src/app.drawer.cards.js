@@ -61,7 +61,7 @@ Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl
 */
 
 export async function init_appDrawer(par) {
-	const { holder, apps_sandbox_div, apps_off } = par
+	const { holder, apps_sandbox_div, apps_off, genome } = par
 	const re = await dofetch2('/cardsjson')
 	if (re.error) {
 		sayerror(holder.append('div'), re.error)
@@ -82,6 +82,8 @@ export async function init_appDrawer(par) {
 		.style('display', 'grid')
 		.style('grid-template-columns', '1fr 1fr')
 		.style('gap', '5px')
+
+	const datasetBtns_div = app_col.append('div')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const track_args = {
@@ -93,11 +95,13 @@ export async function init_appDrawer(par) {
 	const page_args = {
 		apps_sandbox_div,
 		apps_off,
-		allow_mdsform: re.allow_mdsform
+		allow_mdsform: re.allow_mdsform,
+		genome
 	}
 	// make_searchbar(track_args, page_args, searchbar_div)
 	make_useCasesCard(topCards_div, track_args, page_args)
 	makeDNAnexusFileViewerCard(topCards_div, page_args)
+	makeDatasetButtons(datasetBtns_div, page_args)
 	await loadTracks(track_args, page_args)
 }
 
@@ -1017,4 +1021,27 @@ async function openDNAnexusSandbox(holder) {
 		.style('margin', '0vw 10vw')
 		.style('padding', '10px')
 		.html(res.file)
+}
+
+/********** Dataset Functions  **********/
+async function makeDatasetButtons(div, page_args) {
+	const dataset_div = div
+		.append('div')
+		.append('div')
+		.append('h5')
+		.attr('class', 'sjpp-track-cols')
+		.style('color', 'rgb(100, 122, 152)')
+		.html(page_args.genome.name + ' Datasets')
+
+	const datasetBtns_div = dataset_div.append('div').style('padding', '10px')
+
+	for (const [k, v] of Object.entries(page_args.genome.datasets)) {
+		if (v.isofficial != true) continue
+		const btn = makeButton(datasetBtns_div, k)
+		btn.on('click', async () => {
+			page_args.apps_off()
+		})
+	}
+
+	return datasetBtns_div
 }
