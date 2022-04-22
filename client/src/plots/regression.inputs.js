@@ -90,7 +90,7 @@ export class RegressionInputs {
 			placeholderIcon: '',
 			configKey: 'independent',
 			limit: 10,
-			exclude_types: { target: 'regression', regressionType: this.opts.regressionType, detail: 'independent' },
+			usecase: { target: 'regression', regressionType: this.opts.regressionType, detail: 'independent' },
 
 			/*** dynamic configuration ***/
 			inputLst: [],

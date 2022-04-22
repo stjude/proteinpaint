@@ -180,7 +180,7 @@ function setRenderers(self) {
 					expandedTermIds.push(...term.__ancestors)
 				}
 				// pre-expand non-selectable parent term
-				if (!graphable(term)) expandedTermIds.push(term.id)
+				if (!self.app.vocabApi.graphable(term)) expandedTermIds.push(term.id)
 				self.app.dispatch({
 					type: 'app_refresh',
 					state: {

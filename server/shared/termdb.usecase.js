@@ -118,7 +118,7 @@ export function isUsableTerm(term, _usecase, ds) {
 			}
 
 			if (usecase.detail == 'independent') {
-				if (term.type == 'float' || term.type == 'integer' || term.type == 'categorical') uses.add('branch')
+				if (term.type == 'float' || term.type == 'integer' || term.type == 'categorical') uses.add('plot')
 				if (hasChildTypes(child_types, ['categorical', 'float', 'integer'])) uses.add('branch')
 				return uses
 			}
@@ -141,6 +141,6 @@ function hasNumericChild(child_types) {
 
 function hasChildTypes(child_types, expected_types) {
 	for (const a of expected_types) {
-		if (child_types.includes(expected_types)) return true
+		if (child_types.includes(a)) return true
 	}
 }
