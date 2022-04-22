@@ -68,7 +68,7 @@ export function isUsableTerm(term, _usecase, ds) {
 				return uses
 			}
 			if (usecase.detail === 'term2') {
-				if (term.type != 'survival') uses.add('plot')
+				if (term.type && term.type != 'survival') uses.add('plot')
 				// -- leave it up to user, don't restrict overlay term by ancestry
 				// if (usecase.term.ancestors.includes(term.id)) return false
 				if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
