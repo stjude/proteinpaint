@@ -22,7 +22,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('survival term as term1', function(test) {
+tape.only('survival term as term1', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {

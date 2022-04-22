@@ -9,88 +9,126 @@ tape('\n', function(test) {
 	test.end()
 })
 
+tape('barchart term', test => {
+	const usecase = { target: 'barchart', detail: 'term' }
+	multiDeepEqual(test, usecase, {
+		plot: [{ type: 'categorical' }, { type: 'float' }, { type: 'integer' }, { type: 'condition' }],
+		branch: [
+			{ child_types: ['categorical'] },
+			{ child_types: ['float'] },
+			{ child_types: ['integer'] },
+			{ child_types: ['condition'] },
+			{ type: 'survival', child_types: ['float'] }
+		],
+		'': [{ type: 'survival', child_types: ['survival'] }]
+	})
+
+	test.end()
+})
+
+tape('barchart overlay', test => {
+	const usecase = { target: 'barchart', detail: 'overlay' }
+	multiDeepEqual(test, usecase, {
+		plot: [{ type: 'categorical' }, { type: 'float' }, { type: 'integer' }, { type: 'condition' }],
+		branch: [
+			{ child_types: ['categorical'] },
+			{ child_types: ['float'] },
+			{ child_types: ['integer'] },
+			{ child_types: ['condition'] },
+			{ type: 'survival', child_types: ['float'] }
+		],
+		'': [{ type: 'survival', child_types: ['survival'] }]
+	})
+
+	test.end()
+})
+
+tape('barchart term0', test => {
+	const usecase = { target: 'barchart', detail: 'term0' }
+	multiDeepEqual(test, usecase, {
+		plot: [{ type: 'categorical' }, { type: 'float' }, { type: 'integer' }, { type: 'condition' }],
+		branch: [
+			{ child_types: ['categorical'] },
+			{ child_types: ['float'] },
+			{ child_types: ['integer'] },
+			{ child_types: ['condition'] },
+			{ type: 'survival', child_types: ['float'] }
+		],
+		'': [{ type: 'survival', child_types: ['survival'] }]
+	})
+
+	test.end()
+})
+
 tape('cuminc term', test => {
-	test.equal(
-		isUsableTerm({ type: 'condition' }, { target: 'cuminc', detail: 'term' }),
-		'plot',
-		`should return 'plot' for term.type='condition'`
-	)
+	const usecase = { target: 'cuminc', detail: 'term' }
 
-	test.equal(
-		isUsableTerm({ type: '', included_types: ['condition'] }, { target: 'cuminc', detail: 'term' }),
-		'tree',
-		`should return 'tree' for term.type != 'condition' and term.included_types=['condition',...]`
-	)
+	multiDeepEqual(test, usecase, {
+		plot: [{ type: 'condition' }],
+		branch: [{ child_types: ['condition'] }],
+		'': [
+			{ type: 'categorical', child_types: ['categorical'] },
+			{ type: 'float', child_types: ['float'] },
+			{ type: 'integer', child_types: ['integer'] },
+			{ type: 'survival', child_types: ['survival'] }
+		]
+	})
 
-	test.equal(
-		isUsableTerm({ type: '', included_types: [] }, { target: 'cuminc', detail: 'term' }),
-		false,
-		`should return false for term.type != 'condition' and !term.included_types.includes('condition')`
-	)
 	test.end()
 })
 
 tape('cuminc overlay', test => {
-	test.equal(
-		isUsableTerm({ isleaf: true }, { target: 'cuminc', detail: 'term2' }),
-		'plot',
-		`should return 'plot' for any term.isleaf`
-	)
+	const usecase = { target: 'cuminc', detail: 'term2' }
 
-	test.equal(
-		isUsableTerm({ type: '', included_types: ['categorical'] }, { target: 'cuminc', detail: 'term2' }),
-		'tree',
-		`should return 'tree' for !term.isleaf and !term.type, but with acceptable term.included_types`
-	)
-
-	test.equal(
-		isUsableTerm({ type: '', included_types: ['survival'] }, { target: 'cuminc', detail: 'term2' }),
-		false,
-		`should return false for !term.isleaf and !term.type and term.included_types=['survival']`
-	)
+	multiDeepEqual(test, usecase, {
+		plot: [{ type: 'categorical' }, { type: 'float' }, { type: 'integer' }],
+		branch: [{ child_types: ['categorical'] }, { child_types: ['float'] }, { child_types: ['integer'] }],
+		'': [{ type: 'survival', child_types: ['survival'] }]
+	})
 
 	test.end()
 })
 
 tape('survival term', test => {
-	test.equal(
-		isUsableTerm({ type: 'survival' }, { target: 'survival', detail: 'term' }),
-		'plot',
-		`should return 'plot' for term.type='survival'`
-	)
-
-	test.equal(
-		isUsableTerm({ type: '', included_types: ['survival'] }, { target: 'survival', detail: 'term' }),
-		'tree',
-		`should return 'tree' for term.type != 'survival' and term.included_types=['survival',...]`
-	)
-
-	test.equal(
-		isUsableTerm({ type: '', included_types: [] }, { target: 'survival', detail: 'term' }),
-		false,
-		`should return false for term.type != 'survival and !term.included_types.includes('survival')`
-	)
+	const usecase = { target: 'survival', detail: 'term' }
+	multiDeepEqual(test, usecase, {
+		plot: [{ type: 'survival' }],
+		branch: [{ child_types: ['survival'] }],
+		'': [{}]
+	})
 	test.end()
 })
 
 tape('survival overlay', test => {
-	test.equal(
-		isUsableTerm({ isleaf: true }, { target: 'survival', detail: 'term2' }),
-		'plot',
-		`should return 'survival' for any term.isleaf`
-	)
-
-	test.equal(
-		isUsableTerm({ type: '', included_types: ['categorical'] }, { target: 'survival', detail: 'term2' }),
-		'tree',
-		`should return 'tree' for !term.isleaf and !term.type, but with acceptable term.included_types`
-	)
-
-	test.equal(
-		isUsableTerm({ type: '', included_types: ['survival'] }, { target: 'survival', detail: 'term2' }),
-		false,
-		`should return false for !term.isleaf and !term.type and term.included_types=['survival']`
-	)
+	const usecase = { target: 'survival', detail: 'term2' }
+	multiDeepEqual(test, usecase, {
+		plot: [{ isleaf: true }],
+		branch: [{ type: '', child_types: ['categorical'] }],
+		'': [{ type: '', child_types: ['survival'] }]
+	})
 
 	test.end()
 })
+
+/*************************
+ reusable helper functions
+**************************/
+
+function multiDeepEqual(test, usecase, inputs) {
+	Object.freeze(usecase)
+	for (const key in inputs) {
+		const expected = key.split(',').filter(s => !!s)
+		const uses = expected.map(d => `'${d}'`).join(', ')
+
+		for (const term of inputs[key]) {
+			const child_types = JSON.stringify(term.child_types || [])
+			if (!term.type) term.type = ''
+
+			test.deepEqual(
+				isUsableTerm(term, usecase),
+				new Set(expected),
+				`should return {${uses}} for ${usecase.detail}.type='${term.type}' and child_types=${child_types}`
+			)
+		}
+	}
+}

@@ -34,7 +34,8 @@ class TdbNav {
 			this.components = await multiInit({
 				search: searchInit({
 					app: this.app,
-					holder: this.dom.searchDiv
+					holder: this.dom.searchDiv,
+					usecase: { target: 'barchart', detail: 'term' }
 				}),
 				filter: filterRxCompInit({
 					app: this.app,

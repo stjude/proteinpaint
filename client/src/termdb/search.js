@@ -3,7 +3,7 @@ import { select, selectAll, event } from 'd3-selection'
 import { dofetch3, sayerror } from '../client'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
-import { graphable } from '../common/termutils'
+import { isUsableTerm } from '../../shared/termdb.usecase'
 
 /*
 steps:
@@ -56,7 +56,6 @@ class TermSearch {
 							.sort()
 							.join(','),
 			expandedTermIds: appState.tree.expandedTermIds,
-			exclude_types: appState.tree.exclude_types || [],
 			usecase: appState.tree.usecase,
 			search: appState.search
 		}
@@ -73,12 +72,7 @@ class TermSearch {
 			this.bus.emit('postSearch', [])
 			return
 		}
-		const data = await this.app.vocabApi.findTerm(
-			str,
-			this.state.cohortStr,
-			this.state.exclude_types,
-			this.state.usecase
-		)
+		const data = await this.app.vocabApi.findTerm(str, this.state.cohortStr, this.state.usecase)
 		if (!data.lst || data.lst.length == 0) {
 			this.noResult()
 		} else {
@@ -137,8 +131,9 @@ function setRenderers(self) {
 	self.showTerm = function(term) {
 		const tr = select(this)
 		const button = tr.append('td').text(term.name)
+		const uses = isUsableTerm(term)
 
-		if (self.opts.click_term && graphable(term)) {
+		if (self.opts.click_term && uses.has('plot')) {
 			// to click a graphable term, show as blue button
 			if (self.opts.disable_terms && self.opts.disable_terms.includes(term.id)) {
 				// but it's disabled
@@ -185,7 +180,7 @@ function setRenderers(self) {
 					expandedTermIds.push(...term.__ancestors)
 				}
 				// pre-expand non-selectable parent term
-				if (!graphable(term)) expandedTermIds.push(term.id)
+				if (!self.app.vocabApi.graphable(term)) expandedTermIds.push(term.id)
 				self.app.dispatch({
 					type: 'app_refresh',
 					state: {

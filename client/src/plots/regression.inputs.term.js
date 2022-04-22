@@ -360,7 +360,6 @@ export class InputTerm {
 			{
 				activeCohort: state.activeCohort,
 				disable_terms,
-				exclude_types: section.exclude_types,
 				usecase: {
 					target: 'regression',
 					detail: section.configKey,

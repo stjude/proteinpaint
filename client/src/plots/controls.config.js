@@ -30,16 +30,26 @@ class TdbConfigUiInit {
 			for (const key of this.opts.inputs) {
 				if (typeof key == 'object') {
 					const obj = key // reassign to be less confusing
-					this.inputs[obj.settingsKey || obj.configKey] = initByInput[obj.type](
-						Object.assign({}, obj, {
+					if (obj.type in initByInput) {
+						this.inputs[obj.settingsKey || obj.configKey] = initByInput[obj.type](
+							Object.assign({}, obj, {
+								holder: this.dom.table.append('tr'),
+								dispatch,
+								id: this.id,
+								instanceNum: this.instanceNum,
+								debug: this.opts.debug,
+								parent: this
+							})
+						)
+					} else if (obj.type in initByComponent) {
+						componentPromises[obj.type] = initByComponent[obj.type]({
+							app: this.app,
 							holder: this.dom.table.append('tr'),
-							dispatch,
 							id: this.id,
-							instanceNum: this.instanceNum,
-							debug: this.opts.debug,
-							parent: this
+							usecase: obj.usecase,
+							debug: this.opts.debug
 						})
-					)
+					}
 				} else if (key in initByInput) {
 					this.inputs[key] = initByInput[key]({
 						holder: this.dom.table.append('tr'),

@@ -1,6 +1,5 @@
 const tape = require('tape')
 const helpers = require('../../../test/front.helpers.js')
-const graphable = require('../../common/termutils').graphable
 
 /*************************
  reusable helper functions
@@ -136,7 +135,9 @@ tape('click_term', test => {
 			}
 		}
 	})
+	let app
 	function runTests(tree) {
+		app = tree.Inner.app
 		helpers
 			.rideInit({ arg: tree, bus: tree, eventType: 'postRender.test' })
 			.run(expandTerm1)
@@ -167,7 +168,7 @@ tape('click_term', test => {
 		buttons[0].click() // click this button and trigger the next test
 	}
 	function modifier_callback(term) {
-		test.ok(graphable(term), 'modifier callback called with a graphable term')
+		test.ok(app.vocabApi.graphable(term), 'modifier callback called with a graphable term')
 	}
 })
 
@@ -257,7 +258,7 @@ tape('rehydrated from saved state', function(test) {
 
 	function testDom(tree) {
 		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 9, 'should have 9 expanded terms')
-		test.equal(tree.Inner.dom.holder.selectAll('.termbtn').size(), 6, 'should have 6 term toggle buttons')
+		test.equal(tree.Inner.dom.holder.selectAll('.termbtn').size(), 7, 'should have 7 term toggle buttons')
 	}
 })
 
@@ -294,14 +295,14 @@ tape('error handling', function(test) {
 	}
 })
 
-tape('exclude_types', function(test) {
+tape('usecase', function(test) {
 	test.timeoutAfter(2000)
 
 	runpp({
 		state: {
 			tree: {
-				exclude_types: ['integer', 'survival'],
-				expandedTermIds: ['root', 'Cancer-related Variables', 'Diagnosis']
+				usecase: { target: 'survival', detail: 'term' },
+				expandedTermIds: ['root', 'Survival outcome']
 			}
 		},
 		tree: {
@@ -313,12 +314,12 @@ tape('exclude_types', function(test) {
 
 	function runTests(tree) {
 		const divs = tree.Inner.dom.holder.node().querySelectorAll('.termdiv')
-		test.equal(divs.length, 7, 'should have 7 displayed term divs')
+		test.equal(divs.length, 3, 'should have 3 displayed term divs')
 		const labels = [...tree.Inner.dom.holder.node().querySelectorAll('.termlabel')]
 		test.equal(
 			labels.filter(elem => elem.innerHTML.includes('urvival')).length,
-			0,
-			'should not display any "Survival" term label'
+			3,
+			'should display any "Survival" term label'
 		)
 		test.equal(
 			labels.filter(elem => elem.innerHTML.includes('Diagnosis Year')).length,
