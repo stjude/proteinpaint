@@ -10,21 +10,23 @@ const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 
 	Arguments:
 	term {}
 		.type: 'categorical', etc.
-		.included_types: []
+		.child_types: []
 	
-	use {}
-		.target: 'barchart', etc. // may change to chartType 
-		.detail: 'term1', 'term2', etc. // optional 
-		// may have to add other key-values for more intricate logic
-		// for example, regression UI can have its own key-values
-		// that other apps or plots do not use and vice-versa
+	_usecase {}
+		.target (REQUIRED): 'barchart', 'regression', etc
+			- used as a switch-case "router" for additional use-specific logic
+			- other parameters, if applicable, are described in the route "handler" 
 	
-	ds
+	ds 
+	- a bootstrapped dataset object that can supply overrides to the use case logic,
+	for example, to apply role-based allowed term uses or performance-related restrictions
+	to ancestor terms when a use case aggregates too many data points for a given chart type
 
 	Returns
-	'plot' if the term can be used in a plot chartType
-	'tree' if the term can be used only as an expandable tree branch, but not in a plot
-	false if the term cannot be used either for plotting or as a tree branch
+	a Set{} with zero or more of the following strings:
+	- 'plot' if the term can be used in a plot chartType
+	- 'branch' if the term can be used only as an expandable tree branch, but not in a plot
+	- an empty Set means that the term has no valid uses, i.e, it cannot be used either for plotting or as a tree branch
 */
 export function isUsableTerm(term, _usecase, ds) {
 	const usecase = _usecase || {}

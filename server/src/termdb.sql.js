@@ -962,7 +962,6 @@ thus less things to worry about...
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
 					j.included_types = i.included_types ? i.included_types.split(',') : []
-					console.log(964, usecase, usecase && isUsableTerm(j, usecase))
 					if (!usecase || isUsableTerm(j, usecase).has('plot')) lst.push(j)
 					if (lst.length == 10) break
 				}
