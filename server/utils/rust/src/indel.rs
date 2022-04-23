@@ -2957,9 +2957,20 @@ fn check_first_last_nucleotide_correctly_aligned(
     {
         // Check if there is better alignment for last matched sequence
         println!("Partially matched left-sequence");
-        q_seq_chars = q_seq_correct.chars().collect();
-        align_chars = align_correct.chars().collect();
-        r_seq_chars = r_seq_correct.chars().collect();
+        if q_seq_correct.len() > 0 {
+            // If there are any changes in alignment in previous steps work on the updated alignment, otherwise use original alignment
+            q_seq_chars = q_seq_correct.chars().collect();
+            align_chars = align_correct.chars().collect();
+            r_seq_chars = r_seq_correct.chars().collect();
+        } else {
+            q_seq_chars = q_seq.chars().collect();
+            align_chars = align.chars().collect();
+            r_seq_chars = r_seq.chars().collect();
+        }
+
+        println!("q_seq_correct:{}", q_seq_correct);
+        println!("align_correct:{}", align_correct);
+        println!("r_seq_correct:{}", r_seq_correct);
 
         q_seq_correct = String::new();
         align_correct = String::new();
