@@ -2768,18 +2768,84 @@ fn check_first_last_nucleotide_correctly_aligned(
             }
         }
 
+        let mut all_substituted_nucleotides;
+        let mut best_alignment_position = 0;
+        for i in 0..first_unmatched_sequence.len() {
+            all_substituted_nucleotides = true;
+            let mut num_iterations = 0; // Need to check if the entire length of first_unmatched_sequence has been parsed or not
+            for j in 0..first_substituted_nucleotides.len() {
+                // Check if all nucleotides are matching or not
+                if i + j < first_unmatched_sequence.len() {
+                    // Prevent iterator to go beyond length of first_unmatched_sequence_vector
+                    //println!("i:{}", i);
+                    //println!("i+j:{}", i + j);
+                    //println!(
+                    //    "first_substituted_nucleotides_vector[j]:{}",
+                    //    first_substituted_nucleotides_vector[j]
+                    //);
+                    //println!(
+                    //    "first_unmatched_sequence_vector[i + j]:{}",
+                    //    first_unmatched_sequence_vector[i + j]
+                    //);
+                    if first_substituted_nucleotides_vector[j]
+                        != first_unmatched_sequence_vector[i + j]
+                    {
+                        all_substituted_nucleotides = false;
+                        break;
+                    }
+                    best_alignment_position = i;
+                    num_iterations += 1;
+                }
+            }
+            //if all_substituted_nucleotides == true {
+            //    println!("num_iterations:{}", num_iterations);
+            //    println!(
+            //        "first_substituted_nucleotides.len():{}",
+            //        first_substituted_nucleotides.len()
+            //    );
+            //}
+            if num_iterations != first_substituted_nucleotides.len()
+                && all_substituted_nucleotides == true
+            {
+                // If all the nucleotides in first_matched_nucleotides have not been parsed set all_matched_nucleotides = false
+                all_substituted_nucleotides = false;
+            }
+            if all_substituted_nucleotides == true {
+                break;
+            }
+        }
+
+        for i in correct_alignment_length + last_print_position
+            ..correct_alignment_length + last_print_position + best_alignment_position
+        {
+            //println!(
+            //    "i,q_seq_chars[i],align_chars[i],r_seq_chars[i]:{}{}{}{}",
+            //    i, q_seq_chars[i], align_chars[i], r_seq_chars[i]
+            //);
+            q_seq_correct.push(q_seq_chars[i]);
+            align_correct.push(align_chars[i]);
+            r_seq_correct.push(r_seq_chars[i]);
+        }
+
+        println!("last_print_position:{}", last_print_position);
+        println!("best_alignment_position:{}", best_alignment_position);
         // Adding unmatched nucleotide(s) to first nucleotide after last_print_position
         for i in 0..first_substituted_nucleotides.len() {
             if first_substituted_nucleotides_vector[i]
-                == r_seq_chars[last_print_position + correct_alignment_length + i]
+                == r_seq_chars
+                    [last_print_position + best_alignment_position + correct_alignment_length + i]
             {
                 align_correct.push('|');
             } else {
                 align_correct.push('*');
             }
             q_seq_correct.push(first_substituted_nucleotides_vector[i]);
-            r_seq_correct.push(r_seq_chars[last_print_position + correct_alignment_length + i])
+            r_seq_correct.push(
+                r_seq_chars
+                    [last_print_position + best_alignment_position + correct_alignment_length + i],
+            )
         }
+        alignment_changed = true;
     } else if first_matched_nucleotides.len() > 0
         && first_unmatched_sequence.len() > 0
         && first_unmatched_sequence.len() > first_matched_nucleotides.len()
