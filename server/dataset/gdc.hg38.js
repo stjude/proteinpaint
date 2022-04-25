@@ -502,12 +502,6 @@ const variant2samples = {
 	}
 }
 
-const ssm_occurrences_dictionary = {
-	endpoint: GDC_HOST + '/ssm_occurrences/_mapping',
-	mapping_prefix: 'ssm_occurrence_centrics',
-	duplicate_term_skip: ['case.project.disease_type', 'case.project.primary_site']
-}
-
 /*
 getting total cohort sizes
 */
@@ -1104,9 +1098,7 @@ module.exports = {
 		termid2totalsize2: {
 			gdcapi: termidlst2size
 		},
-		dictionary: {
-			gdcapi: ssm_occurrences_dictionary
-		}
+		dictionary: { gdcapi: true }
 	},
 
 	ssm2canonicalisoform,

@@ -1,4 +1,5 @@
 const gdc = require('./mds3.gdc')
+const gdcTermdb = require('./termdb.gdc')
 const variant2samples_getresult = require('./mds3.variant2samples')
 
 /*
@@ -700,10 +701,9 @@ function validate_ssm2canonicalisoform(ds) {
 
 async function init_dictionary(ds) {
 	const dictioary = ds.termdb.dictionary
-	// 'ssm_occurance' dictioanry from gdc
 	if (dictioary.gdcapi) {
 		ds.cohort = {}
-		await gdc.init_dictionary(ds)
+		await gdcTermdb.initDictionary(ds)
 	}
 }
 
