@@ -21,8 +21,8 @@
 #     "name": variable name
 #     "rtype": type of R variable ("numeric", "factor")
 #     "timeToEvent": {} (only for cox outcome)
-#       "timeScale": year/age
-#       "timeId": id of time variable (for 'year' time scale)
+#       "timeScale": time/age
+#       "timeId": id of time variable (for 'time' time scale)
 #       "agestartId": id of age start variable (for 'age' time scale)
 #       "ageendId": id of age end variable (for 'age' time scale)
 #       "eventId": id of event variable

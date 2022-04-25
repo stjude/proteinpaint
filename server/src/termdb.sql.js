@@ -359,12 +359,6 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 	if (typeof termq == 'string') {
 		termq = JSON.parse(decodeURIComponent(termq))
 	}
-	if (index == 1) {
-		if (q.getcuminc) {
-			termq.getcuminc = q.getcuminc
-			termq.grade = q.grade
-		}
-	}
 
 	const tablename = 'samplekey_' + index
 	/*
@@ -380,6 +374,8 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 		possible if only the bin labels are returned. Similar use cases may be supported
 		later.  
 	*/
+	// index position is dependent on server route
+	// TODO: investigate the utility of 'filter' argument (since get_rows() already performs filtering)
 	let CTE
 	if (term.type == 'categorical') {
 		const groupset = get_active_groupset(term, termq)
@@ -388,25 +384,15 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 		const mode = termq.mode == 'spline' ? 'cubicSpline' : termq.mode || 'discrete'
 		CTE = numericSql[mode].getCTE(tablename, term, q.ds, termq, values, index, filter)
 	} else if (term.type == 'condition') {
-		// index position is dependent on server route
-		// TODO: termq.mode == 'time-to-event' so that we don't need
-		// to check index or other flags
-		if (index == 1 && q.getcuminc) {
-			// CTE for cumulative incidence term
-			return conditionSql.cuminc.getCTE(tablename, term, q, values, filter)
-		} else if (q.getregression && q.regressionType == 'cox' && index === 0) {
-			// CTE for cox regression outcome term
-			return conditionSql.cox.getCTE(tablename, term, termq, values, filter)
-		} else {
-			// CTE for all other conditional terms
-			CTE = conditionSql.other.getCTE(tablename, term, q.ds, termq, values, index)
-		}
+		const mode = termq.mode || 'discrete'
+		// TODO: can add back 'filter' arg if performance degrades
+		CTE = conditionSql[mode].getCTE(tablename, term, termq, values /*, filter*/)
 	} else if (term.type == 'survival') {
 		CTE = makesql_survival(tablename, term, q, values, filter)
 	} else {
 		throw 'unknown term type'
 	}
-	if (index != 1) CTE.join_on_clause = `ON t${index}.sample = t1.sample`
+	if (index != 1) CTE.join_on_clause = `ON t${index}.sample = t1.sample` // will be ignored if no join clause is created by sql constructor
 	return CTE
 }
 

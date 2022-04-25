@@ -88,26 +88,16 @@ class TdbCumInc {
 						'overlay',
 						'divideBy',
 						{
-							label: 'Minimum years to event',
+							label: 'Minimum number of samples in series',
 							type: 'number',
 							chartType: 'cuminc',
-							settingsKey: 'minYearsToEvent',
-							title:
-								'Minimum number of years for sample to experience an event. Cannot be less than 5, which is the minimum for SJLIFE samples.'
+							settingsKey: 'minSampleSize'
 						},
 						{
-							label: 'Minimum sample size',
+							label: 'Minimum number of events in series',
 							type: 'number',
 							chartType: 'cuminc',
-							settingsKey: 'minSampleSize',
-							title: 'Minimum number of samples in series'
-						},
-						{
-							label: 'Minimum number of events',
-							type: 'number',
-							chartType: 'cuminc',
-							settingsKey: 'minEventCnt',
-							title: 'Minimum number of events in series'
+							settingsKey: 'minEventCnt'
 						}
 					]
 				})
@@ -173,15 +163,14 @@ class TdbCumInc {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
 		const c = this.state.config
-		if (c.settings.minYearsToEvent < 5) throw 'minimum years to event must be at least 5 years'
+		if (!Number.isFinite(c.term.q.minYearsToEvent)) throw 'minimum years to event must be a numeric value'
+		if (c.term.q.minYearsToEvent < 5) throw 'minimum years to event must be at least 5 years'
 		const opts = {
 			chartType: 'cuminc',
-			grade: c.term.q.breaks[0],
 			term: c.term,
 			filter: this.state.termfilter.filter,
 			minSampleSize: c.settings.minSampleSize,
-			minEventCnt: c.settings.minEventCnt,
-			minYearsToEvent: c.settings.minYearsToEvent
+			minEventCnt: c.settings.minEventCnt
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
@@ -792,7 +781,9 @@ function setInteractivity(self) {
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'cuminc: opts.term{} missing'
 	try {
-		await fillTermWrapper(opts.term, app.vocabApi, { condition: { mode: 'binary', breaks: [3], type: 'time2event' } })
+		await fillTermWrapper(opts.term, app.vocabApi, {
+			condition: { mode: 'time2event', breaks: [3], showTimeScale: false }
+		})
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 	} catch (e) {
@@ -817,7 +808,6 @@ export async function getPlotConfig(opts, app) {
 			cuminc: {
 				minSampleSize: 5,
 				minEventCnt: 5,
-				minYearsToEvent: 5,
 				radius: 5,
 				fill: '#fff',
 				stroke: '#000',
