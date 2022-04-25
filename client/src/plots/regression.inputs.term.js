@@ -194,7 +194,7 @@ export class InputTerm {
 			for continuous term, assume it is numeric and that we'd want counts by bins,
 			so remove the 'mode: continuous' value as it will prevent bin construction in the backend
 		*/
-		if (q.mode == 'continuous' || q.mode == 'spline') delete q.mode
+		if (q.mode == 'continuous' || q.mode == 'spline' || q.mode == 'time2event') delete q.mode
 
 		// the 3rd argument to getCategories() is different for snplst and dictionary term types
 		const qlst =
@@ -294,7 +294,7 @@ export class InputTerm {
 						'Time axis: ' +
 							(tw.q.timeScale == 'age'
 								? 'Age'
-								: tw.q.timeScale == 'year'
+								: tw.q.timeScale == 'time'
 								? 'From study enrollment' // can be from termdbConfig
 								: 'ERR unknown value')
 					)
@@ -546,7 +546,7 @@ function setQ4conditionOutcome(tw, vocabApi, filter, state) {
 		}
 	} else {
 		// cox
-		if (!['age', 'year'].includes(q.timeScale)) q.timeScale = 'year' // change year to time2event
+		if (!['age', 'time'].includes(q.timeScale)) q.timeScale = 'time'
 	}
 }
 

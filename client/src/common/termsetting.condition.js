@@ -24,12 +24,12 @@ export function getHandler(self) {
 				return showMenu_discrete(self, div)
 			}
 			if (self.q.mode == 'binary') {
-				if (self.q.type == 'time2event') {
-					// cuminc term1, cox outcome
-					return showMenu_time2event(self, div)
-				}
 				// logistic outcome
 				return showMenu_binary(self, div)
+			}
+			if (self.q.mode == 'time2event') {
+				// cuminc term1, cox outcome
+				return showMenu_time2event(self, div)
 			}
 			console.error('invalid q.mode:', self.q.mode)
 			throw 'invalid q.mode'
@@ -51,7 +51,7 @@ function getPillStatus(self) {
 			return { text: self.q.breaks.length + 1 + ' groups' }
 		}
 	}
-	if (self.q.mode == 'binary') return { text: 'Grades ' + self.q.breaks[0] + '-5' }
+	if (self.q.mode == 'binary' || self.q.mode == 'time2event') return { text: 'Grades ' + self.q.breaks[0] + '-5' }
 	return { text: 'Error: unknown q.mode', bgcolor: 'red' }
 }
 
@@ -297,12 +297,24 @@ function showMenu_time2event(self, div) {
 	}
 	// breaks[0] must have already been set
 	gradeSelect.property('selectedIndex', self.q.breaks[0] - 1)
-	sd.append('div')
-		.text('Using maximum grade for each patient.')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
 
 	// row 2
+	let minYearsToEventValue = self.q.minYearsToEvent
+	holder
+		.append('div')
+		.text('Minimum years to have event')
+		.style('opacity', 0.4)
+	const nd = holder.append('div')
+	const minYearsToEventInput = nd
+		.append('input')
+		.attr('type', 'number')
+		.style('width', '143px')
+		.property('value', minYearsToEventValue)
+		.on('change', () => {
+			minYearsToEventValue = Number(minYearsToEventInput.property('value'))
+		})
+
+	// row 3
 	holder
 		.append('div')
 		.text('No event')
@@ -334,25 +346,24 @@ function showMenu_time2event(self, div) {
 		}
 	}
 
-	let timeScaleChoice
-
-	if (self.q.timeScale) {
+	let timeScaleChoice = self.q.timeScale
+	if (self.q.showTimeScale) {
 		// row 4: time scale toggle
 		holder
 			.append('div')
 			.text('Time scale')
 			.style('opacity', 0.4)
 		const options = [
-			{ label: 'Age', value: 'age' },
 			{
 				label: 'Time from study enrollment', // may define from ds
-				value: 'year' // replace by 'time2event'
-			}
+				value: 'time'
+			},
+			{ label: 'Age', value: 'age' }
 		]
 		if (self.q.timeScale == 'age') {
-			options[0].checked = true
-		} else {
 			options[1].checked = true
+		} else {
+			options[0].checked = true
 		}
 		make_radios({
 			holder: holder.append('div'),
@@ -368,9 +379,10 @@ function showMenu_time2event(self, div) {
 		.style('margin', '10px')
 		.on('click', () => {
 			self.q.breaks[0] = gradeSelect.property('selectedIndex') + 1
-			if (self.q.timeScale) self.q.timeScale = timeScaleChoice
-			event.target.disabled = true
-			event.target.innerHTML = 'Loading...'
+			self.q.minYearsToEvent = minYearsToEventValue
+			self.q.timeScale = timeScaleChoice
+			event.target.disabled = true // is 'event' initialized?
+			event.target.innerHTML = 'Loading...' // is 'event' initialized?
 			self.runCallback()
 		})
 }
@@ -411,9 +423,9 @@ export function fillTW(tw, vocabApi, defaultQ) {
 
 	if (tw.q.breaks.length >= cutoffGrades.length) throw 'too many values from tw.q.breaks[]'
 
-	if (tw.q.type == 'time2event') {
-		if (!tw.q.timeScale) tw.q.timeScale = 'year'
-		if (!['age', 'year'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
-		// TODO change year to time2event
+	if (tw.q.mode == 'time2event') {
+		if (!tw.q.timeScale) tw.q.timeScale = 'time'
+		if (!['age', 'time'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
+		if (!tw.q.minYearsToEvent) tw.q.minYearsToEvent = 5
 	}
 }

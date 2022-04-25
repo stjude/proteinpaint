@@ -79,7 +79,7 @@ buildFormulas <- function(outcome, independent) {
     # cox outcome variable
     # time-to-event data
     outcomeEventId <- outcome$timeToEvent$eventId
-    if (outcome$timeToEvent$timeScale == "year") {
+    if (outcome$timeToEvent$timeScale == "time") {
       outcomeTimeId <- outcome$timeToEvent$timeId
       formula_outcome <- paste0("Surv(",outcomeTimeId,", ",outcomeEventId,")")
       outcomeIds <- c(outcomeIds, outcomeTimeId, outcomeEventId)

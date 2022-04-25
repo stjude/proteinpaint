@@ -66,13 +66,13 @@ export function setGroupsettingMethods(self) {
 			.style('margin', '10px 0px')
 			//.style('display', 'inline')
 			.text('Time scale: ')
-		const defaultScale = 'timeScale' in self.q ? self.q.timeScale : 'year'
+		const defaultScale = 'timeScale' in self.q ? self.q.timeScale : 'time'
 		self.q.timeScale = defaultScale
 		const scales = [
 			{
 				label: 'Time from study entry',
 				value: 1,
-				checked: defaultScale == 'year' ? true : false
+				checked: defaultScale == 'time' ? true : false
 			},
 			{
 				label: 'Age',
@@ -86,7 +86,7 @@ export function setGroupsettingMethods(self) {
 			holder: scale_select,
 			options: scales,
 			callback: value => {
-				self.q.timeScale = value == 1 ? 'year' : 'age'
+				self.q.timeScale = value == 1 ? 'time' : 'age'
 			}
 		})
 
