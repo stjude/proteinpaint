@@ -265,14 +265,15 @@ module.exports = genomes => {
 			}
 
 			if (req.query.downloadgdc) {
+				// call gdc bam slicing api to slice the bam, save to cachedir
 				res.send(await download_gdc_bam(req))
 				return
 			}
 
 			if (req.query.clientdownloadgdcslice) {
-				// TODO prevent unathorized download
-				if (app.illegalpath(req.query.clientdownloadgdcslice)) throw 'illegal file path'
-				const file = path.join(serverconfig.cachedir_bam, req.query.clientdownloadgdcslice)
+				// read the cached bam slice for client to download
+				if (!req.query.file || !req.query.isFileSlice) throw 'invalid query'
+				const file = path.join(serverconfig.cachedir_bam, req.query.file)
 				const data = await fs.promises.readFile(file)
 				res.writeHead(200, {
 					'Content-Type': 'application/octet-stream',

@@ -6,7 +6,7 @@ import { axisTop, axisLeft } from 'd3-axis'
 import { debounce } from 'debounce'
 import * as client from './client'
 import { Menu } from './dom/menu'
-import { dofetch3 } from './common/dofetch'
+import { dofetch2, dofetch3 } from './common/dofetch'
 import * as common from '../shared/common'
 import * as coord from './coord'
 import vcf2dstk from './vcf.tkconvert'
@@ -540,12 +540,40 @@ export class Block {
 			.style('display', 'none')
 			.text('Download GDC BAM slice')
 			.on('click', async () => {
+				// TODO show menu options for multiple files
 				const tk = this.tklst.find(i => i.type == 'bam' && i.gdcFile)
 				if (!tk) return
-				// TODO show menu options for multiple files
-				// FIXME how to pass token as http header?
-				const requestUrl = `tkbam?genome=${this.genome.name}&clientdownloadgdcslice=${tk.file}`
-				window.open(requestUrl, '_self', 'download')
+
+				this.gdcBamSliceDownloadBtn.property('disabled', true)
+
+				// old method of window.open() won't allow passing token via request header
+				//const requestUrl = `tkbam?genome=${this.genome.name}&clientdownloadgdcslice=`
+				//window.open(requestUrl, '_self', 'download')
+
+				// FIXME the entire bam slice is cached in browser memory before downloading, which can be slow
+				// will be nice to directly "stream" to a download file without caching
+
+				const headers = {
+					'Content-Type': 'application/json',
+					Accept: 'application/json',
+					'X-Auth-Token': tk.gdcToken
+				}
+				const lst = [
+					'clientdownloadgdcslice=1',
+					'gdcFileUUID=' + tk.gdcFile.uuid,
+					'gdcFilePosition=' + tk.gdcFile.position
+				]
+				const data = await dofetch2('tkbam?' + lst.join('&'), { headers })
+
+				this.gdcBamSliceDownloadBtn.property('disabled', false)
+
+				const a = document.createElement('a')
+				a.href = URL.createObjectURL(data)
+				a.download = tk.aboutThisFile ? tk.aboutThisFile[0].v + '.bam' : 'gdc.bam'
+				a.style.display = 'none'
+				document.body.appendChild(a)
+				a.click()
+				document.body.removeChild(a)
 			})
 
 		this.gbase = this.svg.append('g').attr('transform', 'translate(0,0)')

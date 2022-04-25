@@ -126,7 +126,23 @@ export function dofetch2(path, init = {}, opts = {}) {
 
 		return opts.serverData[dataName].then(str => JSON.parse(str))
 	} else {
-		return fetch(url, init).then(r => r.json())
+		/* potentially allow "application/octet-stream" as response type
+		in such case it will not try to parse it as json
+		also the caller should just call dofetch2() without a serverData{}
+		rather than dofetch3
+		*/
+		return fetch(url, init).then(r => {
+			const ct = r.headers.get('content-type') // content type is always present
+			if (ct.includes('/json')) {
+				return r.json()
+			}
+			if (ct.includes('/text')) {
+				return r.text()
+			}
+			// call blob() as catch-all
+			// https://developer.mozilla.org/en-US/docs/Web/API/Response
+			return r.blob()
+		})
 	}
 }
 
