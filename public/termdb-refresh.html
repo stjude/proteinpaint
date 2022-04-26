@@ -41,6 +41,8 @@ async function showForm() {
 			.style('margin', '20px 0')
 			.html('(May skip the extraction above and directly paste tab-delimited data below:)')
 
+		div.append('div').html(`NOTE: Do not include a header row!`)
+
 		const subdivs = div.selectAll('.refresh-subdiv')
 			.data(data.files)
 			.enter()
@@ -138,10 +140,13 @@ function showExtractOption(div, app) {
 				try {
 					const study = JSON.parse(event.target.result)
 					const data = await hmjsonETL(study); console.log(52, data)
+					
 					const termsTSV = []
 					for(const t of data.terms) {
-						const jsondata = JSON.stringify({type: t.type, values: t.values})
-						termsTSV.push(`${t.id}\t${t.name}\t\t${jsondata}\t\t${t.type}\t1`)
+						const isleaf = 'isleaf' in t ? t.isleaf : 1
+						const parent_id = 'parent_id' in t ? t.parent_id : ''
+						const jsondata = JSON.stringify({type: t.type, values: t.values, isleaf})
+						termsTSV.push(`${t.id}\t${t.name}\t${parent_id}\t${jsondata}\t\t${t.type}\t${isleaf}`)
 					}
 					app.dom.textareas.filter(d=>d=='terms').text(termsTSV.join('\n'))
 

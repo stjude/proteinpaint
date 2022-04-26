@@ -36,39 +36,63 @@ for (const sample of survSamples) {
 const annoTerms = cn.prepare(`SELECT distinct(term_id) as id FROM annotations`).all()
 
 for (const term of annoTerms) {
-	const values = cn.prepare(`SELECT value FROM annotations WHERE term_id=?`).all([term.id])
-	// for pnet, for now assume that there are no uncomputable values, except when not numeric
-	if (values.filter(v => isNumeric(v.value)).length == values.length) {
-		const vals = values.map(v => Number(v.value))
-		const bins = {
-			default: initBinConfig(vals)
+	let t = cn.prepare(`SELECT * FROM terms WHERE id=?`).all(term.id)[0]
+	if (!t) t = { id: term.id, name: term.id }
+	t.jsondata = JSON.parse(t.jsondata || '{}')
+
+	if (!t.jsondata.values) {
+		const values = cn.prepare(`SELECT distinct(value) FROM annotations WHERE term_id=?`).all([term.id])
+		// for pnet, for now assume that there are no uncomputable values, except when not numeric
+		if (values.filter(v => isNumeric(v.value)).length == values.length) {
+			const vals = values.map(v => Number(v.value))
+			if (vals.filter(Number.isInteger).length == vals.length) {
+				// hardcoded assumption that a max of two unique integer values indicate a categorical term
+				t.type = vals.length < 3 ? 'categorical' : 'integer'
+			} else {
+				t.type = 'float'
+			}
+
+			if (!t.jsondata.bins) {
+				t.jsondata.bins = {
+					default: initBinConfig(vals)
+				}
+			}
+		} else if (values.length < 50) {
+			// hardcoded limit of 50 categorical values
+			t.type = 'categorical'
+			t.jsondata.values = {}
+			for (const v of values) {
+				t.jsondata.values[v.value] = { key: v.value }
+			}
+		} else {
+			throw `the term.type cannot be automatically assigned`
 		}
-		const type = vals.filter(Number.isInteger).length == vals.length ? 'integer' : 'float'
+	}
+
+	if (t.type == 'float' || t.type == 'integer') {
 		const jsondata = JSON.stringify({
-			type,
-			name: term.id,
-			bins,
+			type: t.type,
+			name: t.name,
+			bins: t.jsondata.bins,
+			isleaf: true,
+			// unhandled uncomputable values, assumed to be either undefined or preloaded to terms table
+			values: t.jsondata.values
+		})
+
+		cn.prepare(`UPDATE terms SET jsondata=?, type=?, isleaf=? WHERE id=?`).run([jsondata, t.type, 1, term.id])
+	} else if (t.type == 'categorical') {
+		if (!t.jsondata.groupsetting) {
+			t.jsondata.groupsetting = { disabled: true }
+		}
+		const jsondata = JSON.stringify({
+			type: t.type,
+			name: t.name,
+			values: t.jsondata.values,
+			groupsetting: t.jsondata.groupsetting,
 			isleaf: true
 		})
 
-		cn.prepare(`UPDATE terms SET jsondata=?, type=?, isleaf=? WHERE id=?`).run([jsondata, type, 1, term.id])
-	} else {
-		const termvals = {}
-		for (const v of values) {
-			termvals[v] = { key: v, label: v }
-		}
-		const type = 'categorical'
-		const jsondata = JSON.stringify({
-			type,
-			name: term.id,
-			values: termvals,
-			groupsetting: {
-				disabled: true
-			},
-			isleaf: true
-		})
-
-		cn.prepare(`UPDATE terms SET jsondata=?, type=?, isleaf=? WHERE id=?`).run([jsondata, type, 1, term.id])
+		cn.prepare(`UPDATE terms SET jsondata=?, type=?, isleaf=? WHERE id=?`).run([jsondata, t.type, 1, term.id])
 	}
 }
 
