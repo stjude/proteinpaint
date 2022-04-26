@@ -178,7 +178,17 @@ export class RegressionResults {
 				}
 			}
 		}
-		throw 'cannot find Input for a tid: ' + tid
+		// given tid does not match with an Input
+		// can be an ancestry PC which is automatically added by serverside and not recorded on client
+		// quick fix: return dummy tw so it won't break
+		return {
+			term: {
+				id: tid,
+				q: {},
+				term: { name: tid }
+			}
+		}
+		//throw 'cannot find Input for a tid: ' + tid
 	}
 }
 

@@ -37,7 +37,7 @@ so that R script will not need to interpret term type
 ***  function cascade  ***
 get_regression()
 	parse_q
-		mayAlterFilterByAncestryRestriction
+		checkTwAncestryRestriction
 	getSampleData
 		divideTerms
 		getSampleData_dictionaryTerms
@@ -161,14 +161,35 @@ function parse_q(q, ds) {
 
 function checkTwAncestryRestriction(tw, q, ds) {
 	if (!tw.q.restrictAncestry) {
-		// should only be present for snplocus
+		// should only be present for snplst and snplocus
 		return
 	}
-	if (!ds.cohort.termdb.restrictAncestries) throw 'ds.restrictAncestries missing'
-	// attach ancestry obj {tvs,pcs} for access later
+	if (!ds.cohort.termdb.restrictAncestries) throw 'ds.cohort.termdb.restrictAncestries missing'
+	// attach principal components (pcs) for access later
 	const a = ds.cohort.termdb.restrictAncestries.find(i => i.name == tw.q.restrictAncestry.name)
 	if (!a) throw 'unknown ancestry: ' + tw.q.restrictAncestry.name
-	tw.q.restrictAncestry.pcs = a.pcs
+	if (a.pcs) {
+		// directly available in this entry
+		tw.q.restrictAncestry.pcs = a.pcs
+	} else if (a.PCfileBySubcohort) {
+		// by subcohort, which is coded as a tvs in q.filter
+		if (!q.filter) throw 'q.filter missing while trying to access subcohort for PCfileBySubcohort'
+		const item = q.filter.lst.find(i => i.tag == 'cohortFilter')
+		if (!item)
+			throw 'item by tag=cohortFilter missing from q.filter.lst[] while trying to access subcohort for PCfileBySubcohort'
+		// item.tvs.values[] contain elements e.g. {key:'SJLIFE'}
+		// in which keys are joined in alphabetical order
+		const sortedKeys = item.tvs.values
+			.map(i => i.key)
+			.sort()
+			.join(',')
+		const b = a.PCfileBySubcohort[sortedKeys]
+		if (!b) throw 'missing from PCfileBySubcohort: ' + sortedKeys
+		if (!b.pcs) throw 'pcs Map() missing from PCfileBySubcohort[]: ' + sortedKeys
+		tw.q.restrictAncestry.pcs = b.pcs
+	} else {
+		throw 'unknown way of accessing pcs from ds.cohort.termdb.restrictAncestries: ' + tw.q.restrictAncestry.name
+	}
 }
 
 function makeRinput(q, sampledata) {
@@ -382,16 +403,15 @@ function makeRvariable_snps(tw, independent, q) {
 		independent.push(thisSnp)
 	}
 	if (tw.q.restrictAncestry) {
-		/* add PCs as independent variables
-		for(const pcid of tw.q.restrictAncestry.pcs) {
+		// add PCs as independent variables
+		for (const pcid of tw.q.restrictAncestry.pcs.keys()) {
 			independent.push({
 				id: pcid,
 				name: pcid,
-				type:'other',
-				rtype:'numeric'
+				type: 'float',
+				rtype: 'numeric'
 			})
 		}
-		*/
 	}
 }
 
@@ -700,8 +720,11 @@ async function getSampleData(q, terms, ds) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
 
+	// query data for dictionary terms
 	const samples = getSampleData_dictionaryTerms(q, dictTerms)
-	// sample data from all terms are loaded into "samples"
+	// k: sampleid, v: {sample:str, id2value:Map( tid => {key,value}) }
+
+	// next: data from non-dictionary terms are appended to the same "samples" Map
 
 	const snpgt2count = new Map()
 	// k: snpid, v:{gt:INT}
@@ -728,20 +751,19 @@ async function getSampleData(q, terms, ds) {
 
 function mayAddAncestryPCs(tw, samples, ds) {
 	if (!tw.q.restrictAncestry) return
-	/* add sample pc values from tw.q.restrictAncestry.pcs to samples
-	for(const [pcid, s] of tw.q.restrictAncestry.pcs) {
-		for(const [sampleid, v] of s) {
-			if(!samples.has(sampleid)) continue
-			samples.get(sampleid).id2value.set( pcid, {key:v, value:v})
+	// add sample pc values from tw.q.restrictAncestry.pcs to samples
+	for (const [pcid, s] of tw.q.restrictAncestry.pcs) {
+		for (const [sampleid, v] of s) {
+			if (!samples.has(sampleid)) continue
+			samples.get(sampleid).id2value.set(pcid, { key: v, value: v })
 		}
 	}
-	*/
 }
 
 function getSampleData_dictionaryTerms(q, terms) {
 	// outcome can only be dictionary term so terms array must have at least 1 term
 	const samples = new Map()
-	// k: sample name, v: {sample, id2value:Map( tid => {key,value}) }
+	// k: sample id, v: {sample, id2value:Map( tid => {key,value}) }
 	const filter = getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would

@@ -74,8 +74,18 @@ const restrictAncestries = [
 				name: 'Genetically defined race'
 			},
 			values: [{ key: 'European Ancestry', label: 'European Ancestry' }]
+		},
+		// principal components as covariates in a model using genetic markers
+		// 10 PCs for each sample, as 10 columns in each file
+		PCcount: 10,
+		PCfileBySubcohort: {
+			SJLIFE: {
+				file: 'files/hg38/sjlife/clinical/PCA/european.sjlife'
+				// once loaded, pcs Map is attached here for each subcohort combination
+			},
+			CCSS: { file: 'files/hg38/sjlife/clinical/PCA/european.ccss' },
+			'CCSS,SJLIFE': { file: 'files/hg38/sjlife/clinical/PCA/european.sjlife.ccss' }
 		}
-		// file
 	},
 	{
 		name: 'African ancestry',
@@ -86,8 +96,11 @@ const restrictAncestries = [
 				name: 'Genetically defined race'
 			},
 			values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
-		}
-		// file
+		},
+		PCcount: 10,
+		// a single pc file, not divided into subcohorts
+		PCfile: 'files/hg38/sjlife/clinical/PCA/african.sjlife.ccss'
+		// pcs Map is attached here
 	}
 ]
 
