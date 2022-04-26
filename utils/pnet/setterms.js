@@ -108,6 +108,8 @@ for (const term of annoTerms) {
 	}
 }
 
+cn.prepare(`UPDATE terms SET parent_id=NULL where parent_id=''`).run()
+
 const survRoot = 'Survival outcome'
 const survTerms = cn.prepare(`SELECT distinct(term_id) as id FROM survival`).all()
 for (const term of survTerms) {

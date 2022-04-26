@@ -26,20 +26,6 @@ document.body.onload = () => runproteinpaint({
 			genome: 'hg19',
 			plots: [
 				{
-					chartType: 'survival',
-					term: {
-						id: 'Event-free survival'
-					},
-					term2: {
-						id: 'Age'
-					},
-					settings: {
-						survival: {
-							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
-						}
-					}
-				},
-				{
 					chartType: 'matrix',
 					settings: {
 						matrix: {
@@ -173,7 +159,39 @@ document.body.onload = () => runproteinpaint({
 
 						...getGeneTermGroups()
 					],
-				}
+				},
+
+
+				{
+					chartType: 'survival',
+					term: {
+						id: 'Event-free survival'
+					},
+					// term2: {
+					// 	id: 'Age'
+					// },
+					settings: {
+						survival: {
+							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
+						}
+					}
+				},
+
+
+				{
+					chartType: 'survival',
+					term: {
+						id: 'Overall Survival'
+					},
+					/*term2: {
+						id: 'Age'
+					},*/
+					settings: {
+						survival: {
+							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
+						}
+					}
+				},
 			]
 		}
 	}

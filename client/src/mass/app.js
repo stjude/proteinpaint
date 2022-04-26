@@ -76,15 +76,14 @@ class MassApp {
 		this.api.vocabApi.main()
 
 		const newPlots = {}
-		for (const plot of this.state.plots) {
+		for (const [index, plot] of this.state.plots.entries()) {
 			if (!(plot.id in this.components.plots)) {
 				const holder = newSandboxDiv(this.dom.plotDiv, () => {
 					this.api.dispatch({
 						type: 'plot_delete',
 						id: plot.id
 					})
-				})
-
+				}) // # TODO: pass an index argument to sandbox to specify insertion point)
 				newPlots[plot.id] = plotInit(Object.assign({}, { app: this.api, holder }, plot))
 			}
 		}

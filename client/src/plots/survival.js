@@ -519,7 +519,7 @@ function setRenderers(self) {
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {
 		let xTicks
 		if (s.xTickValues) {
-			chart.xTickValues = s.xTickValues.filter(v => v >= chart.xMin && v <= chart.xMax)
+			chart.xTickValues = s.xTickValues.filter(v => v === 0 || (v >= chart.xMin && v <= chart.xMax))
 			xTicks = axisBottom(chart.xScale).tickValues(chart.xTickValues)
 		} else {
 			chart.xTickValues = []
@@ -582,11 +582,13 @@ function setRenderers(self) {
 			const counts = []
 			let i = 0,
 				d = series.data[0],
-				prev = d // prev = "previous" data point
+				prev = d, // prev = "previous" data point,
+				nCensored = 0
 
 			// for each x-axis timepoint, find and use the data that applies
 			for (const time of chart.xTickValues) {
 				while (d && d.x < time) {
+					nCensored += d.ncensor
 					prev = d
 					i++
 					d = series.data[i]
@@ -598,7 +600,7 @@ function setRenderers(self) {
 				// followed by another data with nrisk counts;
 				// however, must also adjust the prev.nrisk for use in the next timepoint,
 				// since it is a starting count and does not include the exits in that timepoint
-				counts.push([time, prev.nrisk - prev.nevent - prev.ncensor])
+				counts.push([time, prev.nrisk - prev.nevent - prev.ncensor, nCensored])
 			}
 			bySeries[series.seriesId] = counts
 		}
@@ -627,7 +629,7 @@ function setRenderers(self) {
 					.attr('transform', `translate(0,${y})`)
 					.attr('fill', self.term2toColor[seriesId])
 
-				const fontsize = `${s.axisTitleFontSize - 2}px`
+				const fontsize = `${s.axisTitleFontSize - 4}px`
 				const sObj = chart.serieses.find(s => s.seriesId === seriesId)
 
 				g.append('text')
@@ -637,9 +639,9 @@ function setRenderers(self) {
 					.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : 'At-risk')
 
 				const data = chart.xTickValues.map(tickVal => {
-					if (tickVal === 0) return { tickVal, atRisk: series[0][1] }
+					if (tickVal === 0) return { tickVal, atRisk: series[0][1], nCensored: series[0][2] }
 					const d = reversed.find(d => d[0] <= tickVal)
-					return { tickVal, atRisk: d[1] }
+					return { tickVal, atRisk: d[1], nCensored: d[2] }
 				})
 				const text = g
 					.append('g')
@@ -652,7 +654,7 @@ function setRenderers(self) {
 					.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
 					.attr('text-anchor', 'middle')
 					.attr('font-size', fontsize)
-					.text(d => d.atRisk)
+					.text(d => `${d.atRisk}(${d.nCensored})`)
 			})
 	}
 

@@ -849,7 +849,7 @@ function setSampleGroupActions(self) {
 					if (menuOpt.config) {
 						Object.assign(config, menuOpt.config)
 					}
-					self.app.dispatch({ type: 'plot_create', config })
+					self.app.dispatch({ type: 'plot_create', config, insertBefore: self.id })
 				}
 			}
 		})
