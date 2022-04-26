@@ -126,8 +126,8 @@ app.use((req, res, next) => {
 	next()
 })
 
-app.use(bodyParser.json({ limit: '1mb' }))
-app.use(bodyParser.text({ limit: '1mb' }))
+app.use(bodyParser.json({ limit: '5mb' }))
+app.use(bodyParser.text({ limit: '5mb' }))
 app.use(bodyParser.urlencoded({ extended: true }))
 
 app.use((req, res, next) => {

@@ -12,8 +12,7 @@ select term_id, term_id, 'Survival outcome', '{}', 1, 'survival', 1
 from survival
 group by term_id;
 
--- either import from file or copy from annotations table????
-
+-- import available terms data 
 .import terms.txt terms
 
 insert into terms

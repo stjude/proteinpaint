@@ -155,7 +155,7 @@ function showExtractOption(div, app) {
 						const anno = data.annotations[sample]
 						for(const term_id in anno) {
 							if (term_id == 'sample') continue
-							annoTSV.push(`${sample}\t${term_id}\t\t${anno[term_id]}`)
+							annoTSV.push(`${sample}\t${term_id}\t${anno[term_id]}`)
 						}
 					}
 					app.dom.textareas.filter(d=>d=='annotations').text(annoTSV.join('\n'))

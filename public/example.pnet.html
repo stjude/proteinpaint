@@ -13,7 +13,7 @@
 <div id=exp style="margin:10px"></div>
 
 <script>
-runproteinpaint({
+document.body.onload = () => runproteinpaint({
 	//host: 'https://ppr.stjude.org',
 	holder:document.getElementById('aaa'),
 	parseurl:true,
@@ -25,7 +25,7 @@ runproteinpaint({
 			dslabel: 'PNET',
 			genome: 'hg19',
 			plots: [
-				{
+				/*{
 					chartType: 'survival',
 					term: {
 						id: 'Event-free survival'
@@ -38,13 +38,15 @@ runproteinpaint({
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 						}
 					}
-				},
+				},*/
 				{
 					chartType: 'matrix',
 					settings: {
 						matrix: {
+							colw: 8,
+							colspace: 0,
 							termLabelOffset: 220,
-							sortTermsBy: 'sampleCount'
+							sortTermsBy: 'sampleCount',
 						}
 					},
 					divideBy: {
@@ -149,49 +151,383 @@ runproteinpaint({
 								},
 							]
 						},
-						{
-							name: 'Somatic',
-							lst: [
-								{
-									term: {
-										type: 'geneVariant',
-										name: 'C19MC'
-									}
-								},
-								{
-									term: {
-										type: 'geneVariant',
-										name: 'TP53'
-									}
-								},{
-									term: {
-										type: 'geneVariant',
-										name: 'ATRX'
-									}
-								},{
-									term: {
-										type: 'geneVariant',
-										name: 'EP300'
-									}
-								},{
-									term: {
-										type: 'geneVariant',
-										name: 'GF11B'
-									}
-								},{
-									term: {
-										type: 'geneVariant',
-										name: 'PDGFRA'
-									}
-								}
-							]
-						}
+
+						...getGeneTermGroups()
 					],
 				}
 			]
 		}
 	}
 })
+
+function getGeneTermGroups() {
+	const termgroups = []; console.log(164, genegroups)
+	for(const g of genegroups) {
+		termgroups.push({
+			name: g.name,
+			lst: g.lst.map(t => {
+				t.type = 'geneVariant'
+				const tw = {
+					term: t
+				}
+
+				return tw
+			})
+		})
+	}
+	return termgroups
+}
+
+const genegroups = [
+  {
+      "name": "fusion",
+      "lst": [
+          {
+              "name": "BCOR_SV"
+          },
+          {
+              "name": "CIC_SV"
+          },
+          {
+              "name": "TTYH1_SV"
+          },
+          {
+              "name": "ATXN1_SV"
+          },
+          {
+              "name": "C19MC_SV"
+          },
+          {
+              "name": "KDM2B_SV"
+          }
+      ]
+  },
+  {
+      "name": "Germline",
+      "lst": [
+          {
+              "name": "DICER1_G"
+          },
+          {
+              "name": "ATM_G"
+          }
+      ]
+  },
+  {
+      "name": "Somatic",
+      "lst": [
+          {
+              "name": "AFDN"
+          },
+          {
+              "name": "ALK"
+          },
+          {
+              "name": "APC"
+          },
+          {
+              "name": "ARID1A"
+          },
+          {
+              "name": "ARID2"
+          },
+          {
+              "name": "ASXL2"
+          },
+          {
+              "name": "ATF7IP"
+          },
+          {
+              "name": "ATRX"
+          },
+          {
+              "name": "BAZ1A"
+          },
+          {
+              "name": "BCL6"
+          },
+          {
+              "name": "BCL9"
+          },
+          {
+              "name": "BCOR"
+          },
+          {
+              "name": "BRAF"
+          },
+          {
+              "name": "CD22"
+          },
+          {
+              "name": "CHD7"
+          },
+          {
+              "name": "CREB3L1"
+          },
+          {
+              "name": "CTCF"
+          },
+          {
+              "name": "CTNNB1"
+          },
+          {
+              "name": "CUX1"
+          },
+          {
+              "name": "EZHIP"
+          },
+          {
+              "name": "DGCR8"
+          },
+          {
+              "name": "DICER1"
+          },
+          {
+              "name": "DMBT1"
+          },
+          {
+              "name": "EBF1"
+          },
+          {
+              "name": "EGFR"
+          },
+          {
+              "name": "ELL"
+          },
+          {
+              "name": "EP300"
+          },
+          {
+              "name": "ERBB4"
+          },
+          {
+              "name": "EZH2"
+          },
+          {
+              "name": "FAT1"
+          },
+          {
+              "name": "FGFR1"
+          },
+          {
+              "name": "FLI1"
+          },
+          {
+              "name": "GNA13"
+          },
+          {
+              "name": "GNAS"
+          },
+          {
+              "name": "NCOA2"
+          },
+          {
+              "name": "GSE1"
+          },
+          {
+              "name": "H3-3A"
+          },
+          {
+              "name": "H3C1"
+          },
+          {
+              "name": "HUWE1"
+          },
+          {
+              "name": "IDH2"
+          },
+          {
+              "name": "IKZF2"
+          },
+          {
+              "name": "JAK1"
+          },
+          {
+              "name": "JAK3"
+          },
+          {
+              "name": "KDR"
+          },
+          {
+              "name": "KIAA1549"
+          },
+          {
+              "name": "KMT2A"
+          },
+          {
+              "name": "KMT2D"
+          },
+          {
+              "name": "KRAS"
+          },
+          {
+              "name": "LATS1"
+          },
+          {
+              "name": "MAML2"
+          },
+          {
+              "name": "MGA"
+          },
+          {
+              "name": "MUTYH"
+          },
+          {
+              "name": "MYH11"
+          },
+          {
+              "name": "NAV1"
+          },
+          {
+              "name": "NDRG2"
+          },
+          {
+              "name": "NIPBL"
+          },
+          {
+              "name": "NOTCH1"
+          },
+          {
+              "name": "NR3C1"
+          },
+          {
+              "name": "NR4A3"
+          },
+          {
+              "name": "NSD1"
+          },
+          {
+              "name": "NTRK1"
+          },
+          {
+              "name": "NUP98"
+          },
+          {
+              "name": "MED12"
+          },
+          {
+              "name": "PALB2"
+          },
+          {
+              "name": "PDGFRA"
+          },
+          {
+              "name": "PDGFRB"
+          },
+          {
+              "name": "PIK3C2G"
+          },
+          {
+              "name": "PIK3CG"
+          },
+          {
+              "name": "PIK3R1"
+          },
+          {
+              "name": "POLD1"
+          },
+          {
+              "name": "PTEN"
+          },
+          {
+              "name": "PTPN2"
+          },
+          {
+              "name": "ROS1"
+          },
+          {
+              "name": "RPL11"
+          },
+          {
+              "name": "RUNX1T1"
+          },
+          {
+              "name": "SAMD9"
+          },
+          {
+              "name": "SEPTIN2"
+          },
+          {
+              "name": "SETBP1"
+          },
+          {
+              "name": "SETD2"
+          },
+          {
+              "name": "SHANK2"
+          },
+          {
+              "name": "SMARCC1"
+          },
+          {
+              "name": "SMO"
+          },
+          {
+              "name": "SRF"
+          },
+          {
+              "name": "STAG2"
+          },
+          {
+              "name": "TNFAIP3"
+          },
+          {
+              "name": "TP53"
+          },
+          {
+              "name": "TRAF7"
+          },
+          {
+              "name": "TSPYL2"
+          },
+          {
+              "name": "U2AF2"
+          },
+          {
+              "name": "USP6"
+          },
+          {
+              "name": "ZNF384"
+          },
+          {
+              "name": "C19MC"
+          },
+          {
+              "name": "GFI1B"
+          },
+          {
+              "name": "MYC"
+          },
+          {
+              "name": "MET"
+          },
+          {
+              "name": "MDM4"
+          },
+          {
+              "name": "CDK4"
+          },
+          {
+              "name": "OTX2"
+          },
+          {
+              "name": "PPM1D"
+          },
+          {
+              "name": "PTCH1"
+          },
+          {
+              "name": "SUFU"
+          },
+          {
+              "name": "NF1"
+          },
+          {
+              "name": "MYCN"
+          }
+      ]
+  }
+]
 
 </script>
 

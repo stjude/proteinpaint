@@ -210,7 +210,7 @@ class Matrix {
 			}
 		}
 
-		if (defaultSampleGrp.lst.length) {
+		if (defaultSampleGrp.lst.length && !sampleGroups.size) {
 			sampleGroups.set(undefined, defaultSampleGrp)
 		}
 
@@ -378,10 +378,11 @@ class Matrix {
 				// TODO: generalize the alternative ID handling
 				const anno = row[$id]
 				if (!anno) continue
-				const termid = 'id' in t.tw.term ? t.tw.term : t.tw.term.name
+				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
 				const key = anno.key
 				const values = t.tw.term.values || {}
 				const label = 'label' in anno ? anno.label : key in values && values[key].label ? values[key].label : key
+				const fill = values[key]?.color
 
 				if (!anno.values) {
 					// only one rect for this sample annotation
@@ -393,6 +394,7 @@ class Matrix {
 						$id,
 						key,
 						label,
+						fill,
 						x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace,
 						y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace : 0,
 						order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
@@ -491,7 +493,7 @@ class Matrix {
 						termid,
 						key,
 						text: item.label,
-						color: this.colorScaleByTermId[$id](key),
+						color: term.values?.[key]?.color || this.colorScaleByTermId[$id](key),
 						order: i
 					}
 				})
