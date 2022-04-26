@@ -19,6 +19,9 @@ const snplstTerm = {
 	term:{
 		type:'snplst',
 		snps:[
+			{rsid:"rs1333261826",effectAllele:"T"}, // AF=0, not present in sjlife/ccss
+			//{rsid:'rs201382018',effectAllele:'T'}, // one het case, African sjlife, id:5506
+			{rsid:'rs1010330999',effectAllele:'G'}, // two het cases, European, sjlife and ccss
 			{rsid:'rs1641548',effectAllele:'T'},
 			{rsid:'rs858528',effectAllele:'T'},
 			{rsid:'rs1642793',effectAllele:'C'},
@@ -34,6 +37,16 @@ const snplstTerm = {
 		geneticModel:0,
 		missingGenotype:0,
 		restrictAncestry:{
+			name:'European ancestry',
+			tvs: {
+				term: {
+					id: 'genetic_race',
+					type: 'categorical',
+					name: 'Genetically defined race'
+				},
+				values: [{ key: 'European Ancestry', label: 'European Ancestry' }]
+			}
+		/*
 			name:'African ancestry',
 			tvs: {
 				term: {
@@ -43,6 +56,7 @@ const snplstTerm = {
 				},
 				values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
 			}
+			*/
 		},
 	}
 }
@@ -73,8 +87,8 @@ const snplocusQ = {
 			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR","name":"Call rate, SJLIFE+CCSS","parent_id":null,"isleaf":true,"type":"float"}}},
 			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_sjlife","name":"SJLIFE call rate","parent_id":null,"isleaf":true,"type":"float"}}},
 			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_ccss","name":"CCSS call rate","parent_id":null,"isleaf":true,"type":"float"}}},
-			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_CR","name":"gnmoAD call rate","parent_id":null,"isleaf":true,"type":"float"}}},
-			{"type":"tvs","tvs":{"ranges":[{"start":0.1,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_AF","name":"gnomAD allele frequency","parent_id":null,"isleaf":true,"type":"float","min":0,"max":1,"values":{}}}},
+			//{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_CR","name":"gnmoAD call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+			//{"type":"tvs","tvs":{"ranges":[{"start":0.1,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_AF","name":"gnomAD allele frequency","parent_id":null,"isleaf":true,"type":"float","min":0,"max":1,"values":{}}}},
 			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"BadBLAT","name":"Paralog","parent_id":null,"isleaf":true,"type":"categorical"}}},
 			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"Polymer_region","name":"Polymer region","parent_id":null,"isleaf":true,"type":"categorical"}}}
 		]

@@ -34,24 +34,35 @@ input to R is an json object, with an array of variables (first being outcome)
 rtype with values numeric/factor is used instead of actual term type
 so that R script will not need to interpret term type
 
-***  function cascade  ***
+**************** EXPORT
 get_regression()
-	parse_q
-		checkTwAncestryRestriction
-	getSampleData
-		divideTerms
-		getSampleData_dictionaryTerms
-		mayAddAncestryPCs
-		getSampleData_snplstOrLocus
-			doImputation
-			applyGeneticModel
-	makeRinput
-	validateRinput
-	replaceTermId
-	... run R ...
-	parseRoutput
+
+***  function cascade  ***
+parse_q()
+	checkTwAncestryRestriction()
+		// adds tw.q.restrictAncestry.pcs Map
+getSampleData
+	divideTerms
+	getSampleData_dictionaryTerms
+	mayAddAncestryPCs
+	getSampleData_snplstOrLocus
+		// parse cache file
+		doImputation
+		filterSnpsByAFcutoff
+			// creates tw.snpidlst[] for high AF snps that are analyzed as covariants
+			// low-AF snps are to be used for Fisher
+		applyGeneticModel
+makeRinput()
+	makeRvariable_snps()
+	makeRvariable_dictionaryTerm()
+validateRinput
+replaceTermId
+... run R ...
+parseRoutput
 */
 
+// list of supported types
+const regressionTypes = ['linear', 'logistic', 'cox']
 // minimum number of samples to run analysis
 const minimumSample = 1
 
@@ -104,24 +115,24 @@ function parse_q(q, ds) {
 
 	// client to always specify regressionType
 	if (!q.regressionType) throw 'regressionType missing'
-	if (!['linear', 'logistic', 'cox'].includes(q.regressionType)) throw 'unknown regressionType'
+	if (!regressionTypes.includes(q.regressionType)) throw 'unknown regressionType'
 
 	// outcome
 	if (!q.outcome) throw `missing 'outcome' parameter`
-	if (!q.outcome) throw `empty 'outcome' parameter`
 	if (!('id' in q.outcome)) throw 'outcome.id missing'
 	if (!q.outcome.q) throw 'outcome.q missing'
-	q.outcome.q.computableValuesOnly = true // will prevent appending uncomputable values in CTE constructors
 	// outcome is always a dictionary term
+	// set this flag to prevent appending uncomputable values in CTE constructors
+	q.outcome.q.computableValuesOnly = true
 	q.outcome.term = ds.cohort.termdb.q.termjsonByOneid(q.outcome.id)
 	if (!q.outcome.term) throw 'invalid outcome term: ' + q.outcome.id
 
 	// independent
 	if (!q.independent) throw 'independent[] missing'
 	if (!Array.isArray(q.independent) || q.independent.length == 0) throw 'q.independent is not non-empty array'
-	// tw = termWrapper
+	// tw: term wrapper
 	for (const tw of q.independent) {
-		if (!tw.q) throw `missing q for term.id='${tw.id}'`
+		if (!tw.q) throw `missing q for independent term '${tw.id}'`
 
 		checkTwAncestryRestriction(tw, q, ds)
 
@@ -149,7 +160,7 @@ function parse_q(q, ds) {
 		tw.term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
 		if (!tw.term) throw `invalid independent term='${tw.id}'`
 	}
-	// interaction of independent
+	// interaction between independent terms
 	for (const i of q.independent) {
 		if (!i.interactions) i.interactions = []
 		for (const x of i.interactions) {
@@ -160,36 +171,44 @@ function parse_q(q, ds) {
 }
 
 function checkTwAncestryRestriction(tw, q, ds) {
-	if (!tw.q.restrictAncestry) {
-		// should only be present for snplst and snplocus
-		return
+	if (!tw.q.restrictAncestry) return
+	/* this attr is required for snplst and snplocus
+	tw.q.restrictAncestry = {
+		name: str
+		tvs: {} // not used in this script
 	}
+	look for corresponding entry in ds, in which principal component data are stored in the frozne pcs Map
+	attach the pcs to tw.q.restrictAncestry for later use
+	*/
+	if (!('name' in tw.q.restrictAncestry)) throw '.name missing from tw.q.restrictAncestry'
 	if (!ds.cohort.termdb.restrictAncestries) throw 'ds.cohort.termdb.restrictAncestries missing'
-	// attach principal components (pcs) for access later
+	// look for entry by name
 	const a = ds.cohort.termdb.restrictAncestries.find(i => i.name == tw.q.restrictAncestry.name)
-	if (!a) throw 'unknown ancestry: ' + tw.q.restrictAncestry.name
+	if (!a) throw 'unknown ancestry for restriction: ' + tw.q.restrictAncestry.name
 	if (a.pcs) {
 		// directly available in this entry
 		tw.q.restrictAncestry.pcs = a.pcs
-	} else if (a.PCfileBySubcohort) {
+		return
+	}
+	if (a.PCfileBySubcohort) {
 		// by subcohort, which is coded as a tvs in q.filter
 		if (!q.filter) throw 'q.filter missing while trying to access subcohort for PCfileBySubcohort'
 		const item = q.filter.lst.find(i => i.tag == 'cohortFilter')
 		if (!item)
 			throw 'item by tag=cohortFilter missing from q.filter.lst[] while trying to access subcohort for PCfileBySubcohort'
 		// item.tvs.values[] contain elements e.g. {key:'SJLIFE'}
-		// in which keys are joined in alphabetical order
+		// in which keys are joined in alphabetical order for lookup in a.PCfileBySubcohort{}
 		const sortedKeys = item.tvs.values
 			.map(i => i.key)
 			.sort()
 			.join(',')
 		const b = a.PCfileBySubcohort[sortedKeys]
-		if (!b) throw 'missing from PCfileBySubcohort: ' + sortedKeys
+		if (!b) throw 'unknown key for PCfileBySubcohort: ' + sortedKeys
 		if (!b.pcs) throw 'pcs Map() missing from PCfileBySubcohort[]: ' + sortedKeys
 		tw.q.restrictAncestry.pcs = b.pcs
-	} else {
-		throw 'unknown way of accessing pcs from ds.cohort.termdb.restrictAncestries: ' + tw.q.restrictAncestry.name
+		return
 	}
+	throw 'unknown way of accessing pcs from ds.cohort.termdb.restrictAncestries: ' + tw.q.restrictAncestry.name
 }
 
 function makeRinput(q, sampledata) {
@@ -728,8 +747,8 @@ async function getSampleData(q, terms, ds) {
 
 	const snpgt2count = new Map()
 	// k: snpid, v:{gt:INT}
-	// filled for snplst and snplocus terms
-	// to append genotype samplecount breakdown as result.headerRow
+	// for snplst and snplocus terms
+	// fill with genotype samplecount breakdown and show as result.headerRow
 
 	for (const tw of nonDictTerms) {
 		// for each non dictionary term type
@@ -753,9 +772,9 @@ function mayAddAncestryPCs(tw, samples, ds) {
 	if (!tw.q.restrictAncestry) return
 	// add sample pc values from tw.q.restrictAncestry.pcs to samples
 	for (const [pcid, s] of tw.q.restrictAncestry.pcs) {
-		for (const [sampleid, v] of s) {
+		for (const [sampleid, pcValue] of s) {
 			if (!samples.has(sampleid)) continue
-			samples.get(sampleid).id2value.set(pcid, { key: v, value: v })
+			samples.get(sampleid).id2value.set(pcid, { key: pcValue, value: pcValue })
 		}
 	}
 }
@@ -835,8 +854,6 @@ samples {Map}
 	as those will miss value for dict terms and ineligible for analysis
 */
 async function getSampleData_snplstOrLocus(tw, samples, snpgt2count) {
-	tw.snpidlst = [] // snpid are added to this list while reading cache file
-
 	const lines = (await utils.read_file(path.join(serverconfig.cachedir_snpgt, tw.q.cacheid))).split('\n')
 	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 
@@ -846,11 +863,13 @@ async function getSampleData_snplstOrLocus(tw, samples, snpgt2count) {
 		.slice(6) // from 7th column
 		.map(Number) // sample ids are integer
 
-	// make a list of true/false, same length of cachesampleheader, to tell if a sample is in use
+	// make a list of true/false, same length of cachesampleheader
+	// to tell if a cache file column (a sample) is in use
 	// do not apply q.filter here
 	// as samples{} is already computed with q.filter in getSampleData_dictionaryTerms
 	const sampleinfilter = cachesampleheader.map(i => samples.has(i))
 
+	// load cache file data into this temporary structure for computing in this function
 	const snp2sample = new Map()
 	// k: snpid
 	// v: { effAle, refAle, altAles, samples: map { k: sample id, v: gt } }
@@ -860,7 +879,6 @@ async function getSampleData_snplstOrLocus(tw, samples, snpgt2count) {
 		const l = lines[i].split('\t')
 
 		const snpid = l[0] // snpid is used as "term id"
-		tw.snpidlst.push(snpid)
 
 		snp2sample.set(snpid, {
 			// get effect allele from q, but not from cache file
@@ -888,6 +906,17 @@ async function getSampleData_snplstOrLocus(tw, samples, snpgt2count) {
 		doImputation(snp2sample, tw, cachesampleheader, sampleinfilter)
 	}
 
+	// filter snps by AF of effect allele
+	// snps with AF lower than cutoff are removed from snp2sample
+	// added to tw.snpidlst
+	// and are kept in lowAFsnps, to be analyzed by Fisher
+	const lowAFsnps = filterSnpsByAFcutoff(tw, snp2sample, sampleinfilter)
+
+	/* TODO filter variants by AF of effect allele
+	low-AF variants are not stored in samples{} and used as covariants
+	but are analyzed by Fisher
+	*/
+
 	for (const [snpid, o] of snp2sample) {
 		const gt2count = new Map()
 
@@ -903,6 +932,40 @@ async function getSampleData_snplstOrLocus(tw, samples, snpgt2count) {
 			samples.get(sampleid).id2value.set(snpid, { key: v, value: v })
 		}
 		snpgt2count.set(snpid, gt2count)
+	}
+}
+
+function filterSnpsByAFcutoff(tw, snp2sample, sampleinfilter) {
+	tw.q.AFcutoff = 0.05 // hardcoded before UI support
+	const totalsamplecount = sampleinfilter.reduce((i, j) => i + (j ? 1 : 0), 0)
+	const lowAFsnps = new Map() // same as snp2sample, to store low AF ones
+
+	tw.snpidlst = [] // store snps with AF >= cutoff
+
+	for (const [snpid, o] of snp2sample) {
+		// o.effAle is effect allele
+		let effAleCount = 0 // count eff ale across samples
+		for (const [sampleid, gt] of o.samples) {
+			const [a1, a2] = gt.split('/') // assuming diploid
+			effAleCount += (a1 == o.effAle ? 1 : 0) + (a2 == o.effAle ? 1 : 0)
+		}
+
+		if (effAleCount == 0) {
+			console.log('AF=0', snpid)
+			// effect allele is not present in the cohort, do not analyze
+			snp2sample.delete(snpid)
+			continue
+		}
+
+		const af = effAleCount / (totalsamplecount * 2)
+		if (af < tw.q.AFcutoff) {
+			lowAFsnps.set(snpid, o)
+			snp2sample.delete(snpid)
+			console.log('AFfilter', snpid)
+		} else {
+			// AF above cutoff
+			tw.snpidlst.push(snpid)
+		}
 	}
 }
 

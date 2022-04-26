@@ -25,6 +25,13 @@ same cache file is used for both snplst and snplocus terms
 info fields:
 - snplst does not process info fields
 - snplocus uses info fields to filter variants. info fields of resulting variants are returned to client for showing in gb
+
+*************** EXPORT
+validate()
+*************** function cascade
+summarizeSamplesFromCache()
+validateInputCreateCache_by_snptext
+validateInputCreateCache_by_coord
 */
 
 const bcfformat_snplst = '%CHROM\t%POS\t%REF\t%ALT[\t%TGT]\n'
@@ -37,6 +44,7 @@ export async function validate(q, tdb, ds, genome) {
 		if (q.sumSamples) {
 			/* given a cache file, summarize number of samples for each variant
 			works for both snplst and snplocus term types
+			do not filter variants by AF, as the term q is not provided and cannot derive effect Allele
 			returns:
 			.numOfSampleWithAnyValidGT: int
 			.snps[]
@@ -86,19 +94,17 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 	if (!tk) throw 'ds.track.vcf missing'
 	// samples are at tk.samples[], each element: {name: int ID}
 
-	// collect samples that will be summarized with optional filter
-	let samples
+	let sampleinfilter // list of true/false, same length of tk.samples, to tell if a sample is in use
 	if (q.filter) {
-		samples = termdbsql.get_samples(q.filter, ds)
+		// using optional filter
+		const samples = termdbsql.get_samples(q.filter, ds)
 		if (samples.length == 0) throw 'no samples from filter'
-	}
-	const sampleinfilter = [] // list of true/false, same length of tk.samples, to tell if a sample is in use
-	for (const i of tk.samples) {
-		if (samples) {
-			sampleinfilter.push(samples.includes(i.name))
-		} else {
-			sampleinfilter.push(true)
-		}
+		sampleinfilter = tk.samples.map(i => samples.includes(i.name))
+	} else {
+		// no filter, using all samples
+		sampleinfilter = tk.samples.map(i => {
+			return true
+		})
 	}
 
 	const lines = (await utils.read_file(path.join(serverconfig.cachedir_snpgt, q.cacheid))).split('\n')
