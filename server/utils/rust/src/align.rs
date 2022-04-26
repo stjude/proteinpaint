@@ -273,7 +273,10 @@ fn check_first_last_nucleotide_correctly_aligned(
         } else if first == 1 && &align_chars[j].to_string() != &"|" {
             // Addition of nucleotides to first unmatched sequence
             first_unmatched_sequence.push(r_seq_chars[j]);
-        } else if first == 0 && &align_chars[j].to_string() != &"|" {
+        } else if first == 0
+            && &align_chars[j].to_string() != &"|"
+            && &align_chars[j].to_string() != &"*"
+        {
             // End of first matched nucleotide and start of first unmatched sequence
             first += 1;
             first_unmatched_sequence.push(r_seq_chars[j]);
