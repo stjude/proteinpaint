@@ -790,13 +790,16 @@ function setSampleGroupActions(self) {
 			.selectAll('*')
 			.remove()
 
+		const options = JSON.parse(JSON.stringify(self.config.menuOpts?.sampleGroup || [])).map(d => {
+			d.callback = self[d.callback]
+			return d
+		})
+		const menuOptions = [...options, { label: 'Delete', callback: self.removeSampleGroup }]
+
 		self.dom.menutop
 			.append('div')
 			.selectAll(':scope>.sja_menuoption')
-			.data([
-				{ label: 'Survival plot', callback: self.launchSurvivalPlot },
-				{ label: 'Delete', callback: self.removeSampleGroup }
-			])
+			.data(menuOptions)
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption')
@@ -814,12 +817,12 @@ function setSampleGroupActions(self) {
 		self.dom.menubody.selectAll('*').remove()
 	}
 
-	self.launchSurvivalPlot = async () => {
+	self.launchSurvivalPlot = async menuOpt => {
 		self.dom.menubody.selectAll('*').remove()
 		self.dom.menubody
 			.append('div')
 			.style('padding', '10px')
-			.html(`Use "<b>${self.config.divideBy.term.name}</b>" as overlay on the selected survival term below:`)
+			.html(`Use "<b>${self.config.divideBy.term.name}</b>" to divide charts on the selected survival term below:`)
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
 			holder: self.dom.menubody.append('div'),
@@ -836,14 +839,17 @@ function setSampleGroupActions(self) {
 				click_term: term => {
 					self.dom.tip.hide()
 					self.dom.menubody.selectAll('*').remove()
-					self.app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: 'survival',
-							term,
-							term2: JSON.parse(JSON.stringify(self.config.divideBy))
-						}
-					})
+					const termNum = menuOpt?.detail || 'term0'
+					const config = {
+						chartType: 'survival',
+						term,
+						[termNum]: JSON.parse(JSON.stringify(self.config.divideBy))
+					}
+
+					if (menuOpt.config) {
+						Object.assign(config, menuOpt.config)
+					}
+					self.app.dispatch({ type: 'plot_create', config })
 				}
 			}
 		})

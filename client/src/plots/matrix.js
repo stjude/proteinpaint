@@ -263,7 +263,8 @@ class Matrix {
 					ref,
 					counts,
 					label:
-						t.tw.term.name + (s.samplecount4gene && t.tw.term.type.startsWith('gene') ? ` (${counts.samples})` : '')
+						(t.tw.label || t.tw.term.name) +
+						(s.samplecount4gene && t.tw.term.type.startsWith('gene') ? ` (${counts.samples})` : '')
 				})
 			}
 
@@ -387,6 +388,7 @@ class Matrix {
 				if (!anno.values) {
 					// only one rect for this sample annotation
 					series.cells.push({
+						series,
 						sample: row.sample,
 						tw: t.tw,
 						term: t.tw.term,

@@ -40,29 +40,31 @@ for (const term of annoTerms) {
 	if (!t) t = { id: term.id, name: term.id }
 	t.jsondata = JSON.parse(t.jsondata || '{}')
 
+	let defaultBins, vals
 	if (!t.jsondata.values) {
+		t.jsondata.values = {}
 		const values = cn.prepare(`SELECT distinct(value) FROM annotations WHERE term_id=?`).all([term.id])
-		// for pnet, for now assume that there are no uncomputable values, except when not numeric
-		if (values.filter(v => isNumeric(v.value)).length == values.length) {
-			const vals = values.map(v => Number(v.value))
+		for (const v of values) {
+			t.jsondata.values[v.value] = { key: v.value }
+		}
+	}
+
+	const values = Object.values(t.jsondata.values)
+	// for pnet, for now assume that there are no uncomputable values, except when not numeric
+	if (!t.type) {
+		if (values.filter(v => isNumeric(v.key)).length == values.length) {
+			vals = values.map(v => Number(v.key))
 			if (vals.filter(Number.isInteger).length == vals.length) {
 				// hardcoded assumption that a max of two unique integer values indicate a categorical term
 				t.type = vals.length < 3 ? 'categorical' : 'integer'
 			} else {
 				t.type = 'float'
 			}
-
-			if (!t.jsondata.bins) {
-				t.jsondata.bins = {
-					default: initBinConfig(vals)
-				}
-			}
 		} else if (values.length < 50) {
 			// hardcoded limit of 50 categorical values
 			t.type = 'categorical'
-			t.jsondata.values = {}
 			for (const v of values) {
-				t.jsondata.values[v.value] = { key: v.value }
+				if (!(v.key in t.jsondata.values)) t.jsondata.values[v.key] = { key: v.key }
 			}
 		} else {
 			throw `the term.type cannot be automatically assigned`
@@ -70,15 +72,25 @@ for (const term of annoTerms) {
 	}
 
 	if (t.type == 'float' || t.type == 'integer') {
+		if (!t.jsondata.bins) t.jsondata.bins = {}
+		if (!t.jsondata.bins.default) {
+			if (!vals) vals = values.map(v => Number(v.key))
+			t.jsondata.bins.default = initBinConfig(vals)
+		}
+
+		const jv = {}
+		for (const key in t.jsondata.values) {
+			if (t.jsondata.values[key].uncomputable) jv[key] = t.jsondata.values[key]
+		}
+
 		const jsondata = JSON.stringify({
 			type: t.type,
 			name: t.name,
 			bins: t.jsondata.bins,
 			isleaf: true,
 			// unhandled uncomputable values, assumed to be either undefined or preloaded to terms table
-			values: t.jsondata.values
+			values: jv
 		})
-
 		cn.prepare(`UPDATE terms SET jsondata=?, type=?, isleaf=? WHERE id=?`).run([jsondata, t.type, 1, term.id])
 	} else if (t.type == 'categorical') {
 		if (!t.jsondata.groupsetting) {
