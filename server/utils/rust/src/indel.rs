@@ -229,13 +229,13 @@ fn main() {
         rightflankseq,
         surrounding_region_length,
     );
-    println!("ref_allele:{}", &refallele);
-    println!("alt_allele:{}", &altallele);
-    println!("optimized_ref_allele:{}", optimized_ref_allele);
-    println!("optimized_alt_allele:{}", optimized_alt_allele);
-    println!("left_offset:{}", left_offset);
-    println!("right_offset:{}", right_offset);
-    println!("ref_alt_same_base_start:{}", ref_alt_same_base_start);
+    //println!("ref_allele:{}", &refallele);
+    //println!("alt_allele:{}", &altallele);
+    //println!("optimized_ref_allele:{}", optimized_ref_allele);
+    //println!("optimized_alt_allele:{}", optimized_alt_allele);
+    //println!("left_offset:{}", left_offset);
+    //println!("right_offset:{}", right_offset);
+    //println!("ref_alt_same_base_start:{}", ref_alt_same_base_start);
 
     let mut optimized_indel_length = optimized_alt_allele.len();
     if optimized_ref_allele.len() > optimized_alt_allele.len() {
@@ -286,6 +286,7 @@ fn main() {
     //println!("ref_nucleotides_all:{:?}", ref_nucleotides_all);
     //println!("alt_nucleotides_all_right:{:?}", alt_nucleotides_all_right);
     //println!("alt_nucleotides_all_left:{:?}", alt_nucleotides_all_left);
+    //println!("alt_nucleotides:{:?}", alt_nucleotides);
     drop(rightflank_nucleotides);
     let reference_sequence = lines[0].to_string();
     let alternate_sequence = lines[1].to_string();
@@ -356,12 +357,12 @@ fn main() {
                     strictness,
                     read.len(),
                 );
-                println!("correct_start_position:{}", correct_start_position);
-                println!("correct_end_position:{}", correct_end_position);
-                println!(
-                    "cigar_sequence:{}",
-                    &cigar_sequences_list[i as usize - 2].to_string()
-                );
+                //println!("correct_start_position:{}", correct_start_position);
+                //println!("correct_end_position:{}", correct_end_position);
+                //println!(
+                //    "cigar_sequence:{}",
+                //    &cigar_sequences_list[i as usize - 2].to_string()
+                //);
                 if within_indel == 1 {
                     // Checking if the read is in forward or reverse strand
                     let mut sequence_strand: String = "F".to_string(); // Initializing sequence strand to forward
@@ -410,46 +411,17 @@ fn main() {
                         splice_start_cigar,
                         splice_stop_cigar,
                     );
-                    //println!("alignment_side:{}", &alignment_side);
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
                     //println!("read_ambiguous:{}", read_ambiguous);
                     //println!("ref_insertion:{}", ref_insertion);
 
-                    //let (kmers,ref_polyclonal_read_status,alt_polyclonal_read_status) = build_kmers_reads(read.to_string(), kmer_length, corrected_start_positions_list[i as usize -2] - 1, variant_pos, &ref_indel_kmers, &alt_indel_kmers, ref_length, alt_length);
-
-                    //println!("spliced_sequence:{}", &spliced_sequence);
-                    //println!("splice_start_pos:{}", splice_start_pos);
-                    //println!("splice_stop_pos:{}", splice_stop_pos);
-                    //let kmers = build_kmers_reads(spliced_sequence, kmer_length_iter); // Generates kmers for the given read
-                    //                                                                   //println!("Reference:");
-                    //let ref_comparison = jaccard_similarity_weights(
-                    //    // Computes jaccard similarity w.r.t ref sequence
-                    //    &kmers,
-                    //    &ref_kmers_nodups,
-                    //    &ref_kmers_data,
-                    //    correct_start_position,
-                    //    correct_end_position,
-                    //    kmer_length_iter,
-                    //    &alignment_side,
-                    //);
-                    ////println!("Alternate:");
-                    //let alt_comparison = jaccard_similarity_weights(
-                    //    // Computes jaccard similarity w.r.t alt sequence
-                    //    &kmers,
-                    //    &alt_kmers_nodups,
-                    //    &alt_kmers_data,
-                    //    correct_start_position,
-                    //    correct_end_position,
-                    //    kmer_length_iter,
-                    //    &alignment_side,
-                    //);
                     let ref_comparison =
                         align_single_reads(&spliced_sequence, reference_sequence.clone());
                     let alt_comparison =
                         align_single_reads(&spliced_sequence, alternate_sequence.clone());
-                    println!("ref_comparison:{}", ref_comparison);
-                    println!("alt_comparison:{}", alt_comparison);
+                    //println!("ref_comparison:{}", ref_comparison);
+                    //println!("alt_comparison:{}", alt_comparison);
                     let mut diff_score: f64 = 0.0;
                     if read_ambiguous < 2 {
                         diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
@@ -1691,9 +1663,9 @@ fn check_polyclonal(
                 right_most_pos += numbers[i].to_string().parse::<i64>().unwrap();
                 // right_most_pos incremented when read starts with soft-clip
             }
-            if &alphabets[i].to_string().as_str() == &"N"
-                || &alphabets[i].to_string().as_str() == &"H"
-            {
+            if &alphabets[i].to_string().as_str() == &"N" {
+                position = 0;
+            } else if &alphabets[i].to_string().as_str() == &"H" {
             } else {
                 position += numbers[i].to_string().parse::<usize>().unwrap();
             }
@@ -1865,6 +1837,7 @@ fn check_polyclonal(
                     //        + indel_length
                     //);
                     read_indel_start -= numbers[i] as usize;
+                    //println!("case4");
                     //println!("Insertion found between indel end-point and end-position")
                 } else if i == 0 { // Avoid panic error in the next else if statement when i==0
                 } else if numbers_position[i]
@@ -1880,6 +1853,7 @@ fn check_polyclonal(
                     //println!("numbers_position[i]:{}", numbers_position[i]);
                     //println!("numbers[i]:{}", numbers[i]);
                     read_indel_start += numbers[i] as usize;
+                    //println!("case5");
                 }
             }
         } else if alignment_side == "left" {
@@ -1889,6 +1863,7 @@ fn check_polyclonal(
                     && &alphabets[i].to_string().as_str() == &"I"
                 {
                     read_indel_start += numbers[i] as usize;
+                    //println!("case6");
                 } else if i == 0 { // Avoid panic error in the next else if statement when i==0
                 } else if numbers_position[i]
                     < indel_start as usize - correct_start_position as usize
@@ -1901,10 +1876,11 @@ fn check_polyclonal(
                     //println!("numbers_position[i]:{}", numbers_position[i]);
                     //println!("numbers[i]:{}", numbers[i]);
                     read_indel_start -= numbers[i] as usize;
+                    //println!("case7");
                 }
             }
         } else {
-            println!("case5");
+            //println!("case8");
         }
 
         //println!("read_indel_start2:{}", read_indel_start);
@@ -2132,6 +2108,7 @@ fn check_polyclonal(
         //println!("ref_nucleotides_all:{:?}", ref_nucleotides_all);
         //println!("read_indel_start:{}", read_indel_start);
         //println!("sequence_vector:{:?}", sequence_vector);
+        //println!("alignment_side:{}", alignment_side);
         if strictness >= 1 {
             //if &alphabets[0].to_string().as_str() != &"S" {
             // When a read starts with a softclip, then the indel will be on the left-side. Then this logic below will not work. Will have to compare each nucleotide from the end of the indel rather than from the beginning
@@ -2529,9 +2506,9 @@ fn check_first_last_nucleotide_correctly_aligned(
     align: &String,
     r_seq: &String,
 ) -> (String, String, String) {
-    println!("q_seq:{}", q_seq);
-    println!("align:{}", align);
-    println!("r_seq:{}", r_seq);
+    //println!("q_seq:{}", q_seq);
+    //println!("align:{}", align);
+    //println!("r_seq:{}", r_seq);
 
     // Check if last nucleotide(s) is correctly aligned and if substituted remove the unnecessary gap
 
@@ -2622,14 +2599,14 @@ fn check_first_last_nucleotide_correctly_aligned(
             break;
         }
     }
-    println!(
-        "first_partially_matched_nucleotides_left:{}",
-        first_partially_matched_nucleotides_left
-    );
-    println!(
-        "first_unmatched_sequence_left_wrt_partially_matched_nucleotides:{}",
-        first_unmatched_sequence_left_wrt_partially_matched_nucleotides,
-    );
+    //println!(
+    //    "first_partially_matched_nucleotides_left:{}",
+    //    first_partially_matched_nucleotides_left
+    //);
+    //println!(
+    //    "first_unmatched_sequence_left_wrt_partially_matched_nucleotides:{}",
+    //    first_unmatched_sequence_left_wrt_partially_matched_nucleotides,
+    //);
 
     first_unmatched_sequence = reverse_string(&first_unmatched_sequence);
     first_matched_nucleotides = reverse_string(&first_matched_nucleotides);
@@ -2638,20 +2615,20 @@ fn check_first_last_nucleotide_correctly_aligned(
         reverse_string(&first_partially_matched_nucleotides_right);
     first_unmatched_sequence_right_wrt_partially_matched_nucleotides =
         reverse_string(&first_unmatched_sequence_right_wrt_partially_matched_nucleotides);
-    println!(
-        "first_partially_matched_nucleotides_right:{}",
-        first_partially_matched_nucleotides_right
-    );
-    println!(
-        "first_unmatched_sequence_right_wrt_partially_matched_nucleotides:{}",
-        first_unmatched_sequence_right_wrt_partially_matched_nucleotides,
-    );
-    println!("first_matched_nucleotides:{}", first_matched_nucleotides);
-    println!(
-        "first_substituted_nucleotides:{}",
-        first_substituted_nucleotides
-    );
-    println!("first_unmatched_sequence:{}", first_unmatched_sequence);
+    //println!(
+    //    "first_partially_matched_nucleotides_right:{}",
+    //    first_partially_matched_nucleotides_right
+    //);
+    //println!(
+    //    "first_unmatched_sequence_right_wrt_partially_matched_nucleotides:{}",
+    //    first_unmatched_sequence_right_wrt_partially_matched_nucleotides,
+    //);
+    //println!("first_matched_nucleotides:{}", first_matched_nucleotides);
+    //println!(
+    //    "first_substituted_nucleotides:{}",
+    //    first_substituted_nucleotides
+    //);
+    //println!("first_unmatched_sequence:{}", first_unmatched_sequence);
 
     let first_matched_nucleotides_vector: Vec<_> = first_matched_nucleotides.chars().collect();
     let first_unmatched_sequence_vector: Vec<_> = first_unmatched_sequence.chars().collect();
@@ -2685,8 +2662,8 @@ fn check_first_last_nucleotide_correctly_aligned(
     } else {
         alignment_wrong = false;
     }
-    println!("alignment_wrong:{}", alignment_wrong);
-    println!("wrong_substitution:{}", wrong_substitution);
+    //println!("alignment_wrong:{}", alignment_wrong);
+    //println!("wrong_substitution:{}", wrong_substitution);
 
     let q_seq_original = q_seq.clone();
     let align_original = align.clone();
@@ -2796,8 +2773,8 @@ fn check_first_last_nucleotide_correctly_aligned(
             r_seq_correct.push(r_seq_chars[i]);
         }
 
-        println!("last_print_position:{}", last_print_position);
-        println!("best_alignment_position:{}", best_alignment_position);
+        //println!("last_print_position:{}", last_print_position);
+        //println!("best_alignment_position:{}", best_alignment_position);
         // Adding unmatched nucleotide(s) to first nucleotide after last_print_position
         for i in 0..first_matched_nucleotides.len() {
             if first_matched_nucleotides_vector[i]
@@ -2919,8 +2896,8 @@ fn check_first_last_nucleotide_correctly_aligned(
             r_seq_correct.push(r_seq_chars[i]);
         }
 
-        println!("last_print_position:{}", last_print_position);
-        println!("best_alignment_position:{}", best_alignment_position);
+        //println!("last_print_position:{}", last_print_position);
+        //println!("best_alignment_position:{}", best_alignment_position);
         // Adding unmatched nucleotide(s) to first nucleotide after last_print_position
         for i in 0..first_substituted_nucleotides.len() {
             if first_substituted_nucleotides_vector[i]
@@ -2943,7 +2920,7 @@ fn check_first_last_nucleotide_correctly_aligned(
         && first_unmatched_sequence.len() > first_matched_nucleotides.len()
     {
         // Check if there is better alignment for last matched sequence
-        println!("Fully matched right-sequence");
+        //println!("Fully matched right-sequence");
         let correct_alignment_length =
             r_seq.len() - first_unmatched_sequence.len() - first_matched_nucleotides.len();
         for i in 0..correct_alignment_length {
@@ -2998,9 +2975,9 @@ fn check_first_last_nucleotide_correctly_aligned(
             }
         }
 
-        println!("last_print_position:{}", last_print_position);
-        println!("all_matched_nucleotides:{}", all_matched_nucleotides);
-        println!("correct_alignment_length:{}", correct_alignment_length);
+        //println!("last_print_position:{}", last_print_position);
+        //println!("all_matched_nucleotides:{}", all_matched_nucleotides);
+        //println!("correct_alignment_length:{}", correct_alignment_length);
 
         if all_matched_nucleotides == true {
             for j in correct_alignment_length..correct_alignment_length + last_print_position {
@@ -3026,7 +3003,7 @@ fn check_first_last_nucleotide_correctly_aligned(
     // Check if partially aligned sequences to the right have better alignment in the first unmatched sequence in the right
     {
         // Check if there is better alignment for last matched sequence
-        println!("Partially matched right-sequence");
+        //println!("Partially matched right-sequence");
         let correct_alignment_length = r_seq.len()
             - first_unmatched_sequence_right_wrt_partially_matched_nucleotides.len()
             - first_partially_matched_nucleotides_right.len();
@@ -3085,9 +3062,9 @@ fn check_first_last_nucleotide_correctly_aligned(
             }
         }
 
-        println!("last_print_position:{}", last_print_position);
-        println!("all_matched_nucleotides:{}", all_matched_nucleotides);
-        println!("correct_alignment_length:{}", correct_alignment_length);
+        //println!("last_print_position:{}", last_print_position);
+        //println!("all_matched_nucleotides:{}", all_matched_nucleotides);
+        //println!("correct_alignment_length:{}", correct_alignment_length);
 
         if all_matched_nucleotides == true {
             for j in correct_alignment_length..correct_alignment_length + last_print_position {
@@ -3114,7 +3091,7 @@ fn check_first_last_nucleotide_correctly_aligned(
     // Check if partially aligned sequences to the left have better alignment in the first unmatched sequence in the left
     {
         // Check if there is better alignment for last matched sequence
-        println!("Partially matched left-sequence");
+        //println!("Partially matched left-sequence");
         if q_seq_correct.len() > 0 {
             // If there are any changes in alignment in previous steps work on the updated alignment, otherwise use original alignment
             q_seq_chars = q_seq_correct.chars().collect();
@@ -3126,9 +3103,9 @@ fn check_first_last_nucleotide_correctly_aligned(
             r_seq_chars = r_seq.chars().collect();
         }
 
-        println!("q_seq_correct:{}", q_seq_correct);
-        println!("align_correct:{}", align_correct);
-        println!("r_seq_correct:{}", r_seq_correct);
+        //println!("q_seq_correct:{}", q_seq_correct);
+        //println!("align_correct:{}", align_correct);
+        //println!("r_seq_correct:{}", r_seq_correct);
 
         q_seq_correct = String::new();
         align_correct = String::new();
@@ -3202,8 +3179,8 @@ fn check_first_last_nucleotide_correctly_aligned(
             }
         }
 
-        println!("final_print_position:{}", final_print_position);
-        println!("all_matched_nucleotides:{}", all_matched_nucleotides);
+        //println!("final_print_position:{}", final_print_position);
+        //println!("all_matched_nucleotides:{}", all_matched_nucleotides);
 
         if all_matched_nucleotides == true {
             for k in 0..first_partially_matched_nucleotides_left.len() {
@@ -3245,9 +3222,9 @@ fn check_first_last_nucleotide_correctly_aligned(
         r_seq_correct = r_seq_original.to_owned();
         align_correct = align_original.to_owned();
     }
-    println!("alignment_changed:{}", alignment_changed);
-    println!("q_seq_correct:{}", q_seq_correct);
-    println!("align_correct:{}", align_correct);
-    println!("r_seq_correct:{}", r_seq_correct);
+    //println!("alignment_changed:{}", alignment_changed);
+    //println!("q_seq_correct:{}", q_seq_correct);
+    //println!("align_correct:{}", align_correct);
+    //println!("r_seq_correct:{}", r_seq_correct);
     (q_seq_correct, align_correct, r_seq_correct)
 }
