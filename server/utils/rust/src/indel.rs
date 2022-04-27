@@ -15,18 +15,6 @@
 // Optimize ref/alt allele given by user
 // preprocess_input() (Optimizing ref/alt allele entered by user to account for flanking repeat regions. For e.g A-AT in the region CACA{T}TTTTGCGA will become ATTTT-ATTTTT)
 //
-// Select appropriate kmer length
-//
-// assign_kmer_weights {
-//   while duplicate_kmers {
-//      build_kmers_refalt() (for both ref and alt)
-//      check for duplicate kmers
-//   }
-//
-//   Determine final weight of kmers for reference and alternate sequence
-//   build_kmers_refalt() (for both ref and alt using chosen kmer length)
-// }
-//
 // if number of reads > single_thread_limit (multithreading option is turned on)
 //
 // Analyze each read
@@ -34,10 +22,10 @@
 //      check_read_within_indel_region() (Checks if the read contains indel region)
 //      check_if_read_ambiguous() (Checks if a read starts/ends within repeat region (if present) or if start/end of variant is similar to flanking sequence such that read does not contain sufficient part of variant region to infer whether it supports ref or alt allele)
 //      check_polyclonal() (checking if read is polyclonal)
-//      build_kmers()
-//      jaccard_similarity_weights() (w.r.t ref and alt)
-//      diff_score = j.s[alt] - j.s[ref]
-//      if diff_score > 0 classify read as alt; else classify read as ref
+//      percentage identity w.r.t ref allele = align_single_reads(sequence, reference sequence)
+//      percentage identity w.r.t alt allele = align_single_reads(sequence, alternate sequence)
+//      diff_score = percentage identity w.r.t alt allele - percentage identity w.r.t ref allele
+//      if diff_score > 0 classify read as alt; else classify read as ref ; else if diff_score = 0 classify read as ambiguous
 //   }
 //
 // classify_to_four_categories() (classify into ref,alt,none and amb)
@@ -290,46 +278,6 @@ fn main() {
     drop(rightflank_nucleotides);
     let reference_sequence = lines[0].to_string();
     let alternate_sequence = lines[1].to_string();
-
-    //println!(
-    //    "{}{}",
-    //    "Number of original reads in input (from Rust):",
-    //    (lines.len() - 2).to_string()
-    //);
-    //
-    //for i in 0..ref_kmers_nodups.len() {
-    //    if ref_kmers_data[i].kmer_weight > weight_no_indel * kmer_length_iter as f64 {
-    //        println!(
-    //            "Ref kmer:{},weight:{}",
-    //            ref_kmers_nodups[i], ref_kmers_data[i].kmer_weight
-    //        );
-    //        println!(
-    //            "Ref kmer:{},left position:{}",
-    //            ref_kmers_nodups[i], ref_kmers_data[i].left_position
-    //        );
-    //        println!(
-    //            "Ref kmer:{},right position:{}",
-    //            ref_kmers_nodups[i], ref_kmers_data[i].right_position
-    //        );
-    //    }
-    //}
-    //for i in 0..alt_kmers_nodups.len() {
-    //    if alt_kmers_data[i].kmer_weight > weight_no_indel * kmer_length_iter as f64 {
-    //        println!(
-    //            "Alt kmer:{},weight:{}",
-    //            alt_kmers_nodups[i], alt_kmers_data[i].kmer_weight
-    //        );
-    //        println!(
-    //            "Alt kmer:{},left position:{}",
-    //            alt_kmers_nodups[i], alt_kmers_data[i].left_position
-    //        );
-    //        println!(
-    //            "Alt kmer:{},right position:{}",
-    //            alt_kmers_nodups[i], alt_kmers_data[i].right_position
-    //        );
-    //    }
-    //}
-
     let mut ref_scores = Vec::<read_diff_scores>::new(); // Vector for storing structs of type read_diff_scores which contain diff_scores, ref_insertion status, polyclonal status, original group ID of reads classified as supporting ref allele
     let mut alt_scores = Vec::<read_diff_scores>::new(); // Vector for storing structs of type read_diff_scores which contain diff_scores, ref_insertion status, polyclonal status, original group ID of reads classified as supporting alt allele
     if lines.len() - 2 <= single_thread_limit {
@@ -405,7 +353,6 @@ fn main() {
                         alt_length as usize,
                         indel_length as usize,
                         strictness,
-                        0,
                         ref_alt_same_base_start,
                         splice_freq,
                         splice_start_cigar,
@@ -572,35 +519,11 @@ fn main() {
                                 alt_length as usize,
                                 indel_length as usize,
                                 strictness,
-                                0,
                                 ref_alt_same_base_start,
                                 splice_freq,
                                 splice_start_cigar,
                                 splice_stop_cigar,
                             );
-                            //let kmers = build_kmers(lines[iter + 2].to_string(), kmer_length_iter); // Generate kmers for a given read sequence
-
-                            //let kmers = build_kmers_reads(spliced_sequence, kmer_length_iter); // Generates kmers for the given read
-                            //let ref_comparison = jaccard_similarity_weights(
-                            //    // Computer jaccard similarity w.r.t ref
-                            //    &kmers,
-                            //    &ref_kmers_nodups,
-                            //    &ref_kmers_data,
-                            //    correct_start_position,
-                            //    correct_end_position,
-                            //    kmer_length_iter,
-                            //    &alignment_side,
-                            //);
-                            //let alt_comparison = jaccard_similarity_weights(
-                            //    // Computer jaccard similarity w.r.t alt
-                            //    &kmers,
-                            //    &alt_kmers_nodups,
-                            //    &alt_kmers_data,
-                            //    correct_start_position,
-                            //    correct_end_position,
-                            //    kmer_length_iter,
-                            //    &alignment_side,
-                            //);
                             let ref_comparison = align_single_reads(
                                 &spliced_sequence,
                                 reference_sequence.to_string(),
@@ -1589,7 +1512,6 @@ fn check_polyclonal(
     alt_length: usize, // Alt allele length
     indel_length: usize, // Length of indel
     strictness: usize, // Strictness of the pipeline
-    found_duplicate_kmers: usize, // Flag to tell if there are duplicated kmers (Currently hardcoded to 0 in main function, but maybe used in the future)
     ref_alt_same_base_start: usize, // Flag to check if the ref and alt allele start with the last ref nucleotide (e.g A/ATCGT)
     splice_freq: usize,             // Number of splice junctions in read
     splice_start_cigar: usize, // First cigar entry in the spliced fragment containing the variant to see if its a softclip
@@ -1599,7 +1521,7 @@ fn check_polyclonal(
     let mut ref_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches ref allele (Will be used later to determine if the read harbors a polyclonal variant)
     let mut alt_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches alt allele (Will be used later to determine if the read harbors a polyclonal variant)
     let mut ref_insertion: i64 = 0; // Keep tab whether there is an insertion within the ref allele (This variable will be used later to parse out ref-classified reads that have insertions/deletions in indel region and evebtually classified as 'none')
-    let mut alignment_side: String = "left".to_string(); // Flag to check whether kmers should be compared from the left or right-side in jaccard_similarity_weights() function
+    let mut alignment_side: String = "left".to_string(); // Flag to check whether read should be compared from the left or right-side in jaccard_similarity_weights() function
     let mut right_most_pos: i64;
 
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
@@ -1915,8 +1837,6 @@ fn check_polyclonal(
                     } else if old_parse_position <= read_indel_start
                         && read_indel_start <= parse_position
                         && parse_position <= read_indel_start + indel_length
-                        && found_duplicate_kmers == 0
-                    // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
                     {
                         // Making sure part of the insertion is within the indel region
                         //indel_insertion_starts.push(old_parse_position);
@@ -1926,8 +1846,6 @@ fn check_polyclonal(
                     } else if read_indel_start <= old_parse_position
                         && old_parse_position <= read_indel_start + indel_length
                         && read_indel_start + indel_length <= parse_position
-                        && found_duplicate_kmers == 0
-                    // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
                     {
                         // Making sure part of the insertion is within the indel region
                         //indel_insertion_starts.push(old_parse_position);
@@ -1957,8 +1875,6 @@ fn check_polyclonal(
                     } else if old_parse_position <= read_indel_start
                         && parse_position >= read_indel_start
                         && parse_position <= read_indel_start + indel_length
-                        && found_duplicate_kmers == 0
-                    // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
                     {
                         // Making sure part of the insertion is within the indel region
                         //indel_insertion_starts.push(old_parse_position);
@@ -1968,8 +1884,6 @@ fn check_polyclonal(
                     } else if read_indel_start <= old_parse_position
                         && read_indel_start + indel_length > old_parse_position
                         && read_indel_start + indel_length <= parse_position
-                        && found_duplicate_kmers == 0
-                    // Only part of the insertion inside indel, found_duplicate_kmers is currently hardcoded to 0 in the main function. May be used in the future
                     {
                         // Making sure part of the insertion is within the indel region
                         //indel_insertion_starts.push(old_parse_position);
@@ -2004,8 +1918,6 @@ fn check_polyclonal(
                     } else if old_parse_position <= read_indel_start
                         && parse_position >= read_indel_start
                         && parse_position <= read_indel_start + indel_length
-                        && found_duplicate_kmers == 0
-                    // Part of deletion inside indel region
                     {
                         // Making sure part of the insertion is within the indel region
                         ref_insertion = 1;
@@ -2013,8 +1925,6 @@ fn check_polyclonal(
                     } else if read_indel_start <= old_parse_position
                         && read_indel_start + indel_length > old_parse_position
                         && read_indel_start + indel_length <= parse_position
-                        && found_duplicate_kmers == 0
-                    // Part of deletion inside indel region
                     {
                         // Making sure part of the insertion is within the indel region
                         ref_insertion = 1; // Setting ref_insertion to flag, so if reads gets initially classifed ar "Ref", it finally gets classified as "None"
@@ -2047,7 +1957,6 @@ fn check_polyclonal(
                 } else if old_parse_position <= read_indel_start
                     && read_indel_start <= parse_position
                     && parse_position <= read_indel_start + indel_length
-                    && found_duplicate_kmers == 0
                     && strictness >= 1
                 {
                     // Making sure part of the insertion is within the indel region
@@ -2058,7 +1967,6 @@ fn check_polyclonal(
                 } else if read_indel_start <= old_parse_position
                     && old_parse_position <= read_indel_start + indel_length
                     && read_indel_start + indel_length <= parse_position
-                    && found_duplicate_kmers == 0
                     && strictness >= 1
                 {
                     // Making sure part of the insertion is within the indel region
@@ -2353,57 +2261,67 @@ fn check_polyclonal(
 }
 
 fn classify_to_four_categories(
-    kmer_diff_scores: &mut Vec<read_diff_scores>, // Vector containing read diff_scores for all reads classified as ref/alt
-    strictness: usize,                            // Strictness of the pipeline
+    read_alignment_diff_scores: &mut Vec<read_diff_scores>, // Vector containing read diff_scores for all reads classified as ref/alt
+    strictness: usize,                                      // Strictness of the pipeline
 ) -> Vec<read_category> {
     let mut indices = Vec::<read_category>::new(); // Vector of type struct read_category containing category classified, original group ID, diff_score and ref_insertion flag. This vecor will be finally returned to the main function
     let absolute_threshold_cutoff: f64 = 0.0; // Absolute threshold cutoff. If the absolute diff_score is less than this value, the read will automatically be classified as "none"
-    for i in 0..kmer_diff_scores.len() {
-        if kmer_diff_scores[i].polyclonal >= 2 as i64 {
+    for i in 0..read_alignment_diff_scores.len() {
+        if read_alignment_diff_scores[i].polyclonal >= 2 as i64 {
             // If polyclonal is 2, it is automatically classified as 'none' since the allele neither matches ref allele or alt allele of interest
             let read_cat = read_category {
                 category: String::from("none"),
-                groupID: usize::from(kmer_diff_scores[i].groupID),
-                alt_comparison: i64::from(kmer_diff_scores[i].alt_comparison),
-                ref_comparison: i64::from(kmer_diff_scores[i].ref_comparison),
-                diff_score: f64::from(kmer_diff_scores[i].value),
-                ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
-                sequence_strand: String::from(&kmer_diff_scores[i].sequence_strand.to_owned()),
+                groupID: usize::from(read_alignment_diff_scores[i].groupID),
+                alt_comparison: i64::from(read_alignment_diff_scores[i].alt_comparison),
+                ref_comparison: i64::from(read_alignment_diff_scores[i].ref_comparison),
+                diff_score: f64::from(read_alignment_diff_scores[i].value),
+                ref_insertion: i64::from(read_alignment_diff_scores[i].ref_insertion),
+                sequence_strand: String::from(
+                    &read_alignment_diff_scores[i].sequence_strand.to_owned(),
+                ),
             };
             indices.push(read_cat);
-        } else if kmer_diff_scores[i].ambiguous == 2 as i64 {
+        } else if read_alignment_diff_scores[i].ambiguous == 2 as i64 {
             // If ambiguous is 1, it is automatically classified as 'amb' since the read start/ends in a region which has the same sequence as that in the flanking region
             let read_cat = read_category {
                 category: String::from("amb"),
-                groupID: usize::from(kmer_diff_scores[i].groupID),
-                alt_comparison: i64::from(kmer_diff_scores[i].alt_comparison),
-                ref_comparison: i64::from(kmer_diff_scores[i].ref_comparison),
-                diff_score: f64::from(kmer_diff_scores[i].value),
-                ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
-                sequence_strand: String::from(&kmer_diff_scores[i].sequence_strand.to_owned()),
+                groupID: usize::from(read_alignment_diff_scores[i].groupID),
+                alt_comparison: i64::from(read_alignment_diff_scores[i].alt_comparison),
+                ref_comparison: i64::from(read_alignment_diff_scores[i].ref_comparison),
+                diff_score: f64::from(read_alignment_diff_scores[i].value),
+                ref_insertion: i64::from(read_alignment_diff_scores[i].ref_insertion),
+                sequence_strand: String::from(
+                    &read_alignment_diff_scores[i].sequence_strand.to_owned(),
+                ),
             };
             indices.push(read_cat);
-        } else if kmer_diff_scores[i].abs_value <= absolute_threshold_cutoff && strictness >= 1 {
+        } else if read_alignment_diff_scores[i].abs_value <= absolute_threshold_cutoff
+            && strictness >= 1
+        {
             // If diff_score absolute value is less than absolute threshold cutoff, it is automatically classified as 'none'
             let read_cat = read_category {
                 category: String::from("none"),
-                groupID: usize::from(kmer_diff_scores[i].groupID),
-                alt_comparison: i64::from(kmer_diff_scores[i].alt_comparison),
-                ref_comparison: i64::from(kmer_diff_scores[i].ref_comparison),
-                diff_score: f64::from(kmer_diff_scores[i].value),
-                ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
-                sequence_strand: String::from(&kmer_diff_scores[i].sequence_strand.to_owned()),
+                groupID: usize::from(read_alignment_diff_scores[i].groupID),
+                alt_comparison: i64::from(read_alignment_diff_scores[i].alt_comparison),
+                ref_comparison: i64::from(read_alignment_diff_scores[i].ref_comparison),
+                diff_score: f64::from(read_alignment_diff_scores[i].value),
+                ref_insertion: i64::from(read_alignment_diff_scores[i].ref_insertion),
+                sequence_strand: String::from(
+                    &read_alignment_diff_scores[i].sequence_strand.to_owned(),
+                ),
             };
             indices.push(read_cat);
         } else {
             let read_cat = read_category {
                 category: String::from("refalt"),
-                groupID: usize::from(kmer_diff_scores[i].groupID),
-                alt_comparison: i64::from(kmer_diff_scores[i].alt_comparison),
-                ref_comparison: i64::from(kmer_diff_scores[i].ref_comparison),
-                diff_score: f64::from(kmer_diff_scores[i].value),
-                ref_insertion: i64::from(kmer_diff_scores[i].ref_insertion),
-                sequence_strand: String::from(&kmer_diff_scores[i].sequence_strand.to_owned()),
+                groupID: usize::from(read_alignment_diff_scores[i].groupID),
+                alt_comparison: i64::from(read_alignment_diff_scores[i].alt_comparison),
+                ref_comparison: i64::from(read_alignment_diff_scores[i].ref_comparison),
+                diff_score: f64::from(read_alignment_diff_scores[i].value),
+                ref_insertion: i64::from(read_alignment_diff_scores[i].ref_insertion),
+                sequence_strand: String::from(
+                    &read_alignment_diff_scores[i].sequence_strand.to_owned(),
+                ),
             };
             indices.push(read_cat);
         }
