@@ -706,9 +706,40 @@ async function parseRoutput(Rinput, Routput, id2originalId, q) {
 		resultLst.push(analysisResult)
 	}
 
+	let headerMessage
+
 	const tw = q.independent.find(i => i.type == 'snplocus')
 	if (tw) {
-		// for the snplocus term, remaining snps in snpgt2count were not used for model-fitting
+		// extra logic specific for the snplocus term
+		const lst = []
+		if (tw.snpcount.highAF)
+			lst.push(
+				tw.snpcount.highAF +
+					' variant' +
+					(tw.snpcount.highAF > 1 ? 's' : '') +
+					' with AF>=' +
+					tw.q.AFcutoff +
+					'% and used for model-fitting'
+			)
+		if (tw.snpcount.lowAF)
+			lst.push(
+				tw.snpcount.lowAF +
+					' variant' +
+					(tw.snpcount.lowAF > 1 ? 's' : '') +
+					' with AF<' +
+					tw.q.AFcutoff +
+					'% and skipped'
+			)
+		if (tw.snpcount.monomorphic)
+			lst.push(tw.snpcount.monomorphic + ' monomorphic variant' + (tw.snpcount.monomorphic > 1 ? 's' : '') + ' skipped')
+		if (lst.length) {
+			headerMessage = {
+				k: 'Summary of variants:',
+				v: lst.join(', ')
+			}
+		}
+
+		// remaining snps in snpgt2count were not used for model-fitting
 		// thus they are not present in resultLst[]
 		// as client has these snps and is showing all snps in the track,
 		// create blank result obj with genotype breakdown for accessing this info on client
@@ -729,7 +760,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, q) {
 		}
 	}
 
-	return resultLst
+	return { headerMessage, resultLst }
 }
 
 /*
@@ -973,36 +1004,38 @@ function filterSnpsByAFcutoff(tw, snp2sample) {
 	tw.lowAFsnps = new Map()
 	// store list of snpid with AF >= cutoff, that can be used for model-fitting
 	tw.snpidlst = []
+	// collect counts about different snp categories
+	tw.snpcount = { monomorphic: 0, lowAF: 0, highAF: 0 }
 
 	for (const [snpid, o] of snp2sample) {
-		// o.effAle is effect allele
-		let effAleCount = 0 // count eff ale across samples
+		if (tw.snpgt2count.get(snpid).size == 1) {
+			// monomorphic, not to be used for any analysis
+			snp2sample.delete(snpid)
+			tw.snpcount.monomorphic++
+			continue
+		}
+
 		const totalsamplecount = o.samples.size
+		// o.effAle is effect allele
+		let effAleCount = 0 // count number of effect alleles across samples
+
 		for (const [sampleid, gt] of o.samples) {
 			const [a1, a2] = gt.split('/') // assuming diploid
 			effAleCount += (a1 == o.effAle ? 1 : 0) + (a2 == o.effAle ? 1 : 0)
 		}
 
-		if (effAleCount == 0) {
-			// monomorphic; effect allele is not present in the cohort, do not analyze
-			snp2sample.delete(snpid)
-			continue
-		}
-
 		const af = effAleCount / (totalsamplecount * 2)
 
-		if (af >= 1) {
-			// monomorphic
-			snp2sample.delete(snpid)
-			continue
-		}
-
 		if (af < tw.q.AFcutoff / 100) {
+			// AF lower than cutoff, will not use for model-fitting
+			// move this snp from snp2sample to lowAFsnps
 			tw.lowAFsnps.set(snpid, o)
 			snp2sample.delete(snpid)
+			tw.snpcount.lowAF++
 		} else {
-			// AF above cutoff
+			// AF above cutoff, use for model-fitting
 			tw.snpidlst.push(snpid)
+			tw.snpcount.highAF++
 		}
 	}
 }

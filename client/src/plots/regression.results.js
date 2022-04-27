@@ -65,6 +65,7 @@ export class RegressionResults {
 		this.dom = {
 			holder,
 			err_div: holder.append('div'),
+			headerDiv: holder.append('div'),
 			snplocusBlockDiv: holder.append('div').style('margin-left', '20px'),
 			// is where newDiv() and displayResult_oneset() writes to
 			oneSetResultDiv: holder.append('div').style('margin', '10px')
@@ -197,12 +198,21 @@ function setInteractivity(self) {}
 
 function setRenderers(self) {
 	self.displayResult = async result => {
-		/* result[
-			{ data: { err, splinePlots, residuals, ... }, id:'snp1' },
-			{ data: { err, splinePlots, residuals, ... }, id:'snp2' },
-			...
-		]
+		/*
+		result {
+			headerMessage {k, v}
+			resultLst [
+				{ data: { err, splinePlots, residuals, ... }, id:'snp1' },
+				{ data: { err, splinePlots, residuals, ... }, id:'snp2' },
+				...
+			]
+		}
 		*/
+
+		self.dom.headerDiv.selectAll('*').remove()
+		if (result.headerMessage) {
+			self.newDiv(result.headerMessage.k, result.headerMessage.v, self.dom.headerDiv)
+		}
 
 		// if there is a snplocus Input
 		const snplocusInput = self.parent.inputs.independent.inputLst.find(i => i.term && i.term.term.type == 'snplocus')
@@ -213,9 +223,9 @@ function setRenderers(self) {
 			clicking on a dot in browser tk will call displayResult_oneset() to display its results
 			*/
 			if (!self.snplocusBlock) {
-				self.snplocusBlock = await createGenomebrowser(self, snplocusInput, result)
+				self.snplocusBlock = await createGenomebrowser(self, snplocusInput, result.resultLst)
 			} else {
-				await updateMds3Tk(self, snplocusInput, result)
+				await updateMds3Tk(self, snplocusInput, result.resultLst)
 			}
 			return
 		}
@@ -223,10 +233,10 @@ function setRenderers(self) {
 		// no snplocus, clear things if had it before
 		delete self.snplocusBlock
 		self.dom.snplocusBlockDiv.selectAll('*').remove()
-		// result[] has only one set of result, from analyzing one model
-		if (!result[0] || !result[0].data) throw 'result is not [ {data:{}} ]'
+		// resultLst[] has only one set of result, from analyzing one model
+		if (!result.resultLst[0] || !result.resultLst[0].data) throw 'result is not [ {data:{}} ]'
 
-		self.displayResult_oneset(result[0].data)
+		self.displayResult_oneset(result.resultLst[0].data)
 	}
 
 	self.displayResult_oneset = result => {
@@ -247,10 +257,10 @@ function setRenderers(self) {
 		self.mayshow_other(result)
 	}
 
-	self.newDiv = (label, label2) => {
+	self.newDiv = (label, label2, holder) => {
 		// create div to show a section of the result
 		// label is required, label2 is optional
-		const div = self.dom.oneSetResultDiv.append('div').style('margin', '20px 0px 10px 0px')
+		const div = (holder || self.dom.oneSetResultDiv).append('div').style('margin', '20px 0px 10px 0px')
 		const row = div.append('div')
 		row
 			.append('span')
