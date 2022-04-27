@@ -148,6 +148,7 @@ const snplst = {
 		]
 	},
 	q: {
+		AFcutoff: 5,
 		alleleType: 0,
 		geneticModel: 0,
 		missingGenotype: 0,
@@ -174,6 +175,7 @@ const snplocus = {
 		chr: 'chr17',
 		start: 7674304,
 		stop: 7676849,
+		AFcutoff: 5,
 		alleleType: 0,
 		geneticModel: 0,
 		restrictAncestry: {
