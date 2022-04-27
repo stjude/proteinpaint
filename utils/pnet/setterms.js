@@ -10,11 +10,9 @@ const cn = new bettersqlite('db', {
 const annoSamples = cn.prepare(`SELECT distinct(sample) FROM annotations`).all()
 for (const sample of annoSamples) {
 	// clean up the sample name
-	const sname = sample.sample
-		.split(';')[0]
-		.trim()
-		.split('_')[0]
-		.trim()
+	const sname = sample.sample.split(';')[0].trim()
+	//.split('_')[0]
+	//.trim()
 	if (sname != sample.sample) {
 		cn.prepare(`UPDATE annotations SET sample=? WHERE sample=?`).run([sname, sample.sample])
 	}
@@ -23,11 +21,9 @@ for (const sample of annoSamples) {
 const survSamples = cn.prepare(`SELECT distinct(sample) FROM survival`).all()
 for (const sample of survSamples) {
 	// clean up the sample name
-	const sname = sample.sample
-		.split(';')[0]
-		.trim()
-		.split('_')[0]
-		.trim()
+	const sname = sample.sample.split(';')[0].trim()
+	//.split('_')[0]
+	//.trim()
 	if (sname != sample.sample) {
 		cn.prepare(`UPDATE survival SET sample=? WHERE sample=?`).run([sname, sample.sample])
 	}

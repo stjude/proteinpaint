@@ -167,9 +167,9 @@ document.body.onload = () => runproteinpaint({
 					term: {
 						id: 'Event-free survival'
 					},
-					// term2: {
-					// 	id: 'Age'
-					// },
+					term2: {
+					  id: 'Met'
+					},
 					settings: {
 						survival: {
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
@@ -183,9 +183,9 @@ document.body.onload = () => runproteinpaint({
 					term: {
 						id: 'Overall Survival'
 					},
-					/*term2: {
-						id: 'Age'
-					},*/
+					// term2: {
+					// 	id: 'Age'
+					// },
 					settings: {
 						survival: {
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
@@ -209,7 +209,8 @@ function getGeneTermGroups() {
 				}
 
 				return tw
-			})
+			}),
+      sortTermsBy: 'sampleCount'
 		})
 	}
 	return termgroups

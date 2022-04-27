@@ -231,7 +231,7 @@ class Matrix {
 
 	setTermOrder(data) {
 		const s = this.settings.matrix
-		this.termSorter = getTermSorter(this, s, data.lst)
+		this.termSorter = getTermSorter(this, s)
 		this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
 		this.termOrder = []
 		let total = 0
@@ -249,7 +249,9 @@ class Matrix {
 				lst.push({ tw, counts, index })
 			}
 
-			grp.lst = lst.sort(this.termSorter).map(t => t.tw)
+			// may override the settings.sortTermsBy with a sorter that is specific to a term group
+			const termSorter = grp.sortTermsBy ? getTermSorter(this, grp) : this.termSorter
+			grp.lst = lst.sort(termSorter).map(t => t.tw)
 			for (const [index, t] of lst.entries()) {
 				const { tw, counts } = t
 				const ref = data.refs.byTermId[t.tw.$id] || {}
