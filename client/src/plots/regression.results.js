@@ -30,6 +30,7 @@ main
 	displayResult
 		createGenomebrowser
 		updateMds3Tk
+			make_mds3_variants
 		show_genomebrowser_snplocus
 		displayResult_oneset
 			mayshow_warn
@@ -825,7 +826,6 @@ function make_mds3_variants(tw, result) {
 	const mlst = []
 	for (const snp of tw.term.snps) {
 		const m = {
-			//snpid: snp.snpid,
 			chr: snp.chr,
 			pos: snp.pos
 		}
@@ -841,11 +841,14 @@ function make_mds3_variants(tw, result) {
 			Object.assign(m, snp.alt2csq[Object.keys(snp.alt2csq)[0]])
 		}
 
+		// set default values as missing, to be able to show all variants in track
+		// overwrite with real values if found in result
+		m.regressionPvalue = 'missing'
+		m.__value = 0 // display the dot at the bottom
+
 		const thisresult = result.find(i => i.id == snp.snpid)
 		if (!thisresult) {
 			// missing result for this variant, caused by variable-skipping in R
-			m.regressionPvalue = 'missing'
-			m.__value = 0 // display the dot at the bottom
 			m.regressionResult = { err: ['No result for this variant at ' + snp.snpid] }
 			continue
 		}
@@ -854,20 +857,20 @@ function make_mds3_variants(tw, result) {
 		if (!d) throw '.data{} missing'
 		m.regressionResult = d // for displaying via click_snvindel()
 
-		// find p-value (last column of type3 table)
-		if (!d.type3 || !d.type3.terms) throw '.data{type3:{terms}} missing'
-		if (!d.type3.terms[snp.snpid]) throw snp.snpid + ' missing in type3.terms{}'
-		if (!Array.isArray(d.type3.terms[snp.snpid])) throw `type3.terms[${snp.snpid}] not array`
-		const str = d.type3.terms[snp.snpid][d.type3.terms[snp.snpid].length - 1]
-		// last value of the array should be p-value string (can be 'NA')
-		const v = Number(str)
-		if (Number.isNaN(v)) {
-			m.regressionPvalue = str // for displaying via tooltipPrintValue()
-			// setting -log10(p) to 0 allows the dot to show while being able to show pvalue=NA in tooltip
-			m.__value = 0
-		} else {
-			m.regressionPvalue = v
-			m.__value = -Math.log10(v)
+		if (d.type3) {
+			// find p-value (last column of type3 table)
+			if (!d.type3.terms) throw '.data{type3:{terms}} missing'
+			if (!d.type3.terms[snp.snpid]) throw snp.snpid + ' missing in type3.terms{}'
+			if (!Array.isArray(d.type3.terms[snp.snpid])) throw `type3.terms[${snp.snpid}] not array`
+			const str = d.type3.terms[snp.snpid][d.type3.terms[snp.snpid].length - 1]
+			// last value of the array should be p-value string (can be 'NA')
+			const v = Number(str)
+			if (Number.isNaN(v)) {
+				m.regressionPvalue = str // for displaying via tooltipPrintValue()
+			} else {
+				m.regressionPvalue = v
+				m.__value = -Math.log10(v)
+			}
 		}
 	}
 	return mlst

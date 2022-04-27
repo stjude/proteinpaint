@@ -70,27 +70,13 @@ export async function get_regression(q, ds) {
 	try {
 		parse_q(q, ds)
 
-		const [sampledata, snpgt2count] = await getSampleData(q, [q.outcome, ...q.independent], ds)
+		const sampledata = await getSampleData(q, [q.outcome, ...q.independent], ds)
 		/* each element is one sample with a key-val map for all its annotations:
 		{sample, id2value:Map( tid => {key,value}) }
 		*/
 
 		// build the input for R script
 		const Rinput = makeRinput(q, sampledata)
-
-		/*
-		Rinput {
-			regressionType: regression type (linear/logistic/cox)
-			binpath: server bin path
-			data: [{}] per-sample data values
-			outcome: {} outcome variable
-			independent: [{}] independent variables
-		}
-
-		- snps from snplst and snplocus terms are added as elements into independent[] array
-		- PCs from q.restrictAncestry.pcs are added as elements into independent[] array
-		- further details of JSON structure described in server/utils/regression.R
-		*/
 
 		validateRinput(Rinput)
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
@@ -99,10 +85,10 @@ export async function get_regression(q, ds) {
 		const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 		await utils.write_file(Rinputfile, JSON.stringify(Rinput))
 		const Routput = await lines2R(path.join(serverconfig.binpath, 'utils', 'regression.R'), [], [Rinputfile])
+		fs.unlink(Rinputfile, () => {})
 
 		// parse the R output
-		fs.unlink(Rinputfile, () => {})
-		return await parseRoutput(Rinput, Routput, id2originalId, snpgt2count)
+		return await parseRoutput(Rinput, Routput, id2originalId, q)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
@@ -211,6 +197,19 @@ function checkTwAncestryRestriction(tw, q, ds) {
 	throw 'unknown way of accessing pcs from ds.cohort.termdb.restrictAncestries: ' + tw.q.restrictAncestry.name
 }
 
+/*
+Rinput {
+	regressionType: regression type (linear/logistic/cox)
+	binpath: server bin path
+	data: [{}] per-sample data values
+	outcome: {} outcome variable
+	independent: [{}] independent variables
+}
+
+- snps from snplst and snplocus terms are added as elements into independent[] array
+- PCs from q.restrictAncestry.pcs are added as elements into independent[] array
+- further details of JSON structure described in server/utils/regression.R
+*/
 function makeRinput(q, sampledata) {
 	// outcome variable
 	const outcome = {
@@ -540,7 +539,7 @@ function validateRinput(Rinput) {
 	}
 }
 
-async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
+async function parseRoutput(Rinput, Routput, id2originalId, q) {
 	if (Routput.length != 1) throw 'expected 1 json line in R output'
 	const out = JSON.parse(Routput[0])
 
@@ -548,7 +547,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 	out (linear/logistic) 
 	[
 	  {
-		id: id of snplocus term (empty if no snplocus terms)
+		id: snpid from a snplocus term (empty if no snplocus terms)
 		data: { sampleSize, residuals: {}, coefficients: {}, type3: {}, other: {}, warnings: [] }
 	  }
 	]
@@ -556,17 +555,17 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 	out (cox) 
 	[
 	  {
-		id: id of snplocus term (empty if no snplocus terms)
+		id: snpid from a snplocus term (empty if no snplocus terms)
 		data: { sampleSize, eventCnt, coefficients: {}, type3: {}, tests: {}, other: {}, warnings: [] }
 	  }
 	]
 	*/
 
-	const result = [] // same structure as out[]
+	const resultLst = [] // same structure as out[]
 
 	for (const analysis of out) {
-		// to be pushed to result[]
-		const analysisResults = {
+		// convert "analysis" to "analysisResult", then push latter to resultLst
+		const analysisResult = {
 			data: {
 				sampleSize: analysis.data.sampleSize,
 				eventCnt: analysis.data.eventCnt ? analysis.data.eventCnt : null
@@ -574,16 +573,24 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 		}
 
 		if (analysis.id) {
-			// id must be snpid from snplocus
-			analysisResults.id = id2originalId[analysis.id]
-			const gt2count = snpgt2count.get(analysisResults.id)
+			// if id is set, this "analysis" is the model-fitting result for one snp from a snplocus term
+			// converted id must be snpid, assign to analysisResult
+			// client will rely on this id to associate this result to a variant
+			const snpid = id2originalId[analysis.id]
+			analysisResult.id = snpid
+
+			const tw = q.independent.find(i => i.type == 'snplocus')
+			if (!tw) throw 'snplocus term missing'
+			const gt2count = tw.snpgt2count.get(snpid)
 			if (gt2count) {
 				const lst = []
 				for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
-				analysisResults.data.headerRow = {
+				analysisResult.data.headerRow = {
 					k: 'Genotypes:',
 					v: lst.join(', ')
 				}
+				// delete this snp; at the end snpgt2count leaves only snps not used for model-fitting
+				tw.snpgt2count.delete(snpid)
 			}
 		}
 
@@ -591,8 +598,8 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 
 		// residuals
 		if (data.residuals) {
-			analysisResults.data.residuals = data.residuals
-			analysisResults.data.residuals.label = Rinput.regressionType == 'linear' ? 'Residuals' : 'Deviance residuals'
+			analysisResult.data.residuals = data.residuals
+			analysisResult.data.residuals.label = Rinput.regressionType == 'linear' ? 'Residuals' : 'Deviance residuals'
 		}
 
 		// coefficients
@@ -601,7 +608,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 		} else {
 			if (data.coefficients.rows.length < 2) throw 'fewer than 2 rows in coefficients table'
 		}
-		analysisResults.data.coefficients = {
+		analysisResult.data.coefficients = {
 			header: data.coefficients.header,
 			intercept: Rinput.regressionType == 'cox' ? null : data.coefficients.rows.shift(),
 			terms: {}, // individual independent terms, not interaction
@@ -619,29 +626,29 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 				interaction.term2 = id2originalId[id2]
 				interaction.category2 = cat2
 				interaction.lst = row
-				analysisResults.data.coefficients.interactions.push(interaction)
+				analysisResult.data.coefficients.interactions.push(interaction)
 			} else {
 				// not interaction, individual variable
 				const id = row.shift()
 				const category = row.shift()
 				// row is now only data fields
 				const termid = id2originalId[id]
-				if (!analysisResults.data.coefficients.terms[termid]) analysisResults.data.coefficients.terms[termid] = {}
+				if (!analysisResult.data.coefficients.terms[termid]) analysisResult.data.coefficients.terms[termid] = {}
 				if (category) {
 					// has category
-					if (!analysisResults.data.coefficients.terms[termid].categories)
-						analysisResults.data.coefficients.terms[termid].categories = {}
-					analysisResults.data.coefficients.terms[termid].categories[category] = row
+					if (!analysisResult.data.coefficients.terms[termid].categories)
+						analysisResult.data.coefficients.terms[termid].categories = {}
+					analysisResult.data.coefficients.terms[termid].categories[category] = row
 				} else {
 					// no category
-					analysisResults.data.coefficients.terms[termid].fields = row
+					analysisResult.data.coefficients.terms[termid].fields = row
 				}
 			}
 		}
-		analysisResults.data.coefficients.label = 'Coefficients'
+		analysisResult.data.coefficients.label = 'Coefficients'
 
 		// type III statistics
-		analysisResults.data.type3 = {
+		analysisResult.data.type3 = {
 			header: data.type3.header,
 			intercept: data.type3.rows.shift(),
 			terms: {}, // individual independent terms, not interaction
@@ -656,34 +663,34 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 				interaction.term1 = id2originalId[id1]
 				interaction.term2 = id2originalId[id2]
 				interaction.lst = row
-				analysisResults.data.type3.interactions.push(interaction)
+				analysisResult.data.type3.interactions.push(interaction)
 			} else {
 				// not interaction, individual variable
 				const id = row.shift()
 				// row is now only data fields
 				const termid = id2originalId[id]
-				if (!analysisResults.data.type3.terms[termid]) analysisResults.data.type3.terms[termid] = row
+				if (!analysisResult.data.type3.terms[termid]) analysisResult.data.type3.terms[termid] = row
 			}
 		}
-		analysisResults.data.type3.label = 'Type III statistics'
+		analysisResult.data.type3.label = 'Type III statistics'
 
 		// statistical tests
 		if (data.tests) {
-			analysisResults.data.tests = data.tests
-			analysisResults.data.tests.label = 'Statistical tests'
+			analysisResult.data.tests = data.tests
+			analysisResult.data.tests.label = 'Statistical tests'
 		}
 
 		// other summary statistics
-		analysisResults.data.other = data.other
-		analysisResults.data.other.label = 'Other summary statistics'
+		analysisResult.data.other = data.other
+		analysisResult.data.other.label = 'Other summary statistics'
 
 		// plots
 		for (const tw of Rinput.independent) {
 			if (tw.spline && tw.spline.plotfile) {
-				if (!analysisResults.data.splinePlots) analysisResults.data.splinePlots = []
+				if (!analysisResult.data.splinePlots) analysisResult.data.splinePlots = []
 				const file = tw.spline.plotfile
 				const plot = await fs.promises.readFile(file)
-				analysisResults.data.splinePlots.push({
+				analysisResult.data.splinePlots.push({
 					src: 'data:image/png;base64,' + new Buffer.from(plot).toString('base64'),
 					size: imagesize(file)
 				})
@@ -694,11 +701,35 @@ async function parseRoutput(Rinput, Routput, id2originalId, snpgt2count) {
 		}
 
 		// warnings
-		if (data.warnings) analysisResults.data.warnings = data.warnings
+		if (data.warnings) analysisResult.data.warnings = data.warnings
 
-		result.push(analysisResults)
+		resultLst.push(analysisResult)
 	}
-	return result
+
+	const tw = q.independent.find(i => i.type == 'snplocus')
+	if (tw) {
+		// for the snplocus term, remaining snps in snpgt2count were not used for model-fitting
+		// thus they are not present in resultLst[]
+		// as client has these snps and is showing all snps in the track,
+		// create blank result obj with genotype breakdown for accessing this info on client
+		// TODO later provide Fisher results
+		for (const [snpid, gt2count] of tw.snpgt2count) {
+			const lst = []
+			for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
+			const analysisResult = {
+				id: snpid,
+				data: {
+					headerRow: {
+						k: 'Genotypes:',
+						v: lst.join(', ')
+					}
+				}
+			}
+			resultLst.push(analysisResult)
+		}
+	}
+
+	return resultLst
 }
 
 /*
@@ -745,11 +776,6 @@ async function getSampleData(q, terms, ds) {
 
 	// next: data from non-dictionary terms are appended to the same "samples" Map
 
-	const snpgt2count = new Map()
-	// k: snpid, v:{gt:INT}
-	// for snplst and snplocus terms
-	// fill with genotype samplecount breakdown and show as result.headerRow
-
 	for (const tw of nonDictTerms) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
@@ -758,14 +784,13 @@ async function getSampleData(q, terms, ds) {
 
 		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			// each snp is one indepedent variable
-			// record list of snps on term.snpidlst
-			await getSampleData_snplstOrLocus(tw, samples, snpgt2count)
+			await getSampleData_snplstOrLocus(tw, samples)
 		} else {
 			throw 'unknown type of independent non-dictionary term'
 		}
 	}
 
-	return [samples.values(), snpgt2count]
+	return samples.values()
 }
 
 function mayAddAncestryPCs(tw, samples, ds) {
@@ -853,7 +878,7 @@ samples {Map}
 	but do not introduce new samples to this map
 	as those will miss value for dict terms and ineligible for analysis
 */
-async function getSampleData_snplstOrLocus(tw, samples, snpgt2count) {
+async function getSampleData_snplstOrLocus(tw, samples) {
 	const lines = (await utils.read_file(path.join(serverconfig.cache_snpgt.dir, tw.q.cacheid))).split('\n')
 	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 
@@ -906,68 +931,75 @@ async function getSampleData_snplstOrLocus(tw, samples, snpgt2count) {
 		doImputation(snp2sample, tw, cachesampleheader, sampleinfilter)
 	}
 
-	// filter snps by AF of effect allele
-	// snps with AF lower than cutoff are removed from snp2sample
-	// added to tw.snpidlst
-	// and are kept in lowAFsnps, to be analyzed by Fisher
-	const lowAFsnps = filterSnpsByAFcutoff(tw, snp2sample, sampleinfilter)
-
-	/* TODO filter variants by AF of effect allele
-	low-AF variants are not stored in samples{} and used as covariants
-	but are analyzed by Fisher
-	*/
-
+	// for all snps, count samples by genotypes, keep in snpgt2count, for showing as result.headerRow
+	tw.snpgt2count = new Map()
+	// k: snpid, v:{gt:INT}
 	for (const [snpid, o] of snp2sample) {
 		const gt2count = new Map()
-
 		for (const [sampleid, gt] of o.samples) {
 			// count gt for this snp
 			gt2count.set(gt, 1 + (gt2count.get(gt) || 0))
+		}
+		tw.snpgt2count.set(snpid, gt2count)
+	}
 
+	/* divide snps to two groups by AFcutoff
+	lower than cutoff:
+		delete from snp2sample
+		create tw.lowAFsnps and store these, later to be analyzed by Fisher
+	higher than cutoff:
+		keep in snp2sample
+		create tw.snpidlst[] to store snpid of these variants
+	*/
+	filterSnpsByAFcutoff(tw, snp2sample)
+
+	/* snp2sample now contains snps with AF above cutoff
+	these snps can be used for model-fitting
+	derive sample values for each snp and store in samples Map()
+	*/
+	for (const [snpid, o] of snp2sample) {
+		for (const [sampleid, gt] of o.samples) {
 			// for this sample, convert gt to value
 			const [gtA1, gtA2] = gt.split('/') // assuming diploid
 			const v = applyGeneticModel(tw, o.effAle, gtA1, gtA2)
-
 			// sampleid must be present in samples{map}, no need to check
 			samples.get(sampleid).id2value.set(snpid, { key: v, value: v })
 		}
-		snpgt2count.set(snpid, gt2count)
 	}
 }
 
-function filterSnpsByAFcutoff(tw, snp2sample, sampleinfilter) {
-	const totalsamplecount = sampleinfilter.reduce((i, j) => i + (j ? 1 : 0), 0)
-	const lowAFsnps = new Map() // same as snp2sample, to store low AF ones
-
-	tw.snpidlst = [] // store snps with AF >= cutoff
+function filterSnpsByAFcutoff(tw, snp2sample) {
+	// same as snp2sample, to store snps with AF>0 and <cutoff, later to use for Fisher
+	tw.lowAFsnps = new Map()
+	// store list of snpid with AF >= cutoff, that can be used for model-fitting
+	tw.snpidlst = []
 
 	for (const [snpid, o] of snp2sample) {
 		// o.effAle is effect allele
 		let effAleCount = 0 // count eff ale across samples
+		const totalsamplecount = o.samples.size
 		for (const [sampleid, gt] of o.samples) {
 			const [a1, a2] = gt.split('/') // assuming diploid
 			effAleCount += (a1 == o.effAle ? 1 : 0) + (a2 == o.effAle ? 1 : 0)
 		}
 
 		if (effAleCount == 0) {
-			console.log('AF=0', snpid)
-			// effect allele is not present in the cohort, do not analyze
-			snp2sample.delete(snpid)
-			continue
-		}
-
-		if (effAleCount >= totalsamplecount * 2) {
-			console.log('AF=1', snpid)
-			// monogenic
+			// monomorphic; effect allele is not present in the cohort, do not analyze
 			snp2sample.delete(snpid)
 			continue
 		}
 
 		const af = effAleCount / (totalsamplecount * 2)
-		if (af < tw.q.AFcutoff / 100) {
-			lowAFsnps.set(snpid, o)
+
+		if (af >= 1) {
+			// monomorphic
 			snp2sample.delete(snpid)
-			console.log('AFfilter', snpid)
+			continue
+		}
+
+		if (af < tw.q.AFcutoff / 100) {
+			tw.lowAFsnps.set(snpid, o)
+			snp2sample.delete(snpid)
 		} else {
 			// AF above cutoff
 			tw.snpidlst.push(snpid)
