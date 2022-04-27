@@ -46,7 +46,7 @@ export async function get_survival(q, ds) {
 		const survq = tNum == 't1' ? q.term1_q : q.term2_q
 
 		const results = get_rows(q, { withCTEs: true })
-		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
+		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1)) //if (q.term1.id.startsWith('Event-free')) console.log(results.lst.map(r=>`${r.sample}\t${r.key1}\t${r.val1}\t${r.key2}`).join('\n'))
 
 		const byChartSeries = {}
 		const keys = { chart: new Set(), series: new Set() }

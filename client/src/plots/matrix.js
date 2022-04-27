@@ -377,20 +377,18 @@ class Matrix {
 			}
 
 			for (const t of this.termOrder) {
+				mayApplyOverrides(row, t.tw, this.config.overrides)
 				const $id = t.tw.$id
-				// TODO: generalize the alternative ID handling
 				const anno = row[$id]
 				if (!anno) continue
 				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
 				const key = anno.key
 				const values = t.tw.term.values || {}
 				const label = 'label' in anno ? anno.label : key in values && values[key].label ? values[key].label : key
-				const fill = values[key]?.color
 
 				if (!anno.values) {
 					// only one rect for this sample annotation
 					series.cells.push({
-						series,
 						sample: row.sample,
 						tw: t.tw,
 						term: t.tw.term,
@@ -398,7 +396,7 @@ class Matrix {
 						$id,
 						key,
 						label,
-						fill,
+						fill: anno.color || values[key]?.color,
 						x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace,
 						y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace : 0,
 						order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
@@ -422,7 +420,7 @@ class Matrix {
 							y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + height * i : 0,
 							height,
 							width,
-							fill: mclass[value.class].color,
+							fill: value.color || mclass[value.class].color,
 							class: value.class,
 							order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
 						})
@@ -535,6 +533,7 @@ export async function getPlotConfig(opts, app) {
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				sortTermsBy: 'asListed', // or sampleCount
 				samplecount4gene: true,
+				cellbg: '#ececec',
 				colw: 14,
 				colspace: 1,
 				colgspace: 8,
@@ -569,4 +568,20 @@ export async function getPlotConfig(opts, app) {
 	if (config.divideBy) promises.push(fillTermWrapper(config.divideBy, app.vocabApi))
 	await Promise.all(promises)
 	return config
+}
+
+function mayApplyOverrides(row, tw, overrides) {
+	if (!tw.overrides) return {}
+	for (const key in overrides) {
+		if (!tw.overrides.includes(key)) continue
+		const sf = overrides[key].sampleFilter || {}
+		if (sf.type == 'wvs') {
+			for (const v of sf.values) {
+				if (row[sf.wrapper$id]?.key === v.key) {
+					row[tw.$id] = JSON.parse(JSON.stringify(overrides[key].value))
+					row[tw.$id].overriden = true
+				}
+			}
+		}
+	}
 }

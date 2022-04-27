@@ -31,6 +31,7 @@ document.body.onload = () => runproteinpaint({
 						matrix: {
 							colw: 8,
 							colspace: 0,
+              rowspace: 0,
 							termLabelOffset: 220,
 							sortTermsBy: 'asListed',
 						}
@@ -72,8 +73,8 @@ document.body.onload = () => runproteinpaint({
 									} // or 'continuous'
 								},
 								{
-									id: 'Age',
 									label: 'Age Group',
+                  id: 'Age',
 									q: {
 										mode: 'discrete',
 										type: 'custom-bin',
@@ -124,7 +125,7 @@ document.body.onload = () => runproteinpaint({
 									id: 'Surgery Prior to Therapy'
 								},
 								{
-									id: 'study'
+									id: 'Group'
 								},
 								{
 									id: 'Histologic group at diagnosis'
@@ -136,33 +137,87 @@ document.body.onload = () => runproteinpaint({
 									id: 'TSNE closest cluster'
 								},
 								{
-									id: 'Primary Treatment category 2'
-								},
-								{
 									id: 'DKFZ 12.5 Prediction Simplified'
 								},
+                {
+                  id: 'Sample Type'
+                },
+                {
+                  label: 'Study',
+                  id: 'study'
+                },
 								{
 									id: 'Mutational Burden'
 								},
 								{
-									id: 'Germline'
+									id: 'Germline',
+                  $id: 'germline'
 								},
 								{
-									id: 'WES'
+									id: 'WES',
+                  $id: 'WES'
 								},
 								{
-									id: 'RNAseq'
+									id: 'RNAseq',
+                  $id: 'rnaseq'
 								},
+                {
+                  id: 'Methylation'
+                },
 								...getCytogeneticsData()
 							]
 						},
-
-						...getGeneTermGroups()
+						...getGeneTermGroups(),
 					],
+          // each override may be used by any termwrapper 
+          // that has a tw.overrides[$key] array of any twOverride[$key] below
+          overrides: {
+            SVfill: {
+              value: {
+                key: 'RNAseq', 
+                value: 'RNAseq', 
+                values: [
+                  {key: 'Not tested', label: 'Not tested', color: '#fff'}
+                ]
+              },
+              sampleFilter: {
+                type: 'wvs', // "wrapper-value-setting"
+                wrapper$id: 'rnaseq',
+                values: [{key: 'No'}]
+              }
+            },
+            Gfill: {
+              value: {
+                key: 'Germline', 
+                value: 'Germline', 
+                values: [
+                  {key: 'Not tested', label: 'Not tested', color: '#fff'}
+                ]
+              },
+              sampleFilter: {
+                type: 'wvs', // "wrapper-value-setting"
+                wrapper$id: 'germline',
+                values: [{key: 'No'}]
+              }
+            },
+            WESfill: {
+              value: {
+                key: 'WES', 
+                value: 'WES', 
+                values: [
+                  {key: 'Not tested', label: 'Not tested', color: '#fff'}
+                ]
+              },
+              sampleFilter: {
+                type: 'wvs', // "wrapper-value-setting"
+                wrapper$id: 'WES',
+                values: [{key: 'No'}]
+              }
+            }
+          }
 				},
 
-
-				{
+				/*{
 					chartType: 'survival',
 					term: {
 						id: 'Event-free survival'
@@ -177,7 +232,6 @@ document.body.onload = () => runproteinpaint({
 					}
 				},
 
-
 				{
 					chartType: 'survival',
 					term: {
@@ -191,7 +245,7 @@ document.body.onload = () => runproteinpaint({
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 						}
 					}
-				},
+				},*/
 			]
 		}
 	}
@@ -202,11 +256,17 @@ function getGeneTermGroups() {
 	for(const g of genegroups) {
 		termgroups.push({
 			name: g.name,
-			lst: g.lst.map(t => {
-				t.type = 'geneVariant'
-				const tw = {
-					term: t
-				}
+			lst: g.lst.map(term => {
+				term.type = 'geneVariant'
+				const tw = {term}
+        const [name, suffix] = term.name.split('_')
+        if (suffix == 'SV') {
+          tw.overrides = ['SVfill']
+        } else if (suffix == 'G') {
+          tw.overrides = ['Gfill']
+        } else {
+          tw.overrides = ['WESfill']
+        }
 
 				return tw
 			}),
@@ -231,7 +291,7 @@ const genegroups = [
       "name": "fusion",
       "lst": [
           {
-              "name": "BCOR_SV"
+              "name": "BCOR_SV",
           },
           {
               "name": "CIC_SV"

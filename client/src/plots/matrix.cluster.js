@@ -84,7 +84,7 @@ function setRenderers(self) {
 			.attr('y', cluster.y)
 			.attr('width', cluster.width)
 			.attr('height', cluster.height)
-			.attr('fill', 'transparent')
+			.attr('fill', self.settings.cellbg)
 			.attr('stroke', '#555')
 			.attr('stroke-width', '1px')
 	}

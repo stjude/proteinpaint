@@ -15,7 +15,7 @@ export function setInteractivity(self) {
 			]
 
 			if (d.term.type == 'geneVariant') {
-				rows.push()
+				if (d.value.label) rows.push(`<tr><td style='text-align: center'>${d.value.label}</td></tr>`)
 				if (d.value.alt)
 					rows.push(`<tr><td style='text-align: center'>ref=${d.value.ref}, alt=${d.value.alt}</td></tr>`)
 				if (d.value.isoform) rows.push(`<tr><td style='text-align: center'>Isoform: ${d.value.isoform}</td></tr>`)

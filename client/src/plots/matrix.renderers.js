@@ -57,8 +57,8 @@ export function setRenderers(self) {
 			.attr('y', cell.y)
 			.attr('width', cell.width ? cell.width : s.colw)
 			.attr('height', cell.height ? cell.height : s.rowh)
-			//.attr('stroke', '#eee')
-			//.attr('stroke-width', 1)
+			.attr('stroke', s.colspace ? null : cell.fill)
+			//.attr('stroke-width', 0)
 			.attr('fill', cell.fill)
 	}
 
