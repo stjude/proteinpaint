@@ -1071,6 +1071,10 @@ async function datasetBtnEvent(page_args, ds) {
 	sandbox_div.body
 
 	if (ds.searchbar) {
+		const par = {
+			genome: page_args.genomes[ds.defaultGenome]
+		}
+
 		if (ds.genomeToggle == true) {
 			// Create hg19 and hg38 toggle first when applicable
 			const toggleBtn_div = sandbox_div.body
@@ -1086,7 +1090,6 @@ async function datasetBtnEvent(page_args, ds) {
 				.style('background-color', hg19btn.active ? '#0b5394ff' : '#bfbfbf')
 				.style('border', 'none')
 				.style('border-radius', '3px 0px 0px 3px')
-				.classed('sjpp-featuredDS-btn', true)
 				.text('hg19')
 
 			// right hg38 toggle button
@@ -1097,29 +1100,38 @@ async function datasetBtnEvent(page_args, ds) {
 				.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
 				.style('border', 'none')
 				.style('border-radius', '0px 3px 3px 0px')
-				.classed('sjpp-featuredDS-btn', true)
 				.text('hg38')
 
 			hg19btn.on('click', () => {
-				hg19btn.active == true ? (hg19btn.active = false) : (hg19btn.active = true)
-				hg38btn.active == false ? (hg38btn.active = true) : (hg38btn.active = false)
+				hg19btn.active == true
+					? (hg19btn.active = false)
+					: (hg19btn.active = true) && (par.genome = page_args.genomes['hg19'])
+				hg38btn.active == false
+					? (hg38btn.active = true) && (par.genome = page_args.genomes['hg38'])
+					: (hg38btn.active = false)
 				hg19btn
 					.style('color', hg19btn.active ? 'white' : 'black')
 					.style('background-color', hg19btn.active ? '#0b5394ff' : '#bfbfbf')
 				hg38btn
 					.style('color', hg38btn.active ? 'white' : 'black')
 					.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
+				console.log(par.genome)
 			})
 
 			hg38btn.on('click', () => {
-				hg19btn.active == false ? (hg19btn.active = true) : (hg19btn.active = false)
-				hg38btn.active == true ? (hg38btn.active = false) : (hg38btn.active = true)
+				hg19btn.active == false
+					? (hg19btn.active = true) && (par.genome = page_args.genomes['hg19'])
+					: (hg19btn.active = false)
+				hg38btn.active == true
+					? (hg38btn.active = false)
+					: (hg38btn.active = true) && (par.genome = page_args.genomes['hg38'])
 				hg19btn
 					.style('color', hg19btn.active ? 'white' : 'black')
 					.style('background-color', hg19btn.active ? '#0b5394ff' : '#bfbfbf')
 				hg38btn
 					.style('color', hg38btn.active ? 'white' : 'black')
 					.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
+				console.log(par.genome)
 			})
 		}
 		// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
@@ -1127,16 +1139,27 @@ async function datasetBtnEvent(page_args, ds) {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('padding', '10px 10px 10px 10px')
-		const tip = new Menu({ padding: '' })
+		par.tip = new Menu({ padding: '' })
+		par.row = searchbar_div.append('div').style('border', '1px, solid #d0e3ff')
 
-		const par = {
-			genome: page_args.genomes[ds.defaultGenome],
-			tip,
-			row: searchbar_div.append('div').style('border', '1px, solid #d0e3ff')
-		}
+		const coords = addGeneSearchbox(par)
 
-		const geneSearch = addGeneSearchbox(par)
+		const applyBtn = makeButton(sandbox_div.body, 'Apply')
+		applyBtn.on('click', () => {
+			const runpp_arg = {
+				holder: sandbox_div.body
+					.append('div')
+					.style('margin', '20px')
+					.node(),
+				host: window.location.origin,
+				genome: par.genome.name,
+				position: `${coords.chr}:${coords.start}-${coords.stop}`,
+				gene: coords.geneSymbol
+			}
 
-		console.log(par, geneSearch)
+			const callpp = JSON.parse(JSON.stringify(ds.runargs))
+
+			runproteinpaint(Object.assign(runpp_arg, callpp))
+		})
 	}
 }
