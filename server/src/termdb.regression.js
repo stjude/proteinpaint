@@ -141,7 +141,7 @@ function parse_q(q, ds) {
 			// tw for these terms lacks tw.term{}
 			// tw.snpidlst[] will be added when parsing cache file
 			if (!tw.q.cacheid) throw 'q.cacheid missing'
-			if (tw.q.cacheid.match(/[^\w]/)) throw 'invalid cacheid'
+			if (serverconfig.cache_snpgt.fileNameRegexp.test(tw.q.cacheid)) throw 'invalid cacheid'
 			if (typeof tw.q.snp2effAle != 'object') throw 'q.snp2effAle{} is not object'
 			if (!Number.isInteger(tw.q.alleleType)) throw 'q.alleleType is not integer'
 			if (!Number.isInteger(tw.q.geneticModel)) throw 'q.geneticModel is not integer'
@@ -854,13 +854,13 @@ samples {Map}
 	as those will miss value for dict terms and ineligible for analysis
 */
 async function getSampleData_snplstOrLocus(tw, samples, snpgt2count) {
-	const lines = (await utils.read_file(path.join(serverconfig.cachedir_snpgt, tw.q.cacheid))).split('\n')
+	const lines = (await utils.read_file(path.join(serverconfig.cache_snpgt.dir, tw.q.cacheid))).split('\n')
 	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 
 	// array of sample ids from the cache file; note cache file contains all the samples from the dataset
 	const cachesampleheader = lines[0]
 		.split('\t')
-		.slice(6) // from 7th column
+		.slice(serverconfig.cache_snpgt.sampleColumn) // from 7th column
 		.map(Number) // sample ids are integer
 
 	// make a list of true/false, same length of cachesampleheader
@@ -893,7 +893,7 @@ async function getSampleData_snplstOrLocus(tw, samples, snpgt2count) {
 				// this sample is filtered out
 				continue
 			}
-			const gt = l[j + 6]
+			const gt = l[j + serverconfig.cache_snpgt.sampleColumn]
 			if (gt) {
 				snp2sample.get(snpid).samples.set(sampleid, gt)
 			}

@@ -7746,7 +7746,11 @@ async function pp_init() {
 	// to ensure temp files saved in previous server session are accessible in current session
 	// must use consistent dir name but not random dir name that changes from last server boot
 	serverconfig.cachedir_massSession = await mayCreateSubdirInCache('massSession')
-	serverconfig.cachedir_snpgt = await mayCreateSubdirInCache('snpgt')
+	serverconfig.cache_snpgt = {
+		dir: await mayCreateSubdirInCache('snpgt'),
+		fileNameRegexp: /[^\w]/, // client-provided cache file name matching with this are denied
+		sampleColumn: 6 // in cache file, sample column starts from 7th column
+	}
 	serverconfig.cachedir_bam = await mayCreateSubdirInCache('bam')
 	serverconfig.cachedir_genome = await mayCreateSubdirInCache('genome')
 

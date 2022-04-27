@@ -89,7 +89,7 @@ export async function validate(q, tdb, ds, genome) {
 
 async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 	if (!q.cacheid) throw 'cacheid missing'
-	if (q.cacheid.match(/[^\w]/)) throw 'invalid cacheid'
+	if (serverconfig.cache_snpgt.fileNameRegexp.test(q.cacheid)) throw 'invalid cacheid'
 	const tk = ds.track.vcf
 	if (!tk) throw 'ds.track.vcf missing'
 	// samples are at tk.samples[], each element: {name: int ID}
@@ -107,7 +107,7 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 		})
 	}
 
-	const lines = (await utils.read_file(path.join(serverconfig.cachedir_snpgt, q.cacheid))).split('\n')
+	const lines = (await utils.read_file(path.join(serverconfig.cache_snpgt.dir, q.cacheid))).split('\n')
 	const samplewithgt = new Set() // collect samples with valid gt for any snp
 	const snps = []
 	for (let i = 1; i < lines.length; i++) {
@@ -118,11 +118,12 @@ async function summarizeSamplesFromCache(q, tdb, ds, genome) {
 		// count per allele count from this snp
 		const allele2count = {} // k: allele, v: number of appearances
 		const gt2count = {} // k: gt string, v: number of samples
-		for (let j = 6; j < l.length; j++) {
+		for (let j = serverconfig.cache_snpgt.sampleColumn; j < l.length; j++) {
 			const gt = l[j]
 			if (!gt) continue // no gt call for this sample
-			if (!sampleinfilter[j - 6]) continue //sample not in use
-			samplewithgt.add(tk.samples[j - 6].name) // this sample has valid gt
+			if (!sampleinfilter[j - serverconfig.cache_snpgt.sampleColumn]) continue //sample not in use
+			// this sample has valid gt
+			samplewithgt.add(tk.samples[j - serverconfig.cache_snpgt.sampleColumn].name)
 			gt2count[gt] = 1 + (gt2count[gt] || 0)
 			const alleles = gt.split('/')
 			for (const a of alleles) {
@@ -350,7 +351,7 @@ async function queryBcf(q, snps, ds) {
 	// cache id is a file name and its characters are covered by \w
 	// will apply /[^\w]/ to check against attack
 	const cacheid = q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
-	await utils.write_file(path.join(serverconfig.cachedir_snpgt, cacheid), lines.join('\n'))
+	await utils.write_file(path.join(serverconfig.cache_snpgt.dir, cacheid), lines.join('\n'))
 	return cacheid
 }
 
@@ -427,7 +428,7 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 		}
 	})
 	result.cacheid = q.genome + '_' + q.dslabel + '_' + new Date() / 1 + '_' + Math.ceil(Math.random() * 10000)
-	await utils.write_file(path.join(serverconfig.cachedir_snpgt, result.cacheid), lines.join('\n'))
+	await utils.write_file(path.join(serverconfig.cache_snpgt.dir, result.cacheid), lines.join('\n'))
 	return result
 }
 
