@@ -936,7 +936,6 @@ async function getSampleData_snplstOrLocus(tw, samples, snpgt2count) {
 }
 
 function filterSnpsByAFcutoff(tw, snp2sample, sampleinfilter) {
-	tw.q.AFcutoff = 0.05 // hardcoded before UI support
 	const totalsamplecount = sampleinfilter.reduce((i, j) => i + (j ? 1 : 0), 0)
 	const lowAFsnps = new Map() // same as snp2sample, to store low AF ones
 
@@ -957,8 +956,15 @@ function filterSnpsByAFcutoff(tw, snp2sample, sampleinfilter) {
 			continue
 		}
 
+		if (effAleCount >= totalsamplecount * 2) {
+			console.log('AF=1', snpid)
+			// monogenic
+			snp2sample.delete(snpid)
+			continue
+		}
+
 		const af = effAleCount / (totalsamplecount * 2)
-		if (af < tw.q.AFcutoff) {
+		if (af < tw.q.AFcutoff / 100) {
 			lowAFsnps.set(snpid, o)
 			snp2sample.delete(snpid)
 			console.log('AFfilter', snpid)

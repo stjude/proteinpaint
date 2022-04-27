@@ -1,6 +1,14 @@
 import { mayRunSnplstTask } from './termsetting.snplst.sampleSum'
 
 /* 
+********************* EXPORT
+getHandler()
+fillTW()
+mayRestrictAncestry()
+makeSnpSelect()
+
+*********************
+
 storing snps on self.term but not self so it can be written to state,
 allow snps to be supplied from self.main(),
 and prevent snps from being included in regression request string
@@ -104,7 +112,11 @@ async function makeEditMenu(self, div) {
 	// right column
 	const tdright = tr.append('td').style('vertical-align', 'top')
 
-	const [select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(tdright, self, 'snplst')
+	const [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
+		tdright,
+		self,
+		'snplst'
+	)
 
 	// submit button
 	const submit_btn = div
@@ -148,6 +160,10 @@ async function makeEditMenu(self, div) {
 			await validateInput(self)
 			//q.cacheid is set
 
+			{
+				const v = Number(input_AFcutoff.property('value'))
+				self.q.AFcutoff = v <= 0 || v >= 100 ? 5 : v // set to default if invalid
+			}
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
 			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
@@ -430,6 +446,8 @@ async function makeSampleSummary(self) {
 }
 
 function validateQ(self, data) {
+	if (!Number.isFinite(data.q.AFcutoff)) throw 'AFcutoff is not number'
+	if (data.q.AFcutoff < 0 || data.q.AFcutoff > 100) throw 'AFcutoff is not within 0 to 100'
 	if (![0, 1].includes(data.q.alleleType)) throw 'alleleType value is not one of 0/1'
 	if (![0, 1, 2, 3].includes(data.q.geneticModel)) throw 'geneticModel value is not one of 0/1'
 	if (![0, 1, 2].includes(data.q.missingGenotype)) throw 'missingGenotype value is not one of 0/1'
@@ -468,13 +486,48 @@ function makeId() {
 	return 'snplst' + Math.random()
 }
 
+/*
+shared between snplst and snplocus term type
+create following dom elements and return in an array
+- AF cutoff <input>
+- allele type <select>
+- genetic model <select>
+- missing gt <select>
+  (missing gt is not created for snplocus)
+
+*/
 export function makeSnpSelect(div, self, termtype) {
-	// create following 3 <select> and return in an array
-	// missingGenotype will not be created for snplocus
-	let select_alleleType, select_geneticModel, select_missingGenotype
+	let input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype
+
+	// input - af cutoff
+	{
+		div
+			.append('div')
+			.style('opacity', 0.4)
+			.style('font-size', '.7em')
+			.text('EFFECT ALLELE FREQUENCY CUTOFF')
+		const row = div.append('div')
+		input_AFcutoff = row
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', 0)
+			.attr('max', 100)
+			// default 0.05 to be shown when launching edit menu to create new term
+			// if value is set in self.q, will be overwritten later
+			.property('value', 5)
+		row.append('span').text('%')
+		row
+			.append('span')
+			.style('margin-left', '10px')
+			.style('opacity', 0.5)
+			.style('font-size', '.7em')
+			.text('Variants below the cutoff are not analyzed')
+	}
+
 	// select - allele type
 	div
 		.append('div')
+		.style('margin-top', '10px')
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
 		.text('ALLELE TYPE')
@@ -515,6 +568,7 @@ export function makeSnpSelect(div, self, termtype) {
 
 	if (self.term) {
 		// .term and .q is available on the instance; populate UI with values
+		input_AFcutoff.property('value', self.q.AFcutoff)
 		select_alleleType.property('selectedIndex', self.q.alleleType)
 		select_geneticModel.property('selectedIndex', self.q.geneticModel)
 		if (select_missingGenotype) {
@@ -536,7 +590,7 @@ export function makeSnpSelect(div, self, termtype) {
 				'Impute as homozygous ' + (is0 ? 'major' : 'reference') + ' allele'
 		}
 	}
-	return [select_alleleType, select_geneticModel, select_missingGenotype]
+	return [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype]
 }
 
 export async function mayRestrictAncestry(self, holder) {
