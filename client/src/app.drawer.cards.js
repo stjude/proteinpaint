@@ -1,7 +1,7 @@
 import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from './client'
 import { newSandboxDiv } from './dom/sandbox'
 import { debounce } from 'debounce'
-import { event, select } from 'd3-selection'
+import { event, selec, selectAll } from 'd3-selection'
 // js-only syntax highlighting for smallest bundle, see https://highlightjs.org/usage/
 // also works in rollup and not just webpack, without having to use named imports
 import hljs from 'highlight.js/lib/core'
@@ -10,6 +10,8 @@ hljs.registerLanguage('javascript', javascript)
 import json from 'highlight.js/lib/languages/json'
 hljs.registerLanguage('json', json)
 import copyButton from './dom/copyButton'
+import { addGeneSearchbox } from './dom/genesearch'
+import { Menu } from './dom/menu'
 
 /*
 
@@ -57,11 +59,14 @@ make_useCasesCard
 makeDNAnexusFileViewerCard
 	- openDNAnexusSandbox
 
+*** Featured Datasets ***
+makeDatasetButtons
+
 Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl0xIJqDRbyhahA4/edit#heading=h.jwyqi1mhacps
 */
 
 export async function init_appDrawer(par) {
-	const { holder, apps_sandbox_div, apps_off, genome } = par
+	const { holder, apps_sandbox_div, apps_off, genomes } = par
 	const re = await dofetch2('/cardsjson')
 	if (re.error) {
 		sayerror(holder.append('div'), re.error)
@@ -96,7 +101,7 @@ export async function init_appDrawer(par) {
 		apps_sandbox_div,
 		apps_off,
 		allow_mdsform: re.allow_mdsform,
-		genome
+		genomes
 	}
 	// make_searchbar(track_args, page_args, searchbar_div)
 	make_useCasesCard(topCards_div, track_args, page_args)
@@ -1031,17 +1036,107 @@ async function makeDatasetButtons(div, page_args) {
 		.append('h5')
 		.attr('class', 'sjpp-track-cols')
 		.style('color', 'rgb(100, 122, 152)')
-		.html(page_args.genome.name + ' Datasets')
+		.html('Featured Datasets')
 
 	const datasetBtns_div = dataset_div.append('div').style('padding', '10px')
 
-	for (const [k, v] of Object.entries(page_args.genome.datasets)) {
-		if (v.isofficial != true) continue
-		const btn = makeButton(datasetBtns_div, k)
-		btn.on('click', async () => {
+	const res = await dofetch3(`/cardsjson?jsonfile=featuredDatasets`)
+	if (res.error) {
+		sayerror(div.append('div'), res.error)
+		return
+	}
+
+	const datasets = res.jsonfile.datasets
+
+	for (const ds of datasets) {
+		const btn = makeButton(datasetBtns_div, ds.name)
+		btn.on('click', () => {
 			page_args.apps_off()
+			if (ds.link) {
+				event.stopPropagation()
+				window.open(`${ds.link}`, '_blank')
+			} else {
+				datasetBtnEvent(page_args, ds)
+			}
 		})
 	}
 
 	return datasetBtns_div
+}
+
+async function datasetBtnEvent(page_args, ds) {
+	const sandbox_div = newSandboxDiv(page_args.apps_sandbox_div)
+	sandbox_div.header_row
+	sandbox_div.header.text(ds.name)
+	sandbox_div.body
+
+	if (ds.searchbar) {
+		if (ds.genomeToggle == true) {
+			// Create hg19 and hg38 toggle first when applicable
+			const toggleBtn_div = sandbox_div.body
+				.append('div')
+				.style('display', 'inline-block')
+				.style('padding', '10px 0px 10px 10px')
+
+			// left hg19 toggle button
+			const hg19btn = toggleBtn_div.append('button')
+			hg19btn.active = true
+			hg19btn
+				.style('color', hg19btn.active ? 'white' : 'black')
+				.style('background-color', hg19btn.active ? '#0b5394ff' : '#bfbfbf')
+				.style('border', 'none')
+				.style('border-radius', '3px 0px 0px 3px')
+				.classed('sjpp-featuredDS-btn', true)
+				.text('hg19')
+
+			// right hg38 toggle button
+			const hg38btn = toggleBtn_div.append('button')
+			hg38btn.active = false
+			hg38btn
+				.style('color', hg38btn.active ? 'white' : 'black')
+				.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
+				.style('border', 'none')
+				.style('border-radius', '0px 3px 3px 0px')
+				.classed('sjpp-featuredDS-btn', true)
+				.text('hg38')
+
+			hg19btn.on('click', () => {
+				hg19btn.active == true ? (hg19btn.active = false) : (hg19btn.active = true)
+				hg38btn.active == false ? (hg38btn.active = true) : (hg38btn.active = false)
+				hg19btn
+					.style('color', hg19btn.active ? 'white' : 'black')
+					.style('background-color', hg19btn.active ? '#0b5394ff' : '#bfbfbf')
+				hg38btn
+					.style('color', hg38btn.active ? 'white' : 'black')
+					.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
+			})
+
+			hg38btn.on('click', () => {
+				hg19btn.active == false ? (hg19btn.active = true) : (hg19btn.active = false)
+				hg38btn.active == true ? (hg38btn.active = false) : (hg38btn.active = true)
+				hg19btn
+					.style('color', hg19btn.active ? 'white' : 'black')
+					.style('background-color', hg19btn.active ? '#0b5394ff' : '#bfbfbf')
+				hg38btn
+					.style('color', hg38btn.active ? 'white' : 'black')
+					.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
+			})
+		}
+		// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
+		const searchbar_div = sandbox_div.body
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '10px 10px 10px 10px')
+		const tip = new Menu({ padding: '' })
+
+		const par = {
+			genome: page_args.genomes[ds.defaultGenome],
+			tip,
+			row: searchbar_div.append('div').style('border', '1px, solid #d0e3ff')
+		}
+
+		const geneSearch = addGeneSearchbox(par)
+
+		console.log(par, geneSearch)
+	}
 }

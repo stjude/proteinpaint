@@ -1,0 +1,68 @@
+{
+    "datasets": [
+        {
+            "name": "Pediatric Protein View",
+            "searchbar": "gene",
+            "genomeToggle": true,
+            "defaultGenome": "hg19",
+            "runargs": {
+                "nobox": true,
+                "parselurl": true,
+                "noheader": true, 
+                "gene": "TP53",
+                "genome": "hg19",
+                "dataset": "Pediatric2"
+            }
+        },
+        {
+            "name": "Pediatric Genome Browser",
+            "searchbar": "all",
+            "genomeToggle": true,
+            "defaultGenome": "hg19",
+            "runargs": {
+                "nobox": true,
+                "parselurl": true,
+                "noheader": true,
+                "gene": "TP53",
+                "genome": "hg19",
+                "datasetqueries":[ {"dataset": "Pediatric2", "querykey": "svcnv"} ]
+            }
+        },
+        {
+            "name": "NCI GDC",
+            "searchbar": "gene",
+            "defaultGenome": "hg38",
+            "runargs": {
+                "nobox": true,
+                "parselurl": true,
+                "noheader": true,
+                "gene": "TP53",
+                "genome": "hg38",
+                "tracks": [
+                    {
+                        "type": "mds3",
+                        "dslabel": "GDC"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "CIViC",
+            "searchbar": "gene",
+            "defaultGenome": "hg38",
+            "runargs": {
+                "nobox": true,
+                "parselurl": true,
+                "noheader": true,
+                "gene": "TP53",
+                "genome": "hg19",
+                "dataset": "CIViC"
+            }
+        },
+        {
+            "name": "Survivorship Study",
+            "searchbar": "none",
+            "link": "https://proteinpaint.stjude.org/?noheader=1&mass=%7B%22genome%22:%22hg38%22,%22dslabel%22:%20%22SJLife%22%7D"
+        }
+    ]
+}

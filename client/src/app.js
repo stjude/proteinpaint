@@ -364,7 +364,6 @@ function makeheader(app, obj, jwt) {
 		.style('margin', '1px 20px 1px 10px')
 		.on('change', () => {
 			update_genome_browser_btn(app)
-			app.drawer = drawer_init(app, obj.features)
 		})
 	for (const n in app.genomes) {
 		app.selectgenome
