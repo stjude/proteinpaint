@@ -5,11 +5,12 @@
             "searchbar": "gene",
             "genomeToggle": true,
             "defaultGenome": "hg19",
+            "dsURLparam": "mds=Pediatric2,svcnv",
             "runargs": {
                 "nobox": true,
                 "parselurl": true,
                 "noheader": true, 
-                "dataset": "Pediatric2"
+                "datasetqueries":[ {"dataset": "Pediatric2", "querykey": "svcnv"} ]
             }
         },
         {
@@ -17,10 +18,12 @@
             "searchbar": "all",
             "genomeToggle": true,
             "defaultGenome": "hg19",
+            "dsURLparam": "block=1&mds=Pediatric2,svcnv",
             "runargs": {
                 "nobox": true,
                 "parselurl": true,
                 "noheader": true,
+                "block": true,
                 "datasetqueries":[ {"dataset": "Pediatric2", "querykey": "svcnv"} ]
             }
         },
@@ -28,6 +31,7 @@
             "name": "NCI GDC",
             "searchbar": "gene",
             "defaultGenome": "hg38",
+            "dsURLparam": "mds3=GDC",
             "runargs": {
                 "nobox": true,
                 "parselurl": true,
@@ -44,7 +48,8 @@
         {
             "name": "CIViC",
             "searchbar": "gene",
-            "defaultGenome": "hg38",
+            "defaultGenome": "hg19",
+            "dsURLparam": "dataset=CIViC",
             "runargs": {
                 "nobox": true,
                 "parselurl": true,

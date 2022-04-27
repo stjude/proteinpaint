@@ -61,6 +61,8 @@ makeDNAnexusFileViewerCard
 
 *** Featured Datasets ***
 makeDatasetButtons
+	- openDatasetSandbox
+		- makeURLbutton
 
 Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl0xIJqDRbyhahA4/edit#heading=h.jwyqi1mhacps
 */
@@ -1056,7 +1058,7 @@ async function makeDatasetButtons(div, page_args) {
 				event.stopPropagation()
 				window.open(`${ds.link}`, '_blank')
 			} else {
-				datasetBtnEvent(page_args, ds)
+				openDatasetSandbox(page_args, ds)
 			}
 		})
 	}
@@ -1064,13 +1066,14 @@ async function makeDatasetButtons(div, page_args) {
 	return datasetBtns_div
 }
 
-async function datasetBtnEvent(page_args, ds) {
+async function openDatasetSandbox(page_args, ds) {
 	const sandbox_div = newSandboxDiv(page_args.apps_sandbox_div)
 	sandbox_div.header_row
 	sandbox_div.header.text(ds.name)
 	sandbox_div.body
 
 	if (ds.searchbar) {
+		// Create search bar only for searchable datasets (may not be needed if all datasets are assumed searchable)
 		const par = {
 			genome: page_args.genomes[ds.defaultGenome]
 		}
@@ -1115,7 +1118,6 @@ async function datasetBtnEvent(page_args, ds) {
 				hg38btn
 					.style('color', hg38btn.active ? 'white' : 'black')
 					.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
-				console.log(par.genome)
 			})
 
 			hg38btn.on('click', () => {
@@ -1131,7 +1133,6 @@ async function datasetBtnEvent(page_args, ds) {
 				hg38btn
 					.style('color', hg38btn.active ? 'white' : 'black')
 					.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
-				console.log(par.genome)
 			})
 		}
 		// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
@@ -1142,24 +1143,43 @@ async function datasetBtnEvent(page_args, ds) {
 		par.tip = new Menu({ padding: '' })
 		par.row = searchbar_div.append('div').style('border', '1px, solid #d0e3ff')
 
+		// Add gene search box and save the return coordinates, attributes, etc.
 		const coords = addGeneSearchbox(par)
 
 		const applyBtn = makeButton(sandbox_div.body, 'Apply')
-		applyBtn.on('click', () => {
-			const runpp_arg = {
-				holder: sandbox_div.body
-					.append('div')
-					.style('margin', '20px')
-					.node(),
-				host: window.location.origin,
-				genome: par.genome.name,
-				position: `${coords.chr}:${coords.start}-${coords.stop}`,
-				gene: coords.geneSymbol
-			}
+		applyBtn
+			.style('display', 'block')
+			.style('margin', '10px')
+			.on('click', () => {
+				// Create 'Run Dataset from URL' btn specific to each applied search
+				makeURLbutton(sandbox_div.body, coords, par, ds)
+				// Render the search parameters as a track
+				const runpp_arg = {
+					holder: sandbox_div.body
+						.append('div')
+						.style('margin', '20px')
+						.node(),
+					host: window.location.origin,
+					genome: par.genome.name,
+					position: `${coords.chr}:${coords.start}-${coords.stop}`,
+					gene: coords.geneSymbol
+				}
 
-			const callpp = JSON.parse(JSON.stringify(ds.runargs))
+				const callpp = JSON.parse(JSON.stringify(ds.runargs))
 
-			runproteinpaint(Object.assign(runpp_arg, callpp))
-		})
+				runproteinpaint(Object.assign(runpp_arg, callpp))
+			})
 	}
+}
+
+function makeURLbutton(div, coords, par, ds) {
+	const URLbtn = makeButton(div, 'Run Dataset from URL')
+	// Use position for genome browser and gene for protein view
+	const blockOn =
+		ds.runargs.block == true ? `position=${coords.chr}:${coords.start}-${coords.stop}` : `gene=${coords.geneSymbol}`
+	URLbtn.on('click', () => {
+		event.stopPropagation()
+		// Opens from window location
+		window.open(`?genome=${par.genome.name}&${blockOn}&${ds.dsURLparam}`, '_blank')
+	})
 }
