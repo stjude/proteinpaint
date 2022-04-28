@@ -298,7 +298,6 @@ class Matrix {
 				})
 
 				totalHtAdjustments += (t.tw.settings?.barh || ht) - ht
-				console.log(totalHtAdjustments)
 			}
 
 			totalIndex += grp.lst.length
@@ -440,7 +439,7 @@ class Matrix {
 						const barh = t.tw.settings.barh
 						if (s.transpose) {
 							cell.width = t.scale(cell.key)
-							cell.x += barh - cell.width
+							//cell.x += barh - cell.width
 						} else {
 							cell.height = t.scale(cell.key)
 							cell.y += barh - cell.height
@@ -451,8 +450,8 @@ class Matrix {
 				} else {
 					// some term types like geneVariant can have multiple values for the same term,
 					// which will be renderd as multiple smaller, non-overlapping rects within the same cell
-					const height = !s.transpose ? s.rowh / anno.values.length : 0
-					const width = !s.transpose ? 0 : s.colw / anno.values.length
+					const height = !s.transpose ? s.rowh / anno.values.length : s.colw
+					const width = !s.transpose ? s.colw : s.colw / anno.values.length
 					for (const [i, value] of anno.values.entries()) {
 						series.cells.push({
 							sample: row.sample,

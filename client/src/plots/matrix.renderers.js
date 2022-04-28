@@ -56,7 +56,7 @@ export function setRenderers(self) {
 			.attr('x', cell.x)
 			.attr('y', cell.y)
 			.attr('width', cell.width ? cell.width : s.colw)
-			.attr('height', cell.height ? cell.height : s.rowh)
+			.attr('height', 'height' in cell ? cell.height : s.rowh)
 			.attr('stroke', s.colspace ? null : cell.fill)
 			.attr('stroke-width', '1px')
 			.attr('fill', cell.fill)
