@@ -105,7 +105,8 @@ class Matrix {
 				app: this.app,
 				id: this.id,
 				parent: this,
-				holder: this.dom.controls
+				holder: this.dom.controls,
+				getSvg: () => this.dom.svg.node()
 			},
 			appState
 		)
