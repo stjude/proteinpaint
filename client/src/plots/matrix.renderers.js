@@ -58,7 +58,7 @@ export function setRenderers(self) {
 			.attr('width', cell.width ? cell.width : s.colw)
 			.attr('height', cell.height ? cell.height : s.rowh)
 			.attr('stroke', s.colspace ? null : cell.fill)
-			//.attr('stroke-width', 0)
+			.attr('stroke-width', '1px')
 			.attr('fill', cell.fill)
 	}
 
@@ -103,28 +103,38 @@ export function setRenderers(self) {
 	self.colLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const x = lab.grpIndex * s.colgspace + lab.totalIndex * d.dx + 0.8 * s.colw
+		const x = lab.grpIndex * s.colgspace + lab.totalIndex * d.dx + 0.8 * s.colw + lab.totalHtAdjustments
 		return `translate(${x},0)`
 	}
 
 	self.colGrpLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const x = lab.grpIndex * s.colgspace + lab.prevGrpTotalIndex * d.dx + (lab.grp.lst.length * d.dx) / 2 + 3
+		const x =
+			lab.grpIndex * s.colgspace +
+			lab.prevGrpTotalIndex * d.dx +
+			(lab.grp.lst.length * d.dx) / 2 +
+			3 +
+			lab.totalHtAdjustments
 		return `translate(${x},0)`
 	}
 
 	self.rowLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + 0.7 * s.rowh
+		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + 0.7 * s.rowh + lab.totalHtAdjustments
 		return `translate(0,${y})`
 	}
 
 	self.rowGrpLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const y = lab.grpIndex * s.rowgspace + lab.prevGrpTotalIndex * d.dy + (lab.grp.lst.length * d.dy) / 2 + 3
+		const y =
+			lab.grpIndex * s.rowgspace +
+			lab.prevGrpTotalIndex * d.dy +
+			(lab.grp.lst.length * d.dy) / 2 +
+			3 +
+			lab.totalHtAdjustments
 		return `translate(0,${y})`
 	}
 

@@ -62,15 +62,11 @@ document.body.onload = () => runproteinpaint({
 								{
 									id: 'Age',
 									q: {
-										mode: 'discrete',
-										type: 'regular-bin',
-										bin_size: 2,
-										first_bin: {
-											startunbounded: true,
-											stop: 2,
-											stopinclusive: true
-										}
-									} // or 'continuous'
+										mode: 'continuous',
+									},
+                  settings: {
+                    barh: 30
+                  }
 								},
 								{
 									label: 'Age Group',

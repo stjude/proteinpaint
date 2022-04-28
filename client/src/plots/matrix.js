@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
-import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
+import { scaleLinear, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { fillTermWrapper } from '../common/termsetting'
 import { MatrixCluster } from './matrix.cluster'
 import { MatrixControls } from './matrix.controls'
@@ -224,7 +224,16 @@ class Matrix {
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
 			grp.lst.sort(this.sampleSorter)
 			for (const [index, row] of grp.lst.entries()) {
-				this.sampleOrder.push({ grp, grpIndex, row, index, prevGrpTotalIndex: total, totalIndex: total + index })
+				this.sampleOrder.push({
+					grp,
+					grpIndex,
+					row,
+					index,
+					prevGrpTotalIndex: total,
+					totalIndex: total + index,
+					totalHtAdjustments: 0,
+					grpHtAdjustments: 0
+				})
 			}
 			total += grp.lst.length
 		}
@@ -232,12 +241,16 @@ class Matrix {
 
 	setTermOrder(data) {
 		const s = this.settings.matrix
+		// ht: standard cell dimension for term row or column
+		const ht = s.transpose ? s.colw : s.rowh
 		this.termSorter = getTermSorter(this, s)
 		this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
 		this.termOrder = []
-		let total = 0
+		let totalIndex = 0,
+			totalHtAdjustments = 0
 		for (const [grpIndex, grp] of this.termGroups.entries()) {
 			const lst = [] // will derive a mutable copy of grp.lst
+			let grpHtAdjustments = 0
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
 				for (const sn in data.samples) {
@@ -245,9 +258,15 @@ class Matrix {
 					if (tw.$id in row) {
 						counts.samples += 1
 						counts.hits += Array.isArray(row[tw.$id].values) ? row[tw.$id].values.length : 1
+						if (tw.q?.mode == 'continuous') {
+							const v = row[tw.$id].value
+							if (!('minval' in counts) || counts.minval > v) counts.minval = v
+							if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
+						}
 					}
 				}
 				lst.push({ tw, counts, index })
+				grpHtAdjustments += (tw.settings?.barh || ht) - ht
 			}
 
 			// may override the settings.sortTermsBy with a sorter that is specific to a term group
@@ -261,17 +280,28 @@ class Matrix {
 					grpIndex,
 					tw,
 					index, // rendered index
-					prevGrpTotalIndex: total,
-					totalIndex: total + index,
+					prevGrpTotalIndex: totalIndex,
+					totalIndex: totalIndex + index,
+					totalHtAdjustments,
+					grpHtAdjustments,
 					ref,
 					counts,
 					label:
 						(t.tw.label || t.tw.term.name) +
-						(s.samplecount4gene && t.tw.term.type.startsWith('gene') ? ` (${counts.samples})` : '')
+						(s.samplecount4gene && t.tw.term.type.startsWith('gene') ? ` (${counts.samples})` : ''),
+					scale:
+						tw.q?.mode == 'continuous'
+							? scaleLinear()
+									.domain([counts.minval, counts.maxval])
+									.range([0, tw.settings.barh])
+							: null
 				})
+
+				totalHtAdjustments += (t.tw.settings?.barh || ht) - ht
+				console.log(totalHtAdjustments)
 			}
 
-			total += grp.lst.length
+			totalIndex += grp.lst.length
 		}
 	}
 
@@ -312,8 +342,10 @@ class Matrix {
 		const nx = this[`${col}s`].length
 		const dy = s.rowh + s.rowspace
 		const ny = this[`${row}s`].length
-		const mainw = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
-		const mainh = ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace
+		const mainw =
+			nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace + this[`${col}s`].slice(-1)[0].totalHtAdjustments
+		const mainh =
+			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + this[`${row}s`].slice(-1)[0].totalHtAdjustments
 
 		layout.top.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset - s.collabelgap})`,
@@ -389,7 +421,7 @@ class Matrix {
 
 				if (!anno.values) {
 					// only one rect for this sample annotation
-					series.cells.push({
+					const cell = {
 						sample: row.sample,
 						tw: t.tw,
 						term: t.tw.term,
@@ -398,10 +430,24 @@ class Matrix {
 						key,
 						label,
 						fill: anno.color || values[key]?.color,
-						x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace,
-						y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace : 0,
+						x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + t.totalHtAdjustments,
+						y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + t.totalHtAdjustments : 0,
 						order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
-					})
+					}
+
+					if (t.tw.q?.mode == 'continuous') {
+						// TODO: may use color scale instead of bars
+						const barh = t.tw.settings.barh
+						if (s.transpose) {
+							cell.width = t.scale(cell.key)
+							cell.x += barh - cell.width
+						} else {
+							cell.height = t.scale(cell.key)
+							cell.y += barh - cell.height
+						}
+					}
+
+					series.cells.push(cell)
 				} else {
 					// some term types like geneVariant can have multiple values for the same term,
 					// which will be renderd as multiple smaller, non-overlapping rects within the same cell
@@ -417,8 +463,8 @@ class Matrix {
 							key,
 							label: value.class ? mclass[value.class].label : '',
 							value,
-							x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + width * i,
-							y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + height * i : 0,
+							x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + width * i + t.totalHtAdjustments,
+							y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + height * i + t.totalHtAdjustments : 0,
 							height,
 							width,
 							fill: value.color || mclass[value.class].color,

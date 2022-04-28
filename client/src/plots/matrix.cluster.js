@@ -31,12 +31,12 @@ export class MatrixCluster {
 		const clusters = []
 
 		for (const xg of this.xGrps) {
-			const x = xg.prevGrpTotalIndex * d.dx + s.colgspace * xg.grpIndex
-			const width = d.dx * xg.grp.lst.length
+			const x = xg.prevGrpTotalIndex * d.dx + s.colgspace * xg.grpIndex + xg.totalHtAdjustments
+			const width = d.dx * xg.grp.lst.length + xg.grpHtAdjustments
 
 			for (const yg of this.yGrps) {
-				const y = yg.prevGrpTotalIndex * d.dy + yg.grpIndex * s.rowgspace
-				const height = d.dy * yg.grp.lst.length
+				const y = yg.prevGrpTotalIndex * d.dy + yg.grpIndex * s.rowgspace + yg.totalHtAdjustments
+				const height = d.dy * yg.grp.lst.length + yg.grpHtAdjustments
 
 				clusters.push({
 					xg,
@@ -85,7 +85,7 @@ function setRenderers(self) {
 			.attr('width', cluster.width)
 			.attr('height', cluster.height)
 			.attr('fill', self.settings.cellbg)
-			.attr('stroke', '#555')
+			.attr('stroke', '#eee')
 			.attr('stroke-width', '1px')
 	}
 }
