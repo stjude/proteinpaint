@@ -376,7 +376,7 @@ plot_spline <- function(splineVariable, fdat, outcome, independentIds, res, regt
   preddat_ci <- cbind("fit" = preddat$fit, "lwr" = ci_lwr, "upr" = ci_upr)
   # adjust the predicted values 
   # adjusted predicted values = predicted values + ((prop category A * coef category A) + (prop category B * coef category B) + etc.)
-  preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod))
+  preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod), na.rm = T)
   
   ## plot data
   plotfile <- splineVariable$spline$plotfile
