@@ -294,7 +294,7 @@ class Matrix {
 						tw.q?.mode == 'continuous'
 							? scaleLinear()
 									.domain([counts.minval, counts.maxval])
-									.range([0, tw.settings.barh])
+									.range([1, tw.settings.barh])
 							: null
 				})
 

@@ -110,8 +110,9 @@ export function setRenderers(self) {
 					axisg.selectAll('*').remove()
 					const domain = [lab.counts.maxval, lab.counts.minval]
 					if (s.transpose) domain.reverse()
-					const x = 0
-					const y = !s.transpose ? `${lab.tw.settings.gap - 1}` : 0
+					const d = self.dimensions
+					const x = !s.transpose ? 0 : lab.tw.settings.gap - 1 - lab.labelOffset
+					const y = !s.transpose ? lab.tw.settings.gap - 1 - lab.labelOffset : 0
 					axisg
 						.attr('shape-rendering', 'crispEdges')
 						.attr('transform', `translate(${x},${y})`)
@@ -124,7 +125,8 @@ export function setRenderers(self) {
 	self.colLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const x = lab.grpIndex * s.colgspace + lab.totalIndex * d.dx + 0.8 * s.colw + lab.totalHtAdjustments
+		lab.labelOffset = 0.8 * s.colw
+		const x = lab.grpIndex * s.colgspace + lab.totalIndex * d.dx + lab.labelOffset + lab.totalHtAdjustments
 		const y = 0 //lab.tw?.q?.mode == 'continuous' ? -30 : 0
 		return `translate(${x},${y})`
 	}
@@ -145,7 +147,8 @@ export function setRenderers(self) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const x = 0 // lab.tw?.q?.mode == 'continuous' ? -30 : 0
-		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + 0.7 * s.rowh + lab.totalHtAdjustments
+		lab.labelOffset = 0.7 * s.rowh
+		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + lab.labelOffset + lab.totalHtAdjustments
 		return `translate(${x},${y})`
 	}
 
