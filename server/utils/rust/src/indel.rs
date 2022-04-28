@@ -7,8 +7,7 @@
 
 // Strictness:
 //   0: No postprocessing, pure indel typing results
-//   1: Postprocessing will be carried out (Checks if read is polyclonal, reads with insertion near indel but classified as reference by kmer algorithm is put into none category)
-//   2: In addition to postprocessing in 1, insertions/deletions near indel region also get classified into none
+//   1: Postprocessing will be carried out (Checks if read is polyclonal, reads with insertion near indel but classified as reference by identity ratio algorithm is put into none category)
 
 // Function cascade:
 //
@@ -619,7 +618,7 @@ fn main() {
         } else if item.ref_insertion == 1 {
             // In case of ref-classified reads, if there is any insertion/deletion in the indel region it will get classified into the none category.
             output_cat.push_str("none:"); // Appending none to output_cat string
-        } else if strictness >= 2 && item.ref_comparison == 1 {
+        } else if strictness >= 1 && item.ref_comparison == 1 {
             output_cat.push_str("none:"); // Appending none to output_cat string
         } else if item.category == "refalt".to_string() {
             output_cat.push_str("ref:"); // Appending ref to output_cat string
@@ -640,7 +639,7 @@ fn main() {
     for item in &alt_indices {
         if item.category == "amb" {
             output_cat.push_str("amb:"); // Appending amb (i.e ambiguous) to output_cat string
-        } else if strictness >= 2 && item.alt_comparison == 1 {
+        } else if strictness >= 1 && item.alt_comparison == 1 {
             output_cat.push_str("none:"); // Appending none to output_cat string
         } else if item.category == "refalt".to_string() {
             output_cat.push_str("alt:"); // Appending alt to output_cat string
