@@ -2,6 +2,8 @@ import { select } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '../common/termsetting'
 import { icons } from '../dom/control.icons'
 
+let inputIndex = 0
+
 export function setInteractivity(self) {
 	self.showCellInfo = function() {
 		if (self.activeTerm) return
@@ -821,8 +823,34 @@ function setSampleGroupActions(self) {
 		self.dom.menubody.selectAll('*').remove()
 		self.dom.menubody
 			.append('div')
-			.style('padding', '10px')
-			.html(`Use "<b>${self.config.divideBy.term.name}</b>" to divide charts on the selected survival term below:`)
+			.style('padding-top', '10px')
+			.html(`Use "<b>${self.config.divideBy.term.name}</b>" to`)
+
+		const radioDiv = self.dom.menubody.append('div').style('padding', '0 10px')
+
+		const radioName = 'sjpp-matrix-surv-termnum-' + inputIndex++
+		const label1 = radioDiv.append('label')
+		label1
+			.append('input')
+			.attr('type', 'radio')
+			.attr('name', radioName)
+			.attr('value', 'term2')
+			.property('checked', true)
+		label1.append('span').html(' overlay')
+
+		const label2 = radioDiv.append('label').style('margin-left', '10px')
+		label2
+			.append('input')
+			.attr('type', 'radio')
+			.attr('name', radioName)
+			.attr('value', 'term0')
+		label2.append('span').html(' divide')
+
+		self.dom.menubody
+			.append('div')
+			.style('padding-bottom', '10px')
+			.html(`the selected survival term below:`)
+
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
 			holder: self.dom.menubody.append('div'),
@@ -838,8 +866,8 @@ function setSampleGroupActions(self) {
 			tree: {
 				click_term: term => {
 					self.dom.tip.hide()
+					const termNum = radioDiv.select(`input[name='${radioName}']:checked`).property('value')
 					self.dom.menubody.selectAll('*').remove()
-					const termNum = menuOpt?.detail || 'term0'
 					const config = {
 						chartType: 'survival',
 						term,

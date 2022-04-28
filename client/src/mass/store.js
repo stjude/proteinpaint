@@ -198,7 +198,6 @@ TdbStore.prototype.actions = {
 		const plot = await _.getPlotConfig(action.config, this.app)
 		if (!('id' in action)) action.id = idPrefix + id++
 		plot.id = action.id
-		console.log(200, action, this.state.plots.findIndex(p => p.id === action.insertBefore), this.state.plots)
 		const i =
 			'insertBefore' in action
 				? this.state.plots.findIndex(p => p.id === action.insertBefore)

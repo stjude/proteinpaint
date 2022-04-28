@@ -347,46 +347,50 @@ class Matrix {
 		const mainh =
 			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + this[`${row}s`].slice(-1)[0].totalHtAdjustments
 
+		const topFontSize = _t_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 4, s.minLabelFontSize)
 		layout.top.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset - s.collabelgap})`,
 			labelTransform: 'rotate(-90)',
 			labelAnchor: 'start',
 			labelGY: 0,
 			labelGTransform: this[`col${_t_}LabelGTransform`],
-			fontSize: s.colw + s.colspace - (_t_ == 'Grp' ? 0 : 4),
+			fontSize: topFontSize,
 			textpos: { coord: 'y', factor: -1 },
 			axisFxn: axisTop
 		}
 
+		const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 4, s.minLabelFontSize)
 		layout.btm.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset + mainh + s.collabelgap})`,
 			labelTransform: 'rotate(-90)',
 			labelAnchor: 'end',
 			labelGY: 0,
 			labelGTransform: this[`col${_b_}LabelGTransform`],
-			fontSize: s.colw + s.colspace - (_b_ == 'Grp' ? 0 : 4),
+			fontSize: btmFontSize,
 			textpos: { coord: 'y', factor: 1 },
 			axisFxn: axisBottom
 		}
 
+		const leftFontSize = _l_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 4, s.minLabelFontSize)
 		layout.left.attr = {
 			boxTransform: `translate(${xOffset - s.rowlabelgap}, ${yOffset})`,
 			labelTransform: '',
 			labelAnchor: 'end',
 			labelGX: 0,
 			labelGTransform: this[`row${_l_}LabelGTransform`],
-			fontSize: s.rowh + s.rowspace - (_l_ == 'Grp' ? 2 : 4),
+			fontSize: leftFontSize,
 			textpos: { coord: 'x', factor: -1 },
 			axisFxn: axisLeft
 		}
 
+		const rtFontSize = _r_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 4, s.minLabelFontSize)
 		layout.right.attr = {
 			boxTransform: `translate(${xOffset + mainw + s.rowlabelgap}, ${yOffset})`,
 			labelTransform: '',
 			labelAnchor: 'start',
 			labelGX: 0,
 			labelGTransform: this[`row${_r_}LabelGTransform`],
-			fontSize: s.rowh + s.rowspace - (_r_ == 'Grp' ? 2 : 4),
+			fontSize: rtFontSize,
 			textpos: { coord: 'x', factor: 1 },
 			axisFxn: axisRight
 		}
@@ -603,6 +607,8 @@ export async function getPlotConfig(opts, app) {
 				rowlabelvisible: true,
 				rowglabelpos: true,
 				rowlabelgap: 5,
+				grpLabelFontSize: 12,
+				minLabelFontSize: 6,
 				transpose: false,
 				sampleLabelOffset: 120,
 				sampleGrpLabelOffset: 120,

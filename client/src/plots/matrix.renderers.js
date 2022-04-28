@@ -101,14 +101,12 @@ export function setRenderers(self) {
 					.text(side.label)
 
 				if (lab.tw?.q?.mode == 'continuous' && side.label(lab)) {
-					// TODO: may extract this into a matrix method
-					const p = select(g.node().parentNode)
-					if (!p.select('.sjpp-matrix-cell-axis').size()) {
-						p.append('g')
+					if (!g.select('.sjpp-matrix-cell-axis').size()) {
+						g.append('g')
 							.attr('class', 'sjpp-matrix-cell-axis')
 							.attr('shape-rendering', 'crispEdges')
 					}
-					const axisg = p.select('.sjpp-matrix-cell-axis')
+					const axisg = g.select('.sjpp-matrix-cell-axis')
 					axisg.selectAll('*').remove()
 					const domain = [lab.counts.maxval, lab.counts.minval]
 					if (s.transpose) domain.reverse()
@@ -138,7 +136,7 @@ export function setRenderers(self) {
 			lab.grpIndex * s.colgspace +
 			lab.prevGrpTotalIndex * d.dx +
 			(lab.grp.lst.length * d.dx) / 2 +
-			3 +
+			s.grpLabelFontSize / 2 +
 			lab.totalHtAdjustments
 		return `translate(${x},0)`
 	}
@@ -158,9 +156,17 @@ export function setRenderers(self) {
 			lab.grpIndex * s.rowgspace +
 			lab.prevGrpTotalIndex * d.dy +
 			(lab.grp.lst.length * d.dy) / 2 +
-			3 +
+			s.grpLabelFontSize / 2 +
 			lab.totalHtAdjustments
 		return `translate(0,${y})`
+	}
+
+	self.rowAxisGTransform = (lab, grpIndex) => {
+		const s = self.settings.matrix
+		const d = self.dimensions
+		const x = 0 // lab.tw?.q?.mode == 'continuous' ? -30 : 0
+		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + 0.7 * s.rowh + lab.totalHtAdjustments
+		return `translate(${x},${y})`
 	}
 
 	self.adjustSvgDimensions = async function(prevTranspose) {

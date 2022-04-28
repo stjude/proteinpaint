@@ -34,6 +34,7 @@ document.body.onload = () => runproteinpaint({
               rowspace: 0,
 							termLabelOffset: 220,
 							sortTermsBy: 'asListed',
+              grpLabelFontSize: 13
 						}
 					},
 					menuOpts: {
@@ -42,7 +43,7 @@ document.body.onload = () => runproteinpaint({
 								label: 'Survival plot',
 								callback: 'launchSurvivalPlot',
 								config: {
-									term2: {id: 'Primary Treatment category 2'},
+									//term2: {id: 'Primary Treatment category 2'},
 									settings: {
 										survival: {
 											xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
