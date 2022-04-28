@@ -426,7 +426,7 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
 	}
-	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
+	tk.read_alignment_diff_scores_asc = data.read_alignment_diff_scores_asc
 }
 
 function update_left_margin(tk, block) {
