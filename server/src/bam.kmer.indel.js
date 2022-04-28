@@ -103,10 +103,6 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 
 	//----------------------------------------------------------------------------
 	// IMPORTANT PARAMETERS
-	const kmer_length = 6 // Initial length of kmer, will be increased in case of repeat regions
-	const weight_no_indel = 0.1 // Weight when base not inside the indel
-	const weight_indel = 10 // Weight when base is inside the indel
-	//const threshold_slope = 0.1 // Maximum curvature allowed to recognize perfectly aligned alt/ref sequences
 	const fisher_test_threshold = 60 // Fisher exact-test strand analysis significance parameter. See details in this weblink https://gatk.broadinstitute.org/hc/en-us/articles/360035890471
 	const is_realignment_reads = 0 // Realign reads to obtain correct indel sequence (If 1 realignment of reads will be attempted, if 0 no realignment of reads will be performed )
 	//----------------------------------------------------------------------------
@@ -144,17 +140,9 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		'_' +
 		final_pos.toString() +
 		'_' +
-		segbplen.toString() +
-		'_' +
 		refallele +
 		'_' +
 		altallele +
-		'_' +
-		kmer_length.toString() +
-		'_' +
-		weight_no_indel.toString() +
-		'_' +
-		weight_indel.toString() +
 		'_' +
 		q.variant.strictness +
 		'_' +
@@ -169,10 +157,10 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	}
 	//console.log({seqRef:refseq, seqMut:altseq, leftFlank:leftflankseq, rightFlank:rightflankseq, readlen: segbplen, variant: q.variant}) // uncomment this line to help creating tests at server/utils/test/rust_indel.spec.js
 
-	//fs.writeFile('test.txt', input_data, function (err) {
-	//	// For catching input to rust pipeline, in case of an error
-	//	if (err) return console.log(err)
-	//})
+	fs.writeFile('test.txt', input_data, function(err) {
+		// For catching input to rust pipeline, in case of an error
+		if (err) return console.log(err)
+	})
 	const time1 = new Date()
 	const rust_output = await utils.run_rust('indel', input_data)
 	const time2 = new Date()
@@ -207,8 +195,6 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 				.split(':')
 				.map(Number)
 			//.map(n => Number(n.replace(/\D/g, '')))
-		} else if (item.includes('Final kmer length (from Rust)')) {
-			console.log(item)
 		} else if (item.includes('alternate_forward_count:')) {
 			alternate_forward_count = Number(
 				item
@@ -244,10 +230,9 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 					.replace(/,/g, '')
 					.replace('strand_probability:', '')
 			)
+		} else {
+			console.log(item)
 		}
-		//else {
-		//	console.log(item)
-		//}
 	}
 
 	let strand_significance = false
@@ -261,7 +246,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	//console.log('strand_probability:', strand_probability)
 	let index = 0
 	const type2group = bamcommon.make_type2group(q)
-	const kmer_diff_scores_input = []
+	const read_alignment_diff_scores_input = []
 	for (let i = 0; i < categories.length; i++) {
 		if (categories[i] == 'ref') {
 			if (type2group[bamcommon.type_supportref]) {
@@ -269,69 +254,61 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 				//console.log("index:",index)
 				//console.log("diff_scores[i]:",diff_scores[i])
 
-				//if (serverconfig.features.indel_kmer_scores) {
 				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-				//}
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 				const input_items = {
 					value: diff_scores[i],
 					groupID: 'ref'
 				}
-				kmer_diff_scores_input.push(input_items)
+				read_alignment_diff_scores_input.push(input_items)
 			}
 		} else if (categories[i] == 'alt') {
 			if (type2group[bamcommon.type_supportalt]) {
 				index = group_ids[i]
 				//console.log("index:",index)
 				//console.log("diff_scores[i]:",diff_scores[i])
-				//if (serverconfig.features.indel_kmer_scores) {
 				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-				//}
 				type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
 				const input_items = {
 					value: diff_scores[i],
 					groupID: 'alt'
 				}
-				kmer_diff_scores_input.push(input_items)
+				read_alignment_diff_scores_input.push(input_items)
 			}
 		} else if (categories[i] == 'amb') {
 			if (type2group[bamcommon.type_supportamb]) {
 				index = group_ids[i]
 				//console.log("index:",index)
 				//console.log("diff_scores[i]:",diff_scores[i])
-				//if (serverconfig.features.indel_kmer_scores) {
 				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-				//}
 				type2group[bamcommon.type_supportamb].templates.push(templates_info[index])
 				const input_items = {
 					value: diff_scores[i],
 					groupID: 'amb'
 				}
-				kmer_diff_scores_input.push(input_items)
+				read_alignment_diff_scores_input.push(input_items)
 			}
 		} else if (categories[i] == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
 				index = group_ids[i]
 				//console.log("index:",index)
 				//console.log("diff_scores[i]:",diff_scores[i])
-				//if (serverconfig.features.indel_kmer_scores) {
 				templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-				//}
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 				const input_items = {
 					value: diff_scores[i],
 					groupID: 'none'
 				}
-				kmer_diff_scores_input.push(input_items)
+				read_alignment_diff_scores_input.push(input_items)
 			}
 		} else {
 			console.log('Unknown category:', categories[i])
 		}
 	}
-	kmer_diff_scores_input.sort((a, b) => a.value - b.value)
-	// console.log('Final array for plotting:', kmer_diff_scores_input)
+	read_alignment_diff_scores_input.sort((a, b) => a.value - b.value)
+	// console.log('Final array for plotting:', read_alignment_diff_scores_input)
 	// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
-	const diff_list = kmer_diff_scores_input.map(i => i.value)
+	const diff_list = read_alignment_diff_scores_input.map(i => i.value)
 	const max_diff_score = Math.max(...diff_list)
 	const min_diff_score = Math.min(...diff_list)
 	const groups = []
@@ -360,7 +337,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 						? 'reference allele'
 						: k == bamcommon.type_supportalt
 						? 'alternate allele'
-						: 'neither reference or mutant alleles')
+						: 'neither reference nor alternate alleles')
 			})
 		}
 		g.widths = region_widths

@@ -1141,7 +1141,7 @@ function run_clustalo(
 
 async function query_reads(q) {
 	if (q.variant) {
-		/* doing kmer typing on a variant
+		/* doing read alignment genotyping on a variant
 		will only query reads from the variant region
 		query region is centered on the variant position to be able to include softclip reads resulting from the mutation
 		*/
@@ -2198,7 +2198,7 @@ function plot_template(ctx, template, group, q) {
 
 	// for testing, print a stat (numeric or string) per template on the right of each row
 	// should not use this in production
-	if (template.__tempscore != undefined && serverconfig.features.indel_kmer_scores) {
+	if (template.__tempscore != undefined && serverconfig.features.indel_read_alignment_scores) {
 		ctx.fillStyle = 'blue'
 		ctx.font = group.stackheight + 'pt Arial'
 		ctx.fillText(template.__tempscore, q.regions[0].width - 100, template.y + group.stackheight / 2)
