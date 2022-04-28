@@ -255,6 +255,7 @@ function setRenderers(self) {
 		self.mayshow_type3(result)
 		self.mayshow_tests(result)
 		self.mayshow_other(result)
+		self.mayshow_fisher(result)
 	}
 
 	self.newDiv = (label, label2, holder) => {
@@ -308,6 +309,45 @@ function setRenderers(self) {
 		for (let i = 0; i < result.residuals.header.length; i++) {
 			tr1.append('td').text(result.residuals.header[i])
 			tr2.append('td').text(result.residuals.rows[i])
+		}
+	}
+
+	self.mayshow_fisher = result => {
+		if (!result.fisher) return
+		const div = self.newDiv("Fisher's exact test")
+		div
+			.append('div')
+			.text('p-value=' + result.fisher.pvalue)
+			.style('margin', '20px')
+		const table = div
+			.append('table')
+			.style('margin', '20px')
+			.style('border-spacing', '5px')
+			.style('border-collapse', 'separate')
+		{
+			const tr = table.append('tr').style('opacity', 0.5)
+			tr.append('td')
+			tr.append('td').text('REF/REF')
+			tr.append('td').text('REF/ALT')
+			tr.append('td').text('ALT/ALT')
+		}
+		{
+			const tr = table.append('tr')
+			tr.append('td')
+				.text('Outcome=Yes')
+				.style('opacity', 0.5)
+			tr.append('td').text(result.fisher.table[0])
+			tr.append('td').text(result.fisher.table[2])
+			tr.append('td').text(result.fisher.table[4])
+		}
+		{
+			const tr = table.append('tr')
+			tr.append('td')
+				.text('Outcome=No')
+				.style('opacity', 0.5)
+			tr.append('td').text(result.fisher.table[1])
+			tr.append('td').text(result.fisher.table[3])
+			tr.append('td').text(result.fisher.table[5])
 		}
 	}
 
@@ -881,6 +921,10 @@ function make_mds3_variants(tw, result) {
 				m.regressionPvalue = v
 				m.__value = -Math.log10(v)
 			}
+		} else if (d.fisher) {
+			// { pvalue:float, table:[] }
+			m.regressionPvalue = d.fisher.pvalue
+			m.__value = -Math.log10(d.fisher.pvalue)
 		}
 	}
 	return mlst

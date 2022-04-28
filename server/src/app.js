@@ -7753,6 +7753,7 @@ async function pp_init() {
 	}
 	serverconfig.cachedir_bam = await mayCreateSubdirInCache('bam')
 	serverconfig.cachedir_genome = await mayCreateSubdirInCache('genome')
+	serverconfig.cachedir_ssid = await mayCreateSubdirInCache('ssid')
 
 	if (!serverconfig.genomes) throw '.genomes[] missing'
 	if (!Array.isArray(serverconfig.genomes)) throw '.genomes[] not array'

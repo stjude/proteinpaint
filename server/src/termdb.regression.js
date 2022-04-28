@@ -28,7 +28,6 @@ q {}
 		.computableValuesOnly:true // always added
 	.refGrp
 	.interactions[] // always added; empty if no interaction
-	.snpidlst[] // list of snp ids, for type=snplst, added when parsing cache file
 
 input to R is an json object, with an array of variables (first being outcome)
 rtype with values numeric/factor is used instead of actual term type
@@ -48,8 +47,8 @@ getSampleData
 	getSampleData_snplstOrLocus
 		// parse cache file
 		doImputation
-		filterSnpsByAFcutoff
-			// creates tw.snpidlst[] for high AF snps that are analyzed as covariants
+		categorizeSnpsByAF
+			// creates for high AF snps that are analyzed as covariants
 			// low-AF snps are to be used for Fisher
 		applyGeneticModel
 makeRinput()
@@ -87,8 +86,13 @@ export async function get_regression(q, ds) {
 		const Routput = await lines2R(path.join(serverconfig.binpath, 'utils', 'regression.R'), [], [Rinputfile])
 		fs.unlink(Rinputfile, () => {})
 
-		// parse the R output
-		return await parseRoutput(Rinput, Routput, id2originalId, q)
+		const result = {
+			resultLst: await parseRoutput(Rinput, Routput, id2originalId, q)
+		}
+
+		await snplocusPostprocess(q, sampledata, Rinput, result)
+
+		return result
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
@@ -125,7 +129,6 @@ function parse_q(q, ds) {
 		if (tw.type == 'snplst' || tw.type == 'snplocus') {
 			// !!!!!!!!!QUICK FIX!! detect non-dict term and do not query termdb
 			// tw for these terms lacks tw.term{}
-			// tw.snpidlst[] will be added when parsing cache file
 			if (!tw.q.cacheid) throw 'q.cacheid missing'
 			if (serverconfig.cache_snpgt.fileNameRegexp.test(tw.q.cacheid)) throw 'invalid cacheid'
 			if (typeof tw.q.snp2effAle != 'object') throw 'q.snp2effAle{} is not object'
@@ -260,8 +263,12 @@ function makeRinput(q, sampledata) {
 	// for each sample, determine if it has value for all variables
 	// if so, then sample can be included for analysis
 	const data = []
-	for (const { sample, id2value } of sampledata) {
-		if (!id2value.has(q.outcome.id)) continue
+	for (const tmp of sampledata) {
+		const { sample, id2value } = tmp
+		if (!id2value.has(q.outcome.id)) {
+			tmp.noOutcome = true // to be able to skip this sample in snplocusPostprocess
+			continue
+		}
 		const out = id2value.get(q.outcome.id)
 
 		let skipsample = false
@@ -274,7 +281,7 @@ function makeRinput(q, sampledata) {
 				continue
 			}
 			if (tw.type == 'snplst') {
-				for (const snpid of tw.snpidlst) {
+				for (const snpid of tw.highAFsnps.keys()) {
 					if (!id2value.get(snpid)) {
 						skipsample = true
 						break
@@ -364,7 +371,7 @@ function makeRvariable_dictionaryTerm(tw, independent, q) {
 			const tw2 = q.independent.find(i => i.id == id)
 			if (tw2.type == 'snplst') {
 				// this term is interacting with a snplst term, fill in all snps from this list into thisTerm.interactions
-				for (const s of tw2.snpidlst) thisTerm.interactions.push(s)
+				for (const s of tw2.highAFsnps.keys()) thisTerm.interactions.push(s)
 			} else if (tw2.type == 'snplocus') {
 				// snplocus interactions should not be handled here because each snp needs to be analyzed separately
 				// snplocus interactions will be specified separately for each snp in makeRvariable_snps()
@@ -392,7 +399,7 @@ function makeRvariable_dictionaryTerm(tw, independent, q) {
 function makeRvariable_snps(tw, independent, q) {
 	// tw is either snplst or snplocus
 	// create one independent variable for each snp
-	for (const snpid of tw.snpidlst) {
+	for (const snpid of tw.highAFsnps.keys()) {
 		const thisSnp = {
 			id: snpid,
 			name: snpid,
@@ -705,62 +712,136 @@ async function parseRoutput(Rinput, Routput, id2originalId, q) {
 
 		resultLst.push(analysisResult)
 	}
+	return resultLst
+}
 
-	let headerMessage
-
+async function snplocusPostprocess(q, sampledata, Rinput, result) {
 	const tw = q.independent.find(i => i.type == 'snplocus')
-	if (tw) {
-		// extra logic specific for the snplocus term
-		const lst = []
-		if (tw.snpcount.highAF)
-			lst.push(
-				tw.snpcount.highAF +
-					' variant' +
-					(tw.snpcount.highAF > 1 ? 's' : '') +
-					' with AF>=' +
-					tw.q.AFcutoff +
-					'% and used for model-fitting'
-			)
-		if (tw.snpcount.lowAF)
-			lst.push(
-				tw.snpcount.lowAF +
-					' variant' +
-					(tw.snpcount.lowAF > 1 ? 's' : '') +
-					' with AF<' +
-					tw.q.AFcutoff +
-					'% and skipped'
-			)
-		if (tw.snpcount.monomorphic)
-			lst.push(tw.snpcount.monomorphic + ' monomorphic variant' + (tw.snpcount.monomorphic > 1 ? 's' : '') + ' skipped')
-		if (lst.length) {
-			headerMessage = {
-				k: 'Summary of variants:',
-				v: lst.join(', ')
+	if (!tw) return
+
+	mayAddSnpMessage(tw, result, q)
+	mayAddResult4monomorphic(tw, result)
+	await mayDoFisher(tw, q, sampledata, Rinput, result)
+}
+
+async function mayDoFisher(tw, q, sampledata, Rinput, result) {
+	if (q.regressionType != 'logistic' && q.regressionType != 'cox') return
+	const lines = [] // one line for each snp
+	for (const [snpid, snpO] of tw.lowAFsnps) {
+		// a snp with low AF, run fisher on it
+		let outcome0href = 0,
+			outcome0het = 0,
+			outcome0halt = 0,
+			outcome1href = 0,
+			outcome1het = 0,
+			outcome1halt = 0
+		let RinputDataidx = 0
+		for (const { sample, noOutcome } of sampledata) {
+			if (noOutcome) continue
+			const outcome =
+				'outcome' in Rinput.data[RinputDataidx]
+					? Rinput.data[RinputDataidx].outcome
+					: Rinput.data[RinputDataidx].outcome_event
+			RinputDataidx++
+			if (outcome != 0 && outcome != 1) throw 'outcome is not 0 or 1'
+			const gt = snpO.samples.get(sample)
+			if (!gt) {
+				// missing gt for this sample, skip
+				continue
+			}
+			const [a, b] = gt.split('/')
+			const effCount = (snpO.effAle == a ? 1 : 0) + (snpO.effAle == b ? 1 : 0)
+			if (outcome == 0) {
+				if (effCount == 0) outcome0href++
+				else if (effCount == 1) outcome0het++
+				else outcome0halt++
+			} else {
+				if (effCount == 0) outcome1href++
+				else if (effCount == 1) outcome1het++
+				else outcome1halt++
 			}
 		}
+		const line = [snpid, outcome1href, outcome0href, outcome1het, outcome0het, outcome1halt, outcome0halt]
+		lines.push(line.join('\t'))
+	}
+	const plines = await lines2R(path.join(serverconfig.binpath, 'utils/fisher.2x3.R'), lines)
+	for (const line of plines) {
+		const l = line.split('\t')
+		const snpid = l[0]
+		const pvalue = Number(l[7])
 
-		// remaining snps in snpgt2count were not used for model-fitting
-		// thus they are not present in resultLst[]
-		// as client has these snps and is showing all snps in the track,
-		// create blank result obj with genotype breakdown for accessing this info on client
-		// TODO later provide Fisher results
-		for (const [snpid, gt2count] of tw.snpgt2count) {
-			const lst = []
-			for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
-			const analysisResult = {
-				id: snpid,
-				data: {
-					headerRow: {
-						k: 'Genotypes:',
-						v: lst.join(', ')
-					}
+		const gt2count = tw.snpgt2count.get(snpid)
+		const lst = []
+		for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
+
+		const analysisResult = {
+			id: snpid,
+			data: {
+				headerRow: {
+					k: 'Genotypes:',
+					v: lst.join(', ')
+				},
+				fisher: {
+					pvalue: Number(pvalue.toFixed(4)),
+					table: l.slice(1, 7)
 				}
 			}
-			resultLst.push(analysisResult)
+		}
+		result.resultLst.push(analysisResult)
+	}
+}
+
+function mayAddResult4monomorphic(tw, result) {
+	for (const snpid of tw.monomorphicLst) {
+		const gt2count = tw.snpgt2count.get(snpid)
+		const lst = []
+		for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
+		const analysisResult = {
+			id: snpid,
+			data: {
+				headerRow: {
+					k: 'Genotype:',
+					v: lst.join(', ')
+				}
+			}
+		}
+		result.resultLst.push(analysisResult)
+	}
+}
+
+function mayAddSnpMessage(tw, result, q) {
+	const lst = []
+	if (tw.highAFsnps.size) {
+		lst.push(
+			tw.highAFsnps.size +
+				' variant' +
+				(tw.highAFsnps.size > 1 ? 's' : '') +
+				' used for model-fitting (AF>=' +
+				tw.q.AFcutoff +
+				'%)'
+		)
+	}
+	if (tw.lowAFsnps.size) {
+		const wilcox = q.regressionType == 'linear'
+		lst.push(
+			tw.lowAFsnps.size +
+				' variant' +
+				(tw.lowAFsnps.size > 1 ? 's' : '') +
+				' analyzed by ' +
+				(wilcox ? 'Wilcox rank sum test' : "Fisher's exact test") +
+				' (AF<' +
+				tw.q.AFcutoff +
+				'%)'
+		)
+	}
+	if (tw.monomorphicLst.length)
+		lst.push(tw.monomorphicLst.length + ' monomorphic variant' + (tw.monomorphicLst.length > 1 ? 's' : '') + ' skipped')
+	if (lst.length) {
+		result.headerMessage = {
+			k: 'Summary:',
+			v: lst.join(', ')
 		}
 	}
-
-	return { headerMessage, resultLst }
 }
 
 /*
@@ -821,7 +902,7 @@ async function getSampleData(q, terms, ds) {
 		}
 	}
 
-	return samples.values()
+	return [...samples.values()]
 }
 
 function mayAddAncestryPCs(tw, samples, ds) {
@@ -901,8 +982,6 @@ tw{}
 		missingGenotype: 0/1/2
 		snp2effAle{}
 		snp2refGrp{}
-	snpidlst[]
-		// list of snpid; tricky!! added in this function
 samples {Map}
 	contains all samples that have valid data for all dict terms
 	only get genotype data for these samples,
@@ -974,21 +1053,18 @@ async function getSampleData_snplstOrLocus(tw, samples) {
 		tw.snpgt2count.set(snpid, gt2count)
 	}
 
-	/* divide snps to two groups by AFcutoff
+	/* categorize variants
 	lower than cutoff:
 		delete from snp2sample
-		create tw.lowAFsnps and store these, later to be analyzed by Fisher
+		create tw.lowAFsnps and store these, later to be analyzed by Fisher/Wilcox
 	higher than cutoff:
 		keep in snp2sample
-		create tw.snpidlst[] to store snpid of these variants
+	monomorphic:
+		delete from snp2sample, do not analyze
 	*/
-	filterSnpsByAFcutoff(tw, snp2sample)
+	categorizeSnpsByAF(tw, snp2sample)
 
-	/* snp2sample now contains snps with AF above cutoff
-	these snps can be used for model-fitting
-	derive sample values for each snp and store in samples Map()
-	*/
-	for (const [snpid, o] of snp2sample) {
+	for (const [snpid, o] of tw.highAFsnps) {
 		for (const [sampleid, gt] of o.samples) {
 			// for this sample, convert gt to value
 			const [gtA1, gtA2] = gt.split('/') // assuming diploid
@@ -999,26 +1075,24 @@ async function getSampleData_snplstOrLocus(tw, samples) {
 	}
 }
 
-function filterSnpsByAFcutoff(tw, snp2sample) {
-	// same as snp2sample, to store snps with AF>0 and <cutoff, later to use for Fisher
+function categorizeSnpsByAF(tw, snp2sample) {
+	// same as snp2sample, to store snps with AF<cutoff, later to use for Fisher
 	tw.lowAFsnps = new Map()
-	// store list of snpid with AF >= cutoff, that can be used for model-fitting
-	tw.snpidlst = []
-	// collect counts about different snp categories
-	tw.snpcount = { monomorphic: 0, lowAF: 0, highAF: 0 }
+	// same as snp2sample, to store snps with AF>=cutoff, to be used for model-fitting
+	tw.highAFsnps = new Map()
+	// list of snpid for monomorphic ones
+	tw.monomorphicLst = []
 
 	for (const [snpid, o] of snp2sample) {
 		if (tw.snpgt2count.get(snpid).size == 1) {
 			// monomorphic, not to be used for any analysis
-			snp2sample.delete(snpid)
-			tw.snpcount.monomorphic++
+			tw.monomorphicLst.push(snpid)
 			continue
 		}
 
 		const totalsamplecount = o.samples.size
 		// o.effAle is effect allele
 		let effAleCount = 0 // count number of effect alleles across samples
-
 		for (const [sampleid, gt] of o.samples) {
 			const [a1, a2] = gt.split('/') // assuming diploid
 			effAleCount += (a1 == o.effAle ? 1 : 0) + (a2 == o.effAle ? 1 : 0)
@@ -1030,12 +1104,9 @@ function filterSnpsByAFcutoff(tw, snp2sample) {
 			// AF lower than cutoff, will not use for model-fitting
 			// move this snp from snp2sample to lowAFsnps
 			tw.lowAFsnps.set(snpid, o)
-			snp2sample.delete(snpid)
-			tw.snpcount.lowAF++
 		} else {
 			// AF above cutoff, use for model-fitting
-			tw.snpidlst.push(snpid)
-			tw.snpcount.highAF++
+			tw.highAFsnps.set(snpid, o)
 		}
 	}
 }
