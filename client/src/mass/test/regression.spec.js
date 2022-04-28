@@ -307,8 +307,9 @@ const snplocus = {
 }
 
 /*************************
-each element of testList[] is one combination of these.
+each element of testList[] is one combination of below, to work as covariates in a model
 set "runthis:true" on one element to just test that one
+outcome variables are separately defined
 
 categorical term
   - by category (default, mode=discrete, type=values)
@@ -462,12 +463,13 @@ const testList = [
 	},
 
 	{
-		name: 'sex diaggrp*snplst',
+		// cannot use diaggrp to interact with snplst, it will timeout
+		name: 'sex income*snplst',
 		headingCount: 5,
 		independent: [
 			{ id: 'sex', refGrp: '1' },
-			{ id: 'diaggrp', interactions: ['snplstTermId'] },
-			addInteraction(snplst, 'diaggrp')
+			{ id: 'homeinc', interactions: ['snplstTermId'] },
+			addInteraction(snplst, 'homeinc')
 		]
 	},
 
@@ -521,12 +523,12 @@ const testList = [
 	},
 
 	{
-		name: 'sex diagrp*snplocus',
+		name: 'sex income*snplocus',
 		headingCount: 0,
 		independent: [
 			{ id: 'sex', refGrp: '1' },
-			{ id: 'diaggrp', interactions: ['snplocusTermId'] },
-			addInteraction(snplocus, 'diaggrp')
+			{ id: 'homeinc', interactions: ['snplocusTermId'] },
+			addInteraction(snplocus, 'homeinc')
 		]
 	},
 
