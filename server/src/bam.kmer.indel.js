@@ -157,10 +157,10 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	}
 	//console.log({seqRef:refseq, seqMut:altseq, leftFlank:leftflankseq, rightFlank:rightflankseq, readlen: segbplen, variant: q.variant}) // uncomment this line to help creating tests at server/utils/test/rust_indel.spec.js
 
-	fs.writeFile('test.txt', input_data, function(err) {
-		// For catching input to rust pipeline, in case of an error
-		if (err) return console.log(err)
-	})
+	//fs.writeFile('test.txt', input_data, function(err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
 	const time1 = new Date()
 	const rust_output = await utils.run_rust('indel', input_data)
 	const time2 = new Date()
