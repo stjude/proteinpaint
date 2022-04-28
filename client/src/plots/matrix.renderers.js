@@ -57,7 +57,8 @@ export function setRenderers(self) {
 			.attr('y', cell.y)
 			.attr('width', cell.width ? cell.width : s.colw)
 			.attr('height', 'height' in cell ? cell.height : s.rowh)
-			.attr('stroke', s.colspace ? null : cell.fill)
+			.attr('shape-rendering', 'crispEdges')
+			.attr('stroke', cell.fill)
 			.attr('stroke-width', '1px')
 			.attr('fill', cell.fill)
 	}
@@ -70,12 +71,13 @@ export function setRenderers(self) {
 				.duration(duration)
 				.attr('transform', side.attr.boxTransform)
 
-			const labels = side.box.selectAll('g').data(side.data, side.key)
+			const labels = side.box.selectAll('.sjpp-matrix-label').data(side.data, side.key)
 			labels.exit().remove()
 			labels.each(renderLabel)
 			labels
 				.enter()
 				.append('g')
+				.attr('class', 'sjpp-matrix-label')
 				.each(renderLabel)
 
 			function renderLabel(lab) {
@@ -85,8 +87,8 @@ export function setRenderers(self) {
 					.duration(textduration)
 					.attr('transform', side.attr.labelGTransform)
 
-				if (!g.select('text').size()) g.append('text')
-				g.select('text')
+				if (!g.select(':scope>text').size()) g.append('text')
+				g.select(':scope>text')
 					.attr('fill', '#000')
 					.transition()
 					.duration(textduration)
@@ -95,7 +97,28 @@ export function setRenderers(self) {
 					.attr('text-anchor', side.attr.labelAnchor)
 					.attr('transform', side.attr.labelTransform)
 					.attr('cursor', 'pointer')
+					.attr(side.attr.textpos.coord, side.attr.textpos.factor * (lab.tw?.q?.mode == 'continuous' ? 30 : 0))
 					.text(side.label)
+
+				if (lab.tw?.q?.mode == 'continuous' && side.label(lab)) {
+					// TODO: may extract this into a matrix method
+					const p = select(g.node().parentNode)
+					if (!p.select('.sjpp-matrix-cell-axis').size()) {
+						p.append('g')
+							.attr('class', 'sjpp-matrix-cell-axis')
+							.attr('shape-rendering', 'crispEdges')
+					}
+					const axisg = p.select('.sjpp-matrix-cell-axis')
+					axisg.selectAll('*').remove()
+					const domain = [lab.counts.maxval, lab.counts.minval]
+					if (s.transpose) domain.reverse()
+					const x = 0
+					const y = !s.transpose ? `${lab.tw.settings.gap - 1}` : 0
+					axisg
+						.attr('shape-rendering', 'crispEdges')
+						.attr('transform', `translate(${x},${y})`)
+						.call(side.attr.axisFxn(lab.scale.domain(domain)).tickValues(domain))
+				}
 			}
 		}
 	}
@@ -104,7 +127,8 @@ export function setRenderers(self) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const x = lab.grpIndex * s.colgspace + lab.totalIndex * d.dx + 0.8 * s.colw + lab.totalHtAdjustments
-		return `translate(${x},0)`
+		const y = 0 //lab.tw?.q?.mode == 'continuous' ? -30 : 0
+		return `translate(${x},${y})`
 	}
 
 	self.colGrpLabelGTransform = (lab, grpIndex) => {
@@ -122,8 +146,9 @@ export function setRenderers(self) {
 	self.rowLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
+		const x = 0 // lab.tw?.q?.mode == 'continuous' ? -30 : 0
 		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + 0.7 * s.rowh + lab.totalHtAdjustments
-		return `translate(0,${y})`
+		return `translate(${x},${y})`
 	}
 
 	self.rowGrpLabelGTransform = (lab, grpIndex) => {

@@ -37,15 +37,16 @@ export class MatrixCluster {
 			for (const yg of this.yGrps) {
 				const y = yg.prevGrpTotalIndex * d.dy + yg.grpIndex * s.rowgspace + yg.totalHtAdjustments
 				const height = d.dy * yg.grp.lst.length + yg.grpHtAdjustments
-
+				const offsetX = Math.max(1, s.colspace)
+				const offsetY = Math.max(1, s.rowspace)
 				clusters.push({
 					xg,
 					yg,
 					// use colspace and rowspace as padding around the cluster outline
-					x: x - s.colspace,
-					y: y - s.rowspace,
-					width: width + s.colspace,
-					height: height + s.rowspace
+					x: x - offsetX,
+					y: y - offsetY,
+					width: width + 2 * offsetX,
+					height: height + 2 * offsetY
 				})
 			}
 		}
@@ -84,8 +85,9 @@ function setRenderers(self) {
 			.attr('y', cluster.y)
 			.attr('width', cluster.width)
 			.attr('height', cluster.height)
+			.attr('shape-rendering', 'crispEdges')
 			.attr('fill', self.settings.cellbg)
-			.attr('stroke', '#eee')
+			.attr('stroke', '#ccc') //self.settings.cellbg)
 			.attr('stroke-width', '1px')
 	}
 }

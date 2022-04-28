@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
+import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { fillTermWrapper } from '../common/termsetting'
 import { MatrixCluster } from './matrix.cluster'
 import { MatrixControls } from './matrix.controls'
@@ -266,7 +267,7 @@ class Matrix {
 					}
 				}
 				lst.push({ tw, counts, index })
-				grpHtAdjustments += (tw.settings?.barh || ht) - ht
+				grpHtAdjustments += (tw.settings ? tw.settings.barh + 2 * tw.settings.gap : ht) - ht
 			}
 
 			// may override the settings.sortTermsBy with a sorter that is specific to a term group
@@ -297,7 +298,7 @@ class Matrix {
 							: null
 				})
 
-				totalHtAdjustments += (t.tw.settings?.barh || ht) - ht
+				totalHtAdjustments += (t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht) - ht
 			}
 
 			totalIndex += grp.lst.length
@@ -352,7 +353,9 @@ class Matrix {
 			labelAnchor: 'start',
 			labelGY: 0,
 			labelGTransform: this[`col${_t_}LabelGTransform`],
-			fontSize: s.colw + s.colspace - (_t_ == 'Grp' ? 0 : 4)
+			fontSize: s.colw + s.colspace - (_t_ == 'Grp' ? 0 : 4),
+			textpos: { coord: 'y', factor: -1 },
+			axisFxn: axisTop
 		}
 
 		layout.btm.attr = {
@@ -361,7 +364,9 @@ class Matrix {
 			labelAnchor: 'end',
 			labelGY: 0,
 			labelGTransform: this[`col${_b_}LabelGTransform`],
-			fontSize: s.colw + s.colspace - (_b_ == 'Grp' ? 0 : 4)
+			fontSize: s.colw + s.colspace - (_b_ == 'Grp' ? 0 : 4),
+			textpos: { coord: 'y', factor: 1 },
+			axisFxn: axisBottom
 		}
 
 		layout.left.attr = {
@@ -370,7 +375,9 @@ class Matrix {
 			labelAnchor: 'end',
 			labelGX: 0,
 			labelGTransform: this[`row${_l_}LabelGTransform`],
-			fontSize: s.rowh + s.rowspace - (_l_ == 'Grp' ? 2 : 4)
+			fontSize: s.rowh + s.rowspace - (_l_ == 'Grp' ? 2 : 4),
+			textpos: { coord: 'x', factor: -1 },
+			axisFxn: axisLeft
 		}
 
 		layout.right.attr = {
@@ -379,7 +386,9 @@ class Matrix {
 			labelAnchor: 'start',
 			labelGX: 0,
 			labelGTransform: this[`row${_r_}LabelGTransform`],
-			fontSize: s.rowh + s.rowspace - (_r_ == 'Grp' ? 2 : 4)
+			fontSize: s.rowh + s.rowspace - (_r_ == 'Grp' ? 2 : 4),
+			textpos: { coord: 'x', factor: 1 },
+			axisFxn: axisRight
 		}
 
 		this.layout = layout
@@ -436,13 +445,12 @@ class Matrix {
 
 					if (t.tw.q?.mode == 'continuous') {
 						// TODO: may use color scale instead of bars
-						const barh = t.tw.settings.barh
 						if (s.transpose) {
 							cell.width = t.scale(cell.key)
-							//cell.x += barh - cell.width
+							cell.x += t.tw.settings.gap // - cell.width
 						} else {
 							cell.height = t.scale(cell.key)
-							cell.y += barh - cell.height
+							cell.y += t.tw.settings.barh + t.tw.settings.gap - cell.height
 						}
 					}
 
