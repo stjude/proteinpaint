@@ -63,6 +63,7 @@ snplocusPostprocess
 	mayAddResult4monomorphic
 		getLine4OneSnp
 	mayDoFisher
+	mayDoWilcoxon
 */
 
 // list of supported types
@@ -724,12 +725,58 @@ async function snplocusPostprocess(q, sampledata, Rinput, result) {
 async function mayDoWilcoxon(tw, q, sampledata, Rinput, result) {
 	// for linear regression, perform wilcoxon rank sum test for low-AF snps
 	if (q.regressionType != 'linear') return
+	const wilcoxInput = {} // { snpid: {hasEffale: [], noEffale: []} }
+	for (const [snpid, snpO] of tw.lowAFsnps) {
+		let RinputDataidx = 0
+		const hasEffale = [],
+			noEffale = []
+		for (const { sample, noOutcome } of sampledata) {
+			if (noOutcome) continue
+			const outcomeValue = Rinput.data[RinputDataidx++].outcome
+			if (!Number.isFinite(outcomeValue)) {
+				// outcome value is not numeric
+				continue
+			}
+			const gt = snpO.samples.get(sample)
+			if (!gt) {
+				// missing gt for this sample
+				continue
+			}
+			const [a, b] = gt.split('/')
+			if (a == snpO.effAle || b == snpO.effAle) {
+				hasEffale.push(outcomeValue)
+			} else {
+				noEffale.push(outcomeValue)
+			}
+		}
+		wilcoxInput[snpid] = {
+			hasEffale: hasEffale,
+			noEffale: noEffale
+		}
+	}
+	const wilcoxInputFile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await utils.write_file(wilcoxInputFile, JSON.stringify(wilcoxInput))
+	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [wilcoxInputFile])
+	const pvalues = JSON.parse(wilcoxOutput)
+	for (const snpid in pvalues) {
+		// make a result object for this snp
+		const analysisResult = {
+			id: snpid,
+			data: {
+				headerRow: getLine4OneSnp(snpid, tw),
+				wilcoxon: {
+					pvalue: pvalues[snpid]
+				}
+			}
+		}
+		result.resultLst.push(analysisResult)
+	}
 }
 
 async function mayDoFisher(tw, q, sampledata, Rinput, result) {
 	// for logistic/cox, perform fisher's exact test for low-AF snps
 	if (q.regressionType != 'logistic' && q.regressionType != 'cox') return
-	const lines = [] // one line for each snp
+	const lines = [] // one line per snp
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		// a snp with low AF, run fisher on it
 		// count 6 numbers for this snp across all samples
