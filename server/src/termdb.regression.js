@@ -586,14 +586,22 @@ async function parseRoutput(Rinput, Routput, id2originalId, q) {
 		}
 
 		if (analysis.id) {
-			// if id is set, this "analysis" is the model-fitting result for one snp from a snplocus term
-			// converted id must be snpid, assign to analysisResult
-			// client will rely on this id to associate this result to a variant
+			/* id is set on this analysis result
+			this is the model-fitting result for one snp from a snplocus term
+			** this must not be a snp from snplst! as snps from snplst are analyzed as covariates,
+			** while snps from snplocus each have model-fitted separately
+			*/
 			const snpid = id2originalId[analysis.id]
+			// converted id is now snpid, assign to analysisResult
+			// client will rely on this id to associate this result to a variant
 			analysisResult.id = snpid
 
 			const tw = q.independent.find(i => i.type == 'snplocus')
 			if (!tw) throw 'snplocus term missing'
+
+			// copy AF to it, for showing by m dot hovering
+			analysisResult.AFstr = tw.snpid2AFstr.get(snpid)
+
 			analysisResult.data.headerRow = getLine4OneSnp(snpid, tw)
 		}
 
@@ -749,19 +757,18 @@ async function mayDoWilcoxon(tw, q, sampledata, Rinput, result) {
 				noEffale.push(outcomeValue)
 			}
 		}
-		wilcoxInput[snpid] = {
-			hasEffale: hasEffale,
-			noEffale: noEffale
-		}
+		wilcoxInput[snpid] = { hasEffale, noEffale }
 	}
-	const wilcoxInputFile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	await utils.write_file(wilcoxInputFile, JSON.stringify(wilcoxInput))
-	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [wilcoxInputFile])
+	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
+	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
+	fs.unlink(tmpfile, () => {})
 	const pvalues = JSON.parse(wilcoxOutput)
 	for (const snpid in pvalues) {
 		// make a result object for this snp
 		const analysisResult = {
 			id: snpid,
+			AFstr: tw.snpid2AFstr.get(snpid),
 			data: {
 				headerRow: getLine4OneSnp(snpid, tw),
 				wilcoxon: {
@@ -831,6 +838,7 @@ async function mayDoFisher(tw, q, sampledata, Rinput, result) {
 		// make a result object for this snp
 		const analysisResult = {
 			id: snpid,
+			AFstr: tw.snpid2AFstr.get(snpid),
 			data: {
 				headerRow: getLine4OneSnp(snpid, tw),
 				fisher: {
@@ -871,10 +879,10 @@ function getLine4OneSnp(snpid, tw) {
 	}
 	const lst = [
 		'Effect allele=' + (tw.highAFsnps.has(snpid) ? tw.highAFsnps.get(snpid).effAle : tw.lowAFsnps.get(snpid).effAle),
-		'AF=' + tw.snpid2AF.get(snpid)
+		'AF=' + tw.snpid2AFstr.get(snpid)
 	]
 	for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
-	return { k: 'Variant:', v: lst.join(', ') }
+	return { k: 'Variant:', v: lst.join('&nbsp;&nbsp;&nbsp;') }
 }
 
 function mayAddSnplocusMessage(tw, result, q) {
@@ -1122,7 +1130,7 @@ async function getSampleData_snplstOrLocus(tw, samples) {
 	}
 
 	categorizeSnpsByAF(tw, snp2sample)
-	// tw.lowAFsnps, tw.highAFsnps, tw.monomorphicLst, tw.snpid2AF are created
+	// tw.lowAFsnps, tw.highAFsnps, tw.monomorphicLst, tw.snpid2AFstr are created
 
 	// for highAFsnps, write data into "samples{}" for model-fitting
 	for (const [snpid, o] of tw.highAFsnps) {
@@ -1151,8 +1159,8 @@ function categorizeSnpsByAF(tw, snp2sample) {
 	tw.highAFsnps = new Map()
 	// list of snpid for monomorphic ones
 	tw.monomorphicLst = []
-	tw.snpid2AF = new Map()
-	// k: snpid, v: af
+	tw.snpid2AFstr = new Map()
+	// k: snpid, v: af string, '5.1%', for display only, not for computing
 
 	for (const [snpid, o] of snp2sample) {
 		if (tw.snpgt2count.get(snpid).size == 1) {
@@ -1170,7 +1178,7 @@ function categorizeSnpsByAF(tw, snp2sample) {
 		}
 
 		const af = effAleCount / (totalsamplecount * 2)
-		tw.snpid2AF.set(snpid, Number(af.toFixed(4)))
+		tw.snpid2AFstr.set(snpid, (af * 100).toFixed(1) + '%')
 
 		if (af < tw.q.AFcutoff / 100) {
 			// AF lower than cutoff, will not use for model-fitting
