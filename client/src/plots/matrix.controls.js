@@ -1,6 +1,6 @@
 import { select, event } from 'd3-selection'
 import { initByInput } from './controls.config'
-import { to_svg } from '../../src/client'
+import { to_svg } from '../client'
 
 export class MatrixControls {
 	constructor(opts, appState) {

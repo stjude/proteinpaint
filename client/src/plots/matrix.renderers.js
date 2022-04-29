@@ -58,8 +58,8 @@ export function setRenderers(self) {
 			.attr('width', cell.width ? cell.width : s.colw)
 			.attr('height', 'height' in cell ? cell.height : s.rowh)
 			.attr('shape-rendering', 'crispEdges')
-			.attr('stroke', cell.fill)
-			.attr('stroke-width', '1px')
+			//.attr('stroke', cell.fill)
+			.attr('stroke-width', 0)
 			.attr('fill', cell.fill)
 	}
 

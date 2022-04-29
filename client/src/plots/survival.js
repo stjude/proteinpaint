@@ -8,8 +8,9 @@ import { line, area, curveStepAfter } from 'd3-shape'
 import { rgb } from 'd3-color'
 import htmlLegend from '../html.legend'
 import Partjson from 'partjson'
-import { dofetch3, to_svg } from '../client'
+import { to_svg } from '../client'
 import { fillTermWrapper } from '../common/termsetting'
+import { Menu } from '../dom/menu'
 
 class TdbSurvival {
 	constructor(opts) {
@@ -25,7 +26,11 @@ class TdbSurvival {
 			controls,
 			holder,
 			chartsDiv: holder.append('div').style('margin', '10px'),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
+			tip: new Menu({ padding: '5px' })
+		}
+		this.dom.tip.onHide = () => {
+			this.activeMenu = false
 		}
 		if (this.dom.header) this.dom.header.html('Survival Plot')
 		// hardcode for now, but may be set as option later
@@ -52,7 +57,7 @@ class TdbSurvival {
 
 	async setControls() {
 		if (this.opts.controls) {
-			this.opts.controls.on('downloadClick.boxplot', this.download)
+			this.opts.controls.on('downloadClick.survival', this.download)
 		} else {
 			this.dom.holder
 				.attr('class', 'pp-termdb-plot-viz')
@@ -115,7 +120,7 @@ class TdbSurvival {
 				})
 			}
 
-			this.components.controls.on('downloadClick.boxplot', this.download)
+			this.components.controls.on('downloadClick.survival', () => alert('TODO: data download?'))
 		}
 	}
 
@@ -269,16 +274,22 @@ function setRenderers(self) {
 		//.style('border', '1px solid #eee')
 		//.style('box-shadow', '0px 0px 1px 0px #ccc')
 
-		div
+		const titleDiv = div
 			.append('div')
-			.attr('class', 'sjpp-survival-title')
-			.style('text-align', 'center')
 			.style('width', s.svgw + 50 + 'px')
 			.style('height', s.chartTitleDivHt + 'px')
+			.style('text-align', 'center')
 			.style('font-weight', '600')
 			.style('margin', '5px')
-			.datum(chart.chartId)
-			.html(chart.chartId)
+			.append('div')
+			.attr('class', 'sjpp-survival-title')
+			.style('display', 'inline-block')
+			.datum(chart)
+			.html(chart => chart.chartId)
+			.style('cursor', 'pointer')
+			.on('mouseover', () => titleDiv.style('text-decoration', 'underline'))
+			.on('mouseout', () => titleDiv.style('text-decoration', ''))
+			.on('click', self.showMenuForSelectedChart)
 
 		if (chart.serieses) {
 			const svg = div.append('svg').attr('class', 'pp-survival-svg')
@@ -704,12 +715,13 @@ function setInteractivity(self) {
 				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 		} else if (event.target.tagName == 'path' && d && d.seriesId) {
 			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesLabel ? d.seriesLabel : d.seriesId)
-		} else {
+		} else if (!self.activeMenu) {
 			self.app.tip.hide()
 		}
 	}
 
 	self.mouseout = function() {
+		if (self.activeMenu) return
 		self.app.tip.hide()
 	}
 
@@ -732,6 +744,18 @@ function setInteractivity(self) {
 				}
 			}
 		})
+	}
+
+	self.showMenuForSelectedChart = function(d) {
+		self.dom.tip.clear()
+		self.activeMenu = true
+		self.dom.tip
+			.showunder(this)
+			.d.append('button')
+			.html('Download SVG')
+			.on('click', () =>
+				to_svg(this.parentNode.parentNode.querySelector('svg'), 'survival', { apply_dom_styles: true })
+			)
 	}
 }
 
