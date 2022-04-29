@@ -174,16 +174,24 @@ function setTermActions(self) {
 	self.sortSamplesAgainstCornerTerm = () => {
 		event.stopPropagation()
 		const t = self.activeTerm
-		const termgroups = self.termGroups
+		const activeIndex = t.index
+		const termgroups = JSON.parse(JSON.stringify(self.termGroups))
 		const grp = termgroups[t.grpIndex]
 		const [tcopy, sorterTerms] = self.getSorterTerms(t)
 		const removed = grp.lst.splice(t.index, 1)
 		grp.lst.unshift(tcopy)
+		grp.sortTermsBy = 'asListed'
 
 		for (const g of termgroups) {
-			for (const tw of g.lst) {
-				if (!tw.sortSamples) continue
-				tw.sortSamples.priority = sorterTerms.findIndex(t => t.tw?.$id === tw.$id)
+			if (g == grp) {
+				for (const [priority, tw] of g.lst.entries()) {
+					tw.sortSamples = { priority, by: 'values' }
+				}
+			} else {
+				for (const tw of g.lst) {
+					if (!tw.sortSamples) continue
+					tw.sortSamples.priority = sorterTerms.findIndex(t => t.tw?.$id === tw.$id) + grp.lst.length
+				}
 			}
 		}
 
@@ -209,6 +217,7 @@ function setTermActions(self) {
 		const [tcopy] = self.getSorterTerms(t)
 		const termgroups = self.termGroups
 		termgroups[t.grpIndex].lst[t.index] = tcopy
+		termgroups[t.grpIndex].sortTermsBy = 'asListed'
 		for (const g of termgroups) {
 			for (const tw of g.lst) {
 				if (!tw.sortSamples) continue
@@ -239,6 +248,7 @@ function setTermActions(self) {
 		const grp = self.termGroups[t.grpIndex]
 		grp.lst.splice(t.index, 1)
 		grp.lst.splice(t.index - 1, 0, t.tw)
+		grp.sortTermsBy = 'asListed'
 
 		self.app.dispatch({
 			type: 'plot_nestedEdits',
@@ -263,6 +273,7 @@ function setTermActions(self) {
 		const grp = self.termGroups[t.grpIndex]
 		grp.lst.splice(t.index, 1)
 		grp.lst.splice(t.index + 1, 0, t.tw)
+		grp.sortTermsBy = 'asListed'
 
 		self.app.dispatch({
 			type: 'plot_nestedEdits',
