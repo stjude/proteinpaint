@@ -913,6 +913,10 @@ function make_mds3_variants(tw, result) {
 			// { pvalue:float, table:[] }
 			m.regressionPvalue = d.fisher.pvalue
 			m.__value = -Math.log10(d.fisher.pvalue)
+		} else if (d.wilcoxon) {
+			// { pvalue:float }
+			m.regressionPvalue = d.wilcoxon.pvalue
+			m.__value = -Math.log10(d.wilcoxon.pvalue)
 		}
 	}
 	return mlst

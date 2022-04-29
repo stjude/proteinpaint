@@ -63,6 +63,7 @@ snplocusPostprocess
 	mayAddResult4monomorphic
 		getLine4OneSnp
 	mayDoFisher
+	mayDoWilcoxon
 */
 
 // list of supported types
@@ -724,12 +725,56 @@ async function snplocusPostprocess(q, sampledata, Rinput, result) {
 async function mayDoWilcoxon(tw, q, sampledata, Rinput, result) {
 	// for linear regression, perform wilcoxon rank sum test for low-AF snps
 	if (q.regressionType != 'linear') return
+	const lines = [] // one line per snp
+	for (const [snpid, snpO] of tw.lowAFsnps) {
+		let RinputDataidx = 0
+		const hasEffale = [],
+			noEffale = []
+		for (const { sample, noOutcome } of sampledata) {
+			if (noOutcome) continue
+			const outcomeValue = Rinput.data[RinputDataidx++].outcome
+			if (!Number.isFinite(outcomeValue)) {
+				// outcome value is not numeric
+				continue
+			}
+			const gt = snpO.samples.get(sample)
+			if (!gt) {
+				// missing gt for this sample
+				continue
+			}
+			const [a, b] = gt.split('/')
+			if (a == snpO.effAle || b == snpO.effAle) {
+				hasEffale.push(outcomeValue)
+			} else {
+				noEffale.push(outcomeValue)
+			}
+		}
+		lines.push(snpid + '\t' + hasEffale.join(',') + '\t' + noEffale.join(','))
+	}
+	const plines = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), lines)
+	for (const line of plines) {
+		const l = line.split('\t')
+		const snpid = l[0]
+		const pvalue = Number(l[3])
+
+		// make a result object for this snp
+		const analysisResult = {
+			id: snpid,
+			data: {
+				headerRow: getLine4OneSnp(snpid, tw),
+				wilcoxon: {
+					pvalue: Number(pvalue.toFixed(4))
+				}
+			}
+		}
+		result.resultLst.push(analysisResult)
+	}
 }
 
 async function mayDoFisher(tw, q, sampledata, Rinput, result) {
 	// for logistic/cox, perform fisher's exact test for low-AF snps
 	if (q.regressionType != 'logistic' && q.regressionType != 'cox') return
-	const lines = [] // one line for each snp
+	const lines = [] // one line per snp
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		// a snp with low AF, run fisher on it
 		// count 6 numbers for this snp across all samples
