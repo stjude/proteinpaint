@@ -411,7 +411,7 @@ class Matrix {
 		const serieses = []
 		const dx = s.colw + s.colspace
 		const dy = s.rowh + s.rowspace
-		const keysByTermId = {}
+		const keysByTermId = { 'Mutation Types': { values: {} } }
 
 		for (const { totalIndex, grpIndex, row } of this.sampleOrder) {
 			const series = {
@@ -465,6 +465,9 @@ class Matrix {
 					const height = !s.transpose ? s.rowh / anno.values.length : s.colw
 					const width = !s.transpose ? s.colw : s.colw / anno.values.length
 					for (const [i, value] of anno.values.entries()) {
+						const label = value.label || (value.class ? mclass[value.class].label : '')
+						const fill = value.color || mclass[value.class].color
+
 						series.cells.push({
 							sample: row.sample,
 							tw: t.tw,
@@ -472,16 +475,22 @@ class Matrix {
 							termid,
 							$id,
 							key,
-							label: value.class ? mclass[value.class].label : '',
+							label,
 							value,
 							x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + width * i + t.totalHtAdjustments,
 							y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + height * i + t.totalHtAdjustments : 0,
 							height,
 							width,
-							fill: value.color || mclass[value.class].color,
+							fill,
 							class: value.class,
 							order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
 						})
+
+						if (t.tw.term.type == 'geneVariant') {
+							if (!keysByTermId['Mutation Types'][value.class]) {
+								keysByTermId['Mutation Types'].values[value.class] = { key: value.class, label, fill }
+							}
+						}
 					}
 				}
 
@@ -535,11 +544,34 @@ class Matrix {
 	setLegendData(keysByTermId, refs) {
 		this.colorScaleByTermId = {}
 		const legendData = new Map()
+
 		for (const $id in keysByTermId) {
+			const legend = keysByTermId[$id]
+
+			if ($id == 'Mutation Types') {
+				const keys = Object.keys(legend.values)
+				if (!keys.length) continue
+				legendData.set($id, {
+					name: 'Mutation Types',
+					items: keys.map((key, i) => {
+						const item = legend.values[key]
+						return {
+							termid: 'Mutation Types',
+							key,
+							text: item.label,
+							color: item.fill,
+							order: i,
+							border: '1px solid #ccc'
+						}
+					})
+				})
+				continue
+			}
+
 			const term = this.termOrder.find(t => t.tw.$id == $id).tw.term
 			const termid = term.id
-			const keys = Object.keys(keysByTermId[$id].values)
-			const ref = keysByTermId[$id].ref
+			const keys = Object.keys(legend.values)
+			const ref = legend.ref
 			if (ref.bins)
 				keys.sort((a, b) => ref.bins.findIndex(bin => bin.name === a) - ref.bins.findIndex(bin => bin.name === b))
 
@@ -548,7 +580,7 @@ class Matrix {
 			legendData.set($id, {
 				name: term.name,
 				items: keys.map((key, i) => {
-					const item = keysByTermId[$id].values[key]
+					const item = legend.values[key]
 					return {
 						termid,
 						key,

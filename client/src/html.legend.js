@@ -127,6 +127,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 				.attr('height', d.svgh)
 				.style('display', 'inline-block')
 				.style('vertical-align', 'top')
+				.style('border', d.border)
 				.html(d => d.svg)
 		} else if (!d.noIcon) {
 			div
