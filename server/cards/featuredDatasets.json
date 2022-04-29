@@ -1,7 +1,7 @@
 {
     "datasets": [
         {
-            "name": "Pediatric Protein View",
+            "name": "Pediatric Cancer MutationTODO",
             "searchbar": "gene",
             "genomeToggle": true,
             "defaultGenome": "hg19",
@@ -14,7 +14,7 @@
             }
         },
         {
-            "name": "Pediatric Genome Browser",
+            "name": "Pediatric2 GenomePaint",
             "searchbar": "all",
             "genomeToggle": true,
             "defaultGenome": "hg19",

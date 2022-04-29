@@ -1,7 +1,7 @@
 import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from './client'
 import { newSandboxDiv } from './dom/sandbox'
 import { debounce } from 'debounce'
-import { event, selec, selectAll } from 'd3-selection'
+import { event, select, selectAll } from 'd3-selection'
 // js-only syntax highlighting for smallest bundle, see https://highlightjs.org/usage/
 // also works in rollup and not just webpack, without having to use named imports
 import hljs from 'highlight.js/lib/core'
@@ -90,7 +90,7 @@ export async function init_appDrawer(par) {
 		.style('grid-template-columns', '1fr 1fr')
 		.style('gap', '5px')
 
-	const datasetBtns_div = app_col.append('div')
+	// const datasetBtns_div = app_col.append('div')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const track_args = {
@@ -108,7 +108,7 @@ export async function init_appDrawer(par) {
 	// make_searchbar(track_args, page_args, searchbar_div)
 	make_useCasesCard(topCards_div, track_args, page_args)
 	makeDNAnexusFileViewerCard(topCards_div, page_args)
-	makeDatasetButtons(datasetBtns_div, page_args)
+	// makeDatasetButtons(datasetBtns_div, page_args)
 	await loadTracks(track_args, page_args)
 }
 
@@ -1093,17 +1093,34 @@ async function openDatasetSandbox(page_args, ds) {
 
 	const applyBtn = makeButton(sandbox_div.body, 'Apply')
 
-	const results_div = sandbox_div.body.append('div')
+	const allResults_div = sandbox_div.body.append('div').style('max-width', '90vw')
 
 	applyBtn
 		.style('display', 'block')
 		.style('margin', '10px')
 		.on('click', () => {
 			// Create 'Run Dataset from URL' btn specific to each applied search
-			makeURLbutton(results_div, coords, par, ds)
+			const result_div = allResults_div
+				.insert('div', ':first-child')
+				// .style('border', '1px solid #e6e6e6')
+				.style('max-width', '90vw')
+				.style('margin', '1vw')
+			const destroyBtn = result_div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('cursor', 'default')
+				.style('margin', '0px')
+				.style('font-size', '1.5em')
+				.html('&times;')
+				.on('click', () => {
+					// clear event handlers
+					result_div.selectAll('*').remove()
+					if (typeof close === 'function') close()
+				})
+			makeURLbutton(result_div, coords, par, ds)
 			// Render the search parameters as a track
 			const runpp_arg = {
-				holder: results_div
+				holder: result_div
 					.append('div')
 					.style('margin', '20px')
 					.node(),
@@ -1118,7 +1135,7 @@ async function openDatasetSandbox(page_args, ds) {
 			const callpp = JSON.parse(JSON.stringify(ds.runargs))
 
 			runproteinpaint(Object.assign(runpp_arg, callpp))
-			console.log(results_div.nodes().length)
+			console.log(allResults_div.nodes().length)
 		})
 }
 
