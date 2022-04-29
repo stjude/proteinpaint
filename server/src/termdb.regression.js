@@ -49,7 +49,7 @@ getSampleData
 		doImputation
 		categorizeSnpsByAF
 			// creates for high AF snps that are analyzed as covariants
-			// low-AF snps are to be used for Fisher
+			// low-AF snps are to be used for Fisher/Wilcoxon
 		applyGeneticModel
 makeRinput()
 	makeRvariable_snps()
@@ -58,6 +58,10 @@ validateRinput
 replaceTermId
 ... run R ...
 parseRoutput
+snplocusPostprocess
+	mayAddSnplocusMessage
+	mayAddResult4monomorphic
+	mayDoFisher
 */
 
 // list of supported types
@@ -718,31 +722,41 @@ async function parseRoutput(Rinput, Routput, id2originalId, q) {
 async function snplocusPostprocess(q, sampledata, Rinput, result) {
 	const tw = q.independent.find(i => i.type == 'snplocus')
 	if (!tw) return
-
-	mayAddSnpMessage(tw, result, q)
+	mayAddSnplocusMessage(tw, result, q)
 	mayAddResult4monomorphic(tw, result)
-	await mayDoFisher(tw, q, sampledata, Rinput, result)
+	if (tw.lowAFsnps.size) {
+		await mayDoFisher(tw, q, sampledata, Rinput, result)
+		await mayDoWilcoxon(tw, q, sampledata, Rinput, result)
+	}
+}
+
+async function mayDoWilcoxon(tw, q, sampledata, Rinput, result) {
+	// for linear regression, perform wilcoxon rank sum test for low-AF snps
+	if (q.regressionType != 'linear') return
 }
 
 async function mayDoFisher(tw, q, sampledata, Rinput, result) {
+	// for logistic/cox, perform fisher's exact test for low-AF snps
 	if (q.regressionType != 'logistic' && q.regressionType != 'cox') return
 	const lines = [] // one line for each snp
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		// a snp with low AF, run fisher on it
-		let outcome0href = 0,
+		// count 6 numbers for this snp across all samples
+		let outcome0href = 0, // outcome is 0/No,
 			outcome0het = 0,
 			outcome0halt = 0,
-			outcome1href = 0,
+			outcome1href = 0, // outcome is 1/Yes
 			outcome1het = 0,
 			outcome1halt = 0
+
+		// Rinput.data[] is a subset of sampledata[], though they're in same order
+		// see makeRinput()
 		let RinputDataidx = 0
 		for (const { sample, noOutcome } of sampledata) {
 			if (noOutcome) continue
-			const outcome =
-				'outcome' in Rinput.data[RinputDataidx]
-					? Rinput.data[RinputDataidx].outcome
-					: Rinput.data[RinputDataidx].outcome_event
-			RinputDataidx++
+			const d = Rinput.data[RinputDataidx++]
+			// outcome is the outcome term value in R input: either 0 or 1
+			const outcome = 'outcome' in d ? d.outcome : d.outcome_event
 			if (outcome != 0 && outcome != 1) throw 'outcome is not 0 or 1'
 			const gt = snpO.samples.get(sample)
 			if (!gt) {
@@ -761,6 +775,11 @@ async function mayDoFisher(tw, q, sampledata, Rinput, result) {
 				else outcome1halt++
 			}
 		}
+		/* a line forming this 2x3 table:
+		     homo-ref het homo-alt
+		Yes  -        -   -
+		No   -        -   -
+		*/
 		const line = [snpid, outcome1href, outcome0href, outcome1het, outcome0het, outcome1halt, outcome0halt]
 		lines.push(line.join('\t'))
 	}
@@ -768,12 +787,14 @@ async function mayDoFisher(tw, q, sampledata, Rinput, result) {
 	for (const line of plines) {
 		const l = line.split('\t')
 		const snpid = l[0]
+		const { effAle, refAle } = tw.lowAFsnps.get(snpid)
 		const pvalue = Number(l[7])
 
 		const gt2count = tw.snpgt2count.get(snpid)
 		const lst = []
 		for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
 
+		// make a result object for this snp
 		const analysisResult = {
 			id: snpid,
 			data: {
@@ -783,7 +804,11 @@ async function mayDoFisher(tw, q, sampledata, Rinput, result) {
 				},
 				fisher: {
 					pvalue: Number(pvalue.toFixed(4)),
-					table: l.slice(1, 7)
+					rows: [
+						['', refAle + '/' + refAle, refAle + '/' + effAle, effAle + '/' + effAle],
+						['Have event', l[1], l[3], l[5]],
+						['No event', l[2], l[4], l[6]]
+					]
 				}
 			}
 		}
@@ -809,7 +834,11 @@ function mayAddResult4monomorphic(tw, result) {
 	}
 }
 
-function mayAddSnpMessage(tw, result, q) {
+function getSnpStatusLine(snpid, tw) {
+	const gt2count = tw.snpgt2count.get(snpid)
+}
+
+function mayAddSnplocusMessage(tw, result, q) {
 	const lst = []
 	if (tw.highAFsnps.size) {
 		lst.push(
@@ -1053,17 +1082,10 @@ async function getSampleData_snplstOrLocus(tw, samples) {
 		tw.snpgt2count.set(snpid, gt2count)
 	}
 
-	/* categorize variants
-	lower than cutoff:
-		delete from snp2sample
-		create tw.lowAFsnps and store these, later to be analyzed by Fisher/Wilcox
-	higher than cutoff:
-		keep in snp2sample
-	monomorphic:
-		delete from snp2sample, do not analyze
-	*/
 	categorizeSnpsByAF(tw, snp2sample)
+	// tw.lowAFsnps, tw.highAFsnps, tw.monomorphicLst, tw.snpid2af are created
 
+	// for highAFsnps, write data into "samples{}" for model-fitting
 	for (const [snpid, o] of tw.highAFsnps) {
 		for (const [sampleid, gt] of o.samples) {
 			// for this sample, convert gt to value
@@ -1075,6 +1097,14 @@ async function getSampleData_snplstOrLocus(tw, samples) {
 	}
 }
 
+/* categorize variants to three groups:
+lower than cutoff:
+	create tw.lowAFsnps and store these, later to be analyzed by Fisher/Wilcox
+higher than cutoff:
+	keep in snp2sample
+monomorphic:
+	delete from snp2sample, do not analyze
+*/
 function categorizeSnpsByAF(tw, snp2sample) {
 	// same as snp2sample, to store snps with AF<cutoff, later to use for Fisher
 	tw.lowAFsnps = new Map()
@@ -1082,6 +1112,8 @@ function categorizeSnpsByAF(tw, snp2sample) {
 	tw.highAFsnps = new Map()
 	// list of snpid for monomorphic ones
 	tw.monomorphicLst = []
+	tw.snpid2AF = new Map()
+	// k: snpid, v: af
 
 	for (const [snpid, o] of snp2sample) {
 		if (tw.snpgt2count.get(snpid).size == 1) {
@@ -1099,6 +1131,7 @@ function categorizeSnpsByAF(tw, snp2sample) {
 		}
 
 		const af = effAleCount / (totalsamplecount * 2)
+		tw.snpid2AF.set(snpid, af)
 
 		if (af < tw.q.AFcutoff / 100) {
 			// AF lower than cutoff, will not use for model-fitting

@@ -39,6 +39,8 @@ main
 			mayshow_coefficients
 			mayshow_type3
 			mayshow_other
+			mayshow_fisher
+			mayshow_wilcoxon
 */
 
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
@@ -256,6 +258,7 @@ function setRenderers(self) {
 		self.mayshow_tests(result)
 		self.mayshow_other(result)
 		self.mayshow_fisher(result)
+		self.mayshow_wilcoxon(result)
 	}
 
 	self.newDiv = (label, label2, holder) => {
@@ -312,6 +315,10 @@ function setRenderers(self) {
 		}
 	}
 
+	self.mayshow_wilcoxon = result => {
+		if (!result.wilcoxon) return
+	}
+
 	self.mayshow_fisher = result => {
 		if (!result.fisher) return
 		const div = self.newDiv("Fisher's exact test")
@@ -324,30 +331,11 @@ function setRenderers(self) {
 			.style('margin', '20px')
 			.style('border-spacing', '5px')
 			.style('border-collapse', 'separate')
-		{
-			const tr = table.append('tr').style('opacity', 0.5)
-			tr.append('td')
-			tr.append('td').text('REF/REF')
-			tr.append('td').text('REF/ALT')
-			tr.append('td').text('ALT/ALT')
-		}
-		{
+		for (const r of result.fisher.rows) {
 			const tr = table.append('tr')
-			tr.append('td')
-				.text('Outcome=Yes')
-				.style('opacity', 0.5)
-			tr.append('td').text(result.fisher.table[0])
-			tr.append('td').text(result.fisher.table[2])
-			tr.append('td').text(result.fisher.table[4])
-		}
-		{
-			const tr = table.append('tr')
-			tr.append('td')
-				.text('Outcome=No')
-				.style('opacity', 0.5)
-			tr.append('td').text(result.fisher.table[1])
-			tr.append('td').text(result.fisher.table[3])
-			tr.append('td').text(result.fisher.table[5])
+			for (const c of r) {
+				tr.append('td').text(c)
+			}
 		}
 	}
 
