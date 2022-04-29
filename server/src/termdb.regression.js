@@ -61,6 +61,7 @@ parseRoutput
 snplocusPostprocess
 	mayAddSnplocusMessage
 	mayAddResult4monomorphic
+		getLine4OneSnp
 	mayDoFisher
 */
 
@@ -592,17 +593,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, q) {
 
 			const tw = q.independent.find(i => i.type == 'snplocus')
 			if (!tw) throw 'snplocus term missing'
-			const gt2count = tw.snpgt2count.get(snpid)
-			if (gt2count) {
-				const lst = []
-				for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
-				analysisResult.data.headerRow = {
-					k: 'Genotypes:',
-					v: lst.join(', ')
-				}
-				// delete this snp; at the end snpgt2count leaves only snps not used for model-fitting
-				tw.snpgt2count.delete(snpid)
-			}
+			analysisResult.data.headerRow = getLine4OneSnp(snpid, tw)
 		}
 
 		const data = analysis.data
@@ -790,18 +781,11 @@ async function mayDoFisher(tw, q, sampledata, Rinput, result) {
 		const { effAle, refAle } = tw.lowAFsnps.get(snpid)
 		const pvalue = Number(l[7])
 
-		const gt2count = tw.snpgt2count.get(snpid)
-		const lst = []
-		for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
-
 		// make a result object for this snp
 		const analysisResult = {
 			id: snpid,
 			data: {
-				headerRow: {
-					k: 'Genotypes:',
-					v: lst.join(', ')
-				},
+				headerRow: getLine4OneSnp(snpid, tw),
 				fisher: {
 					pvalue: Number(pvalue.toFixed(4)),
 					rows: [
@@ -823,19 +807,27 @@ function mayAddResult4monomorphic(tw, result) {
 		for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
 		const analysisResult = {
 			id: snpid,
-			data: {
-				headerRow: {
-					k: 'Genotype:',
-					v: lst.join(', ')
-				}
-			}
+			data: { headerRow: getLine4OneSnp(snpid, tw) }
 		}
 		result.resultLst.push(analysisResult)
 	}
 }
 
-function getSnpStatusLine(snpid, tw) {
+function getLine4OneSnp(snpid, tw) {
+	// get summary line for one snp to show in result
 	const gt2count = tw.snpgt2count.get(snpid)
+	if (!gt2count) return { k: 'Error', v: 'Variant not found' }
+
+	if (tw.monomorphicLst.includes(snpid)) {
+		const [gt, c] = [...gt2count][0]
+		return { k: 'Genotype', v: gt + '=' + c }
+	}
+	const lst = [
+		'Effect allele=' + (tw.highAFsnps.has(snpid) ? tw.highAFsnps.get(snpid).effAle : tw.lowAFsnps.get(snpid).effAle),
+		'AF=' + tw.snpid2AF.get(snpid)
+	]
+	for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
+	return { k: 'Variant:', v: lst.join(', ') }
 }
 
 function mayAddSnplocusMessage(tw, result, q) {
@@ -1083,7 +1075,7 @@ async function getSampleData_snplstOrLocus(tw, samples) {
 	}
 
 	categorizeSnpsByAF(tw, snp2sample)
-	// tw.lowAFsnps, tw.highAFsnps, tw.monomorphicLst, tw.snpid2af are created
+	// tw.lowAFsnps, tw.highAFsnps, tw.monomorphicLst, tw.snpid2AF are created
 
 	// for highAFsnps, write data into "samples{}" for model-fitting
 	for (const [snpid, o] of tw.highAFsnps) {
@@ -1131,7 +1123,7 @@ function categorizeSnpsByAF(tw, snp2sample) {
 		}
 
 		const af = effAleCount / (totalsamplecount * 2)
-		tw.snpid2AF.set(snpid, af)
+		tw.snpid2AF.set(snpid, Number(af.toFixed(4)))
 
 		if (af < tw.q.AFcutoff / 100) {
 			// AF lower than cutoff, will not use for model-fitting
