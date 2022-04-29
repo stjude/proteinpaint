@@ -527,8 +527,7 @@ class TermdbVocab {
 			}
 		}
 
-		const filterRoot = getNormalRoot(opts.filter)
-		const filter = filterRoot.lst.length && JSON.stringify(filterRoot)
+		const filter = getNormalRoot(opts.filter)
 		const isNewFilter = !deepEqual(currData.lastFilter, filter)
 		const termsToUpdate = isNewFilter
 			? [...opts.terms]
@@ -540,7 +539,7 @@ class TermdbVocab {
 
 		const currSampleIds = Object.keys(currData.samples)
 		const promises = []
-		const serverSampleIds = []
+		const samplesToShow = []
 		while (termsToUpdate.length) {
 			const copies = this.getCopiesToUpdate(termsToUpdate)
 			const init = {
@@ -557,7 +556,7 @@ class TermdbVocab {
 				dofetch3('termdb', init, this.opts.fetchOpts).then(data => {
 					if (data.error) throw data.error
 					for (const sampleId in data.samples) {
-						serverSampleIds.push(sampleId)
+						samplesToShow.push(sampleId)
 						const sample = data.samples[sampleId]
 						if (!(sampleId in currData.samples)) {
 							currData.samples[sampleId] = { sample: sampleId }
@@ -599,6 +598,7 @@ class TermdbVocab {
 		}
 		currData.lastFilter = filter
 		currData.lastTerms = opts.terms
+		currData.samplesToShow = samplesToShow
 	}
 
 	getCopiesToUpdate(terms) {

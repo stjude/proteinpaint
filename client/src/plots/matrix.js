@@ -193,7 +193,8 @@ class Matrix {
 			const ref = data.refs.byTermId[$id] || {}
 
 			for (const row of data.lst) {
-				if ($id in row) {
+				if (!data.samplesToShow.includes(row.sample)) continue
+				else if ($id in row) {
 					if (exclude.includes(row[$id].key)) continue
 					const key = row[$id].key
 					if (!sampleGroups.has(key)) {

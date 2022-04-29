@@ -1085,7 +1085,7 @@ function test_tables(cn) {
 
 // helper function to display or log the filled-in, constructed sql statement
 // use for debugging only, do not feed directly into better-sqlite3
-function interpolateSqlValues(sql, values) {
+export function interpolateSqlValues(sql, values) {
 	const vals = values.slice() // use a copy
 	let prevChar
 	return sql
