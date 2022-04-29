@@ -68,7 +68,9 @@ function getSortSamplesByValues($id, self, rows) {
 	const t = self.termOrder.find(t => t.tw.$id === $id)
 
 	if (t.tw.q?.mode == 'continuous') {
-		return (a, b) => a[$id].key - b[$id].key
+		return (a, b) => {
+			return a[$id].key - b[$id].key
+		}
 	}
 
 	const values = []

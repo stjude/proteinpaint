@@ -411,7 +411,7 @@ class Matrix {
 		const serieses = []
 		const dx = s.colw + s.colspace
 		const dy = s.rowh + s.rowspace
-		const keysByTermId = { 'Mutation Types': { values: {} } }
+		const legendGroups = {}
 
 		for (const { totalIndex, grpIndex, row } of this.sampleOrder) {
 			const series = {
@@ -432,6 +432,7 @@ class Matrix {
 				const label = 'label' in anno ? anno.label : key in values && values[key].label ? values[key].label : key
 
 				if (!anno.values) {
+					const fill = values[key]?.color
 					// only one rect for this sample annotation
 					const cell = {
 						sample: row.sample,
@@ -444,7 +445,8 @@ class Matrix {
 						fill: anno.color || values[key]?.color,
 						x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + t.totalHtAdjustments,
 						y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + t.totalHtAdjustments : 0,
-						order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
+						order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0,
+						fill
 					}
 
 					if (t.tw.q?.mode == 'continuous') {
@@ -459,6 +461,15 @@ class Matrix {
 					}
 
 					series.cells.push(cell)
+
+					// TODO: improve logic for excluding data from legend
+					if (t.tw.q.mode != 'continuous') {
+						const legendGrp = t.tw.legend?.group || t.tw.$id
+						if (legendGrp) {
+							if (!legendGroups[legendGrp]) legendGroups[legendGrp] = { ref: t.ref, values: {} }
+							if (!legendGroups[legendGrp].values[key]) legendGroups[legendGrp].values[key] = { key, label, fill }
+						}
+					}
 				} else {
 					// some term types like geneVariant can have multiple values for the same term,
 					// which will be renderd as multiple smaller, non-overlapping rects within the same cell
@@ -487,24 +498,19 @@ class Matrix {
 						})
 
 						if (t.tw.term.type == 'geneVariant') {
-							if (!keysByTermId['Mutation Types'][value.class]) {
-								keysByTermId['Mutation Types'].values[value.class] = { key: value.class, label, fill }
+							const legendGrp = t.tw.legend?.group || 'Mutation Types'
+							if (!legendGroups[legendGrp]) legendGroups[legendGrp] = { values: {} }
+							if (!legendGroups[legendGrp][value.class]) {
+								legendGroups[legendGrp].values[value.class] = { key: value.class, label, fill }
 							}
 						}
 					}
-				}
-
-				// TODO: improve logic for excluding data from legend
-				if (t.tw.q.mode != 'continuous' && t.tw.term.type != 'geneVariant') {
-					if (!t.tw.$id) console.log(427, t.tw.$id, t.tw.term?.id)
-					if (!keysByTermId[t.tw.$id]) keysByTermId[t.tw.$id] = { ref: t.ref, values: {} }
-					if (!keysByTermId[t.tw.$id].values[key]) keysByTermId[t.tw.$id].values[key] = { key, label }
 				}
 			}
 			serieses.push(series)
 		}
 
-		this.setLegendData(keysByTermId, data.refs)
+		this.setLegendData(legendGroups, data.refs)
 
 		return serieses
 	}
@@ -541,17 +547,17 @@ class Matrix {
 		return t.grp.name
 	}
 
-	setLegendData(keysByTermId, refs) {
+	setLegendData(legendGroups, refs) {
 		this.colorScaleByTermId = {}
-		const legendData = new Map()
+		const legendData = []
 
-		for (const $id in keysByTermId) {
-			const legend = keysByTermId[$id]
+		for (const $id in legendGroups) {
+			const legend = legendGroups[$id]
 
 			if ($id == 'Mutation Types') {
 				const keys = Object.keys(legend.values)
 				if (!keys.length) continue
-				legendData.set($id, {
+				legendData.unshift({
 					name: 'Mutation Types',
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
@@ -568,31 +574,34 @@ class Matrix {
 				continue
 			}
 
-			const term = this.termOrder.find(t => t.tw.$id == $id).tw.term
-			const termid = term.id
+			const t = this.termOrder.find(t => t.tw.$id == $id || t.tw.legend?.group == $id)
+			const grp = $id
+			const term = t.tw.term
 			const keys = Object.keys(legend.values)
 			const ref = legend.ref
 			if (ref.bins)
 				keys.sort((a, b) => ref.bins.findIndex(bin => bin.name === a) - ref.bins.findIndex(bin => bin.name === b))
 
-			this.colorScaleByTermId[$id] = keys.length < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
+			if (!this.colorScaleByTermId[grp])
+				this.colorScaleByTermId[grp] =
+					keys.length < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 
-			legendData.set($id, {
-				name: term.name,
+			legendData.push({
+				name: t.tw.legend?.group || term.name,
 				items: keys.map((key, i) => {
 					const item = legend.values[key]
 					return {
-						termid,
+						termid: term.id,
 						key,
 						text: item.label,
-						color: term.values?.[key]?.color || this.colorScaleByTermId[$id](key),
+						color: item.fill || this.colorScaleByTermId[grp](key),
 						order: i
 					}
 				})
 			})
 		}
 
-		this.legendData = [...legendData.values()]
+		this.legendData = legendData
 	}
 }
 

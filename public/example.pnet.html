@@ -278,8 +278,8 @@ function getCytogeneticsData() {
 	const chrs = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,'X','Y']
 	const lst = []
 	for(const c of chrs) {
-		if (c != 13 && c != 14 && c != 15 && c != 21 && c != 22) lst.push({id: `chr${c}p`})
-		lst.push({id: `chr${c}q`})
+		if (c != 13 && c != 14 && c != 15 && c != 21 && c != 22) lst.push({id: `chr${c}p`, legend: {group: 'Cytogenetics'}})
+		lst.push({id: `chr${c}q`, legend: {group: 'Cytogenetics'}})
 	}
 	return lst
 }
