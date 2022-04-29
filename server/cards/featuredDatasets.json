@@ -1,16 +1,16 @@
 {
     "datasets": [
         {
-            "name": "Pediatric Cancer MutationTODO",
+            "name": "Pediatric Cancer Mutation",
             "searchbar": "gene",
             "genomeToggle": true,
             "defaultGenome": "hg19",
-            "dsURLparam": "mds=Pediatric2,svcnv",
+            "dsURLparam": "dataset=Pediatric",
             "runargs": {
                 "nobox": true,
                 "parselurl": true,
                 "noheader": true, 
-                "datasetqueries":[ {"dataset": "Pediatric2", "querykey": "svcnv"} ]
+                "dataset": "Pediatric"
             }
         },
         {

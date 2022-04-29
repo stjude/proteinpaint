@@ -90,7 +90,7 @@ export async function init_appDrawer(par) {
 		.style('grid-template-columns', '1fr 1fr')
 		.style('gap', '5px')
 
-	// const datasetBtns_div = app_col.append('div')
+	const datasetBtns_div = app_col.append('div')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const track_args = {
@@ -108,7 +108,7 @@ export async function init_appDrawer(par) {
 	// make_searchbar(track_args, page_args, searchbar_div)
 	make_useCasesCard(topCards_div, track_args, page_args)
 	makeDNAnexusFileViewerCard(topCards_div, page_args)
-	// makeDatasetButtons(datasetBtns_div, page_args)
+	makeDatasetButtons(datasetBtns_div, page_args)
 	await loadTracks(track_args, page_args)
 }
 
