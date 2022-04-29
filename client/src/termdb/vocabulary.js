@@ -539,7 +539,10 @@ class TermdbVocab {
 
 		const currSampleIds = Object.keys(currData.samples)
 		const promises = []
-		const samplesToShow = []
+		// TODO: do not apply the filter to the term data request,
+		// so that a term will have annotated samples, while a
+		// separate request to a filtered sample list can be applied on the client side
+		const samplesToShow = isNewFilter || !currData.samplesToShow ? new Set() : currData.samplesToShow
 		while (termsToUpdate.length) {
 			const copies = this.getCopiesToUpdate(termsToUpdate)
 			const init = {
@@ -556,7 +559,7 @@ class TermdbVocab {
 				dofetch3('termdb', init, this.opts.fetchOpts).then(data => {
 					if (data.error) throw data.error
 					for (const sampleId in data.samples) {
-						samplesToShow.push(sampleId)
+						samplesToShow.add(sampleId)
 						const sample = data.samples[sampleId]
 						if (!(sampleId in currData.samples)) {
 							currData.samples[sampleId] = { sample: sampleId }

@@ -193,7 +193,7 @@ class Matrix {
 			const ref = data.refs.byTermId[$id] || {}
 
 			for (const row of data.lst) {
-				if (!data.samplesToShow.includes(row.sample)) continue
+				if (!data.samplesToShow.has(row.sample)) continue
 				else if ($id in row) {
 					if (exclude.includes(row[$id].key)) continue
 					const key = row[$id].key
@@ -256,12 +256,12 @@ class Matrix {
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
 				for (const sn in data.samples) {
-					const row = data.samples[sn]
-					if (tw.$id in row) {
+					const anno = data.samples[sn][tw.$id]
+					if (anno && ('value' in anno || 'values' in anno)) {
 						counts.samples += 1
-						counts.hits += Array.isArray(row[tw.$id].values) ? row[tw.$id].values.length : 1
+						counts.hits += Array.isArray(anno.values) ? anno.values.length : 1
 						if (tw.q?.mode == 'continuous') {
-							const v = row[tw.$id].value
+							const v = anno.value
 							if (!('minval' in counts) || counts.minval > v) counts.minval = v
 							if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
 						}
@@ -425,7 +425,7 @@ class Matrix {
 			for (const t of this.termOrder) {
 				mayApplyOverrides(row, t.tw, this.config.overrides)
 				const $id = t.tw.$id
-				const anno = row[$id]
+				const anno = row[$id]?.override || row[$id]
 				if (!anno) continue
 				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
 				const key = anno.key
@@ -680,8 +680,8 @@ function mayApplyOverrides(row, tw, overrides) {
 		if (sf.type == 'wvs') {
 			for (const v of sf.values) {
 				if (row[sf.wrapper$id]?.key === v.key) {
-					row[tw.$id] = JSON.parse(JSON.stringify(overrides[key].value))
-					row[tw.$id].overriden = true
+					if (!row[tw.$id]) row[tw.$id] = {}
+					row[tw.$id].override = JSON.parse(JSON.stringify(overrides[key].value))
 				}
 			}
 		}

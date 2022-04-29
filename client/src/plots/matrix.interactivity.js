@@ -212,8 +212,9 @@ function setTermActions(self) {
 		for (const g of termgroups) {
 			for (const tw of g.lst) {
 				if (!tw.sortSamples) continue
-				if (tw.$id === t.tw.$id) tw.sortSamples.priority = 0
-				else tw.sortSamples.priority += 1
+				if (tw.$id === t.tw.$id) {
+					tw.sortSamples.priority = 0
+				} else tw.sortSamples.priority += 1
 			}
 		}
 
@@ -709,11 +710,14 @@ function setTermActions(self) {
 				.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority),
 			...self.config.settings.matrix.sortSamplesTieBreakers.map(st => JSON.parse(JSON.stringify(st)))
 		]
+		console.log(713, sorterTerms)
 		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
 		const tcopy = JSON.parse(JSON.stringify(t.tw))
 		if (i == -1) {
-			tcopy.sortSamples = { by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' }
+			tcopy.sortSamples = { by: 'values' } // { by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' }
 			sorterTerms.unshift(tcopy)
+		} else {
+			tcopy.sortSamples.by = 'values'
 		}
 
 		return [tcopy, sorterTerms]

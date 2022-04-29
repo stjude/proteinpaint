@@ -84,8 +84,8 @@ function getSortSamplesByValues($id, self, rows) {
 	} else {
 		for (const row of rows) {
 			if (!($id in row)) continue
-			const v = row[$id].key
-			if (values.indexOf(v) == -1) values.push(v) //else hits[row.sample] = row[$id].values ? row[$id].values.length : 1
+			const v = row[$id].override?.key || row[$id].key
+			if (values.indexOf(v) == -1) values.push(v)
 		}
 	}
 
@@ -93,6 +93,11 @@ function getSortSamplesByValues($id, self, rows) {
 		if (!a[$id] && !b[$id]) return 0
 		if (!a[$id]) return 1
 		if (!b[$id]) return -1
+		if (a[$id].override && b[$id].override) {
+			return values.indexOf(a[$id].override.key) - values.indexOf(b[$id].override.key)
+		}
+		if (!a[$id].override) return -1
+		if (!b[$id].override) return 1
 		return values.indexOf(a[$id].key) - values.indexOf(b[$id].key)
 	}
 }
