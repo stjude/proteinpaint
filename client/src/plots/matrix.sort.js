@@ -98,9 +98,12 @@ function getSortSamplesByValues($id, self, rows) {
 			const bk = 'order' in b[$id].override ? b[$id].override.order : values.indexOf(b[$id].override.key)
 			return ak - bk
 		}
+		if (!a[$id].override && !b[$id].override) {
+			return values.indexOf(a[$id].key) - values.indexOf(b[$id].key)
+		}
 		if (!a[$id].override) return -1
 		if (!b[$id].override) return 1
-		return values.indexOf(a[$id].key) - values.indexOf(b[$id].key)
+		return 0
 	}
 }
 
