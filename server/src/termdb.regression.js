@@ -725,7 +725,7 @@ async function snplocusPostprocess(q, sampledata, Rinput, result) {
 async function mayDoWilcoxon(tw, q, sampledata, Rinput, result) {
 	// for linear regression, perform wilcoxon rank sum test for low-AF snps
 	if (q.regressionType != 'linear') return
-	const lines = [] // one line per snp
+	const wilcoxInput = {} // { snpid: {hasEffale: [], noEffale: []} }
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		let RinputDataidx = 0
 		const hasEffale = [],
@@ -749,21 +749,23 @@ async function mayDoWilcoxon(tw, q, sampledata, Rinput, result) {
 				noEffale.push(outcomeValue)
 			}
 		}
-		lines.push(snpid + '\t' + hasEffale.join(',') + '\t' + noEffale.join(','))
+		wilcoxInput[snpid] = {
+			hasEffale: hasEffale,
+			noEffale: noEffale
+		}
 	}
-	const plines = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), lines)
-	for (const line of plines) {
-		const l = line.split('\t')
-		const snpid = l[0]
-		const pvalue = Number(l[3])
-
+	const wilcoxInputFile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await utils.write_file(wilcoxInputFile, JSON.stringify(wilcoxInput))
+	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [wilcoxInputFile])
+	const pvalues = JSON.parse(wilcoxOutput)
+	for (const snpid in pvalues) {
 		// make a result object for this snp
 		const analysisResult = {
 			id: snpid,
 			data: {
 				headerRow: getLine4OneSnp(snpid, tw),
 				wilcoxon: {
-					pvalue: Number(pvalue.toFixed(4))
+					pvalue: pvalues[snpid]
 				}
 			}
 		}
