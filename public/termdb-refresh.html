@@ -221,7 +221,7 @@ function getTerms(metadata) { console.log(193)
 		if (t.values && ((t.type != 'float' && t.type != 'integer' ) || t.values.length)) {
 			term.values = {}
 			for (const key in t.values) {
-				term.values[key] = { key }
+				term.values[key] = { key, label: key }
 				if (t.values[key]) term.values[key].color = t.values[key]
 			}
 		}

@@ -74,8 +74,11 @@ function get_pill_label(tvs) {
 		// single
 		const v = tvs.values[0]
 		if (v.label) return { txt: v.label }
-		if (tvs.term.values && tvs.term.values[v.key] && tvs.term.values[v.key].label)
-			return { txt: tvs.term.values[v.key].label }
+		const value = tvs.term.values?.[v.key]
+		if (value) {
+			return { txt: value.key || value.label }
+			console.log(tvs.term, v.key)
+		}
 		console.error(`key "${v.key}" not found in values{} of ${tvs.term.name}`)
 		return { txt: v.key }
 	}
