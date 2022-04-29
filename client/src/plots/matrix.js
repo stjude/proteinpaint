@@ -194,7 +194,16 @@ class Matrix {
 
 			for (const row of data.lst) {
 				if (!data.samplesToShow.has(row.sample)) continue
-				else if ($id in row) {
+
+				// TODO: may move the override handling downstream,
+				// but before sample group.lst sorting, as needed
+				for (const grp of this.config.termgroups) {
+					for (const tw of grp.lst) {
+						mayApplyOverrides(row, tw, this.config.overrides)
+					}
+				}
+
+				if ($id in row) {
 					if (exclude.includes(row[$id].key)) continue
 					const key = row[$id].key
 					if (!sampleGroups.has(key)) {
@@ -423,7 +432,6 @@ class Matrix {
 			}
 
 			for (const t of this.termOrder) {
-				mayApplyOverrides(row, t.tw, this.config.overrides)
 				const $id = t.tw.$id
 				const anno = row[$id]?.override || row[$id]
 				if (!anno) continue

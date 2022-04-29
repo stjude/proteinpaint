@@ -710,7 +710,6 @@ function setTermActions(self) {
 				.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority),
 			...self.config.settings.matrix.sortSamplesTieBreakers.map(st => JSON.parse(JSON.stringify(st)))
 		]
-		console.log(713, sorterTerms)
 		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
 		const tcopy = JSON.parse(JSON.stringify(t.tw))
 		if (i == -1) {
