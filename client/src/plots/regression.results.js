@@ -29,7 +29,10 @@ result.data: {}
 main
 	displayResult
 		createGenomebrowser
+			mayCheckLD
+				showLDlegend
 		updateMds3Tk
+			make_mds3_variants
 		show_genomebrowser_snplocus
 		displayResult_oneset
 			mayshow_warn
@@ -38,6 +41,8 @@ main
 			mayshow_coefficients
 			mayshow_type3
 			mayshow_other
+			mayshow_fisher
+			mayshow_wilcoxon
 */
 
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
@@ -64,6 +69,7 @@ export class RegressionResults {
 		this.dom = {
 			holder,
 			err_div: holder.append('div'),
+			headerDiv: holder.append('div'),
 			snplocusBlockDiv: holder.append('div').style('margin-left', '20px'),
 			// is where newDiv() and displayResult_oneset() writes to
 			oneSetResultDiv: holder.append('div').style('margin', '10px')
@@ -196,12 +202,21 @@ function setInteractivity(self) {}
 
 function setRenderers(self) {
 	self.displayResult = async result => {
-		/* result[
-			{ data: { err, splinePlots, residuals, ... }, id:'snp1' },
-			{ data: { err, splinePlots, residuals, ... }, id:'snp2' },
-			...
-		]
+		/*
+		result {
+			headerMessage {k, v}
+			resultLst [
+				{ data: { err, splinePlots, residuals, ... }, id:'snp1' },
+				{ data: { err, splinePlots, residuals, ... }, id:'snp2' },
+				...
+			]
+		}
 		*/
+
+		self.dom.headerDiv.selectAll('*').remove()
+		if (result.headerMessage) {
+			self.newDiv(result.headerMessage.k, result.headerMessage.v, self.dom.headerDiv)
+		}
 
 		// if there is a snplocus Input
 		const snplocusInput = self.parent.inputs.independent.inputLst.find(i => i.term && i.term.term.type == 'snplocus')
@@ -212,9 +227,9 @@ function setRenderers(self) {
 			clicking on a dot in browser tk will call displayResult_oneset() to display its results
 			*/
 			if (!self.snplocusBlock) {
-				self.snplocusBlock = await createGenomebrowser(self, snplocusInput, result)
+				self.snplocusBlock = await createGenomebrowser(self, snplocusInput, result.resultLst)
 			} else {
-				await updateMds3Tk(self, snplocusInput, result)
+				await updateMds3Tk(self, snplocusInput, result.resultLst)
 			}
 			return
 		}
@@ -222,10 +237,10 @@ function setRenderers(self) {
 		// no snplocus, clear things if had it before
 		delete self.snplocusBlock
 		self.dom.snplocusBlockDiv.selectAll('*').remove()
-		// result[] has only one set of result, from analyzing one model
-		if (!result[0] || !result[0].data) throw 'result is not [ {data:{}} ]'
+		// resultLst[] has only one set of result, from analyzing one model
+		if (!result.resultLst[0] || !result.resultLst[0].data) throw 'result is not [ {data:{}} ]'
 
-		self.displayResult_oneset(result[0].data)
+		self.displayResult_oneset(result.resultLst[0].data)
 	}
 
 	self.displayResult_oneset = result => {
@@ -244,12 +259,14 @@ function setRenderers(self) {
 		self.mayshow_type3(result)
 		self.mayshow_tests(result)
 		self.mayshow_other(result)
+		self.mayshow_fisher(result)
+		self.mayshow_wilcoxon(result)
 	}
 
-	self.newDiv = (label, label2) => {
+	self.newDiv = (label, label2, holder) => {
 		// create div to show a section of the result
 		// label is required, label2 is optional
-		const div = self.dom.oneSetResultDiv.append('div').style('margin', '20px 0px 10px 0px')
+		const div = (holder || self.dom.oneSetResultDiv).append('div').style('margin', '20px 0px 10px 0px')
 		const row = div.append('div')
 		row
 			.append('span')
@@ -258,7 +275,7 @@ function setRenderers(self) {
 		if (label2) {
 			row
 				.append('span')
-				.text(label2)
+				.html(label2)
 				.style('margin-left', '5px')
 		}
 		return div.append('div').style('margin-left', '20px')
@@ -297,6 +314,35 @@ function setRenderers(self) {
 		for (let i = 0; i < result.residuals.header.length; i++) {
 			tr1.append('td').text(result.residuals.header[i])
 			tr2.append('td').text(result.residuals.rows[i])
+		}
+	}
+
+	self.mayshow_wilcoxon = result => {
+		if (!result.wilcoxon) return
+		const div = self.newDiv('Wilcoxon rank sum test')
+		div
+			.append('div')
+			.text('p-value=' + result.wilcoxon.pvalue)
+			.style('margin', '20px')
+	}
+
+	self.mayshow_fisher = result => {
+		if (!result.fisher) return
+		const div = self.newDiv("Fisher's exact test")
+		div
+			.append('div')
+			.text('p-value=' + result.fisher.pvalue)
+			.style('margin', '20px')
+		const table = div
+			.append('table')
+			.style('margin', '20px')
+			.style('border-spacing', '5px')
+			.style('border-collapse', 'separate')
+		for (const r of result.fisher.rows) {
+			const tr = table.append('tr')
+			for (const c of r) {
+				tr.append('td').text(c)
+			}
 		}
 	}
 
@@ -808,7 +854,7 @@ function fillCoefficientTermname(tw, td) {
 	}
 }
 
-function make_mds3_variants(tw, result) {
+function make_mds3_variants(tw, resultLst) {
 	/* return a list of variants good for tk display
 	tw:
 		term:
@@ -820,12 +866,11 @@ function make_mds3_variants(tw, result) {
 		q{}
 			snp2effAle:{}
 
-	result:{lst[{data,id},{data,id},...]}
+	resultLst: [{data,id},{data,id},...]
 	*/
 	const mlst = []
 	for (const snp of tw.term.snps) {
 		const m = {
-			//snpid: snp.snpid,
 			chr: snp.chr,
 			pos: snp.pos
 		}
@@ -841,39 +886,66 @@ function make_mds3_variants(tw, result) {
 			Object.assign(m, snp.alt2csq[Object.keys(snp.alt2csq)[0]])
 		}
 
-		const thisresult = result.find(i => i.id == snp.snpid)
+		// set default values as missing, to be able to show all variants in track
+		// overwrite with real values if found in result
+		m.regressionPvalue = 'NA'
+		m.__value = 0 // display the dot at the bottom
+
+		const thisresult = resultLst.find(i => i.id == snp.snpid)
 		if (!thisresult) {
 			// missing result for this variant, caused by variable-skipping in R
-			m.regressionPvalue = 'missing'
-			m.__value = 0 // display the dot at the bottom
-			m.regressionResult = { err: ['No result for this variant at ' + snp.snpid] }
+			m.regressionResult = {
+				data: {
+					err: ['No result for this variant at ' + snp.snpid]
+				}
+			}
 			continue
 		}
 		// reg result is found for this snp; can call displayResult_oneset
+		m.regressionResult = thisresult // for displaying via click_snvindel()
+
 		const d = thisresult.data
 		if (!d) throw '.data{} missing'
-		m.regressionResult = d // for displaying via click_snvindel()
 
-		// find p-value (last column of type3 table)
-		if (!d.type3 || !d.type3.terms) throw '.data{type3:{terms}} missing'
-		if (!d.type3.terms[snp.snpid]) throw snp.snpid + ' missing in type3.terms{}'
-		if (!Array.isArray(d.type3.terms[snp.snpid])) throw `type3.terms[${snp.snpid}] not array`
-		const str = d.type3.terms[snp.snpid][d.type3.terms[snp.snpid].length - 1]
-		// last value of the array should be p-value string (can be 'NA')
-		const v = Number(str)
-		if (Number.isNaN(v)) {
-			m.regressionPvalue = str // for displaying via tooltipPrintValue()
-			// setting -log10(p) to 0 allows the dot to show while being able to show pvalue=NA in tooltip
-			m.__value = 0
-		} else {
-			m.regressionPvalue = v
-			m.__value = -Math.log10(v)
+		if (d.type3) {
+			// find p-value (last column of type3 table)
+			if (!d.type3.terms) throw '.data{type3:{terms}} missing'
+			if (!d.type3.terms[snp.snpid]) throw snp.snpid + ' missing in type3.terms{}'
+			if (!Array.isArray(d.type3.terms[snp.snpid])) throw `type3.terms[${snp.snpid}] not array`
+			const str = d.type3.terms[snp.snpid][d.type3.terms[snp.snpid].length - 1]
+			// last value of the array should be p-value string (can be 'NA')
+			const v = Number(str)
+			if (Number.isNaN(v)) {
+				m.regressionPvalue = str // for displaying via tooltipPrintValue()
+			} else {
+				m.regressionPvalue = v
+				m.__value = -Math.log10(v)
+			}
+		}
+		if (d.fisher) {
+			// { pvalue:float, table:[] }
+			m.regressionPvalue = d.fisher.pvalue
+			m.__value = -Math.log10(d.fisher.pvalue)
+			m.shapeTriangle = true
+		}
+		if (d.wilcoxon) {
+			// { pvalue:float }
+			m.regressionPvalue = d.wilcoxon.pvalue
+			m.__value = -Math.log10(d.wilcoxon.pvalue)
+			m.shapeTriangle = true
+		}
+
+		if (d.coefficients) {
+			if (!d.coefficients.terms) throw '.data.coefficients.terms{} missing'
+			const r = d.coefficients.terms[snp.snpid]
+			if (!r) throw 'snp missing from data.coefficients.terms{}'
+			m.regressionEstimate = r.fields[0]
 		}
 	}
 	return mlst
 }
 
-async function createGenomebrowser(self, input, result) {
+async function createGenomebrowser(self, input, resultLst) {
 	// create block instance that harbors the mds3 track for showing variants from the snplocus term
 	// input is the snplocus Input instance
 	const arg = {
@@ -930,13 +1002,11 @@ async function createGenomebrowser(self, input, result) {
 			inuse: true,
 			type: '__value',
 			label: '-log10 p-value',
-			tooltipPrintValue: m => {
-				return ['p-value', m.regressionPvalue]
-			}
+			tooltipPrintValue: m => getMtooltipValues(m, self.config.regressionType)
 		},
-		custom_variants: make_mds3_variants(input.term, result),
+		custom_variants: make_mds3_variants(input.term, resultLst),
 		click_snvindel: async m => {
-			self.displayResult_oneset(m.regressionResult)
+			self.displayResult_oneset(m.regressionResult.data)
 			await mayCheckLD(m, input, self)
 		}
 	})
@@ -946,12 +1016,12 @@ async function createGenomebrowser(self, input, result) {
 	return new _.Block(arg)
 }
 
-async function updateMds3Tk(self, input, result) {
+async function updateMds3Tk(self, input, resultLst) {
 	// browser is already created
 	// find the mds3 track
 	const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
 	// apply new sets of variants and results to track and render
-	tk.custom_variants = make_mds3_variants(input.term, result)
+	tk.custom_variants = make_mds3_variants(input.term, resultLst)
 	// if user changes position using termsetting ui,
 	// input.term.q{} will hold different chr/start/stop than block
 	// and block will need to update coord
@@ -985,6 +1055,9 @@ async function mayCheckLD(m, input, self) {
 	const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
 	if (!tk || !tk.skewer || !tk.skewer.nmg) return
 
+	// clear old result
+	for (const m of tk.custom_variants) delete m.regressionR2
+
 	const wait = self.dom.LDresultDiv.append('span').text('Loading LD data...')
 
 	try {
@@ -1005,7 +1078,11 @@ async function mayCheckLD(m, input, self) {
 				return LDcolor1
 			}
 			for (const i of data.lst) {
-				if (i.pos == m2.pos && i.alleles == m2.ref + '.' + m2.alt) return LDcolorScale(i.r2)
+				if (i.pos == m2.pos && i.alleles == m2.ref + '.' + m2.alt) {
+					// matched, record new result for displaying in hover tooltip
+					m2.regressionR2 = i.r2
+					return LDcolorScale(i.r2)
+				}
 			}
 			return LDcolorScale(0)
 		})
@@ -1064,4 +1141,21 @@ function showLDlegend(div) {
 		.attr('fill', 'url(#grad)')
 
 	svg.attr('width', xpad * 2 + axiswidth).attr('height', axisheight + barheight)
+}
+
+function getMtooltipValues(m, regressionType) {
+	const lst = ['p-value=' + m.regressionPvalue]
+	if (m.regressionResult.AFstr) {
+		lst.push('AF=' + m.regressionResult.AFstr)
+	}
+	if (m.regressionEstimate) {
+		if (regressionType == 'linear') lst.push('beta=' + m.regressionEstimate)
+		else if (regressionType == 'logistic') lst.push('odds ratio=' + m.regressionEstimate)
+		else if (regressionType == 'cox') lst.push('hazard ratio=' + m.regressionEstimate)
+		else throw 'unknown regression type'
+	}
+	if (m.regressionR2) {
+		lst.push('LD r2=' + m.regressionR2)
+	}
+	return lst
 }

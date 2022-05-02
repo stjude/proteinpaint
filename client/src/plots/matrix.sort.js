@@ -66,6 +66,13 @@ function getSortSamplesByHits($id, self, rows) {
 
 function getSortSamplesByValues($id, self, rows) {
 	const t = self.termOrder.find(t => t.tw.$id === $id)
+
+	if (t.tw.q?.mode == 'continuous') {
+		return (a, b) => {
+			return a[$id].key - b[$id].key
+		}
+	}
+
 	const values = []
 	if (t?.term?.values) {
 		for (const v of term.values) {
@@ -77,16 +84,26 @@ function getSortSamplesByValues($id, self, rows) {
 	} else {
 		for (const row of rows) {
 			if (!($id in row)) continue
-			const v = row[$id].key
-			if (values.indexOf(v) == -1) values.push(v) //else hits[row.sample] = row[$id].values ? row[$id].values.length : 1
+			const v = row[$id].override?.key || row[$id].key
+			if (values.indexOf(v) == -1) values.push(v)
 		}
 	}
 
 	return (a, b) => {
 		if (!a[$id] && !b[$id]) return 0
-		if (!a[$id]) return 1
-		if (!b[$id]) return -1
-		return values.indexOf(a[$id].key) - values.indexOf(b[$id].key)
+		if (!a[$id]) return b[$id].override ? -1 : 1
+		if (!b[$id]) return a[$id].override ? 1 : -1
+		if (a[$id].override && b[$id].override) {
+			const ak = 'order' in a[$id].override ? a[$id].override.order : values.indexOf(a[$id].override.key)
+			const bk = 'order' in b[$id].override ? b[$id].override.order : values.indexOf(b[$id].override.key)
+			return ak - bk
+		}
+		if (!a[$id].override && !b[$id].override) {
+			return values.indexOf(a[$id].key) - values.indexOf(b[$id].key)
+		}
+		if (!a[$id].override) return -1
+		if (!b[$id].override) return 1
+		return 0
 	}
 }
 

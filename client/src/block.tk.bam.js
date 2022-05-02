@@ -427,7 +427,7 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
 	}
-	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
+	tk.read_alignment_diff_scores_asc = data.read_alignment_diff_scores_asc
 }
 
 function update_left_margin(tk, block) {
@@ -1581,8 +1581,7 @@ function configPanel(tk, block) {
 			holder: row,
 			options: [
 				{ label: '0', value: 0, checked: tk.variants[0].strictness == 0 },
-				{ label: '1', value: 1, checked: tk.variants[0].strictness == 1 },
-				{ label: '2', value: 2, checked: tk.variants[0].strictness == 2 }
+				{ label: '1', value: 1, checked: tk.variants[0].strictness == 1 }
 			],
 			styles: { display: 'inline-block', margin: '10px 5px' },
 			callback: v => {
@@ -1599,6 +1598,7 @@ function configPanel(tk, block) {
 		.style('font-size', '.8em')
 		.style('width', '300px').html(`
 	<ul style="padding-left:15px">
+          <li><b>Strictness</b></li> <ul style="list-style-type:none;"> <li> 0: No post-processing after genotyping of reads (Lenient) </li> <li> 1: Reads with non-reference and non-alternate nucleotides within variant region are classifed into none category (Strict) </li></ul>
 	  <li><b>Matches</b> are rendered as gray boxes aligned to the reference.</li>
 	  <li><b>Mismatches</b> will be checked when 1 bp is wider than 1 pixel, and are rendered as red boxes aligned to the reference.</li>
 	  <li><b>Softclips</b> are rendered as blue boxes not aligned to the reference.</li>
@@ -1615,6 +1615,11 @@ function configPanel(tk, block) {
 		.style('margin-top', '10px')
 		.append('img')
 		.attr('src', tk.colorscale)
+	d
+		.append('div')
+		.style('font-size', '.8em')
+		.style('width', '300px').html(`
+`)
 }
 
 /*

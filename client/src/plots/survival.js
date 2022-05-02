@@ -8,8 +8,9 @@ import { line, area, curveStepAfter } from 'd3-shape'
 import { rgb } from 'd3-color'
 import htmlLegend from '../html.legend'
 import Partjson from 'partjson'
-import { dofetch3, to_svg } from '../client'
+import { to_svg } from '../client'
 import { fillTermWrapper } from '../common/termsetting'
+import { Menu } from '../dom/menu'
 
 class TdbSurvival {
 	constructor(opts) {
@@ -25,7 +26,11 @@ class TdbSurvival {
 			controls,
 			holder,
 			chartsDiv: holder.append('div').style('margin', '10px'),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
+			tip: new Menu({ padding: '5px' })
+		}
+		this.dom.tip.onHide = () => {
+			this.activeMenu = false
 		}
 		if (this.dom.header) this.dom.header.html('Survival Plot')
 		// hardcode for now, but may be set as option later
@@ -52,7 +57,7 @@ class TdbSurvival {
 
 	async setControls() {
 		if (this.opts.controls) {
-			this.opts.controls.on('downloadClick.boxplot', this.download)
+			this.opts.controls.on('downloadClick.survival', this.download)
 		} else {
 			this.dom.holder
 				.attr('class', 'pp-termdb-plot-viz')
@@ -115,7 +120,7 @@ class TdbSurvival {
 				})
 			}
 
-			this.components.controls.on('downloadClick.boxplot', this.download)
+			this.components.controls.on('downloadClick.survival', () => alert('TODO: data download?'))
 		}
 	}
 
@@ -282,16 +287,22 @@ function setRenderers(self) {
 		//.style('border', '1px solid #eee')
 		//.style('box-shadow', '0px 0px 1px 0px #ccc')
 
-		div
+		const titleDiv = div
 			.append('div')
-			.attr('class', 'sjpp-survival-title')
-			.style('text-align', 'center')
 			.style('width', s.svgw + 50 + 'px')
 			.style('height', s.chartTitleDivHt + 'px')
+			.style('text-align', 'center')
 			.style('font-weight', '600')
 			.style('margin', '5px')
-			.datum(chart.chartId)
-			.html(chart.chartId)
+			.append('div')
+			.attr('class', 'sjpp-survival-title')
+			.style('display', 'inline-block')
+			.datum(chart)
+			.html(chart => chart.chartId)
+			.style('cursor', 'pointer')
+			.on('mouseover', () => titleDiv.style('text-decoration', 'underline'))
+			.on('mouseout', () => titleDiv.style('text-decoration', ''))
+			.on('click', self.showMenuForSelectedChart)
 
 		if (chart.serieses) {
 			const svg = div.append('svg').attr('class', 'pp-survival-svg')
@@ -628,7 +639,7 @@ function setRenderers(self) {
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {
 		let xTicks
 		if (s.xTickValues) {
-			chart.xTickValues = s.xTickValues.filter(v => v >= chart.xMin && v <= chart.xMax)
+			chart.xTickValues = s.xTickValues.filter(v => v === 0 || (v >= chart.xMin && v <= chart.xMax))
 			xTicks = axisBottom(chart.xScale).tickValues(chart.xTickValues)
 		} else {
 			chart.xTickValues = []
@@ -691,11 +702,13 @@ function setRenderers(self) {
 			const counts = []
 			let i = 0,
 				d = series.data[0],
-				prev = d // prev = "previous" data point
+				prev = d, // prev = "previous" data point,
+				nCensored = 0
 
 			// for each x-axis timepoint, find and use the data that applies
 			for (const time of chart.xTickValues) {
 				while (d && d.x < time) {
+					nCensored += d.ncensor
 					prev = d
 					i++
 					d = series.data[i]
@@ -707,7 +720,7 @@ function setRenderers(self) {
 				// followed by another data with nrisk counts;
 				// however, must also adjust the prev.nrisk for use in the next timepoint,
 				// since it is a starting count and does not include the exits in that timepoint
-				counts.push([time, prev.nrisk - prev.nevent - prev.ncensor])
+				counts.push([time, prev.nrisk - prev.nevent - prev.ncensor, nCensored])
 			}
 			bySeries[series.seriesId] = counts
 		}
@@ -736,7 +749,7 @@ function setRenderers(self) {
 					.attr('transform', `translate(0,${y})`)
 					.attr('fill', self.term2toColor[seriesId])
 
-				const fontsize = `${s.axisTitleFontSize - 2}px`
+				const fontsize = `${s.axisTitleFontSize - 4}px`
 				const sObj = chart.serieses.find(s => s.seriesId === seriesId)
 
 				g.append('text')
@@ -746,9 +759,9 @@ function setRenderers(self) {
 					.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : 'At-risk')
 
 				const data = chart.xTickValues.map(tickVal => {
-					if (tickVal === 0) return { tickVal, atRisk: series[0][1] }
+					if (tickVal === 0) return { tickVal, atRisk: series[0][1], nCensored: series[0][2] }
 					const d = reversed.find(d => d[0] <= tickVal)
-					return { tickVal, atRisk: d[1] }
+					return { tickVal, atRisk: d[1], nCensored: d[2] }
 				})
 				const text = g
 					.append('g')
@@ -761,7 +774,7 @@ function setRenderers(self) {
 					.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
 					.attr('text-anchor', 'middle')
 					.attr('font-size', fontsize)
-					.text(d => d.atRisk)
+					.text(d => `${d.atRisk}(${d.nCensored})`)
 			})
 	}
 
@@ -811,12 +824,13 @@ function setInteractivity(self) {
 				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 		} else if (event.target.tagName == 'path' && d && d.seriesId) {
 			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesLabel ? d.seriesLabel : d.seriesId)
-		} else {
+		} else if (!self.activeMenu) {
 			self.app.tip.hide()
 		}
 	}
 
 	self.mouseout = function() {
+		if (self.activeMenu) return
 		self.app.tip.hide()
 	}
 
@@ -840,6 +854,18 @@ function setInteractivity(self) {
 			}
 		})
 	}
+
+	self.showMenuForSelectedChart = function(d) {
+		self.dom.tip.clear()
+		self.activeMenu = true
+		self.dom.tip
+			.showunder(this)
+			.d.append('button')
+			.html('Download SVG')
+			.on('click', () =>
+				to_svg(this.parentNode.parentNode.querySelector('svg'), 'survival', { apply_dom_styles: true })
+			)
+	}
 }
 
 export async function getPlotConfig(opts, app) {
@@ -849,7 +875,7 @@ export async function getPlotConfig(opts, app) {
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 	} catch (e) {
-		throw `${e} [barchart getPlotConfig()]`
+		throw `${e} [survival getPlotConfig()]`
 	}
 
 	const config = {

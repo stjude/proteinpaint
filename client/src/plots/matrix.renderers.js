@@ -56,9 +56,10 @@ export function setRenderers(self) {
 			.attr('x', cell.x)
 			.attr('y', cell.y)
 			.attr('width', cell.width ? cell.width : s.colw)
-			.attr('height', cell.height ? cell.height : s.rowh)
-			//.attr('stroke', '#eee')
-			//.attr('stroke-width', 1)
+			.attr('height', 'height' in cell ? cell.height : s.rowh)
+			.attr('shape-rendering', 'crispEdges')
+			//.attr('stroke', cell.fill)
+			.attr('stroke-width', 0)
 			.attr('fill', cell.fill)
 	}
 
@@ -70,12 +71,13 @@ export function setRenderers(self) {
 				.duration(duration)
 				.attr('transform', side.attr.boxTransform)
 
-			const labels = side.box.selectAll('g').data(side.data, side.key)
+			const labels = side.box.selectAll('.sjpp-matrix-label').data(side.data, side.key)
 			labels.exit().remove()
 			labels.each(renderLabel)
 			labels
 				.enter()
 				.append('g')
+				.attr('class', 'sjpp-matrix-label')
 				.each(renderLabel)
 
 			function renderLabel(lab) {
@@ -85,8 +87,8 @@ export function setRenderers(self) {
 					.duration(textduration)
 					.attr('transform', side.attr.labelGTransform)
 
-				if (!g.select('text').size()) g.append('text')
-				g.select('text')
+				if (!g.select(':scope>text').size()) g.append('text')
+				g.select(':scope>text')
 					.attr('fill', '#000')
 					.transition()
 					.duration(textduration)
@@ -95,7 +97,27 @@ export function setRenderers(self) {
 					.attr('text-anchor', side.attr.labelAnchor)
 					.attr('transform', side.attr.labelTransform)
 					.attr('cursor', 'pointer')
+					.attr(side.attr.textpos.coord, side.attr.textpos.factor * (lab.tw?.q?.mode == 'continuous' ? 30 : 0))
 					.text(side.label)
+
+				if (lab.tw?.q?.mode == 'continuous' && side.label(lab)) {
+					if (!g.select('.sjpp-matrix-cell-axis').size()) {
+						g.append('g')
+							.attr('class', 'sjpp-matrix-cell-axis')
+							.attr('shape-rendering', 'crispEdges')
+					}
+					const axisg = g.select('.sjpp-matrix-cell-axis')
+					axisg.selectAll('*').remove()
+					const domain = [lab.counts.maxval, lab.counts.minval]
+					if (s.transpose) domain.reverse()
+					const d = self.dimensions
+					const x = !s.transpose ? 0 : lab.tw.settings.gap - 1 - lab.labelOffset
+					const y = !s.transpose ? lab.tw.settings.gap - 1 - lab.labelOffset : 0
+					axisg
+						.attr('shape-rendering', 'crispEdges')
+						.attr('transform', `translate(${x},${y})`)
+						.call(side.attr.axisFxn(lab.scale.domain(domain)).tickValues(domain))
+				}
 			}
 		}
 	}
@@ -103,29 +125,51 @@ export function setRenderers(self) {
 	self.colLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const x = lab.grpIndex * s.colgspace + lab.totalIndex * d.dx + 0.8 * s.colw
-		return `translate(${x},0)`
+		lab.labelOffset = 0.8 * s.colw
+		const x = lab.grpIndex * s.colgspace + lab.totalIndex * d.dx + lab.labelOffset + lab.totalHtAdjustments
+		const y = 0 //lab.tw?.q?.mode == 'continuous' ? -30 : 0
+		return `translate(${x},${y})`
 	}
 
 	self.colGrpLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const x = lab.grpIndex * s.colgspace + lab.prevGrpTotalIndex * d.dx + (lab.grp.lst.length * d.dx) / 2 + 3
+		const x =
+			lab.grpIndex * s.colgspace +
+			lab.prevGrpTotalIndex * d.dx +
+			(lab.grp.lst.length * d.dx) / 2 +
+			s.grpLabelFontSize / 2 +
+			lab.totalHtAdjustments
 		return `translate(${x},0)`
 	}
 
 	self.rowLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + 0.7 * s.rowh
-		return `translate(0,${y})`
+		const x = 0 // lab.tw?.q?.mode == 'continuous' ? -30 : 0
+		lab.labelOffset = 0.7 * s.rowh
+		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + lab.labelOffset + lab.totalHtAdjustments
+		return `translate(${x},${y})`
 	}
 
 	self.rowGrpLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const y = lab.grpIndex * s.rowgspace + lab.prevGrpTotalIndex * d.dy + (lab.grp.lst.length * d.dy) / 2 + 3
+		const y =
+			lab.grpIndex * s.rowgspace +
+			lab.prevGrpTotalIndex * d.dy +
+			(lab.grp.lst.length * d.dy) / 2 +
+			s.grpLabelFontSize / 2 +
+			lab.totalHtAdjustments
 		return `translate(0,${y})`
+	}
+
+	self.rowAxisGTransform = (lab, grpIndex) => {
+		const s = self.settings.matrix
+		const d = self.dimensions
+		const x = 0 // lab.tw?.q?.mode == 'continuous' ? -30 : 0
+		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + 0.7 * s.rowh + lab.totalHtAdjustments
+		return `translate(${x},${y})`
 	}
 
 	self.adjustSvgDimensions = async function(prevTranspose) {

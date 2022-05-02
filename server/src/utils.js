@@ -379,7 +379,7 @@ exports.loadfile_ssid = async function(id, samplefilterset) {
 samplefilterset:
 	optional Set of samples to restrict to
 */
-	const text = await read_file(path.join(serverconfig.cachedir, 'ssid', id))
+	const text = await read_file(path.join(serverconfig.cachedir_ssid, id))
 	const sample2gt = new Map()
 	// k: sample, v: genotype str
 	const genotype2sample = new Map()

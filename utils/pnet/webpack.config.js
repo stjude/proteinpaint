@@ -1,3 +1,8 @@
+/*
+	to bundle:
+	cd proteinpaint # run at project root
+	npx webpack --config=./utils/pnet/webpack.config.js
+*/
 const serverConfigFxn = require('../../server/webpack.config')
 const nodeExternals = require('webpack-node-externals')
 const path = require('path')

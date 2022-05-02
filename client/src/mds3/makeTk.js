@@ -38,7 +38,7 @@ export async function makeTk(tk, block) {
 
 	tk.load = _load(tk, block) // shorthand
 
-	get_ds(tk, block)
+	await get_ds(tk, block)
 	// tk.mds is created for both official and custom track
 	// following procedures are only based on tk.mds
 
@@ -142,11 +142,13 @@ function init_mclass(tk) {
 	tk.mclass2variantcount = new Map()
 }
 
-function get_ds(tk, block) {
+async function get_ds(tk, block) {
 	if (tk.dslabel) {
 		// official dataset
-		tk.mds = block.genome.datasets[tk.dslabel]
-		if (!tk.mds) throw 'dataset not found for ' + tk.dslabel
+		const data = await dofetch3(`getDataset?genome=${block.genome.name}&dsname=${tk.dslabel}`)
+		if (data.error) throw 'Error: ' + data.error
+		if (!data.ds) throw 'data.ds{} missing'
+		tk.mds = data.ds
 		return
 	}
 	// custom

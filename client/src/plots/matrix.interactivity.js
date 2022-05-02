@@ -2,6 +2,8 @@ import { select } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '../common/termsetting'
 import { icons } from '../dom/control.icons'
 
+let inputIndex = 0
+
 export function setInteractivity(self) {
 	self.showCellInfo = function() {
 		if (self.activeTerm) return
@@ -15,7 +17,7 @@ export function setInteractivity(self) {
 			]
 
 			if (d.term.type == 'geneVariant') {
-				rows.push()
+				if (d.value.label) rows.push(`<tr><td style='text-align: center'>${d.value.label}</td></tr>`)
 				if (d.value.alt)
 					rows.push(`<tr><td style='text-align: center'>ref=${d.value.ref}, alt=${d.value.alt}</td></tr>`)
 				if (d.value.isoform) rows.push(`<tr><td style='text-align: center'>Isoform: ${d.value.isoform}</td></tr>`)
@@ -172,16 +174,24 @@ function setTermActions(self) {
 	self.sortSamplesAgainstCornerTerm = () => {
 		event.stopPropagation()
 		const t = self.activeTerm
-		const termgroups = self.termGroups
+		const activeIndex = t.index
+		const termgroups = JSON.parse(JSON.stringify(self.termGroups))
 		const grp = termgroups[t.grpIndex]
 		const [tcopy, sorterTerms] = self.getSorterTerms(t)
 		const removed = grp.lst.splice(t.index, 1)
 		grp.lst.unshift(tcopy)
+		grp.sortTermsBy = 'asListed'
 
 		for (const g of termgroups) {
-			for (const tw of g.lst) {
-				if (!tw.sortSamples) continue
-				tw.sortSamples.priority = sorterTerms.findIndex(t => t.tw?.$id === tw.$id)
+			if (g == grp) {
+				for (const [priority, tw] of g.lst.entries()) {
+					tw.sortSamples = { priority, by: 'values' }
+				}
+			} else {
+				for (const tw of g.lst) {
+					if (!tw.sortSamples) continue
+					tw.sortSamples.priority = sorterTerms.findIndex(t => t.tw?.$id === tw.$id) + grp.lst.length
+				}
 			}
 		}
 
@@ -207,11 +217,13 @@ function setTermActions(self) {
 		const [tcopy] = self.getSorterTerms(t)
 		const termgroups = self.termGroups
 		termgroups[t.grpIndex].lst[t.index] = tcopy
+		termgroups[t.grpIndex].sortTermsBy = 'asListed'
 		for (const g of termgroups) {
 			for (const tw of g.lst) {
 				if (!tw.sortSamples) continue
-				if (tw.$id === t.tw.$id) tw.sortSamples.priority = 0
-				else tw.sortSamples.priority += 1
+				if (tw.$id === t.tw.$id) {
+					tw.sortSamples.priority = 0
+				} else tw.sortSamples.priority += 1
 			}
 		}
 
@@ -236,6 +248,7 @@ function setTermActions(self) {
 		const grp = self.termGroups[t.grpIndex]
 		grp.lst.splice(t.index, 1)
 		grp.lst.splice(t.index - 1, 0, t.tw)
+		grp.sortTermsBy = 'asListed'
 
 		self.app.dispatch({
 			type: 'plot_nestedEdits',
@@ -260,6 +273,7 @@ function setTermActions(self) {
 		const grp = self.termGroups[t.grpIndex]
 		grp.lst.splice(t.index, 1)
 		grp.lst.splice(t.index + 1, 0, t.tw)
+		grp.sortTermsBy = 'asListed'
 
 		self.app.dispatch({
 			type: 'plot_nestedEdits',
@@ -710,8 +724,10 @@ function setTermActions(self) {
 		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
 		const tcopy = JSON.parse(JSON.stringify(t.tw))
 		if (i == -1) {
-			tcopy.sortSamples = { by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' }
+			tcopy.sortSamples = { by: 'values' } // { by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' }
 			sorterTerms.unshift(tcopy)
+		} else {
+			tcopy.sortSamples.by = 'values'
 		}
 
 		return [tcopy, sorterTerms]
@@ -790,13 +806,16 @@ function setSampleGroupActions(self) {
 			.selectAll('*')
 			.remove()
 
+		const options = JSON.parse(JSON.stringify(self.config.menuOpts?.sampleGroup || [])).map(d => {
+			d.callback = self[d.callback]
+			return d
+		})
+		const menuOptions = [...options, { label: 'Delete', callback: self.removeSampleGroup }]
+
 		self.dom.menutop
 			.append('div')
 			.selectAll(':scope>.sja_menuoption')
-			.data([
-				{ label: 'Survival plot', callback: self.launchSurvivalPlot },
-				{ label: 'Delete', callback: self.removeSampleGroup }
-			])
+			.data(menuOptions)
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption')
@@ -814,12 +833,38 @@ function setSampleGroupActions(self) {
 		self.dom.menubody.selectAll('*').remove()
 	}
 
-	self.launchSurvivalPlot = async () => {
+	self.launchSurvivalPlot = async menuOpt => {
 		self.dom.menubody.selectAll('*').remove()
 		self.dom.menubody
 			.append('div')
-			.style('padding', '10px')
-			.html(`Use "<b>${self.config.divideBy.term.name}</b>" as overlay on the selected survival term below:`)
+			.style('padding-top', '10px')
+			.html(`Use "<b>${self.config.divideBy.term.name}</b>" to`)
+
+		const radioDiv = self.dom.menubody.append('div').style('padding', '0 10px')
+
+		const radioName = 'sjpp-matrix-surv-termnum-' + inputIndex++
+		const label1 = radioDiv.append('label')
+		label1
+			.append('input')
+			.attr('type', 'radio')
+			.attr('name', radioName)
+			.attr('value', 'term2')
+			.property('checked', true)
+		label1.append('span').html(' overlay')
+
+		const label2 = radioDiv.append('label').style('margin-left', '10px')
+		label2
+			.append('input')
+			.attr('type', 'radio')
+			.attr('name', radioName)
+			.attr('value', 'term0')
+		label2.append('span').html(' divide')
+
+		self.dom.menubody
+			.append('div')
+			.style('padding-bottom', '10px')
+			.html(`the selected survival term below:`)
+
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
 			holder: self.dom.menubody.append('div'),
@@ -835,15 +880,18 @@ function setSampleGroupActions(self) {
 			tree: {
 				click_term: term => {
 					self.dom.tip.hide()
+					const termNum = radioDiv.select(`input[name='${radioName}']:checked`).property('value')
 					self.dom.menubody.selectAll('*').remove()
-					self.app.dispatch({
-						type: 'plot_create',
-						config: {
-							chartType: 'survival',
-							term,
-							term2: JSON.parse(JSON.stringify(self.config.divideBy))
-						}
-					})
+					const config = {
+						chartType: 'survival',
+						term,
+						[termNum]: JSON.parse(JSON.stringify(self.config.divideBy))
+					}
+
+					if (menuOpt.config) {
+						Object.assign(config, menuOpt.config)
+					}
+					self.app.dispatch({ type: 'plot_create', config, insertBefore: self.id })
 				}
 			}
 		})

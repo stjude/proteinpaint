@@ -6,7 +6,8 @@ const serverconfig = require('./serverconfig')
 
 exports.features = Object.freeze(serverconfig.features || {})
 
-/* test accessibility of serverconfig.tpmasterdir at two places.
+/*
+********** test accessibility of serverconfig.tpmasterdir at two places **********
 if inaccessible, do not crash service. maintain server process to be able to return helpful message to all request
 1. pp_init()
    if dir is inaccessible, will not initiate and validate any genome/dataset
@@ -15,7 +16,21 @@ if inaccessible, do not crash service. maintain server process to be able to ret
 2. handle_genomes()
    if dir is inaccessbile, will return error
    this can handle the case that dir becomes inaccessible *after* server launches
-   as genomes is the first thing most requests will query about, this may allow to return a helpful message for most of the cases
+   as genomes is the first thing most requests will query about
+   this may allow to return a helpful message for most of the cases
+
+************** dataset *************
+in serverconfig, a dataset is defined as {"name":str,"jsfile":..}
+when launching:
+- at server backend
+  - an in-memory "ds{}" object is created for this dataset
+    ds.label is the "name" from serverconfig
+  - creates genome.datasets{}
+    key: ds.label, value: ds{} object
+    the keys are referred to as "dsname" and is used in server requests to point to a specific ds
+- at client, runpp() returns list of server-side official dataset for a genome
+  as genomeobj.datasets{name:{label:str}}
+  both name and label are the same "name" from serverconfig
 */
 
 const tabixnoterror = s => {
@@ -126,8 +141,8 @@ app.use((req, res, next) => {
 	next()
 })
 
-app.use(bodyParser.json({ limit: '1mb' }))
-app.use(bodyParser.text({ limit: '1mb' }))
+app.use(bodyParser.json({ limit: '5mb' }))
+app.use(bodyParser.text({ limit: '5mb' }))
 app.use(bodyParser.urlencoded({ extended: true }))
 
 app.use((req, res, next) => {
@@ -203,6 +218,7 @@ app.get(basepath + '/healthcheck', handle_healthcheck)
 app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
+app.get(basepath + '/getDataset', handle_getDataset)
 app.post(basepath + '/genelookup', handle_genelookup)
 app.post(basepath + '/ntseq', handle_ntseq)
 app.post(basepath + '/pdomain', handle_pdomain)
@@ -624,7 +640,10 @@ function clientcopy_genome(genomename) {
 		const ds = g.datasets[dsname]
 
 		if (ds.isMds3) {
-			g2.datasets[ds.label] = mds3_init.client_copy(ds)
+			g2.datasets[ds.label] = {
+				isMds3: true,
+				label: ds.label
+			}
 			continue
 		}
 
@@ -706,6 +725,24 @@ function clientcopy_genome(genomename) {
 		}
 	}
 	return g2
+}
+
+function handle_getDataset(req, res) {
+	log(req)
+	// { genome:str, dsname: str}
+	try {
+		const genome = genomes[req.query.genome]
+		if (!genome) throw 'unknown genome'
+		if (!genome.datasets) throw 'genomeobj.datasets{} missing'
+		const ds = genome.datasets[req.query.dsname]
+		if (!ds) throw 'invalid dsname'
+		if (ds.isMds3) {
+			return res.send({ ds: mds3_init.client_copy(ds) })
+		}
+		throw 'unknown way to make client copy of ds'
+	} catch (e) {
+		res.send({ error: e.message || e })
+	}
 }
 
 function mds_clientcopy(ds) {
@@ -7746,9 +7783,14 @@ async function pp_init() {
 	// to ensure temp files saved in previous server session are accessible in current session
 	// must use consistent dir name but not random dir name that changes from last server boot
 	serverconfig.cachedir_massSession = await mayCreateSubdirInCache('massSession')
-	serverconfig.cachedir_snpgt = await mayCreateSubdirInCache('snpgt')
+	serverconfig.cache_snpgt = {
+		dir: await mayCreateSubdirInCache('snpgt'),
+		fileNameRegexp: /[^\w]/, // client-provided cache file name matching with this are denied
+		sampleColumn: 6 // in cache file, sample column starts from 7th column
+	}
 	serverconfig.cachedir_bam = await mayCreateSubdirInCache('bam')
 	serverconfig.cachedir_genome = await mayCreateSubdirInCache('genome')
+	serverconfig.cachedir_ssid = await mayCreateSubdirInCache('ssid')
 
 	if (!serverconfig.genomes) throw '.genomes[] missing'
 	if (!Array.isArray(serverconfig.genomes)) throw '.genomes[] not array'

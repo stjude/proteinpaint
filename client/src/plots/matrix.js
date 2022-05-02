@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
-import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
+import { scaleLinear, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
+import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { fillTermWrapper } from '../common/termsetting'
 import { MatrixCluster } from './matrix.cluster'
 import { MatrixControls } from './matrix.controls'
@@ -105,7 +106,8 @@ class Matrix {
 				app: this.app,
 				id: this.id,
 				parent: this,
-				holder: this.dom.controls
+				holder: this.dom.controls,
+				getSvg: () => this.dom.svg.node()
 			},
 			appState
 		)
@@ -191,6 +193,16 @@ class Matrix {
 			const ref = data.refs.byTermId[$id] || {}
 
 			for (const row of data.lst) {
+				if (!data.samplesToShow.has(row.sample)) continue
+
+				// TODO: may move the override handling downstream,
+				// but before sample group.lst sorting, as needed
+				for (const grp of this.config.termgroups) {
+					for (const tw of grp.lst) {
+						mayApplyOverrides(row, tw, this.config.overrides)
+					}
+				}
+
 				if ($id in row) {
 					if (exclude.includes(row[$id].key)) continue
 					const key = row[$id].key
@@ -210,7 +222,7 @@ class Matrix {
 			}
 		}
 
-		if (defaultSampleGrp.lst.length) {
+		if (defaultSampleGrp.lst.length && !sampleGroups.size) {
 			sampleGroups.set(undefined, defaultSampleGrp)
 		}
 
@@ -223,7 +235,16 @@ class Matrix {
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
 			grp.lst.sort(this.sampleSorter)
 			for (const [index, row] of grp.lst.entries()) {
-				this.sampleOrder.push({ grp, grpIndex, row, index, prevGrpTotalIndex: total, totalIndex: total + index })
+				this.sampleOrder.push({
+					grp,
+					grpIndex,
+					row,
+					index,
+					prevGrpTotalIndex: total,
+					totalIndex: total + index,
+					totalHtAdjustments: 0,
+					grpHtAdjustments: 0
+				})
 			}
 			total += grp.lst.length
 		}
@@ -231,25 +252,37 @@ class Matrix {
 
 	setTermOrder(data) {
 		const s = this.settings.matrix
-		this.termSorter = getTermSorter(this, s, data.lst)
+		// ht: standard cell dimension for term row or column
+		const ht = s.transpose ? s.colw : s.rowh
+		this.termSorter = getTermSorter(this, s)
 		this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
 		this.termOrder = []
-		let total = 0
+		let totalIndex = 0,
+			totalHtAdjustments = 0
 		for (const [grpIndex, grp] of this.termGroups.entries()) {
 			const lst = [] // will derive a mutable copy of grp.lst
+			let grpHtAdjustments = 0
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
 				for (const sn in data.samples) {
-					const row = data.samples[sn]
-					if (tw.$id in row) {
+					const anno = data.samples[sn][tw.$id]
+					if (anno && ('value' in anno || 'values' in anno)) {
 						counts.samples += 1
-						counts.hits += Array.isArray(row[tw.$id].values) ? row[tw.$id].values.length : 1
+						counts.hits += Array.isArray(anno.values) ? anno.values.length : 1
+						if (tw.q?.mode == 'continuous') {
+							const v = anno.value
+							if (!('minval' in counts) || counts.minval > v) counts.minval = v
+							if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
+						}
 					}
 				}
 				lst.push({ tw, counts, index })
+				grpHtAdjustments += (tw.settings ? tw.settings.barh + 2 * tw.settings.gap : ht) - ht
 			}
 
-			grp.lst = lst.sort(this.termSorter).map(t => t.tw)
+			// may override the settings.sortTermsBy with a sorter that is specific to a term group
+			const termSorter = grp.sortTermsBy ? getTermSorter(this, grp) : this.termSorter
+			grp.lst = lst.sort(termSorter).map(t => t.tw)
 			for (const [index, t] of lst.entries()) {
 				const { tw, counts } = t
 				const ref = data.refs.byTermId[t.tw.$id] || {}
@@ -258,16 +291,27 @@ class Matrix {
 					grpIndex,
 					tw,
 					index, // rendered index
-					prevGrpTotalIndex: total,
-					totalIndex: total + index,
+					prevGrpTotalIndex: totalIndex,
+					totalIndex: totalIndex + index,
+					totalHtAdjustments,
+					grpHtAdjustments,
 					ref,
 					counts,
 					label:
-						t.tw.term.name + (s.samplecount4gene && t.tw.term.type.startsWith('gene') ? ` (${counts.samples})` : '')
+						(t.tw.label || t.tw.term.name) +
+						(s.samplecount4gene && t.tw.term.type.startsWith('gene') ? ` (${counts.samples})` : ''),
+					scale:
+						tw.q?.mode == 'continuous'
+							? scaleLinear()
+									.domain([counts.minval, counts.maxval])
+									.range([1, tw.settings.barh])
+							: null
 				})
+
+				totalHtAdjustments += (t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht) - ht
 			}
 
-			total += grp.lst.length
+			totalIndex += grp.lst.length
 		}
 	}
 
@@ -308,43 +352,57 @@ class Matrix {
 		const nx = this[`${col}s`].length
 		const dy = s.rowh + s.rowspace
 		const ny = this[`${row}s`].length
-		const mainw = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
-		const mainh = ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace
+		const mainw =
+			nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace + this[`${col}s`].slice(-1)[0].totalHtAdjustments
+		const mainh =
+			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + this[`${row}s`].slice(-1)[0].totalHtAdjustments
 
+		const topFontSize = _t_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 4, s.minLabelFontSize)
 		layout.top.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset - s.collabelgap})`,
 			labelTransform: 'rotate(-90)',
 			labelAnchor: 'start',
 			labelGY: 0,
 			labelGTransform: this[`col${_t_}LabelGTransform`],
-			fontSize: s.colw + s.colspace - (_t_ == 'Grp' ? 0 : 4)
+			fontSize: topFontSize,
+			textpos: { coord: 'y', factor: -1 },
+			axisFxn: axisTop
 		}
 
+		const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 4, s.minLabelFontSize)
 		layout.btm.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset + mainh + s.collabelgap})`,
 			labelTransform: 'rotate(-90)',
 			labelAnchor: 'end',
 			labelGY: 0,
 			labelGTransform: this[`col${_b_}LabelGTransform`],
-			fontSize: s.colw + s.colspace - (_b_ == 'Grp' ? 0 : 4)
+			fontSize: btmFontSize,
+			textpos: { coord: 'y', factor: 1 },
+			axisFxn: axisBottom
 		}
 
+		const leftFontSize = _l_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 4, s.minLabelFontSize)
 		layout.left.attr = {
 			boxTransform: `translate(${xOffset - s.rowlabelgap}, ${yOffset})`,
 			labelTransform: '',
 			labelAnchor: 'end',
 			labelGX: 0,
 			labelGTransform: this[`row${_l_}LabelGTransform`],
-			fontSize: s.rowh + s.rowspace - (_l_ == 'Grp' ? 2 : 4)
+			fontSize: leftFontSize,
+			textpos: { coord: 'x', factor: -1 },
+			axisFxn: axisLeft
 		}
 
+		const rtFontSize = _r_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 4, s.minLabelFontSize)
 		layout.right.attr = {
 			boxTransform: `translate(${xOffset + mainw + s.rowlabelgap}, ${yOffset})`,
 			labelTransform: '',
 			labelAnchor: 'start',
 			labelGX: 0,
 			labelGTransform: this[`row${_r_}LabelGTransform`],
-			fontSize: s.rowh + s.rowspace - (_r_ == 'Grp' ? 2 : 4)
+			fontSize: rtFontSize,
+			textpos: { coord: 'x', factor: 1 },
+			axisFxn: axisRight
 		}
 
 		this.layout = layout
@@ -363,7 +421,7 @@ class Matrix {
 		const serieses = []
 		const dx = s.colw + s.colspace
 		const dy = s.rowh + s.rowspace
-		const keysByTermId = {}
+		const legendGroups = {}
 
 		for (const { totalIndex, grpIndex, row } of this.sampleOrder) {
 			const series = {
@@ -375,17 +433,17 @@ class Matrix {
 
 			for (const t of this.termOrder) {
 				const $id = t.tw.$id
-				// TODO: generalize the alternative ID handling
-				const anno = row[$id]
+				const anno = row[$id]?.override || row[$id]
 				if (!anno) continue
-				const termid = 'id' in t.tw.term ? t.tw.term : t.tw.term.name
+				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
 				const key = anno.key
 				const values = t.tw.term.values || {}
 				const label = 'label' in anno ? anno.label : key in values && values[key].label ? values[key].label : key
 
 				if (!anno.values) {
+					const fill = values[key]?.color
 					// only one rect for this sample annotation
-					series.cells.push({
+					const cell = {
 						sample: row.sample,
 						tw: t.tw,
 						term: t.tw.term,
@@ -393,16 +451,43 @@ class Matrix {
 						$id,
 						key,
 						label,
-						x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace,
-						y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace : 0,
-						order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
-					})
+						fill: anno.color || values[key]?.color,
+						x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + t.totalHtAdjustments,
+						y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + t.totalHtAdjustments : 0,
+						order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0,
+						fill
+					}
+
+					if (t.tw.q?.mode == 'continuous') {
+						// TODO: may use color scale instead of bars
+						if (s.transpose) {
+							cell.width = t.scale(cell.key)
+							cell.x += t.tw.settings.gap // - cell.width
+						} else {
+							cell.height = t.scale(cell.key)
+							cell.y += t.tw.settings.barh + t.tw.settings.gap - cell.height
+						}
+					}
+
+					series.cells.push(cell)
+
+					// TODO: improve logic for excluding data from legend
+					if (t.tw.q.mode != 'continuous') {
+						const legendGrp = t.tw.legend?.group || t.tw.$id
+						if (legendGrp) {
+							if (!legendGroups[legendGrp]) legendGroups[legendGrp] = { ref: t.ref, values: {} }
+							if (!legendGroups[legendGrp].values[key]) legendGroups[legendGrp].values[key] = { key, label, fill }
+						}
+					}
 				} else {
 					// some term types like geneVariant can have multiple values for the same term,
 					// which will be renderd as multiple smaller, non-overlapping rects within the same cell
-					const height = !s.transpose ? s.rowh / anno.values.length : 0
-					const width = !s.transpose ? 0 : s.colw / anno.values.length
+					const height = !s.transpose ? s.rowh / anno.values.length : s.colw
+					const width = !s.transpose ? s.colw : s.colw / anno.values.length
 					for (const [i, value] of anno.values.entries()) {
+						const label = value.label || (value.class ? mclass[value.class].label : '')
+						const fill = value.color || mclass[value.class].color
+
 						series.cells.push({
 							sample: row.sample,
 							tw: t.tw,
@@ -410,30 +495,31 @@ class Matrix {
 							termid,
 							$id,
 							key,
-							label: value.class ? mclass[value.class].label : '',
+							label,
 							value,
-							x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + width * i,
-							y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + height * i : 0,
+							x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + width * i + t.totalHtAdjustments,
+							y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + height * i + t.totalHtAdjustments : 0,
 							height,
 							width,
-							fill: mclass[value.class].color,
+							fill,
 							class: value.class,
 							order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
 						})
-					}
-				}
 
-				// TODO: improve logic for excluding data from legend
-				if (t.tw.q.mode != 'continuous' && t.tw.term.type != 'geneVariant') {
-					if (!t.tw.$id) console.log(427, t.tw.$id, t.tw.term?.id)
-					if (!keysByTermId[t.tw.$id]) keysByTermId[t.tw.$id] = { ref: t.ref, values: {} }
-					if (!keysByTermId[t.tw.$id].values[key]) keysByTermId[t.tw.$id].values[key] = { key, label }
+						if (t.tw.term.type == 'geneVariant') {
+							const legendGrp = t.tw.legend?.group || 'Mutation Types'
+							if (!legendGroups[legendGrp]) legendGroups[legendGrp] = { values: {} }
+							if (!legendGroups[legendGrp][value.class]) {
+								legendGroups[legendGrp].values[value.class] = { key: value.class, label, fill }
+							}
+						}
+					}
 				}
 			}
 			serieses.push(series)
 		}
 
-		this.setLegendData(keysByTermId, data.refs)
+		this.setLegendData(legendGroups, data.refs)
 
 		return serieses
 	}
@@ -470,35 +556,61 @@ class Matrix {
 		return t.grp.name
 	}
 
-	setLegendData(keysByTermId, refs) {
+	setLegendData(legendGroups, refs) {
 		this.colorScaleByTermId = {}
-		const legendData = new Map()
-		for (const $id in keysByTermId) {
-			const term = this.termOrder.find(t => t.tw.$id == $id).tw.term
-			const termid = term.id
-			const keys = Object.keys(keysByTermId[$id].values)
-			const ref = keysByTermId[$id].ref
+		const legendData = []
+
+		for (const $id in legendGroups) {
+			const legend = legendGroups[$id]
+
+			if ($id == 'Mutation Types') {
+				const keys = Object.keys(legend.values)
+				if (!keys.length) continue
+				legendData.unshift({
+					name: 'Mutation Types',
+					items: keys.map((key, i) => {
+						const item = legend.values[key]
+						return {
+							termid: 'Mutation Types',
+							key,
+							text: item.label,
+							color: item.fill,
+							order: i,
+							border: '1px solid #ccc'
+						}
+					})
+				})
+				continue
+			}
+
+			const t = this.termOrder.find(t => t.tw.$id == $id || t.tw.legend?.group == $id)
+			const grp = $id
+			const term = t.tw.term
+			const keys = Object.keys(legend.values)
+			const ref = legend.ref
 			if (ref.bins)
 				keys.sort((a, b) => ref.bins.findIndex(bin => bin.name === a) - ref.bins.findIndex(bin => bin.name === b))
 
-			this.colorScaleByTermId[$id] = keys.length < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
+			if (!this.colorScaleByTermId[grp])
+				this.colorScaleByTermId[grp] =
+					keys.length < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 
-			legendData.set($id, {
-				name: term.name,
+			legendData.push({
+				name: t.tw.legend?.group || term.name,
 				items: keys.map((key, i) => {
-					const item = keysByTermId[$id].values[key]
+					const item = legend.values[key]
 					return {
-						termid,
+						termid: term.id,
 						key,
 						text: item.label,
-						color: this.colorScaleByTermId[$id](key),
+						color: item.fill || this.colorScaleByTermId[grp](key),
 						order: i
 					}
 				})
 			})
 		}
 
-		this.legendData = [...legendData.values()]
+		this.legendData = legendData
 	}
 }
 
@@ -529,6 +641,7 @@ export async function getPlotConfig(opts, app) {
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				sortTermsBy: 'asListed', // or sampleCount
 				samplecount4gene: true,
+				cellbg: '#ececec',
 				colw: 14,
 				colspace: 1,
 				colgspace: 8,
@@ -544,6 +657,8 @@ export async function getPlotConfig(opts, app) {
 				rowlabelvisible: true,
 				rowglabelpos: true,
 				rowlabelgap: 5,
+				grpLabelFontSize: 12,
+				minLabelFontSize: 6,
 				transpose: false,
 				sampleLabelOffset: 120,
 				sampleGrpLabelOffset: 120,
@@ -563,4 +678,20 @@ export async function getPlotConfig(opts, app) {
 	if (config.divideBy) promises.push(fillTermWrapper(config.divideBy, app.vocabApi))
 	await Promise.all(promises)
 	return config
+}
+
+function mayApplyOverrides(row, tw, overrides) {
+	if (!tw.overrides) return {}
+	for (const key in overrides) {
+		if (!tw.overrides.includes(key)) continue
+		const sf = overrides[key].sampleFilter || {}
+		if (sf.type == 'wvs') {
+			for (const v of sf.values) {
+				if (row[sf.wrapper$id]?.key === v.key) {
+					if (!row[tw.$id]) row[tw.$id] = {}
+					row[tw.$id].override = JSON.parse(JSON.stringify(overrides[key].value))
+				}
+			}
+		}
+	}
 }

@@ -95,7 +95,7 @@ get ssid by one m from vcf
 		result.groups[k] = { size: aa.length }
 		lines.push(k + '\t' + aa.join(','))
 	}
-	await utils.write_file(path.join(serverconfig.cachedir, 'ssid', filename), lines.join('\n'))
+	await utils.write_file(path.join(serverconfig.cachedir_ssid, filename), lines.join('\n'))
 }
 
 export async function handle_vcfbyrange(q, genome, ds, result) {

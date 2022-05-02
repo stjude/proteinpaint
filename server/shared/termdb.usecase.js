@@ -109,7 +109,7 @@ export function isUsableTerm(term, _usecase, ds) {
 					return uses
 				}
 				if (usecase.regressionType == 'logistic') {
-					if (term.type != 'survival') uses.add('plot')
+					if (term.type && term.type != 'survival') uses.add('plot')
 					if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
 					return uses
 				} else if (usecase.regressionType == 'cox') {

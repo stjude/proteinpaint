@@ -2,6 +2,7 @@ import { event as d3event } from 'd3-selection'
 import { init_sampletable } from './sampletable'
 import { itemtable } from './itemtable'
 import { skewer_sety } from './skewer.render'
+import { trianglePath } from './numericmode'
 
 const minoccur4sunburst = 10 // minimum occurrence for showing skewer, maybe ds specific
 const highlight_color = 'red'
@@ -147,8 +148,16 @@ function highlight_one_disk(m, dot, tk) {
 		.attr('r', m => m.radius - 0.5)
 		.attr('stroke', m => tk.color4disc(m))
 		.attr('stroke-opacity', 0)
+	tk.skewer.discKickSelection_triangle
+		.attr('d', m => trianglePath(m.radius))
+		.attr('stroke', m => tk.color4disc(m))
+		.attr('stroke-opacity', 0)
 	// dot is the kick <circle>; apply highlight styling on it
-	dot.setAttribute('r', m.radius * 1.4)
+	if (m.shapeTriangle) {
+		dot.setAttribute('d', trianglePath(m.radius * 1.4))
+	} else {
+		dot.setAttribute('r', m.radius * 1.4)
+	}
 	dot.setAttribute('stroke', highlight_color)
 	dot.setAttribute('stroke-opacity', 1)
 }

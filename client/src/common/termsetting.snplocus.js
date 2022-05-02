@@ -4,7 +4,11 @@ import { filterInit, getNormalRoot } from './filter'
 import { addGeneSearchbox } from '../dom/genesearch'
 
 /* 
-instance attributes
+***************** EXPORT
+getHandler()
+fillTW()
+
+***************** instance attributes
 
 self.term{}
 	.id: str, not really used
@@ -69,14 +73,14 @@ async function makeEditMenu(self, div) {
 	const coordResult = addGeneSearchbox({
 		genome: self.opts.genomeObj,
 		tip: self.dom.tip2,
-		row: div.append('div').style('margin', '10px'),
+		row: div.append('div').style('margin', '15px'),
 		defaultCoord: self.q && self.q.chr ? { chr: self.q.chr, start: self.q.start, stop: self.q.stop } : null
 	})
 
 	await mayDisplayVariantFilter(self, div)
 
-	const [select_alleleType, select_geneticModel] = makeSnpSelect(
-		div.append('div').style('margin', '10px'),
+	const [input_AFcutoff, select_alleleType, select_geneticModel] = makeSnpSelect(
+		div.append('div').style('margin', '15px'),
 		self,
 		'snplocus'
 	)
@@ -113,6 +117,10 @@ async function makeEditMenu(self, div) {
 			// q.cacheid is set
 			// self.term.snps[] is set
 
+			{
+				const v = Number(input_AFcutoff.property('value'))
+				self.q.AFcutoff = v <= 0 || v >= 100 ? 5 : v // set to default if invalid
+			}
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
 			if (select_ancestry) {
@@ -151,6 +159,8 @@ async function validateInput(self) {
 
 function validateQ(self, data) {
 	const q = data.q
+	if (!Number.isFinite(q.AFcutoff)) throw 'AFcutoff is not number'
+	if (q.AFcutoff < 0 || q.AFcutoff > 100) throw 'AFcutoff is not within 0 to 100'
 	if (![0, 1].includes(q.alleleType)) throw 'alleleType value is not one of 0/1'
 	if (![0, 1, 2, 3].includes(q.geneticModel)) throw 'geneticModel value is not one of 0/1'
 	if (!q.chr) throw 'chr missing'
@@ -214,7 +224,7 @@ async function mayDisplayVariantFilter(self, holder) {
 		// use default filter from dataset
 		self.variantFilter.active = JSON.parse(JSON.stringify(self.variantFilter.filter))
 	}
-	const div = holder.append('div').style('margin', '15px 15px 15px 10px')
+	const div = holder.append('div').style('margin', '15px')
 	div
 		.append('div')
 		.text('VARIANT FILTERS')

@@ -1,5 +1,6 @@
 import { select, event } from 'd3-selection'
 import { initByInput } from './controls.config'
+import { to_svg } from '../client'
 
 export class MatrixControls {
 	constructor(opts, appState) {
@@ -22,9 +23,10 @@ export class MatrixControls {
 				{ value: 'samples', label: 'Samples' },
 				{ value: 'anno', label: 'Terms' },
 				{ value: 'cols', label: 'Column layout' },
-				{ value: 'rows', label: 'Row layout' }
+				{ value: 'rows', label: 'Row layout' },
 				//{ label: 'Undo', callback: ()=>this.recover.goto(-1) },
 				//{ label: 'Redo', callback: ()=>this.recover.goto(1) },
+				{ label: 'Download SVG', callback: () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }) }
 			])
 			.enter()
 			.append('button')

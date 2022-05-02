@@ -110,7 +110,7 @@ export async function getHandler(self) {
 }
 
 export function fillTW(tw, vocabApi) {
-	if (!valid_binscheme(tw.q)) {
+	if (tw.q?.mode !== 'continuous' && !valid_binscheme(tw.q)) {
 		/*
 		if q is already initiated, do not overwrite
 		to be tested if can work with partially declared state
