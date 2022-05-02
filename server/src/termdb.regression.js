@@ -7,8 +7,14 @@ const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
+const app = require('./app')
 
 /*
+
+**************** q{} object
+
+the q object comes from client request, in this form:
+the object is used through out the script, and can be modified at various steps
 q {}
 .regressionType
 .filter
@@ -26,30 +32,42 @@ q {}
 	.q{}
 		.scale
 		.computableValuesOnly:true // always added
+		.restrictAncestry{}
 	.refGrp
 	.interactions[] // always added; empty if no interaction
+
+
+**************** R input
 
 input to R is an json object, with an array of variables (first being outcome)
 rtype with values numeric/factor is used instead of actual term type
 so that R script will not need to interpret term type
+described in server/utils/regression.R
+
 
 **************** EXPORT
+
 get_regression()
 
-***  function cascade  ***
+
+**************** function cascade 
+
 parse_q()
 	checkTwAncestryRestriction()
 		// adds tw.q.restrictAncestry.pcs Map
 getSampleData
+	// returns sampledata[]
 	divideTerms
 	getSampleData_dictionaryTerms
 	mayAddAncestryPCs
+		// creates ad-hoc independent variables for pcs
 	getSampleData_snplstOrLocus
 		// parse cache file
 		doImputation
 		categorizeSnpsByAF
-			// creates for high AF snps that are analyzed as covariants
-			// low-AF snps are to be used for Fisher/Wilcoxon
+			// creates following on the tw{} to divide the snps
+			// tw.lowAFsnps{} tw.highAFsnps{} tw.monomorphicLst[] tw.snpid2AFstr{}
+			// sample data for high-AF snps are kept in sampledata[]
 		applyGeneticModel
 makeRinput()
 	makeRvariable_snps()
@@ -62,8 +80,8 @@ snplocusPostprocess
 	mayAddSnplocusMessage
 	mayAddResult4monomorphic
 		getLine4OneSnp
-	mayDoFisher
-	mayDoWilcoxon
+	lowAFsnps_wilcoxon
+	lowAFsnps_fisher
 */
 
 // list of supported types
@@ -725,19 +743,25 @@ async function snplocusPostprocess(q, sampledata, Rinput, result) {
 	mayAddSnplocusMessage(tw, result, q)
 	mayAddResult4monomorphic(tw, result)
 	if (tw.lowAFsnps.size) {
-		await mayDoFisher(tw, q, sampledata, Rinput, result)
-		await mayDoWilcoxon(tw, q, sampledata, Rinput, result)
+		// low-af variants are not used for model-fitting
+		// use alternative method depending on regression type
+		if (q.regressionType == 'linear') {
+			await lowAFsnps_wilcoxon(tw, sampledata, Rinput, result)
+		} else if (q.regressionType == 'logistic' || q.regressionType == 'cox') {
+			await lowAFsnps_fisher(tw, sampledata, Rinput, result)
+		} else {
+			throw 'unknown regression type'
+		}
 	}
 }
 
-async function mayDoWilcoxon(tw, q, sampledata, Rinput, result) {
+async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 	// for linear regression, perform wilcoxon rank sum test for low-AF snps
-	if (q.regressionType != 'linear') return
 	const wilcoxInput = {} // { snpid: {hasEffale: [], noEffale: []} }
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		let RinputDataidx = 0
-		const hasEffale = [],
-			noEffale = []
+		const group1values = [], // for cases with effect allele
+			group2values = []
 		for (const { sample, noOutcome } of sampledata) {
 			if (noOutcome) continue
 			const outcomeValue = Rinput.data[RinputDataidx++].outcome
@@ -752,12 +776,12 @@ async function mayDoWilcoxon(tw, q, sampledata, Rinput, result) {
 			}
 			const [a, b] = gt.split('/')
 			if (a == snpO.effAle || b == snpO.effAle) {
-				hasEffale.push(outcomeValue)
+				group1values.push(outcomeValue)
 			} else {
-				noEffale.push(outcomeValue)
+				group2values.push(outcomeValue)
 			}
 		}
-		wilcoxInput[snpid] = { hasEffale, noEffale }
+		wilcoxInput[snpid] = { group1values, group2values }
 	}
 	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
@@ -765,6 +789,7 @@ async function mayDoWilcoxon(tw, q, sampledata, Rinput, result) {
 	fs.unlink(tmpfile, () => {})
 	const pvalues = JSON.parse(wilcoxOutput)
 	for (const snpid in pvalues) {
+		const { group1values, group2values } = wilcoxInput[snpid]
 		// make a result object for this snp
 		const analysisResult = {
 			id: snpid,
@@ -772,7 +797,23 @@ async function mayDoWilcoxon(tw, q, sampledata, Rinput, result) {
 			data: {
 				headerRow: getLine4OneSnp(snpid, tw),
 				wilcoxon: {
-					pvalue: pvalues[snpid]
+					pvalue: pvalues[snpid],
+					boxplots: {
+						hasEff: app.boxplot_getvalue(
+							group1values
+								.sort((a, b) => a - b)
+								.map(i => {
+									return { value: i }
+								})
+						),
+						noEff: app.boxplot_getvalue(
+							group2values
+								.sort((a, b) => a - b)
+								.map(i => {
+									return { value: i }
+								})
+						)
+					}
 				}
 			}
 		}
@@ -780,9 +821,8 @@ async function mayDoWilcoxon(tw, q, sampledata, Rinput, result) {
 	}
 }
 
-async function mayDoFisher(tw, q, sampledata, Rinput, result) {
+async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 	// for logistic/cox, perform fisher's exact test for low-AF snps
-	if (q.regressionType != 'logistic' && q.regressionType != 'cox') return
 	const lines = [] // one line per snp
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		// a snp with low AF, run fisher on it
@@ -904,7 +944,7 @@ function mayAddSnplocusMessage(tw, result, q) {
 				' variant' +
 				(tw.lowAFsnps.size > 1 ? 's' : '') +
 				' analyzed by ' +
-				(wilcox ? 'Wilcox rank sum test' : "Fisher's exact test") +
+				(wilcox ? 'Wilcoxon rank sum test' : "Fisher's exact test") +
 				' (AF<' +
 				tw.q.AFcutoff +
 				'%)'

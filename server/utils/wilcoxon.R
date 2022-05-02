@@ -13,14 +13,14 @@
 
 # Input JSON specifications:
 # {
-#   snpid: {
-#     hasEffale: [] outcome values for samples with effect allele
-#     noEffale: [] outcome values for samples without effect allele
+#   id: { # "id" is required for each entry
+#     group1values: [] vector of numeric values for the 1st group
+#     group2values: [] vector of numeric values for the 2nd group
 #   }
 # }
 #
 # Output JSON specifications:
-# { snpid: p-value }
+# { id: p-value }
 
 
 ########
@@ -36,7 +36,7 @@ infile <- args[1]
 dat <- fromJSON(infile)
 
 # compute wilcox p-value for each snp
-pvalues <- lapply(dat, function(snp) unbox(wilcox.test(snp$hasEffale, snp$noEffale)$p.value))
+pvalues <- lapply(dat, function(item) unbox(wilcox.test(item$group1values, item$group2values)$p.value))
 
 # output p-values
 toJSON(pvalues)

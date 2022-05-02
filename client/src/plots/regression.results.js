@@ -324,6 +324,10 @@ function setRenderers(self) {
 			.append('div')
 			.text('p-value=' + result.wilcoxon.pvalue)
 			.style('margin', '20px')
+		if (result.wilcoxon.boxplots) {
+			//show plots
+			console.log(result.wilcoxon.boxplots)
+		}
 	}
 
 	self.mayshow_fisher = result => {
