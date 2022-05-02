@@ -376,6 +376,7 @@ export class Block {
 				.attr('class', 'sja_clbtext')
 				.html('<span style="font-size:1.5em;font-weight:bold">' + this.usegm.name + '</span> ' + this.usegm.isoform)
 				.on('click', () => {
+					d3event.stopPropagation()
 					this.genemenu()
 				})
 			butrow.append('span').html('&nbsp;&nbsp;&nbsp;')
@@ -1923,10 +1924,32 @@ reverseorient() {
 			.style('padding', '20px')
 			.style('background-color', '#E6EEF5')
 			.style('margin-bottom', '20px')
-		sec1
-			.append('div')
-			.style('width', '580px')
-			.html(gm.name + ': ' + (gm.description ? '<strong>' + gm.description + '</strong>' : 'no description'))
+
+		const description_div = sec1.append('div').style('width', '580px')
+		if (!gm.description) {
+			description_div.html(`${gm.name}: No description`)
+		} else if (gm.description.length >= 120) {
+			// Detect when the description is very long
+			const truncDescrip = gm.description.substring(0, 100)
+			let activeDesc = false
+			description_div.html(`${gm.name}: <strong>${truncDescrip}</strong> ...`)
+			const a = sec1.append('a')
+			a.text('Show More')
+				// Add simple a tag. Should show and hide text on click
+				.style('display', 'inline-block')
+				.on('click', () => {
+					activeDesc = !activeDesc
+					description_div.html(
+						activeDesc == true
+							? `${gm.name}: <strong>${gm.description}</strong>`
+							: `${gm.name}: <strong>${truncDescrip}</strong> ...`
+					)
+					a.text(activeDesc == true ? 'Hide' : 'Show More')
+				})
+		} else {
+			description_div.html(`${gm.name}: <strong>${gm.description}</strong>`)
+		}
+
 		const p2 = sec1.append('div').style('margin-top', '10px')
 
 		p2.append('span')
