@@ -266,13 +266,16 @@ class Matrix {
 				const counts = { samples: 0, hits: 0 }
 				for (const sn in data.samples) {
 					const anno = data.samples[sn][tw.$id]
-					if (anno && ('value' in anno || 'values' in anno)) {
-						counts.samples += 1
-						counts.hits += Array.isArray(anno.values) ? anno.values.length : 1
-						if (tw.q?.mode == 'continuous') {
-							const v = anno.value
-							if (!('minval' in counts) || counts.minval > v) counts.minval = v
-							if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
+					if (anno) {
+						anno.filteredValues = this.getFilteredValues(anno, tw)
+						if (anno.filteredValues) {
+							counts.samples += 1
+							counts.hits += anno.filteredValues.length
+							if (tw.q?.mode == 'continuous') {
+								const v = anno.value
+								if (!('minval' in counts) || counts.minval > v) counts.minval = v
+								if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
+							}
 						}
 					}
 				}
@@ -313,6 +316,21 @@ class Matrix {
 
 			totalIndex += grp.lst.length
 		}
+	}
+
+	getFilteredValues(anno, tw) {
+		const values = 'value' in anno ? [anno.value] : anno.values
+		if (!tw.valueFilter || !values) return values
+		return values.filter(v => {
+			// TODO: handle non-tvs type value filter
+			if (tw.valueFilter.type == 'tvs') {
+				const matched = true //t.tw.valueFilter.isnot
+				for (const vf of tw.valueFilter.tvs.values) {
+					if (v[vf.key] == vf.value) return !tw.valueFilter.isnot
+				}
+				return matched
+			}
+		})
 	}
 
 	setLayout() {
@@ -433,6 +451,7 @@ class Matrix {
 
 			for (const t of this.termOrder) {
 				const $id = t.tw.$id
+				if (row[$id]?.filteredValues && !row[$id]?.filteredValues.length) continue
 				const anno = row[$id]?.override || row[$id]
 				if (!anno) continue
 				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
@@ -440,7 +459,7 @@ class Matrix {
 				const values = t.tw.term.values || {}
 				const label = 'label' in anno ? anno.label : key in values && values[key].label ? values[key].label : key
 
-				if (!anno.values) {
+				if ('value' in anno) {
 					const fill = values[key]?.color
 					// only one rect for this sample annotation
 					const cell = {
@@ -482,9 +501,10 @@ class Matrix {
 				} else {
 					// some term types like geneVariant can have multiple values for the same term,
 					// which will be renderd as multiple smaller, non-overlapping rects within the same cell
-					const height = !s.transpose ? s.rowh / anno.values.length : s.colw
-					const width = !s.transpose ? s.colw : s.colw / anno.values.length
-					for (const [i, value] of anno.values.entries()) {
+					const values = anno.filteredValues || anno.values || [anno.value]
+					const height = !s.transpose ? s.rowh / values.length : s.colw
+					const width = !s.transpose ? s.colw : s.colw / values.length
+					for (const [i, value] of values.entries()) {
 						const label = value.label || (value.class ? mclass[value.class].label : '')
 						const fill = value.color || mclass[value.class].color
 

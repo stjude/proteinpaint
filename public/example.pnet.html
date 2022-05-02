@@ -211,6 +211,20 @@ document.body.onload = () => runproteinpaint({
                 wrapper$id: 'WES',
                 values: [{key: 'No'}]
               }
+            },
+            CNVfill: {
+              value: {
+                key: 'Methylation', 
+                value: 'Methylation', 
+                values: [
+                  {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
+                ]
+              },
+              sampleFilter: {
+                type: 'wvs', // "wrapper-value-setting"
+                wrapper$id: 'Methylation',
+                values: [{key: 'No'}]
+              }
             }
           }
 				},
@@ -249,6 +263,8 @@ document.body.onload = () => runproteinpaint({
 	}
 })
 
+const cnvGenes = `C19MC, MYCN, PDGFR,CDK4, MET, MDM4, MYC`.split(',').map(g=>g.trim())
+
 function getGeneTermGroups() {
 	const termgroups = []
 	for(const g of genegroups) {
@@ -264,6 +280,20 @@ function getGeneTermGroups() {
           tw.overrides = ['Gfill']
         } else {
           tw.overrides = ['WESfill']
+        }
+
+        if (cnvGenes.includes(term.name)) {
+          tw.valueFilter = {
+            type: 'tvs',
+            isnot: g.name != 'Copy Number',
+            tvs: {
+              values: [{key: 'dt', value: 4}]
+            },
+          }
+
+          if (g.name == 'Copy Number') {
+            tw.overrides = ['CNVfill']
+          }
         }
 
 				return tw
@@ -307,6 +337,10 @@ const genegroups = [
               "name": "KDM2B_SV"
           }
       ]
+  },
+  {
+    name: "Copy Number",
+    lst: cnvGenes.map(name=>{return {name}})
   },
   {
       "name": "Germline",
