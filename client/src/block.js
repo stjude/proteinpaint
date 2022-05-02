@@ -1985,7 +1985,7 @@ reverseorient() {
 	}
 
 	old_dshandle_new(dsname) {
-		// for old official dataset
+		// for old official dataset, and mds3
 		// won't add handle for either children or custom datasets
 		let ds = this.genome.datasets[dsname]
 		if (!ds) {

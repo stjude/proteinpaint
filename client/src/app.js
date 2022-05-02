@@ -1475,12 +1475,14 @@ function initgenome(g) {
 		*/
 		t.tkid = Math.random().toString()
 	}
+
 	// validate ds info
 	for (const dsname in g.datasets) {
 		const ds = g.datasets[dsname]
 
 		if (ds.isMds) {
-			// nothing to validate for the moment
+		} else if (ds.isMds3) {
+			if (!ds.label) return 'ds.label missing'
 		} else {
 			const e = validate_oldds(ds)
 			if (e) {
