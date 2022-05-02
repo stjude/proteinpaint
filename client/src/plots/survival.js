@@ -198,6 +198,19 @@ class TdbSurvival {
 			rows.push(obj)
 			this.uniqueSeriesIds.add(obj.seriesId)
 		}
+
+		// hide tests of hidden series
+		this.tests = data.tests
+		if (this.tests) {
+			for (const chart in this.tests) {
+				// remove hidden series from this.tests
+				this.tests[chart] = this.tests[chart].filter(
+					test => !this.settings.hidden.includes(test.series1) && !this.settings.hidden.includes(test.series2)
+				)
+				if (this.tests[chart].length == 0) delete this.tests[chart]
+			}
+		}
+
 		return rows
 	}
 
@@ -299,6 +312,23 @@ function setRenderers(self) {
 				.transition()
 				.duration(s.duration)
 				.style('opacity', 1)
+
+			// div for chart-specific legends
+			div
+				.append('div')
+				.attr('class', 'pp-survival-chartLegends')
+				.style('vertical-align', 'top')
+				.style('margin', '10px 10px 10px 30px')
+				.style('display', 'none')
+
+			// p-values legend
+			if (self.tests && chart.rawChartId in self.tests) {
+				const pvaldiv = div
+					.select('.pp-survival-chartLegends')
+					.style('display', 'inline-block')
+					.append('div')
+				renderPvalues(pvaldiv, chart, self.tests[chart.rawChartId], s)
+			}
 		}
 	}
 
@@ -336,6 +366,21 @@ function setRenderers(self) {
 		div.selectAll('.sjpp-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
 
 		renderSVG(div.select('svg'), chart, s, s.duration)
+
+		// div for chart-specific legends
+		div
+			.select('.pp-survival-chartLegends')
+			.selectAll('*')
+			.remove()
+
+		// p-values legend
+		if (self.tests && chart.rawChartId in self.tests) {
+			const pvaldiv = div
+				.select('.pp-survival-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+			renderPvalues(pvaldiv, chart, self.tests[chart.rawChartId], s)
+		}
 	}
 
 	function renderSVG(svg, chart, s, duration) {
@@ -373,6 +418,70 @@ function setRenderers(self) {
 
 		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
 		renderAtRiskG(atRiskG, s, chart)
+	}
+
+	function renderPvalues(pvaldiv, chart, tests, s) {
+		const fontSize = s.axisTitleFontSize - 2
+		const maxPvalsToShow = 10
+
+		pvaldiv.selectAll('*').remove()
+
+		// title div
+		pvaldiv
+			.append('div')
+			.style('padding-bottom', '5px')
+			.style('font-size', fontSize + 'px')
+			.style('font-weight', 'bold')
+			.text('Series comparisons (log-rank test)')
+
+		// table div
+		// need separate divs for title and table
+		// to support table scrolling
+		const tablediv = pvaldiv.append('div').style('border', '1px solid #ccc')
+		if (tests.length > maxPvalsToShow) {
+			tablediv.style('overflow', 'auto').style('height', '220px')
+		}
+
+		// table
+		const table = tablediv.append('table').style('width', '100%')
+
+		// table header
+		table
+			.append('thead')
+			.append('tr')
+			.selectAll('td')
+			.data(['Series 1', 'Series 2', 'P-value'])
+			.enter()
+			.append('td')
+			.style('padding', '1px 8px 1px 2px')
+			.style('color', '#858585')
+			.style('position', 'sticky')
+			.style('top', '0px')
+			.style('background', 'white')
+			.style('font-size', fontSize + 'px')
+			.text(column => column)
+
+		// table rows
+		const tbody = table.append('tbody')
+		const tr = tbody
+			.selectAll('tr')
+			.data(tests.sort((a, b) => a.pvalue - b.pvalue))
+			.enter()
+			.append('tr')
+			.attr('class', 'pp-survival-chartLegends-pvalue')
+
+		// table cells
+		tr.selectAll('td')
+			.data(d => [
+				chart.serieses.find(series => series.seriesId == d.series1).seriesLabel,
+				chart.serieses.find(series => series.seriesId == d.series2).seriesLabel,
+				d.pvalue
+			])
+			.enter()
+			.append('td')
+			.style('padding', '1px 8px 1px 2px')
+			.style('font-size', fontSize + 'px')
+			.text(d => d)
 	}
 
 	function getSvgSubElems(svg) {

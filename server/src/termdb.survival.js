@@ -1,9 +1,8 @@
 const path = require('path')
 const get_rows = require('./termdb.sql').get_rows
-const spawn = require('child_process').spawn
+const write_file = require('./utils').write_file
+const fs = require('fs')
 const serverconfig = require('./serverconfig')
-const do_plot = require('./km').do_plot
-const processSerieses = require('./survival.km').processSerieses
 const lines2R = require('./lines2R')
 
 export async function get_survival(q, ds) {
@@ -48,24 +47,26 @@ export async function get_survival(q, ds) {
 		const results = get_rows(q, { withCTEs: true })
 		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1)) //if (q.term1.id.startsWith('Event-free')) console.log(results.lst.map(r=>`${r.sample}\t${r.key1}\t${r.val1}\t${r.key2}`).join('\n'))
 
+		// prepare input data for survival analysis
 		const byChartSeries = {}
 		const keys = { chart: new Set(), series: new Set() }
 		for (const d of results.lst) {
-			// do not include data when years_to_event < 0
-			if (d[vNum] < 0) continue
-			// clearer alias for censored boolean
-			d.censored = d[kNum]
+			// time-to-event
+			const time = d[vNum]
+			if (time < 0) continue // do not include data when years_to_event < 0
+			// status codes
+			// 0=censored; 1=dead
+			// codes match the codes expected by Surv() in R
+			const status = d[kNum]
+			// series
+			const series = d[sNum] === '' ? '*' : d[sNum] // R errors on empty string series value, so replace with '*' (will reconvert later)
+			keys.series.add(series)
+			// enter chart data
 			if (!(d.key0 in byChartSeries)) {
-				byChartSeries[d.key0] = [['cohort', 'time', 'status']]
+				byChartSeries[d.key0] = []
 				keys.chart.add(d.key0)
 			}
-			// R errors on an empty string cohort value,
-			// so use '*' as a placeholder for now and will reconvert later
-			const sKey = d[sNum] === '' ? '*' : d[sNum]
-			keys.series.add(sKey)
-			// do NOT negate the d.censored value, it must already match the expected exit code
-			// where status=TRUE or 2 means 'dead' or 'event' in R's survival.survfit()
-			byChartSeries[d.key0].push([sKey, d[vNum], d.censored])
+			byChartSeries[d.key0].push({ time, status, series })
 		}
 		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
 		const final_data = {
@@ -73,40 +74,48 @@ export async function get_survival(q, ds) {
 			case: [],
 			refs: { bins }
 		}
-		const promises = []
+
+		// perform survival analysis for each chart
 		for (const chartId in byChartSeries) {
-			//console.log(byChartSeries[chartId])
-			const output = await lines2R(
-				path.join(serverconfig.binpath, 'utils/survival.R'),
-				byChartSeries[chartId].map(d => d.join('\t'))
-			)
-			let header
-			output
-				// remove non-data artifacts from the stream, such as messages when a plot image file is saved in the R script
-				.filter(line => line.includes('\t'))
-				.map(line => line.split('\t'))
-				.forEach((row, i) => {
-					if (i === 0) header = row
-					else {
-						const obj = {}
-						header.forEach((key, i) => {
-							obj[key] = i > 0 ? Number(row[i]) : row[i]
-						})
-						// may reconvert a placeholder cohort value with an empty string
-						const cohort = obj.cohort == '*' ? '' : obj.cohort
-						final_data.case.push([
-							chartId,
-							cohort,
-							obj.time,
-							obj.surv,
-							obj.lower,
-							obj.upper,
-							obj.nevent,
-							obj.ncensor,
-							obj.nrisk
-						])
+			const data = byChartSeries[chartId]
+			const datafile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+			await write_file(datafile, JSON.stringify(data))
+			const out = await lines2R(path.join(serverconfig.binpath, 'utils/survival.R'), [], [datafile])
+			const survival_data = JSON.parse(out)
+
+			// parse survival estimates
+			for (const obj of survival_data.estimates) {
+				for (const key in obj) {
+					if (key == 'series') {
+						// reconvert series placeholder back to empty string
+						obj[key] = obj[key] == '*' ? '' : obj[key]
+					} else {
+						// ensure estimate values are numeric (important for
+						// 'NA' strings from R)
+						obj[key] = Number(obj[key])
 					}
-				})
+				}
+				// add estimate values to final data
+				final_data.case.push([
+					chartId,
+					obj.series,
+					obj.time,
+					obj.surv,
+					obj.lower,
+					obj.upper,
+					obj.nevent,
+					obj.ncensor,
+					obj.nrisk
+				])
+			}
+
+			// parse results of statistical tests
+			if (survival_data.tests) {
+				if (!final_data.tests) final_data.tests = {}
+				final_data.tests[chartId] = survival_data.tests
+			}
+
+			fs.unlink(datafile, () => {})
 		}
 		// sort by d.x
 		final_data.case.sort((a, b) => a[2] - b[2])
