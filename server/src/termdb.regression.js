@@ -758,8 +758,11 @@ async function snplocusPostprocess(q, sampledata, Rinput, result) {
 async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 	// for linear regression, perform wilcoxon rank sum test for low-AF snps
 	const wilcoxInput = {} // { snpid: {hasEffale: [], noEffale: []} }
+	const snpid2scale = new Map() // k: snpid, v: {minv,maxv} for making scale in boxplot
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		let RinputDataidx = 0
+		let minv = null,
+			maxv = null
 		const group1values = [], // for cases with effect allele
 			group2values = []
 		for (const { sample, noOutcome } of sampledata) {
@@ -774,6 +777,14 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 				// missing gt for this sample
 				continue
 			}
+
+			if (minv == null) {
+				minv = maxv = outcomeValue
+			} else {
+				minv = Math.min(minv, outcomeValue)
+				maxv = Math.max(maxv, outcomeValue)
+			}
+
 			const [a, b] = gt.split('/')
 			if (a == snpO.effAle || b == snpO.effAle) {
 				group1values.push(outcomeValue)
@@ -782,6 +793,7 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 			}
 		}
 		wilcoxInput[snpid] = { group1values, group2values }
+		snpid2scale.set(snpid, { minv, maxv })
 	}
 	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
@@ -790,6 +802,25 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 	const pvalues = JSON.parse(wilcoxOutput)
 	for (const snpid in pvalues) {
 		const { group1values, group2values } = wilcoxInput[snpid]
+		const { minv, maxv } = snpid2scale.get(snpid)
+
+		const box1 = app.boxplot_getvalue(
+			group1values
+				.sort((a, b) => a - b)
+				.map(i => {
+					return { value: i }
+				})
+		)
+		box1.label = 'Carry effect allele, n=' + group1values.length
+		const box2 = app.boxplot_getvalue(
+			group2values
+				.sort((a, b) => a - b)
+				.map(i => {
+					return { value: i }
+				})
+		)
+		box2.label = 'No effect allele, n=' + group2values.length
+
 		// make a result object for this snp
 		const analysisResult = {
 			id: snpid,
@@ -799,20 +830,10 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 				wilcoxon: {
 					pvalue: pvalues[snpid],
 					boxplots: {
-						hasEff: app.boxplot_getvalue(
-							group1values
-								.sort((a, b) => a - b)
-								.map(i => {
-									return { value: i }
-								})
-						),
-						noEff: app.boxplot_getvalue(
-							group2values
-								.sort((a, b) => a - b)
-								.map(i => {
-									return { value: i }
-								})
-						)
+						minv,
+						maxv,
+						hasEff: box1,
+						noEff: box2
 					}
 				}
 			}
