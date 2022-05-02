@@ -229,7 +229,7 @@ document.body.onload = () => runproteinpaint({
           }
 				},
 
-				/*{
+				{
 					chartType: 'survival',
 					term: {
 						id: 'Event-free survival'
@@ -257,7 +257,7 @@ document.body.onload = () => runproteinpaint({
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 						}
 					}
-				},*/
+				},
 			]
 		}
 	}
@@ -268,11 +268,11 @@ const cnvGenes = `C19MC, MYCN, PDGFR,CDK4, MET, MDM4, MYC`.split(',').map(g=>g.t
 function getGeneTermGroups() {
 	const termgroups = []
 	for(const g of genegroups) {
-		termgroups.push({
-			name: g.name,
-			lst: g.lst.map(term => {
-				term.type = 'geneVariant'
-				const tw = {term}
+    const grp = {
+      name: g.name,
+      lst: g.lst.map(term => {
+        term.type = 'geneVariant'
+        const tw = {term}
         const [name, suffix] = term.name.split('_')
         if (suffix == 'SV') {
           tw.overrides = ['SVfill']
@@ -296,10 +296,12 @@ function getGeneTermGroups() {
           }
         }
 
-				return tw
-			}),
-      sortTermsBy: 'sampleCount'
-		})
+        return tw
+      })
+    }
+
+    if (g.settings) grp.settings = g.settings 
+		termgroups.push(grp)
 	}
 	return termgroups
 }
@@ -355,6 +357,9 @@ const genegroups = [
   },
   {
       "name": "Somatic",
+      "settings": {
+        minNumSamples: 2
+      },
       "lst": [
           {
               "name": "AFDN"

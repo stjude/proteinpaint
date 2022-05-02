@@ -265,10 +265,11 @@ class Matrix {
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
 				for (const sn in data.samples) {
+					if (!data.samplesToShow.has(sn)) continue
 					const anno = data.samples[sn][tw.$id]
 					if (anno) {
 						anno.filteredValues = this.getFilteredValues(anno, tw)
-						if (anno.filteredValues) {
+						if (anno.filteredValues?.length) {
 							counts.samples += 1
 							counts.hits += anno.filteredValues.length
 							if (tw.q?.mode == 'continuous') {
@@ -285,8 +286,13 @@ class Matrix {
 
 			// may override the settings.sortTermsBy with a sorter that is specific to a term group
 			const termSorter = grp.sortTermsBy ? getTermSorter(this, grp) : this.termSorter
-			grp.lst = lst.sort(termSorter).map(t => t.tw)
-			for (const [index, t] of lst.entries()) {
+			const minLst = lst
+				.sort(termSorter)
+				.filter(
+					t => !grp.settings || !('minNumSamples' in grp.settings) || t.counts.samples >= grp.settings.minNumSamples
+				)
+			grp.lst = minLst.map(t => t.tw)
+			for (const [index, t] of minLst.entries()) {
 				const { tw, counts } = t
 				const ref = data.refs.byTermId[t.tw.$id] || {}
 				this.termOrder.push({

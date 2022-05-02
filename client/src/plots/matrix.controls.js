@@ -81,6 +81,13 @@ export class MatrixControls {
 					settingsKey: 'samplecount4gene'
 				},
 				{
+					label: 'Minimum hits',
+					type: 'number',
+					chartType: 'matrix',
+					settingsKey: 'minNumHits',
+					title: 'Minimum number of hits for a row to be visible'
+				},
+				{
 					label: 'Sort terms',
 					type: 'radio',
 					chartType: 'matrix',
