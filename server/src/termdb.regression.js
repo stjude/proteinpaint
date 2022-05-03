@@ -843,17 +843,15 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 }
 
 async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
-	// for logistic/cox, perform fisher's exact test for low-AF snps
+	// for logistic, perform fisher's exact test for low-AF snps
 	const lines = [] // one line per snp
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		// a snp with low AF, run fisher on it
-		// count 6 numbers for this snp across all samples
-		let outcome0href = 0, // outcome is 0/No,
-			outcome0het = 0,
-			outcome0halt = 0,
-			outcome1href = 0, // outcome is 1/Yes
-			outcome1het = 0,
-			outcome1halt = 0
+		// count 4 numbers for this snp across all samples
+		let outcome0noale = 0, // outcome=no, no allele
+			outcome0hasale = 0, // outcome=no, has allele
+			outcome1noale = 0, // outcome=yes, no allele
+			outcome1hasale = 0 // outcome=yes, has allele
 
 		// Rinput.data[] is a subset of sampledata[], though they're in same order
 		// see makeRinput()
@@ -870,31 +868,29 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 				continue
 			}
 			const [a, b] = gt.split('/')
-			const effCount = (snpO.effAle == a ? 1 : 0) + (snpO.effAle == b ? 1 : 0)
+			const hasale = snpO.effAle == a || snpO.effAle == b
 			if (outcome == 0) {
-				if (effCount == 0) outcome0href++
-				else if (effCount == 1) outcome0het++
-				else outcome0halt++
+				if (hasale) outcome0hasale++
+				else outcome0noale++
 			} else {
-				if (effCount == 0) outcome1href++
-				else if (effCount == 1) outcome1het++
-				else outcome1halt++
+				if (hasale) outcome1hasale++
+				else outcome1noale++
 			}
 		}
-		/* a line forming this 2x3 table:
-		     homo-ref het homo-alt
-		Yes  -        -   -
-		No   -        -   -
+		/* a line forming 2x2 table:
+		     has ale  no ale
+		Yes  -        - 
+		No   -        -
 		*/
-		const line = [snpid, outcome1href, outcome0href, outcome1het, outcome0het, outcome1halt, outcome0halt]
+		const line = [snpid, outcome1hasale, outcome0hasale, outcome1noale, outcome0noale]
 		lines.push(line.join('\t'))
 	}
-	const plines = await lines2R(path.join(serverconfig.binpath, 'utils/fisher.2x3.R'), lines)
+	const plines = await lines2R(path.join(serverconfig.binpath, 'utils/fisher.R'), lines)
 	for (const line of plines) {
 		const l = line.split('\t')
 		const snpid = l[0]
-		const { effAle, refAle } = tw.lowAFsnps.get(snpid)
-		const pvalue = Number(l[7])
+		const { effAle } = tw.lowAFsnps.get(snpid)
+		const pvalue = Number(l[5])
 
 		// make a result object for this snp
 		const analysisResult = {
@@ -905,9 +901,9 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 				fisher: {
 					pvalue: Number(pvalue.toFixed(4)),
 					rows: [
-						['', refAle + '/' + refAle, refAle + '/' + effAle, effAle + '/' + effAle],
-						['Have event', l[1], l[3], l[5]],
-						['No event', l[2], l[4], l[6]]
+						['', 'Carry ' + effAle + ' allele', 'No ' + effAle + ' allele'],
+						['Have event', l[1], l[3]],
+						['No event', l[2], l[4]]
 					]
 				}
 			}
