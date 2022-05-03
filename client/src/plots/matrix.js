@@ -327,7 +327,7 @@ class Matrix {
 				totalHtAdjustments += (t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht) - ht
 			}
 
-			totalIndex += grp.lst.length
+			totalIndex += processedLst.length
 			visibleGrpIndex += 1
 		}
 	}

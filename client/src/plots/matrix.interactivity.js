@@ -95,13 +95,13 @@ function setTermActions(self) {
 		self.dom.twLabelInput = labelEditDiv
 			.append('input')
 			.attr('type', 'text')
-			.attr('size', t.tw.term.name.length)
+			.attr('size', t.tw.term.name.length + 5)
 			.style('padding', '1px 5px')
 			.style('text-align', 'center')
 			.property('value', t.tw.term.name)
 			.on('input', () => {
 				const value = self.dom.twLabelInput.property('value')
-				self.dom.twLabelInput.attr('size', value.length)
+				self.dom.twLabelInput.attr('size', value.length + 5)
 				self.dom.twLabelEditBtn.property('disabled', value === t.tw.label)
 			})
 			.on('change', self.updateTermLabel)
@@ -960,12 +960,39 @@ function setTermGroupActions(self) {
 		if (!d) return
 		self.activeLabel = d
 		self.dom.menutop.selectAll('*').remove()
+
+		const labelEditDiv = self.dom.menutop.append('div')
+
+		self.dom.grpNameInput = labelEditDiv
+			.append('input')
+			.attr('type', 'text')
+			.attr('size', self.activeLabel.grp.name.length + 5)
+			.style('padding', '1px 5px')
+			.style('text-align', 'center')
+			.property('value', self.activeLabel.grp.name)
+			.on('input', () => {
+				const value = self.dom.grpNameInput.property('value')
+				self.dom.grpNameInput.attr('size', value.length + 5)
+				self.dom.grpEditBtn.property('disabled', value === self.activeLabel.grp.name)
+			})
+			.on('change', self.updateTermGrpName)
+
+		self.dom.grpEditBtn = labelEditDiv
+			.append('button')
+			.property('disabled', true)
+			.style('margin-left', '5px')
+			.html('edit')
+			.on('click', self.updateTermGrpName)
+
 		self.dom.menubody
 			.style('padding', 0)
 			.selectAll('*')
 			.remove()
 
-		const menuOptions = [{ label: 'Delete', callback: self.removeTermGroup }]
+		const menuOptions = [
+			{ label: 'Edit', callback: self.showTermGroupEditMenu },
+			{ label: 'Delete', callback: self.removeTermGroup }
+		]
 
 		self.dom.menutop
 			.append('div')
@@ -982,6 +1009,63 @@ function setTermGroupActions(self) {
 			})
 
 		self.dom.tip.showunder(event.target)
+	}
+
+	self.updateTermGrpName = () => {
+		const value = self.dom.grpNameInput.property('value')
+		const t = self.activeLabel
+		if (t.grp.name === value) return
+		t.grp.name = value
+		self.app.dispatch({
+			type: 'plot_nestedEdits',
+			id: self.opts.id,
+			edits: [
+				{
+					nestedKeys: ['termgroups', t.grpIndex],
+					value: t.grp
+				}
+			]
+		})
+	}
+
+	self.showTermGroupEditMenu = async () => {
+		self.dom.menubody.selectAll('*').remove()
+
+		const menu = self.dom.menubody.append('div').style('padding', '5px')
+		menu
+			.append('div')
+			.style('width', '100%')
+			.style('font-weight', 600)
+			.html('Group options')
+
+		const label = menu.append('div').append('label')
+		label.append('span').html('Minimum #samples for visible terms')
+		const minNumSampleInput = label
+			.append('input')
+			.attr('type', 'number')
+			.style('margin-left', '5px')
+			.style('width', '50px')
+			.property('value', self.activeLabel.grp.settings?.minNumSamples || 0)
+
+		menu
+			.append('div')
+			.append('button')
+			.html('Submit')
+			.on('click', () => {
+				const settings = self.activeLabel.grp.settings || {}
+				settings.minNumSamples = minNumSampleInput.property('value')
+
+				self.app.dispatch({
+					type: 'plot_nestedEdits',
+					id: self.id,
+					edits: [
+						{
+							nestedKeys: ['termgroups', self.activeLabel.grpIndex, 'settings'],
+							value: settings
+						}
+					]
+				})
+			})
 	}
 
 	self.removeTermGroup = () => {
