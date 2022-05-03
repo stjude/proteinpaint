@@ -4,6 +4,7 @@ import { axisBottom, axisTop } from 'd3-axis'
 import { axisstyle } from '../dom/axisstyle'
 import { first_genetrack_tolist } from '../common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
+import { drawBoxplot } from '../dom/boxplot'
 
 /*************
 can dynamically add following attributes
@@ -29,6 +30,7 @@ result.data: {}
 main
 	displayResult
 		createGenomebrowser
+			getMtooltipValues
 			mayCheckLD
 				showLDlegend
 		updateMds3Tk
@@ -46,7 +48,8 @@ main
 */
 
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
-const forestcolor = '#126e08'
+const forestcolor = '#126e08' // forest plot color
+const boxplotcolor = forestcolor
 
 export class RegressionResults {
 	constructor(opts) {
@@ -322,8 +325,64 @@ function setRenderers(self) {
 		const div = self.newDiv('Wilcoxon rank sum test')
 		div
 			.append('div')
-			.text('p-value=' + result.wilcoxon.pvalue)
+			.text('p-value = ' + result.wilcoxon.pvalue)
 			.style('margin', '20px')
+		if (result.wilcoxon.boxplots) {
+			const bs = result.wilcoxon.boxplots
+			// {hasEff{}, noEff{}, minv, maxv}
+
+			const boxplotHeight = 20,
+				boxplotWidth = 400,
+				leftLabelWidth = 180,
+				axisheight = 40,
+				labpad = 20,
+				vpad = 10
+
+			const scale = scaleLinear()
+				.domain([bs.minv, bs.maxv])
+				.range([0, boxplotWidth])
+
+			const svg = div
+				.append('svg')
+				.attr('width', leftLabelWidth + labpad + boxplotWidth + 10)
+				.attr('height', vpad * 3 + boxplotHeight * 2 + axisheight)
+			// anchor
+			const g = svg.append('g').attr('transform', `translate(${leftLabelWidth + labpad},${vpad})`)
+			drawBoxplot({
+				g: g.append('g'),
+				bp: bs.hasEff,
+				scale,
+				rowheight: boxplotHeight,
+				color: boxplotcolor,
+				labpad
+			})
+			drawBoxplot({
+				g: g.append('g').attr('transform', `translate(0,${boxplotHeight + vpad})`),
+				bp: bs.noEff,
+				scale,
+				rowheight: boxplotHeight,
+				color: boxplotcolor,
+				labpad
+			})
+			// axis
+			{
+				const axisg = g.append('g').attr('transform', `translate(0,${boxplotHeight * 2 + vpad * 2})`)
+				const axis = axisBottom().scale(scale)
+				axisstyle({
+					axis: axisg.call(axis),
+					color: boxplotcolor,
+					showline: true
+				})
+				axisg
+					.append('text')
+					.text(self.config.outcome.term.name)
+					.attr('font-size', 15)
+					.attr('x', boxplotWidth / 2)
+					.attr('y', axisheight - 5)
+					.attr('text-anchor', 'middle')
+					.attr('fill', boxplotcolor)
+			}
+		}
 	}
 
 	self.mayshow_fisher = result => {
@@ -331,7 +390,7 @@ function setRenderers(self) {
 		const div = self.newDiv("Fisher's exact test")
 		div
 			.append('div')
-			.text('p-value=' + result.fisher.pvalue)
+			.text('p-value = ' + result.fisher.pvalue)
 			.style('margin', '20px')
 		const table = div
 			.append('table')
