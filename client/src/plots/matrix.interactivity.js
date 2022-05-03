@@ -79,17 +79,39 @@ function setTermActions(self) {
 	}
 
 	self.showTermMenu = async function() {
-		const d = event.target.__data__
-		if (!d || !d.tw) return
-		self.activeTerm = d
+		const t = event.target.__data__
+		if (!t || !t.tw) return
+		self.activeTerm = t
 		self.dom.menutop.selectAll('*').remove()
 		self.dom.menubody
 			.style('padding', 0)
 			.selectAll('*')
 			.remove()
 
-		self.dom.menutop.append('div').html(d.tw.term.name)
-		self.showShortcuts(d, self.dom.menutop)
+		const labelEditDiv = self.dom.menutop.append('div')
+
+		self.dom.twLabelInput = labelEditDiv
+			.append('input')
+			.attr('type', 'text')
+			.attr('size', t.tw.term.name.length)
+			.style('padding', '1px 5px')
+			.style('text-align', 'center')
+			.property('value', t.tw.term.name)
+			.on('input', () => {
+				const value = self.dom.twLabelInput.property('value')
+				self.dom.twLabelInput.attr('size', value.length)
+				self.dom.twLabelEditBtn.property('disabled', value === t.tw.label)
+			})
+			.on('change', self.updateTermLabel)
+
+		self.dom.twLabelEditBtn = labelEditDiv
+			.append('button')
+			.property('disabled', true)
+			.style('margin-left', '5px')
+			.html('edit')
+			.on('click', self.updateTermLabel)
+
+		self.showShortcuts(t, self.dom.menutop)
 
 		self.dom.menutop
 			.append('div')
@@ -112,6 +134,24 @@ function setTermActions(self) {
 			})
 
 		self.dom.tip.showunder(event.target)
+	}
+
+	self.updateTermLabel = () => {
+		const value = self.dom.twLabelInput.property('value')
+		const t = self.activeTerm
+		if (t.tw.label === value) return
+		t.tw.label = value
+		t.grp.lst[t.index] = t.tw
+		self.app.dispatch({
+			type: 'plot_nestedEdits',
+			id: self.opts.id,
+			edits: [
+				{
+					nestedKeys: ['termgroups', t.grpIndex],
+					value: t.grp
+				}
+			]
+		})
 	}
 
 	self.showShortcuts = (t, div) => {
