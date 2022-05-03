@@ -2127,9 +2127,15 @@ async function getReadInfo(tk, block, box, ridx) {
 	const wait = tk.readpane.body.append('div').text('Loading...')
 	const req_data = getparam()
 	if (tk.variants) {
+		console.log('tk.variants:', tk.variants)
 		req_data.lst.push('refseq=' + tk.variants[0].refseq)
 		req_data.lst.push('altseq=' + tk.variants[0].altseq)
+		req_data.lst.push('chrom=' + tk.variants[0].chr)
+		req_data.lst.push('pos=' + tk.variants[0].pos)
+		req_data.lst.push('ref=' + tk.variants[0].ref)
+		req_data.lst.push('alt=' + tk.variants[0].alt)
 	}
+	console.log('req_data:', req_data)
 	const data = await dofetch3('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
 	if (data.error) {
 		sayerror(wait, data.error)

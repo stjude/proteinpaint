@@ -2731,10 +2731,31 @@ async function query_oneread(req, r) {
 
 	if (lst) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
+		const cigar_chars = lst[0].boxes.map(i => i.opr)
+		const cigar_pos = lst[0].boxes.map(i => i.len)
+		let cigar_seq = ''
+		for (i = 0; i < cigar_chars.length; i++) {
+			cigar_seq += cigar_pos[i] + cigar_chars[i]
+		}
 		if (req.query.altseq) {
 			const alignment_output = await utils.run_rust(
 				'align',
-				'single:' + lst[0].seq + ':' + req.query.refseq + ':' + req.query.altseq
+				'single:' +
+					lst[0].seq +
+					':' +
+					req.query.refseq +
+					':' +
+					req.query.altseq +
+					':' +
+					cigar_seq +
+					':' +
+					req.query.start +
+					':' +
+					req.query.pos +
+					':' +
+					req.query.ref +
+					':' +
+					req.query.alt
 			)
 			const alignment_output_list = alignment_output.split('\n')
 			for (let item of alignment_output_list) {
@@ -2768,6 +2789,8 @@ async function query_oneread(req, r) {
 						.replace(/"/g, '')
 						.replace(/,/g, '')
 						.replace('r_seq_alt:', '')
+				} else {
+					console.log(item)
 				}
 			}
 		}
