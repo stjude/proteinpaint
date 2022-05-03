@@ -134,10 +134,11 @@ export function setRenderers(self) {
 	self.colGrpLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
+		const len = (lab.processedLst || lab.grp.lst).length
 		const x =
 			lab.grpIndex * s.colgspace +
 			lab.prevGrpTotalIndex * d.dx +
-			(lab.grp.lst.length * d.dx) / 2 +
+			(len * d.dx) / 2 +
 			s.grpLabelFontSize / 2 +
 			lab.totalHtAdjustments
 		return `translate(${x},0)`
@@ -155,10 +156,11 @@ export function setRenderers(self) {
 	self.rowGrpLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
+		const len = (lab.processedLst || lab.grp.lst).length
 		const y =
 			lab.grpIndex * s.rowgspace +
 			lab.prevGrpTotalIndex * d.dy +
-			(lab.grp.lst.length * d.dy) / 2 +
+			(len * d.dy) / 2 +
 			s.grpLabelFontSize / 2 +
 			lab.totalHtAdjustments
 		return `translate(0,${y})`

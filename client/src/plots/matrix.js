@@ -44,7 +44,10 @@ class Matrix {
 				.append('g')
 				.attr('class', 'sjpp-matrix-series-group-label-g')
 				.on('click', this.showSampleGroupMenu),
-			termGrpLabelG: mainG.append('g').attr('class', 'sjpp-matrix-term-group-label-g'),
+			termGrpLabelG: mainG
+				.append('g')
+				.attr('class', 'sjpp-matrix-term-group-label-g')
+				.on('click', this.showTermGroupMenu),
 			cluster: mainG.append('g').attr('class', 'sjpp-matrix-cluster-g'),
 			seriesesG: mainG.append('g').attr('class', 'sjpp-matrix-serieses-g'),
 			sampleLabelG: mainG.append('g').attr('class', 'sjpp-matrix-series-label-g'),
@@ -258,6 +261,7 @@ class Matrix {
 		this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
 		this.termOrder = []
 		let totalIndex = 0,
+			visibleGrpIndex = 0,
 			totalHtAdjustments = 0
 		for (const [grpIndex, grp] of this.termGroups.entries()) {
 			const lst = [] // will derive a mutable copy of grp.lst
@@ -286,20 +290,24 @@ class Matrix {
 
 			// may override the settings.sortTermsBy with a sorter that is specific to a term group
 			const termSorter = grp.sortTermsBy ? getTermSorter(this, grp) : this.termSorter
-			const minLst = lst
-				.sort(termSorter)
+			const processedLst = lst
 				.filter(
 					t => !grp.settings || !('minNumSamples' in grp.settings) || t.counts.samples >= grp.settings.minNumSamples
 				)
-			grp.lst = minLst.map(t => t.tw)
-			for (const [index, t] of minLst.entries()) {
+				.sort(termSorter)
+
+			if (!processedLst.length) continue
+			for (const [index, t] of processedLst.entries()) {
 				const { tw, counts } = t
 				const ref = data.refs.byTermId[t.tw.$id] || {}
 				this.termOrder.push({
 					grp,
 					grpIndex,
+					visibleGrpIndex,
 					tw,
 					index, // rendered index
+					lstIndex: t.index, // as-listed index, before applying term filters
+					processedLst,
 					prevGrpTotalIndex: totalIndex,
 					totalIndex: totalIndex + index,
 					totalHtAdjustments,
@@ -316,11 +324,11 @@ class Matrix {
 									.range([1, tw.settings.barh])
 							: null
 				})
-
 				totalHtAdjustments += (t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht) - ht
 			}
 
 			totalIndex += grp.lst.length
+			visibleGrpIndex += 1
 		}
 	}
 
@@ -477,8 +485,8 @@ class Matrix {
 						key,
 						label,
 						fill: anno.color || values[key]?.color,
-						x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + t.totalHtAdjustments,
-						y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + t.totalHtAdjustments : 0,
+						x: !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + t.totalHtAdjustments,
+						y: !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0,
 						order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0,
 						fill
 					}
@@ -523,8 +531,12 @@ class Matrix {
 							key,
 							label,
 							value,
-							x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + width * i + t.totalHtAdjustments,
-							y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + height * i + t.totalHtAdjustments : 0,
+							x: !s.transpose
+								? 0
+								: t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments,
+							y: !s.transpose
+								? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments
+								: 0,
 							height,
 							width,
 							fill,

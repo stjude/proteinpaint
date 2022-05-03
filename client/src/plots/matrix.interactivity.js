@@ -32,11 +32,12 @@ export function setInteractivity(self) {
 	}
 
 	self.mouseout = function() {
-		if (!self.activeTerm && !self.activeSampleGroup) self.dom.tip.hide()
+		if (!self.activeTerm && !self.activeSampleGroup && !self.activeLabel) self.dom.tip.hide()
 	}
 
 	self.legendClick = function() {}
 	setTermActions(self)
+	setTermGroupActions(self)
 	setSampleGroupActions(self)
 }
 
@@ -82,6 +83,7 @@ function setTermActions(self) {
 		const t = event.target.__data__
 		if (!t || !t.tw) return
 		self.activeTerm = t
+		self.activeLabel = t
 		self.dom.menutop.selectAll('*').remove()
 		self.dom.menubody
 			.style('padding', 0)
@@ -946,6 +948,50 @@ function setSampleGroupActions(self) {
 			id: self.id,
 			config: {
 				divideBy
+			}
+		})
+		self.dom.tip.hide()
+	}
+}
+
+function setTermGroupActions(self) {
+	self.showTermGroupMenu = function() {
+		const d = event.target.__data__
+		if (!d) return
+		self.activeLabel = d
+		self.dom.menutop.selectAll('*').remove()
+		self.dom.menubody
+			.style('padding', 0)
+			.selectAll('*')
+			.remove()
+
+		const menuOptions = [{ label: 'Delete', callback: self.removeTermGroup }]
+
+		self.dom.menutop
+			.append('div')
+			.selectAll(':scope>.sja_menuoption')
+			.data(menuOptions)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', 'inline-block')
+			.html(d => d.label)
+			.on('click', d => {
+				event.stopPropagation()
+				d.callback(d)
+			})
+
+		self.dom.tip.showunder(event.target)
+	}
+
+	self.removeTermGroup = () => {
+		const termgroups = self.termGroups
+		termgroups.splice(self.activeLabel.grpIndex, 1)
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				termgroups
 			}
 		})
 		self.dom.tip.hide()
