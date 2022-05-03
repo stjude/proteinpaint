@@ -811,7 +811,7 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 					return { value: i }
 				})
 		)
-		box1.label = 'Carry effect allele, n=' + group1values.length
+		box1.label = `Carry ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${group1values.length}`
 		const box2 = app.boxplot_getvalue(
 			group2values
 				.sort((a, b) => a - b)
@@ -819,7 +819,7 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 					return { value: i }
 				})
 		)
-		box2.label = 'No effect allele, n=' + group2values.length
+		box2.label = `No ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${group2values.length}`
 
 		// make a result object for this snp
 		const analysisResult = {
@@ -939,7 +939,9 @@ function getLine4OneSnp(snpid, tw) {
 		return { k: 'Genotype', v: gt + '=' + c }
 	}
 	const lst = [
-		'Effect allele=' + (tw.highAFsnps.has(snpid) ? tw.highAFsnps.get(snpid).effAle : tw.lowAFsnps.get(snpid).effAle),
+		`${tw.q.alleleType == 0 ? 'Minor' : 'Alternative'} allele=${
+			tw.highAFsnps.has(snpid) ? tw.highAFsnps.get(snpid).effAle : tw.lowAFsnps.get(snpid).effAle
+		}`,
 		'AF=' + tw.snpid2AFstr.get(snpid)
 	]
 	for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
