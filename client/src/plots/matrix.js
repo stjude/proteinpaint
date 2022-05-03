@@ -145,11 +145,22 @@ class Matrix {
 			// this will write annotation data to this.currData
 			await this.app.vocabApi.setAnnotatedSampleData(reqOpts, this.currData)
 
-			// process the data
-			this.setTermOrder(this.currData)
-			this.setSampleGroupsOrder(this.currData)
+			this.sampleFilter = new RegExp(this.settings.matrix.sampleNameFilter || '.*')
+			const data = {
+				lst: this.currData.lst.filter(
+					row => this.currData.samplesToShow.has(row.sample) && this.sampleFilter.test(row.sample)
+				),
+				refs: this.currData.refs
+			}
+			data.samples = data.lst.reduce((obj, row) => {
+				obj[row.sample] = row
+				return obj
+			}, {})
+			// process the sample-filtered data
+			this.setTermOrder(data)
+			this.setSampleGroupsOrder(data)
 			this.setLayout()
-			this.serieses = this.getSerieses(this.currData)
+			this.serieses = this.getSerieses(data)
 			// render the data
 			this.render()
 
@@ -196,8 +207,6 @@ class Matrix {
 			const ref = data.refs.byTermId[$id] || {}
 
 			for (const row of data.lst) {
-				if (!data.samplesToShow.has(row.sample)) continue
-
 				// TODO: may move the override handling downstream,
 				// but before sample group.lst sorting, as needed
 				for (const grp of this.config.termgroups) {
@@ -269,7 +278,6 @@ class Matrix {
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
 				for (const sn in data.samples) {
-					if (!data.samplesToShow.has(sn)) continue
 					const anno = data.samples[sn][tw.$id]
 					if (anno) {
 						anno.filteredValues = this.getFilteredValues(anno, tw)
@@ -677,6 +685,7 @@ export async function getPlotConfig(opts, app) {
 					bottom: 20,
 					left: 50
 				},
+				sampleNameFilter: '',
 				sortSamplesBy: 'selectedTerms',
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				sortTermsBy: 'asListed', // or sampleCount

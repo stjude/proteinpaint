@@ -62,6 +62,12 @@ export class MatrixControls {
 						vocab: this.opts.vocab
 						//activeCohort: appState.activeCohort
 					}
+				},
+				{
+					label: 'Sample name regex filter',
+					type: 'text',
+					chartType: 'matrix',
+					settingsKey: 'sampleNameFilter'
 				}
 			],
 
