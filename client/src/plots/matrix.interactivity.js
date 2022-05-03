@@ -341,19 +341,28 @@ function setTermActions(self) {
 			const div = self.dom.menubody.append('div')
 			const label = div.append('label')
 			label.append('span').html('Minimum #sample to be visible')
+
+			const minNumSamples = t.tw.minNumSamples || ''
 			const input = label
 				.append('input')
 				.attr('type', 'number')
 				.style('margin-left', '5px')
 				.style('width', '50px')
-				.property('value', t.tw.minNumSamples || 0)
+				.property('value', minNumSamples)
 
 			div
 				.append('div')
 				.append('button')
 				.html('Submit')
 				.on('click', () => {
-					t.tw.minNumSamples = Number(input.property('value'))
+					const value = input.property('value')
+					if (value === minNumSamples) return
+					if (value == '') {
+						delete t.tw.minNumSamples
+					} else {
+						t.tw.minNumSamples = Number(value)
+					}
+
 					self.app.dispatch({
 						type: 'plot_nestedEdits',
 						id: self.opts.id,
@@ -1073,7 +1082,10 @@ function setTermGroupActions(self) {
 			.html('Group options')
 
 		const label = menu.append('div').append('label')
-		label.append('span').html('Minimum #samples for visible terms')
+		label
+			.append('span')
+			.html('Minimum #samples for visible terms*')
+			.attr('title', 'May be overridden by a term-specific minNumSamples')
 		const minNumSampleInput = label
 			.append('input')
 			.attr('type', 'number')
