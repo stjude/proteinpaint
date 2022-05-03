@@ -614,7 +614,7 @@ makeURL([
 			} ]
 		})],
 
-		['Yadav Cardiomyopathy 2021','?noheader=1&mass='+JSON.stringify({
+		['Yadav EF 2021','?noheader=1&mass='+JSON.stringify({
 			genome:'hg38',
 			dslabel:'SJLife',
 			plots:[{
@@ -634,9 +634,9 @@ makeURL([
 					}},
 					{id:'hrtavg',q:{
 						mode:'discrete',type:'custom-bin',lst:[
-							{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
-							{stopinclusive:true,start:0,stop:250,label:'>0 to 250'},
-							{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
+							{startunbounded:true, stopinclusive:true,stop:200,label:'Lower than 200'},
+							{stopinclusive:true,start:200,stop:2000,label:'>200 to 2000'},
+							{startinclusive:false,stopunbounded:true,start:2000,label:'>2000'}
 						]
 					}},
 					{
@@ -1044,9 +1044,9 @@ makeURL([
 					}},
 					{id:'hrtavg',q:{
 						mode:'discrete',type:'custom-bin',lst:[
-							{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
-							{stopinclusive:true,start:0,stop:250,label:'>0 to 250'},
-							{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
+							{startunbounded:true, stopinclusive:true,stop:200,label:'Lower than 200'},
+							{stopinclusive:true,start:200,stop:2000,label:'>200 to 2000'},
+							{startinclusive:false,stopunbounded:true,start:2000,label:'>2000'}
 						]
 					}},
 					// chr1:113558796-113559396 for rs6689879
