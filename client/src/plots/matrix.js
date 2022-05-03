@@ -62,8 +62,8 @@ class Matrix {
 		}
 
 		this.dom.tip.onHide = () => {
-			this.lastActiveTerm = this.activeTerm
-			delete this.activeTerm
+			this.lastActiveLabel = this.activeLabel
+			delete this.activeLabel
 		}
 
 		this.config = appState.plots.find(p => p.id === this.id)

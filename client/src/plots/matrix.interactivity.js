@@ -6,7 +6,7 @@ let inputIndex = 0
 
 export function setInteractivity(self) {
 	self.showCellInfo = function() {
-		if (self.activeTerm) return
+		if (self.activeLabel) return
 		const d = event.target.__data__
 		if (!d || !d.term || !d.sample) return
 		if (event.target.tagName == 'rect') {
@@ -32,7 +32,7 @@ export function setInteractivity(self) {
 	}
 
 	self.mouseout = function() {
-		if (!self.activeTerm && !self.activeSampleGroup && !self.activeLabel) self.dom.tip.hide()
+		if (!self.activeLabel && !self.activeLabel && !self.activeLabel) self.dom.tip.hide()
 	}
 
 	self.legendClick = function() {}
@@ -57,7 +57,7 @@ function setTermActions(self) {
 			callback: tw => {
 				// data is object with only one needed attribute: q, never is null
 				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
-				const t = self.activeTerm || self.lastActiveTerm
+				const t = self.activeLabel || self.lastactiveLabel
 				if (tw) {
 					if (t && t.tw) tw.$id = t.tw.$id
 					self.pill.main(tw)
@@ -82,7 +82,7 @@ function setTermActions(self) {
 	self.showTermMenu = async function() {
 		const t = event.target.__data__
 		if (!t || !t.tw) return
-		self.activeTerm = t
+		self.activeLabel = t
 		self.activeLabel = t
 		self.dom.menutop.selectAll('*').remove()
 		self.dom.menubody
@@ -140,7 +140,7 @@ function setTermActions(self) {
 
 	self.updateTermLabel = () => {
 		const value = self.dom.twLabelInput.property('value')
-		const t = self.activeTerm
+		const t = self.activeLabel
 		if (t.tw.label === value) return
 		t.tw.label = value
 		t.grp.lst[t.index] = t.tw
@@ -215,7 +215,7 @@ function setTermActions(self) {
 
 	self.sortSamplesAgainstCornerTerm = () => {
 		event.stopPropagation()
-		const t = self.activeTerm
+		const t = self.activeLabel
 		const activeIndex = t.index
 		const termgroups = JSON.parse(JSON.stringify(self.termGroups))
 		const grp = termgroups[t.grpIndex]
@@ -255,7 +255,7 @@ function setTermActions(self) {
 
 	self.sortSamplesAgainstTerm = () => {
 		event.stopPropagation()
-		const t = self.activeTerm
+		const t = self.activeLabel
 		const [tcopy] = self.getSorterTerms(t)
 		const termgroups = self.termGroups
 		termgroups[t.grpIndex].lst[t.index] = tcopy
@@ -286,7 +286,7 @@ function setTermActions(self) {
 
 	self.moveTermUp = () => {
 		event.stopPropagation()
-		const t = self.activeTerm
+		const t = self.activeLabel
 		const grp = self.termGroups[t.grpIndex]
 		grp.lst.splice(t.index, 1)
 		grp.lst.splice(t.index - 1, 0, t.tw)
@@ -311,7 +311,7 @@ function setTermActions(self) {
 
 	self.moveTermDown = () => {
 		event.stopPropagation()
-		const t = self.activeTerm
+		const t = self.activeLabel
 		const grp = self.termGroups[t.grpIndex]
 		grp.lst.splice(t.index, 1)
 		grp.lst.splice(t.index + 1, 0, t.tw)
@@ -335,14 +335,14 @@ function setTermActions(self) {
 	}
 
 	self.showTermEditMenu = async () => {
-		await self.pill.main(self.activeTerm.tw)
+		await self.pill.main(self.activeLabel.tw)
 		self.dom.menubody.selectAll('*').remove()
 		self.pill.showMenu()
 	}
 
 	self.showMoveMenu = async () => {
 		self.dom.menubody.selectAll('*').remove()
-		self.termBeingMoved = self.activeTerm
+		self.termBeingMoved = self.activeLabel
 		const div = self.dom.menubody.append('div')
 		div.append('span').html('Click on another label')
 		self.makeInsertPosRadios(div)
@@ -362,7 +362,7 @@ function setTermActions(self) {
 			const value = self.dom.grpNameSelect.property('value')
 			self.dom.grpNameTextInput
 				.property('disabled', value == 'current')
-				.property('value', value == 'current' ? self.activeTerm.grp.name : newGrpName)
+				.property('value', value == 'current' ? self.activeLabel.grp.name : newGrpName)
 		})
 		self.dom.grpNameSelect
 			.selectAll('option')
@@ -379,10 +379,10 @@ function setTermActions(self) {
 			.append('input')
 			.attr('type', 'text')
 			.property('disabled', true)
-			.property('value', self.activeTerm.grp.name)
+			.property('value', self.activeLabel.grp.name)
 			.on('change', () => {
 				const name = self.dom.grpNameTextInput.property('value')
-				if (name == self.activeTerm.grp.name) {
+				if (name == self.activeLabel.grp.name) {
 				} else {
 					newGrpName = self.dom.grpNameTextInput.property('value')
 				}
@@ -472,7 +472,7 @@ function setTermActions(self) {
 						})
 					)
 					const pos = select(`input[name='${self.insertRadioId}']:checked`).property('value')
-					const t = self.activeTerm
+					const t = self.activeLabel
 					const termgroups = self.termGroups
 					if (self.dom.grpNameSelect.property('value') == 'current') {
 						const grp = termgroups[t.grpIndex]
@@ -586,7 +586,7 @@ function setTermActions(self) {
 			Apply
 		*/
 
-		const t = self.activeTerm
+		const t = self.activeLabel
 		self.dom.menubody.selectAll('*').remove()
 
 		self.dom.menubody
@@ -776,7 +776,7 @@ function setTermActions(self) {
 	}
 
 	self.showRemoveMenu = () => {
-		const t = self.activeTerm
+		const t = self.activeLabel
 		self.dom.menubody.selectAll('*').remove()
 		const subdiv = self.dom.menubody.append('div').style('margin-top', '10px')
 		subdiv
@@ -796,7 +796,7 @@ function setTermActions(self) {
 	}
 
 	self.removeTerm = () => {
-		const t = self.activeTerm
+		const t = self.activeLabel
 		const termgroups = self.termGroups
 		const grp = termgroups[t.grpIndex]
 		// remove this element
@@ -825,7 +825,7 @@ function setTermActions(self) {
 	}
 
 	self.removeTermGroup = () => {
-		const t = self.activeTerm
+		const t = self.activeLabel
 		const termgroups = self.termGroups
 		termgroups.splice(t.grpIndex, 1)
 		self.app.dispatch({
@@ -841,7 +841,7 @@ function setSampleGroupActions(self) {
 	self.showSampleGroupMenu = function() {
 		const d = event.target.__data__
 		if (!d) return
-		self.activeSampleGroup = d
+		self.activeLabel = d
 		self.dom.menutop.selectAll('*').remove()
 		self.dom.menubody
 			.style('padding', 0)
@@ -942,7 +942,7 @@ function setSampleGroupActions(self) {
 	self.removeSampleGroup = () => {
 		const divideBy = JSON.parse(JSON.stringify(self.config.divideBy))
 		if (!divideBy.exclude) divideBy.exclude = []
-		divideBy.exclude.push(self.activeSampleGroup.grp.id)
+		divideBy.exclude.push(self.activeLabel.grp.id)
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
@@ -961,7 +961,7 @@ function setTermGroupActions(self) {
 		self.activeLabel = d
 		self.dom.menutop.selectAll('*').remove()
 
-		const labelEditDiv = self.dom.menutop.append('div')
+		const labelEditDiv = self.dom.menutop.append('div').style('text-align', 'center')
 
 		self.dom.grpNameInput = labelEditDiv
 			.append('input')
@@ -991,11 +991,13 @@ function setTermGroupActions(self) {
 
 		const menuOptions = [
 			{ label: 'Edit', callback: self.showTermGroupEditMenu },
+			{ label: 'Add Terms', callback: self.showTermInsertMenu },
 			{ label: 'Delete', callback: self.removeTermGroup }
 		]
 
 		self.dom.menutop
 			.append('div')
+			.style('text-align', 'center')
 			.selectAll(':scope>.sja_menuoption')
 			.data(menuOptions)
 			.enter()
