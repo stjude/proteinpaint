@@ -2749,7 +2749,7 @@ async function query_oneread(req, r) {
 					':' +
 					cigar_seq +
 					':' +
-					req.query.start +
+					lst[0].boxes[0].start +
 					':' +
 					req.query.pos +
 					':' +
