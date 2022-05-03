@@ -13,7 +13,7 @@ import { make_leftlabels } from './leftlabel'
 loadTk
 rangequery_rglst
 ********************** INTERNAL
-get_parameter
+getParameter
 loadTk_finish_closure
 rangequery_add_variantfilters
 
@@ -33,16 +33,7 @@ export async function loadTk(tk, block) {
 			await makeTk(tk, block)
 		}
 
-		let data
-		if (tk.custom_variants) {
-			// has custom data on client side, no need to request from server
-			data = filter_custom_variants(tk, block)
-		} else {
-			// request data from server, either official or custom sources
-			const [par, headers] = get_parameter(tk, block)
-			data = await dofetch3('mds3?' + par, { headers })
-		}
-		if (data.error) throw data.error
+		const data = await getData(tk, block)
 
 		if (tk.uninitialized) {
 			tk.clear()
@@ -87,7 +78,7 @@ function loadTk_finish_closure(tk, block) {
 	}
 }
 
-function get_parameter(tk, block) {
+function getParameter(tk, block) {
 	// to get data for current view range
 
 	const par = ['genome=' + block.genome.name]
@@ -144,6 +135,21 @@ function get_parameter(tk, block) {
 	}
 	//par.push('samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp))
 	return [par.join('&'), headers]
+}
+
+async function getData(tk, block) {
+	// abstract various data sources
+	let data
+	if (tk.custom_variants) {
+		// has custom data on client side, no need to request from server
+		data = filter_custom_variants(tk, block)
+	} else {
+		// request data from server, either official or custom sources
+		const [par, headers] = getParameter(tk, block)
+		data = await dofetch3('mds3?' + par, { headers })
+	}
+	if (data.error) throw data.error
+	return data
 }
 
 export function rangequery_rglst(tk, block, par) {
