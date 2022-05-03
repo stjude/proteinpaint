@@ -322,18 +322,14 @@ function setRenderers(self) {
 
 	self.mayshow_wilcoxon = result => {
 		if (!result.wilcoxon) return
-		const div = self.newDiv('Wilcoxon rank sum test')
-		div
-			.append('div')
-			.text('p-value = ' + result.wilcoxon.pvalue)
-			.style('margin', '20px')
+		const div = self.newDiv('Wilcoxon rank sum test:', 'p-value = ' + result.wilcoxon.pvalue)
 		if (result.wilcoxon.boxplots) {
 			const bs = result.wilcoxon.boxplots
 			// {hasEff{}, noEff{}, minv, maxv}
 
 			const boxplotHeight = 20,
 				boxplotWidth = 400,
-				leftLabelWidth = 180,
+				leftLabelWidth = 160, // hardcoded number, must fit the boxplot labels
 				axisheight = 40,
 				labpad = 20,
 				vpad = 10
@@ -344,6 +340,7 @@ function setRenderers(self) {
 
 			const svg = div
 				.append('svg')
+				.style('margin-top', '10px')
 				.attr('width', leftLabelWidth + labpad + boxplotWidth + 10)
 				.attr('height', vpad * 3 + boxplotHeight * 2 + axisheight)
 			// anchor
@@ -387,11 +384,7 @@ function setRenderers(self) {
 
 	self.mayshow_fisher = result => {
 		if (!result.fisher) return
-		const div = self.newDiv("Fisher's exact test")
-		div
-			.append('div')
-			.text('p-value = ' + result.fisher.pvalue)
-			.style('margin', '20px')
+		const div = self.newDiv("Fisher's exact test:", 'p-value = ' + result.fisher.pvalue)
 		const table = div
 			.append('table')
 			.style('margin', '20px')
