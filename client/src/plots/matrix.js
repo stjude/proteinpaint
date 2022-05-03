@@ -291,9 +291,11 @@ class Matrix {
 			// may override the settings.sortTermsBy with a sorter that is specific to a term group
 			const termSorter = grp.sortTermsBy ? getTermSorter(this, grp) : this.termSorter
 			const processedLst = lst
-				.filter(
-					t => !grp.settings || !('minNumSamples' in grp.settings) || t.counts.samples >= grp.settings.minNumSamples
-				)
+				.filter(t => {
+					if ('minNumSamples' in t.tw) return t.tw.minNumSamples <= t.counts.samples
+					if (!grp.settings) return true
+					return !('minNumSamples' in grp.settings) || t.counts.samples >= grp.settings.minNumSamples
+				})
 				.sort(termSorter)
 
 			if (!processedLst.length) continue

@@ -335,9 +335,41 @@ function setTermActions(self) {
 	}
 
 	self.showTermEditMenu = async () => {
-		await self.pill.main(self.activeLabel.tw)
 		self.dom.menubody.selectAll('*').remove()
-		self.pill.showMenu()
+		const t = self.activeLabel
+		if (t.tw.term.type == 'geneVariant') {
+			const div = self.dom.menubody.append('div')
+			const label = div.append('label')
+			label.append('span').html('Minimum #sample to be visible')
+			const input = label
+				.append('input')
+				.attr('type', 'number')
+				.style('margin-left', '5px')
+				.style('width', '50px')
+				.property('value', t.tw.minNumSamples || 0)
+
+			div
+				.append('div')
+				.append('button')
+				.html('Submit')
+				.on('click', () => {
+					t.tw.minNumSamples = Number(input.property('value'))
+					self.app.dispatch({
+						type: 'plot_nestedEdits',
+						id: self.opts.id,
+						edits: [
+							{
+								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.lstIndex],
+								value: t.tw
+							}
+						]
+					})
+					self.dom.tip.hide()
+				})
+		} else {
+			await self.pill.main(self.activeLabel.tw)
+			self.pill.showMenu()
+		}
 	}
 
 	self.showMoveMenu = async () => {

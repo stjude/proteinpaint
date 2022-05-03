@@ -270,9 +270,10 @@ function getGeneTermGroups() {
 	for(const g of genegroups) {
     const grp = {
       name: g.name,
-      lst: g.lst.map(term => {
-        term.type = 'geneVariant'
+      lst: g.lst.map(t => {
+        const term = {name: t.name, type: 'geneVariant'}
         const tw = {term}
+        if ('minNumSamples' in t) tw.minNumSamples = t.minNumSamples
         const [name, suffix] = term.name.split('_')
         if (suffix == 'SV') {
           tw.overrides = ['SVfill']
@@ -413,7 +414,8 @@ const genegroups = [
               "name": "CTCF"
           },
           {
-              "name": "CTNNB1"
+              "name": "CTNNB1",
+              minNumSamples: 1
           },
           {
               "name": "CUX1"
