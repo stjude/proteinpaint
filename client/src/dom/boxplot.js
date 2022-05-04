@@ -24,7 +24,6 @@ export function drawBoxplot({ bp, g, color, scale, rowheight, labpad }) {
 			.attr('font-family', 'Arial')
 			.attr('text-anchor', 'end')
 			.attr('dominant-baseline', 'central')
-			.attr('class', 'sja_clbtext')
 			.attr('fill', color)
 			.attr('x', -labpad)
 			.attr('y', rowheight / 2)
