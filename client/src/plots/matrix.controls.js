@@ -1,6 +1,7 @@
 import { select, event } from 'd3-selection'
 import { initByInput } from './controls.config'
 import { to_svg } from '../client'
+import { fillTermWrapper } from '../common/termsetting'
 
 export class MatrixControls {
 	constructor(opts, appState) {
@@ -62,6 +63,9 @@ export class MatrixControls {
 					state: {
 						vocab: this.opts.vocab
 						//activeCohort: appState.activeCohort
+					},
+					processInput: tw => {
+						if (tw) fillTermWrapper(tw)
 					}
 				},
 				{

@@ -202,12 +202,14 @@ class Matrix {
 
 	setSampleGroupsOrder(data) {
 		const s = this.settings.matrix
-		const defaultSampleGrp = { id: undefined, lst: [] }
+		const defaultSampleGrp = {
+			id: this.config.divideBy?.$id,
+			name: this.config.divideBy ? 'Not annotated' : '',
+			lst: []
+		}
 		this.sampleSorter = getSampleSorter(this, s, data.lst)
 
 		const sampleGroups = new Map()
-
-		defaultSampleGrp.name = this.config.divideBy ? 'Not annotated' : ''
 		const term = this.config.divideBy?.term || {}
 		const $id = this.config.divideBy?.$id || '-'
 		const exclude = this.config.divideBy?.exclude || []
