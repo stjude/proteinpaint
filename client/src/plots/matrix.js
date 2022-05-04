@@ -5,7 +5,7 @@ import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { fillTermWrapper } from '../common/termsetting'
 import { MatrixCluster } from './matrix.cluster'
 import { MatrixControls } from './matrix.controls'
-import htmlLegend from '../dom/html.legend'
+import svgLegend from '../dom/svg.legend'
 import { mclass } from '../../shared/common'
 import { Menu } from '../dom/menu'
 import { setInteractivity } from './matrix.interactivity'
@@ -55,7 +55,8 @@ class Matrix {
 				.append('g')
 				.attr('class', 'sjpp-matrix-term-label-g')
 				.on('click', this.showTermMenu),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px'),
+			//legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px'),
+			legendG: mainG.append('g'),
 			tip,
 			menutop: tip.d.append('div'),
 			menubody: tip.d.append('div')
@@ -72,11 +73,10 @@ class Matrix {
 
 		this.setControls(appState)
 		this.clusterRenderer = new MatrixCluster({ holder: this.dom.cluster, app: this.app, parent: this })
-		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
-			settings: {
-				legendOrientation: 'grid',
-				legendTextAlign: 'left'
-			},
+		this.legendRenderer = svgLegend({
+			holder: this.dom.legendG,
+			rectFillFxn: d => d.color,
+			iconStroke: '#aaa',
 			handlers: {
 				legend: {
 					click: this.legendClick
@@ -172,8 +172,14 @@ class Matrix {
 				dimensions: this.dimensions
 			})
 
+			this.legendRenderer(this.legendData, {
+				settings: {
+					svgw: Math.max(400, this.dimensions.mainw),
+					svgh: this.dimensions.mainh + this.dimensions.yOffset
+				}
+			})
+
 			await this.adjustSvgDimensions(prevTranspose)
-			this.legendRenderer(this.legendData)
 		} catch (e) {
 			throw e
 		}
