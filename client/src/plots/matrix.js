@@ -650,7 +650,7 @@ class Matrix {
 					keys.length < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 
 			legendData.push({
-				name: t.tw.legend?.group || term.name,
+				name: t.tw.legend?.group || t.tw.label || term.name,
 				items: keys.map((key, i) => {
 					const item = legend.values[key]
 					return {
