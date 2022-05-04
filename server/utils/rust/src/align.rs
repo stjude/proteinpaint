@@ -88,54 +88,6 @@ fn main() {
     }
 }
 
-//fn check_if_read_spliced(
-//    query_seq: &String,
-//    ref_seq: &String,
-//    cigar_chars: &String,
-//    cigar_pos: &String,
-//    variant_chr: &String,
-//    variant_pos: i64,
-//    variant_ref: &String,
-//    variant_alt: &String,
-//) -> String {
-//    let cigar_chars_vec: Vec<&str> = cigar_chars.split("-").collect(); // Various cigar characters separated by "-" character
-//    let cigar_poss_vec: Vec<&str> = cigar_pos.split("-").collect(); // Various cigar characters separated by "-" character
-//
-//    // Check if there is any splicing in the read i.e checking for charcter "N" in the cigar sequence
-//    let mut is_spliced = false;
-//    let mut sequence_starts = Vec::<i64>::new();
-//    let mut sequence_stops = Vec::<i64>::new();
-//    let mut sequence_starts_wrt_read = Vec::<usize>::new();
-//    let mut sequence_stops_wrt_read = Vec::<usize>::new();
-//    let mut next_char_after_splicing = false;
-//
-//    // Determine sequence starts and stops for each fragment of the sequence (if spliced)
-//    for i in 0..cigar_chars_vec.len() {
-//        if i == 0 {
-//            sequence_starts.push(cigar_poss_vec[i].parse::<i64>().unwrap());
-//        } else if i == cigar_chars_vec.len() - 1 {
-//            sequence_stops.push(cigar_poss_vec[i].parse::<i64>().unwrap());
-//        } else if cigar_chars_vec[i] == "N" {
-//            is_spliced = true;
-//            next_char_after_splicing = true;
-//            sequence_stops.push(cigar_poss_vec[i].parse::<i64>().unwrap());
-//        } else if next_char_after_splicing == true {
-//            next_char_after_splicing = false;
-//            sequence_starts.push(cigar_poss_vec[i].parse::<i64>().unwrap());
-//        }
-//    }
-//    let mut final_sequence = query_seq.to_owned(); // In case there is no splicing
-//    if is_spliced == true {
-//        // Spliced sequence, determine in which fragment the variant belongs
-//        println!("sequence_starts:{:?}", sequence_starts);
-//        println!("sequence_stops:{:?}", sequence_stops);
-//        for i in 0..sequence_starts.len() {
-//            if sequence_starts[i] < variant_pos && variant_pos < sequence_stops[i] {}
-//        }
-//    }
-//    final_sequence
-//}
-
 fn align_single_reads(
     query_seq: &String,
     ref_seq: String,

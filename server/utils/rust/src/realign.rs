@@ -1140,8 +1140,6 @@ pub fn check_first_last_nucleotide_correctly_aligned(
                 r_seq_correct.push(r_seq_chars[i]);
             }
             alignment_changed = true;
-        } else {
-            alignment_changed = false;
         }
     }
     if alignment_changed == false {

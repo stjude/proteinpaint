@@ -2738,6 +2738,26 @@ async function query_oneread(req, r) {
 			cigar_seq += cigar_pos[i] + cigar_chars[i]
 		}
 		if (req.query.altseq) {
+			// Uncomment this line to test the single-read alignment in command line
+
+			//console.log(
+			//	'single:' +
+			//		lst[0].seq +
+			//		':' +
+			//		req.query.refseq +
+			//		':' +
+			//		req.query.altseq +
+			//		':' +
+			//		cigar_seq +
+			//		':' +
+			//		lst[0].boxes[0].start +
+			//		':' +
+			//		req.query.pos +
+			//		':' +
+			//		req.query.ref +
+			//		':' +
+			//		req.query.alt
+			//)
 			const alignment_output = await utils.run_rust(
 				'align',
 				'single:' +
