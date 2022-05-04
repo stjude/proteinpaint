@@ -18,7 +18,11 @@ sqlite3 db < $DIR/load.sql
 
 echo "updating the terms table"
 if [[ -f $DIR/setterms.js ]]; then
-	node $DIR/setterms.js
+	if [[ ! -f $DIR/setterms.bundle.js || $DIR/setterms.js -nt $DIR/setterms.bundle.js ]]; then
+		node $DIR/setterms.js
+	else
+		node $DIR/setterms.bundle.js
+	fi
 else 
 	# production
 	node $DIR/setterms.bundle.js 
