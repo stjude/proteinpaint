@@ -55,7 +55,9 @@ export default function svgLegend(opts) {
 
 		opts.holder.selectAll('g').remove()
 		const d = settings.dimensions
-		opts.holder.attr('transform', settings.ontop ? null : `translate(${d.xOffset},${settings.svgh})`)
+		if (!opts.holder.attr('transform')) {
+			opts.holder.attr('transform', settings.ontop ? null : `translate(${d.xOffset},${settings.svgh})`)
+		}
 
 		const l = opts.holder.selectAll('g').data(data)
 
