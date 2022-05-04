@@ -151,7 +151,7 @@ fn main() {
     let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect(); // Vector containing cigar sequences
     let sequence_flags_list: Vec<&str> = sequence_flags.split("-").collect(); // Vector containing sam flag of read sequences
     let single_thread_limit: usize = 1000; // If total number of reads is lower than this value the reads will be parsed sequentially in a single thread, if greaterreads will be parsed in parallel
-    let max_threads: usize = 3; // Max number of threads in case the parallel processing of reads is invoked
+    let max_threads: usize = 5; // Max number of threads in case the parallel processing of reads is invoked
     let ref_length: i64 = refallele.len() as i64; // Determining length of ref allele
     let alt_length: i64 = altallele.len() as i64; // Determining length of alt allele
     let mut indel_length: i64 = alt_length; // Determining indel length, in case of an insertion it will be alt_length. In case of a deletion, it will be ref_length

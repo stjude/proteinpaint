@@ -2648,6 +2648,7 @@ async function route_getread(genome, req) {
 		lst[0].q_align_alt = seglst.q_align_alt
 		lst[0].align_wrt_alt = seglst.align_wrt_alt
 		lst[0].r_align_alt = seglst.r_align_alt
+		lst[0].correct_start_position = Number.parseInt(seglst.correct_start_position)
 	}
 	return { lst }
 }
@@ -2809,6 +2810,11 @@ async function query_oneread(req, r) {
 						.replace(/"/g, '')
 						.replace(/,/g, '')
 						.replace('r_seq_alt:', '')
+				} else if (item.includes('correct_start_position')) {
+					lst.correct_start_position = item
+						.replace(/"/g, '')
+						.replace(/,/g, '')
+						.replace('correct_start_position:', '')
 				} else {
 					console.log(item)
 				}

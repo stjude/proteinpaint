@@ -30,7 +30,6 @@ fn main() {
         Err(error) => println!("Piping error: {}", error),
     }
     let args: Vec<&str> = input.split(":").collect(); // Various input from nodejs is separated by ":" character
-    println!("args:{:?}", args);
     let align_case: String = args[0].parse::<String>().unwrap(); // Single-read alignment or multi-read alignment
     if align_case == "single".to_string() {
         let query_seq: String = args[1].parse::<String>().unwrap(); // Query sequence
@@ -41,24 +40,47 @@ fn main() {
         let variant_pos = args[6].parse::<i64>().unwrap(); // Contains variant position
         let variant_ref = args[7].parse::<String>().unwrap(); // Contains variant reference
         let variant_alt = args[8].parse::<String>().unwrap().replace("\n", ""); // Contains variant alternate
-        let (q_seq_ref, align_ref, r_seq_ref) = align_single_reads(
-            &query_seq,
-            ref_seq,
-            &cigar_seq,
+
+        let mut indel_length: i64 = variant_alt.len() as i64; // Determining indel length, in case of an insertion it will be alt_length. In case of a deletion, it will be ref_length
+        if variant_ref.len() > variant_alt.len() {
+            indel_length = variant_ref.len() as i64;
+        }
+        let (
+            _within_indel,
+            correct_start_position,
+            _correct_end_position,
+            splice_freq,
+            splice_start_pos,
+            splice_stop_pos,
+            _splice_start_cigar,
+            _splice_stop_cigar,
+        ) = realign::check_read_within_indel_region(
+            // Checks if the read contains the indel region (or a part of it)
             read_start,
+            cigar_seq.to_owned(),
             variant_pos,
-            &variant_ref,
-            &variant_alt,
-        ); // Aligning against reference
-        let (q_seq_alt, align_alt, r_seq_alt) = align_single_reads(
-            &query_seq,
-            alt_seq,
-            &cigar_seq,
-            read_start,
-            variant_pos,
-            &variant_ref,
-            &variant_alt,
-        ); // Aligning against alternate
+            indel_length as usize,
+            1, // Using strictness = 1
+            query_seq.len(),
+        );
+
+        let mut final_sequence = query_seq.to_owned(); // No splicing
+        if splice_freq > 0 {
+            final_sequence = String::new(); // Contains spliced sequences which overlaps with indel region. If read not spliced, contains entire sequence
+            let sequence_vector: Vec<_> = query_seq.chars().collect(); // Vector containing each sequence nucleotides as separate elements in the vector
+
+            //println!("splice_start_pos:{}", splice_start_pos);
+            //println!("splice_stop_pos:{}", splice_stop_pos);
+            for k in splice_start_pos..splice_stop_pos {
+                if (k as usize) < sequence_vector.len() {
+                    final_sequence += &sequence_vector[k as usize].to_string();
+                }
+            }
+        }
+        //println!("final_sequence:{}", final_sequence);
+
+        let (q_seq_ref, align_ref, r_seq_ref) = align_single_reads(&final_sequence, ref_seq); // Aligning against reference
+        let (q_seq_alt, align_alt, r_seq_alt) = align_single_reads(&final_sequence, alt_seq); // Aligning against alternate
 
         println!("q_seq_ref:{}", q_seq_ref);
         println!("align_ref:{}", align_ref);
@@ -66,6 +88,7 @@ fn main() {
         println!("q_seq_alt:{}", q_seq_alt);
         println!("align_alt:{}", align_alt);
         println!("r_seq_alt:{}", r_seq_alt);
+        println!("correct_start_position:{}", correct_start_position);
     } else if align_case == "multi".to_string() {
         let ref_seq: String = args[1].parse::<String>().unwrap(); // First sequence is always reference sequence
         let mut main_seq: String = String::new();
@@ -88,79 +111,22 @@ fn main() {
     }
 }
 
-fn align_single_reads(
-    query_seq: &String,
-    ref_seq: String,
-    cigar_seq: &String,
-    read_start: i64,
-    variant_pos: i64,
-    variant_ref: &String,
-    variant_alt: &String,
-) -> (String, String, String) {
+fn align_single_reads(query_seq: &String, ref_seq: String) -> (String, String, String) {
     let ref_vector: Vec<_> = ref_seq.chars().collect();
-
-    let mut indel_length: i64 = variant_alt.len() as i64; // Determining indel length, in case of an insertion it will be alt_length. In case of a deletion, it will be ref_length
-    if variant_ref.len() > variant_alt.len() {
-        indel_length = variant_ref.len() as i64;
-    }
-    //let spliced_sequence = check_if_read_spliced(
-    //    query_seq,
-    //    &ref_seq,
-    //    cigar_chars,
-    //    cigar_pos,
-    //    variant_chr,
-    //    variant_pos,
-    //    variant_ref,
-    //    variant_alt,
-    //);
-
-    let (
-        _within_indel,
-        _correct_start_position,
-        _correct_end_position,
-        splice_freq,
-        splice_start_pos,
-        splice_stop_pos,
-        _splice_start_cigar,
-        _splice_stop_cigar,
-    ) = realign::check_read_within_indel_region(
-        // Checks if the read contains the indel region (or a part of it)
-        read_start,
-        cigar_seq.to_owned(),
-        variant_pos,
-        indel_length as usize,
-        1, // Using strictness = 1
-        query_seq.len(),
-    );
-
-    let mut final_sequence = query_seq.to_owned(); // No splicing
-    if splice_freq > 0 {
-        final_sequence = String::new(); // Contains spliced sequences which overlaps with indel region. If read not spliced, contains entire sequence
-        let sequence_vector: Vec<_> = query_seq.chars().collect(); // Vector containing each sequence nucleotides as separate elements in the vector
-
-        //println!("splice_start_pos:{}", splice_start_pos);
-        //println!("splice_stop_pos:{}", splice_stop_pos);
-        for k in splice_start_pos..splice_stop_pos {
-            if (k as usize) < sequence_vector.len() {
-                final_sequence += &sequence_vector[k as usize].to_string();
-            }
-        }
-    }
-    //println!("final_sequence:{}", final_sequence);
-    let query_vector: Vec<_> = final_sequence.chars().collect();
+    let query_vector: Vec<_> = query_seq.chars().collect();
 
     let score = |a: u8, b: u8| if a == b { 1i32 } else { -1i32 };
     // gap open score: -5, gap extension score: -1
 
     let mut aligner = Aligner::with_capacity(
-        final_sequence.as_bytes().len(),
+        query_seq.as_bytes().len(),
         ref_seq.as_bytes().len(),
         -5, // gap open penalty
         -1, // gap extension penalty
         &score,
     );
 
-    let alignment = aligner.global(&final_sequence.as_bytes(), ref_seq.as_bytes());
+    let alignment = aligner.global(&query_seq.as_bytes(), ref_seq.as_bytes());
     //let alignment = aligner.semiglobal(query_seq.as_bytes(), ref_seq.as_bytes());
     //let alignment = aligner.local(query_seq.as_bytes(), ref_seq.as_bytes());
 
@@ -230,7 +196,9 @@ fn align_single_reads(
     //println!("q_seq:{}", q_seq);
     //println!("align:{}", align);
     //println!("r_seq:{}", r_seq);
-    realign::check_first_last_nucleotide_correctly_aligned(&q_seq, &align, &r_seq)
+    let (q_seq_final, align_final, r_seq_final) =
+        realign::check_first_last_nucleotide_correctly_aligned(&q_seq, &align, &r_seq);
+    (q_seq_final, align_final, r_seq_final)
 }
 
 fn align_multi_reads(query_seq: &String, ref_seq: &String) -> (String, String, String) {

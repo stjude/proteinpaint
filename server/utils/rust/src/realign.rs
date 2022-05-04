@@ -1106,7 +1106,7 @@ pub fn check_first_last_nucleotide_correctly_aligned(
         }
 
         //println!("final_print_position:{}", final_print_position);
-        println!("all_matched_nucleotides:{}", all_matched_nucleotides);
+        //println!("all_matched_nucleotides:{}", all_matched_nucleotides);
 
         if all_matched_nucleotides == true {
             for k in 0..first_partially_matched_nucleotides_left.len() {
