@@ -24,6 +24,7 @@ export class MatrixControls {
 				{ value: 'anno', label: 'Terms' },
 				{ value: 'cols', label: 'Column layout' },
 				{ value: 'rows', label: 'Row layout' },
+				{ value: 'legend', label: 'Legend layout' },
 				//{ label: 'Undo', callback: ()=>this.recover.goto(-1) },
 				//{ label: 'Redo', callback: ()=>this.recover.goto(1) },
 				{ label: 'Download SVG', callback: () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }) }
@@ -168,6 +169,65 @@ export class MatrixControls {
 					chartType: 'matrix',
 					settingsKey: 'rowlabelpos',
 					options: [{ label: 'Rows', value: 'left' }, { label: 'Groups', value: 'right' }]
+				}
+			],
+
+			legend: [
+				//ontop: false,
+				{
+					label: 'Font size',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'fontsize'
+				},
+				{
+					label: 'Line height',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'lineh'
+				},
+				{
+					label: 'Icon height',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'iconh'
+				},
+				{
+					label: 'Icon width',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'iconw'
+				},
+				{
+					label: 'Left margin',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'padleft'
+				},
+				/*{
+					label: 'Bottom margin',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'padbtm'
+				},*/
+				{
+					label: 'Item left pad',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'padx'
+				},
+				{
+					label: 'Item layout',
+					type: 'checkbox',
+					chartType: 'legend',
+					settingsKey: 'linesep',
+					boxLabel: 'Line separated'
+				},
+				{
+					label: 'Left indent',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'hangleft'
 				}
 			]
 		}

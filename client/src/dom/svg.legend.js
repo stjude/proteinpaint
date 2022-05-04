@@ -5,21 +5,19 @@ export default function svgLegend(opts) {
 	let currliney = 0
 	let currG
 
-	const defaults = {
-		legendontop: false,
-		legendh: 0,
-		legendlineh: 25,
-		legendpadx: 5,
-		legendpadleft: 0, //150,
-		legendpadright: 20,
-		legendpadbtm: 30,
-		legendfontsize: 12,
-		legendiconh: 10,
-		legendiconw: 10,
-		samplecount4legend: true,
-		legendhangleft: 1,
-		legendlinesep: false,
-		legendmutationorder: [
+	const defaultSettings = {
+		ontop: false,
+		lineh: 25,
+		padx: 5,
+		padleft: 0, //150,
+		padright: 20,
+		padbtm: 30,
+		fontsize: 12,
+		iconh: 10,
+		iconw: 10,
+		hangleft: 1,
+		linesep: false,
+		mutationorder: [
 			'M',
 			'E',
 			'F',
@@ -48,22 +46,16 @@ export default function svgLegend(opts) {
 		itemOpacity: 1
 	}
 
-	const settings = Object.assign(defaults, opts.settings || {})
+	const settings = Object.assign(defaultSettings, opts.settings || {})
 
 	function render(data, overrides = {}) {
-		/*const legendGroups = holder.selectAll(':scope>g').data(data)
-		legendGroups.exit().remove()
-		legendGroups.each(updateLegendGroup)
-		legendGroups.enter().append('g').each(addLegendGroup)*/
 		Object.assign(settings, overrides.settings || {})
-		currlinex = settings.legendpadleft
+		currlinex = settings.padleft
 		currliney = 0
 
 		opts.holder.selectAll('g').remove()
 		const d = settings.dimensions
-		opts.holder.attr('transform', settings.legendontop ? null : `translate(${d.xOffset},${settings.svgh})`)
-		//.on('mouseover.tphm2', settings.handlers.legend.mouseover)
-		//.on('click.tphm2', settings.handlers.legend.click)
+		opts.holder.attr('transform', settings.ontop ? null : `translate(${d.xOffset},${settings.svgh})`)
 
 		const l = opts.holder.selectAll('g').data(data)
 
@@ -72,35 +64,33 @@ export default function svgLegend(opts) {
 			.append('g')
 			.each(addGroup)
 
-		return currliney + settings.legendlineh + settings.legendpadbtm
+		return currliney + settings.lineh + settings.padbtm
 	}
 
 	function addGroup(d, i) {
 		if (!d.items || !d.items.length) return
 		currlinex = 0
-		currliney += settings.legendlineh
+		currliney += settings.lineh
 
 		let g = select(this)
-		const leftdist = settings.legendhangleft
-			? settings.legendpadleft + settings.legendhangleft - settings.legendpadx
-			: settings.legendpadleft
+		const leftdist = settings.hangleft ? settings.padleft + settings.hangleft - settings.padx : settings.padleft
 
 		const grplabel = g
 			.append('text')
-			.attr('transform', 'translate(' + leftdist + ',' + (currliney + settings.legendiconh / 2) + ')')
-			.attr('text-anchor', settings.legendhangleft ? 'end' : 'start')
+			.attr('transform', 'translate(' + leftdist + ',' + (currliney + settings.iconh / 2) + ')')
+			.attr('text-anchor', settings.hangleft ? 'end' : 'start')
 			.attr('font-weight', 700)
-			.attr('font-size', settings.legendfontsize)
+			.attr('font-size', settings.fontsize)
 			.attr('dominant-baseline', 'central')
-			.text(d.name) // + (settings.samplecount4legend ? ' (sample count)' : ''))
+			.text(d.name)
 
 		if (settings.linesep) {
-			currlinex = settings.legendpadleft
-			currliney += settings.legendlineh
-		} else if (settings.legendhangleft) {
-			currlinex = leftdist + 2 * settings.legendpadx
+			currlinex = settings.padleft
+			currliney += settings.lineh
+		} else if (settings.hangleft) {
+			currlinex = leftdist + 2 * settings.padx
 		} else {
-			currlinex += settings.legendpadleft + grplabel.node().getBBox().width + 2 * settings.legendpadx
+			currlinex += settings.padleft + grplabel.node().getBBox().width + 2 * settings.padx
 		}
 
 		if (d.sorter) d.items.sort(d.sorter)
@@ -130,11 +120,8 @@ export default function svgLegend(opts) {
 
 		const itemlabel = g
 			.append('text')
-			.attr(
-				'transform',
-				'translate(' + (settings.legendiconw + settings.legendpadx / 2) + ',' + settings.legendiconh / 2 + ')'
-			)
-			.attr('font-size', settings.legendfontsize)
+			.attr('transform', 'translate(' + (settings.iconw + settings.padx / 2) + ',' + settings.iconh / 2 + ')')
+			.attr('font-size', settings.fontsize)
 			.attr('dominant-baseline', 'central')
 			.style('cursor', 'default')
 			.style(
@@ -169,24 +156,22 @@ export default function svgLegend(opts) {
 		})
 
 		const bbox = itemlabel.node().getBBox()
-		currlinex += settings.legendiconw + bbox.width + 2.5 * settings.legendpadx
-		if (settings.legendlinesep || currlinex > settings.svgw - settings.legendpadright) {
-			currliney += settings.legendlineh
-			const leftdist = !settings.legendhangleft
-				? settings.legendpadleft
-				: settings.legendpadleft + settings.legendhangleft + settings.legendpadx
+		currlinex += settings.iconw + bbox.width + 2.5 * settings.padx
+		if (settings.linesep || currlinex > settings.svgw - settings.padright) {
+			currliney += settings.lineh
+			const leftdist = !settings.hangleft ? settings.padleft : settings.padleft + settings.hangleft + settings.padx
 
 			g.attr('transform', 'translate(' + leftdist + ',' + currliney + ')')
-			currlinex = settings.legendiconw + bbox.width + 2.5 * settings.legendpadx + settings.legendpadleft
-			if (settings.legendhangleft) currlinex = settings.legendiconw + bbox.width + 2.5 * settings.legendpadx + leftdist
-			else currlinex = settings.legendiconw + bbox.width + 2.5 * settings.legendpadx + settings.legendpadleft
+			currlinex = settings.iconw + bbox.width + 2.5 * settings.padx + settings.padleft
+			if (settings.hangleft) currlinex = settings.iconw + bbox.width + 2.5 * settings.padx + leftdist
+			else currlinex = settings.iconw + bbox.width + 2.5 * settings.padx + settings.padleft
 		}
 
 		const rect = g
 			.append('rect')
-			.attr('height', settings.legendiconh)
-			.attr('width', settings.legendiconw)
-			.attr('y', settings.legendfontsize - bbox.height + (bbox.height - settings.legendiconh) / 2)
+			.attr('height', settings.iconh)
+			.attr('width', settings.iconw)
+			.attr('y', settings.fontsize - bbox.height + (bbox.height - settings.iconh) / 2)
 			.attr('fill', opts.rectFillFxn)
 			.attr('stroke', opts.iconStroke)
 			.attr('shape-rendering', 'crispEdges')

@@ -207,13 +207,9 @@ export function setRenderers(self) {
 			.duration(duration)
 			.attr('transform', `translate(${x},${y})`)
 
+		// this position is based on layout.btm.attr.boxTransform, plus box height and margins
 		const legendX = d.xOffset + (s.transpose ? 20 : 0)
-		const [lx, ly] = self.dom.seriesesG
-			.attr('transform')
-			.split('translate(')[1]
-			.split(')')[0]
-			.split(',')
-		const legendY = Number(ly) + seriesBox.height + btmBox.height + 20
+		const legendY = d.yOffset + d.mainh + s.collabelgap + btmBox.height + 20
 
 		self.dom.legendG
 			.transition()

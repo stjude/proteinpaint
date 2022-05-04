@@ -174,11 +174,14 @@ class Matrix {
 			})
 
 			this.legendRenderer(this.legendData, {
-				settings: {
-					svgw: Math.max(400, d.mainw),
-					svgh: d.mainh + d.yOffset,
-					dimensions: d
-				}
+				settings: Object.assign(
+					{
+						svgw: Math.max(400, d.mainw),
+						svgh: d.mainh + d.yOffset,
+						dimensions: d
+					},
+					this.settings.legend
+				)
 			})
 
 			await this.adjustSvgDimensions(prevTranspose)
@@ -722,6 +725,19 @@ export async function getPlotConfig(opts, app) {
 				termLabelOffset: 80,
 				termGrpLabelOffset: 80,
 				duration: 250
+			},
+			legend: {
+				ontop: false,
+				lineh: 25,
+				padx: 5,
+				padleft: 0, //150,
+				padright: 20,
+				padbtm: 30,
+				fontsize: 12,
+				iconh: 10,
+				iconw: 10,
+				hangleft: 1,
+				linesep: false
 			}
 		}
 	}
