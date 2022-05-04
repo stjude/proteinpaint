@@ -114,10 +114,14 @@ function processCustomBinInputs(self) {
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
 	const inputDivs = self.dom.customBinLabelDiv.node().querySelectorAll('div')
 	let prevBin
-	const data = self.dom.customBinBoundaryInput
+	const inputData = self.dom.customBinBoundaryInput
 		.property('value')
 		.split('\n')
 		.filter(d => d != '' && !isNaN(d))
+
+	const trackBins = new Set()
+	inputData.filter(d => !trackBins.has(d)).forEach(d => trackBins.add(d))
+	const data = Array.from(trackBins)
 		.map(d => +d)
 		.sort((a, b) => a - b)
 		.map((d, i) => {
