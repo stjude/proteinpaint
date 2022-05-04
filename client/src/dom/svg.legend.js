@@ -60,7 +60,8 @@ export default function svgLegend(opts) {
 		currliney = 0
 
 		opts.holder.selectAll('g').remove()
-		opts.holder.attr('transform', settings.legendontop ? null : 'translate(0,' + settings.svgh + ')')
+		const d = settings.dimensions
+		opts.holder.attr('transform', settings.legendontop ? null : `translate(${d.xOffset},${settings.svgh})`)
 		//.on('mouseover.tphm2', settings.handlers.legend.mouseover)
 		//.on('click.tphm2', settings.handlers.legend.click)
 

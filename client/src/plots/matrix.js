@@ -165,17 +165,19 @@ class Matrix {
 			this.render()
 
 			const [xGrps, yGrps] = !this.settings.matrix.transpose ? ['sampleGrps', 'termGrps'] : ['termGrps', 'sampleGrps']
+			const d = this.dimensions
 			this.clusterRenderer.main({
 				settings: this.settings.matrix,
 				xGrps: this[xGrps],
 				yGrps: this[yGrps],
-				dimensions: this.dimensions
+				dimensions: d
 			})
 
 			this.legendRenderer(this.legendData, {
 				settings: {
-					svgw: Math.max(400, this.dimensions.mainw),
-					svgh: this.dimensions.mainh + this.dimensions.yOffset
+					svgw: Math.max(400, d.mainw),
+					svgh: d.mainh + d.yOffset,
+					dimensions: d
 				}
 			})
 

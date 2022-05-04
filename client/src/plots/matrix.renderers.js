@@ -188,6 +188,7 @@ export function setRenderers(self) {
 		const leftBox = self.layout.left.box.node().getBBox()
 		const rtBox = self.layout.right.box.node().getBBox()
 		const legendBox = self.dom.legendG.node().getBBox()
+		const seriesBox = self.dom.seriesesG.node().getBBox()
 
 		d.extraWidth = leftBox.width + rtBox.width + s.margin.left + s.margin.right + s.rowlabelgap * 2
 		d.extraHeight = topBox.height + btmBox.height + s.margin.top + s.margin.bottom + s.collabelgap * 2
@@ -207,7 +208,12 @@ export function setRenderers(self) {
 			.attr('transform', `translate(${x},${y})`)
 
 		const legendX = d.xOffset + (s.transpose ? 20 : 0)
-		const legendY = y + d.mainh + d.extraHeight
+		const [lx, ly] = self.dom.seriesesG
+			.attr('transform')
+			.split('translate(')[1]
+			.split(')')[0]
+			.split(',')
+		const legendY = Number(ly) + seriesBox.height + btmBox.height + 20
 
 		self.dom.legendG
 			.transition()
