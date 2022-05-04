@@ -252,7 +252,7 @@ document.body.onload = () => runproteinpaint({
 						id: 'Event-free survival'
 					},
 					term2: {
-					  id: 'Met'
+					  id: 'Metastasis'
 					},
 					settings: {
 						survival: {
@@ -290,6 +290,7 @@ function getGeneTermGroups() {
       lst: g.lst.map(t => {
         const term = {name: t.name, type: 'geneVariant'}
         const tw = {term}
+        if ('label' in t) tw.label = t.label
         if ('minNumSamples' in t) tw.minNumSamples = t.minNumSamples
         const [name, suffix] = term.name.split('_')
         if (suffix == 'SV') {
@@ -655,9 +656,6 @@ const genegroups = [
           },
           {
               "name": "C19MC"
-          },
-          {
-              "name": "GFI1B"
           },
           {
               "name": "MYC"

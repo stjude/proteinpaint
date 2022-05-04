@@ -1,4 +1,3 @@
-const ds = require('../../server/dataset/pnet.hg19.js')
 const bettersqlite = require('better-sqlite3')
 const initBinConfig = require('../../server/shared/termdb.initbinconfig')
 
