@@ -326,6 +326,10 @@ function setRenderers(self) {
 		if (!result.cuminc) return
 		const div = self.newDiv('Cumulative incidence test:', 'p-value = ' + result.cuminc.pvalue)
 		console.log(result.cuminc.final_data)
+		/*
+		const _ = await import('./cuminc')
+		_.plotter( result.cuminc.final_data, div)
+		*/
 	}
 
 	self.mayshow_wilcoxon = result => {

@@ -83,6 +83,7 @@ snplocusPostprocess
 		getLine4OneSnp
 	lowAFsnps_wilcoxon
 	lowAFsnps_fisher
+	lowAFsnps_cuminc
 */
 
 // list of supported types
@@ -929,7 +930,7 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 			if (d.outcome_event != 0 && d.outcome_event != 1) throw 'd.outcome_event is not 0/1'
 			if (!Number.isFinite(d.outcome_time)) throw 'd.outcome_time is not numeric'
 
-			// to add to fdata[]
+			// data point of this sample, to add to fdata[]
 			const sampleData = {
 				time: d.outcome_time,
 				event: d.outcome_event
@@ -941,12 +942,9 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 				continue
 			}
 			const [a, b] = gt.split('/')
-			if (snpO.effAle == a || snpO.effAle == b) {
-				// this person carries the allele
-				sampleData.series = '1'
-			} else {
-				sampleData.series = '2'
-			}
+			// if this person carries the allele, assign to series "1", otherwise "2"
+			sampleData.series = snpO.effAle == a || snpO.effAle == b ? '1' : '2'
+
 			fdata.push(sampleData)
 		}
 
