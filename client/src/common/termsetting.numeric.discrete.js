@@ -119,10 +119,9 @@ function processCustomBinInputs(self) {
 		.split('\n')
 		.filter(d => d != '' && !isNaN(d))
 
-	const trackBins = new Set()
+	const trackBins = new Set(inputData)
 	// Fix for when user enters in the same number more than once.
 	// UI will ignore duplicate entries completely.
-	inputData.filter(d => !trackBins.has(d)).forEach(d => trackBins.add(d))
 	const data = Array.from(trackBins)
 		.map(d => +d)
 		.sort((a, b) => a - b)
