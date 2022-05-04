@@ -24,6 +24,18 @@ document.body.onload = () => runproteinpaint({
 		state: {
 			dslabel: 'PNET',
 			genome: 'hg19',
+      termfilter: {
+        filter: {
+          type: 'tvslst',
+          lst: [{
+            type: 'tvs',
+            tvs: {
+              term: {id: 'Sample Type'},
+              values: [{key: 'D1'}]
+            }
+          }]
+        }
+      },
 			plots: [
 				{
 					chartType: 'matrix',
@@ -35,7 +47,7 @@ document.body.onload = () => runproteinpaint({
 							termLabelOffset: 220,
 							sortTermsBy: 'asListed',
               grpLabelFontSize: 13,
-              sampleNameFilter: '_D1$'
+              //sampleNameFilter: '_D1$'
 						}
 					},
 					menuOpts: {
@@ -54,9 +66,9 @@ document.body.onload = () => runproteinpaint({
 							}
 						]
 					},
-					divideBy: {
+					/*divideBy: {
 						id: 'TSNE Category'
-					},
+					},*/
 					termgroups: [
 						{
 							name: '',
@@ -234,7 +246,7 @@ document.body.onload = () => runproteinpaint({
           }
 				},
 
-				{
+				/*{
 					chartType: 'survival',
 					term: {
 						id: 'Event-free survival'
@@ -262,7 +274,7 @@ document.body.onload = () => runproteinpaint({
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 						}
 					}
-				},
+				},*/
 			]
 		}
 	}

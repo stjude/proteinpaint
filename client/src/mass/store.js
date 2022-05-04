@@ -72,7 +72,7 @@ class TdbStore {
 	async init() {
 		try {
 			this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
-			this.setTermfilter()
+			await this.setTermfilter()
 			// vocab.state.termfilter may be used in getPlotConfig() when rehydrating terms,
 			// so manually set it here
 			this.app.vocabApi.main({
@@ -99,12 +99,14 @@ class TdbStore {
 		}
 	}
 
-	setTermfilter() {
+	async setTermfilter() {
 		let filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
 		if (!filterUiRoot) {
 			this.state.termfilter.filter.tag = 'filterUiRoot'
 			filterUiRoot = this.state.termfilter.filter
 		}
+
+		await Promise.all(rehydrateFilter(this.state.termfilter.filter, this.app.vocabApi))
 
 		if (!this.state.termdbConfig.selectCohort) {
 			this.state.activeCohort = -1
@@ -153,6 +155,22 @@ class TdbStore {
 			}
 		}
 	}
+}
+
+function rehydrateFilter(filter, vocabApi, proms = []) {
+	if (filter.type == 'tvslst') {
+		for (const f of filter.lst) rehydrateFilter(f, vocabApi, proms)
+	} else if (filter.type == 'tvs') {
+		if (!filter.tvs.term.name)
+			proms.push(
+				vocabApi.getterm(filter.tvs.term.id).then(term => {
+					filter.tvs.term = term
+				})
+			)
+	} else {
+		throw `cannot rehydrate filter.type='${filter.type}'`
+	}
+	return proms
 }
 
 /*
