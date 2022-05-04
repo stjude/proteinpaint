@@ -113,13 +113,15 @@ function processCustomBinInputs(self) {
 	const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
 	const inputDivs = self.dom.customBinLabelDiv.node().querySelectorAll('div')
-	let prevBin
+	let prevBin //previous bin
 	const inputData = self.dom.customBinBoundaryInput
 		.property('value')
 		.split('\n')
 		.filter(d => d != '' && !isNaN(d))
 
 	const trackBins = new Set()
+	// Fix for when user enters in the same number more than once.
+	// UI will ignore duplicate entries completely.
 	inputData.filter(d => !trackBins.has(d)).forEach(d => trackBins.add(d))
 	const data = Array.from(trackBins)
 		.map(d => +d)
