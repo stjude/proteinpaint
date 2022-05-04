@@ -206,42 +206,38 @@ class Matrix {
 		this.sampleSorter = getSampleSorter(this, s, data.lst)
 
 		const sampleGroups = new Map()
-		if (!this.config.divideBy) {
-			defaultSampleGrp.lst = data.lst
-			defaultSampleGrp.name = ''
-		} else {
-			defaultSampleGrp.name = 'Not annotated'
-			const term = this.config.divideBy.term
-			const $id = this.config.divideBy.$id
-			const exclude = this.config.divideBy.exclude || []
-			const values = term.values || {}
-			const ref = data.refs.byTermId[$id] || {}
 
-			for (const row of data.lst) {
-				// TODO: may move the override handling downstream,
-				// but before sample group.lst sorting, as needed
-				for (const grp of this.config.termgroups) {
-					for (const tw of grp.lst) {
-						mayApplyOverrides(row, tw, this.config.overrides)
-					}
-				}
+		defaultSampleGrp.name = this.config.divideBy ? 'Not annotated' : ''
+		const term = this.config.divideBy?.term || {}
+		const $id = this.config.divideBy?.$id || '-'
+		const exclude = this.config.divideBy?.exclude || []
+		const values = term.values || {}
+		const ref = data.refs.byTermId[$id] || {}
 
-				if ($id in row) {
-					if (exclude.includes(row[$id].key)) continue
-					const key = row[$id].key
-					if (!sampleGroups.has(key)) {
-						sampleGroups.set(key, {
-							id: key,
-							name: key in values && values[key].label ? values[key].label : key,
-							lst: [],
-							order: ref.bins ? ref.bins.findIndex(bin => bin.name == key) : 0,
-							tw: this.config.divideBy
-						})
-					}
-					sampleGroups.get(key).lst.push(row)
-				} else {
-					defaultSampleGrp.lst.push(row)
+		for (const row of data.lst) {
+			// TODO: may move the override handling downstream,
+			// but before sample group.lst sorting, as needed
+			for (const grp of this.config.termgroups) {
+				for (const tw of grp.lst) {
+					mayApplyOverrides(row, tw, this.config.overrides)
 				}
+			}
+
+			if ($id in row) {
+				if (exclude.includes(row[$id].key)) continue
+				const key = row[$id].key
+				if (!sampleGroups.has(key)) {
+					sampleGroups.set(key, {
+						id: key,
+						name: key in values && values[key].label ? values[key].label : key,
+						lst: [],
+						order: ref.bins ? ref.bins.findIndex(bin => bin.name == key) : 0,
+						tw: this.config.divideBy
+					})
+				}
+				sampleGroups.get(key).lst.push(row)
+			} else {
+				defaultSampleGrp.lst.push(row)
 			}
 		}
 
