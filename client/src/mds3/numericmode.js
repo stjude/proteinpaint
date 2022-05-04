@@ -337,7 +337,7 @@ function numeric_make(nm, _g, data, tk, block) {
 	tk.skewer.discKickSelection = discg
 		.filter(m => !m.shapeTriangle)
 		.append('circle')
-		//.attr('r', m => m.radius - 0.5)
+		.attr('r', m => m.radius - 0.5) // must set radius for the circle to be visible
 		.attr('stroke', m => tk.color4disc(m))
 		.attr('class', 'sja_aa_disckick')
 		.attr('fill', 'white')

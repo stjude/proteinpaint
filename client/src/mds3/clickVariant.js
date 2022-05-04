@@ -158,7 +158,10 @@ async function variant_details(arg) {
 
 function highlight_one_disk(m, dot, tk) {
 	// remove highlight on all disc kick covers
-	tk.skewer.discKickSelection.attr('stroke', m => tk.color4disc(m)).attr('stroke-opacity', 0)
+	tk.skewer.discKickSelection
+		.attr('r', m => m.radius - 0.5) // reset radius
+		.attr('stroke', m => tk.color4disc(m))
+		.attr('stroke-opacity', 0)
 	tk.skewer.discKickSelection_triangle
 		.attr('d', m => trianglePath(m.radius))
 		.attr('stroke', m => tk.color4disc(m))
