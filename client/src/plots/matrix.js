@@ -136,12 +136,12 @@ class Matrix {
 
 	async main() {
 		try {
-			this.config = this.state.config
+			this.config = JSON.parse(JSON.stringify(this.state.config))
 			const prevTranspose = this.settings.transpose
 			Object.assign(this.settings, this.config.settings)
 
 			// get the data
-			const reqOpts = this.getDataRequestOpts()
+			const reqOpts = await this.getDataRequestOpts()
 			// this will write annotation data to this.currData
 			await this.app.vocabApi.setAnnotatedSampleData(reqOpts, this.currData)
 
@@ -191,12 +191,35 @@ class Matrix {
 	}
 
 	// creates an opts object for the vocabApi.getNestedChartsData()
-	getDataRequestOpts() {
+	async getDataRequestOpts() {
 		const terms = []
 		for (const grp of this.config.termgroups) {
 			terms.push(...grp.lst)
 		}
 		if (this.config.divideBy) terms.push(this.config.divideBy)
+		if (this.config.overrides) {
+			const overrideTerms = [],
+				sampleFilters = []
+			for (const key in this.config.overrides) {
+				const r = this.config.overrides[key]
+				if (r.sampleFilter?.type == 'tvs') {
+					overrideTerms.push(r.sampleFilter.tvs.term)
+					sampleFilters.push(r.sampleFilter)
+				}
+			}
+			// may need additional term data to fill-in a filter
+			const readyTerms = await Promise.all(overrideTerms.map(t => (t.type ? t : this.app.vocabApi.getterm(t.id))))
+			terms.push(
+				...readyTerms.map((term, i) => {
+					const tw = { term }
+					fillTermWrapper(tw)
+					// important to get a non-ambiguous tw.$id since the
+					// same term may be used as different rows in the matrix
+					sampleFilters[i].wrapper$id = tw.$id
+					return tw
+				})
+			)
+		}
 		return { terms, filter: this.state.filter, data: this.currData }
 	}
 
@@ -758,6 +781,13 @@ function mayApplyOverrides(row, tw, overrides) {
 		const sf = overrides[key].sampleFilter || {}
 		if (sf.type == 'wvs') {
 			for (const v of sf.values) {
+				if (row[sf.wrapper$id]?.key === v.key) {
+					if (!row[tw.$id]) row[tw.$id] = {}
+					row[tw.$id].override = JSON.parse(JSON.stringify(overrides[key].value))
+				}
+			}
+		} else if (sf.type == 'tvs') {
+			for (const v of sf.tvs.values) {
 				if (row[sf.wrapper$id]?.key === v.key) {
 					if (!row[tw.$id]) row[tw.$id] = {}
 					row[tw.$id].override = JSON.parse(JSON.stringify(overrides[key].value))

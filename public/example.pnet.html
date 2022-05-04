@@ -154,31 +154,31 @@ document.body.onload = () => runproteinpaint({
                   id: 'Sample Type'
                 },
                 {
-                  label: 'Study',
+                  
                   id: 'study'
                 },
 								{
 									id: 'Mutational Burden'
 								},
-								{
-									id: 'Germline',
-                  $id: 'germline'
+								{	
+                  id: 'Germline'
 								},
 								{
 									id: 'WES',
-                  $id: 'WES',
-                  label: 'Tumor WES'
 								},
 								{
 									id: 'RNAseq',
-                  $id: 'rnaseq'
+                  //$id: 'RNAseq'
 								},
                 {
                   id: 'Methylation'
-                },
-								...getCytogeneticsData()
+                }
 							]
 						},
+            {
+              name: 'Cytogenetics',
+              lst: getCytogeneticsData()
+            },
 						...getGeneTermGroups(),
 					],
           // each override may be used by any termwrapper 
@@ -193,9 +193,11 @@ document.body.onload = () => runproteinpaint({
                 ]
               },
               sampleFilter: {
-                type: 'wvs', // "wrapper-value-setting"
-                wrapper$id: 'rnaseq',
-                values: [{key: 'No'}]
+                type: 'tvs',
+                tvs: {
+                  term: {id: 'RNAseq'},
+                  values: [{key: 'No'}]
+                }
               }
             },
             Gfill: {
@@ -207,9 +209,11 @@ document.body.onload = () => runproteinpaint({
                 ]
               },
               sampleFilter: {
-                type: 'wvs', // "wrapper-value-setting"
-                wrapper$id: 'germline',
-                values: [{key: 'No'}]
+                type: 'tvs', // "wrapper-value-setting"
+                tvs: {
+                  term: {id: 'Germline'},
+                  values: [{key: 'No'}]
+                }
               }
             },
             WESfill: {
@@ -221,9 +225,11 @@ document.body.onload = () => runproteinpaint({
                 ]
               },
               sampleFilter: {
-                type: 'wvs', // "wrapper-value-setting"
-                wrapper$id: 'WES',
-                values: [{key: 'No'}]
+                type: 'tvs', // "wrapper-value-setting"
+                tvs: {
+                  term: {id: 'WES'},
+                  values: [{key: 'No'}]
+                }
               }
             },
             CNVfill: {
@@ -235,9 +241,11 @@ document.body.onload = () => runproteinpaint({
                 ]
               },
               sampleFilter: {
-                type: 'wvs', // "wrapper-value-setting"
-                wrapper$id: 'Methylation',
-                values: [{key: 'No'}]
+                type: 'tvs', // "wrapper-value-setting"
+                tvs: {
+                  term: {id: 'Methylation'},
+                  values: [{key: 'No'}]
+                }
               }
             }
           }
@@ -334,7 +342,7 @@ function getCytogeneticsData() {
 
 const genegroups = [
   {
-      "name": "fusion",
+      "name": "Fusion",
       "lst": [
           {
               "name": "BCOR_SV",
