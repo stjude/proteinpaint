@@ -7,6 +7,7 @@ const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
+const runCumincR = require('./termdb.cuminc').runCumincR
 const app = require('./app')
 
 /*
@@ -77,11 +78,12 @@ replaceTermId
 ... run R ...
 parseRoutput
 snplocusPostprocess
-	mayAddSnplocusMessage
-	mayAddResult4monomorphic
+	addSnplocusMessage
+	addResult4monomorphic
 		getLine4OneSnp
 	lowAFsnps_wilcoxon
 	lowAFsnps_fisher
+	lowAFsnps_cuminc
 */
 
 // list of supported types
@@ -740,15 +742,17 @@ async function parseRoutput(Rinput, Routput, id2originalId, q) {
 async function snplocusPostprocess(q, sampledata, Rinput, result) {
 	const tw = q.independent.find(i => i.type == 'snplocus')
 	if (!tw) return
-	mayAddSnplocusMessage(tw, result, q)
-	mayAddResult4monomorphic(tw, result)
+	addSnplocusMessage(tw, result, q)
+	addResult4monomorphic(tw, result)
 	if (tw.lowAFsnps.size) {
 		// low-af variants are not used for model-fitting
 		// use alternative method depending on regression type
 		if (q.regressionType == 'linear') {
 			await lowAFsnps_wilcoxon(tw, sampledata, Rinput, result)
-		} else if (q.regressionType == 'logistic' || q.regressionType == 'cox') {
+		} else if (q.regressionType == 'logistic') {
 			await lowAFsnps_fisher(tw, sampledata, Rinput, result)
+		} else if (q.regressionType == 'cox') {
+			await lowAFsnps_cuminc(tw, sampledata, Rinput, result)
 		} else {
 			throw 'unknown regression type'
 		}
@@ -912,7 +916,67 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 	}
 }
 
-function mayAddResult4monomorphic(tw, result) {
+async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
+	// for cox, perform cuminc analysis between samples having and missing effect allele
+	const lines = [] // one line per snp
+	for (const [snpid, snpO] of tw.lowAFsnps) {
+		// Rinput.data[] is a subset of sampledata[], though they're in same order
+		// see makeRinput()
+		let RinputDataidx = 0
+		const fdata = [] // input for cuminc analysis
+		for (const { sample, noOutcome } of sampledata) {
+			if (noOutcome) continue
+			const d = Rinput.data[RinputDataidx++]
+			if (d.outcome_event != 0 && d.outcome_event != 1) throw 'd.outcome_event is not 0/1'
+			if (!Number.isFinite(d.outcome_time)) throw 'd.outcome_time is not numeric'
+
+			// data point of this sample, to add to fdata[]
+			const sampleData = {
+				time: d.outcome_time,
+				event: d.outcome_event
+			}
+
+			const gt = snpO.samples.get(sample)
+			if (!gt) {
+				// missing gt for this sample, skip
+				continue
+			}
+			const [a, b] = gt.split('/')
+			// if this person carries the allele, assign to series "1", otherwise "2"
+			sampleData.series = snpO.effAle == a || snpO.effAle == b ? '1' : '2'
+
+			fdata.push(sampleData)
+		}
+
+		const final_data = {
+			case: [],
+			tests: {}
+		}
+		const minYearsToEvent = 5 // FIXME clarify
+		await runCumincR('snp', fdata, new Set(['1', '2']), final_data, minYearsToEvent)
+
+		// final_data.tests = { snp: [ { series1: '1', series2: '2', pvalue: 0.0016 } ] }
+		if (!final_data.tests.snp || !final_data.tests.snp[0]) throw 'final_data.tests.snp[0] missing'
+		const pvalue = final_data.tests.snp[0].pvalue
+		if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
+
+		// make a result object for this snp
+		const analysisResult = {
+			id: snpid,
+			AFstr: tw.snpid2AFstr.get(snpid),
+			data: {
+				headerRow: getLine4OneSnp(snpid, tw),
+				cuminc: {
+					pvalue: Number(pvalue.toFixed(4)),
+					final_data
+				}
+			}
+		}
+		result.resultLst.push(analysisResult)
+	}
+}
+
+function addResult4monomorphic(tw, result) {
 	for (const snpid of tw.monomorphicLst) {
 		const gt2count = tw.snpgt2count.get(snpid)
 		const lst = []
@@ -944,7 +1008,7 @@ function getLine4OneSnp(snpid, tw) {
 	return { k: 'Variant:', v: lst.join('&nbsp;&nbsp;&nbsp;') }
 }
 
-function mayAddSnplocusMessage(tw, result, q) {
+function addSnplocusMessage(tw, result, q) {
 	const lst = []
 	if (tw.highAFsnps.size) {
 		lst.push(
@@ -957,13 +1021,16 @@ function mayAddSnplocusMessage(tw, result, q) {
 		)
 	}
 	if (tw.lowAFsnps.size) {
-		const wilcox = q.regressionType == 'linear'
 		lst.push(
 			tw.lowAFsnps.size +
 				' variant' +
 				(tw.lowAFsnps.size > 1 ? 's' : '') +
 				' analyzed by ' +
-				(wilcox ? 'Wilcoxon rank sum test' : "Fisher's exact test") +
+				(q.regressionType == 'linear'
+					? 'Wilcoxon rank sum test'
+					: q.regressionType == 'logistic'
+					? "Fisher's exact test"
+					: 'Cumulative incidence test') +
 				' (AF<' +
 				tw.q.AFcutoff +
 				'%)'

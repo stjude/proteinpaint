@@ -45,6 +45,7 @@ main
 			mayshow_other
 			mayshow_fisher
 			mayshow_wilcoxon
+			mayshow_cuminc
 */
 
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
@@ -264,6 +265,7 @@ function setRenderers(self) {
 		self.mayshow_other(result)
 		self.mayshow_fisher(result)
 		self.mayshow_wilcoxon(result)
+		self.mayshow_cuminc(result)
 	}
 
 	self.newDiv = (label, label2, holder) => {
@@ -318,6 +320,16 @@ function setRenderers(self) {
 			tr1.append('td').text(result.residuals.header[i])
 			tr2.append('td').text(result.residuals.rows[i])
 		}
+	}
+
+	self.mayshow_cuminc = result => {
+		if (!result.cuminc) return
+		const div = self.newDiv('Cumulative incidence test:', 'p-value = ' + result.cuminc.pvalue)
+		console.log(result.cuminc.final_data)
+		/*
+		const _ = await import('./cuminc')
+		_.plotter( result.cuminc.final_data, div)
+		*/
 	}
 
 	self.mayshow_wilcoxon = result => {
@@ -984,6 +996,12 @@ function make_mds3_variants(tw, resultLst) {
 			// { pvalue:float }
 			m.regressionPvalue = d.wilcoxon.pvalue
 			m.__value = -Math.log10(d.wilcoxon.pvalue)
+			m.shapeTriangle = true
+		}
+		if (d.cuminc) {
+			// { pvalue:float }
+			m.regressionPvalue = d.cuminc.pvalue
+			m.__value = -Math.log10(d.cuminc.pvalue)
 			m.shapeTriangle = true
 		}
 
