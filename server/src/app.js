@@ -96,7 +96,9 @@ const express = require('express'),
 	mdsgeneboxplot_closure = require('./mds.geneboxplot').default,
 	phewas = require('./termdb.phewas'),
 	handle_mdssurvivalplot = require('./km').handle_mdssurvivalplot,
-	validator = require('./validator')
+	validator = require('./validator'),
+	cookieParser = require('cookie-parser'),
+	{ maySetAuthRoutes, getDsAuth } = require('./auth.js')
 
 /*
 valuable globals
@@ -141,6 +143,7 @@ app.use((req, res, next) => {
 	next()
 })
 
+app.use(cookieParser())
 app.use(bodyParser.json({ limit: '5mb' }))
 app.use(bodyParser.text({ limit: '5mb' }))
 app.use(bodyParser.urlencoded({ extended: true }))
@@ -214,6 +217,7 @@ if (serverconfig.jwt) {
 // has to set optional routes before app.get() or app.post()
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
+maySetAuthRoutes(app, basepath)
 app.get(basepath + '/healthcheck', handle_healthcheck)
 app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
@@ -613,7 +617,8 @@ async function handle_genomes(req, res) {
 		codedate: codedate.toDateString(),
 		launchdate,
 		hasblat,
-		features: exports.features
+		features: exports.features,
+		dsAuth: getDsAuth(req)
 	})
 }
 
