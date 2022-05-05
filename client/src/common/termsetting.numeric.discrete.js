@@ -101,8 +101,10 @@ function applyEdits(self) {
 		}
 		self.numqByTermIdModeType[self.term.id].discrete['regular-bin'] = JSON.parse(JSON.stringify(self.q))
 	} else {
-		self.q.lst = processCustomBinInputs(self)
-		self.numqByTermIdModeType[self.term.id].discrete['custom-bin'] = JSON.parse(JSON.stringify(self.q))
+		if (self.dom.customBinLabelDiv.selectAll('input').node().value) {
+			self.q.lst = processCustomBinInputs(self)
+			self.numqByTermIdModeType[self.term.id].discrete['custom-bin'] = JSON.parse(JSON.stringify(self.q))
+		}
 	}
 	self.q.mode = 'discrete'
 	self.dom.tip.hide()
@@ -141,7 +143,7 @@ function processCustomBinInputs(self) {
 			prevBin = bin
 			return bin
 		})
-
+	if (data.length == 0) return
 	prevBin.stopunbounded = true
 	const label = inputDivs[data.length] && inputDivs[data.length].querySelector('input').value
 	prevBin.label = label ? label : get_bin_label(prevBin, self.q)
@@ -545,6 +547,8 @@ function renderCustomBinInputs(self, tablediv) {
 			// enter or backspace/delete
 			// i don't think backspace works
 			if (!keyupEnter() && event.key != 8) return
+			if (!self.dom.customBinLabelDiv.selectAll('input').node().value) return
+			// Fix for if user hits enter with no values. Reverts to default cutoff.
 			handleChange.call(this)
 		})
 
@@ -559,6 +563,10 @@ function renderCustomBinInputs(self, tablediv) {
 	function handleChange() {
 		self.dom.customBinLabelDiv.selectAll('input').property('value', '')
 		const data = processCustomBinInputs(self)
+		if (data == undefined) {
+			// alert('Enter custom bin value(s)')
+			return
+		}
 		// update self.q.lst and render bin lines only if bin boundry changed
 		const q = self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
 		if (self.q.hiddenValues) q.hiddenValues = self.q.hiddenValues
