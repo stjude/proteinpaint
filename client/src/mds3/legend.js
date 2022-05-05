@@ -1,24 +1,33 @@
 import { event as d3event } from 'd3-selection'
-import * as client from '../client'
 import { legend_newrow } from '../block.legend'
-import * as common from '../../shared/common'
+import { Menu } from '../dom/menu'
+import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '../../shared/common'
 
 /*
 ********************** EXPORTED
-init
-update
+initLegend
+updateLegend
 ********************** INTERNAL
 create_mclass
 update_mclass
 update_info_fields
+
+********************** tk.legend{} structure
+.tip
+.table
+	<table>, in which creates sections for the legend of this track
+.mclass{}
+	.hiddenvalues Set()
+	.holder DOM
+	.row DOM
 */
 
-export function init(tk, block) {
+export function initLegend(tk, block) {
 	/*
 run only once, called by makeTk
 */
 	if (!tk.legend) tk.legend = {}
-	tk.legend.tip = new client.Menu({ padding: '0px' })
+	tk.legend.tip = new Menu({ padding: '0px' })
 
 	const [tr, td] = legend_newrow(block, tk.name)
 
@@ -57,25 +66,25 @@ legend.mclass{}
 	tk.legend.mclass.holder = tk.legend.mclass.row.append('td')
 }
 
-export function update(data, tk, block) {
+export function updateLegend(data, tk, block) {
 	/*
 data is returned by xhr
 */
-	if (data.mclass2count) {
-		update_mclass(data.mclass2count, tk)
+	if (data.mclass2variantcount) {
+		update_mclass(data.mclass2variantcount, tk)
 	}
 	if (data.info_fields) {
 		update_info_fields(data.info_fields, tk)
 	}
 }
 
-function update_mclass(mclass2count, tk) {
+function update_mclass(mclass2variantcount, tk) {
 	tk.legend.mclass.holder.selectAll('*').remove()
 
 	const showlst = [],
 		hiddenlst = []
-	for (const k in mclass2count) {
-		const v = { k: k, count: mclass2count[k] }
+	for (const [k, count] of mclass2variantcount) {
+		const v = { k, count }
 		if (tk.legend.mclass.hiddenvalues.has(k)) {
 			hiddenlst.push(v)
 		} else {
@@ -84,7 +93,14 @@ function update_mclass(mclass2count, tk) {
 	}
 	showlst.sort((i, j) => j.count - i.count)
 	hiddenlst.sort((i, j) => j.count - i.count)
-	//tk.legend.mclass.total_count = classlst.reduce((a,b)=>a+b.count,0);
+
+	// items in hiddenvalues{} can still be absent in hiddenlst,
+	// e.g. if class filter is done at backend, and mclass2variantcount is calculated just from visible data items
+	for (const k of tk.legend.mclass.hiddenvalues) {
+		if (!hiddenlst.find(i => i.k == k)) {
+			hiddenlst.push({ k })
+		}
+	}
 
 	for (const c of showlst) {
 		/*
@@ -96,23 +112,24 @@ function update_mclass(mclass2count, tk) {
 			color = '#858585'
 
 		if (Number.isInteger(c.k)) {
-			label = common.dt2label[c.k]
-			if (c.dt == common.dtcnv) {
+			// c.k is not mclass (string), but dt (integer)
+			label = dt2label[c.k]
+			if (c.k == dtcnv) {
 				desc = 'Copy number variation.'
-			} else if (c.dt == common.dtloh) {
+			} else if (c.k == dtloh) {
 				desc = 'Loss of heterozygosity.'
-			} else if (c.dt == common.dtitd) {
-				color = common.mclass[common.mclassitd].color
+			} else if (c.k == dtitd) {
+				color = mclass[mclassitd].color
 				desc = 'Internal tandem duplication.'
-			} else if (c.dt == common.dtsv) {
+			} else if (c.k == dtsv) {
 				desc = 'Structural variation of DNA.'
-			} else if (c.dt == common.dtfusionrna) {
+			} else if (c.k == dtfusionrna) {
 				desc = 'Fusion gene from RNA-seq.'
 			}
 		} else {
-			label = common.mclass[c.k].label
-			color = common.mclass[c.k].color
-			desc = common.mclass[c.k].desc
+			label = mclass[c.k].label
+			color = mclass[c.k].color
+			desc = mclass[c.k].desc
 		}
 
 		const cell = tk.legend.mclass.holder
@@ -128,6 +145,7 @@ function update_mclass(mclass2count, tk) {
 					.on('click', () => {
 						tk.legend.mclass.hiddenvalues.add(c.k)
 						tk.legend.tip.hide()
+						tk.uninitialized = true
 						tk.load()
 					})
 
@@ -141,6 +159,7 @@ function update_mclass(mclass2count, tk) {
 						}
 						tk.legend.mclass.hiddenvalues.delete(c.k)
 						tk.legend.tip.hide()
+						tk.uninitialized = true
 						tk.load()
 					})
 
@@ -152,6 +171,7 @@ function update_mclass(mclass2count, tk) {
 						.on('click', () => {
 							tk.legend.mclass.hiddenvalues.clear()
 							tk.legend.tip.hide()
+							tk.uninitialized = true
 							tk.load()
 						})
 				}
@@ -189,12 +209,13 @@ function update_mclass(mclass2count, tk) {
 			.attr('class', 'sja_clb')
 			.style('text-decoration', 'line-through')
 			.style('opacity', 0.3)
-			.text('(' + c.count + ') ' + (Number.isInteger(c.k) ? common.dt2label[c.k] : common.mclass[c.k].label))
+			.text((c.count ? '(' + c.count + ') ' : '') + (Number.isInteger(c.k) ? dt2label[c.k] : mclass[c.k].label))
 			.on('click', async () => {
 				if (loading) return
 				loading = true
 				tk.legend.mclass.hiddenvalues.delete(c.k)
 				d3event.target.innerHTML = 'Updating...'
+				tk.uninitialized = true
 				await tk.load()
 			})
 	}

@@ -1075,6 +1075,17 @@ async function createGenomebrowser(self, input, resultLst) {
 			tooltipPrintValue: m => getMtooltipValues(m, self.config.regressionType)
 		},
 		custom_variants: make_mds3_variants(input.term, resultLst),
+		variantShapeName: {
+			dot: 'analyzed by model-fitting',
+			triangle:
+				'analyzed by ' +
+				(self.config.regressionType == 'linear'
+					? 'Wilcoxon rank sum test'
+					: self.config.regressionType == 'logistic'
+					? "Fisher's exact test"
+					: 'Cumulative incidence test')
+			// circle: 'monomorphic'
+		},
 		click_snvindel: async m => {
 			self.displayResult_oneset(m.regressionResult.data)
 			await mayCheckLD(m, input, self)

@@ -1,7 +1,7 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { Menu } from '../dom/menu'
 import { dofetch3 } from '../common/dofetch'
-import { init as init_legend } from './legend'
+import { initLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '../common/urlmap'
 import { mclass } from '../../shared/common'
@@ -44,8 +44,6 @@ export async function makeTk(tk, block) {
 
 	init_termdb(tk, block)
 
-	init_mclass(tk)
-
 	mayaddGetter_sampleSummaries2(tk, block)
 	mayaddGetter_variant2samples(tk, block)
 	mayaddGetter_m2csq(tk, block)
@@ -77,7 +75,9 @@ export async function makeTk(tk, block) {
 		configPanel(tk, block)
 	})
 
-	init_legend(tk, block)
+	initLegend(tk, block)
+
+	init_mclass(tk)
 
 	if (tk.hlaachange) {
 		// comma-separated names
@@ -133,13 +133,10 @@ export async function makeTk(tk, block) {
 
 function init_mclass(tk) {
 	// hidden mclass is controled on the client side
-	tk.hiddenmclass = new Set()
 	if (tk.mds.hiddenmclass) {
 		// port over default hidden mclass
-		for (const c of tk.mds.hiddenmclass) tk.hiddenmclass.add(c)
+		for (const c of tk.mds.hiddenmclass) tk.legend.mclass.hiddenvalues.add(c)
 	}
-	// #variant for mclass returned by server
-	tk.mclass2variantcount = new Map()
 }
 
 async function get_ds(tk, block) {
@@ -149,6 +146,7 @@ async function get_ds(tk, block) {
 		if (data.error) throw 'Error: ' + data.error
 		if (!data.ds) throw 'data.ds{} missing'
 		tk.mds = data.ds
+		tk.name = data.ds.label
 		return
 	}
 	// custom
