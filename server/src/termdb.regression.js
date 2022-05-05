@@ -752,7 +752,7 @@ async function snplocusPostprocess(q, sampledata, Rinput, result) {
 		} else if (q.regressionType == 'logistic') {
 			await lowAFsnps_fisher(tw, sampledata, Rinput, result)
 		} else if (q.regressionType == 'cox') {
-			await lowAFsnps_cuminc(tw, sampledata, Rinput, result)
+			await lowAFsnps_cuminc(tw, sampledata, Rinput, result, q.outcome.minYearsToEvent)
 		} else {
 			throw 'unknown regression type'
 		}
@@ -916,21 +916,22 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 	}
 }
 
-async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
+async function lowAFsnps_cuminc(tw, sampledata, Rinput, result, minYearsToEvent) {
 	// for cox, perform cuminc analysis between samples having and missing effect allele
 	const lines = [] // one line per snp
+	const fdata = {} // input for cuminc analysis {snpid: [{time, event, series}]}
 	for (const [snpid, snpO] of tw.lowAFsnps) {
+		fdata[snpid] = []
 		// Rinput.data[] is a subset of sampledata[], though they're in same order
 		// see makeRinput()
 		let RinputDataidx = 0
-		const fdata = [] // input for cuminc analysis
 		for (const { sample, noOutcome } of sampledata) {
 			if (noOutcome) continue
 			const d = Rinput.data[RinputDataidx++]
 			if (d.outcome_event != 0 && d.outcome_event != 1) throw 'd.outcome_event is not 0/1'
 			if (!Number.isFinite(d.outcome_time)) throw 'd.outcome_time is not numeric'
 
-			// data point of this sample, to add to fdata[]
+			// data point of this sample, to add to fdata[snpid][]
 			const sampleData = {
 				time: d.outcome_time,
 				event: d.outcome_event
@@ -945,19 +946,22 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 			// if this person carries the allele, assign to series "1", otherwise "2"
 			sampleData.series = snpO.effAle == a || snpO.effAle == b ? '1' : '2'
 
-			fdata.push(sampleData)
+			fdata[snpid].push(sampleData)
 		}
+	}
 
-		const final_data = {
-			case: [],
-			tests: {}
-		}
-		const minYearsToEvent = 5 // FIXME clarify
-		await runCumincR('snp', fdata, new Set(['1', '2']), final_data, minYearsToEvent)
+	const final_data = {
+		case: [],
+		tests: {}
+	}
 
-		// final_data.tests = { snp: [ { series1: '1', series2: '2', pvalue: 0.0016 } ] }
-		if (!final_data.tests.snp || !final_data.tests.snp[0]) throw 'final_data.tests.snp[0] missing'
-		const pvalue = final_data.tests.snp[0].pvalue
+	// run cumulative incidence analysis in R
+	await runCumincR(fdata, final_data, minYearsToEvent)
+
+	// parse cumulative incidence results
+	for (const [snpid, snpO] of tw.lowAFsnps) {
+		if (!final_data.tests[snpid] || final_data.tests[snpid].length == 0) throw 'final_data.tests missing for snp'
+		const pvalue = Number(final_data.tests[snpid][0].pvalue)
 		if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
 
 		// make a result object for this snp
@@ -968,10 +972,14 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 				headerRow: getLine4OneSnp(snpid, tw),
 				cuminc: {
 					pvalue: Number(pvalue.toFixed(4)),
-					final_data
+					final_data: {
+						case: final_data.case.filter(x => x[0] == snpid),
+						tests: final_data.tests[snpid]
+					}
 				}
 			}
 		}
+
 		result.resultLst.push(analysisResult)
 	}
 }
