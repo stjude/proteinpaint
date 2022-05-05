@@ -8,14 +8,41 @@ const maxSessionAge = 1000 * 3600 * 24
 
 let sessions
 
+/*
+	One-time setup on server startup:
+	- maySetAuthRoutes() will be called in app.js
+		to optionally setup a middleware and login route
+
+	Called in handle_genomes():
+	- getDsAuth() will return a list of dslabels that require credentials
+
+	Called in all requests:
+	- the "gatekeeper" middleware that checks for required credentials, if applicable
+
+	Called for login, if the client code detects, using the genomes.dsAuth[] response,
+	that an active session is required
+	- the '/dslogin' route handler
+*/
+
+/*
+	maySetAuthRoutes() will be called in app.js
+	- if there are no serverconfig.dsCredentials, will not do anything
+	- will setup a middleware for most requests and the /dslogin route
+*/
 async function maySetAuthRoutes(app, basepath) {
+	// no need to setup additional middlewares and routes
+	// if there are no protected datasets
 	if (!creds || !Object.keys(creds).length) return
 	try {
+		// 1. Get an empty or rehydrated sessions tracker object
 		sessions = await getSessions()
 	} catch (e) {
 		throw e
 	}
 
+	// "gatekeeper" middleware that checks if a request requires
+	// credentials and if yes, if there is already a valid session
+	// for a ds label
 	app.use((req, res, next) => {
 		const q = req.query
 		if (req.path == '/genomes' || req.path == '/dslogin' || !q.dslabel || !(q.dslabel in creds)) {
@@ -40,6 +67,7 @@ async function maySetAuthRoutes(app, basepath) {
 		}
 	})
 
+	// creates a session ID that is returned
 	app.post(basepath + '/dslogin', async (req, res) => {
 		let code = 401
 		try {
@@ -66,7 +94,10 @@ async function maySetAuthRoutes(app, basepath) {
 		}
 	})
 }
-
+/*
+	will return a sessions object that is used
+	for tracking sessions by [dslabel]{[id]: {id, time}}
+*/
 async function getSessions() {
 	const sessions = {}
 	for (const dslabel in creds) {
@@ -91,6 +122,9 @@ async function getSessions() {
 	}
 }
 
+/*
+	will return a list of dslabels that require credentials
+*/
 function getDsAuth(req) {
 	return Object.keys(serverconfig.dsCredentials || {}).map(dslabel => {
 		const id = req.cookies[`${dslabel}SessionId`]

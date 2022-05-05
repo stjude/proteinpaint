@@ -108,6 +108,11 @@ export function dofetch2(path, init = {}, opts = {}) {
 		init.headers.authorization = 'Bearer ' + jwt
 	}
 
+	/*
+		this is client-side "gatekeeper", will not proceed
+		to the usual request handling unless no credentials
+		are required or a valid session has already been established
+	*/
 	return mayShowAuthUi(init, path).then(() => {
 		const dataName = url + ' | ' + init.method + ' | ' + init.body
 
@@ -251,10 +256,33 @@ export function setAuth(opts) {
 	authUi = opts.ui || defaultAuthUi
 	authUiHolder = opts.holder || select('body')
 	for (const auth of dsAuth) {
+		// fillin all the dslabels that has an active session
+		// so that an unnecessary login form will not be shown
 		if (auth.insession) dsAuthOk.add(auth.dslabel)
 	}
 }
 
+/* 
+	mayShowAuthUi() is the client-side "gatekeeper"
+	method to check if a dataset requires credentials
+*/
+async function mayShowAuthUi(init, path) {
+	const ok = { status: 'ok' }
+	if (!dsAuth) return ok
+	for (const a of dsAuth) {
+		if (init.body?.includes(`"dslabel":${a.dslabel}`) || path.includes(`dslabel=${a.dslabel}`)) {
+			if (dsAuthOk.has(a.dslabel)) return ok
+			return await authUi(a.dslabel)
+		}
+	}
+	return ok
+}
+
+/*
+	this is the default login UI, may be overriden
+	by an optional different form, for example if PP 
+	is embedded in another portal
+*/
 async function defaultAuthUi(dslabel) {
 	const mask = authUiHolder
 		.append('div')
@@ -295,15 +323,4 @@ async function defaultAuthUi(dslabel) {
 		btn.on('click', login)
 		pwd.on('change', login)
 	})
-}
-
-async function mayShowAuthUi(init, path) {
-	if (!dsAuth) return Promise.resolve()
-	for (const a of dsAuth) {
-		if (init.body?.includes(`"dslabel":${a.dslabel}`) || path.includes(`dslabel=${a.dslabel}`)) {
-			if (dsAuthOk.has(a.dslabel)) return Promise.resolve({ status: 'ok' })
-			return await authUi(a.dslabel)
-		}
-	}
-	return Promise.resolve({ status: 'ok' })
 }
