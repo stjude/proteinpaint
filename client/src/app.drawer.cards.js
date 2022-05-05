@@ -1085,24 +1085,17 @@ async function openDatasetSandbox(page_args, ds) {
 		.append('div')
 		.style('display', 'inline-block')
 		.style('padding', '10px 10px 10px 10px')
-	par.tip = new Menu({ padding: '' })
-	par.row = searchbar_div.append('div').style('border', '1px, solid #d0e3ff')
-
-	// Add gene search box and save the return coordinates, attributes, etc.
-	const coords = addGeneSearchbox(par)
-
-	const applyBtn = makeButton(sandbox_div.body, 'Apply')
 
 	const allResults_div = sandbox_div.body.append('div').style('max-width', '90vw')
 
-	applyBtn
-		.style('display', 'block')
-		.style('margin', '10px')
-		.on('click', () => {
-			// Create 'Run Dataset from URL' btn specific to each applied search
+	const coords = addGeneSearchbox({
+		genome: par.genome,
+		tip: new Menu({ padding: '' }),
+		row: searchbar_div.append('div').style('border', '1px, solid #d0e3ff'),
+		callback: async () => {
+			// Creates search results as tracks, last to first
 			const result_div = allResults_div
 				.insert('div', ':first-child')
-				// .style('border', '1px solid #e6e6e6')
 				.style('max-width', '90vw')
 				.style('margin', '1vw')
 			const destroyBtn = result_div
@@ -1117,6 +1110,7 @@ async function openDatasetSandbox(page_args, ds) {
 					result_div.selectAll('*').remove()
 					if (typeof close === 'function') close()
 				})
+			// Create 'Run Dataset from URL' btn specific to each applied search
 			makeURLbutton(result_div, coords, par, ds)
 			// Render the search parameters as a track
 			const runpp_arg = {
@@ -1135,8 +1129,8 @@ async function openDatasetSandbox(page_args, ds) {
 			const callpp = JSON.parse(JSON.stringify(ds.runargs))
 
 			runproteinpaint(Object.assign(runpp_arg, callpp))
-			console.log(allResults_div.nodes().length)
-		})
+		}
+	})
 }
 
 function makeHgGenomeBtns(div, par, genomes) {
@@ -1186,7 +1180,6 @@ function makeHgGenomeBtns(div, par, genomes) {
 			.style('color', hg38btn.active ? 'white' : 'black')
 			.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
 	})
-
 	return toggleBtn_div, hg19btn, hg38btn
 }
 
@@ -1197,7 +1190,6 @@ function makeURLbutton(div, coords, par, ds) {
 		ds.runargs.block == true ? `position=${coords.chr}:${coords.start}-${coords.stop}` : `gene=${coords.geneSymbol}`
 	URLbtn.on('click', () => {
 		event.stopPropagation()
-		// Opens from window location
 		window.open(`?genome=${par.genome.name}&${blockOn}&${ds.dsURLparam}`, '_blank')
 	})
 }
