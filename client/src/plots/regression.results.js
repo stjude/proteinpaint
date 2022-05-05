@@ -322,14 +322,27 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayshow_cuminc = result => {
+	self.mayshow_cuminc = async result => {
 		if (!result.cuminc) return
-		const div = self.newDiv('Cumulative incidence test:', 'p-value = ' + result.cuminc.pvalue)
-		console.log(result.cuminc.final_data)
-		/*
+		const holder = self.newDiv('Cumulative incidence test:', 'p-value = ' + result.cuminc.pvalue)
 		const _ = await import('./cuminc')
-		_.plotter( result.cuminc.final_data, div)
-		*/
+		const plotter = new _.Cuminc({
+			holder,
+			config: {
+				term: self.config.outcome,
+				term2: {
+					term: {
+						name: 'SNP-fake',
+						values: {
+							1: { key: 1, label: 'Alt' },
+							2: { key: 2, label: 'Ref' }
+						}
+					},
+					q: {}
+				}
+			}
+		})
+		plotter.main(result.cuminc.final_data)
 	}
 
 	self.mayshow_wilcoxon = result => {
