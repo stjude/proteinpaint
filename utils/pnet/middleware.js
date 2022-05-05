@@ -1,20 +1,15 @@
 const fs = require('fs')
 const path = require('path')
-const cookieParser = require('cookie-parser')
 const serverconfig = require('../../serverconfig')
 
-// simulate GDC sessionid to token mapping
-// sessionid will be the index of the entry in the array
 const sessions = []
 const auth = serverconfig.genomes.find(g => g.name == 'hg19').datasets.find(d => d.name == 'PNET').auth
-const maxSessionAge = 3600 * 24
+const maxSessionAge = 1000 * 3600 * 24
 
 module.exports = function setRoutes(app, basepath) {
-	app.use(cookieParser())
-
 	app.use((req, res, next) => {
 		const q = req.query
-		if (!q.dslabel || q.dslabel != 'PNET') {
+		if (!q.dslabel || q.dslabel != 'PNET' || req.path == '/dslogin') {
 			next()
 			return
 		}
@@ -38,7 +33,7 @@ module.exports = function setRoutes(app, basepath) {
 	app.all(basepath + '/pnet-login', async (req, res) => {
 		try {
 			console.log(req.headers)
-			if (!req.headers.authorization) throw 'missing Authorization header'
+			if (!req.headers.authorization) throw 'missing authorization header'
 			const [type, pwd] = req.headers.authorization.split(' ')
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != auth.value) throw 'invalid password'
