@@ -15,11 +15,13 @@ update_info_fields
 ********************** tk.legend{} structure
 .tip
 .table
-	<table>, in which creates sections for the legend of this track
+	<table>, in which creates <tr> of two <td> to show legend sections
 .mclass{}
 	.hiddenvalues Set()
 	.holder DOM
 	.row DOM
+.variantShapeName{}
+	.row
 */
 
 export function initLegend(tk, block) {
@@ -41,6 +43,7 @@ run only once, called by makeTk
 	tk.legend.table = table
 
 	create_mclass(tk, block)
+	may_create_variantShapeName(tk)
 }
 
 function create_mclass(tk, block) {
@@ -66,6 +69,36 @@ legend.mclass{}
 	tk.legend.mclass.holder = tk.legend.mclass.row.append('td')
 }
 
+function may_create_variantShapeName(tk) {
+	if (!tk.variantShapeName) return
+	const holder = tk.legend.table
+		.append('tr')
+		.append('td')
+		.attr('colspan', 2)
+	const vl = (tk.legend.variantShapeName = {})
+	{
+		const d = holder.append('div')
+		d.append('span').html('<svg width=12 height=12><circle cx=6 cy=6 r=6 fill=gray></circle></svg> n=')
+		vl.dotCount = d.append('span')
+		if (tk.variantShapeName.dot) d.append('span').text(', ' + tk.variantShapeName.dot)
+		vl.dotDiv = d
+	}
+	{
+		const d = holder.append('div')
+		d.append('span').html('<svg width=12 height=12><path d="M 6 0 L 0 12 h 12 Z" fill=gray></path></svg> n=')
+		vl.triangleCount = d.append('span')
+		if (tk.variantShapeName.triangle) d.append('span').text(', ' + tk.variantShapeName.triangle)
+		vl.triangleDiv = d
+	}
+	{
+		const d = holder.append('div')
+		d.append('span').html('<svg width=13 height=13><circle cx=6.5 cy=6.5 r=6 stroke=gray fill=none></circle></svg> n=')
+		vl.circleCount = d.append('span')
+		if (tk.variantShapeName.circle) d.append('span').text(', ' + tk.variantShapeName.circle)
+		vl.circleDiv = d
+	}
+}
+
 export function updateLegend(data, tk, block) {
 	/*
 data is returned by xhr
@@ -76,6 +109,26 @@ data is returned by xhr
 	if (data.info_fields) {
 		update_info_fields(data.info_fields, tk)
 	}
+	may_update_variantShapeName(data, tk)
+}
+
+function may_update_variantShapeName(data, tk) {
+	if (!tk.variantShapeName) return
+	let dot = 0,
+		triangle = 0,
+		circle = 0
+	for (const m of data.skewer) {
+		if (m.shapeTriangle) triangle++
+		else if (m.shapeCircle) circle++
+		else dot++
+	}
+	const vl = tk.legend.variantShapeName
+	vl.dotDiv.style('display', dot ? 'block' : 'none')
+	vl.triangleDiv.style('display', triangle ? 'block' : 'none')
+	vl.circleDiv.style('display', circle ? 'block' : 'none')
+	vl.dotCount.text(dot)
+	vl.triangleCount.text(triangle)
+	vl.circleCount.text(circle)
 }
 
 function update_mclass(mclass2variantcount, tk) {
@@ -103,10 +156,8 @@ function update_mclass(mclass2variantcount, tk) {
 	}
 
 	for (const c of showlst) {
-		/*
-	k
-	count
-	*/
+		// { k, count }
+		// k is either dt (integer), or mclass (string)
 		let label,
 			desc,
 			color = '#858585'

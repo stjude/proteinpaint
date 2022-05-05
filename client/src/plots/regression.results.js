@@ -972,7 +972,10 @@ function make_mds3_variants(tw, resultLst) {
 		if (!d) throw '.data{} missing'
 
 		if (d.type3) {
-			// find p-value (last column of type3 table)
+			/* result has type3 section, this variant has AF>cutoff and used for model-fitting
+			show this variant as a dot, do not set .shapeTriangle=true
+			find p-value (last column of type3 table)
+			*/
 			if (!d.type3.terms) throw '.data{type3:{terms}} missing'
 			if (!d.type3.terms[snp.snpid]) throw snp.snpid + ' missing in type3.terms{}'
 			if (!Array.isArray(d.type3.terms[snp.snpid])) throw `type3.terms[${snp.snpid}] not array`
@@ -985,31 +988,36 @@ function make_mds3_variants(tw, resultLst) {
 				m.regressionPvalue = v
 				m.__value = -Math.log10(v)
 			}
-		}
-		if (d.fisher) {
-			// { pvalue:float, table:[] }
-			m.regressionPvalue = d.fisher.pvalue
-			m.__value = -Math.log10(d.fisher.pvalue)
-			m.shapeTriangle = true
-		}
-		if (d.wilcoxon) {
-			// { pvalue:float }
-			m.regressionPvalue = d.wilcoxon.pvalue
-			m.__value = -Math.log10(d.wilcoxon.pvalue)
-			m.shapeTriangle = true
-		}
-		if (d.cuminc) {
-			// { pvalue:float }
-			m.regressionPvalue = d.cuminc.pvalue
-			m.__value = -Math.log10(d.cuminc.pvalue)
-			m.shapeTriangle = true
-		}
 
-		if (d.coefficients) {
-			if (!d.coefficients.terms) throw '.data.coefficients.terms{} missing'
+			// assign estimate
+			if (!d.coefficients || !d.coefficients.terms) throw '.data.coefficients.terms{} missing'
 			const r = d.coefficients.terms[snp.snpid]
 			if (!r) throw 'snp missing from data.coefficients.terms{}'
 			m.regressionEstimate = r.fields[0]
+		} else if (d.fisher) {
+			/* { pvalue:float, table:[] }
+			this variant is tested by fisher, show as triangle
+			*/
+			m.regressionPvalue = d.fisher.pvalue
+			m.__value = -Math.log10(d.fisher.pvalue)
+			m.shapeTriangle = true
+		} else if (d.wilcoxon) {
+			/* { pvalue:float }
+			this variant is tested by wilcoxon, show as triangle
+			*/
+			m.regressionPvalue = d.wilcoxon.pvalue
+			m.__value = -Math.log10(d.wilcoxon.pvalue)
+			m.shapeTriangle = true
+		} else if (d.cuminc) {
+			/* { pvalue:float }
+			this variant is tested by cuminc, show as triangle
+			*/
+			m.regressionPvalue = d.cuminc.pvalue
+			m.__value = -Math.log10(d.cuminc.pvalue)
+			m.shapeTriangle = true
+		} else {
+			// none of above. is monomorphic, show as hollow circle
+			m.shapeCircle = true
 		}
 	}
 	return mlst
@@ -1076,15 +1084,15 @@ async function createGenomebrowser(self, input, resultLst) {
 		},
 		custom_variants: make_mds3_variants(input.term, resultLst),
 		variantShapeName: {
-			dot: 'analyzed by model-fitting',
+			dot: 'common variants analyzed by model-fitting',
 			triangle:
-				'analyzed by ' +
+				'rare variants analyzed by ' +
 				(self.config.regressionType == 'linear'
-					? 'Wilcoxon rank sum test'
+					? 'Wilcoxon rank sum test' // with permutation
 					: self.config.regressionType == 'logistic'
 					? "Fisher's exact test"
-					: 'Cumulative incidence test')
-			// circle: 'monomorphic'
+					: 'Cumulative incidence test'),
+			circle: 'monomorphic variants skipped'
 		},
 		click_snvindel: async m => {
 			self.displayResult_oneset(m.regressionResult.data)
@@ -1150,7 +1158,7 @@ async function mayCheckLD(m, input, self) {
 			// or no ld data retrieved using given variant
 			// restore color in case dots have been colored by ld in a prior click
 			wait.text('No LD data')
-			tk.skewer.nmg.selectAll('.sja_aa_disk_fill').attr('fill', m => tk.color4disc(m))
+			tk.skewer.nmg.selectAll('.sja_aa_disk_fill').attr('fill', m => (m.shapeCircle ? 'none' : tk.color4disc(m)))
 			return
 		}
 		tk.skewer.nmg.selectAll('.sja_aa_disk_fill').attr('fill', m2 => {

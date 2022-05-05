@@ -292,7 +292,7 @@ function numeric_make(nm, _g, data, tk, block) {
 	})
 
 	// actual disc
-	// not circles
+	// triangle
 	discg
 		.filter(m => m.shapeTriangle)
 		.append('path')
@@ -300,9 +300,17 @@ function numeric_make(nm, _g, data, tk, block) {
 		.attr('fill', m => tk.color4disc(m))
 		.attr('stroke', 'white')
 		.attr('class', 'sja_aa_disk_fill')
-	// circles
+	// hollow circle
 	discg
-		.filter(m => !m.shapeTriangle)
+		.filter(m => m.shapeCircle)
+		.append('circle')
+		.attr('stroke', m => tk.color4disc(m))
+		.attr('fill', 'none')
+		.attr('r', m => m.radius - 0.5)
+		.attr('class', 'sja_aa_disk_fill')
+	// dots, or filled circles
+	discg
+		.filter(m => !m.shapeTriangle && !m.shapeCircle)
 		.append('circle')
 		.attr('fill', m => tk.color4disc(m))
 		.attr('stroke', 'white')
