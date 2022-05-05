@@ -1,15 +1,19 @@
-const fs = require('fs')
+const fs = require('fs').promises
 const path = require('path')
 const serverconfig = require('./serverconfig')
 
-const sessions = {} // TODO: rehydrate sessions from a cached file
+const cacheFile = path.join(serverconfig.cachedir, 'dsSessions')
 const creds = serverconfig.dsCredentials
 const maxSessionAge = 1000 * 3600 * 24
 
+let sessions
+
 async function maySetAuthRoutes(app, basepath) {
 	if (!creds || !Object.keys(creds).length) return
-	for (const dslabel in creds) {
-		sessions[dslabel] = {}
+	try {
+		sessions = await getSessions()
+	} catch (e) {
+		throw e
 	}
 
 	app.use((req, res, next) => {
@@ -50,14 +54,41 @@ async function maySetAuthRoutes(app, basepath) {
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != creds[q.dslabel].password) throw 'invalid password'
 			const id = Math.random().toString()
-			sessions[q.dslabel][id] = { id, time: +new Date() }
+			const time = +new Date()
+			sessions[q.dslabel][id] = { id, time }
+			await fs.appendFile(cacheFile, `${q.dslabel}\t${id}\t${time}\n`)
 			res.header('Set-cookie', `${q.dslabel}SessionId=${id}`)
 			res.send({ status: 'ok' })
 		} catch (e) {
+			console.log(e, code)
 			res.status(code)
 			res.send({ error: e })
 		}
 	})
+}
+
+async function getSessions() {
+	const sessions = {}
+	for (const dslabel in creds) {
+		if (!sessions[dslabel]) sessions[dslabel] = {}
+	}
+
+	try {
+		const file = await fs.readFile(cacheFile, 'utf8')
+		//rehydrate sessions from a cached file
+		const now = +new Date()
+		for (const line of file.split('\n')) {
+			if (!line) continue
+			const [dslabel, id, _time] = line.split('\t')
+			const time = Number(_time)
+			if (!sessions[dslabel]) sessions[dslabel] = {}
+			if (now - time < maxSessionAge) sessions[dslabel][id] = { id, time }
+		}
+		return sessions
+	} catch (e) {
+		console.log(e)
+		return sessions
+	}
 }
 
 function getDsAuth(req) {
