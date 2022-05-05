@@ -157,8 +157,9 @@ class Matrix {
 				return obj
 			}, {})
 			// process the sample-filtered data
+			this.setSampleGroups(data)
 			this.setTermOrder(data)
-			this.setSampleGroupsOrder(data)
+			this.setSampleOrder(data)
 			this.setLayout()
 			this.serieses = this.getSerieses(data)
 			// render the data
@@ -223,14 +224,13 @@ class Matrix {
 		return { terms, filter: this.state.filter, data: this.currData }
 	}
 
-	setSampleGroupsOrder(data) {
+	setSampleGroups(data) {
 		const s = this.settings.matrix
 		const defaultSampleGrp = {
 			id: this.config.divideBy?.$id,
 			name: this.config.divideBy ? 'Not annotated' : '',
 			lst: []
 		}
-		this.sampleSorter = getSampleSorter(this, s, data.lst)
 
 		const sampleGroups = new Map()
 		const term = this.config.divideBy?.term || {}
@@ -238,6 +238,7 @@ class Matrix {
 		const exclude = this.config.divideBy?.exclude || []
 		const values = term.values || {}
 		const ref = data.refs.byTermId[$id] || {}
+		this.visibleSamples = new Set()
 
 		for (const row of data.lst) {
 			// TODO: may move the override handling downstream,
@@ -261,6 +262,7 @@ class Matrix {
 					})
 				}
 				sampleGroups.get(key).lst.push(row)
+				this.visibleSamples.add(row.sample)
 			} else {
 				defaultSampleGrp.lst.push(row)
 			}
@@ -272,9 +274,12 @@ class Matrix {
 
 		// TODO: sort sample groups, maybe by sample count, value order, etc
 		this.sampleGroups = [...sampleGroups.values()].sort((a, b) => a.order - b.order)
-		//this.sampleGroupKeys = [...sampleGroups.keys()] -- not needed?
-		this.sampleOrder = []
+	}
 
+	setSampleOrder(data) {
+		const s = this.settings.matrix
+		this.sampleOrder = []
+		this.sampleSorter = getSampleSorter(this, s, data.lst)
 		let total = 0
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
 			grp.lst.sort(this.sampleSorter)
@@ -309,7 +314,7 @@ class Matrix {
 			let grpHtAdjustments = 0
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
-				for (const sn in data.samples) {
+				for (const sn of this.visibleSamples) {
 					const anno = data.samples[sn][tw.$id]
 					if (anno) {
 						anno.filteredValues = this.getFilteredValues(anno, tw)
