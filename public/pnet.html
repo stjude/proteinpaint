@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+  <script src="bin/proteinpaint.js" charset="utf-8"></script>
+</head>
+<body>
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+<div id=aaa style="margin:10px"></div>
+<script>
+const maxTries = 1
+let numTries=0
+function run() {
+  const pw = prompt('Please enter a password')
+  numTries++
+
+  fetch('/pnet-login', {
+    headers: {
+      authorization: `Basic ${btoa(pw)}`
+    }
+  })
+  .then(res => res.json())
+  .then(res=>{
+    if (res.error) throw res.error
+    runproteinpaint({
+      holder:document.getElementById('aaa'),
+      parseurl:true,
+    })
+  })
+  .catch(e => {
+    if (numTries >= maxTries) {
+      document.body.innerHTML = `<div style='padding: 10px 20px'><h1>Unauthorized</h1><h2>${e.error || e}</h2></div>`
+    } else {
+      alert(e.error || e)
+      run()
+    }
+  })
+}
+run()
+</script>
+
+</body>
+</html>
