@@ -98,7 +98,7 @@ const express = require('express'),
 	handle_mdssurvivalplot = require('./km').handle_mdssurvivalplot,
 	validator = require('./validator'),
 	cookieParser = require('cookie-parser'),
-	maySetAuthRoutes = require('./auth.js')
+	{ maySetAuthRoutes, getDsAuth } = require('./auth.js')
 
 /*
 valuable globals
@@ -617,7 +617,8 @@ async function handle_genomes(req, res) {
 		codedate: codedate.toDateString(),
 		launchdate,
 		hasblat,
-		features: exports.features
+		features: exports.features,
+		dsAuth: getDsAuth(req)
 	})
 }
 

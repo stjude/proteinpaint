@@ -1,6 +1,6 @@
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import * as client from './client'
-import { dofetch3 } from './common/dofetch'
+import { dofetch3, setAuth } from './common/dofetch'
 import { stratinput } from '../shared/tree'
 import { stratify } from 'd3-hierarchy'
 import { findgenemodel_bysymbol } from './gene'
@@ -153,6 +153,7 @@ export function runproteinpaint(arg) {
 			if (data.debugmode) {
 				app.debugmode = true
 			}
+			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
 			// genome data init
 			for (const genomename in app.genomes) {

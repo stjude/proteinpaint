@@ -6,7 +6,7 @@ const sessions = {} // TODO: rehydrate sessions from a cached file
 const creds = serverconfig.dsCredentials
 const maxSessionAge = 1000 * 3600 * 24
 
-module.exports = async function maySetAuthRoutes(app, basepath) {
+async function maySetAuthRoutes(app, basepath) {
 	if (!creds || !Object.keys(creds).length) return
 	for (const dslabel in creds) {
 		sessions[dslabel] = {}
@@ -14,21 +14,22 @@ module.exports = async function maySetAuthRoutes(app, basepath) {
 
 	app.use((req, res, next) => {
 		const q = req.query
-		if (req.path == '/dslogin' || !q.dslabel || !(q.dslabel in creds)) {
+		if (req.path == '/genomes' || req.path == '/dslogin' || !q.dslabel || !(q.dslabel in creds)) {
 			next()
 			return
 		}
 
 		try {
-			//console.log(req.query.dslabel)
 			const id = req.cookies[`${q.dslabel}SessionId`]
 			if (!id) throw 'missing session cookie'
 			const session = sessions[q.dslabel][id]
-			if (!session) throw `unestablished browser session`
-			if (+new Date() - sessions.time > maxSessionAge) {
+			if (!session) throw `unestablished or expired browser session`
+			const time = +new Date()
+			if (time - session.time > maxSessionAge) {
 				delete sessions[q.dslabel][id]
 				throw 'expired browser session'
 			}
+			session.time = time
 			next()
 		} catch (e) {
 			res.send({ error: e })
@@ -58,3 +59,13 @@ module.exports = async function maySetAuthRoutes(app, basepath) {
 		}
 	})
 }
+
+function getDsAuth(req) {
+	return Object.keys(serverconfig.dsCredentials || {}).map(dslabel => {
+		const id = req.cookies[`${dslabel}SessionId`]
+		const sessionStart = sessions[dslabel]?.[id]?.time || 0
+		return { dslabel, insession: +new Date() - sessionStart < maxSessionAge }
+	})
+}
+
+module.exports = { maySetAuthRoutes, getDsAuth }
