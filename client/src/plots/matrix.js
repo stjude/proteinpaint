@@ -440,7 +440,8 @@ class Matrix {
 		const mainh =
 			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + this[`${row}s`].slice(-1)[0].totalHtAdjustments
 
-		const topFontSize = _t_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 4, s.minLabelFontSize)
+		const topFontSize =
+			_t_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 2 * s.collabelpad, s.minLabelFontSize)
 		layout.top.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset - s.collabelgap})`,
 			labelTransform: 'rotate(-90)',
@@ -452,7 +453,8 @@ class Matrix {
 			axisFxn: axisTop
 		}
 
-		const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 4, s.minLabelFontSize)
+		const btmFontSize =
+			_b_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 2 * s.collabelpad, s.minLabelFontSize)
 		layout.btm.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset + mainh + s.collabelgap})`,
 			labelTransform: 'rotate(-90)',
@@ -464,7 +466,8 @@ class Matrix {
 			axisFxn: axisBottom
 		}
 
-		const leftFontSize = _l_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 4, s.minLabelFontSize)
+		const leftFontSize =
+			_l_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad, s.minLabelFontSize)
 		layout.left.attr = {
 			boxTransform: `translate(${xOffset - s.rowlabelgap}, ${yOffset})`,
 			labelTransform: '',
@@ -476,7 +479,8 @@ class Matrix {
 			axisFxn: axisLeft
 		}
 
-		const rtFontSize = _r_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 4, s.minLabelFontSize)
+		const rtFontSize =
+			_r_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad, s.minLabelFontSize)
 		layout.right.attr = {
 			boxTransform: `translate(${xOffset + mainw + s.rowlabelgap}, ${yOffset})`,
 			labelTransform: '',
@@ -516,7 +520,7 @@ class Matrix {
 
 			for (const t of this.termOrder) {
 				const $id = t.tw.$id
-				if (row[$id]?.filteredValues && !row[$id]?.filteredValues.length) continue
+				if (row[$id]?.filteredValues && !row[$id]?.filteredValues.length && !row[$id].override) continue
 				const anno = row[$id]?.override || row[$id]
 				if (!anno) continue
 				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
@@ -739,6 +743,7 @@ export async function getPlotConfig(opts, app) {
 				collabelvisible: true,
 				colglabelpos: true,
 				collabelgap: 5,
+				collabelpad: 1,
 				rowh: 18,
 				rowspace: 1,
 				rowgspace: 8,
@@ -747,6 +752,7 @@ export async function getPlotConfig(opts, app) {
 				rowlabelvisible: true,
 				rowglabelpos: true,
 				rowlabelgap: 5,
+				rowlabelpad: 1,
 				grpLabelFontSize: 12,
 				minLabelFontSize: 6,
 				transpose: false,

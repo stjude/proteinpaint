@@ -128,6 +128,12 @@ export class MatrixControls {
 					settingsKey: 'colgspace'
 				},
 				{
+					label: 'Column label pad',
+					type: 'number',
+					chartType: 'matrix',
+					settingsKey: 'collabelpad'
+				},
+				{
 					label: 'Column label offset',
 					type: 'number',
 					chartType: 'matrix',
@@ -154,6 +160,12 @@ export class MatrixControls {
 					type: 'number',
 					chartType: 'matrix',
 					settingsKey: 'rowspace'
+				},
+				{
+					label: 'Row label pad',
+					type: 'number',
+					chartType: 'matrix',
+					settingsKey: 'rowlabelpad'
 				},
 				{
 					label: 'Row label offset',
