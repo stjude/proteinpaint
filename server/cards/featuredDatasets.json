@@ -2,6 +2,7 @@
     "datasets": [
         {
             "name": "Pediatric Cancer Mutation",
+            "intro": "The Pediatric dataset consists of somatic variants and tumor RNA-seq data shown in the protein view. The dataset is comprised of the GRCh37/hg19 genome as well as data from the Pediatric Cancer Genome Project <a href='https://permalinks.stjude.cloud/permalinks/pcgp' target='_blank'>(PCGP)</a>, NCI Target cohort, the Pan-TARGET study <a href='https://pubmed.ncbi.nlm.nih.gov/29489755/' target='_blank'>(PMID: 29489755)</a>, and the Shanghai Children's Medical Center T-ALL cohort <a href='https://pubmed.ncbi.nlm.nih.gov/32632335/' target='_blank'>(PMID: 32632335)</a>. A liftover of genomic variants and gene internals created the GRCh/hg38 dataset.<br><br><div style='margin-left: 3em;'>Read more about ProteinPaint <a href='https://genomepaint.stjude.cloud/#data-release' target='_blank' >data releases</a>.</div>",
             "searchbar": "gene",
             "genomeToggle": true,
             "defaultGenome": "hg19",
@@ -15,6 +16,7 @@
         },
         {
             "name": "Pediatric2 GenomePaint",
+            "intro": "The Pediatric2 dataset expanded the original Pediatric dataset with non-coding variants and expression data in GenomePaint. The additional data includes Genome for Kids <a href='https://pubmed.ncbi.nlm.nih.gov/34301788/' target='blank'>(PMID: 34301788)</a>, Shanghai Children's Medical Center relapsed ALL cohort <a href='https://pubmed.ncbi.nlm.nih.gov/32632335/' target='_blank'>(PMID: 32632335)</a>, St Jude's Clinical cancer genomic profiling by three-platform sequencing study<a href='https://pubmed.ncbi.nlm.nih.gov/30262806/' target='_blank'>(PMID: 30262806)</a>, and St Jude's Pan-neuroblastoma analysis data study<a href='https://pubmed.ncbi.nlm.nih.gov/33056981/' target='_blank'>(PMID: 33056981)</a>.<br><br><div style='margin-left: 3em;'>Read more about ProteinPaint <a href='https://genomepaint.stjude.cloud/#data-release' target='PP data release' >data releases</a>.</div>",
             "searchbar": "all",
             "genomeToggle": true,
             "defaultGenome": "hg19",
@@ -29,6 +31,7 @@
         },
         {
             "name": "NCI GDC",
+            "intro": "The NCI's Genomic Data Commmons <a href='https://gdc.cancer.gov/about-gdc' target='GDC homepage'>(GDC)</a> coagulates data from NCI-supported programs, such as TCGA and TARGET. Search <br><br><div style='margin-left: 3em;'>Read more about <a href='https://gdc.cancer.gov/about-data/data-sources' target='GDC data sources'>GDC data sources</a>.</div>",
             "searchbar": "gene",
             "defaultGenome": "hg38",
             "dsURLparam": "mds3=GDC",
@@ -47,6 +50,7 @@
         },
         {
             "name": "CIViC",
+            "intro": "The <a href='https://civicdb.org' target='_blank'>Clinical Interpretation of Variants in Cancer</a> touts itself as \"an open-source platform for crowdsourced and expert-moderated cancer variant curation.\" Supported by the NIH, NHGRI, and NCI, CIViC is a richly curated oncology dataset <a href='https://pubmed.ncbi.nlm.nih.gov/28138153/' target='_blank'>(PMID: 28138153)</a>.", 
             "searchbar": "gene",
             "defaultGenome": "hg19",
             "dsURLparam": "dataset=CIViC",

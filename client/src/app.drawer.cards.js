@@ -1075,30 +1075,42 @@ async function openDatasetSandbox(page_args, ds) {
 	const par = {
 		genome: page_args.genomes[ds.defaultGenome]
 	}
+	const main_div = sandbox_div.body
+		.append('div')
+		// Intro, gene toggle, and gene search box
+		.style('padding', '1em')
+		.style('border-bottom', '1px solid #d0e3ff')
+
+	main_div
+		.append('div')
+		.style('line-height', '1.5em')
+		.style('padding', '0.5em 0.5em 1em 0.5em')
+		.html(ds.intro)
 
 	if (ds.genomeToggle == true) {
 		// Create hg19 and hg38 toggle first when applicable
-		makeHgGenomeBtns(sandbox_div.body, par, page_args.genomes)
+		makeHgGenomeBtns(main_div, par, page_args.genomes)
 	}
 	// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
-	const searchbar_div = sandbox_div.body
+	const searchbar_div = main_div
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding', '10px 10px 10px 10px')
+		.style('padding', '0.5em')
 
 	const allResults_div = sandbox_div.body.append('div').style('max-width', '90vw')
 
 	const coords = addGeneSearchbox({
 		genome: par.genome,
 		tip: new Menu({ padding: '' }),
-		row: searchbar_div.append('div').style('border', '1px, solid #d0e3ff'),
+		row: searchbar_div.append('div'),
 		callback: async () => {
 			// Creates search results as tracks, last to first
 			const result_div = allResults_div
 				.insert('div', ':first-child')
 				.style('max-width', '90vw')
 				.style('margin', '1vw')
-			const destroyBtn = result_div
+			result_div
+				// Destroy track on click button
 				.append('div')
 				.style('display', 'inline-block')
 				.style('cursor', 'default')
@@ -1134,6 +1146,7 @@ async function openDatasetSandbox(page_args, ds) {
 }
 
 function makeHgGenomeBtns(div, par, genomes) {
+	//TODO dynamically create from array, not hardcoded hg19/hg38
 	const toggleBtn_div = div
 		.append('div')
 		.style('display', 'inline-block')
