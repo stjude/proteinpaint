@@ -77,6 +77,8 @@ upon error, throw err message as a string
 		const res = await client.dofetch3(`/massSession?id=${id}`)
 		if (res.error) throw res.error
 		const opts = {
+			// default to noheader for mass sessions
+			noheader: urlp.has('noheader') ? urlp.get('noheader') : 0,
 			holder: arg.holder,
 			state: res.state,
 			genome: arg.genomes[res.state.vocab.genome]
