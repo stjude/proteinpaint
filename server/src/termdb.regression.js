@@ -78,7 +78,6 @@ replaceTermId
 runRegression
 	parseRoutput
 snplocusPostprocess
-	addSnplocusMessage
 	addResult4monomorphic
 		getLine4OneSnp
 	lowAFsnps_wilcoxon
@@ -752,7 +751,6 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 async function snplocusPostprocess(q, sampledata, Rinput, result) {
 	const tw = q.independent.find(i => i.type == 'snplocus')
 	if (!tw) return
-	addSnplocusMessage(tw, result, q)
 	addResult4monomorphic(tw, result)
 	if (tw.lowAFsnps.size) {
 		// low-af variants are not used for model-fitting
@@ -1035,44 +1033,6 @@ function getLine4OneSnp(snpid, tw) {
 	]
 	for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
 	return { k: 'Variant:', v: lst.join('&nbsp;&nbsp;&nbsp;') }
-}
-
-function addSnplocusMessage(tw, result, q) {
-	const lst = []
-	if (tw.highAFsnps.size) {
-		lst.push(
-			tw.highAFsnps.size +
-				' variant' +
-				(tw.highAFsnps.size > 1 ? 's' : '') +
-				' used for model-fitting (AF>=' +
-				tw.q.AFcutoff +
-				'%)'
-		)
-	}
-	if (tw.lowAFsnps.size) {
-		lst.push(
-			tw.lowAFsnps.size +
-				' variant' +
-				(tw.lowAFsnps.size > 1 ? 's' : '') +
-				' analyzed by ' +
-				(q.regressionType == 'linear'
-					? 'Wilcoxon rank sum test'
-					: q.regressionType == 'logistic'
-					? "Fisher's exact test"
-					: 'Cumulative incidence test') +
-				' (AF<' +
-				tw.q.AFcutoff +
-				'%)'
-		)
-	}
-	if (tw.monomorphicLst.length)
-		lst.push(tw.monomorphicLst.length + ' monomorphic variant' + (tw.monomorphicLst.length > 1 ? 's' : '') + ' skipped')
-	if (lst.length) {
-		result.headerMessage = {
-			k: 'Summary:',
-			v: lst.join(', ')
-		}
-	}
 }
 
 /*
