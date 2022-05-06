@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge } from '../common/rx.core'
+import { getCompInit, copyMerge } from '../../rx'
 import { controlsInit } from './controls'
 import { fillTermWrapper } from '../common/termsetting'
 import { select, event } from 'd3-selection'
@@ -12,7 +12,121 @@ import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
 import { sayerror } from '../dom/error'
 
-class TdbCumInc {
+export class Cuminc {
+	constructor(opts) {
+		this.pj = getPj(this)
+		this.state = {
+			config: copyMerge(
+				{
+					settings: JSON.parse(defaultSettings)
+				},
+				opts.config
+			)
+		}
+
+		const holder = opts.holder
+		this.dom = {
+			holder,
+			chartsDiv: holder.append('div').style('margin', '10px'),
+			legendDiv: holder.append('div').style('margin', '5px'),
+			skippedChartsDiv: holder.append('div').style('margin', '25px 5px 15px 5px')
+		}
+
+		this.lineFxn = line()
+			.curve(curveStepAfter)
+			.x(c => c.scaledX)
+			.y(c => c.scaledY)
+
+		setRenderers(this)
+
+		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+			settings: {
+				legendOrientation: 'vertical'
+			},
+			handlers: {
+				legend: {
+					click: this.legendClick
+				}
+			}
+		})
+	}
+
+	main(data) {
+		this.settings = this.state.config.settings.cuminc
+		this.hiddenOverlays = []
+		this.processData(data)
+		this.pj.refresh({ data: this.currData })
+		this.setTerm2Color(this.pj.tree.charts)
+		this.render()
+		this.legendRenderer(this.legendData)
+		this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
+	}
+
+	processData(data) {
+		data.keys = ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high']
+		this.uniqueSeriesIds = new Set()
+		this.currData = []
+		const estKeys = ['cuminc', 'low', 'high']
+		for (const d of data.case) {
+			const obj = {}
+			data.keys.forEach((k, i) => {
+				obj[k] = estKeys.includes(k) ? 100 * d[i] : d[i]
+			})
+			this.currData.push(obj)
+			this.uniqueSeriesIds.add(obj.seriesId)
+		}
+
+		this.refs = {} //data.refs
+		this.skippedCharts = data.skippedCharts
+
+		// assume only one chart for now
+		this.tests = {
+			[this.currData[0].chartId]: data.tests //[0]
+		}
+
+		// hide skipped series of hidden series
+		this.skippedSeries = data.skippedSeries
+		if (this.skippedSeries) {
+			for (const chart in this.skippedSeries) {
+				// remove hidden series from this.skippedTests
+				this.skippedSeries[chart] = this.skippedSeries[chart].filter(series => !this.hiddenOverlays.includes(series))
+				if (this.skippedSeries[chart].length == 0) delete this.skippedSeries[chart]
+			}
+		}
+	}
+
+	setTerm2Color(charts) {
+		if (!charts) return
+		this.term2toColor = {}
+		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
+		const legendItems = []
+		for (const chart of charts) {
+			for (const series of chart.serieses) {
+				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
+				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
+					legendItems.push({
+						seriesId: series.seriesId,
+						text: series.seriesLabel,
+						color: this.term2toColor[series.seriesId],
+						isHidden: false // this.hiddenOverlays.includes(series.seriesId)
+					})
+				}
+			}
+		}
+		if (this.state.config.term2 && legendItems.length) {
+			this.legendData = [
+				{
+					name: this.state.config.term2.term.name,
+					items: legendItems
+				}
+			]
+		} else {
+			this.legendData = []
+		}
+	}
+}
+
+class MassCumInc {
 	constructor(opts) {
 		this.type = 'cuminc'
 	}
@@ -145,6 +259,7 @@ class TdbCumInc {
 			}
 			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.hiddenOverlays = this.getHiddenOverlays()
+			console.log(data)
 			this.processData(data)
 			this.pj.refresh({ data: this.currData })
 			this.setTerm2Color(this.pj.tree.charts)
@@ -257,7 +372,7 @@ class TdbCumInc {
 	}
 }
 
-export const cumincInit = getCompInit(TdbCumInc)
+export const cumincInit = getCompInit(MassCumInc)
 // this alias will allow abstracted dynamic imports
 export const componentInit = cumincInit
 
@@ -455,6 +570,7 @@ function setRenderers(self) {
 	}
 
 	function renderPvalues(pvaldiv, chart, tests, s) {
+		console.log(568, tests)
 		const fontSize = s.axisTitleFontSize - 2
 		const maxPvalsToShow = 10
 
@@ -778,6 +894,32 @@ function setInteractivity(self) {
 	}
 }
 
+const defaultSettings = JSON.stringify({
+	controls: {
+		isOpen: false, // control panel is hidden by default
+		term2: null, // the previous overlay value may be displayed as a convenience for toggling
+		term0: null
+	},
+	cuminc: {
+		minSampleSize: 5,
+		minEventCnt: 5,
+		radius: 5,
+		fill: '#fff',
+		stroke: '#000',
+		fillOpacity: 0,
+		chartMargin: 10,
+		svgw: 400,
+		svgh: 300,
+		svgPadding: {
+			top: 20,
+			left: 55,
+			right: 20,
+			bottom: 50
+		},
+		axisTitleFontSize: 16
+	}
+})
+
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'cuminc: opts.term{} missing'
 	try {
@@ -792,38 +934,7 @@ export async function getPlotConfig(opts, app) {
 	const h = opts.term2?.q.hiddenValues || {}
 	const config = {
 		id: opts.term.term.id,
-		settings: {
-			controls: {
-				isOpen: false, // control panel is hidden by default
-				term2: null, // the previous overlay value may be displayed as a convenience for toggling
-				term0: null
-			},
-			common: {
-				use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
-				use_percentage: false,
-				barheight: 300, // maximum bar length
-				barwidth: 20, // bar thickness
-				barspace: 2 // space between two bars
-			},
-			cuminc: {
-				minSampleSize: 5,
-				minEventCnt: 5,
-				radius: 5,
-				fill: '#fff',
-				stroke: '#000',
-				fillOpacity: 0,
-				chartMargin: 10,
-				svgw: 400,
-				svgh: 300,
-				svgPadding: {
-					top: 20,
-					left: 55,
-					right: 20,
-					bottom: 50
-				},
-				axisTitleFontSize: 16
-			}
-		}
+		settings: JSON.parse(defaultSettings)
 	}
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
@@ -872,6 +983,7 @@ function getPj(self) {
 		},
 		'=': {
 			chartTitle(row) {
+				if (!self.state?.config?.term) return row.chartId
 				const s = self.settings
 				const cutoff = self.state.config.term.q.breaks[0]
 				if (!row.chartId || row.chartId == '-') {
@@ -886,8 +998,8 @@ function getPj(self) {
 				return value && value.label ? value.label : row.chartId
 			},
 			seriesLabel(row, context) {
-				const t2 = self.state.config.term2
-				if (!t2) return
+				const t2 = self.state.config?.term2
+				if (!t2) return context.self.seriesId
 				const seriesId = context.self.seriesId
 				if (t2 && t2.q && t2.q.groupsetting && t2.q.groupsetting.inuse) return seriesId
 				if (t2 && t2.term.values && seriesId in t2.term.values) return t2.term.values[seriesId].label

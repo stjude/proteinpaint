@@ -943,6 +943,8 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result, minYearsToEvent)
 				continue
 			}
 			const [a, b] = gt.split('/')
+
+			// hardcoded series "1/2", here and client side
 			// if this person carries the allele, assign to series "1", otherwise "2"
 			sampleData.series = snpO.effAle == a || snpO.effAle == b ? '1' : '2'
 
@@ -964,6 +966,15 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result, minYearsToEvent)
 		const pvalue = Number(final_data.tests[snpid][0].pvalue)
 		if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
 
+		// clear chartId at [0] so it won't show as chart title
+		const caselst = []
+		for (const i of final_data.case) {
+			if (i[0] == snpid) {
+				i[0] = ''
+				caselst.push(i)
+			}
+		}
+
 		// make a result object for this snp
 		const analysisResult = {
 			id: snpid,
@@ -973,7 +984,7 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result, minYearsToEvent)
 				cuminc: {
 					pvalue: Number(pvalue.toFixed(4)),
 					final_data: {
-						case: final_data.case.filter(x => x[0] == snpid),
+						case: caselst,
 						tests: final_data.tests[snpid]
 					}
 				}
