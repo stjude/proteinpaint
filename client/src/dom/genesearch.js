@@ -101,6 +101,13 @@ export function addGeneSearchbox(arg) {
 
 	let placeholder = 'Gene, position',
 		width = 150
+	if (arg.geneOnly) {
+		placeholder = 'Gene'
+		arg.genome.hasSNP = false
+		if (arg.allowVariant) {
+			throw 'Conflicting arguments: .geneOnly = true and .allowVariant = true'
+		}
+	}
 	if (arg.genome.hasSNP) {
 		placeholder += ', SNP'
 		width += 40
@@ -144,7 +151,7 @@ export function addGeneSearchbox(arg) {
 				}
 
 				const pos = string2pos(v, arg.genome)
-				if (pos) {
+				if (pos && !arg.geneOnly) {
 					// input is coordinate
 					getResult(pos, 'Valid coordinate')
 					return

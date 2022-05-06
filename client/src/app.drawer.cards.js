@@ -1102,6 +1102,7 @@ async function openDatasetSandbox(page_args, ds) {
 		genome: par.genome,
 		tip: new Menu({ padding: '' }),
 		row: searchbar_div.append('div'),
+		geneOnly: ds.searchbar == 'gene' ? true : false,
 		callback: async () => {
 			// Creates search results as tracks, last to first
 			const result_div = allResults_div
@@ -1153,9 +1154,15 @@ function addDatasetGenomeBtns(div, par, ds, genomes) {
 	const btns = []
 	if (ds.availableGenomes.length == 1) {
 		// Show default genome as a non-functional button left of the search button
-		return makeButton(toggleBtn_div, ds.availableGenomes[0])
+		div
+			.append('div')
+			.style('padding', '8px')
 			.style('color', 'white')
-			.style('background-color', '#0b5394ff')
+			.style('background-color', '#5f86b5')
+			.style('display', 'inline-block')
+			.style('width', 'auto')
+			.style('height', 'auto')
+			.text(ds.availableGenomes[0])
 	} else {
 		const btns = []
 
@@ -1188,7 +1195,6 @@ function addDatasetGenomeBtns(div, par, ds, genomes) {
 					b.active = b === btn
 					b.btn.style('color', b.active ? 'white' : 'black')
 					b.btn.style('background-color', b.active ? '#0b5394ff' : '#bfbfbf')
-					console.log(b.active)
 				}
 				if (btn.active) {
 					btn.callback(par)
