@@ -651,7 +651,7 @@ function setRenderers(self) {
 				})
 		}
 
-		xAxis.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom) + ')').call(xTicks)
+		xAxis.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5) + ')').call(xTicks)
 
 		yAxis.call(
 			axisLeft(

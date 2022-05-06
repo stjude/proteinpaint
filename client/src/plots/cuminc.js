@@ -570,7 +570,6 @@ function setRenderers(self) {
 	}
 
 	function renderPvalues(pvaldiv, chart, tests, s) {
-		console.log(568, tests)
 		const fontSize = s.axisTitleFontSize - 2
 		const maxPvalsToShow = 10
 
@@ -787,7 +786,7 @@ function setRenderers(self) {
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
 		xAxis
-			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom) + ')')
+			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5) + ')')
 			.call(axisBottom(d.xScale).ticks(5))
 
 		yAxis.call(
