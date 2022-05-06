@@ -1,15 +1,16 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import * as common from '../../shared/common'
-import * as client from '../client'
+import { mclass } from '../../shared/common'
+import { fillbar } from '../client'
+import { fold_glyph, settle_glyph } from './skewer.render'
 
 const labyspace = 5
+const font = 'Arial'
 
 /*
 ********************** EXPORTED
 make_leftlabels
 ********************** INTERNAL
 makelabel
-menu_mclass
 stratifymenu_samplesummary
 stratifymenu_genecnv
 */
@@ -31,32 +32,36 @@ export function make_leftlabels(data, tk, block) {
 
 	const labels = [] // for max width
 
-	if (tk.skewer && tk.skewer.data) {
-		// variant count may combine genecnv and skewer, and show sublabels under main
-		const lab = makelabel(tk, block, laby)
-		const variantcount = tk.skewer.data.reduce((i, j) => i + j.mlst.length, 0)
-		if (variantcount == 0) {
-			// hide label
-			lab
-				.text('No variants')
-				.attr('class', '')
-				.style('opacity', 0.5)
-		} else {
-			if (data.skewer) {
-				lab.text(
-					variantcount < data.skewer.length
-						? variantcount + ' of ' + data.skewer.length + ' variants'
-						: variantcount + ' variant' + (variantcount > 1 ? 's' : '')
-				)
+	if (tk.skewer) {
+		if (tk.skewer.mode == 'skewer') {
+			// quick fix - only show label for "skewer" mode
+			// count number from skewer.data
+			// TODO show label for numeric mode, decide menu content
+			const lab = makelabel(tk, block, laby)
+			const variantcount = tk.skewer.data.reduce((i, j) => i + j.mlst.length, 0)
+			if (variantcount == 0) {
+				// hide label
+				lab
+					.text('No variants')
+					.attr('class', '')
+					.style('opacity', 0.5)
 			} else {
-				lab.text(variantcount + ' variant' + (variantcount > 1 ? 's' : ''))
+				if (data.skewer) {
+					lab.text(
+						variantcount < data.skewer.length
+							? variantcount + ' of ' + data.skewer.length + ' variants'
+							: variantcount + ' variant' + (variantcount > 1 ? 's' : '')
+					)
+				} else {
+					lab.text(variantcount + ' variant' + (variantcount > 1 ? 's' : ''))
+				}
+				lab.on('click', () => {
+					tk.tktip.clear().showunder(d3event.target)
+					menu_variants(tk, block)
+				})
 			}
-			lab.on('click', () => {
-				tk.tktip.clear().showunder(d3event.target)
-				menu_mclass(data, tk, block)
-			})
+			labels.push(lab)
 		}
-		labels.push(lab)
 	}
 
 	laby += labyspace + block.labelfontsize
@@ -125,7 +130,7 @@ function makelabel(tk, block, y) {
 	return tk.leftlabelg
 		.append('text')
 		.attr('font-size', block.labelfontsize)
-		.attr('font-family', client.font)
+		.attr('font-family', font)
 		.attr('y', block.labelfontsize / 2 + y)
 		.attr('text-anchor', 'end')
 		.attr('dominant-baseline', 'central')
@@ -134,85 +139,32 @@ function makelabel(tk, block, y) {
 		.attr('x', block.tkleftlabel_xshift)
 }
 
-function menu_mclass(data, tk, block) {
-	const checkboxdiv = tk.tktip.d.append('div').style('margin-bottom', '10px')
-	for (const [mclass, c] of data.mclass2variantcount) {
-		addrow(mclass, c)
-	}
-	// show hidden mclass without a server-returned count
-	for (const s of tk.hiddenmclass) {
-		addrow(s, 0)
-	}
-
-	const row = tk.tktip.d.append('div')
-	row
-		.append('button')
-		.text('Submit')
-		.style('margin-right', '5px')
-		.on('click', () => {
-			const lst = checkboxdiv.node().getElementsByTagName('input')
-			const unchecked = []
-			for (const i of lst) {
-				if (!i.checked) unchecked.push(i.getAttribute('mclass'))
-			}
-			if (unchecked.length == lst.length) return window.alert('Please check at least one option.')
-			tk.hiddenmclass = new Set(unchecked)
-			tk.tktip.hide()
-			tk.uninitialized = true
-			tk.load()
-		})
-	row
-		.append('span')
-		.text('Check_all')
-		.attr('class', 'sja_clbtext2')
-		.style('margin-right', '10px')
-		.on('click', () => {
-			for (const i of checkboxdiv.node().getElementsByTagName('input')) {
-				i.checked = true
-			}
-		})
-	row
-		.append('span')
-		.text('Clear')
-		.attr('class', 'sja_clbtext2')
-		.style('margin-right', '5px')
-		.on('click', () => {
-			for (const i of checkboxdiv.node().getElementsByTagName('input')) {
-				i.checked = false
-			}
-		})
-
-	function addrow(mclass, count) {
-		const row = checkboxdiv.append('div')
-		const label = row.append('label')
-		label
-			.append('input')
-			.attr('type', 'checkbox')
-			.property('checked', !tk.hiddenmclass.has(mclass))
-			.attr('mclass', mclass)
-		if (count > 0) {
-			label
-				.append('span')
-				.style('margin-left', '8px')
-				.style('padding', '0px 6px')
-				.style('border-radius', '6px')
-				.style('background', common.mclass[mclass].color)
-				.style('color', 'white')
-				.style('font-size', '.8em')
-				.text(count > 1 ? count : '')
-		} else {
-			label
-				.append('span')
-				.style('margin-left', '8px')
-				.style('font-size', '.8em')
-				.style('opacity', 0.5)
-				.text('HIDDEN')
+function menu_variants(tk, block) {
+	if (tk.skewer.mode == 'skewer') {
+		// showmode=1/0 means expanded/folded skewer, defined in skewer.render.js
+		const expandCount = tk.skewer.data.reduce((i, j) => i + j.showmode, 0)
+		if (expandCount > 0) {
+			// has expanded skewer
+			tk.tktip.d
+				.append('div')
+				.text('Fold')
+				.attr('class', 'sja_menuoption')
+				.on('click', () => {
+					fold_glyph(tk.skewer.data, tk)
+					tk.tktip.hide()
+				})
+		} else if (expandCount == 0) {
+			tk.tktip.d
+				.append('div')
+				.text('Expand')
+				.attr('class', 'sja_menuoption')
+				.on('click', () => {
+					settle_glyph(tk, block)
+					tk.tktip.hide()
+				})
 		}
-		label
-			.append('span')
-			.style('margin-left', '8px')
-			.text(common.mclass[mclass].label)
-			.style('color', common.mclass[mclass].color)
+	} else if (tk.skewer.mode == 'numeric') {
+		// TODO come up with menu content
 	}
 }
 
@@ -383,7 +335,7 @@ function stratifymenu_samplesummary(strat, tk, block) {
 		if (hascohortsize) {
 			const td = tr.append('td')
 			if (item.cohortsize != undefined) {
-				client.fillbar(
+				fillbar(
 					td,
 					{ f: item.samplecount / item.cohortsize, v1: item.samplecount, v2: item.cohortsize },
 					{ fillbg: '#ECE5FF', fill: '#9F80FF' }
@@ -398,10 +350,10 @@ function stratifymenu_samplesummary(strat, tk, block) {
 		}
 		const td = tr.append('td')
 		if (item.mclasses) {
-			for (const [mclass, count] of item.mclasses) {
+			for (const [thisclass, count] of item.mclasses) {
 				td.append('span')
 					.html(count == 1 ? '&nbsp;' : count)
-					.style('background-color', common.mclass[mclass].color)
+					.style('background-color', mclass[thisclass].color)
 					.attr('class', 'sja_mcdot')
 			}
 		}
@@ -412,7 +364,7 @@ function stratifymenu_samplesummary(strat, tk, block) {
 				for (const [mclass, count] of item.hiddenmclasses) {
 					td.append('span')
 						.html(count == 1 ? '&nbsp;' : count)
-						.style('background-color', common.mclass[mclass].color)
+						.style('background-color', mclass[mclass].color)
 						.attr('class', 'sja_mcdot')
 				}
 			}
