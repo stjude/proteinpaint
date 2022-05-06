@@ -6,6 +6,7 @@ const serverconfig = require('./serverconfig')
 /*
 GDC graphql API
 
+****************** EXPORTED
 validate_variant2sample
 validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
@@ -20,8 +21,11 @@ validate_ssm2canonicalisoform
 getheaders
 validate_sampleSummaries2_number
 validate_sampleSummaries2_mclassdetail
-
 handle_gdc_ssms
+
+**************** internal
+mayMapRefseq2ensembl
+may_add_readdepth
 */
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -172,15 +176,8 @@ export function validate_query_snvindel_byisoform_2(ds) {
 		3. set refseq to "refseq" holder variable
 		4. in resulting ssm, set isoform to refseq so skewer can show
 		*/
-		let refseq
-		if (opts.isoform[0] == 'N' && ds.refseq2ensembl_query) {
-			const x = ds.refseq2ensembl_query.get(opts.isoform)
-			if (x) {
-				// converted given refseq to an ensembl
-				refseq = opts.isoform
-				opts.isoform = x.ensembl
-			}
-		}
+
+		const refseq = mayMapRefseq2ensembl(opts, ds)
 
 		const headers = getheaders(opts)
 		const response = await got.post(api.apihost, {
@@ -223,6 +220,25 @@ export function validate_query_snvindel_byisoform_2(ds) {
 
 		return mlst
 	}
+}
+
+function mayMapRefseq2ensembl(q, ds) {
+	/*
+	q: { isoform: str }
+	if this isoform starts with N, consider it as refseq and try to map to ensembl
+	if mapped, assign ensembl to q.isoform, and return the original refseq
+	on any failure, return undefined
+	*/
+	let refseq
+	if (q.isoform[0] == 'N' && ds.refseq2ensembl_query) {
+		const x = ds.refseq2ensembl_query.get(q.isoform)
+		if (x) {
+			// converted given refseq to an ensembl
+			refseq = q.isoform
+			q.isoform = x.ensembl
+		}
+	}
+	return refseq
 }
 
 function makeSampleObj(c, ds) {
@@ -699,8 +715,12 @@ export function validate_sampleSummaries2_number(api) {
 		return [{ label1: 'project_id', count: project_set.size }, { label1: 'primary_site', count: site_set.size }]
 	}
 }
+
 export function validate_sampleSummaries2_mclassdetail(api, ds) {
 	api.get = async q => {
+		// q.isoform is refseq when queried from that; must convert to ensembl, no need to keep refseq
+		mayMapRefseq2ensembl(q, ds)
+
 		const headers = getheaders(q)
 		const p1 = got(
 			api.gdcapi[0].endpoint +
@@ -731,12 +751,14 @@ export function validate_sampleSummaries2_mclassdetail(api, ds) {
 		if (!re_ssms.data || !re_ssms.data.hits) throw 'returned data from ssms query not .data.hits'
 		if (!re_cases.data || !re_cases.data.hits) throw 'returned data from cases query not .data.hits[]'
 		if (!Array.isArray(re_ssms.data.hits) || !Array.isArray(re_cases.data.hits)) throw 're.data.hits[] is not array'
+
 		const id2ssm = new Map()
 		// key: ssm_id, value: ssm {}
+
 		for (const h of re_ssms.data.hits) {
 			if (!h.ssm_id) throw 'ssm_id missing from a ssms hit'
 			if (!h.consequence) throw '.consequence[] missing from a ssm'
-			const consequence = h.consequence.find(i => i.transcript.transcript_id == q.isoform)
+			const consequence = h.consequence.find(i => i.transcript.transcript_id == q.isoform) // xxx
 			snvindel_addclass(h, consequence)
 			h.samples = []
 			id2ssm.set(h.ssm_id, h)
@@ -861,6 +883,7 @@ export function validate_sampleSummaries2_mclassdetail(api, ds) {
 		return strat
 	}
 }
+
 function sort_mclass(set) {
 	const lst = []
 	for (const [c, s] of set) {
