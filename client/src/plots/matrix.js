@@ -238,14 +238,13 @@ class Matrix {
 		const exclude = this.config.divideBy?.exclude || []
 		const values = term.values || {}
 		const ref = data.refs.byTermId[$id] || {}
-		this.visibleSamples = new Set()
 
 		for (const row of data.lst) {
 			// TODO: may move the override handling downstream,
 			// but before sample group.lst sorting, as needed
 			for (const grp of this.config.termgroups) {
 				for (const tw of grp.lst) {
-					mayApplyOverrides(row, tw, this.config.overrides)
+					mayApplyOverrides(row, tw, grp, this.config.overrides)
 				}
 			}
 
@@ -262,7 +261,6 @@ class Matrix {
 					})
 				}
 				sampleGroups.get(key).lst.push(row)
-				this.visibleSamples.add(row.sample)
 			} else {
 				defaultSampleGrp.lst.push(row)
 			}
@@ -314,17 +312,22 @@ class Matrix {
 			let grpHtAdjustments = 0
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
-				for (const sn of this.visibleSamples) {
-					const anno = data.samples[sn][tw.$id]
-					if (anno) {
-						anno.filteredValues = this.getFilteredValues(anno, tw)
-						if (anno.filteredValues?.length) {
-							counts.samples += 1
-							counts.hits += anno.filteredValues.length
-							if (tw.q?.mode == 'continuous') {
-								const v = anno.value
-								if (!('minval' in counts) || counts.minval > v) counts.minval = v
-								if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
+				const countedSamples = new Set()
+				for (const sgrp of this.sampleGroups) {
+					for (const s of sgrp.lst) {
+						if (countedSamples.has(s.sample)) continue
+						countedSamples.add(s.sample)
+						const anno = data.samples[s.sample][tw.$id]
+						if (anno) {
+							anno.filteredValues = this.getFilteredValues(anno, tw, grp)
+							if (anno.filteredValues?.length) {
+								counts.samples += 1
+								counts.hits += anno.filteredValues.length
+								if (tw.q?.mode == 'continuous') {
+									const v = anno.value
+									if (!('minval' in counts) || counts.minval > v) counts.minval = v
+									if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
+								}
 							}
 						}
 					}
@@ -379,15 +382,16 @@ class Matrix {
 		}
 	}
 
-	getFilteredValues(anno, tw) {
+	getFilteredValues(anno, tw, grp) {
 		const values = 'value' in anno ? [anno.value] : anno.values
-		if (!tw.valueFilter || !values) return values
+		const valueFilter = tw.valueFilter || grp.valueFilter
+		if (!valueFilter || !values) return values
 		return values.filter(v => {
 			// TODO: handle non-tvs type value filter
-			if (tw.valueFilter.type == 'tvs') {
-				const matched = true //t.tw.valueFilter.isnot
-				for (const vf of tw.valueFilter.tvs.values) {
-					if (v[vf.key] == vf.value) return !tw.valueFilter.isnot
+			if (valueFilter.type == 'tvs') {
+				const matched = true
+				for (const vf of valueFilter.tvs.values) {
+					if (v[vf.key] == vf.value) return !valueFilter.isnot
 				}
 				return matched
 			}
@@ -779,23 +783,24 @@ export async function getPlotConfig(opts, app) {
 	return config
 }
 
-function mayApplyOverrides(row, tw, overrides) {
-	if (!tw.overrides) return {}
-	for (const key in overrides) {
-		if (!tw.overrides.includes(key)) continue
-		const sf = overrides[key].sampleFilter || {}
+function mayApplyOverrides(row, tw, grp, configOverrides) {
+	const overrides = tw.overrides || grp.overrides
+	if (!grp.overrides) return {}
+	for (const key in configOverrides) {
+		if (!overrides.includes(key)) continue
+		const sf = configOverrides[key].sampleFilter || {}
 		if (sf.type == 'wvs') {
 			for (const v of sf.values) {
 				if (row[sf.wrapper$id]?.key === v.key) {
 					if (!row[tw.$id]) row[tw.$id] = {}
-					row[tw.$id].override = JSON.parse(JSON.stringify(overrides[key].value))
+					row[tw.$id].override = JSON.parse(JSON.stringify(configOverrides[key].value))
 				}
 			}
 		} else if (sf.type == 'tvs') {
 			for (const v of sf.tvs.values) {
 				if (row[sf.wrapper$id]?.key === v.key) {
 					if (!row[tw.$id]) row[tw.$id] = {}
-					row[tw.$id].override = JSON.parse(JSON.stringify(overrides[key].value))
+					row[tw.$id].override = JSON.parse(JSON.stringify(configOverrides[key].value))
 				}
 			}
 		}
