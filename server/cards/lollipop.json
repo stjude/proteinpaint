@@ -51,6 +51,7 @@
                 "tracks": [
                     {
                         "type": "mds3",
+                        "skewerMode":"numeric",
                         "name":"Tau Phosphosites",
                         "custom_variants":[
                             {"chr":"chr17","pos":45962452,"mname":"T39","class":"M","dt":1, "__value": 1.32},
@@ -155,6 +156,7 @@
                 "tracks": [
                     {
                         "type": "mds3",
+                        "skewerMode":"numeric",
                         "name":"Tau Phosphosites",
                         "custom_variants":[
                             {"chr":"chr17","pos":45962452,"mname":"T39","class":"M","dt":1, "__value": 1.32, "shapeTriangle": true},
