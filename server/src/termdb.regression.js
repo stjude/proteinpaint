@@ -762,7 +762,7 @@ async function snplocusPostprocess(q, sampledata, Rinput, result) {
 		} else if (q.regressionType == 'logistic') {
 			await lowAFsnps_fisher(tw, sampledata, Rinput, result)
 		} else if (q.regressionType == 'cox') {
-			await lowAFsnps_cuminc(tw, sampledata, Rinput, result, q.outcome.minYearsToEvent)
+			await lowAFsnps_cuminc(tw, sampledata, Rinput, result, q.outcome.q.minYearsToEvent)
 		} else {
 			throw 'unknown regression type'
 		}
