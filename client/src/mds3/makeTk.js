@@ -31,6 +31,8 @@ stratify labels will account for all tracks, e.g. skewer, cnv
 */
 
 export async function makeTk(tk, block) {
+	// run just once to initiate a track
+
 	tk.cache = {}
 	tk.itemtip = new Menu()
 	tk.samplefiltertemp = {}
@@ -50,10 +52,25 @@ export async function makeTk(tk, block) {
 
 	if (tk.mds.has_skewer) {
 		tk.skewer = {
-			g: tk.glider.append('g')
+			g: tk.glider.append('g'),
+			// skewer.mode defines how to show snv/indel; may also control fusion
+			// later may add new attributes e.g. "cnvMode" to control mode of other data types
+			mode: 'skewer' // default mode, can be overwritten later
 		}
 		// both skewer and numeric mode will render elements into tk.skewer.g
 		// will also attach skewer.discKickSelection
+
+		if (tk.skewerMode) {
+			// override
+			tk.skewer.mode = tk.skewerMode
+			delete tk.skewerMode
+		}
+		if (tk.skewer.mode == 'skewer') {
+		} else if (tk.skewer.mode == 'numeric') {
+			if (!tk.numericmode) throw '.numericmode{} missing when skewer.mode=numeric'
+		} else {
+			throw 'unknown skewerMode'
+		}
 	}
 
 	tk.leftLabelMaxwidth = tk.tklabel

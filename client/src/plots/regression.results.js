@@ -1088,8 +1088,8 @@ async function createGenomebrowser(self, input, resultLst) {
 	arg.tklst.push({
 		type: 'mds3', // tkt.mds3
 		name: 'Variants',
+		skewerMode: 'numeric',
 		numericmode: {
-			inuse: true,
 			type: '__value',
 			label: '-log10 p-value',
 			tooltipPrintValue: m => getMtooltipValues(m, self.config.regressionType)

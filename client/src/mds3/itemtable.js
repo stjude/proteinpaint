@@ -86,8 +86,8 @@ function table_snvindel_onevariant({ m, tk, table, block }) {
 		td1.text('Occurrence')
 		td2.text(m.occurrence)
 	}
-	const nm = tk.numericmode
-	if (nm && nm.inuse) {
+	if (tk.skewer.mode == 'numeric') {
+		const nm = tk.numericmode
 		const [td1, td2] = row_headervalue(table)
 		if (nm.tooltipPrintValue) {
 			const [a, b] = nm.tooltipPrintValue(m)
