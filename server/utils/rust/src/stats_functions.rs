@@ -22,7 +22,7 @@ pub fn strand_analysis_one_iteration(
                 reference_reverse_count,
             ])
             .unwrap()
-            .greater_pvalue;
+            .two_tail_pvalue;
             p_value
         });
 
@@ -52,7 +52,7 @@ pub fn strand_analysis_one_iteration(
                 reference_reverse_count,
             ])
             .unwrap()
-            .greater_pvalue;
+            .two_tail_pvalue;
             p_value
         });
 

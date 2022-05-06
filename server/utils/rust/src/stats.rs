@@ -4,7 +4,7 @@ mod stats_functions;
 
 fn main() {
     let mut input = String::new();
-    let fisher_limit: u32 = 300;
+    let fisher_limit: u32 = 300; // Change this value to include large number inputs for the fisher test
     match io::stdin().read_line(&mut input) {
         // Accepting the piped input from nodejs (or command line from testing)
         #[allow(unused_variables)]
