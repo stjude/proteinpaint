@@ -332,13 +332,12 @@ function setRenderers(self) {
 				term: self.config.outcome,
 				term2: {
 					term: {
-						name: 'SNP-fake',
+						name: 'Variant',
 						values: {
-							1: { key: 1, label: 'Alt' },
-							2: { key: 2, label: 'Ref' }
+							1: { key: 1, label: 'Carry minor allele' },
+							2: { key: 2, label: 'No minor allele' }
 						}
-					},
-					q: {}
+					}
 				}
 			}
 		})
