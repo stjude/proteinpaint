@@ -789,7 +789,7 @@ function setRenderers(self) {
 			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5) + ')')
 			.call(axisBottom(d.xScale).ticks(5))
 
-		yAxis.call(
+		yAxis.attr('transform', 'translate(-5,0)').call(
 			axisLeft(
 				d3Linear()
 					.domain(d.yScale.domain())

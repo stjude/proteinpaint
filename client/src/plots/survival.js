@@ -653,7 +653,7 @@ function setRenderers(self) {
 
 		xAxis.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5) + ')').call(xTicks)
 
-		yAxis.call(
+		yAxis.attr('transform', 'translate(-5,0').call(
 			axisLeft(
 				scaleLinear()
 					.domain(chart.yScale.domain())
