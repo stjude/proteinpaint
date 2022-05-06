@@ -29,7 +29,7 @@
         },
         {
             "name": "NCI GDC",
-            "intro": "The NCI's Genomic Data Commmons <a href='https://gdc.cancer.gov/about-gdc' target='GDC homepage'>(GDC)</a> coagulates data from NCI-supported programs, such as TCGA and TARGET. Search <br><br><div style='margin-left: 3em;'>Read more about <a href='https://gdc.cancer.gov/about-data/data-sources' target='GDC data sources'>GDC data sources</a>.</div>",
+            "intro": "The NCI's Genomic Data Commmons <a href='https://gdc.cancer.gov/about-gdc' target='GDC homepage'>(GDC)</a> coagulates data from NCI-supported programs, such as TCGA and TARGET.<br><br><div style='margin-left: 3em;'>Read more about <a href='https://gdc.cancer.gov/about-data/data-sources' target='GDC data sources'>GDC data sources</a>.</div>",
             "searchbar": "gene",
             "availableGenomes": ["hg38"],
             "dsURLparam": "mds3=GDC",
