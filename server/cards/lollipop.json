@@ -51,6 +51,7 @@
                 "tracks": [
                     {
                         "type": "mds3",
+                        "skewerMode":"numeric",
                         "name":"Tau Phosphosites",
                         "custom_variants":[
                             {"chr":"chr17","pos":45962452,"mname":"T39","class":"M","dt":1, "__value": 1.32},
@@ -112,7 +113,6 @@
 
                         ],
                         "numericmode":{
-                            "inuse":true,
                             "type":"__value",
                             "label":"Log2FC AD vs Control",
                             "valueName":"Log2FC"
@@ -155,6 +155,7 @@
                 "tracks": [
                     {
                         "type": "mds3",
+                        "skewerMode":"numeric",
                         "name":"Tau Phosphosites",
                         "custom_variants":[
                             {"chr":"chr17","pos":45962452,"mname":"T39","class":"M","dt":1, "__value": 1.32, "shapeTriangle": true},
@@ -216,7 +217,6 @@
 
                         ],
                         "numericmode":{
-                            "inuse":true,
                             "type":"__value",
                             "label":"Log2FC AD vs Control",
                             "valueName":"Log2FC"
