@@ -101,13 +101,6 @@ export function addGeneSearchbox(arg) {
 
 	let placeholder = 'Gene, position',
 		width = 150
-	if (arg.geneOnly) {
-		placeholder = 'Gene'
-		arg.genome.hasSNP = false
-		if (arg.allowVariant) {
-			throw 'Conflicting arguments: .geneOnly = true and .allowVariant = true'
-		}
-	}
 	if (arg.genome.hasSNP) {
 		placeholder += ', SNP'
 		width += 40
@@ -115,6 +108,12 @@ export function addGeneSearchbox(arg) {
 	if (arg.allowVariant) {
 		placeholder += ', variant'
 		width += 40
+	}
+	if (arg.geneOnly) {
+		placeholder = 'Gene'
+		if (arg.allowVariant) {
+			throw 'Conflicting arguments: .geneOnly = true and .allowVariant = true'
+		}
 	}
 
 	const searchbox = row
