@@ -48,18 +48,21 @@ fn main() {
         let (
             _within_indel,
             correct_start_position,
-            _correct_end_position,
+            correct_end_position,
             splice_freq,
             splice_start_pos,
             splice_stop_pos,
             _splice_start_cigar,
             _splice_stop_cigar,
+            alignment_side,
         ) = realign::check_read_within_indel_region(
             // Checks if the read contains the indel region (or a part of it)
             read_start,
             cigar_seq.to_owned(),
             variant_pos,
             indel_length as usize,
+            variant_ref.len(),
+            variant_alt.len(),
             1, // Using strictness = 1
             query_seq.len(),
         );
@@ -82,13 +85,60 @@ fn main() {
         let (q_seq_ref, align_ref, r_seq_ref) = align_single_reads(&final_sequence, ref_seq); // Aligning against reference
         let (q_seq_alt, align_alt, r_seq_alt) = align_single_reads(&final_sequence, alt_seq); // Aligning against alternate
 
+        // Determine start/stop position of nucleotides in read that need to be highlighted red to show variant region in UI
+        let mut red_region_start_alt = 0;
+        let mut red_region_start_ref = 0;
+        let mut red_region_stop_ref = 0;
+        let mut red_region_stop_alt = 0;
+        //println!("variant_ref.len():{}", variant_ref.len());
+        //println!("variant_alt.len():{}", variant_alt.len());
+        //println!("q_seq_temp_alt.len():{}", q_seq_alt.len());
+        //println!("q_seq_temp_ref.len():{}", q_seq_ref.len());
+        //println!("correct_end_position:{}", correct_end_position);
+        if alignment_side == "left".to_string() {
+            red_region_start_alt = (variant_pos - correct_start_position).abs();
+            red_region_start_ref = (variant_pos - correct_start_position).abs();
+            red_region_stop_ref =
+                (variant_pos - correct_start_position).abs() + variant_ref.len() as i64;
+            red_region_stop_alt =
+                (variant_pos - correct_start_position).abs() + variant_alt.len() as i64;
+        } else if alignment_side == "right".to_string() {
+            let correctly_aligned_nclt_in_right =
+                correct_end_position - variant_pos - variant_ref.len() as i64;
+            red_region_start_alt =
+                q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - variant_alt.len() as i64;
+            red_region_start_ref =
+                q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - variant_ref.len() as i64;
+            red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right;
+            red_region_stop_ref = r_seq_ref.len() as i64 - correctly_aligned_nclt_in_right;
+        }
+
+        if red_region_start_alt < 0 {
+            red_region_start_alt = 0;
+        }
+
+        if red_region_start_ref < 0 {
+            red_region_start_ref = 0;
+        }
+
+        if red_region_stop_alt < 0 {
+            red_region_stop_alt = 0;
+        }
+
+        if red_region_stop_ref < 0 {
+            red_region_stop_ref = 0;
+        }
+
         println!("q_seq_ref:{}", q_seq_ref);
         println!("align_ref:{}", align_ref);
         println!("r_seq_ref:{}", r_seq_ref);
         println!("q_seq_alt:{}", q_seq_alt);
         println!("align_alt:{}", align_alt);
         println!("r_seq_alt:{}", r_seq_alt);
-        println!("correct_start_position:{}", correct_start_position);
+        println!("red_region_start_alt:{}", red_region_start_alt);
+        println!("red_region_start_ref:{}", red_region_start_ref);
+        println!("red_region_stop_alt:{}", red_region_stop_alt);
+        println!("red_region_stop_ref:{}", red_region_stop_ref);
     } else if align_case == "multi".to_string() {
         let ref_seq: String = args[1].parse::<String>().unwrap(); // First sequence is always reference sequence
         let mut main_seq: String = String::new();

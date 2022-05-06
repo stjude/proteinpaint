@@ -275,12 +275,15 @@ fn main() {
                     splice_stop_pos,
                     splice_start_cigar,
                     splice_stop_cigar,
+                    alignment_side,
                 ) = realign::check_read_within_indel_region(
                     // Checks if the read contains the indel region (or a part of it)
                     start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
                     cigar_sequences_list[i as usize - 2].to_string(),
                     variant_pos,
                     indel_length as usize,
+                    ref_length as usize,
+                    alt_length as usize,
                     strictness,
                     read.len(),
                 );
@@ -336,6 +339,7 @@ fn main() {
                         splice_freq,
                         splice_start_cigar,
                         splice_stop_cigar,
+                        alignment_side,
                     );
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
@@ -446,12 +450,15 @@ fn main() {
                             splice_stop_pos,
                             splice_start_cigar,
                             splice_stop_cigar,
+                            alignment_side,
                         ) = realign::check_read_within_indel_region(
                             // Checks if the read contains the indel region (or a part of it)
                             start_positions_list[iter].parse::<i64>().unwrap() - 1,
                             cigar_sequences_list[iter].to_string(),
                             variant_pos,
                             indel_length as usize,
+                            ref_length as usize,
+                            alt_length as usize,
                             strictness,
                             lines[iter + 2].to_string().len(),
                         );
@@ -502,6 +509,7 @@ fn main() {
                                 splice_freq,
                                 splice_start_cigar,
                                 splice_stop_cigar,
+                                alignment_side,
                             );
                             let ref_comparison = align_single_reads(
                                 &spliced_sequence,
@@ -1235,233 +1243,6 @@ fn check_flanking_sequence_for_repeats(
     repeat_flanking_sequence
 }
 
-//fn check_read_within_indel_region(
-//    left_most_pos: i64, // Left most pos, contains start_positions_list input for that particular read i.e the nucleotide position from where that particular read starts from
-//    cigar_sequence: String, // Cigar sequence of that read
-//    indel_start: i64,   // Indel start position
-//    indel_length: usize, // Length of indel
-//    strictness: usize,  // Strictness of the indel pipeline
-//    original_read_length: usize, // Original read length
-//) -> (usize, i64, i64, usize, i64, i64, usize, usize) {
-//    let mut within_indel = 0; // 0 if read does not contain indel region and 1 if it contains indel region
-//    let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
-//    let mut correct_end_position = correct_start_position; // Correct end position of read
-//    let mut splice_freq: usize = 0; // Number of times the read has been spliced
-//    let mut splice_start_pos: i64 = 0; // Start position of the spliced part of the region containing indel site relative to the read
-//    let mut splice_stop_pos: i64 = 0; // Stop position of the spliced part of the region containing indel site relative to the read
-//    let mut splice_start_cigar: usize = 0; // First cigar entry in the spliced fragment containing the variant to see if its a softclip
-//    let mut splice_stop_cigar: usize = 0; // Last cigar entry in the spliced fragment containing the variant to see if its a softclip
-//
-//    if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
-//    } else {
-//        let indel_stop: i64 = indel_start + indel_length as i64;
-//        let (alphabets, numbers) = cigar::parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
-//        let cigar_length: usize = alphabets.len();
-//        // Check to see if the first item in cigar is a soft clip
-//        if &alphabets[0].to_string().as_str() == &"S" || &alphabets[0].to_string().as_str() == &"I"
-//        {
-//            correct_start_position =
-//                correct_start_position - numbers[0].to_string().parse::<i64>().unwrap();
-//            // Correcting for incorrect left position (when read starts with a softclip) by subtracting length of softclip from original left most position of read
-//        }
-//        let mut correct_start_position_without_splicing = correct_start_position; // Correct start position without splicing (if read is spliced);
-//        correct_end_position = correct_start_position;
-//        for i in 0..cigar_length {
-//            //if &alphabets[i].to_string().as_str() == &"D" {
-//            //    // In case of deleted nucleotides, the end position will be pushed to the left
-//            //    correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
-//            //} else
-//            if &alphabets[i].to_string().as_str() == &"H" { // In case of a hard-clip, the read in the bam file will not contain indel region
-//            } else if &alphabets[i].to_string().as_str() == &"N" {
-//                splice_freq += 1;
-//                correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
-//                correct_start_position_without_splicing +=
-//                    numbers[i].to_string().parse::<i64>().unwrap();
-//            } else if &alphabets[i].to_string().as_str() == &"I" {
-//            } else {
-//                correct_end_position += numbers[i].to_string().parse::<i64>().unwrap();
-//            }
-//        }
-//        let correct_end_position_without_splicing = correct_end_position;
-//        //println!(
-//        //    "correct_start_position_without_splicing(orig):{}",
-//        //    correct_start_position_without_splicing
-//        //);
-//        //println!(
-//        //    "&cigar_sequence.to_string():{}",
-//        //    &cigar_sequence.to_string()
-//        //);
-//        //println!("correct_start_position:{}", correct_start_position);
-//        //println!("correct_end_position:{}", correct_end_position);
-//        //println!("indel_start:{}", indel_start);
-//        //println!("indel_stop:{}", indel_stop);
-//
-//        #[allow(unused_comparisons)] // In the future, may remove this "if strictness" condition
-//        if strictness >= 0 {
-//            let percentage_indel_length: f64 = 0.2; // Minimum fraction of length of indel needed to decide the max distance a read can be from the start of an indel so as to decide if the read harbors variant region
-//            let indel_cutoff: i64 = (indel_length as f64 * percentage_indel_length).ceil() as i64; // Max distance from start of an indel a read can start so as to consider if read contains variant region
-//                                                                                                   //println!("indel_cutoff:{}", indel_cutoff);
-//            if (indel_start + indel_cutoff <= correct_start_position
-//                && correct_end_position <= indel_stop - indel_cutoff)
-//                || (correct_start_position <= indel_start && indel_stop <= correct_end_position)
-//            // When the indel region is completely inside the read or the read is completely inside the indel region
-//            {
-//                //println!("case1 within_indel");
-//                within_indel = 1;
-//            } else if (indel_start + indel_cutoff <= correct_start_position
-//                && correct_start_position <= indel_stop - indel_cutoff)
-//                || (indel_start + indel_cutoff <= correct_end_position
-//                    && correct_end_position <= indel_stop - indel_cutoff)
-//            // When read contains only part of a read
-//            {
-//                //println!("case2 within_indel");
-//                within_indel = 1;
-//            }
-//        } else if (indel_start <= correct_start_position && correct_end_position <= indel_stop)
-//            || (correct_start_position <= indel_start && indel_stop <= correct_end_position)
-//        // When the indel region is completely inside the read or the read is completely inside the indel region
-//        {
-//            //println!("case3 within_indel");
-//            within_indel = 1;
-//        } else if (indel_start <= correct_start_position && correct_start_position <= indel_stop)
-//            || (indel_start <= correct_end_position && correct_end_position <= indel_stop)
-//        // When read contains only part of a read
-//        {
-//            //println!("case4 within_indel");
-//            within_indel = 1;
-//        } else {
-//            //println!("Case not addressed in within indel region. Please look!!");
-//            //println!("correct_start_position:{}", correct_start_position);
-//            //println!("correct_end_position:{}", correct_end_position);
-//            //println!("indel_start:{}", indel_start);
-//            //println!("indel_stop:{}", indel_stop);
-//        }
-//
-//        // Checking if read is missing indel site due to splicing such as exon-skipping
-//
-//        let mut splice_start_frag = correct_start_position; // Start of spliced part of read which contains indel region in ref genome coordinates
-//        let mut splice_stop_frag = correct_start_position; // Stop of spliced part of read which contains indel region in ref genome coordinates
-//        if splice_freq > 0 && within_indel == 1 {
-//            let mut nucleotide_position = 0; // This contains the position of nucleotide being analyzed w.r.t to read
-//            let mut nucleotide_position_without_splicing = 0; // This contains the position of nucleotide being analyzed w.r.t to read without splicing
-//            let mut new_frag = 1; // Flag indicating start of a new fragment after splicing
-//            for i in 0..alphabets.len() {
-//                if new_frag == 1 {
-//                    splice_start_cigar = 0;
-//                    splice_stop_cigar = 0;
-//                    if &alphabets[i].to_string().as_str() == &"S" {
-//                        splice_start_cigar = 1;
-//                    }
-//                    splice_start_frag += nucleotide_position;
-//                    splice_stop_frag = splice_start_frag;
-//                    splice_start_pos = nucleotide_position_without_splicing;
-//                    splice_stop_pos = nucleotide_position_without_splicing;
-//                    new_frag = 0
-//                }
-//
-//                nucleotide_position += numbers[i].to_string().parse::<i64>().unwrap();
-//                if &alphabets[i].to_string().as_str() != &"N" {
-//                    nucleotide_position_without_splicing +=
-//                        numbers[i].to_string().parse::<i64>().unwrap();
-//                }
-//                if &alphabets[i].to_string().as_str() == &"I" {
-//                    // In case of an insertion, the position w.r.t to read will change, but no change will occur w.r.t reference genome since the inserted nucleotides are not present in the reference genome
-//                    splice_stop_pos += numbers[i].to_string().parse::<i64>().unwrap();
-//                }
-//
-//                if &alphabets[i].to_string().as_str() == &"D" {
-//                    // In case of a deletion, the position w.r.t reference genome will change but no change will occur w.r.t reads since the deleted nucleotides are not present in the read
-//                    splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
-//                }
-//
-//                if &alphabets[i].to_string().as_str() == &"M"
-//                    || &alphabets[i].to_string().as_str() == &"S"
-//                {
-//                    splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
-//                    splice_stop_pos += numbers[i].to_string().parse::<i64>().unwrap();
-//                }
-//
-//                //println!("alphabet:{}", &alphabets[i].to_string().as_str());
-//                //println!("splice_start_frag:{}", splice_start_frag);
-//                //println!("splice_stop_frag2:{}", splice_stop_frag);
-//
-//                if &alphabets[i].to_string().as_str() == &"N" {
-//                    new_frag = 1;
-//                    //splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
-//                    // Check if this fragment of read contains indel region or not
-//                    if (splice_start_frag <= indel_start && indel_start <= splice_stop_frag)
-//                        || (splice_start_frag <= indel_start + indel_length as i64
-//                            && indel_start + indel_length as i64 <= splice_stop_frag)
-//                    {
-//                        correct_start_position = splice_start_frag;
-//                        correct_end_position = splice_stop_frag;
-//                        if &alphabets[i].to_string().as_str() == &"S" {
-//                            splice_stop_cigar = 1;
-//                        }
-//                        //splice_start_pos = splice_start_frag;
-//                        //splice_stop_pos = nucleotide_position_without_splicing;
-//                        break;
-//                    }
-//                    //splice_stop_frag -= numbers[i].to_string().parse::<i64>().unwrap();
-//                } else if i == alphabets.len() - 1 {
-//                    // Last entry in CIGAR
-//                    // Check if this fragment of read contains indel region or not
-//                    if (splice_start_frag <= indel_start && indel_start <= splice_stop_frag)
-//                        || (splice_start_frag <= indel_start + indel_length as i64
-//                            && indel_start + indel_length as i64 <= splice_stop_frag)
-//                    {
-//                        correct_start_position = splice_start_frag;
-//                        correct_end_position = splice_stop_frag;
-//                        if &alphabets[i].to_string().as_str() == &"S" {
-//                            splice_stop_cigar = 1;
-//                        }
-//                        //splice_start_pos = splice_start_frag;
-//                        //splice_stop_pos = nucleotide_position_without_splicing;
-//                        break;
-//                    } else {
-//                        //println!("Somehow fragment containing indel site was not found, please check (within_indel = 0)!");
-//                        within_indel = 0;
-//                        //println!("splice_start_frag:{}", splice_start_frag);
-//                        //println!("splice_stop_frag:{}", splice_stop_frag);
-//                        //println!("indel_start:{}", indel_start);
-//                        //println!("indel_stop:{}", indel_start + indel_length as i64);
-//                    }
-//                }
-//            }
-//
-//            // Check if the insertion (if variant is an insertion) is too close to the splice-site or not. In that case the start/end position of the read will have to be updated so that read containing the complete indel region is parsed
-//            if indel_start - (indel_length as i64) < correct_start_position
-//                && correct_start_position_without_splicing < indel_start - (indel_length as i64)
-//                && splice_start_pos - indel_length as i64 > 0
-//            // The second condition has been added to make sure that there is actually a spliced part of the sequence (adjoining to current one) where part of the sequence may have got wrongly spliced otherwise its possible that read only spans part of the variant region
-//            {
-//                //println!("Indel too close to splice site");
-//                correct_start_position = indel_start - (indel_length as i64);
-//                splice_start_pos = splice_start_pos - indel_length as i64;
-//            } else if indel_start + (indel_length as i64) > correct_end_position
-//                && correct_end_position_without_splicing > indel_start + (indel_length as i64)
-//                && splice_stop_pos as usize + indel_length < original_read_length
-//            // The second condition has been added to make sure that there is actually a spliced part of the sequence (adjoining to current one) where part of the sequence may have got wrongly spliced otherwise its possible that read only spans part of the variant region
-//            {
-//                //println!("Indel too close to splice site");
-//                correct_end_position = indel_start + (indel_length as i64);
-//                splice_stop_pos = splice_stop_pos + indel_length as i64;
-//            }
-//        }
-//    }
-//
-//    (
-//        within_indel,
-//        correct_start_position,
-//        correct_end_position,
-//        splice_freq,
-//        splice_start_pos,
-//        splice_stop_pos,
-//        splice_start_cigar,
-//        splice_stop_cigar,
-//    )
-//}
-
 #[allow(unused_variables)] // This is added to silence warnings because ref_alt_same_base_start and splice_stop_cigar variable is currently not being used. Maybe deprecated in the future
 
 fn check_polyclonal(
@@ -1486,12 +1267,13 @@ fn check_polyclonal(
     splice_freq: usize,             // Number of splice junctions in read
     splice_start_cigar: usize, // First cigar entry in the spliced fragment containing the variant to see if its a softclip
     splice_stop_cigar: usize, // Last cigar entry in the spliced fragment containing the variant to see if its a softclip
+    alignment_side: String,
 ) -> (i64, i64, i64, String) {
     let mut sequence_vector: Vec<_> = sequence.chars().collect(); // Vector containing each sequence nucleotides as separate elements in the vector
     let mut ref_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches ref allele (Will be used later to determine if the read harbors a polyclonal variant)
     let mut alt_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches alt allele (Will be used later to determine if the read harbors a polyclonal variant)
     let mut ref_insertion: i64 = 0; // Keep tab whether there is an insertion within the ref allele (This variable will be used later to parse out ref-classified reads that have insertions/deletions in indel region and evebtually classified as 'none')
-    let mut alignment_side: String = "left".to_string(); // Flag to check whether read should be compared from the left or right-side in jaccard_similarity_weights() function
+                                    //let mut alignment_side: String = "left".to_string(); // Flag to check whether read should be compared from the left or right-side in jaccard_similarity_weights() function
     let mut right_most_pos: i64;
 
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
@@ -1571,8 +1353,6 @@ fn check_polyclonal(
         //{ // If both sides are soft-clipped, then continue with left alignment. May need to think of a better logic later to handle this case.
         //} else
 
-        let alignment_offset: i64 = 7; // Variable which sets the offset for reads that start only these many bases before the indel start. If the start position of the read lies between the offset and indel start, the read is right-aligned. This value is somewhat arbitary and may be changed in the future.
-
         //println!("correct_start_position:{}", correct_start_position);
         //println!(
         //    "correct_start_position + alignment_offset:{}",
@@ -1585,45 +1365,46 @@ fn check_polyclonal(
         //    indel_start + indel_length as i64
         //);
 
-        if (&alphabets[0].to_string().as_str() == &"S"
-            && &alphabets[alphabets.len() - 1].to_string().as_str() == &"S")
-            && splice_freq == 0
-        // When read starts and ends with a softclip
-        {
-            if (indel_start - correct_start_position).abs()
-                <= (indel_start - correct_end_position).abs()
-            // When start position is closer to indel start, read is right aligned
-            {
-                alignment_side = "right".to_string();
-            }
-        } else if &alphabets[0].to_string().as_str() == &"S"
-            && splice_freq == 0
-            && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
-        {
-            alignment_side = "right".to_string();
-            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
-            //read_indel_start = correct_end_position as usize - sequence.len();
-        } else if splice_freq > 0
-            && splice_start_cigar == 1
-            && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
-        {
-            alignment_side = "right".to_string();
-            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
-            //read_indel_start = correct_end_position as usize - sequence.len();
-        } else if correct_start_position > indel_start
-            && correct_start_position < indel_start + indel_length as i64
-            && right_most_pos > indel_start + indel_length as i64
-        {
-            alignment_side = "right".to_string();
-            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
-            //read_indel_start = correct_end_position as usize - sequence.len();
-        } else if correct_start_position + alignment_offset > indel_start
-            && right_most_pos > indel_start + indel_length as i64
-        {
-            alignment_side = "right".to_string();
-            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
-            //read_indel_start = correct_end_position as usize - sequence.len();
-        }
+        //let alignment_offset: i64 = 7; // Variable which sets the offset for reads that start only these many bases before the indel start. If the start position of the read lies between the offset and indel start, the read is right-aligned. This value is somewhat arbitary and may be changed in the future.
+        //if (&alphabets[0].to_string().as_str() == &"S"
+        //    && &alphabets[alphabets.len() - 1].to_string().as_str() == &"S")
+        //    && splice_freq == 0
+        //// When read starts and ends with a softclip
+        //{
+        //    if (indel_start - correct_start_position).abs()
+        //        <= (indel_start - correct_end_position).abs()
+        //    // When start position is closer to indel start, read is right aligned
+        //    {
+        //        alignment_side = "right".to_string();
+        //    }
+        //} else if &alphabets[0].to_string().as_str() == &"S"
+        //    && splice_freq == 0
+        //    && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
+        //{
+        //    alignment_side = "right".to_string();
+        //    //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+        //    //read_indel_start = correct_end_position as usize - sequence.len();
+        //} else if splice_freq > 0
+        //    && splice_start_cigar == 1
+        //    && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
+        //{
+        //    alignment_side = "right".to_string();
+        //    //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+        //    //read_indel_start = correct_end_position as usize - sequence.len();
+        //} else if correct_start_position > indel_start
+        //    && correct_start_position < indel_start + indel_length as i64
+        //    && right_most_pos > indel_start + indel_length as i64
+        //{
+        //    alignment_side = "right".to_string();
+        //    //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+        //    //read_indel_start = correct_end_position as usize - sequence.len();
+        //} else if correct_start_position + alignment_offset > indel_start
+        //    && right_most_pos > indel_start + indel_length as i64
+        //{
+        //    alignment_side = "right".to_string();
+        //    //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+        //    //read_indel_start = correct_end_position as usize - sequence.len();
+        //}
 
         // Determining read_indel_start based on whether read is left or right-aligned
         if correct_start_position > indel_start && alt_length >= ref_length {
@@ -2116,7 +1897,8 @@ fn check_polyclonal(
                         //    }
                         //}
 
-                        //println!("read_offset:{}", read_offset);
+                        //println!("i+read_offset:{}", i + read_offset);
+                        //println!("read_indel_start + i:{}", read_indel_start + i);
                         //println!(
                         //    "sequence_vector[read_indel_start + i]:{}",
                         //    &sequence_vector[read_indel_start + i]

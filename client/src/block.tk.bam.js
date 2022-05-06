@@ -2208,19 +2208,12 @@ async function getReadInfo(tk, block, box, ridx) {
 				.style('text-align', 'right')
 				.style('font-weight', '550')
 				.style('white-space', 'nowrap')
-
-			// Check if there is any splicing of the read, if yes update read_start_pos
-			if (read_start_pos != data.lst[0].correct_start_position) {
-				read_start_pos = data.lst[0].correct_start_position
-			}
 			for (const nclt of r_align) {
 				nclt_count += 1
-				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
-					refAlt_tr.append('td').text(nclt)
-				} else if (
+				if (
 					type == 'Ref' &&
-					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
-					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
+					nclt_count > data.lst[0].red_region_start_ref &&
+					nclt_count <= data.lst[0].red_region_stop_ref
 				) {
 					refAlt_tr
 						.append('td')
@@ -2228,8 +2221,8 @@ async function getReadInfo(tk, block, box, ridx) {
 						.style('color', 'red')
 				} else if (
 					type == 'Alt' &&
-					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
-					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
+					nclt_count > data.lst[0].red_region_start_alt &&
+					nclt_count <= data.lst[0].red_region_stop_alt
 				) {
 					refAlt_tr
 						.append('td')
@@ -2244,12 +2237,10 @@ async function getReadInfo(tk, block, box, ridx) {
 			nclt_count = 0
 			for (const align_str of align_wrt) {
 				nclt_count += 1
-				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
-					alignment_tr.append('td').text(align_str)
-				} else if (
+				if (
 					type == 'Ref' &&
-					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
-					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
+					nclt_count > data.lst[0].red_region_start_ref &&
+					nclt_count <= data.lst[0].red_region_stop_ref
 				) {
 					alignment_tr
 						.append('td')
@@ -2257,8 +2248,8 @@ async function getReadInfo(tk, block, box, ridx) {
 						.style('color', 'red')
 				} else if (
 					type == 'Alt' &&
-					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
-					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
+					nclt_count > data.lst[0].red_region_start_alt &&
+					nclt_count <= data.lst[0].red_region_stop_alt
 				) {
 					alignment_tr
 						.append('td')
@@ -2278,12 +2269,10 @@ async function getReadInfo(tk, block, box, ridx) {
 			nclt_count = 0
 			for (const nclt of q_align) {
 				nclt_count += 1
-				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
-					query_tr.append('td').text(nclt)
-				} else if (
+				if (
 					type == 'Ref' &&
-					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
-					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
+					nclt_count > data.lst[0].red_region_start_ref &&
+					nclt_count <= data.lst[0].red_region_stop_ref
 				) {
 					query_tr
 						.append('td')
@@ -2291,8 +2280,8 @@ async function getReadInfo(tk, block, box, ridx) {
 						.style('color', 'red')
 				} else if (
 					type == 'Alt' &&
-					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
-					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
+					nclt_count > data.lst[0].red_region_start_alt &&
+					nclt_count <= data.lst[0].red_region_stop_alt
 				) {
 					query_tr
 						.append('td')

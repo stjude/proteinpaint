@@ -187,9 +187,11 @@ pub fn check_read_within_indel_region(
     cigar_sequence: String, // Cigar sequence of that read
     indel_start: i64,   // Indel start position
     indel_length: usize, // Length of indel
+    ref_length: usize,  // Length of reference allele
+    alt_length: usize,  // Length of alternate allele
     strictness: usize,  // Strictness of the indel pipeline
     original_read_length: usize, // Original read length
-) -> (usize, i64, i64, usize, i64, i64, usize, usize) {
+) -> (usize, i64, i64, usize, i64, i64, usize, usize, String) {
     let mut within_indel = 0; // 0 if read does not contain indel region and 1 if it contains indel region
     let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
     let mut correct_end_position = correct_start_position; // Correct end position of read
@@ -202,6 +204,7 @@ pub fn check_read_within_indel_region(
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
     } else {
         let indel_stop: i64 = indel_start + indel_length as i64;
+        //println!("cigar_sequence:{}", cigar_sequence);
         let (alphabets, numbers) = parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
         let cigar_length: usize = alphabets.len();
         // Check to see if the first item in cigar is a soft clip
@@ -213,6 +216,7 @@ pub fn check_read_within_indel_region(
         }
         let mut correct_start_position_without_splicing = correct_start_position; // Correct start position without splicing (if read is spliced);
         correct_end_position = correct_start_position;
+        //println!("correct_start_position:{}", correct_start_position);
         for i in 0..cigar_length {
             //if &alphabets[i].to_string().as_str() == &"D" {
             //    // In case of deleted nucleotides, the end position will be pushed to the left
@@ -397,6 +401,68 @@ pub fn check_read_within_indel_region(
         }
     }
 
+    let mut alignment_side: String = "left".to_string(); // Flag to check whether read should be compared from the left or right-side in jaccard_similarity_weights() function
+    if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
+    } else {
+        let (alphabets, numbers) = parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
+        let mut right_most_pos;
+
+        // When read starts with softclip, right_most_pos is initialized to left_most_pos and subsequently incremented using the CIGAR entries
+        right_most_pos = correct_start_position;
+        for i in 0..alphabets.len() {
+            // Looping over each CIGAR item
+            if &alphabets[i].to_string().as_str() != &"H" {
+                // If the cigar item is a hard-clip, the right_most_pos will not be incremented
+                right_most_pos += numbers[i].to_string().parse::<i64>().unwrap();
+                // right_most_pos incremented when read starts with soft-clip
+            }
+        }
+
+        //Determine if left or right_alignment
+
+        let alignment_offset: i64 = 7; // Variable which sets the offset for reads that start only these many bases before the indel start. If the start position of the read lies between the offset and indel start, the read is right-aligned. This value is somewhat arbitary and may be changed in the future.
+
+        if (&alphabets[0].to_string().as_str() == &"S"
+            && &alphabets[alphabets.len() - 1].to_string().as_str() == &"S")
+            && splice_freq == 0
+        // When read starts and ends with a softclip
+        {
+            if (indel_start - correct_start_position).abs()
+                <= (indel_start - correct_end_position).abs()
+            // When start position is closer to indel start, read is right aligned
+            {
+                alignment_side = "right".to_string();
+            }
+        } else if &alphabets[0].to_string().as_str() == &"S"
+            && splice_freq == 0
+            && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
+        {
+            alignment_side = "right".to_string();
+            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+            //read_indel_start = correct_end_position as usize - sequence.len();
+        } else if splice_freq > 0
+            && splice_start_cigar == 1
+            && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
+        {
+            alignment_side = "right".to_string();
+            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+            //read_indel_start = correct_end_position as usize - sequence.len();
+        } else if correct_start_position > indel_start
+            && correct_start_position < indel_start + indel_length as i64
+            && right_most_pos > indel_start + indel_length as i64
+        {
+            alignment_side = "right".to_string();
+            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+            //read_indel_start = correct_end_position as usize - sequence.len();
+        } else if correct_start_position + alignment_offset > indel_start
+            && right_most_pos > indel_start + indel_length as i64
+        {
+            alignment_side = "right".to_string();
+            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+            //read_indel_start = correct_end_position as usize - sequence.len();
+        }
+    }
+
     (
         within_indel,
         correct_start_position,
@@ -406,6 +472,7 @@ pub fn check_read_within_indel_region(
         splice_stop_pos,
         splice_start_cigar,
         splice_stop_cigar,
+        alignment_side,
     )
 }
 
