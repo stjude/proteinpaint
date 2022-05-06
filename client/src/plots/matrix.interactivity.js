@@ -341,7 +341,7 @@ function setTermActions(self) {
 			const label = div.append('label')
 			label.append('span').html('Minimum #sample to be visible')
 
-			const minNumSamples = t.tw.minNumSamples || ''
+			const minNumSamples = 'minNumSamples' in t.tw ? t.tw.minNumSamples : ''
 			const input = label
 				.append('input')
 				.attr('type', 'number')
@@ -356,7 +356,7 @@ function setTermActions(self) {
 				.on('click', () => {
 					const value = input.property('value')
 					if (value === minNumSamples) return
-					if (value == '') {
+					if (value === '') {
 						delete t.tw.minNumSamples
 					} else {
 						t.tw.minNumSamples = Number(value)
