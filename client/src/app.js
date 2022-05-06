@@ -163,7 +163,11 @@ export function runproteinpaint(arg) {
 				}
 			}
 
-			if (!arg.noheader && !window.location.search.includes('noheader')) {
+			if (
+				!arg.noheader &&
+				!window.location.search.includes('noheader') &&
+				!window.location.search.includes('mass-session-id')
+			) {
 				makeheader(app, data, arg.jwt)
 			}
 
