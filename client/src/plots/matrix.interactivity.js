@@ -568,12 +568,14 @@ function setTermActions(self) {
 					grp = { name, lst: [] }
 					termgroups.push(grp)
 				}
+				const tws = []
 				for (const id of lines) {
 					if (!(id in terms)) continue
-					const tw = { term: terms[id] }
+					const tw = { term: terms[id], minNumSamples: 0 }
 					await fillTermWrapper(tw)
-					grp.lst.push(tw)
+					tws.push(tw)
 				}
+				grp.lst.splice(self.activeLabel.lstIndex, 0, ...tws)
 
 				self.app.dispatch({
 					type: 'plot_edit',

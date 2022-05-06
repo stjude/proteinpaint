@@ -333,7 +333,7 @@ class Matrix {
 					}
 				}
 				lst.push({ tw, counts, index })
-				grpHtAdjustments += (tw.settings ? tw.settings.barh + 2 * tw.settings.gap : ht) - ht
+				grpHtAdjustments += (tw.settings ? (tw.settings?.barh || 0) + 2 * (tw.settings.gap || 0) : ht) - ht
 			}
 
 			// may override the settings.sortTermsBy with a sorter that is specific to a term group
