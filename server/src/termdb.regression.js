@@ -75,8 +75,8 @@ makeRinput()
 	makeRvariable_dictionaryTerm()
 validateRinput
 replaceTermId
-... run R ...
-parseRoutput
+runRegression
+	parseRoutput
 snplocusPostprocess
 	addSnplocusMessage
 	addResult4monomorphic
@@ -106,17 +106,21 @@ export async function get_regression(q, ds) {
 		validateRinput(Rinput)
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
 
-		// run regression analysis in R
-		const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-		await utils.write_file(Rinputfile, JSON.stringify(Rinput))
-		const Routput = await lines2R(path.join(serverconfig.binpath, 'utils', 'regression.R'), [], [Rinputfile])
-		fs.unlink(Rinputfile, () => {})
+		const result = { resultLst: [] }
 
-		const result = {
-			resultLst: await parseRoutput(Rinput, Routput, id2originalId, q)
-		}
-
-		await snplocusPostprocess(q, sampledata, Rinput, result)
+		/*
+		when snplocus is used:
+			common snps are analyzed in runRegression for model-fitting 
+			rare ones are analyzed in snplocusPostprocess for fisher/wilcoxon/cuminc
+			each function below returns a promise and runs in parallel
+		else:
+			runRegression fits model just one time
+			snplocusPostprocess will not run
+		*/
+		await Promise.all([
+			runRegression(Rinput, id2originalId, q, result),
+			snplocusPostprocess(q, sampledata, Rinput, result)
+		])
 
 		return result
 	} catch (e) {
@@ -572,7 +576,16 @@ function validateRinput(Rinput) {
 	}
 }
 
-async function parseRoutput(Rinput, Routput, id2originalId, q) {
+async function runRegression(Rinput, id2originalId, q, result) {
+	// run regression analysis in R
+	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await utils.write_file(Rinputfile, JSON.stringify(Rinput))
+	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils', 'regression.R'), [], [Rinputfile])
+	fs.unlink(Rinputfile, () => {})
+	await parseRoutput(Rinput, Routput, id2originalId, q, result)
+}
+
+async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 	if (Routput.length != 1) throw 'expected 1 json line in R output'
 	const out = JSON.parse(Routput[0])
 
@@ -593,8 +606,6 @@ async function parseRoutput(Rinput, Routput, id2originalId, q) {
 	  }
 	]
 	*/
-
-	const resultLst = [] // same structure as out[]
 
 	for (const analysis of out) {
 		// convert "analysis" to "analysisResult", then push latter to resultLst
@@ -734,9 +745,8 @@ async function parseRoutput(Rinput, Routput, id2originalId, q) {
 		// warnings
 		if (data.warnings) analysisResult.data.warnings = data.warnings
 
-		resultLst.push(analysisResult)
+		result.resultLst.push(analysisResult)
 	}
-	return resultLst
 }
 
 async function snplocusPostprocess(q, sampledata, Rinput, result) {
