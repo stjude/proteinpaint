@@ -113,7 +113,6 @@
 
                         ],
                         "numericmode":{
-                            "inuse":true,
                             "type":"__value",
                             "label":"Log2FC AD vs Control",
                             "valueName":"Log2FC"
@@ -218,7 +217,6 @@
 
                         ],
                         "numericmode":{
-                            "inuse":true,
                             "type":"__value",
                             "label":"Log2FC AD vs Control",
                             "valueName":"Log2FC"
