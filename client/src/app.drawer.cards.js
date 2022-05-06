@@ -1072,9 +1072,11 @@ async function openDatasetSandbox(page_args, ds) {
 	sandbox_div.header.text(ds.name)
 	sandbox_div.body
 
+	// First genome ds.availableGenomes is the default
 	const par = {
-		genome: page_args.genomes[ds.defaultGenome]
+		genome: page_args.genomes[ds.availableGenomes[0]]
 	}
+
 	const main_div = sandbox_div.body
 		.append('div')
 		// Intro, gene toggle, and gene search box
@@ -1087,10 +1089,7 @@ async function openDatasetSandbox(page_args, ds) {
 		.style('padding', '0.5em 0.5em 1em 0.5em')
 		.html(ds.intro)
 
-	if (ds.genomeToggle == true) {
-		// Create hg19 and hg38 toggle first when applicable
-		makeHgGenomeBtns(main_div, par, page_args.genomes)
-	}
+	addDatasetGenomeBtns(main_div, par, ds, page_args.genomes)
 	// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
 	const searchbar_div = main_div
 		.append('div')
@@ -1145,55 +1144,58 @@ async function openDatasetSandbox(page_args, ds) {
 	})
 }
 
-function makeHgGenomeBtns(div, par, genomes) {
-	//TODO dynamically create from array, not hardcoded hg19/hg38
+function addDatasetGenomeBtns(div, par, ds, genomes) {
+	// Dynamically creates genome marker or buttons
 	const toggleBtn_div = div
 		.append('div')
 		.style('display', 'inline-block')
 		.style('padding', '10px 0px 10px 10px')
+	const btns = []
+	if (ds.availableGenomes.length == 1) {
+		// Show default genome as a non-functional button left of the search button
+		return makeButton(toggleBtn_div, ds.availableGenomes[0])
+			.style('color', 'white')
+			.style('background-color', '#0b5394ff')
+	} else {
+		const btns = []
 
-	// left hg19 toggle button
-	const hg19btn = toggleBtn_div.append('button')
-	hg19btn.active = true
-	hg19btn
-		.style('color', hg19btn.active ? 'white' : 'black')
-		.style('background-color', hg19btn.active ? '#0b5394ff' : '#bfbfbf')
-		.style('border', 'none')
-		.style('border-radius', '3px 0px 0px 3px')
-		.text('hg19')
+		ds.availableGenomes.forEach(genome => {
+			btns.push({
+				name: genome,
+				active: false,
+				btn: makeButton(div, genome),
+				callback: par => {
+					par.genome = genomes[genome]
+				}
+			})
+		})
 
-	// right hg38 toggle button
-	const hg38btn = toggleBtn_div.append('button')
-	hg38btn.active = false
-	hg38btn
-		.style('color', hg38btn.active ? 'white' : 'black')
-		.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
-		.style('border', 'none')
-		.style('border-radius', '0px 3px 3px 0px')
-		.text('hg38')
+		for (const btn of btns) {
+			btns[0].active = true
 
-	hg19btn.on('click', () => {
-		hg19btn.active == true ? (hg19btn.active = false) : (hg19btn.active = true) && (par.genome = genomes['hg19'])
-		hg38btn.active == false ? (hg38btn.active = true) && (par.genome = genomes['hg38']) : (hg38btn.active = false)
-		hg19btn
-			.style('color', hg19btn.active ? 'white' : 'black')
-			.style('background-color', hg19btn.active ? '#0b5394ff' : '#bfbfbf')
-		hg38btn
-			.style('color', hg38btn.active ? 'white' : 'black')
-			.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
-	})
+			btn.btn
+				.style('margin', '0px')
+				.style('color', btn.active ? 'white' : 'black')
+				.style('background-color', btn.active ? '#0b5394ff' : '#bfbfbf')
+				.style('border-radius', '0px')
 
-	hg38btn.on('click', () => {
-		hg19btn.active == false ? (hg19btn.active = true) && (par.genome = genomes['hg19']) : (hg19btn.active = false)
-		hg38btn.active == true ? (hg38btn.active = false) : (hg38btn.active = true) && (par.genome = genomes['hg38'])
-		hg19btn
-			.style('color', hg19btn.active ? 'white' : 'black')
-			.style('background-color', hg19btn.active ? '#0b5394ff' : '#bfbfbf')
-		hg38btn
-			.style('color', hg38btn.active ? 'white' : 'black')
-			.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
-	})
-	return toggleBtn_div, hg19btn, hg38btn
+			if (btn.active) {
+				btn.callback(par)
+			}
+
+			btn.btn.on('click', () => {
+				for (const b of btns) {
+					b.active = b === btn
+					b.btn.style('color', b.active ? 'white' : 'black')
+					b.btn.style('background-color', b.active ? '#0b5394ff' : '#bfbfbf')
+					console.log(b.active)
+				}
+				if (btn.active) {
+					btn.callback(par)
+				}
+			})
+		}
+	}
 }
 
 function makeURLbutton(div, coords, par, ds) {
