@@ -11,11 +11,29 @@ const spawn = require('child_process').spawn
 main()
 
 async function main() {
+	/*
 	for (let i = 0; i < 10; i++) {
 		const t2 = await testRust()
 		const t1 = await testR()
 		console.log('R/rust milliseconds:', t1, t2)
 	}
+	*/
+
+	await comparePvalues()
+}
+
+async function comparePvalues() {
+	const data = makeData()
+	const r_v = [],
+		rust_v = []
+	for (const line of await lines2R('../../server/utils/fisher.R', data)) {
+		r_v.push(-Math.log10(Number(line.split('\t')[5])))
+	}
+
+	for (const line of (await run_rust('stats', data.join('\n'))).split('\n')) {
+		rust_v.push(-Math.log10(Number(line.split('\t')[5])))
+	}
+	//console.log(r_v)
 }
 
 async function testR() {
@@ -56,7 +74,6 @@ function run_rust(binfile, input_data) {
 		ps.stdout.on('data', data => stdout.push(data))
 		ps.stderr.on('data', data => stderr.push(data))
 		ps.on('error', err => {
-			console.log('stderr:', stderr)
 			reject(err)
 		})
 		ps.on('close', code => {
