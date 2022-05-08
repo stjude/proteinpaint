@@ -30,10 +30,11 @@ async function comparePvalues() {
 		r_v.push(-Math.log10(Number(line.split('\t')[5])))
 	}
 
-	for (const line of (await run_rust('stats', data.join('\n'))).split('\n')) {
+	for (const line of (await run_rust('stats', data.join('-'))).split('\n')) {
 		rust_v.push(-Math.log10(Number(line.split('\t')[5])))
 	}
-	//console.log(r_v)
+	console.log(r_v)
+	console.log(rust_v)
 }
 
 async function testR() {

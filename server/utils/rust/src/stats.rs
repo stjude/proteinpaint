@@ -10,16 +10,16 @@ fn main() {
         #[allow(unused_variables)]
         Ok(n) => {
             //println!("{} bytes read", n);
-            //println!("{}", input);
+            //println!("input:{}", input);
         }
         Err(error) => println!("Piping error: {}", error),
     }
-    let variants: Vec<&str> = input.split("n").collect(); // Putting each variant in a separate element of vector
+    let variants: Vec<&str> = input.split("-").collect(); // Putting each variant in a separate element of vector
 
     //println!("variants:{:?}", variants);
 
     for i in 0..variants.len() {
-        let variant: Vec<&str> = variants[i].split("t").collect();
+        let variant: Vec<&str> = variants[i].split("\t").collect();
         //println!("variant:{:?}", variant);
         if variant.len() > 1 {
             // Check if total greater than fisher limit, if yes then use chisq test
