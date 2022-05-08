@@ -7,6 +7,7 @@ const lines2R = require('../../server/src/lines2R')
 const path = require('path')
 const Readable = require('stream').Readable
 const spawn = require('child_process').spawn
+const fisher_limit = 300 // Cutoff for sum of four numbers. If higher, chisq test is used. Otherwise fishers exact test is used.
 
 main()
 
@@ -30,7 +31,8 @@ async function comparePvalues() {
 		r_v.push(-Math.log10(Number(line.split('\t')[5])))
 	}
 
-	for (const line of (await run_rust('stats', data.join('-'))).split('\n')) {
+	//console.log('fisher_limit\t' + fisher_limit + '-' + data.join('-').split('\n'))
+	for (const line of (await run_rust('stats', 'fisher_limit\t' + fisher_limit + '-' + data.join('-'))).split('\n')) {
 		rust_v.push(-Math.log10(Number(line.split('\t')[5])))
 	}
 	console.log(r_v)

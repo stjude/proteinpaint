@@ -4,7 +4,6 @@ mod stats_functions;
 
 fn main() {
     let mut input = String::new();
-    let fisher_limit: u32 = 300; // Change this value to include large number inputs for the fisher test
     match io::stdin().read_line(&mut input) {
         // Accepting the piped input from nodejs (or command line from testing)
         #[allow(unused_variables)]
@@ -16,9 +15,14 @@ fn main() {
     }
     let variants: Vec<&str> = input.split("-").collect(); // Putting each variant in a separate element of vector
 
+    let temp_vec: Vec<&str> = variants[0].split("\t").collect();
+    let fisher_limit = temp_vec[1].parse::<u32>().unwrap(); // Cutoff for sum of all four numbers to decide whether to use fisher or chisq test
+
+    //println!("fisher_limit:{}", fisher_limit);
+
     //println!("variants:{:?}", variants);
 
-    for i in 0..variants.len() {
+    for i in 1..variants.len() {
         let variant: Vec<&str> = variants[i].split("\t").collect();
         //println!("variant:{:?}", variant);
         if variant.len() > 1 {
