@@ -125,7 +125,7 @@ fn main() {
         }
         Err(error) => println!("Piping error: {}", error),
     }
-    let args: Vec<&str> = input.split("_").collect(); // Various input from nodejs is separated by ":" character
+    let args: Vec<&str> = input.split("_").collect(); // Various input from nodejs is separated by "_" character
     let sequences: String = args[0].parse::<String>().unwrap(); // Variable contains sequences separated by "-" character, the first two sequences contains the ref and alt sequences
     let start_positions: String = args[1].parse::<String>().unwrap(); // Variable contains start position of reads separated by "-" character
     let cigar_sequences: String = args[2].parse::<String>().unwrap(); // Variable contains cigar sequences separated by "-" character
