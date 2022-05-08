@@ -1,53 +1,80 @@
 /*
 compare fisher test using rust and r
-won't check validity, simply compare speed
 */
 
 const lines2R = require('../../server/src/lines2R')
 const path = require('path')
 const Readable = require('stream').Readable
 const spawn = require('child_process').spawn
+const fs = require('fs')
 const fisher_limit = 300 // Cutoff for sum of four numbers. If higher, chisq test is used. Otherwise fishers exact test is used.
 
 main()
 
 async function main() {
 	/*
+	make random data of 1000 rows, run with both R and rust. 
+	repeat the tests 10 times, output amount of time in each run
+
+	observation on xin's desktop on 2022/5/8
+	R/rust milliseconds: 1375 108
+	R/rust milliseconds: 1375 65
+	R/rust milliseconds: 1370 74
+	R/rust milliseconds: 1370 55
+	R/rust milliseconds: 1378 56
+	R/rust milliseconds: 1385 56
+	R/rust milliseconds: 1386 57
+	R/rust milliseconds: 1333 56
+	R/rust milliseconds: 1384 55
+	R/rust milliseconds: 1364 55
+	*/
 	for (let i = 0; i < 10; i++) {
-		const t2 = await testRust()
-		const t1 = await testR()
+		const data = makeData()
+		const t2 = await testRust(data)
+		const t1 = await testR(data)
 		console.log('R/rust milliseconds:', t1, t2)
 	}
-	*/
 
+	/*
+	collect pvalues from r and rust on the same set of data
+	write to temp file "x"
+	for making scatterplot
+	*/
 	await comparePvalues()
 }
 
 async function comparePvalues() {
 	const data = makeData()
-	const r_v = [],
-		rust_v = []
+	// collect pvalues from r and rust, over the same set of input data
+	const r_pv = [],
+		rust_pv = []
 	for (const line of await lines2R('../../server/utils/fisher.R', data)) {
-		r_v.push(-Math.log10(Number(line.split('\t')[5])))
+		r_pv.push(-Math.log10(Number(line.split('\t')[5])))
 	}
 
-	//console.log('fisher_limit\t' + fisher_limit + '-' + data.join('-').split('\n'))
 	for (const line of (await run_rust('stats', 'fisher_limit\t' + fisher_limit + '-' + data.join('-'))).split('\n')) {
-		rust_v.push(-Math.log10(Number(line.split('\t')[5])))
+		rust_pv.push(-Math.log10(Number(line.split('\t')[5])))
 	}
-	console.log(r_v)
-	console.log(rust_v)
+
+	const lst = []
+	for (let i = 0; i < r_pv.length; i++) {
+		const r = r_pv[i],
+			u = rust_pv[i]
+		if (r == Infinity || u == Infinity) continue
+		lst.push(r_pv[i] + '\t' + rust_pv[i])
+	}
+	fs.writeFileSync('x', lst.join('\n') + '\n')
 }
 
-async function testR() {
+async function testR(data) {
 	const t = new Date()
-	await lines2R('../../server/utils/fisher.R', makeData())
+	await lines2R('../../server/utils/fisher.R', data)
 	return new Date() - t
 }
 
-async function testRust() {
+async function testRust(data) {
 	const t = new Date()
-	await run_rust('stats', makeData())
+	await run_rust('stats', 'fisher_limit\t' + fisher_limit + '-' + data.join('-'))
 	return new Date() - t
 }
 
