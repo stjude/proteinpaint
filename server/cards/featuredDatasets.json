@@ -61,7 +61,19 @@
         },
         {
             "name": "Survivorship Study",
-            "link": "https://proteinpaint.stjude.org/?noheader=1&mass=%7B%22genome%22:%22hg38%22,%22dslabel%22:%20%22SJLife%22%7D"
+            "intro": "The survivorship dataset contains clinical, genomic, and patient-reported data from the <a href='https://sjlife.stjude.org/' target='sjlife'>St. Jude Life study</a> (SJLife) and <a href='https://ccss.stjude.org/' target='CCSS'> Childhood Cancer Survivor Study</a> (CCSS). The interface offers data analysis tools like regression analysis (linear, logistic, and Cox) and interactive statistical plots.<br><br>To change to the CCSS data or see combined data from both studies, click on the <span style='font-family: courier; display: inline-block; opacity: 0.65;font-size:16px;'>COHORT</span> tab at the top, and select the desired dataset(s).",
+            "searchbar": "none",
+            "availableGenomes": ["hg38"],
+            "runargs": {
+                "nobox":true,
+                "noheader": true,
+                "mass": {
+                    "state": {
+                        "dslabel": "SJLife",
+                        "genome": "hg38"
+                    }
+                }
+            }
         }
     ]
 }

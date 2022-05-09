@@ -1055,13 +1055,9 @@ async function makeDatasetButtons(div, page_args) {
 	for (const ds of datasets) {
 		const btn = makeButton(datasetBtns_div, ds.name)
 		btn.on('click', () => {
+			event.stopPropagation()
 			page_args.apps_off()
-			if (ds.link) {
-				event.stopPropagation()
-				window.open(`${ds.link}`, '_blank')
-			} else {
-				openDatasetSandbox(page_args, ds)
-			}
+			openDatasetSandbox(page_args, ds)
 		})
 	}
 
@@ -1090,6 +1086,23 @@ async function openDatasetSandbox(page_args, ds) {
 		.style('line-height', '1.5em')
 		.style('padding', '0.5em 0.5em 1em 0.5em')
 		.html(ds.intro)
+
+	if (ds.searchbar == 'none') {
+		// Call mass UI without search bar
+		const runpp_arg = {
+			holder: sandbox_div.body
+				.append('div')
+				.style('margin', '20px')
+				.style('overflow-x', 'auto')
+				.node(),
+			host: window.location.origin
+		}
+
+		const callpp = JSON.parse(JSON.stringify(ds.runargs))
+
+		runproteinpaint(Object.assign(runpp_arg, callpp))
+		return
+	}
 
 	addDatasetGenomeBtns(main_div, par, ds, page_args.genomes)
 	// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
