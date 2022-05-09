@@ -135,6 +135,38 @@ fn main() {
             red_region_stop_ref = 0;
         }
 
+        if alignment_side == "left".to_string()
+            && (red_region_start_alt >= q_seq_alt.len() as i64
+                || red_region_start_ref >= q_seq_ref.len() as i64)
+        {
+            // In case of reads with very poor alignment but left-aligned, the start site of read may be greater than the length of the alignment in such case, try right-aligning the reads
+            let correctly_aligned_nclt_in_right =
+                correct_end_position - variant_pos - variant_ref.len() as i64;
+            //println!(
+            //    "correctly_aligned_nclt_in_right:{}",
+            //    correctly_aligned_nclt_in_right
+            //);
+            //println!("Was originally left-aligned but start position was higher than alignment length, so attempted to right-align");
+            red_region_start_alt =
+                q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - variant_alt.len() as i64;
+            red_region_start_ref =
+                q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - variant_ref.len() as i64;
+            red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right;
+            red_region_stop_ref = r_seq_ref.len() as i64 - correctly_aligned_nclt_in_right;
+        } else if alignment_side == "right".to_string()
+            && (red_region_start_alt >= q_seq_alt.len() as i64
+                || red_region_start_ref >= q_seq_ref.len() as i64)
+        // In case of reads with very poor alignment but right-aligned, the start site of read may be greater than the length of the alignment in such case, try left-aligning the reads
+        {
+            //println!("Was originally right-aligned but start position was higher than alignment length, so attempted to left-align");
+            red_region_start_alt = (variant_pos - correct_start_position).abs();
+            red_region_start_ref = (variant_pos - correct_start_position).abs();
+            red_region_stop_ref =
+                (variant_pos - correct_start_position).abs() + variant_ref.len() as i64;
+            red_region_stop_alt =
+                (variant_pos - correct_start_position).abs() + variant_alt.len() as i64;
+        }
+
         //println!("red_disp_region_start_alt:{}", red_region_start_alt);
         //println!("red_disp_region_start_ref:{}", red_region_start_ref);
         //println!("red_disp_region_stop_alt:{}", red_region_stop_alt);
