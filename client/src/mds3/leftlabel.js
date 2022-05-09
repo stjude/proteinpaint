@@ -11,6 +11,9 @@ const font = 'Arial'
 make_leftlabels
 ********************** INTERNAL
 makelabel
+mayMakeVariantLabel
+	menu_variants
+		listSkewerData
 stratifymenu_samplesummary
 stratifymenu_genecnv
 */
@@ -222,17 +225,51 @@ function menu_variants(tk, block) {
 }
 
 function listSkewerData(tk, block) {
+	const data = tk.skewer.mode == 'skewer' ? tk.skewer.data : tk.numericmode.data
+	/* data: []
+	each element {}:
+	.x
+	.mlst[]
+		each m{}:
+			.mname
+			.class
+	*/
+
+	// TODO show additional columns (allele, occurrence etc) if available from data
+
 	const div = tk.menutip
 		.clear()
 		.d.append('div')
 		.style('margin', '10px')
 		.style('display', 'grid')
-		.style('grid-template-columns', 'auto auto')
-	const data = tk.skewer.mode == 'skewer' ? tk.skewer.data : tk.numericmode.data
+		.style('grid-template-columns', 'auto auto auto')
+		.style('gap', '7px')
+		.style('font-size', '.9em')
+		.style('overflow', 'scroll')
+		.style('max-height', '20vw')
+
+	// header
+	div
+		.append('div')
+		.style('position', 'sticky')
+		.style('opacity', 0.3)
+		.text('Variant')
+	div
+		.append('div')
+		.style('position', 'sticky')
+		.style('opacity', 0.3)
+		.text(block.mclassOverride ? block.mclassOverride.className : 'Class')
+	div
+		.append('div')
+		.style('position', 'sticky')
+		.style('opacity', 0.3)
+		.text('Position')
+
 	for (const g of data) {
 		if (g.x <= 0 || g.x >= block.width) continue
 		for (const m of g.mlst) {
 			div.append('div').text(m.mname)
+			div.append('div').text(mclass[m.class].label)
 			div.append('div').text(m.chr + ':' + m.pos)
 		}
 	}
