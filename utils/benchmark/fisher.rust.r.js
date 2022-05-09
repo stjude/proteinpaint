@@ -8,6 +8,7 @@ const Readable = require('stream').Readable
 const spawn = require('child_process').spawn
 const fs = require('fs')
 const fisher_limit = 300 // Cutoff for sum of four numbers. If higher, chisq test is used. Otherwise fishers exact test is used.
+const individual_fisher_limit = 150 // In addition to the fisher_limit cutoff, each of the four numbers given must be higher than this cutoff to invoke chisq test
 
 main()
 
@@ -52,7 +53,10 @@ async function comparePvalues() {
 		r_pv.push(-Math.log10(Number(line.split('\t')[5])))
 	}
 
-	for (const line of (await run_rust('stats', 'fisher_limit\t' + fisher_limit + '-' + data.join('-'))).split('\n')) {
+	for (const line of (await run_rust(
+		'stats',
+		'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + data.join('-')
+	)).split('\n')) {
 		rust_pv.push(-Math.log10(Number(line.split('\t')[5])))
 	}
 
@@ -74,7 +78,7 @@ async function testR(data) {
 
 async function testRust(data) {
 	const t = new Date()
-	await run_rust('stats', 'fisher_limit\t' + fisher_limit + '-' + data.join('-'))
+	await run_rust('stats', 'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + data.join('-'))
 	return new Date() - t
 }
 

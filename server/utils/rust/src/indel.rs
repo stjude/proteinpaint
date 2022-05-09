@@ -677,11 +677,16 @@ fn strand_analysis(
     let mut fisher_chisq_test: u64 = 1; // Initializing to fisher-test
 
     let fisher_limit = 300; // If number of alternate + reference reads greater than this number, chi-sq test will be invoked
+    let individual_fisher_limit = 150; // Cutoff for each individual number (in addition to fisher_limit) that must be passed to invoke chisq test
     if alternate_forward_count
         + alternate_reverse_count
         + reference_forward_count
         + reference_reverse_count
         > fisher_limit
+        && alternate_forward_count > individual_fisher_limit
+        && alternate_reverse_count > individual_fisher_limit
+        && reference_forward_count > individual_fisher_limit
+        && reference_reverse_count > individual_fisher_limit
     {
         fisher_chisq_test = 2; // Setting test = chi-sq
     }
