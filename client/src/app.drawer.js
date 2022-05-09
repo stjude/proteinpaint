@@ -36,8 +36,6 @@ export function drawer_init(app, features, overrides = {}) {
 		}
 	}
 
-	const selectedGenome = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
-
 	async function load_examples() {
 		// prevent reloading
 		if (examples_rendered) return
