@@ -42,8 +42,6 @@
 //              fishers_exact_test
 
 //use num_traits::Float;
-use bio::alignment::pairwise::*;
-use bio::alignment::AlignmentOperation;
 //use fishers_exact::fishers_exact;
 //use statrs::distribution::{ChiSquared, ContinuousCDF};
 use std::cmp;
@@ -347,10 +345,10 @@ fn main() {
                     //println!("read_ambiguous:{}", read_ambiguous);
                     //println!("ref_insertion:{}", ref_insertion);
 
-                    let ref_comparison =
-                        align_single_reads(&spliced_sequence, reference_sequence.clone());
-                    let alt_comparison =
-                        align_single_reads(&spliced_sequence, alternate_sequence.clone());
+                    let (_q_seq_ref, _align_ref, _r_seq_ref, ref_comparison) =
+                        realign::align_single_reads(&spliced_sequence, reference_sequence.clone());
+                    let (_q_seq_alt, _align_alt, _r_seq_alt, alt_comparison) =
+                        realign::align_single_reads(&spliced_sequence, alternate_sequence.clone());
                     //println!("ref_comparison:{}", ref_comparison);
                     //println!("alt_comparison:{}", alt_comparison);
                     let mut diff_score: f64 = 0.0;
@@ -512,14 +510,16 @@ fn main() {
                                 splice_stop_cigar,
                                 alignment_side,
                             );
-                            let ref_comparison = align_single_reads(
-                                &spliced_sequence,
-                                reference_sequence.to_string(),
-                            );
-                            let alt_comparison = align_single_reads(
-                                &spliced_sequence,
-                                alternate_sequence.to_string(),
-                            );
+                            let (_q_seq_ref, _align_ref, _r_seq_ref, ref_comparison) =
+                                realign::align_single_reads(
+                                    &spliced_sequence,
+                                    reference_sequence.to_string(),
+                                );
+                            let (_q_seq_alt, _align_alt, _r_seq_alt, alt_comparison) =
+                                realign::align_single_reads(
+                                    &spliced_sequence,
+                                    alternate_sequence.to_string(),
+                                );
                             let mut diff_score: f64 = 0.0;
                             if read_ambiguous < 2 {
                                 diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
@@ -1950,94 +1950,4 @@ fn classify_to_four_categories(
         }
     }
     indices // Indices vector being returned to main function
-}
-
-fn align_single_reads(query_seq: &String, ref_seq: String) -> f64 {
-    let query_vector: Vec<_> = query_seq.chars().collect();
-    let ref_vector: Vec<_> = ref_seq.chars().collect();
-
-    let score = |a: u8, b: u8| if a == b { 1i32 } else { -1i32 };
-    // gap open score: -5, gap extension score: -1
-
-    let mut aligner = Aligner::with_capacity(
-        query_seq.as_bytes().len(),
-        ref_seq.as_bytes().len(),
-        -5, // gap open penalty
-        -1, // gap extension penalty
-        &score,
-    );
-
-    let alignment = aligner.global(query_seq.as_bytes(), ref_seq.as_bytes());
-    //let alignment = aligner.semiglobal(query_seq.as_bytes(), ref_seq.as_bytes());
-    //let alignment = aligner.local(query_seq.as_bytes(), ref_seq.as_bytes());
-
-    //let scoring = Scoring::from_scores(-5, -1, 1, -1) // Gap open, extend, match, mismatch score
-    //    .xclip(MIN_SCORE) // Clipping penalty for x set to 'negative infinity', hence global in x
-    //    .yclip(MIN_SCORE); // Clipping penalty for y set to 'negative infinity', hence global in y
-    //
-    //let mut aligner = Aligner::with_scoring(scoring);
-    //let alignment = aligner.custom(query_seq.as_bytes(), ref_seq.as_bytes());
-
-    let alignment_seq = alignment.operations;
-    let mut q_seq: String = String::new();
-    let mut align: String = String::new();
-    let mut r_seq: String = String::new();
-    let mut j: usize = 0;
-    let mut k: usize = 0;
-    let num_matches;
-    for i in 0..alignment_seq.len() {
-        if AlignmentOperation::Match == alignment_seq[i] {
-            if j < query_vector.len() {
-                q_seq += &query_vector[j].to_string();
-                j += 1;
-            }
-            if k < ref_vector.len() {
-                r_seq += &ref_vector[k].to_string();
-                k += 1;
-            }
-            align += &"|".to_string(); // Add "|" when there is a match
-        } else if AlignmentOperation::Subst == alignment_seq[i] {
-            if j < query_vector.len() {
-                q_seq += &query_vector[j].to_string();
-                j += 1;
-            }
-            if k < ref_vector.len() {
-                r_seq += &ref_vector[k].to_string();
-                k += 1;
-            }
-            align += &"*".to_string(); // Add "*" when there is a substitution
-        } else if AlignmentOperation::Del == alignment_seq[i] {
-            if j > 0 && j < query_vector.len() {
-                // This condition is added so as to suppress part of the reference sequence that do not lie within the read region
-                q_seq += &"-".to_string();
-            }
-            if k < ref_vector.len() {
-                if j > 0 && j < query_vector.len() {
-                    // This condition is added so as to suppress part of the reference sequence that do not lie within the read region
-                    r_seq += &ref_vector[k].to_string();
-                }
-                k += 1;
-            }
-            if j > 0 && j < query_vector.len() {
-                // This condition is added so as to suppress part of the reference sequence that do not lie within the read region
-                align += &" ".to_string(); // Add empty space when there is a deletion
-            }
-        } else if AlignmentOperation::Ins == alignment_seq[i] {
-            if j < query_vector.len() {
-                q_seq += &query_vector[j].to_string();
-                j += 1;
-            }
-            r_seq += &"-".to_string();
-            align += &" ".to_string(); // Add empty space when there is an insertion
-        } else {
-            // Should not happen, added to help debug if it ever happens
-            println!("Alignment operation not found:{}{:?}", i, alignment_seq[i]);
-        }
-    }
-
-    // Need to check if the first and last nucleotide has been incorrectly aligned or not
-    let (_q_seq_correct, align_correct, _r_seq_correct) =
-        realign::check_first_last_nucleotide_correctly_aligned(&q_seq, &align, &r_seq);
-    num_matches = align_correct.matches("|").count() as f64;
-    num_matches / align_correct.len() as f64
 }

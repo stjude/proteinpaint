@@ -1,5 +1,6 @@
 // Syntax: cd .. && cargo build --release
-
+use bio::alignment::pairwise::*;
+use bio::alignment::AlignmentOperation;
 use std::process::Command;
 use std::str;
 
@@ -494,7 +495,7 @@ pub fn parse_cigar(cigar_seq: &String) -> (Vec<char>, Vec<i64>) {
     (alphabets, numbers)
 }
 
-pub fn check_first_last_nucleotide_correctly_aligned(
+fn check_first_last_nucleotide_correctly_aligned(
     q_seq: &String,
     align: &String,
     r_seq: &String,
@@ -1229,4 +1230,95 @@ pub fn reverse_string(input: &str) -> String {
         result.push(c)
     }
     result
+}
+
+pub fn align_single_reads(query_seq: &String, ref_seq: String) -> (String, String, String, f64) {
+    let query_vector: Vec<_> = query_seq.chars().collect();
+    let ref_vector: Vec<_> = ref_seq.chars().collect();
+
+    let score = |a: u8, b: u8| if a == b { 1i32 } else { -1i32 };
+    // gap open score: -5, gap extension score: -1
+
+    let mut aligner = Aligner::with_capacity(
+        query_seq.as_bytes().len(),
+        ref_seq.as_bytes().len(),
+        -5, // gap open penalty
+        -1, // gap extension penalty
+        &score,
+    );
+
+    let alignment = aligner.global(&query_seq.as_bytes(), ref_seq.as_bytes());
+    //let alignment = aligner.semiglobal(query_seq.as_bytes(), ref_seq.as_bytes());
+    //let alignment = aligner.local(query_seq.as_bytes(), ref_seq.as_bytes());
+
+    //let scoring = Scoring::from_scores(-5, -1, 1, -1) // Gap open, extend, match, mismatch score
+    //    .xclip(MIN_SCORE) // Clipping penalty for x set to 'negative infinity', hence global in x
+    //    .yclip(MIN_SCORE); // Clipping penalty for y set to 'negative infinity', hence global in y
+    //
+    //let mut aligner = Aligner::with_scoring(scoring);
+    //let alignment = aligner.custom(query_seq.as_bytes(), ref_seq.as_bytes());
+
+    let alignment_seq = alignment.operations;
+    let mut q_seq: String = String::new();
+    let mut align: String = String::new();
+    let mut r_seq: String = String::new();
+    let mut j: usize = 0;
+    let mut k: usize = 0;
+    for i in 0..alignment_seq.len() {
+        if AlignmentOperation::Match == alignment_seq[i] {
+            if j < query_vector.len() {
+                q_seq += &query_vector[j].to_string();
+                j += 1;
+            }
+            if k < ref_vector.len() {
+                r_seq += &ref_vector[k].to_string();
+                k += 1;
+            }
+            align += &"|".to_string(); // Add "|" when there is a match
+        } else if AlignmentOperation::Subst == alignment_seq[i] {
+            if j < query_vector.len() {
+                q_seq += &query_vector[j].to_string();
+                j += 1;
+            }
+            if k < ref_vector.len() {
+                r_seq += &ref_vector[k].to_string();
+                k += 1;
+            }
+            align += &"*".to_string(); // Add "*" when there is a substitution
+        } else if AlignmentOperation::Del == alignment_seq[i] {
+            if j > 0 && j < query_vector.len() {
+                // This condition is added so as to suppress part of the reference sequence that do not lie within the read region
+                q_seq += &"-".to_string();
+            }
+            if k < ref_vector.len() {
+                if j > 0 && j < query_vector.len() {
+                    // This condition is added so as to suppress part of the reference sequence that do not lie within the read region
+                    r_seq += &ref_vector[k].to_string();
+                }
+                k += 1;
+            }
+            if j > 0 && j < query_vector.len() {
+                // This condition is added so as to suppress part of the reference sequence that do not lie within the read region
+                align += &" ".to_string(); // Add empty space when there is a deletion
+            }
+        } else if AlignmentOperation::Ins == alignment_seq[i] {
+            if j < query_vector.len() {
+                q_seq += &query_vector[j].to_string();
+                j += 1;
+            }
+            r_seq += &"-".to_string();
+            align += &" ".to_string(); // Add empty space when there is an insertion
+        } else {
+            // Should not happen, added to help debug if it ever happens
+            println!("Alignment operation not found:{}{:?}", i, alignment_seq[i]);
+        }
+    }
+    // Need to check if the first and last nucleotide has been incorrectly aligned or not
+    //println!("q_seq:{}", q_seq);
+    //println!("align:{}", align);
+    //println!("r_seq:{}", r_seq);
+    let (q_seq_final, align_final, r_seq_final) =
+        check_first_last_nucleotide_correctly_aligned(&q_seq, &align, &r_seq);
+    let num_matches = align_final.matches("|").count() as f64 / align_final.len() as f64;
+    (q_seq_final, align_final, r_seq_final, num_matches)
 }
