@@ -32,39 +32,14 @@ export function make_leftlabels(data, tk, block) {
 
 	const labels = [] // for max width
 
-	if (tk.skewer) {
-		if (tk.skewer.mode == 'skewer') {
-			// quick fix - only show label for "skewer" mode
-			// count number from skewer.data
-			// TODO show label for numeric mode, decide menu content
-			const lab = makelabel(tk, block, laby)
-			const variantcount = tk.skewer.data.reduce((i, j) => i + j.mlst.length, 0)
-			if (variantcount == 0) {
-				// hide label
-				lab
-					.text('No variants')
-					.attr('class', '')
-					.style('opacity', 0.5)
-			} else {
-				if (data.skewer) {
-					lab.text(
-						variantcount < data.skewer.length
-							? variantcount + ' of ' + data.skewer.length + ' variants'
-							: variantcount + ' variant' + (variantcount > 1 ? 's' : '')
-					)
-				} else {
-					lab.text(variantcount + ' variant' + (variantcount > 1 ? 's' : ''))
-				}
-				lab.on('click', () => {
-					tk.tktip.clear().showunder(d3event.target)
-					menu_variants(tk, block)
-				})
-			}
+	{
+		const lab = mayMakeVariantLabel(data, tk, block, laby)
+		if (lab) {
 			labels.push(lab)
+			laby += labyspace + block.labelfontsize
 		}
 	}
 
-	laby += labyspace + block.labelfontsize
 	if (data.genecnvNosample) {
 		// quick fix; only for genecnv with no sample level info
 		// should be replaced with just one multi-row label showing #variants, #cnv and click for a menu for collective summary
@@ -139,32 +114,127 @@ function makelabel(tk, block, y) {
 		.attr('x', block.tkleftlabel_xshift)
 }
 
+function mayMakeVariantLabel(data, tk, block, laby) {
+	// TODO allow to show a different name instead of "variant"
+
+	if (!tk.skewer) return
+
+	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
+	const lab = makelabel(tk, block, laby)
+
+	let totalcount, showcount
+
+	if (tk.custom_variants) {
+		// if custom list is available, total is defined by its array length
+		totalcount = tk.custom_variants.length
+	} else if (data.skewer) {
+		// no custom data but server returned data, get total from it
+		totalcount = data.skewer.length
+	} else {
+		/* messy way to get total number of data points
+		when it's updating in protein mode, client may not re-request data from server
+		and data.skewer will be missing
+		still the total data is kept on client
+		*/
+		if (tk.skewer.mode == 'skewer') {
+			totalcount = tk.skewer.data.reduce((i, j) => i + j.mlst.length, 0)
+		} else {
+			throw 'do not know how to handle'
+		}
+	}
+
+	if (totalcount == 0) {
+		lab
+			.text('No variants')
+			.attr('class', '')
+			.style('opacity', 0.5)
+		return lab
+	}
+
+	/*
+	out of total, only a subset may be plotted
+	to count how many are plotted, check with skewer.mode
+	if mode=skewer, plotted data are at tk.skewer.data[]
+	else if mode=numeric, plotted data are at tk.numericmode.data
+	*/
+	if (tk.skewer.mode == 'skewer') {
+		showcount = tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width).reduce((i, j) => i + j.mlst.length, 0)
+	} else if (tk.skewer.mode == 'numeric') {
+		showcount = tk.numericmode.data.reduce((i, j) => i + j.mlst.length, 0)
+	} else {
+		throw 'unknown skewer.mode'
+	}
+
+	if (showcount == 0) {
+		// has data but none displayed
+		lab
+			.text('0 out of ' + totalcount + ' variant' + (totalcount > 1 ? 's' : ''))
+			.attr('class', '')
+			.style('opacity', 0.5)
+		return lab
+	}
+
+	lab.text(
+		showcount < totalcount
+			? showcount + ' of ' + totalcount + ' variants'
+			: showcount + ' variant' + (showcount > 1 ? 's' : '')
+	)
+	lab.on('click', () => {
+		tk.menutip.clear().showunder(d3event.target)
+		menu_variants(tk, block)
+	})
+	return lab
+}
+
 function menu_variants(tk, block) {
+	tk.menutip.d
+		.append('div')
+		.text('List')
+		.attr('class', 'sja_menuoption')
+		.on('click', () => {
+			listSkewerData(tk, block)
+		})
+
 	if (tk.skewer.mode == 'skewer') {
 		// showmode=1/0 means expanded/folded skewer, defined in skewer.render.js
 		const expandCount = tk.skewer.data.reduce((i, j) => i + j.showmode, 0)
 		if (expandCount > 0) {
 			// has expanded skewer
-			tk.tktip.d
+			tk.menutip.d
 				.append('div')
 				.text('Fold')
 				.attr('class', 'sja_menuoption')
 				.on('click', () => {
 					fold_glyph(tk.skewer.data, tk)
-					tk.tktip.hide()
+					tk.menutip.hide()
 				})
 		} else if (expandCount == 0) {
-			tk.tktip.d
+			tk.menutip.d
 				.append('div')
 				.text('Expand')
 				.attr('class', 'sja_menuoption')
 				.on('click', () => {
 					settle_glyph(tk, block)
-					tk.tktip.hide()
+					tk.menutip.hide()
 				})
 		}
-	} else if (tk.skewer.mode == 'numeric') {
-		// TODO come up with menu content
+	}
+}
+
+function listSkewerData(tk, block) {
+	const div = tk.menutip
+		.clear()
+		.d.append('div')
+		.style('margin', '10px')
+		.style('display', 'grid')
+		.style('grid-template-columns', 'auto auto')
+	const data = tk.skewer.mode == 'skewer' ? tk.skewer.data : tk.numericmode.data
+	for (const g of data) {
+		if (g.x <= 0 || g.x >= block.width) continue
+		for (const m of g.mlst) {
+			div.append('div').text(m.mname)
+			div.append('div').text(m.chr + ':' + m.pos)
+		}
 	}
 }
 

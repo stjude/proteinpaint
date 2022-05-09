@@ -35,6 +35,7 @@ export async function makeTk(tk, block) {
 
 	tk.cache = {}
 	tk.itemtip = new Menu()
+	tk.menutip = new Menu({ padding: '' }) // to show menu options without margin
 	tk.samplefiltertemp = {}
 	// switch to .samplefilter with a filter.js object
 
