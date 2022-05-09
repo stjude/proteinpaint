@@ -18,6 +18,8 @@ import { Menu } from './dom/menu'
 -------EXPORTED-------
 init_appDrawer
 	- creates the app drawer
+openSandbox
+	- opens track or app card sandboxes
 
 -------Internal-------
 *** App Drawer ***
@@ -293,7 +295,7 @@ function makeRibbon(e, text, color) {
  	Opens a sandbox with track example(s) or app ui with links and other information
 */
 
-async function openSandbox(track, holder) {
+export async function openSandbox(track, holder) {
 	//queries relevant json file with sandbox args
 	const res = await dofetch3(`/cardsjson?jsonfile=${track.sandboxjson}`) //Fix for loading the sandbox json only once
 	if (res.error) {
