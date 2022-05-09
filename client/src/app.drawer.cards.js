@@ -1172,11 +1172,12 @@ function addDatasetGenomeBtns(div, par, ds, genomes) {
 		div
 			.append('div')
 			.style('padding', '8px')
-			.style('color', 'white')
-			.style('background-color', '#5f86b5')
+			.style('color', '#a6a6a6')
+			.style('border', '1px solid #a6a6a6')
 			.style('display', 'inline-block')
 			.style('width', 'auto')
 			.style('height', 'auto')
+			.style('cursor', 'not-allowed')
 			.text(ds.availableGenomes[0])
 	} else {
 		const btns = []
@@ -1200,6 +1201,7 @@ function addDatasetGenomeBtns(div, par, ds, genomes) {
 				.style('color', btn.active ? 'white' : 'black')
 				.style('background-color', btn.active ? '#0b5394ff' : '#bfbfbf')
 				.style('border-radius', '0px')
+				.style('cursor', 'pointer')
 
 			if (btn.active) {
 				btn.callback(par)
