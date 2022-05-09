@@ -2,6 +2,7 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { mclass } from '../../shared/common'
 import { fillbar } from '../client'
 import { fold_glyph, settle_glyph } from './skewer.render'
+import { itemtable } from './itemtable'
 
 const labyspace = 5
 const font = 'Arial'
@@ -224,8 +225,7 @@ function menu_variants(tk, block) {
 	}
 }
 
-function listSkewerData(tk, block) {
-	const data = tk.skewer.mode == 'skewer' ? tk.skewer.data : tk.numericmode.data
+async function listSkewerData(tk, block) {
 	/* data: []
 	each element {}:
 	.x
@@ -234,44 +234,31 @@ function listSkewerData(tk, block) {
 			.mname
 			.class
 	*/
+	const data = tk.skewer.mode == 'skewer' ? tk.skewer.data : tk.numericmode.data
 
-	// TODO show additional columns (allele, occurrence etc) if available from data
+	tk.menutip.clear()
 
-	const div = tk.menutip
-		.clear()
-		.d.append('div')
-		.style('margin', '10px')
-		.style('display', 'grid')
-		.style('grid-template-columns', 'auto auto auto')
-		.style('gap', '7px')
-		.style('font-size', '.9em')
-		.style('overflow', 'scroll')
-		.style('max-height', '20vw')
+	// should simply list variants in a table
+	// group variants by dt; for each group, render with itemtable()
 
-	// header
-	div
-		.append('div')
-		.style('position', 'sticky')
-		.style('opacity', 0.3)
-		.text('Variant')
-	div
-		.append('div')
-		.style('position', 'sticky')
-		.style('opacity', 0.3)
-		.text(block.mclassOverride ? block.mclassOverride.className : 'Class')
-	div
-		.append('div')
-		.style('position', 'sticky')
-		.style('opacity', 0.3)
-		.text('Position')
-
+	const dt2mlst = new Map()
 	for (const g of data) {
-		if (g.x <= 0 || g.x >= block.width) continue
 		for (const m of g.mlst) {
-			div.append('div').text(m.mname)
-			div.append('div').text(mclass[m.class].label)
-			div.append('div').text(m.chr + ':' + m.pos)
+			if (!dt2mlst.has(m.dt)) dt2mlst.set(m.dt, [])
+			dt2mlst.get(m.dt).push(m)
 		}
+	}
+
+	for (const mlst of dt2mlst.values()) {
+		const div = tk.menutip.d.append('div').style('margin', '10px')
+		await itemtable({
+			div,
+			mlst,
+			tk,
+			block,
+			// quick fix to prevent gdc track to run samplesummary on too many ssm
+			disableSamplesummary: true
+		})
 	}
 }
 
