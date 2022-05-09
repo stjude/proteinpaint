@@ -214,5 +214,27 @@
             "describe": "Create a SV view with BigWig tracks using Python script",
             "file": "svview"
         }
+    ],
+    "datasets": [
+        {
+            "name": "Pediatric Cancer Mutation",
+            "id": 1000
+        },
+        {
+            "name": "Pediatric2 GenomePaint",
+            "id": 1001
+        },
+        {
+            "name": "NCI GDC",
+            "id": 1002
+        },
+        {
+            "name": "CIViC",
+            "id": 1003
+        },
+        {
+            "name": "Survivorship Study",
+            "id": 1004
+        }
     ]
 }
