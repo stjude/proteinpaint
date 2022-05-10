@@ -139,13 +139,13 @@ buildFormulas <- function(outcome, independent) {
   if (nrow(snpLocusSnps) > 0) {
     # snplocus snps present
     # build separate formula for each snplocus snp
-    tempIndependentIds <- vector(mode = "character")
-    temp_formula_independent <- vector(mode = "character")
-    temp_formula_interaction <- vector(mode = "character")
     for (r in 1:nrow(snpLocusSnps)) {
+      tempIndependentIds <- independentIds
+      temp_formula_independent <- formula_independent
+      temp_formula_interaction <- formula_interaction
       snp <- snpLocusSnps[r,]
-      tempIndependentIds <- c(independentIds, snp$id)
-      temp_formula_independent <- c(formula_independent, snp$id)
+      tempIndependentIds <- c(tempIndependentIds, snp$id)
+      temp_formula_independent <- c(temp_formula_independent, snp$id)
       if ("interactions" %in% names(snp) & length(snp$interactions[[1]]) > 0) {
         # interactions
         interactionIds <- snp$interactions[[1]]
@@ -153,8 +153,8 @@ buildFormulas <- function(outcome, independent) {
           # get unique set of interactions
           int1 <- paste(snp$id, intId, sep = ":")
           int2 <- paste(intId, snp$id, sep = ":")
-          if (!(int1 %in% formula_interaction) & !(int2 %in% formula_interaction)) {
-            temp_formula_interaction <- c(formula_interaction, int1)
+          if (!(int1 %in% temp_formula_interaction) & !(int2 %in% temp_formula_interaction)) {
+            temp_formula_interaction <- c(temp_formula_interaction, int1)
           }
         }
       }
