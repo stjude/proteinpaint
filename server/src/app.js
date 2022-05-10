@@ -45,7 +45,6 @@ const express = require('express'),
 	fs = require('fs'),
 	path = require('path'),
 	got = require('got'),
-	async = require('async'), // where this is used?
 	lazy = require('lazy'),
 	compression = require('compression'),
 	child_process = require('child_process'),
@@ -246,7 +245,6 @@ app.post(basepath + '/isoformlst', handle_isoformlst)
 app.post(basepath + '/dbdata', handle_dbdata)
 app.get(basepath + '/img', handle_img)
 app.post(basepath + '/svmr', handle_svmr)
-app.post(basepath + '/dsgenestat', handle_dsgenestat)
 app.post(basepath + '/study', handle_study)
 app.post(basepath + '/textfile', handle_textfile)
 app.post(basepath + '/urltextfile', handle_urltextfile)
@@ -1848,449 +1846,124 @@ function handle_hicdata(req, res) {
 	})
 }
 
-/*
-function handle_putfile(req,res) {
-	const id=Math.random().toString()
-	const file=path.join(serverconfig.tpmasterdir,putfiledir,id)
-	fs.writeFile(file,req.body,err=>{
-		if(err) {
-			res.send({error:'cannot write file'})
-			return
-		}
-		res.send({id:path.join(putfiledir,id)})
-	})
-}
-*/
+async function handle_study(req, res) {
+	try {
+		if (illegalpath(req.query.file)) throw 'invalid file path'
+		const file = path.join(
+			serverconfig.tpmasterdir,
+			req.query.file.endsWith('.json') ? req.query.file : req.query.file + '.json'
+		)
 
-function handle_dsgenestat(req, res) {
-	const gn = req.query.genome
-	if (!gn) return res.send({ error: 'genome unspecified' })
-	const g = genomes[gn]
-	if (!g) return res.send({ error: 'invalid genome: ' + gn })
-	if (!g.datasets) return res.send({ error: 'no datasets available for this genome' })
-	if (!req.query.dsname) return res.send({ error: 'dataset name unspecified' })
-	const dsc = g.datasets[req.query.dsname]
-	if (!dsc) return res.send({ error: 'invalid dataset: ' + req.query.dsname })
-	if (!dsc.queries) return res.send({ error: '.queries missing for dataset ' + req.query.dsname })
-	if (!(gn in ch_genemcount)) {
-		ch_genemcount[gn] = {}
-	}
-	const genemcount = ch_genemcount[gn]
-	const usesilent = req.query.silent
-	const genedata = {} // to be returned
-	const qlst2 = [] // actually queried
-	for (const i of req.query.lst) {
-		if (i in genemcount && req.query.dsname in genemcount[i]) {
-			const rec = genemcount[i][req.query.dsname]
-			genedata[i] = {
-				sample: rec.sample,
-				total: rec.total
-			}
-			const class2 = {}
-			for (const n in rec.class) {
-				class2[n] = rec.class[n]
-			}
-			if (!usesilent) {
-				// FIXME hardcoded silent class
-				delete class2['S']
-			}
-			genedata[i].class = class2
-			continue
-		}
-		qlst2.push(i)
-		genedata[i] = {
-			class: {},
-			disease: {},
-			sample: {},
-			total: 0
-		}
-	}
-	if (qlst2.length == 0) {
-		res.send({ result: genedata, totalsample: dsc.samplecount })
-		return
-	}
-	const tasks = []
-	for (const q of dsc.queries) {
-		if (!q.genemcount) continue
-		tasks.push(next => {
-			var idx = 0
-
-			function run() {
-				if (idx == qlst2.length) {
-					next(null)
-					return
-				}
-				const sql = q.genemcount.query(qlst2[idx])
-				idx++
-				dsc.db.all(sql, (err, results) => {
-					if (err) {
-						console.error('dsgenestat: ' + err)
-						run()
-						return
-					}
-					q.genemcount.summary(results, genedata)
-					run()
-				})
-			}
-			run()
-		})
-	}
-	async.series(tasks, err => {
-		if (err) {
-			res.send({ error: err })
-			return
-		}
-		const result = {} // returned result is a copy of genedata, since silent data may be modified
-		for (const i in genedata) {
-			result[i] = {
-				total: genedata[i].total
-			}
-			// this genedata is not cached
-			let c = 0
-			for (const n in genedata[i].sample) {
-				c++
-			}
-			genedata[i].sample = c
-			result[i].sample = c
-			if (!(i in genemcount)) {
-				genemcount[i] = {}
-			}
-			// cache
-			genemcount[i][req.query.dsname] = genedata[i]
-			// decide whether to report silent
-			const class2 = {}
-			for (const n in genedata[i].class) {
-				class2[n] = genedata[i].class[n]
-			}
-			/*
-            if(!usesilent) {
-            	delete class2['S']
-            }
-            */
-			result[i].class = class2
-		}
-		res.send({ result: result, totalsample: dsc.samplecount })
-		return
-	})
-}
-
-function handle_study(req, res) {
-	if (illegalpath(req.query.file)) {
-		res.send({ error: 'Illegal file path' })
-		return
-	}
-	const file = path.join(
-		serverconfig.tpmasterdir,
-		req.query.file.endsWith('.json') ? req.query.file : req.query.file + '.json'
-	)
-	fs.readFile(file, 'utf8', (err, text) => {
-		if (err) {
-			res.send({ error: 'Error reading JSON file' })
-			return
-		}
-		let cohort
-		try {
-			cohort = JSON.parse(text)
-		} catch (e) {
-			res.send({ error: 'Invalid JSON syntax' })
-			return
-		}
-		if (!cohort.genome) {
-			res.send({ error: 'genome missing' })
-			return
-		}
-		if (cohort.dbexpression) {
-			const dd = cohort.dbexpression
-			if (!dd.dbfile) return res.send({ error: 'dbfile missing for dbexpression' })
-			/*
-		if(!ch_dbtable.has(dd.dbfile)) {
-			const db=new sqlite3.Database(path.join(serverconfig.tpmasterdir,dd.dbfile),sqlite3.OPEN_READONLY,err=>{
-				if(err) {
-					dd.db=null
-					console.error('cannot connect to dbfile: '+dd.dbfile)
-				} else {
-					console.log('Db opened: '+dd.dbfile)
-					ch_dbtable.set(dd.dbfile,{db:db})
-				}
-			})
-		}
-		*/
-			if (!dd.tablename) return res.send({ error: '.tablename missing from dbexpression' })
-			if (!dd.keyname) return res.send({ error: '.keyname missing from dbexpression' })
-			if (!dd.config) return res.send({ error: 'config missing from dbexpression' })
-			cohort.dbexpression = {
-				dbfile: dd.dbfile,
-				tablename: dd.tablename,
-				keyname: dd.keyname,
-				tidy: dd.tidy,
-				config: dd.config
-			}
-		}
-		const tasklst = []
+		const cohort = JSON.parse(await utils.read_file(file))
+		if (!cohort.genome) throw 'genome missing'
 		const flagset = {}
-		if (cohort.mutationset) {
-			let nameless = 0
-			for (const mset of cohort.mutationset) {
-				const flag = bulk.init_bulk_flag(cohort.genome)
-				if (!flag) {
-					res.send({ error: 'init_bulk_flag() failed' })
-					return
-				}
-				if (cohort.mutationset.length > 1) {
-					flag.tpsetname = mset.name ? mset.name : 'set' + ++nameless
-				}
-				flagset[Math.random()] = flag
-				if (mset.snvindel) {
-					tasklst.push(next => {
-						fs.readFile(path.join(serverconfig.tpmasterdir, mset.snvindel), 'utf8', (err, text) => {
-							if (err) {
-								next('file error: ' + mset.snvindel)
-								return
-							}
-							const lines = text.trim().split(/\r?\n/)
-							const herr = bulksnv.parseheader(lines[0], flag)
-							if (herr) {
-								next('snvindel header line error: ' + herr)
-								return
-							}
-							for (let i = 1; i < lines.length; i++) {
-								bulksnv.parseline(i, lines[i], flag)
-							}
-							next(null)
-						})
-					})
-				}
-				if (mset.sv) {
-					tasklst.push(next => {
-						fs.readFile(path.join(serverconfig.tpmasterdir, mset.sv), 'utf8', (err, text) => {
-							if (err) {
-								next('file error: ' + mset.sv)
-								return
-							}
-							const lines = text.trim().split(/\r?\n/)
-							const herr = bulksv.parseheader(lines[0], flag, true)
-							if (herr) {
-								next('sv header line error: ' + herr)
-								return
-							}
-							for (let i = 1; i < lines.length; i++) {
-								bulksv.parseline(i, lines[i], flag, true)
-							}
-							next(null)
-						})
-					})
-				}
-				if (mset.fusion) {
-					tasklst.push(next => {
-						fs.readFile(path.join(serverconfig.tpmasterdir, mset.fusion), 'utf8', (err, text) => {
-							if (err) {
-								next('file error: ' + mset.fusion)
-								return
-							}
-							const lines = text.trim().split(/\r?\n/)
-							const herr = bulksv.parseheader(lines[0], flag, false)
-							if (herr) {
-								next('fusion header line error: ' + herr)
-								return
-							}
-							for (let i = 1; i < lines.length; i++) {
-								bulksv.parseline(i, lines[i], flag, false)
-							}
-							next(null)
-						})
-					})
-				}
-				if (mset.svjson) {
-					tasklst.push(next => {
-						fs.readFile(path.join(serverconfig.tpmasterdir, mset.svjson), 'utf8', (err, text) => {
-							if (err) {
-								next('file error: ' + mset.svjson)
-								return
-							}
-							const lines = text.trim().split(/\r?\n/)
-							const [herr, header] = bulksvjson.parseheader(lines[0], flag)
-							if (herr) {
-								next('svjson header line error: ' + herr)
-								return
-							}
-							for (let i = 1; i < lines.length; i++) {
-								bulksvjson.parseline(i, lines[i], flag, header)
-							}
-							next(null)
-						})
-					})
-				}
-				if (mset.cnv) {
-					tasklst.push(next => {
-						fs.readFile(path.join(serverconfig.tpmasterdir, mset.cnv), 'utf8', function(err, text) {
-							if (err) {
-								next('file error: ' + mset.cnv)
-								return
-							}
-							const lines = text.trim().split(/\r?\n/)
-							const herr = bulkcnv.parseheader(lines[0], flag)
-							if (herr) {
-								next('cnv header line error: ' + herr)
-								return
-							}
-							for (let i = 1; i < lines.length; i++) {
-								bulkcnv.parseline(i, lines[i], flag)
-							}
-							next(null)
-						})
-					})
-				}
-				if (mset.itd) {
-					tasklst.push(next => {
-						fs.readFile(path.join(serverconfig.tpmasterdir, mset.itd), 'utf8', (err, text) => {
-							if (err) {
-								next('file error: ' + mset.itd)
-								return
-							}
-							const lines = text.trim().split(/\r?\n/)
-							const herr = bulkitd.parseheader(lines[0], flag)
-							if (herr) {
-								next('itd header line error: ' + herr)
-								return
-							}
-							for (let i = 1; i < lines.length; i++) {
-								bulkitd.parseline(i, lines[i], flag)
-							}
-							next(null)
-						})
-					})
-				}
-				if (mset.deletion) {
-					tasklst.push(next => {
-						fs.readFile(path.join(serverconfig.tpmasterdir, mset.deletion), 'utf8', (err, text) => {
-							if (err) {
-								next('file error: ' + mset.deletion)
-								return
-							}
-							const lines = text.trim().split(/\r?\n/)
-							const herr = bulkdel.parseheader(lines[0], flag)
-							if (herr) {
-								next('deletion header line error: ' + herr)
-								return
-							}
-							for (let i = 1; i < lines.length; i++) {
-								bulkdel.parseline(i, lines[i], flag)
-							}
-							next(null)
-						})
-					})
-				}
-				if (mset.truncation) {
-					tasklst.push(next => {
-						fs.readFile(path.join(serverconfig.tpmasterdir, mset.truncation), 'utf8', (err, text) => {
-							if (err) {
-								next('file error: ' + mset.truncation)
-								return
-							}
-							const lines = text.trim().split(/\r?\n/)
-							const herr = bulktrunc.parseheader(lines[0], flag)
-							if (herr) {
-								next('Truncation header line error: ' + herr)
-								return
-							}
-							for (let i = 1; i < lines.length; i++) {
-								bulktrunc.parseline(i, lines[i], flag)
-							}
-							next(null)
-						})
-					})
-				}
-				if (mset.variant_gene_assoc) {
-					tasklst.push(next => {
-						fs.readFile(path.join(serverconfig.tpmasterdir, mset.variant_gene_assoc), 'utf8', (err, text) => {
-							if (err) {
-								return next('file error: ' + mset.variant_gene_assoc)
-							}
-							const lines = text.trim().split(/\r?\n/)
-							const [err2, header] = parse_header_variantgene(lines[0])
-							if (err2) {
-								next('variant-gene-association header line error: ' + err)
-								return
-							}
-							const errlst = [],
-								mlst = []
-							for (let i = 1; i < lines.length; i++) {
-								if (lines[i][0] == '#') continue
-								const [err3, m] = parse_variantgene(lines[i], header)
-								if (err3) {
-									errlst.push(err)
-									continue
-								}
-								mlst.push(m)
-							}
-							flag.variantgene = {
-								header: header,
-								errlst: errlst,
-								mlst: mlst
-							}
-							next(null)
-						})
-					})
-				}
-				// newdt
+		let nameless = 0
+		for (const mset of cohort.mutationset || []) {
+			const flag = bulk.init_bulk_flag(cohort.genome)
+			if (!flag) throw 'init_bulk_flag() failed'
+			if (cohort.mutationset.length > 1) {
+				flag.tpsetname = mset.name ? mset.name : 'set' + ++nameless
 			}
-		}
-		if (cohort.hardcodemap) {
-			if (!Array.isArray(cohort.hardcodemap)) return res.send({ error: 'hardcodemap value should be an array' })
-			for (const hcmap of cohort.hardcodemap) {
-				if (!hcmap.file) {
-					return res.send({ error: '.file missing for one hard-coded map' })
+			flagset[Math.random()] = flag
+			if (mset.snvindel) {
+				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.snvindel))
+				const lines = text.trim().split(/\r?\n/)
+				const herr = bulksnv.parseheader(lines[0], flag)
+				if (herr) throw 'snvindel header line error: ' + herr
+				for (let i = 1; i < lines.length; i++) {
+					bulksnv.parseline(i, lines[i], flag)
 				}
-				if (!hcmap.metadata) {
-					return res.send({ error: '.metadata missing for one hard-coded map' })
+			}
+			if (mset.sv) {
+				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.sv))
+				const lines = text.trim().split(/\r?\n/)
+				const herr = bulksv.parseheader(lines[0], flag, true)
+				if (herr) throw 'sv header line error: ' + herr
+				for (let i = 1; i < lines.length; i++) {
+					bulksv.parseline(i, lines[i], flag, true)
 				}
-				tasklst.push(next => {
-					fs.readFile(path.join(serverconfig.tpmasterdir, hcmap.file), 'utf8', (err, text) => {
-						if (err) {
-							return next('cannot read file ' + hcmap.file + ' for hard-coded map')
-						}
-						hcmap.text = text
-						next(null)
-					})
-				})
+			}
+			if (mset.fusion) {
+				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.fusion))
+				const lines = text.trim().split(/\r?\n/)
+				const herr = bulksv.parseheader(lines[0], flag, false)
+				if (herr) throw 'fusion header line error: ' + herr
+				for (let i = 1; i < lines.length; i++) {
+					bulksv.parseline(i, lines[i], flag, false)
+				}
+			}
+			if (mset.svjson) {
+				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.svjson))
+				const lines = text.trim().split(/\r?\n/)
+				const [herr, header] = bulksvjson.parseheader(lines[0], flag)
+				if (herr) throw 'svjson header line error: ' + herr
+				for (let i = 1; i < lines.length; i++) {
+					bulksvjson.parseline(i, lines[i], flag, header)
+				}
+			}
+			if (mset.cnv) {
+				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.cnv))
+				const lines = text.trim().split(/\r?\n/)
+				const herr = bulkcnv.parseheader(lines[0], flag)
+				if (herr) throw 'cnv header line error: ' + herr
+				for (let i = 1; i < lines.length; i++) {
+					bulkcnv.parseline(i, lines[i], flag)
+				}
+			}
+			if (mset.itd) {
+				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.itd))
+				const lines = text.trim().split(/\r?\n/)
+				const herr = bulkitd.parseheader(lines[0], flag)
+				if (herr) throw 'itd header line error: ' + herr
+				for (let i = 1; i < lines.length; i++) {
+					bulkitd.parseline(i, lines[i], flag)
+				}
+			}
+			if (mset.deletion) {
+				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.deletion))
+				const lines = text.trim().split(/\r?\n/)
+				const herr = bulkdel.parseheader(lines[0], flag)
+				if (herr) throw 'deletion header line error: ' + herr
+				for (let i = 1; i < lines.length; i++) {
+					bulkdel.parseline(i, lines[i], flag)
+				}
+			}
+			if (mset.truncation) {
+				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, mset.truncation))
+				const lines = text.trim().split(/\r?\n/)
+				const herr = bulktrunc.parseheader(lines[0], flag)
+				if (herr) throw 'Truncation header line error: ' + herr
+				for (let i = 1; i < lines.length; i++) {
+					bulktrunc.parseline(i, lines[i], flag)
+				}
 			}
 		}
 		if (cohort.annotations) {
 			const idkey = cohort.annotations.idkey ? cohort.annotations.idkey : 'sample'
 			cohort.annotations.data = {}
-			cohort.annotations.files.forEach(filename => {
-				tasklst.push(next => {
-					fs.readFile(path.join(serverconfig.tpmasterdir, filename), 'utf8', (err, text) => {
-						if (err) {
-							return next('file error: ' + filename)
-						}
-						d3dsv.tsvParse(text).forEach(d => {
-							const id = d[idkey].trim()
-							if (!cohort.annotations.data[id]) {
-								cohort.annotations.data[id] = []
-							}
-							cohort.annotations.data[id].push(d)
-						})
-						next(null)
-					})
+			for (const filename of cohort.annotations.files) {
+				const text = await utils.read_file(path.join(serverconfig.tpmasterdir, filename))
+				d3dsv.tsvParse(text).forEach(d => {
+					const id = d[idkey].trim()
+					if (!cohort.annotations.data[id]) {
+						cohort.annotations.data[id] = []
+					}
+					cohort.annotations.data[id].push(d)
 				})
-			})
+			}
 		}
-		async.series(tasklst, err => {
-			if (err) {
-				res.send({ error: err })
-				return
-			}
-			for (const k in flagset) {
-				local_end_flag(flagset[k])
-			}
-			delete cohort.mutationset
-			res.send({
-				cohort: cohort,
-				flagset: flagset
-			})
+		for (const k in flagset) {
+			local_end_flag(flagset[k])
+		}
+		delete cohort.mutationset
+		res.send({
+			cohort: cohort,
+			flagset: flagset
 		})
-	})
+	} catch (e) {
+		res.send({ error: e.message || e })
+		return
+	}
 }
 
 function handle_textfile(req, res) {
@@ -7584,92 +7257,6 @@ function makeyscale() {
 	return yscale
 }
 exports.makeyscale = makeyscale
-
-function parse_header_variantgene(line) {
-	var lst = line.toLowerCase().split('\t')
-
-	function htry() {
-		for (var i = 0; i < arguments.length; i++) {
-			var j = lst.indexOf(arguments[i])
-			if (j != -1) return j
-		}
-		return -1
-	}
-	var header = []
-	var i = htry('chromosome')
-	if (i == -1) return ['no chromosome']
-	header.push({
-		k: 'chr',
-		i: i
-	})
-	var i = htry('position')
-	if (i == -1) return ['no position']
-	header.push({
-		k: 'position',
-		i: i
-	})
-	var i = htry('reference_allele')
-	if (i == -1) return ['no reference_allele']
-	header.push({
-		k: 'reference_allele',
-		i: i
-	})
-	var i = htry('mutant_allele')
-	if (i == -1) return ['no mutant_allele']
-	header.push({
-		k: 'mutant_allele',
-		i: i
-	})
-	var i = htry('patient')
-	if (i == -1) return ['no patient']
-	header.push({
-		k: 'patient',
-		i: i
-	})
-	var i = htry('sampletype')
-	if (i == -1) return ['no sampletype']
-	header.push({
-		k: 'sampletype',
-		i: i
-	})
-	var i = htry('geneset')
-	if (i == -1) return ['no geneset']
-	header.push({
-		k: 'geneset',
-		i: i
-	})
-	return [null, header]
-}
-
-function parse_variantgene(line, header) {
-	var lst = line.split('\t')
-	var m = {}
-	header.forEach(h => {
-		m[h.k] = lst[h.i]
-	})
-	if (!m.chr) return ['missing chr']
-	if (!m.position) return ['missing position']
-	var p = parseInt(m.position)
-	if (isNaN(p)) return ['invalid position']
-	m.position = p - 1
-	if (!m.patient) return ['missing patient']
-	if (!m.sampletype) return ['missing sample']
-	if (!m.geneset) return ['missing geneset']
-	if (!m.reference_allele) {
-		m.hgvs = 'g.' + p + 'ins' + m.mutant_allele
-	} else if (!m.mutant_allele) {
-		m.hgvs = 'g.' + p + 'del' + m.reference_allele
-	} else {
-		m.hgvs = 'g.' + p + m.reference_allele + '>' + m.mutant_allele
-	}
-	try {
-		var jsg = JSON.parse(m.geneset)
-	} catch (e) {
-		return ['invalid json for geneset']
-	}
-	m.geneset = jsg
-	return [null, m]
-}
 
 function illegalpath(s) {
 	if (s[0] == '/') return true // must not be relative to mount root
