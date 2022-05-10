@@ -84,6 +84,7 @@ run_cuminc <- function(chart) {
       }
       # retrieve p-value of the pair
       pvalue <- signif(res$Tests[1,"pv"], 2)
+      if (pvalue == 0) pvalue <- "<1e-16" # see https://stacks.cdc.gov/view/cdc/22757/cdc_22757_DS11.pdf
       tests[i,] <- c(pair, pvalue)
     }
     out <- list("estimates" = estimates, "tests" = tests)

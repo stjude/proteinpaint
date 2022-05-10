@@ -259,7 +259,6 @@ class MassCumInc {
 			}
 			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.hiddenOverlays = this.getHiddenOverlays()
-			console.log(data)
 			this.processData(data)
 			this.pj.refresh({ data: this.currData })
 			this.setTerm2Color(this.pj.tree.charts)
@@ -303,6 +302,7 @@ class MassCumInc {
 	}
 
 	processData(data) {
+		// process case data
 		this.uniqueSeriesIds = new Set()
 		this.currData = []
 		const estKeys = ['cuminc', 'low', 'high']
@@ -316,29 +316,54 @@ class MassCumInc {
 		}
 
 		this.refs = data.refs
-		this.skippedCharts = data.skippedCharts
+		const labelOrder = this.refs.bins && this.refs.bins.length > 0 ? this.refs.bins.map(b => b.label) : null
 
-		// hide tests of hidden series
-		this.tests = data.tests
-		if (this.tests) {
-			for (const chart in this.tests) {
-				// remove hidden series from this.tests
-				this.tests[chart] = this.tests[chart].filter(
+		// process statistical tests
+		if (data.tests) {
+			this.tests = {}
+			for (const chart in data.tests) {
+				// hide tests of hidden series
+				this.tests[chart] = data.tests[chart].filter(
 					test => !this.hiddenOverlays.includes(test.series1) && !this.hiddenOverlays.includes(test.series2)
 				)
-				if (this.tests[chart].length == 0) delete this.tests[chart]
+				if (this.tests[chart].length == 0) {
+					delete this.tests[chart]
+					continue
+				}
+
+				// sort tests
+				if (labelOrder) {
+					// series 1 should have smaller bin value
+					for (const test of this.tests[chart]) {
+						const orderedSeries = [test.series1, test.series2].sort(
+							(a, b) => labelOrder.indexOf(a) - labelOrder.indexOf(b)
+						)
+						test.series1 = orderedSeries[0]
+						test.series2 = orderedSeries[1]
+					}
+					// sort first by series1 then by series2
+					this.tests[chart].sort(
+						(a, b) =>
+							labelOrder.indexOf(a.series1) - labelOrder.indexOf(b.series1) ||
+							labelOrder.indexOf(a.series2) - labelOrder.indexOf(b.series2)
+					)
+				}
 			}
 		}
 
-		// hide skipped series of hidden series
+		// process skipped series
 		this.skippedSeries = data.skippedSeries
 		if (this.skippedSeries) {
+			// hide skipped series of hidden series
 			for (const chart in this.skippedSeries) {
 				// remove hidden series from this.skippedTests
 				this.skippedSeries[chart] = this.skippedSeries[chart].filter(series => !this.hiddenOverlays.includes(series))
 				if (this.skippedSeries[chart].length == 0) delete this.skippedSeries[chart]
 			}
 		}
+
+		// process skipped charts
+		this.skippedCharts = data.skippedCharts
 	}
 
 	setTerm2Color(charts) {
@@ -431,7 +456,7 @@ function setRenderers(self) {
 				.append('div')
 				.attr('class', 'pp-cuminc-chartLegends')
 				.style('vertical-align', 'top')
-				.style('margin', '10px')
+				.style('margin', '10px 10px 10px 30px')
 				.style('display', 'none')
 
 			// p-values legend
@@ -440,7 +465,6 @@ function setRenderers(self) {
 					.select('.pp-cuminc-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
-					.style('margin', '10px')
 				renderPvalues(pvaldiv, chart, self.tests[chart.chartId], s)
 			}
 
@@ -492,7 +516,6 @@ function setRenderers(self) {
 				.select('.pp-cuminc-chartLegends')
 				.style('display', 'inline-block')
 				.append('div')
-				.style('margin', '10px')
 			renderPvalues(pvaldiv, chart, self.tests[chart.chartId], s)
 		}
 
@@ -581,7 +604,7 @@ function setRenderers(self) {
 			.style('padding-bottom', '5px')
 			.style('font-size', fontSize + 'px')
 			.style('font-weight', 'bold')
-			.text("Series comparisons (Gray's test)")
+			.text("Group comparisons (Gray's test)")
 
 		// table div
 		// need separate divs for title and table
@@ -599,10 +622,10 @@ function setRenderers(self) {
 			.append('thead')
 			.append('tr')
 			.selectAll('td')
-			.data(['Series 1', 'Series 2', 'P-value'])
+			.data(['Group 1', 'Group 2', 'P-value'])
 			.enter()
 			.append('td')
-			.style('padding', '1px 8px 1px 2px')
+			.style('padding', '1px 20px 1px 3px')
 			.style('color', '#858585')
 			.style('position', 'sticky')
 			.style('top', '0px')
@@ -614,7 +637,7 @@ function setRenderers(self) {
 		const tbody = table.append('tbody')
 		const tr = tbody
 			.selectAll('tr')
-			.data(tests.sort((a, b) => a.pvalue - b.pvalue))
+			.data(tests)
 			.enter()
 			.append('tr')
 			.attr('class', 'pp-cuminc-chartLegends-pvalue')
@@ -628,7 +651,7 @@ function setRenderers(self) {
 			])
 			.enter()
 			.append('td')
-			.style('padding', '1px 8px 1px 2px')
+			.style('padding', '1px 20px 1px 3px')
 			.style('font-size', fontSize + 'px')
 			.text(d => d)
 	}
