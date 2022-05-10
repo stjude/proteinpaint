@@ -1005,6 +1005,7 @@ function make_mds3_variants(tw, resultLst) {
 			if (!d.coefficients || !d.coefficients.terms) throw '.data.coefficients.terms{} missing'
 			const r = d.coefficients.terms[snp.snpid]
 			if (!r) throw 'snp missing from data.coefficients.terms{}'
+			if (!Array.isArray(r.fields)) throw 'data.coefficients.terms[snpid].fields[] is not array'
 			m.regressionEstimate = r.fields[0]
 		} else if (d.fisher) {
 			/* { pvalue:float, table:[] }

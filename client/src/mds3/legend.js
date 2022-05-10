@@ -11,6 +11,8 @@ updateLegend
 create_mclass
 update_mclass
 update_info_fields
+may_create_variantShapeName
+may_update_variantShapeName
 
 ********************** tk.legend{} structure
 .tip
@@ -78,21 +80,30 @@ function may_create_variantShapeName(tk) {
 	const vl = (tk.legend.variantShapeName = {})
 	{
 		const d = holder.append('div')
-		d.append('span').html('<svg width=12 height=12><circle cx=6 cy=6 r=6 fill=gray></circle></svg> n=')
+		d.append('span').html(
+			`<svg style="display:inline-block" width=12 height=12>
+			<circle cx=6 cy=6 r=6 fill=gray></circle></svg> n=`
+		)
 		vl.dotCount = d.append('span')
 		if (tk.variantShapeName.dot) d.append('span').text(', ' + tk.variantShapeName.dot)
 		vl.dotDiv = d
 	}
 	{
 		const d = holder.append('div')
-		d.append('span').html('<svg width=12 height=12><path d="M 6 0 L 0 12 h 12 Z" fill=gray></path></svg> n=')
+		d.append('span').html(
+			`<svg style="display:inline-block" width=12 height=12>
+			<path d="M 6 0 L 0 12 h 12 Z" fill=gray></path></svg> n=`
+		)
 		vl.triangleCount = d.append('span')
 		if (tk.variantShapeName.triangle) d.append('span').text(', ' + tk.variantShapeName.triangle)
 		vl.triangleDiv = d
 	}
 	{
 		const d = holder.append('div')
-		d.append('span').html('<svg width=13 height=13><circle cx=6.5 cy=6.5 r=6 stroke=gray fill=none></circle></svg> n=')
+		d.append('span').html(
+			`<svg style="display:inline-block" width=13 height=13>
+			<circle cx=6.5 cy=6.5 r=6 stroke=gray fill=none></circle></svg> n=`
+		)
 		vl.circleCount = d.append('span')
 		if (tk.variantShapeName.circle) d.append('span').text(', ' + tk.variantShapeName.circle)
 		vl.circleDiv = d
