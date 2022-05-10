@@ -604,7 +604,7 @@ function setRenderers(self) {
 			.style('padding-bottom', '5px')
 			.style('font-size', fontSize + 'px')
 			.style('font-weight', 'bold')
-			.text("Series comparisons (Gray's test)")
+			.text("Group comparisons (Gray's test)")
 
 		// table div
 		// need separate divs for title and table
@@ -622,7 +622,7 @@ function setRenderers(self) {
 			.append('thead')
 			.append('tr')
 			.selectAll('td')
-			.data(['Series 1', 'Series 2', 'P-value'])
+			.data(['Group 1', 'Group 2', 'P-value'])
 			.enter()
 			.append('td')
 			.style('padding', '1px 20px 1px 3px')
