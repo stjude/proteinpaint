@@ -191,10 +191,22 @@ pub fn check_read_within_indel_region(
     ref_length: usize,  // Length of reference allele
     alt_length: usize,  // Length of alternate allele
     strictness: usize,  // Strictness of the indel pipeline
-    original_read_length: usize, // Original read length
-) -> (usize, i64, i64, usize, i64, i64, usize, usize, String) {
+    read_sequence: String, // Original read sequence
+) -> (
+    usize,
+    i64,
+    i64,
+    usize,
+    i64,
+    i64,
+    usize,
+    usize,
+    String,
+    String,
+) {
     let mut within_indel = 0; // 0 if read does not contain indel region and 1 if it contains indel region
     let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
+    let original_read_length = read_sequence.len(); // Original read length
     let mut correct_end_position = correct_start_position; // Correct end position of read
     let mut splice_freq: usize = 0; // Number of times the read has been spliced
     let mut splice_start_pos: i64 = 0; // Start position of the spliced part of the region containing indel site relative to the read
@@ -464,6 +476,20 @@ pub fn check_read_within_indel_region(
         }
     }
 
+    let mut final_sequence = read_sequence.to_owned(); // No splicing
+    if splice_freq > 0 {
+        final_sequence = String::new(); // Contains spliced sequences which overlaps with indel region. If read not spliced, contains entire sequence
+        let sequence_vector: Vec<_> = read_sequence.chars().collect(); // Vector containing each sequence nucleotides as separate elements in the vector
+
+        //println!("splice_start_pos:{}", splice_start_pos);
+        //println!("splice_stop_pos:{}", splice_stop_pos);
+        for k in splice_start_pos..splice_stop_pos {
+            if (k as usize) < sequence_vector.len() {
+                final_sequence += &sequence_vector[k as usize].to_string();
+            }
+        }
+    }
+
     (
         within_indel,
         correct_start_position,
@@ -474,6 +500,7 @@ pub fn check_read_within_indel_region(
         splice_start_cigar,
         splice_stop_cigar,
         alignment_side,
+        final_sequence,
     )
 }
 

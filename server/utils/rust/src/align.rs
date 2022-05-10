@@ -46,12 +46,13 @@ fn main() {
             _within_indel,
             correct_start_position,
             correct_end_position,
-            splice_freq,
-            splice_start_pos,
-            splice_stop_pos,
+            _splice_freq,
+            _splice_start_pos,
+            _splice_stop_pos,
             _splice_start_cigar,
             _splice_stop_cigar,
             alignment_side,
+            final_sequence,
         ) = realign::check_read_within_indel_region(
             // Checks if the read contains the indel region (or a part of it)
             read_start,
@@ -61,22 +62,9 @@ fn main() {
             variant_ref.len(),
             variant_alt.len(),
             1, // Using strictness = 1
-            query_seq.len(),
+            query_seq,
         );
 
-        let mut final_sequence = query_seq.to_owned(); // No splicing
-        if splice_freq > 0 {
-            final_sequence = String::new(); // Contains spliced sequences which overlaps with indel region. If read not spliced, contains entire sequence
-            let sequence_vector: Vec<_> = query_seq.chars().collect(); // Vector containing each sequence nucleotides as separate elements in the vector
-
-            //println!("splice_start_pos:{}", splice_start_pos);
-            //println!("splice_stop_pos:{}", splice_stop_pos);
-            for k in splice_start_pos..splice_stop_pos {
-                if (k as usize) < sequence_vector.len() {
-                    final_sequence += &sequence_vector[k as usize].to_string();
-                }
-            }
-        }
         //println!("final_sequence:{}", final_sequence);
 
         let (q_seq_ref, align_ref, r_seq_ref, _matched_nucleotides_ratio) =

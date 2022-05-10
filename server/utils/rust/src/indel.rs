@@ -275,6 +275,7 @@ fn main() {
                     splice_start_cigar,
                     splice_stop_cigar,
                     alignment_side,
+                    spliced_sequence,
                 ) = realign::check_read_within_indel_region(
                     // Checks if the read contains the indel region (or a part of it)
                     start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
@@ -284,7 +285,7 @@ fn main() {
                     ref_length as usize,
                     alt_length as usize,
                     strictness,
-                    read.len(),
+                    read.to_string(),
                 );
                 //println!("correct_start_position:{}", correct_start_position);
                 //println!("correct_end_position:{}", correct_end_position);
@@ -310,36 +311,32 @@ fn main() {
                         &alt_nucleotides,
                         optimized_allele,
                     );
-                    let (
-                        ref_polyclonal_read_status,
-                        alt_polyclonal_read_status,
-                        ref_insertion,
-                        spliced_sequence, // This variable contains only the spliced part which contains the indel. If no splicing has occured, it will retain the entire original read sequence
-                    ) = check_polyclonal(
-                        // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
-                        read.to_string(),
-                        correct_start_position,
-                        correct_end_position,
-                        cigar_sequences_list[i as usize - 2].to_string(),
-                        variant_pos,
-                        splice_start_pos,
-                        splice_stop_pos,
-                        &ref_nucleotides,
-                        &alt_nucleotides,
-                        &ref_nucleotides_all,
-                        &alt_nucleotides_all_right,
-                        &alt_nucleotides_all_left,
-                        optimized_indel_length as usize,
-                        ref_length as usize,
-                        alt_length as usize,
-                        indel_length as usize,
-                        strictness,
-                        ref_alt_same_base_start,
-                        splice_freq,
-                        splice_start_cigar,
-                        splice_stop_cigar,
-                        alignment_side,
-                    );
+                    let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) =
+                        check_polyclonal(
+                            // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
+                            &spliced_sequence,
+                            correct_start_position,
+                            correct_end_position,
+                            cigar_sequences_list[i as usize - 2].to_string(),
+                            variant_pos,
+                            splice_start_pos,
+                            splice_stop_pos,
+                            &ref_nucleotides,
+                            &alt_nucleotides,
+                            &ref_nucleotides_all,
+                            &alt_nucleotides_all_right,
+                            &alt_nucleotides_all_left,
+                            optimized_indel_length as usize,
+                            ref_length as usize,
+                            alt_length as usize,
+                            indel_length as usize,
+                            strictness,
+                            ref_alt_same_base_start,
+                            splice_freq,
+                            splice_start_cigar,
+                            splice_stop_cigar,
+                            alignment_side,
+                        );
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
                     //println!("read_ambiguous:{}", read_ambiguous);
@@ -450,6 +447,7 @@ fn main() {
                             splice_start_cigar,
                             splice_stop_cigar,
                             alignment_side,
+                            spliced_sequence,
                         ) = realign::check_read_within_indel_region(
                             // Checks if the read contains the indel region (or a part of it)
                             start_positions_list[iter].parse::<i64>().unwrap() - 1,
@@ -459,7 +457,7 @@ fn main() {
                             ref_length as usize,
                             alt_length as usize,
                             strictness,
-                            lines[iter + 2].to_string().len(),
+                            lines[iter + 2].to_string(),
                         );
                         if within_indel == 1 {
                             // Checking if the read is in forward or reverse strand
@@ -484,10 +482,9 @@ fn main() {
                                 ref_polyclonal_read_status,
                                 alt_polyclonal_read_status,
                                 ref_insertion,
-                                spliced_sequence, // This variable contains only the spliced part which contains the indel. If no splicing has occured, it will retain the entire original read sequence
                             ) = check_polyclonal(
                                 // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
-                                lines[iter + 2].to_string(),
+                                &spliced_sequence,
                                 correct_start_position,
                                 correct_end_position,
                                 cigar_sequences_list[iter].to_string(),
@@ -1117,11 +1114,11 @@ fn check_flanking_sequence_for_repeats(
 #[allow(unused_variables)] // This is added to silence warnings because ref_alt_same_base_start and splice_stop_cigar variable is currently not being used. Maybe deprecated in the future
 
 fn check_polyclonal(
-    mut sequence: String,                  // Read sequence
-    correct_start_position: i64,           // Left most pos
-    correct_end_position: i64,             // Right most pos
-    cigar_sequence: String,                // Cigar sequence of that read
-    indel_start: i64,                      // Indel start position
+    sequence: &String, // Read sequence. In case of spliced read, contains only the fragment containing the variant
+    correct_start_position: i64, // Left most pos
+    correct_end_position: i64, // Right most pos
+    cigar_sequence: String, // Cigar sequence of that read
+    indel_start: i64,  // Indel start position
     left_most_spliced: i64, // Left most position of fragment in read containing indel region (Used when read is spliced)
     right_most_spliced: i64, // Right most position of fragment in read containing indel region (Used when read is spliced)
     ref_nucleotides: &Vec<char>, // Vector containing ref allele nucleotides
@@ -1139,8 +1136,8 @@ fn check_polyclonal(
     splice_start_cigar: usize, // First cigar entry in the spliced fragment containing the variant to see if its a softclip
     splice_stop_cigar: usize, // Last cigar entry in the spliced fragment containing the variant to see if its a softclip
     alignment_side: String,
-) -> (i64, i64, i64, String) {
-    let mut sequence_vector: Vec<_> = sequence.chars().collect(); // Vector containing each sequence nucleotides as separate elements in the vector
+) -> (i64, i64, i64) {
+    let sequence_vector: Vec<_>; // Vector containing each sequence nucleotides as separate elements in the vector
     let mut ref_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches ref allele (Will be used later to determine if the read harbors a polyclonal variant)
     let mut alt_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches alt allele (Will be used later to determine if the read harbors a polyclonal variant)
     let mut ref_insertion: i64 = 0; // Keep tab whether there is an insertion within the ref allele (This variable will be used later to parse out ref-classified reads that have insertions/deletions in indel region and evebtually classified as 'none')
@@ -1149,22 +1146,7 @@ fn check_polyclonal(
 
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
     } else {
-        if splice_freq > 0 {
-            // When read is spliced
-            let mut spliced_seq = String::new(); // Contains spliced sequences which overlaps with indel region. If read not spliced, contains entire sequence
-
-            //println!("Length of sequence:{}", sequence_vector.len());
-            //println!("left_most_spliced:{}", left_most_spliced);
-            //println!("right_most_spliced:{}", right_most_spliced);
-            for k in left_most_spliced..right_most_spliced {
-                if (k as usize) < sequence_vector.len() {
-                    spliced_seq += &sequence_vector[k as usize].to_string();
-                }
-            }
-            sequence = spliced_seq.clone();
-            sequence_vector = sequence.chars().collect();
-            //println!("spliced_seq:{}", spliced_seq);
-        }
+        sequence_vector = sequence.chars().collect();
         let (alphabets, numbers) = realign::parse_cigar(&cigar_sequence.to_string()); // Parsing out all the alphabets and numbers from the cigar sequence (using parse_cigar function)
 
         // Looking for insertions and deletions in cigar sequence
@@ -1875,12 +1857,7 @@ fn check_polyclonal(
     }
 
     //println!("cigar_sequence:{}", cigar_sequence);
-    (
-        ref_polyclonal_status,
-        alt_polyclonal_status,
-        ref_insertion,
-        sequence, // This variable is being passed back because in case of splicing only the part which contains the indel will be retained
-    )
+    (ref_polyclonal_status, alt_polyclonal_status, ref_insertion)
 }
 
 fn classify_to_four_categories(
