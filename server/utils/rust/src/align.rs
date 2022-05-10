@@ -92,8 +92,8 @@ fn main() {
                 correct_start_position,
                 correct_end_position,
                 variant_pos,
-                variant_ref,
-                variant_alt,
+                variant_ref.len(),
+                variant_alt.len(),
             );
 
         //println!("red_disp_region_start_alt:{}", red_region_start_alt);

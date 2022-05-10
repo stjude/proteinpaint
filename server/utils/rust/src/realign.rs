@@ -1331,16 +1331,16 @@ pub fn determine_start_stop_indel_region_in_read(
     correct_start_position: i64,
     correct_end_position: i64,
     variant_pos: i64,
-    variant_ref: String,
-    variant_alt: String,
+    variant_ref_length: usize,
+    variant_alt_length: usize,
 ) -> (i64, i64, i64, i64) {
     // Determine start/stop position of nucleotides in read that need to be highlighted red to show variant region in UI
     let mut red_region_start_alt = 0;
     let mut red_region_start_ref = 0;
     let mut red_region_stop_ref = 0;
     let mut red_region_stop_alt = 0;
-    //println!("variant_ref.len():{}", variant_ref.len());
-    //println!("variant_alt.len():{}", variant_alt.len());
+    //println!("variant_ref_length:{}", variant_ref_length);
+    //println!("variant_alt_length:{}", variant_alt_length);
     //println!("q_seq_temp_alt.len():{}", q_seq_alt.len());
     //println!("q_seq_temp_ref.len():{}", q_seq_ref.len());
     //println!("correct_end_position:{}", correct_end_position);
@@ -1348,20 +1348,20 @@ pub fn determine_start_stop_indel_region_in_read(
         red_region_start_alt = (variant_pos - correct_start_position).abs();
         red_region_start_ref = (variant_pos - correct_start_position).abs();
         red_region_stop_ref =
-            (variant_pos - correct_start_position).abs() + variant_ref.len() as i64;
+            (variant_pos - correct_start_position).abs() + variant_ref_length as i64;
         red_region_stop_alt =
-            (variant_pos - correct_start_position).abs() + variant_alt.len() as i64;
+            (variant_pos - correct_start_position).abs() + variant_alt_length as i64;
     } else if alignment_side == "right".to_string() {
         let correctly_aligned_nclt_in_right =
-            correct_end_position - variant_pos - variant_ref.len() as i64;
+            correct_end_position - variant_pos - variant_ref_length as i64;
         //println!(
         //    "correctly_aligned_nclt_in_right:{}",
         //    correctly_aligned_nclt_in_right
         //);
         red_region_start_alt =
-            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - variant_alt.len() as i64;
+            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - variant_alt_length as i64;
         red_region_start_ref =
-            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - variant_ref.len() as i64;
+            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - variant_ref_length as i64;
         red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right;
         red_region_stop_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right;
     }
@@ -1388,16 +1388,16 @@ pub fn determine_start_stop_indel_region_in_read(
     {
         // In case of reads with very poor alignment but left-aligned, the start site of read may be greater than the length of the alignment in such case, try right-aligning the reads
         let correctly_aligned_nclt_in_right =
-            correct_end_position - variant_pos - variant_ref.len() as i64;
+            correct_end_position - variant_pos - variant_ref_length as i64;
         //println!(
         //    "correctly_aligned_nclt_in_right:{}",
         //    correctly_aligned_nclt_in_right
         //);
         //println!("Was originally left-aligned but start position was higher than alignment length, so attempted to right-align");
         red_region_start_alt =
-            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - variant_alt.len() as i64;
+            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - variant_alt_length as i64;
         red_region_start_ref =
-            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - variant_ref.len() as i64;
+            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - variant_ref_length as i64;
         red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right;
         red_region_stop_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right;
     } else if alignment_side == "right".to_string()
@@ -1409,9 +1409,9 @@ pub fn determine_start_stop_indel_region_in_read(
         red_region_start_alt = (variant_pos - correct_start_position).abs();
         red_region_start_ref = (variant_pos - correct_start_position).abs();
         red_region_stop_ref =
-            (variant_pos - correct_start_position).abs() + variant_ref.len() as i64;
+            (variant_pos - correct_start_position).abs() + variant_ref_length as i64;
         red_region_stop_alt =
-            (variant_pos - correct_start_position).abs() + variant_alt.len() as i64;
+            (variant_pos - correct_start_position).abs() + variant_alt_length as i64;
     }
     (
         red_region_start_alt,
