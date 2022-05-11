@@ -71,10 +71,13 @@ export const time2event = {
 		if (q.breaks.length != 1) throw 'time2event term requires one break'
 		if (!q.timeScale) throw 'time scale missing'
 		if (q.timeScale == 'time') {
-			// time scale is follow-up time
-			// sql output -> 'key': event status (0/1); 'value': follow-up time
-			// when 'key' is 0, 'value' is follow-up time until last assessment
-			// when 'key' is 1, 'value' is follow-up time until first occurrence of event
+			/*
+			time scale is time from diagnosis
+			sql output -> 'key': event status (0/1); 'value': follow-up time
+			when 'key' is 0, 'value' is time until last assessment
+			when 'key' is 1, 'value' is time until first occurrence of event
+			FIXME: should "time" be (1) time from diagnosis or (2) time from study enrollment?
+			*/
 			let event1CTE
 			if (term.isleaf) {
 				event1CTE = `event1 AS (
@@ -138,16 +141,21 @@ export const time2event = {
 				tablename
 			}
 		} else if (q.timeScale == 'age') {
-			// time scale is age
-			// sql output -> 'key': event status (0/1); 'value': json of start and end ages
-			// when 'key' is 0, 'value' is {age_start: age at 5 years post cancer diagnosis, age_end: age at last assessment}
-			// when 'key' is 1, 'value' is {age_start: age at 5 years post cancer diagnosis, age_end: age at first occurrence of event}
-			// NOTE: one day (i.e. 1/365 or 0.00274) is added to age_end so that age_end does not equal age_start (otherwise model fit will fail in R)
-			// TODO: do not hardcode '5', '0.00274', and 'agedx'. Should retrieve from dataset.
+			/*
+			time scale is age
+			sql output -> 'key': event status (0/1); 'value': {age_start, age_end, time}
+			when 'key' is 0, 'value' is {age_start: age at cancer diagnosis, age_end: age at last assessment, time: time from diagnosis until last assessment}
+			when 'key' is 1, 'value' is {age_start: age at cancer diagnosis, age_end: age at first occurrence of event, time: time from diagnosis until first occurrence of event}
+			NOTE: time is included in this output so that cuminc analysis can run for rare variants when age scale is selected for cox regression
+			NOTE: one day (i.e. 1/365 or 0.00274) is added to age_end so that age_end does not equal age_start (otherwise model fit will fail in R)
+			FIXME: determine whether "age_start" should be (1) agedx, (2) (agedx + 5), or (3) ageconsent (from annotations table)
+			FIXME: see above FIXME for what kind of time should "time" refer to
+			TODO: do not hardcode '0.00274' or 'agedx'. Should retrieve from dataset.
+			*/
 			let event1CTE
 			if (term.isleaf) {
 				event1CTE = `event1 AS (
-					SELECT c.sample, 1 as key, json_object('age_start', (a.value + 5), 'age_end', (MIN(c.age_graded) + 0.00274)) as value
+					SELECT c.sample, 1 as key, json_object('age_start', a.value, 'age_end', (MIN(c.age_graded) + 0.00274), 'time', MIN(c.years_to_event)) as value
 					FROM chronicevents c
 					INNER JOIN anno_float a ON c.sample = a.sample
 					WHERE a.term_id = 'agedx'
@@ -171,7 +179,7 @@ export const time2event = {
 					WHERE a.ancestor_id = ?
 				),
 				event1 AS (
-					SELECT c.sample, 1 as key, json_object('age_start', (a.value + 5), 'age_end', (MIN(c.age_graded) + 0.00274)) as value
+					SELECT c.sample, 1 as key, json_object('age_start', a.value, 'age_end', (MIN(c.age_graded) + 0.00274), 'time', MIN(c.years_to_event)) as value
 					FROM chronicevents c
 					INNER JOIN anno_float a ON c.sample = a.sample
 					WHERE a.term_id = 'agedx'
@@ -186,7 +194,7 @@ export const time2event = {
 			}
 
 			const event0CTE = `event0 AS (
-				SELECT c.sample, 0 as key, json_object('age_start', (a.value + 5), 'age_end', (MAX(c.age_graded) + 0.00274)) as value
+				SELECT c.sample, 0 as key, json_object('age_start', a.value, 'age_end', (MAX(c.age_graded) + 0.00274), 'time', MAX(c.years_to_event)) as value
 				FROM chronicevents c
 				INNER JOIN anno_float a ON c.sample = a.sample
 				WHERE a.term_id = 'agedx'
