@@ -185,10 +185,11 @@ class TermdbVocab {
 				refs: {...}
 			}
 	*/
-	syncTermData(config, data) {
+	syncTermData(config, data, prevConfig = {}) {
 		if (!data || !data.refs) return
 		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
 			const term = config[key]
+			const persistTerm = !prevConfig[key] || prevConfig[key].term?.id === term?.term?.id
 			if (term == 'genotype') return
 			if (!term) {
 				if (key == 'term') throw `missing plot.term{}`
@@ -199,8 +200,12 @@ class TermdbVocab {
 				if (data.refs.q && data.refs.q[i]) {
 					if (!term.q) term.q = {}
 					const q = data.refs.q[i]
-					if (q !== term.q) {
-						for (const key in term.q) delete term.q[key]
+					// FIGURE OUT: when will q equal term.q?
+					if (q !== term.q || !persistTerm) {
+						for (const key in term.q) {
+							// persist hiddenValues if it exists, but may be overridden by the server data's q
+							if (key != 'hiddenValues' || !persistTerm) delete term.q[key]
+						}
 						Object.assign(term.q, q)
 					}
 				}
@@ -585,7 +590,6 @@ class TermdbVocab {
 
 		const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
 		if (!dictTerm$ids.length) {
-			console.log(585)
 			currData.lst = Object.values(currData.samples)
 		} else {
 			currData.lst = []
@@ -746,7 +750,7 @@ class FrontendVocab {
 				refs: {...}
 			}
 	*/
-	syncTermData(config, data) {
+	syncTermData(config, data, prevConfig = {}) {
 		if (!data || !data.refs) return
 		for (const [i, key] of ['term0', 'term', 'term2'].entries()) {
 			const term = config[key]

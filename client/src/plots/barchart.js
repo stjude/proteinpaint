@@ -143,6 +143,7 @@ class TdbBarchart {
 	async main() {
 		try {
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
+			this.prevConfig = this.config || {}
 			this.config = this.state.config
 			if (this.dom.header)
 				this.dom.header.html(
@@ -151,7 +152,7 @@ class TdbBarchart {
 
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
-			this.app.vocabApi.syncTermData(this.state.config, data)
+			this.app.vocabApi.syncTermData(this.config, data, this.prevConfig)
 			this.currServerData = data
 			if (this.currServerData.refs && this.currServerData.refs.q) {
 				for (const q of this.currServerData.refs.q) {
@@ -206,7 +207,7 @@ class TdbBarchart {
 		//this.mayResetHidden(this.config.term, this.config.term2, this.config.term0)
 
 		this.setExclude(this.config.term, this.config.term2)
-		Object.assign(this.settings, settings, this.currServerData.refs ? this.currServerData.refs : {}, {
+		Object.assign(this.settings, settings, this.currServerData.refs || {}, {
 			exclude: this.settings.exclude
 		})
 
@@ -262,7 +263,7 @@ class TdbBarchart {
 
 	setExclude(term, term2) {
 		// a non-numeric term.id is used directly as seriesId or dataId
-		this.settings.exclude.cols = Object.keys(term.q && term.q.hiddenValues ? term.q.hiddenValues : {})
+		this.settings.exclude.cols = Object.keys(term.q?.hiddenValues || {})
 			.filter(id => term.q.hiddenValues[id])
 			.map(id =>
 				term.term.type == 'categorical'
@@ -274,20 +275,19 @@ class TdbBarchart {
 					: id
 			)
 
-		this.settings.exclude.rows =
-			!term2 || !term2.q || !term2.q.hiddenValues
-				? []
-				: Object.keys(term2.q.hiddenValues)
-						.filter(id => term2.q.hiddenValues[id])
-						.map(id =>
-							term2.term.type == 'categorical'
-								? id
-								: this.settings.cols && this.settings.cols.includes(term2.term.id)
-								? id
-								: term2.term.values && id in term2.term.values && 'label' in term2.term.values[id]
-								? term2.term.values[id].label
-								: id
-						)
+		this.settings.exclude.rows = !term2?.q?.hiddenValues
+			? []
+			: Object.keys(term2.q.hiddenValues)
+					.filter(id => term2.q.hiddenValues[id])
+					.map(id =>
+						term2.term.type == 'categorical'
+							? id
+							: this.settings.cols && this.settings.cols.includes(term2.term.id)
+							? id
+							: term2.term.values && id in term2.term.values && 'label' in term2.term.values[id]
+							? term2.term.values[id].label
+							: id
+					)
 	}
 
 	processData(chartsData) {
