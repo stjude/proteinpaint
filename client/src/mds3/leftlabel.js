@@ -119,7 +119,7 @@ function makelabel(tk, block, y) {
 }
 
 function mayMakeVariantLabel(data, tk, block, laby) {
-	// TODO allow to show a different name instead of "variant"
+	// may allow to show a different name instead of "variant"
 
 	if (!tk.skewer) return
 
@@ -234,7 +234,8 @@ async function listSkewerData(tk, block) {
 			.mname
 			.class
 	*/
-	const data = tk.skewer.mode == 'skewer' ? tk.skewer.data : tk.numericmode.data
+	const data =
+		tk.skewer.mode == 'skewer' ? tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width) : tk.numericmode.data
 
 	tk.menutip.clear()
 

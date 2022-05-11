@@ -825,8 +825,9 @@ render axis
 	})
 	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxw + 15)
 
-	if (nm.label) {
-		const lst = nm.label.split(' ')
+	// axis label
+	{
+		const lst = (nm.label || 'Numeric value').split(' ')
 		const y = (nm.axisheight - lst.length * (nm.dotwidth + 1)) / 2
 		let maxlabelw = 0
 		lst.forEach((text, i) => {

@@ -1089,6 +1089,7 @@ async function createGenomebrowser(self, input, resultLst) {
 		numericmode: {
 			type: '__value',
 			label: '-log10 p-value',
+			valueName: '-log10 p-value',
 			tooltipPrintValue: m => getMtooltipValues(m, self.config.regressionType)
 		},
 		custom_variants: make_mds3_variants(input.term, resultLst),

@@ -162,7 +162,7 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 	if (showNumericmodeValue) {
 		grid
 			.append('div')
-			.style('opacity', 0.5)
+			.style('opacity', 0.3)
 			.text(tk.numericmode.valueName || 'Value')
 	}
 
