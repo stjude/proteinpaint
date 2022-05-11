@@ -18,6 +18,8 @@ import { Menu } from './dom/menu'
 -------EXPORTED-------
 init_appDrawer
 	- creates the app drawer
+openSandbox
+	- opens track or app card sandboxes
 
 -------Internal-------
 *** App Drawer ***
@@ -90,7 +92,7 @@ export async function init_appDrawer(par) {
 		.style('grid-template-columns', '1fr 1fr')
 		.style('gap', '5px')
 
-	// const datasetBtns_div = app_col.append('div')
+	const datasetBtns_div = app_col.append('div')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const track_args = {
@@ -108,7 +110,7 @@ export async function init_appDrawer(par) {
 	// make_searchbar(track_args, page_args, searchbar_div)
 	make_useCasesCard(topCards_div, track_args, page_args)
 	makeDNAnexusFileViewerCard(topCards_div, page_args)
-	// makeDatasetButtons(datasetBtns_div, page_args)
+	makeDatasetButtons(datasetBtns_div, page_args)
 	await loadTracks(track_args, page_args)
 }
 
@@ -293,7 +295,7 @@ function makeRibbon(e, text, color) {
  	Opens a sandbox with track example(s) or app ui with links and other information
 */
 
-async function openSandbox(track, holder) {
+export async function openSandbox(track, holder) {
 	//queries relevant json file with sandbox args
 	const res = await dofetch3(`/cardsjson?jsonfile=${track.sandboxjson}`) //Fix for loading the sandbox json only once
 	if (res.error) {
@@ -1072,40 +1074,45 @@ async function openDatasetSandbox(page_args, ds) {
 	sandbox_div.header.text(ds.name)
 	sandbox_div.body
 
+	// First genome ds.availableGenomes is the default
 	const par = {
-		genome: page_args.genomes[ds.defaultGenome]
+		genome: page_args.genomes[ds.availableGenomes[0]]
 	}
 
-	if (ds.genomeToggle == true) {
-		// Create hg19 and hg38 toggle first when applicable
-		makeHgGenomeBtns(sandbox_div.body, par, page_args.genomes)
-	}
+	const main_div = sandbox_div.body
+		.append('div')
+		// Intro, gene toggle, and gene search box
+		.style('padding', '1em')
+		.style('border-bottom', '1px solid #d0e3ff')
+
+	main_div
+		.append('div')
+		.style('line-height', '1.5em')
+		.style('padding', '0.5em 0.5em 1em 0.5em')
+		.html(ds.intro)
+
+	addDatasetGenomeBtns(main_div, par, ds, page_args.genomes)
 	// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
-	const searchbar_div = sandbox_div.body
+	const searchbar_div = main_div
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding', '10px 10px 10px 10px')
-	par.tip = new Menu({ padding: '' })
-	par.row = searchbar_div.append('div').style('border', '1px, solid #d0e3ff')
-
-	// Add gene search box and save the return coordinates, attributes, etc.
-	const coords = addGeneSearchbox(par)
-
-	const applyBtn = makeButton(sandbox_div.body, 'Apply')
+		.style('padding', '0.5em')
 
 	const allResults_div = sandbox_div.body.append('div').style('max-width', '90vw')
 
-	applyBtn
-		.style('display', 'block')
-		.style('margin', '10px')
-		.on('click', () => {
-			// Create 'Run Dataset from URL' btn specific to each applied search
+	const coords = addGeneSearchbox({
+		genome: par.genome,
+		tip: new Menu({ padding: '' }),
+		row: searchbar_div.append('div'),
+		geneOnly: ds.searchbar == 'gene' ? true : false,
+		callback: async () => {
+			// Creates search results as tracks, last to first
 			const result_div = allResults_div
 				.insert('div', ':first-child')
-				// .style('border', '1px solid #e6e6e6')
 				.style('max-width', '90vw')
 				.style('margin', '1vw')
-			const destroyBtn = result_div
+			result_div
+				// Destroy track on click button
 				.append('div')
 				.style('display', 'inline-block')
 				.style('cursor', 'default')
@@ -1117,6 +1124,7 @@ async function openDatasetSandbox(page_args, ds) {
 					result_div.selectAll('*').remove()
 					if (typeof close === 'function') close()
 				})
+			// Create 'Run Dataset from URL' btn specific to each applied search
 			makeURLbutton(result_div, coords, par, ds)
 			// Render the search parameters as a track
 			const runpp_arg = {
@@ -1135,59 +1143,67 @@ async function openDatasetSandbox(page_args, ds) {
 			const callpp = JSON.parse(JSON.stringify(ds.runargs))
 
 			runproteinpaint(Object.assign(runpp_arg, callpp))
-			console.log(allResults_div.nodes().length)
-		})
+		}
+	})
 }
 
-function makeHgGenomeBtns(div, par, genomes) {
+function addDatasetGenomeBtns(div, par, ds, genomes) {
+	// Dynamically creates genome marker or buttons
 	const toggleBtn_div = div
 		.append('div')
 		.style('display', 'inline-block')
 		.style('padding', '10px 0px 10px 10px')
+	const btns = []
+	if (ds.availableGenomes.length == 1) {
+		// Show default genome as a non-functional button left of the search button
+		div
+			.append('div')
+			.style('padding', '8px')
+			.style('color', 'white')
+			.style('background-color', '#5f86b5')
+			.style('display', 'inline-block')
+			.style('width', 'auto')
+			.style('height', 'auto')
+			.text(ds.availableGenomes[0])
+	} else {
+		const btns = []
 
-	// left hg19 toggle button
-	const hg19btn = toggleBtn_div.append('button')
-	hg19btn.active = true
-	hg19btn
-		.style('color', hg19btn.active ? 'white' : 'black')
-		.style('background-color', hg19btn.active ? '#0b5394ff' : '#bfbfbf')
-		.style('border', 'none')
-		.style('border-radius', '3px 0px 0px 3px')
-		.text('hg19')
+		ds.availableGenomes.forEach(genome => {
+			btns.push({
+				name: genome,
+				active: false,
+				btn: makeButton(div, genome),
+				callback: par => {
+					par.genome = genomes[genome]
+				}
+			})
+		})
 
-	// right hg38 toggle button
-	const hg38btn = toggleBtn_div.append('button')
-	hg38btn.active = false
-	hg38btn
-		.style('color', hg38btn.active ? 'white' : 'black')
-		.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
-		.style('border', 'none')
-		.style('border-radius', '0px 3px 3px 0px')
-		.text('hg38')
+		for (const btn of btns) {
+			btns[0].active = true
 
-	hg19btn.on('click', () => {
-		hg19btn.active == true ? (hg19btn.active = false) : (hg19btn.active = true) && (par.genome = genomes['hg19'])
-		hg38btn.active == false ? (hg38btn.active = true) && (par.genome = genomes['hg38']) : (hg38btn.active = false)
-		hg19btn
-			.style('color', hg19btn.active ? 'white' : 'black')
-			.style('background-color', hg19btn.active ? '#0b5394ff' : '#bfbfbf')
-		hg38btn
-			.style('color', hg38btn.active ? 'white' : 'black')
-			.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
-	})
+			btn.btn
+				.style('margin', '0px')
+				.style('color', btn.active ? 'white' : 'black')
+				.style('background-color', btn.active ? '#0b5394ff' : '#bfbfbf')
+				.style('border-radius', '0px')
 
-	hg38btn.on('click', () => {
-		hg19btn.active == false ? (hg19btn.active = true) && (par.genome = genomes['hg19']) : (hg19btn.active = false)
-		hg38btn.active == true ? (hg38btn.active = false) : (hg38btn.active = true) && (par.genome = genomes['hg38'])
-		hg19btn
-			.style('color', hg19btn.active ? 'white' : 'black')
-			.style('background-color', hg19btn.active ? '#0b5394ff' : '#bfbfbf')
-		hg38btn
-			.style('color', hg38btn.active ? 'white' : 'black')
-			.style('background-color', hg38btn.active ? '#0b5394ff' : '#bfbfbf')
-	})
+			if (btn.active) {
+				btn.callback(par)
+			}
 
-	return toggleBtn_div, hg19btn, hg38btn
+			btn.btn.on('click', () => {
+				for (const b of btns) {
+					b.active = b === btn
+					b.btn.style('color', b.active ? 'white' : 'black')
+					b.btn.style('background-color', b.active ? '#0b5394ff' : '#bfbfbf')
+				}
+				if (btn.active) {
+					btn.callback(par)
+				}
+			})
+		}
+	}
 }
 
 function makeURLbutton(div, coords, par, ds) {
@@ -1197,7 +1213,6 @@ function makeURLbutton(div, coords, par, ds) {
 		ds.runargs.block == true ? `position=${coords.chr}:${coords.start}-${coords.stop}` : `gene=${coords.geneSymbol}`
 	URLbtn.on('click', () => {
 		event.stopPropagation()
-		// Opens from window location
 		window.open(`?genome=${par.genome.name}&${blockOn}&${ds.dsURLparam}`, '_blank')
 	})
 }

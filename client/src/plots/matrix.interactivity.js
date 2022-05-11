@@ -341,7 +341,7 @@ function setTermActions(self) {
 			const label = div.append('label')
 			label.append('span').html('Minimum #sample to be visible')
 
-			const minNumSamples = t.tw.minNumSamples || ''
+			const minNumSamples = 'minNumSamples' in t.tw ? t.tw.minNumSamples : ''
 			const input = label
 				.append('input')
 				.attr('type', 'number')
@@ -356,7 +356,7 @@ function setTermActions(self) {
 				.on('click', () => {
 					const value = input.property('value')
 					if (value === minNumSamples) return
-					if (value == '') {
+					if (value === '') {
 						delete t.tw.minNumSamples
 					} else {
 						t.tw.minNumSamples = Number(value)
@@ -568,12 +568,14 @@ function setTermActions(self) {
 					grp = { name, lst: [] }
 					termgroups.push(grp)
 				}
+				const tws = []
 				for (const id of lines) {
 					if (!(id in terms)) continue
-					const tw = { term: terms[id] }
+					const tw = { term: terms[id], minNumSamples: 0 }
 					await fillTermWrapper(tw)
-					grp.lst.push(tw)
+					tws.push(tw)
 				}
+				grp.lst.splice(self.activeLabel.lstIndex, 0, ...tws)
 
 				self.app.dispatch({
 					type: 'plot_edit',

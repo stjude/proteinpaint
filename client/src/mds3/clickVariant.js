@@ -43,7 +43,7 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 			return
 		}
 		if ('occurrence' in d && d.occurrence >= minoccur4sunburst && tk.mds.variant2samples) {
-			await click2sunburst(d, tk, block)
+			await click2sunburst(d, tk, block, tippos)
 			return
 		}
 		// no sunburst, no matter occurrence, show details
@@ -54,7 +54,7 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 	}
 }
 
-async function click2sunburst(d, tk, block) {
+async function click2sunburst(d, tk, block, tippos) {
 	tk.glider.style('cursor', 'wait')
 	const data = await tk.mds.variant2samples.get({ mlst: d.mlst, querytype: tk.mds.variant2samples.type_sunburst })
 	tk.glider.style('cursor', 'auto')

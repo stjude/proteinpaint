@@ -15,7 +15,7 @@ can dynamically add following attributes
 - this.hasUnsubmittedEdits_nullify_singleuse:
 	to negate hasUnsubmittedEdits and keep running analysis
 
-** R result object
+**************** R result object
 result.data: {}
 	warnings
 	sampleSize: int
@@ -26,7 +26,7 @@ result.data: {}
 	other: {header[], rows[], label}
 
 
-** function cascade **
+*************** function cascade
 main
 	displayResult
 		createGenomebrowser
@@ -931,7 +931,7 @@ function fillCoefficientTermname(tw, td) {
 }
 
 function make_mds3_variants(tw, resultLst) {
-	/* return a list of variants good for tk display
+	/* return a list of variants as mds3 client-side custom data
 	tw:
 		term:
 			snps[ {} ]
@@ -988,23 +988,20 @@ function make_mds3_variants(tw, resultLst) {
 			show this variant as a dot, do not set .shapeTriangle=true
 			find p-value (last column of type3 table)
 			*/
-			if (!d.type3.terms) throw '.data{type3:{terms}} missing'
-			if (!d.type3.terms[snp.snpid]) throw snp.snpid + ' missing in type3.terms{}'
-			if (!Array.isArray(d.type3.terms[snp.snpid])) throw `type3.terms[${snp.snpid}] not array`
-			const str = d.type3.terms[snp.snpid][d.type3.terms[snp.snpid].length - 1]
-			// last value of the array should be p-value string (can be 'NA')
-			const v = Number(str)
-			if (Number.isNaN(v)) {
-				m.regressionPvalue = str // for displaying via tooltipPrintValue()
+			const v = getSnpPvalueFromType3orCoefficient(d, snp.snpid)
+			if (v == undefined) {
+				// no valid pvalue from either place
 			} else {
+				// has valid pvalue from either coefficients table, or type3 table
 				m.regressionPvalue = v
 				m.__value = -Math.log10(v)
 			}
 
-			// assign estimate
+			// assign estimate, for tooltip display
 			if (!d.coefficients || !d.coefficients.terms) throw '.data.coefficients.terms{} missing'
 			const r = d.coefficients.terms[snp.snpid]
 			if (!r) throw 'snp missing from data.coefficients.terms{}'
+			if (!Array.isArray(r.fields)) throw 'data.coefficients.terms[snpid].fields[] is not array'
 			m.regressionEstimate = r.fields[0]
 		} else if (d.fisher) {
 			/* { pvalue:float, table:[] }
@@ -1088,10 +1085,11 @@ async function createGenomebrowser(self, input, resultLst) {
 	arg.tklst.push({
 		type: 'mds3', // tkt.mds3
 		name: 'Variants',
+		skewerMode: 'numeric',
 		numericmode: {
-			inuse: true,
 			type: '__value',
 			label: '-log10 p-value',
+			valueName: '-log10 p-value',
 			tooltipPrintValue: m => getMtooltipValues(m, self.config.regressionType)
 		},
 		custom_variants: make_mds3_variants(input.term, resultLst),
@@ -1259,4 +1257,27 @@ function getMtooltipValues(m, regressionType) {
 		lst.push('LD r2=' + m.regressionR2)
 	}
 	return lst
+}
+
+function getSnpPvalueFromType3orCoefficient(d, snpid) {
+	// if type3 table has valid pvalue for snp, return; otherwise look to coefficients table
+	if (!d.type3.terms) throw '.data{type3:{terms}} missing'
+	if (!d.type3.terms[snpid]) throw snpid + ' missing in type3.terms{}'
+	if (!Array.isArray(d.type3.terms[snpid])) throw `type3.terms[${snp.snpid}] not array`
+	const str = d.type3.terms[snpid][d.type3.terms[snpid].length - 1]
+	// last value of the array should be p-value string (can be 'NA')
+	const v = Number(str)
+	if (Number.isFinite(v)) {
+		return v
+	}
+	// no pvalue from type3; check coefficients table
+	if (!d.coefficients) throw 'd.coefficients missing'
+	if (!d.coefficients || !d.coefficients.terms) throw '.data.coefficients.terms{} missing'
+	const r = d.coefficients.terms[snpid]
+	if (!r) throw 'snp missing from data.coefficients.terms{}'
+	if (!Array.isArray(r.fields)) throw 'data.coefficients.terms[snpid].fields[] is not array'
+	const str2 = r.fields[r.fields.length - 1]
+	const v2 = Number(str2)
+	if (Number.isFinite(v2)) return v2
+	// if also no pvalue from coefficients, return undefined
 }

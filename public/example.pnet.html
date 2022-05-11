@@ -200,7 +200,7 @@ document.body.onload = () => runproteinpaint({
                 }
               }
             },
-            Gfill: {
+            Germfill: {
               value: {
                 key: 'Germline', 
                 //value: 'Germline', 
@@ -292,34 +292,13 @@ function getGeneTermGroups() {
 	for(const g of genegroups) {
     const grp = {
       name: g.name,
+      overrides: g.overrides,
+      valueFilter: g.valueFilter,
       lst: g.lst.map(t => {
         const term = {name: t.name, type: 'geneVariant'}
         const tw = {term}
         if ('label' in t) tw.label = t.label
         if ('minNumSamples' in t) tw.minNumSamples = t.minNumSamples
-        const [name, suffix] = term.name.split('_')
-        if (suffix == 'SV') {
-          tw.overrides = ['SVfill']
-        } else if (suffix == 'G') {
-          tw.overrides = ['Gfill']
-        } else {
-          tw.overrides = ['WESfill']
-        }
-
-        if (cnvGenes.includes(term.name)) {
-          tw.valueFilter = {
-            type: 'tvs',
-            isnot: g.name != 'Copy Number',
-            tvs: {
-              values: [{key: 'dt', value: 4}]
-            },
-          }
-
-          if (g.name == 'Copy Number') {
-            tw.overrides = ['CNVfill']
-          }
-        }
-
         return tw
       })
     }
@@ -343,6 +322,13 @@ function getCytogeneticsData() {
 const genegroups = [
   {
       "name": "Fusion",
+      valueFilter: {
+        type: 'tvs',
+        tvs: {
+          values: [{key: 'dt', value: 2}]
+        },
+      },
+      overrides: ['SVfill'],
       "lst": [
           {
               "name": "BCOR_SV",
@@ -366,10 +352,18 @@ const genegroups = [
   },
   {
     name: "Copy Number",
+    valueFilter: {
+      type: 'tvs',
+      tvs: {
+        values: [{key: 'dt', value: 4}]
+      },
+    },
+    overrides: ['CNVfill'],
     lst: cnvGenes.map(name=>{return {name}})
   },
   {
       "name": "Germline",
+      overrides: ['Germfill'],
       "lst": [
           {
               "name": "DICER1_G"
@@ -384,6 +378,14 @@ const genegroups = [
       "settings": {
         minNumSamples: 2
       },
+      valueFilter: {
+        type: 'tvs',
+        isnot: true,
+        tvs: {
+          values: [{key: 'dt', value: 4}]
+        },
+      },
+      overrides: ['WESfill'],
       "lst": [
           {
               "name": "AFDN"

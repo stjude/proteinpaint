@@ -48,12 +48,7 @@ export async function loadTk(tk, block) {
 		{
 			const h2 = may_render_skewer(data, tk, block)
 			// must render skewer first, then left labels
-			let h1
-			if (data.skewer) {
-				h1 = make_leftlabels(data, tk, block)
-			} else {
-				h1 = 60 // FIXME should be kept at tk.leftlabels.height
-			}
+			const h1 = make_leftlabels(data, tk, block)
 			tk.height_main += Math.max(h1, h2)
 		}
 		// add new subtrack type
@@ -137,8 +132,17 @@ function getParameter(tk, block) {
 	return [par.join('&'), headers]
 }
 
+/*
+abstract various data sources
+
+returned data{}:
+
+.skewer[]
+	list of data points to show as skewer plot
+.mclass2variantcount[]
+	mclass breakdown of skewer[]
+*/
 async function getData(tk, block) {
-	// abstract various data sources
 	let data
 	if (tk.custom_variants) {
 		// has custom data on client side, no need to request from server

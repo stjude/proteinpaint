@@ -111,12 +111,13 @@ run_cuminc <- function(chart) {
         B_left <- sum(tsPs <= -abs(tsO))
         B_right <- sum(tsPs >= abs(tsO))
         B <- B_left + B_right
-        pvalue <- (B+1)/(M+1)
+        pvalue <- signif((B+1)/(M+1), 2)
       } else {
         # sample sizes are not low, permutation test is not needed
         # use computed p-value from Gray's test
         pvalue <- signif(res$Tests[1,"pv"], 2)
       }
+      if (pvalue == 0) pvalue <- "<1e-16" # see https://stacks.cdc.gov/view/cdc/22757/cdc_22757_DS11.pdf
       tests[i,] <- c(pair, pvalue)
     }
     out <- list("estimates" = estimates, "tests" = tests)

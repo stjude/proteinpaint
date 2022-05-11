@@ -579,7 +579,7 @@ makeURL([
 			} ]
 		})],
 
-		['EF ~ snplocus*sex', '?noheader=1&mass='+JSON.stringify({
+		['EF ~ snplocus*sex*agedx', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
 			plots: [ {
@@ -589,10 +589,11 @@ makeURL([
 				independent: [
 					{
 						term:{ type:'snplocus', id:'temp112233' },
-						interactions:['sex'],
+						interactions:['sex','agedx'],
 						q:snplocusQ
 					},
-					{ id: 'sex', refGrp:'2', interactions:['temp112233']}
+					{ id: 'sex', refGrp:'2', interactions:['temp112233']},
+					{ id: 'agedx', interactions:['temp112233']}
 				]
 			} ]
 		})],

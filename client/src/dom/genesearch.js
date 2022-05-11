@@ -10,10 +10,6 @@ string2variant()
 
 
 TODO
--- allow only searching by gene name, disable coord/variant/snp parsing
-   this allows to replace gene_searchbox() in client/src/gene.js
-   use only shallow (not "deep") query to find gene symbol
-   do not map gene to coord
 -- allow to hide searchStat dom
 -- dedup code with block.js
 -- dedup code with app header
@@ -38,8 +34,12 @@ function argument object {}
 	set to {chr, start, stop} to fill default position into <input>
 	when missing, just show placeholder
 
+.geneOnly: true
+	if true, search for gene name only
+	TODO use only shallow (not "deep") query to find gene symbol, do not map gene to coord
+	replace gene_searchbox() in client/src/gene.js
+
 .allowVariant: true
-	optional
 	if true, allow to enter chr.pos.ref.alt or hgvs (see next section)
 	otherwise, only allow chr:start-stop
 
@@ -99,15 +99,20 @@ export function addGeneSearchbox(arg) {
 	const tip = arg.tip,
 		row = arg.row
 
-	let placeholder = 'Gene, position',
+	let placeholder,
 		width = 150
-	if (arg.genome.hasSNP) {
-		placeholder += ', SNP'
-		width += 40
-	}
-	if (arg.allowVariant) {
-		placeholder += ', variant'
-		width += 40
+	if (arg.geneOnly) {
+		placeholder = 'Gene'
+	} else {
+		placeholder = 'Gene, position'
+		if (arg.genome.hasSNP) {
+			placeholder += ', SNP'
+			width += 40
+		}
+		if (arg.allowVariant) {
+			placeholder += ', variant'
+			width += 40
+		}
 	}
 
 	const searchbox = row
@@ -144,7 +149,7 @@ export function addGeneSearchbox(arg) {
 				}
 
 				const pos = string2pos(v, arg.genome)
-				if (pos) {
+				if (pos && !arg.geneOnly) {
 					// input is coordinate
 					getResult(pos, 'Valid coordinate')
 					return

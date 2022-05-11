@@ -57,6 +57,10 @@ value may be singular number, or boxplot
 
 	// TODO when switching to nm from skewer, allow to dynamically create nm
 	const nm = tk.numericmode
+
+	// for variant leftlabel to access later
+	nm.data = datagroup
+
 	// initialize numeric mode
 	if (!nm.axisg) nm.axisg = tk.gleft.append('g')
 	if (!nm.axisheight) nm.axisheight = 150
@@ -66,7 +70,7 @@ value may be singular number, or boxplot
 	tk.skewer.g.selectAll('*').remove()
 	if (tk.skewer.nmg) tk.skewer.nmg.selectAll('*').remove()
 
-	numeric_make(nm, tk.skewer.g, datagroup, tk, block)
+	numeric_make(nm, tk.skewer.g, tk, block)
 
 	return (
 		nm.toplabelheight +
@@ -80,9 +84,11 @@ value may be singular number, or boxplot
 	)
 }
 
-function numeric_make(nm, _g, data, tk, block) {
+function numeric_make(nm, _g, tk, block) {
 	/*
 	 */
+
+	const data = nm.data
 
 	for (const d of data) {
 		d.x0 = d.x
@@ -819,8 +825,9 @@ render axis
 	})
 	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxw + 15)
 
-	if (nm.label) {
-		const lst = nm.label.split(' ')
+	// axis label
+	{
+		const lst = (nm.label || 'Numeric value').split(' ')
 		const y = (nm.axisheight - lst.length * (nm.dotwidth + 1)) / 2
 		let maxlabelw = 0
 		lst.forEach((text, i) => {

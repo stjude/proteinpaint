@@ -238,14 +238,13 @@ class Matrix {
 		const exclude = this.config.divideBy?.exclude || []
 		const values = term.values || {}
 		const ref = data.refs.byTermId[$id] || {}
-		this.visibleSamples = new Set()
 
 		for (const row of data.lst) {
 			// TODO: may move the override handling downstream,
 			// but before sample group.lst sorting, as needed
 			for (const grp of this.config.termgroups) {
 				for (const tw of grp.lst) {
-					mayApplyOverrides(row, tw, this.config.overrides)
+					mayApplyOverrides(row, tw, grp, this.config.overrides)
 				}
 			}
 
@@ -262,7 +261,6 @@ class Matrix {
 					})
 				}
 				sampleGroups.get(key).lst.push(row)
-				this.visibleSamples.add(row.sample)
 			} else {
 				defaultSampleGrp.lst.push(row)
 			}
@@ -314,23 +312,28 @@ class Matrix {
 			let grpHtAdjustments = 0
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
-				for (const sn of this.visibleSamples) {
-					const anno = data.samples[sn][tw.$id]
-					if (anno) {
-						anno.filteredValues = this.getFilteredValues(anno, tw)
-						if (anno.filteredValues?.length) {
-							counts.samples += 1
-							counts.hits += anno.filteredValues.length
-							if (tw.q?.mode == 'continuous') {
-								const v = anno.value
-								if (!('minval' in counts) || counts.minval > v) counts.minval = v
-								if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
+				const countedSamples = new Set()
+				for (const sgrp of this.sampleGroups) {
+					for (const s of sgrp.lst) {
+						if (countedSamples.has(s.sample)) continue
+						countedSamples.add(s.sample)
+						const anno = data.samples[s.sample][tw.$id]
+						if (anno) {
+							anno.filteredValues = this.getFilteredValues(anno, tw, grp)
+							if (anno.filteredValues?.length) {
+								counts.samples += 1
+								counts.hits += anno.filteredValues.length
+								if (tw.q?.mode == 'continuous') {
+									const v = anno.value
+									if (!('minval' in counts) || counts.minval > v) counts.minval = v
+									if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
+								}
 							}
 						}
 					}
 				}
 				lst.push({ tw, counts, index })
-				grpHtAdjustments += (tw.settings ? tw.settings.barh + 2 * tw.settings.gap : ht) - ht
+				grpHtAdjustments += (tw.settings ? (tw.settings?.barh || 0) + 2 * (tw.settings.gap || 0) : ht) - ht
 			}
 
 			// may override the settings.sortTermsBy with a sorter that is specific to a term group
@@ -379,15 +382,16 @@ class Matrix {
 		}
 	}
 
-	getFilteredValues(anno, tw) {
+	getFilteredValues(anno, tw, grp) {
 		const values = 'value' in anno ? [anno.value] : anno.values
-		if (!tw.valueFilter || !values) return values
+		const valueFilter = tw.valueFilter || grp.valueFilter
+		if (!valueFilter || !values) return values
 		return values.filter(v => {
 			// TODO: handle non-tvs type value filter
-			if (tw.valueFilter.type == 'tvs') {
-				const matched = true //t.tw.valueFilter.isnot
-				for (const vf of tw.valueFilter.tvs.values) {
-					if (v[vf.key] == vf.value) return !tw.valueFilter.isnot
+			if (valueFilter.type == 'tvs') {
+				const matched = true
+				for (const vf of valueFilter.tvs.values) {
+					if (v[vf.key] == vf.value) return !valueFilter.isnot
 				}
 				return matched
 			}
@@ -436,7 +440,8 @@ class Matrix {
 		const mainh =
 			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + this[`${row}s`].slice(-1)[0].totalHtAdjustments
 
-		const topFontSize = _t_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 4, s.minLabelFontSize)
+		const topFontSize =
+			_t_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 2 * s.collabelpad, s.minLabelFontSize)
 		layout.top.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset - s.collabelgap})`,
 			labelTransform: 'rotate(-90)',
@@ -448,7 +453,8 @@ class Matrix {
 			axisFxn: axisTop
 		}
 
-		const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 4, s.minLabelFontSize)
+		const btmFontSize =
+			_b_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 2 * s.collabelpad, s.minLabelFontSize)
 		layout.btm.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset + mainh + s.collabelgap})`,
 			labelTransform: 'rotate(-90)',
@@ -460,7 +466,8 @@ class Matrix {
 			axisFxn: axisBottom
 		}
 
-		const leftFontSize = _l_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 4, s.minLabelFontSize)
+		const leftFontSize =
+			_l_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad, s.minLabelFontSize)
 		layout.left.attr = {
 			boxTransform: `translate(${xOffset - s.rowlabelgap}, ${yOffset})`,
 			labelTransform: '',
@@ -472,7 +479,8 @@ class Matrix {
 			axisFxn: axisLeft
 		}
 
-		const rtFontSize = _r_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 4, s.minLabelFontSize)
+		const rtFontSize =
+			_r_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad, s.minLabelFontSize)
 		layout.right.attr = {
 			boxTransform: `translate(${xOffset + mainw + s.rowlabelgap}, ${yOffset})`,
 			labelTransform: '',
@@ -512,7 +520,7 @@ class Matrix {
 
 			for (const t of this.termOrder) {
 				const $id = t.tw.$id
-				if (row[$id]?.filteredValues && !row[$id]?.filteredValues.length) continue
+				if (row[$id]?.filteredValues && !row[$id]?.filteredValues.length && !row[$id].override) continue
 				const anno = row[$id]?.override || row[$id]
 				if (!anno) continue
 				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
@@ -735,6 +743,7 @@ export async function getPlotConfig(opts, app) {
 				collabelvisible: true,
 				colglabelpos: true,
 				collabelgap: 5,
+				collabelpad: 1,
 				rowh: 18,
 				rowspace: 1,
 				rowgspace: 8,
@@ -743,6 +752,7 @@ export async function getPlotConfig(opts, app) {
 				rowlabelvisible: true,
 				rowglabelpos: true,
 				rowlabelgap: 5,
+				rowlabelpad: 1,
 				grpLabelFontSize: 12,
 				minLabelFontSize: 6,
 				transpose: false,
@@ -779,23 +789,24 @@ export async function getPlotConfig(opts, app) {
 	return config
 }
 
-function mayApplyOverrides(row, tw, overrides) {
-	if (!tw.overrides) return {}
-	for (const key in overrides) {
-		if (!tw.overrides.includes(key)) continue
-		const sf = overrides[key].sampleFilter || {}
+function mayApplyOverrides(row, tw, grp, configOverrides) {
+	const overrides = tw.overrides || grp.overrides
+	if (!grp.overrides) return {}
+	for (const key in configOverrides) {
+		if (!overrides.includes(key)) continue
+		const sf = configOverrides[key].sampleFilter || {}
 		if (sf.type == 'wvs') {
 			for (const v of sf.values) {
 				if (row[sf.wrapper$id]?.key === v.key) {
 					if (!row[tw.$id]) row[tw.$id] = {}
-					row[tw.$id].override = JSON.parse(JSON.stringify(overrides[key].value))
+					row[tw.$id].override = JSON.parse(JSON.stringify(configOverrides[key].value))
 				}
 			}
 		} else if (sf.type == 'tvs') {
 			for (const v of sf.tvs.values) {
 				if (row[sf.wrapper$id]?.key === v.key) {
 					if (!row[tw.$id]) row[tw.$id] = {}
-					row[tw.$id].override = JSON.parse(JSON.stringify(overrides[key].value))
+					row[tw.$id].override = JSON.parse(JSON.stringify(configOverrides[key].value))
 				}
 			}
 		}

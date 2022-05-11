@@ -24,7 +24,8 @@ using variant2samples
 mlst can be mixture of data types, doesn't matter
 if the total occurrence is 1, will print details for that sample
 otherwise, will print summaries for each sample attribute from all samples
-arg{}
+
+********************** arg{}
 .mlst[]
 	.occurrence // important parameter to determine the display mode
 .tk
@@ -69,15 +70,16 @@ async function make_singleSampleTable(arg, holder) {
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
 	const data = await arg.tk.mds.variant2samples.get(arg) // data is [samples, total]
 	const sampledata = data[0][0] // must have just one sample
-	arg.temp_div.style('display', 'block').text('Loading...')
 
-	const grid_div = holder
-		.append('div')
-		.style('display', 'inline-grid')
-		.style('grid-template-columns', 'auto auto')
-		.style('gap-row-gap', '1px')
-		.style('align-items', 'center')
-		.style('justify-items', 'left')
+	const grid_div =
+		arg.variantDiv ||
+		holder
+			.append('div')
+			.style('display', 'inline-grid')
+			.style('grid-template-columns', 'auto auto')
+			.style('gap-row-gap', '1px')
+			.style('align-items', 'center')
+			.style('justify-items', 'left')
 
 	if (sampledata.sample_id) {
 		// sample_id is hardcoded
