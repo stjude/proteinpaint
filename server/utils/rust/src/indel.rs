@@ -311,43 +311,60 @@ fn main() {
                         &alt_nucleotides,
                         optimized_allele,
                     );
-                    let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) =
-                        check_polyclonal(
-                            // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
-                            &spliced_sequence,
-                            correct_start_position,
-                            correct_end_position,
-                            cigar_sequences_list[i as usize - 2].to_string(),
-                            variant_pos,
-                            splice_start_pos,
-                            splice_stop_pos,
-                            &ref_nucleotides,
-                            &alt_nucleotides,
-                            &ref_nucleotides_all,
-                            &alt_nucleotides_all_right,
-                            &alt_nucleotides_all_left,
-                            optimized_indel_length as usize,
-                            ref_length as usize,
-                            alt_length as usize,
-                            indel_length as usize,
-                            strictness,
-                            ref_alt_same_base_start,
-                            splice_freq,
-                            splice_start_cigar,
-                            splice_stop_cigar,
-                            alignment_side,
-                        );
+                    //let (ref_polyclonal_read_status, alt_polyclonal_read_status, ref_insertion) =
+                    //    check_polyclonal(
+                    //        // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
+                    //        &spliced_sequence,
+                    //        correct_start_position,
+                    //        correct_end_position,
+                    //        cigar_sequences_list[i as usize - 2].to_string(),
+                    //        variant_pos,
+                    //        splice_start_pos,
+                    //        splice_stop_pos,
+                    //        &ref_nucleotides,
+                    //        &alt_nucleotides,
+                    //        &ref_nucleotides_all,
+                    //        &alt_nucleotides_all_right,
+                    //        &alt_nucleotides_all_left,
+                    //        optimized_indel_length as usize,
+                    //        ref_length as usize,
+                    //        alt_length as usize,
+                    //        indel_length as usize,
+                    //        strictness,
+                    //        ref_alt_same_base_start,
+                    //        splice_freq,
+                    //        splice_start_cigar,
+                    //        splice_stop_cigar,
+                    //        &alignment_side,
+                    //    );
+
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
                     //println!("read_ambiguous:{}", read_ambiguous);
                     //println!("ref_insertion:{}", ref_insertion);
 
-                    let (_q_seq_ref, _align_ref, _r_seq_ref, ref_comparison) =
+                    let (q_seq_ref, align_ref, _r_seq_ref, ref_comparison) =
                         realign::align_single_reads(&spliced_sequence, reference_sequence.clone());
-                    let (_q_seq_alt, _align_alt, _r_seq_alt, alt_comparison) =
+                    let (q_seq_alt, align_alt, _r_seq_alt, alt_comparison) =
                         realign::align_single_reads(&spliced_sequence, alternate_sequence.clone());
                     //println!("ref_comparison:{}", ref_comparison);
                     //println!("alt_comparison:{}", alt_comparison);
+
+                    let (ref_polyclonal_read_status, alt_polyclonal_read_status) =
+                        check_polyclonal_with_read_alignment(
+                            &alignment_side,
+                            &q_seq_alt,
+                            &q_seq_ref,
+                            &align_alt,
+                            &align_ref,
+                            correct_start_position,
+                            correct_end_position,
+                            variant_pos,
+                            ref_length as usize,
+                            alt_length as usize,
+                        );
+                    let ref_insertion = 0;
+
                     let mut diff_score: f64 = 0.0;
                     if read_ambiguous < 2 {
                         diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
@@ -478,45 +495,61 @@ fn main() {
                                 optimized_allele,
                             );
 
-                            let (
-                                ref_polyclonal_read_status,
-                                alt_polyclonal_read_status,
-                                ref_insertion,
-                            ) = check_polyclonal(
-                                // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
-                                &spliced_sequence,
-                                correct_start_position,
-                                correct_end_position,
-                                cigar_sequences_list[iter].to_string(),
-                                variant_pos,
-                                splice_start_pos,
-                                splice_stop_pos,
-                                &ref_nucleotides,
-                                &alt_nucleotides,
-                                &ref_nucleotides_temp,
-                                &alt_nucleotides_temp_right,
-                                &alt_nucleotides_temp_left,
-                                optimized_indel_length as usize,
-                                ref_length as usize,
-                                alt_length as usize,
-                                indel_length as usize,
-                                strictness,
-                                ref_alt_same_base_start,
-                                splice_freq,
-                                splice_start_cigar,
-                                splice_stop_cigar,
-                                alignment_side,
-                            );
-                            let (_q_seq_ref, _align_ref, _r_seq_ref, ref_comparison) =
+                            //let (
+                            //    ref_polyclonal_read_status,
+                            //    alt_polyclonal_read_status,
+                            //    ref_insertion,
+                            //) = check_polyclonal(
+                            //    // Function that checks if the read harbors polyclonal variant (neither ref not alt), flags if there is any insertion/deletion in indel region
+                            //    &spliced_sequence,
+                            //    correct_start_position,
+                            //    correct_end_position,
+                            //    cigar_sequences_list[iter].to_string(),
+                            //    variant_pos,
+                            //    splice_start_pos,
+                            //    splice_stop_pos,
+                            //    &ref_nucleotides,
+                            //    &alt_nucleotides,
+                            //    &ref_nucleotides_temp,
+                            //    &alt_nucleotides_temp_right,
+                            //    &alt_nucleotides_temp_left,
+                            //    optimized_indel_length as usize,
+                            //    ref_length as usize,
+                            //    alt_length as usize,
+                            //    indel_length as usize,
+                            //    strictness,
+                            //    ref_alt_same_base_start,
+                            //    splice_freq,
+                            //    splice_start_cigar,
+                            //    splice_stop_cigar,
+                            //    &alignment_side,
+                            //);
+                            let (q_seq_ref, align_ref, _r_seq_ref, ref_comparison) =
                                 realign::align_single_reads(
                                     &spliced_sequence,
                                     reference_sequence.to_string(),
                                 );
-                            let (_q_seq_alt, _align_alt, _r_seq_alt, alt_comparison) =
+                            let (q_seq_alt, align_alt, _r_seq_alt, alt_comparison) =
                                 realign::align_single_reads(
                                     &spliced_sequence,
                                     alternate_sequence.to_string(),
                                 );
+
+                            let (ref_polyclonal_read_status, alt_polyclonal_read_status) =
+                                check_polyclonal_with_read_alignment(
+                                    &alignment_side,
+                                    &q_seq_alt,
+                                    &q_seq_ref,
+                                    &align_alt,
+                                    &align_ref,
+                                    correct_start_position,
+                                    correct_end_position,
+                                    variant_pos,
+                                    ref_length as usize,
+                                    alt_length as usize,
+                                );
+                            let ref_insertion = 0;
+
                             let mut diff_score: f64 = 0.0;
                             if read_ambiguous < 2 {
                                 diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
@@ -1135,7 +1168,7 @@ fn check_polyclonal(
     splice_freq: usize,             // Number of splice junctions in read
     splice_start_cigar: usize, // First cigar entry in the spliced fragment containing the variant to see if its a softclip
     splice_stop_cigar: usize, // Last cigar entry in the spliced fragment containing the variant to see if its a softclip
-    alignment_side: String,
+    alignment_side: &String,
 ) -> (i64, i64, i64) {
     let sequence_vector: Vec<_>; // Vector containing each sequence nucleotides as separate elements in the vector
     let mut ref_polyclonal_status: i64 = 0; // Flag to check if the read sequence inside indel region matches ref allele (Will be used later to determine if the read harbors a polyclonal variant)
@@ -1927,4 +1960,78 @@ fn classify_to_four_categories(
         }
     }
     indices // Indices vector being returned to main function
+}
+
+fn check_polyclonal_with_read_alignment(
+    alignment_side: &String,
+    q_seq_alt: &String,
+    q_seq_ref: &String,
+    align_alt: &String,
+    align_ref: &String,
+    correct_start_position: i64,
+    correct_end_position: i64,
+    variant_pos: i64,
+    variant_ref_length: usize,
+    variant_alt_length: usize,
+) -> (i64, i64) {
+    let mut ref_polyclonal_read_status = 0;
+    let mut alt_polyclonal_read_status = 0;
+
+    let (red_region_start_alt, red_region_stop_alt, red_region_start_ref, red_region_stop_ref) =
+        realign::determine_start_stop_indel_region_in_read(
+            alignment_side.to_owned(),
+            q_seq_alt,
+            q_seq_ref,
+            correct_start_position,
+            correct_end_position,
+            variant_pos,
+            variant_ref_length,
+            variant_alt_length,
+        );
+
+    //println!("correct_start_position:{}", correct_start_position);
+    //println!("q_seq_ref:{}", q_seq_ref);
+    //println!("align_ref:{}", align_ref);
+    //println!("q_seq_alt:{}", q_seq_alt);
+    //println!("align_alt:{}", align_alt);
+    //println!("red_region_start_alt:{}", red_region_start_alt);
+    //println!("red_region_start_ref:{}", red_region_start_ref);
+    //println!("red_region_stop_alt:{}", red_region_stop_alt);
+    //println!("red_region_stop_ref:{}", red_region_stop_ref);
+
+    let align_alt_vec: Vec<_> = align_alt.chars().collect();
+    let align_ref_vec: Vec<_> = align_ref.chars().collect();
+    if red_region_start_alt > q_seq_alt.len() as i64 {
+        // When read alignment is very bad, its possible that the calculated start of indel in read is greater than the length of the alignment. In such cases such reads are classified as polyclonal
+        alt_polyclonal_read_status = 1;
+    } else {
+        for i in red_region_start_alt as usize..red_region_stop_alt as usize {
+            if i < align_alt_vec.len() {
+                if align_alt_vec[i] != '|' {
+                    alt_polyclonal_read_status = 1;
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+    if red_region_start_ref > q_seq_ref.len() as i64 {
+        // When read alignment is very bad, its possible that the calculated start of indel in read is greater than the length of the alignment. In such cases such reads are classified as polyclonal
+        ref_polyclonal_read_status = 1;
+    } else {
+        for i in red_region_start_ref as usize..red_region_stop_ref as usize {
+            if i < align_ref_vec.len() {
+                if align_ref_vec[i] != '|' {
+                    ref_polyclonal_read_status = 1;
+                    break;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+    (ref_polyclonal_read_status, alt_polyclonal_read_status)
 }

@@ -1350,7 +1350,6 @@ pub fn align_single_reads(query_seq: &String, ref_seq: String) -> (String, Strin
     (q_seq_final, align_final, r_seq_final, num_matches)
 }
 
-#[allow(dead_code)]
 pub fn determine_start_stop_indel_region_in_read(
     alignment_side: String,
     q_seq_alt: &String,
