@@ -30,3 +30,7 @@ path="src/align.rs"
 [[bin]]
 name="indel"
 path="src/indel.rs"
+
+[[bin]]
+name="stats"
+path="src/stats.rs"
