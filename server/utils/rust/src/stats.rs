@@ -1,4 +1,5 @@
-// Test syntax: echo chr17.7666870.T.C\t1678\t2828\t25242\t39296\nchr17.7667504.G.C\t179\t4327\t2884\t61648\nchr17.7667559.G.A\t3548\t958\t51468\t13062 | ../target/release/stats
+// Test syntax: cd ~/proteinpaint/utils/benchmark && node fisher.rust.r.js
+
 use std::io;
 mod stats_functions;
 
