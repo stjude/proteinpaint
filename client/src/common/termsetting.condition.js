@@ -355,7 +355,7 @@ function showMenu_time2event(self, div) {
 			.style('opacity', 0.4)
 		const options = [
 			{
-				label: 'Time from study enrollment', // may define from ds
+				label: 'Time from diagnosis', // may define from ds
 				value: 'time'
 			},
 			{ label: 'Age', value: 'age' }
