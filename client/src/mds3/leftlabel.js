@@ -256,8 +256,8 @@ async function listSkewerData(tk, block) {
 			mlst,
 			tk,
 			block,
-			// quick fix to prevent gdc track to run samplesummary on too many ssm
-			disableSamplesummary: true
+			// quick fix to prevent gdc track to run variant2sample on too many ssm
+			disable_variant2samples: true
 		})
 	}
 }
