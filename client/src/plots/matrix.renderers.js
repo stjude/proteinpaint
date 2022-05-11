@@ -134,10 +134,11 @@ export function setRenderers(self) {
 	self.colGrpLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
+		const len = (lab.processedLst || lab.grp.lst).length
 		const x =
 			lab.grpIndex * s.colgspace +
 			lab.prevGrpTotalIndex * d.dx +
-			(lab.grp.lst.length * d.dx) / 2 +
+			(len * d.dx) / 2 +
 			s.grpLabelFontSize / 2 +
 			lab.totalHtAdjustments
 		return `translate(${x},0)`
@@ -155,10 +156,11 @@ export function setRenderers(self) {
 	self.rowGrpLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
+		const len = (lab.processedLst || lab.grp.lst).length
 		const y =
 			lab.grpIndex * s.rowgspace +
 			lab.prevGrpTotalIndex * d.dy +
-			(lab.grp.lst.length * d.dy) / 2 +
+			(len * d.dy) / 2 +
 			s.grpLabelFontSize / 2 +
 			lab.totalHtAdjustments
 		return `translate(0,${y})`
@@ -185,11 +187,13 @@ export function setRenderers(self) {
 		const btmBox = self.layout.btm.box.node().getBBox()
 		const leftBox = self.layout.left.box.node().getBBox()
 		const rtBox = self.layout.right.box.node().getBBox()
+		const legendBox = self.dom.legendG.node().getBBox()
+		const seriesBox = self.dom.seriesesG.node().getBBox()
 
 		d.extraWidth = leftBox.width + rtBox.width + s.margin.left + s.margin.right + s.rowlabelgap * 2
 		d.extraHeight = topBox.height + btmBox.height + s.margin.top + s.margin.bottom + s.collabelgap * 2
 		d.svgw = d.mainw + d.extraWidth
-		d.svgh = d.mainh + d.extraHeight
+		d.svgh = d.mainh + d.extraHeight + legendBox.height + 20
 		self.dom.svg
 			.transition()
 			.duration(duration)
@@ -202,6 +206,15 @@ export function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('transform', `translate(${x},${y})`)
+
+		// this position is based on layout.btm.attr.boxTransform, plus box height and margins
+		const legendX = d.xOffset + (s.transpose ? 20 : 0)
+		const legendY = d.yOffset + d.mainh + s.collabelgap + btmBox.height + 20
+
+		self.dom.legendG
+			.transition()
+			.duration(duration)
+			.attr('transform', `translate(${legendX},${legendY})`)
 	}
 }
 

@@ -24,6 +24,18 @@ document.body.onload = () => runproteinpaint({
 		state: {
 			dslabel: 'PNET',
 			genome: 'hg19',
+      termfilter: {
+        filter: {
+          type: 'tvslst',
+          lst: [{
+            type: 'tvs',
+            tvs: {
+              term: {id: 'Sample Type'},
+              values: [{key: 'D1'}]
+            }
+          }]
+        }
+      },
 			plots: [
 				{
 					chartType: 'matrix',
@@ -34,7 +46,8 @@ document.body.onload = () => runproteinpaint({
               rowspace: 0,
 							termLabelOffset: 220,
 							sortTermsBy: 'asListed',
-              grpLabelFontSize: 13
+              grpLabelFontSize: 13,
+              //sampleNameFilter: '_D1$'
 						}
 					},
 					menuOpts: {
@@ -98,17 +111,17 @@ document.body.onload = () => runproteinpaint({
 									}
 								},
 								{
-									id: 'sex',
+									id: 'Gender',
 									//q: { mode: 'values' } // or 'groupsetting'
 								},
 								{
-									id: 'Met'
+									id: 'Metastasis'
 								},
 								{
 									id: 'Death'
 								},
 								{
-									id: 'PD'
+									id: 'Progressive Disease'
 								},
 								{
 									id: 'M stage'
@@ -120,7 +133,7 @@ document.body.onload = () => runproteinpaint({
 									id: 'Primary Treatment category 2'
 								},
 								{
-									id: 'Surgery Prior to Therapy'
+									id: 'Extent of Resection'
 								},
 								{
 									id: 'Group'
@@ -141,30 +154,31 @@ document.body.onload = () => runproteinpaint({
                   id: 'Sample Type'
                 },
                 {
-                  label: 'Study',
+                  
                   id: 'study'
                 },
 								{
 									id: 'Mutational Burden'
 								},
-								{
-									id: 'Germline',
-                  $id: 'germline'
+								{	
+                  id: 'Germline'
 								},
 								{
 									id: 'WES',
-                  $id: 'WES'
 								},
 								{
 									id: 'RNAseq',
-                  $id: 'rnaseq'
+                  //$id: 'RNAseq'
 								},
                 {
                   id: 'Methylation'
-                },
-								...getCytogeneticsData()
+                }
 							]
 						},
+            {
+              name: 'Cytogenetics',
+              lst: getCytogeneticsData()
+            },
 						...getGeneTermGroups(),
 					],
           // each override may be used by any termwrapper 
@@ -173,55 +187,77 @@ document.body.onload = () => runproteinpaint({
             SVfill: {
               value: {
                 key: 'RNAseq', 
-                value: 'RNAseq', 
+                //value: 'RNAseq', 
                 values: [
                   {key: 'Not tested', label: 'Not tested', color: '#fff'}
                 ]
               },
               sampleFilter: {
-                type: 'wvs', // "wrapper-value-setting"
-                wrapper$id: 'rnaseq',
-                values: [{key: 'No'}]
+                type: 'tvs',
+                tvs: {
+                  term: {id: 'RNAseq'},
+                  values: [{key: 'No'}]
+                }
               }
             },
-            Gfill: {
+            Germfill: {
               value: {
                 key: 'Germline', 
-                value: 'Germline', 
+                //value: 'Germline', 
                 values: [
-                  {key: 'Not tested', label: 'Not tested', color: '#fff'}
+                  {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
                 ]
               },
               sampleFilter: {
-                type: 'wvs', // "wrapper-value-setting"
-                wrapper$id: 'germline',
-                values: [{key: 'No'}]
+                type: 'tvs', // "wrapper-value-setting"
+                tvs: {
+                  term: {id: 'Germline'},
+                  values: [{key: 'No'}]
+                }
               }
             },
             WESfill: {
               value: {
                 key: 'WES', 
-                value: 'WES', 
+                //value: 'WES', 
                 values: [
-                  {key: 'Not tested', label: 'Not tested', color: '#fff'}
+                  {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
                 ]
               },
               sampleFilter: {
-                type: 'wvs', // "wrapper-value-setting"
-                wrapper$id: 'WES',
-                values: [{key: 'No'}]
+                type: 'tvs', // "wrapper-value-setting"
+                tvs: {
+                  term: {id: 'WES'},
+                  values: [{key: 'No'}]
+                }
+              }
+            },
+            CNVfill: {
+              value: {
+                key: 'Methylation', 
+                value: 'Methylation', 
+                values: [
+                  {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
+                ]
+              },
+              sampleFilter: {
+                type: 'tvs', // "wrapper-value-setting"
+                tvs: {
+                  term: {id: 'Methylation'},
+                  values: [{key: 'No'}]
+                }
               }
             }
           }
 				},
 
-				/*{
+				{
 					chartType: 'survival',
 					term: {
 						id: 'Event-free survival'
 					},
 					term2: {
-					  id: 'Met'
+					  id: 'Metastasis'
 					},
 					settings: {
 						survival: {
@@ -243,33 +279,32 @@ document.body.onload = () => runproteinpaint({
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 						}
 					}
-				},*/
+				}
 			]
 		}
 	}
 })
 
+const cnvGenes = `C19MC, MYCN, PDGFR,CDK4, MET, MDM4, MYC`.split(',').map(g=>g.trim())
+
 function getGeneTermGroups() {
 	const termgroups = []
 	for(const g of genegroups) {
-		termgroups.push({
-			name: g.name,
-			lst: g.lst.map(term => {
-				term.type = 'geneVariant'
-				const tw = {term}
-        const [name, suffix] = term.name.split('_')
-        if (suffix == 'SV') {
-          tw.overrides = ['SVfill']
-        } else if (suffix == 'G') {
-          tw.overrides = ['Gfill']
-        } else {
-          tw.overrides = ['WESfill']
-        }
+    const grp = {
+      name: g.name,
+      overrides: g.overrides,
+      valueFilter: g.valueFilter,
+      lst: g.lst.map(t => {
+        const term = {name: t.name, type: 'geneVariant'}
+        const tw = {term}
+        if ('label' in t) tw.label = t.label
+        if ('minNumSamples' in t) tw.minNumSamples = t.minNumSamples
+        return tw
+      })
+    }
 
-				return tw
-			}),
-      sortTermsBy: 'sampleCount'
-		})
+    if (g.settings) grp.settings = g.settings 
+		termgroups.push(grp)
 	}
 	return termgroups
 }
@@ -286,7 +321,14 @@ function getCytogeneticsData() {
 
 const genegroups = [
   {
-      "name": "fusion",
+      "name": "Fusion",
+      valueFilter: {
+        type: 'tvs',
+        tvs: {
+          values: [{key: 'dt', value: 2}]
+        },
+      },
+      overrides: ['SVfill'],
       "lst": [
           {
               "name": "BCOR_SV",
@@ -309,7 +351,19 @@ const genegroups = [
       ]
   },
   {
+    name: "Copy Number",
+    valueFilter: {
+      type: 'tvs',
+      tvs: {
+        values: [{key: 'dt', value: 4}]
+      },
+    },
+    overrides: ['CNVfill'],
+    lst: cnvGenes.map(name=>{return {name}})
+  },
+  {
       "name": "Germline",
+      overrides: ['Germfill'],
       "lst": [
           {
               "name": "DICER1_G"
@@ -321,6 +375,17 @@ const genegroups = [
   },
   {
       "name": "Somatic",
+      "settings": {
+        minNumSamples: 2
+      },
+      valueFilter: {
+        type: 'tvs',
+        isnot: true,
+        tvs: {
+          values: [{key: 'dt', value: 4}]
+        },
+      },
+      overrides: ['WESfill'],
       "lst": [
           {
               "name": "AFDN"
@@ -374,7 +439,8 @@ const genegroups = [
               "name": "CTCF"
           },
           {
-              "name": "CTNNB1"
+              "name": "CTNNB1",
+              minNumSamples: 1
           },
           {
               "name": "CUX1"
@@ -597,9 +663,6 @@ const genegroups = [
           },
           {
               "name": "C19MC"
-          },
-          {
-              "name": "GFI1B"
           },
           {
               "name": "MYC"

@@ -7,8 +7,15 @@ const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
+const runCumincR = require('./termdb.cuminc').runCumincR
+const app = require('./app')
 
 /*
+
+**************** q{} object
+
+the q object comes from client request, in this form:
+the object is used through out the script, and can be modified at various steps
 q {}
 .regressionType
 .filter
@@ -26,43 +33,56 @@ q {}
 	.q{}
 		.scale
 		.computableValuesOnly:true // always added
+		.restrictAncestry{}
 	.refGrp
 	.interactions[] // always added; empty if no interaction
+
+
+**************** R input
 
 input to R is an json object, with an array of variables (first being outcome)
 rtype with values numeric/factor is used instead of actual term type
 so that R script will not need to interpret term type
+described in server/utils/regression.R
+
 
 **************** EXPORT
+
 get_regression()
 
-***  function cascade  ***
+
+**************** function cascade 
+
 parse_q()
 	checkTwAncestryRestriction()
 		// adds tw.q.restrictAncestry.pcs Map
 getSampleData
+	// returns sampledata[]
 	divideTerms
 	getSampleData_dictionaryTerms
 	mayAddAncestryPCs
+		// creates ad-hoc independent variables for pcs
 	getSampleData_snplstOrLocus
 		// parse cache file
 		doImputation
 		categorizeSnpsByAF
-			// creates for high AF snps that are analyzed as covariants
-			// low-AF snps are to be used for Fisher/Wilcoxon
+			// creates following on the tw{} to divide the snps
+			// tw.lowAFsnps{} tw.highAFsnps{} tw.monomorphicLst[] tw.snpid2AFstr{}
+			// sample data for high-AF snps are kept in sampledata[]
 		applyGeneticModel
 makeRinput()
 	makeRvariable_snps()
 	makeRvariable_dictionaryTerm()
 validateRinput
 replaceTermId
-... run R ...
-parseRoutput
+runRegression
+	parseRoutput
 snplocusPostprocess
-	mayAddSnplocusMessage
-	mayAddResult4monomorphic
+	addResult4monomorphic
 		getLine4OneSnp
-	mayDoFisher
+	lowAFsnps_wilcoxon
+	lowAFsnps_fisher
+	lowAFsnps_cuminc
 */
 
 // list of supported types
@@ -85,17 +105,21 @@ export async function get_regression(q, ds) {
 		validateRinput(Rinput)
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
 
-		// run regression analysis in R
-		const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-		await utils.write_file(Rinputfile, JSON.stringify(Rinput))
-		const Routput = await lines2R(path.join(serverconfig.binpath, 'utils', 'regression.R'), [], [Rinputfile])
-		fs.unlink(Rinputfile, () => {})
+		const result = { resultLst: [] }
 
-		const result = {
-			resultLst: await parseRoutput(Rinput, Routput, id2originalId, q)
-		}
-
-		await snplocusPostprocess(q, sampledata, Rinput, result)
+		/*
+		when snplocus is used:
+			common snps are analyzed in runRegression for model-fitting 
+			rare ones are analyzed in snplocusPostprocess for fisher/wilcoxon/cuminc
+			each function below returns a promise and runs in parallel
+		else:
+			runRegression fits model just one time
+			snplocusPostprocess will not run
+		*/
+		await Promise.all([
+			runRegression(Rinput, id2originalId, q, result),
+			snplocusPostprocess(q, sampledata, Rinput, result)
+		])
 
 		return result
 	} catch (e) {
@@ -234,23 +258,15 @@ function makeRinput(q, sampledata) {
 	}
 	if (q.regressionType == 'cox') {
 		// for cox regression, outcome needs to be time-to-event data
-		if (q.outcome.q.timeScale == 'time') {
-			// time from enrollment time scale
-			outcome.timeToEvent = {
-				timeId: q.outcome.id + '_time',
-				eventId: q.outcome.id + '_event',
-				timeScale: q.outcome.q.timeScale
-			}
-		} else if (q.outcome.q.timeScale == 'age') {
+		outcome.timeToEvent = {
+			timeId: q.outcome.id + '_time',
+			eventId: q.outcome.id + '_event',
+			timeScale: q.outcome.q.timeScale
+		}
+		if (outcome.timeToEvent.timeScale == 'age') {
 			// age time scale
-			outcome.timeToEvent = {
-				agestartId: q.outcome.id + '_agestart',
-				ageendId: q.outcome.id + '_ageend',
-				eventId: q.outcome.id + '_event',
-				timeScale: q.outcome.q.timeScale
-			}
-		} else {
-			throw 'unknown cox regression time scale'
+			outcome.timeToEvent.agestartId = q.outcome.id + '_agestart'
+			outcome.timeToEvent.ageendId = q.outcome.id + '_ageend'
 		}
 	}
 
@@ -326,9 +342,10 @@ function makeRinput(q, sampledata) {
 				entry[outcome.timeToEvent.timeId] = out.value
 			} else if (q.outcome.q.timeScale == 'age') {
 				// age time scale
-				const ages = JSON.parse(out.value)
-				entry[outcome.timeToEvent.agestartId] = ages.age_start
-				entry[outcome.timeToEvent.ageendId] = ages.age_end
+				const values = JSON.parse(out.value)
+				entry[outcome.timeToEvent.agestartId] = values.age_start
+				entry[outcome.timeToEvent.ageendId] = values.age_end
+				entry[outcome.timeToEvent.timeId] = values.time
 			} else {
 				throw 'unknown cox regression time scale'
 			}
@@ -509,7 +526,7 @@ function validateRinput(Rinput) {
 		if (outcome.timeToEvent.timeScale == 'time') {
 			nvariables = nvariables + 2
 		} else if (outcome.timeToEvent.timeScale == 'age') {
-			nvariables = nvariables + 3
+			nvariables = nvariables + 4
 		} else {
 			throw 'unknown cox regression time scale'
 		}
@@ -551,7 +568,16 @@ function validateRinput(Rinput) {
 	}
 }
 
-async function parseRoutput(Rinput, Routput, id2originalId, q) {
+async function runRegression(Rinput, id2originalId, q, result) {
+	// run regression analysis in R
+	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await utils.write_file(Rinputfile, JSON.stringify(Rinput))
+	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils', 'regression.R'), [], [Rinputfile])
+	fs.unlink(Rinputfile, () => {})
+	await parseRoutput(Rinput, Routput, id2originalId, q, result)
+}
+
+async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 	if (Routput.length != 1) throw 'expected 1 json line in R output'
 	const out = JSON.parse(Routput[0])
 
@@ -573,8 +599,6 @@ async function parseRoutput(Rinput, Routput, id2originalId, q) {
 	]
 	*/
 
-	const resultLst = [] // same structure as out[]
-
 	for (const analysis of out) {
 		// convert "analysis" to "analysisResult", then push latter to resultLst
 		const analysisResult = {
@@ -585,14 +609,22 @@ async function parseRoutput(Rinput, Routput, id2originalId, q) {
 		}
 
 		if (analysis.id) {
-			// if id is set, this "analysis" is the model-fitting result for one snp from a snplocus term
-			// converted id must be snpid, assign to analysisResult
-			// client will rely on this id to associate this result to a variant
+			/* id is set on this analysis result
+			this is the model-fitting result for one snp from a snplocus term
+			** this must not be a snp from snplst! as snps from snplst are analyzed as covariates,
+			** while snps from snplocus each have model-fitted separately
+			*/
 			const snpid = id2originalId[analysis.id]
+			// converted id is now snpid, assign to analysisResult
+			// client will rely on this id to associate this result to a variant
 			analysisResult.id = snpid
 
 			const tw = q.independent.find(i => i.type == 'snplocus')
 			if (!tw) throw 'snplocus term missing'
+
+			// copy AF to it, for showing by m dot hovering
+			analysisResult.AFstr = tw.snpid2AFstr.get(snpid)
+
 			analysisResult.data.headerRow = getLine4OneSnp(snpid, tw)
 		}
 
@@ -705,40 +737,126 @@ async function parseRoutput(Rinput, Routput, id2originalId, q) {
 		// warnings
 		if (data.warnings) analysisResult.data.warnings = data.warnings
 
-		resultLst.push(analysisResult)
+		result.resultLst.push(analysisResult)
 	}
-	return resultLst
 }
 
 async function snplocusPostprocess(q, sampledata, Rinput, result) {
 	const tw = q.independent.find(i => i.type == 'snplocus')
 	if (!tw) return
-	mayAddSnplocusMessage(tw, result, q)
-	mayAddResult4monomorphic(tw, result)
+	addResult4monomorphic(tw, result)
 	if (tw.lowAFsnps.size) {
-		await mayDoFisher(tw, q, sampledata, Rinput, result)
-		await mayDoWilcoxon(tw, q, sampledata, Rinput, result)
+		// low-af variants are not used for model-fitting
+		// use alternative method depending on regression type
+		if (q.regressionType == 'linear') {
+			await lowAFsnps_wilcoxon(tw, sampledata, Rinput, result)
+		} else if (q.regressionType == 'logistic') {
+			await lowAFsnps_fisher(tw, sampledata, Rinput, result)
+		} else if (q.regressionType == 'cox') {
+			await lowAFsnps_cuminc(tw, sampledata, Rinput, result, q.outcome.q.minYearsToEvent)
+		} else {
+			throw 'unknown regression type'
+		}
 	}
 }
 
-async function mayDoWilcoxon(tw, q, sampledata, Rinput, result) {
+async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 	// for linear regression, perform wilcoxon rank sum test for low-AF snps
-	if (q.regressionType != 'linear') return
+	const wilcoxInput = {} // { snpid: {hasEffale: [], noEffale: []} }
+	const snpid2scale = new Map() // k: snpid, v: {minv,maxv} for making scale in boxplot
+	for (const [snpid, snpO] of tw.lowAFsnps) {
+		let RinputDataidx = 0
+		let minv = null,
+			maxv = null
+		const group1values = [], // for cases with effect allele
+			group2values = []
+		for (const { sample, noOutcome } of sampledata) {
+			if (noOutcome) continue
+			const outcomeValue = Rinput.data[RinputDataidx++].outcome
+			if (!Number.isFinite(outcomeValue)) {
+				// outcome value is not numeric
+				continue
+			}
+			const gt = snpO.samples.get(sample)
+			if (!gt) {
+				// missing gt for this sample
+				continue
+			}
+
+			if (minv == null) {
+				minv = maxv = outcomeValue
+			} else {
+				minv = Math.min(minv, outcomeValue)
+				maxv = Math.max(maxv, outcomeValue)
+			}
+
+			const [a, b] = gt.split('/')
+			if (a == snpO.effAle || b == snpO.effAle) {
+				group1values.push(outcomeValue)
+			} else {
+				group2values.push(outcomeValue)
+			}
+		}
+		wilcoxInput[snpid] = { group1values, group2values }
+		snpid2scale.set(snpid, { minv, maxv })
+	}
+	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
+	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
+	fs.unlink(tmpfile, () => {})
+	const pvalues = JSON.parse(wilcoxOutput)
+	for (const snpid in pvalues) {
+		const { group1values, group2values } = wilcoxInput[snpid]
+		const { minv, maxv } = snpid2scale.get(snpid)
+
+		const box1 = app.boxplot_getvalue(
+			group1values
+				.sort((a, b) => a - b)
+				.map(i => {
+					return { value: i }
+				})
+		)
+		box1.label = `Carry ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${group1values.length}`
+		const box2 = app.boxplot_getvalue(
+			group2values
+				.sort((a, b) => a - b)
+				.map(i => {
+					return { value: i }
+				})
+		)
+		box2.label = `No ${tw.q.alleleType == 0 ? 'minor' : 'alternative'} allele, n=${group2values.length}`
+
+		// make a result object for this snp
+		const analysisResult = {
+			id: snpid,
+			AFstr: tw.snpid2AFstr.get(snpid),
+			data: {
+				headerRow: getLine4OneSnp(snpid, tw),
+				wilcoxon: {
+					pvalue: pvalues[snpid],
+					boxplots: {
+						minv,
+						maxv,
+						hasEff: box1,
+						noEff: box2
+					}
+				}
+			}
+		}
+		result.resultLst.push(analysisResult)
+	}
 }
 
-async function mayDoFisher(tw, q, sampledata, Rinput, result) {
-	// for logistic/cox, perform fisher's exact test for low-AF snps
-	if (q.regressionType != 'logistic' && q.regressionType != 'cox') return
-	const lines = [] // one line for each snp
+async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
+	// for logistic, perform fisher's exact test for low-AF snps
+	const lines = [] // one line per snp
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		// a snp with low AF, run fisher on it
-		// count 6 numbers for this snp across all samples
-		let outcome0href = 0, // outcome is 0/No,
-			outcome0het = 0,
-			outcome0halt = 0,
-			outcome1href = 0, // outcome is 1/Yes
-			outcome1het = 0,
-			outcome1halt = 0
+		// count 4 numbers for this snp across all samples
+		let outcome0noale = 0, // outcome=no, no allele
+			outcome0hasale = 0, // outcome=no, has allele
+			outcome1noale = 0, // outcome=yes, no allele
+			outcome1hasale = 0 // outcome=yes, has allele
 
 		// Rinput.data[] is a subset of sampledata[], though they're in same order
 		// see makeRinput()
@@ -755,43 +873,42 @@ async function mayDoFisher(tw, q, sampledata, Rinput, result) {
 				continue
 			}
 			const [a, b] = gt.split('/')
-			const effCount = (snpO.effAle == a ? 1 : 0) + (snpO.effAle == b ? 1 : 0)
+			const hasale = snpO.effAle == a || snpO.effAle == b
 			if (outcome == 0) {
-				if (effCount == 0) outcome0href++
-				else if (effCount == 1) outcome0het++
-				else outcome0halt++
+				if (hasale) outcome0hasale++
+				else outcome0noale++
 			} else {
-				if (effCount == 0) outcome1href++
-				else if (effCount == 1) outcome1het++
-				else outcome1halt++
+				if (hasale) outcome1hasale++
+				else outcome1noale++
 			}
 		}
-		/* a line forming this 2x3 table:
-		     homo-ref het homo-alt
-		Yes  -        -   -
-		No   -        -   -
+		/* a line forming 2x2 table:
+		     has ale  no ale
+		Yes  -        - 
+		No   -        -
 		*/
-		const line = [snpid, outcome1href, outcome0href, outcome1het, outcome0het, outcome1halt, outcome0halt]
+		const line = [snpid, outcome1hasale, outcome0hasale, outcome1noale, outcome0noale]
 		lines.push(line.join('\t'))
 	}
-	const plines = await lines2R(path.join(serverconfig.binpath, 'utils/fisher.2x3.R'), lines)
+	const plines = await lines2R(path.join(serverconfig.binpath, 'utils/fisher.R'), lines)
 	for (const line of plines) {
 		const l = line.split('\t')
 		const snpid = l[0]
-		const { effAle, refAle } = tw.lowAFsnps.get(snpid)
-		const pvalue = Number(l[7])
+		const { effAle } = tw.lowAFsnps.get(snpid)
+		const pvalue = Number(l[5])
 
 		// make a result object for this snp
 		const analysisResult = {
 			id: snpid,
+			AFstr: tw.snpid2AFstr.get(snpid),
 			data: {
 				headerRow: getLine4OneSnp(snpid, tw),
 				fisher: {
 					pvalue: Number(pvalue.toFixed(4)),
 					rows: [
-						['', refAle + '/' + refAle, refAle + '/' + effAle, effAle + '/' + effAle],
-						['Have event', l[1], l[3], l[5]],
-						['No event', l[2], l[4], l[6]]
+						['', 'Carry ' + effAle + ' allele', 'No ' + effAle + ' allele'],
+						['Have event', l[1], l[3]],
+						['No event', l[2], l[4]]
 					]
 				}
 			}
@@ -800,7 +917,86 @@ async function mayDoFisher(tw, q, sampledata, Rinput, result) {
 	}
 }
 
-function mayAddResult4monomorphic(tw, result) {
+async function lowAFsnps_cuminc(tw, sampledata, Rinput, result, minYearsToEvent) {
+	// for cox, perform cuminc analysis between samples having and missing effect allele
+	const lines = [] // one line per snp
+	const fdata = {} // input for cuminc analysis {snpid: [{time, event, series}]}
+	for (const [snpid, snpO] of tw.lowAFsnps) {
+		fdata[snpid] = []
+		// Rinput.data[] is a subset of sampledata[], though they're in same order
+		// see makeRinput()
+		let RinputDataidx = 0
+		for (const { sample, noOutcome } of sampledata) {
+			if (noOutcome) continue
+			const d = Rinput.data[RinputDataidx++]
+			if (d.outcome_event != 0 && d.outcome_event != 1) throw 'd.outcome_event is not 0/1'
+			if (!Number.isFinite(d.outcome_time)) throw 'd.outcome_time is not numeric'
+
+			// data point of this sample, to add to fdata[snpid][]
+			const sampleData = {
+				time: d.outcome_time,
+				event: d.outcome_event
+			}
+
+			const gt = snpO.samples.get(sample)
+			if (!gt) {
+				// missing gt for this sample, skip
+				continue
+			}
+			const [a, b] = gt.split('/')
+
+			// hardcoded series "1/2", here and client side
+			// if this person carries the allele, assign to series "1", otherwise "2"
+			sampleData.series = snpO.effAle == a || snpO.effAle == b ? '1' : '2'
+
+			fdata[snpid].push(sampleData)
+		}
+	}
+
+	const final_data = {
+		case: [],
+		tests: {}
+	}
+
+	// run cumulative incidence analysis in R
+	await runCumincR(fdata, final_data, minYearsToEvent)
+
+	// parse cumulative incidence results
+	for (const [snpid, snpO] of tw.lowAFsnps) {
+		if (!final_data.tests[snpid] || final_data.tests[snpid].length == 0) throw 'final_data.tests missing for snp'
+		const pvalue = Number(final_data.tests[snpid][0].pvalue)
+		if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
+
+		// clear chartId at [0] so it won't show as chart title
+		const caselst = []
+		for (const i of final_data.case) {
+			if (i[0] == snpid) {
+				i[0] = ''
+				caselst.push(i)
+			}
+		}
+
+		// make a result object for this snp
+		const analysisResult = {
+			id: snpid,
+			AFstr: tw.snpid2AFstr.get(snpid),
+			data: {
+				headerRow: getLine4OneSnp(snpid, tw),
+				cuminc: {
+					pvalue: Number(pvalue.toFixed(4)),
+					final_data: {
+						case: caselst,
+						tests: final_data.tests[snpid]
+					}
+				}
+			}
+		}
+
+		result.resultLst.push(analysisResult)
+	}
+}
+
+function addResult4monomorphic(tw, result) {
 	for (const snpid of tw.monomorphicLst) {
 		const gt2count = tw.snpgt2count.get(snpid)
 		const lst = []
@@ -823,46 +1019,13 @@ function getLine4OneSnp(snpid, tw) {
 		return { k: 'Genotype', v: gt + '=' + c }
 	}
 	const lst = [
-		'Effect allele=' + (tw.highAFsnps.has(snpid) ? tw.highAFsnps.get(snpid).effAle : tw.lowAFsnps.get(snpid).effAle),
-		'AF=' + tw.snpid2AF.get(snpid)
+		`${tw.q.alleleType == 0 ? 'Minor' : 'Alternative'} allele=${
+			tw.highAFsnps.has(snpid) ? tw.highAFsnps.get(snpid).effAle : tw.lowAFsnps.get(snpid).effAle
+		}`,
+		'AF=' + tw.snpid2AFstr.get(snpid)
 	]
 	for (const [gt, c] of gt2count) lst.push(gt + '=' + c)
-	return { k: 'Variant:', v: lst.join(', ') }
-}
-
-function mayAddSnplocusMessage(tw, result, q) {
-	const lst = []
-	if (tw.highAFsnps.size) {
-		lst.push(
-			tw.highAFsnps.size +
-				' variant' +
-				(tw.highAFsnps.size > 1 ? 's' : '') +
-				' used for model-fitting (AF>=' +
-				tw.q.AFcutoff +
-				'%)'
-		)
-	}
-	if (tw.lowAFsnps.size) {
-		const wilcox = q.regressionType == 'linear'
-		lst.push(
-			tw.lowAFsnps.size +
-				' variant' +
-				(tw.lowAFsnps.size > 1 ? 's' : '') +
-				' analyzed by ' +
-				(wilcox ? 'Wilcox rank sum test' : "Fisher's exact test") +
-				' (AF<' +
-				tw.q.AFcutoff +
-				'%)'
-		)
-	}
-	if (tw.monomorphicLst.length)
-		lst.push(tw.monomorphicLst.length + ' monomorphic variant' + (tw.monomorphicLst.length > 1 ? 's' : '') + ' skipped')
-	if (lst.length) {
-		result.headerMessage = {
-			k: 'Summary:',
-			v: lst.join(', ')
-		}
-	}
+	return { k: 'Variant:', v: lst.join('&nbsp;&nbsp;&nbsp;') }
 }
 
 /*
@@ -1075,7 +1238,7 @@ async function getSampleData_snplstOrLocus(tw, samples) {
 	}
 
 	categorizeSnpsByAF(tw, snp2sample)
-	// tw.lowAFsnps, tw.highAFsnps, tw.monomorphicLst, tw.snpid2AF are created
+	// tw.lowAFsnps, tw.highAFsnps, tw.monomorphicLst, tw.snpid2AFstr are created
 
 	// for highAFsnps, write data into "samples{}" for model-fitting
 	for (const [snpid, o] of tw.highAFsnps) {
@@ -1104,8 +1267,8 @@ function categorizeSnpsByAF(tw, snp2sample) {
 	tw.highAFsnps = new Map()
 	// list of snpid for monomorphic ones
 	tw.monomorphicLst = []
-	tw.snpid2AF = new Map()
-	// k: snpid, v: af
+	tw.snpid2AFstr = new Map()
+	// k: snpid, v: af string, '5.1%', for display only, not for computing
 
 	for (const [snpid, o] of snp2sample) {
 		if (tw.snpgt2count.get(snpid).size == 1) {
@@ -1123,7 +1286,7 @@ function categorizeSnpsByAF(tw, snp2sample) {
 		}
 
 		const af = effAleCount / (totalsamplecount * 2)
-		tw.snpid2AF.set(snpid, Number(af.toFixed(4)))
+		tw.snpid2AFstr.set(snpid, (af * 100).toFixed(1) + '%')
 
 		if (af < tw.q.AFcutoff / 100) {
 			// AF lower than cutoff, will not use for model-fitting
@@ -1239,18 +1402,15 @@ function replaceTermId(Rinput) {
 	if (Rinput.outcome.timeToEvent) {
 		// time-to-event variable
 		const t2e = Rinput.outcome.timeToEvent
+		id2originalId['outcome_time'] = t2e.timeId
+		originalId2id[t2e.timeId] = 'outcome_time'
 		id2originalId['outcome_event'] = t2e.eventId
 		originalId2id[t2e.eventId] = 'outcome_event'
-		if (t2e.timeScale == 'time') {
-			id2originalId['outcome_time'] = t2e.timeId
-			originalId2id[t2e.timeId] = 'outcome_time'
-		} else if (t2e.timeScale == 'age') {
+		if (t2e.timeScale == 'age') {
 			id2originalId['outcome_agestart'] = t2e.agestartId
 			id2originalId['outcome_ageend'] = t2e.ageendId
 			originalId2id[t2e.agestartId] = 'outcome_agestart'
 			originalId2id[t2e.ageendId] = 'outcome_ageend'
-		} else {
-			throw 'unknown cox regression time scale'
 		}
 	}
 	// independent variables
@@ -1267,14 +1427,11 @@ function replaceTermId(Rinput) {
 	Rinput.outcome.id = originalId2id[Rinput.outcome.id]
 	if (Rinput.outcome.timeToEvent) {
 		const t2e = Rinput.outcome.timeToEvent
+		t2e.timeId = originalId2id[t2e.timeId]
 		t2e.eventId = originalId2id[t2e.eventId]
-		if (t2e.timeScale == 'time') {
-			t2e.timeId = originalId2id[t2e.timeId]
-		} else if (t2e.timeScale == 'age') {
+		if (t2e.timeScale == 'age') {
 			t2e.agestartId = originalId2id[t2e.agestartId]
 			t2e.ageendId = originalId2id[t2e.ageendId]
-		} else {
-			throw 'unknown cox regression time scale'
 		}
 	}
 	// independent variables

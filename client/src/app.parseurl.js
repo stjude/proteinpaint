@@ -28,6 +28,15 @@ upon error, throw err message as a string
 */
 	const urlp = urlmap()
 
+	if (urlp.has('appcard')) {
+		const ad = await import('./app.drawer.cards')
+		const cardJsonFile = urlp.get('appcard')
+		const re = await client.dofetch2('/cardsjson')
+		const track = re.examples.findIndex(t => t.sandboxjson == cardJsonFile)
+		ad.openSandbox(re.examples[track], arg.app.drawer.apps_sandbox_div)
+		return
+	}
+
 	if (urlp.has('gdcbamslice')) {
 		const _ = await import('./block.tk.bam.gdc')
 		_.bamsliceui({

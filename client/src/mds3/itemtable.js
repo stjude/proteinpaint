@@ -7,12 +7,11 @@ import { event as d3event } from 'd3-selection'
 itemtable
 ********************** INTERNAL
 table_snvindel
-table_fusionsv
 table_snvindel_onevariant
+table_snvindel_multivariant
 add_csqButton
 print_snv
-table_snvindel_multivariant
-table_fusionsv
+
 table_fusionsv
 
 .occurrence must be set for each variant
@@ -26,6 +25,8 @@ print each info as table row/column
 
 */
 
+const cutoff_tableview = 10
+
 /*
 for a list of variants of *same type*, print details of both variant and samples
 arg{}
@@ -33,11 +34,8 @@ arg{}
 .mlst
 .tk
 .block
-.tid2value{}
+.disableSamplesummary:true
 */
-
-const cutoff_tableview = 10
-
 export async function itemtable(arg) {
 	if (arg.mlst[0].dt == dtsnvindel) {
 		await table_snvindel(arg)
@@ -64,7 +62,8 @@ async function table_snvindel(arg) {
 		// make a multi-column table for all variants, one row for each variant
 		table_snvindel_multivariant(arg)
 	}
-	if (arg.tk.mds.variant2samples) {
+
+	if (!arg.disableSamplesummary && arg.tk.mds.variant2samples) {
 		await init_sampletable(arg)
 	}
 }
@@ -86,8 +85,8 @@ function table_snvindel_onevariant({ m, tk, table, block }) {
 		td1.text('Occurrence')
 		td2.text(m.occurrence)
 	}
-	const nm = tk.numericmode
-	if (nm && nm.inuse) {
+	if (tk.skewer.mode == 'numeric') {
+		const nm = tk.numericmode
 		const [td1, td2] = row_headervalue(table)
 		if (nm.tooltipPrintValue) {
 			const [a, b] = nm.tooltipPrintValue(m)

@@ -1,7 +1,7 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { Menu } from '../dom/menu'
 import { dofetch3 } from '../common/dofetch'
-import { init as init_legend } from './legend'
+import { initLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '../common/urlmap'
 import { mclass } from '../../shared/common'
@@ -31,20 +31,21 @@ stratify labels will account for all tracks, e.g. skewer, cnv
 */
 
 export async function makeTk(tk, block) {
+	// run just once to initiate a track
+
 	tk.cache = {}
 	tk.itemtip = new Menu()
+	tk.menutip = new Menu({ padding: '' }) // to show menu options without margin
 	tk.samplefiltertemp = {}
 	// switch to .samplefilter with a filter.js object
 
 	tk.load = _load(tk, block) // shorthand
 
-	get_ds(tk, block)
+	await get_ds(tk, block)
 	// tk.mds is created for both official and custom track
 	// following procedures are only based on tk.mds
 
 	init_termdb(tk, block)
-
-	init_mclass(tk)
 
 	mayaddGetter_sampleSummaries2(tk, block)
 	mayaddGetter_variant2samples(tk, block)
@@ -52,10 +53,25 @@ export async function makeTk(tk, block) {
 
 	if (tk.mds.has_skewer) {
 		tk.skewer = {
-			g: tk.glider.append('g')
+			g: tk.glider.append('g'),
+			// skewer.mode defines how to show snv/indel; may also control fusion
+			// later may add new attributes e.g. "cnvMode" to control mode of other data types
+			mode: 'skewer' // default mode, can be overwritten later
 		}
 		// both skewer and numeric mode will render elements into tk.skewer.g
 		// will also attach skewer.discKickSelection
+
+		if (tk.skewerMode) {
+			// override
+			tk.skewer.mode = tk.skewerMode
+			delete tk.skewerMode
+		}
+		if (tk.skewer.mode == 'skewer') {
+		} else if (tk.skewer.mode == 'numeric') {
+			if (!tk.numericmode) throw '.numericmode{} missing when skewer.mode=numeric'
+		} else {
+			throw 'unknown skewerMode'
+		}
 	}
 
 	tk.leftLabelMaxwidth = tk.tklabel
@@ -77,7 +93,9 @@ export async function makeTk(tk, block) {
 		configPanel(tk, block)
 	})
 
-	init_legend(tk, block)
+	initLegend(tk, block)
+
+	init_mclass(tk)
 
 	if (tk.hlaachange) {
 		// comma-separated names
@@ -133,20 +151,20 @@ export async function makeTk(tk, block) {
 
 function init_mclass(tk) {
 	// hidden mclass is controled on the client side
-	tk.hiddenmclass = new Set()
 	if (tk.mds.hiddenmclass) {
 		// port over default hidden mclass
-		for (const c of tk.mds.hiddenmclass) tk.hiddenmclass.add(c)
+		for (const c of tk.mds.hiddenmclass) tk.legend.mclass.hiddenvalues.add(c)
 	}
-	// #variant for mclass returned by server
-	tk.mclass2variantcount = new Map()
 }
 
-function get_ds(tk, block) {
+async function get_ds(tk, block) {
 	if (tk.dslabel) {
 		// official dataset
-		tk.mds = block.genome.datasets[tk.dslabel]
-		if (!tk.mds) throw 'dataset not found for ' + tk.dslabel
+		const data = await dofetch3(`getDataset?genome=${block.genome.name}&dsname=${tk.dslabel}`)
+		if (data.error) throw 'Error: ' + data.error
+		if (!data.ds) throw 'data.ds{} missing'
+		tk.mds = data.ds
+		tk.name = data.ds.label
 		return
 	}
 	// custom

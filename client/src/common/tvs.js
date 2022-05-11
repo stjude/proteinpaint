@@ -270,7 +270,7 @@ function setRenderers(self) {
 				.append('span')
 				.style('padding', '2px 5px')
 				.style('font-size', '.8em')
-				.html(d.label + nlabel)
+				.html((d.label || d.key) + nlabel)
 
 			const maxBarWidth = 100
 			const barWidth = maxBarWidth * d.bar_width_frac

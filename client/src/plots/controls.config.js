@@ -435,6 +435,7 @@ function setTermInput(opts) {
 		callback: tw => {
 			// data is object with only one needed attribute: q, never is null
 			if (tw && !tw.q) throw 'data.q{} missing from pill callback'
+			if (opts.processInput) opts.processInput(tw)
 			pill.main(tw ? tw : { term: null, q: null })
 			opts.dispatch({
 				type: 'plot_edit',

@@ -1,6 +1,6 @@
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import * as client from './client'
-import { dofetch3 } from './common/dofetch'
+import { dofetch3, setAuth } from './common/dofetch'
 import { stratinput } from '../shared/tree'
 import { stratify } from 'd3-hierarchy'
 import { findgenemodel_bysymbol } from './gene'
@@ -153,6 +153,7 @@ export function runproteinpaint(arg) {
 			if (data.debugmode) {
 				app.debugmode = true
 			}
+			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
 			// genome data init
 			for (const genomename in app.genomes) {
@@ -162,7 +163,11 @@ export function runproteinpaint(arg) {
 				}
 			}
 
-			if (!arg.noheader && !window.location.search.includes('noheader')) {
+			if (
+				!arg.noheader &&
+				!window.location.search.includes('noheader') &&
+				!window.location.search.includes('mass-session-id')
+			) {
 				makeheader(app, data, arg.jwt)
 			}
 
@@ -1475,12 +1480,14 @@ function initgenome(g) {
 		*/
 		t.tkid = Math.random().toString()
 	}
+
 	// validate ds info
 	for (const dsname in g.datasets) {
 		const ds = g.datasets[dsname]
 
 		if (ds.isMds) {
-			// nothing to validate for the moment
+		} else if (ds.isMds3) {
+			if (!ds.label) return 'ds.label missing'
 		} else {
 			const e = validate_oldds(ds)
 			if (e) {

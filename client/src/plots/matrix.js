@@ -5,7 +5,7 @@ import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { fillTermWrapper } from '../common/termsetting'
 import { MatrixCluster } from './matrix.cluster'
 import { MatrixControls } from './matrix.controls'
-import htmlLegend from '../html.legend'
+import svgLegend from '../dom/svg.legend'
 import { mclass } from '../../shared/common'
 import { Menu } from '../dom/menu'
 import { setInteractivity } from './matrix.interactivity'
@@ -44,7 +44,10 @@ class Matrix {
 				.append('g')
 				.attr('class', 'sjpp-matrix-series-group-label-g')
 				.on('click', this.showSampleGroupMenu),
-			termGrpLabelG: mainG.append('g').attr('class', 'sjpp-matrix-term-group-label-g'),
+			termGrpLabelG: mainG
+				.append('g')
+				.attr('class', 'sjpp-matrix-term-group-label-g')
+				.on('click', this.showTermGroupMenu),
 			cluster: mainG.append('g').attr('class', 'sjpp-matrix-cluster-g'),
 			seriesesG: mainG.append('g').attr('class', 'sjpp-matrix-serieses-g'),
 			sampleLabelG: mainG.append('g').attr('class', 'sjpp-matrix-series-label-g'),
@@ -52,15 +55,16 @@ class Matrix {
 				.append('g')
 				.attr('class', 'sjpp-matrix-term-label-g')
 				.on('click', this.showTermMenu),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px'),
+			//legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px'),
+			legendG: mainG.append('g'),
 			tip,
 			menutop: tip.d.append('div'),
 			menubody: tip.d.append('div')
 		}
 
 		this.dom.tip.onHide = () => {
-			this.lastActiveTerm = this.activeTerm
-			delete this.activeTerm
+			this.lastActiveLabel = this.activeLabel
+			delete this.activeLabel
 		}
 
 		this.config = appState.plots.find(p => p.id === this.id)
@@ -69,11 +73,10 @@ class Matrix {
 
 		this.setControls(appState)
 		this.clusterRenderer = new MatrixCluster({ holder: this.dom.cluster, app: this.app, parent: this })
-		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
-			settings: {
-				legendOrientation: 'grid',
-				legendTextAlign: 'left'
-			},
+		this.legendRenderer = svgLegend({
+			holder: this.dom.legendG,
+			rectFillFxn: d => d.color,
+			iconStroke: '#aaa',
 			handlers: {
 				legend: {
 					click: this.legendClick
@@ -133,82 +136,133 @@ class Matrix {
 
 	async main() {
 		try {
-			this.config = this.state.config
+			this.config = JSON.parse(JSON.stringify(this.state.config))
 			const prevTranspose = this.settings.transpose
 			Object.assign(this.settings, this.config.settings)
 
 			// get the data
-			const reqOpts = this.getDataRequestOpts()
+			const reqOpts = await this.getDataRequestOpts()
 			// this will write annotation data to this.currData
 			await this.app.vocabApi.setAnnotatedSampleData(reqOpts, this.currData)
 
-			// process the data
-			this.setTermOrder(this.currData)
-			this.setSampleGroupsOrder(this.currData)
+			this.sampleFilter = new RegExp(this.settings.matrix.sampleNameFilter || '.*')
+			const data = {
+				lst: this.currData.lst.filter(
+					row => this.currData.samplesToShow.has(row.sample) && this.sampleFilter.test(row.sample)
+				),
+				refs: this.currData.refs
+			}
+			data.samples = data.lst.reduce((obj, row) => {
+				obj[row.sample] = row
+				return obj
+			}, {})
+			// process the sample-filtered data
+			this.setSampleGroups(data)
+			this.setTermOrder(data)
+			this.setSampleOrder(data)
 			this.setLayout()
-			this.serieses = this.getSerieses(this.currData)
+			this.serieses = this.getSerieses(data)
 			// render the data
 			this.render()
 
 			const [xGrps, yGrps] = !this.settings.matrix.transpose ? ['sampleGrps', 'termGrps'] : ['termGrps', 'sampleGrps']
+			const d = this.dimensions
 			this.clusterRenderer.main({
 				settings: this.settings.matrix,
 				xGrps: this[xGrps],
 				yGrps: this[yGrps],
-				dimensions: this.dimensions
+				dimensions: d
+			})
+
+			this.legendRenderer(this.legendData, {
+				settings: Object.assign(
+					{
+						svgw: Math.max(400, d.mainw),
+						svgh: d.mainh + d.yOffset,
+						dimensions: d
+					},
+					this.settings.legend
+				)
 			})
 
 			await this.adjustSvgDimensions(prevTranspose)
-			this.legendRenderer(this.legendData)
 		} catch (e) {
 			throw e
 		}
 	}
 
 	// creates an opts object for the vocabApi.getNestedChartsData()
-	getDataRequestOpts() {
+	async getDataRequestOpts() {
 		const terms = []
 		for (const grp of this.config.termgroups) {
 			terms.push(...grp.lst)
 		}
 		if (this.config.divideBy) terms.push(this.config.divideBy)
+		if (this.config.overrides) {
+			const overrideTerms = [],
+				sampleFilters = []
+			for (const key in this.config.overrides) {
+				const r = this.config.overrides[key]
+				if (r.sampleFilter?.type == 'tvs') {
+					overrideTerms.push(r.sampleFilter.tvs.term)
+					sampleFilters.push(r.sampleFilter)
+				}
+			}
+			// may need additional term data to fill-in a filter
+			const readyTerms = await Promise.all(overrideTerms.map(t => (t.type ? t : this.app.vocabApi.getterm(t.id))))
+			terms.push(
+				...readyTerms.map((term, i) => {
+					const tw = { term }
+					fillTermWrapper(tw)
+					// important to get a non-ambiguous tw.$id since the
+					// same term may be used as different rows in the matrix
+					sampleFilters[i].wrapper$id = tw.$id
+					return tw
+				})
+			)
+		}
 		return { terms, filter: this.state.filter, data: this.currData }
 	}
 
-	setSampleGroupsOrder(data) {
+	setSampleGroups(data) {
 		const s = this.settings.matrix
-		const defaultSampleGrp = { id: undefined, lst: [] }
-		this.sampleSorter = getSampleSorter(this, s, data.lst)
+		const defaultSampleGrp = {
+			id: this.config.divideBy?.$id,
+			name: this.config.divideBy ? 'Not annotated' : '',
+			lst: []
+		}
 
 		const sampleGroups = new Map()
-		if (!this.config.divideBy) {
-			defaultSampleGrp.lst = data.lst
-			defaultSampleGrp.name = ''
-		} else {
-			defaultSampleGrp.name = 'Not annotated'
-			const term = this.config.divideBy.term
-			const $id = this.config.divideBy.$id
-			const exclude = this.config.divideBy.exclude || []
-			const values = term.values || {}
-			const ref = data.refs.byTermId[$id] || {}
+		const term = this.config.divideBy?.term || {}
+		const $id = this.config.divideBy?.$id || '-'
+		const exclude = this.config.divideBy?.exclude || []
+		const values = term.values || {}
+		const ref = data.refs.byTermId[$id] || {}
 
-			for (const row of data.lst) {
-				if ($id in row) {
-					if (exclude.includes(row[$id].key)) continue
-					const key = row[$id].key
-					if (!sampleGroups.has(key)) {
-						sampleGroups.set(key, {
-							id: key,
-							name: key in values && values[key].label ? values[key].label : key,
-							lst: [],
-							order: ref.bins ? ref.bins.findIndex(bin => bin.name == key) : 0,
-							tw: this.config.divideBy
-						})
-					}
-					sampleGroups.get(key).lst.push(row)
-				} else {
-					defaultSampleGrp.lst.push(row)
+		for (const row of data.lst) {
+			// TODO: may move the override handling downstream,
+			// but before sample group.lst sorting, as needed
+			for (const grp of this.config.termgroups) {
+				for (const tw of grp.lst) {
+					mayApplyOverrides(row, tw, grp, this.config.overrides)
 				}
+			}
+
+			if ($id in row) {
+				if (exclude.includes(row[$id].key)) continue
+				const key = row[$id].key
+				if (!sampleGroups.has(key)) {
+					sampleGroups.set(key, {
+						id: key,
+						name: key in values && values[key].label ? values[key].label : key,
+						lst: [],
+						order: ref.bins ? ref.bins.findIndex(bin => bin.name == key) : 0,
+						tw: this.config.divideBy
+					})
+				}
+				sampleGroups.get(key).lst.push(row)
+			} else {
+				defaultSampleGrp.lst.push(row)
 			}
 		}
 
@@ -218,9 +272,12 @@ class Matrix {
 
 		// TODO: sort sample groups, maybe by sample count, value order, etc
 		this.sampleGroups = [...sampleGroups.values()].sort((a, b) => a.order - b.order)
-		//this.sampleGroupKeys = [...sampleGroups.keys()] -- not needed?
-		this.sampleOrder = []
+	}
 
+	setSampleOrder(data) {
+		const s = this.settings.matrix
+		this.sampleOrder = []
+		this.sampleSorter = getSampleSorter(this, s, data.lst)
 		let total = 0
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
 			grp.lst.sort(this.sampleSorter)
@@ -248,39 +305,59 @@ class Matrix {
 		this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
 		this.termOrder = []
 		let totalIndex = 0,
+			visibleGrpIndex = 0,
 			totalHtAdjustments = 0
 		for (const [grpIndex, grp] of this.termGroups.entries()) {
 			const lst = [] // will derive a mutable copy of grp.lst
 			let grpHtAdjustments = 0
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
-				for (const sn in data.samples) {
-					const row = data.samples[sn]
-					if (tw.$id in row) {
-						counts.samples += 1
-						counts.hits += Array.isArray(row[tw.$id].values) ? row[tw.$id].values.length : 1
-						if (tw.q?.mode == 'continuous') {
-							const v = row[tw.$id].value
-							if (!('minval' in counts) || counts.minval > v) counts.minval = v
-							if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
+				const countedSamples = new Set()
+				for (const sgrp of this.sampleGroups) {
+					for (const s of sgrp.lst) {
+						if (countedSamples.has(s.sample)) continue
+						countedSamples.add(s.sample)
+						const anno = data.samples[s.sample][tw.$id]
+						if (anno) {
+							anno.filteredValues = this.getFilteredValues(anno, tw, grp)
+							if (anno.filteredValues?.length) {
+								counts.samples += 1
+								counts.hits += anno.filteredValues.length
+								if (tw.q?.mode == 'continuous') {
+									const v = anno.value
+									if (!('minval' in counts) || counts.minval > v) counts.minval = v
+									if (!('maxval' in counts) || counts.maxval < v) counts.maxval = v
+								}
+							}
 						}
 					}
 				}
 				lst.push({ tw, counts, index })
-				grpHtAdjustments += (tw.settings ? tw.settings.barh + 2 * tw.settings.gap : ht) - ht
+				grpHtAdjustments += (tw.settings ? (tw.settings?.barh || 0) + 2 * (tw.settings.gap || 0) : ht) - ht
 			}
 
 			// may override the settings.sortTermsBy with a sorter that is specific to a term group
 			const termSorter = grp.sortTermsBy ? getTermSorter(this, grp) : this.termSorter
-			grp.lst = lst.sort(termSorter).map(t => t.tw)
-			for (const [index, t] of lst.entries()) {
+			const processedLst = lst
+				.filter(t => {
+					if ('minNumSamples' in t.tw) return t.tw.minNumSamples <= t.counts.samples
+					if (!grp.settings) return true
+					return !('minNumSamples' in grp.settings) || t.counts.samples >= grp.settings.minNumSamples
+				})
+				.sort(termSorter)
+
+			if (!processedLst.length) continue
+			for (const [index, t] of processedLst.entries()) {
 				const { tw, counts } = t
 				const ref = data.refs.byTermId[t.tw.$id] || {}
 				this.termOrder.push({
 					grp,
 					grpIndex,
+					visibleGrpIndex,
 					tw,
 					index, // rendered index
+					lstIndex: t.index, // as-listed index, before applying term filters
+					processedLst,
 					prevGrpTotalIndex: totalIndex,
 					totalIndex: totalIndex + index,
 					totalHtAdjustments,
@@ -297,12 +374,28 @@ class Matrix {
 									.range([1, tw.settings.barh])
 							: null
 				})
-
 				totalHtAdjustments += (t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht) - ht
 			}
 
-			totalIndex += grp.lst.length
+			totalIndex += processedLst.length
+			visibleGrpIndex += 1
 		}
+	}
+
+	getFilteredValues(anno, tw, grp) {
+		const values = 'value' in anno ? [anno.value] : anno.values
+		const valueFilter = tw.valueFilter || grp.valueFilter
+		if (!valueFilter || !values) return values
+		return values.filter(v => {
+			// TODO: handle non-tvs type value filter
+			if (valueFilter.type == 'tvs') {
+				const matched = true
+				for (const vf of valueFilter.tvs.values) {
+					if (v[vf.key] == vf.value) return !valueFilter.isnot
+				}
+				return matched
+			}
+		})
 	}
 
 	setLayout() {
@@ -347,7 +440,8 @@ class Matrix {
 		const mainh =
 			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + this[`${row}s`].slice(-1)[0].totalHtAdjustments
 
-		const topFontSize = _t_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 4, s.minLabelFontSize)
+		const topFontSize =
+			_t_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 2 * s.collabelpad, s.minLabelFontSize)
 		layout.top.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset - s.collabelgap})`,
 			labelTransform: 'rotate(-90)',
@@ -359,7 +453,8 @@ class Matrix {
 			axisFxn: axisTop
 		}
 
-		const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 4, s.minLabelFontSize)
+		const btmFontSize =
+			_b_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 2 * s.collabelpad, s.minLabelFontSize)
 		layout.btm.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset + mainh + s.collabelgap})`,
 			labelTransform: 'rotate(-90)',
@@ -371,7 +466,8 @@ class Matrix {
 			axisFxn: axisBottom
 		}
 
-		const leftFontSize = _l_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 4, s.minLabelFontSize)
+		const leftFontSize =
+			_l_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad, s.minLabelFontSize)
 		layout.left.attr = {
 			boxTransform: `translate(${xOffset - s.rowlabelgap}, ${yOffset})`,
 			labelTransform: '',
@@ -383,7 +479,8 @@ class Matrix {
 			axisFxn: axisLeft
 		}
 
-		const rtFontSize = _r_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 4, s.minLabelFontSize)
+		const rtFontSize =
+			_r_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad, s.minLabelFontSize)
 		layout.right.attr = {
 			boxTransform: `translate(${xOffset + mainw + s.rowlabelgap}, ${yOffset})`,
 			labelTransform: '',
@@ -422,16 +519,16 @@ class Matrix {
 			}
 
 			for (const t of this.termOrder) {
-				mayApplyOverrides(row, t.tw, this.config.overrides)
 				const $id = t.tw.$id
-				const anno = row[$id]
+				if (row[$id]?.filteredValues && !row[$id]?.filteredValues.length && !row[$id].override) continue
+				const anno = row[$id]?.override || row[$id]
 				if (!anno) continue
 				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
 				const key = anno.key
 				const values = t.tw.term.values || {}
 				const label = 'label' in anno ? anno.label : key in values && values[key].label ? values[key].label : key
 
-				if (!anno.values) {
+				if ('value' in anno) {
 					const fill = values[key]?.color
 					// only one rect for this sample annotation
 					const cell = {
@@ -443,8 +540,8 @@ class Matrix {
 						key,
 						label,
 						fill: anno.color || values[key]?.color,
-						x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + t.totalHtAdjustments,
-						y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + t.totalHtAdjustments : 0,
+						x: !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + t.totalHtAdjustments,
+						y: !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0,
 						order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0,
 						fill
 					}
@@ -473,9 +570,10 @@ class Matrix {
 				} else {
 					// some term types like geneVariant can have multiple values for the same term,
 					// which will be renderd as multiple smaller, non-overlapping rects within the same cell
-					const height = !s.transpose ? s.rowh / anno.values.length : s.colw
-					const width = !s.transpose ? s.colw : s.colw / anno.values.length
-					for (const [i, value] of anno.values.entries()) {
+					const values = anno.filteredValues || anno.values || [anno.value]
+					const height = !s.transpose ? s.rowh / values.length : s.colw
+					const width = !s.transpose ? s.colw : s.colw / values.length
+					for (const [i, value] of values.entries()) {
 						const label = value.label || (value.class ? mclass[value.class].label : '')
 						const fill = value.color || mclass[value.class].color
 
@@ -488,8 +586,12 @@ class Matrix {
 							key,
 							label,
 							value,
-							x: !s.transpose ? 0 : t.totalIndex * dx + t.grpIndex * s.colgspace + width * i + t.totalHtAdjustments,
-							y: !s.transpose ? t.totalIndex * dy + t.grpIndex * s.rowgspace + height * i + t.totalHtAdjustments : 0,
+							x: !s.transpose
+								? 0
+								: t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments,
+							y: !s.transpose
+								? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments
+								: 0,
 							height,
 							width,
 							fill,
@@ -587,7 +689,7 @@ class Matrix {
 					keys.length < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 
 			legendData.push({
-				name: t.tw.legend?.group || term.name,
+				name: t.tw.legend?.group || t.tw.label || term.name,
 				items: keys.map((key, i) => {
 					const item = legend.values[key]
 					return {
@@ -628,6 +730,7 @@ export async function getPlotConfig(opts, app) {
 					bottom: 20,
 					left: 50
 				},
+				sampleNameFilter: '',
 				sortSamplesBy: 'selectedTerms',
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				sortTermsBy: 'asListed', // or sampleCount
@@ -640,6 +743,7 @@ export async function getPlotConfig(opts, app) {
 				collabelvisible: true,
 				colglabelpos: true,
 				collabelgap: 5,
+				collabelpad: 1,
 				rowh: 18,
 				rowspace: 1,
 				rowgspace: 8,
@@ -648,6 +752,7 @@ export async function getPlotConfig(opts, app) {
 				rowlabelvisible: true,
 				rowglabelpos: true,
 				rowlabelgap: 5,
+				rowlabelpad: 1,
 				grpLabelFontSize: 12,
 				minLabelFontSize: 6,
 				transpose: false,
@@ -656,6 +761,19 @@ export async function getPlotConfig(opts, app) {
 				termLabelOffset: 80,
 				termGrpLabelOffset: 80,
 				duration: 250
+			},
+			legend: {
+				ontop: false,
+				lineh: 25,
+				padx: 5,
+				padleft: 0, //150,
+				padright: 20,
+				padbtm: 30,
+				fontsize: 12,
+				iconh: 10,
+				iconw: 10,
+				hangleft: 1,
+				linesep: false
 			}
 		}
 	}
@@ -671,16 +789,24 @@ export async function getPlotConfig(opts, app) {
 	return config
 }
 
-function mayApplyOverrides(row, tw, overrides) {
-	if (!tw.overrides) return {}
-	for (const key in overrides) {
-		if (!tw.overrides.includes(key)) continue
-		const sf = overrides[key].sampleFilter || {}
+function mayApplyOverrides(row, tw, grp, configOverrides) {
+	const overrides = tw.overrides || grp.overrides
+	if (!grp.overrides) return {}
+	for (const key in configOverrides) {
+		if (!overrides.includes(key)) continue
+		const sf = configOverrides[key].sampleFilter || {}
 		if (sf.type == 'wvs') {
 			for (const v of sf.values) {
 				if (row[sf.wrapper$id]?.key === v.key) {
-					row[tw.$id] = JSON.parse(JSON.stringify(overrides[key].value))
-					row[tw.$id].overriden = true
+					if (!row[tw.$id]) row[tw.$id] = {}
+					row[tw.$id].override = JSON.parse(JSON.stringify(configOverrides[key].value))
+				}
+			}
+		} else if (sf.type == 'tvs') {
+			for (const v of sf.tvs.values) {
+				if (row[sf.wrapper$id]?.key === v.key) {
+					if (!row[tw.$id]) row[tw.$id] = {}
+					row[tw.$id].override = JSON.parse(JSON.stringify(configOverrides[key].value))
 				}
 			}
 		}

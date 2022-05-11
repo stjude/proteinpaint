@@ -18,7 +18,7 @@ hlaachange_addnewtrack
 
 ********************** EXPORTED
 may_render_skewer
-********************** INTERNAL
+
 *********** function cascade
 may_render_skewer
 	make_skewer_data
@@ -63,9 +63,11 @@ export function may_render_skewer(data, tk, block) {
 		return 0
 	}
 
-	if (tk.numericmode && tk.numericmode.inuse) {
+	if (tk.skewer.mode == 'numeric') {
 		return nm_render(data, tk, block)
 	}
+
+	if (tk.skewer.mode != 'skewer') throw 'skewer.mode is not "skewer"'
 
 	tk.aboveprotein = true
 

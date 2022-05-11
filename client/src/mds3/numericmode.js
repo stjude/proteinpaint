@@ -57,6 +57,10 @@ value may be singular number, or boxplot
 
 	// TODO when switching to nm from skewer, allow to dynamically create nm
 	const nm = tk.numericmode
+
+	// for variant leftlabel to access later
+	nm.data = datagroup
+
 	// initialize numeric mode
 	if (!nm.axisg) nm.axisg = tk.gleft.append('g')
 	if (!nm.axisheight) nm.axisheight = 150
@@ -66,7 +70,7 @@ value may be singular number, or boxplot
 	tk.skewer.g.selectAll('*').remove()
 	if (tk.skewer.nmg) tk.skewer.nmg.selectAll('*').remove()
 
-	numeric_make(nm, tk.skewer.g, datagroup, tk, block)
+	numeric_make(nm, tk.skewer.g, tk, block)
 
 	return (
 		nm.toplabelheight +
@@ -80,9 +84,11 @@ value may be singular number, or boxplot
 	)
 }
 
-function numeric_make(nm, _g, data, tk, block) {
+function numeric_make(nm, _g, tk, block) {
 	/*
 	 */
+
+	const data = nm.data
 
 	for (const d of data) {
 		d.x0 = d.x
@@ -292,9 +298,26 @@ function numeric_make(nm, _g, data, tk, block) {
 	})
 
 	// actual disc
-	const discdot = discg.append('circle')
-	// full filled
-	discdot
+	// triangle
+	discg
+		.filter(m => m.shapeTriangle)
+		.append('path')
+		.attr('d', m => trianglePath(m.radius))
+		.attr('fill', m => tk.color4disc(m))
+		.attr('stroke', 'white')
+		.attr('class', 'sja_aa_disk_fill')
+	// hollow circle
+	discg
+		.filter(m => m.shapeCircle)
+		.append('circle')
+		.attr('stroke', m => tk.color4disc(m))
+		.attr('fill', 'none')
+		.attr('r', m => m.radius - 0.5)
+		.attr('class', 'sja_aa_disk_fill')
+	// dots, or filled circles
+	discg
+		.filter(m => !m.shapeTriangle && !m.shapeCircle)
+		.append('circle')
 		.attr('fill', m => tk.color4disc(m))
 		.attr('stroke', 'white')
 		.attr('r', m => m.radius - 0.5)
@@ -303,9 +326,32 @@ function numeric_make(nm, _g, data, tk, block) {
 	// no text in disc
 
 	// disc kick
+	tk.skewer.discKickSelection_triangle = discg
+		.filter(m => m.shapeTriangle)
+		.append('path')
+		.attr('d', m => trianglePath(m.radius))
+		.attr('stroke', m => tk.color4disc(m))
+		.attr('fill', 'white')
+		.attr('class', 'sja_aa_disckick')
+		.attr('fill-opacity', 0)
+		.attr('stroke-opacity', 0)
+		.on('mousedown', () => {
+			d3event.preventDefault()
+		})
+		.on('mouseover', m => {
+			m_mouseover(m, nm, tk)
+		})
+		.on('mouseout', m => {
+			m_mouseout(m, tk)
+		})
+		.on('click', m => {
+			click_variant({ mlst: [m] }, tk, block, d3event.target.getBoundingClientRect(), d3event.target)
+		})
+
 	tk.skewer.discKickSelection = discg
+		.filter(m => !m.shapeTriangle)
 		.append('circle')
-		.attr('r', m => m.radius - 0.5)
+		.attr('r', m => m.radius - 0.5) // must set radius for the circle to be visible
 		.attr('stroke', m => tk.color4disc(m))
 		.attr('class', 'sja_aa_disckick')
 		.attr('fill', 'white')
@@ -595,13 +641,11 @@ function m_mouseover(m, nm, tk) {
 
 	const words = []
 
-	words.push(
-		nm.tooltipPrintValue
-			? nm.tooltipPrintValue(m).join('=')
-			: nm.valueName
-			? nm.valueName + '=' + m.__value_use
-			: 'value=' + m.__value_use
-	)
+	if (nm.tooltipPrintValue) {
+		for (const line of nm.tooltipPrintValue(m)) words.push(line)
+	} else {
+		words.push(nm.valueName ? nm.valueName + '=' + m.__value_use : 'value=' + m.__value_use)
+	}
 
 	if (!m.labattop && !m.labatbottom) {
 		words.push(m.mname)
@@ -801,4 +845,8 @@ render axis
 		})
 		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
 	}
+}
+
+export function trianglePath(p) {
+	return `M 0 -${p} L ${p} ${p * 0.7} h -${p * 2} Z`
 }

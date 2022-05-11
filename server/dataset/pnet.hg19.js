@@ -11,6 +11,7 @@ module.exports = function() {
 		isMds: true,
 
 		cohort: {
+			allowedChartTypes: ['barchart', 'survival', 'matrix'],
 			db: {
 				file: 'files/hg19/pnet/clinical/db'
 			},

@@ -1044,7 +1044,7 @@ thus less things to worry about...
 			if (!r.type) continue
 			// !!! r.cohort is undefined for dataset without subcohort
 			if (!(r.cohort in supportedChartTypes)) {
-				supportedChartTypes[r.cohort] = ['barchart', 'table', 'regression']
+				supportedChartTypes[r.cohort] = ['barchart', 'regression']
 				numericTypeCount[r.cohort] = 0
 				// why is app.features missing?
 				if (app.features && app.features.draftChartTypes) {
@@ -1063,6 +1063,12 @@ thus less things to worry about...
 			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].push('scatterplot')
 		}
 
+		// may restrict the visible chart options
+		if (ds.cohort.allowedChartTypes) {
+			for (const cohort in supportedChartTypes) {
+				supportedChartTypes[cohort] = supportedChartTypes[cohort].filter(c => ds.cohort.allowedChartTypes.includes(c))
+			}
+		}
 		return supportedChartTypes
 	}
 }
@@ -1085,7 +1091,7 @@ function test_tables(cn) {
 
 // helper function to display or log the filled-in, constructed sql statement
 // use for debugging only, do not feed directly into better-sqlite3
-function interpolateSqlValues(sql, values) {
+export function interpolateSqlValues(sql, values) {
 	const vals = values.slice() // use a copy
 	let prevChar
 	return sql

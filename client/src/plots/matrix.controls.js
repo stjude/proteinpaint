@@ -1,6 +1,7 @@
 import { select, event } from 'd3-selection'
 import { initByInput } from './controls.config'
 import { to_svg } from '../client'
+import { fillTermWrapper } from '../common/termsetting'
 
 export class MatrixControls {
 	constructor(opts, appState) {
@@ -24,6 +25,7 @@ export class MatrixControls {
 				{ value: 'anno', label: 'Terms' },
 				{ value: 'cols', label: 'Column layout' },
 				{ value: 'rows', label: 'Row layout' },
+				{ value: 'legend', label: 'Legend layout' },
 				//{ label: 'Undo', callback: ()=>this.recover.goto(-1) },
 				//{ label: 'Redo', callback: ()=>this.recover.goto(1) },
 				{ label: 'Download SVG', callback: () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }) }
@@ -61,7 +63,16 @@ export class MatrixControls {
 					state: {
 						vocab: this.opts.vocab
 						//activeCohort: appState.activeCohort
+					},
+					processInput: tw => {
+						if (tw) fillTermWrapper(tw)
 					}
+				},
+				{
+					label: 'Sample name regex filter',
+					type: 'text',
+					chartType: 'matrix',
+					settingsKey: 'sampleNameFilter'
 				}
 			],
 
@@ -80,6 +91,14 @@ export class MatrixControls {
 					chartType: 'matrix',
 					settingsKey: 'samplecount4gene'
 				},
+				/*{
+					NOTE: this is only by term group, not global to all rows
+					label: 'Minimum #samples',
+					type: 'number',
+					chartType: 'matrix',
+					settingsKey: 'minNumSamples',
+					title: 'Minimum number of hits for a row to be visible'
+				},*/
 				{
 					label: 'Sort terms',
 					type: 'radio',
@@ -107,6 +126,12 @@ export class MatrixControls {
 					type: 'number',
 					chartType: 'matrix',
 					settingsKey: 'colgspace'
+				},
+				{
+					label: 'Column label pad',
+					type: 'number',
+					chartType: 'matrix',
+					settingsKey: 'collabelpad'
 				},
 				{
 					label: 'Column label offset',
@@ -137,6 +162,12 @@ export class MatrixControls {
 					settingsKey: 'rowspace'
 				},
 				{
+					label: 'Row label pad',
+					type: 'number',
+					chartType: 'matrix',
+					settingsKey: 'rowlabelpad'
+				},
+				{
 					label: 'Row label offset',
 					type: 'number',
 					chartType: 'matrix',
@@ -154,6 +185,65 @@ export class MatrixControls {
 					chartType: 'matrix',
 					settingsKey: 'rowlabelpos',
 					options: [{ label: 'Rows', value: 'left' }, { label: 'Groups', value: 'right' }]
+				}
+			],
+
+			legend: [
+				//ontop: false,
+				{
+					label: 'Font size',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'fontsize'
+				},
+				{
+					label: 'Line height',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'lineh'
+				},
+				{
+					label: 'Icon height',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'iconh'
+				},
+				{
+					label: 'Icon width',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'iconw'
+				},
+				{
+					label: 'Left margin',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'padleft'
+				},
+				/*{
+					label: 'Bottom margin',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'padbtm'
+				},*/
+				{
+					label: 'Item left pad',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'padx'
+				},
+				{
+					label: 'Item layout',
+					type: 'checkbox',
+					chartType: 'legend',
+					settingsKey: 'linesep',
+					boxLabel: 'Line separated'
+				},
+				{
+					label: 'Left indent',
+					type: 'number',
+					chartType: 'legend',
+					settingsKey: 'hangleft'
 				}
 			]
 		}

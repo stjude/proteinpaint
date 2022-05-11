@@ -1,7 +1,7 @@
 import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from './client'
 import { newSandboxDiv } from './dom/sandbox'
 import { debounce } from 'debounce'
-import { event, select } from 'd3-selection'
+import { event, select, selectAll } from 'd3-selection'
 // js-only syntax highlighting for smallest bundle, see https://highlightjs.org/usage/
 // also works in rollup and not just webpack, without having to use named imports
 import hljs from 'highlight.js/lib/core'
@@ -10,12 +10,16 @@ hljs.registerLanguage('javascript', javascript)
 import json from 'highlight.js/lib/languages/json'
 hljs.registerLanguage('json', json)
 import copyButton from './dom/copyButton'
+import { addGeneSearchbox } from './dom/genesearch'
+import { Menu } from './dom/menu'
 
 /*
 
 -------EXPORTED-------
 init_appDrawer
 	- creates the app drawer
+openSandbox
+	- opens track or app card sandboxes
 
 -------Internal-------
 *** App Drawer ***
@@ -57,11 +61,16 @@ make_useCasesCard
 makeDNAnexusFileViewerCard
 	- openDNAnexusSandbox
 
+*** Featured Datasets ***
+makeDatasetButtons
+	- openDatasetSandbox
+		- makeURLbutton
+
 Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl0xIJqDRbyhahA4/edit#heading=h.jwyqi1mhacps
 */
 
 export async function init_appDrawer(par) {
-	const { holder, apps_sandbox_div, apps_off } = par
+	const { holder, apps_sandbox_div, apps_off, genomes } = par
 	const re = await dofetch2('/cardsjson')
 	if (re.error) {
 		sayerror(holder.append('div'), re.error)
@@ -82,6 +91,8 @@ export async function init_appDrawer(par) {
 		.style('display', 'grid')
 		.style('grid-template-columns', '1fr 1fr')
 		.style('gap', '5px')
+
+	const datasetBtns_div = app_col.append('div')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const track_args = {
@@ -93,11 +104,13 @@ export async function init_appDrawer(par) {
 	const page_args = {
 		apps_sandbox_div,
 		apps_off,
-		allow_mdsform: re.allow_mdsform
+		allow_mdsform: re.allow_mdsform,
+		genomes
 	}
 	// make_searchbar(track_args, page_args, searchbar_div)
 	make_useCasesCard(topCards_div, track_args, page_args)
 	makeDNAnexusFileViewerCard(topCards_div, page_args)
+	makeDatasetButtons(datasetBtns_div, page_args)
 	await loadTracks(track_args, page_args)
 }
 
@@ -282,7 +295,7 @@ function makeRibbon(e, text, color) {
  	Opens a sandbox with track example(s) or app ui with links and other information
 */
 
-async function openSandbox(track, holder) {
+export async function openSandbox(track, holder) {
 	//queries relevant json file with sandbox args
 	const res = await dofetch3(`/cardsjson?jsonfile=${track.sandboxjson}`) //Fix for loading the sandbox json only once
 	if (res.error) {
@@ -1017,4 +1030,189 @@ async function openDNAnexusSandbox(holder) {
 		.style('margin', '0vw 10vw')
 		.style('padding', '10px')
 		.html(res.file)
+}
+
+/********** Dataset Functions  **********/
+async function makeDatasetButtons(div, page_args) {
+	const dataset_div = div
+		.append('div')
+		.append('div')
+		.append('h5')
+		.attr('class', 'sjpp-track-cols')
+		.style('color', 'rgb(100, 122, 152)')
+		.html('Featured Datasets')
+
+	const datasetBtns_div = dataset_div.append('div').style('padding', '10px')
+
+	const res = await dofetch3(`/cardsjson?jsonfile=featuredDatasets`)
+	if (res.error) {
+		sayerror(div.append('div'), res.error)
+		return
+	}
+
+	const datasets = res.jsonfile.datasets
+
+	for (const ds of datasets) {
+		const btn = makeButton(datasetBtns_div, ds.name)
+		btn.on('click', () => {
+			page_args.apps_off()
+			if (ds.link) {
+				event.stopPropagation()
+				window.open(`${ds.link}`, '_blank')
+			} else {
+				openDatasetSandbox(page_args, ds)
+			}
+		})
+	}
+
+	return datasetBtns_div
+}
+
+async function openDatasetSandbox(page_args, ds) {
+	const sandbox_div = newSandboxDiv(page_args.apps_sandbox_div)
+	sandbox_div.header_row
+	sandbox_div.header.text(ds.name)
+	sandbox_div.body
+
+	// First genome ds.availableGenomes is the default
+	const par = {
+		genome: page_args.genomes[ds.availableGenomes[0]]
+	}
+
+	const main_div = sandbox_div.body
+		.append('div')
+		// Intro, gene toggle, and gene search box
+		.style('padding', '1em')
+		.style('border-bottom', '1px solid #d0e3ff')
+
+	main_div
+		.append('div')
+		.style('line-height', '1.5em')
+		.style('padding', '0.5em 0.5em 1em 0.5em')
+		.html(ds.intro)
+
+	addDatasetGenomeBtns(main_div, par, ds, page_args.genomes)
+	// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
+	const searchbar_div = main_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding', '0.5em')
+
+	const allResults_div = sandbox_div.body.append('div').style('max-width', '90vw')
+
+	const coords = addGeneSearchbox({
+		genome: par.genome,
+		tip: new Menu({ padding: '' }),
+		row: searchbar_div.append('div'),
+		geneOnly: ds.searchbar == 'gene' ? true : false,
+		callback: async () => {
+			// Creates search results as tracks, last to first
+			const result_div = allResults_div
+				.insert('div', ':first-child')
+				.style('max-width', '90vw')
+				.style('margin', '1vw')
+			result_div
+				// Destroy track on click button
+				.append('div')
+				.style('display', 'inline-block')
+				.style('cursor', 'default')
+				.style('margin', '0px')
+				.style('font-size', '1.5em')
+				.html('&times;')
+				.on('click', () => {
+					// clear event handlers
+					result_div.selectAll('*').remove()
+					if (typeof close === 'function') close()
+				})
+			// Create 'Run Dataset from URL' btn specific to each applied search
+			makeURLbutton(result_div, coords, par, ds)
+			// Render the search parameters as a track
+			const runpp_arg = {
+				holder: result_div
+					.append('div')
+					.style('margin', '20px')
+					.node(),
+				host: window.location.origin,
+				genome: par.genome.name
+			}
+			// Return only position or gene; avoid returning undefined values to runpp()
+			ds.runargs.block == true
+				? (runpp_arg.position = `${coords.chr}:${coords.start}-${coords.stop}`) && (runpp_arg.nativetracks = 'Refgene')
+				: (runpp_arg.gene = coords.geneSymbol)
+
+			const callpp = JSON.parse(JSON.stringify(ds.runargs))
+
+			runproteinpaint(Object.assign(runpp_arg, callpp))
+		}
+	})
+}
+
+function addDatasetGenomeBtns(div, par, ds, genomes) {
+	// Dynamically creates genome marker or buttons
+	const toggleBtn_div = div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding', '10px 0px 10px 10px')
+	const btns = []
+	if (ds.availableGenomes.length == 1) {
+		// Show default genome as a non-functional button left of the search button
+		div
+			.append('div')
+			.style('padding', '8px')
+			.style('color', 'white')
+			.style('background-color', '#5f86b5')
+			.style('display', 'inline-block')
+			.style('width', 'auto')
+			.style('height', 'auto')
+			.text(ds.availableGenomes[0])
+	} else {
+		const btns = []
+
+		ds.availableGenomes.forEach(genome => {
+			btns.push({
+				name: genome,
+				active: false,
+				btn: makeButton(div, genome),
+				callback: par => {
+					par.genome = genomes[genome]
+				}
+			})
+		})
+
+		for (const btn of btns) {
+			btns[0].active = true
+
+			btn.btn
+				.style('margin', '0px')
+				.style('color', btn.active ? 'white' : 'black')
+				.style('background-color', btn.active ? '#0b5394ff' : '#bfbfbf')
+				.style('border-radius', '0px')
+
+			if (btn.active) {
+				btn.callback(par)
+			}
+
+			btn.btn.on('click', () => {
+				for (const b of btns) {
+					b.active = b === btn
+					b.btn.style('color', b.active ? 'white' : 'black')
+					b.btn.style('background-color', b.active ? '#0b5394ff' : '#bfbfbf')
+				}
+				if (btn.active) {
+					btn.callback(par)
+				}
+			})
+		}
+	}
+}
+
+function makeURLbutton(div, coords, par, ds) {
+	const URLbtn = makeButton(div, 'Run Result from URL')
+	// Use position for genome browser and gene for protein view
+	const blockOn =
+		ds.runargs.block == true ? `position=${coords.chr}:${coords.start}-${coords.stop}` : `gene=${coords.geneSymbol}`
+	URLbtn.on('click', () => {
+		event.stopPropagation()
+		window.open(`?genome=${par.genome.name}&${blockOn}&${ds.dsURLparam}`, '_blank')
+	})
 }

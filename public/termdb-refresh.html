@@ -196,7 +196,7 @@ async function hmjsonETL(study) {
 	return { terms, annotations: heatmapJSON.sampleannotation}
 }
 
-function getTerms(metadata) { console.log(193)
+function getTerms(metadata) {
 	const terms = []
 	for (const t of metadata) {
 		const term = {
@@ -211,7 +211,10 @@ function getTerms(metadata) { console.log(193)
 		if (t.type) {
 			term.type = t.type
 		} else if (t.hasOnlyNumericVals) {
-			t.values = Object.values(t.values).filter(v=>v.uncomputable)
+			// even though there may be a lot of numeric values here,
+			// do not delete, to be used as an argument to initBinConfig()
+			// will be deleted later
+			t.values = Object.values(t.values) //.filter(v=>v.uncomputable)
 			if (!t.values) delete t.values
 			term.type = 'float'
 		} else { if (t.label=='Age') console.log(t)
@@ -221,7 +224,7 @@ function getTerms(metadata) { console.log(193)
 		if (t.values && ((t.type != 'float' && t.type != 'integer' ) || t.values.length)) {
 			term.values = {}
 			for (const key in t.values) {
-				term.values[key] = { key }
+				term.values[key] = { key, label: key }
 				if (t.values[key]) term.values[key].color = t.values[key]
 			}
 		}

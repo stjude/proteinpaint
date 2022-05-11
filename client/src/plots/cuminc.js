@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge } from '../common/rx.core'
+import { getCompInit, copyMerge } from '../../rx'
 import { controlsInit } from './controls'
 import { fillTermWrapper } from '../common/termsetting'
 import { select, event } from 'd3-selection'
@@ -7,12 +7,126 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter } from 'd3-shape'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
-import htmlLegend from '../html.legend'
+import htmlLegend from '../dom/html.legend'
 import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
 import { sayerror } from '../dom/error'
 
-class TdbCumInc {
+export class Cuminc {
+	constructor(opts) {
+		this.pj = getPj(this)
+		this.state = {
+			config: copyMerge(
+				{
+					settings: JSON.parse(defaultSettings)
+				},
+				opts.config
+			)
+		}
+
+		const holder = opts.holder
+		this.dom = {
+			holder,
+			chartsDiv: holder.append('div').style('margin', '10px'),
+			legendDiv: holder.append('div').style('margin', '5px'),
+			skippedChartsDiv: holder.append('div').style('margin', '25px 5px 15px 5px')
+		}
+
+		this.lineFxn = line()
+			.curve(curveStepAfter)
+			.x(c => c.scaledX)
+			.y(c => c.scaledY)
+
+		setRenderers(this)
+
+		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+			settings: {
+				legendOrientation: 'vertical'
+			},
+			handlers: {
+				legend: {
+					click: this.legendClick
+				}
+			}
+		})
+	}
+
+	main(data) {
+		this.settings = this.state.config.settings.cuminc
+		this.hiddenOverlays = []
+		this.processData(data)
+		this.pj.refresh({ data: this.currData })
+		this.setTerm2Color(this.pj.tree.charts)
+		this.render()
+		this.legendRenderer(this.legendData)
+		this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
+	}
+
+	processData(data) {
+		data.keys = ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high']
+		this.uniqueSeriesIds = new Set()
+		this.currData = []
+		const estKeys = ['cuminc', 'low', 'high']
+		for (const d of data.case) {
+			const obj = {}
+			data.keys.forEach((k, i) => {
+				obj[k] = estKeys.includes(k) ? 100 * d[i] : d[i]
+			})
+			this.currData.push(obj)
+			this.uniqueSeriesIds.add(obj.seriesId)
+		}
+
+		this.refs = {} //data.refs
+		this.skippedCharts = data.skippedCharts
+
+		// assume only one chart for now
+		this.tests = {
+			[this.currData[0].chartId]: data.tests //[0]
+		}
+
+		// hide skipped series of hidden series
+		this.skippedSeries = data.skippedSeries
+		if (this.skippedSeries) {
+			for (const chart in this.skippedSeries) {
+				// remove hidden series from this.skippedTests
+				this.skippedSeries[chart] = this.skippedSeries[chart].filter(series => !this.hiddenOverlays.includes(series))
+				if (this.skippedSeries[chart].length == 0) delete this.skippedSeries[chart]
+			}
+		}
+	}
+
+	setTerm2Color(charts) {
+		if (!charts) return
+		this.term2toColor = {}
+		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
+		const legendItems = []
+		for (const chart of charts) {
+			for (const series of chart.serieses) {
+				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
+				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
+					legendItems.push({
+						seriesId: series.seriesId,
+						text: series.seriesLabel,
+						color: this.term2toColor[series.seriesId],
+						isHidden: false // this.hiddenOverlays.includes(series.seriesId)
+					})
+				}
+			}
+		}
+		if (this.state.config.term2 && legendItems.length) {
+			this.legendData = [
+				{
+					name: this.state.config.term2.term.name,
+					items: legendItems
+				}
+			]
+		} else {
+			this.legendData = []
+		}
+	}
+}
+
+class MassCumInc {
 	constructor(opts) {
 		this.type = 'cuminc'
 	}
@@ -188,6 +302,7 @@ class TdbCumInc {
 	}
 
 	processData(data) {
+		// process case data
 		this.uniqueSeriesIds = new Set()
 		this.currData = []
 		const estKeys = ['cuminc', 'low', 'high']
@@ -201,29 +316,54 @@ class TdbCumInc {
 		}
 
 		this.refs = data.refs
-		this.skippedCharts = data.skippedCharts
+		const labelOrder = this.refs.bins && this.refs.bins.length > 0 ? this.refs.bins.map(b => b.label) : null
 
-		// hide tests of hidden series
-		this.tests = data.tests
-		if (this.tests) {
-			for (const chart in this.tests) {
-				// remove hidden series from this.tests
-				this.tests[chart] = this.tests[chart].filter(
+		// process statistical tests
+		if (data.tests) {
+			this.tests = {}
+			for (const chart in data.tests) {
+				// hide tests of hidden series
+				this.tests[chart] = data.tests[chart].filter(
 					test => !this.hiddenOverlays.includes(test.series1) && !this.hiddenOverlays.includes(test.series2)
 				)
-				if (this.tests[chart].length == 0) delete this.tests[chart]
+				if (this.tests[chart].length == 0) {
+					delete this.tests[chart]
+					continue
+				}
+
+				// sort tests
+				if (labelOrder) {
+					// series 1 should have smaller bin value
+					for (const test of this.tests[chart]) {
+						const orderedSeries = [test.series1, test.series2].sort(
+							(a, b) => labelOrder.indexOf(a) - labelOrder.indexOf(b)
+						)
+						test.series1 = orderedSeries[0]
+						test.series2 = orderedSeries[1]
+					}
+					// sort first by series1 then by series2
+					this.tests[chart].sort(
+						(a, b) =>
+							labelOrder.indexOf(a.series1) - labelOrder.indexOf(b.series1) ||
+							labelOrder.indexOf(a.series2) - labelOrder.indexOf(b.series2)
+					)
+				}
 			}
 		}
 
-		// hide skipped series of hidden series
+		// process skipped series
 		this.skippedSeries = data.skippedSeries
 		if (this.skippedSeries) {
+			// hide skipped series of hidden series
 			for (const chart in this.skippedSeries) {
 				// remove hidden series from this.skippedTests
 				this.skippedSeries[chart] = this.skippedSeries[chart].filter(series => !this.hiddenOverlays.includes(series))
 				if (this.skippedSeries[chart].length == 0) delete this.skippedSeries[chart]
 			}
 		}
+
+		// process skipped charts
+		this.skippedCharts = data.skippedCharts
 	}
 
 	setTerm2Color(charts) {
@@ -257,7 +397,7 @@ class TdbCumInc {
 	}
 }
 
-export const cumincInit = getCompInit(TdbCumInc)
+export const cumincInit = getCompInit(MassCumInc)
 // this alias will allow abstracted dynamic imports
 export const componentInit = cumincInit
 
@@ -316,7 +456,7 @@ function setRenderers(self) {
 				.append('div')
 				.attr('class', 'pp-cuminc-chartLegends')
 				.style('vertical-align', 'top')
-				.style('margin', '10px')
+				.style('margin', '10px 10px 10px 30px')
 				.style('display', 'none')
 
 			// p-values legend
@@ -325,7 +465,6 @@ function setRenderers(self) {
 					.select('.pp-cuminc-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
-					.style('margin', '10px')
 				renderPvalues(pvaldiv, chart, self.tests[chart.chartId], s)
 			}
 
@@ -377,7 +516,6 @@ function setRenderers(self) {
 				.select('.pp-cuminc-chartLegends')
 				.style('display', 'inline-block')
 				.append('div')
-				.style('margin', '10px')
 			renderPvalues(pvaldiv, chart, self.tests[chart.chartId], s)
 		}
 
@@ -466,7 +604,7 @@ function setRenderers(self) {
 			.style('padding-bottom', '5px')
 			.style('font-size', fontSize + 'px')
 			.style('font-weight', 'bold')
-			.text("Series comparisons (Gray's test)")
+			.text("Group comparisons (Gray's test)")
 
 		// table div
 		// need separate divs for title and table
@@ -484,10 +622,10 @@ function setRenderers(self) {
 			.append('thead')
 			.append('tr')
 			.selectAll('td')
-			.data(['Series 1', 'Series 2', 'P-value'])
+			.data(['Group 1', 'Group 2', 'P-value'])
 			.enter()
 			.append('td')
-			.style('padding', '1px 8px 1px 2px')
+			.style('padding', '1px 20px 1px 3px')
 			.style('color', '#858585')
 			.style('position', 'sticky')
 			.style('top', '0px')
@@ -499,7 +637,7 @@ function setRenderers(self) {
 		const tbody = table.append('tbody')
 		const tr = tbody
 			.selectAll('tr')
-			.data(tests.sort((a, b) => a.pvalue - b.pvalue))
+			.data(tests)
 			.enter()
 			.append('tr')
 			.attr('class', 'pp-cuminc-chartLegends-pvalue')
@@ -513,7 +651,7 @@ function setRenderers(self) {
 			])
 			.enter()
 			.append('td')
-			.style('padding', '1px 8px 1px 2px')
+			.style('padding', '1px 20px 1px 3px')
 			.style('font-size', fontSize + 'px')
 			.text(d => d)
 	}
@@ -671,10 +809,10 @@ function setRenderers(self) {
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
 		xAxis
-			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom) + ')')
+			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5) + ')')
 			.call(axisBottom(d.xScale).ticks(5))
 
-		yAxis.call(
+		yAxis.attr('transform', 'translate(-5,0)').call(
 			axisLeft(
 				d3Linear()
 					.domain(d.yScale.domain())
@@ -778,11 +916,37 @@ function setInteractivity(self) {
 	}
 }
 
+const defaultSettings = JSON.stringify({
+	controls: {
+		isOpen: false, // control panel is hidden by default
+		term2: null, // the previous overlay value may be displayed as a convenience for toggling
+		term0: null
+	},
+	cuminc: {
+		minSampleSize: 5,
+		minEventCnt: 5,
+		radius: 5,
+		fill: '#fff',
+		stroke: '#000',
+		fillOpacity: 0,
+		chartMargin: 10,
+		svgw: 400,
+		svgh: 300,
+		svgPadding: {
+			top: 20,
+			left: 55,
+			right: 20,
+			bottom: 50
+		},
+		axisTitleFontSize: 16
+	}
+})
+
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'cuminc: opts.term{} missing'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi, {
-			condition: { mode: 'time2event', breaks: [3], showTimeScale: false }
+			condition: { mode: 'time2event', breaks: [2], showTimeScale: false }
 		})
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
@@ -792,38 +956,7 @@ export async function getPlotConfig(opts, app) {
 	const h = opts.term2?.q.hiddenValues || {}
 	const config = {
 		id: opts.term.term.id,
-		settings: {
-			controls: {
-				isOpen: false, // control panel is hidden by default
-				term2: null, // the previous overlay value may be displayed as a convenience for toggling
-				term0: null
-			},
-			common: {
-				use_logscale: false, // flag for y-axis scale type, 0=linear, 1=log
-				use_percentage: false,
-				barheight: 300, // maximum bar length
-				barwidth: 20, // bar thickness
-				barspace: 2 // space between two bars
-			},
-			cuminc: {
-				minSampleSize: 5,
-				minEventCnt: 5,
-				radius: 5,
-				fill: '#fff',
-				stroke: '#000',
-				fillOpacity: 0,
-				chartMargin: 10,
-				svgw: 400,
-				svgh: 300,
-				svgPadding: {
-					top: 20,
-					left: 55,
-					right: 20,
-					bottom: 50
-				},
-				axisTitleFontSize: 16
-			}
-		}
+		settings: JSON.parse(defaultSettings)
 	}
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
@@ -872,6 +1005,7 @@ function getPj(self) {
 		},
 		'=': {
 			chartTitle(row) {
+				if (!self.state?.config?.term) return row.chartId
 				const s = self.settings
 				const cutoff = self.state.config.term.q.breaks[0]
 				if (!row.chartId || row.chartId == '-') {
@@ -886,8 +1020,8 @@ function getPj(self) {
 				return value && value.label ? value.label : row.chartId
 			},
 			seriesLabel(row, context) {
-				const t2 = self.state.config.term2
-				if (!t2) return
+				const t2 = self.state.config?.term2
+				if (!t2) return context.self.seriesId
 				const seriesId = context.self.seriesId
 				if (t2 && t2.q && t2.q.groupsetting && t2.q.groupsetting.inuse) return seriesId
 				if (t2 && t2.term.values && seriesId in t2.term.values) return t2.term.values[seriesId].label

@@ -4,7 +4,7 @@ import { scaleLinear } from 'd3-scale'
 import { gmmode } from '../client'
 import { dofetch3 } from '../common/dofetch'
 import { makeTk } from './makeTk'
-import { update as update_legend } from './legend'
+import { updateLegend } from './legend'
 import { may_render_skewer } from './skewer'
 import { make_leftlabels } from './leftlabel'
 
@@ -13,7 +13,7 @@ import { make_leftlabels } from './leftlabel'
 loadTk
 rangequery_rglst
 ********************** INTERNAL
-get_parameter
+getParameter
 loadTk_finish_closure
 rangequery_add_variantfilters
 
@@ -33,16 +33,7 @@ export async function loadTk(tk, block) {
 			await makeTk(tk, block)
 		}
 
-		let data
-		if (tk.custom_variants) {
-			// has custom data on client side, no need to request from server
-			data = filter_custom_variants(tk, block)
-		} else {
-			// request data from server, either official or custom sources
-			const [par, headers] = get_parameter(tk, block)
-			data = await dofetch3('mds3?' + par, { headers })
-		}
-		if (data.error) throw data.error
+		const data = await getData(tk, block)
 
 		if (tk.uninitialized) {
 			tk.clear()
@@ -57,12 +48,7 @@ export async function loadTk(tk, block) {
 		{
 			const h2 = may_render_skewer(data, tk, block)
 			// must render skewer first, then left labels
-			let h1
-			if (data.skewer) {
-				h1 = make_leftlabels(data, tk, block)
-			} else {
-				h1 = 60 // FIXME should be kept at tk.leftlabels.height
-			}
+			const h1 = make_leftlabels(data, tk, block)
 			tk.height_main += Math.max(h1, h2)
 		}
 		// add new subtrack type
@@ -80,14 +66,14 @@ export async function loadTk(tk, block) {
 
 function loadTk_finish_closure(tk, block) {
 	return data => {
-		update_legend(data, tk, block)
+		updateLegend(data, tk, block)
 		block.tkcloakoff(tk, { error: data.error })
 		block.block_setheight()
 		block.setllabel()
 	}
 }
 
-function get_parameter(tk, block) {
+function getParameter(tk, block) {
 	// to get data for current view range
 
 	const par = ['genome=' + block.genome.name]
@@ -139,11 +125,35 @@ function get_parameter(tk, block) {
 
 	rangequery_rglst(tk, block, par)
 
-	if (tk.hiddenmclass.size) {
-		par.push('hiddenmclasslst=' + [...tk.hiddenmclass].join(','))
+	if (tk.legend.mclass.hiddenvalues.size) {
+		par.push('hiddenmclasslst=' + [...tk.legend.mclass.hiddenvalues].join(','))
 	}
 	//par.push('samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp))
 	return [par.join('&'), headers]
+}
+
+/*
+abstract various data sources
+
+returned data{}:
+
+.skewer[]
+	list of data points to show as skewer plot
+.mclass2variantcount[]
+	mclass breakdown of skewer[]
+*/
+async function getData(tk, block) {
+	let data
+	if (tk.custom_variants) {
+		// has custom data on client side, no need to request from server
+		data = filter_custom_variants(tk, block)
+	} else {
+		// request data from server, either official or custom sources
+		const [par, headers] = getParameter(tk, block)
+		data = await dofetch3('mds3?' + par, { headers })
+	}
+	if (data.error) throw data.error
+	return data
 }
 
 export function rangequery_rglst(tk, block, par) {
@@ -254,8 +264,8 @@ by info_fields[] and variantcase_fields[]
 function filter_custom_variants(tk, block) {
 	// return the same data{} object as server queries
 	const data = {
-		skewer: [],
-		mclass2count: {}
+		skewer: []
+		// adds mclass2variantcount[] later
 	}
 
 	// must exclude out-of-range items, otherwise numericmode rendering will break
@@ -270,6 +280,9 @@ function filter_custom_variants(tk, block) {
 			bbstop = Math.max(bbstop, block.rglst[i].stop)
 		}
 	}
+
+	const m2c = new Map() // k: mclass, v: count
+
 	for (const m of tk.custom_variants) {
 		if (m.chr != block.rglst[0].chr) continue // may not work for subpanel
 		if (m.pos <= bbstart || m.pos >= bbstop) continue
@@ -279,10 +292,12 @@ function filter_custom_variants(tk, block) {
 		}
 
 		// for hidden mclass, must count it so the legend will be able to show the hidden item
-		data.mclass2count[m.class] = 1 + (data.mclass2count[m.class] || 0)
+		m2c.set(m.class, 1 + (m2c.get(m.class) || 0))
 		if (tk.legend.mclass.hiddenvalues.has(m.class)) continue
 
 		data.skewer.push(m)
 	}
+
+	data.mclass2variantcount = [...m2c]
 	return data
 }

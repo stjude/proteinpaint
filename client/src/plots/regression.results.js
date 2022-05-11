@@ -4,6 +4,7 @@ import { axisBottom, axisTop } from 'd3-axis'
 import { axisstyle } from '../dom/axisstyle'
 import { first_genetrack_tolist } from '../common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
+import { drawBoxplot } from '../dom/boxplot'
 
 /*************
 can dynamically add following attributes
@@ -14,7 +15,7 @@ can dynamically add following attributes
 - this.hasUnsubmittedEdits_nullify_singleuse:
 	to negate hasUnsubmittedEdits and keep running analysis
 
-** R result object
+**************** R result object
 result.data: {}
 	warnings
 	sampleSize: int
@@ -25,10 +26,13 @@ result.data: {}
 	other: {header[], rows[], label}
 
 
-** function cascade **
+*************** function cascade
 main
 	displayResult
 		createGenomebrowser
+			getMtooltipValues
+			mayCheckLD
+				showLDlegend
 		updateMds3Tk
 			make_mds3_variants
 		show_genomebrowser_snplocus
@@ -41,10 +45,12 @@ main
 			mayshow_other
 			mayshow_fisher
 			mayshow_wilcoxon
+			mayshow_cuminc
 */
 
 const refGrp_NA = 'NA' // refGrp value is not applicable, hardcoded for R
-const forestcolor = '#126e08'
+const forestcolor = '#126e08' // forest plot color
+const boxplotcolor = forestcolor
 
 export class RegressionResults {
 	constructor(opts) {
@@ -259,6 +265,7 @@ function setRenderers(self) {
 		self.mayshow_other(result)
 		self.mayshow_fisher(result)
 		self.mayshow_wilcoxon(result)
+		self.mayshow_cuminc(result)
 	}
 
 	self.newDiv = (label, label2, holder) => {
@@ -273,7 +280,7 @@ function setRenderers(self) {
 		if (label2) {
 			row
 				.append('span')
-				.text(label2)
+				.html(label2)
 				.style('margin-left', '5px')
 		}
 		return div.append('div').style('margin-left', '20px')
@@ -315,17 +322,93 @@ function setRenderers(self) {
 		}
 	}
 
+	self.mayshow_cuminc = async result => {
+		if (!result.cuminc) return
+		const holder = self.newDiv('Cumulative incidence test:', 'p-value = ' + result.cuminc.pvalue)
+		const _ = await import('./cuminc')
+		const plotter = new _.Cuminc({
+			holder,
+			config: {
+				term: self.config.outcome,
+				term2: {
+					term: {
+						name: 'Variant',
+						values: {
+							1: { key: 1, label: 'Carry minor allele' },
+							2: { key: 2, label: 'No minor allele' }
+						}
+					}
+				}
+			}
+		})
+		plotter.main(result.cuminc.final_data)
+	}
+
 	self.mayshow_wilcoxon = result => {
 		if (!result.wilcoxon) return
+		const div = self.newDiv('Wilcoxon rank sum test:', 'p-value = ' + result.wilcoxon.pvalue)
+		if (result.wilcoxon.boxplots) {
+			const bs = result.wilcoxon.boxplots
+			// {hasEff{}, noEff{}, minv, maxv}
+
+			const boxplotHeight = 20,
+				boxplotWidth = 400,
+				leftLabelWidth = 160, // hardcoded number, must fit the boxplot labels
+				axisheight = 40,
+				labpad = 20,
+				vpad = 10
+
+			const scale = scaleLinear()
+				.domain([bs.minv, bs.maxv])
+				.range([0, boxplotWidth])
+
+			const svg = div
+				.append('svg')
+				.style('margin-top', '10px')
+				.attr('width', leftLabelWidth + labpad + boxplotWidth + 10)
+				.attr('height', vpad * 3 + boxplotHeight * 2 + axisheight)
+			// anchor
+			const g = svg.append('g').attr('transform', `translate(${leftLabelWidth + labpad},${vpad})`)
+			drawBoxplot({
+				g: g.append('g'),
+				bp: bs.hasEff,
+				scale,
+				rowheight: boxplotHeight,
+				color: boxplotcolor,
+				labpad
+			})
+			drawBoxplot({
+				g: g.append('g').attr('transform', `translate(0,${boxplotHeight + vpad})`),
+				bp: bs.noEff,
+				scale,
+				rowheight: boxplotHeight,
+				color: boxplotcolor,
+				labpad
+			})
+			// axis
+			{
+				const axisg = g.append('g').attr('transform', `translate(0,${boxplotHeight * 2 + vpad * 2})`)
+				const axis = axisBottom().scale(scale)
+				axisstyle({
+					axis: axisg.call(axis),
+					color: boxplotcolor,
+					showline: true
+				})
+				axisg
+					.append('text')
+					.text(self.config.outcome.term.name)
+					.attr('font-size', 15)
+					.attr('x', boxplotWidth / 2)
+					.attr('y', axisheight - 5)
+					.attr('text-anchor', 'middle')
+					.attr('fill', boxplotcolor)
+			}
+		}
 	}
 
 	self.mayshow_fisher = result => {
 		if (!result.fisher) return
-		const div = self.newDiv("Fisher's exact test")
-		div
-			.append('div')
-			.text('p-value=' + result.fisher.pvalue)
-			.style('margin', '20px')
+		const div = self.newDiv("Fisher's exact test:", 'p-value = ' + result.fisher.pvalue)
 		const table = div
 			.append('table')
 			.style('margin', '20px')
@@ -847,8 +930,8 @@ function fillCoefficientTermname(tw, td) {
 	}
 }
 
-function make_mds3_variants(tw, result) {
-	/* return a list of variants good for tk display
+function make_mds3_variants(tw, resultLst) {
+	/* return a list of variants as mds3 client-side custom data
 	tw:
 		term:
 			snps[ {} ]
@@ -859,7 +942,7 @@ function make_mds3_variants(tw, result) {
 		q{}
 			snp2effAle:{}
 
-	result:{lst[{data,id},{data,id},...]}
+	resultLst: [{data,id},{data,id},...]
 	*/
 	const mlst = []
 	for (const snp of tw.term.snps) {
@@ -881,44 +964,75 @@ function make_mds3_variants(tw, result) {
 
 		// set default values as missing, to be able to show all variants in track
 		// overwrite with real values if found in result
-		m.regressionPvalue = 'missing'
+		m.regressionPvalue = 'NA'
 		m.__value = 0 // display the dot at the bottom
 
-		const thisresult = result.find(i => i.id == snp.snpid)
+		const thisresult = resultLst.find(i => i.id == snp.snpid)
 		if (!thisresult) {
 			// missing result for this variant, caused by variable-skipping in R
-			m.regressionResult = { err: ['No result for this variant at ' + snp.snpid] }
+			m.regressionResult = {
+				data: {
+					err: ['No result for this variant at ' + snp.snpid]
+				}
+			}
 			continue
 		}
 		// reg result is found for this snp; can call displayResult_oneset
+		m.regressionResult = thisresult // for displaying via click_snvindel()
+
 		const d = thisresult.data
 		if (!d) throw '.data{} missing'
-		m.regressionResult = d // for displaying via click_snvindel()
 
 		if (d.type3) {
-			// find p-value (last column of type3 table)
-			if (!d.type3.terms) throw '.data{type3:{terms}} missing'
-			if (!d.type3.terms[snp.snpid]) throw snp.snpid + ' missing in type3.terms{}'
-			if (!Array.isArray(d.type3.terms[snp.snpid])) throw `type3.terms[${snp.snpid}] not array`
-			const str = d.type3.terms[snp.snpid][d.type3.terms[snp.snpid].length - 1]
-			// last value of the array should be p-value string (can be 'NA')
-			const v = Number(str)
-			if (Number.isNaN(v)) {
-				m.regressionPvalue = str // for displaying via tooltipPrintValue()
+			/* result has type3 section, this variant has AF>cutoff and used for model-fitting
+			show this variant as a dot, do not set .shapeTriangle=true
+			find p-value (last column of type3 table)
+			*/
+			const v = getSnpPvalueFromType3orCoefficient(d, snp.snpid)
+			if (v == undefined) {
+				// no valid pvalue from either place
 			} else {
+				// has valid pvalue from either coefficients table, or type3 table
 				m.regressionPvalue = v
 				m.__value = -Math.log10(v)
 			}
+
+			// assign estimate, for tooltip display
+			if (!d.coefficients || !d.coefficients.terms) throw '.data.coefficients.terms{} missing'
+			const r = d.coefficients.terms[snp.snpid]
+			if (!r) throw 'snp missing from data.coefficients.terms{}'
+			if (!Array.isArray(r.fields)) throw 'data.coefficients.terms[snpid].fields[] is not array'
+			m.regressionEstimate = r.fields[0]
 		} else if (d.fisher) {
-			// { pvalue:float, table:[] }
+			/* { pvalue:float, table:[] }
+			this variant is tested by fisher, show as triangle
+			*/
 			m.regressionPvalue = d.fisher.pvalue
 			m.__value = -Math.log10(d.fisher.pvalue)
+			m.shapeTriangle = true
+		} else if (d.wilcoxon) {
+			/* { pvalue:float }
+			this variant is tested by wilcoxon, show as triangle
+			*/
+			m.regressionPvalue = d.wilcoxon.pvalue
+			m.__value = -Math.log10(d.wilcoxon.pvalue)
+			m.shapeTriangle = true
+		} else if (d.cuminc) {
+			/* { pvalue:float }
+			this variant is tested by cuminc, show as triangle
+			*/
+			m.regressionPvalue = d.cuminc.pvalue
+			m.__value = -Math.log10(d.cuminc.pvalue)
+			m.shapeTriangle = true
+		} else {
+			// none of above. is monomorphic, show as hollow circle
+			m.shapeCircle = true
 		}
 	}
 	return mlst
 }
 
-async function createGenomebrowser(self, input, result) {
+async function createGenomebrowser(self, input, resultLst) {
 	// create block instance that harbors the mds3 track for showing variants from the snplocus term
 	// input is the snplocus Input instance
 	const arg = {
@@ -971,17 +1085,26 @@ async function createGenomebrowser(self, input, result) {
 	arg.tklst.push({
 		type: 'mds3', // tkt.mds3
 		name: 'Variants',
+		skewerMode: 'numeric',
 		numericmode: {
-			inuse: true,
 			type: '__value',
 			label: '-log10 p-value',
-			tooltipPrintValue: m => {
-				return ['p-value', m.regressionPvalue]
-			}
+			tooltipPrintValue: m => getMtooltipValues(m, self.config.regressionType)
 		},
-		custom_variants: make_mds3_variants(input.term, result),
+		custom_variants: make_mds3_variants(input.term, resultLst),
+		variantShapeName: {
+			dot: 'common variants analyzed by model-fitting',
+			triangle:
+				'rare variants analyzed by ' +
+				(self.config.regressionType == 'linear'
+					? 'Wilcoxon rank sum test' // with permutation
+					: self.config.regressionType == 'logistic'
+					? "Fisher's exact test"
+					: 'Cumulative incidence test'),
+			circle: 'monomorphic variants skipped'
+		},
 		click_snvindel: async m => {
-			self.displayResult_oneset(m.regressionResult)
+			self.displayResult_oneset(m.regressionResult.data)
 			await mayCheckLD(m, input, self)
 		}
 	})
@@ -991,12 +1114,12 @@ async function createGenomebrowser(self, input, result) {
 	return new _.Block(arg)
 }
 
-async function updateMds3Tk(self, input, result) {
+async function updateMds3Tk(self, input, resultLst) {
 	// browser is already created
 	// find the mds3 track
 	const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
 	// apply new sets of variants and results to track and render
-	tk.custom_variants = make_mds3_variants(input.term, result)
+	tk.custom_variants = make_mds3_variants(input.term, resultLst)
 	// if user changes position using termsetting ui,
 	// input.term.q{} will hold different chr/start/stop than block
 	// and block will need to update coord
@@ -1030,6 +1153,9 @@ async function mayCheckLD(m, input, self) {
 	const tk = self.snplocusBlock.tklst.find(i => i.type == 'mds3')
 	if (!tk || !tk.skewer || !tk.skewer.nmg) return
 
+	// clear old result
+	for (const m of tk.custom_variants) delete m.regressionR2
+
 	const wait = self.dom.LDresultDiv.append('span').text('Loading LD data...')
 
 	try {
@@ -1041,7 +1167,7 @@ async function mayCheckLD(m, input, self) {
 			// or no ld data retrieved using given variant
 			// restore color in case dots have been colored by ld in a prior click
 			wait.text('No LD data')
-			tk.skewer.nmg.selectAll('.sja_aa_disk_fill').attr('fill', m => tk.color4disc(m))
+			tk.skewer.nmg.selectAll('.sja_aa_disk_fill').attr('fill', m => (m.shapeCircle ? 'none' : tk.color4disc(m)))
 			return
 		}
 		tk.skewer.nmg.selectAll('.sja_aa_disk_fill').attr('fill', m2 => {
@@ -1050,7 +1176,11 @@ async function mayCheckLD(m, input, self) {
 				return LDcolor1
 			}
 			for (const i of data.lst) {
-				if (i.pos == m2.pos && i.alleles == m2.ref + '.' + m2.alt) return LDcolorScale(i.r2)
+				if (i.pos == m2.pos && i.alleles == m2.ref + '.' + m2.alt) {
+					// matched, record new result for displaying in hover tooltip
+					m2.regressionR2 = i.r2
+					return LDcolorScale(i.r2)
+				}
 			}
 			return LDcolorScale(0)
 		})
@@ -1109,4 +1239,44 @@ function showLDlegend(div) {
 		.attr('fill', 'url(#grad)')
 
 	svg.attr('width', xpad * 2 + axiswidth).attr('height', axisheight + barheight)
+}
+
+function getMtooltipValues(m, regressionType) {
+	const lst = ['p-value=' + m.regressionPvalue]
+	if (m.regressionResult.AFstr) {
+		lst.push('AF=' + m.regressionResult.AFstr)
+	}
+	if (m.regressionEstimate) {
+		if (regressionType == 'linear') lst.push('beta=' + m.regressionEstimate)
+		else if (regressionType == 'logistic') lst.push('odds ratio=' + m.regressionEstimate)
+		else if (regressionType == 'cox') lst.push('hazard ratio=' + m.regressionEstimate)
+		else throw 'unknown regression type'
+	}
+	if (m.regressionR2) {
+		lst.push('LD r2=' + m.regressionR2)
+	}
+	return lst
+}
+
+function getSnpPvalueFromType3orCoefficient(d, snpid) {
+	// if type3 table has valid pvalue for snp, return; otherwise look to coefficients table
+	if (!d.type3.terms) throw '.data{type3:{terms}} missing'
+	if (!d.type3.terms[snpid]) throw snpid + ' missing in type3.terms{}'
+	if (!Array.isArray(d.type3.terms[snpid])) throw `type3.terms[${snp.snpid}] not array`
+	const str = d.type3.terms[snpid][d.type3.terms[snpid].length - 1]
+	// last value of the array should be p-value string (can be 'NA')
+	const v = Number(str)
+	if (Number.isFinite(v)) {
+		return v
+	}
+	// no pvalue from type3; check coefficients table
+	if (!d.coefficients) throw 'd.coefficients missing'
+	if (!d.coefficients || !d.coefficients.terms) throw '.data.coefficients.terms{} missing'
+	const r = d.coefficients.terms[snpid]
+	if (!r) throw 'snp missing from data.coefficients.terms{}'
+	if (!Array.isArray(r.fields)) throw 'data.coefficients.terms[snpid].fields[] is not array'
+	const str2 = r.fields[r.fields.length - 1]
+	const v2 = Number(str2)
+	if (Number.isFinite(v2)) return v2
+	// if also no pvalue from coefficients, return undefined
 }

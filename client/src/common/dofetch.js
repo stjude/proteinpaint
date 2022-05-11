@@ -1,3 +1,5 @@
+import { select } from 'd3-selection'
+
 /*
 	path: URL
 	arg: HTTP request body
@@ -106,44 +108,55 @@ export function dofetch2(path, init = {}, opts = {}) {
 		init.headers.authorization = 'Bearer ' + jwt
 	}
 
-	const dataName = url + ' | ' + init.method + ' | ' + init.body
+	/*
+		this is client-side "gatekeeper", will not proceed
+		to the usual request handling unless no credentials
+		are required or a valid session has already been established
+	*/
+	return mayShowAuthUi(init, path).then(() => {
+		const dataName = url + ' | ' + init.method + ' | ' + init.body
 
-	if (opts.serverData) {
-		if (!(dataName in opts.serverData)) {
-			// will cache data as text to not share parsed response object
-			// to-do: support opt.freeze to enforce Object.freeze(data.json())
-			opts.serverData[dataName] = fetch(url, init).then(data => data.text())
-		}
-
-		// manage the number of stored keys in serverData
-		const i = cachedServerDataKeys.indexOf(dataName)
-		if (i !== -1) cachedServerDataKeys.splice(i, 1)
-		cachedServerDataKeys.unshift(dataName)
-		if (cachedServerDataKeys.length > maxNumOfServerDataKeys) {
-			const oldestDataname = cachedServerDataKeys.pop()
-			delete opts.serverData[oldestDataname]
-		}
-
-		return opts.serverData[dataName].then(str => JSON.parse(str))
-	} else {
-		/* potentially allow "application/octet-stream" as response type
-		in such case it will not try to parse it as json
-		also the caller should just call dofetch2() without a serverData{}
-		rather than dofetch3
-		*/
-		return fetch(url, init).then(r => {
-			const ct = r.headers.get('content-type') // content type is always present
-			if (ct.includes('/json')) {
-				return r.json()
+		if (opts.serverData) {
+			if (!(dataName in opts.serverData)) {
+				// to-do: support opt.freeze to enforce Object.freeze(data.json())
+				opts.serverData[dataName] = fetch(url, init)
 			}
-			if (ct.includes('/text')) {
-				return r.text()
+
+			// manage the number of stored keys in serverData
+			const i = cachedServerDataKeys.indexOf(dataName)
+			if (i !== -1) cachedServerDataKeys.splice(i, 1)
+			cachedServerDataKeys.unshift(dataName)
+			if (cachedServerDataKeys.length > maxNumOfServerDataKeys) {
+				const oldestDataname = cachedServerDataKeys.pop()
+				delete opts.serverData[oldestDataname]
 			}
-			// call blob() as catch-all
-			// https://developer.mozilla.org/en-US/docs/Web/API/Response
-			return r.blob()
-		})
+
+			return opts.serverData[dataName].then(r => processResponse(r.clone()))
+		} else {
+			return fetch(url, init).then(processResponse)
+		}
+	})
+}
+
+/* 
+r: a native fetch response argument
+
+potentially allow "application/octet-stream" as response type
+in such case it will not try to parse it as json
+also the caller should just call dofetch2() without a serverData{}
+rather than dofetch3
+*/
+function processResponse(r) {
+	const ct = r.headers.get('content-type') // content type is always present
+	if (ct.includes('/json')) {
+		return r.json()
 	}
+	if (ct.includes('/text')) {
+		return r.text()
+	}
+	// call blob() as catch-all
+	// https://developer.mozilla.org/en-US/docs/Web/API/Response
+	return r.blob()
 }
 
 const defaultServerDataCache = {}
@@ -227,4 +240,87 @@ function mayAdjustRequest(url, init) {
 	}
 
 	return hostpath
+}
+
+const dsAuthOk = new Set()
+let dsAuth, authUi, authUiHolder
+
+/*
+	opts{}
+	.dsAuth: required, array of dataset names that require login
+	.authUi: optional, a custom login UI function to launch as needed
+	.holder: optional, a d3-wrapped selection to hold the auth UI
+*/
+export function setAuth(opts) {
+	dsAuth = opts.dsAuth
+	authUi = opts.ui || defaultAuthUi
+	authUiHolder = opts.holder || select('body')
+	for (const auth of dsAuth) {
+		// fillin all the dslabels that has an active session
+		// so that an unnecessary login form will not be shown
+		if (auth.insession) dsAuthOk.add(auth.dslabel)
+	}
+}
+
+/* 
+	mayShowAuthUi() is the client-side "gatekeeper"
+	method to check if a dataset requires credentials
+*/
+async function mayShowAuthUi(init, path) {
+	const ok = { status: 'ok' }
+	if (!dsAuth) return ok
+	for (const a of dsAuth) {
+		if (init.body?.includes(`"dslabel":${a.dslabel}`) || path.includes(`dslabel=${a.dslabel}`)) {
+			if (dsAuthOk.has(a.dslabel)) return ok
+			return await authUi(a.dslabel)
+		}
+	}
+	return ok
+}
+
+/*
+	this is the default login UI, may be overriden
+	by an optional different form, for example if PP 
+	is embedded in another portal
+*/
+async function defaultAuthUi(dslabel) {
+	const mask = authUiHolder
+		.append('div')
+		.style('position', 'fixed')
+		.style('height', '100%')
+		.style('width', '100%')
+		.style('margin', 0)
+		.style('padding', '20px')
+		.style('background-color', 'rgba(0,0,0,0.2)')
+
+	const form = mask.append('div').style('opacity', 1)
+	form.append('div').html(`Restricted dataset '${dslabel}'`)
+	//form.append('br')
+	form.append('span').html('Please enter a password ')
+	const pwd = form.append('input').attr('type', 'password')
+	const btn = form.append('button').html('Submit')
+	return new Promise((resolve, reject) => {
+		function login() {
+			fetch('/dslogin', {
+				method: 'POST',
+				headers: {
+					authorization: `Basic ${btoa(pwd.property('value'))}`
+				},
+				body: JSON.stringify({ dslabel })
+			})
+				.then(res => res.json())
+				.then(res => {
+					if (res.error) throw res.error
+					mask.remove()
+					dsAuthOk.add(dslabel)
+					resolve(dslabel)
+				})
+				.catch(e => {
+					mask.remove()
+					reject(e)
+				})
+		}
+		btn.on('click', login)
+		pwd.on('change', login)
+	})
 }

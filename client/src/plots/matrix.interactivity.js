@@ -6,7 +6,7 @@ let inputIndex = 0
 
 export function setInteractivity(self) {
 	self.showCellInfo = function() {
-		if (self.activeTerm) return
+		if (self.activeLabel) return
 		const d = event.target.__data__
 		if (!d || !d.term || !d.sample) return
 		if (event.target.tagName == 'rect') {
@@ -32,11 +32,12 @@ export function setInteractivity(self) {
 	}
 
 	self.mouseout = function() {
-		if (!self.activeTerm && !self.activeSampleGroup) self.dom.tip.hide()
+		if (!self.activeLabel && !self.activeLabel && !self.activeLabel) self.dom.tip.hide()
 	}
 
 	self.legendClick = function() {}
 	setTermActions(self)
+	setTermGroupActions(self)
 	setSampleGroupActions(self)
 }
 
@@ -56,7 +57,7 @@ function setTermActions(self) {
 			callback: tw => {
 				// data is object with only one needed attribute: q, never is null
 				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
-				const t = self.activeTerm || self.lastActiveTerm
+				const t = self.activeLabel || self.lastactiveLabel
 				if (tw) {
 					if (t && t.tw) tw.$id = t.tw.$id
 					self.pill.main(tw)
@@ -65,7 +66,7 @@ function setTermActions(self) {
 						id: self.opts.id,
 						edits: [
 							{
-								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.index],
+								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.lstIndex],
 								value: tw
 							}
 						]
@@ -79,17 +80,40 @@ function setTermActions(self) {
 	}
 
 	self.showTermMenu = async function() {
-		const d = event.target.__data__
-		if (!d || !d.tw) return
-		self.activeTerm = d
+		const t = event.target.__data__
+		if (!t || !t.tw) return
+		self.activeLabel = t
+		self.activeLabel = t
 		self.dom.menutop.selectAll('*').remove()
 		self.dom.menubody
 			.style('padding', 0)
 			.selectAll('*')
 			.remove()
 
-		self.dom.menutop.append('div').html(d.tw.term.name)
-		self.showShortcuts(d, self.dom.menutop)
+		const labelEditDiv = self.dom.menutop.append('div')
+
+		self.dom.twLabelInput = labelEditDiv
+			.append('input')
+			.attr('type', 'text')
+			.attr('size', t.tw.term.name.length + 5)
+			.style('padding', '1px 5px')
+			.style('text-align', 'center')
+			.property('value', t.tw.term.name)
+			.on('input', () => {
+				const value = self.dom.twLabelInput.property('value')
+				self.dom.twLabelInput.attr('size', value.length + 5)
+				self.dom.twLabelEditBtn.property('disabled', value === t.tw.label)
+			})
+			.on('change', self.updateTermLabel)
+
+		self.dom.twLabelEditBtn = labelEditDiv
+			.append('button')
+			.property('disabled', true)
+			.style('margin-left', '5px')
+			.html('edit')
+			.on('click', self.updateTermLabel)
+
+		self.showShortcuts(t, self.dom.menutop)
 
 		self.dom.menutop
 			.append('div')
@@ -112,6 +136,24 @@ function setTermActions(self) {
 			})
 
 		self.dom.tip.showunder(event.target)
+	}
+
+	self.updateTermLabel = () => {
+		const value = self.dom.twLabelInput.property('value')
+		const t = self.activeLabel
+		if (t.tw.label === value) return
+		t.tw.label = value
+		t.grp.lst[t.lstIndex] = t.tw
+		self.app.dispatch({
+			type: 'plot_nestedEdits',
+			id: self.opts.id,
+			edits: [
+				{
+					nestedKeys: ['termgroups', t.grpIndex],
+					value: t.grp
+				}
+			]
+		})
 	}
 
 	self.showShortcuts = (t, div) => {
@@ -173,17 +215,24 @@ function setTermActions(self) {
 
 	self.sortSamplesAgainstCornerTerm = () => {
 		event.stopPropagation()
-		const t = self.activeTerm
-		const termgroups = self.termGroups
+		const t = self.activeLabel
+		const termgroups = JSON.parse(JSON.stringify(self.termGroups))
 		const grp = termgroups[t.grpIndex]
 		const [tcopy, sorterTerms] = self.getSorterTerms(t)
-		const removed = grp.lst.splice(t.index, 1)
+		const removed = grp.lst.splice(t.lstIndex, 1)
 		grp.lst.unshift(tcopy)
+		grp.sortTermsBy = 'asListed'
 
 		for (const g of termgroups) {
-			for (const tw of g.lst) {
-				if (!tw.sortSamples) continue
-				tw.sortSamples.priority = sorterTerms.findIndex(t => t.tw?.$id === tw.$id)
+			if (g == grp) {
+				for (const [priority, tw] of g.lst.entries()) {
+					tw.sortSamples = { priority, by: 'values' }
+				}
+			} else {
+				for (const tw of g.lst) {
+					if (!tw.sortSamples) continue
+					tw.sortSamples.priority = sorterTerms.findIndex(t => t.tw?.$id === tw.$id) + grp.lst.length
+				}
 			}
 		}
 
@@ -205,15 +254,17 @@ function setTermActions(self) {
 
 	self.sortSamplesAgainstTerm = () => {
 		event.stopPropagation()
-		const t = self.activeTerm
+		const t = self.activeLabel
 		const [tcopy] = self.getSorterTerms(t)
 		const termgroups = self.termGroups
-		termgroups[t.grpIndex].lst[t.index] = tcopy
+		termgroups[t.grpIndex].lst[t.lstIndex] = tcopy
+		termgroups[t.grpIndex].sortTermsBy = 'asListed'
 		for (const g of termgroups) {
 			for (const tw of g.lst) {
 				if (!tw.sortSamples) continue
-				if (tw.$id === t.tw.$id) tw.sortSamples.priority = 0
-				else tw.sortSamples.priority += 1
+				if (tw.$id === t.tw.$id) {
+					tw.sortSamples.priority = 0
+				} else tw.sortSamples.priority += 1
 			}
 		}
 
@@ -234,10 +285,11 @@ function setTermActions(self) {
 
 	self.moveTermUp = () => {
 		event.stopPropagation()
-		const t = self.activeTerm
+		const t = self.activeLabel
 		const grp = self.termGroups[t.grpIndex]
-		grp.lst.splice(t.index, 1)
-		grp.lst.splice(t.index - 1, 0, t.tw)
+		grp.lst.splice(t.lstIndex, 1)
+		grp.lst.splice(t.lstIndex - 1, 0, t.tw)
+		grp.sortTermsBy = 'asListed'
 
 		self.app.dispatch({
 			type: 'plot_nestedEdits',
@@ -258,10 +310,11 @@ function setTermActions(self) {
 
 	self.moveTermDown = () => {
 		event.stopPropagation()
-		const t = self.activeTerm
+		const t = self.activeLabel
 		const grp = self.termGroups[t.grpIndex]
-		grp.lst.splice(t.index, 1)
-		grp.lst.splice(t.index + 1, 0, t.tw)
+		grp.lst.splice(t.lstIndex, 1)
+		grp.lst.splice(t.lstIndex + 1, 0, t.tw)
+		grp.sortTermsBy = 'asListed'
 
 		self.app.dispatch({
 			type: 'plot_nestedEdits',
@@ -281,14 +334,55 @@ function setTermActions(self) {
 	}
 
 	self.showTermEditMenu = async () => {
-		await self.pill.main(self.activeTerm.tw)
 		self.dom.menubody.selectAll('*').remove()
-		self.pill.showMenu()
+		const t = self.activeLabel
+		if (t.tw.term.type == 'geneVariant') {
+			const div = self.dom.menubody.append('div')
+			const label = div.append('label')
+			label.append('span').html('Minimum #sample to be visible')
+
+			const minNumSamples = 'minNumSamples' in t.tw ? t.tw.minNumSamples : ''
+			const input = label
+				.append('input')
+				.attr('type', 'number')
+				.style('margin-left', '5px')
+				.style('width', '50px')
+				.property('value', minNumSamples)
+
+			div
+				.append('div')
+				.append('button')
+				.html('Submit')
+				.on('click', () => {
+					const value = input.property('value')
+					if (value === minNumSamples) return
+					if (value === '') {
+						delete t.tw.minNumSamples
+					} else {
+						t.tw.minNumSamples = Number(value)
+					}
+
+					self.app.dispatch({
+						type: 'plot_nestedEdits',
+						id: self.opts.id,
+						edits: [
+							{
+								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.lstIndex],
+								value: t.tw
+							}
+						]
+					})
+					self.dom.tip.hide()
+				})
+		} else {
+			await self.pill.main(self.activeLabel.tw)
+			self.pill.showMenu()
+		}
 	}
 
 	self.showMoveMenu = async () => {
 		self.dom.menubody.selectAll('*').remove()
-		self.termBeingMoved = self.activeTerm
+		self.termBeingMoved = self.activeLabel
 		const div = self.dom.menubody.append('div')
 		div.append('span').html('Click on another label')
 		self.makeInsertPosRadios(div)
@@ -308,7 +402,7 @@ function setTermActions(self) {
 			const value = self.dom.grpNameSelect.property('value')
 			self.dom.grpNameTextInput
 				.property('disabled', value == 'current')
-				.property('value', value == 'current' ? self.activeTerm.grp.name : newGrpName)
+				.property('value', value == 'current' ? self.activeLabel.grp.name : newGrpName)
 		})
 		self.dom.grpNameSelect
 			.selectAll('option')
@@ -325,10 +419,10 @@ function setTermActions(self) {
 			.append('input')
 			.attr('type', 'text')
 			.property('disabled', true)
-			.property('value', self.activeTerm.grp.name)
+			.property('value', self.activeLabel.grp.name)
 			.on('change', () => {
 				const name = self.dom.grpNameTextInput.property('value')
-				if (name == self.activeTerm.grp.name) {
+				if (name == self.activeLabel.grp.name) {
 				} else {
 					newGrpName = self.dom.grpNameTextInput.property('value')
 				}
@@ -418,11 +512,11 @@ function setTermActions(self) {
 						})
 					)
 					const pos = select(`input[name='${self.insertRadioId}']:checked`).property('value')
-					const t = self.activeTerm
+					const t = self.activeLabel
 					const termgroups = self.termGroups
 					if (self.dom.grpNameSelect.property('value') == 'current') {
 						const grp = termgroups[t.grpIndex]
-						const i = pos == 'above' ? t.index : t.index + 1
+						const i = pos == 'above' ? t.lstIndex : t.lstIndex + 1
 						// remove this element
 						grp.lst.splice(i, 0, ...newterms)
 						self.app.dispatch({
@@ -474,12 +568,14 @@ function setTermActions(self) {
 					grp = { name, lst: [] }
 					termgroups.push(grp)
 				}
+				const tws = []
 				for (const id of lines) {
 					if (!(id in terms)) continue
-					const tw = { term: terms[id] }
+					const tw = { term: terms[id], minNumSamples: 0 }
 					await fillTermWrapper(tw)
-					grp.lst.push(tw)
+					tws.push(tw)
 				}
+				grp.lst.splice(self.activeLabel.lstIndex, 0, ...tws)
 
 				self.app.dispatch({
 					type: 'plot_edit',
@@ -532,7 +628,7 @@ function setTermActions(self) {
 			Apply
 		*/
 
-		const t = self.activeTerm
+		const t = self.activeLabel
 		self.dom.menubody.selectAll('*').remove()
 
 		self.dom.menubody
@@ -614,7 +710,7 @@ function setTermActions(self) {
 						id: self.opts.id,
 						edits: [
 							{
-								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.index],
+								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.lstIndex],
 								value: tcopy
 							},
 							{
@@ -712,15 +808,17 @@ function setTermActions(self) {
 		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
 		const tcopy = JSON.parse(JSON.stringify(t.tw))
 		if (i == -1) {
-			tcopy.sortSamples = { by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' }
+			tcopy.sortSamples = { by: 'values' } // { by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' }
 			sorterTerms.unshift(tcopy)
+		} else {
+			tcopy.sortSamples.by = 'values'
 		}
 
 		return [tcopy, sorterTerms]
 	}
 
 	self.showRemoveMenu = () => {
-		const t = self.activeTerm
+		const t = self.activeLabel
 		self.dom.menubody.selectAll('*').remove()
 		const subdiv = self.dom.menubody.append('div').style('margin-top', '10px')
 		subdiv
@@ -740,11 +838,11 @@ function setTermActions(self) {
 	}
 
 	self.removeTerm = () => {
-		const t = self.activeTerm
+		const t = self.activeLabel
 		const termgroups = self.termGroups
 		const grp = termgroups[t.grpIndex]
 		// remove this element
-		grp.lst.splice(t.index, 1)
+		grp.lst.splice(t.lstIndex, 1)
 		if (grp.lst.length) {
 			self.app.dispatch({
 				type: 'plot_nestedEdits',
@@ -769,7 +867,7 @@ function setTermActions(self) {
 	}
 
 	self.removeTermGroup = () => {
-		const t = self.activeTerm
+		const t = self.activeLabel
 		const termgroups = self.termGroups
 		termgroups.splice(t.grpIndex, 1)
 		self.app.dispatch({
@@ -785,7 +883,7 @@ function setSampleGroupActions(self) {
 	self.showSampleGroupMenu = function() {
 		const d = event.target.__data__
 		if (!d) return
-		self.activeSampleGroup = d
+		self.activeLabel = d
 		self.dom.menutop.selectAll('*').remove()
 		self.dom.menubody
 			.style('padding', 0)
@@ -886,12 +984,145 @@ function setSampleGroupActions(self) {
 	self.removeSampleGroup = () => {
 		const divideBy = JSON.parse(JSON.stringify(self.config.divideBy))
 		if (!divideBy.exclude) divideBy.exclude = []
-		divideBy.exclude.push(self.activeSampleGroup.grp.id)
+		divideBy.exclude.push(self.activeLabel.grp.id)
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
 			config: {
 				divideBy
+			}
+		})
+		self.dom.tip.hide()
+	}
+}
+
+function setTermGroupActions(self) {
+	self.showTermGroupMenu = function() {
+		const d = event.target.__data__
+		if (!d) return
+		self.activeLabel = d
+		self.dom.menutop.selectAll('*').remove()
+
+		const labelEditDiv = self.dom.menutop.append('div').style('text-align', 'center')
+
+		self.dom.grpNameInput = labelEditDiv
+			.append('input')
+			.attr('type', 'text')
+			.attr('size', self.activeLabel.grp.name.length + 5)
+			.style('padding', '1px 5px')
+			.style('text-align', 'center')
+			.property('value', self.activeLabel.grp.name)
+			.on('input', () => {
+				const value = self.dom.grpNameInput.property('value')
+				self.dom.grpNameInput.attr('size', value.length + 5)
+				self.dom.grpEditBtn.property('disabled', value === self.activeLabel.grp.name)
+			})
+			.on('change', self.updateTermGrpName)
+
+		self.dom.grpEditBtn = labelEditDiv
+			.append('button')
+			.property('disabled', true)
+			.style('margin-left', '5px')
+			.html('edit')
+			.on('click', self.updateTermGrpName)
+
+		self.dom.menubody
+			.style('padding', 0)
+			.selectAll('*')
+			.remove()
+
+		const menuOptions = [
+			{ label: 'Edit', callback: self.showTermGroupEditMenu },
+			{ label: 'Add Terms', callback: self.showTermInsertMenu },
+			{ label: 'Delete', callback: self.removeTermGroup }
+		]
+
+		self.dom.menutop
+			.append('div')
+			.style('text-align', 'center')
+			.selectAll(':scope>.sja_menuoption')
+			.data(menuOptions)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', 'inline-block')
+			.html(d => d.label)
+			.on('click', d => {
+				event.stopPropagation()
+				d.callback(d)
+			})
+
+		self.dom.tip.showunder(event.target)
+	}
+
+	self.updateTermGrpName = () => {
+		const value = self.dom.grpNameInput.property('value')
+		const t = self.activeLabel
+		if (t.grp.name === value) return
+		t.grp.name = value
+		self.app.dispatch({
+			type: 'plot_nestedEdits',
+			id: self.opts.id,
+			edits: [
+				{
+					nestedKeys: ['termgroups', t.grpIndex],
+					value: t.grp
+				}
+			]
+		})
+	}
+
+	self.showTermGroupEditMenu = async () => {
+		self.dom.menubody.selectAll('*').remove()
+
+		const menu = self.dom.menubody.append('div').style('padding', '5px')
+		menu
+			.append('div')
+			.style('width', '100%')
+			.style('font-weight', 600)
+			.html('Group options')
+
+		const label = menu.append('div').append('label')
+		label
+			.append('span')
+			.html('Minimum #samples for visible terms*')
+			.attr('title', 'May be overridden by a term-specific minNumSamples')
+		const minNumSampleInput = label
+			.append('input')
+			.attr('type', 'number')
+			.style('margin-left', '5px')
+			.style('width', '50px')
+			.property('value', self.activeLabel.grp.settings?.minNumSamples || 0)
+
+		menu
+			.append('div')
+			.append('button')
+			.html('Submit')
+			.on('click', () => {
+				const settings = self.activeLabel.grp.settings || {}
+				settings.minNumSamples = minNumSampleInput.property('value')
+
+				self.app.dispatch({
+					type: 'plot_nestedEdits',
+					id: self.id,
+					edits: [
+						{
+							nestedKeys: ['termgroups', self.activeLabel.grpIndex, 'settings'],
+							value: settings
+						}
+					]
+				})
+			})
+	}
+
+	self.removeTermGroup = () => {
+		const termgroups = self.termGroups
+		termgroups.splice(self.activeLabel.grpIndex, 1)
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				termgroups
 			}
 		})
 		self.dom.tip.hide()

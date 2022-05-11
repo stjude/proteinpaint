@@ -497,15 +497,14 @@ create following dom elements and return in an array
 
 */
 export function makeSnpSelect(div, self, termtype) {
-	let input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype
+	let input_AFcutoff_label, input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype
 
 	// input - af cutoff
 	{
-		div
+		input_AFcutoff_label = div
 			.append('div')
 			.style('opacity', 0.4)
 			.style('font-size', '.7em')
-			.text('EFFECT ALLELE FREQUENCY CUTOFF')
 		const row = div.append('div')
 		input_AFcutoff = row
 			.append('input')
@@ -521,7 +520,7 @@ export function makeSnpSelect(div, self, termtype) {
 			.style('margin-left', '10px')
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
-			.text('Variants below the cutoff are not analyzed')
+			.text('Variants above/below the cutoff are analyzed separately.')
 	}
 
 	// select - allele type
@@ -534,7 +533,7 @@ export function makeSnpSelect(div, self, termtype) {
 	select_alleleType = div.append('select')
 	select_alleleType.append('option').text('Major (d) vs minor (D) from data')
 	select_alleleType.append('option').text('Reference (r) vs alternative (A)')
-	select_alleleType.on('change', updateOptionText)
+	select_alleleType.on('change', alleleTypeChanged)
 
 	// select - genetic model
 	div
@@ -576,10 +575,11 @@ export function makeSnpSelect(div, self, termtype) {
 		}
 	}
 
-	updateOptionText()
-	function updateOptionText() {
+	alleleTypeChanged()
+	function alleleTypeChanged() {
 		// when allele type <select> is changed, update text of some other options
 		const is0 = select_alleleType.property('selectedIndex') == 0 // 0 is the choice of major/minor
+		input_AFcutoff_label.text(`${is0 ? 'MINOR' : 'ALTERNATIVE'} ALLELE FREQUENCY CUTOFF`)
 		const o = select_geneticModel.node().options
 		o[0].innerHTML = 'Additive: ' + (is0 ? 'DD=2, Dd=1, dd=0' : 'AA=2, Ar=1, rr=0')
 		o[1].innerHTML = 'Dominant: ' + (is0 ? 'DD=1, Dd=1, dd=0' : 'AA=1, Ar=1, rr=0')

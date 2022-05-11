@@ -36,6 +36,8 @@ export function drawer_init(app, features, overrides = {}) {
 		}
 	}
 
+	const selectedGenome = app.selectgenome.node().options[app.selectgenome.property('selectedIndex')].value
+
 	async function load_examples() {
 		// prevent reloading
 		if (examples_rendered) return
@@ -44,7 +46,8 @@ export function drawer_init(app, features, overrides = {}) {
 		await _.init_appDrawer({
 			holder: dom.drawer_div,
 			apps_sandbox_div: dom.sandbox_div,
-			apps_off
+			apps_off,
+			genomes: app.genomes
 		})
 		drawer_full_height = dom.drawer_div.node().getBoundingClientRect().height + 5
 		slide_drawer()

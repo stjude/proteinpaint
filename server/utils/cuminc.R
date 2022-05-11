@@ -11,35 +11,39 @@
 # Input data is in JSON format and is read in from <in.json> file.
 # Cuminc results are written in JSON format to stdout.
 
-# Input JSON specifications:
-# [
-#   {
-#     time: time to event
-#     event: event code (0 = censored, 1 = event)
-#     series: series ID
-#   }
-# ]
-#
-# Output JSON specifications:
+# Input JSON:
 # {
-#   "estimates": {
-#     <series>: [
-#       {
-#         "time": time when estimate is computed
-#         "est": estimated cumulative incidence value
-#         "var": variance of cumulative incidence value
-#         "low": 95% confidence interval - lower bound
-#         "up": 95% confidence intervals - upper bound
-#       }
-#     ]
-#   },
-#   "tests": [
+#   chartId: [
 #     {
-#       "series1": first series of test,
-#       "series2": second series of test,
-#       "pvalue": p-value of test
+#       time: time to event
+#       event: event code (0 = censored, 1 = event)
+#       series: series ID
 #     }
 #   ]
+# }
+#
+# Output JSON:
+# {
+#   chartId: {
+#     estimates: {
+#       seriesId: [
+#         {
+#           time: time when estimate is computed
+#           est: estimated cumulative incidence value
+#           var: variance of cumulative incidence value
+#           low: 95% confidence interval - lower bound
+#           up: 95% confidence intervals - upper bound
+#         }
+#       ]
+#     },
+#     tests: [
+#       {
+#         series1: first series of test,
+#         series2: second series of test,
+#         pvalue: p-value of test
+#       }
+#     ]
+#   }
 # }
 
 
@@ -49,6 +53,44 @@
 
 library(jsonlite)
 suppressPackageStartupMessages(library(cmprsk))
+
+# function to run cumulative incidence analysis on data from a chart
+run_cuminc <- function(chart) {
+  chart$event <- as.factor(chart$event)
+  chart$series <- as.factor(chart$series)
+  estimates <- list()
+  if (length(levels(chart$series)) == 1) {
+    # single series
+    res <- cuminc(ftime = chart$time, fstatus = chart$event, cencode = 0)
+    seriesRes <- as.data.frame(res[[1]])
+    seriesRes <- compute_ci(seriesRes)
+    estimates[[levels(chart$series)]] <- seriesRes
+    out <- list("estimates" = estimates)
+  } else {
+    # multiple series
+    # compute cumulative incidence for each pairwise combination of series
+    pairs <- combn(levels(chart$series), 2)
+    # initialize table for Gray's tests
+    tests <- data.frame("series1" = character(length = ncol(pairs)), "series2" = character(length = ncol(pairs)), "pvalue" = double(length = ncol(pairs)), stringsAsFactors = F)
+    for (i in 1:ncol(pairs)) {
+      pair <- pairs[,i]
+      res <- cuminc(ftime = chart$time, fstatus = chart$event, group = chart$series, cencode = 0, subset = chart$series %in% pair)
+      # retrieve estimates for each series within the pair
+      for (series in pair) {
+        if (series %in% names(estimates)) next
+        seriesRes <- as.data.frame(res[[paste(series,1)]])
+        seriesRes <- compute_ci(seriesRes)
+        estimates[[series]] <- seriesRes
+      }
+      # retrieve p-value of the pair
+      pvalue <- signif(res$Tests[1,"pv"], 2)
+      if (pvalue == 0) pvalue <- "<1e-16" # see https://stacks.cdc.gov/view/cdc/22757/cdc_22757_DS11.pdf
+      tests[i,] <- c(pair, pvalue)
+    }
+    out <- list("estimates" = estimates, "tests" = tests)
+  }
+  return(out)
+}
 
 # function to compute 95% confidence intervals
 compute_ci <- function(res) {
@@ -67,41 +109,7 @@ infile <- args[1]
 dat <- fromJSON(infile)
 
 # compute cumulative incidence
-dat$event <- as.factor(dat$event)
-dat$series <- as.factor(dat$series)
-out <- list()
-out[["estimates"]] <- list()
-if (length(levels(dat$series)) == 1) {
-  # single series
-  res <- cuminc(ftime = dat$time, fstatus = dat$event, cencode = 0)
-  seriesRes <- as.data.frame(res[[1]])
-  seriesRes <- compute_ci(seriesRes)
-  out$estimates[[levels(dat$series)[1]]] <- seriesRes
-} else {
-  # multiple series
-  # compute cumulative incidence for each pairwise combination of series
-  pairs <- combn(levels(dat$series), 2)
-  pvalues <- vector(mode = "numeric")
-  series1s <- vector(mode = "character")
-  series2s <- vector(mode = "character")
-  for (i in 1:ncol(pairs)) {
-    pair <- pairs[,i]
-    series1s <- c(series1s, pair[1])
-    series2s <- c(series2s, pair[2])
-    res <- cuminc(ftime = dat$time, fstatus = dat$event, group = dat$series, cencode = 0, subset = dat$series %in% pair)
-    # retrieve estimates for each series within the pair
-    for (series in pair) {
-      if (series %in% names(out$estimates)) next
-      seriesRes <- as.data.frame(res[[paste(series,1)]])
-      seriesRes <- compute_ci(seriesRes)
-      out$estimates[[series]] <- seriesRes
-    }
-    # retrieve p-value of the pair
-    pvalues <- c(pvalues, signif(res$Tests[1,"pv"], 2))
-  }
-  # store tests
-  out[["tests"]] <- data.frame("series1" = series1s, "series2" = series2s, "pvalue" = pvalues)
-}
+ci_results <- lapply(dat, run_cuminc)
 
 # output results in json format
-cat(toJSON(out, digits = NA, na = "string"), file = "", sep = "")
+toJSON(ci_results, digits = NA, na = "string")
