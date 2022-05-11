@@ -258,23 +258,15 @@ function makeRinput(q, sampledata) {
 	}
 	if (q.regressionType == 'cox') {
 		// for cox regression, outcome needs to be time-to-event data
-		if (q.outcome.q.timeScale == 'time') {
-			// time from enrollment time scale
-			outcome.timeToEvent = {
-				timeId: q.outcome.id + '_time',
-				eventId: q.outcome.id + '_event',
-				timeScale: q.outcome.q.timeScale
-			}
-		} else if (q.outcome.q.timeScale == 'age') {
+		outcome.timeToEvent = {
+			timeId: q.outcome.id + '_time',
+			eventId: q.outcome.id + '_event',
+			timeScale: q.outcome.q.timeScale
+		}
+		if (outcome.timeToEvent.timeScale == 'age') {
 			// age time scale
-			outcome.timeToEvent = {
-				agestartId: q.outcome.id + '_agestart',
-				ageendId: q.outcome.id + '_ageend',
-				eventId: q.outcome.id + '_event',
-				timeScale: q.outcome.q.timeScale
-			}
-		} else {
-			throw 'unknown cox regression time scale'
+			outcome.timeToEvent.agestartId = q.outcome.id + '_agestart'
+			outcome.timeToEvent.ageendId = q.outcome.id + '_ageend'
 		}
 	}
 
@@ -350,9 +342,10 @@ function makeRinput(q, sampledata) {
 				entry[outcome.timeToEvent.timeId] = out.value
 			} else if (q.outcome.q.timeScale == 'age') {
 				// age time scale
-				const ages = JSON.parse(out.value)
-				entry[outcome.timeToEvent.agestartId] = ages.age_start
-				entry[outcome.timeToEvent.ageendId] = ages.age_end
+				const values = JSON.parse(out.value)
+				entry[outcome.timeToEvent.agestartId] = values.age_start
+				entry[outcome.timeToEvent.ageendId] = values.age_end
+				entry[outcome.timeToEvent.timeId] = values.time
 			} else {
 				throw 'unknown cox regression time scale'
 			}
@@ -533,7 +526,7 @@ function validateRinput(Rinput) {
 		if (outcome.timeToEvent.timeScale == 'time') {
 			nvariables = nvariables + 2
 		} else if (outcome.timeToEvent.timeScale == 'age') {
-			nvariables = nvariables + 3
+			nvariables = nvariables + 4
 		} else {
 			throw 'unknown cox regression time scale'
 		}
@@ -1409,18 +1402,15 @@ function replaceTermId(Rinput) {
 	if (Rinput.outcome.timeToEvent) {
 		// time-to-event variable
 		const t2e = Rinput.outcome.timeToEvent
+		id2originalId['outcome_time'] = t2e.timeId
+		originalId2id[t2e.timeId] = 'outcome_time'
 		id2originalId['outcome_event'] = t2e.eventId
 		originalId2id[t2e.eventId] = 'outcome_event'
-		if (t2e.timeScale == 'time') {
-			id2originalId['outcome_time'] = t2e.timeId
-			originalId2id[t2e.timeId] = 'outcome_time'
-		} else if (t2e.timeScale == 'age') {
+		if (t2e.timeScale == 'age') {
 			id2originalId['outcome_agestart'] = t2e.agestartId
 			id2originalId['outcome_ageend'] = t2e.ageendId
 			originalId2id[t2e.agestartId] = 'outcome_agestart'
 			originalId2id[t2e.ageendId] = 'outcome_ageend'
-		} else {
-			throw 'unknown cox regression time scale'
 		}
 	}
 	// independent variables
@@ -1437,14 +1427,11 @@ function replaceTermId(Rinput) {
 	Rinput.outcome.id = originalId2id[Rinput.outcome.id]
 	if (Rinput.outcome.timeToEvent) {
 		const t2e = Rinput.outcome.timeToEvent
+		t2e.timeId = originalId2id[t2e.timeId]
 		t2e.eventId = originalId2id[t2e.eventId]
-		if (t2e.timeScale == 'time') {
-			t2e.timeId = originalId2id[t2e.timeId]
-		} else if (t2e.timeScale == 'age') {
+		if (t2e.timeScale == 'age') {
 			t2e.agestartId = originalId2id[t2e.agestartId]
 			t2e.ageendId = originalId2id[t2e.ageendId]
-		} else {
-			throw 'unknown cox regression time scale'
 		}
 	}
 	// independent variables
