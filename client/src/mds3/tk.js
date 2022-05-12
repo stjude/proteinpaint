@@ -16,7 +16,8 @@ rangequery_rglst
 getParameter
 loadTk_finish_closure
 rangequery_add_variantfilters
-
+getData
+filterCustomVariants
 */
 
 export async function loadTk(tk, block) {
@@ -146,7 +147,7 @@ async function getData(tk, block) {
 	let data
 	if (tk.custom_variants) {
 		// has custom data on client side, no need to request from server
-		data = filter_custom_variants(tk, block)
+		data = filterCustomVariants(tk, block)
 	} else {
 		// request data from server, either official or custom sources
 		const [par, headers] = getParameter(tk, block)
@@ -261,7 +262,7 @@ by info_fields[] and variantcase_fields[]
 	}
 }
 
-function filter_custom_variants(tk, block) {
+function filterCustomVariants(tk, block) {
 	// return the same data{} object as server queries
 	const data = {
 		skewer: []

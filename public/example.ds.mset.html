@@ -12,6 +12,7 @@
 <div id=aaa style="margin:10px"></div>
 <div id=bb style="margin:10px"></div>
 <div id=cc style="margin:10px"></div>
+<div id=dd style="margin:10px"></div>
 
 <script>
 /*
@@ -41,6 +42,7 @@ runproteinpaint({
 
 
 runproteinpaint({
+noheader:1,
 	holder:document.getElementById('bb'),
 	parseurl:true,
 	nobox:1,
@@ -73,6 +75,7 @@ runproteinpaint({
 
 
 runproteinpaint({
+noheader:1,
 	holder:document.getElementById('cc'),
 	parseurl:true,
 	nobox:1,
@@ -80,12 +83,34 @@ runproteinpaint({
 	gene:'NM_002467',
 	tracks:[{
 		type:'mds3',
-		name:'Test',
+		name:'Test, with occurrence',
 		custom_variants:[
 			// TODO occurrence is right now required but should be optional
 			{"chr":"chr8","pos":128750685,"mname":"P75","class":"M","dt":1,occurrence:1},
 			{"chr":"chr8","pos":128750680,"mname":"T73","class":"M","dt":1,occurrence:2},
 			{"chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1,occurrence:3}
+		],
+	}],
+})
+
+
+
+runproteinpaint({
+noheader:1,
+	holder:document.getElementById('dd'),
+	parseurl:true,
+	nobox:1,
+	genome:'hg19',
+	gene:'NM_002467',
+	tracks:[{
+		type:'mds3',
+		name:'Test, with sample name',
+		custom_variants:[
+			// TODO occurrence is right now required but should be optional
+			{"chr":"chr8","pos":128750685,"mname":"P75","class":"M","dt":1,sample:'sample 1'},
+			{"chr":"chr8","pos":128750680,"mname":"T73","class":"M","dt":1,sample:'sample 2'},
+			{"chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1,sample:'sample 3'},
+			{"chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1,sample:'sample 4'}
 		],
 	}],
 })

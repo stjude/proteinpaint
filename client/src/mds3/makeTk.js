@@ -19,6 +19,7 @@ mayaddGetter_sampleSummaries2
 parse_client_config
 configPanel
 _load
+mayDeriveSkewerOccurrence4samples
 */
 
 /* common structure of tk.mds between official and custom
@@ -178,6 +179,13 @@ async function get_ds(tk, block) {
 	} else if (tk.custom_variants) {
 		tk.mds.has_skewer = true // enable skewer tk
 		// validate custom data
+		{
+			const newlst = mayDeriveSkewerOccurrence4samples(tk.custom_variants)
+			if (newlst) {
+				// only overwrite if newlst is returned
+				tk.custom_variants = newlst
+			}
+		}
 	} else {
 		throw 'unknown data source for custom track'
 	}
@@ -336,4 +344,52 @@ function getter_mcset_key(mcset, m) {
 	}
 
 	return ['no trigger']
+}
+
+/*
+in custom_variants[] data points,
+if "sample" is present but "occurrence" is missing,
+dedup the list by merging m{} of same variant together, and derive m.occurrence:int
+this works for receiving data from mass-matrix gene label-clicking
+
+work-in-progress
+
+may share code with server
+*/
+function mayDeriveSkewerOccurrence4samples(lst) {
+	if (lst.find(i => i.occurrence != undefined)) {
+		// at least one m{} has occurrence, presumably all m{} should have it. no need to group
+		return
+	}
+	if (!lst.find(i => i.sample)) {
+		// no m{} has sample, cannot derive occurrence
+		// usecase: for displaying variant-only info, e.g. regression-snplocus, dbsnp, clinvar
+		return
+	}
+	// merge m{} and derive occurrence
+	const key2m = new Map()
+	// k: string key, v: m{} after deduplication, with occurrence:int
+	for (const m of lst) {
+		const key = m.mname + '.' + m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt
+		const m2 = key2m.get(key)
+		if (m2) {
+			m2.occurrence++
+			// TODO collect samples to array
+			m2.samples.push({
+				sample: m.sample
+			})
+		} else {
+			m.occurrence = 1
+			m.samples = [
+				{
+					sample: m.sample
+				}
+			]
+			delete m.sample
+			key2m.set(key, m)
+		}
+	}
+	const newlst = []
+	for (const m of key2m.values()) newlst.push(m)
+	return newlst
 }
