@@ -1001,8 +1001,20 @@ function make_mds3_variants(tw, resultLst) {
 			if (!d.coefficients || !d.coefficients.terms) throw '.data.coefficients.terms{} missing'
 			const r = d.coefficients.terms[snp.snpid]
 			if (!r) throw 'snp missing from data.coefficients.terms{}'
-			if (!Array.isArray(r.fields)) throw 'data.coefficients.terms[snpid].fields[] is not array'
-			m.regressionEstimate = r.fields[0]
+			if (Array.isArray(r.fields)) {
+				// has fields[], snp is used as additive/dominant/recessive
+				m.regressionEstimate = r.fields[0]
+			} else if (r.categories) {
+				// has categories{}: {C/T: Array(6), T/T: Array(6)}
+				// snp is used by genotype
+				const lst = []
+				for (const gt in r.categories) {
+					lst.push(gt + ':' + r.categories[gt][0])
+				}
+				m.regressionEstimate = ' ' + lst.join(' ')
+			} else {
+				throw 'unknown way to get snp estimates from coefficients table'
+			}
 		} else if (d.fisher) {
 			/* { pvalue:float, table:[] }
 			this variant is tested by fisher, show as triangle
@@ -1266,18 +1278,14 @@ function getSnpPvalueFromType3orCoefficient(d, snpid) {
 	if (!Array.isArray(d.type3.terms[snpid])) throw `type3.terms[${snp.snpid}] not array`
 	const str = d.type3.terms[snpid][d.type3.terms[snpid].length - 1]
 	// last value of the array should be p-value string (can be 'NA')
+	/*
+	TODO pvalue is always NA for main effects of interacting terms
+	when interacting, a new row is to be created in type3 table that can provide pvalue for the snp
+	see issue 1033 and 1034
+	*/
 	const v = Number(str)
 	if (Number.isFinite(v)) {
 		return v
 	}
-	// no pvalue from type3; check coefficients table
-	if (!d.coefficients) throw 'd.coefficients missing'
-	if (!d.coefficients || !d.coefficients.terms) throw '.data.coefficients.terms{} missing'
-	const r = d.coefficients.terms[snpid]
-	if (!r) throw 'snp missing from data.coefficients.terms{}'
-	if (!Array.isArray(r.fields)) throw 'data.coefficients.terms[snpid].fields[] is not array'
-	const str2 = r.fields[r.fields.length - 1]
-	const v2 = Number(str2)
-	if (Number.isFinite(v2)) return v2
-	// if also no pvalue from coefficients, return undefined
+	return undefined
 }
