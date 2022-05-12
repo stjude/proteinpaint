@@ -472,16 +472,12 @@ function setRenderers(self) {
 			fillCoefficientTermname(tw, termNameTd)
 
 			if (termdata.fields) {
-				// only 1 row for this term, no categories
+				// create only 1 row for this term in coefficients table, as it doesn't have categories
 
-				// col 2: no category
+				// col 2: category column
 				{
-					const td = tr.append('td')
-					// may indicate geneticModel
-					if ('geneticModel' in tw.q) {
-						const v = tw.q.geneticModel
-						td.text(v == 0 ? '(additive)' : v == 1 ? '(dominant)' : '(recessive)').style('opacity', 0.3)
-					}
+					const td = tr.append('td').style('padding', '8px')
+					fillColumn2coefficientsTable(td, tw)
 				}
 
 				// col 3
@@ -493,7 +489,7 @@ function setRenderers(self) {
 						.style('padding', '8px')
 				}
 			} else if (termdata.categories) {
-				// term has categories, one sub-row for each category
+				// term has categories, create one sub-row for each category in coefficient tables
 
 				const orderedCategories = []
 				const input = self.getIndependentInput(tid)
@@ -519,12 +515,14 @@ function setRenderers(self) {
 						// create new row starting from 2nd category
 						tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 					}
+
 					// col 2
-					tr.append('td')
-						.text(tw && tw.term.values && tw.term.values[k] ? tw.term.values[k].label : k)
-						.style('padding', '8px')
+					const td = tr.append('td').style('padding', '8px')
+					fillColumn2coefficientsTable(td, tw, k)
+
 					// col 3
 					forestPlotter(tr.append('td'), termdata.categories[k])
+
 					// rest of columns
 					for (const v of termdata.categories[k]) {
 						tr.append('td')
@@ -536,6 +534,7 @@ function setRenderers(self) {
 				tr.append('td').text('ERROR: no .fields[] or .categories{}')
 			}
 		}
+
 		// interactions
 		for (const row of result.coefficients.interactions) {
 			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
@@ -552,22 +551,8 @@ function setRenderers(self) {
 			// col 2: category
 			{
 				const td = tr.append('td').style('padding', '8px')
-				const d1 = td.append('div')
-				if (row.category1) {
-					d1.text(
-						term1 && term1.term.values && term1.term.values[row.category1]
-							? term1.term.values[row.category1].label
-							: row.category1
-					)
-				}
-				const d2 = td.append('div')
-				if (row.category2) {
-					d2.text(
-						term2 && term2.term.values && term2.term.values[row.category2]
-							? term2.term.values[row.category2].label
-							: row.category2
-					)
-				}
+				fillColumn2coefficientsTable(td.append('div'), term1, row.category1)
+				fillColumn2coefficientsTable(td.append('div'), term2, row.category2)
 			}
 			// col 3
 			forestPlotter(tr.append('td'), row.lst)
@@ -1288,4 +1273,22 @@ function getSnpPvalueFromType3orCoefficient(d, snpid) {
 		return v
 	}
 	return undefined
+}
+
+function fillColumn2coefficientsTable(div, tw, categoryKey) {
+	if (categoryKey) {
+		div.text(tw && tw.term.values && tw.term.values[categoryKey] ? tw.term.values[categoryKey].label : categoryKey)
+		return
+	}
+	// the term doesn't have category, so indicate helpful status
+	div.style('opacity', 0.3) // also gray out text to differentiate it from a category
+	if ('geneticModel' in tw.q) {
+		const v = tw.q.geneticModel
+		div.text(v == 0 ? '(additive)' : v == 1 ? '(dominant)' : '(recessive)')
+		return
+	}
+	if (tw.q.mode) {
+		div.text('(' + tw.q.mode + ')')
+		return
+	}
 }
