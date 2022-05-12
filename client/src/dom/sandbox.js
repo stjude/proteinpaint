@@ -28,8 +28,9 @@ export function renderSandboxFormDiv(holder, genomes) {
 	return [inputdiv, gselect.node(), filediv, saydiv, visualdiv]
 }
 
-export function newSandboxDiv(sandbox_holder, close) {
-	const app_div = sandbox_holder.insert('div', ':first-child')
+export function newSandboxDiv(sandbox_holder, close, insertSelector = ':first-child') {
+	const elem = sandbox_holder.select(insertSelector).node()
+	const app_div = sandbox_holder.insert('div', insertSelector).attr('class', 'sjpp-sandbox')
 	const header_row = app_div
 		.append('div')
 		.style('display', 'inline-block')

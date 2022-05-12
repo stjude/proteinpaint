@@ -46,7 +46,21 @@ class MassApp {
 			api.tip = new Menu({ padding: '5px' })
 			api.printError = e => this.printError(e)
 
-			api.getSandbox = (callback = null) => newSandboxDiv(this.dom.plotDiv, callback)
+			api.getSandbox = (opts = {}) => {
+				let i = 1,
+					j = 1
+				if (opts.clickedDiv) {
+					for (const elem of this.dom.plotDiv.node().childNodes) {
+						if (elem.contains(opts.clickedDiv)) {
+							i = j
+							break
+						}
+						j++
+					}
+					delete opts.clickedDiv
+				}
+				return newSandboxDiv(this.dom.plotDiv, opts.callback, `.sjpp-sandbox:nth-child(${i})`)
+			}
 
 			// TODO: only pass state.genome, dslabel to vocabInit
 			api.vocabApi = await vocabInit({
