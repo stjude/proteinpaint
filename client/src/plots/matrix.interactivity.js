@@ -115,16 +115,22 @@ function setTermActions(self) {
 
 		self.showShortcuts(t, self.dom.menutop)
 
-		self.dom.menutop
-			.append('div')
-			.selectAll(':scope>.sja_menuoption')
-			.data([
+		const options = []
+		if (t.tw.term?.type == 'geneVariant') options.push({ label: 'Browser', callback: self.launchBrowser })
+		options.push(
+			...[
 				{ label: 'Edit', callback: self.showTermEditMenu },
 				//{ label: 'Move', callback: self.showMoveMenu },
 				{ label: 'Insert', callback: self.showTermInsertMenu },
 				{ label: 'Sort', callback: self.showSortMenu },
 				{ label: 'Delete', callback: self.showRemoveMenu }
-			])
+			]
+		)
+
+		self.dom.menutop
+			.append('div')
+			.selectAll(':scope>.sja_menuoption')
+			.data(options)
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption')
@@ -876,6 +882,43 @@ function setTermActions(self) {
 			config: { termgroups }
 		})
 		self.dom.tip.hide()
+	}
+
+	self.launchBrowser = () => {
+		const tw = self.activeLabel.tw
+		const custom_variants = []
+		for (const row of self.data.lst) {
+			if (row[tw.$id]?.values) custom_variants.push(...row[tw.$id].values)
+		}
+
+		const sandbox = self.app.getSandbox()
+		sandbox.header_row
+			.append('div')
+			.style('display', 'inline-block')
+			.style('color', '#999')
+			.style('padding-left', '7px')
+			.html(`${tw.term.name}: variants in matrix samples`)
+
+		if (tw.term.type == 'geneVariant') {
+			// TODO: import the specific track/app to render instead of using runpp()
+			runproteinpaint({
+				holder: sandbox.body.node(),
+				noheader: 1,
+				parseurl: true,
+				nobox: 1,
+				genome: self.app.vocabApi.vocab.genome,
+				gene: custom_variants[0].isoform,
+				tracks: [
+					{
+						type: 'mds3',
+						name: custom_variants[0].isoform,
+						custom_variants
+					}
+				]
+			})
+		} else {
+			alert(`TODO: create browser wrapper app for term.type=${tw.term.type}`)
+		}
 	}
 }
 

@@ -156,6 +156,7 @@ class Matrix {
 				obj[row.sample] = row
 				return obj
 			}, {})
+			this.data = data
 			// process the sample-filtered data
 			this.setSampleGroups(data)
 			this.setTermOrder(data)

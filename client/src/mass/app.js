@@ -42,13 +42,21 @@ class MassApp {
 	}
 
 	async preApiFreeze(api) {
-		api.tip = new Menu({ padding: '5px' })
-		api.printError = e => this.printError(e)
-		api.vocabApi = await vocabInit({
-			app: api,
-			state: this.opts.state,
-			fetchOpts: this.opts.fetchOpts
-		})
+		try {
+			api.tip = new Menu({ padding: '5px' })
+			api.printError = e => this.printError(e)
+
+			api.getSandbox = (callback = null) => newSandboxDiv(this.dom.plotDiv, callback)
+
+			// TODO: only pass state.genome, dslabel to vocabInit
+			api.vocabApi = await vocabInit({
+				app: api,
+				state: this.opts.state,
+				fetchOpts: this.opts.fetchOpts
+			})
+		} catch (e) {
+			throw e
+		}
 	}
 
 	async init() {
@@ -78,6 +86,8 @@ class MassApp {
 		const newPlots = {}
 		for (const [index, plot] of this.state.plots.entries()) {
 			if (!(plot.id in this.components.plots)) {
+				// TODO: specify where to insert the sandbox, not always at the top,
+				// but maybe right above the sandbox where a click triggered the new sandbox
 				const holder = newSandboxDiv(this.dom.plotDiv, () => {
 					this.api.dispatch({
 						type: 'plot_delete',
