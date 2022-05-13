@@ -67,8 +67,8 @@ class MassApp {
 				app: api,
 				state: {
 					vocab: {
-						genome: this.opts.state.genome,
-						dslabel: this.opts.state.dslabel
+						genome: this.opts.state.vocab?.genome || this.opts.state.genome,
+						dslabel: this.opts.state.vocab?.dslabel || this.opts.state.dslabel
 					}
 				},
 				fetchOpts: this.opts.fetchOpts
