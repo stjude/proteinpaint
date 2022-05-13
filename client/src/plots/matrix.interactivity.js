@@ -917,7 +917,7 @@ function setTermActions(self) {
 			]
 		})
 
-		sandbox.app_div.node().scrollIntoView()
+		sandbox.app_div.node().scrollIntoView({ behavior: 'smooth' })
 	}
 }
 
