@@ -65,9 +65,16 @@ class MassApp {
 			// TODO: only pass state.genome, dslabel to vocabInit
 			api.vocabApi = await vocabInit({
 				app: api,
-				state: this.opts.state,
+				state: {
+					vocab: {
+						genome: this.opts.state.genome,
+						dslabel: this.opts.state.dslabel
+					}
+				},
 				fetchOpts: this.opts.fetchOpts
 			})
+
+			this.opts.state.vocab = api.vocabApi.vocab
 		} catch (e) {
 			throw e
 		}

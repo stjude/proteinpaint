@@ -67,9 +67,16 @@ class TdbApp {
 	}
 
 	async preApiFreeze(api) {
+		const state = this.opts.state.vocab || {
+			vocab: {
+				genome: this.opts.state.genome,
+				dslabel: this.opts.state.dslabel
+			}
+		}
 		api.vocabApi = this.opts.vocabApi
 			? this.opts.vocabApi
-			: await vocabInit({ app: this.api, state: this.opts.state, fetchOpts: this.opts.fetchOpts })
+			: await vocabInit({ app: this.api, state, fetchOpts: this.opts.fetchOpts })
+		this.opts.state.vocab = api.vocabApi.vocab
 		api.tip = this.dom.tip
 		api.appInit = appInit
 	}

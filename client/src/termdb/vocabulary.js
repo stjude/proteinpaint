@@ -12,6 +12,9 @@ const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
+	if (opts.vocab && !opt.state) {
+		opts.state = { vocab: opts.vocab }
+	}
 	if (!opts.state) return // let termdb/store handle error
 	if (!opts.state.vocab) {
 		opts.state.vocab = opts.vocab ? opts.vocab : {}

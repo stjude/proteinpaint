@@ -231,10 +231,14 @@ class Filter {
 					}
 				}
 			}
-
+			const state = app.getState()
+			const vocab = state.vocab || {
+				genome: state.genome,
+				dslabel: state.dslabel
+			}
 			this.vocabApi = vocabInit({
 				app,
-				state: app.getState()
+				state: { vocab }
 			})
 		}
 
