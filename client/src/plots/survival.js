@@ -276,7 +276,7 @@ function setRenderers(self) {
 			.attr('class', 'pp-survival-chart')
 			.style('opacity', chart.serieses ? 0 : 1) // if the data can be plotted, slowly reveal plot
 			//.style("position", "absolute")
-			.style('width', `${s.svgw + 50 + chart.atRiskLabelWidth}px`)
+			.style('width', 'fit-content')
 			.style('display', 'inline-block')
 			.style('margin', s.chartMargin + 'px')
 			.style('padding', '10px')
@@ -352,7 +352,7 @@ function setRenderers(self) {
 		div
 			.transition()
 			.duration(s.duration)
-			.style('width', `${s.svgw + 50 + chart.atRiskLabelWidth}px`)
+			.style('width', 'fit-content')
 
 		div
 			.select('.sjpp-survival-title')
