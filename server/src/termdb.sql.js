@@ -1042,15 +1042,18 @@ thus less things to worry about...
 
 		for (const r of rows) {
 			if (!r.type) continue
+			console.log(1044, r.type)
 			// !!! r.cohort is undefined for dataset without subcohort
 			if (!(r.cohort in supportedChartTypes)) {
 				supportedChartTypes[r.cohort] = ['barchart', 'regression']
 				numericTypeCount[r.cohort] = 0
-				// why is app.features missing?
-				if (app.features && app.features.draftChartTypes) {
-					// TODO: move draft charts out of flag once stable
-					supportedChartTypes[r.cohort].push(...app.features.draftChartTypes)
-				}
+				console.log(ds.cohort.allowedChartTypes)
+				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].push('matrix')
+			}
+			// why would app.features be missing?
+			if (app.features?.draftChartTypes) {
+				// TODO: move draft charts out of flag once stable
+				supportedChartTypes[r.cohort].push(...app.features.draftChartTypes)
 			}
 			if (r.type == 'survival' && !supportedChartTypes[r.cohort].includes('survival'))
 				supportedChartTypes[r.cohort].push('survival')
