@@ -76,7 +76,7 @@ class TdbSurvival {
 							usecase: { target: 'survival', detail: 'term2' }
 						},
 						{
-							type: 'divide',
+							type: 'divideBy',
 							usecase: { target: 'survival', detail: 'term0' }
 						},
 						{
