@@ -360,8 +360,7 @@ fn main() {
                             correct_start_position,
                             correct_end_position,
                             variant_pos,
-                            ref_length as usize,
-                            alt_length as usize,
+                            indel_length as usize,
                         );
                     let ref_insertion = 0;
 
@@ -545,8 +544,7 @@ fn main() {
                                     correct_start_position,
                                     correct_end_position,
                                     variant_pos,
-                                    ref_length as usize,
-                                    alt_length as usize,
+                                    indel_length as usize,
                                 );
                             let ref_insertion = 0;
 
@@ -1971,8 +1969,7 @@ fn check_polyclonal_with_read_alignment(
     correct_start_position: i64,
     correct_end_position: i64,
     variant_pos: i64,
-    variant_ref_length: usize,
-    variant_alt_length: usize,
+    indel_length: usize,
 ) -> (i64, i64) {
     let mut ref_polyclonal_read_status = 0;
     let mut alt_polyclonal_read_status = 0;
@@ -1985,8 +1982,8 @@ fn check_polyclonal_with_read_alignment(
             correct_start_position,
             correct_end_position,
             variant_pos,
-            variant_ref_length,
-            variant_alt_length,
+            indel_length,
+            indel_length,
         );
 
     //println!("correct_start_position:{}", correct_start_position);
