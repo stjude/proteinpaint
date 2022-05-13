@@ -1042,7 +1042,6 @@ thus less things to worry about...
 
 		for (const r of rows) {
 			if (!r.type) continue
-			console.log(1044, r.type)
 			// !!! r.cohort is undefined for dataset without subcohort
 			if (!(r.cohort in supportedChartTypes)) {
 				supportedChartTypes[r.cohort] = ['barchart', 'regression']

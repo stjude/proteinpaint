@@ -55,8 +55,8 @@ tape('basic cuminc', function(test) {
 		)
 		test.equal(
 			cumincDiv && cumincDiv.selectAll('.sjpcb-cuminc-series circle').size(),
-			18,
-			'should render 18 cuminc series circles'
+			21,
+			'should render 21 cuminc series circles'
 		)
 		test.end()
 	}
@@ -74,6 +74,12 @@ tape('hidden uncomputable', function(test) {
 					},
 					term2: {
 						id: 'hrtavg'
+					},
+					settings: {
+						cuminc: {
+							minSampleSize: 1,
+							minEventCnt: 1
+						}
 					}
 				}
 			]
@@ -118,6 +124,12 @@ tape('skipped series', function(test) {
 						id: 'genetic_race'
 						//term: termjson['Cardiac dysrhythmia'],
 						//q: { bar_by_grade: true, value_by_max_grade: true }
+					},
+					settings: {
+						cuminc: {
+							minSampleSize: 1,
+							minEventCnt: 1
+						}
 					}
 				}
 			]
