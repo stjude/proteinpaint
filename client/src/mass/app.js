@@ -23,6 +23,14 @@ opts{}
 
 */
 
+const sandboxIdStr =
+	Math.random()
+		.toString()
+		.slice(-6) +
+	'-' +
+	(+new Date()).toString().slice(-8)
+let sandboxIdSuffix = 0
+
 class MassApp {
 	constructor(opts) {
 		this.type = 'app'
@@ -33,6 +41,9 @@ class MassApp {
 			errdiv: opts.holder.append('div'),
 			plotDiv: opts.holder.append('div')
 		}
+
+		// track plots by ID, and assign
+		this.plotIdToSandboxId = {}
 	}
 
 	validateOpts(o = {}) {
@@ -47,19 +58,10 @@ class MassApp {
 			api.printError = e => this.printError(e)
 
 			api.getSandbox = (opts = {}) => {
-				let i = 1,
-					j = 1
-				if (opts.clickedDiv) {
-					for (const elem of this.dom.plotDiv.node().childNodes) {
-						if (elem.contains(opts.clickedDiv)) {
-							i = j
-							break
-						}
-						j++
-					}
-					delete opts.clickedDiv
-				}
-				return newSandboxDiv(this.dom.plotDiv, opts.callback, `.sjpp-sandbox:nth-child(${i})`)
+				return newSandboxDiv(this.dom.plotDiv, {
+					callback: opts.callback,
+					insertSelector: opts.insertBefore ? '#' + this.plotIdToSandboxId[opts.insertBefore] : ''
+				})
 			}
 
 			// TODO: only pass state.genome, dslabel to vocabInit
@@ -107,25 +109,38 @@ class MassApp {
 		const newPlots = {}
 		for (const [index, plot] of this.state.plots.entries()) {
 			if (!(plot.id in this.components.plots)) {
+				const sandboxId = `sjpp-sandbox-${sandboxIdStr}-${sandboxIdSuffix++}`
+				this.plotIdToSandboxId[plot.id] = sandboxId
+
 				// TODO: specify where to insert the sandbox, not always at the top,
 				// but maybe right above the sandbox where a click triggered the new sandbox
-				const holder = newSandboxDiv(this.dom.plotDiv, () => {
-					this.api.dispatch({
-						type: 'plot_delete',
-						id: plot.id
-					})
-				}) // # TODO: pass an index argument to sandbox to specify insertion point)
-				newPlots[plot.id] = plotInit(Object.assign({}, { app: this.api, holder }, plot))
+				const sandbox = newSandboxDiv(this.dom.plotDiv, {
+					close: () => {
+						this.api.dispatch({
+							type: 'plot_delete',
+							id: plot.id
+						})
+					},
+					id: sandboxId,
+					insertSelector: plot.insertBefore ? '#' + this.plotIdToSandboxId[plot.insertBefore] : ''
+				})
+				newPlots[plot.id] = plotInit(Object.assign({}, { app: this.api, holder: sandbox }, plot))
 			}
 		}
 
 		// simultaneous initialization of multiple new plots;
 		// if done inside the for-of loop above, the await kewyword
 		// will delay subsequent plot initializations
-		if (Object.keys(newPlots).length) {
+		const numNewPlots = Object.keys(newPlots).length
+		if (numNewPlots) {
 			await Promise.all(Object.values(newPlots))
 			for (const plotId in newPlots) {
 				this.components.plots[plotId] = await newPlots[plotId]
+				if (numNewPlots === 1) {
+					select('#' + this.plotIdToSandboxId[plotId])
+						.node()
+						.scrollIntoView({ behavior: 'smooth' })
+				}
 			}
 		}
 

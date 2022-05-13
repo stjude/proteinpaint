@@ -28,9 +28,16 @@ export function renderSandboxFormDiv(holder, genomes) {
 	return [inputdiv, gselect.node(), filediv, saydiv, visualdiv]
 }
 
-export function newSandboxDiv(sandbox_holder, close, insertSelector = ':first-child') {
-	const elem = sandbox_holder.select(insertSelector).node()
+/*
+	sandbox_holder: a d3-selection
+	opts{}
+	.close
+*/
+export function newSandboxDiv(sandbox_holder, opts = {}) {
+	const insertSelector = opts.insertSelector || ':first-child'
 	const app_div = sandbox_holder.insert('div', insertSelector).attr('class', 'sjpp-sandbox')
+	if (opts.id) app_div.attr('id', opts.id)
+
 	const header_row = app_div
 		.append('div')
 		.style('display', 'inline-block')
@@ -63,7 +70,7 @@ export function newSandboxDiv(sandbox_holder, close, insertSelector = ':first-ch
 			// clear event handlers
 			header_row.on('click', null).on('mousedown', null)
 			app_div.selectAll('*').remove()
-			if (typeof close === 'function') close()
+			if (typeof opts.close === 'function') opts.close()
 		})
 
 	const header = header_row

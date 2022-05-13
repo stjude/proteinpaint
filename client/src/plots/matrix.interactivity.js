@@ -891,7 +891,7 @@ function setTermActions(self) {
 			if (row[tw.$id]?.values) custom_variants.push(...row[tw.$id].values)
 		}
 
-		const sandbox = self.app.getSandbox({ clickedDiv: self.dom.holder.node() })
+		const sandbox = self.app.getSandbox({ insertBefore: self.id })
 		sandbox.header_row
 			.append('div')
 			.style('display', 'inline-block')
@@ -1011,13 +1011,14 @@ function setSampleGroupActions(self) {
 					const config = {
 						chartType: 'survival',
 						term,
-						[termNum]: JSON.parse(JSON.stringify(self.config.divideBy))
+						[termNum]: JSON.parse(JSON.stringify(self.config.divideBy)),
+						insertBefore: self.id
 					}
 
 					if (menuOpt.config) {
 						Object.assign(config, menuOpt.config)
 					}
-					self.app.dispatch({ type: 'plot_create', config, insertBefore: self.id })
+					self.app.dispatch({ type: 'plot_create', config })
 				}
 			}
 		})
