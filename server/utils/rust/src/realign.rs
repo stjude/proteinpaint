@@ -192,18 +192,7 @@ pub fn check_read_within_indel_region(
     alt_length: usize,  // Length of alternate allele
     strictness: usize,  // Strictness of the indel pipeline
     read_sequence: String, // Original read sequence
-) -> (
-    usize,
-    i64,
-    i64,
-    usize,
-    i64,
-    i64,
-    usize,
-    usize,
-    String,
-    String,
-) {
+) -> (usize, i64, i64, String, String) {
     let mut within_indel = 0; // 0 if read does not contain indel region and 1 if it contains indel region
     let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
     let original_read_length = read_sequence.len(); // Original read length
@@ -212,8 +201,6 @@ pub fn check_read_within_indel_region(
     let mut splice_start_pos: i64 = 0; // Start position of the spliced part of the region containing indel site relative to the read
     let mut splice_stop_pos: i64 = 0; // Stop position of the spliced part of the region containing indel site relative to the read
     let mut splice_start_cigar: usize = 0; // First cigar entry in the spliced fragment containing the variant to see if its a softclip
-    let mut splice_stop_cigar: usize = 0; // Last cigar entry in the spliced fragment containing the variant to see if its a softclip
-
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
     } else {
         let indel_stop: i64 = indel_start + indel_length as i64;
@@ -312,7 +299,6 @@ pub fn check_read_within_indel_region(
             for i in 0..alphabets.len() {
                 if new_frag == 1 {
                     splice_start_cigar = 0;
-                    splice_stop_cigar = 0;
                     if &alphabets[i].to_string().as_str() == &"S" {
                         splice_start_cigar = 1;
                     }
@@ -359,9 +345,6 @@ pub fn check_read_within_indel_region(
                     {
                         correct_start_position = splice_start_frag;
                         correct_end_position = splice_stop_frag;
-                        if &alphabets[i].to_string().as_str() == &"S" {
-                            splice_stop_cigar = 1;
-                        }
                         //splice_start_pos = splice_start_frag;
                         //splice_stop_pos = nucleotide_position_without_splicing;
                         break;
@@ -376,9 +359,6 @@ pub fn check_read_within_indel_region(
                     {
                         correct_start_position = splice_start_frag;
                         correct_end_position = splice_stop_frag;
-                        if &alphabets[i].to_string().as_str() == &"S" {
-                            splice_stop_cigar = 1;
-                        }
                         //splice_start_pos = splice_start_frag;
                         //splice_stop_pos = nucleotide_position_without_splicing;
                         break;
@@ -494,11 +474,6 @@ pub fn check_read_within_indel_region(
         within_indel,
         correct_start_position,
         correct_end_position,
-        splice_freq,
-        splice_start_pos,
-        splice_stop_pos,
-        splice_start_cigar,
-        splice_stop_cigar,
         alignment_side,
         final_sequence,
     )

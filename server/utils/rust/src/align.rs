@@ -46,11 +46,6 @@ fn main() {
             _within_indel,
             correct_start_position,
             correct_end_position,
-            _splice_freq,
-            _splice_start_pos,
-            _splice_stop_pos,
-            _splice_start_cigar,
-            _splice_stop_cigar,
             alignment_side,
             final_sequence,
         ) = realign::check_read_within_indel_region(
