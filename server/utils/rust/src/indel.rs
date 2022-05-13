@@ -44,7 +44,6 @@
 //use num_traits::Float;
 //use fishers_exact::fishers_exact;
 //use statrs::distribution::{ChiSquared, ContinuousCDF};
-use std::cmp;
 //use std::panic;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
@@ -132,15 +131,12 @@ fn main() {
     let refallele: String = args[5].parse::<String>().unwrap(); // Reference allele
     let altallele: String = args[6].parse::<String>().unwrap(); // Alternate allele
     let strictness: usize = args[7].parse::<usize>().unwrap(); // strictness of the pipeline
-    let leftflankseq: String = args[8].parse::<String>().unwrap(); //Left flanking sequence
     let rightflankseq: String = args[9].parse::<String>().unwrap(); //Right flanking sequence.
 
     //let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
     let rightflank_nucleotides: Vec<char> = rightflankseq.chars().collect(); // Vector containing right flanking nucleotides
 
     //println!("rightflank_nucleotides:{:?}", rightflank_nucleotides);
-    let ref_nucleotides: Vec<char> = refallele.chars().collect(); // Vector containing ref nucleotides
-    let alt_nucleotides: Vec<char> = altallele.chars().collect(); // Vector containing alt nucleotides
     let lines: Vec<&str> = sequences.split("-").collect(); // Vector containing list of sequences, the first two containing ref and alt.
     let start_positions_list: Vec<&str> = start_positions.split("-").collect(); // Vector containing start positions
     let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect(); // Vector containing cigar sequences
@@ -153,7 +149,6 @@ fn main() {
     if ref_length > alt_length {
         indel_length = ref_length;
     }
-    let surrounding_region_length: i64 = 80; // Flanking region on both sides upto which it will search for duplicate kmers
 
     if args.len() > 14 {
         // This is true when realigning reads to determine correct indel sequence. Currently in development (not functional)
@@ -172,26 +167,8 @@ fn main() {
         );
     }
 
-    // Preprocessing of input
-    let (_optimized_ref_allele, _optimized_alt_allele, left_offset, right_offset, optimized_allele) =
-        preprocess_input(
-            &ref_nucleotides,
-            &alt_nucleotides,
-            &refallele,
-            &altallele,
-            variant_pos,
-            indel_length,
-            leftflankseq,
-            rightflankseq,
-            surrounding_region_length,
-        );
     //println!("ref_allele:{}", &refallele);
     //println!("alt_allele:{}", &altallele);
-    //println!("optimized_ref_allele:{}", optimized_ref_allele);
-    //println!("optimized_alt_allele:{}", optimized_alt_allele);
-    //println!("left_offset:{}", left_offset);
-    //println!("right_offset:{}", right_offset);
-    //println!("ref_alt_same_base_start:{}", ref_alt_same_base_start);
 
     drop(rightflank_nucleotides);
     let reference_sequence = lines[0].to_string();
@@ -234,18 +211,18 @@ fn main() {
                     if sequence_flags_list[i as usize - 2].parse::<i64>().unwrap() & 16 == 16 {
                         sequence_strand = "R".to_string();
                     }
-                    let mut read_ambiguous = check_if_read_ambiguous(
-                        // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
-                        correct_start_position,
-                        correct_end_position,
-                        left_offset,
-                        right_offset,
-                        variant_pos,
-                        refallele.len(),
-                        &ref_nucleotides,
-                        &alt_nucleotides,
-                        optimized_allele,
-                    );
+                    //let mut read_ambiguous = check_if_read_ambiguous(
+                    //    // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
+                    //    correct_start_position,
+                    //    correct_end_position,
+                    //    left_offset,
+                    //    right_offset,
+                    //    variant_pos,
+                    //    refallele.len(),
+                    //    &ref_nucleotides,
+                    //    &alt_nucleotides,
+                    //    optimized_allele,
+                    //);
 
                     //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
                     //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
@@ -273,11 +250,8 @@ fn main() {
                         );
                     let ref_insertion = 0;
 
-                    let mut diff_score: f64 = 0.0;
-                    if read_ambiguous < 2 {
-                        diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
-                    }
-
+                    let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
+                    let mut read_ambiguous = 0;
                     if (diff_score.abs() * 100000000.0).round() == 0.0 / 100000000.0 {
                         // Rounding off to 4 places of decimal
                         read_ambiguous = 2;
@@ -313,8 +287,6 @@ fn main() {
         let start_positions = Arc::new(start_positions);
         let cigar_sequences = Arc::new(cigar_sequences);
         let sequence_flags = Arc::new(sequence_flags);
-        let refallele = Arc::new(refallele);
-        let altallele = Arc::new(altallele);
         let reference_sequence = Arc::new(reference_sequence);
         let alternate_sequence = Arc::new(alternate_sequence);
         let ref_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new())); // This variable will store read_diff_scores struct of reads classifed as ref, but can be written into by all threads. When Mutex is not define (as in the variables above) they are read-only.
@@ -330,8 +302,6 @@ fn main() {
             let reference_sequence = Arc::clone(&reference_sequence);
             let alternate_sequence = Arc::clone(&alternate_sequence);
             let sequence_flags = Arc::clone(&sequence_flags);
-            let refallele = Arc::clone(&refallele);
-            let altallele = Arc::clone(&altallele);
             let ref_scores_temp = Arc::clone(&ref_scores_temp);
             let alt_scores_temp = Arc::clone(&alt_scores_temp);
 
@@ -342,8 +312,6 @@ fn main() {
                 let start_positions_list: Vec<&str> = start_positions.split("-").collect();
                 let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect();
                 let sequence_flags_list: Vec<&str> = sequence_flags.split("-").collect();
-                let ref_nucleotides: Vec<char> = refallele.chars().collect();
-                let alt_nucleotides: Vec<char> = altallele.chars().collect();
                 let mut ref_scores_thread = Vec::<read_diff_scores>::new(); // This local variable stores all read_diff_scores (for ref classified reads) parsed by each thread. This variable is then concatenated from other threads later.
                 let mut alt_scores_thread = Vec::<read_diff_scores>::new(); // This local variable stores all read_diff_scores (for alt classified reads) parsed by each thread. This variable is then concatenated from other threads later.
                 for iter in 0..lines.len() - 2 {
@@ -379,18 +347,18 @@ fn main() {
                             if sequence_flags_list[iter].parse::<i64>().unwrap() & 16 == 16 {
                                 sequence_strand = "R".to_string();
                             }
-                            let mut read_ambiguous = check_if_read_ambiguous(
-                                // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
-                                correct_start_position,
-                                correct_end_position,
-                                left_offset,
-                                right_offset,
-                                variant_pos,
-                                refallele.len(),
-                                &ref_nucleotides,
-                                &alt_nucleotides,
-                                optimized_allele,
-                            );
+                            //let mut read_ambiguous = check_if_read_ambiguous(
+                            //    // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
+                            //    correct_start_position,
+                            //    correct_end_position,
+                            //    left_offset,
+                            //    right_offset,
+                            //    variant_pos,
+                            //    refallele.len(),
+                            //    &ref_nucleotides,
+                            //    &alt_nucleotides,
+                            //    optimized_allele,
+                            //);
 
                             let (q_seq_ref, align_ref, _r_seq_ref, ref_comparison) =
                                 realign::align_single_reads(
@@ -417,11 +385,9 @@ fn main() {
                                 );
                             let ref_insertion = 0;
 
-                            let mut diff_score: f64 = 0.0;
-                            if read_ambiguous < 2 {
-                                diff_score = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
-                            }
+                            let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
 
+                            let mut read_ambiguous = 0;
                             if (diff_score.abs() * 100000000.0).round() == 0.0 / 100000000.0 {
                                 // Rounding off to 4 places of decimal
                                 read_ambiguous = 2;
@@ -638,376 +604,6 @@ fn strand_analysis(
         p_sum = 0.000000000000000001;
     }
     -10.0 * p_sum.log(10.0) // Reporting phred-scale p-values (-10*log(p-value))
-}
-
-fn check_if_read_ambiguous(
-    correct_start_position: i64,
-    correct_end_position: i64,
-    left_offset: usize,
-    right_offset: usize,
-    ref_start: i64,
-    ref_length: usize,
-    ref_nucleotides: &Vec<char>,
-    alt_nucleotides: &Vec<char>,
-    optimized_allele: usize,
-) -> i64 {
-    let mut read_ambiguous: i64 = 0;
-    let mut ref_stop = ref_start + ref_length as i64;
-    if ref_nucleotides[0] == alt_nucleotides[0] {
-        // Generally the alt position contains the nucleotide preceding the indel. In that case one is subtracted from ref_stop
-        ref_stop -= 1;
-    }
-
-    //println!("ref_start (before offset):{}", ref_start);
-    //println!("ref_stop (before offset):{}", ref_stop);
-    let repeat_start = ref_start - left_offset as i64;
-    let repeat_stop = ref_stop + right_offset as i64;
-    //println!("correct_start_position:{}", correct_start_position);
-    //println!("correct_end_position:{}", correct_end_position);
-    //println!("repeat_start:{}", repeat_start);
-    //println!("repeat_stop:{}", repeat_stop);
-
-    //if repeat_start <= correct_start_position && correct_start_position <= ref_start {
-    //    read_ambiguous = 2;
-    //    println!("Case1");
-    //} else if ref_stop <= correct_end_position && correct_end_position <= repeat_stop {
-    //    read_ambiguous = 2;
-    //    println!("Case2");
-    //}
-
-    if correct_start_position < repeat_start
-        && repeat_start < correct_end_position
-        && correct_end_position <= ref_start
-    {
-        read_ambiguous = 2;
-        //println!("Case1 read ambiguous");
-    } else if ref_stop < correct_start_position
-        && correct_start_position < repeat_stop
-        && correct_end_position > repeat_stop
-    {
-        read_ambiguous = 2;
-        //println!("Case2 read ambiguous");
-    }
-    if repeat_start <= correct_start_position
-        && correct_start_position < ref_start
-        && correct_end_position > repeat_stop
-        && optimized_allele == 1
-    {
-        read_ambiguous = 2;
-        //println!("Case3 read ambiguous");
-    } else if ref_stop <= correct_end_position
-        && correct_end_position < repeat_stop
-        && correct_start_position < repeat_start
-        && optimized_allele == 1
-    {
-        read_ambiguous = 2;
-        //println!("Case4 read ambiguous");
-    } else if repeat_start <= correct_end_position && correct_end_position < ref_stop {
-        if (correct_end_position - ref_start).abs() <= right_offset as i64 {
-            read_ambiguous = 2;
-            //println!("Case5 read ambiguous");
-        }
-    } else if ref_nucleotides.len() > alt_nucleotides.len()
-        && ref_nucleotides[0] == ref_nucleotides[ref_nucleotides.len() - 1]
-        && correct_start_position == ref_stop
-    // When deletion starts and ends with the same nucleotide, a read containing only last nucleotide only should be considered ambiguous
-    {
-        read_ambiguous = 2;
-        //println!("Case6 read ambiguous");
-    } else if alt_nucleotides.len() > ref_nucleotides.len()
-        && alt_nucleotides[0] == alt_nucleotides[alt_nucleotides.len() - 1]
-        && correct_start_position == ref_stop
-    // When insertion starts and ends with the same nucleotide, a read containing only last nucleotide only should be considered ambiguous
-    {
-        read_ambiguous = 2;
-        //println!("Case7 read ambiguous");
-    } else if ref_nucleotides.len() > alt_nucleotides.len()
-        && ref_nucleotides[0] == ref_nucleotides[ref_nucleotides.len() - 1]
-        && correct_end_position == ref_start
-    // When deletion starts and ends with the same nucleotide, a read containing only first nucleotide only should be considered ambiguous
-    {
-        read_ambiguous = 2;
-        //println!("Case8 read ambiguous");
-    } else if alt_nucleotides.len() > ref_nucleotides.len()
-        && alt_nucleotides[0] == alt_nucleotides[alt_nucleotides.len() - 1]
-        && correct_end_position == ref_start
-    // When insertion starts and ends with the same nucleotide, a read containing only first nucleotide only should be considered ambiguous
-    {
-        read_ambiguous = 2;
-        //println!("Case9 read ambiguous");
-    }
-
-    // This part of the code is not tested, so its commented out for now.
-
-    //else if ref_start <= correct_start_position && correct_start_position <= repeat_stop {
-    //    if (correct_start_position - ref_stop).abs() <= left_offset as i64 {
-    //        read_ambiguous = 2;
-    //    }
-    //}
-
-    //if splice_freq > 0 {
-    //    // When read is spliced
-    //    println!("correct_start_position:{}", correct_start_position);
-    //    println!("correct_end_position:{}", correct_end_position);
-    //    println!("ref_start:{}", ref_start);
-    //    println!("indel_length:{}", indel_length);
-    //    if correct_start_position <= ref_start && ref_start + indel_length <= correct_end_position {
-    //    } else {
-    //        read_ambiguous = 2;
-    //        println!("Case10 read ambiguous");
-    //    }
-    //}
-
-    read_ambiguous
-}
-
-// This function preprocesses the flanking region, ref and alt allele to search if the indel is a tandem repeat (or a polymer consisting of small indels). It also looks if there is possibility of ambiguous reads if part of the flanking sequence is repeated inside the indel itself
-fn preprocess_input(
-    ref_nucleotides: &Vec<char>, // Vector containing reference nucleotides
-    alt_nucleotides: &Vec<char>, // Vector containing alternate nucleotides
-    ref_allele: &String,         // Sequence of reference allele
-    alt_allele: &String,         // Sequence of alternate allele
-    variant_pos: i64,            // Start position of indel
-    indel_length: i64,           // Length of indel
-    leftflankseq: String,        // Left flanking sequence
-    rightflankseq: String,       // Right flanking sequence
-    mut surrounding_region_length: i64, // Maximum limit upto which repetition of sequence will be searched to on either side of the indel
-) -> (String, String, usize, usize, usize) {
-    let mut optimized_ref_allele = ref_allele.clone();
-    let mut optimized_alt_allele = alt_allele.clone();
-    let mut right_subseq = String::new(); // String for storing sequence on right side of indel
-    let right_sequence_vector: Vec<_> = rightflankseq.chars().collect(); // A vector which contains all the nucleotides of the right flanking sequence
-
-    // Selecting minimum of surrounding region length and rightflankseq
-    surrounding_region_length = cmp::min(surrounding_region_length, rightflankseq.len() as i64);
-    // Selecting minimum of surrounding region length and leftflankseq
-    surrounding_region_length = cmp::min(surrounding_region_length, leftflankseq.len() as i64);
-    for k in 0..surrounding_region_length as usize {
-        right_subseq += &right_sequence_vector[k].to_string();
-    }
-    let mut left_subseq = String::new(); // String for storing sequence on left hand side. In case of left_subseq the nucleotides are stored in reverse order i.e nucleotides closest to the indel are first
-    let left_sequence_vector: Vec<_> = leftflankseq.chars().collect(); // A vector which contains all the nucleotides of the left flanking sequence
-    for k in 0..surrounding_region_length as usize {
-        let j = left_sequence_vector.len() - k - 1;
-        left_subseq += &left_sequence_vector[j].to_string();
-    }
-    let left_flanking_nucleotides: Vec<char> = left_subseq.chars().collect(); // Vector containing left flanking  nucleotides
-    let right_flanking_nucleotides: Vec<char> = right_subseq.chars().collect(); // Vector containing right flanking  nucleotides
-
-    // In the future, will need to check if there are repeats within the indel.
-
-    // Check if the alt allele starts with ref nucleotide
-    println!("indel_length:{}", indel_length);
-    let mut original_indel_length = indel_length;
-    let mut actual_indel = String::new();
-    let mut ref_alt_same_base_start: usize = 0; // Flag to see if the original ref/alt nucleotide start with the same base i.e the ref start position of the indel is in the alt allele (e.g. ACGA/A representing 3bp deletion)
-    if ref_nucleotides[0] == alt_nucleotides[0] {
-        ref_alt_same_base_start = 1;
-        original_indel_length = indel_length - 1; // If the insertion/deletion starts with same nucleotide, subtracting 1 from indel_length.
-        if ref_nucleotides.len() > alt_nucleotides.len() {
-            // In case of deletion
-            for j in 1..ref_nucleotides.len() {
-                actual_indel += &ref_nucleotides[j].to_string();
-            }
-        } else {
-            // In case of insertion
-            for j in 1..alt_nucleotides.len() {
-                actual_indel += &alt_nucleotides[j].to_string();
-            }
-        }
-    } else {
-        if ref_nucleotides.len() > alt_nucleotides.len() {
-            // In case of deletion
-            for j in 0..ref_nucleotides.len() {
-                actual_indel += &ref_nucleotides[j].to_string();
-            }
-        } else {
-            // In case of insertion
-            for j in 0..alt_nucleotides.len() {
-                actual_indel += &alt_nucleotides[j].to_string();
-            }
-        }
-    }
-    println!("original_indel_length:{}", original_indel_length);
-    let actual_indel_nucleotides: Vec<char> = actual_indel.chars().collect(); // Vector containing left flanking  nucleotides
-                                                                              //let no_repeats: usize = 1; // Flag to check if non-repeating region has been reached
-    let mut left_offset: usize = 0; // Position in left-flanking sequence from where nearby nucleotides will be parsed
-    let mut right_offset: usize = 0; // Position in right-flanking sequence from where nearby nucleotides will be parsed
-    let left_nearby_seq;
-    let mut left_nearby_seq_reverse = String::new();
-    let mut right_nearby_seq = String::new();
-    let mut optimized_variant_pos = variant_pos;
-
-    //println!("left_flanking_nucleotides:{:?}", left_flanking_nucleotides);
-    //println!(
-    //    "right_flanking_nucleotides:{:?}",
-    //    right_flanking_nucleotides
-    //);
-
-    //while iter < actual_indel.len() {
-    //    for j in left_offset..left_offset + original_indel_length as usize {
-    //        let k = left_offset + original_indel_length as usize - 1 - j;
-    //        left_nearby_seq += &left_flanking_nucleotides[k].to_string();
-    //        //println!("left_nearby_seq:{}", left_nearby_seq);
-    //    }
-    //    for j in right_offset..right_offset + original_indel_length as usize {
-    //        right_nearby_seq += &right_flanking_nucleotides[j].to_string();
-    //        //println!("right_nearby_seq:{}", right_nearby_seq);
-    //    }
-    //    iter += 1;
-    //}
-
-    for i in 0..original_indel_length as usize {
-        let k = original_indel_length as usize - 1 - i;
-        left_nearby_seq_reverse += &left_flanking_nucleotides[k].to_string();
-        right_nearby_seq += &right_flanking_nucleotides[i].to_string();
-    }
-
-    left_nearby_seq = realign::reverse_string(&left_nearby_seq_reverse);
-    //println!("left_nearby_seq:{}", left_nearby_seq);
-    //println!("right_nearby_seq:{}", right_nearby_seq);
-    //println!("right_subseq:{}", right_subseq);
-    println!("actual_indel:{}", actual_indel);
-
-    let mut no_repeat_region = 0;
-    if left_nearby_seq != actual_indel && right_nearby_seq != actual_indel {
-        no_repeat_region = 1;
-        println!("No repeating region");
-    } else if left_nearby_seq == actual_indel && right_nearby_seq != actual_indel {
-        println!("Left side is repeating");
-        let repeating_sequence_left = check_flanking_sequence_for_repeats(
-            &left_nearby_seq,
-            &left_subseq,
-            surrounding_region_length,
-            "L",
-        );
-        optimized_variant_pos -= repeating_sequence_left.len() as i64; // Need to pass this to main and also change optimized ref and alt allele. Will need to do this later
-    } else if left_nearby_seq != actual_indel && right_nearby_seq == actual_indel {
-        println!("Right side is repeating");
-        let repeating_sequence_right = check_flanking_sequence_for_repeats(
-            &right_nearby_seq,
-            &right_subseq,
-            surrounding_region_length,
-            "R",
-        );
-        println!("repeating_sequence_right:{}", repeating_sequence_right);
-        optimized_alt_allele = optimized_alt_allele + &repeating_sequence_right;
-        optimized_ref_allele = optimized_ref_allele + &repeating_sequence_right;
-        right_offset += repeating_sequence_right.len();
-    } else if left_nearby_seq == actual_indel && right_nearby_seq == actual_indel {
-        println!("Both sides are repeating");
-    }
-
-    println!("optimized_variant_pos:{}", optimized_variant_pos);
-
-    // Testing if the original indel starts with similar sequence as right flanking sequence or vice-versa (i.e original indel finishes with similar sequence as left-flanking sequence finishes with)
-    let mut left_offset_part: usize = 0; // Position in left-flanking sequence from where nearby nucleotides will be parsed
-    let mut right_offset_part: usize = 0; // Position in right-flanking sequence from where nearby nucleotides will be parsed
-    let mut no_repeats_part: usize = 1; // Flag to check if non-repeating region has been reached
-    let mut iter = 0;
-    if ref_alt_same_base_start == 1 {
-        // If ref/alt nucleotide start with the same base (e.g ACGA/A representing 3bp deletion),increment right_offset_part by 1
-        right_offset_part += 1;
-    }
-    //println!(
-    //    "right_flanking_nucleotides:{:?}",
-    //    right_flanking_nucleotides
-    //);
-    //println!("left_flanking_nucleotides:{:?}", left_flanking_nucleotides);
-    //println!("actual_indel_nucleotides:{:?}", actual_indel_nucleotides);
-
-    while iter < original_indel_length as usize && no_repeats_part == 1 {
-        if actual_indel_nucleotides[iter] != right_flanking_nucleotides[iter] {
-            no_repeats_part = 0;
-        } else {
-            right_offset_part += 1;
-            iter += 1;
-        }
-    }
-    no_repeats_part = 1;
-    iter = 0;
-    while iter < original_indel_length as usize && no_repeats_part == 1 {
-        let j = original_indel_length as usize - 1 - iter;
-        if iter == 0
-            && ref_alt_same_base_start == 1
-            && ref_nucleotides[iter] != actual_indel_nucleotides[j]
-        // In first iteration, check if the last nucleotide of the indel is same as the last common ref nucleotide between ref & alt (when ref_alt_same_base_start == 1)
-        {
-            no_repeats_part = 0;
-        } else if actual_indel_nucleotides[j] != left_flanking_nucleotides[iter] {
-            no_repeats_part = 0;
-            //println!(
-            //    "actual_indel_nucleotides[j]:{}",
-            //    actual_indel_nucleotides[j]
-            //);
-            //println!(
-            //    "left_flanking_nucleotides[iter]:{}",
-            //    left_flanking_nucleotides[iter]
-            //);
-        } else {
-            left_offset_part += 1;
-            iter += 1;
-        }
-    }
-
-    let mut optimized_allele: usize = 0; // Flag to check if alleles have been optimized
-    if optimized_ref_allele.len() != ref_allele.len()
-        || optimized_alt_allele.len() != alt_allele.len()
-    {
-        optimized_allele = 1;
-        right_offset_part +=
-            (optimized_alt_allele.len() as i64 - alt_allele.len() as i64).abs() as usize;
-        // When the alt allele has been optimized, the right offset part needs to be increased
-    }
-
-    if right_offset_part > right_offset && no_repeat_region == 1 {
-        right_offset = right_offset_part;
-    }
-
-    if left_offset_part > left_offset && no_repeat_region == 1 {
-        left_offset = left_offset_part;
-    }
-
-    (
-        optimized_ref_allele,
-        optimized_alt_allele,
-        left_offset,
-        right_offset,
-        optimized_allele,
-    )
-}
-
-// Function to check if the monomer is present in flanking region
-fn check_flanking_sequence_for_repeats(
-    monomer: &String,
-    flanking_sequence: &String,
-    surrounding_region_length: i64, // Checks for monomer in the flanking region but only upto surrounding_region_length
-    side: &str,                     // "L" for left, "R" for right flanking sequence
-) -> String {
-    let sequence_vector: Vec<_> = flanking_sequence.chars().collect(); // Vector containing all the nucleotides of the reads as individual elements
-    let num_iterations: i64 = surrounding_region_length / (monomer.len() as i64); // Number of times the monomer will have to be checked for repeating units from the variant region. e.g if monomer length is 2 and surrounding_region_length is 9, it will be 4 times at distances of 2, 4, 6 and 8 from the indel region
-    let mut repeat_flanking_sequence = String::new();
-    for i in 0..num_iterations {
-        let mut subseq = String::new(); // String where putative repeat unit will be stored
-        if &side == &"R" {
-            for j in 0..monomer.len() {
-                subseq += &sequence_vector[(i as usize) * monomer.len() + j].to_string();
-                //
-            }
-        } else if &side == &"L" {
-            for j in 0..monomer.len() {
-                let k = monomer.len() - 1 - j;
-                subseq += &sequence_vector[(i as usize) * monomer.len() + k].to_string();
-                //
-            }
-        }
-        if &subseq != monomer {
-            break;
-        }
-        repeat_flanking_sequence.push_str(&subseq);
-    }
-    //println!("repeat_flanking_sequence:{}", repeat_flanking_sequence);
-    repeat_flanking_sequence
 }
 
 fn classify_to_four_categories(
