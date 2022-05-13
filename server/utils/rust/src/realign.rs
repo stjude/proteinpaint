@@ -1064,14 +1064,20 @@ fn check_first_last_nucleotide_correctly_aligned(
 
         if all_matched_nucleotides == true {
             for j in correct_alignment_length..correct_alignment_length + last_print_position {
-                q_seq_correct.push(q_seq_chars[j]);
-                align_correct.push(align_chars[j]);
-                r_seq_correct.push(r_seq_chars[j]);
+                if j < q_seq_chars.len() {
+                    q_seq_correct.push(q_seq_chars[j]);
+                    align_correct.push(align_chars[j]);
+                    r_seq_correct.push(r_seq_chars[j]);
+                }
             }
             for k in 0..first_partially_matched_nucleotides_right.len() {
                 q_seq_correct.push(first_partially_matched_nucleotides_right_vector[k]);
-                align_correct.push(align_chars[correct_alignment_length + last_print_position + k]);
-                r_seq_correct.push(r_seq_chars[correct_alignment_length + last_print_position + k]);
+                if correct_alignment_length + last_print_position + k < align_chars.len() {
+                    align_correct
+                        .push(align_chars[correct_alignment_length + last_print_position + k]);
+                    r_seq_correct
+                        .push(r_seq_chars[correct_alignment_length + last_print_position + k]);
+                }
             }
             alignment_changed = true;
         } else {
@@ -1192,9 +1198,11 @@ fn check_first_last_nucleotide_correctly_aligned(
                 //    "j,q_seq_chars[j],align_chars[j],r_seq_chars[j]:{},{},{},{}",
                 //    j, q_seq_chars[j], align_chars[j], r_seq_chars[j]
                 //);
-                q_seq_correct.push(q_seq_chars[j]);
-                align_correct.push(align_chars[j]);
-                r_seq_correct.push(r_seq_chars[j]);
+                if j < q_seq_chars.len() {
+                    q_seq_correct.push(q_seq_chars[j]);
+                    align_correct.push(align_chars[j]);
+                    r_seq_correct.push(r_seq_chars[j]);
+                }
             }
 
             for i in first_partially_matched_nucleotides_left.len()
@@ -1205,9 +1213,11 @@ fn check_first_last_nucleotide_correctly_aligned(
                 //    "i,q_seq_chars[i],align_chars[i],r_seq_chars[i]:{},{},{},{}",
                 //    i, q_seq_chars[i], align_chars[i], r_seq_chars[i]
                 //);
-                q_seq_correct.push(q_seq_chars[i]);
-                align_correct.push(align_chars[i]);
-                r_seq_correct.push(r_seq_chars[i]);
+                if i < q_seq_chars.len() {
+                    q_seq_correct.push(q_seq_chars[i]);
+                    align_correct.push(align_chars[i]);
+                    r_seq_correct.push(r_seq_chars[i]);
+                }
             }
             alignment_changed = true;
         }
@@ -1414,13 +1424,13 @@ pub fn determine_start_stop_indel_region_in_read(
     }
 
     if red_region_start_alt < 0 {
-        red_region_stop_alt = red_region_start_alt.abs() as i64 + 1;
+        red_region_stop_alt = variant_alt_length as i64;
         red_region_start_alt = 0;
         //println!("red_disp_region_start_alt was less than zero");
     }
 
     if red_region_start_ref < 0 {
-        red_region_stop_ref = red_region_start_ref.abs() as i64 + 1;
+        red_region_stop_ref = variant_ref_length as i64;
         red_region_start_ref = 0;
         //println!("red_disp_region_start_ref was less than zero");
     }
