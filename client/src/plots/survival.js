@@ -22,6 +22,11 @@ class TdbSurvival {
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
+			loadingDiv: holder
+				.append('div')
+				.style('display', 'none')
+				.style('padding', '20px')
+				.html('Loading ...'),
 			header: opts.header,
 			controls,
 			holder,
@@ -153,10 +158,12 @@ class TdbSurvival {
 			}
 
 			if (this.dom.header) this.dom.header.html(this.state.config.term.term.name + ` plot`)
+			this.dom.loadingDiv.style('display', '')
 
 			Object.assign(this.settings, this.state.config.settings)
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			this.dom.loadingDiv.style('display', 'none')
 			this.serverData = data
 			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.currData = this.processData(data)
