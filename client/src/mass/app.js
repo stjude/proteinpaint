@@ -23,14 +23,6 @@ opts{}
 
 */
 
-const sandboxIdStr =
-	Math.random()
-		.toString()
-		.slice(-6) +
-	'-' +
-	(+new Date()).toString().slice(-8)
-let sandboxIdSuffix = 0
-
 class MassApp {
 	constructor(opts) {
 		this.type = 'app'
@@ -56,13 +48,6 @@ class MassApp {
 		try {
 			api.tip = new Menu({ padding: '5px' })
 			api.printError = e => this.printError(e)
-
-			api.getSandbox = (opts = {}) => {
-				return newSandboxDiv(this.dom.plotDiv, {
-					callback: opts.callback,
-					insertSelector: opts.insertBefore ? '#' + this.plotIdToSandboxId[opts.insertBefore] : ''
-				})
-			}
 
 			// TODO: only pass state.genome, dslabel to vocabInit
 			api.vocabApi = await vocabInit({
@@ -107,22 +92,18 @@ class MassApp {
 		this.api.vocabApi.main()
 
 		const newPlots = {}
+		let sandbox
 		for (const [index, plot] of this.state.plots.entries()) {
 			if (!(plot.id in this.components.plots)) {
-				const sandboxId = `sjpp-sandbox-${sandboxIdStr}-${sandboxIdSuffix++}`
-				this.plotIdToSandboxId[plot.id] = sandboxId
-
-				// TODO: specify where to insert the sandbox, not always at the top,
-				// but maybe right above the sandbox where a click triggered the new sandbox
-				const sandbox = newSandboxDiv(this.dom.plotDiv, {
+				sandbox = newSandboxDiv(this.dom.plotDiv, {
 					close: () => {
 						this.api.dispatch({
 							type: 'plot_delete',
 							id: plot.id
 						})
 					},
-					id: sandboxId,
-					insertSelector: plot.insertBefore ? '#' + this.plotIdToSandboxId[plot.insertBefore] : ''
+					plotId: plot.id,
+					beforePlotId: plot.insertBefore || null
 				})
 				newPlots[plot.id] = plotInit(Object.assign({}, { app: this.api, holder: sandbox }, plot))
 			}
@@ -137,7 +118,7 @@ class MassApp {
 			for (const plotId in newPlots) {
 				this.components.plots[plotId] = await newPlots[plotId]
 				if (numNewPlots === 1) {
-					select('#' + this.plotIdToSandboxId[plotId])
+					select(`#${sandbox.id}`)
 						.node()
 						.scrollIntoView({ behavior: 'smooth' })
 				}

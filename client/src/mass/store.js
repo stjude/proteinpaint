@@ -2,8 +2,17 @@ import { getStoreInit } from '../common/rx.core'
 import { dofetch3 } from '../common/dofetch'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
 
-const idPrefix = '_STORE_AUTOID_' // to distinguish from user-assigned chart IDs
-let id = +new Date()
+// to distinguish from IDs assigned by other code or users
+const idPrefix =
+	'_MASS_AUTOID_' +
+	Math.random()
+		.toString()
+		.slice(-6)
+let id = (+new Date()).toString().slice(-8)
+
+function getId() {
+	return idPrefix + id++
+}
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
@@ -22,7 +31,7 @@ const defaultState = {
 	// mass.state.plots[] is provided in the runpp argument
 	plots: [
 		{
-			id: idPrefix + id++,
+			id: getId(),
 			chartType: 'dictionary',
 			config: {
 				chartType: 'dictionary'
@@ -204,7 +213,7 @@ TdbStore.prototype.actions = {
 
 	async plot_prep(action) {
 		const plot = {
-			id: 'id' in action ? action.id : idPrefix + id++
+			id: 'id' in action ? action.id : getId()
 		}
 		if (!action.config) throw '.config{} missing for plot_prep'
 		Object.assign(plot, action.config)
@@ -214,7 +223,7 @@ TdbStore.prototype.actions = {
 	async plot_create(action) {
 		const _ = await import(`../plots/${action.config.chartType}.js`)
 		const plot = await _.getPlotConfig(action.config, this.app)
-		if (!('id' in action)) action.id = idPrefix + id++
+		if (!('id' in action)) action.id = getId()
 		plot.id = action.id
 		this.state.plots.push(plot)
 	},

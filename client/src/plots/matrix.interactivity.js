@@ -891,33 +891,26 @@ function setTermActions(self) {
 			if (row[tw.$id]?.values) custom_variants.push(...row[tw.$id].values)
 		}
 
-		const sandbox = self.app.getSandbox({ insertBefore: self.id })
-		sandbox.header_row
-			.append('div')
-			.style('display', 'inline-block')
-			.style('color', '#999')
-			.style('padding-left', '7px')
-			.html(`${tw.term.name}: variants in matrix samples`)
-
-		// TODO: dispatch to launch a wrapper component which imports
-		// the specific track/app to render instead of using runpp()
-		runproteinpaint({
-			holder: sandbox.body.node(),
-			noheader: 1,
-			parseurl: true,
-			nobox: 1,
-			genome: self.app.vocabApi.vocab.genome,
-			gene: custom_variants[0].isoform,
-			tracks: [
-				{
-					type: 'mds3',
-					name: custom_variants[0].isoform,
-					custom_variants
-				}
-			]
+		self.app.dispatch({
+			type: 'plot_create',
+			config: {
+				chartType: 'variantBrowser',
+				insertBefore: self.id,
+				noheader: 1,
+				parseurl: true,
+				nobox: 1,
+				genome: self.app.vocabApi.vocab.genome,
+				gene: custom_variants[0].isoform,
+				geneName: tw.term.name,
+				tracks: [
+					{
+						type: 'mds3',
+						name: custom_variants[0].isoform,
+						custom_variants
+					}
+				]
+			}
 		})
-
-		sandbox.app_div.node().scrollIntoView({ behavior: 'smooth' })
 	}
 }
 

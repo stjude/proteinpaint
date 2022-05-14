@@ -28,15 +28,31 @@ export function renderSandboxFormDiv(holder, genomes) {
 	return [inputdiv, gselect.node(), filediv, saydiv, visualdiv]
 }
 
+const plotIdToSandboxId = {}
+const sandboxIdStr =
+	Math.random()
+		.toString()
+		.slice(-6) +
+	'-' +
+	(+new Date()).toString().slice(-8)
+let sandboxIdSuffix = 0
+
 /*
 	sandbox_holder: a d3-selection
 	opts{}
-	.close
+	.close: optional callback to trigger when the sandbox is closed
+	.plotId: optional plot.id, for which a sandbox div ID will be assigned
+	.beforePlotId: optional insertion position, a key in the plotIdToSandboxId tracker
 */
 export function newSandboxDiv(sandbox_holder, opts = {}) {
-	const insertSelector = opts.insertSelector || ':first-child'
+	const insertSelector = opts.beforePlotId ? '#' + plotIdToSandboxId[opts.beforePlotId] : ':first-child'
 	const app_div = sandbox_holder.insert('div', insertSelector).attr('class', 'sjpp-sandbox')
-	if (opts.id) app_div.attr('id', opts.id)
+	let sandboxId
+	if (opts.plotId) {
+		sandboxId = `sjpp-sandbox-${sandboxIdStr}-${sandboxIdSuffix++}`
+		app_div.attr('id', sandboxId)
+		plotIdToSandboxId[opts.plotId] = sandboxId
+	}
 
 	const header_row = app_div
 		.append('div')
@@ -90,5 +106,5 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 		.style('border-radius', '0  0 5px 5px')
 		.style('width', '95vw')
 
-	return { header_row, header, body, app_div }
+	return { header_row, header, body, app_div, id: sandboxId }
 }
