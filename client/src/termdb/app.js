@@ -67,20 +67,23 @@ class TdbApp {
 	}
 
 	async preApiFreeze(api) {
-		/*
-		// NOTE: cannot extract from opts.state as there may be downstream code
-		// that expects opts.state to be mutated prior to vocabInit() completing
-		const state = this.opts.state.vocab || {
-			vocab: {
-				genome: this.opts.state.genome,
-				dslabel: this.opts.state.dslabel
+		try {
+			if (this.opts.vocabApi) {
+				api.vocabApi = this.opts.vocabApi
+			} else {
+				const state = {
+					vocab: this.opts.state.vocab || {
+						genome: this.opts.state.genome,
+						dslabel: this.opts.state.dslabel
+					}
+				}
+				api.vocabApi = await vocabInit({ app: this.api, state, fetchOpts: this.opts.fetchOpts })
 			}
-		}*/
-		api.vocabApi = this.opts.vocabApi
-			? this.opts.vocabApi
-			: await vocabInit({ app: this.api, state: this.opts.state, fetchOpts: this.opts.fetchOpts })
-		this.opts.state.vocab = api.vocabApi.vocab
-		api.appInit = appInit
+			api.appInit = appInit
+		} catch (e) {
+			console.log(e)
+			throw e
+		}
 	}
 
 	async init() {

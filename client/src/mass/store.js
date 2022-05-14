@@ -11,7 +11,7 @@ const idPrefix =
 let id = (+new Date()).toString().slice(-8)
 
 function getId() {
-	return idPrefix + id++
+	return idPrefix + '_' + id++
 }
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#

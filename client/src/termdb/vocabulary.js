@@ -15,7 +15,7 @@ export function vocabInit(opts) {
 	if (opts.vocab && !opt.state) {
 		opts.state = { vocab: opts.vocab }
 	}
-	if (!opts.state) return // let termdb/store handle error
+	if (!opts.state) throw 'missing opts.state'
 	if (!opts.state.vocab) {
 		opts.state.vocab = opts.vocab ? opts.vocab : {}
 	}

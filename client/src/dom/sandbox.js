@@ -41,10 +41,11 @@ let sandboxIdSuffix = 0
 	sandbox_holder: a d3-selection
 	opts{}
 	.close: optional callback to trigger when the sandbox is closed
-	.plotId: optional plot.id, for which a sandbox div ID will be assigned
+	.plotId: optional plot.id, for which a sandbox div ID will be assigned, should not be an 'empty' value (null , undefined, 0)
 	.beforePlotId: optional insertion position, a key in the plotIdToSandboxId tracker
 */
 export function newSandboxDiv(sandbox_holder, opts = {}) {
+	// NOTE: plotId=0 (Number) will not be tracked, assumes a non-empty plotId is used
 	const insertSelector = opts.beforePlotId ? '#' + plotIdToSandboxId[opts.beforePlotId] : ':first-child'
 	const app_div = sandbox_holder.insert('div', insertSelector).attr('class', 'sjpp-sandbox')
 	let sandboxId
