@@ -40,7 +40,7 @@ const cutoff_tableview = 10
 
 export async function init_sampletable(arg) {
 	const holder = arg.div.append('div').attr('class', 'sj_sampletable_holder')
-	arg.temp_div = arg.div.append('div').text('Loading...')
+	const wait = arg.div.append('div').text('Loading...')
 
 	const numofcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0) // sum of occurrence of mlst[]
 	//terms from sunburst ring
@@ -59,9 +59,9 @@ export async function init_sampletable(arg) {
 			// more cases, show summary
 			await make_multiSampleSummaryList({ arg, holder })
 		}
-		arg.temp_div.style('display', 'none')
+		wait.remove()
 	} catch (e) {
-		arg.temp_div.text('Error: ' + (e.message || e))
+		wait.text('Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
 	}
 }
@@ -101,12 +101,14 @@ async function make_singleSampleTable(arg, holder) {
 		}
 	}
 
-	for (const termid of arg.tk.mds.variant2samples.termidlst) {
-		const term = arg.tk.mds.termdb.getTermById(termid)
-		if (!term) throw 'unknown term id: ' + termid
-		const [cell1, cell2] = get_list_cells(grid_div)
-		cell1.text(term.name)
-		cell2.text(sampledata[termid] || 'N/A')
+	if (arg.tk.mds.variant2samples.termidlst) {
+		for (const termid of arg.tk.mds.variant2samples.termidlst) {
+			const term = arg.tk.mds.termdb.getTermById(termid)
+			if (!term) throw 'unknown term id: ' + termid
+			const [cell1, cell2] = get_list_cells(grid_div)
+			cell1.text(term.name)
+			cell2.text(sampledata[termid] || 'N/A')
+		}
 	}
 
 	/////////////
@@ -137,7 +139,6 @@ async function make_singleSampleTable(arg, holder) {
 			.style('font-size', '.7em')
 			.style('opacity', 0.5)
 	}
-	arg.temp_div.style('display', 'none')
 }
 
 async function make_multiSampleTable(args) {
@@ -156,7 +157,6 @@ async function make_multiSampleTable(args) {
 		arg.from = current_from
 	}
 	holder.selectAll('*').style('opacity', 0.5)
-	arg.temp_div.style('display', 'block').text('Loading...')
 	const [data, numofcases] = await arg.tk.mds.variant2samples.get(arg)
 	arg.numofcases = numofcases
 	holder.selectAll('*').remove()
@@ -297,7 +297,6 @@ async function make_multiSampleTable(args) {
 	// TODO: hide this button for now,
 	// varify after GDC demo and redesigning config menu if this feature will be useful
 	// make_column_showhide_menu(arg, columns, header_div, grid_div)
-	arg.temp_div.style('display', 'none')
 }
 
 async function make_multiSampleSummaryList(args) {
@@ -308,7 +307,6 @@ async function make_multiSampleSummaryList(args) {
 	if (new_term) arg.tid2value = JSON.parse(JSON.stringify(arg.tid2value_orig))
 	arg.querytype = arg.tk.mds.variant2samples.type_summary
 	arg.totalcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0)
-	arg.temp_div.style('display', 'block').text('Loading...')
 	const data = await arg.tk.mds.variant2samples.get(arg)
 	holder.selectAll('*').remove()
 
@@ -379,7 +377,6 @@ async function make_multiSampleSummaryList(args) {
 	init_download(tabArg.tabHolder, arg, main_tabs)
 	// TODO: enable and move later in CONFIG
 	// init_remove_terms_menu(main_tabs.holder, arg, main_tabs)
-	arg.temp_div.style('display', 'none')
 }
 
 function init_dictionary_ui(holder, arg, main_tabs) {

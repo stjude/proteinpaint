@@ -12,6 +12,7 @@ makeTk
 ********************** INTERNAL
 init_mclass
 get_ds
+	mayDeriveSkewerOccurrence4samples
 init_termdb
 mayaddGetter_m2csq
 mayaddGetter_variant2samples
@@ -19,10 +20,9 @@ mayaddGetter_sampleSummaries2
 parse_client_config
 configPanel
 _load
-mayDeriveSkewerOccurrence4samples
-*/
 
-/* common structure of tk.mds between official and custom
+
+common structure of tk.mds between official and custom
 
 tk.skewer{}
 	create if skewer data type is available for this mds
@@ -43,7 +43,7 @@ export async function makeTk(tk, block) {
 	tk.load = _load(tk, block) // shorthand
 
 	await get_ds(tk, block)
-	// tk.mds is created for both official and custom track
+	// tk.mds{} is created for both official and custom track
 	// following procedures are only based on tk.mds
 
 	init_termdb(tk, block)
@@ -169,9 +169,10 @@ async function get_ds(tk, block) {
 		return
 	}
 	// custom
-	if (!tk.name) tk.name = 'Unnamed'
+	if (!tk.name) tk.name = 'Custom data'
 	tk.mds = {}
 	// fill in details to tk.mds
+	///////////// custom data sources
 	if (tk.vcf) {
 		tk.mds.has_skewer = true // enable skewer tk
 		console.log('to enable custom vcf')
@@ -179,13 +180,7 @@ async function get_ds(tk, block) {
 	} else if (tk.custom_variants) {
 		tk.mds.has_skewer = true // enable skewer tk
 		// validate custom data
-		{
-			const newlst = mayDeriveSkewerOccurrence4samples(tk.custom_variants)
-			if (newlst) {
-				// only overwrite if newlst is returned
-				tk.custom_variants = newlst
-			}
-		}
+		mayDeriveSkewerOccurrence4samples(tk)
 	} else {
 		throw 'unknown data source for custom track'
 	}
@@ -238,7 +233,30 @@ function mayaddGetter_sampleSummaries2(tk, block) {
 function mayaddGetter_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
 	if (tk.mds.variant2samples.get) return // track from the same mds has already been intialized
-	// native track, need to know what to do for custom track
+
+	// getter are implemented differently based on data sources
+	if (tk.custom_variants) {
+		tk.mds.variant2samples.get = arg => {
+			if (arg.querytype == tk.mds.variant2samples.type_samples) {
+				const samples = []
+				for (const m of arg.mlst) {
+					if (!m.samples) continue
+					for (const s of m.samples) samples.push(JSON.parse(JSON.stringify(s)))
+				}
+				return [samples, samples.length]
+			}
+			if (arg.querytype == tk.mds.variant2samples.type_summary) {
+				throw 'todo: summary'
+			}
+			if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
+				throw 'todo: sunburst'
+			}
+			throw 'unknown querytype'
+		}
+		return
+	}
+
+	// server-hosted official dataset
 	tk.mds.variant2samples.get = async arg => {
 		/* arg{}
 		.tk1
@@ -347,49 +365,64 @@ function getter_mcset_key(mcset, m) {
 }
 
 /*
-in custom_variants[] data points,
-if "sample" is present but "occurrence" is missing,
-dedup the list by merging m{} of same variant together, and derive m.occurrence:int
+work-in-progress
 this works for receiving data from mass-matrix gene label-clicking
 
-work-in-progress
+in custom_variants[] data points,
+if "sample_id" is present but "occurrence" is missing, do below:
+- dedup the list by merging m{} of same variant together
+- on unique m{}, create .samples[] to collect list of samples harboring that variant
+- derive m.occurrence:int, as the samples[] array length
+- enable tk.mds.variant2samples{}
 
 may share code with server
 */
-function mayDeriveSkewerOccurrence4samples(lst) {
-	if (lst.find(i => i.occurrence != undefined)) {
+function mayDeriveSkewerOccurrence4samples(tk) {
+	if (tk.custom_variants.find(i => i.occurrence != undefined)) {
 		// at least one m{} has occurrence, presumably all m{} should have it. no need to group
 		return
 	}
-	if (!lst.find(i => i.sample)) {
+	// sample_id is hardcoded, change "sample" to "sample_id"
+	for (const i of tk.custom_variants) {
+		if (i.sample) {
+			i.sample_id = i.sample
+			delete i.sample
+		}
+	}
+	if (!tk.custom_variants.find(i => i.sample_id)) {
 		// no m{} has sample, cannot derive occurrence
 		// usecase: for displaying variant-only info, e.g. regression-snplocus, dbsnp, clinvar
 		return
 	}
-	// merge m{} and derive occurrence
+	// has .sample_id but lacks .occurrence, do things
 	const key2m = new Map()
 	// k: string key, v: m{} after deduplication, with occurrence:int
-	for (const m of lst) {
+	for (const m of tk.custom_variants) {
 		const key = m.mname + '.' + m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt
 		const m2 = key2m.get(key)
 		if (m2) {
 			m2.occurrence++
 			// TODO collect samples to array
 			m2.samples.push({
-				sample: m.sample
+				sample_id: m.sample_id
 			})
 		} else {
 			m.occurrence = 1
 			m.samples = [
 				{
-					sample: m.sample
+					sample_id: m.sample_id
 				}
 			]
-			delete m.sample
+			delete m.sample_id
 			key2m.set(key, m)
 		}
 	}
-	const newlst = []
-	for (const m of key2m.values()) newlst.push(m)
-	return newlst
+	tk.custom_variants = []
+	for (const m of key2m.values()) tk.custom_variants.push(m)
+	// enable
+	if (!tk.mds.variant2samples) tk.mds.variant2samples = {}
+	const v = tk.mds.variant2samples
+	v.type_samples = 'samples'
+	v.type_summary = 'summary'
+	v.type_sunburst = 'sunburst'
 }

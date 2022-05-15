@@ -59,19 +59,20 @@ async function table_snvindel(arg) {
 		.append('div')
 		.style('display', 'inline-grid')
 		.style('overflow-y', 'scroll')
-		.style('margin-bottom', '10px')
 
 	if (arg.mlst.length == 1) {
 		// single variant, use two-column table to show key:value pairs
 		grid.style('grid-template-columns', 'auto auto').style('max-height', '40vw')
-		arg.m = arg.mlst[0]
 		table_snvindel_onevariant(arg, grid)
 
 		arg.variantDiv = grid // allow to append sample info to the same grid along with variant info
 	} else {
 		// make a multi-column table for all variants, one row for each variant
 		// set of columns are based on available attributes in mlst
-		grid.style('max-height', '30vw').style('gap', '10px')
+		grid
+			.style('max-height', '30vw')
+			.style('gap', '10px')
+			.style('margin-bottom', '10px') // add space between new table created for samples
 		table_snvindel_multivariant(arg, grid)
 	}
 
@@ -80,7 +81,8 @@ async function table_snvindel(arg) {
 	}
 }
 
-function table_snvindel_onevariant({ m, tk, block }, grid) {
+function table_snvindel_onevariant({ mlst, tk, block }, grid) {
+	const m = mlst[0]
 	{
 		const [td1, td2] = get_list_cells(grid)
 		td1.text(block.mclassOverride ? block.mclassOverride.className : 'Consequence')
