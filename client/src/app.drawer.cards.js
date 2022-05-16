@@ -20,6 +20,8 @@ init_appDrawer
 	- creates the app drawer
 openSandbox
 	- opens track or app card sandboxes
+	- works internally by clicking on a card or externally 
+		by using `appcard=` URL parameter
 
 -------Internal-------
 *** App Drawer ***
@@ -64,6 +66,7 @@ makeDNAnexusFileViewerCard
 *** Featured Datasets ***
 makeDatasetButtons
 	- openDatasetSandbox
+		- addDatasetGenomeBtns
 		- makeURLbutton
 
 Documentation: https://docs.google.com/document/d/18sQH9KxG7wOUkx8kecptElEjwAuJl0xIJqDRbyhahA4/edit#heading=h.jwyqi1mhacps
@@ -92,8 +95,8 @@ export async function init_appDrawer(par) {
 		.style('grid-template-columns', '1fr 1fr')
 		.style('gap', '5px')
 
-	const datasetBtns_div = app_col.append('div')
 	const browserList = make_subheader_contents(gbrowser_col, 'Genome Browser Tracks')
+	const datasetBtns_div = app_col.append('div')
 	const launchList = make_subheader_contents(app_col, 'Launch Apps')
 	const track_args = {
 		tracks: re.examples.filter(track => !track.hidden),
@@ -111,7 +114,7 @@ export async function init_appDrawer(par) {
 	// make_searchbar(track_args, page_args, searchbar_div)
 	make_useCasesCard(topCards_div, track_args, page_args)
 	makeDNAnexusFileViewerCard(topCards_div, page_args)
-	makeDatasetButtons(datasetBtns_div, track_args, page_args)
+	makeDatasetButtons(datasetBtns_div, track_args.datasets, page_args)
 	await loadTracks(track_args, page_args)
 }
 
@@ -912,12 +915,14 @@ function make_useCasesCard(div, track_args, page_args) {
 		.style('width', '90%')
 		.style('margin', '20px 10px')
 		.style('padding', '5px')
+		// .attr('class', 'sjpp-app-drawer-card')
 		.attr('class', 'sjpp-app-drawer-card')
 		.html(
 			`<p style="margin-left: 12px; font-size:14.5px;font-weight:500; display: block;">Use Cases</p>
 		<p style="display: block; font-size: 13px; font-weight: 300; margin-left: 20px; justify-content: center; font-style:oblique; color: #403f3f;">find workflows and processes for specific needs</p>`
 		)
 		.on('click', async () => {
+			event.stopPropagation()
 			page_args.apps_off()
 			openUseCasesSandbox(track_args.usecases, page_args.apps_sandbox_div)
 		})
@@ -927,7 +932,7 @@ function make_useCasesCard(div, track_args, page_args) {
 
 //Clicking on the 'use cases' card opens to a sandbox with another set of cards. Clicking on a use case card removes all other cards and opens static content of the selected card.
 function openUseCasesSandbox(usecases, holder) {
-	holder.selectAll('*').remove()
+	// holder.selectAll('*').remove()
 	const sandbox_div = newSandboxDiv(holder)
 	sandbox_div.header_row
 	sandbox_div.header.text('Use Cases')
@@ -955,6 +960,7 @@ function openUseCasesSandbox(usecases, holder) {
 				<p style="display: block; font-size: 13px; font-weight: 300; margin-left: 20px; justify-content: center; font-style:oblique; color: #403f3f;">${usecase.describe}</p>`
 				)
 				.on('click', () => {
+					event.stopPropagation()
 					list_div.selectAll('*').remove()
 					showUseCaseContent(usecase, content_div)
 				})
@@ -1005,6 +1011,7 @@ function makeDNAnexusFileViewerCard(div, page_args) {
 		<p style="display: block; font-size: 13px; font-weight: 300; margin-left: 20px; justify-content: center; font-style:oblique; color: #403f3f;">Instructions on launching ProteinPaint from DNAnexus</p>`
 		)
 		.on('click', async () => {
+			event.stopPropagation()
 			page_args.apps_off()
 			openDNAnexusSandbox(page_args.apps_sandbox_div)
 		})
@@ -1034,7 +1041,7 @@ async function openDNAnexusSandbox(holder) {
 }
 
 /********** Dataset Functions  **********/
-async function makeDatasetButtons(div, track_args, page_args) {
+function makeDatasetButtons(div, datasets, page_args) {
 	div
 		.append('div')
 		.append('h5')
@@ -1044,13 +1051,13 @@ async function makeDatasetButtons(div, track_args, page_args) {
 
 	const datasetBtns_div = div.append('div').style('padding', '10px')
 
-	for (const ds of track_args.datasets) {
+	for (const ds of datasets) {
 		//Fix for feature datasets loading on page load
 		const btn = makeButton(datasetBtns_div, ds.name)
-		btn.on('click', () => {
-			page_args.apps_off()
+		btn.attr('class', 'sjpp-dataset-btn').on('click', async () => {
 			event.stopPropagation()
-			openDatasetSandbox(page_args, ds)
+			page_args.apps_off()
+			await openDatasetSandbox(page_args, ds)
 		})
 	}
 }
@@ -1058,21 +1065,22 @@ async function makeDatasetButtons(div, track_args, page_args) {
 async function openDatasetSandbox(page_args, ds) {
 	const res = await dofetch3(`/cardsjson?jsonfile=featuredDatasets`)
 	if (res.error) {
-		sayerror(holder.append('div'), res.error)
+		sayerror(page_args.apps_sandbox_div.append('div'), res.error)
 		return
 	}
-	const fdsIndex = res.jsonfile.datasets.findIndex(fd => fd.id == ds.id)
-	const fds = res.jsonfile.datasets[fdsIndex]
 
-	const sandbox_div = newSandboxDiv(page_args.apps_sandbox_div)
-	sandbox_div.header_row
-	sandbox_div.header.text(fds.name)
-	sandbox_div.body
+	const fds = res.jsonfile.datasets.filter(fd => fd.id == ds.id)
 
 	// First genome fds.availableGenomes is the default
 	const par = {
-		genome: page_args.genomes[fds.availableGenomes[0]]
+		fds: fds[0]
 	}
+	par.genome = page_args.genomes[par.fds.availableGenomes[0]]
+
+	const sandbox_div = newSandboxDiv(page_args.apps_sandbox_div)
+	sandbox_div.header_row
+	sandbox_div.header.text(par.fds.name)
+	sandbox_div.body
 
 	const main_div = sandbox_div.body
 		// Intro, gene toggle, and gene search box
@@ -1080,13 +1088,16 @@ async function openDatasetSandbox(page_args, ds) {
 		.style('padding', '1em')
 		.style('border-bottom', '1px solid #d0e3ff')
 
-	main_div
-		.append('div')
-		.style('line-height', '1.5em')
-		.style('padding', '0.5em 0.5em 1em 0.5em')
-		.html(fds.intro)
+	// Introduction div
+	if (par.fds.intro) {
+		main_div
+			.append('div')
+			.style('line-height', '1.5em')
+			.style('padding', '0.5em 0.5em 1em 0.5em')
+			.html(par.fds.intro)
+	}
 
-	if (fds.searchbar == 'none') {
+	if (par.fds.searchbar == 'none') {
 		// Call mass UI without search bar
 		const runpp_arg = {
 			holder: sandbox_div.body
@@ -1097,13 +1108,13 @@ async function openDatasetSandbox(page_args, ds) {
 			host: window.location.origin
 		}
 
-		const callpp = JSON.parse(JSON.stringify(fds.runargs))
+		const callpp = JSON.parse(JSON.stringify(par.fds.runargs))
 
 		runproteinpaint(Object.assign(runpp_arg, callpp))
 		return
 	}
 
-	addDatasetGenomeBtns(main_div, par, fds, page_args.genomes)
+	addDatasetGenomeBtns(main_div, par, page_args.genomes)
 	// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
 	const searchbar_div = main_div
 		.append('div')
@@ -1116,15 +1127,20 @@ async function openDatasetSandbox(page_args, ds) {
 		genome: par.genome,
 		tip: new Menu({ padding: '' }),
 		row: searchbar_div.append('div'),
-		geneOnly: fds.searchbar == 'gene' ? true : false,
-		callback: async () => {
-			// Creates search results as tracks, last to first
+		row: main_div
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '0.5em'),
+		geneOnly: par.fds.searchbar == 'gene' ? true : false,
+		focusOff: true,
+		callback: async div => {
+			//Creates search results as tracks, last to first
 			const result_div = allResults_div
-				.insert('div', ':first-child')
+				// .insert('div', ':first-child')
 				.style('max-width', '90vw')
 				.style('margin', '1vw')
 			result_div
-				// Destroy track on click button
+				// Destroy track on `x` button click
 				.append('div')
 				.style('display', 'inline-block')
 				.style('cursor', 'default')
@@ -1137,7 +1153,7 @@ async function openDatasetSandbox(page_args, ds) {
 					if (typeof close === 'function') close()
 				})
 			// Create 'Run Dataset from URL' btn specific to each applied search
-			makeURLbutton(result_div, coords, par, fds)
+			makeURLbutton(result_div, coords, par)
 			// Render the search parameters as a track
 			const runpp_arg = {
 				holder: result_div
@@ -1148,26 +1164,26 @@ async function openDatasetSandbox(page_args, ds) {
 				genome: par.genome.name
 			}
 			// Return only position or gene; avoid returning undefined values to runpp()
-			fds.runargs.block == true
+			par.fds.runargs.block == true
 				? (runpp_arg.position = `${coords.chr}:${coords.start}-${coords.stop}`) && (runpp_arg.nativetracks = 'Refgene')
 				: (runpp_arg.gene = coords.geneSymbol)
 
-			const callpp = JSON.parse(JSON.stringify(fds.runargs))
+			const callpp = JSON.parse(JSON.stringify(par.fds.runargs))
 
 			runproteinpaint(Object.assign(runpp_arg, callpp))
 		}
 	})
 }
 
-function addDatasetGenomeBtns(div, par, fds, genomes) {
+function addDatasetGenomeBtns(div, par, genomes) {
 	// Dynamically creates genome marker or buttons
-	const toggleBtn_div = div
+	div
 		.append('div')
 		.style('display', 'inline-block')
 		.style('padding', '10px 0px 10px 10px')
-	const btns = []
-	if (fds.availableGenomes.length == 1) {
-		// Show default genome as a non-functional button left of the search button
+
+	if (par.fds.availableGenomes.length == 1) {
+		// Show default genome as a non-functional button left of the search bar
 		div
 			.append('div')
 			.style('padding', '8px')
@@ -1177,11 +1193,11 @@ function addDatasetGenomeBtns(div, par, fds, genomes) {
 			.style('width', 'auto')
 			.style('height', 'auto')
 			.style('cursor', 'not-allowed')
-			.text(fds.availableGenomes[0])
+			.text(par.fds.availableGenomes[0])
 	} else {
 		const btns = []
 
-		fds.availableGenomes.forEach(genome => {
+		par.fds.availableGenomes.forEach(genome => {
 			btns.push({
 				name: genome,
 				active: false,
@@ -1220,13 +1236,15 @@ function addDatasetGenomeBtns(div, par, fds, genomes) {
 	}
 }
 
-function makeURLbutton(div, coords, par, fds) {
+function makeURLbutton(div, coords, par) {
 	const URLbtn = makeButton(div, 'Run Result from URL')
 	// Use position for genome browser and gene for protein view
 	const blockOn =
-		fds.runargs.block == true ? `position=${coords.chr}:${coords.start}-${coords.stop}` : `gene=${coords.geneSymbol}`
+		par.fds.runargs.block == true
+			? `position=${coords.chr}:${coords.start}-${coords.stop}`
+			: `gene=${coords.geneSymbol}`
 	URLbtn.on('click', () => {
 		event.stopPropagation()
-		window.open(`?genome=${par.genome.name}&${blockOn}&${fds.dsURLparam}`, '_blank')
+		window.open(`?genome=${par.genome.name}&${blockOn}&${par.fds.dsURLparam}`, '_blank')
 	})
 }

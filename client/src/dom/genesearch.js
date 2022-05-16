@@ -35,6 +35,7 @@ function argument object {}
 	when missing, just show placeholder
 
 .geneOnly: true
+	optional
 	if true, search for gene name only
 	TODO use only shallow (not "deep") query to find gene symbol, do not map gene to coord
 	replace gene_searchbox() in client/src/gene.js
@@ -42,6 +43,11 @@ function argument object {}
 .allowVariant: true
 	if true, allow to enter chr.pos.ref.alt or hgvs (see next section)
 	otherwise, only allow chr:start-stop
+
+.focusOff: true
+	optional
+	If true, user must click on search box and enter instead of automatically 
+	focusing on search box. Use to render d3 animations smoothly.
 
 .callback()
 	optional
@@ -181,7 +187,10 @@ export function addGeneSearchbox(arg) {
 			}
 			debouncer()
 		})
-	searchbox.node().focus()
+	// focusOff fix for jerky (unsmooth) app drawer sliding.
+	// App drawer slide animation very jerky when .focus() is applied to any
+	// input box. Set focusOff: true to smoothly execute animations.
+	if (!arg.focusOff) searchbox.node().focus()
 
 	const searchStat = {
 		mark: row.append('span').style('margin-left', '5px'),
