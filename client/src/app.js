@@ -1240,6 +1240,15 @@ async function launchblock(arg, app) {
 		blockinitarg.datasetqueries = arg.datasetqueries
 	}
 
+	if (arg.hlregions) {
+		const lst = []
+		for (const region of arg.hlregions) {
+			const pos = string2pos(region, genomeobj, true)
+			if (pos) lst.push(pos)
+		}
+		if (lst.length) blockinitarg.hlregions = lst
+	}
+
 	// apply url parameter
 	const h = urlmap()
 	if (h) {
@@ -1277,7 +1286,6 @@ async function launchblock(arg, app) {
 			}
 		}
 	}
-
 	// return a promise resolving to block
 	return import('./block').then(b => {
 		app.block = new b.Block(blockinitarg)

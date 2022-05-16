@@ -62,6 +62,30 @@
             "testSpec": {
                 "expected": {"circle": 15, "line": 15}
             }
+        },
+        {
+            "label": "Highlight Genomic Regions",
+            "message": "<div>Highlight multiple regions in the genome browser by defining regions in the <span style='font-family: Courier; opacity: 0.6;'>hlregion</span> array.</div>",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "hlregions": ["chr17:7575049-7576692","chr17:7578987-7580630"],
+                "nativetracks":"refgene",
+                "tracks": [
+                    {
+                        "type": "bigwig",
+                        "file": "proteinpaint_demo/hg19/bigwig/file.bw",
+                        "name": "BigWig Demo",
+                        "height": 100
+                    }
+                ]
+            },
+            "testSpec": {
+                "expected": {"circle": 15, "line": 15}
+            }
         }
     ]
 }
