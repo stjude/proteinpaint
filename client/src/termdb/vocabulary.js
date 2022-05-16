@@ -46,6 +46,7 @@ class TermdbVocab {
 		this.opts = opts
 		this.state = opts.state
 		this.vocab = opts.state.vocab
+		this.currAnnoData = { samples: {}, refs: { byTermId: {} }, lastTerms: [], lastFilter: {} }
 	}
 
 	main(stateOverride = null) {
@@ -488,7 +489,7 @@ class TermdbVocab {
 	}
 
 	/*
-	This will fill-in currData{} with annotations by sample ID.
+	This will fill-in this.currAnnoData{} with annotations by sample ID.
 	It will only request annotations for terms that have changed,
 	or when the filter has changed, using rx.deepEqual(). 
 
@@ -497,7 +498,7 @@ class TermdbVocab {
 	tw.$id. This will prevent conflicts when the same term.id is used
 	multiple times in the terms[] argument, such as for the matrix plot.
 
-	Other tracking data are attached to currData{}, to be able to
+	Other tracking data are attached to this.currAnnoData{}, to be able to
 	compare the previous version of term wrappers against future
 	server requests.
 
@@ -526,7 +527,7 @@ class TermdbVocab {
 			.$id: {bins, etc}   metadata for processed terms, useful
 													for specifying value order, colors, etc.
 	*/
-	async setAnnotatedSampleData(opts, currData) {
+	async getAnnotatedSampleData(opts) {
 		const init = {
 			body: {
 				for: 'matrix',
@@ -536,21 +537,22 @@ class TermdbVocab {
 		}
 
 		const filter = getNormalRoot(opts.filter)
-		const isNewFilter = !deepEqual(currData.lastFilter, filter)
-		const termsToUpdate = isNewFilter
-			? [...opts.terms]
-			: opts.terms.filter(tw => {
-					const lastTw = currData.lastTerms.find(lt => lt.$id === tw.$id)
-					return !lastTw || !deepEqual(lastTw, tw)
-			  })
+		const isNewFilter = !deepEqual(this.currAnnoData.lastFilter, filter)
+		if (isNewFilter) {
+			this.currAnnoData = { samples: {}, refs: { byTermId: {} }, lastTerms: [], lastFilter: {} }
+		}
+		const termsToUpdate = opts.terms.filter(tw => {
+			const lastTw = this.currAnnoData.lastTerms.find(lt => lt.$id === tw.$id)
+			return !lastTw || !deepEqual(lastTw, tw)
+		})
 		if (!termsToUpdate.length) return
 
-		const currSampleIds = Object.keys(currData.samples)
+		const currSampleIds = Object.keys(this.currAnnoData.samples)
 		const promises = []
 		// TODO: do not apply the filter to the term data request,
 		// so that a term will have annotated samples, while a
 		// separate request to a filtered sample list can be applied on the client side
-		const samplesToShow = isNewFilter || !currData.samplesToShow ? new Set() : currData.samplesToShow
+		const samplesToShow = isNewFilter || !this.currAnnoData.samplesToShow ? new Set() : this.currAnnoData.samplesToShow
 		while (termsToUpdate.length) {
 			const copies = this.getCopiesToUpdate(termsToUpdate)
 			const init = {
@@ -569,10 +571,10 @@ class TermdbVocab {
 					for (const sampleId in data.samples) {
 						samplesToShow.add(sampleId)
 						const sample = data.samples[sampleId]
-						if (!(sampleId in currData.samples)) {
-							currData.samples[sampleId] = { sample: sampleId }
+						if (!(sampleId in this.currAnnoData.samples)) {
+							this.currAnnoData.samples[sampleId] = { sample: sampleId }
 						}
-						const row = currData.samples[sampleId]
+						const row = this.currAnnoData.samples[sampleId]
 						for (const tw of copies) {
 							if (tw.idn in sample) {
 								row[tw.$id] = sample[tw.idn]
@@ -582,7 +584,7 @@ class TermdbVocab {
 
 					for (const tw of copies) {
 						if (tw.idn in data.refs.byTermId) {
-							currData.refs.byTermId[tw.$id] = data.refs.byTermId[tw.idn]
+							this.currAnnoData.refs.byTermId[tw.$id] = data.refs.byTermId[tw.idn]
 						}
 					}
 				})
@@ -593,22 +595,37 @@ class TermdbVocab {
 
 		const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
 		if (!dictTerm$ids.length) {
-			currData.lst = Object.values(currData.samples)
+			this.currAnnoData.lst = Object.values(this.currAnnoData.samples)
 		} else {
-			currData.lst = []
-			for (const sampleId in currData.samples) {
-				const row = currData.samples[sampleId]
+			this.currAnnoData.lst = []
+			for (const sampleId in this.currAnnoData.samples) {
+				const row = this.currAnnoData.samples[sampleId]
 				for (const $id in row) {
 					if (dictTerm$ids.includes($id)) {
-						currData.lst.push(row)
+						this.currAnnoData.lst.push(row)
 						break
 					}
 				}
 			}
 		}
-		currData.lastFilter = filter
-		currData.lastTerms = opts.terms
-		currData.samplesToShow = samplesToShow
+
+		this.currAnnoData.lastFilter = filter
+		this.currAnnoData.lastTerms = opts.terms
+		this.currAnnoData.samplesToShow = samplesToShow
+
+		const sampleFilter = new RegExp(opts.sampleNameFilter || '.*')
+		const data = {
+			lst: this.currAnnoData.lst.filter(
+				row => this.currAnnoData.samplesToShow.has(row.sample) && sampleFilter.test(row.sample)
+			),
+			refs: this.currAnnoData.refs
+		}
+		data.samples = data.lst.reduce((obj, row) => {
+			obj[row.sample] = row
+			return obj
+		}, {})
+
+		return data
 	}
 
 	getCopiesToUpdate(terms) {

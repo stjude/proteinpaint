@@ -17,7 +17,6 @@ class Matrix {
 		this.type = 'matrix'
 		setInteractivity(this)
 		setRenderers(this)
-		this.currData = { samples: {}, refs: { byTermId: {} }, lastTerms: [], lastFilter: {} }
 	}
 
 	async init(appState) {
@@ -142,27 +141,12 @@ class Matrix {
 
 			// get the data
 			const reqOpts = await this.getDataRequestOpts()
-			// this will write annotation data to this.currData
-			await this.app.vocabApi.setAnnotatedSampleData(reqOpts, this.currData)
-
-			this.sampleFilter = new RegExp(this.settings.matrix.sampleNameFilter || '.*')
-			const data = {
-				lst: this.currData.lst.filter(
-					row => this.currData.samplesToShow.has(row.sample) && this.sampleFilter.test(row.sample)
-				),
-				refs: this.currData.refs
-			}
-			data.samples = data.lst.reduce((obj, row) => {
-				obj[row.sample] = row
-				return obj
-			}, {})
-			this.data = data
-			// process the sample-filtered data
-			this.setSampleGroups(data)
-			this.setTermOrder(data)
-			this.setSampleOrder(data)
+			this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
+			this.setSampleGroups(this.data)
+			this.setTermOrder(this.data)
+			this.setSampleOrder(this.data)
 			this.setLayout()
-			this.serieses = this.getSerieses(data)
+			this.serieses = this.getSerieses(this.data)
 			// render the data
 			this.render()
 
@@ -222,7 +206,7 @@ class Matrix {
 				})
 			)
 		}
-		return { terms, filter: this.state.filter, data: this.currData }
+		return { terms, filter: this.state.filter }
 	}
 
 	setSampleGroups(data) {
