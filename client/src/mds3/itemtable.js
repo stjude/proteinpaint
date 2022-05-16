@@ -183,7 +183,7 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 	const sampleDivHeader = grid.append('div')
 
 	// one row for each variant
-	const sampleDivLst = []
+	const ssmid2div = new Map() // k: m.ssm_id, v: <div>
 	// for each variant, make a placeholder <div> and append to list
 
 	// temp array to collect subset of mlst[] for showing samples
@@ -234,9 +234,9 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 		}
 
 		// placeholder for showing available samples of this variant
-		sampleDivLst.push(grid.append('div'))
+		ssmid2div.set(m.ssm_id, grid.append('div'))
 	}
-	return { header: sampleDivHeader, lst: sampleDivLst }
+	return { header: sampleDivHeader, ssmid2div }
 }
 
 async function table_fusionsv(arg) {

@@ -12,6 +12,7 @@ makeTk
 ********************** INTERNAL
 init_mclass
 get_ds
+	validateCustomVariants
 	mayDeriveSkewerOccurrence4samples
 init_termdb
 mayaddGetter_m2csq
@@ -179,7 +180,7 @@ async function get_ds(tk, block) {
 		//await getvcfheader_customtk(tk.vcf, block.genome)
 	} else if (tk.custom_variants) {
 		tk.mds.has_skewer = true // enable skewer tk
-		// validate custom data
+		validateCustomVariants(tk)
 		mayDeriveSkewerOccurrence4samples(tk)
 	} else {
 		throw 'unknown data source for custom track'
@@ -241,7 +242,11 @@ function mayaddGetter_variant2samples(tk, block) {
 				const samples = []
 				for (const m of arg.mlst) {
 					if (!m.samples) continue
-					for (const s of m.samples) samples.push(JSON.parse(JSON.stringify(s)))
+					for (const s of m.samples) {
+						const s2 = JSON.parse(JSON.stringify(s))
+						s2.ssm_id = m.ssm_id
+						samples.push(s2)
+					}
 				}
 				return [samples, samples.length]
 			}
@@ -364,6 +369,14 @@ function getter_mcset_key(mcset, m) {
 	return ['no trigger']
 }
 
+function validateCustomVariants(tk) {
+	for (const m of tk.custom_variants) {
+		if (!m.ssm_id) {
+			m.ssm_id = m.chr + '.' + m.pos + '.' + (m.ref && m.alt ? m.ref + '.' + m.alt : m.mname)
+		}
+	}
+}
+
 /*
 work-in-progress
 this works for receiving data from mass-matrix gene label-clicking
@@ -419,7 +432,7 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 	}
 	tk.custom_variants = []
 	for (const m of key2m.values()) tk.custom_variants.push(m)
-	// enable
+	// enable variant2samples
 	if (!tk.mds.variant2samples) tk.mds.variant2samples = {}
 	const v = tk.mds.variant2samples
 	v.type_samples = 'samples'

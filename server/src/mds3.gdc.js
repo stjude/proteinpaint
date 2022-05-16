@@ -472,6 +472,13 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 	for (const s of re.data.hits) {
 		if (!s.case) throw '.case{} missing from a hit for query :' + query + ' and filter: ' + filter
 		const sample = {}
+		if (s.ssm) {
+			/* ssm{ ssm_id } is available on this case
+			this happens when getting the list of samples for a set of variants
+			attach ssm id allows client to associate sample to variant
+			*/
+			sample.ssm_id = s.ssm.ssm_id
+		}
 
 		// get printable sample id
 		if (ds.variant2samples.sample_id_key) {

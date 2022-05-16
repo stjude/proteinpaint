@@ -425,6 +425,7 @@ const variant2samples = {
 	// Note: observation node and children terms are removed from gdc dictionary,
 	// so have to use entire path
 	fields_samples: [
+		'ssm.ssm_id',
 		'case.case_id',
 		'case.observation.read_depth.t_alt_count',
 		'case.observation.read_depth.t_depth',
