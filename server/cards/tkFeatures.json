@@ -65,7 +65,7 @@
         },
         {
             "label": "Highlight Genomic Regions",
-            "message": "<div>Highlight multiple regions in the genome browser by defining regions in the <span style='font-family: Courier; opacity: 0.6;'>hlregion</span> array.</div>",
+            "message": "<div>Highlight multiple regions in the genome browser by defining regions in the <span style='font-family: Courier; opacity: 0.6;'>hlregions</span> array.</div>",
             "runargs": {
                 "parseurl": true,
                 "block": true,
