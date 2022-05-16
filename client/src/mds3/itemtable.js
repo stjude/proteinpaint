@@ -65,7 +65,11 @@ async function table_snvindel(arg) {
 		grid.style('grid-template-columns', 'auto auto').style('max-height', '40vw')
 		table_snvindel_onevariant(arg, grid)
 
-		arg.variantDiv = grid // allow to append sample info to the same grid along with variant info
+		// if the variant has only one sample,
+		// allow to append new rows to grid to show sample key:value
+		arg.singleSampleDiv = grid
+		// if there are multiple samples, this <div> won't be used
+		// a new table will be created under arg.div to show sample table
 	} else {
 		// make a multi-column table for all variants, one row for each variant
 		// set of columns are based on available attributes in mlst
@@ -73,7 +77,7 @@ async function table_snvindel(arg) {
 			.style('max-height', '30vw')
 			.style('gap', '10px')
 			.style('margin-bottom', '10px') // add space between new table created for samples
-		table_snvindel_multivariant(arg, grid)
+		arg.multiSampleTable = table_snvindel_multivariant(arg, grid)
 	}
 
 	if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
@@ -141,10 +145,17 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 	... optional columns
 	*/
 
+	const fixedColumnCount =
+		1 + // consequence
+		1 + // mutation
+		1 // sampleDivHeader
 	const showOccurrence = mlst.find(i => i.occurrence != undefined),
 		showNumericmodeValue = tk.skewer.mode == 'numeric'
 
-	grid.style('grid-template-columns', `repeat(${2 + (showOccurrence ? 1 : 0) + (showNumericmodeValue ? 1 : 0)}, auto)`)
+	grid.style(
+		'grid-template-columns',
+		`repeat(${fixedColumnCount + (showOccurrence ? 1 : 0) + (showNumericmodeValue ? 1 : 0)}, auto)`
+	)
 
 	// header
 	grid
@@ -168,7 +179,12 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 			.text(tk.numericmode.valueName || 'Value')
 	}
 
+	// placeholder for showing column headers of sample table, keep blank if there's no content
+	const sampleDivHeader = grid.append('div')
+
 	// one row for each variant
+	const sampleDivLst = []
+	// for each variant, make a placeholder <div> and append to list
 
 	// temp array to collect subset of mlst[] for showing samples
 	let mlst_render = []
@@ -216,7 +232,11 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 		if (showNumericmodeValue) {
 			grid.append('div').text(m.__value_use)
 		}
+
+		// placeholder for showing available samples of this variant
+		sampleDivLst.push(grid.append('div'))
 	}
+	return { header: sampleDivHeader, lst: sampleDivLst }
 }
 
 async function table_fusionsv(arg) {

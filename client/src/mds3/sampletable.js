@@ -34,6 +34,11 @@ otherwise, will print summaries for each sample attribute from all samples
 .div
 .tid2value
  	sample filters by e.g. clicking on a sunburst ring, for tk.mds.variant2samples.get
+.singleSampleDiv
+	optional, if just one single sample, can show into this table rather than creating a new one
+.multiSampleTable{}
+	optional, may show a list of samples in here
+	{ header:div, lst[ div, ... ] }
 */
 
 const cutoff_tableview = 10
@@ -72,7 +77,7 @@ async function make_singleSampleTable(arg, holder) {
 	const sampledata = data[0][0] // must have just one sample
 
 	const grid_div =
-		arg.variantDiv ||
+		arg.singleSampleDiv ||
 		holder
 			.append('div')
 			.style('display', 'inline-grid')
