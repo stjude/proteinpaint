@@ -499,7 +499,12 @@ async function handle_cards(req, res) {
 		} else {
 			const cardsjson = await utils.read_file(serverconfig.cardsjson)
 			const json = JSON.parse(cardsjson)
-			res.send({ examples: json.examples, usecases: json.usecases, allow_mdsform: exports.features.mdsjsonform })
+			res.send({
+				examples: json.examples,
+				usecases: json.usecases,
+				datasets: json.datasets,
+				allow_mdsform: exports.features.mdsjsonform
+			})
 		}
 	} catch (e) {
 		res.send({ error: e.message || e })
