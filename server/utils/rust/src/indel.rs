@@ -19,7 +19,6 @@
 // Analyze each read
 //   for each read {
 //      check_read_within_indel_region() (Checks if the read contains indel region)
-//      check_if_read_ambiguous() (Checks if a read starts/ends within repeat region (if present) or if start/end of variant is similar to flanking sequence such that read does not contain sufficient part of variant region to infer whether it supports ref or alt allele)
 //      check_polyclonal_with_read_alignment() (checking if read is polyclonal)
 //      percentage identity w.r.t ref allele = align_single_reads(sequence, reference sequence)
 //      percentage identity w.r.t alt allele = align_single_reads(sequence, alternate sequence)
@@ -131,6 +130,7 @@ fn main() {
     let refallele: String = args[5].parse::<String>().unwrap(); // Reference allele
     let altallele: String = args[6].parse::<String>().unwrap(); // Alternate allele
     let strictness: usize = args[7].parse::<usize>().unwrap(); // strictness of the pipeline
+    println!("strictness:{}", strictness);
     let rightflankseq: String = args[9].parse::<String>().unwrap(); //Right flanking sequence.
 
     //let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
@@ -236,18 +236,26 @@ fn main() {
                     //println!("ref_comparison:{}", ref_comparison);
                     //println!("alt_comparison:{}", alt_comparison);
 
-                    let (ref_polyclonal_read_status, alt_polyclonal_read_status) =
-                        check_polyclonal_with_read_alignment(
-                            &alignment_side,
-                            &q_seq_alt,
-                            &q_seq_ref,
-                            &align_alt,
-                            &align_ref,
-                            correct_start_position,
-                            correct_end_position,
-                            variant_pos,
-                            indel_length as usize,
-                        );
+                    let (ref_polyclonal_read_status, alt_polyclonal_read_status);
+                    if strictness == 0 {
+                        ref_polyclonal_read_status = 0;
+                        alt_polyclonal_read_status = 0;
+                    } else {
+                        let (ref_polyclonal_read_status_temp, alt_polyclonal_read_status_temp) =
+                            check_polyclonal_with_read_alignment(
+                                &alignment_side,
+                                &q_seq_alt,
+                                &q_seq_ref,
+                                &align_alt,
+                                &align_ref,
+                                correct_start_position,
+                                correct_end_position,
+                                variant_pos,
+                                indel_length as usize,
+                            );
+                        ref_polyclonal_read_status = ref_polyclonal_read_status_temp;
+                        alt_polyclonal_read_status = alt_polyclonal_read_status_temp;
+                    }
                     let ref_insertion = 0;
 
                     let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
@@ -371,8 +379,15 @@ fn main() {
                                     alternate_sequence.to_string(),
                                 );
 
-                            let (ref_polyclonal_read_status, alt_polyclonal_read_status) =
-                                check_polyclonal_with_read_alignment(
+                            let (ref_polyclonal_read_status, alt_polyclonal_read_status);
+                            if strictness == 0 {
+                                ref_polyclonal_read_status = 0;
+                                alt_polyclonal_read_status = 0;
+                            } else {
+                                let (
+                                    ref_polyclonal_read_status_temp,
+                                    alt_polyclonal_read_status_temp,
+                                ) = check_polyclonal_with_read_alignment(
                                     &alignment_side,
                                     &q_seq_alt,
                                     &q_seq_ref,
@@ -383,6 +398,9 @@ fn main() {
                                     variant_pos,
                                     indel_length as usize,
                                 );
+                                ref_polyclonal_read_status = ref_polyclonal_read_status_temp;
+                                alt_polyclonal_read_status = alt_polyclonal_read_status_temp;
+                            }
                             let ref_insertion = 0;
 
                             let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
