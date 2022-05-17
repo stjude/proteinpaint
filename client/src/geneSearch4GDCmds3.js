@@ -23,7 +23,7 @@ export async function init(arg, holder, genomes) {
 	geneInputDiv
 		.append('div')
 		.style('opacity', 0.5)
-		.text('To view GDC mutations on a gene, enter the gene name or isoform below.')
+		.text('To view GDC mutations on a gene, enter gene symbol or alias below.')
 
 	// second row, display graph
 	const graphDiv = holder.append('div')

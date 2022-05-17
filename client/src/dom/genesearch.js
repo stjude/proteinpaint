@@ -37,8 +37,10 @@ function argument object {}
 .geneOnly: true
 	optional
 	if true, search for gene name only
-	TODO use only shallow (not "deep") query to find gene symbol, do not map gene to coord
-	replace gene_searchbox() in client/src/gene.js
+	input can be symbol or alias
+	result is {geneSymbol:str}, will not map to coord
+	cannot map isoform to gene name!
+	(later may need geneOrIsoform flag to query both)
 
 .allowVariant: true
 	if true, allow to enter chr.pos.ref.alt or hgvs (see next section)
@@ -109,6 +111,7 @@ export function addGeneSearchbox(arg) {
 		width = 150
 	if (arg.geneOnly) {
 		placeholder = 'Gene'
+		width = 100 // use shorter width for inputting only one gene name
 	} else {
 		placeholder = 'Gene, position'
 		if (arg.genome.hasSNP) {
@@ -143,6 +146,20 @@ export function addGeneSearchbox(arg) {
 				input.blur()
 				tip.hide()
 
+				if (arg.geneOnly) {
+					// searching gene only, yield result here
+					const hitgene = tip.d.select('.sja_menuoption')
+					if (hitgene.size() > 0 && hitgene.attr('isgene')) {
+						// matched with gene names, use the first one
+						const geneSymbol = hitgene.text()
+						getResult({ geneSymbol })
+					} else {
+						// err
+						getResult(null, 'not a gene')
+					}
+					return
+				}
+
 				// if input can be parsed as either variant or coord
 				// then no need to match with gene/snp
 
@@ -155,7 +172,7 @@ export function addGeneSearchbox(arg) {
 				}
 
 				const pos = string2pos(v, arg.genome)
-				if (pos && !arg.geneOnly) {
+				if (pos) {
 					// input is coordinate
 					getResult(pos, 'Valid coordinate')
 					return
@@ -251,7 +268,14 @@ export function addGeneSearchbox(arg) {
 					.attr('class', 'sja_menuoption')
 					.attr('isgene', 1)
 					.on('click', () => {
-						geneCoordSearch(s)
+						if (arg.geneOnly) {
+							// finding gene only, got result
+							getResult({ geneSymbol: s })
+							tip.hide()
+						} else {
+							// convert gene symbol to coord
+							geneCoordSearch(s)
+						}
 					})
 			}
 		} catch (e) {
@@ -345,19 +369,25 @@ export function addGeneSearchbox(arg) {
 		if (r) {
 			// got hit (coord or variant), clear result{}
 			for (const k in result) delete result[k]
+
 			if (r.isVariant) {
 				// do not update searchbox
 				result.chr = r.chr
 				result.pos = r.pos
 				result.ref = r.ref
 				result.alt = r.alt
-			} else {
-				// is coord, maybe from gene
+			} else if (r.chr) {
+				// is coord
 				searchbox.property('value', r.chr + ':' + r.start + '-' + r.stop)
 				result.chr = r.chr
 				result.start = r.start
 				result.stop = r.stop
+			} else if (r.geneSymbol) {
+				// is only a gene symbol
+				searchbox.property('value', r.geneSymbol)
+				result.geneSymbol = r.geneSymbol
 			}
+
 			searchStat.mark.style('color', 'green').html('&check;')
 
 			if (geneSymbol) {
