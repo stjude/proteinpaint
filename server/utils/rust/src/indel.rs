@@ -40,10 +40,6 @@
 //              chi_square_test
 //              fishers_exact_test
 
-//use num_traits::Float;
-//use fishers_exact::fishers_exact;
-//use statrs::distribution::{ChiSquared, ContinuousCDF};
-//use std::panic;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
 //use std::env;
