@@ -130,7 +130,6 @@ fn main() {
     let refallele: String = args[5].parse::<String>().unwrap(); // Reference allele
     let altallele: String = args[6].parse::<String>().unwrap(); // Alternate allele
     let strictness: usize = args[7].parse::<usize>().unwrap(); // strictness of the pipeline
-    println!("strictness:{}", strictness);
     let rightflankseq: String = args[9].parse::<String>().unwrap(); //Right flanking sequence.
 
     //let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
@@ -149,6 +148,7 @@ fn main() {
     if ref_length > alt_length {
         indel_length = ref_length;
     }
+    //println!("indel_length:{}", indel_length);
 
     if args.len() > 14 {
         // This is true when realigning reads to determine correct indel sequence. Currently in development (not functional)
@@ -715,7 +715,8 @@ fn check_polyclonal_with_read_alignment(
             correct_start_position,
             correct_end_position,
             variant_pos,
-            indel_length,
+            None,
+            None,
             indel_length,
         );
 
