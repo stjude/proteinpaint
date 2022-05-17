@@ -44,6 +44,7 @@ findgene2paint
 ********** loaders from parseEmbedThenUrl()
 
 launchblock()
+may_launchGeneView
 launchgeneview()
 launchfusioneditor()
 launchmavb()
@@ -582,65 +583,6 @@ async function findgene2paint(app, str, genomename, jwt) {
 	blockinit(par)
 }
 
-function studyui(app, x, y) {
-	const pane = client.newpane({ x: x, y: y })
-	pane.header.text('View a study')
-	pane.body.style('padding', '20px')
-	pane.body
-		.append('div')
-		.style('color', '#858585')
-		.html(
-			"A study can organize various data for a cohort, and is hosted on this server.<br>To view, enter the path to the study's JSON config file.<br><a href=https://drive.google.com/open?id=121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE target=_blank>Learn how to organize data in a study</a>."
-		)
-	const row = pane.body.append('div').style('margin-top', '20px')
-	const input = row
-		.append('input')
-		.style('margin-right', '5px')
-		.attr('size', 15)
-		.attr('placeholder', 'Study name')
-	input
-		.on('keyup', () => {
-			if (d3event.code != 'Enter') return
-			submit()
-		})
-		.node()
-		.focus()
-	row
-		.append('button')
-		.text('Submit')
-		.on('click', submit)
-	row
-		.append('button')
-		.text('Clear')
-		.on('click', () => {
-			input
-				.property('value', '')
-				.node()
-				.focus()
-		})
-	pane.body
-		.append('p')
-		.html('<a href=https://www.dropbox.com/s/psfzwkbg7v022ef/example_study.json?dl=0 target=_blank>Example study</a>')
-	function submit() {
-		const v = input.property('value')
-		if (v == '') return
-		input.property('value', '')
-		input.node().blur()
-		const p2 = client.newpane({ x: 100, y: 100 })
-		p2.header.html('<span style="font-size:.7em">STUDY</span> ' + v)
-		p2.body.style('padding', '0px 20px 20px 20px')
-		loadstudycohort(
-			app.genomes,
-			v,
-			p2.body,
-			app.hostURL,
-			null, // jwt
-			false, // no show
-			app
-		)
-	}
-}
-
 async function parseEmbedThenUrl(arg, app) {
 	/*
 	first, try to parse any embedding parameters
@@ -770,6 +712,11 @@ async function parseEmbedThenUrl(arg, app) {
 
 	if (arg.selectGenomeWithTklst) {
 		await launchSelectGenomeWithTklst(arg, app)
+		return
+	}
+
+	if (arg.geneSearch4GDCmds3) {
+		await launchGeneSearch4GDCmds3(arg, app)
 		return
 	}
 
@@ -1075,7 +1022,6 @@ async function launchgeneview(arg, app) {
 		pa.hlvariants = arg.hlvariants
 	}
 
-	// TODO support tracks in block.init.js
 	blockinit(pa)
 }
 
@@ -1321,6 +1267,11 @@ async function launchmdsjsonform(arg, app) {
 
 async function launchSelectGenomeWithTklst(arg, app) {
 	const _ = await import('./selectGenomeWithTklst')
+	await _.init(arg, app.holder0, app.genomes)
+}
+
+async function launchGeneSearch4GDCmds3(arg, app) {
+	const _ = await import('./geneSearch4GDCmds3')
 	await _.init(arg, app.holder0, app.genomes)
 }
 
