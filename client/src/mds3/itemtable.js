@@ -62,7 +62,12 @@ async function table_snvindel(arg) {
 
 	if (arg.mlst.length == 1) {
 		// single variant, use two-column table to show key:value pairs
-		grid.style('grid-template-columns', 'auto auto').style('max-height', '40vw')
+		grid
+			.style('grid-template-columns', 'auto auto')
+			.style('max-height', '40vw')
+			// in case creating a new table for multiple samples of this variant,
+			// add space between grid and the new table
+			.style('margin-bottom', '10px')
 		table_snvindel_onevariant(arg, grid)
 
 		// if the variant has only one sample,
@@ -73,10 +78,8 @@ async function table_snvindel(arg) {
 	} else {
 		// make a multi-column table for all variants, one row for each variant
 		// set of columns are based on available attributes in mlst
-		grid
-			.style('max-height', '30vw')
-			.style('gap', '10px')
-			.style('margin-bottom', '10px') // add space between new table created for samples
+		grid.style('max-height', '30vw').style('gap', '10px')
+		// create placeholder for inserting samples for each variant
 		arg.multiSampleTable = table_snvindel_multivariant(arg, grid)
 	}
 

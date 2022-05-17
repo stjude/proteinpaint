@@ -1,11 +1,7 @@
-import { fillbar, tab2box, Menu, to_textfile } from '../client'
-import { make_densityplot } from '../dom/densityplot'
-import { init_tabs, update_tabs } from '../dom/toggleButtons'
-import { get_list_cells, get_table_header, get_table_cell } from '../dom/gridutils'
-import { select as d3select, event } from 'd3-selection'
+import { fillbar } from '../dom/fillbar'
+import { get_list_cells } from '../dom/gridutils'
 
 /*
-FIXME replace Menu with tk.itemtip2
 ********************** EXPORTED
 init_sampletable
 ********************** INTERNAL
@@ -59,17 +55,8 @@ export async function init_sampletable(arg) {
 			await make_singleSampleTable(arg)
 		} else {
 			// multiple samples
-			await make_multiSampleTable2(arg)
+			await make_multiSampleTable(arg)
 		}
-		/*
-		 else if (numofcases < cutoff_tableview) {
-			// few cases
-			await make_multiSampleTable({ arg, holder, no_tabs: true })
-		} else {
-			// more cases, show summary
-			await make_multiSampleSummaryList({ arg, holder })
-		}
-		*/
 		wait.remove()
 	} catch (e) {
 		wait.text('Error: ' + (e.message || e))
@@ -139,9 +126,10 @@ async function make_singleSampleTable(arg) {
 	}
 }
 
-function printSampleName(sample, tk, cell) {
+function printSampleName(sample, tk, div) {
+	// print sample name in a div, if applicable, generate a hyper link using the sample name
 	if (tk.mds.variant2samples.url) {
-		const a = cell.append('a')
+		const a = div.append('a')
 		a.attr(
 			'href',
 			tk.mds.variant2samples.url.base +
@@ -150,13 +138,15 @@ function printSampleName(sample, tk, cell) {
 		a.attr('target', '_blank')
 		a.text(sample.sample_id)
 	} else {
-		cell.text(sample.sample_id)
+		div.text(sample.sample_id)
 	}
 }
 
-async function make_multiSampleTable2(arg) {
+async function make_multiSampleTable(arg) {
+	// create horizontal table to show multiple samples, one sample per row
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
 	const [data, numofcases] = await arg.tk.mds.variant2samples.get(arg)
+	// each element of data[] is a sample{}
 
 	// flags for optional columns
 	const has_sample_id = data.find(i => i.sample_id),
@@ -171,8 +161,12 @@ async function make_multiSampleTable2(arg) {
 	if (has_totalNormal) numColumns++
 
 	if (arg.multiSampleTable) {
-		// insert into existing table
+		/* insert into existing table, do not create new table
+		print sample column headers into multiSampleTable.header
+		for each sample, find placeholder by sample.ssm_id, create new row for this sample into placeholder
+		*/
 
+		// FIXME sample columns must not overlap when clicking a variant to the right, e.g. F156L of KRAS
 		arg.multiSampleTable.header
 			.style('display', 'grid')
 			.style('grid-template-columns', 'repeat(' + numColumns + ', minmax(2vw, 10vw))')
