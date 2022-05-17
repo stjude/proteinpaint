@@ -153,6 +153,9 @@ async function make_multiSampleTable(arg) {
 	if (has_ssm_read_depth) numColumns++
 	if (has_totalNormal) numColumns++
 
+	// flag to enable alternating background color for sample rows
+	let rowBg = false
+
 	if (arg.multiSampleTable) {
 		/* insert into existing table, do not create new table
 		print sample column headers into multiSampleTable.header
@@ -173,8 +176,10 @@ async function make_multiSampleTable(arg) {
 				// no corresponding row was found by this ssm id
 				continue
 			}
+
+			// for a variant with multiple samples, css is set repeatedly on the row (placeholder)
 			row.style('display', 'grid').style('grid-template-columns', 'repeat(' + numColumns + ', minmax(2vw, 10vw))')
-			printSample(sample, row)
+			printSampleRow(sample, row)
 		}
 	} else {
 		// create new table, one row per sample
@@ -187,7 +192,7 @@ async function make_multiSampleTable(arg) {
 			.style('overflow-y', 'scroll')
 		printHeader(grid, true)
 		for (const sample of data) {
-			printSample(sample, grid)
+			printSampleRow(sample, grid)
 		}
 	}
 
@@ -214,13 +219,18 @@ async function make_multiSampleTable(arg) {
 			if (gray) c.style('opacity', 0.3)
 		}
 	}
-	function printSample(sample, row) {
+
+	function printSampleRow(sample, row) {
+		rowBg = !rowBg
 		if (has_sample_id) {
-			printSampleName(sample, arg.tk, row.append('div'))
+			const cell = row.append('div')
+			if (rowBg) cell.style('background', '#eee')
+			printSampleName(sample, arg.tk, cell)
 		}
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
-				row.append('div').text(termid in sample ? sample[termid] : '')
+				const cell = row.append('div').text(termid in sample ? sample[termid] : '')
+				if (rowBg) cell.style('background', '#eee')
 			}
 		}
 		if (has_ssm_read_depth) {
@@ -233,9 +243,11 @@ async function make_multiSampleTable(arg) {
 					.text(sm.altTumor + ' / ' + sm.totalTumor)
 					.style('margin', '0px 10px')
 			}
+			if (rowBg) cell.style('background', '#eee')
 		}
 		if (has_totalNormal) {
-			row.append('div').text('totalNormal' in sample ? sample.totalNormal : '')
+			const cell = row.append('div').text('totalNormal' in sample ? sample.totalNormal : '')
+			if (rowBg) cell.style('background', '#eee')
 		}
 	}
 }
