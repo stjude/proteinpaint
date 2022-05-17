@@ -61,6 +61,7 @@ fn main() {
         let (q_seq_alt, align_alt, r_seq_alt, _matched_nucleotides_ratio) =
             realign::align_single_reads(&final_sequence, alt_seq); // Aligning against alternate
 
+        //println!("alignment_side:{}", &alignment_side);
         let (red_region_start_alt, red_region_stop_alt, red_region_start_ref, red_region_stop_ref) =
             realign::determine_start_stop_indel_region_in_read(
                 alignment_side,

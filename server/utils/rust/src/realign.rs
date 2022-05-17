@@ -462,6 +462,11 @@ pub fn check_read_within_indel_region(
             alignment_side = "right".to_string();
             //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
             //read_indel_start = correct_end_position as usize - sequence.len();
+        } else if (indel_start - correct_start_position).abs()
+            <= (indel_start - correct_end_position).abs()
+        // When start position is closer to indel start, read is right aligned
+        {
+            alignment_side = "right".to_string();
         }
     }
 
@@ -1376,6 +1381,7 @@ pub fn determine_start_stop_indel_region_in_read(
     //println!("variant_pos:{}", variant_pos);
     //println!("q_seq_temp_alt.len():{}", q_seq_alt.len());
     //println!("q_seq_temp_ref.len():{}", q_seq_ref.len());
+    //println!("correct_start_position:{}", correct_start_position);
     //println!("correct_end_position:{}", correct_end_position);
     let q_seq_alt_vec: Vec<_> = q_seq_alt.chars().collect();
     let q_seq_ref_vec: Vec<_> = q_seq_ref.chars().collect();
