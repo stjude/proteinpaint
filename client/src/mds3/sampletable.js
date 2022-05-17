@@ -7,23 +7,14 @@ init_sampletable
 ********************** INTERNAL
 make_singleSampleTable
 make_multiSampleTable
-make_multiSampleSummaryList
-make_summary_panel
-init_dictionary_ui
-init_remove_terms_menu
-make_sunburst_tidlist
-make_filter_pill
-make_pagination
-make_column_showhide_menu
 
-using variant2samples
+using mds.variant2samples.get() to map mlst[] to samples
+always return list of samples, does not return summaries
 mlst can be mixture of data types, doesn't matter
-if the total occurrence is 1, will print details for that sample
-otherwise, will print summaries for each sample attribute from all samples
 
 ********************** arg{}
 .mlst[]
-	.occurrence // important parameter to determine the display mode
+	.occurrence
 .tk
 	.mds.variant2samples.termidlst
 .block
@@ -43,6 +34,8 @@ export async function init_sampletable(arg) {
 	const wait = arg.div.append('div').text('Loading...')
 
 	const numofcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0) // sum of occurrence of mlst[]
+
+	// may not be used!
 	//terms from sunburst ring
 	// Note: in ordered to keep term-values related to sunburst immuatable, these term names are
 	// stored as 'tid2value_orig' and not removed from tid2Value when filter changed or removed

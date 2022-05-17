@@ -189,9 +189,6 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 	const ssmid2div = new Map() // k: m.ssm_id, v: <div>
 	// for each variant, make a placeholder <div> and append to list
 
-	// temp array to collect subset of mlst[] for showing samples
-	let mlst_render = []
-
 	for (const m of mlst) {
 		// column 1
 		print_mname(grid.append('div'), m)
@@ -199,44 +196,14 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 		print_snv(grid.append('div'), m, tk)
 
 		if (showOccurrence) {
-			const cell = grid.append('div')
-
-			if (!disable_variant2samples && tk.mds.variant2samples) {
-				cell
-					.append('input')
-					.property('type', 'checkbox')
-					.on('change', async () => {
-						if (d3event.target.checked) mlst_render.push(m)
-						else {
-							mlst_render = mlst_render.filter(mt => mt.ssm_id != m.ssm_id)
-						}
-						const multisample_div = div.select('.sj_sampletable_holder')
-						multisample_div.selectAll('*').remove()
-						await init_sampletable({
-							mlst: mlst_render.length ? mlst_render : mlst,
-							tk,
-							block,
-							div: multisample_div
-						})
-					})
-
-				cell
-					.append('div')
-					.style('display', 'inline-block')
-					.style('text-align', 'right')
-					.style('margin-left', '5px')
-					.attr('class', 'sja_clbtext')
-					.text(m.occurrence)
-			} else {
-				cell.text(m.occurrence)
-			}
+			grid.append('div').text(m.occurrence)
 		}
 
 		if (showNumericmodeValue) {
 			grid.append('div').text(m.__value_use)
 		}
 
-		// placeholder for showing available samples of this variant
+		// create placeholder for showing available samples of this variant
 		ssmid2div.set(m.ssm_id, grid.append('div'))
 	}
 	return { header: sampleDivHeader, ssmid2div }
