@@ -13,7 +13,7 @@
 <div id=exp style="margin:10px"></div>
 
 <script>
-runproteinpaint({
+document.body.onload = () => runproteinpaint({
 	//host: 'https://ppr.stjude.org',
 	holder:document.getElementById('aaa'),
 	parseurl:true,
@@ -66,10 +66,256 @@ runproteinpaint({
 						atRiskLabelOffset: -20,
 					}
 				}
+			},
+			{
+				chartType: 'matrix',
+				settings: {
+					matrix: {
+						colw: 6,
+						colspace: 0,
+            rowspace: 0,
+						termLabelOffset: 220,
+						sortTermsBy: 'asListed',
+            grpLabelFontSize: 13,
+            //sampleNameFilter: '_D1$'
+					}
+				},
+				menuOpts: {
+					sampleGroup: [
+						{
+							label: 'Survival plot',
+							callback: 'launchSurvivalPlot',
+							config: {
+								//term2: {id: 'Primary Treatment category 2'},
+								settings: {
+									survival: {
+										xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
+									}
+								}
+							}
+						}
+					]
+				},
+				termgroups: [
+					{
+						name: '',
+						lst: [
+							{
+								id: 'Age',
+								q: {
+									mode: 'continuous',
+								},
+                settings: {
+                  barh: 40,
+                  gap: 10
+                }
+							},
+							{
+								label: 'Age Group',
+                id: 'Age',
+								q: {
+									mode: 'discrete',
+									type: 'custom-bin',
+									lst: [{
+										label: '<3',
+										startunbounded: true,
+										startinclusive: true,
+										stopinclusive: false,
+										stop: 3
+									},{
+										label: '3 to <7',
+										startinclusive: true,
+										stopinclusive: false,
+										start: 3,
+										stop: 7
+									},{
+										label: '7 to 18',
+										startinclusive: true,
+										stopinclusive: false,
+										start: 7,
+										stopunbounded: true,
+									}]
+								}
+							},
+							{
+								id: 'Gender',
+								//q: { mode: 'values' } // or 'groupsetting'
+							},
+							{
+								id: 'Mstage'
+							},
+							{
+								id: 'Mstatus'
+							},
+							{
+								id: 'RTgroup'
+							},
+							{
+								id: 'CSIgroup'
+							},
+							{
+								id: 'Carboplatin'
+							},
+							{
+								id: 'Risk'
+							},
+							{
+								id: 'ACNS0332STRATUM'
+							},
+							{
+								id: 'AnaplasticIndc'
+							},
+							{
+								id: 'ExtentofResection'
+							},
+							{
+								id: 'Hgroup'
+							},
+							{
+								id: 'SJMB03Histology'
+							},
+							{
+								id: 'Subgroup'
+							},
+              {
+                id: 'Subtype'
+              },
+              {
+                
+                id: 'Trial'
+              },
+							{
+								id: 'Sequencing'
+							},
+							{
+								id: 'Methylation'
+							}
+						]
+					},
+
+				 	{
+            name: 'Cytogenetics',
+            lst: getCytogeneticsData()
+          },
+
+          ...genegroups
+				],
+
+				// each override may be used by any termwrapper 
+        // that has a tw.overrides[$key] array of any twOverride[$key] below
+        overrides: {
+          WESfill: {
+            value: {
+              key: 'Sequencing', 
+              //value: 'WES', 
+              values: [
+                {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
+              ]
+            },
+            sampleFilter: {
+              type: 'tvs', // "wrapper-value-setting"
+              tvs: {
+                term: {id: 'Sequencing'},
+                values: [{key: 'No'}]
+              }
+            }
+          },
+          CNVfill: {
+            value: {
+              key: 'Methylation', 
+              //value: 'Methylation', 
+              values: [
+                {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
+              ]
+            },
+            sampleFilter: {
+              type: 'tvs', // "wrapper-value-setting"
+              tvs: {
+                term: {id: 'Methylation'},
+                values: [{key: 'No'}]
+              }
+            }
+          }
+        },
 			}],
 		}
 	}
 })
+
+function getCytogeneticsData() {
+	const chrs = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22] //,'X','Y']
+	const lst = []
+	for(const c of chrs) {
+		if (c != 13 && c != 14 && c != 15 && c != 21 && c != 22) lst.push({id: `${c}p`, legend: {group: 'Cytogenetics'}})
+		lst.push({id: `${c}q`, legend: {group: 'Cytogenetics'}})
+	}
+	return lst
+}
+
+const genegroups = [{
+	name: 'Copy Number Variation',
+	valueFilter: {
+    type: 'tvs',
+    tvs: {
+      values: [{key: 'dt', value: 4}]
+    },
+  },
+ 	overrides: ['CNVfill'],
+	lst: `MYCN, OTX2, MYC, GLI2`.split(',').map(g => {
+		return {term: {name: g.trim(), type: 'geneVariant'}}
+	}),
+},{
+	name: 'Somatic Mutations',
+	"settings": {
+    minNumSamples: 2
+  },
+  valueFilter: {
+    type: 'tvs',
+    isnot: true,
+    tvs: {
+      values: [{key: 'dt', value: 4}]
+    },
+  },
+  overrides: ['WESfill'],
+	lst: `CTNNB1
+		MYCN
+		DDX3X
+		PTCH1
+		SMARCA4
+		TP53
+		OTX2
+		KDM6A
+		MYC
+		KBTBD4
+		KMT2D
+		GSE1
+		KMT2C
+		ELP1
+		CREBBP
+		GLI2
+		TBR1
+		PTEN
+		ZMYM3
+		SUFU
+		SMO
+		ARID1A
+		CTDNEP1
+		APC
+		EPHA7
+		PIK3CA
+		ATM
+		BCOR
+		BRCA2
+		ZIC1
+		GPR161
+		PRDM6
+		TCF4
+		TERT`
+		.split('\n')
+		.map(g => {
+			return {term: {name: g.trim(), type: 'geneVariant'}}
+		})
+}]
 
 </script>
 
