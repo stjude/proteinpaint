@@ -28,7 +28,7 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('lolliplot using props', async test => {
+tape.skip('lolliplot using props', async test => {
 	test.timeoutAfter(35000)
 	test.plan(5)
 	const holder = select('body').append('div')
@@ -104,7 +104,7 @@ tape('lolliplot using props', async test => {
 	test.end()
 })
 
-tape('lolliplot with ssm_id', async test => {
+tape.skip('lolliplot with ssm_id', async test => {
 	test.timeoutAfter(30000)
 	test.plan(1)
 	const holder = select('body').append('div')
@@ -118,7 +118,21 @@ tape('lolliplot with ssm_id', async test => {
 	test.end()
 })
 
-tape.only('lolliplot with ssm_id', async test => {
+tape(`PpTrack.type='lolliplot' without geneId`, async test => {
+	test.timeoutAfter(30000)
+	test.plan(2)
+	const holder = select('body').append('div')
+	const portal = ReactDOM.render(
+		<PpTrack basepath={`http://localhost:${serverconfig.port}`} type="lolliplot" />,
+		holder.node()
+	)
+	await sleep(3000)
+	test.equal(holder.selectAll('.sja_skg>circle').size(), 0, `should not display any circles`)
+	test.equal(holder.selectAll('input').size(), 1, `should display a search input`)
+	test.end()
+})
+
+tape(`PpTrack.type='lolliplot' with geneId`, async test => {
 	test.timeoutAfter(30000)
 	test.plan(1)
 	const holder = select('body').append('div')
@@ -126,8 +140,9 @@ tape.only('lolliplot with ssm_id', async test => {
 		<PpTrack basepath={`http://localhost:${serverconfig.port}`} type="lolliplot" geneId="MYC" />,
 		holder.node()
 	)
-	//await sleep(4000)
-	test.fail('todo') //equal(holder.selectAll('.sja_aa_discg rect').size(), 1, `should highlight the matching circle for props.ssm_id'`)
-
+	await sleep(3000)
+	const numCircles = holder.selectAll('.sja_skg>circle').size()
+	const [min, max] = [50, 200]
+	test.true(numCircles > min && numCircles < max, `should have between ${min} and ${max} #circles`)
 	test.end()
 })

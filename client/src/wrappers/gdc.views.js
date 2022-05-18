@@ -42,7 +42,6 @@ export function getLolliplotTrack() {
 }
 
 export function getTrackByType() {
-	console.log(this.props)
 	const host = 'basepath' in this.props ? this.props.basepath : basepath
 
 	if (this.props.type == 'lolliplot') {
