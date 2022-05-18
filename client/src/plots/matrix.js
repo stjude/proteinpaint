@@ -376,7 +376,8 @@ class Matrix {
 			if (valueFilter.type == 'tvs') {
 				const matched = true
 				for (const vf of valueFilter.tvs.values) {
-					if (v[vf.key] == vf.value) return !valueFilter.isnot
+					if (v[vf.key] === vf.value) return !valueFilter.isnot
+					else if (v[vf.key] !== vf.value) return valueFilter.isnot
 				}
 				return matched
 			}
