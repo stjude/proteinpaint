@@ -12,7 +12,7 @@ const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
-	if (opts.vocab && !opt.state) {
+	if (opts.vocab && !opts.state) {
 		opts.state = { vocab: opts.vocab }
 	}
 	if (!opts.state) throw 'missing opts.state'
@@ -28,14 +28,11 @@ export function vocabInit(opts) {
 		vocab.dslabel = opts.state.dslabel
 		delete opts.state.dslabel
 	}
-	if (!vocab.route && vocab.dslabel) {
-		vocab.route = 'termdb'
-	}
 	/*** end legacy support ***/
 
-	if (vocab.route == 'termdb') {
+	if (vocab.dslabel) {
 		return new TermdbVocab(opts)
-	} else if (!vocab.route && vocab.terms) {
+	} else if (vocab.terms) {
 		return new FrontendVocab(opts)
 	}
 }

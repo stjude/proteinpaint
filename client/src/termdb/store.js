@@ -53,9 +53,8 @@ class TdbStore {
 		if (s.vocab) {
 			// assume that any vocabulary with a route
 			// will require genome + dslabel
-			if (s.vocab.route) {
+			if (s.vocab.dslabel) {
 				if (!s.vocab.genome) throw '.state[.vocab].genome missing'
-				if (!s.vocab.dslabel) throw '.state[.vocab].dslabel missing'
 			} else {
 				if (!Array.isArray(s.vocab.terms)) throw 'vocab.terms must be an array of objects'
 			}

@@ -74,9 +74,8 @@ class Filter {
 		if (!o.holder) throw '.holder missing'
 		if (!o.vocab) throw '.vocab missing'
 
-		if (o.vocab.route) {
+		if (o.vocab.dslabel) {
 			if (!o.vocab.genome) throw 'vocab.genome missing'
-			if (!o.vocab.dslabel) throw 'vocab.dslabel missing'
 		} else {
 			if (!o.vocab.terms) throw 'vocab.terms missing'
 		}
