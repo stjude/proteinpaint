@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import { AppUrl } from './AppUrl'
 import { AppProps } from './AppProps'
+import { PpTrack } from '../PpReact'
 import tape from 'tape'
 import { select } from 'd3-selection'
 import { getWindow } from '../../../test/fake.window'
@@ -114,6 +114,20 @@ tape('lolliplot with ssm_id', async test => {
 	)
 	await sleep(4000)
 	test.equal(holder.selectAll('.sja_aa_discg rect').size(), 1, `should highlight the matching circle for props.ssm_id'`)
+
+	test.end()
+})
+
+tape.only('lolliplot with ssm_id', async test => {
+	test.timeoutAfter(30000)
+	test.plan(1)
+	const holder = select('body').append('div')
+	const portal = ReactDOM.render(
+		<PpTrack basepath={`http://localhost:${serverconfig.port}`} type="lolliplot" geneId="MYC" />,
+		holder.node()
+	)
+	//await sleep(4000)
+	test.fail('todo') //equal(holder.selectAll('.sja_aa_discg rect').size(), 1, `should highlight the matching circle for props.ssm_id'`)
 
 	test.end()
 })
