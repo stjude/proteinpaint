@@ -47,7 +47,7 @@ export async function makeTk(tk, block) {
 	// tk.mds{} is created for both official and custom track
 	// following procedures are only based on tk.mds
 
-	init_termdb(tk, block)
+	await init_termdb(tk, block)
 
 	mayaddGetter_sampleSummaries2(tk, block)
 	mayaddGetter_variant2samples(tk, block)
@@ -188,9 +188,29 @@ async function get_ds(tk, block) {
 	// if variant2samples is enabled for custom ds, it will also have the async get()
 }
 
-function init_termdb(tk, block) {
+async function init_termdb(tk, block) {
 	const tdb = tk.mds.termdb
 	if (!tdb) return
+
+	{
+		const arg = {}
+		if (tk.mds.label) {
+			// official dataset
+			arg.vocab = {
+				genome: block.genome.name,
+				dslabel: tk.mds.label
+			}
+		} else if (tdb.terms) {
+			// custom dataset
+			arg.terms = tdb.terms
+		} else {
+			throw 'do not know how to init vocab'
+		}
+		const _ = await import('../termdb/vocabulary')
+		tdb.vocabApi = _.vocabInit(arg)
+	}
+
+	// TODO replace getTermById with `await tk.mds.termdb.vocabApi.getterm()`
 	tdb.getTermById = id => {
 		if (tdb.terms) return tdb.terms.find(i => i.id == id)
 		return null

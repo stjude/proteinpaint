@@ -1013,67 +1013,6 @@ const terms = [
 	}
 ]
 
-/* this now applies not only to vcf track but also legacy ds
- */
-
-// attributes to show for list of variants
-const snvindel_attributes = [
-	{
-		label: 'Mutation',
-		get: m => m.mname || ''
-	},
-	{
-		label: 'Genome pos.',
-		get: m => {
-			if (m.chr && m.pos) return m.chr + ':' + (m.pos + 1)
-			return null
-		}
-	},
-	{
-		label: 'Allele',
-		lst: [
-			{
-				get: function(m) {
-					return m.ref || ''
-				},
-				label: 'Ref',
-				valuecenter: true
-			},
-			{
-				get: function(m) {
-					return m.alt || ''
-				},
-				label: 'Alt',
-				valuecenter: true
-			}
-		]
-	},
-	{
-		label: 'Occurrence',
-		get: m => m.info.total
-	},
-	{
-		label: 'Polyphen impact',
-		get: m => m.info.polyphen_impact
-	},
-	{
-		label: 'Polyphen score',
-		get: m => m.info.polyphen_score
-	},
-	{
-		label: 'SIFT impact',
-		get: m => m.info.sift_impact
-	},
-	{
-		label: 'SIFT score',
-		get: m => m.info.sift_score
-	},
-	{
-		label: 'VEP impact',
-		get: m => m.info.vep_impact
-	}
-]
-
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 // XXX hardcoded to use .sample_id to dedup samples
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1081,7 +1020,6 @@ const snvindel_attributes = [
 module.exports = {
 	isMds3: true,
 	genome: 'hg38',
-	snvindel_attributes,
 	apihost: GDC_HOST + '/v0/graphql',
 
 	validate_filter0,

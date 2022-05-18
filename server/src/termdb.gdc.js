@@ -67,7 +67,6 @@ const skip_fields_lines = ['case.project.disease_type', 'case.project.primary_si
 const mapping_prefix = 'ssm_occurrence_centrics'
 
 export async function initDictionary(ds) {
-	ds.cohort.termdb = {}
 	const id2term = (ds.cohort.termdb.id2term = new Map())
 	const response = await got(endpoint, {
 		method: 'GET',
@@ -275,9 +274,8 @@ function init_termdb_queries(termdb, ds) {
 	}
 	q.getAncestorNames = q.getAncestorIDs
 
-	q.getTermById = id => {
-		const terms = [...termdb.id2term.values()]
-		return terms.find(i => i.id == id)
+	q.termjsonByOneid = id => {
+		return JSON.parse(JSON.stringify(termdb.id2term.get(id)))
 	}
 
 	q.getSupportedChartTypes = () => {

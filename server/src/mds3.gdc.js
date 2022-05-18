@@ -249,8 +249,9 @@ function makeSampleObj(c, ds) {
 		// as defined here, for producing sub-labels
 		for (const i of ds.sampleSummaries.lst) {
 			{
-				const t = ds.termdb.getTermById(i.label1)
+				const t = ds.cohort.termdb.q.termjsonByOneid(i.label1)
 				if (t) {
+					console.log(t)
 					sample[i.label1] = c[t.fields[0]]
 					for (let j = 1; j < t.fields.length; j++) {
 						if (sample[i.label1]) sample[i.label1] = sample[i.label1][t.fields[j]]
@@ -258,7 +259,7 @@ function makeSampleObj(c, ds) {
 				}
 			}
 			if (i.label2) {
-				const t = ds.termdb.getTermById(i.label2)
+				const t = ds.cohort.termdb.q.termjsonByOneid(i.label2)
 				if (t) {
 					sample[i.label2] = c[t.fields[0]]
 					for (let j = 1; j < t.fields.length; j++) {
@@ -445,8 +446,7 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 	if (q.tid2value && Object.keys(q.tid2value).length) {
 		q.termlst = []
 		for (const t of Object.keys(q.tid2value)) {
-			let term = ds.termdb.terms.find(i => i.id == t)
-			if (!term) term = ds.cohort.termdb.q.getTermById(t)
+			const term = ds.cohort.termdb.q.termjsonByOneid(t)
 			if (term) q.termlst.push(term)
 		}
 	}
@@ -497,21 +497,18 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 		sample.case_uuid = s.case.case_id
 
 		for (const id of termidlst) {
-			let t = ds.termdb.getTermById(id)
-			// if term is not in serverside termdb, query gdc_dictionary for new term
-			if (!t) t = ds.cohort.termdb.q.getTermById(id)
-			if (t) {
-				sample[id] = s.case[t.fields[0]]
-				for (let j = 1; j < t.fields.length; j++) {
-					if (sample[id] && Array.isArray(sample[id])) {
-						if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
-							sample[id] = (sample[id][0][t.fields[j]] * t.unit_conversion).toFixed(2)
-						else sample[id] = sample[id][0][t.fields[j]]
-					} else if (sample[id]) {
-						if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
-							sample[id] = (sample[id][t.fields[j]] * t.unit_conversion).toFixed(2)
-						else sample[id] = sample[id][t.fields[j]]
-					}
+			const t = ds.cohort.termdb.q.termjsonByOneid(id)
+			if (!t) continue
+			sample[id] = s.case[t.fields[0]]
+			for (let j = 1; j < t.fields.length; j++) {
+				if (sample[id] && Array.isArray(sample[id])) {
+					if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
+						sample[id] = (sample[id][0][t.fields[j]] * t.unit_conversion).toFixed(2)
+					else sample[id] = sample[id][0][t.fields[j]]
+				} else if (sample[id]) {
+					if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
+						sample[id] = (sample[id][t.fields[j]] * t.unit_conversion).toFixed(2)
+					else sample[id] = sample[id][t.fields[j]]
 				}
 			}
 		}
@@ -771,8 +768,8 @@ export function validate_sampleSummaries2_mclassdetail(api, ds) {
 			id2ssm.set(h.ssm_id, h)
 		}
 		const { label1, label2 } = JSON.parse(decodeURIComponent(q.samplesummary2_mclassdetail))
-		const term1 = ds.termdb.getTermById(label1)
-		const term2 = label2 ? ds.termdb.getTermById(label2) : null
+		const term1 = ds.cohort.termdb.q.termjsonByOneid(label1)
+		const term2 = label2 ? ds.cohort.termdb.q.termjsonByOneid(label2) : null
 		for (const h of re_cases.data.hits) {
 			if (!h.ssm) throw '.ssm{} missing from a case'
 			if (!h.ssm.ssm_id) throw '.ssm.ssm_id missing from a case'
