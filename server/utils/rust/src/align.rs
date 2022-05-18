@@ -1,15 +1,9 @@
 // Syntax: cd .. && cargo build --release && echo single:TGCAATTCAGGGTCAAGCTTCCTGAGGCATTTGTGCCAAAAGTGCCTGTCTTTAAAGATCAGGATTTCTNCCCTCA:CATCCACGCCTGAAGGAAGAGATGGCCAAAATGAAGAGATCAAATGCAATTCAGGTTCAAGCTTCCTGAGGGATTTGCGCCAAAAGTGCCTAAAATATATGTAAAAAGAAATGTAAATTGAAAAACAATCTTTCACCTTTAGAATATTTTCCTCA:CATCCACGCCTGAAGGAAGAGATGGCCAAAATGAAGAGATCAAATGCAATTCAGGTTCAAGCTTCCTGAGGGATTTGTGCCAAAAGTGCCTAAAATATATGTAAAAAGAAATGTAAATTGAAAAACAATCTTTCACCTTTAGAATATTTTCCTCA:45M864N31M:102839198:102839231:C:T | target/release/align
-// Syntax: cd .. && cargo build --release && echo multi:AGAGGAATCCGTAGGACATCTGCTTATCATTTTTGTAGGCCAAACAGTTCTGACTGAAACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAGCCTGCACGGGAGTCAGAGGCACTCAGCAATGCCGTGGCTCTGTTACGAACGGCTGAAATCAAAACCCCTCTGGCTTCTCCTATGCTTGT:ATCCGTAGGACATCTGCTTATCATTTTTGTAGGCCAAACAGTTCTGACTGAAACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTAGATCGGAAG:ATCTTCTGCTTATCATTTTTGTAGGCCAAACAGTTCTGACTGAAACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCA:CATCTGCTTATCATTTTTGTAGGCCAAACAGTTCTGACTGAAACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAGC:TCTGCTTATCATTTTTGTAGGCCAAACAGTTCTGACTGAAACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAAGAT:CTGCTTATCATTTTTGTAGGCCAAACAGTTCTGACTGAAACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAGCCTG:CTGCTTATCATTTTTGTAGGCCAAACAGTTCTGACTGAAACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAGCCTG:CATTTTTGTAGGCCAAACAGTTCTGACTGAAACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAGCCTGTTTGGAAA:CATTTTTGTAGGCCAAACAGTTCTGACTGAAACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAGCCTGCACGGGAG:TGTAGGCCAAACAGTTCTGACTGAAACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAGCCTGCACGGGAGTCAGAG:CCAAACAGTTCTGACTGAAACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAGCCTGCACGGGAGTCAGAGGCACTC:CAAACAGTTCTGACTGAAACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAGCCTGTTTGGAAACAGTATATGATGT:AACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAGCCTGCACGGGAGTCAGAGGCACTCAGCAATGCCATGGCTCTG:ACTCGGAGAAACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAGCCTGCACGGGAGTCAGAGGCACTCAGCAATGCCATGGCTCTGT:ACACGGACATCAGGCCGGACGCAACTGGTCAGATGCTGGAAACCTCAGCCTGCACGGGAGTCAGAGGCACTCAGCAATGCCATGGCTCTGTTACGAACGGC:GTCAGATGCTGGAAACCTCAGCCTGCACGGGAGTCAGAGGCACTCAGCAATGCCATGGCTCTGTTACGAACGGCTGAAATCAAAACCCCTCTGGCTTCTCC | time ../target/release/align
 
 // Function Cascade:
 // Single-read alignment mode: When first word in input is "single", it triggers the single-read alignment mode. The first sequence is the query sequence, second is reference sequence and third is alternate sequence. Each read/ref/alt sequence is separated by ":" character.
 //       align_single_reads(query_sequence, reference_sequence)
 //       align_single_reads(query_sequence, alternate_sequence)
-// Multi-read alignment mode: When first word in input is "multi", it triggers the multi-read alignment mode in which multiple reads are aligned against a single reference using pairwise alignment. Each read/ref sequence is separated by ":" character.
-//       for read in reads
-//          align_multi_reads(read, reference_sequence)
-//
-// NOTE: Currently the multi-read alignment mode is not in use because it will not be able to handle cases where a read opens a gap in the reference sequence outside the proposed variant region. This will require a more complex implementation. For now "clustalo" is being used.
 
 use std::io;
 
@@ -46,11 +40,6 @@ fn main() {
             _within_indel,
             correct_start_position,
             correct_end_position,
-            _splice_freq,
-            _splice_start_pos,
-            _splice_stop_pos,
-            _splice_start_cigar,
-            _splice_stop_cigar,
             alignment_side,
             final_sequence,
         ) = realign::check_read_within_indel_region(
@@ -72,6 +61,7 @@ fn main() {
         let (q_seq_alt, align_alt, r_seq_alt, _matched_nucleotides_ratio) =
             realign::align_single_reads(&final_sequence, alt_seq); // Aligning against alternate
 
+        //println!("alignment_side:{}", &alignment_side);
         let (red_region_start_alt, red_region_stop_alt, red_region_start_ref, red_region_stop_ref) =
             realign::determine_start_stop_indel_region_in_read(
                 alignment_side,
@@ -80,8 +70,9 @@ fn main() {
                 correct_start_position,
                 correct_end_position,
                 variant_pos,
-                variant_ref.len(),
-                variant_alt.len(),
+                Some(variant_ref.len()),
+                Some(variant_alt.len()),
+                indel_length as usize,
             );
 
         //println!("red_disp_region_start_alt:{}", red_region_start_alt);

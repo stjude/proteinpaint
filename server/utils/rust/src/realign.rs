@@ -192,18 +192,7 @@ pub fn check_read_within_indel_region(
     alt_length: usize,  // Length of alternate allele
     strictness: usize,  // Strictness of the indel pipeline
     read_sequence: String, // Original read sequence
-) -> (
-    usize,
-    i64,
-    i64,
-    usize,
-    i64,
-    i64,
-    usize,
-    usize,
-    String,
-    String,
-) {
+) -> (usize, i64, i64, String, String) {
     let mut within_indel = 0; // 0 if read does not contain indel region and 1 if it contains indel region
     let mut correct_start_position: i64 = left_most_pos; // Many times reads starting with a softclip (e.g cigar sequence: 10S80M) will report the first matched nucleotide as the start position (i.e 11th nucleotide in this example). This problem is being corrected below
     let original_read_length = read_sequence.len(); // Original read length
@@ -212,8 +201,6 @@ pub fn check_read_within_indel_region(
     let mut splice_start_pos: i64 = 0; // Start position of the spliced part of the region containing indel site relative to the read
     let mut splice_stop_pos: i64 = 0; // Stop position of the spliced part of the region containing indel site relative to the read
     let mut splice_start_cigar: usize = 0; // First cigar entry in the spliced fragment containing the variant to see if its a softclip
-    let mut splice_stop_cigar: usize = 0; // Last cigar entry in the spliced fragment containing the variant to see if its a softclip
-
     if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
     } else {
         let indel_stop: i64 = indel_start + indel_length as i64;
@@ -306,48 +293,55 @@ pub fn check_read_within_indel_region(
         let mut splice_start_frag = correct_start_position; // Start of spliced part of read which contains indel region in ref genome coordinates
         let mut splice_stop_frag = correct_start_position; // Stop of spliced part of read which contains indel region in ref genome coordinates
         if splice_freq > 0 && within_indel == 1 {
-            let mut nucleotide_position = 0; // This contains the position of nucleotide being analyzed w.r.t to read
             let mut nucleotide_position_without_splicing = 0; // This contains the position of nucleotide being analyzed w.r.t to read without splicing
+            let mut nucleotide_position_wrt_genome = correct_start_position; // This contains the position of nucleotide being analyzed w.r.t to genome
             let mut new_frag = 1; // Flag indicating start of a new fragment after splicing
             for i in 0..alphabets.len() {
                 if new_frag == 1 {
                     splice_start_cigar = 0;
-                    splice_stop_cigar = 0;
                     if &alphabets[i].to_string().as_str() == &"S" {
                         splice_start_cigar = 1;
                     }
-                    splice_start_frag += nucleotide_position;
+                    //splice_start_frag = nucleotide_position_wrt_genome;
+                    splice_start_frag = nucleotide_position_wrt_genome;
                     splice_stop_frag = splice_start_frag;
                     splice_start_pos = nucleotide_position_without_splicing;
                     splice_stop_pos = nucleotide_position_without_splicing;
                     new_frag = 0
                 }
 
-                nucleotide_position += numbers[i].to_string().parse::<i64>().unwrap();
                 if &alphabets[i].to_string().as_str() != &"N" {
                     nucleotide_position_without_splicing +=
                         numbers[i].to_string().parse::<i64>().unwrap();
                 }
-                if &alphabets[i].to_string().as_str() == &"I" {
+
+                if &alphabets[i].to_string().as_str() == &"N" {
+                    nucleotide_position_wrt_genome +=
+                        numbers[i].to_string().parse::<i64>().unwrap();
+                } else if &alphabets[i].to_string().as_str() == &"I" {
                     // In case of an insertion, the position w.r.t to read will change, but no change will occur w.r.t reference genome since the inserted nucleotides are not present in the reference genome
                     splice_stop_pos += numbers[i].to_string().parse::<i64>().unwrap();
-                }
-
-                if &alphabets[i].to_string().as_str() == &"D" {
+                } else if &alphabets[i].to_string().as_str() == &"D" {
                     // In case of a deletion, the position w.r.t reference genome will change but no change will occur w.r.t reads since the deleted nucleotides are not present in the read
                     splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
-                }
-
-                if &alphabets[i].to_string().as_str() == &"M"
+                    nucleotide_position_wrt_genome +=
+                        numbers[i].to_string().parse::<i64>().unwrap();
+                } else if &alphabets[i].to_string().as_str() == &"M"
                     || &alphabets[i].to_string().as_str() == &"S"
                 {
                     splice_stop_frag += numbers[i].to_string().parse::<i64>().unwrap();
                     splice_stop_pos += numbers[i].to_string().parse::<i64>().unwrap();
+                    nucleotide_position_wrt_genome +=
+                        numbers[i].to_string().parse::<i64>().unwrap();
                 }
 
+                //println!(
+                //    "nucleotide_position_wrt_genome:{}",
+                //    nucleotide_position_wrt_genome
+                //);
                 //println!("alphabet:{}", &alphabets[i].to_string().as_str());
                 //println!("splice_start_frag:{}", splice_start_frag);
-                //println!("splice_stop_frag2:{}", splice_stop_frag);
+                //println!("splice_stop_frag:{}", splice_stop_frag);
 
                 if &alphabets[i].to_string().as_str() == &"N" {
                     new_frag = 1;
@@ -359,9 +353,6 @@ pub fn check_read_within_indel_region(
                     {
                         correct_start_position = splice_start_frag;
                         correct_end_position = splice_stop_frag;
-                        if &alphabets[i].to_string().as_str() == &"S" {
-                            splice_stop_cigar = 1;
-                        }
                         //splice_start_pos = splice_start_frag;
                         //splice_stop_pos = nucleotide_position_without_splicing;
                         break;
@@ -376,17 +367,15 @@ pub fn check_read_within_indel_region(
                     {
                         correct_start_position = splice_start_frag;
                         correct_end_position = splice_stop_frag;
-                        if &alphabets[i].to_string().as_str() == &"S" {
-                            splice_stop_cigar = 1;
-                        }
                         //splice_start_pos = splice_start_frag;
                         //splice_stop_pos = nucleotide_position_without_splicing;
+                        //println!("splice_stop_frag:{}", splice_stop_frag);
                         break;
                     } else {
                         //println!("Somehow fragment containing indel site was not found, please check (within_indel = 0)!");
                         within_indel = 0;
                         //println!("splice_start_frag:{}", splice_start_frag);
-                        //println!("splice_stop_frag:{}", splice_stop_frag);
+                        //println!("splice_stop_frag2:{}", splice_stop_frag);
                         //println!("indel_start:{}", indel_start);
                         //println!("indel_stop:{}", indel_start + indel_length as i64);
                     }
@@ -473,6 +462,11 @@ pub fn check_read_within_indel_region(
             alignment_side = "right".to_string();
             //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
             //read_indel_start = correct_end_position as usize - sequence.len();
+        } else if (indel_start - correct_start_position).abs()
+            <= (indel_start - correct_end_position).abs()
+        // When start position is closer to indel start, read is right aligned
+        {
+            alignment_side = "right".to_string();
         }
     }
 
@@ -489,16 +483,10 @@ pub fn check_read_within_indel_region(
             }
         }
     }
-
     (
         within_indel,
         correct_start_position,
         correct_end_position,
-        splice_freq,
-        splice_start_pos,
-        splice_stop_pos,
-        splice_start_cigar,
-        splice_stop_cigar,
         alignment_side,
         final_sequence,
     )
@@ -1089,14 +1077,20 @@ fn check_first_last_nucleotide_correctly_aligned(
 
         if all_matched_nucleotides == true {
             for j in correct_alignment_length..correct_alignment_length + last_print_position {
-                q_seq_correct.push(q_seq_chars[j]);
-                align_correct.push(align_chars[j]);
-                r_seq_correct.push(r_seq_chars[j]);
+                if j < q_seq_chars.len() {
+                    q_seq_correct.push(q_seq_chars[j]);
+                    align_correct.push(align_chars[j]);
+                    r_seq_correct.push(r_seq_chars[j]);
+                }
             }
             for k in 0..first_partially_matched_nucleotides_right.len() {
                 q_seq_correct.push(first_partially_matched_nucleotides_right_vector[k]);
-                align_correct.push(align_chars[correct_alignment_length + last_print_position + k]);
-                r_seq_correct.push(r_seq_chars[correct_alignment_length + last_print_position + k]);
+                if correct_alignment_length + last_print_position + k < align_chars.len() {
+                    align_correct
+                        .push(align_chars[correct_alignment_length + last_print_position + k]);
+                    r_seq_correct
+                        .push(r_seq_chars[correct_alignment_length + last_print_position + k]);
+                }
             }
             alignment_changed = true;
         } else {
@@ -1217,9 +1211,11 @@ fn check_first_last_nucleotide_correctly_aligned(
                 //    "j,q_seq_chars[j],align_chars[j],r_seq_chars[j]:{},{},{},{}",
                 //    j, q_seq_chars[j], align_chars[j], r_seq_chars[j]
                 //);
-                q_seq_correct.push(q_seq_chars[j]);
-                align_correct.push(align_chars[j]);
-                r_seq_correct.push(r_seq_chars[j]);
+                if j < q_seq_chars.len() {
+                    q_seq_correct.push(q_seq_chars[j]);
+                    align_correct.push(align_chars[j]);
+                    r_seq_correct.push(r_seq_chars[j]);
+                }
             }
 
             for i in first_partially_matched_nucleotides_left.len()
@@ -1230,9 +1226,11 @@ fn check_first_last_nucleotide_correctly_aligned(
                 //    "i,q_seq_chars[i],align_chars[i],r_seq_chars[i]:{},{},{},{}",
                 //    i, q_seq_chars[i], align_chars[i], r_seq_chars[i]
                 //);
-                q_seq_correct.push(q_seq_chars[i]);
-                align_correct.push(align_chars[i]);
-                r_seq_correct.push(r_seq_chars[i]);
+                if i < q_seq_chars.len() {
+                    q_seq_correct.push(q_seq_chars[i]);
+                    align_correct.push(align_chars[i]);
+                    r_seq_correct.push(r_seq_chars[i]);
+                }
             }
             alignment_changed = true;
         }
@@ -1350,7 +1348,6 @@ pub fn align_single_reads(query_seq: &String, ref_seq: String) -> (String, Strin
     (q_seq_final, align_final, r_seq_final, num_matches)
 }
 
-#[allow(dead_code)]
 pub fn determine_start_stop_indel_region_in_read(
     alignment_side: String,
     q_seq_alt: &String,
@@ -1358,55 +1355,134 @@ pub fn determine_start_stop_indel_region_in_read(
     correct_start_position: i64,
     correct_end_position: i64,
     variant_pos: i64,
-    variant_ref_length: usize,
-    variant_alt_length: usize,
+    variant_ref_length: Option<usize>, // Is None in case of indel pipeline where indel length is used as ref length. In case of alignment display, this variable is defined
+    variant_alt_length: Option<usize>, // Is None in case of indel pipeline where indel length is used as ref length. In case of alignment display, this variable is defined
+    indel_length: usize,
 ) -> (i64, i64, i64, i64) {
     // Determine start/stop position of nucleotides in read that need to be highlighted red to show variant region in UI
     let mut red_region_start_alt = 0;
     let mut red_region_start_ref = 0;
     let mut red_region_stop_ref = 0;
     let mut red_region_stop_alt = 0;
-    //println!("variant_ref_length:{}", variant_ref_length);
-    //println!("variant_alt_length:{}", variant_alt_length);
+
+    let (ref_length, alt_length);
+    match variant_ref_length {
+        Some(variant_ref_length) => ref_length = variant_ref_length,
+
+        None => ref_length = indel_length,
+    }
+    match variant_alt_length {
+        Some(variant_alt_length) => alt_length = variant_alt_length,
+
+        None => alt_length = indel_length,
+    }
+    //println!("ref_length:{}", ref_length);
+    //println!("alt_length:{}", alt_length);
+    //println!("variant_pos:{}", variant_pos);
     //println!("q_seq_temp_alt.len():{}", q_seq_alt.len());
     //println!("q_seq_temp_ref.len():{}", q_seq_ref.len());
+    //println!("correct_start_position:{}", correct_start_position);
     //println!("correct_end_position:{}", correct_end_position);
+    let q_seq_alt_vec: Vec<_> = q_seq_alt.chars().collect();
+    let q_seq_ref_vec: Vec<_> = q_seq_ref.chars().collect();
     if alignment_side == "left".to_string() {
         red_region_start_alt = (variant_pos - correct_start_position).abs();
         red_region_start_ref = (variant_pos - correct_start_position).abs();
-        red_region_stop_ref =
-            (variant_pos - correct_start_position).abs() + variant_ref_length as i64;
-        red_region_stop_alt =
-            (variant_pos - correct_start_position).abs() + variant_alt_length as i64;
+        red_region_stop_ref = (variant_pos - correct_start_position).abs() + ref_length as i64;
+        red_region_stop_alt = (variant_pos - correct_start_position).abs() + alt_length as i64;
+
+        // Check if there are any gaps between start of variant and start of alignment
+
+        for i in 0..(variant_pos - correct_start_position).abs() as usize {
+            if i < q_seq_alt_vec.len() {
+                if q_seq_alt_vec[i] == '-' {
+                    red_region_start_alt += 1;
+                    red_region_stop_alt += 1;
+                }
+            }
+            if i < q_seq_ref_vec.len() {
+                if q_seq_ref_vec[i] == '-' {
+                    red_region_start_ref += 1;
+                    red_region_stop_ref += 1;
+                }
+            }
+        }
     } else if alignment_side == "right".to_string() {
-        let correctly_aligned_nclt_in_right =
-            correct_end_position - variant_pos - variant_ref_length as i64;
+        let mut correctly_aligned_nclt_in_right_alt =
+            correct_end_position - variant_pos - ref_length as i64;
+        let mut correctly_aligned_nclt_in_right_ref =
+            correct_end_position - variant_pos - ref_length as i64;
+
+        // Check if there are any gaps in the query sequence between end of alignment and end of variant sequence
+        for i in q_seq_alt.len() - correctly_aligned_nclt_in_right_alt as usize..q_seq_alt.len() {
+            if i < q_seq_alt_vec.len() {
+                if q_seq_alt_vec[i] == '-' {
+                    correctly_aligned_nclt_in_right_alt += 1;
+                    //println!("Alt_space");
+                }
+            } else {
+                break;
+            }
+        }
+        for i in q_seq_ref.len() - correctly_aligned_nclt_in_right_ref as usize..q_seq_ref.len() {
+            if i < q_seq_ref_vec.len() {
+                if q_seq_ref_vec[i] == '-' {
+                    correctly_aligned_nclt_in_right_ref += 1;
+                    //println!("Ref_space");
+                }
+            } else {
+                break;
+            }
+        }
+
         //println!(
-        //    "correctly_aligned_nclt_in_right:{}",
-        //    correctly_aligned_nclt_in_right
+        //    "correctly_aligned_nclt_in_right_alt:{}",
+        //    correctly_aligned_nclt_in_right_alt
+        //);
+        //println!(
+        //    "correctly_aligned_nclt_in_right_ref:{}",
+        //    correctly_aligned_nclt_in_right_ref
         //);
         red_region_start_alt =
-            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - variant_alt_length as i64;
+            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt - alt_length as i64;
         red_region_start_ref =
-            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - variant_ref_length as i64;
-        red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right;
-        red_region_stop_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right;
+            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref - ref_length as i64;
+        red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt;
+        red_region_stop_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref;
     }
 
     if red_region_start_alt < 0 {
+        //red_region_stop_alt = alt_length as i64;
+        //println!("red_disp_region_start_alt:{}", red_region_start_alt);
+        //if ref_length > alt_length {
+        //} else {
+        //    red_region_stop_alt = red_region_start_alt.abs() as i64 + 2;
+        //}
+        red_region_stop_alt = (red_region_start_alt.abs() - indel_length as i64).abs();
         red_region_start_alt = 0;
+        //println!("red_disp_region_start_alt was less than zero");
     }
 
     if red_region_start_ref < 0 {
+        //red_region_stop_ref = ref_length as i64;
+        //println!("red_disp_region_start_ref:{}", red_region_start_ref);
+        if ref_length > alt_length {
+            red_region_stop_ref = (red_region_start_ref.abs() - indel_length as i64).abs();
+        } else {
+            red_region_stop_ref = red_region_start_ref.abs() as i64 + 2;
+        }
         red_region_start_ref = 0;
+        //println!("red_disp_region_start_ref was less than zero");
     }
 
     if red_region_stop_alt < 0 {
         red_region_stop_alt = 0;
+        //println!("red_disp_region_stop_alt was less than zero");
     }
 
     if red_region_stop_ref < 0 {
         red_region_stop_ref = 0;
+        //println!("red_disp_region_stop_ref was less than zero");
     }
 
     if alignment_side == "left".to_string()
@@ -1415,16 +1491,16 @@ pub fn determine_start_stop_indel_region_in_read(
     {
         // In case of reads with very poor alignment but left-aligned, the start site of read may be greater than the length of the alignment in such case, try right-aligning the reads
         let correctly_aligned_nclt_in_right =
-            correct_end_position - variant_pos - variant_ref_length as i64;
+            correct_end_position - variant_pos - ref_length as i64;
         //println!(
         //    "correctly_aligned_nclt_in_right:{}",
         //    correctly_aligned_nclt_in_right
         //);
         //println!("Was originally left-aligned but start position was higher than alignment length, so attempted to right-align");
         red_region_start_alt =
-            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - variant_alt_length as i64;
+            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - alt_length as i64;
         red_region_start_ref =
-            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - variant_ref_length as i64;
+            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - ref_length as i64;
         red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right;
         red_region_stop_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right;
     } else if alignment_side == "right".to_string()
@@ -1435,11 +1511,10 @@ pub fn determine_start_stop_indel_region_in_read(
         //println!("Was originally right-aligned but start position was higher than alignment length, so attempted to left-align");
         red_region_start_alt = (variant_pos - correct_start_position).abs();
         red_region_start_ref = (variant_pos - correct_start_position).abs();
-        red_region_stop_ref =
-            (variant_pos - correct_start_position).abs() + variant_ref_length as i64;
-        red_region_stop_alt =
-            (variant_pos - correct_start_position).abs() + variant_alt_length as i64;
+        red_region_stop_ref = (variant_pos - correct_start_position).abs() + ref_length as i64;
+        red_region_stop_alt = (variant_pos - correct_start_position).abs() + alt_length as i64;
     }
+    //println!("alignment_side:{}", alignment_side);
     (
         red_region_start_alt,
         red_region_stop_alt,
