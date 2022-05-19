@@ -4,7 +4,7 @@ import { scaleOrdinal, schemeCategory10, scaleLinear } from 'd3-scale'
 import { axisLeft } from 'd3-axis'
 import { event as d3event } from 'd3-selection'
 import { filterInit } from './common/filter'
-import { appInit } from './termdb/app'
+import { appInit } from '../termdb/app'
 
 /*
 obj{}

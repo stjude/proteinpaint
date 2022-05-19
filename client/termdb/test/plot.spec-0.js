@@ -1,5 +1,5 @@
 const tape = require('tape')
-const helpers = require('../../../test/front.helpers.js')
+const helpers = require('../../test/front.helpers.js')
 
 /*************************
  reusable helper functions

@@ -1,7 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const helpers = require('../../../test/front.helpers.js')
-const graphable = require('../../common/termutils').graphable
+const helpers = require('../../test/front.helpers.js')
+const graphable = require('../../src/common/termutils').graphable
 
 /*
 Note:
@@ -28,7 +28,6 @@ tape('\n', function(test) {
 
 tape('term search, default behavior', function(test) {
 	test.timeoutAfter(5000)
-	const 
 	runpp({
 		state: {
 			tree: {

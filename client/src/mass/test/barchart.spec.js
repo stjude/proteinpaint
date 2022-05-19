@@ -3,7 +3,7 @@ const tape = require('tape')
 const termjson = require('../../../test/testdata/termjson').termjson
 const helpers = require('../../../test/front.helpers.js')
 const getFilterItemByTag = require('../../common/filter').getFilterItemByTag
-const vocabData = require('../../termdb/test/vocabData')
+const vocabData = require('../../../termdb/test/vocabData')
 
 /*************************
  reusable helper functions

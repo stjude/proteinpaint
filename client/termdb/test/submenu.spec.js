@@ -1,7 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const termjson = require('../../../test/testdata/termjson').termjson
-const helpers = require('../../../test/front.helpers.js')
+const termjson = require('../../test/testdata/termjson').termjson
+const helpers = require('../../test/front.helpers.js')
 
 /*
 Note:

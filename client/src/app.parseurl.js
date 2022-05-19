@@ -61,7 +61,7 @@ upon error, throw err message as a string
 			holder: arg.holder,
 			state
 		}
-		const _ = await import('./termdb/app')
+		const _ = await import('../termdb/app')
 		_.appInit(opts)
 		return
 	}

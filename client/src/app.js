@@ -1369,7 +1369,7 @@ async function launch_tkUIs(arg, app) {
 
 async function launchtermdb(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
-	import('./termdb/app').then(_ => {
+	import('../termdb/app').then(_ => {
 		_.appInit(opts)
 	})
 }

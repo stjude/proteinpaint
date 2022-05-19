@@ -1,11 +1,11 @@
-import { getAppInit, multiInit } from '../common/rx.core'
+import { getAppInit, multiInit } from '../src/common/rx.core'
 import { storeInit } from './store'
 import { vocabInit } from './vocabulary'
 import { treeInit } from './tree'
 import { submenuInit } from './submenu'
 import { searchInit } from './search'
 import { select } from 'd3-selection'
-import { sayerror, Menu } from '../client'
+import { sayerror, Menu } from '../src/client'
 
 /*
 opts{}

@@ -1,5 +1,5 @@
 const tape = require('tape')
-const helpers = require('../../../test/front.helpers.js')
+const helpers = require('../../test/front.helpers.js')
 const vocabInit = require('../vocabulary').vocabInit
 const appInit = require('../app').appInit
 const vocabData = require('./vocabData')

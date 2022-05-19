@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '../common/rx.core'
-import { appInit } from '../termdb/app'
+import { appInit } from '../../termdb/app'
 
 class MassDict {
 	constructor(opts) {

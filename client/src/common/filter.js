@@ -3,7 +3,7 @@ import { select, event } from 'd3-selection'
 import { Menu } from '../client'
 import { TVSInit } from './tvs'
 import * as client from '../client'
-import { vocabInit } from '../termdb/vocabulary'
+import { vocabInit } from '../../termdb/vocabulary'
 
 const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
 
@@ -946,7 +946,7 @@ function setInteractivity(self) {
 			? self.getAdjustedRoot(self.activeData.filter.$id, d)
 			: JSON.parse(self.rawCopy)
 
-		const termdb = await import('../termdb/app')
+		const termdb = await import('../../termdb/app')
 		termdb.appInit({
 			holder: self.dom.termSrcDiv,
 			state: {
@@ -1046,7 +1046,7 @@ function setInteractivity(self) {
 		}
 		const filter = self.activeData.filter
 
-		const termdb = await import('../termdb/app')
+		const termdb = await import('../../termdb/app')
 		termdb.appInit({
 			holder: self.dom.termSrcDiv,
 			state: {

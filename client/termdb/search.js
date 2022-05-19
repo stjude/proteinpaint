@@ -1,9 +1,9 @@
-import * as rx from '../common/rx.core'
+import * as rx from '../src/common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch3, sayerror } from '../client'
+import { dofetch3, sayerror } from '../src/client'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
-import { isUsableTerm } from '../../shared/termdb.usecase'
+import { isUsableTerm } from '../shared/termdb.usecase'
 
 /*
 steps:

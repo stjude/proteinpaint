@@ -3,7 +3,7 @@ import * as client from './client'
 import { make_select_btn_pair } from './dom/buttonPair'
 import { filterInit, filterJoin, getFilterItemByTag } from './common/filter'
 import { may_setup_numerical_axis, may_get_param_AFtest_termfilter } from './block.mds2.vcf.numericaxis'
-import { appInit } from './termdb/app'
+import { appInit } from '../termdb/app'
 
 /*
 

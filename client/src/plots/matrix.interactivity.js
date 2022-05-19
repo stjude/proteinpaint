@@ -493,7 +493,7 @@ function setTermActions(self) {
 		self.dom.dictTermBtn.style('text-decoration', 'underline')
 		self.dom.textTermBtn.style('text-decoration', '')
 
-		const termdb = await import('../termdb/app')
+		const termdb = await import('../../termdb/app')
 		self.dom.editbody.selectAll('*').remove()
 		termdb.appInit({
 			holder: self.dom.editbody.append('div'),
@@ -984,7 +984,7 @@ function setSampleGroupActions(self) {
 			.style('padding-bottom', '10px')
 			.html(`the selected survival term below:`)
 
-		const termdb = await import('../termdb/app')
+		const termdb = await import('../../termdb/app')
 		termdb.appInit({
 			holder: self.dom.menubody.append('div'),
 			vocabApi: self.app.vocabApi,

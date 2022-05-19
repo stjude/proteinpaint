@@ -250,7 +250,7 @@ function init_dictionary_ui(holder, arg, main_tabs) {
 		.on('click', async () => {
 			const active_tab = main_tabs ? main_tabs.find(t => t.active) : undefined
 			const tip = new Menu({ padding: '5px', parent_menu: add_btn })
-			const termdb = await import('../termdb/app')
+			const termdb = await import('../../termdb/app')
 			tip.clear().showunder(add_btn.node())
 			termdb.appInit({
 				holder: tip.d,

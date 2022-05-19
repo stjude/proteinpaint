@@ -1,8 +1,8 @@
-import * as rx from '../common/rx.core'
+import * as rx from '../src/common/rx.core'
 import { root_ID } from './tree'
-import { dofetch3 } from '../client'
-import { filterJoin, getFilterItemByTag, findItem, findParent } from '../common/filter'
-import { isUsableTerm } from '../../shared/termdb.usecase'
+import { dofetch3 } from '../src/client'
+import { filterJoin, getFilterItemByTag, findItem, findParent } from '../src/common/filter'
+import { isUsableTerm } from '../shared/termdb.usecase'
 
 // state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 

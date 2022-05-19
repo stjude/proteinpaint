@@ -1,7 +1,7 @@
-import { getCompInit } from '../common/rx.core'
+import { getCompInit } from '../src/common/rx.core'
 import { select, selectAll, event } from 'd3-selection'
-import { getNormalRoot } from '../common/filter'
-import { isUsableTerm } from '../../shared/termdb.usecase'
+import { getNormalRoot } from '../src/common/filter'
+import { isUsableTerm } from '../shared/termdb.usecase'
 import { termInfoInit } from './termInfo'
 
 const childterm_indent = '25px'

@@ -314,7 +314,7 @@ function setRenderers(self) {
 			config: { chartType: chart.chartType }
 		}
 
-		const termdb = await import('../termdb/app')
+		const termdb = await import('../../termdb/app')
 		termdb.appInit({
 			holder: self.dom.tip.d.append('div'),
 			state: {
@@ -351,7 +351,7 @@ function setRenderers(self) {
 			config: { chartType: chart.chartType }
 		}
 
-		const termdb = await import('../termdb/app')
+		const termdb = await import('../../termdb/app')
 		self.dom.submenu = self.dom.tip.d.append('div')
 		termdb.appInit({
 			holder: self.dom.submenu,
