@@ -1379,7 +1379,7 @@ async function launchmass(opts, app) {
 	if (opts.state && opts.state.genome) {
 		opts.genome = app.genomes[opts.state.genome]
 	}
-	import('./mass/app').then(_ => {
+	import('../mass/app').then(_ => {
 		_.appInit(opts)
 	})
 }

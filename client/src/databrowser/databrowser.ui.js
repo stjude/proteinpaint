@@ -2,7 +2,7 @@ import * as uiutils from '../dom/uiUtils'
 import { appear } from '../dom/animation'
 import { init_tabs } from '../dom/toggleButtons'
 import { event as d3event } from 'd3-selection'
-import { appInit } from '../mass/app'
+import { appInit } from '../../mass/app'
 import { parseDictionary } from './dictionary.parse'
 
 /* 

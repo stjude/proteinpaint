@@ -1,11 +1,11 @@
 import { dofetch3 } from '../src/common/dofetch'
-import { getBarchartData, getCategoryData } from '../src/plots/barchart.data'
-import { nonDictionaryTermTypes } from '../src/common/termsetting'
-import { getNormalRoot } from '../src/common/filter'
+import { getBarchartData, getCategoryData } from '../plots/barchart.data'
+import { nonDictionaryTermTypes } from '../termsetting/termsetting'
+import { getNormalRoot } from '../filter/filter'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../src/common/termutils'
 import initBinConfig from '../shared/termdb.initbinconfig'
-import { deepEqual } from '../src/common/rx.core'
+import { deepEqual } from '../rx'
 import { isUsableTerm } from '../shared/termdb.usecase'
 
 const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst', 'snplocus'])

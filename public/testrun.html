@@ -88,7 +88,7 @@ function updateNavCrumbs(display, params={}) {
 
 async function showAvailableSpecs() {
   try {
-    const data = await fetch(`/specs?exclude=`).then(r=>r.json()); console.log(data)
+    const data = await fetch(`/specs?exclude=`).then(r=>r.json())
     const byDir = processData(data)
     const dirNames = Object.keys(byDir).sort((a,b)=> a < b ? -1 : 1)
 

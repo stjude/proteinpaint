@@ -1,5 +1,5 @@
-import { getCompInit } from '../src/common/rx.core'
-import { showTvsMenu } from '../src/common/tvs'
+import { getCompInit } from '../rx'
+import { showTvsMenu } from '../filter/tvs'
 
 class TdbSubmenu {
 	constructor(opts) {
