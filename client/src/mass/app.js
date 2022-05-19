@@ -1,7 +1,7 @@
 import { getAppInit } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { storeInit } from './store'
-import { vocabInit } from '../termdb/vocabulary'
+import { vocabInit } from '../../termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
 import { sayerror } from '../dom/error'

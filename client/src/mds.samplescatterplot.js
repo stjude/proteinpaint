@@ -6,7 +6,7 @@ import { d3lasso } from './common/lasso'
 import { zoom as d3zoom, zoomIdentity } from 'd3'
 import { filterInit } from './common/filter'
 import { getFilteredSamples } from '../shared/filter'
-import { getVocabFromSamplesArray } from './termdb/vocabulary'
+import { getVocabFromSamplesArray } from '../termdb/vocabulary'
 import { getsjcharts } from './getsjcharts'
 import { uncollide } from './common/uncollide'
 

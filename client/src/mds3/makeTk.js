@@ -206,7 +206,7 @@ async function init_termdb(tk, block) {
 		} else {
 			throw 'do not know how to init vocab'
 		}
-		const _ = await import('../termdb/vocabulary')
+		const _ = await import('../../termdb/vocabulary')
 		tdb.vocabApi = _.vocabInit(arg)
 	}
 
