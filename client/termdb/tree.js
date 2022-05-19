@@ -1,4 +1,4 @@
-import { getCompInit } from '../src/common/rx.core'
+import { getCompInit } from '../rx'
 import { select, selectAll, event } from 'd3-selection'
 import { getNormalRoot } from '../filter/filter'
 import { isUsableTerm } from '../shared/termdb.usecase'

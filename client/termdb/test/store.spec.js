@@ -2,7 +2,7 @@ const tape = require('tape')
 const helpers = require('../../test/front.helpers.js')
 const store = require('../store')
 const ds = require('../../../../server/dataset/sjlife2.hg38.js')
-const rx = require('../../src/common/rx.core')
+const rx = require('../../rx')
 
 /*************************
  reusable helper functions

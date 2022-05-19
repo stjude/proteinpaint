@@ -1,4 +1,4 @@
-import * as rx from '../src/common/rx.core'
+import * as rx from '../rx'
 import { root_ID } from './tree'
 import { dofetch3 } from '../src/client'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../filter/filter'

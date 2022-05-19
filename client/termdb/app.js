@@ -1,4 +1,4 @@
-import { getAppInit, multiInit } from '../src/common/rx.core'
+import { getAppInit, multiInit } from '../rx'
 import { storeInit } from './store'
 import { vocabInit } from './vocabulary'
 import { treeInit } from './tree'

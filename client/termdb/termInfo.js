@@ -1,4 +1,4 @@
-import { getCompInit, getInitFxn, copyMerge } from '../src/common/rx.core'
+import { getCompInit, getInitFxn, copyMerge } from '../rx'
 
 const defaultState = { isVisible: false, term: null }
 

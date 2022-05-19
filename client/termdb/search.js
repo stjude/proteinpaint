@@ -1,4 +1,4 @@
-import * as rx from '../src/common/rx.core'
+import * as rx from '../rx'
 import { select, selectAll, event } from 'd3-selection'
 import { dofetch3, sayerror } from '../src/client'
 import { debounce } from 'debounce'
