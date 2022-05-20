@@ -68,6 +68,9 @@ function parse_q(q, ds) {
 	if (!ds.cohort) throw 'cohort missing from ds'
 	q.ds = ds
 	if (!q.terms) throw `missing 'terms' parameter`
+	q.terms.map(tw => {
+		if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
+	})
 }
 
 /*
@@ -143,6 +146,14 @@ function getSampleData_dictionaryTerms(q, termWrappers) {
 		const CTE = get_term_cte(q, values, i, filter, tw)
 		if (CTE.bins) {
 			refs.byTermId[tw.term.id] = { bins: CTE.bins }
+		}
+		if (tw.term.values) {
+			const values = Object.values(tw.term.values)
+			if (values.find(v => 'order' in v)) {
+				refs.byTermId[tw.term.id] = {
+					keyOrder: values.sort((a, b) => a.order - b.order).map(v => v.key)
+				}
+			}
 		}
 		return CTE
 	})

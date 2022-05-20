@@ -669,6 +669,7 @@ class Matrix {
 			const ref = legend.ref
 			if (ref.bins)
 				keys.sort((a, b) => ref.bins.findIndex(bin => bin.name === a) - ref.bins.findIndex(bin => bin.name === b))
+			else if (ref.keyOrder) keys.sort((a, b) => ref.keyOrder.indexOf(a) - ref.keyOrder.indexOf(b))
 
 			if (!this.colorScaleByTermId[grp])
 				this.colorScaleByTermId[grp] =
