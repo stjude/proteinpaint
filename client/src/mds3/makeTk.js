@@ -209,12 +209,6 @@ async function init_termdb(tk, block) {
 		const _ = await import('../../termdb/vocabulary')
 		tdb.vocabApi = _.vocabInit(arg)
 	}
-
-	// TODO replace getTermById with `await tk.mds.termdb.vocabApi.getterm()`
-	tdb.getTermById = id => {
-		if (tdb.terms) return tdb.terms.find(i => i.id == id)
-		return null
-	}
 }
 
 function mayaddGetter_m2csq(tk, block) {

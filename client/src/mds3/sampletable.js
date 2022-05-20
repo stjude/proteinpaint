@@ -81,7 +81,7 @@ async function make_singleSampleTable(arg) {
 
 	if (arg.tk.mds.variant2samples.termidlst) {
 		for (const termid of arg.tk.mds.variant2samples.termidlst) {
-			const term = arg.tk.mds.termdb.getTermById(termid)
+			const term = await arg.tk.mds.termdb.vocabApi.getterm(termid)
 			if (!term) throw 'unknown term id: ' + termid
 			const [cell1, cell2] = get_list_cells(grid_div)
 			cell1.text(term.name)
@@ -168,7 +168,7 @@ async function make_multiSampleTable(arg) {
 			.style('grid-template-columns', 'repeat(' + numColumns + ', minmax(2vw, 10vw))')
 			.style('opacity', 0.3)
 
-		printHeader(arg.multiSampleTable.header)
+		await printHeader(arg.multiSampleTable.header)
 
 		for (const sample of data) {
 			const row = arg.multiSampleTable.ssmid2div.get(sample.ssm_id)
@@ -190,7 +190,7 @@ async function make_multiSampleTable(arg) {
 			.style('gap', '5px')
 			.style('max-height', '30vw')
 			.style('overflow-y', 'scroll')
-		printHeader(grid, true)
+		await printHeader(grid, true)
 		for (const sample of data) {
 			printSampleRow(sample, grid)
 		}
@@ -198,14 +198,14 @@ async function make_multiSampleTable(arg) {
 
 	//////////// helpers
 
-	function printHeader(row, gray) {
+	async function printHeader(row, gray) {
 		if (has_sample_id) {
 			const c = row.append('div').text('Sample')
 			if (gray) c.style('opacity', 0.3)
 		}
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
-				const t = arg.tk.mds.termdb.getTermById(termid)
+				const t = await arg.tk.mds.termdb.vocabApi.getterm(termid)
 				const c = row.append('div').text(t ? t.name : termid)
 				if (gray) c.style('opacity', 0.3)
 			}

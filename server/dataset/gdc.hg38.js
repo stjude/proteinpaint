@@ -476,29 +476,6 @@ const variant2samples = {
 				}
 			}
 		}
-		// Note: all logic for tid2value has been converted termlst, because newly added terms are
-		// not part of terms[], so new term must be added from q.
-		// TODO: remove following commented part after reviewing
-		// else if (p.tid2value) {
-		// 	for (const tid in p.tid2value) {
-		// 		let t = terms.find(i => i.id == tid)
-		// 		// Quick Fix: tid2value from sample table has term.name rather than term.id
-		// 		if (!t) t = terms.find(i => i.name == tid)
-		// 		if (t && t.type == 'categorical') {
-		// 			f.content.push({
-		// 				op: 'in',
-		// 				content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
-		// 			})
-		// 		} else if (t && t.type == 'integer') {
-		// 			for (const val of p.tid2value[tid]) {
-		// 				f.content.push({
-		// 					op: val.op,
-		// 					content: { field: 'cases.' + t.fields.join('.'), value: val.range }
-		// 				})
-		// 			}
-		// 		}
-		// 	}
-		// }
 		return f
 	}
 }
@@ -964,7 +941,7 @@ const aliquot2sample = {
 
 /*
 hardcoding a flat list of terms here
-any possibility of dynamically querying terms from api??
+this is no longer kept in termdb.terms, but kept here so totalsize_filters() won't break
 */
 const terms = [
 	{
@@ -1027,7 +1004,6 @@ module.exports = {
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
 	termdb: {
-		terms,
 		termid2totalsize: {
 			// keys are term ids
 			project_id: { gdcapi: project_size },

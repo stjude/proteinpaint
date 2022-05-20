@@ -52,8 +52,6 @@ export function client_copy(ds) {
 				}
 				ds2.termdb.terms.push(n)
 			}
-		} else {
-			throw 'unknown vocab source'
 		}
 	}
 	if (ds.queries.snvindel) {
