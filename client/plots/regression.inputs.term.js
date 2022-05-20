@@ -2,7 +2,7 @@ import { termsettingInit, nonDictionaryTermTypes } from '../termsetting/termsett
 import { getNormalRoot } from '../filter/filter'
 import { get_bin_label } from '../shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
-import { Menu } from '../src/dom/menu'
+import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
 import { mayRunSnplstTask } from '../termsetting/snplst.sampleSum'
 import { get_defaultQ4fillTW } from './regression'

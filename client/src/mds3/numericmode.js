@@ -2,7 +2,7 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { format as d3format } from 'd3-format'
 import { axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { axisstyle } from '../dom/axisstyle'
+import { axisstyle } from '../../dom/axisstyle'
 import { make_datagroup } from './datagroup'
 import { click_variant } from './clickVariant'
 

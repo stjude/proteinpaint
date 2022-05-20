@@ -5,7 +5,7 @@ import { filterRxCompInit } from '../filter/filter'
 import { chartsInit } from './charts'
 import { select } from 'd3-selection'
 import { dofetch3 } from '../src/common/dofetch'
-import { Menu } from '../src/dom/menu'
+import { Menu } from '../dom/menu'
 import { getNormalRoot, getFilterItemByTag } from '../filter/filter'
 
 // to be used for assigning unique

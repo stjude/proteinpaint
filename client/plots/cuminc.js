@@ -7,10 +7,10 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter } from 'd3-shape'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
-import htmlLegend from '../src/dom/html.legend'
+import htmlLegend from '../dom/html.legend'
 import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../src/client'
-import { sayerror } from '../src/dom/error'
+import { sayerror } from '../dom/error'
 
 export class Cuminc {
 	constructor(opts) {

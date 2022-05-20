@@ -2,7 +2,7 @@ import * as client from './client'
 import { event as d3event } from 'd3-selection'
 import { scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { rgb as d3rgb } from 'd3-color'
-import { Menu } from './dom/menu'
+import { Menu } from '../dom/menu'
 
 /*
 generate the menu by click "Track" button on block

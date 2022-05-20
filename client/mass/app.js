@@ -4,9 +4,9 @@ import { storeInit } from './store'
 import { vocabInit } from '../termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
-import { sayerror } from '../src/dom/error'
-import { Menu } from '../src/dom/menu'
-import { newSandboxDiv } from '../src/dom/sandbox'
+import { sayerror } from '../dom/error'
+import { Menu } from '../dom/menu'
+import { newSandboxDiv } from '../dom/sandbox'
 
 /*
 opts{}

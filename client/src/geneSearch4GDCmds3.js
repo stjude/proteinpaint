@@ -1,5 +1,5 @@
-import { addGeneSearchbox } from './dom/genesearch'
-import { Menu } from './dom/menu'
+import { addGeneSearchbox } from '../dom/genesearch'
+import { Menu } from '../dom/menu'
 import { dofetch3 } from './common/dofetch'
 import blockinit from './block.init'
 

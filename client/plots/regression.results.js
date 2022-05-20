@@ -1,10 +1,10 @@
-import { sayerror } from '../src/dom/error'
+import { sayerror } from '../dom/error'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
-import { axisstyle } from '../src/dom/axisstyle'
+import { axisstyle } from '../dom/axisstyle'
 import { first_genetrack_tolist } from '../src/common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
-import { drawBoxplot } from '../src/dom/boxplot'
+import { drawBoxplot } from '../dom/boxplot'
 
 /*************
 can dynamically add following attributes

@@ -6,11 +6,11 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { timeYear } from 'd3-time'
 import { line, area, curveStepAfter } from 'd3-shape'
 import { rgb } from 'd3-color'
-import htmlLegend from '../src/dom/html.legend'
+import htmlLegend from '../dom/html.legend'
 import Partjson from 'partjson'
 import { to_svg } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import { Menu } from '../src/dom/menu'
+import { Menu } from '../dom/menu'
 
 class TdbSurvival {
 	constructor(opts) {

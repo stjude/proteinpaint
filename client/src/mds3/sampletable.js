@@ -1,5 +1,5 @@
-import { fillbar } from '../dom/fillbar'
-import { get_list_cells } from '../dom/gridutils'
+import { fillbar } from '../../dom/fillbar'
+import { get_list_cells } from '../../dom/gridutils'
 
 /*
 ********************** EXPORTED

@@ -1,6 +1,6 @@
 import * as rx from '../rx'
 import { select } from 'd3-selection'
-import { Menu } from '../src/dom/menu'
+import { Menu } from '../dom/menu'
 
 /*
 ********************** EXPORTED

@@ -3,8 +3,8 @@ import { select, event } from 'd3-selection'
 import { format } from 'd3-format'
 import { setDensityPlot } from './density'
 import { get_bin_label, get_bin_range_equation } from '../shared/termdb.bins'
-import { init_tabs } from '../src/dom/toggleButtons'
-import { make_radios } from '../src/dom/radiobutton'
+import { init_tabs } from '../dom/toggleButtons'
+import { make_radios } from '../dom/radiobutton'
 import { getPillNameDefault } from './termsetting'
 
 /*

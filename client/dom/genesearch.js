@@ -1,7 +1,7 @@
-import { keyupEnter, gmlst2loci } from '../client'
+import { keyupEnter, gmlst2loci } from '../src/client'
 import { debounce } from 'debounce'
-import { dofetch3 } from '../common/dofetch'
-import { invalidcoord, string2pos } from '../coord'
+import { dofetch3 } from '../src/common/dofetch'
+import { invalidcoord, string2pos } from '../src/coord'
 
 /*
 *********************************** EXPORT

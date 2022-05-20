@@ -1,5 +1,5 @@
 import { getInitFxn, copyMerge } from '../rx'
-import { Menu } from '../src/dom/menu'
+import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
 
 /*

@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge } from '../rx'
 import rendererSettings from './bars.settings'
 import barsRenderer from './bars.renderer'
-import htmlLegend from '../src/dom/html.legend'
+import htmlLegend from '../dom/html.legend'
 import { select, event } from 'd3-selection'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'

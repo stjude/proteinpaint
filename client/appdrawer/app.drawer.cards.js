@@ -1,5 +1,7 @@
-import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from '/client/src/client'
-import { newSandboxDiv } from '/client/src/dom/sandbox'
+import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from '../src/client'
+import { newSandboxDiv } from '../dom/sandbox'
+import { addGeneSearchbox } from '../dom/genesearch'
+import { Menu } from '../dom/menu'
 import { debounce } from 'debounce'
 import { event, select, selectAll } from 'd3-selection'
 // js-only syntax highlighting for smallest bundle, see https://highlightjs.org/usage/
@@ -9,8 +11,6 @@ import javascript from 'highlight.js/lib/languages/javascript'
 hljs.registerLanguage('javascript', javascript)
 import json from 'highlight.js/lib/languages/json'
 hljs.registerLanguage('json', json)
-import { addGeneSearchbox } from '/client/src/dom/genesearch'
-import { Menu } from '/client/src/dom/menu'
 
 /*
 

@@ -1,5 +1,5 @@
 import { getCompInit } from '../rx'
-import { Menu } from '../src/dom/menu'
+import { Menu } from '../dom/menu'
 import { getNormalRoot } from '../filter/filter'
 import { select, event } from 'd3-selection'
 

@@ -1,4 +1,4 @@
-import { init_tabs } from '../src/dom/toggleButtons'
+import { init_tabs } from '../dom/toggleButtons'
 import { getPillNameDefault, set_hiddenvalues } from './termsetting'
 import { copyMerge } from '../rx'
 

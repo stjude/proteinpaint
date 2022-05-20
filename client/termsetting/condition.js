@@ -1,5 +1,5 @@
 import { getPillNameDefault, set_hiddenvalues } from './termsetting'
-import { make_radios } from '../src/dom/radiobutton'
+import { make_radios } from '../dom/radiobutton'
 import { keyupEnter } from '../src/client'
 import { copyMerge } from '../rx'
 

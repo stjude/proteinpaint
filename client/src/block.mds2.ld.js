@@ -1,6 +1,6 @@
 import * as common from '../shared/common'
 import * as client from './client'
-import { make_one_checkbox } from './dom/checkbox'
+import { make_one_checkbox } from '../dom/checkbox'
 import { scaleLinear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
 import { vcf_m_color } from './block.mds2.vcf'

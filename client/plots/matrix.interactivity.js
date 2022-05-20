@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '../termsetting/termsetting'
-import { icons } from '../src/dom/control.icons'
+import { icons } from '../dom/control.icons'
 
 let inputIndex = 0
 

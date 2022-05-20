@@ -13,13 +13,13 @@ import { dofetch, dofetch2, dofetch3 } from './common/dofetch'
 // support client code that import dofetch* from client.js
 // TODO: update affected code to import dofetch* directly from common/dofetch.js
 export { dofetch, dofetch2, dofetch3 }
-import { Menu } from './dom/menu'
+import { Menu } from '../dom/menu'
 export { Menu }
 import { first_genetrack_tolist } from './common/1stGenetk'
 export { first_genetrack_tolist }
-import { make_table_2col } from './dom/table2col'
+import { make_table_2col } from '../dom/table2col'
 export { make_table_2col }
-import { fillbar } from './dom/fillbar'
+import { fillbar } from '../dom/fillbar'
 export { fillbar }
 
 export const font = 'Arial'

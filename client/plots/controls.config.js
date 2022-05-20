@@ -2,7 +2,7 @@ import { getCompInit, multiInit } from '../rx'
 import { overlayInit } from './controls.overlay'
 import { term1uiInit } from './controls.term1'
 import { divideInit } from './controls.divide'
-import { initRadioInputs } from '../src/dom/radio2'
+import { initRadioInputs } from '../dom/radio2'
 import { termsettingInit } from '../termsetting/termsetting'
 
 // to be used for assigning unique

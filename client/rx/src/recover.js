@@ -1,5 +1,5 @@
 import { getCompInit, toJson } from '../index'
-import { Menu } from '../../src/dom/menu'
+import { Menu } from '../../dom/menu'
 
 class Recover {
 	constructor(opts = {}) {

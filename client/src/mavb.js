@@ -1,6 +1,6 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import * as client from './client'
-import { renderSandboxFormDiv } from './dom/sandbox'
+import { renderSandboxFormDiv } from '../dom/sandbox'
 import { scaleLog, scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import { format as d3format } from 'd3-format'

@@ -2,7 +2,7 @@ import { scaleLinear } from 'd3-scale'
 import { axisLeft, axisRight } from 'd3-axis'
 import * as client from './client'
 import { event as d3event } from 'd3-selection'
-import { make_radios } from './dom/radiobutton'
+import { make_radios } from '../dom/radiobutton'
 
 /*
 follows bigwig track, main & subpanel rendered separately

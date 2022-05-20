@@ -1,6 +1,6 @@
 import { getCompInit } from '../rx'
 import { select, selectAll, event } from 'd3-selection'
-import { Menu } from '../src/dom/menu'
+import { Menu } from '../dom/menu'
 import { debounce } from 'debounce'
 //import { graphable } from '../common/termutils'
 
