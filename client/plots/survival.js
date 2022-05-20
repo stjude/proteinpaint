@@ -223,12 +223,15 @@ class TdbSurvival {
 
 	setTerm2Color(charts) {
 		if (!charts) return
+		const config = this.state.config
+		const values = this.refs.bins[2] || Object.values(config.term2?.term?.values || {})
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		const legendItems = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
-				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
+				const v = values.find(v => v.key === series.seriesId || v.name === series.seriesId)
+				this.term2toColor[series.seriesId] = rgb(v?.color || this.colorScale(series.seriesId))
 				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
 					legendItems.push({
 						seriesId: series.seriesId,
@@ -243,7 +246,7 @@ class TdbSurvival {
 			const s = this.refs.orderedKeys.series
 			legendItems.sort((a, b) => s.indexOf(a.seriesId) - s.indexOf(b.seriesId))
 		}
-		const config = this.state.config
+
 		if ((!config.term.term.type == 'survival' || config.term2) && legendItems.length) {
 			const termNum = config.term.term.type == 'survival' ? 'term2' : 'term'
 			this.legendData = [
