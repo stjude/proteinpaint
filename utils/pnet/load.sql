@@ -20,8 +20,3 @@ select a.term_id, a.term_id, null, '{}', 1, '', 1
 from annotations a
 where a.term_id not in (select distinct(id) from terms)
 group by term_id;
-
-insert into ancestry (term_id, ancestor_id)
-values 
-('Event-free survival', 'Survival outcome'), 
-('Overall survival', 'Survival outcome');
