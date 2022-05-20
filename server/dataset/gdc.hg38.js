@@ -483,7 +483,7 @@ const variant2samples = {
 /*
 getting total cohort sizes
 */
-function totalsize_filters(p) {
+function totalsize_filters(p, ds) {
 	// same filter maker function is shared for all terms that need to get total size
 	const f = {
 		filters: {
@@ -505,7 +505,7 @@ function totalsize_filters(p) {
 	}
 	if (p.tid2value) {
 		for (const tid in p.tid2value) {
-			const t = terms.find(i => i.id == tid)
+			const t = ds.cohort.termdb.q.termjsonByOneid(tid)
 			if (t) {
 				f.filters.content.push({
 					op: 'in',
@@ -601,7 +601,7 @@ function termid2size_query(termlst) {
 	return query
 }
 
-function termid2size_filters(p) {
+function termid2size_filters(p, ds) {
 	const f = {
 		filters: {
 			op: 'and',
@@ -611,7 +611,7 @@ function termid2size_filters(p) {
 
 	if (p && p.tid2value) {
 		for (const tid in p.tid2value) {
-			const t = terms.find(i => i.id == tid)
+			const t = ds.cohort.termdb.q.termjsonByOneid(tid)
 			if (t) {
 				f.filters.content.push({
 					op: 'in',
@@ -938,57 +938,6 @@ const aliquot2sample = {
 }
 
 ///////////////////////////////// end of query strings ///////////////
-
-/*
-hardcoding a flat list of terms here
-this is no longer kept in termdb.terms, but kept here so totalsize_filters() won't break
-*/
-const terms = [
-	{
-		name: 'Project',
-		id: 'project_id',
-		type: 'categorical',
-		fields: ['project', 'project_id']
-	},
-	{
-		name: 'Disease',
-		id: 'disease_type',
-		type: 'categorical',
-		fields: ['disease_type']
-	},
-	{
-		name: 'Primary site',
-		id: 'primary_site',
-		type: 'categorical',
-		fields: ['primary_site']
-	},
-	{
-		name: 'Gender',
-		id: 'gender',
-		type: 'categorical',
-		fields: ['demographic', 'gender']
-	},
-	{
-		name: 'Age at diagnosis',
-		id: 'age_at_diagnosis',
-		type: 'integer',
-		fields: ['diagnoses', 'age_at_diagnosis'],
-		unit_conversion: 0.002739,
-		unit: 'years'
-	},
-	{
-		name: 'Race',
-		id: 'race',
-		type: 'categorical',
-		fields: ['demographic', 'race']
-	},
-	{
-		name: 'Ethnicity',
-		id: 'ethnicity',
-		type: 'categorical',
-		fields: ['demographic', 'ethnicity']
-	}
-]
 
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 // XXX hardcoded to use .sample_id to dedup samples

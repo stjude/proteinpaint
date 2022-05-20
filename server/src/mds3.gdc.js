@@ -549,7 +549,7 @@ export async function get_cohortTotal(api, ds, q) {
 	if (typeof api.filters != 'function') throw '.filters() not function in termid2totalsize'
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
-		body: JSON.stringify({ query: api.query, variables: api.filters(q) })
+		body: JSON.stringify({ query: api.query, variables: api.filters(q, ds) })
 	})
 	let re
 	try {
@@ -575,7 +575,7 @@ export async function get_cohortTotal(api, ds, q) {
 export async function get_termlst2size(args) {
 	const { api, ds, termlst, q, treeFilter } = args
 	const query = api.query(termlst)
-	const filter = api.filters(treeFilter)
+	const filter = api.filters(treeFilter, ds)
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
 		body: JSON.stringify({ query, variables: filter })
