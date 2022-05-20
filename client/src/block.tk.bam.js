@@ -6,11 +6,11 @@ import { newpane } from './client'
 import { Menu } from '../dom/menu'
 import { sayerror } from '../dom/sayerror'
 import { appear } from '../dom/animation'
-import { dofetch3 } from './common/dofetch'
+import { dofetch3 } from '../common/dofetch'
 import { make_radios } from '../dom/radiobutton'
 import { make_table_2col } from '../dom/table2col'
 import { make_one_checkbox } from '../dom/checkbox'
-import urlmap from './common/urlmap'
+import urlmap from '../common/urlmap'
 
 /*
 important: tk.uninitialized will be deleted by getData at the first launch

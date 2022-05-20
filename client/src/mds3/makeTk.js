@@ -1,9 +1,9 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { Menu } from '../../dom/menu'
-import { dofetch3 } from '../common/dofetch'
+import { dofetch3 } from '../../common/dofetch'
 import { initLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
-import urlmap from '../common/urlmap'
+import urlmap from '../../common/urlmap'
 import { mclass } from '../../shared/common'
 
 /*

@@ -1,4 +1,4 @@
-import { dofetch3 } from '../client'
+import { dofetch3 } from '../src/client'
 
 /*
 to retrieve the termjson object of one term, using its id

@@ -5,7 +5,7 @@ import { scaleLog, scaleLinear } from 'd3-scale'
 import * as d3axis from 'd3-axis'
 import { format as d3format } from 'd3-format'
 import blocklazyload from './block.lazyload'
-import { d3lasso } from './common/lasso'
+import { d3lasso } from '../common/lasso'
 
 /*
 differential gene expression viewer

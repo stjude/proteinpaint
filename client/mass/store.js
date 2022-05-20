@@ -1,5 +1,5 @@
 import { getStoreInit } from '../rx'
-import { dofetch3 } from '../src/common/dofetch'
+import { dofetch3 } from '../common/dofetch'
 import { filterJoin, getFilterItemByTag, findItem, findParent } from '../filter/filter'
 
 // to distinguish from IDs assigned by other code or users

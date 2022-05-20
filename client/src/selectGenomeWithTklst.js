@@ -1,4 +1,4 @@
-import { first_genetrack_tolist } from './common/1stGenetk'
+import { first_genetrack_tolist } from '../common/1stGenetk'
 import { contigNameNoChr2 } from '../shared/common'
 import { addGeneSearchbox } from '../dom/genesearch'
 import { Menu } from '../dom/menu'

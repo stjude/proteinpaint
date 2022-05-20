@@ -9,13 +9,13 @@ import { select as d3select, selectAll as d3selectAll, event as d3event } from '
 import { rgb as d3rgb } from 'd3-color'
 import { transition } from 'd3-transition'
 import * as common from '../shared/common'
-import { dofetch, dofetch2, dofetch3 } from './common/dofetch'
+import { dofetch, dofetch2, dofetch3 } from '../common/dofetch'
 // support client code that import dofetch* from client.js
 // TODO: update affected code to import dofetch* directly from common/dofetch.js
 export { dofetch, dofetch2, dofetch3 }
 import { Menu } from '../dom/menu'
 export { Menu }
-import { first_genetrack_tolist } from './common/1stGenetk'
+import { first_genetrack_tolist } from '../common/1stGenetk'
 export { first_genetrack_tolist }
 import { make_table_2col } from '../dom/table2col'
 export { make_table_2col }

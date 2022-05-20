@@ -2,13 +2,13 @@ import * as client from './client'
 import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
 import { select as d3select, event as d3event } from 'd3-selection'
 import blocklazyload from './block.lazyload'
-import { d3lasso } from './common/lasso'
+import { d3lasso } from '../common/lasso'
 import { zoom as d3zoom, zoomIdentity } from 'd3'
 import { filterInit } from '../filter/filter'
 import { getFilteredSamples } from '../shared/filter'
 import { getVocabFromSamplesArray } from '../termdb/vocabulary'
 import { getsjcharts } from './getsjcharts'
-import { uncollide } from './common/uncollide'
+import { uncollide } from '../common/uncollide'
 
 /*
 obj:

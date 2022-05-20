@@ -7,7 +7,7 @@ import { color as d3color } from 'd3-color'
 import { bigwigconfigpanel } from './block.tk.bigwig'
 import { format as d3format } from 'd3-format'
 import { bigwigfromtemplate } from './block.tk.bigwig'
-import { dofetch3 } from './common/dofetch'
+import { dofetch3 } from '../common/dofetch'
 import { Menu } from '../dom/menu'
 import { make_table_2col } from '../dom/table2col'
 

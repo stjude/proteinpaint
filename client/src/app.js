@@ -1,6 +1,6 @@
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import * as client from './client'
-import { dofetch3, setAuth } from './common/dofetch'
+import { dofetch3, setAuth } from '../common/dofetch'
 import { stratinput } from '../shared/tree'
 import { stratify } from 'd3-hierarchy'
 import { findgenemodel_bysymbol } from './gene'
@@ -16,10 +16,10 @@ import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
 import { drawer_init } from '../appdrawer/app.drawer'
-import urlmap from './common/urlmap'
+import urlmap from '../common/urlmap'
 import { renderSandboxFormDiv, newSandboxDiv } from '../dom/sandbox'
 import * as wrappers from './wrappers/PpReact'
-import { first_genetrack_tolist } from './common/1stGenetk'
+import { first_genetrack_tolist } from '../common/1stGenetk'
 
 /*
 

@@ -4,7 +4,7 @@ import { searchInit } from './search'
 import { filterRxCompInit } from '../filter/filter'
 import { chartsInit } from './charts'
 import { select } from 'd3-selection'
-import { dofetch3 } from '../src/common/dofetch'
+import { dofetch3 } from '../common/dofetch'
 import { Menu } from '../dom/menu'
 import { getNormalRoot, getFilterItemByTag } from '../filter/filter'
 

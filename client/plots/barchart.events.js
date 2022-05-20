@@ -1,6 +1,6 @@
 import { event } from 'd3-selection'
 import { Menu } from '../dom/menu'
-import { dofetch3 } from '../src/common/dofetch'
+import { dofetch3 } from '../common/dofetch'
 import { newpane, export_data } from '../src/client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '../filter/filter'
 

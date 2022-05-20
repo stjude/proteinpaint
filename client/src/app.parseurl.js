@@ -4,8 +4,8 @@ import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
 import path from 'path'
 import * as mdsjson from './app.mdsjson'
-import urlmap from './common/urlmap'
-import { first_genetrack_tolist } from './common/1stGenetk'
+import urlmap from '../common/urlmap'
+import { first_genetrack_tolist } from '../common/1stGenetk'
 
 /*
 ********************** EXPORTED
