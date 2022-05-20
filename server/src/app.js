@@ -34,8 +34,9 @@ when launching:
 */
 
 const tabixnoterror = s => {
-	return s.startsWith('[M::test_and_fetch]')
+	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
 }
+exports.tabixnoterror = tabixnoterror
 
 const express = require('express'),
 	util = require('util'),
