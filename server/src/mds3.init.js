@@ -40,19 +40,9 @@ export function client_copy(ds) {
 	}
 	if (ds.termdb) {
 		ds2.termdb = {}
-		if (ds.termdb.terms) {
-			// if okay to expose the whole vocabulary to client?
-			// if to keep vocabulary at backend
-			ds2.termdb.terms = []
-			for (const m of ds.termdb.terms) {
-				const n = {}
-				for (const k in m) {
-					if (k == 'get') continue
-					n[k] = m[k]
-				}
-				ds2.termdb.terms.push(n)
-			}
-		}
+		// if using flat list of terms, do not send terms[] to client
+		// as this is official ds, and client will create vocabApi
+		// to query /termdb server route with standard methods
 	}
 	if (ds.queries.snvindel) {
 		ds2.has_skewer = true
@@ -100,9 +90,6 @@ async function validate_termdb(ds) {
 		throw 'unknown source of termdb vocabulary'
 	}
 
-	///////////////////////
-	// TODO use helpers under ds.cohort.termdb.q{} instead
-
 	if (tdb.termid2totalsize) {
 		for (const tid in tdb.termid2totalsize) {
 			if (!ds.cohort.termdb.q.termjsonByOneid(tid)) throw 'unknown term id from termid2totalsize: ' + tid
@@ -131,7 +118,7 @@ async function validate_termdb(ds) {
 			if (!gdcapi.keys && !gdcapi.keys.length) throw 'termid2totalsize2 missing keys[]'
 			if (typeof gdcapi.filters != 'function') throw '.filters is not in termid2totalsize2'
 		} else {
-			throw 'termid2totalsize2 missing gdcapi'
+			throw 'unknown method for termid2totalsize2'
 		}
 		// add getter
 		tdb.termid2totalsize2.get = async (termidlst, entries, q) => {
@@ -158,6 +145,8 @@ async function validate_termdb(ds) {
 						}
 					}
 				}
+			} else {
+				throw 'unknown method for termid2totalsize2'
 			}
 			return entries
 		}
