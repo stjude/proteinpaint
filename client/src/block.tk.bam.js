@@ -1708,6 +1708,10 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 			)
 			.style('text-align', 'center')
 	}
+	tk.alignpane.body
+		.style('max-width', '90vw')
+		.style('max-height', '65vh')
+		.style('overflow', 'scroll')
 
 	const div = tk.alignpane.body.append('div').style('margin', '20px')
 	tk.readAlignmentTable = div
