@@ -62,7 +62,9 @@ export function may_render_skewer(data, tk, block) {
 	mayProcess_hlaachange(tk, data.skewer)
 
 	if (tk.skewer.mode == 'numeric') {
-		return nm_render(data, tk, block)
+		const h = nm_render(data, tk, block)
+		if (tk.hlssmid) highlight_disks(tk)
+		return h
 	}
 
 	if (tk.skewer.mode != 'skewer') throw 'skewer.mode is not "skewer"'

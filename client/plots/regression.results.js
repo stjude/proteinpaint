@@ -1042,6 +1042,12 @@ async function createGenomebrowser(self, input, resultLst) {
 		nobox: true,
 		tklst: [],
 		onCoordinateChange: async rglst => {
+			// at the mds3 track, clear highlights added before
+			// so that nothing is highlighted by default in updated data
+			for (const t of self.snplocusBlock.tklst) {
+				if (t.type == 'mds3') delete t.hlssmid
+			}
+
 			const { chr, start, stop } = rglst[0]
 			// temporary tw as override for pill.runCallback()
 			const overrideTw = {
