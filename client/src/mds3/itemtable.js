@@ -55,6 +55,10 @@ rendering may be altered by tk.mds config
 may use separate scripts to code different table styles
 */
 async function table_snvindel(arg) {
+	if (!isElementInViewport(arg.div)) {
+		arg.div.style('left', '3vw').style('max-width', '90vw')
+	}
+
 	const grid = arg.div
 		.append('div')
 		.style('display', 'inline-grid')
@@ -85,6 +89,9 @@ async function table_snvindel(arg) {
 
 	if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
 		await init_sampletable(arg)
+		if (!isElementInViewport(grid)) {
+			arg.div.style('left', '3vw').style('max-width', '90vw')
+		}
 	}
 }
 
@@ -276,4 +283,14 @@ function add_csqButton(m, tk, td, table) {
 		// no showing additional csq
 		print_mname(td, m)
 	}
+}
+
+function isElementInViewport(el) {
+	const rect = el.node().getBoundingClientRect()
+	return (
+		rect.top >= 0 &&
+		rect.left >= 0 &&
+		rect.bottom < (document.documentElement.clientHeight || window.innerHeight) &&
+		rect.right < (document.documentElement.clientWidth || window.innerWidth)
+	)
 }
