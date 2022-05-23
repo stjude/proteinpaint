@@ -55,25 +55,14 @@ export async function makeTk(tk, block) {
 
 	if (tk.mds.has_skewer) {
 		tk.skewer = {
+			// both skewer and numeric mode will render elements into tk.skewer.g
+			// will also attach skewer.discKickSelection
 			g: tk.glider.append('g'),
-			// skewer.mode defines how to show snv/indel; may also control fusion
-			// later may add new attributes e.g. "cnvMode" to control mode of other data types
-			mode: 'skewer' // default mode, can be overwritten later
-		}
-		// both skewer and numeric mode will render elements into tk.skewer.g
-		// will also attach skewer.discKickSelection
 
-		if (tk.skewerMode) {
-			// override
-			tk.skewer.mode = tk.skewerMode
-			delete tk.skewerMode
+			highlightVariantAs: tk.mds.highlightVariantAs || 'pulse'
 		}
-		if (tk.skewer.mode == 'skewer') {
-		} else if (tk.skewer.mode == 'numeric') {
-			if (!tk.numericmode) throw '.numericmode{} missing when skewer.mode=numeric'
-		} else {
-			throw 'unknown skewerMode'
-		}
+
+		setSkewerMode(tk)
 	}
 
 	tk.leftLabelMaxwidth = tk.tklabel
@@ -148,6 +137,25 @@ export async function makeTk(tk, block) {
 		if (urlp.has('hlssmid')) {
 			tk.hlssmid = new Set(urlp.get('hlssmid').split(','))
 		}
+	}
+}
+
+function setSkewerMode(tk) {
+	/* skewer.mode defines how to show snv/indel data points; will also control fusion
+	later may add new attributes e.g. "cnvMode" to control mode of other data types
+	default mode can be overwritten later
+	*/
+	tk.skewer.mode = 'skewer'
+	if (tk.skewerMode) {
+		// override
+		tk.skewer.mode = tk.skewerMode
+		delete tk.skewerMode
+	}
+	if (tk.skewer.mode == 'skewer') {
+	} else if (tk.skewer.mode == 'numeric') {
+		if (!tk.numericmode) throw '.numericmode{} missing when skewer.mode=numeric'
+	} else {
+		throw 'unknown skewerMode'
 	}
 }
 

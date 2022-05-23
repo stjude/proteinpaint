@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+<div id=bb style="margin:10px"></div>
+<div id=cc style="margin:10px"></div>
+<div id=dd style="margin:10px"></div>
+
+<script>
+
+
+runproteinpaint({
+noheader:1,
+	holder:document.getElementById('bb'),
+	parseurl:true,
+	nobox:1,
+	genome:'hg19',
+	gene:'NM_002467',
+	tracks:[{
+		type:'mds3',
+		skewerMode:'numeric',
+		name:'AA sites with numbers',
+		custom_variants:[
+			{"chr":"chr8","pos":128750685,"mname":"P75","class":"M","dt":1,__value:1},
+			{"chr":"chr8","pos":128750680,"mname":"T73","class":"M","dt":1,__value:2},
+			{"chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1,__value:3}
+		],
+		numericmode:{
+			type:'__value',
+			label:'Numeric data',
+			valueName:'p-value'
+		}
+	}],
+	mclassOverride:{
+		className:'Phospho',
+		classes:{
+			M:{label:'AA',desc:'AA desc'},
+			I:{label:'BB',desc:'BB desc'}
+		}
+	}
+})
+</script>
+
+</body>
+</html>

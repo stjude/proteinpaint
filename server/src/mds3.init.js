@@ -30,14 +30,18 @@ export function client_copy(ds) {
 	const ds2 = {
 		isMds3: true,
 		label: ds.label,
+		highlightVariantAs: ds.highlightVariantAs,
 		queries: copy_queries(ds)
 	}
+
+	// sample summaries to be replaced by #cases leftlabel
 	if (ds.sampleSummaries) {
 		ds2.sampleSummaries = ds.sampleSummaries.lst
 	}
 	if (ds.sampleSummaries2) {
 		ds2.sampleSummaries2 = { lst: ds.sampleSummaries2.lst }
 	}
+
 	if (ds.termdb) {
 		ds2.termdb = {}
 		// if using flat list of terms, do not send terms[] to client

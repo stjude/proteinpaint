@@ -1,6 +1,4 @@
-import * as common from '../../shared/common'
-import * as coord from '../coord'
-import * as client from '../client'
+import { dtsnvindel, dtsv, dtfusionrna, dtitd, dtdel, dtnloss, dtcloss } from '../../shared/common'
 import { skewer_make, settle_glyph, fold_glyph, unfold_glyph } from './skewer.render'
 import { make_datagroup } from './datagroup'
 import { render as nm_render } from './numericmode'
@@ -13,8 +11,6 @@ otherwise, ssm_id list will not be given when the number is big, in hundreds
 availability of ssm_id decides if variant2samples query is allowed
 
 
-legacy code to clean up:
-hlaachange_addnewtrack
 
 ********************** EXPORTED
 may_render_skewer
@@ -63,6 +59,8 @@ export function may_render_skewer(data, tk, block) {
 		return 0
 	}
 
+	mayProcess_hlaachange(tk, data.skewer)
+
 	if (tk.skewer.mode == 'numeric') {
 		return nm_render(data, tk, block)
 	}
@@ -71,7 +69,7 @@ export function may_render_skewer(data, tk, block) {
 
 	tk.aboveprotein = true
 
-	if (data && !data.skewer && block.usegm && block.gmmode != client.gmmode.genomic && block.pannedpx != undefined) {
+	if (data && !data.skewer && block.usegm && block.gmmode != 'genomic' && block.pannedpx != undefined) {
 		// when data.skewer is not given
 		// in gmmode, browser panned, no re-requesting data
 		// no need to re-group
@@ -100,39 +98,13 @@ export function may_render_skewer(data, tk, block) {
 	variants loaded for this track
 	*/
 
-	if (tk.hlaachange || tk.hlssmid) {
+	if (tk.hlssmid) {
 		/*
 		for any variants to be highlighted, expanded and fold all the others
 		*/
 		const fold = []
 		const unfold = []
 
-		if (tk.hlaachange) {
-			// is map
-			for (const d of tk.skewer.data) {
-				let has = false
-				for (const g of d.groups) {
-					if (tk.hlaachange.has(g.mlst[0].mname)) {
-						has = true
-						tk.hlaachange.delete(g.mlst[0].mname)
-						break
-					}
-				}
-				if (has) {
-					unfold.push(d)
-				} else {
-					fold.push(d)
-				}
-			}
-			if (tk.hlaachange.size) {
-				if (!block.usegm) {
-					block.error('cannot add items from hlaachange: not in gene-mode')
-				} else {
-					hlaachange_addnewtrack(tk, block)
-				}
-			}
-			delete tk.hlaachange
-		}
 		if (tk.hlssmid) {
 			// is map
 			for (const d of tk.skewer.data) {
@@ -159,11 +131,20 @@ export function may_render_skewer(data, tk, block) {
 		fold_glyph(fold, tk)
 		unfold_glyph(unfold, tk, block)
 	} else {
-		// natural expand
+		// automatically expand
 		settle_glyph(tk, block)
 	}
 
 	return tk.skewer.maxheight + tk.skewer.stem1 + tk.skewer.stem2 + tk.skewer.stem3
+}
+
+function mayProcess_hlaachange(tk, mlst) {
+	if (!tk.hlaachange) return
+	tk.hlssmid = new Set()
+	for (const m of mlst) {
+		if (tk.hlaachange.has(m.mname)) tk.hlssmid.add(m.ssm_id)
+	}
+	delete tk.hlaachange
 }
 
 function tkdata_update_x(tk, block) {
@@ -210,7 +191,7 @@ function make_skewer_data(tk, block) {
 	for (const g of datagroup) {
 		g.groups = mlst2disc(g.mlst, tk)
 	}
-	if (tk.skewer.data && block.pannedpx != undefined && (!block.usegm || block.gmmode == client.gmmode.genomic)) {
+	if (tk.skewer.data && block.pannedpx != undefined && (!block.usegm || block.gmmode == 'genomic')) {
 		// inherit genomic mode and panned
 		const pastmode = {}
 		for (const g of tk.skewer.data) {
@@ -239,7 +220,7 @@ function mlst2disc(mlst, tk) {
 	const k2g = new Map()
 	for (const m of mlst) {
 		switch (m.dt) {
-			case common.dtsnvindel:
+			case dtsnvindel:
 				if (!k2g.has(m.dt)) {
 					k2g.set(m.dt, new Map())
 				}
@@ -264,8 +245,8 @@ function mlst2disc(mlst, tk) {
 					.get(n)
 					.push(m)
 				break
-			case common.dtsv:
-			case common.dtfusionrna:
+			case dtsv:
+			case dtfusionrna:
 				if (!k2g.has(m.dt)) {
 					k2g.set(m.dt, new Map())
 				}
@@ -311,10 +292,10 @@ function mlst2disc(mlst, tk) {
 						.push(m)
 				}
 				break
-			case common.dtitd:
-			case common.dtdel:
-			case common.dtnloss:
-			case common.dtcloss:
+			case dtitd:
+			case dtdel:
+			case dtnloss:
+			case dtcloss:
 				if (!k2g.has(m.dt)) {
 					k2g.set(m.dt, [])
 				}
@@ -329,7 +310,7 @@ function mlst2disc(mlst, tk) {
 	const groups = []
 	for (const [dt, tmp] of k2g) {
 		switch (dt) {
-			case common.dtsnvindel:
+			case dtsnvindel:
 				for (const t2 of tmp.values()) {
 					for (const mlst of t2.values()) {
 						groups.push({
@@ -339,8 +320,8 @@ function mlst2disc(mlst, tk) {
 					}
 				}
 				break
-			case common.dtsv:
-			case common.dtfusionrna:
+			case dtsv:
+			case dtfusionrna:
 				for (const classset of tmp.values()) {
 					for (const mlst of classset.use5.values()) {
 						groups.push({
@@ -358,10 +339,10 @@ function mlst2disc(mlst, tk) {
 					}
 				}
 				break
-			case common.dtitd:
-			case common.dtdel:
-			case common.dtnloss:
-			case common.dtcloss:
+			case dtitd:
+			case dtdel:
+			case dtnloss:
+			case dtcloss:
 				groups.push({
 					dt: dt,
 					mlst: tmp
@@ -389,7 +370,6 @@ function done_tknodata(tk, block) {
 	/*
 	no data loaded for track
 	set track height by # of controllers
-	in case of hlaachange, create new track and show
 	*/
 	let height = 0 // cumulate
 
@@ -397,78 +377,16 @@ function done_tknodata(tk, block) {
 	tk.skewer.g.selectAll('*').remove()
 
 	let context = 'view range'
-	if (block.usegm && block.gmmode != client.gmmode.genomic) {
+	if (block.usegm && block.gmmode != 'genomic') {
 		context = block.usegm.name || block.usegm.isoform
 	}
 	tk.skewer.g
 		.append('text')
-		.text(tk.mds.label + ': no mutation in ' + context)
+		.text((tk.mds.label || tk.name) + ': no mutation in ' + context)
 		.attr('y', 25)
 		.attr('x', block.width / 2)
 		.attr('text-anchor', 'middle')
 		.attr('dominant-baseline', 'center')
 
-	if (tk.hlaachange) {
-		hlaachange_addnewtrack(tk, block)
-		delete tk.hlaachange
-	}
 	return 50
-}
-
-function hlaachange_addnewtrack(tk, block) {
-	/*
-	not in use
-
-	variants to be highlighted were not found in track
-	add a new ds track and show them
-	*/
-	const l2c = new Map()
-	for (const c in common.mclass) {
-		l2c.set(common.mclass[c].label.toUpperCase(), c)
-	}
-	const toadd = []
-	for (const [n, m] of tk.hlaachange) {
-		if (m == false) {
-			// came from urlparam, cannot add
-			continue
-		}
-		if (!m.name) {
-			block.error('hlaachange item .name missing')
-			continue
-		}
-		if (m.codon == undefined || !Number.isFinite(m.codon)) {
-			block.error('hlaachange invalid codon for ' + m.name)
-			continue
-		}
-		if (!m.class) {
-			block.error('hlaachange .class missing')
-			continue
-		}
-		const c = common.mclass[m.class] ? m.class : l2c.get(m.class.toUpperCase())
-		if (!c) {
-			block.error('hlaachange invalid class: ' + m.class)
-			continue
-		}
-		m.class = c
-		m.mname = m.name
-		delete m.name
-		m.chr = block.usegm.chr
-		m.pos = coord.aa2gmcoord(m.codon, block.usegm)
-		delete m.codon
-		m.dt = common.dtsnvindel
-		m.isoform = block.usegm.isoform
-		toadd.push(m)
-	}
-	if (toadd.length) {
-		const ds = {
-			label: 'Highlight',
-			type: client.tkt.ds,
-			iscustom: true,
-			bulkdata: {}
-		}
-		ds.bulkdata[block.usegm.name.toUpperCase()] = toadd
-		block.ownds[ds.label] = ds
-		const tk2 = block.block_addtk_template({ type: client.tkt.ds, ds: ds })
-		dstkload(tk2, block)
-	}
 }
