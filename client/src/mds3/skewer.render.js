@@ -11,6 +11,7 @@ settle_glyph
 unfold_glyph
 fold_glyph
 skewer_sety
+highlight_disks
 ********************** INTERNAL
 skewer_setstem
 settle_glyph
@@ -23,7 +24,6 @@ const modefold = 0
 const modeshow = 1
 const middlealignshift = 0.3
 const disclabelspacing = 1 // px spacing between disc and label
-const highlightBoxColor = 'red'
 const textlensf = 0.6 // to replace n.getBBox().width for detecting filling font size which breaks in chrome
 const font = 'Arial'
 
@@ -204,24 +204,11 @@ export function skewer_make(tk, block) {
 			unfold_update(tk, block)
 		})
 
-	// special effect for highlighted variants
-	if (tk.hlssmid) {
-		if (tk.skewer.highlightVariantAs == 'pulse') {
-			textlab.filter(d => d.mlst.find(m => tk.hlssmid.has(m.ssm_id))).classed('sja_pulse', true)
-		} else {
-			// add red box
-			discg
-				.filter(d => d.mlst.find(m => tk.hlssmid.has(m.ssm_id)))
-				.append('rect')
-				.attr('x', d => -d.radius)
-				.attr('y', d => -d.radius)
-				.attr('width', d => d.radius * 2)
-				.attr('height', d => d.radius * 2)
-				.attr('stroke', highlightBoxColor)
-				.attr('stroke-width', 1.5)
-				.attr('fill', 'none')
-		}
-	}
+	// red box for highlighting, under the kick cover
+	ss.hlBoxG = discg.append('g')
+
+	// pulsating label, not in use
+	// textlab.filter(d => d.mlst.find(m => tk.hlssmid.has(m.ssm_id))).classed('sja_pulse', true)
 
 	// skewer width
 	for (const d of ss.data) {
@@ -235,7 +222,7 @@ export function skewer_make(tk, block) {
 	}
 
 	// invisible kicking disc cover
-	tk.skewer.discKickSelection = discg
+	discg
 		.append('circle')
 		.attr('r', d => d.radius - 0.5)
 		.attr('stroke', d => tk.color4disc(d.mlst[0]))
@@ -883,4 +870,30 @@ export function fold_glyph(lst, tk) {
 		.transition()
 		.duration(dur) // to prevent showing pica over busy skewer
 		.attr('transform', 'scale(1)')
+}
+
+/* works for both skewer and numeric mode
+highlights disc dots by matching with tk.hlssmid, a set
+hlBoxG is blank <g> in each discg
+to highlight a disk, insert a <rect> with colored border
+*/
+export function highlight_disks(tk) {
+	tk.skewer.hlBoxG.selectAll('*').remove()
+	tk.skewer.hlBoxG
+		.filter(g => {
+			if (g.mlst) {
+				// in skewer mode
+				return g.mlst.find(m => tk.hlssmid.has(m.ssm_id))
+			}
+			// numeric mode
+			return tk.hlssmid.has(g.ssm_id)
+		})
+		.append('rect')
+		.attr('x', g => -g.radius)
+		.attr('y', g => -g.radius)
+		.attr('width', g => g.radius * 2)
+		.attr('height', g => g.radius * 2)
+		.attr('stroke', tk.skewer.hlBoxColor)
+		.attr('stroke-width', g => (g.radius > 10 ? 1.5 : 1))
+		.attr('fill', 'none')
 }

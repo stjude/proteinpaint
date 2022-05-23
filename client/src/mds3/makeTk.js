@@ -15,6 +15,8 @@ get_ds
 	validateCustomVariants
 	mayDeriveSkewerOccurrence4samples
 init_termdb
+init_skewer
+	setSkewerMode
 mayaddGetter_m2csq
 mayaddGetter_variant2samples
 mayaddGetter_sampleSummaries2
@@ -53,17 +55,7 @@ export async function makeTk(tk, block) {
 	mayaddGetter_variant2samples(tk, block)
 	mayaddGetter_m2csq(tk, block)
 
-	if (tk.mds.has_skewer) {
-		tk.skewer = {
-			// both skewer and numeric mode will render elements into tk.skewer.g
-			// will also attach skewer.discKickSelection
-			g: tk.glider.append('g'),
-
-			highlightVariantAs: tk.mds.highlightVariantAs || 'pulse'
-		}
-
-		setSkewerMode(tk)
-	}
+	init_skewer(tk)
 
 	tk.leftLabelMaxwidth = tk.tklabel
 		.text(tk.mds.label || tk.name)
@@ -138,6 +130,19 @@ export async function makeTk(tk, block) {
 			tk.hlssmid = new Set(urlp.get('hlssmid').split(','))
 		}
 	}
+}
+
+function init_skewer(tk) {
+	if (!tk.mds.has_skewer) return
+	tk.skewer = {
+		// both skewer and numeric mode will render elements into tk.skewer.g
+		// will also attach skewer.discKickSelection
+		g: tk.glider.append('g'),
+
+		// border color of a box over a highlighted data
+		hlBoxColor: tk.mds.hlBoxColor || 'red'
+	}
+	setSkewerMode(tk) // adds skewer.mode
 }
 
 function setSkewerMode(tk) {

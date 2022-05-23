@@ -30,7 +30,6 @@ export function client_copy(ds) {
 	const ds2 = {
 		isMds3: true,
 		label: ds.label,
-		highlightVariantAs: ds.highlightVariantAs,
 		queries: copy_queries(ds)
 	}
 

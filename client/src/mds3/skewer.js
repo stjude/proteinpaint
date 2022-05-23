@@ -1,5 +1,5 @@
 import { dtsnvindel, dtsv, dtfusionrna, dtitd, dtdel, dtnloss, dtcloss } from '../../shared/common'
-import { skewer_make, settle_glyph, fold_glyph, unfold_glyph } from './skewer.render'
+import { skewer_make, settle_glyph, fold_glyph, unfold_glyph, highlight_disks } from './skewer.render'
 import { make_datagroup } from './datagroup'
 import { render as nm_render } from './numericmode'
 
@@ -99,37 +99,29 @@ export function may_render_skewer(data, tk, block) {
 	*/
 
 	if (tk.hlssmid) {
-		/*
-		for any variants to be highlighted, expanded and fold all the others
-		*/
+		// highlight variants based on if m.ssm_id is in tk.hlssmid (a set)
+		// and fold all the others
 		const fold = []
 		const unfold = []
-
-		if (tk.hlssmid) {
-			// is map
-			for (const d of tk.skewer.data) {
-				let has = false
-				for (const g of d.groups) {
-					for (const m of g.mlst) {
-						// harcoded key of "ssm_id"!!!
-						if (tk.hlssmid.has(m.ssm_id)) {
-							has = true
-							tk.hlssmid.delete(m.ssm_id)
-							break
-						}
+		for (const d of tk.skewer.data) {
+			let has = false
+			for (const g of d.groups) {
+				for (const m of g.mlst) {
+					if (tk.hlssmid.has(m.ssm_id)) {
+						has = true
+						break
 					}
 				}
-				if (has) {
-					unfold.push(d)
-				} else {
-					fold.push(d)
-				}
 			}
-			delete tk.hlssmid
+			if (has) {
+				unfold.push(d)
+			} else {
+				fold.push(d)
+			}
 		}
-
 		fold_glyph(fold, tk)
 		unfold_glyph(unfold, tk, block)
+		highlight_disks(tk)
 	} else {
 		// automatically expand
 		settle_glyph(tk, block)

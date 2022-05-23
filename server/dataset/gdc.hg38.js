@@ -1015,12 +1015,6 @@ module.exports = {
 		lst: [{ label1: 'project_id', label2: 'disease_type' }, { label1: 'primary_site', label2: 'disease_type' }]
 	},
 
-	/* attr controls data points rendered in skewer track, including snvindel and fusion
-	thus not put into queries.snvindel{}
-	may organize by ds.skewer{ highlightVariantAs }
-	*/
-	highlightVariantAs: 'box',
-
 	queries: {
 		snvindel: {
 			forTrack: true,

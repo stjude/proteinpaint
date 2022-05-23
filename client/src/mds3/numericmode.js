@@ -325,8 +325,11 @@ function numeric_make(nm, _g, tk, block) {
 
 	// no text in disc
 
+	// used by highlight_disks()
+	tk.skewer.hlBoxG = discg.append('g')
+
 	// disc kick
-	tk.skewer.discKickSelection_triangle = discg
+	discg
 		.filter(m => m.shapeTriangle)
 		.append('path')
 		.attr('d', m => trianglePath(m.radius))
@@ -348,7 +351,7 @@ function numeric_make(nm, _g, tk, block) {
 			click_variant({ mlst: [m] }, tk, block, d3event.target.getBoundingClientRect(), d3event.target)
 		})
 
-	tk.skewer.discKickSelection = discg
+	discg
 		.filter(m => !m.shapeTriangle)
 		.append('circle')
 		.attr('r', m => m.radius - 0.5) // must set radius for the circle to be visible

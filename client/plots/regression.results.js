@@ -933,7 +933,8 @@ function make_mds3_variants(tw, resultLst) {
 	for (const snp of tw.term.snps) {
 		const m = {
 			chr: snp.chr,
-			pos: snp.pos
+			pos: snp.pos,
+			ssm_id: snp.snpid // needed for highlighting dot
 		}
 		mlst.push(m)
 		// decide class/mname for this based on effect allele
