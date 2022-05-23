@@ -1355,8 +1355,8 @@ pub fn determine_start_stop_indel_region_in_read(
     correct_start_position: i64,
     correct_end_position: i64,
     variant_pos: i64,
-    variant_ref_length: Option<usize>, // Is None in case of indel pipeline where indel length is used as ref length. In case of alignment display, this variable is defined
-    variant_alt_length: Option<usize>, // Is None in case of indel pipeline where indel length is used as ref length. In case of alignment display, this variable is defined
+    ref_length: usize,
+    alt_length: usize,
     indel_length: usize,
 ) -> (i64, i64, i64, i64) {
     // Determine start/stop position of nucleotides in read that need to be highlighted red to show variant region in UI
@@ -1365,17 +1365,6 @@ pub fn determine_start_stop_indel_region_in_read(
     let mut red_region_stop_ref = 0;
     let mut red_region_stop_alt = 0;
 
-    let (ref_length, alt_length);
-    match variant_ref_length {
-        Some(variant_ref_length) => ref_length = variant_ref_length,
-
-        None => ref_length = indel_length,
-    }
-    match variant_alt_length {
-        Some(variant_alt_length) => alt_length = variant_alt_length,
-
-        None => alt_length = indel_length,
-    }
     //println!("ref_length:{}", ref_length);
     //println!("alt_length:{}", alt_length);
     //println!("variant_pos:{}", variant_pos);

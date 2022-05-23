@@ -247,6 +247,8 @@ fn main() {
                                 correct_start_position,
                                 correct_end_position,
                                 variant_pos,
+                                ref_length as usize,
+                                alt_length as usize,
                                 indel_length as usize,
                             );
                         ref_polyclonal_read_status = ref_polyclonal_read_status_temp;
@@ -392,6 +394,8 @@ fn main() {
                                     correct_start_position,
                                     correct_end_position,
                                     variant_pos,
+                                    ref_length as usize,
+                                    alt_length as usize,
                                     indel_length as usize,
                                 );
                                 ref_polyclonal_read_status = ref_polyclonal_read_status_temp;
@@ -698,25 +702,65 @@ fn check_polyclonal_with_read_alignment(
     correct_start_position: i64,
     correct_end_position: i64,
     variant_pos: i64,
+    ref_length: usize,
+    alt_length: usize,
     indel_length: usize,
 ) -> (i64, i64) {
     let mut ref_polyclonal_read_status = 0;
     let mut alt_polyclonal_read_status = 0;
 
-    let (red_region_start_alt, red_region_stop_alt, red_region_start_ref, red_region_stop_ref) =
-        realign::determine_start_stop_indel_region_in_read(
-            alignment_side.to_owned(),
-            q_seq_alt,
-            q_seq_ref,
-            correct_start_position,
-            correct_end_position,
-            variant_pos,
-            None,
-            None,
-            indel_length,
-        );
+    let (
+        red_region_start_alt_temp,
+        red_region_stop_alt_temp,
+        red_region_start_ref_temp,
+        red_region_stop_ref_temp,
+    ) = realign::determine_start_stop_indel_region_in_read(
+        alignment_side.to_owned(),
+        q_seq_alt,
+        q_seq_ref,
+        correct_start_position,
+        correct_end_position,
+        variant_pos,
+        ref_length,
+        alt_length,
+        indel_length,
+    );
 
+    let mut red_region_start_alt = 0;
+    let mut red_region_stop_alt = 0;
+    let mut red_region_start_ref = 0;
+    let mut red_region_stop_ref = 0;
+
+    if alignment_side == &"left".to_string() {
+        red_region_start_alt = red_region_start_alt_temp;
+        red_region_stop_alt = red_region_start_alt + indel_length as i64;
+        if red_region_stop_alt > q_seq_alt.len() as i64 {
+            red_region_stop_alt = q_seq_alt.len() as i64;
+        }
+
+        red_region_start_ref = red_region_start_ref_temp;
+        red_region_stop_ref = red_region_start_ref + indel_length as i64;
+        if red_region_stop_ref > q_seq_ref.len() as i64 {
+            red_region_stop_ref = q_seq_ref.len() as i64;
+        }
+    } else if alignment_side == &"right".to_string() {
+        red_region_stop_ref = red_region_stop_ref_temp;
+        red_region_start_ref = red_region_stop_ref - indel_length as i64;
+        if red_region_start_ref < 0 {
+            red_region_start_ref = 0;
+        }
+
+        red_region_stop_alt = red_region_stop_alt_temp;
+        red_region_start_alt = red_region_stop_alt - indel_length as i64;
+        if red_region_start_alt < 0 {
+            red_region_start_alt = 0;
+        }
+    }
+
+    //println!("alignment_side:{}", alignment_side);
     //println!("correct_start_position:{}", correct_start_position);
+    //println!("correct_end_position:{}", correct_end_position);
+    //println!("variant_pos:{}", variant_pos);
     //println!("q_seq_ref:{}", q_seq_ref);
     //println!("align_ref:{}", align_ref);
     //println!("q_seq_alt:{}", q_seq_alt);
