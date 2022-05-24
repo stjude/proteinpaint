@@ -1,5 +1,5 @@
 import { dtsnvindel, dtsv, dtfusionrna, dtitd, dtdel, dtnloss, dtcloss } from '../../shared/common'
-import { skewer_make, settle_glyph, fold_glyph, unfold_glyph, highlight_disks } from './skewer.render'
+import { skewer_make, settle_glyph, fold_glyph, unfold_glyph, mayHighlightDiskBySsmid } from './skewer.render'
 import { make_datagroup } from './datagroup'
 import { render as nm_render } from './numericmode'
 
@@ -59,11 +59,11 @@ export function may_render_skewer(data, tk, block) {
 		return 0
 	}
 
-	mayProcess_hlaachange(tk, data.skewer)
+	hlaachange2ssmid(tk, data.skewer) // tk.skewer.hlssmid may be set
 
 	if (tk.skewer.mode == 'numeric') {
 		const h = nm_render(data, tk, block)
-		if (tk.hlssmid) highlight_disks(tk)
+		mayHighlightDiskBySsmid(tk)
 		return h
 	}
 
@@ -100,8 +100,8 @@ export function may_render_skewer(data, tk, block) {
 	variants loaded for this track
 	*/
 
-	if (tk.hlssmid) {
-		// highlight variants based on if m.ssm_id is in tk.hlssmid (a set)
+	if (tk.skewer.hlssmid) {
+		// highlight variants based on if m.ssm_id is in hlssmid (a set)
 		// and fold all the others
 		const fold = []
 		const unfold = []
@@ -109,7 +109,7 @@ export function may_render_skewer(data, tk, block) {
 			let has = false
 			for (const g of d.groups) {
 				for (const m of g.mlst) {
-					if (tk.hlssmid.has(m.ssm_id)) {
+					if (tk.skewer.hlssmid.has(m.ssm_id)) {
 						has = true
 						break
 					}
@@ -123,7 +123,7 @@ export function may_render_skewer(data, tk, block) {
 		}
 		fold_glyph(fold, tk)
 		unfold_glyph(unfold, tk, block)
-		highlight_disks(tk)
+		mayHighlightDiskBySsmid(tk)
 	} else {
 		// automatically expand
 		settle_glyph(tk, block)
@@ -132,13 +132,16 @@ export function may_render_skewer(data, tk, block) {
 	return tk.skewer.maxheight + tk.skewer.stem1 + tk.skewer.stem2 + tk.skewer.stem3
 }
 
-function mayProcess_hlaachange(tk, mlst) {
+function hlaachange2ssmid(tk, mlst) {
 	if (!tk.hlaachange) return
-	tk.hlssmid = new Set()
-	for (const m of mlst) {
-		if (tk.hlaachange.has(m.mname)) tk.hlssmid.add(m.ssm_id)
-	}
+	// value is comma-joined list of mnames, convert to ssm_id for keeping track of variants
+	// using skewer data mlst[], either from server or client,
+	const set = new Set(tk.hlaachange.split(','))
 	delete tk.hlaachange
+	tk.skewer.hlssmid = new Set()
+	for (const m of mlst) {
+		if (set.has(m.mname)) tk.skewer.hlssmid.add(m.ssm_id)
+	}
 }
 
 function tkdata_update_x(tk, block) {

@@ -325,7 +325,7 @@ function numeric_make(nm, _g, tk, block) {
 
 	// no text in disc
 
-	// used by highlight_disks()
+	// used by mayHighlightDiskBySsmid
 	tk.skewer.hlBoxG = discg.append('g')
 
 	// disc kick

@@ -11,7 +11,7 @@ settle_glyph
 unfold_glyph
 fold_glyph
 skewer_sety
-highlight_disks
+mayHighlightDiskBySsmid
 ********************** INTERNAL
 skewer_setstem
 settle_glyph
@@ -873,20 +873,22 @@ export function fold_glyph(lst, tk) {
 }
 
 /* works for both skewer and numeric mode
-highlights disc dots by matching with tk.hlssmid, a set
+highlights disc dots by matching with tk.skewer.hlssmid, a set
 hlBoxG is blank <g> in each discg
 to highlight a disk, insert a <rect> with colored border
 */
-export function highlight_disks(tk) {
+export function mayHighlightDiskBySsmid(tk) {
+	// clear existing highlights
 	tk.skewer.hlBoxG.selectAll('*').remove()
+	if (!tk.skewer.hlssmid) return
 	tk.skewer.hlBoxG
 		.filter(g => {
 			if (g.mlst) {
 				// in skewer mode
-				return g.mlst.find(m => tk.hlssmid.has(m.ssm_id))
+				return g.mlst.find(m => tk.skewer.hlssmid.has(m.ssm_id))
 			}
 			// numeric mode
-			return tk.hlssmid.has(g.ssm_id)
+			return tk.skewer.hlssmid.has(g.ssm_id)
 		})
 		.append('rect')
 		.attr('x', g => -g.radius)

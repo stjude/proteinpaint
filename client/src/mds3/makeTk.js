@@ -15,7 +15,7 @@ get_ds
 	validateCustomVariants
 	mayDeriveSkewerOccurrence4samples
 init_termdb
-init_skewer
+mayInitSkewer
 	setSkewerMode
 mayaddGetter_m2csq
 mayaddGetter_variant2samples
@@ -32,6 +32,16 @@ tk.skewer{}
 	if not equipped then tk.skewer is undefined and should not show skewer track
 
 stratify labels will account for all tracks, e.g. skewer, cnv
+
+********************************
+* On highlighting skewer disks *
+client can supply tk.hlssmid or tk.hlaachange, both are comma-joined list of names
+upon init, both will be converted to tk.skewer.hlssmid (set)
+hlaachange is converted when skewer data is returned from server
+tk.skewer.hlssmid can be modified or deleted dynamically
+highlighting is done by inserting <rect> into tk.skewer.hlBoxG
+see mayHighlightDiskBySsmid()
+
 */
 
 export async function makeTk(tk, block) {
@@ -55,7 +65,7 @@ export async function makeTk(tk, block) {
 	mayaddGetter_variant2samples(tk, block)
 	mayaddGetter_m2csq(tk, block)
 
-	init_skewer(tk)
+	mayInitSkewer(tk) // tk.skewer{} may be added
 
 	tk.leftLabelMaxwidth = tk.tklabel
 		.text(tk.mds.label || tk.name)
@@ -79,14 +89,6 @@ export async function makeTk(tk, block) {
 	initLegend(tk, block)
 
 	init_mclass(tk)
-
-	if (tk.hlaachange) {
-		// comma-separated names
-		tk.hlaachange = new Set(tk.hlaachange.split(','))
-	}
-	if (tk.hlssmid) {
-		tk.hlssmid = new Set(tk.hlssmid.split(','))
-	}
 
 	tk.color4disc = m => {
 		// figure out what color to use for a m point
@@ -119,20 +121,33 @@ export async function makeTk(tk, block) {
 		return 'black'
 	}
 
-	// parse url parameters applicable to this track
-	// may inhibit this through some settings
-	{
-		const urlp = urlmap()
-		if (urlp.has('hlaachange')) {
-			tk.hlaachange = new Set(urlp.get('hlaachange').split(','))
-		}
-		if (urlp.has('hlssmid')) {
-			tk.hlssmid = new Set(urlp.get('hlssmid').split(','))
-		}
+	parseUrl(tk)
+
+	// do this after parsing url
+	if (tk.hlssmid) {
+		tk.skewer.hlssmid = new Set(tk.hlssmid.split(','))
+		delete tk.hlssmid
 	}
 }
 
-function init_skewer(tk) {
+function parseUrl(tk) {
+	// parse url parameters applicable to this track
+	// may inhibit this through some settings
+	const urlp = urlmap()
+	if (tk.skewer) {
+		// process skewer-related params
+		if (urlp.has('hlaachange')) {
+			tk.hlaachange = urlp.get('hlaachange')
+			// later convert to hlssmid, when skewer data is available
+		}
+		if (urlp.has('hlssmid')) {
+			tk.hlssmid = urlp.get('hlssmid').split(',')
+		}
+	}
+	// process additional params
+}
+
+function mayInitSkewer(tk) {
 	if (!tk.mds.has_skewer) return
 	tk.skewer = {
 		// both skewer and numeric mode will render elements into tk.skewer.g

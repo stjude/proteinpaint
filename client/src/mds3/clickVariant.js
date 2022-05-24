@@ -1,7 +1,7 @@
 import { event as d3event } from 'd3-selection'
 import { init_sampletable } from './sampletable'
 import { itemtable } from './itemtable'
-import { skewer_sety, highlight_disks } from './skewer.render'
+import { skewer_sety, mayHighlightDiskBySsmid } from './skewer.render'
 
 const minoccur4sunburst = 10 // minimum occurrence for showing skewer, maybe ds specific
 
@@ -11,7 +11,7 @@ click_variant()
 
 ************** tentative logic
 custom method:
-	if tk.click_snvindel() is set, call this; will also create tk.hlssmid and call highlight_disks
+	if tk.click_snvindel() is set, call this; will also create hlssmid and call mayHighlightDiskBySsmid 
 built-in methods
 	if d.occurrence is set, show sunburst
 	else, call variant_details()
@@ -36,8 +36,8 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 	try {
 		if (tk.click_snvindel) {
 			// custom handler overrides default behavior
-			tk.hlssmid = new Set(d.mlst.map(i => i.ssm_id))
-			highlight_disks(tk)
+			tk.skewer.hlssmid = new Set(d.mlst.map(i => i.ssm_id))
+			mayHighlightDiskBySsmid(tk)
 			tk.click_snvindel(d.mlst[0])
 			return
 		}
