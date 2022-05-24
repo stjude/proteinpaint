@@ -744,14 +744,14 @@ fn check_polyclonal_with_read_alignment(
             red_region_stop_ref = q_seq_ref.len() as i64;
         }
     } else if alignment_side == &"right".to_string() {
-        red_region_stop_ref = red_region_stop_ref_temp;
-        red_region_start_ref = red_region_stop_ref - indel_length as i64;
+        red_region_start_ref = red_region_stop_ref_temp - ref_length as i64;
+        red_region_stop_ref = red_region_start_ref + indel_length as i64;
         if red_region_start_ref < 0 {
             red_region_start_ref = 0;
         }
 
-        red_region_stop_alt = red_region_stop_alt_temp;
-        red_region_start_alt = red_region_stop_alt - indel_length as i64;
+        red_region_start_alt = red_region_stop_alt_temp - alt_length as i64;
+        red_region_stop_alt = red_region_start_alt + indel_length as i64;
         if red_region_start_alt < 0 {
             red_region_start_alt = 0;
         }

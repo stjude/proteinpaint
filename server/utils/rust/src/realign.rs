@@ -1364,6 +1364,7 @@ pub fn determine_start_stop_indel_region_in_read(
     let mut red_region_start_ref = 0;
     let mut red_region_stop_ref = 0;
     let mut red_region_stop_alt = 0;
+    let trust_match_cutoff = 10; // When there are gaps in alignment near the variant region, it can be due to reason. Either due to poor alignment near the end of the read or due to a genuine deletion near the variant region. If beyond this cutoff, start/stop position will not be incremented
 
     //println!("ref_length:{}", ref_length);
     //println!("alt_length:{}", alt_length);
@@ -1374,6 +1375,8 @@ pub fn determine_start_stop_indel_region_in_read(
     //println!("correct_end_position:{}", correct_end_position);
     let q_seq_alt_vec: Vec<_> = q_seq_alt.chars().collect();
     let q_seq_ref_vec: Vec<_> = q_seq_ref.chars().collect();
+    let mut num_matches_alt = 0;
+    let mut num_matches_ref = 0;
     if alignment_side == "left".to_string() {
         red_region_start_alt = (variant_pos - correct_start_position).abs();
         red_region_start_ref = (variant_pos - correct_start_position).abs();
@@ -1381,16 +1384,27 @@ pub fn determine_start_stop_indel_region_in_read(
         red_region_stop_alt = (variant_pos - correct_start_position).abs() + alt_length as i64;
 
         // Check if there are any gaps between start of variant and start of alignment
-
         for i in 0..(variant_pos - correct_start_position).abs() as usize {
             if i < q_seq_alt_vec.len() {
-                if q_seq_alt_vec[i] == '-' {
+                if q_seq_alt_vec[i] != '-' {
+                    num_matches_alt += 1;
+                }
+                //else if q_seq_alt_vec[i] == '-' && i < red_region_start_alt as usize - 1 {
+                //    num_matches_alt = 0;
+                //}
+                else if q_seq_alt_vec[i] == '-' && num_matches_alt < trust_match_cutoff {
                     red_region_start_alt += 1;
                     red_region_stop_alt += 1;
                 }
             }
             if i < q_seq_ref_vec.len() {
-                if q_seq_ref_vec[i] == '-' {
+                if q_seq_ref_vec[i] != '-' {
+                    num_matches_ref += 1;
+                }
+                //else if q_seq_ref_vec[i] == '-' && i < red_region_start_ref as usize - 1 {
+                //    num_matches_ref = 0;
+                //}
+                else if q_seq_ref_vec[i] == '-' && num_matches_ref < trust_match_cutoff {
                     red_region_start_ref += 1;
                     red_region_stop_ref += 1;
                 }
@@ -1403,9 +1417,19 @@ pub fn determine_start_stop_indel_region_in_read(
             correct_end_position - variant_pos - ref_length as i64;
 
         // Check if there are any gaps in the query sequence between end of alignment and end of variant sequence
-        for i in q_seq_alt.len() - correctly_aligned_nclt_in_right_alt as usize..q_seq_alt.len() {
+        for i in
+            (q_seq_alt.len() - correctly_aligned_nclt_in_right_alt as usize..q_seq_alt.len()).rev()
+        {
             if i < q_seq_alt_vec.len() {
-                if q_seq_alt_vec[i] == '-' {
+                if q_seq_alt_vec[i] != '-' {
+                    num_matches_alt += 1;
+                }
+                //else if q_seq_alt_vec[i] == '-'
+                //    && i > q_seq_alt.len() - correctly_aligned_nclt_in_right_alt as usize
+                //{
+                //    num_matches_alt = 0;
+                //}
+                else if q_seq_alt_vec[i] == '-' && num_matches_alt < trust_match_cutoff {
                     correctly_aligned_nclt_in_right_alt += 1;
                     //println!("Alt_space");
                 }
@@ -1413,9 +1437,19 @@ pub fn determine_start_stop_indel_region_in_read(
                 break;
             }
         }
-        for i in q_seq_ref.len() - correctly_aligned_nclt_in_right_ref as usize..q_seq_ref.len() {
+        for i in
+            (q_seq_ref.len() - correctly_aligned_nclt_in_right_ref as usize..q_seq_ref.len()).rev()
+        {
             if i < q_seq_ref_vec.len() {
-                if q_seq_ref_vec[i] == '-' {
+                if q_seq_ref_vec[i] != '-' {
+                    num_matches_ref += 1;
+                }
+                //else if q_seq_ref_vec[i] == '-'
+                //    && i > q_seq_ref.len() - correctly_aligned_nclt_in_right_ref as usize
+                //{
+                //    num_matches_ref = 0;
+                //}
+                else if q_seq_ref_vec[i] == '-' && num_matches_ref < trust_match_cutoff {
                     correctly_aligned_nclt_in_right_ref += 1;
                     //println!("Ref_space");
                 }
@@ -1439,6 +1473,8 @@ pub fn determine_start_stop_indel_region_in_read(
         red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt;
         red_region_stop_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref;
     }
+    //println!("num_matches_alt:{}", num_matches_alt);
+    //println!("num_matches_ref:{}", num_matches_ref);
 
     if red_region_start_alt < 0 {
         //red_region_stop_alt = alt_length as i64;
