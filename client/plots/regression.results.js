@@ -1045,7 +1045,7 @@ async function createGenomebrowser(self, input, resultLst) {
 			// at the mds3 track, clear highlights added before
 			// so that nothing is highlighted by default in updated data
 			for (const t of self.snplocusBlock.tklst) {
-				if (t.type == 'mds3') delete t.hlssmid
+				if (t.type == 'mds3') delete t.skewer.hlssmid
 			}
 
 			const { chr, start, stop } = rglst[0]

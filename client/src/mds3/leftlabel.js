@@ -199,6 +199,24 @@ function menu_variants(tk, block) {
 			listSkewerData(tk, block)
 		})
 
+	if (tk.skewer.hlssmid) {
+		tk.menutip.d
+			.append('div')
+			.text('Cancel highlight')
+			.attr('class', 'sja_menuoption')
+			.on('click', () => {
+				delete tk.skewer.hlssmid
+				tk.skewer.hlBoxG.selectAll('*').remove()
+				if (tk.skewer.mode == 'skewer') {
+					// have to rerender under skewer mode, to rearrange skewers
+					settle_glyph(tk, block)
+				} else {
+					// no need to rerender for numeric mode, the disks are fixed
+				}
+				tk.menutip.hide()
+			})
+	}
+
 	if (tk.skewer.mode == 'skewer') {
 		// showmode=1/0 means expanded/folded skewer, defined in skewer.render.js
 		const expandCount = tk.skewer.data.reduce((i, j) => i + j.showmode, 0)
