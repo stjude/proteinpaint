@@ -1,8 +1,9 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { mclass } from '../../shared/common'
-import { fillbar } from '../client'
+import { fillbar } from '../../dom/fillbar'
 import { fold_glyph, settle_glyph } from './skewer.render'
 import { itemtable } from './itemtable'
+import { mayAddSkewerModeOption } from './skewer'
 
 const labyspace = 5
 const font = 'Arial'
@@ -34,7 +35,7 @@ export function make_leftlabels(data, tk, block) {
 
 	let laby = labyspace + block.labelfontsize
 
-	const labels = [] // for max width
+	const labels = [] // collect doms of created labels to derive max width
 
 	{
 		const lab = mayMakeVariantLabel(data, tk, block, laby)
@@ -125,6 +126,7 @@ function mayMakeVariantLabel(data, tk, block, laby) {
 
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
 	const lab = makelabel(tk, block, laby)
+	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
 
 	let totalcount, showcount
 
@@ -140,7 +142,7 @@ function mayMakeVariantLabel(data, tk, block, laby) {
 		and data.skewer will be missing
 		still the total data is kept on client
 		*/
-		if (tk.skewer.mode == 'skewer') {
+		if (currentMode.type == 'skewer') {
 			totalcount = tk.skewer.data.reduce((i, j) => i + j.mlst.length, 0)
 		} else {
 			throw 'do not know how to handle'
@@ -157,16 +159,16 @@ function mayMakeVariantLabel(data, tk, block, laby) {
 
 	/*
 	out of total, only a subset may be plotted
-	to count how many are plotted, check with skewer.mode
-	if mode=skewer, plotted data are at tk.skewer.data[]
-	else if mode=numeric, plotted data are at tk.numericmode.data
+	to count how many are plotted, check with mode type
+	if type=skewer, plotted data are at tk.skewer.data[]
+	else if type=numeric, plotted data are at tk.skewer.numericModes[?].data
 	*/
-	if (tk.skewer.mode == 'skewer') {
+	if (currentMode.type == 'skewer') {
 		showcount = tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width).reduce((i, j) => i + j.mlst.length, 0)
-	} else if (tk.skewer.mode == 'numeric') {
-		showcount = tk.numericmode.data.reduce((i, j) => i + j.mlst.length, 0)
+	} else if (currentMode.type == 'numeric') {
+		showcount = currentMode.data.reduce((i, j) => i + j.mlst.length, 0)
 	} else {
-		throw 'unknown skewer.mode'
+		throw 'unknown mode type'
 	}
 
 	if (showcount == 0) {
@@ -207,17 +209,20 @@ function menu_variants(tk, block) {
 			.on('click', () => {
 				delete tk.skewer.hlssmid
 				tk.skewer.hlBoxG.selectAll('*').remove()
-				if (tk.skewer.mode == 'skewer') {
+				const currentMode = tk.skewer.viewModes.find(i => i.inuse)
+				if (currentMode.type == 'skewer') {
 					// have to rerender under skewer mode, to rearrange skewers
 					settle_glyph(tk, block)
-				} else {
+				} else if (currentMode.type == 'numeric') {
 					// no need to rerender for numeric mode, the disks are fixed
+				} else {
+					throw 'unknown mode type'
 				}
 				tk.menutip.hide()
 			})
 	}
 
-	if (tk.skewer.mode == 'skewer') {
+	if (tk.skewer.viewModes.find(n => n.inuse).type == 'skewer') {
 		// showmode=1/0 means expanded/folded skewer, defined in skewer.render.js
 		const expandCount = tk.skewer.data.reduce((i, j) => i + j.showmode, 0)
 		if (expandCount > 0) {
@@ -241,6 +246,8 @@ function menu_variants(tk, block) {
 				})
 		}
 	}
+
+	mayAddSkewerModeOption(tk)
 }
 
 async function listSkewerData(tk, block) {
@@ -252,8 +259,15 @@ async function listSkewerData(tk, block) {
 			.mname
 			.class
 	*/
-	const data =
-		tk.skewer.mode == 'skewer' ? tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width) : tk.numericmode.data
+	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
+	let data
+	if (currentMode.type == 'skewer') {
+		data = tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width)
+	} else if (currentMode.type == 'numeric') {
+		data = currentMode.data
+	} else {
+		throw 'unknown mode type'
+	}
 
 	tk.menutip.clear()
 

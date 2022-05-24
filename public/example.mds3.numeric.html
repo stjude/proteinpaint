@@ -26,18 +26,17 @@ noheader:1,
 	gene:'NM_002467',
 	tracks:[{
 		type:'mds3',
-		skewerMode:'numeric',
+		skewerModes:[
+			{type:'numeric', byAttribute:'lpv', label:'-log10(p-value)', inuse:true, axisheight:100},
+			{type:'numeric', byAttribute:'value2', label:'other numbers', axisheight:200},
+		],
 		name:'AA sites with numbers',
 		custom_variants:[
-			{"chr":"chr8","pos":128750685,"mname":"P75","class":"M","dt":1,__value:1},
-			{"chr":"chr8","pos":128750680,"mname":"T73","class":"M","dt":1,__value:2},
-			{"chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1,__value:3}
+			{"chr":"chr8","pos":128750685,"mname":"P75","class":"M","dt":1,lpv:1, value2:4},
+			{"chr":"chr8","pos":128750680,"mname":"T73","class":"M","dt":1,lpv:2, value2:5},
+			{"chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1,lpv:3, value2:6},
+			{"chr":"chr8","pos":128750754,"mname":"data point","class":"I","dt":1},
 		],
-		numericmode:{
-			type:'__value',
-			label:'Numeric data',
-			valueName:'p-value'
-		}
 	}],
 	mclassOverride:{
 		className:'Phospho',

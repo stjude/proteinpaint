@@ -6,10 +6,9 @@ import { axisstyle } from '../../dom/axisstyle'
 import { make_datagroup } from './datagroup'
 import { click_variant } from './clickVariant'
 
-/* adapted from mds2, which is in turn from legacy ds code
-
+/*
 ********************** EXPORTED
-render
+renderNumericMode
 ********************** INTERNAL
 numeric_make
 render_axis
@@ -44,7 +43,7 @@ const maxclusterwidth = 100
 const hardcode_missing_value = 0
 const stemColor = '#ededed'
 
-export function render(data, tk, block) {
+export function renderNumericMode(nm, data, tk, block) {
 	/*
 data: {skewer}
 numerical axis
@@ -54,9 +53,6 @@ value may be singular number, or boxplot
 
 */
 	const datagroup = make_datagroup(tk, data.skewer, block)
-
-	// TODO when switching to nm from skewer, allow to dynamically create nm
-	const nm = tk.numericmode
 
 	// for variant leftlabel to access later
 	nm.data = datagroup
@@ -135,7 +131,13 @@ function numeric_make(nm, _g, tk, block) {
 	// set m._y
 	for (const d of data) {
 		for (const m of d.mlst) {
-			m._y = numscale(m.__value_use)
+			if (m.__value_missing) {
+				// missing numeric value, assign 0 to place the dot at the bottom of axis
+				m._y = 0
+			} else {
+				// has valid value, map to axis
+				m._y = numscale(m.__value_use)
+			}
 		}
 	}
 
@@ -647,7 +649,7 @@ function m_mouseover(m, nm, tk) {
 	if (nm.tooltipPrintValue) {
 		for (const line of nm.tooltipPrintValue(m)) words.push(line)
 	} else {
-		words.push(nm.valueName ? nm.valueName + '=' + m.__value_use : 'value=' + m.__value_use)
+		words.push(nm.label + '=' + (m.__value_missing ? 'NA' : m.__value_use))
 	}
 
 	if (!m.labattop && !m.labatbottom) {
@@ -751,19 +753,24 @@ decide following things about the y axis:
 	nm.maxvalue = 0
 
 	for (const g of data) {
-		for (const m of g.mlst) delete m.__value_use
+		for (const m of g.mlst) {
+			delete m.__value_use
+			delete m.__value_missing
+		}
 	}
-	if (nm.type == '__value') {
+	if (nm.byAttribute) {
 		for (const g of data) {
 			for (const m of g.mlst) {
-				const v = m.__value
+				const v = m[nm.byAttribute]
 				if (Number.isFinite(v)) {
 					m.__value_use = v
+				} else {
+					m.__value_missing = true
 				}
 			}
 		}
 	} else {
-		throw 'unknown numericmode.type'
+		throw 'unknown method of getting value'
 	}
 
 	for (const g of data) {
@@ -851,6 +858,6 @@ render axis
 	}
 }
 
-export function trianglePath(p) {
+function trianglePath(p) {
 	return `M 0 -${p} L ${p} ${p * 0.7} h -${p * 2} Z`
 }

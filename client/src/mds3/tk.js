@@ -1,7 +1,6 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { gmmode } from '../client'
 import { dofetch3 } from '../../common/dofetch'
 import { makeTk } from './makeTk'
 import { updateLegend } from './legend'
@@ -83,7 +82,7 @@ function getParameter(tk, block) {
 	// including skewer or non-skewer
 	par.push('forTrack=1')
 
-	if (tk.uninitialized || !block.usegm || block.gmmode == gmmode.genomic || block.gmmodepast == gmmode.genomic) {
+	if (tk.uninitialized || !block.usegm || block.gmmode == 'genomic' || block.gmmodepast == 'genomic') {
 		// assumption is that api will return the same amount of variants for different mode (protein/exon/splicerna)
 		// so there's no need to re-request data in these modes (but not genomic mode)
 		if (tk.mds.has_skewer) {
@@ -178,7 +177,7 @@ export function rangequery_rglst(tk, block, par) {
 		}
 		rglst.push(r)
 		par.push('isoform=' + block.usegm.isoform)
-		if (block.gmmode == gmmode.genomic) {
+		if (block.gmmode == 'genomic') {
 			// TODO if can delete the isoform parameter to simply make the query by genomic pos
 			par.push('atgenomic=1')
 		}
@@ -269,7 +268,7 @@ function filterCustomVariants(tk, block) {
 		// adds mclass2variantcount[] later
 	}
 
-	// must exclude out-of-range items, otherwise numericmode rendering will break
+	// must exclude out-of-range items, otherwise numeric mode rendering will break
 	let bbstart = null,
 		bbstop
 	for (let i = block.startidx; i <= block.stopidx; i++) {

@@ -35,12 +35,22 @@ stratify labels will account for all tracks, e.g. skewer, cnv
 
 ********************************
 * On highlighting skewer disks *
+********************************
 client can supply tk.hlssmid or tk.hlaachange, both are comma-joined list of names
 upon init, both will be converted to tk.skewer.hlssmid (set)
 hlaachange is converted when skewer data is returned from server
 tk.skewer.hlssmid can be modified or deleted dynamically
 highlighting is done by inserting <rect> into tk.skewer.hlBoxG
 see mayHighlightDiskBySsmid()
+
+********************************
+* On skewer view modes         *
+********************************
+array of objects in tk.skewer.viewModes[]
+each obj is one mode, defines how to show snv/indel data points; will also control fusion
+later may add cnv.viewModes[] to control mode of other data types
+obj can offer flexibility on defining complex data source/method/arithmetics
+viewModes is a merge from tk.skewerModes (custom) and tk.mds.skewerModes (official)
 
 */
 
@@ -157,26 +167,37 @@ function mayInitSkewer(tk) {
 		// border color of a box over a highlighted data
 		hlBoxColor: tk.mds.hlBoxColor || 'red'
 	}
-	setSkewerMode(tk) // adds skewer.mode
+	setSkewerMode(tk) // adds skewer.viewModes[]
 }
 
 function setSkewerMode(tk) {
-	/* skewer.mode defines how to show snv/indel data points; will also control fusion
-	later may add new attributes e.g. "cnvMode" to control mode of other data types
-	default mode can be overwritten later
-	*/
-	tk.skewer.mode = 'skewer'
-	if (tk.skewerMode) {
-		// override
-		tk.skewer.mode = tk.skewerMode
-		delete tk.skewerMode
+	tk.skewer.viewModes = tk.skewerModes
+	delete tk.skewerModes
+	if (!tk.skewer.viewModes) tk.skewer.viewModes = []
+	const vm = tk.skewer.viewModes
+	if (!Array.isArray(vm)) throw 'skewerModes[] is not array'
+	if (tk.mds.skewerModes) {
+		for (const n of tk.mds.skewerModes) vm.push(n)
 	}
-	if (tk.skewer.mode == 'skewer') {
-	} else if (tk.skewer.mode == 'numeric') {
-		if (!tk.numericmode) throw '.numericmode{} missing when skewer.mode=numeric'
-	} else {
-		throw 'unknown skewerMode'
+	if (!vm.find(n => n.type == 'skewer')) vm.push({ type: 'skewer' })
+	for (const n of vm) {
+		if (typeof n != 'object') throw 'one of skewerModes[] is not object'
+		if (n.type == 'skewer') {
+			// allowed type, no more configs
+			if (!n.label) n.label = 'lollipops'
+		} else if (n.type == 'numeric') {
+			// data method
+			if (n.byAttribute) {
+				if (!n.label) n.label = n.byAttribute
+			} else {
+				// support info fields etc
+				throw 'unknown data method for a type=numeric mode'
+			}
+		} else {
+			throw 'unknown type from a skewerModes[]'
+		}
 	}
+	if (!vm.find(n => n.inuse)) vm[0].inuse = true
 }
 
 function init_mclass(tk) {

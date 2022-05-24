@@ -114,11 +114,12 @@ function table_snvindel_onevariant({ mlst, tk, block }, grid) {
 		td1.text('Occurrence')
 		td2.text(m.occurrence)
 	}
-	if (tk.skewer.mode == 'numeric') {
-		const nm = tk.numericmode
+	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
+	if (currentMode.type == 'numeric' && currentMode.byAttribute != 'occurrence') {
+		// show a numeric value that is not occurrence
 		const [td1, td2] = get_list_cells(grid)
-		td1.text(nm.valueName || 'Value')
-		td2.text(m.__value_use)
+		td1.text(currentMode.label)
+		td2.text(m.__value_missing ? 'NA' : m.__value_use)
 	}
 }
 
@@ -159,8 +160,12 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 		1 + // consequence
 		1 + // mutation
 		1 // sampleDivHeader
-	const showOccurrence = mlst.find(i => i.occurrence != undefined),
-		showNumericmodeValue = tk.skewer.mode == 'numeric'
+	const showOccurrence = mlst.find(i => i.occurrence != undefined)
+	let showNumericmodeValue
+	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
+	if (currentMode.type == 'numeric' && currentMode.byAttribute != 'occurrence') {
+		showNumericmodeValue = true
+	}
 
 	grid.style(
 		'grid-template-columns',
@@ -186,7 +191,7 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 		grid
 			.append('div')
 			.style('opacity', 0.3)
-			.text(tk.numericmode.valueName || 'Value')
+			.text(currentMode.label)
 	}
 
 	// placeholder for showing column headers of sample table, keep blank if there's no content
@@ -207,7 +212,7 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 		}
 
 		if (showNumericmodeValue) {
-			grid.append('div').text(m.__value_use)
+			grid.append('div').text(m.__value_missing ? 'NA' : m.__value_use)
 		}
 
 		// create placeholder for showing available samples of this variant

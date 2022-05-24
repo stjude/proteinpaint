@@ -951,7 +951,7 @@ function make_mds3_variants(tw, resultLst) {
 		// set default values as missing, to be able to show all variants in track
 		// overwrite with real values if found in result
 		m.regressionPvalue = 'NA'
-		m.__value = 0 // display the dot at the bottom
+		m.mlpv = 0 // display the dot at the bottom
 
 		const thisresult = resultLst.find(i => i.id == snp.snpid)
 		if (!thisresult) {
@@ -980,7 +980,7 @@ function make_mds3_variants(tw, resultLst) {
 			} else {
 				// has valid pvalue from either coefficients table, or type3 table
 				m.regressionPvalue = v
-				m.__value = -Math.log10(v)
+				m.mlpv = -Math.log10(v)
 			}
 
 			// assign estimate, for tooltip display
@@ -1006,21 +1006,21 @@ function make_mds3_variants(tw, resultLst) {
 			this variant is tested by fisher, show as triangle
 			*/
 			m.regressionPvalue = d.fisher.pvalue
-			m.__value = -Math.log10(d.fisher.pvalue)
+			m.mlpv = -Math.log10(d.fisher.pvalue)
 			m.shapeTriangle = true
 		} else if (d.wilcoxon) {
 			/* { pvalue:float }
 			this variant is tested by wilcoxon, show as triangle
 			*/
 			m.regressionPvalue = d.wilcoxon.pvalue
-			m.__value = -Math.log10(d.wilcoxon.pvalue)
+			m.mlpv = -Math.log10(d.wilcoxon.pvalue)
 			m.shapeTriangle = true
 		} else if (d.cuminc) {
 			/* { pvalue:float }
 			this variant is tested by cuminc, show as triangle
 			*/
 			m.regressionPvalue = d.cuminc.pvalue
-			m.__value = -Math.log10(d.cuminc.pvalue)
+			m.mlpv = -Math.log10(d.cuminc.pvalue)
 			m.shapeTriangle = true
 		} else {
 			// none of above. is monomorphic, show as hollow circle
@@ -1089,13 +1089,15 @@ async function createGenomebrowser(self, input, resultLst) {
 	arg.tklst.push({
 		type: 'mds3', // tkt.mds3
 		name: 'Variants',
-		skewerMode: 'numeric',
-		numericmode: {
-			type: '__value',
-			label: '-log10 p-value',
-			valueName: '-log10 p-value',
-			tooltipPrintValue: m => getMtooltipValues(m, self.config.regressionType)
-		},
+		skewerModes: [
+			{
+				type: 'numeric',
+				byAttribute: 'mlpv', // corresponds to the "mlpv" attribute in m{}, can be anything
+				label: '-log10 p-value',
+				inuse: true,
+				tooltipPrintValue: m => getMtooltipValues(m, self.config.regressionType)
+			}
+		],
 		custom_variants: make_mds3_variants(input.term, resultLst),
 		variantShapeName: {
 			dot: 'common variants analyzed by model-fitting',
