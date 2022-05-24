@@ -56,6 +56,7 @@ may use separate scripts to code different table styles
 */
 async function table_snvindel(arg) {
 	if (!isElementInViewport(arg.div)) {
+		// If div renders outside of viewport, shift left
 		arg.div.style('left', '3vw').style('max-width', '90vw')
 	}
 
@@ -89,7 +90,9 @@ async function table_snvindel(arg) {
 
 	if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
 		await init_sampletable(arg)
+
 		if (!isElementInViewport(grid)) {
+			// If div renders outside of viewport, shift left
 			arg.div.style('left', '3vw').style('max-width', '90vw')
 		}
 	}
@@ -293,9 +296,16 @@ function add_csqButton(m, tk, td, table) {
 function isElementInViewport(el) {
 	const rect = el.node().getBoundingClientRect()
 	return (
-		rect.top >= 0 &&
-		rect.left >= 0 &&
-		rect.bottom < (document.documentElement.clientHeight || window.innerHeight) &&
-		rect.right < (document.documentElement.clientWidth || window.innerWidth)
+		// rect.top >= 0 &&
+		// rect.left >= 0 &&
+		// rect.bottom < (document.documentElement.clientHeight || window.innerHeight) &&
+		// rect.right < (document.documentElement.clientWidth || window.innerWidth)
+
+		// Fix for div appearing still appearing within viewport but without a border,
+		// causing content to render bunched.
+		rect.top >= 25 &&
+		rect.left >= 25 &&
+		rect.bottom < (document.documentElement.clientHeight || window.innerHeight) - 25 &&
+		rect.right < (document.documentElement.clientWidth || window.innerWidth) - 25
 	)
 }
