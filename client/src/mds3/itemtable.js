@@ -2,6 +2,7 @@ import { mclass, dtsnvindel, dtfusionrna, dtsv } from '../../shared/common'
 import { init_sampletable } from './sampletable'
 import { get_list_cells } from '../../dom/gridutils'
 import { event as d3event } from 'd3-selection'
+import { appear } from '../../dom/animation'
 
 /*
 ********************** EXPORTED
@@ -41,13 +42,40 @@ arg{}
 export async function itemtable(arg) {
 	if (arg.mlst[0].dt == dtsnvindel) {
 		await table_snvindel(arg)
+		if (!isElementInViewport(arg.div)) {
+			console.log(46)
+			// If div renders outside of viewport, shift left
+			const leftpos = determineLeftCoordinate(arg.div)
+			appear(arg.div)
+			arg.div.style('left', leftpos + 'vw').style('max-width', '90vw')
+		}
 		return
 	}
 	if (arg.mlst[0].dt == dtfusionrna || arg.mlst[0].dt == dtsv) {
 		await table_fusionsv(arg)
+		if (!isElementInViewport(arg.div)) {
+			// If div renders outside of viewport, shift left
+			const leftpos = determineLeftCoordinate(arg.div)
+			appear(arg.div)
+			arg.div.style('left', leftpos + 'vw').style('max-width', '90vw')
+		}
 		return
 	}
 	throw 'itemtable unknown dt'
+}
+
+function determineLeftCoordinate(div) {
+	const coords = div.node().getBoundingClientRect()
+	// Reset left position to 100% - (arg.div.width % + 3%)
+	console.log(coords)
+	let leftpos
+	const left = 100 - ((coords.width / (document.documentElement.clientWidth || window.innerWidth)) * 100 + 3)
+	if (coords.width / (document.documentElement.clientWidth || window.innerWidth) > 0.4) {
+		leftpos = 3
+	} else {
+		leftpos = left
+	}
+	return leftpos
 }
 
 /*
@@ -55,10 +83,6 @@ rendering may be altered by tk.mds config
 may use separate scripts to code different table styles
 */
 async function table_snvindel(arg) {
-	if (!isElementInViewport(arg.div)) {
-		arg.div.style('left', '3vw').style('max-width', '90vw')
-	}
-
 	const grid = arg.div
 		.append('div')
 		.style('display', 'inline-grid')
@@ -89,9 +113,6 @@ async function table_snvindel(arg) {
 
 	if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
 		await init_sampletable(arg)
-		if (!isElementInViewport(grid)) {
-			arg.div.style('left', '3vw').style('max-width', '90vw')
-		}
 	}
 }
 
@@ -293,9 +314,16 @@ function add_csqButton(m, tk, td, table) {
 function isElementInViewport(el) {
 	const rect = el.node().getBoundingClientRect()
 	return (
-		rect.top >= 0 &&
-		rect.left >= 0 &&
-		rect.bottom < (document.documentElement.clientHeight || window.innerHeight) &&
-		rect.right < (document.documentElement.clientWidth || window.innerWidth)
+		// rect.top >= 0 &&
+		// rect.left >= 0 &&
+		// rect.bottom < (document.documentElement.clientHeight || window.innerHeight) &&
+		// rect.right < (document.documentElement.clientWidth || window.innerWidth)
+
+		// Fix for div appearing still appearing within viewport but without a border,
+		// causing content to render bunched.
+		rect.top >= 5 &&
+		rect.left >= 5 &&
+		rect.bottom < (document.documentElement.clientHeight || window.innerHeight) - 5 &&
+		rect.right < (document.documentElement.clientWidth || window.innerWidth) - 5
 	)
 }
