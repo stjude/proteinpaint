@@ -2,6 +2,7 @@ import { mclass, dtsnvindel, dtfusionrna, dtsv } from '../../shared/common'
 import { init_sampletable } from './sampletable'
 import { get_list_cells } from '../../dom/gridutils'
 import { event as d3event } from 'd3-selection'
+import { appear } from '../../dom/animation'
 
 /*
 ********************** EXPORTED
@@ -57,7 +58,14 @@ may use separate scripts to code different table styles
 async function table_snvindel(arg) {
 	if (!isElementInViewport(arg.div)) {
 		// If div renders outside of viewport, shift left
-		arg.div.style('left', '3vw').style('max-width', '90vw')
+		const coords = arg.div.node().getBoundingClientRect()
+		// Reset left position to 100% - (arg.div.width % + 3%)
+		const leftpos =
+			100 -
+			((coords.width / (document.documentElement.clientWidth || window.innerWidth)) * 100 +
+				(document.documentElement.clientWidth || window.innerWidth) * 0.03)
+		appear(arg.div)
+		arg.div.style('left', leftpos + 'vw').style('max-width', '90vw')
 	}
 
 	const grid = arg.div
@@ -93,7 +101,14 @@ async function table_snvindel(arg) {
 
 		if (!isElementInViewport(grid)) {
 			// If div renders outside of viewport, shift left
-			arg.div.style('left', '3vw').style('max-width', '90vw')
+			const coords = arg.div.node().getBoundingClientRect()
+			// Reset left position to 100% - (arg.div.width % + 3%)
+			const leftpos =
+				100 -
+				((coords.width / (document.documentElement.clientWidth || window.innerWidth)) * 100 +
+					(document.documentElement.clientWidth || window.innerWidth) * 0.03)
+			appear(arg.div)
+			arg.div.style('left', leftpos + 'vw').style('max-width', '90vw')
 		}
 	}
 }
