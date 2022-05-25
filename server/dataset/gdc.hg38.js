@@ -972,9 +972,16 @@ module.exports = {
 	*/
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
-		// list of terms to show as items in detailed info page
+
+		// default list of terms to show as sample attributes in details page
 		termidlst: ['disease_type', 'primary_site', 'project_id', 'gender', 'age_at_diagnosis', 'race', 'ethnicity'],
-		sunburst_ids: ['disease_type', 'primary_site'], // term id
+
+		// default list of terms for making sunburst/crosstab summary for cases harboring a term
+		sunburst_ids: ['disease_type', 'primary_site'],
+
+		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
+		sampleHasSsmReadDepth: true, // corresponds to .ssm_read_depth{} of a sample
+		sampleHasSsmTotalNormal: true, // corresponds to .totalNormal:int of a sample
 
 		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
 		//sample_id_key: 'case_id',

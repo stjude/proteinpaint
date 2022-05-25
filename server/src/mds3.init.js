@@ -55,13 +55,11 @@ export function client_copy(ds) {
 		ds2.has_genecnv_quickfix = true
 	}
 	if (ds.variant2samples) {
-		ds2.variant2samples = {
-			variantkey: ds.variant2samples.variantkey,
-			termidlst: ds.variant2samples.termidlst,
-			type_samples: ds.variant2samples.type_samples,
-			type_summary: ds.variant2samples.type_summary,
-			type_sunburst: ds.variant2samples.type_sunburst,
-			url: ds.variant2samples.url
+		const skip = ['sample_id_key', 'sample_id_getter', 'gdcapi']
+		ds2.variant2samples = {}
+		for (const k in ds.variant2samples) {
+			if (skip.includes(k)) continue
+			ds2.variant2samples[k] = ds.variant2samples[k]
 		}
 	}
 	return ds2
