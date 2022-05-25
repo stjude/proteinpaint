@@ -40,6 +40,8 @@ runproteinpaint({
 })
 
 
+*/
+
 runproteinpaint({
 noheader:1,
 	holder:document.getElementById('cc'),
@@ -49,18 +51,16 @@ noheader:1,
 	gene:'NM_002467',
 	tracks:[{
 		type:'mds3',
-		name:'Test, with occurrence',
+		name:'Test, without occurrence',
 		custom_variants:[
-			// TODO occurrence is right now required but should be optional
-			{"chr":"chr8","pos":128750685,"mname":"P75","class":"M","dt":1,occurrence:1},
-			{"chr":"chr8","pos":128750680,"mname":"T73","class":"M","dt":1,occurrence:2},
-			{"chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1,occurrence:3}
+			{"chr":"chr8","pos":128750685,"mname":"P75","class":"M","dt":1},
+			{"chr":"chr8","pos":128750680,"mname":"T73","class":"M","dt":1},
+			{"chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1}
 		],
 	}],
 })
 
 
-*/
 
 runproteinpaint({
 noheader:1,

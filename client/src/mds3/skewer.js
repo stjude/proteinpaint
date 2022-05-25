@@ -17,30 +17,50 @@ may_render_skewer
 mayAddSkewerModeOption
 
 *********** function cascade
-may_render_skewer
-	make_skewer_data
+make_skewer_data
 	skewer_make
 	tkdata_update_x
 	settle_glyph
 	done_tknodata
 
-
+*************************
+* skewer data structure *
+*************************
 tk.skewer{}
 	.rawmlst[] -- comes from server-returned data.skewer[]
 	.g
 	.data[]
+		// each element is a skewer
 		.chr, pos
 		.x
-		.occurrence
+		.occurrence // different types of values
+		            // if occurrence is in rawmlst, this is the sum of occurrences from .mlst[]
+					// otherwise it's the length of .mlst[]
 		.mlst[]
 		.groups[]
+			// each group is a disk
 			.dt
-			.occurrence
+			.occurrence // same as above
 			.mlst[]
 	.selection
 	.stem1, stem2, stem3 // #pixel
 	.maxheight
 
+
+*******************************
+* numeric mode data structure *
+*******************************
+nm{}
+	// the view mode object from skewer.viewModes[] that is in use
+	.data[]
+		.chr, .pos
+		.g
+		.mlst[]
+			// can be multiple variants at the same position with different alleles
+		.width
+		.x
+		.x0
+		.xoffset
 */
 
 /*
@@ -149,7 +169,7 @@ export function may_render_skewer(data, tk, block) {
 }
 
 function hlaachange2ssmid(tk, mlst) {
-	if (!tk.hlaachange) return
+	if (!tk.hlaachange || !mlst) return
 	// value is comma-joined list of mnames, convert to ssm_id for keeping track of variants
 	// using skewer data mlst[], either from server or client,
 	const set = new Set(tk.hlaachange.split(','))
@@ -371,8 +391,17 @@ function mlst2disc(mlst, tk) {
 		}
 		g.rim1count = rim1count
 		g.rim2count = rim2count
-		g.occurrence = g.mlst.reduce((i, j) => i + j.occurrence, 0)
 	}
+
+	if (mlst.some(m => Number.isFinite(m.occurrence))) {
+		// data points has occurrence; g.occurrence will be the sum from mlst[]
+		for (const g of groups) g.occurrence = g.mlst.reduce((i, j) => i + j.occurrence, 0)
+	} else {
+		// no occurrence from mlst[]; g.occurrence is length of mlst
+		for (const g of groups) g.occurrence = g.mlst.length
+	}
+	// this ensures that data groups all get a valid .occurrence value for rendering
+
 	groups.sort((a, b) => {
 		return b.occurrence - a.occurrence
 	})

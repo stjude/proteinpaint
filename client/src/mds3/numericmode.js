@@ -43,16 +43,19 @@ const maxclusterwidth = 100
 const hardcode_missing_value = 0
 const stemColor = '#ededed'
 
-export function renderNumericMode(nm, data, tk, block) {
-	/*
+/*
+nm{}
+	the object marked as "in use" in skewer.viewModes[]
+	rendering parameters are attached to it
 data: {skewer}
-numerical axis
-info field as sources of values
-
-value may be singular number, or boxplot
-
+	tricky!
+	data.skewer can be missing when pan/zoom in protein mode, where skewer data is not returned
+	as same data has been kept at tk.skewer.rawmlst
 */
-	const datagroup = make_datagroup(tk, data.skewer || tk.skewer.rawmlst, block)
+export function renderNumericMode(nm, data, tk, block) {
+	const datagroup = make_datagroup(tk, data.skewer || tk.skewer.rawmlst, block).filter(
+		g => g.x >= 0 && g.x <= block.width
+	)
 
 	// for variant leftlabel to access later
 	nm.data = datagroup
@@ -66,7 +69,7 @@ value may be singular number, or boxplot
 	tk.skewer.g.selectAll('*').remove()
 	if (tk.skewer.nmg) tk.skewer.nmg.selectAll('*').remove()
 
-	numeric_make(nm, tk.skewer.g, tk, block)
+	numeric_make(nm, tk, block)
 
 	return (
 		nm.toplabelheight +
@@ -80,11 +83,11 @@ value may be singular number, or boxplot
 	)
 }
 
-function numeric_make(nm, _g, tk, block) {
+function numeric_make(nm, tk, block) {
 	/*
 	 */
 
-	const data = nm.data.filter(g => g.x >= 0 && g.x <= block.width)
+	const data = nm.data
 
 	for (const d of data) {
 		d.x0 = d.x
@@ -229,22 +232,24 @@ function numeric_make(nm, _g, tk, block) {
 		nm.toplabelheight = Math.max(nm.toplabelheight, h)
 	}
 
-	render_axis(_g, tk, nm, block)
+	render_axis(tk, nm, block)
 
-	_g.append('line')
+	tk.skewer.g
+		.append('line')
 		.attr('y1', nm.toplabelheight + nm.maxradius)
 		.attr('y2', nm.toplabelheight + nm.maxradius)
 		.attr('x2', block.width)
 		.attr('stroke', stemColor)
 		.attr('shape-rendering', 'crispEdges')
-	_g.append('line')
+	tk.skewer.g
+		.append('line')
 		.attr('y1', nm.toplabelheight + nm.maxradius + nm.axisheight)
 		.attr('y2', nm.toplabelheight + nm.maxradius + nm.axisheight)
 		.attr('x2', block.width)
 		.attr('stroke', stemColor)
 		.attr('shape-rendering', 'crispEdges')
 
-	tk.skewer.nmg = _g
+	tk.skewer.nmg = tk.skewer.g
 		.selectAll()
 		.data(data)
 		.enter()
@@ -775,7 +780,7 @@ decide following things about the y axis:
 	}
 }
 
-function render_axis(_g, tk, nm, block) {
+function render_axis(tk, nm, block) {
 	/*
 render axis
 */

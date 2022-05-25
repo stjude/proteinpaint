@@ -47,19 +47,28 @@ see mayHighlightDiskBySsmid()
 ********************************
 * On skewer view modes         *
 ********************************
-array of objects in tk.skewer.viewModes[]
-each obj is one mode, defines how to show snv/indel data points; will also control fusion
-later may add cnv.viewModes[] to control mode of other data types
+view modes applicable to current data are declared in tk.skewer.viewModes[]
+each element is one mode, defines how to show snv/indel data points; will also control fusion
 obj can offer flexibility on defining complex data source/method/arithmetics
-viewModes is a merge from tk.skewerModes (custom) and tk.mds.skewerModes (official)
+viewModes[] is a merge from tk.skewerModes (custom) and tk.mds.skewerModes (official)
+viewModes[] is dynamically modified in may_render_skewer, upon getting new data
+later may add cnv.viewModes[] to control mode of other data types
 
+********************************
+* On tricky skewer data        *
+********************************
+when requesting skewer data at gmmode (not genomic) for the first time,
+data is queried by isoform, and returned data is kept at tk.skewer.rawmlst
+at subsequent panning/zooming, it won't re-request skewer data, as it's still using the same isoform
+and will use cached data at rawmlst instead
 */
 
 export async function makeTk(tk, block) {
 	// run just once to initiate a track
 
 	tk.subtk2height = {}
-	// keys: "skewer", etc; value is #pixel in height
+	// keys: skewer, leftlabels, etc
+	// value is #pixel in height for that component
 
 	tk._finish = loadTk_finish_closure(tk, block)
 
