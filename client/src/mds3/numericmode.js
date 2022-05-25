@@ -52,7 +52,7 @@ info field as sources of values
 value may be singular number, or boxplot
 
 */
-	const datagroup = make_datagroup(tk, data.skewer, block)
+	const datagroup = make_datagroup(tk, data.skewer || tk.skewer.rawmlst, block)
 
 	// for variant leftlabel to access later
 	nm.data = datagroup
@@ -84,7 +84,7 @@ function numeric_make(nm, _g, tk, block) {
 	/*
 	 */
 
-	const data = nm.data
+	const data = nm.data.filter(g => g.x >= 0 && g.x <= block.width)
 
 	for (const d of data) {
 		d.x0 = d.x
@@ -95,14 +95,6 @@ function numeric_make(nm, _g, tk, block) {
 
 	// diameter, also m label font size
 	const dotwidth = Math.max(14, block.width / 110)
-
-	if (tk.ld && tk.ld.overlay && tk.ld.overlay.vcfcircle) {
-		// resize overlay circle
-		tk.ld.overlay.vcfcircle
-			.attr('r', dotwidth / 2)
-			// and also hide it upon rendering variants
-			.attr('stroke-opacity', 0)
-	}
 
 	nm.dotwidth = dotwidth
 	nm.maxradius = 0

@@ -14,7 +14,7 @@ availability of ssm_id decides if variant2samples query is allowed
 
 ********************** EXPORTED
 may_render_skewer
-makeSkewerModeUI
+mayAddSkewerModeOption
 
 *********** function cascade
 may_render_skewer
@@ -57,21 +57,31 @@ export function may_render_skewer(data, tk, block) {
 	if (!tk.skewer) {
 		// not equipped with skewer track
 		// created in makeTk when skewer datatype is available
-		return 0
+		tk.subtk2height.skewer = 0
+		return
 	}
 
-	setPossibleSkewerModes(tk, data.skewer)
-	// tk.skewer.possibleModes set
+	updateViewModes(tk, data.skewer)
+	// tk.skewer.viewModes[] updated
 
 	hlaachange2ssmid(tk, data.skewer) // tk.skewer.hlssmid may be set
 
 	const currentMode = tk.skewer.viewModes.find(n => n.inuse)
 	if (!currentMode) throw 'no mode!!'
 
+	if (data.skewer) {
+		// register new mlst data
+		// otherwise will not overwrite skewer.mlst
+		tk.skewer.rawmlst = data.skewer
+	} else {
+		// server will not return skewer data when panning/zooming in protein mode
+		// the data is already kept as tk.skewer.rawmlst
+	}
+
 	if (currentMode.type == 'numeric') {
-		const h = renderNumericMode(currentMode, data, tk, block)
+		tk.subtk2height.skewer = renderNumericMode(currentMode, data, tk, block)
 		mayHighlightDiskBySsmid(tk)
-		return h
+		return
 	}
 
 	// possible to plug in new skewer.*.js scripts to support additional mode types
@@ -89,11 +99,6 @@ export function may_render_skewer(data, tk, block) {
 		tk.skewer.selection.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')')
 		settle_glyph(tk, block)
 	} else {
-		if (data && data.skewer) {
-			// register new mlst data
-			// otherwise will not overwrite skewer.mlst
-			tk.skewer.rawmlst = data.skewer
-		}
 		// when zooming protein mode, data.skewer is not given but still need to remake skewers
 		// generate new skewer track data from skewer.mlst
 		tk.skewer.g.selectAll('*').remove()
@@ -102,7 +107,9 @@ export function may_render_skewer(data, tk, block) {
 	}
 
 	if (!tk.skewer.data || tk.skewer.data.length == 0) {
-		return done_tknodata(tk, block)
+		done_tknodata(tk, block)
+		tk.subtk2height.skewer = 40
+		return
 	}
 
 	/*
@@ -138,7 +145,7 @@ export function may_render_skewer(data, tk, block) {
 		settle_glyph(tk, block)
 	}
 
-	return tk.skewer.maxheight + tk.skewer.stem1 + tk.skewer.stem2 + tk.skewer.stem3
+	tk.subtk2height.skewer = tk.skewer.maxheight + tk.skewer.stem1 + tk.skewer.stem2 + tk.skewer.stem3
 }
 
 function hlaachange2ssmid(tk, mlst) {
@@ -393,76 +400,77 @@ function done_tknodata(tk, block) {
 		.attr('x', block.width / 2)
 		.attr('text-anchor', 'middle')
 		.attr('dominant-baseline', 'center')
-
-	return 50
 }
 
-function setPossibleSkewerModes(tk, mlst) {
+function updateViewModes(tk, mlst) {
 	detectNumericMode(tk, mlst)
-	// all possible modes based on ds and current data
-	// mode=skewer is always available
-	tk.skewer.possibleModes = new Set(['skewer'])
-	// modes predefined by official ds
-	if (tk.mds.skewerModes) {
-		for (const i of tk.mds.skewerModes) tk.skewer.possibleModes.add(i)
+	detectAlternativeSkewerModes(tk, mlst)
+	// for numeric modes not in use, clear axisg
+	for (const n of tk.skewer.viewModes) {
+		if (n.type == 'numeric' && !n.inuse && n.axisg) n.axisg.selectAll('*').remove()
 	}
-	detectAlternativeSkewerModes(tk)
 }
 
 function detectAlternativeSkewerModes(tk) {
 	// TODO if possible to render as protein painter style
 	// low #variants, low occurrences
+	// may delete special skewer modes if condition no longer applies
 }
 
 function detectNumericMode(tk, mlst) {
-	if (!mlst) {
-		// mlst can be undefined when server returns no new data
-		return
-	}
 	// detect if data has occurrence
-	if (mlst.find(i => Number.isFinite(i.occurrence))) {
+	// mlst can be undefined when server returns no new data
+	if (mlst && mlst.find(i => Number.isFinite(i.occurrence))) {
 		// has occurrence, assume all data points have it thus numeric mode is possible
 		if (!tk.skewer.viewModes.find(n => n.type == 'numeric' && n.byAttribute == 'occurrence')) {
 			// occurrence mode obj is missing, add it
 			tk.skewer.viewModes.push({
 				type: 'numeric',
 				byAttribute: 'occurrence',
-				label: 'Occurrence'
+				label: 'Occurrence',
+				isinteger: true
 			})
 		}
 	}
 	// TODO more sources e.g. bcf numeric info fields
 }
 
-function currentSkewerModeName(tk) {
-	const n = tk.skewer.viewModes.find(n => n.inuse)
-	if (!n) return 'NONE IN USE'
-	if (n.type == 'skewer') return 'Viewing as lollipops'
+function getViewmodeName(n) {
+	if (!n) return 'MISSING!!'
+	if (n.type == 'skewer') return 'As lollipops'
 	if (n.type == 'numeric') return n.label + ' as Y axis'
 	return 'unknown mode'
 }
 
 function makeSkewerModeUI(tk) {}
 
-export function mayAddSkewerModeOption(tk) {
+export function mayAddSkewerModeOption(tk, block) {
 	if (!tk.skewer) return
-	if (tk.skewer.possibleModes.size == 1) {
-		// only one possible mode, cannot change to alt modes, do not add option
+	if (tk.skewer.viewModes.length <= 1) {
+		// only one possible mode, cannot toggle mode, do not add option
 		return
 	}
-	// there are more than 1 mode for skewer, allow to change
+	// there are more than 1 mode, print name of current mode
 	tk.menutip.d
 		.append('div')
-		.style('margin', '10px 3px 3px 3px')
+		.style('margin', '10px 10px 3px 10px')
 		.style('font-size', '.7em')
 		.style('opacity', 0.5)
-		.text(currentSkewerModeName(tk))
-	tk.menutip.d
-		.append('div')
-		.text('Change mode')
-		.attr('class', 'sja_menuoption')
-		.on('click', () => {
-			tk.menutip.clear()
-			makeSkewerModeUI(tk)
-		})
+		.text(getViewmodeName(tk.skewer.viewModes.find(n => n.inuse)))
+	// show available modes
+	for (const n of tk.skewer.viewModes) {
+		if (n.inuse) continue
+		// a mode not in use; make option to switch to it
+		tk.menutip.d
+			.append('div')
+			.text(getViewmodeName(n))
+			.attr('class', 'sja_menuoption')
+			.on('click', () => {
+				for (const i of tk.skewer.viewModes) i.inuse = false
+				n.inuse = true
+				tk.menutip.clear()
+				may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)
+				tk._finish()
+			})
+	}
 }

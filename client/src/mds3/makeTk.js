@@ -1,7 +1,7 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { Menu } from '../../dom/menu'
 import { dofetch3 } from '../../common/dofetch'
-import { initLegend } from './legend'
+import { initLegend, updateLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '../../common/urlmap'
 import { mclass } from '../../shared/common'
@@ -25,7 +25,8 @@ configPanel
 _load
 
 
-common structure of tk.mds between official and custom
+tk.subtk2height{ skewer: int, ... }
+
 
 tk.skewer{}
 	create if skewer data type is available for this mds
@@ -56,6 +57,11 @@ viewModes is a merge from tk.skewerModes (custom) and tk.mds.skewerModes (offici
 
 export async function makeTk(tk, block) {
 	// run just once to initiate a track
+
+	tk.subtk2height = {}
+	// keys: "skewer", etc; value is #pixel in height
+
+	tk._finish = loadTk_finish_closure(tk, block)
 
 	tk.cache = {}
 	tk.itemtip = new Menu()
@@ -137,6 +143,24 @@ export async function makeTk(tk, block) {
 	if (tk.hlssmid) {
 		tk.skewer.hlssmid = new Set(tk.hlssmid.split(','))
 		delete tk.hlssmid
+	}
+}
+
+function loadTk_finish_closure(tk, block) {
+	return data => {
+		// derive tk height
+		tk.height_main = tk.toppad + tk.bottompad
+		for (const k in tk.subtk2height) {
+			tk.height_main = Math.max(tk.height_main, tk.subtk2height[k])
+		}
+
+		if (data) {
+			updateLegend(data, tk, block)
+		}
+
+		block.tkcloakoff(tk, { error: data ? data.error : null })
+		block.block_setheight()
+		block.setllabel()
 	}
 }
 

@@ -35,7 +35,7 @@ export function make_leftlabels(data, tk, block) {
 
 	let laby = labyspace + block.labelfontsize
 
-	const labels = [] // collect doms of created labels to derive max width
+	const labels = [] // collect label doms created here to derive max width
 
 	{
 		const lab = mayMakeVariantLabel(data, tk, block, laby)
@@ -103,7 +103,7 @@ export function make_leftlabels(data, tk, block) {
 	for (const l of labels) {
 		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, l.node().getBBox().width)
 	}
-	return laby
+	tk.subtk2height.leftlabels = laby
 }
 
 function makelabel(tk, block, y) {
@@ -133,20 +133,9 @@ function mayMakeVariantLabel(data, tk, block, laby) {
 	if (tk.custom_variants) {
 		// if custom list is available, total is defined by its array length
 		totalcount = tk.custom_variants.length
-	} else if (data.skewer) {
-		// no custom data but server returned data, get total from it
-		totalcount = data.skewer.length
 	} else {
-		/* messy way to get total number of data points
-		when it's updating in protein mode, client may not re-request data from server
-		and data.skewer will be missing
-		still the total data is kept on client
-		*/
-		if (currentMode.type == 'skewer') {
-			totalcount = tk.skewer.data.reduce((i, j) => i + j.mlst.length, 0)
-		} else {
-			throw 'do not know how to handle'
-		}
+		// no custom data but server returned data, get total from it
+		totalcount = tk.skewer.rawmlst.length
 	}
 
 	if (totalcount == 0) {
@@ -166,7 +155,7 @@ function mayMakeVariantLabel(data, tk, block, laby) {
 	if (currentMode.type == 'skewer') {
 		showcount = tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width).reduce((i, j) => i + j.mlst.length, 0)
 	} else if (currentMode.type == 'numeric') {
-		showcount = currentMode.data.reduce((i, j) => i + j.mlst.length, 0)
+		showcount = currentMode.data.filter(i => i.x >= 0 && i.x <= block.width).reduce((i, j) => i + j.mlst.length, 0)
 	} else {
 		throw 'unknown mode type'
 	}
@@ -247,7 +236,7 @@ function menu_variants(tk, block) {
 		}
 	}
 
-	mayAddSkewerModeOption(tk)
+	mayAddSkewerModeOption(tk, block)
 }
 
 async function listSkewerData(tk, block) {
