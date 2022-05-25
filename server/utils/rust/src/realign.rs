@@ -991,13 +991,24 @@ fn check_first_last_nucleotide_correctly_aligned(
         if all_matched_nucleotides == true {
             for j in correct_alignment_length..correct_alignment_length + last_print_position {
                 q_seq_correct.push(q_seq_chars[j]);
-                align_correct.push(align_chars[j]);
                 r_seq_correct.push(r_seq_chars[j]);
+                if q_seq_chars[j] == r_seq_chars[j] {
+                    align_correct.push('|');
+                } else {
+                    align_correct.push(align_chars[j]);
+                }
             }
             for k in 0..first_matched_nucleotides.len() {
                 q_seq_correct.push(first_matched_nucleotides_vector[k]);
-                align_correct.push(align_chars[correct_alignment_length + last_print_position + k]);
                 r_seq_correct.push(r_seq_chars[correct_alignment_length + last_print_position + k]);
+                if first_matched_nucleotides_vector[k]
+                    == r_seq_chars[correct_alignment_length + last_print_position + k]
+                {
+                    align_correct.push('|');
+                } else {
+                    align_correct
+                        .push(align_chars[correct_alignment_length + last_print_position + k]);
+                }
             }
             alignment_changed = true;
         } else {
@@ -1086,10 +1097,16 @@ fn check_first_last_nucleotide_correctly_aligned(
             for k in 0..first_partially_matched_nucleotides_right.len() {
                 q_seq_correct.push(first_partially_matched_nucleotides_right_vector[k]);
                 if correct_alignment_length + last_print_position + k < align_chars.len() {
-                    align_correct
-                        .push(align_chars[correct_alignment_length + last_print_position + k]);
                     r_seq_correct
                         .push(r_seq_chars[correct_alignment_length + last_print_position + k]);
+                    if r_seq_chars[correct_alignment_length + last_print_position + k]
+                        == first_partially_matched_nucleotides_right_vector[k]
+                    {
+                        align_correct.push('|');
+                    } else {
+                        align_correct
+                            .push(align_chars[correct_alignment_length + last_print_position + k]);
+                    }
                 }
             }
             alignment_changed = true;
