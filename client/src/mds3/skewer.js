@@ -436,7 +436,10 @@ function updateViewModes(tk, mlst) {
 	detectAlternativeSkewerModes(tk, mlst)
 	// for numeric modes not in use, clear axisg
 	for (const n of tk.skewer.viewModes) {
-		if (n.type == 'numeric' && !n.inuse && n.axisg) n.axisg.selectAll('*').remove()
+		if (n.type == 'numeric' && !n.inuse && n.axisg) {
+			n.axisg.remove()
+			delete n.axisg
+		}
 	}
 }
 

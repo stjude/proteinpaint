@@ -1,4 +1,4 @@
-export const font = 'Arial'
+const font = 'Arial'
 
 export function axisstyle(p) {
 	if (!p || !p.axis) return

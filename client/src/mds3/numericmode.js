@@ -1,6 +1,6 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { format as d3format } from 'd3-format'
-import { axisLeft } from 'd3-axis'
+import { axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { axisstyle } from '../../dom/axisstyle'
 import { make_datagroup } from './datagroup'
@@ -781,11 +781,17 @@ decide following things about the y axis:
 }
 
 function render_axis(tk, nm, block) {
-	/*
-render axis
-*/
+	// open axis to right so not to overlap with left labels
+	// quick fix! only works when changing skewer to numeric mode, where left labels are already rendered
+	// won't work if is in numeric mode by default, when leftlabels are not rendered yet
+	const openRight = tk.subtk2height.leftlabels
+
+	// somehow this must be set otherwise axisg will be <g text-anchor=end>
+	// and cause tick values to be overlapping with ticks when opening to right
+	if (openRight) nm.axisg.attr('text-anchor', '')
+
 	nm.axisg
-		.attr('transform', 'translate(-' + nm.dotwidth / 2 + ',' + (nm.toplabelheight + nm.maxradius) + ')')
+		.attr('transform', 'translate(0,' + (nm.toplabelheight + nm.maxradius) + ')')
 		.selectAll('*')
 		.remove()
 
@@ -793,9 +799,8 @@ render axis
 	const thisscale = scaleLinear()
 		.domain([nm.minvalue, nm.maxvalue])
 		.range([nm.axisheight, 0])
-	const thisaxis = axisLeft()
-		.scale(thisscale)
-		.ticks(4)
+
+	const thisaxis = (openRight ? axisRight() : axisLeft()).scale(thisscale).ticks(4)
 	if (nm.isinteger) {
 		thisaxis.tickFormat(d3format('d'))
 		if (nm.maxvalue - nm.minvalue < 3) {
@@ -812,24 +817,33 @@ render axis
 		fontsize: nm.dotwidth
 	})
 
+	/*
 	if (nm.minvalue == nm.maxvalue) {
 		nm.axisg
 			.append('text')
 			.attr('text-anchor', 'end')
 			.attr('font-size', nm.dotwidth)
 			.attr('dominant-baseline', 'central')
-			.attr('x', block.tkleftlabel_xshift)
+			.attr('x', openRight ? 0 : block.tkleftlabel_xshift)
 			.attr('y', nm.axisheight)
 			.text(nm.minvalue)
 			.attr('fill', 'black')
 	}
+	*/
 
 	// axis label, text must wrap
 	// read the max tick label width first
+	// max width of axis tick labels
 	let maxw = 0
-	nm.axisg.selectAll('text').each(function() {
-		maxw = Math.max(maxw, this.getBBox().width)
-	})
+	if (openRight) {
+		maxw = 5 // add distance between axis label and vertical line
+	} else {
+		// axis open to left, get max width of tick numbers so axis label won't overlap with them
+		nm.axisg.selectAll('text').each(function() {
+			maxw = Math.max(maxw, this.getBBox().width)
+		})
+		maxw += 15
+	}
 	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxw + 15)
 
 	// axis label
@@ -845,7 +859,7 @@ render axis
 				.attr('dominant-baseline', 'central')
 				.attr('text-anchor', 'end')
 				.attr('y', y + (nm.dotwidth + 1) * i)
-				.attr('x', -(maxw + 15))
+				.attr('x', -maxw)
 				.text(text)
 				.each(function() {
 					maxlabelw = Math.max(maxlabelw, this.getBBox().width + 15 + maxw)
