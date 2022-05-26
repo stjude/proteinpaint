@@ -46,8 +46,8 @@ use std::thread;
 //use std::time::{SystemTime};
 use std::io;
 
-mod realign;
-mod stats_functions;
+mod realign; // Imports functions from realign.rs
+mod stats_functions; // Imports functions from stats_functions.rs
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
