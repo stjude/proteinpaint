@@ -93,8 +93,10 @@ TODO filter by category
 	.start // pixel position in canvas
 	.stop
 	.stranded
-	.namewidth
-	.namestart
+	.namewidth // rendering width of a name
+	.namestart // x position to print a name
+	.namehover // if true, "hover" name on top of item, with a white bordered box as backdrop
+	.textalign // how to align this name text, with value for ctx.textAlign
 
 *********************** returned data
 */
@@ -454,8 +456,26 @@ async function do_query(req, genomes) {
 						boxstop = item.canvas.namestart + namewidth
 						item.canvas.textalign = 'left'
 					} else {
-						item.canvas.namehover = true
-						item.canvas.textalign = 'left'
+						// not enough space on left and right
+						if (namewidth > item.canvas.stop - item.canvas.start) {
+							// name is wider than the item itself, do not hover
+							// show on the wider side
+							if (item.canvas.start > width - item.canvas.stop) {
+								// space on left is wider
+								item.canvas.namestart = item.canvas.start - namespace
+								boxstart = item.canvas.namestart - namewidth
+								item.canvas.textalign = 'right'
+							} else {
+								// space on right is wider
+								item.canvas.namestart = item.canvas.stop + namespace
+								boxstop = item.canvas.namestart + namewidth
+								item.canvas.textalign = 'left'
+							}
+						} else {
+							// name can fit into item, allow hover
+							item.canvas.namehover = true
+							item.canvas.textalign = 'left'
+						}
 					}
 				} else {
 					if (Math.min(width, item.canvas.stop) - Math.max(0, item.canvas.start) >= namewidth + namepad * 2) {
