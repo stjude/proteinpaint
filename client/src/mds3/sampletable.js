@@ -32,7 +32,6 @@ const cutoff_tableview = 10
 
 export async function init_sampletable(arg) {
 	const wait = arg.div.append('div').text('Loading...')
-
 	const numofcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0) // sum of occurrence of mlst[]
 
 	// may not be used!
@@ -142,7 +141,6 @@ function printSampleName(sample, tk, div) {
 
 async function make_multiSampleTable(arg) {
 	// create horizontal table to show multiple samples, one sample per row
-	console.log(arg.tk.mds.variant2samples)
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
 	const [data, numofcases] = await arg.tk.mds.variant2samples.get(arg)
 	// each element of data[] is a sample{}
@@ -163,33 +161,22 @@ async function make_multiSampleTable(arg) {
 	let rowBg = false
 
 	if (arg.multiSampleTable) {
-		/* insert into existing table, do not create new table
-		print sample column headers into multiSampleTable.header
-		for each sample, find placeholder by sample.ssm_id, create new row for this sample into placeholder
-		*/
+		// for each sample, find placeholder by sample.ssm_id, create new row for this sample into placeholder
 
-		// FIXME sample columns must not overlap when clicking a variant to the right, e.g. F156L of KRAS
-		arg.multiSampleTable.header
-			.style('display', 'grid')
-			.style('grid-template-columns', 'repeat(' + numColumns + ', minmax(2vw, 10vw))')
-			.style('text-overflow', 'ellipsis')
-			.style('opacity', 0.3)
+		let startDataCol = arg.multiSampleTable.startCol + 1
+		await printHeader(arg.grid, true, startDataCol)
 
-		await printHeader(arg.multiSampleTable.header)
-
+		let sampleStartRow = 1
 		for (const sample of data) {
+			sampleStartRow = ++sampleStartRow
 			const row = arg.multiSampleTable.ssmid2div.get(sample.ssm_id)
 			if (!row) {
 				// no corresponding row was found by this ssm id
 				continue
 			}
-
+			console.log(row)
 			// for a variant with multiple samples, css is set repeatedly on the row (placeholder)
-			row
-				.style('display', 'grid')
-				.style('grid-template-columns', 'repeat(' + numColumns + ', minmax(2vw, 10vw))')
-				.style('text-overflow', 'ellipsis')
-			printSampleRow(sample, row)
+			printSampleRow(sample, arg.grid, startDataCol, sampleStartRow)
 		}
 	} else {
 		// create new table, one row per sample
@@ -208,61 +195,76 @@ async function make_multiSampleTable(arg) {
 
 	//////////// helpers
 
-	async function printHeader(row, gray) {
+	async function printHeader(div, gray, startDataCol) {
+		let startCol = startDataCol
 		if (has_sample_id) {
-			const c = row
+			const c = div
 				.append('div')
 				.text('Sample')
-				.style('text-overflow', 'ellipsis')
-				.style('background-color', 'white')
+				.style('grid-row-start', 1)
+			if (startDataCol) {
+				c.style('grid-column-start', startCol)
+			}
 			if (gray) c.style('opacity', 0.3)
 		}
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
 				const t = await arg.tk.mds.termdb.vocabApi.getterm(termid)
-				const c = row
+				const c = div
 					.append('div')
 					.text(t ? t.name : termid)
-					.style('text-overflow', 'ellipsis')
-					.style('background-color', 'white')
+					.style('grid-row-start', 1)
+				if (startDataCol) {
+					startCol = ++startCol
+					c.style('grid-column-start', startCol)
+				}
 				if (gray) c.style('opacity', 0.3)
 			}
 		}
 		if (has_ssm_read_depth) {
-			const c = row
+			const c = div
 				.append('div')
 				.text('Tumor DNA MAF')
-				.style('text-overflow', 'ellipsis')
-				.style('background-color', 'white')
+				.style('grid-row-start', 1)
+			if (startDataCol) {
+				startCol = ++startCol
+				c.style('grid-column-start', startCol)
+			}
 			if (gray) c.style('opacity', 0.3)
 		}
 		if (has_totalNormal) {
-			const c = row.header
+			const c = div.header
 				.append('div')
 				.text('Normal depth')
-				.style('text-overflow', 'ellipsis')
-				.style('background-color', 'white')
+				.style('grid-row-start', 1)
+			if (startDataCol) {
+				startCol = ++startCol
+				c.style('grid-column-start', startCol)
+			}
 			if (gray) c.style('opacity', 0.3)
 		}
 	}
 
-	function printSampleRow(sample, row) {
+	function printSampleRow(sample, row, startDataCol, sampleStartRow) {
 		rowBg = !rowBg
+		let startCol = startDataCol
 		if (has_sample_id) {
-			const cell = row
-				.append('div')
-				.style('text-overflow', 'ellipsis')
-				.style('background-color', 'white')
+			const cell = row.append('div')
+			if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
+			if (startDataCol) {
+				cell.style('grid-column-start', startCol)
+			}
 			if (rowBg) cell.style('background', '#eee')
 			printSampleName(sample, arg.tk, cell)
 		}
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
-				const cell = row
-					.append('div')
-					.text(termid in sample ? sample[termid] : '')
-					.style('text-overflow', 'ellipsis')
-					.style('background-color', 'white')
+				const cell = row.append('div').text(termid in sample ? sample[termid] : '')
+				if (startDataCol) {
+					startCol = ++startCol
+					cell.style('grid-column-start', startCol)
+				}
+				if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
 				if (rowBg) cell.style('background', '#eee')
 			}
 		}
@@ -275,15 +277,21 @@ async function make_multiSampleTable(arg) {
 					.append('span')
 					.text(sm.altTumor + ' / ' + sm.totalTumor)
 					.style('margin', '0px 10px')
+				if (startDataCol) {
+					startCol = ++startCol
+					cell.style('grid-column-start', startCol)
+				}
+				if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
 			}
 			if (rowBg) cell.style('background', '#eee')
 		}
 		if (has_totalNormal) {
-			const cell = row
-				.append('div')
-				.text('totalNormal' in sample ? sample.totalNormal : '')
-				.style('text-overflow', 'ellipsis')
-				.style('background-color', 'white')
+			const cell = row.append('div').text('totalNormal' in sample ? sample.totalNormal : '')
+			if (startDataCol) {
+				startCol = ++startCol
+				cell.style('grid-column-start', startCol)
+			}
+			if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
 			if (rowBg) cell.style('background', '#eee')
 		}
 	}

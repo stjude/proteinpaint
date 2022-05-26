@@ -43,7 +43,6 @@ export async function itemtable(arg) {
 	if (arg.mlst[0].dt == dtsnvindel) {
 		await table_snvindel(arg)
 		if (!isElementInViewport(arg.div)) {
-			console.log(46)
 			// If div renders outside of viewport, shift left
 			const leftpos = determineLeftCoordinate(arg.div)
 			appear(arg.div)
@@ -67,7 +66,6 @@ export async function itemtable(arg) {
 function determineLeftCoordinate(div) {
 	const coords = div.node().getBoundingClientRect()
 	// Reset left position to 100% - (arg.div.width % + 3%)
-	console.log(coords)
 	let leftpos
 	const left = 100 - ((coords.width / (document.documentElement.clientWidth || window.innerWidth)) * 100 + 3)
 	if (coords.width / (document.documentElement.clientWidth || window.innerWidth) > 0.4) {
@@ -109,6 +107,7 @@ async function table_snvindel(arg) {
 		grid.style('max-height', '30vw').style('gap', '10px')
 		// create placeholder for inserting samples for each variant
 		arg.multiSampleTable = table_snvindel_multivariant(arg, grid)
+		arg.grid = grid
 	}
 
 	if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
@@ -187,11 +186,24 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 	if (currentMode.type == 'numeric' && currentMode.byAttribute != 'occurrence') {
 		showNumericmodeValue = true
 	}
+	// Calculate number of columns specific to each sample group
+	const numOfMetaDataCols =
+		tk.mds.variant2samples.termidlst.length +
+		(tk.mds.variant2samples.sampleHasSsmReadDepth == true ? 1 : 0) +
+		(tk.mds.variant2samples.sampleHasSsmTotalNormal == true ? 1 : 0)
 
-	grid.style(
-		'grid-template-columns',
-		`repeat(${fixedColumnCount + (showOccurrence ? 1 : 0) + (showNumericmodeValue ? 1 : 0)}, auto)`
-	)
+	grid
+		.style(
+			'grid-template-columns',
+			`'repeat(${fixedColumnCount +
+				(showOccurrence ? 1 : 0) +
+				(showNumericmodeValue ? 1 : 0) +
+				numOfMetaDataCols}, auto)'`
+		)
+		.style('text-overflow', 'ellipsis')
+		.style('background-color', 'white')
+		.style('overflow', 'scroll')
+		.style('max-width', '100%') // Fix for grid overflowing tooltip
 
 	// header
 	grid
@@ -202,21 +214,27 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 		.append('div')
 		.text(mlst.find(i => i.ref && i.alt) ? 'Mutation' : 'Position')
 		.style('opacity', 0.3)
+		.style('grid-column-start', '2')
+	let startCol = 2 // Determines the start col for positioning later
 	if (showOccurrence) {
+		startCol = ++startCol
 		grid
 			.append('div')
 			.style('opacity', 0.3)
 			.text('Occurrence')
+			.style('grid-column-start', startCol)
 	}
 	if (showNumericmodeValue) {
+		startCol = ++startCol
 		grid
 			.append('div')
 			.style('opacity', 0.3)
 			.text(currentMode.label)
+			.style('grid-column-start', startCol)
 	}
 
 	// placeholder for showing column headers of sample table, keep blank if there's no content
-	const sampleDivHeader = grid.append('div')
+	// const sampleDivHeader = grid.append('div')
 
 	// one row for each variant
 	const ssmid2div = new Map() // k: m.ssm_id, v: <div>
@@ -224,22 +242,31 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 
 	for (const m of mlst) {
 		// column 1
-		print_mname(grid.append('div'), m)
+		print_mname(grid.append('div').style('grid-column-start', '1'), m)
 		// column 2
-		print_snv(grid.append('div'), m, tk)
-
+		print_snv(grid.append('div').style('grid-column-start', '2'), m, tk)
+		let dataStartCol = 2
 		if (showOccurrence) {
-			grid.append('div').text(m.occurrence)
+			dataStartCol = ++dataStartCol
+			grid
+				.append('div')
+				.text(m.occurrence)
+				.style('grid-column-start', dataStartCol)
 		}
 
 		if (showNumericmodeValue) {
-			grid.append('div').text(m.__value_missing ? 'NA' : m.__value_use)
+			dataStartCol = ++dataStartCol
+			grid
+				.append('div')
+				.text(m.__value_missing ? 'NA' : m.__value_use)
+				.style('grid-column-start', dataStartCol)
 		}
 
 		// create placeholder for showing available samples of this variant
 		ssmid2div.set(m.ssm_id, grid.append('div'))
 	}
-	return { header: sampleDivHeader, ssmid2div }
+	// return { header: sampleDivHeader, ssmid2div, startCol, grid }
+	return { ssmid2div, startCol, grid }
 }
 
 async function table_fusionsv(arg) {
