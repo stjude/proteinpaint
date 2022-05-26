@@ -73,7 +73,8 @@ else exon<:
 */
 
 export function may_render_skewer(data, tk, block) {
-	// return skewer tk height
+	// update skewer subtrack height to tk.subtk2height.skewer:int
+
 	if (!tk.skewer) {
 		// not equipped with skewer track
 		// created in makeTk when skewer datatype is available
@@ -224,8 +225,14 @@ function make_skewer_data(tk, block) {
 	for (const g of datagroup) {
 		g.groups = mlst2disc(g.mlst, tk)
 	}
-	if (tk.skewer.data && block.pannedpx != undefined && (!block.usegm || block.gmmode == 'genomic')) {
-		// inherit genomic mode and panned
+	if (tk.skewer.data && block.pannedpx != undefined) {
+		/* block is panned, tk.skewer.data is the previous set of skewers
+		existing data points from before panning should assemble into the same set of skewers
+		as resolution did not change
+		will inherit the showmode
+		used to only run this at genomic mode but not in protein mode
+		(!block.usegm || block.gmmode == 'genomic')
+		*/
 		const pastmode = {}
 		for (const g of tk.skewer.data) {
 			pastmode[g.chr + '.' + g.pos] = {
