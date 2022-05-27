@@ -508,7 +508,7 @@ export function mayAddSkewerModeOption(tk, block) {
 			.on('click', () => {
 				for (const i of tk.skewer.viewModes) i.inuse = false
 				n.inuse = true
-				tk.menutip.clear()
+				tk.menutip.hide()
 				may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)
 				positionLeftlabelg(tk, block)
 				tk._finish()

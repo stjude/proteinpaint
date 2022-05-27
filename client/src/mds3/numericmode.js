@@ -5,6 +5,8 @@ import { scaleLinear } from 'd3-scale'
 import { axisstyle } from '../../dom/axisstyle'
 import { make_datagroup } from './datagroup'
 import { click_variant } from './clickVariant'
+import { positionLeftlabelg } from './leftlabel'
+import { may_render_skewer } from './skewer'
 
 /*
 ********************** EXPORTED
@@ -823,6 +825,8 @@ function render_axis(tk, nm, block) {
 	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, nm.axisWidth)
 
 	// axis label
+
+	/* split string by space and render one word in each line
 	const lst = (nm.label || defaultLabel).split(' ')
 	const y = (nm.axisheight - lst.length * (nm.dotwidth + 1)) / 2
 	let maxlabelw = 0
@@ -841,6 +845,37 @@ function render_axis(tk, nm, block) {
 			})
 	})
 	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
+	*/
+
+	// render one single text label so can apply click
+	nm.axisg
+		.append('text')
+		.attr('fill', 'black')
+		.attr('font-size', nm.dotwidth)
+		.attr('dominant-baseline', 'central')
+		.attr('text-anchor', 'end')
+		.attr('y', nm.axisheight / 2)
+		.attr('x', -nm.axisWidth)
+		.text(nm.label || defaultLabel) // if too long can use ellipsis, hover to show full
+		.each(function() {
+			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width + 15 + nm.axisWidth)
+		})
+		.on('click', () => {
+			tk.menutip
+				.clear()
+				.showunder(d3event.target)
+				.d.append('div')
+				.text('Cancel')
+				.attr('class', 'sja_menuoption')
+				.on('click', () => {
+					tk.menutip.hide()
+					nm.inuse = false
+					tk.skewer.viewModes.find(i => i.type == 'skewer').inuse = true
+					may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)
+					positionLeftlabelg(tk, block)
+					tk._finish()
+				})
+		})
 }
 
 function trianglePath(p) {
