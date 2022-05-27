@@ -11,6 +11,7 @@ const font = 'Arial'
 /*
 ********************** EXPORTED
 make_leftlabels
+positionLeftlabelg
 ********************** INTERNAL
 makelabel
 mayMakeVariantLabel
@@ -22,7 +23,7 @@ stratifymenu_samplesummary
 /*
 make left labels on main track render
 labels are based on server data
-labels are kept persistent by keys in tk.leftlabels{}
+labels are kept persistent by keys in tk.leftlabels.doms{}
 must call after rendering skewer track
 must reset leftLabelMaxwidth
 
@@ -32,29 +33,31 @@ TODO may not update every label when only updating certain sub track
 export function make_leftlabels(data, tk, block) {
 	tk.leftLabelMaxwidth = tk.tklabel.node().getBBox().width
 
-	let laby = labyspace + block.labelfontsize
+	let laby = 0
 
 	mayMakeVariantLabel(data, tk, block, laby)
-	if (tk.leftlabels.variants) laby += labyspace + block.labelfontsize
+	if (tk.leftlabels.doms.variants) laby += labyspace + block.labelfontsize
 
 	if (data.sampleSummaries) {
 		for (const strat of data.sampleSummaries) {
-			if (!tk.leftlabels[strat.label]) {
-				tk.leftlabels[strat.label] = makelabel(tk, block, laby)
+			if (!tk.leftlabels.doms[strat.label]) {
+				tk.leftlabels.doms[strat.label] = makelabel(tk, block, laby)
 			}
 			const showcount = strat.items.reduce((i, j) => i + (j.mclasses ? 1 : 0), 0)
-			tk.leftlabels[strat.label].text(showcount + ' ' + strat.label + (showcount > 1 ? 's' : '')).on('click', () => {
-				tk.tktip.clear().showunder(d3event.target)
-				stratifymenu_samplesummary(strat, tk, block)
-			})
+			tk.leftlabels.doms[strat.label]
+				.text(showcount + ' ' + strat.label + (showcount > 1 ? 's' : ''))
+				.on('click', () => {
+					tk.tktip.clear().showunder(d3event.target)
+					stratifymenu_samplesummary(strat, tk, block)
+				})
 			laby += labyspace + block.labelfontsize
 		}
 	}
 
 	if (data.sampleSummaries2) {
 		for (const l of data.sampleSummaries2) {
-			if (!tk.leftlabels[l.label1]) tk.leftlabels[l.label1] = makelabel(tk, block, laby)
-			tk.leftlabels[l.label1].text(l.count + ' ' + l.label1 + (l.count > 1 ? 's' : '')).on('click', async () => {
+			if (!tk.leftlabels.doms[l.label1]) tk.leftlabels.doms[l.label1] = makelabel(tk, block, laby)
+			tk.leftlabels.doms[l.label1].text(l.count + ' ' + l.label1 + (l.count > 1 ? 's' : '')).on('click', async () => {
 				const wait = tk.tktip
 					.clear()
 					.showunder(d3event.target)
@@ -75,14 +78,38 @@ export function make_leftlabels(data, tk, block) {
 		}
 	}
 	// done creating all possible left labels
-	for (const k in tk.leftlabels) {
-		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, tk.leftlabels[k].node().getBBox().width)
+	tk.leftlabels.laby = laby
+	positionLeftlabelg(tk, block)
+
+	for (const k in tk.leftlabels.doms) {
+		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, tk.leftlabels.doms[k].node().getBBox().width)
 	}
 	tk.subtk2height.leftlabels = laby
 }
 
+export function positionLeftlabelg(tk, block) {
+	if (tk.leftlabels.laby == 0) {
+		// no labels
+		return
+	}
+	let x = 0
+	if (tk.skewer) {
+		const nm = tk.skewer.viewModes.find(i => i.inuse)
+		if (nm.type == 'numeric') {
+			// in numeric mode now, axis opens to left,
+			// need to prevent left label from overlapping with axis
+			// use y position of last label
+			const lly = tk.leftlabels.laby + labyspace + block.labelfontsize
+			if (lly > nm.toplabelheight - 10) {
+				x = nm.axisWidth
+			}
+		}
+	}
+	tk.leftlabels.g.attr('transform', `translate(${-x},${labyspace + block.labelfontsize})`)
+}
+
 function makelabel(tk, block, y) {
-	return tk.leftlabelg
+	return tk.leftlabels.g
 		.append('text')
 		.attr('font-size', block.labelfontsize)
 		.attr('font-family', font)
@@ -104,8 +131,8 @@ function mayMakeVariantLabel(data, tk, block, laby) {
 	if (!tk.skewer) return
 
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
-	if (!tk.leftlabels.variants) {
-		tk.leftlabels.variants = makelabel(tk, block, laby)
+	if (!tk.leftlabels.doms.variants) {
+		tk.leftlabels.doms.variants = makelabel(tk, block, laby)
 	}
 
 	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
@@ -121,7 +148,7 @@ function mayMakeVariantLabel(data, tk, block, laby) {
 	}
 
 	if (totalcount == 0) {
-		tk.leftlabels.variants
+		tk.leftlabels.doms.variants
 			.text('No variants')
 			.attr('class', '')
 			.style('opacity', 0.5)
@@ -145,7 +172,7 @@ function mayMakeVariantLabel(data, tk, block, laby) {
 
 	if (showcount == 0) {
 		// has data but none displayed
-		tk.leftlabels.variants
+		tk.leftlabels.doms.variants
 			.text('0 out of ' + totalcount + ' variant' + (totalcount > 1 ? 's' : ''))
 			.attr('class', '')
 			.style('opacity', 0.5)
@@ -153,7 +180,7 @@ function mayMakeVariantLabel(data, tk, block, laby) {
 		return
 	}
 
-	tk.leftlabels.variants
+	tk.leftlabels.doms.variants
 		.style('opacity', 1) // restore style in case label was disabled
 		.attr('class', 'sja_clbtext2')
 		.text(

@@ -2,6 +2,7 @@ import { dtsnvindel, dtsv, dtfusionrna, dtitd, dtdel, dtnloss, dtcloss } from '.
 import { skewer_make, settle_glyph, fold_glyph, unfold_glyph, mayHighlightDiskBySsmid } from './skewer.render'
 import { make_datagroup } from './datagroup'
 import { renderNumericMode } from './numericmode'
+import { positionLeftlabelg } from './leftlabel'
 
 /*
 at some point, data.skewer will return aggregated data,
@@ -509,6 +510,7 @@ export function mayAddSkewerModeOption(tk, block) {
 				n.inuse = true
 				tk.menutip.clear()
 				may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)
+				positionLeftlabelg(tk, block)
 				tk._finish()
 			})
 	}

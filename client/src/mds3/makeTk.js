@@ -70,9 +70,13 @@ export async function makeTk(tk, block) {
 	// keys: "skewer", "leftlabels"
 	// value is #pixel in height for that component
 
-	tk.leftlabels = {}
-	// keys: label name, value: label dom
-	// to avoid having to delete all labels upon tk rendering
+	tk.leftlabels = {
+		g: tk.gleft.append('g'), // all labels are rendered here, except track label
+		doms: {},
+		// keys: label name, value: label dom
+		// to avoid having to delete all labels upon tk rendering
+		laby: 0 // cumulative height, 0 for no labels
+	}
 
 	tk._finish = loadTk_finish_closure(tk, block)
 
@@ -100,8 +104,6 @@ export async function makeTk(tk, block) {
 		.text(tk.mds.label || tk.name)
 		.node()
 		.getBBox().width
-
-	tk.leftlabelg = tk.gleft.append('g')
 
 	tk.clear = () => {
 		// called in loadTk, when uninitialized is true

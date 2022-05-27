@@ -69,17 +69,14 @@ export function skewer_make(tk, block) {
 	let globalmaxradius = dotwidth / 2
 	ss.maxheight = 0
 	for (const d of ss.data) {
+		// settings may have been carried over from previous rendering
+		if (d.showmode == undefined) d.showmode = modefold
+		if (d.slabelrotate == undefined) d.slabelrotate = false
 		// determine dimension for this skewer, do not position or render yet
 		// compute radius for each group
-		if (d.showmode == undefined) {
-			d.showmode = modefold
-		} else {
-			// has already been set by past data from genomic panning
-		}
 		d.maxradius = 0
 		d.maxrimwidth = 0
 		d.width = 0
-		d.slabelrotate = false
 		d.slabelwidth = 0
 		for (const r of d.groups) {
 			if (r.occurrence == 1) {
