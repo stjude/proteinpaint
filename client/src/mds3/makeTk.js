@@ -67,8 +67,12 @@ export async function makeTk(tk, block) {
 	// run just once to initiate a track
 
 	tk.subtk2height = {}
-	// keys: skewer, leftlabels, etc
+	// keys: "skewer", "leftlabels"
 	// value is #pixel in height for that component
+
+	tk.leftlabels = {}
+	// keys: label name, value: label dom
+	// to avoid having to delete all labels upon tk rendering
 
 	tk._finish = loadTk_finish_closure(tk, block)
 

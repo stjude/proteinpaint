@@ -431,7 +431,7 @@ function done_tknodata(tk, block) {
 	}
 	tk.skewer.g
 		.append('text')
-		.text((tk.mds.label || tk.name) + ': no mutation in ' + context)
+		.text('No mutation in ' + context)
 		.attr('y', 25)
 		.attr('x', block.width / 2)
 		.attr('text-anchor', 'middle')
