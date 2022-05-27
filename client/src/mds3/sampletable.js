@@ -146,9 +146,9 @@ async function make_multiSampleTable(arg) {
 	// each element of data[] is a sample{}
 
 	// flags for optional columns
-	const has_sample_id = data.find(i => i.sample_id),
-		has_ssm_read_depth = data.find(i => i.ssm_read_depth),
-		has_totalNormal = data.find(i => i.totalNormal)
+	const has_sample_id = data.some(i => i.sample_id),
+		has_ssm_read_depth = data.some(i => i.ssm_read_depth),
+		has_totalNormal = data.some(i => i.totalNormal)
 
 	// count total number of columns
 	let numColumns = 0
@@ -174,9 +174,9 @@ async function make_multiSampleTable(arg) {
 				// no corresponding row was found by this ssm id
 				continue
 			}
-			console.log(row)
 			// for a variant with multiple samples, css is set repeatedly on the row (placeholder)
-			printSampleRow(sample, arg.grid, startDataCol, sampleStartRow)
+			row.style('display', 'contents').style('grid-column-start', startDataCol)
+			printSampleRow(sample, row, startDataCol)
 		}
 	} else {
 		// create new table, one row per sample
@@ -250,22 +250,22 @@ async function make_multiSampleTable(arg) {
 		let startCol = startDataCol
 		if (has_sample_id) {
 			const cell = row.append('div')
-			if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
+			// if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
 			if (startDataCol) {
 				cell.style('grid-column-start', startCol)
 			}
-			if (rowBg) cell.style('background', '#eee')
+			// if (rowBg) cell.style('background', '#eee')
 			printSampleName(sample, arg.tk, cell)
 		}
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
 				const cell = row.append('div').text(termid in sample ? sample[termid] : '')
-				if (startDataCol) {
-					startCol = ++startCol
+				if (startDataCol && !has_sample_id && arg.tk.mds.variant2samples.termidlst[0]) {
+					// startCol = ++startCol
 					cell.style('grid-column-start', startCol)
 				}
-				if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
-				if (rowBg) cell.style('background', '#eee')
+				// if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
+				// if (rowBg) cell.style('background', '#eee')
 			}
 		}
 		if (has_ssm_read_depth) {
@@ -277,22 +277,22 @@ async function make_multiSampleTable(arg) {
 					.append('span')
 					.text(sm.altTumor + ' / ' + sm.totalTumor)
 					.style('margin', '0px 10px')
-				if (startDataCol) {
-					startCol = ++startCol
-					cell.style('grid-column-start', startCol)
-				}
-				if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
+				// if (startDataCol) {
+				// 	startCol = ++startCol
+				// 	cell.style('grid-column-start', startCol)
+				// }
+				// if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
 			}
-			if (rowBg) cell.style('background', '#eee')
+			// if (rowBg) cell.style('background', '#eee')
 		}
 		if (has_totalNormal) {
 			const cell = row.append('div').text('totalNormal' in sample ? sample.totalNormal : '')
-			if (startDataCol) {
-				startCol = ++startCol
-				cell.style('grid-column-start', startCol)
-			}
-			if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
-			if (rowBg) cell.style('background', '#eee')
+			// if (startDataCol) {
+			// 	startCol = ++startCol
+			// 	cell.style('grid-column-start', startCol)
+			// }
+			// if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
+			// if (rowBg) cell.style('background', '#eee')
 		}
 	}
 }

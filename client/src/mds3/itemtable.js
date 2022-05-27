@@ -263,7 +263,8 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 		}
 
 		// create placeholder for showing available samples of this variant
-		ssmid2div.set(m.ssm_id, grid.append('div'))
+		// ssmid2div.set(m.ssm_id, grid.append('div'))
+		ssmid2div.set(m.ssm_id, grid.append('div').style('display', 'grid'))
 	}
 	// return { header: sampleDivHeader, ssmid2div, startCol, grid }
 	return { ssmid2div, startCol, grid }
@@ -341,11 +342,6 @@ function add_csqButton(m, tk, td, table) {
 function isElementInViewport(el) {
 	const rect = el.node().getBoundingClientRect()
 	return (
-		// rect.top >= 0 &&
-		// rect.left >= 0 &&
-		// rect.bottom < (document.documentElement.clientHeight || window.innerHeight) &&
-		// rect.right < (document.documentElement.clientWidth || window.innerWidth)
-
 		// Fix for div appearing still appearing within viewport but without a border,
 		// causing content to render bunched.
 		rect.top >= 5 &&
