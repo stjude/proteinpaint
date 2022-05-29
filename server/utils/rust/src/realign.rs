@@ -442,6 +442,13 @@ pub fn check_read_within_indel_region(
             alignment_side = "right".to_string();
             //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
             //read_indel_start = correct_end_position as usize - sequence.len();
+        } else if &alphabets[0].to_string().as_str() == &"S"
+            && splice_freq == 0
+            && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
+        {
+            alignment_side = "right".to_string();
+            //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
+            //read_indel_start = correct_end_position as usize - sequence.len();
         } else if splice_freq > 0
             && splice_start_cigar == 1
             && right_most_pos > indel_start + ref_length as i64 - alt_length as i64
@@ -449,6 +456,11 @@ pub fn check_read_within_indel_region(
             alignment_side = "right".to_string();
             //read_indel_start = indel_start as usize - correct_end_position as usize + sequence.len();
             //read_indel_start = correct_end_position as usize - sequence.len();
+        } else if &alphabets[alphabets.len() - 1].to_string().as_str() == &"S"
+            && splice_freq == 0
+            && &alphabets[0].to_string().as_str() != &"S"
+        {
+            alignment_side = "left".to_string();
         } else if correct_start_position > indel_start
             && correct_start_position < indel_start + indel_length as i64
             && right_most_pos > indel_start + indel_length as i64
@@ -1394,6 +1406,10 @@ pub fn determine_start_stop_indel_region_in_read(
     let q_seq_ref_vec: Vec<_> = q_seq_ref.chars().collect();
     let mut num_matches_alt = 0;
     let mut num_matches_ref = 0;
+    let mut correctly_aligned_nclt_in_right_alt =
+        correct_end_position - variant_pos - ref_length as i64;
+    let mut correctly_aligned_nclt_in_right_ref =
+        correct_end_position - variant_pos - ref_length as i64;
     if alignment_side == "left".to_string() {
         red_region_start_alt = (variant_pos - correct_start_position).abs();
         red_region_start_ref = (variant_pos - correct_start_position).abs();
@@ -1428,11 +1444,6 @@ pub fn determine_start_stop_indel_region_in_read(
             }
         }
     } else if alignment_side == "right".to_string() {
-        let mut correctly_aligned_nclt_in_right_alt =
-            correct_end_position - variant_pos - ref_length as i64;
-        let mut correctly_aligned_nclt_in_right_ref =
-            correct_end_position - variant_pos - ref_length as i64;
-
         // Check if there are any gaps in the query sequence between end of alignment and end of variant sequence
         for i in
             (q_seq_alt.len() - correctly_aligned_nclt_in_right_alt as usize..q_seq_alt.len()).rev()
@@ -1496,11 +1507,12 @@ pub fn determine_start_stop_indel_region_in_read(
     if red_region_start_alt < 0 {
         //red_region_stop_alt = alt_length as i64;
         //println!("red_disp_region_start_alt:{}", red_region_start_alt);
+        //println!("red_disp_region_stop_alt:{}", red_region_stop_alt);
         //if ref_length > alt_length {
+        //    red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt;
         //} else {
-        //    red_region_stop_alt = red_region_start_alt.abs() as i64 + 2;
+        //    red_region_stop_alt = (red_region_start_alt.abs() - alt_length as i64).abs();
         //}
-        red_region_stop_alt = (red_region_start_alt.abs() - indel_length as i64).abs();
         red_region_start_alt = 0;
         //println!("red_disp_region_start_alt was less than zero");
     }
