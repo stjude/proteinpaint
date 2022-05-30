@@ -1,5 +1,8 @@
 const tape = require('tape')
-const utils = require('../../src/utils')
+const path = require('path')
+const spawn =require('child_process').spawn
+const Readable = require('stream').Readable
+//const utils = require('../../src/utils')
 
 /**************
 requires compiled rust code, see server/utils/rust/README.md
@@ -20,11 +23,12 @@ examples data structure
 	}
 	reads [
 		{
-		n <optional comment on what this read is about>
-		s <read sequence>
-		p <1-based alignment position from BAM file>
-		c <cigar>
-		g <truth, ref/alt/none>
+		n <str, optional comment on what this read is about>
+		s <str, read sequence>
+		p <int, 1-based alignment position from BAM file>
+		c <str, cigar>
+		f <str, flag>
+		g <truth, ref/alt/none/ambi>
 		}
 	]
 	}
@@ -36,7 +40,8 @@ const pphost = 'http://pp-int-test.stjude.org/' // show links using this host
 const kmer_length = 6,
 	weight_no_indel = 0.1,
 	weight_indel = 10,
-	strictness = 1
+	strictness = 1,
+	groupkeys = ['ref','alt','none','ambi']
 
 /**************
  Test sections
@@ -73,7 +78,8 @@ async function runTest(e, test) {
 		if (!r.s) throw '.s (sequence) missing from a read'
 		if (!Number.isInteger(r.p)) throw '.p (position) not integer from a read'
 		if (!r.c) throw '.c (cigar) missing from a read'
-		if (r.g != 'none' && r.g != 'ref' && r.g != 'alt') throw '.g (group) is not none/ref/alt for a read'
+		if (!groupkeys.includes(r.g)) throw '.g (group) is invalid for a read'
+		if(!r.f) throw '.f (flag) missing for a read'
 	}
 
 	// compose input string
@@ -82,35 +88,28 @@ async function runTest(e, test) {
 		'-' +
 		e.seqMut +
 		'-' +
-		e.reads.map(i => i.s).join('-') +
-		':' +
-		e.reads.map(i => i.p).join('-') +
-		':' +
-		e.reads.map(i => i.c).join('-') +
-		':' +
+		e.reads.map(i => i.s).join('-') + // reads
+		'_' +
+		e.reads.map(i => i.p).join('-') + // position
+		'_' +
+		e.reads.map(i => i.c).join('-') + // cigar
+		'_' +
+		e.reads.map(i => i.f).join('-') + // flag
+		'_' +
 		e.variant.pos +
-		':' +
-		e.readlen +
-		':' +
+		'_' +
 		e.variant.ref +
-		':' +
+		'_' +
 		e.variant.alt +
-		':' +
-		kmer_length +
-		':' +
-		weight_no_indel +
-		':' +
-		weight_indel +
-		':' +
+		'_' +
 		strictness +
-		':' +
+		'_' +
 		e.leftFlank +
-		':' +
+		'_' +
 		e.rightFlank
 
 	try {
-		const stdout = await utils.run_rust('indel', input)
-		console.log([112, stdout])
+		const stdout = await run_rust('indel', input)
 		let groups, indices
 		for (const line of stdout.split('\n')) {
 			if (line.includes('output_cat')) {
@@ -181,56 +180,64 @@ const examples = [
 				s: 'CGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACC',
 				p: 119155685,
 				c: '75M',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'softclip on right',
 				s: 'CTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCTGCC',
 				p: 119155692, // 1-based
 				c: '61M14S',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'softclip on right',
 				s: 'CCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCCGCCGCAGC',
 				p: 119155697,
 				c: '56M19S',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'insertion at right',
 				s: 'TCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCTGCCGCAG',
 				p: 119155696,
 				c: '51M8I16M',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'insertion at left',
 				s: 'AAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAG',
 				p: 119155716,
 				c: '37M8I30M',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'softclip on left',
 				s: 'CCACGACTTGACCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTT',
 				p: 119155731,
 				c: '16S59M',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'softclip on left',
 				s: 'CTTGACCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGG',
 				p: 119155737,
 				c: '10S65M',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'ref',
 				s: 'GAACGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTTCTG',
 				p: 119155682,
 				c: '75M',
-				g: 'ref'
+				g: 'ref',
+				f:'99'
 			}
 			/* adding these reads will break the test
 			{
@@ -267,57 +274,89 @@ const examples = [
 				s: 'TTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACAGGCTCGTGGAAGGCATGCTCCCATGTGTGGCAGG',
 				p: 55589708,
 				c: '61M39S',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'softclip',
 				s: 'TGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACAGGCTCCTGAATGGCATGCTCCAAAGTGTGGCAGGAGGAAGACCAGAGCCCCCA',
 				p: 55589727,
 				c: '30M70S',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'softclip',
 				s: 'GCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACAGGCTCGTGAATGGCATGCTCCAAAGTGTGGCAGGAGGGTTTCCCGAGGCCCCAAA',
 				p: 55589729,
 				c: '44M56S',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'del',
 				s: 'AGAAATCCTGACTTACAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGGAGGGTTCCCCGAGCCCCCAATAGATTGGGATTTTTGTCCAGGGACTGAG',
 				p: 55589757,
 				c: '14M3D40M46S',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'del',
 				s: 'AGAAATCCTGACTTACAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAG',
 				p: 55589757,
 				c: '14M3D86M',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'del',
 				s: 'TGACTTACAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTG',
 				p: 55589765,
 				c: '6M3D94M',
-				g: 'alt'
+				g: 'alt',
+				f:'99'
 			},
 			{
 				n: 'distal SNV',
 				s: 'GGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCGGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACGACAGGCTCG',
 				p: 55589683,
 				c: '100M',
-				g: 'ref'
+				g: 'ref',
+				f:'99'
 			},
 			{
 				n: 'SNV at first bp of deletion site',
 				s: 'CACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTGCGACAGGCTCGTGAATGGCATGCTCCCATGTGTGGCCGCAGGG',
 				p: 55589715,
 				c: '100M',
-				g: 'none'
+				g: 'none',
+				f:'99'
 			}
 		]
 	}
 ]
+
+// importing ../../server/src/utils.js has following err
+// /Users/xzhou1/proteinpaint/server/shared/common.js:12
+// export const defaultcolor = '#8AB1D4'
+// ^^^^^^
+function run_rust(binfile, input_data) {
+	return new Promise((resolve, reject) => {
+		const binpath = path.join('../../../server/utils/rust/target/release/', binfile)
+		const ps = spawn(binpath)
+		const stdout = []
+		const stderr = []
+		Readable.from(input_data).pipe(ps.stdin)
+		ps.stdout.on('data', data => stdout.push(data))
+		ps.stderr.on('data', data => stderr.push(data))
+		ps.on('error', err => {
+			reject(err)
+		})
+		ps.on('close', code => {
+			if (code !== 0) reject(`spawned '${binfile}' exited with a non-zero status and this stderr:\n${stderr.join('')}`)
+			//console.log("stdout:",stdout)
+			resolve(stdout.join('').toString())
+		})
+	})
+}
