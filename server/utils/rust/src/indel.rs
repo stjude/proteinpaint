@@ -249,9 +249,9 @@ fn main() {
                     //println!("read_ambiguous:{}", read_ambiguous);
                     //println!("ref_insertion:{}", ref_insertion);
 
-                    let (q_seq_ref, align_ref, _r_seq_ref, ref_comparison) =
+                    let (q_seq_ref, align_ref, r_seq_ref, ref_comparison) =
                         realign::align_single_reads(&spliced_sequence, reference_sequence.clone());
-                    let (q_seq_alt, align_alt, _r_seq_alt, alt_comparison) =
+                    let (q_seq_alt, align_alt, r_seq_alt, alt_comparison) =
                         realign::align_single_reads(&spliced_sequence, alternate_sequence.clone());
                     //println!("ref_comparison:{}", ref_comparison);
                     //println!("alt_comparison:{}", alt_comparison);
@@ -266,6 +266,8 @@ fn main() {
                                 &alignment_side,
                                 &q_seq_alt,
                                 &q_seq_ref,
+                                &r_seq_alt,
+                                &r_seq_ref,
                                 &align_alt,
                                 &align_ref,
                                 correct_start_position,
@@ -390,12 +392,12 @@ fn main() {
                             //    optimized_allele,
                             //);
 
-                            let (q_seq_ref, align_ref, _r_seq_ref, ref_comparison) =
+                            let (q_seq_ref, align_ref, r_seq_ref, ref_comparison) =
                                 realign::align_single_reads(
                                     &spliced_sequence,
                                     reference_sequence.to_string(),
                                 );
-                            let (q_seq_alt, align_alt, _r_seq_alt, alt_comparison) =
+                            let (q_seq_alt, align_alt, r_seq_alt, alt_comparison) =
                                 realign::align_single_reads(
                                     &spliced_sequence,
                                     alternate_sequence.to_string(),
@@ -413,6 +415,8 @@ fn main() {
                                     &alignment_side,
                                     &q_seq_alt,
                                     &q_seq_ref,
+                                    &r_seq_alt,
+                                    &r_seq_ref,
                                     &align_alt,
                                     &align_ref,
                                     correct_start_position,
@@ -721,6 +725,8 @@ fn check_polyclonal_with_read_alignment(
     alignment_side: &String,
     q_seq_alt: &String,
     q_seq_ref: &String,
+    r_seq_alt: &String,
+    r_seq_ref: &String,
     align_alt: &String,
     align_ref: &String,
     correct_start_position: i64,
@@ -742,6 +748,8 @@ fn check_polyclonal_with_read_alignment(
         alignment_side.to_owned(),
         q_seq_alt,
         q_seq_ref,
+        &r_seq_alt,
+        &r_seq_ref,
         correct_start_position,
         correct_end_position,
         variant_pos,
@@ -1157,7 +1165,7 @@ fn preprocess_input(
                 && repeating_sequence_right_temp.len() == 0
             {
                 println!("Left side is repeating");
-                optimized_variant_pos -= repeating_sequence_left_temp.len() as i64; // Need to pass this to main and also change optimized ref and alt allele. Will need to do this later
+                optimized_variant_pos -= repeating_sequence_left_temp.len() as i64;
                 optimized_indel_length = repeating_sequence_left_temp.len() as i64 + indel_length;
             } else if repeating_sequence_left_temp.len() == 0
                 && repeating_sequence_right_temp.len() > 0
@@ -1172,7 +1180,7 @@ fn preprocess_input(
                 && repeating_sequence_right_temp.len() > 0
             {
                 println!("Both sides are repeating");
-                optimized_variant_pos -= repeating_sequence_left_temp.len() as i64; // Need to pass this to main and also change optimized ref and alt allele. Will need to do this later
+                optimized_variant_pos -= repeating_sequence_left_temp.len() as i64;
                 optimized_indel_length = repeating_sequence_left_temp.len() as i64
                     + indel_length
                     + repeating_sequence_right_temp.len() as i64;

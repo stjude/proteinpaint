@@ -67,6 +67,8 @@ fn main() {
                 alignment_side,
                 &q_seq_alt,
                 &q_seq_ref,
+                &r_seq_alt,
+                &r_seq_ref,
                 correct_start_position,
                 correct_end_position,
                 variant_pos,
