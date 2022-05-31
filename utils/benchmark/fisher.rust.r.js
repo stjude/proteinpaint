@@ -2,6 +2,7 @@
 compare fisher test using rust and r
 */
 
+const utils = require('../../server/src/utils.js')
 const lines2R = require('../../server/src/lines2R')
 const path = require('path')
 const Readable = require('stream').Readable
@@ -53,7 +54,7 @@ async function comparePvalues() {
 		r_pv.push(-Math.log10(Number(line.split('\t')[5])))
 	}
 
-	for (const line of (await run_rust(
+	for (const line of (await utils.run_rust(
 		'stats',
 		'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + data.join('-')
 	)).split('\n')) {
@@ -78,7 +79,10 @@ async function testR(data) {
 
 async function testRust(data) {
 	const t = new Date()
-	await run_rust('stats', 'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + data.join('-'))
+	await utils.run_rust(
+		'stats',
+		'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + data.join('-')
+	)
 	return new Date() - t
 }
 
@@ -94,6 +98,7 @@ function int() {
 	return Math.max(1, Math.ceil(Math.random() * 1000))
 }
 
+/*
 // importing ../../server/src/utils.js has following err
 // /Users/xzhou1/proteinpaint/server/shared/common.js:12
 // export const defaultcolor = '#8AB1D4'
@@ -117,3 +122,4 @@ function run_rust(binfile, input_data) {
 		})
 	})
 }
+*/
