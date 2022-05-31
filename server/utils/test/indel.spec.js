@@ -1,13 +1,15 @@
 const tape = require('tape')
 const path = require('path')
-const spawn =require('child_process').spawn
+const spawn = require('child_process').spawn
 const Readable = require('stream').Readable
 //const utils = require('../../src/utils')
 
-/**************
-requires compiled rust code, see server/utils/rust/README.md
+/*
+to compile rust, see server/utils/rust/README.md
 
-examples data structure
+run as: $ node indel.spec.js
+
+"examples[]" array structure
 [
 	{
 	pplink: <provide the pplink of this example for manual inspection>
@@ -15,7 +17,6 @@ examples data structure
 	rightFlank
 	seqRef <reference seq>
 	seqMut <mutated seq>
-	readlen <read length>
 	variant {
 		pos <0-based!!!>
 		ref
@@ -23,25 +24,46 @@ examples data structure
 	}
 	reads [
 		{
-		n <str, optional comment on what this read is about>
-		s <str, read sequence>
-		p <int, 1-based alignment position from BAM file>
-		c <str, cigar>
-		f <str, flag>
-		g <truth, ref/alt/none/ambi>
+			n <str, optional comment on what this read is about>
+			s <str, read sequence>
+			p <int, 1-based alignment position from BAM file>
+			c <str, cigar>
+			f <int, flag>
+			g <str, one string from groupkeys[]>
 		}
 	]
 	}
 ]
+
+to add a new test example:
+- first obtain the bam slice file on your computer and the browser url for it
+- uncomment console.log() line at 160 of bam.kmer.indel.js
+- run the example from browser, use server log to create a new object in examples[] array
+- to add individual reads of this example:
+  - click on a representative read and show the read panel
+  - from the panel, copy read sequence, start position, cigar, flag
+    to construct the object {n,s,p,c,f,g}
+	enter appropriate group (ref/alt/none/amb)
+	and add optional note (e.g. "softclip on left")
+
+if indel binary input format is changed, update code to assemble the input string
+if output format is changed (expecting below output), update code:
+
+Number of reads analyzed: 8
+alternate_forward_count:6
+alternate_reverse_count:0
+reference_forward_count:1
+reference_reverse_count:0
+strand_probability:-0.00
+output_cat:"ref:none:alt:alt:alt:alt:alt:alt"
+output_gID:"6:7:0:1:2:3:4:5"
+output_diff_scores:"-0.1537931034482759:-0.01869158878504673:0.02717086834733884:0.027087378640776705:0.02656130997715156:0.027378640776698937:0.029126213592232997:0.029126213592232997"
 ***************/
+
 const pphost = 'http://pp-int-test.stjude.org/' // show links using this host
 
-// these are constants. can be overwritten by the same settings in the examples
-const kmer_length = 6,
-	weight_no_indel = 0.1,
-	weight_indel = 10,
-	strictness = 1,
-	groupkeys = ['ref','alt','none','ambi']
+const strictness = 1,
+	groupkeys = ['ref', 'alt', 'none', 'amb'] // corresponds to the same values returned by rust
 
 /**************
  Test sections
@@ -67,7 +89,6 @@ async function runTest(e, test) {
 	if (!e.rightFlank) throw '.rightFlank missing'
 	if (!e.seqRef) throw '.seqRef missing'
 	if (!e.seqMut) throw '.seqMut missing'
-	if (!Number.isInteger(e.readlen)) throw '.readlen is not integer'
 	if (!e.variant) throw '.variant{} missing'
 	if (!Number.isInteger(e.variant.pos)) throw '.variant.pos is not integer'
 	if (!e.variant.ref) throw '.variant.ref missing'
@@ -79,7 +100,7 @@ async function runTest(e, test) {
 		if (!Number.isInteger(r.p)) throw '.p (position) not integer from a read'
 		if (!r.c) throw '.c (cigar) missing from a read'
 		if (!groupkeys.includes(r.g)) throw '.g (group) is invalid for a read'
-		if(!r.f) throw '.f (flag) missing for a read'
+		if (!Number.isInteger(r.f)) throw '.f (flag) not integer for a read'
 	}
 
 	// compose input string
@@ -127,12 +148,15 @@ async function runTest(e, test) {
 					.map(Number)
 			}
 		}
-		if (groups.length != indices.length) test.fail('output_cat and output_gID are of different length')
-		if (indices.length != e.reads.length) test.fail('Expecting ' + e.reads.length + ' reads but got ' + indices.length)
+		if (!groups) throw 'output_cat: line missing'
+		if (!indices) throw 'output_gID: line missing'
+		test.equal(groups.length, indices.length, 'output_cat and output_gID should be same length')
+		test.equal(indices.length, e.reads.length, 'indices.length should equal e.reads.length')
+
 		const results = [] // in the same order as e.reads[]
 		for (let i = 0; i < indices.length; i++) results[indices[i]] = groups[i]
 
-		// detect reads that fail the test
+		// find reads with wrong classification
 		let wrongcount = 0
 		for (let i = 0; i < results.length; i++) {
 			if (e.reads[i].g != results[i]) wrongcount++
@@ -148,7 +172,7 @@ async function runTest(e, test) {
 			}
 			test.fail(`Misassigned ${wrongcount} reads:\nRead\tTruth\tResult\n${lst.join('\n')}`)
 		} else {
-			test.pass(`all passed`)
+			test.pass('classifications are correct')
 		}
 	} catch (e) {
 		throw e
@@ -168,7 +192,6 @@ const examples = [
 			'GTACCCTAGGTGGAACGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGTAAAGCATTTT',
 		seqMut:
 			'GTACCCTAGGTGGAACGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGTAAAGCATTTT',
-		readlen: 75,
 		variant: {
 			pos: 119155745, // 0-based
 			ref: 'T',
@@ -180,75 +203,72 @@ const examples = [
 				s: 'CGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACC',
 				p: 119155685,
 				c: '75M',
-				g: 'alt',
-				f:'99'
+				f: 163,
+				g: 'alt'
 			},
 			{
 				n: 'softclip on right',
 				s: 'CTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCTGCC',
-				p: 119155692, // 1-based
+				p: 119155692,
 				c: '61M14S',
-				g: 'alt',
-				f:'99'
-			},
-			{
-				n: 'softclip on right',
-				s: 'CCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCCGCCGCAGC',
-				p: 119155697,
-				c: '56M19S',
-				g: 'alt',
-				f:'99'
+				f: 163,
+				g: 'alt'
 			},
 			{
 				n: 'insertion at right',
 				s: 'TCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCTGCCGCAG',
 				p: 119155696,
 				c: '51M8I16M',
-				g: 'alt',
-				f:'99'
+				f: 83,
+				g: 'alt'
 			},
 			{
 				n: 'insertion at left',
 				s: 'AAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAG',
 				p: 119155716,
 				c: '37M8I30M',
-				g: 'alt',
-				f:'99'
+				f: 163,
+				g: 'alt'
 			},
 			{
 				n: 'softclip on left',
 				s: 'CCACGACTTGACCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTT',
 				p: 119155731,
 				c: '16S59M',
-				g: 'alt',
-				f:'99'
+				f: 163,
+				g: 'alt'
 			},
 			{
 				n: 'softclip on left',
 				s: 'CTTGACCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGG',
 				p: 119155737,
 				c: '10S65M',
-				g: 'alt',
-				f:'99'
+				f: 163,
+				g: 'alt'
 			},
 			{
-				n: 'ref',
-				s: 'GAACGGCCGCCTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACCACGACTTGACCTTCTG',
-				p: 119155682,
+				n: 'only one read is ref',
+				s: 'CTTCTCCATTCTCCATGGCCCCACAAGCTTCCCTTCCCCCGGTGCCACTACGACTTGACCTTCTGCCGCAGCGAG',
+				p: 119155692,
 				c: '75M',
-				g: 'ref',
-				f:'99'
-			}
-			/* adding these reads will break the test
-			{
-				n:'mismatch on left',
-				s:'CCTGGTGACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGCTGCT',
-				p:119155742,
-				c:'69M88N6M',
-				g:'alt',
+				f: 163,
+				g: 'ref'
 			},
-
-			*/
+			{
+				n: 'none read with 8 insertion',
+				s: 'GCCACCACGACTTGACCTGGCGACCTTCTGCCGCAGCGAGTATGCGTTCCCTCAAGTGCTTCTGCTCTTGGAACT',
+				p: 119155735,
+				c: '18M8I49M',
+				f: 163,
+				g: 'none'
+			},
+			{
+				s: 'ACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGCTGCTTCTGGCT',
+				p: 119155749,
+				c: '62M88N13M',
+				f: 163,
+				g: 'amb'
+			}
 		]
 	},
 	{
@@ -256,13 +276,12 @@ const examples = [
 		pplink:
 			pphost +
 			'?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A',
+		leftFlank: 'AGGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTT',
+		rightFlank: 'CAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGAGATGATT',
 		seqRef:
 			'AGGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACGACAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGAGATGATT',
 		seqMut:
 			'AGGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGAGATGATT',
-		leftFlank: 'AGGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTT',
-		rightFlank: 'CAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGAGATGATT',
-		readlen: 100,
 		variant: {
 			pos: 55589770,
 			ref: 'ACGA',
@@ -270,77 +289,57 @@ const examples = [
 		},
 		reads: [
 			{
-				n: 'softclip',
+				n: 'with softclip',
 				s: 'TTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACAGGCTCGTGGAAGGCATGCTCCCATGTGTGGCAGG',
 				p: 55589708,
 				c: '61M39S',
-				g: 'alt',
-				f:'99'
+				f: 99,
+				g: 'alt'
 			},
 			{
-				n: 'softclip',
-				s: 'TGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACAGGCTCCTGAATGGCATGCTCCAAAGTGTGGCAGGAGGAAGACCAGAGCCCCCA',
-				p: 55589727,
-				c: '30M70S',
-				g: 'alt',
-				f:'99'
-			},
-			{
-				n: 'softclip',
+				n: 'with softclip',
 				s: 'GCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACAGGCTCGTGAATGGCATGCTCCAAAGTGTGGCAGGAGGGTTTCCCGAGGCCCCAAA',
 				p: 55589729,
 				c: '44M56S',
-				g: 'alt',
-				f:'99'
+				f: 99,
+				g: 'alt'
 			},
 			{
-				n: 'del',
+				n: 'with del',
 				s: 'AGAAATCCTGACTTACAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGGAGGGTTCCCCGAGCCCCCAATAGATTGGGATTTTTGTCCAGGGACTGAG',
 				p: 55589757,
 				c: '14M3D40M46S',
-				g: 'alt',
-				f:'99'
-			},
-			{
-				n: 'del',
-				s: 'AGAAATCCTGACTTACAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAG',
-				p: 55589757,
-				c: '14M3D86M',
-				g: 'alt',
-				f:'99'
-			},
-			{
-				n: 'del',
-				s: 'TGACTTACAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTG',
-				p: 55589765,
-				c: '6M3D94M',
-				g: 'alt',
-				f:'99'
+				f: 99,
+				g: 'alt'
 			},
 			{
 				n: 'distal SNV',
 				s: 'GGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCGGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACGACAGGCTCG',
 				p: 55589683,
 				c: '100M',
-				g: 'ref',
-				f:'99'
+				f: 83,
+				g: 'ref'
 			},
 			{
 				n: 'SNV at first bp of deletion site',
 				s: 'CACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTGCGACAGGCTCGTGAATGGCATGCTCCCATGTGTGGCCGCAGGG',
 				p: 55589715,
 				c: '100M',
-				g: 'none',
-				f:'99'
+				f: 99,
+				g: 'none'
+			},
+			{
+				s: 'GATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTAC',
+				p: 55589673,
+				c: '100M',
+				f: 99,
+				g: 'amb'
 			}
 		]
 	}
 ]
 
-// importing ../../server/src/utils.js has following err
-// /Users/xzhou1/proteinpaint/server/shared/common.js:12
-// export const defaultcolor = '#8AB1D4'
-// ^^^^^^
+// same as utils/benchmark/fisher.rust.r.js
 function run_rust(binfile, input_data) {
 	return new Promise((resolve, reject) => {
 		const binpath = path.join('../../../server/utils/rust/target/release/', binfile)

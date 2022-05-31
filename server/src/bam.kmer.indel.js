@@ -155,7 +155,14 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		const quality_scores = templates_info.map(i => i.sam_info.split('\t')[10]).join('-')
 		input_data += clustalo_read_alignment + '_' + quality_scores + '_' + is_realignment_reads
 	}
-	//console.log({seqRef:refseq, seqMut:altseq, leftFlank:leftflankseq, rightFlank:rightflankseq, readlen: segbplen, variant: q.variant}) // uncomment this line to help creating tests at server/utils/test/rust_indel.spec.js
+
+	/* uncomment this line to help creating tests at server/utils/test/indel.spec.js
+	console.log('indel test:',{
+		leftFlank:leftflankseq, rightFlank:rightflankseq,
+		seqRef:refseq, seqMut:altseq,
+		variant: q.variant
+	})
+	*/
 
 	//fs.writeFile('test.txt', input_data, function(err) {
 	//	// For catching input to rust pipeline, in case of an error

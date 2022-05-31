@@ -2890,6 +2890,7 @@ async function convertunmappedread2html(seg, genome, query) {
 		info: `<div style='margin-top:10px'>
 			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${Math.abs(seg.seq.length)} bp,
 			<span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
+			<span style="opacity:.5;font-size:.7em">FLAG</span>: ${seg.flag}
 			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
 		  </div>
 		  <ul style='padding-left:15px'>${lst.join('')}</ul>`
@@ -3068,6 +3069,7 @@ async function convertread2html(seg, genome, query) {
 			<span style="opacity:.5;font-size:.7em">THIS READ</span>: ${refstop - refstart} bp,
 			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${Math.abs(seg.tlen)} bp,
 			<span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
+			<span style="opacity:.5;font-size:.7em">FLAG</span>: ${seg.flag}
 			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
 		  </div>
 		  <ul style='padding-left:15px'>${lst.join('')}</ul>`,
