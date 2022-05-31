@@ -97,7 +97,8 @@ export function isUsableTerm(term, _usecase, ds) {
 			}
 			if (usecase.detail == 'term0') {
 				// divide by
-				uses.add('plot')
+				if (term.isleaf) uses.add('plot')
+				if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
 				return uses
 			}
 
