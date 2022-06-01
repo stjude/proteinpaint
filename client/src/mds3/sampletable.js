@@ -150,7 +150,7 @@ function printSampleName(sample, tk, div) {
 async function make_multiSampleTable(arg) {
 	// create horizontal table to show multiple samples, one sample per row
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
-	const [data, numofcases] = await arg.tk.mds.variant2samples.get(arg)
+	const data = await arg.tk.mds.variant2samples.get(arg)
 	// each element of data[] is a sample{}
 
 	// flags for optional columns

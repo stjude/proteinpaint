@@ -19,7 +19,6 @@ mayInitSkewer
 	setSkewerMode
 mayaddGetter_m2csq
 mayaddGetter_variant2samples
-mayaddGetter_sampleSummaries2
 parse_client_config
 configPanel
 _load
@@ -94,7 +93,6 @@ export async function makeTk(tk, block) {
 
 	await init_termdb(tk, block)
 
-	mayaddGetter_sampleSummaries2(tk, block)
 	mayaddGetter_variant2samples(tk, block)
 	mayaddGetter_m2csq(tk, block)
 
@@ -310,25 +308,6 @@ function mayaddGetter_m2csq(tk, block) {
 		}
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (tk.token) headers['X-Auth-Token'] = tk.token
-		return await dofetch3('mds3?' + lst.join('&'), { headers }, { serverData: tk.cache })
-	}
-}
-
-function mayaddGetter_sampleSummaries2(tk, block) {
-	if (!tk.mds.sampleSummaries2) return
-	if (tk.mds.sampleSummaries2.get) return
-	tk.mds.sampleSummaries2.get = async level => {
-		// level is one of sampleSummaries2.lst[]
-		const lst = [
-			'genome=' + block.genome.name,
-			'dslabel=' + tk.mds.label,
-			'samplesummary2_mclassdetail=' + encodeURIComponent(JSON.stringify(level))
-		]
-		rangequery_rglst(tk, block, lst)
-		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-		if (tk.set_id) lst.push('set_id=' + tk.set_id)
-		if (tk.token) headers['X-Auth-Token'] = tk.token
-		if (tk.filter0) lst.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
 		return await dofetch3('mds3?' + lst.join('&'), { headers }, { serverData: tk.cache })
 	}
 }

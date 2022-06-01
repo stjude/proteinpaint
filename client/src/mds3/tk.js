@@ -73,14 +73,6 @@ function getParameter(tk, block) {
 			// need to load skewer data
 			par.push('skewer=1')
 		}
-		if (tk.mds.sampleSummaries) {
-			// need to make sample summary
-			par.push('samplesummary=1')
-		}
-		if (tk.mds.sampleSummaries2) {
-			// need to make sample summary using different method but still based on same querying parameter
-			par.push('samplesummary2=1')
-		}
 		if (tk.set_id) {
 			// quick fix!!!
 			par.push('set_id=' + tk.set_id)

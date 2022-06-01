@@ -229,6 +229,7 @@ function mayMapRefseq2ensembl(q, ds) {
 	if mapped, assign ensembl to q.isoform, and return the original refseq
 	on any failure, return undefined
 	*/
+	if (!q.isoform) return
 	let refseq
 	if (q.isoform[0] == 'N' && ds.refseq2ensembl_query) {
 		const x = ds.refseq2ensembl_query.get(q.isoform)
@@ -440,7 +441,6 @@ export function validate_query_genecnv(ds) {
 
 // for variant2samples query
 export async function getSamples_gdcapi(q, termidlst, fields, ds) {
-	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
 	const api = ds.variant2samples.gdcapi
 	if (!fields) throw 'invalid get type of q.get'
 	if (q.tid2value && Object.keys(q.tid2value).length) {
@@ -451,8 +451,13 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 		}
 	}
 
-	const query =
-		api.endpoint + '?size=' + (q.size || api.size) + '&from=' + (q.from || 0) + '&fields=' + fields.join(',')
+	const query = api.endpoint + '?size=10000&fields=' + fields.join(',')
+	// no longer paginates
+	//'&size=' + (q.size || api.size) + '&from=' + (q.from || 0)
+
+	// it may query with isoform
+	mayMapRefseq2ensembl(q, ds)
+
 	const filter = JSON.stringify(api.filters(q))
 	const headers = getheaders(q) // will be reused below
 
@@ -480,13 +485,17 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 			sample.ssm_id = s.ssm.ssm_id
 		}
 
-		// get printable sample id
-		if (ds.variant2samples.sample_id_key) {
-			sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
-		} else if (ds.variant2samples.sample_id_getter) {
-			// must pass request header to getter in case requesting a controlled sample via a user token
-			// this is gdc-specific logic and should not impact generic mds3
-			sample.sample_id = await ds.variant2samples.sample_id_getter(s.case, headers)
+		if (fields.length == 1 && fields[0] == 'case.case_id') {
+			sample.sample_id = s.case.case_id
+		} else {
+			// get printable sample id
+			if (ds.variant2samples.sample_id_key) {
+				sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
+			} else if (ds.variant2samples.sample_id_getter) {
+				// must pass request header to getter in case requesting a controlled sample via a user token
+				// this is gdc-specific logic and should not impact generic mds3
+				sample.sample_id = await ds.variant2samples.sample_id_getter(s.case, headers)
+			}
 		}
 
 		/* gdc-specific logic
@@ -512,13 +521,15 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 				}
 			}
 		}
+
 		/////////////////// hardcoded logic to use .observation
 		// FIXME apply a generalized mechanism to record read depth (or just use sampledata.read_depth{})
 		may_add_readdepth(s.case, sample)
+
 		///////////////////
 		samples.push(sample)
 	}
-	return [samples, total]
+	return samples
 }
 
 function may_add_readdepth(acase, sample) {

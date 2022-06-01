@@ -68,16 +68,6 @@ function summarize_mclass(mlst) {
 	return [...cc].sort((i, j) => j[1] - i[1])
 }
 
-async function may_sampleSummary(q, ds, result) {
-	if (!q.samplesummary) return
-	if (!ds.sampleSummaries) throw 'sampleSummaries missing from ds'
-	const datalst = [result.skewer]
-	if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
-	const labels = ds.sampleSummaries.makeholder(q)
-	ds.sampleSummaries.summarize(labels, q, datalst)
-	result.sampleSummaries = await ds.sampleSummaries.finalize(labels, q)
-}
-
 function init_q(query, genome) {
 	// cannot validate filter0 here as ds will be required and is not made yet
 	if (query.hiddenmclasslst) {
@@ -115,6 +105,10 @@ function finalize_result(q, ds, result) {
 				delete m.samples
 			}
 		}
+	}
+	if (result._sampleSet) {
+		result.sampleTotalNumber = result._sampleSet.size
+		delete result._sampleSet
 	}
 }
 
@@ -157,14 +151,6 @@ async function load_driver(q, ds, result) {
 		throw 'm2csq not supported on this dataset'
 	}
 
-	if (q.samplesummary2_mclassdetail) {
-		if (ds.sampleSummaries2) {
-			result.strat = await ds.sampleSummaries2.get_mclassdetail.get(q)
-			return
-		}
-		throw 'sampleSummaries2 not supported on this dataset'
-	}
-
 	if (q.forTrack) {
 		// to load things for block track
 
@@ -172,48 +158,45 @@ async function load_driver(q, ds, result) {
 			// get skewer data
 			result.skewer = [] // for skewer track
 
-			// run queries in parallel
-			const promises = []
-
 			if (ds.queries.snvindel) {
 				// the query will resolve to list of mutations, to be flattened and pushed to .skewer[]
-				const p = query_snvindel(q, ds).then(d => {
-					//console.log('snv')
-					result.skewer.push(...d)
-				})
-				promises.push(p)
+				const d = await query_snvindel(q, ds)
+				result.skewer.push(...d)
+
+				// quick fix
+				if (ds.queries.snvindel.getSamples) {
+					const p = JSON.parse(JSON.stringify(q))
+					p.get = ds.variant2samples.type_samplesIdOnly
+					const samples = await ds.variant2samples.get(p)
+					// samples is array of {sample_id}
+					// later may join sample sets from snvindel and fusion together using Set
+
+					// missing holder, init
+					if (!result._sampleSet) result._sampleSet = new Set()
+					// collect sample ids into the set
+					for (const s of samples) result._sampleSet.add(s.sample_id)
+				}
 			}
+
 			if (ds.queries.svfusion) {
 				// todo
-				promises.push(query_svfusion(q, ds).then(d => result.skewer.push(...d)))
+				const d = await query_svfusion(q, ds)
+				result.skewer.push(...d)
+				if (ds.queries.svfusion.getSamples) {
+					// may duplicate same steps as snvindel.getSamples?
+					if (!result._sampleSet) result._sampleSet = new Set()
+					// add fusion samples to _sampleSet
+				}
 			}
-			if (ds.queries.genecnv) {
-				promises.push(query_genecnv(q, ds).then(d => result.genecnvNosample))
-				// for gene cnv with sample details, need api details
-				//result.genecnvAtsample = ....
-				// should return genecnv at sample-level, then will be combined with snvindel for summary
-			}
-
-			if (q.samplesummary2) {
-				// FIXME change to issue one query per ds.sampleSummaries2.lst[]
-				const p = ds.sampleSummaries2.get_number.get(q).then(d => {
-					//console.log('s2')
-					result.sampleSummaries2 = d
-				})
-				promises.push(p)
-			}
-
-			await Promise.all(promises)
 
 			filter_data(q, result)
 
 			result.mclass2variantcount = summarize_mclass(result.skewer)
-
-			await may_sampleSummary(q, ds, result)
-
-			finalize_result(q, ds, result)
 		}
-		// other types of data e.g. cnvpileup
+
+		// add queries for new data types
+
+		finalize_result(q, ds, result)
 		return
 	}
 	// other query type
