@@ -6,6 +6,7 @@ const Readable = require('stream').Readable
 
 /*
 to compile rust, see server/utils/rust/README.md
+Syntax for compiling the rust code: cd ~/proteinpaint/server/utils/rust && cargo build --release
 
 run as: $ node indel.spec.js
 
@@ -62,7 +63,7 @@ output_diff_scores:"-0.1537931034482759:-0.01869158878504673:0.02717086834733884
 
 const pphost = 'http://pp-int-test.stjude.org/' // show links using this host
 
-const strictness = 1,
+const strictness = 1, // Can be manually changed to zero
 	groupkeys = ['ref', 'alt', 'none', 'amb'] // corresponds to the same values returned by rust
 
 /**************
@@ -418,6 +419,35 @@ const examples = [
 				c: '151M',
 				f: 147,
 				g: 'alt'
+			},
+			{
+				n: 'Deletion (supporting alt) with mismatch, different strictness values gives different results',
+				s:
+					'GAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGCGCAGCGCCTCACACCCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGG',
+				p: 7578308,
+				c: '74M18D77M',
+				f: 163,
+				g: 'none'
+			},
+			{
+				n:
+					'Read supporting reference but with mismatch at variant region, different strictness values gives different results',
+				s:
+					'GGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCCATGGTGGGGGCGGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGCGTGCCGGGCGGGGGT',
+				p: 7578330,
+				c: '151M',
+				f: 83,
+				g: 'none',
+				g_0: 'ref' // Value for strictness = 0
+			},
+			{
+				n: 'Read supporting reference but mismatch is outside variant, both strictness values should yield same result',
+				s:
+					'GGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCTCATGGTGGGGGCGGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGT',
+				p: 7578330,
+				c: '151M',
+				f: 83,
+				g: 'ref'
 			}
 		]
 	}
