@@ -31,6 +31,7 @@ run as: $ node indel.spec.js
 			c <str, cigar>
 			f <int, flag>
 			g <str, one string from groupkeys[]>
+                        g_0 <str, one string from groupkeys[] for strictness = 0 (is optional and used when different strictness values yield different results for that read)>
 		}
 	]
 	}
