@@ -100,6 +100,7 @@ async function click2sunburst(d, tk, block, tippos) {
 				throw 'unknown variant2samples.variantkey'
 			})
 			arg.mlst[0].occurrence = d2.value
+
 			/* do not call variant_details() as no need to show info on variants
 			only need to show sample display
 			*/

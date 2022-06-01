@@ -105,7 +105,6 @@ function getParameter(tk, block) {
 	if (tk.legend.mclass.hiddenvalues.size) {
 		par.push('hiddenmclasslst=' + [...tk.legend.mclass.hiddenvalues].join(','))
 	}
-	//par.push('samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp))
 	return [par.join('&'), headers]
 }
 

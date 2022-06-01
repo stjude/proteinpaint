@@ -130,7 +130,6 @@ export function may_render_skewer(data, tk, block) {
 
 	if (!tk.skewer.data || tk.skewer.data.length == 0) {
 		done_tknodata(tk, block)
-		tk.subtk2height.skewer = 40
 		return
 	}
 
@@ -437,6 +436,8 @@ function done_tknodata(tk, block) {
 		.attr('x', block.width / 2)
 		.attr('text-anchor', 'middle')
 		.attr('dominant-baseline', 'center')
+
+	tk.subtk2height.skewer = 40
 }
 
 function updateViewModes(tk, mlst) {

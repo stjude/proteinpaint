@@ -48,7 +48,7 @@ export function make_leftlabels(data, tk, block) {
 	for (const k in tk.leftlabels.doms) {
 		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, tk.leftlabels.doms[k].node().getBBox().width)
 	}
-	tk.subtk2height.leftlabels = laby
+	tk.subtk2height.leftlabels = laby + 20 // account for tk.tklabel
 }
 
 export function positionLeftlabelg(tk, block) {
@@ -269,16 +269,17 @@ function mayMakeSampleLabel(data, tk, block, laby) {
 		tk.leftlabels.doms.samples = makelabel(tk, block, laby)
 	}
 	tk.leftlabels.doms.samples
-		.style('opacity', 1) // restore style in case label was disabled
-		.attr('class', 'sja_clbtext2')
 		.text(`${data.sampleTotalNumber} case${data.sampleTotalNumber > 1 ? 's' : ''}`)
 		.on('click', () => {
 			tk.menutip.clear().showunder(d3event.target)
-			menu_samples(tk, block)
+			menu_samples(data, tk, block)
 		})
 }
 
-function menu_samples(tk, block) {
+function menu_samples(data, tk, block) {
+	if (data.sampleTotalNumber < 10) {
+		// list samples
+	}
 	tk.menutip.d
 		.append('div')
 		.text('Todo')

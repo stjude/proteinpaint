@@ -1,6 +1,5 @@
 const { stratinput } = require('../shared/tree')
 const { getSamples_gdcapi } = require('./mds3.gdc')
-const samplefilter = require('./mds3.samplefilter')
 const { get_densityplot } = require('./mds3.densityPlot')
 
 /*
@@ -63,9 +62,6 @@ async function get_samples(q, ds) {
 		samples = await getSamples_gdcapi(q, termidlst, fields, ds)
 	} else {
 		throw 'unknown query method for variant2samples'
-	}
-	if (q.samplefiltertemp) {
-		return samplefilter.run(samples, q.samplefiltertemp)
 	}
 	return samples
 }

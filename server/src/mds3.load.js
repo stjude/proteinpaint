@@ -1,7 +1,6 @@
 const app = require('./app')
 const path = require('path')
 const utils = require('./utils')
-const samplefilter = require('./mds3.samplefilter')
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -70,14 +69,6 @@ function init_q(query, genome) {
 	if (query.hiddenmclasslst) {
 		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))
 		delete query.hiddenmclasslst
-	}
-	{
-		const filter = samplefilter.parsearg(query)
-		if (filter) {
-			query.samplefiltertemp = filter
-		} else {
-			delete query.samplefiltertemp
-		}
 	}
 	if (query.rglst) query.rglst = JSON.parse(query.rglst)
 	if (query.tid2value) query.tid2value = JSON.parse(query.tid2value)
@@ -242,13 +233,6 @@ function filter_data(q, result) {
 
 			// filter by other variant attributes
 
-			// filter by sample attributes
-			if (q.samplefiltertemp) {
-				if (!m.samples) continue
-				const samples = samplefilter.run(m.samples, q.samplefiltertemp)
-				if (samples.length == 0) continue
-				m.samples = samples
-			}
 			newskewer.push(m)
 		}
 		result.skewer = newskewer

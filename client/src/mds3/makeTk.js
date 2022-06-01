@@ -19,7 +19,6 @@ mayInitSkewer
 	setSkewerMode
 mayaddGetter_m2csq
 mayaddGetter_variant2samples
-parse_client_config
 configPanel
 _load
 
@@ -82,8 +81,6 @@ export async function makeTk(tk, block) {
 	tk.cache = {}
 	tk.itemtip = new Menu()
 	tk.menutip = new Menu({ padding: '' }) // to show menu options without margin
-	tk.samplefiltertemp = {}
-	// switch to .samplefilter with a filter.js object
 
 	tk.load = _load(tk, block) // shorthand
 
@@ -162,10 +159,11 @@ export async function makeTk(tk, block) {
 function loadTk_finish_closure(tk, block) {
 	return data => {
 		// derive tk height
-		tk.height_main = tk.toppad + tk.bottompad
+		tk.height_main = 0
 		for (const k in tk.subtk2height) {
 			tk.height_main = Math.max(tk.height_main, tk.subtk2height[k])
 		}
+		tk.height_main += tk.toppad + tk.bottompad
 
 		if (data) {
 			updateLegend(data, tk, block)
@@ -314,7 +312,6 @@ function mayaddGetter_m2csq(tk, block) {
 
 function mayaddGetter_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
-	if (tk.mds.variant2samples.get) return // track from the same mds has already been intialized
 
 	// getter are implemented differently based on data sources
 	if (tk.custom_variants) {
@@ -345,19 +342,13 @@ function mayaddGetter_variant2samples(tk, block) {
 	// server-hosted official dataset
 	tk.mds.variant2samples.get = async arg => {
 		/* arg{}
-		.tk1
 		.querytype
 		.mlst
 		.tid2value{}
-
-		TODO support alternative data sources
-		where all data are hosted on client
 		*/
-		// hardcode to getsummary and using fixed levels
 		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', 'get=' + arg.querytype]
-		if (arg.tk1) par.push('samplefiltertemp=' + JSON.stringify(arg.tk1.samplefiltertemp)) // must use tk1 but not tk for this one
-		if (arg.size) par.push('size=' + arg.size)
-		if (arg.from != undefined) par.push('from=' + arg.from)
+		//if (arg.size) par.push('size=' + arg.size)
+		//if (arg.from != undefined) par.push('from=' + arg.from)
 		if (tk.mds.variant2samples.variantkey == 'ssm_id') {
 			// TODO detect too long string length that will result url-too-long error
 			// in such case, need alternative query method
@@ -378,12 +369,6 @@ function mayaddGetter_variant2samples(tk, block) {
 		if (!data.variant2samples) throw 'result error'
 		return data.variant2samples
 	}
-}
-
-function parse_client_config(tk) {
-	/* for both official and custom
-configurations and their location are not stable
-*/
 }
 
 function configPanel(tk, block) {}
