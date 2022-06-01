@@ -1,5 +1,6 @@
 import { fillbar } from '../../dom/fillbar'
 import { get_list_cells } from '../../dom/gridutils'
+import { select as d3select } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -31,8 +32,13 @@ mlst can be mixture of data types, doesn't matter
 const cutoff_tableview = 10
 
 export async function init_sampletable(arg) {
-	const wait = arg.div.append('div').text('Loading...')
-
+	const wait = arg.div
+		.append('div')
+		.text('Loading...')
+		.style('padding', '10px')
+		.style('color', '#8AB1D4')
+		.style('font-size', '1.25em')
+		.style('font-weight', 'bold')
 	const numofcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0) // sum of occurrence of mlst[]
 
 	// may not be used!
@@ -135,6 +141,7 @@ function printSampleName(sample, tk, div) {
 		)
 		a.attr('target', '_blank')
 		a.text(sample.sample_id)
+		a.style('word-break', 'break-word')
 	} else {
 		div.text(sample.sample_id)
 	}
@@ -142,15 +149,14 @@ function printSampleName(sample, tk, div) {
 
 async function make_multiSampleTable(arg) {
 	// create horizontal table to show multiple samples, one sample per row
-	console.log(arg.tk.mds.variant2samples)
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
 	const [data, numofcases] = await arg.tk.mds.variant2samples.get(arg)
 	// each element of data[] is a sample{}
 
 	// flags for optional columns
-	const has_sample_id = data.find(i => i.sample_id),
-		has_ssm_read_depth = data.find(i => i.ssm_read_depth),
-		has_totalNormal = data.find(i => i.totalNormal)
+	const has_sample_id = data.some(i => i.sample_id),
+		has_ssm_read_depth = data.some(i => i.ssm_read_depth),
+		has_totalNormal = data.some(i => i.totalNormal)
 
 	// count total number of columns
 	let numColumns = 0
@@ -159,37 +165,22 @@ async function make_multiSampleTable(arg) {
 	if (has_ssm_read_depth) numColumns++
 	if (has_totalNormal) numColumns++
 
-	// flag to enable alternating background color for sample rows
-	let rowBg = false
-
 	if (arg.multiSampleTable) {
-		/* insert into existing table, do not create new table
-		print sample column headers into multiSampleTable.header
-		for each sample, find placeholder by sample.ssm_id, create new row for this sample into placeholder
-		*/
+		// for each sample, find placeholder by sample.ssm_id, create new row for this sample into placeholder
 
-		// FIXME sample columns must not overlap when clicking a variant to the right, e.g. F156L of KRAS
-		arg.multiSampleTable.header
-			.style('display', 'grid')
-			.style('grid-template-columns', 'repeat(' + numColumns + ', minmax(2vw, 10vw))')
-			.style('text-overflow', 'ellipsis')
-			.style('opacity', 0.3)
-
-		await printHeader(arg.multiSampleTable.header)
-
+		let startDataCol = arg.multiSampleTable.startCol + 1
+		await printHeader(arg.grid, true, startDataCol)
 		for (const sample of data) {
 			const row = arg.multiSampleTable.ssmid2div.get(sample.ssm_id)
 			if (!row) {
 				// no corresponding row was found by this ssm id
 				continue
 			}
-
 			// for a variant with multiple samples, css is set repeatedly on the row (placeholder)
-			row
-				.style('display', 'grid')
-				.style('grid-template-columns', 'repeat(' + numColumns + ', minmax(2vw, 10vw))')
-				.style('text-overflow', 'ellipsis')
-			printSampleRow(sample, row)
+			// display: contents renders data within the parent grid, ensuring the grid and subgrid
+			// stay aligned as well as resize/flex synchronously
+			row.style('display', 'contents').style('grid-column-start', startDataCol)
+			printSampleRow(sample, row, startDataCol)
 		}
 	} else {
 		// create new table, one row per sample
@@ -205,55 +196,71 @@ async function make_multiSampleTable(arg) {
 			printSampleRow(sample, grid)
 		}
 	}
+	// Alternating background color for sample rows
+	colorRows()
 
 	//////////// helpers
 
-	async function printHeader(row, gray) {
+	async function printHeader(div, gray, startDataCol) {
+		let startCol = startDataCol
 		if (has_sample_id) {
-			const c = row
+			const c = div
 				.append('div')
 				.text('Sample')
-				.style('text-overflow', 'ellipsis')
-				.style('background-color', 'white')
+				.style('grid-row-start', 1)
+			if (startDataCol) {
+				c.style('grid-column-start', startCol)
+			}
 			if (gray) c.style('opacity', 0.3)
 		}
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
 				const t = await arg.tk.mds.termdb.vocabApi.getterm(termid)
-				const c = row
+				const c = div
 					.append('div')
 					.text(t ? t.name : termid)
-					.style('text-overflow', 'ellipsis')
-					.style('background-color', 'white')
+					.style('grid-row-start', 1)
+				if (startDataCol) {
+					startCol = ++startCol
+					c.style('grid-column-start', startCol)
+				}
 				if (gray) c.style('opacity', 0.3)
 			}
 		}
 		if (has_ssm_read_depth) {
-			const c = row
+			const c = div
 				.append('div')
 				.text('Tumor DNA MAF')
-				.style('text-overflow', 'ellipsis')
-				.style('background-color', 'white')
+				.style('grid-row-start', 1)
+			if (startDataCol) {
+				startCol = ++startCol
+				c.style('grid-column-start', startCol)
+			}
 			if (gray) c.style('opacity', 0.3)
 		}
 		if (has_totalNormal) {
-			const c = row.header
+			const c = div.header
 				.append('div')
 				.text('Normal depth')
-				.style('text-overflow', 'ellipsis')
-				.style('background-color', 'white')
+				.style('grid-row-start', 1)
+			if (startDataCol) {
+				startCol = ++startCol
+				c.style('grid-column-start', startCol)
+			}
 			if (gray) c.style('opacity', 0.3)
 		}
 	}
 
-	function printSampleRow(sample, row) {
-		rowBg = !rowBg
+	function printSampleRow(sample, row, startDataCol) {
+		let startCol = startDataCol
 		if (has_sample_id) {
 			const cell = row
 				.append('div')
-				.style('text-overflow', 'ellipsis')
-				.style('background-color', 'white')
-			if (rowBg) cell.style('background', '#eee')
+				.classed('sjpp-sample-table-div', true)
+				.style('padding', '1px')
+			if (startDataCol) {
+				cell.style('grid-column-start', startCol)
+			}
 			printSampleName(sample, arg.tk, cell)
 		}
 		if (arg.tk.mds.variant2samples.termidlst) {
@@ -261,13 +268,18 @@ async function make_multiSampleTable(arg) {
 				const cell = row
 					.append('div')
 					.text(termid in sample ? sample[termid] : '')
-					.style('text-overflow', 'ellipsis')
-					.style('background-color', 'white')
-				if (rowBg) cell.style('background', '#eee')
+					.style('padding', '1px')
+					.classed('sjpp-sample-table-div', true)
+				if (startDataCol && !has_sample_id && arg.tk.mds.variant2samples.termidlst[0]) {
+					cell.style('grid-column-start', startCol)
+				}
 			}
 		}
 		if (has_ssm_read_depth) {
-			const cell = row.append('div')
+			const cell = row
+				.append('div')
+				.classed('sjpp-sample-table-div', true)
+				.style('padding', '1px')
 			const sm = sample.ssm_read_depth
 			if (sm) {
 				fillbar(cell, { f: sm.altTumor / sm.totalTumor })
@@ -276,15 +288,38 @@ async function make_multiSampleTable(arg) {
 					.text(sm.altTumor + ' / ' + sm.totalTumor)
 					.style('margin', '0px 10px')
 			}
-			if (rowBg) cell.style('background', '#eee')
 		}
 		if (has_totalNormal) {
 			const cell = row
 				.append('div')
 				.text('totalNormal' in sample ? sample.totalNormal : '')
-				.style('text-overflow', 'ellipsis')
-				.style('background-color', 'white')
-			if (rowBg) cell.style('background', '#eee')
+				.classed('sjpp-sample-table-div', true)
+				.style('padding', '1px')
+		}
+	}
+
+	function colorRows() {
+		// Colors every other row light gray
+		// Solves the problem of the multisample table rows' background color
+		// rendering out of order (Cause: the sample rows are processed and rendered in order of
+		// the data list and then shuffled into the respective sample subgrid)
+
+		const rowDivs = document.querySelectorAll('.sjpp-sample-table-div')
+		const rowArray = Array.from(rowDivs)
+		for (const [i, elm] of rowArray.entries()) {
+			const e = d3select(elm)
+			const rowPosition = Math.floor(i / numColumns)
+			let background = false
+			if (rowPosition % 2 != 0) {
+				background = true
+				e.style('background-color', '#ededed')
+			}
+			e.on('mouseover', () => {
+				e.style('background-color', '#fcfcca')
+			})
+			e.on('mouseout', () => {
+				e.style('background-color', background == true ? '#ededed' : '')
+			})
 		}
 	}
 }
