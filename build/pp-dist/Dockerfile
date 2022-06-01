@@ -14,5 +14,8 @@ COPY --from=ppimg /home/root/pp/app /home/root/pp/app
 WORKDIR /home/root/pp/app
 RUN npm prune
 COPY ./LICENSE ./
+COPY ./serverconfig.json ./
+
 ENV PP_MODE container-prod
 CMD [ "sh", "-c", "./setup.sh && PP_MODE=container-prod npx proteinpaint"]
+# CMD ["sleep", "3600"]
