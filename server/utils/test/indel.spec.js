@@ -6,6 +6,7 @@ const Readable = require('stream').Readable
 
 /*
 to compile rust, see server/utils/rust/README.md
+Syntax for compiling the rust code: cd ~/proteinpaint/server/utils/rust && cargo build --release
 
 run as: $ node indel.spec.js
 
@@ -30,6 +31,7 @@ run as: $ node indel.spec.js
 			c <str, cigar>
 			f <int, flag>
 			g <str, one string from groupkeys[]>
+                        g_0 <str, one string from groupkeys[] for strictness = 0 (is optional and used when different strictness values yield different results for that read)>
 		}
 	]
 	}
@@ -61,9 +63,7 @@ output_diff_scores:"-0.1537931034482759:-0.01869158878504673:0.02717086834733884
 ***************/
 
 const pphost = 'http://pp-int-test.stjude.org/' // show links using this host
-
-const strictness = 1,
-	groupkeys = ['ref', 'alt', 'none', 'amb'] // corresponds to the same values returned by rust
+const groupkeys = ['ref', 'alt', 'none', 'amb'] // corresponds to the same values returned by rust
 
 /**************
  Test sections
@@ -74,13 +74,17 @@ tape('\n', function(test) {
 })
 
 tape('rust indel binary', async function(test) {
-	for (const e of examples) {
-		await runTest(e, test)
+	const strictness_values = [0, 1] // Array containing the possible number of strictness values
+	for (const strictness of strictness_values) {
+		console.log('Testing with strictness=', strictness)
+		for (const e of examples) {
+			await runTest(e, test, strictness)
+		}
 	}
 	test.end()
 })
 
-async function runTest(e, test) {
+async function runTest(e, test, strictness) {
 	// validate data structure of e
 	if (!e.pplink) throw '.pplink missing'
 	test.pass(`Testing "${e.comment}" at ${e.pplink}`)
@@ -117,17 +121,17 @@ async function runTest(e, test) {
 		'_' +
 		e.reads.map(i => i.f).join('-') + // flag
 		'_' +
-		e.variant.pos +
+		e.variant.pos + // Variant position
 		'_' +
-		e.variant.ref +
+		e.variant.ref + // Reference allele
 		'_' +
-		e.variant.alt +
+		e.variant.alt + // Alternate allele
 		'_' +
-		strictness +
+		strictness + // Strictness value
 		'_' +
-		e.leftFlank +
+		e.leftFlank + // Left flank sequence
 		'_' +
-		e.rightFlank
+		e.rightFlank // Right flank sequence
 
 	try {
 		const stdout = await run_rust('indel', input)
@@ -159,12 +163,32 @@ async function runTest(e, test) {
 		// find reads with wrong classification
 		let wrongcount = 0
 		for (let i = 0; i < results.length; i++) {
-			if (e.reads[i].g != results[i]) wrongcount++
+			if (strictness == 0) {
+				// Check if "g_0" exists for that read
+				if (e.reads[i].g_0) {
+					// if it exists check with truth value for strictness = 0
+					if (e.reads[i].g_0 != results[i]) wrongcount++
+				} else {
+					// if g_0 does not exist for that read use the truth value for strictness = 1
+					if (e.reads[i].g != results[i]) wrongcount++
+				}
+			} else if (e.reads[i].g != results[i]) wrongcount++ // For strictness = 1, simply check truth value for strictness = 1, i.e. .g
 		}
 		if (wrongcount) {
 			const lst = []
 			for (let i = 0; i < e.reads.length; i++) {
-				const truth = e.reads[i].g
+				let truth
+				if (strictness == 0) {
+					if (e.reads[i].g_0) {
+						// if it exists check with truth value for strictness = 0
+						truth = e.reads[i].g_0
+					} else {
+						// if g_0 does not exist for that read use the truth value for strictness = 1
+						truth = e.reads[i].g
+					}
+				} else {
+					truth = e.reads[i].g
+				}
 				const result = results[i]
 				lst.push(
 					i + '\t\t' + truth + '\t' + (truth != result ? result + (e.reads[i].n ? ' (' + e.reads[i].n + ')' : '') : '')
@@ -260,7 +284,8 @@ const examples = [
 				p: 119155735,
 				c: '18M8I49M',
 				f: 163,
-				g: 'none'
+				g: 'none',
+				g_0: 'alt'
 			},
 			{
 				s: 'ACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGCTGCTTCTGGCT',
@@ -326,7 +351,8 @@ const examples = [
 				p: 55589715,
 				c: '100M',
 				f: 99,
-				g: 'none'
+				g: 'none',
+				g_0: 'ref'
 			},
 			{
 				s: 'GATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTAC',
@@ -334,6 +360,120 @@ const examples = [
 				c: '100M',
 				f: 99,
 				g: 'amb'
+			}
+		]
+	},
+	{
+		comment: '19bp deletion at TP53',
+		pplink:
+			pphost +
+			'?genome=hg19&block=1&bamfile=TP53_del,rpaul1/kmers/SJHGG010324_A3.bam&position=chr17:7578371-7578417&variant=chr17.7578383.AGCAGCGCTCATGGTGGGG.A&bedjfilterbyname=NM_000546',
+		leftFlank:
+			'CAAATACTCCACACGCAAATTTCCTTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTG',
+		rightFlank:
+			'GCAGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGTGTGGAATCAACCCACAGCTGCACAGGGCAGGTCTTGGCCAGTTGGCAAAACATCTTGTTGAGGGCAGGGGAGT',
+		seqRef:
+			'CAAATACTCCACACGCAAATTTCCTTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCTCATGGTGGGGGCAGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGTGTGGAATCAACCCACAGCTGCACAGGGCAGGTCTTGGCCAGTTGGCAAAACATCTTGTTGAGGGCAGGGGAGT',
+		seqMut:
+			'CAAATACTCCACACGCAAATTTCCTTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGTGTGGAATCAACCCACAGCTGCACAGGGCAGGTCTTGGCCAGTTGGCAAAACATCTTGTTGAGGGCAGGGGAGT',
+		variant: {
+			pos: 7578382, // 0-based
+			ref: 'AGCAGCGCTCATGGTGGGG',
+			alt: 'A'
+		},
+		reads: [
+			{
+				n: 'mismatch and insertion on right',
+				s:
+					'CAAATTTCCTTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCACA',
+				p: 7578246,
+				c: '144M1I6M',
+				f: 99,
+				g: 'alt'
+			},
+			{
+				n: 'mismatch on right',
+				s:
+					'ACGCAAATTTCCTTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCCACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTC',
+				p: 7578243,
+				c: '151M',
+				f: 163,
+				g: 'alt'
+			},
+			{
+				n: 'Softclip on right',
+				s:
+					'TTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCACAACCTCCGTC',
+				p: 7578255,
+				c: '136M15S',
+				f: 99,
+				g: 'alt'
+			},
+			{
+				n: 'Insertion only on right',
+				s:
+					'CGCAAATTTCCTTCCACTCGGATAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCA',
+				p: 7578244,
+				c: '146M1I14M',
+				f: 83,
+				g: 'alt'
+			},
+			{
+				n: 'Deletion in middle of read',
+				s:
+					'TAAGATGCTGAGGAGGGGCCAGACCTAAGAGCAATCAGTGAGGAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCTCACAACCTCCGTCATGTGCTGTGA',
+				p: 7578266,
+				c: '118M18D33M',
+				f: 99,
+				g: 'alt'
+			},
+			{
+				n: 'Softclip on left',
+				s:
+					'TGCTCACCATCGCTATCTGAGCAGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGTGTGGAATCAACCCACAGCTGCACAGGGCAGGTCTTGGCCAGTTGGCAAAACA',
+				p: 7578382,
+				c: '20S131M',
+				f: 147,
+				g: 'alt'
+			},
+			{
+				n: 'Mismatch on left',
+				s:
+					'CTATCTGAGCAGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGTGTGGAATCAACCCACAGCTGCACAGGGCAGGTCTTGGCCAGTTGGCAAAACATCTTGTTGAGGG',
+				p: 7578394,
+				c: '151M',
+				f: 147,
+				g: 'alt'
+			},
+			{
+				n: 'Deletion (supporting alt) with mismatch, different strictness values gives different results',
+				s:
+					'GAATCAGAGGCCTGGGGACCCTGGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGCGCAGCGCCTCACACCCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGG',
+				p: 7578308,
+				c: '74M18D77M',
+				f: 163,
+				g: 'none',
+				g_0: 'alt' // Value for strictness = 0
+			},
+			{
+				n:
+					'Read supporting reference but with mismatch at variant region, different strictness values gives different results',
+				s:
+					'GGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCCCATGGTGGGGGCGGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGCGTGCCGGGCGGGGGT',
+				p: 7578330,
+				c: '151M',
+				f: 83,
+				g: 'none',
+				g_0: 'ref' // Value for strictness = 0
+			},
+			{
+				n: 'Read supporting reference but mismatch is outside variant, both strictness values should yield same result',
+				s:
+					'GGGCAACCAGCCCTGTCGTCTCTCCAGCCCCAGCTGCTCACCATCGCTATCTGAGCAGCGCTCATGGTGGGGGCGGCGCCTCACAACCTCCGTCATGTGCTGTGACTGCTTGTAGATGGCCATGGCGCGGACGCGGGTGCCGGGCGGGGGT',
+				p: 7578330,
+				c: '151M',
+				f: 83,
+				g: 'ref'
 			}
 		]
 	}

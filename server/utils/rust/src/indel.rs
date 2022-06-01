@@ -12,7 +12,9 @@
 // Function cascade:
 //
 // Optimize ref/alt allele given by user
-// preprocess_input() (Optimizing ref/alt allele entered by user to account for flanking repeat regions. For e.g A-AT in the region CACA{T}TTTTGCGA will become ATTTT-ATTTTT)
+// preprocess_input() (Optimizing ref/alt allele entered by user to account for flanking repeat regions. This is accomplished by modifying variant_pos (optimized_variant_pos) and indel_length (optimized_indel_length) to account for repeats present on either or both sides of the predicted variant region. For e.g A-AT in the region CACA{T}TTTTGCGA will become ATTTT-ATTTTT)
+//       check_if_repeat_inside_indel() (This functions helps to determine if the indel is part of a repeat such as a tandem repeat within the indel sequence)
+//       check_flanking_sequence_for_repeats() (Checks if the monomer or indel is repeated on either or both sides of the predicted indel region)
 //
 // if number of reads > single_thread_limit (multithreading option is turned on)
 //
@@ -40,14 +42,15 @@
 //              chi_square_test
 //              fishers_exact_test
 
+use std::cmp;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
 //use std::env;
 //use std::time::{SystemTime};
 use std::io;
 
-mod realign;
-mod stats_functions;
+mod realign; // Imports functions from realign.rs
+mod stats_functions; // Imports functions from stats_functions.rs
 
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
@@ -126,10 +129,13 @@ fn main() {
     let refallele: String = args[5].parse::<String>().unwrap(); // Reference allele
     let altallele: String = args[6].parse::<String>().unwrap(); // Alternate allele
     let strictness: usize = args[7].parse::<usize>().unwrap(); // strictness of the pipeline
+    let leftflankseq: String = args[8].parse::<String>().unwrap(); //Left flanking sequence
     let rightflankseq: String = args[9].parse::<String>().unwrap(); //Right flanking sequence.
 
     //let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
     let rightflank_nucleotides: Vec<char> = rightflankseq.chars().collect(); // Vector containing right flanking nucleotides
+    let ref_nucleotides: Vec<char> = refallele.chars().collect(); // Vector containing ref nucleotides
+    let alt_nucleotides: Vec<char> = altallele.chars().collect(); // Vector containing alt nucleotides
 
     //println!("rightflank_nucleotides:{:?}", rightflank_nucleotides);
     let lines: Vec<&str> = sequences.split("-").collect(); // Vector containing list of sequences, the first two containing ref and alt.
@@ -145,6 +151,7 @@ fn main() {
         indel_length = ref_length;
     }
     //println!("indel_length:{}", indel_length);
+    let surrounding_region_length: i64 = 80; // Flanking region on both sides upto which it will search for duplicate kmers
 
     if args.len() > 14 {
         // This is true when realigning reads to determine correct indel sequence. Currently in development (not functional)
@@ -163,6 +170,23 @@ fn main() {
         );
     }
 
+    // Preprocessing of input
+    let (optimized_variant_pos, optimized_indel_length) = preprocess_input(
+        &ref_nucleotides,
+        &alt_nucleotides,
+        variant_pos,
+        indel_length,
+        leftflankseq,
+        rightflankseq,
+        surrounding_region_length,
+    );
+
+    if indel_length != optimized_indel_length {
+        indel_length = optimized_indel_length;
+    }
+
+    println!("optimized_variant_pos:{}", optimized_variant_pos);
+    println!("optimized_indel_length:{}", optimized_indel_length);
     //println!("ref_allele:{}", &refallele);
     //println!("alt_allele:{}", &altallele);
 
@@ -225,9 +249,9 @@ fn main() {
                     //println!("read_ambiguous:{}", read_ambiguous);
                     //println!("ref_insertion:{}", ref_insertion);
 
-                    let (q_seq_ref, align_ref, _r_seq_ref, ref_comparison) =
+                    let (q_seq_ref, align_ref, r_seq_ref, ref_comparison) =
                         realign::align_single_reads(&spliced_sequence, reference_sequence.clone());
-                    let (q_seq_alt, align_alt, _r_seq_alt, alt_comparison) =
+                    let (q_seq_alt, align_alt, r_seq_alt, alt_comparison) =
                         realign::align_single_reads(&spliced_sequence, alternate_sequence.clone());
                     //println!("ref_comparison:{}", ref_comparison);
                     //println!("alt_comparison:{}", alt_comparison);
@@ -242,11 +266,15 @@ fn main() {
                                 &alignment_side,
                                 &q_seq_alt,
                                 &q_seq_ref,
+                                &r_seq_alt,
+                                &r_seq_ref,
                                 &align_alt,
                                 &align_ref,
                                 correct_start_position,
                                 correct_end_position,
                                 variant_pos,
+                                ref_length as usize,
+                                alt_length as usize,
                                 indel_length as usize,
                             );
                         ref_polyclonal_read_status = ref_polyclonal_read_status_temp;
@@ -364,12 +392,12 @@ fn main() {
                             //    optimized_allele,
                             //);
 
-                            let (q_seq_ref, align_ref, _r_seq_ref, ref_comparison) =
+                            let (q_seq_ref, align_ref, r_seq_ref, ref_comparison) =
                                 realign::align_single_reads(
                                     &spliced_sequence,
                                     reference_sequence.to_string(),
                                 );
-                            let (q_seq_alt, align_alt, _r_seq_alt, alt_comparison) =
+                            let (q_seq_alt, align_alt, r_seq_alt, alt_comparison) =
                                 realign::align_single_reads(
                                     &spliced_sequence,
                                     alternate_sequence.to_string(),
@@ -387,11 +415,15 @@ fn main() {
                                     &alignment_side,
                                     &q_seq_alt,
                                     &q_seq_ref,
+                                    &r_seq_alt,
+                                    &r_seq_ref,
                                     &align_alt,
                                     &align_ref,
                                     correct_start_position,
                                     correct_end_position,
                                     variant_pos,
+                                    ref_length as usize,
+                                    alt_length as usize,
                                     indel_length as usize,
                                 );
                                 ref_polyclonal_read_status = ref_polyclonal_read_status_temp;
@@ -693,30 +725,74 @@ fn check_polyclonal_with_read_alignment(
     alignment_side: &String,
     q_seq_alt: &String,
     q_seq_ref: &String,
+    r_seq_alt: &String,
+    r_seq_ref: &String,
     align_alt: &String,
     align_ref: &String,
     correct_start_position: i64,
     correct_end_position: i64,
     variant_pos: i64,
+    ref_length: usize,
+    alt_length: usize,
     indel_length: usize,
 ) -> (i64, i64) {
     let mut ref_polyclonal_read_status = 0;
     let mut alt_polyclonal_read_status = 0;
 
-    let (red_region_start_alt, red_region_stop_alt, red_region_start_ref, red_region_stop_ref) =
-        realign::determine_start_stop_indel_region_in_read(
-            alignment_side.to_owned(),
-            q_seq_alt,
-            q_seq_ref,
-            correct_start_position,
-            correct_end_position,
-            variant_pos,
-            None,
-            None,
-            indel_length,
-        );
+    let (
+        red_region_start_alt_temp,
+        red_region_stop_alt_temp,
+        red_region_start_ref_temp,
+        red_region_stop_ref_temp,
+    ) = realign::determine_start_stop_indel_region_in_read(
+        alignment_side.to_owned(),
+        q_seq_alt,
+        q_seq_ref,
+        &r_seq_alt,
+        &r_seq_ref,
+        correct_start_position,
+        correct_end_position,
+        variant_pos,
+        ref_length,
+        alt_length,
+        indel_length,
+    );
 
+    let mut red_region_start_alt = 0;
+    let mut red_region_stop_alt = 0;
+    let mut red_region_start_ref = 0;
+    let mut red_region_stop_ref = 0;
+
+    if alignment_side == &"left".to_string() {
+        red_region_start_alt = red_region_start_alt_temp;
+        red_region_stop_alt = red_region_start_alt + indel_length as i64;
+        if red_region_stop_alt > q_seq_alt.len() as i64 {
+            red_region_stop_alt = q_seq_alt.len() as i64;
+        }
+
+        red_region_start_ref = red_region_start_ref_temp;
+        red_region_stop_ref = red_region_start_ref + indel_length as i64;
+        if red_region_stop_ref > q_seq_ref.len() as i64 {
+            red_region_stop_ref = q_seq_ref.len() as i64;
+        }
+    } else if alignment_side == &"right".to_string() {
+        red_region_start_ref = red_region_stop_ref_temp - ref_length as i64;
+        red_region_stop_ref = red_region_start_ref + indel_length as i64;
+        if red_region_start_ref < 0 {
+            red_region_start_ref = 0;
+        }
+
+        red_region_start_alt = red_region_stop_alt_temp - alt_length as i64;
+        red_region_stop_alt = red_region_start_alt + indel_length as i64;
+        if red_region_start_alt < 0 {
+            red_region_start_alt = 0;
+        }
+    }
+
+    //println!("alignment_side:{}", alignment_side);
     //println!("correct_start_position:{}", correct_start_position);
+    //println!("correct_end_position:{}", correct_end_position);
+    //println!("variant_pos:{}", variant_pos);
     //println!("q_seq_ref:{}", q_seq_ref);
     //println!("align_ref:{}", align_ref);
     //println!("q_seq_alt:{}", q_seq_alt);
@@ -761,4 +837,481 @@ fn check_polyclonal_with_read_alignment(
     }
 
     (ref_polyclonal_read_status, alt_polyclonal_read_status)
+}
+
+// This function preprocesses the flanking region, ref and alt allele to search if the indel is a tandem repeat (or a polymer consisting of small indels). It also looks if there is possibility of ambiguous reads if part of the flanking sequence is repeated inside the indel itself
+fn preprocess_input(
+    ref_nucleotides: &Vec<char>, // Vector containing reference nucleotides
+    alt_nucleotides: &Vec<char>, // Vector containing alternate nucleotides
+    variant_pos: i64,            // Start position of indel
+    indel_length: i64,           // Length of indel
+    leftflankseq: String,        // Left flanking sequence
+    rightflankseq: String,       // Right flanking sequence
+    mut surrounding_region_length: i64, // Maximum limit upto which repetition of sequence will be searched to on either side of the indel
+) -> (i64, i64) {
+    let mut right_subseq = String::new(); // String for storing sequence on right side of indel
+    let right_sequence_vector: Vec<_> = rightflankseq.chars().collect(); // A vector which contains all the nucleotides of the right flanking sequence
+
+    // Selecting minimum of surrounding region length and rightflankseq
+    surrounding_region_length = cmp::min(surrounding_region_length, rightflankseq.len() as i64);
+    // Selecting minimum of surrounding region length and leftflankseq
+    surrounding_region_length = cmp::min(surrounding_region_length, leftflankseq.len() as i64);
+    for k in 0..surrounding_region_length as usize {
+        right_subseq += &right_sequence_vector[k].to_string();
+    }
+    let mut left_subseq = String::new(); // String for storing sequence on left hand side. In case of left_subseq the nucleotides are stored in reverse order i.e nucleotides closest to the indel are first
+    let left_sequence_vector: Vec<_> = leftflankseq.chars().collect(); // A vector which contains all the nucleotides of the left flanking sequence
+    for k in 0..surrounding_region_length as usize {
+        let j = left_sequence_vector.len() - k - 1;
+        left_subseq += &left_sequence_vector[j].to_string();
+    }
+    let left_flanking_nucleotides: Vec<char> = left_subseq.chars().collect(); // Vector containing left flanking  nucleotides
+    let right_flanking_nucleotides: Vec<char> = right_subseq.chars().collect(); // Vector containing right flanking  nucleotides
+
+    //println!("left_flanking_nucleotides:{:?}", left_flanking_nucleotides);
+    //println!(
+    //    "right_flanking_nucleotides:{:?}",
+    //    right_flanking_nucleotides
+    //);
+
+    // Check if the alt allele starts with ref nucleotide
+    let mut actual_indel = String::new();
+    let mut ref_alt_same_base_start: usize = 0; // Flag to see if the original ref/alt nucleotide start with the same base i.e the ref start position of the indel is in the alt allele (e.g. ACGA/A representing 3bp deletion)
+    if ref_nucleotides[0] == alt_nucleotides[0]
+        && (ref_nucleotides.len() > 0 || alt_nucleotides.len() > 0)
+    {
+        ref_alt_same_base_start = 1;
+        //original_indel_length = indel_length - 1; // If the insertion/deletion starts with same nucleotide, subtracting 1 from indel_length.
+        if ref_nucleotides.len() > alt_nucleotides.len() {
+            // In case of deletion
+            for j in 1..ref_nucleotides.len() {
+                actual_indel += &ref_nucleotides[j].to_string();
+            }
+        } else {
+            // In case of insertion
+            for j in 1..alt_nucleotides.len() {
+                actual_indel += &alt_nucleotides[j].to_string();
+            }
+        }
+    } else {
+        if ref_nucleotides.len() > alt_nucleotides.len() {
+            // In case of deletion
+            for j in 0..ref_nucleotides.len() {
+                actual_indel += &ref_nucleotides[j].to_string();
+            }
+        } else {
+            // In case of insertion
+            for j in 0..alt_nucleotides.len() {
+                actual_indel += &alt_nucleotides[j].to_string();
+            }
+        }
+    }
+    //let no_repeats: usize = 1; // Flag to check if non-repeating region has been reached
+    let left_nearby_seq;
+    let mut left_nearby_seq_reverse = String::new();
+    let mut right_nearby_seq = String::new();
+    let mut optimized_variant_pos = variant_pos;
+
+    //println!("left_flanking_nucleotides:{:?}", left_flanking_nucleotides);
+    //println!(
+    //    "right_flanking_nucleotides:{:?}",
+    //    right_flanking_nucleotides
+    //);
+
+    //while iter < actual_indel.len() {
+    //    for j in left_offset..left_offset + original_indel_length as usize {
+    //        let k = left_offset + original_indel_length as usize - 1 - j;
+    //        left_nearby_seq += &left_flanking_nucleotides[k].to_string();
+    //        //println!("left_nearby_seq:{}", left_nearby_seq);
+    //    }
+    //    for j in right_offset..right_offset + original_indel_length as usize {
+    //        right_nearby_seq += &right_flanking_nucleotides[j].to_string();
+    //        //println!("right_nearby_seq:{}", right_nearby_seq);
+    //    }
+    //    iter += 1;
+    //}
+
+    for i in 0..surrounding_region_length as usize {
+        let k = surrounding_region_length as usize - 1 - i;
+        if k < left_flanking_nucleotides.len() {
+            left_nearby_seq_reverse += &left_flanking_nucleotides[k].to_string();
+        }
+        if i < right_flanking_nucleotides.len() {
+            right_nearby_seq += &right_flanking_nucleotides[i].to_string();
+        }
+
+        if k >= left_flanking_nucleotides.len() && i >= right_flanking_nucleotides.len() {
+            // Prevent useless iterations when it has looped through all positions in left_flanking_nucleotides and right_flanking_nucleotides
+            break;
+        }
+    }
+
+    if ref_alt_same_base_start == 1 {
+        // Adding the first reference nucleotide to left flanking sequence when first nucleotide in indel is the last nucleotide from reference sequence
+        left_nearby_seq_reverse += &ref_nucleotides[0].to_string();
+    }
+
+    left_nearby_seq = realign::reverse_string(&left_nearby_seq_reverse);
+    //println!("left_nearby_seq_reverse:{}", left_nearby_seq_reverse);
+    //println!("left_nearby_seq:{}", left_nearby_seq);
+    //println!("right_nearby_seq:{}", right_nearby_seq);
+    //println!("right_subseq:{}", right_subseq);
+    //println!("actual_indel:{}", actual_indel);
+    //println!("ref_alt_same_base_start:{}", ref_alt_same_base_start);
+
+    // Checking if there are repeats within the indel.
+    let repeating_monomeric_unit = check_if_repeat_inside_indel(ref_nucleotides, alt_nucleotides);
+
+    let repeating_sequence_left; // The string stores the repeat sequence in flanking regionon left-hand side of indel if present
+    let repeating_sequence_right; // The string stores the repeat sequence in flanking regionon rightt-hand side of indel if present
+
+    //let mut num_repeats_in_flanking_sequence_left; // This variable stores the number of nucleotides to the left that are included in optimized alleles
+    //let mut num_repeats_in_flanking_sequence_right; // This variable stores the number of nucleotides to the right that are included in optimized alleles
+
+    let mut optimized_indel_length = indel_length;
+    match repeating_monomeric_unit {
+        Some(ref repeat_monomer_unit) => {
+            // When repeating_monomeric_unit is defined
+            println!(
+                "Repeating monomer found within indel sequence:{:?}",
+                &repeat_monomer_unit
+            );
+
+            let (repeating_sequence_left_temp, _num_repeats_in_flanking_sequence_left_temp) =
+                check_flanking_sequence_for_repeats(
+                    repeat_monomer_unit,
+                    &left_nearby_seq,
+                    surrounding_region_length,
+                    "L",
+                );
+
+            let (repeating_sequence_right_temp, _num_repeats_in_flanking_sequence_right_temp) =
+                check_flanking_sequence_for_repeats(
+                    repeat_monomer_unit,
+                    &right_subseq,
+                    surrounding_region_length,
+                    "R",
+                );
+
+            repeating_sequence_left = repeating_sequence_left_temp.clone();
+            repeating_sequence_right = repeating_sequence_right_temp.clone();
+            //num_repeats_in_flanking_sequence_left = num_repeats_in_flanking_sequence_left_temp;
+            //num_repeats_in_flanking_sequence_right = num_repeats_in_flanking_sequence_right_temp;
+            if repeating_sequence_left.len() == 0 && repeating_sequence_right.len() == 0 {
+                // No repeating region
+                println!("Monomer not repeated in flanking regions");
+                optimized_indel_length = indel_length;
+            } else if repeating_sequence_left.len() > 0 && repeating_sequence_right.len() == 0 {
+                // Left side contains the monomer
+                println!("Left side is repeating with monomer inside indel region");
+                optimized_variant_pos -= repeating_sequence_left.len() as i64;
+                optimized_indel_length = repeating_sequence_left.len() as i64 + indel_length;
+            // Optimized indel length = length of repeating sequencing on left + indel_length
+            } else if repeating_sequence_left.len() == 0 && repeating_sequence_right.len() > 0 {
+                // Right side contains the monomer
+                println!("Right side is repeating with monomer inside indel region");
+                optimized_indel_length = indel_length + repeating_sequence_right.len() as i64;
+            } else if repeating_sequence_left.len() > 0 && repeating_sequence_right.len() > 0 {
+                // Both sides contain the monomer
+                println!("Both sides are repeating with monomer inside indel region");
+                optimized_variant_pos -= repeating_sequence_left.len() as i64;
+                optimized_indel_length = repeating_sequence_left.len() as i64
+                    + indel_length
+                    + repeating_sequence_right.len() as i64;
+            }
+        }
+
+        None => {
+            // When repeating_monomeric_unit is not defined
+            let (repeating_sequence_left_temp, _num_repeats_in_flanking_sequence_left_orig) =
+                check_flanking_sequence_for_repeats(
+                    &actual_indel,
+                    &left_nearby_seq,
+                    surrounding_region_length,
+                    "L",
+                );
+            //println!(
+            //    "repeating_sequence_left_temp:{}",
+            //    repeating_sequence_left_temp
+            //);
+
+            let (repeating_sequence_right_temp, _num_repeats_in_flanking_sequence_right_orig) =
+                check_flanking_sequence_for_repeats(
+                    &actual_indel,
+                    &right_subseq,
+                    surrounding_region_length,
+                    "R",
+                );
+            //println!(
+            //    "repeating_sequence_right_temp:{}",
+            //    repeating_sequence_right_temp
+            //);
+            //println!(
+            //    "num_repeats_in_flanking_sequence_left_orig:{}",
+            //    num_repeats_in_flanking_sequence_left_orig
+            //);
+            //repeating_sequence_left = repeating_sequence_left_temp.clone();
+            //repeating_sequence_right = repeating_sequence_right_temp.clone();
+            //num_repeats_in_flanking_sequence_left = num_repeats_in_flanking_sequence_left_orig;
+            //num_repeats_in_flanking_sequence_right = num_repeats_in_flanking_sequence_right_orig;
+            if repeating_sequence_left_temp.len() == 0 && repeating_sequence_right_temp.len() == 0 {
+                // Check if the left and right most nucleotides are repeated
+                if ref_nucleotides.len() >= alt_nucleotides.len() {
+                    // See if first reference nucleotide is getting repeated in left-flanking region
+                    let (repeating_sequence_left_temp, _num_repeats_in_flanking_sequence_left_temp) =
+                        check_flanking_sequence_for_repeats(
+                            &ref_nucleotides[0].to_string(),
+                            &left_nearby_seq,
+                            surrounding_region_length,
+                            "L",
+                        );
+                    // See if last reference nucleotide is getting repeated in right-flanking region
+                    let (
+                        repeating_sequence_right_temp,
+                        _num_repeats_in_flanking_sequence_right_temp,
+                    ) = check_flanking_sequence_for_repeats(
+                        &ref_nucleotides[ref_nucleotides.len() - 1].to_string(),
+                        &right_subseq,
+                        surrounding_region_length,
+                        "R",
+                    );
+                    repeating_sequence_left = repeating_sequence_left_temp.clone();
+                    repeating_sequence_right = repeating_sequence_right_temp.clone();
+                    //num_repeats_in_flanking_sequence_left =
+                    //    num_repeats_in_flanking_sequence_left_temp;
+                    //num_repeats_in_flanking_sequence_right =
+                    //    num_repeats_in_flanking_sequence_right_temp;
+                    if repeating_sequence_left.len() > 0 && ref_alt_same_base_start == 1 {
+                        optimized_variant_pos -= repeating_sequence_left_temp.len() as i64; // Need to pass this to main and also change optimized ref and alt allele. Will need to do this later
+
+                        //optimized_alt_allele = String::from(
+                        //    left_nearby_seq_vec[repeating_sequence_left_temp.len()].clone(),
+                        //) + &repeating_sequence_left_temp
+                        //    + &optimized_alt_allele; // Adding repetitive part to left side of alt allele
+                        //optimized_ref_allele = String::from(
+                        //    left_nearby_seq_vec[repeating_sequence_left_temp.len()].clone(),
+                        //) + &repeating_sequence_left_temp
+                        //    + &optimized_ref_allele; // Adding repetitive part to left side of ref allele
+
+                        //println!(
+                        //    "repeating_sequence_left_temp1:{}",
+                        //    repeating_sequence_left_temp
+                        //);
+                        optimized_indel_length =
+                            repeating_sequence_left_temp.len() as i64 + indel_length;
+                        println!("First nucleotide of indel is repeating on left-flanking region")
+                    } else if repeating_sequence_left.len() > 0 && ref_alt_same_base_start == 0 {
+                        optimized_variant_pos -= repeating_sequence_left_temp.len() as i64; // Need to pass this to main and also change optimized ref and alt allele. Will need to do this later
+                        optimized_indel_length =
+                            repeating_sequence_left_temp.len() as i64 + indel_length;
+                        println!("First nucleotide of indel is repeating on left-flanking region")
+                    }
+                    if repeating_sequence_right.len() > 0 {
+                        println!("Last nucleotide of indel is repeating on right-flanking region");
+                        //optimized_indel_length += repeating_sequence_right.len() as i64;
+                    }
+                } else if alt_nucleotides.len() > ref_nucleotides.len() {
+                    // See if first alternate nucleotide is getting repeated in left-flanking region
+                    let (repeating_sequence_left_temp, _num_repeats_in_flanking_sequence_left_temp) =
+                        check_flanking_sequence_for_repeats(
+                            &alt_nucleotides[0].to_string(),
+                            &left_nearby_seq,
+                            surrounding_region_length,
+                            "L",
+                        );
+                    // See if last alternate nucleotide is getting repeated in right-flanking region
+                    let (
+                        repeating_sequence_right_temp,
+                        _num_repeats_in_flanking_sequence_right_temp,
+                    ) = check_flanking_sequence_for_repeats(
+                        &alt_nucleotides[alt_nucleotides.len() - 1].to_string(),
+                        &right_subseq,
+                        surrounding_region_length,
+                        "R",
+                    );
+                    repeating_sequence_left = repeating_sequence_left_temp.clone();
+                    repeating_sequence_right = repeating_sequence_right_temp.clone();
+                    //num_repeats_in_flanking_sequence_left =
+                    //    num_repeats_in_flanking_sequence_left_temp;
+                    //num_repeats_in_flanking_sequence_right =
+                    //    num_repeats_in_flanking_sequence_right_temp;
+                    if repeating_sequence_left.len() > 0 && ref_alt_same_base_start == 1 {
+                        optimized_variant_pos -= repeating_sequence_left_temp.len() as i64; // Need to pass this to main and also change optimized ref and alt allele. Will need to do this later
+                        optimized_indel_length =
+                            repeating_sequence_left_temp.len() as i64 + indel_length;
+                        println!("First nucleotide of indel is repeating on left-flanking region");
+                        //optimized_alt_allele = String::from(
+                        //    left_nearby_seq_vec[repeating_sequence_left_temp.len()].clone(),
+                        //) + &repeating_sequence_left_temp
+                        //    + &optimized_alt_allele; // Adding repetitive part to left side of allele
+                        //optimized_ref_allele = String::from(
+                        //    left_nearby_seq_vec[repeating_sequence_left_temp.len()].clone(),
+                        //) + &repeating_sequence_left_temp
+                        //    + &optimized_ref_allele; // Adding repetitive part to left side of allele
+                        // Adding repetitive part to left side of alt allele
+                    } else if repeating_sequence_left.len() > 0 && ref_alt_same_base_start == 0 {
+                        optimized_variant_pos -= repeating_sequence_left_temp.len() as i64; // Need to pass this to main and also change optimized ref and alt allele. Will need to do this later
+                        optimized_indel_length =
+                            repeating_sequence_left_temp.len() as i64 + indel_length;
+                        println!("First nucleotide of indel is repeating on left-flanking region");
+                    }
+                    if repeating_sequence_right.len() > 0 {
+                        println!("Last nucleotide of indel is repeating on right-flanking region");
+                        optimized_indel_length =
+                            repeating_sequence_right_temp.len() as i64 + indel_length;
+                    }
+                }
+            } else if repeating_sequence_left_temp.len() > 0
+                && repeating_sequence_right_temp.len() == 0
+            {
+                println!("Left side is repeating");
+                optimized_variant_pos -= repeating_sequence_left_temp.len() as i64;
+                optimized_indel_length = repeating_sequence_left_temp.len() as i64 + indel_length;
+            } else if repeating_sequence_left_temp.len() == 0
+                && repeating_sequence_right_temp.len() > 0
+            {
+                println!("Right side is repeating");
+                println!(
+                    "repeating_sequence_right_temp:{}",
+                    repeating_sequence_right_temp
+                );
+                optimized_indel_length = repeating_sequence_right_temp.len() as i64 + indel_length;
+            } else if repeating_sequence_left_temp.len() > 0
+                && repeating_sequence_right_temp.len() > 0
+            {
+                println!("Both sides are repeating");
+                optimized_variant_pos -= repeating_sequence_left_temp.len() as i64;
+                optimized_indel_length = repeating_sequence_left_temp.len() as i64
+                    + indel_length
+                    + repeating_sequence_right_temp.len() as i64;
+            }
+        }
+    }
+    //println!("optimized_variant_pos:{}", optimized_variant_pos);
+    //
+    //println!(
+    //    "repeating_sequence_left end of preprocess:{}",
+    //    repeating_sequence_left
+    //);
+    //println!(
+    //    "repeating_sequence_right end of preprocess:{}",
+    //    repeating_sequence_right
+    //);
+    //println!(
+    //    "num_repeats_in_flanking_sequence_left:{}",
+    //    num_repeats_in_flanking_sequence_left
+    //);
+    //println!(
+    //    "num_repeats_in_flanking_sequence_right:{}",
+    //    num_repeats_in_flanking_sequence_right
+    //);
+    (optimized_variant_pos, optimized_indel_length)
+}
+
+// This functions helps to determine if the indel is part of a repeat such as a tandem repeat within the indel sequence
+fn check_if_repeat_inside_indel(
+    ref_nucleotides: &Vec<char>,
+    alt_nucleotides: &Vec<char>,
+) -> Option<String> {
+    let mut is_indel_repeat: bool; // Flag passed back which indicates if the indel is part of a repeat
+    let mut ref_alt_same_base_start = 0; // Flag to check if the ref and alt allele start with the last ref nucleotide (e.g A/ATCGT)
+    let mut indel_sequence = Vec::<char>::new(); // Indel sequence minus first base (if it is the same as reference base)
+    if ref_nucleotides[0] == alt_nucleotides[0] {
+        ref_alt_same_base_start = 1;
+    }
+
+    if ref_nucleotides.len() > alt_nucleotides.len() {
+        for i in 0..ref_nucleotides.len() {
+            if ref_alt_same_base_start == 0 && i == 0 {
+                indel_sequence.push(ref_nucleotides[i]);
+            } else if i > 0 {
+                indel_sequence.push(ref_nucleotides[i]);
+            }
+        }
+    } else {
+        for i in 0..alt_nucleotides.len() {
+            if ref_alt_same_base_start == 0 && i == 0 {
+                indel_sequence.push(alt_nucleotides[i]);
+            } else if i > 0 {
+                indel_sequence.push(alt_nucleotides[i]);
+            }
+        }
+    }
+
+    // Testing monomers of various sizes upto length of indel sequence to see if monomer is getting repeated
+    let mut final_monomeric_sequence = Option::<String>::None; // This variable will be None if no repeating monomeric unit is found. If a repeating monomeric unit is found, it will return the monomer sequence
+    for monomer_length in 1..indel_sequence.len() {
+        is_indel_repeat = true;
+        let mut monomer_seq = String::new();
+        for j in 0..monomer_length {
+            // Extracting the first monomer_length(th) nucleotides from the left as monomer to be tested
+            monomer_seq += &indel_sequence[j].to_string();
+        }
+        // Determine number of monomeric units in indel sequence
+        if indel_sequence.len() % monomer_length == 0 {
+            // Check to see if length of monomer is fully divisible by indel sequence. If not, it automatically means that monomer length is not repeated in the indel sequence
+            let num_repeating_units = indel_sequence.len() / monomer_length;
+            for j in 1..num_repeating_units {
+                let mut subseq = String::new();
+                for k in 0..monomer_length {
+                    subseq += &indel_sequence[j * monomer_length + k].to_string();
+                }
+                if monomer_seq != subseq {
+                    is_indel_repeat = false;
+                    break;
+                }
+            }
+        } else {
+            is_indel_repeat = false;
+        }
+
+        if is_indel_repeat == true {
+            // If repeats are found for a given monomer length, no need to check for higher monomeric lengths
+            final_monomeric_sequence = Some(monomer_seq);
+            break;
+        }
+    }
+
+    final_monomeric_sequence
+}
+
+// Function to check if the monomer is present in flanking region
+fn check_flanking_sequence_for_repeats(
+    monomer: &String,
+    flanking_sequence: &String,
+    surrounding_region_length: i64, // Checks for monomer in the flanking region but only upto surrounding_region_length
+    side: &str,                     // "L" for left, "R" for right flanking sequence
+) -> (String, usize) {
+    let sequence_vector: Vec<_> = flanking_sequence.chars().collect(); // Vector containing all the nucleotides of the reads as individual elements
+    let num_iterations: i64 = surrounding_region_length / (monomer.len() as i64); // Number of times the monomer will have to be checked for repeating units from the variant region. e.g if monomer length is 2 and surrounding_region_length is 9, it will be 4 times at distances of 2, 4, 6 and 8 from the indel region
+    let mut repeat_flanking_sequence = String::new(); // String storing the repeat flanking sequence (if present)
+    let mut num_repeats_in_flanking_sequence: usize = 0; // Number of times monomeric unit is repeated in flanking region
+
+    //println!("sequence_vector:{:?}", sequence_vector);
+    //println!("monomer:{}", monomer);
+    //println!("side:{}", side);
+
+    for i in 0..num_iterations {
+        let mut subseq = String::new(); // String where putative repeat unit will be stored
+        if &side == &"R" {
+            for j in 0..monomer.len() {
+                if (i as usize) * monomer.len() + j < sequence_vector.len() {
+                    subseq += &sequence_vector[(i as usize) * monomer.len() + j].to_string();
+                }
+            }
+        } else if &side == &"L" {
+            for j in 0..monomer.len() {
+                let k = monomer.len() - 1 - j;
+                if (i as usize) * monomer.len() + k < sequence_vector.len() {
+                    subseq += &sequence_vector[(i as usize) * monomer.len() + k].to_string();
+                }
+            }
+        }
+        if &subseq != monomer {
+            break;
+        }
+        num_repeats_in_flanking_sequence += 1;
+        repeat_flanking_sequence.push_str(&subseq);
+    }
+    (repeat_flanking_sequence, num_repeats_in_flanking_sequence)
 }

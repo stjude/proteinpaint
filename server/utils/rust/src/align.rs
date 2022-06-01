@@ -67,14 +67,17 @@ fn main() {
                 alignment_side,
                 &q_seq_alt,
                 &q_seq_ref,
+                &r_seq_alt,
+                &r_seq_ref,
                 correct_start_position,
                 correct_end_position,
                 variant_pos,
-                Some(variant_ref.len()),
-                Some(variant_alt.len()),
+                variant_ref.len(),
+                variant_alt.len(),
                 indel_length as usize,
             );
 
+        //println!("variant_disp_pos:{}", variant_pos);
         //println!("red_disp_region_start_alt:{}", red_region_start_alt);
         //println!("red_disp_region_start_ref:{}", red_region_start_ref);
         //println!("red_disp_region_stop_alt:{}", red_region_stop_alt);
