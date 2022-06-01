@@ -1,13 +1,13 @@
 import { event as d3event } from 'd3-selection'
 import { debounce } from 'debounce'
-import { dofetch3 } from './common/dofetch'
-import { sayerror } from './dom/error'
-import { first_genetrack_tolist } from './common/1stGenetk'
+import { dofetch3 } from '../common/dofetch'
+import { sayerror } from '../dom/error'
+import { first_genetrack_tolist } from '../common/1stGenetk'
 import { contigNameNoChr2 } from '../shared/common'
-import urlmap from './common/urlmap'
-import { addGeneSearchbox, string2variant } from './dom/genesearch'
-import { Menu } from './dom/menu'
-import { init_tabs } from './dom/toggleButtons'
+import urlmap from '../common/urlmap'
+import { addGeneSearchbox, string2variant } from '../dom/genesearch'
+import { Menu } from '../dom/menu'
+import { init_tabs } from '../dom/toggleButtons'
 
 /*
 *********** gdc_args{}

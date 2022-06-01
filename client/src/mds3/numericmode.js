@@ -2,14 +2,15 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { format as d3format } from 'd3-format'
 import { axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { axisstyle } from '../dom/axisstyle'
+import { axisstyle } from '../../dom/axisstyle'
 import { make_datagroup } from './datagroup'
 import { click_variant } from './clickVariant'
+import { positionLeftlabelg } from './leftlabel'
+import { may_render_skewer } from './skewer'
 
-/* adapted from mds2, which is in turn from legacy ds code
-
+/*
 ********************** EXPORTED
-render
+renderNumericMode
 ********************** INTERNAL
 numeric_make
 render_axis
@@ -43,20 +44,21 @@ const clustercrowdlimit = 7 // at least 8 px per disc, otherwise won't show mnam
 const maxclusterwidth = 100
 const hardcode_missing_value = 0
 const stemColor = '#ededed'
+const defaultLabel = 'Numeric value'
 
-export function render(data, tk, block) {
-	/*
+/*
+nm{}
+	the object marked as "in use" in skewer.viewModes[]
+	rendering parameters are attached to it
 data: {skewer}
-numerical axis
-info field as sources of values
-
-value may be singular number, or boxplot
-
+	tricky!
+	data.skewer can be missing when pan/zoom in protein mode, where skewer data is not returned
+	as same data has been kept at tk.skewer.rawmlst
 */
-	const datagroup = make_datagroup(tk, data.skewer, block)
-
-	// TODO when switching to nm from skewer, allow to dynamically create nm
-	const nm = tk.numericmode
+export function renderNumericMode(nm, data, tk, block) {
+	const datagroup = make_datagroup(tk, data.skewer || tk.skewer.rawmlst, block).filter(
+		g => g.x >= 0 && g.x <= block.width
+	)
 
 	// for variant leftlabel to access later
 	nm.data = datagroup
@@ -70,7 +72,7 @@ value may be singular number, or boxplot
 	tk.skewer.g.selectAll('*').remove()
 	if (tk.skewer.nmg) tk.skewer.nmg.selectAll('*').remove()
 
-	numeric_make(nm, tk.skewer.g, tk, block)
+	numeric_make(nm, tk, block)
 
 	return (
 		nm.toplabelheight +
@@ -84,7 +86,7 @@ value may be singular number, or boxplot
 	)
 }
 
-function numeric_make(nm, _g, tk, block) {
+function numeric_make(nm, tk, block) {
 	/*
 	 */
 
@@ -99,14 +101,6 @@ function numeric_make(nm, _g, tk, block) {
 
 	// diameter, also m label font size
 	const dotwidth = Math.max(14, block.width / 110)
-
-	if (tk.ld && tk.ld.overlay && tk.ld.overlay.vcfcircle) {
-		// resize overlay circle
-		tk.ld.overlay.vcfcircle
-			.attr('r', dotwidth / 2)
-			// and also hide it upon rendering variants
-			.attr('stroke-opacity', 0)
-	}
 
 	nm.dotwidth = dotwidth
 	nm.maxradius = 0
@@ -135,7 +129,13 @@ function numeric_make(nm, _g, tk, block) {
 	// set m._y
 	for (const d of data) {
 		for (const m of d.mlst) {
-			m._y = numscale(m.__value_use)
+			if (m.__value_missing) {
+				// missing numeric value, assign 0 to place the dot at the bottom of axis
+				m._y = 0
+			} else {
+				// has valid value, map to axis
+				m._y = numscale(m.__value_use)
+			}
 		}
 	}
 
@@ -235,22 +235,24 @@ function numeric_make(nm, _g, tk, block) {
 		nm.toplabelheight = Math.max(nm.toplabelheight, h)
 	}
 
-	render_axis(_g, tk, nm, block)
+	render_axis(tk, nm, block)
 
-	_g.append('line')
+	tk.skewer.g
+		.append('line')
 		.attr('y1', nm.toplabelheight + nm.maxradius)
 		.attr('y2', nm.toplabelheight + nm.maxradius)
 		.attr('x2', block.width)
 		.attr('stroke', stemColor)
 		.attr('shape-rendering', 'crispEdges')
-	_g.append('line')
+	tk.skewer.g
+		.append('line')
 		.attr('y1', nm.toplabelheight + nm.maxradius + nm.axisheight)
 		.attr('y2', nm.toplabelheight + nm.maxradius + nm.axisheight)
 		.attr('x2', block.width)
 		.attr('stroke', stemColor)
 		.attr('shape-rendering', 'crispEdges')
 
-	tk.skewer.nmg = _g
+	tk.skewer.nmg = tk.skewer.g
 		.selectAll()
 		.data(data)
 		.enter()
@@ -325,8 +327,11 @@ function numeric_make(nm, _g, tk, block) {
 
 	// no text in disc
 
+	// used by mayHighlightDiskBySsmid
+	tk.skewer.hlBoxG = discg.append('g')
+
 	// disc kick
-	tk.skewer.discKickSelection_triangle = discg
+	discg
 		.filter(m => m.shapeTriangle)
 		.append('path')
 		.attr('d', m => trianglePath(m.radius))
@@ -348,7 +353,7 @@ function numeric_make(nm, _g, tk, block) {
 			click_variant({ mlst: [m] }, tk, block, d3event.target.getBoundingClientRect(), d3event.target)
 		})
 
-	tk.skewer.discKickSelection = discg
+	discg
 		.filter(m => !m.shapeTriangle)
 		.append('circle')
 		.attr('r', m => m.radius - 0.5) // must set radius for the circle to be visible
@@ -644,7 +649,7 @@ function m_mouseover(m, nm, tk) {
 	if (nm.tooltipPrintValue) {
 		for (const line of nm.tooltipPrintValue(m)) words.push(line)
 	} else {
-		words.push(nm.valueName ? nm.valueName + '=' + m.__value_use : 'value=' + m.__value_use)
+		words.push(nm.label + '=' + (m.__value_missing ? 'NA' : m.__value_use))
 	}
 
 	if (!m.labattop && !m.labatbottom) {
@@ -748,19 +753,24 @@ decide following things about the y axis:
 	nm.maxvalue = 0
 
 	for (const g of data) {
-		for (const m of g.mlst) delete m.__value_use
+		for (const m of g.mlst) {
+			delete m.__value_use
+			delete m.__value_missing
+		}
 	}
-	if (nm.type == '__value') {
+	if (nm.byAttribute) {
 		for (const g of data) {
 			for (const m of g.mlst) {
-				const v = m.__value
+				const v = m[nm.byAttribute]
 				if (Number.isFinite(v)) {
 					m.__value_use = v
+				} else {
+					m.__value_missing = true
 				}
 			}
 		}
 	} else {
-		throw 'unknown numericmode.type'
+		throw 'unknown method of getting value'
 	}
 
 	for (const g of data) {
@@ -773,12 +783,11 @@ decide following things about the y axis:
 	}
 }
 
-function render_axis(_g, tk, nm, block) {
-	/*
-render axis
-*/
+function render_axis(tk, nm, block) {
+	// axis always opens to left so as not to overlap with data points
+	// to share space with left labels and not overlapping, records nm.toplabelheight and nm.axisWidth
 	nm.axisg
-		.attr('transform', 'translate(-' + nm.dotwidth / 2 + ',' + (nm.toplabelheight + nm.maxradius) + ')')
+		.attr('transform', 'translate(0,' + (nm.toplabelheight + nm.maxradius) + ')')
 		.selectAll('*')
 		.remove()
 
@@ -786,6 +795,7 @@ render axis
 	const thisscale = scaleLinear()
 		.domain([nm.minvalue, nm.maxvalue])
 		.range([nm.axisheight, 0])
+
 	const thisaxis = axisLeft()
 		.scale(thisscale)
 		.ticks(4)
@@ -805,49 +815,69 @@ render axis
 		fontsize: nm.dotwidth
 	})
 
-	if (nm.minvalue == nm.maxvalue) {
-		nm.axisg
-			.append('text')
-			.attr('text-anchor', 'end')
-			.attr('font-size', nm.dotwidth)
-			.attr('dominant-baseline', 'central')
-			.attr('x', block.tkleftlabel_xshift)
-			.attr('y', nm.axisheight)
-			.text(nm.minvalue)
-			.attr('fill', 'black')
-	}
-
 	// axis label, text must wrap
-	// read the max tick label width first
-	let maxw = 0
+	// read the max tick label width at nm.axisWidth, so axis label won't overlap with them
+	nm.axisWidth = 0
 	nm.axisg.selectAll('text').each(function() {
-		maxw = Math.max(maxw, this.getBBox().width)
+		nm.axisWidth = Math.max(nm.axisWidth, this.getBBox().width)
 	})
-	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxw + 15)
+	nm.axisWidth += 15
+	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, nm.axisWidth)
 
 	// axis label
-	{
-		const lst = (nm.label || 'Numeric value').split(' ')
-		const y = (nm.axisheight - lst.length * (nm.dotwidth + 1)) / 2
-		let maxlabelw = 0
-		lst.forEach((text, i) => {
-			nm.axisg
-				.append('text')
-				.attr('fill', 'black')
-				.attr('font-size', nm.dotwidth)
-				.attr('dominant-baseline', 'central')
-				.attr('text-anchor', 'end')
-				.attr('y', y + (nm.dotwidth + 1) * i)
-				.attr('x', -(maxw + 15))
-				.text(text)
-				.each(function() {
-					maxlabelw = Math.max(maxlabelw, this.getBBox().width + 15 + maxw)
+
+	/* split string by space and render one word in each line
+	const lst = (nm.label || defaultLabel).split(' ')
+	const y = (nm.axisheight - lst.length * (nm.dotwidth + 1)) / 2
+	let maxlabelw = 0
+	lst.forEach((text, i) => {
+		nm.axisg
+			.append('text')
+			.attr('fill', 'black')
+			.attr('font-size', nm.dotwidth)
+			.attr('dominant-baseline', 'central')
+			.attr('text-anchor', 'end')
+			.attr('y', y + (nm.dotwidth + 1) * i)
+			.attr('x', -nm.axisWidth)
+			.text(text)
+			.each(function() {
+				maxlabelw = Math.max(maxlabelw, this.getBBox().width + 15 + nm.axisWidth)
+			})
+	})
+	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
+	*/
+
+	// render one single text label so can apply click
+	nm.axisg
+		.append('text')
+		.attr('fill', 'black')
+		.attr('font-size', nm.dotwidth)
+		.attr('dominant-baseline', 'central')
+		.attr('text-anchor', 'end')
+		.attr('y', nm.axisheight / 2)
+		.attr('x', -nm.axisWidth)
+		.text(nm.label || defaultLabel) // if too long can use ellipsis, hover to show full
+		.each(function() {
+			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width + 15 + nm.axisWidth)
+		})
+		.on('click', () => {
+			tk.menutip
+				.clear()
+				.showunder(d3event.target)
+				.d.append('div')
+				.text('Cancel')
+				.attr('class', 'sja_menuoption')
+				.on('click', () => {
+					tk.menutip.hide()
+					nm.inuse = false
+					tk.skewer.viewModes.find(i => i.type == 'skewer').inuse = true
+					may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)
+					positionLeftlabelg(tk, block)
+					tk._finish()
 				})
 		})
-		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
-	}
 }
 
-export function trianglePath(p) {
+function trianglePath(p) {
 	return `M 0 -${p} L ${p} ${p * 0.7} h -${p * 2} Z`
 }

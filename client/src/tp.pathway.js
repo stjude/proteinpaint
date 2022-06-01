@@ -6,7 +6,7 @@ import * as d3drag from 'd3-drag'
 import * as d3force from 'd3-force'
 import * as common from '../shared/common'
 import * as client from './client'
-import { Menu } from './dom/menu'
+import { Menu } from '../dom/menu'
 
 const tip = new Menu()
 

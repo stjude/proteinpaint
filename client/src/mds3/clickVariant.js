@@ -1,11 +1,9 @@
 import { event as d3event } from 'd3-selection'
 import { init_sampletable } from './sampletable'
 import { itemtable } from './itemtable'
-import { skewer_sety } from './skewer.render'
-import { trianglePath } from './numericmode'
+import { skewer_sety, mayHighlightDiskBySsmid } from './skewer.render'
 
 const minoccur4sunburst = 10 // minimum occurrence for showing skewer, maybe ds specific
-const highlight_color = 'red'
 
 /*
 ************** EXPORT
@@ -13,7 +11,7 @@ click_variant()
 
 ************** tentative logic
 custom method:
-	if tk.click_snvindel() is set, call this; will also call highlight_one_disk()
+	if tk.click_snvindel() is set, call this; will also create hlssmid and call mayHighlightDiskBySsmid 
 built-in methods
 	if d.occurrence is set, show sunburst
 	else, call variant_details()
@@ -38,7 +36,8 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 	try {
 		if (tk.click_snvindel) {
 			// custom handler overrides default behavior
-			highlight_one_disk(d.mlst[0], eventTarget, tk)
+			tk.skewer.hlssmid = new Set(d.mlst.map(i => i.ssm_id))
+			mayHighlightDiskBySsmid(tk)
 			tk.click_snvindel(d.mlst[0])
 			return
 		}
@@ -154,24 +153,4 @@ async function variant_details(arg) {
 	}
 	// mlst are of one data type
 	await itemtable(arg)
-}
-
-function highlight_one_disk(m, dot, tk) {
-	// remove highlight on all disc kick covers
-	tk.skewer.discKickSelection
-		.attr('r', m => m.radius - 0.5) // reset radius
-		.attr('stroke', m => tk.color4disc(m))
-		.attr('stroke-opacity', 0)
-	tk.skewer.discKickSelection_triangle
-		.attr('d', m => trianglePath(m.radius))
-		.attr('stroke', m => tk.color4disc(m))
-		.attr('stroke-opacity', 0)
-	// dot is the kick <circle>; apply highlight styling on it
-	if (m.shapeTriangle) {
-		dot.setAttribute('d', trianglePath(m.radius * 1.4))
-	} else {
-		dot.setAttribute('r', m.radius * 1.4)
-	}
-	dot.setAttribute('stroke', highlight_color)
-	dot.setAttribute('stroke-opacity', 1)
 }

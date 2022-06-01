@@ -40,38 +40,6 @@ runproteinpaint({
 })
 
 
-runproteinpaint({
-noheader:1,
-	holder:document.getElementById('bb'),
-	parseurl:true,
-	nobox:1,
-	genome:'hg19',
-	gene:'NM_002467',
-	tracks:[{
-		type:'mds3',
-		skewerMode:'numeric',
-		name:'AA sites with numbers',
-		custom_variants:[
-			{"chr":"chr8","pos":128750685,"mname":"P75","class":"M","dt":1,__value:1},
-			{"chr":"chr8","pos":128750680,"mname":"T73","class":"M","dt":1,__value:2},
-			{"chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1,__value:3}
-		],
-		numericmode:{
-			type:'__value',
-			label:'Numeric data',
-			valueName:'p-value'
-		}
-	}],
-	mclassOverride:{
-		className:'Phospho',
-		classes:{
-			M:{label:'AA',desc:'AA desc'},
-			I:{label:'BB',desc:'BB desc'}
-		}
-	}
-})
-
-
 
 runproteinpaint({
 noheader:1,
@@ -82,18 +50,17 @@ noheader:1,
 	gene:'NM_002467',
 	tracks:[{
 		type:'mds3',
-		name:'Test, with occurrence',
+		name:'Test, without occurrence',
 		custom_variants:[
-			// TODO occurrence is right now required but should be optional
-			{"chr":"chr8","pos":128750685,"mname":"P75","class":"M","dt":1,occurrence:1},
-			{"chr":"chr8","pos":128750680,"mname":"T73","class":"M","dt":1,occurrence:2},
-			{"chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1,occurrence:3}
+			{"chr":"chr8","pos":128750685,"mname":"P75","class":"M","dt":1},
+			{"chr":"chr8","pos":128750680,"mname":"T73","class":"M","dt":1},
+			{"chr":"chr8","pos":128750685,"mname":"WTPinsP75","class":"I","dt":1}
 		],
 	}],
 })
 
-
 */
+
 
 runproteinpaint({
 noheader:1,

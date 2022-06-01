@@ -1,5 +1,5 @@
-import { fillbar } from '../dom/fillbar'
-import { get_list_cells } from '../dom/gridutils'
+import { fillbar } from '../../dom/fillbar'
+import { get_list_cells } from '../../dom/gridutils'
 
 /*
 ********************** EXPORTED
@@ -81,11 +81,11 @@ async function make_singleSampleTable(arg) {
 
 	if (arg.tk.mds.variant2samples.termidlst) {
 		for (const termid of arg.tk.mds.variant2samples.termidlst) {
-			const term = arg.tk.mds.termdb.getTermById(termid)
+			const term = await arg.tk.mds.termdb.vocabApi.getterm(termid)
 			if (!term) throw 'unknown term id: ' + termid
 			const [cell1, cell2] = get_list_cells(grid_div)
-			cell1.text(term.name)
-			cell2.text(sampledata[termid] || 'N/A')
+			cell1.text(term.name).style('text-overflow', 'ellipsis')
+			cell2.text(sampledata[termid] || 'N/A').style('text-overflow', 'ellipsis')
 		}
 	}
 
@@ -96,8 +96,11 @@ async function make_singleSampleTable(arg) {
 		// to support other configurations of ssm read depth
 		const sm = sampledata.ssm_read_depth
 		const [cell1, cell2] = get_list_cells(grid_div)
-		cell1.style('height', '35px').text('Tumor DNA MAF')
-		cell2.style('height', '35px')
+		cell1
+			.style('height', '35px')
+			.text('Tumor DNA MAF')
+			.style('text-overflow', 'ellipsis')
+		cell2.style('height', '35px').style('text-overflow', 'ellipsis')
 		fillbar(cell2, { f: sm.altTumor / sm.totalTumor })
 		cell2
 			.append('span')
@@ -112,10 +115,12 @@ async function make_singleSampleTable(arg) {
 		d.append('span')
 			.text(sm.totalNormal || 'N/A')
 			.style('margin-right', '10px')
+			.style('text-overflow', 'ellipsis')
 		d.append('span')
 			.text('TOTAL DEPTH IN NORMAL')
 			.style('font-size', '.7em')
 			.style('opacity', 0.5)
+			.style('text-overflow', 'ellipsis')
 	}
 }
 
@@ -137,6 +142,7 @@ function printSampleName(sample, tk, div) {
 
 async function make_multiSampleTable(arg) {
 	// create horizontal table to show multiple samples, one sample per row
+	console.log(arg.tk.mds.variant2samples)
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
 	const [data, numofcases] = await arg.tk.mds.variant2samples.get(arg)
 	// each element of data[] is a sample{}
@@ -166,9 +172,10 @@ async function make_multiSampleTable(arg) {
 		arg.multiSampleTable.header
 			.style('display', 'grid')
 			.style('grid-template-columns', 'repeat(' + numColumns + ', minmax(2vw, 10vw))')
+			.style('text-overflow', 'ellipsis')
 			.style('opacity', 0.3)
 
-		printHeader(arg.multiSampleTable.header)
+		await printHeader(arg.multiSampleTable.header)
 
 		for (const sample of data) {
 			const row = arg.multiSampleTable.ssmid2div.get(sample.ssm_id)
@@ -178,7 +185,10 @@ async function make_multiSampleTable(arg) {
 			}
 
 			// for a variant with multiple samples, css is set repeatedly on the row (placeholder)
-			row.style('display', 'grid').style('grid-template-columns', 'repeat(' + numColumns + ', minmax(2vw, 10vw))')
+			row
+				.style('display', 'grid')
+				.style('grid-template-columns', 'repeat(' + numColumns + ', minmax(2vw, 10vw))')
+				.style('text-overflow', 'ellipsis')
 			printSampleRow(sample, row)
 		}
 	} else {
@@ -190,7 +200,7 @@ async function make_multiSampleTable(arg) {
 			.style('gap', '5px')
 			.style('max-height', '30vw')
 			.style('overflow-y', 'scroll')
-		printHeader(grid, true)
+		await printHeader(grid, true)
 		for (const sample of data) {
 			printSampleRow(sample, grid)
 		}
@@ -198,24 +208,40 @@ async function make_multiSampleTable(arg) {
 
 	//////////// helpers
 
-	function printHeader(row, gray) {
+	async function printHeader(row, gray) {
 		if (has_sample_id) {
-			const c = row.append('div').text('Sample')
+			const c = row
+				.append('div')
+				.text('Sample')
+				.style('text-overflow', 'ellipsis')
+				.style('background-color', 'white')
 			if (gray) c.style('opacity', 0.3)
 		}
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
-				const t = arg.tk.mds.termdb.getTermById(termid)
-				const c = row.append('div').text(t ? t.name : termid)
+				const t = await arg.tk.mds.termdb.vocabApi.getterm(termid)
+				const c = row
+					.append('div')
+					.text(t ? t.name : termid)
+					.style('text-overflow', 'ellipsis')
+					.style('background-color', 'white')
 				if (gray) c.style('opacity', 0.3)
 			}
 		}
 		if (has_ssm_read_depth) {
-			const c = row.append('div').text('Tumor DNA MAF')
+			const c = row
+				.append('div')
+				.text('Tumor DNA MAF')
+				.style('text-overflow', 'ellipsis')
+				.style('background-color', 'white')
 			if (gray) c.style('opacity', 0.3)
 		}
 		if (has_totalNormal) {
-			const c = row.header.append('div').text('Normal depth')
+			const c = row.header
+				.append('div')
+				.text('Normal depth')
+				.style('text-overflow', 'ellipsis')
+				.style('background-color', 'white')
 			if (gray) c.style('opacity', 0.3)
 		}
 	}
@@ -223,13 +249,20 @@ async function make_multiSampleTable(arg) {
 	function printSampleRow(sample, row) {
 		rowBg = !rowBg
 		if (has_sample_id) {
-			const cell = row.append('div')
+			const cell = row
+				.append('div')
+				.style('text-overflow', 'ellipsis')
+				.style('background-color', 'white')
 			if (rowBg) cell.style('background', '#eee')
 			printSampleName(sample, arg.tk, cell)
 		}
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
-				const cell = row.append('div').text(termid in sample ? sample[termid] : '')
+				const cell = row
+					.append('div')
+					.text(termid in sample ? sample[termid] : '')
+					.style('text-overflow', 'ellipsis')
+					.style('background-color', 'white')
 				if (rowBg) cell.style('background', '#eee')
 			}
 		}
@@ -246,7 +279,11 @@ async function make_multiSampleTable(arg) {
 			if (rowBg) cell.style('background', '#eee')
 		}
 		if (has_totalNormal) {
-			const cell = row.append('div').text('totalNormal' in sample ? sample.totalNormal : '')
+			const cell = row
+				.append('div')
+				.text('totalNormal' in sample ? sample.totalNormal : '')
+				.style('text-overflow', 'ellipsis')
+				.style('background-color', 'white')
 			if (rowBg) cell.style('background', '#eee')
 		}
 	}

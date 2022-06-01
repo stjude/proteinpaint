@@ -1,8 +1,9 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { mclass } from '../../shared/common'
-import { fillbar } from '../client'
+import { fillbar } from '../../dom/fillbar'
 import { fold_glyph, settle_glyph } from './skewer.render'
 import { itemtable } from './itemtable'
+import { mayAddSkewerModeOption } from './skewer'
 
 const labyspace = 5
 const font = 'Arial'
@@ -10,103 +11,105 @@ const font = 'Arial'
 /*
 ********************** EXPORTED
 make_leftlabels
+positionLeftlabelg
 ********************** INTERNAL
 makelabel
 mayMakeVariantLabel
 	menu_variants
 		listSkewerData
 stratifymenu_samplesummary
-stratifymenu_genecnv
 */
 
 /*
 make left labels on main track render
 labels are based on server data
+labels are kept persistent by keys in tk.leftlabels.doms{}
+must call after rendering skewer track
+must reset leftLabelMaxwidth
+
 TODO may not update every label when only updating certain sub track
 */
 
 export function make_leftlabels(data, tk, block) {
-	// must call after rendering skewer track
-	// prior labels are erased
-	tk.leftlabelg.selectAll('*').remove()
-	// must reset leftLabelMaxwidth
 	tk.leftLabelMaxwidth = tk.tklabel.node().getBBox().width
 
-	let laby = labyspace + block.labelfontsize
+	let laby = 0
 
-	const labels = [] // for max width
+	mayMakeVariantLabel(data, tk, block, laby)
+	if (tk.leftlabels.doms.variants) laby += labyspace + block.labelfontsize
 
-	{
-		const lab = mayMakeVariantLabel(data, tk, block, laby)
-		if (lab) {
-			labels.push(lab)
-			laby += labyspace + block.labelfontsize
-		}
-	}
-
-	if (data.genecnvNosample) {
-		// quick fix; only for genecnv with no sample level info
-		// should be replaced with just one multi-row label showing #variants, #cnv and click for a menu for collective summary
-		const lab = makelabel(tk, block, laby)
-			.text(
-				data.genecnvNosample.reduce((i, j) => i + j.loss, 0) +
-					' loss, ' +
-					data.genecnvNosample.reduce((i, j) => i + j.gain, 0) +
-					' gain'
-			)
-			.on('click', () => {
-				tk.tktip.clear().showunder(d3event.target)
-				stratifymenu_genecnv(data.genecnvNosample, tk, block)
-			})
-		laby += labyspace + block.labelfontsize
-		labels.push(lab)
-	}
 	if (data.sampleSummaries) {
 		for (const strat of data.sampleSummaries) {
+			if (!tk.leftlabels.doms[strat.label]) {
+				tk.leftlabels.doms[strat.label] = makelabel(tk, block, laby)
+			}
 			const showcount = strat.items.reduce((i, j) => i + (j.mclasses ? 1 : 0), 0)
-			const lab = makelabel(tk, block, laby)
+			tk.leftlabels.doms[strat.label]
 				.text(showcount + ' ' + strat.label + (showcount > 1 ? 's' : ''))
 				.on('click', () => {
 					tk.tktip.clear().showunder(d3event.target)
 					stratifymenu_samplesummary(strat, tk, block)
 				})
 			laby += labyspace + block.labelfontsize
-			labels.push(lab)
 		}
 	}
+
 	if (data.sampleSummaries2) {
 		for (const l of data.sampleSummaries2) {
-			const lab = makelabel(tk, block, laby)
-				.text(l.count + ' ' + l.label1 + (l.count > 1 ? 's' : ''))
-				.on('click', async () => {
-					const wait = tk.tktip
-						.clear()
-						.showunder(d3event.target)
-						.d.append('div')
-						.text('Loading...')
-					try {
-						const config = tk.mds.sampleSummaries2.lst.find(i => i.label1 == l.label1)
-						if (!config) throw 'not found: ' + l.label1
-						const data = await tk.mds.sampleSummaries2.get(config)
-						if (data.error) throw data.error
-						wait.remove()
-						stratifymenu_samplesummary(data.strat, tk, block)
-					} catch (e) {
-						wait.text('Error: ' + (e.message || e))
-					}
-				})
+			if (!tk.leftlabels.doms[l.label1]) tk.leftlabels.doms[l.label1] = makelabel(tk, block, laby)
+			tk.leftlabels.doms[l.label1].text(l.count + ' ' + l.label1 + (l.count > 1 ? 's' : '')).on('click', async () => {
+				const wait = tk.tktip
+					.clear()
+					.showunder(d3event.target)
+					.d.append('div')
+					.text('Loading...')
+				try {
+					const config = tk.mds.sampleSummaries2.lst.find(i => i.label1 == l.label1)
+					if (!config) throw 'not found: ' + l.label1
+					const data = await tk.mds.sampleSummaries2.get(config)
+					if (data.error) throw data.error
+					wait.remove()
+					stratifymenu_samplesummary(data.strat, tk, block)
+				} catch (e) {
+					wait.text('Error: ' + (e.message || e))
+				}
+			})
 			laby += labyspace + block.labelfontsize
-			labels.push(lab)
 		}
 	}
-	for (const l of labels) {
-		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, l.node().getBBox().width)
+	// done creating all possible left labels
+	tk.leftlabels.laby = laby
+	positionLeftlabelg(tk, block)
+
+	for (const k in tk.leftlabels.doms) {
+		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, tk.leftlabels.doms[k].node().getBBox().width)
 	}
-	return laby
+	tk.subtk2height.leftlabels = laby
+}
+
+export function positionLeftlabelg(tk, block) {
+	if (tk.leftlabels.laby == 0) {
+		// no labels
+		return
+	}
+	let x = 0
+	if (tk.skewer) {
+		const nm = tk.skewer.viewModes.find(i => i.inuse)
+		if (nm.type == 'numeric') {
+			// in numeric mode now, axis opens to left,
+			// need to prevent left label from overlapping with axis
+			// use y position of last label
+			const lly = tk.leftlabels.laby + labyspace + block.labelfontsize
+			if (lly > nm.toplabelheight - 10) {
+				x = nm.axisWidth
+			}
+		}
+	}
+	tk.leftlabels.g.attr('transform', `translate(${-x},${labyspace + block.labelfontsize})`)
 }
 
 function makelabel(tk, block, y) {
-	return tk.leftlabelg
+	return tk.leftlabels.g
 		.append('text')
 		.attr('font-size', block.labelfontsize)
 		.attr('font-family', font)
@@ -118,76 +121,78 @@ function makelabel(tk, block, y) {
 		.attr('x', block.tkleftlabel_xshift)
 }
 
-function mayMakeVariantLabel(data, tk, block, laby) {
-	// may allow to show a different name instead of "variant"
+/* for now data{} is no longer used! as mlst used for display is cached on client
+if type=skewer, cached at tk.skewer.data
+if type=numeric, cached at currentMode.data
 
+may allow to show a different name instead of "variant"
+*/
+function mayMakeVariantLabel(data, tk, block, laby) {
 	if (!tk.skewer) return
 
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
-	const lab = makelabel(tk, block, laby)
+	if (!tk.leftlabels.doms.variants) {
+		tk.leftlabels.doms.variants = makelabel(tk, block, laby)
+	}
+
+	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
 
 	let totalcount, showcount
 
 	if (tk.custom_variants) {
 		// if custom list is available, total is defined by its array length
 		totalcount = tk.custom_variants.length
-	} else if (data.skewer) {
-		// no custom data but server returned data, get total from it
-		totalcount = data.skewer.length
 	} else {
-		/* messy way to get total number of data points
-		when it's updating in protein mode, client may not re-request data from server
-		and data.skewer will be missing
-		still the total data is kept on client
-		*/
-		if (tk.skewer.mode == 'skewer') {
-			totalcount = tk.skewer.data.reduce((i, j) => i + j.mlst.length, 0)
-		} else {
-			throw 'do not know how to handle'
-		}
+		// no custom data but server returned data, get total from it
+		totalcount = tk.skewer.rawmlst.length
 	}
 
 	if (totalcount == 0) {
-		lab
+		tk.leftlabels.doms.variants
 			.text('No variants')
 			.attr('class', '')
 			.style('opacity', 0.5)
-		return lab
+			.on('click', null)
+		return
 	}
 
 	/*
 	out of total, only a subset may be plotted
-	to count how many are plotted, check with skewer.mode
-	if mode=skewer, plotted data are at tk.skewer.data[]
-	else if mode=numeric, plotted data are at tk.numericmode.data
+	to count how many are plotted, check with mode type
+	if type=skewer, plotted data are at tk.skewer.data[]
+	else if type=numeric, plotted data are at tk.skewer.numericModes[?].data
 	*/
-	if (tk.skewer.mode == 'skewer') {
+	if (currentMode.type == 'skewer') {
 		showcount = tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width).reduce((i, j) => i + j.mlst.length, 0)
-	} else if (tk.skewer.mode == 'numeric') {
-		showcount = tk.numericmode.data.reduce((i, j) => i + j.mlst.length, 0)
+	} else if (currentMode.type == 'numeric') {
+		showcount = currentMode.data.filter(i => i.x >= 0 && i.x <= block.width).reduce((i, j) => i + j.mlst.length, 0)
 	} else {
-		throw 'unknown skewer.mode'
+		throw 'unknown mode type'
 	}
 
 	if (showcount == 0) {
 		// has data but none displayed
-		lab
+		tk.leftlabels.doms.variants
 			.text('0 out of ' + totalcount + ' variant' + (totalcount > 1 ? 's' : ''))
 			.attr('class', '')
 			.style('opacity', 0.5)
-		return lab
+			.on('click', null)
+		return
 	}
 
-	lab.text(
-		showcount < totalcount
-			? showcount + ' of ' + totalcount + ' variants'
-			: showcount + ' variant' + (showcount > 1 ? 's' : '')
-	)
-	lab.on('click', () => {
-		tk.menutip.clear().showunder(d3event.target)
-		menu_variants(tk, block)
-	})
-	return lab
+	tk.leftlabels.doms.variants
+		.style('opacity', 1) // restore style in case label was disabled
+		.attr('class', 'sja_clbtext2')
+		.text(
+			showcount < totalcount
+				? showcount + ' of ' + totalcount + ' variants'
+				: showcount + ' variant' + (showcount > 1 ? 's' : '')
+		)
+		.on('click', () => {
+			tk.menutip.clear().showunder(d3event.target)
+			menu_variants(tk, block)
+		})
+	return
 }
 
 function menu_variants(tk, block) {
@@ -199,7 +204,28 @@ function menu_variants(tk, block) {
 			listSkewerData(tk, block)
 		})
 
-	if (tk.skewer.mode == 'skewer') {
+	if (tk.skewer.hlssmid) {
+		tk.menutip.d
+			.append('div')
+			.text('Cancel highlight')
+			.attr('class', 'sja_menuoption')
+			.on('click', () => {
+				delete tk.skewer.hlssmid
+				tk.skewer.hlBoxG.selectAll('*').remove()
+				const currentMode = tk.skewer.viewModes.find(i => i.inuse)
+				if (currentMode.type == 'skewer') {
+					// have to rerender under skewer mode, to rearrange skewers
+					settle_glyph(tk, block)
+				} else if (currentMode.type == 'numeric') {
+					// no need to rerender for numeric mode, the disks are fixed
+				} else {
+					throw 'unknown mode type'
+				}
+				tk.menutip.hide()
+			})
+	}
+
+	if (tk.skewer.viewModes.find(n => n.inuse).type == 'skewer') {
 		// showmode=1/0 means expanded/folded skewer, defined in skewer.render.js
 		const expandCount = tk.skewer.data.reduce((i, j) => i + j.showmode, 0)
 		if (expandCount > 0) {
@@ -223,6 +249,8 @@ function menu_variants(tk, block) {
 				})
 		}
 	}
+
+	mayAddSkewerModeOption(tk, block)
 }
 
 async function listSkewerData(tk, block) {
@@ -234,8 +262,15 @@ async function listSkewerData(tk, block) {
 			.mname
 			.class
 	*/
-	const data =
-		tk.skewer.mode == 'skewer' ? tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width) : tk.numericmode.data
+	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
+	let data
+	if (currentMode.type == 'skewer') {
+		data = tk.skewer.data.filter(i => i.x >= 0 && i.x <= block.width)
+	} else if (currentMode.type == 'numeric') {
+		data = currentMode.data
+	} else {
+		throw 'unknown mode type'
+	}
 
 	tk.menutip.clear()
 
@@ -465,76 +500,5 @@ function stratifymenu_samplesummary(strat, tk, block) {
 			}
 		}
 		*/
-	}
-}
-
-function stratifymenu_genecnv(dat, tk, block) {
-	// quick fix, will abandon when getting sample-level cnv data
-	// dat[] is .genecnvNosample from server
-	const m = dat[0]
-	const maxf = (m.gain + m.loss) / m.total
-	const frac2width = f => (100 * f) / maxf
-	// scrollable table with fixed header
-	const staydiv = tk.tktip.d
-		.append('div')
-		.style('position', 'relative')
-		.style('padding-top', '20px')
-	const scrolldiv = staydiv.append('div').style('overflow-y', 'scroll')
-	if (dat.length > 20) {
-		scrolldiv.style('height', '400px').style('resize', 'vertical')
-	}
-	const table = scrolldiv.append('table')
-	const tr = table
-		.append('tr')
-		.style('font-size', '.9em')
-		.style('color', '#858585')
-	tr.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '0px')
-		.text('Project') // XXX hardcoded!
-	tr.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '0px')
-		.text('Max: ' + Math.ceil(100 * maxf) + '%')
-	tr.append('td')
-		.append('div')
-		.style('position', 'absolute')
-		.style('top', '0px')
-		.text('Loss/Gain/Total')
-	for (const item of dat) {
-		const tr = table.append('tr').attr('class', 'sja_clb')
-		tr.append('td').text(item.label)
-		const td = tr.append('td')
-		if (item.loss) {
-			td.append('div')
-				.style('background', tk.mds.queries.genecnv.losscolor)
-				.style('display', 'inline-block')
-				.style('width', frac2width(item.loss / item.total) + 'px')
-				.style('height', '15px')
-		}
-		if (item.gain) {
-			td.append('div')
-				.style('background', tk.mds.queries.genecnv.gaincolor)
-				.style('display', 'inline-block')
-				.style('width', frac2width(item.gain / item.total) + 'px')
-				.style('height', '15px')
-		}
-		tr.append('td').html(
-			'<span style="color:' +
-				tk.mds.queries.genecnv.losscolor +
-				'">' +
-				item.loss +
-				'</span>\t\t' +
-				'<span style="color:' +
-				tk.mds.queries.genecnv.gaincolor +
-				'">' +
-				item.gain +
-				'</span>\t\t' +
-				'<span style="opacity:.5;font-size:.8em">' +
-				item.total +
-				'</span>'
-		)
 	}
 }

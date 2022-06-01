@@ -1,4 +1,4 @@
-import { dofetch3 } from './common/dofetch'
+import { dofetch3 } from '../common/dofetch'
 
 /*
 ********************** EXPORTED

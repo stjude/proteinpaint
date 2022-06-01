@@ -476,29 +476,6 @@ const variant2samples = {
 				}
 			}
 		}
-		// Note: all logic for tid2value has been converted termlst, because newly added terms are
-		// not part of terms[], so new term must be added from q.
-		// TODO: remove following commented part after reviewing
-		// else if (p.tid2value) {
-		// 	for (const tid in p.tid2value) {
-		// 		let t = terms.find(i => i.id == tid)
-		// 		// Quick Fix: tid2value from sample table has term.name rather than term.id
-		// 		if (!t) t = terms.find(i => i.name == tid)
-		// 		if (t && t.type == 'categorical') {
-		// 			f.content.push({
-		// 				op: 'in',
-		// 				content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
-		// 			})
-		// 		} else if (t && t.type == 'integer') {
-		// 			for (const val of p.tid2value[tid]) {
-		// 				f.content.push({
-		// 					op: val.op,
-		// 					content: { field: 'cases.' + t.fields.join('.'), value: val.range }
-		// 				})
-		// 			}
-		// 		}
-		// 	}
-		// }
 		return f
 	}
 }
@@ -506,7 +483,7 @@ const variant2samples = {
 /*
 getting total cohort sizes
 */
-function totalsize_filters(p) {
+function totalsize_filters(p, ds) {
 	// same filter maker function is shared for all terms that need to get total size
 	const f = {
 		filters: {
@@ -528,7 +505,7 @@ function totalsize_filters(p) {
 	}
 	if (p.tid2value) {
 		for (const tid in p.tid2value) {
-			const t = terms.find(i => i.id == tid)
+			const t = ds.cohort.termdb.q.termjsonByOneid(tid)
 			if (t) {
 				f.filters.content.push({
 					op: 'in',
@@ -624,7 +601,7 @@ function termid2size_query(termlst) {
 	return query
 }
 
-function termid2size_filters(p) {
+function termid2size_filters(p, ds) {
 	const f = {
 		filters: {
 			op: 'and',
@@ -634,7 +611,7 @@ function termid2size_filters(p) {
 
 	if (p && p.tid2value) {
 		for (const tid in p.tid2value) {
-			const t = terms.find(i => i.id == tid)
+			const t = ds.cohort.termdb.q.termjsonByOneid(tid)
 			if (t) {
 				f.filters.content.push({
 					op: 'in',
@@ -962,118 +939,6 @@ const aliquot2sample = {
 
 ///////////////////////////////// end of query strings ///////////////
 
-/*
-hardcoding a flat list of terms here
-any possibility of dynamically querying terms from api??
-*/
-const terms = [
-	{
-		name: 'Project',
-		id: 'project_id',
-		type: 'categorical',
-		fields: ['project', 'project_id']
-	},
-	{
-		name: 'Disease',
-		id: 'disease_type',
-		type: 'categorical',
-		fields: ['disease_type']
-	},
-	{
-		name: 'Primary site',
-		id: 'primary_site',
-		type: 'categorical',
-		fields: ['primary_site']
-	},
-	{
-		name: 'Gender',
-		id: 'gender',
-		type: 'categorical',
-		fields: ['demographic', 'gender']
-	},
-	{
-		name: 'Age at diagnosis',
-		id: 'age_at_diagnosis',
-		type: 'integer',
-		fields: ['diagnoses', 'age_at_diagnosis'],
-		unit_conversion: 0.002739,
-		unit: 'years'
-	},
-	{
-		name: 'Race',
-		id: 'race',
-		type: 'categorical',
-		fields: ['demographic', 'race']
-	},
-	{
-		name: 'Ethnicity',
-		id: 'ethnicity',
-		type: 'categorical',
-		fields: ['demographic', 'ethnicity']
-	}
-]
-
-/* this now applies not only to vcf track but also legacy ds
- */
-
-// attributes to show for list of variants
-const snvindel_attributes = [
-	{
-		label: 'Mutation',
-		get: m => m.mname || ''
-	},
-	{
-		label: 'Genome pos.',
-		get: m => {
-			if (m.chr && m.pos) return m.chr + ':' + (m.pos + 1)
-			return null
-		}
-	},
-	{
-		label: 'Allele',
-		lst: [
-			{
-				get: function(m) {
-					return m.ref || ''
-				},
-				label: 'Ref',
-				valuecenter: true
-			},
-			{
-				get: function(m) {
-					return m.alt || ''
-				},
-				label: 'Alt',
-				valuecenter: true
-			}
-		]
-	},
-	{
-		label: 'Occurrence',
-		get: m => m.info.total
-	},
-	{
-		label: 'Polyphen impact',
-		get: m => m.info.polyphen_impact
-	},
-	{
-		label: 'Polyphen score',
-		get: m => m.info.polyphen_score
-	},
-	{
-		label: 'SIFT impact',
-		get: m => m.info.sift_impact
-	},
-	{
-		label: 'SIFT score',
-		get: m => m.info.sift_score
-	},
-	{
-		label: 'VEP impact',
-		get: m => m.info.vep_impact
-	}
-]
-
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 // XXX hardcoded to use .sample_id to dedup samples
 // XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -1081,7 +946,6 @@ const snvindel_attributes = [
 module.exports = {
 	isMds3: true,
 	genome: 'hg38',
-	snvindel_attributes,
 	apihost: GDC_HOST + '/v0/graphql',
 
 	validate_filter0,
@@ -1089,7 +953,6 @@ module.exports = {
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
 	termdb: {
-		terms,
 		termid2totalsize: {
 			// keys are term ids
 			project_id: { gdcapi: project_size },
@@ -1109,9 +972,16 @@ module.exports = {
 	*/
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
-		// list of terms to show as items in detailed info page
+
+		// default list of terms to show as sample attributes in details page
 		termidlst: ['disease_type', 'primary_site', 'project_id', 'gender', 'age_at_diagnosis', 'race', 'ethnicity'],
-		sunburst_ids: ['disease_type', 'primary_site'], // term id
+
+		// default list of terms for making sunburst/crosstab summary for cases harboring a term
+		sunburst_ids: ['disease_type', 'primary_site'],
+
+		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
+		sampleHasSsmReadDepth: true, // corresponds to .ssm_read_depth{} of a sample
+		sampleHasSsmTotalNormal: true, // corresponds to .totalNormal:int of a sample
 
 		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
 		//sample_id_key: 'case_id',

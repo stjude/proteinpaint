@@ -12,14 +12,13 @@ get_crosstabCombinations
 
 export async function init(ds, genome, _servconfig) {
 	if (!ds.queries) throw 'ds.queries{} missing'
-	validate_termdb(ds)
+	await validate_termdb(ds)
 	validate_variant2samples(ds)
 	validate_sampleSummaries(ds)
 	validate_sampleSummaries2(ds)
 	validate_query_snvindel(ds)
 	validate_query_genecnv(ds, genome)
 	validate_ssm2canonicalisoform(ds)
-	init_dictionary(ds)
 
 	may_add_refseq2ensembl(ds, genome)
 }
@@ -33,29 +32,20 @@ export function client_copy(ds) {
 		label: ds.label,
 		queries: copy_queries(ds)
 	}
+
+	// sample summaries to be replaced by #cases leftlabel
 	if (ds.sampleSummaries) {
 		ds2.sampleSummaries = ds.sampleSummaries.lst
 	}
 	if (ds.sampleSummaries2) {
 		ds2.sampleSummaries2 = { lst: ds.sampleSummaries2.lst }
 	}
+
 	if (ds.termdb) {
 		ds2.termdb = {}
-		if (ds.termdb.terms) {
-			// if okay to expose the whole vocabulary to client?
-			// if to keep vocabulary at backend
-			ds2.termdb.terms = []
-			for (const m of ds.termdb.terms) {
-				const n = {}
-				for (const k in m) {
-					if (k == 'get') continue
-					n[k] = m[k]
-				}
-				ds2.termdb.terms.push(n)
-			}
-		} else {
-			throw 'unknown vocab source'
-		}
+		// if using flat list of terms, do not send terms[] to client
+		// as this is official ds, and client will create vocabApi
+		// to query /termdb server route with standard methods
 	}
 	if (ds.queries.snvindel) {
 		ds2.has_skewer = true
@@ -65,23 +55,33 @@ export function client_copy(ds) {
 		ds2.has_genecnv_quickfix = true
 	}
 	if (ds.variant2samples) {
-		ds2.variant2samples = {
-			variantkey: ds.variant2samples.variantkey,
-			termidlst: ds.variant2samples.termidlst,
-			type_samples: ds.variant2samples.type_samples,
-			type_summary: ds.variant2samples.type_summary,
-			type_sunburst: ds.variant2samples.type_sunburst,
-			url: ds.variant2samples.url
+		const skip = ['sample_id_key', 'sample_id_getter', 'gdcapi']
+		ds2.variant2samples = {}
+		for (const k in ds.variant2samples) {
+			if (skip.includes(k)) continue
+			ds2.variant2samples[k] = ds.variant2samples[k]
 		}
 	}
 	return ds2
 }
 
-function validate_termdb(ds) {
+async function validate_termdb(ds) {
 	const tdb = ds.termdb
 	if (!tdb) return
-	if (tdb.terms) {
-		// the need for get function is only for gdc
+
+	////////////////////////////////////////
+	// ds.cohort.termdb{} is created to be compatible with termdb.js
+	ds.cohort = {}
+	ds.cohort.termdb = {}
+
+	if (tdb.dictionary) {
+		if (tdb.dictionary.gdcapi) {
+			await gdcTermdb.initDictionary(ds)
+		} else {
+			throw 'unknown method to initiate dictionary'
+		}
+	} else if (tdb.terms) {
+		// flat list of terms
 		for (const t of tdb.terms) {
 			if (!t.id) throw 'id missing from a term'
 			if (!t.fields) throw '.fields[] missing from a term'
@@ -90,16 +90,10 @@ function validate_termdb(ds) {
 	} else {
 		throw 'unknown source of termdb vocabulary'
 	}
-	tdb.getTermById = id => {
-		if (tdb.terms) {
-			return tdb.terms.find(i => i.id == id)
-		}
-		return null
-	}
 
 	if (tdb.termid2totalsize) {
 		for (const tid in tdb.termid2totalsize) {
-			if (!tdb.getTermById(tid)) throw 'unknown term id from termid2totalsize: ' + tid
+			if (!ds.cohort.termdb.q.termjsonByOneid(tid)) throw 'unknown term id from termid2totalsize: ' + tid
 			const t = tdb.termid2totalsize[tid]
 			if (t.gdcapi) {
 				// validate
@@ -125,14 +119,14 @@ function validate_termdb(ds) {
 			if (!gdcapi.keys && !gdcapi.keys.length) throw 'termid2totalsize2 missing keys[]'
 			if (typeof gdcapi.filters != 'function') throw '.filters is not in termid2totalsize2'
 		} else {
-			throw 'termid2totalsize2 missing gdcapi'
+			throw 'unknown method for termid2totalsize2'
 		}
 		// add getter
 		tdb.termid2totalsize2.get = async (termidlst, entries, q) => {
 			// termidlst is from clientside
 			let termlst = []
 			for (const termid of termidlst) {
-				const term = ds.cohort.termdb.q.getTermById(termid)
+				const term = ds.cohort.termdb.q.termjsonByOneid(termid)
 				if (term)
 					termlst.push({
 						path: term.path.replace('case.', '').replace(/\./g, '__'),
@@ -142,8 +136,7 @@ function validate_termdb(ds) {
 			if (tdb.termid2totalsize2.gdcapi) {
 				const tv2counts = await gdc.get_termlst2size({ api: tdb.termid2totalsize2.gdcapi, ds, termlst, q })
 				for (const termid of termidlst) {
-					let term = ds.termdb.getTermById(termid)
-					if (!term) term = ds.cohort.termdb.q.getTermById(termid)
+					const term = ds.cohort.termdb.q.termjsonByOneid(termid)
 					const entry = entries.find(e => e.name == term.name)
 					if (term && term.type == 'categorical' && entry !== undefined) {
 						const tv2count = tv2counts.get(term.id)
@@ -153,6 +146,8 @@ function validate_termdb(ds) {
 						}
 					}
 				}
+			} else {
+				throw 'unknown method for termid2totalsize2'
 			}
 			return entries
 		}
@@ -172,14 +167,14 @@ function validate_variant2samples(ds) {
 	if (vs.termidlst.length == 0) throw '.termidlst[] empty array from variant2samples'
 	if (!ds.termdb) throw 'ds.termdb missing when variant2samples.termidlst is in use'
 	for (const id of vs.termidlst) {
-		if (!ds.termdb.getTermById(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
+		if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
 	}
 	// FIXME should be optional. when provided will show sunburst chart
 	if (!vs.sunburst_ids) throw '.sunburst_ids[] missing from variant2samples'
 	if (!Array.isArray(vs.sunburst_ids)) throw '.sunburst_ids[] not array from variant2samples'
 	if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
 	for (const id of vs.sunburst_ids) {
-		if (!ds.termdb.getTermById(id)) throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
+		if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
 	}
 	if (vs.gdcapi) {
 		gdc.validate_variant2sample(vs.gdcapi)
@@ -244,9 +239,9 @@ function validate_sampleSummaries2(ds) {
 	if (!Array.isArray(ss.lst)) throw '.lst is not array from sampleSummaries2'
 	for (const i of ss.lst) {
 		if (!i.label1) throw '.label1 from one of sampleSummaries2.lst'
-		if (!ds.termdb.getTermById(i.label1)) throw 'no term match with .label1: ' + i.label1
+		if (!ds.cohort.termdb.q.termjsonByOneid(i.label1)) throw 'no term match with .label1: ' + i.label1
 		if (i.label2) {
-			if (!ds.termdb.getTermById(i.label2)) throw 'no term match with .label2: ' + i.label2
+			if (!ds.cohort.termdb.q.termjsonByOneid(i.label2)) throw 'no term match with .label2: ' + i.label2
 		}
 	}
 	if (!ss.get_number) throw '.get_number{} missing from sampleSummaries2'
@@ -272,9 +267,9 @@ function validate_sampleSummaries(ds) {
 	if (!Array.isArray(ss.lst)) throw '.lst is not array from sampleSummaries'
 	for (const i of ss.lst) {
 		if (!i.label1) throw '.label1 from one of sampleSummaries.lst'
-		if (!ds.termdb.getTermById(i.label1)) throw 'no term match with .label1: ' + i.label1
+		if (!ds.cohort.termdb.q.termjsonByOneid(i.label1)) throw 'no term match with .label1: ' + i.label1
 		if (i.label2) {
-			if (!ds.termdb.getTermById(i.label2)) throw 'no term match with .label2: ' + i.label2
+			if (!ds.cohort.termdb.q.termjsonByOneid(i.label2)) throw 'no term match with .label2: ' + i.label2
 		}
 	}
 	ss.makeholder = opts => {
@@ -697,14 +692,6 @@ function validate_ssm2canonicalisoform(ds) {
 	// gdc-specific logic
 	if (!ds.ssm2canonicalisoform) return
 	gdc.validate_ssm2canonicalisoform(ds.ssm2canonicalisoform) // add get()
-}
-
-async function init_dictionary(ds) {
-	const dictioary = ds.termdb.dictionary
-	if (dictioary.gdcapi) {
-		ds.cohort = {}
-		await gdcTermdb.initDictionary(ds)
-	}
 }
 
 /* if genome allows converting refseq/ensembl

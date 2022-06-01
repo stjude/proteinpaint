@@ -1,16 +1,16 @@
 import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
 import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { axisstyle } from './dom/axisstyle'
+import { axisstyle } from '../dom/axisstyle'
 import { newpane } from './client'
-import { Menu } from './dom/menu'
-import { sayerror } from './dom/sayerror'
-import { appear } from './dom/animation'
-import { dofetch3 } from './common/dofetch'
-import { make_radios } from './dom/radiobutton'
-import { make_table_2col } from './dom/table2col'
-import { make_one_checkbox } from './dom/checkbox'
-import urlmap from './common/urlmap'
+import { Menu } from '../dom/menu'
+import { sayerror } from '../dom/sayerror'
+import { appear } from '../dom/animation'
+import { dofetch3 } from '../common/dofetch'
+import { make_radios } from '../dom/radiobutton'
+import { make_table_2col } from '../dom/table2col'
+import { make_one_checkbox } from '../dom/checkbox'
+import urlmap from '../common/urlmap'
 
 /*
 important: tk.uninitialized will be deleted by getData at the first launch
@@ -1708,6 +1708,10 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 			)
 			.style('text-align', 'center')
 	}
+	tk.alignpane.body
+		.style('max-width', '90vw')
+		.style('max-height', '65vh')
+		.style('overflow', 'scroll')
 
 	const div = tk.alignpane.body.append('div').style('margin', '20px')
 	tk.readAlignmentTable = div

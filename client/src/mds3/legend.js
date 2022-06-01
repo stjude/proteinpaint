@@ -1,6 +1,6 @@
 import { event as d3event } from 'd3-selection'
 import { legend_newrow } from '../block.legend'
-import { Menu } from '../dom/menu'
+import { Menu } from '../../dom/menu'
 import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '../../shared/common'
 
 /*

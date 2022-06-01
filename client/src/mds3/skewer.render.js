@@ -11,6 +11,7 @@ settle_glyph
 unfold_glyph
 fold_glyph
 skewer_sety
+mayHighlightDiskBySsmid
 ********************** INTERNAL
 skewer_setstem
 settle_glyph
@@ -23,7 +24,6 @@ const modefold = 0
 const modeshow = 1
 const middlealignshift = 0.3
 const disclabelspacing = 1 // px spacing between disc and label
-const highlightBoxColor = 'red'
 const textlensf = 0.6 // to replace n.getBBox().width for detecting filling font size which breaks in chrome
 const font = 'Arial'
 
@@ -69,17 +69,14 @@ export function skewer_make(tk, block) {
 	let globalmaxradius = dotwidth / 2
 	ss.maxheight = 0
 	for (const d of ss.data) {
+		// settings may have been carried over from previous rendering
+		if (d.showmode == undefined) d.showmode = modefold
+		if (d.slabelrotate == undefined) d.slabelrotate = false
 		// determine dimension for this skewer, do not position or render yet
 		// compute radius for each group
-		if (d.showmode == undefined) {
-			d.showmode = modefold
-		} else {
-			// has already been set by past data from genomic panning
-		}
 		d.maxradius = 0
 		d.maxrimwidth = 0
 		d.width = 0
-		d.slabelrotate = false
 		d.slabelwidth = 0
 		for (const r of d.groups) {
 			if (r.occurrence == 1) {
@@ -204,25 +201,11 @@ export function skewer_make(tk, block) {
 			unfold_update(tk, block)
 		})
 
-	// special effect for highlighted variants
-	if (tk.hlaachange) {
-		// pulsating label
-		textlab.filter(d => tk.hlaachange.has(d.mlst[0].mname)).classed('sja_pulse', true)
-	}
-	if (tk.hlssmid) {
-		// add red box
-		//textlab.filter(d => d.mlst.find(m => tk.hlssmid.has(m.ssm_id))).classed('sja_pulse', true)
-		discg
-			.filter(d => d.mlst.find(m => tk.hlssmid.has(m.ssm_id)))
-			.append('rect')
-			.attr('x', d => -d.radius)
-			.attr('y', d => -d.radius)
-			.attr('width', d => d.radius * 2)
-			.attr('height', d => d.radius * 2)
-			.attr('stroke', highlightBoxColor)
-			.attr('stroke-width', 1.5)
-			.attr('fill', 'none')
-	}
+	// red box for highlighting, under the kick cover
+	ss.hlBoxG = discg.append('g')
+
+	// pulsating label, not in use
+	// textlab.filter(d => d.mlst.find(m => tk.hlssmid.has(m.ssm_id))).classed('sja_pulse', true)
 
 	// skewer width
 	for (const d of ss.data) {
@@ -236,7 +219,7 @@ export function skewer_make(tk, block) {
 	}
 
 	// invisible kicking disc cover
-	tk.skewer.discKickSelection = discg
+	discg
 		.append('circle')
 		.attr('r', d => d.radius - 0.5)
 		.attr('stroke', d => tk.color4disc(d.mlst[0]))
@@ -884,4 +867,32 @@ export function fold_glyph(lst, tk) {
 		.transition()
 		.duration(dur) // to prevent showing pica over busy skewer
 		.attr('transform', 'scale(1)')
+}
+
+/* works for both skewer and numeric mode
+highlights disc dots by matching with tk.skewer.hlssmid, a set
+hlBoxG is blank <g> in each discg
+to highlight a disk, insert a <rect> with colored border
+*/
+export function mayHighlightDiskBySsmid(tk) {
+	// clear existing highlights
+	tk.skewer.hlBoxG.selectAll('*').remove()
+	if (!tk.skewer.hlssmid) return
+	tk.skewer.hlBoxG
+		.filter(g => {
+			if (g.mlst) {
+				// in skewer mode
+				return g.mlst.find(m => tk.skewer.hlssmid.has(m.ssm_id))
+			}
+			// numeric mode
+			return tk.skewer.hlssmid.has(g.ssm_id)
+		})
+		.append('rect')
+		.attr('x', g => -g.radius)
+		.attr('y', g => -g.radius)
+		.attr('width', g => g.radius * 2)
+		.attr('height', g => g.radius * 2)
+		.attr('stroke', tk.skewer.hlBoxColor)
+		.attr('stroke-width', g => (g.radius > 10 ? 1.5 : 1))
+		.attr('fill', 'none')
 }

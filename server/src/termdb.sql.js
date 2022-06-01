@@ -1046,7 +1046,6 @@ thus less things to worry about...
 			if (!(r.cohort in supportedChartTypes)) {
 				supportedChartTypes[r.cohort] = ['barchart', 'regression']
 				numericTypeCount[r.cohort] = 0
-				console.log(ds.cohort.allowedChartTypes)
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].push('matrix')
 			}
 			// why would app.features be missing?

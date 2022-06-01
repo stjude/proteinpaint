@@ -1,6 +1,6 @@
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import * as client from './client'
-import { dofetch3, setAuth } from './common/dofetch'
+import { dofetch3, setAuth } from '../common/dofetch'
 import { stratinput } from '../shared/tree'
 import { stratify } from 'd3-hierarchy'
 import { findgenemodel_bysymbol } from './gene'
@@ -15,11 +15,11 @@ import blockinit from './block.init'
 import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
-import { drawer_init } from './app.drawer'
-import urlmap from './common/urlmap'
-import { renderSandboxFormDiv, newSandboxDiv } from './dom/sandbox'
+import { drawer_init } from '../appdrawer/app.drawer'
+import urlmap from '../common/urlmap'
+import { renderSandboxFormDiv, newSandboxDiv } from '../dom/sandbox'
 import * as wrappers from './wrappers/PpReact'
-import { first_genetrack_tolist } from './common/1stGenetk'
+import { first_genetrack_tolist } from '../common/1stGenetk'
 
 /*
 
@@ -1369,7 +1369,7 @@ async function launch_tkUIs(arg, app) {
 
 async function launchtermdb(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
-	import('./termdb/app').then(_ => {
+	import('../termdb/app').then(_ => {
 		_.appInit(opts)
 	})
 }
@@ -1379,7 +1379,7 @@ async function launchmass(opts, app) {
 	if (opts.state && opts.state.genome) {
 		opts.genome = app.genomes[opts.state.genome]
 	}
-	import('./mass/app').then(_ => {
+	import('../mass/app').then(_ => {
 		_.appInit(opts)
 	})
 }

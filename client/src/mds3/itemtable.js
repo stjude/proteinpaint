@@ -1,7 +1,8 @@
 import { mclass, dtsnvindel, dtfusionrna, dtsv } from '../../shared/common'
 import { init_sampletable } from './sampletable'
-import { get_list_cells } from '../dom/gridutils'
+import { get_list_cells } from '../../dom/gridutils'
 import { event as d3event } from 'd3-selection'
+import { appear } from '../../dom/animation'
 
 /*
 ********************** EXPORTED
@@ -41,13 +42,40 @@ arg{}
 export async function itemtable(arg) {
 	if (arg.mlst[0].dt == dtsnvindel) {
 		await table_snvindel(arg)
+		if (!isElementInViewport(arg.div)) {
+			console.log(46)
+			// If div renders outside of viewport, shift left
+			const leftpos = determineLeftCoordinate(arg.div)
+			appear(arg.div)
+			arg.div.style('left', leftpos + 'vw').style('max-width', '90vw')
+		}
 		return
 	}
 	if (arg.mlst[0].dt == dtfusionrna || arg.mlst[0].dt == dtsv) {
 		await table_fusionsv(arg)
+		if (!isElementInViewport(arg.div)) {
+			// If div renders outside of viewport, shift left
+			const leftpos = determineLeftCoordinate(arg.div)
+			appear(arg.div)
+			arg.div.style('left', leftpos + 'vw').style('max-width', '90vw')
+		}
 		return
 	}
 	throw 'itemtable unknown dt'
+}
+
+function determineLeftCoordinate(div) {
+	const coords = div.node().getBoundingClientRect()
+	// Reset left position to 100% - (arg.div.width % + 3%)
+	console.log(coords)
+	let leftpos
+	const left = 100 - ((coords.width / (document.documentElement.clientWidth || window.innerWidth)) * 100 + 3)
+	if (coords.width / (document.documentElement.clientWidth || window.innerWidth) > 0.4) {
+		leftpos = 3
+	} else {
+		leftpos = left
+	}
+	return leftpos
 }
 
 /*
@@ -107,11 +135,12 @@ function table_snvindel_onevariant({ mlst, tk, block }, grid) {
 		td1.text('Occurrence')
 		td2.text(m.occurrence)
 	}
-	if (tk.skewer.mode == 'numeric') {
-		const nm = tk.numericmode
+	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
+	if (currentMode.type == 'numeric' && currentMode.byAttribute != 'occurrence') {
+		// show a numeric value that is not occurrence
 		const [td1, td2] = get_list_cells(grid)
-		td1.text(nm.valueName || 'Value')
-		td2.text(m.__value_use)
+		td1.text(currentMode.label)
+		td2.text(m.__value_missing ? 'NA' : m.__value_use)
 	}
 }
 
@@ -152,8 +181,12 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 		1 + // consequence
 		1 + // mutation
 		1 // sampleDivHeader
-	const showOccurrence = mlst.find(i => i.occurrence != undefined),
-		showNumericmodeValue = tk.skewer.mode == 'numeric'
+	const showOccurrence = mlst.find(i => i.occurrence != undefined)
+	let showNumericmodeValue
+	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
+	if (currentMode.type == 'numeric' && currentMode.byAttribute != 'occurrence') {
+		showNumericmodeValue = true
+	}
 
 	grid.style(
 		'grid-template-columns',
@@ -179,7 +212,7 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 		grid
 			.append('div')
 			.style('opacity', 0.3)
-			.text(tk.numericmode.valueName || 'Value')
+			.text(currentMode.label)
 	}
 
 	// placeholder for showing column headers of sample table, keep blank if there's no content
@@ -200,7 +233,7 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 		}
 
 		if (showNumericmodeValue) {
-			grid.append('div').text(m.__value_use)
+			grid.append('div').text(m.__value_missing ? 'NA' : m.__value_use)
 		}
 
 		// create placeholder for showing available samples of this variant
@@ -276,4 +309,21 @@ function add_csqButton(m, tk, td, table) {
 		// no showing additional csq
 		print_mname(td, m)
 	}
+}
+
+function isElementInViewport(el) {
+	const rect = el.node().getBoundingClientRect()
+	return (
+		// rect.top >= 0 &&
+		// rect.left >= 0 &&
+		// rect.bottom < (document.documentElement.clientHeight || window.innerHeight) &&
+		// rect.right < (document.documentElement.clientWidth || window.innerWidth)
+
+		// Fix for div appearing still appearing within viewport but without a border,
+		// causing content to render bunched.
+		rect.top >= 5 &&
+		rect.left >= 5 &&
+		rect.bottom < (document.documentElement.clientHeight || window.innerHeight) - 5 &&
+		rect.right < (document.documentElement.clientWidth || window.innerWidth) - 5
+	)
 }

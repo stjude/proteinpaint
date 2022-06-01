@@ -1,9 +1,8 @@
-import * as common from '../../shared/common'
-import * as coord from '../coord'
-import * as client from '../client'
-import { skewer_make, settle_glyph, fold_glyph, unfold_glyph } from './skewer.render'
+import { dtsnvindel, dtsv, dtfusionrna, dtitd, dtdel, dtnloss, dtcloss } from '../../shared/common'
+import { skewer_make, settle_glyph, fold_glyph, unfold_glyph, mayHighlightDiskBySsmid } from './skewer.render'
 import { make_datagroup } from './datagroup'
-import { render as nm_render } from './numericmode'
+import { renderNumericMode } from './numericmode'
+import { positionLeftlabelg } from './leftlabel'
 
 /*
 at some point, data.skewer will return aggregated data,
@@ -13,37 +12,56 @@ otherwise, ssm_id list will not be given when the number is big, in hundreds
 availability of ssm_id decides if variant2samples query is allowed
 
 
-legacy code to clean up:
-hlaachange_addnewtrack
 
 ********************** EXPORTED
 may_render_skewer
+mayAddSkewerModeOption
 
 *********** function cascade
-may_render_skewer
-	make_skewer_data
+make_skewer_data
 	skewer_make
 	tkdata_update_x
 	settle_glyph
 	done_tknodata
 
-
+*************************
+* skewer data structure *
+*************************
 tk.skewer{}
 	.rawmlst[] -- comes from server-returned data.skewer[]
 	.g
 	.data[]
+		// each element is a skewer
 		.chr, pos
 		.x
-		.occurrence
+		.occurrence // different types of values
+		            // if occurrence is in rawmlst, this is the sum of occurrences from .mlst[]
+					// otherwise it's the length of .mlst[]
 		.mlst[]
 		.groups[]
+			// each group is a disk
 			.dt
-			.occurrence
+			.occurrence // same as above
 			.mlst[]
 	.selection
 	.stem1, stem2, stem3 // #pixel
 	.maxheight
 
+
+*******************************
+* numeric mode data structure *
+*******************************
+nm{}
+	// the view mode object from skewer.viewModes[] that is in use
+	.data[]
+		.chr, .pos
+		.g
+		.mlst[]
+			// can be multiple variants at the same position with different alleles
+		.width
+		.x
+		.x0
+		.xoffset
 */
 
 /*
@@ -56,22 +74,45 @@ else exon<:
 */
 
 export function may_render_skewer(data, tk, block) {
-	// return skewer tk height
+	// update skewer subtrack height to tk.subtk2height.skewer:int
+
 	if (!tk.skewer) {
 		// not equipped with skewer track
 		// created in makeTk when skewer datatype is available
-		return 0
+		tk.subtk2height.skewer = 0
+		return
 	}
 
-	if (tk.skewer.mode == 'numeric') {
-		return nm_render(data, tk, block)
+	updateViewModes(tk, data.skewer)
+	// tk.skewer.viewModes[] updated
+
+	hlaachange2ssmid(tk, data.skewer) // tk.skewer.hlssmid may be set
+
+	const currentMode = tk.skewer.viewModes.find(n => n.inuse)
+	if (!currentMode) throw 'no mode!!'
+
+	if (data.skewer) {
+		// register new mlst data
+		// otherwise will not overwrite skewer.mlst
+		tk.skewer.rawmlst = data.skewer
+	} else {
+		// server will not return skewer data when panning/zooming in protein mode
+		// the data is already kept as tk.skewer.rawmlst
 	}
 
-	if (tk.skewer.mode != 'skewer') throw 'skewer.mode is not "skewer"'
+	if (currentMode.type == 'numeric') {
+		tk.subtk2height.skewer = renderNumericMode(currentMode, data, tk, block)
+		mayHighlightDiskBySsmid(tk)
+		return
+	}
+
+	// possible to plug in new skewer.*.js scripts to support additional mode types
+
+	if (currentMode.type != 'skewer') throw 'mode.type is not "skewer"'
 
 	tk.aboveprotein = true
 
-	if (data && !data.skewer && block.usegm && block.gmmode != client.gmmode.genomic && block.pannedpx != undefined) {
+	if (data && !data.skewer && block.usegm && block.gmmode != 'genomic' && block.pannedpx != undefined) {
 		// when data.skewer is not given
 		// in gmmode, browser panned, no re-requesting data
 		// no need to re-group
@@ -80,11 +121,6 @@ export function may_render_skewer(data, tk, block) {
 		tk.skewer.selection.attr('transform', d => 'translate(' + d.x + ',' + d.y + ')')
 		settle_glyph(tk, block)
 	} else {
-		if (data && data.skewer) {
-			// register new mlst data
-			// otherwise will not overwrite skewer.mlst
-			tk.skewer.rawmlst = data.skewer
-		}
 		// when zooming protein mode, data.skewer is not given but still need to remake skewers
 		// generate new skewer track data from skewer.mlst
 		tk.skewer.g.selectAll('*').remove()
@@ -93,77 +129,57 @@ export function may_render_skewer(data, tk, block) {
 	}
 
 	if (!tk.skewer.data || tk.skewer.data.length == 0) {
-		return done_tknodata(tk, block)
+		done_tknodata(tk, block)
+		tk.subtk2height.skewer = 40
+		return
 	}
 
 	/*
 	variants loaded for this track
 	*/
 
-	if (tk.hlaachange || tk.hlssmid) {
-		/*
-		for any variants to be highlighted, expanded and fold all the others
-		*/
+	if (tk.skewer.hlssmid) {
+		// highlight variants based on if m.ssm_id is in hlssmid (a set)
+		// and fold all the others
 		const fold = []
 		const unfold = []
-
-		if (tk.hlaachange) {
-			// is map
-			for (const d of tk.skewer.data) {
-				let has = false
-				for (const g of d.groups) {
-					if (tk.hlaachange.has(g.mlst[0].mname)) {
+		for (const d of tk.skewer.data) {
+			let has = false
+			for (const g of d.groups) {
+				for (const m of g.mlst) {
+					if (tk.skewer.hlssmid.has(m.ssm_id)) {
 						has = true
-						tk.hlaachange.delete(g.mlst[0].mname)
 						break
 					}
 				}
-				if (has) {
-					unfold.push(d)
-				} else {
-					fold.push(d)
-				}
 			}
-			if (tk.hlaachange.size) {
-				if (!block.usegm) {
-					block.error('cannot add items from hlaachange: not in gene-mode')
-				} else {
-					hlaachange_addnewtrack(tk, block)
-				}
+			if (has) {
+				unfold.push(d)
+			} else {
+				fold.push(d)
 			}
-			delete tk.hlaachange
 		}
-		if (tk.hlssmid) {
-			// is map
-			for (const d of tk.skewer.data) {
-				let has = false
-				for (const g of d.groups) {
-					for (const m of g.mlst) {
-						// harcoded key of "ssm_id"!!!
-						if (tk.hlssmid.has(m.ssm_id)) {
-							has = true
-							tk.hlssmid.delete(m.ssm_id)
-							break
-						}
-					}
-				}
-				if (has) {
-					unfold.push(d)
-				} else {
-					fold.push(d)
-				}
-			}
-			delete tk.hlssmid
-		}
-
 		fold_glyph(fold, tk)
 		unfold_glyph(unfold, tk, block)
+		mayHighlightDiskBySsmid(tk)
 	} else {
-		// natural expand
+		// automatically expand
 		settle_glyph(tk, block)
 	}
 
-	return tk.skewer.maxheight + tk.skewer.stem1 + tk.skewer.stem2 + tk.skewer.stem3
+	tk.subtk2height.skewer = tk.skewer.maxheight + tk.skewer.stem1 + tk.skewer.stem2 + tk.skewer.stem3
+}
+
+function hlaachange2ssmid(tk, mlst) {
+	if (!tk.hlaachange || !mlst) return
+	// value is comma-joined list of mnames, convert to ssm_id for keeping track of variants
+	// using skewer data mlst[], either from server or client,
+	const set = new Set(tk.hlaachange.split(','))
+	delete tk.hlaachange
+	tk.skewer.hlssmid = new Set()
+	for (const m of mlst) {
+		if (set.has(m.mname)) tk.skewer.hlssmid.add(m.ssm_id)
+	}
 }
 
 function tkdata_update_x(tk, block) {
@@ -210,8 +226,14 @@ function make_skewer_data(tk, block) {
 	for (const g of datagroup) {
 		g.groups = mlst2disc(g.mlst, tk)
 	}
-	if (tk.skewer.data && block.pannedpx != undefined && (!block.usegm || block.gmmode == client.gmmode.genomic)) {
-		// inherit genomic mode and panned
+	if (tk.skewer.data && block.pannedpx != undefined) {
+		/* block is panned, tk.skewer.data is the previous set of skewers
+		existing data points from before panning should assemble into the same set of skewers
+		as resolution did not change
+		will inherit the showmode
+		used to only run this at genomic mode but not in protein mode
+		(!block.usegm || block.gmmode == 'genomic')
+		*/
 		const pastmode = {}
 		for (const g of tk.skewer.data) {
 			pastmode[g.chr + '.' + g.pos] = {
@@ -239,7 +261,7 @@ function mlst2disc(mlst, tk) {
 	const k2g = new Map()
 	for (const m of mlst) {
 		switch (m.dt) {
-			case common.dtsnvindel:
+			case dtsnvindel:
 				if (!k2g.has(m.dt)) {
 					k2g.set(m.dt, new Map())
 				}
@@ -264,8 +286,8 @@ function mlst2disc(mlst, tk) {
 					.get(n)
 					.push(m)
 				break
-			case common.dtsv:
-			case common.dtfusionrna:
+			case dtsv:
+			case dtfusionrna:
 				if (!k2g.has(m.dt)) {
 					k2g.set(m.dt, new Map())
 				}
@@ -311,10 +333,10 @@ function mlst2disc(mlst, tk) {
 						.push(m)
 				}
 				break
-			case common.dtitd:
-			case common.dtdel:
-			case common.dtnloss:
-			case common.dtcloss:
+			case dtitd:
+			case dtdel:
+			case dtnloss:
+			case dtcloss:
 				if (!k2g.has(m.dt)) {
 					k2g.set(m.dt, [])
 				}
@@ -329,7 +351,7 @@ function mlst2disc(mlst, tk) {
 	const groups = []
 	for (const [dt, tmp] of k2g) {
 		switch (dt) {
-			case common.dtsnvindel:
+			case dtsnvindel:
 				for (const t2 of tmp.values()) {
 					for (const mlst of t2.values()) {
 						groups.push({
@@ -339,8 +361,8 @@ function mlst2disc(mlst, tk) {
 					}
 				}
 				break
-			case common.dtsv:
-			case common.dtfusionrna:
+			case dtsv:
+			case dtfusionrna:
 				for (const classset of tmp.values()) {
 					for (const mlst of classset.use5.values()) {
 						groups.push({
@@ -358,10 +380,10 @@ function mlst2disc(mlst, tk) {
 					}
 				}
 				break
-			case common.dtitd:
-			case common.dtdel:
-			case common.dtnloss:
-			case common.dtcloss:
+			case dtitd:
+			case dtdel:
+			case dtnloss:
+			case dtcloss:
 				groups.push({
 					dt: dt,
 					mlst: tmp
@@ -377,8 +399,17 @@ function mlst2disc(mlst, tk) {
 		}
 		g.rim1count = rim1count
 		g.rim2count = rim2count
-		g.occurrence = g.mlst.reduce((i, j) => i + j.occurrence, 0)
 	}
+
+	if (mlst.some(m => Number.isFinite(m.occurrence))) {
+		// data points has occurrence; g.occurrence will be the sum from mlst[]
+		for (const g of groups) g.occurrence = g.mlst.reduce((i, j) => i + j.occurrence, 0)
+	} else {
+		// no occurrence from mlst[]; g.occurrence is length of mlst
+		for (const g of groups) g.occurrence = g.mlst.length
+	}
+	// this ensures that data groups all get a valid .occurrence value for rendering
+
 	groups.sort((a, b) => {
 		return b.occurrence - a.occurrence
 	})
@@ -389,7 +420,6 @@ function done_tknodata(tk, block) {
 	/*
 	no data loaded for track
 	set track height by # of controllers
-	in case of hlaachange, create new track and show
 	*/
 	let height = 0 // cumulate
 
@@ -397,78 +427,91 @@ function done_tknodata(tk, block) {
 	tk.skewer.g.selectAll('*').remove()
 
 	let context = 'view range'
-	if (block.usegm && block.gmmode != client.gmmode.genomic) {
+	if (block.usegm && block.gmmode != 'genomic') {
 		context = block.usegm.name || block.usegm.isoform
 	}
 	tk.skewer.g
 		.append('text')
-		.text(tk.mds.label + ': no mutation in ' + context)
+		.text('No mutation in ' + context)
 		.attr('y', 25)
 		.attr('x', block.width / 2)
 		.attr('text-anchor', 'middle')
 		.attr('dominant-baseline', 'center')
-
-	if (tk.hlaachange) {
-		hlaachange_addnewtrack(tk, block)
-		delete tk.hlaachange
-	}
-	return 50
 }
 
-function hlaachange_addnewtrack(tk, block) {
-	/*
-	not in use
+function updateViewModes(tk, mlst) {
+	detectNumericMode(tk, mlst)
+	detectAlternativeSkewerModes(tk, mlst)
+	// for numeric modes not in use, clear axisg
+	for (const n of tk.skewer.viewModes) {
+		if (n.type == 'numeric' && !n.inuse && n.axisg) {
+			n.axisg.remove()
+			delete n.axisg
+		}
+	}
+}
 
-	variants to be highlighted were not found in track
-	add a new ds track and show them
-	*/
-	const l2c = new Map()
-	for (const c in common.mclass) {
-		l2c.set(common.mclass[c].label.toUpperCase(), c)
+function detectAlternativeSkewerModes(tk) {
+	// TODO if possible to render as protein painter style
+	// low #variants, low occurrences
+	// may delete special skewer modes if condition no longer applies
+}
+
+function detectNumericMode(tk, mlst) {
+	// detect if data has occurrence
+	// mlst can be undefined when server returns no new data
+	if (mlst && mlst.find(i => Number.isFinite(i.occurrence))) {
+		// has occurrence, assume all data points have it thus numeric mode is possible
+		if (!tk.skewer.viewModes.find(n => n.type == 'numeric' && n.byAttribute == 'occurrence')) {
+			// occurrence mode obj is missing, add it
+			tk.skewer.viewModes.push({
+				type: 'numeric',
+				byAttribute: 'occurrence',
+				label: 'Occurrence',
+				isinteger: true
+			})
+		}
 	}
-	const toadd = []
-	for (const [n, m] of tk.hlaachange) {
-		if (m == false) {
-			// came from urlparam, cannot add
-			continue
-		}
-		if (!m.name) {
-			block.error('hlaachange item .name missing')
-			continue
-		}
-		if (m.codon == undefined || !Number.isFinite(m.codon)) {
-			block.error('hlaachange invalid codon for ' + m.name)
-			continue
-		}
-		if (!m.class) {
-			block.error('hlaachange .class missing')
-			continue
-		}
-		const c = common.mclass[m.class] ? m.class : l2c.get(m.class.toUpperCase())
-		if (!c) {
-			block.error('hlaachange invalid class: ' + m.class)
-			continue
-		}
-		m.class = c
-		m.mname = m.name
-		delete m.name
-		m.chr = block.usegm.chr
-		m.pos = coord.aa2gmcoord(m.codon, block.usegm)
-		delete m.codon
-		m.dt = common.dtsnvindel
-		m.isoform = block.usegm.isoform
-		toadd.push(m)
+	// TODO more sources e.g. bcf numeric info fields
+}
+
+function getViewmodeName(n) {
+	if (!n) return 'MISSING!!'
+	if (n.type == 'skewer') return 'As lollipops'
+	if (n.type == 'numeric') return n.label + ' as Y axis'
+	return 'unknown mode'
+}
+
+function makeSkewerModeUI(tk) {}
+
+export function mayAddSkewerModeOption(tk, block) {
+	if (!tk.skewer) return
+	if (tk.skewer.viewModes.length <= 1) {
+		// only one possible mode, cannot toggle mode, do not add option
+		return
 	}
-	if (toadd.length) {
-		const ds = {
-			label: 'Highlight',
-			type: client.tkt.ds,
-			iscustom: true,
-			bulkdata: {}
-		}
-		ds.bulkdata[block.usegm.name.toUpperCase()] = toadd
-		block.ownds[ds.label] = ds
-		const tk2 = block.block_addtk_template({ type: client.tkt.ds, ds: ds })
-		dstkload(tk2, block)
+	// there are more than 1 mode, print name of current mode
+	tk.menutip.d
+		.append('div')
+		.style('margin', '10px 10px 3px 10px')
+		.style('font-size', '.7em')
+		.style('opacity', 0.5)
+		.text(getViewmodeName(tk.skewer.viewModes.find(n => n.inuse)))
+	// show available modes
+	for (const n of tk.skewer.viewModes) {
+		if (n.inuse) continue
+		// a mode not in use; make option to switch to it
+		tk.menutip.d
+			.append('div')
+			.text(getViewmodeName(n))
+			.attr('class', 'sja_menuoption')
+			.on('click', () => {
+				for (const i of tk.skewer.viewModes) i.inuse = false
+				n.inuse = true
+				tk.menutip.hide()
+				may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)
+				positionLeftlabelg(tk, block)
+				tk._finish()
+			})
 	}
 }

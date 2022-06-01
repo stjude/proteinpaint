@@ -1,10 +1,8 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { gmmode } from '../client'
-import { dofetch3 } from '../common/dofetch'
+import { dofetch3 } from '../../common/dofetch'
 import { makeTk } from './makeTk'
-import { updateLegend } from './legend'
 import { may_render_skewer } from './skewer'
 import { make_leftlabels } from './leftlabel'
 
@@ -27,8 +25,6 @@ export async function loadTk(tk, block) {
 	block.tkcloakon(tk)
 	block.block_setheight()
 
-	const _finish = loadTk_finish_closure(tk, block) // function used at multiple places
-
 	try {
 		if (!tk.mds) {
 			await makeTk(tk, block)
@@ -41,36 +37,23 @@ export async function loadTk(tk, block) {
 			delete tk.uninitialized
 		}
 
-		tk.height_main = tk.toppad + tk.bottompad
-
 		// render each possible track type. if indeed rendered, return sub track height
-
 		// left labels and skewer at same row, whichever taller
-		{
-			const h2 = may_render_skewer(data, tk, block)
-			// must render skewer first, then left labels
-			const h1 = make_leftlabels(data, tk, block)
-			tk.height_main += Math.max(h1, h2)
-		}
-		// add new subtrack type
+		may_render_skewer(data, tk, block)
+		// must render skewer first, then left labels
+		make_leftlabels(data, tk, block)
 
-		_finish(data)
+		////////// add new subtrack type
+
+		// done tk rendering, adjust height
+		tk._finish(data)
 	} catch (e) {
 		// if the error is thrown upon initiating the track, clear() function may not have been added
 		if (tk.clear) tk.clear()
-		tk.height_main = 50
-		_finish({ error: e.message || e })
+		tk.subtk2height.skewer = 50
+		tk._finish({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
 		return
-	}
-}
-
-function loadTk_finish_closure(tk, block) {
-	return data => {
-		updateLegend(data, tk, block)
-		block.tkcloakoff(tk, { error: data.error })
-		block.block_setheight()
-		block.setllabel()
 	}
 }
 
@@ -83,7 +66,7 @@ function getParameter(tk, block) {
 	// including skewer or non-skewer
 	par.push('forTrack=1')
 
-	if (tk.uninitialized || !block.usegm || block.gmmode == gmmode.genomic || block.gmmodepast == gmmode.genomic) {
+	if (tk.uninitialized || !block.usegm || block.gmmode == 'genomic' || block.gmmodepast == 'genomic') {
 		// assumption is that api will return the same amount of variants for different mode (protein/exon/splicerna)
 		// so there's no need to re-request data in these modes (but not genomic mode)
 		if (tk.mds.has_skewer) {
@@ -178,7 +161,7 @@ export function rangequery_rglst(tk, block, par) {
 		}
 		rglst.push(r)
 		par.push('isoform=' + block.usegm.isoform)
-		if (block.gmmode == gmmode.genomic) {
+		if (block.gmmode == 'genomic') {
 			// TODO if can delete the isoform parameter to simply make the query by genomic pos
 			par.push('atgenomic=1')
 		}
@@ -269,7 +252,7 @@ function filterCustomVariants(tk, block) {
 		// adds mclass2variantcount[] later
 	}
 
-	// must exclude out-of-range items, otherwise numericmode rendering will break
+	// must exclude out-of-range items, otherwise numeric mode rendering will break
 	let bbstart = null,
 		bbstop
 	for (let i = block.startidx; i <= block.stopidx; i++) {

@@ -4,8 +4,8 @@ import { loadstudycohort } from './tp.init'
 import { string2pos } from './coord'
 import path from 'path'
 import * as mdsjson from './app.mdsjson'
-import urlmap from './common/urlmap'
-import { first_genetrack_tolist } from './common/1stGenetk'
+import urlmap from '../common/urlmap'
+import { first_genetrack_tolist } from '../common/1stGenetk'
 
 /*
 ********************** EXPORTED
@@ -29,7 +29,7 @@ upon error, throw err message as a string
 	const urlp = urlmap()
 
 	if (urlp.has('appcard')) {
-		const ad = await import('./app.drawer.cards')
+		const ad = await import('../appdrawer/app.drawer.cards')
 		const cardJsonFile = urlp.get('appcard')
 		const re = await client.dofetch2('/cardsjson')
 		const track = re.examples.findIndex(t => t.sandboxjson == cardJsonFile)
@@ -61,7 +61,7 @@ upon error, throw err message as a string
 			holder: arg.holder,
 			state
 		}
-		const _ = await import('./termdb/app')
+		const _ = await import('../termdb/app')
 		_.appInit(opts)
 		return
 	}
@@ -76,7 +76,7 @@ upon error, throw err message as a string
 		if (state.genome) {
 			opts.genome = arg.genomes[state.genome]
 		}
-		const _ = await import('./mass/app')
+		const _ = await import('../mass/app')
 		_.appInit(opts)
 		return
 	}
@@ -90,7 +90,7 @@ upon error, throw err message as a string
 			state: res.state,
 			genome: arg.genomes[res.state.vocab.genome]
 		}
-		const _ = await import('./mass/app')
+		const _ = await import('../mass/app')
 		_.appInit(opts)
 		return
 	}

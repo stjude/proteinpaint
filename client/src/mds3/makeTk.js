@@ -1,9 +1,9 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import { Menu } from '../dom/menu'
-import { dofetch3 } from '../common/dofetch'
-import { initLegend } from './legend'
+import { Menu } from '../../dom/menu'
+import { dofetch3 } from '../../common/dofetch'
+import { initLegend, updateLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
-import urlmap from '../common/urlmap'
+import urlmap from '../../common/urlmap'
 import { mclass } from '../../shared/common'
 
 /*
@@ -15,6 +15,8 @@ get_ds
 	validateCustomVariants
 	mayDeriveSkewerOccurrence4samples
 init_termdb
+mayInitSkewer
+	setSkewerMode
 mayaddGetter_m2csq
 mayaddGetter_variant2samples
 mayaddGetter_sampleSummaries2
@@ -23,17 +25,60 @@ configPanel
 _load
 
 
-common structure of tk.mds between official and custom
+tk.subtk2height{ skewer: int, ... }
+
 
 tk.skewer{}
 	create if skewer data type is available for this mds
 	if not equipped then tk.skewer is undefined and should not show skewer track
 
 stratify labels will account for all tracks, e.g. skewer, cnv
+
+********************************
+* On highlighting skewer disks *
+********************************
+client can supply tk.hlssmid or tk.hlaachange, both are comma-joined list of names
+upon init, both will be converted to tk.skewer.hlssmid (set)
+hlaachange is converted when skewer data is returned from server
+tk.skewer.hlssmid can be modified or deleted dynamically
+highlighting is done by inserting <rect> into tk.skewer.hlBoxG
+see mayHighlightDiskBySsmid()
+
+********************************
+* On skewer view modes         *
+********************************
+view modes applicable to current data are declared in tk.skewer.viewModes[]
+each element is one mode, defines how to show snv/indel data points; will also control fusion
+obj can offer flexibility on defining complex data source/method/arithmetics
+viewModes[] is a merge from tk.skewerModes (custom) and tk.mds.skewerModes (official)
+viewModes[] is dynamically modified in may_render_skewer, upon getting new data
+later may add cnv.viewModes[] to control mode of other data types
+
+********************************
+* On tricky skewer data        *
+********************************
+when requesting skewer data at gmmode (not genomic) for the first time,
+data is queried by isoform, and returned data is kept at tk.skewer.rawmlst
+at subsequent panning/zooming, it won't re-request skewer data, as it's still using the same isoform
+and will use cached data at rawmlst instead
 */
 
 export async function makeTk(tk, block) {
 	// run just once to initiate a track
+
+	tk.subtk2height = {}
+	// keys: "skewer", "leftlabels"
+	// value is #pixel in height for that component
+
+	tk.leftlabels = {
+		g: tk.gleft.append('g'), // all labels are rendered here, except track label
+		doms: {},
+		// keys: label name, value: label dom
+		// to avoid having to delete all labels upon tk rendering
+		laby: 0 // cumulative height, 0 for no labels
+	}
+
+	tk._finish = loadTk_finish_closure(tk, block)
 
 	tk.cache = {}
 	tk.itemtip = new Menu()
@@ -47,41 +92,18 @@ export async function makeTk(tk, block) {
 	// tk.mds{} is created for both official and custom track
 	// following procedures are only based on tk.mds
 
-	init_termdb(tk, block)
+	await init_termdb(tk, block)
 
 	mayaddGetter_sampleSummaries2(tk, block)
 	mayaddGetter_variant2samples(tk, block)
 	mayaddGetter_m2csq(tk, block)
 
-	if (tk.mds.has_skewer) {
-		tk.skewer = {
-			g: tk.glider.append('g'),
-			// skewer.mode defines how to show snv/indel; may also control fusion
-			// later may add new attributes e.g. "cnvMode" to control mode of other data types
-			mode: 'skewer' // default mode, can be overwritten later
-		}
-		// both skewer and numeric mode will render elements into tk.skewer.g
-		// will also attach skewer.discKickSelection
-
-		if (tk.skewerMode) {
-			// override
-			tk.skewer.mode = tk.skewerMode
-			delete tk.skewerMode
-		}
-		if (tk.skewer.mode == 'skewer') {
-		} else if (tk.skewer.mode == 'numeric') {
-			if (!tk.numericmode) throw '.numericmode{} missing when skewer.mode=numeric'
-		} else {
-			throw 'unknown skewerMode'
-		}
-	}
+	mayInitSkewer(tk) // tk.skewer{} may be added
 
 	tk.leftLabelMaxwidth = tk.tklabel
 		.text(tk.mds.label || tk.name)
 		.node()
 		.getBBox().width
-
-	tk.leftlabelg = tk.gleft.append('g')
 
 	tk.clear = () => {
 		// called in loadTk, when uninitialized is true
@@ -98,14 +120,6 @@ export async function makeTk(tk, block) {
 	initLegend(tk, block)
 
 	init_mclass(tk)
-
-	if (tk.hlaachange) {
-		// comma-separated names
-		tk.hlaachange = new Set(tk.hlaachange.split(','))
-	}
-	if (tk.hlssmid) {
-		tk.hlssmid = new Set(tk.hlssmid.split(','))
-	}
 
 	tk.color4disc = m => {
 		// figure out what color to use for a m point
@@ -138,17 +152,91 @@ export async function makeTk(tk, block) {
 		return 'black'
 	}
 
+	parseUrl(tk)
+
+	// do this after parsing url
+	if (tk.hlssmid) {
+		tk.skewer.hlssmid = new Set(tk.hlssmid.split(','))
+		delete tk.hlssmid
+	}
+}
+
+function loadTk_finish_closure(tk, block) {
+	return data => {
+		// derive tk height
+		tk.height_main = tk.toppad + tk.bottompad
+		for (const k in tk.subtk2height) {
+			tk.height_main = Math.max(tk.height_main, tk.subtk2height[k])
+		}
+
+		if (data) {
+			updateLegend(data, tk, block)
+		}
+
+		block.tkcloakoff(tk, { error: data ? data.error : null })
+		block.block_setheight()
+		block.setllabel()
+	}
+}
+
+function parseUrl(tk) {
 	// parse url parameters applicable to this track
 	// may inhibit this through some settings
-	{
-		const urlp = urlmap()
+	const urlp = urlmap()
+	if (tk.skewer) {
+		// process skewer-related params
 		if (urlp.has('hlaachange')) {
-			tk.hlaachange = new Set(urlp.get('hlaachange').split(','))
+			tk.hlaachange = urlp.get('hlaachange')
+			// later convert to hlssmid, when skewer data is available
 		}
 		if (urlp.has('hlssmid')) {
-			tk.hlssmid = new Set(urlp.get('hlssmid').split(','))
+			tk.hlssmid = urlp.get('hlssmid').split(',')
 		}
 	}
+	// process additional params
+}
+
+function mayInitSkewer(tk) {
+	if (!tk.mds.has_skewer) return
+	tk.skewer = {
+		// both skewer and numeric mode will render elements into tk.skewer.g
+		// will also attach skewer.discKickSelection
+		g: tk.glider.append('g'),
+
+		// border color of a box over a highlighted data
+		hlBoxColor: tk.mds.hlBoxColor || 'red'
+	}
+	setSkewerMode(tk) // adds skewer.viewModes[]
+}
+
+function setSkewerMode(tk) {
+	tk.skewer.viewModes = tk.skewerModes
+	delete tk.skewerModes
+	if (!tk.skewer.viewModes) tk.skewer.viewModes = []
+	const vm = tk.skewer.viewModes
+	if (!Array.isArray(vm)) throw 'skewerModes[] is not array'
+	if (tk.mds.skewerModes) {
+		for (const n of tk.mds.skewerModes) vm.push(n)
+	}
+	if (!vm.find(n => n.type == 'skewer')) vm.push({ type: 'skewer' })
+	for (const n of vm) {
+		if (typeof n != 'object') throw 'one of skewerModes[] is not object'
+		if (n.type == 'skewer') {
+			// allowed type, no more configs
+			if (!n.label) n.label = 'lollipops'
+		} else if (n.type == 'numeric') {
+			// data method
+			if (n.byAttribute) {
+				if (!n.label) n.label = n.byAttribute
+			} else {
+				// support info fields etc
+				throw 'unknown data method for a type=numeric mode'
+			}
+		} else {
+			throw 'unknown type from a skewerModes[]'
+		}
+	}
+	if (!vm.find(n => n.inuse)) vm[0].inuse = true
 }
 
 function init_mclass(tk) {
@@ -188,12 +276,26 @@ async function get_ds(tk, block) {
 	// if variant2samples is enabled for custom ds, it will also have the async get()
 }
 
-function init_termdb(tk, block) {
+async function init_termdb(tk, block) {
 	const tdb = tk.mds.termdb
 	if (!tdb) return
-	tdb.getTermById = id => {
-		if (tdb.terms) return tdb.terms.find(i => i.id == id)
-		return null
+
+	{
+		const arg = {}
+		if (tk.mds.label) {
+			// official dataset
+			arg.vocab = {
+				genome: block.genome.name,
+				dslabel: tk.mds.label
+			}
+		} else if (tdb.terms) {
+			// custom dataset
+			arg.terms = tdb.terms
+		} else {
+			throw 'do not know how to init vocab'
+		}
+		const _ = await import('../../termdb/vocabulary')
+		tdb.vocabApi = _.vocabInit(arg)
 	}
 }
 

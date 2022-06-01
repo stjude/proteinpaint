@@ -67,8 +67,7 @@ const skip_fields_lines = ['case.project.disease_type', 'case.project.primary_si
 const mapping_prefix = 'ssm_occurrence_centrics'
 
 export async function initDictionary(ds) {
-	ds.cohort.termdb = {}
-	const id2term = (ds.cohort.termdb.id2term = new Map())
+	const id2term = new Map()
 	const response = await got(endpoint, {
 		method: 'GET',
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
@@ -203,7 +202,7 @@ export async function initDictionary(ds) {
 	*/
 
 	console.log(
-		ds.cohort.termdb.id2term.size,
+		id2term.size,
 		'variables parsed from GDC dictionary,',
 		skipLineCount,
 		'lines skipped,',
@@ -218,8 +217,8 @@ export async function initDictionary(ds) {
 	)
 
 	// freeze gdc dictionary as it's readonly and must not be changed by treeFilter or other features
-	Object.freeze(ds.cohort.termdb.id2term)
-	init_termdb_queries(ds.cohort.termdb, ds)
+	Object.freeze(id2term)
+	init_termdb_queries(ds, id2term)
 }
 
 function maySkipLine(line) {
@@ -228,13 +227,13 @@ function maySkipLine(line) {
 	return false
 }
 
-function init_termdb_queries(termdb, ds) {
-	const q = (termdb.q = {})
+function init_termdb_queries(ds, id2term) {
+	const q = (ds.cohort.termdb.q = {})
 
 	q.getRootTerms = async (vocab, treeFilter = null) => {
 		// find terms without term.parent_id
 		const terms = []
-		for (const term of termdb.id2term.values()) {
+		for (const term of id2term.values()) {
 			if (term.parent_id == undefined) terms.push(JSON.parse(JSON.stringify(term)))
 		}
 		await mayAddSamplecount4treeFilter(terms, treeFilter)
@@ -244,7 +243,7 @@ function init_termdb_queries(termdb, ds) {
 	q.getTermChildren = async (id, vocab, treeFilter = null) => {
 		// find terms which have term.parent_id as clicked term
 		const terms = []
-		for (const term of termdb.id2term.values()) {
+		for (const term of id2term.values()) {
 			if (term.parent_id == id) terms.push(JSON.parse(JSON.stringify(term)))
 		}
 		await mayAddSamplecount4treeFilter(terms, treeFilter)
@@ -257,7 +256,7 @@ function init_termdb_queries(termdb, ds) {
 		if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
 		// find terms that have term.id containing search string
 		const terms = []
-		for (const term of termdb.id2term.values()) {
+		for (const term of id2term.values()) {
 			if (usecase && !isUsableTerm(term, usecase)) continue
 			if (term.id.includes(searchStr)) terms.push(JSON.parse(JSON.stringify(term)))
 		}
@@ -266,7 +265,7 @@ function init_termdb_queries(termdb, ds) {
 	}
 
 	q.getAncestorIDs = id => {
-		const search_term = termdb.id2term.get(id)
+		const search_term = id2term.get(id)
 		if (!search_term) return
 		// ancestor terms are already defined in term.path seperated by '.'
 		const re = search_term.path ? search_term.path.split('.') : ['']
@@ -275,9 +274,8 @@ function init_termdb_queries(termdb, ds) {
 	}
 	q.getAncestorNames = q.getAncestorIDs
 
-	q.getTermById = id => {
-		const terms = [...termdb.id2term.values()]
-		return terms.find(i => i.id == id)
+	q.termjsonByOneid = id => {
+		return JSON.parse(JSON.stringify(id2term.get(id)))
 	}
 
 	q.getSupportedChartTypes = () => {
@@ -287,7 +285,7 @@ function init_termdb_queries(termdb, ds) {
 		// key: subcohort combinations, comma-joined, as in the subcohort_terms table
 		// value: array of chart types allowed by term types
 
-		for (const r of termdb.id2term.values()) {
+		for (const r of id2term.values()) {
 			if (!r.type) continue
 			// !!! r.cohort is undefined here as gdc data dictionary has no subcohort
 			if (!(r.cohort in supportedChartTypes)) {

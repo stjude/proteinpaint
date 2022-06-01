@@ -31,11 +31,14 @@ document.body.onload = () => runproteinpaint({
 				},
 				settings: {
 					survival: {
+						svgw: 1000,
+						svgh: 400,
 						symbol: 'vtick',
 						timeUnit: 'years',
 						xTickInterval: 5,
 						atRiskVisible: true,
 						atRiskLabelOffset: -20,
+						xTickValues: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
 					}
 				}
 			},{
@@ -45,11 +48,14 @@ document.body.onload = () => runproteinpaint({
 				},
 				settings: {
 					survival: {
+						svgw: 1000,
+						svgh: 400,
 						symbol: 'vtick',
 						timeUnit: 'years',
-						xTickInterval: 5,
+						xTickInterval: 1,
 						atRiskVisible: true,
 						atRiskLabelOffset: -20,
+						xTickValues: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
 					}
 				}
 			},{
@@ -59,11 +65,14 @@ document.body.onload = () => runproteinpaint({
 				},
 				settings: {
 					survival: {
+						svgw: 1000,
+						svgh: 400,
 						symbol: 'vtick',
 						timeUnit: 'years',
-						xTickInterval: 5,
+						xTickInterval: 1,
 						atRiskVisible: true,
 						atRiskLabelOffset: -20,
+						xTickValues: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
 					}
 				}
 			},
@@ -89,7 +98,14 @@ document.body.onload = () => runproteinpaint({
 								//term2: {id: 'Primary Treatment category 2'},
 								settings: {
 									survival: {
-										xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
+										svgw: 1000,
+										svgh: 400,
+										symbol: 'vtick',
+										timeUnit: 'years',
+										xTickInterval: 1,
+										atRiskVisible: true,
+										atRiskLabelOffset: -20,
+										xTickValues: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
 									}
 								}
 							}
@@ -138,8 +154,7 @@ document.body.onload = () => runproteinpaint({
 								}
 							},
 							{
-								id: 'Gender',
-								//q: { mode: 'values' } // or 'groupsetting'
+								id: 'Sex',
 							},
 							{
 								id: 'Mstage'
@@ -148,41 +163,41 @@ document.body.onload = () => runproteinpaint({
 								id: 'Mstatus'
 							},
 							{
-								id: 'RTgroup'
-							},
-							{
-								id: 'CSIgroup'
-							},
-							{
-								id: 'Carboplatin'
-							},
-							{
-								id: 'Risk'
-							},
-							{
 								id: 'ACNS0332STRATUM'
 							},
 							{
 								id: 'AnaplasticIndc'
 							},
 							{
-								id: 'ExtentofResection'
+								id: 'ACNS0331CSIgroup'
 							},
 							{
-								id: 'Hgroup'
+								id: 'ACNS0331RTgroup'
 							},
+							{
+								id: 'ACNS0332CarboIndc'
+							},
+							{
+								id: 'ExtentofResection'
+							},
+							
 							{
 								id: 'SJMB03Histology'
 							},
 							{
-								id: 'Subgroup'
+								id: 'KeyComps_MinusCarbo'
 							},
-              {
+							{
+								id: 'abstract figure'
+							},
+							{
+								id: 'Subgroup'
+							},              
+							{
                 id: 'Subtype'
               },
-              {
-                
-                id: 'Trial'
+              {  
+                id: 'Study'
               },
 							{
 								id: 'Sequencing'
@@ -254,6 +269,9 @@ function getCytogeneticsData() {
 
 const genegroups = [{
 	name: 'Copy Number Variation',
+	settings: {
+    minNumSamples: 2
+  },
 	valueFilter: {
     type: 'tvs',
     tvs: {
@@ -261,12 +279,30 @@ const genegroups = [{
     },
   },
  	overrides: ['CNVfill'],
-	lst: `MYCN, OTX2, MYC, GLI2`.split(',').map(g => {
-		return {term: {name: g.trim(), type: 'geneVariant'}}
-	}),
+	lst: `CCND2
+		CDK4
+		CDK6
+		FGFR1
+		GFI1B
+		GLI2
+		KRAS
+		LMO4
+		MCL1
+		MDM2
+		MDM4
+		MYC
+		MYCL
+		MYCN
+		OTX2
+		PPM1D
+		PRDM6
+		RB1
+		TERT`.split('\n').map(g => {
+			return {term: {name: g.trim(), type: 'geneVariant'}}
+		}),
 },{
 	name: 'Somatic Mutations',
-	"settings": {
+	settings: {
     minNumSamples: 2
   },
   valueFilter: {

@@ -65,7 +65,7 @@ async function get_samples(q, ds) {
 function get_termid2fields(termidlst, ds) {
 	const fields = []
 	for (const termid of termidlst) {
-		const term = ds.cohort.termdb.q.getTermById(termid)
+		const term = ds.cohort.termdb.q.termjsonByOneid(termid)
 		fields.push(term.path)
 	}
 	return fields
@@ -95,17 +95,7 @@ async function make_summary(samples, ds, q) {
 	const entries = []
 	const termidlst = q.termidlst ? q.termidlst.split(',') : ds.variant2samples.termidlst
 	for (const termid of termidlst) {
-		let term = ds.termdb.getTermById(termid)
-		// if term is not in serverside termdb, query gdc dictionary
-		if (!term) {
-			const term_ = ds.cohort.termdb.q.getTermById(termid)
-			term = {
-				name: term_.name,
-				id: term_.id,
-				type: term_.type,
-				fields: term_.fields
-			}
-		}
+		const term = ds.cohort.termdb.q.termjsonByOneid(termid)
 		if (!term) continue
 		// may skip a term
 		if (term.type == 'categorical') {
