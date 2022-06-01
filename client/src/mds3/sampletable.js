@@ -141,6 +141,7 @@ function printSampleName(sample, tk, div) {
 		)
 		a.attr('target', '_blank')
 		a.text(sample.sample_id)
+		a.style('word-break', 'break-word')
 	} else {
 		div.text(sample.sample_id)
 	}
@@ -253,7 +254,10 @@ async function make_multiSampleTable(arg) {
 	function printSampleRow(sample, row, startDataCol) {
 		let startCol = startDataCol
 		if (has_sample_id) {
-			const cell = row.append('div').classed('sjpp-sample-table-div', true)
+			const cell = row
+				.append('div')
+				.classed('sjpp-sample-table-div', true)
+				.style('padding', '1px')
 			if (startDataCol) {
 				cell.style('grid-column-start', startCol)
 			}
@@ -264,6 +268,7 @@ async function make_multiSampleTable(arg) {
 				const cell = row
 					.append('div')
 					.text(termid in sample ? sample[termid] : '')
+					.style('padding', '1px')
 					.classed('sjpp-sample-table-div', true)
 				if (startDataCol && !has_sample_id && arg.tk.mds.variant2samples.termidlst[0]) {
 					cell.style('grid-column-start', startCol)
@@ -271,7 +276,10 @@ async function make_multiSampleTable(arg) {
 			}
 		}
 		if (has_ssm_read_depth) {
-			const cell = row.append('div').classed('sjpp-sample-table-div', true)
+			const cell = row
+				.append('div')
+				.classed('sjpp-sample-table-div', true)
+				.style('padding', '1px')
 			const sm = sample.ssm_read_depth
 			if (sm) {
 				fillbar(cell, { f: sm.altTumor / sm.totalTumor })
@@ -286,6 +294,7 @@ async function make_multiSampleTable(arg) {
 				.append('div')
 				.text('totalNormal' in sample ? sample.totalNormal : '')
 				.classed('sjpp-sample-table-div', true)
+				.style('padding', '1px')
 		}
 	}
 

@@ -103,7 +103,7 @@ async function table_snvindel(arg) {
 	} else {
 		// make a multi-column table for all variants, one row for each variant
 		// set of columns are based on available attributes in mlst
-		grid.style('max-height', '30vw').style('gap', '10px')
+		grid.style('max-height', '30vw').style('gap', '5px')
 		// create placeholder for inserting samples for each variant
 		arg.multiSampleTable = table_snvindel_multivariant(arg, grid)
 		arg.grid = grid
