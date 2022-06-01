@@ -439,7 +439,9 @@ export function validate_query_genecnv(ds) {
 	}
 }
 
-// for variant2samples query
+/* for variant2samples query
+clarify why needs two parameters termidlst[] and fields[]
+*/
 export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 	const api = ds.variant2samples.gdcapi
 	if (!fields) throw 'invalid get type of q.get'
@@ -451,7 +453,7 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 		}
 	}
 
-	const query = api.endpoint + '?size=10000&fields=' + fields.join(',')
+	const query = apihost + api.endpoint + '?size=10000&fields=' + fields.join(',')
 	// no longer paginates
 	//'&size=' + (q.size || api.size) + '&from=' + (q.from || 0)
 
@@ -470,10 +472,9 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 	}
 	if (!re.data || !re.data.hits) throw 'data structure not data.hits[] for query :' + query + ' and filter: ' + filter
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array for query :' + query + ' and filter: ' + filter
-	// total to display on sample list page
-	// for numerical terms, total is not possible before making GDC query
-	const total = re.data.pagination.total
+
 	const samples = []
+
 	for (const s of re.data.hits) {
 		if (!s.case) throw '.case{} missing from a hit for query :' + query + ' and filter: ' + filter
 		const sample = {}
@@ -486,6 +487,14 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 		}
 
 		if (fields.length == 1 && fields[0] == 'case.case_id') {
+			/*
+			quick fix!
+
+			when getting the total list of samples from byisoform request
+			(see use of ds.queries.snvindel.getSamples in mds3.load.js load_driver())
+			only need to get uuid of each case, no need to convert to submitter id
+			thus detecting such case when fields array has single element
+			*/
 			sample.sample_id = s.case.case_id
 		} else {
 			// get printable sample id

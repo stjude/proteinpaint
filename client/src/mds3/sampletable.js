@@ -66,7 +66,7 @@ export async function init_sampletable(arg) {
 async function make_singleSampleTable(arg) {
 	arg.querytype = arg.tk.mds.variant2samples.type_samples
 	const data = await arg.tk.mds.variant2samples.get(arg) // data is [samples, total]
-	const sampledata = data[0][0] // must have just one sample
+	const sampledata = data[0] // must have just one sample
 
 	const grid_div =
 		arg.singleSampleDiv ||

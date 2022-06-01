@@ -45,10 +45,7 @@ module.exports = genomes => {
 
 			may_validate_filter0(q, ds)
 
-			const result = init_result(q, ds)
-
-			await load_driver(q, ds, result)
-			// data loaded into result{}
+			const result = await load_driver(q, ds)
 
 			res.send(result)
 		} catch (e) {
@@ -87,16 +84,6 @@ function init_q(query, genome) {
 	return query
 }
 
-/*
-in order to do sample/variant summary, data from multiple queries needs to be summarized
-before querying, create the summary holder
-then cumulate counts from each type of data
-last, finalize results by converting Set of sample id to sample count
-*/
-function init_result(q, ds) {
-	const result = {}
-	return result
-}
 function finalize_result(q, ds, result) {
 	if (result.skewer) {
 		for (const m of result.skewer) {
@@ -126,33 +113,31 @@ async function get_ds(q, genome) {
 	return ds
 }
 
-async function load_driver(q, ds, result) {
+async function load_driver(q, ds) {
 	// various bits of data to be appended as keys to result{}
 	// what other loaders can be if not in ds.queries?
 
 	if (q.ssm2canonicalisoform) {
 		// gdc-specific logic
 		if (!ds.ssm2canonicalisoform) throw 'ssm2canonicalisoform not supported on this dataset'
-		result.isoform = await ds.ssm2canonicalisoform.get(q)
-		return
+		return { isoform: await ds.ssm2canonicalisoform.get(q) }
 	}
 
 	if (q.variant2samples) {
 		if (!ds.variant2samples) throw 'not supported by server'
-		result.variant2samples = await ds.variant2samples.get(q)
-		return
+		return { variant2samples: await ds.variant2samples.get(q) }
 	}
 
 	if (q.m2csq) {
 		if (ds.queries && ds.queries.snvindel && ds.queries.snvindel.m2csq) {
-			result.csq = await ds.queries.snvindel.m2csq.get(q)
-			return
+			return { csq: await ds.queries.snvindel.m2csq.get(q) }
 		}
 		throw 'm2csq not supported on this dataset'
 	}
 
 	if (q.forTrack) {
 		// to load things for block track
+		const result = {}
 
 		if (q.skewer) {
 			// get skewer data
@@ -164,7 +149,11 @@ async function load_driver(q, ds, result) {
 				result.skewer.push(...d)
 
 				// quick fix
+				// TODO if snvindel d contains samples, then collect samples from there
 				if (ds.queries.snvindel.getSamples) {
+					// running variant2sample query to retrieve total list of samples
+					// since ssm returned by snvindel query does not contain samples
+					// may rename to getSample_v2s to signify this
 					const p = JSON.parse(JSON.stringify(q))
 					p.get = ds.variant2samples.type_samplesIdOnly
 					const samples = await ds.variant2samples.get(p)
@@ -197,7 +186,7 @@ async function load_driver(q, ds, result) {
 		// add queries for new data types
 
 		finalize_result(q, ds, result)
-		return
+		return result
 	}
 	// other query type
 

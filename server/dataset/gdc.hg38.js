@@ -248,7 +248,7 @@ don't know a js method to alter the list of attributes in `case { }` part
   only return subset of attributes selected for sunburst chart
 */
 const variant2samplesApi = {
-	endpoint: GDC_HOST + '/ssm_occurrences',
+	endpoint: '/ssm_occurrences',
 	// Note: case.case_id seems extra field just for sunburst,
 	// but it's fail-safe in case both 'disease_type' and 'primary_site' are missing from that case
 	fields_sunburst: ['disease_type', 'primary_site', 'case_id'],
@@ -627,6 +627,8 @@ module.exports = {
 			byisoform: {
 				gdcapi: protein_mutations
 			},
+			// run a separate query to get total number of samples with snvindel
+			// since snvindel byisoform query only return ssm, but not cases
 			getSamples: {},
 			m2csq: {
 				// may also support querying a vcf by chr.pos.ref.alt

@@ -15,7 +15,7 @@ getParameter
 loadTk_finish_closure
 rangequery_add_variantfilters
 getData
-filterCustomVariants
+	dataFromCustomVariants
 */
 
 export async function loadTk(tk, block) {
@@ -27,6 +27,7 @@ export async function loadTk(tk, block) {
 
 	try {
 		if (!tk.mds) {
+			// missing .mds{}, run makeTk to initiate; only run once
 			await makeTk(tk, block)
 		}
 
@@ -122,7 +123,7 @@ async function getData(tk, block) {
 	let data
 	if (tk.custom_variants) {
 		// has custom data on client side, no need to request from server
-		data = filterCustomVariants(tk, block)
+		data = dataFromCustomVariants(tk, block)
 	} else {
 		// request data from server, either official or custom sources
 		const [par, headers] = getParameter(tk, block)
@@ -237,7 +238,7 @@ by info_fields[] and variantcase_fields[]
 	}
 }
 
-function filterCustomVariants(tk, block) {
+function dataFromCustomVariants(tk, block) {
 	// return the same data{} object as server queries
 	const data = {
 		skewer: []
@@ -272,6 +273,17 @@ function filterCustomVariants(tk, block) {
 		if (tk.legend.mclass.hiddenvalues.has(m.class)) continue
 
 		data.skewer.push(m)
+	}
+
+	if (data.skewer.some(i => i.samples)) {
+		// has .samples[], get sample count
+		const set = new Set()
+		for (const m of data.skewer) {
+			if (m.samples) {
+				for (const s of m.samples) set.add(s.sample_id)
+			}
+		}
+		data.sampleTotalNumber = set.size
 	}
 
 	data.mclass2variantcount = [...m2c]
