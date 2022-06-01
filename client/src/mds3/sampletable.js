@@ -1,5 +1,6 @@
 import { fillbar } from '../../dom/fillbar'
 import { get_list_cells } from '../../dom/gridutils'
+import { select as d3select } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -31,7 +32,13 @@ mlst can be mixture of data types, doesn't matter
 const cutoff_tableview = 10
 
 export async function init_sampletable(arg) {
-	const wait = arg.div.append('div').text('Loading...')
+	const wait = arg.div
+		.append('div')
+		.text('Loading...')
+		.style('padding', '10px')
+		.style('color', '#8AB1D4')
+		.style('font-size', '1.25em')
+		.style('font-weight', 'bold')
 	const numofcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0) // sum of occurrence of mlst[]
 
 	// may not be used!
@@ -157,24 +164,20 @@ async function make_multiSampleTable(arg) {
 	if (has_ssm_read_depth) numColumns++
 	if (has_totalNormal) numColumns++
 
-	// flag to enable alternating background color for sample rows
-	let rowBg = false
-
 	if (arg.multiSampleTable) {
 		// for each sample, find placeholder by sample.ssm_id, create new row for this sample into placeholder
 
 		let startDataCol = arg.multiSampleTable.startCol + 1
 		await printHeader(arg.grid, true, startDataCol)
-
-		let sampleStartRow = 1
 		for (const sample of data) {
-			sampleStartRow = ++sampleStartRow
 			const row = arg.multiSampleTable.ssmid2div.get(sample.ssm_id)
 			if (!row) {
 				// no corresponding row was found by this ssm id
 				continue
 			}
 			// for a variant with multiple samples, css is set repeatedly on the row (placeholder)
+			// display: contents renders data within the parent grid, ensuring the grid and subgrid
+			// stay aligned as well as resize/flex synchronously
 			row.style('display', 'contents').style('grid-column-start', startDataCol)
 			printSampleRow(sample, row, startDataCol)
 		}
@@ -192,6 +195,8 @@ async function make_multiSampleTable(arg) {
 			printSampleRow(sample, grid)
 		}
 	}
+	// Alternating background color for sample rows
+	colorRows()
 
 	//////////// helpers
 
@@ -245,31 +250,28 @@ async function make_multiSampleTable(arg) {
 		}
 	}
 
-	function printSampleRow(sample, row, startDataCol, sampleStartRow) {
-		rowBg = !rowBg
+	function printSampleRow(sample, row, startDataCol) {
 		let startCol = startDataCol
 		if (has_sample_id) {
-			const cell = row.append('div')
-			// if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
+			const cell = row.append('div').classed('sjpp-sample-table-div', true)
 			if (startDataCol) {
 				cell.style('grid-column-start', startCol)
 			}
-			// if (rowBg) cell.style('background', '#eee')
 			printSampleName(sample, arg.tk, cell)
 		}
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
-				const cell = row.append('div').text(termid in sample ? sample[termid] : '')
+				const cell = row
+					.append('div')
+					.text(termid in sample ? sample[termid] : '')
+					.classed('sjpp-sample-table-div', true)
 				if (startDataCol && !has_sample_id && arg.tk.mds.variant2samples.termidlst[0]) {
-					// startCol = ++startCol
 					cell.style('grid-column-start', startCol)
 				}
-				// if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
-				// if (rowBg) cell.style('background', '#eee')
 			}
 		}
 		if (has_ssm_read_depth) {
-			const cell = row.append('div')
+			const cell = row.append('div').classed('sjpp-sample-table-div', true)
 			const sm = sample.ssm_read_depth
 			if (sm) {
 				fillbar(cell, { f: sm.altTumor / sm.totalTumor })
@@ -277,22 +279,38 @@ async function make_multiSampleTable(arg) {
 					.append('span')
 					.text(sm.altTumor + ' / ' + sm.totalTumor)
 					.style('margin', '0px 10px')
-				// if (startDataCol) {
-				// 	startCol = ++startCol
-				// 	cell.style('grid-column-start', startCol)
-				// }
-				// if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
 			}
-			// if (rowBg) cell.style('background', '#eee')
 		}
 		if (has_totalNormal) {
-			const cell = row.append('div').text('totalNormal' in sample ? sample.totalNormal : '')
-			// if (startDataCol) {
-			// 	startCol = ++startCol
-			// 	cell.style('grid-column-start', startCol)
-			// }
-			// if (sampleStartRow) cell.style('grid-row-start', sampleStartRow)
-			// if (rowBg) cell.style('background', '#eee')
+			const cell = row
+				.append('div')
+				.text('totalNormal' in sample ? sample.totalNormal : '')
+				.classed('sjpp-sample-table-div', true)
+		}
+	}
+
+	function colorRows() {
+		// Colors every other row light gray
+		// Solves the problem of the multisample table rows' background color
+		// rendering out of order (Cause: the sample rows are processed and rendered in order of
+		// the data list and then shuffled into the respective sample subgrid)
+
+		const rowDivs = document.querySelectorAll('.sjpp-sample-table-div')
+		const rowArray = Array.from(rowDivs)
+		for (const [i, elm] of rowArray.entries()) {
+			const e = d3select(elm)
+			const rowPosition = Math.floor(i / numColumns)
+			let background = false
+			if (rowPosition % 2 != 0) {
+				background = true
+				e.style('background-color', '#ededed')
+			}
+			e.on('mouseover', () => {
+				e.style('background-color', '#fcfcca')
+			})
+			e.on('mouseout', () => {
+				e.style('background-color', background == true ? '#ededed' : '')
+			})
 		}
 	}
 }

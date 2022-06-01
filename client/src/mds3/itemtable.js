@@ -67,11 +67,10 @@ function determineLeftCoordinate(div) {
 	const coords = div.node().getBoundingClientRect()
 	// Reset left position to 100% - (arg.div.width % + 3%)
 	let leftpos
-	const left = 100 - ((coords.width / (document.documentElement.clientWidth || window.innerWidth)) * 100 + 3)
 	if (coords.width / (document.documentElement.clientWidth || window.innerWidth) > 0.4) {
 		leftpos = 3
 	} else {
-		leftpos = left
+		leftpos = 100 - ((coords.width / (document.documentElement.clientWidth || window.innerWidth)) * 100 + 3)
 	}
 	return leftpos
 }
@@ -201,7 +200,6 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 				numOfMetaDataCols}, auto)'`
 		)
 		.style('text-overflow', 'ellipsis')
-		.style('background-color', 'white')
 		.style('overflow', 'scroll')
 		.style('max-width', '100%') // Fix for grid overflowing tooltip
 
@@ -252,6 +250,7 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 				.append('div')
 				.text(m.occurrence)
 				.style('grid-column-start', dataStartCol)
+				.style('text-align', 'center')
 		}
 
 		if (showNumericmodeValue) {
@@ -260,14 +259,13 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 				.append('div')
 				.text(m.__value_missing ? 'NA' : m.__value_use)
 				.style('grid-column-start', dataStartCol)
+				.style('text-align', 'center')
 		}
-
 		// create placeholder for showing available samples of this variant
-		// ssmid2div.set(m.ssm_id, grid.append('div'))
 		ssmid2div.set(m.ssm_id, grid.append('div').style('display', 'grid'))
 	}
 	// return { header: sampleDivHeader, ssmid2div, startCol, grid }
-	return { ssmid2div, startCol, grid }
+	return { ssmid2div, startCol }
 }
 
 async function table_fusionsv(arg) {
