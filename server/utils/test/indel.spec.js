@@ -62,9 +62,7 @@ output_diff_scores:"-0.1537931034482759:-0.01869158878504673:0.02717086834733884
 ***************/
 
 const pphost = 'http://pp-int-test.stjude.org/' // show links using this host
-
-const strictness = 1, // Can be manually changed to zero
-	groupkeys = ['ref', 'alt', 'none', 'amb'] // corresponds to the same values returned by rust
+const groupkeys = ['ref', 'alt', 'none', 'amb'] // corresponds to the same values returned by rust
 
 /**************
  Test sections
@@ -75,13 +73,17 @@ tape('\n', function(test) {
 })
 
 tape('rust indel binary', async function(test) {
-	for (const e of examples) {
-		await runTest(e, test)
+	const strictness_values = [0, 1] // Array containing the possible number of strictness values
+	for (const strictness of strictness_values) {
+		console.log('Testing with strictness=', strictness)
+		for (const e of examples) {
+			await runTest(e, test, strictness)
+		}
 	}
 	test.end()
 })
 
-async function runTest(e, test) {
+async function runTest(e, test, strictness) {
 	// validate data structure of e
 	if (!e.pplink) throw '.pplink missing'
 	test.pass(`Testing "${e.comment}" at ${e.pplink}`)
@@ -118,17 +120,17 @@ async function runTest(e, test) {
 		'_' +
 		e.reads.map(i => i.f).join('-') + // flag
 		'_' +
-		e.variant.pos +
+		e.variant.pos + // Variant position
 		'_' +
-		e.variant.ref +
+		e.variant.ref + // Reference allele
 		'_' +
-		e.variant.alt +
+		e.variant.alt + // Alternate allele
 		'_' +
-		strictness +
+		strictness + // Strictness value
 		'_' +
-		e.leftFlank +
+		e.leftFlank + // Left flank sequence
 		'_' +
-		e.rightFlank
+		e.rightFlank // Right flank sequence
 
 	try {
 		const stdout = await run_rust('indel', input)
@@ -160,12 +162,32 @@ async function runTest(e, test) {
 		// find reads with wrong classification
 		let wrongcount = 0
 		for (let i = 0; i < results.length; i++) {
-			if (e.reads[i].g != results[i]) wrongcount++
+			if (strictness == 0) {
+				// Check if "g_0" exists for that read
+				if (e.reads[i].g_0) {
+					// if it exists check with truth value for strictness = 0
+					if (e.reads[i].g_0 != results[i]) wrongcount++
+				} else {
+					// if g_0 does not exist for that read use the truth value for strictness = 1
+					if (e.reads[i].g != results[i]) wrongcount++
+				}
+			} else if (e.reads[i].g != results[i]) wrongcount++ // For strictness = 1, simply check truth value for strictness = 1, i.e. .g
 		}
 		if (wrongcount) {
 			const lst = []
 			for (let i = 0; i < e.reads.length; i++) {
-				const truth = e.reads[i].g
+				let truth
+				if (strictness == 0) {
+					if (e.reads[i].g_0) {
+						// if it exists check with truth value for strictness = 0
+						truth = e.reads[i].g_0
+					} else {
+						// if g_0 does not exist for that read use the truth value for strictness = 1
+						truth = e.reads[i].g
+					}
+				} else {
+					truth = e.reads[i].g
+				}
 				const result = results[i]
 				lst.push(
 					i + '\t\t' + truth + '\t' + (truth != result ? result + (e.reads[i].n ? ' (' + e.reads[i].n + ')' : '') : '')
@@ -261,7 +283,8 @@ const examples = [
 				p: 119155735,
 				c: '18M8I49M',
 				f: 163,
-				g: 'none'
+				g: 'none',
+				g_0: 'alt'
 			},
 			{
 				s: 'ACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGCTGCTTCTGGCT',
@@ -327,7 +350,8 @@ const examples = [
 				p: 55589715,
 				c: '100M',
 				f: 99,
-				g: 'none'
+				g: 'none',
+				g_0: 'ref'
 			},
 			{
 				s: 'GATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTAC',
@@ -427,7 +451,8 @@ const examples = [
 				p: 7578308,
 				c: '74M18D77M',
 				f: 163,
-				g: 'none'
+				g: 'none',
+				g_0: 'alt' // Value for strictness = 0
 			},
 			{
 				n:
