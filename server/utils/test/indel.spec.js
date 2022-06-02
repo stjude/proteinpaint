@@ -2,6 +2,7 @@ const tape = require('tape')
 const path = require('path')
 const spawn = require('child_process').spawn
 const Readable = require('stream').Readable
+const additionalExamples = require('./indel.examples')
 //const utils = require('../../src/utils')
 
 /*
@@ -205,6 +206,10 @@ async function runTest(e, test, strictness) {
 
 const examples = [
 	// one object for each example
+
+	// additional examples from separate script
+	...additionalExamples.examples,
+
 	{
 		comment: '8-bp insertion at CBL exon 10',
 		pplink:
