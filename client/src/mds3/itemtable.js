@@ -186,10 +186,11 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 		showNumericmodeValue = true
 	}
 	// Calculate number of columns specific to each sample group
-	const numOfMetaDataCols =
-		tk.mds.variant2samples.termidlst.length +
-		(tk.mds.variant2samples.sampleHasSsmReadDepth == true ? 1 : 0) +
-		(tk.mds.variant2samples.sampleHasSsmTotalNormal == true ? 1 : 0)
+	const numOfMetaDataCols = tk.mds.variant2samples
+		? tk.mds.variant2samples.termidlst.length +
+		  (tk.mds.variant2samples.sampleHasSsmReadDepth == true ? 1 : 0) +
+		  (tk.mds.variant2samples.sampleHasSsmTotalNormal == true ? 1 : 0)
+		: 0
 
 	grid
 		.style(
