@@ -56,6 +56,6 @@ module.exports = function(env = {}) {
 		// devtool: 'source-map' is slowest to build/rebuild, but
 		// line numbers in stack traces are accurate
 		//
-		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'eval' : ''
+		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'eval-source-map' : ''
 	}
 }
