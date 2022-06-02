@@ -4,6 +4,7 @@ import { fillbar } from '../../dom/fillbar'
 import { fold_glyph, settle_glyph } from './skewer.render'
 import { itemtable } from './itemtable'
 import { mayAddSkewerModeOption } from './skewer'
+import { rangequery_rglst } from './tk'
 
 const labyspace = 5
 const font = 'Arial'
@@ -256,14 +257,14 @@ async function listSkewerData(tk, block) {
 			mlst,
 			tk,
 			block,
-			// quick fix to prevent gdc track to run variant2sample on too many ssm
+			// quick fix to prevent gdc track to run variant2samples on too many ssm
 			disable_variant2samples: true
 		})
 	}
 }
 
 function mayMakeSampleLabel(data, tk, block, laby) {
-	if (!data.sampleTotalNumber) return
+	if (!('sampleTotalNumber' in data)) return
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
 	if (!tk.leftlabels.doms.samples) {
 		tk.leftlabels.doms.samples = makelabel(tk, block, laby)
@@ -277,12 +278,19 @@ function mayMakeSampleLabel(data, tk, block, laby) {
 }
 
 function menu_samples(data, tk, block) {
-	if (data.sampleTotalNumber < 10) {
-		// list samples
+	// subject to change
+
+	if (tk.mds.variant2samples.termidlst) {
+		// list terms for selecting one and summarize
 	}
+
 	tk.menutip.d
 		.append('div')
-		.text('Todo')
+		.text('List')
 		.attr('class', 'sja_menuoption')
-		.on('click', () => {})
+		.on('click', () => {
+			const par = []
+			rangequery_rglst(tk, block, par)
+			// quick fix to convert lst to obj, later allow function to optionally create obj
+		})
 }

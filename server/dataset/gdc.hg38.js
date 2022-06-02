@@ -230,10 +230,14 @@ const ssmid2csq = {
 }
 
 /*
-using one or multiple variants, get info about all tumors harbording them
-variant2samples intends to be a generic mechanism for fetching tumors harbording a variant
-same name attribute will be exposed to client (ds.variant2samples: true)
-and hiding the implementation details on server
+this is gdc api-specific implementation
+
+query by variants or isoform:
+- a list of variants, get samples harboring the variants
+- an isoform, get samples harboring any variant of the isoform
+
+variant2samples intends to be a generic mechanism for fetching tumors harboring a variant
+same name attribute will be exposed to client
 
 on client, get() is added to tk.ds.variant2samples to make GET request for list of variants
 this happens for sunburst and itemtable
@@ -247,7 +251,7 @@ don't know a js method to alter the list of attributes in `case { }` part
 - sunburst
   only return subset of attributes selected for sunburst chart
 */
-const variant2samplesApi = {
+const variant2samplesGdcapi = {
 	endpoint: '/ssm_occurrences',
 	// Note: case.case_id seems extra field just for sunburst,
 	// but it's fail-safe in case both 'disease_type' and 'primary_site' are missing from that case
@@ -607,7 +611,7 @@ module.exports = {
 			// if missing, will require sample_id_key
 			namekey: 'case_uuid'
 		},
-		gdcapi: variant2samplesApi
+		gdcapi: variant2samplesGdcapi
 	},
 
 	queries: {

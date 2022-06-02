@@ -2,7 +2,7 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { Menu } from '../../dom/menu'
 import { dofetch3 } from '../../common/dofetch'
 import { initLegend, updateLegend } from './legend'
-import { loadTk, rangequery_rglst } from './tk'
+import { loadTk } from './tk'
 import urlmap from '../../common/urlmap'
 import { mclass } from '../../shared/common'
 
@@ -316,6 +316,10 @@ function mayaddGetter_variant2samples(tk, block) {
 	// getter are implemented differently based on data sources
 	if (tk.custom_variants) {
 		tk.mds.variant2samples.get = arg => {
+			/*
+			arg{}
+			.mlst[]
+			*/
 			if (arg.querytype == tk.mds.variant2samples.type_samples) {
 				const samples = []
 				for (const m of arg.mlst) {
