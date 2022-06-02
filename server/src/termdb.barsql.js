@@ -296,7 +296,7 @@ export function getOrderedLabels(term, bins) {
 			.sort((a, b) => a - b)
 			.map(i => term.values[i].label)
 	}
-	if (term.values) {
+	if (term.values && 'order' in Object.values(term.values)[0]) {
 		return Object.keys(term.values)
 			.sort((a, b) =>
 				'order' in term.values[a] && 'order' in term.values[b] ? term.values[a].order - term.values[b].order : 0
