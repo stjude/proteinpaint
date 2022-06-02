@@ -115,49 +115,57 @@ export function validate_query_snvindel_byrange(ds) {
 }
 
 // tandem rest api query: 1. variant and csq, 2. cases
-// not in use
 export function validate_query_snvindel_byisoform(ds) {
 	const api = ds.queries.snvindel.byisoform.gdcapi
-	if (!Array.isArray(api.lst)) throw 'api.lst is not array'
-	if (api.lst.length != 2) throw 'api.lst is not array of length 2'
-	for (const a of api.lst) {
+	if (!api.query1) throw 'api.query1 is missing'
+	if (!api.query2) throw 'api.query2 is missing'
+	/*
 		if (!a.endpoint) throw '.endpoint missing for byisoform.gdcapi'
 		if (!a.fields) throw '.fields missing for byisoform.gdcapi'
 		if (!a.filters) throw '.filters missing for byisoform.gdcapi'
 		if (typeof a.filters != 'function') throw 'byisoform.gdcapi.filters() is not a function'
-	}
+		*/
 	ds.queries.snvindel.byisoform.get = async opts => {
-		const hits = await snvindel_byisoform_run(api, opts)
+		const refseq = mayMapRefseq2ensembl(opts, ds)
+
+		const ssmLst = await snvindel_byisoform_run(api, opts)
 		const mlst = [] // parse snv/indels into this list
-		for (const hit of hits) {
-			if (!hit.ssm_id) throw 'hit.ssm_id missing'
-			if (!Number.isInteger(hit.start_position)) throw 'hit.start_position is not integer'
+		for (const ssm of ssmLst) {
 			const m = {
-				ssm_id: hit.ssm_id,
+				ssm_id: ssm.ssm_id,
 				dt: common.dtsnvindel,
-				chr: hit.chromosome,
-				pos: hit.start_position - 1,
-				ref: hit.reference_allele,
-				alt: hit.tumor_allele,
+				chr: ssm.chromosome,
+				pos: ssm.start_position - 1,
+				ref: ssm.reference_allele,
+				alt: ssm.tumor_allele,
 				isoform: opts.isoform,
-				csqcount: hit.csqcount,
+				csqcount: ssm.csqcount,
 				// occurrence count will be overwritten after sample filtering
-				occurrence: hit.cases.length
+				occurrence: ssm.cases.length
 			}
-			snvindel_addclass(m, hit.consequence)
+			snvindel_addclass(m, ssm.consequence)
 			m.samples = []
-			for (const c of hit.cases) {
-				const sample = makeSampleObj(c, ds)
-				sample.sample_id = c.case_id
-				m.samples.push(sample)
+			for (const c of ssm.cases) {
+				//const sample = makeSampleObj(c, ds)
+				//sample.sample_id = c.case_id
+				// make simple sample obj for counting
+				m.samples.push({ sample_id: c.case_id })
 			}
 			mlst.push(m)
 		}
+
+		if (refseq) {
+			// replace ensembl back to refseq
+			opts.isoform = refseq
+			for (const m of mlst) m.isoform = refseq
+		}
+
 		return mlst
 	}
 }
 
-// protein mutation api, just occurrence and without case info
+// "protein_mutations" graphql api, just occurrence and without case info
+// not in use!!
 export function validate_query_snvindel_byisoform_2(ds) {
 	const api = ds.queries.snvindel.byisoform.gdcapi
 	if (!api.query) throw '.query missing for byisoform.gdcapi'
@@ -325,23 +333,25 @@ async function snvindel_byisoform_run(api, opts) {
 	// query is ds.queries.snvindel
 	const headers = getheaders(opts)
 	const p1 = got(
-		api.lst[0].endpoint +
+		apihost +
+			api.query1.endpoint +
 			'?size=' +
-			api.lst[0].size +
+			api.query1.size +
 			'&fields=' +
-			api.lst[0].fields.join(',') +
+			api.query1.fields.join(',') +
 			'&filters=' +
-			encodeURIComponent(JSON.stringify(api.lst[0].filters(opts))),
+			encodeURIComponent(JSON.stringify(api.query1.filters(opts))),
 		{ method: 'GET', headers }
 	)
 	const p2 = got(
-		api.lst[1].endpoint +
+		apihost +
+			api.query2.endpoint +
 			'?size=' +
-			api.lst[1].size +
+			api.query2.size +
 			'&fields=' +
-			api.lst[1].fields.join(',') +
+			api.query2.fields.join(',') +
 			'&filters=' +
-			encodeURIComponent(JSON.stringify(api.lst[1].filters(opts))),
+			encodeURIComponent(JSON.stringify(api.query2.filters(opts))),
 		{ method: 'GET', headers }
 	)
 	const [tmp1, tmp2] = await Promise.all([p1, p2])
@@ -352,14 +362,16 @@ async function snvindel_byisoform_run(api, opts) {
 	} catch (e) {
 		throw 'invalid JSON returned by GDC'
 	}
-	if (!re_ssms.data || !re_ssms.data.hits) throw 'returned data from ssms query not .data.hits'
-	if (!re_cases.data || !re_cases.data.hits) throw 'returned data from cases query not .data.hits[]'
+	if (!re_ssms.data || !re_ssms.data.hits) throw 'query1 did not return .data.hits'
+	if (!re_cases.data || !re_cases.data.hits) throw 'query2 did not return .data.hits[]'
 	if (!Array.isArray(re_ssms.data.hits) || !Array.isArray(re_cases.data.hits)) throw 're.data.hits[] is not array'
-	const id2ssm = new Map()
-	// key: ssm_id, value: ssm {}
+
+	// hash ssm by ssm_id
+	const id2ssm = new Map() // key: ssm_id, value: ssm {}
 	for (const h of re_ssms.data.hits) {
 		if (!h.ssm_id) throw 'ssm_id missing from a ssms hit'
 		if (!h.consequence) throw '.consequence[] missing from a ssm'
+		if (!Number.isInteger(h.start_position)) throw 'hit.start_position is not integer'
 		h.csqcount = h.consequence.length
 		const consequence = h.consequence.find(i => i.transcript.transcript_id == opts.isoform)
 		if (!consequence) {
@@ -369,6 +381,8 @@ async function snvindel_byisoform_run(api, opts) {
 		h.cases = []
 		id2ssm.set(h.ssm_id, h)
 	}
+
+	// assign case to ssm by ssm_id
 	for (const h of re_cases.data.hits) {
 		if (!h.ssm) throw '.ssm{} missing from a case'
 		if (!h.ssm.ssm_id) throw '.ssm.ssm_id missing from a case'
@@ -486,25 +500,13 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 			sample.ssm_id = s.ssm.ssm_id
 		}
 
-		if (fields.length == 1 && fields[0] == 'case.case_id') {
-			/*
-			quick fix!
-
-			when getting the total list of samples from byisoform request
-			(see use of ds.queries.snvindel.getSamples in mds3.load.js load_driver())
-			only need to get uuid of each case, no need to convert to submitter id
-			thus detecting such case when fields array has single element
-			*/
-			sample.sample_id = s.case.case_id
-		} else {
-			// get printable sample id
-			if (ds.variant2samples.sample_id_key) {
-				sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
-			} else if (ds.variant2samples.sample_id_getter) {
-				// must pass request header to getter in case requesting a controlled sample via a user token
-				// this is gdc-specific logic and should not impact generic mds3
-				sample.sample_id = await ds.variant2samples.sample_id_getter(s.case, headers)
-			}
+		// get printable sample id
+		if (ds.variant2samples.sample_id_key) {
+			sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
+		} else if (ds.variant2samples.sample_id_getter) {
+			// must pass request header to getter in case requesting a controlled sample via a user token
+			// this is gdc-specific logic and should not impact generic mds3
+			sample.sample_id = await ds.variant2samples.sample_id_getter(s.case, headers)
 		}
 
 		/* gdc-specific logic

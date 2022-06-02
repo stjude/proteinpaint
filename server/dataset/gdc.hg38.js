@@ -25,59 +25,16 @@ function validate_filter0(f) {
 query list of variants by isoform
 */
 
-// TODO FIXME investigate if this api supports both isoform and coordinate query
-// if so then no need for snvindel.byrange and .byisoform
-const protein_mutations = {
-	apihost: GDC_HOST + '/v0/graphql',
-	query: `query Lolliplot_relayQuery(
-		  $filter: FiltersArgument
-		  $score: String
-		) {
-		  analysis {
-			protein_mutations {
-			  data(first: 10000, score: $score,  filters: $filter, fields: [
-				"ssm_id"
-				"chromosome"
-				"start_position"
-				"reference_allele"
-				"tumor_allele"
-				"consequence.transcript.aa_change"
-				"consequence.transcript.consequence_type"
-				"consequence.transcript.transcript_id"
-				])
-			}
-		  }
-		}`,
-	filters: p => {
-		if (!p.isoform) throw '.isoform missing'
-		const f = {
-			filter: {
-				op: 'and',
-				content: [{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [p.isoform] } }]
-			},
-			score: 'occurrence.case.project.project_id'
-		}
-		if (p.set_id) {
-			if (typeof p.set_id != 'string') throw '.set_id value not string'
-			f.filter.content.push({
-				op: 'in',
-				content: {
-					field: 'cases.case_id',
-					value: [p.set_id]
-				}
-			})
-		}
-		if (p.filter0) {
-			f.filter.content.push(p.filter0)
-		}
-		return f
-	}
-}
+/*
+REST: get list of ssm with consequence, no case info and occurrence
+isoform2ssm_getvariant and isoform2ssm_getcase are the "tandem REST api"
+yields list of ssm, each with .samples[{sample_id}]
+can use .samples[] to derive .occurrence for each ssm, and overal number of unique samples
 
-// REST: get list of ssm with consequence, no case info and occurrence
-// isoform2ssm_getvariant and isoform2ssm_getcase are the "tandem REST api" for lollipop+summary label, which is not in use now
+in comparison to "protein_mutations" graphql query
+*/
 const isoform2ssm_getvariant = {
-	endpoint: GDC_HOST + '/ssms',
+	endpoint: '/ssms',
 	size: 100000,
 	fields: [
 		'ssm_id',
@@ -102,6 +59,45 @@ const isoform2ssm_getvariant = {
 					op: '=',
 					content: {
 						field: 'consequence.transcript.transcript_id',
+						value: [p.isoform]
+					}
+				}
+			]
+		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		if (p.filter0) {
+			f.content.push(p.filter0)
+		}
+		return f
+	}
+}
+// REST: get case details for each ssm, no variant-level info
+const isoform2ssm_getcase = {
+	endpoint: '/ssm_occurrences',
+	size: 100000,
+	fields: ['ssm.ssm_id', 'case.case_id'],
+	filters: p => {
+		// p:{}
+		// .isoform
+		// .set_id
+		if (!p.isoform) throw '.isoform missing'
+		if (typeof p.isoform != 'string') throw '.isoform value not string'
+		const f = {
+			op: 'and',
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'ssms.consequence.transcript.transcript_id',
 						value: [p.isoform]
 					}
 				}
@@ -629,11 +625,15 @@ module.exports = {
 				}
 			},
 			byisoform: {
+				gdcapi: {
+					query1: isoform2ssm_getvariant,
+					query2: isoform2ssm_getcase
+				}
+				/* using tandem api but not graphql query, as former returns list of samples
+				and easier to summarize
 				gdcapi: protein_mutations
+				*/
 			},
-			// run a separate query to get total number of samples with snvindel
-			// since snvindel byisoform query only return ssm, but not cases
-			getSamples: {},
 			m2csq: {
 				// may also support querying a vcf by chr.pos.ref.alt
 				by: 'ssm_id',

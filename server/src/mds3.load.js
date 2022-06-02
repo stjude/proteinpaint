@@ -76,17 +76,23 @@ function init_q(query, genome) {
 }
 
 function finalize_result(q, ds, result) {
+	const sampleSet = new Set() // collects sample ids if present in data points
+
 	if (result.skewer) {
 		for (const m of result.skewer) {
 			if (m.samples) {
 				m.occurrence = m.samples.length
+				for (const s of m.samples) {
+					sampleSet.add(s.sample_id)
+				}
 				delete m.samples
 			}
 		}
 	}
-	if (result._sampleSet) {
-		result.sampleTotalNumber = result._sampleSet.size
-		delete result._sampleSet
+
+	if (sampleSet.size) {
+		// has samples, report total number of unique samples across all data types
+		result.sampleTotalNumber = sampleSet.size
 	}
 }
 
@@ -138,35 +144,12 @@ async function load_driver(q, ds) {
 				// the query will resolve to list of mutations, to be flattened and pushed to .skewer[]
 				const d = await query_snvindel(q, ds)
 				result.skewer.push(...d)
-
-				// quick fix
-				// TODO if snvindel d contains samples, then collect samples from there
-				if (ds.queries.snvindel.getSamples) {
-					// running variant2sample query to retrieve total list of samples
-					// since ssm returned by snvindel query does not contain samples
-					// may rename to getSample_v2s to signify this
-					const p = JSON.parse(JSON.stringify(q))
-					p.get = ds.variant2samples.type_samplesIdOnly
-					const samples = await ds.variant2samples.get(p)
-					// samples is array of {sample_id}
-					// later may join sample sets from snvindel and fusion together using Set
-
-					// missing holder, init
-					if (!result._sampleSet) result._sampleSet = new Set()
-					// collect sample ids into the set
-					for (const s of samples) result._sampleSet.add(s.sample_id)
-				}
 			}
 
 			if (ds.queries.svfusion) {
 				// todo
 				const d = await query_svfusion(q, ds)
 				result.skewer.push(...d)
-				if (ds.queries.svfusion.getSamples) {
-					// may duplicate same steps as snvindel.getSamples?
-					if (!result._sampleSet) result._sampleSet = new Set()
-					// add fusion samples to _sampleSet
-				}
 			}
 
 			filter_data(q, result)

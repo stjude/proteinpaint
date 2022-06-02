@@ -434,3 +434,52 @@ const isoform2casesummary = {
 		return f
 	}
 }
+
+// TODO FIXME investigate if this api supports both isoform and coordinate query
+// if so then no need for snvindel.byrange and .byisoform
+const protein_mutations = {
+	apihost: GDC_HOST + '/v0/graphql',
+	query: `query Lolliplot_relayQuery(
+		  $filter: FiltersArgument
+		  $score: String
+		) {
+		  analysis {
+			protein_mutations {
+			  data(first: 10000, score: $score,  filters: $filter, fields: [
+				"ssm_id"
+				"chromosome"
+				"start_position"
+				"reference_allele"
+				"tumor_allele"
+				"consequence.transcript.aa_change"
+				"consequence.transcript.consequence_type"
+				"consequence.transcript.transcript_id"
+				])
+			}
+		  }
+		}`,
+	filters: p => {
+		if (!p.isoform) throw '.isoform missing'
+		const f = {
+			filter: {
+				op: 'and',
+				content: [{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [p.isoform] } }]
+			},
+			score: 'occurrence.case.project.project_id'
+		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.filter.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		if (p.filter0) {
+			f.filter.content.push(p.filter0)
+		}
+		return f
+	}
+}

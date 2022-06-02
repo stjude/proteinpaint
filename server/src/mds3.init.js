@@ -237,7 +237,7 @@ function validate_query_snvindel(ds) {
 	if (!q.byisoform) throw '.byisoform missing for queries.snvindel'
 	if (q.byisoform.gdcapi) {
 		//gdc.validate_query_snvindel_byisoform(ds) // tandem rest apis
-		gdc.validate_query_snvindel_byisoform_2(ds)
+		gdc.validate_query_snvindel_byisoform(ds)
 	} else {
 		throw 'unknown query method for queries.snvindel.byisoform'
 	}
