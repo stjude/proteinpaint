@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint-server",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server.js",
   "bin": "bin.js",
@@ -67,7 +67,9 @@
     "cards/index.json",
     "server.js*",
     "shared/common.js",
-    "utils"
+    "utils/*.R",
+    "utils/rust/*.*",
+    "utils/rust/src"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"

@@ -1,5 +1,5 @@
 {
-  "private": true,
+  "private": false,
   "name": "@stjude/proteinpaint",
   "bin": "server/bin.js",
   "main": "client/dist/app.js",
@@ -23,7 +23,9 @@
     "server/genome",
     "server/src/serverconfig.js",
     "server/server.js*",
-    "server/utils",
+    "server/utils/*.R",
+    "server/utils/rust/*.*",
+    "server/utils/rust/src",
     "server/shared",
     "server/cards"
   ],
