@@ -164,14 +164,26 @@ async function load_driver(q, ds) {
 	}
 
 	if (q.getSamples) {
-		const samples = {} // k: sample_id, v: { key:val, ssm_id_lst:[] }
+		/* quick fix: for listing all samples that have mutation in the view range
+		client-side variant data are stripped of sample info
+		to list samples, must re-query and collect samples
+		*/
+		const id2samples = new Map() // k: sample_id, v: { key:val, ssm_id_lst:[] }
 		if (ds.queries.snvindel) {
-			const d = await query_snvindel(q, ds)
-			console.log(d)
+			const samples = await query_snvindel(q, ds)
+			for (const s of samples) {
+				if (id2samples.has(s.sample_id)) {
+					id2samples.get(s.sample_id).ssm_id_lst.push(s.ssm_id)
+				} else {
+					s.ssm_id_lst = [s.ssm_id]
+					delete s.ssm_id
+					id2samples.set(s.sample_id, s)
+				}
+			}
 		}
 		if (ds.queries.svfusion) {
 		}
-		return { samples }
+		return { samples: [...id2samples.values()] }
 	}
 
 	// other query type

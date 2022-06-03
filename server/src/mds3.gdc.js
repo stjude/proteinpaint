@@ -10,6 +10,8 @@ GDC API
 validate_variant2sample
 validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
+	snvindel_byisoform
+	getSamples_byisoform
 validate_query_snvindel_byisoform_2
 validate_query_genecnv
 getSamples_gdcapi
@@ -24,8 +26,6 @@ validate_sampleSummaries2_mclassdetail
 handle_gdc_ssms
 
 **************** internal
-snvindel_byisoform
-getSamples_byisoform
 mayMapRefseq2ensembl
 may_add_readdepth
 makeSampleObj
@@ -156,7 +156,7 @@ export function validate_query_snvindel_byisoform(ds) {
 		const refseq = mayMapRefseq2ensembl(opts, ds)
 
 		if (opts.getSamples) {
-			return await getSamples_byisoform(api, opts)
+			return await getSamples_byisoform(api, opts, ds)
 		}
 
 		const ssmLst = await snvindel_byisoform(api, opts)
@@ -409,18 +409,28 @@ async function snvindel_byisoform(api, opts) {
 	return [...id2ssm.values()]
 }
 
-async function getSamples_byisoform(api, opts) {
-	// query is ds.queries.snvindel
+/*
+purpuse: query list of samples that harbor a variant 
+api: ds.queries.snvindel
+opts{}
+	.isoform, required
+	.termidlst, optional, comma-joined term ids
+*/
+async function getSamples_byisoform(api, opts, ds) {
 	const headers = getheaders(opts)
-	// only run p2
-	// combine opts.termidlst with api.query2.fields4details
+	// only run query2
+
+	// TODO combine opts.termidlst with api.query2.fields4details
+	const fields = [...api.query2.fields4details]
+	console.log(opts)
+
 	const tmp = await got(
 		apihost +
 			api.query2.endpoint +
 			'?size=' +
 			api.query2.size +
 			'&fields=' +
-			api.query2.fields4details.join(',') +
+			fields.join(',') +
 			'&filters=' +
 			encodeURIComponent(JSON.stringify(api.query2.filters(opts))),
 		{ method: 'GET', headers }
@@ -434,15 +444,34 @@ async function getSamples_byisoform(api, opts) {
 	if (!re_cases.data || !re_cases.data.hits) throw 'query2 did not return .data.hits[]'
 	if (!Array.isArray(re_cases.data.hits)) throw 're.data.hits[] is not array'
 
-	const samplebyid = new Map()
+	const samples = []
 
 	for (const h of re_cases.data.hits) {
 		if (!h.ssm) throw '.ssm{} missing from a case'
 		if (!h.ssm.ssm_id) throw '.ssm.ssm_id missing from a case'
 		if (!h.case) throw '.case{} missing from a case'
-		console.log(h.case)
+
+		const sample = {
+			ssm_id: h.ssm.ssm_id
+		}
+		// TODO fill in attributes
+
+		// get printable sample id
+		if (ds.variant2samples.sample_id_key) {
+			sample.sample_id = h.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
+		} else if (ds.variant2samples.sample_id_getter) {
+			sample.tempcase = h.case
+		}
+		sample.case_uuid = h.case.case_id
+
+		samples.push(sample)
 	}
-	return samplebyid
+
+	if (ds.variant2samples.sample_id_getter) {
+		await ds.variant2samples.sample_id_getter(samples, headers)
+	}
+
+	return samples
 }
 
 export function validate_query_genecnv(ds) {
