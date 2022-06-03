@@ -27,7 +27,7 @@ method good for somatic variants, in skewer and gp queries:
 .genecnvNosample[]
  */
 
-module.exports = genomes => {
+export function mds3_request_closure(genomes) {
 	return async (req, res) => {
 		try {
 			if (!req.query.genome) throw '.genome missing'

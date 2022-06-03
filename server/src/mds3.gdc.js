@@ -26,6 +26,7 @@ handle_gdc_ssms
 **************** internal
 mayMapRefseq2ensembl
 may_add_readdepth
+makeSampleObj
 */
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -118,18 +119,33 @@ export function validate_query_snvindel_byrange(ds) {
 export function validate_query_snvindel_byisoform(ds) {
 	const api = ds.queries.snvindel.byisoform.gdcapi
 	if (!api.query1) throw 'api.query1 is missing'
+	if (!api.query1.endpoint) throw 'query1.endpoint missing'
+	if (!api.query1.fields) throw 'query1.fields missing'
+	if (!api.query1.filters) throw 'query1.filters missing'
+	if (typeof api.query1.filters != 'function') throw 'query1.filters() is not a function'
 	if (!api.query2) throw 'api.query2 is missing'
-	/*
-		if (!a.endpoint) throw '.endpoint missing for byisoform.gdcapi'
-		if (!a.fields) throw '.fields missing for byisoform.gdcapi'
-		if (!a.filters) throw '.filters missing for byisoform.gdcapi'
-		if (typeof a.filters != 'function') throw 'byisoform.gdcapi.filters() is not a function'
-		*/
+	if (!api.query2.endpoint) throw 'query2.endpoint missing'
+	if (!api.query2.fields) throw 'query2.fields missing'
+	if (!api.query2.filters) throw 'query2.filters missing'
+	if (typeof api.query2.filters != 'function') throw 'query2.filters() is not a function'
+
 	ds.queries.snvindel.byisoform.get = async opts => {
+		/*
+		hardcoded logic!!
+
+		as gdc ssm is based on gencode
+		to allow them to also show up on a refseq pp view
+		will detect if querying isoform is refseq
+		steps:
+		1. convert refseq to ensembl
+		2. set ensembl to opts.isoform to run query
+		3. set refseq to "refseq" holder variable
+		4. in resulting ssm, set isoform to refseq so skewer can show
+		*/
 		const refseq = mayMapRefseq2ensembl(opts, ds)
 
 		const ssmLst = await snvindel_byisoform_run(api, opts)
-		const mlst = [] // parse snv/indels into this list
+		const mlst = [] // parse final ssm into this list
 		for (const ssm of ssmLst) {
 			const m = {
 				ssm_id: ssm.ssm_id,
@@ -139,9 +155,7 @@ export function validate_query_snvindel_byisoform(ds) {
 				ref: ssm.reference_allele,
 				alt: ssm.tumor_allele,
 				isoform: opts.isoform,
-				csqcount: ssm.csqcount,
-				// occurrence count will be overwritten after sample filtering
-				occurrence: ssm.cases.length
+				csqcount: ssm.csqcount
 			}
 			snvindel_addclass(m, ssm.consequence)
 			m.samples = []
@@ -172,19 +186,6 @@ export function validate_query_snvindel_byisoform_2(ds) {
 	if (!api.filters) throw '.filters missing for byisoform.gdcapi'
 	if (typeof api.filters != 'function') throw 'byisoform.gdcapi.filters() is not function'
 	ds.queries.snvindel.byisoform.get = async opts => {
-		/*
-		hardcoded logic!!
-
-		as gdc ssm is based on gencode
-		to allow them to also show up on a refseq pp view
-		will detect if querying isoform is refseq
-		steps:
-		1. convert refseq to ensembl
-		2. set ensembl to opts.isoform to run query
-		3. set refseq to "refseq" holder variable
-		4. in resulting ssm, set isoform to refseq so skewer can show
-		*/
-
 		const refseq = mayMapRefseq2ensembl(opts, ds)
 
 		const headers = getheaders(opts)
