@@ -405,7 +405,7 @@ class TdbBarchart {
 
 	setTerm2Color(result) {
 		const t2 = this.config.term2
-		const t2firstVal = Object.values(t2.term.values || {})
+		const t2firstVal = Object.values(t2?.term?.values || {})
 		if (t2 && t2.term.values && t2.term.values[result.dataId]?.color) {
 			this.term2toColor[result.dataId] = t2.term.values[result.dataId]?.color
 		}
