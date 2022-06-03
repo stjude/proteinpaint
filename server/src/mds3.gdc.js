@@ -4,7 +4,7 @@ const { get_crosstabCombinations } = require('./mds3.init')
 const serverconfig = require('./serverconfig')
 
 /*
-GDC graphql API
+GDC API
 
 ****************** EXPORTED
 validate_variant2sample
@@ -24,6 +24,8 @@ validate_sampleSummaries2_mclassdetail
 handle_gdc_ssms
 
 **************** internal
+snvindel_byisoform
+getSamples_byisoform
 mayMapRefseq2ensembl
 may_add_readdepth
 makeSampleObj
@@ -115,7 +117,10 @@ export function validate_query_snvindel_byrange(ds) {
 	}
 }
 
-// tandem rest api query: 1. variant and csq, 2. cases
+/* tandem rest api query
+1. variant and csq
+2. cases
+*/
 export function validate_query_snvindel_byisoform(ds) {
 	const api = ds.queries.snvindel.byisoform.gdcapi
 	if (!api.query1) throw 'api.query1 is missing'
@@ -125,11 +130,17 @@ export function validate_query_snvindel_byisoform(ds) {
 	if (typeof api.query1.filters != 'function') throw 'query1.filters() is not a function'
 	if (!api.query2) throw 'api.query2 is missing'
 	if (!api.query2.endpoint) throw 'query2.endpoint missing'
-	if (!api.query2.fields) throw 'query2.fields missing'
+	if (!api.query2.fields4counting) throw 'query2.fields4counting missing'
+	if (!api.query2.fields4details) throw 'query2.fields4details missing'
 	if (!api.query2.filters) throw 'query2.filters missing'
 	if (typeof api.query2.filters != 'function') throw 'query2.filters() is not a function'
 
 	ds.queries.snvindel.byisoform.get = async opts => {
+		/* opts{}
+		.getSamples: true
+		.isoform: str
+		*/
+
 		/*
 		hardcoded logic!!
 
@@ -144,7 +155,11 @@ export function validate_query_snvindel_byisoform(ds) {
 		*/
 		const refseq = mayMapRefseq2ensembl(opts, ds)
 
-		const ssmLst = await snvindel_byisoform_run(api, opts)
+		if (opts.getSamples) {
+			return await getSamples_byisoform(api, opts)
+		}
+
+		const ssmLst = await snvindel_byisoform(api, opts)
 		const mlst = [] // parse final ssm into this list
 		for (const ssm of ssmLst) {
 			const m = {
@@ -329,8 +344,7 @@ function getheaders(q) {
 	return h
 }
 
-async function snvindel_byisoform_run(api, opts) {
-	// function may be shared
+async function snvindel_byisoform(api, opts) {
 	// query is ds.queries.snvindel
 	const headers = getheaders(opts)
 	const p1 = got(
@@ -350,7 +364,7 @@ async function snvindel_byisoform_run(api, opts) {
 			'?size=' +
 			api.query2.size +
 			'&fields=' +
-			api.query2.fields.join(',') +
+			api.query2.fields4counting.join(',') +
 			'&filters=' +
 			encodeURIComponent(JSON.stringify(api.query2.filters(opts))),
 		{ method: 'GET', headers }
@@ -393,6 +407,42 @@ async function snvindel_byisoform_run(api, opts) {
 		ssm.cases.push(h.case)
 	}
 	return [...id2ssm.values()]
+}
+
+async function getSamples_byisoform(api, opts) {
+	// query is ds.queries.snvindel
+	const headers = getheaders(opts)
+	// only run p2
+	// combine opts.termidlst with api.query2.fields4details
+	const tmp = await got(
+		apihost +
+			api.query2.endpoint +
+			'?size=' +
+			api.query2.size +
+			'&fields=' +
+			api.query2.fields4details.join(',') +
+			'&filters=' +
+			encodeURIComponent(JSON.stringify(api.query2.filters(opts))),
+		{ method: 'GET', headers }
+	)
+	let re_cases
+	try {
+		re_cases = JSON.parse(tmp.body)
+	} catch (e) {
+		throw 'invalid JSON returned by GDC'
+	}
+	if (!re_cases.data || !re_cases.data.hits) throw 'query2 did not return .data.hits[]'
+	if (!Array.isArray(re_cases.data.hits)) throw 're.data.hits[] is not array'
+
+	const samplebyid = new Map()
+
+	for (const h of re_cases.data.hits) {
+		if (!h.ssm) throw '.ssm{} missing from a case'
+		if (!h.ssm.ssm_id) throw '.ssm.ssm_id missing from a case'
+		if (!h.case) throw '.case{} missing from a case'
+		console.log(h.case)
+	}
+	return samplebyid
 }
 
 export function validate_query_genecnv(ds) {

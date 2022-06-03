@@ -98,7 +98,8 @@ const isoform2ssm_getvariant = {
 const isoform2ssm_getcase = {
 	endpoint: '/ssm_occurrences',
 	size: 100000,
-	fields: ['ssm.ssm_id', 'case.case_id'],
+	fields4counting: ['ssm.ssm_id', 'case.case_id'],
+	fields4details: ['ssm.ssm_id', 'case.case_id', 'case.observation.sample.tumor_sample_barcode'],
 	filters: p => {
 		// p:{}
 		// .isoform

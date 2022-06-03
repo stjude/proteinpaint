@@ -4,7 +4,6 @@ import { fillbar } from '../../dom/fillbar'
 import { fold_glyph, settle_glyph } from './skewer.render'
 import { itemtable } from './itemtable'
 import { mayAddSkewerModeOption } from './skewer'
-import { rangequery_rglst } from './tk'
 
 const labyspace = 5
 const font = 'Arial'
@@ -288,9 +287,8 @@ function menu_samples(data, tk, block) {
 		.append('div')
 		.text('List')
 		.attr('class', 'sja_menuoption')
-		.on('click', () => {
-			const par = []
-			rangequery_rglst(tk, block, par)
-			// quick fix to convert lst to obj, later allow function to optionally create obj
+		.on('click', async () => {
+			return
+			const samples = await tk.mds.getSamples()
 		})
 }

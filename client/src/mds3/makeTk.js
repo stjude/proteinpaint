@@ -2,7 +2,7 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { Menu } from '../../dom/menu'
 import { dofetch3 } from '../../common/dofetch'
 import { initLegend, updateLegend } from './legend'
-import { loadTk } from './tk'
+import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '../../common/urlmap'
 import { mclass } from '../../shared/common'
 
@@ -372,6 +372,21 @@ function mayaddGetter_variant2samples(tk, block) {
 		if (data.error) throw data.error
 		if (!data.variant2samples) throw 'result error'
 		return data.variant2samples
+	}
+
+	tk.mds.getSamples = async arg => {
+		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'getSamples=1']
+		rangequery_rglst(tk, block, par)
+		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+		if (tk.token) headers['X-Auth-Token'] = tk.token
+		// filters?
+		// pass all termidlst including new termid
+		if (tk.mds.variant2samples.termidlst) {
+			par.push('termidlst=' + tk.mds.variant2samples.termidlst)
+		}
+		const data = await dofetch3('mds3?' + par.join('&'), { headers }, { serverData: tk.cache })
+		if (data.error) throw data.error
+		console.log(data)
 	}
 }
 

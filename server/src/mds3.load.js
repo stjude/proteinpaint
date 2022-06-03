@@ -162,6 +162,18 @@ async function load_driver(q, ds) {
 		finalize_result(q, ds, result)
 		return result
 	}
+
+	if (q.getSamples) {
+		const samples = {} // k: sample_id, v: { key:val, ssm_id_lst:[] }
+		if (ds.queries.snvindel) {
+			const d = await query_snvindel(q, ds)
+			console.log(d)
+		}
+		if (ds.queries.svfusion) {
+		}
+		return { samples }
+	}
+
 	// other query type
 
 	throw 'do not know what client wants'
