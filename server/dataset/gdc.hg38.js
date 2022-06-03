@@ -1,5 +1,19 @@
 const got = require('got')
 
+/*
+validate_filter0
+isoform2ssm_getvariant
+isoform2ssm_getcase
+query_range2variants
+variables_range2variants
+totalsize_filters
+termid2size_query
+termid2size_filters
+ssm2canonicalisoform
+aliquot2sample
+sample_id_getter
+*/
+
 const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
 /* if filter0 is missing necessary attr, adding it to api query will cause error
@@ -483,64 +497,120 @@ const ssm2canonicalisoform = {
 	fields: ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
 }
 
-// gdc-specific logic, for converting aliquot id to sample id
-// per greg: Confusingly, the tumor_sample_barcode is actually the submitter ID of the tumor aliquot for which a variant was called. If you want to display the submitter ID of the sample, you’ll have to query the GDC case API for the sample for that aliquot.
+/* gdc-specific logic, for converting aliquot id to sample id
+
+per greg: Confusingly, the tumor_sample_barcode is actually the submitter ID of the tumor aliquot for which a variant was called. If you want to display the submitter ID of the sample, you’ll have to query the GDC case API for the sample for that aliquot.
+
+questions:
+1. 433c2eb6-560f-4387-93af-6c2e1a_D6_1 is converted to 433c2eb6-560f-4387-93af-6c2e1a but not but not case id (15BR003, CPTAC-2)
+2. raising value of "first" above 100 will crash, defeating the batch design
+3. why setting (first: 100, filters: $filters) at two places
+*/
 const aliquot2sample = {
 	query: `query barcode($filters: FiltersArgument) {
-	  repository {
-		cases {
-		  hits(first: 10, filters: $filters) {
-			edges {
-			  node {
-				samples {
-				  hits (first: 10, filters: $filters) {
-					edges {
-					  node {
-						submitter_id
-					  }
+  repository {
+    cases {
+      hits(first: 100, filters: $filters) { edges { node {
+        samples {
+          hits (first: 100, filters: $filters) { edges { node {
+            submitter_id
+            portions {
+              hits { edges { node {
+			    analytes {
+				  hits { edges { node { 
+				    aliquots {
+					  hits { edges { node { submitter_id }}}
 					}
-				  }
+				  }}}
 				}
-			  }
-			}
-		  }
-		}
-	  }
-	}`,
-	variables: aliquotid => {
+              } } }
+            }
+          } } }
+        }
+      } } }
+    }
+  }
+}`,
+	variables: aliquotidLst => {
 		return {
 			filters: {
 				op: '=',
 				content: {
 					// one aliquot id will match with one sample id
 					field: 'samples.portions.analytes.aliquots.submitter_id',
-					value: aliquotid
+					value: aliquotidLst
 				}
 			}
 		}
 	},
-	get: async (aliquotid, headers) => {
+	get: async (aliquotidLst, headers) => {
 		const response = await got.post(GDC_HOST + '/v0/graphql', {
 			headers,
-			body: JSON.stringify({ query: aliquot2sample.query, variables: aliquot2sample.variables(aliquotid) })
+			body: JSON.stringify({
+				query: aliquot2sample.query,
+				variables: aliquot2sample.variables(aliquotidLst)
+			})
 		})
-		const d = JSON.parse(response.body)
+		const json = JSON.parse(response.body)
 		if (
-			!d.data ||
-			!d.data.repository ||
-			!d.data.repository.cases ||
-			!d.data.repository.cases.hits ||
-			!d.data.repository.cases.hits.edges
+			!json.data ||
+			!json.data.repository ||
+			!json.data.repository.cases ||
+			!json.data.repository.cases.hits ||
+			!json.data.repository.cases.hits.edges
 		)
 			throw 'structure not data.repository.cases.hits.edges'
-		const acase = d.data.repository.cases.hits.edges[0]
-		if (!acase) throw 'data.repository.cases.hits.edges[0] missing'
-		if (!acase.node || !acase.node.samples || !acase.node.samples.hits || !acase.node.samples.hits.edges)
-			throw 'case not .node.samples.hits.edges'
-		const sample = acase.node.samples.hits.edges[0]
-		if (!sample) throw 'acase.node.samples.hits.edges[0] missing'
-		if (!sample.node || !sample.node.submitter_id) throw 'a sample is not node.submitter_id'
-		return sample.node.submitter_id
+
+		const aset = new Set(aliquotidLst)
+		const idmap = new Map() // k: input id, v: output id
+
+		for (const c of json.data.repository.cases.hits.edges) {
+			for (const s of c.node.samples.hits.edges) {
+				const submitter_id = s.node.submitter_id
+				for (const p of s.node.portions.hits.edges) {
+					for (const a of p.node.analytes.hits.edges) {
+						for (const al of a.node.aliquots.hits.edges) {
+							const al_id = al.node.submitter_id
+							if (aset.has(al_id)) {
+								// a match!
+								idmap.set(al_id, submitter_id)
+							}
+						}
+					}
+				}
+			}
+		}
+		return idmap
+	}
+}
+
+async function sample_id_getter(samples, headers) {
+	/*
+	samples[], each element:
+		{
+			tempcase:{observation[0].sample.tumor_sample_barcode}
+		}
+	convert tumor_sample_barcode to sample submitter id, assign to sample.sample_id
+	and delete sample.tempcase
+
+	fire one graphql query to convert id of all samples
+	the getter is a dataset-specific, generic feature, so it should be defined here
+	passing in headers is a gdc-specific logic for controlled data
+	*/
+	const id2sample = new Map() // k: tumor_sample_barcode, v: sample obj
+	for (const sample of samples) {
+		const s = sample.tempcase
+		if (s.observation && s.observation[0].sample) {
+			const n = s.observation[0].sample.tumor_sample_barcode
+			if (n) {
+				id2sample.set(n, sample)
+			}
+		}
+		delete sample.tempcase
+	}
+	const idmap = await aliquot2sample.get([...id2sample.keys()], headers)
+	for (const [id, sample] of id2sample) {
+		sample.sample_id = idmap.get(id) || id
 	}
 }
 
@@ -592,14 +662,7 @@ module.exports = {
 
 		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
 		//sample_id_key: 'case_id',
-		sample_id_getter: async (d, headers) => {
-			// the getter is a dataset-specific, generic feature, so it should be defined here
-			// passing in headers is a gdc-specific logic for controlled data
-			if (d.observation && d.observation[0].sample && d.observation[0].sample.tumor_sample_barcode) {
-				return await aliquot2sample.get(d.observation[0].sample.tumor_sample_barcode, headers)
-			}
-			return ''
-		},
+		sample_id_getter,
 
 		url: {
 			base: 'https://portal.gdc.cancer.gov/cases/',

@@ -505,9 +505,9 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 		if (ds.variant2samples.sample_id_key) {
 			sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
 		} else if (ds.variant2samples.sample_id_getter) {
-			// must pass request header to getter in case requesting a controlled sample via a user token
-			// this is gdc-specific logic and should not impact generic mds3
-			sample.sample_id = await ds.variant2samples.sample_id_getter(s.case, headers)
+			// getter do batch process
+			// tempcase will be deleted after processing
+			sample.tempcase = s.case
 		}
 
 		/* gdc-specific logic
@@ -541,6 +541,14 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 		///////////////////
 		samples.push(sample)
 	}
+
+	if (ds.variant2samples.sample_id_getter) {
+		// batch process, fire one graphql query to convert id for all samples
+		// must pass request header to getter in case requesting a controlled sample via a user token
+		// this is gdc-specific logic and should not impact generic mds3
+		await ds.variant2samples.sample_id_getter(samples, headers)
+	}
+
 	return samples
 }
 
