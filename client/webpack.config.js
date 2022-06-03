@@ -49,6 +49,7 @@ module.exports = function(env = {}) {
 				process: require.resolve('process')
 			}*/
 		},
+		plugins: [new NodePolyfillPlugin()],
 		module: {
 			strictExportPresence: true,
 			rules: [
@@ -76,12 +77,12 @@ module.exports = function(env = {}) {
 				}
 			]
 		},
-		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : ''
+		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : false
 	}
 
 	/*** OVERRIDES ***/
 	if (config.mode == 'development') {
-		config.plugins = [new WebpackNotifierPlugin(), new SpecHelpersWpPlugin(), new NodePolyfillPlugin()]
+		config.plugins.push(new WebpackNotifierPlugin(), new SpecHelpersWpPlugin())
 		// allow react to be bundled
 		delete config.externals
 		// delete the rule that empties the ./test/internals.js code,

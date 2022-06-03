@@ -5,7 +5,7 @@
   "main": "dist/app.js",
   "scripts": {
     "predev": "node ./test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js",
-    "dev": "webpack --env.NODE_ENV=development --watch --progress --color",
+    "dev": "webpack --env NODE_ENV=development --watch --progress --color",
     "pretest": "./test/pretest.js",
     "test": "node ./test/import-specs.js && npm run tape",
     "tape": "cat ../public/bin/proteinpaint.js ./test/init.js | tape-run --static ../public",
