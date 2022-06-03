@@ -5,7 +5,7 @@
   "main": "server.js",
   "bin": "bin.js",
   "scripts": {
-    "dev": "webpack --config=./webpack.config.js --env.NODE_ENV=development --watch --progress --colors",
+    "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --progress --color",
     "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
     "pretest": "./test/pretest.js",
     "test": "tape -r '@babel/register' */test/*usecase.spec.js",
@@ -26,14 +26,14 @@
     "nodemon": "^1.19.1",
     "prettier": "1.18.2",
     "tape": "^5.2.2",
-    "webpack": "^4.44.2",
-    "webpack-cli": "^3.3.12",
-    "webpack-node-externals": "^1.7.2",
-    "webpack-notifier": "^1.7.0"
+    "webpack": "^5.7.3",
+    "webpack-cli": "^4.9.2",
+    "webpack-node-externals": "^3.0.0",
+    "webpack-notifier": "^1.15.0"
   },
   "dependencies": {
     "@babel/register": "^7.14.5",
-    "better-sqlite3": "^5.4.3",
+    "better-sqlite3": "^7.5.3",
     "body-parser": "^1.15.2",
     "canvas": "2.6.0",
     "compression": "^1.6.2",
@@ -49,7 +49,8 @@
     "lazy": "^1.0.11",
     "node-fetch": "^2.6.1",
     "partjson": "^0.58.1",
-    "tiny-async-pool": "^1.2.0"
+    "tiny-async-pool": "^1.2.0",
+    "webpack": "^5.73.0"
   },
   "repository": {
     "type": "git",
@@ -88,7 +89,7 @@
           "plugins": [
             "@babel/plugin-syntax-dynamic-import",
             "@babel/plugin-transform-runtime"
-          ] 
+          ]
         }
       ]
     ]
