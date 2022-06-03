@@ -98,6 +98,8 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	//console.log(q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt)
 	//console.log('refSeq', refseq)
 	//console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
+	//console.log('leftflankseq:', leftflankseq)
+	//console.log('rightflankseq:', rightflankseq)
 
 	// console.log(refallele,altallele,refseq,altseq)
 
@@ -164,6 +166,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	})
 	*/
 
+	//console.log('input_data:', input_data)
 	//fs.writeFile('test.txt', input_data, function(err) {
 	//	// For catching input to rust pipeline, in case of an error
 	//	if (err) return console.log(err)

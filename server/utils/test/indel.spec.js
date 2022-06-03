@@ -540,6 +540,74 @@ const examples = [
 				g_0: 'ref'
 			}
 		]
+	},
+	{
+		comment: 'transcriptomic example with spliced reads on both sides of the variant',
+		pplink:
+			pphost +
+			'?genome=hg19&block=1&position=chr1:62907850-62907980&hlregion=chr1:62907931-62907931&bamfile=SJGIST030018_D1,rpaul1/proteinpaint_demo/indel/BX03UJ250B.bam&variant=chr1.62907932.AAAG.A',
+		leftFlank: 'TTCAGTAAACACTTAAGACAATCTCACTTTTTATAGGTATTATATTTTTGTCCCGGTTTTAAATCTGGAGTAAAGCACTTATTTAATATTATTTCAAGGAAG',
+		rightFlank:
+			'AAGCTCTAAAGGATGAAGCCAATCAAAAAGACAAGGTAAGAAAAATAAAGAACAGAAAATAATGTAAAAAGCAAAAGTAAATTAATGGAAATTTACTTGCCT',
+		seqRef:
+			'TTCAGTAAACACTTAAGACAATCTCACTTTTTATAGGTATTATATTTTTGTCCCGGTTTTAAATCTGGAGTAAAGCACTTATTTAATATTATTTCAAGGAAGAAAGAAGCTCTAAAGGATGAAGCCAATCAAAAAGACAAGGTAAGAAAAATAAAGAACAGAAAATAATGTAAAAAGCAAAAGTAAATTAATGGAAATTTACTTGCCT',
+		seqMut:
+			'TTCAGTAAACACTTAAGACAATCTCACTTTTTATAGGTATTATATTTTTGTCCCGGTTTTAAATCTGGAGTAAAGCACTTATTTAATATTATTTCAAGGAAGAAAGCTCTAAAGGATGAAGCCAATCAAAAAGACAAGGTAAGAAAAATAAAGAACAGAAAATAATGTAAAAAGCAAAAGTAAATTAATGGAAATTTACTTGCCT',
+		variant: {
+			pos: 62907931, // 0-based
+			ref: 'AAAG',
+			alt: 'A'
+		},
+		reads: [
+			{
+				n: 'splicing on left side of the read, variant on right fragment',
+				s: 'CTTAATAGTATACTTCAGGTATTATATTTTTGTCCCGGTTTTAAATCTGGAGTAAAGCACTTATTTAATATTATTTCAAGGAAGAAAGCTCTAAAGGATGA',
+				p: 62907262,
+				c: '18M586N67M3D16M',
+				f: 163,
+				g: 'alt'
+			},
+			{
+				n: 'read not spliced but should be spliced on the left side but is instead softclipped',
+				s: 'CTCTTCCGATCTGTATACTTCAGGTATTATATTTTTGTCCCGGTTTTAAATCTGGAGTAAAGCACTTATTTAATATTATTTCAAGGAAGAAAGCTCTAAAG',
+				p: 62907864, // In the bam track read info panel the start position is misleading as the number of softclipped nucleotides is subtracted from the original position reported in the bam file
+				c: '21S72M3D8M',
+				f: 83,
+				g: 'alt'
+			},
+			{
+				n: 'normal read with alt allele and no splicing',
+				s: 'TATTATATTTTTGTCCCGGTTTTAAATCTGGAGTAAAGCACTTATTTAATATTATTTCAAGGAAGAAAGCTCTAAAGGATGAAGCCAATCAAAAAGACAAG',
+				p: 62907867,
+				c: '66M3D35M',
+				f: 83,
+				g: 'alt'
+			},
+			{
+				n: 'splicing on right side of the read, variant on left fragment',
+				s: 'AAAGCACTTATTTAATATTATTTCAAGGAAGAAAGCTCTAAAGGATGAAGCCAATCAAAAAGACAAGGGAAATTGCAAAGAAGATTCTTTGGCAAGTTATG',
+				p: 62907901,
+				c: '32M3D35M859N34M',
+				f: 163,
+				g: 'alt'
+			},
+			{
+				n: 'read is softclipped on the left',
+				s: 'CCGATCTAAAGCTCTAAAGGATGAAGCCAATCAAAAAGACAAGGGAAATTGCAAAGAAGATTCTTTGGCAAGTTATGAATTGATATGCAGTTTACAGTCCG',
+				p: 62907936,
+				c: '8S35M859N57M1S',
+				f: 83,
+				g: 'alt'
+			},
+			{
+				n: 'read softclipped on left but supports reference allele',
+				s: 'CGTGTGCTCTTCCGATCTGTTTTAAATCTGGAGTAAAGCACTTATTTAATATTATTTCAAGGAAGAAAGAAGCTCTAAAGGATGAAGCCAATCAAAAAGAC',
+				p: 62907885,
+				c: '18S83M',
+				f: 83,
+				g: 'ref'
+			}
+		]
 	}
 ]
 
