@@ -608,6 +608,83 @@ const examples = [
 				g: 'ref'
 			}
 		]
+	},
+	{
+		comment: 'Insertion in a region which contains the same sequence in the right flanking sequence',
+		pplink:
+			pphost +
+			'?genome=hg38&block=1&bamfile=NPM1,rpaul1/kmers/NPM1.bam&position=chr5:171410519-171410549&variant=chr5.171410539.C.CTCTG',
+		leftFlank: 'ATGTTGAACTATGCAAAGAGACATTTAATTTATTGATGTCTATGAAGTGTTGTGGTTCCTTAACCACATTTCTTTTTTTTTTTTTCCAGGCTATTCAAGAT',
+		rightFlank: 'TCTGGCAGTGGAGGAAGTCTCTTTAAGAAAATAGTTTAAACAATTTGTTAAAAAATTTTCCGTCTTATTTCATTTCTGTAACAGTTGATATCTGGCTGTCC',
+		seqRef:
+			'ATGTTGAACTATGCAAAGAGACATTTAATTTATTGATGTCTATGAAGTGTTGTGGTTCCTTAACCACATTTCTTTTTTTTTTTTTCCAGGCTATTCAAGATCTCTGGCAGTGGAGGAAGTCTCTTTAAGAAAATAGTTTAAACAATTTGTTAAAAAATTTTCCGTCTTATTTCATTTCTGTAACAGTTGATATCTGGCTGTCC',
+		seqMut:
+			'ATGTTGAACTATGCAAAGAGACATTTAATTTATTGATGTCTATGAAGTGTTGTGGTTCCTTAACCACATTTCTTTTTTTTTTTTTCCAGGCTATTCAAGATCTCTGTCTGGCAGTGGAGGAAGTCTCTTTAAGAAAATAGTTTAAACAATTTGTTAAAAAATTTTCCGTCTTATTTCATTTCTGTAACAGTTGATATCTGGCTGTCC',
+		variant: {
+			pos: 171410538, // 0-based
+			ref: 'C',
+			alt: 'CTCTG'
+		},
+		reads: [
+			{
+				n: 'Read supports alt allele and softclipped on right',
+				s: 'ATGCAAAGAGACATTTAATTTATTGATGTCTATGAAGTGTTGTGGTTCCTTAACCACATTTCTTTTTTTTTTTTTCCAGGCTATTCAAGATCTCTGTCTG',
+				p: 171410448,
+				c: '96M4S',
+				f: 163,
+				g: 'alt'
+			},
+			{
+				n: 'Insertion in middle of read but wrong bp nucleotide away from variant region',
+				s: 'GGGTTCCTTAACCACATTTTTTTTTTTTTTTTTCCAGGCTATTCAAGATCTCTGTCTGGTAGTGGAGGAAGTCTCTTTAAGAAAATAGTTTAAACAATTT',
+				p: 171410490,
+				c: '50M4I46M',
+				f: 147,
+				g: 'alt'
+			},
+			{
+				n: 'Read supports alt allele and softclipped to the left',
+				s: 'CTCTGTCTGGCAGTGGAGGAAGTCTCTTTAAGAAAATAGTTTAAACAATTTGTTAAAAAATTTTCCGTCTTATTTCATTTCTGTAACAGTTGATATCTGG',
+				p: 171410540,
+				c: '5S95M',
+				f: 83,
+				g: 'alt'
+			},
+			{
+				n: 'Read supporting reference allele',
+				s: 'ATTTAATTTTTTGATTGTTATGAAGTTTTTTGGTTCCTTTAACCCATTTTTTTTTTTTTTTTTCCAGGCTATTCAAGATCTCTGGCAGTGGAGGAAGTCT',
+				p: 171410460,
+				c: '100M',
+				f: 147,
+				g: 'ref'
+			},
+			{
+				n: 'Read supporting alt allele but contains wrong bp inside variant region',
+				s: 'TGATGTCTATGAAGTGTTGTGGTTCCTTAACCACATTTCTTTTTTTTTTTTTCCAGGCTATTCAAGATCTTTGTCTGGCAGTGGAGGAAGTCTCTTTAAG',
+				p: 171410471,
+				c: '69M4I27M',
+				f: 97,
+				g: 'none',
+				g_0: 'alt'
+			},
+			{
+				n: 'Read supporting alternate allele but contains a mismatch in the flanking region similar to insertion',
+				s: 'GTTGTGGTTCCTTAACCACATTTCTTTTTTTTTTTTTCCAGGCTATTCAAGATCTCTGGCTGGCAGTGGAGGAAGTCTCTTTAAGAAAATAGTTTAAACA',
+				p: 171410486,
+				c: '55M4I41M',
+				f: 147,
+				g: 'alt'
+			},
+			{
+				n:
+					'Read finishes near the adjoining region of the flanking region of the insertion which has the same sequence as the insertion itself, read is also hard-clipped at the end',
+				s: 'CCACATTTGTTTTTTTTTTTTTCCCGGCCATTCAAGATCTCTG',
+				p: 171410501,
+				c: '50H43M7H',
+				f: 2209,
+				g: 'amb'
+			}
+		]
 	}
 ]
 
