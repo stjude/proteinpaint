@@ -247,7 +247,7 @@ class TdbSurvival {
 					legendItems.push({
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
-						color: this.term2toColor[series.seriesId],
+						color: this.term2toColor[series.seriesId].darker(),
 						isHidden: this.settings.hidden.includes(series.seriesId)
 					})
 				}
@@ -256,6 +256,32 @@ class TdbSurvival {
 		if (this.refs.orderedKeys) {
 			const s = this.refs.orderedKeys.series
 			legendItems.sort((a, b) => s.indexOf(a.seriesId) - s.indexOf(b.seriesId))
+		}
+		this.legendValues = {}
+		legendItems.forEach((item, i) => {
+			if (!('order' in item)) item.order = i
+			this.legendValues[item.seriesId] = item
+		})
+		const v = this.state.config.term2?.values
+		if (v) {
+			legendItems.sort((a, b) => {
+				const av = v[a.seriesId]
+				const bv = v[b.seriesId]
+				if (av && bv) {
+					if ('order' in av && 'order' in bv) return av.order - bv.order
+					if (av.order) return av.order
+					if (bv.order) return bv.order
+					return 0
+				}
+				if (av) return av.order || 0
+				if (bv) return bv.order || 0
+				// default order
+				return a.order - b.order
+			})
+
+			legendItems.forEach((item, i) => {
+				item.order = i
+			})
 		}
 
 		if ((!config.term.term.type == 'survival' || config.term2) && legendItems.length) {
@@ -784,6 +810,23 @@ function setRenderers(self) {
 		// g.selectAll('*').remove()
 
 		const seriesOrder = chart.serieses.map(s => s.seriesId)
+		const v = self.state.config.term2.values
+		if (v) {
+			seriesOrder.sort((aId, bId) => {
+				const av = v[aId]
+				const bv = v[bId]
+				if (av && bv) {
+					if ('order' in av && 'order' in bv) return av.order - bv.order
+					if (av.order) return av.order
+					if (bv.order) return bv.order
+					return 0
+				}
+				if (av) return av.order || 0
+				if (bv) return bv.order || 0
+				return 0
+			})
+		}
+
 		const data = !s.atRiskVisible
 			? []
 			: Object.keys(bySeries).sort((a, b) => seriesOrder.indexOf(a) - seriesOrder.indexOf(b))
@@ -798,7 +841,7 @@ function setRenderers(self) {
 		sg.each(function(seriesId, i) {
 			const g = select(this)
 				.attr('transform', `translate(0,${(i + 1) * 20})`)
-				.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId])
+				.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].darker())
 		})
 
 		sg.enter()
@@ -809,7 +852,7 @@ function setRenderers(self) {
 				const y = (i + 1) * 20
 				const g = select(this)
 					.attr('transform', `translate(0,${y})`)
-					.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId])
+					.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].darker())
 
 				const fontsize = `${s.axisTitleFontSize - 4}px`
 				const sObj = chart.serieses.find(s => s.seriesId === seriesId)
@@ -906,17 +949,129 @@ function setInteractivity(self) {
 		if (d === undefined) return
 		const hidden = self.settings.hidden.slice()
 		const i = hidden.indexOf(d.seriesId)
-		if (i == -1) hidden.push(d.seriesId)
-		else hidden.splice(i, 1)
+		if (i == -1) {
+			self.showLegendItemMenu(d)
+		} else {
+			hidden.splice(i, 1)
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: {
+					settings: {
+						survival: {
+							hidden
+						}
+					}
+				}
+			})
+		}
+	}
+
+	self.showLegendItemMenu = function(d) {
+		const term1 = self.state.config.term.term
+		const term2 = self.state.config.term2?.term || null
+		const uncomp_term1 = term1.values ? Object.values(term1.values).map(v => v.label) : []
+		const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v => v.label) : []
+		const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId || d.id) ? ' ' + term1.unit : ''
+		const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId || d.id) ? ' ' + term2.unit : ''
+		const seriesLabel =
+			(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId ? d.seriesId : d.id) +
+			term1unit
+		const dataLabel =
+			(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
+			term2unit
+		const icon = !term2
+			? ''
+			: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
+			  d.color +
+			  "'>&nbsp;</div>"
+		const header =
+			`<div style='padding:2px'><b>${term1.name}</b>: ${seriesLabel}</div>` +
+			(d.seriesId && term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel} ${icon}</div>` : '')
+
+		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
+
+		const options = []
+		options.push({
+			label: 'Hide "' + seriesLabel,
+			callback: () => {
+				const hidden = self.settings.hidden.slice()
+				hidden.push(d.seriesId)
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: {
+						settings: {
+							survival: {
+								hidden
+							}
+						}
+					}
+				})
+			}
+		})
+
+		const legendIndex = self.legendValues[d.seriesId].order
+
+		if (legendIndex != 0)
+			options.push({
+				label: 'Move up',
+				callback: d => self.adjustValueOrder(d, -1)
+			})
+
+		if (legendIndex < self.legendData[0]?.items.length - 1)
+			options.push({
+				label: 'Move down',
+				callback: d => self.adjustValueOrder(d, 1)
+			})
+
+		if (!options.length) return
+		self.activeMenu = true
+		self.app.tip.clear()
+		self.app.tip.d.append('div').html(header)
+		self.app.tip.d
+			.append('div')
+			.selectAll('div')
+			.data(options)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.html(d => d.label)
+			.on('click', c => {
+				self.app.tip.hide()
+				c.callback(d)
+			})
+		self.app.tip.show(event.clientX, event.clientY)
+	}
+
+	self.adjustValueOrder = (d, increment) => {
+		const values = JSON.parse(JSON.stringify(self.state.config.term2?.values || self.legendValues))
+		if (!values[d.seriesId]) {
+			values[d.seriesId] = Object.assign({}, self.state.config.term2?.term?.values || {})
+		}
+
+		for (const id in values) {
+			if (!('order' in values[id])) values[id].order = self.legendValues[id].order
+		}
+
+		const v = values[d.seriesId]
+		v.order += increment
+		for (const id in values) {
+			if (id == d.seriesId) continue
+			if ('order' in values[id] && values[id].order === v.order) {
+				values[id].order += -1 * increment
+				break
+			}
+		}
+
+		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
+		term2.values = values
+
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
 			config: {
-				settings: {
-					survival: {
-						hidden
-					}
-				}
+				term2
 			}
 		})
 	}
