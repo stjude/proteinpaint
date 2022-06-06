@@ -1542,6 +1542,7 @@ function parse_one_segment(arg, q) {
 		// return this data structure
 		qname,
 		segstart,
+		segstart_original: segstart, // This is necessary when read starts with a softclip, the segstart field contains the original position - number of softclipped nucleotides. This is necessary for rendering the read , but in the read info panel the original bam file position must be reported.
 		segstop: segstart,
 		boxes: [], // blank array for no aligned parts
 		forward: !(flag & 0x10),
@@ -3064,7 +3065,7 @@ async function convertread2html(seg, genome, query) {
 			  <tr style="color:white">${querylst.join('')}</tr>
 			</table>`,
 		info: `<div style='margin-top:10px'>
-			<span style="opacity:.5;font-size:.7em">START</span>: ${refstart + 1},
+			<span style="opacity:.5;font-size:.7em">START</span>: ${seg.segstart_original + 1},
 			<span style="opacity:.5;font-size:.7em">STOP</span>: ${refstop},
 			<span style="opacity:.5;font-size:.7em">THIS READ</span>: ${refstop - refstart} bp,
 			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${Math.abs(seg.tlen)} bp,
