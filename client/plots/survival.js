@@ -295,7 +295,7 @@ class TdbSurvival {
 
 			this.hiddenData = [
 				{
-					name: `<span style='color: #aaa'><span>Hidden Categories</span><span style='font-size: 0.8rem; font-weight: 400'> CLICK TO SHOW</span></span>`,
+					name: `<span style='color:#aaa; font-weight:400'><span>Hidden categories</span><span style='font-size:0.8rem'> CLICK TO SHOW</span></span>`,
 					items: legendItems.filter(s => s.isHidden).map(item => Object.assign({}, item, { isHidden: false }))
 				}
 			]
@@ -519,46 +519,132 @@ function setRenderers(self) {
 			tablediv.style('overflow', 'auto').style('height', '220px')
 		}
 
-		// table
-		const table = tablediv.append('table').style('width', '100%')
+		const visibleTests = tests.filter(
+			t => !s.hiddenPvalues.find(p => p.series1 === t.series1 && p.series2 === t.series2)
+		)
 
-		// table header
-		table
-			.append('thead')
-			.append('tr')
-			.selectAll('td')
-			.data(['Group 1', 'Group 2', 'P-value'])
-			.enter()
-			.append('td')
-			.style('padding', '1px 8px 1px 2px')
-			.style('color', '#858585')
-			.style('position', 'sticky')
-			.style('top', '0px')
-			.style('background', 'white')
-			.style('font-size', fontSize + 'px')
-			.text(column => column)
+		if (visibleTests.length) {
+			visibleTests.sort((a, b) => a.pvalue - b.pvalue)
 
-		// table rows
-		const tbody = table.append('tbody')
-		const tr = tbody
-			.selectAll('tr')
-			.data(tests.sort((a, b) => a.pvalue - b.pvalue))
-			.enter()
-			.append('tr')
-			.attr('class', 'pp-survival-chartLegends-pvalue')
+			// table
+			const table = tablediv.append('table').style('width', '100%')
 
-		// table cells
-		tr.selectAll('td')
-			.data(d => [
-				chart.serieses.find(series => series.seriesId == d.series1).seriesLabel,
-				chart.serieses.find(series => series.seriesId == d.series2).seriesLabel,
-				d.pvalue
-			])
-			.enter()
-			.append('td')
-			.style('padding', '1px 8px 1px 2px')
-			.style('font-size', fontSize + 'px')
-			.text(d => d)
+			// table header
+			table
+				.append('thead')
+				.append('tr')
+				.selectAll('td')
+				.data(['Group 1', 'Group 2', 'P-value'])
+				.enter()
+				.append('td')
+				.style('padding', '1px 8px 1px 2px')
+				.style('color', '#858585')
+				.style('position', 'sticky')
+				.style('top', '0px')
+				.style('background', 'white')
+				.style('font-size', fontSize + 'px')
+				.text(column => column)
+
+			// table rows
+			const tbody = table.append('tbody')
+			const tr = tbody
+				.selectAll('tr')
+				.data(visibleTests)
+				.enter()
+				.append('tr')
+				.attr('class', 'pp-survival-chartLegends-pvalue')
+				.on('click', t => {
+					const hiddenPvalues = s.hiddenPvalues.slice()
+					hiddenPvalues.push(t)
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: {
+							settings: {
+								survival: {
+									hiddenPvalues
+								}
+							}
+						}
+					})
+				})
+
+			// table cells
+			tr.selectAll('td')
+				.data(d => [
+					{
+						d,
+						text: chart.serieses.find(series => series.seriesId == d.series1).seriesLabel,
+						color: self.term2toColor[d.series1].darker()
+					},
+					{
+						d,
+						text: chart.serieses.find(series => series.seriesId == d.series2).seriesLabel,
+						color: self.term2toColor[d.series2].darker()
+					},
+					{ d, text: d.pvalue, color: '#000' }
+				])
+				.enter()
+				.append('td')
+				.attr('title', 'Click to hide a p-value')
+				.style('color', d => d.color)
+				.style('padding', '1px 8px 1px 2px')
+				.style('font-size', fontSize + 'px')
+				.style('cursor', 'pointer')
+				.text(d => d.text)
+		}
+
+		const hiddenTests = tests.filter(t => s.hiddenPvalues.find(p => p.series1 === t.series1 && p.series2 === t.series2))
+		if (hiddenTests.length) {
+			pvaldiv
+				.append('div')
+				.style('color', '#aaa')
+				.html(`<span style='color:#aaa; font-weight:400'><span>Hidden tests (${hiddenTests.length})</span>`)
+				.on('click', () => {
+					self.app.tip.clear()
+					const divs = self.app.tip.d
+						.append('div')
+						.selectAll('div')
+						.data(hiddenTests)
+						.enter()
+						.append('div')
+						.each(function(d) {
+							self.activeMenu = true
+							const div = select(this)
+							div
+								.append('input')
+								.attr('type', 'checkbox')
+								.style('margin-right', '5px')
+							div.append('span').html(`${d.series1} vs ${d.series2}`)
+						})
+
+					self.app.tip.d
+						.append('button')
+						.html('Show checked test(s)')
+						.on('click', () => {
+							const hiddenPvalues = []
+							divs
+								.filter(function() {
+									return !select(this.firstChild).property('checked')
+								})
+								.each(d => hiddenPvalues.push(d))
+							self.app.dispatch({
+								type: 'plot_edit',
+								id: self.id,
+								config: {
+									settings: {
+										survival: {
+											hiddenPvalues
+										}
+									}
+								}
+							})
+							self.app.tip.hide()
+						})
+
+					self.app.tip.show(event.clientX, event.clientY)
+				})
+		}
 	}
 
 	function getSvgSubElems(svg) {
@@ -1012,7 +1098,6 @@ function setInteractivity(self) {
 		})
 
 		const legendIndex = self.legendValues[d.seriesId].order
-
 		if (legendIndex != 0)
 			options.push({
 				label: 'Move up',
@@ -1129,7 +1214,8 @@ export async function getPlotConfig(opts, app) {
 					bottom: 50
 				},
 				axisTitleFontSize: 16,
-				hidden: []
+				hidden: [],
+				hiddenPvalues: []
 			}
 		}
 	}
