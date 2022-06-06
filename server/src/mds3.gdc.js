@@ -422,7 +422,17 @@ async function getSamples_byisoform(api, opts, ds) {
 
 	// TODO combine opts.termidlst with api.query2.fields4details
 	const fields = [...api.query2.fields4details]
-	console.log(opts)
+	let termlst
+	if (opts.termidlst) {
+		termlst = []
+		for (const id of opts.termidlst.split(',')) {
+			const t = ds.cohort.termdb.q.termjsonByOneid(id)
+			if (t) {
+				fields.push(t.path)
+				termlst.push(t)
+			}
+		}
+	}
 
 	const tmp = await got(
 		apihost +
@@ -454,7 +464,9 @@ async function getSamples_byisoform(api, opts, ds) {
 		const sample = {
 			ssm_id: h.ssm.ssm_id
 		}
-		// TODO fill in attributes
+		if (termlst) {
+			flattenCaseByFields(sample, h.case, termlst)
+		}
 
 		// get printable sample id
 		if (ds.variant2samples.sample_id_key) {
@@ -472,6 +484,63 @@ async function getSamples_byisoform(api, opts, ds) {
 	}
 
 	return samples
+}
+
+/*
+two terms
+{
+  id: 'age_at_diagnosis',
+  name: 'Age at diagnosis',
+  path: 'case.diagnoses.age_at_diagnosis',
+  isleaf: true,
+  parent_id: 'diagnoses',
+  fields: [ 'diagnoses', 'age_at_diagnosis' ],
+  type: 'integer'
+}
+{
+  id: 'race',
+  name: 'Race',
+  path: 'case.demographic.race',
+  isleaf: true,
+  parent_id: 'demographic',
+  fields: [ 'demographic', 'race' ],
+  type: 'categorical'
+}
+
+
+a case returned by api
+{
+  primary_site: 'Hematopoietic and reticuloendothelial systems',
+  disease_type: 'Plasma Cell Tumors',
+  observation: [ { sample: [Object] }, { sample: [Object] } ],
+  case_id: 'cd91e38c-1d2a-4534-8765-bfb9f0541338',
+  project: { project_id: 'MMRF-COMMPASS' },
+  diagnoses: [ { age_at_diagnosis: 32171 } ],
+  demographic: {
+    ethnicity: 'not hispanic or latino',
+    gender: 'male',
+    race: 'white'
+  }
+}
+*/
+function flattenCaseByFields(sample, acase, termlst) {
+	for (const term of termlst) {
+		let current = acase
+		for (const [i, field] of term.fields.entries()) {
+			if (i == term.fields.length - 1) {
+				sample[field] = current[field]
+			} else {
+				current = current[field]
+				if (Array.isArray(current)) {
+					current = current[0]
+				}
+				if (!current) {
+					// missing level
+					return
+				}
+			}
+		}
+	}
 }
 
 export function validate_query_genecnv(ds) {

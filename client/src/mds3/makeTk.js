@@ -386,7 +386,7 @@ function mayaddGetter_variant2samples(tk, block) {
 		}
 		const data = await dofetch3('mds3?' + par.join('&'), { headers }, { serverData: tk.cache })
 		if (data.error) throw data.error
-		console.log(data)
+		return data.samples
 	}
 }
 
