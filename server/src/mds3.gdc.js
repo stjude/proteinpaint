@@ -12,6 +12,7 @@ validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
 	snvindel_byisoform
 	getSamples_byisoform
+		flattenCaseByFields
 validate_query_snvindel_byisoform_2
 validate_query_genecnv
 getSamples_gdcapi
@@ -487,15 +488,14 @@ async function getSamples_byisoform(api, opts, ds) {
 }
 
 /*
-two terms
+examples of terms from termdb as below, note the "fields[]" array
 {
-  id: 'age_at_diagnosis',
-  name: 'Age at diagnosis',
-  path: 'case.diagnoses.age_at_diagnosis',
-  isleaf: true,
-  parent_id: 'diagnoses',
-  fields: [ 'diagnoses', 'age_at_diagnosis' ],
-  type: 'integer'
+    id: 'disease_type',
+    name: 'Disease type',
+    path: 'case.disease_type',
+    isleaf: true,
+    fields: [ 'disease_type' ],
+    type: 'categorical'
 }
 {
   id: 'race',
@@ -506,9 +506,19 @@ two terms
   fields: [ 'demographic', 'race' ],
   type: 'categorical'
 }
+{
+  id: 'age_at_diagnosis',
+  name: 'Age at diagnosis',
+  path: 'case.diagnoses.age_at_diagnosis',
+  isleaf: true,
+  parent_id: 'diagnoses',
+  fields: [ 'diagnoses', 'age_at_diagnosis' ],
+  type: 'integer'
+}
 
 
-a case returned by api
+example of a case returned by api (/ssm_occurrences/ query)
+
 {
   primary_site: 'Hematopoietic and reticuloendothelial systems',
   disease_type: 'Plasma Cell Tumors',
@@ -522,22 +532,50 @@ a case returned by api
     race: 'white'
   }
 }
+
+the sample-specific values for terms come in 3 formats:
+
+	term1: disease_type
+	in case{}: disease_type: 'value'
+
+	term2: project_id
+	in case{}: project: { project_id: 'value' }
+
+	term3: age_at_diagnosis
+	in case{}: diagnoses: [ { age_at_diagnosis: int } ]
+
+this function "flattens" latter two to make the sample obj for easier use later
+{
+	disease_type: 'value',
+	project_id: 'value',
+	age_at_diagnosis: int
+}
+
+the flattening is done by "fields[]" array of the term, and some hardcoded logic
+may need to revise later
 */
 function flattenCaseByFields(sample, acase, termlst) {
 	for (const term of termlst) {
+		/* flatten the case{} using fields array of this term
+		when there are multiple fields (hierarchical),
+		at one field, use "current" to refer to the previous level in case
+		*/
 		let current = acase
 		for (const [i, field] of term.fields.entries()) {
 			if (i == term.fields.length - 1) {
+				/* is at the last field
+				simply assign value
+				*/
 				sample[field] = current[field]
-			} else {
-				current = current[field]
-				if (Array.isArray(current)) {
-					current = current[0]
-				}
-				if (!current) {
-					// missing level
-					return
-				}
+				break
+			}
+			current = current[field]
+			if (Array.isArray(current)) {
+				current = current[0]
+			}
+			if (!current) {
+				// missing level
+				break
 			}
 		}
 	}
