@@ -16,6 +16,7 @@ validate_query_snvindel_byisoform
 validate_query_snvindel_byisoform_2
 validate_query_genecnv
 getSamples_gdcapi
+	flattenCaseByFields
 get_cohortTotal
 get_termlst2size
 addCrosstabCount_tonodes
@@ -423,14 +424,14 @@ async function getSamples_byisoform(api, opts, ds) {
 
 	// TODO combine opts.termidlst with api.query2.fields4details
 	const fields = [...api.query2.fields4details]
-	let termlst
+	let termObjs
 	if (opts.termidlst) {
-		termlst = []
+		termObjs = []
 		for (const id of opts.termidlst.split(',')) {
 			const t = ds.cohort.termdb.q.termjsonByOneid(id)
 			if (t) {
 				fields.push(t.path)
-				termlst.push(t)
+				termObjs.push(t)
 			}
 		}
 	}
@@ -465,8 +466,8 @@ async function getSamples_byisoform(api, opts, ds) {
 		const sample = {
 			ssm_id: h.ssm.ssm_id
 		}
-		if (termlst) {
-			flattenCaseByFields(sample, h.case, termlst)
+		if (termObjs) {
+			flattenCaseByFields(sample, h.case, termObjs)
 		}
 
 		// get printable sample id
@@ -554,8 +555,8 @@ this function "flattens" latter two to make the sample obj for easier use later
 the flattening is done by "fields[]" array of the term, and some hardcoded logic
 may need to revise later
 */
-function flattenCaseByFields(sample, acase, termlst) {
-	for (const term of termlst) {
+function flattenCaseByFields(sample, acase, termObjs) {
+	for (const term of termObjs) {
 		/* flatten the case{} using fields array of this term
 		when there are multiple fields (hierarchical),
 		at one field, use "current" to refer to the previous level in case
@@ -646,38 +647,41 @@ clarify why needs two parameters termidlst[] and fields[]
 export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 	const api = ds.variant2samples.gdcapi
 	if (!fields) throw 'invalid get type of q.get'
-	if (q.tid2value && Object.keys(q.tid2value).length) {
-		q.termlst = []
-		for (const t of Object.keys(q.tid2value)) {
-			const term = ds.cohort.termdb.q.termjsonByOneid(t)
-			if (term) q.termlst.push(term)
+
+	let termObjs
+	if (termidlst) {
+		termObjs = []
+		for (const id of termidlst) {
+			const t = ds.cohort.termdb.q.termjsonByOneid(id)
+			if (t) termObjs.push(t)
 		}
 	}
 
-	const query = apihost + api.endpoint + '?size=10000&fields=' + fields.join(',')
+	const param = ['size=10000', 'fields=' + fields.join(',')]
 	// no longer paginates
 	//'&size=' + (q.size || api.size) + '&from=' + (q.from || 0)
 
 	// it may query with isoform
 	mayMapRefseq2ensembl(q, ds)
 
-	const filter = JSON.stringify(api.filters(q))
+	param.push('filters=' + encodeURIComponent(JSON.stringify(api.filters(q, ds))))
+
 	const headers = getheaders(q) // will be reused below
 
-	const response = await got(query + '&filters=' + encodeURIComponent(filter), { method: 'GET', headers })
+	const response = await got(apihost + api.endpoint + '?' + param.join('&'), { method: 'GET', headers })
 	let re
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
-		throw 'invalid JSON from GDC for variant2samples for query :' + query + ' and filter: ' + filter
+		throw 'invalid JSON from GDC for variant2samples query'
 	}
-	if (!re.data || !re.data.hits) throw 'data structure not data.hits[] for query :' + query + ' and filter: ' + filter
-	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array for query :' + query + ' and filter: ' + filter
+	if (!re.data || !re.data.hits) throw 'variant2samples data structure not data.hits[]'
+	if (!Array.isArray(re.data.hits)) throw 'variant2samples re.data.hits is not array for query'
 
 	const samples = []
 
 	for (const s of re.data.hits) {
-		if (!s.case) throw '.case{} missing from a hit for query :' + query + ' and filter: ' + filter
+		if (!s.case) throw 'variant2samples .case{} missing from a hit'
 		const sample = {}
 		if (s.ssm) {
 			/* ssm{ ssm_id } is available on this case
@@ -703,21 +707,8 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 		*/
 		sample.case_uuid = s.case.case_id
 
-		for (const id of termidlst) {
-			const t = ds.cohort.termdb.q.termjsonByOneid(id)
-			if (!t) continue
-			sample[id] = s.case[t.fields[0]]
-			for (let j = 1; j < t.fields.length; j++) {
-				if (sample[id] && Array.isArray(sample[id])) {
-					if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
-						sample[id] = (sample[id][0][t.fields[j]] * t.unit_conversion).toFixed(2)
-					else sample[id] = sample[id][0][t.fields[j]]
-				} else if (sample[id]) {
-					if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
-						sample[id] = (sample[id][t.fields[j]] * t.unit_conversion).toFixed(2)
-					else sample[id] = sample[id][t.fields[j]]
-				}
-			}
+		if (termObjs) {
+			flattenCaseByFields(sample, s.case, termObjs)
 		}
 
 		/////////////////// hardcoded logic to use .observation

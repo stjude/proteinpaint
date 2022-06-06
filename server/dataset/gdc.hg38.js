@@ -6,6 +6,7 @@ isoform2ssm_getvariant
 isoform2ssm_getcase
 query_range2variants
 variables_range2variants
+variant2samplesGdcapi
 totalsize_filters
 termid2size_query
 termid2size_filters
@@ -278,7 +279,7 @@ const variant2samplesGdcapi = {
 		'case.observation.sample.tumor_sample_barcode'
 	],
 	fields_samplesIdOnly: ['case.case_id'],
-	filters: p => {
+	filters: (p, ds) => {
 		const f = { op: 'and', content: [] }
 		if (p.ssm_id_lst) {
 			f.content.push({
@@ -313,15 +314,17 @@ const variant2samplesGdcapi = {
 		if (p.filter0) {
 			f.content.push(p.filter0)
 		}
-		if (p.termlst) {
-			for (const t of p.termlst) {
-				if (t && t.type == 'categorical') {
+		if (p.tid2value) {
+			for (const id in p.tid2value) {
+				const t = ds.cohort.termdb.q.termjsonByOneid(id)
+				if (!t) continue
+				if (t.type == 'categorical') {
 					f.content.push({
 						op: 'in',
-						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[t.id]] }
+						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[id]] }
 					})
-				} else if (t && t.type == 'integer') {
-					for (const val of p.tid2value[t.id]) {
+				} else if (t.type == 'integer') {
+					for (const val of p.tid2value[id]) {
 						f.content.push({
 							op: val.op,
 							content: { field: 'cases.' + t.fields.join('.'), value: val.range }
