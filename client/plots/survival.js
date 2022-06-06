@@ -33,6 +33,7 @@ class TdbSurvival {
 			holder,
 			chartsDiv: holder.append('div').style('margin', '10px'),
 			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
+			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
 			tip: new Menu({ padding: '5px' })
 		}
 		this.dom.tip.onHide = () => {
@@ -49,6 +50,16 @@ class TdbSurvival {
 		setInteractivity(this)
 		setRenderers(this)
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+			settings: {
+				legendOrientation: 'vertical'
+			},
+			handlers: {
+				legend: {
+					click: this.legendClick
+				}
+			}
+		})
+		this.hiddenRenderer = htmlLegend(this.dom.hiddenDiv, {
 			settings: {
 				legendOrientation: 'vertical'
 			},
@@ -173,7 +184,6 @@ class TdbSurvival {
 			this.setTerm2Color(this.pj.tree.charts)
 			this.symbol = this.getSymbol(7) // hardcode the symbol size for now
 			this.render()
-			this.legendRenderer(this.settings.atRiskVisible ? [] : this.legendData)
 		} catch (e) {
 			throw e
 		}
@@ -253,7 +263,14 @@ class TdbSurvival {
 			this.legendData = [
 				{
 					name: config[termNum].term.name,
-					items: legendItems
+					items: legendItems.filter(s => !s.isHidden)
+				}
+			]
+
+			this.hiddenData = [
+				{
+					name: `<span style='color: #aaa'><span>Hidden Categories</span><span style='font-size: 0.8rem; font-weight: 400'> CLICK TO SHOW</span></span>`,
+					items: legendItems.filter(s => s.isHidden).map(item => Object.assign({}, item, { isHidden: false }))
 				}
 			]
 		} else {
@@ -292,6 +309,13 @@ function setRenderers(self) {
 
 		self.dom.holder.style('display', 'inline-block')
 		self.dom.chartsDiv.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
+
+		self.legendRenderer(self.settings.atRiskVisible ? [] : self.legendData)
+		if (!self.hiddenData[0]?.items.length) self.dom.hiddenDiv.style('display', 'none')
+		else {
+			self.dom.hiddenDiv.style('display', '')
+			self.hiddenRenderer(self.hiddenData)
+		}
 	}
 
 	self.addCharts = function(chart) {
@@ -411,7 +435,7 @@ function setRenderers(self) {
 	}
 
 	function renderSVG(svg, chart, s, duration) {
-		const extraHeight = s.atRiskVisible ? chart.serieses.length * 20 : 0
+		const extraHeight = s.atRiskVisible ? 20 + chart.visibleSerieses.length * 20 : 0
 
 		svg
 			.transition()
@@ -728,7 +752,7 @@ function setRenderers(self) {
 
 	function renderAtRiskG(g, s, chart) {
 		const bySeries = {}
-		for (const series of chart.serieses) {
+		for (const series of chart.visibleSerieses) {
 			const counts = []
 			let i = 0,
 				d = series.data[0],
@@ -771,8 +795,10 @@ function setRenderers(self) {
 
 		sg.exit().remove()
 
-		sg.each(function(seriesId) {
-			const g = select(this).attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId])
+		sg.each(function(seriesId, i) {
+			const g = select(this)
+				.attr('transform', `translate(0,${(i + 1) * 20})`)
+				.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId])
 		})
 
 		sg.enter()
@@ -797,7 +823,7 @@ function setRenderers(self) {
 					.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : 'At-risk')
 
 				const data = chart.xTickValues.map(tickVal => {
-					if (tickVal === 0) return { tickVal, atRisk: series[0][1], nCensored: series[0][2] }
+					if (tickVal === 0) return { seriesId, tickVal, atRisk: series[0][1], nCensored: series[0][2] }
 					const d = reversed.find(d => d[0] <= tickVal)
 					return { seriesId, tickVal, atRisk: d[1], nCensored: d[2] }
 				})

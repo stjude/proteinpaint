@@ -86,3 +86,5 @@ p4/public/dev.html
 *.ext
 *.crt
 .ssl
+
+portal/*
