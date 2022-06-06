@@ -337,7 +337,7 @@ function setRenderers(self) {
 		self.dom.chartsDiv.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 
 		self.legendRenderer(self.settings.atRiskVisible ? [] : self.legendData)
-		if (!self.hiddenData[0]?.items.length) self.dom.hiddenDiv.style('display', 'none')
+		if (!self.hiddenData?.[0]?.items.length) self.dom.hiddenDiv.style('display', 'none')
 		else {
 			self.dom.hiddenDiv.style('display', '')
 			self.hiddenRenderer(self.hiddenData)
@@ -896,7 +896,7 @@ function setRenderers(self) {
 		// g.selectAll('*').remove()
 
 		const seriesOrder = chart.serieses.map(s => s.seriesId)
-		const v = self.state.config.term2.values
+		const v = self.state.config.term2?.values
 		if (v) {
 			seriesOrder.sort((aId, bId) => {
 				const av = v[aId]
