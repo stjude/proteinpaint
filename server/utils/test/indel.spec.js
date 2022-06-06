@@ -673,7 +673,8 @@ const examples = [
 				p: 171410486,
 				c: '55M4I41M',
 				f: 147,
-				g: 'alt'
+				g: 'none',
+				g_0: 'alt'
 			},
 			{
 				n:
