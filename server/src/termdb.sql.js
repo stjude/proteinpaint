@@ -1075,7 +1075,7 @@ thus less things to worry about...
 }
 
 function test_tables(cn) {
-	const s = cn.prepare('SELECT name FROM sqlite_master WHERE type="table" AND name=?')
+	const s = cn.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`)
 	return {
 		terms: s.get('terms'),
 		ancestry: s.get('ancestry'),

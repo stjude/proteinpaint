@@ -24,6 +24,7 @@ class TdbSurvival {
 		this.dom = {
 			loadingDiv: holder
 				.append('div')
+				.style('position', 'absolute')
 				.style('display', 'none')
 				.style('padding', '20px')
 				.html('Loading ...'),
@@ -158,12 +159,12 @@ class TdbSurvival {
 			}
 
 			if (this.dom.header) this.dom.header.html(this.state.config.term.term.name + ` plot`)
-			this.dom.loadingDiv.style('display', '')
+			this.toggleLoadingDiv()
 
 			Object.assign(this.settings, this.state.config.settings)
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
-			this.dom.loadingDiv.style('display', 'none')
+			this.toggleLoadingDiv('none')
 			this.serverData = data
 			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.currData = this.processData(data)
@@ -258,6 +259,22 @@ class TdbSurvival {
 		} else {
 			this.legendData = []
 		}
+	}
+
+	// helper so that 'Loading...' does not flash when not needed
+	toggleLoadingDiv(display = '') {
+		if (display != 'none') {
+			this.dom.loadingDiv
+				.style('opacity', 0)
+				.style('display', display)
+				.transition()
+				.duration('loadingWait' in this ? this.loadingWait : 0)
+				.style('opacity', 1)
+		} else {
+			this.dom.loadingDiv.style('display', display)
+		}
+		// do not transition on initial chart load
+		this.loadingWait = 1000
 	}
 }
 
@@ -394,7 +411,7 @@ function setRenderers(self) {
 	}
 
 	function renderSVG(svg, chart, s, duration) {
-		const extraHeight = s.atRiskVisible ? chart.visibleSerieses.length * 20 : 0
+		const extraHeight = s.atRiskVisible ? chart.serieses.length * 20 : 0
 
 		svg
 			.transition()
@@ -442,7 +459,7 @@ function setRenderers(self) {
 			.style('padding-bottom', '5px')
 			.style('font-size', fontSize + 'px')
 			.style('font-weight', 'bold')
-			.text('Series comparisons (log-rank test)')
+			.text('Group comparisons (log-rank test)')
 
 		// table div
 		// need separate divs for title and table
@@ -460,7 +477,7 @@ function setRenderers(self) {
 			.append('thead')
 			.append('tr')
 			.selectAll('td')
-			.data(['Series 1', 'Series 2', 'P-value'])
+			.data(['Group 1', 'Group 2', 'P-value'])
 			.enter()
 			.append('td')
 			.style('padding', '1px 8px 1px 2px')
@@ -503,7 +520,10 @@ function setRenderers(self) {
 			yAxis = axisG.append('g').attr('class', 'sjpp-survival-y-axis')
 			xTitle = axisG.append('g').attr('class', 'sjpp-survival-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpp-survival-y-title')
-			atRiskG = mainG.append('g').attr('class', 'sjpp-survival-atrisk')
+			atRiskG = mainG
+				.append('g')
+				.attr('class', 'sjpp-survival-atrisk')
+				.on('click', self.legendClick)
 		} else {
 			mainG = svg.select('.sjpp-survival-mainG')
 			axisG = mainG.select('.sjpp-survival-axis')
@@ -511,7 +531,7 @@ function setRenderers(self) {
 			yAxis = axisG.select('.sjpp-survival-y-axis')
 			xTitle = axisG.select('.sjpp-survival-x-title')
 			yTitle = axisG.select('.sjpp-survival-y-title')
-			atRiskG = mainG.select('.sjpp-survival-atrisk')
+			atRiskG = mainG.select('.sjpp-survival-atrisk').on('click', self.legendClick)
 		}
 		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG]
 	}
@@ -708,7 +728,7 @@ function setRenderers(self) {
 
 	function renderAtRiskG(g, s, chart) {
 		const bySeries = {}
-		for (const series of chart.visibleSerieses) {
+		for (const series of chart.serieses) {
 			const counts = []
 			let i = 0,
 				d = series.data[0],
@@ -737,7 +757,7 @@ function setRenderers(self) {
 
 		const y = s.svgh - s.svgPadding.top - s.svgPadding.bottom + 60 // make y-offset option???
 		// fully rerender, later may reuse previously rendered elements
-		g.selectAll('*').remove()
+		// g.selectAll('*').remove()
 
 		const seriesOrder = chart.serieses.map(s => s.seriesId)
 		const data = !s.atRiskVisible
@@ -749,6 +769,12 @@ function setRenderers(self) {
 			.selectAll(':scope > g')
 			.data(data, seriesId => seriesId)
 
+		sg.exit().remove()
+
+		sg.each(function(seriesId) {
+			const g = select(this).attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId])
+		})
+
 		sg.enter()
 			.append('g')
 			.each(function(seriesId, i) {
@@ -757,7 +783,7 @@ function setRenderers(self) {
 				const y = (i + 1) * 20
 				const g = select(this)
 					.attr('transform', `translate(0,${y})`)
-					.attr('fill', self.term2toColor[seriesId])
+					.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId])
 
 				const fontsize = `${s.axisTitleFontSize - 4}px`
 				const sObj = chart.serieses.find(s => s.seriesId === seriesId)
@@ -766,12 +792,14 @@ function setRenderers(self) {
 					.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
 					.attr('text-anchor', 'end')
 					.attr('font-size', fontsize)
+					.attr('cursor', 'pointer')
+					.datum({ seriesId })
 					.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : 'At-risk')
 
 				const data = chart.xTickValues.map(tickVal => {
 					if (tickVal === 0) return { tickVal, atRisk: series[0][1], nCensored: series[0][2] }
 					const d = reversed.find(d => d[0] <= tickVal)
-					return { tickVal, atRisk: d[1], nCensored: d[2] }
+					return { seriesId, tickVal, atRisk: d[1], nCensored: d[2] }
 				})
 				const text = g
 					.append('g')
@@ -784,6 +812,7 @@ function setRenderers(self) {
 					.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
 					.attr('text-anchor', 'middle')
 					.attr('font-size', fontsize)
+					.attr('cursor', 'pointer')
 					.text(d => `${d.atRisk}(${d.nCensored})`)
 			})
 	}
@@ -825,7 +854,8 @@ function setInteractivity(self) {
 					d.seriesLabel ? d.seriesLabel : self.state.config.term.term.name
 				}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} ${xUnit}</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}%</td></tr>`,
+				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${100 *
+					y}%</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>At-risk:</td><td style='padding:3px; text-align:center'>${d.nrisk}</td></tr>`
 			]
 			// may also indicate the confidence interval (lower%-upper%) in a new row

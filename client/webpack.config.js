@@ -1,4 +1,5 @@
 const WebpackNotifierPlugin = require('webpack-notifier')
+const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const path = require('path')
 const fs = require('fs')
 const SpecHelpersWpPlugin = require('./test/specHelpers.js').SpecHelpersWpPlugin
@@ -25,7 +26,7 @@ module.exports = function(env = {}) {
 			path: path.join(__dirname, '../public/bin'),
 			publicPath: (env.url || '') + '/bin/',
 			filename: 'proteinpaint.js',
-			jsonpFunction: 'ppJsonp',
+			chunkLoadingGlobal: 'ppJsonp',
 			// the library name exposed by this bundle
 			library: 'runproteinpaint',
 			// the exported value from the entry point file
@@ -39,9 +40,16 @@ module.exports = function(env = {}) {
 			react: 'React',
 			'react-dom': 'ReactDOM'
 		},
-		node: {
-			fs: 'empty'
+		resolve: {
+			/* TODO: select polyfills instead of using node-polyfill-webpack-plugin
+			fallback: {
+				//stream: false,
+				//fs: false,
+				path: require.resolve('path-browserify'),
+				process: require.resolve('process')
+			}*/
 		},
+		plugins: [new NodePolyfillPlugin()],
 		module: {
 			strictExportPresence: true,
 			rules: [
@@ -69,12 +77,12 @@ module.exports = function(env = {}) {
 				}
 			]
 		},
-		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : ''
+		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : false
 	}
 
 	/*** OVERRIDES ***/
 	if (config.mode == 'development') {
-		config.plugins = [new WebpackNotifierPlugin(), new SpecHelpersWpPlugin()]
+		config.plugins.push(new WebpackNotifierPlugin(), new SpecHelpersWpPlugin())
 		// allow react to be bundled
 		delete config.externals
 		// delete the rule that empties the ./test/internals.js code,

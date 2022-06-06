@@ -4,12 +4,14 @@ const { get_crosstabCombinations } = require('./mds3.init')
 const serverconfig = require('./serverconfig')
 
 /*
-GDC graphql API
+GDC API
 
 ****************** EXPORTED
 validate_variant2sample
 validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
+	snvindel_byisoform
+	getSamples_byisoform
 validate_query_snvindel_byisoform_2
 validate_query_genecnv
 getSamples_gdcapi
@@ -115,7 +117,10 @@ export function validate_query_snvindel_byrange(ds) {
 	}
 }
 
-// tandem rest api query: 1. variant and csq, 2. cases
+/* tandem rest api query
+1. variant and csq
+2. cases
+*/
 export function validate_query_snvindel_byisoform(ds) {
 	const api = ds.queries.snvindel.byisoform.gdcapi
 	if (!api.query1) throw 'api.query1 is missing'
@@ -125,11 +130,17 @@ export function validate_query_snvindel_byisoform(ds) {
 	if (typeof api.query1.filters != 'function') throw 'query1.filters() is not a function'
 	if (!api.query2) throw 'api.query2 is missing'
 	if (!api.query2.endpoint) throw 'query2.endpoint missing'
-	if (!api.query2.fields) throw 'query2.fields missing'
+	if (!api.query2.fields4counting) throw 'query2.fields4counting missing'
+	if (!api.query2.fields4details) throw 'query2.fields4details missing'
 	if (!api.query2.filters) throw 'query2.filters missing'
 	if (typeof api.query2.filters != 'function') throw 'query2.filters() is not a function'
 
 	ds.queries.snvindel.byisoform.get = async opts => {
+		/* opts{}
+		.getSamples: true
+		.isoform: str
+		*/
+
 		/*
 		hardcoded logic!!
 
@@ -144,7 +155,11 @@ export function validate_query_snvindel_byisoform(ds) {
 		*/
 		const refseq = mayMapRefseq2ensembl(opts, ds)
 
-		const ssmLst = await snvindel_byisoform_run(api, opts)
+		if (opts.getSamples) {
+			return await getSamples_byisoform(api, opts, ds)
+		}
+
+		const ssmLst = await snvindel_byisoform(api, opts)
 		const mlst = [] // parse final ssm into this list
 		for (const ssm of ssmLst) {
 			const m = {
@@ -329,8 +344,7 @@ function getheaders(q) {
 	return h
 }
 
-async function snvindel_byisoform_run(api, opts) {
-	// function may be shared
+async function snvindel_byisoform(api, opts) {
 	// query is ds.queries.snvindel
 	const headers = getheaders(opts)
 	const p1 = got(
@@ -350,7 +364,7 @@ async function snvindel_byisoform_run(api, opts) {
 			'?size=' +
 			api.query2.size +
 			'&fields=' +
-			api.query2.fields.join(',') +
+			api.query2.fields4counting.join(',') +
 			'&filters=' +
 			encodeURIComponent(JSON.stringify(api.query2.filters(opts))),
 		{ method: 'GET', headers }
@@ -393,6 +407,140 @@ async function snvindel_byisoform_run(api, opts) {
 		ssm.cases.push(h.case)
 	}
 	return [...id2ssm.values()]
+}
+
+/*
+purpuse: query list of samples that harbor a variant 
+api: ds.queries.snvindel
+opts{}
+	.isoform, required
+	.termidlst, optional, comma-joined term ids
+*/
+async function getSamples_byisoform(api, opts, ds) {
+	const headers = getheaders(opts)
+	// only run query2
+
+	// TODO combine opts.termidlst with api.query2.fields4details
+	const fields = [...api.query2.fields4details]
+	let termlst
+	if (opts.termidlst) {
+		termlst = []
+		for (const id of opts.termidlst.split(',')) {
+			const t = ds.cohort.termdb.q.termjsonByOneid(id)
+			if (t) {
+				fields.push(t.path)
+				termlst.push(t)
+			}
+		}
+	}
+
+	const tmp = await got(
+		apihost +
+			api.query2.endpoint +
+			'?size=' +
+			api.query2.size +
+			'&fields=' +
+			fields.join(',') +
+			'&filters=' +
+			encodeURIComponent(JSON.stringify(api.query2.filters(opts))),
+		{ method: 'GET', headers }
+	)
+	let re_cases
+	try {
+		re_cases = JSON.parse(tmp.body)
+	} catch (e) {
+		throw 'invalid JSON returned by GDC'
+	}
+	if (!re_cases.data || !re_cases.data.hits) throw 'query2 did not return .data.hits[]'
+	if (!Array.isArray(re_cases.data.hits)) throw 're.data.hits[] is not array'
+
+	const samples = []
+
+	for (const h of re_cases.data.hits) {
+		if (!h.ssm) throw '.ssm{} missing from a case'
+		if (!h.ssm.ssm_id) throw '.ssm.ssm_id missing from a case'
+		if (!h.case) throw '.case{} missing from a case'
+
+		const sample = {
+			ssm_id: h.ssm.ssm_id
+		}
+		if (termlst) {
+			flattenCaseByFields(sample, h.case, termlst)
+		}
+
+		// get printable sample id
+		if (ds.variant2samples.sample_id_key) {
+			sample.sample_id = h.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
+		} else if (ds.variant2samples.sample_id_getter) {
+			sample.tempcase = h.case
+		}
+		sample.case_uuid = h.case.case_id
+
+		samples.push(sample)
+	}
+
+	if (ds.variant2samples.sample_id_getter) {
+		await ds.variant2samples.sample_id_getter(samples, headers)
+	}
+
+	return samples
+}
+
+/*
+two terms
+{
+  id: 'age_at_diagnosis',
+  name: 'Age at diagnosis',
+  path: 'case.diagnoses.age_at_diagnosis',
+  isleaf: true,
+  parent_id: 'diagnoses',
+  fields: [ 'diagnoses', 'age_at_diagnosis' ],
+  type: 'integer'
+}
+{
+  id: 'race',
+  name: 'Race',
+  path: 'case.demographic.race',
+  isleaf: true,
+  parent_id: 'demographic',
+  fields: [ 'demographic', 'race' ],
+  type: 'categorical'
+}
+
+
+a case returned by api
+{
+  primary_site: 'Hematopoietic and reticuloendothelial systems',
+  disease_type: 'Plasma Cell Tumors',
+  observation: [ { sample: [Object] }, { sample: [Object] } ],
+  case_id: 'cd91e38c-1d2a-4534-8765-bfb9f0541338',
+  project: { project_id: 'MMRF-COMMPASS' },
+  diagnoses: [ { age_at_diagnosis: 32171 } ],
+  demographic: {
+    ethnicity: 'not hispanic or latino',
+    gender: 'male',
+    race: 'white'
+  }
+}
+*/
+function flattenCaseByFields(sample, acase, termlst) {
+	for (const term of termlst) {
+		let current = acase
+		for (const [i, field] of term.fields.entries()) {
+			if (i == term.fields.length - 1) {
+				sample[field] = current[field]
+			} else {
+				current = current[field]
+				if (Array.isArray(current)) {
+					current = current[0]
+				}
+				if (!current) {
+					// missing level
+					return
+				}
+			}
+		}
+	}
 }
 
 export function validate_query_genecnv(ds) {
