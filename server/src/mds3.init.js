@@ -143,7 +143,6 @@ function validate_variant2samples(ds) {
 	const vs = ds.variant2samples
 	if (!vs) return
 	vs.type_samples = 'samples'
-	vs.type_samplesIdOnly = 'samplesIdOnly'
 	vs.type_sunburst = 'sunburst'
 	vs.type_summary = 'summary'
 	if (!vs.variantkey) throw '.variantkey missing from variant2samples'

@@ -278,7 +278,6 @@ const variant2samplesGdcapi = {
 		'case.observation.read_depth.n_depth',
 		'case.observation.sample.tumor_sample_barcode'
 	],
-	fields_samplesIdOnly: ['case.case_id'],
 	filters: (p, ds) => {
 		const f = { op: 'and', content: [] }
 		if (p.ssm_id_lst) {

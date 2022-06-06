@@ -30,7 +30,6 @@ export async function variant2samples_getresult(q, ds) {
 	// each sample obj has keys from .terms[].id
 	const samples = await get_samples(q, ds)
 
-	if (q.get == ds.variant2samples.type_samplesIdOnly) return samples
 	if (q.get == ds.variant2samples.type_samples) return samples
 	if (q.get == ds.variant2samples.type_sunburst) return make_sunburst(samples, ds, q)
 	if (q.get == ds.variant2samples.type_summary) return make_summary(samples, ds, q)
@@ -41,24 +40,17 @@ async function get_samples(q, ds) {
 	let samples
 	if (ds.variant2samples.gdcapi) {
 		const api = ds.variant2samples.gdcapi
-		let termidlst, fields
-		if (q.get == ds.variant2samples.type_samplesIdOnly) {
-			// to retrieve case id only, no other attributes
-			termidlst = []
-			fields = api.fields_samplesIdOnly
-		} else {
-			termidlst = q.termidlst ? q.termidlst.split(',') : ds.variant2samples.termidlst
-			// fields[] generated dynamically using gdc_dictionary
-			fields =
-				q.get == ds.variant2samples.type_sunburst
-					? get_termid2fields(api.fields_sunburst, ds)
-					: q.get == ds.variant2samples.type_summary
-					? get_termid2fields(termidlst, ds)
-					: q.get == ds.variant2samples.type_samples
-					? // fields_samples[] have few extra fields for table view than fields_summary[]
-					  [...api.fields_samples, ...get_termid2fields(termidlst, ds)]
-					: null
-		}
+		const termidlst = q.termidlst ? q.termidlst.split(',') : ds.variant2samples.termidlst
+		// fields[] generated dynamically using gdc_dictionary
+		const fields =
+			q.get == ds.variant2samples.type_sunburst
+				? get_termid2fields(api.fields_sunburst, ds)
+				: q.get == ds.variant2samples.type_summary
+				? get_termid2fields(termidlst, ds)
+				: q.get == ds.variant2samples.type_samples
+				? // fields_samples[] have few extra fields for table view than fields_summary[]
+				  [...api.fields_samples, ...get_termid2fields(termidlst, ds)]
+				: null
 		samples = await getSamples_gdcapi(q, termidlst, fields, ds)
 	} else {
 		throw 'unknown query method for variant2samples'
