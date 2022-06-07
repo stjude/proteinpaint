@@ -251,13 +251,14 @@ function setTextInput(opts) {
 		.attr('type', 'text')
 		.style('width', (opts.width || 100) + 'px')
 		.on('change', () => {
+			const value = self.dom.input.property('value')
 			opts.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
 					settings: {
 						[opts.chartType]: {
-							[opts.settingsKey]: self.dom.input.property('value')
+							[opts.settingsKey]: opts.processInput ? opts.processInput(value) : value
 						}
 					}
 				}

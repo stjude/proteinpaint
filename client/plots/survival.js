@@ -125,6 +125,14 @@ class TdbSurvival {
 							title: `The unit to display in the x-axis title, like 'years'`
 						},
 						{
+							label: 'X-axis ticks',
+							type: 'text',
+							chartType: 'survival',
+							settingsKey: 'xTickValues',
+							title: `Option to customize the x-axis tick values, enter as comma-separated values`,
+							processInput: value => value.split(',').map(Number)
+						},
+						{
 							label: 'At-risk counts',
 							boxLabel: 'Visible',
 							type: 'checkbox',
@@ -804,7 +812,7 @@ function setRenderers(self) {
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {
 		let xTicks
-		if (s.xTickValues) {
+		if (s.xTickValues?.length) {
 			chart.xTickValues = s.xTickValues.filter(v => v === 0 || (v >= chart.xMin && v <= chart.xMax))
 			xTicks = axisBottom(chart.xScale).tickValues(chart.xTickValues)
 		} else {
@@ -928,48 +936,56 @@ function setRenderers(self) {
 			const g = select(this)
 				.attr('transform', `translate(0,${(i + 1) * 20})`)
 				.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].darker())
+
+			renderAtRiskTick(g.select(':scope>g'), chart, s, bySeries[seriesId])
 		})
 
 		sg.enter()
 			.append('g')
 			.each(function(seriesId, i) {
-				const series = bySeries[seriesId]
-				const reversed = series.slice().reverse()
 				const y = (i + 1) * 20
 				const g = select(this)
 					.attr('transform', `translate(0,${y})`)
 					.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].darker())
 
-				const fontsize = `${s.axisTitleFontSize - 4}px`
 				const sObj = chart.serieses.find(s => s.seriesId === seriesId)
-
 				g.append('text')
 					.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
 					.attr('text-anchor', 'end')
-					.attr('font-size', fontsize)
+					.attr('font-size', `${s.axisTitleFontSize - 4}px`)
 					.attr('cursor', 'pointer')
 					.datum({ seriesId })
 					.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : 'At-risk')
 
-				const data = chart.xTickValues.map(tickVal => {
-					if (tickVal === 0) return { seriesId, tickVal, atRisk: series[0][1], nCensored: series[0][2] }
-					const d = reversed.find(d => d[0] <= tickVal)
-					return { seriesId, tickVal, atRisk: d[1], nCensored: d[2] }
-				})
-				const text = g
-					.append('g')
-					.selectAll('text')
-					.data(data)
-				text.exit().remove()
-				text
-					.enter()
-					.append('text')
-					.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
-					.attr('text-anchor', 'middle')
-					.attr('font-size', fontsize)
-					.attr('cursor', 'pointer')
-					.text(d => `${d.atRisk}(${d.nCensored})`)
+				renderAtRiskTick(g.append('g'), chart, s, bySeries[seriesId])
 			})
+	}
+
+	function renderAtRiskTick(g, chart, s, series) {
+		const seriesId = series.seriesId
+		const reversed = series.slice().reverse()
+		const data = chart.xTickValues.map(tickVal => {
+			if (tickVal === 0) return { seriesId, tickVal, atRisk: series[0][1], nCensored: series[0][2] }
+			const d = reversed.find(d => d[0] <= tickVal)
+			return { seriesId, tickVal, atRisk: d[1], nCensored: d[2] }
+		})
+
+		const text = g.selectAll('text').data(data)
+		text.exit().remove()
+		text.each(function(d) {
+			select(this)
+				.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
+				.attr('font-size', `${s.axisTitleFontSize - 4}px`)
+				.text(d => `${d.atRisk}(${d.nCensored})`)
+		})
+		text
+			.enter()
+			.append('text')
+			.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', `${s.axisTitleFontSize - 4}px`)
+			.attr('cursor', 'pointer')
+			.text(d => `${d.atRisk}(${d.nCensored})`)
 	}
 
 	self.getSymbol = function(size) {
@@ -1204,9 +1220,9 @@ export async function getPlotConfig(opts, app) {
 				svgh: 300,
 				timeFactor: 1,
 				timeUnit: '',
-				//xTickInterval: 0, // if zero, automatically determined by d3-axis
 				atRiskVisible: true,
 				atRiskLabelOffset: -20,
+				xTickValues: [], // if undefined or empty, will be ignored
 				svgPadding: {
 					top: 20,
 					left: 55,
