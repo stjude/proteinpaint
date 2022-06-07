@@ -129,7 +129,7 @@ class TdbSurvival {
 							type: 'text',
 							chartType: 'survival',
 							settingsKey: 'xTickValues',
-							title: `Option to customize the x-axis tick values, enter as comma-separated values`,
+							title: `Option to customize the x-axis tick values, enter as comma-separated values. Will be ignored if empty`,
 							processInput: value => value.split(',').map(Number)
 						},
 						{
@@ -253,6 +253,7 @@ class TdbSurvival {
 				this.term2toColor[series.seriesId] = rgb(v?.color || this.colorScale(series.seriesId))
 				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
 					legendItems.push({
+						//key: series.seriesId,
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
 						color: this.term2toColor[series.seriesId].darker(),
@@ -937,7 +938,7 @@ function setRenderers(self) {
 				.attr('transform', `translate(0,${(i + 1) * 20})`)
 				.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].darker())
 
-			renderAtRiskTick(g.select(':scope>g'), chart, s, bySeries[seriesId])
+			renderAtRiskTick(g.select(':scope>g'), chart, s, seriesId, bySeries[seriesId])
 		})
 
 		sg.enter()
@@ -957,12 +958,11 @@ function setRenderers(self) {
 					.datum({ seriesId })
 					.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : 'At-risk')
 
-				renderAtRiskTick(g.append('g'), chart, s, bySeries[seriesId])
+				renderAtRiskTick(g.append('g'), chart, s, seriesId, bySeries[seriesId])
 			})
 	}
 
-	function renderAtRiskTick(g, chart, s, series) {
-		const seriesId = series.seriesId
+	function renderAtRiskTick(g, chart, s, seriesId, series) {
 		const reversed = series.slice().reverse()
 		const data = chart.xTickValues.map(tickVal => {
 			if (tickVal === 0) return { seriesId, tickVal, atRisk: series[0][1], nCensored: series[0][2] }
@@ -1112,7 +1112,7 @@ function setInteractivity(self) {
 				})
 			}
 		})
-
+		console.log(1116, d.seriesId, d, self.legendValues)
 		const legendIndex = self.legendValues[d.seriesId].order
 		if (legendIndex != 0)
 			options.push({
@@ -1125,6 +1125,11 @@ function setInteractivity(self) {
 				label: 'Move down',
 				callback: d => self.adjustValueOrder(d, 1)
 			})
+
+		/*options.push({
+			label: 'Color',
+			callback: d => {}
+		})*/
 
 		if (!options.length) return
 		self.activeMenu = true
