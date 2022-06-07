@@ -3,9 +3,12 @@ const get_termlst2size = require('./mds3.gdc').get_termlst2size
 const isUsableTerm = require('../shared/termdb.usecase').isUsableTerm
 
 /* parse gdc dictionary, and store as in-memory termdb
-does not need any dataset configuration, entirely hardcoded logic
 
-termdb "interface" functions are added to ds.cohort.termdb.q{}
+HARDCODED LOGIC, does not need any dataset configuration
+
+standard termdb "interface" functions are added to ds.cohort.termdb.q{}
+
+exports one function: initGDCdictionary
 */
 
 const apiurl = (process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov') + '/ssm_occurrences/_mapping'
@@ -52,6 +55,30 @@ re.fields: []
 	'case.demographic.demographic_id',
 	...
 
+	SKIPPED:
+		"case.available_variation_data"
+	lines starting with "case.observation":
+		"case.observation.center",
+		"case.observation.input_bam_file.normal_bam_uuid",
+		"case.observation.input_bam_file.tumor_bam_uuid",
+		"case.observation.mutation_status",
+		"case.observation.normal_genotype.match_norm_seq_allele1",
+		"case.observation.normal_genotype.match_norm_seq_allele2",
+		"case.observation.observation_id",
+		"case.observation.read_depth.n_depth",
+		...
+	lines starting with "ssm":
+	    "ssm.chromosome",
+		"ssm.clinical_annotations.civic.gene_id",
+		"ssm.clinical_annotations.civic.variant_id",
+		"ssm.consequence.consequence_id",
+		"ssm.consequence.transcript.aa_change",
+		"ssm.consequence.transcript.aa_end",
+		"ssm.consequence.transcript.aa_start",
+		"ssm.consequence.transcript.annotation.amino_acids",
+		...
+
+
 
 ******************* Unused parts
 "defaults": [
@@ -79,9 +106,10 @@ re.expand: []
 
 // prefix for keys in re._mapping{}
 const mapping_prefix = 'ssm_occurrence_centrics'
-const fs = require('fs')
 
-export async function initDictionary(ds) {
+//
+
+export async function initGDCdictionary(ds) {
 	const id2term = new Map()
 	// k: term id, string with full path
 	// v: term obj
@@ -127,7 +155,7 @@ export async function initDictionary(ds) {
 			// so that findTermByName can work
 			const termObj = {
 				id: currentId.toLowerCase(),
-				name: termLevels[i][0].toUpperCase() + termLevels[i].slice(1).replace('_', ' ')
+				name: termLevels[i][0].toUpperCase() + termLevels[i].slice(1).replace(/_/g, ' ')
 			}
 
 			if (i == termLevels.length - 1) {
@@ -188,7 +216,7 @@ export async function initDictionary(ds) {
 	// id2term is readonly and must not be changed by treeFilter or other features
 	Object.freeze(id2term)
 
-	init_termdb_queries(ds, id2term)
+	makeTermdbQueries(ds, id2term)
 }
 
 function maySkipLine(line) {
@@ -208,7 +236,7 @@ q.getAncestorNames
 q.termjsonByOneid
 q.getSupportedChartTypes
 */
-function init_termdb_queries(ds, id2term) {
+function makeTermdbQueries(ds, id2term) {
 	const q = (ds.cohort.termdb.q = {})
 
 	q.getRootTerms = async (vocab, treeFilter = null) => {

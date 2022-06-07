@@ -1,5 +1,5 @@
 const gdc = require('./mds3.gdc')
-const gdcTermdb = require('./termdb.gdc')
+const { initGDCdictionary } = require('./termdb.gdc')
 const { variant2samples_getresult } = require('./mds3.variant2samples')
 
 /*
@@ -61,7 +61,7 @@ async function validate_termdb(ds) {
 
 	if (tdb.dictionary) {
 		if (tdb.dictionary.gdcapi) {
-			await gdcTermdb.initDictionary(ds)
+			await initGDCdictionary(ds)
 		} else {
 			throw 'unknown method to initiate dictionary'
 		}

@@ -623,9 +623,7 @@ async function sample_id_getter(samples, headers) {
 
 ///////////////////////////////// end of query strings ///////////////
 
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-// XXX hardcoded to use .sample_id to dedup samples
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+// mds3 hardcodes to use .sample_id to dedup samples
 
 module.exports = {
 	isMds3: true,
@@ -646,7 +644,11 @@ module.exports = {
 		termid2totalsize2: {
 			gdcapi: termidlst2size
 		},
-		dictionary: { gdcapi: true }
+		dictionary: {
+			// runs termdb.gdc.js to init gdc dictionary
+			// create standard helpers at ds.cohort.termdb.q{}
+			gdcapi: true
+		}
 	},
 
 	ssm2canonicalisoform,
@@ -663,7 +665,7 @@ module.exports = {
 			'case.primary_site',
 			'case.project.project_id',
 			'case.demographic.gender',
-			'case.diagnoses.age_at_diagnosis',
+			//'case.diagnoses.age_at_diagnosis', move to case details
 			'case.demographic.race',
 			'case.demographic.ethnicity'
 		],

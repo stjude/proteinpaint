@@ -497,6 +497,7 @@ function flattenCaseByFields(sample, acase, termObjs) {
 			}
 			current = current[field]
 			if (Array.isArray(current)) {
+				//if(current.length>1) console.log(sample.case_uuid,current)
 				current = current[0]
 			}
 			if (!current) {
