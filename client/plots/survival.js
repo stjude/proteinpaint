@@ -97,6 +97,20 @@ class TdbSurvival {
 							usecase: { target: 'survival', detail: 'term0' }
 						},
 						{
+							label: 'Chart width',
+							type: 'number',
+							chartType: 'survival',
+							settingsKey: 'svgw',
+							title: 'The internal width of the chart plot'
+						},
+						{
+							label: 'Chart height',
+							type: 'number',
+							chartType: 'survival',
+							settingsKey: 'svgh',
+							title: 'The internal height of the chart plot'
+						},
+						{
 							label: '95% CI',
 							boxLabel: 'Visible',
 							type: 'checkbox',
