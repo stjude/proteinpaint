@@ -8,11 +8,14 @@ does not need any dataset configuration, entirely hardcoded logic
 termdb "interface" functions are added to ds.cohort.termdb.q{}
 */
 
-const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-// the api endpoint from which following 3 sections of info are returned
-const endpoint = apihost + '/ssm_occurrences/_mapping'
+const apiurl = (process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov') + '/ssm_occurrences/_mapping'
 
 /* 
+api returns 2 major parts of data:
+
+******************* Part 1
+to derive type (categorical/integer/float) for terms
+
 re._mapping: {}
 	'ssm_occurrence_centrics.case.available_variation_data': {
 		description: '',
@@ -29,6 +32,12 @@ re._mapping: {}
 		type: 'keyword'
 	},
 
+******************* Part 2
+to generate leaf terms and hierarchies
+each row is a leaf term, the whole line is term id
+from the line, derive hierarchies, e.g.
+case{} >> case.demographic{} >> case.demographic.age_at_index{type:float}
+
 re.fields: []
 	'case.available_variation_data',
 	'case.case_id',
@@ -43,32 +52,41 @@ re.fields: []
 	'case.demographic.demographic_id',
 	...
 
+
+******************* Unused parts
+"defaults": [
+	"ssm_occurrence_autocomplete",
+	"ssm_occurrence_id"
+],
+"multi": [],
+"nested": [
+	"case.diagnoses",
+	"case.diagnoses.pathology_details",
+	"case.diagnoses.treatments",
+	"case.exposures",
+	"case.family_histories",
+	"case.observation",
+	"ssm.consequence"
+]
 re.expand: []
 	'case',
 	'case.demographic',
 	'case.diagnoses',
 	'case.diagnoses.pathology_details',
 	'case.diagnoses.treatments',
-	'case.exposures',
-	'case.family_histories',
-	'case.observation',
-	'case.observation.input_bam_file',
-	'case.observation.normal_genotype',
-	'case.observation.read_depth',
-	'case.observation.sample',
+	...
 */
-
-// skip these two lines from re.fields[]
-// as primary_site and disease_type are currently loaded from case/ level
-// and these two lines are duplicating and causing err
-const skip_fields_lines = ['case.project.disease_type', 'case.project.primary_site']
 
 // prefix for keys in re._mapping{}
 const mapping_prefix = 'ssm_occurrence_centrics'
+const fs = require('fs')
 
 export async function initDictionary(ds) {
 	const id2term = new Map()
-	const response = await got(endpoint, {
+	// k: term id, string with full path
+	// v: term obj
+
+	const response = await got(apiurl, {
 		method: 'GET',
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
 	})
@@ -78,11 +96,9 @@ export async function initDictionary(ds) {
 	} catch (e) {
 		throw 'invalid JSON from GDC dictionary'
 	}
+
 	if (!re._mapping) throw 'returned data does not have ._mapping'
-	if (!re.fields) throw 'returned data does not have .fields'
 	if (!Array.isArray(re.fields)) throw '.fields not array'
-	if (!re.expand) throw 'returned data does not have .expand'
-	if (!Array.isArray(re.expand)) throw '.expand not array'
 
 	// step 1: add leaf terms
 	let skipLineCount = 0,
@@ -90,143 +106,108 @@ export async function initDictionary(ds) {
 		categoricalCount = 0,
 		integerCount = 0,
 		floatCount = 0,
-		duplicateID = 0
-	for (const term_path_str of re.fields) {
-		if (maySkipLine(term_path_str)) {
+		parentCount = 0
+
+	for (const fieldLine of re.fields) {
+		if (maySkipLine(fieldLine)) {
 			skipLineCount++
 			continue
 		}
 
-		if (skip_fields_lines.includes(term_path_str)) {
-			skipLineCount++
-			continue
-		}
-
-		const term_paths = term_path_str.split('.')
-
-		const term_id = term_paths[term_paths.length - 1]
-		/* TODO id may be duplicating
-		if(id2term.has(term_id)) {
-			term_id = term_paths.join('/')
-		}
+		const termLevels = fieldLine.split('.')
+		/* for term with multiple levels (all terms should have 2 or more levels)
+		create parent term
 		*/
+		for (let i = 1; i < termLevels.length; i++) {
+			const parentId = termLevels.slice(0, i).join('.')
+			const currentId = parentId + '.' + termLevels[i]
 
-		const term_obj = {
-			id: term_id,
-			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
-			path: term_path_str,
-			isleaf: true,
-			parent_id: term_paths[term_paths.length - 2],
-			fields: term_paths.slice(1)
-			//child_types: [] // TODO: may set in the future to support hiding childless parent terms in the tree menu
-		}
-
-		// step 2: add type of leaf terms from _mapping:{}
-		const t_map = re._mapping[mapping_prefix + '.' + term_path_str]
-		if (t_map) {
-			if (t_map.type == 'keyword') {
-				term_obj.type = 'categorical'
-				categoricalCount++
-			} else if (t_map.type == 'long') {
-				term_obj.type = 'integer'
-				integerCount++
-			} else if (t_map.type == 'double') {
-				term_obj.type = 'float'
-				floatCount++
+			// always create an object for currentId
+			// when recording this term in id2term{}, force term id to be lower case
+			// so that findTermByName can work
+			const termObj = {
+				id: currentId.toLowerCase(),
+				name: termLevels[i][0].toUpperCase() + termLevels[i].slice(1).replace('_', ' ')
 			}
-		}
-		if (!term_obj.type) {
-			unknownTermType++
-			continue
-		}
 
-		/*
-		if(id2term.has(term_id)) console.log(term_path_str, id2term.get(term_id).path)
+			if (i == termLevels.length - 1) {
+				// this is a leaf term
+				termObj.isleaf = true
+				// assign type
+				const t = re._mapping[mapping_prefix + '.' + currentId]
+				if (t) {
+					if (t.type == 'keyword') {
+						termObj.type = 'categorical'
+						categoricalCount++
+					} else if (t.type == 'long') {
+						termObj.type = 'integer'
+						integerCount++
+					} else if (t.type == 'double') {
+						termObj.type = 'float'
+						floatCount++
+					}
+				}
 
-		XXX known issue
+				if (!termObj.type) {
+					unknownTermType++
+				}
+			}
 
-		the same leaf level ID can appear at multiple branches, e.g.
-		case.diagnoses.vascular_invasion_type
-		case.diagnoses.pathology_details.vascular_invasion_type
-
-		current id2term Map can only keep one of the two terms
-		no way to keep both
-		*/
-
-		if (id2term.has(term_id)) {
-			duplicateID++
-		} else {
-			id2term.set(term_id, term_obj)
-		}
-	}
-
-	// step 3: add parent  and root terms
-	for (const term_str of re.expand) {
-		if (maySkipLine(term_str)) {
-			continue
-		}
-		const term_levels = term_str.split('.')
-
-		const term_id = term_levels.length == 1 ? term_str : term_levels[term_levels.length - 1]
-		// TODO term_id may already be present in id2term
-
-		const term_obj = {
-			id: term_id,
-			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
-			path: term_str,
-			fields: term_str.split('.').slice(1)
-			// included_types: [] // TODO update term.included_types usage to this method
-			// child_types: [] // TODO: may set in the future to support hiding childless parent terms in the tree menu
-		}
-		if (term_levels.length > 1) term_obj.parent_id = term_levels[term_levels.length - 2]
-		id2term.set(term_id, term_obj)
-	}
-
-	//step 5: remove 'case' term, remove "case" as the first level
-	id2term.delete('case')
-	for (const term of id2term.values()) {
-		if (term.parent_id == 'case') {
-			// this term is a direct child of "case"
-			delete term.parent_id
-
-			// hope later able to move it to "Misc" branch
-			//term.parent_id = 'Miscellaneous'
+			// whether this term has parent
+			if (i == 1) {
+				/* this is a root term, do not add parent_id
+				e.g. case.disease_type, which is a leaf term without a parent
+				as we do not want "case" as a root term
+				thus case.disease_type itself is a root term
+				*/
+			} else {
+				termObj.parent_id = parentId
+			}
+			id2term.set(currentId, termObj)
 		}
 	}
 
-	/* adding Misc branch does not work, as term.path is required
-	id2term.set('Miscellaneous', {
-		id: 'Miscellaneous',
-		name:'Miscellaneous',
-	})
-	*/
+	for (const t of id2term.values()) {
+		if (!t.type) parentCount++
+	}
 
 	console.log(
+		'GDC dictionary:',
 		id2term.size,
-		'variables parsed from GDC dictionary,',
+		'total variables,',
 		skipLineCount,
 		'lines skipped,',
 		unknownTermType,
 		'lines with unknown term type,',
-		categoricalCount,
-		integerCount,
-		floatCount,
-		'categorical/integer/float #terms,',
-		duplicateID,
-		'duplicating terms skipped'
+		'categorical=' + categoricalCount,
+		'integer=' + integerCount,
+		'float=' + floatCount,
+		'parent=' + parentCount
 	)
 
-	// freeze gdc dictionary as it's readonly and must not be changed by treeFilter or other features
+	// id2term is readonly and must not be changed by treeFilter or other features
 	Object.freeze(id2term)
+
 	init_termdb_queries(ds, id2term)
 }
 
 function maySkipLine(line) {
-	if (line.startsWith('ssm') || line.startsWith('case.observation') || line.startsWith('case.available_variation_data'))
-		return true
-	return false
+	return (
+		line.startsWith('ssm') || line.startsWith('case.observation') || line.startsWith('case.available_variation_data')
+	)
 }
 
+/* in order to work with backend /termdb? route,
+add following queries to ds.cohort.termdb.q{}
+as done in server_init_db_queries() of termdb.sql.js
+q.getRootTerms
+q.getTermChildren
+q.findTermByName
+q.getAncestorIDs
+q.getAncestorNames
+q.termjsonByOneid
+q.getSupportedChartTypes
+*/
 function init_termdb_queries(ds, id2term) {
 	const q = (ds.cohort.termdb.q = {})
 
@@ -240,8 +221,9 @@ function init_termdb_queries(ds, id2term) {
 		return terms
 	}
 
-	q.getTermChildren = async (id, vocab, treeFilter = null) => {
+	q.getTermChildren = async (id, cohortValues = null, treeFilter = null) => {
 		// find terms which have term.parent_id as clicked term
+		// cohortValues is in concordance with previous design and does not apply to gdc
 		const terms = []
 		for (const term of id2term.values()) {
 			if (term.parent_id == id) terms.push(JSON.parse(JSON.stringify(term)))
@@ -265,21 +247,31 @@ function init_termdb_queries(ds, id2term) {
 	}
 
 	q.getAncestorIDs = id => {
-		const search_term = id2term.get(id)
-		if (!search_term) return
-		// ancestor terms are already defined in term.path seperated by '.'
-		const re = search_term.path ? search_term.path.split('.') : ['']
-		if (re.length > 1) re.pop() // remove the last element of array which is the query term itself
-		return re
+		if (!id2term.has(id)) return // invalid id
+		/* id is valid term id
+		ancestor terms are already defined in term.path seperated by '.'
+		for case.diagnoses.treatments.state, it should return
+		['case.diagnoses', 'case.diagnoses.treatments']
+		*/
+		const lst = id.split('.')
+		const ancestorIds = []
+		for (let i = 1; i < lst.length; i++) {
+			ancestorIds.push(lst.slice(0, i + 1).join('.'))
+		}
+		return ancestorIds
 	}
 	q.getAncestorNames = q.getAncestorIDs
 
 	q.termjsonByOneid = id => {
-		return JSON.parse(JSON.stringify(id2term.get(id)))
+		const t = id2term.get(id)
+		if (t) return JSON.parse(JSON.stringify(t))
+		return null
 	}
 
 	q.getSupportedChartTypes = () => {
 		// this function is required for server-provided termdbConfig
+		// TODO FIXME if this is needed??
+		console.log('termdb.q.getSupportedChartTypes() called!!!!!!!!!')
 		const supportedChartTypes = {}
 		const numericTypeCount = {}
 		// key: subcohort combinations, comma-joined, as in the subcohort_terms table
@@ -302,12 +294,12 @@ function init_termdb_queries(ds, id2term) {
 			if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].push('boxplot')
 			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].push('scatterplot')
 		}
-
 		return supportedChartTypes
 	}
 
 	async function mayAddSamplecount4treeFilter(terms, treeFilter) {
 		// if tree filter is given, add sample count for each term
+		// FIXME revive this code
 		if (terms.length == 0 || !treeFilter) return
 		let termlst = []
 		for (const term of terms) {

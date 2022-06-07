@@ -42,16 +42,16 @@ async function get_samples(q, ds) {
 		const api = ds.variant2samples.gdcapi
 		const termidlst = q.termidlst ? q.termidlst.split(',') : ds.variant2samples.termidlst
 		// fields[] generated dynamically using gdc_dictionary
-		const fields =
-			q.get == ds.variant2samples.type_sunburst
-				? get_termid2fields(api.fields_sunburst, ds)
-				: q.get == ds.variant2samples.type_summary
-				? get_termid2fields(termidlst, ds)
-				: q.get == ds.variant2samples.type_samples
-				? // fields_samples[] have few extra fields for table view than fields_summary[]
-				  [...api.fields_samples, ...get_termid2fields(termidlst, ds)]
-				: null
-		samples = await getSamples_gdcapi(q, termidlst, fields, ds)
+		let useids = []
+		if (q.get == ds.variant2samples.type_sunburst) {
+			useids = api.termids_sunburst
+		} else if (q.get == ds.variant2samples.type_summary) {
+			useids = termidlst
+		} else if (q.get == ds.variant2samples.type_samples) {
+			// fields_samples[] have few extra fields for table view than fields_summary[]
+			useids = [...api.termids_samples, ...termidlst]
+		}
+		samples = await getSamples_gdcapi(q, useids, ds)
 	} else {
 		throw 'unknown query method for variant2samples'
 	}

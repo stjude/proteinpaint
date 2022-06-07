@@ -10,9 +10,8 @@ GDC API
 validate_variant2sample
 validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
+	getSamples_gdcapi
 	snvindel_byisoform
-	getSamples_byisoform
-		flattenCaseByFields
 validate_query_snvindel_byisoform_2
 validate_query_genecnv
 getSamples_gdcapi
@@ -139,8 +138,8 @@ export function validate_query_snvindel_byisoform(ds) {
 
 	ds.queries.snvindel.byisoform.get = async opts => {
 		/* opts{}
-		.getSamples: true
-		.isoform: str
+		.getSamples= true
+		.isoform= str
 		*/
 
 		/*
@@ -158,7 +157,14 @@ export function validate_query_snvindel_byisoform(ds) {
 		const refseq = mayMapRefseq2ensembl(opts, ds)
 
 		if (opts.getSamples) {
-			return await getSamples_byisoform(api, opts, ds)
+			/* see load_driver() of mds3.load.js
+			to get all samples that harbor a mutation on this isoform
+			opts.termidlst is client-supplied term ids for sample fields
+			must combine with ds.variant2samples.gdcapi.termids_samples[],
+			for getSamples_gdcapi to work
+			*/
+			const idlst = [...opts.termidlst.split(','), ...ds.variant2samples.gdcapi.termids_samples]
+			return await getSamples_gdcapi(opts, idlst, ds)
 		}
 
 		const ssmLst = await snvindel_byisoform(api, opts)
@@ -412,108 +418,25 @@ async function snvindel_byisoform(api, opts) {
 }
 
 /*
-purpuse: query list of samples that harbor a variant 
-api: ds.queries.snvindel
-opts{}
-	.isoform, required
-	.termidlst, optional, comma-joined term ids
-*/
-async function getSamples_byisoform(api, opts, ds) {
-	const headers = getheaders(opts)
-	// only run query2
-
-	// TODO combine opts.termidlst with api.query2.fields4details
-	const fields = [...api.query2.fields4details]
-	let termObjs
-	if (opts.termidlst) {
-		termObjs = []
-		for (const id of opts.termidlst.split(',')) {
-			const t = ds.cohort.termdb.q.termjsonByOneid(id)
-			if (t) {
-				fields.push(t.path)
-				termObjs.push(t)
-			}
-		}
-	}
-
-	const tmp = await got(
-		apihost +
-			api.query2.endpoint +
-			'?size=' +
-			api.query2.size +
-			'&fields=' +
-			fields.join(',') +
-			'&filters=' +
-			encodeURIComponent(JSON.stringify(api.query2.filters(opts))),
-		{ method: 'GET', headers }
-	)
-	let re_cases
-	try {
-		re_cases = JSON.parse(tmp.body)
-	} catch (e) {
-		throw 'invalid JSON returned by GDC'
-	}
-	if (!re_cases.data || !re_cases.data.hits) throw 'query2 did not return .data.hits[]'
-	if (!Array.isArray(re_cases.data.hits)) throw 're.data.hits[] is not array'
-
-	const samples = []
-
-	for (const h of re_cases.data.hits) {
-		if (!h.ssm) throw '.ssm{} missing from a case'
-		if (!h.ssm.ssm_id) throw '.ssm.ssm_id missing from a case'
-		if (!h.case) throw '.case{} missing from a case'
-
-		const sample = {
-			ssm_id: h.ssm.ssm_id
-		}
-		if (termObjs) {
-			flattenCaseByFields(sample, h.case, termObjs)
-		}
-
-		// get printable sample id
-		if (ds.variant2samples.sample_id_key) {
-			sample.sample_id = h.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
-		} else if (ds.variant2samples.sample_id_getter) {
-			sample.tempcase = h.case
-		}
-		sample.case_uuid = h.case.case_id
-
-		samples.push(sample)
-	}
-
-	if (ds.variant2samples.sample_id_getter) {
-		await ds.variant2samples.sample_id_getter(samples, headers)
-	}
-
-	return samples
-}
-
-/*
-examples of terms from termdb as below, note the "fields[]" array
+examples of terms from termdb as below, note the dot-delimited value of term id
 {
-    id: 'disease_type',
+    id: 'case.disease_type',
     name: 'Disease type',
-    path: 'case.disease_type',
     isleaf: true,
-    fields: [ 'disease_type' ],
     type: 'categorical'
 }
 {
-  id: 'race',
+  id: 'case.demographic.race',
   name: 'Race',
-  path: 'case.demographic.race',
   isleaf: true,
   parent_id: 'demographic',
-  fields: [ 'demographic', 'race' ],
   type: 'categorical'
 }
 {
-  id: 'age_at_diagnosis',
+  id: 'case.diagnoses.age_at_diagnosis',
   name: 'Age at diagnosis',
-  path: 'case.diagnoses.age_at_diagnosis',
   isleaf: true,
   parent_id: 'diagnoses',
-  fields: [ 'diagnoses', 'age_at_diagnosis' ],
   type: 'integer'
 }
 
@@ -536,24 +459,23 @@ example of a case returned by api (/ssm_occurrences/ query)
 
 the sample-specific values for terms come in 3 formats:
 
-	term1: disease_type
+	term1: case.disease_type
 	in case{}: disease_type: 'value'
 
-	term2: project_id
+	term2: case.project.project_id
 	in case{}: project: { project_id: 'value' }
 
-	term3: age_at_diagnosis
+	term3: case.diagnoses.age_at_diagnosis
 	in case{}: diagnoses: [ { age_at_diagnosis: int } ]
 
 this function "flattens" latter two to make the sample obj for easier use later
 {
-	disease_type: 'value',
-	project_id: 'value',
-	age_at_diagnosis: int
+	'case.disease_type': 'value',
+	'case.project.project_id': 'value',
+	'case.diagnoses.age_at_diagnosis': int
 }
 
-the flattening is done by "fields[]" array of the term, and some hardcoded logic
-may need to revise later
+the flattening is done by splitting term id, and some hardcoded logic
 */
 function flattenCaseByFields(sample, acase, termObjs) {
 	for (const term of termObjs) {
@@ -562,12 +484,15 @@ function flattenCaseByFields(sample, acase, termObjs) {
 		at one field, use "current" to refer to the previous level in case
 		*/
 		let current = acase
-		for (const [i, field] of term.fields.entries()) {
-			if (i == term.fields.length - 1) {
+		const fields = term.id.split('.')
+		for (let i = 1; i < fields.length; i++) {
+			const field = fields[i]
+			if (i == fields.length - 1) {
 				/* is at the last field
 				simply assign value
 				*/
-				sample[field] = current[field]
+				const samplekey = fields.slice(0, i + 1).join('.')
+				sample[samplekey] = current[field]
 				break
 			}
 			current = current[field]
@@ -642,22 +567,26 @@ export function validate_query_genecnv(ds) {
 }
 
 /* for variant2samples query
-clarify why needs two parameters termidlst[] and fields[]
+q{}
+	.get=str
+	.ssm_id_lst=str, comma-delimited
+	.isoform=str
+	.tid2value={}
+termidlst[]
+	array of term ids to append to "&fields="
+	and to parse out as sample attributes
+ds{}
 */
-export async function getSamples_gdcapi(q, termidlst, fields, ds) {
+export async function getSamples_gdcapi(q, termidlst, ds) {
 	const api = ds.variant2samples.gdcapi
-	if (!fields) throw 'invalid get type of q.get'
 
-	let termObjs
-	if (termidlst) {
-		termObjs = []
-		for (const id of termidlst) {
-			const t = ds.cohort.termdb.q.termjsonByOneid(id)
-			if (t) termObjs.push(t)
-		}
+	const termObjs = []
+	for (const id of termidlst) {
+		const t = ds.cohort.termdb.q.termjsonByOneid(id)
+		if (t) termObjs.push(t)
 	}
 
-	const param = ['size=10000', 'fields=' + fields.join(',')]
+	const param = ['size=10000', 'fields=' + termidlst.join(',')]
 	// no longer paginates
 	//'&size=' + (q.size || api.size) + '&from=' + (q.from || 0)
 

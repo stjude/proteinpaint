@@ -265,12 +265,14 @@ don't know a js method to alter the list of attributes in `case { }` part
 */
 const variant2samplesGdcapi = {
 	endpoint: '/ssm_occurrences',
-	// Note: case.case_id seems extra field just for sunburst,
-	// but it's fail-safe in case both 'disease_type' and 'primary_site' are missing from that case
-	fields_sunburst: ['disease_type', 'primary_site', 'case_id'],
+
+	// Note: must have "case.case_id" for sunburst,
+	// as it's fail-safe in case both 'disease_type' and 'primary_site' are missing from that case
+	termids_sunburst: ['case.disease_type', 'case.primary_site', 'case.case_id'],
+
 	// Note: observation node and children terms are removed from gdc dictionary,
 	// so have to use entire path
-	fields_samples: [
+	termids_samples: [
 		'ssm.ssm_id',
 		'case.case_id',
 		'case.observation.read_depth.t_alt_count',
@@ -278,6 +280,7 @@ const variant2samplesGdcapi = {
 		'case.observation.read_depth.n_depth',
 		'case.observation.sample.tumor_sample_barcode'
 	],
+
 	filters: (p, ds) => {
 		const f = { op: 'and', content: [] }
 		if (p.ssm_id_lst) {
@@ -289,6 +292,7 @@ const variant2samplesGdcapi = {
 				}
 			})
 		} else if (p.isoform) {
+			// note purpose!!
 			f.content.push({
 				op: '=',
 				content: {
@@ -314,19 +318,19 @@ const variant2samplesGdcapi = {
 			f.content.push(p.filter0)
 		}
 		if (p.tid2value) {
-			for (const id in p.tid2value) {
-				const t = ds.cohort.termdb.q.termjsonByOneid(id)
+			for (const termid in p.tid2value) {
+				const t = ds.cohort.termdb.q.termjsonByOneid(termid)
 				if (!t) continue
 				if (t.type == 'categorical') {
 					f.content.push({
 						op: 'in',
-						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[id]] }
+						content: { field: termid, value: [p.tid2value[termid]] }
 					})
 				} else if (t.type == 'integer') {
-					for (const val of p.tid2value[id]) {
+					for (const val of p.tid2value[termid]) {
 						f.content.push({
 							op: val.op,
-							content: { field: 'cases.' + t.fields.join('.'), value: val.range }
+							content: { field: termid, value: val.range }
 						})
 					}
 				}
@@ -360,12 +364,12 @@ function totalsize_filters(p, ds) {
 		f.filters.content.push(p.filter0)
 	}
 	if (p.tid2value) {
-		for (const tid in p.tid2value) {
-			const t = ds.cohort.termdb.q.termjsonByOneid(tid)
+		for (const termid in p.tid2value) {
+			const t = ds.cohort.termdb.q.termjsonByOneid(termid)
 			if (t) {
 				f.filters.content.push({
 					op: 'in',
-					content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+					content: { field: termid, value: [p.tid2value[termid]] }
 				})
 			}
 		}
@@ -466,12 +470,12 @@ function termid2size_filters(p, ds) {
 	}
 
 	if (p && p.tid2value) {
-		for (const tid in p.tid2value) {
-			const t = ds.cohort.termdb.q.termjsonByOneid(tid)
+		for (const termid in p.tid2value) {
+			const t = ds.cohort.termdb.q.termjsonByOneid(termid)
 			if (t) {
 				f.filters.content.push({
 					op: 'in',
-					content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+					content: { field: termid, value: [p.tid2value[termid]] }
 				})
 			}
 		}
@@ -635,9 +639,9 @@ module.exports = {
 	termdb: {
 		termid2totalsize: {
 			// keys are term ids
-			project_id: { gdcapi: project_size },
-			disease_type: { gdcapi: disease_size },
-			primary_site: { gdcapi: site_size }
+			'case.project.project_id': { gdcapi: project_size },
+			'case.disease_type': { gdcapi: disease_size },
+			'case.primary_site': { gdcapi: site_size }
 		},
 		termid2totalsize2: {
 			gdcapi: termidlst2size
@@ -653,11 +657,19 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 
-		// default list of terms to show as sample attributes in details page
-		termidlst: ['disease_type', 'primary_site', 'project_id', 'gender', 'age_at_diagnosis', 'race', 'ethnicity'],
+		// default list of term ids to show as sample attributes in details page
+		termidlst: [
+			'case.disease_type',
+			'case.primary_site',
+			'case.project.project_id',
+			'case.demographic.gender',
+			'case.diagnoses.age_at_diagnosis',
+			'case.demographic.race',
+			'case.demographic.ethnicity'
+		],
 
 		// default list of terms for making sunburst/crosstab summary for cases harboring a term
-		sunburst_ids: ['disease_type', 'primary_site'],
+		sunburst_ids: ['case.disease_type', 'case.primary_site'],
 
 		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
 		sampleHasSsmReadDepth: true, // corresponds to .ssm_read_depth{} of a sample
