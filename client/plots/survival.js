@@ -243,20 +243,27 @@ class TdbSurvival {
 	setTerm2Color(charts) {
 		if (!charts) return
 		const config = this.state.config
-		const values = this.refs.bins[2] || Object.values(config.term2?.term?.values || {})
+		const t2values = copyMerge({}, config.term2?.term?.values || {}, config.term2?.values || {})
+		const values = this.refs.bins[2] || Object.values(t2values)
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		const legendItems = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
 				const v = values.find(v => v.key === series.seriesId || v.name === series.seriesId)
-				this.term2toColor[series.seriesId] = rgb(v?.color || this.colorScale(series.seriesId))
+				const c = {
+					orig: v?.color || this.colorScale(series.seriesId)
+				}
+				c.rgb = rgb(c.orig)
+				c.adjusted = c.rgb.darker().toString()
+				this.term2toColor[series.seriesId] = c
+
 				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
 					legendItems.push({
-						//key: series.seriesId,
+						key: series.seriesId,
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
-						color: this.term2toColor[series.seriesId].darker(),
+						color: this.term2toColor[series.seriesId].adjusted,
 						isHidden: this.settings.hidden.includes(series.seriesId)
 					})
 				}
@@ -268,8 +275,11 @@ class TdbSurvival {
 		}
 		this.legendValues = {}
 		legendItems.forEach((item, i) => {
-			if (!('order' in item)) item.order = i
-			this.legendValues[item.seriesId] = item
+			this.legendValues[item.seriesId] = {
+				seriesId: item.seriesId,
+				order: 'order' in item ? item.order : i,
+				color: this.term2toColor[item.seriesId].orig
+			}
 		})
 		const v = this.state.config.term2?.values
 		if (v) {
@@ -289,7 +299,7 @@ class TdbSurvival {
 			})
 
 			legendItems.forEach((item, i) => {
-				item.order = i
+				this.legendValues[item.seriesId].order = i
 			})
 		}
 
@@ -584,12 +594,12 @@ function setRenderers(self) {
 					{
 						d,
 						text: chart.serieses.find(series => series.seriesId == d.series1).seriesLabel,
-						color: self.term2toColor[d.series1].darker()
+						color: self.term2toColor[d.series1].adjusted
 					},
 					{
 						d,
 						text: chart.serieses.find(series => series.seriesId == d.series2).seriesLabel,
-						color: self.term2toColor[d.series2].darker()
+						color: self.term2toColor[d.series2].adjusted
 					},
 					{ d, text: d.pvalue, color: '#000' }
 				])
@@ -694,7 +704,7 @@ function setRenderers(self) {
 					.y1(c => c.scaledY[2])(series.data)
 			)
 			.style('display', s.ciVisible ? '' : 'none')
-			.style('fill', self.term2toColor[series.seriesId].toString())
+			.style('fill', self.term2toColor[series.seriesId].adjusted)
 			.style('opacity', '0.15')
 			.style('stroke', 'none')
 
@@ -779,12 +789,12 @@ function setRenderers(self) {
 			.style('stroke', s.stroke)
 
 		const seriesName = data[0].seriesName
-		const color = self.term2toColor[data[0].seriesId]
+		const color = self.term2toColor[data[0].seriesId].adjusted
 		if (seriesName == 'survival') {
 			g.append('path')
 				.attr('d', self.lineFxn(lineData))
 				.style('fill', 'none')
-				.style('stroke', color.darker())
+				.style('stroke', color)
 				.style('opacity', 1)
 				.style('stroke-opacity', 1)
 		}
@@ -796,7 +806,7 @@ function setRenderers(self) {
 
 		censored
 			.attr('transform', c => `translate(${c.scaledX},${c.scaledY})`)
-			.style('stroke', color.darker())
+			.style('stroke', color)
 			.style('display', '')
 
 		censored
@@ -807,7 +817,7 @@ function setRenderers(self) {
 			.attr('d', self.symbol)
 			.style('fill', 'transparent')
 			.style('fill-opacity', s.fillOpacity)
-			.style('stroke', color.darker())
+			.style('stroke', color)
 			.style('display', '')
 	}
 
@@ -936,7 +946,7 @@ function setRenderers(self) {
 		sg.each(function(seriesId, i) {
 			const g = select(this)
 				.attr('transform', `translate(0,${(i + 1) * 20})`)
-				.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].darker())
+				.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].adjusted)
 
 			renderAtRiskTick(g.select(':scope>g'), chart, s, seriesId, bySeries[seriesId])
 		})
@@ -947,7 +957,7 @@ function setRenderers(self) {
 				const y = (i + 1) * 20
 				const g = select(this)
 					.attr('transform', `translate(0,${y})`)
-					.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].darker())
+					.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].adjusted)
 
 				const sObj = chart.serieses.find(s => s.seriesId === seriesId)
 				g.append('text')
@@ -1112,24 +1122,58 @@ function setInteractivity(self) {
 				})
 			}
 		})
-		console.log(1116, d.seriesId, d, self.legendValues)
-		const legendIndex = self.legendValues[d.seriesId].order
-		if (legendIndex != 0)
-			options.push({
-				label: 'Move up',
-				callback: d => self.adjustValueOrder(d, -1)
-			})
 
-		if (legendIndex < self.legendData[0]?.items.length - 1)
+		if (self.legendData[0]?.items.length > 1) {
 			options.push({
-				label: 'Move down',
-				callback: d => self.adjustValueOrder(d, 1)
+				label: 'Move',
+				setInput: holder => {
+					const legendIndex = self.legendValues[d.seriesId].order
+					if (legendIndex != 0)
+						holder
+							.append('button')
+							.html('up')
+							.on('click', () => self.adjustValueOrder(d, -1))
+					if (legendIndex < self.legendData[0]?.items.length - 1)
+						holder
+							.append('button')
+							.html('down')
+							.on('click', () => self.adjustValueOrder(d, 1))
+				}
 			})
+		}
 
-		/*options.push({
+		options.push({
 			label: 'Color',
-			callback: d => {}
-		})*/
+			//callback: d => {}
+			setInput: holder => {
+				const input = holder
+					.append('input')
+					.attr('type', 'text')
+					.property('value', self.term2toColor[d.seriesId].adjusted)
+					.style('width', 'fit-content')
+					.on('change', () => {
+						const t2 = self.state.config.term2
+						const values = JSON.parse(JSON.stringify(t2?.values || self.legendValues))
+						if (!values[d.seriesId]) {
+							values[d.seriesId] = copyMerge({}, t2?.term?.values || {})
+						}
+
+						values[d.seriesId].color = rgb(input.property('value')).toString()
+						const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
+						term2.values = values
+
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: {
+								term2
+							}
+						})
+
+						self.app.tip.hide()
+					})
+			}
+		})
 
 		if (!options.length) return
 		self.activeMenu = true
@@ -1142,11 +1186,27 @@ function setInteractivity(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.html(d => d.label)
 			.on('click', c => {
+				if (c.setInput) return
 				self.app.tip.hide()
 				c.callback(d)
 			})
+			.each(function(d) {
+				const div = select(this)
+				if (d.label)
+					div
+						.append('div')
+						.style('display', 'inline-block')
+						.html(d.label)
+				if (d.setInput)
+					d.setInput(
+						div
+							.append('div')
+							.style('display', 'inline-block')
+							.style('margin-left', '10px')
+					)
+			})
+
 		self.app.tip.show(event.clientX, event.clientY)
 	}
 
@@ -1180,6 +1240,8 @@ function setInteractivity(self) {
 				term2
 			}
 		})
+
+		self.app.tip.hide()
 	}
 
 	self.showMenuForSelectedChart = function(d) {
