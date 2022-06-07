@@ -2736,15 +2736,8 @@ async function query_oneread(req, r) {
 
 	if (lst) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
-		const cigar_chars = lst[0].boxes.map(i => i.opr)
-		const cigar_pos = lst[0].boxes.map(i => i.len)
-		let cigar_seq = ''
-		for (i = 0; i < cigar_chars.length; i++) {
-			cigar_seq += cigar_pos[i] + cigar_chars[i]
-		}
 		if (req.query.altseq) {
 			// Uncomment this line to test the single-read alignment in command line
-
 			//console.log(
 			//	'single:' +
 			//		lst[0].seq +
@@ -2753,9 +2746,9 @@ async function query_oneread(req, r) {
 			//		':' +
 			//		req.query.altseq +
 			//		':' +
-			//		cigar_seq +
+			//		lst[0].cigarstr +
 			//		':' +
-			//		lst[0].boxes[0].start +
+			//		lst[0].boxes[0].segstart +
 			//		':' +
 			//		req.query.pos +
 			//		':' +
@@ -2774,7 +2767,7 @@ async function query_oneread(req, r) {
 					':' +
 					req.query.altseq +
 					':' +
-					cigar_seq +
+					lst[0].cigarstr +
 					':' +
 					lst[0].segstart +
 					':' +
