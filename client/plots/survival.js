@@ -8,7 +8,7 @@ import { line, area, curveStepAfter } from 'd3-shape'
 import { rgb } from 'd3-color'
 import htmlLegend from '../dom/html.legend'
 import Partjson from 'partjson'
-import { to_svg } from '../src/client'
+import { to_svg, rgb2hex } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { Menu } from '../dom/menu'
 
@@ -255,7 +255,12 @@ class TdbSurvival {
 					orig: v?.color || this.colorScale(series.seriesId)
 				}
 				c.rgb = rgb(c.orig)
+				// TODO: should not darken term2 value color automatically,
+				// can set value[seriesId] = {order, color, colorAdjustment: 'darker'}
+				// and once automatic darkening is disabled + for legacy support of saved views,
+				// can declare colorAdjustment in the dataset js file
 				c.adjusted = c.rgb.darker().toString()
+				c.hex = rgb2hex(c.adjusted)
 				this.term2toColor[series.seriesId] = c
 
 				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
@@ -1148,9 +1153,9 @@ function setInteractivity(self) {
 			setInput: holder => {
 				const input = holder
 					.append('input')
-					.attr('type', 'text')
-					.property('value', self.term2toColor[d.seriesId].adjusted)
-					.style('width', 'fit-content')
+					.attr('type', 'color')
+					.attr('value', self.term2toColor[d.seriesId].hex)
+					//.style('width', 'fit-content')
 					.on('change', () => {
 						const t2 = self.state.config.term2
 						const values = JSON.parse(JSON.stringify(t2?.values || self.legendValues))
