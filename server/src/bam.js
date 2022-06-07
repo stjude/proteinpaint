@@ -1638,7 +1638,11 @@ function parse_one_segment(arg, q) {
 				// deletion or skipped region, must have at least one end within region
 				// cannot use max(starts)<min(stops)
 				// if both ends are outside of region e.g. intron-spanning rna read, will not include
-				if ((pos >= r.start && pos <= r.stop) || (pos + len - 1 >= r.start && pos + len - 1 <= r.stop)) {
+				if (
+					(pos >= r.start && pos <= r.stop) ||
+					(pos + len - 1 >= r.start && pos + len - 1 <= r.stop) ||
+					keepallboxes
+				) {
 					segment.boxes.push({
 						opr: cigar,
 						start: pos,
