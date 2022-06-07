@@ -255,11 +255,7 @@ class TdbSurvival {
 					orig: v?.color || this.colorScale(series.seriesId)
 				}
 				c.rgb = rgb(c.orig)
-				// TODO: should not darken term2 value color automatically,
-				// can set value[seriesId] = {order, color, colorAdjustment: 'darker'}
-				// and once automatic darkening is disabled + for legacy support of saved views,
-				// can declare colorAdjustment in the dataset js file
-				c.adjusted = c.rgb.darker().toString()
+				c.adjusted = c.rgb.toString()
 				c.hex = rgb2hex(c.adjusted)
 				this.term2toColor[series.seriesId] = c
 
@@ -1148,35 +1144,43 @@ function setInteractivity(self) {
 		}
 
 		options.push({
-			label: 'Color',
+			//label: 'Color',
 			//callback: d => {}
 			setInput: holder => {
-				const input = holder
+				const label = holder.append('label')
+				label
+					.append('span')
+					.style('vertical-align', 'middle')
+					.style('line-height', '25px')
+					.html('Edit color ')
+				const input = label
 					.append('input')
 					.attr('type', 'color')
 					.attr('value', self.term2toColor[d.seriesId].hex)
-					//.style('width', 'fit-content')
-					.on('change', () => {
-						const t2 = self.state.config.term2
-						const values = JSON.parse(JSON.stringify(t2?.values || self.legendValues))
-						if (!values[d.seriesId]) {
-							values[d.seriesId] = copyMerge({}, t2?.term?.values || {})
-						}
+					.style('vertical-align', 'top')
+					.on('change', () => self.adjustColor(input.property('value'), d))
 
-						values[d.seriesId].color = rgb(input.property('value')).toString()
-						const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
-						term2.values = values
+				holder
+					.append('span')
+					.style('vertical-align', 'middle')
+					.style('line-height', '25px')
+					.html(' OR ')
 
-						self.app.dispatch({
-							type: 'plot_edit',
-							id: self.id,
-							config: {
-								term2
-							}
-						})
+				holder
+					.append('button')
+					.style('margin-left', '5px')
+					.style('background-color', self.term2toColor[d.seriesId].rgb.darker())
+					.style('vertical-align', 'top')
+					.html('darken')
+					.on('click', () => self.adjustColor(input.property('value'), d, 'darker'))
 
-						self.app.tip.hide()
-					})
+				holder
+					.append('button')
+					.style('margin-left', '5px')
+					.style('background-color', self.term2toColor[d.seriesId].rgb.brighter())
+					.style('vertical-align', 'top')
+					.html('brighten')
+					.on('click', () => self.adjustColor(input.property('value'), d, 'brighter'))
 			}
 		})
 
@@ -1238,6 +1242,26 @@ function setInteractivity(self) {
 		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
 		term2.values = values
 
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				term2
+			}
+		})
+
+		self.app.tip.hide()
+	}
+
+	self.adjustColor = (value, d, adjust = '') => {
+		if (adjust && adjust != 'darker' && adjust != 'brighter') throw 'invalid color adjustment option'
+		const t2 = self.state.config.term2
+		const values = JSON.parse(JSON.stringify(t2?.values || self.legendValues))
+		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
+		term2.values = values
+		const color = rgb(value)
+		const adjustedColor = !adjust ? color : adjust == 'darker' ? color.darker() : color.brighter()
+		values[d.seriesId].color = adjustedColor.toString()
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
