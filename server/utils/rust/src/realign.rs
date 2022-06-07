@@ -1410,8 +1410,12 @@ pub fn determine_start_stop_indel_region_in_read(
     let r_seq_ref_vec: Vec<_> = r_seq_ref.chars().collect();
     let mut num_matches_alt = 0;
     let mut num_matches_ref = 0;
-    let mut correctly_aligned_nclt_in_right =
+    // Please keep correctly_aligned_nclt_in_right_alt and correctly_aligned_nclt_in_right_ref separate because they may be different when there are gaps outside the variant region
+    let mut correctly_aligned_nclt_in_right_alt =
         correct_end_position - variant_pos - ref_length as i64;
+    let mut correctly_aligned_nclt_in_right_ref =
+        correct_end_position - variant_pos - ref_length as i64;
+
     if alignment_side == "left".to_string() {
         red_region_start_alt = (variant_pos - correct_start_position).abs();
         red_region_start_ref = (variant_pos - correct_start_position).abs();
@@ -1447,38 +1451,40 @@ pub fn determine_start_stop_indel_region_in_read(
         }
     } else if alignment_side == "right".to_string() {
         // Check if there are any gaps in the query sequence between end of alignment and end of variant sequence
-        for i in (q_seq_alt.len() - correctly_aligned_nclt_in_right as usize..q_seq_alt.len()).rev()
+        for i in
+            (q_seq_alt.len() - correctly_aligned_nclt_in_right_alt as usize..q_seq_alt.len()).rev()
         {
             if i < q_seq_alt_vec.len() {
                 if q_seq_alt_vec[i] != '-' {
                     num_matches_alt += 1;
                 }
                 //else if q_seq_alt_vec[i] == '-'
-                //    && i > q_seq_alt.len() - correctly_aligned_nclt_in_right as usize
+                //    && i > q_seq_alt.len() - correctly_aligned_nclt_in_right_alt as usize
                 //{
                 //    num_matches_alt = 0;
                 //}
                 else if q_seq_alt_vec[i] == '-' && num_matches_alt < trust_match_cutoff {
-                    correctly_aligned_nclt_in_right += 1;
+                    correctly_aligned_nclt_in_right_alt += 1;
                     //println!("Alt_space");
                 }
             } else {
                 break;
             }
         }
-        for i in (q_seq_ref.len() - correctly_aligned_nclt_in_right as usize..q_seq_ref.len()).rev()
+        for i in
+            (q_seq_ref.len() - correctly_aligned_nclt_in_right_ref as usize..q_seq_ref.len()).rev()
         {
             if i < q_seq_ref_vec.len() {
                 if q_seq_ref_vec[i] != '-' {
                     num_matches_ref += 1;
                 }
                 //else if q_seq_ref_vec[i] == '-'
-                //    && i > q_seq_ref.len() - correctly_aligned_nclt_in_right as usize
+                //    && i > q_seq_ref.len() - correctly_aligned_nclt_in_right_ref as usize
                 //{
                 //    num_matches_ref = 0;
                 //}
                 else if q_seq_ref_vec[i] == '-' && num_matches_ref < trust_match_cutoff {
-                    correctly_aligned_nclt_in_right += 1;
+                    correctly_aligned_nclt_in_right_ref += 1;
                     //println!("Ref_space");
                 }
             } else {
@@ -1487,20 +1493,25 @@ pub fn determine_start_stop_indel_region_in_read(
         }
 
         //println!(
-        //    "correctly_aligned_nclt_in_right:{}",
-        //    correctly_aligned_nclt_in_right
+        //    "correctly_aligned_nclt_in_right_alt:{}",
+        //    correctly_aligned_nclt_in_right_alt
         //);
+        //println!(
+        //    "correctly_aligned_nclt_in_right_ref:{}",
+        //    correctly_aligned_nclt_in_right_ref
+        //);
+
         red_region_start_alt =
-            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - alt_length as i64;
+            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt - alt_length as i64;
         red_region_start_ref =
-            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - ref_length as i64;
-        red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right;
-        red_region_stop_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right;
+            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref - ref_length as i64;
+        red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt;
+        red_region_stop_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref;
 
         // Left-aligning the start/stop so that when read alignment is displayed there is consistency between left and right-aligned reads
         if alt_length > ref_length {
             let red_region_start_ref_left_aligned =
-                q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - alt_length as i64;
+                q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref - alt_length as i64;
             let mut is_complete_insertion = true; // Check if there the ref alignment has a gap arounbd the variant region
             for i in red_region_start_ref_left_aligned + 1..red_region_start_ref {
                 if (i as usize) < r_seq_ref_vec.len() {
@@ -1517,7 +1528,7 @@ pub fn determine_start_stop_indel_region_in_read(
             }
         } else if ref_length > alt_length {
             let red_region_start_alt_left_aligned =
-                q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - ref_length as i64;
+                q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt - ref_length as i64;
             let mut is_complete_insertion = true; // Check if there the ref alignment has a gap arounbd the variant region
             for i in red_region_start_alt_left_aligned + 1..red_region_start_alt {
                 if (i as usize) < r_seq_alt_vec.len() {
@@ -1542,7 +1553,7 @@ pub fn determine_start_stop_indel_region_in_read(
         //println!("red_disp_region_start_alt:{}", red_region_start_alt);
         //println!("red_disp_region_stop_alt:{}", red_region_stop_alt);
         //if ref_length > alt_length {
-        //    red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right;
+        //    red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt;
         //} else {
         //    red_region_stop_alt = (red_region_start_alt.abs() - alt_length as i64).abs();
         //}
@@ -1577,7 +1588,9 @@ pub fn determine_start_stop_indel_region_in_read(
             || red_region_start_ref >= q_seq_ref.len() as i64)
     {
         // In case of reads with very poor alignment but left-aligned, the start site of read may be greater than the length of the alignment in such case, try right-aligning the reads
-        let correctly_aligned_nclt_in_right =
+        let correctly_aligned_nclt_in_right_alt =
+            correct_end_position - variant_pos - ref_length as i64;
+        let correctly_aligned_nclt_in_right_ref =
             correct_end_position - variant_pos - ref_length as i64;
         //println!(
         //    "correctly_aligned_nclt_in_right:{}",
@@ -1585,16 +1598,16 @@ pub fn determine_start_stop_indel_region_in_read(
         //);
         //println!("Was originally left-aligned but start position was higher than alignment length, so attempted to right-align");
         red_region_start_alt =
-            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - alt_length as i64;
+            q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt - alt_length as i64;
         red_region_start_ref =
-            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - ref_length as i64;
-        red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right;
-        red_region_stop_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right;
+            q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref - ref_length as i64;
+        red_region_stop_alt = q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt;
+        red_region_stop_ref = q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref;
 
         // Left-aligning the start/stop so that when read alignment is displayed there is consistency between left and right-aligned reads
         if alt_length > ref_length {
             let red_region_start_ref_left_aligned =
-                q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - alt_length as i64;
+                q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right_alt - alt_length as i64;
             let mut is_complete_insertion = true; // Check if there the ref alignment has a gap arounbd the variant region
             for i in red_region_start_ref_left_aligned + 1..red_region_start_ref {
                 if (i as usize) < r_seq_ref_vec.len() {
@@ -1611,7 +1624,7 @@ pub fn determine_start_stop_indel_region_in_read(
             }
         } else if ref_length > alt_length {
             let red_region_start_alt_left_aligned =
-                q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - ref_length as i64;
+                q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right_ref - ref_length as i64;
             let mut is_complete_insertion = true; // Check if there the ref alignment has a gap arounbd the variant region
             for i in red_region_start_alt_left_aligned + 1..red_region_start_alt {
                 if (i as usize) < r_seq_alt_vec.len() {
