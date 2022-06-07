@@ -1490,10 +1490,6 @@ pub fn determine_start_stop_indel_region_in_read(
         //    "correctly_aligned_nclt_in_right:{}",
         //    correctly_aligned_nclt_in_right
         //);
-        //println!(
-        //    "correctly_aligned_nclt_in_right:{}",
-        //    correctly_aligned_nclt_in_right
-        //);
         red_region_start_alt =
             q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - alt_length as i64;
         red_region_start_ref =
@@ -1504,7 +1500,7 @@ pub fn determine_start_stop_indel_region_in_read(
         // Left-aligning the start/stop so that when read alignment is displayed there is consistency between left and right-aligned reads
         if alt_length > ref_length {
             let red_region_start_ref_left_aligned =
-                q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - alt_length as i64;
+                q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - alt_length as i64;
             let mut is_complete_insertion = true; // Check if there the ref alignment has a gap arounbd the variant region
             for i in red_region_start_ref_left_aligned + 1..red_region_start_ref {
                 if (i as usize) < r_seq_ref_vec.len() {
@@ -1521,7 +1517,7 @@ pub fn determine_start_stop_indel_region_in_read(
             }
         } else if ref_length > alt_length {
             let red_region_start_alt_left_aligned =
-                q_seq_ref.len() as i64 - correctly_aligned_nclt_in_right - ref_length as i64;
+                q_seq_alt.len() as i64 - correctly_aligned_nclt_in_right - ref_length as i64;
             let mut is_complete_insertion = true; // Check if there the ref alignment has a gap arounbd the variant region
             for i in red_region_start_alt_left_aligned + 1..red_region_start_alt {
                 if (i as usize) < r_seq_alt_vec.len() {
