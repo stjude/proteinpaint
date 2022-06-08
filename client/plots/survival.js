@@ -258,7 +258,7 @@ class TdbSurvival {
 		if (!charts) return
 		const config = this.state.config
 		const t2values = copyMerge({}, config.term2?.term?.values || {}, config.term2?.values || {})
-		const values = this.refs.bins[2] || Object.values(t2values)
+		const values = (this.refs.bins[2] && [this.refs.bins[2]]) || Object.values(t2values)
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		const legendItems = []
