@@ -9,6 +9,7 @@ GDC API
 ****************** EXPORTED
 validate_variant2sample
 validate_query_snvindel_byrange
+	makeSampleObj
 validate_query_snvindel_byisoform
 	getSamples_gdcapi
 	snvindel_byisoform
@@ -29,7 +30,6 @@ handle_gdc_ssms
 **************** internal
 mayMapRefseq2ensembl
 may_add_readdepth
-makeSampleObj
 */
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -157,7 +157,8 @@ export function validate_query_snvindel_byisoform(ds) {
 		const refseq = mayMapRefseq2ensembl(opts, ds)
 
 		if (opts.getSamples) {
-			/* see load_driver() of mds3.load.js
+			/* exit
+			see load_driver() of mds3.load.js
 			to get all samples that harbor a mutation on this isoform
 			opts.termidlst is client-supplied term ids for sample fields
 			must combine with ds.variant2samples.gdcapi.termids_samples[],
@@ -183,9 +184,10 @@ export function validate_query_snvindel_byisoform(ds) {
 			snvindel_addclass(m, ssm.consequence)
 			m.samples = []
 			for (const c of ssm.cases) {
-				//const sample = makeSampleObj(c, ds)
-				//sample.sample_id = c.case_id
-				// make simple sample obj for counting
+				/* make simple sample obj for counting, with sample_id
+				only returns total number of unique cases to client
+				thus do not convert uuid to sample id for significant time-saving
+				*/
 				m.samples.push({ sample_id: c.case_id })
 			}
 			mlst.push(m)
@@ -472,7 +474,7 @@ this function "flattens" latter two to make the sample obj for easier use later
 {
 	'case.disease_type': 'value',
 	'case.project.project_id': 'value',
-	'case.diagnoses.age_at_diagnosis': int
+	'case.diagnoses.age_at_diagnosis': [ int ]
 }
 
 the flattening is done by splitting term id, and some hardcoded logic

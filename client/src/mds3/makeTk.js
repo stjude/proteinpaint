@@ -293,6 +293,10 @@ async function init_termdb(tk, block) {
 		const _ = await import('../../termdb/vocabulary')
 		tdb.vocabApi = _.vocabInit(arg)
 	}
+
+	if (tk.mds.termdb.allowCaseDetails) {
+		tk.mds.termdb.allowCaseDetails.get = async acase => {}
+	}
 }
 
 function mayaddGetter_m2csq(tk, block) {

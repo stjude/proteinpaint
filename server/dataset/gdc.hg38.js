@@ -648,6 +648,11 @@ module.exports = {
 			// runs termdb.gdc.js to init gdc dictionary
 			// create standard helpers at ds.cohort.termdb.q{}
 			gdcapi: true
+		},
+		// quick fix
+		allowCaseDetails: {
+			sample_id_key: 'case_uuid',
+			terms: ['case.diagnoses']
 		}
 	},
 

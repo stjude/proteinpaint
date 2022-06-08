@@ -128,6 +128,12 @@ async function make_singleSampleTable(arg) {
 			.style('opacity', 0.5)
 			.style('text-overflow', 'ellipsis')
 	}
+
+	// quick fix for accessing details of a single case
+	if (arg.tk.mds.termdb && arg.tk.mds.termdb.allowCaseDetails) {
+		// has one single case
+		arg.div.append('div').text('Case details')
+	}
 }
 
 function printSampleName(sample, tk, div) {

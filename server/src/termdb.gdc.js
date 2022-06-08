@@ -53,6 +53,8 @@ re.fields: []
 	'case.demographic.days_to_birth',
 	'case.demographic.days_to_death',
 	'case.demographic.demographic_id',
+	'case.disease_type'
+	'case.project.disease_type',
 	...
 
 	SKIPPED:
@@ -106,6 +108,7 @@ re.expand: []
 
 // prefix for keys in re._mapping{}
 const mapping_prefix = 'ssm_occurrence_centrics'
+const fs = require('fs')
 
 //
 
@@ -127,6 +130,8 @@ export async function initGDCdictionary(ds) {
 
 	if (!re._mapping) throw 'returned data does not have ._mapping'
 	if (!Array.isArray(re.fields)) throw '.fields not array'
+	if (!Array.isArray(re.nested)) throw '.nested not array'
+	const nestedSet = new Set(re.nested)
 
 	// step 1: add leaf terms
 	let skipLineCount = 0,
@@ -143,8 +148,14 @@ export async function initGDCdictionary(ds) {
 		}
 
 		const termLevels = fieldLine.split('.')
+
 		/* for term with multiple levels (all terms should have 2 or more levels)
 		create parent term
+		e.g. for ['case','demographic','age_at_index']
+		make two terms, first one is root:
+			{id:'case.demographic',name:''}
+		second one is leaf under this root:
+			{id:'case.demographic.age_at_index', parent_id:'case.demographic', type:'float', ...}
 		*/
 		for (let i = 1; i < termLevels.length; i++) {
 			const parentId = termLevels.slice(0, i).join('.')
@@ -191,6 +202,12 @@ export async function initGDCdictionary(ds) {
 			} else {
 				termObj.parent_id = parentId
 			}
+
+			// if nested
+			if (nestedSet.has(currentId)) {
+				termObj.isObjectList = true
+			}
+
 			id2term.set(currentId, termObj)
 		}
 	}

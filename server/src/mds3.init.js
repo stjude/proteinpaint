@@ -35,6 +35,11 @@ export function client_copy(ds) {
 		// if using flat list of terms, do not send terms[] to client
 		// as this is official ds, and client will create vocabApi
 		// to query /termdb server route with standard methods
+		if (ds.termdb.allowCaseDetails) {
+			ds2.termdb.allowCaseDetails = {
+				sample_id_key: ds.termdb.allowCaseDetails.sample_id_key // optional key
+			}
+		}
 	}
 	if (ds.queries.snvindel) {
 		ds2.has_skewer = true
