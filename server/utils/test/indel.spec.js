@@ -1,6 +1,7 @@
 const tape = require('tape')
 const path = require('path')
 const spawn = require('child_process').spawn
+const serverconfig = require('../../src/serverconfig')
 const Readable = require('stream').Readable
 const additionalExamples = require('./indel.examples')
 //const utils = require('../../src/utils')
@@ -1772,7 +1773,7 @@ const examples = [
 function run_rust(binfile, input_data) {
 	//console.log('input_data:', input_data)
 	return new Promise((resolve, reject) => {
-		const binpath = path.join('../../../server/utils/rust/target/release/', binfile)
+		const binpath = path.join(serverconfig.binpath, '/utils/rust/target/release/', binfile)
 		const ps = spawn(binpath)
 		const stdout = []
 		const stderr = []
