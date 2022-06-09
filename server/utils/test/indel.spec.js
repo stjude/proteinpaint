@@ -75,11 +75,15 @@ tape('\n', function(test) {
 })
 
 tape('rust indel binary', async function(test) {
-	const strictness_values = [0, 1] // Array containing the possible number of strictness values
+	const strictness_values = [0, 1] // Array containing the possible number of strictness values. This array structure is better than hardcoding, because number of strictness values may change later.
 	for (const strictness of strictness_values) {
 		console.log('Testing with strictness=', strictness)
 		for (const e of examples) {
-			await runTest(e, test, strictness)
+			try {
+				await runTest(e, test, strictness)
+			} catch (err) {
+				test.fail('unexpected test error? ' + err)
+			}
 		}
 	}
 	test.end()
