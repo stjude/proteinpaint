@@ -70,7 +70,7 @@ async function make_sunburst(samples, ds, q) {
 
 async function make_summary(samples, ds, q) {
 	const entries = []
-	const termidlst = q.termidlst ? q.termidlst.split(',') : ds.variant2samples.termidlst
+	const termidlst = q.termidlst.split(',')
 	for (const termid of termidlst) {
 		const term = ds.cohort.termdb.q.termjsonByOneid(termid)
 		if (!term) continue

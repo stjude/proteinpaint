@@ -273,7 +273,6 @@ function makeSampleObj(c, ds) {
 			{
 				const t = ds.cohort.termdb.q.termjsonByOneid(i.label1)
 				if (t) {
-					console.log(t)
 					sample[i.label1] = c[t.fields[0]]
 					for (let j = 1; j < t.fields.length; j++) {
 						if (sample[i.label1]) sample[i.label1] = sample[i.label1][t.fields[j]]
@@ -734,9 +733,29 @@ export async function get_cohortTotal(api, ds, q) {
 	return { v2count, combination: q._combination }
 }
 
+/*
+purpose
+args{}
+
+*/
 export async function get_termlst2size(args) {
-	const { api, ds, termlst, q, treeFilter } = args
-	const query = api.query(termlst)
+	const { api, ds, termidlst, q, treeFilter } = args
+
+	// convert each term id to {path}
+	// required for termid2size_query() of gdc.hg38.js
+	const terms = []
+	for (const id of termidlst) {
+		const t = ds.cohort.termdb.q.termjsonByOneid(id)
+		if (t) {
+			terms.push({
+				termid: id,
+				path: id.replace('case.', '').replace(/\./g, '__'),
+				type: t.type
+			})
+		}
+	}
+
+	const query = api.query(terms)
 	const filter = api.filters(treeFilter, ds)
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
@@ -759,7 +778,7 @@ export async function get_termlst2size(args) {
 				' and filter: ' +
 				filter
 	}
-	for (const term of termlst) {
+	for (const term of terms) {
 		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets']))
 			throw api.keys.join('.') + ' not array for query :' + query + ' and filter: ' + filter
 		if ((term.type == 'integer' || term.type == 'float') && typeof h[term.path]['stats'] != 'object') {
@@ -768,19 +787,17 @@ export async function get_termlst2size(args) {
 	}
 	// return total size here attached to entires
 	const tv2counts = new Map()
-	for (const term of termlst) {
+	for (const term of terms) {
 		if (term.type == 'categorical') {
 			const buckets = h[term.path]['buckets']
 			let values = []
 			for (const bucket of buckets) {
 				values.push([bucket.key.replace('.', '__'), bucket.doc_count])
 			}
-			const term_id = term.path.split('__').length > 1 ? term.path.split('__').pop() : term.path
-			tv2counts.set(term_id, values)
+			tv2counts.set(term.termid, values)
 		} else if (term.type == 'integer' || term.type == 'float') {
 			const count = h[term.path]['stats']['count']
-			const term_id = term.path.split('__').length > 1 ? term.path.split('__').pop() : term.path
-			tv2counts.set(term_id, { total: count })
+			tv2counts.set(term.termid, { total: count })
 		}
 	}
 	return tv2counts

@@ -346,7 +346,9 @@ function mayaddGetter_variant2samples(tk, block) {
 			}
 			throw 'unknown querytype'
 		}
+
 		// TODO auto generate variant2samples.termidlst[] based on sample data
+
 		tk.mds.getSamples = () => {
 			const id2sample = new Map()
 			for (const m of tk.custom_variants) {
@@ -414,6 +416,8 @@ function mayaddGetter_variant2samples(tk, block) {
 			par.push('termidlst=' + tk.mds.variant2samples.sunburst_ids)
 		} else if (arg.querytype == tk.mds.variant2samples.type_samples) {
 			par.push('termidlst=' + tk.mds.variant2samples.termidlst) // if missing?
+		} else if (arg.querytype == tk.mds.variant2samples.type_summary) {
+			par.push('termidlst=' + tk.mds.variant2samples.termidlst) // if missing?
 		} else {
 			throw 'unknown querytype'
 		}
@@ -424,10 +428,18 @@ function mayaddGetter_variant2samples(tk, block) {
 		return data.variant2samples
 	}
 
-	tk.mds.getSamples = async () => {
-		const arg = {
-			querytype: tk.mds.variant2samples.type_samples,
-			listSamples: 1
+	/* purpose: 
+	if isSummary is true,
+	*/
+	tk.mds.getSamples = async isSummary => {
+		const arg = {}
+		if (isSummary) {
+			arg.querytype = tk.mds.variant2samples.type_summary
+		} else {
+			// must be calling from "List" option of #case menu
+			arg.querytype = tk.mds.variant2samples.type_samples
+			// supply this flag so server will group ssm by case
+			arg.listSamples = 1
 		}
 		rangequery_rglst(tk, block, arg)
 		return await tk.mds.variant2samples.get(arg)

@@ -114,17 +114,8 @@ async function validate_termdb(ds) {
 		// add getter
 		tdb.termid2totalsize2.get = async (termidlst, entries, q) => {
 			// termidlst is from clientside
-			let termlst = []
-			for (const termid of termidlst) {
-				const term = ds.cohort.termdb.q.termjsonByOneid(termid)
-				if (term)
-					termlst.push({
-						path: term.path.replace('case.', '').replace(/\./g, '__'),
-						type: term.type
-					})
-			}
 			if (tdb.termid2totalsize2.gdcapi) {
-				const tv2counts = await gdc.get_termlst2size({ api: tdb.termid2totalsize2.gdcapi, ds, termlst, q })
+				const tv2counts = await gdc.get_termlst2size({ api: tdb.termid2totalsize2.gdcapi, ds, termidlst, q })
 				for (const termid of termidlst) {
 					const term = ds.cohort.termdb.q.termjsonByOneid(termid)
 					const entry = entries.find(e => e.name == term.name)

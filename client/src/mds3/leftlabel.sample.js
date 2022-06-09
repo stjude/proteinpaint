@@ -1,17 +1,41 @@
 import { event as d3event } from 'd3-selection'
 import { makelabel } from './leftlabel'
 
-export function makeSampleLabel(data, tk, block, laby) {
+export async function makeSampleLabel(data, tk, block, laby) {
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
 	if (!tk.leftlabels.doms.samples) {
 		tk.leftlabels.doms.samples = makelabel(tk, block, laby)
 	}
+
 	tk.leftlabels.doms.samples
 		.text(`${data.sampleTotalNumber} case${data.sampleTotalNumber > 1 ? 's' : ''}`)
 		.on('click', () => {
 			tk.menutip.clear().showunder(d3event.target)
+
+			mayShowSummary(data, tk, block)
+
 			menu_samples(data, tk, block)
 		})
+}
+
+function mayShowSummary(data, tk, block) {
+	if (!tk.mds.variant2samples.termidlst) {
+		// no terms to summarize for
+		return
+	}
+	return
+	// function is not async to display "wait" and not to block showing other menu options
+	const wait = tk.menutip.d
+		.append('div')
+		.text('Loading...')
+		.style('margin', '10px')
+
+	tk.mds
+		.getSamples(true)
+		.then(data => {
+			console.log(data)
+		})
+		.catch(e => {})
 }
 
 function menu_samples(data, tk, block) {

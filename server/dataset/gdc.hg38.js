@@ -438,7 +438,10 @@ const site_size = {
 }
 
 function termid2size_query(termlst) {
-	console.log(termlst)
+	/* each term {type, path, termid}
+	path is converted from term id "project__project_id"
+	required for graphql
+	*/
 	let query_str = ''
 	for (const term of termlst) {
 		const key = term.path
@@ -671,8 +674,8 @@ module.exports = {
 			'case.primary_site',
 			'case.project.project_id',
 			'case.demographic.gender',
-			'case.diagnoses.age_at_diagnosis',
-			'case.diagnoses.treatments.therapeutic_agents',
+			//'case.diagnoses.age_at_diagnosis',
+			//'case.diagnoses.treatments.therapeutic_agents',
 			'case.demographic.race',
 			'case.demographic.ethnicity'
 		],

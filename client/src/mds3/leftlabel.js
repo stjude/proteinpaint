@@ -33,7 +33,8 @@ export async function make_leftlabels(data, tk, block) {
 
 	if ('sampleTotalNumber' in data) {
 		// only make sample label when there's sample count
-		;(await import('./leftlabel.sample')).makeSampleLabel(data, tk, block, laby)
+		const _ = await import('./leftlabel.sample')
+		_.makeSampleLabel(data, tk, block, laby)
 		if (tk.leftlabels.doms.samples) laby += labyspace + block.labelfontsize // later delete if
 	}
 
