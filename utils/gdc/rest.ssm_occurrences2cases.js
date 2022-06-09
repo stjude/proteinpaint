@@ -9,7 +9,13 @@ for (let i = 2; i < process.argv.length; i++) {
 
 if (!p.isoform) p.isoform = 'ENST00000407796' // AKT1
 
-const fields = ['ssm.ssm_id', 'case.case_id', 'case.diagnoses.age_at_diagnosis']
+const fields = [
+	'ssm.ssm_id',
+	'case.case_id',
+	'case.diagnoses.age_at_diagnosis',
+	'case.diagnoses.treatments.therapeutic_agents'
+]
+// add 'case.diagnoses' to fields won't return diagnoses count
 
 const filters = {
 	op: 'and',

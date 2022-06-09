@@ -445,7 +445,7 @@ examples of terms from termdb as below, note the dot-delimited value of term id
 
 example of a case returned by api (/ssm_occurrences/ query)
 
-{
+case {
   primary_site: 'Hematopoietic and reticuloendothelial systems',
   disease_type: 'Plasma Cell Tumors',
   observation: [ { sample: [Object] }, { sample: [Object] } ],
@@ -470,7 +470,7 @@ the sample-specific values for terms come in 3 formats:
 	term3: case.diagnoses.age_at_diagnosis
 	in case{}: diagnoses: [ { age_at_diagnosis: int } ]
 
-this function "flattens" latter two to make the sample obj for easier use later
+this function "flattens" case{} to make the sample obj for easier use later
 {
 	'case.disease_type': 'value',
 	'case.project.project_id': 'value',
@@ -479,34 +479,69 @@ this function "flattens" latter two to make the sample obj for easier use later
 
 the flattening is done by splitting term id, and some hardcoded logic
 */
-function flattenCaseByFields(sample, acase, termObjs) {
-	for (const term of termObjs) {
-		/* flatten the case{} using fields array of this term
-		when there are multiple fields (hierarchical),
-		at one field, use "current" to refer to the previous level in case
-		*/
-		let current = acase
-		const fields = term.id.split('.')
-		for (let i = 1; i < fields.length; i++) {
-			const field = fields[i]
-			if (i == fields.length - 1) {
-				/* is at the last field
-				simply assign value
-				*/
-				const samplekey = fields.slice(0, i + 1).join('.')
-				sample[samplekey] = current[field]
-				break
-			}
-			current = current[field]
-			if (Array.isArray(current)) {
-				//if(current.length>1) console.log(sample.case_uuid,current)
-				current = current[0]
-			}
-			if (!current) {
-				// missing level
-				break
-			}
+function flattenCaseByFields(sample, caseObj, term) {
+	const fields = term.id.split('.')
+
+	query(caseObj, 1)
+	/* start with caseObj as "current" root
+	i=1 as fields[0]='case', and caseObj is already the "case", so start from i=1
+	*/
+
+	// done searching; if available, a new value is now assigned to sample[term.id]
+	// if value is a Set, convert to array
+	// hardcoded to use set to dedup values (e.g. chemo drug from multiple treatments)
+	if (sample[term.id] instanceof Set) {
+		sample[term.id] = [...sample[term.id]]
+	}
+
+	/* query()
+	e.g. "case.AA.BB.CC"
+	begin with query( case{}, 1 )
+		--> found case.AA{}
+		query( AA{}, 2 )
+			--> found AA.BB{}
+			query( BB{}, 3)
+				--> found BB.CC, assign BB.CC to sample[case.AA.BB.CC]
+
+	e.g. "case.diagnoses.age_at_diagnosis"
+	begin with query( case{}, 1 ):
+		--> found case.diagnoses, is array
+		for(diagnosis of array) {
+			query( diagnosis, 2 )
+				--> found diagnosis.age_at_diagnosis=int
+					collect int value to sample[case.diagnoses.age_at_diagnosis]
 		}
+
+	recursion is used to advance i and when current is array, to loop through it
+	*/
+	function query(current, i) {
+		const field = fields[i]
+		if (i == fields.length - 1) {
+			// i is at the end of fields[], sample attr key is term.id
+			if (sample[term.id]) {
+				sample[term.id].add(current[field])
+			} else {
+				sample[term.id] = current[field]
+			}
+			return
+		}
+		// i is not at the end of fields[], advance to next "root"
+		const next = current[field]
+		if (next == undefined) {
+			// no more values, unable to assign term.id value to sample
+			return
+		}
+		if (Array.isArray(next)) {
+			// next is array, initiate set to collect values from all array elements
+			sample[term.id] = new Set()
+			// recurse through each array element
+			for (const n of next) {
+				query(n, i + 1)
+			}
+			return
+		}
+		// advance i and recurse
+		query(next, i + 1)
 	}
 }
 
@@ -639,8 +674,8 @@ export async function getSamples_gdcapi(q, termidlst, ds) {
 		*/
 		sample.case_uuid = s.case.case_id
 
-		if (termObjs) {
-			flattenCaseByFields(sample, s.case, termObjs)
+		for (const term of termObjs) {
+			flattenCaseByFields(sample, s.case, term)
 		}
 
 		/////////////////// hardcoded logic to use .observation

@@ -2,9 +2,10 @@ const got = require('got')
 const get_termlst2size = require('./mds3.gdc').get_termlst2size
 const isUsableTerm = require('../shared/termdb.usecase').isUsableTerm
 
-/* parse gdc dictionary, and store as in-memory termdb
-
+/*
 HARDCODED LOGIC, does not need any dataset configuration
+
+parse gdc dictionary, and store as in-memory termdb
 
 standard termdb "interface" functions are added to ds.cohort.termdb.q{}
 
@@ -14,7 +15,7 @@ exports one function: initGDCdictionary
 const apiurl = (process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov') + '/ssm_occurrences/_mapping'
 
 /* 
-api returns 2 major parts of data:
+sections from api return that are used to build in-memory termdb
 
 ******************* Part 1
 to derive type (categorical/integer/float) for terms
@@ -80,14 +81,8 @@ re.fields: []
 		"ssm.consequence.transcript.annotation.amino_acids",
 		...
 
-
-
-******************* Unused parts
-"defaults": [
-	"ssm_occurrence_autocomplete",
-	"ssm_occurrence_id"
-],
-"multi": [],
+******************* Part 3
+to add the .isObjectList:true attribute on a parent term
 "nested": [
 	"case.diagnoses",
 	"case.diagnoses.pathology_details",
@@ -97,6 +92,14 @@ re.fields: []
 	"case.observation",
 	"ssm.consequence"
 ]
+
+
+******************* Unused parts
+"defaults": [
+	"ssm_occurrence_autocomplete",
+	"ssm_occurrence_id"
+],
+"multi": [],
 re.expand: []
 	'case',
 	'case.demographic',
@@ -108,9 +111,6 @@ re.expand: []
 
 // prefix for keys in re._mapping{}
 const mapping_prefix = 'ssm_occurrence_centrics'
-const fs = require('fs')
-
-//
 
 export async function initGDCdictionary(ds) {
 	const id2term = new Map()
@@ -190,6 +190,8 @@ export async function initGDCdictionary(ds) {
 				if (!termObj.type) {
 					unknownTermType++
 				}
+
+				mayAddTermAttribute(termObj)
 			}
 
 			// whether this term has parent
@@ -234,6 +236,13 @@ export async function initGDCdictionary(ds) {
 	Object.freeze(id2term)
 
 	makeTermdbQueries(ds, id2term)
+}
+
+function mayAddTermAttribute(t) {
+	if (t.id == 'case.diagnoses.age_at_diagnosis') {
+		t.printDays2years = true // print 25868 as '70 years, 318 days'
+		return
+	}
 }
 
 function maySkipLine(line) {

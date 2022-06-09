@@ -670,7 +670,8 @@ module.exports = {
 			'case.primary_site',
 			'case.project.project_id',
 			'case.demographic.gender',
-			//'case.diagnoses.age_at_diagnosis', move to case details
+			'case.diagnoses.age_at_diagnosis',
+			'case.diagnoses.treatments.therapeutic_agents',
 			'case.demographic.race',
 			'case.demographic.ethnicity'
 		],
