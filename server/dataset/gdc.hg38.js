@@ -268,10 +268,10 @@ const variant2samplesGdcapi = {
 
 	// Note: must have "case.case_id" for sunburst,
 	// as it's fail-safe in case both 'disease_type' and 'primary_site' are missing from that case
+	// 2delete
 	termids_sunburst: ['case.disease_type', 'case.primary_site', 'case.case_id'],
 
-	// Note: observation node and children terms are removed from gdc dictionary,
-	// so have to use entire path
+	// 2delete
 	termids_samples: [
 		'ssm.ssm_id',
 		'case.case_id',
@@ -438,6 +438,7 @@ const site_size = {
 }
 
 function termid2size_query(termlst) {
+	console.log(termlst)
 	let query_str = ''
 	for (const term of termlst) {
 		const key = term.path
@@ -674,6 +675,14 @@ module.exports = {
 			'case.diagnoses.treatments.therapeutic_agents',
 			'case.demographic.race',
 			'case.demographic.ethnicity'
+		],
+		termids_samples: [
+			'ssm.ssm_id',
+			'case.case_id',
+			'case.observation.read_depth.t_alt_count',
+			'case.observation.read_depth.t_depth',
+			'case.observation.read_depth.n_depth',
+			'case.observation.sample.tumor_sample_barcode'
 		],
 
 		// default list of terms for making sunburst/crosstab summary for cases harboring a term

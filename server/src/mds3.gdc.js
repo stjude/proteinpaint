@@ -138,7 +138,6 @@ export function validate_query_snvindel_byisoform(ds) {
 
 	ds.queries.snvindel.byisoform.get = async opts => {
 		/* opts{}
-		.getSamples= true
 		.isoform= str
 		*/
 
@@ -155,18 +154,6 @@ export function validate_query_snvindel_byisoform(ds) {
 		4. in resulting ssm, set isoform to refseq so skewer can show
 		*/
 		const refseq = mayMapRefseq2ensembl(opts, ds)
-
-		if (opts.getSamples) {
-			/* exit
-			see load_driver() of mds3.load.js
-			to get all samples that harbor a mutation on this isoform
-			opts.termidlst is client-supplied term ids for sample fields
-			must combine with ds.variant2samples.gdcapi.termids_samples[],
-			for getSamples_gdcapi to work
-			*/
-			const idlst = [...opts.termidlst.split(','), ...ds.variant2samples.gdcapi.termids_samples]
-			return await getSamples_gdcapi(opts, idlst, ds)
-		}
 
 		const ssmLst = await snvindel_byisoform(api, opts)
 		const mlst = [] // parse final ssm into this list

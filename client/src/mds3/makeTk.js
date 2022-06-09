@@ -314,11 +314,11 @@ function mayaddGetter_m2csq(tk, block) {
 	}
 }
 
+/* to add tk.mds.variant2samples.get()
+with different implementation for client/server-based data sources
+*/
 function mayaddGetter_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
-
-	// to add tk.mds.variant2samples.get()
-	// with different implementation for client/server-based data sources
 
 	if (tk.custom_variants) {
 		tk.mds.variant2samples.get = arg => {
@@ -346,6 +346,7 @@ function mayaddGetter_variant2samples(tk, block) {
 			}
 			throw 'unknown querytype'
 		}
+		// TODO auto generate variant2samples.termidlst[] based on sample data
 		tk.mds.getSamples = () => {
 			const id2sample = new Map()
 			for (const m of tk.custom_variants) {
@@ -365,31 +366,58 @@ function mayaddGetter_variant2samples(tk, block) {
 		return
 	}
 
-	// server-hosted official dataset
+	/* server-hosted official dataset
+	call get() with querytype=?
+	based on querytype, get() finds terms from appropriate places to retrieve attributes
+	thus no need to directly supply list of terms to get()
+	*/
 	tk.mds.variant2samples.get = async arg => {
 		/* arg{}
 		.querytype
 		.mlst
+		.isoform 
+		.rglst[] // require one of (mlst, isoform, rglst)
 		.tid2value{}
 		*/
 		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', 'get=' + arg.querytype]
+		if (arg.listSamples) {
+			// from getSamples(), may rename to better state purpose
+			par.push('listSamples=1')
+		}
+
+		// pagination, not used
 		//if (arg.size) par.push('size=' + arg.size)
 		//if (arg.from != undefined) par.push('from=' + arg.from)
-		if (tk.mds.variant2samples.variantkey == 'ssm_id') {
-			// TODO detect too long string length that will result url-too-long error
-			// in such case, need alternative query method
-			par.push('ssm_id_lst=' + arg.mlst.map(i => i.ssm_id).join(','))
-		} else {
-			throw 'unknown variantkey for variant2samples'
+
+		if (arg.mlst) {
+			if (tk.mds.variant2samples.variantkey == 'ssm_id') {
+				// TODO detect too long string length that will result url-too-long error
+				// in such case, need alternative query method
+				par.push('ssm_id_lst=' + arg.mlst.map(i => i.ssm_id).join(','))
+			} else {
+				throw 'unknown variantkey for variant2samples'
+			}
+		} else if (arg.isoform) {
+			par.push('isoform=' + arg.isoform)
+		} else if (arg.rglst) {
+			par.push('rglst=' + arg.rglst)
 		}
+
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (tk.set_id) par.push('set_id=' + tk.set_id)
 		if (tk.token) headers['X-Auth-Token'] = tk.token
 		if (tk.filter0) par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
 		if (arg.tid2value) par.push('tid2value=' + encodeURIComponent(JSON.stringify(arg.tid2value)))
-		// pass all termidlst including new termid
-		if (arg.querytype != tk.mds.variant2samples.type_sunburst && tk.mds.variant2samples.termidlst)
-			par.push('termidlst=' + tk.mds.variant2samples.termidlst)
+
+		// supply list of terms based on querytype
+		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
+			par.push('termidlst=' + tk.mds.variant2samples.sunburst_ids)
+		} else if (arg.querytype == tk.mds.variant2samples.type_samples) {
+			par.push('termidlst=' + tk.mds.variant2samples.termidlst) // if missing?
+		} else {
+			throw 'unknown querytype'
+		}
+
 		const data = await dofetch3('mds3?' + par.join('&'), { headers }, { serverData: tk.cache })
 		if (data.error) throw data.error
 		if (!data.variant2samples) throw 'result error'
@@ -397,21 +425,12 @@ function mayaddGetter_variant2samples(tk, block) {
 	}
 
 	tk.mds.getSamples = async () => {
-		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'getSamples=1']
-		rangequery_rglst(tk, block, par)
-		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-		if (tk.token) headers['X-Auth-Token'] = tk.token
-		// filters?
-		// pass all termidlst including new termid
-		if (tk.mds.variant2samples.termidlst) {
-			par.push('termidlst=' + tk.mds.variant2samples.termidlst)
+		const arg = {
+			querytype: tk.mds.variant2samples.type_samples,
+			listSamples: 1
 		}
-		const data = await dofetch3('mds3?' + par.join('&'), { headers }, { serverData: tk.cache })
-		if (data.error) throw data.error
-		return data.samples
-		/* each sample in the samples[] array:
-		{ sample_id, ssm_id_lst:[], ...attributes... }
-		*/
+		rangequery_rglst(tk, block, arg)
+		return await tk.mds.variant2samples.get(arg)
 	}
 }
 

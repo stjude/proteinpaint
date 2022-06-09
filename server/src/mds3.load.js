@@ -122,7 +122,29 @@ async function load_driver(q, ds) {
 
 	if (q.variant2samples) {
 		if (!ds.variant2samples) throw 'not supported by server'
-		return { variant2samples: await ds.variant2samples.get(q) }
+		const out = await ds.variant2samples.get(q)
+
+		if (q.listSamples) {
+			/* quick fix: for listing all samples that have mutation in the view range
+			client-side variant data are stripped of sample info
+			to list samples, must re-query and collect samples
+
+			out[] must be list of sample obj, each with .ssm_id
+			*/
+			const id2samples = new Map() // k: sample_id, v: { key:val, ssm_id_lst:[] }
+			for (const s of out) {
+				if (id2samples.has(s.sample_id)) {
+					id2samples.get(s.sample_id).ssm_id_lst.push(s.ssm_id)
+				} else {
+					s.ssm_id_lst = [s.ssm_id]
+					delete s.ssm_id
+					id2samples.set(s.sample_id, s)
+				}
+			}
+			return { variant2samples: [...id2samples.values()] }
+		}
+
+		return { variant2samples: out }
 	}
 
 	if (q.m2csq) {
@@ -161,29 +183,6 @@ async function load_driver(q, ds) {
 
 		finalize_result(q, ds, result)
 		return result
-	}
-
-	if (q.getSamples) {
-		/* quick fix: for listing all samples that have mutation in the view range
-		client-side variant data are stripped of sample info
-		to list samples, must re-query and collect samples
-		*/
-		const id2samples = new Map() // k: sample_id, v: { key:val, ssm_id_lst:[] }
-		if (ds.queries.snvindel) {
-			const samples = await query_snvindel(q, ds)
-			for (const s of samples) {
-				if (id2samples.has(s.sample_id)) {
-					id2samples.get(s.sample_id).ssm_id_lst.push(s.ssm_id)
-				} else {
-					s.ssm_id_lst = [s.ssm_id]
-					delete s.ssm_id
-					id2samples.set(s.sample_id, s)
-				}
-			}
-		}
-		if (ds.queries.svfusion) {
-		}
-		return { samples: [...id2samples.values()] }
 	}
 
 	// other query type

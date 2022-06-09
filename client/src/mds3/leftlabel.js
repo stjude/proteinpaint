@@ -1,5 +1,6 @@
 import { event as d3event } from 'd3-selection'
-import { mayMakeVariantLabel } from './leftlabel.variant'
+// variant label is always made
+import { makeVariantLabel } from './leftlabel.variant'
 import { mayMakeSampleLabel } from './leftlabel.sample'
 
 const labyspace = 5
@@ -22,16 +23,19 @@ must reset leftLabelMaxwidth
 TODO may not update every label when only updating certain sub track
 */
 
-export function make_leftlabels(data, tk, block) {
+export async function make_leftlabels(data, tk, block) {
 	tk.leftLabelMaxwidth = tk.tklabel.node().getBBox().width
 
 	let laby = 0
 
-	mayMakeVariantLabel(data, tk, block, laby)
-	if (tk.leftlabels.doms.variants) laby += labyspace + block.labelfontsize
+	makeVariantLabel(data, tk, block, laby)
+	if (tk.leftlabels.doms.variants) laby += labyspace + block.labelfontsize // later delete if
 
-	mayMakeSampleLabel(data, tk, block, laby)
-	if (tk.leftlabels.doms.samples) laby += labyspace + block.labelfontsize
+	if ('sampleTotalNumber' in data) {
+		// only make sample label when there's sample count
+		;(await import('./leftlabel.sample')).makeSampleLabel(data, tk, block, laby)
+		if (tk.leftlabels.doms.samples) laby += labyspace + block.labelfontsize // later delete if
+	}
 
 	// done creating all possible left labels
 	tk.leftlabels.laby = laby

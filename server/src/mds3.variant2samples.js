@@ -11,21 +11,12 @@ only requires ds.variant2samples{}
 
 client instructs if to return sample list or sunburst summary; server may deny that request based on certain config
 
+q{}
+.get=str, samples/sunburst/summary
+.ssm_id_lst=str
+.termidlst=str
+	client always provides this, as the list of terms to query against can be modified
 */
-
-/*
-get types:
-- samples
-  - use all terms
-  - return list of samples, not summary
-- sunburst
-  - use only terms labeled for sunburst
-  - return stratified nodes
-- summary
-  - use all terms
-  - return summary of each attribute
-*/
-
 export async function variant2samples_getresult(q, ds) {
 	// each sample obj has keys from .terms[].id
 	const samples = await get_samples(q, ds)
@@ -37,25 +28,15 @@ export async function variant2samples_getresult(q, ds) {
 }
 
 async function get_samples(q, ds) {
-	let samples
-	if (ds.variant2samples.gdcapi) {
-		const api = ds.variant2samples.gdcapi
-		const termidlst = q.termidlst ? q.termidlst.split(',') : ds.variant2samples.termidlst
-		// fields[] generated dynamically using gdc_dictionary
-		let useids = []
-		if (q.get == ds.variant2samples.type_sunburst) {
-			useids = api.termids_sunburst
-		} else if (q.get == ds.variant2samples.type_summary) {
-			useids = termidlst
-		} else if (q.get == ds.variant2samples.type_samples) {
-			// fields_samples[] have few extra fields for table view than fields_summary[]
-			useids = [...api.termids_samples, ...termidlst]
-		}
-		samples = await getSamples_gdcapi(q, useids, ds)
-	} else {
-		throw 'unknown query method for variant2samples'
+	const termidlst = q.termidlst.split(',')
+	if (q.get == ds.variant2samples.type_samples && ds.variant2samples.termids_samples) {
+		// extra term ids to add for get=samples query
+		termidlst.push(...ds.variant2samples.termids_samples)
 	}
-	return samples
+	if (ds.variant2samples.gdcapi) {
+		return await getSamples_gdcapi(q, termidlst, ds)
+	}
+	throw 'unknown query method for variant2samples'
 }
 
 function get_termid2fields(termidlst, ds) {

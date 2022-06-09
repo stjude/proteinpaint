@@ -55,7 +55,10 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 
 async function click2sunburst(d, tk, block, tippos) {
 	tk.glider.style('cursor', 'wait')
-	const data = await tk.mds.variant2samples.get({ mlst: d.mlst, querytype: tk.mds.variant2samples.type_sunburst })
+	const data = await tk.mds.variant2samples.get({
+		mlst: d.mlst,
+		querytype: tk.mds.variant2samples.type_sunburst
+	})
 	tk.glider.style('cursor', 'auto')
 	const arg = {
 		nodes: data,

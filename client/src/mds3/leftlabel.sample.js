@@ -1,8 +1,7 @@
 import { event as d3event } from 'd3-selection'
 import { makelabel } from './leftlabel'
 
-export function mayMakeSampleLabel(data, tk, block, laby) {
-	if (!('sampleTotalNumber' in data)) return
+export function makeSampleLabel(data, tk, block, laby) {
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
 	if (!tk.leftlabels.doms.samples) {
 		tk.leftlabels.doms.samples = makelabel(tk, block, laby)

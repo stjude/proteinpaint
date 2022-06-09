@@ -91,7 +91,14 @@ async function make_singleSampleTable(arg) {
 			if (!term) throw 'unknown term id: ' + termid
 			const [cell1, cell2] = get_list_cells(grid_div)
 			cell1.text(term.name).style('text-overflow', 'ellipsis')
-			cell2.text(sampledata[termid] || 'N/A').style('text-overflow', 'ellipsis')
+			cell2.style('text-overflow', 'ellipsis')
+			if (termid in sampledata) {
+				if (Array.isArray(sampledata[termid])) {
+					cell2.html(sampledata[termid].join('<br>'))
+				} else {
+					cell2.text(sampledata[termid])
+				}
+			}
 		}
 	}
 

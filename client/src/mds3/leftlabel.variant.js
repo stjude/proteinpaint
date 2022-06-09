@@ -4,13 +4,18 @@ import { itemtable } from './itemtable'
 import { mayAddSkewerModeOption } from './skewer'
 import { makelabel } from './leftlabel'
 
-/* for now data{} is no longer used! as mlst used for display is cached on client
+/*
+the "#variants" label should always be made as it is about any content displayed in mds3 track
+
+for now data{} is no longer used! as mlst used for display is cached on client
 if type=skewer, cached at tk.skewer.data
 if type=numeric, cached at currentMode.data
 
 may allow to show a different name instead of "variant"
 */
-export function mayMakeVariantLabel(data, tk, block, laby) {
+export function makeVariantLabel(data, tk, block, laby) {
+	// TODO while skewer data is optional for a mds3 track,
+	// later should check other non-skewer data types too
 	if (!tk.skewer) return
 
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
