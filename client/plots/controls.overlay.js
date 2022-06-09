@@ -48,7 +48,8 @@ class Overlay {
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
-					config: { term2 }
+					config: { term2 },
+					usecase: this.opts.usecase
 				})
 			}
 		})
@@ -59,6 +60,7 @@ class Overlay {
 			throw `No plot with id='${this.id}' found.`
 		}
 		const state = {
+			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			config,
@@ -277,14 +279,26 @@ function setRenderers(self) {
 					})
 				})
 		}
+
 		// option (4)
 		self.dom.tip.d
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.text('Select a new term')
+			.text('Select a dictionary term')
 			.on('click', () => {
 				self.dom.tip.hide()
 				self.pill.showTree(self.dom.menuBtn.node())
 			})
+
+		if (self.state.allowedTermTypes.find(t => t.startsWith('gene'))) {
+			self.dom.tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.text('Search gene(s)')
+				.on('click', () => {
+					self.dom.tip.hide()
+					self.pill.showGeneSearch(self.dom.menuBtn.node())
+				})
+		}
 	}
 }

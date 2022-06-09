@@ -1,5 +1,13 @@
-const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst', 'snplocus'])
-
+export const graphableTypes = new Set([
+	'categorical',
+	'integer',
+	'float',
+	'condition',
+	'survival',
+	'snplst',
+	'snplocus',
+	'geneCustomLst'
+])
 /*
 	isUsableTerm() will
 	- centralize the "allowed term" logic
@@ -90,7 +98,7 @@ export function isUsableTerm(term, _usecase, ds) {
 			if (usecase.detail === 'term2') {
 				if (term.type != 'survival') {
 					// do not allow overlaying one survival term over another
-					if (term.isleaf) uses.add('plot')
+					if (term.isleaf || term.type == 'geneCustomLst') uses.add('plot')
 					if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
 				}
 				return uses
@@ -101,6 +109,10 @@ export function isUsableTerm(term, _usecase, ds) {
 				if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
 				return uses
 			}
+
+			if (term.isleaf) uses.add('plot')
+			else uses.add('branch')
+			return uses
 
 		case 'regression':
 			if (usecase.detail == 'outcome') {

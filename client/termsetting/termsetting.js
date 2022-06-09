@@ -14,7 +14,7 @@ clickNoPillDiv
 showTree
 */
 
-export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant'])
+export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant', 'geneCustomLst'])
 
 // append the common ID substring,
 // so that the first characters of $id is more indexable
@@ -82,6 +82,7 @@ class TermSetting {
 			// do not change the this context of showTree, d3 sets it to the DOM element
 			showTree: this.showTree,
 			showMenu: this.showMenu.bind(this),
+			showGeneSearch: this.showGeneSearch,
 			hasError: () => this.hasError,
 			validateQ: d => {
 				if (!this.handler || !this.handler.validateQ) return
@@ -100,7 +101,7 @@ class TermSetting {
 		the override tw serves the "atypical" termsetting usage
 		as used in snplocus block pan/zoom update in regression.results.js
 		*/
-		const arg = { id: this.term.id, term: this.term, q: this.q }
+		const arg = this.term ? { id: this.term.id, term: this.term, q: this.q } : {}
 		if ('$id' in this) arg.$id = this.$id
 		this.opts.callback(overrideTw ? copyMerge({}, arg, overrideTw) : arg)
 	}
@@ -283,8 +284,9 @@ function setRenderers(self) {
 				.html(d => d.toUpperCase())
 				.on('click', d => {
 					if (d == 'delete') self.removeTerm()
-					else if (d == 'replace') self.showTree(event.target)
-					else throw 'unknown button'
+					else if (d == 'replace') {
+						self.showTree(event.target)
+					} else throw 'unknown button'
 				})
 
 			// render info button only if term has html details
@@ -526,6 +528,91 @@ function setInteractivity(self) {
 				self.dom.tip.hide()
 				self.removeTerm()
 			})
+	}
+
+	self.showGeneSearch = clickedElem => {
+		self.dom.tip.clear()
+		if (clickedElem)
+			self.dom.tip.showunder(
+				clickedElem instanceof Element ? clickedElem : this instanceof Element ? this : self.dom.holder.node()
+			)
+		else self.dom.tip.show(event.clientX, event.clientY)
+
+		const selectedGenes = new Set()
+		const searchDiv = self.dom.tip.d.append('div').style('padding', '5px')
+		const label = searchDiv.append('label')
+		label.append('span').text('Search: ')
+		const input = label
+			.append('input')
+			.attr('type', 'text')
+			.on('input', async () => {
+				const str = input.property('value')
+				try {
+					const results = !str
+						? { lst: [] }
+						: await self.vocabApi.findTerm(str, self.activeCohort, self.usecase, 'gene')
+					resultsDiv.selectAll('*').remove()
+					resultsDiv
+						.selectAll('div')
+						.data(results.lst.filter(g => !selectedGenes.has(g)))
+						.enter()
+						.append('div')
+						.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term')
+						.style('display', 'block')
+						.style('margin', '2px 3px')
+						.style('width', 'fit-content')
+						.text(gene => gene)
+						.on('click', gene => {
+							selectedGenes.add(gene)
+							input.property('value', '')
+							displaySelected()
+						})
+				} catch (e) {
+					alert('Search error: ' + e)
+				}
+			})
+
+		const resultsDiv = self.dom.tip.d
+			.append('div')
+			.style('margin', '5px')
+			.style('padding-left', '5px')
+			.style('border-left', '2px solid #ccc')
+		const selectedDiv = self.dom.tip.d.append('div').style('margin', '5px')
+		const submitBtn = self.dom.tip.d
+			.append('div')
+			.style('text-align', 'center')
+			.append('button')
+			.text('Submit')
+			.property('disabled', true)
+			.on('click', () => {
+				const genes = [...selectedGenes]
+				self.runCallback({
+					term: {
+						name: genes.join(' & '),
+						type: 'geneCustomLst'
+					},
+					q: {
+						// TODO: support 'or' operator
+						join: 'and',
+						values: genes
+					}
+				})
+			})
+
+		function displaySelected() {
+			resultsDiv.selectAll('*').remove()
+			const genes = selectedDiv.selectAll('div').data([...selectedGenes])
+			genes.exit().remove()
+			genes
+				.enter()
+				.insert('div', 'div')
+				.style('margin', '5px')
+				.style('padding', '2px 3px')
+				.style('width', 'fit-content')
+				.style('background-color', '#eee')
+				.text(gene => gene)
+			submitBtn.property('disabled', selectedGenes.size < 1)
+		}
 	}
 }
 

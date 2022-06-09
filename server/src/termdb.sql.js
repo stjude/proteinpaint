@@ -333,9 +333,9 @@ RETURNS
 { sql, tablename }
 */
 export function get_term_cte(q, values, index, filter, termWrapper = null) {
-	const twterm = termWrapper && termWrapper.term
+	const twterm = (termWrapper && termWrapper.term) || q[`term${index}`]
 	const termid = twterm ? twterm.id : q['term' + index + '_id']
-	const term_is_genotype = twterm ? termWrapper.term.is_genotype : q['term' + index + '_is_genotype']
+	const term_is_genotype = termWrapper && twterm ? termWrapper.term.is_genotype : q['term' + index + '_is_genotype']
 	// legacy code support: index=1 is assumed to be barchart term
 	// when there is no termWrapper argument
 	if (!termWrapper && index == 1 && !term_is_genotype) {

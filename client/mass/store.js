@@ -377,6 +377,7 @@ function validatePlotTerm(t, vocabApi) {
 			break
 		case 'snplst':
 		case 'snplocus':
+		case 'geneCustomLst':
 			break
 		default:
 			if (t.term.isgenotype) {
@@ -384,6 +385,6 @@ function validatePlotTerm(t, vocabApi) {
 				console.log('to add in type:"genotype"')
 				break
 			}
-			throw 'unknown term type'
+			throw `unknown term type='${t.term.type}'`
 	}
 }
