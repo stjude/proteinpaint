@@ -317,7 +317,9 @@ function mayaddGetter_m2csq(tk, block) {
 function mayaddGetter_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
 
-	// getter are implemented differently based on data sources
+	// to add tk.mds.variant2samples.get()
+	// with different implementation for client/server-based data sources
+
 	if (tk.custom_variants) {
 		tk.mds.variant2samples.get = arg => {
 			/*
@@ -334,7 +336,7 @@ function mayaddGetter_variant2samples(tk, block) {
 						samples.push(s2)
 					}
 				}
-				return [samples, samples.length]
+				return samples
 			}
 			if (arg.querytype == tk.mds.variant2samples.type_summary) {
 				throw 'todo: summary'
@@ -343,6 +345,22 @@ function mayaddGetter_variant2samples(tk, block) {
 				throw 'todo: sunburst'
 			}
 			throw 'unknown querytype'
+		}
+		tk.mds.getSamples = () => {
+			const id2sample = new Map()
+			for (const m of tk.custom_variants) {
+				if (!m.samples) continue
+				for (const s of m.samples) {
+					if (id2sample.has(s.sample_id)) {
+						id2sample.get(s.sample_id).ssm_id_lst.push(m.ssm_id)
+					} else {
+						const s2 = JSON.parse(JSON.stringify(s))
+						s2.ssm_id_lst = [m.ssm_id]
+						id2sample.set(s.sample_id, s2)
+					}
+				}
+			}
+			return [...id2sample.values()]
 		}
 		return
 	}
@@ -378,7 +396,7 @@ function mayaddGetter_variant2samples(tk, block) {
 		return data.variant2samples
 	}
 
-	tk.mds.getSamples = async arg => {
+	tk.mds.getSamples = async () => {
 		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'getSamples=1']
 		rangequery_rglst(tk, block, par)
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
@@ -391,6 +409,9 @@ function mayaddGetter_variant2samples(tk, block) {
 		const data = await dofetch3('mds3?' + par.join('&'), { headers }, { serverData: tk.cache })
 		if (data.error) throw data.error
 		return data.samples
+		/* each sample in the samples[] array:
+		{ sample_id, ssm_id_lst:[], ...attributes... }
+		*/
 	}
 }
 
