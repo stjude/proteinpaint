@@ -15,9 +15,14 @@ q{}
 .get=str, samples/sunburst/summary
 .ssm_id_lst=str
 .termidlst=str
-	client always provides this, as the list of terms to query against can be modified
+	client always provides this, to reflect any user changes
+	if get=sunburst, termidlst is an ordered array of terms, for which to build layered sunburst
+	otherwise element order is not essential
 */
 export async function variant2samples_getresult(q, ds) {
+	// query sample details for list of terms in request parameter
+	if (!q.termidlst) throw 'q.termidlst=str missing'
+
 	// each sample obj has keys from .terms[].id
 	const samples = await get_samples(q, ds)
 
@@ -49,14 +54,12 @@ function get_termid2fields(termidlst, ds) {
 }
 
 async function make_sunburst(samples, ds, q) {
-	if (!ds.variant2samples.sunburst_ids) throw 'sunburst_ids missing'
-	console.log(q)
-	// use only suburst terms
+	const termidlst = q.termidlst.split(',')
 
 	// to use stratinput, convert each attr to {k} where k is term id
 	const nodes = stratinput(
 		samples,
-		ds.variant2samples.sunburst_ids.map(i => {
+		termidlst.map(i => {
 			return { k: i }
 		})
 	)
@@ -64,7 +67,8 @@ async function make_sunburst(samples, ds, q) {
 		delete node.lst
 	}
 	if (ds.variant2samples.addCrosstabCount) {
-		await ds.variant2samples.addCrosstabCount(nodes, q)
+		await ds.variant2samples.addCrosstabCount(nodes, q, termidlst)
+		// .cohortsize=int is added to applicable elements of nodes[]
 	}
 	return nodes
 }

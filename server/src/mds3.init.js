@@ -154,7 +154,8 @@ function validate_variant2samples(ds) {
 	for (const id of vs.termidlst) {
 		if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
 	}
-	// FIXME should be optional. when provided will show sunburst chart
+
+	// TODO make it optional. when provided will show sunburst chart
 	if (!vs.sunburst_ids) throw '.sunburst_ids[] missing from variant2samples'
 	if (!Array.isArray(vs.sunburst_ids)) throw '.sunburst_ids[] not array from variant2samples'
 	if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
@@ -171,8 +172,8 @@ function validate_variant2samples(ds) {
 	}
 	if (ds.termdb.termid2totalsize) {
 		// has ways of querying total size, add the crosstab getter
-		vs.addCrosstabCount = async (nodes, q) => {
-			const combinations = await get_crosstabCombinations(vs.sunburst_ids, ds, q, nodes)
+		vs.addCrosstabCount = async (nodes, q, termidlst) => {
+			const combinations = await get_crosstabCombinations(termidlst, ds, q, nodes)
 			if (vs.gdcapi) {
 				await gdc.addCrosstabCount_tonodes(nodes, combinations)
 			} else {
@@ -264,26 +265,30 @@ steps:
 2. for disease at level2, get disease size by filtering on each project
 3. for level 3 term, get category size by filtering on each project-disease combination
 4. apply the combination sizes to each node of sunburst
+
+todo: define input and output
+
+<input>
+termidlst[]
+	ordered array of term ids
+	must always get category list from first term
+	as the list cannot be predetermined due to api and token permissions
+	currently has up to three levels
+ds{}
+q{}
+nodes[], optional
+
+<output>
+combinations[]
+	stores all combinations, each element:
+	level 1: {count, id0, v0}
+	level 2: {count, id0, v0, id1, v1}
+	level 3: {count, id0, v0, id1, v1, id2, v2}
 */
 export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
-	/*
-	parameters:
-	termidlst[]
-	- ordered array of term ids
-	- must always get category list from first term, as the list cannot be predetermined due to api and token permissions
-	- currently has up to three levels
-	ds{}
-	q{}
-	nodes[], optional
-	*/
-
 	if (termidlst.length == 0) throw 'zero terms for crosstab'
 	if (termidlst.length > 3) throw 'crosstab will not work with more than 3 levels'
 
-	// stores all combinations
-	// level 1: {count, id0, v0}
-	// level 2: {count, id0, v0, id1, v1}
-	// level 3: {count, id0, v0, id1, v1, id2, v2}
 	const combinations = []
 
 	// temporarily record categories for each term
@@ -328,7 +333,8 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 
 	// get term[0] category total, not dependent on other terms
 	const id0 = termidlst[0]
-	{
+	if (ds.termdb.termid2totalsize[id0]) {
+		// has query method for this term
 		const v2c = (await ds.termdb.termid2totalsize[id0].get(q)).v2count
 		for (const [v, count] of v2c) {
 			const v0 = v.toLowerCase()
@@ -345,7 +351,8 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 
 	// get term[1] category total, conditional on term1
 	const id1 = termidlst[1]
-	if (id1) {
+	if (ds.termdb.termid2totalsize[id1]) {
+		// has query method for this term, query in combination with id0 categories
 		const promises = []
 		for (const v0 of id2categories.get(id0)) {
 			const q2 = Object.assign({ tid2value: {} }, q)
@@ -371,7 +378,8 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 
 	// get term[2] category total, conditional on term1+term2 combinations
 	const id2 = termidlst[2]
-	if (id2) {
+	if (ds.termdb.termid2totalsize[id2]) {
+		// has query method for this term, query in combination with id0 & id1 categories
 		const promises = []
 		for (const v0 of id2categories.get(id0)) {
 			for (const v1 of id2categories.get(id1)) {
