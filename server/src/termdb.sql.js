@@ -933,25 +933,31 @@ thus less things to worry about...
 		// may not cache result of this one as query string may be indefinite
 		// instead, will cache prepared statement by cohort
 		const sql = cn.prepare(
-			`SELECT id, jsondata, s.included_types 
+			`SELECT id, name, jsondata, s.included_types
 			FROM terms t
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE name LIKE ?`
 		)
-		const trueFilter = () => true
 		q.findTermByName = (n, limit, cohortStr = '', treeFilter = null, usecase = null) => {
 			const vals = []
 			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
+				const r = { equals: [], startsWith: [], startsWord: [], includes: [] }
 				const lst = []
 				for (const i of tmp) {
+					const name = i.name.toLowerCase()
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
 					j.included_types = i.included_types ? i.included_types.split(',') : []
-					if (!usecase || isUsableTerm(j, usecase).has('plot')) lst.push(j)
-					if (lst.length == 10) break
+					if (!usecase || isUsableTerm(j, usecase).has('plot')) {
+						if (n === 'se') console.log(name, n)
+						if (name === n) r.equals.push(j)
+						else if (name.startsWith(n)) r.startsWith.push(j)
+						else if (name.includes(' ' + n)) r.startsWord.push(j)
+						else r.includes.push(j)
+					}
 				}
-				return lst
+				return [...r.equals, ...r.startsWith, ...r.startsWord, ...r.includes].slice(0, 10)
 			}
 			return undefined
 		}
