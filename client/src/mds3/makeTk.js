@@ -316,11 +316,21 @@ function mayaddGetter_m2csq(tk, block) {
 
 /* to add tk.mds.variant2samples.get()
 with different implementation for client/server-based data sources
+
+note inconsistency in getSamples() for client/server
+where server function queries v2s.get()
+but client function does not do v2s.get() but should do the same to support sunburst and summary
 */
 function mayaddGetter_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
 
 	if (tk.custom_variants) {
+		// TODO auto generate variant2samples.termidlst[] based on sample data
+
+		/* getter implemented for custom data
+		currently only provides list of samples
+		TODO support summary and sunburst
+		*/
 		tk.mds.variant2samples.get = arg => {
 			/*
 			arg{}
@@ -347,8 +357,6 @@ function mayaddGetter_variant2samples(tk, block) {
 			throw 'unknown querytype'
 		}
 
-		// TODO auto generate variant2samples.termidlst[] based on sample data
-
 		tk.mds.getSamples = () => {
 			const id2sample = new Map()
 			for (const m of tk.custom_variants) {
@@ -368,23 +376,26 @@ function mayaddGetter_variant2samples(tk, block) {
 		return
 	}
 
-	/* server-hosted official dataset
-	call get() with querytype=?
+	// same getters implemented for server-hosted official dataset
+
+	/*
+	call v2s.get() with querytype=?
 	based on querytype, get() finds terms from appropriate places to retrieve attributes
 	thus no need to directly supply list of terms to get()
+
+	arg{}
+	.querytype=sunburst/samples/summary
+	.listSamples=1
+	.mlst
+	.isoform 
+	.rglst[] // requires one of (mlst, isoform, rglst)
+	.tid2value{}
 	*/
 	tk.mds.variant2samples.get = async arg => {
-		/* arg{}
-		.querytype
-		.mlst
-		.isoform 
-		.rglst[] // require one of (mlst, isoform, rglst)
-		.tid2value{}
-		*/
 		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', 'get=' + arg.querytype]
-		if (arg.listSamples) {
-			// from getSamples(), may rename to better state purpose
-			par.push('listSamples=1')
+		if (arg.listSsm) {
+			// from getSamples(), is a modifier of querytype=samples, to return .ssm_id_lst[] with each sample
+			par.push('listSsm=1')
 		}
 
 		// pagination, not used
@@ -428,10 +439,12 @@ function mayaddGetter_variant2samples(tk, block) {
 		return data.variant2samples
 	}
 
-	/* purpose: 
-	if isSummary is true,
+	/*
+	this function is called for 2 uses in #cases menu
+	for "List" option, call without arg to get samples, with ssm grouped
+	for "Summary", call with isSummary=true
 	*/
-	tk.mds.getSamples = async isSummary => {
+	tk.mds.getSamples = async (isSummary = false) => {
 		const arg = {}
 		if (isSummary) {
 			arg.querytype = tk.mds.variant2samples.type_summary
@@ -439,7 +452,7 @@ function mayaddGetter_variant2samples(tk, block) {
 			// must be calling from "List" option of #case menu
 			arg.querytype = tk.mds.variant2samples.type_samples
 			// supply this flag so server will group ssm by case
-			arg.listSamples = 1
+			arg.listSsm = 1
 		}
 		rangequery_rglst(tk, block, arg)
 		return await tk.mds.variant2samples.get(arg)

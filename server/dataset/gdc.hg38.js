@@ -266,21 +266,6 @@ don't know a js method to alter the list of attributes in `case { }` part
 const variant2samplesGdcapi = {
 	endpoint: '/ssm_occurrences',
 
-	// Note: must have "case.case_id" for sunburst,
-	// as it's fail-safe in case both 'disease_type' and 'primary_site' are missing from that case
-	// 2delete
-	termids_sunburst: ['case.disease_type', 'case.primary_site', 'case.case_id'],
-
-	// 2delete
-	termids_samples: [
-		'ssm.ssm_id',
-		'case.case_id',
-		'case.observation.read_depth.t_alt_count',
-		'case.observation.read_depth.t_depth',
-		'case.observation.read_depth.n_depth',
-		'case.observation.sample.tumor_sample_barcode'
-	],
-
 	filters: (p, ds) => {
 		const f = { op: 'and', content: [] }
 		if (p.ssm_id_lst) {
@@ -639,21 +624,25 @@ module.exports = {
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
 	termdb: {
+		// purpuse?
 		termid2totalsize: {
-			// keys are term ids
 			'case.project.project_id': { gdcapi: project_size },
 			'case.disease_type': { gdcapi: disease_size },
 			'case.primary_site': { gdcapi: site_size }
 		},
+
+		// purpose?
 		termid2totalsize2: {
 			gdcapi: termidlst2size
 		},
+
 		dictionary: {
 			// runs termdb.gdc.js to init gdc dictionary
 			// create standard helpers at ds.cohort.termdb.q{}
 			gdcapi: true
 		},
-		// quick fix
+
+		// pending
 		allowCaseDetails: {
 			sample_id_key: 'case_uuid',
 			terms: ['case.diagnoses']
@@ -668,7 +657,12 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 
-		// default list of term ids to show as sample attributes in details page
+		//////////////////////////////
+		// termidlst and sunburst_ids are sent to client as default lists for different purposes
+		// subject to user-customization there, and sent back via request arg for computing
+		// not to be used on server-side!
+
+		// list of term ids as sample details
 		termidlst: [
 			'case.disease_type',
 			'case.primary_site',
@@ -679,7 +673,14 @@ module.exports = {
 			'case.demographic.race',
 			'case.demographic.ethnicity'
 		],
-		termids_samples: [
+
+		// small list of terms for sunburst rings
+		sunburst_ids: ['case.disease_type', 'case.primary_site'],
+
+		//////////////////////////////
+		// optional extra terms to append to client-provided term ids when get='samples'
+		// not to send to client but secretly used in backend computing
+		extra_termids_samples: [
 			'ssm.ssm_id',
 			'case.case_id',
 			'case.observation.read_depth.t_alt_count',
@@ -687,9 +688,6 @@ module.exports = {
 			'case.observation.read_depth.n_depth',
 			'case.observation.sample.tumor_sample_barcode'
 		],
-
-		// default list of terms for making sunburst/crosstab summary for cases harboring a term
-		sunburst_ids: ['case.disease_type', 'case.primary_site'],
 
 		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
 		sampleHasSsmReadDepth: true, // corresponds to .ssm_read_depth{} of a sample

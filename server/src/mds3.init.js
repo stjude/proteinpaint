@@ -45,11 +45,15 @@ export function client_copy(ds) {
 		ds2.has_skewer = true
 	}
 	if (ds.variant2samples) {
-		const skip = ['sample_id_key', 'sample_id_getter', 'gdcapi']
-		ds2.variant2samples = {}
-		for (const k in ds.variant2samples) {
-			if (skip.includes(k)) continue
-			ds2.variant2samples[k] = ds.variant2samples[k]
+		const v = ds.variant2samples
+		ds2.variant2samples = {
+			sunburst_ids: v.sunburst_ids,
+			termidlst: v.termidlst,
+			type_samples: v.type_samples,
+			type_summary: v.type_summary,
+			type_sunburst: v.type_sunburst,
+			url: v.url,
+			variantkey: v.variantkey
 		}
 	}
 	return ds2

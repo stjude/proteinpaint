@@ -124,8 +124,11 @@ async function load_driver(q, ds) {
 		if (!ds.variant2samples) throw 'not supported by server'
 		const out = await ds.variant2samples.get(q)
 
-		if (q.listSamples) {
-			/* quick fix: for listing all samples that have mutation in the view range
+		if (q.get == ds.variant2samples.type_samples && q.listSsm) {
+			/*
+			listSsm=true as a modifier of get=samples
+			work for "List" option in case menu
+			for listing all samples that have mutation in the view range
 			client-side variant data are stripped of sample info
 			to list samples, must re-query and collect samples
 

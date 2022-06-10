@@ -22,16 +22,16 @@ export async function variant2samples_getresult(q, ds) {
 	const samples = await get_samples(q, ds)
 
 	if (q.get == ds.variant2samples.type_samples) return samples
-	if (q.get == ds.variant2samples.type_sunburst) return make_sunburst(samples, ds, q)
-	if (q.get == ds.variant2samples.type_summary) return make_summary(samples, ds, q)
+	if (q.get == ds.variant2samples.type_sunburst) return await make_sunburst(samples, ds, q)
+	if (q.get == ds.variant2samples.type_summary) return await make_summary(samples, ds, q)
 	throw 'unknown get type'
 }
 
 async function get_samples(q, ds) {
 	const termidlst = q.termidlst.split(',')
-	if (q.get == ds.variant2samples.type_samples && ds.variant2samples.termids_samples) {
+	if (q.get == ds.variant2samples.type_samples && ds.variant2samples.extra_termids_samples) {
 		// extra term ids to add for get=samples query
-		termidlst.push(...ds.variant2samples.termids_samples)
+		termidlst.push(...ds.variant2samples.extra_termids_samples)
 	}
 	if (ds.variant2samples.gdcapi) {
 		return await getSamples_gdcapi(q, termidlst, ds)
@@ -50,6 +50,7 @@ function get_termid2fields(termidlst, ds) {
 
 async function make_sunburst(samples, ds, q) {
 	if (!ds.variant2samples.sunburst_ids) throw 'sunburst_ids missing'
+	console.log(q)
 	// use only suburst terms
 
 	// to use stratinput, convert each attr to {k} where k is term id

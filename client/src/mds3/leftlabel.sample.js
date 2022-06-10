@@ -1,7 +1,7 @@
 import { event as d3event } from 'd3-selection'
 import { makelabel } from './leftlabel'
 
-export async function makeSampleLabel(data, tk, block, laby) {
+export function makeSampleLabel(data, tk, block, laby) {
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
 	if (!tk.leftlabels.doms.samples) {
 		tk.leftlabels.doms.samples = makelabel(tk, block, laby)
@@ -23,7 +23,6 @@ function mayShowSummary(data, tk, block) {
 		// no terms to summarize for
 		return
 	}
-	return
 	// function is not async to display "wait" and not to block showing other menu options
 	const wait = tk.menutip.d
 		.append('div')
