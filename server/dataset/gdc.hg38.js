@@ -464,7 +464,16 @@ function termid2size_filters(p, ds) {
 			if (t) {
 				f.filters.content.push({
 					op: 'in',
-					content: { field: termid, value: [p.tid2value[termid]] }
+					content: {
+						/*********************
+						extremely tricky, no explanation
+						**********************
+						term id all starts with "case.**"
+						but in this graphql query, fields must start with "cases.**"
+						*/
+						field: termid.replace(/^case\./, 'cases.'),
+						value: [p.tid2value[termid]]
+					}
 				})
 			}
 		}
@@ -476,6 +485,7 @@ function termid2size_filters(p, ds) {
 			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
 		})
 	}
+	//console.log(JSON.stringify(f,null,2))
 	return f
 }
 

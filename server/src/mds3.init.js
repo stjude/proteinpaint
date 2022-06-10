@@ -6,7 +6,6 @@ const { variant2samples_getresult } = require('./mds3.variant2samples')
 ********************** EXPORTED
 init
 client_copy
-get_crosstabCombinations
 ********************** INTERNAL
 */
 
@@ -120,11 +119,11 @@ async function validate_termdb(ds) {
 			// termidlst is from clientside
 			if (tdb.termid2totalsize2.gdcapi) {
 				const tv2counts = await gdc.get_termlst2size({ api: tdb.termid2totalsize2.gdcapi, ds, termidlst, q })
+				// { termid: [ [cat1, total], [cat2, total], ... ] }
 				for (const termid of termidlst) {
-					const term = ds.cohort.termdb.q.termjsonByOneid(termid)
-					const entry = entries.find(e => e.name == term.name)
-					if (term && term.type == 'categorical' && entry !== undefined) {
-						const tv2count = tv2counts.get(term.id)
+					const entry = entries.find(e => e.termid == termid)
+					if (entry) {
+						const tv2count = tv2counts.get(termid)
 						for (const cat of entry.numbycategory) {
 							const vtotal = tv2count.find(v => v[0].toLowerCase() == cat[0].toLowerCase())
 							if (vtotal) cat.push(vtotal[1])
@@ -252,160 +251,6 @@ function validate_query_snvindel(ds) {
 			throw 'unknown query method for queries.snvindel.m2csq'
 		}
 	}
-}
-
-/*
-sunburst requires an array of multiple levels [project, disease, ...], with one term at each level
-to get disease total sizes per project, issue separate graphql queries on disease total with filter of project=xx for each
-essentially cross-tab two terms, for sunburst
-may generalize for 3 terms (3 layer sunburst)
-the procedural logic of cross-tabing Project+Disease may be specific to gdc, so the code here
-steps:
-1. given levels of sunburst [project, disease, ..], get size of each project without filtering
-2. for disease at level2, get disease size by filtering on each project
-3. for level 3 term, get category size by filtering on each project-disease combination
-4. apply the combination sizes to each node of sunburst
-
-todo: define input and output
-
-<input>
-termidlst[]
-	ordered array of term ids
-	must always get category list from first term
-	as the list cannot be predetermined due to api and token permissions
-	currently has up to three levels
-ds{}
-q{}
-nodes[], optional
-
-<output>
-combinations[]
-	stores all combinations, each element:
-	level 1: {count, id0, v0}
-	level 2: {count, id0, v0, id1, v1}
-	level 3: {count, id0, v0, id1, v1, id2, v2}
-*/
-export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
-	if (termidlst.length == 0) throw 'zero terms for crosstab'
-	if (termidlst.length > 3) throw 'crosstab will not work with more than 3 levels'
-
-	const combinations = []
-
-	// temporarily record categories for each term
-	// do not register list of categories in ds, as the list could be token-specific
-	// k: term id
-	// v: set of category labels
-	// if term id is not found, it will use all categories retrieved from api queries
-	const id2categories = new Map()
-	id2categories.set(termidlst[0], new Set())
-	if (termidlst[1]) id2categories.set(termidlst[1], new Set())
-	if (termidlst[2]) id2categories.set(termidlst[2], new Set())
-
-	let useall = true // to use all categories returned from api query
-	if (nodes) {
-		// only use a subset of categories existing in nodes[]
-		// at kras g12d, may get a node such as:
-		// {"id":"root...HCMI-CMDC...","parentId":"root...HCMI-CMDC","value":1,"name":"","id0":"project","v0":"HCMI-CMDC","id1":"disease"}
-		// with v1 missing, unknown reason
-		useall = false
-		for (const n of nodes) {
-			if (n.id0) {
-				if (!n.v0) {
-					continue
-				}
-				id2categories.get(n.id0).add(n.v0.toLowerCase())
-			}
-			if (n.id1 && termidlst[1]) {
-				if (!n.v1) {
-					// see above comments
-					continue
-				}
-				id2categories.get(n.id1).add(n.v1.toLowerCase())
-			}
-			if (n.id2 && termidlst[2]) {
-				if (!n.v2) {
-					continue
-				}
-				id2categories.get(n.id2).add(n.v2.toLowerCase())
-			}
-		}
-	}
-
-	// get term[0] category total, not dependent on other terms
-	const id0 = termidlst[0]
-	if (ds.termdb.termid2totalsize[id0]) {
-		// has query method for this term
-		const v2c = (await ds.termdb.termid2totalsize[id0].get(q)).v2count
-		for (const [v, count] of v2c) {
-			const v0 = v.toLowerCase()
-			if (useall) {
-				id2categories.get(id0).add(v0)
-				combinations.push({ count, id0, v0 })
-			} else {
-				if (id2categories.get(id0).has(v0)) {
-					combinations.push({ count, id0, v0 })
-				}
-			}
-		}
-	}
-
-	// get term[1] category total, conditional on term1
-	const id1 = termidlst[1]
-	if (ds.termdb.termid2totalsize[id1]) {
-		// has query method for this term, query in combination with id0 categories
-		const promises = []
-		for (const v0 of id2categories.get(id0)) {
-			const q2 = Object.assign({ tid2value: {} }, q)
-			q2.tid2value[id0] = v0
-			q2._combination = v0
-			promises.push(ds.termdb.termid2totalsize[id1].get(q2))
-		}
-		const lst = await Promise.all(promises)
-		for (const { v2count, combination } of lst) {
-			for (const [s, count] of v2count) {
-				const v1 = s.toLowerCase()
-				if (useall) {
-					id2categories.get(id1).add(v1)
-					combinations.push({ count, id0, v0: combination, id1, v1 })
-				} else {
-					if (id2categories.get(id1).has(v1)) {
-						combinations.push({ count, id0, v0: combination, id1, v1 })
-					}
-				}
-			}
-		}
-	}
-
-	// get term[2] category total, conditional on term1+term2 combinations
-	const id2 = termidlst[2]
-	if (ds.termdb.termid2totalsize[id2]) {
-		// has query method for this term, query in combination with id0 & id1 categories
-		const promises = []
-		for (const v0 of id2categories.get(id0)) {
-			for (const v1 of id2categories.get(id1)) {
-				const q2 = Object.assign({ tid2value: {} }, q)
-				q2.tid2value[id0] = v0
-				q2.tid2value[id1] = v1
-				q2._combination = { v0, v1 }
-				promises.push(ds.termdb.termid2totalsize[id2].get(q2))
-			}
-		}
-		const lst = await Promise.all(promises)
-		for (const { v2count, combination } of lst) {
-			for (const [s, count] of v2count) {
-				const v2 = s.toLowerCase()
-				if (useall) {
-					id2categories.get(id2).add(v2)
-					combinations.push({ count, id0, v0: combination.v0, id1, v1: combination.v1, id2, v2 })
-				} else {
-					if (id2categories.get(id2).has(v2)) {
-						combinations.push({ count, id0, v0: combination.v0, id1, v1: combination.v1, id2, v2 })
-					}
-				}
-			}
-		}
-	}
-	return combinations
 }
 
 function validate_ssm2canonicalisoform(ds) {

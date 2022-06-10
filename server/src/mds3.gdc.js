@@ -1,6 +1,6 @@
 const common = require('../shared/common')
 const got = require('got')
-const { get_crosstabCombinations } = require('./mds3.init')
+const { get_crosstabCombinations } = require('./mds3.variant2samples')
 const serverconfig = require('./serverconfig')
 
 /*
@@ -734,12 +734,26 @@ export async function get_cohortTotal(api, ds, q) {
 }
 
 /*
-purpose
-args{}
+for termid2totalsize2
+to replace termid2totalsize stuff
 
+args{}
+.api: can delete and directly use ds.termdb.termid2totalsize2.gdcapi
+.ds{}
+.termidlst=[ termids ]
+.q{}
+._combination={}
+	if provided, attached to returned map
+
+returns a map: {
+	term1id: [ [cat1, total], [cat2, total], ...],
+	term2id: [ ... same ],
+	...
+	"_combination": _combination
+}
 */
 export async function get_termlst2size(args) {
-	const { api, ds, termidlst, q, treeFilter } = args
+	const { api, ds, termidlst, q, treeFilter, _combination } = args
 
 	// convert each term id to {path}
 	// required for termid2size_query() of gdc.hg38.js
@@ -787,6 +801,12 @@ export async function get_termlst2size(args) {
 	}
 	// return total size here attached to entires
 	const tv2counts = new Map()
+
+	if (_combination) {
+		// needed for sunburst, see get_crosstabCombinations()
+		tv2counts.set('_combination', _combination)
+	}
+
 	for (const term of terms) {
 		if (term.type == 'categorical') {
 			const buckets = h[term.path]['buckets']
@@ -803,6 +823,10 @@ export async function get_termlst2size(args) {
 	return tv2counts
 }
 
+/* for an ele of nodes[], find matching ele from combinations[], and assign total as node.cohortsize
+why this function is gdc-specific?
+if not move to mds3.init.js
+*/
 export async function addCrosstabCount_tonodes(nodes, combinations) {
 	for (const node of nodes) {
 		if (!node.id0) continue // root
@@ -899,6 +923,7 @@ export function validate_sampleSummaries2_number(api) {
 	}
 }
 
+// not in use
 export function validate_sampleSummaries2_mclassdetail(api, ds) {
 	api.get = async q => {
 		// q.isoform is refseq when queried from that; must convert to ensembl, no need to keep refseq
