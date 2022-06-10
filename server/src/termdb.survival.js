@@ -162,6 +162,8 @@ function getOrderedLabels(term, bins = []) {
 
 async function addGeneData(q, rows) {
 	const termq = q.term2_q
+	if (!termq.exclude) termq.exclude = []
+	const classes = new Set()
 	const flagset = await get_flagset(q.ds.cohort, q.genome)
 	for (const row of rows) {
 		let matched = 0
@@ -175,7 +177,8 @@ async function addGeneData(q, rows) {
 					// only create a sample entry/row when it is not already filtered out by not having any dictionary term values
 					if (sname == row.sample) {
 						// TODO: may finetune matching based on dt# or mutation class
-						matched++
+						if (!termq.exclude.includes(d.class)) matched++
+						classes.add(d.class)
 						break
 					}
 				}

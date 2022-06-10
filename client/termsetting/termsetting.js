@@ -1,5 +1,5 @@
-import { getInitFxn, copyMerge } from '../rx'
-import { Menu } from '../dom/menu'
+import { getInitFxn, copyMerge } from '#rx'
+import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 
 /*
@@ -103,7 +103,7 @@ class TermSetting {
 		*/
 		const arg = this.term ? { id: this.term.id, term: this.term, q: this.q } : {}
 		if ('$id' in this) arg.$id = this.$id
-		this.opts.callback(overrideTw ? copyMerge({}, arg, overrideTw) : arg)
+		this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), overrideTw) : arg)
 	}
 
 	validateOpts(_opts) {
@@ -569,7 +569,9 @@ function setInteractivity(self) {
 									name: gene.name,
 									type: 'geneVariant'
 								},
-								q: {}
+								q: {
+									exclude: []
+								}
 							})
 						})
 				} catch (e) {

@@ -45,63 +45,72 @@ export const mclass = {
 		label: 'MISSENSE',
 		color: '#3987CC',
 		dt: dtsnvindel,
-		desc: 'A substitution variant in the coding region resulting in altered protein coding.'
+		desc: 'A substitution variant in the coding region resulting in altered protein coding.',
+		key: 'M'
 	},
-	E: { label: 'EXON', color: '#bcbd22', dt: dtsnvindel, desc: 'A variant in the exon of a non-coding RNA.' },
+	E: { label: 'EXON', color: '#bcbd22', dt: dtsnvindel, desc: 'A variant in the exon of a non-coding RNA.', key: 'E' },
 	F: {
 		label: 'FRAMESHIFT',
 		color: '#db3d3d',
 		dt: dtsnvindel,
-		desc: 'An insertion or deletion variant that alters the protein coding frame.'
+		desc: 'An insertion or deletion variant that alters the protein coding frame.',
+		key: 'F'
 	},
 	N: {
 		label: 'NONSENSE',
 		color: '#ff7f0e',
 		dt: dtsnvindel,
-		desc: 'A variant altering protein coding to produce a premature stopgain or stoploss.'
+		desc: 'A variant altering protein coding to produce a premature stopgain or stoploss.',
+		key: 'N'
 	},
 	S: {
 		label: 'SILENT',
 		color: '#2ca02c',
 		dt: dtsnvindel,
-		desc: 'A substitution variant in the coding region that does not alter protein coding.'
+		desc: 'A substitution variant in the coding region that does not alter protein coding.',
+		key: 'S'
 	},
 	D: {
 		label: 'PROTEINDEL',
 		color: '#7f7f7f',
 		dt: dtsnvindel,
 		desc:
-			'A deletion resulting in a loss of one or more codons from the product, but not altering the protein coding frame.'
+			'A deletion resulting in a loss of one or more codons from the product, but not altering the protein coding frame.',
+		key: 'D'
 	},
 	I: {
 		label: 'PROTEININS',
 		color: '#8c564b',
 		dt: dtsnvindel,
-		desc: 'An insertion introducing one or more codons into the product, but not altering the protein coding frame.'
+		desc: 'An insertion introducing one or more codons into the product, but not altering the protein coding frame.',
+		key: 'I'
 	},
 	P: {
 		label: 'SPLICE_REGION',
 		color: '#9467bd',
 		dt: dtsnvindel,
-		desc: 'A variant in an intron within 10 nt of an exon boundary.'
+		desc: 'A variant in an intron within 10 nt of an exon boundary.',
+		key: 'P'
 	},
 	L: {
 		label: 'SPLICE',
 		color: '#6633FF',
 		dt: dtsnvindel,
-		desc: 'A variant near an exon edge that may affect splicing functionality.'
+		desc: 'A variant near an exon edge that may affect splicing functionality.',
+		key: 'L'
 	},
-	Intron: { label: 'INTRON', color: '#bbbbbb', dt: dtsnvindel, desc: 'An intronic variant.' },
+	Intron: { label: 'INTRON', color: '#bbbbbb', dt: dtsnvindel, desc: 'An intronic variant.', key: 'Intron' },
 
 	// quick fix!! for showing genes that are not tested in samples (e.g. gene panels) in the heatmap
-	Blank: { label: 'Not tested', color: '#fff', dt: dtsnvindel, desc: 'This gene is not tested.' }
+	Blank: { label: 'Not tested', color: '#fff', dt: dtsnvindel, desc: 'This gene is not tested.', key: 'Blank' }
 }
 export const mclassitd = 'ITD'
 mclass[mclassitd] = {
 	label: 'ITD',
 	color: '#ff70ff',
 	dt: dtitd,
-	desc: 'In-frame internal tandem duplication.'
+	desc: 'In-frame internal tandem duplication.',
+	key: mclassitd
 }
 
 export const mclassdel = 'DEL'
@@ -109,7 +118,8 @@ mclass[mclassdel] = {
 	label: 'DELETION, intragenic',
 	color: '#858585',
 	dt: dtdel,
-	desc: 'Intragenic deletion.'
+	desc: 'Intragenic deletion.',
+	key: mclassdel
 }
 
 export const mclassnloss = 'NLOSS'
@@ -117,7 +127,8 @@ mclass[mclassnloss] = {
 	label: 'N-terminus loss',
 	color: '#545454',
 	dt: dtnloss,
-	desc: 'N-terminus loss due to translocation'
+	desc: 'N-terminus loss due to translocation',
+	key: mclassnloss
 }
 
 export const mclasscloss = 'CLOSS'
@@ -125,7 +136,8 @@ mclass[mclasscloss] = {
 	label: 'C-terminus loss',
 	color: '#545454',
 	dt: dtcloss,
-	desc: 'C-terminus loss due to translocation'
+	desc: 'C-terminus loss due to translocation',
+	key: mclasscloss
 }
 
 export const mclassutr3 = 'Utr3'
@@ -133,7 +145,8 @@ mclass[mclassutr3] = {
 	label: 'UTR_3',
 	color: '#998199',
 	dt: dtsnvindel,
-	desc: "A variant in the 3' untranslated region."
+	desc: "A variant in the 3' untranslated region.",
+	key: mclassutr3
 }
 
 export const mclassutr5 = 'Utr5'
@@ -141,7 +154,8 @@ mclass[mclassutr5] = {
 	label: 'UTR_5',
 	color: '#819981',
 	dt: dtsnvindel,
-	desc: "A variant in the 5' untranslated region."
+	desc: "A variant in the 5' untranslated region.",
+	key: mclassutr5
 }
 
 export const mclassnonstandard = 'X'
@@ -149,7 +163,8 @@ mclass[mclassnonstandard] = {
 	label: 'NONSTANDARD',
 	color: 'black',
 	dt: dtsnvindel,
-	desc: 'A mutation class that either does not match our notation, or is unspecified.'
+	desc: 'A mutation class that either does not match our notation, or is unspecified.',
+	key: mclassnonstandard
 }
 
 export const mclassnoncoding = 'noncoding'
@@ -157,7 +172,8 @@ mclass[mclassnoncoding] = {
 	label: 'NONCODING',
 	color: 'black',
 	dt: dtsnvindel,
-	desc: 'Noncoding mutation.'
+	desc: 'Noncoding mutation.',
+	key: mclassnoncoding
 }
 // done point mutations
 
@@ -206,37 +222,75 @@ mclass[mclassfusionrna] = {
 	desc:
 		'Marks the break points leading to fusion transcripts, predicted by "Cicero" from RNA-seq data.<br>' +
 		'<span style="font-size:150%">&#9680;</span> - 3\' end of the break point is fused to the 5\' end of another break point in a different gene.<br>' +
-		'<span style="font-size:150%">&#9681;</span> - 5\' end of the break point is fused to the 3\' end of another break point in a different gene.'
+		'<span style="font-size:150%">&#9681;</span> - 5\' end of the break point is fused to the 3\' end of another break point in a different gene.',
+	key: mclassfusionrna
 }
 export const mclasssv = 'SV'
 mclass[mclasssv] = {
 	label: 'Structural variation',
 	color: '#858585',
 	dt: dtsv,
-	desc: 'Structural variation detected in genomic DNA.'
+	desc: 'Structural variation detected in genomic DNA.',
+	key: mclasssv
 }
 
 export const mclasscnvgain = 'CNV_amp'
-mclass[mclasscnvgain] = { label: 'Copy number gain', color: '#e9a3c9', dt: dtcnv, desc: 'Copy number gain' }
+mclass[mclasscnvgain] = {
+	label: 'Copy number gain',
+	color: '#e9a3c9',
+	dt: dtcnv,
+	desc: 'Copy number gain',
+	key: mclasscnvgain
+}
 
 export const mclasscnvloss = 'CNV_loss'
-mclass[mclasscnvloss] = { label: 'Copy number loss', color: '#a1d76a', dt: dtcnv, desc: 'Copy number loss' }
+mclass[mclasscnvloss] = {
+	label: 'Copy number loss',
+	color: '#a1d76a',
+	dt: dtcnv,
+	desc: 'Copy number loss',
+	key: mclasscnvloss
+}
 
 export const mclasscnvloh = 'CNV_loh'
-mclass[mclasscnvloh] = { label: 'LOH', color: '#12EDFC', dt: dtcnv, desc: 'Loss of heterozygosity' }
+mclass[mclasscnvloh] = { label: 'LOH', color: '#12EDFC', dt: dtcnv, desc: 'Loss of heterozygosity', key: mclasscnvloh }
 
 // for VCF
 export const mclasssnv = 'snv'
-mclass[mclasssnv] = { label: 'SNV', color: '#92a2d4', dt: dtsnvindel, desc: 'Single nucleotide variation' }
+mclass[mclasssnv] = {
+	label: 'SNV',
+	color: '#92a2d4',
+	dt: dtsnvindel,
+	desc: 'Single nucleotide variation',
+	key: mclasssnv
+}
 
 export const mclassmnv = 'mnv'
-mclass[mclassmnv] = { label: 'MNV', color: '#92a2d4', dt: dtsnvindel, desc: 'Multiple nucleotide variation' }
+mclass[mclassmnv] = {
+	label: 'MNV',
+	color: '#92a2d4',
+	dt: dtsnvindel,
+	desc: 'Multiple nucleotide variation',
+	key: mclassmnv
+}
 
 export const mclassinsertion = 'insertion'
-mclass[mclassinsertion] = { label: 'Sequence insertion', color: '#bd8e91', dt: dtsnvindel, desc: 'Sequence insertion' }
+mclass[mclassinsertion] = {
+	label: 'Sequence insertion',
+	color: '#bd8e91',
+	dt: dtsnvindel,
+	desc: 'Sequence insertion',
+	key: mclassinsertion
+}
 
 export const mclassdeletion = 'deletion'
-mclass[mclassdeletion] = { label: 'Sequence deletion', color: '#b5a174', dt: dtsnvindel, desc: 'Sequence deletion' }
+mclass[mclassdeletion] = {
+	label: 'Sequence deletion',
+	color: '#b5a174',
+	dt: dtsnvindel,
+	desc: 'Sequence deletion',
+	key: mclassdeletion
+}
 // TODO complex indel
 
 export const vepinfo = function(s) {
