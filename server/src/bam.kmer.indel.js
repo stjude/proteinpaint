@@ -95,7 +95,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		altseq = q.altseq
 	}
 
-	//console.log(q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt)
+	console.log(q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt)
 	//console.log('refSeq', refseq)
 	//console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
 	//console.log('leftflankseq:', leftflankseq)
@@ -322,9 +322,11 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	let max_diff_score = Math.max(...diff_list)
 	let min_diff_score = Math.min(...diff_list)
 	if (min_diff_score > 0) {
+		// This scenario arises when only alt group is displayed, in that case the min_diff_score will be the lowest number within the alt group. In that case, set min_diff_score = 0
 		min_diff_score = 0
 	}
 	if (max_diff_score < 0) {
+		// This scenario arises when only ref group is displayed, in that case the max_diff_score will be the highest number within the ref group, but that number will always be less than zero. In that case, set max_diff_score = 0
 		max_diff_score = 0
 	}
 	const groups = []
