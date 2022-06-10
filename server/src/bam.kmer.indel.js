@@ -319,8 +319,14 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	// console.log('Final array for plotting:', read_alignment_diff_scores_input)
 	// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
 	const diff_list = read_alignment_diff_scores_input.map(i => i.value)
-	const max_diff_score = Math.max(...diff_list)
-	const min_diff_score = Math.min(...diff_list)
+	let max_diff_score = Math.max(...diff_list)
+	let min_diff_score = Math.min(...diff_list)
+	if (min_diff_score > 0) {
+		min_diff_score = 0
+	}
+	if (max_diff_score < 0) {
+		max_diff_score = 0
+	}
 	const groups = []
 	for (const k in type2group) {
 		const g = type2group[k]
