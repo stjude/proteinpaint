@@ -84,26 +84,6 @@ async function validate_termdb(ds) {
 		throw 'unknown source of termdb vocabulary'
 	}
 
-	if (tdb.termid2totalsize) {
-		for (const tid in tdb.termid2totalsize) {
-			if (!ds.cohort.termdb.q.termjsonByOneid(tid)) throw 'unknown term id from termid2totalsize: ' + tid
-			const t = tdb.termid2totalsize[tid]
-			if (t.gdcapi) {
-				// validate
-			} else {
-				throw 'unknown method for term totalsize: ' + tid
-			}
-			// add getter
-			t.get = async p => {
-				// p is client query parameter (set_id, parent project_id etc)
-				if (t.gdcapi) {
-					return gdc.get_cohortTotal(t.gdcapi, ds, p)
-				}
-				throw 'unknown method for term totalsize: ' + tid
-			}
-		}
-	}
-
 	if (tdb.termid2totalsize2) {
 		if (tdb.termid2totalsize2.gdcapi) {
 			// validate gdcapi
@@ -168,17 +148,6 @@ function validate_variant2samples(ds) {
 	}
 	vs.get = async q => {
 		return await variant2samples_getresult(q, ds)
-	}
-	if (ds.termdb.termid2totalsize) {
-		// has ways of querying total size, add the crosstab getter
-		vs.addCrosstabCount = async (nodes, q, termidlst) => {
-			const combinations = await get_crosstabCombinations(termidlst, ds, q, nodes)
-			if (vs.gdcapi) {
-				await gdc.addCrosstabCount_tonodes(nodes, combinations)
-			} else {
-				throw 'unknown way of doing crosstab'
-			}
-		}
 	}
 
 	if (vs.url) {

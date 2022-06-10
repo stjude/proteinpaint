@@ -17,7 +17,6 @@ validate_query_snvindel_byisoform_2
 validate_query_genecnv
 getSamples_gdcapi
 	flattenCaseByFields
-get_cohortTotal
 get_termlst2size
 addCrosstabCount_tonodes
 validate_m2csq
@@ -696,46 +695,7 @@ function may_add_readdepth(acase, sample) {
 }
 
 /*
-works for ds.termdb.termid2totalsize{}
-q is query parameter:
-.set_id
-.tid2value{}, k: term id, v: category value to be added to filter
-._combination
-	in the cross-tab computation e.g. Project+Disease, will need to attach _combination to returned data
-	so in Promise.all(), the result can be traced back to a project+disease combination
-*/
-export async function get_cohortTotal(api, ds, q) {
-	if (!api.query) throw '.query missing for termid2totalsize'
-	if (!api.filters) throw '.filters missing for termid2totalsize'
-	if (typeof api.filters != 'function') throw '.filters() not function in termid2totalsize'
-	const response = await got.post(ds.apihost, {
-		headers: getheaders(q),
-		body: JSON.stringify({ query: api.query, variables: api.filters(q, ds) })
-	})
-	let re
-	try {
-		re = JSON.parse(response.body)
-	} catch (e) {
-		throw 'invalid JSON from GDC for cohortTotal'
-	}
-	let h = re[api.keys[0]]
-	for (let i = 1; i < api.keys.length; i++) {
-		h = h[api.keys[i]]
-		if (!h) throw '.' + api.keys[i] + ' missing from data structure of termid2totalsize'
-	}
-	if (!Array.isArray(h)) throw api.keys.join('.') + ' not array'
-	const v2count = new Map()
-	for (const t of h) {
-		if (!t.key) throw 'key missing from one bucket'
-		if (!Number.isInteger(t.doc_count)) throw '.doc_count not integer for bucket: ' + t.key
-		v2count.set(t.key, t.doc_count)
-	}
-	return { v2count, combination: q._combination }
-}
-
-/*
 for termid2totalsize2
-to replace termid2totalsize stuff
 
 args{}
 .api: can delete and directly use ds.termdb.termid2totalsize2.gdcapi
@@ -787,7 +747,7 @@ export async function get_termlst2size(args) {
 		if (!h)
 			throw '.' +
 				api.keys[i] +
-				' missing from data structure of termid2totalsize for query :' +
+				' missing from data structure of termid2totalsize2 for query :' +
 				query +
 				' and filter: ' +
 				filter

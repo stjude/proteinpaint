@@ -325,103 +325,6 @@ const variant2samplesGdcapi = {
 	}
 }
 
-/*
-getting total cohort sizes
-*/
-function totalsize_filters(p, ds) {
-	// same filter maker function is shared for all terms that need to get total size
-	const f = {
-		filters: {
-			op: 'and',
-			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
-		}
-	}
-	if (p.set_id) {
-		f.filters.content.push({
-			op: 'in',
-			content: {
-				field: 'cases.case_id',
-				value: [p.set_id]
-			}
-		})
-	}
-	if (p.filter0) {
-		f.filters.content.push(p.filter0)
-	}
-	if (p.tid2value) {
-		for (const termid in p.tid2value) {
-			const t = ds.cohort.termdb.q.termjsonByOneid(termid)
-			if (t) {
-				f.filters.content.push({
-					op: 'in',
-					content: { field: termid, value: [p.tid2value[termid]] }
-				})
-			}
-		}
-	}
-	return f
-}
-const project_size = {
-	query: ` query projectSize( $filters: FiltersArgument) {
-	viewer {
-		explore {
-			cases {
-				total: aggregations(filters: $filters) {
-					project__project_id {
-						buckets {
-							doc_count
-							key
-						}
-					}
-				}
-			}
-		}
-	}
-}`,
-	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'project__project_id', 'buckets'],
-	filters: totalsize_filters
-}
-const disease_size = {
-	query: ` query diseaseSize( $filters: FiltersArgument) {
-	viewer {
-		explore {
-			cases {
-				total: aggregations(filters: $filters) {
-					disease_type {
-						buckets {
-							doc_count
-							key
-						}
-					}
-				}
-			}
-		}
-	}
-}`,
-	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'disease_type', 'buckets'],
-	filters: totalsize_filters
-}
-const site_size = {
-	query: ` query siteSize( $filters: FiltersArgument) {
-	viewer {
-		explore {
-			cases {
-				total: aggregations(filters: $filters) {
-					primary_site {
-						buckets {
-							doc_count
-							key
-						}
-					}
-				}
-			}
-		}
-	}
-}`,
-	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'primary_site', 'buckets'],
-	filters: totalsize_filters
-}
-
 function termid2size_query(termlst) {
 	/* each term {type, path, termid}
 	path is converted from term id "project__project_id"
@@ -634,14 +537,8 @@ module.exports = {
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
 	termdb: {
-		// purpuse?
-		termid2totalsize: {
-			'case.project.project_id': { gdcapi: project_size },
-			'case.disease_type': { gdcapi: disease_size },
-			'case.primary_site': { gdcapi: site_size }
-		},
-
-		// purpose?
+		// for each term from an input list, get total sizes for each category
+		// used for sunburst and summary
 		termid2totalsize2: {
 			gdcapi: termidlst2size
 		},
