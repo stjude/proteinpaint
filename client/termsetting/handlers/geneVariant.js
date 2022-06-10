@@ -25,7 +25,7 @@ export function getHandler(self) {
 		},
 
 		getPillStatus() {
-			return { text: 'any variant class' }
+			return { text: self.q.exclude?.length ? 'matching variants' : 'any variant class' }
 		},
 
 		validateQ(data) {},
@@ -43,8 +43,11 @@ export function fillTW(tw, vocabApi) {
 	if (!('id' in tw)) tw.id = idPrefix + id++
 }
 
-function makeEditMenu(self, div) {
-	div.style('padding', '5px').style('cursor', 'pointer')
+function makeEditMenu(self, _div) {
+	const div = _div
+		.append('div')
+		.style('padding', '5px')
+		.style('cursor', 'pointer')
 
 	div
 		.append('div')

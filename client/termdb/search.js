@@ -37,7 +37,6 @@ class TermSearch {
 
 	async init() {
 		this.state = this.getState(this.app.getState())
-		console.log(39, this.state)
 		this.initUI()
 	}
 
@@ -138,7 +137,7 @@ function setRenderers(self) {
 
 		if (self.opts.click_term && uses.has('plot')) {
 			// to click a graphable term, show as blue button
-			if (self.opts.disable_terms && self.opts.disable_terms.includes(term.id)) {
+			if ('id' in term && self.opts.disable_terms?.includes(term.id)) {
 				// but it's disabled
 				button
 					.attr('class', 'sja_tree_click_term_disabled')
@@ -174,6 +173,7 @@ function setRenderers(self) {
 					.text('n=' + term.samplecount)
 			}
 		} else {
+			if (term.name == 'MYC') console.log(176)
 			// as regular button, click to expand tree
 			button.attr('class', 'sja_menuoption').on('click', () => {
 				self.clear()

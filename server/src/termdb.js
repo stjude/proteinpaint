@@ -183,7 +183,7 @@ async function trigger_findterm(q, res, termdb, ds) {
 			const flag = flagset[flagname]
 			for (const gene in flag.data) {
 				if (!flag.data[gene]?.length) continue
-				const d = { name: gene, type: 'geneVariant' }
+				const d = { name: gene, type: 'geneVariant', isleaf: true }
 				if (gene === str) matches.equals.push(d)
 				else if (gene.startsWith(str)) matches.startsWith.push(d)
 				else if (gene.includes(' ' + str)) matches.startsWord.push(d)
