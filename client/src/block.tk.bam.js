@@ -728,7 +728,7 @@ function may_render_variant(data, tk, block) {
 				.style('width', '300px')
 				.style('font-size', '12px')
 				.html(
-					'Diff score is the difference between jaccard similarities of the alternate and reference alleles for each read. For reference and alternate groups, higher magnitude indicates greater confidence of the classification.' +
+					'Diff score = (Number of nucleotide matches of read vs alternate allele)/(Total length of alignment of read vs alternate allele) - (Number of nucleotide matches of read vs reference allele)/(Total length of alignment of read vs reference allele). In case of the none group, the diff_score reveals to which allele the read has greater sequence similarity.' +
 						"<br><a href='https://proteinpaint.stjude.org/bam' target='_blank'>Click here to view details of this method</a>."
 				)
 		})
