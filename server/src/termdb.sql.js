@@ -938,11 +938,11 @@ thus less things to worry about...
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE name LIKE ?`
 		)
-		q.findTermByName = (n, limit, cohortStr = '', treeFilter = null, usecase = null) => {
+		q.findTermByName = (n, limit = 10, cohortStr = '', treeFilter = null, usecase = null, matches = null) => {
 			const vals = []
 			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
-				const r = { equals: [], startsWith: [], startsWord: [], includes: [] }
+				const r = matches || { equals: [], startsWith: [], startsWord: [], includes: [] }
 				const lst = []
 				for (const i of tmp) {
 					const name = i.name.toLowerCase()
@@ -957,7 +957,7 @@ thus less things to worry about...
 						else r.includes.push(j)
 					}
 				}
-				return [...r.equals, ...r.startsWith, ...r.startsWord, ...r.includes].slice(0, 10)
+				return [...r.equals, ...r.startsWith, ...r.startsWord, ...r.includes].slice(0, limit)
 			}
 			return undefined
 		}

@@ -126,7 +126,7 @@ class TermdbVocab {
 			const key = _key == 'term' ? 'term1' : _key
 			if ('id' in term.term) {
 				params.push(key + '_id=' + encodeURIComponent(term.term.id))
-			} else if (term.term.type == 'geneCustomLst') {
+			} else if (term.term.type == 'geneVariant') {
 				params.push(key + '=' + encodeURIComponent(JSON.stringify(term.term)))
 			}
 

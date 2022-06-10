@@ -126,58 +126,6 @@ function setRenderers(self) {
 		self.updatePill()
 	}
 	self.showMenu = function() {
-		self.dom.tip.clear().showunder(self.dom.menuBtn.node())
-		const term0 = self.state.config.term0
-
-		// option (1) none
-		if (term0) {
-			// term0 is not null, allow to change to none
-			// right now this option will not be shown, as termsetting pill menu generates the cancel button to delete term0
-			// will be used when additional term0 options are used
-			self.dom.tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.text('None')
-				.on('click', () => {
-					self.dom.tip.hide()
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.opts.id,
-						config: {
-							term0: null
-						}
-					})
-				})
-		}
-
-		for (const t of self.usedTerms) {
-			self.dom.tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.text('Term: ' + t.term.name)
-				.on('click', () => {
-					self.dom.tip.hide()
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.opts.id,
-						config: {
-							term0: {
-								id: t.term.id,
-								term: t.term,
-								q: t.q
-							}
-						}
-					})
-				})
-		}
-		// option (4)
-		self.dom.tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.text('Select a new term')
-			.on('click', () => {
-				self.dom.tip.hide()
-				self.pill.showTree(self.dom.menuBtn.node())
-			})
+		self.pill.showTree(self.dom.menuBtn.node())
 	}
 }

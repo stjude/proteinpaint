@@ -24,7 +24,7 @@ export function getHandler(self) {
 		},
 
 		getPillStatus() {
-			return { text: 'TEST' }
+			return { text: 'any variant class' }
 		},
 
 		validateQ(data) {},

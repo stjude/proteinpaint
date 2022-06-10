@@ -51,7 +51,7 @@ export async function get_survival(q, ds) {
 		const results = get_rows(q, { withCTEs: true })
 		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
 
-		if (q.term2?.type == 'geneCustomLst') {
+		if (q.term2?.type == 'geneVariant') {
 			await addGeneData(q, results.lst)
 		}
 
@@ -167,8 +167,8 @@ async function addGeneData(q, rows) {
 		let matched = 0
 		for (const flagname in flagset) {
 			const flag = flagset[flagname]
-			for (const gene of termq.values) {
-				if (!(gene in flag.data)) continue
+			const gene = q.term2.name
+			if (gene in flag.data) {
 				for (const d of flag.data[gene]) {
 					// TODO: fix the sample names in the PNET mutation text files
 					const sname = d.sample.split(';')[0].trim()
@@ -179,15 +179,9 @@ async function addGeneData(q, rows) {
 						break
 					}
 				}
-				if (termq?.join == 'or') break
 			}
-
-			if (termq?.join == 'or') {
-				row.val2 = matched ? 'matched' : 'not matched'
-			} else {
-				row.val2 = matched === termq.values.length ? 'matched' : 'not matched'
-			}
-			row.key2 = row.val2
 		}
+		row.val2 = matched ? 'matched' : 'not matched'
+		row.key2 = row.val2
 	}
 }

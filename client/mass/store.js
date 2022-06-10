@@ -377,7 +377,7 @@ function validatePlotTerm(t, vocabApi) {
 			break
 		case 'snplst':
 		case 'snplocus':
-		case 'geneCustomLst':
+		case 'geneVariant':
 			break
 		default:
 			if (t.term.isgenotype) {

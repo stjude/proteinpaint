@@ -14,7 +14,7 @@ clickNoPillDiv
 showTree
 */
 
-export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant', 'geneCustomLst'])
+export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant'])
 
 // append the common ID substring,
 // so that the first characters of $id is more indexable
@@ -561,11 +561,16 @@ function setInteractivity(self) {
 						.style('display', 'block')
 						.style('margin', '2px 3px')
 						.style('width', 'fit-content')
-						.text(gene => gene)
+						.text(gene => gene.name)
 						.on('click', gene => {
-							selectedGenes.add(gene)
-							input.property('value', '')
-							displaySelected()
+							self.dom.tip.hide()
+							self.runCallback({
+								term: {
+									name: gene.name,
+									type: 'geneVariant'
+								},
+								q: {}
+							})
 						})
 				} catch (e) {
 					alert('Search error: ' + e)
@@ -577,42 +582,6 @@ function setInteractivity(self) {
 			.style('margin', '5px')
 			.style('padding-left', '5px')
 			.style('border-left', '2px solid #ccc')
-		const selectedDiv = self.dom.tip.d.append('div').style('margin', '5px')
-		const submitBtn = self.dom.tip.d
-			.append('div')
-			.style('text-align', 'center')
-			.append('button')
-			.text('Submit')
-			.property('disabled', true)
-			.on('click', () => {
-				const genes = [...selectedGenes]
-				self.runCallback({
-					term: {
-						name: genes.join(' & '),
-						type: 'geneCustomLst'
-					},
-					q: {
-						// TODO: support 'or' operator
-						join: 'and',
-						values: genes
-					}
-				})
-			})
-
-		function displaySelected() {
-			resultsDiv.selectAll('*').remove()
-			const genes = selectedDiv.selectAll('div').data([...selectedGenes])
-			genes.exit().remove()
-			genes
-				.enter()
-				.insert('div', 'div')
-				.style('margin', '5px')
-				.style('padding', '2px 3px')
-				.style('width', 'fit-content')
-				.style('background-color', '#eee')
-				.text(gene => gene)
-			submitBtn.property('disabled', selectedGenes.size < 1)
-		}
 	}
 }
 

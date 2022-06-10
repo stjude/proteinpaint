@@ -33,11 +33,12 @@ class TermSearch {
 		setRenderers(this)
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }
-		this.initUI()
 	}
 
 	async init() {
 		this.state = this.getState(this.app.getState())
+		console.log(39, this.state)
+		this.initUI()
 	}
 
 	reactsTo(action) {
@@ -55,6 +56,7 @@ class TermSearch {
 							.slice()
 							.sort()
 							.join(','),
+			allowedTermTypes: appState.termdbConfig.allowedTermTypes || [],
 			expandedTermIds: appState.tree.expandedTermIds,
 			usecase: appState.tree.usecase,
 			search: appState.search
@@ -88,13 +90,14 @@ export const searchInit = rx.getInitFxn(TermSearch)
 function setRenderers(self) {
 	self.initUI = () => {
 		self.dom.holder.style('display', self.search && self.search.isVisible == false ? 'none' : 'block')
+		const placeholderDetail = self.state.allowedTermTypes.includes('geneVariant') ? ' terms or genes' : '...'
 		self.dom.input = self.dom.holder
 			.style('text-align', 'left')
 			.append('input')
 			.attr('type', 'search')
 			.attr('class', 'tree_search')
-			.attr('placeholder', 'Search')
-			.style('width', '180px')
+			.attr('placeholder', 'Search' + placeholderDetail)
+			.style('width', '190px')
 			.style('margin', '10px')
 			.style('display', 'block')
 			.on('input', debounce(self.onInput, 300))
@@ -131,7 +134,7 @@ function setRenderers(self) {
 	self.showTerm = function(term) {
 		const tr = select(this)
 		const button = tr.append('td').text(term.name)
-		const uses = isUsableTerm(term)
+		const uses = isUsableTerm(term, self.state.usecase)
 
 		if (self.opts.click_term && uses.has('plot')) {
 			// to click a graphable term, show as blue button
@@ -151,7 +154,7 @@ function setRenderers(self) {
 					.style('color', 'black')
 					.style('padding', '5px 8px')
 					.style('border-radius', '6px')
-					.style('background-color', '#cfe2f3')
+					.style('background-color', term.type == 'geneVariant' ? 'rgba(251,171,96,0.5)' : '#cfe2f3')
 					.style('margin', '1px 0px')
 					.style('cursor', 'default')
 					.on('click', () => {
@@ -190,7 +193,7 @@ function setRenderers(self) {
 			})
 		}
 		tr.append('td')
-			.text((term.__ancestorNames || []).join(' > '))
+			.text(term.type == 'geneVariant' ? 'gene variant' : (term.__ancestorNames || []).join(' > '))
 			.style('opacity', 0.5)
 			.style('font-size', '.7em')
 	}

@@ -11,6 +11,7 @@ const termdbsnp = require('./termdb.snp')
 const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 const get_flagset = require('./bulk.mset').get_flagset
+const isUsableTerm = require('../shared/termdb.usecase').isUsableTerm
 
 /*
 ********************** EXPORTED
@@ -173,34 +174,34 @@ do not directly hand over the term object to client; many attr to be kept on ser
 
 async function trigger_findterm(q, res, termdb, ds) {
 	// TODO also search categories
-	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
-	if (q.type?.startsWith('gene')) {
-		const flagset = await get_flagset(ds.cohort, q.genome) //console.log(flagset)
-		const matches = { equals: [], startsWith: [], includes: [] }
-		const str = q.findterm.toUpperCase()
+	const flagset = await get_flagset(ds.cohort, q.genome) //console.log(flagset)
+	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
+	const str = q.findterm.toUpperCase()
+
+	if (isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')) {
 		for (const flagname in flagset) {
 			const flag = flagset[flagname]
 			for (const gene in flag.data) {
 				if (!flag.data[gene]?.length) continue
-				else if (gene === str) matches.equals.push(gene)
-				else if (gene.startsWith(str)) matches.startsWith.push(gene)
-				else if (gene.includes(str)) matches.includes.push(gene)
+				const d = { name: gene, type: 'geneVariant' }
+				if (gene === str) matches.equals.push(d)
+				else if (gene.startsWith(str)) matches.startsWith.push(d)
+				else if (gene.includes(' ' + str)) matches.startsWord.push(d)
+				else if (gene.includes(str)) matches.includes.push(d)
 			}
 		}
-		// show terms that equals or start with the search string first/second,
-		// but also limit the list of matches to 50
-		// TODO: do not harcode a limit
-		res.send({ lst: [...matches.equals, ...matches.startsWith, ...matches.includes].slice(0, 50) })
-	} else {
-		const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.treeFilter, q.usecase)
-		const terms = terms_.map(copy_term)
-		const id2ancestors = {}
-		terms.forEach(term => {
-			term.__ancestors = termdb.q.getAncestorIDs(term.id)
-			term.__ancestorNames = termdb.q.getAncestorNames(term.id)
-		})
-		res.send({ lst: terms })
 	}
+
+	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
+	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.treeFilter, q.usecase, matches)
+	const terms = terms_.map(copy_term)
+	const id2ancestors = {}
+	terms.forEach(term => {
+		if (term.type == 'geneVariant') return
+		term.__ancestors = termdb.q.getAncestorIDs(term.id)
+		term.__ancestorNames = termdb.q.getAncestorNames(term.id)
+	})
+	res.send({ lst: terms })
 }
 
 function trigger_getcategories(q, res, tdb, ds) {
