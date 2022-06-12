@@ -355,21 +355,10 @@ function makeTermdbQueries(ds, id2term) {
 		// if tree filter is given, add sample count for each term
 		// FIXME revive this code
 		if (terms.length == 0 || !treeFilter) return
-		let termlst = []
-		for (const term of terms) {
-			if (term.path)
-				termlst.push({
-					path: term.path.replace('case.', '').replace(/\./g, '__'),
-					type: term.type
-				})
-		}
-
-		if (termlst.length == 0) return
 
 		const tv2counts = await get_termlst2size({
-			api: ds.termdb.termid2totalsize2.gdcapi,
 			ds,
-			termlst,
+			termidlst: terms.map(i => i.id),
 			treeFilter: JSON.parse(treeFilter)
 		})
 

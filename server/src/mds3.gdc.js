@@ -698,12 +698,11 @@ function may_add_readdepth(acase, sample) {
 for termid2totalsize2
 
 args{}
-.api: can delete and directly use ds.termdb.termid2totalsize2.gdcapi
 .ds{}
 .termidlst=[ termids ]
 .q{}
 ._combination={}
-	if provided, attached to returned map
+	if provided, return alongside map; needed for sunburst, see get_crosstabCombinations()
 
 returns a map: {
 	term1id: [ [cat1, total], [cat2, total], ...],
@@ -713,27 +712,29 @@ returns a map: {
 }
 */
 export async function get_termlst2size(args) {
-	const { api, ds, termidlst, q, treeFilter, _combination } = args
+	const { ds, termidlst, q, treeFilter, _combination } = args
+	const api = ds.termdb.termid2totalsize2.gdcapi
 
 	// convert each term id to {path}
+	// id=case.project.project_id, convert to path=project__project_id, for graphql
 	// required for termid2size_query() of gdc.hg38.js
-	const terms = []
+	const termPaths = []
 	for (const id of termidlst) {
 		const t = ds.cohort.termdb.q.termjsonByOneid(id)
 		if (t) {
-			terms.push({
-				termid: id,
+			termPaths.push({
+				id,
 				path: id.replace('case.', '').replace(/\./g, '__'),
 				type: t.type
 			})
 		}
 	}
 
-	const query = api.query(terms)
-	const filter = api.filters(treeFilter, ds)
+	const query = api.query(termPaths)
+	const variables = api.filters(treeFilter, ds)
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
-		body: JSON.stringify({ query, variables: filter })
+		body: JSON.stringify({ query, variables })
 	})
 	let re
 	try {
@@ -752,7 +753,7 @@ export async function get_termlst2size(args) {
 				' and filter: ' +
 				filter
 	}
-	for (const term of terms) {
+	for (const term of termPaths) {
 		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets']))
 			throw api.keys.join('.') + ' not array for query :' + query + ' and filter: ' + filter
 		if ((term.type == 'integer' || term.type == 'float') && typeof h[term.path]['stats'] != 'object') {
@@ -762,24 +763,21 @@ export async function get_termlst2size(args) {
 	// return total size here attached to entires
 	const tv2counts = new Map()
 
-	if (_combination) {
-		// needed for sunburst, see get_crosstabCombinations()
-		tv2counts.set('_combination', _combination)
-	}
-
-	for (const term of terms) {
+	for (const term of termPaths) {
 		if (term.type == 'categorical') {
 			const buckets = h[term.path]['buckets']
 			let values = []
 			for (const bucket of buckets) {
 				values.push([bucket.key.replace('.', '__'), bucket.doc_count])
 			}
-			tv2counts.set(term.termid, values)
+			tv2counts.set(term.id, values)
 		} else if (term.type == 'integer' || term.type == 'float') {
 			const count = h[term.path]['stats']['count']
-			tv2counts.set(term.termid, { total: count })
+			tv2counts.set(term.id, { total: count })
 		}
 	}
+
+	if (_combination) return [tv2counts, _combination]
 	return tv2counts
 }
 

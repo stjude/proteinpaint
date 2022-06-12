@@ -7,9 +7,9 @@ isoform2ssm_getcase
 query_range2variants
 variables_range2variants
 variant2samplesGdcapi
-totalsize_filters
-termid2size_query
-termid2size_filters
+termTotalSizeGdcapi
+	termid2size_query
+	termid2size_filters
 ssm2canonicalisoform
 aliquot2sample
 sample_id_getter
@@ -325,19 +325,22 @@ const variant2samplesGdcapi = {
 	}
 }
 
+/*
+argument is array, each element: {type, id}
+
+for term id of 'case.project.project_id', convert to "project__project_id", for graphql
+*/
 function termid2size_query(termlst) {
-	/* each term {type, path, termid}
-	path is converted from term id "project__project_id"
-	required for graphql
-	*/
-	let query_str = ''
+	const lst = []
 	for (const term of termlst) {
-		const key = term.path
-		if (!key) continue
-		if (term.type)
-			query_str = query_str.length
-				? `${query_str} ${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
-				: `${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
+		if (!term.id) continue
+		if ((term.type = 'categorical')) {
+			lst.push(term.path + ' {buckets { doc_count, key }}')
+		} else if (term.type == 'integer' || term.type == 'float') {
+			lst.push(term.path + ' {stats { count }}')
+		} else {
+			throw 'unknown term type'
+		}
 	}
 
 	// for all terms from termidlst will be added to single query
@@ -345,7 +348,7 @@ function termid2size_query(termlst) {
 		explore {
 			cases {
 				aggregations (filters: $filters, aggregations_filter_themselves: true) {
-					${query_str}
+					${lst.join('\n')}
 				}
 			}
 		}
@@ -392,7 +395,7 @@ function termid2size_filters(p, ds) {
 	return f
 }
 
-const termidlst2size = {
+const termTotalSizeGdcapi = {
 	query: termid2size_query,
 	keys: ['data', 'explore', 'cases', 'aggregations'],
 	filters: termid2size_filters
@@ -540,7 +543,7 @@ module.exports = {
 		// for each term from an input list, get total sizes for each category
 		// used for sunburst and summary
 		termid2totalsize2: {
-			gdcapi: termidlst2size
+			gdcapi: termTotalSizeGdcapi
 		},
 
 		dictionary: {

@@ -1,5 +1,5 @@
 const { stratinput } = require('../shared/tree')
-const { getSamples_gdcapi, addCrosstabCount_tonodes, get_termlst2size } = require('./mds3.gdc')
+const gdc = require('./mds3.gdc')
 const { get_densityplot } = require('./mds3.densityPlot')
 
 /*
@@ -39,7 +39,7 @@ async function get_samples(q, ds) {
 		termidlst.push(...ds.variant2samples.extra_termids_samples)
 	}
 	if (ds.variant2samples.gdcapi) {
-		return await getSamples_gdcapi(q, termidlst, ds)
+		return await gdc.getSamples_gdcapi(q, termidlst, ds)
 	}
 	throw 'unknown query method for variant2samples'
 }
@@ -103,7 +103,7 @@ async function make_sunburst(samples, ds, q) {
 
 	if (ds.termdb && ds.termdb.termid2totalsize2) {
 		const combinations = await get_crosstabCombinations(termidlst, ds, q, nodes)
-		await addCrosstabCount_tonodes(nodes, combinations)
+		await gdc.addCrosstabCount_tonodes(nodes, combinations)
 		// .cohortsize=int is added to applicable elements of nodes[]
 	}
 	return nodes
@@ -149,7 +149,7 @@ sunburst requires an array of multiple levels [project, disease, ...], with one 
 to get disease total sizes per project, issue separate graphql queries on disease total with filter of project=xx for each
 essentially cross-tab two terms, for sunburst
 may generalize for 3 terms (3 layer sunburst)
-the procedural logic of cross-tabing Project+Disease may be specific to gdc, so the code here
+the procedural logic of cross-tabing Project+Disease may be specific to GDC, so the code here
 steps:
 1. given levels of sunburst [project, disease, ..], get size of each project without filtering
 2. for disease at level2, get disease size by filtering on each project
@@ -228,7 +228,7 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		// { termid: [ [cat1, total], [cat2, total], ... ] }
 
 		if (ds.termdb.termid2totalsize2.gdcapi) {
-			tv2counts = await get_termlst2size({ api: ds.termdb.termid2totalsize2.gdcapi, ds, termidlst: [id0], q })
+			tv2counts = await gdc.get_termlst2size({ ds, termidlst: [id0], q })
 		} else {
 			throw 'unknown method for termid2totalsize2'
 		}
@@ -252,22 +252,18 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		const promises = []
 		// for every id0 category, get id1 category/count conditional on it
 		for (const v0 of id2categories.get(id0)) {
-			const treeFilter = { tid2value: {} }
-			treeFilter.tid2value[id0] = v0
 			promises.push(
-				get_termlst2size({
-					api: ds.termdb.termid2totalsize2.gdcapi,
+				gdc.get_termlst2size({
 					ds,
 					termidlst: [id1],
 					q,
-					treeFilter,
+					treeFilter: { tid2value: { [id0]: v0 } },
 					_combination: v0
 				})
 			)
 		}
 		const lst = await Promise.all(promises)
-		for (const tv2counts of lst) {
-			const combination = tv2counts.get('_combination')
+		for (const [tv2counts, combination] of lst) {
 			for (const [s, count] of tv2counts.get(id1)) {
 				const v1 = s.toLowerCase()
 				if (useall) {
@@ -289,25 +285,19 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		const promises = []
 		for (const v0 of id2categories.get(id0)) {
 			for (const v1 of id2categories.get(id1)) {
-				const treeFilter = { tid2value: {} }
-				treeFilter.tid2value[id0] = v0
-				treeFilter.tid2value[id1] = v1
-				q2._combination = { v0, v1 }
 				promises.push(
-					get_termlst2size({
-						api: ds.termdb.termid2totalsize2.gdcapi,
+					gdc.get_termlst2size({
 						ds,
 						termidlst: [id2],
 						q,
-						treeFilter,
+						treeFilter: { tid2value: { [id0]: v0, [id1]: v1 } },
 						_combination: { v0, v1 }
 					})
 				)
 			}
 		}
 		const lst = await Promise.all(promises)
-		for (const tv2counts of lst) {
-			const combination = tv2counts.get('_combination')
+		for (const [tv2counts, combination] of lst) {
 			for (const [s, count] of v2counts.get(id2)) {
 				const v2 = s.toLowerCase()
 				if (useall) {

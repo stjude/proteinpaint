@@ -98,7 +98,7 @@ async function validate_termdb(ds) {
 		tdb.termid2totalsize2.get = async (termidlst, entries, q) => {
 			// termidlst is from clientside
 			if (tdb.termid2totalsize2.gdcapi) {
-				const tv2counts = await gdc.get_termlst2size({ api: tdb.termid2totalsize2.gdcapi, ds, termidlst, q })
+				const tv2counts = await gdc.get_termlst2size({ ds, termidlst, q })
 				// { termid: [ [cat1, total], [cat2, total], ... ] }
 				for (const termid of termidlst) {
 					const entry = entries.find(e => e.termid == termid)
