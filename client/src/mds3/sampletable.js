@@ -5,15 +5,20 @@ import { mclass } from '../../shared/common'
 
 /*
 ********************** EXPORTED
-init_sampletable
-displaySampleTable
+init_sampletable()
+	using mds.variant2samples.get() to map mlst[] to samples
+	always return list of samples, does not return summaries
+	mlst can be mixture of data types, doesn't matter
+displaySampleTable()
+	call this function to render one or multiple samples
+
 ********************** INTERNAL
 make_singleSampleTable
 make_multiSampleTable
+samples2rows
+samples2columns
+renderTable
 
-using mds.variant2samples.get() to map mlst[] to samples
-always return list of samples, does not return summaries
-mlst can be mixture of data types, doesn't matter
 
 ********************** arg{}
 .mlst[]
@@ -442,13 +447,18 @@ function samples2rows(samples, tk) {
 	return rows
 }
 function renderTable({ columns, rows, div }) {
-	const table = div.append('table')
+	const table = div
+		.append('table')
+		.style('border-spacing', '5px')
+		.style('border-collapse', 'separate')
 	const tr = table.append('tr')
 	for (const c of columns) {
-		tr.append('td').text(c.label)
+		tr.append('td')
+			.text(c.label)
+			.style('opacity', 0.5)
 	}
 	for (const row of rows) {
-		const tr = table.append('tr')
+		const tr = table.append('tr').attr('class', 'sja_clb')
 		for (const [colIdx, cell] of row.entries()) {
 			const column = columns[colIdx]
 
