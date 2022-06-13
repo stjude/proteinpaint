@@ -114,6 +114,7 @@ async function make_summary(samples, ds, q) {
 	/* one element for a term
 	{
 		termid=str
+		termname=str
 		numbycategory=[ ]
 		density_data=[]
 	}
@@ -132,6 +133,7 @@ async function make_summary(samples, ds, q) {
 			}
 			entries.push({
 				termid: term.id,
+				termname: term.name,
 				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1])
 			})
 		} else if (term.type == 'integer' || term.type == 'float') {
