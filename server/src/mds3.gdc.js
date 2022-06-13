@@ -697,22 +697,23 @@ function may_add_readdepth(acase, sample) {
 /*
 for termid2totalsize2
 
-args{}
-.ds{}
-.termidlst=[ termids ]
-.q{}
-._combination={}
-	if provided, return alongside map; needed for sunburst, see get_crosstabCombinations()
-
-returns a map: {
-	term1id: [ [cat1, total], [cat2, total], ...],
-	term2id: [ ... same ],
-	...
-	"_combination": _combination
-}
+input:
+	termidlst=[ termids ]
+	q{}
+		.tid2value={ termid: v}
+		.ssm_id_lst=str
+	combination={}
+		if provided, return alongside map; needed for sunburst, see get_crosstabCombinations()
+	ds
+output
+	returns a map
+	{
+		term1id: [ [cat1, total], [cat2, total], ...],
+		term2id: [ ... same ],
+	}
+	if combination is given, returns [ map, combination ] instead
 */
-export async function get_termlst2size(args) {
-	const { ds, termidlst, q, treeFilter, _combination } = args
+export async function get_termlst2size(termidlst, q, combination, ds) {
 	const api = ds.termdb.termid2totalsize2.gdcapi
 
 	// convert each term id to {path}
@@ -731,7 +732,7 @@ export async function get_termlst2size(args) {
 	}
 
 	const query = api.query(termPaths)
-	const variables = api.filters(treeFilter, ds)
+	const variables = api.filters(q, ds)
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
 		body: JSON.stringify({ query, variables })
@@ -777,7 +778,7 @@ export async function get_termlst2size(args) {
 		}
 	}
 
-	if (_combination) return [tv2counts, _combination]
+	if (combination) return [tv2counts, combination]
 	return tv2counts
 }
 

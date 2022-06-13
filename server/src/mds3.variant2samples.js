@@ -111,6 +111,13 @@ async function make_sunburst(samples, ds, q) {
 
 async function make_summary(samples, ds, q) {
 	const entries = []
+	/* one element for a term
+	{
+		termid=str
+		numbycategory=[ ]
+		density_data=[]
+	}
+	*/
 	const termidlst = q.termidlst.split(',')
 	for (const termid of termidlst) {
 		const term = ds.cohort.termdb.q.termjsonByOneid(termid)
@@ -128,7 +135,7 @@ async function make_summary(samples, ds, q) {
 				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1])
 			})
 		} else if (term.type == 'integer' || term.type == 'float') {
-			// add numeric term summary here
+			// later replace density with bin breakdown
 			const density_data = await get_densityplot(term, samples)
 			entries.push({
 				termid: term.id,
@@ -139,7 +146,17 @@ async function make_summary(samples, ds, q) {
 		}
 	}
 	if (ds.termdb.termid2totalsize2) {
-		await ds.termdb.termid2totalsize2.get(termidlst, entries, q)
+		const tv2counts = await ds.termdb.termid2totalsize2.get(termidlst, q)
+		for (const { termid, numbycategory } of entries) {
+			const categories = tv2counts.get(termid)
+			// array ele: [category, total]
+			if (categories) {
+				for (const cat of numbycategory) {
+					const vtotal = categories.find(v => v[0].toLowerCase() == cat[0].toLowerCase())
+					if (vtotal) cat.push(vtotal[1])
+				}
+			}
+		}
 	}
 	return entries
 }
@@ -224,15 +241,7 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 	// get term[0] category total, not dependent on other terms
 	const id0 = termidlst[0]
 	{
-		let tv2counts
-		// { termid: [ [cat1, total], [cat2, total], ... ] }
-
-		if (ds.termdb.termid2totalsize2.gdcapi) {
-			tv2counts = await gdc.get_termlst2size({ ds, termidlst: [id0], q })
-		} else {
-			throw 'unknown method for termid2totalsize2'
-		}
-
+		const tv2counts = await ds.termdb.termid2totalsize2.get([id0])
 		for (const [v, count] of tv2counts.get(id0)) {
 			const v0 = v.toLowerCase()
 			if (useall) {
@@ -252,15 +261,7 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		const promises = []
 		// for every id0 category, get id1 category/count conditional on it
 		for (const v0 of id2categories.get(id0)) {
-			promises.push(
-				gdc.get_termlst2size({
-					ds,
-					termidlst: [id1],
-					q,
-					treeFilter: { tid2value: { [id0]: v0 } },
-					_combination: v0
-				})
-			)
+			promises.push(ds.termdb.termid2totalsize2.get([id1], { tid2value: { [id0]: v0 } }, v0))
 		}
 		const lst = await Promise.all(promises)
 		for (const [tv2counts, combination] of lst) {
@@ -285,15 +286,8 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		const promises = []
 		for (const v0 of id2categories.get(id0)) {
 			for (const v1 of id2categories.get(id1)) {
-				promises.push(
-					gdc.get_termlst2size({
-						ds,
-						termidlst: [id2],
-						q,
-						treeFilter: { tid2value: { [id0]: v0, [id1]: v1 } },
-						_combination: { v0, v1 }
-					})
-				)
+				const q2 = JSON.parse(JSON.stringify(q))
+				promises.push(ds.termdb.termid2totalsize2.get([id2], { tid2value: { [id0]: v0, [id1]: v1 } }, { v0, v1 }))
 			}
 		}
 		const lst = await Promise.all(promises)

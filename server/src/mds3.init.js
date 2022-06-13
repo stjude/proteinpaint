@@ -94,26 +94,23 @@ async function validate_termdb(ds) {
 		} else {
 			throw 'unknown method for termid2totalsize2'
 		}
-		// add getter
-		tdb.termid2totalsize2.get = async (termidlst, entries, q) => {
-			// termidlst is from clientside
+
+		/* add getter
+		input:
+			termidlst=[ id1, ...]
+			q={}
+				.tid2value={id1:v1, ...}
+				.ssm_id_lst=str
+			combination={}
+				optional,
+		output:
+			a map, key is termid, value is array, each element: [category, total]
+		*/
+		tdb.termid2totalsize2.get = async (termidlst, q = {}, combination = null) => {
 			if (tdb.termid2totalsize2.gdcapi) {
-				const tv2counts = await gdc.get_termlst2size({ ds, termidlst, q })
-				// { termid: [ [cat1, total], [cat2, total], ... ] }
-				for (const termid of termidlst) {
-					const entry = entries.find(e => e.termid == termid)
-					if (entry) {
-						const tv2count = tv2counts.get(termid)
-						for (const cat of entry.numbycategory) {
-							const vtotal = tv2count.find(v => v[0].toLowerCase() == cat[0].toLowerCase())
-							if (vtotal) cat.push(vtotal[1])
-						}
-					}
-				}
-			} else {
-				throw 'unknown method for termid2totalsize2'
+				return await gdc.get_termlst2size(termidlst, q, combination, ds)
 			}
-			return entries
+			throw 'unknown method for termid2totalsize2'
 		}
 	}
 }

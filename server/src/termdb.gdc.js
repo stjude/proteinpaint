@@ -1,5 +1,4 @@
 const got = require('got')
-const get_termlst2size = require('./mds3.gdc').get_termlst2size
 const isUsableTerm = require('../shared/termdb.usecase').isUsableTerm
 
 /*
@@ -356,11 +355,7 @@ function makeTermdbQueries(ds, id2term) {
 		// FIXME revive this code
 		if (terms.length == 0 || !treeFilter) return
 
-		const tv2counts = await get_termlst2size({
-			ds,
-			termidlst: terms.map(i => i.id),
-			treeFilter: JSON.parse(treeFilter)
-		})
+		const tv2counts = await ds.termdb.termid2totalsize2.get(terms.map(i => i.id), JSON.parse(treeFilter))
 
 		// add term.disabled if samplesize if zero
 		for (const term of terms) {
