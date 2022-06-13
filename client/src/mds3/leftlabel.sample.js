@@ -2,6 +2,7 @@ import { event as d3event } from 'd3-selection'
 import { makelabel } from './leftlabel'
 import { tab2box } from '../client'
 import { fillbar } from '../../dom/fillbar'
+import { displaySampleTable } from './sampletable'
 
 export function makeSampleLabel(data, tk, block, laby) {
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
@@ -32,30 +33,34 @@ function mayShowSummary(tk, block) {
 		.style('margin', '10px')
 
 	tk.mds
-		.getSamples(true)
+		.getSamples({ isSummary: true })
 		.then(async data => {
 			wait.html('')
-			await showSummaryUI(data, wait, tk, block)
+			await showSummary4terms(data, wait, tk, block)
 		})
 		.catch(e => {})
 }
 
-/* data is array, each ele: {termid, termname, numbycategory}
+/* show summaries over a list of terms
+data is array, each ele: {termid, termname, numbycategory}
  */
-async function showSummaryUI(data, div, tk, block) {
+async function showSummary4terms(data, div, tk, block) {
 	const tabs = []
 	for (const { termid, termname, numbycategory } of data) {
 		tabs.push({
 			label: `${termname} 
 				<span style='color:#999;font-size:.8em;float:right;margin-left: 5px;'>
 				n=${numbycategory.length}</span>`,
-			callback: div => make_summary_panel(div, numbycategory)
+			callback: div => showSummary4oneTerm(termid, div, numbycategory, tk, block)
 		})
 	}
 	tab2box(div, tabs)
 }
 
-function make_summary_panel(div, numbycategory) {
+/* show categories and #case for one term
+click a category to list cases
+*/
+function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 	const grid_div = div
 		.append('div')
 		.style('display', 'inline-grid')
@@ -76,7 +81,7 @@ function make_summary_panel(div, numbycategory) {
 			.on('mouseout', () => {
 				cat_div.style('color', '#000').style('text-decoration', 'none')
 			})
-			.on('click', () => makeFilteredList(category_name))
+			.on('click', () => listSamples(category_name))
 
 		if (total != undefined) {
 			// show percent bar
@@ -88,7 +93,7 @@ function make_summary_panel(div, numbycategory) {
 				.on('mouseout', () => {
 					cat_div.style('color', '#000').style('text-decoration', 'none')
 				})
-				.on('click', () => makeFilteredList(category_name))
+				.on('click', () => listSamples(category_name))
 
 			fillbar(percent_div, { f: count / total, v1: count, v2: total }, { fillbg: '#ECE5FF', fill: '#9F80FF' })
 		}
@@ -105,26 +110,17 @@ function make_summary_panel(div, numbycategory) {
 			.on('mouseout', () => {
 				cat_div.style('color', '#000').style('text-decoration', 'none')
 			})
-			.on('click', () => makeFilteredList(category_name))
+			.on('click', () => listSamples(category_name))
 	}
 
-	function makeFilteredList(cat) {
-		if (arg.tid2value == undefined) arg.tid2value = {}
-		else if (arg.filter_term) {
-			const term = arg.tk.mds.termdb.terms.find(t => t.name == arg.filter_term)
-			delete arg.tid2value[term.id]
-			delete arg.filter_term
-		}
-		const term = arg.tk.mds.termdb.terms.find(t => t.name == category.name)
-		arg.tid2value[term.id] = cat
-		delete main_tabs[0].active
-		main_tabs[1].active = true
-		update_tabs(main_tabs)
-		make_multiSampleTable({
-			arg,
-			holder: main_tabs[1].holder,
-			filter_term: category.name
-		})
+	async function listSamples(category) {
+		// for a selected category, list the samples
+		tk.menutip.clear()
+		const div = tk.menutip.d.append('div').style('margin', '10px')
+		const wait = div.append('div').text('Loading...')
+		const samples = await tk.mds.getSamples({ tid2value: { [termid]: category } })
+		wait.remove()
+		await displaySampleTable(samples, { div, tk, block, useRenderTable: true })
 	}
 }
 
@@ -147,10 +143,11 @@ function menu_samples(data, tk, block) {
 				.style('margin', '15px')
 			try {
 				const samples = await tk.mds.getSamples()
-				renderTable({
-					columns: await samples2columns(samples, tk),
-					rows: samples2rows(samples, tk),
-					div: tk.menutip.d
+				await displaySampleTable(samples, {
+					div: tk.menutip.d,
+					tk,
+					block,
+					useRenderTable: true
 				})
 				wait.remove()
 			} catch (e) {
@@ -158,90 +155,4 @@ function menu_samples(data, tk, block) {
 				console.log(e)
 			}
 		})
-}
-
-async function samples2columns(samples, tk) {
-	const columns = [{ label: 'Sample' }]
-	if (tk.mds.variant2samples.termidlst) {
-		for (const id of tk.mds.variant2samples.termidlst) {
-			const t = await tk.mds.termdb.vocabApi.getterm(id)
-			if (t) {
-				columns.push({ label: t.name })
-			} else {
-				columns.push({ isinvalid: true })
-			}
-		}
-	}
-	columns.push({ label: 'Mutations', isSsm: true })
-	return columns
-}
-function samples2rows(samples, tk) {
-	const rows = []
-	for (const sample of samples) {
-		const row = [{ value: sample.sample_id }]
-
-		if (tk.mds.variant2samples.url) {
-			row[0].url = tk.mds.variant2samples.url.base + sample[tk.mds.variant2samples.url.namekey]
-		}
-
-		if (tk.mds.variant2samples.termidlst) {
-			for (const id of tk.mds.variant2samples.termidlst) {
-				row.push({ value: sample[id] })
-			}
-		}
-
-		const ssmCell = { values: [] }
-		for (const ssm_id of sample.ssm_id_lst) {
-			const m = (tk.skewer.rawmlst || tk.custom_variants).find(i => i.ssm_id == ssm_id)
-			const ssm = {}
-			if (m) {
-				ssm.value = m.mname
-				if (tk.mds.queries && tk.mds.queries.snvindel && tk.mds.queries.snvindel.url) {
-					ssm.url = tk.mds.queries.snvindel.url.base + m.ssm_id
-				}
-			} else {
-				ssm.value = ssm_id
-			}
-			ssmCell.values.push(ssm)
-		}
-
-		row.push(ssmCell)
-		rows.push(row)
-	}
-	return rows
-}
-function renderTable({ columns, rows, div }) {
-	const table = div.append('table')
-	const tr = table.append('tr')
-	for (const c of columns) {
-		tr.append('td').text(c.label)
-	}
-	for (const row of rows) {
-		const tr = table.append('tr')
-		for (const [colIdx, cell] of row.entries()) {
-			const column = columns[colIdx]
-
-			const td = tr.append('td')
-			if (cell.values) {
-				for (const v of cell.values) {
-					const d = td.append('div')
-					if (v.url) {
-						d.append('a')
-							.text(v.value)
-							.attr('href', v.url)
-							.attr('target', '_blank')
-					} else {
-						d.text(v.value)
-					}
-				}
-			} else if (cell.url) {
-				td.append('a')
-					.text(cell.value)
-					.attr('href', cell.url)
-					.attr('target', '_blank')
-			} else {
-				td.text(cell.value)
-			}
-		}
-	}
 }

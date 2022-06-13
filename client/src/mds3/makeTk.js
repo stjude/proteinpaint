@@ -441,12 +441,15 @@ function mayaddGetter_variant2samples(tk, block) {
 
 	/*
 	this function is called for 2 uses in #cases menu
-	for "List" option, call without arg to get samples, with ssm grouped
-	for "Summary", call with isSummary=true
+	arg{}
+	.isSummary=true
+		true: return summaries for v2s.termidlst
+		false: return list of samples
+	.tid2value={}
+		optional, to filter samples
 	*/
-	tk.mds.getSamples = async (isSummary = false) => {
-		const arg = {}
-		if (isSummary) {
+	tk.mds.getSamples = async (arg = {}) => {
+		if (arg.isSummary) {
 			arg.querytype = tk.mds.variant2samples.type_summary
 		} else {
 			// must be calling from "List" option of #case menu
