@@ -173,23 +173,27 @@ function setRenderers(self) {
 					.text('n=' + term.samplecount)
 			}
 		} else {
-			if (term.name == 'MYC') console.log(176)
 			// as regular button, click to expand tree
 			button.attr('class', 'sja_menuoption').on('click', () => {
 				self.clear()
 				self.dom.input.property('value', '')
 				const expandedTermIds = [root_ID]
-				if (term.__ancestors) {
-					expandedTermIds.push(...term.__ancestors)
-				}
-				// pre-expand non-selectable parent term
-				if (!self.app.vocabApi.graphable(term)) expandedTermIds.push(term.id)
-				self.app.dispatch({
-					type: 'app_refresh',
-					state: {
-						tree: { expandedTermIds }
+
+				if (term.type == 'geneVariant' && self.opts.handleGeneVariant) {
+					self.opts.handleGeneVariant(term)
+				} else {
+					if (term.__ancestors) {
+						expandedTermIds.push(...term.__ancestors)
 					}
-				})
+					// pre-expand non-selectable parent term
+					if (!self.app.vocabApi.graphable(term)) expandedTermIds.push(term.id)
+					self.app.dispatch({
+						type: 'app_refresh',
+						state: {
+							tree: { expandedTermIds }
+						}
+					})
+				}
 			})
 		}
 		tr.append('td')
