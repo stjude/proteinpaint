@@ -5,6 +5,7 @@ import { initLegend, updateLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '../../common/urlmap'
 import { mclass } from '../../shared/common'
+import { vcfparsemeta } from '../../shared/vcf'
 
 /*
 ********************** EXPORTED
@@ -259,9 +260,9 @@ async function get_ds(tk, block) {
 	// fill in details to tk.mds
 	///////////// custom data sources
 	if (tk.vcf) {
+		if (!tk.vcf.file && !tk.vcf.url) throw 'file or url missing for tk.vcf{}'
 		tk.mds.has_skewer = true // enable skewer tk
-		console.log('to enable custom vcf')
-		//await getvcfheader_customtk(tk.vcf, block.genome)
+		await getvcfheader_customtk(tk, block.genome)
 	} else if (tk.custom_variants) {
 		tk.mds.has_skewer = true // enable skewer tk
 		validateCustomVariants(tk)
@@ -595,4 +596,22 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 	v.type_samples = 'samples'
 	v.type_summary = 'summary'
 	v.type_sunburst = 'sunburst'
+}
+
+async function getvcfheader_customtk(tk, genome) {
+	const arg = ['genome=' + genome.name]
+	if (tk.vcf.file) {
+		arg.push('file=' + tk.vcf.file)
+	} else {
+		arg.push('url=' + tk.vcf.url)
+		if (tk.vcf.indexURL) arg.push('indexURL=' + tk.vcf.indexURL)
+	}
+	const data = await dofetch3('vcfheader?' + arg.join('&'))
+	if (data.error) throw data.error
+	const [info, format, samples, errs] = vcfparsemeta(data.metastr.split('\n'))
+	if (errs) throw 'Error parsing VCF meta lines: ' + errs.join('; ')
+	tk.vcf.info = info
+	tk.vcf.format = format
+	tk.vcf.samples = samples
+	tk.vcf.nochr = data.nochr
 }

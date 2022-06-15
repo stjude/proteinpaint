@@ -1,6 +1,8 @@
 const app = require('./app')
 const path = require('path')
 const utils = require('./utils')
+//const vcf = require('../shared/vcf')
+const compute_mclass = require('./termdb.snp').compute_mclass
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -98,15 +100,63 @@ function finalize_result(q, ds, result) {
 
 async function get_ds(q, genome) {
 	if (q.dslabel) {
+		// is official dataset
 		if (!genome.datasets) throw '.datasets{} missing from genome'
 		const ds = genome.datasets[q.dslabel]
 		if (!ds) throw 'invalid dslabel'
 		return ds
 	}
-	// make a custom ds
-	throw 'custom ds todo'
-	const ds = {}
+	// for a custom dataset, a temporary ds{} obj is made for every query, based on q{}
 	// may cache index files from url, thus the await
+	const ds = { queries: {} }
+	if (q.vcffile || q.vcfurl) {
+		const [e, file, isurl] = app.fileurl({ query: { file: q.vcffile, url: q.vcfurl } })
+		if (e) throw e
+		const tk = {} // temp tk{} to receive vcf header
+		if (isurl) {
+			tk.url = file
+			tk.indexURL = q.vcfindexURL
+		} else {
+			tk.file = file
+		}
+		await utils.init_one_vcf(tk, genome)
+		// tk{ dir, info, format, samples, nochr }
+
+		ds.queries.snvindel = { byrange: {} }
+		ds.queries.snvindel.byrange.get = async q => {
+			const variants = []
+			for (const r of q.rglst) {
+				await utils.get_lines_bigfile({
+					args: [file, (tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+					dir: tk.dir,
+					callback: line => {
+						const l = line.split('\t')
+						const refallele = l[3]
+						const altalleles = l[4].split(',')
+						const m0 = {} // temp obj
+						compute_mclass(
+							tk,
+							refallele,
+							altalleles,
+							m0,
+							l[7], // info str
+							l[2] // vcf line ID
+						)
+						// make a m{} for every alt allele
+						for (const alt in m0.alt2csq) {
+							const m = m0.alt2csq[alt]
+							m.chr = r.chr
+							m.pos = Number(l[1])
+							variants.push(m)
+						}
+					}
+				})
+			}
+			return variants
+		}
+	}
+	// add new file types
+
 	return ds
 }
 
@@ -195,18 +245,26 @@ async function load_driver(q, ds) {
 
 async function query_snvindel(q, ds) {
 	if (q.isoform) {
+		// client supplies isoform, see if isoform query is supported
 		if (q.atgenomic) {
 			// in genomic mode
 			if (!ds.queries.snvindel.byrange) throw '.atgenomic but missing byrange query method'
 			return await ds.queries.snvindel.byrange.get(q)
 		}
-		if (!ds.queries.snvindel.byisoform) throw 'q.isoform is given but missing byisoform query method'
-		return await ds.queries.snvindel.byisoform.get(q)
+		if (ds.queries.snvindel.byisoform) {
+			// querying by isoform is supported
+			return await ds.queries.snvindel.byisoform.get(q)
+		} else {
+			// querying by isoform is not supported, continue to check if can query by range
+		}
 	}
-	// if isoform not provided, must be by range. could be by other things?
-	if (ds.queries.snvindel.byrange) {
+	// not querying by isoform;
+	if (q.rglst) {
+		// provided range parameter
+		if (!ds.queries.snvindel.byrange) throw 'q.rglst[] provided but .byrange{} is missing'
 		return await ds.queries.snvindel.byrange.get(q)
 	}
+	// may allow other query method (e.g. by gene name from a db table)
 	throw 'unknown query method for snvindel'
 }
 

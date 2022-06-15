@@ -7125,7 +7125,6 @@ function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 
 async function handle_vcfheader(req, res) {
 	// get header for a single custom vcf track
-	log(req)
 	try {
 		if (!req.query.genome) throw 'genome missing'
 		const g = genomes[req.query.genome]

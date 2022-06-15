@@ -391,12 +391,25 @@ export async function get_tklst(urlp, genomeobj) {
 	const tklst = []
 
 	if (urlp.has('mds3')) {
+		// official mds3 dataset; value is comma-joined dslabels
 		const lst = urlp.get('mds3').split(',')
 		for (const n of lst) {
 			tklst.push({
 				type: client.tkt.mds3,
 				dslabel: n,
-				token: urlp.get('token')
+				token: urlp.get('token') // temporary
+			})
+		}
+	}
+
+	if (urlp.has('mds3vcffile')) {
+		// "name,path" pairs to server-side vcf files
+		const [tkname, vcffile] = urlp.get('mds3vcffile').split(',')
+		if (tkname && vcffile) {
+			tklst.push({
+				type: client.tkt.mds3,
+				name: tkname,
+				vcf: { file: vcffile }
 			})
 		}
 	}

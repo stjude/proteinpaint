@@ -95,7 +95,18 @@ function getParameter(tk, block) {
 		// official
 		par.push('dslabel=' + tk.mds.label)
 	} else {
-		throw 'how to deal with custom track'
+		// should be custom track with data files on backend
+		if (tk.vcf) {
+			if (tk.vcf.file) {
+				par.push('vcffile=' + tk.vcf.file)
+			} else if (tk.vcf.url) {
+				par.push('vcfurl=' + tk.vcf.url)
+				if (tk.vcf.indexURL) par.push('vcfindexURL=' + tk.vcf.indexURL)
+			} else {
+				throw '.file and .url missing for tk.vcf{}'
+			}
+		}
+		// add new file types
 	}
 
 	//rangequery_add_variantfilters(par, tk)
@@ -151,7 +162,7 @@ export function rangequery_rglst(tk, block, par) {
 			const j = block.rglst[i]
 			r.width += j.width + block.regionspace
 			r.start = r.start == null ? j.start : Math.min(r.start, j.start)
-			r.stop = r.stop == null ? j.stop : Math.min(r.stop, j.stop)
+			r.stop = r.stop == null ? j.stop : Math.max(r.stop, j.stop)
 		}
 		rglst.push(r)
 		add('isoform', block.usegm.isoform)

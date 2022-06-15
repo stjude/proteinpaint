@@ -413,16 +413,17 @@ const ssm2canonicalisoform = {
 
 per greg: Confusingly, the tumor_sample_barcode is actually the submitter ID of the tumor aliquot for which a variant was called. If you want to display the submitter ID of the sample, you’ll have to query the GDC case API for the sample for that aliquot.
 
+per phil's suggestion, setting first "first=1000" works
+
 questions:
-1. 433c2eb6-560f-4387-93af-6c2e1a_D6_1 is converted to 433c2eb6-560f-4387-93af-6c2e1a but not but not case id (15BR003, CPTAC-2)
-2. raising value of "first" above 100 will crash, defeating the batch design
-3. why setting (first: 100, filters: $filters) at two places
+- 433c2eb6-560f-4387-93af-6c2e1a_D6_1 is converted to 433c2eb6-560f-4387-93af-6c2e1a but not but not case id (15BR003, CPTAC-2)
+- why setting (first: 100, filters: $filters) at two places
 */
 const aliquot2sample = {
 	query: `query barcode($filters: FiltersArgument) {
   repository {
     cases {
-      hits(first: 100, filters: $filters) { edges { node {
+      hits(first: 1000, filters: $filters) { edges { node {
         samples {
           hits (first: 100, filters: $filters) { edges { node {
             submitter_id
