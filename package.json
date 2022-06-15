@@ -7,7 +7,8 @@
   "private": true,
   "workspaces": [
     "client",
-    "server"
+    "server",
+    "portal"
   ],
   "scripts": {
     "reset": "npm install --workspaces",

@@ -29,13 +29,13 @@ export function getLolliplotTrack() {
 
 	if (this.props.geneId) {
 		arg.gene2canonicalisoform = this.props.geneId
-	}
-
-	if (this.props.ssm_id) {
+	} else if (this.props.ssm_id) {
 		arg.mds3_ssm2canonicalisoform = {
 			dslabel: 'GDC',
 			ssm_id: this.props.ssm_id
 		}
+	} else {
+		arg.geneSearch4GDCmds3 = true
 	}
 
 	return arg
