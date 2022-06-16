@@ -10,6 +10,7 @@ const serverconfig = require('./serverconfig')
 ********************** EXPORTED
 init
 client_copy
+snvindelVcfByRangeGetter
 ********************** INTERNAL
 */
 
@@ -201,46 +202,8 @@ async function validate_query_snvindel(ds, genome) {
 			gdc.validate_query_snvindel_byrange(ds)
 		} else if (q.byrange.vcffile) {
 			q.byrange.vcffile = path.join(serverconfig.tpmasterdir, q.byrange.vcffile)
-			q.byrange._tk = { file: q.byrange.vcffile } // _tk{} to receive vcf header
-
-			// some duplication with custom getter() in get_ds()
-			await utils.init_one_vcf(q.byrange._tk, genome)
-			// tk{ info, format, samples, nochr }
-			q.byrange.get = async param => {
-				const variants = []
-				for (const r of param.rglst) {
-					await utils.get_lines_bigfile({
-						args: [
-							q.byrange.vcffile,
-							(q.byrange._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-						],
-						dir: q.byrange._tk.dir,
-						callback: line => {
-							const l = line.split('\t')
-							const refallele = l[3]
-							const altalleles = l[4].split(',')
-							const m0 = {} // temp obj
-							compute_mclass(
-								q.byrange._tk,
-								refallele,
-								altalleles,
-								m0,
-								l[7], // info str
-								l[2] // vcf line ID
-							)
-							// make a m{} for every alt allele
-							for (const alt in m0.alt2csq) {
-								const m = m0.alt2csq[alt]
-								m.chr = r.chr
-								m.pos = Number(l[1])
-								m.ssm_id = m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt
-								variants.push(m)
-							}
-						}
-					})
-				}
-				return variants
-			}
+			q.byrange._tk = { file: q.byrange.vcffile }
+			q.byrange.get = await snvindelVcfByRangeGetter(ds, genome)
 		} else {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
@@ -281,4 +244,128 @@ so that gencode-annotated stuff can show under a refseq name
 function may_add_refseq2ensembl(ds, genome) {
 	if (!genome.genedb.refseq2ensembl) return
 	ds.refseq2ensembl_query = genome.genedb.db.prepare('select ensembl from refseq2ensembl where refseq=?')
+}
+
+/* generate getter as ds.queries.snvindel.byrange.get()
+
+get(param{}):
+.rglst=[ {chr, start, stop} ]
+
+returns array of variants
+*/
+export async function snvindelVcfByRangeGetter(ds, genome) {
+	const q = ds.queries.snvindel.byrange
+	/* q{}
+	._tk={}
+		.file=str
+		.url, .indexURL
+		.dir=str
+		.nochr=true
+		.indexURL
+		.info={}
+		.format={}
+		.samples=[ {name:str}, ... ] // blank array if vcf has no samples
+	.
+	*/
+	await utils.init_one_vcf(q._tk, genome)
+	// tk{ dir, info, format, samples, nochr }
+	if (q._tk.samples.length && !q._tk.format) {
+		throw 'vcf file has samples but no FORMAT'
+	}
+
+	return async param => {
+		const variants = [] // to be returned
+		for (const r of param.rglst) {
+			await utils.get_lines_bigfile({
+				args: [
+					q._tk.file || q._tk.url,
+					(q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
+				],
+				dir: q._tk.dir,
+				callback: line => {
+					const l = line.split('\t')
+					// [9] for samples
+					const refallele = l[3]
+					const altalleles = l[4].split(',')
+					const m0 = {} // temp obj
+					compute_mclass(
+						q._tk,
+						refallele,
+						altalleles,
+						m0,
+						l[7], // info str
+						l[2] // vcf line ID
+					)
+					// make a m{} for every alt allele
+					for (const alt in m0.alt2csq) {
+						const m = m0.alt2csq[alt]
+						m.chr = r.chr
+						m.pos = Number(l[1])
+						m.ssm_id = m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt
+						variants.push(m)
+						mayAddSamples(q, m, l)
+					}
+				}
+			})
+		}
+		return variants
+	}
+}
+
+/* quick fix
+ */
+function mayAddSamples(q, m, l) {
+	if (!q._tk.samples || q._tk.samples.length == 0) {
+		// vcf file has no samples
+		return
+	}
+	// l[8] is FORMAT, l[9] is first sample
+	if (!l[8] || l[8] == '.') {
+		// no format field
+		return
+	}
+	const formatlst = [] // list of format object from q._tk.format{}, by the order of l[8]
+	for (const s of l[8].split(':')) {
+		const f = q._tk.format[s]
+		if (f) {
+			// a valid format field
+			formatlst.push(f)
+		} else {
+			throw 'invalid format field: ' + f
+		}
+	}
+	const samples = []
+	for (const [i, sampleObj] of q._tk.samples.entries()) {
+		const v = l[i + 9]
+		if (!v || v == '.') {
+			// no value for this sample
+			continue
+		}
+		const vlst = v.split(':')
+		for (const [j, format] of formatlst.entries()) {
+			const fv = vlst[j] // value for this format field
+			if (!fv || fv == '.') {
+				// no value for this format field
+				continue
+			}
+			if (format.isGT) {
+				if (fv == './.' || fv == '.|.') {
+					// no gt
+					continue
+				}
+				// temp!
+				samples.push({ sample_id: sampleObj.name })
+				break
+			}
+			/* this field is not GT
+			this variant has value for this format field,
+			indicating the variant is annotated to this sample
+			irrespective of what this format field is
+			later may check by meanings of each format field
+			*/
+			samples.push({ sample_id: sampleObj.name })
+			break
+		}
+	}
+	if (samples.length) m.samples = samples
 }

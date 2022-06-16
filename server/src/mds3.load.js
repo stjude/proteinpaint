@@ -1,7 +1,7 @@
 const app = require('./app')
 const path = require('path')
 const utils = require('./utils')
-const compute_mclass = require('./termdb.snp').compute_mclass
+const snvindelVcfByRangeGetter = require('./mds3.init').snvindelVcfByRangeGetter
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -111,49 +111,15 @@ async function get_ds(q, genome) {
 	if (q.vcffile || q.vcfurl) {
 		const [e, file, isurl] = app.fileurl({ query: { file: q.vcffile, url: q.vcfurl } })
 		if (e) throw e
-		const tk = {} // temp tk{} to receive vcf header
+		const _tk = {}
 		if (isurl) {
-			tk.url = file
-			tk.indexURL = q.vcfindexURL
+			_tk.url = file
+			_tk.indexURL = q.vcfindexURL
 		} else {
-			tk.file = file
+			_tk.file = file
 		}
-		await utils.init_one_vcf(tk, genome)
-		// tk{ dir, info, format, samples, nochr }
-
-		ds.queries.snvindel = { byrange: {} }
-		ds.queries.snvindel.byrange.get = async q => {
-			const variants = []
-			for (const r of q.rglst) {
-				await utils.get_lines_bigfile({
-					args: [file, (tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-					dir: tk.dir,
-					callback: line => {
-						const l = line.split('\t')
-						const refallele = l[3]
-						const altalleles = l[4].split(',')
-						const m0 = {} // temp obj
-						compute_mclass(
-							tk,
-							refallele,
-							altalleles,
-							m0,
-							l[7], // info str
-							l[2] // vcf line ID
-						)
-						// make a m{} for every alt allele
-						for (const alt in m0.alt2csq) {
-							const m = m0.alt2csq[alt]
-							m.chr = r.chr
-							m.pos = Number(l[1])
-							m.ssm_id = m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt
-							variants.push(m)
-						}
-					}
-				})
-			}
-			return variants
-		}
+		ds.queries.snvindel = { byrange: { _tk } }
+		ds.queries.snvindel.byrange.get = await snvindelVcfByRangeGetter(ds, genome)
 	}
 	// add new file types
 
@@ -217,8 +183,15 @@ async function load_driver(q, ds) {
 
 			if (ds.queries.snvindel) {
 				// the query will resolve to list of mutations, to be flattened and pushed to .skewer[]
-				const d = await query_snvindel(q, ds)
-				result.skewer.push(...d)
+				const mlst = await query_snvindel(q, ds)
+				/* mlst=[], each element:
+				{
+					ssm_id:str
+					mclass
+					samples:[ {sample_id}, ... ]
+				}
+				*/
+				result.skewer.push(...mlst)
 			}
 
 			if (ds.queries.svfusion) {

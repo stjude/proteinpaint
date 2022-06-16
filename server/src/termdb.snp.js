@@ -28,6 +28,7 @@ info fields:
 
 *************** EXPORT
 validate()
+compute_mclass
 *************** function cascade
 summarizeSamplesFromCache()
 validateInputCreateCache_by_snptext
