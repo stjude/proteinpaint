@@ -2920,13 +2920,7 @@ async function convertread2html(seg, genome, query) {
 	const b = seg.boxes[seg.boxes.length - 1]
 	const refstop = b.start + b.len
 	const refseq = await get_refseq(genome, query.chr + ':' + (refstart + 1) + '-' + refstop)
-	let quallst
-	if (seg.qual == '*') {
-		// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are assigned the highest bp quality
-		quallst = Array(seg.seq.length).fill(41) // Setting quality score to 41 so that the darkest color is rendered
-	} else {
-		quallst = qual2int(seg.qual)
-	}
+	const quallst = qual2int(seg.qual)
 	const reflst = ['<td>Reference</td>']
 	const querylst = ['<td style="color:black;text-align:left">Read</td>']
 	for (const b of seg.boxes) {
@@ -2936,15 +2930,22 @@ async function convertread2html(seg, genome, query) {
 		if (b.opr == 'I') {
 			for (let i = b.cidx; i < b.cidx + b.len; i++) {
 				reflst.push('<td>-</td>')
-				querylst.push(
-					'<td style="color:' +
-						insertion_hq +
-						';background:' +
-						qual2match(quallst[i] / maxqual) +
-						'">' +
-						seg.seq[i] +
-						'</td>'
-				)
+				if (seg.qual == '*') {
+					// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a white background
+					querylst.push(
+						'<td style="color:' + insertion_hq + ';background:' + qual2match(1) + '">' + seg.seq[i] + '</td>'
+					)
+				} else {
+					querylst.push(
+						'<td style="color:' +
+							insertion_hq +
+							';background:' +
+							qual2match(quallst[i] / maxqual) +
+							'">' +
+							seg.seq[i] +
+							'</td>'
+					)
+				}
 			}
 			continue
 		}
@@ -2963,13 +2964,18 @@ async function convertread2html(seg, genome, query) {
 		if (b.opr == 'S') {
 			for (let i = 0; i < b.len; i++) {
 				reflst.push('<td>' + refseq[b.start - refstart + i] + '</td>')
-				querylst.push(
-					'<td style="background:' +
-						qual2softclipbg(quallst[b.cidx + i] / maxqual) +
-						'">' +
-						seg.seq[b.cidx + i] +
-						'</td>'
-				)
+				if (seg.qual == '*') {
+					// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a white background
+					querylst.push('<td style="background:' + qual2softclipbg(1) + '">' + seg.seq[b.cidx + i] + '</td>')
+				} else {
+					querylst.push(
+						'<td style="background:' +
+							qual2softclipbg(quallst[b.cidx + i] / maxqual) +
+							'">' +
+							seg.seq[b.cidx + i] +
+							'</td>'
+					)
+				}
 			}
 			continue
 		}
@@ -2978,13 +2984,24 @@ async function convertread2html(seg, genome, query) {
 				const nt0 = refseq[b.start - refstart + i]
 				const nt1 = seg.seq[b.cidx + i]
 				reflst.push('<td>' + nt0 + '</td>')
-				querylst.push(
-					'<td style="background:' +
-						(nt0.toUpperCase() == nt1.toUpperCase() ? qual2match : qual2mismatchbg)(quallst[b.cidx + i] / maxqual) +
-						'">' +
-						seg.seq[b.cidx + i] +
-						'</td>'
-				)
+				if (seg.qual == '*') {
+					// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a white background
+					querylst.push(
+						'<td style="color:black;background:' +
+							(nt0.toUpperCase() == nt1.toUpperCase() ? qual2match : qual2mismatchbg) +
+							'">' +
+							seg.seq[b.cidx + i] +
+							'</td>'
+					)
+				} else {
+					querylst.push(
+						'<td style="background:' +
+							(nt0.toUpperCase() == nt1.toUpperCase() ? qual2match : qual2mismatchbg)(quallst[b.cidx + i] / maxqual) +
+							'">' +
+							seg.seq[b.cidx + i] +
+							'</td>'
+					)
+				}
 			}
 			continue
 		}
