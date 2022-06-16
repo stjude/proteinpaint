@@ -41,7 +41,7 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 			tk.click_snvindel(d.mlst[0])
 			return
 		}
-		if ('occurrence' in d && d.occurrence >= minoccur4sunburst && tk.mds.variant2samples) {
+		if ('occurrence' in d && d.occurrence >= minoccur4sunburst && tk.mds.variant2samples && tk.mds.variant2samples.sunburst_ids) {
 			await click2sunburst(d, tk, block, tippos)
 			return
 		}

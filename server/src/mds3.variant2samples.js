@@ -1,8 +1,16 @@
 const { stratinput } = require('../shared/tree')
 const gdc = require('./mds3.gdc')
 const { get_densityplot } = require('./mds3.densityPlot')
+const {ssmIdFieldsSeparator, mayAddSamplesFromVcfLine} =require('./mds3.init')
+const utils = require('./utils')
+
 
 /*
+***************** exported
+variant2samples_getresult()
+get_crosstabCombinations()
+
+
 from one or more variants, get list of samples harboring any of the variants
 
 always require a ds found at genome.datasets{}
@@ -13,7 +21,8 @@ client instructs if to return sample list or sunburst summary; server may deny t
 
 q{}
 .get=str, samples/sunburst/summary
-.ssm_id_lst=str
+.ssm_id_lst=str, comma-joined
+// later can add ssm_dt_lst="1,2" etc to indicate datatype for each of ssm_id_lst
 .termidlst=str
 	client always provides this, to reflect any user changes
 	if get=sunburst, termidlst is an ordered array of terms, for which to build layered sunburst
@@ -21,7 +30,6 @@ q{}
 */
 export async function variant2samples_getresult(q, ds) {
 	// query sample details for list of terms in request parameter
-	if (!q.termidlst) throw 'q.termidlst=str missing'
 
 	// each sample obj has keys from .terms[].id
 	const samples = await get_samples(q, ds)
@@ -33,7 +41,7 @@ export async function variant2samples_getresult(q, ds) {
 }
 
 async function get_samples(q, ds) {
-	const termidlst = q.termidlst.split(',')
+	const termidlst = q.termidlst ? q.termidlst.split(',') : []
 	if (q.get == ds.variant2samples.type_samples && ds.variant2samples.extra_termids_samples) {
 		// extra term ids to add for get=samples query
 		termidlst.push(...ds.variant2samples.extra_termids_samples)
@@ -41,6 +49,16 @@ async function get_samples(q, ds) {
 	if (ds.variant2samples.gdcapi) {
 		return await gdc.getSamples_gdcapi(q, termidlst, ds)
 	}
+
+	/* tentative
+	from server-side files, q.ssm_id_lst can be multiple data types
+	*/
+	if(ds.queries.snvindel
+		&& ds.queries.snvindel.byrange
+		&& ds.queries.snvindel.byrange._tk) {
+		return await get_samples_vcf_byssmid(q, termidlst, ds.queries.snvindel.byrange._tk)
+	}
+
 	throw 'unknown query method for variant2samples'
 }
 
@@ -308,4 +326,36 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		}
 	}
 	return combinations
+}
+
+async function get_samples_vcf_byssmid(q, termidlst, _tk) {
+	const samples = []
+	for(const ssmId of q.ssm_id_lst.split(',')) {
+		// chr.pos.ref.alt
+		const ssmFields = ssmId.split(ssmIdFieldsSeparator)
+		if(ssmFields.length!=4) throw 'ssmid not 4 fields'
+		const pos = Number(ssmFields[1])
+		if(Number.isNaN(pos)) throw 'ssmid position not integer'
+		await utils.get_lines_bigfile({
+			args: [
+				_tk.file || _tk.url,
+				(_tk.nochr ? ssmFields[0].replace('chr', '') : ssmFields[0]) + ':' + pos + '-' + (pos+1)
+			],
+			dir: _tk.dir,
+			callback: line => {
+				const l = line.split('\t')
+				if(l[1]!=ssmFields[1] || l[3]!=ssmFields[2] || l[4]!=ssmFields[3]) {
+					// not matching with this ssm
+					return
+				}
+				const m = {}
+				mayAddSamplesFromVcfLine( {_tk}, m, l, q.get=='samples' )
+				if(!m.samples) return
+				for(const sample of m.samples) {
+					samples.push(sample)
+				}
+			}
+		})
+	}
+	return samples
 }

@@ -11,14 +11,21 @@ const serverconfig = require('./serverconfig')
 init
 client_copy
 snvindelVcfByRangeGetter
+mayAddSamplesFromVcfLine
 ********************** INTERNAL
 */
 
+// in case chr name may contain '.', can change to __
+export const ssmIdFieldsSeparator = '.'
+
 export async function init(ds, genome, _servconfig) {
 	if (!ds.queries) throw 'ds.queries{} missing'
+	// must validate termdb first
 	await validate_termdb(ds)
-	validate_variant2samples(ds)
+	// must validate snvindel query before variant2sample
+	// as vcf header must be parsed to supply samples for v2s
 	await validate_query_snvindel(ds, genome)
+	validate_variant2samples(ds)
 	validate_ssm2canonicalisoform(ds)
 
 	may_add_refseq2ensembl(ds, genome)
@@ -128,26 +135,45 @@ function validate_variant2samples(ds) {
 	vs.type_summary = 'summary'
 	if (!vs.variantkey) throw '.variantkey missing from variant2samples'
 	if (['ssm_id'].indexOf(vs.variantkey) == -1) throw 'invalid value of variantkey'
-	if (!vs.termidlst) throw '.termidlst[] missing from variant2samples'
-	if (!Array.isArray(vs.termidlst)) throw 'variant2samples.termidlst[] is not array'
-	if (vs.termidlst.length == 0) throw '.termidlst[] empty array from variant2samples'
-	if (!ds.termdb) throw 'ds.termdb missing when variant2samples.termidlst is in use'
-	for (const id of vs.termidlst) {
-		if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
+	if (vs.termidlst) {
+		if (!Array.isArray(vs.termidlst)) throw 'variant2samples.termidlst[] is not array'
+		if (vs.termidlst.length == 0) throw '.termidlst[] empty array from variant2samples'
+		if (!ds.termdb) throw 'ds.termdb missing when variant2samples.termidlst is in use'
+		for (const id of vs.termidlst) {
+			if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
+		}
 	}
 
-	// TODO make it optional. when provided will show sunburst chart
-	if (!vs.sunburst_ids) throw '.sunburst_ids[] missing from variant2samples'
-	if (!Array.isArray(vs.sunburst_ids)) throw '.sunburst_ids[] not array from variant2samples'
-	if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
-	for (const id of vs.sunburst_ids) {
-		if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
+	if (vs.sunburst_ids) {
+		if (!Array.isArray(vs.sunburst_ids)) throw '.sunburst_ids[] not array from variant2samples'
+		if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
+		if (!ds.termdb) throw 'ds.termdb missing when variant2samples.sunburst_ids is in use'
+		for (const id of vs.sunburst_ids) {
+			if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
+		}
 	}
+
 	if (vs.gdcapi) {
 		gdc.validate_variant2sample(vs.gdcapi)
 	} else {
-		throw 'unknown query method of variant2samples'
+		// look for server-side vcf/bcf/tabix file
+		// file header should already been parsed and samples obtain if any
+		let hasSamples = false
+		if(ds.queries.snvindel) {
+			// has snvindel
+			if(ds.queries.snvindel.byrange) {
+				if(ds.queries.snvindel.byrange._tk) {
+					if(ds.queries.snvindel.byrange._tk.samples) {
+						// this file has samples
+						hasSamples=true
+					}
+				}
+			}
+			// expand later
+		}
+		if(!hasSamples) throw 'cannot find a sample source from ds.queries{}'
 	}
+
 	vs.get = async q => {
 		return await variant2samples_getresult(q, ds)
 	}
@@ -248,6 +274,10 @@ function may_add_refseq2ensembl(ds, genome) {
 
 /* generate getter as ds.queries.snvindel.byrange.get()
 
+usage scenario:
+1. to initiate official dataset
+2. to make temp ds{} on the fly when querying a custom track
+
 get(param{}):
 .rglst=[ {chr, start, stop} ]
 
@@ -263,7 +293,14 @@ export async function snvindelVcfByRangeGetter(ds, genome) {
 		.nochr=true
 		.indexURL
 		.info={}
-		.format={}
+		.format={
+			ID: {
+				ID: 'dna_assay',
+				Number: '1',
+				Type: 'String',
+				Description: '...'
+	  		}
+		}
 		.samples=[ {name:str}, ... ] // blank array if vcf has no samples
 	.
 	*/
@@ -271,6 +308,13 @@ export async function snvindelVcfByRangeGetter(ds, genome) {
 	// tk{ dir, info, format, samples, nochr }
 	if (q._tk.samples.length && !q._tk.format) {
 		throw 'vcf file has samples but no FORMAT'
+	}
+	if(q._tk.format) {
+		for(const id in q._tk.format) {
+			if(id=='GT') {
+				q._tk.format.isGT = true
+			}
+		}
 	}
 
 	return async param => {
@@ -301,9 +345,9 @@ export async function snvindelVcfByRangeGetter(ds, genome) {
 						const m = m0.alt2csq[alt]
 						m.chr = r.chr
 						m.pos = Number(l[1])
-						m.ssm_id = m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt
+						m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
 						variants.push(m)
-						mayAddSamples(q, m, l)
+						mayAddSamplesFromVcfLine(q, m, l)
 					}
 				}
 			})
@@ -312,9 +356,26 @@ export async function snvindelVcfByRangeGetter(ds, genome) {
 	}
 }
 
-/* quick fix
- */
-function mayAddSamples(q, m, l) {
+/* tentative, subject to change
+
+usage:
+call at snvindel.byrange.get() to assign .samples[] to each m for counting total number of unique samples
+call at variant2samples.get() to get list of samples
+
+parameters:
+q={}
+	q._tk{}
+		.samples=[ {name=str}, ... ] // list of samples corresponding to vcf header
+		.format={}
+m={}
+	m.samples=[] will be created if any are found
+l=[]
+	list of fields from a vcf line, corresponding to m{}
+addFormatValues=true
+	if true, k:v for format fields are added to each sample of m.samples[]
+	set to false for counting samples, or doing sample summary
+*/
+export function mayAddSamplesFromVcfLine(q, m, l, addFormatValues) {
 	if (!q._tk.samples || q._tk.samples.length == 0) {
 		// vcf file has no samples
 		return
@@ -335,37 +396,60 @@ function mayAddSamples(q, m, l) {
 		}
 	}
 	const samples = []
-	for (const [i, sampleObj] of q._tk.samples.entries()) {
+	for (const [i, sampleHeaderObj] of q._tk.samples.entries()) {
 		const v = l[i + 9]
 		if (!v || v == '.') {
 			// no value for this sample
 			continue
 		}
 		const vlst = v.split(':')
-		for (const [j, format] of formatlst.entries()) {
-			const fv = vlst[j] // value for this format field
-			if (!fv || fv == '.') {
-				// no value for this format field
+		const sampleObj = vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues)
+		if(sampleObj) {
+			// this sample is annotated with this variant
+			samples.push(sampleObj)
+		}
+	}
+	if (samples.length) m.samples = samples
+}
+
+function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
+	const sampleObj = {
+		sample_id: sampleHeaderObj.name
+	}
+	for (const [j, format] of formatlst.entries()) {
+		const fv = vlst[j] // value for this format field
+		if (!fv || fv == '.') {
+			// no value for this format field
+			continue
+		}
+		if (format.isGT) {
+			if (fv == './.' || fv == '.|.') {
+				// no gt
 				continue
 			}
-			if (format.isGT) {
-				if (fv == './.' || fv == '.|.') {
-					// no gt
-					continue
-				}
-				// temp!
-				samples.push({ sample_id: sampleObj.name })
-				break
+			// has gt value
+			if(addFormatValues) {
+				sampleObj.GT = fv
+			} else {
+				// no need to add any format fields, only need to return sample id for counting
+				return sampleObj
 			}
-			/* this field is not GT
-			this variant has value for this format field,
+		} else {
+			/* has value for a non-GT field
 			indicating the variant is annotated to this sample
 			irrespective of what this format field is
 			later may check by meanings of each format field
 			*/
-			samples.push({ sample_id: sampleObj.name })
-			break
+			if(addFormatValues) {
+				sampleObj[format.ID] = fv
+			} else {
+				// no need to add field, just return
+				return sampleObj
+			}
 		}
 	}
-	if (samples.length) m.samples = samples
+	if(Object.keys(sampleObj).length==1) {
+		return null
+	}
+	return sampleObj
 }

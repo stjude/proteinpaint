@@ -425,11 +425,14 @@ function mayaddGetter_variant2samples(tk, block) {
 
 		// supply list of terms based on querytype
 		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
-			par.push('termidlst=' + tk.mds.variant2samples.sunburst_ids)
+			if(tk.mds.variant2samples.sunburst_ids) 
+				par.push('termidlst=' + tk.mds.variant2samples.sunburst_ids)
 		} else if (arg.querytype == tk.mds.variant2samples.type_samples) {
-			par.push('termidlst=' + tk.mds.variant2samples.termidlst) // if missing?
+			if(tk.mds.variant2samples.termidlst)
+				par.push('termidlst=' + tk.mds.variant2samples.termidlst)
 		} else if (arg.querytype == tk.mds.variant2samples.type_summary) {
-			par.push('termidlst=' + tk.mds.variant2samples.termidlst) // if missing?
+			if(tk.mds.variant2samples.termidlst)
+				par.push('termidlst=' + tk.mds.variant2samples.termidlst)
 		} else {
 			throw 'unknown querytype'
 		}
