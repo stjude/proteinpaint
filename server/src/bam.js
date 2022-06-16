@@ -2932,9 +2932,7 @@ async function convertread2html(seg, genome, query) {
 				reflst.push('<td>-</td>')
 				if (seg.qual == '*') {
 					// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a white background
-					querylst.push(
-						'<td style="color:' + insertion_hq + ';background:' + qual2match(1) + '">' + seg.seq[i] + '</td>'
-					)
+					querylst.push('<td style="color:' + insertion_hq + ';background:white">' + seg.seq[i] + '</td>')
 				} else {
 					querylst.push(
 						'<td style="color:' +
