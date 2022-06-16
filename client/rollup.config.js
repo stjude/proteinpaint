@@ -2,6 +2,7 @@ import pkg from './package.json'
 import resolve from '@rollup/plugin-node-resolve'
 import commonjs from '@rollup/plugin-commonjs'
 import postcss from 'rollup-plugin-postcss'
+import postcssImport from 'postcss-import'
 import { terser } from 'rollup-plugin-terser'
 import json from '@rollup/plugin-json'
 import path from 'path'
@@ -17,7 +18,7 @@ export default [
 	{
 		input: path.join(__dirname, './src/app.js'),
 		output: { dir: path.join(__dirname, 'dist'), format: 'es' },
-		external: [...Object.keys(pkg.peerDependencies ? pkg.peerDependencies : {})],
+		external: [...Object.keys(pkg.peerDependencies ? pkg.peerDependencies : {}), 'react', 'react-dom'],
 		plugins: [
 			resolve({
 				main: true
@@ -26,7 +27,9 @@ export default [
 			commonjs({
 				extensions: ['.js']
 			}),
-			postcss(),
+			postcss({
+				plugins: [postcssImport()]
+			}),
 			// for GDC webpack 3 use case: do not use terser by running
 			// `cd client && rm -rf dist && NODE_ENV=dev npx rollup -c ./rollup.config.js`
 			production && terser()
