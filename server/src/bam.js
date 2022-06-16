@@ -2304,7 +2304,12 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillRect(r.x, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
 					}
 					if (r.to_printnt) {
-						ctx.fillStyle = 'white'
+						if (!b.qual) {
+							// When quality scores are not defined print nucleotides in black
+							ctx.fillStyle = 'black'
+						} else {
+							ctx.fillStyle = 'white'
+						}
 						if (xoff + r.ntwidth / 2 < r.width && xoff < r.width && r.x <= xoff + r.ntwidth / 2) {
 							ctx.fillText(b.s[i], xoff + r.ntwidth / 2, y + group.stackheight / 2)
 						}
@@ -2373,7 +2378,12 @@ function plot_segment(ctx, segment, y, group, q) {
 			}
 			if (r.to_printnt) {
 				ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
-				ctx.fillStyle = 'white'
+				if (!b.qual) {
+					// When quality scores are not defined print nucleotides in black
+					ctx.fillStyle = 'black'
+				} else {
+					ctx.fillStyle = 'white'
+				}
 				for (let i = 0; i < b.s.length; i++) {
 					if (x + r.ntwidth * (i + 0.5) < r.width && x < r.width && r.x <= x + r.ntwidth * (i + 0.5)) {
 						ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + group.stackheight / 2)
@@ -2393,7 +2403,12 @@ function plot_segment(ctx, segment, y, group, q) {
 			// no quality and just a solid box, may print mate chr name
 			if (segment.x2 - segment.x1 >= 20 && group.stackheight >= 7) {
 				ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, group.stackheight - 4)) + 'pt Arial'
-				ctx.fillStyle = 'white'
+				if (!b.qual) {
+					// When quality scores are not defined print nucleotides in black
+					ctx.fillStyle = 'black'
+				} else {
+					ctx.fillStyle = 'white'
+				}
 				ctx.fillText(
 					(q.nochr ? 'chr' : '') + segment.rnext,
 					(segment.x1 + segment.x2) / 2,
