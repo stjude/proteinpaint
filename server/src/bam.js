@@ -28,7 +28,7 @@ XXX quick fix to be removed/disabled later
    upon first query, will produce all possible groups based on variant type
    - snv/indel yields up to 3 groups
      1. if by snv, will require mismatches
-     2. if by complex variant, require read sequence to do k-mer
+     2. if by complex variant, require read sequence to do read alignment
    - sv yields up to 2 groups
      method to be developed
    - default just 1 group with all the reads
@@ -2905,7 +2905,13 @@ async function convertread2html(seg, genome, query) {
 	const b = seg.boxes[seg.boxes.length - 1]
 	const refstop = b.start + b.len
 	const refseq = await get_refseq(genome, query.chr + ':' + (refstart + 1) + '-' + refstop)
-	const quallst = qual2int(seg.qual)
+	let quallst
+	if (seg.qual == '*') {
+		// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are assigned the highest bp quality
+		quallst = Array(seg.seq.length).fill(41)
+	} else {
+		quallst = qual2int(seg.qual)
+	}
 	const reflst = ['<td>Reference</td>']
 	const querylst = ['<td style="color:black;text-align:left">Read</td>']
 	for (const b of seg.boxes) {
@@ -2968,7 +2974,6 @@ async function convertread2html(seg, genome, query) {
 			continue
 		}
 	}
-
 	// Determining start and stop position of softclips (if any)
 	let soft_start = 0
 	let soft_stop = 0
