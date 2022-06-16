@@ -1,7 +1,6 @@
 const app = require('./app')
 const path = require('path')
 const utils = require('./utils')
-//const vcf = require('../shared/vcf')
 const compute_mclass = require('./termdb.snp').compute_mclass
 
 /*
@@ -147,6 +146,7 @@ async function get_ds(q, genome) {
 							const m = m0.alt2csq[alt]
 							m.chr = r.chr
 							m.pos = Number(l[1])
+							m.ssm_id = m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt
 							variants.push(m)
 						}
 					}

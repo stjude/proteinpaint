@@ -1,6 +1,10 @@
 const gdc = require('./mds3.gdc')
 const { initGDCdictionary } = require('./termdb.gdc')
 const { variant2samples_getresult } = require('./mds3.variant2samples')
+const utils = require('./utils')
+const compute_mclass = require('./termdb.snp').compute_mclass
+const path = require('path')
+const serverconfig = require('./serverconfig')
 
 /*
 ********************** EXPORTED
@@ -13,7 +17,7 @@ export async function init(ds, genome, _servconfig) {
 	if (!ds.queries) throw 'ds.queries{} missing'
 	await validate_termdb(ds)
 	validate_variant2samples(ds)
-	validate_query_snvindel(ds)
+	await validate_query_snvindel(ds, genome)
 	validate_ssm2canonicalisoform(ds)
 
 	may_add_refseq2ensembl(ds, genome)
@@ -185,26 +189,70 @@ function sort_mclass(set) {
 	return lst
 }
 
-function validate_query_snvindel(ds) {
+async function validate_query_snvindel(ds, genome) {
 	const q = ds.queries.snvindel
 	if (!q) return
 	if (q.url) {
 		if (!q.url.base) throw '.snvindel.url.base missing'
 		if (!q.url.key) throw '.snvindel.url.key missing'
 	}
-	if (!q.byrange) throw '.byrange missing for queries.snvindel'
-	if (q.byrange.gdcapi) {
-		gdc.validate_query_snvindel_byrange(ds)
-	} else {
-		throw 'unknown query method for queries.snvindel.byrange'
+	if (q.byrange) {
+		if (q.byrange.gdcapi) {
+			gdc.validate_query_snvindel_byrange(ds)
+		} else if (q.byrange.vcffile) {
+			q.byrange.vcffile = path.join(serverconfig.tpmasterdir, q.byrange.vcffile)
+			q.byrange._tk = { file: q.byrange.vcffile } // _tk{} to receive vcf header
+
+			// some duplication with custom getter() in get_ds()
+			await utils.init_one_vcf(q.byrange._tk, genome)
+			// tk{ info, format, samples, nochr }
+			q.byrange.get = async param => {
+				const variants = []
+				for (const r of param.rglst) {
+					await utils.get_lines_bigfile({
+						args: [
+							q.byrange.vcffile,
+							(q.byrange._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
+						],
+						dir: q.byrange._tk.dir,
+						callback: line => {
+							const l = line.split('\t')
+							const refallele = l[3]
+							const altalleles = l[4].split(',')
+							const m0 = {} // temp obj
+							compute_mclass(
+								q.byrange._tk,
+								refallele,
+								altalleles,
+								m0,
+								l[7], // info str
+								l[2] // vcf line ID
+							)
+							// make a m{} for every alt allele
+							for (const alt in m0.alt2csq) {
+								const m = m0.alt2csq[alt]
+								m.chr = r.chr
+								m.pos = Number(l[1])
+								m.ssm_id = m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt
+								variants.push(m)
+							}
+						}
+					})
+				}
+				return variants
+			}
+		} else {
+			throw 'unknown query method for queries.snvindel.byrange'
+		}
 	}
 
-	if (!q.byisoform) throw '.byisoform missing for queries.snvindel'
-	if (q.byisoform.gdcapi) {
-		//gdc.validate_query_snvindel_byisoform(ds) // tandem rest apis
-		gdc.validate_query_snvindel_byisoform(ds)
-	} else {
-		throw 'unknown query method for queries.snvindel.byisoform'
+	if (q.byisoform) {
+		if (q.byisoform.gdcapi) {
+			//gdc.validate_query_snvindel_byisoform(ds) // tandem rest apis
+			gdc.validate_query_snvindel_byisoform(ds)
+		} else {
+			throw 'unknown query method for queries.snvindel.byisoform'
+		}
 	}
 
 	if (q.m2csq) {
