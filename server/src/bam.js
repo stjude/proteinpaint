@@ -2263,7 +2263,7 @@ function plot_segment(ctx, segment, y, group, q) {
 
 		if (b.opr == '*') {
 			// Possibly unmapped reads
-			if (r.to_qual) {
+			if (r.to_qual && b.qual) {
 				let xoff = x
 				b.qual.forEach(v => {
 					if (segment.discord_unmapped2) {
@@ -2326,7 +2326,7 @@ function plot_segment(ctx, segment, y, group, q) {
 		}
 		if (b.opr == 'M' || b.opr == '=') {
 			// box
-			if (r.to_qual) {
+			if (r.to_qual && b.qual) {
 				let xoff = x
 				b.qual.forEach(v => {
 					if (segment.rnext) {
