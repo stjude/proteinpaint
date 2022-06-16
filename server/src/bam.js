@@ -2908,7 +2908,7 @@ async function convertread2html(seg, genome, query) {
 	let quallst
 	if (seg.qual == '*') {
 		// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are assigned the highest bp quality
-		quallst = Array(seg.seq.length).fill(41)
+		quallst = Array(seg.seq.length).fill(41) // Setting quality score to 41 so that the darkest color is rendered
 	} else {
 		quallst = qual2int(seg.qual)
 	}
