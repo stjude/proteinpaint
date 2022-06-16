@@ -26,9 +26,13 @@ module.exports = function(env = {}) {
 		target: 'node',
 		externals: [
 			nodeExternals({
-				allowlist: [/\/src\//]
+				allowlist: [/\/src\//],
+				additionalModuleDirs: [path.resolve(__dirname, '../node_modules')],
 			})
 		],
+		externalsPresets: {
+			node: true
+		},
 		entry: path.join(__dirname, './src/app.js'),
 		output: {
 			path: path.join(__dirname, './'),
@@ -56,6 +60,6 @@ module.exports = function(env = {}) {
 		// devtool: 'source-map' is slowest to build/rebuild, but
 		// line numbers in stack traces are accurate
 		//
-		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'eval-source-map' : false
+		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : false
 	}
 }
