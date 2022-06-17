@@ -195,10 +195,16 @@ class TermSetting {
 		const typeSubtype = `${type}${subtype}`
 		if (!this.handlerByType[typeSubtype]) {
 			try {
-				const _ = await import(`./${typeSubtype}.js`)
+				let _ 
+				// @rollup/plugin-dynamic-import-vars cannot use a import variable name in the same dir
+				if (typeSubtype == 'numeric.toggle') {
+					_ = await import(`./numeric.toggle.js`)
+				} else {
+					_ = await import(`./handlers/${typeSubtype}.js`)
+				}
 				this.handlerByType[typeSubtype] = await _.getHandler(this)
 			} catch (e) {
-				throw `error with handler='./${typeSubtype}.js': ${e}`
+				throw `error with handler='./handlers/${typeSubtype}.js': ${e}`
 			}
 		}
 		this.handler = this.handlerByType[typeSubtype]
@@ -290,7 +296,7 @@ function setRenderers(self) {
 
 				// TODO: modify termInfoInit() to display term info in tip rather than in div
 				// can be content_tip: self.dom.tip.d to separate it from content_holder
-				const termInfo = await import('../termdb/termInfo')
+				const termInfo = await import('#termdb/termInfo')
 				termInfo.termInfoInit({
 					vocabApi: self.opts.vocabApi,
 					icon_holder: infoIcon_div,
@@ -445,7 +451,7 @@ function setInteractivity(self) {
 			)
 		else self.dom.tip.show(event.clientX, event.clientY)
 
-		const termdb = await import('../termdb/app')
+		const termdb = await import('#termdb/app')
 		termdb.appInit({
 			holder: self.dom.tip.d,
 			vocabApi: self.vocabApi,
@@ -578,7 +584,12 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 async function call_fillTW(tw, vocabApi, defaultQ) {
 	const t = tw.term.type
 	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : t
-	const _ = await import(`./${type}.js`)
+	let _
+	if (type == 'numeric.toggle') {
+		_ = await import(`./numeric.toggle.js`)
+	} else {
+		_ = await import(`./handlers/${type}.js`)
+	}
 	await _.fillTW(tw, vocabApi, defaultQ ? defaultQ[type] : null)
 }
 

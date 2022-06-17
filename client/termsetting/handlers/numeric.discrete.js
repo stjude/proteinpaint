@@ -1,11 +1,11 @@
-import { keyupEnter } from '../src/client'
+import { keyupEnter } from '#src/client'
 import { select, event } from 'd3-selection'
 import { format } from 'd3-format'
 import { setDensityPlot } from './density'
-import { get_bin_label, get_bin_range_equation } from '../shared/termdb.bins'
-import { init_tabs } from '../dom/toggleButtons'
-import { make_radios } from '../dom/radiobutton'
-import { getPillNameDefault } from './termsetting'
+import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
+import { init_tabs } from '#dom/toggleButtons'
+import { make_radios } from '#dom/radiobutton'
+import { getPillNameDefault } from '#termsetting'
 
 /*
 ********************** EXPORTED

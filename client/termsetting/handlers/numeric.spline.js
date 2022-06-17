@@ -1,7 +1,7 @@
 import { select, event } from 'd3-selection'
 import { setDensityPlot } from './density'
-import { keyupEnter } from '../src/client'
-import { getPillNameDefault } from './termsetting'
+import { keyupEnter } from '#src/client'
+import { getPillNameDefault } from '#termsetting'
 
 /*
 ********************** EXPORTED

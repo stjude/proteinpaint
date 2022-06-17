@@ -1,7 +1,7 @@
-import { getPillNameDefault, set_hiddenvalues } from './termsetting'
-import { make_radios } from '../dom/radiobutton'
-import { keyupEnter } from '../src/client'
-import { copyMerge } from '../rx'
+import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
+import { make_radios } from '#dom/radiobutton'
+import { keyupEnter } from '#src/client'
+import { copyMerge } from '#rx'
 
 // grades that can be used for q.breaks, exclude uncomputable ones and 0, thus have to hardcode
 // if needed, can define from termdbConfig

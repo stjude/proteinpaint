@@ -1,6 +1,6 @@
-import { init_tabs } from '../dom/toggleButtons'
-import { getPillNameDefault, set_hiddenvalues } from './termsetting'
-import { copyMerge } from '../rx'
+import { init_tabs } from '#dom/toggleButtons'
+import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
+import { copyMerge } from '#rx'
 
 /*
 ********************** EXPORTED
@@ -22,7 +22,7 @@ export async function getHandler(self) {
 		self.q.mode = tab.subType
 		const typeSubtype = `numeric.${tab.subType}`
 		if (!self.handlerByType[typeSubtype]) {
-			const _ = await import(`./${typeSubtype}.js`)
+			const _ = await import(`./handlers/${typeSubtype}.js`)
 			self.handlerByType[typeSubtype] = await _.getHandler(self)
 		}
 		tab.isRendered = true

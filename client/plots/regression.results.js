@@ -1,10 +1,10 @@
-import { sayerror } from '../dom/error'
+import { sayerror } from '#dom/error'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisBottom, axisTop } from 'd3-axis'
-import { axisstyle } from '../dom/axisstyle'
-import { first_genetrack_tolist } from '../common/1stGenetk'
+import { axisstyle } from '#dom/axisstyle'
+import { first_genetrack_tolist } from '#common/1stGenetk'
 import { interpolateRgb } from 'd3-interpolate'
-import { drawBoxplot } from '../dom/boxplot'
+import { drawBoxplot } from '#dom/boxplot'
 
 /*************
 can dynamically add following attributes
@@ -1061,7 +1061,7 @@ async function createGenomebrowser(self, input, resultLst) {
 			overrideTw.q.start = start
 			overrideTw.q.stop = stop
 			// call fillTW of snplocus.js to recompute tw.term.snps[] and cache file
-			const _ = await import('../termsetting/snplocus')
+			const _ = await import('../termsetting/handlers/snplocus')
 			await _.fillTW(overrideTw, self.app.vocabApi)
 			/*
 			updated term info (term.snps[] and q.cacheid etc) are now in overrideTw

@@ -1,10 +1,10 @@
 import { event } from 'd3-selection'
 import { makeSnpSelect } from './snplst'
-import { filterInit, getNormalRoot } from '../filter/filter'
-import { keyupEnter, gmlst2loci } from '../src/client'
+import { filterInit, getNormalRoot } from '#filter'
+import { keyupEnter, gmlst2loci } from '#src/client'
 import { debounce } from 'debounce'
-import { dofetch3 } from '../common/dofetch'
-import { string2pos } from '../src/coord'
+import { dofetch3 } from '#common/dofetch'
+import { string2pos } from '#src/coord'
 
 /* 
 instance attributes

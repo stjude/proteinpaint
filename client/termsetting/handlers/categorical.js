@@ -1,6 +1,6 @@
 import { setGroupsettingMethods } from './groupsetting'
-import { filterInit } from '../filter/filter'
-import { getPillNameDefault, set_hiddenvalues } from './termsetting'
+import { filterInit } from '#filter'
+import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 
 /*
 ********************** EXPORTED

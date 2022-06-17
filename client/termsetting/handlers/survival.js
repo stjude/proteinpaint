@@ -1,4 +1,4 @@
-import { getPillNameDefault } from './termsetting'
+import { getPillNameDefault } from '#termsetting'
 
 export function getHandler(self) {
 	return {

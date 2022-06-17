@@ -1,7 +1,7 @@
-import { keyupEnter } from '../src/client'
+import { keyupEnter } from '#src/client'
 import { select, event } from 'd3-selection'
-import { filterInit } from '../filter/filter'
-import { make_radios } from '../dom/radiobutton'
+import { filterInit } from '#filter'
+import { make_radios } from '#dom/radiobutton'
 
 /*
 Arguments

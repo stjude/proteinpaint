@@ -1,5 +1,5 @@
 import { event as d3event } from 'd3-selection'
-import { getPillNameDefault } from './termsetting'
+import { getPillNameDefault } from '#termsetting'
 
 /*
 ********************** EXPORTED

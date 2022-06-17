@@ -1,7 +1,7 @@
 {
 	"main": "index.js",
 	"scripts": {
-		"predev": "rm -rf ../client/dist & rollup -c ../client/rollup.config.js -w &",
+		
 		"dev": "rm -rf ../public/bin & webpack --env NODE_ENV=development --watch --progress --color",
 		"#dev": "webpack --env NODE_ENV=development --watch --progress --color",
 		"start": "npx proteinpaint-server"

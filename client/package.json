@@ -4,6 +4,18 @@
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "module": "dist/app.js",
+  "imports": {
+    "#src/*": "./src/*.js",
+    "#common/*": "./common/*.js",
+    "#dom/*": "./dom/*.js",
+    "#filter": "./filter/filter.js",
+    "#filter/*": "./filter/*.js",
+    "#rx": "./rx/index.js",
+    "#shared/*": "./shared/*.js",
+    "#termdb/*": "./termdb/*.js",
+    "#termsetting": "./termsetting/termsetting.js",
+    "#termsetting/handlers/*": "./termsetting/handlers/*.js"
+  },
   "scripts": {
     "predev": "node ./test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js",
     "dev": "webpack --env NODE_ENV=development --watch --progress --color",
@@ -24,6 +36,7 @@
     "@babel/preset-env": "^7.9.6",
     "@babel/preset-react": "^7.14.5",
     "@rollup/plugin-commonjs": "^17.0.0",
+    "@rollup/plugin-dynamic-import-vars": "^1.4.3",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.0.1",
     "babel-loader": "^8.2.2",
