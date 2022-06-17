@@ -28,7 +28,7 @@ XXX quick fix to be removed/disabled later
    upon first query, will produce all possible groups based on variant type
    - snv/indel yields up to 3 groups
      1. if by snv, will require mismatches
-     2. if by complex variant, require read sequence to do k-mer
+     2. if by complex variant, require read sequence to do read alignment
    - sv yields up to 2 groups
      method to be developed
    - default just 1 group with all the reads
@@ -2263,7 +2263,7 @@ function plot_segment(ctx, segment, y, group, q) {
 
 		if (b.opr == '*') {
 			// Possibly unmapped reads
-			if (r.to_qual) {
+			if (r.to_qual && b.qual) {
 				let xoff = x
 				b.qual.forEach(v => {
 					if (segment.discord_unmapped2) {
@@ -2304,7 +2304,12 @@ function plot_segment(ctx, segment, y, group, q) {
 						ctx.fillRect(r.x, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
 					}
 					if (r.to_printnt) {
-						ctx.fillStyle = 'white'
+						if (!b.qual) {
+							// When quality scores are not defined print nucleotides in black
+							ctx.fillStyle = 'black'
+						} else {
+							ctx.fillStyle = 'white'
+						}
 						if (xoff + r.ntwidth / 2 < r.width && xoff < r.width && r.x <= xoff + r.ntwidth / 2) {
 							ctx.fillText(b.s[i], xoff + r.ntwidth / 2, y + group.stackheight / 2)
 						}
@@ -2326,7 +2331,7 @@ function plot_segment(ctx, segment, y, group, q) {
 		}
 		if (b.opr == 'M' || b.opr == '=') {
 			// box
-			if (r.to_qual) {
+			if (r.to_qual && b.qual) {
 				let xoff = x
 				b.qual.forEach(v => {
 					if (segment.rnext) {
@@ -2373,7 +2378,12 @@ function plot_segment(ctx, segment, y, group, q) {
 			}
 			if (r.to_printnt) {
 				ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
-				ctx.fillStyle = 'white'
+				if (!b.qual) {
+					// When quality scores are not defined print nucleotides in black
+					ctx.fillStyle = 'black'
+				} else {
+					ctx.fillStyle = 'white'
+				}
 				for (let i = 0; i < b.s.length; i++) {
 					if (x + r.ntwidth * (i + 0.5) < r.width && x < r.width && r.x <= x + r.ntwidth * (i + 0.5)) {
 						ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + group.stackheight / 2)
@@ -2393,7 +2403,12 @@ function plot_segment(ctx, segment, y, group, q) {
 			// no quality and just a solid box, may print mate chr name
 			if (segment.x2 - segment.x1 >= 20 && group.stackheight >= 7) {
 				ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, group.stackheight - 4)) + 'pt Arial'
-				ctx.fillStyle = 'white'
+				if (!b.qual) {
+					// When quality scores are not defined print nucleotides in black
+					ctx.fillStyle = 'black'
+				} else {
+					ctx.fillStyle = 'white'
+				}
 				ctx.fillText(
 					(q.nochr ? 'chr' : '') + segment.rnext,
 					(segment.x1 + segment.x2) / 2,
@@ -2915,15 +2930,20 @@ async function convertread2html(seg, genome, query) {
 		if (b.opr == 'I') {
 			for (let i = b.cidx; i < b.cidx + b.len; i++) {
 				reflst.push('<td>-</td>')
-				querylst.push(
-					'<td style="color:' +
-						insertion_hq +
-						';background:' +
-						qual2match(quallst[i] / maxqual) +
-						'">' +
-						seg.seq[i] +
-						'</td>'
-				)
+				if (seg.qual == '*') {
+					// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a white background
+					querylst.push('<td style="color:' + insertion_hq + ';background:white">' + seg.seq[i] + '</td>')
+				} else {
+					querylst.push(
+						'<td style="color:' +
+							insertion_hq +
+							';background:' +
+							qual2match(quallst[i] / maxqual) +
+							'">' +
+							seg.seq[i] +
+							'</td>'
+					)
+				}
 			}
 			continue
 		}
@@ -2942,13 +2962,18 @@ async function convertread2html(seg, genome, query) {
 		if (b.opr == 'S') {
 			for (let i = 0; i < b.len; i++) {
 				reflst.push('<td>' + refseq[b.start - refstart + i] + '</td>')
-				querylst.push(
-					'<td style="background:' +
-						qual2softclipbg(quallst[b.cidx + i] / maxqual) +
-						'">' +
-						seg.seq[b.cidx + i] +
-						'</td>'
-				)
+				if (seg.qual == '*') {
+					// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a blue background
+					querylst.push('<td style="background:' + qual2softclipbg(1) + '">' + seg.seq[b.cidx + i] + '</td>')
+				} else {
+					querylst.push(
+						'<td style="background:' +
+							qual2softclipbg(quallst[b.cidx + i] / maxqual) +
+							'">' +
+							seg.seq[b.cidx + i] +
+							'</td>'
+					)
+				}
 			}
 			continue
 		}
@@ -2957,18 +2982,28 @@ async function convertread2html(seg, genome, query) {
 				const nt0 = refseq[b.start - refstart + i]
 				const nt1 = seg.seq[b.cidx + i]
 				reflst.push('<td>' + nt0 + '</td>')
-				querylst.push(
-					'<td style="background:' +
-						(nt0.toUpperCase() == nt1.toUpperCase() ? qual2match : qual2mismatchbg)(quallst[b.cidx + i] / maxqual) +
-						'">' +
-						seg.seq[b.cidx + i] +
-						'</td>'
-				)
+				if (seg.qual == '*') {
+					// This happens in case of some long-read sequencing technology where phred-quality scores of nucleotides is not available. In that case all base-pairs are colored black in a white background
+					querylst.push(
+						'<td style="color:black;background:' +
+							(nt0.toUpperCase() == nt1.toUpperCase() ? qual2match : qual2mismatchbg) +
+							'">' +
+							seg.seq[b.cidx + i] +
+							'</td>'
+					)
+				} else {
+					querylst.push(
+						'<td style="background:' +
+							(nt0.toUpperCase() == nt1.toUpperCase() ? qual2match : qual2mismatchbg)(quallst[b.cidx + i] / maxqual) +
+							'">' +
+							seg.seq[b.cidx + i] +
+							'</td>'
+					)
+				}
 			}
 			continue
 		}
 	}
-
 	// Determining start and stop position of softclips (if any)
 	let soft_start = 0
 	let soft_stop = 0

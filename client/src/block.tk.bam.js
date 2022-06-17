@@ -2144,7 +2144,10 @@ async function getReadInfo(tk, block, box, ridx) {
 		return
 	}
 	wait.remove()
-
+	tk.readpane.body
+		.style('max-width', '90vw')
+		.style('max-height', '65vh')
+		.style('overflow', 'scroll')
 	for (const r of data.lst) {
 		// {seq, alignment (html), info (html) }
 		const div = tk.readpane.body.append('div').style('margin', '20px')
