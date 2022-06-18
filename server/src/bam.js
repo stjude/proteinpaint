@@ -2324,6 +2324,20 @@ function plot_segment(ctx, segment, y, group, q) {
 				} else if (x + b.len * r.ntwidth + ntboxwidthincrement >= r.width && r.x < x) {
 					ctx.fillRect(x, y, r.width - x, group.stackheight)
 				}
+				if (r.to_printnt && !b.qual) {
+					ctx.font = Math.min(r.ntwidth, group.stackheight - 2) + 'pt Arial'
+					if (!b.qual) {
+						// When quality scores are not defined print nucleotides in black
+						ctx.fillStyle = 'black'
+					} else {
+						ctx.fillStyle = 'white'
+					}
+					for (let i = 0; i < b.s.length; i++) {
+						if (x + r.ntwidth * (i + 0.5) < r.width && x < r.width && r.x <= x + r.ntwidth * (i + 0.5)) {
+							ctx.fillText(b.s[i], x + r.ntwidth * (i + 0.5), y + group.stackheight / 2)
+						}
+					}
+				}
 			}
 			continue
 		}
