@@ -17,7 +17,7 @@ const minbpwidth = 4
 
 export function make_datagroup(tk, rawmlst, block) {
 	mlst_pretreat(rawmlst, tk, block)
-	// m.__x added
+	// m.__x is added to viewable data points
 
 	const x2mlst = new Map()
 	for (const m of rawmlst) {
@@ -242,13 +242,18 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 				m.isoform = block.usegm.isoform
 				// gmmode, single datum over current gene
 				let nohit = true
-				for (let i = 0; i < m.pairlst.length; i++) {
-					const pair = m.pairlst[i]
+				for (const [i, pair] of m.pairlst.entries()) {
+
 					// try to match with both isoform and name, for IGH, without isoform, but the querying "gene" can be IGH
-					if (block.usegm.isoform == (pair.a.isoform || pair.a.name)) {
+					//if (block.usegm.isoform == (pair.a.isoform || pair.a.name)) 
+					if(block.usegm.chr == pair.a.chr && block.usegm.start < pair.a.pos && block.usegm.stop > pair.a.pos) {
 						m.useNterm = i == 0
-						m.chr = block.usegm.chr
 						m.strand = pair.a.strand
+
+						// m.pos is already set
+
+						/*
+						m.chr = block.usegm.chr
 						if (pair.a.position == undefined) {
 							if (pair.a.rnaposition == undefined) {
 								if (pair.a.codon == undefined) {
@@ -269,6 +274,7 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 						} else {
 							m.pos = pair.a.position
 						}
+						*/
 						const t = coord.genomic2gm(m.pos, block.usegm)
 						m.rnapos = t.rnapos
 						m.aapos = t.aapos
@@ -279,10 +285,15 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 						nohit = false
 						break
 					}
-					if (block.usegm.isoform == (pair.b.isoform || pair.b.name)) {
+
+					//if (block.usegm.isoform == (pair.b.isoform || pair.b.name)) 
+					if(block.usegm.chr == pair.b.chr && block.usegm.start < pair.b.pos && block.usegm.stop > pair.b.pos) {
 						m.useNterm = false // always
-						m.chr = block.usegm.chr
 						m.strand = pair.b.strand
+
+						// m.pos is already set
+						/*
+						m.chr = block.usegm.chr
 						if (pair.b.position == undefined) {
 							if (pair.b.rnaposition == undefined) {
 								if (pair.b.codon == undefined) {
@@ -303,6 +314,8 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 						} else {
 							m.pos = pair.b.position
 						}
+						*/
+
 						const t = coord.genomic2gm(m.pos, block.usegm)
 						m.rnapos = t.rnapos
 						m.aapos = t.aapos
@@ -318,6 +331,7 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 					console.error('sv/fusion isoform no match to gm isoform: ' + block.usegm.isoform)
 				}
 			} else {
+				///////// not working yet
 				// genomic mode, one m for each breakend
 				for (const pair of m.pairlst) {
 					let ain = false,

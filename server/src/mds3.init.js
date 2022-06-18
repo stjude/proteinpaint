@@ -10,8 +10,11 @@ const serverconfig = require('./serverconfig')
 ********************** EXPORTED
 init
 client_copy
-snvindelVcfByRangeGetter
+	copy_queries
+snvindelByRangeGetter_vcf
+svfusionByRangeGetter_file
 mayAddSamplesFromVcfLine
+	vcfFormat2sample
 ********************** INTERNAL
 */
 
@@ -22,9 +25,12 @@ export async function init(ds, genome, _servconfig) {
 	if (!ds.queries) throw 'ds.queries{} missing'
 	// must validate termdb first
 	await validate_termdb(ds)
+
 	// must validate snvindel query before variant2sample
 	// as vcf header must be parsed to supply samples for v2s
 	await validate_query_snvindel(ds, genome)
+	await validate_query_svfusion(ds, genome)
+
 	validate_variant2samples(ds)
 	validate_ssm2canonicalisoform(ds)
 
@@ -223,13 +229,15 @@ async function validate_query_snvindel(ds, genome) {
 		if (!q.url.base) throw '.snvindel.url.base missing'
 		if (!q.url.key) throw '.snvindel.url.key missing'
 	}
+
+	if(!q.byisoform && !q.byrange) throw 'byisoform and byrange are both missing on queries.snvindel'
 	if (q.byrange) {
 		if (q.byrange.gdcapi) {
 			gdc.validate_query_snvindel_byrange(ds)
 		} else if (q.byrange.vcffile) {
 			q.byrange.vcffile = path.join(serverconfig.tpmasterdir, q.byrange.vcffile)
 			q.byrange._tk = { file: q.byrange.vcffile }
-			q.byrange.get = await snvindelVcfByRangeGetter(ds, genome)
+			q.byrange.get = await snvindelByRangeGetter_vcf(ds, genome)
 		} else {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
@@ -237,7 +245,6 @@ async function validate_query_snvindel(ds, genome) {
 
 	if (q.byisoform) {
 		if (q.byisoform.gdcapi) {
-			//gdc.validate_query_snvindel_byisoform(ds) // tandem rest apis
 			gdc.validate_query_snvindel_byisoform(ds)
 		} else {
 			throw 'unknown query method for queries.snvindel.byisoform'
@@ -283,7 +290,7 @@ get(param{}):
 
 returns array of variants
 */
-export async function snvindelVcfByRangeGetter(ds, genome) {
+export async function snvindelByRangeGetter_vcf(ds, genome) {
 	const q = ds.queries.snvindel.byrange
 	/* q{}
 	._tk={}
@@ -293,22 +300,24 @@ export async function snvindelVcfByRangeGetter(ds, genome) {
 		.nochr=true
 		.indexURL
 		.info={}
-		.format={
-			ID: {
+			<ID>: {}
+				ID: 'CSQ',
+				Number: '.',
+				Type: 'String',
+				Description: 'Cons
+		.format={} // null if no format
+			<ID>: {}
 				ID: 'dna_assay',
 				Number: '1',
 				Type: 'String',
 				Description: '...'
-	  		}
-		}
 		.samples=[ {name:str}, ... ] // blank array if vcf has no samples
 	.
 	*/
 	await utils.init_one_vcf(q._tk, genome)
 	// tk{ dir, info, format, samples, nochr }
-	if (q._tk.samples.length && !q._tk.format) {
-		throw 'vcf file has samples but no FORMAT'
-	}
+	if (q._tk.samples.length>0 && !q._tk.format) throw 'vcf file has samples but no FORMAT'
+	if(q._tk.format && q._tk.samples.length==0) throw 'vcf file has FORMAT but no samples'
 	if(q._tk.format) {
 		for(const id in q._tk.format) {
 			if(id=='GT') {
@@ -318,6 +327,8 @@ export async function snvindelVcfByRangeGetter(ds, genome) {
 	}
 
 	return async param => {
+		if(!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
+		if(param.rglst.length==0) throw 'q.rglst[] blank array'
 		const variants = [] // to be returned
 		for (const r of param.rglst) {
 			await utils.get_lines_bigfile({
@@ -452,4 +463,90 @@ function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 		return null
 	}
 	return sampleObj
+}
+
+async function validate_query_svfusion(ds,genome) {
+	const q = ds.queries.svfusion
+	if(!q) return
+	if(!q.byrange) throw 'byrange missing from queries.svfusion'
+	if(q.byrange) {
+		if(q.byrange.file) {
+			q.byrange.file = path.join(serverconfig.tpmasterdir,q.byrange.file)
+			q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
+		} else {
+			throw 'unknown query method for svfusion.byrange'
+		}
+	}
+}
+
+export async function svfusionByRangeGetter_file(ds,genome) {
+	const q = ds.queries.svfusion.byrange
+	if(q.file) {
+		await utils.validate_tabixfile(q.file)
+	} else if(q.url) {
+		q.dir = await utils.cache_index(q.url, q.indexURL)
+	} else {
+		throw 'file and url both missing on svfusion.byrange{}'
+	}
+	q.nochr = await utils.tabix_is_nochr(q.file || q.url, null, genome)
+	return async param => {
+		if(!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
+		if(param.rglst.length==0) throw 'q.rglst[] blank array'
+		const variants = [] // to be returned
+		for (const r of param.rglst) {
+			await utils.get_lines_bigfile({
+				args: [
+					q.file || q.url,
+					(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
+				],
+				dir: q.dir,
+				callback: line => {
+					const l = line.split('\t')
+					const pos = Number(l[1])
+					let j
+					try {
+						j=JSON.parse(l[3])
+					}catch(e) {
+						//console.log('svfusion json err')
+						return
+					}
+					if(j.dt!=2 && j.dt!=5) {
+						// not fusion or sv
+						//console.log('svfusion invalid dt')
+						return
+					}
+					j.chr = r.chr
+					j.pos = pos
+					const a = {
+						strand: j.strandA,
+						name: j.geneA
+					}
+					const b={
+						strand: j.strandB,
+						name: j.geneB
+					}
+					if(j.chrA) {
+						a.chr = j.chrA
+						a.pos = j.posA
+						b.chr = r.chr
+						b.pos = pos
+					} else {
+						a.chr = r.chr
+						a.pos = pos
+						b.chr = j.chrB
+						b.pos = j.posB
+					}
+					j.pairlst = [{a,b}]
+					if(j.sample) {
+						// value is string sample id
+						// convert to .samples[] as snvindel
+						j.samples = [ {sample_id: j.sample} ]
+						delete j.sample
+					}
+					variants.push(j)
+				}
+			})
+		}
+		return variants
+	}
 }

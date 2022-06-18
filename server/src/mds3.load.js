@@ -1,7 +1,7 @@
 const app = require('./app')
 const path = require('path')
 const utils = require('./utils')
-const snvindelVcfByRangeGetter = require('./mds3.init').snvindelVcfByRangeGetter
+const snvindelByRangeGetter_vcf = require('./mds3.init').snvindelByRangeGetter_vcf
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -60,7 +60,9 @@ function summarize_mclass(mlst) {
 	// ??? if to include genecnv data here?
 	const cc = new Map() // k: mclass, v: {}
 	for (const m of mlst) {
-		cc.set(m.class, 1 + (cc.get(m.class) || 0))
+		// snvindel has m.class=str, svfusion has only dt=int
+		const key = m.class || m.dt
+		cc.set(key, 1 + (cc.get(key) || 0))
 	}
 	return [...cc].sort((i, j) => j[1] - i[1])
 }
@@ -119,7 +121,7 @@ async function get_ds(q, genome) {
 			_tk.file = file
 		}
 		ds.queries.snvindel = { byrange: { _tk } }
-		ds.queries.snvindel.byrange.get = await snvindelVcfByRangeGetter(ds, genome)
+		ds.queries.snvindel.byrange.get = await snvindelByRangeGetter_vcf(ds, genome)
 	}
 	// add new file types
 
@@ -238,7 +240,15 @@ async function query_snvindel(q, ds) {
 		return await ds.queries.snvindel.byrange.get(q)
 	}
 	// may allow other query method (e.g. by gene name from a db table)
-	throw 'unknown query method for snvindel'
+	throw 'insufficient query parameters for snvindel'
+}
+
+async function query_svfusion(q, ds) {
+	if(q.rglst) {
+		if(!ds.queries.svfusion.byrange) throw 'q.rglst provided but svfusion.byrange missing'
+		return await ds.queries.svfusion.byrange.get(q)
+	}
+	throw 'insufficient query parameters for svfusion'
 }
 
 async function query_genecnv(q, ds) {
@@ -261,8 +271,6 @@ async function query_genecnv(q, ds) {
 		throw '.byisoform missing for genecnv query'
 	}
 }
-
-async function query_svfusion(q, ds) {}
 
 function filter_data(q, result) {
 	// will not be needed when filters are combined into graphql query language

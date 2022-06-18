@@ -53,21 +53,16 @@ module.exports = {
 	queries: {
 		snvindel: {
 			forTrack: true,
-			/*
-			url: {
-				// for adding url link in variant panel
-				base: 'https://portal.gdc.cancer.gov/ssms/',
-				key: 'ssm_id'
-			},
-			*/
 			byrange: {
 				vcffile: 'files/hg38/ash/panall.hg38.vcf.gz'
 			}
-		}
-
-		/*
-		svfusion: {
 		},
+		svfusion: {
+			byrange: {
+				file: 'files/hg38/ash/panall.svfusion.hg38.gz'
+			}
+		},
+		/*
 		cnvpileup:{},
 		geneexpression: {
 		},
