@@ -1,10 +1,32 @@
 import { gmmode, dtsnvindel, dtsv, dtfusionrna } from '../../shared/common'
 import * as coord from '../coord'
 
-/*
-method shared by skewer and numeric mode
+/* method shared by skewer and numeric mode
 
-each data group is:
+******** input ************
+list of mixed snvindel or sv/fusion
+
+snvindel is:
+{
+	dt = dtsnvindel
+	chr = str
+	pos = int
+}
+sv/fusion is:
+{
+	dt = dtsv/dtfusionrna
+	chr = str
+	pos = int
+	pairlst = [
+		{
+			a = {chr, pos, strand, name}
+			b = {chr, pos, strand, name}
+		}
+	]
+}
+
+******** output ***********
+
 {
 	chr
 	pos
@@ -13,6 +35,8 @@ each data group is:
 }
 */
 
+// minimum #pixels per basepair, for which to group data points by bp position
+// if lower than this, means too zoomed out and will group by on-screen pixel position
 const minbpwidth = 4
 
 export function make_datagroup(tk, rawmlst, block) {
@@ -20,6 +44,8 @@ export function make_datagroup(tk, rawmlst, block) {
 	// m.__x is added to viewable data points
 
 	const x2mlst = new Map()
+	// k: m.__x, v: mlst
+
 	for (const m of rawmlst) {
 		if (m.__x == undefined) continue // dropped
 		if (!x2mlst.has(m.__x)) {
@@ -30,8 +56,7 @@ export function make_datagroup(tk, rawmlst, block) {
 	const datagroup = []
 	// by resolution
 	if (block.exonsf >= minbpwidth) {
-		// # pixel per nt is big enough
-		// group by each nt
+		// # pixel per nt is big enough, group by each nt
 		for (const [x, mlst] of x2mlst) {
 			datagroup.push({
 				chr: mlst[0].chr,
@@ -133,7 +158,10 @@ legacy function kept to add in new filters
 guard against bad data
 filter data by a systematic filter
 
-- calculate m.__x by mapping coord to view range
+for viewable data points, add following:
+.__x = view range x position
+.rnapos = rna position of block.usegm
+.aapos = aa position of block.usegm
 */
 function mlst_pretreat(rawmlst, tk, block) {
 	let nogenomicpos = 0,
@@ -207,15 +235,12 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 			continue
 		}
 		if (m.dt == dtsv || m.dt == dtfusionrna) {
-			if (!m.pairlst) {
-				throw 'pairlst missing from sv/fusion'
-			}
+			validatePairlst(m)
+
 			// TODO following legacy code needs correction
+			/*
 			if (block.usegm && m.dt == dtsv) {
-				/*
-				SV data correction to suit gene strand
-				do not look at strands
-				*/
+				//SV data correction to suit gene strand, do not look at strands
 				if (m.pairlst.length == 1) {
 					// only works for single pair
 					const a = m.pairlst[0].a
@@ -237,9 +262,10 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 					}
 				}
 			}
+			*/
 			// XXX current data format doesnt work for genomic range query!!!
 			if (block.usegm && block.gmmode != gmmode.genomic) {
-				m.isoform = block.usegm.isoform
+				//m.isoform = block.usegm.isoform
 				// gmmode, single datum over current gene
 				let nohit = true
 				for (const [i, pair] of m.pairlst.entries()) {
@@ -250,10 +276,9 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 						m.useNterm = i == 0
 						m.strand = pair.a.strand
 
-						// m.pos is already set
-
 						/*
-						m.chr = block.usegm.chr
+						this logic was needed when fusion has only rna/codon position on an isoform, and has to convert that to genomic position
+
 						if (pair.a.position == undefined) {
 							if (pair.a.rnaposition == undefined) {
 								if (pair.a.codon == undefined) {
@@ -293,7 +318,6 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 
 						// m.pos is already set
 						/*
-						m.chr = block.usegm.chr
 						if (pair.b.position == undefined) {
 							if (pair.b.rnaposition == undefined) {
 								if (pair.b.codon == undefined) {
@@ -382,5 +406,20 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 			continue
 		}
 		throw 'unknown dt: ' + m.dt
+	}
+}
+
+function validatePairlst(m) {
+	if (!Array.isArray(m.pairlst) && m.pairlst.length==0) 
+		throw 'sv/fusion pairlst[] is not non-empty array'
+	for(const p of m.pairlst) {
+		if(typeof p.a != 'object') throw '.a{} not an object'
+		if(typeof p.b != 'object') throw '.b{} not an object'
+		if(typeof p.a.chr != 'string') throw '.a.chr not string'
+		if(typeof p.b.chr != 'string') throw '.b.chr not string'
+		if(!Number.isInteger(p.a.pos)) throw '.a.pos not integer'
+		if(!Number.isInteger(p.b.pos)) throw '.b.pos not integer'
+		if(p.a.strand!='+' && p.a.strand!='-') throw '.a.strand is invalid'
+		if(p.b.strand!='+' && p.b.strand!='-') throw '.b.strand is invalid'
 	}
 }

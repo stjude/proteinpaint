@@ -515,8 +515,6 @@ export async function svfusionByRangeGetter_file(ds,genome) {
 						//console.log('svfusion invalid dt')
 						return
 					}
-					j.chr = r.chr
-					j.pos = pos
 					const a = {
 						strand: j.strandA,
 						name: j.geneA
@@ -536,14 +534,19 @@ export async function svfusionByRangeGetter_file(ds,genome) {
 						b.chr = j.chrB
 						b.pos = j.posB
 					}
-					j.pairlst = [{a,b}]
+					const m = {
+						dt: j.dt,
+						chr: r.chr,
+						pos,
+						pairlst: [{a,b}],
+						ssm_id: [a.chr, a.pos, a.strand,b.chr, b.pos,b.strand].join(ssmIdFieldsSeparator)
+					}
 					if(j.sample) {
 						// value is string sample id
 						// convert to .samples[] as snvindel
-						j.samples = [ {sample_id: j.sample} ]
-						delete j.sample
+						m.samples = [ {sample_id: j.sample} ]
 					}
-					variants.push(j)
+					variants.push(m)
 				}
 			})
 		}
