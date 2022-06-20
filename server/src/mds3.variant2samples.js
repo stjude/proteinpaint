@@ -3,6 +3,7 @@ const gdc = require('./mds3.gdc')
 const { get_densityplot } = require('./mds3.densityPlot')
 const {ssmIdFieldsSeparator, mayAddSamplesFromVcfLine} =require('./mds3.init')
 const utils = require('./utils')
+const {dtfusionrna, dtsv} = require('../shared/common')
 
 
 /*
@@ -58,10 +59,6 @@ async function get_samples(q, ds) {
 	*/
 
 	if( q.ssm_id_lst) {
-		/* querying server side files based on ssm ids
-		the ids must be in chr.pos... format for both snvindel and svfusion
-		thus can extract coordinate from a "ssm" to query
-		*/
 		return await queryServerFileBySsmid(q, termidlst, ds)
 	}
 
@@ -75,14 +72,20 @@ async function get_samples(q, ds) {
 async function queryServerFileBySsmid(q, termidlst, ds) {
 	/*
 	q.ssm_id_lst can be multiple data types
-	snvindel id has 4 fields, and svfusion id has 6 fields
+	the id string must be in format like chr.pos.etc.etc
+	that contains chromsome position for querying snvindel or svfusion file
+	thus can extract coordinate from  to query
+
+	snvindel id has 4 fields, svfusion id has 6 fields, thus be able to differentiate
 	*/
 	const samples = []
 
 	for(const ssmid of q.ssm_id_lst.split(',')) {
 		const l = ssmid.split(ssmIdFieldsSeparator)
+
 		if(l.length==4) {
-			//////// ssm is snv
+			if(!ds.queries.snvindel || !ds.queries.snvindel.byrange)
+				throw 'queries.snvindel.byrange missing when id has 4 fields'
 			const [chr, tmp, ref, alt] = l
 			const pos = Number(tmp)
 			if(Number.isNaN(pos)) throw 'no integer position for snvindel from ssm id'
@@ -94,29 +97,31 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 					samples.push(s)
 				}
 			}
-				
-		} else if(l.length==6) {
-			//////// ssm is svfusion
-			// dt, chr, pos, strand, pairlstIdx, partner gene
+			continue
+		}
+
+		if(l.length==6) {
+			if(!ds.queries.svfusion || !ds.queries.svfusion.byrange)
+				throw 'queries.svfusion.byrange missing when id has 6 fields'
 			const [_dt, chr, _pos, strand, _pi, mname] = l
 			const dt = Number(_dt)
-			if(dt!=2 && dt!=5) throw 'dt not sv/fusion'
+			if(dt!=dtsv && dt!=dtfusionrna) throw 'dt not sv/fusion'
 			const pos = Number(_pos)
 			if(Number.isNaN(pos)) throw 'position not integer'
 			const pairlstIdx = Number(_pi)
 			if(Number.isNaN(pairlstIdx)) throw 'pairlstIdx not integer'
 			const mlst = await ds.queries.svfusion.byrange.get({rglst:[{chr, start:pos, stop:pos}]})
 			for(const m of mlst) {
-				if(m.pos!=pos || m.strand!=strand || m.pairlstIdx!=pairlstIdx || m.mname!=mname) continue
+				if(m.dt != dt && m.pos!=pos || m.strand!=strand || m.pairlstIdx!=pairlstIdx || m.mname!=mname) continue
 				for(const s of m.samples) {
 					s.ssm_id = ssmid
 					samples.push(s)
 				}
 			}
-
-		} else {
-			throw 'unknown format of ssm id'
+			continue
 		}
+
+		throw 'unknown format of ssm id'
 	}
 
 	if(termidlst && termidlst.length) {
@@ -124,15 +129,6 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 	}
 
 	return samples
-
-	/*
-	const ssmidByType = {}
-	if(ds.queries.snvindel
-		&& ds.queries.snvindel.byrange
-		&& ds.queries.snvindel.byrange._tk) {
-		return await get_samples_vcf_byssmid(q, termidlst, ds.queries.snvindel.byrange._tk)
-	}
-	*/
 }
 
 
@@ -391,36 +387,4 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		}
 	}
 	return combinations
-}
-
-async function get_samples_vcf_byssmid(q, termidlst, _tk) {
-	const samples = []
-	for(const ssmId of q.ssm_id_lst.split(',')) {
-		// chr.pos.ref.alt
-		const ssmFields = ssmId.split(ssmIdFieldsSeparator)
-		if(ssmFields.length!=4) throw 'ssmid not 4 fields'
-		const pos = Number(ssmFields[1])
-		if(Number.isNaN(pos)) throw 'ssmid position not integer'
-		await utils.get_lines_bigfile({
-			args: [
-				_tk.file || _tk.url,
-				(_tk.nochr ? ssmFields[0].replace('chr', '') : ssmFields[0]) + ':' + pos + '-' + (pos+1)
-			],
-			dir: _tk.dir,
-			callback: line => {
-				const l = line.split('\t')
-				if(l[1]!=ssmFields[1] || l[3]!=ssmFields[2] || l[4]!=ssmFields[3]) {
-					// not matching with this ssm
-					return
-				}
-				const m = {}
-				mayAddSamplesFromVcfLine( {_tk}, m, l, q.get=='samples' )
-				if(!m.samples) return
-				for(const sample of m.samples) {
-					samples.push(sample)
-				}
-			}
-		})
-	}
-	return samples
 }

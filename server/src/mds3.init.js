@@ -489,9 +489,9 @@ getter input:
 
 getter returns:
 list of svfusion events,
-each event { dt, chr, pos, pairlstIdx, name, samples:[] }
-where chr/pos is the break point following into the querying region
-
+events are partially grouped
+represented as { dt, chr, pos, strand, pairlstIdx, mname, samples:[] }
+object attributes (except samples) are differentiators, enough to identify events on a gene
 */
 export async function svfusionByRangeGetter_file(ds,genome) {
 	const q = ds.queries.svfusion.byrange
@@ -510,14 +510,14 @@ export async function svfusionByRangeGetter_file(ds,genome) {
 		const key2variants = new Map()
 		/*
 		key: key fields joined into a string
-		value: lst of variants
-		key fields allow to group events by:
-		dt sv/fusion
-		chr of current breakpoint
-		pos of current breakpoint
-		strand of current breakpoint
-		array index in pairlst[]
-		partner gene name(s)
+		value: list of events described by the key
+		key fields include:
+		- dt sv/fusion
+		- chr of current breakpoint
+		- pos of current breakpoint
+		- strand of current breakpoint
+		- array index in pairlst[]
+		- partner gene name(s)
 		*/
 
 		for (const r of param.rglst) {
@@ -543,22 +543,44 @@ export async function svfusionByRangeGetter_file(ds,genome) {
 						return
 					}
 
-					let pairlstIdx,
-						mname,
-						strand
+					// collect key fields
+					let pairlstIdx, mname, strand
 					// later may add pairlstLength to support fusion events with more than 2 genes
+
+					// collect initial pairlst to add to key2variants{}, for showing svgraph
+					let pairlst
+
+					/* two types of possible file formats
+					1. {chrA, posA, chrB, posB, strandA, strandB}
+						legacy format used for mds, hardcoded for 2-gene events
+					2. {pairlst:[ {a,b}, {a,b}, ... ]}
+						new format that can support events with more than 2 genes
+						pairlst.length=1 for 2-gene event
+						pairlst.length=2 for 3-gene event, where lst[0].b and lst[1].a are on the same gene
+					*/
 					if(j.chrA) {
 						// chrA given, current chr:pos is on 3'
 						pairlstIdx=1 // as using C-term of this gene
 						mname = j.geneA || j.chrA
 						strand = j.strandA
+						// 
+						pairlst = [ {
+							a: {chr: j.chrA, pos: j.posA, strand: j.strandA},
+							b: {chr: r.chr, pos, strand: j.strandB}
+						}]
 					} else if(j.chrB) {
 						// chrB given, current chr:pos is on 5'
 						pairlstIdx=0 // as using N-term of this gene
 						mname = j.geneB || j.chrB
 						strand = j.strandB
+						// 
+						pairlst = [ {
+							a: {chr: r.chr, pos, strand: j.strandA},
+							b: {chr: j.chrB, pos: j.posB, strand: j.strandB}
+						}]
 					} else if(j.pairlst) {
 						// todo: support pairlst=[{chr,pos}, {chr,pos}, ...]
+						pairlst = j.pairlst
 						const idx = j.pairlst.findIndex(i=>i.chr==chr && i.pos==pos)
 						if(idx==-1) throw 'current point missing from pairlst'
 						pairlstIdx = idx
@@ -579,6 +601,7 @@ export async function svfusionByRangeGetter_file(ds,genome) {
 							strand,
 							pairlstIdx,
 							mname,
+							pairlst, // if this key corresponds multiple events, add initial pairlst to allow showing svgraph without additional query to get other breakpoints
 							samples:[]
 						})
 					}

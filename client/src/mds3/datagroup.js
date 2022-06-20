@@ -17,12 +17,9 @@ sv/fusion is:
 	dt = dtsv/dtfusionrna
 	chr = str
 	pos = int
-	pairlst = [
-		{
-			a = {chr, pos, strand, name}
-			b = {chr, pos, strand, name}
-		}
-	]
+	pairlstIdx = int
+	strand = +/-
+	mname = str
 }
 
 ******** output ***********

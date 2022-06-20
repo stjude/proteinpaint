@@ -1,3 +1,4 @@
+import {select} from 'd3-selection'
 /*
 draw a horizontal bar with bg and fg to show percentage
 
@@ -30,7 +31,7 @@ export function fillbar(td, v, at) {
 			.attr('width', w)
 			.attr('height', h)
 	} else {
-		g = d3select(document.body).append('svg')
+		g = select(document.body).append('svg')
 	}
 
 	let y = 0

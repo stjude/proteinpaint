@@ -3,18 +3,28 @@ import { init_sampletable } from './sampletable'
 import { get_list_cells } from '../../dom/gridutils'
 import { event as d3event } from 'd3-selection'
 import { appear } from '../../dom/animation'
+import {dofetch3} from '../../common/dofetch'
 
 /*
 ********************** EXPORTED
 itemtable
+
+for a list of variants of *same type*, print details of both variant and samples
+arg{}
+.div
+.mlst
+.tk
+.block
+.disable_variant2samples:true
+	set to true to not to issue variant2samples query for variants
+
 ********************** INTERNAL
-table_snvindel
+table_snvindel_svfusion
 table_snvindel_onevariant
 table_snvindel_multivariant
 add_csqButton
 print_snv
 
-table_fusionsv
 
 .occurrence must be set for each variant
 all mlst of one data type
@@ -29,29 +39,10 @@ print each info as table row/column
 
 const cutoff_tableview = 10
 
-/*
-for a list of variants of *same type*, print details of both variant and samples
-arg{}
-.div
-.mlst
-.tk
-.block
-.disable_variant2samples:true
-	set to true to not to issue variant2samples query for variants
-*/
 export async function itemtable(arg) {
-	if (arg.mlst[0].dt == dtsnvindel) {
-		await table_snvindel(arg)
-		if (!isElementInViewport(arg.div)) {
-			// If div renders outside of viewport, shift left
-			const leftpos = determineLeftCoordinate(arg.div)
-			appear(arg.div)
-			arg.div.style('left', leftpos + 'vw').style('max-width', '90vw')
-		}
-		return
-	}
-	if (arg.mlst[0].dt == dtfusionrna || arg.mlst[0].dt == dtsv) {
-		await table_fusionsv(arg)
+	const dt = arg.mlst[0].dt
+	if (dt == dtsnvindel || dt==dtfusionrna || dt==dtsv) {
+		await table_snvindel_svfusion(arg)
 		if (!isElementInViewport(arg.div)) {
 			// If div renders outside of viewport, shift left
 			const leftpos = determineLeftCoordinate(arg.div)
@@ -79,11 +70,13 @@ function determineLeftCoordinate(div) {
 rendering may be altered by tk.mds config
 may use separate scripts to code different table styles
 */
-async function table_snvindel(arg) {
+async function table_snvindel_svfusion(arg) {
 	const grid = arg.div
 		.append('div')
 		.style('display', 'inline-grid')
 		.style('overflow-y', 'scroll')
+
+	const isSnvindel = arg.mlst[0].dt==dtsnvindel
 
 	if (arg.mlst.length == 1) {
 		// single variant, use two-column table to show key:value pairs
@@ -93,7 +86,12 @@ async function table_snvindel(arg) {
 			// in case creating a new table for multiple samples of this variant,
 			// add space between grid and the new table
 			.style('margin-bottom', '10px')
-		table_snvindel_onevariant(arg, grid)
+
+		if(isSnvindel) {
+			table_snvindel_onevariant(arg, grid)
+		} else {
+			await table_svfusion_one(arg, grid)
+		}
 
 		// if the variant has only one sample,
 		// allow to append new rows to grid to show sample key:value
@@ -105,7 +103,11 @@ async function table_snvindel(arg) {
 		// set of columns are based on available attributes in mlst
 		grid.style('max-height', '30vw').style('gap', '5px')
 		// create placeholder for inserting samples for each variant
-		arg.multiSampleTable = table_snvindel_multivariant(arg, grid)
+		if(isSnvindel) {
+			arg.multiSampleTable = table_snvindel_multivariant(arg, grid)
+		} else {
+			arg.multiSampleTable = await table_svfusion_multi(arg, grid)
+		}
 		arg.grid = grid
 	}
 
@@ -270,22 +272,6 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 	return { ssmid2div, startCol }
 }
 
-async function table_fusionsv(arg) {
-	/*
-	table view, with svgraph for first ml
-	svgraph(mlst[0])
-
-	if(mlst.length==1) {
-		// 2-column table view
-	} else {
-		// one row per sv, click each row to show its svgraph
-	}
-	*/
-	if (arg.tk.mds.variant2samples) {
-		// show sample summary
-		await init_sampletable(arg)
-	}
-}
 
 // function is not used
 function add_csqButton(m, tk, td, table) {
@@ -349,4 +335,55 @@ function isElementInViewport(el) {
 		rect.bottom < (document.documentElement.clientHeight || window.innerHeight) - 5 &&
 		rect.right < (document.documentElement.clientWidth || window.innerWidth) - 5
 	)
+}
+
+async function table_svfusion_one(arg,grid) {
+	grid.append('div')
+	await makeSvgraph( arg.mlst[0], grid.append('div'), arg.block)
+}
+async function table_svfusion_multi(arg, grid) {
+}
+
+async function makeSvgraph(m, div, block) {
+	const wait = div.append('div').text('Loading...')
+	try {
+		if(!m.pairlst) throw '.pairlst[] missing'
+		const svpair = {
+			a: {
+				chr: m.pairlst[0].a.chr,
+				position: m.pairlst[0].a.pos,
+				strand: m.pairlst[0].a.strand,
+			},
+			b: {
+				chr: m.pairlst[0].b.chr,
+				position: m.pairlst[0].b.pos,
+				strand: m.pairlst[0].b.strand,
+			}
+		}
+
+
+		await getGm(svpair.a, block)
+		await getGm(svpair.b, block)
+
+		wait.remove()
+
+		const _ = await import('../svgraph')
+		_.default( {
+			pairlst: [svpair],
+			genome: block.genome,
+			holder: div
+		})
+	}catch(e) {
+		wait.text( e.message ||e)
+	}
+}
+async function getGm(p, block) {
+	// p={chr, position}
+	const d = await dofetch3(`isoformbycoord?genome=${block.genome.name}&chr=${p.chr}&pos=${p.position}`)
+	if(d.error) throw d.error
+	const u = d.lst.find(i => i.isdefault) || d.lst[0]
+	if (u) {
+		p.name = u.name
+		p.gm = { isoform: u.isoform }
+	}
 }
