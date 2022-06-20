@@ -226,200 +226,21 @@ function mlst_pretreat(rawmlst, tk, block) {
 function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 	// legacy function, kept the same
 	for (const m of lst) {
-		if (m.dt == dtsnvindel) {
-			if (block.usegm) {
-				const t = coord.genomic2gm(m.pos, block.usegm)
-				m.rnapos = t.rnapos
-				m.aapos = t.aapos
-			}
-			continue
+		if (block.usegm) {
+			// m.pos must always be set
+			const t = coord.genomic2gm(m.pos, block.usegm)
+			m.rnapos = t.rnapos
+			m.aapos = t.aapos
 		}
+		if(m.dt==dtsnvindel) continue
 		if (m.dt == dtsv || m.dt == dtfusionrna) {
-			validatePairlst(m)
-
-			// TODO following legacy code needs correction
-			/*
-			if (block.usegm && m.dt == dtsv) {
-				//SV data correction to suit gene strand, do not look at strands
-				if (m.pairlst.length == 1) {
-					// only works for single pair
-					const a = m.pairlst[0].a
-					const b = m.pairlst[0].b
-					if (a.chr != null && b.chr != null && a.chr == b.chr && a.position != null && b.position != null) {
-						// good to check
-						if (a.position < b.position) {
-							if (block.usegm.strand == '+') {
-								// no change
-								a.strand = '+'
-								b.strand = '+'
-							} else {
-								a.strand = '-'
-								b.strand = '-'
-								m.pairlst[0].a = b
-								m.pairlst[0].b = a
-							}
-						}
-					}
-				}
-			}
-			*/
-			// XXX current data format doesnt work for genomic range query!!!
-			if (block.usegm && block.gmmode != gmmode.genomic) {
-				//m.isoform = block.usegm.isoform
-				// gmmode, single datum over current gene
-				let nohit = true
-				for (const [i, pair] of m.pairlst.entries()) {
-
-					// try to match with both isoform and name, for IGH, without isoform, but the querying "gene" can be IGH
-					//if (block.usegm.isoform == (pair.a.isoform || pair.a.name)) 
-					if(block.usegm.chr == pair.a.chr && block.usegm.start < pair.a.pos && block.usegm.stop > pair.a.pos) {
-						m.useNterm = i == 0
-						m.strand = pair.a.strand
-
-						/*
-						this logic was needed when fusion has only rna/codon position on an isoform, and has to convert that to genomic position
-
-						if (pair.a.position == undefined) {
-							if (pair.a.rnaposition == undefined) {
-								if (pair.a.codon == undefined) {
-									console.error('no position/rnaposition/codon available for ' + block.usegm.isoform)
-									break
-								} else {
-									m.pos = coord.aa2gmcoord(pair.a.codon, block.usegm)
-									pair.a.position = m.pos
-								}
-							} else {
-								m.pos = coord.rna2gmcoord(pair.a.rnaposition - 1, block.usegm)
-								if (m.pos == null) {
-									console.error('failed to convert rnaposition to genomic position: ' + pair.a.rnaposition)
-									break
-								}
-								pair.a.position = m.pos
-							}
-						} else {
-							m.pos = pair.a.position
-						}
-						*/
-						const t = coord.genomic2gm(m.pos, block.usegm)
-						m.rnapos = t.rnapos
-						m.aapos = t.aapos
-						if (pair.a.codon) {
-							m.aapos = pair.a.codon
-						}
-						m.mname = pair.b.name
-						nohit = false
-						break
-					}
-
-					//if (block.usegm.isoform == (pair.b.isoform || pair.b.name)) 
-					if(block.usegm.chr == pair.b.chr && block.usegm.start < pair.b.pos && block.usegm.stop > pair.b.pos) {
-						m.useNterm = false // always
-						m.strand = pair.b.strand
-
-						// m.pos is already set
-						/*
-						if (pair.b.position == undefined) {
-							if (pair.b.rnaposition == undefined) {
-								if (pair.b.codon == undefined) {
-									console.error('no position/rnaposition/codon available for ' + block.usegm.isoform)
-									break
-								} else {
-									m.pos = coord.aa2gmcoord(pair.b.codon, block.usegm)
-									pair.b.position = m.pos
-								}
-							} else {
-								m.pos = coord.rna2gmcoord(pair.b.rnaposition - 1, block.usegm)
-								if (m.pos == null) {
-									console.error('failed to convert rnaposition to genomic')
-									break
-								}
-								pair.b.position = m.pos
-							}
-						} else {
-							m.pos = pair.b.position
-						}
-						*/
-
-						const t = coord.genomic2gm(m.pos, block.usegm)
-						m.rnapos = t.rnapos
-						m.aapos = t.aapos
-						if (pair.b.codon) {
-							m.aapos = pair.b.codon
-						}
-						m.mname = pair.a.name
-						nohit = false
-						break
-					}
-				}
-				if (nohit) {
-					console.error('sv/fusion isoform no match to gm isoform: ' + block.usegm.isoform)
-				}
+			if(m.pairlstIdx==0) {
+				m.useNterm=true
 			} else {
-				///////// not working yet
-				// genomic mode, one m for each breakend
-				for (const pair of m.pairlst) {
-					let ain = false,
-						bin = false
-					for (let i = block.startidx; i <= block.stopidx; i++) {
-						const r = block.rglst[i]
-						if (pair.a.chr == r.chr && pair.a.position >= r.start && pair.a.position <= r.stop) {
-							ain = true
-						}
-						if (pair.b.chr == r.chr && pair.b.position >= r.start && pair.b.position <= r.stop) {
-							bin = true
-						}
-					}
-					if (ain) {
-						const m2 = svduplicate(m)
-						const ma = pair.a
-						m2.chr = ma.chr
-						m2.strand = ma.strand
-						m2.useNterm = ma.strand == '+'
-						m2.pos = ma.pos || ma.position
-						m2.mname = pair.b.name || pair.b.chr
-						if (!Number.isFinite(m2.pos)) {
-							console.error('no genomic pos for breakend a')
-						} else if (!m2.chr) {
-							console.error('no chromosome for breakend a')
-						} else {
-							//tk.mlst.push(m2)
-						}
-					}
-					if (bin) {
-						const m2 = svduplicate(m)
-						const mb = pair.b
-						m2.chr = mb.chr
-						m2.strand = mb.strand
-						m2.useNterm = mb.strand == '+'
-						m2.pos = mb.pos || mb.position
-						m2.mname = pair.a.name || pair.a.chr
-						if (!Number.isFinite(m2.pos)) {
-							console.error('no genomic pos for breakend b')
-						} else if (!m2.chr) {
-							console.error('no chromosome for breakend b')
-						} else {
-							//tk.mlst.push(m2)
-						}
-					}
-				}
+				m.useNterm=false
 			}
 			continue
 		}
 		throw 'unknown dt: ' + m.dt
-	}
-}
-
-function validatePairlst(m) {
-	if (!Array.isArray(m.pairlst) && m.pairlst.length==0) 
-		throw 'sv/fusion pairlst[] is not non-empty array'
-	for(const p of m.pairlst) {
-		if(typeof p.a != 'object') throw '.a{} not an object'
-		if(typeof p.b != 'object') throw '.b{} not an object'
-		if(typeof p.a.chr != 'string') throw '.a.chr not string'
-		if(typeof p.b.chr != 'string') throw '.b.chr not string'
-		if(!Number.isInteger(p.a.pos)) throw '.a.pos not integer'
-		if(!Number.isInteger(p.b.pos)) throw '.b.pos not integer'
-		if(p.a.strand!='+' && p.a.strand!='-') throw '.a.strand is invalid'
-		if(p.b.strand!='+' && p.b.strand!='-') throw '.b.strand is invalid'
 	}
 }

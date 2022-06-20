@@ -5,6 +5,7 @@ const utils = require('./utils')
 const compute_mclass = require('./termdb.snp').compute_mclass
 const path = require('path')
 const serverconfig = require('./serverconfig')
+const {dtfusionrna, dtsv, mclassfusionrna, mclasssv} = require('../shared/common')
 
 /*
 ********************** EXPORTED
@@ -27,7 +28,7 @@ export async function init(ds, genome, _servconfig) {
 	await validate_termdb(ds)
 
 	// must validate snvindel query before variant2sample
-	// as vcf header must be parsed to supply samples for v2s
+	// as vcf header must be parsed to supply samples for variant2samples
 	await validate_query_snvindel(ds, genome)
 	await validate_query_svfusion(ds, genome)
 
@@ -285,10 +286,13 @@ usage scenario:
 1. to initiate official dataset
 2. to make temp ds{} on the fly when querying a custom track
 
-get(param{}):
+getter input:
 .rglst=[ {chr, start, stop} ]
 
-returns array of variants
+getter returns:
+array of variants
+if samples are available, attaches array of sample ids to each variant
+as .samples=[ {sample_id} ]
 */
 export async function snvindelByRangeGetter_vcf(ds, genome) {
 	const q = ds.queries.snvindel.byrange
@@ -479,6 +483,16 @@ async function validate_query_svfusion(ds,genome) {
 	}
 }
 
+/*
+getter input:
+.rglst=[ { chr, start, stop} ]
+
+getter returns:
+list of svfusion events,
+each event { dt, chr, pos, pairlstIdx, name, samples:[] }
+where chr/pos is the break point following into the querying region
+
+*/
 export async function svfusionByRangeGetter_file(ds,genome) {
 	const q = ds.queries.svfusion.byrange
 	if(q.file) {
@@ -492,7 +506,20 @@ export async function svfusionByRangeGetter_file(ds,genome) {
 	return async param => {
 		if(!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if(param.rglst.length==0) throw 'q.rglst[] blank array'
-		const variants = [] // to be returned
+
+		const key2variants = new Map()
+		/*
+		key: key fields joined into a string
+		value: lst of variants
+		key fields allow to group events by:
+		dt sv/fusion
+		chr of current breakpoint
+		pos of current breakpoint
+		strand of current breakpoint
+		array index in pairlst[]
+		partner gene name(s)
+		*/
+
 		for (const r of param.rglst) {
 			await utils.get_lines_bigfile({
 				args: [
@@ -510,46 +537,57 @@ export async function svfusionByRangeGetter_file(ds,genome) {
 						//console.log('svfusion json err')
 						return
 					}
-					if(j.dt!=2 && j.dt!=5) {
+					if(j.dt!=dtfusionrna && j.dt!=dtsv) {
 						// not fusion or sv
 						//console.log('svfusion invalid dt')
 						return
 					}
-					const a = {
-						strand: j.strandA,
-						name: j.geneA
-					}
-					const b={
-						strand: j.strandB,
-						name: j.geneB
-					}
+
+					let pairlstIdx,
+						mname,
+						strand
+					// later may add pairlstLength to support fusion events with more than 2 genes
 					if(j.chrA) {
-						a.chr = j.chrA
-						a.pos = j.posA
-						b.chr = r.chr
-						b.pos = pos
+						// chrA given, current chr:pos is on 3'
+						pairlstIdx=1 // as using C-term of this gene
+						mname = j.geneA || j.chrA
+						strand = j.strandA
+					} else if(j.chrB) {
+						// chrB given, current chr:pos is on 5'
+						pairlstIdx=0 // as using N-term of this gene
+						mname = j.geneB || j.chrB
+						strand = j.strandB
+					} else if(j.pairlst) {
+						// todo: support pairlst=[{chr,pos}, {chr,pos}, ...]
+						const idx = j.pairlst.findIndex(i=>i.chr==chr && i.pos==pos)
+						if(idx==-1) throw 'current point missing from pairlst'
+						pairlstIdx = idx
+						// todo mname as joining names of rest of pairlst points
 					} else {
-						a.chr = r.chr
-						a.pos = pos
-						b.chr = j.chrB
-						b.pos = j.posB
+						throw 'missing chrA and chrB'
 					}
-					const m = {
-						dt: j.dt,
-						chr: r.chr,
-						pos,
-						pairlst: [{a,b}],
-						ssm_id: [a.chr, a.pos, a.strand,b.chr, b.pos,b.strand].join(ssmIdFieldsSeparator)
+
+					const ssm_id = [j.dt, r.chr, pos, strand, pairlstIdx, mname].join(ssmIdFieldsSeparator)
+
+					if(!key2variants.has(ssm_id)) {
+						key2variants.set(ssm_id, {
+							ssm_id,
+							dt: j.dt,
+							class: j.dt==dtsv ? mclasssv : mclassfusionrna,
+							chr: r.chr,
+							pos,
+							strand,
+							pairlstIdx,
+							mname,
+							samples:[]
+						})
 					}
 					if(j.sample) {
-						// value is string sample id
-						// convert to .samples[] as snvindel
-						m.samples = [ {sample_id: j.sample} ]
+						key2variants.get(ssm_id).samples.push({sample_id: j.sample})
 					}
-					variants.push(m)
 				}
 			})
 		}
-		return variants
+		return [...key2variants.values()]
 	}
 }

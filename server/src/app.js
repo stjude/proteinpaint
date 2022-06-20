@@ -233,7 +233,7 @@ app.get(basepath + '/gdcbam', gdc_bam_request)
 app.get(basepath + '/gdc_ssms', handle_gdc_ssms(genomes))
 app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
 app.get(basepath + '/blat', blat_request_closure(genomes))
-app.get(basepath + '/mds3', mds3_request_closure(genomes))
+app.all(basepath + '/mds3', mds3_request_closure(genomes))
 app.get(basepath + '/tkbampile', bampile_request)
 app.post(basepath + '/dsdata', handle_dsdata) // old official ds, replace by mds
 

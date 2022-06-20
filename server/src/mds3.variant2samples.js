@@ -50,26 +50,91 @@ async function get_samples(q, ds) {
 		return await gdc.getSamples_gdcapi(q, termidlst, ds)
 	}
 
-	/* tentative
-	from server-side files, q.ssm_id_lst can be multiple data types
+	/* from server-side files
+	action depends on details:
+	- file type (gz or db perhaps)
+	- data type (snv or sv)
+	- query by what (ssm id, region, or isoform)
 	*/
+
+	if( q.ssm_id_lst) {
+		/* querying server side files based on ssm ids
+		the ids must be in chr.pos... format for both snvindel and svfusion
+		thus can extract coordinate from a "ssm" to query
+		*/
+		return await queryServerFileBySsmid(q, termidlst, ds)
+	}
+
+	if(q.isoform) { 
+		throw 'q.isoform provided when querying server side files, query method not implemented yet'
+	}
+
+	throw 'unknown q{} option when querying server side files'
+}
+
+async function queryServerFileBySsmid(q, termidlst, ds) {
+	/*
+	q.ssm_id_lst can be multiple data types
+	snvindel id has 4 fields, and svfusion id has 6 fields
+	*/
+	const samples = []
+
+	for(const ssmid of q.ssm_id_lst.split(',')) {
+		const l = ssmid.split(ssmIdFieldsSeparator)
+		if(l.length==4) {
+			//////// ssm is snv
+			const [chr, tmp, ref, alt] = l
+			const pos = Number(tmp)
+			if(Number.isNaN(pos)) throw 'no integer position for snvindel from ssm id'
+			const mlst = await ds.queries.snvindel.byrange.get({rglst:[{chr, start:pos, stop:pos}]})
+			for(const m of mlst) {
+				if(m.pos != pos || m.ref!=ref && m.alt!=alt) continue
+				for(const s of m.samples) {
+					s.ssm_id = ssmid
+					samples.push(s)
+				}
+			}
+				
+		} else if(l.length==6) {
+			//////// ssm is svfusion
+			// dt, chr, pos, strand, pairlstIdx, partner gene
+			const [_dt, chr, _pos, strand, _pi, mname] = l
+			const dt = Number(_dt)
+			if(dt!=2 && dt!=5) throw 'dt not sv/fusion'
+			const pos = Number(_pos)
+			if(Number.isNaN(pos)) throw 'position not integer'
+			const pairlstIdx = Number(_pi)
+			if(Number.isNaN(pairlstIdx)) throw 'pairlstIdx not integer'
+			const mlst = await ds.queries.svfusion.byrange.get({rglst:[{chr, start:pos, stop:pos}]})
+			for(const m of mlst) {
+				if(m.pos!=pos || m.strand!=strand || m.pairlstIdx!=pairlstIdx || m.mname!=mname) continue
+				for(const s of m.samples) {
+					s.ssm_id = ssmid
+					samples.push(s)
+				}
+			}
+
+		} else {
+			throw 'unknown format of ssm id'
+		}
+	}
+
+	if(termidlst && termidlst.length) {
+		// todo: add annotation
+	}
+
+	return samples
+
+	/*
+	const ssmidByType = {}
 	if(ds.queries.snvindel
 		&& ds.queries.snvindel.byrange
 		&& ds.queries.snvindel.byrange._tk) {
 		return await get_samples_vcf_byssmid(q, termidlst, ds.queries.snvindel.byrange._tk)
 	}
-
-	throw 'unknown query method for variant2samples'
+	*/
 }
 
-function get_termid2fields(termidlst, ds) {
-	const fields = []
-	for (const termid of termidlst) {
-		const term = ds.cohort.termdb.q.termjsonByOneid(termid)
-		fields.push(term.path)
-	}
-	return fields
-}
 
 async function make_sunburst(samples, ds, q) {
 	const termidlst = q.termidlst.split(',')
