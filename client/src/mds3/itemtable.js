@@ -17,8 +17,6 @@ arg{}
 	can be of different dt
 .tk
 .block
-.disable_variant2samples:true
-	set to true to not to issue variant2samples query for variants
 
 ********************** INTERNAL
 itemtable_oneItem
@@ -77,6 +75,7 @@ function determineLeftCoordinate(div) {
 }
 
 /*
+display full details (and samples) for one item
 */
 async function itemtable_oneItem(arg, grid) {
 	grid
@@ -98,7 +97,7 @@ async function itemtable_oneItem(arg, grid) {
 	// if there are multiple samples, this <div> won't be used
 	// a new table will be created under arg.div to show sample table
 
-	if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
+	if (arg.tk.mds.variant2samples && arg.mlst[0].occurrence) {
 		await init_sampletable(arg)
 	}
 }
@@ -106,20 +105,49 @@ async function itemtable_oneItem(arg, grid) {
 async function itemtable_multiItems(arg, grid) {
 	// multiple variants
 	// show an option for each, click one to run above single-variant code
+
+	// limit height
+	grid.style('max-height', '40vw')
+
+	// note
 	grid.append('div')
 		.text('Click a variant to see details')
-		.style('font-size','.7em')
-		.style('opacity',.5)
+		.style('font-size','.8em')
+		.style('opacity',.3)
+
+	// upon clicking an option for a variant, hide grid and display go-back button to go back to grid
+	const goBackButton = arg.div.append('div')
+		.style('margin-bottom','10px')
+		.style('display','none')
+	goBackButton.append('span')
+		.text('<< Back to list')
+		.attr('class','sja_clbtext')
+		.on('click',()=>{
+			grid.style('display','inline-grid')
+			goBackButton.style('display','none')
+			singleVariantDiv.style('display','none')
+		})
+
+	const singleVariantDiv = arg.div.append('div')
+		.style('display','none')
 
 	for(const m of arg.mlst) {
+
+		// create a menu option, clicking to show this variant by itself
 		const div = grid.append('div')
 			.attr('class','sja_menuoption')
 			.on('click', ()=>{
-				grid.remove()
+				grid.style('display','none')
+				goBackButton.style('display','block')
+				singleVariantDiv.style('display','block')
+					.selectAll('*').remove()
 				const a2 = Object.assign({}, arg)
 				a2.mlst = [m]
+				a2.div = singleVariantDiv
 				itemtable(a2)
 			})
+
+		// print variant name
 		if(m.dt==dtsnvindel) {
 			div.append('span')
 				.text(m.mname)
@@ -128,7 +156,7 @@ async function itemtable_multiItems(arg, grid) {
 				.style('font-size','.8em')
 				.style('margin-left','10px')
 			div.append('span')
-				.text((m.pos+1)+', '+m.ref+'>'+m.alt)
+				.text(`${m.chr}:${m.pos+1}${m.ref ? ', '+m.ref+'>'+m.alt : ''}`)
 				.style('font-size','.8em')
 				.style('margin-left','10px')
 			if(m.occurrence) {
@@ -150,11 +178,12 @@ async function itemtable_multiItems(arg, grid) {
 		}
 	}
 
-	if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
+	if (!arg.doNotListSample4multim && arg.tk.mds.variant2samples) {
 		const totalOccurrence = arg.mlst.reduce((i,j)=>i+(j.occurrence || 0),0)
 		if(totalOccurrence) {
 			grid.append('div')
 				.style('margin-top','10px')
+				.append('span')
 				.attr('class','sja_clbtext')
 				.text('List all '+totalOccurrence+' samples')
 				.on('click',()=>{
