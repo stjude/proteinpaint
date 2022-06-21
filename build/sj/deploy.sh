@@ -118,7 +118,7 @@ elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" || "$ENV" == "prp1" ]]; th
 	HOSTNAME=proteinpaint.stjude.org
 	SUBDOMAIN=proteinpaint
 	WPSERVERDEVTOOL='source-map'
-	WPCLIENTDEVTOOL='none'
+	WPCLIENTDEVTOOL=''
 
 elif [[ "$ENV" == "pp-ict" ]]; then
 	DEPLOYER=genomeuser
