@@ -1,7 +1,6 @@
 import { event as d3event } from 'd3-selection'
 // variant label is always made
 import { makeVariantLabel } from './leftlabel.variant'
-import { mayMakeSampleLabel } from './leftlabel.sample'
 
 const labyspace = 5
 const font = 'Arial'

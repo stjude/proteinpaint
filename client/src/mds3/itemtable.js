@@ -9,18 +9,22 @@ import { dofetch3 } from '../../common/dofetch'
 ********************** EXPORTED
 itemtable
 
-for a list of variants of *same type*, print details of both variant and samples
+for a list of variants, print details of both variant and samples
+
 arg{}
 .div
-.mlst
+.mlst[]
+	can be of different dt
 .tk
 .block
 .disable_variant2samples:true
 	set to true to not to issue variant2samples query for variants
 
 ********************** INTERNAL
-table_snvindel_svfusion
-	table_snvindel_onevariant
+itemtable_oneItem
+	table_snvindel
+	table_svfusion
+itemtable_multiItems
 add_csqButton
 print_snv
 
@@ -37,18 +41,27 @@ print vcf info about variant attributes
 const cutoff_tableview = 10
 
 export async function itemtable(arg) {
-	const dt = arg.mlst[0].dt
-	if (dt == dtsnvindel || dt==dtfusionrna || dt==dtsv) {
-		await table_snvindel_svfusion(arg)
-		if (!isElementInViewport(arg.div)) {
-			// If div renders outside of viewport, shift left
-			const leftpos = determineLeftCoordinate(arg.div)
-			appear(arg.div)
-			arg.div.style('left', leftpos + 'vw').style('max-width', '90vw')
-		}
-		return
+	for(const m of arg.mlst) {
+		if (m.dt != dtsnvindel && m.dt!=dtfusionrna && m.dt!=dtsv) throw 'mlst[] contains unknown dt'
 	}
-	throw 'itemtable unknown dt'
+
+	const grid = arg.div
+		.append('div')
+		.style('display', 'inline-grid')
+		.style('overflow-y', 'scroll')
+
+	if (arg.mlst.length == 1) {
+		await itemtable_oneItem(arg, grid)
+	} else {
+		await itemtable_multiItems(arg, grid)
+	}
+
+	if (!isElementInViewport(arg.div)) {
+		// If div renders outside of viewport, shift left
+		const leftpos = determineLeftCoordinate(arg.div)
+		appear(arg.div)
+		arg.div.style('left', leftpos + 'vw').style('max-width', '90vw')
+	}
 }
 
 function determineLeftCoordinate(div) {
@@ -64,48 +77,36 @@ function determineLeftCoordinate(div) {
 }
 
 /*
-rendering may be altered by tk.mds config
-may use separate scripts to code different table styles
 */
-async function table_snvindel_svfusion(arg) {
-	const grid = arg.div
-		.append('div')
-		.style('display', 'inline-grid')
-		.style('overflow-y', 'scroll')
+async function itemtable_oneItem(arg, grid) {
+	grid
+		.style('grid-template-columns', 'auto auto')
+		.style('max-height', '40vw')
+		// in case creating a new table for multiple samples of this variant,
+		// add space between grid and the new table
+		.style('margin-bottom', '10px')
 
-	const isSnvindel = arg.mlst[0].dt==dtsnvindel
-
-	if (arg.mlst.length == 1) {
-		// single variant, use two-column table to show key:value pairs
-		grid
-			.style('grid-template-columns', 'auto auto')
-			.style('max-height', '40vw')
-			// in case creating a new table for multiple samples of this variant,
-			// add space between grid and the new table
-			.style('margin-bottom', '10px')
-
-		if(isSnvindel) {
-			table_snvindel_onevariant(arg, grid)
-		} else {
-			await table_svfusion_one(arg, grid)
-		}
-
-		// if the variant has only one sample,
-		// allow to append new rows to grid to show sample key:value
-		arg.singleSampleDiv = grid
-		// if there are multiple samples, this <div> won't be used
-		// a new table will be created under arg.div to show sample table
-
-		if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
-			await init_sampletable(arg)
-		}
-		return
+	if(arg.mlst[0].dt==dtsnvindel) {
+		table_snvindel(arg, grid)
+	} else {
+		await table_svfusion(arg, grid)
 	}
 
+	// if the variant has only one sample,
+	// allow to append new rows to grid to show sample key:value
+	arg.singleSampleDiv = grid
+	// if there are multiple samples, this <div> won't be used
+	// a new table will be created under arg.div to show sample table
+
+	if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
+		await init_sampletable(arg)
+	}
+}
+
+async function itemtable_multiItems(arg, grid) {
 	// multiple variants
 	// show an option for each, click one to run above single-variant code
 	grid.append('div')
-		.style('grid-template-columns', 'auto')
 		.text('Click a variant to see details')
 		.style('font-size','.7em')
 		.style('opacity',.5)
@@ -117,7 +118,7 @@ async function table_snvindel_svfusion(arg) {
 				grid.remove()
 				const a2 = Object.assign({}, arg)
 				a2.mlst = [m]
-				table_snvindel_svfusion(a2)
+				itemtable(a2)
 			})
 		if(m.dt==dtsnvindel) {
 			div.append('span')
@@ -140,6 +141,7 @@ async function table_snvindel_svfusion(arg) {
 				.style('margin-right','8px')
 
 			printSvPair(m.pairlst[0], div)
+
 			if(m.occurrence) {
 				div.append('span').text(m.occurrence+' sample'+(m.occurrence>1?'s':'')).style('margin-left','10px')
 			}
@@ -161,25 +163,9 @@ async function table_snvindel_svfusion(arg) {
 				})
 		}
 	}
-
-/*
-	{
-	// old code
-		// make a multi-column table for all variants, one row for each variant
-		// set of columns are based on available attributes in mlst
-		grid.style('max-height', '30vw').style('gap', '5px')
-		// create placeholder for inserting samples for each variant
-		if(isSnvindel) {
-			arg.multiSampleTable = table_snvindel_multivariant(arg, grid)
-		} else {
-			arg.multiSampleTable = await table_svfusion_multi(arg, grid)
-		}
-		arg.grid = grid
-	}
-	*/
 }
 
-function table_snvindel_onevariant({ mlst, tk, block }, grid) {
+function table_snvindel({ mlst, tk, block }, grid) {
 	const m = mlst[0]
 	{
 		const [td1, td2] = get_list_cells(grid)
@@ -294,7 +280,7 @@ function isElementInViewport(el) {
 	)
 }
 
-async function table_svfusion_one(arg,grid) {
+async function table_svfusion(arg,grid) {
 	// display one svfusion event
 
 	// svgraph in 1st row
