@@ -239,6 +239,7 @@ async function validate_query_snvindel(ds, genome) {
 			q.byrange.vcffile = path.join(serverconfig.tpmasterdir, q.byrange.vcffile)
 			q.byrange._tk = { file: q.byrange.vcffile }
 			q.byrange.get = await snvindelByRangeGetter_vcf(ds, genome)
+			console.log(q.byrange._tk.samples.length,'samples from snvindel.byrange of '+ds.label)
 		} else {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
