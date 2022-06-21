@@ -3,7 +3,7 @@ import { init_sampletable } from './sampletable'
 import { get_list_cells } from '../../dom/gridutils'
 import { event as d3event } from 'd3-selection'
 import { appear } from '../../dom/animation'
-import {dofetch3} from '../../common/dofetch'
+import { dofetch3 } from '../../common/dofetch'
 
 /*
 ********************** EXPORTED
@@ -20,8 +20,7 @@ arg{}
 
 ********************** INTERNAL
 table_snvindel_svfusion
-table_snvindel_onevariant
-table_snvindel_multivariant
+	table_snvindel_onevariant
 add_csqButton
 print_snv
 
@@ -31,9 +30,7 @@ all mlst of one data type
 should work for all types of data
 
 TODO
-similar to vcf, variant annotation should be kept in .info{}, e.g. consequence
-describe these attributes in tk.mds.variantInfo
-print each info as table row/column
+print vcf info about variant attributes
 
 */
 
@@ -98,7 +95,76 @@ async function table_snvindel_svfusion(arg) {
 		arg.singleSampleDiv = grid
 		// if there are multiple samples, this <div> won't be used
 		// a new table will be created under arg.div to show sample table
-	} else {
+
+		if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
+			await init_sampletable(arg)
+		}
+		return
+	}
+
+	// multiple variants
+	// show an option for each, click one to run above single-variant code
+	grid.append('div')
+		.style('grid-template-columns', 'auto')
+		.text('Click a variant to see details')
+		.style('font-size','.7em')
+		.style('opacity',.5)
+
+	for(const m of arg.mlst) {
+		const div = grid.append('div')
+			.attr('class','sja_menuoption')
+			.on('click', ()=>{
+				grid.remove()
+				const a2 = Object.assign({}, arg)
+				a2.mlst = [m]
+				table_snvindel_svfusion(a2)
+			})
+		if(m.dt==dtsnvindel) {
+			div.append('span')
+				.text(m.mname)
+			div.append('span')
+				.text(mclass[m.class].label)
+				.style('font-size','.8em')
+				.style('margin-left','10px')
+			div.append('span')
+				.text((m.pos+1)+', '+m.ref+'>'+m.alt)
+				.style('font-size','.8em')
+				.style('margin-left','10px')
+			if(m.occurrence) {
+				div.append('span').text(m.occurrence+' sample'+(m.occurrence>1?'s':'')).style('margin-left','10px')
+			}
+		} else if(m.dt==dtsv ||m.dt==dtfusionrna) {
+			div.append('span')
+				.text(mclass[m.class].label)
+				.style('font-size','.7em')
+				.style('margin-right','8px')
+
+			printSvPair(m.pairlst[0], div)
+			if(m.occurrence) {
+				div.append('span').text(m.occurrence+' sample'+(m.occurrence>1?'s':'')).style('margin-left','10px')
+			}
+		} else {
+			div.text('error: unknown m.dt')
+		}
+	}
+
+	if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
+		const totalOccurrence = arg.mlst.reduce((i,j)=>i+(j.occurrence || 0),0)
+		if(totalOccurrence) {
+			grid.append('div')
+				.style('margin-top','10px')
+				.attr('class','sja_clbtext')
+				.text('List all '+totalOccurrence+' samples')
+				.on('click',()=>{
+					grid.remove()
+					init_sampletable(arg)
+				})
+		}
+	}
+
+/*
+	{
+	// old code
 		// make a multi-column table for all variants, one row for each variant
 		// set of columns are based on available attributes in mlst
 		grid.style('max-height', '30vw').style('gap', '5px')
@@ -110,10 +176,7 @@ async function table_snvindel_svfusion(arg) {
 		}
 		arg.grid = grid
 	}
-
-	if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
-		await init_sampletable(arg)
-	}
+	*/
 }
 
 function table_snvindel_onevariant({ mlst, tk, block }, grid) {
@@ -165,112 +228,6 @@ function print_snv(holder, m, tk) {
 	printto.html(`${m.chr}:${m.pos + 1} ${m.ref && m.alt ? m.ref + '>' + m.alt : ''}`)
 }
 
-/* multiple variants, each with occurrence
-one row for each variant
-click a button from a row to show the sample summary/detail table for that variant
-show a summary table across samples of all variants
-*/
-function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2samples }, grid) {
-	/* flags to indicate if to show these columns in the grid
-	column 1: mutation
-	column 2: position
-	... optional columns
-	*/
-
-	const fixedColumnCount =
-		1 + // consequence
-		1 + // mutation
-		1 // sampleDivHeader
-	const showOccurrence = mlst.find(i => i.occurrence != undefined)
-	let showNumericmodeValue
-	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
-	if (currentMode.type == 'numeric' && currentMode.byAttribute != 'occurrence') {
-		showNumericmodeValue = true
-	}
-	// Calculate number of columns specific to each sample group
-	let numOfMetaDataCols = 0
-	if (tk.mds.variant2samples) {
-		numOfMetaDataCols += tk.mds.variant2samples.termidlst ? tk.mds.variant2samples.termidlst.length : 0
-		numOfMetaDataCols += tk.mds.variant2samples.sampleHasSsmReadDepth ? 1 : 0
-		numOfMetaDataCols += tk.mds.variant2samples.sampleHasSsmTotalNormal ? 1 : 0
-	}
-
-	grid
-		.style(
-			'grid-template-columns',
-			`'repeat(${fixedColumnCount +
-				(showOccurrence ? 1 : 0) +
-				(showNumericmodeValue ? 1 : 0) +
-				numOfMetaDataCols}, auto)'`
-		)
-		.style('text-overflow', 'ellipsis')
-		.style('overflow', 'scroll')
-		.style('max-width', '100%') // Fix for grid overflowing tooltip
-
-	// header
-	grid
-		.append('div')
-		.text(block.mclassOverride ? block.mclassOverride.className : 'Consequence')
-		.style('opacity', 0.3)
-	grid
-		.append('div')
-		.text(mlst.find(i => i.ref && i.alt) ? 'Mutation' : 'Position')
-		.style('opacity', 0.3)
-		.style('grid-column-start', '2')
-	let startCol = 2 // Determines the start col for positioning later
-	if (showOccurrence) {
-		startCol = ++startCol
-		grid
-			.append('div')
-			.style('opacity', 0.3)
-			.text('Occurrence')
-			.style('grid-column-start', startCol)
-	}
-	if (showNumericmodeValue) {
-		startCol = ++startCol
-		grid
-			.append('div')
-			.style('opacity', 0.3)
-			.text(currentMode.label)
-			.style('grid-column-start', startCol)
-	}
-
-	// placeholder for showing column headers of sample table, keep blank if there's no content
-	// const sampleDivHeader = grid.append('div')
-
-	// one row for each variant
-	const ssmid2div = new Map() // k: m.ssm_id, v: <div>
-	// for each variant, make a placeholder <div> and append to list
-
-	for (const m of mlst) {
-		// column 1
-		print_mname(grid.append('div').style('grid-column-start', '1'), m)
-		// column 2
-		print_snv(grid.append('div').style('grid-column-start', '2'), m, tk)
-		let dataStartCol = 2
-		if (showOccurrence) {
-			dataStartCol = ++dataStartCol
-			grid
-				.append('div')
-				.text(m.occurrence)
-				.style('grid-column-start', dataStartCol)
-				.style('text-align', 'center')
-		}
-
-		if (showNumericmodeValue) {
-			dataStartCol = ++dataStartCol
-			grid
-				.append('div')
-				.text(m.__value_missing ? 'NA' : m.__value_use)
-				.style('grid-column-start', dataStartCol)
-				.style('text-align', 'center')
-		}
-		// create placeholder for showing available samples of this variant
-		ssmid2div.set(m.ssm_id, grid.append('div').style('display', 'grid'))
-	}
-	// return { header: sampleDivHeader, ssmid2div, startCol, grid }
-	return { ssmid2div, startCol }
-}
 
 
 // function is not used
@@ -338,10 +295,32 @@ function isElementInViewport(el) {
 }
 
 async function table_svfusion_one(arg,grid) {
+	// display one svfusion event
+
+	// svgraph in 1st row
 	grid.append('div')
-	await makeSvgraph( arg.mlst[0], grid.append('div'), arg.block)
+	await makeSvgraph( arg.mlst[0], grid.append('div').style('margin-bottom','10px'), arg.block)
+
+	// rows
+	{
+		const [c1, c2] = get_list_cells(grid)
+		c1.text('Data type')
+		c2.text(mclass[arg.mlst[0].class].label)
+	}
+	{
+		// todo: support chimeric read fraction on each break end
+		const [c1, c2] = get_list_cells(grid)
+		c1.text('Break points')
+		for(const pair of arg.mlst[0].pairlst) {
+			printSvPair(pair, c2.append('div'))
+		}
+	}
 }
-async function table_svfusion_multi(arg, grid) {
+
+function printSvPair(pair, div) {
+	if(pair.a.name) div.append('span').text(pair.a.name).style('font-weight','bold').style('margin-right','5px')
+	div.append('span').text(`${pair.a.chr}:${pair.a.pos} ${pair.a.strand=='+'?'forward':'reverse'} > ${pair.b.chr}:${pair.b.pos} ${pair.b.strand=='+'?'forward':'reverse'}`)
+	if(pair.b.name) div.append('span').text(pair.b.name).style('font-weight','bold').style('margin-left','5px')
 }
 
 async function makeSvgraph(m, div, block) {

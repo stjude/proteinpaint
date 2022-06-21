@@ -110,7 +110,8 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 			if(Number.isNaN(pos)) throw 'position not integer'
 			const pairlstIdx = Number(_pi)
 			if(Number.isNaN(pairlstIdx)) throw 'pairlstIdx not integer'
-			const mlst = await ds.queries.svfusion.byrange.get({rglst:[{chr, start:pos, stop:pos}]})
+			// why has to stop=pos+1
+			const mlst = await ds.queries.svfusion.byrange.get({rglst:[{chr, start:pos, stop:(pos+1)}]})
 			for(const m of mlst) {
 				if(m.dt != dt && m.pos!=pos || m.strand!=strand || m.pairlstIdx!=pairlstIdx || m.mname!=mname) continue
 				for(const s of m.samples) {

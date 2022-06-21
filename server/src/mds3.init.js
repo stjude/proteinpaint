@@ -565,8 +565,8 @@ export async function svfusionByRangeGetter_file(ds,genome) {
 						strand = j.strandA
 						// 
 						pairlst = [ {
-							a: {chr: j.chrA, pos: j.posA, strand: j.strandA},
-							b: {chr: r.chr, pos, strand: j.strandB}
+							a: {chr: j.chrA, pos: j.posA, strand: j.strandA, name: j.geneA},
+							b: {chr: r.chr, pos, strand: j.strandB, name: j.geneB}
 						}]
 					} else if(j.chrB) {
 						// chrB given, current chr:pos is on 5'
@@ -575,8 +575,8 @@ export async function svfusionByRangeGetter_file(ds,genome) {
 						strand = j.strandB
 						// 
 						pairlst = [ {
-							a: {chr: r.chr, pos, strand: j.strandA},
-							b: {chr: j.chrB, pos: j.posB, strand: j.strandB}
+							a: {chr: r.chr, pos, strand: j.strandA, name: j.geneA},
+							b: {chr: j.chrB, pos: j.posB, strand: j.strandB, name: j.geneB}
 						}]
 					} else if(j.pairlst) {
 						// todo: support pairlst=[{chr,pos}, {chr,pos}, ...]
