@@ -1,0 +1,15 @@
+#!/bin/sh
+
+FILES=$(git diff --cached --name-only --diff-filter=ACM "*.js" | sed 's| |\\ |g')
+[ -z "$FILES" ] && exit 0
+
+echo "Prettifying $FILES ..."
+
+# Prettify all selected files
+# configuration are under the `"prettier": {}` object in package.json
+echo "$FILES" | xargs ./node_modules/.bin/prettier --no-semi --use-tabs --write
+
+# Add back the modified/prettified files to staging
+echo "$FILES" | xargs git add
+
+exit 0

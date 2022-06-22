@@ -16,14 +16,10 @@
 
 		<div id="aaa" style="margin: 10px"></div>
 		<div id="bbb" style="margin: 10px"></div>
-
-		<script></script>
-		<script type="text/babel">
-			const PpLolliplot = runproteinpaint.wrappers.getPpLolliplot()
-			ReactDOM.render(
-				<PpLolliplot basepath="http://localhost:3000" geneId="ENSG00000142208" />,
-				document.querySelector('#aaa')
-			)
-		</script>
-	</body>
+</script>
+<script type='text/babel'>
+const PpLolliplot = runproteinpaint.wrappers.getPpLolliplot()
+ReactDOM.render(<PpLolliplot basepath='http://localhost:3000' />, document.querySelector('#aaa'))
+</script>
+</body>
 </html>
