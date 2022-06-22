@@ -1,9 +1,10 @@
 const gdc = require('./mds3.gdc')
+const fs=require('fs')
+const path = require('path')
 const { initGDCdictionary } = require('./termdb.gdc')
 const { variant2samples_getresult } = require('./mds3.variant2samples')
 const utils = require('./utils')
 const compute_mclass = require('./termdb.snp').compute_mclass
-const path = require('path')
 const serverconfig = require('./serverconfig')
 const {dtfusionrna, dtsv, mclassfusionrna, mclasssv} = require('../shared/common')
 
@@ -17,6 +18,10 @@ svfusionByRangeGetter_file
 mayAddSamplesFromVcfLine
 	vcfFormat2sample
 ********************** INTERNAL
+validate_termdb
+	initTermdb_termsAndFile
+		loadAnnotationFile
+		makeTermdbApi_inMemoryData
 */
 
 // in case chr name may contain '.', can change to __
@@ -93,12 +98,9 @@ async function validate_termdb(ds) {
 			throw 'unknown method to initiate dictionary'
 		}
 	} else if (tdb.terms) {
-		// flat list of terms
-		for (const t of tdb.terms) {
-			if (!t.id) throw 'id missing from a term'
-			if (!t.fields) throw '.fields[] missing from a term'
-			if (!Array.isArray(t.fields)) throw '.fields[] not an array'
-		}
+		// array of terms, directly coded up in js file
+		// also need tdb.annotationFile
+		await initTermdb_termsAndFile(ds)
 	} else {
 		throw 'unknown source of termdb vocabulary'
 	}
@@ -133,6 +135,159 @@ async function validate_termdb(ds) {
 		}
 	}
 }
+
+async function initTermdb_termsAndFile(ds) {
+	/* requires ds.termdb.terms[],
+	and ds.termdb.annotationFile = 'path to server-side tabular text file of sample annotation for these terms'
+	generate termdb api methods at ds.cohort.termdb.q{}
+
+	file:
+	sample \t term1 \t term2 \t ...
+	aaa    \t v1    \t v2    \t ...
+	bbb    \t v3    \t v4    \t ...
+
+	1. first line must be header, each field is term id
+	2. first column must be sample id
+	*/
+	const terms = ds.termdb.terms
+	for (const t of terms) {
+		if (!t.id) throw 'id missing from a term'
+		if(!t.name) t.name = t.id
+		if(t.type=='categorical') {
+			if(!t.values) {
+				// while reading file, missing categories are filled into values{}
+				t.values = {}
+			}
+		} else if(t.type=='integer' || t.type=='float') {
+		} else {
+			throw 'invalid term type of '+t.id
+		}
+	}
+	if(!ds.termdb.annotationFile) throw 'termdb.annotationFile missing when .terms[] used'
+
+	const annotations = await loadAnnotationFile(ds)
+	// k: sample id
+	// v: map{}, k: term id, v: value
+
+	ds.cohort.termdb.q = makeTermdbApi_inMemoryData(terms, annotations)
+}
+
+async function loadAnnotationFile(ds) {
+	const lines = (await fs.promises.readFile(path.join(serverconfig.tpmasterdir, ds.termdb.annotationFile),{encoding:'utf8'})).trim().split('\n')
+	const hterms = [] // array of term objs by order of file columns
+	const headerfields = lines[0].split('\t')
+	for(let i=1; i<headerfields.length; i++) {
+		const tid = headerfields[i]
+		if(!tid) throw `blank field at column ${i+1} in file header`
+		const t = ds.termdb.terms.find(j=>j.id==tid)
+		if(!t) throw `header field is not a term id: ${tid}`
+		hterms.push(t)
+	}
+
+	const annotations = new Map()
+	// k: sample id
+	// v: map{}, k: term id, v: value
+
+	for(let i=1; i<lines.length; i++) {
+		const l = lines[i].split('\t')
+		const sample_id = l[0]
+		if(!sample_id) throw `blank sample id at line ${i+1}`
+		if(annotations.has(sample_id)) throw `duplicate sample id: ${sample_id}`
+		annotations.set(sample_id, new Map())
+		for(const [j, term] of hterms.entries()) {
+			const v = l[j+1]
+			if(!v) {
+				// blank, no value for this term
+				continue
+			}
+			if(term.type=='categorical') {
+				annotations.get(sample_id).set(term.id, v)
+				if(!(v in term.values)) {
+					// auto add
+					term.values[v] = {label:v}
+				}
+			} else if(term.type=='float') {
+				const n = Number(v)
+				if(Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i+1}`
+				annotations.get(sample_id).set(term.id, n)
+			} else if(term.type=='integer') {
+				const n = Number(v)
+				if(Number.isInteger(n)) throw `value=${v} not integer for type=integer, term=${term.id}, line=${i+1}`
+				annotations.get(sample_id).set(term.id, n)
+			} else {
+				throw 'unknown term type'
+			}
+		}
+	}
+	return annotations
+}
+
+/*
+terms[] list of term objects
+annotations{}
+	k=sample id
+	v=map
+		k=term id
+		v=value
+*/
+function makeTermdbApi_inMemoryData(terms, annotations) {
+	const q = {}
+	q.getSample2value = (termid, sample_id=undefined) => {
+		if(sample_id!=undefined) {
+			if(!annotations.has(sample_id)) return
+			return annotations.get(sample_id).get(termid)
+		}
+		const lst = []
+		for(const [s,o] of annotations) {
+			if(o.has(termid)) lst.push({sample: s, value: o.get(termid)})
+		}
+		return lst
+	}
+	q.getRootTerms = async (vocab, treeFilter = null) => {
+		const roots = []
+		for (const t of terms) {
+			if (t.parent_id == undefined) roots.push(JSON.parse(JSON.stringify(t)))
+		}
+		return roots
+	}
+
+	q.getTermChildren = async (id, cohortValues = null, treeFilter = null) => {
+		// find terms which have term.parent_id as input id
+		const lst = []
+		for (const t of terms) {
+			if (t.parent_id == id) lst.push(JSON.parse(JSON.stringify(t)))
+		}
+		return lst
+	}
+
+	q.findTermByName = async (searchStr, limit = null, vocab, treeFilter = null, usecase = null) => {
+		searchStr = searchStr.toLowerCase() // convert to lowercase
+		// find terms that have term.id containing search string
+		const lst = []
+		for (const t of terms) {
+			//if (usecase && !isUsableTerm(term, usecase)) continue
+			if (t.id.toLowerCase().includes(searchStr)) lst.push(JSON.parse(JSON.stringify(t)))
+		}
+		return lst
+	}
+
+	q.getAncestorIDs = id => {
+		return []
+	}
+	q.getAncestorNames = q.getAncestorIDs
+
+	q.termjsonByOneid = id => {
+		const t = terms.find(i=>i.id.toLowerCase()==id.toLowerCase())
+		if (t) return JSON.parse(JSON.stringify(t))
+		return null
+	}
+
+	q.getSupportedChartTypes = () => {
+		return ['barchart']
+	}
+	return q
+}
+
 
 function validate_variant2samples(ds) {
 	const vs = ds.variant2samples

@@ -997,10 +997,15 @@ thus less things to worry about...
 		}
 	}
 	{
-		// select sample and category, only for categorical term
-		// right now only for category-overlay on maf-cov plot
+		/* term id is required, sample id is optional
+		if sample is missing, select all sample and category by term id
+			return [ {sample=str, value=?}, ... ]
+		else, return single value by sample and term
+		*/
 		const s = cn.prepare('SELECT sample,value FROM annotations WHERE term_id=?')
-		q.getSample2value = id => {
+		const s2 = cn.prepare('SELECT value FROM annotations WHERE term_id=? AND sample=?')
+		q.getSample2value = (id, sample=null) => {
+			if(sample) return s2.all(id, sample)
 			return s.all(id)
 		}
 	}

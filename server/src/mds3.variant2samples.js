@@ -9,6 +9,8 @@ const {dtfusionrna, dtsv} = require('../shared/common')
 /*
 ***************** exported
 variant2samples_getresult()
+	get_samples
+		queryServerFileBySsmid
 get_crosstabCombinations()
 
 
@@ -78,7 +80,8 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 
 	snvindel id has 4 fields, svfusion id has 6 fields, thus be able to differentiate
 	*/
-	const samples = []
+
+	let samples = [] // array can be modified by q.tid2value
 
 	for(const ssmid of q.ssm_id_lst.split(',')) {
 		const l = ssmid.split(ssmIdFieldsSeparator)
@@ -115,18 +118,53 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 			for(const m of mlst) {
 				if(m.dt != dt && m.pos!=pos || m.strand!=strand || m.pairlstIdx!=pairlstIdx || m.mname!=mname) continue
 				for(const s of m.samples) {
-					s.ssm_id = ssmid
-					samples.push(s)
+					// if this sample is already found from snvindel
+					const s2 = samples.find(i=>i.sample_id ==s.sample_id)
+					if(s2) {
+						// this sample is already found; record ssmid on this s2
+						if(s2.ssm_id_lst) {
+							s2.ssm_id_lst.push(ssmid)
+						} else {
+							s2.ssm_id_lst = [ s2.ssm_id, ssmid ]
+							delete s2.ssm_id
+						}
+					} else {
+						// this sample is not found yet
+						s.ssm_id = ssmid
+						samples.push(s)
+					}
 				}
 			}
 			continue
 		}
-
 		throw 'unknown format of ssm id'
 	}
 
+	if(q.tid2value) {
+		// filter sample to only keep those matching given tid=value pairs
+		const lst = [] // samples meeting filter
+		for(const s of samples) {
+			let skip=false
+			for(const tid in q.tid2value) {
+				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+				if(v!=q.tid2value[tid]) {
+					skip=true
+					break
+				}
+			}
+			if(skip) continue
+			lst.push(s)
+		}
+		samples = lst
+	}
+
 	if(termidlst && termidlst.length) {
-		// todo: add annotation
+		// append term values to each sample
+		for(const s of samples) {
+			for(const tid of termidlst) {
+				s[tid] = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+			}
+		}
 	}
 
 	return samples
