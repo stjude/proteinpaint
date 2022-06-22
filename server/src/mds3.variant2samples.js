@@ -94,7 +94,7 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 			if(Number.isNaN(pos)) throw 'no integer position for snvindel from ssm id'
 			const mlst = await ds.queries.snvindel.byrange.get({rglst:[{chr, start:pos, stop:pos}]})
 			for(const m of mlst) {
-				if(m.pos != pos || m.ref!=ref && m.alt!=alt) continue
+				if(m.pos != pos || m.ref!=ref || m.alt!=alt) continue
 				for(const s of m.samples) {
 					s.ssm_id = ssmid
 					samples.push(s)
@@ -116,7 +116,7 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 			// why has to stop=pos+1
 			const mlst = await ds.queries.svfusion.byrange.get({rglst:[{chr, start:pos, stop:(pos+1)}]})
 			for(const m of mlst) {
-				if(m.dt != dt && m.pos!=pos || m.strand!=strand || m.pairlstIdx!=pairlstIdx || m.mname!=mname) continue
+				if(m.dt != dt || m.pos!=pos || m.strand!=strand || m.pairlstIdx!=pairlstIdx || m.mname!=mname) continue
 				for(const s of m.samples) {
 					// if this sample is already found from snvindel
 					const s2 = samples.find(i=>i.sample_id ==s.sample_id)

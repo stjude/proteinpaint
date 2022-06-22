@@ -102,20 +102,44 @@ async function itemtable_oneItem(arg, grid) {
 	}
 }
 
+/*
+multiple variants
+show an option for each, click one to run above single-variant code
+grid has optional columns, only the first column is clickable menu option, rest of columns are info only
+1. basic info about the variant, as menu option
+2. occurrence if present, as text 
+3. numeric value if used, as text
+*/
 async function itemtable_multiItems(arg, grid) {
-	// multiple variants
-	// show an option for each, click one to run above single-variant code
 
 	// limit height
 	grid.style('max-height', '40vw')
+	// possible columns
+	const hasOccurrence = arg.mlst.some(i=>i.occurrence)
+	// numeric value?
 
-	// note
+	if(hasOccurrence) {
+		// has more than 1 column
+		grid.style('grid-template-columns', 'auto auto')
+	}
+
+	///////// print all rows
+
+	// header row
+	// header - note
 	grid.append('div')
 		.text('Click a variant to see details')
 		.style('font-size','.8em')
 		.style('opacity',.3)
+	if(hasOccurrence) {
+		grid.append('div')
+			.text('Occurrence')
+			.style('font-size','.8em')
+			.style('opacity',.3)
+	}
 
-	// upon clicking an option for a variant, hide grid and display go-back button to go back to grid
+	// upon clicking an option for a variant
+	// hide grid and display go-back button allowing to go back to grid (all options)
 	const goBackButton = arg.div.append('div')
 		.style('margin-bottom','10px')
 		.style('display','none')
@@ -159,9 +183,6 @@ async function itemtable_multiItems(arg, grid) {
 				.text(`${m.chr}:${m.pos+1}${m.ref ? ', '+m.ref+'>'+m.alt : ''}`)
 				.style('font-size','.8em')
 				.style('margin-left','10px')
-			if(m.occurrence) {
-				div.append('span').text(m.occurrence+' sample'+(m.occurrence>1?'s':'')).style('margin-left','10px')
-			}
 		} else if(m.dt==dtsv ||m.dt==dtfusionrna) {
 			div.append('span')
 				.text(mclass[m.class].label)
@@ -170,11 +191,15 @@ async function itemtable_multiItems(arg, grid) {
 
 			printSvPair(m.pairlst[0], div)
 
-			if(m.occurrence) {
-				div.append('span').text(m.occurrence+' sample'+(m.occurrence>1?'s':'')).style('margin-left','10px')
-			}
 		} else {
 			div.text('error: unknown m.dt')
+		}
+
+		// additional columns of this row
+
+		if(hasOccurrence) {
+			grid.append('div').text(m.occurrence || '')
+				.style('padding','5px 10px') // same as sja_menuoption
 		}
 	}
 
@@ -185,7 +210,7 @@ async function itemtable_multiItems(arg, grid) {
 				.style('margin-top','10px')
 				.append('span')
 				.attr('class','sja_clbtext')
-				.text('List all '+totalOccurrence+' samples')
+				.text('List all samples')
 				.on('click',()=>{
 					grid.remove()
 					init_sampletable(arg)
