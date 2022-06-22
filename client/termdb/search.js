@@ -1,9 +1,10 @@
-import * as rx from '../rx'
+import { getCompInit } from '#rx'
 import { select, selectAll, event } from 'd3-selection'
-import { dofetch3, sayerror } from '../src/client'
+import { dofetch3, sayerror } from '#src/client'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
-import { isUsableTerm } from '../shared/termdb.usecase'
+import { isUsableTerm } from '#shared/termdb.usecase'
+import { nonDictionaryTermTypes } from '#termsetting'
 
 /*
 steps:
@@ -29,7 +30,6 @@ class TermSearch {
 		// currently postSearch is only used for testing
 		this.customEvents = ['postSearch']
 		// set this.id, .app, .opts, .api
-		rx.prepComponent(this, opts)
 		setRenderers(this)
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }
@@ -41,6 +41,7 @@ class TermSearch {
 	}
 
 	reactsTo(action) {
+		if (action.type == 'app_refresh') return true
 		const prefix = action.type.split('_')[0]
 		return ['search', 'cohort', 'submenu'].includes(prefix)
 	}
@@ -57,6 +58,7 @@ class TermSearch {
 							.join(','),
 			allowedTermTypes: appState.termdbConfig.allowedTermTypes || [],
 			expandedTermIds: appState.tree.expandedTermIds,
+			selectedTerms: appState.selectedTerms,
 			usecase: appState.tree.usecase,
 			search: appState.search
 		}
@@ -65,6 +67,7 @@ class TermSearch {
 	async main() {
 		// show/hide search input from the tree
 		this.dom.holder.style('display', this.state.isVisible ? 'block' : 'none')
+		this.renderSelectedNonDictTerms()
 	}
 
 	async doSearch(str) {
@@ -84,7 +87,7 @@ class TermSearch {
 	}
 }
 
-export const searchInit = rx.getInitFxn(TermSearch)
+export const searchInit = getCompInit(TermSearch)
 
 function setRenderers(self) {
 	self.initUI = () => {
@@ -106,6 +109,13 @@ function setRenderers(self) {
 			.style('border-left', self.opts.resultsHolder ? '' : 'solid 1px rgb(133,182,225)')
 			.style('margin', '0px 0px 10px 10px')
 			.style('padding-left', '5px')
+
+		self.dom.nonDictDiv = self.dom.holder.append('div')
+			.style('margin', '0px 0px 10px 10px')
+			.style('display', 'none')
+
+		self.dom.nonDictDiv.append('div').style('font-weight', 600).html('Selected genes')
+		self.dom.selectedNonDictDiv = self.dom.nonDictDiv.append('div')
 	}
 	self.noResult = () => {
 		self.clear()
@@ -181,6 +191,13 @@ function setRenderers(self) {
 
 				if (term.type == 'geneVariant' && self.opts.handleGeneVariant) {
 					self.opts.handleGeneVariant(term)
+				} else if (nonDictionaryTermTypes.has(term.type)) {
+					self.app.dispatch({
+						type: 'app_refresh',
+						state: {
+							selectedTerms: [...self.state.selectedTerms, term]
+						}
+					})
 				} else {
 					if (term.__ancestors) {
 						expandedTermIds.push(...term.__ancestors)
@@ -203,6 +220,28 @@ function setRenderers(self) {
 	}
 	self.clear = () => {
 		self.dom.resultDiv.selectAll('*').remove()
+	}
+	self.renderSelectedNonDictTerms = function() {
+		const lst = self.state.selectedTerms.filter(t => nonDictionaryTermTypes.has(t.type))
+		self.dom.nonDictDiv.style('display', lst.length ? '' : 'none')
+
+		const genes = self.dom.selectedNonDictDiv
+			.selectAll('div')
+			.data(lst, d => d.name)
+
+		genes.exit().remove()
+		genes.enter()
+			.append('div')
+			.style('display', 'inline-block')
+			.style('margin', '1px')
+			.style('padding', '5px 8px')
+			.style('background-color', 'rgba(255, 194, 10,0.5)')
+			.style('border-radius', '6px')
+			.html(d => d.name)
+			/*.each(function(){
+				const div = select(this)
+				div.append('')
+			})*/
 	}
 }
 

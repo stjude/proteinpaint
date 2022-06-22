@@ -37,13 +37,13 @@ class MassDict {
 		return {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter
+			termfilter: appState.termfilter,
+			selectdTerms: appState.selectedTerms
 		}
 	}
 
 	main() {
 		if (this.dom.header) this.dom.header.html('Dictionary')
-
 		this.tree.dispatch({
 			type: 'app_refresh',
 			state: this.state
