@@ -177,11 +177,14 @@ async function trigger_findterm(q, res, termdb, ds) {
 	const flagset = await get_flagset(ds.cohort, q.genome) //console.log(flagset)
 	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
 	const str = q.findterm.toUpperCase()
-
+	// harcoded gene name length limit to exclude fusion/comma-separated gene names
+	/* TODO: improve the logic for excluding concatenated gene names */
+	const maxGeneNameLength = 25
 	if (isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')) {
 		for (const flagname in flagset) {
 			const flag = flagset[flagname]
 			for (const gene in flag.data) {
+				if (gene.length > maxGeneNameLength) continue
 				if (!flag.data[gene]?.length) continue
 				const d = { name: gene, type: 'geneVariant', isleaf: true }
 				if (gene === str) matches.equals.push(d)
