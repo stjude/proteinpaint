@@ -548,7 +548,8 @@ class TermdbVocab {
 			const lastTw = this.currAnnoData.lastTerms.find(lt => lt.$id === tw.$id)
 			return !lastTw || !deepEqual(lastTw, tw)
 		})
-		if (!termsToUpdate.length) return
+		/* NOTE: ok to continue processing with unchanged currAnnoData  */
+		//if (!termsToUpdate.length) return
 
 		const currSampleIds = Object.keys(this.currAnnoData.samples)
 		const promises = []
