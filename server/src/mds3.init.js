@@ -1,27 +1,30 @@
 const gdc = require('./mds3.gdc')
-const fs=require('fs')
+const fs = require('fs')
 const path = require('path')
 const { initGDCdictionary } = require('./termdb.gdc')
 const { variant2samples_getresult } = require('./mds3.variant2samples')
 const utils = require('./utils')
 const compute_mclass = require('./termdb.snp').compute_mclass
 const serverconfig = require('./serverconfig')
-const {dtfusionrna, dtsv, mclassfusionrna, mclasssv} = require('../shared/common')
+const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('../shared/common')
 
 /*
 ********************** EXPORTED
 init
 client_copy
 	copy_queries
-snvindelByRangeGetter_vcf
-svfusionByRangeGetter_file
-mayAddSamplesFromVcfLine
-	vcfFormat2sample
 ********************** INTERNAL
 validate_termdb
 	initTermdb_termsAndFile
 		loadAnnotationFile
 		makeTermdbApi_inMemoryData
+validate_query_snvindel
+	snvindelByRangeGetter_vcf
+		addSamplesFromVcfLine
+			vcfFormat2sample
+validate_query_svfusion
+	svfusionByRangeGetter_file
+validate_variant2samples
 */
 
 // in case chr name may contain '.', can change to __
@@ -152,18 +155,18 @@ async function initTermdb_termsAndFile(ds) {
 	const terms = ds.termdb.terms
 	for (const t of terms) {
 		if (!t.id) throw 'id missing from a term'
-		if(!t.name) t.name = t.id
-		if(t.type=='categorical') {
-			if(!t.values) {
+		if (!t.name) t.name = t.id
+		if (t.type == 'categorical') {
+			if (!t.values) {
 				// while reading file, missing categories are filled into values{}
 				t.values = {}
 			}
-		} else if(t.type=='integer' || t.type=='float') {
+		} else if (t.type == 'integer' || t.type == 'float') {
 		} else {
-			throw 'invalid term type of '+t.id
+			throw 'invalid term type of ' + t.id
 		}
 	}
-	if(!ds.termdb.annotationFile) throw 'termdb.annotationFile missing when .terms[] used'
+	if (!ds.termdb.annotationFile) throw 'termdb.annotationFile missing when .terms[] used'
 
 	const annotations = await loadAnnotationFile(ds)
 	// k: sample id
@@ -173,14 +176,18 @@ async function initTermdb_termsAndFile(ds) {
 }
 
 async function loadAnnotationFile(ds) {
-	const lines = (await fs.promises.readFile(path.join(serverconfig.tpmasterdir, ds.termdb.annotationFile),{encoding:'utf8'})).trim().split('\n')
+	const lines = (await fs.promises.readFile(path.join(serverconfig.tpmasterdir, ds.termdb.annotationFile), {
+		encoding: 'utf8'
+	}))
+		.trim()
+		.split('\n')
 	const hterms = [] // array of term objs by order of file columns
 	const headerfields = lines[0].split('\t')
-	for(let i=1; i<headerfields.length; i++) {
+	for (let i = 1; i < headerfields.length; i++) {
 		const tid = headerfields[i]
-		if(!tid) throw `blank field at column ${i+1} in file header`
-		const t = ds.termdb.terms.find(j=>j.id==tid)
-		if(!t) throw `header field is not a term id: ${tid}`
+		if (!tid) throw `blank field at column ${i + 1} in file header`
+		const t = ds.termdb.terms.find(j => j.id == tid)
+		if (!t) throw `header field is not a term id: ${tid}`
 		hterms.push(t)
 	}
 
@@ -188,31 +195,31 @@ async function loadAnnotationFile(ds) {
 	// k: sample id
 	// v: map{}, k: term id, v: value
 
-	for(let i=1; i<lines.length; i++) {
+	for (let i = 1; i < lines.length; i++) {
 		const l = lines[i].split('\t')
 		const sample_id = l[0]
-		if(!sample_id) throw `blank sample id at line ${i+1}`
-		if(annotations.has(sample_id)) throw `duplicate sample id: ${sample_id}`
+		if (!sample_id) throw `blank sample id at line ${i + 1}`
+		if (annotations.has(sample_id)) throw `duplicate sample id: ${sample_id}`
 		annotations.set(sample_id, new Map())
-		for(const [j, term] of hterms.entries()) {
-			const v = l[j+1]
-			if(!v) {
+		for (const [j, term] of hterms.entries()) {
+			const v = l[j + 1]
+			if (!v) {
 				// blank, no value for this term
 				continue
 			}
-			if(term.type=='categorical') {
+			if (term.type == 'categorical') {
 				annotations.get(sample_id).set(term.id, v)
-				if(!(v in term.values)) {
+				if (!(v in term.values)) {
 					// auto add
-					term.values[v] = {label:v}
+					term.values[v] = { label: v }
 				}
-			} else if(term.type=='float') {
+			} else if (term.type == 'float') {
 				const n = Number(v)
-				if(Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i+1}`
+				if (Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i + 1}`
 				annotations.get(sample_id).set(term.id, n)
-			} else if(term.type=='integer') {
+			} else if (term.type == 'integer') {
 				const n = Number(v)
-				if(Number.isInteger(n)) throw `value=${v} not integer for type=integer, term=${term.id}, line=${i+1}`
+				if (Number.isInteger(n)) throw `value=${v} not integer for type=integer, term=${term.id}, line=${i + 1}`
 				annotations.get(sample_id).set(term.id, n)
 			} else {
 				throw 'unknown term type'
@@ -232,14 +239,14 @@ annotations{}
 */
 function makeTermdbApi_inMemoryData(terms, annotations) {
 	const q = {}
-	q.getSample2value = (termid, sample_id=undefined) => {
-		if(sample_id!=undefined) {
-			if(!annotations.has(sample_id)) return
+	q.getSample2value = (termid, sample_id = undefined) => {
+		if (sample_id != undefined) {
+			if (!annotations.has(sample_id)) return
 			return annotations.get(sample_id).get(termid)
 		}
 		const lst = []
-		for(const [s,o] of annotations) {
-			if(o.has(termid)) lst.push({sample: s, value: o.get(termid)})
+		for (const [s, o] of annotations) {
+			if (o.has(termid)) lst.push({ sample: s, value: o.get(termid) })
 		}
 		return lst
 	}
@@ -277,7 +284,7 @@ function makeTermdbApi_inMemoryData(terms, annotations) {
 	q.getAncestorNames = q.getAncestorIDs
 
 	q.termjsonByOneid = id => {
-		const t = terms.find(i=>i.id.toLowerCase()==id.toLowerCase())
+		const t = terms.find(i => i.id.toLowerCase() == id.toLowerCase())
 		if (t) return JSON.parse(JSON.stringify(t))
 		return null
 	}
@@ -287,7 +294,6 @@ function makeTermdbApi_inMemoryData(terms, annotations) {
 	}
 	return q
 }
-
 
 function validate_variant2samples(ds) {
 	const vs = ds.variant2samples
@@ -311,7 +317,8 @@ function validate_variant2samples(ds) {
 		if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
 		if (!ds.termdb) throw 'ds.termdb missing when variant2samples.sunburst_ids is in use'
 		for (const id of vs.sunburst_ids) {
-			if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
+			if (!ds.cohort.termdb.q.termjsonByOneid(id))
+				throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
 		}
 	}
 
@@ -321,19 +328,19 @@ function validate_variant2samples(ds) {
 		// look for server-side vcf/bcf/tabix file
 		// file header should already been parsed and samples obtain if any
 		let hasSamples = false
-		if(ds.queries.snvindel) {
+		if (ds.queries.snvindel) {
 			// has snvindel
-			if(ds.queries.snvindel.byrange) {
-				if(ds.queries.snvindel.byrange._tk) {
-					if(ds.queries.snvindel.byrange._tk.samples) {
+			if (ds.queries.snvindel.byrange) {
+				if (ds.queries.snvindel.byrange._tk) {
+					if (ds.queries.snvindel.byrange._tk.samples) {
 						// this file has samples
-						hasSamples=true
+						hasSamples = true
 					}
 				}
 			}
 			// expand later
 		}
-		if(!hasSamples) throw 'cannot find a sample source from ds.queries{}'
+		if (!hasSamples) throw 'cannot find a sample source from ds.queries{}'
 	}
 
 	vs.get = async q => {
@@ -386,15 +393,16 @@ async function validate_query_snvindel(ds, genome) {
 		if (!q.url.key) throw '.snvindel.url.key missing'
 	}
 
-	if(!q.byisoform && !q.byrange) throw 'byisoform and byrange are both missing on queries.snvindel'
+	if (!q.byisoform && !q.byrange) throw 'byisoform and byrange are both missing on queries.snvindel'
 	if (q.byrange) {
 		if (q.byrange.gdcapi) {
 			gdc.validate_query_snvindel_byrange(ds)
+			// q.byrange.get() added
 		} else if (q.byrange.vcffile) {
 			q.byrange.vcffile = path.join(serverconfig.tpmasterdir, q.byrange.vcffile)
 			q.byrange._tk = { file: q.byrange.vcffile }
 			q.byrange.get = await snvindelByRangeGetter_vcf(ds, genome)
-			console.log(q.byrange._tk.samples.length,'samples from snvindel.byrange of '+ds.label)
+			console.log(q.byrange._tk.samples.length, 'samples from snvindel.byrange of ' + ds.label)
 		} else {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
@@ -403,6 +411,7 @@ async function validate_query_snvindel(ds, genome) {
 	if (q.byisoform) {
 		if (q.byisoform.gdcapi) {
 			gdc.validate_query_snvindel_byisoform(ds)
+			// q.byisoform.get() added
 		} else {
 			throw 'unknown query method for queries.snvindel.byisoform'
 		}
@@ -438,17 +447,19 @@ function may_add_refseq2ensembl(ds, genome) {
 
 /* generate getter as ds.queries.snvindel.byrange.get()
 
-usage scenario:
-1. to initiate official dataset
-2. to make temp ds{} on the fly when querying a custom track
+called at two places:
+1. to initiate official dataset, in this script
+2. to make temp ds{} on the fly when querying a custom track, in mds3.load.js
 
 getter input:
-.rglst=[ {chr, start, stop} ]
+.rglst=[ {chr, start, stop} ] (required)
+.tid2value = { termid1:v1, termid2:v2, ...} (optional, to restrict samples)
 
 getter returns:
 array of variants
 if samples are available, attaches array of sample ids to each variant
 as .samples=[ {sample_id} ]
+TODO change to bcf
 */
 export async function snvindelByRangeGetter_vcf(ds, genome) {
 	const q = ds.queries.snvindel.byrange
@@ -476,19 +487,22 @@ export async function snvindelByRangeGetter_vcf(ds, genome) {
 	*/
 	await utils.init_one_vcf(q._tk, genome)
 	// tk{ dir, info, format, samples, nochr }
-	if (q._tk.samples.length>0 && !q._tk.format) throw 'vcf file has samples but no FORMAT'
-	if(q._tk.format && q._tk.samples.length==0) throw 'vcf file has FORMAT but no samples'
-	if(q._tk.format) {
-		for(const id in q._tk.format) {
-			if(id=='GT') {
+	if (q._tk.samples.length > 0 && !q._tk.format) throw 'vcf file has samples but no FORMAT'
+	if (q._tk.format && q._tk.samples.length == 0) throw 'vcf file has FORMAT but no samples'
+	if (q._tk.format) {
+		for (const id in q._tk.format) {
+			if (id == 'GT') {
 				q._tk.format.isGT = true
 			}
 		}
 	}
 
 	return async param => {
-		if(!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
-		if(param.rglst.length==0) throw 'q.rglst[] blank array'
+		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
+		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+		if (param.tid2value) {
+			if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
+		}
 		const variants = [] // to be returned
 		for (const r of param.rglst) {
 			await utils.get_lines_bigfile({
@@ -517,8 +531,22 @@ export async function snvindelByRangeGetter_vcf(ds, genome) {
 						m.chr = r.chr
 						m.pos = Number(l[1])
 						m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
+
+						if (q._tk.samples && q._tk.samples.length) {
+							/* vcf file has sample, must find out samples harboring this variant
+							TODO determine when to set addFormatValues=true
+							so to attach format fields to each sample
+							*/
+							addSamplesFromVcfLine(q, m, l, false, ds)
+							if (!m.samples) {
+								// no sample found for this variant, when vcf has samples
+								// can be due to sample filtering, thus must skip this variant
+								continue
+							}
+						}
+
+						// acceptable variant
 						variants.push(m)
-						mayAddSamplesFromVcfLine(q, m, l)
 					}
 				}
 			})
@@ -545,15 +573,13 @@ l=[]
 addFormatValues=true
 	if true, k:v for format fields are added to each sample of m.samples[]
 	set to false for counting samples, or doing sample summary
+ds={}
+	the server-side dataset obj
 */
-export function mayAddSamplesFromVcfLine(q, m, l, addFormatValues) {
-	if (!q._tk.samples || q._tk.samples.length == 0) {
-		// vcf file has no samples
-		return
-	}
+function addSamplesFromVcfLine(q, m, l, addFormatValues, ds) {
 	// l[8] is FORMAT, l[9] is first sample
 	if (!l[8] || l[8] == '.') {
-		// no format field
+		// this variant has 0 format fields??
 		return
 	}
 	const formatlst = [] // list of format object from q._tk.format{}, by the order of l[8]
@@ -575,7 +601,7 @@ export function mayAddSamplesFromVcfLine(q, m, l, addFormatValues) {
 		}
 		const vlst = v.split(':')
 		const sampleObj = vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues)
-		if(sampleObj) {
+		if (sampleObj) {
 			// this sample is annotated with this variant
 			samples.push(sampleObj)
 		}
@@ -583,6 +609,8 @@ export function mayAddSamplesFromVcfLine(q, m, l, addFormatValues) {
 	if (samples.length) m.samples = samples
 }
 
+/* purpose is to
+ */
 function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 	const sampleObj = {
 		sample_id: sampleHeaderObj.name
@@ -599,7 +627,7 @@ function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 				continue
 			}
 			// has gt value
-			if(addFormatValues) {
+			if (addFormatValues) {
 				sampleObj.GT = fv
 			} else {
 				// no need to add any format fields, only need to return sample id for counting
@@ -611,7 +639,7 @@ function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 			irrespective of what this format field is
 			later may check by meanings of each format field
 			*/
-			if(addFormatValues) {
+			if (addFormatValues) {
 				sampleObj[format.ID] = fv
 			} else {
 				// no need to add field, just return
@@ -619,19 +647,19 @@ function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 			}
 		}
 	}
-	if(Object.keys(sampleObj).length==1) {
+	if (Object.keys(sampleObj).length == 1) {
 		return null
 	}
 	return sampleObj
 }
 
-async function validate_query_svfusion(ds,genome) {
+async function validate_query_svfusion(ds, genome) {
 	const q = ds.queries.svfusion
-	if(!q) return
-	if(!q.byrange) throw 'byrange missing from queries.svfusion'
-	if(q.byrange) {
-		if(q.byrange.file) {
-			q.byrange.file = path.join(serverconfig.tpmasterdir,q.byrange.file)
+	if (!q) return
+	if (!q.byrange) throw 'byrange missing from queries.svfusion'
+	if (q.byrange) {
+		if (q.byrange.file) {
+			q.byrange.file = path.join(serverconfig.tpmasterdir, q.byrange.file)
 			q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
 		} else {
 			throw 'unknown query method for svfusion.byrange'
@@ -649,19 +677,19 @@ events are partially grouped
 represented as { dt, chr, pos, strand, pairlstIdx, mname, samples:[] }
 object attributes (except samples) are differentiators, enough to identify events on a gene
 */
-export async function svfusionByRangeGetter_file(ds,genome) {
+export async function svfusionByRangeGetter_file(ds, genome) {
 	const q = ds.queries.svfusion.byrange
-	if(q.file) {
+	if (q.file) {
 		await utils.validate_tabixfile(q.file)
-	} else if(q.url) {
+	} else if (q.url) {
 		q.dir = await utils.cache_index(q.url, q.indexURL)
 	} else {
 		throw 'file and url both missing on svfusion.byrange{}'
 	}
 	q.nochr = await utils.tabix_is_nochr(q.file || q.url, null, genome)
 	return async param => {
-		if(!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
-		if(param.rglst.length==0) throw 'q.rglst[] blank array'
+		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
+		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
 
 		const key2variants = new Map()
 		/*
@@ -678,22 +706,19 @@ export async function svfusionByRangeGetter_file(ds,genome) {
 
 		for (const r of param.rglst) {
 			await utils.get_lines_bigfile({
-				args: [
-					q.file || q.url,
-					(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-				],
+				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
 				dir: q.dir,
 				callback: line => {
 					const l = line.split('\t')
 					const pos = Number(l[1])
 					let j
 					try {
-						j=JSON.parse(l[3])
-					}catch(e) {
+						j = JSON.parse(l[3])
+					} catch (e) {
 						//console.log('svfusion json err')
 						return
 					}
-					if(j.dt!=dtfusionrna && j.dt!=dtsv) {
+					if (j.dt != dtfusionrna && j.dt != dtsv) {
 						// not fusion or sv
 						//console.log('svfusion invalid dt')
 						return
@@ -714,31 +739,35 @@ export async function svfusionByRangeGetter_file(ds,genome) {
 						pairlst.length=1 for 2-gene event
 						pairlst.length=2 for 3-gene event, where lst[0].b and lst[1].a are on the same gene
 					*/
-					if(j.chrA) {
+					if (j.chrA) {
 						// chrA given, current chr:pos is on 3'
-						pairlstIdx=1 // as using C-term of this gene
+						pairlstIdx = 1 // as using C-term of this gene
 						mname = j.geneA || j.chrA
 						strand = j.strandA
-						// 
-						pairlst = [ {
-							a: {chr: j.chrA, pos: j.posA, strand: j.strandA, name: j.geneA},
-							b: {chr: r.chr, pos, strand: j.strandB, name: j.geneB}
-						}]
-					} else if(j.chrB) {
+						//
+						pairlst = [
+							{
+								a: { chr: j.chrA, pos: j.posA, strand: j.strandA, name: j.geneA },
+								b: { chr: r.chr, pos, strand: j.strandB, name: j.geneB }
+							}
+						]
+					} else if (j.chrB) {
 						// chrB given, current chr:pos is on 5'
-						pairlstIdx=0 // as using N-term of this gene
+						pairlstIdx = 0 // as using N-term of this gene
 						mname = j.geneB || j.chrB
 						strand = j.strandB
-						// 
-						pairlst = [ {
-							a: {chr: r.chr, pos, strand: j.strandA, name: j.geneA},
-							b: {chr: j.chrB, pos: j.posB, strand: j.strandB, name: j.geneB}
-						}]
-					} else if(j.pairlst) {
+						//
+						pairlst = [
+							{
+								a: { chr: r.chr, pos, strand: j.strandA, name: j.geneA },
+								b: { chr: j.chrB, pos: j.posB, strand: j.strandB, name: j.geneB }
+							}
+						]
+					} else if (j.pairlst) {
 						// todo: support pairlst=[{chr,pos}, {chr,pos}, ...]
 						pairlst = j.pairlst
-						const idx = j.pairlst.findIndex(i=>i.chr==chr && i.pos==pos)
-						if(idx==-1) throw 'current point missing from pairlst'
+						const idx = j.pairlst.findIndex(i => i.chr == chr && i.pos == pos)
+						if (idx == -1) throw 'current point missing from pairlst'
 						pairlstIdx = idx
 						// todo mname as joining names of rest of pairlst points
 					} else {
@@ -747,22 +776,22 @@ export async function svfusionByRangeGetter_file(ds,genome) {
 
 					const ssm_id = [j.dt, r.chr, pos, strand, pairlstIdx, mname].join(ssmIdFieldsSeparator)
 
-					if(!key2variants.has(ssm_id)) {
+					if (!key2variants.has(ssm_id)) {
 						key2variants.set(ssm_id, {
 							ssm_id,
 							dt: j.dt,
-							class: j.dt==dtsv ? mclasssv : mclassfusionrna,
+							class: j.dt == dtsv ? mclasssv : mclassfusionrna,
 							chr: r.chr,
 							pos,
 							strand,
 							pairlstIdx,
 							mname,
 							pairlst, // if this key corresponds multiple events, add initial pairlst to allow showing svgraph without additional query to get other breakpoints
-							samples:[]
+							samples: []
 						})
 					}
-					if(j.sample) {
-						key2variants.get(ssm_id).samples.push({sample_id: j.sample})
+					if (j.sample) {
+						key2variants.get(ssm_id).samples.push({ sample_id: j.sample })
 					}
 				}
 			})

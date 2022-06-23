@@ -412,9 +412,11 @@ function mayaddGetter_variant2samples(tk, block) {
 			} else {
 				throw 'unknown variantkey for variant2samples'
 			}
-		} else if (arg.isoform) {
+		}
+		if (arg.isoform) {
 			par.push('isoform=' + arg.isoform)
-		} else if (arg.rglst) {
+		}
+		if (arg.rglst) {
 			par.push('rglst=' + arg.rglst)
 		}
 
@@ -426,14 +428,11 @@ function mayaddGetter_variant2samples(tk, block) {
 
 		// supply list of terms based on querytype
 		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
-			if(tk.mds.variant2samples.sunburst_ids) 
-				par.push('termidlst=' + tk.mds.variant2samples.sunburst_ids)
+			if (tk.mds.variant2samples.sunburst_ids) par.push('termidlst=' + tk.mds.variant2samples.sunburst_ids)
 		} else if (arg.querytype == tk.mds.variant2samples.type_samples) {
-			if(tk.mds.variant2samples.termidlst)
-				par.push('termidlst=' + tk.mds.variant2samples.termidlst)
+			if (tk.mds.variant2samples.termidlst) par.push('termidlst=' + tk.mds.variant2samples.termidlst)
 		} else if (arg.querytype == tk.mds.variant2samples.type_summary) {
-			if(tk.mds.variant2samples.termidlst)
-				par.push('termidlst=' + tk.mds.variant2samples.termidlst)
+			if (tk.mds.variant2samples.termidlst) par.push('termidlst=' + tk.mds.variant2samples.termidlst)
 		} else {
 			throw 'unknown querytype'
 		}

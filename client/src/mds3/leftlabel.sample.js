@@ -38,7 +38,9 @@ function mayShowSummary(tk, block) {
 			wait.html('')
 			await showSummary4terms(data, wait, tk, block)
 		})
-		.catch(e => {})
+		.catch(e => {
+			wait.text(`Error: ${e.message || e}`)
+		})
 }
 
 /* show summaries over a list of terms
