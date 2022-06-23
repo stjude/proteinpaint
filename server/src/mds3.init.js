@@ -19,8 +19,9 @@ validate_termdb
 		loadAnnotationFile
 		makeTermdbApi_inMemoryData
 validate_query_snvindel
-	snvindelByRangeGetter_vcf
-		addSamplesFromVcfLine
+	snvindelByRangeGetter_bcf
+		mayLimitSamples
+		addSamplesFromBcfLine
 			vcfFormat2sample
 validate_query_svfusion
 	svfusionByRangeGetter_file
@@ -398,11 +399,11 @@ async function validate_query_snvindel(ds, genome) {
 		if (q.byrange.gdcapi) {
 			gdc.validate_query_snvindel_byrange(ds)
 			// q.byrange.get() added
-		} else if (q.byrange.vcffile) {
-			q.byrange.vcffile = path.join(serverconfig.tpmasterdir, q.byrange.vcffile)
-			q.byrange._tk = { file: q.byrange.vcffile }
-			q.byrange.get = await snvindelByRangeGetter_vcf(ds, genome)
-			console.log(q.byrange._tk.samples.length, 'samples from snvindel.byrange of ' + ds.label)
+		} else if (q.byrange.bcffile) {
+			q.byrange.bcffile = path.join(serverconfig.tpmasterdir, q.byrange.bcffile)
+			q.byrange._tk = { file: q.byrange.bcffile }
+			q.byrange.get = await snvindelByRangeGetter_bcf(ds, genome)
+			console.log(q.byrange._tk.samples.length, 'samples from snvindel.byrange.bcffile of ' + ds.label)
 		} else {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
@@ -461,11 +462,11 @@ if samples are available, attaches array of sample ids to each variant
 as .samples=[ {sample_id} ]
 TODO change to bcf
 */
-export async function snvindelByRangeGetter_vcf(ds, genome) {
+export async function snvindelByRangeGetter_bcf(ds, genome) {
 	const q = ds.queries.snvindel.byrange
 	/* q{}
 	._tk={}
-		.file=str
+		.file= absolute path to bcf file
 		.url, .indexURL
 		.dir=str
 		.nochr=true
@@ -485,13 +486,15 @@ export async function snvindelByRangeGetter_vcf(ds, genome) {
 		.samples=[ {name:str}, ... ] // blank array if vcf has no samples
 	.
 	*/
-	await utils.init_one_vcf(q._tk, genome)
-	// tk{ dir, info, format, samples, nochr }
-	if (q._tk.samples.length > 0 && !q._tk.format) throw 'vcf file has samples but no FORMAT'
-	if (q._tk.format && q._tk.samples.length == 0) throw 'vcf file has FORMAT but no samples'
+
+	await utils.init_one_vcf(q._tk, genome, true) // "true" to indicate file is bcf but not vcf
+
+	if (q._tk.samples.length > 0 && !q._tk.format) throw 'bcf file has samples but no FORMAT'
+	if (q._tk.format && q._tk.samples.length == 0) throw 'bcf file has FORMAT but no samples'
 	if (q._tk.format) {
 		for (const id in q._tk.format) {
 			if (id == 'GT') {
+				// may not need with bcftools
 				q._tk.format.isGT = true
 			}
 		}
@@ -500,63 +503,101 @@ export async function snvindelByRangeGetter_vcf(ds, genome) {
 	return async param => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
-		if (param.tid2value) {
-			if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
-		}
-		const variants = [] // to be returned
-		for (const r of param.rglst) {
-			await utils.get_lines_bigfile({
-				args: [
-					q._tk.file || q._tk.url,
-					(q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-				],
-				dir: q._tk.dir,
-				callback: line => {
-					const l = line.split('\t')
-					// [9] for samples
-					const refallele = l[3]
-					const altalleles = l[4].split(',')
-					const m0 = {} // temp obj
-					compute_mclass(
-						q._tk,
-						refallele,
-						altalleles,
-						m0,
-						l[7], // info str
-						l[2] // vcf line ID
-					)
-					// make a m{} for every alt allele
-					for (const alt in m0.alt2csq) {
-						const m = m0.alt2csq[alt]
-						m.chr = r.chr
-						m.pos = Number(l[1])
-						m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
 
-						if (q._tk.samples && q._tk.samples.length) {
-							/* vcf file has sample, must find out samples harboring this variant
-							TODO determine when to set addFormatValues=true
-							so to attach format fields to each sample
-							*/
-							addSamplesFromVcfLine(q, m, l, false, ds)
-							if (!m.samples) {
-								// no sample found for this variant, when vcf has samples
-								// can be due to sample filtering, thus must skip this variant
-								continue
-							}
+		const bcfArgs = [
+			'query',
+			q._tk.file || q._tk.url,
+			'-r',
+			param.rglst.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop).join(','),
+			'-f',
+			'%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO\t%FORMAT\n'
+		]
+
+		const limitSamples = mayLimitSamples(param, q._tk.samples, ds)
+		if (limitSamples) {
+			bcfArgs.push('-s', limitSamples.map(i => i.name).join(','))
+		}
+
+		const variants = []
+
+		await utils.get_lines_bigfile({
+			isbcf: true,
+			args: bcfArgs,
+			dir: q._tk.dir,
+			callback: line => {
+				const l = line.split('\t')
+				const id = l[0],
+					chr = l[1],
+					pos = Number(l[2]),
+					refallele = l[3],
+					altalleles = l[4].split(','),
+					infoStr = l[5]
+				// [6] is format fields, [7 and on] for samples
+
+				const m0 = {} // temp obj, modified by compute_mclass()
+				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id)
+				// make a m{} for every alt allele
+				for (const alt in m0.alt2csq) {
+					const m = m0.alt2csq[alt]
+					m.chr = (q._tk.nochr ? 'chr' : '') + chr
+					m.pos = pos
+					m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
+
+					if (q._tk.samples && q._tk.samples.length) {
+						/* vcf file has sample, must find out samples harboring this variant
+						TODO determine when to set addFormatValues=true
+						so to attach format fields to each sample
+						*/
+						addSamplesFromBcfLine(q, m, l, false, ds, limitSamples)
+						if (!m.samples) {
+							// no sample found for this variant, when vcf has samples
+							// can be due to sample filtering, thus must skip this variant
+							continue
 						}
-
-						// acceptable variant
-						variants.push(m)
 					}
+
+					// acceptable variant
+					variants.push(m)
 				}
-			})
-		}
+			}
+		})
 		return variants
 	}
 }
 
-/* tentative, subject to change
+/*
+input:
+param={}
+	.tid2value = { term1id: v1, term2id:v2, ... }
+	if present, return list of samples matching the given k/v pairs, assuming AND
+	later to replace with filter
+allSamples = [ {name}, ... ] array of parsed samples from a bcf file header
+ds={}
 
+output:
+array of {name}, same elements from allSamples, null if not filtering
+*/
+function mayLimitSamples(param, allSamples, ds) {
+	if (!allSamples || allSamples.length == 0) return null // no samples from this bcf file
+	if (!param.tid2value) return null // no limit, use all samples
+	if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
+	const limitSamples = []
+	for (const s of allSamples) {
+		let skip = false
+		for (const tid in param.tid2value) {
+			const v = ds.cohort.termdb.q.getSample2value(tid, s.name)
+			if (v != param.tid2value[tid]) {
+				skip = true
+				break
+			}
+		}
+		if (skip) continue
+		limitSamples.push(s)
+	}
+	return limitSamples
+}
+
+/* 
 usage:
 call at snvindel.byrange.get() to assign .samples[] to each m for counting total number of unique samples
 call at variant2samples.get() to get list of samples
@@ -575,15 +616,21 @@ addFormatValues=true
 	set to false for counting samples, or doing sample summary
 ds={}
 	the server-side dataset obj
+limitSamples=[ {name} ]
+	if bcf query is limiting on this sample set. if so the output is only based on these samples
+	otherwise output will have all samples from the bcf file
 */
-function addSamplesFromVcfLine(q, m, l, addFormatValues, ds) {
-	// l[8] is FORMAT, l[9] is first sample
-	if (!l[8] || l[8] == '.') {
+function addSamplesFromBcfLine(q, m, l, addFormatValues, ds, limitSamples) {
+	// l[6] is FORMAT, l[7] is first sample
+	const format_idx = 6
+	const firstSample_idx = 7
+
+	if (!l[format_idx] || l[format_idx] == '.') {
 		// this variant has 0 format fields??
 		return
 	}
-	const formatlst = [] // list of format object from q._tk.format{}, by the order of l[8]
-	for (const s of l[8].split(':')) {
+	const formatlst = [] // list of format object from q._tk.format{}, by the order of l[7]
+	for (const s of l[format_idx].split(':')) {
 		const f = q._tk.format[s]
 		if (f) {
 			// a valid format field
@@ -593,8 +640,8 @@ function addSamplesFromVcfLine(q, m, l, addFormatValues, ds) {
 		}
 	}
 	const samples = []
-	for (const [i, sampleHeaderObj] of q._tk.samples.entries()) {
-		const v = l[i + 9]
+	for (const [i, sampleHeaderObj] of (limitSamples || q._tk.samples).entries()) {
+		const v = l[i + firstSample_idx]
 		if (!v || v == '.') {
 			// no value for this sample
 			continue
@@ -609,8 +656,11 @@ function addSamplesFromVcfLine(q, m, l, addFormatValues, ds) {
 	if (samples.length) m.samples = samples
 }
 
-/* purpose is to
- */
+/*
+parse format value for a sample and decide if the sample harbor the variant
+if so, return sample obj
+otherwise, return null
+*/
 function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 	const sampleObj = {
 		sample_id: sampleHeaderObj.name
@@ -636,7 +686,7 @@ function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 		} else {
 			/* has value for a non-GT field
 			indicating the variant is annotated to this sample
-			irrespective of what this format field is
+			irrespective of what this field is
 			later may check by meanings of each format field
 			*/
 			if (addFormatValues) {
@@ -670,6 +720,7 @@ async function validate_query_svfusion(ds, genome) {
 /*
 getter input:
 .rglst=[ { chr, start, stop} ]
+.tid2value, same as in bcf
 
 getter returns:
 list of svfusion events,
@@ -722,6 +773,17 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 						// not fusion or sv
 						//console.log('svfusion invalid dt')
 						return
+					}
+
+					if (j.sample && param.tid2value) {
+						// to filter sample
+						for (const tid in param.tid2value) {
+							const v = ds.cohort.termdb.q.getSample2value(tid, j.sample)
+							if (v != param.tid2value[tid]) {
+								// this sample is no match, skip this event
+								return
+							}
+						}
 					}
 
 					// collect key fields

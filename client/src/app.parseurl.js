@@ -402,14 +402,14 @@ export async function get_tklst(urlp, genomeobj) {
 		}
 	}
 
-	if (urlp.has('mds3vcffile')) {
+	if (urlp.has('mds3bcffile')) {
 		// "name,path" pairs to server-side vcf files
-		const [tkname, vcffile] = urlp.get('mds3vcffile').split(',')
-		if (tkname && vcffile) {
+		const [tkname, bcffile] = urlp.get('mds3bcffile').split(',')
+		if (tkname && bcffile) {
 			tklst.push({
 				type: client.tkt.mds3,
 				name: tkname,
-				vcf: { file: vcffile }
+				bcf: { file: bcffile }
 			})
 		}
 	}
