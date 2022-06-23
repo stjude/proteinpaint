@@ -184,7 +184,7 @@ async function addGeneData(q, rows) {
 				}
 			}
 		}
-		row.val2 = matched ? 'matched' : 'not matched'
+		row.val2 = matched ? 'Altered' : 'Wildtype'
 		row.key2 = row.val2
 	}
 }
