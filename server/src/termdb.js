@@ -10,6 +10,8 @@ const regression = require('./termdb.regression')
 const termdbsnp = require('./termdb.snp')
 const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
+const get_flagset = require('./bulk.mset').get_flagset
+const isUsableTerm = require('../shared/termdb.usecase').isUsableTerm
 
 /*
 ********************** EXPORTED
@@ -62,7 +64,7 @@ export function handle_request_closure(genomes) {
 			if (q.getnumericcategories) return trigger_getnumericcategories(q, res, tdb, ds)
 			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
 			if (q.get_children) return await trigger_children(q, res, tdb)
-			if (q.findterm) return await trigger_findterm(q, res, tdb)
+			if (q.findterm) return await trigger_findterm(q, res, tdb, ds)
 			if (q.scatter) return trigger_scatter(q, res, tdb, ds)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
 			if (q.phewas) {
@@ -170,13 +172,35 @@ do not directly hand over the term object to client; many attr to be kept on ser
 	return t2
 }
 
-async function trigger_findterm(q, res, termdb) {
+async function trigger_findterm(q, res, termdb, ds) {
 	// TODO also search categories
+	const flagset = await get_flagset(ds.cohort, q.genome) //console.log(flagset)
+	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
+	const str = q.findterm.toUpperCase()
+	// harcoded gene name length limit to exclude fusion/comma-separated gene names
+	/* TODO: improve the logic for excluding concatenated gene names */
+	const maxGeneNameLength = 25
+	if (isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')) {
+		for (const flagname in flagset) {
+			const flag = flagset[flagname]
+			for (const gene in flag.data) {
+				if (gene.length > maxGeneNameLength) continue
+				if (!flag.data[gene]?.length) continue
+				const d = { name: gene, type: 'geneVariant', isleaf: true }
+				if (gene === str) matches.equals.push(d)
+				else if (gene.startsWith(str)) matches.startsWith.push(d)
+				else if (gene.includes(' ' + str)) matches.startsWord.push(d)
+				else if (gene.includes(str)) matches.includes.push(d)
+			}
+		}
+	}
+
 	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
-	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.treeFilter, q.usecase)
+	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.treeFilter, q.usecase, matches)
 	const terms = terms_.map(copy_term)
 	const id2ancestors = {}
 	terms.forEach(term => {
+		if (term.type == 'geneVariant') return
 		term.__ancestors = termdb.q.getAncestorIDs(term.id)
 		term.__ancestorNames = termdb.q.getAncestorNames(term.id)
 	})

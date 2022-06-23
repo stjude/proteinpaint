@@ -6,9 +6,7 @@ import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
 import initBinConfig from '../shared/termdb.initbinconfig'
 import { deepEqual } from '../rx'
-import { isUsableTerm } from '../shared/termdb.usecase'
-
-const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst', 'snplocus'])
+import { isUsableTerm, graphableTypes } from '../shared/termdb.usecase'
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
@@ -126,7 +124,12 @@ class TermdbVocab {
 			const term = opts[_key]
 			if (!term) continue
 			const key = _key == 'term' ? 'term1' : _key
-			params.push(key + '_id=' + encodeURIComponent(term.term.id))
+			if ('id' in term.term) {
+				params.push(key + '_id=' + encodeURIComponent(term.term.id))
+			} else if (term.term.type == 'geneVariant') {
+				params.push(key + '=' + encodeURIComponent(JSON.stringify(term.term)))
+			}
+
 			if (!term.q) throw 'plot.' + _key + '.q{} missing: ' + term.term.id
 			params.push(key + '_q=' + q_to_param(term.q))
 		}
@@ -277,7 +280,7 @@ class TermdbVocab {
 	}
 
 	// from termdb/search
-	async findTerm(str, cohortStr, usecase = null) {
+	async findTerm(str, cohortStr, usecase = null, type = '') {
 		const lst = [
 			'genome=' + this.vocab.genome,
 			'dslabel=' + this.vocab.dslabel,
@@ -289,6 +292,9 @@ class TermdbVocab {
 		}
 		if (this.state.treeFilter) {
 			lst.push('treeFilter=' + encodeURIComponent(JSON.stringify(this.state.treeFilter)))
+		}
+		if (type) {
+			lst.push('type=' + type)
 		}
 		const data = await dofetch3('termdb?' + lst.join('&'))
 		if (data.error) throw data.error
@@ -542,7 +548,8 @@ class TermdbVocab {
 			const lastTw = this.currAnnoData.lastTerms.find(lt => lt.$id === tw.$id)
 			return !lastTw || !deepEqual(lastTw, tw)
 		})
-		if (!termsToUpdate.length) return
+		/* NOTE: ok to continue processing with unchanged currAnnoData  */
+		//if (!termsToUpdate.length) return
 
 		const currSampleIds = Object.keys(this.currAnnoData.samples)
 		const promises = []

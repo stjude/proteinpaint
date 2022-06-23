@@ -23,9 +23,22 @@ class TdbApp {
 		if (!opts.holder) select('body').append('div')
 		// do this in the constructor to have an dom.errdiv
 		// available at any point during initialization
+		const submitDiv = opts.holder
+				.append('div')
+				.style('display', opts.tree.submit_lst ? '' : 'none')
+				.style('text-align', 'center')
+				.style('margin', '10px 5px')
+				
+		const submitBtn =	submitDiv.append('button')
+				.property('disabled', true)
+				.text(this.noSelectionPrompt)
+				.on('click', () => this.opts.tree.submit_lst(this.state.selectedTerms))
+
 		const topbar = opts.holder.append('div')
 		this.dom = {
 			holder: opts.holder,
+			submitDiv,
+			submitBtn,
 			topbar,
 			searchDiv: topbar.append('div').style('display', 'inline-block'),
 			filterDiv: topbar.append('div').style('display', 'none'),
@@ -132,6 +145,10 @@ class TdbApp {
 
 	async main() {
 		this.api.vocabApi.main()
+		const n = this.state.selectedTerms.length
+		this.dom.submitBtn
+			.property('disabled', !n)
+			.text(!n ? 'Search or click term(s)' : `Submit ${n} term${n > 1 ? 's' : ''}`)
 	}
 
 	printError(e) {

@@ -1,5 +1,5 @@
-import { getInitFxn, copyMerge } from '../rx'
-import { Menu } from '../dom/menu'
+import { getInitFxn, copyMerge } from '#rx'
+import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 
 /*
@@ -82,6 +82,7 @@ class TermSetting {
 			// do not change the this context of showTree, d3 sets it to the DOM element
 			showTree: this.showTree,
 			showMenu: this.showMenu.bind(this),
+			showGeneSearch: this.showGeneSearch,
 			hasError: () => this.hasError,
 			validateQ: d => {
 				if (!this.handler || !this.handler.validateQ) return
@@ -100,9 +101,9 @@ class TermSetting {
 		the override tw serves the "atypical" termsetting usage
 		as used in snplocus block pan/zoom update in regression.results.js
 		*/
-		const arg = { id: this.term.id, term: this.term, q: this.q }
+		const arg = this.term ? { id: this.term.id, term: this.term, q: this.q } : {}
 		if ('$id' in this) arg.$id = this.$id
-		this.opts.callback(overrideTw ? copyMerge({}, arg, overrideTw) : arg)
+		this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), overrideTw) : arg)
 	}
 
 	validateOpts(_opts) {
@@ -283,8 +284,9 @@ function setRenderers(self) {
 				.html(d => d.toUpperCase())
 				.on('click', d => {
 					if (d == 'delete') self.removeTerm()
-					else if (d == 'replace') self.showTree(event.target)
-					else throw 'unknown button'
+					else if (d == 'replace') {
+						self.showTree(event.target)
+					} else throw 'unknown button'
 				})
 
 			// render info button only if term has html details
@@ -361,7 +363,7 @@ function setRenderers(self) {
 		const pillstat = self.handler.getPillStatus() || {}
 		// { text, bgcolor }
 
-		self.dom.pill_termname.style('border-radius', pillstat.text ? '6px 0 0 6px' : '6px')
+		self.dom.pill_termname.style('border-radius', pillstat.text ? '6px 0 0 6px' : '6px').html(self.handler.getPillName)
 
 		const pill_settingSummary = one_term_div
 			.selectAll('.ts_summary_btn')
@@ -526,6 +528,62 @@ function setInteractivity(self) {
 				self.dom.tip.hide()
 				self.removeTerm()
 			})
+	}
+
+	self.showGeneSearch = clickedElem => {
+		self.dom.tip.clear()
+		if (clickedElem)
+			self.dom.tip.showunder(
+				clickedElem instanceof Element ? clickedElem : this instanceof Element ? this : self.dom.holder.node()
+			)
+		else self.dom.tip.show(event.clientX, event.clientY)
+
+		const selectedGenes = new Set()
+		const searchDiv = self.dom.tip.d.append('div').style('padding', '5px')
+		const label = searchDiv.append('label')
+		label.append('span').text('Search: ')
+		const input = label
+			.append('input')
+			.attr('type', 'text')
+			.on('input', async () => {
+				const str = input.property('value')
+				try {
+					const results = !str
+						? { lst: [] }
+						: await self.vocabApi.findTerm(str, self.activeCohort, self.usecase, 'gene')
+					resultsDiv.selectAll('*').remove()
+					resultsDiv
+						.selectAll('div')
+						.data(results.lst.filter(g => !selectedGenes.has(g)))
+						.enter()
+						.append('div')
+						.attr('class', 'ts_pill sja_filter_tag_btn sja_tree_click_term')
+						.style('display', 'block')
+						.style('margin', '2px 3px')
+						.style('width', 'fit-content')
+						.text(gene => gene.name)
+						.on('click', gene => {
+							self.dom.tip.hide()
+							self.runCallback({
+								term: {
+									name: gene.name,
+									type: 'geneVariant'
+								},
+								q: {
+									exclude: []
+								}
+							})
+						})
+				} catch (e) {
+					alert('Search error: ' + e)
+				}
+			})
+
+		const resultsDiv = self.dom.tip.d
+			.append('div')
+			.style('margin', '5px')
+			.style('padding-left', '5px')
+			.style('border-left', '2px solid #ccc')
 	}
 }
 

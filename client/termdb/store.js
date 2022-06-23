@@ -21,6 +21,7 @@ const defaultState = {
 		// term: {} or undefined
 	},
 	search: { isVisible: true },
+	selectedTerms: [],
 	termfilter: {
 		filter: {
 			type: 'tvslst',

@@ -19,8 +19,8 @@ class MassDict {
 					this.app.dispatch({
 						type: 'plot_create',
 						config: {
-							chartType: term.type == 'survival' ? 'survival' : 'barchart',
-							term: { id: term.id, term }
+							chartType: term.type == 'survival' || term.type == 'geneVariant' ? 'survival' : 'barchart',
+							term: 'id' in term ? { id: term.id, term } : { term }
 						}
 					})
 
@@ -37,13 +37,13 @@ class MassDict {
 		return {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter
+			termfilter: appState.termfilter,
+			selectdTerms: appState.selectedTerms
 		}
 	}
 
 	main() {
 		if (this.dom.header) this.dom.header.html('Dictionary')
-
 		this.tree.dispatch({
 			type: 'app_refresh',
 			state: this.state
