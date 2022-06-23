@@ -10,6 +10,7 @@ const { dtfusionrna, dtsv } = require('../shared/common')
 variant2samples_getresult()
 	get_samples
 		queryServerFileBySsmid
+		queryServerFileByRglst
 get_crosstabCombinations()
 
 
@@ -315,6 +316,7 @@ async function make_summary(samples, ds, q) {
 			const density_data = await get_densityplot(term, samples)
 			entries.push({
 				termid: term.id,
+				termname: term.name,
 				density_data
 			})
 		} else {

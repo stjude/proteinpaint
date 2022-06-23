@@ -36,10 +36,12 @@ function mayShowSummary(tk, block) {
 		.getSamples({ isSummary: true })
 		.then(async data => {
 			wait.html('')
+			console.log(data)
 			await showSummary4terms(data, wait, tk, block)
 		})
 		.catch(e => {
 			wait.text(`Error: ${e.message || e}`)
+			if (e.stack) console.log(e.stack)
 		})
 }
 
@@ -48,12 +50,20 @@ data is array, each ele: {termid, termname, numbycategory}
  */
 async function showSummary4terms(data, div, tk, block) {
 	const tabs = []
-	for (const { termid, termname, numbycategory } of data) {
+	for (const { termid, termname, numbycategory, density_data } of data) {
 		tabs.push({
-			label: `${termname} 
-				<span style='color:#999;font-size:.8em;float:right;margin-left: 5px;'>
-				n=${numbycategory.length}</span>`,
-			callback: div => showSummary4oneTerm(termid, div, numbycategory, tk, block)
+			label:
+				termname +
+				(numbycategory
+					? '<span style="color:#999;font-size:.8em;float:right;margin-left: 5px;">n=' +
+					  numbycategory.length +
+					  '</span>'
+					: ''),
+			callback: div => {
+				if (numbycategory) return showSummary4oneTerm(termid, div, numbycategory, tk, block)
+				if (density_data) return showDensity(termid, div, density_data, tk, block)
+				throw 'unknown summary data'
+			}
 		})
 	}
 	tab2box(div, tabs)
@@ -85,10 +95,10 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 			})
 			.on('click', () => listSamples(category_name))
 
+		const percent_div = grid_div.append('div')
 		if (total != undefined) {
 			// show percent bar
-			const percent_div = grid_div
-				.append('div')
+			percent_div
 				.on('mouseover', () => {
 					cat_div.style('color', 'blue').style('text-decoration', 'underline')
 				})
@@ -100,19 +110,25 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 			fillbar(percent_div, { f: count / total, v1: count, v2: total }, { fillbg: '#ECE5FF', fill: '#9F80FF' })
 		}
 
-		grid_div
-			.append('div')
-			.html(count + (total ? ' / ' + total : ''))
-			.style('text-align', 'right')
-			.style('padding', '2px 10px')
-			.style('font-size', '.8em')
-			.on('mouseover', () => {
-				cat_div.style('color', 'blue').style('text-decoration', 'underline')
-			})
-			.on('mouseout', () => {
-				cat_div.style('color', '#000').style('text-decoration', 'none')
-			})
-			.on('click', () => listSamples(category_name))
+		{
+			const d = grid_div
+				.append('div')
+				.style('margin-left', '10px')
+				.on('mouseover', () => {
+					cat_div.style('color', 'blue').style('text-decoration', 'underline')
+				})
+				.on('mouseout', () => {
+					cat_div.style('color', '#000').style('text-decoration', 'none')
+				})
+				.on('click', () => listSamples(category_name))
+			d.append('span').text(count)
+			if (total) {
+				d.append('span')
+					.text('/ ' + total)
+					.style('margin-left', '5px')
+					.style('font-size', '.8em')
+			}
+		}
 	}
 
 	async function listSamples(category) {
@@ -125,6 +141,8 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 		await displaySampleTable(samples, { div, tk, block, useRenderTable: true })
 	}
 }
+
+function showDensity(termid, div, density_data, tk, block) {}
 
 function menu_samples(data, tk, block) {
 	// subject to change
