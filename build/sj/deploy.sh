@@ -102,6 +102,7 @@ elif [[ "$ENV" == "public-prod" || "$ENV" == "pp-prp" || "$ENV" == "pp-prp1" ]];
 	HOSTNAME=proteinpaint.stjude.org
 	SUBDOMAIN=proteinpaint
 	WPSERVERDEVTOOL='source-map'
+	WPCLIENTDEVTOOL=''
 
 elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" || "$ENV" == "prp1" ]]; then
 	# 
@@ -117,6 +118,7 @@ elif [[ "$ENV" == "jump-prod" || "$ENV" == "vpn-prod" || "$ENV" == "prp1" ]]; th
 	HOSTNAME=proteinpaint.stjude.org
 	SUBDOMAIN=proteinpaint
 	WPSERVERDEVTOOL='source-map'
+	WPCLIENTDEVTOOL=''
 
 elif [[ "$ENV" == "pp-ict" ]]; then
 	DEPLOYER=genomeuser
@@ -184,10 +186,10 @@ else
 
 	# create webpack bundle
 	echo "Packing frontend bundles ..."
-	npx webpack --config=client/webpack.config.js --env.url=https://$HOSTNAME --env.devtool=$WPCLIENTDEVTOOL
+	npx webpack --config=client/webpack.config.js --env url=https://$HOSTNAME --env devtool=$WPCLIENTDEVTOOL
 
 	echo "Packing backend bundle ..."
-	npx webpack --config=server/webpack.config.js --env.NODE_ENV=$WPSERVERMODE --env.devtool=$WPSERVERDEVTOOL
+	npx webpack --config=server/webpack.config.js --env NODE_ENV=$WPSERVERMODE --env devtool=$WPSERVERDEVTOOL
 
 	if [[ "$SUBDOMAIN" == "ppr" ]]; then
 		# may need to support cohort.db.refresh,

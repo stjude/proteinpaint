@@ -1,11 +1,9 @@
 import { event as d3event } from 'd3-selection'
 import { init_sampletable } from './sampletable'
 import { itemtable } from './itemtable'
-import { skewer_sety } from './skewer.render'
-import { trianglePath } from './numericmode'
+import { skewer_sety, mayHighlightDiskBySsmid } from './skewer.render'
 
 const minoccur4sunburst = 10 // minimum occurrence for showing skewer, maybe ds specific
-const highlight_color = 'red'
 
 /*
 ************** EXPORT
@@ -13,7 +11,7 @@ click_variant()
 
 ************** tentative logic
 custom method:
-	if tk.click_snvindel() is set, call this; will also call highlight_one_disk()
+	if tk.click_snvindel() is set, call this; will also create hlssmid and call mayHighlightDiskBySsmid 
 built-in methods
 	if d.occurrence is set, show sunburst
 	else, call variant_details()
@@ -38,11 +36,13 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 	try {
 		if (tk.click_snvindel) {
 			// custom handler overrides default behavior
-			highlight_one_disk(d.mlst[0], eventTarget, tk)
+			tk.skewer.hlssmid = new Set(d.mlst.map(i => i.ssm_id))
+			mayHighlightDiskBySsmid(tk)
 			tk.click_snvindel(d.mlst[0])
 			return
 		}
-		if ('occurrence' in d && d.occurrence >= minoccur4sunburst && tk.mds.variant2samples) {
+		if ('occurrence' in d && d.occurrence >= minoccur4sunburst && tk.mds.variant2samples && tk.mds.variant2samples.sunburst_ids) {
+			// show sunburst when meeting conditions: mutation have occurrence, have v2s.sunburst_ids[]
 			await click2sunburst(d, tk, block, tippos)
 			return
 		}
@@ -56,7 +56,10 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 
 async function click2sunburst(d, tk, block, tippos) {
 	tk.glider.style('cursor', 'wait')
-	const data = await tk.mds.variant2samples.get({ mlst: d.mlst, querytype: tk.mds.variant2samples.type_sunburst })
+	const data = await tk.mds.variant2samples.get({
+		mlst: d.mlst,
+		querytype: tk.mds.variant2samples.type_sunburst
+	})
 	tk.glider.style('cursor', 'auto')
 	const arg = {
 		nodes: data,
@@ -101,6 +104,7 @@ async function click2sunburst(d, tk, block, tippos) {
 				throw 'unknown variant2samples.variantkey'
 			})
 			arg.mlst[0].occurrence = d2.value
+
 			/* do not call variant_details() as no need to show info on variants
 			only need to show sample display
 			*/
@@ -126,11 +130,9 @@ async function click2sunburst(d, tk, block, tippos) {
 }
 
 /*
-if items of mlst are of same type, show table view of the variant itself, plus the sample summary table
-if of multiple data types, do not show variant table view; only show the sample summary table
-should work with skewer and non-skewer data types
 arg{}
 .mlst[]
+	can be mixture of different dt
 .tk
 .block
 .tippos
@@ -139,39 +141,5 @@ arg{}
 async function variant_details(arg) {
 	arg.tk.itemtip.clear().show(arg.tippos.left - 10, arg.tippos.top - 10)
 	arg.div = arg.tk.itemtip.d
-	// count how many dt
-	const dtset = new Set()
-	for (const m of arg.mlst) dtset.add(m.dt)
-	if (dtset.size > 1) {
-		// more than 1 data types, won't print detail table for each variant
-		if (arg.tk.mds.variant2samples) {
-			// show sample summary
-			await init_sampletable(arg)
-		} else {
-			throw 'no variant2samples, do not know what to show'
-		}
-		return
-	}
-	// mlst are of one data type
 	await itemtable(arg)
-}
-
-function highlight_one_disk(m, dot, tk) {
-	// remove highlight on all disc kick covers
-	tk.skewer.discKickSelection
-		.attr('r', m => m.radius - 0.5) // reset radius
-		.attr('stroke', m => tk.color4disc(m))
-		.attr('stroke-opacity', 0)
-	tk.skewer.discKickSelection_triangle
-		.attr('d', m => trianglePath(m.radius))
-		.attr('stroke', m => tk.color4disc(m))
-		.attr('stroke-opacity', 0)
-	// dot is the kick <circle>; apply highlight styling on it
-	if (m.shapeTriangle) {
-		dot.setAttribute('d', trianglePath(m.radius * 1.4))
-	} else {
-		dot.setAttribute('r', m.radius * 1.4)
-	}
-	dot.setAttribute('stroke', highlight_color)
-	dot.setAttribute('stroke-opacity', 1)
 }

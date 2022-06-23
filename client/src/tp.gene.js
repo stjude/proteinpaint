@@ -4,7 +4,7 @@ import * as client from './client'
 import * as common from '../shared/common'
 import blockinit from './block.init'
 import tp_getgeneexpression from './tp.gene.geneexpression'
-import { Menu } from './dom/menu'
+import { Menu } from '../dom/menu'
 
 const tip = new Menu()
 

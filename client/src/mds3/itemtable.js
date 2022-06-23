@@ -1,86 +1,226 @@
 import { mclass, dtsnvindel, dtfusionrna, dtsv } from '../../shared/common'
 import { init_sampletable } from './sampletable'
-import { get_list_cells } from '../dom/gridutils'
+import { get_list_cells } from '../../dom/gridutils'
 import { event as d3event } from 'd3-selection'
+import { appear } from '../../dom/animation'
+import { dofetch3 } from '../../common/dofetch'
 
 /*
 ********************** EXPORTED
 itemtable
+
+for a list of variants, print details of both variant and samples
+
+arg{}
+.div
+.mlst[]
+	can be of different dt
+.tk
+.block
+
 ********************** INTERNAL
-table_snvindel
-table_snvindel_onevariant
-table_snvindel_multivariant
+itemtable_oneItem
+	table_snvindel
+	table_svfusion
+itemtable_multiItems
 add_csqButton
 print_snv
 
-table_fusionsv
 
 .occurrence must be set for each variant
 all mlst of one data type
 should work for all types of data
 
 TODO
-similar to vcf, variant annotation should be kept in .info{}, e.g. consequence
-describe these attributes in tk.mds.variantInfo
-print each info as table row/column
+print vcf info about variant attributes
 
 */
 
 const cutoff_tableview = 10
 
-/*
-for a list of variants of *same type*, print details of both variant and samples
-arg{}
-.div
-.mlst
-.tk
-.block
-.disable_variant2samples:true
-	set to true to not to issue variant2samples query for variants
-*/
 export async function itemtable(arg) {
-	if (arg.mlst[0].dt == dtsnvindel) {
-		await table_snvindel(arg)
-		return
+	for(const m of arg.mlst) {
+		if (m.dt != dtsnvindel && m.dt!=dtfusionrna && m.dt!=dtsv) throw 'mlst[] contains unknown dt'
 	}
-	if (arg.mlst[0].dt == dtfusionrna || arg.mlst[0].dt == dtsv) {
-		await table_fusionsv(arg)
-		return
-	}
-	throw 'itemtable unknown dt'
-}
 
-/*
-rendering may be altered by tk.mds config
-may use separate scripts to code different table styles
-*/
-async function table_snvindel(arg) {
 	const grid = arg.div
 		.append('div')
 		.style('display', 'inline-grid')
 		.style('overflow-y', 'scroll')
-		.style('margin-bottom', '10px')
 
 	if (arg.mlst.length == 1) {
-		// single variant, use two-column table to show key:value pairs
-		grid.style('grid-template-columns', 'auto auto').style('max-height', '40vw')
-		arg.m = arg.mlst[0]
-		table_snvindel_onevariant(arg, grid)
-
-		arg.variantDiv = grid // allow to append sample info to the same grid along with variant info
+		await itemtable_oneItem(arg, grid)
 	} else {
-		// make a multi-column table for all variants, one row for each variant
-		// set of columns are based on available attributes in mlst
-		grid.style('max-height', '30vw').style('gap', '10px')
-		table_snvindel_multivariant(arg, grid)
+		await itemtable_multiItems(arg, grid)
 	}
 
-	if (!arg.disable_variant2samples && arg.tk.mds.variant2samples) {
+	if (!isElementInViewport(arg.div)) {
+		// If div renders outside of viewport, shift left
+		const leftpos = determineLeftCoordinate(arg.div)
+		appear(arg.div)
+		arg.div.style('left', leftpos + 'vw').style('max-width', '90vw')
+	}
+}
+
+function determineLeftCoordinate(div) {
+	const coords = div.node().getBoundingClientRect()
+	// Reset left position to 100% - (arg.div.width % + 3%)
+	let leftpos
+	if (coords.width / (document.documentElement.clientWidth || window.innerWidth) > 0.4) {
+		leftpos = 3
+	} else {
+		leftpos = 100 - ((coords.width / (document.documentElement.clientWidth || window.innerWidth)) * 100 + 3)
+	}
+	return leftpos
+}
+
+/*
+display full details (and samples) for one item
+*/
+async function itemtable_oneItem(arg, grid) {
+	grid
+		.style('grid-template-columns', 'auto auto')
+		.style('max-height', '40vw')
+		// in case creating a new table for multiple samples of this variant,
+		// add space between grid and the new table
+		.style('margin-bottom', '10px')
+
+	if(arg.mlst[0].dt==dtsnvindel) {
+		table_snvindel(arg, grid)
+	} else {
+		await table_svfusion(arg, grid)
+	}
+
+	// if the variant has only one sample,
+	// allow to append new rows to grid to show sample key:value
+	arg.singleSampleDiv = grid
+	// if there are multiple samples, this <div> won't be used
+	// a new table will be created under arg.div to show sample table
+
+	if (arg.tk.mds.variant2samples && arg.mlst[0].occurrence) {
 		await init_sampletable(arg)
 	}
 }
 
-function table_snvindel_onevariant({ m, tk, block }, grid) {
+/*
+multiple variants
+show an option for each, click one to run above single-variant code
+grid has optional columns, only the first column is clickable menu option, rest of columns are info only
+1. basic info about the variant, as menu option
+2. occurrence if present, as text 
+3. numeric value if used, as text
+*/
+async function itemtable_multiItems(arg, grid) {
+
+	// limit height
+	grid.style('max-height', '40vw')
+	// possible columns
+	const hasOccurrence = arg.mlst.some(i=>i.occurrence)
+	// numeric value?
+
+	if(hasOccurrence) {
+		// has more than 1 column
+		grid.style('grid-template-columns', 'auto auto')
+	}
+
+	///////// print all rows
+
+	// header row
+	// header - note
+	grid.append('div')
+		.text('Click a variant to see details')
+		.style('font-size','.8em')
+		.style('opacity',.3)
+	if(hasOccurrence) {
+		grid.append('div')
+			.text('Occurrence')
+			.style('font-size','.8em')
+			.style('opacity',.3)
+	}
+
+	// upon clicking an option for a variant
+	// hide grid and display go-back button allowing to go back to grid (all options)
+	const goBackButton = arg.div.append('div')
+		.style('margin-bottom','10px')
+		.style('display','none')
+	goBackButton.append('span')
+		.text('<< Back to list')
+		.attr('class','sja_clbtext')
+		.on('click',()=>{
+			grid.style('display','inline-grid')
+			goBackButton.style('display','none')
+			singleVariantDiv.style('display','none')
+		})
+
+	const singleVariantDiv = arg.div.append('div')
+		.style('display','none')
+
+	for(const m of arg.mlst) {
+
+		// create a menu option, clicking to show this variant by itself
+		const div = grid.append('div')
+			.attr('class','sja_menuoption')
+			.on('click', ()=>{
+				grid.style('display','none')
+				goBackButton.style('display','block')
+				singleVariantDiv.style('display','block')
+					.selectAll('*').remove()
+				const a2 = Object.assign({}, arg)
+				a2.mlst = [m]
+				a2.div = singleVariantDiv
+				itemtable(a2)
+			})
+
+		// print variant name
+		if(m.dt==dtsnvindel) {
+			div.append('span')
+				.text(m.mname)
+			div.append('span')
+				.text(mclass[m.class].label)
+				.style('font-size','.8em')
+				.style('margin-left','10px')
+			div.append('span')
+				.text(`${m.chr}:${m.pos+1}${m.ref ? ', '+m.ref+'>'+m.alt : ''}`)
+				.style('font-size','.8em')
+				.style('margin-left','10px')
+		} else if(m.dt==dtsv ||m.dt==dtfusionrna) {
+			div.append('span')
+				.text(mclass[m.class].label)
+				.style('font-size','.7em')
+				.style('margin-right','8px')
+
+			printSvPair(m.pairlst[0], div)
+
+		} else {
+			div.text('error: unknown m.dt')
+		}
+
+		// additional columns of this row
+
+		if(hasOccurrence) {
+			grid.append('div').text(m.occurrence || '')
+				.style('padding','5px 10px') // same as sja_menuoption
+		}
+	}
+
+	if (!arg.doNotListSample4multim && arg.tk.mds.variant2samples) {
+		const totalOccurrence = arg.mlst.reduce((i,j)=>i+(j.occurrence || 0),0)
+		if(totalOccurrence) {
+			grid.append('div')
+				.style('margin-top','10px')
+				.append('span')
+				.attr('class','sja_clbtext')
+				.text('List all samples')
+				.on('click',()=>{
+					grid.remove()
+					init_sampletable(arg)
+				})
+		}
+	}
+}
+
+function table_snvindel({ mlst, tk, block }, grid) {
+	const m = mlst[0]
 	{
 		const [td1, td2] = get_list_cells(grid)
 		td1.text(block.mclassOverride ? block.mclassOverride.className : 'Consequence')
@@ -98,11 +238,12 @@ function table_snvindel_onevariant({ m, tk, block }, grid) {
 		td1.text('Occurrence')
 		td2.text(m.occurrence)
 	}
-	if (tk.skewer.mode == 'numeric') {
-		const nm = tk.numericmode
+	const currentMode = tk.skewer.viewModes.find(i => i.inuse)
+	if (currentMode.type == 'numeric' && currentMode.byAttribute != 'occurrence') {
+		// show a numeric value that is not occurrence
 		const [td1, td2] = get_list_cells(grid)
-		td1.text(nm.valueName || 'Value')
-		td2.text(m.__value_use)
+		td1.text(currentMode.label)
+		td2.text(m.__value_missing ? 'NA' : m.__value_use)
 	}
 }
 
@@ -127,112 +268,7 @@ function print_snv(holder, m, tk) {
 	printto.html(`${m.chr}:${m.pos + 1} ${m.ref && m.alt ? m.ref + '>' + m.alt : ''}`)
 }
 
-/* multiple variants, each with occurrence
-one row for each variant
-click a button from a row to show the sample summary/detail table for that variant
-show a summary table across samples of all variants
-*/
-function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2samples }, grid) {
-	/* flags to indicate if to show these columns in the grid
-	column 1: mutation
-	column 2: position
-	... optional columns
-	*/
 
-	const showOccurrence = mlst.find(i => i.occurrence != undefined),
-		showNumericmodeValue = tk.skewer.mode == 'numeric'
-
-	grid.style('grid-template-columns', `repeat(${2 + (showOccurrence ? 1 : 0) + (showNumericmodeValue ? 1 : 0)}, auto)`)
-
-	// header
-	grid
-		.append('div')
-		.text(block.mclassOverride ? block.mclassOverride.className : 'Consequence')
-		.style('opacity', 0.3)
-	grid
-		.append('div')
-		.text(mlst.find(i => i.ref && i.alt) ? 'Mutation' : 'Position')
-		.style('opacity', 0.3)
-	if (showOccurrence) {
-		grid
-			.append('div')
-			.style('opacity', 0.3)
-			.text('Occurrence')
-	}
-	if (showNumericmodeValue) {
-		grid
-			.append('div')
-			.style('opacity', 0.3)
-			.text(tk.numericmode.valueName || 'Value')
-	}
-
-	// one row for each variant
-
-	// temp array to collect subset of mlst[] for showing samples
-	let mlst_render = []
-
-	for (const m of mlst) {
-		// column 1
-		print_mname(grid.append('div'), m)
-		// column 2
-		print_snv(grid.append('div'), m, tk)
-
-		if (showOccurrence) {
-			const cell = grid.append('div')
-
-			if (!disable_variant2samples && tk.mds.variant2samples) {
-				cell
-					.append('input')
-					.property('type', 'checkbox')
-					.on('change', async () => {
-						if (d3event.target.checked) mlst_render.push(m)
-						else {
-							mlst_render = mlst_render.filter(mt => mt.ssm_id != m.ssm_id)
-						}
-						const multisample_div = div.select('.sj_sampletable_holder')
-						multisample_div.selectAll('*').remove()
-						await init_sampletable({
-							mlst: mlst_render.length ? mlst_render : mlst,
-							tk,
-							block,
-							div: multisample_div
-						})
-					})
-
-				cell
-					.append('div')
-					.style('display', 'inline-block')
-					.style('text-align', 'right')
-					.style('margin-left', '5px')
-					.attr('class', 'sja_clbtext')
-					.text(m.occurrence)
-			} else {
-				cell.text(m.occurrence)
-			}
-		}
-
-		if (showNumericmodeValue) {
-			grid.append('div').text(m.__value_use)
-		}
-	}
-}
-
-async function table_fusionsv(arg) {
-	/*
-	table view, with svgraph for first ml
-	svgraph(mlst[0])
-
-	if(mlst.length==1) {
-		// 2-column table view
-	} else {
-		// one row per sv, click each row to show its svgraph
-	}
-	*/
-	if (arg.tk.mds.variant2samples) {
-		// show sample summary
-		await init_sampletable(arg)
-	}
-}
 
 // function is not used
 function add_csqButton(m, tk, td, table) {
@@ -283,5 +319,90 @@ function add_csqButton(m, tk, td, table) {
 	} else {
 		// no showing additional csq
 		print_mname(td, m)
+	}
+}
+
+function isElementInViewport(el) {
+	const rect = el.node().getBoundingClientRect()
+	return (
+		// Fix for div appearing still appearing within viewport but without a border,
+		// causing content to render bunched.
+		rect.top >= 5 &&
+		rect.left >= 5 &&
+		rect.bottom < (document.documentElement.clientHeight || window.innerHeight) - 5 &&
+		rect.right < (document.documentElement.clientWidth || window.innerWidth) - 5
+	)
+}
+
+async function table_svfusion(arg,grid) {
+	// display one svfusion event
+
+	// svgraph in 1st row
+	grid.append('div')
+	await makeSvgraph( arg.mlst[0], grid.append('div').style('margin-bottom','10px'), arg.block)
+
+	// rows
+	{
+		const [c1, c2] = get_list_cells(grid)
+		c1.text('Data type')
+		c2.text(mclass[arg.mlst[0].class].label)
+	}
+	{
+		// todo: support chimeric read fraction on each break end
+		const [c1, c2] = get_list_cells(grid)
+		c1.text('Break points')
+		for(const pair of arg.mlst[0].pairlst) {
+			printSvPair(pair, c2.append('div'))
+		}
+	}
+}
+
+function printSvPair(pair, div) {
+	if(pair.a.name) div.append('span').text(pair.a.name).style('font-weight','bold').style('margin-right','5px')
+	div.append('span').text(`${pair.a.chr}:${pair.a.pos} ${pair.a.strand=='+'?'forward':'reverse'} > ${pair.b.chr}:${pair.b.pos} ${pair.b.strand=='+'?'forward':'reverse'}`)
+	if(pair.b.name) div.append('span').text(pair.b.name).style('font-weight','bold').style('margin-left','5px')
+}
+
+async function makeSvgraph(m, div, block) {
+	const wait = div.append('div').text('Loading...')
+	try {
+		if(!m.pairlst) throw '.pairlst[] missing'
+		const svpair = {
+			a: {
+				chr: m.pairlst[0].a.chr,
+				position: m.pairlst[0].a.pos,
+				strand: m.pairlst[0].a.strand,
+			},
+			b: {
+				chr: m.pairlst[0].b.chr,
+				position: m.pairlst[0].b.pos,
+				strand: m.pairlst[0].b.strand,
+			}
+		}
+
+
+		await getGm(svpair.a, block)
+		await getGm(svpair.b, block)
+
+		wait.remove()
+
+		const _ = await import('../svgraph')
+		_.default( {
+			pairlst: [svpair],
+			genome: block.genome,
+			holder: div
+		})
+	}catch(e) {
+		wait.text( e.message ||e)
+	}
+}
+async function getGm(p, block) {
+	// p={chr, position}
+	const d = await dofetch3(`isoformbycoord?genome=${block.genome.name}&chr=${p.chr}&pos=${p.position}`)
+	if(d.error) throw d.error
+	const u = d.lst.find(i => i.isdefault) || d.lst[0]
+	if (u) {
+		p.name = u.name
+		p.gm = { isoform: u.isoform }
 	}
 }

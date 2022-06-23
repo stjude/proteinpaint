@@ -1,4 +1,4 @@
-import { sayerror } from '../dom/error'
+import { sayerror } from '../../dom/error'
 /*
 ------ EXPORTED ------ 
 parseDictionary()

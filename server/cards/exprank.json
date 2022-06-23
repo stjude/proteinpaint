@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-            "message": "<p style='line-height: 1.5em;'>In this example, <em>three</em> expression rank tracks are shown: rank, FPKM, and TPM. The first track displays the expression rank on a scale of 0 - 100%. The second FPKM track and third TPM track display values on a scale from zero to the highest rounded value, 0 - 9,775 and 0 - 3.9, respectively. Hover over the grey bars to see the annotation for each gene.<br><br>To change between expression rank and FPKM/TPM: <ul><li>Click on <a style='color:gray; text-decoration: none;'>CONFIG</a> on the right-hand side of the track</li><li>Change the radio button to either 'FPKM'/'TPM' or 'Rank of a group of samples.'</li></ul></p>",
+            "message": "<p style='line-height: 1.5em;'>In this example, <em>three</em> expression rank tracks are shown: rank, FPKM, and TPM. The first track displays the expression rank on a scale of 0 - 100%. The second FPKM track and third TPM track display values on a scale from zero to the highest rounded value, 0 - 9,775 and 0 - 3.9, respectively. Hover over the grey bars to see the annotation for each gene.<br><br>To change between expression rank and FPKM/TPM: <ul><li>Click on <span style='color:gray; text-decoration: none;'>CONFIG</span> on the right-hand side of the track</li><li>Change the radio button to either 'FPKM'/'TPM' or 'Rank of a group of samples.'</li></ul></p>",
             "datapreview": [
                 {
                     "file": "proteinpaint_demo/hg38/exprank/TCGA.fpkm.gz",

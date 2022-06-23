@@ -34,8 +34,9 @@ when launching:
 */
 
 const tabixnoterror = s => {
-	return s.startsWith('[M::test_and_fetch]')
+	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
 }
+exports.tabixnoterror = tabixnoterror
 
 const express = require('express'),
 	util = require('util'),
@@ -83,7 +84,7 @@ const express = require('express'),
 	junction_request = require('./junction'),
 	bedj_request_closure = require('./bedj'),
 	blat_request_closure = require('./blat').request_closure,
-	mds3_request_closure = require('./mds3.load'),
+	mds3_request_closure = require('./mds3.load').mds3_request_closure,
 	mds2_init = require('./mds2.init'),
 	mds3_init = require('./mds3.init'),
 	mds2_load = require('./mds2.load'),
@@ -232,7 +233,7 @@ app.get(basepath + '/gdcbam', gdc_bam_request)
 app.get(basepath + '/gdc_ssms', handle_gdc_ssms(genomes))
 app.get(basepath + '/tkaicheck', aicheck_request_closure(genomes))
 app.get(basepath + '/blat', blat_request_closure(genomes))
-app.get(basepath + '/mds3', mds3_request_closure(genomes))
+app.all(basepath + '/mds3', mds3_request_closure(genomes))
 app.get(basepath + '/tkbampile', bampile_request)
 app.post(basepath + '/dsdata', handle_dsdata) // old official ds, replace by mds
 
@@ -275,7 +276,7 @@ app.all(basepath + '/termdb-barsql', termdbbarsql.handle_request_closure(genomes
 app.post(basepath + '/singlecell', singlecell.handle_singlecell_closure(genomes))
 app.post(basepath + '/massSession', massSession.save)
 app.get(basepath + '/massSession', massSession.get)
-app.post(basepath + '/isoformbycoord', handle_isoformbycoord)
+app.get(basepath + '/isoformbycoord', handle_isoformbycoord)
 app.post(basepath + '/ase', handle_ase)
 app.post(basepath + '/bamnochr', handle_bamnochr)
 app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
@@ -499,7 +500,12 @@ async function handle_cards(req, res) {
 		} else {
 			const cardsjson = await utils.read_file(serverconfig.cardsjson)
 			const json = JSON.parse(cardsjson)
-			res.send({ examples: json.examples, usecases: json.usecases, allow_mdsform: exports.features.mdsjsonform })
+			res.send({
+				examples: json.examples,
+				usecases: json.usecases,
+				datasets: json.datasets,
+				allow_mdsform: exports.features.mdsjsonform
+			})
 		}
 	} catch (e) {
 		res.send({ error: e.message || e })
@@ -6272,16 +6278,28 @@ async function handle_isoformbycoord(req, res) {
 		const genome = genomes[req.query.genome]
 		if (!genome) throw 'invalid genome'
 		if (!req.query.chr) throw 'chr missing'
-		if (!Number.isInteger(req.query.pos)) throw 'pos must be positive integer'
+		const pos = Number(req.query.pos)
+		if (!Number.isInteger(pos)) throw 'pos must be positive integer'
 
-		const isoforms = await isoformbycoord_tabix(genome, req.query.chr, req.query.pos)
-		for (const i of isoforms) {
-			const tmp = genome.genedb.getjsonbyisoform.get(i.isoform)
-			if (tmp) {
-				i.name = JSON.parse(tmp.genemodel).name
-				i.isdefault = tmp.isdefault
+		const genetk = genome.tracks.find(i => i.__isgene)
+		if (!genetk) reject('no gene track')
+		const isoforms = []
+		await utils.get_lines_bigfile({
+			args: [path.join(serverconfig.tpmasterdir, genetk.file), req.query.chr + ':' + pos + '-' + pos],
+			callback: line=>{
+				const str = line.split('\t')[3]
+				if (!str) return
+				const j = JSON.parse(str)
+				if (!j.isoform) return
+				const j2 = {isoform: j.isoform}
+				const tmp = genome.genedb.getjsonbyisoform.get(j.isoform)
+				if (tmp) {
+					j2.name = JSON.parse(tmp.genemodel).name
+					j2.isdefault = tmp.isdefault
+				}
+				isoforms.push(j2)
 			}
-		}
+		})
 		res.send({ lst: isoforms })
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -6291,8 +6309,6 @@ async function handle_isoformbycoord(req, res) {
 
 function isoformbycoord_tabix(genome, chr, pos) {
 	return new Promise((resolve, reject) => {
-		const genetk = genome.tracks.find(i => i.__isgene)
-		if (!genetk) reject('no gene track')
 		const ps = spawn('tabix', [path.join(serverconfig.tpmasterdir, genetk.file), chr + ':' + pos + '-' + pos])
 		const out = [],
 			out2 = []
@@ -7119,7 +7135,6 @@ function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 
 async function handle_vcfheader(req, res) {
 	// get header for a single custom vcf track
-	log(req)
 	try {
 		if (!req.query.genome) throw 'genome missing'
 		const g = genomes[req.query.genome]

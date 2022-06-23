@@ -199,7 +199,7 @@ export function prepStore(self, opts) {
 	self.api = getStoreApi(self)
 	self.copyMerge = copyMerge
 	self.deepFreeze = deepFreeze
-	// see rx.core comments on when not to reuse rx.fromJson, rx.toJson
+	// see comments on when not to reuse rx.fromJson, rx.toJson
 	if (!self.fromJson) self.fromJson = fromJson // used in store.api.copyState()
 	if (!self.toJson) self.toJson = toJson // used in store.api.copyState()
 	self.state = copyMerge(self.toJson(self.defaultState), opts.state)
@@ -561,7 +561,7 @@ export class Bus {
 	approach:
 
 	- makes it clearer which instance method corresponds
-	  to what rx.core method
+	  to what rx method
 	
 	- it is not susceptible to any class prototype edits
 	  that may affect all instances that inherits from 
@@ -644,7 +644,7 @@ export function getComponents(components, dotSepNames) {
 	- a base value that is an object will be extended by a matching arg key-value
 	- nested base object values will be extended recursively, instead of being swapped/replaced
 	  at the root level
-	- see core.spec test for copyMerge details
+	- see index.spec test for copyMerge details
 */
 export function copyMerge(base, ...args) {
 	const replaceKeyVals = []

@@ -3,7 +3,7 @@ import * as client from './client'
 import { scaleLog, scaleLinear } from 'd3-scale'
 import { axisLeft } from 'd3-axis'
 import { format as d3format } from 'd3-format'
-import { Menu } from './dom/menu'
+import { Menu } from '../dom/menu'
 
 const tip = new Menu()
 

@@ -62,6 +62,32 @@
             "testSpec": {
                 "expected": {"circle": 15, "line": 15}
             }
+        },
+        {
+            "label": "Highlight Genomic Regions",
+            "message": "<div>Highlight multiple regions in the genome browser by defining regions in the <span style='font-family: Courier; opacity: 0.6;'>hlregions</span> array.</div>",
+            "urlparam": "?block=on&genome=hg19&bigwigfile=BigWig_Demo,proteinpaint_demo/hg19/bigwig/file.bw&hlregion=chr17:7575049-7576692,chr17:7578987-7580630",
+            "runargs": {
+                "parseurl": true,
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "hlregions": ["chr17:7575049-7576692","chr17:7578987-7580630"],
+                "nativetracks":"refgene",
+                "tracks": [
+                    {
+                        "type": "bigwig",
+                        "file": "proteinpaint_demo/hg19/bigwig/file.bw",
+                        "name": "BigWig Demo",
+                        "height": 100
+                    }
+                ]
+            },
+            "testSpec": {
+                "expected": {"circle": 15, "line": 15}
+            }
         }
-    ]
+    ],
+    "update_message": "Please see the new example on how to highlight regions in the genome brower."
 }

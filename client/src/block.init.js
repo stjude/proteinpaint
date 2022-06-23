@@ -3,8 +3,8 @@ import * as client from './client'
 import { nt2aa, codon_stop, bplen } from '../shared/common'
 import { string2snp } from './coord'
 import { select } from 'd3-selection'
-import { dofetch3 } from './common/dofetch'
-import { first_genetrack_tolist } from './common/1stGenetk'
+import { dofetch3 } from '../common/dofetch'
+import { first_genetrack_tolist } from '../common/1stGenetk'
 
 /*
 for processing requests from entry point (app.js ui, embedding)

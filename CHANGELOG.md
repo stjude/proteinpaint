@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.1.4
+
+- make the React wrapper work in the GDC frontend framework
+
+## 2.1.3
+
+- include utils/install.pp.js in the package 
+
+## 2.1.2
+
+- fix the Docker build and npm packing for pp-dist
+
 ## 2.1.1
 
 - bug-fix for trailing comma in gencode bigbed

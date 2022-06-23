@@ -16,8 +16,8 @@ const bcftools = serverconfig.bcftools
 const bigBedToBed = serverconfig.bigBedToBed
 const bigBedNamedItems = serverconfig.bigBedNamedItems
 
-/* p4 ready
-********************** EXPORTED
+/*********************** EXPORTED
+cache_index
 file_is_readable
 init_one_vcf
 validate_tabixfile
@@ -309,7 +309,9 @@ exports.get_lines_bigfile = function({ args, dir, callback, isbcf, isbam }) {
 		ps.stderr.on('data', d => em.push(d))
 		ps.on('close', () => {
 			const e = em.join('').trim()
-			if (e) reject(e)
+			if (e && !tabixnoterror(e)) {
+				reject(e)
+			}
 			resolve()
 		})
 	})
@@ -521,4 +523,8 @@ exports.run_rust = function(binfile, input_data) {
 			resolve(stdout.join('').toString())
 		})
 	})
+}
+
+function tabixnoterror(s) {
+	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
 }

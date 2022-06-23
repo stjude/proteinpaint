@@ -1,6 +1,6 @@
-import * as uiutils from './dom/uiUtils'
-import { init_tabs } from './dom/toggleButtons'
-import { appear } from './dom/animation'
+import * as uiutils from '../dom/uiUtils'
+import { init_tabs } from '../dom/toggleButtons'
+import { appear } from '../dom/animation'
 import { first_genetrack_tolist } from './client'
 
 /*

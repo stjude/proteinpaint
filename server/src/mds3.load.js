@@ -1,7 +1,7 @@
 const app = require('./app')
 const path = require('path')
 const utils = require('./utils')
-const samplefilter = require('./mds3.samplefilter')
+const snvindelByRangeGetter_vcf = require('./mds3.init').snvindelByRangeGetter_vcf
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -28,7 +28,7 @@ method good for somatic variants, in skewer and gp queries:
 .genecnvNosample[]
  */
 
-module.exports = genomes => {
+export function mds3_request_closure(genomes) {
 	return async (req, res) => {
 		try {
 			if (!req.query.genome) throw '.genome missing'
@@ -45,10 +45,7 @@ module.exports = genomes => {
 
 			may_validate_filter0(q, ds)
 
-			const result = init_result(q, ds)
-
-			await load_driver(q, ds, result)
-			// data loaded into result{}
+			const result = await load_driver(q, ds)
 
 			res.send(result)
 		} catch (e) {
@@ -63,19 +60,11 @@ function summarize_mclass(mlst) {
 	// ??? if to include genecnv data here?
 	const cc = new Map() // k: mclass, v: {}
 	for (const m of mlst) {
-		cc.set(m.class, 1 + (cc.get(m.class) || 0))
+		// snvindel has m.class=str, svfusion has only dt=int
+		const key = m.class || m.dt
+		cc.set(key, 1 + (cc.get(key) || 0))
 	}
 	return [...cc].sort((i, j) => j[1] - i[1])
-}
-
-async function may_sampleSummary(q, ds, result) {
-	if (!q.samplesummary) return
-	if (!ds.sampleSummaries) throw 'sampleSummaries missing from ds'
-	const datalst = [result.skewer]
-	if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
-	const labels = ds.sampleSummaries.makeholder(q)
-	ds.sampleSummaries.summarize(labels, q, datalst)
-	result.sampleSummaries = await ds.sampleSummaries.finalize(labels, q)
 }
 
 function init_q(query, genome) {
@@ -84,138 +73,146 @@ function init_q(query, genome) {
 		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))
 		delete query.hiddenmclasslst
 	}
-	{
-		const filter = samplefilter.parsearg(query)
-		if (filter) {
-			query.samplefiltertemp = filter
-		} else {
-			delete query.samplefiltertemp
-		}
-	}
 	if (query.rglst) query.rglst = JSON.parse(query.rglst)
 	if (query.tid2value) query.tid2value = JSON.parse(query.tid2value)
 	return query
 }
 
-/*
-in order to do sample/variant summary, data from multiple queries needs to be summarized
-before querying, create the summary holder
-then cumulate counts from each type of data
-last, finalize results by converting Set of sample id to sample count
-*/
-function init_result(q, ds) {
-	const result = {}
-	return result
-}
 function finalize_result(q, ds, result) {
+	const sampleSet = new Set() // collects sample ids if present in data points
+
 	if (result.skewer) {
 		for (const m of result.skewer) {
 			if (m.samples) {
 				m.occurrence = m.samples.length
+				for (const s of m.samples) {
+					sampleSet.add(s.sample_id)
+				}
 				delete m.samples
 			}
 		}
+	}
+
+	if (sampleSet.size) {
+		// has samples, report total number of unique samples across all data types
+		result.sampleTotalNumber = sampleSet.size
 	}
 }
 
 async function get_ds(q, genome) {
 	if (q.dslabel) {
+		// is official dataset
 		if (!genome.datasets) throw '.datasets{} missing from genome'
 		const ds = genome.datasets[q.dslabel]
 		if (!ds) throw 'invalid dslabel'
 		return ds
 	}
-	// make a custom ds
-	throw 'custom ds todo'
-	const ds = {}
+	// for a custom dataset, a temporary ds{} obj is made for every query, based on q{}
 	// may cache index files from url, thus the await
+	const ds = { queries: {} }
+	if (q.vcffile || q.vcfurl) {
+		const [e, file, isurl] = app.fileurl({ query: { file: q.vcffile, url: q.vcfurl } })
+		if (e) throw e
+		const _tk = {}
+		if (isurl) {
+			_tk.url = file
+			_tk.indexURL = q.vcfindexURL
+		} else {
+			_tk.file = file
+		}
+		ds.queries.snvindel = { byrange: { _tk } }
+		ds.queries.snvindel.byrange.get = await snvindelByRangeGetter_vcf(ds, genome)
+	}
+	// add new file types
+
 	return ds
 }
 
-async function load_driver(q, ds, result) {
+async function load_driver(q, ds) {
 	// various bits of data to be appended as keys to result{}
 	// what other loaders can be if not in ds.queries?
 
 	if (q.ssm2canonicalisoform) {
 		// gdc-specific logic
 		if (!ds.ssm2canonicalisoform) throw 'ssm2canonicalisoform not supported on this dataset'
-		result.isoform = await ds.ssm2canonicalisoform.get(q)
-		return
+		return { isoform: await ds.ssm2canonicalisoform.get(q) }
 	}
 
 	if (q.variant2samples) {
 		if (!ds.variant2samples) throw 'not supported by server'
-		result.variant2samples = await ds.variant2samples.get(q)
-		return
+		const out = await ds.variant2samples.get(q)
+
+		if (q.get == ds.variant2samples.type_samples && q.listSsm) {
+			/*
+			listSsm=true as a modifier of get=samples
+			work for "List" option in case menu
+			for listing all samples that have mutation in the view range
+			client-side variant data are stripped of sample info
+			to list samples, must re-query and collect samples
+
+			out[] must be list of sample obj, each with .ssm_id
+			*/
+			const id2samples = new Map() // k: sample_id, v: { key:val, ssm_id_lst:[] }
+			for (const s of out) {
+				if (id2samples.has(s.sample_id)) {
+					id2samples.get(s.sample_id).ssm_id_lst.push(s.ssm_id)
+				} else {
+					s.ssm_id_lst = [s.ssm_id]
+					delete s.ssm_id
+					id2samples.set(s.sample_id, s)
+				}
+			}
+			return { variant2samples: [...id2samples.values()] }
+		}
+
+		return { variant2samples: out }
 	}
 
 	if (q.m2csq) {
 		if (ds.queries && ds.queries.snvindel && ds.queries.snvindel.m2csq) {
-			result.csq = await ds.queries.snvindel.m2csq.get(q)
-			return
+			return { csq: await ds.queries.snvindel.m2csq.get(q) }
 		}
 		throw 'm2csq not supported on this dataset'
 	}
 
-	if (q.samplesummary2_mclassdetail) {
-		if (ds.sampleSummaries2) {
-			result.strat = await ds.sampleSummaries2.get_mclassdetail.get(q)
-			return
-		}
-		throw 'sampleSummaries2 not supported on this dataset'
-	}
-
 	if (q.forTrack) {
 		// to load things for block track
+		const result = {}
 
 		if (q.skewer) {
 			// get skewer data
 			result.skewer = [] // for skewer track
 
-			// run queries in parallel
-			const promises = []
-
 			if (ds.queries.snvindel) {
 				// the query will resolve to list of mutations, to be flattened and pushed to .skewer[]
-				const p = query_snvindel(q, ds).then(d => {
-					//console.log('snv')
-					result.skewer.push(...d)
-				})
-				promises.push(p)
+				const mlst = await query_snvindel(q, ds)
+				/* mlst=[], each element:
+				{
+					ssm_id:str
+					mclass
+					samples:[ {sample_id}, ... ]
+				}
+				*/
+				result.skewer.push(...mlst)
 			}
+
 			if (ds.queries.svfusion) {
 				// todo
-				promises.push(query_svfusion(q, ds).then(d => result.skewer.push(...d)))
+				const d = await query_svfusion(q, ds)
+				result.skewer.push(...d)
 			}
-			if (ds.queries.genecnv) {
-				promises.push(query_genecnv(q, ds).then(d => result.genecnvNosample))
-				// for gene cnv with sample details, need api details
-				//result.genecnvAtsample = ....
-				// should return genecnv at sample-level, then will be combined with snvindel for summary
-			}
-
-			if (q.samplesummary2) {
-				// FIXME change to issue one query per ds.sampleSummaries2.lst[]
-				const p = ds.sampleSummaries2.get_number.get(q).then(d => {
-					//console.log('s2')
-					result.sampleSummaries2 = d
-				})
-				promises.push(p)
-			}
-
-			await Promise.all(promises)
 
 			filter_data(q, result)
 
 			result.mclass2variantcount = summarize_mclass(result.skewer)
-
-			await may_sampleSummary(q, ds, result)
-
-			finalize_result(q, ds, result)
 		}
-		// other types of data e.g. cnvpileup
-		return
+
+		// add queries for new data types
+
+		finalize_result(q, ds, result)
+		return result
 	}
+
 	// other query type
 
 	throw 'do not know what client wants'
@@ -223,19 +220,35 @@ async function load_driver(q, ds, result) {
 
 async function query_snvindel(q, ds) {
 	if (q.isoform) {
+		// client supplies isoform, see if isoform query is supported
 		if (q.atgenomic) {
 			// in genomic mode
 			if (!ds.queries.snvindel.byrange) throw '.atgenomic but missing byrange query method'
 			return await ds.queries.snvindel.byrange.get(q)
 		}
-		if (!ds.queries.snvindel.byisoform) throw 'q.isoform is given but missing byisoform query method'
-		return await ds.queries.snvindel.byisoform.get(q)
+		if (ds.queries.snvindel.byisoform) {
+			// querying by isoform is supported
+			return await ds.queries.snvindel.byisoform.get(q)
+		} else {
+			// querying by isoform is not supported, continue to check if can query by range
+		}
 	}
-	// if isoform not provided, must be by range. could be by other things?
-	if (ds.queries.snvindel.byrange) {
+	// not querying by isoform;
+	if (q.rglst) {
+		// provided range parameter
+		if (!ds.queries.snvindel.byrange) throw 'q.rglst[] provided but .byrange{} is missing'
 		return await ds.queries.snvindel.byrange.get(q)
 	}
-	throw 'unknown query method for snvindel'
+	// may allow other query method (e.g. by gene name from a db table)
+	throw 'insufficient query parameters for snvindel'
+}
+
+async function query_svfusion(q, ds) {
+	if(q.rglst) {
+		if(!ds.queries.svfusion.byrange) throw 'q.rglst provided but svfusion.byrange missing'
+		return await ds.queries.svfusion.byrange.get(q)
+	}
+	throw 'insufficient query parameters for svfusion'
 }
 
 async function query_genecnv(q, ds) {
@@ -259,8 +272,6 @@ async function query_genecnv(q, ds) {
 	}
 }
 
-async function query_svfusion(q, ds) {}
-
 function filter_data(q, result) {
 	// will not be needed when filters are combined into graphql query language
 	if (result.skewer) {
@@ -270,13 +281,6 @@ function filter_data(q, result) {
 
 			// filter by other variant attributes
 
-			// filter by sample attributes
-			if (q.samplefiltertemp) {
-				if (!m.samples) continue
-				const samples = samplefilter.run(m.samples, q.samplefiltertemp)
-				if (samples.length == 0) continue
-				m.samples = samples
-			}
 			newskewer.push(m)
 		}
 		result.skewer = newskewer

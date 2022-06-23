@@ -1,6 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const dofetch3 = require( '../common/dofetch').dofetch3
+const dofetch3 = require('../../common/dofetch').dofetch3
 
 /***********************************
  reusable helper vars and functions
@@ -106,7 +106,7 @@ async function runTests(data, test) {
 			}
 		}
 	}
-	
+
 	if (!testable.length) {
 		test.fail('no testable examples')
 		test.end()

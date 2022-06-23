@@ -1,10 +1,10 @@
 import React from 'react'
+import { findDOMNode } from 'react-dom'
 import { runproteinpaint } from '../app'
-import { getLolliplotTrack } from './gdc.views'
+import { getLolliplotTrack, getTrackByType } from './gdc.views'
 
 export function getPpReact(getTrack) {
-	if (!React) return
-
+	if (!React) throw `missing React module`
 	class PpReact extends React.Component {
 		constructor(props) {
 			super(props)
@@ -20,7 +20,7 @@ export function getPpReact(getTrack) {
 		render() {
 			// avoid jsx syntax to simplify bundling requirements
 			// since this is only a very minimal wrapper
-			return React.createElement('div', { ref: 'ppHolderRef' }, '')
+			return React.createElement('div', null, '')
 		}
 		runpp() {
 			const data = this.getTrack()
@@ -28,11 +28,12 @@ export function getPpReact(getTrack) {
 			// is the same as the last render
 			if (deepEqual(data, this.currentData)) return
 			this.currentData = data
-			const pp_holder = this.refs.ppHolderRef.querySelector('.sja_root_holder')
+			const rootElem = findDOMNode(this)
+			const pp_holder = rootElem.querySelector('.sja_root_holder')
 			if (pp_holder) pp_holder.remove()
-			runproteinpaint(
-				Object.assign({ holder: this.refs.ppHolderRef, noheader: true, nobox: true }, JSON.parse(JSON.stringify(data)))
-			)
+
+			const arg = Object.assign({ holder: rootElem, noheader: true, nobox: true }, JSON.parse(JSON.stringify(data)))
+			runproteinpaint(arg)
 		}
 		/* 
 			TODO: delete getUrlParams() once all 
@@ -74,7 +75,7 @@ export function getPpReact(getTrack) {
 function deepEqual(x, y) {
 	if (x === y) {
 		return true
-	} else if (typeof x == 'object' && x != null && (typeof y == 'object' && y != null)) {
+	} else if (typeof x == 'object' && x != null && typeof y == 'object' && y != null) {
 		if (Object.keys(x).length != Object.keys(y).length) {
 			return false
 		}
@@ -91,4 +92,8 @@ function deepEqual(x, y) {
 }
 
 export { getLolliplotTrack }
-export const PpLolliplot = getPpReact(getLolliplotTrack)
+export function getPpLolliplot() {
+	return getPpReact(getLolliplotTrack)
+}
+
+//export const PpTrack = getPpReact(getTrackByType)

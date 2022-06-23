@@ -1,16 +1,16 @@
 import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
 import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { axisstyle } from './dom/axisstyle'
+import { axisstyle } from '../dom/axisstyle'
 import { newpane } from './client'
-import { Menu } from './dom/menu'
-import { sayerror } from './dom/sayerror'
-import { appear } from './dom/animation'
-import { dofetch3 } from './common/dofetch'
-import { make_radios } from './dom/radiobutton'
-import { make_table_2col } from './dom/table2col'
-import { make_one_checkbox } from './dom/checkbox'
-import urlmap from './common/urlmap'
+import { Menu } from '../dom/menu'
+import { sayerror } from '../dom/sayerror'
+import { appear } from '../dom/animation'
+import { dofetch3 } from '../common/dofetch'
+import { make_radios } from '../dom/radiobutton'
+import { make_table_2col } from '../dom/table2col'
+import { make_one_checkbox } from '../dom/checkbox'
+import urlmap from '../common/urlmap'
 
 /*
 important: tk.uninitialized will be deleted by getData at the first launch
@@ -728,7 +728,7 @@ function may_render_variant(data, tk, block) {
 				.style('width', '300px')
 				.style('font-size', '12px')
 				.html(
-					'Diff score is the difference between jaccard similarities of the alternate and reference alleles for each read. For reference and alternate groups, higher magnitude indicates greater confidence of the classification.' +
+					'Diff score = (Number of nucleotide matches of read vs alternate allele)/(Total length of alignment of read vs alternate allele) - (Number of nucleotide matches of read vs reference allele)/(Total length of alignment of read vs reference allele). In case of the none group, the diff_score reveals to which allele the read has greater sequence similarity.' +
 						"<br><a href='https://proteinpaint.stjude.org/bam' target='_blank'>Click here to view details of this method</a>."
 				)
 		})
@@ -1708,6 +1708,10 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 			)
 			.style('text-align', 'center')
 	}
+	tk.alignpane.body
+		.style('max-width', '90vw')
+		.style('max-height', '65vh')
+		.style('overflow', 'scroll')
 
 	const div = tk.alignpane.body.append('div').style('margin', '20px')
 	tk.readAlignmentTable = div
@@ -2140,7 +2144,10 @@ async function getReadInfo(tk, block, box, ridx) {
 		return
 	}
 	wait.remove()
-
+	tk.readpane.body
+		.style('max-width', '90vw')
+		.style('max-height', '65vh')
+		.style('overflow', 'scroll')
 	for (const r of data.lst) {
 		// {seq, alignment (html), info (html) }
 		const div = tk.readpane.body.append('div').style('margin', '20px')

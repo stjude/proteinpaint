@@ -1,10 +1,8 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { gmmode } from '../client'
-import { dofetch3 } from '../common/dofetch'
+import { dofetch3 } from '../../common/dofetch'
 import { makeTk } from './makeTk'
-import { updateLegend } from './legend'
 import { may_render_skewer } from './skewer'
 import { make_leftlabels } from './leftlabel'
 
@@ -16,7 +14,8 @@ rangequery_rglst
 getParameter
 loadTk_finish_closure
 rangequery_add_variantfilters
-
+getData
+	dataFromCustomVariants
 */
 
 export async function loadTk(tk, block) {
@@ -26,10 +25,9 @@ export async function loadTk(tk, block) {
 	block.tkcloakon(tk)
 	block.block_setheight()
 
-	const _finish = loadTk_finish_closure(tk, block) // function used at multiple places
-
 	try {
 		if (!tk.mds) {
+			// missing .mds{}, run makeTk to initiate; only run once
 			await makeTk(tk, block)
 		}
 
@@ -40,36 +38,23 @@ export async function loadTk(tk, block) {
 			delete tk.uninitialized
 		}
 
-		tk.height_main = tk.toppad + tk.bottompad
-
 		// render each possible track type. if indeed rendered, return sub track height
-
 		// left labels and skewer at same row, whichever taller
-		{
-			const h2 = may_render_skewer(data, tk, block)
-			// must render skewer first, then left labels
-			const h1 = make_leftlabels(data, tk, block)
-			tk.height_main += Math.max(h1, h2)
-		}
-		// add new subtrack type
+		may_render_skewer(data, tk, block)
+		// must render skewer first, then left labels
+		await make_leftlabels(data, tk, block)
 
-		_finish(data)
+		////////// add new subtrack type
+
+		// done tk rendering, adjust height
+		tk._finish(data)
 	} catch (e) {
 		// if the error is thrown upon initiating the track, clear() function may not have been added
 		if (tk.clear) tk.clear()
-		tk.height_main = 50
-		_finish({ error: e.message || e })
+		tk.subtk2height.skewer = 50
+		tk._finish({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
 		return
-	}
-}
-
-function loadTk_finish_closure(tk, block) {
-	return data => {
-		updateLegend(data, tk, block)
-		block.tkcloakoff(tk, { error: data.error })
-		block.block_setheight()
-		block.setllabel()
 	}
 }
 
@@ -82,20 +67,12 @@ function getParameter(tk, block) {
 	// including skewer or non-skewer
 	par.push('forTrack=1')
 
-	if (tk.uninitialized || !block.usegm || block.gmmode == gmmode.genomic || block.gmmodepast == gmmode.genomic) {
+	if (tk.uninitialized || !block.usegm || block.gmmode == 'genomic' || block.gmmodepast == 'genomic') {
 		// assumption is that api will return the same amount of variants for different mode (protein/exon/splicerna)
 		// so there's no need to re-request data in these modes (but not genomic mode)
 		if (tk.mds.has_skewer) {
 			// need to load skewer data
 			par.push('skewer=1')
-		}
-		if (tk.mds.sampleSummaries) {
-			// need to make sample summary
-			par.push('samplesummary=1')
-		}
-		if (tk.mds.sampleSummaries2) {
-			// need to make sample summary using different method but still based on same querying parameter
-			par.push('samplesummary2=1')
 		}
 		if (tk.set_id) {
 			// quick fix!!!
@@ -118,7 +95,18 @@ function getParameter(tk, block) {
 		// official
 		par.push('dslabel=' + tk.mds.label)
 	} else {
-		throw 'how to deal with custom track'
+		// should be custom track with data files on backend
+		if (tk.vcf) {
+			if (tk.vcf.file) {
+				par.push('vcffile=' + tk.vcf.file)
+			} else if (tk.vcf.url) {
+				par.push('vcfurl=' + tk.vcf.url)
+				if (tk.vcf.indexURL) par.push('vcfindexURL=' + tk.vcf.indexURL)
+			} else {
+				throw '.file and .url missing for tk.vcf{}'
+			}
+		}
+		// add new file types
 	}
 
 	//rangequery_add_variantfilters(par, tk)
@@ -128,7 +116,6 @@ function getParameter(tk, block) {
 	if (tk.legend.mclass.hiddenvalues.size) {
 		par.push('hiddenmclasslst=' + [...tk.legend.mclass.hiddenvalues].join(','))
 	}
-	//par.push('samplefiltertemp=' + JSON.stringify(tk.samplefiltertemp))
 	return [par.join('&'), headers]
 }
 
@@ -146,7 +133,7 @@ async function getData(tk, block) {
 	let data
 	if (tk.custom_variants) {
 		// has custom data on client side, no need to request from server
-		data = filter_custom_variants(tk, block)
+		data = dataFromCustomVariants(tk, block)
 	} else {
 		// request data from server, either official or custom sources
 		const [par, headers] = getParameter(tk, block)
@@ -157,6 +144,8 @@ async function getData(tk, block) {
 }
 
 export function rangequery_rglst(tk, block, par) {
+	// if par is array, push "k=v" string to it; otherwise add to obj: par[k] = v
+	// makes no return
 	let rglst = []
 	if (block.usegm) {
 		/* to merge par.rglst[] into one region
@@ -173,13 +162,13 @@ export function rangequery_rglst(tk, block, par) {
 			const j = block.rglst[i]
 			r.width += j.width + block.regionspace
 			r.start = r.start == null ? j.start : Math.min(r.start, j.start)
-			r.stop = r.stop == null ? j.stop : Math.min(r.stop, j.stop)
+			r.stop = r.stop == null ? j.stop : Math.max(r.stop, j.stop)
 		}
 		rglst.push(r)
-		par.push('isoform=' + block.usegm.isoform)
-		if (block.gmmode == gmmode.genomic) {
+		add('isoform', block.usegm.isoform)
+		if (block.gmmode == 'genomic') {
 			// TODO if can delete the isoform parameter to simply make the query by genomic pos
-			par.push('atgenomic=1')
+			add.push('atgenomic', 1)
 		}
 	} else {
 		rglst = block.tkarg_rglst(tk)
@@ -208,7 +197,14 @@ export function rangequery_rglst(tk, block, par) {
 			xoff += r.width + r.leftpad
 		}
 	}
-	par.push('rglst=' + JSON.stringify(rglst))
+	add('rglst', JSON.stringify(rglst))
+	function add(k, v) {
+		if (Array.isArray(par)) {
+			par.push(k + '=' + v)
+		} else {
+			par[k] = v
+		}
+	}
 }
 
 function rangequery_add_variantfilters(par, tk) {
@@ -261,14 +257,14 @@ by info_fields[] and variantcase_fields[]
 	}
 }
 
-function filter_custom_variants(tk, block) {
+function dataFromCustomVariants(tk, block) {
 	// return the same data{} object as server queries
 	const data = {
 		skewer: []
 		// adds mclass2variantcount[] later
 	}
 
-	// must exclude out-of-range items, otherwise numericmode rendering will break
+	// must exclude out-of-range items, otherwise numeric mode rendering will break
 	let bbstart = null,
 		bbstop
 	for (let i = block.startidx; i <= block.stopidx; i++) {
@@ -296,6 +292,17 @@ function filter_custom_variants(tk, block) {
 		if (tk.legend.mclass.hiddenvalues.has(m.class)) continue
 
 		data.skewer.push(m)
+	}
+
+	if (data.skewer.some(i => i.samples)) {
+		// has .samples[], get sample count
+		const set = new Set()
+		for (const m of data.skewer) {
+			if (m.samples) {
+				for (const s of m.samples) set.add(s.sample_id)
+			}
+		}
+		data.sampleTotalNumber = set.size
 	}
 
 	data.mclass2variantcount = [...m2c]

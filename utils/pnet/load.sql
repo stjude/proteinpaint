@@ -21,7 +21,11 @@ from annotations a
 where a.term_id not in (select distinct(id) from terms)
 group by term_id;
 
-insert into ancestry (term_id, ancestor_id)
-values 
-('Event-free survival', 'Survival outcome'), 
-('Overall survival', 'Survival outcome');
+INSERT INTO terms
+VALUES('Cytogenetics', 'Cytogenetics', NULL, '{"name": "Cytogenetics"}', 1, NULL, 0);
+
+UPDATE terms
+SET parent_id='Cytogenetics'
+WHERE id IN (
+'1p', '1q', '2p', '2q', '3p', '3q', '4p', '4q', '5p', '5q', '6p', '6q', '7p', '7q', '8p', '8q', '9p', '9q', '10p', '10q', '11p', '11q', '12p', '12q', '13q', '14q', '15q', '16p', '16q', '17p', '17q', '18p', '18q', '19p', '19q', '20p', '20q', '21q', '22q'
+);

@@ -5,6 +5,8 @@ import * as d3force from 'd3-force'
 import * as client from './client'
 import * as coord from './coord'
 import hm2legend from './hm2.legend'
+import {dofetch3} from '../common/dofetch'
+import {Menu} from '../dom/menu'
 
 /*
 argument:
@@ -19,8 +21,6 @@ argument:
 */
 
 export default function(arg) {
-	const hostURL = arg.hostURL
-	const jwt = arg.jwt
 
 	const outborder = '#ddd'
 	const pairlst = arg.pairlst
@@ -41,7 +41,7 @@ export default function(arg) {
 		.append('div')
 		.style('margin', '10px')
 		.style('display', 'none')
-	const colormenu = new client.Menu({ padding: '10px' })
+	const colormenu = new Menu({ padding: '10px' })
 
 	function err(m) {
 		client.sayerror(errdiv, m)
@@ -79,15 +79,7 @@ export default function(arg) {
 		loadlst.push(n)
 	}
 
-	fetch(
-		new Request(hostURL + '/isoformlst', {
-			method: 'POST',
-			body: JSON.stringify({ jwt: jwt, genome: genome.name, lst: loadlst })
-		})
-	)
-		.then(data => {
-			return data.json()
-		})
+	dofetch3('isoformlst',{method:'POST',body:JSON.stringify({genome: genome.name, lst: loadlst })})
 		.then(data => {
 			if (data.error) throw { message: data.error }
 			for (const ilst of data.lst) {
@@ -269,9 +261,9 @@ export default function(arg) {
 	}
 
 	async function getPdomains(loadlst) {
-		const data = await client.dofetch2('pdomain', {
+		const data = await dofetch3('pdomain', {
 			method: 'POST',
-			body: JSON.stringify({ jwt: jwt, genome: genome.name, isoforms: loadlst })
+			body: JSON.stringify({ genome: genome.name, isoforms: loadlst })
 		})
 		if (data.error) throw data.error
 		else waitdiv.remove()

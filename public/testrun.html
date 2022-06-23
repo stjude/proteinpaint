@@ -55,7 +55,7 @@
 <div style='padding: 5px 30px'>
   <h1>
     <span id='testrun-back-arrows' style='display: none'>&lt;&lt; </span>
-    <a href='testrun.html' style='text-decoration: underline;'>client/src</a>
+    <a href='testrun.html' style='text-decoration: underline;'>client/</a>
     <span id='testrun-curr-test' style='font-weight: 400; color: #aaa'></span>
   </h1>
   <div id='testrun-loading-div'></div>
@@ -161,7 +161,7 @@ async function triggerImportSpecs(params) {
       loadingDiv.html(`Error: ${specs.error}`)
     } else {
       console.log('Specs: ', specs)
-      currTest.text(specs.pattern.split('/client/src')[1])
+      currTest.text(specs.pattern.split('/client/')[1])
       if (specs.n) await sleep(specs*10)
       d3.select('body')
         .append('script')

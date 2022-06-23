@@ -933,25 +933,31 @@ thus less things to worry about...
 		// may not cache result of this one as query string may be indefinite
 		// instead, will cache prepared statement by cohort
 		const sql = cn.prepare(
-			`SELECT id, jsondata, s.included_types 
+			`SELECT id, name, jsondata, s.included_types
 			FROM terms t
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE name LIKE ?`
 		)
-		const trueFilter = () => true
 		q.findTermByName = (n, limit, cohortStr = '', treeFilter = null, usecase = null) => {
 			const vals = []
 			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
+				const r = { equals: [], startsWith: [], startsWord: [], includes: [] }
 				const lst = []
 				for (const i of tmp) {
+					const name = i.name.toLowerCase()
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
 					j.included_types = i.included_types ? i.included_types.split(',') : []
-					if (!usecase || isUsableTerm(j, usecase).has('plot')) lst.push(j)
-					if (lst.length == 10) break
+					if (!usecase || isUsableTerm(j, usecase).has('plot')) {
+						if (n === 'se') console.log(name, n)
+						if (name === n) r.equals.push(j)
+						else if (name.startsWith(n)) r.startsWith.push(j)
+						else if (name.includes(' ' + n)) r.startsWord.push(j)
+						else r.includes.push(j)
+					}
 				}
-				return lst
+				return [...r.equals, ...r.startsWith, ...r.startsWord, ...r.includes].slice(0, 10)
 			}
 			return undefined
 		}
@@ -991,10 +997,15 @@ thus less things to worry about...
 		}
 	}
 	{
-		// select sample and category, only for categorical term
-		// right now only for category-overlay on maf-cov plot
+		/* term id is required, sample id is optional
+		if sample is missing, select all sample and category by term id
+			return [ {sample=str, value=?}, ... ]
+		else, return single value by sample and term
+		*/
 		const s = cn.prepare('SELECT sample,value FROM annotations WHERE term_id=?')
-		q.getSample2value = id => {
+		const s2 = cn.prepare('SELECT value FROM annotations WHERE term_id=? AND sample=?')
+		q.getSample2value = (id, sample=null) => {
+			if(sample) return s2.all(id, sample)
 			return s.all(id)
 		}
 	}
@@ -1046,11 +1057,12 @@ thus less things to worry about...
 			if (!(r.cohort in supportedChartTypes)) {
 				supportedChartTypes[r.cohort] = ['barchart', 'regression']
 				numericTypeCount[r.cohort] = 0
-				// why is app.features missing?
-				if (app.features && app.features.draftChartTypes) {
-					// TODO: move draft charts out of flag once stable
-					supportedChartTypes[r.cohort].push(...app.features.draftChartTypes)
-				}
+				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].push('matrix')
+			}
+			// why would app.features be missing?
+			if (app.features?.draftChartTypes) {
+				// TODO: move draft charts out of flag once stable
+				supportedChartTypes[r.cohort].push(...app.features.draftChartTypes)
 			}
 			if (r.type == 'survival' && !supportedChartTypes[r.cohort].includes('survival'))
 				supportedChartTypes[r.cohort].push('survival')
@@ -1074,7 +1086,7 @@ thus less things to worry about...
 }
 
 function test_tables(cn) {
-	const s = cn.prepare('SELECT name FROM sqlite_master WHERE type="table" AND name=?')
+	const s = cn.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`)
 	return {
 		terms: s.get('terms'),
 		ancestry: s.get('ancestry'),
