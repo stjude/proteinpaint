@@ -1,7 +1,7 @@
-import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from '../src/client'
-import { newSandboxDiv } from '../dom/sandbox'
-import { addGeneSearchbox } from '../dom/genesearch'
-import { Menu } from '../dom/menu'
+import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from '#src/client'
+import { newSandboxDiv } from '#dom/sandbox'
+import { addGeneSearchbox } from '#dom/genesearch'
+import { Menu } from '#dom/menu'
 import { debounce } from 'debounce'
 import { event, select, selectAll } from 'd3-selection'
 // js-only syntax highlighting for smallest bundle, see https://highlightjs.org/usage/
