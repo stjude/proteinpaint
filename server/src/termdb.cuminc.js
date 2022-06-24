@@ -39,32 +39,29 @@ export async function get_incidence(q, ds) {
 		for (const chartId in byChartSeries) {
 			if (!byChartSeries[chartId].length) continue
 
-			// skip series that do not meet sample size and event count thresholds
-			// compute sample sizes and event counts
-			const series2size = new Map()
+			// skip series that do not meet sample size threshold
+			// compute sample sizes
+			const samplesizes = new Map() // series => samplesize
 			for (const sample of byChartSeries[chartId]) {
-				const size = series2size.get(sample.series)
-				if (size) {
-					size.samplesize++
-					if (sample.event) size.eventcnt++
-					series2size.set(sample.series, size)
+				let samplesize = samplesizes.get(sample.series)
+				if (samplesize) {
+					samplesize++
+					samplesizes.set(sample.series, samplesize)
 				} else {
-					series2size.set(sample.series, { samplesize: 1, eventcnt: sample.event ? 1 : 0 })
+					samplesizes.set(sample.series, 1)
 				}
 			}
 
-			// flag series that do not meet thresholds
+			// flag series that do not meet the sample size threshold
 			const toSkip = new Set()
-			for (const [series, size] of series2size) {
-				if (size.samplesize < q.minSampleSize || size.eventcnt < q.minEventCnt) {
+			for (const [series, samplesize] of samplesizes) {
+				if (samplesize < q.minSampleSize) {
 					toSkip.add(series)
 				}
 			}
 
 			// skip any flagged series
 			if (toSkip.size > 0) {
-				// series need to be skipped
-				// remove the series from the byChartSeries[chartId]
 				fdata[chartId] = byChartSeries[chartId].filter(sample => !toSkip.has(sample.series))
 				// store the skipped series
 				if (!final_data.skippedSeries) final_data.skippedSeries = {}
