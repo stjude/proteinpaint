@@ -206,12 +206,6 @@ class MassCumInc {
 							type: 'number',
 							chartType: 'cuminc',
 							settingsKey: 'minSampleSize'
-						},
-						{
-							label: 'Minimum number of events in series',
-							type: 'number',
-							chartType: 'cuminc',
-							settingsKey: 'minEventCnt'
 						}
 					]
 				})
@@ -283,8 +277,7 @@ class MassCumInc {
 			chartType: 'cuminc',
 			term: c.term,
 			filter: this.state.termfilter.filter,
-			minSampleSize: c.settings.minSampleSize,
-			minEventCnt: c.settings.minEventCnt
+			minSampleSize: c.settings.minSampleSize
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
@@ -474,7 +467,7 @@ function setRenderers(self) {
 					.select('.pp-cuminc-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
-					.style('margin', '30px 10px')
+					.style('margin', '30px 0px')
 				renderSkippedSeries(skipdiv, self.skippedSeries[chart.chartId], s)
 			}
 		}
@@ -525,7 +518,7 @@ function setRenderers(self) {
 				.select('.pp-cuminc-chartLegends')
 				.style('display', 'inline-block')
 				.append('div')
-				.style('margin', '30px 10px')
+				.style('margin', '30px 0px')
 			renderSkippedSeries(skipdiv, self.skippedSeries[chart.chartId], s)
 		}
 	}
@@ -647,13 +640,22 @@ function setRenderers(self) {
 			.data(d => [
 				chart.serieses.find(series => series.seriesId == d.series1).seriesLabel,
 				chart.serieses.find(series => series.seriesId == d.series2).seriesLabel,
-				d.pvalue
+				d.permutation == 'TRUE' ? d.pvalue + '*' : d.pvalue
 			])
 			.enter()
 			.append('td')
 			.style('padding', '1px 20px 1px 3px')
 			.style('font-size', fontSize + 'px')
 			.text(d => d)
+
+		// footnote div
+		if (tests.find(test => test.permutation == 'TRUE')) {
+			pvaldiv
+				.append('div')
+				.style('margin-top', '10px')
+				.style('font-size', fontSize - 2 + 'px')
+				.text("*computed by permutation of Gray's test statistic (1000 permutations)")
+		}
 	}
 
 	function renderSkippedSeries(skipdiv, skippedSeries, s) {
@@ -924,7 +926,6 @@ const defaultSettings = JSON.stringify({
 	},
 	cuminc: {
 		minSampleSize: 5,
-		minEventCnt: 5,
 		radius: 5,
 		fill: '#fff',
 		stroke: '#000',

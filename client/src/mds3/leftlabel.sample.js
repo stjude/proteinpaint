@@ -37,7 +37,6 @@ function mayShowSummary(tk, block) {
 		.getSamples({ isSummary: true })
 		.then(async data => {
 			wait.html('')
-			console.log(data)
 			await showSummary4terms(data, wait, tk, block)
 		})
 		.catch(e => {

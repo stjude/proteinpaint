@@ -77,8 +77,7 @@ tape('hidden uncomputable', function(test) {
 					},
 					settings: {
 						cuminc: {
-							minSampleSize: 1,
-							minEventCnt: 1
+							minSampleSize: 1
 						}
 					}
 				}
@@ -127,8 +126,7 @@ tape('skipped series', function(test) {
 					},
 					settings: {
 						cuminc: {
-							minSampleSize: 1,
-							minEventCnt: 1
+							minSampleSize: 1
 						}
 					}
 				}

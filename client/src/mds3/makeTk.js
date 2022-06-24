@@ -394,9 +394,9 @@ function mayaddGetter_variant2samples(tk, block) {
 	*/
 	tk.mds.variant2samples.get = async arg => {
 		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', 'get=' + arg.querytype]
-		if (arg.listSsm) {
+		if (arg.groupSsmBySample) {
 			// from getSamples(), is a modifier of querytype=samples, to return .ssm_id_lst[] with each sample
-			par.push('listSsm=1')
+			par.push('groupSsmBySample=1')
 		}
 
 		// pagination, not used
@@ -459,7 +459,7 @@ function mayaddGetter_variant2samples(tk, block) {
 			// must be calling from "List" option of #case menu
 			arg.querytype = tk.mds.variant2samples.type_samples
 			// supply this flag so server will group ssm by case
-			arg.listSsm = 1
+			arg.groupSsmBySample = 1
 		}
 		rangequery_rglst(tk, block, arg)
 		return await tk.mds.variant2samples.get(arg)
