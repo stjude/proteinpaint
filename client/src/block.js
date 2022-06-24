@@ -41,7 +41,7 @@ import {
 	mdsexpressionrankload
 } from './block.mds.expressionrank.adaptor'
 import { mds2_fromtemplate, mds2_maketk, mds2_load } from './block.mds2.adaptor'
-import { mds3_fromtemplate, mds3_maketk, mds3_load } from './mds3/adaptor'
+import { mds3_fromtemplate, mds3_maketk, mds3_load } from '../mds3/adaptor'
 import { bedgraphdot_fromtemplate, bedgraphdot_maketk, bedgraphdot_load } from './block.tk.bedgraphdot.adaptor'
 
 // ds tk special case

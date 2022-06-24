@@ -1,6 +1,6 @@
 import { event as d3event } from 'd3-selection'
 import { makelabel } from './leftlabel'
-import { tab2box } from '../client'
+import { tab2box } from '../src/client'
 import { displaySampleTable } from './sampletable'
 import { fillbar } from '#dom/fillbar'
 import { make_densityplot } from '#dom/densityplot'

@@ -3,8 +3,8 @@ import { fold_glyph, settle_glyph } from './skewer.render'
 import { itemtable } from './itemtable'
 import { mayAddSkewerModeOption } from './skewer'
 import { makelabel } from './leftlabel'
-import {tab2box} from '../client'
-import {dt2label} from '../../shared/common'
+import {tab2box} from '../src/client'
+import {dt2label} from '#shared/common'
 
 /*
 the "#variants" label should always be made as it is about any content displayed in mds3 track

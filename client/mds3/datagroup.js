@@ -1,5 +1,5 @@
-import { gmmode, dtsnvindel, dtsv, dtfusionrna } from '../../shared/common'
-import * as coord from '../coord'
+import { gmmode, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
+import * as coord from '../src/coord'
 
 /* method shared by skewer and numeric mode
 

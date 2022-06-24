@@ -1,7 +1,7 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { dofetch3 } from '../../common/dofetch'
+import { dofetch3 } from '#common/dofetch'
 import { makeTk } from './makeTk'
 import { may_render_skewer } from './skewer'
 import { make_leftlabels } from './leftlabel'

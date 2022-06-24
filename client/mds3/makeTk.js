@@ -1,11 +1,11 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import { Menu } from '../../dom/menu'
-import { dofetch3 } from '../../common/dofetch'
+import { Menu } from '#dom/menu'
+import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
-import urlmap from '../../common/urlmap'
-import { mclass } from '../../shared/common'
-import { vcfparsemeta } from '../../shared/vcf'
+import urlmap from '#common/urlmap'
+import { mclass } from '#shared/common'
+import { vcfparsemeta } from '#shared/vcf'
 
 /*
 ********************** EXPORTED
@@ -259,10 +259,10 @@ async function get_ds(tk, block) {
 	tk.mds = {}
 	// fill in details to tk.mds
 	///////////// custom data sources
-	if (tk.vcf) {
-		if (!tk.vcf.file && !tk.vcf.url) throw 'file or url missing for tk.vcf{}'
+	if (tk.bcf) {
+		if (!tk.bcf.file && !tk.bcf.url) throw 'file or url missing for tk.bcf{}'
 		tk.mds.has_skewer = true // enable skewer tk
-		await getvcfheader_customtk(tk, block.genome)
+		await getbcfheader_customtk(tk, block.genome)
 	} else if (tk.custom_variants) {
 		tk.mds.has_skewer = true // enable skewer tk
 		validateCustomVariants(tk)
@@ -291,7 +291,7 @@ async function init_termdb(tk, block) {
 		} else {
 			throw 'do not know how to init vocab'
 		}
-		const _ = await import('../../termdb/vocabulary')
+		const _ = await import('#termdb/vocabulary')
 		tdb.vocabApi = _.vocabInit(arg)
 	}
 
@@ -601,20 +601,21 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 	v.type_sunburst = 'sunburst'
 }
 
-async function getvcfheader_customtk(tk, genome) {
+async function getbcfheader_customtk(tk, genome) {
 	const arg = ['genome=' + genome.name]
-	if (tk.vcf.file) {
-		arg.push('file=' + tk.vcf.file)
+	if (tk.bcf.file) {
+		arg.push('file=' + tk.bcf.file)
 	} else {
-		arg.push('url=' + tk.vcf.url)
-		if (tk.vcf.indexURL) arg.push('indexURL=' + tk.vcf.indexURL)
+		arg.push('url=' + tk.bcf.url)
+		if (tk.bcf.indexURL) arg.push('indexURL=' + tk.bcf.indexURL)
 	}
+	// FIXME if vcf and bcf files can both be used?
 	const data = await dofetch3('vcfheader?' + arg.join('&'))
 	if (data.error) throw data.error
 	const [info, format, samples, errs] = vcfparsemeta(data.metastr.split('\n'))
 	if (errs) throw 'Error parsing VCF meta lines: ' + errs.join('; ')
-	tk.vcf.info = info
-	tk.vcf.format = format
-	tk.vcf.samples = samples
-	tk.vcf.nochr = data.nochr
+	tk.bcf.info = info
+	tk.bcf.format = format
+	tk.bcf.samples = samples
+	tk.bcf.nochr = data.nochr
 }

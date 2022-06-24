@@ -125,7 +125,7 @@ async function click2sunburst(d, tk, block, tippos) {
 		// multiple m, use mname of most recurrent variant
 		arg.chartlabel = d.mlst.reduce((i, j) => (j.occurrence > i.occurrence ? j : i)).mname + ' etc'
 	}
-	const _ = await import('../sunburst')
+	const _ = await import('../src/sunburst')
 	_.default(arg)
 }
 

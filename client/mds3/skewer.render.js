@@ -2,7 +2,7 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { arc as d3arc } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 import { click_variant } from './clickVariant'
-import { dtsnvindel, dtsv, dtfusionrna } from '../../shared/common'
+import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 
 /*
 ********************** EXPORTED
