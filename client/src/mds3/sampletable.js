@@ -1,7 +1,7 @@
 import { fillbar } from '../../dom/fillbar'
 import { get_list_cells } from '../../dom/gridutils'
 import { select as d3select } from 'd3-selection'
-import { mclass } from '../../shared/common'
+import { mclass, dtsnvindel, dtsv, dtfusionrna } from '../../shared/common'
 
 /*
 ********************** EXPORTED
@@ -74,6 +74,7 @@ export async function displaySampleTable(samples, arg) {
 		return await make_singleSampleTable(samples[0], arg)
 	}
 	if (arg.useRenderTable) {
+		// flag is temporary, delete if() when renderTable is permanent
 		renderTable({
 			rows: samples2rows(samples, arg.tk),
 			columns: await samples2columns(samples, arg.tk),
@@ -427,11 +428,19 @@ function samples2rows(samples, tk) {
 			const ssm = {}
 			if (m) {
 				// found m data point
-				ssm.value = m.mname
-				if (tk.mds.queries && tk.mds.queries.snvindel && tk.mds.queries.snvindel.url) {
-					ssm.html = `<a href=${tk.mds.queries.snvindel.url.base + m.ssm_id} target=_blank>${m.mname}</a>`
+				if (m.dt == dtsnvindel) {
+					ssm.value = m.mname
+					if (tk.mds.queries && tk.mds.queries.snvindel && tk.mds.queries.snvindel.url) {
+						ssm.html = `<a href=${tk.mds.queries.snvindel.url.base + m.ssm_id} target=_blank>${m.mname}</a>`
+					} else {
+						ssm.html = m.mname
+					}
+				} else if (m.dt == dtsv || m.dt == dtfusionrna) {
+					const p = m.pairlst[0]
+					ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.a
+						.name || ''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
 				} else {
-					ssm.html = m.mname
+					throw 'unknown dt'
 				}
 				ssm.html += ` <span style="color:${mclass[m.class].color};font-size:.7em">${mclass[m.class].label}</span>`
 			} else {
@@ -451,6 +460,7 @@ function renderTable({ columns, rows, div }) {
 		.append('table')
 		.style('border-spacing', '5px')
 		.style('border-collapse', 'separate')
+		.style('max-height', '40vw')
 	const tr = table.append('tr')
 	for (const c of columns) {
 		tr.append('td')

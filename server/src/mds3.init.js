@@ -508,7 +508,10 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 			'query',
 			q._tk.file || q._tk.url,
 			'-r',
-			param.rglst.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop).join(','),
+			// plus 1 to stop, as rglst pos is 0-based, and bcf is 1-based
+			param.rglst
+				.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + (r.stop + 1))
+				.join(','),
 			'-f',
 			'%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO\t%FORMAT\n'
 		]
@@ -540,7 +543,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 				for (const alt in m0.alt2csq) {
 					const m = m0.alt2csq[alt]
 					m.chr = (q._tk.nochr ? 'chr' : '') + chr
-					m.pos = pos
+					m.pos = pos - 1 // bcf pos is 1-based, return 0-based
 					m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
 
 					if (q._tk.samples && q._tk.samples.length) {
