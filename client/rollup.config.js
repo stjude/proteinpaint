@@ -19,7 +19,7 @@ export default [
 	{
 		input: path.join(__dirname, './src/app.js'),
 		output: { dir: path.join(__dirname, 'dist'), format: 'es' },
-		external: [...Object.keys(pkg.peerDependencies ? pkg.peerDependencies : {}), 'react', 'react-dom'],
+		external: [...Object.keys(pkg.peerDependencies ? pkg.peerDependencies : {})],
 		plugins: [
 			resolve({
 				main: true

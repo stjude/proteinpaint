@@ -33,12 +33,8 @@ module.exports = function(env = {}) {
 			// the library name exposed by this bundle
 			library: {
 				//name: 'runproteinpaint',
-				type: 'module',
+				type: 'module'
 			}
-		},
-		externals: {
-			react: 'react',
-			'react-dom': 'react-dom'
 		},
 		resolve: {
 			/* TODO: select polyfills instead of using node-polyfill-webpack-plugin

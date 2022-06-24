@@ -36,10 +36,6 @@ module.exports = function(env = {}) {
 			// e.g., window.runproteinpaint
 			libraryTarget: 'window'
 		},
-		externals: {
-			react: 'React',
-			'react-dom': 'ReactDOM'
-		},
 		resolve: {
 			/* TODO: select polyfills instead of using node-polyfill-webpack-plugin
 			fallback: {

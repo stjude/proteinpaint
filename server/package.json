@@ -83,8 +83,7 @@
         {
           "babelrc": false,
           "presets": [
-            "@babel/preset-env",
-            "@babel/preset-react"
+            "@babel/preset-env"
           ],
           "plugins": [
             "@babel/plugin-syntax-dynamic-import",
