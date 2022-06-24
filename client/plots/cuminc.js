@@ -206,12 +206,6 @@ class MassCumInc {
 							type: 'number',
 							chartType: 'cuminc',
 							settingsKey: 'minSampleSize'
-						},
-						{
-							label: 'Minimum number of events in series',
-							type: 'number',
-							chartType: 'cuminc',
-							settingsKey: 'minEventCnt'
 						}
 					]
 				})
@@ -283,8 +277,7 @@ class MassCumInc {
 			chartType: 'cuminc',
 			term: c.term,
 			filter: this.state.termfilter.filter,
-			minSampleSize: c.settings.minSampleSize,
-			minEventCnt: c.settings.minEventCnt
+			minSampleSize: c.settings.minSampleSize
 		}
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
@@ -474,7 +467,7 @@ function setRenderers(self) {
 					.select('.pp-cuminc-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
-					.style('margin', '30px 10px')
+					.style('margin', '30px 0px')
 				renderSkippedSeries(skipdiv, self.skippedSeries[chart.chartId], s)
 			}
 		}
@@ -525,7 +518,7 @@ function setRenderers(self) {
 				.select('.pp-cuminc-chartLegends')
 				.style('display', 'inline-block')
 				.append('div')
-				.style('margin', '30px 10px')
+				.style('margin', '30px 0px')
 			renderSkippedSeries(skipdiv, self.skippedSeries[chart.chartId], s)
 		}
 	}
@@ -933,7 +926,6 @@ const defaultSettings = JSON.stringify({
 	},
 	cuminc: {
 		minSampleSize: 5,
-		minEventCnt: 5,
 		radius: 5,
 		fill: '#fff',
 		stroke: '#000',
