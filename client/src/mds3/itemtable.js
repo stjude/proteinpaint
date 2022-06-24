@@ -39,8 +39,8 @@ print vcf info about variant attributes
 const cutoff_tableview = 10
 
 export async function itemtable(arg) {
-	for(const m of arg.mlst) {
-		if (m.dt != dtsnvindel && m.dt!=dtfusionrna && m.dt!=dtsv) throw 'mlst[] contains unknown dt'
+	for (const m of arg.mlst) {
+		if (m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv) throw 'mlst[] contains unknown dt'
 	}
 
 	const grid = arg.div
@@ -85,7 +85,7 @@ async function itemtable_oneItem(arg, grid) {
 		// add space between grid and the new table
 		.style('margin-bottom', '10px')
 
-	if(arg.mlst[0].dt==dtsnvindel) {
+	if (arg.mlst[0].dt == dtsnvindel) {
 		table_snvindel(arg, grid)
 	} else {
 		await table_svfusion(arg, grid)
@@ -111,14 +111,13 @@ grid has optional columns, only the first column is clickable menu option, rest 
 3. numeric value if used, as text
 */
 async function itemtable_multiItems(arg, grid) {
-
 	// limit height
 	grid.style('max-height', '40vw')
 	// possible columns
-	const hasOccurrence = arg.mlst.some(i=>i.occurrence)
+	const hasOccurrence = arg.mlst.some(i => i.occurrence)
 	// numeric value?
 
-	if(hasOccurrence) {
+	if (hasOccurrence) {
 		// has more than 1 column
 		grid.style('grid-template-columns', 'auto auto')
 	}
@@ -127,44 +126,49 @@ async function itemtable_multiItems(arg, grid) {
 
 	// header row
 	// header - note
-	grid.append('div')
+	grid
+		.append('div')
 		.text('Click a variant to see details')
-		.style('font-size','.8em')
-		.style('opacity',.3)
-	if(hasOccurrence) {
-		grid.append('div')
+		.style('font-size', '.8em')
+		.style('opacity', 0.3)
+	if (hasOccurrence) {
+		grid
+			.append('div')
 			.text('Occurrence')
-			.style('font-size','.8em')
-			.style('opacity',.3)
+			.style('font-size', '.8em')
+			.style('opacity', 0.3)
 	}
 
 	// upon clicking an option for a variant
 	// hide grid and display go-back button allowing to go back to grid (all options)
-	const goBackButton = arg.div.append('div')
-		.style('margin-bottom','10px')
-		.style('display','none')
-	goBackButton.append('span')
+	const goBackButton = arg.div
+		.append('div')
+		.style('margin-bottom', '10px')
+		.style('display', 'none')
+	goBackButton
+		.append('span')
 		.text('<< Back to list')
-		.attr('class','sja_clbtext')
-		.on('click',()=>{
-			grid.style('display','inline-grid')
-			goBackButton.style('display','none')
-			singleVariantDiv.style('display','none')
+		.attr('class', 'sja_clbtext')
+		.on('click', () => {
+			grid.style('display', 'inline-grid')
+			goBackButton.style('display', 'none')
+			singleVariantDiv.style('display', 'none')
 		})
 
-	const singleVariantDiv = arg.div.append('div')
-		.style('display','none')
+	const singleVariantDiv = arg.div.append('div').style('display', 'none')
 
-	for(const m of arg.mlst) {
-
+	for (const m of arg.mlst) {
 		// create a menu option, clicking to show this variant by itself
-		const div = grid.append('div')
-			.attr('class','sja_menuoption')
-			.on('click', ()=>{
-				grid.style('display','none')
-				goBackButton.style('display','block')
-				singleVariantDiv.style('display','block')
-					.selectAll('*').remove()
+		const div = grid
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.on('click', () => {
+				grid.style('display', 'none')
+				goBackButton.style('display', 'block')
+				singleVariantDiv
+					.style('display', 'block')
+					.selectAll('*')
+					.remove()
 				const a2 = Object.assign({}, arg)
 				a2.mlst = [m]
 				a2.div = singleVariantDiv
@@ -172,46 +176,52 @@ async function itemtable_multiItems(arg, grid) {
 			})
 
 		// print variant name
-		if(m.dt==dtsnvindel) {
-			div.append('span')
-				.text(m.mname)
-			div.append('span')
+
+		if (m.dt == dtsnvindel) {
+			div.append('span').text(m.mname)
+			div
+				.append('span')
 				.text(mclass[m.class].label)
-				.style('font-size','.8em')
-				.style('margin-left','10px')
-			div.append('span')
-				.text(`${m.chr}:${m.pos+1}${m.ref ? ', '+m.ref+'>'+m.alt : ''}`)
-				.style('font-size','.8em')
-				.style('margin-left','10px')
-		} else if(m.dt==dtsv ||m.dt==dtfusionrna) {
-			div.append('span')
+				.style('font-size', '.8em')
+				.style('margin-left', '10px')
+				.style('color', mclass[m.class].color)
+			div
+				.append('span')
+				.text(`${m.chr}:${m.pos + 1}${m.ref ? ', ' + m.ref + '>' + m.alt : ''}`)
+				.style('font-size', '.8em')
+				.style('margin-left', '10px')
+		} else if (m.dt == dtsv || m.dt == dtfusionrna) {
+			div
+				.append('span')
 				.text(mclass[m.class].label)
-				.style('font-size','.7em')
-				.style('margin-right','8px')
+				.style('font-size', '.7em')
+				.style('margin-right', '8px')
 
 			printSvPair(m.pairlst[0], div)
-
 		} else {
 			div.text('error: unknown m.dt')
 		}
 
 		// additional columns of this row
 
-		if(hasOccurrence) {
-			grid.append('div').text(m.occurrence || '')
-				.style('padding','5px 10px') // same as sja_menuoption
+		if (hasOccurrence) {
+			grid
+				.append('div')
+				.text(m.occurrence || '')
+				.style('padding', '5px 10px') // same as sja_menuoption
 		}
 	}
 
 	if (!arg.doNotListSample4multim && arg.tk.mds.variant2samples) {
-		const totalOccurrence = arg.mlst.reduce((i,j)=>i+(j.occurrence || 0),0)
-		if(totalOccurrence) {
-			grid.append('div')
-				.style('margin-top','10px')
+		const totalOccurrence = arg.mlst.reduce((i, j) => i + (j.occurrence || 0), 0)
+		if (totalOccurrence) {
+			grid
+				.append('div')
+				.style('margin-top', '10px')
 				.append('span')
-				.attr('class','sja_clbtext')
+				.attr('class', 'sja_clbtext')
 				.text('List all samples')
-				.on('click',()=>{
+				.on('click', () => {
 					grid.remove()
 					init_sampletable(arg)
 				})
@@ -267,8 +277,6 @@ function print_snv(holder, m, tk) {
 	}
 	printto.html(`${m.chr}:${m.pos + 1} ${m.ref && m.alt ? m.ref + '>' + m.alt : ''}`)
 }
-
-
 
 // function is not used
 function add_csqButton(m, tk, td, table) {
@@ -334,12 +342,12 @@ function isElementInViewport(el) {
 	)
 }
 
-async function table_svfusion(arg,grid) {
+async function table_svfusion(arg, grid) {
 	// display one svfusion event
 
 	// svgraph in 1st row
 	grid.append('div')
-	await makeSvgraph( arg.mlst[0], grid.append('div').style('margin-bottom','10px'), arg.block)
+	await makeSvgraph(arg.mlst[0], grid.append('div').style('margin-bottom', '10px'), arg.block)
 
 	// rows
 	{
@@ -351,35 +359,50 @@ async function table_svfusion(arg,grid) {
 		// todo: support chimeric read fraction on each break end
 		const [c1, c2] = get_list_cells(grid)
 		c1.text('Break points')
-		for(const pair of arg.mlst[0].pairlst) {
+		for (const pair of arg.mlst[0].pairlst) {
 			printSvPair(pair, c2.append('div'))
 		}
 	}
 }
 
 function printSvPair(pair, div) {
-	if(pair.a.name) div.append('span').text(pair.a.name).style('font-weight','bold').style('margin-right','5px')
-	div.append('span').text(`${pair.a.chr}:${pair.a.pos} ${pair.a.strand=='+'?'forward':'reverse'} > ${pair.b.chr}:${pair.b.pos} ${pair.b.strand=='+'?'forward':'reverse'}`)
-	if(pair.b.name) div.append('span').text(pair.b.name).style('font-weight','bold').style('margin-left','5px')
+	if (pair.a.name)
+		div
+			.append('span')
+			.text(pair.a.name)
+			.style('font-weight', 'bold')
+			.style('margin-right', '5px')
+	div
+		.append('span')
+		.text(
+			`${pair.a.chr}:${pair.a.pos} ${pair.a.strand == '+' ? 'forward' : 'reverse'} > ${pair.b.chr}:${pair.b.pos} ${
+				pair.b.strand == '+' ? 'forward' : 'reverse'
+			}`
+		)
+	if (pair.b.name)
+		div
+			.append('span')
+			.text(pair.b.name)
+			.style('font-weight', 'bold')
+			.style('margin-left', '5px')
 }
 
 async function makeSvgraph(m, div, block) {
 	const wait = div.append('div').text('Loading...')
 	try {
-		if(!m.pairlst) throw '.pairlst[] missing'
+		if (!m.pairlst) throw '.pairlst[] missing'
 		const svpair = {
 			a: {
 				chr: m.pairlst[0].a.chr,
 				position: m.pairlst[0].a.pos,
-				strand: m.pairlst[0].a.strand,
+				strand: m.pairlst[0].a.strand
 			},
 			b: {
 				chr: m.pairlst[0].b.chr,
 				position: m.pairlst[0].b.pos,
-				strand: m.pairlst[0].b.strand,
+				strand: m.pairlst[0].b.strand
 			}
 		}
-
 
 		await getGm(svpair.a, block)
 		await getGm(svpair.b, block)
@@ -387,19 +410,19 @@ async function makeSvgraph(m, div, block) {
 		wait.remove()
 
 		const _ = await import('../svgraph')
-		_.default( {
+		_.default({
 			pairlst: [svpair],
 			genome: block.genome,
 			holder: div
 		})
-	}catch(e) {
-		wait.text( e.message ||e)
+	} catch (e) {
+		wait.text(e.message || e)
 	}
 }
 async function getGm(p, block) {
 	// p={chr, position}
 	const d = await dofetch3(`isoformbycoord?genome=${block.genome.name}&chr=${p.chr}&pos=${p.position}`)
-	if(d.error) throw d.error
+	if (d.error) throw d.error
 	const u = d.lst.find(i => i.isdefault) || d.lst[0]
 	if (u) {
 		p.name = u.name

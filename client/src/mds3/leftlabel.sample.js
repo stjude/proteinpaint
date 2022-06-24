@@ -1,8 +1,9 @@
 import { event as d3event } from 'd3-selection'
 import { makelabel } from './leftlabel'
 import { tab2box } from '../client'
-import { fillbar } from '../../dom/fillbar'
 import { displaySampleTable } from './sampletable'
+import { fillbar } from '#dom/fillbar'
+import { make_densityplot } from '#dom/densityplot'
 
 export function makeSampleLabel(data, tk, block, laby) {
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
@@ -61,7 +62,7 @@ async function showSummary4terms(data, div, tk, block) {
 					: ''),
 			callback: div => {
 				if (numbycategory) return showSummary4oneTerm(termid, div, numbycategory, tk, block)
-				if (density_data) return showDensity(termid, div, density_data, tk, block)
+				if (density_data) return showDensity4oneTerm(termid, div, density_data, tk, block)
 				throw 'unknown summary data'
 			}
 		})
@@ -142,7 +143,9 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 	}
 }
 
-function showDensity(termid, div, density_data, tk, block) {}
+function showDensity4oneTerm(termid, div, density_data, tk, block) {
+	make_densityplot(div, density_data, () => {})
+}
 
 function menu_samples(data, tk, block) {
 	// subject to change
