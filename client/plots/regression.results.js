@@ -324,7 +324,7 @@ function setRenderers(self) {
 
 	self.mayshow_cuminc = async result => {
 		if (!result.cuminc) return
-		const holder = self.newDiv('Cumulative incidence test:', 'p-value = ' + result.cuminc.pvalue)
+		const holder = self.newDiv('Cumulative incidence test:' /*, 'p-value = ' + result.cuminc.pvalue*/)
 		const _ = await import('./cuminc')
 		const plotter = new _.Cuminc({
 			holder,
