@@ -23,8 +23,6 @@
     "test": "node ./test/import-specs.js && npm run tape",
     "tape": "cat ../public/bin/proteinpaint.js ./test/init.js | tape-run --static ../public",
     "examples": "node ./test/import-specs.js name=_x_.examples && npm run tape",
-    "gdc": "node ./test/import-specs.js name=_x_.gdc.views && npm run tape",
-    "gdc-unwatched": "node ./test/import-specs.js name=_x_.gdc.views && webpack --env.NODE_ENV=development && npm run tape -- --no-sandbox",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w"
   },
   "author": "",
@@ -65,10 +63,6 @@
     "normalize.css": "^8.0.1",
     "partjson": "^0.58.1",
     "process": "^0.11.10"
-  },
-  "peerDependencies": {
-    "react": "^17.0.1",
-    "react-dom": "^17.0.1"
   },
   "repository": {
     "type": "git",

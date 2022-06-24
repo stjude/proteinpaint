@@ -18,7 +18,6 @@ import { init_mdsjson } from './app.mdsjson'
 import { drawer_init } from '../appdrawer/app.drawer'
 import urlmap from '../common/urlmap'
 import { renderSandboxFormDiv, newSandboxDiv } from '../dom/sandbox'
-import * as wrappers from './wrappers/PpReact'
 import { first_genetrack_tolist } from '../common/1stGenetk'
 
 /*
@@ -182,8 +181,6 @@ export function runproteinpaint(arg) {
 			if (err.stack) console.log(err.stack)
 		})
 }
-
-runproteinpaint.wrappers = wrappers
 
 // KEEP THIS ppsrc DECLARATION AT THE TOP SCOPE !!!
 // need to know the script src when pp is first loaded
