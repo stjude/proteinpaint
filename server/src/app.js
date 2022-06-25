@@ -460,7 +460,8 @@ function handle_gene2canonicalisoform(req, res) {
 		if (!genome) throw 'unknown genome'
 		if (!genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
 		const data = genome.genedb.get_gene2canonicalisoform.get(req.query.gene)
-		res.send(data)
+		const j = JSON.parse(data.genemodel)
+		res.send(j)
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
@@ -981,10 +982,11 @@ function handle_genelookup(req, res) {
 				*/
 				const data = g.genedb.get_gene2canonicalisoform.get(req.query.input)
 				if (data) {
+					const j = JSON.parse(data.genemodel)
 					// mapped into an ENST isoform
-					result.found_isoform = data.isoform
+					result.found_isoform = j.isoform
 					// convert isoform back to symbol as in the beginning
-					const tmp = g.genedb.getnamebynameorisoform.get(data.isoform, data.isoform)
+					const tmp = g.genedb.getnamebynameorisoform.get(j.isoform, j.isoform)
 					if (!tmp) throw 'cannot map enst isoform to symbol'
 					symbol = tmp.name
 				}
@@ -6286,12 +6288,12 @@ async function handle_isoformbycoord(req, res) {
 		const isoforms = []
 		await utils.get_lines_bigfile({
 			args: [path.join(serverconfig.tpmasterdir, genetk.file), req.query.chr + ':' + pos + '-' + pos],
-			callback: line=>{
+			callback: line => {
 				const str = line.split('\t')[3]
 				if (!str) return
 				const j = JSON.parse(str)
 				if (!j.isoform) return
-				const j2 = {isoform: j.isoform}
+				const j2 = { isoform: j.isoform }
 				const tmp = genome.genedb.getjsonbyisoform.get(j.isoform)
 				if (tmp) {
 					j2.name = JSON.parse(tmp.genemodel).name
@@ -7547,7 +7549,9 @@ async function pp_init() {
 			}
 		}
 		if (g.genedb.gene2canonicalisoform) {
-			g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare('select isoform from gene2canonicalisoform where gene=?')
+			g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
+				'select genemodel from gene2canonicalisoform as c, genes as g where c.gene=? AND c.isoform=g.isoform'
+			)
 		}
 
 		for (const tk of g.tracks) {

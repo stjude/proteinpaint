@@ -1,6 +1,6 @@
-import { addGeneSearchbox } from '../dom/genesearch'
-import { Menu } from '../dom/menu'
-import { dofetch3 } from '../common/dofetch'
+import { addGeneSearchbox } from '#dom/genesearch'
+import { Menu } from '#dom/menu'
+import { dofetch3 } from '#common/dofetch'
 import blockinit from './block.init'
 
 /*
@@ -49,7 +49,7 @@ export async function init(arg, holder, genomes) {
 			query: data.isoform,
 			genome,
 			holder: graphDiv,
-			gmmode: 'protein',
+			gmmode: data.coding ? 'protein' : 'exon only',
 			tklst: [{ type: 'mds3', dslabel: 'GDC' }]
 		}
 		blockinit(pa)
