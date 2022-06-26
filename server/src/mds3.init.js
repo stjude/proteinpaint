@@ -170,11 +170,14 @@ async function initTermdb_termsAndFile(ds) {
 	if (!ds.termdb.annotationFile) throw 'termdb.annotationFile missing when .terms[] used'
 
 	const annotations = await loadAnnotationFile(ds)
-	// k: sample id
+	// map{}, k: sample id
 	// v: map{}, k: term id, v: value
 
 	ds.cohort.termdb.q = makeTermdbApi_inMemoryData(terms, annotations)
+	//makeTermdbApi_makeTempSqlitedb(ds, annotations)
 }
+
+function makeTermdbApi_makeTempSqlitedb(ds, annotations) {}
 
 async function loadAnnotationFile(ds) {
 	const lines = (await fs.promises.readFile(path.join(serverconfig.tpmasterdir, ds.termdb.annotationFile), {

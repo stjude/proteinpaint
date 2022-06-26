@@ -356,15 +356,20 @@ exports.get_fasta = async (gn, pos) => {
 	return lines.join('\n')
 }
 
-exports.connect_db = function(file, isfullpath) {
-	/*
-file: half or full path
-isfullpath: true/false
+/*
+inputs:
+file=str
+	half or full path; if not starting with '/', join with tp dir
+override={}
+	supplies overrides to default setting
+returns:
+	db connector
 */
-	return new bettersqlite(isfullpath ? file : path.join(serverconfig.tpmasterdir, file), {
-		readonly: true,
-		fileMustExist: true
-	})
+exports.connect_db = function(file, override = {}) {
+	return new bettersqlite(
+		file[0] == '/' ? file : path.join(serverconfig.tpmasterdir, file),
+		Object.assign({ readonly: true, fileMustExist: true }, override)
+	)
 }
 
 const genotype_type_set = new Set(['Homozygous reference', 'Homozygous alternative', 'Heterozygous'])

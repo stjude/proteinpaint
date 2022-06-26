@@ -723,16 +723,10 @@ thus less things to worry about...
 	if (!ds.cohort.db) throw 'ds.cohort.db missing'
 	if (!ds.cohort.termdb) throw 'ds.cohort.termdb missing'
 
-	let cn
-	if (ds.cohort.db.file) {
-		cn = connect_db(ds.cohort.db.file)
-	} else if (ds.cohort.db.file_fullpath) {
-		// only on ppr
-		cn = connect_db(ds.cohort.db.file_fullpath, true)
-	} else {
-		throw 'neither .file or .file_fullpath is set on ds.cohort.db'
-	}
-	console.log(`DB connected for ${ds.label}: ${ds.cohort.db.file || ds.cohort.db.file_fullpath}`)
+	const dbfile = ds.cohort.db.file || ds.cohort.db.file_fullpath
+	if (!dbfile) throw 'both file and file_fullpath missing'
+	const cn = connect_db(dbfile)
+	console.log(`DB connected for ${ds.label}: ${dbfile}`)
 
 	ds.cohort.db.connection = cn
 
@@ -1004,8 +998,8 @@ thus less things to worry about...
 		*/
 		const s = cn.prepare('SELECT sample,value FROM annotations WHERE term_id=?')
 		const s2 = cn.prepare('SELECT value FROM annotations WHERE term_id=? AND sample=?')
-		q.getSample2value = (id, sample=null) => {
-			if(sample) return s2.all(id, sample)
+		q.getSample2value = (id, sample = null) => {
+			if (sample) return s2.all(id, sample)
 			return s.all(id)
 		}
 	}
