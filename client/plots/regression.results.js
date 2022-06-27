@@ -601,7 +601,13 @@ function setRenderers(self) {
 		// independent terms (no interaction)
 		let rowcount = 0
 		for (const tid in result.type3.terms) {
-			const termdata = result.type3.terms[tid]
+			// get term data
+			// if term is part of interaction, then
+			// set data to 'NA' because the effect of
+			// main term on the model cannot be estimated
+			const termdata = result.type3.interactions.find(int => int.term1 == tid || int.term2 == tid)
+				? result.type3.terms[tid].map(d => 'NA')
+				: result.type3.terms[tid]
 			const tw = self.getIndependentInput(tid).term
 			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 			// col 1: variable
