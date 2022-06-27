@@ -7,6 +7,8 @@ const utils = require('./utils')
 const compute_mclass = require('./termdb.snp').compute_mclass
 const serverconfig = require('./serverconfig')
 const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('../shared/common')
+const { server_init_db_queries } = require('./termdb.sql')
+const { makeTempSqliteDb } = require('./tempdb')
 
 /*
 ********************** EXPORTED
@@ -17,7 +19,6 @@ client_copy
 validate_termdb
 	initTermdb_termsAndFile
 		loadAnnotationFile
-		makeTermdbApi_inMemoryData
 validate_query_snvindel
 	snvindelByRangeGetter_bcf
 		mayLimitSamples
@@ -168,23 +169,24 @@ async function initTermdb_termsAndFile(ds) {
 		}
 	}
 	if (!ds.termdb.annotationFile) throw 'termdb.annotationFile missing when .terms[] used'
+	const annotationFile = path.join(serverconfig.tpmasterdir, ds.termdb.annotationFile)
 
-	const annotations = await loadAnnotationFile(ds)
+	const annotations = await loadAnnotationFile(annotationFile, ds)
 	// map{}, k: sample id
 	// v: map{}, k: term id, v: value
 
-	ds.cohort.termdb.q = makeTermdbApi_inMemoryData(terms, annotations)
-	//makeTermdbApi_makeTempSqlitedb(ds, annotations)
+	// to on-the-fly create sqlite db file at this location
+	const dbfile = annotationFile + '.db'
+	makeTempSqliteDb({ terms, annotations, dbfile })
+	// sqlite db is created
+
+	ds.cohort.db = { file_fullpath: dbfile }
+	server_init_db_queries(ds)
+	// ds.cohort.termdb.q{} initiated
 }
 
-function makeTermdbApi_makeTempSqlitedb(ds, annotations) {}
-
-async function loadAnnotationFile(ds) {
-	const lines = (await fs.promises.readFile(path.join(serverconfig.tpmasterdir, ds.termdb.annotationFile), {
-		encoding: 'utf8'
-	}))
-		.trim()
-		.split('\n')
+async function loadAnnotationFile(file, ds) {
+	const lines = (await fs.promises.readFile(file, { encoding: 'utf8' })).trim().split('\n')
 	const hterms = [] // array of term objs by order of file columns
 	const headerfields = lines[0].split('\t')
 	for (let i = 1; i < headerfields.length; i++) {
@@ -231,72 +233,6 @@ async function loadAnnotationFile(ds) {
 		}
 	}
 	return annotations
-}
-
-/*
-terms[] list of term objects
-annotations{}
-	k=sample id
-	v=map
-		k=term id
-		v=value
-*/
-function makeTermdbApi_inMemoryData(terms, annotations) {
-	const q = {}
-	q.getSample2value = (termid, sample_id = undefined) => {
-		if (sample_id != undefined) {
-			if (!annotations.has(sample_id)) return
-			return annotations.get(sample_id).get(termid)
-		}
-		const lst = []
-		for (const [s, o] of annotations) {
-			if (o.has(termid)) lst.push({ sample: s, value: o.get(termid) })
-		}
-		return lst
-	}
-	q.getRootTerms = async (vocab, treeFilter = null) => {
-		const roots = []
-		for (const t of terms) {
-			if (t.parent_id == undefined) roots.push(JSON.parse(JSON.stringify(t)))
-		}
-		return roots
-	}
-
-	q.getTermChildren = async (id, cohortValues = null, treeFilter = null) => {
-		// find terms which have term.parent_id as input id
-		const lst = []
-		for (const t of terms) {
-			if (t.parent_id == id) lst.push(JSON.parse(JSON.stringify(t)))
-		}
-		return lst
-	}
-
-	q.findTermByName = async (searchStr, limit = null, vocab, treeFilter = null, usecase = null) => {
-		searchStr = searchStr.toLowerCase() // convert to lowercase
-		// find terms that have term.id containing search string
-		const lst = []
-		for (const t of terms) {
-			//if (usecase && !isUsableTerm(term, usecase)) continue
-			if (t.id.toLowerCase().includes(searchStr)) lst.push(JSON.parse(JSON.stringify(t)))
-		}
-		return lst
-	}
-
-	q.getAncestorIDs = id => {
-		return []
-	}
-	q.getAncestorNames = q.getAncestorIDs
-
-	q.termjsonByOneid = id => {
-		const t = terms.find(i => i.id.toLowerCase() == id.toLowerCase())
-		if (t) return JSON.parse(JSON.stringify(t))
-		return null
-	}
-
-	q.getSupportedChartTypes = () => {
-		return ['barchart']
-	}
-	return q
 }
 
 function validate_variant2samples(ds) {
@@ -577,7 +513,7 @@ param={}
 	.tid2value = { term1id: v1, term2id:v2, ... }
 	if present, return list of samples matching the given k/v pairs, assuming AND
 	later to replace with filter
-allSamples = [ {name}, ... ] array of parsed samples from a bcf file header
+allSamples = [ {name}, ... ] array of parsed samples e.g. from a bcf file header
 ds={}
 
 output:
@@ -592,7 +528,7 @@ function mayLimitSamples(param, allSamples, ds) {
 		let skip = false
 		for (const tid in param.tid2value) {
 			const v = ds.cohort.termdb.q.getSample2value(tid, s.name)
-			if (v != param.tid2value[tid]) {
+			if (!v[0] || (v[0] && v[0].value != param.tid2value[tid])) {
 				skip = true
 				break
 			}
@@ -717,6 +653,7 @@ async function validate_query_svfusion(ds, genome) {
 		if (q.byrange.file) {
 			q.byrange.file = path.join(serverconfig.tpmasterdir, q.byrange.file)
 			q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
+			console.log(q.byrange.samples.length, 'samples from svfusion.byrange.file of ' + ds.label)
 		} else {
 			throw 'unknown query method for svfusion.byrange'
 		}
@@ -744,9 +681,28 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 		throw 'file and url both missing on svfusion.byrange{}'
 	}
 	q.nochr = await utils.tabix_is_nochr(q.file || q.url, null, genome)
+
+	{
+		const lines = await utils.get_header_tabix(q.file)
+		if (!lines[0]) throw 'header line missing from ' + q.file
+		const l = lines[0].split(' ')
+		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
+		q.samples = l.slice(1).map(i => {
+			return { name: i }
+		})
+	}
+
 	return async param => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+
+		let limitSamples
+		{
+			const lst = mayLimitSamples(param, q.samples, ds)
+			if (lst) {
+				limitSamples = new Set(lst.map(i => i.name))
+			}
+		}
 
 		const key2variants = new Map()
 		/*
@@ -781,15 +737,9 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 						return
 					}
 
-					if (j.sample && param.tid2value) {
+					if (j.sample && limitSamples) {
 						// to filter sample
-						for (const tid in param.tid2value) {
-							const v = ds.cohort.termdb.q.getSample2value(tid, j.sample)
-							if (v != param.tid2value[tid]) {
-								// this sample is no match, skip this event
-								return
-							}
-						}
+						if (!limitSamples.has(j.sample)) return
 					}
 
 					// collect key fields

@@ -154,7 +154,7 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 			let skip = false
 			for (const tid in q.tid2value) {
 				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
-				if (v != q.tid2value[tid]) {
+				if (v[0] && v[0].value != q.tid2value[tid]) {
 					skip = true
 					break
 				}
@@ -169,7 +169,10 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 		// append term values to each sample
 		for (const s of samples) {
 			for (const tid of termidlst) {
-				s[tid] = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+				if (v[0]) {
+					s[tid] = v[0].value
+				}
 			}
 		}
 	}
@@ -220,7 +223,10 @@ async function queryServerFileByRglst(q, termidlst, ds) {
 		// append term values to each sample
 		for (const s of samples) {
 			for (const tid of termidlst) {
-				s[tid] = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+				if (v[0]) {
+					s[tid] = v[0].value
+				}
 			}
 		}
 	}

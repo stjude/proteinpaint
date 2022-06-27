@@ -1,7 +1,7 @@
 const terms = [
 	{ id: 'Lineage', type: 'categorical' },
-	{ id: 'Primary_subtype', type: 'categorical' },
-	{ id: 'Secondary_subtype', type: 'categorical' },
+	{ id: 'Primary_subtype', name: 'Primary subtype', type: 'categorical' },
+	{ id: 'Secondary_subtype', name: 'Secondary subtype', type: 'categorical' },
 	{ id: 'Sex', type: 'categorical' },
 	{ id: 'Age', name: 'Age of diagnosis', type: 'float' }
 ]

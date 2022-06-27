@@ -997,9 +997,15 @@ thus less things to worry about...
 		else, return single value by sample and term
 		*/
 		const s = cn.prepare('SELECT sample,value FROM annotations WHERE term_id=?')
-		const s2 = cn.prepare('SELECT value FROM annotations WHERE term_id=? AND sample=?')
+		const s_sampleInt = cn.prepare('SELECT value FROM annotations WHERE term_id=? AND sample=?')
+		const s_sampleStr = cn.prepare(
+			'SELECT a.value FROM annotations AS a, sampleidmap AS s WHERE a.term_id=? AND a.sample=s.id AND s.name=?'
+		)
 		q.getSample2value = (id, sample = null) => {
-			if (sample) return s2.all(id, sample)
+			if (sample) {
+				if (typeof sample == 'string') return s_sampleStr.all(id, sample)
+				return s_sampleInt.all(id, sample)
+			}
 			return s.all(id)
 		}
 	}

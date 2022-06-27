@@ -652,6 +652,7 @@ function clientcopy_genome(genomename) {
 		if (ds.isMds3) {
 			g2.datasets[ds.label] = {
 				isMds3: true,
+				noHandleOnClient: ds.noHandleOnClient,
 				label: ds.label
 			}
 			continue
