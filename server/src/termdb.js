@@ -11,7 +11,7 @@ const termdbsnp = require('./termdb.snp')
 const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 const get_flagset = require('./bulk.mset').get_flagset
-const isUsableTerm = require('../shared/termdb.usecase').isUsableTerm
+const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 
 /*
 ********************** EXPORTED

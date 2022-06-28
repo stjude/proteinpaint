@@ -4,9 +4,9 @@ const fs = require('fs'),
 	readline = require('readline'),
 	app = require('./app'),
 	utils = require('./utils'),
-	common = require('../shared/common'),
+	common = require('#shared/common'),
 	serverconfig = require('./serverconfig'),
-	vcf = require('../shared/vcf'),
+	vcf = require('#shared/vcf'),
 	lines2R = require('./lines2R')
 
 /*

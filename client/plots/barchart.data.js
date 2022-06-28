@@ -1,5 +1,5 @@
 import Partjson from 'partjson'
-import { compute_bins } from '../shared/termdb.bins'
+import { compute_bins } from '#shared/termdb.bins'
 import { sample_match_termvaluesetting } from '../common/termutils'
 
 export function getBarchartData(_q, data) {

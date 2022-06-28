@@ -3,7 +3,7 @@ const path = require('path')
 const fs = require('fs')
 const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
-const nt2aa = require('../shared/common').nt2aa
+const nt2aa = require('#shared/common').nt2aa
 
 /*
 should guard against file content error e.g. two tabs separating columns

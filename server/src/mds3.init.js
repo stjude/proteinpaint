@@ -6,7 +6,7 @@ const { variant2samples_getresult } = require('./mds3.variant2samples')
 const utils = require('./utils')
 const compute_mclass = require('./termdb.snp').compute_mclass
 const serverconfig = require('./serverconfig')
-const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('../shared/common')
+const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('#shared/common')
 const { server_init_db_queries } = require('./termdb.sql')
 const { makeTempSqliteDb } = require('./tempdb')
 

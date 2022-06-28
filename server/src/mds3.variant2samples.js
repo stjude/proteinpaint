@@ -1,9 +1,9 @@
-const { stratinput } = require('../shared/tree')
+const { stratinput } = require('#shared/tree')
 const gdc = require('./mds3.gdc')
 const { get_densityplot } = require('./mds3.densityPlot')
 const { ssmIdFieldsSeparator } = require('./mds3.init')
 const utils = require('./utils')
-const { dtfusionrna, dtsv } = require('../shared/common')
+const { dtfusionrna, dtsv } = require('#shared/common')
 
 /*
 ***************** exported

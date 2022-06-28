@@ -4,9 +4,9 @@ import { nonDictionaryTermTypes } from '../termsetting/termsetting'
 import { getNormalRoot } from '../filter/filter'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
-import initBinConfig from '../shared/termdb.initbinconfig'
+import initBinConfig from '#shared/termdb.initbinconfig'
 import { deepEqual } from '../rx'
-import { isUsableTerm, graphableTypes } from '../shared/termdb.usecase'
+import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/

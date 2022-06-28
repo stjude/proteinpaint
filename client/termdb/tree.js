@@ -1,7 +1,7 @@
 import { getCompInit } from '../rx'
 import { select, selectAll, event } from 'd3-selection'
 import { getNormalRoot } from '../filter/filter'
-import { isUsableTerm } from '../shared/termdb.usecase'
+import { isUsableTerm } from '#shared/termdb.usecase'
 import { termInfoInit } from './termInfo'
 
 const childterm_indent = '25px'
@@ -289,8 +289,15 @@ function setRenderers(self) {
 		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
-		div.select('.' + cls_termlabel).style('background-color', !uses.has('plot') || termIsDisabled ? '' : isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3')
-		div.select('.' + cls_termcheck).style('display', uses.has('plot') && isSelected && !termIsDisabled ? 'inline-block' : 'none')
+		div
+			.select('.' + cls_termlabel)
+			.style(
+				'background-color',
+				!uses.has('plot') || termIsDisabled ? '' : isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3'
+			)
+		div
+			.select('.' + cls_termcheck)
+			.style('display', uses.has('plot') && isSelected && !termIsDisabled ? 'inline-block' : 'none')
 	}
 
 	self.addTerm = async function(term) {

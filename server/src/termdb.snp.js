@@ -5,10 +5,10 @@ const termdbsql = require('./termdb.sql')
 const termdb = require('./termdb')
 const readline = require('readline')
 const serverconfig = require('./serverconfig')
-const { dissect_INFO } = require('../shared/vcf.info')
-const { parse_CSQ } = require('../shared/vcf.csq')
-const { getVariantType } = require('../shared/vcf.type')
-const { vcfcopymclass } = require('../shared/common')
+const { dissect_INFO } = require('#shared/vcf.info')
+const { parse_CSQ } = require('#shared/vcf.csq')
+const { getVariantType } = require('#shared/vcf.type')
+const { vcfcopymclass } = require('#shared/common')
 
 /*
 cache file has a header line, with one line per valid snp. columns: 

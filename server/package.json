@@ -4,11 +4,14 @@
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server.js",
   "bin": "bin.js",
+  "imports": {
+    "#shared/*": "../shared/*.js"
+  },
   "scripts": {
     "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --progress --color",
     "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
     "pretest": "./test/pretest.js",
-    "test": "tape -r '@babel/register' */test/*usecase.spec.js",
+    "test": "tape -r '@babel/register' */test/*.spec.js",
     "build": "webpack --config=./webpack.config.js",
     "response": "nodemon modules/test/test.server.js --watch src",
     "getconf": "node -p 'JSON.stringify(require(\"./src/serverconfig.js\"),null,\"  \")'"
